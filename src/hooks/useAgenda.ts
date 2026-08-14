@@ -36,6 +36,9 @@ export type Capture = {
   team: string | null;
   status: "agendada" | "concluida" | "cancelada";
   note: string | null;
+  // Duração estimada da captação em horas (1..5; 5 = "5h ou mais"). Opcional e
+  // defensivo: antes da migration o select("*") não traz e cai como undefined.
+  duration_hours?: number | null;
   // Roteiro da gravação (o texto que o gestor copia cru no Cria Captação). É
   // separado de `note` (nota livre). Opcional no tipo pra leitura defensiva: antes
   // da migration rodar, o select("*") não traz a coluna e cai como undefined.
@@ -284,10 +287,14 @@ export function useAddCapture() {
   const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null }) => {
+    mutationFn: async (input: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null; duration_hours?: number | null }) => {
       if (!agencyOwnerId) throw new Error("Not authenticated");
+      // Só manda a coluna quando há duração: sem ela, funciona mesmo antes da
+      // migration do duration_hours rodar.
+      const { duration_hours, ...resto } = input;
       const { error } = await sbFrom("agenda_captures").insert({
-        manager_id: agencyOwnerId, status: "agendada", ...input,
+        manager_id: agencyOwnerId, status: "agendada", ...resto,
+        ...(duration_hours ? { duration_hours } : {}),
       } as never);
       if (error) throw error;
     },
@@ -299,7 +306,7 @@ export function useAddCapture() {
 export function useUpdateCapture() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Capture, "status" | "capture_date" | "capture_time" | "location" | "team" | "note" | "roteiro" | "crm_client_id" | "client_name" | "shot_list" | "recurring" | "recurrence_day">> }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Capture, "status" | "capture_date" | "capture_time" | "location" | "team" | "note" | "roteiro" | "crm_client_id" | "client_name" | "shot_list" | "recurring" | "recurrence_day" | "duration_hours">> }) => {
       const { error } = await sbFrom("agenda_captures").update(patch as never).eq("id", id);
       if (error) throw error;
     },

@@ -31,6 +31,8 @@ const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 type CaptureRow = {
   id: string; capture_date: string; capture_time: string | null;
   status: string | null; location: string | null; converted_post_id: string | null;
+  // Duração estimada em horas (1..5; 5 = "5h ou mais"), opcional/defensiva.
+  duration_hours?: number | null;
   // Nota/briefing que a social mídia deixou na captação (agenda). É o que a
   // Gabriela pediu pra aparecer no relatório ("Vídeos ADS Yasmin" etc).
   note: string | null; team: string | null;
@@ -371,7 +373,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     enabled: open && !!agencyOwnerId && !!client.crm_client_id,
     queryFn: async () => {
       const { data, error } = await sbFrom("agenda_captures")
-        .select("id, capture_date, capture_time, status, location, converted_post_id, note, team")
+        .select("id, capture_date, capture_time, status, location, converted_post_id, note, team, duration_hours")
         .eq("manager_id", agencyOwnerId!)
         .eq("crm_client_id", client.crm_client_id!)
         .gte("capture_date", dayRange.since)
@@ -1772,7 +1774,11 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       <div key={c.id} style={{ display: "flex", gap: 12, padding: "10px 13px", borderTop: i === 0 ? "none" : `1px solid ${C.line}`, opacity: c.status === "cancelada" ? 0.6 : 1 }}>
         <div style={{ width: 56, flexShrink: 0 }}>
           <div style={{ fontSize: 12.5, fontWeight: 800, color: C.ink }}>{dia}</div>
-          {c.capture_time && <div style={{ fontSize: 10.5, color: C.sub }}>{c.capture_time.slice(0, 5)}</div>}
+          {(c.capture_time || c.duration_hours) && (
+            <div style={{ fontSize: 10.5, color: C.sub }}>
+              {[c.capture_time ? c.capture_time.slice(0, 5) : null, c.duration_hours ? (c.duration_hours >= 5 ? "+5h" : `${c.duration_hours}h`) : null].filter(Boolean).join(" · ")}
+            </div>
+          )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>

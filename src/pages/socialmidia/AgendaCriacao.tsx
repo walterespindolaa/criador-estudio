@@ -1602,7 +1602,7 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
   initialKind?: "tarefa" | "captacao" | "criacao";
   onCreation: (crm: string | null, name: string | null, team: string | null, note: string | null, time: string | null, day: string) => void;
   onTask: (v: { title: string; description: string | null; crm_client_id: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string; due_time: string | null; color: string | null }) => void;
-  onCapture: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null }) => void;
+  onCapture: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null; duration_hours?: number | null }) => void;
 }) {
   const [kind, setKind] = useState<"criacao" | "tarefa" | "captacao">("criacao");
   const [crm, setCrm] = useState<string | null>(null);
@@ -1613,13 +1613,14 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
   const [prio, setPrio] = useState<CrmTaskPriority>("media");
   const [time, setTime] = useState("");
   const [loc, setLoc] = useState("");
+  const [dur, setDur] = useState<number | null>(null); // duracao da captacao (horas)
   const [date, setDate] = useState(""); // data do item (padrao o dia clicado, mas editavel)
   const [taskCol, setTaskCol] = useState<string | null>(null); // cor opcional da tarefa
   const [seeded, setSeeded] = useState("");
 
   if (open && day && seeded !== day) {
     setSeeded(day);
-    setKind(initialKind); setCrm(null); setName(""); setTeam(""); setNote(""); setTitle(""); setPrio("media"); setTime(""); setLoc(""); setDate(day); setTaskCol(null);
+    setKind(initialKind); setCrm(null); setName(""); setTeam(""); setNote(""); setTitle(""); setPrio("media"); setTime(""); setLoc(""); setDur(null); setDate(day); setTaskCol(null);
   }
   if (!open && seeded) setSeeded("");
 
@@ -1631,7 +1632,7 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
     if (!d) return;
     if (kind === "criacao") onCreation(crm, name.trim() || null, team.trim() || null, note.trim() || null, time || null, d);
     else if (kind === "tarefa") onTask({ title: title.trim(), description: note.trim() || null, crm_client_id: crm, priority: prio, status: "pendente", due_date: d, due_time: time || null, color: taskCol });
-    else onCapture({ capture_date: d, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null });
+    else onCapture({ capture_date: d, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null, duration_hours: dur });
   };
 
   // Ordem das abas: Tarefa primeiro (aba default), depois Captação e Criação.
@@ -1700,6 +1701,21 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
             </div>
           )}
 
+          {kind === "captacao" && (
+          <div>
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Duração (opcional)</p>
+            <div className="flex flex-wrap gap-1.5">
+              {[1, 2, 3, 4, 5].map((h) => (
+                <button key={h} type="button" onClick={() => setDur(dur === h ? null : h)}
+                  className={cn("h-8 px-3 rounded-full border text-xs font-body font-semibold transition-colors",
+                    dur === h ? "border-primary bg-primary/[0.08] text-primary" : "border-border text-muted-foreground hover:border-primary/40")}>
+                  {h >= 5 ? "+5h" : `${h}h`}
+                </button>
+              ))}
+            </div>
+          </div>
+          )}
+
           {kind === "tarefa" && (
             <div className="grid grid-cols-2 gap-2 max-[390px]:grid-cols-1">
               <div className="min-w-0">
@@ -1737,12 +1753,13 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
   );
 }
 
-function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pending }: { open: boolean; initial?: Capture | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null; status?: Capture["status"] }) => void; pending: boolean }) {
+function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pending }: { open: boolean; initial?: Capture | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null; status?: Capture["status"]; duration_hours?: number | null }) => void; pending: boolean }) {
   const [crm, setCrm] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [loc, setLoc] = useState("");
+  const [dur, setDur] = useState<number | null>(null);
   const [team, setTeam] = useState("");
   const [note, setNote] = useState("");
   const [status, setStatus] = useState<Capture["status"]>("agendada");
@@ -1752,7 +1769,7 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
     setSeeded(seed);
     setCrm(initial?.crm_client_id ?? null); setName(initial?.client_name ?? "");
     setDate(initial?.capture_date ?? ""); setTime(initial?.capture_time ? initial.capture_time.slice(0, 5) : "");
-    setLoc(initial?.location ?? ""); setTeam(initial?.team ?? ""); setNote(initial?.note ?? ""); setStatus(initial?.status ?? "agendada");
+    setLoc(initial?.location ?? ""); setDur(initial?.duration_hours ?? null); setTeam(initial?.team ?? ""); setNote(initial?.note ?? ""); setStatus(initial?.status ?? "agendada");
   }
   if (!open && seeded) setSeeded("");
   const valid = date && (!!crm || name.trim());
@@ -1768,6 +1785,18 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
             <HoraInput label="Hora" value={time} onChange={setTime} />
           </div>
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Local (opcional)</p><Input value={loc} onChange={(e) => setLoc(e.target.value)} placeholder="Ex.: Estúdio, coworking, local externo" /></div>
+          <div>
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Duração (opcional)</p>
+            <div className="flex flex-wrap gap-1.5">
+              {[1, 2, 3, 4, 5].map((h) => (
+                <button key={h} type="button" onClick={() => setDur(dur === h ? null : h)}
+                  className={cn("h-8 px-3 rounded-full border text-xs font-body font-semibold transition-colors",
+                    dur === h ? "border-primary bg-primary/[0.08] text-primary" : "border-border text-muted-foreground hover:border-primary/40")}>
+                  {h >= 5 ? "+5h" : `${h}h`}
+                </button>
+              ))}
+            </div>
+          </div>
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Equipe (opcional)</p><Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Ex.: Ana, Bruno" list="agenda-team-names" /><TeamDatalist names={teamNames} /></div>
           <div>
             <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Notas (opcional)</p>
@@ -1786,7 +1815,7 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => onSave({ capture_date: date, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null, ...(initial ? { status } : {}) })} disabled={!valid || pending}>
+          <Button onClick={() => onSave({ capture_date: date, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null, duration_hours: dur, ...(initial ? { status } : {}) })} disabled={!valid || pending}>
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : initial ? "Salvar" : "Agendar"}
           </Button>
         </DialogFooter>
