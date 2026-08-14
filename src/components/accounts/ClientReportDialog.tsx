@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -1119,6 +1119,613 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     </div>
   );
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // MONTAGEM DO RELATÓRIO EM PÁGINAS A4 DE VERDADE
+  // Cada folha é uma página 210x297 com cabeçalho e rodapé próprios. O exportador
+  // fotografa página por página (nada de fatiar um canvas comprido), então nada
+  // sai comprimido, nada corta no meio e cada folha tem layout desenhado.
+  // ─────────────────────────────────────────────────────────────────────────
+  function chunk<T>(arr: T[], n: number): T[][] {
+    const out: T[][] = [];
+    for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+    return out;
+  }
+
+  const logoClienteRedonda = (px: number, fontePx: number) => (
+    <div style={{ width: px, height: px, borderRadius: "50%", background: "#fff", boxShadow: "0 8px 26px -14px rgba(0,0,0,.35)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      {client.logo_url
+        ? <img src={client.logo_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        : <span style={{ fontWeight: 800, fontSize: fontePx, color: C.laranja }}>{client.name.charAt(0).toUpperCase()}</span>}
+    </div>
+  );
+
+  // Capa: página inteira, estilo apresentação Cria.
+  const paginaCapa = (
+    <div style={{ position: "relative", overflow: "hidden", flex: 1, padding: "44px 42px", background: C.creme, display: "flex", flexDirection: "column" }}>
+      <span style={{ position: "absolute", top: -92, right: -66, width: 250, height: 250, borderRadius: "50%", background: C.rosa }} />
+      <span style={{ position: "absolute", bottom: -116, left: -92, width: 250, height: 250, borderRadius: "50%", background: C.amarelo }} />
+      <span style={{ position: "absolute", top: "36%", left: 24, width: 58, height: 58, borderRadius: "50%", background: C.azul }} />
+      <span style={{ position: "absolute", bottom: "24%", right: 50, width: 42, height: 42, borderRadius: "50%", background: C.verde }} />
+      <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        {agencyLogo
+          ? <img src={agencyLogo} alt={managerName ? `Logo ${managerName}` : "Logo da agência"} crossOrigin="anonymous" style={{ maxHeight: 42, maxWidth: 190, objectFit: "contain", display: "block", borderRadius: 10 }} />
+          : <div style={{ fontSize: 15, fontWeight: 800, color: C.ink }}>{elaboradoPor}</div>}
+        <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: "#fff", background: C.laranja, padding: "7px 15px", borderRadius: 999, whiteSpace: "nowrap" }}>
+          Relatório de Entregas
+        </span>
+      </div>
+      <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+        {logoClienteRedonda(134, 54)}
+        <div style={{ fontSize: 30, fontWeight: 800, color: C.ink, lineHeight: 1.12, marginTop: 20 }}>{client.name}</div>
+        {client.instagram_handle && (
+          <div style={{ fontSize: 15, color: C.sub, marginTop: 2 }}>@{client.instagram_handle.replace(/^@/, "")}</div>
+        )}
+        <div style={{ marginTop: 18, fontSize: 20, fontWeight: 800, color: C.laranja }}>Relatório de Entregas · {coverPeriodo}</div>
+      </div>
+      <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.6 }}>
+          <div>Elaborado por <b style={{ color: C.ink }}>{elaboradoPor}</b></div>
+          <div>Gerado em {new Date().toLocaleDateString("pt-BR")}</div>
+        </div>
+        <AssinaturaCria variante="rodape" tom="claro" altura={22} style={{ width: "auto" }} />
+      </div>
+    </div>
+  );
+
+  // Contracapa: fecha o relatório no mesmo estilo da capa.
+  const paginaFinal = (
+    <div style={{ position: "relative", overflow: "hidden", flex: 1, padding: "44px 42px", background: C.creme, display: "flex", flexDirection: "column" }}>
+      <span style={{ position: "absolute", top: -92, left: -66, width: 250, height: 250, borderRadius: "50%", background: C.amarelo }} />
+      <span style={{ position: "absolute", bottom: -116, right: -92, width: 250, height: 250, borderRadius: "50%", background: C.rosa }} />
+      <span style={{ position: "absolute", top: "30%", right: 30, width: 46, height: 46, borderRadius: "50%", background: C.verde }} />
+      <span style={{ position: "absolute", bottom: "26%", left: 34, width: 54, height: 54, borderRadius: "50%", background: C.azul }} />
+      <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+        {logoClienteRedonda(110, 44)}
+        <div style={{ fontSize: 24, fontWeight: 800, color: C.ink, marginTop: 18 }}>{client.name}</div>
+        <div style={{ fontSize: 13, color: C.sub, marginTop: 2 }}>Relatório de Entregas · {coverPeriodo}</div>
+        <div style={{ marginTop: 22, fontSize: 19, fontWeight: 800, color: C.laranja }}>Foi um prazer construir este mês com você!</div>
+        <div style={{ marginTop: 8, fontSize: 12.5, color: C.sub, maxWidth: 340, lineHeight: 1.6 }}>
+          Qualquer dúvida sobre este relatório, é só chamar. Já estamos de olho no próximo período.
+        </div>
+      </div>
+      <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ fontSize: 12, color: C.sub }}>Elaborado por <b style={{ color: C.ink }}>{elaboradoPor}</b></div>
+        <AssinaturaCria variante="rodape" tom="claro" altura={22} style={{ width: "auto" }} />
+      </div>
+    </div>
+  );
+
+  // Cabeçalho e rodapé das páginas de conteúdo.
+  const cabecalhoPagina = (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "18px 32px 12px", borderBottom: `2px solid ${C.laranja}`, flexShrink: 0 }}>
+      <div style={{ width: 30, height: 30, borderRadius: "50%", background: C.soft, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+        {client.logo_url
+          ? <img src={client.logo_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          : <span style={{ fontWeight: 800, fontSize: 13, color: C.laranja }}>{client.name.charAt(0).toUpperCase()}</span>}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 12.5, fontWeight: 800, color: C.ink }}>{client.name}</div>
+        <div style={{ fontSize: 9.5, color: C.sub }}>Relatório de Entregas · {coverPeriodo}</div>
+      </div>
+      {agencyLogo && (
+        <img src={agencyLogo} alt="" crossOrigin="anonymous" style={{ maxHeight: 22, maxWidth: 110, objectFit: "contain", display: "block", flexShrink: 0, borderRadius: 6 }} />
+      )}
+    </div>
+  );
+  const rodapePagina = (num: number, total: number) => (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 32px 16px", borderTop: `1px solid ${C.line}`, flexShrink: 0 }}>
+      <span style={{ fontSize: 9.5, color: C.sub }}>Preparado por {elaboradoPor}</span>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 9.5, color: C.sub }}>
+        Feito com <img src="/logo-cria.png" alt="Cria Social Club" style={{ height: 12, width: "auto", display: "block", opacity: 0.9 }} />
+      </span>
+      <span style={{ fontSize: 9.5, color: C.sub }}>Página {num} de {total}</span>
+    </div>
+  );
+
+  // ── Blocos de conteúdo (cada um cabe na sua página) ──
+  const recadoNode = notes.trim() ? (
+    <div style={{ marginBottom: 14, padding: "12px 14px", border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.brand}`, borderRadius: 12, background: C.soft }}>
+      <div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>
+        {managerName ? `Recado de ${managerName}` : "Recado da social mídia"}
+      </div>
+      <div style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{notes.trim()}</div>
+    </div>
+  ) : null;
+
+  const emptyNode = (
+    <div style={{ padding: "22px 20px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft, textAlign: "center" }}>
+      <div style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>Nenhuma atividade registrada em {monthLabel}</div>
+      <div style={{ fontSize: 12, color: C.sub, marginTop: 6, lineHeight: 1.5 }}>
+        Não houve peça produzida, aprovada ou publicada neste período.
+        {hasPriorHistory ? ` No período anterior (${prevPeriod.label}) foram ${prevStats.published} publicação(ões).` : " Este é o primeiro período acompanhado."}
+      </div>
+    </div>
+  );
+
+  const entregaNode = (
+    <div>
+      <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
+        <div style={{ flex: 1, border: `1px solid ${C.green}`, borderRadius: 12, padding: "16px 18px", background: "#f0fdf4" }}>
+          <div style={{ fontSize: 36, fontWeight: 800, color: C.green, lineHeight: 1 }}>{nb(stats.published)}</div>
+          <div style={{ fontSize: 11, color: C.sub, marginTop: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
+            {stats.published === 1 ? "Post publicado no período" : "Posts publicados no período"}
+          </div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+        {STATUS_KEYS.map((k) => {
+          const color = k === "postado" ? C.green : k === "aprovado" ? C.green
+            : k === "pendente" ? C.amber : k === "ajuste_solicitado" ? C.orange : C.sub;
+          return (
+            <div key={k} style={{ flex: 1, minWidth: 92, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px" }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color, lineHeight: 1 }}>{stats.byStatus[k]}</div>
+              <div style={{ fontSize: 9.5, color: C.sub, marginTop: 5, textTransform: "uppercase", letterSpacing: 0.4 }}>{STATUS_LABEL[k]}</div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 10, color: C.sub, marginTop: 8, lineHeight: 1.5 }}>
+        O funil mostra em que etapa cada peça do período está hoje.
+      </div>
+    </div>
+  );
+
+  const breakdownNode = (
+    <div style={{ display: "flex", gap: 24, marginTop: 18 }}>
+      <div style={{ flex: 1 }}>
+        {sectionTitle("Por formato", C.azul)}
+        {Object.keys(stats.byFormat).length === 0
+          ? <div style={{ fontSize: 12, color: C.sub }}>Sem posts no período.</div>
+          : Object.entries(stats.byFormat).sort((a, b) => b[1] - a[1]).map(([f, v]) => breakdownRow(FORMAT_LABELS[f] ?? cap(f), v, stats.total))}
+      </div>
+      <div style={{ flex: 1 }}>
+        {sectionTitle("Por plataforma", C.lilas)}
+        {Object.keys(stats.byPlatform).length === 0
+          ? <div style={{ fontSize: 12, color: C.sub }}>Sem posts no período.</div>
+          : Object.entries(stats.byPlatform).sort((a, b) => b[1] - a[1]).map(([p, v]) => breakdownRow(cap(p), v, stats.total))}
+      </div>
+    </div>
+  );
+
+  const avisoMetricasNode = (
+    <div style={{ marginTop: 18, padding: "14px 16px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>Métricas de alcance e engajamento</div>
+      <div style={{ fontSize: 11, color: C.sub, marginTop: 4, lineHeight: 1.55 }}>
+        Este relatório cobre a produção e a entrega das peças. Alcance, visualizações, salvamentos e evolução de seguidores
+        vêm direto do Instagram e só podem ser lidos com o perfil conectado, o que ainda não foi feito. Assim que a conexão
+        for autorizada, esta seção passa a sair preenchida nos próximos relatórios.
+      </div>
+    </div>
+  );
+
+  const leituraNode = (highlight || bestFormat || stats.cycleDays !== null || stuck.length > 0) ? (
+    <div>
+      {sectionTitle("O que o período mostrou", C.verde)}
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        {highlight && (
+          <div style={{ flex: 2, minWidth: 240, border: `1px solid ${C.line}`, borderRadius: 12, padding: "13px 15px", display: "flex", gap: 12, alignItems: "center" }}>
+            <div style={{ width: 48, height: 48, borderRadius: 10, background: C.soft, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {highlight.best.thumbnail_url
+                ? <img src={highlight.best.thumbnail_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <span style={{ fontSize: 9, color: C.sub }}>{highlight.best.type}</span>}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Destaque do período</div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink, marginTop: 3 }}>{highlight.best.title}</div>
+              <div style={{ fontSize: 11, color: C.sub, marginTop: 3 }}>
+                {nb(highlight.best.reach)} de alcance · {nb(highlight.best.saved)} salvamentos
+                {highlight.best.vsAvg !== null && highlight.best.vsAvg > 0
+                  ? <span style={{ color: C.green, fontWeight: 600 }}> · {highlight.best.vsAvg}% acima da média</span>
+                  : null}
+              </div>
+            </div>
+          </div>
+        )}
+        {bestFormat && (
+          <div style={{ flex: 1, minWidth: 190, border: `1px solid ${C.line}`, borderRadius: 12, padding: "13px 15px" }}>
+            <div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Formato que mais rendeu</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: C.ink, marginTop: 4 }}>{bestFormat.label}</div>
+            <div style={{ fontSize: 11, color: C.sub, marginTop: 3 }}>
+              {nb(bestFormat.avg)} de alcance médio em {bestFormat.count} publicação{bestFormat.count === 1 ? "" : "ões"}
+              {bestFormat.lift !== null && bestFormat.lift > 0 ? `, ${bestFormat.lift}% acima de ${bestFormat.vs}` : ""}.
+            </div>
+          </div>
+        )}
+      </div>
+      {(stats.cycleDays !== null || stuck.length > 0 || highlight?.worst) && (
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
+          {stats.cycleDays !== null && (
+            <div style={{ flex: 1, minWidth: 190, border: `1px solid ${C.line}`, borderRadius: 12, padding: "13px 15px" }}>
+              <div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Tempo até a aprovação</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: C.ink, marginTop: 4 }}>
+                {stats.cycleDays.toFixed(1).replace(".", ",")} <span style={{ fontSize: 12, fontWeight: 600 }}>dias</span>
+              </div>
+              <div style={{ fontSize: 10.5, color: C.sub, marginTop: 3 }}>
+                Média da criação da peça até a aprovação, em {stats.cycleSample} peça{stats.cycleSample === 1 ? "" : "s"} aprovada{stats.cycleSample === 1 ? "" : "s"} no período.
+              </div>
+            </div>
+          )}
+          {stuck.length > 0 && (
+            <div style={{ flex: 1, minWidth: 210, border: `1px solid ${C.amber}`, borderRadius: 12, padding: "13px 15px", background: "#fffbeb" }}>
+              <div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Aguardando sua resposta</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: C.amber, marginTop: 4 }}>
+                {stuck.length} <span style={{ fontSize: 12, fontWeight: 600, color: C.ink }}>peça{stuck.length === 1 ? "" : "s"} há 7 dias ou mais</span>
+              </div>
+              <div style={{ fontSize: 10.5, color: C.sub, marginTop: 5, lineHeight: 1.5 }}>
+                {stuck.slice(0, 3).map((s) => `${s.p.title} (${s.days} dias)`).join(" · ")}
+                {stuck.length > 3 ? ` e mais ${stuck.length - 3}.` : "."}
+              </div>
+            </div>
+          )}
+          {highlight?.worst && (
+            <div style={{ flex: 1, minWidth: 190, border: `1px solid ${C.line}`, borderRadius: 12, padding: "13px 15px" }}>
+              <div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Menor alcance do período</div>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink, marginTop: 4 }}>{highlight.worst.title}</div>
+              <div style={{ fontSize: 11, color: C.sub, marginTop: 3 }}>
+                {nb(highlight.worst.reach)} de alcance, contra {nb(highlight.avg)} de média. Serve de referência do que evitar repetir.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  ) : null;
+
+  const analiseNode = (
+    <div style={{ marginTop: leituraNode ? 18 : 0 }}>
+      {sectionTitle("Análise do período")}
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={updateActive}
+        onKeyUp={updateActive}
+        onMouseUp={updateActive}
+        onFocus={() => { setAnaliseFocada(true); updateActive(); }}
+        onBlur={() => setAnaliseFocada(false)}
+        data-placeholder="Escreva a análise ou clique em “Gerar análise (IA)”. Este texto é editável: clique nele e digite."
+        className="report-editor"
+        style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.6, outline: "none", minHeight: 64, cursor: "text" }}
+      />
+    </div>
+  );
+
+  const pecasPages = chunk(monthPosts, 11).map((grupo, gi, all) => (
+    <div key={`pecas-${gi}`}>
+      {sectionTitle(all.length > 1 ? `Peças do período (${monthPosts.length}) · parte ${gi + 1}` : `Peças do período (${monthPosts.length})`, C.verde)}
+      <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
+        {grupo.map((p, i) => {
+          const k = statusOf(p);
+          const color = k === "postado" ? C.green : k === "aprovado" ? C.green
+            : k === "pendente" ? C.amber : k === "ajuste_solicitado" ? C.orange : C.sub;
+          const label = k === "postado" ? "Publicado" : k === "aprovado" ? "Aprovado"
+            : k === "pendente" ? "Aguardando" : k === "ajuste_solicitado" ? "Em ajuste" : "Em produção";
+          const dia = publishedDayOf(p) ?? p.scheduled_date;
+          return (
+            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 13px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: C.ink }}>{p.title}</div>
+                <div style={{ fontSize: 10.5, color: C.sub }}>
+                  {FORMAT_LABELS[p.format] ?? cap(p.format)} · {cap(p.platform)}
+                  {dia ? ` · ${parseDateOnly(dia).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}` : ""}
+                </div>
+              </div>
+              <div style={{ fontSize: 10.5, fontWeight: 700, color, whiteSpace: "nowrap" }}>{label}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  ));
+
+  const igNode = perf.has ? (
+    <div>
+      {sectionTitle(`Desempenho no Instagram (${perf.posts} post${perf.posts === 1 ? "" : "s"})`, C.azul)}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {statCard("Alcance", nb(perf.reach), C.ink, igDelta.has ? igDelta.reach : undefined)}
+        {statCard("Visualizações", nb(perf.views), C.ink, igDelta.has ? igDelta.views : undefined)}
+        {statCard("Interações", nb(perf.interactions), C.ink, igDelta.has ? igDelta.interactions : undefined)}
+        {statCard("Salvamentos", nb(perf.saved))}
+        {perf.engRate !== null && statCard(
+          "Taxa de engajamento",
+          `${perf.engRate.toFixed(1).replace(".", ",")}%`,
+          perf.engRate >= 3 ? C.green : C.ink,
+          igDelta.engRate ?? undefined,
+          "%",
+        )}
+      </div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+        {statCard("Curtidas", nb(perf.likes))}
+        {statCard("Comentários", nb(perf.comments))}
+        {followers && (
+          <div key="seguidores" style={{ flex: 1, minWidth: 118, border: `1px solid ${C.line}`, borderRadius: 12, padding: "13px 15px" }}>
+            <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1, color: followers.delta >= 0 ? C.green : C.orange }}>
+              {followers.delta >= 0 ? "+" : ""}{nb(followers.delta)}
+            </div>
+            <div style={{ fontSize: 10.5, color: C.sub, marginTop: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Seguidores no período</div>
+            <div style={{ fontSize: 10, color: C.sub, marginTop: 5 }}>de {nb(followers.start)} para {nb(followers.end)}</div>
+          </div>
+        )}
+      </div>
+      {!igDelta.has && (
+        <div style={{ fontSize: 10, color: C.sub, marginTop: 8 }}>
+          Não há medição do Instagram em {prevPeriod.label}, então este é o primeiro período com comparação possível.
+        </div>
+      )}
+      {ranking.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>
+            Ranking de posts{bestHour ? ` · top post publicado às ${bestHour}` : ""}
+          </div>
+          <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
+            {ranking.map((r, i) => {
+              const views = Number(r.metrics?.views ?? r.metrics?.plays) || 0;
+              return (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                  <div style={{ width: 20, fontSize: 13, fontWeight: 800, color: C.brand, textAlign: "center" }}>{i + 1}</div>
+                  <div style={{ width: 40, height: 40, borderRadius: 8, background: C.soft, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {r.thumbnail_url
+                      ? <img src={r.thumbnail_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <span style={{ fontSize: 9, color: C.sub }}>{MEDIA_PT[r.media_type ?? ""] ?? "post"}</span>}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 600, color: C.ink }}>
+                      {MEDIA_PT[r.media_type ?? ""] ?? r.media_type ?? "Post"} · {dtFmt(r.posted_at)}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: C.sub }}>
+                      {(Number(r.metrics?.reach) || 0).toLocaleString("pt-BR")} alcance · {(Number(r.metrics?.likes) || 0).toLocaleString("pt-BR")} curtidas · {(Number(r.metrics?.comments) || 0).toLocaleString("pt-BR")} coment.{views ? ` · ${views.toLocaleString("pt-BR")} views` : ""}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: C.brand, whiteSpace: "nowrap" }}>{engOf(r.metrics)} interações</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  ) : null;
+
+  const produzimosPages = perf.has ? chunk(pieces, 8).map((grupo, gi, all) => (
+    <div key={`produzimos-${gi}`}>
+      {sectionTitle(all.length > 1 ? `As peças que produzimos e o que renderam (${pieces.length}) · parte ${gi + 1}` : `As peças que produzimos e o que renderam (${pieces.length})`, C.verde)}
+      <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
+        {grupo.map((p, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+            <div style={{ width: 40, height: 40, borderRadius: 8, background: C.soft, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {p.thumbnail_url
+                ? <img src={p.thumbnail_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <span style={{ fontSize: 9, color: C.sub }}>{p.format ? (FORMAT_LABELS[p.format] ?? p.format) : "post"}</span>}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</div>
+              <div style={{ fontSize: 10.5, color: C.sub }}>
+                {p.format ? (FORMAT_LABELS[p.format] ?? cap(p.format)) : "Post"}{p.posted_at ? ` · ${dtFmt(p.posted_at)}` : ""}
+              </div>
+            </div>
+            <div style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: C.ink }}>{p.reach.toLocaleString("pt-BR")} alcance</div>
+              <div style={{ fontSize: 10.5, color: C.sub }}>{p.saved.toLocaleString("pt-BR")} salvos · {p.interactions.toLocaleString("pt-BR")} inter.</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )) : [];
+
+  const temDirecionamento = perf.has && (byProducedFormat.length > 0 || byProducedHook.length > 0 || crossHl.length > 0 || cross.hasData || topReels.length > 0);
+  const direcionamentoNode = temDirecionamento ? (
+    <div>
+      {sectionTitle("Direcionamento do período", C.lilas)}
+      {crossHl.length > 0 && (
+        <div style={{ padding: "12px 14px", border: `1px solid ${C.line}`, borderRadius: 12, background: C.soft, marginBottom: 14 }}>
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {crossHl.map((h, i) => (
+              <li key={i} style={{ fontSize: 11.5, color: C.ink, marginBottom: 5, lineHeight: 1.5 }}>{h}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {byProducedFormat.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por formato que produzimos</div>
+          {(() => { const mx = Math.max(...byProducedFormat.map((r) => r.avg), 0); return byProducedFormat.map((r) => crossRow(FORMAT_LABELS[r.f] ?? cap(r.f), r.avg, r.n, mx)); })()}
+        </div>
+      )}
+      {byProducedHook.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por hook que produzimos</div>
+          {(() => { const mx = Math.max(...byProducedHook.map((r) => r.avg), 0); return byProducedHook.map((r) => crossRow(r.h, r.avg, r.n, mx)); })()}
+        </div>
+      )}
+      {cross.hasData && (
+        <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 12 }}>
+          {cross.byFormat.length > 0 && (
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por formato</div>
+              {(() => { const mx = Math.max(...cross.byFormat.map((r) => r.avgReach), 0); return cross.byFormat.map((r) => crossRow(r.label, r.avgReach, r.count, mx)); })()}
+            </div>
+          )}
+          {cross.byWeekday.length > 1 && (
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por dia</div>
+              {(() => { const mx = Math.max(...cross.byWeekday.map((r) => r.avgReach), 0); return cross.byWeekday.map((r) => crossRow(r.label, r.avgReach, r.count, mx)); })()}
+            </div>
+          )}
+          {cross.byTime.length > 1 && (
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por período</div>
+              {(() => { const mx = Math.max(...cross.byTime.map((r) => r.avgReach), 0); return cross.byTime.map((r) => crossRow(r.label, r.avgReach, r.count, mx)); })()}
+            </div>
+          )}
+        </div>
+      )}
+      {topReels.length > 0 && (
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Reels com mais retenção (tempo médio assistido)</div>
+          <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
+            {topReels.map(({ r, watch, views }, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                <div style={{ width: 20, fontSize: 13, fontWeight: 800, color: C.brand, textAlign: "center" }}>{i + 1}</div>
+                <div style={{ width: 40, height: 40, borderRadius: 8, background: C.soft, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {r.thumbnail_url
+                    ? <img src={r.thumbnail_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    : <span style={{ fontSize: 9, color: C.sub }}>Reels</span>}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 600, color: C.ink }}>{r.caption ? r.caption.slice(0, 60) : "Reels"}</div>
+                  <div style={{ fontSize: 10.5, color: C.sub }}>{fmtWatch(watch)} assistidos em média{views ? ` · ${fmtNum(views)} views` : ""}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  ) : null;
+
+  const audsNode = (audience.hasData || stories.hasData) ? (
+    <div>
+      {audience.hasData && (
+        <div>
+          {sectionTitle(`Perfil de audiência${audience.source === "engaged" ? " (com base nos engajados)" : ""}`)}
+          {(audience.age.length > 0 || audience.gender.length > 0) && (
+            <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+              {audience.age.length > 0 && audienceCol("Faixa etária", audience.age)}
+              {audience.gender.length > 0 && audienceCol("Gênero", audience.gender)}
+            </div>
+          )}
+          {(audience.city.length > 0 || audience.country.length > 0) && (
+            <div style={{ display: "flex", gap: 24, marginTop: 12, flexWrap: "wrap" }}>
+              {audience.city.length > 0 && audienceCol("Principais cidades", audience.city)}
+              {audience.country.length > 0 && audienceCol("Principais países", audience.country)}
+            </div>
+          )}
+        </div>
+      )}
+      {stories.hasData && (
+        <div style={{ marginTop: audience.hasData ? 18 : 0 }}>
+          {sectionTitle(`Stories (${stories.count} no período)`, C.rosa)}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {statCard("Alcance", nb(stories.reach))}
+            {statCard("Alcance médio", nb(stories.avgReach))}
+            {statCard("Respostas", nb(stories.replies))}
+            {statCard("Taxa de resposta", `${stories.replyRate.toFixed(1).replace(".", ",")}%`)}
+            {stories.navigation > 0 && statCard("Navegação", nb(stories.navigation))}
+          </div>
+        </div>
+      )}
+    </div>
+  ) : null;
+
+  const shotsPages = metricShots.map((s, si) => (
+    <div key={s.path} style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {sectionTitle(metricShots.length > 1 ? `Métricas do Instagram · print ${si + 1} de ${metricShots.length}` : "Métricas do Instagram", C.azul)}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", alignItems: "flex-start", justifyContent: "center" }}>
+        <img src={s.url} alt="Print das métricas do Instagram" crossOrigin="anonymous" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 10, border: `1px solid ${C.line}` }} />
+      </div>
+    </div>
+  ));
+
+  const captacaoRow = (c: CaptureRow, i: number) => {
+    const st = c.status === "concluida" ? { t: "Concluída", cor: C.green }
+      : c.status === "cancelada" ? { t: "Cancelada", cor: C.sub }
+      : { t: "Agendada", cor: C.amber };
+    const dia = parseDateOnly(c.capture_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+    const local = [c.location, c.team].filter(Boolean).join(" · ");
+    return (
+      <div key={c.id} style={{ display: "flex", gap: 12, padding: "10px 13px", borderTop: i === 0 ? "none" : `1px solid ${C.line}`, opacity: c.status === "cancelada" ? 0.6 : 1 }}>
+        <div style={{ width: 56, flexShrink: 0 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 800, color: C.ink }}>{dia}</div>
+          {c.capture_time && <div style={{ fontSize: 10.5, color: C.sub }}>{c.capture_time.slice(0, 5)}</div>}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
+            {c.note?.trim() ? c.note.trim() : <span style={{ color: C.sub, fontStyle: "italic" }}>Sem nota registrada.</span>}
+          </div>
+          {local && <div style={{ fontSize: 10.5, color: C.sub, marginTop: 3 }}>{local}</div>}
+        </div>
+        <div style={{ fontSize: 10.5, fontWeight: 700, color: st.cor, whiteSpace: "nowrap", flexShrink: 0 }}>{st.t}</div>
+      </div>
+    );
+  };
+  const captacaoPages = (!client.crm_client_id || captureList.length === 0)
+    ? [(
+      <div key="captacao-vazia">
+        {sectionTitle("Captação do período", C.rosa)}
+        <div style={{ fontSize: 12, color: C.sub, padding: "12px 14px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
+          {!client.crm_client_id
+            ? "Vincule este cliente ao cadastro central pra trazer as captações do período aqui."
+            : "Nenhuma captação registrada neste período."}
+        </div>
+      </div>
+    )]
+    : chunk(captureList, 7).map((grupo, gi, all) => (
+      <div key={`captacao-${gi}`}>
+        {sectionTitle(all.length > 1 ? `Captação do período · parte ${gi + 1}` : "Captação do período", C.rosa)}
+        {gi === 0 && (
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {statCard(captureSummary.total === 1 ? "Captação" : "Captações", nb(captureSummary.total))}
+            {statCard("Concluídas", nb(captureSummary.done), C.green)}
+            {captureSummary.last && statCard("Última captação", parseDateOnly(captureSummary.last).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }))}
+          </div>
+        )}
+        <div style={{ marginTop: gi === 0 ? 12 : 0, border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
+          {grupo.map((c, i) => captacaoRow(c, i))}
+        </div>
+        {gi === all.length - 1 && captureSummary.cancelled > 0 && (
+          <div style={{ fontSize: 10, color: C.sub, marginTop: 8 }}>
+            {captureSummary.cancelled === 1 ? "1 captação foi cancelada" : `${captureSummary.cancelled} captações foram canceladas`} no período.
+          </div>
+        )}
+      </div>
+    ));
+
+  // ── Sequência final das páginas ──
+  const defs: { key: string; body: ReactNode; semChrome?: boolean }[] = [
+    { key: "capa", body: paginaCapa, semChrome: true },
+  ];
+  defs.push({
+    key: "resumo",
+    body: (
+      <>
+        {recadoNode}
+        {stats.total === 0 && !perf.has ? emptyNode : (
+          <>
+            {entregaNode}
+            {breakdownNode}
+          </>
+        )}
+        {!perf.has && metricShots.length === 0 && avisoMetricasNode}
+      </>
+    ),
+  });
+  defs.push({ key: "analise", body: (<>{leituraNode}{analiseNode}</>) });
+  pecasPages.forEach((b, i) => defs.push({ key: `pecas-${i}`, body: b }));
+  if (igNode) defs.push({ key: "ig", body: igNode });
+  produzimosPages.forEach((b, i) => defs.push({ key: `produzimos-${i}`, body: b }));
+  if (direcionamentoNode) defs.push({ key: "direcionamento", body: direcionamentoNode });
+  if (audsNode) defs.push({ key: "audiencia", body: audsNode });
+  shotsPages.forEach((b, i) => defs.push({ key: `print-${i}`, body: b }));
+  captacaoPages.forEach((b, i) => defs.push({ key: `captacao-${i}`, body: b }));
+  defs.push({ key: "final", body: paginaFinal, semChrome: true });
+
+  const totalPaginas = defs.length;
+  const paginasRender = defs.map((p, i) => (
+    <div key={p.key} style={{ boxShadow: "0 6px 20px -12px rgba(0,0,0,.35)", borderRadius: 6, overflow: "hidden", border: `1px solid ${C.line}` }}>
+      <div data-pdf-page style={{ width: "100%", aspectRatio: "210 / 297", background: "#ffffff", display: "flex", flexDirection: "column", overflow: "hidden", boxSizing: "border-box", fontFamily: "Inter, system-ui, sans-serif", color: C.ink }}>
+        {p.semChrome ? p.body : (
+          <>
+            {cabecalhoPagina}
+            <div style={{ flex: 1, overflow: "hidden", padding: "14px 32px 6px" }}>{p.body}</div>
+            {rodapePagina(i + 1, totalPaginas)}
+          </>
+        )}
+      </div>
+    </div>
+  ));
+
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl rounded-2xl max-h-[90vh] overflow-y-auto">
@@ -1283,588 +1890,14 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           </div>
         )}
 
-        {/* Preview = o próprio elemento exportado. Numa caixa rolável e rotulada
-            pra ficar óbvio que é aqui que a "Análise do período" (e tudo mais) sai. */}
+        {/* Prévia paginada: cada folha abaixo é uma página A4 REAL do PDF (o
+            exportador fotografa folha por folha). A análise é editável direto. */}
         <div className="mt-3">
           <div className="mb-1 text-xs font-body font-semibold text-foreground">
-            Prévia do relatório <span className="font-normal text-muted-foreground">(role pra ver tudo, inclusive a “Análise do período”. É isto que vira o PDF.)</span>
+            Prévia do relatório <span className="font-normal text-muted-foreground">(cada folha é uma página A4 do PDF. Pra editar a análise, clique no texto dela e digite.)</span>
           </div>
-          <div className="border border-border rounded-xl overflow-hidden bg-white">
-          <div ref={reportRef} style={{ width: "100%", boxSizing: "border-box", background: "#ffffff", padding: 32, fontFamily: "Inter, system-ui, sans-serif", color: C.ink }}>
-            {/* ───────────────── CAPA (ocupa a primeira página inteira) ─────────────────
-                Estilo apresentação Cria: creme + formas orgânicas da paleta, logo do
-                cliente redonda no centro, título "Relatório de Entregas", o mês, a
-                marca da agência e o "elaborado por". */}
-            <div data-pdf-block style={{
-              position: "relative", overflow: "hidden",
-              // Full-bleed de verdade: largura explícita (100% do conteúdo + os 64px
-              // dos dois paddings) + margem negativa. Só a margem negativa não
-              // expandia a largura e sobrava faixa branca à direita.
-              width: "calc(100% + 64px)", margin: "-32px -32px 0", padding: "50px 46px",
-              // Altura ~ uma página A4 inteira (210/296, um tico abaixo de 297 pra
-              // não estourar), pra a capa preencher a folha e o conteúdo começar na
-              // página 2.
-              background: C.creme, aspectRatio: "210 / 296",
-              display: "flex", flexDirection: "column",
-            }}>
-              {/* formas orgânicas nos cantos (como a capa do Cria) */}
-              <span style={{ position: "absolute", top: -92, right: -66, width: 250, height: 250, borderRadius: "50%", background: C.rosa }} />
-              <span style={{ position: "absolute", bottom: -116, left: -92, width: 250, height: 250, borderRadius: "50%", background: C.amarelo }} />
-              <span style={{ position: "absolute", top: "36%", left: 24, width: 58, height: 58, borderRadius: "50%", background: C.azul }} />
-              <span style={{ position: "absolute", bottom: "24%", right: 50, width: 42, height: 42, borderRadius: "50%", background: C.verde }} />
-
-              {/* topo: marca da agência + selo do tipo de relatório */}
-              <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                {agencyLogo
-                  ? <img src={agencyLogo} alt={managerName ? `Logo ${managerName}` : "Logo da agência"} crossOrigin="anonymous" style={{ maxHeight: 42, maxWidth: 190, objectFit: "contain", display: "block", borderRadius: 10 }} />
-                  : <div style={{ fontSize: 15, fontWeight: 800, color: C.ink }}>{elaboradoPor}</div>}
-                <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: "#fff", background: C.laranja, padding: "7px 15px", borderRadius: 999, whiteSpace: "nowrap" }}>
-                  Relatório de Entregas
-                </span>
-              </div>
-
-              {/* centro: logo redonda do cliente + nome + mês */}
-              <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-                <div style={{ width: 134, height: 134, borderRadius: "50%", background: "#fff", border: "5px solid #fff", boxShadow: "0 10px 34px -14px rgba(0,0,0,.35)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-                  {client.logo_url
-                    ? <img src={client.logo_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    : <span style={{ fontWeight: 800, fontSize: 54, color: C.laranja }}>{client.name.charAt(0).toUpperCase()}</span>}
-                </div>
-                <div style={{ fontSize: 30, fontWeight: 800, color: C.ink, lineHeight: 1.12 }}>{client.name}</div>
-                {client.instagram_handle && (
-                  <div style={{ fontSize: 15, color: C.sub, marginTop: 2 }}>@{client.instagram_handle.replace(/^@/, "")}</div>
-                )}
-                <div style={{ marginTop: 18, fontSize: 20, fontWeight: 800, color: C.laranja }}>Relatório de Entregas · {coverPeriodo}</div>
-              </div>
-
-              {/* rodapé da capa: elaborado por + data + assinatura discreta do Cria */}
-              <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
-                <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.6 }}>
-                  <div>Elaborado por <b style={{ color: C.ink }}>{elaboradoPor}</b></div>
-                  <div>Gerado em {new Date().toLocaleDateString("pt-BR")}</div>
-                </div>
-                <AssinaturaCria variante="rodape" tom="claro" altura={22} style={{ width: "auto" }} />
-              </div>
-            </div>
-            {/* força o conteúdo a começar numa página nova (a capa é só dela) */}
-            <div data-pdf-break style={{ height: 1 }} />
-
-            {/* Cabeçalho corrido das páginas de conteúdo */}
-            <div data-pdf-block style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 14, borderBottom: `2px solid ${C.laranja}` }}>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", background: C.soft, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
-                {client.logo_url
-                  ? <img src={client.logo_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : <span style={{ fontWeight: 800, fontSize: 19, color: C.laranja }}>{client.name.charAt(0).toUpperCase()}</span>}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 17, fontWeight: 800, color: C.ink }}>{client.name}</div>
-                <div style={{ fontSize: 12, color: C.sub }}>Relatório de Entregas · {coverPeriodo}</div>
-              </div>
-              {agencyLogo && (
-                <img src={agencyLogo} alt="" crossOrigin="anonymous" style={{ maxHeight: 26, maxWidth: 130, objectFit: "contain", display: "block", flexShrink: 0, borderRadius: 7 }} />
-              )}
-            </div>
-
-            {/* Recado da social mídia: abre o relatório com a leitura humana do mês.
-                Só aparece quando há texto (o cliente não vê um bloco vazio). */}
-            {notes.trim() && (
-              <div data-pdf-block style={{ marginTop: 18, padding: "14px 16px", border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.brand}`, borderRadius: 12, background: C.soft }}>
-                <div style={{ fontSize: 10.5, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
-                  {managerName ? `Recado de ${managerName}` : "Recado da social mídia"}
-                </div>
-                <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{notes.trim()}</div>
-              </div>
-            )}
-
-            {/* Período totalmente vazio: estado honesto em vez de uma parede de zeros */}
-            {stats.total === 0 && !perf.has ? (
-              <div data-pdf-block style={{ marginTop: 20, padding: "22px 20px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft, textAlign: "center" }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>Nenhuma atividade registrada em {monthLabel}</div>
-                <div style={{ fontSize: 12, color: C.sub, marginTop: 6, lineHeight: 1.5 }}>
-                  Não houve peça produzida, aprovada ou publicada neste período.
-                  {hasPriorHistory ? ` No período anterior (${prevPeriod.label}) foram ${prevStats.published} publicação(ões).` : " Este é o primeiro período acompanhado."}
-                </div>
-              </div>
-            ) : (
-            <>
-            {/* Entrega: o número que prova o trabalho vem primeiro e grande */}
-            <div data-pdf-block style={{ marginTop: 20 }}>
-              <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
-                <div style={{ flex: 1, border: `1px solid ${C.green}`, borderRadius: 12, padding: "16px 18px", background: "#f0fdf4" }}>
-                  <div style={{ fontSize: 38, fontWeight: 800, color: C.green, lineHeight: 1 }}>{nb(stats.published)}</div>
-                  <div style={{ fontSize: 11, color: C.sub, marginTop: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                    {stats.published === 1 ? "Post publicado no período" : "Posts publicados no período"}
-                  </div>
-                </div>
-              </div>
-
-              {/* Funil completo: as cinco etapas do fluxo, nenhuma escondida */}
-              <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-                {STATUS_KEYS.map((k) => {
-                  const color = k === "postado" ? C.green : k === "aprovado" ? C.green
-                    : k === "pendente" ? C.amber : k === "ajuste_solicitado" ? C.orange : C.sub;
-                  return (
-                    <div key={k} style={{ flex: 1, minWidth: 96, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px" }}>
-                      <div style={{ fontSize: 19, fontWeight: 800, color, lineHeight: 1 }}>{stats.byStatus[k]}</div>
-                      <div style={{ fontSize: 10, color: C.sub, marginTop: 5, textTransform: "uppercase", letterSpacing: 0.4 }}>{STATUS_LABEL[k]}</div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8, lineHeight: 1.5 }}>
-                O funil mostra em que etapa cada peça do período está hoje.
-              </div>
-            </div>
-
-            {/* Breakdown */}
-            <div data-pdf-block style={{ display: "flex", gap: 24, marginTop: 24 }}>
-              <div style={{ flex: 1 }}>
-                {sectionTitle("Por formato", C.azul)}
-                {Object.keys(stats.byFormat).length === 0
-                  ? <div style={{ fontSize: 12, color: C.sub }}>Sem posts no período.</div>
-                  : Object.entries(stats.byFormat).sort((a, b) => b[1] - a[1]).map(([f, v]) => breakdownRow(FORMAT_LABELS[f] ?? cap(f), v, stats.total))}
-              </div>
-              <div style={{ flex: 1 }}>
-                {sectionTitle("Por plataforma", C.lilas)}
-                {Object.keys(stats.byPlatform).length === 0
-                  ? <div style={{ fontSize: 12, color: C.sub }}>Sem posts no período.</div>
-                  : Object.entries(stats.byPlatform).sort((a, b) => b[1] - a[1]).map(([p, v]) => breakdownRow(cap(p), v, stats.total))}
-              </div>
-            </div>
-
-            {/* Leitura do período: destaque, formato campeão e fluxo de aprovação */}
-            {(highlight || bestFormat || stats.cycleDays !== null || stuck.length > 0) && (
-              <div data-pdf-block style={{ marginTop: 24 }}>
-                {sectionTitle("O que o período mostrou", C.verde)}
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  {highlight && (
-                    <div style={{ flex: 2, minWidth: 260, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px", display: "flex", gap: 12, alignItems: "center" }}>
-                      <div style={{ width: 52, height: 52, borderRadius: 10, background: C.soft, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {highlight.best.thumbnail_url
-                          ? <img src={highlight.best.thumbnail_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                          : <span style={{ fontSize: 9, color: C.sub }}>{highlight.best.type}</span>}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 10.5, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Destaque do período</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, marginTop: 3 }}>{highlight.best.title}</div>
-                        <div style={{ fontSize: 11.5, color: C.sub, marginTop: 3 }}>
-                          {nb(highlight.best.reach)} de alcance · {nb(highlight.best.saved)} salvamentos
-                          {highlight.best.vsAvg !== null && highlight.best.vsAvg > 0
-                            ? <span style={{ color: C.green, fontWeight: 600 }}> · {highlight.best.vsAvg}% acima da média</span>
-                            : null}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {bestFormat && (
-                    <div style={{ flex: 1, minWidth: 200, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px" }}>
-                      <div style={{ fontSize: 10.5, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Formato que mais rendeu</div>
-                      <div style={{ fontSize: 17, fontWeight: 800, color: C.ink, marginTop: 4 }}>{bestFormat.label}</div>
-                      <div style={{ fontSize: 11.5, color: C.sub, marginTop: 3 }}>
-                        {nb(bestFormat.avg)} de alcance médio em {bestFormat.count} publicação{bestFormat.count === 1 ? "" : "ões"}
-                        {bestFormat.lift !== null && bestFormat.lift > 0 ? `, ${bestFormat.lift}% acima de ${bestFormat.vs}` : ""}.
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {(stats.cycleDays !== null || stuck.length > 0 || highlight?.worst) && (
-                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
-                    {stats.cycleDays !== null && (
-                      <div style={{ flex: 1, minWidth: 200, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px" }}>
-                        <div style={{ fontSize: 10.5, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Tempo até a aprovação</div>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: C.ink, marginTop: 4 }}>
-                          {stats.cycleDays.toFixed(1).replace(".", ",")} <span style={{ fontSize: 13, fontWeight: 600 }}>dias</span>
-                        </div>
-                        <div style={{ fontSize: 11, color: C.sub, marginTop: 3 }}>
-                          Média da criação da peça até a aprovação, em {stats.cycleSample} peça{stats.cycleSample === 1 ? "" : "s"} aprovada{stats.cycleSample === 1 ? "" : "s"} no período.
-                        </div>
-                      </div>
-                    )}
-                    {stuck.length > 0 && (
-                      <div style={{ flex: 1, minWidth: 220, border: `1px solid ${C.amber}`, borderRadius: 12, padding: "14px 16px", background: "#fffbeb" }}>
-                        <div style={{ fontSize: 10.5, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Aguardando sua resposta</div>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: C.amber, marginTop: 4 }}>
-                          {stuck.length} <span style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>peça{stuck.length === 1 ? "" : "s"} há 7 dias ou mais</span>
-                        </div>
-                        <div style={{ fontSize: 11, color: C.sub, marginTop: 5, lineHeight: 1.5 }}>
-                          {stuck.slice(0, 3).map((s) => `${s.p.title} (${s.days} dias)`).join(" · ")}
-                          {stuck.length > 3 ? ` e mais ${stuck.length - 3}.` : "."}
-                        </div>
-                      </div>
-                    )}
-                    {highlight?.worst && (
-                      <div style={{ flex: 1, minWidth: 200, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px" }}>
-                        <div style={{ fontSize: 10.5, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Menor alcance do período</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, marginTop: 4 }}>{highlight.worst.title}</div>
-                        <div style={{ fontSize: 11.5, color: C.sub, marginTop: 3 }}>
-                          {nb(highlight.worst.reach)} de alcance, contra {nb(highlight.avg)} de média. Serve de referência do que evitar repetir.
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-            </>
-            )}
-
-            {/* Lista de posts do período (produzidos, agendados ou publicados) */}
-            {monthPosts.length > 0 && (
-              <div data-pdf-block style={{ marginTop: 24 }}>
-                {sectionTitle(`Peças do período (${monthPosts.length})`, C.verde)}
-                <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
-                  {monthPosts.map((p, i) => {
-                    const k = statusOf(p);
-                    const color = k === "postado" ? C.green : k === "aprovado" ? C.green
-                      : k === "pendente" ? C.amber : k === "ajuste_solicitado" ? C.orange : C.sub;
-                    const label = k === "postado" ? "Publicado" : k === "aprovado" ? "Aprovado"
-                      : k === "pendente" ? "Aguardando" : k === "ajuste_solicitado" ? "Em ajuste" : "Em produção";
-                    const dia = publishedDayOf(p) ?? p.scheduled_date;
-                    return (
-                      <div key={p.id} data-pdf-block style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>{p.title}</div>
-                          <div style={{ fontSize: 11, color: C.sub }}>
-                            {FORMAT_LABELS[p.format] ?? cap(p.format)} · {cap(p.platform)}
-                            {dia ? ` · ${parseDateOnly(dia).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}` : ""}
-                          </div>
-                        </div>
-                        <div style={{ fontSize: 11, fontWeight: 700, color, whiteSpace: "nowrap" }}>{label}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Análise do mês, editável (Word-like) */}
-            <div data-pdf-block style={{ marginTop: 24 }}>
-              {sectionTitle("Análise do período")}
-              <div
-                ref={editorRef}
-                contentEditable
-                suppressContentEditableWarning
-                onInput={updateActive}
-                onKeyUp={updateActive}
-                onMouseUp={updateActive}
-                onFocus={() => { setAnaliseFocada(true); updateActive(); }}
-                onBlur={() => setAnaliseFocada(false)}
-                data-placeholder="Escreva a análise ou clique em “Gerar análise (IA)”. Você pode formatar com a barra acima."
-                className="report-editor"
-                style={{ fontSize: 13, color: C.ink, lineHeight: 1.6, outline: "none", minHeight: 48 }}
-              />
-            </div>
-
-            {/* Desempenho, números reais do Instagram quando os posts estão vinculados */}
-            {perf.has ? (
-              <div style={{ marginTop: 24 }}>
-                <div data-pdf-block>
-                  {sectionTitle(`Desempenho no Instagram (${perf.posts} post${perf.posts === 1 ? "" : "s"})`)}
-                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                    {statCard("Alcance", nb(perf.reach), C.ink, igDelta.has ? igDelta.reach : undefined)}
-                    {statCard("Visualizações", nb(perf.views), C.ink, igDelta.has ? igDelta.views : undefined)}
-                    {statCard("Interações", nb(perf.interactions), C.ink, igDelta.has ? igDelta.interactions : undefined)}
-                    {statCard("Salvamentos", nb(perf.saved))}
-                    {perf.engRate !== null && statCard(
-                      "Taxa de engajamento",
-                      `${perf.engRate.toFixed(1).replace(".", ",")}%`,
-                      perf.engRate >= 3 ? C.green : C.ink,
-                      igDelta.engRate ?? undefined,
-                      "%",
-                    )}
-                  </div>
-                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
-                    {statCard("Curtidas", nb(perf.likes))}
-                    {statCard("Comentários", nb(perf.comments))}
-                    {followers && (
-                      <div key="seguidores" style={{ flex: 1, minWidth: 118, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px" }}>
-                        <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color: followers.delta >= 0 ? C.green : C.orange }}>
-                          {followers.delta >= 0 ? "+" : ""}{nb(followers.delta)}
-                        </div>
-                        <div style={{ fontSize: 11, color: C.sub, marginTop: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Seguidores no período</div>
-                        <div style={{ fontSize: 10.5, color: C.sub, marginTop: 5 }}>de {nb(followers.start)} para {nb(followers.end)}</div>
-                      </div>
-                    )}
-                  </div>
-                  {!igDelta.has && (
-                    <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8 }}>
-                      Não há medição do Instagram em {prevPeriod.label}, então este é o primeiro período com comparação possível.
-                    </div>
-                  )}
-                </div>
-
-                {ranking.length > 0 && (
-                  <div data-pdf-block style={{ marginTop: 18 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>
-                      Ranking de posts{bestHour ? ` · top post publicado às ${bestHour}` : ""}
-                    </div>
-                    <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
-                      {ranking.map((r, i) => {
-                        const views = Number(r.metrics?.views ?? r.metrics?.plays) || 0;
-                        return (
-                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
-                            <div style={{ width: 20, fontSize: 13, fontWeight: 800, color: C.brand, textAlign: "center" }}>{i + 1}</div>
-                            <div style={{ width: 44, height: 44, borderRadius: 8, background: C.soft, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                              {r.thumbnail_url
-                                ? <img src={r.thumbnail_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                : <span style={{ fontSize: 9, color: C.sub }}>{MEDIA_PT[r.media_type ?? ""] ?? "post"}</span>}
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 12, fontWeight: 600, color: C.ink }}>
-                                {MEDIA_PT[r.media_type ?? ""] ?? r.media_type ?? "Post"} · {dtFmt(r.posted_at)}
-                              </div>
-                              <div style={{ fontSize: 11, color: C.sub }}>
-                                {(Number(r.metrics?.reach) || 0).toLocaleString("pt-BR")} alcance · {(Number(r.metrics?.likes) || 0).toLocaleString("pt-BR")} curtidas · {(Number(r.metrics?.comments) || 0).toLocaleString("pt-BR")} coment.{views ? ` · ${views.toLocaleString("pt-BR")} views` : ""}
-                              </div>
-                            </div>
-                            <div style={{ fontSize: 12, fontWeight: 700, color: C.brand, whiteSpace: "nowrap" }}>{engOf(r.metrics)} interações</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* As peças que produzimos e o que renderam: mídia do IG × external_post vinculado */}
-                {pieces.length > 0 && (
-                  <div data-pdf-block style={{ marginTop: 18 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>
-                      As peças que produzimos e o que renderam ({pieces.length})
-                    </div>
-                    <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
-                      {pieces.map((p, i) => (
-                        <div key={i} data-pdf-block style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
-                          <div style={{ width: 44, height: 44, borderRadius: 8, background: C.soft, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            {p.thumbnail_url
-                              ? <img src={p.thumbnail_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                              : <span style={{ fontSize: 9, color: C.sub }}>{p.format ? (FORMAT_LABELS[p.format] ?? p.format) : "post"}</span>}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</div>
-                            <div style={{ fontSize: 11, color: C.sub }}>
-                              {p.format ? (FORMAT_LABELS[p.format] ?? cap(p.format)) : "Post"}{p.posted_at ? ` · ${dtFmt(p.posted_at)}` : ""}
-                            </div>
-                          </div>
-                          <div style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                            <div style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>{p.reach.toLocaleString("pt-BR")} alcance</div>
-                            <div style={{ fontSize: 11, color: C.sub }}>{p.saved.toLocaleString("pt-BR")} salvos · {p.interactions.toLocaleString("pt-BR")} inter.</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Camada 2: alcance médio real por formato (e hook) da peça produzida */}
-                    {byProducedFormat.length > 0 && (
-                      <div style={{ marginTop: 14 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por formato que produzimos</div>
-                        {(() => { const mx = Math.max(...byProducedFormat.map((r) => r.avg), 0); return byProducedFormat.map((r) => crossRow(FORMAT_LABELS[r.f] ?? cap(r.f), r.avg, r.n, mx)); })()}
-                      </div>
-                    )}
-                    {byProducedHook.length > 0 && (
-                      <div style={{ marginTop: 14 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por hook que produzimos</div>
-                        {(() => { const mx = Math.max(...byProducedHook.map((r) => r.avg), 0); return byProducedHook.map((r) => crossRow(r.h, r.avg, r.n, mx)); })()}
-                      </div>
-                    )}
-                    <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8 }}>
-                      Cruzamento pelas peças que a agência produziu no Cria Post (formato e hook). Pilar não é registrado em posts externos, por isso fica de fora.
-                    </div>
-                  </div>
-                )}
-
-                {/* Direcionamento: conclusões pro cliente entender o que rende mais */}
-                {crossHl.length > 0 && (
-                  <div data-pdf-block style={{ marginTop: 18, padding: "14px 16px", border: `1px solid ${C.line}`, borderRadius: 12, background: C.soft }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Direcionamento do período</div>
-                    <ul style={{ margin: 0, paddingLeft: 18 }}>
-                      {crossHl.map((h, i) => (
-                        <li key={i} style={{ fontSize: 12, color: C.ink, marginBottom: 5, lineHeight: 1.5 }}>{h}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Cruzamentos: alcance médio por formato, dia e horário */}
-                {cross.hasData && (
-                  <div data-pdf-block style={{ display: "flex", gap: 24, marginTop: 18, flexWrap: "wrap" }}>
-                    {cross.byFormat.length > 0 && (
-                      <div style={{ flex: 1, minWidth: 220 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por formato</div>
-                        {(() => { const mx = Math.max(...cross.byFormat.map((r) => r.avgReach), 0); return cross.byFormat.map((r) => crossRow(r.label, r.avgReach, r.count, mx)); })()}
-                      </div>
-                    )}
-                    {cross.byWeekday.length > 1 && (
-                      <div style={{ flex: 1, minWidth: 220 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por dia</div>
-                        {(() => { const mx = Math.max(...cross.byWeekday.map((r) => r.avgReach), 0); return cross.byWeekday.map((r) => crossRow(r.label, r.avgReach, r.count, mx)); })()}
-                      </div>
-                    )}
-                    {cross.byTime.length > 1 && (
-                      <div style={{ flex: 1, minWidth: 220 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Alcance médio por período</div>
-                        {(() => { const mx = Math.max(...cross.byTime.map((r) => r.avgReach), 0); return cross.byTime.map((r) => crossRow(r.label, r.avgReach, r.count, mx)); })()}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Destaque de Reels por tempo médio assistido (retenção) */}
-                {topReels.length > 0 && (
-                  <div data-pdf-block style={{ marginTop: 18 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Reels com mais retenção (tempo médio assistido)</div>
-                    <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
-                      {topReels.map(({ r, watch, views }, i) => (
-                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
-                          <div style={{ width: 20, fontSize: 13, fontWeight: 800, color: C.brand, textAlign: "center" }}>{i + 1}</div>
-                          <div style={{ width: 44, height: 44, borderRadius: 8, background: C.soft, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            {r.thumbnail_url
-                              ? <img src={r.thumbnail_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                              : <span style={{ fontSize: 9, color: C.sub }}>Reels</span>}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: C.ink }}>{r.caption ? r.caption.slice(0, 60) : "Reels"}</div>
-                            <div style={{ fontSize: 11, color: C.sub }}>{fmtWatch(watch)} assistidos em média{views ? ` · ${fmtNum(views)} views` : ""}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : metricShots.length === 0 ? (
-              <div data-pdf-block style={{ marginTop: 20, padding: "14px 16px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>Métricas de alcance e engajamento</div>
-                <div style={{ fontSize: 11, color: C.sub, marginTop: 4, lineHeight: 1.55 }}>
-                  Este relatório cobre a produção e a entrega das peças. Alcance, visualizações, salvamentos e evolução de seguidores
-                  vêm direto do Instagram e só podem ser lidos com o perfil conectado, o que ainda não foi feito. Assim que a conexão
-                  for autorizada, esta seção passa a sair preenchida nos próximos relatórios.
-                </div>
-              </div>
-            ) : null}
-
-            {/* Métricas do Instagram por print: a social mídia sobe o print do app do
-                IG (alcance, seguidores, etc) e ele entra aqui como imagem. Serve
-                sobretudo pra cliente sem o perfil conectado. */}
-            {metricShots.length > 0 && (
-              <div data-pdf-block style={{ marginTop: 24 }}>
-                {sectionTitle("Métricas do Instagram", C.azul)}
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {metricShots.map((s) => (
-                    <div key={s.path} data-pdf-block style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden", background: "#fff" }}>
-                      <img src={s.url} alt="Print das métricas do Instagram" crossOrigin="anonymous" style={{ display: "block", width: "100%", height: "auto" }} />
-                    </div>
-                  ))}
-                </div>
-                <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8 }}>
-                  Prints das métricas direto do Instagram no período.
-                </div>
-              </div>
-            )}
-
-            {/* Perfil de audiência: faixa etária, gênero, top cidades, top países */}
-            {audience.hasData && (
-              <div data-pdf-block style={{ marginTop: 24 }}>
-                {sectionTitle(`Perfil de audiência${audience.source === "engaged" ? " (com base nos engajados)" : ""}`)}
-                {(audience.age.length > 0 || audience.gender.length > 0) && (
-                  <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-                    {audience.age.length > 0 && audienceCol("Faixa etária", audience.age)}
-                    {audience.gender.length > 0 && audienceCol("Gênero", audience.gender)}
-                  </div>
-                )}
-                {(audience.city.length > 0 || audience.country.length > 0) && (
-                  <div style={{ display: "flex", gap: 24, marginTop: 14, flexWrap: "wrap" }}>
-                    {audience.city.length > 0 && audienceCol("Principais cidades", audience.city)}
-                    {audience.country.length > 0 && audienceCol("Principais países", audience.country)}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Stories: alcance, alcance médio, respostas, taxa de resposta, navegação */}
-            {stories.hasData && (
-              <div data-pdf-block style={{ marginTop: 24 }}>
-                {sectionTitle(`Stories (${stories.count} no período)`)}
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  {statCard("Alcance", nb(stories.reach))}
-                  {statCard("Alcance médio", nb(stories.avgReach))}
-                  {statCard("Respostas", nb(stories.replies))}
-                  {statCard("Taxa de resposta", `${stories.replyRate.toFixed(1).replace(".", ",")}%`)}
-                  {stories.navigation > 0 && statCard("Navegação", nb(stories.navigation))}
-                </div>
-              </div>
-            )}
-
-            {/* Captação do período: o que foi a campo no mês (gravações). Puxado de
-                agenda_captures pelo mesmo período; sempre com estado vazio honesto. */}
-            <div data-pdf-block style={{ marginTop: 24 }}>
-              {sectionTitle("Captação do período", C.rosa)}
-              {!client.crm_client_id ? (
-                <div style={{ fontSize: 12, color: C.sub, padding: "12px 14px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
-                  Vincule este cliente ao cadastro central pra trazer as captações do período aqui.
-                </div>
-              ) : captureSummary.total === 0 ? (
-                <div style={{ fontSize: 12, color: C.sub, padding: "12px 14px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
-                  Nenhuma captação registrada neste período.
-                </div>
-              ) : (
-                <>
-                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                    {statCard(captureSummary.total === 1 ? "Captação" : "Captações", nb(captureSummary.total))}
-                    {statCard("Concluídas", nb(captureSummary.done), C.green)}
-                    {captureSummary.last && statCard("Última captação", parseDateOnly(captureSummary.last).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }))}
-                  </div>
-
-                  {/* Lista das gravações do mês, cada uma com a nota/briefing que a
-                      social mídia deixou na agenda (ex.: "Vídeos ADS Yasmin"). */}
-                  <div style={{ marginTop: 12, border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
-                    {captureList.map((c, i) => {
-                      const st = c.status === "concluida" ? { t: "Concluída", cor: C.green }
-                        : c.status === "cancelada" ? { t: "Cancelada", cor: C.sub }
-                        : { t: "Agendada", cor: C.amber };
-                      const dia = parseDateOnly(c.capture_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
-                      const local = [c.location, c.team].filter(Boolean).join(" · ");
-                      return (
-                        <div key={c.id} data-pdf-block style={{ display: "flex", gap: 12, padding: "11px 14px", borderTop: i === 0 ? "none" : `1px solid ${C.line}`, opacity: c.status === "cancelada" ? 0.6 : 1 }}>
-                          <div style={{ width: 58, flexShrink: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 800, color: C.ink }}>{dia}</div>
-                            {c.capture_time && <div style={{ fontSize: 11, color: C.sub }}>{c.capture_time.slice(0, 5)}</div>}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13, color: C.ink, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>
-                              {c.note?.trim() ? c.note.trim() : <span style={{ color: C.sub, fontStyle: "italic" }}>Sem nota registrada.</span>}
-                            </div>
-                            {local && <div style={{ fontSize: 11, color: C.sub, marginTop: 3 }}>{local}</div>}
-                          </div>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: st.cor, whiteSpace: "nowrap", flexShrink: 0 }}>{st.t}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {captureSummary.cancelled > 0 && (
-                    <div style={{ fontSize: 10.5, color: C.sub, marginTop: 8 }}>
-                      {captureSummary.cancelled === 1 ? "1 captação foi cancelada" : `${captureSummary.cancelled} captações foram canceladas`} no período.
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Rodapé branded (white-label). Protagonismo do cliente e da agência lá
-                em cima; aqui embaixo o Cria entra só como assinatura discreta. */}
-            <div data-pdf-block style={{ marginTop: 22, paddingTop: 14, borderTop: `1px solid ${C.line}` }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ fontSize: 11, color: C.sub }}>
-                  {managerName ? `Preparado por ${managerName}` : "Relatório de gestão de conteúdo"}
-                </div>
-                <div style={{ fontSize: 11, color: C.sub }}>
-                  Gerado em {new Date().toLocaleDateString("pt-BR")}
-                </div>
-              </div>
-              <AssinaturaCria variante="rodape" tom="claro" style={{ marginTop: 10 }} />
-            </div>
-          </div>
+          <div ref={reportRef} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {paginasRender}
           </div>
         </div>
 

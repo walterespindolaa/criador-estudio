@@ -94,6 +94,25 @@ async function buildPdf(element: HTMLDivElement) {
 
   await waitForImages(element);
 
+  // MODO PAGINADO: quando o elemento é montado em folhas A4 reais
+  // ([data-pdf-page], caso do relatório do cliente), fotografamos cada folha
+  // separadamente e cada uma vira exatamente UMA página do PDF. Sem fatiar
+  // canvas: sem compressão, sem corte no meio de texto e sem emenda.
+  const pages = Array.from(element.querySelectorAll<HTMLElement>("[data-pdf-page]"));
+  if (pages.length > 0) {
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const w = pdf.internal.pageSize.getWidth();
+    const h = pdf.internal.pageSize.getHeight();
+    for (let i = 0; i < pages.length; i++) {
+      const canvas = await html2canvas(pages[i], {
+        scale: 2, useCORS: true, logging: false, backgroundColor: "#ffffff",
+      });
+      if (i > 0) pdf.addPage();
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, w, h);
+    }
+    return pdf;
+  }
+
   const fullHeight = Math.max(
     element.scrollHeight,
     element.offsetHeight,
