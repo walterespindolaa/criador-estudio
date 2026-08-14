@@ -1062,7 +1062,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   };
 
   const statCard = (label: string, value: string | number, color = C.ink, d?: Delta, unit = "", invert = false) => (
-    <div key={label} style={{ flex: 1, minWidth: 118, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px" }}>
+    <div key={label} style={{ flex: 1, minWidth: 118, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px", background: C.cremeCard }}>
       <div style={{ fontSize: 26, fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
       <div style={{ fontSize: 11, color: C.sub, marginTop: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
       {d !== undefined && deltaLine(d, unit, invert)}
@@ -1197,7 +1197,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
   // Cabeçalho e rodapé das páginas de conteúdo.
   const cabecalhoPagina = (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "18px 32px 12px", borderBottom: `2px solid ${C.laranja}`, flexShrink: 0 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "18px 32px 12px", borderBottom: `2px solid ${C.laranja}`, background: C.creme, flexShrink: 0 }}>
       <div style={{ width: 30, height: 30, borderRadius: "50%", background: C.soft, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
         {client.logo_url
           ? <img src={client.logo_url} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -1213,7 +1213,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     </div>
   );
   const rodapePagina = (num: number, total: number) => (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 32px 16px", borderTop: `1px solid ${C.line}`, flexShrink: 0 }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 32px 16px", borderTop: `1px solid ${C.line}`, background: C.cremeCard, flexShrink: 0 }}>
       <span style={{ fontSize: 9.5, color: C.sub }}>Preparado por {elaboradoPor}</span>
       <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 9.5, color: C.sub }}>
         Feito com <img src="/logo-cria.png" alt="Cria Social Club" style={{ height: 12, width: "auto", display: "block", opacity: 0.9 }} />
@@ -1257,7 +1257,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           const color = k === "postado" ? C.green : k === "aprovado" ? C.green
             : k === "pendente" ? C.amber : k === "ajuste_solicitado" ? C.orange : C.sub;
           return (
-            <div key={k} style={{ flex: 1, minWidth: 92, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px" }}>
+            <div key={k} style={{ flex: 1, minWidth: 92, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", background: C.cremeCard }}>
               <div style={{ fontSize: 18, fontWeight: 800, color, lineHeight: 1 }}>{stats.byStatus[k]}</div>
               <div style={{ fontSize: 9.5, color: C.sub, marginTop: 5, textTransform: "uppercase", letterSpacing: 0.4 }}>{STATUS_LABEL[k]}</div>
             </div>
@@ -1322,7 +1322,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           </div>
         )}
         {bestFormat && (
-          <div style={{ flex: 1, minWidth: 190, border: `1px solid ${C.line}`, borderRadius: 12, padding: "13px 15px" }}>
+          <div style={{ flex: 1, minWidth: 190, border: `1px solid ${C.line}`, borderRadius: 12, padding: "13px 15px", background: C.cremeCard }}>
             <div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Formato que mais rendeu</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: C.ink, marginTop: 4 }}>{bestFormat.label}</div>
             <div style={{ fontSize: 11, color: C.sub, marginTop: 3 }}>
@@ -1335,7 +1335,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       {(stats.cycleDays !== null || stuck.length > 0 || highlight?.worst) && (
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
           {stats.cycleDays !== null && (
-            <div style={{ flex: 1, minWidth: 190, border: `1px solid ${C.line}`, borderRadius: 12, padding: "13px 15px" }}>
+            <div style={{ flex: 1, minWidth: 190, border: `1px solid ${C.line}`, borderRadius: 12, padding: "13px 15px", background: C.cremeCard }}>
               <div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Tempo até a aprovação</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: C.ink, marginTop: 4 }}>
                 {stats.cycleDays.toFixed(1).replace(".", ",")} <span style={{ fontSize: 12, fontWeight: 600 }}>dias</span>
@@ -1358,7 +1358,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             </div>
           )}
           {highlight?.worst && (
-            <div style={{ flex: 1, minWidth: 190, border: `1px solid ${C.line}`, borderRadius: 12, padding: "13px 15px" }}>
+            <div style={{ flex: 1, minWidth: 190, border: `1px solid ${C.line}`, borderRadius: 12, padding: "13px 15px", background: C.cremeCard }}>
               <div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Menor alcance do período</div>
               <div style={{ fontSize: 12.5, fontWeight: 700, color: C.ink, marginTop: 4 }}>{highlight.worst.title}</div>
               <div style={{ fontSize: 11, color: C.sub, marginTop: 3 }}>
@@ -1438,7 +1438,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         {statCard("Curtidas", nb(perf.likes))}
         {statCard("Comentários", nb(perf.comments))}
         {followers && (
-          <div key="seguidores" style={{ flex: 1, minWidth: 118, border: `1px solid ${C.line}`, borderRadius: 12, padding: "13px 15px" }}>
+          <div key="seguidores" style={{ flex: 1, minWidth: 118, border: `1px solid ${C.line}`, borderRadius: 12, padding: "13px 15px", background: C.cremeCard }}>
             <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1, color: followers.delta >= 0 ? C.green : C.orange }}>
               {followers.delta >= 0 ? "+" : ""}{nb(followers.delta)}
             </div>
