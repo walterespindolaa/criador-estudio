@@ -117,7 +117,16 @@ function buildStats(all: ExternalPost[], since: Date, until: Date): PeriodStats 
   // Data que define o mês do post: publicação (se postado) ou agendamento.
   const refDayOf = (p: ExternalPost): string | null => publishedDayOf(p) ?? p.scheduled_date;
 
-  const posts = all.filter((p) => dayIn(refDayOf(p)));
+  // Peça SEM data nenhuma (em produção/aguardando, ainda não agendada) é
+  // trabalho de AGORA: entra no relatório do período corrente. Sem isso, o funil
+  // e o "por formato" zeravam mesmo com peças no fluxo (o "0 posts" do PDF).
+  // Em período fechado (mês passado), peça sem data continua de fora.
+  const periodoCorrente = until.getTime() > Date.now();
+  const posts = all.filter((p) => {
+    const ref = refDayOf(p);
+    if (ref) return dayIn(ref);
+    return periodoCorrente && statusOf(p) !== "postado";
+  });
 
   const byStatus = Object.fromEntries(STATUS_KEYS.map((k) => [k, 0])) as Record<StatusKey, number>;
   const byFormat: Record<string, number> = {};
@@ -397,18 +406,18 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
   // Carrega a nota salva pra este cliente+período. Se a tabela ainda não existir
   // (migration não rodou), a query falha e a nota fica só na sessão.
-  const { data: savedNote, isFetched: notesFetched } = useQuery<{ body: string; shots: { path: string; url: string }[] }>({
+  const { data: savedNote, isFetched: notesFetched } = useQuery<{ body: string; analysis: string; shots: { path: string; url: string }[] }>({
     queryKey: ["report-notes", agencyOwnerId, client.crm_client_id, notesKey],
     enabled: open && canPersistNotes,
     queryFn: async () => {
       const { data, error } = await sbFrom("client_report_notes")
-        .select("body, metrics_images")
+        .select("body, metrics_images, analysis_html")
         .eq("manager_id", agencyOwnerId!)
         .eq("crm_client_id", client.crm_client_id!)
         .eq("period_key", notesKey)
         .maybeSingle();
       if (error) throw error;
-      const row = data as { body: string | null; metrics_images: string[] | null } | null;
+      const row = data as { body: string | null; metrics_images: string[] | null; analysis_html?: string | null } | null;
       const paths = row?.metrics_images ?? [];
       // Assina cada caminho do Storage pra renderizar (bucket privado).
       const shots: { path: string; url: string }[] = [];
@@ -416,12 +425,20 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         const { data: s } = await supabase.storage.from("relatorios").createSignedUrl(p, 60 * 60 * 24 * 30);
         if (s?.signedUrl) shots.push({ path: p, url: s.signedUrl });
       }
-      return { body: row?.body ?? "", shots };
+      return { body: row?.body ?? "", analysis: row?.analysis_html ?? "", shots };
     },
   });
   // Espelha a nota e os prints carregados ao abrir/trocar de período/cliente.
   useEffect(() => {
-    if (notesFetched) { setNotes(savedNote?.body ?? ""); setMetricShots(savedNote?.shots ?? []); }
+    if (!notesFetched) return;
+    setNotes(savedNote?.body ?? "");
+    setMetricShots(savedNote?.shots ?? []);
+    // Restaura a análise salva deste período no editor (sem sobrescrever o que
+    // a pessoa já digitou nesta sessão).
+    if (editorRef.current && !editorRef.current.textContent?.trim() && savedNote?.analysis) {
+      editorRef.current.innerHTML = savedNote.analysis;
+      setAnaliseTemTexto(true);
+    }
   }, [notesFetched, savedNote, notesKey]);
 
   const saveNotes = async () => {
@@ -430,7 +447,11 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     try {
       const { error } = await sbFrom("client_report_notes").upsert({
         manager_id: agencyOwnerId, crm_client_id: client.crm_client_id,
-        period_key: notesKey, body: notes, updated_at: new Date().toISOString(),
+        period_key: notesKey, body: notes,
+        // A análise (IA ou escrita à mão) é salva JUNTO da nota, no mesmo
+        // registro do período, pra reabrir depois sem gerar o relatório de novo.
+        analysis_html: editorRef.current?.innerHTML ?? null,
+        updated_at: new Date().toISOString(),
       } as never, { onConflict: "manager_id,crm_client_id,period_key" });
       if (error) throw error;
     } catch (e) {
@@ -1009,6 +1030,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         (recs ? `<p><strong>Recomendações</strong></p><ul>${recs}</ul>` : "");
       if (editorRef.current) editorRef.current.innerHTML = html;
       setAnaliseTemTexto(true);
+      if (canPersistNotes) void saveNotes();
       // A análise fica no meio do preview (longe do botão), então rola até ela e
       // avisa, senão parece que "não gerou nada".
       editorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1036,6 +1058,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       linhas.push(`<p><strong>Recomendações</strong></p><ul>${recs.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>`);
       if (editorRef.current) editorRef.current.innerHTML = linhas.join("");
       setAnaliseTemTexto(true);
+      if (canPersistNotes) void saveNotes();
       editorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       toast.message(
         msg && !/non-2xx/i.test(msg) ? `IA indisponível (${msg}). Gerei um resumo automático, você pode editar.` : "IA indisponível agora. Gerei um resumo automático, você pode editar.",
@@ -1449,7 +1472,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         onKeyUp={updateActive}
         onMouseUp={updateActive}
         onFocus={() => { setAnaliseFocada(true); updateActive(); }}
-        onBlur={() => setAnaliseFocada(false)}
+        onBlur={() => { setAnaliseFocada(false); if (canPersistNotes) void saveNotes(); }}
         data-placeholder="Escreva a análise ou clique em “Gerar análise (IA)”. Este texto é editável: clique nele e digite."
         className="report-editor"
         style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.6, outline: "none", minHeight: 64, cursor: "text" }}
@@ -1878,7 +1901,18 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             <label htmlFor="report-notes" className="text-xs font-body font-semibold text-foreground">
               Recado da social mídia <span className="font-normal text-muted-foreground">(aparece no início do relatório)</span>
             </label>
-            {notesSaving && <span className="text-[11px] font-body text-muted-foreground">salvando…</span>}
+            <div className="flex items-center gap-2">
+              {notesSaving && <span className="text-[11px] font-body text-muted-foreground">salvando…</span>}
+              {canPersistNotes && (
+                <button
+                  type="button"
+                  onClick={async () => { await saveNotes(); toast.success("Nota e análise salvas pra este período."); }}
+                  className="rounded-lg border border-border bg-card px-2.5 py-1 text-[11px] font-body text-foreground hover:bg-accent"
+                >
+                  Salvar nota
+                </button>
+              )}
+            </div>
           </div>
           <textarea
             id="report-notes"
