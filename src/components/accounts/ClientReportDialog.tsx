@@ -480,6 +480,26 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     },
   });
 
+  // Reuniões do período (agenda_creations do cliente): entram no relatório
+  // logo após a captação, quando existirem. select("*") defensivo: title e
+  // event_time são colunas novas.
+  type ReuniaoRow = { id: string; day: string; title?: string | null; event_time?: string | null; team?: string | null; note?: string | null };
+  const { data: reunioes = [] } = useQuery<ReuniaoRow[]>({
+    queryKey: ["report-reunioes", agencyOwnerId, client.crm_client_id, dayRange.since, dayRange.until],
+    enabled: open && !!agencyOwnerId && !!client.crm_client_id,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("agenda_creations")
+        .select("*")
+        .eq("manager_id", agencyOwnerId!)
+        .eq("crm_client_id", client.crm_client_id!)
+        .gte("day", dayRange.since)
+        .lte("day", dayRange.until)
+        .order("day", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as ReuniaoRow[];
+    },
+  });
+
   const captureSummary = useMemo(() => {
     const total = captures.length;
     const valid = captures.filter((c) => c.status !== "cancelada");
@@ -1914,6 +1934,30 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       </div>
     ));
 
+  // Reuniões do período: página(s) logo depois da captação, só quando existem.
+  const reunioesPages = reunioes.length
+    ? pack(reunioes, (r) => 1 + estLinhas(r.note ?? ""), 26).map((grupo, gi, all) => (
+        <div key={`reunioes-${gi}`}>
+          {sectionTitle(all.length > 1 ? `Reuniões do período (${reunioes.length}) · parte ${gi + 1}` : `Reuniões do período (${reunioes.length})`, C.lilas)}
+          <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
+            {grupo.map((r, i) => (
+              <div key={r.id} style={{ display: "flex", gap: 12, padding: "10px 13px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                <div style={{ width: 56, flexShrink: 0 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 800, color: C.ink }}>{parseDateOnly(r.day).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</div>
+                  {r.event_time && <div style={{ fontSize: 10.5, color: C.sub }}>{r.event_time.slice(0, 5)}</div>}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: C.ink }}>{r.title?.trim() || "Reunião"}</div>
+                  {r.note?.trim() && <div style={{ fontSize: 11, color: C.sub, marginTop: 2, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{r.note.trim()}</div>}
+                  {r.team && <div style={{ fontSize: 10.5, color: C.sub, marginTop: 2 }}>{r.team}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))
+    : [];
+
   // Próximos passos: página(s) opcional(is) no final, com a mesma formatação
   // rica do recado (negrito, tópicos, divisor) e continuação quando longo.
   const proximosLinhas = proximos.trim() ? proximos.trim().split("\n") : [];
@@ -1959,6 +2003,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   if (audsNode) defs.push({ key: "audiencia", body: audsNode });
   shotsPages.forEach((b, i) => defs.push({ key: `print-${i}`, body: b }));
   captacaoPages.forEach((b, i) => defs.push({ key: `captacao-${i}`, body: b }));
+  reunioesPages.forEach((b, i) => defs.push({ key: `reunioes-${i}`, body: b }));
   proximosPages.forEach((b, i) => defs.push({ key: `proximos-${i}`, body: b }));
   defs.push({ key: "final", body: paginaFinal, semChrome: true });
 

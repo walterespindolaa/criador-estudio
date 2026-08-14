@@ -18,6 +18,8 @@ export type Creation = {
   // Hora da reunião (opcional). Coluna nova (event_time); leitura defensiva:
   // antes da migration rodar o select("*") não traz e cai como undefined.
   event_time?: string | null;
+  // Título da reunião (ex.: "Alinhamento mensal"). Coluna nova; defensiva.
+  title?: string | null;
   created_at: string;
 };
 
@@ -125,7 +127,7 @@ export function useAddCreation() {
   const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { day: string; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null; event_time?: string | null }) => {
+    mutationFn: async (input: { day: string; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null; event_time?: string | null; title?: string | null }) => {
       if (!agencyOwnerId) throw new Error("Not authenticated");
       const { error } = await sbFrom("agenda_creations").insert({
         manager_id: agencyOwnerId, day: input.day,
@@ -133,6 +135,7 @@ export function useAddCreation() {
         // Só manda a coluna quando há hora: sem hora continua funcionando mesmo
         // antes da migration do event_time rodar.
         ...(input.event_time ? { event_time: input.event_time } : {}),
+        ...(input.title ? { title: input.title } : {}),
       } as never);
       if (error) throw error;
     },
@@ -144,7 +147,7 @@ export function useAddCreation() {
 export function useUpdateCreation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Creation, "day" | "team" | "note" | "crm_client_id" | "client_name" | "event_time">> }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Creation, "day" | "team" | "note" | "crm_client_id" | "client_name" | "event_time" | "title">> }) => {
       const { error } = await sbFrom("agenda_creations").update(patch as never).eq("id", id);
       if (error) throw error;
     },

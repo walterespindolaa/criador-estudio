@@ -1077,15 +1077,19 @@ export default function AgendaCriacao() {
                           role="button" tabIndex={0}
                           onClick={() => setEditCreation(c)}
                           onKeyDown={(e) => { if (e.key === "Enter") setEditCreation(c); }}
-                          style={{ ...dragProvided.draggableProps.style, ...dragCardStyle }}
-                          className={cn("group rounded-lg border border-border bg-card px-2 py-1.5 hover:bg-muted/40 transition-colors",
+                          style={{ ...dragProvided.draggableProps.style, ...dragCardStyle, borderLeftColor: "#4B3FA8" }}
+                          className={cn("group rounded-lg border border-l-2 border-border bg-card px-2 py-1.5 hover:bg-muted/40 transition-colors",
                             dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                           <div className="flex items-start gap-1 min-w-0">
                             <DragGrip className="mt-px" handleProps={dragProvided.dragHandleProps ?? undefined} />
-                            <p className="text-[12px] font-body font-semibold text-foreground leading-tight flex-1 min-w-0 truncate">{nameOf(c.crm_client_id, c.client_name)}</p>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[9px] font-body font-bold uppercase tracking-wider" style={{ color: "#4B3FA8" }}>Reunião{item.time ? ` · ${item.time}` : ""}</p>
+                              <p className="text-[12px] font-body font-semibold text-foreground leading-tight truncate">{c.title?.trim() || nameOf(c.crm_client_id, c.client_name)}</p>
+                              {c.title?.trim() && <p className="text-[10px] font-body text-muted-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</p>}
+                            </div>
                             <button onClick={(e) => { e.stopPropagation(); delCreation.mutate(c.id); }} className="text-muted-foreground/50 hover:text-destructive shrink-0" aria-label="Remover"><X className="h-3 w-3" /></button>
                           </div>
-                          {(item.time || c.team) && <p className="text-[10px] font-body text-muted-foreground truncate">{[item.time, c.team].filter(Boolean).join(" · ")}</p>}
+                          {c.team && <p className="text-[10px] font-body text-muted-foreground truncate">{c.team}</p>}
                         </div>
                       )}
                     </Draggable>
@@ -1404,16 +1408,16 @@ export default function AgendaCriacao() {
       {/* "+" do dia: escolhe o TIPO (criação / tarefa / captação) antes de preencher. */}
       <AddAnyDialog open={!!addDay} day={addDay} clients={clients} teamNames={teamNames} initialKind={addKind}
         onClose={() => setAddDay(null)}
-        onCreation={(crm, name, team, note, time, day) => { addCreation.mutate({ day, crm_client_id: crm, client_name: name, team, note, event_time: time }); setAddDay(null); }}
+        onCreation={(crm, name, team, note, time, title, day) => { addCreation.mutate({ day, crm_client_id: crm, client_name: name, team, note, event_time: time, title }); setAddDay(null); }}
         onTask={(v) => { createTask.mutate(v, { onSuccess: () => toast.success("Tarefa criada.") }); setAddDay(null); }}
         onCapture={(v) => { addCapture.mutate(v); setAddDay(null); }} />
 
       {/* Edição de uma criação existente */}
       <AddCreationDialog open={!!editCreation} day={null} initial={editCreation} clients={clients} teamNames={teamNames}
         onClose={() => setEditCreation(null)}
-        onSave={(crm, name, team, note, time) => {
+        onSave={(crm, name, team, note, time, title) => {
           if (editCreation) {
-            updCreation.mutate({ id: editCreation.id, patch: { crm_client_id: crm, client_name: name, team, note, event_time: time } },
+            updCreation.mutate({ id: editCreation.id, patch: { crm_client_id: crm, client_name: name, team, note, event_time: time, title } },
               { onSuccess: () => toast.success("Reunião atualizada."), onError: () => toast.error("Não consegui salvar.") });
           }
           setEditCreation(null);
@@ -1473,7 +1477,7 @@ export default function AgendaCriacao() {
         const criaModal: Record<Faixa, ClientCriaAgendaPost[]> = { sem: [], manha: [], tarde: [], noite: [] };
         for (const p of criaCli) criaModal[faixaDoItem(null, p.scheduled_time)].push(p);
         const linhaItem = (item: DayItem) => {
-          if (item.kind === "cria") { const c = item.cria; return <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot("#4B3FA8")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">{c.event_time ? `${c.event_time.slice(0, 5)} · ` : ""}Reunião</span></button>; }
+          if (item.kind === "cria") { const c = item.cria; return <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot("#4B3FA8")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{c.title?.trim() || nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">{c.event_time ? `${c.event_time.slice(0, 5)} · ` : ""}Reunião</span></button>; }
           if (item.kind === "task") { const t = item.task; const dotColor = corDaTarefa(t); return <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
           if (item.kind === "mat") { const mt = item.mat; const done = mt.status === "finalizado"; return <button key={`m${mt.id}`} onClick={() => { setDayModal(null); openMaterial(mt); }} className={rowCls}>{dot(corDoMaterial(mt))}<span className={cn("text-[13px] font-body font-semibold truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{mt.title}</span><span className="ml-auto text-[10px] text-muted-foreground shrink-0">Material</span></button>; }
           if (item.kind === "cap") { const c = item.cap; return <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{item.time ? ` · ${item.time}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>; }
@@ -1559,15 +1563,16 @@ function TeamDatalist({ names }: { names: string[] }) {
   return <datalist id="agenda-team-names">{names.map((n) => <option key={n} value={n} />)}</datalist>;
 }
 
-function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, onSave }: { open: boolean; day: string | null; initial?: Creation | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (crm: string | null, name: string | null, team: string | null, note: string | null, time: string | null) => void }) {
+function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, onSave }: { open: boolean; day: string | null; initial?: Creation | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (crm: string | null, name: string | null, team: string | null, note: string | null, time: string | null, title: string | null) => void }) {
   const [crm, setCrm] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [team, setTeam] = useState("");
   const [note, setNote] = useState("");
   const [time, setTime] = useState("");
+  const [titulo, setTitulo] = useState("");
   const seed = open ? `${day ?? ""}:${initial?.id ?? "new"}` : "";
   const [seeded, setSeeded] = useState("");
-  if (open && seed !== seeded) { setSeeded(seed); setCrm(initial?.crm_client_id ?? null); setName(initial?.client_name ?? ""); setTeam(initial?.team ?? ""); setNote(initial?.note ?? ""); setTime(initial?.event_time ? initial.event_time.slice(0, 5) : ""); }
+  if (open && seed !== seeded) { setSeeded(seed); setCrm(initial?.crm_client_id ?? null); setName(initial?.client_name ?? ""); setTeam(initial?.team ?? ""); setNote(initial?.note ?? ""); setTime(initial?.event_time ? initial.event_time.slice(0, 5) : ""); setTitulo(initial?.title ?? ""); }
   if (!open && seeded) setSeeded("");
   const valid = !!crm || name.trim();
   return (
@@ -1576,6 +1581,10 @@ function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, on
         <DialogHeader><DialogTitle className="font-display">{initial ? "Editar reunião" : "Nova reunião"}</DialogTitle></DialogHeader>
         <div className="space-y-2">
           <ClientPicker clients={clients} crm={crm} name={name} onCrm={setCrm} onName={setName} />
+          <div>
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">Título (opcional)</p>
+            <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex.: Alinhamento mensal" />
+          </div>
           <HoraInput label="Hora (opcional)" value={time} onChange={setTime} className="w-[140px]" />
           <div>
             <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">Equipe (opcional)</p>
@@ -1589,7 +1598,7 @@ function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, on
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => onSave(crm, name.trim() || null, team.trim() || null, note.trim() || null, time || null)} disabled={!valid}>{initial ? "Salvar" : "Adicionar"}</Button>
+          <Button onClick={() => onSave(crm, name.trim() || null, team.trim() || null, note.trim() || null, time || null, titulo.trim() || null)} disabled={!valid}>{initial ? "Salvar" : "Adicionar"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1600,7 +1609,7 @@ function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, on
 function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTask, onCapture, initialKind = "tarefa" }: {
   open: boolean; day: string | null; clients: Client[]; teamNames: string[]; onClose: () => void;
   initialKind?: "tarefa" | "captacao" | "criacao";
-  onCreation: (crm: string | null, name: string | null, team: string | null, note: string | null, time: string | null, day: string) => void;
+  onCreation: (crm: string | null, name: string | null, team: string | null, note: string | null, time: string | null, title: string | null, day: string) => void;
   onTask: (v: { title: string; description: string | null; crm_client_id: string | null; priority: CrmTaskPriority; status: CrmTaskStatus; due_date: string; due_time: string | null; color: string | null }) => void;
   onCapture: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null; duration_hours?: number | null }) => void;
 }) {
@@ -1630,7 +1639,7 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
   const submit = () => {
     const d = date || day;
     if (!d) return;
-    if (kind === "criacao") onCreation(crm, name.trim() || null, team.trim() || null, note.trim() || null, time || null, d);
+    if (kind === "criacao") onCreation(crm, name.trim() || null, team.trim() || null, note.trim() || null, time || null, title.trim() || null, d);
     else if (kind === "tarefa") onTask({ title: title.trim(), description: note.trim() || null, crm_client_id: crm, priority: prio, status: "pendente", due_date: d, due_time: time || null, color: taskCol });
     else onCapture({ capture_date: d, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null, duration_hours: dur });
   };
@@ -1689,7 +1698,13 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
           <ClientPicker clients={clients} crm={crm} name={name} onCrm={setCrm} onName={setName} />
 
           {kind === "criacao" && (
-            <HoraInput label="Hora (opcional)" value={time} onChange={setTime} className="w-[140px]" />
+            <>
+              <div>
+                <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Título (opcional)</p>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Alinhamento mensal" />
+              </div>
+              <HoraInput label="Hora (opcional)" value={time} onChange={setTime} className="w-[140px]" />
+            </>
           )}
 
           {kind === "captacao" && (
