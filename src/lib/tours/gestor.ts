@@ -738,4 +738,30 @@ export const TOURS_GESTOR: TourConfig[] = [
       },
     ],
   },
+  {
+    id: "gestor-configuracoes",
+    route: "/socialmidia/dashboard",
+    title: "Configurações: comece por aqui",
+    valueProp: "Antes de operar, deixa o Cria com a SUA cara: é daqui que saem a logo e as cores que os seus clientes vão ver nos links e nos relatórios.",
+    benefits: [
+      "Sua logo nos relatórios white-label e nos links de aprovação",
+      "Tema, cor e fonte do app do seu jeito",
+      "Notificações e assinatura no mesmo lugar",
+    ],
+    steps: [
+      {
+        target: '[data-tour="nav-config"]',
+        mobileTarget: '[data-tour="nav-config-m"]',
+        title: "Sua primeira parada",
+        body: "A engrenagem guarda o setup da operação: perfil da agência, logo, cores e conta. Vale ajustar antes de tudo, porque a logo daqui sai nos relatórios e nos links que os seus clientes recebem.",
+      },
+      {
+        openFirst: '[data-tour="nav-config"]',
+        mobileOpenFirst: '[data-tour="nav-config-m"]',
+        target: '[data-tour="config-drawer"]',
+        title: "Tudo num painel só",
+        body: "Perfil e nome da agência, logo white-label, tema e cores, notificações e a sua assinatura. Ajustou uma vez, o Cria inteiro segue o seu padrão.",
+      },
+    ],
+  },
 ];

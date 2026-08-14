@@ -16,7 +16,7 @@ type Rect = { top: number; left: number; width: number; height: number };
 /** Folga do topo: cabe o header sticky do mobile. */
 const FOLGA_TOPO = 72;
 /** Folga de baixo: no mobile o card do tour é um bottom-sheet e come a tela. */
-const folgaBase = () => (window.innerWidth < 640 ? 240 : 160);
+const folgaBase = () => (window.innerWidth < 640 ? Math.min(Math.round(window.innerHeight * 0.55), 480) + 24 : 160);
 /** Caixa menor que isso não é alvo: é wrapper vazio, aba fechada ou display:none. */
 const CAIXA_MINIMA = 8;
 
@@ -176,7 +176,20 @@ export function TourOverlay({
     const attach = (el: Element) => {
       elRef.current = el;
       measure();
-      if (precisaRolar(el)) el.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+      if (precisaRolar(el)) {
+        el.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+        // No mobile o card é um bottom-sheet que come a metade de baixo: centraliza
+        // o alvo na ÁREA VISÍVEL (entre o header e o sheet), não na janela inteira.
+        if (window.innerWidth < 640) {
+          window.setTimeout(() => {
+            if (cancelled || elRef.current !== el) return;
+            const r2 = el.getBoundingClientRect();
+            const alvoY = FOLGA_TOPO + (window.innerHeight - FOLGA_TOPO - folgaBase()) / 2;
+            const delta = r2.top + r2.height / 2 - alvoY;
+            if (Math.abs(delta) > 24) window.scrollBy({ top: delta, behavior: "smooth" });
+          }, 280);
+        }
+      }
       estabilizar(el);
     };
     // ABRIR O QUE ESCONDE O ALVO.
@@ -248,13 +261,20 @@ export function TourOverlay({
 
   const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
 
-  // Posição do card no desktop: abaixo do alvo se couber, senão acima
+  // Posição do card no desktop: vai pro lado com MAIS espaço e ganha um
+  // max-height com rolagem interna. Antes um card longo estourava a janela e o
+  // botão Continuar ficava cortado, travando o tour.
   const cardStyle: React.CSSProperties = {};
   if (!isMobile && rect) {
-    const below = rect.top + rect.height + 16;
-    const fitsBelow = below + 220 < window.innerHeight;
-    cardStyle.top = fitsBelow ? below : undefined;
-    cardStyle.bottom = fitsBelow ? undefined : window.innerHeight - rect.top + 16;
+    const abaixo = window.innerHeight - (rect.top + rect.height + 16) - 12;
+    const acima = rect.top - 16 - 12;
+    if (abaixo >= acima) {
+      cardStyle.top = rect.top + rect.height + 16;
+      cardStyle.maxHeight = Math.max(200, abaixo);
+    } else {
+      cardStyle.bottom = window.innerHeight - rect.top + 16;
+      cardStyle.maxHeight = Math.max(200, acima);
+    }
     cardStyle.left = Math.min(Math.max(16, rect.left), window.innerWidth - 396);
   }
 
@@ -325,7 +345,7 @@ export function TourOverlay({
                 // max-h + scroll: rede de segurança pra passo de texto longo no
                 // celular, que antes crescia até engolir a tela e tapar o spotlight.
                 ? "fixed inset-x-0 bottom-0 max-h-[55vh] overflow-y-auto overscroll-contain rounded-t-3xl border-t-2 border-x-2 border-[#0A0A0A] bg-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pointer-events-auto"
-                : "fixed w-[380px] rounded-2xl border-2 border-[#0A0A0A] bg-card p-5 shadow-[0_8px_0_rgba(21,20,18,0.9)] transition-[top,left,bottom] duration-200 ease-out pointer-events-auto"
+                : "fixed w-[380px] overflow-y-auto overscroll-contain rounded-2xl border-2 border-[#0A0A0A] bg-card p-5 shadow-[0_8px_0_rgba(21,20,18,0.9)] transition-[top,left,bottom] duration-200 ease-out pointer-events-auto"
             }
             style={missing || isMobile ? undefined : cardStyle}
           >

@@ -161,21 +161,37 @@ export const TRAINING_SEQUENCES: Record<"criador" | "gestor", string[]> = {
   //   `tour.route`, e essas rotas são padrões com :id, não caminhos navegáveis.
   //   Sem um id de cliente real cairiam em tela vazia e travariam a fila. Os dois
   //   abrem pelo "?" dentro da ficha de um cliente.
-  // - "gestor-parceria" e "gestor-contas": são back-office (indicação e assentos),
-  //   não a operação do dia a dia. As rotas são navegáveis, então caberiam aqui,
-  //   mas esticariam o tour completo com assunto que ninguém está tentando
-  //   aprender quando pede "me mostra o sistema".
+  // - "gestor-contas": back-office de assentos, abre pelo "?" na própria tela.
+  // Os tours de MÓDULO PAGO entram na fila, mas o TourProvider filtra pelos
+  // módulos ATIVOS da conta (TOUR_MODULE_GATE): ninguém faz tour de tela trancada.
   gestor: [
     "gestor-dashboard",
+    "gestor-configuracoes",
     "gestor-clientes",
     "gestor-agenda",
     "gestor-aprovacoes",
-    "gestor-hubcria",
     "gestor-criapost",
     "gestor-criacrm",
     "gestor-criacaixa",
+    "gestor-captacao",
+    "gestor-hubcria",
     "gestor-equipe",
+    "gestor-parceria",
+    "gestor-lixeira",
   ],
+};
+
+/**
+ * Tour de módulo pago: só aparece (auto-start, "?" e tour completo) quando o
+ * módulo está ATIVO na conta. Sem isto o tour completo passeava por telas
+ * trancadas ("Você não tem acesso ao Cria Radar") explicando o nada.
+ */
+export const TOUR_MODULE_GATE: Record<string, string> = {
+  "gestor-criapost": "aprovapost_externo",
+  "gestor-criacrm": "crm",
+  "gestor-criacaixa": "financeiro",
+  "gestor-hubcria": "hub_cria",
+  "gestor-captacao": "cria_captacao",
 };
 
 export function areaForPath(pathname: string): "criador" | "gestor" {

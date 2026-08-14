@@ -121,6 +121,14 @@ export default function ManagerLayout() {
     if (profile?.theme_font) applyThemeFont(profile.theme_font);
   }, [profile]);
 
+  // O tour de Configurações abre o drawer via openFirst; quando o tour termina,
+  // fecha o drawer pra fila do treinamento seguir com a tela limpa.
+  useEffect(() => {
+    const fecha = () => setSettingsOpen(false);
+    window.addEventListener("cria-tour-fim", fecha);
+    return () => window.removeEventListener("cria-tour-fim", fecha);
+  }, []);
+
   const isActive = (to: string) =>
     to === "/socialmidia/dashboard"
       ? location.pathname === to || location.pathname === "/socialmidia"
@@ -140,13 +148,14 @@ export default function ManagerLayout() {
   const railNode = (
     Icon: LucideIcon,
     label: string,
-    opts: { active?: boolean; onClick: () => void; corner?: ReactNode; tipBadge?: ReactNode },
+    opts: { active?: boolean; onClick: () => void; corner?: ReactNode; tipBadge?: ReactNode; dataTour?: string },
   ) => (
     <button
       key={label}
       type="button"
       onClick={opts.onClick}
       aria-label={label}
+      data-tour={opts.dataTour}
       className={cn(
         "relative flex h-10 w-full items-center rounded-2xl transition-colors",
         railHovered ? "gap-3 px-2.5 justify-start" : "justify-center",
@@ -287,7 +296,7 @@ export default function ManagerLayout() {
         <div className="my-2 h-px w-full bg-border" />
         <div className="flex w-full flex-col items-stretch gap-1">
           {railNode(Trash2, "Lixeira", { active: isActive("/socialmidia/lixeira"), onClick: () => navigate("/socialmidia/lixeira") })}
-          {railNode(SettingsIcon, "Configurações", { onClick: () => setSettingsOpen(true) })}
+          {railNode(SettingsIcon, "Configurações", { onClick: () => setSettingsOpen(true), dataTour: "nav-config" })}
           {railNode(LogOut, "Sair", { onClick: handleSignOut })}
         </div>
       </nav>
@@ -350,6 +359,7 @@ export default function ManagerLayout() {
               type="button"
               onClick={() => setSettingsOpen(true)}
               aria-label="Configurações"
+              data-tour="nav-config-m"
               className="p-2 rounded-xl text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors"
             >
               <SettingsIcon className="h-5 w-5" />

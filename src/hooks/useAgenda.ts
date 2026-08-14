@@ -20,6 +20,8 @@ export type Creation = {
   event_time?: string | null;
   // Título da reunião (ex.: "Alinhamento mensal"). Coluna nova; defensiva.
   title?: string | null;
+  // Reunião concluída (check no card, igual tarefa/captação). Coluna nova.
+  done?: boolean | null;
   created_at: string;
 };
 
@@ -147,7 +149,7 @@ export function useAddCreation() {
 export function useUpdateCreation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Creation, "day" | "team" | "note" | "crm_client_id" | "client_name" | "event_time" | "title">> }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Creation, "day" | "team" | "note" | "crm_client_id" | "client_name" | "event_time" | "title" | "done">> }) => {
       const { error } = await sbFrom("agenda_creations").update(patch as never).eq("id", id);
       if (error) throw error;
     },

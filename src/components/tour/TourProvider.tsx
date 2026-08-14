@@ -12,8 +12,10 @@ import {
   findTourByRoute,
   findTourById,
   TRAINING_SEQUENCES,
+  TOUR_MODULE_GATE,
   type TourConfig,
 } from "@/lib/tours/registry";
+import { useModules } from "@/hooks/useModules";
 import { loadSeenTours, markTourSeen } from "@/lib/tours/progress";
 import { TourOverlay } from "./TourOverlay";
 
@@ -44,6 +46,14 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [active, setActive] = useState<TourConfig | null>(null);
+  // Módulos ativos da conta: tour de módulo pago só roda com o módulo assinado
+  // (nada de tour em tela trancada dizendo "você não tem acesso").
+  const { modules } = useModules();
+  const tourBloqueado = useCallback((id: string) => {
+    const gate = TOUR_MODULE_GATE[id];
+    if (!gate) return false;
+    return !modules.some(m => m.code === gate && (m.status === "active" || m.status === "past_due"));
+  }, [modules]);
   const [step, setStep] = useState(-1);
   const seenRef = useRef<Set<string>>(new Set());
   const [seenLoaded, setSeenLoaded] = useState(false);
@@ -101,7 +111,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     const id = window.setTimeout(() => {
       setPendingId(null);
       begin(tour);
-    }, 400);
+    }, 250);
     return () => window.clearTimeout(id);
   }, [pendingId, location.pathname, begin]);
 
@@ -109,11 +119,11 @@ export function TourProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!seenLoaded || active || pendingId) return;
     const tour = findTourByRoute(location.pathname);
-    if (tour && !seenRef.current.has(tour.id)) {
+    if (tour && !seenRef.current.has(tour.id) && !tourBloqueado(tour.id)) {
       const id = window.setTimeout(() => begin(tour), 400); // deixa a tela montar
       return () => window.clearTimeout(id);
     }
-  }, [location.pathname, seenLoaded, active, pendingId, begin]);
+  }, [location.pathname, seenLoaded, active, pendingId, begin, tourBloqueado]);
 
   const finish = useCallback(
     (completed: boolean) => {
@@ -122,6 +132,8 @@ export function TourProvider({ children }: { children: ReactNode }) {
       if (user?.id) markTourSeen(user.id, active.id, completed, step);
       setActive(null);
       setStep(-1);
+      // Avisa a UI que o tour acabou (o drawer de Configurações fecha com isto).
+      window.dispatchEvent(new Event("cria-tour-fim"));
 
       // Treinamento: pulou = sai do modo; concluiu = avança pra próxima tela
       if (!completed) {
@@ -165,7 +177,8 @@ export function TourProvider({ children }: { children: ReactNode }) {
 
   const startTraining = useCallback(() => {
     const area = areaForPath(location.pathname);
-    const ids = [...TRAINING_SEQUENCES[area]];
+    // Módulo não assinado sai da fila: o tour completo pula a tela trancada.
+    const ids = TRAINING_SEQUENCES[area].filter(id => !tourBloqueado(id));
     const firstId = ids.shift();
     if (!firstId) return;
     const first = findTourById(firstId);
@@ -177,7 +190,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
       setPendingId(firstId);
       navigate(first.route);
     }
-  }, [location.pathname, navigate, begin]);
+  }, [location.pathname, navigate, begin, tourBloqueado]);
 
   const next = useCallback(() => {
     if (!active) return;

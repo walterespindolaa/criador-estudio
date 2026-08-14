@@ -1079,14 +1079,24 @@ export default function AgendaCriacao() {
                           onKeyDown={(e) => { if (e.key === "Enter") setEditCreation(c); }}
                           style={{ ...dragProvided.draggableProps.style, ...dragCardStyle, borderLeftColor: "#4B3FA8" }}
                           className={cn("group rounded-lg border border-l-2 border-border bg-card px-2 py-1.5 hover:bg-muted/40 transition-colors",
+                            c.done && "opacity-60",
                             dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                           <div className="flex items-start gap-1 min-w-0">
                             <DragGrip className="mt-px" handleProps={dragProvided.dragHandleProps ?? undefined} />
                             <div className="flex-1 min-w-0">
                               <p className="text-[9px] font-body font-bold uppercase tracking-wider" style={{ color: "#4B3FA8" }}>Reunião{item.time ? ` · ${item.time}` : ""}</p>
-                              <p className="text-[12px] font-body font-semibold text-foreground leading-tight truncate">{c.title?.trim() || nameOf(c.crm_client_id, c.client_name)}</p>
+                              <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", c.done ? "line-through text-muted-foreground" : "text-foreground")}>{c.title?.trim() || nameOf(c.crm_client_id, c.client_name)}</p>
                               {c.title?.trim() && <p className="text-[10px] font-body text-muted-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</p>}
                             </div>
+                            {/* Check da reunião: mesmo padrão do check de tarefa/captação. */}
+                            <span role="button" tabIndex={0} aria-label={c.done ? "Reabrir reunião" : "Concluir reunião"}
+                              onClick={(e) => { e.stopPropagation(); updCreation.mutate({ id: c.id, patch: { done: !c.done } }); }}
+                              className="grid shrink-0 place-items-center cursor-pointer p-2 -my-2 -ml-1 md:p-0 md:m-0">
+                              <span className={cn("grid h-6 w-6 md:h-4 md:w-4 place-items-center rounded border transition-colors",
+                                c.done ? "bg-emerald-500 border-emerald-500 text-white" : "border-current/50 hover:border-emerald-500 hover:text-emerald-600")}>
+                                {c.done && <Check className="h-3 w-3" strokeWidth={3} />}
+                              </span>
+                            </span>
                             <button onClick={(e) => { e.stopPropagation(); delCreation.mutate(c.id); }} className="text-muted-foreground/50 hover:text-destructive shrink-0" aria-label="Remover"><X className="h-3 w-3" /></button>
                           </div>
                           {c.team && <p className="text-[10px] font-body text-muted-foreground truncate">{c.team}</p>}
