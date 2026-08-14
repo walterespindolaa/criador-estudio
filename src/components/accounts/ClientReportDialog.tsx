@@ -334,6 +334,9 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   // Recado da social mídia: texto livre que ela escreve antes de mandar e que sai
   // no INÍCIO do relatório. Persistido por cliente+período quando dá (ver abaixo).
   const [notes, setNotes] = useState("");
+  // Próximos passos (opcional): perspectiva pro próximo mês, sai no FINAL do
+  // relatório. Salvo junto da nota, no mesmo registro do período.
+  const [proximos, setProximos] = useState("");
   const [notesSaving, setNotesSaving] = useState(false);
   // Prints das métricas do Instagram que a social mídia sobe (a Gabriela cola o
   // print do app do IG e ele entra numa seção do relatório). Guardamos o caminho
@@ -341,6 +344,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const [metricShots, setMetricShots] = useState<{ path: string; url: string }[]>([]);
   const [uploadingShot, setUploadingShot] = useState(false);
   const shotInputRef = useRef<HTMLInputElement>(null);
+  const recadoRef = useRef<HTMLTextAreaElement>(null);
   // Barra de formatação da análise: só faz sentido quando há texto (ou o campo
   // está em foco). Antes ficava sempre visível pedindo negrito sem texto pra usar.
   const [analiseTemTexto, setAnaliseTemTexto] = useState(false);
@@ -406,18 +410,18 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
   // Carrega a nota salva pra este cliente+período. Se a tabela ainda não existir
   // (migration não rodou), a query falha e a nota fica só na sessão.
-  const { data: savedNote, isFetched: notesFetched } = useQuery<{ body: string; analysis: string; shots: { path: string; url: string }[] }>({
+  const { data: savedNote, isFetched: notesFetched } = useQuery<{ body: string; analysis: string; proximos: string; shots: { path: string; url: string }[] }>({
     queryKey: ["report-notes", agencyOwnerId, client.crm_client_id, notesKey],
     enabled: open && canPersistNotes,
     queryFn: async () => {
       const { data, error } = await sbFrom("client_report_notes")
-        .select("body, metrics_images, analysis_html")
+        .select("body, metrics_images, analysis_html, next_steps")
         .eq("manager_id", agencyOwnerId!)
         .eq("crm_client_id", client.crm_client_id!)
         .eq("period_key", notesKey)
         .maybeSingle();
       if (error) throw error;
-      const row = data as { body: string | null; metrics_images: string[] | null; analysis_html?: string | null } | null;
+      const row = data as { body: string | null; metrics_images: string[] | null; analysis_html?: string | null; next_steps?: string | null } | null;
       const paths = row?.metrics_images ?? [];
       // Assina cada caminho do Storage pra renderizar (bucket privado).
       const shots: { path: string; url: string }[] = [];
@@ -425,13 +429,14 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         const { data: s } = await supabase.storage.from("relatorios").createSignedUrl(p, 60 * 60 * 24 * 30);
         if (s?.signedUrl) shots.push({ path: p, url: s.signedUrl });
       }
-      return { body: row?.body ?? "", analysis: row?.analysis_html ?? "", shots };
+      return { body: row?.body ?? "", analysis: row?.analysis_html ?? "", proximos: row?.next_steps ?? "", shots };
     },
   });
   // Espelha a nota e os prints carregados ao abrir/trocar de período/cliente.
   useEffect(() => {
     if (!notesFetched) return;
     setNotes(savedNote?.body ?? "");
+    setProximos(savedNote?.proximos ?? "");
     setMetricShots(savedNote?.shots ?? []);
     // Restaura a análise salva deste período no editor (sem sobrescrever o que
     // a pessoa já digitou nesta sessão).
@@ -448,6 +453,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       const { error } = await sbFrom("client_report_notes").upsert({
         manager_id: agencyOwnerId, crm_client_id: client.crm_client_id,
         period_key: notesKey, body: notes,
+        next_steps: proximos,
         // A análise (IA ou escrita à mão) é salva JUNTO da nota, no mesmo
         // registro do período, pra reabrir depois sem gerar o relatório de novo.
         analysis_html: editorRef.current?.innerHTML ?? null,
@@ -505,8 +511,43 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     supabase.storage.from("relatorios").remove([path]).catch(() => { /* best effort */ });
   };
 
+  // Botões de formatação do recado: inserem os marcadores no texto, que o
+  // relatório renderiza como negrito/itálico/título/tópico/divisor.
+  const aplicarMarcador = (tipo: "negrito" | "italico" | "titulo" | "topico" | "divisor") => {
+    const ta = recadoRef.current;
+    const ini = ta?.selectionStart ?? notes.length;
+    const fim = ta?.selectionEnd ?? notes.length;
+    const sel = notes.slice(ini, fim);
+    let novo = notes;
+    let pos = fim;
+    if (tipo === "negrito" || tipo === "italico") {
+      const m = tipo === "negrito" ? "*" : "_";
+      const conteudo = sel || (tipo === "negrito" ? "negrito" : "itálico");
+      novo = notes.slice(0, ini) + m + conteudo + m + notes.slice(fim);
+      pos = ini + conteudo.length + 2;
+    } else if (tipo === "titulo" || tipo === "topico") {
+      const prefixo = tipo === "titulo" ? "## " : "- ";
+      const inicioLinha = notes.lastIndexOf("\n", Math.max(0, ini - 1)) + 1;
+      novo = notes.slice(0, inicioLinha) + prefixo + notes.slice(inicioLinha);
+      pos = fim + prefixo.length;
+    } else {
+      const antes = notes.slice(0, ini);
+      const depois = notes.slice(fim);
+      const quebra = antes === "" || antes.endsWith("\n") ? "" : "\n";
+      novo = antes + quebra + "---\n" + depois;
+      pos = (antes + quebra + "---\n").length;
+    }
+    setNotes(novo);
+    requestAnimationFrame(() => { ta?.focus(); ta?.setSelectionRange(pos, pos); });
+  };
+
   // Relatório rápido: reabre já no preset escolhido pela gestora.
   useEffect(() => { if (open && initialPeriodKey) setPeriodKey(initialPeriodKey); }, [open, initialPeriodKey]);
+  // Histórico de relatórios: reabre já no intervalo daquela nota (as props mudam
+  // com o diálogo montado, então o estado interno precisa acompanhar).
+  useEffect(() => {
+    if (open && customSince && customUntil) { setCustomFrom(customSince); setCustomTo(customUntil); }
+  }, [open, customSince, customUntil]);
 
   // Limpa a análise, o recado e o link publicado ao trocar de período (não valem
   // pra outro recorte). Pra cliente com persistência, o recado salvo é recarregado
@@ -514,6 +555,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   useEffect(() => {
     if (editorRef.current) editorRef.current.innerHTML = "";
     setNotes("");
+    setProximos("");
     setMetricShots([]);
     setAnaliseTemTexto(false);
     setShareUrl(null);
@@ -1164,7 +1206,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   // Estimativa de linhas visuais (considerando quebra automática) e um
   // empacotador por "custo": é o que deixa texto longo CONTINUAR na página
   // seguinte em vez de sumir cortado no rodapé da folha.
-  const estLinhas = (l: string) => Math.max(1, Math.ceil(l.trim().length / 78));
+  const estLinhas = (l: string) => Math.max(1, Math.ceil(l.trim().length / 95));
   function pack<T>(arr: T[], custo: (t: T) => number, orcamento: number): T[][] {
     const grupos: T[][] = [];
     let atual: T[] = [];
@@ -1181,9 +1223,12 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   // Texto "rico" do recado: *trecho* vira negrito, linha começando com "- ",
   // "* " ou "• " vira tópico com bolinha, "## " vira subtítulo e uma linha só
   // de traços (---) vira divisor. É como a social mídia já escreve.
+  const italico = (t: string, kb: string) =>
+    t.split(/_([^_]+)_/g).map((parte, i) =>
+      i % 2 === 1 ? <i key={`${kb}-i${i}`}>{parte}</i> : <span key={`${kb}-i${i}`}>{parte}</span>);
   const negrito = (t: string, kb: string) =>
     t.split(/\*([^*]+)\*/g).map((parte, i) =>
-      i % 2 === 1 ? <b key={`${kb}-${i}`}>{parte}</b> : <span key={`${kb}-${i}`}>{parte}</span>);
+      i % 2 === 1 ? <b key={`${kb}-${i}`}>{italico(parte, `${kb}-${i}`)}</b> : <span key={`${kb}-${i}`}>{italico(parte, `${kb}-${i}`)}</span>);
   const renderTextoRico = (linhas: string[]) => {
     const out: ReactNode[] = [];
     let bullets: string[] = [];
@@ -1304,7 +1349,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   // ── Blocos de conteúdo (cada um cabe na sua página) ──
   const recadoLinhas = notes.trim() ? notes.trim().split("\n") : [];
   const recadoEst = recadoLinhas.reduce((a, l) => a + estLinhas(l), 0);
-  const recadoCurto = recadoEst <= 14;
+  const recadoCurto = recadoEst <= 16;
   const recadoBox = (linhas: string[], continuacao: boolean) => (
     <div style={{ marginBottom: 14, padding: "12px 14px", border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.brand}`, borderRadius: 12, background: C.soft }}>
       <div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>
@@ -1317,7 +1362,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   // e o texto CONTINUA na folha seguinte (antes ele sumia cortado).
   const recadoNode = recadoLinhas.length && recadoCurto ? recadoBox(recadoLinhas, false) : null;
   const recadoPages = recadoLinhas.length && !recadoCurto
-    ? pack(recadoLinhas, estLinhas, 30).map((grupo, gi) => (
+    ? pack(recadoLinhas, estLinhas, 36).map((grupo, gi) => (
         <div key={`recado-${gi}`}>{recadoBox(grupo, gi > 0)}</div>
       ))
     : [];
@@ -1472,7 +1517,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         onKeyUp={updateActive}
         onMouseUp={updateActive}
         onFocus={() => { setAnaliseFocada(true); updateActive(); }}
-        onBlur={() => { setAnaliseFocada(false); if (canPersistNotes) void saveNotes(); }}
+        onBlur={() => setAnaliseFocada(false)}
         data-placeholder="Escreva a análise ou clique em “Gerar análise (IA)”. Este texto é editável: clique nele e digite."
         className="report-editor"
         style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.6, outline: "none", minHeight: 64, cursor: "text" }}
@@ -1750,7 +1795,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         </div>
       </div>
     )]
-    : pack(captureList, (c) => 1 + estLinhas(c.note ?? ""), 20).map((grupo, gi, all) => (
+    : pack(captureList, (c) => 1 + estLinhas(c.note ?? ""), 26).map((grupo, gi, all) => (
       <div key={`captacao-${gi}`}>
         {sectionTitle(all.length > 1 ? `Captação do período · parte ${gi + 1}` : "Captação do período", C.rosa)}
         {gi === 0 && (
@@ -1770,6 +1815,20 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         )}
       </div>
     ));
+
+  // Próximos passos: página(s) opcional(is) no final, com a mesma formatação
+  // rica do recado (negrito, tópicos, divisor) e continuação quando longo.
+  const proximosLinhas = proximos.trim() ? proximos.trim().split("\n") : [];
+  const proximosPages = proximosLinhas.length
+    ? pack(proximosLinhas, estLinhas, 34).map((grupo, gi, all) => (
+        <div key={`prox-${gi}`}>
+          {sectionTitle(all.length > 1 ? `Próximos passos · parte ${gi + 1}` : "Próximos passos", C.verde)}
+          <div style={{ padding: "12px 14px", border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.verde}`, borderRadius: 12, background: C.cremeCard, fontSize: 12.5, color: C.ink, lineHeight: 1.6 }}>
+            {renderTextoRico(grupo)}
+          </div>
+        </div>
+      ))
+    : [];
 
   // ── Sequência final das páginas ──
   const defs: { key: string; body: ReactNode; semChrome?: boolean; pularSeVazia?: boolean }[] = [
@@ -1802,6 +1861,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   if (audsNode) defs.push({ key: "audiencia", body: audsNode });
   shotsPages.forEach((b, i) => defs.push({ key: `print-${i}`, body: b }));
   captacaoPages.forEach((b, i) => defs.push({ key: `captacao-${i}`, body: b }));
+  proximosPages.forEach((b, i) => defs.push({ key: `proximos-${i}`, body: b }));
   defs.push({ key: "final", body: paginaFinal, semChrome: true });
 
   const sai = (p: { pularSeVazia?: boolean }) => !(p.pularSeVazia && !analiseTemTexto);
@@ -1914,20 +1974,57 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
               )}
             </div>
           </div>
+          {/* Barra de formatação do recado: os marcadores que o relatório entende. */}
+          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+            {([
+              ["negrito", "B", "font-bold", "Negrito (*texto*)"],
+              ["italico", "I", "italic", "Itálico (_texto_)"],
+              ["titulo", "T", "", "Título (## no começo da linha)"],
+              ["topico", "•", "", "Tópico com bolinha (- no começo da linha)"],
+              ["divisor", "―", "", "Divisor (linha de ---)"],
+            ] as ["negrito" | "italico" | "titulo" | "topico" | "divisor", string, string, string][]).map(([tipo, icone, cls, titulo]) => (
+              <button
+                key={tipo}
+                type="button"
+                title={titulo}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => aplicarMarcador(tipo)}
+                className={`h-7 w-7 rounded-lg border border-border bg-card text-xs text-foreground hover:bg-accent ${cls}`}
+              >
+                {icone}
+              </button>
+            ))}
+            <span className="ml-1 text-[10px] font-body text-muted-foreground">*negrito* · _itálico_ · ## título · - tópico · --- divisor</span>
+          </div>
           <textarea
             id="report-notes"
+            ref={recadoRef}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            onBlur={() => { if (canPersistNotes) saveNotes(); }}
             placeholder="Ex.: um resumo do mês, os próximos passos, um recado pro cliente."
             rows={3}
             className="mt-1 w-full rounded-xl border border-border bg-card p-3 text-sm font-body text-foreground outline-none focus:border-primary resize-y"
           />
           <p className="text-[11px] font-body text-muted-foreground mt-1">
             {canPersistNotes
-              ? "Salvo automaticamente por cliente e período."
+              ? "Nada é salvo sozinho: clique em Salvar nota (baixar ou compartilhar também salva). Assim período novo abre limpo."
               : "Vincule o cliente ao cadastro central pra guardar o recado entre sessões. Por ora ele sai só neste PDF."}
           </p>
+        </div>
+
+        {/* Próximos passos: opcional, sai no FINAL do relatório (antes da contracapa). */}
+        <div className="mt-3">
+          <label htmlFor="report-next" className="text-xs font-body font-semibold text-foreground">
+            Próximos passos <span className="font-normal text-muted-foreground">(opcional, vira uma página no final do relatório)</span>
+          </label>
+          <textarea
+            id="report-next"
+            value={proximos}
+            onChange={(e) => setProximos(e.target.value)}
+            placeholder="Ex.: a perspectiva pro próximo mês, o que vamos priorizar, campanhas previstas."
+            rows={3}
+            className="mt-1 w-full rounded-xl border border-border bg-card p-3 text-sm font-body text-foreground outline-none focus:border-primary resize-y"
+          />
         </div>
 
         {/* Prints das métricas do Instagram: sobe a imagem e ela entra no relatório */}

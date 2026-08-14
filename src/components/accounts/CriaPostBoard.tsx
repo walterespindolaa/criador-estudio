@@ -397,6 +397,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  // Período vindo do Histórico de relatórios: reabre o relatório daquele mês.
+  const [reportPeriodo, setReportPeriodo] = useState<{ since: string; until: string } | null>(null);
   // Personalização do cliente (logo, cores, vínculo central): antes vivia na lista do
   // Cria Post, agora acompanha o cliente aqui dentro (embutido no ClienteHub).
   const [editOpen, setEditOpen] = useState(false);
@@ -539,7 +541,16 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         </>
       )}
 
-      <ClientReportDialog open={reportOpen} onOpenChange={setReportOpen} client={client} posts={posts} managerName={profile?.name ?? undefined} />
+      <ClientReportDialog
+        open={reportOpen}
+        onOpenChange={(v) => { setReportOpen(v); if (!v) setReportPeriodo(null); }}
+        client={client}
+        posts={posts}
+        managerName={profile?.name ?? undefined}
+        initialPeriodKey={reportPeriodo ? "custom" : undefined}
+        customSince={reportPeriodo?.since}
+        customUntil={reportPeriodo?.until}
+      />
       <ExternalClientDialog open={editOpen} onOpenChange={setEditOpen} client={client} />
       <ImportKanbanDialog open={importOpen} onOpenChange={setImportOpen} externalClientId={client.id} criaOwnerId={criaOwnerId} existingTitles={new Set(posts.map((p) => p.title))} />
 
@@ -776,7 +787,10 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
             <Button onClick={() => setReportOpen(true)}><FileText className="h-4 w-4 mr-1.5" /> Abrir relatório</Button>
           </div>
           {/* As notas que a social mídia escreveu em cada período, acessíveis sem gerar o PDF. */}
-          <NotasRelatorioSalvas crmClientId={client.crm_client_id ?? null} />
+          <NotasRelatorioSalvas
+            crmClientId={client.crm_client_id ?? null}
+            onAbrirPeriodo={(since, until) => { setReportPeriodo({ since, until }); setReportOpen(true); }}
+          />
         </TabsContent>
 
         <TabsContent value="instagram">
