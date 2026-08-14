@@ -287,7 +287,11 @@ const escRico = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").re
 const inlineRico = (esc: string) =>
   esc.replace(/\*([^*\n]+)\*/g, "<b>*$1*</b>").replace(/_([^_\n]+)_/g, "<i>_$1_</i>");
 function ricoParaHtml(texto: string): string {
-  return texto.split("\n").map((linha) => {
+  // \u200b na linha final vazia: sem ele, o Enter no fim do texto não cria uma
+  // linha visível (pre-wrap ignora a última linha vazia) e parecia que o
+  // parágrafo "não funcionava". O zero-width é removido em toda leitura.
+  const fecho = texto.endsWith("\n") ? "\u200b" : "";
+  return (texto + fecho).split("\n").map((linha) => {
     const esc = escRico(linha);
     const t = linha.trim();
     if (/^[-\u2013]{3,}$/.test(t)) return `<span style="color:#9ca3af">${esc}</span>`;
@@ -311,18 +315,47 @@ function EditorRico({ valor, onChange, placeholder, minHeight = 96, innerRef }: 
   // durante a digitação o DOM é a fonte e o React apenas acompanha.
   useEffect(() => {
     const el = ref.current;
-    if (el && (el.textContent ?? "") !== valor) el.innerHTML = ricoParaHtml(valor);
+    if (el && (el.textContent ?? "").replace(/\u200b/g, "") !== valor) el.innerHTML = ricoParaHtml(valor);
   }, [valor, ref]);
 
+  const leiaTexto = (el: HTMLDivElement) => (el.textContent ?? "").replace(/\u200b/g, "");
   const offsetAtual = (el: HTMLDivElement): number => {
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return (el.textContent ?? "").length;
+    if (!sel || sel.rangeCount === 0) return leiaTexto(el).length;
     const range = sel.getRangeAt(0);
-    if (!el.contains(range.endContainer)) return (el.textContent ?? "").length;
+    if (!el.contains(range.endContainer)) return leiaTexto(el).length;
     const pre = range.cloneRange();
     pre.selectNodeContents(el);
     pre.setEnd(range.endContainer, range.endOffset);
-    return pre.toString().length;
+    return pre.toString().replace(/\u200b/g, "").length;
+  };
+  // Começo e fim da seleção em offsets do texto puro (pra substituir a seleção
+  // ao colar/Enter sem depender do execCommand).
+  const selecaoAtual = (el: HTMLDivElement): [number, number] => {
+    const sel = window.getSelection();
+    const len = leiaTexto(el).length;
+    if (!sel || sel.rangeCount === 0) return [len, len];
+    const range = sel.getRangeAt(0);
+    if (!el.contains(range.startContainer) || !el.contains(range.endContainer)) return [len, len];
+    const ini = el.ownerDocument.createRange();
+    ini.selectNodeContents(el);
+    ini.setEnd(range.startContainer, range.startOffset);
+    const fim = el.ownerDocument.createRange();
+    fim.selectNodeContents(el);
+    fim.setEnd(range.endContainer, range.endOffset);
+    return [ini.toString().replace(/\u200b/g, "").length, fim.toString().replace(/\u200b/g, "").length];
+  };
+  // Insere texto puro na posição da seleção, re-renderiza e devolve o cursor.
+  // É o caminho do Enter e do colar: o execCommand virava <br>/<div> e a quebra
+  // SUMIA na leitura (o "não consigo colocar parágrafo" e o texto colado emendado).
+  const inserirTexto = (t: string) => {
+    const el = ref.current; if (!el) return;
+    const texto = leiaTexto(el);
+    const [ini, fim] = selecaoAtual(el);
+    const novo = texto.slice(0, ini) + t + texto.slice(fim);
+    onChange(novo);
+    el.innerHTML = ricoParaHtml(novo);
+    posiciona(el, ini + t.length);
   };
   const posiciona = (el: HTMLDivElement, off: number) => {
     const sel = window.getSelection();
@@ -346,7 +379,7 @@ function EditorRico({ valor, onChange, placeholder, minHeight = 96, innerRef }: 
   };
   const aoDigitar = () => {
     const el = ref.current; if (!el) return;
-    const texto = el.textContent ?? "";
+    const texto = leiaTexto(el);
     const off = offsetAtual(el);
     onChange(texto);
     el.innerHTML = ricoParaHtml(texto);
@@ -363,13 +396,13 @@ function EditorRico({ valor, onChange, placeholder, minHeight = 96, innerRef }: 
       data-placeholder={placeholder}
       onInput={aoDigitar}
       onKeyDown={(e) => {
-        // Enter vira \n LITERAL (nada de <div>/<br>): mantém o texto puro fiel
-        // e o cursor estável no re-render.
-        if (e.key === "Enter") { e.preventDefault(); document.execCommand("insertText", false, "\n"); }
+        // Enter vira \n LITERAL inserido por nós (nada de execCommand, que criava
+        // <br> e fazia o parágrafo sumir na leitura).
+        if (e.key === "Enter") { e.preventDefault(); inserirTexto("\n"); }
       }}
       onPaste={(e) => {
         e.preventDefault();
-        document.execCommand("insertText", false, e.clipboardData.getData("text/plain"));
+        inserirTexto(e.clipboardData.getData("text/plain"));
       }}
     />
   );
