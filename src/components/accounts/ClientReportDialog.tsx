@@ -279,6 +279,102 @@ const C = {
   rosa: "#FF77B9", amarelo: "#FFCF03", lilas: "#7C90F0",
 };
 
+// ── Editor "estilo WhatsApp" do recado/próximos passos ──
+// Os marcadores CONTINUAM no texto (*negrito*, _itálico_, ## título, - tópico,
+// --- divisor), mas o visual aplica na hora, enquanto digita. O conteúdo vive
+// só em TEXT nodes com \n literais, então cursor e texto puro ficam fiéis.
+const escRico = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const inlineRico = (esc: string) =>
+  esc.replace(/\*([^*\n]+)\*/g, "<b>*$1*</b>").replace(/_([^_\n]+)_/g, "<i>_$1_</i>");
+function ricoParaHtml(texto: string): string {
+  return texto.split("\n").map((linha) => {
+    const esc = escRico(linha);
+    const t = linha.trim();
+    if (/^[-\u2013]{3,}$/.test(t)) return `<span style="color:#9ca3af">${esc}</span>`;
+    if (/^#{1,3}\s+/.test(t)) return `<span style="font-weight:800">${inlineRico(esc)}</span>`;
+    const mb = esc.match(/^(\s*)((?:-|\u2022|\*)\s)([\s\S]*)$/);
+    if (mb && /^([-\u2022]|\*)\s/.test(t)) {
+      return `${mb[1]}<span style="color:#EA4918;font-weight:700">${mb[2]}</span>${inlineRico(mb[3])}`;
+    }
+    return inlineRico(esc);
+  }).join("\n");
+}
+
+function EditorRico({ valor, onChange, placeholder, minHeight = 96, innerRef }: {
+  valor: string; onChange: (v: string) => void; placeholder: string; minHeight?: number;
+  innerRef?: { current: HTMLDivElement | null };
+}) {
+  const proprio = useRef<HTMLDivElement>(null);
+  const ref = innerRef ?? proprio;
+
+  // Valor externo (restaurar nota, trocar período) entra no DOM só quando difere;
+  // durante a digitação o DOM é a fonte e o React apenas acompanha.
+  useEffect(() => {
+    const el = ref.current;
+    if (el && (el.textContent ?? "") !== valor) el.innerHTML = ricoParaHtml(valor);
+  }, [valor, ref]);
+
+  const offsetAtual = (el: HTMLDivElement): number => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return (el.textContent ?? "").length;
+    const range = sel.getRangeAt(0);
+    if (!el.contains(range.endContainer)) return (el.textContent ?? "").length;
+    const pre = range.cloneRange();
+    pre.selectNodeContents(el);
+    pre.setEnd(range.endContainer, range.endOffset);
+    return pre.toString().length;
+  };
+  const posiciona = (el: HTMLDivElement, off: number) => {
+    const sel = window.getSelection();
+    if (!sel) return;
+    let resta = off;
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let no = walker.nextNode() as Text | null;
+    while (no) {
+      if (resta <= no.length) {
+        const r = document.createRange();
+        r.setStart(no, resta); r.collapse(true);
+        sel.removeAllRanges(); sel.addRange(r);
+        return;
+      }
+      resta -= no.length;
+      no = walker.nextNode() as Text | null;
+    }
+    const r = document.createRange();
+    r.selectNodeContents(el); r.collapse(false);
+    sel.removeAllRanges(); sel.addRange(r);
+  };
+  const aoDigitar = () => {
+    const el = ref.current; if (!el) return;
+    const texto = el.textContent ?? "";
+    const off = offsetAtual(el);
+    onChange(texto);
+    el.innerHTML = ricoParaHtml(texto);
+    posiciona(el, off);
+  };
+
+  return (
+    <div
+      ref={ref}
+      contentEditable
+      suppressContentEditableWarning
+      className="editor-rico mt-1 w-full rounded-xl border border-border bg-card p-3 text-sm font-body text-foreground outline-none focus:border-primary"
+      style={{ minHeight, maxHeight: 320, overflowY: "auto", whiteSpace: "pre-wrap" }}
+      data-placeholder={placeholder}
+      onInput={aoDigitar}
+      onKeyDown={(e) => {
+        // Enter vira \n LITERAL (nada de <div>/<br>): mantém o texto puro fiel
+        // e o cursor estável no re-render.
+        if (e.key === "Enter") { e.preventDefault(); document.execCommand("insertText", false, "\n"); }
+      }}
+      onPaste={(e) => {
+        e.preventDefault();
+        document.execCommand("insertText", false, e.clipboardData.getData("text/plain"));
+      }}
+    />
+  );
+}
+
 export function ClientReportDialog({ open, onOpenChange, client, posts, managerName, initialPeriodKey, customSince, customUntil }: Props) {
   const { exportPdf, exportPdfBlob } = usePdfExport();
   const { user } = useAuth();
@@ -346,7 +442,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const [metricShots, setMetricShots] = useState<{ path: string; url: string }[]>([]);
   const [uploadingShot, setUploadingShot] = useState(false);
   const shotInputRef = useRef<HTMLInputElement>(null);
-  const recadoRef = useRef<HTMLTextAreaElement>(null);
+  const recadoRef = useRef<HTMLDivElement>(null);
   // Barra de formatação da análise: só faz sentido quando há texto (ou o campo
   // está em foco). Antes ficava sempre visível pedindo negrito sem texto pra usar.
   const [analiseTemTexto, setAnaliseTemTexto] = useState(false);
@@ -515,32 +611,28 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
   // Botões de formatação do recado: inserem os marcadores no texto, que o
   // relatório renderiza como negrito/itálico/título/tópico/divisor.
+  // Sem foco no editor, o marcador entra numa linha nova no fim do recado.
+  const anexaMarcador = (t: string) => {
+    setNotes((n) => (n && !n.endsWith("\n") ? `${n}\n${t}` : `${n}${t}`));
+  };
   const aplicarMarcador = (tipo: "negrito" | "italico" | "titulo" | "topico" | "divisor") => {
-    const ta = recadoRef.current;
-    const ini = ta?.selectionStart ?? notes.length;
-    const fim = ta?.selectionEnd ?? notes.length;
-    const sel = notes.slice(ini, fim);
-    let novo = notes;
-    let pos = fim;
+    const el = recadoRef.current;
+    const sel = window.getSelection();
+    const dentro = !!el && !!sel && sel.rangeCount > 0 && el.contains(sel.getRangeAt(0).startContainer);
+    const inserir = (t: string) => { el?.focus(); document.execCommand("insertText", false, t); };
     if (tipo === "negrito" || tipo === "italico") {
       const m = tipo === "negrito" ? "*" : "_";
-      const conteudo = sel || (tipo === "negrito" ? "negrito" : "itálico");
-      novo = notes.slice(0, ini) + m + conteudo + m + notes.slice(fim);
-      pos = ini + conteudo.length + 2;
-    } else if (tipo === "titulo" || tipo === "topico") {
-      const prefixo = tipo === "titulo" ? "## " : "- ";
-      const inicioLinha = notes.lastIndexOf("\n", Math.max(0, ini - 1)) + 1;
-      novo = notes.slice(0, inicioLinha) + prefixo + notes.slice(inicioLinha);
-      pos = fim + prefixo.length;
-    } else {
-      const antes = notes.slice(0, ini);
-      const depois = notes.slice(fim);
-      const quebra = antes === "" || antes.endsWith("\n") ? "" : "\n";
-      novo = antes + quebra + "---\n" + depois;
-      pos = (antes + quebra + "---\n").length;
+      const trecho = dentro && sel ? sel.toString() : "";
+      if (dentro) inserir(`${m}${trecho || (tipo === "negrito" ? "negrito" : "itálico")}${m}`);
+      else anexaMarcador(`${m}${tipo === "negrito" ? "negrito" : "itálico"}${m}`);
+      return;
     }
-    setNotes(novo);
-    requestAnimationFrame(() => { ta?.focus(); ta?.setSelectionRange(pos, pos); });
+    if (tipo === "divisor") {
+      if (dentro) inserir("\n---\n"); else anexaMarcador("---");
+      return;
+    }
+    const prefixo = tipo === "titulo" ? "## " : "- ";
+    if (dentro) inserir(`\n${prefixo}`); else anexaMarcador(prefixo);
   };
 
   // Relatório rápido: reabre já no preset escolhido pela gestora.
@@ -2003,15 +2095,8 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             ))}
             <span className="ml-1 text-[10px] font-body text-muted-foreground">*negrito* · _itálico_ · ## título · - tópico · --- divisor</span>
           </div>
-          <textarea
-            id="report-notes"
-            ref={recadoRef}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Ex.: um resumo do mês, os próximos passos, um recado pro cliente."
-            rows={3}
-            className="mt-1 w-full rounded-xl border border-border bg-card p-3 text-sm font-body text-foreground outline-none focus:border-primary resize-y"
-          />
+          <EditorRico innerRef={recadoRef} valor={notes} onChange={setNotes}
+            placeholder="Ex.: um resumo do mês, os próximos passos, um recado pro cliente." />
           <p className="text-[11px] font-body text-muted-foreground mt-1">
             {canPersistNotes
               ? "Nada é salvo sozinho: clique em Salvar nota (baixar ou compartilhar também salva). Assim período novo abre limpo."
@@ -2024,14 +2109,8 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           <label htmlFor="report-next" className="text-xs font-body font-semibold text-foreground">
             Próximos passos <span className="font-normal text-muted-foreground">(opcional, vira uma página no final do relatório)</span>
           </label>
-          <textarea
-            id="report-next"
-            value={proximos}
-            onChange={(e) => setProximos(e.target.value)}
-            placeholder="Ex.: a perspectiva pro próximo mês, o que vamos priorizar, campanhas previstas."
-            rows={3}
-            className="mt-1 w-full rounded-xl border border-border bg-card p-3 text-sm font-body text-foreground outline-none focus:border-primary resize-y"
-          />
+          <EditorRico valor={proximos} onChange={setProximos} minHeight={80}
+            placeholder="Ex.: a perspectiva pro próximo mês, o que vamos priorizar, campanhas previstas." />
         </div>
 
         {/* Prints das métricas do Instagram: sobe a imagem e ela entra no relatório */}
@@ -2083,6 +2162,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
         {/* Barra de formatação (fora do que vira PDF) */}
         <style>{`.report-editor:empty:before{content:attr(data-placeholder);color:#9ca3af;}
+.editor-rico:empty:before{content:attr(data-placeholder);color:#9ca3af;}
 .report-editor ul{list-style:disc;padding-left:22px;margin:6px 0;} .report-editor ol{list-style:decimal;padding-left:22px;margin:6px 0;} .report-editor li{margin-bottom:4px;} .report-editor p{margin:0 0 8px;}`}</style>
         {(analiseTemTexto || analiseFocada) && (
           <div className="mt-3 flex items-center gap-1">
