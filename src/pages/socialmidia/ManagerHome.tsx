@@ -270,18 +270,45 @@ export default function ManagerHome() {
           );
         })}
       </div>
-      {/* Upsell discreto, em UMA linha, sem card duplicado no meio dos ativos. */}
-      {upsellMods.length > 0 && (
+      {/* Upsell: quem NÃO tem módulo nenhum vê cards coloridos no estilo Cria
+          (é a vitrine); quem já tem algum vê só a linha discreta de ampliar. */}
+      {upsellMods.length > 0 && (activeMods.length === 0 ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-8">
+          {upsellMods.map((m) => {
+            const cor = CRIA_HEX[MODULE_COLOR[m.code] ?? "laranja"];
+            const Icon = MODULE_ICON[m.code] ?? Sparkles;
+            return (
+              <button key={m.code} type="button" onClick={() => openModule(m)}
+                className="relative overflow-hidden text-left rounded-2xl border border-border p-3 transition-all hover:-translate-y-0.5 hover:shadow-md"
+                style={{ background: "#F6F2E8" }}>
+                <span className="absolute -top-7 -right-7 h-16 w-16 rounded-full opacity-90" style={{ background: cor }} aria-hidden />
+                <span className="relative grid h-8 w-8 place-items-center rounded-xl bg-white shadow-sm mb-2" style={{ color: cor }}>
+                  <Icon className="h-4 w-4" />
+                </span>
+                <p className="relative font-display font-bold text-[13px] leading-tight truncate text-[#1a1a2e]">{m.name}</p>
+                <p className="relative mt-1 text-[10.5px] font-body font-semibold" style={{ color: cor }}>
+                  R$ {(m.price_cents / 100).toFixed(2).replace(".", ",")}/mês · conhecer
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
         <div className="flex items-center gap-2 flex-wrap rounded-2xl border border-dashed border-border bg-card/60 px-4 py-3 mb-8">
           <span className="text-xs font-body font-bold text-foreground">Amplie seu plano:</span>
-          {upsellMods.map((m) => (
-            <button key={m.code} type="button" onClick={() => openModule(m)}
-              className="text-xs font-body font-semibold rounded-full border border-border bg-card px-3 py-1.5 text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
-              {m.name}
-            </button>
-          ))}
+          {upsellMods.map((m) => {
+            const cor = CRIA_HEX[MODULE_COLOR[m.code] ?? "laranja"];
+            return (
+              <button key={m.code} type="button" onClick={() => openModule(m)}
+                className="text-xs font-body font-semibold rounded-full border bg-card px-3 py-1.5 text-foreground/80 hover:text-foreground transition-colors"
+                style={{ borderColor: `${cor}66` }}>
+                <span className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle" style={{ background: cor }} />
+                {m.name}
+              </button>
+            );
+          })}
         </div>
-      )}
+      ))}
 
       {/* ═══ VISÃO GERAL DO MÊS ═══
           Painel de produção do mês pro gestor se organizar: contagem de posts do

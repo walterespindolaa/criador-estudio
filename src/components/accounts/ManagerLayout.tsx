@@ -325,6 +325,9 @@ export default function ManagerLayout() {
           <div className="flex items-center gap-0.5 justify-self-start">
             <GlobalSearch />
             <HelpButton />
+            {/* Enviar feedback também no celular (antes só existia na HeroBand
+                do desktop, então o gestor mobile não tinha o botão). */}
+            <FeedbackButton origin="gestor" />
           </div>
 
           {/* A logo central sobe a página atual pro topo (não navega pra home). */}

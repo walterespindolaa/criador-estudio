@@ -278,6 +278,8 @@ const AppLayout = () => {
                 <div className="flex items-center gap-0.5 justify-self-start">
                   <GlobalSearch />
                   <HelpButton />
+                  {/* Enviar feedback também no celular (antes só na HeroBand desktop). */}
+                  <FeedbackButton origin="usuario" />
                 </div>
 
                 {/* A logo central sobe a página atual pro topo (não navega pra home). */}

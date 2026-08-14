@@ -47,13 +47,38 @@ const TAGLINES: Record<string, string> = {
   hub_extra: "Mais fôlego de análise pro Cria Radar",
   cria_captacao: "Suas captações do mês organizadas como uma produção",
 };
-const RESULTADO: Record<string, string> = {
-  aprovapost_externo: "Post enviado, cliente aprova pelo link em segundos e você publica no prazo, com histórico de tudo.",
-  crm: "Você bate o olho e sabe de cada cliente: proposta, contrato, follow-up e histórico, tudo num lugar só.",
-  financeiro: "Cachês, mensalidades e pendências na tela: você cobra na hora certa e fecha o mês sabendo o número.",
-  hub_cria: "Pauta baseada no que já bomba no nicho, e o cliente sentindo que você está sempre um passo à frente.",
-  hub_extra: "Mais clientes analisados no mesmo mês, sem esperar a cota virar.",
-  cria_captacao: "Você chega na captação com roteiro, tomadas e folha do dia prontos, e nada fica sem gravar.",
+// Cenários CONCRETOS de uso: a pessoa se enxerga usando (dia, situação, gesto).
+// É o "na prática" que dá ideia, não frase de efeito.
+const NA_PRATICA: Record<string, string[]> = {
+  aprovapost_externo: [
+    "Terminou a arte às 18h? Manda o link e o cliente aprova do celular, na fila do mercado. O post sai no dia certo.",
+    "Pediu ajuste? O pedido chega comentado no post certo, sem áudio de 3 minutos pra decifrar.",
+    "No fim do mês, o histórico mostra tudo que foi enviado, aprovado e publicado: prova do seu trabalho, preto no branco.",
+  ],
+  crm: [
+    "Segunda de manhã: você abre o pipeline e vê qual proposta está parada e quem precisa de follow-up hoje.",
+    "Lead chegou pelo direct? Cadastra em 30 segundos e ele nunca mais se perde na caixa de mensagens.",
+    "Na renovação de contrato, o histórico inteiro do cliente está ali pra justificar seu reajuste com segurança.",
+  ],
+  financeiro: [
+    "Dia 5: o Caixa mostra quem já pagou e quem merece uma cobrada educada, antes de virar bola de neve.",
+    "Fechou cliente novo? Lança a mensalidade recorrente UMA vez e ela entra sozinha na previsão de todo mês.",
+    "No fechamento, você sabe o número real: quanto entrou, o que ficou pendente e qual cliente dá mais resultado.",
+  ],
+  hub_cria: [
+    "Antes da reunião de pauta, você roda a análise e chega com: “os concorrentes estão apostando em X, a gente responde com Y”.",
+    "Viu um reel bombando no nicho? Transcreve, adapta pro tom do seu cliente e vira ideia no cronograma dele.",
+    "Os anúncios que os concorrentes estão rodando agora viram referência pro seu criativo, sem print de espiã.",
+  ],
+  hub_extra: [
+    "Mês cheio de pauta? Os créditos extras entram na hora e você analisa todos os clientes sem esperar a cota virar.",
+    "Acabou o pique do mês, é só cancelar o pacote: ele existe pros meses de aperto.",
+  ],
+  cria_captacao: [
+    "Na véspera, você gera a folha do dia: roteiros e tomadas de todas as gravações de amanhã numa página só.",
+    "No cliente, abre o teleprompter no celular, entrega na mão dele e grava com o texto rolando na tela.",
+    "Cliente em outra cidade? O painel sugere aproveitar a viagem e agrupar as captações do mesmo lugar.",
+  ],
 };
 const BENEFITS: Record<string, string[]> = {
   aprovapost_externo: [
@@ -108,7 +133,7 @@ export function ModulePopup({ module: m, onClose }: { module: ModuleWithStatus |
   const active = m ? (m.status === "active" || m.status === "past_due") : false;
   const benefits = m ? (BENEFITS[m.code] ?? []) : [];
   const dor = m ? DOR[m.code] : undefined;
-  const resultado = m ? RESULTADO[m.code] : undefined;
+  const napratica = m ? (NA_PRATICA[m.code] ?? []) : [];
   const busy = checkout.isPending || portalLoading;
   const navigate = useNavigate();
   const rota = m ? ROTA[m.code] : undefined;
@@ -129,7 +154,7 @@ export function ModulePopup({ module: m, onClose }: { module: ModuleWithStatus |
       <Dialog open={!!m} onOpenChange={(o) => !o && onClose()}>
         <DialogContent className="max-w-md rounded-3xl p-0 overflow-hidden">
           {m && (
-            <div className="max-h-[88vh] overflow-y-auto">
+            <div className="max-h-[88vh] overflow-y-auto scrollbar-none">
               {/* ── Hero no estilo Cria: creme + formas + ícone + preço ── */}
               <div className="relative overflow-hidden px-6 pt-9 pb-6 text-center" style={{ background: "#F6F2E8" }}>
                 <span className="absolute -top-10 -right-8 w-28 h-28 rounded-full opacity-90" style={{ background: "#FF77B9" }} aria-hidden />
@@ -171,11 +196,18 @@ export function ModulePopup({ module: m, onClose }: { module: ModuleWithStatus |
                   </ul>
                 </div>
 
-                {/* ── O resultado no fim do mês ── */}
-                {resultado && (
+                {/* ── Na prática: cenários concretos que dão ideia de uso ── */}
+                {napratica.length > 0 && (
                   <div className="mt-4 rounded-2xl border border-border bg-muted/30 px-4 py-3">
-                    <p className="text-[10.5px] uppercase tracking-wider text-muted-foreground font-body font-bold mb-1">Na prática</p>
-                    <p className="text-[13px] font-body text-foreground leading-relaxed">{resultado}</p>
+                    <p className="text-[10.5px] uppercase tracking-wider text-muted-foreground font-body font-bold mb-2">Na prática</p>
+                    <ul className="space-y-2">
+                      {napratica.map((t, i) => (
+                        <li key={i} className="flex items-start gap-2 text-[13px] font-body text-foreground leading-relaxed">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: cor }} />
+                          {t}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
 
