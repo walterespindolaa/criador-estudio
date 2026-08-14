@@ -259,7 +259,13 @@ export default function ManagerLayout() {
             const route = MODULE_ROUTE[m.code];
             const corner = active
               ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-[hsl(var(--sidebar-background))]" />
-              : <Lock className="absolute right-0.5 top-0.5 h-3 w-3 text-muted-foreground" />;
+              : (
+                // Selinho de cadeado com fundo sólido (espelha a bolinha verde do
+                // ativo): o ícone solto cinza-claro parecia bug de renderização.
+                <span className="absolute right-0 top-0 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-foreground/75 ring-2 ring-[hsl(var(--sidebar-background))]">
+                  <Lock className="h-2 w-2 text-background" strokeWidth={3} />
+                </span>
+              );
             const tipBadge = (
               <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold",
                 active ? "bg-emerald-500/12 text-emerald-600 ring-1 ring-inset ring-emerald-500/25" : m.coming_soon ? "bg-foreground/[0.07] text-muted-foreground" : "bg-primary/12 text-primary ring-1 ring-inset ring-primary/20")}>
