@@ -86,9 +86,10 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
   const aspect = postAspect(post.platform, post.format);
   const vertical = aspect === "9 / 16";
   const brand = client.brand_color ?? null;
-  // Legenda: no modo "Ambas"/detalhado o texto vai pro campo de conteúdo (script),
-  // então caímos nele quando a legenda estiver vazia senão o cliente não vê nada.
-  const legenda = post.caption || post.script || null;
+  // SÓ a legenda de verdade. O roteiro/copy (script) é material INTERNO de
+  // produção e aparece no fluxo do CRONOGRAMA; na aprovação do post pronto ele
+  // vazava inteiro ("SLIDE 1 - CAPA...") quando a legenda estava vazia.
+  const legenda = post.caption || null;
   // Story tem preview próprio: tela cheia 9:16, sem legenda e sem ações de feed.
   if ((post.format || "").toLowerCase() === "story") {
     return (
@@ -213,8 +214,8 @@ function PostApproval({ client, post, index, busy, history, onApproveFast, onAdj
   const fullyApproved = post.approval_status === "aprovado";
   const vertical = postAspect(post.platform, post.format) === "9 / 16";
   const isStory = (post.format || "").toLowerCase() === "story";
-  // Mesma regra do CardIG: legenda cai no script quando o campo próprio vem vazio.
-  const legenda = post.caption || post.script || null;
+  // SÓ a legenda (o roteiro/copy é interno; vive na aprovação do cronograma).
+  const legenda = post.caption || null;
 
   const openAdjust = () => { setAdjOpen(true); setComment(""); };
   const sendFast = () => { onAdjustFast(post.post_id, comment.trim()); setAdjOpen(false); setComment(""); };
