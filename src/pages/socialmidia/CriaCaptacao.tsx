@@ -685,69 +685,87 @@ function CriaCaptacaoInner() {
       )}
 
       {!pastaAberta && (<>
-      {/* Resumo do mês: cards grandes */}
-      <div data-tour="cap-resumo" className="grid grid-cols-3 gap-3">
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <p className="flex items-center gap-1.5 text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground"><Video className="h-3.5 w-3.5" /> Captações</p>
-          <p className="text-3xl font-display font-extrabold text-foreground leading-none mt-2 tabular-nums">{resumo.total}</p>
-          <p className="text-[11px] font-body text-muted-foreground mt-1">no mês</p>
-        </div>
-        <div className="rounded-2xl border px-4 py-4" style={{ background: "hsl(var(--cria-verde) / 0.08)", borderColor: "hsl(var(--cria-verde) / 0.25)" }}>
-          <p className="flex items-center gap-1.5 text-[11px] font-body font-bold uppercase tracking-wide" style={{ color: "hsl(var(--cria-verde))" }}><CheckCircle2 className="h-3.5 w-3.5" /> Concluídas</p>
-          <p className="text-3xl font-display font-extrabold text-foreground leading-none mt-2 tabular-nums">{resumo.concluidas}</p>
-          <p className="text-[11px] font-body text-muted-foreground mt-1">já gravadas</p>
-        </div>
-        <div className="rounded-2xl border px-4 py-4" style={{ background: "hsl(var(--cria-amarelo) / 0.1)", borderColor: "hsl(var(--cria-amarelo) / 0.3)" }}>
-          <p className="flex items-center gap-1.5 text-[11px] font-body font-bold uppercase tracking-wide" style={{ color: "hsl(var(--cria-amarelo))" }}><Clock className="h-3.5 w-3.5" /> Faltam</p>
-          <p className="text-3xl font-display font-extrabold text-foreground leading-none mt-2 tabular-nums">{resumo.faltam}</p>
-          <p className="text-[11px] font-body text-muted-foreground mt-1">pendentes</p>
-        </div>
-      </div>
-
-      {/* Direcionamento: o que fazer agora (a "recepção" do módulo). */}
-      {(proxima || semRoteiro > 0 || roteirosAGravar > 0) && (
-        <div data-tour="cap-direcao" className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-4">
-          <h2 className="flex items-center gap-2 text-sm font-display font-bold text-foreground">
-            <Sparkles className="h-4 w-4 text-primary" /> Por onde começar
-          </h2>
-          <div className="mt-2.5 space-y-1.5">
-            {proxima && (
-              <button type="button"
-                onClick={() => {
-                  const k = proxima.crm_client_id ? `crm:${proxima.crm_client_id}` : null;
-                  if (k && pastas.some((p) => p.key === k)) setPasta(k); else setAba("agenda");
-                }}
-                className="w-full flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-left hover:border-primary/40 transition-colors">
-                <Video className="h-4 w-4 text-primary shrink-0" />
-                <span className="min-w-0 flex-1 text-[12.5px] font-body text-foreground truncate">
-                  Próxima gravação: <strong>{diaMes(proxima.capture_date)}</strong> · {capName(proxima)}{proxima.capture_time ? ` · ${proxima.capture_time.slice(0, 5)}` : ""}
-                </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </button>
+      {/* HERO do módulo: placar do mês + próxima gravação + pendências, num
+          painel só (substitui os 3 cards soltos e o bloco de direcionamento). */}
+      <div data-tour="cap-resumo" className="relative overflow-hidden rounded-3xl border border-primary/15 bg-card p-4 sm:p-5">
+        <span aria-hidden className="pointer-events-none absolute -top-14 -right-14 w-44 h-44 rounded-full bg-primary/10 blur-2xl" />
+        <div className="relative flex flex-col md:flex-row md:items-stretch gap-4">
+          {/* Placar */}
+          <div className="md:w-52 shrink-0">
+            <p className="flex items-center gap-1.5 text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">
+              <Video className="h-3.5 w-3.5" /> {monthLabel(month)}
+            </p>
+            <p className="mt-1.5 text-4xl font-display font-extrabold text-foreground leading-none tabular-nums">
+              {resumo.concluidas}<span className="text-xl text-muted-foreground/50">/{resumo.total}</span>
+            </p>
+            <p className="text-[11px] font-body text-muted-foreground mt-1">captações gravadas</p>
+            <div className="mt-2.5 h-2 rounded-full bg-muted overflow-hidden">
+              <div className="h-full rounded-full bg-[hsl(var(--cria-verde))] transition-all"
+                style={{ width: `${resumo.total > 0 ? Math.round((resumo.concluidas / resumo.total) * 100) : 0}%` }} />
+            </div>
+          </div>
+          <div className="hidden md:block w-px bg-border/60" />
+          {/* Próxima gravação + pendências */}
+          <div className="flex-1 min-w-0">
+            {proxima ? (() => {
+              const cor = (proxima.crm_client_id ? clientById.get(proxima.crm_client_id)?.color : null) || "#EA4918";
+              const nome = capName(proxima);
+              return (
+                <button type="button"
+                  onClick={() => {
+                    const k = proxima.crm_client_id ? `crm:${proxima.crm_client_id}` : null;
+                    if (k && pastas.some((p) => p.key === k)) setPasta(k); else setAba("agenda");
+                  }}
+                  className="w-full flex items-center gap-3 rounded-2xl border border-border bg-background px-3.5 py-3 text-left hover:border-primary/40 transition-colors">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white text-sm font-display font-extrabold" style={{ background: cor }}>
+                    {nome.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[10px] font-body font-bold uppercase tracking-wide text-primary">Próxima gravação</span>
+                    <span className="block text-sm font-display font-extrabold text-foreground truncate">{nome}</span>
+                    <span className="block text-[11.5px] font-body text-muted-foreground truncate">
+                      {diaMes(proxima.capture_date)} ({WD[parseDateOnly(proxima.capture_date).getDay()]})
+                      {proxima.capture_time ? ` · ${proxima.capture_time.slice(0, 5)}` : ""}
+                      {(proxima.location ?? "").trim() ? ` · ${(proxima.location ?? "").trim()}` : ""}
+                    </span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                </button>
+              );
+            })() : (
+              <div className="rounded-2xl border border-dashed border-border px-3.5 py-3">
+                <p className="text-sm font-body font-semibold text-foreground">Nenhuma gravação futura marcada</p>
+                <p className="text-[11.5px] font-body text-muted-foreground mt-0.5">Abra a pasta de um cliente e use o Marcar captação.</p>
+              </div>
             )}
-            {semRoteiro > 0 && (
-              <button type="button" onClick={() => { setAba("agenda"); setStatusFilter("pendentes"); }}
-                className="w-full flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-left hover:border-primary/40 transition-colors">
-                <FileText className="h-4 w-4 text-[hsl(var(--cria-amarelo))] shrink-0" />
-                <span className="min-w-0 flex-1 text-[12.5px] font-body text-foreground truncate">
-                  <strong>{semRoteiro}</strong> {semRoteiro === 1 ? "captação pendente ainda sem roteiro" : "captações pendentes ainda sem roteiro"}
+            <div data-tour="cap-direcao" className="mt-2.5 flex flex-wrap gap-1.5">
+              {semRoteiro > 0 && (
+                <button type="button" onClick={() => { setAba("agenda"); setStatusFilter("pendentes"); }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--cria-amarelo)/0.4)] bg-[hsl(var(--cria-amarelo)/0.12)] px-3 py-1.5 text-[11px] font-body font-bold text-[hsl(var(--cria-amarelo))] hover:brightness-95 transition-all">
+                  <FileText className="h-3 w-3" /> {semRoteiro} sem roteiro
+                </button>
+              )}
+              {roteirosAGravar > 0 && (
+                <button type="button" onClick={() => setAba("clientes")}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-[11px] font-body font-bold text-primary hover:bg-primary/15 transition-colors">
+                  <Film className="h-3 w-3" /> {roteirosAGravar} {roteirosAGravar === 1 ? "roteiro a gravar" : "roteiros a gravar"}
+                </button>
+              )}
+              {resumo.faltam > 0 && (
+                <button type="button" onClick={() => { setAba("agenda"); setStatusFilter("pendentes"); }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1.5 text-[11px] font-body font-bold text-muted-foreground hover:text-foreground transition-colors">
+                  <Clock className="h-3 w-3" /> {resumo.faltam} {resumo.faltam === 1 ? "pendente no mês" : "pendentes no mês"}
+                </button>
+              )}
+              {resumo.total > 0 && resumo.faltam === 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--cria-verde)/0.35)] bg-[hsl(var(--cria-verde)/0.12)] px-3 py-1.5 text-[11px] font-body font-bold text-[hsl(var(--cria-verde))]">
+                  <CheckCircle2 className="h-3 w-3" /> Mês 100% gravado
                 </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </button>
-            )}
-            {roteirosAGravar > 0 && (
-              <button type="button" onClick={() => setAba("clientes")}
-                className="w-full flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-left hover:border-primary/40 transition-colors">
-                <Film className="h-4 w-4 text-primary shrink-0" />
-                <span className="min-w-0 flex-1 text-[12.5px] font-body text-foreground truncate">
-                  <strong>{roteirosAGravar}</strong> {roteirosAGravar === 1 ? "roteiro do mês ainda não gravado" : "roteiros do mês ainda não gravados"}
-                </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-              </button>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Sugestões "aproveita a viagem": valem nas duas visões, ficam acima das abas. */}
       {showSugestoes && (
@@ -1417,6 +1435,9 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editando, setEditando] = useState<CaptureScript | null>(null);
+  // Roteiro aberto no modal (card estilo Drive clicado). Guarda só o id: o
+  // conteúdo vem SEMPRE da lista fresca, pra refletir edições na hora.
+  const [verId, setVerId] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [marcarOpen, setMarcarOpen] = useState(false);
   const [tomadasOpen, setTomadasOpen] = useState(false);
@@ -1504,16 +1525,11 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {scripts.map((s) => (
-              <ScriptCard key={s.id} script={s}
-                onToggleDone={() => updScript.mutate({ id: s.id, patch: { done: !s.done } })}
-                onEdit={() => { setEditando(s); setEditorOpen(true); }}
-                onDelete={() => { if (window.confirm("Excluir este roteiro?")) delScript.mutate(s.id); }}
-                onPrompter={() => onPrompter(pasta.nome, s.content)}
-                onVirarPost={ext ? () => virarPost(s) : null}
-                onVerPost={pasta.crmId ? () => navigate(`/socialmidia/clientes/${pasta.crmId}/posts`) : null}
-                converting={toPost.isPending} />
+          /* Grade estilo Drive: miniatura do texto + título. Clicar abre o modal
+             com o roteiro inteiro e as ações (renomear, teleprompter, copiar...). */
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {scripts.map((s, i) => (
+              <RoteiroMiniCard key={s.id} script={s} indice={i} onOpen={() => setVerId(s.id)} />
             ))}
           </div>
         )}
@@ -1529,8 +1545,30 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             Nenhuma captação marcada neste mês. Use o Marcar captação aqui em cima.
           </p>
         ) : (
-          <div className="rounded-2xl border border-border bg-card divide-y divide-border">
-            {caps.map((c) => renderCapture(c))}
+          /* Compacto por padrão: uma linha por captação (dia, hora, status);
+             expandir mostra o card completo (roteiro, tomadas, virar post). */
+          <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
+            {caps.map((c) => {
+              const done = c.status === "concluida";
+              const temRoteiro = !!(c.roteiro ?? "").trim();
+              return (
+                <details key={c.id} className="group/cap">
+                  <summary className="flex items-center gap-2.5 px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:bg-muted/30 transition-colors">
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 transition-transform group-open/cap:rotate-90" />
+                    <span className="text-sm font-display font-bold text-foreground tabular-nums shrink-0">{diaMes(c.capture_date)}</span>
+                    {c.capture_time && <span className="text-[11px] font-body text-muted-foreground shrink-0">{c.capture_time.slice(0, 5)}</span>}
+                    <span className={cn("min-w-0 flex-1 truncate text-[11px] font-body", temRoteiro ? "text-muted-foreground" : "text-[hsl(var(--cria-amarelo))] font-semibold")}>
+                      {temRoteiro ? "roteiro pronto" : "sem roteiro"}
+                    </span>
+                    <span className={cn("shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-body font-bold",
+                      done ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]" : "bg-[hsl(var(--cria-amarelo)/0.15)] text-[hsl(var(--cria-amarelo))]")}>
+                      {done ? "Concluída" : "Pendente"}
+                    </span>
+                  </summary>
+                  <div className="border-t border-border/60">{renderCapture(c)}</div>
+                </details>
+              );
+            })}
           </div>
         )}
       </div>
@@ -1581,6 +1619,22 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             });
           }} />
       )}
+      {verId && (() => {
+        const s = scripts.find((x) => x.id === verId);
+        if (!s) return null;
+        return (
+          <RoteiroVerDialog script={s}
+            onOpenChange={(o) => { if (!o) setVerId(null); }}
+            onRename={(t) => updScript.mutate({ id: s.id, patch: { title: t } })}
+            onToggleDone={() => updScript.mutate({ id: s.id, patch: { done: !s.done } })}
+            onEditar={() => { setEditando(s); setEditorOpen(true); }}
+            onExcluir={() => { if (window.confirm("Excluir este roteiro?")) { delScript.mutate(s.id); setVerId(null); } }}
+            onPrompter={() => onPrompter(pasta.nome, s.content)}
+            onVirarPost={ext && !s.source_post_id ? () => virarPost(s) : null}
+            onVerPost={s.source_post_id && pasta.crmId ? () => navigate(`/socialmidia/clientes/${pasta.crmId}/posts`) : null}
+            converting={toPost.isPending} />
+        );
+      })()}
       {marcarOpen && (
         <MarcarCaptacaoDialog open onOpenChange={(o) => { if (!o) setMarcarOpen(false); }}
           salvando={addingCapture}
@@ -1593,19 +1647,44 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   );
 }
 
-// ── Um roteiro salvo (card): copiar, teleprompter, editar, gravado, virar post ─
-function ScriptCard({ script, onToggleDone, onEdit, onDelete, onPrompter, onVirarPost, onVerPost, converting }: {
+// ── Card do roteiro estilo Drive: miniatura do texto + título ─────────────────
+function RoteiroMiniCard({ script, indice, onOpen }: { script: CaptureScript; indice: number; onOpen: () => void }) {
+  return (
+    <button type="button" onClick={onOpen}
+      className="group rounded-xl border border-border bg-card overflow-hidden text-left hover:border-primary/40 hover:shadow-warm-sm transition-all">
+      {/* A "miniatura": as primeiras linhas do texto em letra mínima, como no Drive. */}
+      <div className="h-24 bg-background px-3 py-2.5 overflow-hidden border-b border-border/60">
+        <p className="text-[8px] leading-relaxed text-muted-foreground/80 whitespace-pre-wrap break-words">{script.content.slice(0, 420)}</p>
+      </div>
+      <div className="flex items-center gap-1.5 px-2.5 py-2">
+        <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+        <span className="min-w-0 flex-1 truncate text-[12px] font-body font-semibold text-foreground">
+          {script.title.trim() || `Roteiro ${indice + 1}`}
+        </span>
+        {script.done
+          ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[hsl(var(--cria-verde))]" />
+          : <Clock className="h-3.5 w-3.5 shrink-0 text-[hsl(var(--cria-amarelo))]" />}
+      </div>
+    </button>
+  );
+}
+
+// ── Modal do roteiro: título renomeável + texto inteiro + todas as ações ──────
+function RoteiroVerDialog({ script, onOpenChange, onRename, onToggleDone, onEditar, onExcluir, onPrompter, onVirarPost, onVerPost, converting }: {
   script: CaptureScript;
-  onToggleDone: () => void; onEdit: () => void; onDelete: () => void;
+  onOpenChange: (o: boolean) => void;
+  onRename: (titulo: string) => void;
+  onToggleDone: () => void;
+  onEditar: () => void;
+  onExcluir: () => void;
   onPrompter: () => void;
   onVirarPost: (() => void) | null;
   onVerPost: (() => void) | null;
   converting: boolean;
 }) {
-  const [aberto, setAberto] = useState(false);
+  const [titulo, setTitulo] = useState(script.title);
   const [copied, setCopied] = useState(false);
   const texto = script.content.trim();
-  const longo = texto.length > 280;
   const copiar = async () => {
     try {
       await navigator.clipboard.writeText(texto);
@@ -1615,62 +1694,60 @@ function ScriptCard({ script, onToggleDone, onEdit, onDelete, onPrompter, onVira
     } catch { toast.error("Não consegui copiar. Copie manualmente."); }
   };
   return (
-    <div className={cn("rounded-2xl border bg-card p-3.5", script.done ? "border-[hsl(var(--cria-verde)/0.4)]" : "border-border")}>
-      <div className="flex items-start gap-2">
-        <p className="min-w-0 flex-1 text-sm font-display font-bold text-foreground break-words">
-          {script.title.trim() || "Roteiro"}
-          {script.source === "reel" && (
-            <span className="ml-1.5 align-middle inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[9px] font-body font-bold uppercase tracking-wide">
-              <Film className="h-2.5 w-2.5" /> do Cria Post
-            </span>
-          )}
-        </p>
-        {/* Gravado x A gravar: o placar da pasta soma daqui. */}
-        <button type="button" onClick={onToggleDone}
-          className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-body font-bold transition-colors",
-            script.done
-              ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]"
-              : "bg-muted text-muted-foreground hover:text-foreground")}>
-          {script.done ? <><CheckCircle2 className="h-3 w-3" /> Gravado</> : <><Clock className="h-3 w-3" /> A gravar</>}
-        </button>
-      </div>
-      <p className={cn("mt-1.5 text-[13px] font-body text-foreground whitespace-pre-wrap break-words", !aberto && longo && "line-clamp-4")}>{texto}</p>
-      {longo && (
-        <button type="button" onClick={() => setAberto((o) => !o)} className="mt-1 text-[11px] font-body font-semibold text-primary">
-          {aberto ? "Mostrar menos" : "Ler tudo"}
-        </button>
-      )}
-      <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-        <Button size="sm" onClick={onPrompter} className="rounded-xl h-8"
-          title="Abre este roteiro em tela cheia pro cliente ler enquanto você grava.">
-          <Play className="h-3.5 w-3.5 mr-1.5" /> Teleprompter
-        </Button>
-        <Button size="sm" variant="outline" onClick={copiar} className="rounded-xl h-8">
-          {copied ? <><Check className="h-3.5 w-3.5 mr-1.5" /> Copiado</> : <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar</>}
-        </Button>
-        <Button size="sm" variant="ghost" onClick={onEdit} className="rounded-xl h-8">
-          <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
-        </Button>
-        {script.source_post_id && onVerPost ? (
-          <button type="button" onClick={onVerPost} className="inline-flex items-center gap-1 text-[11px] font-body font-semibold text-primary">
-            <Check className="h-3.5 w-3.5" /> Tem post
+    <Dialog open onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+        {/* Título renomeável direto aqui (salva ao sair do campo). */}
+        <div className="flex items-center gap-2 pr-8">
+          <FileText className="h-4 w-4 text-primary shrink-0" />
+          <Input value={titulo} onChange={(e) => setTitulo(e.target.value)}
+            onBlur={() => { const t = titulo.trim(); if (t !== script.title.trim()) onRename(t); }}
+            placeholder="Nome do roteiro" className="rounded-xl h-9 font-display font-bold" />
+          <button type="button" onClick={onToggleDone}
+            className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10.5px] font-body font-bold transition-colors",
+              script.done
+                ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]"
+                : "bg-muted text-muted-foreground hover:text-foreground")}>
+            {script.done ? <><CheckCircle2 className="h-3 w-3" /> Gravado</> : <><Clock className="h-3 w-3" /> A gravar</>}
           </button>
-        ) : onVirarPost ? (
-          <Button size="sm" variant="outline" onClick={onVirarPost} disabled={converting} className="rounded-xl h-8">
-            {converting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />} Virar post
+        </div>
+        {script.source === "reel" && (
+          <p className="-mt-1 inline-flex items-center gap-1 text-[10.5px] font-body font-bold text-primary"><Film className="h-3 w-3" /> importado do Cria Post</p>
+        )}
+        <div className="flex-1 min-h-0 overflow-y-auto rounded-xl border border-border bg-muted/20 p-3.5">
+          <p className="text-[13.5px] font-body text-foreground whitespace-pre-wrap break-words leading-relaxed">{texto}</p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" onClick={onPrompter} className="rounded-xl h-9"
+            title="Abre este roteiro em tela cheia pro cliente ler enquanto você grava.">
+            <Play className="h-3.5 w-3.5 mr-1.5" /> Teleprompter
           </Button>
-        ) : null}
-        <button type="button" onClick={onDelete}
-          className="ml-auto grid h-8 w-8 place-items-center rounded-lg text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
-          aria-label="Excluir roteiro">
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    </div>
+          <Button size="sm" variant="outline" onClick={copiar} className="rounded-xl h-9">
+            {copied ? <><Check className="h-3.5 w-3.5 mr-1.5" /> Copiado</> : <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar</>}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onEditar} className="rounded-xl h-9">
+            <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
+          </Button>
+          {onVerPost ? (
+            <button type="button" onClick={onVerPost} className="inline-flex items-center gap-1 text-[11px] font-body font-semibold text-primary">
+              <Check className="h-3.5 w-3.5" /> Tem post
+            </button>
+          ) : onVirarPost ? (
+            <Button size="sm" variant="outline" onClick={onVirarPost} disabled={converting} className="rounded-xl h-9">
+              {converting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />} Virar post
+            </Button>
+          ) : null}
+          <button type="button" onClick={onExcluir}
+            className="ml-auto grid h-9 w-9 place-items-center rounded-lg text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+            aria-label="Excluir roteiro">
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-// ── Novo/editar roteiro ────────────────────────────────────────────────────────
+// ── Novo/editar roteiro ────────────────────────────────────────────────────────// ── Novo/editar roteiro ────────────────────────────────────────────────────────
 function RoteiroDialog({ open, onOpenChange, editando, inicialTitulo, inicialTexto, salvando, onSalvar }: {
   open: boolean; onOpenChange: (o: boolean) => void;
   editando: boolean; inicialTitulo: string; inicialTexto: string;
