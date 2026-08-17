@@ -353,6 +353,11 @@ function EditorRico({ valor, onChange, placeholder, minHeight = 96, innerRef }: 
   const proprio = useRef<HTMLDivElement>(null);
   const ref = innerRef ?? proprio;
 
+  // ACENTOS: enquanto o navegador compõe um dead key (´ + o = ó) NÃO se pode
+  // reescrever o innerHTML, senão a composição é cancelada e vira apóstrofo.
+  // Durante a composição a gente não mexe no DOM; no compositionend processa.
+  const compondo = useRef(false);
+
   // DEBOUNCE: o DOM é a fonte durante a digitação; o estado do diálogo (que
   // re-renderiza a prévia A4 inteira) só recebe o texto depois de uma pausa.
   // Era ESSE re-render a cada tecla o delay do editor.
@@ -445,6 +450,7 @@ function EditorRico({ valor, onChange, placeholder, minHeight = 96, innerRef }: 
   };
   const aoDigitar = () => {
     const el = ref.current; if (!el) return;
+    if (compondo.current) return; // meio da composição de acento: o DOM fica quieto
     const texto = leiaTexto(el);
     const off = offsetAtual(el);
     emitir(texto);
@@ -509,6 +515,8 @@ function EditorRico({ valor, onChange, placeholder, minHeight = 96, innerRef }: 
         style={{ minHeight, maxHeight: 320, overflowY: "auto", whiteSpace: "pre-wrap" }}
         data-placeholder={placeholder}
         onInput={aoDigitar}
+        onCompositionStart={() => { compondo.current = true; }}
+        onCompositionEnd={() => { compondo.current = false; aoDigitar(); }}
         onBlur={emitirJa}
         onKeyDown={(e) => {
           if (e.key === "Enter") { e.preventDefault(); inserirTexto("\n"); }
