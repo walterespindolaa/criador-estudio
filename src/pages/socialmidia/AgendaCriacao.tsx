@@ -1070,6 +1070,13 @@ export default function AgendaCriacao() {
                 }
                 if (item.kind === "cria") {
                   const c = item.cria;
+                  // Reunião herda a cor do cliente cadastrado (fundo segue branco);
+                  // o lilás é só o padrão de quem não tem cor definida.
+                  const criaColor = corDoItem(
+                    null,
+                    c.crm_client_id ? clients.find((x) => x.id === c.crm_client_id)?.color : null,
+                    "#4B3FA8",
+                  );
                   return (
                     <Draggable key={`cria:${c.id}`} draggableId={`cria:${c.id}`} index={idx} disableInteractiveElementBlocking>
                       {(dragProvided, dragSnapshot) => (
@@ -1077,14 +1084,14 @@ export default function AgendaCriacao() {
                           role="button" tabIndex={0}
                           onClick={() => setEditCreation(c)}
                           onKeyDown={(e) => { if (e.key === "Enter") setEditCreation(c); }}
-                          style={{ ...dragProvided.draggableProps.style, ...dragCardStyle, borderLeftColor: "#4B3FA8" }}
+                          style={{ ...dragProvided.draggableProps.style, ...dragCardStyle, borderLeftColor: criaColor }}
                           className={cn("group rounded-lg border border-l-2 border-border bg-card px-2 py-1.5 hover:bg-muted/40 transition-colors",
                             c.done && "opacity-60",
                             dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                           <div className="flex items-start gap-1 min-w-0">
                             <DragGrip className="mt-px" handleProps={dragProvided.dragHandleProps ?? undefined} />
                             <div className="flex-1 min-w-0">
-                              <p className="text-[9px] font-body font-bold uppercase tracking-wider" style={{ color: "#4B3FA8" }}>Reunião{item.time ? ` · ${item.time}` : ""}</p>
+                              <p className="text-[9px] font-body font-bold uppercase tracking-wider" style={{ color: criaColor }}>Reunião{item.time ? ` · ${item.time}` : ""}</p>
                               <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", c.done ? "line-through text-muted-foreground" : "text-foreground")}>{c.title?.trim() || nameOf(c.crm_client_id, c.client_name)}</p>
                               {c.title?.trim() && <p className="text-[10px] font-body text-muted-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}</p>}
                             </div>
@@ -1487,7 +1494,7 @@ export default function AgendaCriacao() {
         const criaModal: Record<Faixa, ClientCriaAgendaPost[]> = { sem: [], manha: [], tarde: [], noite: [] };
         for (const p of criaCli) criaModal[faixaDoItem(null, p.scheduled_time)].push(p);
         const linhaItem = (item: DayItem) => {
-          if (item.kind === "cria") { const c = item.cria; return <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot("#4B3FA8")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{c.title?.trim() || nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">{c.event_time ? `${c.event_time.slice(0, 5)} · ` : ""}Reunião</span></button>; }
+          if (item.kind === "cria") { const c = item.cria; const cor = corDoItem(null, c.crm_client_id ? clients.find((x) => x.id === c.crm_client_id)?.color : null, "#4B3FA8"); return <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot(cor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{c.title?.trim() || nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">{c.event_time ? `${c.event_time.slice(0, 5)} · ` : ""}Reunião</span></button>; }
           if (item.kind === "task") { const t = item.task; const dotColor = corDaTarefa(t); return <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
           if (item.kind === "mat") { const mt = item.mat; const done = mt.status === "finalizado"; return <button key={`m${mt.id}`} onClick={() => { setDayModal(null); openMaterial(mt); }} className={rowCls}>{dot(corDoMaterial(mt))}<span className={cn("text-[13px] font-body font-semibold truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{mt.title}</span><span className="ml-auto text-[10px] text-muted-foreground shrink-0">Material</span></button>; }
           if (item.kind === "cap") { const c = item.cap; return <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{item.time ? ` · ${item.time}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>; }
