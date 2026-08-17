@@ -340,6 +340,27 @@ export const TOURS_GESTOR: TourConfig[] = [
         placement: "bottom",
       },
       {
+        // Só aparece quando há algo pra fazer (próxima gravação, roteiro faltando).
+        skipIfMissing: true,
+        target: '[data-tour="cap-direcao"]',
+        title: "Por onde começar",
+        body: "A recepção do módulo: a próxima gravação, as captações que ainda estão sem roteiro e os roteiros que faltam gravar. Toque numa linha e o Cria te leva direto pro lugar certo.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="cap-abas"]',
+        title: "Pastas ou agenda",
+        body: "Dois jeitos de ver o mês: em Clientes, cada um vira uma pasta com os roteiros e captações dele, mês a mês. Em Agenda do mês, tudo agrupado por dia e local, com a folha do dia pra levar pra rua.",
+        placement: "bottom",
+      },
+      {
+        skipIfMissing: true,
+        target: '[data-tour="cap-pastas"]',
+        title: "A pasta de cada cliente",
+        body: "Toque num cliente pra abrir a pasta dele: vários roteiros salvos por mês (copiar, teleprompter, editar, virar post), as captações marcadas e as tomadas padrão dele. Dá pra puxar os roteiros dos reels aprovados no Cria Post e criar um cliente avulso de fora da carteira.",
+        placement: "top",
+      },
+      {
         // Bloco condicional: só aparece quando há cliente da mesma cidade ainda não
         // captado no mês. Mês sem oportunidade não mostra nada, então o passo sai.
         skipIfMissing: true,
@@ -349,6 +370,9 @@ export const TOURS_GESTOR: TourConfig[] = [
         placement: "bottom",
       },
       {
+        // Os filtros moram na aba Agenda do mês; o openFirst clica nela primeiro.
+        skipIfMissing: true,
+        openFirst: '[data-tour="cap-aba-agenda"]',
         target: '[data-tour="cap-filtros"]',
         title: "Filtrar a lista",
         body: "Quando o mês enche, filtre por status (pendentes ou concluídas) ou por cidade pra ver só o que interessa agora. É o jeito de focar na cidade da próxima gravação sem o resto atrapalhar.",

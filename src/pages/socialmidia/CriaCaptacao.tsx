@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Cell, LabelList } from "recharts";
 import {
@@ -6,6 +6,7 @@ import {
   Plus, X, CheckCircle2, Clock, Pencil, CalendarRange, MapPinned, Camera,
   Play, FileText, Download, Repeat, ListChecks, Square, CheckSquare, ChevronDown,
   Sparkles, Route, Send, Settings, Clapperboard,
+  ArrowLeft, UserPlus, Trash2, Film, CalendarPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +22,13 @@ import {
   type Capture, type ShotItem, type NewRecurringRow,
 } from "@/hooks/useAgenda";
 import { useCrmClients } from "@/hooks/useCrm";
-import { useExternalClients } from "@/hooks/useCriaPost";
+import { useExternalClients, useExternalPosts } from "@/hooks/useCriaPost";
 import { useCaptureCities, useDefaultShotList } from "@/hooks/useCaptureCities";
+import {
+  useCaptureScripts, useAddCaptureScript, useUpdateCaptureScript, useDeleteCaptureScript,
+  useCaptureExtraClients, useAddCaptureExtraClient, useDeleteCaptureExtraClient,
+  useSetClientCaptureShots, useScriptToPost, type CaptureScript,
+} from "@/hooks/useCaptureScripts";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { PrompterPlayer } from "@/components/prompter/PrompterPlayer";
@@ -135,6 +141,15 @@ type TripSuggestion = {
   candidates: TripCandidate[];
 };
 
+// Uma PASTA de cliente no Cria Captação: cliente do CRM ou avulso (fora da
+// carteira). Os contadores são do mês aberto.
+type PastaInfo = {
+  key: string; nome: string; cidade: string | null; cor: string | null;
+  crmId: string | null; extraId: string | null;
+  caps: { total: number; done: number; next: string | null };
+  rots: { total: number; feitos: number };
+};
+
 // Cria Captação é módulo PAGO: a página inteira fica atrás do ModuleGate
 // ('cria_captacao'). Dono sem o módulo vê o convite pra ativar; colaborador
 // precisa do módulo liberado (teamCode). Acessar /socialmidia/captacao direto
@@ -159,6 +174,11 @@ function CriaCaptacaoInner() {
   const [prompter, setPrompter] = useState<{ title: string; text: string } | null>(null);
   // Folha do dia aberta (todos os roteiros daquele dia + local num lugar só).
   const [folha, setFolha] = useState<{ diaLabel: string; wd: string; local: string; items: FolhaItem[] } | null>(null);
+  // v2: a tela tem duas visões (pastas por cliente x agenda por dia/local) e uma
+  // pasta pode estar aberta (a tela vira o dossiê daquele cliente, mês a mês).
+  const [aba, setAba] = useState<"clientes" | "agenda">("clientes");
+  const [pasta, setPasta] = useState<string | null>(null);
+  const [novoAvulsoOpen, setNovoAvulsoOpen] = useState(false);
 
   const { data: captures = [], isLoading } = useCaptures();
   const { data: clients = [] } = useCrmClients();
@@ -171,6 +191,12 @@ function CriaCaptacaoInner() {
   const { cities, save: saveCities } = useCaptureCities();
   // Tomadas padrão configuráveis pela social mídia (fallback = DEFAULT_SHOT_LIST).
   const { shots: defaultShots, save: saveDefaultShots } = useDefaultShotList();
+  // v2: biblioteca de roteiros + clientes avulsos + tomadas por cliente.
+  const { data: scripts = [] } = useCaptureScripts();
+  const { data: extraClients = [] } = useCaptureExtraClients();
+  const addExtra = useAddCaptureExtraClient();
+  const delExtra = useDeleteCaptureExtraClient();
+  const setClientShots = useSetClientCaptureShots();
 
   const currentMonth = hojeBR().slice(0, 7);
   // Mês em que a social mídia dispensou o bloco de sugestões (dispensa por mês:
@@ -286,6 +312,83 @@ function CriaCaptacaoInner() {
     const concluidas = doMes.filter((c) => c.status === "concluida").length;
     return { total, concluidas, faltam: total - concluidas };
   }, [doMes]);
+
+  // ── Direcionamento (dashboard): o que fazer agora ──────────────────────────
+  const hojeStr = hojeBR();
+  // doMes já vem ordenado por data/hora, então o primeiro pendente >= hoje é a próxima.
+  const proxima = useMemo(
+    () => doMes.find((c) => c.status === "agendada" && c.capture_date >= hojeStr) ?? null,
+    [doMes, hojeStr]);
+  const semRoteiro = useMemo(
+    () => doMes.filter((c) => c.status === "agendada" && !(c.roteiro ?? "").trim()).length,
+    [doMes]);
+  const roteirosDoMes = useMemo(() => scripts.filter((s) => s.month === month), [scripts, month]);
+  const roteirosAGravar = roteirosDoMes.filter((s) => !s.done).length;
+
+  // ── Pastas por cliente: carteira ativa do CRM + avulsos, com contadores do mês.
+  const pastas = useMemo<PastaInfo[]>(() => {
+    const nomeKey = (s: string | null | undefined) => `nome:${(s ?? "").trim().toLowerCase()}`;
+    const rotCount = new Map<string, { total: number; feitos: number }>();
+    for (const s of roteirosDoMes) {
+      const key = s.crm_client_id ? `crm:${s.crm_client_id}` : nomeKey(s.client_name);
+      const e = rotCount.get(key) ?? { total: 0, feitos: 0 };
+      e.total += 1; if (s.done) e.feitos += 1;
+      rotCount.set(key, e);
+    }
+    const capCount = new Map<string, { total: number; done: number; next: string | null }>();
+    for (const c of doMes) {
+      const key = c.crm_client_id ? `crm:${c.crm_client_id}` : nomeKey(c.client_name);
+      const e = capCount.get(key) ?? { total: 0, done: 0, next: null };
+      e.total += 1; if (c.status === "concluida") e.done += 1;
+      if (c.status === "agendada" && (!e.next || c.capture_date < e.next)) e.next = c.capture_date;
+      capCount.set(key, e);
+    }
+    const out: PastaInfo[] = [];
+    for (const cl of clients) {
+      if (cl.active === false || cl.status === "inativo") continue;
+      const key = `crm:${cl.id}`;
+      out.push({
+        key, nome: nomeExibidoCliente(cl), cidade: ((cl as { city?: string | null }).city ?? null),
+        cor: cl.color, crmId: cl.id, extraId: null,
+        caps: capCount.get(key) ?? { total: 0, done: 0, next: null },
+        rots: rotCount.get(key) ?? { total: 0, feitos: 0 },
+      });
+    }
+    for (const ex of extraClients) {
+      const nk = nomeKey(ex.name);
+      out.push({
+        key: `extra:${ex.id}`, nome: ex.name, cidade: ex.city, cor: null, crmId: null, extraId: ex.id,
+        caps: capCount.get(nk) ?? { total: 0, done: 0, next: null },
+        rots: rotCount.get(nk) ?? { total: 0, feitos: 0 },
+      });
+    }
+    // Quem tem movimento no mês vem primeiro; o resto por nome.
+    return out.sort((a, b) =>
+      (b.caps.total + b.rots.total) - (a.caps.total + a.rots.total)
+      || a.nome.localeCompare(b.nome, "pt-BR"));
+  }, [clients, extraClients, doMes, roteirosDoMes]);
+
+  const pastaAberta = useMemo(() => pastas.find((p) => p.key === pasta) ?? null, [pastas, pasta]);
+  const nomeKeyAberta = pastaAberta && !pastaAberta.crmId ? pastaAberta.nome.trim().toLowerCase() : null;
+  const scriptsDaPasta = useMemo(() => {
+    if (!pastaAberta) return [] as CaptureScript[];
+    return roteirosDoMes.filter((s) => pastaAberta.crmId
+      ? s.crm_client_id === pastaAberta.crmId
+      : !s.crm_client_id && (s.client_name ?? "").trim().toLowerCase() === nomeKeyAberta);
+  }, [roteirosDoMes, pastaAberta, nomeKeyAberta]);
+  const capsDaPasta = useMemo(() => {
+    if (!pastaAberta) return [] as Capture[];
+    return doMes.filter((c) => pastaAberta.crmId
+      ? c.crm_client_id === pastaAberta.crmId
+      : !c.crm_client_id && (c.client_name ?? "").trim().toLowerCase() === nomeKeyAberta);
+  }, [doMes, pastaAberta, nomeKeyAberta]);
+
+  // Tomadas padrão DO CLIENTE (crm_clients.capture_shots): vence a lista geral.
+  const clientShotsOf = (crmId: string | null): string[] => {
+    if (!crmId) return [];
+    const cl = clients.find((x) => x.id === crmId) as { capture_shots?: string[] | null } | undefined;
+    return cl?.capture_shots ?? [];
+  };
 
   // Gráfico por cidade: conta as captações do mês por cidade (só cidades COM
   // captação aparecem; cliente sem cidade cai em "Sem cidade").
@@ -489,6 +592,31 @@ function CriaCaptacaoInner() {
     } catch { /* o hook já avisa */ }
   };
 
+  // Uma linha de captação, usada na Agenda do mês E dentro da pasta do cliente.
+  const renderCaptureRow = (c: Capture): ReactNode => {
+    // Estado de recorrência do GRUPO: a raiz (a própria captação, ou a origem
+    // apontada por recurrence_source_id) manda no recurring/dia.
+    const rootId = c.recurrence_source_id ?? c.id;
+    const root = capturesById.get(rootId) ?? c;
+    return (
+      <CaptureRow key={c.id} cap={c} nome={capName(c)} cidade={capCity(c)}
+        onToggle={() => updCapture.mutate({ id: c.id, patch: { status: c.status === "concluida" ? "agendada" : "concluida" } })}
+        onSaveRoteiro={(roteiro) => updCapture.mutateAsync({ id: c.id, patch: { roteiro } })}
+        onTeleprompter={() => setPrompter({ title: capName(c), text: (c.roteiro ?? "").trim() })}
+        shotList={normalizeShotList(c.shot_list)}
+        onSaveShotList={(list) => setShots.mutate({ id: c.id, shot_list: list })}
+        defaultShots={defaultShots}
+        clientShots={clientShotsOf(c.crm_client_id)}
+        recurring={!!root.recurring}
+        recurrenceDay={root.recurrence_day ?? null}
+        onSetRecurring={(on, day) => updCapture.mutateAsync({ id: rootId, patch: { recurring: on, recurrence_day: day } })}
+        convertedPostId={c.converted_post_id ?? null}
+        onVirarPost={() => virarPost(c)}
+        onVerPost={() => navigate(`/socialmidia/clientes/${c.crm_client_id}/posts`)}
+        converting={captureToPost.isPending} />
+    );
+  };
+
   // Abre a folha do dia de um grupo (só as captações que já têm roteiro).
   const abrirFolha = (g: { date: string; local: string; caps: Capture[] }) => {
     const items: FolhaItem[] = g.caps
@@ -530,6 +658,33 @@ function CriaCaptacaoInner() {
         </Button>
       </div>
 
+      {/* PASTA ABERTA: a tela vira o dossiê do cliente (roteiros, captações,
+          tomadas dele), respeitando o mês do cabeçalho. */}
+      {pastaAberta && (
+        <PastaCliente
+          pasta={pastaAberta}
+          month={month}
+          scripts={scriptsDaPasta}
+          caps={capsDaPasta}
+          habit={pastaAberta.crmId
+            ? habitoLabel(clientHabits.get(pastaAberta.crmId)?.day ?? null, clientHabits.get(pastaAberta.crmId)?.time ?? null)
+            : null}
+          clientShots={clientShotsOf(pastaAberta.crmId)}
+          savingClientShots={setClientShots.isPending}
+          onSaveClientShots={pastaAberta.crmId
+            ? (list) => setClientShots.mutateAsync({ crmClientId: pastaAberta.crmId!, shots: list })
+            : null}
+          ext={pastaAberta.crmId ? extByCrmId.get(pastaAberta.crmId) ?? null : null}
+          onBack={() => setPasta(null)}
+          onDeleteExtra={pastaAberta.extraId ? () => { delExtra.mutate(pastaAberta.extraId!); setPasta(null); } : undefined}
+          onPrompter={(title, text) => setPrompter({ title, text })}
+          renderCapture={renderCaptureRow}
+          addCapture={(input) => addCapture.mutateAsync(input)}
+          addingCapture={addCapture.isPending}
+        />
+      )}
+
+      {!pastaAberta && (<>
       {/* Resumo do mês: cards grandes */}
       <div data-tour="cap-resumo" className="grid grid-cols-3 gap-3">
         <div className="rounded-2xl border border-border bg-card p-4">
@@ -549,6 +704,111 @@ function CriaCaptacaoInner() {
         </div>
       </div>
 
+      {/* Direcionamento: o que fazer agora (a "recepção" do módulo). */}
+      {(proxima || semRoteiro > 0 || roteirosAGravar > 0) && (
+        <div data-tour="cap-direcao" className="rounded-2xl border border-primary/20 bg-primary/[0.04] p-4">
+          <h2 className="flex items-center gap-2 text-sm font-display font-bold text-foreground">
+            <Sparkles className="h-4 w-4 text-primary" /> Por onde começar
+          </h2>
+          <div className="mt-2.5 space-y-1.5">
+            {proxima && (
+              <button type="button"
+                onClick={() => {
+                  const k = proxima.crm_client_id ? `crm:${proxima.crm_client_id}` : null;
+                  if (k && pastas.some((p) => p.key === k)) setPasta(k); else setAba("agenda");
+                }}
+                className="w-full flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-left hover:border-primary/40 transition-colors">
+                <Video className="h-4 w-4 text-primary shrink-0" />
+                <span className="min-w-0 flex-1 text-[12.5px] font-body text-foreground truncate">
+                  Próxima gravação: <strong>{diaMes(proxima.capture_date)}</strong> · {capName(proxima)}{proxima.capture_time ? ` · ${proxima.capture_time.slice(0, 5)}` : ""}
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            )}
+            {semRoteiro > 0 && (
+              <button type="button" onClick={() => { setAba("agenda"); setStatusFilter("pendentes"); }}
+                className="w-full flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-left hover:border-primary/40 transition-colors">
+                <FileText className="h-4 w-4 text-[hsl(var(--cria-amarelo))] shrink-0" />
+                <span className="min-w-0 flex-1 text-[12.5px] font-body text-foreground truncate">
+                  <strong>{semRoteiro}</strong> {semRoteiro === 1 ? "captação pendente ainda sem roteiro" : "captações pendentes ainda sem roteiro"}
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            )}
+            {roteirosAGravar > 0 && (
+              <button type="button" onClick={() => setAba("clientes")}
+                className="w-full flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-left hover:border-primary/40 transition-colors">
+                <Film className="h-4 w-4 text-primary shrink-0" />
+                <span className="min-w-0 flex-1 text-[12.5px] font-body text-foreground truncate">
+                  <strong>{roteirosAGravar}</strong> {roteirosAGravar === 1 ? "roteiro do mês ainda não gravado" : "roteiros do mês ainda não gravados"}
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Sugestões "aproveita a viagem": valem nas duas visões, ficam acima das abas. */}
+      {showSugestoes && (
+        <SugestoesViagem trips={tripSuggestions} onAdd={marcarNoDia} onDismiss={() => setSugDismissed(month)} />
+      )}
+
+      {/* Abas: pastas por cliente x agenda por dia/local. */}
+      <div data-tour="cap-abas" className="inline-flex rounded-xl border border-border bg-card p-0.5">
+        {([["clientes", "Clientes"], ["agenda", "Agenda do mês"]] as const).map(([k, label]) => (
+          <button key={k} type="button" data-tour={k === "agenda" ? "cap-aba-agenda" : undefined}
+            onClick={() => setAba(k)}
+            className={cn("px-3.5 py-1.5 text-xs font-body font-semibold rounded-lg transition-colors",
+              aba === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Visão CLIENTES: uma pastinha por cliente (carteira ativa + avulsos). */}
+      {aba === "clientes" && (
+        <div data-tour="cap-pastas">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {pastas.map((p) => (
+              <button key={p.key} type="button" onClick={() => setPasta(p.key)}
+                className="rounded-2xl border border-border bg-card p-3.5 text-left hover:border-primary/40 hover:shadow-warm-sm transition-all">
+                <div className="flex items-center gap-2">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-white text-xs font-display font-extrabold"
+                    style={{ background: p.cor || "#EA4918" }}>
+                    {p.nome.slice(0, 1).toUpperCase()}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-display font-bold text-foreground truncate">{p.nome}</p>
+                    <p className="text-[10.5px] font-body text-muted-foreground truncate">{p.cidade || (p.extraId ? "avulso" : "\u00a0")}</p>
+                  </div>
+                </div>
+                <div className="mt-2.5 flex items-center gap-3 text-[11px] font-body text-muted-foreground">
+                  <span className="inline-flex items-center gap-1" title="Captações gravadas / marcadas no mês">
+                    <Video className="h-3 w-3" /> {p.caps.done}/{p.caps.total}
+                  </span>
+                  <span className="inline-flex items-center gap-1" title="Roteiros salvos no mês">
+                    <FileText className="h-3 w-3" /> {p.rots.total}
+                  </span>
+                  {p.caps.next && <span className="ml-auto font-semibold text-primary tabular-nums" title="Próxima captação">{diaMes(p.caps.next)}</span>}
+                </div>
+              </button>
+            ))}
+            {/* Cliente avulso: pasta fora da carteira (job pontual). */}
+            <button type="button" onClick={() => setNovoAvulsoOpen(true)}
+              className="rounded-2xl border border-dashed border-border p-3.5 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors grid place-items-center min-h-[96px]">
+              <span className="inline-flex flex-col items-center gap-1 text-xs font-body font-semibold">
+                <UserPlus className="h-5 w-5" /> Cliente avulso
+              </span>
+            </button>
+          </div>
+          <p className="text-[11px] font-body text-muted-foreground mt-2">
+            Cada pasta guarda os roteiros e as captações do cliente, mês a mês (troque o mês nas setas lá em cima).
+          </p>
+        </div>
+      )}
+
+      {aba === "agenda" && (<>
       {/* Gráfico por cidade */}
       {porCidade.length > 0 && (
         <div data-tour="cap-grafico" className="rounded-2xl border border-border bg-card p-4 sm:p-5">
@@ -590,12 +850,6 @@ function CriaCaptacaoInner() {
           </select>
         )}
       </div>
-
-      {/* Sugestões "aproveita a viagem": bloco discreto e dispensável, só aparece
-          quando há oportunidade de agrupar clientes da mesma cidade numa ida só. */}
-      {showSugestoes && (
-        <SugestoesViagem trips={tripSuggestions} onAdd={marcarNoDia} onDismiss={() => setSugDismissed(month)} />
-      )}
 
       {/* Lista agrupada por dia + local */}
       {isLoading ? (
@@ -639,32 +893,23 @@ function CriaCaptacaoInner() {
                 </div>
               </div>
               <div className="divide-y divide-border">
-                {g.caps.map((c) => {
-                  // Estado de recorrência do GRUPO: a raiz (a própria captação, ou a
-                  // origem apontada por recurrence_source_id) manda no recurring/dia.
-                  const rootId = c.recurrence_source_id ?? c.id;
-                  const root = capturesById.get(rootId) ?? c;
-                  return (
-                    <CaptureRow key={c.id} cap={c} nome={capName(c)} cidade={capCity(c)}
-                      onToggle={() => updCapture.mutate({ id: c.id, patch: { status: c.status === "concluida" ? "agendada" : "concluida" } })}
-                      onSaveRoteiro={(roteiro) => updCapture.mutateAsync({ id: c.id, patch: { roteiro } })}
-                      onTeleprompter={() => setPrompter({ title: capName(c), text: (c.roteiro ?? "").trim() })}
-                      shotList={normalizeShotList(c.shot_list)}
-                      onSaveShotList={(list) => setShots.mutate({ id: c.id, shot_list: list })}
-                      defaultShots={defaultShots}
-                      recurring={!!root.recurring}
-                      recurrenceDay={root.recurrence_day ?? null}
-                      onSetRecurring={(on, day) => updCapture.mutateAsync({ id: rootId, patch: { recurring: on, recurrence_day: day } })}
-                      convertedPostId={c.converted_post_id ?? null}
-                      onVirarPost={() => virarPost(c)}
-                      onVerPost={() => navigate(`/socialmidia/clientes/${c.crm_client_id}/posts`)}
-                      converting={captureToPost.isPending} />
-                  );
-                })}
+                {g.caps.map((c) => renderCaptureRow(c))}
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      </>)}
+      </>)}
+
+      {novoAvulsoOpen && (
+        <NovoAvulsoDialog open onOpenChange={(o) => { if (!o) setNovoAvulsoOpen(false); }}
+          salvando={addExtra.isPending}
+          onSalvar={async (nome, cidade) => {
+            await addExtra.mutateAsync({ name: nome, city: cidade || null });
+            setNovoAvulsoOpen(false);
+          }} />
       )}
 
       <ConfigCaptacaoDialog open={configOpen} onOpenChange={setConfigOpen}
@@ -774,7 +1019,7 @@ function SugestoesViagem({ trips, onAdd, onDismiss }: {
 }
 
 // ── Uma captação (cliente + cidade + status + roteiro + copiar) ────────────────
-function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter, shotList, onSaveShotList, defaultShots, recurring, recurrenceDay, onSetRecurring, convertedPostId, onVirarPost, onVerPost, converting }: {
+function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter, shotList, onSaveShotList, defaultShots, clientShots, recurring, recurrenceDay, onSetRecurring, convertedPostId, onVirarPost, onVerPost, converting }: {
   cap: Capture; nome: string; cidade: string;
   onToggle: () => void; onSaveRoteiro: (roteiro: string) => Promise<unknown>;
   onTeleprompter: () => void;
@@ -782,6 +1027,8 @@ function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter
   onSaveShotList: (list: ShotItem[]) => void;
   // Lista padrão que a social mídia configurou (vazio = cai no fallback fixo).
   defaultShots: string[];
+  // Tomadas padrão DESTE cliente (crm_clients.capture_shots): vence a geral.
+  clientShots?: string[];
   recurring: boolean;
   recurrenceDay: number | null;
   onSetRecurring: (on: boolean, day: number) => Promise<unknown>;
@@ -814,7 +1061,9 @@ function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter
   // "Usar tomadas padrão": usa a lista que a social mídia configurou nas
   // Configurações da captação; se ela não configurou nada, cai na lista fixa.
   const usarPadrao = () => {
-    const base = defaultShots.length > 0 ? defaultShots : [...DEFAULT_SHOT_LIST];
+    const base = clientShots && clientShots.length > 0
+      ? clientShots
+      : defaultShots.length > 0 ? defaultShots : [...DEFAULT_SHOT_LIST];
     onSaveShotList(base.map((texto) => ({ id: newShotId(), texto, feito: false })));
     setShotsOpen(true);
   };
@@ -1134,6 +1383,431 @@ function FolhaDoDiaDialog({ open, onOpenChange, diaLabel, wd, local, items }: {
             </DialogFooter>
           </>
         )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Pasta do cliente: roteiros do mês (vários), captações e tomadas dele ──────
+// A pasta é o dossiê de gravação do cliente. O mês vem do cabeçalho da página
+// (as setas navegam meses passados e futuros). Aqui nasce roteiro manual,
+// roteiro puxado dos reels aprovados do Cria Post, e a captação marcada direto.
+function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingClientShots, onSaveClientShots, ext, onBack, onDeleteExtra, onPrompter, renderCapture, addCapture, addingCapture }: {
+  pasta: PastaInfo;
+  month: string;
+  scripts: CaptureScript[];
+  caps: Capture[];
+  habit: string | null;
+  clientShots: string[];
+  savingClientShots: boolean;
+  onSaveClientShots: ((list: string[]) => Promise<unknown>) | null;
+  ext: { id: string; name: string } | null;
+  onBack: () => void;
+  onDeleteExtra?: () => void;
+  onPrompter: (title: string, text: string) => void;
+  renderCapture: (c: Capture) => ReactNode;
+  addCapture: (input: { capture_date: string; capture_time: string | null; location: string | null; crm_client_id: string | null; client_name: string | null }) => Promise<unknown>;
+  addingCapture: boolean;
+}) {
+  const navigate = useNavigate();
+  const addScript = useAddCaptureScript();
+  const updScript = useUpdateCaptureScript();
+  const delScript = useDeleteCaptureScript();
+  const toPost = useScriptToPost();
+
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editando, setEditando] = useState<CaptureScript | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [marcarOpen, setMarcarOpen] = useState(false);
+  const [tomadasOpen, setTomadasOpen] = useState(false);
+
+  const salvarRoteiro = async (title: string, content: string) => {
+    if (editando) {
+      await updScript.mutateAsync({ id: editando.id, patch: { title, content } });
+    } else {
+      await addScript.mutateAsync({
+        crm_client_id: pasta.crmId, client_name: pasta.crmId ? null : pasta.nome,
+        month, title, content,
+      });
+    }
+    setEditorOpen(false); setEditando(null);
+  };
+
+  const virarPost = async (s: CaptureScript) => {
+    if (!ext) { toast.error("O Cria Post não está ativo pra este cliente."); return; }
+    try {
+      await toPost.mutateAsync({ scriptId: s.id, externalClientId: ext.id, title: `${pasta.nome} · ${s.title.trim() || "roteiro"}`, script: s.content });
+      if (pasta.crmId) navigate(`/socialmidia/clientes/${pasta.crmId}/posts`);
+    } catch { /* o hook já avisa */ }
+  };
+
+  const gravados = scripts.filter((s) => s.done).length;
+
+  return (
+    <div className="space-y-4">
+      {/* Cabeçalho da pasta */}
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={onBack}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Voltar pras pastas">
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white text-sm font-display font-extrabold"
+            style={{ background: pasta.cor || "#EA4918" }}>
+            {pasta.nome.slice(0, 1).toUpperCase()}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-display font-extrabold text-foreground truncate">{pasta.nome}</h2>
+            <p className="text-[11px] font-body text-muted-foreground truncate">
+              {[pasta.cidade, habit, pasta.extraId ? "cliente avulso" : null].filter(Boolean).join(" · ") || "Pasta de captação"}
+            </p>
+          </div>
+          {onDeleteExtra && (
+            <button type="button"
+              onClick={() => { if (window.confirm(`Remover a pasta de ${pasta.nome}?`)) onDeleteExtra(); }}
+              className="shrink-0 grid h-8 w-8 place-items-center rounded-lg text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+              aria-label="Remover cliente avulso">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Button size="sm" onClick={() => { setEditando(null); setEditorOpen(true); }} className="rounded-xl h-9">
+            <Plus className="h-3.5 w-3.5 mr-1.5" /> Novo roteiro
+          </Button>
+          {ext && (
+            <Button size="sm" variant="outline" onClick={() => setImportOpen(true)} className="rounded-xl h-9"
+              title="Importa os roteiros dos reels aprovados no Cria Post deste cliente.">
+              <Film className="h-3.5 w-3.5 mr-1.5" /> Puxar dos reels aprovados
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={() => setMarcarOpen(true)} className="rounded-xl h-9">
+            <CalendarPlus className="h-3.5 w-3.5 mr-1.5" /> Marcar captação
+          </Button>
+        </div>
+      </div>
+
+      {/* Roteiros do mês: VÁRIOS por cliente, salvos na biblioteca. */}
+      <div>
+        <h3 className="flex items-center gap-1.5 text-sm font-display font-bold text-foreground mb-2">
+          <FileText className="h-4 w-4 text-primary" /> Roteiros de {monthLabel(month).toLowerCase()}
+          {scripts.length > 0 && (
+            <span className="text-[11px] font-body font-semibold text-muted-foreground">({gravados}/{scripts.length} gravados)</span>
+          )}
+        </h3>
+        {scripts.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border p-6 text-center">
+            <p className="text-sm font-body text-foreground font-medium">Nenhum roteiro salvo neste mês</p>
+            <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">
+              Escreva um novo{ext ? " ou puxe dos reels aprovados" : ""}. As setas do mês lá em cima mostram os meses anteriores e os próximos.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {scripts.map((s) => (
+              <ScriptCard key={s.id} script={s}
+                onToggleDone={() => updScript.mutate({ id: s.id, patch: { done: !s.done } })}
+                onEdit={() => { setEditando(s); setEditorOpen(true); }}
+                onDelete={() => { if (window.confirm("Excluir este roteiro?")) delScript.mutate(s.id); }}
+                onPrompter={() => onPrompter(pasta.nome, s.content)}
+                onVirarPost={ext ? () => virarPost(s) : null}
+                onVerPost={pasta.crmId ? () => navigate(`/socialmidia/clientes/${pasta.crmId}/posts`) : null}
+                converting={toPost.isPending} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Captações do cliente no mês (mesma linha da Agenda do mês). */}
+      <div>
+        <h3 className="flex items-center gap-1.5 text-sm font-display font-bold text-foreground mb-2">
+          <Video className="h-4 w-4 text-primary" /> Captações de {monthLabel(month).toLowerCase()}
+        </h3>
+        {caps.length === 0 ? (
+          <p className="text-xs font-body text-muted-foreground rounded-2xl border border-dashed border-border p-4">
+            Nenhuma captação marcada neste mês. Use o Marcar captação aqui em cima.
+          </p>
+        ) : (
+          <div className="rounded-2xl border border-border bg-card divide-y divide-border">
+            {caps.map((c) => renderCapture(c))}
+          </div>
+        )}
+      </div>
+
+      {/* Tomadas padrão DESTE cliente (só cliente do CRM). */}
+      {onSaveClientShots && (
+        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+          <button type="button" onClick={() => setTomadasOpen((o) => !o)}
+            className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-muted/30 transition-colors">
+            <Clapperboard className="h-4 w-4 text-primary shrink-0" />
+            <div className="min-w-0 flex-1">
+              <span className="text-sm font-display font-bold text-foreground">Tomadas padrão deste cliente</span>
+              <p className="text-[10.5px] font-body text-muted-foreground">
+                O combo que você sempre grava pra ele. Quando existe, o Usar tomadas padrão usa esta lista em vez da geral.
+              </p>
+            </div>
+            {clientShots.length > 0 && (
+              <span className="text-[11px] font-body font-bold text-muted-foreground tabular-nums shrink-0">{clientShots.length}</span>
+            )}
+            <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", tomadasOpen && "rotate-180")} />
+          </button>
+          {tomadasOpen && (
+            <div className="px-4 pb-4 border-t border-border">
+              <ChipEditor items={clientShots} onSave={onSaveClientShots} saving={savingClientShots}
+                placeholder="Ex.: 2 Reels"
+                emptyText="Sem lista própria: este cliente usa as tomadas padrão gerais."
+                removeLabel={(s) => `Remover ${s}`} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {editorOpen && (
+        <RoteiroDialog open onOpenChange={(o) => { if (!o) { setEditorOpen(false); setEditando(null); } }}
+          editando={!!editando}
+          inicialTitulo={editando?.title ?? ""} inicialTexto={editando?.content ?? ""}
+          salvando={addScript.isPending || updScript.isPending} onSalvar={salvarRoteiro} />
+      )}
+      {importOpen && ext && (
+        <ImportarReelsDialog open onOpenChange={(o) => { if (!o) setImportOpen(false); }}
+          externalClientId={ext.id}
+          jaImportados={new Set(scripts.map((s) => s.source_post_id).filter(Boolean) as string[])}
+          onImportar={async (post) => {
+            await addScript.mutateAsync({
+              crm_client_id: pasta.crmId, client_name: pasta.crmId ? null : pasta.nome,
+              month, title: post.title || "Reels aprovado", content: post.script ?? "",
+              source: "reel", source_post_id: post.id,
+            });
+          }} />
+      )}
+      {marcarOpen && (
+        <MarcarCaptacaoDialog open onOpenChange={(o) => { if (!o) setMarcarOpen(false); }}
+          salvando={addingCapture}
+          onSalvar={async (date, time) => {
+            await addCapture({ capture_date: date, capture_time: time, location: null, crm_client_id: pasta.crmId, client_name: pasta.crmId ? null : pasta.nome });
+            setMarcarOpen(false);
+          }} />
+      )}
+    </div>
+  );
+}
+
+// ── Um roteiro salvo (card): copiar, teleprompter, editar, gravado, virar post ─
+function ScriptCard({ script, onToggleDone, onEdit, onDelete, onPrompter, onVirarPost, onVerPost, converting }: {
+  script: CaptureScript;
+  onToggleDone: () => void; onEdit: () => void; onDelete: () => void;
+  onPrompter: () => void;
+  onVirarPost: (() => void) | null;
+  onVerPost: (() => void) | null;
+  converting: boolean;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const texto = script.content.trim();
+  const longo = texto.length > 280;
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopied(true);
+      toast.success("Roteiro copiado");
+      setTimeout(() => setCopied(false), 1600);
+    } catch { toast.error("Não consegui copiar. Copie manualmente."); }
+  };
+  return (
+    <div className={cn("rounded-2xl border bg-card p-3.5", script.done ? "border-[hsl(var(--cria-verde)/0.4)]" : "border-border")}>
+      <div className="flex items-start gap-2">
+        <p className="min-w-0 flex-1 text-sm font-display font-bold text-foreground break-words">
+          {script.title.trim() || "Roteiro"}
+          {script.source === "reel" && (
+            <span className="ml-1.5 align-middle inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[9px] font-body font-bold uppercase tracking-wide">
+              <Film className="h-2.5 w-2.5" /> do Cria Post
+            </span>
+          )}
+        </p>
+        {/* Gravado x A gravar: o placar da pasta soma daqui. */}
+        <button type="button" onClick={onToggleDone}
+          className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-body font-bold transition-colors",
+            script.done
+              ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]"
+              : "bg-muted text-muted-foreground hover:text-foreground")}>
+          {script.done ? <><CheckCircle2 className="h-3 w-3" /> Gravado</> : <><Clock className="h-3 w-3" /> A gravar</>}
+        </button>
+      </div>
+      <p className={cn("mt-1.5 text-[13px] font-body text-foreground whitespace-pre-wrap break-words", !aberto && longo && "line-clamp-4")}>{texto}</p>
+      {longo && (
+        <button type="button" onClick={() => setAberto((o) => !o)} className="mt-1 text-[11px] font-body font-semibold text-primary">
+          {aberto ? "Mostrar menos" : "Ler tudo"}
+        </button>
+      )}
+      <div className="flex items-center gap-2 mt-2.5 flex-wrap">
+        <Button size="sm" onClick={onPrompter} className="rounded-xl h-8"
+          title="Abre este roteiro em tela cheia pro cliente ler enquanto você grava.">
+          <Play className="h-3.5 w-3.5 mr-1.5" /> Teleprompter
+        </Button>
+        <Button size="sm" variant="outline" onClick={copiar} className="rounded-xl h-8">
+          {copied ? <><Check className="h-3.5 w-3.5 mr-1.5" /> Copiado</> : <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar</>}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onEdit} className="rounded-xl h-8">
+          <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
+        </Button>
+        {script.source_post_id && onVerPost ? (
+          <button type="button" onClick={onVerPost} className="inline-flex items-center gap-1 text-[11px] font-body font-semibold text-primary">
+            <Check className="h-3.5 w-3.5" /> Tem post
+          </button>
+        ) : onVirarPost ? (
+          <Button size="sm" variant="outline" onClick={onVirarPost} disabled={converting} className="rounded-xl h-8">
+            {converting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />} Virar post
+          </Button>
+        ) : null}
+        <button type="button" onClick={onDelete}
+          className="ml-auto grid h-8 w-8 place-items-center rounded-lg text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+          aria-label="Excluir roteiro">
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Novo/editar roteiro ────────────────────────────────────────────────────────
+function RoteiroDialog({ open, onOpenChange, editando, inicialTitulo, inicialTexto, salvando, onSalvar }: {
+  open: boolean; onOpenChange: (o: boolean) => void;
+  editando: boolean; inicialTitulo: string; inicialTexto: string;
+  salvando: boolean; onSalvar: (titulo: string, texto: string) => Promise<unknown>;
+}) {
+  const [titulo, setTitulo] = useState(inicialTitulo);
+  const [texto, setTexto] = useState(inicialTexto);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader><DialogTitle className="font-display">{editando ? "Editar roteiro" : "Novo roteiro"}</DialogTitle></DialogHeader>
+        <Input value={titulo} onChange={(e) => setTitulo(e.target.value)}
+          placeholder="Título (ex.: Reels dos bastidores)" className="rounded-xl" />
+        <Textarea rows={8} value={texto} onChange={(e) => setTexto(e.target.value)} autoFocus={!editando}
+          placeholder="O que vai ser falado ou gravado…" className="rounded-xl text-sm" />
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={() => onSalvar(titulo.trim(), texto.trim())} disabled={salvando || !texto.trim()}>
+            {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar roteiro"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Importar roteiros dos reels APROVADOS do Cria Post ────────────────────────
+function ImportarReelsDialog({ open, onOpenChange, externalClientId, jaImportados, onImportar }: {
+  open: boolean; onOpenChange: (o: boolean) => void;
+  externalClientId: string;
+  jaImportados: Set<string>;
+  onImportar: (post: { id: string; title: string; script: string | null }) => Promise<unknown>;
+}) {
+  const { posts } = useExternalPosts(externalClientId);
+  const [busy, setBusy] = useState<string | null>(null);
+  // Só reels com roteiro escrito e já aprovados/postados: é o material validado
+  // pelo cliente, pronto pra virar pauta de gravação.
+  const candidatos = useMemo(
+    () => posts.filter((p) => p.format === "reels" && (p.script ?? "").trim()
+      && (p.approval_status === "aprovado" || p.approval_status === "postado")),
+    [posts]);
+  const importar = async (p: { id: string; title: string; script: string | null }) => {
+    setBusy(p.id);
+    try { await onImportar(p); toast.success("Roteiro importado pra pasta."); }
+    finally { setBusy(null); }
+  };
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader><DialogTitle className="font-display">Puxar dos reels aprovados</DialogTitle></DialogHeader>
+        <p className="text-xs text-muted-foreground font-body -mt-1">
+          Os roteiros dos reels que o cliente já aprovou no Cria Post. Importar traz o texto pra pasta, pronto pro teleprompter.
+        </p>
+        {candidatos.length === 0 ? (
+          <p className="text-sm font-body text-foreground py-6 text-center">Nenhum reels aprovado com roteiro por enquanto.</p>
+        ) : (
+          <div className="space-y-2">
+            {candidatos.map((p) => {
+              const feito = jaImportados.has(p.id);
+              return (
+                <div key={p.id} className="rounded-xl border border-border p-3">
+                  <div className="flex items-center gap-2">
+                    <p className="min-w-0 flex-1 text-[13px] font-body font-semibold text-foreground truncate">{p.title || "Reels"}</p>
+                    <Button size="sm" variant={feito ? "ghost" : "outline"} disabled={feito || busy === p.id}
+                      onClick={() => importar({ id: p.id, title: p.title, script: p.script })}
+                      className="rounded-lg h-8 shrink-0">
+                      {feito ? <><Check className="h-3.5 w-3.5 mr-1" /> Importado</>
+                        : busy === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <><Download className="h-3.5 w-3.5 mr-1" /> Importar</>}
+                    </Button>
+                  </div>
+                  <p className="mt-1 text-[11.5px] font-body text-muted-foreground line-clamp-2 whitespace-pre-wrap">{(p.script ?? "").trim()}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Marcar captação direto da pasta (cai na Agenda também) ────────────────────
+function MarcarCaptacaoDialog({ open, onOpenChange, salvando, onSalvar }: {
+  open: boolean; onOpenChange: (o: boolean) => void;
+  salvando: boolean; onSalvar: (date: string, time: string | null) => Promise<unknown>;
+}) {
+  const [data, setData] = useState(hojeBR());
+  const [hora, setHora] = useState("");
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader><DialogTitle className="font-display">Marcar captação</DialogTitle></DialogHeader>
+        <p className="text-xs text-muted-foreground font-body -mt-1">A captação entra aqui e na Agenda.</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[11px] font-body font-semibold text-muted-foreground">Dia</label>
+            <Input type="date" value={data} onChange={(e) => setData(e.target.value)} className="rounded-xl mt-1" />
+          </div>
+          <div>
+            <label className="text-[11px] font-body font-semibold text-muted-foreground">Hora (opcional)</label>
+            <Input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className="rounded-xl mt-1" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={() => onSalvar(data, hora || null)} disabled={!data || salvando}>
+            {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Marcar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Cliente avulso (pasta fora da carteira do CRM) ────────────────────────────
+function NovoAvulsoDialog({ open, onOpenChange, salvando, onSalvar }: {
+  open: boolean; onOpenChange: (o: boolean) => void;
+  salvando: boolean; onSalvar: (nome: string, cidade: string) => Promise<unknown>;
+}) {
+  const [nome, setNome] = useState("");
+  const [cidade, setCidade] = useState("");
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader><DialogTitle className="font-display">Cliente avulso</DialogTitle></DialogHeader>
+        <p className="text-xs text-muted-foreground font-body -mt-1">
+          Uma pasta de captação pra quem está fora da sua carteira (job pontual). Não entra no CRM.
+        </p>
+        <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome do cliente" autoFocus className="rounded-xl" />
+        <Input value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Cidade (opcional)" className="rounded-xl" />
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={() => onSalvar(nome.trim(), cidade.trim())} disabled={salvando || !nome.trim()}>
+            {salvando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Adicionar"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
