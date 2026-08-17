@@ -446,50 +446,55 @@ export default function ManagerHome() {
         </button>
       )}
 
+      {/* Convite do Plano de Agência NO LAYOUT DO CRIA: card claro com acentos,
+          não um bloco rosa chapado (a cor fica no ícone, nos títulos e no CTA). */}
       {!hasAgency && (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-pink-400 text-white p-5 sm:p-6 mt-8">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-8 h-8 rounded-lg bg-white/15 grid place-items-center"><Users className="h-4 w-4" /></span>
-            <h3 className="font-display font-extrabold text-lg">Vire uma agência no CRIA</h3>
-          </div>
-          <p className="text-sm font-body text-white/90 max-w-2xl leading-relaxed">
-            Você gerencia todos os clientes num painel só e cobra quanto quiser deles. Paga só pelos assentos (a partir de <strong>R$ 36,90</strong> vs R$ 49,90 avulso), e cada cliente entra com a conta <strong>Studio completa</strong>, sem custo pra ele.
-          </p>
+        <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card p-5 sm:p-6 mt-8">
+          <span aria-hidden className="pointer-events-none absolute -top-12 -right-12 w-40 h-40 rounded-full bg-primary/10 blur-2xl" />
+          <div className="relative">
+            <div className="flex items-center gap-2.5 mb-2">
+              <span className="w-9 h-9 rounded-xl bg-primary text-primary-foreground grid place-items-center shadow-sm"><Users className="h-4 w-4" /></span>
+              <h3 className="font-display font-extrabold text-lg text-foreground">Vire uma agência no CRIA</h3>
+            </div>
+            <p className="text-sm font-body text-muted-foreground max-w-2xl leading-relaxed">
+              Você gerencia todos os clientes num painel só e cobra quanto quiser deles. Paga só pelos assentos (a partir de <strong className="text-foreground">R$ 36,90</strong> vs R$ 49,90 avulso), e cada cliente entra com a conta <strong className="text-foreground">Studio completa</strong>, sem custo pra ele.
+            </p>
 
-          <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4 mt-5">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-white/70 mb-2">O que muda pra você</p>
-              <div className="space-y-1.5">
-                {[
-                  "Todos os clientes num painel só",
-                  "Posts, cronograma e aprovação de cada um",
-                  "Relatórios e acesso com a sua cara (white-label)",
-                  "Cliente cancelou? Pausa no inventário e libera o assento",
-                  "Adiciona cliente na hora, sem depender de ninguém",
-                ].map((b) => (
-                  <div key={b} className="flex items-start gap-2 text-[13px] font-body text-white/95"><Check className="h-4 w-4 shrink-0 mt-0.5" /> {b}</div>
-                ))}
+            <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4 mt-5">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-primary mb-2">O que muda pra você</p>
+                <div className="space-y-1.5">
+                  {[
+                    "Todos os clientes num painel só",
+                    "Posts, cronograma e aprovação de cada um",
+                    "Relatórios e acesso com a sua cara (white-label)",
+                    "Cliente cancelou? Pausa no inventário e libera o assento",
+                    "Adiciona cliente na hora, sem depender de ninguém",
+                  ].map((b) => (
+                    <div key={b} className="flex items-start gap-2 text-[13px] font-body text-foreground"><Check className="h-4 w-4 shrink-0 mt-0.5 text-[hsl(var(--cria-verde))]" /> {b}</div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-primary mb-2">O que cada cliente recebe</p>
+                <div className="space-y-1.5">
+                  {[
+                    "Cria Plano: a IA monta o mês de conteúdo",
+                    "Cria IA: ideias, legendas e score de post",
+                    "Media Kit automático pra fechar publi",
+                    "Calendário + melhor horário pra postar",
+                    "Link na bio, Brandbook e insights do Instagram",
+                  ].map((b) => (
+                    <div key={b} className="flex items-start gap-2 text-[13px] font-body text-foreground"><Check className="h-4 w-4 shrink-0 mt-0.5 text-[hsl(var(--cria-verde))]" /> {b}</div>
+                  ))}
+                </div>
               </div>
             </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-white/70 mb-2">O que cada cliente recebe</p>
-              <div className="space-y-1.5">
-                {[
-                  "Cria Plano: a IA monta o mês de conteúdo",
-                  "Cria IA: ideias, legendas e score de post",
-                  "Media Kit automático pra fechar publi",
-                  "Calendário + melhor horário pra postar",
-                  "Link na bio, Brandbook e insights do Instagram",
-                ].map((b) => (
-                  <div key={b} className="flex items-start gap-2 text-[13px] font-body text-white/95"><Check className="h-4 w-4 shrink-0 mt-0.5" /> {b}</div>
-                ))}
-              </div>
-            </div>
-          </div>
 
-          <button onClick={() => navigate("/socialmidia/contas")} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-primary hover:opacity-90 transition">
-            <Sparkles className="h-4 w-4" /> Conhecer o Plano de Agência
-          </button>
+            <button onClick={() => navigate("/socialmidia/contas")} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90 transition">
+              <Sparkles className="h-4 w-4" /> Conhecer o Plano de Agência
+            </button>
+          </div>
         </div>
       )}
 
