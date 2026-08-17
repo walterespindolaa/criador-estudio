@@ -2165,11 +2165,16 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl rounded-2xl p-0 overflow-hidden">
-        <div className="max-h-[90vh] overflow-y-auto p-6">
+      <DialogContent className="max-w-3xl md:max-w-6xl rounded-2xl p-0 overflow-hidden">
+        <div className="max-h-[90vh] overflow-y-auto md:overflow-hidden md:flex md:flex-col p-6">
         <DialogHeader>
           <DialogTitle className="font-display">Relatório do cliente</DialogTitle>
         </DialogHeader>
+
+        {/* Desktop (md+): editor à esquerda, prévia à direita, cada coluna com o
+            próprio scroll. Mobile continua empilhado num scroll só. */}
+        <div className="md:mt-2 md:grid md:grid-cols-[380px_minmax(0,1fr)] md:gap-6 md:flex-1 md:min-h-0">
+        <div className="md:min-h-0 md:overflow-y-auto md:pr-2">
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-body text-muted-foreground">Período:</span>
@@ -2351,18 +2356,8 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           <span className="text-[11px] font-body text-muted-foreground">Entra na seção “Análise do período” da prévia (e dá pra editar por lá).</span>
         </div>
 
-        {/* Prévia paginada: cada folha abaixo é uma página A4 REAL do PDF (o
-            exportador fotografa folha por folha). A análise é editável direto. */}
-        <div className="mt-3">
-          <div className="mb-1 text-xs font-body font-semibold text-foreground">
-            Prévia do relatório <span className="font-normal text-muted-foreground">(cada folha é uma página A4 do PDF. Pra editar a análise, clique no texto dela e digite.)</span>
-          </div>
-          <div ref={reportRef} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {paginasRender}
-          </div>
-        </div>
-
-        {/* Compartilhar: link público do PDF + WhatsApp + e-mail */}
+        {/* Compartilhar: link público do PDF + WhatsApp + e-mail (mora na coluna
+            do editor; a prévia fica inteira pra coluna da direita no desktop) */}
         <div className="mt-4 rounded-2xl border border-border bg-muted/30 p-3 sm:p-4">
           <p className="text-xs font-body font-semibold text-foreground">Compartilhar com o cliente</p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -2382,8 +2377,23 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           </p>
         </div>
 
-        {/* O Gerar análise vive SÓ lá em cima (perto das métricas): dois botões
-            iguais confundiam. O rodapé fica pra fechar/baixar. */}
+        </div>
+
+        {/* Prévia paginada (coluna direita no desktop): cada folha é uma página
+            A4 REAL do PDF (o exportador fotografa folha por folha). */}
+        <div className="mt-3 md:mt-0 md:min-h-0 md:overflow-y-auto">
+          <div className="mb-1 text-xs font-body font-semibold text-foreground">
+            Prévia do relatório <span className="font-normal text-muted-foreground">(cada folha é uma página A4 do PDF. Pra editar a análise, clique no texto dela e digite.)</span>
+          </div>
+          <div ref={reportRef} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {paginasRender}
+          </div>
+        </div>
+
+        </div>
+
+        {/* O Gerar análise vive SÓ na coluna do editor. O rodapé fica pra
+            fechar/baixar. */}
         <DialogFooter className="mt-4">
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
