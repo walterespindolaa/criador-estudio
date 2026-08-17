@@ -679,6 +679,7 @@ function CriaCaptacaoInner() {
           onDeleteExtra={pastaAberta.extraId ? () => { delExtra.mutate(pastaAberta.extraId!); setPasta(null); } : undefined}
           onPrompter={(title, text) => setPrompter({ title, text })}
           renderCapture={renderCaptureRow}
+          onSaveCapRoteiro={(id, roteiro) => updCapture.mutateAsync({ id, patch: { roteiro } })}
           addCapture={(input) => addCapture.mutateAsync(input)}
           addingCapture={addCapture.isPending}
         />
@@ -1410,7 +1411,7 @@ function FolhaDoDiaDialog({ open, onOpenChange, diaLabel, wd, local, items }: {
 // A pasta é o dossiê de gravação do cliente. O mês vem do cabeçalho da página
 // (as setas navegam meses passados e futuros). Aqui nasce roteiro manual,
 // roteiro puxado dos reels aprovados do Cria Post, e a captação marcada direto.
-function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingClientShots, onSaveClientShots, ext, onBack, onDeleteExtra, onPrompter, renderCapture, addCapture, addingCapture }: {
+function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingClientShots, onSaveClientShots, ext, onBack, onDeleteExtra, onPrompter, renderCapture, onSaveCapRoteiro, addCapture, addingCapture }: {
   pasta: PastaInfo;
   month: string;
   scripts: CaptureScript[];
@@ -1424,6 +1425,8 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   onDeleteExtra?: () => void;
   onPrompter: (title: string, text: string) => void;
   renderCapture: (c: Capture) => ReactNode;
+  // Salva o roteiro que vive DENTRO de uma captação (agenda_captures.roteiro).
+  onSaveCapRoteiro: (id: string, roteiro: string) => Promise<unknown>;
   addCapture: (input: { capture_date: string; capture_time: string | null; location: string | null; crm_client_id: string | null; client_name: string | null }) => Promise<unknown>;
   addingCapture: boolean;
 }) {
@@ -1438,11 +1441,20 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   // Roteiro aberto no modal (card estilo Drive clicado). Guarda só o id: o
   // conteúdo vem SEMPRE da lista fresca, pra refletir edições na hora.
   const [verId, setVerId] = useState<string | null>(null);
+  // Roteiro DE CAPTAÇÃO aberto/em edição (o campo que vive dentro da captação
+  // aparece na MESMA grade, como card "Captação DD/MM").
+  const [verCapId, setVerCapId] = useState<string | null>(null);
+  const [editandoCapId, setEditandoCapId] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [marcarOpen, setMarcarOpen] = useState(false);
   const [tomadasOpen, setTomadasOpen] = useState(false);
 
   const salvarRoteiro = async (title: string, content: string) => {
+    if (editandoCapId) {
+      await onSaveCapRoteiro(editandoCapId, content);
+      setEditorOpen(false); setEditandoCapId(null);
+      return;
+    }
     if (editando) {
       await updScript.mutateAsync({ id: editando.id, patch: { title, content } });
     } else {
@@ -1509,7 +1521,13 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
         </div>
       </div>
 
-      {/* Roteiros do mês: VÁRIOS por cliente, salvos na biblioteca. */}
+      {/* Roteiros do mês: a biblioteca (quantos quiser) + os roteiros escritos
+          DENTRO das captações do mês, tudo na MESMA grade. Antes o roteiro da
+          captação ficava escondido na captação e a grade parecia vazia. */}
+      {(() => {
+        const capsComRoteiro = caps.filter((c) => (c.roteiro ?? "").trim());
+        const totalRoteiros = scripts.length + capsComRoteiro.length;
+        return (
       <div>
         <h3 className="flex items-center gap-1.5 text-sm font-display font-bold text-foreground mb-2">
           <FileText className="h-4 w-4 text-primary" /> Roteiros de {monthLabel(month).toLowerCase()}
@@ -1517,11 +1535,11 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             <span className="text-[11px] font-body font-semibold text-muted-foreground">({gravados}/{scripts.length} gravados)</span>
           )}
         </h3>
-        {scripts.length === 0 ? (
+        {totalRoteiros === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-6 text-center">
-            <p className="text-sm font-body text-foreground font-medium">Nenhum roteiro salvo neste mês</p>
+            <p className="text-sm font-body text-foreground font-medium">Nenhum roteiro neste mês</p>
             <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">
-              Escreva um novo{ext ? " ou puxe dos reels aprovados" : ""}. As setas do mês lá em cima mostram os meses anteriores e os próximos.
+              Adicione quantos quiser no Novo roteiro{ext ? " ou puxe dos reels aprovados" : ""}. As setas do mês lá em cima mostram os meses anteriores e os próximos.
             </p>
           </div>
         ) : (
@@ -1531,9 +1549,17 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             {scripts.map((s, i) => (
               <RoteiroMiniCard key={s.id} script={s} indice={i} onOpen={() => setVerId(s.id)} />
             ))}
+            {/* Roteiros que vivem dentro de uma captação do mês. */}
+            {capsComRoteiro.map((c) => (
+              <RoteiroMiniCard key={`cap-${c.id}`}
+                script={{ title: `Captação ${diaMes(c.capture_date)}`, content: (c.roteiro ?? "").trim(), done: c.status === "concluida" }}
+                indice={0} icone="video" onOpen={() => setVerCapId(c.id)} />
+            ))}
           </div>
         )}
       </div>
+        );
+      })()}
 
       {/* Captações do cliente no mês (mesma linha da Agenda do mês). */}
       <div>
@@ -1602,9 +1628,11 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
       )}
 
       {editorOpen && (
-        <RoteiroDialog open onOpenChange={(o) => { if (!o) { setEditorOpen(false); setEditando(null); } }}
-          editando={!!editando}
-          inicialTitulo={editando?.title ?? ""} inicialTexto={editando?.content ?? ""}
+        <RoteiroDialog open onOpenChange={(o) => { if (!o) { setEditorOpen(false); setEditando(null); setEditandoCapId(null); } }}
+          editando={!!editando || !!editandoCapId}
+          semTitulo={!!editandoCapId}
+          inicialTitulo={editando?.title ?? ""}
+          inicialTexto={editandoCapId ? (caps.find((c) => c.id === editandoCapId)?.roteiro ?? "") : editando?.content ?? ""}
           salvando={addScript.isPending || updScript.isPending} onSalvar={salvarRoteiro} />
       )}
       {importOpen && ext && (
@@ -1635,6 +1663,18 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             converting={toPost.isPending} />
         );
       })()}
+      {verCapId && (() => {
+        const c = caps.find((x) => x.id === verCapId);
+        if (!c) return null;
+        return (
+          <RoteiroVerDialog
+            script={{ id: c.id, title: `Captação ${diaMes(c.capture_date)}${c.capture_time ? ` · ${c.capture_time.slice(0, 5)}` : ""}`, content: (c.roteiro ?? "").trim(), done: c.status === "concluida", source: "captacao" } as unknown as CaptureScript}
+            onOpenChange={(o) => { if (!o) setVerCapId(null); }}
+            onEditar={() => { setEditandoCapId(c.id); setEditorOpen(true); }}
+            onPrompter={() => onPrompter(pasta.nome, (c.roteiro ?? "").trim())}
+            onVirarPost={null} onVerPost={null} converting={false} />
+        );
+      })()}
       {marcarOpen && (
         <MarcarCaptacaoDialog open onOpenChange={(o) => { if (!o) setMarcarOpen(false); }}
           salvando={addingCapture}
@@ -1648,7 +1688,11 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
 }
 
 // ── Card do roteiro estilo Drive: miniatura do texto + título ─────────────────
-function RoteiroMiniCard({ script, indice, onOpen }: { script: CaptureScript; indice: number; onOpen: () => void }) {
+function RoteiroMiniCard({ script, indice, onOpen, icone = "file" }: {
+  script: Pick<CaptureScript, "title" | "content" | "done">; indice: number; onOpen: () => void;
+  icone?: "file" | "video";
+}) {
+  const Icone = icone === "video" ? Video : FileText;
   return (
     <button type="button" onClick={onOpen}
       className="group rounded-xl border border-border bg-card overflow-hidden text-left hover:border-primary/40 hover:shadow-warm-sm transition-all">
@@ -1657,7 +1701,7 @@ function RoteiroMiniCard({ script, indice, onOpen }: { script: CaptureScript; in
         <p className="text-[8px] leading-relaxed text-muted-foreground/80 whitespace-pre-wrap break-words">{script.content.slice(0, 420)}</p>
       </div>
       <div className="flex items-center gap-1.5 px-2.5 py-2">
-        <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+        <Icone className="h-3.5 w-3.5 text-primary shrink-0" />
         <span className="min-w-0 flex-1 truncate text-[12px] font-body font-semibold text-foreground">
           {script.title.trim() || `Roteiro ${indice + 1}`}
         </span>
@@ -1673,10 +1717,12 @@ function RoteiroMiniCard({ script, indice, onOpen }: { script: CaptureScript; in
 function RoteiroVerDialog({ script, onOpenChange, onRename, onToggleDone, onEditar, onExcluir, onPrompter, onVirarPost, onVerPost, converting }: {
   script: CaptureScript;
   onOpenChange: (o: boolean) => void;
-  onRename: (titulo: string) => void;
-  onToggleDone: () => void;
+  // Sem onRename/onToggleDone/onExcluir (roteiro de captação): o título vira
+  // texto fixo, o status é só leitura e o excluir some.
+  onRename?: (titulo: string) => void;
+  onToggleDone?: () => void;
   onEditar: () => void;
-  onExcluir: () => void;
+  onExcluir?: () => void;
   onPrompter: () => void;
   onVirarPost: (() => void) | null;
   onVerPost: (() => void) | null;
@@ -1699,14 +1745,19 @@ function RoteiroVerDialog({ script, onOpenChange, onRename, onToggleDone, onEdit
         {/* Título renomeável direto aqui (salva ao sair do campo). */}
         <div className="flex items-center gap-2 pr-8">
           <FileText className="h-4 w-4 text-primary shrink-0" />
-          <Input value={titulo} onChange={(e) => setTitulo(e.target.value)}
-            onBlur={() => { const t = titulo.trim(); if (t !== script.title.trim()) onRename(t); }}
-            placeholder="Nome do roteiro" className="rounded-xl h-9 font-display font-bold" />
-          <button type="button" onClick={onToggleDone}
+          {onRename ? (
+            <Input value={titulo} onChange={(e) => setTitulo(e.target.value)}
+              onBlur={() => { const t = titulo.trim(); if (t !== script.title.trim()) onRename(t); }}
+              placeholder="Nome do roteiro" className="rounded-xl h-9 font-display font-bold" />
+          ) : (
+            <span className="min-w-0 flex-1 truncate text-sm font-display font-bold text-foreground">{script.title}</span>
+          )}
+          <button type="button" onClick={onToggleDone} disabled={!onToggleDone}
             className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10.5px] font-body font-bold transition-colors",
               script.done
                 ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]"
-                : "bg-muted text-muted-foreground hover:text-foreground")}>
+                : "bg-muted text-muted-foreground",
+              onToggleDone && !script.done && "hover:text-foreground")}>
             {script.done ? <><CheckCircle2 className="h-3 w-3" /> Gravado</> : <><Clock className="h-3 w-3" /> A gravar</>}
           </button>
         </div>
@@ -1736,11 +1787,13 @@ function RoteiroVerDialog({ script, onOpenChange, onRename, onToggleDone, onEdit
               {converting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />} Virar post
             </Button>
           ) : null}
-          <button type="button" onClick={onExcluir}
-            className="ml-auto grid h-9 w-9 place-items-center rounded-lg text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
-            aria-label="Excluir roteiro">
-            <Trash2 className="h-4 w-4" />
-          </button>
+          {onExcluir && (
+            <button type="button" onClick={onExcluir}
+              className="ml-auto grid h-9 w-9 place-items-center rounded-lg text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+              aria-label="Excluir roteiro">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -1748,9 +1801,12 @@ function RoteiroVerDialog({ script, onOpenChange, onRename, onToggleDone, onEdit
 }
 
 // ── Novo/editar roteiro ────────────────────────────────────────────────────────// ── Novo/editar roteiro ────────────────────────────────────────────────────────
-function RoteiroDialog({ open, onOpenChange, editando, inicialTitulo, inicialTexto, salvando, onSalvar }: {
+function RoteiroDialog({ open, onOpenChange, editando, semTitulo, inicialTitulo, inicialTexto, salvando, onSalvar }: {
   open: boolean; onOpenChange: (o: boolean) => void;
-  editando: boolean; inicialTitulo: string; inicialTexto: string;
+  editando: boolean;
+  // Roteiro de captação não tem título (o card mostra a data da captação).
+  semTitulo?: boolean;
+  inicialTitulo: string; inicialTexto: string;
   salvando: boolean; onSalvar: (titulo: string, texto: string) => Promise<unknown>;
 }) {
   const [titulo, setTitulo] = useState(inicialTitulo);
@@ -1759,8 +1815,10 @@ function RoteiroDialog({ open, onOpenChange, editando, inicialTitulo, inicialTex
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader><DialogTitle className="font-display">{editando ? "Editar roteiro" : "Novo roteiro"}</DialogTitle></DialogHeader>
-        <Input value={titulo} onChange={(e) => setTitulo(e.target.value)}
-          placeholder="Título (ex.: Reels dos bastidores)" className="rounded-xl" />
+        {!semTitulo && (
+          <Input value={titulo} onChange={(e) => setTitulo(e.target.value)}
+            placeholder="Título (ex.: Reels dos bastidores)" className="rounded-xl" />
+        )}
         <Textarea rows={8} value={texto} onChange={(e) => setTexto(e.target.value)} autoFocus={!editando}
           placeholder="O que vai ser falado ou gravado…" className="rounded-xl text-sm" />
         <DialogFooter>
