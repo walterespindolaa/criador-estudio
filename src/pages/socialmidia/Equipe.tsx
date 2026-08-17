@@ -59,13 +59,15 @@ export default function Equipe() {
 
   return (
     <div className="space-y-5">
-      {/* Explicação */}
+      {/* Explicação (só com time montado; sem time, o bloco de venda explica) */}
+      {members.length > 0 && (
       <div className="flex items-start gap-2 rounded-xl bg-primary/[0.04] border border-primary/15 px-4 py-3">
         <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
         <p className="text-[13px] font-body text-foreground/80 leading-relaxed">
           Convide colaboradores pra trabalhar <strong>dentro da sua conta</strong>, você escolhe, no convite, <strong>quais módulos e clientes</strong> cada um acessa. O <strong>1º colaborador é grátis</strong>; a partir do 2º, R$ 29,90/mês por pessoa.
         </p>
       </div>
+      )}
 
       {/* Assentos */}
       <div data-tour="eq-assentos" className="bg-card border border-border rounded-2xl p-4 flex items-center gap-4 flex-wrap">
@@ -93,10 +95,52 @@ export default function Equipe() {
       {isLoading ? (
         <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
       ) : members.length === 0 ? (
-        <div className="border border-dashed border-border rounded-2xl py-12 px-6 text-center">
-          <Users className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" strokeWidth={1.5} />
-          <p className="text-sm font-body text-foreground font-medium">Nenhum colaborador ainda</p>
-          <p className="text-xs font-body text-muted-foreground mt-1">Convide alguém pra trabalhar com você.</p>
+        <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card p-5 sm:p-6">
+          <span aria-hidden className="pointer-events-none absolute -top-12 -right-12 w-40 h-40 rounded-full bg-primary/10 blur-2xl" />
+          <div className="relative">
+            <h2 className="text-lg font-display font-extrabold text-foreground">Sua operação não precisa depender só de você</h2>
+            <p className="text-[13px] font-body text-muted-foreground mt-1 max-w-2xl leading-relaxed">
+              Colaborador entra <strong className="text-foreground">dentro da sua conta</strong>, com o próprio login, vendo só o que você liberar: por módulo E por cliente. Sem senha compartilhada, sem print no WhatsApp.
+            </p>
+
+            <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4 mt-5">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-primary mb-2">Te soa familiar?</p>
+                <div className="space-y-1.5">
+                  {[
+                    "O designer manda a arte no WhatsApp e VOCÊ sobe post por post",
+                    "Você viaja e a operação inteira para junto",
+                    "Alguém pediu sua senha pra ajudar e você (com razão) travou",
+                  ].map((b) => (
+                    <div key={b} className="flex items-start gap-2 text-[13px] font-body text-foreground">
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-[hsl(var(--cria-amarelo))]" /> {b}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-primary mb-2">Na prática</p>
+                <div className="space-y-1.5">
+                  {[
+                    "O designer entra só no Cria Post dos clientes dele: sobe a arte direto no kanban e você só aprova",
+                    "A assistente cuida da Agenda e do CRM sem enxergar o seu Caixa",
+                    "Saiu do time? Pausa o acesso num clique e o assento fica livre",
+                  ].map((b) => (
+                    <div key={b} className="flex items-start gap-2 text-[13px] font-body text-foreground">
+                      <Check className="h-4 w-4 shrink-0 mt-0.5 text-[hsl(var(--cria-verde))]" /> {b}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center gap-3 flex-wrap">
+              <Button onClick={openInvite}><UserPlus className="h-4 w-4 mr-2" /> Convidar meu 1º colaborador</Button>
+              <p className="text-[12px] font-body text-muted-foreground">
+                O <strong className="text-foreground">1º colaborador é grátis</strong>. A partir do 2º, R$ 29,90/mês por pessoa.
+              </p>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
