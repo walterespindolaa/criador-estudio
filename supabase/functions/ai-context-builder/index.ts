@@ -575,6 +575,106 @@ RESPONDA APENAS JSON válido:
     }
 
     // ═══════════════════════════════════════════════════════════════════════
+    // LER O RELATÓRIO MESTRE (briefing completo do cliente)
+    //
+    // A social mídia faz um briefing rico com o cliente (história, diferenciais,
+    // personas, diagnóstico do perfil, concorrentes) e esse documento morria num
+    // PDF. Esta operação lê o PDF e devolve o conteúdo JÁ SEPARADO nas quatro
+    // abas da ficha (Brandbook, Persona, Diagnóstico, Concorrência). Mesma regra
+    // do brandbook-read: só afirmar o que está NO documento, nada de inventar, e
+    // NADA é salvo sem a pessoa conferir (quem salva é a tela, depois da revisão).
+    if (operation === 'relatorio-read') {
+      const imagens: string[] = Array.isArray(data?.imagens) ? data.imagens.slice(0, 14) : []
+      if (imagens.length === 0) {
+        return new Response(JSON.stringify({ error: 'sem_paginas', message: 'Não consegui ler nenhuma página do arquivo.' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const sys = `Você lê briefings/relatórios estratégicos de marca (agência de social media) e extrai o conteúdo pra ficha do cliente. Você olha as PÁGINAS como imagens.
+
+REGRAS:
+- Só afirme o que você REALMENTE VÊ no documento. Campo sem informação vem null. NUNCA invente.
+- IGNORE texto de instrução/placeholder do template (ex.: "Registre aqui as informações...", "Insira aqui um resumo...", "COLOQUE AQUI", "NOME DA EMPRESA AQUI"). Isso é molde, não conteúdo. Se a seção só tem placeholder, o campo vem null.
+- Textos longos: resuma com fidelidade, mantendo os fatos e o vocabulário do documento. Listas: um item por linha (\n).
+- personas: até 3, na ordem do documento (principal primeiro).
+- diagnostico: os checks vêm de tabelas Sim/Não ou de marcas visuais de certo/errado; "sim" | "nao" | null.
+- concorrentes: os citados nominalmente; kind = "direto" | "indireto" quando o documento distinguir.
+
+RESPONDA APENAS JSON válido:
+{"brand":{
+  "history":"como e por que a empresa nasceu"|null,
+  "brandValues":"valores"|null,
+  "impact":"impacto/transformação que quer gerar"|null,
+  "vision":"onde quer chegar"|null,
+  "specialty":"especialidade/domínio técnico"|null,
+  "valueProp":"o que diz fazer melhor + diferencial percebido"|null,
+  "offer":"o que vende (resumo)"|null,
+  "products":"principais produtos/serviços e categorias"|null,
+  "audience":"cliente ideal (resumo em 2-3 frases)"|null,
+  "toneOfVoice":"tom de voz"|null,
+  "personality":"imagem que a marca quer transmitir"|null,
+  "avoid":"estilos/abordagens que prefere evitar"|null,
+  "contentThemes":"temas centrais de conteúdo, um por linha"|null,
+  "coreMessage":"objetivo/mensagem central do conteúdo + transformação desejada"|null,
+  "admiredBrands":"marcas que admira, uma por linha com o motivo"|null},
+"personas":[{
+  "name":"nome simbólico"|null,"ageRange":null,"gender":null,"region":null,"spend":null,
+  "lifestyle":"quem é essa pessoa"|null,"valuesWhat":"o que valoriza"|null,
+  "habits":"interesses e hábitos"|null,"buying":"como costuma comprar"|null,
+  "seeks":"o que busca ao escolher"|null,"loyalty":"o que fideliza"|null,
+  "pains":"uma dor por linha"|null,"desires":"um desejo por linha"|null,
+  "doubts":"dúvidas frequentes do público"|null,"howWeServe":"como a empresa atende essa persona"|null}],
+"diagnostico":{
+  "chkBio":"sim"|"nao"|null,"chkFeed":null,"chkPinned":null,"chkHighlights":null,
+  "chkVisual":null,"chkSite":null,"chkContact":null,
+  "bioSuggestion":"bio sugerida no documento"|null,
+  "nameSuggestion":"nome de perfil sugerido"|null,
+  "highlightsPlan":"destaques sugeridos, um por linha"|null,
+  "pinnedPlan":"fixados sugeridos, um por linha"|null,
+  "notes":"outras observações do diagnóstico"|null},
+"concorrentes":[{"name":"...","instagram":null,"kind":"direto"|"indireto"|null,"note":"o que observar"|null}],
+"resumo":"1 frase do que é esta marca"}`
+
+      const conteudo: unknown[] = [
+        { type: 'text', text: `Leia este briefing/relatório estratégico e extraia o conteúdo pra ficha do cliente. ${imagens.length} páginas.` },
+        ...imagens.map((url) => ({ type: 'image_url', image_url: { url } })),
+      ]
+
+      const r = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash', // leitura de documento: precisa enxergar bem
+          messages: [{ role: 'system', content: sys }, { role: 'user', content: conteudo }],
+          max_tokens: 5000,
+          temperature: 0.1,
+        }),
+      })
+      if (!r.ok) {
+        const t = await r.text()
+        console.error('[relatorio-read] gateway', r.status, t.slice(0, 300))
+        return new Response(JSON.stringify({ error: 'leitura_falhou', message: 'Não consegui ler o relatório. Tente de novo em instantes.' }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      const j = await r.json()
+      const bruto = String(j.choices?.[0]?.message?.content || '')
+      const limpo = bruto.replace(/```json/gi, '').replace(/```/g, '').trim()
+      const m = limpo.match(/\{[\s\S]*\}/)
+      try {
+        return new Response(JSON.stringify({ result: JSON.parse(m ? m[0] : limpo) }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      } catch {
+        console.error('[relatorio-read] json inválido', limpo.slice(0, 300))
+        return new Response(JSON.stringify({ error: 'leitura_falhou', message: 'Li o arquivo mas não entendi o conteúdo. Tente outro PDF.' }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
     // O QUE ESTÁ QUENTE SOBRE ESTE TEMA
     //
     // O botão "amarrar com o que está quente" existia SEM ISTO: ele só mandava

@@ -21,6 +21,7 @@ import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { useScrapes, useHasHubCria, useDeleteScrape } from "@/hooks/useHubCria";
 import { SummaryCard } from "@/components/hubcria/CriativoTab";
 import { BrandbookImport } from "@/components/brandbook/BrandbookImport";
+import { RelatorioImport } from "@/components/brandbook/RelatorioImport";
 import { ClientTasks } from "@/components/accounts/crm/ClientTasks";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { Button } from "@/components/ui/button";
@@ -457,6 +458,41 @@ function ClientWorkspace() {
               Só que o dado já existe: a social mídia tem o moodboard do cliente
               em PDF. Então a gente para de pedir pra digitar e passa a pedir o
               arquivo. "Digite vinte campos" vira "confere o que eu entendi". */}
+          {/* Relatório MESTRE / briefing completo: preenche AS QUATRO ABAS de uma
+              vez (Brandbook, Persona, Diagnóstico, Concorrência). O import COMPLETA
+              a ficha, nunca apaga o que já foi escrito à mão. */}
+          <RelatorioImport
+            onSalvar={async (r) => {
+              const nbc = { ...bc };
+              for (const [k, v] of Object.entries(r.brand)) if (v.trim()) nbc[k] = v.trim();
+              // Personas: mantém as preenchidas à mão e completa as vagas (até 3).
+              const atuais = personas.filter((p) => Object.values(p).some((v) => (v ?? "").trim()));
+              const novasPersonas = [...atuais];
+              for (const p of r.personas) { if (novasPersonas.length >= 3) break; novasPersonas.push(p); }
+              const ndg = { ...dg };
+              for (const [k, v] of Object.entries(r.diagnostico)) if (v.trim()) ndg[k] = v.trim();
+              // Concorrentes: adiciona sem duplicar por nome.
+              const nomes = new Set(comps.map((c) => (c.name ?? "").trim().toLowerCase()).filter(Boolean));
+              const ncomps = [...comps];
+              for (const c of r.concorrentes) {
+                const key = c.name.trim().toLowerCase();
+                if (!key || nomes.has(key)) continue;
+                nomes.add(key);
+                ncomps.push(c as (typeof comps)[number]);
+              }
+              setForm({
+                ...form, brand_core: nbc, diagnosis: ndg,
+                persona: novasPersonas as unknown as CrmClient["persona"],
+                competitors: ncomps as CrmClient["competitors"],
+              });
+              await update.mutateAsync({
+                id: form.id, brand_core: nbc, diagnosis: ndg,
+                persona: novasPersonas, competitors: ncomps,
+              } as never);
+              toast.success("Ficha preenchida com o relatório. Confere as abas Persona, Diagnóstico e Concorrência também.");
+            }}
+          />
+
           {!isCria && (
             <BrandbookImport
               alvo="cliente"
@@ -472,6 +508,17 @@ function ClientWorkspace() {
             />
           )}
 
+          {/* História & essência: as perguntas do briefing inicial (Relatório MESTRE)
+              que dão contexto REAL pra IA e pra qualquer pessoa do time que pegar
+              o cliente: por que a marca existe, no que acredita e aonde quer chegar. */}
+          <Card icon={<Building2 />} title="História & essência (briefing)">
+            <F label="Como e por que a empresa nasceu"><MicTextarea value={bc.history ?? ""} onChange={(v) => setBc("history", v)} placeholder="A origem da marca: quem fundou, por quê, o que motivou..." /></F>
+            <F label="Valores da marca" className="mt-3"><MicTextarea value={bc.brandValues ?? ""} onChange={(v) => setBc("brandValues", v)} placeholder="No que a empresa acredita e não abre mão." /></F>
+            <F label="Impacto / transformação que quer gerar" className="mt-3"><MicTextarea value={bc.impact ?? ""} onChange={(v) => setBc("impact", v)} placeholder="O que muda no mercado e na vida do cliente por causa da marca." /></F>
+            <F label="Onde a marca quer chegar (visão)" className="mt-3"><MicTextarea value={bc.vision ?? ""} onChange={(v) => setBc("vision", v)} placeholder="A visão de longo prazo: onde quer estar nos próximos anos." /></F>
+            <F label="Marcas que admira (referências)" className="mt-3"><MicTextarea value={bc.admiredBrands ?? ""} onChange={(v) => setBc("admiredBrands", v)} placeholder="Uma por linha: @marca e por que é referência." /></F>
+          </Card>
+
           {/* Mensagem & estratégia, é isso que alimenta as ideias de post da IA */}
           <Card icon={<Brain />} title="Mensagem & estratégia (alimenta as ideias de post)">
             <p className="text-[11px] font-body text-muted-foreground mb-3 -mt-1">Quanto mais completo, melhores as ideias que a IA gera pra este cliente. Toque no 🎤 pra ditar por voz.</p>
@@ -480,6 +527,9 @@ function ClientWorkspace() {
             <F label="Público-alvo" className="mt-3"><MicTextarea value={bc.audience ?? ""} onChange={(v) => setBc("audience", v)} placeholder="Pra quem é? Dores, desejos, momento de vida..." /></F>
             <F label="Temas / pilares de conteúdo" className="mt-3"><MicTextarea value={bc.contentThemes ?? ""} onChange={(v) => setBc("contentThemes", v)} placeholder="Sobre o que a marca posta? Ex.: educação financeira, bastidores, dicas..." /></F>
             <F label="O que evitar" className="mt-3"><MicTextarea value={bc.avoid ?? ""} onChange={(v) => setBc("avoid", v)} placeholder="Assuntos, palavras ou tom que a marca não usa." /></F>
+            <F label="Principais produtos / serviços (categorias)" className="mt-3"><MicTextarea value={bc.products ?? ""} onChange={(v) => setBc("products", v)} placeholder="As categorias e o que cada uma entrega." /></F>
+            <F label="Especialidade / domínio técnico" className="mt-3"><MicTextarea value={bc.specialty ?? ""} onChange={(v) => setBc("specialty", v)} placeholder="No que a empresa é realmente forte tecnicamente." /></F>
+            <F label="Mensagem central do conteúdo" className="mt-3"><MicTextarea value={bc.coreMessage ?? ""} onChange={(v) => setBc("coreMessage", v)} placeholder="A ideia que TODO conteúdo deve transmitir + a transformação que o público deve sentir." /></F>
           </Card>
           {bc.criaBrandbook && (
             <Card icon={<Instagram />} title="Brandbook do cliente (sincronizado do Cria)">
@@ -566,6 +616,18 @@ function ClientWorkspace() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <F label="Nome / apelido da persona"><Input value={pe.name ?? ""} onChange={(e) => setPe("name", e.target.value)} placeholder="Ex.: Ana, a empreendedora ocupada" className="rounded-xl" /></F>
               <F label="Faixa etária"><Input value={pe.ageRange ?? ""} onChange={(e) => setPe("ageRange", e.target.value)} placeholder="Ex.: 28-40" className="rounded-xl" /></F>
+              <F label="Gênero predominante"><Input value={pe.gender ?? ""} onChange={(e) => setPe("gender", e.target.value)} placeholder="Se fizer sentido pro negócio" className="rounded-xl" /></F>
+              <F label="Cidade / região"><Input value={pe.region ?? ""} onChange={(e) => setPe("region", e.target.value)} placeholder="Onde esse público está" className="rounded-xl" /></F>
+              <F label="Faixa de gasto médio"><Input value={pe.spend ?? ""} onChange={(e) => setPe("spend", e.target.value)} placeholder="Quanto costuma investir no segmento" className="rounded-xl" /></F>
+            </div>
+          </Card>
+          {/* Comportamento: as perguntas de persona do briefing (Relatório MESTRE). */}
+          <Card icon={<Activity />} title="Comportamento & rotina">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <F label="Quem é essa pessoa (estilo de vida)"><MicTextarea value={pe.lifestyle ?? ""} onChange={(v) => setPe("lifestyle", v)} placeholder="Rotina, comportamentos, características..." /></F>
+              <F label="O que ela valoriza"><MicTextarea value={pe.valuesWhat ?? ""} onChange={(v) => setPe("valuesWhat", v)} placeholder="O que pesa na decisão de compra." /></F>
+              <F label="Interesses e hábitos"><MicTextarea value={pe.habits ?? ""} onChange={(v) => setPe("habits", v)} placeholder="Atividades, conteúdos que consome, hobbies..." /></F>
+              <F label="Como costuma comprar"><MicTextarea value={pe.buying ?? ""} onChange={(v) => setPe("buying", v)} placeholder="Online, presencial, por indicação, pesquisa antes..." /></F>
             </div>
           </Card>
           <Card icon={<Brain />} title="Estado de consciência">
@@ -580,6 +642,15 @@ function ClientWorkspace() {
             <Card icon={<HeartCrack />} title="Dores"><MicTextarea rows={4} value={pe.pains ?? ""} onChange={(v) => setPe("pains", v)} placeholder="Uma dor por linha... (🎤 pra ditar)" /></Card>
             <Card icon={<Heart />} title="Desejos"><MicTextarea rows={4} value={pe.desires ?? ""} onChange={(v) => setPe("desires", v)} placeholder="Um desejo por linha... (🎤 pra ditar)" /></Card>
           </div>
+          {/* Relação com a marca: fecha o ciclo dor -> desejo -> por que a NOSSA marca. */}
+          <Card icon={<Heart />} title="Relação com a marca">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <F label="O que busca ao escolher uma empresa assim"><MicTextarea value={pe.seeks ?? ""} onChange={(v) => setPe("seeks", v)} placeholder="Necessidades e problemas que espera resolver." /></F>
+              <F label="O que faria virar cliente fiel"><MicTextarea value={pe.loyalty ?? ""} onChange={(v) => setPe("loyalty", v)} placeholder="Atendimento, qualidade, experiência, confiança..." /></F>
+              <F label="Dúvidas frequentes do público"><MicTextarea value={pe.doubts ?? ""} onChange={(v) => setPe("doubts", v)} placeholder="O que sempre chegam perguntando (vira pauta de conteúdo)." /></F>
+              <F label="Como a empresa atende essa persona"><MicTextarea value={pe.howWeServe ?? ""} onChange={(v) => setPe("howWeServe", v)} placeholder="Como produto, atendimento e experiência resolvem as dores dela." /></F>
+            </div>
+          </Card>
           <Card icon={<Lightbulb />} title="Estratégia">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <F label="Objetivos"><MicTextarea value={pe.objectives ?? ""} onChange={(v) => setPe("objectives", v)} /></F>
@@ -592,6 +663,29 @@ function ClientWorkspace() {
 
         {/* DIAGNÓSTICO */}
         <TabsContent value="diag" className="mt-0 space-y-4">
+          {/* Checklist "Arrumando a casa" (Relatório MESTRE): antes de crescer,
+              o perfil precisa transmitir clareza. Cada item é um Sim/Não direto. */}
+          <Card icon={<Check />} title="Arrumando a casa (checklist do perfil)">
+            <p className="text-[11px] font-body text-muted-foreground -mt-1 mb-2">Antes de crescer, viralizar ou vender: o perfil transmite clareza? Marque item a item.</p>
+            {([
+              ["chkBio", "A bio comunica o que a marca faz?"],
+              ["chkFeed", "O feed mostra autoridade?"],
+              ["chkPinned", "Os fixados conectam com o cliente ideal?"],
+              ["chkHighlights", "Os destaques eliminam objeções?"],
+              ["chkVisual", "A identidade visual transmite foco e clareza?"],
+              ["chkSite", "Há direcionamento pro site?"],
+              ["chkContact", "Há um canal claro de contato?"],
+            ] as const).map(([k, l]) => (
+              <SimNao key={k} label={l} value={dg[k] ?? ""} on={(x) => setDg(k, x)} />
+            ))}
+          </Card>
+          {/* Plano de primeiros ajustes: o perfil como cartão de visitas estratégico. */}
+          <Card icon={<Lightbulb />} title="Primeiros ajustes (plano)">
+            <F label="Bio sugerida"><MicTextarea value={dg.bioSuggestion ?? ""} onChange={(v) => setDg("bioSuggestion", v)} placeholder="Clareza + valor + autoridade + CTA." /></F>
+            <F label="Nome do perfil sugerido" className="mt-3"><Input value={dg.nameSuggestion ?? ""} onChange={(e) => setDg("nameSuggestion", e.target.value)} placeholder="Ex.: Nome | o que faz" className="rounded-xl" /></F>
+            <F label="Destaques sugeridos" className="mt-3"><MicTextarea value={dg.highlightsPlan ?? ""} onChange={(v) => setDg("highlightsPlan", v)} placeholder="Um por linha: nome do destaque + o que vai dentro." /></F>
+            <F label="Fixados sugeridos" className="mt-3"><MicTextarea value={dg.pinnedPlan ?? ""} onChange={(v) => setDg("pinnedPlan", v)} placeholder="Post 1 quem sou; Post 2 o que entregamos; Post 3 educativo de valor..." /></F>
+          </Card>
           <Card icon={<Activity />} title="Diagnóstico do perfil">
             {[["visualIdentity", "Identidade visual"], ["bio", "Bio do perfil"], ["highlights", "Destaques (Highlights)"], ["positioning", "Clareza de posicionamento"]].map(([k, l]) => (
               <Rating key={k} label={l} value={dg[k] ?? ""} on={(x) => setDg(k, x)} />
@@ -640,6 +734,21 @@ function ClientWorkspace() {
                 <CF label="Seguidores" v={c.followers ?? ""} on={(x) => setComp(i, { followers: x })} />
                 <CF label="Frequência" v={c.frequency ?? ""} on={(x) => setComp(i, { frequency: x })} />
                 <CF label="Conteúdo" v={c.contentType ?? ""} on={(x) => setComp(i, { contentType: x })} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-2 mt-2">
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Tipo</Label>
+                  <select value={(c as { kind?: string }).kind ?? ""} onChange={(e) => setComp(i, { kind: e.target.value } as never)}
+                    className="w-full h-9 mt-1 rounded-xl border border-input bg-card px-2 text-sm">
+                    <option value="">-</option>
+                    <option value="direto">Direto</option>
+                    <option value="indireto">Indireto</option>
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">O que observar (por que compete / o que faz bem)</Label>
+                  <Input value={(c as { note?: string }).note ?? ""} onChange={(e) => setComp(i, { note: e.target.value } as never)} className="rounded-xl mt-1" />
+                </div>
               </div>
             </div>
           ))}
@@ -834,6 +943,28 @@ function BirthdayPicker({ value, onChange }: { value: string | null; onChange: (
 function CF({ label, v, on }: { label: string; v: string; on: (x: string) => void }) {
   return <div className="space-y-1"><Label className="text-[10px] text-muted-foreground uppercase">{label}</Label><Input value={v} onChange={(e) => on(e.target.value)} className="rounded-lg h-9 text-sm" /></div>;
 }
+// Sim/Não do checklist "Arrumando a casa" (clicar de novo limpa).
+function SimNao({ label, value, on }: { label: string; value: string; on: (v: string) => void }) {
+  return (
+    <div className="flex items-center justify-between gap-2 py-1.5 border-b border-border/50 last:border-0">
+      <span className="text-[13px] font-body text-foreground">{label}</span>
+      <div className="flex gap-1 shrink-0">
+        {(["sim", "nao"] as const).map((v) => (
+          <button key={v} type="button" onClick={() => on(value === v ? "" : v)}
+            className={cn("px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors",
+              value === v
+                ? v === "sim"
+                  ? "bg-[hsl(var(--cria-verde)/0.15)] text-[hsl(var(--cria-verde))] border-[hsl(var(--cria-verde)/0.4)]"
+                  : "bg-destructive/10 text-destructive border-destructive/30"
+                : "bg-card border-border text-muted-foreground hover:text-foreground")}>
+            {v === "sim" ? "Sim" : "Não"}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Rating({ label, value, on, bold }: { label: string; value: string; on: (x: string) => void; bold?: boolean }) {
   const opts: [string, string, string][] = [["baixo", "Baixo", "bg-red-100 text-red-700 border-red-200"], ["medio", "Médio", "bg-amber-100 text-amber-700 border-amber-200"], ["alto", "Alto", "bg-green-100 text-green-700 border-green-200"]];
   return (

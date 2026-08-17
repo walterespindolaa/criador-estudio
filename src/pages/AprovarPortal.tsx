@@ -435,10 +435,22 @@ export default function AprovarPortal() {
     },
   });
 
-  const approveFast = useMutation({ mutationFn: async (id: string) => { const { error } = await sbRpc("approve_post_by_token", { _token: token, _post_id: id }); if (error) throw error; }, onSuccess: () => { toast.success("Aprovado!"); inv(); }, onError: () => toast.error("Não foi possível aprovar.") });
-  const adjustFast = useMutation({ mutationFn: async ({ id, comment }: { id: string; comment: string }) => { const { error } = await sbRpc("request_adjustment_by_token", { _token: token, _post_id: id, _comment: comment }); if (error) throw error; }, onSuccess: () => { toast.success("Ajuste enviado!"); inv(); }, onError: () => toast.error("Não foi possível enviar.") });
-  const approveStage = useMutation({ mutationFn: async ({ id, stage }: { id: string; stage: Stage }) => { const { error } = await sbRpc("approve_stage_by_token", { _token: token, _post_id: id, _stage: stage }); if (error) throw error; }, onSuccess: () => { toast.success("Etapa aprovada!"); inv(); }, onError: () => toast.error("Não foi possível aprovar.") });
-  const adjustStage = useMutation({ mutationFn: async ({ id, stage, comment }: { id: string; stage: Stage; comment: string }) => { const { error } = await sbRpc("request_stage_adjustment_by_token", { _token: token, _post_id: id, _stage: stage, _comment: comment }); if (error) throw error; }, onSuccess: () => { toast.success("Ajuste enviado!"); inv(); }, onError: () => toast.error("Não foi possível enviar.") });
+  // O "Não foi possível aprovar" seco escondia o MOTIVO real do banco. Agora o
+  // erro vira mensagem útil (link fora do período, link expirado...) e o
+  // detalhe cru vai pro console, pra dar pra depurar pelo print do cliente.
+  const motivoErro = (e: unknown, acao: string): string => {
+    const msg = e instanceof Error ? e.message : String((e as { message?: string })?.message ?? e ?? "");
+    console.error(`[aprovar-portal] ${acao} falhou:`, e);
+    if (/fora do periodo/i.test(msg)) return "Este link cobre outro período e este post ficou de fora. Peça um link novo pra sua social mídia.";
+    if (/invalid_token/i.test(msg)) return "Este link expirou ou foi desativado. Peça um link novo pra sua social mídia.";
+    if (/post_not_found/i.test(msg)) return "Este post não está mais disponível. Atualize a página.";
+    if (/has_module|module/i.test(msg)) return "O módulo de aprovação está inativo. Avise sua social mídia.";
+    return msg ? `${acao} falhou: ${msg}` : `${acao} falhou. Tente de novo.`;
+  };
+  const approveFast = useMutation({ mutationFn: async (id: string) => { const { error } = await sbRpc("approve_post_by_token", { _token: token, _post_id: id }); if (error) throw error; }, onSuccess: () => { toast.success("Aprovado!"); inv(); }, onError: (e) => toast.error(motivoErro(e, "Aprovar")) });
+  const adjustFast = useMutation({ mutationFn: async ({ id, comment }: { id: string; comment: string }) => { const { error } = await sbRpc("request_adjustment_by_token", { _token: token, _post_id: id, _comment: comment }); if (error) throw error; }, onSuccess: () => { toast.success("Ajuste enviado!"); inv(); }, onError: (e) => toast.error(motivoErro(e, "Enviar o ajuste")) });
+  const approveStage = useMutation({ mutationFn: async ({ id, stage }: { id: string; stage: Stage }) => { const { error } = await sbRpc("approve_stage_by_token", { _token: token, _post_id: id, _stage: stage }); if (error) throw error; }, onSuccess: () => { toast.success("Etapa aprovada!"); inv(); }, onError: (e) => toast.error(motivoErro(e, "Aprovar a etapa")) });
+  const adjustStage = useMutation({ mutationFn: async ({ id, stage, comment }: { id: string; stage: Stage; comment: string }) => { const { error } = await sbRpc("request_stage_adjustment_by_token", { _token: token, _post_id: id, _stage: stage, _comment: comment }); if (error) throw error; }, onSuccess: () => { toast.success("Ajuste enviado!"); inv(); }, onError: (e) => toast.error(motivoErro(e, "Enviar o ajuste")) });
 
   // Qual post está em ação AGORA. Só ele trava; os outros seguem clicáveis.
   let pendingId: string | null = null;

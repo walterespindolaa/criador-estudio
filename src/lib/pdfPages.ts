@@ -45,6 +45,7 @@ async function imagemParaDataUrl(file: File): Promise<PaginaLida[]> {
 async function pdfParaDataUrls(
   file: File,
   onProgresso?: (lidas: number, total: number) => void,
+  maxPaginas: number = MAX_PAGINAS,
 ): Promise<PaginaLida[]> {
   const pdfjs = await import("pdfjs-dist");
   // O worker precisa vir do MESMO pacote e do MESMO build.
@@ -58,7 +59,7 @@ async function pdfParaDataUrls(
 
   const buffer = await file.arrayBuffer();
   const doc = await pdfjs.getDocument({ data: buffer }).promise;
-  const total = Math.min(doc.numPages, MAX_PAGINAS);
+  const total = Math.min(doc.numPages, maxPaginas);
   const paginas: PaginaLida[] = [];
 
   for (let n = 1; n <= total; n++) {
@@ -100,8 +101,9 @@ export function validarArquivo(file: File): ArquivoInvalido | null {
 export async function lerPaginas(
   file: File,
   onProgresso?: (lidas: number, total: number) => void,
+  maxPaginas: number = MAX_PAGINAS,
 ): Promise<PaginaLida[]> {
   const nome = file.name.toLowerCase();
   const ehPdf = file.type === "application/pdf" || nome.endsWith(".pdf");
-  return ehPdf ? pdfParaDataUrls(file, onProgresso) : imagemParaDataUrl(file);
+  return ehPdf ? pdfParaDataUrls(file, onProgresso, maxPaginas) : imagemParaDataUrl(file);
 }
