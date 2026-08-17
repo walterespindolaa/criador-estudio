@@ -4,7 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { getStatusClasses } from "@/lib/statusColors";
+import { FORMAT_LABELS } from "@/lib/constants";
+import { formatColorVars, FORMAT_TEXT_CLASS, FORMAT_BORDER_CLASS, FORMAT_DOT_CLASS } from "@/lib/format-colors";
 import type { Post } from "@/hooks/usePosts";
+
+// Rótulo da etapa: os MESMOS nomes das colunas do kanban (Criando), pro
+// calendário contar a mesma história do board, igual ao calendário do gestor.
+const STATUS_ROTULO: Record<string, string> = {
+  ideia: "Ideia", roteiro: "Planejamento", gravando: "Produzindo",
+  editando: "Pronto", agendado: "Agendado", publicado: "Publicado",
+};
 import type { Pillar } from "@/hooks/usePillars";
 
 const WEEK_DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -102,28 +111,32 @@ export function CalendarMonthView({ posts, pillars, currentMonth, onMonthChange,
 
               {/* Desktop (md+): cards com texto + drag, exatamente como antes. */}
               <div className="hidden md:block">
-                {dayPosts.slice(0, 3).map((post) => {
-                  const pillar = post.pillar_id ? pillarById.get(post.pillar_id) : undefined;
-                  return (
-                    <button
-                      key={post.id}
-                      type="button"
-                      draggable={!!onReschedule}
-                      onDragStart={onReschedule ? (e) => { e.dataTransfer.setData("text/plain", post.id); e.dataTransfer.effectAllowed = "move"; setDragging(true); } : undefined}
-                      onDragEnd={onReschedule ? () => { setDragging(false); setOverDate(null); } : undefined}
-                      onClick={(e) => { e.stopPropagation(); onPostClick(post); }}
-                      style={{ borderLeftColor: pillar?.color, borderLeftWidth: pillar ? 2 : undefined, pointerEvents: dragging ? "none" : undefined }}
-                      className={cn(
-                        "w-full text-left rounded-md px-1.5 py-0.5 mb-0.5 text-[10px] font-body truncate border",
-                        onReschedule && "cursor-grab active:cursor-grabbing",
-                        getStatusClasses(post.status)
-                      )}
-                    >
-                      {post.scheduled_time && (<span className="font-semibold mr-1">{post.scheduled_time.slice(0, 5)}</span>)}
-                      {post.title}
-                    </button>
-                  );
-                })}
+                {dayPosts.slice(0, 3).map((post) => (
+                  <button
+                    key={post.id}
+                    type="button"
+                    draggable={!!onReschedule}
+                    onDragStart={onReschedule ? (e) => { e.dataTransfer.setData("text/plain", post.id); e.dataTransfer.effectAllowed = "move"; setDragging(true); } : undefined}
+                    onDragEnd={onReschedule ? () => { setDragging(false); setOverDate(null); } : undefined}
+                    onClick={(e) => { e.stopPropagation(); onPostClick(post); }}
+                    style={{ ...formatColorVars(post.format), pointerEvents: dragging ? "none" : undefined }}
+                    className={cn(
+                      "w-full text-left rounded-lg border border-border bg-background px-1.5 py-1 mb-1 shadow-sm transition-colors hover:bg-muted/40",
+                      "border-l-[3px]", FORMAT_BORDER_CLASS,
+                      onReschedule && "cursor-grab active:cursor-grabbing",
+                    )}
+                  >
+                    {/* Badge da ETAPA (mesmos nomes do kanban), igual ao calendário do gestor. */}
+                    <span className={cn("inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight mb-0.5", getStatusClasses(post.status))}>
+                      {STATUS_ROTULO[post.status ?? ""] ?? post.status ?? "Post"}
+                    </span>
+                    <p className="text-[10px] font-body font-semibold text-foreground leading-tight truncate">{post.title}</p>
+                    <p className={cn("text-[8.5px] font-body font-bold uppercase tracking-wide truncate", FORMAT_TEXT_CLASS)}>
+                      {(FORMAT_LABELS[post.format ?? ""] ?? post.format ?? "").toString()}
+                      {post.scheduled_time ? <span className="text-muted-foreground font-medium normal-case"> · {post.scheduled_time.slice(0, 5)}</span> : null}
+                    </p>
+                  </button>
+                ))}
 
                 {dayPosts.length > 3 && (
                   <button type="button" onClick={() => onDayClick(cell.date)} className="text-[10px] text-primary font-body font-medium hover:underline">+{dayPosts.length - 3} mais</button>
@@ -135,10 +148,9 @@ export function CalendarMonthView({ posts, pillars, currentMonth, onMonthChange,
                 <button type="button" onClick={() => setDayModal(cell.date)}
                   className="md:hidden w-full min-h-[28px] flex flex-wrap content-start items-center gap-0.5 rounded-md px-0.5 py-0.5 hover:bg-muted/40 transition-colors"
                   aria-label={`Ver ${dayPosts.length} post(s) do dia ${cell.dayNum}`}>
-                  {dayPosts.slice(0, 4).map((post) => {
-                    const pillar = post.pillar_id ? pillarById.get(post.pillar_id) : undefined;
-                    return <span key={post.id} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: pillar?.color ?? "#94a3b8" }} />;
-                  })}
+                  {dayPosts.slice(0, 4).map((post) => (
+                    <span key={post.id} className={cn("h-1.5 w-1.5 rounded-full", FORMAT_DOT_CLASS)} style={formatColorVars(post.format)} />
+                  ))}
                   <span className="ml-auto text-[10px] font-body font-bold text-muted-foreground">{dayPosts.length}</span>
                 </button>
               )}
@@ -157,19 +169,22 @@ export function CalendarMonthView({ posts, pillars, currentMonth, onMonthChange,
               <DialogHeader><DialogTitle className="font-display capitalize">{d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}</DialogTitle></DialogHeader>
               <p className="text-[12px] font-body text-muted-foreground -mt-2">{items.length} post(s) · toque pra editar</p>
               <div className="space-y-1.5 mt-1">
-                {items.map((post) => {
-                  const pillar = post.pillar_id ? pillarById.get(post.pillar_id) : undefined;
-                  return (
-                    <button key={post.id} onClick={() => { setDayModal(null); onPostClick(post); }}
-                      className="w-full flex items-center gap-2.5 rounded-xl border border-border p-3 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors">
-                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: pillar?.color ?? "#94a3b8" }} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[13px] font-body font-semibold text-foreground truncate">{post.title}</p>
-                        {post.scheduled_time && <p className="text-[11px] font-body text-muted-foreground">{post.scheduled_time.slice(0, 5)}</p>}
-                      </div>
-                    </button>
-                  );
-                })}
+                {items.map((post) => (
+                  <button key={post.id} onClick={() => { setDayModal(null); onPostClick(post); }}
+                    style={formatColorVars(post.format)}
+                    className={cn("w-full flex items-center gap-2.5 rounded-xl border border-border border-l-[3px] p-3 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors", FORMAT_BORDER_CLASS)}>
+                    <div className="min-w-0 flex-1">
+                      <span className={cn("inline-block rounded-full border px-1.5 py-px text-[9px] font-body font-bold leading-tight mb-1", getStatusClasses(post.status))}>
+                        {STATUS_ROTULO[post.status ?? ""] ?? post.status ?? "Post"}
+                      </span>
+                      <p className="text-[13px] font-body font-semibold text-foreground truncate">{post.title}</p>
+                      <p className={cn("text-[10px] font-body font-bold uppercase tracking-wide", FORMAT_TEXT_CLASS)}>
+                        {(FORMAT_LABELS[post.format ?? ""] ?? post.format ?? "").toString()}
+                        {post.scheduled_time ? <span className="text-muted-foreground font-medium normal-case"> · {post.scheduled_time.slice(0, 5)}</span> : null}
+                      </p>
+                    </div>
+                  </button>
+                ))}
               </div>
             </DialogContent>
           </Dialog>
