@@ -77,7 +77,7 @@ export default function CriaCaixa() {
 function CaixaInner() {
   const { data: records = [], isLoading } = useFinRecords();
   const { data: clients = [] } = useCrmClients();
-  const { profile, save } = useManagerProfile();
+  const { profile, save, isLoading: profileLoading } = useManagerProfile();
   const del = useDeleteFinRecord();
   const upd = useUpdateFinRecord();   // status editável direto na lista
   const { data: recurring = [] } = useFinRecurring();
@@ -135,6 +135,8 @@ function CaixaInner() {
   const [statusF, setStatusF] = useState<FinStatus | "todos">("todos");
   const [dialog, setDialog] = useState(false);
   const [editing, setEditing] = useState<FinRecord | null>(null);
+  // Mais do card de rentabilidade: abre o Novo lançamento já com o cliente marcado.
+  const [novoCliente, setNovoCliente] = useState<string | null>(null);
   const [companyOpen, setCompanyOpen] = useState(false);
   const [recurringOpen, setRecurringOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -342,8 +344,10 @@ function CaixaInner() {
 
   const customCats = profile?.fin_settings?.categories?.[ctx];
   const addCategory = async (type: FinType, name: string) => {
-    // Sem o perfil carregado, o payload gravaria null por cima de nome/razão/CNPJ.
-    if (!profile) { toast.error("Aguarde carregar seu perfil antes de adicionar categorias."); return; }
+    // Só bloqueia ENQUANTO CARREGA (pra não gravar null por cima de nome/CNPJ de
+    // um perfil que existe). Perfil que ainda não existe é criado agora, junto com
+    // a categoria: era isto que travava categorias pra quem nunca fez checkout.
+    if (profileLoading) { toast.error("Seu perfil ainda está carregando, tenta de novo em um instante."); return; }
     const p = profile;
     const fin = p?.fin_settings ?? {};
     const cur = fin.categories ?? {};
@@ -359,8 +363,7 @@ function CaixaInner() {
 
   const customSubs = profile?.fin_settings?.subcats?.[ctx];
   const addSubcategory = async (type: FinType, category: string, name: string) => {
-    // Sem o perfil carregado, o payload gravaria null por cima de nome/razão/CNPJ.
-    if (!profile) { toast.error("Aguarde carregar seu perfil antes de adicionar subcategorias."); return; }
+    if (profileLoading) { toast.error("Seu perfil ainda está carregando, tenta de novo em um instante."); return; }
     const p = profile;
     const fin = p?.fin_settings ?? {};
     const cur = fin.subcats ?? {};
@@ -724,6 +727,11 @@ function CaixaInner() {
                       {c.margemPct.toFixed(0)}% de margem
                     </p>
                   </div>
+                  {/* Lançar direto PRA ESTE cliente, sem sair da tela. */}
+                  <Button variant="outline" size="icon" className="h-8 w-8 shrink-0 text-primary border-primary/40 hover:bg-primary/10"
+                    title="Novo lançamento pra este cliente" onClick={() => { setEditing(null); setNovoCliente(c.id); setDialog(true); }}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
                   {/* Atalho pra aba Financeiro da ficha: é lá que se lança e edita os custos por categoria. */}
                   <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary"
                     title="Custos e margem na ficha do cliente" onClick={() => navigate(`/socialmidia/clientes/${c.id}/financeiro`)}>
@@ -742,6 +750,39 @@ function CaixaInner() {
                   <MiniStat label="Imposto" value={brl(c.imposto)} tone="muted"
                     hint={isPctRegime(fin.regime) ? `${fin.taxPct ?? 0}% da receita` : "rateio do DAS"} />
                 </div>
+
+                {/* Extrato do mês DESTE cliente: de onde vem cada receita e custo,
+                    sem precisar entrar na ficha pra entender o número. */}
+                {(() => {
+                  const linhas = monthCtx.filter((r) => r.crm_client_id === c.id);
+                  if (linhas.length === 0 && c.aReceber <= 0) return null;
+                  return (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-[11px] font-body font-semibold text-primary list-none [&::-webkit-details-marker]:hidden">
+                        Ver extrato do mês ({linhas.length + (c.aReceber > 0 ? 1 : 0)})
+                      </summary>
+                      <div className="mt-1.5 rounded-lg border border-border/60 divide-y divide-border/60">
+                        {c.aReceber > 0 && (
+                          <div className="flex items-center justify-between px-3 py-1.5 text-[11px] font-body">
+                            <span className="text-muted-foreground">Mensalidade a receber</span>
+                            <span className="font-semibold text-green-700">{brl(c.aReceber)}</span>
+                          </div>
+                        )}
+                        {linhas.map((r) => (
+                          <div key={r.id} className="flex items-center justify-between gap-2 px-3 py-1.5 text-[11px] font-body">
+                            <span className="min-w-0 truncate text-foreground">
+                              {r.description || (r.type === "entrada" ? "Entrada" : "Despesa")}
+                              <span className="text-muted-foreground"> · {STATUS_LABEL[r.status] ?? r.status}</span>
+                            </span>
+                            <span className={cn("font-semibold shrink-0", r.type === "entrada" ? "text-green-700" : "text-destructive")}>
+                              {r.type === "entrada" ? "+" : "-"}{brl(Number(r.amount))}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  );
+                })()}
               </div>
             ))}
           </div>
@@ -853,7 +894,7 @@ function CaixaInner() {
       ))}
 
       {dialog && (
-        <RecordDialog key={editing?.id ?? "new"} record={editing} context={ctx} clients={clients} defaultDate={monthDate} defaultCats={DEFAULT_CATS[ctx]} customCats={customCats} defaultSubs={DEFAULT_SUBCATS[ctx]} customSubs={customSubs} onAddCategory={addCategory} onAddSubcategory={addSubcategory} onClose={() => { setDialog(false); setEditing(null); }} />
+        <RecordDialog key={`${editing?.id ?? "new"}:${novoCliente ?? ""}`} record={editing} context={ctx} clients={clients} defaultDate={monthDate} defaultClientId={novoCliente ?? undefined} defaultType={novoCliente ? "despesa" : undefined} defaultCats={DEFAULT_CATS[ctx]} customCats={customCats} defaultSubs={DEFAULT_SUBCATS[ctx]} customSubs={customSubs} onAddCategory={addCategory} onAddSubcategory={addSubcategory} onClose={() => { setDialog(false); setEditing(null); setNovoCliente(null); }} />
       )}
       <FinCompanyDialog open={companyOpen} onOpenChange={setCompanyOpen} />
       <FinRecurringDialog open={recurringOpen} onOpenChange={setRecurringOpen} ctx={ctx} defaultCats={DEFAULT_CATS[ctx]} customCats={customCats} defaultSubs={DEFAULT_SUBCATS[ctx]} customSubs={customSubs} />
@@ -1101,15 +1142,16 @@ function CashflowChart({ records, ctx, ym }: { records: FinRecord[]; ctx: FinCon
   );
 }
 
-function RecordDialog({ record, context, clients, defaultDate, defaultCats, customCats, defaultSubs, customSubs, onAddCategory, onAddSubcategory, onClose }: {
+function RecordDialog({ record, context, clients, defaultDate, defaultCats, customCats, defaultSubs, customSubs, onAddCategory, onAddSubcategory, onClose, defaultClientId, defaultType }: {
   record: FinRecord | null; context: FinContext; clients: { id: string; name: string }[]; defaultDate: string;
+  defaultClientId?: string; defaultType?: FinType;
   defaultCats: Record<FinType, string[]>; customCats?: { entrada?: string[]; despesa?: string[] };
   defaultSubs: Record<FinType, Record<string, string[]>>; customSubs?: { entrada?: Record<string, string[]>; despesa?: Record<string, string[]> };
   onAddCategory: (type: FinType, name: string) => Promise<void>; onAddSubcategory: (type: FinType, category: string, name: string) => Promise<void>; onClose: () => void;
 }) {
   const create = useCreateFinRecord(); const update = useUpdateFinRecord();
   const createRecurring = useCreateFinRecurring();
-  const [f, setF] = useState<FinRecordInput>(() => record ? { ...record } : { type: "entrada", description: "", amount: 0, status: "pendente", date: defaultDate, context });
+  const [f, setF] = useState<FinRecordInput>(() => record ? { ...record } : { type: defaultType ?? "entrada", description: "", amount: 0, status: "pendente", date: defaultDate, context, ...(defaultClientId ? { crm_client_id: defaultClientId } : {}) });
   const set = (patch: Partial<FinRecordInput>) => setF((p) => ({ ...p, ...patch }));
   // Repetir todo mês: cria o lançamento de hoje E o modelo recorrente, num clique só.
   const [repeat, setRepeat] = useState(false);
@@ -1135,20 +1177,24 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
     setNewSub(""); setAddingSub(false);
   };
   const submit = async () => {
-    if (!f.description?.trim()) return;
     // Valor obrigatório: sem esta trava o lançamento salvava com R$ 0 (criação e edição).
     if (!f.amount || f.amount <= 0) {
       toast.error("Informe um valor maior que zero.");
       return;
     }
+    // Descrição é OPCIONAL: sem texto, nasce um nome honesto (categoria + cliente).
+    const clienteNome = f.crm_client_id ? clients.find((c) => c.id === f.crm_client_id)?.name ?? null : null;
+    const desc = f.description?.trim()
+      || `${f.category?.trim() || (f.type === "entrada" ? "Entrada" : "Despesa")}${clienteNome ? ` - ${clienteNome}` : ""}`;
+    const payload = { ...f, description: desc };
     if (record) {
-      await update.mutateAsync({ id: record.id, ...f });
+      await update.mutateAsync({ id: record.id, ...payload });
     } else {
-      await create.mutateAsync(f as FinRecordInput);
+      await create.mutateAsync(payload as FinRecordInput);
       if (repeat) {
         const dia = Number((f.date ?? defaultDate).slice(8, 10)) || 1;
         await createRecurring.mutateAsync({
-          context, type: f.type, description: f.description!, category: f.category ?? null,
+          context, type: f.type, description: desc, category: f.category ?? null,
           subcategory: f.subcategory ?? null, amount: Number(f.amount) || 0,
           due_day: Math.min(28, Math.max(1, dia)), crm_client_id: f.crm_client_id ?? null,
           active: true, start_date: f.date ?? defaultDate,
@@ -1168,7 +1214,7 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
               <button key={t} onClick={() => set({ type: t, category: "", subcategory: "" })} className={cn("py-2 rounded-xl text-sm font-body font-bold border", f.type === t ? (t === "entrada" ? "bg-green-600 text-white border-green-600" : "bg-destructive text-white border-destructive") : "bg-card border-border text-muted-foreground")}>{t === "entrada" ? "Entrada" : "Despesa"}</button>
             ))}
           </div>
-          <div className="space-y-1.5"><Label className="text-xs">Descrição *</Label><Input value={f.description ?? ""} onChange={(e) => set({ description: e.target.value })} className="rounded-xl" /></div>
+          <div className="space-y-1.5"><Label className="text-xs">Descrição (opcional)</Label><Input value={f.description ?? ""} onChange={(e) => set({ description: e.target.value })} className="rounded-xl" /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5"><Label className="text-xs">Valor *</Label><MoneyInput value={f.amount ?? null} onChange={(v) => set({ amount: v ?? 0 })} /></div>
             <div className="space-y-1.5"><Label className="text-xs">Data</Label><Input type="date" value={f.date ?? defaultDate} onChange={(e) => set({ date: e.target.value })} className="rounded-xl" /></div>
@@ -1250,7 +1296,7 @@ function RecordDialog({ record, context, clients, defaultDate, defaultCats, cust
         </div>
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={submit} disabled={!f.description?.trim() || create.isPending || update.isPending || createRecurring.isPending}>{record ? "Salvar" : "Criar"}</Button>
+          <Button onClick={submit} disabled={create.isPending || update.isPending || createRecurring.isPending}>{record ? "Salvar" : "Criar"}</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -1624,7 +1670,8 @@ function RelatorioPeriodo({ records, ctx, clients = [], monthlies = [], mrr = 0,
   clients?: CrmClient[]; monthlies?: FinMonthly[]; mrr?: number; fin?: FinSettings;
 }) {
   const hoje = parseDateOnly(hojeBR()); // fuso BR
-  const [de, setDe] = useState(`${hoje.getFullYear()}-01-01`);
+  // Padrão: ESTE MÊS (o ano inteiro assustava; quem quiser outro recorte muda as datas).
+  const [de, setDe] = useState(`${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-01`);
   const [ate, setAte] = useState(hojeBR());
   const isPj = ctx === "pj";
 
