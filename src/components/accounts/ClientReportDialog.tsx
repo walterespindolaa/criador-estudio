@@ -2342,8 +2342,8 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           </div>
         )}
 
-        {/* Gerar análise faz parte de MONTAR o relatório, então o botão vive aqui
-            em cima também (embaixo ele continua, perto do Baixar). */}
+        {/* Gerar análise faz parte de MONTAR o relatório, então o botão vive aqui,
+            perto das métricas (era duplicado no rodapé e confundia). */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={genAI} disabled={aiLoading}>
             {aiLoading ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Analisando…</> : <><Sparkles className="h-4 w-4 mr-1.5" /> Gerar análise (IA)</>}
@@ -2382,10 +2382,9 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           </p>
         </div>
 
-        <DialogFooter className="mt-4 sm:justify-between">
-          <Button variant="outline" onClick={genAI} disabled={aiLoading} className="mr-auto">
-            {aiLoading ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Analisando…</> : <><Sparkles className="h-4 w-4 mr-1.5" /> Gerar análise (IA)</>}
-          </Button>
+        {/* O Gerar análise vive SÓ lá em cima (perto das métricas): dois botões
+            iguais confundiam. O rodapé fica pra fechar/baixar. */}
+        <DialogFooter className="mt-4">
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
             <Button onClick={download} disabled={downloading}>
