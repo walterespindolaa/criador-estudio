@@ -2173,8 +2173,8 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
         {/* Desktop (md+): editor à esquerda, prévia à direita, cada coluna com o
             próprio scroll. Mobile continua empilhado num scroll só. */}
-        <div className="md:mt-2 md:grid md:grid-cols-[380px_minmax(0,1fr)] md:gap-6 md:flex-1 md:min-h-0">
-        <div className="md:min-h-0 md:overflow-y-auto md:pr-2">
+        <div className="md:mt-2 md:grid md:grid-cols-[380px_minmax(0,1fr)] md:gap-5 md:flex-1 md:min-h-0">
+        <div className="report-col md:min-h-0 md:overflow-y-auto md:rounded-2xl md:border md:border-border md:bg-card/60 md:p-4">
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-body text-muted-foreground">Período:</span>
@@ -2316,7 +2316,11 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         </div>
 
         {/* Barra de formatação (fora do que vira PDF) */}
-        <style>{`.report-editor:empty:before{content:attr(data-placeholder);color:#9ca3af;}
+        <style>{`.report-col::-webkit-scrollbar{width:8px;}
+.report-col::-webkit-scrollbar-thumb{background:hsl(var(--border));border-radius:999px;}
+.report-col::-webkit-scrollbar-track{background:transparent;border-radius:999px;}
+.report-col{scrollbar-width:thin;scrollbar-color:hsl(var(--border)) transparent;}
+.report-editor:empty:before{content:attr(data-placeholder);color:#9ca3af;}
 .editor-rico:empty:before{content:attr(data-placeholder);color:#9ca3af;}
 .report-editor ul{list-style:disc;padding-left:22px;margin:6px 0;} .report-editor ol{list-style:decimal;padding-left:22px;margin:6px 0;} .report-editor li{margin-bottom:4px;} .report-editor p{margin:0 0 8px;}`}</style>
         {(analiseTemTexto || analiseFocada) && (
@@ -2381,7 +2385,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
         {/* Prévia paginada (coluna direita no desktop): cada folha é uma página
             A4 REAL do PDF (o exportador fotografa folha por folha). */}
-        <div className="mt-3 md:mt-0 md:min-h-0 md:overflow-y-auto">
+        <div className="report-col mt-3 md:mt-0 md:min-h-0 md:overflow-y-auto md:rounded-2xl md:border md:border-border md:bg-muted/30 md:p-4">
           <div className="mb-1 text-xs font-body font-semibold text-foreground">
             Prévia do relatório <span className="font-normal text-muted-foreground">(cada folha é uma página A4 do PDF. Pra editar a análise, clique no texto dela e digite.)</span>
           </div>
