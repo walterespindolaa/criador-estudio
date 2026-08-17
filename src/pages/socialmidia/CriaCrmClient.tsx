@@ -799,12 +799,23 @@ function F({ label, children, className }: { label: string; children: React.Reac
 // "2000-MM-DD" pra manter a coluna date e tudo que lê birthday (calendário/robô).
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 function BirthdayPicker({ value, onChange }: { value: string | null; onChange: (v: string | null) => void }) {
-  const parts = (value ?? "").split("-"); // ["YYYY","MM","DD"]
-  const mm = parts.length === 3 ? parts[1] : "";
-  const dd = parts.length === 3 ? parts[2] : "";
+  // Dia e mês vivem em estado LOCAL: antes eles derivavam direto do value, e
+  // escolher o Dia com o Mês ainda vazio disparava onChange(null), que zerava o
+  // value e resetava o próprio Dia (o "seleciono e não fixa"). Agora cada metade
+  // fica guardada e o valor só é salvo quando as DUAS estão preenchidas.
+  const partsIni = (value ?? "").split("-");
+  const [dd, setDd] = useState(partsIni.length === 3 ? partsIni[2] : "");
+  const [mm, setMm] = useState(partsIni.length === 3 ? partsIni[1] : "");
+  useEffect(() => {
+    const p = (value ?? "").split("-");
+    setDd(p.length === 3 ? p[2] : "");
+    setMm(p.length === 3 ? p[1] : "");
+  }, [value]);
   const set = (nd: string, nm: string) => {
-    if (!nd || !nm) { onChange(null); return; }
-    onChange(`2000-${nm}-${nd.padStart(2, "0")}`);
+    setDd(nd); setMm(nm);
+    if (nd && nm) onChange(`2000-${nm}-${nd.padStart(2, "0")}`);
+    else if (!nd && !nm) onChange(null);
+    // Só uma metade preenchida: espera a outra, sem apagar o que está salvo.
   };
   const selCls = "h-10 rounded-xl border border-input bg-background px-2 text-sm";
   return (

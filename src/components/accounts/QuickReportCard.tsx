@@ -6,6 +6,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { parseDateOnly } from "@/lib/date-br";
 import { useExternalClients, useExternalPosts, type ExternalClient } from "@/hooks/useCriaPost";
+import { useCrmClients } from "@/hooks/useCrm";
+import { nomeExibidoCliente } from "@/lib/cliente-nome";
+import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
 import { useProfile } from "@/hooks/useProfile";
 import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
 
@@ -70,7 +73,26 @@ function writeLS(key: string, value: string) {
 
 export function QuickReportCard() {
   const { clients } = useExternalClients();
-  const active = useMemo(() => clients.filter((c) => c.active), [clients]);
+  const { data: crmClients = [] } = useCrmClients();
+  const { data: criaProfiles } = useCriaClientProfiles();
+  // Nome ATUALIZADO no seletor (a lista mostrava o name antigo do portal):
+  // apelido do gestor > nome ao vivo do Cria > name. E cliente com cadastro
+  // central INATIVO sai da lista (era a "Fabi" fantasma no dropdown).
+  const active = useMemo(() => {
+    const rotulo = (c: ExternalClient) => {
+      const crm = c.crm_client_id ? crmClients.find((k) => k.id === c.crm_client_id) ?? null : null;
+      const live = crm?.cria_owner_id ? criaProfiles?.[crm.cria_owner_id]?.name ?? null : null;
+      return (crm ? nomeExibidoCliente(crm, live) : "") || c.name;
+    };
+    return clients
+      .filter((c) => c.active)
+      .filter((c) => {
+        const crm = c.crm_client_id ? crmClients.find((k) => k.id === c.crm_client_id) : null;
+        return !crm || crm.status !== "inativo";
+      })
+      .map((c) => ({ ...c, _rotulo: rotulo(c) }))
+      .sort((a, b) => a._rotulo.localeCompare(b._rotulo, "pt-BR"));
+  }, [clients, crmClients, criaProfiles]);
 
   const [clientId, setClientId] = useState<string>(() => readLS(LS_CLIENT) ?? "");
   const [periodKey, setPeriodKey] = useState<PeriodKey>(() => {
@@ -116,7 +138,7 @@ export function QuickReportCard() {
           aria-label="Cliente do relatório"
           className="w-full md:w-56 rounded-xl border border-border bg-card px-3 py-2 text-sm font-body"
         >
-          {active.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {active.map((c) => <option key={c.id} value={c.id}>{c._rotulo}</option>)}
         </select>
 
         <div className="flex flex-wrap gap-1.5">

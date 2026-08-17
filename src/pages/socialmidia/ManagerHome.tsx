@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import { nomeExibidoCliente } from "@/lib/cliente-nome";
+import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
 import { useNavigate, Link } from "react-router-dom";
 import { Camera, ArrowRight, Ticket, Settings, Users, Sparkles, Check, Gift, Wallet, Send, CalendarDays, Eye, EyeOff, Heart, Clock, RotateCcw, ChevronRight, ChevronDown } from "lucide-react";
 import { useOperationSignals, DOMAIN_HEX, type OpDomain, type OpUrgency, type HealthLevel } from "@/hooks/useOperationSignals";
@@ -65,6 +67,11 @@ function greeting(name?: string | null) {
 
 export default function ManagerHome() {
   const navigate = useNavigate();
+  // Nome exibido: MESMA regra da página Clientes (apelido > nome ao vivo do
+  // Cria > name do CRM). Antes a home usava o name cru e divergia.
+  const { data: criaProfiles } = useCriaClientProfiles();
+  const nomeDe = (c: { display_name?: string | null; name?: string | null; cria_owner_id?: string | null }) =>
+    nomeExibidoCliente(c, c.cria_owner_id ? criaProfiles?.[c.cria_owner_id]?.name ?? null : null);
   const { user } = useAuth();
   const { profile, updateProfile } = useProfile();
   const { partner, isPartner } = usePartner();
@@ -341,11 +348,11 @@ export default function ManagerHome() {
                 <span aria-hidden className="absolute top-0 inset-x-0 h-1.5" style={{ background: cor }} />
                 <div className="flex items-center gap-2.5">
                   <span className="relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full text-white text-sm font-display font-bold" style={{ background: cor }}>
-                    {initial(c.name)}
+                    {initial(nomeDe(c) || c.name)}
                     {c.logo && <img src={c.logo} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-display font-bold text-foreground truncate">{c.name || "Sem nome"}</span>
+                    <span className="block text-sm font-display font-bold text-foreground truncate">{nomeDe(c) || c.name || "Sem nome"}</span>
                     {c.instagram && <span className="block text-[11px] font-body text-muted-foreground truncate">@{c.instagram.replace(/^@/, "")}</span>}
                   </span>
                   {/* Bolinha de saúde: tooltip no hover diz o que significa. */}
