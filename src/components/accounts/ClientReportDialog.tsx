@@ -304,6 +304,48 @@ function ricoParaHtml(texto: string): string {
   }).join("\n");
 }
 
+// Colar preservando a formatação: converte o HTML da área de transferência
+// (Docs, Word, Notion, site) pros marcadores do editor. Negrito vira *texto*,
+// itálico _texto_, título vira ## , item de lista vira - , hr vira ---.
+function htmlParaRico(html: string): string {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const envolve = (s: string, m: string) => {
+    const p = s.match(/^(\s*)([\s\S]*?)(\s*)$/);
+    if (!p || !p[2] || p[2].includes("\n")) return s;
+    return `${p[1]}${m}${p[2]}${m}${p[3]}`;
+  };
+  const serial = (n: Node): string => {
+    if (n.nodeType === Node.TEXT_NODE) return (n.textContent ?? "").replace(/\u00a0/g, " ").replace(/[\r\n\t]+/g, " ");
+    if (n.nodeType !== Node.ELEMENT_NODE) return "";
+    const el = n as HTMLElement;
+    const tag = el.tagName;
+    if (tag === "SCRIPT" || tag === "STYLE" || tag === "META" || tag === "TITLE") return "";
+    if (tag === "BR") return "\n";
+    if (tag === "HR") return "\n---\n";
+    let filhos = Array.from(el.childNodes).map(serial).join("");
+    const style = el.getAttribute("style") ?? "";
+    // Google Docs embrulha o texto num <b style="font-weight:normal">: NÃO é negrito.
+    const negrito = ((tag === "B" || tag === "STRONG") && !/font-weight:\s*normal/i.test(style)) || /font-weight:\s*(bold|[6-9]00)/i.test(style);
+    const italico = tag === "I" || tag === "EM" || /font-style:\s*italic/i.test(style);
+    if (negrito) filhos = envolve(filhos, "*");
+    if (italico) filhos = envolve(filhos, "_");
+    if (/^H[1-6]$/.test(tag)) return `\n## ${filhos.trim()}\n`;
+    if (tag === "LI") return `\n- ${filhos.trim()}`;
+    if (["P", "DIV", "UL", "OL", "TR", "TABLE", "BLOCKQUOTE", "SECTION", "ARTICLE", "PRE"].includes(tag)) return `\n${filhos}\n`;
+    return filhos;
+  };
+  return serial(doc.body).replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/^\n+|\n+$/g, "");
+}
+
+type MarcadorTipo = "negrito" | "italico" | "titulo" | "topico" | "divisor";
+const BOTOES_RICO: [MarcadorTipo, string, string, string][] = [
+  ["negrito", "B", "font-bold", "Negrito (*texto*)"],
+  ["italico", "I", "italic", "Itálico (_texto_)"],
+  ["titulo", "T", "", "Título (## no começo da linha)"],
+  ["topico", "•", "", "Tópico com bolinha (- no começo da linha)"],
+  ["divisor", "―", "", "Divisor (linha de ---)"],
+];
+
 function EditorRico({ valor, onChange, placeholder, minHeight = 96, innerRef }: {
   valor: string; onChange: (v: string) => void; placeholder: string; minHeight?: number;
   innerRef?: { current: HTMLDivElement | null };
@@ -311,11 +353,32 @@ function EditorRico({ valor, onChange, placeholder, minHeight = 96, innerRef }: 
   const proprio = useRef<HTMLDivElement>(null);
   const ref = innerRef ?? proprio;
 
-  // Valor externo (restaurar nota, trocar período) entra no DOM só quando difere;
-  // durante a digitação o DOM é a fonte e o React apenas acompanha.
+  // DEBOUNCE: o DOM é a fonte durante a digitação; o estado do diálogo (que
+  // re-renderiza a prévia A4 inteira) só recebe o texto depois de uma pausa.
+  // Era ESSE re-render a cada tecla o delay do editor.
+  const ultimoLocal = useRef<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const emitir = (v: string) => {
+    ultimoLocal.current = v;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => { timer.current = null; onChange(v); }, 350);
+  };
+  // Descarga imediata (blur): quem clica em Salvar/baixar logo depois de digitar
+  // não pode perder os últimos caracteres do debounce.
+  const emitirJa = () => {
+    if (timer.current) { clearTimeout(timer.current); timer.current = null; if (ultimoLocal.current !== null) onChange(ultimoLocal.current); }
+  };
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
+  // Valor EXTERNO (restaurar nota, trocar período) entra no DOM; o que acabou
+  // de sair daqui pelo debounce não pode voltar e pular o cursor.
   useEffect(() => {
     const el = ref.current;
-    if (el && (el.textContent ?? "").replace(/\u200b/g, "") !== valor) el.innerHTML = ricoParaHtml(valor);
+    if (!el) return;
+    if (valor === ultimoLocal.current) return;
+    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+    ultimoLocal.current = null;
+    if ((el.textContent ?? "").replace(/\u200b/g, "") !== valor) el.innerHTML = ricoParaHtml(valor);
   }, [valor, ref]);
 
   const leiaTexto = (el: HTMLDivElement) => (el.textContent ?? "").replace(/\u200b/g, "");
@@ -330,7 +393,7 @@ function EditorRico({ valor, onChange, placeholder, minHeight = 96, innerRef }: 
     return pre.toString().replace(/\u200b/g, "").length;
   };
   // Começo e fim da seleção em offsets do texto puro (pra substituir a seleção
-  // ao colar/Enter sem depender do execCommand).
+  // ao colar/Enter e pra FORMATAR o trecho selecionado).
   const selecaoAtual = (el: HTMLDivElement): [number, number] => {
     const sel = window.getSelection();
     const len = leiaTexto(el).length;
@@ -345,17 +408,20 @@ function EditorRico({ valor, onChange, placeholder, minHeight = 96, innerRef }: 
     fim.setEnd(range.endContainer, range.endOffset);
     return [ini.toString().replace(/\u200b/g, "").length, fim.toString().replace(/\u200b/g, "").length];
   };
-  // Insere texto puro na posição da seleção, re-renderiza e devolve o cursor.
-  // É o caminho do Enter e do colar: o execCommand virava <br>/<div> e a quebra
-  // SUMIA na leitura (o "não consigo colocar parágrafo" e o texto colado emendado).
+  // Reescreve o conteúdo com destaque e devolve o cursor pro lugar.
+  const define = (novo: string, cursor: number) => {
+    const el = ref.current; if (!el) return;
+    emitir(novo);
+    el.innerHTML = ricoParaHtml(novo);
+    posiciona(el, cursor);
+  };
+  // Insere texto puro na posição da seleção. É o caminho do Enter e do colar:
+  // o execCommand virava <br>/<div> e a quebra SUMIA na leitura.
   const inserirTexto = (t: string) => {
     const el = ref.current; if (!el) return;
     const texto = leiaTexto(el);
     const [ini, fim] = selecaoAtual(el);
-    const novo = texto.slice(0, ini) + t + texto.slice(fim);
-    onChange(novo);
-    el.innerHTML = ricoParaHtml(novo);
-    posiciona(el, ini + t.length);
+    define(texto.slice(0, ini) + t + texto.slice(fim), ini + t.length);
   };
   const posiciona = (el: HTMLDivElement, off: number) => {
     const sel = window.getSelection();
@@ -381,30 +447,84 @@ function EditorRico({ valor, onChange, placeholder, minHeight = 96, innerRef }: 
     const el = ref.current; if (!el) return;
     const texto = leiaTexto(el);
     const off = offsetAtual(el);
-    onChange(texto);
+    emitir(texto);
     el.innerHTML = ricoParaHtml(texto);
     posiciona(el, off);
   };
 
+  // Barra de formatação: negrito/itálico ENVOLVEM o trecho selecionado (ou
+  // inserem um exemplo no cursor); título/tópico prefixam a(s) linha(s) da
+  // seleção; divisor entra no cursor. Tudo pelo texto puro, sem execCommand.
+  const aplicar = (tipo: MarcadorTipo) => {
+    const el = ref.current; if (!el) return;
+    el.focus();
+    const texto = leiaTexto(el);
+    const [ini, fim] = selecaoAtual(el);
+    if (tipo === "negrito" || tipo === "italico") {
+      const m = tipo === "negrito" ? "*" : "_";
+      if (fim > ini) {
+        define(texto.slice(0, ini) + m + texto.slice(ini, fim) + m + texto.slice(fim), fim + 2);
+      } else {
+        const ph = tipo === "negrito" ? "negrito" : "itálico";
+        define(texto.slice(0, ini) + m + ph + m + texto.slice(fim), ini + ph.length + 2);
+      }
+      return;
+    }
+    if (tipo === "divisor") {
+      const pre = ini === 0 || texto[ini - 1] === "\n" ? "" : "\n";
+      define(texto.slice(0, ini) + pre + "---\n" + texto.slice(fim), ini + pre.length + 4);
+      return;
+    }
+    const prefixo = tipo === "titulo" ? "## " : "- ";
+    const inicioLinha = texto.lastIndexOf("\n", Math.max(0, ini - 1)) + 1;
+    const quebraFim = texto.indexOf("\n", fim);
+    const fimBloco = quebraFim === -1 ? texto.length : quebraFim;
+    const bloco = texto.slice(inicioLinha, fimBloco);
+    const novoBloco = bloco.split("\n").map((l) => (l.startsWith(prefixo) ? l : prefixo + l)).join("\n");
+    define(texto.slice(0, inicioLinha) + novoBloco + texto.slice(fimBloco), inicioLinha + novoBloco.length);
+  };
+
   return (
-    <div
-      ref={ref}
-      contentEditable
-      suppressContentEditableWarning
-      className="editor-rico mt-1 w-full rounded-xl border border-border bg-card p-3 text-sm font-body text-foreground outline-none focus:border-primary"
-      style={{ minHeight, maxHeight: 320, overflowY: "auto", whiteSpace: "pre-wrap" }}
-      data-placeholder={placeholder}
-      onInput={aoDigitar}
-      onKeyDown={(e) => {
-        // Enter vira \n LITERAL inserido por nós (nada de execCommand, que criava
-        // <br> e fazia o parágrafo sumir na leitura).
-        if (e.key === "Enter") { e.preventDefault(); inserirTexto("\n"); }
-      }}
-      onPaste={(e) => {
-        e.preventDefault();
-        inserirTexto(e.clipboardData.getData("text/plain"));
-      }}
-    />
+    <div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1">
+        {BOTOES_RICO.map(([tipo, icone, cls, titulo]) => (
+          <button
+            key={tipo}
+            type="button"
+            title={titulo}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => aplicar(tipo)}
+            className={`h-7 w-7 rounded-lg border border-border bg-card text-xs text-foreground hover:bg-accent ${cls}`}
+          >
+            {icone}
+          </button>
+        ))}
+        <span className="ml-1 text-[10px] font-body text-muted-foreground">selecione o trecho e clique · *negrito* · _itálico_ · ## título · - tópico</span>
+      </div>
+      <div
+        ref={ref}
+        contentEditable
+        suppressContentEditableWarning
+        className="editor-rico mt-1 w-full rounded-xl border border-border bg-card p-3 text-sm font-body text-foreground outline-none focus:border-primary"
+        style={{ minHeight, maxHeight: 320, overflowY: "auto", whiteSpace: "pre-wrap" }}
+        data-placeholder={placeholder}
+        onInput={aoDigitar}
+        onBlur={emitirJa}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); inserirTexto("\n"); }
+          // Atalhos de teclado de quem veio do Word/Docs.
+          if ((e.metaKey || e.ctrlKey) && (e.key === "b" || e.key === "i")) { e.preventDefault(); aplicar(e.key === "b" ? "negrito" : "italico"); }
+        }}
+        onPaste={(e) => {
+          e.preventDefault();
+          // Com HTML na área de transferência, o negrito/itálico/lista colado
+          // vira marcador em vez de sumir; sem HTML, cola o texto puro.
+          const html = e.clipboardData.getData("text/html");
+          const convertido = html ? htmlParaRico(html) : "";
+          inserirTexto(convertido || e.clipboardData.getData("text/plain"));
+        }}
+      />
+    </div>
   );
 }
 
@@ -660,32 +780,6 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     setMetricShots(next);
     await persistMetricPaths(next.map((x) => x.path));
     supabase.storage.from("relatorios").remove([path]).catch(() => { /* best effort */ });
-  };
-
-  // Botões de formatação do recado: inserem os marcadores no texto, que o
-  // relatório renderiza como negrito/itálico/título/tópico/divisor.
-  // Sem foco no editor, o marcador entra numa linha nova no fim do recado.
-  const anexaMarcador = (t: string) => {
-    setNotes((n) => (n && !n.endsWith("\n") ? `${n}\n${t}` : `${n}${t}`));
-  };
-  const aplicarMarcador = (tipo: "negrito" | "italico" | "titulo" | "topico" | "divisor") => {
-    const el = recadoRef.current;
-    const sel = window.getSelection();
-    const dentro = !!el && !!sel && sel.rangeCount > 0 && el.contains(sel.getRangeAt(0).startContainer);
-    const inserir = (t: string) => { el?.focus(); document.execCommand("insertText", false, t); };
-    if (tipo === "negrito" || tipo === "italico") {
-      const m = tipo === "negrito" ? "*" : "_";
-      const trecho = dentro && sel ? sel.toString() : "";
-      if (dentro) inserir(`${m}${trecho || (tipo === "negrito" ? "negrito" : "itálico")}${m}`);
-      else anexaMarcador(`${m}${tipo === "negrito" ? "negrito" : "itálico"}${m}`);
-      return;
-    }
-    if (tipo === "divisor") {
-      if (dentro) inserir("\n---\n"); else anexaMarcador("---");
-      return;
-    }
-    const prefixo = tipo === "titulo" ? "## " : "- ";
-    if (dentro) inserir(`\n${prefixo}`); else anexaMarcador(prefixo);
   };
 
   // Relatório rápido: reabre já no preset escolhido pela gestora.
@@ -2150,28 +2244,6 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                 </button>
               )}
             </div>
-          </div>
-          {/* Barra de formatação do recado: os marcadores que o relatório entende. */}
-          <div className="mt-1.5 flex flex-wrap items-center gap-1">
-            {([
-              ["negrito", "B", "font-bold", "Negrito (*texto*)"],
-              ["italico", "I", "italic", "Itálico (_texto_)"],
-              ["titulo", "T", "", "Título (## no começo da linha)"],
-              ["topico", "•", "", "Tópico com bolinha (- no começo da linha)"],
-              ["divisor", "―", "", "Divisor (linha de ---)"],
-            ] as ["negrito" | "italico" | "titulo" | "topico" | "divisor", string, string, string][]).map(([tipo, icone, cls, titulo]) => (
-              <button
-                key={tipo}
-                type="button"
-                title={titulo}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => aplicarMarcador(tipo)}
-                className={`h-7 w-7 rounded-lg border border-border bg-card text-xs text-foreground hover:bg-accent ${cls}`}
-              >
-                {icone}
-              </button>
-            ))}
-            <span className="ml-1 text-[10px] font-body text-muted-foreground">*negrito* · _itálico_ · ## título · - tópico · --- divisor</span>
           </div>
           <EditorRico innerRef={recadoRef} valor={notes} onChange={setNotes}
             placeholder="Ex.: um resumo do mês, os próximos passos, um recado pro cliente." />
