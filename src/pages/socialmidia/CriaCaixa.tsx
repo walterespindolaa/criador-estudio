@@ -711,6 +711,30 @@ function CaixaInner() {
             Só entra aqui o que você <strong>vinculou ao cliente</strong> no lançamento. Despesa sem cliente vira custo da operação, não do cliente.
           </p>
 
+          {/* Resumo da carteira: a soma dos clientes do mês, antes do detalhe um a um. */}
+          {(() => {
+            const tReceita = clientRows.reduce((s, r) => s + r.receita, 0);
+            const tCusto = clientRows.reduce((s, r) => s + r.custo, 0);
+            const tImposto = clientRows.reduce((s, r) => s + r.imposto, 0);
+            const tMargem = tReceita - tCusto - tImposto;
+            return (
+              <div className="grid grid-cols-3 gap-2 rounded-xl bg-muted/40 p-2.5 mb-3">
+                <div className="text-center">
+                  <p className="text-[10px] font-body font-bold uppercase tracking-wide text-muted-foreground">Receita</p>
+                  <p className="text-sm font-display font-extrabold text-green-700">{brl(tReceita)}</p>
+                </div>
+                <div className="text-center border-x border-border/60">
+                  <p className="text-[10px] font-body font-bold uppercase tracking-wide text-muted-foreground">Custos + imposto</p>
+                  <p className="text-sm font-display font-extrabold text-destructive">{brl(tCusto + tImposto)}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] font-body font-bold uppercase tracking-wide text-muted-foreground">Margem</p>
+                  <p className={cn("text-sm font-display font-extrabold", tMargem >= 0 ? "text-green-700" : "text-destructive")}>{brl(tMargem)}</p>
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="space-y-2">
             {clientRows.map((c) => (
               <div key={c.id} className="rounded-xl border border-border/70 p-3 hover:border-primary/40 transition-colors">
@@ -751,14 +775,24 @@ function CaixaInner() {
                     hint={isPctRegime(fin.regime) ? `${fin.taxPct ?? 0}% da receita` : "rateio do DAS"} />
                 </div>
 
+                {/* Barra de margem: quanto da receita sobra depois de custos e imposto.
+                    Margem negativa pinta a barra inteira de vermelho: cliente no prejuízo. */}
+                <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden" aria-hidden>
+                  <div
+                    className={cn("h-full rounded-full transition-all", c.margem >= 0 ? "bg-green-600/80" : "bg-destructive")}
+                    style={{ width: `${c.margem >= 0 ? Math.max(4, Math.min(100, c.margemPct)) : 100}%` }}
+                  />
+                </div>
+
                 {/* Extrato do mês DESTE cliente: de onde vem cada receita e custo,
                     sem precisar entrar na ficha pra entender o número. */}
                 {(() => {
                   const linhas = monthCtx.filter((r) => r.crm_client_id === c.id);
                   if (linhas.length === 0 && c.aReceber <= 0) return null;
                   return (
-                    <details className="mt-2">
-                      <summary className="cursor-pointer text-[11px] font-body font-semibold text-primary list-none [&::-webkit-details-marker]:hidden">
+                    <details className="mt-2 group/ext">
+                      <summary className="cursor-pointer text-[11px] font-body font-semibold text-primary list-none [&::-webkit-details-marker]:hidden inline-flex items-center gap-1">
+                        <ChevronRight className="h-3 w-3 transition-transform group-open/ext:rotate-90" />
                         Ver extrato do mês ({linhas.length + (c.aReceber > 0 ? 1 : 0)})
                       </summary>
                       <div className="mt-1.5 rounded-lg border border-border/60 divide-y divide-border/60">
