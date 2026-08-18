@@ -200,7 +200,7 @@ const MAX_COVER_SCALE = 1.5;
  * a outra casa exata com o slot. Centralizar com left/top 50% + translate -50%
  * deixa o corte simétrico, igual ao object-cover faria.
  */
-export function coverIframeStyle(videoRatio: number, slotRatio: number): CSSProperties | null {
+export function coverIframeStyle(videoRatio: number, slotRatio: number, zoom = 1): CSSProperties | null {
   if (!Number.isFinite(videoRatio) || videoRatio <= 0) return null;
   if (!Number.isFinite(slotRatio) || slotRatio <= 0) return null;
   const scale = videoRatio >= slotRatio ? videoRatio / slotRatio : slotRatio / videoRatio;
@@ -209,7 +209,11 @@ export function coverIframeStyle(videoRatio: number, slotRatio: number): CSSProp
     position: "absolute",
     left: "50%",
     top: "50%",
-    transform: "translate(-50%, -50%)",
+    // O zoom entra como scale NO CONTEÚDO. Redimensionar o iframe (width/height)
+    // não resolve barra DESENHADA DENTRO do player: o conteúdo se redesenha e a
+    // barra volta, proporcional. O scale amplia o que já foi renderizado e
+    // empurra a barra pra fora da janela (o wrapper tem overflow hidden).
+    transform: `translate(-50%, -50%) scale(${zoom})`,
     // Trava contra a FRESTA na borda: a proporção medida do vídeo é aproximada
     // (vem da miniatura) e o arredondamento de sub-pixel do iframe deixava uma
     // listra do fundo aparecendo de um lado. Com o mínimo em 100% + a folga

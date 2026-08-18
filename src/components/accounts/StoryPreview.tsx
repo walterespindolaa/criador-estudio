@@ -48,7 +48,20 @@ export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
   // overflow-hidden. Sem medição, cover é null e fica o iframe de sempre.
   // Só o Drive: Bunny e <video> de arquivo já se ajustam sozinhos.
   const videoRatio = useDriveVideoRatio(kind === "drive" ? item : null);
-  const cover = kind === "drive" && videoRatio ? coverIframeStyle(videoRatio, 9 / 16) : null;
+  // Zoom no conteúdo (scale) junto do cover: a barra preta que sobrava na
+  // lateral é desenhada DENTRO da página do Drive, então crescer o iframe não
+  // resolvia; o scale empurra a barra pra fora da janela. Sem medição, o
+  // iframe cobre o slot e leva o zoom do mesmo jeito.
+  const ZOOM_DRIVE = 1.08;
+  const cover = kind === "drive"
+    ? (videoRatio
+        ? coverIframeStyle(videoRatio, 9 / 16, ZOOM_DRIVE)
+        : {
+            position: "absolute" as const, left: "50%", top: "50%",
+            width: "100%", height: "100%",
+            transform: `translate(-50%, -50%) scale(${ZOOM_DRIVE})`,
+          })
+    : null;
 
   // Play robusto: monta o player embutido ou abre a fonte em nova aba.
   const onPlay = () => {

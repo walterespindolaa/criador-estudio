@@ -66,7 +66,25 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
       // vertical em card vertical) é pequena e os controles seguem legíveis;
       // acima disso o coverIframeStyle devolve null e o player fica contido
       // sobre o fundo desfocado, que é bem melhor que a tarja.
-      const cover = kind === "drive" && videoRatio && slotRatio > 0 ? coverIframeStyle(videoRatio, slotRatio) : null;
+      // ZOOM NO CONTEÚDO DO PLAYER (o que finalmente mata o risco preto).
+      // A barra que sobrava na lateral não era do nosso layout: é desenhada
+      // DENTRO da página de preview do Drive, em volta do vídeo. Por isso
+      // crescer o iframe nunca resolveu, o player só redesenhava a barra
+      // proporcional. Com transform: scale, o que já foi renderizado é
+      // ampliado e a barra sai da área visível (o wrapper corta com
+      // overflow-hidden). 1.08 = ~4% de corte em cada lado.
+      const ZOOM_DRIVE = 1.08;
+      const cover = kind === "drive"
+        ? (videoRatio && slotRatio > 0
+            ? coverIframeStyle(videoRatio, slotRatio, ZOOM_DRIVE)
+            // Sem a proporção medida, o iframe cobre o slot e leva o zoom
+            // mesmo assim: antes esse caminho caía no iframe cru, com barra.
+            : {
+                position: "absolute" as const, left: "50%", top: "50%",
+                width: "100%", height: "100%",
+                transform: `translate(-50%, -50%) scale(${ZOOM_DRIVE})`,
+              })
+        : null;
       return (
         <div ref={slotRef} className="relative w-full h-full bg-black overflow-hidden">
           {/* Quando o player não cobre o slot inteiro (vertical dentro de card
