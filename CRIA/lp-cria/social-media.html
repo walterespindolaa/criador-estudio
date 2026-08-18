@@ -143,24 +143,32 @@ h1 .hl{color:var(--amarelo)}
 }
 /* Faixa "vem junto": o que a conta gratis ja inclui, sem virar bloco gigante */
 #vem-junto{margin:10px 0 30px}
-.vj-shot{max-width:920px;margin:20px auto 0;border-radius:16px;overflow:hidden;box-shadow:0 14px 34px rgba(10,10,10,.18);border:2px solid rgba(10,10,10,.1)}
-/* Carrossel de prints do "já vem junto": scroll-snap horizontal (arrasta no
-   celular) + setas no desktop. Sem biblioteca. */
-.vj-car{position:relative;max-width:1000px;margin:20px auto 0}
-.vj-track{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:4px}
+/* Carrossel de prints. O buraco enorme embaixo vinha daqui: cada print tem uma
+   proporção diferente e a faixa ficava com a ALTURA DO MAIOR, sobrando vazio
+   sob os mais baixos. Agora o slide tem proporção fixa e a imagem preenche
+   (cover, ancorada no topo, que é onde mora a informação do print). */
+.vj-car{position:relative;max-width:1000px;margin:22px auto 0}
+.vj-track{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:4px 4px 2px}
 .vj-track::-webkit-scrollbar{display:none}
-.vj-track figure{flex:0 0 88%;max-width:900px;margin:0;scroll-snap-align:center}
-.vj-track img{width:100%;display:block;border-radius:16px;box-shadow:0 14px 34px rgba(10,10,10,.18);border:2px solid rgba(10,10,10,.1);cursor:zoom-in}
-.vj-track figcaption{font-size:.86rem;opacity:.72;margin-top:8px;text-align:center}
-.vj-nav{position:absolute;top:38%;z-index:2;width:40px;height:40px;border-radius:50%;border:2px solid rgba(10,10,10,.12);background:#fff;font-size:1.4rem;line-height:1;cursor:pointer;box-shadow:0 6px 16px rgba(10,10,10,.14)}
-.vj-prev{left:-6px}.vj-next{right:-6px}
-@media(max-width:860px){.vj-nav{display:none}.vj-track figure{flex:0 0 92%}}
-.vj-shot img{width:100%;display:block;cursor:zoom-in}
-.vj-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}
-.vj-card{background:var(--branco);border:2.5px solid var(--ink);border-radius:18px 22px 18px 24px;padding:18px;box-shadow:5px 5px 0 rgba(10,10,10,.85);transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
-.vj-card:hover{transform:translateY(-4px) rotate(-.6deg)}
-.vj-card b{font-family:var(--font-display);display:block;margin-bottom:4px}
-.vj-card p{font-size:.85rem;opacity:.8;line-height:1.5}
+.vj-track figure{flex:0 0 100%;margin:0;scroll-snap-align:center}
+.vj-frame{aspect-ratio:16/9;border-radius:16px;overflow:hidden;border:2px solid rgba(10,10,10,.1);box-shadow:0 14px 34px rgba(10,10,10,.14);background:var(--branco)}
+.vj-frame img{width:100%;height:100%;display:block;object-fit:cover;object-position:top center;cursor:zoom-in}
+.vj-track figcaption{font-size:.86rem;opacity:.7;margin-top:10px;text-align:center}
+.vj-nav{position:absolute;top:calc(50% - 26px);z-index:2;width:38px;height:38px;border-radius:50%;border:1.5px solid rgba(10,10,10,.12);background:#fff;font-size:1.3rem;line-height:1;cursor:pointer;box-shadow:0 6px 16px rgba(10,10,10,.14);transition:transform .2s}
+.vj-nav:hover{transform:scale(1.08)}
+.vj-prev{left:-8px}.vj-next{right:-8px}
+.vj-dots{display:flex;gap:7px;justify-content:center;margin-top:12px}
+.vj-dots button{width:8px;height:8px;padding:0;border-radius:50%;border:0;background:rgba(10,10,10,.18);cursor:pointer;transition:all .25s}
+.vj-dots button[aria-current="true"]{background:var(--laranja);width:22px;border-radius:99px}
+@media(max-width:860px){.vj-nav{display:none}.vj-frame{aspect-ratio:4/3}}
+/* Cards: leves, no estilo do app (claro + acento colorido na lateral), em vez
+   dos blocos com sombra dura preta que competiam com o print. */
+.vj-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:26px}
+.vj-card{position:relative;background:var(--branco);border:1.5px solid rgba(10,10,10,.1);border-radius:16px;padding:16px 18px 16px 20px;overflow:hidden;transition:border-color .2s,transform .2s}
+.vj-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--vc,var(--laranja))}
+.vj-card:hover{transform:translateY(-2px);border-color:var(--vc,var(--laranja))}
+.vj-card b{font-family:var(--font-display);display:block;margin-bottom:5px;font-size:.98rem}
+.vj-card p{font-size:.85rem;opacity:.75;line-height:1.55}
 @media(max-width:860px){.vj-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.vj-grid{grid-template-columns:1fr}}
 /* Cartao-ponte pro criador no final */
