@@ -604,9 +604,9 @@ function ClientWorkspace() {
                   className={cn("text-left rounded-xl border p-3 transition-colors relative", i === idx ? "border-primary bg-primary/[0.06] ring-1 ring-primary/25" : "border-border bg-card hover:border-primary/40")}>
                   <p className="text-[13px] font-body font-semibold text-foreground truncate pr-6">{p.name || `Persona ${i + 1}`}</p>
                   <p className="text-[11px] font-body text-muted-foreground line-clamp-1 mt-0.5">{(p.pains || "").split("\n")[0] || "sem dor definida"}</p>
+                  {/* Alvo de toque real (40px): era um ícone de 14px colado na
+                      borda, dentro de um card clicável, numa ação destrutiva. */}
                   {personas.length > 1 && (
-                    {/* Alvo de toque real (40px): era um ícone de 14px colado na
-                        borda, dentro de um card clicável, numa ação destrutiva. */}
                     <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); delPersona(i); }}
                       className="absolute top-0.5 right-0.5 grid h-10 w-10 place-items-center text-muted-foreground hover:text-destructive cursor-pointer"
                       aria-label="Excluir persona"><Trash2 className="h-4 w-4" /></span>
