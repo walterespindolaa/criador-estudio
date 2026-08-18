@@ -163,7 +163,7 @@ export function RelatorioImport({ onSalvar }: { onSalvar: (r: RelatorioSalvar) =
       {/* Progresso + revisão */}
       {etapa !== "parado" && (
         <Dialog open onOpenChange={(o) => { if (!o) fechar(); }}>
-          <DialogContent className="sm:max-w-2xl max-h-[88vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-2xl sm:max-h-[88vh] overflow-y-auto">
             {etapa !== "pronto" ? (
               <div className="py-10 text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />

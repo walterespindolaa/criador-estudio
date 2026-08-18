@@ -2182,7 +2182,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl md:max-w-6xl rounded-2xl p-0 overflow-hidden">
-        <div className="max-h-[90vh] overflow-y-auto md:overflow-hidden md:flex md:flex-col p-6">
+        <div className="sm:max-h-[90vh] overflow-y-auto md:overflow-hidden md:flex md:flex-col p-6">
         <DialogHeader>
           <DialogTitle className="font-display">Relatório do cliente</DialogTitle>
         </DialogHeader>

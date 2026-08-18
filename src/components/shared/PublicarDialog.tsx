@@ -126,7 +126,7 @@ export function PublicarDialog({ open, onOpenChange, caption, midia, onBaixar }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[88vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md sm:max-h-[88vh] overflow-y-auto">
         <DialogHeader><DialogTitle className="font-display">Publicar no Instagram</DialogTitle></DialogHeader>
         <p className="text-[12px] font-body text-muted-foreground -mt-1">
           O Instagram não deixa nenhum app postar a legenda por você. O caminho é: copiar a legenda aqui, abrir o app e colar.

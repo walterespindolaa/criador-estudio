@@ -718,7 +718,7 @@ function CaixaInner() {
             const tImposto = clientRows.reduce((s, r) => s + r.imposto, 0);
             const tMargem = tReceita - tCusto - tImposto;
             return (
-              <div className="grid grid-cols-3 gap-2 rounded-xl bg-muted/40 p-2.5 mb-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 rounded-xl bg-muted/40 p-2.5 mb-3">
                 <div className="text-center">
                   <p className="text-[10px] font-body font-bold uppercase tracking-wide text-muted-foreground">Receita</p>
                   <p className="text-sm font-display font-extrabold text-green-700">{brl(tReceita)}</p>
@@ -767,7 +767,7 @@ function CaixaInner() {
                   </Button>
                 </div>
 
-                <div className="mt-2.5 pt-2.5 border-t border-border/60 grid grid-cols-3 gap-2">
+                <div className="mt-2.5 pt-2.5 border-t border-border/60 grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <MiniStat label="Receita" value={brl(c.receita)} tone="green" />
                   <MiniStat label={c.custos.length ? `Custos (${c.custos.length})` : "Custos"} value={brl(c.custo)} tone="red"
                     hint={c.custos.slice(0, 3).map((x) => x.label).join(", ") || undefined} />

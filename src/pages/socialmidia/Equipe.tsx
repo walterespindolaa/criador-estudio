@@ -198,7 +198,7 @@ export default function Equipe() {
 
       {/* Popup de convite: módulos + clientes ANTES de convidar */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[88vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-lg sm:max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg font-display font-extrabold">Convidar colaborador</DialogTitle>
           </DialogHeader>

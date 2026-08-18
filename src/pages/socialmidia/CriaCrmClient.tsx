@@ -408,7 +408,7 @@ function ClientWorkspace() {
               </div>
             </Card>
             <Card icon={<Activity />} title="Comercial">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <F label="Segmento"><Input value={form.segment ?? ""} onChange={(e) => setForm({ ...form, segment: e.target.value })} className="rounded-xl" /></F>
                 <F label="Valor mensal"><MoneyInput value={form.monthly_value} onChange={(v) => setForm({ ...form, monthly_value: v })} /></F>
                 <F label="Plano contratado"><Input value={form.plan_name ?? ""} onChange={(e) => setForm({ ...form, plan_name: e.target.value })} placeholder="Ex.: Gestão completa" className="rounded-xl" /></F>
@@ -605,8 +605,11 @@ function ClientWorkspace() {
                   <p className="text-[13px] font-body font-semibold text-foreground truncate pr-6">{p.name || `Persona ${i + 1}`}</p>
                   <p className="text-[11px] font-body text-muted-foreground line-clamp-1 mt-0.5">{(p.pains || "").split("\n")[0] || "sem dor definida"}</p>
                   {personas.length > 1 && (
+                    {/* Alvo de toque real (40px): era um ícone de 14px colado na
+                        borda, dentro de um card clicável, numa ação destrutiva. */}
                     <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); delPersona(i); }}
-                      className="absolute top-2 right-2 text-muted-foreground hover:text-destructive" aria-label="Excluir persona"><Trash2 className="h-3.5 w-3.5" /></span>
+                      className="absolute top-0.5 right-0.5 grid h-10 w-10 place-items-center text-muted-foreground hover:text-destructive cursor-pointer"
+                      aria-label="Excluir persona"><Trash2 className="h-4 w-4" /></span>
                   )}
                 </button>
               ))}

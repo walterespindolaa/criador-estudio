@@ -802,7 +802,7 @@ function CriaCaptacaoInner() {
                     <p className="text-[10.5px] font-body text-muted-foreground truncate">{p.cidade || (p.extraId ? "avulso" : "\u00a0")}</p>
                   </div>
                 </div>
-                <div className="mt-2.5 flex items-center gap-3 text-[11px] font-body text-muted-foreground">
+                <div className="mt-2.5 flex items-center gap-2 flex-wrap text-[11px] font-body text-muted-foreground">
                   <span className="inline-flex items-center gap-1" title="Captações gravadas / marcadas no mês">
                     <Video className="h-3 w-3" /> {p.caps.done}/{p.caps.total}
                   </span>
@@ -1286,7 +1286,7 @@ function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter
               · dia
               <input type="number" min={1} max={31} value={dayDraft}
                 onChange={(e) => changeDay(Number(e.target.value))}
-                className="w-12 h-7 rounded-lg border border-border bg-card px-1.5 text-center text-xs font-body text-foreground outline-none focus:border-primary/50" />
+                className="w-14 h-9 rounded-lg border border-border bg-card px-1.5 text-center text-sm font-body text-foreground outline-none focus:border-primary/50" />
             </span>
           )}
         </div>
@@ -1360,7 +1360,7 @@ function FolhaDoDiaDialog({ open, onOpenChange, diaLabel, wd, local, items }: {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-lg sm:max-h-[85vh] flex flex-col">
         <DialogHeader><DialogTitle className="font-display">Folha do dia · {diaLabel}</DialogTitle></DialogHeader>
         <p className="text-xs text-muted-foreground font-body">
           Todos os roteiros {local ? `de ${local} ` : ""}nesse dia num texto só, pra social mídia levar pra captação sem abrir cliente por cliente.
@@ -1698,7 +1698,7 @@ function RoteiroMiniCard({ script, indice, onOpen, icone = "file" }: {
       className="group rounded-xl border border-border bg-card overflow-hidden text-left hover:border-primary/40 hover:shadow-warm-sm transition-all">
       {/* A "miniatura": as primeiras linhas do texto em letra mínima, como no Drive. */}
       <div className="h-24 bg-background px-3 py-2.5 overflow-hidden border-b border-border/60">
-        <p className="text-[8px] leading-relaxed text-muted-foreground/80 whitespace-pre-wrap break-words">{script.content.slice(0, 420)}</p>
+        <p className="text-[10px] leading-snug text-muted-foreground/80 whitespace-pre-wrap break-words">{script.content.slice(0, 300)}</p>
       </div>
       <div className="flex items-center gap-1.5 px-2.5 py-2">
         <Icone className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -1741,7 +1741,7 @@ function RoteiroVerDialog({ script, onOpenChange, onRename, onToggleDone, onEdit
   };
   return (
     <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-lg sm:max-h-[85vh] flex flex-col">
         {/* Título renomeável direto aqui (salva ao sair do campo). */}
         <div className="flex items-center gap-2 pr-8">
           <FileText className="h-4 w-4 text-primary shrink-0" />
@@ -1854,7 +1854,7 @@ function ImportarReelsDialog({ open, onOpenChange, externalClientId, jaImportado
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg sm:max-h-[85vh] overflow-y-auto">
         <DialogHeader><DialogTitle className="font-display">Puxar dos reels aprovados</DialogTitle></DialogHeader>
         <p className="text-xs text-muted-foreground font-body -mt-1">
           Os roteiros dos reels que o cliente já aprovou no Cria Post. Importar traz o texto pra pasta, pronto pro teleprompter.
@@ -1959,7 +1959,7 @@ function ConfigCaptacaoDialog({ open, onOpenChange, cities, onSaveCities, saving
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md sm:max-h-[85vh] overflow-y-auto">
         <DialogHeader><DialogTitle className="font-display">Configurações da captação</DialogTitle></DialogHeader>
 
         {/* SEÇÃO 1 · Cidades atendidas */}
@@ -2028,8 +2028,10 @@ function ChipEditor({ items, onSave, saving, placeholder, emptyText, removeLabel
         ) : items.map((v) => (
           <span key={v} className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary border border-primary/15 pl-3 pr-1.5 py-1 text-xs font-body font-semibold">
             {v}
+            {/* 32px: é a única forma de remover a cidade/tomada, e no celular
+                o alvo de 20px fazia errar o toque. */}
             <button type="button" onClick={() => remove(v)} disabled={saving}
-              className="grid h-5 w-5 place-items-center rounded-full hover:bg-primary/15 transition-colors" aria-label={removeLabel(v)}>
+              className="grid h-8 w-8 -mr-1 place-items-center rounded-full hover:bg-primary/15 transition-colors" aria-label={removeLabel(v)}>
               <X className="h-3 w-3" />
             </button>
           </span>
