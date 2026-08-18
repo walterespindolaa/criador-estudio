@@ -267,6 +267,9 @@ html,body{overflow-x:clip}
   #final h2{font-size:clamp(1.7rem,8vw,2.3rem)}
   .fs-1{width:200px;height:200px}.fs-2{width:150px;height:150px}
 }
+.nav-troca{background:var(--laranja);color:#fff!important;opacity:1!important;font-weight:700;padding:7px 14px;border-radius:999px;font-size:.85rem;white-space:nowrap;transition:filter .2s}
+.nav-troca:hover{filter:brightness(1.1)}
+@media(max-width:1080px){.nav-troca{display:none}}
 </style>
 </head>
 <body>
@@ -276,9 +279,11 @@ html,body{overflow-x:clip}
   <a class="logo" href="index.html"><img src="/logo-cria.png" alt="Cria" style="height:30px;width:auto;display:block"></a>
   <div class="nav-links">
     <a href="#modulos">Módulos</a>
+    <a href="#vem-junto">O que vem junto</a>
     <a href="#precos">Preços</a>
     <a href="#faq-gestor">Dúvidas</a>
-    <a href="index.html" style="opacity:.7">Pra criadores</a>
+    <!-- Porta pro outro público, sempre visível (antes era um link apagado). -->
+    <a href="index.html" class="nav-troca">Você é criador? →</a>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
     <a href="https://app.criasocialclub.com.br/login" class="nav-login">Entrar</a>

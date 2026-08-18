@@ -201,15 +201,23 @@ html,body{overflow-x:clip}
   #final h2{font-size:clamp(1.7rem,8vw,2.3rem)}
   .fs-1{width:200px;height:200px}.fs-2{width:150px;height:150px}
 }
+/* Seletor de público no topo das funcionalidades */
+.fx-publico{display:inline-flex;gap:6px;margin:22px auto 6px;padding:6px;border-radius:999px;background:rgba(255,255,255,.14);flex-wrap:wrap;justify-content:center}
+.fx-op{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 20px;border-radius:999px;font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--creme);opacity:.85;transition:all .2s}
+.fx-op small{font-family:var(--font-body);font-weight:400;font-size:.74rem;opacity:.8}
+.fx-op:hover{opacity:1;background:rgba(255,255,255,.12)}
+.fx-atual{background:var(--creme);color:var(--ink);opacity:1}
+.fx-atual small{opacity:.65}
+@media(max-width:560px){.fx-publico{width:100%;flex-direction:column}.fx-op{width:100%}}
 </style>
 </head>
 <body>
 <nav id="navbar">
   <a class="logo" href="index.html"><img src="/logo-cria.png" alt="Cria" style="height:30px;width:auto;display:block"></a>
   <div class="nav-links">
-    <a href="index.html#ciclo">Como funciona</a>
-    <a href="funcionalidades.html" class="nav-atual">Funcionalidades</a>
-    <a href="social-media.html" style="color:var(--laranja);opacity:1;font-weight:700">Pra social medias</a>
+    <a href="index.html#telas">O produto</a>
+    <a href="funcionalidades.html" class="nav-atual">Pra criadores</a>
+    <a href="social-media.html#modulos">Pra social medias</a>
     <a href="index.html#planos">Planos</a>
     <a href="index.html#faq">Dúvidas</a>
   </div>
@@ -229,7 +237,16 @@ html,body{overflow-x:clip}
     <h1>Cada ferramenta, <span class="hl">a fundo</span>
       <span class="hero-script">e o que ela muda na sua rotina</span>
     </h1>
-    <p class="hero-sub">Sem tour apressado: aqui está como cada parte do CRIA funciona de verdade e o problema que ela resolve no seu dia de criador.</p>
+    <p class="hero-sub">Sem tour apressado: aqui está como cada parte do CRIA funciona de verdade e o problema que ela resolve no seu dia.</p>
+
+    <!-- Escolha de público: as ferramentas de quem CRIA pro próprio perfil e as
+         de quem GERENCIA clientes são diferentes, e a pessoa precisa ver as duas
+         portas sem procurar no menu. -->
+    <div class="fx-publico">
+      <span class="fx-op fx-atual">Pra criadores<small>as ferramentas desta página</small></span>
+      <a class="fx-op" href="social-media.html#modulos">Pra social medias<small>módulos de quem atende clientes →</small></a>
+    </div>
+
     <div class="hero-ctas">
       <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Testar tudo por 7 dias</a>
       <a href="#modulos" class="btn btn-ghost">Ver as ferramentas ↓</a>

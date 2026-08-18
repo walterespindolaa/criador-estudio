@@ -158,6 +158,9 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 .dor-item p{font-size:1.02rem}
 .dor-punch{margin-top:28px;font-family:var(--font-display);font-weight:700;font-size:1.25rem}
 .dor-punch em{font-family:var(--font-script);font-style:normal;font-size:1.6rem;color:var(--laranja)}
+.nav-troca{background:var(--azul);color:#fff!important;opacity:1!important;font-weight:700;padding:7px 14px;border-radius:999px;font-size:.85rem;white-space:nowrap;transition:filter .2s}
+.nav-troca:hover{filter:brightness(1.1)}
+@media(max-width:1080px){.nav-troca{display:none}}
 </style>
 </head>
 <body>
@@ -166,12 +169,14 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 <nav id="navbar">
   <a class="logo" href="/"><img src="/logo-cria.png" alt="Cria" style="height:30px;width:auto;display:block"></a>
   <div class="nav-links">
+    <a href="#telas">O produto</a>
     <a href="#ciclo">Como funciona</a>
-    <a href="#telas">Por dentro</a>
     <a href="funcionalidades.html">Funcionalidades</a>
-    <a href="social-media.html" style="color:var(--laranja);opacity:1;font-weight:700">Pra social medias</a>
     <a href="#planos">Planos</a>
     <a href="#faq">Dúvidas</a>
+    <!-- A porta pro outro público fica SEMPRE visível: quem gerencia clientes
+         não pode ter que adivinhar que existe um lado inteiro pra ele. -->
+    <a href="social-media.html" class="nav-troca">Você é social media? →</a>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
     <a href="https://app.criasocialclub.com.br/login" class="nav-login">Entrar</a>
@@ -206,7 +211,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
     </div>
     <!-- Print real do painel entra aqui quando o Walter gerar: basta substituir
          todo o bloco .hero-ui abaixo por
-         <img src="prints/painel.webp" alt="Painel do CRIA com o quadro da semana" width="1600" height="900">
+         <img src="prints/painel.webp" alt="Painel do CRIA: o que está em produção, o que precisa de você hoje e a semana inteira" width="2200" height="1342" fetchpriority="high">
          O restante do herói (moldura e animação do GSAP) continua igual. -->
     <div class="hero-ui" role="img" aria-label="Ilustração da interface do CRIA: quadro da semana com as colunas Ideia, Produzindo, Pronto e Publicado">
       <aside class="hero-ui-side" aria-hidden="true">
@@ -257,6 +262,150 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 </section>
 
 <!-- ==================== DOR ==================== -->
+<!-- ==================== POR DENTRO, TELA POR TELA ====================
+     Vem LOGO DEPOIS DO HERO: quem chega quer ver o produto, não ler sobre ele.
+     Nove telas reais, do plano do mês ao link na bio. -->
+<section id="telas" style="background:var(--creme);position:relative;overflow:hidden">
+  <div class="container">
+    <div class="ciclo-head reveal">
+      <span class="kicker" style="background:var(--verde)">Tela por tela</span>
+      <h2>O CRIA por dentro, <span class="script" style="color:var(--laranja);font-size:1.15em">sem promessa vaga</span></h2>
+      <p style="opacity:.8;max-width:58ch;margin:12px auto 0;text-align:center">Tudo abaixo é do produto de verdade, do jeito que você vai usar na segunda de manhã. Nenhum desenho, nenhum mockup.</p>
+    </div>
+
+    <div class="mod reveal">
+      <div>
+        <span class="mod-num">01 / 09</span>
+        <span class="mod-tag" style="background:var(--azul);color:#fff">Cria Plano</span>
+        <h3>O mês inteiro montado antes de você sentar pra criar</h3>
+        <p>Você diz seus pilares e o CRIA monta a semana ou o mês com tema, formato e gancho de cada peça, usando o seu brandbook e o que já performou no seu perfil.</p>
+        <ul>
+          <li><b>✓</b> Calendário cheio em minutos, não em domingos</li>
+          <li><b>✓</b> Formatos equilibrados (reels, carrossel, estático)</li>
+          <li><b>✓</b> Você edita tudo: a IA propõe, quem decide é você</li>
+        </ul>
+      </div>
+      <div class="mod-visual" style="background:var(--azul)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/cria-plano.webp" alt="O mês montado com tema, formato e gancho de cada peça."><span class="mk-label">O mês montado com tema, formato e gancho de cada peça.</span></div></div>
+    </div>
+    <div class="mod reveal">
+      <div>
+        <span class="mod-num">02 / 09</span>
+        <span class="mod-tag" style="background:var(--rosa);color:#fff">Ideias</span>
+        <h3>Suas ideias param de morrer nas notas do celular</h3>
+        <p>Toda ideia entra num lugar só, com o gancho e a referência. E a IA transforma a ideia crua em pauta pronta, no formato que você escolher.</p>
+        <ul>
+          <li><b>✓</b> Salva a ideia em segundos, do celular</li>
+          <li><b>✓</b> A IA sugere reels, carrossel ou story da mesma ideia</li>
+          <li><b>✓</b> Vira post com um toque, sem copiar e colar</li>
+        </ul>
+      </div>
+      <div class="mod-visual" style="background:var(--rosa)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/banco-ideias.webp" alt="A ideia entra crua e sai como pauta pronta pra produzir."><span class="mk-label">A ideia entra crua e sai como pauta pronta pra produzir.</span></div></div>
+    </div>
+    <div class="mod reveal">
+      <div>
+        <span class="mod-num">03 / 09</span>
+        <span class="mod-tag" style="background:var(--laranja);color:#fff">Criando</span>
+        <h3>Todo post numa esteira, do rascunho ao publicado</h3>
+        <p>Ideia, planejamento, produzindo, pronto, agendado, publicado. Você bate o olho e sabe o que está travado e o que sai hoje, sem procurar em lugar nenhum.</p>
+        <ul>
+          <li><b>✓</b> Arrasta o card e a etapa muda</li>
+          <li><b>✓</b> Filtra por formato, semana e pilar</li>
+          <li><b>✓</b> Board, tabela ou calendário: como você preferir</li>
+        </ul>
+      </div>
+      <div class="mod-visual" style="background:var(--laranja)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/kanban.webp" alt="Cada post numa coluna: o que trava e o que sai hoje."><span class="mk-label">Cada post numa coluna: o que trava e o que sai hoje.</span></div></div>
+    </div>
+    <div class="mod reveal">
+      <div>
+        <span class="mod-num">04 / 09</span>
+        <span class="mod-tag" style="background:var(--verde);color:#fff">Escrita guiada</span>
+        <h3>A legenda nasce com estrutura, não com a tela em branco</h3>
+        <p>Cada post abre com gancho, corpo e chamada, no tom do seu brandbook, e a prévia do lado mostra exatamente como vai ficar no feed antes de publicar.</p>
+        <ul>
+          <li><b>✓</b> Prévia real de Instagram, TikTok e YouTube</li>
+          <li><b>✓</b> Roteiro de reels e carrossel slide a slide</li>
+          <li><b>✓</b> Melhores horários sugeridos pelo seu histórico</li>
+        </ul>
+      </div>
+      <div class="mod-visual" style="background:var(--verde)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/escrita-guiada.webp" alt="Você escreve à esquerda e vê o post nascendo à direita."><span class="mk-label">Você escreve à esquerda e vê o post nascendo à direita.</span></div></div>
+    </div>
+    <div class="mod reveal">
+      <div>
+        <span class="mod-num">05 / 09</span>
+        <span class="mod-tag" style="background:var(--rosa);color:#fff">Cria Stories</span>
+        <h3>Nunca mais o "o que eu posto no story hoje?"</h3>
+        <p>O plano da semana de stories, dia a dia, com tendências do seu nicho e o passo a passo de cada um: o que gravar, o que escrever na tela, qual figurinha usar.</p>
+        <ul>
+          <li><b>✓</b> Plano de 7 ou 15 dias em um clique</li>
+          <li><b>✓</b> Tendências pesquisadas na web, não genéricas</li>
+          <li><b>✓</b> Exemplo pronto de cada story</li>
+        </ul>
+      </div>
+      <div class="mod-visual" style="background:var(--rosa)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/cria-stories.webp" alt="A semana de stories montada, com o roteiro de cada um."><span class="mk-label">A semana de stories montada, com o roteiro de cada um.</span></div></div>
+    </div>
+    <div class="mod reveal">
+      <div>
+        <span class="mod-num">06 / 09</span>
+        <span class="mod-tag" style="background:var(--amarelo);color:var(--ink)">Tendências</span>
+        <h3>O que está em alta agora, não no ano passado</h3>
+        <p>Formatos, temas e ganchos em alta, atualizados por pesquisa na web. De cada um você gera uma ideia sua, no seu tom, com um clique.</p>
+        <ul>
+          <li><b>✓</b> Formato em alta, tema quente e gancho</li>
+          <li><b>✓</b> Gera ideia direto da tendência</li>
+          <li><b>✓</b> Copia e usa onde quiser</li>
+        </ul>
+      </div>
+      <div class="mod-visual" style="background:var(--amarelo)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/tendencias.webp" alt="O que está em alta, com o gancho pronto pra virar ideia."><span class="mk-label">O que está em alta, com o gancho pronto pra virar ideia.</span></div></div>
+    </div>
+    <div class="mod reveal">
+      <div>
+        <span class="mod-num">07 / 09</span>
+        <span class="mod-tag" style="background:var(--azul);color:#fff">Cria Prompter</span>
+        <h3>Grave olhando pra câmera, não pro papel</h3>
+        <p>Teleprompter com comando de voz: o texto acompanha a sua fala, palavra por palavra. Improvisou? Ele espera. Voltou a ler? Continua do ponto certo.</p>
+        <ul>
+          <li><b>✓</b> Puxa os roteiros que já estão em produção</li>
+          <li><b>✓</b> Segue a sua voz, sem controle na mão</li>
+          <li><b>✓</b> Destaque e pausa marcados no roteiro</li>
+        </ul>
+      </div>
+      <div class="mod-visual" style="background:var(--azul)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/cria-prompter.webp" alt="O teleprompter que acompanha a sua fala enquanto você grava."><span class="mk-label">O teleprompter que acompanha a sua fala enquanto você grava.</span></div></div>
+    </div>
+    <div class="mod reveal">
+      <div>
+        <span class="mod-num">08 / 09</span>
+        <span class="mod-tag" style="background:var(--verde);color:#fff">Insights e Media Kit</span>
+        <h3>Os números do seu perfil viram argumento de venda</h3>
+        <p>O CRIA lê os insights reais do seu Instagram e traduz: o que funcionou, quando postar, o que repetir. E monta o media kit sozinho, pronto pra mandar pra marca.</p>
+        <ul>
+          <li><b>✓</b> Dados reais do Instagram conectado</li>
+          <li><b>✓</b> Melhor dia, horário e formato pelo SEU histórico</li>
+          <li><b>✓</b> Media kit em PDF, sempre atualizado</li>
+        </ul>
+      </div>
+      <div class="mod-visual" style="background:var(--verde)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/media-kit.webp" alt="Seu media kit pronto, com os números reais do seu Instagram."><span class="mk-label">Seu media kit pronto, com os números reais do seu Instagram.</span></div></div>
+    </div>
+    <div class="mod reveal">
+      <div>
+        <span class="mod-num">09 / 09</span>
+        <span class="mod-tag" style="background:var(--amarelo);color:var(--ink)">Link na bio</span>
+        <h3>Sua bio deixa de ser um beco sem saída</h3>
+        <p>Uma página sua, com a sua cara, que leva pro WhatsApp e pros seus links, e ainda captura o contato de quem chegou pelo conteúdo.</p>
+        <ul>
+          <li><b>✓</b> Já vem junto, sem custo extra</li>
+          <li><b>✓</b> Captura de contato de quem te acha pelo perfil</li>
+          <li><b>✓</b> Você vê quantos visitaram e clicaram</li>
+        </ul>
+      </div>
+      <div class="mod-visual" style="background:var(--amarelo)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/link-in-bio.webp" alt="Você edita à esquerda e vê o resultado no celular, à direita."><span class="mk-label">Você edita à esquerda e vê o resultado no celular, à direita.</span></div></div>
+    </div>
+
+    <div style="text-align:center;margin-top:34px">
+      <a href="funcionalidades.html" class="btn btn-ghost">Ver todas as funcionalidades a fundo →</a>
+    </div>
+  </div>
+</section>
+
 <section id="dor">
   <div class="shape shape-rosa-1"></div>
   <div class="shape shape-rosa-2"></div>
@@ -1026,95 +1175,6 @@ html,body{overflow-x:clip}
 {text-align:center;padding:14px 0 22px;font-family:var(--font-display);font-weight:700}
 
 </style>
-
-<!-- ==================== POR DENTRO, TELA POR TELA ====================
-     A LP do criador vendia conceito (3 prints) enquanto a de social mídia
-     mostra o produto módulo a módulo. Esta seção nivela: cada bloco é uma
-     tela real com o que ela resolve, no mesmo padrão visual. -->
-<section id="telas" style="background:var(--creme);position:relative;overflow:hidden">
-  <div class="container">
-    <div class="ciclo-head reveal">
-      <span class="kicker" style="background:var(--verde)">Tela por tela</span>
-      <h2>O CRIA por dentro, <span class="script" style="color:var(--laranja);font-size:1.15em">sem promessa vaga</span></h2>
-      <p style="opacity:.8;max-width:56ch;margin:12px auto 0;text-align:center">Cada tela abaixo é do produto de verdade, do jeito que você vai usar na segunda de manhã.</p>
-    </div>
-
-    <div class="mod reveal">
-      <div>
-        <span class="mod-num">01 / 05</span>
-        <span class="mod-tag" style="background:var(--azul);color:#fff">Cria Plano</span>
-        <h3>O mês inteiro montado antes de você sentar pra criar</h3>
-        <p>Você diz seus pilares e o CRIA monta a semana ou o mês com tema, formato e gancho de cada peça, usando o seu brandbook e o que já performou no seu perfil.</p>
-        <ul>
-          <li><b>✓</b> Calendário cheio em minutos, não em domingos</li>
-          <li><b>✓</b> Formatos equilibrados (reels, carrossel, estático)</li>
-          <li><b>✓</b> Você edita tudo: a IA propõe, quem decide é você</li>
-        </ul>
-      </div>
-      <div class="mod-visual" style="background:var(--azul)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/cria-plano.webp" alt="Cria Plano montando o mês de conteúdo com temas e formatos"><span class="mk-label">O mês montado com tema, formato e gancho de cada peça.</span></div></div>
-    </div>
-
-    <div class="mod reveal">
-      <div>
-        <span class="mod-num">02 / 05</span>
-        <span class="mod-tag" style="background:var(--rosa);color:#fff">Ideias</span>
-        <h3>Suas ideias param de morrer nas notas do celular</h3>
-        <p>Toda ideia entra num lugar só, com o gancho e a referência. Quando bate a hora de produzir, você não começa do branco: começa da sua própria cabeça de duas semanas atrás.</p>
-        <ul>
-          <li><b>✓</b> Salva a ideia em segundos, do celular</li>
-          <li><b>✓</b> Vira post com um toque, sem copiar e colar</li>
-          <li><b>✓</b> Nada se perde entre print, story salvo e bloco de notas</li>
-        </ul>
-      </div>
-      <div class="mod-visual" style="background:var(--rosa)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/ciclo-ideia.webp" alt="Tela de ideias do CRIA com gancho e referência"><span class="mk-label">A ideia entra aqui e sai como post, sem passar pelo esquecimento.</span></div></div>
-    </div>
-
-    <div class="mod reveal">
-      <div>
-        <span class="mod-num">03 / 05</span>
-        <span class="mod-tag" style="background:var(--laranja);color:#fff">Seu painel</span>
-        <h3>Um lugar que responde "o que eu faço hoje?"</h3>
-        <p>O painel abre mostrando o que está em produção, o que já foi publicado e o que precisa de você agora. Sem abrir cinco abas pra descobrir onde parou.</p>
-        <ul>
-          <li><b>✓</b> A semana inteira num quadro</li>
-          <li><b>✓</b> Cada peça com etapa e data</li>
-          <li><b>✓</b> Funciona no celular igual funciona no computador</li>
-        </ul>
-      </div>
-      <div class="mod-visual" style="background:var(--laranja)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/painel.webp" alt="Painel do CRIA com o quadro da semana"><span class="mk-label">O quadro da semana: o que está em produção e o que sai hoje.</span></div></div>
-    </div>
-
-    <div class="mod reveal">
-      <div>
-        <span class="mod-num">04 / 05</span>
-        <span class="mod-tag" style="background:var(--verde);color:#fff">Insights e Media Kit</span>
-        <h3>Os números do seu perfil viram argumento de venda</h3>
-        <p>O CRIA lê os insights reais do seu Instagram e transforma em leitura simples: o que funcionou, quando postar, o que repetir. E monta o media kit sozinho, pronto pra mandar pra marca.</p>
-        <ul>
-          <li><b>✓</b> Dados reais do Instagram conectado</li>
-          <li><b>✓</b> Melhor horário e formato pelo SEU histórico</li>
-          <li><b>✓</b> Media kit atualizado sem você montar nada</li>
-        </ul>
-      </div>
-      <div class="mod-visual" style="background:var(--verde)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/media-kit.webp" alt="Media Kit do CRIA com seguidores, alcance, engajamento e audiência"><span class="mk-label">Seu media kit pronto, com os números reais do seu Instagram.</span></div></div>
-    </div>
-
-    <div class="mod reveal">
-      <div>
-        <span class="mod-num">05 / 05</span>
-        <span class="mod-tag" style="background:var(--amarelo);color:var(--ink)">Link na bio</span>
-        <h3>Sua bio deixa de ser um beco sem saída</h3>
-        <p>Uma página sua, com a sua cara, que leva pro WhatsApp, pros seus links e captura contato de quem chegou pelo conteúdo. Sem mais um app, sem mais uma assinatura.</p>
-        <ul>
-          <li><b>✓</b> Já vem junto, sem custo extra</li>
-          <li><b>✓</b> Captura de contato de quem te acha pelo perfil</li>
-          <li><b>✓</b> Você vê quantos visitaram e clicaram</li>
-        </ul>
-      </div>
-      <div class="mod-visual" style="background:var(--amarelo)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/link-in-bio.webp" alt="Editor do link na bio do CRIA com prévia do celular ao lado"><span class="mk-label">Você edita à esquerda e vê o resultado no celular, à direita.</span></div></div>
-    </div>
-  </div>
-</section>
 
 <section id="gestor-teaser" style="background:var(--creme);padding:0 0 55px">
   <div class="container">
