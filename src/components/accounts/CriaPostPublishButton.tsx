@@ -1,48 +1,54 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Send, Smartphone } from "lucide-react";
-import { toast } from "sonner";
-import { buildShareFile, isMobileDevice } from "@/lib/social-share";
+import { Send } from "lucide-react";
+import { buildShareFile } from "@/lib/social-share";
+import { PublicarDialog, type PublicarMidia } from "@/components/shared/PublicarDialog";
 import type { CarouselMedia } from "@/components/shared/PostMediaCarousel";
 import { isDriveMedia, isVideoMedia } from "@/lib/driveMedia";
 
-function firstDirectImage(media: CarouselMedia[]): string | null {
+/* O botão só ABRE a tela de publicar. Toda a lógica (copiar com fallback,
+   compartilhar só o arquivo pro Instagram aparecer, abrir o app) vive no
+   PublicarDialog, que é o mesmo nos dois lugares do produto.
+
+   Antes daqui saía só um toast: no desktop "abra no celular", no celular um
+   share de TEXTO (que nunca lista o Instagram). Era o "não abre nada" e o
+   "Instagram não aparece". */
+
+// Primeira mídia que dá pra compartilhar como arquivo. Drive fica de fora: o
+// link dele não entrega o binário (é página de preview).
+function primeiraCompartilhavel(media: CarouselMedia[]): { url: string; tipo: "image" | "video" } | null {
   for (const m of media) {
-    if (isVideoMedia(m)) continue;
-    if (isDriveMedia(m)) continue; // Drive não compartilha arquivo direto (o provider real é "gdrive")
-    const url = m.view_url || m.download_url || "";
-    if (/^https?:\/\//.test(url)) return url;
+    if (isDriveMedia(m)) continue;
+    const url = m.download_url || m.view_url || "";
+    if (!/^https?:\/\//.test(url)) continue;
+    return { url, tipo: isVideoMedia(m) ? "video" : "image" };
   }
   return null;
 }
 
 export function CriaPostPublishButton({ caption, media }: { caption: string; media: CarouselMedia[] }) {
-  const [loading, setLoading] = useState(false);
-  const mobile = isMobileDevice();
+  const [open, setOpen] = useState(false);
 
-  const copyCaption = async () => { try { await navigator.clipboard.writeText(caption || ""); } catch { /* */ } };
-  const shareText = async () => { if (navigator.share) { try { await navigator.share({ text: caption || "" }); } catch { /* */ } } };
-
-  const handlePublish = async () => {
-    await copyCaption();
-    if (!mobile) { toast.info("Legenda copiada. Pra publicar com a mídia, abra no celular."); return; }
-    const imgUrl = firstDirectImage(media);
-    if (!imgUrl) { await shareText(); toast.info("Legenda copiada. Anexe a mídia no app."); return; }
-    setLoading(true);
-    try {
-      const file = await buildShareFile(imgUrl, "image");
-      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], text: caption || "" });
-        toast.success("Legenda copiada, é só colar no Instagram");
-      } else { await shareText(); toast.info("Legenda copiada. Anexe a mídia no app."); }
-    } catch { /* cancelado pelo usuário */ }
-    finally { setLoading(false); }
-  };
+  const midia = useMemo<PublicarMidia | null>(() => {
+    const alvo = primeiraCompartilhavel(media);
+    const temDrive = media.some((m) => isDriveMedia(m));
+    if (!alvo) {
+      return temDrive
+        ? { build: async () => null, rotulo: "arquivo", aviso: "A mídia deste post está no Google Drive, e de lá não dá pra mandar o arquivo direto pro Instagram. Baixe do Drive e anexe no app." }
+        : null;
+    }
+    return {
+      build: () => buildShareFile(alvo.url, alvo.tipo),
+      rotulo: alvo.tipo === "video" ? "o vídeo" : "a imagem",
+    };
+  }, [media]);
 
   return (
-    <Button onClick={handlePublish} disabled={loading} variant="hero" className="w-full gap-2 rounded-2xl h-12">
-      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : mobile ? <Send className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />}
-      {loading ? "Preparando mídia…" : "Publicar no Instagram"}
-    </Button>
+    <>
+      <Button onClick={() => setOpen(true)} variant="hero" className="w-full gap-2 rounded-2xl h-12">
+        <Send className="h-4 w-4" /> Publicar no Instagram
+      </Button>
+      <PublicarDialog open={open} onOpenChange={setOpen} caption={caption} midia={midia} />
+    </>
   );
 }

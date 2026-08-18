@@ -178,7 +178,11 @@ export function letterboxStyle(box: LetterboxBox, slotRatio: number): CSSPropert
 // de sempre. Até o teto, o corte por borda é (escala-1)/2 <= 12,5% do slot, e as
 // prévias já desenham overlay de Instagram (rodapé de story, dots do carrossel)
 // por cima dessa faixa, então na prática pouco se perde.
-const MAX_COVER_SCALE = 1.25;
+// Teto de ampliação do iframe pra cobrir o slot. 1.25 deixava de fora justo o
+// caso mais comum do produto (Reels 9:16 dentro do card 4:5, que precisa de
+// ~1.42) e por isso sobrava tarja preta em volta do vídeo do Drive. 1.5 cobre
+// esse caso e ainda segura ampliação absurda (que cortaria conteúdo demais).
+const MAX_COVER_SCALE = 1.5;
 
 /**
  * Estilo pro iframe do player cobrir o slot. `videoRatio` é a proporção real do

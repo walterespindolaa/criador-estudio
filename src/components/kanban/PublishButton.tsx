@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Send } from "lucide-react";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Loader2, Send, Smartphone } from "lucide-react";
-import { toast } from "sonner";
-import {
-  detectMediaOrigin, resolveShareableUrl, buildShareFile, isMobileDevice,
+  detectMediaOrigin, resolveShareableUrl, buildShareFile,
 } from "@/lib/social-share";
 import { getLocalVideoFile } from "@/lib/media-cache";
+import { PublicarDialog, type PublicarMidia } from "@/components/shared/PublicarDialog";
+
+/* O botão só ABRE a tela de publicar (PublicarDialog), que é a mesma do Cria
+   Post. Antes daqui saíam três caminhos diferentes de toast e nenhuma tela:
+   no desktop parecia que o botão não fazia nada, a cópia da legenda acontecia
+   depois de vários await (o iOS recusa: não é mais o gesto do clique) e o
+   share ia com TEXTO, que é justamente o que faz o Instagram sumir da lista. */
 
 interface PublishButtonProps {
   caption: string;
@@ -18,82 +20,34 @@ interface PublishButtonProps {
 }
 
 export function PublishButton({ caption, mediaUrl, mediaType }: PublishButtonProps) {
-  const [loading, setLoading] = useState(false);
-  const [driveWarnOpen, setDriveWarnOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
-  const origin = detectMediaOrigin(mediaUrl);
-  const mobile = isMobileDevice();
-
-  const copyCaption = async () => {
-    try { await navigator.clipboard.writeText(caption || ""); toast.success("Legenda copiada"); }
-    catch { toast.error("Não foi possível copiar a legenda"); }
-  };
-
-  const openAppFallback = async () => {
-    await copyCaption();
-    if (navigator.share) {
-      try { await navigator.share({ text: caption || "" }); } catch { /* cancelado */ }
+  const midia = useMemo<PublicarMidia | null>(() => {
+    const origin = detectMediaOrigin(mediaUrl);
+    if (origin === "none") return null;
+    if (origin === "drive") {
+      return {
+        build: async () => null,
+        rotulo: "arquivo",
+        aviso: "A mídia deste post está no Google Drive, e de lá não dá pra mandar o arquivo direto pro Instagram. Baixe do Drive e anexe no app.",
+      };
     }
-  };
-
-  const handlePublish = async () => {
-    if (!mobile) {
-      await copyCaption();
-      toast.info("Publicação direta só pelo app do celular. Legenda copiada, abra o CRIA no celular.");
-      return;
-    }
-    if (origin === "drive") { setDriveWarnOpen(true); return; }
-    if (origin === "none") { await openAppFallback(); return; }
-
     const fileUrl = resolveShareableUrl(mediaUrl!, origin);
-    if (!fileUrl) { await openAppFallback(); toast.info("Legenda copiada. Anexe a mídia no app."); return; }
-
-    setLoading(true);
-    try {
-      await navigator.clipboard.writeText(caption || "").catch(() => {});
-      let file = getLocalVideoFile(mediaUrl!);
-      if (!file) file = await buildShareFile(fileUrl, mediaType);
-      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], text: caption || "" });
-        toast.success("Legenda copiada, é só colar no app");
-      } else {
-        await openAppFallback();
-        toast.info("Legenda copiada. Anexe a mídia no app.");
-      }
-    } catch { /* share cancelado pelo usuário */ }
-    finally { setLoading(false); }
-  };
+    if (!fileUrl) return null;
+    return {
+      // Vídeo recém-subido tem cópia local: compartilha na hora, sem rede.
+      build: async () => getLocalVideoFile(mediaUrl!) ?? (await buildShareFile(fileUrl, mediaType)),
+      rotulo: mediaType === "video" ? "o vídeo" : "a mídia",
+    };
+  }, [mediaUrl, mediaType]);
 
   return (
     <>
-      <Button onClick={handlePublish} disabled={loading} variant="hero" className="gap-2" aria-label="Publicar">
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" />
-          : mobile ? <Send className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />}
-        {/* No celular o rótulo some pra sobrar espaço no topo do post (o ícone de
-            avião já diz "publicar"); no desktop o texto aparece normalmente. */}
-        <span className={loading ? "" : "hidden sm:inline"}>
-          {loading ? "Preparando mídia…" : mobile ? "Publicar" : "Publicar pelo celular"}
-        </span>
+      <Button onClick={() => setOpen(true)} variant="hero" className="gap-2" aria-label="Publicar">
+        <Send className="h-4 w-4" />
+        <span className="hidden sm:inline">Publicar</span>
       </Button>
-
-      <AlertDialog open={driveWarnOpen} onOpenChange={setDriveWarnOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Mídia no Google Drive</AlertDialogTitle>
-            <AlertDialogDescription>
-              Não é possível publicar direto nas redes quando a mídia está no Google Drive.
-              Você pode copiar a legenda e abrir o app (depois é só anexar a mídia manualmente),
-              ou subir o vídeo/foto direto no CRIA para publicar com um toque.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={async () => { setDriveWarnOpen(false); await openAppFallback(); }}>
-              Copiar legenda e abrir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <PublicarDialog open={open} onOpenChange={setOpen} caption={caption} midia={midia} />
     </>
   );
 }
