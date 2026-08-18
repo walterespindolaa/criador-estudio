@@ -436,7 +436,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
           <li><b>✓</b> A prévia mostra como fica no feed antes de publicar</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--laranja)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/kanban.webp" alt="Kanban do CRIA com as etapas Ideia, Planejamento, Produzindo, Pronto, Agendado e Publicado"><span class="mk-label">Cada post numa coluna: o que trava e o que sai hoje.</span></div></div>
+      <div class="mod-visual" style="background:var(--laranja)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img zoom" loading="lazy" src="prints/kanban.webp" alt="Kanban do CRIA com as etapas Ideia, Planejamento, Produzindo, Pronto, Agendado e Publicado"><span class="mk-label">Cada post numa coluna: o que trava e o que sai hoje.</span></div></div>
     </div>
 
     <div class="mod reveal">
@@ -450,7 +450,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
           <li><b>✓</b> Media kit em PDF, sempre atualizado</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--verde)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/media-kit.webp" alt="Media Kit automático do CRIA com seguidores, alcance, engajamento e audiência"><span class="mk-label">Seu media kit pronto, com os números reais do seu Instagram.</span></div></div>
+      <div class="mod-visual" style="background:var(--verde)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img zoom" loading="lazy" src="prints/media-kit.webp" alt="Media Kit automático do CRIA com seguidores, alcance, engajamento e audiência"><span class="mk-label">Seu media kit pronto, com os números reais do seu Instagram.</span></div></div>
     </div>
 
     <!-- Faixa que arrasta: seis telas em cards menores, sem repetir o padrão
@@ -1379,6 +1379,23 @@ gsap.to('.blob-amarelo',{y:-80,scrollTrigger:{trigger:'#hero',start:'top top',en
 
 /* ---------- reveals genéricos ---------- */
 /* ---------- O MOTOR: cada passo entra do lado dele, a seta pulsa ---------- */
+/* ---------- Telas de apoio: print entra do lado, texto sobe ---------- */
+gsap.utils.toArray('#telas .mod').forEach((el,i)=>{
+  const vis = el.querySelector('.mod-visual');
+  const txt = el.querySelector('div:not(.mod-visual)');
+  if(txt) gsap.fromTo(txt, {opacity:0, y:26}, {opacity:1, y:0, duration:.7, ease:'power3.out',
+    scrollTrigger:{trigger:el, start:'top 84%'}});
+  if(vis) gsap.fromTo(vis,
+    {opacity:0, x: i%2===0 ? -44 : 44, rotate: i%2===0 ? -1.6 : 1.6},
+    {opacity:1, x:0, rotate: i%2===0 ? -.7 : .6, duration:.85, ease:'power3.out',
+     scrollTrigger:{trigger:el, start:'top 84%'}});
+});
+/* Cards da faixa: entram em cascata */
+gsap.utils.toArray('.tf-card').forEach((el,i)=>{
+  gsap.fromTo(el, {opacity:0, y:30}, {opacity:1, y:0, duration:.6, ease:'power2.out', delay:(i%3)*.08,
+    scrollTrigger:{trigger:'.telas-faixa', start:'top 88%'}});
+});
+
 gsap.utils.toArray('.motor-passo').forEach((el,i)=>{
   const daDireita = el.querySelector('.mp-img') && el.classList.contains('inverso');
   gsap.fromTo(el,
