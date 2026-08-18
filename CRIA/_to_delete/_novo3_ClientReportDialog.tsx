@@ -11,7 +11,7 @@ import { useActiveAccount } from "@/contexts/AccountContext";
 import { clientReportInsight } from "@/lib/ai/claude";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
-import { parseDateOnly, toISODateBR, hojeBR } from "@/lib/date-br";
+import { parseDateOnly, toISODateBR } from "@/lib/date-br";
 import { FORMAT_LABELS, normalizarFormato } from "@/lib/constants";
 import type { ExternalClient, ExternalPost } from "@/hooks/useCriaPost";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
@@ -119,18 +119,15 @@ function buildStats(all: ExternalPost[], since: Date, until: Date): PeriodStats 
   // Data que define o mês do post: publicação (se postado) ou agendamento.
   const refDayOf = (p: ExternalPost): string | null => publishedDayOf(p) ?? p.scheduled_date;
 
-  // O relatório do cliente é de ENTREGA, não de bastidor:
-  // 1. Peça EM PRODUÇÃO nunca entra. É trabalho interno; o cliente recebendo uma
-  //    lista de "Em produção" acha que está pagando por post que não existe.
-  // 2. Peça SEM DATA também não entra (era ela que fazia a lista encher de
-  //    "Em produção" sem dia nenhum).
-  // 3. Nada de FUTURO: post agendado pra depois de hoje ainda não foi entregue.
-  const hojeDia = toISODateBR(new Date());
+  // Peça SEM data nenhuma (em produção/aguardando, ainda não agendada) é
+  // trabalho de AGORA: entra no relatório do período corrente. Sem isso, o funil
+  // e o "por formato" zeravam mesmo com peças no fluxo (o "0 posts" do PDF).
+  // Em período fechado (mês passado), peça sem data continua de fora.
+  const periodoCorrente = until.getTime() > Date.now();
   const posts = all.filter((p) => {
-    if (statusOf(p) === "em_producao") return false;
     const ref = refDayOf(p);
-    if (!ref) return false;
-    return dayIn(ref) && ref <= hojeDia;
+    if (ref) return dayIn(ref);
+    return periodoCorrente && statusOf(p) !== "postado";
   });
 
   const byStatus = Object.fromEntries(STATUS_KEYS.map((k) => [k, 0])) as Record<StatusKey, number>;
@@ -246,9 +243,7 @@ function buildPeriods(): ReportPeriod[] {
     { key: "mes-passado", label: `${MONTHS[lastMonth.getMonth()]} de ${lastMonth.getFullYear()}`, since: lastMonth, until: thisMonth },
     { key: "este-mes", label: `Este mês (${MONTHS[thisMonth.getMonth()]})`, since: thisMonth, until: nextMonth },
   ];
-  // Só 2 meses fechados além do mês passado: a lista com 6 meses virava um
-  // paredão de chips. Quem quer mais atrás usa o De/Até.
-  for (let i = 2; i <= 3; i++) {
+  for (let i = 2; i <= 6; i++) {
     const m = new Date(now.getFullYear(), now.getMonth() - i, 1);
     out.push({
       key: `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, "0")}`,
@@ -639,8 +634,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         .eq("manager_id", agencyOwnerId!)
         .eq("crm_client_id", client.crm_client_id!)
         .gte("capture_date", dayRange.since)
-        // Mesma regra das reuniões: captação futura não entrou no período entregue.
-        .lte("capture_date", dayRange.until < hojeBR() ? dayRange.until : hojeBR())
+        .lte("capture_date", dayRange.until)
         .order("capture_date", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as CaptureRow[];
@@ -660,9 +654,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         .eq("manager_id", agencyOwnerId!)
         .eq("crm_client_id", client.crm_client_id!)
         .gte("day", dayRange.since)
-        // Corta no FIM DO PERÍODO ou em HOJE, o que vier antes: reunião marcada
-        // pra semana que vem não é entrega deste relatório.
-        .lte("day", dayRange.until < hojeBR() ? dayRange.until : hojeBR())
+        .lte("day", dayRange.until)
         .order("day", { ascending: true });
       if (error) throw error;
       return (data ?? []) as unknown as ReuniaoRow[];
@@ -1283,7 +1275,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         formatos: fmt, plataformas: plat,
         publicados: stats.published,
         aprovados: stats.byStatus.aprovado, aguardando: stats.byStatus.pendente,
-        ajustes: stats.byStatus.ajuste_solicitado, emProducao: 0,
+        ajustes: stats.byStatus.ajuste_solicitado, emProducao: stats.byStatus.em_producao,
         titulos: monthPosts.map((p) => p.title).slice(0, 20).join("; "),
         segmento: linked?.segment ?? undefined,
         servicos: linked?.services?.length ? linked.services.join(", ") : undefined,
@@ -1645,7 +1637,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         </div>
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-        {STATUS_KEYS.filter((k) => k !== "em_producao").map((k) => {
+        {STATUS_KEYS.map((k) => {
           const color = k === "postado" ? C.green : k === "aprovado" ? C.green
             : k === "pendente" ? C.amber : k === "ajuste_solicitado" ? C.orange : C.sub;
           return (
@@ -1657,7 +1649,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         })}
       </div>
       <div style={{ fontSize: 10, color: C.sub, marginTop: 8, lineHeight: 1.5 }}>
-        O funil mostra em que etapa cada peça ENTREGUE no período está hoje (peça ainda em produção não entra).
+        O funil mostra em que etapa cada peça do período está hoje.
       </div>
     </div>
   );
