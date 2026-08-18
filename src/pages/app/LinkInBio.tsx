@@ -211,6 +211,10 @@ export type BioSettings = {
   buttonStyle: ButtonStyle;
   buttonColor: string;
   buttonTextColor: string;
+  // Cor dos CARDS (Sobre mim e Captura de lead). Vazio = branco translúcido,
+  // o visual antigo. Existe porque o card era fixo e não seguia a identidade.
+  cardColor: string;
+  cardTextColor: string;
   socialLinks: SocialLinks;
   bannerImage: string | null;
   about: BioAbout;
@@ -233,6 +237,8 @@ const DEFAULT_SETTINGS: BioSettings = {
   buttonStyle: "rounded",
   buttonColor: "#FFFFFF",
   buttonTextColor: "#1F2937",
+  cardColor: "",
+  cardTextColor: "",
   socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "" },
   bannerImage: null,
   about: { image: null, title: "Sobre mim", text: "" },
@@ -377,6 +383,8 @@ function parseSettings(raw: unknown): BioSettings {
     buttonColor: typeof t.buttonColor === "string" ? t.buttonColor : DEFAULT_SETTINGS.buttonColor,
     buttonTextColor:
       typeof t.buttonTextColor === "string" ? t.buttonTextColor : DEFAULT_SETTINGS.buttonTextColor,
+    cardColor: typeof t.cardColor === "string" ? t.cardColor : "",
+    cardTextColor: typeof t.cardTextColor === "string" ? t.cardTextColor : "",
     socialLinks: {
       instagram: typeof socialRaw.instagram === "string" ? socialRaw.instagram : "",
       tiktok: typeof socialRaw.tiktok === "string" ? socialRaw.tiktok : "",
@@ -481,6 +489,9 @@ function BgImageField({
   const inputRef = useRef<HTMLInputElement>(null);
   const [rawSrc, setRawSrc] = useState<string | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
+  // A bio é vertical no celular, mas quem abre no computador vê a imagem
+  // esticada. Aqui a pessoa escolhe o recorte antes de ajustar.
+  const [enquadre, setEnquadre] = useState<"retrato" | "paisagem">("retrato");
 
   const handleSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -545,8 +556,19 @@ function BgImageField({
           {uploading ? "Enviando..." : "Escolher imagem de fundo"}
         </button>
       )}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-[11px] text-muted-foreground">Enquadrar como:</span>
+        {([["retrato", "Celular (9:16)"], ["paisagem", "Computador (16:9)"]] as const).map(([k, l]) => (
+          <button key={k} type="button" onClick={() => setEnquadre(k)}
+            className={`rounded-lg border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors ${
+              enquadre === k ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"
+            }`}>
+            {l}
+          </button>
+        ))}
+      </div>
       <p className="text-[11px] text-muted-foreground/70">
-        Ajuste zoom, rotação e posição no formato retrato (9:16), do jeito que a bio aparece no celular. A imagem é salva já ajustada.
+        Ajuste zoom, rotação e posição no formato escolhido. A imagem é salva já ajustada.
       </p>
       {rawSrc && (
         <ImageCropModal
@@ -557,7 +579,7 @@ function BgImageField({
           }}
           imageSrc={rawSrc}
           onCropComplete={onBake}
-          aspectRatio={9 / 16}
+          aspectRatio={enquadre === "paisagem" ? 16 / 9 : 9 / 16}
           cropShape="rect"
         />
       )}
@@ -1780,6 +1802,31 @@ const LinkInBio = () => {
                     label="Cor do texto"
                   />
                 </div>
+
+                {/* Cor dos CARDS: Sobre mim e Captura de lead eram brancos fixos e
+                    não seguiam a identidade da pessoa. Vazio = branco de antes. */}
+                <div className="pt-2">
+                  <Label className="text-sm font-display font-semibold">Cards (Sobre mim e Captura de lead)</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">Deixe vazio pra manter o card branco.</p>
+                  <div className="flex gap-4 pt-2 flex-wrap items-end">
+                    <ColorField
+                      value={settings.cardColor || "#FFFFFF"}
+                      onChange={(v) => patchSettings({ cardColor: v })}
+                      label="Cor do card"
+                    />
+                    <ColorField
+                      value={settings.cardTextColor || "#1F2937"}
+                      onChange={(v) => patchSettings({ cardTextColor: v })}
+                      label="Cor do texto do card"
+                    />
+                    {settings.cardColor && (
+                      <Button type="button" variant="ghost" size="sm" className="h-9"
+                        onClick={() => patchSettings({ cardColor: "", cardTextColor: "" })}>
+                        Voltar ao branco
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Social links */}
@@ -2219,7 +2266,15 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
         style={backgroundStyle(settings)}
       >
         <BgOverlay amount={settings.bgOverlay} />
-        <div className="relative z-10 px-5 py-7 flex flex-col items-center min-h-full">
+        {/* BANNER = CAPA do topo: fica ATRÁS da foto, como capa de perfil. Antes
+            era um card solto no meio dos links, e ficava perdido. */}
+        {settings.bannerImage && settings.sections.some((x) => x.id === "banner" && x.on) && (
+          <div className="absolute inset-x-0 top-0 h-28 z-0 overflow-hidden">
+            <img src={settings.bannerImage} alt="" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10" />
+          </div>
+        )}
+        <div className={`relative z-10 px-5 flex flex-col items-center min-h-full ${settings.bannerImage && settings.sections.some((x) => x.id === "banner" && x.on) ? "pt-16 pb-7" : "py-7"}`}>
         {hasSocials && (
           <div className="flex items-center gap-2.5 mb-4">
             {SOCIAL_FIELDS.map((f) =>
@@ -2262,28 +2317,27 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
 
         <div className="w-full mt-5 space-y-2.5">
           {settings.sections.filter((s) => s.on).map((sec) => {
-            if (sec.id === "banner") {
-              return settings.bannerImage ? (
-                <img key="banner" src={settings.bannerImage} alt="" loading="lazy" className="w-full rounded-xl object-cover max-h-24" />
-              ) : null;
-            }
+            // O banner virou CAPA do topo (renderizada acima, atrás da foto).
+            if (sec.id === "banner") return null;
             if (sec.id === "about") {
               if (!settings.about.text && !settings.about.image) return null;
               return (
-                <div key="about" className="w-full rounded-xl bg-white/90 overflow-hidden text-left shadow-sm">
+                <div key="about" className={`w-full rounded-xl overflow-hidden text-left shadow-sm ${settings.cardColor ? "" : "bg-white/90"}`}
+                  style={settings.cardColor ? { backgroundColor: settings.cardColor, color: settings.cardTextColor || undefined } : undefined}>
                   {settings.about.image && <img src={settings.about.image} alt="" loading="lazy" className="w-full max-h-28 object-cover" />}
                   <div className="p-3">
-                    {settings.about.title && <p className="font-display font-bold text-xs text-gray-900 mb-1">{settings.about.title}</p>}
-                    {settings.about.text && <p className="text-[11px] text-gray-700 whitespace-pre-line line-clamp-4">{settings.about.text}</p>}
+                    {settings.about.title && <p className={`font-display font-bold text-xs mb-1 ${settings.cardColor ? "" : "text-gray-900"}`}>{settings.about.title}</p>}
+                    {settings.about.text && <p className={`text-[11px] whitespace-pre-line line-clamp-4 ${settings.cardColor ? "opacity-90" : "text-gray-700"}`}>{settings.about.text}</p>}
                   </div>
                 </div>
               );
             }
             if (sec.id === "lead") {
               return (
-                <div key="lead" className="w-full rounded-xl bg-white/90 shadow-sm p-3 text-center">
-                  <p className="font-display font-bold text-xs text-gray-900">{settings.lead.title}</p>
-                  {settings.lead.subtitle && <p className="text-[10px] text-gray-600 mt-0.5 mb-2">{settings.lead.subtitle}</p>}
+                <div key="lead" className={`w-full rounded-xl shadow-sm p-3 text-center ${settings.cardColor ? "" : "bg-white/90"}`}
+                  style={settings.cardColor ? { backgroundColor: settings.cardColor, color: settings.cardTextColor || undefined } : undefined}>
+                  <p className={`font-display font-bold text-xs ${settings.cardColor ? "" : "text-gray-900"}`}>{settings.lead.title}</p>
+                  {settings.lead.subtitle && <p className={`text-[10px] mt-0.5 mb-2 ${settings.cardColor ? "opacity-85" : "text-gray-600"}`}>{settings.lead.subtitle}</p>}
                   <div className="h-7 rounded-md bg-gray-100 mb-2" />
                   <div className="h-7 rounded-md font-semibold text-[11px] flex items-center justify-center" style={{ backgroundColor: settings.buttonColor, color: settings.buttonTextColor }}>
                     {settings.lead.buttonText}
@@ -2317,7 +2371,7 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
                           <img src={link.thumbnail_url} alt="" loading="lazy" className="w-full h-full object-cover" />
                         </div>
                       )}
-                      <div className="px-4 py-3 text-center truncate">
+                      <div className="px-4 py-3 text-center line-clamp-2">
                         {!link.thumbnail_url && link.icon && <span className="mr-1.5">{link.icon}</span>}
                         {link.title || "Sem título"}
                       </div>

@@ -30,6 +30,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { PostEditor } from "@/components/kanban/PostEditor";
 import { FORMAT_LABELS, STATUS_OPTIONS, FORMATS } from "@/lib/constants";
+import { formatColorVars, FORMAT_TEXT_CLASS, FORMAT_BORDER_CLASS } from "@/lib/format-colors";
+import { getStatusClasses } from "@/lib/statusColors";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -90,6 +92,13 @@ const COLUMN_TOOLTIPS: Record<string, string> = {
   publicado: "Já publicado! Use o Histórico para acompanhar resultados.",
 };
 type ContentBlocks = { tema?: string; roteiro?: string; midia?: string; legenda?: string };
+
+// Rótulo da etapa no calendário: os MESMOS nomes das colunas do board, pra o
+// calendário contar a mesma história (era só cor de fundo, e ninguém decora cor).
+const CAL_ETAPA: Record<string, string> = {
+  ideia: "Ideia", roteiro: "Planejamento", gravando: "Produzindo",
+  editando: "Pronto", agendado: "Agendado", publicado: "Publicado",
+};
 
 const Criando = () => {
   const { user } = useAuth();
@@ -934,20 +943,27 @@ const Criando = () => {
                             calDragOverKey === cell.key ? "ring-2 ring-primary border-primary" : (isToday ? "border-primary" : "border-border")
                           )}>
                           <span className={cn("text-[11px] font-body font-semibold w-5 h-5 flex items-center justify-center rounded-full", isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{cell.day}</span>
-                          {dayPosts.slice(0, 3).map(post => {
-                            const st = ramp[post.status ?? "ideia"];
-                            return (
-                              <button key={post.id}
-                                draggable
-                                onDragStart={(e) => { e.stopPropagation(); setCalDragId(post.id); }}
-                                onDragEnd={() => setCalDragId(null)}
-                                onClick={() => openEdit(post)}
-                                className="w-full text-left truncate rounded px-1.5 py-0.5 text-[10.5px] font-body leading-tight cursor-grab active:cursor-grabbing"
-                                style={{ background: st.from, color: st.ink }}>
-                                {post.title}
-                              </button>
-                            );
-                          })}
+                          {dayPosts.slice(0, 3).map(post => (
+                            /* Card com ETAPA + título + FORMATO, igual ao calendário
+                               do social mídia: cor sozinha não diz o que é a peça. */
+                            <button key={post.id}
+                              draggable
+                              onDragStart={(e) => { e.stopPropagation(); setCalDragId(post.id); }}
+                              onDragEnd={() => setCalDragId(null)}
+                              onClick={() => openEdit(post)}
+                              style={formatColorVars(post.format)}
+                              className={cn("w-full text-left rounded-lg border border-border bg-card px-1.5 py-1 shadow-sm hover:bg-muted/40 transition-colors cursor-grab active:cursor-grabbing",
+                                "border-l-[3px]", FORMAT_BORDER_CLASS)}>
+                              <span className={cn("inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight mb-0.5", getStatusClasses(post.status))}>
+                                {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
+                              </span>
+                              <span className="block text-[10px] font-body font-semibold text-foreground leading-tight truncate">{post.title}</span>
+                              <span className={cn("block text-[8.5px] font-body font-bold uppercase tracking-wide truncate", FORMAT_TEXT_CLASS)}>
+                                {FORMAT_LABELS[post.format] ?? post.format}
+                                {post.scheduled_time ? <span className="text-muted-foreground font-medium normal-case"> · {post.scheduled_time.slice(0, 5)}</span> : null}
+                              </span>
+                            </button>
+                          ))}
                           {dayPosts.length > 3 && (
                             <span className="text-[10px] text-muted-foreground font-body px-1">+{dayPosts.length - 3}</span>
                           )}
@@ -999,19 +1015,25 @@ const Criando = () => {
                                 <span className="text-[10px] font-body text-muted-foreground">{weekdays[i]}</span>
                                 <span className={cn("text-[11px] font-body font-semibold w-5 h-5 flex items-center justify-center rounded-full", isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{d.getDate()}</span>
                               </div>
-                              {dayPosts.map(post => {
-                                const st = ramp[post.status ?? "ideia"];
-                                return (
-                                  <button key={post.id} draggable
-                                    onDragStart={(e) => { e.stopPropagation(); setCalDragId(post.id); }}
-                                    onDragEnd={() => setCalDragId(null)}
-                                    onClick={() => openEdit(post)}
-                                    className="w-full text-left truncate rounded px-1.5 py-0.5 text-[10.5px] font-body leading-tight cursor-grab active:cursor-grabbing"
-                                    style={{ background: st.from, color: st.ink }}>
-                                    {post.title}
-                                  </button>
-                                );
-                              })}
+                              {dayPosts.map(post => (
+                                /* Mesmo card da visão de mês: etapa + título + formato. */
+                                <button key={post.id} draggable
+                                  onDragStart={(e) => { e.stopPropagation(); setCalDragId(post.id); }}
+                                  onDragEnd={() => setCalDragId(null)}
+                                  onClick={() => openEdit(post)}
+                                  style={formatColorVars(post.format)}
+                                  className={cn("w-full text-left rounded-lg border border-border bg-card px-1.5 py-1 shadow-sm hover:bg-muted/40 transition-colors cursor-grab active:cursor-grabbing",
+                                    "border-l-[3px]", FORMAT_BORDER_CLASS)}>
+                                  <span className={cn("inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight mb-0.5", getStatusClasses(post.status))}>
+                                    {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
+                                  </span>
+                                  <span className="block text-[10px] font-body font-semibold text-foreground leading-tight truncate">{post.title}</span>
+                                  <span className={cn("block text-[8.5px] font-body font-bold uppercase tracking-wide truncate", FORMAT_TEXT_CLASS)}>
+                                    {FORMAT_LABELS[post.format] ?? post.format}
+                                    {post.scheduled_time ? <span className="text-muted-foreground font-medium normal-case"> · {post.scheduled_time.slice(0, 5)}</span> : null}
+                                  </span>
+                                </button>
+                              ))}
                               {dayPosts.length === 0 && <div className="text-[10px] text-muted-foreground/50 text-center py-4">-</div>}
                             </div>
                           );

@@ -160,6 +160,9 @@ type BioSettings = {
   buttonStyle: ButtonStyle;
   buttonColor: string;
   buttonTextColor: string;
+  // Cor dos CARDS (Sobre mim e Captura de lead). Vazio = branco translúcido.
+  cardColor: string;
+  cardTextColor: string;
   socialLinks: SocialLinks;
   bannerImage: string | null;
   about: BioAbout;
@@ -182,6 +185,8 @@ const DEFAULT_SETTINGS: BioSettings = {
   buttonStyle: "rounded",
   buttonColor: "#FFFFFF",
   buttonTextColor: "#1F2937",
+  cardColor: "",
+  cardTextColor: "",
   socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "" },
   bannerImage: null,
   about: { image: null, title: "Sobre mim", text: "" },
@@ -284,6 +289,8 @@ function parseSettings(raw: unknown): BioSettings {
   return {
     bgType,
     bgColor: typeof t.bgColor === "string" ? t.bgColor : DEFAULT_SETTINGS.bgColor,
+    cardColor: typeof t.cardColor === "string" ? t.cardColor : "",
+    cardTextColor: typeof t.cardTextColor === "string" ? t.cardTextColor : "",
     bgGradient: typeof t.bgGradient === "string" ? t.bgGradient : DEFAULT_SETTINGS.bgGradient,
     bgImage: typeof t.bgImage === "string" && t.bgImage ? t.bgImage : null,
     bgImageSize,
@@ -440,6 +447,13 @@ const BioPage = () => {
       <BioFontStyle stack={fontStack} />
       <BgOverlay amount={settings.bgOverlay} />
       <div className="relative z-10 w-full max-w-[520px] flex flex-col items-center">
+        {/* BANNER = CAPA: fica ATRÁS da foto, como capa de perfil. Antes era um
+            card solto no meio dos links e ficava perdido. */}
+        {settings.bannerImage && settings.sections.some((x) => x.id === "banner" && x.on) && (
+          <div className="w-full -mt-2 mb-[-44px] rounded-2xl overflow-hidden shadow-md">
+            <img src={settings.bannerImage} alt="" loading="lazy" className="w-full h-32 sm:h-40 object-cover" />
+          </div>
+        )}
         {/* Desktop: floating column of social icons to the left */}
         {activeSocials.length > 0 && (
           <motion.div
@@ -524,23 +538,20 @@ const BioPage = () => {
         </motion.div>
 
         {settings.sections.filter((s) => s.on).map((sec) => {
-          if (sec.id === "banner") {
-            return settings.bannerImage ? (
-              <div key="banner" className="w-full mt-7">
-                <img src={settings.bannerImage} alt="" loading="lazy" className="w-full rounded-2xl object-cover max-h-48 shadow-md" />
-              </div>
-            ) : null;
-          }
+          // O banner virou CAPA do topo (renderizada acima, atrás da foto).
+          if (sec.id === "banner") return null;
           if (sec.id === "about") {
             if (!settings.about.text && !settings.about.image) return null;
             return (
-              <div key="about" className="w-full mt-7 rounded-2xl bg-white/90 backdrop-blur-sm shadow-md overflow-hidden text-left">
+              <div key="about"
+                className={`w-full mt-7 rounded-2xl shadow-md overflow-hidden text-left ${settings.cardColor ? "" : "bg-white/90 backdrop-blur-sm"}`}
+                style={settings.cardColor ? { backgroundColor: settings.cardColor, color: settings.cardTextColor || undefined } : undefined}>
                 {settings.about.image && (
                   <img src={settings.about.image} alt="" loading="lazy" className="w-full max-h-56 object-cover" />
                 )}
                 <div className="p-5">
-                  {settings.about.title && <h2 className="font-display font-bold text-gray-900 mb-2">{settings.about.title}</h2>}
-                  {settings.about.text && <p className="text-sm text-gray-700 whitespace-pre-line font-body leading-relaxed">{renderRichText(settings.about.text)}</p>}
+                  {settings.about.title && <h2 className={`font-display font-bold mb-2 ${settings.cardColor ? "" : "text-gray-900"}`}>{settings.about.title}</h2>}
+                  {settings.about.text && <p className={`text-sm whitespace-pre-line font-body leading-relaxed ${settings.cardColor ? "opacity-90" : "text-gray-700"}`}>{renderRichText(settings.about.text)}</p>}
                 </div>
               </div>
             );
@@ -548,7 +559,8 @@ const BioPage = () => {
           if (sec.id === "lead") {
             return (
               <div key="lead" className="w-full mt-7">
-                <LeadForm slug={slug ?? ""} config={settings.lead} buttonColor={settings.buttonColor} buttonTextColor={settings.buttonTextColor} radius={radius} />
+                <LeadForm slug={slug ?? ""} config={settings.lead} buttonColor={settings.buttonColor} buttonTextColor={settings.buttonTextColor} radius={radius}
+                  cardColor={settings.cardColor} cardTextColor={settings.cardTextColor} />
               </div>
             );
           }
@@ -618,7 +630,7 @@ const BioPage = () => {
                           />
                         </div>
                       )}
-                      <div className="px-5 py-4 text-center truncate">
+                      <div className="px-5 py-4 text-center line-clamp-2">
                         {!link.thumbnail_url && link.icon && (
                           <span className="mr-2">{link.icon}</span>
                         )}
@@ -869,13 +881,16 @@ function VitrineView({
 }
 
 function LeadForm({
-  slug, config, buttonColor, buttonTextColor, radius,
+  slug, config, buttonColor, buttonTextColor, radius, cardColor, cardTextColor,
 }: {
   slug: string;
   config: BioLeadForm;
   buttonColor: string;
   buttonTextColor: string;
   radius: string;
+  // Cor do card escolhida no editor. Vazio = branco translúcido de antes.
+  cardColor?: string;
+  cardTextColor?: string;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -912,22 +927,24 @@ function LeadForm({
 
   if (done) {
     return (
-      <div className="w-full rounded-2xl bg-white/90 backdrop-blur-sm shadow-md p-6 text-center">
-        <p className="font-display font-bold text-gray-900">Recebido! 💜</p>
-        <p className="text-sm text-gray-700 mt-1">Logo entro em contato.</p>
+      <div className={`w-full rounded-2xl shadow-md p-6 text-center ${cardColor ? "" : "bg-white/90 backdrop-blur-sm"}`}
+        style={cardColor ? { backgroundColor: cardColor, color: cardTextColor || undefined } : undefined}>
+        <p className={`font-display font-bold ${cardColor ? "" : "text-gray-900"}`}>Recebido! 💜</p>
+        <p className={`text-sm mt-1 ${cardColor ? "opacity-90" : "text-gray-700"}`}>Logo entro em contato.</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full rounded-2xl bg-white/90 backdrop-blur-sm shadow-md p-6">
-      <h2 className="font-display font-bold text-gray-900 text-center">{config.title}</h2>
-      {config.subtitle && <p className="text-sm text-gray-600 text-center mt-1 mb-4">{config.subtitle}</p>}
+    <div className={`w-full rounded-2xl shadow-md p-6 ${cardColor ? "" : "bg-white/90 backdrop-blur-sm"}`}
+      style={cardColor ? { backgroundColor: cardColor, color: cardTextColor || undefined } : undefined}>
+      <h2 className={`font-display font-bold text-center ${cardColor ? "" : "text-gray-900"}`}>{config.title}</h2>
+      {config.subtitle && <p className={`text-sm text-center mt-1 mb-4 ${cardColor ? "opacity-85" : "text-gray-600"}`}>{config.subtitle}</p>}
       <div className="space-y-3">
         <input aria-label="Seu nome" value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />
         {showEmail && <input aria-label="Seu email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Seu email" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />}
         {showPhone && <input aria-label="Seu telefone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Seu telefone" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />}
-        <label className="flex items-start gap-2 text-[11px] text-gray-600 leading-snug">
+        <label className={`flex items-start gap-2 text-[11px] leading-snug ${cardColor ? "opacity-85" : "text-gray-600"}`}>
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
           {config.consentText}
         </label>
