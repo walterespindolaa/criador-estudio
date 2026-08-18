@@ -164,8 +164,9 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 .hero-real{width:100%;display:block;border-radius:0 0 14px 14px}
 /* Corta a base na dobra: dá a sensação de que a tela continua além do hero,
    em vez de um retângulo flutuando no vazio. */
-@media(min-width:861px){.hero-mock{max-height:520px;overflow:hidden}}
-@media(max-width:860px){.hero-mock{max-height:300px;overflow:hidden}.hero-real{object-fit:cover;object-position:left top}}
+/* Sem corte: cortar na "dobra" deixava só o cabeçalho laranja aparecendo,
+   que é a parte MENOS interessante da tela. Print inteiro, respirando. */
+.hero-real{width:100%;display:block}
 /* O MOTOR: passos grandes, com o print de verdade em cada um. Alterna o lado
    pra criar ritmo, e a seta entre eles mostra que uma coisa PUXA a outra. */
 .motor-fluxo{margin-top:40px;display:flex;flex-direction:column;align-items:center;gap:0}
@@ -189,13 +190,33 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 /* Faixa horizontal das telas de apoio: ritmo diferente dos blocos grandes. */
 .telas-faixa{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;padding:8px 4px 4px;margin-top:34px;scrollbar-width:none}
 .telas-faixa::-webkit-scrollbar{display:none}
-.tf-card{flex:0 0 min(340px,78%);margin:0;scroll-snap-align:center;background:var(--branco);border:1.5px solid rgba(10,10,10,.1);border-radius:18px;overflow:hidden;box-shadow:0 12px 28px rgba(10,10,10,.1);transition:transform .25s,box-shadow .25s}
+.tf-card{flex:0 0 min(420px,84%);margin:0;scroll-snap-align:center;background:var(--branco);border:1.5px solid rgba(10,10,10,.1);border-radius:18px;overflow:hidden;box-shadow:0 12px 28px rgba(10,10,10,.1);transition:transform .25s,box-shadow .25s}
 .tf-card:hover{transform:translateY(-4px);box-shadow:0 18px 38px rgba(10,10,10,.16)}
-.tf-card img{width:100%;aspect-ratio:16/10;object-fit:cover;object-position:top center;display:block;border-bottom:1px solid rgba(10,10,10,.08)}
+/* Sem corte forçado: aspect-ratio + cover espremia o print (a tela inteira
+   virava uma faixa ilegível). Proporção natural, e quem quiser ler amplia. */
+.tf-card img{width:100%;display:block;border-bottom:1px solid rgba(10,10,10,.08)}
 .tf-card figcaption{padding:14px 16px 16px;font-size:.87rem;opacity:.78;line-height:1.5}
 .tf-card figcaption b{display:block;font-family:var(--font-display);font-size:1rem;opacity:1;margin-bottom:4px}
 .telas-dica{text-align:center;font-size:.8rem;opacity:.5;margin-top:10px}
 @media(min-width:1100px){.telas-dica{display:none}}
+/* Ampliar print: clicou, abre em tela cheia. Print de produto tem texto miúdo,
+   e sem isso a pessoa fica de cara no borrão. */
+.zoom{cursor:zoom-in}
+#lbox{position:fixed;inset:0;z-index:300;background:rgba(10,10,10,.93);display:none;align-items:center;justify-content:center;padding:20px}
+#lbox.on{display:flex}
+#lbox img{max-width:100%;max-height:92vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+#lbox .lb-x{position:absolute;top:16px;right:22px;color:#fff;font-size:2.2rem;font-family:var(--font-display);cursor:pointer;line-height:1}
+#lbox .lb-tip{position:absolute;bottom:18px;left:0;right:0;text-align:center;color:rgba(255,255,255,.65);font-size:.85rem}
+/* Setas da faixa de telas */
+.telas-wrap{position:relative}
+.tf-nav{position:absolute;top:38%;z-index:3;width:42px;height:42px;border-radius:50%;border:1.5px solid rgba(10,10,10,.12);background:#fff;font-size:1.4rem;line-height:1;cursor:pointer;box-shadow:0 8px 20px rgba(10,10,10,.16);transition:transform .2s}
+.tf-nav:hover{transform:scale(1.09)}
+.tf-prev{left:-14px}.tf-next{right:-14px}
+@media(max-width:900px){.tf-nav{display:none}}
+/* Motor: cada passo entra deslizando do lado em que ele está, e a seta pulsa
+   pra reforçar que uma etapa PUXA a próxima. */
+.motor-passo{opacity:0}
+.motor-seta{opacity:0}
 </style>
 </head>
 <body>
@@ -247,8 +268,8 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
     <div class="mock-bar">
       <i style="background:var(--laranja)"></i><i style="background:var(--amarelo)"></i><i style="background:var(--verde)"></i>
     </div>
-    <img class="hero-real" src="prints/painel.webp" width="2200" height="1342" fetchpriority="high"
-      alt="Painel do CRIA: o que está em produção, o que precisa de você hoje e a semana inteira">
+    <img class="hero-real zoom" src="prints/kanban.webp" width="2200" height="1341" fetchpriority="high"
+      alt="Quadro de posts do CRIA: ideia, planejamento, produzindo, pronto, agendado e publicado">
   </div>
 
   <div class="marquee-wrap">
@@ -330,7 +351,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
           <h3>Tudo começa por quem você é</h3>
           <p>Tom de voz, pilares, persona, paleta. Preenche uma vez (ou sobe o PDF que você já tem) e ele passa a conduzir TODA sugestão que o CRIA te dá. É por isso que o que sai daqui não parece texto de robô.</p>
         </div>
-        <div class="mp-img"><img loading="lazy" src="prints/brandbook.webp" alt="Brandbook do CRIA com identidade, tom de voz, personas e pilares"></div>
+        <div class="mp-img"><img loading="lazy" class="zoom" src="prints/brandbook.webp" alt="Brandbook do CRIA com identidade, tom de voz, personas e pilares"></div>
       </article>
 
       <span class="motor-seta" aria-hidden="true">↓</span>
@@ -342,7 +363,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
           <h3>A ideia crua entra do jeito que veio</h3>
           <p>"aquele erro que todo mundo comete no começo". É isso que você anota no ônibus, e é isso que morria nas notas. Aqui ela entra em segundos e fica esperando virar alguma coisa.</p>
         </div>
-        <div class="mp-img"><img loading="lazy" src="prints/ciclo-ideia.webp" alt="Captura rápida de ideia no CRIA"></div>
+        <div class="mp-img"><img loading="lazy" class="zoom" src="prints/ciclo-ideia.webp" alt="Captura rápida de ideia no CRIA"></div>
       </article>
 
       <span class="motor-seta" aria-hidden="true">↓</span>
@@ -354,7 +375,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
           <h3>Da frase solta a três pautas prontas</h3>
           <p>Você escolhe o formato e o CRIA devolve o ângulo, o gancho e a estrutura, no seu tom, cruzando com o que está em alta no seu nicho. A frase de dez palavras vira reels, carrossel ou story com direção.</p>
         </div>
-        <div class="mp-img"><img loading="lazy" src="prints/banco-ideias.webp" alt="Sugestões de IA transformando uma ideia crua em pautas de reels, carrossel e story"></div>
+        <div class="mp-img"><img loading="lazy" class="zoom" src="prints/banco-ideias.webp" alt="Sugestões de IA transformando uma ideia crua em pautas de reels, carrossel e story"></div>
       </article>
 
       <span class="motor-seta" aria-hidden="true">↓</span>
@@ -362,11 +383,23 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
       <article class="motor-passo reveal">
         <span class="mp-num">4</span>
         <div class="mp-txt">
+          <span class="mp-tag">Produção</span>
+          <h3>A pauta vira post, com a prévia do lado</h3>
+          <p>Gancho, corpo e chamada já vêm estruturados no tom do seu brandbook. E a prévia mostra exatamente como o post vai ficar no feed, no reels ou no story, antes de você publicar.</p>
+        </div>
+        <div class="mp-img"><img loading="lazy" class="zoom" src="prints/escrita-guiada.webp" alt="Editor de post do CRIA com a prévia do Instagram ao lado"></div>
+      </article>
+
+      <span class="motor-seta" aria-hidden="true">↓</span>
+
+      <article class="motor-passo reveal">
+        <span class="mp-num">5</span>
+        <div class="mp-txt">
           <span class="mp-tag">Cria Plano</span>
           <h3>E o mês inteiro se monta</h3>
           <p>Com o brandbook, as suas ideias e o que já performou no seu perfil, o CRIA monta a semana ou o mês: cada post com tema, formato, gancho, data e horário. Você ajusta o que quiser e manda pro quadro.</p>
         </div>
-        <div class="mp-img"><img loading="lazy" src="prints/cria-plano.webp" alt="Cria Plano com o mês montado: 12 posts com tema, formato, data e horário"></div>
+        <div class="mp-img"><img loading="lazy" class="zoom" src="prints/cria-plano.webp" alt="Cria Plano com o mês montado: 12 posts com tema, formato, data e horário"></div>
       </article>
     </div>
 
@@ -420,13 +453,17 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 
     <!-- Faixa que arrasta: seis telas em cards menores, sem repetir o padrão
          grande seis vezes. -->
+    <div class="telas-wrap">
+      <button class="tf-nav tf-prev" type="button" aria-label="Ver telas anteriores">‹</button>
+      <button class="tf-nav tf-next" type="button" aria-label="Ver próximas telas">›</button>
     <div class="telas-faixa" id="telasFaixa">
-      <figure class="tf-card"><img loading="lazy" src="prints/escrita-guiada.webp" alt="Editor de post do CRIA com prévia do Instagram ao lado"><figcaption><b>Escrita guiada</b>A legenda nasce com gancho, corpo e chamada, e a prévia mostra como fica no feed.</figcaption></figure>
-      <figure class="tf-card"><img loading="lazy" src="prints/cria-stories.webp" alt="Cria Stories com o plano da semana"><figcaption><b>Cria Stories</b>O plano da semana de stories, dia a dia, com o roteiro de cada um.</figcaption></figure>
-      <figure class="tf-card"><img loading="lazy" src="prints/tendencias.webp" alt="Tendências pesquisadas na web"><figcaption><b>Tendências</b>Formatos e ganchos em alta agora, e a ideia sai deles com um clique.</figcaption></figure>
-      <figure class="tf-card"><img loading="lazy" src="prints/cria-prompter.webp" alt="Cria Prompter, teleprompter com comando de voz"><figcaption><b>Cria Prompter</b>Teleprompter que acompanha a sua fala: grave olhando pra câmera.</figcaption></figure>
-      <figure class="tf-card"><img loading="lazy" src="prints/link-in-bio.webp" alt="Editor do link na bio com prévia no celular"><figcaption><b>Link na bio</b>Sua página de links com captura de contato, sem assinar outro app.</figcaption></figure>
-      <figure class="tf-card"><img loading="lazy" src="prints/collabs.webp" alt="Pipeline de collabs com marcas"><figcaption><b>Collabs</b>Suas publis num funil: negociando, fechado, entregue, pago.</figcaption></figure>
+      <figure class="tf-card"><img loading="lazy" class="zoom" src="prints/escrita-guiada.webp" alt="Editor de post do CRIA com prévia do Instagram ao lado"><figcaption><b>Escrita guiada</b>A legenda nasce com gancho, corpo e chamada, e a prévia mostra como fica no feed.</figcaption></figure>
+      <figure class="tf-card"><img loading="lazy" class="zoom" src="prints/cria-stories.webp" alt="Cria Stories com o plano da semana"><figcaption><b>Cria Stories</b>O plano da semana de stories, dia a dia, com o roteiro de cada um.</figcaption></figure>
+      <figure class="tf-card"><img loading="lazy" class="zoom" src="prints/tendencias.webp" alt="Tendências pesquisadas na web"><figcaption><b>Tendências</b>Formatos e ganchos em alta agora, e a ideia sai deles com um clique.</figcaption></figure>
+      <figure class="tf-card"><img loading="lazy" class="zoom" src="prints/cria-prompter.webp" alt="Cria Prompter, teleprompter com comando de voz"><figcaption><b>Cria Prompter</b>Teleprompter que acompanha a sua fala: grave olhando pra câmera.</figcaption></figure>
+      <figure class="tf-card"><img loading="lazy" class="zoom" src="prints/link-in-bio.webp" alt="Editor do link na bio com prévia no celular"><figcaption><b>Link na bio</b>Sua página de links com captura de contato, sem assinar outro app.</figcaption></figure>
+      <figure class="tf-card"><img loading="lazy" class="zoom" src="prints/collabs.webp" alt="Pipeline de collabs com marcas"><figcaption><b>Collabs</b>Suas publis num funil: negociando, fechado, entregue, pago.</figcaption></figure>
+    </div>
     </div>
     <p class="telas-dica">arraste para o lado →</p>
 
@@ -1339,6 +1376,25 @@ gsap.to('.blob-rosa',{y:120,scrollTrigger:{trigger:'#hero',start:'top top',end:'
 gsap.to('.blob-amarelo',{y:-80,scrollTrigger:{trigger:'#hero',start:'top top',end:'bottom top',scrub:1}});
 
 /* ---------- reveals genéricos ---------- */
+/* ---------- O MOTOR: cada passo entra do lado dele, a seta pulsa ---------- */
+gsap.utils.toArray('.motor-passo').forEach((el,i)=>{
+  const daDireita = el.querySelector('.mp-img') && el.classList.contains('inverso');
+  gsap.fromTo(el,
+    {opacity:0, y:40, scale:.97},
+    {opacity:1, y:0, scale:1, duration:.75, ease:'power3.out',
+     scrollTrigger:{trigger:el, start:'top 86%'}});
+  const img = el.querySelector('.mp-img');
+  if(img) gsap.fromTo(img,
+    {x: i%2===0 ? 40 : -40, rotate: i%2===0 ? 1.2 : -1.2},
+    {x:0, rotate:0, duration:.9, ease:'power3.out',
+     scrollTrigger:{trigger:el, start:'top 86%'}});
+});
+gsap.utils.toArray('.motor-seta').forEach(el=>{
+  gsap.fromTo(el, {opacity:0, y:-14}, {opacity:.9, y:0, duration:.5, ease:'power2.out',
+    scrollTrigger:{trigger:el, start:'top 92%'}});
+  gsap.to(el, {y:8, duration:1.1, repeat:-1, yoyo:true, ease:'sine.inOut'});
+});
+
 gsap.utils.toArray('.reveal').forEach(el=>{
   gsap.to(el,{opacity:1,y:0,duration:.8,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 85%'}});
 });
@@ -1392,6 +1448,29 @@ ScrollTrigger.create({start:80,onUpdate:self=>{
 }});
 
 } /* fim do guard GSAP */
+</script>
+<div id="lbox" role="dialog" aria-label="Print ampliado"><span class="lb-x" aria-hidden="true">×</span><img alt=""><span class="lb-tip">toque fora pra fechar</span></div>
+
+<script>
+  /* Ampliar print (todas as .zoom da página) */
+  (function(){
+    var lb=document.getElementById('lbox'); if(!lb) return;
+    var img=lb.querySelector('img');
+    document.querySelectorAll('img.zoom').forEach(function(el){
+      el.addEventListener('click',function(){ img.src=el.currentSrc||el.src; img.alt=el.alt||''; lb.classList.add('on'); });
+    });
+    lb.addEventListener('click',function(){ lb.classList.remove('on'); img.src=''; });
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape') { lb.classList.remove('on'); img.src=''; } });
+  })();
+
+  /* Setas da faixa de telas: rolam um card por clique */
+  (function(){
+    var t=document.getElementById('telasFaixa'); if(!t) return;
+    var passo=function(){ var c=t.querySelector('.tf-card'); return c?c.getBoundingClientRect().width+16:340; };
+    var p=document.querySelector('.tf-prev'), n=document.querySelector('.tf-next');
+    if(p) p.addEventListener('click',function(){ t.scrollBy({left:-passo(),behavior:'smooth'}); });
+    if(n) n.addEventListener('click',function(){ t.scrollBy({left:passo(),behavior:'smooth'}); });
+  })();
 </script>
 </body>
 </html>

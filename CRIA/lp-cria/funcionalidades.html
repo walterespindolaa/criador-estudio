@@ -209,6 +209,15 @@ html,body{overflow-x:clip}
 .fx-atual{background:var(--creme);color:var(--ink);opacity:1}
 .fx-atual small{opacity:.65}
 @media(max-width:560px){.fx-publico{width:100%;flex-direction:column}.fx-op{width:100%}}
+/* Print real dentro da janelinha do módulo */
+.mock--wide{width:100%}
+.mock-img{width:100%;display:block}
+.zoom{cursor:zoom-in}
+#lbox{position:fixed;inset:0;z-index:300;background:rgba(10,10,10,.93);display:none;align-items:center;justify-content:center;padding:20px}
+#lbox.on{display:flex}
+#lbox img{max-width:100%;max-height:92vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+#lbox .lb-x{position:absolute;top:16px;right:22px;color:#fff;font-size:2.2rem;font-family:var(--font-display);cursor:pointer;line-height:1}
+#lbox .lb-tip{position:absolute;bottom:18px;left:0;right:0;text-align:center;color:rgba(255,255,255,.65);font-size:.85rem}
 </style>
 </head>
 <body>
@@ -278,7 +287,7 @@ html,body{overflow-x:clip}
         <p>Você escolhe: semana ou mês. O método cruza seus pilares, seu brandbook e o que já performou no seu perfil, e devolve a pauta completa: cada post com formato, gancho e direção. Você ajusta o que quiser e manda pro quadro.</p>
         <ul><li><b>✓</b> Um mês de conteúdo em minutos, não em domingos perdidos</li><li><b>✓</b> Cada post nasce com direção, não em branco</li><li><b>✓</b> Vira cards no seu kanban em 1 clique</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--azul)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/cria-plano.webp" alt="Tela do Cria Plano montando a pauta do mês" style="width:100%;display:block"> --><span class="mk-label">Você escolhe semana ou mês e a pauta volta pronta, post a post.</span></div></div></div>
+      <div class="mod-visual" style="background:var(--azul)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img zoom" loading="lazy" src="prints/cria-plano.webp" alt="Tela do Cria Plano montando a pauta do mês"><span class="mk-label">Você escolhe semana ou mês e a pauta volta pronta, post a post.</span></div></div>
     </div>
     <div class="mod reveal">
       <div>
@@ -288,7 +297,7 @@ html,body{overflow-x:clip}
         <p>O story é diário e é onde a audiência realmente te vê. O Cria Stories monta o plano da semana, dia a dia, no seu tom, puxando tendências do seu nicho, e te lembra na hora certa.</p>
         <ul><li><b>✓</b> Plano semanal pronto, dia a dia</li><li><b>✓</b> No seu tom, com tendências do nicho</li><li><b>✓</b> Lembrete na hora de gravar</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--rosa)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/cria-stories.webp" alt="Plano semanal de stories no CRIA" style="width:100%;display:block"> --><span class="mk-label">Plano de stories da semana, dia a dia, com lembrete na hora de gravar.</span></div></div></div>
+      <div class="mod-visual" style="background:var(--rosa)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img zoom" loading="lazy" src="prints/cria-stories.webp" alt="Plano semanal de stories no CRIA"><span class="mk-label">Plano de stories da semana, dia a dia, com lembrete na hora de gravar.</span></div></div>
     </div>
     <div class="mod reveal">
       <div>
@@ -298,7 +307,7 @@ html,body{overflow-x:clip}
         <p>Legendas, roteiros de Reels, ideias e nota de gancho. Tudo nasce do seu brandbook, da sua persona e do seu tom de voz: estrutura pronta pra você ajustar em minutos, em vez de escrever do zero na hora de postar.</p>
         <ul><li><b>✓</b> Estrutura pronta no SEU tom</li><li><b>✓</b> Nota de gancho antes de publicar</li><li><b>✓</b> Roteiro de Reels lâmina por lâmina</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--laranja)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/escrita-guiada.webp" alt="Escrita guiada de legenda no CRIA" style="width:100%;display:block"> --><span class="mk-label">Legenda e roteiro com estrutura pronta e nota de gancho antes de publicar.</span></div></div></div>
+      <div class="mod-visual" style="background:var(--laranja)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img zoom" loading="lazy" src="prints/escrita-guiada.webp" alt="Escrita guiada de legenda no CRIA"><span class="mk-label">Legenda e roteiro com estrutura pronta e nota de gancho antes de publicar.</span></div></div>
     </div>
     <div class="mod reveal">
       <div>
@@ -308,7 +317,7 @@ html,body{overflow-x:clip}
         <p>Cores, fontes, pilares, tom de voz, moodboard e persona num lugar só. É daqui que todas as outras ferramentas aprendem a sua voz: preencheu uma vez, tudo sai com a sua cara.</p>
         <ul><li><b>✓</b> Identidade centralizada e sempre à mão</li><li><b>✓</b> Alimenta escrita, plano e arte</li><li><b>✓</b> Moodboard e persona incluídos</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--amarelo)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/brandbook.webp" alt="Brandbook do CRIA com cores, fontes e tom de voz" style="width:100%;display:block"> --><span class="mk-label">Cores, fontes, pilares, tom de voz e persona no mesmo lugar.</span></div></div></div>
+      <div class="mod-visual" style="background:var(--amarelo)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img zoom" loading="lazy" src="prints/brandbook.webp" alt="Brandbook do CRIA com cores, fontes e tom de voz"><span class="mk-label">Cores, fontes, pilares, tom de voz e persona no mesmo lugar.</span></div></div>
     </div>
     <div class="mod reveal">
       <div>
@@ -318,7 +327,7 @@ html,body{overflow-x:clip}
         <p>Chega de print perdido e nota que você nunca mais abre. Ideias e referências entram num lugar só, com busca, e viram post no quadro com um clique.</p>
         <ul><li><b>✓</b> Captura rápida no celular</li><li><b>✓</b> Busca no que você salvou</li><li><b>✓</b> Ideia vira post em 1 clique</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--azul)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/banco-ideias.webp" alt="Banco de ideias e biblioteca de referências do CRIA" style="width:100%;display:block"> --><span class="mk-label">Ideias e referências com busca: a salva vira post no quadro em 1 clique.</span></div></div></div>
+      <div class="mod-visual" style="background:var(--azul)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img zoom" loading="lazy" src="prints/banco-ideias.webp" alt="Banco de ideias e biblioteca de referências do CRIA"><span class="mk-label">Ideias e referências com busca: a salva vira post no quadro em 1 clique.</span></div></div>
     </div>
     <div class="mod reveal">
       <div>
@@ -328,7 +337,7 @@ html,body{overflow-x:clip}
         <p>Cada post é um card que anda: rascunho, produzindo, pronto, publicado. No calendário você vê a semana e o mês, arrasta e solta pra reagendar, e a constância vira rotina.</p>
         <ul><li><b>✓</b> Nada se perde no caminho</li><li><b>✓</b> Arrasta e solta pra reagendar</li><li><b>✓</b> Visão de semana e de mês</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--verde)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/kanban.webp" alt="Kanban de posts do CRIA com as colunas de produção" style="width:100%;display:block"> --><span class="mk-label">Cada post anda de rascunho até publicado, no kanban e no calendário.</span></div></div></div>
+      <div class="mod-visual" style="background:var(--verde)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img zoom" loading="lazy" src="prints/kanban.webp" alt="Kanban de posts do CRIA com as colunas de produção"><span class="mk-label">Cada post anda de rascunho até publicado, no kanban e no calendário.</span></div></div>
     </div>
     <div class="mod reveal">
       <div>
@@ -338,7 +347,7 @@ html,body{overflow-x:clip}
         <p>Achar tendência hoje é rolar o feed por 40 minutos e torcer. Aqui elas chegam separadas pelo seu nicho, com o gancho já escrito pra você adaptar, e viram post no seu quadro em 1 clique.</p>
         <ul><li><b>✓</b> Atualizadas pelo seu nicho</li><li><b>✓</b> Gancho já escrito pra adaptar</li><li><b>✓</b> Vira post em 1 clique</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--rosa)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/tendencias.webp" alt="Tendências do nicho no CRIA" style="width:100%;display:block"> --><span class="mk-label">Tendências do seu nicho já separadas, com o gancho escrito pra adaptar.</span></div></div></div>
+      <div class="mod-visual" style="background:var(--rosa)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img zoom" loading="lazy" src="prints/tendencias.webp" alt="Tendências do nicho no CRIA"><span class="mk-label">Tendências do seu nicho já separadas, com o gancho escrito pra adaptar.</span></div></div>
     </div>
     <div class="mod reveal">
       <div>
@@ -348,7 +357,7 @@ html,body{overflow-x:clip}
         <p>Dados reais do seu perfil, post a post: alcance, salvamentos, compartilhamentos e o melhor horário pra postar. O desempenho fica colado no post, no seu histórico, pra sempre.</p>
         <ul><li><b>✓</b> Alcance e salvamentos post a post</li><li><b>✓</b> Melhor horário pro SEU público</li><li><b>✓</b> Repita o que funciona, largue o que não</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--verde)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/insights.webp" alt="Insights do Instagram dentro do CRIA" style="width:100%;display:block"> --><span class="mk-label">Insights do Instagram post a post: alcance, salvamentos e melhor horário.</span></div></div></div>
+      <div class="mod-visual" style="background:var(--verde)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img zoom" loading="lazy" src="prints/insights.webp" alt="Insights do Instagram dentro do CRIA"><span class="mk-label">Insights do Instagram post a post: alcance, salvamentos e melhor horário.</span></div></div>
     </div>
     <div class="mod reveal">
       <div>
@@ -358,7 +367,7 @@ html,body{overflow-x:clip}
         <p>O post sozinho é bonito; no meio dos outros, às vezes não. O Meu Feed mostra a sua grade com os posts agendados no lugar, pra você ver o encaixe antes, não depois.</p>
         <ul><li><b>✓</b> Prévia da grade com os agendados</li><li><b>✓</b> Cores e ritmo do perfil num olhar</li><li><b>✓</b> Chega de descobrir o desencaixe publicado</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--azul)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/meu-feed.webp" alt="Prévia da grade do perfil no Meu Feed" style="width:100%;display:block"> --><span class="mk-label">A grade com os agendados no lugar, pra ver o encaixe antes de postar.</span></div></div></div>
+      <div class="mod-visual" style="background:var(--azul)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/meu-feed.webp" alt="Prévia da grade do perfil no Meu Feed" style="width:100%;display:block"> --><span class="mk-label">A grade com os agendados no lugar, pra ver o encaixe antes de postar.</span></div></div></div>
     </div>
     <div class="mod reveal">
       <div>
@@ -368,7 +377,7 @@ html,body{overflow-x:clip}
         <p>Teleprompter dentro do CRIA: cola o roteiro, o texto rola na velocidade que você definir (ou acompanha a sua voz) enquanto a câmera grava. Terminou, o vídeo vai direto pra galeria do celular.</p>
         <ul><li><b>✓</b> Texto rolando enquanto grava</li><li><b>✓</b> Modo por voz ou rolagem automática</li><li><b>✓</b> Vídeo salvo direto na galeria</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--laranja)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/cria-prompter.webp" alt="Teleprompter do CRIA com o roteiro rolando" style="width:100%;display:block"> --><span class="mk-label">O roteiro rola na tela na sua velocidade enquanto a câmera grava.</span></div></div></div>
+      <div class="mod-visual" style="background:var(--laranja)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img zoom" loading="lazy" src="prints/cria-prompter.webp" alt="Teleprompter do CRIA com o roteiro rolando"><span class="mk-label">O roteiro rola na tela na sua velocidade enquanto a câmera grava.</span></div></div>
     </div>
     <div class="mod reveal">
       <div>
@@ -378,7 +387,7 @@ html,body{overflow-x:clip}
         <p>Travou na arte? O Estúdio lê o que você escreveu no post e devolve o prompt da imagem nas suas cores, na sua fonte e no seu estilo: um por página do carrossel, pronto pra colar no Canva ou no Midjourney.</p>
         <ul><li><b>✓</b> Um prompt por página, mesmo estilo</li><li><b>✓</b> Nas suas cores e fontes</li><li><b>✓</b> Cola no gerador que você já usa</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--amarelo)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/estudio.webp" alt="Estúdio do CRIA gerando prompts de imagem" style="width:100%;display:block"> --><span class="mk-label">Um prompt de imagem por página do carrossel, nas suas cores e fontes.</span></div></div></div>
+      <div class="mod-visual" style="background:var(--amarelo)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/estudio.webp" alt="Estúdio do CRIA gerando prompts de imagem" style="width:100%;display:block"> --><span class="mk-label">Um prompt de imagem por página do carrossel, nas suas cores e fontes.</span></div></div></div>
     </div>
     <div class="mod reveal">
       <div>
@@ -388,7 +397,7 @@ html,body{overflow-x:clip}
         <p>A marca pediu o media kit e você tem 20 minutos? Ele já existe, atualizado com os seus números reais, em PDF ou link na hora. E o seu mês inteiro sai num relatório de uma página.</p>
         <ul><li><b>✓</b> Media kit gerado com dados reais</li><li><b>✓</b> Vira PDF ou link na hora</li><li><b>✓</b> Relatório do mês numa página</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--verde)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/media-kit.webp" alt="Media kit gerado pelo CRIA" style="width:100%;display:block"> --><span class="mk-label">Media kit atualizado com os seus números, pronto pra virar PDF ou link.</span></div></div></div>
+      <div class="mod-visual" style="background:var(--verde)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img zoom" loading="lazy" src="prints/media-kit.webp" alt="Media kit gerado pelo CRIA"><span class="mk-label">Media kit atualizado com os seus números, pronto pra virar PDF ou link.</span></div></div>
     </div>
     <div class="mod reveal">
       <div>
@@ -398,7 +407,7 @@ html,body{overflow-x:clip}
         <p>Publi combinada por áudio e valor no bloco de notas é cachê esquecido. No Collabs cada parceria tem proposta, contrato, entregas e cachê registrados: quanto foi combinado e quanto entrou.</p>
         <ul><li><b>✓</b> Propostas e contratos com a marca</li><li><b>✓</b> Entregas da campanha sem esquecer nenhuma</li><li><b>✓</b> Cachê registrado e cobrado</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--rosa)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/collabs.webp" alt="Tela de Collabs do CRIA com as parcerias" style="width:100%;display:block"> --><span class="mk-label">Proposta, contrato, entregas e cachê de cada publi registrados.</span></div></div></div>
+      <div class="mod-visual" style="background:var(--rosa)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img zoom" loading="lazy" src="prints/collabs.webp" alt="Tela de Collabs do CRIA com as parcerias"><span class="mk-label">Proposta, contrato, entregas e cachê de cada publi registrados.</span></div></div>
     </div>
     <div class="mod reveal">
       <div>
@@ -408,7 +417,7 @@ html,body{overflow-x:clip}
         <p>O link in bio com a sua cara, dentro do CRIA: mudou o post, muda o link, sem app extra. E o histórico guarda tudo que você já publicou, com desempenho junto, pra reciclar o que funcionou.</p>
         <ul><li><b>✓</b> Vitrine de links sem app extra</li><li><b>✓</b> Histórico completo com desempenho</li><li><b>✓</b> Recicle em vez de começar do zero</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--azul)"><div class="mock"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/link-in-bio.webp" alt="Link in bio do CRIA" style="width:100%;display:block"> --><span class="mk-label">Vitrine de links com a sua cara e o histórico de tudo que já foi publicado.</span></div></div></div>
+      <div class="mod-visual" style="background:var(--azul)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img zoom" loading="lazy" src="prints/link-in-bio.webp" alt="Link in bio do CRIA"><span class="mk-label">Vitrine de links com a sua cara e o histórico de tudo que já foi publicado.</span></div></div>
     </div>
   </div>
 </section>
@@ -502,6 +511,18 @@ if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') {
     onEnter:()=>stickyCta.classList.remove('show'),
     onLeaveBack:()=>stickyCta.classList.add('show')});
 }
+</script>
+<div id="lbox" role="dialog" aria-label="Print ampliado"><span class="lb-x" aria-hidden="true">×</span><img alt=""><span class="lb-tip">toque fora pra fechar</span></div>
+<script>
+  (function(){
+    var lb=document.getElementById('lbox'); if(!lb) return;
+    var img=lb.querySelector('img');
+    document.querySelectorAll('img.zoom').forEach(function(el){
+      el.addEventListener('click',function(){ img.src=el.currentSrc||el.src; img.alt=el.alt||''; lb.classList.add('on'); });
+    });
+    lb.addEventListener('click',function(){ lb.classList.remove('on'); img.src=''; });
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ lb.classList.remove('on'); img.src=''; } });
+  })();
 </script>
 </body>
 </html>
