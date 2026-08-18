@@ -161,12 +161,16 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 .nav-troca{background:var(--azul);color:#fff!important;opacity:1!important;font-weight:700;padding:7px 14px;border-radius:999px;font-size:.85rem;white-space:nowrap;transition:filter .2s}
 .nav-troca:hover{filter:brightness(1.1)}
 @media(max-width:1080px){.nav-troca{display:none}}
-.hero-real{width:100%;display:block;border-radius:0 0 14px 14px}
+/* Igual à LP de social mídia: o print sobe sobre a próxima seção, com sombra
+   difusa e uma inclinação de meio grau. Sem moldura preta, sem barra falsa. */
+.hero-shot{width:min(940px,94%);margin:52px auto 0;transform:translateY(30px) rotate(-.5deg);background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 30px 70px rgba(10,10,10,.28);position:relative;z-index:3}
+.hero-shot img{width:100%;display:block}
+@media(max-width:860px){
+  .hero-shot{width:92%;margin-top:34px;transform:translateY(20px) rotate(-.6deg);border-radius:14px}
+  .hero-shot img{height:230px;object-fit:cover;object-position:left top}
+}
 /* Corta a base na dobra: dá a sensação de que a tela continua além do hero,
    em vez de um retângulo flutuando no vazio. */
-/* Sem corte: cortar na "dobra" deixava só o cabeçalho laranja aparecendo,
-   que é a parte MENOS interessante da tela. Print inteiro, respirando. */
-.hero-real{width:100%;display:block}
 /* O MOTOR: passos grandes, com o print de verdade em cada um. Alterna o lado
    pra criar ritmo, e a seta entre eles mostra que uma coisa PUXA a outra. */
 .motor-fluxo{margin-top:40px;display:flex;flex-direction:column;align-items:center;gap:0}
@@ -261,15 +265,13 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
     <p class="micro">7 dias grátis · Cancela quando quiser · Sem burocracia</p>
   </div>
 
-  <!-- O PRINT DE VERDADE. Aqui havia uma ilustração de interface feita em CSS
-       (quadradinhos cinza imitando um kanban). Isso comunica protótipo, não
-       produto pronto: quem chega precisa ver o software real na primeira dobra. -->
-  <div class="hero-mock" id="hero-mock">
-    <div class="mock-bar">
-      <i style="background:var(--laranja)"></i><i style="background:var(--amarelo)"></i><i style="background:var(--verde)"></i>
-    </div>
-    <img class="hero-real zoom" src="prints/kanban.webp" width="2200" height="1341" fetchpriority="high"
-      alt="Quadro de posts do CRIA: ideia, planejamento, produzindo, pronto, agendado e publicado">
+  <!-- MESMA ESTRUTURA DA LP DE SOCIAL MÍDIA: moldura clara, sombra difusa,
+       leve inclinação e o print entrando direto. A versão anterior tinha
+       moldura preta grossa + barra de bolinhas, que empurrava a tela pra baixo
+       e roubava a atenção do conteúdo. -->
+  <div class="hero-shot" id="heroShot">
+    <img class="zoom" src="prints/painel.webp" width="2200" height="1342" fetchpriority="high"
+      alt="Painel do CRIA: sua próxima melhor ação, captura rápida de ideia e o quadro da semana">
   </div>
 
   <div class="marquee-wrap">
@@ -363,7 +365,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
           <h3>A ideia crua entra do jeito que veio</h3>
           <p>"aquele erro que todo mundo comete no começo". É isso que você anota no ônibus, e é isso que morria nas notas. Aqui ela entra em segundos e fica esperando virar alguma coisa.</p>
         </div>
-        <div class="mp-img"><img loading="lazy" class="zoom" src="prints/ciclo-ideia.webp" alt="Captura rápida de ideia no CRIA"></div>
+        <div class="mp-img"><img loading="lazy" class="zoom" src="prints/banco-ideias.webp" alt="Captura rápida: a ideia crua entrando no CRIA"></div>
       </article>
 
       <span class="motor-seta" aria-hidden="true">↓</span>
@@ -375,7 +377,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
           <h3>Da frase solta a três pautas prontas</h3>
           <p>Você escolhe o formato e o CRIA devolve o ângulo, o gancho e a estrutura, no seu tom, cruzando com o que está em alta no seu nicho. A frase de dez palavras vira reels, carrossel ou story com direção.</p>
         </div>
-        <div class="mp-img"><img loading="lazy" class="zoom" src="prints/banco-ideias.webp" alt="Sugestões de IA transformando uma ideia crua em pautas de reels, carrossel e story"></div>
+        <div class="mp-img"><img loading="lazy" class="zoom" src="prints/ciclo-ideia.webp" alt="Sugestões de IA transformando a ideia crua em pautas de reels, carrossel e story"></div>
       </article>
 
       <span class="motor-seta" aria-hidden="true">↓</span>
