@@ -96,24 +96,28 @@ h1 .hl{color:var(--amarelo)}
 .mod li b{color:var(--verde);flex-shrink:0}
 /* Visual dos módulos com forma orgânica e leve inclinação: retângulo perfeito
    é o que deixava a página com cara de template. */
-.mod-visual{border-radius:38px 52px 40px 56px;min-height:320px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;transform:rotate(-1.2deg);transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
-.mod:nth-child(even) .mod-visual{transform:rotate(1.1deg)}
+.mod-visual{border-radius:30px 40px 32px 44px;padding:22px 20px;display:flex;align-items:center;justify-content:center;position:relative;transform:rotate(-.8deg);transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+.mod:nth-child(even) .mod-visual{transform:rotate(.7deg)}
 .mod-visual:hover{transform:rotate(0deg) scale(1.015)}
 /* Janelinha de app: ilustração da interface em cima do bloco colorido, com uma
    legenda no rodapé do cartão dizendo o que aquela tela entrega. */
-.mock{width:min(340px,82%);background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 18px 40px rgba(10,10,10,.28);transform:rotate(-1.5deg)}
-.mod:nth-child(even) .mock{transform:rotate(1.2deg)}
+.mock{width:min(340px,82%);background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 18px 40px rgba(10,10,10,.28)}
+/* Print real ocupa o bloco todo e NÃO gira: a rotação do cartão brigava com a
+   do bloco colorido e deixava a tela torta, cortada nos cantos. */
+.mock--wide{width:100%;transform:none}
+.mod:nth-child(even) .mock:not(.mock--wide){transform:rotate(1deg)}
 .mock-bar{display:flex;gap:6px;padding:11px 14px;background:rgba(10,10,10,.06);border-bottom:1px solid rgba(10,10,10,.06)}
 .mock-bar i{width:9px;height:9px;border-radius:50%;background:var(--laranja);opacity:.85}
 .mock-bar i:nth-child(2){background:var(--amarelo)}
 .mock-bar i:nth-child(3){background:var(--verde)}
-.mock-body{padding:20px 18px 20px;display:flex;flex-direction:column;gap:10px}
+.mock-body{padding:20px 18px 4px;display:flex;flex-direction:column;gap:10px}
 .mk-avatar{width:34px;height:34px;border-radius:50%;background:rgba(10,10,10,.12)}
 .mk-line{height:10px;border-radius:999px;background:rgba(10,10,10,.10)}
 .mk-card{height:64px;border-radius:12px;background:rgba(10,10,10,.07);border-left:4px solid var(--laranja)}
 /* Legenda do cartão: é copy de verdade, com cara de caption, não de espaço
    tracejado esperando print. */
-.mk-label{display:block;font-size:.73rem;line-height:1.4;color:rgba(10,10,10,.62);text-align:left;margin-top:8px;padding-top:10px;border-top:1px solid rgba(10,10,10,.10)}
+/* Rodapé do cartão: precisa de respiro lateral, senão cola na borda. */
+.mk-label{display:block;font-size:.75rem;line-height:1.45;color:rgba(10,10,10,.62);text-align:left;padding:11px 14px 13px;border-top:1px solid rgba(10,10,10,.10);background:#fff}
 .sm-blobs{position:absolute;inset:0;pointer-events:none;z-index:0}
 .sm-mark{display:block;opacity:.06}
 .selo-marks{position:absolute;inset:0;pointer-events:none;z-index:0}
@@ -210,7 +214,6 @@ html,body{overflow-x:clip}
 .fx-atual small{opacity:.65}
 @media(max-width:560px){.fx-publico{width:100%;flex-direction:column}.fx-op{width:100%}}
 /* Print real dentro da janelinha do módulo */
-.mock--wide{width:100%}
 .mock-img{width:100%;display:block}
 .zoom{cursor:zoom-in}
 #lbox{position:fixed;inset:0;z-index:300;background:rgba(10,10,10,.93);display:none;align-items:center;justify-content:center;padding:20px}
@@ -218,6 +221,14 @@ html,body{overflow-x:clip}
 #lbox img{max-width:100%;max-height:92vh;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
 #lbox .lb-x{position:absolute;top:16px;right:22px;color:#fff;font-size:2.2rem;font-family:var(--font-display);cursor:pointer;line-height:1}
 #lbox .lb-tip{position:absolute;bottom:18px;left:0;right:0;text-align:center;color:rgba(255,255,255,.65);font-size:.85rem}
+/* Módulo ainda sem print: bloco limpo com a frase do que a tela entrega, em
+   vez de retângulos cinza fingindo ser interface. */
+.mod-visual--vazio{min-height:200px;flex-direction:column;text-align:center;padding:34px 30px}
+.mv-nota{font-family:var(--font-display);font-weight:700;font-size:1rem;line-height:1.45;color:#fff;opacity:.92;max-width:26ch}
+/* Módulo ainda sem print: bloco limpo com a frase do que a tela entrega, no
+   lugar de retângulos cinza fingindo ser interface. */
+.mod-visual--vazio{min-height:200px;flex-direction:column;text-align:center;padding:34px 30px}
+.mv-nota{font-family:var(--font-display);font-weight:700;font-size:1.02rem;line-height:1.45;color:#fff;opacity:.94;max-width:26ch}
 </style>
 </head>
 <body>
@@ -367,7 +378,7 @@ html,body{overflow-x:clip}
         <p>O post sozinho é bonito; no meio dos outros, às vezes não. O Meu Feed mostra a sua grade com os posts agendados no lugar, pra você ver o encaixe antes, não depois.</p>
         <ul><li><b>✓</b> Prévia da grade com os agendados</li><li><b>✓</b> Cores e ritmo do perfil num olhar</li><li><b>✓</b> Chega de descobrir o desencaixe publicado</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--azul)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/meu-feed.webp" alt="Prévia da grade do perfil no Meu Feed" style="width:100%;display:block"> --><span class="mk-label">A grade com os agendados no lugar, pra ver o encaixe antes de postar.</span></div></div></div>
+      <div class="mod-visual mod-visual--vazio" style="background:var(--azul)"><span class="mv-nota">A grade com os agendados no lugar, pra ver o encaixe antes de postar.</span></div>
     </div>
     <div class="mod reveal">
       <div>
@@ -387,7 +398,7 @@ html,body{overflow-x:clip}
         <p>Travou na arte? O Estúdio lê o que você escreveu no post e devolve o prompt da imagem nas suas cores, na sua fonte e no seu estilo: um por página do carrossel, pronto pra colar no Canva ou no Midjourney.</p>
         <ul><li><b>✓</b> Um prompt por página, mesmo estilo</li><li><b>✓</b> Nas suas cores e fontes</li><li><b>✓</b> Cola no gerador que você já usa</li></ul>
       </div>
-      <div class="mod-visual" style="background:var(--amarelo)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><div class="mock-body"><span class="mk-avatar"></span><span class="mk-line" style="width:78%"></span><span class="mk-line" style="width:56%"></span><span class="mk-card"></span><span class="mk-line" style="width:64%"></span><!-- Print real entra aqui: <img src="prints/estudio.webp" alt="Estúdio do CRIA gerando prompts de imagem" style="width:100%;display:block"> --><span class="mk-label">Um prompt de imagem por página do carrossel, nas suas cores e fontes.</span></div></div></div>
+      <div class="mod-visual mod-visual--vazio" style="background:var(--amarelo)"><span class="mv-nota">Um prompt de imagem por página do carrossel, nas suas cores e fontes.</span></div>
     </div>
     <div class="mod reveal">
       <div>
