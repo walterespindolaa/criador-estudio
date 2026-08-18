@@ -23,8 +23,18 @@ dist-ssr
 *.sln
 *.sw?
 
-.env
-.env
-.env
+# O .env deste projeto NÃO é segredo e PRECISA ir pro repositório.
+#
+# O Vite injeta variáveis VITE_* em tempo de BUILD, direto no bundle que roda no
+# navegador. Elas são públicas por natureza: qualquer pessoa lê no DevTools. Por
+# isso o Lovable recusa gravá-las como secret ("VITE_ prefixed variables are
+# build-time browser values and should be defined in .env files, not in secrets").
+#
+# Estando ignorado aqui, o arquivo nunca chegou ao Lovable e o build de produção
+# saiu com VITE_META_PIXEL_ID vazio: o pixel ficava desligado em silêncio, e por
+# isso o Gerenciador de Eventos passou 46 dias sem receber nada.
+#
+# Segredo de verdade (token de API, service_role, chave do Stripe) NÃO entra
+# aqui: vai nos Secrets do Supabase, que só a edge function enxerga.
 
 .claude/
