@@ -210,8 +210,16 @@ export function coverIframeStyle(videoRatio: number, slotRatio: number): CSSProp
     left: "50%",
     top: "50%",
     transform: "translate(-50%, -50%)",
+    // Trava contra a FRESTA na borda: a proporção medida do vídeo é aproximada
+    // (vem da miniatura) e o arredondamento de sub-pixel do iframe deixava uma
+    // listra do fundo aparecendo de um lado. Com o mínimo em 100% + a folga
+    // abaixo, o player sempre cobre o slot inteiro.
+    minWidth: "100%",
+    minHeight: "100%",
   };
+  // 1.5% de folga: invisível no corte, suficiente pra matar o arredondamento.
+  const s = scale * 1.015;
   return videoRatio >= slotRatio
-    ? { ...base, height: "100%", width: `${scale * 100}%` }
-    : { ...base, width: "100%", height: `${scale * 100}%` };
+    ? { ...base, height: "100%", width: `${s * 100}%` }
+    : { ...base, width: "100%", height: `${s * 100}%` };
 }
