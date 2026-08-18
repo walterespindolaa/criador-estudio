@@ -24,7 +24,7 @@
 <style>
 :root{
   --creme:#F5F3E7;--creme-2:#ECE8D5;--ink:#0A0A0A;
-  --laranja:#EA4918;--laranja-2:#FF5A24;--azul:#0061EE;--rosa:#FF77B9;--amarelo:#FFCF03;--verde:#01A652;--branco:#FDFBF5;
+  --laranja:#EA4918;--laranja-2:#FF5A24;--azul:#0061EE;--rosa:#FF77B9;--amarelo:#FFCF03;--verde:#01A652;--lilas:#7C90F0;--branco:#FDFBF5;
   --font-display:'Baloo 2', sans-serif;--font-body:'Roboto', sans-serif;--font-script:'Grand Hotel', cursive;
   --radius-lg:32px;--radius-md:22px;
 }
@@ -503,27 +503,29 @@ html,body{overflow-x:clip}
     <div id="vem-junto" class="reveal">
       <div style="text-align:center;max-width:640px;margin:26px auto 0">
         <h3 style="font-size:clamp(1.3rem,2.6vw,1.8rem)">E já vem junto, sem pagar nada a mais:</h3>
+        <p style="opacity:.75;font-size:.95rem;margin-top:8px">Tudo isto está na conta gratuita, antes de você ativar qualquer módulo.</p>
       </div>
-      <!-- Carrossel de prints: arrasta no mobile, setas no desktop. Trocar/somar
-           print é só adicionar um <figure> aqui (a imagem vive em prints/). -->
+      <!-- Carrossel de prints: arrasta no celular, setas e bolinhas no desktop.
+           Somar print é adicionar um <figure> aqui (a imagem vive em prints/). -->
       <div class="vj-car">
         <button class="vj-nav vj-prev" type="button" aria-label="Ver anterior">‹</button>
         <div class="vj-track" id="vjTrack">
-          <figure><img src="prints/agenda.webp" loading="lazy" class="mock-img" alt="Agenda da semana com reuniões, tarefas, captações e posts de todos os clientes"><figcaption>A semana inteira num calendário só, com arrasta e solta.</figcaption></figure>
-          <figure><img src="prints/agencia-home.webp" loading="lazy" class="mock-img" alt="Painel com todos os clientes e o que está travado em cada um"><figcaption>Seus clientes num painel só: quem precisa de você hoje.</figcaption></figure>
-          <figure><img src="prints/gestao-ficha.webp" loading="lazy" class="mock-img" alt="Ficha do cliente com contato, mensalidade, notas e hashtags"><figcaption>A ficha viva de cada cliente, do contato ao contrato.</figcaption></figure>
-          <figure><img src="prints/post-kanban.webp" loading="lazy" class="mock-img" alt="Posts de todos os clientes separados por etapa"><figcaption>Central de aprovações: o que está esperando resposta de quem.</figcaption></figure>
-          <figure><img src="prints/relatorio-modal.webp" loading="lazy" class="mock-img" alt="Relatório white-label sendo montado com a marca do cliente"><figcaption>Relatório com a marca do cliente, pronto em 1 clique.</figcaption></figure>
+          <figure><div class="vj-frame"><img src="prints/agenda.webp" loading="lazy" class="mock-img" alt="Agenda da semana com reuniões, tarefas, captações e posts de todos os clientes"></div><figcaption>A semana inteira num calendário só, com arrasta e solta.</figcaption></figure>
+          <figure><div class="vj-frame"><img src="prints/agencia-home.webp" loading="lazy" class="mock-img" alt="Painel com todos os clientes e o que está travado em cada um"></div><figcaption>Seus clientes num painel só: quem precisa de você hoje.</figcaption></figure>
+          <figure><div class="vj-frame"><img src="prints/gestao-ficha.webp" loading="lazy" class="mock-img" alt="Ficha do cliente com contato, mensalidade, notas e hashtags"></div><figcaption>A ficha viva de cada cliente, do contato ao contrato.</figcaption></figure>
+          <figure><div class="vj-frame"><img src="prints/post-kanban.webp" loading="lazy" class="mock-img" alt="Posts de todos os clientes separados por etapa"></div><figcaption>Central de aprovações: o que está esperando resposta de quem.</figcaption></figure>
+          <figure><div class="vj-frame"><img src="prints/relatorio-modal.webp" loading="lazy" class="mock-img" alt="Relatório white-label sendo montado com a marca do cliente"></div><figcaption>Relatório com a marca do cliente, pronto em 1 clique.</figcaption></figure>
         </div>
         <button class="vj-nav vj-next" type="button" aria-label="Ver próximo">›</button>
+        <div class="vj-dots" id="vjDots" aria-label="Navegação do carrossel"></div>
       </div>
       <div class="vj-grid">
-        <div class="vj-card"><b>Agenda da semana</b><p>Reuniões, tarefas, captações e posts de todos os clientes num calendário só, com arrasta e solta.</p></div>
-        <div class="vj-card"><b>Central de aprovações</b><p>Tudo que está esperando resposta de cliente, de todo mundo, numa tela: você vê quem está travando o quê.</p></div>
-        <div class="vj-card"><b>Seus clientes organizados</b><p>A carteira inteira num painel, com o status de cada conta e quem precisa de você hoje.</p></div>
-        <div class="vj-card"><b>Planejamento de conteúdo</b><p>A IA monta o mês do cliente a partir da persona e dos pilares dele: temas, formatos e frequência, prontos pra você ajustar.</p></div>
-        <div class="vj-card"><b>Cronograma pro cliente aprovar</b><p>O mês vira um cronograma com data e formato de cada peça, que o cliente aprova por link antes de você produzir.</p></div>
-        <div class="vj-card"><b>Indique e ganhe</b><p>Seu cupom de parceiro: indicou o CRIA, recebe comissão recorrente enquanto a pessoa for assinante.</p></div>
+        <div class="vj-card" style="--vc:var(--azul)"><b>Agenda da semana</b><p>Reuniões, tarefas, captações e posts de todos os clientes num calendário só, com arrasta e solta.</p></div>
+        <div class="vj-card" style="--vc:var(--laranja)"><b>Central de aprovações</b><p>Tudo que está esperando resposta de cliente, numa tela: você vê quem está travando o quê.</p></div>
+        <div class="vj-card" style="--vc:var(--verde)"><b>Seus clientes organizados</b><p>A carteira inteira num painel, com o status de cada conta e quem precisa de você hoje.</p></div>
+        <div class="vj-card" style="--vc:var(--rosa)"><b>Planejamento de conteúdo</b><p>A IA monta o mês do cliente a partir da persona e dos pilares dele: temas, formatos e frequência.</p></div>
+        <div class="vj-card" style="--vc:var(--lilas)"><b>Cronograma pro cliente aprovar</b><p>O mês vira um cronograma com data e formato de cada peça, aprovado por link antes de você produzir.</p></div>
+        <div class="vj-card" style="--vc:var(--amarelo)"><b>Indique e ganhe</b><p>Seu cupom de parceiro: indicou o CRIA, recebe comissão recorrente enquanto a pessoa for assinante.</p></div>
       </div>
     </div>
   </div>
@@ -754,10 +756,28 @@ html,body{overflow-x:clip}
   // Setas do carrossel de prints: rolam uma "página" (a largura do primeiro card).
   (function(){
     var t=document.getElementById('vjTrack'); if(!t) return;
-    var passo=function(){ var f=t.querySelector('figure'); return f?f.getBoundingClientRect().width+16:520; };
+    var figs=Array.prototype.slice.call(t.querySelectorAll('figure'));
+    var passo=function(){ return figs[0]?figs[0].getBoundingClientRect().width+16:520; };
     var p=document.querySelector('.vj-prev'), n=document.querySelector('.vj-next');
     if(p) p.addEventListener('click',function(){ t.scrollBy({left:-passo(),behavior:'smooth'}); });
     if(n) n.addEventListener('click',function(){ t.scrollBy({left:passo(),behavior:'smooth'}); });
+    // Bolinhas: clicar leva ao print e o scroll marca a atual (some a sensação
+    // de "tem mais coisa?" que o corte do slide seguinte dava antes).
+    var dots=document.getElementById('vjDots');
+    if(dots){
+      figs.forEach(function(_,i){
+        var b=document.createElement('button');
+        b.type='button'; b.setAttribute('aria-label','Print '+(i+1));
+        b.addEventListener('click',function(){ t.scrollTo({left:i*passo(),behavior:'smooth'}); });
+        dots.appendChild(b);
+      });
+      var marca=function(){
+        var i=Math.round(t.scrollLeft/passo());
+        Array.prototype.forEach.call(dots.children,function(b,j){ b.setAttribute('aria-current', j===i?'true':'false'); });
+      };
+      marca();
+      t.addEventListener('scroll',function(){ window.clearTimeout(t._d); t._d=window.setTimeout(marca,80); });
+    }
   })();
 </script>
 <div id="lbox" role="dialog" aria-label="Print ampliado"><span class="lb-x" aria-hidden="true">×</span><img alt=""><span class="lb-tip">toque fora pra fechar</span></div>
