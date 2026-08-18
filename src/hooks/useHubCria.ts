@@ -185,6 +185,27 @@ export function useScrapes(crmClientId?: string) {
   });
 }
 
+/**
+ * TODAS as pesquisas do gestor, de todos os clientes.
+ *
+ * O histórico só existia dentro de um cliente. Quem paga pelo módulo queria
+ * abrir uma tela e ver TUDO que já pesquisou, inclusive pra achar aquela
+ * leitura que ela fez no cliente errado e quer mandar pro certo.
+ */
+export function useAllScrapes() {
+  return useQuery<CompetitorScrape[]>({
+    queryKey: ["hubcria-scrapes-all"],
+    queryFn: async () => {
+      const { data, error } = await sbFrom("competitor_scrapes")
+        .select("id,crm_client_id,competitor_id,scrape_type,input_handle,status,result_summary,cost_usd,error,created_at,finished_at")
+        .order("created_at", { ascending: false })
+        .limit(300);
+      if (error) throw error;
+      return (data ?? []) as unknown as CompetitorScrape[];
+    },
+  });
+}
+
 // Todas as ideias do gestor (todos os clientes), pro overview do HUB.
 export function useAllCreativeIdeas() {
   return useQuery<CreativeIdea[]>({
@@ -525,5 +546,150 @@ export function useDeleteScrape() {
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["hubcria-scrapes"] }); toast.success("Análise excluída."); },
     onError: () => toast.error("Não consegui excluir a análise."),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOVER, DUPLICAR E APROVEITAR UMA PESQUISA
+
+   A leitura custa crédito e demora. Ela não pode ficar presa no cliente onde
+   foi feita. Três situações reais da Gabriela:
+
+   1. Ela pesquisou avulso ("só pra dar uma espiada") e o perfil virou cliente:
+      a pesquisa tem que ir junto.
+   2. Dois clientes disputam o MESMO concorrente. A leitura serve pros dois, e
+      pagar duas vezes pelo mesmo dado é jogar dinheiro fora.
+   3. Ela achou um reel bom no meio da leitura e quer transformar AQUELE post
+      em ideia do cliente, sem esperar a IA sugerir.
+
+   Nada disso precisou de tabela nova nem de SQL: as políticas de time já
+   permitem update e insert nas duas tabelas. O que faltava era a ação.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Move a pesquisa (e as pautas que ela gerou) pra outro cliente. */
+export function useMoveScrape() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; para: string | null }) => {
+      const { error } = await sbFrom("competitor_scrapes")
+        .update({ crm_client_id: input.para } as never)
+        .eq("id", input.id);
+      if (error) throw error;
+      // As pautas seguem a pesquisa. Se ficassem no cliente antigo, apareceriam
+      // órfãs numa ficha e sumiriam da outra: pior que não mover.
+      const { error: iErr } = await sbFrom("creative_ideas")
+        .update({ crm_client_id: input.para, updated_at: new Date().toISOString() } as never)
+        .eq("scrape_id", input.id);
+      if (iErr) throw iErr;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["hubcria-scrapes"] });
+      qc.invalidateQueries({ queryKey: ["hubcria-scrapes-all"] });
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas"] });
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas-all"] });
+      toast.success("Pesquisa movida.");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Não consegui mover a pesquisa."),
+  });
+}
+
+/**
+ * Copia a pesquisa pra outro cliente SEM gastar crédito de novo: o resultado
+ * já está no banco, é o mesmo dado. As pautas vão junto, zeradas em "novo",
+ * porque o que o outro cliente vai aproveitar é decisão dele.
+ */
+export function useCopyScrapeToClient() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { scrape: CompetitorScrape; para: string | null; ideas?: CreativeIdea[] }) => {
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      const { data, error } = await sbFrom("competitor_scrapes").insert({
+        manager_id: agencyOwnerId,
+        crm_client_id: input.para,
+        // O concorrente é um ativo DO cliente de origem: não faz sentido apontar
+        // pro radar do outro. A cópia guarda só a leitura.
+        competitor_id: null,
+        scrape_type: input.scrape.scrape_type,
+        input_handle: input.scrape.input_handle,
+        status: "done",
+        result_summary: input.scrape.result_summary,
+        // Custo zero: essa cópia não passou pelo Apify.
+        cost_usd: 0,
+        finished_at: new Date().toISOString(),
+      } as never).select("id").single();
+      if (error) throw error;
+      const novoId = (data as { id: string }).id;
+
+      const pautas = input.ideas ?? [];
+      if (pautas.length > 0) {
+        const { error: iErr } = await sbFrom("creative_ideas").insert(
+          pautas.map((i) => ({
+            manager_id: agencyOwnerId,
+            crm_client_id: input.para,
+            scrape_id: novoId,
+            source: i.source,
+            title: i.title,
+            format: i.format,
+            rationale: i.rationale,
+            ref_url: i.ref_url,
+            status: "novo",
+          })) as never,
+        );
+        if (iErr) throw iErr;
+      }
+      return novoId;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["hubcria-scrapes"] });
+      qc.invalidateQueries({ queryKey: ["hubcria-scrapes-all"] });
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas"] });
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas-all"] });
+      toast.success("Pesquisa copiada pro outro cliente. Não gastou crédito.");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Não consegui copiar a pesquisa."),
+  });
+}
+
+/**
+ * "Peguei essa referência, quero fazer parecido": um post/anúncio/comentário da
+ * leitura vira ideia no banco do cliente, com o link salvo. Sem isso a pessoa
+ * copiava o link na mão e colava numa nota fora do CRIA.
+ */
+export function useIdeaFromReference() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      crm_client_id: string | null;
+      scrape_id?: string | null;
+      title: string;
+      rationale?: string | null;
+      ref_url?: string | null;
+      format?: string | null;
+    }) => {
+      if (!agencyOwnerId) throw new Error("Sem sessão");
+      const title = input.title.trim();
+      if (!title) throw new Error("Essa referência não tem texto pra virar ideia.");
+      const ref = input.ref_url?.trim() || null;
+      const { error } = await sbFrom("creative_ideas").insert({
+        manager_id: agencyOwnerId,
+        crm_client_id: input.crm_client_id,
+        scrape_id: input.scrape_id ?? null,
+        source: "referencia",
+        title: title.slice(0, 500),
+        rationale: input.rationale?.slice(0, 1000) || null,
+        ref_url: ref && /^https?:\/\//i.test(ref) ? ref : null,
+        format: input.format || null,
+        status: "usar",
+      } as never);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas"] });
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas-all"] });
+      toast.success("Referência salva como pauta, já marcada como \u201cusar\u201d.");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Não consegui salvar a referência."),
   });
 }

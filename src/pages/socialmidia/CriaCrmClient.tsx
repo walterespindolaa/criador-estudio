@@ -19,7 +19,7 @@ import { ClientColorPicker } from "@/components/shared/ClientColorPicker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { useScrapes, useHasHubCria, useDeleteScrape } from "@/hooks/useHubCria";
-import { SummaryCard } from "@/components/hubcria/CriativoTab";
+import { SummaryCard } from "@/components/hubcria/ResultadoPesquisa";
 import { BrandbookImport } from "@/components/brandbook/BrandbookImport";
 import { RelatorioImport } from "@/components/brandbook/RelatorioImport";
 import { ClientTasks } from "@/components/accounts/crm/ClientTasks";

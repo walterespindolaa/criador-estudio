@@ -11,6 +11,7 @@ import {
   useAllCreativeIdeas, useHasHubCria, useAllCompetitors, useHubCredits, diasSemLeitura,
 } from "@/hooks/useHubCria";
 import { CriativoTab } from "@/components/hubcria/CriativoTab";
+import { HistoricoRadar } from "@/components/hubcria/HistoricoRadar";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { CRIA_HEX } from "@/lib/moduleTheme";
 import { Button } from "@/components/ui/button";
@@ -238,6 +239,10 @@ export default function HubCria() {
           )}
         </div>
       )}
+
+      {/* HISTÓRICO DE TUDO. A leitura custa crédito e demora: ela tem que ser
+          fácil de reencontrar, de mandar pro outro cliente e de apagar. */}
+      <HistoricoRadar />
 
       {/* PESQUISA AVULSA ela não é de cliente nenhum, então mora aqui, e não
           dentro da ficha. */}
