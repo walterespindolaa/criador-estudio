@@ -161,6 +161,41 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 .nav-troca{background:var(--azul);color:#fff!important;opacity:1!important;font-weight:700;padding:7px 14px;border-radius:999px;font-size:.85rem;white-space:nowrap;transition:filter .2s}
 .nav-troca:hover{filter:brightness(1.1)}
 @media(max-width:1080px){.nav-troca{display:none}}
+.hero-real{width:100%;display:block;border-radius:0 0 14px 14px}
+/* Corta a base na dobra: dá a sensação de que a tela continua além do hero,
+   em vez de um retângulo flutuando no vazio. */
+@media(min-width:861px){.hero-mock{max-height:520px;overflow:hidden}}
+@media(max-width:860px){.hero-mock{max-height:300px;overflow:hidden}.hero-real{object-fit:cover;object-position:left top}}
+/* O MOTOR: passos grandes, com o print de verdade em cada um. Alterna o lado
+   pra criar ritmo, e a seta entre eles mostra que uma coisa PUXA a outra. */
+.motor-fluxo{margin-top:40px;display:flex;flex-direction:column;align-items:center;gap:0}
+.motor-passo{display:grid;grid-template-columns:.85fr 1.15fr;gap:34px;align-items:center;width:100%;max-width:1060px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:26px;padding:26px 30px}
+.motor-passo:nth-child(4n+3){grid-template-columns:1.15fr .85fr}
+.motor-passo:nth-child(4n+3) .mp-txt{order:2}
+.motor-passo:nth-child(4n+3) .mp-img{order:1}
+.mp-num{position:absolute;opacity:0;pointer-events:none}
+.mp-tag{display:inline-block;font-family:var(--font-display);font-weight:800;font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--amarelo);margin-bottom:8px}
+.motor-passo h3{font-size:clamp(1.35rem,2.4vw,1.9rem);color:var(--creme);margin-bottom:10px;line-height:1.12}
+.motor-passo p{opacity:.9;font-size:.98rem;line-height:1.6}
+.mp-img{border-radius:16px;overflow:hidden;box-shadow:0 20px 44px rgba(0,0,0,.34);border:2px solid rgba(255,255,255,.18);background:#fff}
+.mp-img img{width:100%;display:block}
+.motor-seta{font-size:1.6rem;color:var(--amarelo);opacity:.9;padding:14px 0;font-weight:700}
+@media(max-width:860px){
+  .motor-passo,.motor-passo:nth-child(4n+3){grid-template-columns:1fr;gap:18px;padding:22px}
+  .motor-passo:nth-child(4n+3) .mp-txt{order:1}
+  .motor-passo:nth-child(4n+3) .mp-img{order:2}
+  .motor-seta{padding:10px 0}
+}
+/* Faixa horizontal das telas de apoio: ritmo diferente dos blocos grandes. */
+.telas-faixa{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;padding:8px 4px 4px;margin-top:34px;scrollbar-width:none}
+.telas-faixa::-webkit-scrollbar{display:none}
+.tf-card{flex:0 0 min(340px,78%);margin:0;scroll-snap-align:center;background:var(--branco);border:1.5px solid rgba(10,10,10,.1);border-radius:18px;overflow:hidden;box-shadow:0 12px 28px rgba(10,10,10,.1);transition:transform .25s,box-shadow .25s}
+.tf-card:hover{transform:translateY(-4px);box-shadow:0 18px 38px rgba(10,10,10,.16)}
+.tf-card img{width:100%;aspect-ratio:16/10;object-fit:cover;object-position:top center;display:block;border-bottom:1px solid rgba(10,10,10,.08)}
+.tf-card figcaption{padding:14px 16px 16px;font-size:.87rem;opacity:.78;line-height:1.5}
+.tf-card figcaption b{display:block;font-family:var(--font-display);font-size:1rem;opacity:1;margin-bottom:4px}
+.telas-dica{text-align:center;font-size:.8rem;opacity:.5;margin-top:10px}
+@media(min-width:1100px){.telas-dica{display:none}}
 </style>
 </head>
 <body>
@@ -170,7 +205,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
   <a class="logo" href="/"><img src="/logo-cria.png" alt="Cria" style="height:30px;width:auto;display:block"></a>
   <div class="nav-links">
     <a href="#telas">O produto</a>
-    <a href="#ciclo">Como funciona</a>
+    <a href="#motor">Como funciona</a>
     <a href="funcionalidades.html">Funcionalidades</a>
     <a href="#planos">Planos</a>
     <a href="#faq">Dúvidas</a>
@@ -197,60 +232,23 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
     <h1>Seu estúdio de conteúdo inteiro. <span class="hl">Numa aba só.</span>
       <span class="hero-script">ufa, agora faz sentido!</span>
     </h1>
-    <p class="hero-sub">O CRIA junta suas ideias, planejamento, produção, stories e insights no mesmo lugar, pra você criar com constância sem viver pulando de app em app.</p>
+    <p class="hero-sub">Seu brandbook conduz, sua ideia solta vira pauta pronta e o mês inteiro se monta. Ideias, planejamento, produção, stories e insights no mesmo lugar, conversando entre si.</p>
     <div class="hero-ctas">
       <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Começar meus 7 dias grátis</a>
-      <a href="#ciclo" class="btn btn-ghost">Ver como funciona ↓</a>
+      <a href="#motor" class="btn btn-ghost">Ver como funciona ↓</a>
     </div>
     <p class="micro">7 dias grátis · Cancela quando quiser · Sem burocracia</p>
   </div>
 
+  <!-- O PRINT DE VERDADE. Aqui havia uma ilustração de interface feita em CSS
+       (quadradinhos cinza imitando um kanban). Isso comunica protótipo, não
+       produto pronto: quem chega precisa ver o software real na primeira dobra. -->
   <div class="hero-mock" id="hero-mock">
     <div class="mock-bar">
       <i style="background:var(--laranja)"></i><i style="background:var(--amarelo)"></i><i style="background:var(--verde)"></i>
     </div>
-    <!-- Print real do painel entra aqui quando o Walter gerar: basta substituir
-         todo o bloco .hero-ui abaixo por
-         <img src="prints/painel.webp" alt="Painel do CRIA: o que está em produção, o que precisa de você hoje e a semana inteira" width="2200" height="1342" fetchpriority="high">
-         O restante do herói (moldura e animação do GSAP) continua igual. -->
-    <div class="hero-ui" role="img" aria-label="Ilustração da interface do CRIA: quadro da semana com as colunas Ideia, Produzindo, Pronto e Publicado">
-      <aside class="hero-ui-side" aria-hidden="true">
-        <span class="hui-brand"><i></i> CRIA</span>
-        <span class="hui-nav on">Minha semana</span>
-        <span class="hui-nav">Ideias</span>
-        <span class="hui-nav">Calendário</span>
-        <span class="hui-nav">Stories</span>
-        <span class="hui-nav">Insights</span>
-        <span class="hui-nav">Brandbook</span>
-      </aside>
-      <div class="hero-ui-main" aria-hidden="true">
-        <div class="hui-top">
-          <strong>Minha semana</strong>
-          <span class="hui-pill">6 posts planejados</span>
-          <span class="hui-pill ghost">Nenhum atrasado</span>
-        </div>
-        <div class="hui-board">
-          <div class="hui-col">
-            <span class="hui-col-t" style="color:var(--laranja)">Ideia</span>
-            <span class="hui-card" style="border-left-color:var(--laranja)"><b>Reels</b>3 erros que travam a sua legenda</span>
-            <span class="hui-card" style="border-left-color:var(--laranja)"><b>Carrossel</b>Bastidores da semana</span>
-          </div>
-          <div class="hui-col">
-            <span class="hui-col-t" style="color:var(--rosa)">Produzindo</span>
-            <span class="hui-card" style="border-left-color:var(--rosa)"><b>Carrossel</b>Legenda em revisão</span>
-          </div>
-          <div class="hui-col">
-            <span class="hui-col-t" style="color:#B58A00">Pronto</span>
-            <span class="hui-card" style="border-left-color:var(--amarelo)"><b>Stories</b>Enquete de quinta</span>
-            <span class="hui-card" style="border-left-color:var(--amarelo)"><b>Reels</b>Roteiro gravado</span>
-          </div>
-          <div class="hui-col">
-            <span class="hui-col-t" style="color:var(--verde)">Publicado</span>
-            <span class="hui-card" style="border-left-color:var(--verde)"><b>Segunda</b>Alcance acima da média</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <img class="hero-real" src="prints/painel.webp" width="2200" height="1342" fetchpriority="high"
+      alt="Painel do CRIA: o que está em produção, o que precisa de você hoje e a semana inteira">
   </div>
 
   <div class="marquee-wrap">
@@ -262,150 +260,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 </section>
 
 <!-- ==================== DOR ==================== -->
-<!-- ==================== POR DENTRO, TELA POR TELA ====================
-     Vem LOGO DEPOIS DO HERO: quem chega quer ver o produto, não ler sobre ele.
-     Nove telas reais, do plano do mês ao link na bio. -->
-<section id="telas" style="background:var(--creme);position:relative;overflow:hidden">
-  <div class="container">
-    <div class="ciclo-head reveal">
-      <span class="kicker" style="background:var(--verde)">Tela por tela</span>
-      <h2>O CRIA por dentro, <span class="script" style="color:var(--laranja);font-size:1.15em">sem promessa vaga</span></h2>
-      <p style="opacity:.8;max-width:58ch;margin:12px auto 0;text-align:center">Tudo abaixo é do produto de verdade, do jeito que você vai usar na segunda de manhã. Nenhum desenho, nenhum mockup.</p>
-    </div>
-
-    <div class="mod reveal">
-      <div>
-        <span class="mod-num">01 / 09</span>
-        <span class="mod-tag" style="background:var(--azul);color:#fff">Cria Plano</span>
-        <h3>O mês inteiro montado antes de você sentar pra criar</h3>
-        <p>Você diz seus pilares e o CRIA monta a semana ou o mês com tema, formato e gancho de cada peça, usando o seu brandbook e o que já performou no seu perfil.</p>
-        <ul>
-          <li><b>✓</b> Calendário cheio em minutos, não em domingos</li>
-          <li><b>✓</b> Formatos equilibrados (reels, carrossel, estático)</li>
-          <li><b>✓</b> Você edita tudo: a IA propõe, quem decide é você</li>
-        </ul>
-      </div>
-      <div class="mod-visual" style="background:var(--azul)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/cria-plano.webp" alt="O mês montado com tema, formato e gancho de cada peça."><span class="mk-label">O mês montado com tema, formato e gancho de cada peça.</span></div></div>
-    </div>
-    <div class="mod reveal">
-      <div>
-        <span class="mod-num">02 / 09</span>
-        <span class="mod-tag" style="background:var(--rosa);color:#fff">Ideias</span>
-        <h3>Suas ideias param de morrer nas notas do celular</h3>
-        <p>Toda ideia entra num lugar só, com o gancho e a referência. E a IA transforma a ideia crua em pauta pronta, no formato que você escolher.</p>
-        <ul>
-          <li><b>✓</b> Salva a ideia em segundos, do celular</li>
-          <li><b>✓</b> A IA sugere reels, carrossel ou story da mesma ideia</li>
-          <li><b>✓</b> Vira post com um toque, sem copiar e colar</li>
-        </ul>
-      </div>
-      <div class="mod-visual" style="background:var(--rosa)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/banco-ideias.webp" alt="A ideia entra crua e sai como pauta pronta pra produzir."><span class="mk-label">A ideia entra crua e sai como pauta pronta pra produzir.</span></div></div>
-    </div>
-    <div class="mod reveal">
-      <div>
-        <span class="mod-num">03 / 09</span>
-        <span class="mod-tag" style="background:var(--laranja);color:#fff">Criando</span>
-        <h3>Todo post numa esteira, do rascunho ao publicado</h3>
-        <p>Ideia, planejamento, produzindo, pronto, agendado, publicado. Você bate o olho e sabe o que está travado e o que sai hoje, sem procurar em lugar nenhum.</p>
-        <ul>
-          <li><b>✓</b> Arrasta o card e a etapa muda</li>
-          <li><b>✓</b> Filtra por formato, semana e pilar</li>
-          <li><b>✓</b> Board, tabela ou calendário: como você preferir</li>
-        </ul>
-      </div>
-      <div class="mod-visual" style="background:var(--laranja)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/kanban.webp" alt="Cada post numa coluna: o que trava e o que sai hoje."><span class="mk-label">Cada post numa coluna: o que trava e o que sai hoje.</span></div></div>
-    </div>
-    <div class="mod reveal">
-      <div>
-        <span class="mod-num">04 / 09</span>
-        <span class="mod-tag" style="background:var(--verde);color:#fff">Escrita guiada</span>
-        <h3>A legenda nasce com estrutura, não com a tela em branco</h3>
-        <p>Cada post abre com gancho, corpo e chamada, no tom do seu brandbook, e a prévia do lado mostra exatamente como vai ficar no feed antes de publicar.</p>
-        <ul>
-          <li><b>✓</b> Prévia real de Instagram, TikTok e YouTube</li>
-          <li><b>✓</b> Roteiro de reels e carrossel slide a slide</li>
-          <li><b>✓</b> Melhores horários sugeridos pelo seu histórico</li>
-        </ul>
-      </div>
-      <div class="mod-visual" style="background:var(--verde)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/escrita-guiada.webp" alt="Você escreve à esquerda e vê o post nascendo à direita."><span class="mk-label">Você escreve à esquerda e vê o post nascendo à direita.</span></div></div>
-    </div>
-    <div class="mod reveal">
-      <div>
-        <span class="mod-num">05 / 09</span>
-        <span class="mod-tag" style="background:var(--rosa);color:#fff">Cria Stories</span>
-        <h3>Nunca mais o "o que eu posto no story hoje?"</h3>
-        <p>O plano da semana de stories, dia a dia, com tendências do seu nicho e o passo a passo de cada um: o que gravar, o que escrever na tela, qual figurinha usar.</p>
-        <ul>
-          <li><b>✓</b> Plano de 7 ou 15 dias em um clique</li>
-          <li><b>✓</b> Tendências pesquisadas na web, não genéricas</li>
-          <li><b>✓</b> Exemplo pronto de cada story</li>
-        </ul>
-      </div>
-      <div class="mod-visual" style="background:var(--rosa)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/cria-stories.webp" alt="A semana de stories montada, com o roteiro de cada um."><span class="mk-label">A semana de stories montada, com o roteiro de cada um.</span></div></div>
-    </div>
-    <div class="mod reveal">
-      <div>
-        <span class="mod-num">06 / 09</span>
-        <span class="mod-tag" style="background:var(--amarelo);color:var(--ink)">Tendências</span>
-        <h3>O que está em alta agora, não no ano passado</h3>
-        <p>Formatos, temas e ganchos em alta, atualizados por pesquisa na web. De cada um você gera uma ideia sua, no seu tom, com um clique.</p>
-        <ul>
-          <li><b>✓</b> Formato em alta, tema quente e gancho</li>
-          <li><b>✓</b> Gera ideia direto da tendência</li>
-          <li><b>✓</b> Copia e usa onde quiser</li>
-        </ul>
-      </div>
-      <div class="mod-visual" style="background:var(--amarelo)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/tendencias.webp" alt="O que está em alta, com o gancho pronto pra virar ideia."><span class="mk-label">O que está em alta, com o gancho pronto pra virar ideia.</span></div></div>
-    </div>
-    <div class="mod reveal">
-      <div>
-        <span class="mod-num">07 / 09</span>
-        <span class="mod-tag" style="background:var(--azul);color:#fff">Cria Prompter</span>
-        <h3>Grave olhando pra câmera, não pro papel</h3>
-        <p>Teleprompter com comando de voz: o texto acompanha a sua fala, palavra por palavra. Improvisou? Ele espera. Voltou a ler? Continua do ponto certo.</p>
-        <ul>
-          <li><b>✓</b> Puxa os roteiros que já estão em produção</li>
-          <li><b>✓</b> Segue a sua voz, sem controle na mão</li>
-          <li><b>✓</b> Destaque e pausa marcados no roteiro</li>
-        </ul>
-      </div>
-      <div class="mod-visual" style="background:var(--azul)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/cria-prompter.webp" alt="O teleprompter que acompanha a sua fala enquanto você grava."><span class="mk-label">O teleprompter que acompanha a sua fala enquanto você grava.</span></div></div>
-    </div>
-    <div class="mod reveal">
-      <div>
-        <span class="mod-num">08 / 09</span>
-        <span class="mod-tag" style="background:var(--verde);color:#fff">Insights e Media Kit</span>
-        <h3>Os números do seu perfil viram argumento de venda</h3>
-        <p>O CRIA lê os insights reais do seu Instagram e traduz: o que funcionou, quando postar, o que repetir. E monta o media kit sozinho, pronto pra mandar pra marca.</p>
-        <ul>
-          <li><b>✓</b> Dados reais do Instagram conectado</li>
-          <li><b>✓</b> Melhor dia, horário e formato pelo SEU histórico</li>
-          <li><b>✓</b> Media kit em PDF, sempre atualizado</li>
-        </ul>
-      </div>
-      <div class="mod-visual" style="background:var(--verde)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/media-kit.webp" alt="Seu media kit pronto, com os números reais do seu Instagram."><span class="mk-label">Seu media kit pronto, com os números reais do seu Instagram.</span></div></div>
-    </div>
-    <div class="mod reveal">
-      <div>
-        <span class="mod-num">09 / 09</span>
-        <span class="mod-tag" style="background:var(--amarelo);color:var(--ink)">Link na bio</span>
-        <h3>Sua bio deixa de ser um beco sem saída</h3>
-        <p>Uma página sua, com a sua cara, que leva pro WhatsApp e pros seus links, e ainda captura o contato de quem chegou pelo conteúdo.</p>
-        <ul>
-          <li><b>✓</b> Já vem junto, sem custo extra</li>
-          <li><b>✓</b> Captura de contato de quem te acha pelo perfil</li>
-          <li><b>✓</b> Você vê quantos visitaram e clicaram</li>
-        </ul>
-      </div>
-      <div class="mod-visual" style="background:var(--amarelo)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/link-in-bio.webp" alt="Você edita à esquerda e vê o resultado no celular, à direita."><span class="mk-label">Você edita à esquerda e vê o resultado no celular, à direita.</span></div></div>
-    </div>
-
-    <div style="text-align:center;margin-top:34px">
-      <a href="funcionalidades.html" class="btn btn-ghost">Ver todas as funcionalidades a fundo →</a>
-    </div>
-  </div>
-</section>
-
+<!-- ==================== DOR ==================== -->
 <section id="dor">
   <div class="shape shape-rosa-1"></div>
   <div class="shape shape-rosa-2"></div>
@@ -453,6 +308,134 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
   .ade-s7{display:none}
 }
 </style>
+<!-- ==================== A ESTRELA: O ENCADEAMENTO ====================
+     O que vende o CRIA não é uma tela: é o fato de uma coisa PUXAR a outra.
+     Brandbook conduz, a ideia entra crua, vira pauta com insight, e o mês se
+     monta. Por isso este bloco vem antes de qualquer lista de ferramenta e
+     ocupa a tela inteira, com os prints em tamanho grande. -->
+<section id="motor" style="background:var(--azul);color:var(--creme);padding:74px 0 84px;position:relative;overflow:hidden">
+  <div class="selo-marks" aria-hidden="true"><span class="fblob" style="top:8%;right:5%;animation-duration:15s"><img class="selo-w inv" src="cria-icone.png" alt="" style="width:60px;transform:rotate(11deg)"></span></div>
+  <div class="container" style="position:relative;z-index:1">
+    <div style="text-align:center;max-width:720px;margin:0 auto">
+      <span class="kicker" style="background:var(--amarelo);color:var(--ink)">O motor do CRIA</span>
+      <h2 style="color:var(--creme);margin-top:12px">Não é mais uma ferramenta.<br><span class="script" style="color:var(--amarelo);font-size:1.12em">é uma coisa puxando a outra</span></h2>
+      <p style="opacity:.9;margin-top:14px;font-size:1.05rem">Ferramenta solta você já tem de sobra. O que ninguém te deu foi o encadeamento: o que a sua marca é conduz a ideia, a ideia vira pauta, a pauta enche o mês. Sem você carregar nada de uma aba pra outra.</p>
+    </div>
+
+    <div class="motor-fluxo">
+      <article class="motor-passo reveal">
+        <span class="mp-num">1</span>
+        <div class="mp-txt">
+          <span class="mp-tag">Brandbook</span>
+          <h3>Tudo começa por quem você é</h3>
+          <p>Tom de voz, pilares, persona, paleta. Preenche uma vez (ou sobe o PDF que você já tem) e ele passa a conduzir TODA sugestão que o CRIA te dá. É por isso que o que sai daqui não parece texto de robô.</p>
+        </div>
+        <div class="mp-img"><img loading="lazy" src="prints/brandbook.webp" alt="Brandbook do CRIA com identidade, tom de voz, personas e pilares"></div>
+      </article>
+
+      <span class="motor-seta" aria-hidden="true">↓</span>
+
+      <article class="motor-passo reveal">
+        <span class="mp-num">2</span>
+        <div class="mp-txt">
+          <span class="mp-tag">Ideias</span>
+          <h3>A ideia crua entra do jeito que veio</h3>
+          <p>"aquele erro que todo mundo comete no começo". É isso que você anota no ônibus, e é isso que morria nas notas. Aqui ela entra em segundos e fica esperando virar alguma coisa.</p>
+        </div>
+        <div class="mp-img"><img loading="lazy" src="prints/ciclo-ideia.webp" alt="Captura rápida de ideia no CRIA"></div>
+      </article>
+
+      <span class="motor-seta" aria-hidden="true">↓</span>
+
+      <article class="motor-passo reveal">
+        <span class="mp-num">3</span>
+        <div class="mp-txt">
+          <span class="mp-tag">Ideia vira pauta</span>
+          <h3>Da frase solta a três pautas prontas</h3>
+          <p>Você escolhe o formato e o CRIA devolve o ângulo, o gancho e a estrutura, no seu tom, cruzando com o que está em alta no seu nicho. A frase de dez palavras vira reels, carrossel ou story com direção.</p>
+        </div>
+        <div class="mp-img"><img loading="lazy" src="prints/banco-ideias.webp" alt="Sugestões de IA transformando uma ideia crua em pautas de reels, carrossel e story"></div>
+      </article>
+
+      <span class="motor-seta" aria-hidden="true">↓</span>
+
+      <article class="motor-passo reveal">
+        <span class="mp-num">4</span>
+        <div class="mp-txt">
+          <span class="mp-tag">Cria Plano</span>
+          <h3>E o mês inteiro se monta</h3>
+          <p>Com o brandbook, as suas ideias e o que já performou no seu perfil, o CRIA monta a semana ou o mês: cada post com tema, formato, gancho, data e horário. Você ajusta o que quiser e manda pro quadro.</p>
+        </div>
+        <div class="mp-img"><img loading="lazy" src="prints/cria-plano.webp" alt="Cria Plano com o mês montado: 12 posts com tema, formato, data e horário"></div>
+      </article>
+    </div>
+
+    <div style="text-align:center;margin-top:40px">
+      <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Quero o meu mês montado</a>
+      <p style="opacity:.75;font-size:.88rem;margin-top:10px">7 dias grátis · sem cartão pra começar</p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== O RESTO DO ESTÚDIO ====================
+     Depois do motor (brandbook > ideia > pauta > mês), estas são as telas que
+     sustentam o dia a dia. Ritmo diferente de propósito: dois destaques
+     grandes e o resto numa faixa que arrasta, pra não virar catálogo de nove
+     blocos idênticos empilhados. -->
+<section id="telas" style="background:var(--creme);position:relative;overflow:hidden">
+  <div class="container">
+    <div class="ciclo-head reveal">
+      <span class="kicker" style="background:var(--verde)">E tem mais</span>
+      <h2>O resto do estúdio, <span class="script" style="color:var(--laranja);font-size:1.15em">tudo na mesma conta</span></h2>
+      <p style="opacity:.8;max-width:56ch;margin:12px auto 0;text-align:center">Nenhum destes é um app à parte pra você assinar. Tudo abaixo já vem junto.</p>
+    </div>
+
+    <div class="mod reveal">
+      <div>
+        <span class="mod-tag" style="background:var(--laranja);color:#fff">Criando</span>
+        <h3>Todo post numa esteira, do rascunho ao publicado</h3>
+        <p>Ideia, planejamento, produzindo, pronto, agendado, publicado. Você bate o olho e sabe o que está travado e o que sai hoje. Arrasta o card, a etapa muda.</p>
+        <ul>
+          <li><b>✓</b> Board, tabela ou calendário: como você preferir</li>
+          <li><b>✓</b> Filtro por formato, semana e pilar</li>
+          <li><b>✓</b> A prévia mostra como fica no feed antes de publicar</li>
+        </ul>
+      </div>
+      <div class="mod-visual" style="background:var(--laranja)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/kanban.webp" alt="Kanban do CRIA com as etapas Ideia, Planejamento, Produzindo, Pronto, Agendado e Publicado"><span class="mk-label">Cada post numa coluna: o que trava e o que sai hoje.</span></div></div>
+    </div>
+
+    <div class="mod reveal">
+      <div>
+        <span class="mod-tag" style="background:var(--verde);color:#fff">Insights e Media Kit</span>
+        <h3>Os números do seu perfil viram argumento de venda</h3>
+        <p>O CRIA lê os insights reais do seu Instagram e traduz: qual formato rende mais, qual dia performa, o que repetir. E monta o media kit sozinho, pronto pra mandar pra marca.</p>
+        <ul>
+          <li><b>✓</b> Dados reais do Instagram conectado, sem colar print</li>
+          <li><b>✓</b> Melhor dia, horário e formato pelo SEU histórico</li>
+          <li><b>✓</b> Media kit em PDF, sempre atualizado</li>
+        </ul>
+      </div>
+      <div class="mod-visual" style="background:var(--verde)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/media-kit.webp" alt="Media Kit automático do CRIA com seguidores, alcance, engajamento e audiência"><span class="mk-label">Seu media kit pronto, com os números reais do seu Instagram.</span></div></div>
+    </div>
+
+    <!-- Faixa que arrasta: seis telas em cards menores, sem repetir o padrão
+         grande seis vezes. -->
+    <div class="telas-faixa" id="telasFaixa">
+      <figure class="tf-card"><img loading="lazy" src="prints/escrita-guiada.webp" alt="Editor de post do CRIA com prévia do Instagram ao lado"><figcaption><b>Escrita guiada</b>A legenda nasce com gancho, corpo e chamada, e a prévia mostra como fica no feed.</figcaption></figure>
+      <figure class="tf-card"><img loading="lazy" src="prints/cria-stories.webp" alt="Cria Stories com o plano da semana"><figcaption><b>Cria Stories</b>O plano da semana de stories, dia a dia, com o roteiro de cada um.</figcaption></figure>
+      <figure class="tf-card"><img loading="lazy" src="prints/tendencias.webp" alt="Tendências pesquisadas na web"><figcaption><b>Tendências</b>Formatos e ganchos em alta agora, e a ideia sai deles com um clique.</figcaption></figure>
+      <figure class="tf-card"><img loading="lazy" src="prints/cria-prompter.webp" alt="Cria Prompter, teleprompter com comando de voz"><figcaption><b>Cria Prompter</b>Teleprompter que acompanha a sua fala: grave olhando pra câmera.</figcaption></figure>
+      <figure class="tf-card"><img loading="lazy" src="prints/link-in-bio.webp" alt="Editor do link na bio com prévia no celular"><figcaption><b>Link na bio</b>Sua página de links com captura de contato, sem assinar outro app.</figcaption></figure>
+      <figure class="tf-card"><img loading="lazy" src="prints/collabs.webp" alt="Pipeline de collabs com marcas"><figcaption><b>Collabs</b>Suas publis num funil: negociando, fechado, entregue, pago.</figcaption></figure>
+    </div>
+    <p class="telas-dica">arraste para o lado →</p>
+
+    <div style="text-align:center;margin-top:26px">
+      <a href="funcionalidades.html" class="btn btn-ghost">Ver todas as funcionalidades a fundo →</a>
+    </div>
+  </div>
+</section>
+
 <section id="adesivos">
   <img class="ade-sticker ade-s1" src="stickers/selo-da-ideia-ao-post-rosa.png" alt="" aria-hidden="true">
   <img class="ade-sticker ade-s2" src="stickers/criatura-lampada.png" alt="" aria-hidden="true">
@@ -737,120 +720,11 @@ html,body{overflow-x:clip}
 </style>
 
 <!-- ==================== CICLO CRIA ==================== -->
-<section id="ciclo" style="position:relative;overflow:hidden">
-  <div class="selo-marks" aria-hidden="true"><span class="fblob" style="top:10%;left:4%;animation-duration:16s"><img class="selo-w" src="cria-icone.png" alt="" style="width:56px;transform:rotate(-8deg)"></span><span class="fblob" style="bottom:8%;right:5%;animation-duration:13s"><img class="selo-w" src="cria-icone.png" alt="" style="width:40px;transform:rotate(10deg)"></span></div>
-  <div class="container" id="ciclo-inner">
-    <div class="ciclo-head reveal">
-      <span class="kicker" style="background:var(--azul)">O mecanismo</span>
-      <h2>O Ciclo CRIA: as 6 fases da sua criação, <span class="script" style="color:var(--laranja);font-size:1.15em">finalmente conectadas</span></h2>
-      <p style="opacity:.8;margin-top:10px">Cada fase alimenta a próxima. É assim que a constância deixa de depender de força de vontade.</p>
-    </div>
-    <div class="ciclo-pin" id="ciclo-pin">
-      <div class="ciclo-grid">
-        <div class="ciclo-steps" id="ciclo-steps">
-          <div class="step" data-step="0"><span class="step-num" style="background:var(--laranja)">1</span><div><h3>Ideia</h3><p>Banco de ideias sempre à mão + sugestões de pauta no tom da sua marca.</p></div></div>
-          <div class="step" data-step="1"><span class="step-num" style="background:var(--azul)">2</span><div><h3>Planejar</h3><p>Kanban, calendário e plano semanal de stories: a semana inteira montada de uma vez.</p></div></div>
-          <div class="step" data-step="2"><span class="step-num" style="background:var(--rosa)">3</span><div><h3>Produzir</h3><p>Legenda e roteiro saem com estrutura pronta e nota de gancho, com o seu brandbook do lado.</p></div></div>
-          <div class="step" data-step="3"><span class="step-num" style="background:var(--amarelo);color:var(--ink)">4</span><div><h3>Publicar</h3><p>Checklist do dia, Meu Feed pra ver como fica antes de postar, notificação pra não furar.</p></div></div>
-          <div class="step" data-step="4"><span class="step-num" style="background:var(--verde)">5</span><div><h3>Analisar</h3><p>Insights reais do Instagram: o que funcionou, o que repetir, o que abandonar.</p></div></div>
-          <div class="step" data-step="5"><span class="step-num" style="background:var(--azul);border:1.5px solid rgba(255,255,255,.4)">6</span><div><h3>Evoluir</h3><p>Recicla o que deu certo e começa a próxima semana na frente. Constância sem força de vontade.</p></div></div>
-        </div>
-        <!-- Prints reais de cada fase entram aqui quando o Walter gerar: dentro de
-             cada .ciclo-frame, logo antes do <span class="cap">, colocar
-             <img src="prints/ciclo-ideia.webp" alt="Tela de ideias do CRIA" style="max-width:86%;border-radius:16px">
-             e a legenda .cap continua funcionando como caption embaixo da imagem.
-             NÃO mexer nas classes .ciclo-frame nem no atributo data-frame: o GSAP usa. -->
-        <div class="ciclo-visual">
-          <div class="ciclo-frame" data-frame="0"><span style="color:var(--laranja-2)"><svg class="svgi svgi-lg" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1.3.5 2.6 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg></span><span class="big" style="color:var(--laranja-2)">Ideia</span><span class="cap">Toda ideia e referência num lugar só, com busca e captura rápida pelo celular.</span></div>
-          <div class="ciclo-frame" data-frame="1"><span style="color:#7C90F0"><svg class="svgi svgi-lg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg></span><span class="big" style="color:#7C90F0">Planejar</span><span class="cap">Kanban e calendário: a semana inteira montada de uma vez, arrastando e soltando.</span></div>
-          <div class="ciclo-frame" data-frame="2"><span style="color:var(--rosa)"><svg class="svgi svgi-lg" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span><span class="big" style="color:var(--rosa)">Produzir</span><span class="cap">Legenda e roteiro já nascem com estrutura pronta, no tom do seu brandbook.</span></div>
-          <div class="ciclo-frame" data-frame="3"><span style="color:var(--amarelo)"><svg class="svgi svgi-lg" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></span><span class="big" style="color:var(--amarelo)">Publicar</span><span class="cap">Checklist do dia e prévia da grade: você vê como o post encaixa antes de publicar.</span></div>
-          <div class="ciclo-frame" data-frame="4"><span style="color:#6FCF8C"><svg class="svgi svgi-lg" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg></span><span class="big" style="color:#6FCF8C">Analisar</span><span class="cap">Insights reais do Instagram colados em cada post: alcance, salvamentos e horário.</span></div>
-          <div class="ciclo-frame" data-frame="5"><span style="color:var(--creme)"><svg class="svgi svgi-lg" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg></span><span class="big" style="color:var(--creme)">Evoluir</span><span class="cap">O que deu certo volta reciclado pro quadro e a semana seguinte já começa na frente.</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+<!-- A seção do "Ciclo CRIA" saiu daqui. Ela prendia o scroll por 1500px pra
+     trocar seis painéis que mostravam só um ícone e uma frase: custava atenção
+     e não entregava produto. A mesma história é contada melhor pelo #motor
+     (brandbook > ideia > pauta > mês montado), com os prints reais. -->
 
-<style>
-/* Ciclo no MOBILE: iPhone de verdade (moldura + dynamic island) com as telas
-   passando sozinhas e bolinhas de progresso; as 6 etapas ficam em cards
-   normais embaixo, acendendo em sincronia. Zero pin, zero sobreposição:
-   as duas versões anteriores quebravam o layout. */
-@media(max-width:900px){
-  #ciclo .ciclo-grid{display:block;padding:0 0 6px}
-  #ciclo .ciclo-visual{width:min(238px,66vw);aspect-ratio:9/18.5;min-height:0;margin:8px auto 0;border:8px solid #111;border-radius:44px;box-shadow:0 18px 40px rgba(10,10,10,.28)}
-  #ciclo .ciclo-visual::after{content:"";position:absolute;top:12px;left:50%;transform:translateX(-50%);width:72px;height:20px;border-radius:999px;background:#111;z-index:3}
-  #ciclo .ciclo-frame{padding:48px 16px 22px}
-  #ciclo .ciclo-frame .big{font-size:1.4rem}
-  #ciclo .ciclo-frame .cap{padding:12px 13px;font-size:.72rem;line-height:1.35}
-  #ciclo .ciclo-dots{display:flex;justify-content:center;gap:7px;margin:14px 0 2px}
-  #ciclo .ciclo-dots i{width:8px;height:8px;border-radius:999px;background:rgba(10,10,10,.18);transition:all .3s}
-  #ciclo .ciclo-dots i.on{background:var(--laranja);width:22px}
-  #ciclo .ciclo-steps{margin-top:12px;display:flex;flex-direction:column;gap:12px}
-  #ciclo .ciclo-steps .step{background:var(--branco);border-radius:18px;padding:14px 16px;box-shadow:0 5px 16px rgba(10,10,10,.07);opacity:1;transform:none;transition:box-shadow .3s}
-  #ciclo .ciclo-steps .step.active{box-shadow:0 0 0 2.5px var(--laranja),0 5px 16px rgba(10,10,10,.07)}
-  #ciclo .ciclo-steps .step p{display:block;font-size:.86rem}
-}
-</style>
-
-<!-- ==================== CRIA PLANO (destaque) ==================== -->
-<!-- O recurso mais forte do produto não tinha seção própria: aparecia num card
-     no meio de outros oito. Quem vende piloto automático em card pequeno não
-     está vendendo piloto automático. -->
-<section id="criaplano" style="background:var(--azul);padding:90px 0;position:relative;overflow:hidden">
-  <div class="selo-marks" aria-hidden="true"><span class="fblob" style="top:12%;right:7%;animation-duration:14s"><img class="selo-w inv" src="cria-icone.png" alt="" style="width:70px;transform:rotate(10deg)"></span><span class="fblob" style="bottom:10%;left:5%;animation-duration:17s"><img class="selo-w inv" src="cria-icone.png" alt="" style="width:46px;transform:rotate(-7deg)"></span></div>
-  <div class="container">
-    <div class="cp-grid">
-      <div class="reveal">
-        <span class="kicker" style="background:var(--laranja)">A estrela do Studio</span>
-        <h2 style="color:var(--creme)">Seu mês inteiro de conteúdo, <span class="script" style="color:var(--amarelo);font-size:1.15em">montado em minutos</span></h2>
-        <p style="color:rgba(255,255,255,.75);margin:16px 0 26px;font-size:1.05rem;line-height:1.6">O Cria Plano lê o seu brandbook, os seus pilares e o que já performou no seu perfil, e monta a pauta da semana ou do mês inteiro. Cada post já nasce com formato, gancho e direção. Você deixa de decidir "o que postar" todo dia e passa a só produzir.</p>
-        <ul class="cp-list">
-          <li><span class="cp-dot" style="background:var(--laranja)"></span>Um mês de conteúdo em minutos, não em domingos perdidos</li>
-          <li><span class="cp-dot" style="background:var(--amarelo)"></span>No SEU tom: ele usa seu brandbook, sua persona e seu histórico</li>
-          <li><span class="cp-dot" style="background:var(--verde)"></span>Ponto de partida, não camisa de força: edite o que quiser</li>
-          <li><span class="cp-dot" style="background:var(--rosa)"></span>Casa com o Cria Stories: pauta do feed e plano de stories juntos</li>
-        </ul>
-        <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja" style="margin-top:28px">Quero meu mês no automático</a>
-      </div>
-      <div class="cp-visual reveal-scale">
-        <!-- Print real do Cria Plano entra aqui quando o Walter gerar: trocar o
-             bloco .cp-weeks por
-             <img src="prints/cria-plano.webp" alt="Cria Plano montando o mês de conteúdo" style="border-radius:16px">
-             e manter o título e a legenda .cap como caption. -->
-        <div class="cp-frame">
-          <span style="color:var(--amarelo)"><svg class="svgi svgi-lg" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>
-          <span class="big" style="color:var(--creme);font-family:var(--font-display);font-size:1.6rem">Cria Plano</span>
-          <span class="cap">Do brandbook à pauta pronta: cada post do mês já sai com formato, gancho e direção.</span>
-          <div class="cp-weeks" aria-hidden="true">
-            <span><b>Semana 1</b>4 posts + stories</span>
-            <span><b>Semana 2</b>3 posts + stories</span>
-            <span><b>Semana 3</b>4 posts + stories</span>
-            <span><b>Semana 4</b>3 posts + stories</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-<style>
-.cp-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
-.cp-list{list-style:none;display:flex;flex-direction:column;gap:14px;color:rgba(255,255,255,.9);font-size:1rem}
-.cp-list li{display:flex;align-items:flex-start;gap:12px;line-height:1.5}
-.cp-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:5px}
-.cp-frame{background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.16);border-radius:var(--radius-lg);min-height:340px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:30px}
-/* Legenda e resumo das semanas: conteúdo de verdade dentro do quadro, no lugar
-   do antigo espaço vazio de imagem. */
-.cp-frame .cap{color:rgba(255,255,255,.8);font-size:.92rem;line-height:1.45;max-width:32ch}
-.cp-weeks{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:4px}
-.cp-weeks span{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px 10px;font-size:.78rem;color:rgba(255,255,255,.72);line-height:1.35}
-.cp-weeks b{display:block;font-family:var(--font-display);font-weight:700;font-size:.85rem;color:var(--amarelo);margin-bottom:2px}
-@media(max-width:900px){.cp-grid{grid-template-columns:1fr}.cp-frame{min-height:240px}}
-</style>
-
-<!-- ==================== FUNCIONALIDADES ==================== -->
 <section id="func" style="position:relative;overflow:hidden">
   <!-- Formas orgânicas do brandbook flutuando atrás dos pilares -->
   <div class="func-blobs" aria-hidden="true">
@@ -1475,56 +1349,6 @@ gsap.utils.toArray('.reveal-scale').forEach((el,i)=>{
 /* ---------- dores em cascata ---------- */
 gsap.to('.dor-item',{opacity:1,x:0,duration:.55,stagger:.14,ease:'power2.out',scrollTrigger:{trigger:'.dor-list',start:'top 80%'}});
 gsap.set('.dor-item',{x:-24});
-
-/* ---------- Ciclo CRIA: pinned scrub ---------- */
-const frames = gsap.utils.toArray('.ciclo-frame');
-const steps  = gsap.utils.toArray('.step');
-function activate(i){
-  steps.forEach((s,idx)=>s.classList.toggle('active',idx===i));
-}
-ScrollTrigger.matchMedia({
-  '(min-width: 901px)': function(){
-    gsap.set(frames[0],{opacity:1});
-    activate(0);
-    /* pina a seção inteira (título incluso) enquanto as 6 etapas rodam */
-    const tl = gsap.timeline({
-      scrollTrigger:{
-        trigger:'#ciclo-inner', start:'top 84px', end:'+=1500',
-        pin:true, scrub:.6,
-        onUpdate:self=>{
-          const i=Math.min(5,Math.floor(self.progress*6));
-          activate(i);
-        }
-      }
-    });
-    for(let i=1;i<frames.length;i++){
-      tl.to(frames[i-1],{opacity:0,y:-30,duration:.4},i)
-        .fromTo(frames[i],{opacity:0,y:30},{opacity:1,y:0,duration:.4},i+.1);
-    }
-  },
-  '(max-width: 900px)': function(){
-    /* MOBILE: slideshow no iPhone com bolinhas de progresso; os cards das
-       etapas acendem juntos. Estático e à prova de quebra. */
-    gsap.set(frames[0],{opacity:1});
-    activate(0);
-    const vis=document.querySelector('#ciclo .ciclo-visual');
-    if(vis && !document.querySelector('#ciclo .ciclo-dots')){
-      const dots=document.createElement('div');
-      dots.className='ciclo-dots';
-      frames.forEach((_,i)=>{const d=document.createElement('i');if(i===0)d.className='on';dots.appendChild(d);});
-      vis.insertAdjacentElement('afterend',dots);
-      let cur=0;
-      setInterval(()=>{
-        const n=(cur+1)%frames.length;
-        gsap.to(frames[cur],{opacity:0,duration:.35});
-        gsap.fromTo(frames[n],{opacity:0,y:14},{opacity:1,y:0,duration:.45});
-        dots.children[cur].className='';
-        dots.children[n].className='on';
-        activate(n); cur=n;
-      },3000);
-    }
-  }
-});
 
 /* ---------- counters ----------
    O HTML já traz o valor final; aqui a gente só zera e conta quando a animação
