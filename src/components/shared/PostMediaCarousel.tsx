@@ -58,12 +58,15 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
       // real medida, o iframe cresce (até o teto de escala) e o slot vira janela
       // com overflow-hidden que corta o excesso. Sem medição, null: fica o
       // iframe de sempre com as barras, sem chute.
-      // SÓ NO DESKTOP: no celular os controles do player do Google ficam sempre
-      // visíveis (touch) e eram ampliados junto com o vídeo, virando botões
-      // gigantes cortados no meio da tela (a aprovação "desconfigurada" no
-      // iPhone). No mobile o player fica contido, com os controles normais.
-      const desktop = typeof window !== "undefined" && window.innerWidth >= 768;
-      const cover = desktop && kind === "drive" && videoRatio && slotRatio > 0 ? coverIframeStyle(videoRatio, slotRatio) : null;
+      // VALE NO CELULAR TAMBÉM. Antes o cover só rodava no desktop, por causa
+      // dos controles do player do Google que ficavam gigantes ao ampliar muito.
+      // Só que o portal de aprovação é aberto justamente NO CELULAR, e lá o
+      // vídeo ficava contido com borda em volta (a reclamação recorrente). Com
+      // o teto de escala em 1.5, a ampliação necessária pro caso real (vídeo
+      // vertical em card vertical) é pequena e os controles seguem legíveis;
+      // acima disso o coverIframeStyle devolve null e o player fica contido
+      // sobre o fundo desfocado, que é bem melhor que a tarja.
+      const cover = kind === "drive" && videoRatio && slotRatio > 0 ? coverIframeStyle(videoRatio, slotRatio) : null;
       return (
         <div ref={slotRef} className="relative w-full h-full bg-black overflow-hidden">
           {/* Quando o player não cobre o slot inteiro (vertical dentro de card
