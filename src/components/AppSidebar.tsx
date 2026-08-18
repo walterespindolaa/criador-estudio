@@ -65,6 +65,9 @@ const groups = [
       // kanban, porque é ele que ENCHE o kanban.
       { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, feature: "cria-plano" },
       { title: "Criando", url: "/app/criando", icon: Kanban },
+      // Tarefa é o que destrava o post ("gravar o reel", "escrever a legenda"),
+      // então mora ao lado do Criando e não em Planejar.
+      { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
       { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, feature: "stories" },
     ],
   },
@@ -74,7 +77,6 @@ const groups = [
       { title: "Meu Feed", url: "/app/feed", icon: Grid3X3, feature: "feed" },
       { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck },
       { title: "Metas", url: "/app/metas", icon: Target },
-      { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
       { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
     ],
   },

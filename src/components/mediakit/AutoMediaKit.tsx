@@ -68,7 +68,7 @@ export const AutoMediaKit = forwardRef<HTMLDivElement, Props>(function AutoMedia
 
       <div id="media-kit-print" ref={ref} style={{ background: "#fff", borderRadius: 18, overflow: "hidden", border: "1px solid #e7ece9", fontFamily: "Inter, system-ui, sans-serif", color: "#1a2420" }}>
         {/* hero */}
-        <div style={{ background: `linear-gradient(135deg, ${accent} 0%, #0c5947 55%, #1d9e75 100%)`, color: "#fff", padding: "30px 32px 26px", position: "relative" }}>
+        <div data-pdf-block style={{ background: `linear-gradient(135deg, ${accent} 0%, #0c5947 55%, #1d9e75 100%)`, color: "#fff", padding: "30px 32px 26px", position: "relative" }}>
           <span style={{ position: "absolute", top: 20, right: 28, fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", opacity: .8, fontWeight: 600 }}>Media Kit · {new Date().getFullYear()}</span>
           <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
             <div style={{ width: 84, height: 84, borderRadius: "50%", background: "linear-gradient(135deg,#F58529,#DD2A7B,#515BD4)", border: "3px solid rgba(255,255,255,.6)", flexShrink: 0, overflow: "hidden", display: "grid", placeItems: "center", color: "#fff", fontWeight: 800, fontSize: 28 }}>
@@ -90,7 +90,7 @@ export const AutoMediaKit = forwardRef<HTMLDivElement, Props>(function AutoMedia
         </div>
 
         {/* stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 1, background: "#e7ece9" }}>
+        <div data-pdf-block style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 1, background: "#e7ece9" }}>
           {[
             [fmt(stats.followers), "Seguidores"],
             [fmt(stats.reachMonth), "Alcance / mês"],
@@ -107,7 +107,7 @@ export const AutoMediaKit = forwardRef<HTMLDivElement, Props>(function AutoMedia
         <div style={{ padding: "26px 32px 8px" }}>
           {/* audiência */}
           <Section title="Audiência" accent={accent}>
-            <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 24, alignItems: "center" }}>
+            <div data-pdf-block style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 24, alignItems: "center" }}>
               <div>
                 {(kit.audience ?? []).map((b) => (
                   <div key={b.label} style={{ marginBottom: 10 }}>
@@ -145,7 +145,7 @@ export const AutoMediaKit = forwardRef<HTMLDivElement, Props>(function AutoMedia
             if (extra.length < 2) return null;
             return (
               <Section title="Desempenho · últimos 30 dias" accent={accent}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 10 }}>
+                <div data-pdf-block style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 10 }}>
                   {extra.map(([n, l]) => (
                     <div key={l} style={{ background: "#f4f7f5", borderRadius: 10, padding: "12px 14px" }}>
                       <div style={{ fontFamily: "Sora, Inter, sans-serif", fontSize: 19, fontWeight: 700, color: accent }}>{n}</div>
@@ -160,7 +160,7 @@ export const AutoMediaKit = forwardRef<HTMLDivElement, Props>(function AutoMedia
           {/* melhores conteúdos */}
           {posts.length > 0 && (
             <Section title="Melhores conteúdos · 90 dias" accent={accent}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
+              <div data-pdf-block style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
                 {posts.slice(0, 3).map((p, i) => (
                   <div key={i} style={{ border: "1px solid #e7ece9", borderRadius: 12, overflow: "hidden" }}>
                     <div style={{ aspectRatio: "4/5", background: POST_GRADS[i % 3], position: "relative", overflow: "hidden" }}>
@@ -188,7 +188,7 @@ export const AutoMediaKit = forwardRef<HTMLDivElement, Props>(function AutoMedia
                   {(kit.services ?? []).map((s, i) => (
                     <tr key={i}>
                       <td style={{ padding: "12px 0", borderBottom: "1px solid #e7ece9" }}>
-                        <div>{s.name}</div>
+                        <div data-pdf-block>{s.name}</div>
                         {s.desc && <div style={{ fontSize: 11.5, color: "#6b7670", marginTop: 2 }}>{s.desc}</div>}
                       </td>
                       <td style={{ padding: "12px 0", borderBottom: "1px solid #e7ece9", textAlign: "right", fontWeight: 700, color: "#085041", fontFamily: "Sora, Inter, sans-serif" }}>{s.price}</td>
@@ -201,7 +201,7 @@ export const AutoMediaKit = forwardRef<HTMLDivElement, Props>(function AutoMedia
         </div>
 
         {/* cta */}
-        <div style={{ background: "#E1F5EE", margin: "4px 32px 0", borderRadius: 14, padding: "20px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
+        <div data-pdf-block style={{ background: "#E1F5EE", margin: "4px 32px 0", borderRadius: 14, padding: "20px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
           <div>
             <h3 style={{ fontFamily: "Sora, Inter, sans-serif", fontSize: 16, color: "#085041", margin: 0 }}>Vamos criar juntos?</h3>
             <p style={{ fontSize: 12.5, color: accent, marginTop: 3 }}>Aberta a campanhas alinhadas com o meu conteúdo.</p>

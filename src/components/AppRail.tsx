@@ -28,6 +28,10 @@ const TOP: NavNode[] = [
   { id: "criar", label: "nav.create", icon: PenLine, children: [
     { label: "nav.ideas", icon: Lightbulb, to: "/app/ideias" },
     { label: "nav.inProduction", icon: Kanban, to: "/app/criando" },
+    // Tarefa aqui é "o que falta pra ESSE post sair" (gravar, editar, escrever
+    // a legenda): é execução, não planejamento. Fica logo abaixo do Em produção,
+    // que é de onde a pessoa vem quando percebe que algo travou.
+    { label: "nav.tasks", icon: ListTodo, to: "/app/tarefas" },
     { label: "nav.criaPlan", icon: Wand2, to: "/app/autopilot" },
     { label: "nav.criaStories", icon: Clapperboard, to: "/app/stories" },
   ]},
@@ -39,7 +43,6 @@ const TOP: NavNode[] = [
     { label: "nav.myFeed", icon: Grid3X3, to: "/app/feed" },
     { label: "nav.approvals", icon: ClipboardCheck, to: "/app/aprovacao" },
     { label: "nav.calendarGoals", icon: Target, to: "/app/metas" },
-    { label: "nav.tasks", icon: ListTodo, to: "/app/tarefas" },
     { label: "nav.files", icon: FolderOpen, to: "/app/arquivos" },
   ]},
   { id: "marca", label: "nav.myBrand", icon: Palette, children: [

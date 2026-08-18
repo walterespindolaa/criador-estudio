@@ -6,7 +6,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useSocialConnection, useDailyMetrics, useMediaInsights, useSyncInstagram, useSocialAccountOwner, connectInstagram } from "@/hooks/useSocialInsights";
 import { useMediaKitProfile, useSaveMediaKitProfile, useCustomMediaKit, type MediaKitProfile, type KitService } from "@/hooks/useMediaKit";
 import { AutoMediaKit, type KitStats, type KitTopPost } from "@/components/mediakit/AutoMediaKit";
-import { usePdfExport } from "@/hooks/usePdfExport";
+import { usePdfExport, LARGURA_A4 } from "@/hooks/usePdfExport";
 import { useTier } from "@/hooks/useTier";
 import { Link } from "react-router-dom";
 import { Lock } from "lucide-react";
@@ -38,7 +38,9 @@ export default function MediaKit() {
   const downloadPdf = async () => {
     setDownloading(true);
     try {
-      await exportPdf(printRef, `media-kit-${(conn?.username || profile?.name || "cria").replace(/\W+/g, "-").toLowerCase()}`);
+      // Largura de folha: sem isso o PDF saía com o conteúdo medido pela
+      // largura da TELA (faixa branca de um lado, corte do outro).
+      await exportPdf(printRef, `media-kit-${(conn?.username || profile?.name || "cria").replace(/\W+/g, "-").toLowerCase()}`, { larguraFixa: LARGURA_A4 });
     } catch (e) {
       console.error("media kit pdf failed", e);
       toast.error("Não consegui gerar o PDF agora.");

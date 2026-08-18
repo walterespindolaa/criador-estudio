@@ -66,6 +66,16 @@ export function useTasks(options?: { limit?: number }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks", userId] }),
   });
 
+  // Editar a tarefa inteira. Antes só existia troca de STATUS: pra corrigir um
+  // título ou um prazo a pessoa tinha que apagar e criar de novo.
+  const updateTask = useMutation({
+    mutationFn: async ({ id, ...patch }: { id: string } & Partial<Pick<Task, "title" | "description" | "priority" | "status" | "due_date" | "post_id">>): Promise<void> => {
+      const { error } = await supabase.from("tasks").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks", userId] }),
+  });
+
   const deleteTask = useMutation({
     mutationFn: async (id: string): Promise<void> => {
       const { error } = await supabase.from("tasks").delete().eq("id", id);
@@ -74,5 +84,5 @@ export function useTasks(options?: { limit?: number }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks", userId] }),
   });
 
-  return { tasks, isLoading, error, createTask, updateTaskStatus, deleteTask };
+  return { tasks, isLoading, error, createTask, updateTask, updateTaskStatus, deleteTask };
 }

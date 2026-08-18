@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion } from "framer-motion";
-import { Plus, Calendar, Link2, Trash2, ListTodo } from "lucide-react";
+import { Plus, Calendar, Link2, Trash2, ListTodo, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,10 +52,13 @@ const FILTERS = [
 
 const Tarefas = () => {
   const { user } = useAuth();
-  const { tasks, createTask, updateTaskStatus, deleteTask } = useTasks();
+  const { tasks, isLoading, createTask, updateTask, updateTaskStatus, deleteTask } = useTasks();
   const { posts } = usePosts();
   const [filter, setFilter] = useState("todas");
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
+  // Tarefa em edição: o mesmo formulário serve pra criar e pra editar (antes
+  // não existia edição nenhuma, só apagar e recriar).
+  const [editando, setEditando] = useState<Task | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   // Prévia mostra o DONO do post: cliente do Cria Post (external_client_id) →
@@ -101,12 +104,45 @@ const Tarefas = () => {
   };
 
   const openNew = () => {
+    setEditando(null);
     reset();
+    setIsNewTaskOpen(true);
+  };
+
+  const openEdit = (task: Task) => {
+    setEditando(task);
+    reset({
+      title: task.title,
+      priority: task.priority as TaskFormData["priority"],
+      due_date: task.due_date ?? "",
+      status: task.status as TaskFormData["status"],
+      notes: task.description ?? "",
+      post_id: task.post_id ?? null,
+    });
     setIsNewTaskOpen(true);
   };
 
   const onSubmit = async (data: TaskFormData) => {
     if (!user) return;
+    if (editando) {
+      try {
+        await updateTask.mutateAsync({
+          id: editando.id,
+          title: sanitizeText(data.title),
+          description: data.notes ? sanitizeText(data.notes) : null,
+          priority: data.priority,
+          status: data.status,
+          due_date: data.due_date || null,
+          post_id: data.post_id || null,
+        });
+        toast.success("Tarefa atualizada!");
+        setIsNewTaskOpen(false);
+        setEditando(null);
+      } catch {
+        toast.error("Erro ao salvar a tarefa.");
+      }
+      return;
+    }
     try {
       await createTask.mutateAsync({
         title: sanitizeText(data.title),
@@ -132,7 +168,18 @@ const Tarefas = () => {
     }
   };
 
+  // A coluna "em andamento" existia no board mas NÃO havia caminho pra ela: o
+  // checkbox só alternava pendente/concluída. Agora o card tem o atalho.
+  const moverPara = async (task: Task, status: "pendente" | "em_andamento") => {
+    try {
+      await updateTaskStatus.mutateAsync({ id: task.id, status });
+    } catch {
+      toast.error("Erro ao mover a tarefa.");
+    }
+  };
+
   const handleDelete = async (id: string) => {
+    if (!window.confirm("Excluir esta tarefa?")) return;
     try {
       await deleteTask.mutateAsync(id);
       toast.success("Tarefa removida.");
@@ -182,7 +229,22 @@ const Tarefas = () => {
 
         {/* Três colunas vazias não ensinam nada parecem um sistema que não
             carregou. Aqui a tela diz o que ela É antes de pedir a primeira tarefa. */}
-        {tasks.length === 0 && (
+        {/* Enquanto busca, esqueleto. Antes a tela caía no estado vazio
+            ("crie sua primeira tarefa") mesmo pra quem já tinha tarefas, porque
+            no primeiro render a lista ainda chega vazia. */}
+        {isLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="space-y-3">
+                <div className="h-5 w-28 rounded bg-muted animate-pulse" />
+                <div className="h-24 rounded-xl bg-muted animate-pulse" />
+                <div className="h-24 rounded-xl bg-muted animate-pulse" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && tasks.length === 0 && (
           <EmptyState
             icon={ListTodo}
             cor="verde"
@@ -197,7 +259,7 @@ const Tarefas = () => {
           />
         )}
 
-        <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-6", tasks.length === 0 && "hidden")}>
+        <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-6", (isLoading || tasks.length === 0) && "hidden")}>
           {(["pendente", "em_andamento", "concluida"] as const).map(status => (
             <div key={status} className="space-y-4">
               <div className="flex items-center justify-between px-1">
@@ -249,6 +311,19 @@ const Tarefas = () => {
                               </span>
                             )}
 
+                            {/* A nota era gravada e nunca aparecia no card. */}
+                            {task.description && (
+                              <span className="block w-full text-[11px] font-body text-muted-foreground line-clamp-2 mt-0.5">{task.description}</span>
+                            )}
+
+                            {task.status !== "concluida" && (
+                              <button
+                                onClick={() => moverPara(task, task.status === "em_andamento" ? "pendente" : "em_andamento")}
+                                className="text-[10px] font-medium text-primary hover:underline">
+                                {task.status === "em_andamento" ? "voltar pra pendente" : "mover pra em andamento"}
+                              </button>
+                            )}
+
                             {task.post_id && (
                               <button
                                 onClick={() => handlePostPreview(task.post_id!)}
@@ -260,6 +335,13 @@ const Tarefas = () => {
                             )}
                           </div>
                         </div>
+                        <button
+                          aria-label="Editar tarefa"
+                          onClick={() => openEdit(task)}
+                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 hover:bg-primary/10 rounded transition-all"
+                        >
+                          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                        </button>
                         <button
                           aria-label="Excluir tarefa"
                           onClick={() => handleDelete(task.id)}
@@ -277,11 +359,11 @@ const Tarefas = () => {
         </div>
       </motion.div>
 
-      <Dialog open={isNewTaskOpen} onOpenChange={setIsNewTaskOpen}>
+      <Dialog open={isNewTaskOpen} onOpenChange={(o) => { setIsNewTaskOpen(o); if (!o) setEditando(null); }}>
         <DialogContent className="sm:max-w-md bg-background rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
           <div className="p-6 space-y-5">
             <DialogHeader>
-              <DialogTitle className="font-display text-xl">Nova Tarefa</DialogTitle>
+              <DialogTitle className="font-display text-xl">{editando ? "Editar tarefa" : "Nova Tarefa"}</DialogTitle>
             </DialogHeader>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -342,11 +424,11 @@ const Tarefas = () => {
               </div>
 
               <div className="pt-2 flex gap-3">
-                <Button type="button" variant="outline" className="flex-1" onClick={() => setIsNewTaskOpen(false)}>
+                <Button type="button" variant="outline" className="flex-1" onClick={() => { setIsNewTaskOpen(false); setEditando(null); }}>
                   Cancelar
                 </Button>
-                <Button type="submit" variant="hero" className="flex-1">
-                  Criar Tarefa
+                <Button type="submit" variant="hero" className="flex-1" disabled={createTask.isPending || updateTask.isPending}>
+                  {createTask.isPending || updateTask.isPending ? "Salvando…" : editando ? "Salvar tarefa" : "Criar Tarefa"}
                 </Button>
               </div>
             </form>

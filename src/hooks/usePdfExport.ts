@@ -88,11 +88,44 @@ async function waitForImages(element: HTMLElement, timeoutMs = 6000) {
 // Renderiza o elemento num jsPDF (html2canvas + paginação A4, agora fatiando o
 // canvas por página em vez de deslocar a imagem inteira: assim cada página é só
 // o pedaço dela e o corte cai entre blocos).
-async function buildPdf(element: HTMLDivElement) {
+// Largura de uma folha A4 em pixels de CSS a 96dpi. É a largura em que o
+// conteúdo precisa ser MEDIDO pra caber na página inteira, sem faixa branca de
+// um lado e sem cortar do outro.
+const A4_PX = 794;
+
+/**
+ * Captura com LARGURA FIXA: aplica a largura de folha no elemento, mede, e
+ * depois devolve o estilo original. Sem isto, o html2canvas fotografa a largura
+ * que o elemento tem NA TELA: no notebook estreito (ou no celular) o conteúdo
+ * saía menor que a página, deixando a faixa branca à direita do PDF; e o layout
+ * responsivo interno mudava, quebrando as colunas.
+ */
+function fixarLargura(element: HTMLElement, px: number) {
+  const antes = {
+    width: element.style.width,
+    minWidth: element.style.minWidth,
+    maxWidth: element.style.maxWidth,
+  };
+  element.style.width = `${px}px`;
+  element.style.minWidth = `${px}px`;
+  element.style.maxWidth = `${px}px`;
+  // Força o navegador a recalcular o layout antes da foto.
+  void element.offsetHeight;
+  return () => {
+    element.style.width = antes.width;
+    element.style.minWidth = antes.minWidth;
+    element.style.maxWidth = antes.maxWidth;
+  };
+}
+
+async function buildPdf(element: HTMLDivElement, larguraFixa?: number) {
   const { default: html2canvas } = await import("html2canvas");
   const { default: jsPDF } = await import("jspdf");
 
   await waitForImages(element);
+  // Precisa vir ANTES de qualquer medição (blocos, altura, largura).
+  const restaurar = larguraFixa ? fixarLargura(element, larguraFixa) : null;
+  try {
 
   // MODO PAGINADO: quando o elemento é montado em folhas A4 reais
   // ([data-pdf-page], caso do relatório do cliente), fotografamos cada folha
@@ -184,21 +217,33 @@ async function buildPdf(element: HTMLDivElement) {
     from = to;
   });
   return pdf;
+  } finally {
+    restaurar?.();
+  }
 }
 
+export type PdfOpcoes = {
+  /** Mede o conteúdo nesta largura (px) em vez da largura da tela. Use
+   *  LARGURA_A4 pra documentos que devem preencher a folha inteira. */
+  larguraFixa?: number;
+};
+
+/** Largura de folha A4 em px de CSS: o padrão pra documento que enche a página. */
+export const LARGURA_A4 = A4_PX;
+
 export function usePdfExport() {
-  const exportPdf = async (elementRef: React.RefObject<HTMLDivElement | null>, filename: string) => {
+  const exportPdf = async (elementRef: React.RefObject<HTMLDivElement | null>, filename: string, op?: PdfOpcoes) => {
     const element = elementRef.current;
     if (!element) return;
-    const pdf = await buildPdf(element);
+    const pdf = await buildPdf(element, op?.larguraFixa);
     pdf.save(`${filename}.pdf`);
   };
 
   // Mesmo PDF, mas como Blob (pra publicar no Storage e compartilhar por link).
-  const exportPdfBlob = async (elementRef: React.RefObject<HTMLDivElement | null>): Promise<Blob | null> => {
+  const exportPdfBlob = async (elementRef: React.RefObject<HTMLDivElement | null>, op?: PdfOpcoes): Promise<Blob | null> => {
     const element = elementRef.current;
     if (!element) return null;
-    const pdf = await buildPdf(element);
+    const pdf = await buildPdf(element, op?.larguraFixa);
     return pdf.output("blob");
   };
 
