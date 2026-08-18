@@ -177,6 +177,15 @@ export default function ManagerLayout() {
     </button>
   );
 
+  // ATENÇÃO: todo hook precisa ficar ACIMA das guardas abaixo (os returns de
+  // LoadingScreen/Navigate). Hook chamado depois de um return condicional roda
+  // em um render e não roda no outro, e o React derruba a tela com o erro #310.
+  const { overview } = useManagerApprovalOverview();
+  const travados = overview.reduce((s, r) => s + (r.pendentes ?? 0), 0);
+  // Bolinha com número no ícone do app (PWA instalado). A pessoa bate o olho na
+  // tela do celular e vê "3 posts esperando o cliente", sem abrir nada.
+  useEffect(() => { definirBadge(travados); }, [travados]);
+
   // Guards
   // No F5 o profile chega ANTES das contas (managed/time). Se a gente decidisse o
   // redirect agora, hasManagedAccounts/actingAsTeam ainda seriam false e o gestor
@@ -199,13 +208,6 @@ export default function ManagerLayout() {
   // dashboard, o dia de hoje e a única coisa que está te travando. A saudação
   // fica só no card, que é onde ela tem companhia (foto, números, atalhos).
   const isDash = location.pathname === "/socialmidia" || location.pathname === "/socialmidia/dashboard";
-
-  const { overview } = useManagerApprovalOverview();
-  const travados = overview.reduce((s, r) => s + (r.pendentes ?? 0), 0);
-
-  // Bolinha com número no ícone do app (PWA instalado). A pessoa bate o olho na
-  // tela do celular e vê "3 posts esperando o cliente", sem abrir nada.
-  useEffect(() => { definirBadge(travados); }, [travados]);
 
   const firstName = (profile?.name ?? "").trim().split(" ")[0] || "você";
 
