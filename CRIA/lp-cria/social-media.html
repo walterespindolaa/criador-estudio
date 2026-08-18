@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<meta name="description" content="Cria Post, Cria Gestão, Cria Caixa, Cria Captação e Cria Radar. O CRIA opera o lado gestor de quem vive de social media: aprovação por link, CRM, financeiro, captações e relatórios white-label. Conta grátis.">
+<meta name="description" content="Cria Post, Cria Gestão, Cria Caixa, Cria Captação e Cria Radar. O CRIA opera a rotina de quem vive de social media: aprovação por link, CRM, financeiro, captações e relatórios white-label. Conta grátis.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="CRIA pra Social Medias | A operação inteira de quem gerencia clientes">
 <meta property="og:description" content="Aprovação por link, CRM, financeiro, captações e relatórios white-label. Conta grátis, módulos à parte.">
@@ -84,7 +84,7 @@ h1 .hl{color:var(--amarelo)}
 
 /* modulos: blocos alternados */
 #modulos{padding:80px 0 40px}
-.mod{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;padding:44px 0;border-bottom:1.5px dashed rgba(21,20,18,.15)}
+.mod{display:grid;grid-template-columns:.92fr 1.18fr;gap:44px;align-items:center;padding:44px 0;border-bottom:1.5px dashed rgba(21,20,18,.15)}
 .mod:last-child{border-bottom:none}
 .mod:nth-child(even) .mod-visual{order:-1}
 /* Numeração do módulo: mostra que a lista tem fim, o olho acompanha o avanço */
@@ -100,13 +100,13 @@ h1 .hl{color:var(--amarelo)}
 .mod li b{color:var(--verde);flex-shrink:0}
 /* Visual dos módulos com forma orgânica e leve inclinação: retângulo perfeito
    é o que deixava a página com cara de template. */
-.mod-visual{border-radius:38px 52px 40px 56px;min-height:0;padding:26px 20px;display:flex;align-items:center;justify-content:center;position:relative;transform:rotate(-1.2deg);transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
-.mod:nth-child(even) .mod-visual{transform:rotate(1.1deg)}
+.mod-visual{border-radius:34px 46px 36px 50px;min-height:0;padding:18px 16px;display:flex;align-items:center;justify-content:center;position:relative;transform:rotate(-.7deg);transition:transform .35s cubic-bezier(.34,1.56,.64,1)}
+.mod:nth-child(even) .mod-visual{transform:rotate(.6deg)}
 .mod-visual:hover{transform:rotate(0deg) scale(1.015)}
 /* Janelinha de app: ilustração da interface em cima do bloco colorido, com uma
    legenda no rodapé do cartão dizendo o que aquela tela entrega. */
-.mock{width:min(340px,82%);background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 18px 40px rgba(10,10,10,.28);transform:rotate(-1.5deg);flex-shrink:0}
-.mod:nth-child(even) .mock{transform:rotate(1.2deg)}
+.mock{width:min(340px,82%);background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 18px 40px rgba(10,10,10,.28);flex-shrink:0}
+
 .mock-bar{display:flex;gap:6px;padding:11px 14px;background:rgba(10,10,10,.06);border-bottom:1px solid rgba(10,10,10,.06)}
 .mock-bar i{width:9px;height:9px;border-radius:50%;background:var(--laranja);opacity:.85}
 .mock-bar i:nth-child(2){background:var(--amarelo)}
@@ -127,12 +127,12 @@ h1 .hl{color:var(--amarelo)}
 .smblob{position:absolute;display:block;animation:smblob-float 14s ease-in-out infinite}
 @keyframes smblob-float{0%,100%{transform:translate(0,0) rotate(0deg) scale(1)}33%{transform:translate(16px,-20px) rotate(7deg) scale(1.05)}66%{transform:translate(-12px,14px) rotate(-6deg) scale(.97)}}
 @media(prefers-reduced-motion:reduce){.smblob{animation:none}}
-.mock--wide{width:min(580px,100%)}
-.mock-img{width:100%;display:block}
+.mock--wide{width:100%}
+.mock-img{width:100%;display:block;image-rendering:-webkit-optimize-contrast;backface-visibility:hidden;transform:translateZ(0)}
 .mock>.mk-label{margin:0;padding:12px 16px 13px;border-top:2px solid var(--laranja);background:var(--creme-2);position:relative;z-index:2}
 /* Print do hero: janelinha grande, inclinada, flutuando sobre o azul */
 .hero-wrap{background:var(--azul);position:relative;z-index:3;padding:0 0 1px}
-.hero-shot{width:min(920px,94%);margin:0 auto;transform:translateY(34px) rotate(-1.2deg);background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 30px 70px rgba(10,10,10,.4);position:relative;z-index:3}
+.hero-shot{width:min(920px,94%);margin:0 auto;transform:translateY(34px) rotate(-.5deg);background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 30px 70px rgba(10,10,10,.4);position:relative;z-index:3}
 .hero-shot img{width:100%;display:block}
 #hero{padding-bottom:0}
 #semana{padding-top:120px}
@@ -144,6 +144,17 @@ h1 .hl{color:var(--amarelo)}
 /* Faixa "vem junto": o que a conta gratis ja inclui, sem virar bloco gigante */
 #vem-junto{margin:10px 0 30px}
 .vj-shot{max-width:920px;margin:20px auto 0;border-radius:16px;overflow:hidden;box-shadow:0 14px 34px rgba(10,10,10,.18);border:2px solid rgba(10,10,10,.1)}
+/* Carrossel de prints do "já vem junto": scroll-snap horizontal (arrasta no
+   celular) + setas no desktop. Sem biblioteca. */
+.vj-car{position:relative;max-width:1000px;margin:20px auto 0}
+.vj-track{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:4px}
+.vj-track::-webkit-scrollbar{display:none}
+.vj-track figure{flex:0 0 88%;max-width:900px;margin:0;scroll-snap-align:center}
+.vj-track img{width:100%;display:block;border-radius:16px;box-shadow:0 14px 34px rgba(10,10,10,.18);border:2px solid rgba(10,10,10,.1);cursor:zoom-in}
+.vj-track figcaption{font-size:.86rem;opacity:.72;margin-top:8px;text-align:center}
+.vj-nav{position:absolute;top:38%;z-index:2;width:40px;height:40px;border-radius:50%;border:2px solid rgba(10,10,10,.12);background:#fff;font-size:1.4rem;line-height:1;cursor:pointer;box-shadow:0 6px 16px rgba(10,10,10,.14)}
+.vj-prev{left:-6px}.vj-next{right:-6px}
+@media(max-width:860px){.vj-nav{display:none}.vj-track figure{flex:0 0 92%}}
 .vj-shot img{width:100%;display:block;cursor:zoom-in}
 .vj-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}
 .vj-card{background:var(--branco);border:2.5px solid var(--ink);border-radius:18px 22px 18px 24px;padding:18px;box-shadow:5px 5px 0 rgba(10,10,10,.85);transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
@@ -282,13 +293,13 @@ html,body{overflow-x:clip}
       <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Começar grátis</a>
       <a href="#modulos" class="btn btn-ghost">Ver os módulos ↓</a>
     </div>
-    <p class="micro" style="color:rgba(244,239,227,.7)">Área do gestor gratuita · Você ativa só os módulos que precisar</p>
+    <p class="micro" style="color:rgba(244,239,227,.7)">Conta de social media gratuita · Você ativa só os módulos que precisar</p>
   </div>
 </section>
 
 <div class="hero-wrap">
   <div class="hero-shot" id="heroShot">
-    <img src="prints/home-copiloto.webp" alt="Home do gestor no CRIA: clientes ativos, previsão do mês e o que precisa de você hoje" fetchpriority="high">
+    <img src="prints/home-copiloto.webp" alt="Home do social media no CRIA: clientes ativos, previsão do mês e o que precisa de você hoje" fetchpriority="high">
   </div>
 </div>
 
@@ -300,7 +311,7 @@ html,body{overflow-x:clip}
       <h2>A sua semana, <span class="script" style="color:var(--laranja);font-size:1.15em">sem filtro</span></h2>
     </div>
     <div class="sem-grid">
-      <div class="sem-card reveal" style="--sc:var(--azul)"><span class="sem-dia script">domingo, 23h</span><p>Montando relatório no Canva com print de story que já expirou. De novo.</p></div>
+      <div class="sem-card reveal" style="--sc:var(--azul)"><span class="sem-dia script">domingo, 23h</span><p>Abrindo o Notion pra tentar lembrar o que tem pra semana. Sobrou post de sexta? Quem ficou sem aprovar? Ninguém sabe.</p></div>
       <div class="sem-card reveal" style="--sc:var(--laranja)"><span class="sem-dia script">segunda</span><p>"Oi, conseguiu ver os posts?" pela 4ª vez. A resposta chega em áudio de 4 minutos.</p></div>
       <div class="sem-card reveal" style="--sc:var(--rosa)"><span class="sem-dia script">quarta</span><p>O post voltou "com um ajustinho" que você já tinha feito. Ficou 5 dias parado e a culpa sobrou pra você.</p></div>
       <div class="sem-card reveal" style="--sc:var(--verde)"><span class="sem-dia script">sexta</span><p>Quem pagou esse mês? A planilha não sabe. E você cobra com vergonha, como se o errado fosse você.</p></div>
@@ -366,9 +377,9 @@ html,body{overflow-x:clip}
   </div>
   <div class="container" style="position:relative;z-index:1">
     <div style="text-align:center;max-width:720px;margin:0 auto 30px" class="reveal">
-      <span class="kicker" style="background:var(--azul)">Os módulos do gestor</span>
+      <span class="kicker" style="background:var(--azul)">Os módulos do social media</span>
       <h2>A operação inteira, <span class="script" style="color:var(--laranja);font-size:1.15em">módulo por módulo</span></h2>
-      <p style="opacity:.8;max-width:56ch;margin:12px auto 0;text-align:center">A conta de gestor é grátis e já vem com seus clientes organizados. Aí você monta a SUA operação: ativa só o módulo que resolve o seu gargalo de hoje, e o resto quando (e se) precisar.</p>
+      <p style="opacity:.8;max-width:56ch;margin:12px auto 0;text-align:center">A conta de social media é grátis e já vem com seus clientes organizados. Aí você monta a SUA operação: ativa só o módulo que resolve o seu gargalo de hoje, e o resto quando (e se) precisar.</p>
     </div>
 
     <div class="mod reveal">
@@ -436,7 +447,7 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Gravou? A captação vira post em 1 clique</li>
         </ul>
       </div>
-      <div class="mod-visual" style="background:var(--amarelo)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/captacao.webp" alt="Cria Captação: quadro de captações do mês por cliente com roteiros"><span class="mk-label">As gravações do mês, por cliente, com roteiro pronto no card.</span></div></div>
+      <div class="mod-visual" style="background:var(--amarelo)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/captacao.webp" alt="Cria Captação: gravações do mês por cliente, com a próxima gravação em destaque e o que está sem roteiro"><span class="mk-label">As gravações do mês, cliente por cliente: o que já gravou, o que falta e o que está sem roteiro.</span></div></div>
     </div>
     <div class="mod-pausa reveal">
       <p>Já dá pra parar de pagar 4 ferramentas? <a href="https://app.criasocialclub.com.br/signup">Criar conta grátis →</a></p>
@@ -462,11 +473,12 @@ html,body{overflow-x:clip}
         <span class="mod-tag" style="background:var(--verde);color:#fff"><svg class="svgi" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg> Relatórios pro cliente</span>
         <h3>O relatório que levava 3 horas sai em minutos</h3>
         <p class="mod-preco" style="color:var(--verde)">Já vem no Cria Post</p>
-        <p>Insights reais do Instagram viram um relatório profissional, com a identidade do cliente. Ele vê valor, você não vira a madrugada.</p>
+        <p>Insights reais do Instagram viram um relatório profissional, com a identidade do cliente. Ele vê tudo que foi produzido no mês. Chega de ficar encaminhando planilha ou print.</p>
         <ul>
           <li><b>✓</b> Dados reais do Instagram, sem colar print</li>
           <li><b>✓</b> Com a logo e a cor de cada cliente</li>
           <li><b>✓</b> 1 clique e vai pro WhatsApp, todo fim de mês</li>
+          <li><b>✓</b> Com o Instagram do cliente conectado, as métricas reais entram no relatório sozinhas</li>
         </ul>
       </div>
       <div class="mod-visual" style="background:var(--verde)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/relatorio-modal.webp" alt="Relatório white-label sendo montado: editor à esquerda e a capa com a marca do cliente à direita"><span class="mk-label">Você edita à esquerda, a capa com a marca do cliente nasce à direita. PDF em 1 clique.</span></div></div>
@@ -485,18 +497,32 @@ html,body{overflow-x:clip}
           <li><b>✓</b> Visão geral: o que está travado em cada conta</li>
         </ul>
       </div>
-      <div class="mod-visual dark" style="background:var(--azul)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/agencia-home.webp" alt="Painel do gestor com a operação de todos os clientes e o convite do Modo Agência"><span class="mk-label">Um painel só com o que está travado em cada cliente e quem precisa de você hoje.</span></div></div>
+      <div class="mod-visual dark" style="background:var(--azul)"><div class="mock mock--wide"><div class="mock-bar"><i></i><i></i><i></i></div><img class="mock-img" loading="lazy" src="prints/agencia-home.webp" alt="Painel do social media com a operação de todos os clientes e o convite do Modo Agência"><span class="mk-label">Um painel só com o que está travado em cada cliente e quem precisa de você hoje.</span></div></div>
     </div>
 
     <div id="vem-junto" class="reveal">
       <div style="text-align:center;max-width:640px;margin:26px auto 0">
         <h3 style="font-size:clamp(1.3rem,2.6vw,1.8rem)">E já vem junto, sem pagar nada a mais:</h3>
       </div>
-      <div class="vj-shot"><img src="prints/agenda.webp" loading="lazy" class="mock-img" alt="Agenda de criação da semana com reuniões, tarefas, captações e posts de todos os clientes"></div>
+      <!-- Carrossel de prints: arrasta no mobile, setas no desktop. Trocar/somar
+           print é só adicionar um <figure> aqui (a imagem vive em prints/). -->
+      <div class="vj-car">
+        <button class="vj-nav vj-prev" type="button" aria-label="Ver anterior">‹</button>
+        <div class="vj-track" id="vjTrack">
+          <figure><img src="prints/agenda.webp" loading="lazy" class="mock-img" alt="Agenda da semana com reuniões, tarefas, captações e posts de todos os clientes"><figcaption>A semana inteira num calendário só, com arrasta e solta.</figcaption></figure>
+          <figure><img src="prints/agencia-home.webp" loading="lazy" class="mock-img" alt="Painel com todos os clientes e o que está travado em cada um"><figcaption>Seus clientes num painel só: quem precisa de você hoje.</figcaption></figure>
+          <figure><img src="prints/gestao-ficha.webp" loading="lazy" class="mock-img" alt="Ficha do cliente com contato, mensalidade, notas e hashtags"><figcaption>A ficha viva de cada cliente, do contato ao contrato.</figcaption></figure>
+          <figure><img src="prints/post-kanban.webp" loading="lazy" class="mock-img" alt="Posts de todos os clientes separados por etapa"><figcaption>Central de aprovações: o que está esperando resposta de quem.</figcaption></figure>
+          <figure><img src="prints/relatorio-modal.webp" loading="lazy" class="mock-img" alt="Relatório white-label sendo montado com a marca do cliente"><figcaption>Relatório com a marca do cliente, pronto em 1 clique.</figcaption></figure>
+        </div>
+        <button class="vj-nav vj-next" type="button" aria-label="Ver próximo">›</button>
+      </div>
       <div class="vj-grid">
         <div class="vj-card"><b>Agenda da semana</b><p>Reuniões, tarefas, captações e posts de todos os clientes num calendário só, com arrasta e solta.</p></div>
         <div class="vj-card"><b>Central de aprovações</b><p>Tudo que está esperando resposta de cliente, de todo mundo, numa tela: você vê quem está travando o quê.</p></div>
         <div class="vj-card"><b>Seus clientes organizados</b><p>A carteira inteira num painel, com o status de cada conta e quem precisa de você hoje.</p></div>
+        <div class="vj-card"><b>Planejamento de conteúdo</b><p>A IA monta o mês do cliente a partir da persona e dos pilares dele: temas, formatos e frequência, prontos pra você ajustar.</p></div>
+        <div class="vj-card"><b>Cronograma pro cliente aprovar</b><p>O mês vira um cronograma com data e formato de cada peça, que o cliente aprova por link antes de você produzir.</p></div>
         <div class="vj-card"><b>Indique e ganhe</b><p>Seu cupom de parceiro: indicou o CRIA, recebe comissão recorrente enquanto a pessoa for assinante.</p></div>
       </div>
     </div>
@@ -507,7 +533,7 @@ html,body{overflow-x:clip}
   <div class="container">
     <div class="meio-box reveal">
       <h2>Entra grátis. Ativa <span class="script">só o que precisar.</span></h2>
-      <p style="opacity:.9;max-width:54ch;margin:10px auto 28px">A área do gestor é gratuita. Cada módulo você contrata à parte, dentro do app, quando fizer sentido: <b>Cria Post e Cria Captação R$19,90</b>, <b>Cria Caixa R$24,90</b>, <b>Cria Gestão R$29,90</b>. Sem pacote inchado, sem pagar pelo que não usa.</p>
+      <p style="opacity:.9;max-width:54ch;margin:10px auto 28px">A conta de social media é gratuita. Cada módulo você contrata à parte, dentro do app, quando fizer sentido: <b>Cria Post e Cria Captação R$19,90</b>, <b>Cria Caixa R$24,90</b>, <b>Cria Gestão R$29,90</b>. Sem pacote fechado, sem pagar pelo que não usa.</p>
       <p style="opacity:.75;font-size:.85rem;margin:-16px auto 24px"><a href="#precos" style="text-decoration:underline;text-underline-offset:3px">ver todos os preços ↓</a></p>
       <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Criar minha conta grátis</a>
     </div>
@@ -523,12 +549,12 @@ html,body{overflow-x:clip}
     <div class="reveal" style="text-align:center;max-width:700px;margin:0 auto">
       <span class="kicker" style="background:var(--verde)">Preços</span>
       <h2>Você monta o seu plano.<br><span class="script" style="color:var(--laranja);font-size:1.15em">a partir de R$0</span></h2>
-      <p style="opacity:.82;margin-top:12px">Não existe pacote fechado aqui. A conta de gestor é grátis pra sempre, e cada módulo é uma assinatura separada dentro do app: ativa hoje, cancela quando quiser, sem falar com ninguém.</p>
+      <p style="opacity:.82;margin-top:12px">Não existe pacote fechado aqui. A conta de social media é grátis pra sempre, e cada módulo é uma assinatura separada dentro do app: ativa hoje, cancela quando quiser, sem falar com ninguém.</p>
     </div>
 
     <div class="pr-base reveal">
       <div>
-        <span class="pr-badge">Conta de gestor</span>
+        <span class="pr-badge">Conta de social media</span>
         <h3>Grátis pra sempre</h3>
         <p>Todos os seus clientes num painel, a central de aprovações, a agenda da semana com tudo de todo mundo e o programa de indicação. Sem cartão pra começar.</p>
       </div>
@@ -541,7 +567,7 @@ html,body{overflow-x:clip}
       <div class="pr-card reveal" style="--pc:var(--laranja)"><b>Cria Post</b><span class="pr-val">R$ 19,90</span><p>Seu cliente aprova por um link, do celular e sem criar conta. E o relatório do mês sai pronto, com a marca dele.</p></div>
       <div class="pr-card reveal" style="--pc:var(--amarelo)"><b>Cria Captação</b><span class="pr-val">R$ 19,90</span><p>O dia de gravação organizado: roteiro no teleprompter, folha do dia e a lista do que gravar.</p></div>
       <div class="pr-card reveal" style="--pc:var(--verde)"><b>Cria Caixa</b><span class="pr-val">R$ 24,90</span><p>Quanto entra, quem está te devendo e quanto sobra de cada cliente, com o imposto já calculado.</p></div>
-      <div class="pr-card reveal" style="--pc:var(--azul)"><b>Cria Gestão</b><span class="pr-val">R$ 29,90</span><p>Do primeiro contato ao contrato assinado: prospecção, proposta pronta pra enviar e a ficha de cada cliente.</p></div>
+      <div class="pr-card reveal" style="--pc:var(--azul)"><b>Cria Gestão</b><span class="pr-val">R$ 29,90</span><p>Do primeiro contato ao contrato assinado: prospecção, proposta pronta pra enviar, estratégia do cliente e a ficha dele.</p></div>
       <div class="pr-card reveal" style="--pc:var(--rosa)"><b>Cria Radar</b><span class="pr-val">R$ 49,90</span><p>O que os concorrentes do seu cliente andam postando, já virando pauta pra você levar na reunião.</p></div>
     </div>
 
@@ -634,7 +660,7 @@ html,body{overflow-x:clip}
       <div class="comp-row" style="--rc:var(--rosa)"><div class="comp-job">CRM, propostas e contratos</div><div class="comp-mkt">Notion ou planilha adaptados, nada ligado ao conteúdo</div><div class="comp-cria">Cria Gestão R$29,90: pipeline, ficha viva e contrato no mesmo lugar</div></div>
       <div class="comp-row" style="--rc:var(--verde)"><div class="comp-job">Financeiro</div><div class="comp-mkt">Planilha que só você atualiza (quando lembra)</div><div class="comp-cria">Cria Caixa R$24,90: margem e imposto por cliente</div></div>
       <div class="comp-row" style="--rc:var(--laranja)"><div class="comp-job">Integração entre tudo</div><div class="comp-mkt">Você. VOCÊ é a integração.</div><div class="comp-cria">Nativa: é um sistema só, o post aprovado já entra no relatório</div></div>
-      <div class="comp-row comp-total"><div class="comp-job">A conta no fim do mês</div><div class="comp-mkt">R$150+ /mês, em 4 abas diferentes</div><div class="comp-cria">R$74,70/mês com os 3 módulos do dia a dia. E começa em R$0.</div></div>
+      <div class="comp-row comp-total"><div class="comp-job">A conta no fim do mês</div><div class="comp-mkt">R$200+ /mês, em 4 abas diferentes</div><div class="comp-cria">R$74,70/mês com os 3 módulos do dia a dia. E começa em R$0.</div></div>
     </div>
     <p style="text-align:center;font-size:.78rem;opacity:.6;margin-top:14px">*Preços de entrada anunciados pelos sites das próprias ferramentas em julho de 2026. Cada uma resolve um pedaço; a comparação é do combo necessário pra cobrir a operação inteira.</p>
   </div>
@@ -682,12 +708,12 @@ html,body{overflow-x:clip}
       <h2>O que você deve estar <span class="script" style="color:var(--laranja);font-size:1.15em">se perguntando</span></h2>
     </div>
     <div class="fq-list reveal">
-      <details class="fq"><summary>"Mais uma ferramenta pra eu configurar? Não tenho tempo."</summary><p>A maioria organiza o primeiro cliente em menos de 1 hora: cria o cliente, cola os posts, manda o link de aprovação. Sem importação complexa, sem treinamento. E o tempo volta já na primeira rodada de aprovação sem WhatsApp.</p></details>
+      <details class="fq"><summary>"Mais uma ferramenta pra eu configurar? Não tenho tempo."</summary><p>Não é mais uma ferramenta de organização pra você montar do zero. O CRIA já vem pronto: as etapas do post, o portal de aprovação, o relatório e a agenda já existem. Você só preenche as informações do cliente e começa a usar. A maioria organiza o primeiro cliente em menos de 1 hora, e o tempo volta já na primeira rodada de aprovação sem WhatsApp.</p></details>
       <details class="fq"><summary>"Meu cliente mal responde no WhatsApp, vai usar um portal?"</summary><p>Ele não precisa aprender nada: recebe um link, abre no celular e toca em aprovar. Sem cadastro, sem senha, sem app pra baixar. É mais fácil que responder o seu "oi, conseguiu ver?".</p></details>
       <details class="fq"><summary>"R$19,90 + R$24,90 + R$29,90... isso não vira caro?"</summary><p>Os três juntos dão R$74,70, menos de 1 hora do seu trabalho, cobrindo aprovação, CRM e financeiro. E você não precisa de tudo: começa pelo módulo do seu maior gargalo. Sem fidelidade, cancela dentro do app.</p></details>
-      <details class="fq"><summary>"Como funciona a cobrança, na prática?"</summary><p>Você cria a conta de gestor de graça, sem cartão. Quando ativar um módulo, o app abre o pagamento no cartão e a assinatura daquele módulo começa ali. Cada módulo é separado: pode ter só o Cria Post hoje e somar o Cria Caixa mês que vem. Tudo aparece numa área de assinaturas dentro do app.</p></details>
-      <details class="fq"><summary>"Sou criador de conteúdo também. Preciso de duas contas?"</summary><p>Não. É a mesma conta: o lado gestor (esta página) e o lado criador convivem no mesmo login. Os planos de criador (Essencial, Pro e Studio) são outra assinatura, pro seu perfil pessoal, e não têm nada a ver com os módulos do gestor.</p></details>
-      <details class="fq"><summary>"Meu cliente precisa pagar alguma coisa?"</summary><p>Não. No Modo Agência, cada cliente seu ganha uma conta Studio completa de graça, conectada à sua. Pra ele, é um benefício que veio de você.</p></details>
+      <details class="fq"><summary>"Como funciona a cobrança, na prática?"</summary><p>Você cria a conta de social media de graça, sem cartão. Quando ativar um módulo, o app abre o pagamento no cartão e a assinatura daquele módulo começa ali. Cada módulo é separado: pode ter só o Cria Post hoje e somar o Cria Caixa mês que vem. Tudo aparece numa área de assinaturas dentro do app.</p></details>
+      <details class="fq"><summary>"Sou criador de conteúdo também. Preciso de duas contas?"</summary><p>Não, é o mesmo login. Do lado social media você gerencia os clientes com os módulos desta página. Se você também quiser o CRIA pro <b>seu</b> perfil (plano de conteúdo, ideias e legendas com IA, mídia kit, link na bio), isso é a conta de criador: uma assinatura à parte, que convive no mesmo acesso.</p></details>
+      <details class="fq"><summary>"Meu cliente precisa pagar alguma coisa?"</summary><p>Não. Você gerencia a conta dele de graça: cria o cliente, produz, manda pra aprovação e entrega o relatório, sem custo nenhum pro cliente. E se ele quiser a <b>conta de criador</b> pra usar o CRIA por conta própria (planejamento, cronograma, ideias com IA, mídia kit), você libera pra ele no Modo Agência pagando o assento. Pra ele, é um benefício que veio de você.</p></details>
       <details class="fq"><summary>"E se eu quiser sair?"</summary><p>Cancela dentro do app, em 2 cliques, módulo por módulo. Sem ligação, sem multa, sem retenção forçada. Seus dados continuam seus.</p></details>
     </div>
   </div>
@@ -715,20 +741,30 @@ html,body{overflow-x:clip}
     <span class="script reveal">você decide hoje, de graça</span>
     <div class="reveal">
       <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Começar grátis</a>
-      <p class="micro">Área do gestor gratuita · Módulos à parte, sem fidelidade</p>
+      <p class="micro">Conta de social media gratuita · Módulos à parte, sem fidelidade</p>
     </div>
     <div class="ponte reveal">
-      <div><b>Você é criador de conteúdo, não gestor?</b><br><span style="opacity:.75;font-size:.92rem">O CRIA também tem o lado do criador: o Ciclo que tira sua ideia do bloco de notas e coloca no feed.</span></div>
+      <div><b>Você é criador de conteúdo, não social media?</b><br><span style="opacity:.75;font-size:.92rem">O CRIA também tem o lado do criador: o Ciclo que tira sua ideia do bloco de notas e coloca no feed.</span></div>
       <a href="index.html" class="btn btn-ghost" style="flex-shrink:0">Ver o CRIA pra criadores →</a>
     </div>
   </div>
 </section>
 
+<script>
+  // Setas do carrossel de prints: rolam uma "página" (a largura do primeiro card).
+  (function(){
+    var t=document.getElementById('vjTrack'); if(!t) return;
+    var passo=function(){ var f=t.querySelector('figure'); return f?f.getBoundingClientRect().width+16:520; };
+    var p=document.querySelector('.vj-prev'), n=document.querySelector('.vj-next');
+    if(p) p.addEventListener('click',function(){ t.scrollBy({left:-passo(),behavior:'smooth'}); });
+    if(n) n.addEventListener('click',function(){ t.scrollBy({left:passo(),behavior:'smooth'}); });
+  })();
+</script>
 <div id="lbox" role="dialog" aria-label="Print ampliado"><span class="lb-x" aria-hidden="true">×</span><img alt=""><span class="lb-tip">toque fora pra fechar</span></div>
 
 <div id="sticky-cta">
   <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Começar grátis</a>
-  <small>Área do gestor gratuita · Módulos à parte</small>
+  <small>Conta de social media gratuita · Módulos à parte</small>
 </div>
 
 <!-- ==================== RODAPÉ ==================== -->
