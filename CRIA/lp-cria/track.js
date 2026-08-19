@@ -28,10 +28,9 @@ var CRIA_TRACK = {
   chatgptAdsId: "4TCiBRJhEggrMkWpvG3KhE",
 
   // Logs no console, pra conferir os disparos sem abrir os gerenciadores.
-  // LIGADO agora porque os dois pixels acabaram de subir e precisam ser
-  // validados. Depois de confirmar que os eventos chegam, volte pra false:
-  // em produção isso é só ruído no console de quem visita.
-  debug: true,
+  // Já foi validado em 18/08: o console mostrou os dois pixels iniciando.
+  // Ligue de novo quando precisar depurar um evento específico.
+  debug: false,
 };
 
 (function () {
