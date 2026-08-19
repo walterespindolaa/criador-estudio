@@ -179,6 +179,22 @@ const Configuracoes = () => {
     setCustomNiche("");
   };
 
+  // O "Pronto" do diálogo SALVA os nichos na hora. Antes ele só fechava o
+  // diálogo e a escolha ficava pendurada no formulário: quem não clicava no
+  // Salvar do perfil (a Gabriela) saía da tela achando que salvou, e a home
+  // continuava mostrando o nicho antigo.
+  const confirmarNichos = async () => {
+    setNichoOpen(false);
+    const nicheString = selectedNiches.map((n) => n.trim()).filter(Boolean).join(", ");
+    if ((nicheString || null) === (profile?.niche ?? null)) return;
+    try {
+      await updateProfile.mutateAsync({ niche: nicheString ? sanitizeText(nicheString) : null });
+      toast.success("Nichos salvos!");
+    } catch {
+      toast.error("Erro ao salvar os nichos.");
+    }
+  };
+
   const onSubmit = async (data: ProfileFormData) => {
     try {
       const nicheString = selectedNiches.map((n) => n.trim()).filter(Boolean).join(", ");
@@ -502,7 +518,9 @@ const Configuracoes = () => {
                     {errors.niche && <p className="text-xs text-destructive mt-1">{errors.niche.message}</p>}
                   </div>
 
-                  <Dialog open={nichoOpen} onOpenChange={setNichoOpen}>
+                  {/* Fechar por fora (X ou clique no fundo) também salva: senão
+                      a pessoa escolhe os nichos, fecha, e a escolha evapora. */}
+                  <Dialog open={nichoOpen} onOpenChange={(aberto) => { if (aberto) setNichoOpen(true); else void confirmarNichos(); }}>
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle className="font-display">Seu nicho</DialogTitle>
@@ -555,7 +573,7 @@ const Configuracoes = () => {
                       </div>
 
                       <DialogFooter>
-                        <Button type="button" onClick={() => setNichoOpen(false)}>Pronto</Button>
+                        <Button type="button" onClick={() => void confirmarNichos()}>Pronto</Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
