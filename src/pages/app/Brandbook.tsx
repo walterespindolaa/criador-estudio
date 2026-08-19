@@ -965,7 +965,7 @@ const Brandbook = () => {
           ref={pdfRef}
           profile={activeProfile}
           brandItems={brandItems}
-          persona={personas[0]}
+          personas={personas}
           pillars={pillars}
           moodboardEntries={moodboardEntries}
         />

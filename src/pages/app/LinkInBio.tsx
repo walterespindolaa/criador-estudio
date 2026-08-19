@@ -2327,7 +2327,10 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
                   {settings.about.image && <img src={settings.about.image} alt="" loading="lazy" className="w-full max-h-28 object-cover" />}
                   <div className="p-3">
                     {settings.about.title && <p className={`font-display font-bold text-xs mb-1 ${settings.cardColor ? "" : "text-gray-900"}`}>{settings.about.title}</p>}
-                    {settings.about.text && <p className={`text-[11px] whitespace-pre-line line-clamp-4 ${settings.cardColor ? "opacity-90" : "text-gray-700"}`}>{settings.about.text}</p>}
+                    {/* Sem line-clamp: a prévia cortava o Sobre mim em 4 linhas e
+                        parecia que a página pública tinha perdido o texto. A
+                        prévia mostra o que a página pública mostra: tudo. */}
+                    {settings.about.text && <p className={`text-[11px] whitespace-pre-line ${settings.cardColor ? "opacity-90" : "text-gray-700"}`}>{settings.about.text}</p>}
                   </div>
                 </div>
               );

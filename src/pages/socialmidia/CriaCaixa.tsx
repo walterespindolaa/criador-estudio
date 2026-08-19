@@ -329,7 +329,15 @@ function CaixaInner() {
     const st = new Date(t.start_date + "T00:00:00");
     if (st > monthEnd) return false;
     if (t.end_date) { const en = new Date(t.end_date + "T00:00:00"); if (en < monthStart) return false; }
-    return !monthCtx.some((r) => r.recurring_id === t.id);
+    // Lançado pelo botão "Lançar do mês": o registro carrega o recurring_id.
+    if (monthCtx.some((r) => r.recurring_id === t.id)) return false;
+    // Lançado À MÃO: a pessoa cadastra o recorrente e registra o gasto do mês
+    // como lançamento avulso (sem vínculo). O aviso ficava gritando "ainda não
+    // lançado" pra algo que ela acabou de lançar. Se existe no mês um registro
+    // do mesmo tipo com a mesma descrição (ignorando caixa/espaços), contamos
+    // como o lançamento deste recorrente.
+    const desc = t.description.trim().toLowerCase();
+    return !monthCtx.some((r) => r.type === t.type && (r.description ?? "").trim().toLowerCase() === desc);
   });
   const lancarRecorrentes = async () => {
     const rows: FinRecordInput[] = pendingRecurring.map((t) => ({

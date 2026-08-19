@@ -910,7 +910,7 @@ const Criando = () => {
               for (let i = 0; i < startWeekday; i++) cells.push(null);
               for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, key: `${y}-${pad(m + 1)}-${pad(d)}` });
               const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-              const noDate = filteredPosts.filter(p => !p.scheduled_date).length;
+              const noDate = filteredPosts.filter(p => !p.scheduled_date && p.status !== "publicado");
               return (
                 <div className="rounded-2xl border border-border bg-card p-4">
                   <div className="flex items-center justify-between mb-4">
@@ -971,8 +971,31 @@ const Criando = () => {
                       );
                     })}
                   </div>
-                  {noDate > 0 && (
-                    <p className="mt-3 text-xs text-muted-foreground font-body">{noDate} post{noDate > 1 ? "s" : ""} sem data agendada.</p>
+                  {/* Igual ao calendário da social mídia: os SEM DATA aparecem
+                      como cards arrastáveis, não como uma frase. A Gabriela quer
+                      VER quais são e puxar cada um pro dia certo. */}
+                  {noDate.length > 0 && (
+                    <div className="mt-4 rounded-xl border border-dashed border-border p-3">
+                      <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground mb-2">
+                        Sem data ({noDate.length}), arraste pra um dia
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {noDate.map(post => (
+                          <button key={post.id}
+                            draggable
+                            onDragStart={(e) => { e.stopPropagation(); setCalDragId(post.id); }}
+                            onDragEnd={() => setCalDragId(null)}
+                            onClick={() => openEdit(post)}
+                            style={formatColorVars(post.format)}
+                            className={cn("text-left rounded-lg border border-border bg-card px-2 py-1.5 shadow-sm hover:bg-muted/40 transition-colors cursor-grab active:cursor-grabbing border-l-[3px] max-w-[220px]", FORMAT_BORDER_CLASS)}>
+                            <span className="block text-[11px] font-body font-semibold text-foreground leading-tight truncate">{post.title}</span>
+                            <span className={cn("block text-[9px] font-body font-bold uppercase tracking-wide truncate", FORMAT_TEXT_CLASS)}>
+                              {FORMAT_LABELS[post.format] ?? post.format}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               );
@@ -1039,6 +1062,34 @@ const Criando = () => {
                           );
                         })}
                       </div>
+                      {/* Mesma faixa de SEM DATA da visão de mês. */}
+                      {(() => {
+                        const semData = filteredPosts.filter(p => !p.scheduled_date && p.status !== "publicado");
+                        if (semData.length === 0) return null;
+                        return (
+                          <div className="mt-4 rounded-xl border border-dashed border-border p-3">
+                            <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground mb-2">
+                              Sem data ({semData.length}), arraste pra um dia
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {semData.map(post => (
+                                <button key={post.id}
+                                  draggable
+                                  onDragStart={(e) => { e.stopPropagation(); setCalDragId(post.id); }}
+                                  onDragEnd={() => setCalDragId(null)}
+                                  onClick={() => openEdit(post)}
+                                  style={formatColorVars(post.format)}
+                                  className={cn("text-left rounded-lg border border-border bg-card px-2 py-1.5 shadow-sm hover:bg-muted/40 transition-colors cursor-grab active:cursor-grabbing border-l-[3px] max-w-[220px]", FORMAT_BORDER_CLASS)}>
+                                  <span className="block text-[11px] font-body font-semibold text-foreground leading-tight truncate">{post.title}</span>
+                                  <span className={cn("block text-[9px] font-body font-bold uppercase tracking-wide truncate", FORMAT_TEXT_CLASS)}>
+                                    {FORMAT_LABELS[post.format] ?? post.format}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })()}

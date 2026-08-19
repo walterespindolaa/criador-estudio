@@ -1407,10 +1407,33 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     </div>
   );
 
+  // ── Rótulos de barra à prova de html2canvas ──
+  // O exportador NÃO respeita text-overflow: ellipsis e, pior, com
+  // overflow:hidden no contêiner ele pinta o texto deslocado e CORTA as letras
+  // ao meio (era o "Feminino"/"13-17" decapitado que a Gabriela viu no PDF).
+  // Então nada de clip por CSS: o rótulo é encurtado NO TEXTO, com "…" de
+  // verdade, e o contêiner fica livre de overflow.
+  const truncaPdf = (s: string, max: number) => (s.length > max ? s.slice(0, max - 1).trimEnd() + "…" : s);
+  // "Itajaí, Santa Catarina" não cabe na coluna; "Itajaí (SC)" cabe e lê melhor.
+  const UF: Record<string, string> = {
+    "acre": "AC", "alagoas": "AL", "amapá": "AP", "amazonas": "AM", "bahia": "BA", "ceará": "CE",
+    "distrito federal": "DF", "espírito santo": "ES", "goiás": "GO", "maranhão": "MA", "mato grosso": "MT",
+    "mato grosso do sul": "MS", "minas gerais": "MG", "pará": "PA", "paraíba": "PB", "paraná": "PR",
+    "pernambuco": "PE", "piauí": "PI", "rio de janeiro": "RJ", "rio grande do norte": "RN",
+    "rio grande do sul": "RS", "rondônia": "RO", "roraima": "RR", "santa catarina": "SC",
+    "são paulo": "SP", "sergipe": "SE", "tocantins": "TO",
+  };
+  const encurtaLugar = (label: string) => {
+    const m = label.match(/^(.*),\s*(.+)$/);
+    if (!m) return label;
+    const uf = UF[m[2].trim().toLowerCase()];
+    return uf ? `${m[1].trim()} (${uf})` : label;
+  };
+
   // Barra de alcance médio (cruzamentos) com o valor absoluto e a contagem.
   const crossRow = (label: string, avgReach: number, count: number, max: number) => (
     <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-      <div style={{ width: 96, fontSize: 12, lineHeight: 1.6, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</div>
+      <div style={{ width: 96, fontSize: 12, lineHeight: 1.6, color: C.ink }}>{truncaPdf(label, 15)}</div>
       <div style={{ flex: 1, height: 8, background: C.soft, borderRadius: 99, overflow: "hidden" }}>
         <div style={{ width: `${max > 0 ? Math.max(4, (avgReach / max) * 100) : 0}%`, height: "100%", background: C.brand }} />
       </div>
@@ -1433,7 +1456,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   // Barra de demografia (audiência): rótulo + barra proporcional ao percentual.
   const audienceBar = (label: string, pct: number) => (
     <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-      <div style={{ width: 100, fontSize: 12, lineHeight: 1.6, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</div>
+      <div style={{ width: 108, fontSize: 12, lineHeight: 1.6, color: C.ink }}>{truncaPdf(encurtaLugar(label), 17)}</div>
       <div style={{ flex: 1, height: 8, background: C.soft, borderRadius: 99, overflow: "hidden" }}>
         <div style={{ width: `${pct > 0 ? Math.max(4, pct) : 0}%`, height: "100%", background: C.brand }} />
       </div>
@@ -1890,7 +1913,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                 : <span style={{ fontSize: 9, color: C.sub }}>{p.format ? (FORMAT_LABELS[p.format] ?? p.format) : "post"}</span>}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 600, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</div>
+              <div style={{ fontSize: 11.5, fontWeight: 600, color: C.ink }}>{truncaPdf(p.title, 78)}</div>
               <div style={{ fontSize: 10.5, color: C.sub }}>
                 {p.format ? (FORMAT_LABELS[p.format] ?? cap(p.format)) : "Post"}{p.posted_at ? ` · ${dtFmt(p.posted_at)}` : ""}
               </div>

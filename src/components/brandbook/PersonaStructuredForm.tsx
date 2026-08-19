@@ -81,10 +81,30 @@ export function PersonaStructuredForm({
     objections: "",
   });
 
-  const handleAddTag = (field: TagField) => {
-    const value = newTagDraft[field].trim();
-    if (!value) return;
-    onAddTag(field, value);
+  // A Gabriela cola a lista pronta do ChatGPT/Docs (uma frase por linha) e o
+  // campo obrigava a inserir frase por frase. Qualquer texto com quebra de
+  // linha ou ";" vira VÁRIAS tags de uma vez, limpando marcador de lista
+  // (-, •, 1.) e repetição dentro do próprio lote.
+  const explodeTags = (raw: string): string[] => {
+    const vistos = new Set<string>();
+    return raw
+      .split(/[\n;]+/)
+      .map((s) => s.replace(/^\s*(?:[-–—•*·]|\d+[.)])\s*/, "").trim())
+      .filter((s) => {
+        if (!s) return false;
+        const k = s.toLowerCase();
+        if (vistos.has(k)) return false;
+        vistos.add(k);
+        return true;
+      });
+  };
+
+  const handleAddTag = (field: TagField, raw?: string) => {
+    const values = explodeTags(raw ?? newTagDraft[field]);
+    if (values.length === 0) return;
+    // O pai adiciona com setState funcional, então chamadas em sequência no
+    // mesmo tick empilham todas (nenhuma sobrescreve a anterior).
+    values.forEach((v) => onAddTag(field, v));
     setNewTagDraft(prev => ({ ...prev, [field]: "" }));
   };
 
@@ -131,12 +151,23 @@ export function PersonaStructuredForm({
               handleAddTag(section.field);
             }
           }}
+          onPaste={(e) => {
+            // Colou uma LISTA? Entra tudo de uma vez, sem passar pelo input.
+            const texto = e.clipboardData.getData("text/plain");
+            if (/[\n;]/.test(texto)) {
+              e.preventDefault();
+              handleAddTag(section.field, texto);
+            }
+          }}
           className="rounded-xl text-sm"
         />
         <Button variant="outline" size="sm" onClick={() => handleAddTag(section.field)}>
           <Plus className="h-4 w-4" />
         </Button>
       </div>
+      <p className="text-[11px] text-muted-foreground/70 font-body">
+        Dica: cole uma lista inteira (uma frase por linha) que eu separo pra você.
+      </p>
     </div>
   );
 

@@ -422,7 +422,11 @@ Gere um insight estratégico conciso em português BR no formato:
       typeof s === 'string' ? s.slice(0, max) : s
     if (data) {
       data.titulo = truncate(data.titulo, 500)
-      data.brandContext = truncate(data.brandContext, 3000)
+      // 3000 cortava o brandbook de quem preencheu tudo (o da Gabriela passa
+      // disso só no tom de voz) e a IA perdia justamente a persona, que vem
+      // no FIM do texto. 9000 chars ~ 2.5k tokens: barato perto do estrago
+      // de sugerir conteúdo pra pessoa errada.
+      data.brandContext = truncate(data.brandContext, 9000)
       data.roteiro = truncate(data.roteiro, 5000)
       data.legenda_original = truncate(data.legenda_original, 3000)
     }
@@ -853,7 +857,12 @@ FORMATO JSON (APENAS o array, sem texto):
 [{"titulo":"max 70 chars","formato":"reels|carrossel|foto|video|story","angulo":"descritivo e específico","objetivo":"engajamento|autoridade|venda|relacionamento"}]
 
 EXEMPLO para "rotina matinal":
-[{"titulo":"Minha rotina antes de abrir o Instagram mudou tudo","formato":"reels","angulo":"bastidor com storytelling pessoal","objetivo":"relacionamento"},{"titulo":"5 coisas que faço antes das 8h que triplicaram meu engajamento","formato":"carrossel","angulo":"lista prática com resultados","objetivo":"autoridade"},{"titulo":"Sua rotina matinal tá sabotando seu conteúdo. Veja porquê.","formato":"story","angulo":"opinião provocativa com dica","objetivo":"engajamento"}]${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}`
+[{"titulo":"Minha rotina antes de abrir o Instagram mudou tudo","formato":"reels","angulo":"bastidor com storytelling pessoal","objetivo":"relacionamento"},{"titulo":"5 coisas que faço antes das 8h que triplicaram meu engajamento","formato":"carrossel","angulo":"lista prática com resultados","objetivo":"autoridade"},{"titulo":"Sua rotina matinal tá sabotando seu conteúdo. Veja porquê.","formato":"story","angulo":"opinião provocativa com dica","objetivo":"engajamento"}]${data.brandContext ? `
+
+BRANDBOOK DA PESSOA (fonte da verdade, leia ANTES de sugerir):
+${data.brandContext}
+
+REGRA MAIS IMPORTANTE: descubra no brandbook QUEM esta pessoa é (o que ela vende, qual serviço presta) e PRA QUEM ela fala (a persona dela). As 3 sugestões falam COM essa persona, na posição profissional DELA. NÃO assuma que ela é "creator de conteúdo" genérico: se o brandbook diz que ela é social media, nutricionista ou advogada, o conteúdo é sobre O SERVIÇO DELA pro PÚBLICO DELA. Sugestão que contradiz o brandbook está errada.` : ''}`
         userPrompt = `IDEIA: "${data.ideiaTexto || 'conteúdo geral'}"
 PLATAFORMA: ${data.platform || 'instagram'}
 PILAR: ${data.pilar || 'geral'}

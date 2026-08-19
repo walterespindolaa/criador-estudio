@@ -13,9 +13,8 @@ export function WhoYouAre() {
   const { personas } = usePersonas();
 
   const tom = brandItems.filter((i) => i.type === "tom").map((i) => i.name).slice(0, 4);
-  const persona = personas[0];
   const niche = profile?.niche?.trim();
-  const empty = !niche && tom.length === 0 && pillars.length === 0 && !persona;
+  const empty = !niche && tom.length === 0 && pillars.length === 0 && personas.length === 0;
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-warm)]">
@@ -38,8 +37,16 @@ export function WhoYouAre() {
               <span className="flex flex-wrap gap-1.5">{pillars.slice(0, 5).map((p) => (<span key={p.id} className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium"><span className="h-1.5 w-1.5 rounded-full" style={{ background: p.color ?? "var(--primary)" }} />{p.name}</span>))}</span>
             </div>
           )}
-          {persona && (
-            <div className="flex gap-2"><span className="min-w-[58px] shrink-0 text-xs text-muted-foreground">Para quem</span><span>{persona.name}{persona.how_you_help ? `, ${persona.how_you_help}` : ""}</span></div>
+          {personas.length > 0 && (
+            // TODAS as personas, não só a primeira: quem cadastra duas quer ver
+            // as duas aqui (a Gabriela tem duas e o card mostrava uma).
+            <div className="flex gap-2"><span className="min-w-[58px] shrink-0 pt-0.5 text-xs text-muted-foreground">Para quem</span>
+              <span className="flex flex-col gap-1">
+                {personas.map((p) => (
+                  <span key={p.id ?? p.name}>{p.name}{p.how_you_help ? `, ${p.how_you_help}` : ""}</span>
+                ))}
+              </span>
+            </div>
           )}
         </div>
       )}

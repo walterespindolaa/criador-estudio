@@ -75,7 +75,22 @@ export function usePosts(options?: { limit?: number }) {
       if (error) throw error;
       return data as Post;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["posts", userId] }),
+    // OTIMISTA: o cache é atualizado ANTES do servidor responder. É o que tira
+    // o delay do kanban em "Por data" (mover de coluna usa updatePost, e o card
+    // voltava pra origem enquanto o await rodava) e do arrastar no calendário.
+    // Erro reverte pro snapshot; onSettled reconcilia com o servidor.
+    onMutate: async ({ id, updates }: UpdatePostInput) => {
+      await queryClient.cancelQueries({ queryKey: ["posts", userId] });
+      const snapshot = queryClient.getQueriesData<Post[]>({ queryKey: ["posts", userId] });
+      queryClient.setQueriesData<Post[]>({ queryKey: ["posts", userId] }, (old) =>
+        Array.isArray(old) ? old.map((p) => (p.id === id ? ({ ...p, ...updates } as Post) : p)) : old,
+      );
+      return { snapshot };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.snapshot) for (const [key, data] of ctx.snapshot) queryClient.setQueryData(key, data);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["posts", userId] }),
   });
 
   const deletePost = useMutation({

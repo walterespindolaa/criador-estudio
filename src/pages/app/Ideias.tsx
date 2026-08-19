@@ -32,15 +32,17 @@ import { SharedIntake } from "@/components/pwa/SharedIntake";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { usePillars } from "@/hooks/usePillars";
 import { useProfile } from "@/hooks/useProfile";
+import { useBrandContext } from "@/hooks/useBrandContext";
 import { usePosts, type Post } from "@/hooks/usePosts";
 import { getIdeaSuggestions } from "@/lib/ai/claude";
 import { SavedRefs } from "@/components/ideas/SavedRefs";
 
 const ideaSchema = z.object({
-  title: z.string().min(1, "Título é obrigatório").max(100, "Máximo 100 caracteres").trim(),
+  // 100 cortava título vindo do ChatGPT (a Gabriela cola frases longas).
+  title: z.string().min(1, "Título é obrigatório").max(300, "Máximo 300 caracteres").trim(),
   pillar_id: z.string().optional().nullable(),
   platform: z.string().optional().nullable(),
-  notes: z.string().max(500, "Máximo 500 caracteres").optional().nullable(),
+  notes: z.string().max(2000, "Máximo 2000 caracteres").optional().nullable(),
   objective: z.string().optional().nullable(),
   origin: z.string().optional().nullable(),
 });
@@ -84,6 +86,7 @@ const Ideias = () => {
   const { ideas, createIdea, updateIdea, deleteIdea, promoteToPost, isLoading: ideasLoading } = useIdeas();
   const { pillars } = usePillars();
   const { profile } = useProfile();
+  const { brandContext, hasBrandContext } = useBrandContext();
   const { createPost } = usePosts();
 
   const [search, setSearch] = useState("");
@@ -99,9 +102,11 @@ const Ideias = () => {
   const [mainTab, setMainTab] = useState<"ideias" | "salvos">(sharedUrl ? "salvos" : "ideias");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<IdeaFormData>({
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<IdeaFormData>({
     resolver: zodResolver(ideaSchema),
   });
+  // Pilar escolhido no formulário (chips no diálogo de Nova Ideia/Editar).
+  const pilarEscolhido = watch("pillar_id");
 
   const [postDrawerOpen, setPostDrawerOpen] = useState(false);
   const [promotedPost, setPromotedPost] = useState<Post | null>(null);
@@ -220,6 +225,12 @@ const Ideias = () => {
         pilar: pillarName,
         objetivo: "engajamento",
         niche: profile?.niche || "lifestyle",
+        // O BRANDBOOK INTEIRO vai junto. Sem isto a IA só via "nicho:
+        // lifestyle" e inventava a pessoa: tratou a Gabriela (social media
+        // que vende serviço) como creator genérica, sugerindo posts sobre
+        // "contratar um creator". Quem a pessoa é e pra quem ela fala está
+        // no brandbook, e é dali que a sugestão tem que partir.
+        brandContext: hasBrandContext ? brandContext : undefined,
       }, user?.id);
       const parsed = parseSuggestions(result);
       if (parsed.length === 0) {
@@ -682,9 +693,35 @@ const Ideias = () => {
           <form onSubmit={handleSubmit(handleSave)} className="space-y-4 pt-4">
             <div className="space-y-2">
               <Label>Título</Label>
-              <Input {...register("title")} placeholder="Sua ideia..." />
+              {/* Textarea, não Input: título de ideia colado do ChatGPT é uma
+                  frase inteira e no Input só dava pra ler o comecinho. */}
+              <Textarea {...register("title")} placeholder="Sua ideia..." className="min-h-[60px]" />
               {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
             </div>
+            {pillars.length > 0 && (
+              <div className="space-y-2">
+                <Label>Pilar de conteúdo</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {pillars.map((p) => {
+                    const ativo = pilarEscolhido === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setValue("pillar_id", ativo ? "" : p.id, { shouldDirty: true })}
+                        className={cn(
+                          "px-2.5 py-1 rounded-full text-xs font-body border transition-colors",
+                          ativo ? "border-transparent font-semibold" : "border-border bg-background text-muted-foreground hover:text-foreground",
+                        )}
+                        style={ativo ? { backgroundColor: `${p.color}22`, color: p.color, borderColor: p.color } : undefined}
+                      >
+                        {p.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Notas</Label>
               <Textarea {...register("notes")} placeholder="Mais detalhes..." />

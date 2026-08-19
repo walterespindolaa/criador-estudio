@@ -150,6 +150,8 @@ export const getIdeaSuggestions = async (
     pilar?: string;
     objetivo?: string;
     niche?: string;
+    /** Brandbook resumido (useBrandContext): sem ele a IA inventa quem é a pessoa. */
+    brandContext?: string;
   },
   userId?: string
 ) => {

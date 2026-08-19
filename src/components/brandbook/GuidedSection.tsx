@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Save, Sparkles } from "lucide-react";
+import { Maximize2, Save, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { CopyButton } from "@/components/shared/CopyButton";
@@ -36,6 +38,12 @@ export function GuidedSection({
   onSave,
   chatPrompt,
 }: Props) {
+  // Resposta ABERTA em janela grande. A Gabriela preenche respostas longas
+  // (parágrafos inteiros vindos da estratégia) e o textarea de 80px vira um
+  // olho mágico: dá pra digitar, não dá pra LER. O expandir abre a resposta
+  // numa janela de leitura/edição confortável, estilo card do Trello.
+  const [expandida, setExpandida] = useState<Question | null>(null);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -63,7 +71,19 @@ export function GuidedSection({
         >
           <Card className="border-border shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-body font-semibold text-foreground">{q.label}</CardTitle>
+              <div className="flex items-start justify-between gap-2">
+                <CardTitle className="text-sm font-body font-semibold text-foreground">{q.label}</CardTitle>
+                {(answers[q.key] || "").trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setExpandida(q)}
+                    title="Ver a resposta inteira"
+                    className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2 py-1 text-[11px] font-body text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                  >
+                    <Maximize2 className="h-3 w-3" /> expandir
+                  </button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="relative">
@@ -89,6 +109,33 @@ export function GuidedSection({
           {saving ? "Salvando..." : "Salvar"}
         </Button>
       </div>
+
+      {/* Janela de leitura/edição da resposta. Edição aqui é a MESMA resposta
+          (mesmo onAnswerChange): fechar não perde nada, e o Salvar da seção
+          continua sendo quem persiste. */}
+      <Dialog open={!!expandida} onOpenChange={(o) => !o && setExpandida(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          {expandida && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display text-base pr-6">{expandida.label}</DialogTitle>
+              </DialogHeader>
+              <Textarea
+                value={answers[expandida.key] || ""}
+                onChange={(e) => onAnswerChange(expandida.key, e.target.value)}
+                placeholder={expandida.placeholder}
+                className="min-h-[50vh] resize-y font-body text-sm border-border rounded-xl leading-relaxed"
+              />
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] font-body text-muted-foreground">
+                  Pode editar aqui mesmo. Use o Salvar da seção pra gravar.
+                </p>
+                <Button variant="outline" size="sm" onClick={() => setExpandida(null)}>Fechar</Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {chatPrompt && (
         <Card className="border-primary/20 bg-primary/5">
