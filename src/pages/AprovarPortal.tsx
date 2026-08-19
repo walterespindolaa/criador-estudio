@@ -203,8 +203,8 @@ function HistoricoAjustes({ history, managerName }: { history: PortalComment[]; 
 
 function PostApproval({ client, post, index, busy, history, onApproveFast, onAdjustFast, onApproveStage, onAdjustStage }: {
   client: ClientHeader; post: PortalPost; index: number; busy: boolean; history: PortalComment[];
-  onApproveFast: (id: string) => void; onAdjustFast: (id: string, comment: string) => void;
-  onApproveStage: (id: string, stage: Stage) => void; onAdjustStage: (id: string, stage: Stage, comment: string) => void;
+  onApproveFast: (id: string, comment?: string) => void; onAdjustFast: (id: string, comment: string) => void;
+  onApproveStage: (id: string, stage: Stage, comment?: string) => void; onAdjustStage: (id: string, stage: Stage, comment: string) => void;
 }) {
   const mode = post.approval_mode ?? "fast";
   const [view, setView] = useState<"fast" | "flow">(mode === "flow" ? "flow" : "fast");
@@ -219,6 +219,17 @@ function PostApproval({ client, post, index, busy, history, onApproveFast, onAdj
 
   const openAdjust = () => { setAdjOpen(true); setComment(""); };
   const sendFast = () => { onAdjustFast(post.post_id, comment.trim()); setAdjOpen(false); setComment(""); };
+
+  /* O RECADO DE QUEM APROVA.
+     Antes só existia caixa de texto no AJUSTE. Quem queria elogiar escrevia
+     ali mesmo, e o post voltava pro gestor marcado como "ajuste solicitado"
+     com um elogio dentro: trabalho pronto voltando pra fila por falta de campo.
+     Aqui o recado é OPCIONAL de verdade, e o botão de aprovar nunca fica
+     desabilitado por causa dele. */
+  const [okOpen, setOkOpen] = useState(false);
+  const [nota, setNota] = useState("");
+  const LIMITE_NOTA = 140;
+  const sendApprove = () => { onApproveFast(post.post_id, nota.trim() || undefined); setOkOpen(false); setNota(""); };
 
   // Bloco de STATUS no TOPO do painel de info (antes da legenda e das ações), tanto na
   // visão rápida quanto na detalhada: data, título "Esta publicação", selo de status e
@@ -286,14 +297,38 @@ function PostApproval({ client, post, index, busy, history, onApproveFast, onAdj
       )}
       {!showFlow ? (
         <>
-          {post.last_comment && post.last_comment_role === "cliente_externo" && (
+          {/* O gate do status faltava: sem ele, o recado de quem APROVOU aparecia
+              como "Você pediu", virando elogio disfarçado de reclamação. */}
+          {post.approval_status === "ajuste_solicitado" && post.last_comment && post.last_comment_role === "cliente_externo" && (
             <div className="text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5 mb-4 whitespace-pre-wrap">Você pediu:{"\n"}{post.last_comment}</div>
           )}
           {fullyApproved ? (
             <div className="flex items-center gap-2 text-sm font-body font-bold text-green-700 bg-green-50 rounded-2xl px-4 py-3.5"><Check className="h-5 w-5" /> Aprovado, obrigada!</div>
+          ) : okOpen ? (
+            <div className="space-y-2.5">
+              <p className="text-[13px] font-body text-foreground font-semibold">Quer deixar um recado? <span className="font-normal text-muted-foreground">(opcional)</span></p>
+              <Textarea
+                value={nota}
+                onChange={(e) => setNota(e.target.value.slice(0, LIMITE_NOTA))}
+                maxLength={LIMITE_NOTA}
+                placeholder="Ex.: amei esse, ficou a cara da marca"
+                className="rounded-2xl"
+                rows={2}
+                autoFocus
+              />
+              <p className="text-[11px] font-body text-muted-foreground text-right">{nota.length}/{LIMITE_NOTA}</p>
+              <div className="flex gap-2.5">
+                {/* Sem `!nota.trim()` no disabled: o recado é opcional e aprovar
+                    sem escrever nada continua sendo um clique. */}
+                <Button className="flex-1 h-12 rounded-2xl" disabled={busy} onClick={sendApprove}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Confirmar aprovação</>}
+                </Button>
+                <Button variant="ghost" className="h-12 rounded-2xl" onClick={() => { setOkOpen(false); setNota(""); }} disabled={busy}>Voltar</Button>
+              </div>
+            </div>
           ) : !adjOpen ? (
             <div className="flex gap-3">
-              <Button className="flex-1 h-14 rounded-2xl text-base font-bold shadow-lg shadow-primary/25" onClick={() => onApproveFast(post.post_id)} disabled={busy}>{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Check className="h-5 w-5 mr-1.5" /> Aprovar</>}</Button>
+              <Button className="flex-1 h-14 rounded-2xl text-base font-bold shadow-lg shadow-primary/25" onClick={() => setOkOpen(true)} disabled={busy}>{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Check className="h-5 w-5 mr-1.5" /> Aprovar</>}</Button>
               <Button variant="secondary" className="h-14 rounded-2xl px-5" onClick={openAdjust} disabled={busy}><RotateCcw className="h-4 w-4 mr-1.5" /> Ajuste</Button>
             </div>
           ) : (
@@ -310,7 +345,7 @@ function PostApproval({ client, post, index, busy, history, onApproveFast, onAdj
         <EtapasChecklist
           post={post}
           busy={busy}
-          onApproveStage={(stage) => onApproveStage(post.post_id, stage)}
+          onApproveStage={(stage, stageNote) => onApproveStage(post.post_id, stage, stageNote)}
           onAdjustStage={(stage, stageComment) => onAdjustStage(post.post_id, stage, stageComment)}
         />
       )}
@@ -447,15 +482,15 @@ export default function AprovarPortal() {
     if (/has_module|module/i.test(msg)) return "O módulo de aprovação está inativo. Avise sua social mídia.";
     return msg ? `${acao} falhou: ${msg}` : `${acao} falhou. Tente de novo.`;
   };
-  const approveFast = useMutation({ mutationFn: async (id: string) => { const { error } = await sbRpc("approve_post_by_token", { _token: token, _post_id: id }); if (error) throw error; }, onSuccess: () => { toast.success("Aprovado!"); inv(); }, onError: (e) => toast.error(motivoErro(e, "Aprovar")) });
+  const approveFast = useMutation({ mutationFn: async ({ id, comment }: { id: string; comment?: string }) => { const { error } = await sbRpc("approve_post_by_token", { _token: token, _post_id: id, _comment: comment ?? null }); if (error) throw error; }, onSuccess: (_d, v) => { toast.success(v?.comment ? "Aprovado, recado enviado!" : "Aprovado!"); inv(); }, onError: (e) => toast.error(motivoErro(e, "Aprovar")) });
   const adjustFast = useMutation({ mutationFn: async ({ id, comment }: { id: string; comment: string }) => { const { error } = await sbRpc("request_adjustment_by_token", { _token: token, _post_id: id, _comment: comment }); if (error) throw error; }, onSuccess: () => { toast.success("Ajuste enviado!"); inv(); }, onError: (e) => toast.error(motivoErro(e, "Enviar o ajuste")) });
-  const approveStage = useMutation({ mutationFn: async ({ id, stage }: { id: string; stage: Stage }) => { const { error } = await sbRpc("approve_stage_by_token", { _token: token, _post_id: id, _stage: stage }); if (error) throw error; }, onSuccess: () => { toast.success("Etapa aprovada!"); inv(); }, onError: (e) => toast.error(motivoErro(e, "Aprovar a etapa")) });
+  const approveStage = useMutation({ mutationFn: async ({ id, stage, comment }: { id: string; stage: Stage; comment?: string }) => { const { error } = await sbRpc("approve_stage_by_token", { _token: token, _post_id: id, _stage: stage, _comment: comment ?? null }); if (error) throw error; }, onSuccess: () => { toast.success("Etapa aprovada!"); inv(); }, onError: (e) => toast.error(motivoErro(e, "Aprovar a etapa")) });
   const adjustStage = useMutation({ mutationFn: async ({ id, stage, comment }: { id: string; stage: Stage; comment: string }) => { const { error } = await sbRpc("request_stage_adjustment_by_token", { _token: token, _post_id: id, _stage: stage, _comment: comment }); if (error) throw error; }, onSuccess: () => { toast.success("Ajuste enviado!"); inv(); }, onError: (e) => toast.error(motivoErro(e, "Enviar o ajuste")) });
 
   // Qual post está em ação AGORA. Só ele trava; os outros seguem clicáveis.
   let pendingId: string | null = null;
   if (approveFast.isPending && approveFast.variables) {
-    pendingId = approveFast.variables;
+    pendingId = approveFast.variables.id;
   } else if (adjustFast.isPending && adjustFast.variables) {
     pendingId = adjustFast.variables.id;
   } else if (approveStage.isPending && approveStage.variables) {
@@ -514,9 +549,9 @@ export default function AprovarPortal() {
   const renderPost = (p: PortalPost, i: number) => (
     <PostApproval key={p.post_id} client={c} post={p} index={i} busy={pendingId === p.post_id}
       history={commentsQ.data?.[p.post_id] ?? []}
-      onApproveFast={(id) => approveFast.mutate(id)}
+      onApproveFast={(id, comment) => approveFast.mutate({ id, comment })}
       onAdjustFast={(id, comment) => adjustFast.mutate({ id, comment })}
-      onApproveStage={(id, stage) => approveStage.mutate({ id, stage })}
+      onApproveStage={(id, stage, comment) => approveStage.mutate({ id, stage, comment })}
       onAdjustStage={(id, stage, comment) => adjustStage.mutate({ id, stage, comment })} />
   );
 

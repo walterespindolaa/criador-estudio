@@ -41,7 +41,7 @@ function stageValue(post: EtapasPost, stage: Stage): { text: string; box: boolea
 export function EtapasChecklist({ post, busy, onApproveStage, onAdjustStage }: {
   post: EtapasPost;
   busy: boolean;
-  onApproveStage: (stage: Stage) => void;
+  onApproveStage: (stage: Stage, comment?: string) => void;
   onAdjustStage: (stage: Stage, comment: string) => void;
 }) {
   const status = (s: Stage): StageStatus => {
@@ -56,6 +56,10 @@ export function EtapasChecklist({ post, busy, onApproveStage, onAdjustStage }: {
   const [open, setOpen] = useState<Stage | null>(firstPending);
   const [adjustFor, setAdjustFor] = useState<Stage | null>(null);
   const [comment, setComment] = useState("");
+  // Mesma ideia da aprovação rápida: elogiar não pode obrigar a pedir ajuste.
+  const [okFor, setOkFor] = useState<Stage | null>(null);
+  const [nota, setNota] = useState("");
+  const LIMITE_NOTA = 140;
   const prevFirst = useRef<Stage | null>(firstPending);
 
   // Quando uma etapa é aprovada (ou ajustada), avança automaticamente pra próxima pendente.
@@ -156,9 +160,29 @@ export function EtapasChecklist({ post, busy, onApproveStage, onAdjustStage }: {
                         <Button variant="ghost" className="h-12 rounded-xl" onClick={() => { setAdjustFor(null); setComment(""); }} disabled={busy}>Cancelar</Button>
                       </div>
                     </div>
+                  ) : okFor === s ? (
+                    <div className="mt-3.5 space-y-2.5">
+                      <p className="text-xs font-body text-muted-foreground">Quer deixar um recado sobre {STAGE_LABEL[s].toLowerCase()}? É opcional.</p>
+                      <Textarea
+                        value={nota}
+                        onChange={(e) => setNota(e.target.value.slice(0, LIMITE_NOTA))}
+                        maxLength={LIMITE_NOTA}
+                        placeholder="Ex.: ficou exatamente como eu imaginei"
+                        className="rounded-xl bg-card"
+                        rows={2}
+                        autoFocus
+                      />
+                      <p className="text-[11px] font-body text-muted-foreground text-right">{nota.length}/{LIMITE_NOTA}</p>
+                      <div className="flex gap-2.5">
+                        <Button className="flex-1 h-12 rounded-xl font-bold" disabled={busy} onClick={() => { onApproveStage(s, nota.trim() || undefined); setOkFor(null); setNota(""); }}>
+                          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Confirmar</>}
+                        </Button>
+                        <Button variant="ghost" className="h-12 rounded-xl" onClick={() => { setOkFor(null); setNota(""); }} disabled={busy}>Voltar</Button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="mt-3.5 flex flex-col sm:flex-row gap-2.5">
-                      <Button className="flex-1 h-12 rounded-xl text-[15px] font-bold shadow-lg shadow-primary/20" onClick={() => onApproveStage(s)} disabled={busy}>
+                      <Button className="flex-1 h-12 rounded-xl text-[15px] font-bold shadow-lg shadow-primary/20" onClick={() => { setOkFor(s); setNota(""); }} disabled={busy}>
                         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Aprovar esta etapa</>}
                       </Button>
                       <Button variant="secondary" className="h-12 rounded-xl px-4" onClick={() => openAdjust(s)} disabled={busy}>

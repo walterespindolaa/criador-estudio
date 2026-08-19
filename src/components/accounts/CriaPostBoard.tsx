@@ -16,7 +16,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CronogramaBoard } from "@/components/accounts/CronogramaBoard";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useDragScroll } from "@/hooks/useDragScroll";
-import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X, ChevronDown, History, Hash } from "lucide-react";
+import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X, ChevronDown, History, Hash, Check } from "lucide-react";
 import { usePostApprovalComments } from "@/hooks/useApprovals";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { Calendar } from "@/components/ui/calendar";
@@ -112,11 +112,13 @@ function ApprovalHistory({ postId }: { postId: string }) {
         <div className="px-3 pb-3 space-y-2 max-h-72 overflow-y-auto">
           {comments.map((c) => {
             // "cliente_externo" (portal por link) e "cliente" (aprovação interna) = o cliente.
-            const isClient = c.author_role === "cliente_externo" || c.author_role === "cliente";
+            const isClient = c.author_role === "cliente_externo" || c.author_role === "cliente" || c.author_role === "cliente_externo_aprovacao";
+            // Elogio na aprovação: verde, pra não parecer mais um pedido de mudança.
+            const isPraise = c.author_role === "cliente_externo_aprovacao";
             return (
-              <div key={c.id} className={`rounded-lg border px-2.5 py-2 ${isClient ? "border-orange-100 bg-orange-50" : "border-primary/15 bg-primary/[0.04]"}`}>
+              <div key={c.id} className={`rounded-lg border px-2.5 py-2 ${isPraise ? "border-emerald-100 bg-emerald-50" : isClient ? "border-orange-100 bg-orange-50" : "border-primary/15 bg-primary/[0.04]"}`}>
                 <div className="flex items-center justify-between gap-2 mb-0.5">
-                  <span className={`text-[11px] font-body font-bold ${isClient ? "text-orange-700" : "text-primary"}`}>{isClient ? "Cliente" : "Você"}</span>
+                  <span className={`text-[11px] font-body font-bold ${isPraise ? "text-emerald-700" : isClient ? "text-orange-700" : "text-primary"}`}>{isPraise ? "Cliente aprovou" : isClient ? "Cliente" : "Você"}</span>
                   <span className="text-[10px] font-body text-muted-foreground shrink-0">{fmtDateTimeBR(c.created_at)}</span>
                 </div>
                 <p className="text-[12.5px] font-body text-foreground whitespace-pre-wrap leading-relaxed">{c.content}</p>
@@ -731,6 +733,12 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                                 <span className="text-[10.5px] font-bold underline">Abrir pra ver o ajuste completo</span>
                               </div>
                             )}
+                            {p.approval_status === "aprovado" && p.last_comment && p.last_comment_role === "cliente_externo_aprovacao" && (
+                              <div className="mt-2 text-xs font-body text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-1.5" title={p.last_comment}>
+                                <span className="font-bold">Cliente aprovou e comentou</span>
+                                <p className="line-clamp-2 opacity-90 mt-0.5">{p.last_comment}</p>
+                              </div>
+                            )}
                             {colKey === "pendente" && (() => {
                               const sentAt = p.approval_updated_at ?? p.created_at;
                               const seen = !!portalViewedAt && new Date(portalViewedAt) >= new Date(sentAt);
@@ -913,6 +921,19 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                     <p className="text-xs font-body font-bold text-orange-800">O cliente pediu um ajuste</p>
                   </div>
                   <p className="text-[13px] font-body text-orange-800 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">{editing.last_comment}</p>
+                </div>
+              )}
+              {/* O RECADO DE QUEM APROVOU. Elogio enterrado num histórico fechado
+                  é elogio que ninguém lê: aqui ele tem o mesmo peso visual do
+                  pedido de ajuste, só que verde. Vale mais que parece: é o que a
+                  social mídia leva pra reunião de renovação. */}
+              {editing?.approval_status === "aprovado" && editing?.last_comment && editing?.last_comment_role === "cliente_externo_aprovacao" && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Check className="h-3.5 w-3.5 text-emerald-700" />
+                    <p className="text-xs font-body font-bold text-emerald-800">O cliente aprovou e deixou um recado</p>
+                  </div>
+                  <p className="text-[13px] font-body text-emerald-800 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">{editing.last_comment}</p>
                 </div>
               )}
               {/* Histórico completo da aprovação (só ao editar um post já existente, não
