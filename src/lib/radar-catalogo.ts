@@ -32,6 +32,12 @@ export type CampoRadar = {
   min?: number;
   max?: number;
   padrao?: number;
+  /**
+   * Esconde este campo quando OUTRO campo já tem valor. Caso real: na
+   * transcrição, com links de reels colados a quantidade é ignorada, então
+   * perguntá-la ("Quantos reels recentes?") só confundia. Some da tela.
+   */
+  ocultarSeTemValor?: CampoId;
 };
 
 export type GrupoRadar = "conteudo" | "publico" | "mercado";
@@ -168,7 +174,9 @@ export const PESQUISAS: PesquisaDef[] = [
         tipo: "lista",
         obrigatorio: false,
       },
-      campoQuantos("Quantos reels recentes? (só no modo @)", "Cada reel a mais é mais tempo de espera."),
+      // Só faz sentido no caminho do @ (pegar os N mais recentes do perfil).
+      // Com links colados o campo some, porque a quantidade é ignorada.
+      { ...campoQuantos("Quantos reels recentes do perfil?", "Cada reel a mais é mais tempo de espera."), ocultarSeTemValor: "reelLinks" },
     ],
   },
   {

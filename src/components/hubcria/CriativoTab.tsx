@@ -566,7 +566,16 @@ export function CriativoTab({ clientId, clientName }: { clientId?: string; clien
           <p className="text-sm font-display font-extrabold text-foreground">2. Responda pra pesquisar</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {campos.filter((c) => c.id !== "reelLinks").map((c) => (
+            {campos.filter((c) => {
+              if (c.id === "reelLinks") return false;
+              // Campo condicional: some quando o campo que o torna inútil já
+              // tem valor (ex.: quantidade de reels quando há links colados,
+              // porque com links a quantidade é ignorada).
+              if (c.ocultarSeTemValor === "reelLinks" && linksValidos.length > 0) return false;
+              if (c.ocultarSeTemValor && c.ocultarSeTemValor !== "reelLinks"
+                && String(form[c.ocultarSeTemValor as keyof FormState] ?? "").trim()) return false;
+              return true;
+            }).map((c) => (
               <Campo key={c.id} label={c.label} ajuda={c.ajuda}>
                 {c.tipo === "numero" ? (
                   <Input
