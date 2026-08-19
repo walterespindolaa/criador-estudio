@@ -217,6 +217,49 @@ function TopPostCard({ p, rank, aoUsarReferencia }: { p: Bruto; rank: number; ao
         </div>
       )}
 
+      {/* A ENGENHARIA REVERSA: a IA decompõe o roteiro em gancho, estrutura,
+          CTA e a adaptação pro cliente. É o direcionamento pronto, não só o
+          texto cru pra pessoa analisar sozinha. */}
+      {p.engenharia && (p.engenharia.gancho || p.engenharia.estrutura?.length > 0) && (
+        <div className="border-t border-border/60 px-3 py-2.5 space-y-2" style={{ background: `${CRIA_HEX.amarelo}14` }}>
+          <p className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <Sparkles className="h-3 w-3" /> Engenharia reversa
+          </p>
+          {p.engenharia.gancho && (
+            <p className="text-[12px] font-body text-foreground leading-relaxed">
+              <strong className="font-display">Gancho:</strong> {p.engenharia.gancho}
+            </p>
+          )}
+          {Array.isArray(p.engenharia.estrutura) && p.engenharia.estrutura.length > 0 && (
+            <div>
+              <p className="text-[11px] font-body font-bold text-foreground mb-0.5">Estrutura do roteiro</p>
+              <ol className="space-y-0.5">
+                {p.engenharia.estrutura.map((e: string, i: number) => (
+                  <li key={i} className="text-[12px] font-body text-foreground/90 leading-relaxed flex gap-1.5">
+                    <span className="font-display font-bold text-primary shrink-0">{i + 1}.</span> {e}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          {p.engenharia.cta && (
+            <p className="text-[12px] font-body text-foreground leading-relaxed">
+              <strong className="font-display">CTA:</strong> {p.engenharia.cta}
+            </p>
+          )}
+          {p.engenharia.porque && (
+            <p className="text-[12px] font-body text-foreground/90 leading-relaxed">
+              <strong className="font-display">Por que funciona:</strong> {p.engenharia.porque}
+            </p>
+          )}
+          {p.engenharia.adaptacao && (
+            <p className="text-[12px] font-body text-foreground leading-relaxed rounded-lg bg-card border border-border/60 px-2.5 py-1.5">
+              <strong className="font-display">Como usar no seu cliente:</strong> {p.engenharia.adaptacao}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* A TRANSCRIÇÃO, é o roteiro do concorrente. É o produto desta análise. */}
       {transcricao && (
         <div className="border-t border-border/60 bg-muted/30 px-3 py-2.5">
@@ -604,11 +647,15 @@ export function SummaryCard({
 
         ) : (
           <>
+            {/* Sem número, sem card. Na transcrição de pesquisa antiga (antes do
+                enriquecimento) as médias vinham zeradas e a tela mostrava uma
+                fileira de "0", que parecia entrega quebrada. Só mostramos a
+                média que existe de verdade. */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
               <Stat label={kind === "transcription" ? "Reels lidos" : "Posts lidos"} value={fmtNum(s.count)} />
-              <Stat label="Média curtidas" value={fmtNum(s.avg_likes)} />
-              <Stat label="Média coment." value={fmtNum(s.avg_comments)} />
-              <Stat label="Média views" value={s.avg_views ? fmtNum(s.avg_views) : "-"} />
+              {(kind !== "transcription" || Number(s.avg_likes) > 0) && <Stat label="Média curtidas" value={fmtNum(s.avg_likes)} />}
+              {(kind !== "transcription" || Number(s.avg_comments) > 0) && <Stat label="Média coment." value={fmtNum(s.avg_comments)} />}
+              {(kind !== "transcription" || Number(s.avg_views) > 0) && <Stat label="Média views" value={s.avg_views ? fmtNum(s.avg_views) : "-"} />}
             </div>
             {Array.isArray(s.top) && s.top.length > 0 && (
               <div className="space-y-2.5">

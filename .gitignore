@@ -38,3 +38,5 @@ dist-ssr
 # aqui: vai nos Secrets do Supabase, que só a edge function enxerga.
 
 .claude/
+.vercel
+.env*

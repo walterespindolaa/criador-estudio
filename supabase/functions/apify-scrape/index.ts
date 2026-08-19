@@ -206,6 +206,8 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
     duration: x.videoDuration ?? x.duration ?? null,
     transcript: type === "transcription" ? transcriptOf(x).slice(0, 4000) : undefined,
     resumo: type === "transcription" ? String(x.summary || x.aiSummary || "").slice(0, 600) || undefined : undefined,
+    // Engenharia reversa (gancho/estrutura/cta/porque/adaptacao), gerada no poll.
+    engenharia: type === "transcription" ? (x.engenharia ?? undefined) : undefined,
   });
 
   const brutos = items.filter((x) => x && (x.likesCount != null || x.commentsCount != null || transcriptOf(x)));
@@ -235,6 +237,122 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
     },
     top: brutos,
   };
+}
+
+// ── Enriquecimento da transcrição ───────────────────────────────────────────
+// Busca legenda/curtidas/comentários/views/capa dos reels transcritos rodando o
+// instagram-scraper nas mesmas urls, em modo run-sync (o Apify espera o run e já
+// devolve os itens). Best-effort com teto de tempo: qualquer falha devolve os
+// itens originais e a entrega segue só com o roteiro. O custo desse run extra é
+// centavos e não entra no cost_usd do job (que é o do run principal).
+async function enriquecerTranscricao(items: any[], token: string): Promise<any[]> {
+  try {
+    const urls = items
+      .map((x) => String(x.url || ""))
+      .filter((u) => /instagram\.com/i.test(u))
+      .slice(0, 15);
+    if (urls.length === 0) return items;
+    const resp = await fetch(
+      `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${token}&timeout=90`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ directUrls: urls, resultsType: "posts", resultsLimit: urls.length }),
+        signal: AbortSignal.timeout(95000),
+      },
+    );
+    if (!resp.ok) return items;
+    const metas = await resp.json() as any[];
+    if (!Array.isArray(metas) || metas.length === 0) return items;
+    // Casa pelo shortcode (o de transcrição escreve minúsculo, o scraper camelCase).
+    const porCodigo = new Map(metas.map((m) => [String(m.shortCode || m.shortcode || ""), m]));
+    return items.map((x) => {
+      const code = String(x.shortcode || x.shortCode || "");
+      const m = porCodigo.get(code) ?? metas.find((mm) => code && String(mm.url || "").includes(code));
+      if (!m) return x;
+      return {
+        ...x,
+        caption: x.caption || m.caption,
+        likesCount: x.likesCount ?? m.likesCount,
+        commentsCount: x.commentsCount ?? m.commentsCount,
+        videoPlayCount: x.videoPlayCount ?? m.videoPlayCount ?? m.videoViewCount,
+        displayUrl: x.displayUrl || m.displayUrl,
+        timestamp: x.timestamp || m.timestamp,
+        videoDuration: x.videoDuration ?? m.videoDuration ?? x.duration,
+        type: x.type || m.type || "clips",
+      };
+    });
+  } catch {
+    return items;
+  }
+}
+
+// ── Engenharia reversa dos roteiros transcritos ─────────────────────────────
+// Uma chamada só analisa até 8 roteiros e devolve, POR REEL: o gancho, a
+// estrutura em blocos, o CTA, por que o vídeo segura retenção e como adaptar
+// a mesma estrutura pro cliente. O resultado entra em `engenharia` de cada
+// item e o resumo em `summary` (o ator de transcrição não manda resumo nenhum,
+// apesar do enableSummary: verificado no dataset real).
+async function engenhariaReversa(
+  items: any[], lovableKey: string, client: Record<string, any> | null,
+): Promise<any[]> {
+  const comTexto = items
+    .map((x, i) => ({ i, t: String(x.transcript || x.transcriptText || x.transcription || x.captions || x.text || "").replace(/\s+/g, " ").trim() }))
+    .filter((r) => r.t.length > 40)
+    .slice(0, 8);
+  if (comTexto.length === 0) return items;
+
+  const nicho = client?.segment || "o nicho do cliente";
+  const nome = client?.name || "o cliente";
+  const fonte = comTexto.map((r) => `[REEL ${r.i}]\n"${r.t.slice(0, 1800)}"`).join("\n\n");
+  const usr = `Você vai fazer a ENGENHARIA REVERSA de roteiros de reels que performaram. Pra cada um, decomponha:
+- gancho: os primeiros segundos, citando a frase usada e o mecanismo (curiosidade, lista, contrarian, promessa...)
+- estrutura: 3 a 5 blocos, em ordem, do que o roteiro faz (não do que ele fala)
+- cta: como o vídeo pede ação no final
+- porque: 1 frase, por que essa construção segura a retenção
+- adaptacao: 1 a 2 frases, como ${nome} (nicho: ${nicho}) usaria a MESMA estrutura com o assunto dele
+- resumo: 1 frase dizendo do que o reel é
+
+${fonte}
+
+Responda SOMENTE JSON: {"analises":[{"i":0,"resumo":"...","gancho":"...","estrutura":["...","..."],"cta":"...","porque":"...","adaptacao":"..."}]}
+Português BR, direto, sem markdown.`;
+
+  try {
+    const air = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST", headers: { "Authorization": `Bearer ${lovableKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          { role: "system", content: "Você é um roteirista sênior de conteúdo brasileiro, especialista em retenção de reels. Responda SOMENTE JSON válido." },
+          { role: "user", content: usr },
+        ],
+        max_tokens: 3000, temperature: 0.3,
+      }),
+    });
+    if (!air.ok) { console.error("[apify-scrape] engenharia gateway error", air.status); return items; }
+    const aj = await air.json();
+    let s = String(aj.choices?.[0]?.message?.content || "").replace(/```json/gi, "").replace(/```/g, "").trim();
+    const st = s.indexOf("{"); const en = s.lastIndexOf("}");
+    if (st >= 0 && en > st) s = s.slice(st, en + 1);
+    const analises = (JSON.parse(s)?.analises ?? []) as Array<Record<string, unknown>>;
+    for (const a of analises) {
+      const idx = Number(a?.i);
+      if (!Number.isInteger(idx) || !items[idx]) continue;
+      items[idx].engenharia = {
+        gancho: String(a.gancho || "").slice(0, 400),
+        estrutura: Array.isArray(a.estrutura) ? a.estrutura.map((e) => String(e).slice(0, 200)).slice(0, 6) : [],
+        cta: String(a.cta || "").slice(0, 250),
+        porque: String(a.porque || "").slice(0, 300),
+        adaptacao: String(a.adaptacao || "").slice(0, 400),
+      };
+      if (!items[idx].summary && a.resumo) items[idx].summary = String(a.resumo).slice(0, 300);
+    }
+    return items;
+  } catch (e) {
+    console.error("[apify-scrape] engenharia falhou", e);
+    return items;
+  }
 }
 
 // ── Geração das ideias ─────────────────────────────────────────────────────
@@ -432,6 +550,17 @@ Deno.serve(async (req) => {
         if (onlyReels.length > 0) items = onlyReels;
       }
 
+      // ── A transcrição volta PELADA e aqui a gente veste ela ──
+      // Verificado no dataset real (19/08): o ator de transcrição devolve SÓ
+      // url, shortcode, username, duração e o texto. Nada de legenda, curtidas,
+      // comentários, views ou capa, e o card da entrega saía "(sem legenda)",
+      // 0 curtidas e sem imagem. Cobrar 3 créditos por isso era vergonhoso.
+      // Rodamos o instagram-scraper nas MESMAS urls (síncrono, best-effort):
+      // se falhar ou estourar o tempo, a entrega segue só com o roteiro.
+      if (job.scrape_type === "transcription" && items.length > 0) {
+        items = await enriquecerTranscricao(items, apifyToken);
+      }
+
       // O CUSTO REAL, cobrado pelo Apify. Antes era um número chutado no código.
       const costUsd = Number(run?.usageTotalUsd ?? 0) || 0;
 
@@ -444,19 +573,31 @@ Deno.serve(async (req) => {
         return json({ ok: true, status: "error", error: "empty" });
       }
 
+      // Cliente do job: usado pela engenharia reversa (adaptação pro nicho
+      // dele) e pelas pautas. Buscado uma vez só.
+      let client: Record<string, any> | null = null;
+      if (job.crm_client_id) {
+        const { data: c } = await svc.from("crm_clients")
+          .select("id, manager_id, segment, name, persona, brand_core, cria_owner_id")
+          .eq("id", job.crm_client_id).maybeSingle();
+        client = (c as Record<string, any>) ?? null;
+      }
+      const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+
+      // ── ENGENHARIA REVERSA de cada roteiro transcrito ──
+      // O roteiro cru sozinho obriga a social mídia a fazer a análise de cabeça.
+      // Aqui a IA decompõe cada um: gancho, estrutura em blocos, CTA, por que
+      // segura retenção e como adaptar pro cliente. Best-effort: sem IA, a
+      // entrega segue com o roteiro cru.
+      if (job.scrape_type === "transcription" && lovableKey) {
+        items = await engenhariaReversa(items, lovableKey, client);
+      }
+
       const { summary, top } = summarize(items, job.scrape_type);
 
       // Ideias (o perfil é só raio-x, não gera pauta).
       let ideas: Array<{ title: string; format: string; rationale: string }> = [];
-      const lovableKey = Deno.env.get("LOVABLE_API_KEY");
       if (lovableKey && job.scrape_type !== "profile" && top.length > 0) {
-        let client: Record<string, any> | null = null;
-        if (job.crm_client_id) {
-          const { data: c } = await svc.from("crm_clients")
-            .select("id, manager_id, segment, name, persona, brand_core, cria_owner_id")
-            .eq("id", job.crm_client_id).maybeSingle();
-          client = (c as Record<string, any>) ?? null;
-        }
         ideas = await gerarIdeias(svc, job.scrape_type, job.input_handle, top, client, lovableKey);
       }
 
