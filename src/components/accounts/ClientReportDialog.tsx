@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, Download, Sparkles, Link2, Mail, MessageCircle } from "lucide-react";
@@ -545,6 +545,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const { exportPdf, exportPdfBlob } = usePdfExport();
   const { user } = useAuth();
   const { agencyOwnerId } = useActiveAccount();
+  const queryClient = useQueryClient();
   const { data: crmClients = [] } = useCrmClients();
   const linked = useMemo(
     () => (client.crm_client_id ? crmClients.find((c) => c.id === client.crm_client_id) ?? null : null),
@@ -747,8 +748,14 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         updated_at: new Date().toISOString(),
       } as never, { onConflict: "manager_id,crm_client_id,period_key" });
       if (error) throw error;
+      // Sem isto o "Histórico de relatórios" (montado atrás do diálogo) ficava
+      // com a lista velha: a Gabriela salvou duas notas e a tela seguiu
+      // mostrando uma. O dado ESTAVA salvo; a lista é que não recarregava.
+      queryClient.invalidateQueries({ queryKey: ["report-notes-list", agencyOwnerId, client.crm_client_id] });
+      queryClient.invalidateQueries({ queryKey: ["report-notes", agencyOwnerId, client.crm_client_id] });
     } catch (e) {
       console.error("Salvar recado do relatório falhou", e);
+      toast.error("Não consegui salvar a nota. Tente de novo.");
     } finally {
       setNotesSaving(false);
     }
@@ -1702,16 +1709,11 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     </div>
   );
 
-  const avisoMetricasNode = (
-    <div style={{ marginTop: 18, padding: "14px 16px", border: `1px dashed ${C.line}`, borderRadius: 12, background: C.soft }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>Métricas de alcance e engajamento</div>
-      <div style={{ fontSize: 11, color: C.sub, marginTop: 4, lineHeight: 1.55 }}>
-        Este relatório cobre a produção e a entrega das peças. Alcance, visualizações, salvamentos e evolução de seguidores
-        vêm direto do Instagram e só podem ser lidos com o perfil conectado, o que ainda não foi feito. Assim que a conexão
-        for autorizada, esta seção passa a sair preenchida nos próximos relatórios.
-      </div>
-    </div>
-  );
+  // Sem Instagram conectado, a seção de métricas simplesmente NÃO SAI.
+  // Existia aqui um aviso explicando a ausência ("o perfil ainda não foi
+  // conectado"), mas esse recado é assunto interno da social mídia com a
+  // ferramenta, não do cliente: no PDF ele soava como desculpa/pendência.
+  // Relatório white-label mostra o que tem, não justifica o que falta.
 
   const leituraNode = (highlight || bestFormat || stats.cycleDays !== null || stuck.length > 0) ? (
     <div>
@@ -2154,7 +2156,6 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             {breakdownNode}
           </>
         )}
-        {!perf.has && metricShots.length === 0 && avisoMetricasNode}
       </>
     ),
   });
