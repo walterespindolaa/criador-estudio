@@ -56,6 +56,20 @@ async function edgeErrText(err: unknown, fallback: string): Promise<string> {
   return (err as { message?: string })?.message || fallback;
 }
 
+// Invoke que se recupera de sessão vencida. O "Não autenticado" que a Gabriela
+// viu ao excluir mídia: a aba ficou aberta tempo suficiente (picker do Drive,
+// várias abas do app) pro access token expirar/rotacionar, e o invoke mandou o
+// token velho. Renovamos a sessão e tentamos UMA vez de novo antes de desistir.
+async function invokeComSessao(fn: string, body: Record<string, unknown>) {
+  let r = await supabase.functions.invoke(fn, { body });
+  const status = (r.error as { context?: { status?: number } } | null)?.context?.status;
+  if (status === 401) {
+    const { error: refreshErr } = await supabase.auth.refreshSession();
+    if (!refreshErr) r = await supabase.functions.invoke(fn, { body });
+  }
+  return r;
+}
+
 // Resultado da consulta do tipo real de um arquivo do Drive (edge drive-file-meta).
 type DriveMeta = { mime: string | null; name: string | null };
 
@@ -304,7 +318,7 @@ export function useCriaPostMedia(postId: string | null) {
       return { prev };
     },
     mutationFn: async (mediaId: string) => {
-      const { data, error } = await supabase.functions.invoke("criapost-media-delete", { body: { media_id: mediaId } });
+      const { data, error } = await invokeComSessao("criapost-media-delete", { media_id: mediaId });
       if (error) throw new Error(await edgeErrText(error, "Não consegui remover a mídia."));
       if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
     },
@@ -324,7 +338,7 @@ export function useCriaPostMedia(postId: string | null) {
     },
     mutationFn: async (ids: string[]) => {
       const results = await Promise.allSettled(ids.map((id) =>
-        supabase.functions.invoke("criapost-media-delete", { body: { media_id: id } })));
+        invokeComSessao("criapost-media-delete", { media_id: id })));
       const anyFail = results.some((r) =>
         r.status === "rejected" ||
         (r.status === "fulfilled" && (!!r.value.error || !!((r.value.data as { error?: string })?.error))));

@@ -1449,7 +1449,15 @@ export default function AgendaCriacao() {
             addCapture.mutate(v);
           }
           setCapOpen(false); setEditCap(null);
-        }} pending={addCapture.isPending || updCapture.isPending} />
+        }} pending={addCapture.isPending || updCapture.isPending}
+        onDelete={() => {
+          if (!editCap) return;
+          delCapture.mutate(editCap.id, {
+            onSuccess: () => toast.success("Captação excluída."),
+            onError: () => toast.error("Não consegui excluir."),
+          });
+          setCapOpen(false); setEditCap(null);
+        }} />
       <TaskDialog task={editTask} clients={clients}
         onClose={() => setEditTask(null)}
         onOpenCrm={() => { setEditTask(null); navigate("/socialmidia/criacrm/tarefas"); }}
@@ -1785,7 +1793,10 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
   );
 }
 
-function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pending }: { open: boolean; initial?: Capture | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null; status?: Capture["status"]; duration_hours?: number | null }) => void; pending: boolean }) {
+function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pending, onDelete }: { open: boolean; initial?: Capture | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null; status?: Capture["status"]; duration_hours?: number | null }) => void; pending: boolean; onDelete?: () => void }) {
+  // Excluir em dois toques (arma e confirma), igual à tarefa: agendou errado,
+  // apaga dali mesmo em vez de caçar o X na lista de próximas captações.
+  const [confirmDel, setConfirmDel] = useState(false);
   const [crm, setCrm] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
@@ -1802,6 +1813,7 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
     setCrm(initial?.crm_client_id ?? null); setName(initial?.client_name ?? "");
     setDate(initial?.capture_date ?? ""); setTime(initial?.capture_time ? initial.capture_time.slice(0, 5) : "");
     setLoc(initial?.location ?? ""); setDur(initial?.duration_hours ?? null); setTeam(initial?.team ?? ""); setNote(initial?.note ?? ""); setStatus(initial?.status ?? "agendada");
+    setConfirmDel(false);
   }
   if (!open && seeded) setSeeded("");
   const valid = date && (!!crm || name.trim());
@@ -1845,11 +1857,23 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
             </div>
           )}
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => onSave({ capture_date: date, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null, duration_hours: dur, ...(initial ? { status } : {}) })} disabled={!valid || pending}>
-            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : initial ? "Salvar" : "Agendar"}
-          </Button>
+        <DialogFooter className="sm:justify-between gap-2">
+          {initial && onDelete ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className={cn("gap-1.5", confirmDel ? "text-destructive-foreground bg-destructive hover:bg-destructive/90" : "text-destructive hover:text-destructive")}
+              onClick={() => { if (confirmDel) onDelete(); else setConfirmDel(true); }}
+            >
+              <Trash2 className="h-4 w-4" /> {confirmDel ? "Confirmar exclusão" : "Excluir"}
+            </Button>
+          ) : <span />}
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button onClick={() => onSave({ capture_date: date, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null, duration_hours: dur, ...(initial ? { status } : {}) })} disabled={!valid || pending}>
+              {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : initial ? "Salvar" : "Agendar"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

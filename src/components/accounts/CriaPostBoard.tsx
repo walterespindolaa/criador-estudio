@@ -697,6 +697,11 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                       <Draggable key={p.id} draggableId={p.id} index={idx}>
                       {(dragP, dragS) => (
                       <div ref={dragP.innerRef} {...dragP.draggableProps} {...dragP.dragHandleProps} style={dragP.draggableProps.style}
+                        // O card INTEIRO abre o post (era só o lápis, e a pessoa
+                        // clicava no card esperando abrir). defaultPrevented é como
+                        // o dnd marca o clique que na verdade foi um arraste; data/
+                        // links/botões internos já dão stopPropagation.
+                        onClick={(e) => { if (!e.defaultPrevented) openEdit(p); }}
                         className={`bg-card border border-border rounded-xl p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${dragS.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""}`}>
                         <div className="flex items-start gap-2">
                           <div className="flex-1 min-w-0">
@@ -762,8 +767,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                             <TagChips ids={tagsByPost[p.id]} catalog={tagCatalog} />
                           </div>
                           <div className="flex flex-col gap-1.5 md:gap-1 shrink-0">
-                            <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0" onClick={() => openEdit(p)} aria-label="Editar"><Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>
-                            <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0 text-destructive" onClick={() => setConfirmDelete(p.id)} aria-label="Excluir"><Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>
+                            <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0" onClick={(e) => { e.stopPropagation(); openEdit(p); }} aria-label="Editar"><Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>
+                            <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0 text-destructive" onClick={(e) => { e.stopPropagation(); setConfirmDelete(p.id); }} aria-label="Excluir"><Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>
                           </div>
                         </div>
                       </div>
