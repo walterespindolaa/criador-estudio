@@ -105,8 +105,13 @@ end; $function$;
 -- Esta função traduz o autor pro portal. Sem incluir o papel novo aqui, o
 -- elogio do próprio cliente apareceria pra ele rotulado como "Equipe".
 -- ============================================================
+-- A coluna de retorno chama-se author_kind (é o que o portal lê). Mudar o tipo
+-- de retorno exige DROP: `create or replace` sozinho devolve
+-- "cannot change return type of existing function".
+drop function if exists public.list_post_comments_by_token(text);
+
 create or replace function public.list_post_comments_by_token(_token text)
-returns table(post_id uuid, author text, content text, created_at timestamptz)
+returns table(post_id uuid, author_kind text, content text, created_at timestamp with time zone)
 language sql
 stable
 security definer
