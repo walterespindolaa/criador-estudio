@@ -286,7 +286,7 @@ export function useEnsureMonthly() {
   return useMutation({
     mutationFn: async ({ monthRef, clients }: {
       monthRef: string;
-      clients: { id: string; monthly_value: number | null; payment_day: number | null; status?: string; contract_end_date?: string | null }[];
+      clients: { id: string; monthly_value: number | null; payment_day: number | null; status?: string; contract_end_date?: string | null; contract_date?: string | null }[];
     }) => {
       if (!agencyOwnerId) throw new Error("Sem sessão");
       // Só gera/atualiza a instância do mês pra quem ainda conta neste mês.

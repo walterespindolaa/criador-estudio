@@ -74,10 +74,34 @@ export const regimeLabel = (r?: string) => REGIMES.find((x) => x.v === r)?.label
  *                     NÃO usar toISOString(); passe hojeBR().slice(0,7) ou o mês visto.
  */
 export function mensalidadeAtivaNoMes(
-  client: { status?: string | null; monthly_value?: number | null; contract_end_date?: string | null },
+  client: {
+    status?: string | null;
+    monthly_value?: number | null;
+    contract_end_date?: string | null;
+    contract_date?: string | null;
+    payment_day?: number | null;
+  },
   monthYYYYMM: string,
 ): boolean {
   if (!(Number(client.monthly_value) > 0)) return false;
+
+  /* CONTRATO AINDA NÃO CONFIGURADO NÃO VIRA RECEITA.
+     Um lead marcado como "fechado" nasce cliente já com o valor mensal copiado,
+     mas sem dia de pagamento e sem data de início. Antes disso a projeção
+     inventava: caía no dia 1 (por causa do `|| 1` do dueDateFor) e somava no
+     "entra" do mês, mostrando dinheiro que ninguém combinou quando entra.
+
+     A distinção entre `null` e `undefined` aqui é proposital: `null` é o banco
+     dizendo "está vazio" e bloqueia; `undefined` é quem chamou não ter passado
+     o campo (a ficha do cliente calcula com um objeto parcial) e não bloqueia,
+     pra não mudar o comportamento de quem só quer saber do status. */
+  const semDiaDePagamento = client.payment_day === null;
+  const semInicioDeContrato = client.contract_date === null;
+  if (semDiaDePagamento && semInicioDeContrato) return false;
+
+  // O contrato começa quando começa: não projeta receita de mês anterior a ele.
+  if (client.contract_date && monthYYYYMM < client.contract_date.slice(0, 7)) return false;
+
   const end = client.contract_end_date ? client.contract_end_date.slice(0, 7) : null;
   // Encerrado: conta até o mês do encerramento (inclusive), nunca depois.
   if (end) return monthYYYYMM <= end;

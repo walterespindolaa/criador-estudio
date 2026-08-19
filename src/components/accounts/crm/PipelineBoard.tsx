@@ -3,7 +3,7 @@ import { Plus, DollarSign, Trash2, Target, ListTodo, CheckCircle2, Circle, Penci
 import { toast } from "sonner";
 import {
   useCrmLeads, useCreateCrmLead, useUpdateCrmLead, useDeleteCrmLead,
-  useCrmClients, useCreateCrmClient, useCreateCrmContract,
+  useCrmClients, useCreateCrmClient, useUpdateCrmClient, useCreateCrmContract,
   useCrmTasks, useCreateCrmTask, useUpdateCrmTask, useDeleteCrmTask,
   CRM_STAGES, CRM_STAGE_LABELS,
   type CrmLead, type CrmStage, type CrmLeadInput, type CrmTask, type CrmTaskStatus, type CrmTaskPriority,
@@ -42,6 +42,7 @@ export function PipelineBoard() {
   const updateLead = useUpdateCrmLead();
   const delLead = useDeleteCrmLead();
   const createClient = useCreateCrmClient();
+  const updateClient = useUpdateCrmClient();
   const createContract = useCreateCrmContract();
   const updateTask = useUpdateCrmTask();
 
@@ -86,6 +87,31 @@ export function PipelineBoard() {
     if (!lead || lead.stage === stage) return;
     try {
       await updateLead.mutateAsync({ id: lead.id, stage });
+
+      /* VOLTAR DE "FECHADO" TAMBÉM PRECISA DESFAZER.
+         Antes só existia o caminho de ida: ao tocar em Fechado o lead virava
+         cliente pra sempre. Arrastar de volta pra Negociação (ou até um drop
+         acidental que passou por Fechado) deixava um cliente órfão na carteira,
+         contando no MRR e gerando mensalidade no Caixa de um contrato que não
+         existe. Aqui perguntamos em vez de decidir sozinhos, e INATIVAMOS em vez
+         de apagar: se já houver histórico (posts, financeiro, relatório), ele
+         continua lá pra consulta, só sai do que é "ativo". */
+      if (lead.stage === "fechado" && stage !== "fechado") {
+        const cliente = clients.find((c) => c.crm_lead_id === lead.id);
+        if (cliente) {
+          const tirar = await confirmar({
+            titulo: `Tirar ${cliente.name} da carteira?`,
+            descricao:
+              "Esse lead já tinha virado cliente quando foi pra Fechado. Voltando pro pipeline, ele deixa de contar na receita mensal e para de gerar mensalidade no Caixa. O histórico não é apagado: ele fica como inativo.",
+            acao: "Tirar da carteira",
+          });
+          if (tirar) {
+            await updateClient.mutateAsync({ id: cliente.id, status: "inativo" });
+            toast.success("Cliente marcado como inativo. O lead voltou pro pipeline.");
+          }
+        }
+      }
+
       if (stage === "fechado") {
         const exists = clients.find((c) => c.crm_lead_id === lead.id);
         let clientId = exists?.id ?? null;

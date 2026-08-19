@@ -175,7 +175,7 @@ function CaixaInner() {
     if (!activeClients.length) return;
     ensureMonthly.mutate({
       monthRef,
-      clients: activeClients.map((c) => ({ id: c.id, monthly_value: c.monthly_value, payment_day: c.payment_day, status: c.status, contract_end_date: c.contract_end_date })),
+      clients: activeClients.map((c) => ({ id: c.id, monthly_value: c.monthly_value, payment_day: c.payment_day, status: c.status, contract_end_date: c.contract_end_date, contract_date: c.contract_date })),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [monthRef, activeClients.length]);
@@ -1435,8 +1435,16 @@ function CalendarioFinanceiro({ monthlies, billablePendingIds, records, recurrin
   const byDay = new Map<number, Ev[]>();
   for (const e of evs) { const a = byDay.get(e.day) ?? []; a.push(e); byDay.set(e.day, a); }
 
-  const totalReceber = evs.filter((e) => e.kind === "receber" && !e.done).reduce((s, e) => s + e.amount, 0);
-  const totalPagar = evs.filter((e) => e.kind === "pagar" && !e.done).reduce((s, e) => s + e.amount, 0);
+  /* O cabeçalho dizia "entra / sai" mas contava só o que estava `!done`, ou seja,
+     só o PENDENTE. Despesa já paga é `done` e sumia da conta: o mês podia ter
+     oito despesas quitadas e o cabeçalho anunciava "sai R$ 0,00", o oposto da
+     verdade. Agora "entra" e "sai" são o total do mês, pago ou não, que é o que
+     o rótulo promete, e o que ainda está em aberto aparece do lado. */
+  const totalEntrou = evs.filter((e) => e.kind === "receber").reduce((s, e) => s + e.amount, 0);
+  const totalSaiu = evs.filter((e) => e.kind === "pagar").reduce((s, e) => s + e.amount, 0);
+  const aReceber = evs.filter((e) => e.kind === "receber" && !e.done).reduce((s, e) => s + e.amount, 0);
+  const aPagar = evs.filter((e) => e.kind === "pagar" && !e.done).reduce((s, e) => s + e.amount, 0);
+  const emAberto = aReceber + aPagar;
   const temPrevisto = evs.some((e) => e.previsto);
 
   if (evs.length === 0) {
@@ -1458,11 +1466,16 @@ function CalendarioFinanceiro({ monthlies, billablePendingIds, records, recurrin
           {temPrevisto && <p className="text-[11px] font-body text-muted-foreground">Tracejado = previsto (recorrente ainda não lançado).</p>}
         </div>
         <div className="flex items-center gap-x-3 gap-y-1 flex-wrap text-[11px] font-body">
-          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> entra <strong className="text-foreground">{brl(totalReceber)}</strong></span>
-          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> sai <strong className="text-foreground">{brl(totalPagar)}</strong></span>
-          <span className={cn("inline-flex items-center gap-1 font-bold", totalReceber - totalPagar >= 0 ? "text-green-700" : "text-red-600")}>
-            saldo {brl(totalReceber - totalPagar)}
+          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> entra <strong className="text-foreground">{brl(totalEntrou)}</strong></span>
+          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> sai <strong className="text-foreground">{brl(totalSaiu)}</strong></span>
+          <span className={cn("inline-flex items-center gap-1 font-bold", totalEntrou - totalSaiu >= 0 ? "text-green-700" : "text-red-600")}>
+            saldo {brl(totalEntrou - totalSaiu)}
           </span>
+          {emAberto > 0 && (
+            <span className="inline-flex items-center gap-1 text-muted-foreground" title="O que ainda não foi pago nem recebido neste mês">
+              ({brl(aReceber)} a receber · {brl(aPagar)} a pagar)
+            </span>
+          )}
         </div>
       </div>
 
