@@ -5192,11 +5192,16 @@ export type Database = {
       }
       approve_post: { Args: { _post_id: string }; Returns: boolean }
       approve_post_by_token: {
-        Args: { _post_id: string; _token: string }
+        Args: { _comment?: string; _post_id: string; _token: string }
         Returns: undefined
       }
       approve_stage_by_token: {
-        Args: { _post_id: string; _stage: string; _token: string }
+        Args: {
+          _comment?: string
+          _post_id: string
+          _stage: string
+          _token: string
+        }
         Returns: undefined
       }
       bio_slug_available: {
