@@ -24,12 +24,14 @@ var CRIA_TRACK = {
   // anúncio, a visita na LP e a assinatura numa jornada só.
   metaPixelId: "1760482638731506",
 
-  // ads.openai.com > Tools > Conversions > Create > Data Source (Web).
-  // Ele gera o Pixel ID na hora; é só colar aqui.
-  chatgptAdsId: "",
+  // ads.openai.com > Tools > Conversions > Data Source (Web).
+  chatgptAdsId: "4TCiBRJhEggrMkWpvG3KhE",
 
-  // Liga os logs no console pra conferir os disparos sem abrir o Gerenciador.
-  debug: false,
+  // Logs no console, pra conferir os disparos sem abrir os gerenciadores.
+  // LIGADO agora porque os dois pixels acabaram de subir e precisam ser
+  // validados. Depois de confirmar que os eventos chegam, volte pra false:
+  // em produção isso é só ruído no console de quem visita.
+  debug: true,
 };
 
 (function () {
