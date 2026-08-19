@@ -530,6 +530,15 @@ export function SummaryCard({
                 <Stat label="Seguindo" value={fmtNum(s.following)} />
                 <Stat label="Posts" value={fmtNum(s.posts)} />
               </div>
+              {/* Calculado dos ÚLTIMOS POSTS que o raio-x já trazia e a gente
+                  ignorava: engajamento médio, taxa sobre seguidores e ritmo. */}
+              {(s.avg_engagement != null || s.posts_per_week != null) && (
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-2">
+                  {s.avg_engagement != null && <Stat label="Engaj. por post" value={fmtNum(s.avg_engagement)} />}
+                  {s.eng_rate != null && <Stat label="Taxa de engaj." value={`${s.eng_rate}%`} />}
+                  {s.posts_per_week != null && <Stat label="Posts por semana" value={String(s.posts_per_week)} />}
+                </div>
+              )}
               {s.biography && <p className="text-[13px] font-body text-muted-foreground mt-3 whitespace-pre-wrap leading-relaxed">{s.biography}</p>}
               <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
                 {s.verified && <span className="text-[10px] font-body px-2 py-0.5 rounded-full bg-primary/10 text-primary">✔ Verificado</span>}
@@ -537,6 +546,30 @@ export function SummaryCard({
                 {s.category && <span className="text-[10px] font-body px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{s.category}</span>}
                 {s.externalUrl && <a href={s.externalUrl} target="_blank" rel="noreferrer" className="text-[11px] font-body text-primary hover:underline truncate max-w-[240px]">{String(s.externalUrl).replace(/^https?:\/\//, "")}</a>}
               </div>
+              {s.best_recent?.caption && (
+                <p className="mt-2.5 text-[12px] font-body text-foreground leading-relaxed">
+                  <strong className="font-display">Post recente que mais engajou:</strong> "{s.best_recent.caption}"
+                  <span className="text-muted-foreground"> · {fmtNum(s.best_recent.likes)} curtidas</span>
+                  {s.best_recent.url && (
+                    <a href={s.best_recent.url} target="_blank" rel="noreferrer" className="ml-1.5 text-primary font-semibold hover:underline">ver</a>
+                  )}
+                </p>
+              )}
+              {Array.isArray(s.related) && s.related.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                    Perfis parecidos (próximas leituras)
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {s.related.map((r: Bruto) => (
+                      <a key={r.username} href={`https://www.instagram.com/${r.username}/`} target="_blank" rel="noreferrer"
+                        className="text-[11px] font-body font-semibold px-2 py-1 rounded-full border border-border bg-card text-foreground hover:border-primary hover:text-primary transition-colors">
+                        @{r.username}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -570,10 +603,18 @@ export function SummaryCard({
                       {a.active && (
                         <span className="text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700">RODANDO</span>
                       )}
+                      {/* LONGEVIDADE em destaque: anúncio rodando há meses é o
+                          criativo vencedor do concorrente. Sinal mais valioso
+                          da biblioteca, agora em número. */}
+                      {Number(a.dias_no_ar) >= 7 && (
+                        <span className="text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-700">
+                          HÁ {a.dias_no_ar} DIAS NO AR
+                        </span>
+                      )}
                       {a.since && (
                         <span className="text-[10.5px] font-body text-muted-foreground">
                           {/* Vinha "desde 1777446000" epoch cru na cara do usuário. */}
-                          no ar desde {new Date(a.since).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                          desde {new Date(a.since).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
                         </span>
                       )}
                     </div>
@@ -636,11 +677,19 @@ export function SummaryCard({
                     </div>
                   )}
                 </div>
-                {c.likes > 0 && (
-                  <span className="flex items-center gap-0.5 text-[11px] font-body text-muted-foreground shrink-0">
-                    <Heart className="h-3 w-3" />{fmtNum(c.likes)}
-                  </span>
-                )}
+                <span className="flex flex-col items-end gap-0.5 shrink-0">
+                  {c.likes > 0 && (
+                    <span className="flex items-center gap-0.5 text-[11px] font-body text-muted-foreground">
+                      <Heart className="h-3 w-3" />{fmtNum(c.likes)}
+                    </span>
+                  )}
+                  {/* Comentário que abriu conversa é dúvida quente: mostra as respostas. */}
+                  {Number(c.replies) > 0 && (
+                    <span className="flex items-center gap-0.5 text-[11px] font-body text-muted-foreground">
+                      <MessageCircle className="h-3 w-3" />{fmtNum(c.replies)}
+                    </span>
+                  )}
+                </span>
               </div>
             ))}
           </div>
@@ -657,6 +706,35 @@ export function SummaryCard({
               {(kind !== "transcription" || Number(s.avg_comments) > 0) && <Stat label="Média coment." value={fmtNum(s.avg_comments)} />}
               {(kind !== "transcription" || Number(s.avg_views) > 0) && <Stat label="Média views" value={s.avg_views ? fmtNum(s.avg_views) : "-"} />}
             </div>
+            {/* PADRÕES: dados que o Apify já mandava e ficavam na mesa. Cada
+                chip é uma conclusão de estratégia, não um número solto. */}
+            {(s.best_day || s.avg_duration_top || Number(s.publi_count) > 0 || s.audio_original_pct != null || (Array.isArray(s.top_hashtags) && s.top_hashtags.length > 0)) && (
+              <div className="mb-4 flex flex-wrap gap-1.5">
+                {s.best_day && (
+                  <span className="text-[11px] font-body font-semibold px-2.5 py-1 rounded-full bg-muted text-foreground">
+                    Dia que mais rende: <b className="capitalize">{s.best_day}</b>
+                  </span>
+                )}
+                {s.avg_duration_top != null && (
+                  <span className="text-[11px] font-body font-semibold px-2.5 py-1 rounded-full bg-muted text-foreground">
+                    Duração dos top: ~{s.avg_duration_top}s
+                  </span>
+                )}
+                {Number(s.publi_count) > 0 && (
+                  <span className="text-[11px] font-body font-semibold px-2.5 py-1 rounded-full bg-muted text-foreground">
+                    Publi: {s.publi_count} de {s.count}
+                  </span>
+                )}
+                {s.audio_original_pct != null && (
+                  <span className="text-[11px] font-body font-semibold px-2.5 py-1 rounded-full bg-muted text-foreground">
+                    Áudio original: {s.audio_original_pct}%
+                  </span>
+                )}
+                {Array.isArray(s.top_hashtags) && s.top_hashtags.slice(0, 5).map((t: string) => (
+                  <span key={t} className="text-[11px] font-body px-2.5 py-1 rounded-full border border-border text-muted-foreground">#{t}</span>
+                ))}
+              </div>
+            )}
             {Array.isArray(s.top) && s.top.length > 0 && (
               <div className="space-y-2.5">
                 <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">

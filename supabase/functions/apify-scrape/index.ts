@@ -95,6 +95,24 @@ async function resolvePageId(handle: string, token: string): Promise<string | nu
 function summarize(items: any[], type: string): { summary: Record<string, unknown>; top: any[] } {
   if (type === "profile") {
     const p = items[0] || {};
+    // O ator devolve MUITO mais que a contagem de seguidores: os últimos posts
+    // (com curtidas/comentários/data) e os perfis relacionados. Antes a gente
+    // jogava isso fora e o raio-x era só a bio. Agora ele calcula engajamento,
+    // ritmo de postagem e ainda sugere os próximos concorrentes pra pesquisar.
+    const lp: any[] = Array.isArray(p.latestPosts) ? p.latestPosts : [];
+    const engDe = (x: any) => (Number(x.likesCount) || 0) + (Number(x.commentsCount) || 0);
+    const avgEng = lp.length ? Math.round(lp.reduce((s, x) => s + engDe(x), 0) / lp.length) : null;
+    const engRate = avgEng != null && Number(p.followersCount) > 0
+      ? Math.round((10000 * avgEng) / Number(p.followersCount)) / 100 : null;
+    const ts = lp.map((x) => new Date(x.timestamp || 0).getTime()).filter((n) => n > 0).sort((a, b) => a - b);
+    const spanDias = ts.length > 1 ? (ts[ts.length - 1] - ts[0]) / 86400000 : 0;
+    const postsSemana = spanDias > 0 ? Math.round(((ts.length - 1) / (spanDias / 7)) * 10) / 10 : null;
+    const fmts: Record<string, number> = {};
+    for (const x of lp) { const f = String(x.productType || x.type || "outro"); fmts[f] = (fmts[f] || 0) + 1; }
+    const best = lp.slice().sort((a, b) => engDe(b) - engDe(a))[0];
+    const related = (Array.isArray(p.relatedProfiles) ? p.relatedProfiles : []).slice(0, 8)
+      .map((r: any) => ({ username: r.username, name: r.full_name || null, verified: !!r.is_verified }))
+      .filter((r: any) => r.username);
     return {
       summary: {
         kind: "profile",
@@ -105,6 +123,16 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
         externalUrl: p.externalUrl ?? p.externalUrls?.[0]?.url ?? null,
         url: p.url,
         avatar: p.profilePicUrlHD || p.profilePicUrl || null,
+        avg_engagement: avgEng,
+        eng_rate: engRate,
+        posts_per_week: postsSemana,
+        recent_formats: fmts,
+        best_recent: best ? {
+          caption: String(best.caption || "").replace(/\s+/g, " ").slice(0, 160) || null,
+          likes: best.likesCount ?? 0, comments: best.commentsCount ?? 0,
+          url: best.url || (best.shortCode ? `https://www.instagram.com/p/${best.shortCode}/` : null),
+        } : null,
+        related,
       },
       top: [],
     };
@@ -112,12 +140,18 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
 
   if (type === "comments") {
     const comments = items.filter((x) => x && (x.text || x.ownerUsername));
-    const topC = [...comments].sort((a, b) => (Number(b.likesCount) || 0) - (Number(a.likesCount) || 0)).slice(0, 25);
+    // Respostas valem mais que curtida: comentário que abriu conversa é dúvida
+    // quente. Entram no peso e vão pra tela.
+    const pesoC = (c: any) => (Number(c.likesCount) || 0) + 2 * (Number(c.repliesCount) || 0);
+    const topC = [...comments].sort((a, b) => pesoC(b) - pesoC(a)).slice(0, 25);
     return {
       summary: {
         kind: "comments",
         count: comments.length,
-        top: topC.map((c) => ({ text: String(c.text || "").slice(0, 220), user: c.ownerUsername, likes: c.likesCount || 0 })),
+        top: topC.map((c) => ({
+          text: String(c.text || "").slice(0, 220), user: c.ownerUsername,
+          likes: c.likesCount || 0, replies: c.repliesCount || 0,
+        })),
       },
       top: topC,
     };
@@ -157,31 +191,37 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
       );
     };
 
+    const mapAd = (a: any) => {
+      const s = a.snapshot ?? {};
+      const archiveId = a.adArchiveID || a.ad_archive_id || a.adArchiveId || a.adid || s.ad_archive_id || null;
+      const pageId = a.pageId || s.page_id || a.page_id || null;
+      const since = dataDe(a.startDate ?? a.adDeliveryStartTime ?? a.ad_delivery_start_time ?? a.startDateFormatted ?? s.start_date);
+      // LONGEVIDADE: anúncio rodando há meses é criativo que PAGA a conta do
+      // concorrente. É o sinal mais valioso da biblioteca e ficava escondido
+      // numa data solta. Vira número e critério de ordenação.
+      const diasNoAr = since ? Math.max(0, Math.floor((Date.now() - new Date(since).getTime()) / 86400000)) : null;
+      return {
+        text: String(a.adText || s.body?.text || a.body || a.text || a.adCreativeBody || "").replace(/\s+/g, " ").slice(0, 400),
+        titulo: String(s.title || s.link_description || a.title || "").slice(0, 120) || null,
+        page: a.pageName || s.page_name || null,
+        since,
+        dias_no_ar: diasNoAr,
+        active: a.isActive ?? a.active ?? null,
+        link: a.linkUrl || s.link_url || a.link || null,
+        cta: s.cta_text || a.ctaText || s.cta_type || null,
+        // SEM LINK ela não conseguia VER o anúncio. Se não tiver o id do
+        // arquivo, cai na página do anunciante na biblioteca melhor que nada.
+        library_link: archiveId
+          ? `https://www.facebook.com/ads/library/?id=${archiveId}`
+          : (pageId ? `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=BR&view_all_page_id=${pageId}` : null),
+        thumbnail: capaDe(a),
+      };
+    };
+    // Ativos primeiro; entre iguais, o mais LONGEVO em cima.
+    const mapeados = ads.map(mapAd).sort((a, b) =>
+      (Number(!!b.active) - Number(!!a.active)) || ((b.dias_no_ar ?? -1) - (a.dias_no_ar ?? -1)));
     return {
-      summary: {
-        kind: "ads",
-        count: ads.length,
-        top: ads.slice(0, 12).map((a: any) => {
-          const s = a.snapshot ?? {};
-          const archiveId = a.adArchiveID || a.ad_archive_id || a.adArchiveId || a.adid || s.ad_archive_id || null;
-          const pageId = a.pageId || s.page_id || a.page_id || null;
-          return {
-            text: String(a.adText || s.body?.text || a.body || a.text || a.adCreativeBody || "").replace(/\s+/g, " ").slice(0, 400),
-            titulo: String(s.title || s.link_description || a.title || "").slice(0, 120) || null,
-            page: a.pageName || s.page_name || null,
-            since: dataDe(a.startDate ?? a.adDeliveryStartTime ?? a.ad_delivery_start_time ?? a.startDateFormatted ?? s.start_date),
-            active: a.isActive ?? a.active ?? null,
-            link: a.linkUrl || s.link_url || a.link || null,
-            cta: s.cta_text || a.ctaText || s.cta_type || null,
-            // SEM LINK ela não conseguia VER o anúncio. Se não tiver o id do
-            // arquivo, cai na página do anunciante na biblioteca melhor que nada.
-            library_link: archiveId
-              ? `https://www.facebook.com/ads/library/?id=${archiveId}`
-              : (pageId ? `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=BR&view_all_page_id=${pageId}` : null),
-            thumbnail: capaDe(a),
-          };
-        }),
-      },
+      summary: { kind: "ads", count: ads.length, top: mapeados.slice(0, 12) },
       top: ads.slice(0, 12),
     };
   }
@@ -225,6 +265,39 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
   const totalComments = posts.reduce((s, p) => s + p.comments, 0);
   const comViews = posts.filter((p) => p.views != null);
 
+  // ── PADRÕES que o Apify já mandava e a gente jogava fora ──
+  // Dia que mais rende (ponderado por engajamento), hashtags recorrentes,
+  // % de publi (paidPartnership), duração média dos top reels e a proporção
+  // de áudio original x música. É a diferença entre "lista de posts" e
+  // "leitura de estratégia do concorrente".
+  const DIAS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+  const pesoDia: Record<number, number> = {};
+  for (const p of posts) {
+    if (!p.posted_at) continue;
+    const d = new Date(p.posted_at).getDay();
+    if (!Number.isNaN(d)) pesoDia[d] = (pesoDia[d] || 0) + Math.max(1, peso(p));
+  }
+  const diasOrd = Object.entries(pesoDia).sort((a, b) => b[1] - a[1]);
+  const bestDay = diasOrd.length >= 2 ? DIAS[Number(diasOrd[0][0])] : null;
+
+  const tags: Record<string, number> = {};
+  for (const x of brutos) for (const t of (Array.isArray(x.hashtags) ? x.hashtags : [])) {
+    const k = String(t).toLowerCase().replace(/^#/, "");
+    if (k) tags[k] = (tags[k] || 0) + 1;
+  }
+  const topHashtags = Object.entries(tags).filter(([, n]) => n > 1)
+    .sort((a, b) => b[1] - a[1]).slice(0, 6).map(([t]) => t);
+
+  const publiCount = brutos.filter((x) => x.paidPartnership).length;
+
+  const durTop = top.filter((p) => Number(p.duration) > 0).slice(0, 6);
+  const avgDurationTop = durTop.length >= 2
+    ? Math.round(durTop.reduce((s, p) => s + Number(p.duration || 0), 0) / durTop.length) : null;
+
+  const comMusica = brutos.filter((x) => x.musicInfo && x.musicInfo.uses_original_audio != null);
+  const audioOriginalPct = comMusica.length >= 3
+    ? Math.round((100 * comMusica.filter((x) => x.musicInfo.uses_original_audio).length) / comMusica.length) : null;
+
   return {
     summary: {
       kind: type,
@@ -233,6 +306,11 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
       avg_comments: posts.length ? Math.round(totalComments / posts.length) : 0,
       avg_views: comViews.length ? Math.round(comViews.reduce((s, p) => s + (p.views || 0), 0) / comViews.length) : null,
       formats: fmt,
+      best_day: bestDay,
+      top_hashtags: topHashtags,
+      publi_count: publiCount,
+      avg_duration_top: avgDurationTop,
+      audio_original_pct: audioOriginalPct,
       top,
     },
     top: brutos,

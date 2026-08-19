@@ -98,7 +98,7 @@ nav:not(.footer-links){position:fixed;top:18px;left:50%;transform:translateX(-50
 .hero-tag .dot{width:8px;height:8px;border-radius:50%;background:var(--verde);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 h1{font-size:clamp(2.6rem,7vw,5.4rem);max-width:15ch;margin:0 auto 8px}
-h1 .hl{color:var(--laranja);position:relative;display:inline-block}
+h1 .hl{color:var(--amarelo);position:relative;display:inline-block}
 .hero-script{font-family:var(--font-script);font-size:clamp(1.6rem,3.4vw,2.6rem);color:var(--rosa);display:block;margin-top:6px;transform:rotate(-2deg)}
 .hero-sub{max-width:56ch;margin:22px auto 34px;font-size:clamp(1rem,1.4vw,1.2rem);font-weight:300;opacity:.85}
 .hero-ctas{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
@@ -136,8 +136,9 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
    que come a tela sozinho). Agora ele tem altura máxima e é cortado embaixo pela
    própria moldura: é a janela espiando acima da dobra. E o bloco azul vai até a
    faixa laranja, sem sobra de creme no meio. */
-.hero-wrap{position:relative;z-index:3;padding:30px 0 1px}
-.hero-shot{width:min(920px,94%);margin:0 auto -36px;max-height:min(56vh,560px);background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 18px 44px rgba(10,10,10,.32);position:relative;z-index:5}
+.hero-wrap{position:relative;z-index:3;padding:30px 0 0}
+.topo::after{content:"";position:absolute;left:0;right:0;bottom:0;height:34px;background:var(--laranja);z-index:2}
+.hero-shot{width:min(920px,94%);margin:0 auto;max-height:min(56vh,560px);background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 18px 44px rgba(10,10,10,.32);position:relative;z-index:5}
 .hero-shot img{width:100%;height:auto;display:block}
 /* Sobre o azul o contorno escuro do botão some e o texto miúdo fica ilegível. */
 #hero .btn-ghost{color:var(--creme);border-color:rgba(244,239,227,.5)}
@@ -146,7 +147,8 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 #hero .selo-w{opacity:.13;filter:brightness(0) invert(1)}
 @media(max-width:860px){
   .hero-wrap{padding-top:20px}
-  .hero-shot{width:92%;margin-bottom:-26px;max-height:min(40vh,300px);border-radius:14px}
+  .hero-shot{width:92%;margin-bottom:0;max-height:min(40vh,300px);border-radius:14px}
+  .topo::after{height:22px}
 }
 /* O MOTOR: passos grandes, com o print de verdade em cada um. Alterna o lado
    pra criar ritmo, e a seta entre eles mostra que uma coisa PUXA a outra. */
@@ -942,10 +944,10 @@ html,body{overflow-x:clip}
           </div>
         </div>
         <div class="tudo-tier" style="--tt:var(--amarelo)">
-          <div class="tier-top"><span class="tier-nome script">Modo Agência</span><span class="tier-preco">R$36,90/cliente</span></div>
+          <div class="tier-top"><span class="tier-nome script">Cria Radar</span><span class="tier-preco">R$49,90/mês</span></div>
           <div class="chips">
-            <span class="chip"><i></i>Cada cliente ganha uma conta Studio, de graça</span>
-            <span class="chip"><i></i>Equipe com acesso por cliente</span>
+            <span class="chip"><i></i>O que os concorrentes do seu cliente postam</span>
+            <span class="chip"><i></i>Vira pauta pronta pra levar na reunião</span>
           </div>
         </div>
         <a href="social-media.html" class="tudo-link">ver o lado social media em detalhe →</a>
