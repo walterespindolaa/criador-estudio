@@ -152,6 +152,17 @@ async function buildPdf(element: HTMLDivElement, larguraFixa?: number) {
       });
       if (i > 0) pdf.addPage();
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, w, h);
+      // LINKS CLICÁVEIS: a página vira imagem, mas o jsPDF aceita anotação de
+      // link por cima. Todo elemento com data-pdf-link ganha a área clicável
+      // na mesma posição (ex.: "arquivos no Drive" de cada peça do relatório).
+      const pageRect = pages[i].getBoundingClientRect();
+      const fator = w / pageRect.width; // px -> mm
+      for (const el of Array.from(pages[i].querySelectorAll<HTMLElement>("[data-pdf-link]"))) {
+        const url = el.getAttribute("data-pdf-link");
+        if (!url) continue;
+        const r = el.getBoundingClientRect();
+        pdf.link((r.left - pageRect.left) * fator, (r.top - pageRect.top) * fator, r.width * fator, r.height * fator, { url });
+      }
     }
     return pdf;
   }

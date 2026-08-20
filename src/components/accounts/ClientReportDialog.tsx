@@ -1818,6 +1818,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           const label = k === "postado" ? "Publicado" : k === "aprovado" ? "Aprovado"
             : k === "pendente" ? "Aguardando" : k === "ajuste_solicitado" ? "Em ajuste" : "Em produção";
           const dia = publishedDayOf(p) ?? p.scheduled_date;
+          const drive = (p as { drive_folder_url?: string | null }).drive_folder_url ?? null;
           return (
             <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 13px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -1827,6 +1828,20 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
                   {dia ? ` · ${parseDateOnly(dia).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}` : ""}
                 </div>
               </div>
+              {/* A pasta do Drive da peça, puxada do post. data-pdf-link faz o
+                  exportador criar a ÁREA CLICÁVEL no PDF (o PDF é imagem, mas o
+                  jsPDF aceita anotação de link por cima). No preview é <a> normal. */}
+              {drive && (
+                <a
+                  href={drive}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-pdf-link={drive}
+                  style={{ fontSize: 10.5, fontWeight: 700, color: C.azul, whiteSpace: "nowrap", textDecoration: "underline" }}
+                >
+                  arquivos no Drive
+                </a>
+              )}
               <div style={{ fontSize: 10.5, fontWeight: 700, color, whiteSpace: "nowrap" }}>{label}</div>
             </div>
           );

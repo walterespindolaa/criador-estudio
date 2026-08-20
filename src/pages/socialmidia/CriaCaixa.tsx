@@ -479,13 +479,28 @@ function CaixaInner() {
         </div>
       )}
 
-      {/* O aviso de recorrente pendente aparece em qualquer seção, é ação, não informação. */}
+      {/* O aviso de recorrente pendente MOSTRA QUAIS SÃO: "3 recorrentes não
+          lançados" sem dizer quais obrigava a pessoa a lançar no escuro (ou
+          caçar na tela de Recorrentes) pra saber no que estava dando ok. */}
       {pendingRecurring.length > 0 && (
-        <button onClick={lancarRecorrentes} disabled={generate.isPending}
-          className="w-full mb-5 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-primary/10 transition-colors">
-          <span className="text-sm font-body text-foreground"><span className="font-bold">{pendingRecurring.length}</span> recorrente(s) de {MONTHS[ym.m]} ainda não lançado(s).</span>
-          <span className="text-sm font-display font-bold text-primary shrink-0 flex items-center gap-1.5"><Repeat className="h-3.5 w-3.5" /> Lançar do mês</span>
-        </button>
+        <div className="w-full mb-5 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm font-body text-foreground"><span className="font-bold">{pendingRecurring.length}</span> recorrente(s) de {MONTHS[ym.m]} ainda não lançado(s):</span>
+            <button onClick={lancarRecorrentes} disabled={generate.isPending}
+              className="text-sm font-display font-bold text-primary shrink-0 flex items-center gap-1.5 hover:underline disabled:opacity-50">
+              <Repeat className="h-3.5 w-3.5" /> Lançar do mês
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {pendingRecurring.map((t) => (
+              <span key={t.id}
+                className={cn("text-[11.5px] font-body font-semibold px-2.5 py-1 rounded-full border",
+                  t.type === "entrada" ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-border bg-card text-foreground")}>
+                {t.description} · {brl(Number(t.amount))} · dia {Math.min(t.due_day, 28)}
+              </span>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* ═══════ VISÃO GERAL ═══════ */}
