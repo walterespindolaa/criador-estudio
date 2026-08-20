@@ -1,3 +1,5 @@
+// v2 (força redeploy 19/08: a versão no ar era anterior ao sync em lote e
+// devolvia not_connected pra quem só tem conexões DE CLIENTE, caso da Gabriela).
 // Coleta insights do Instagram e grava no cache local.
 // Tabelas: social_metrics_daily (1/dia), social_insights (1/mídia), social_audience
 // (demografia por dimensão) e social_stories (snapshot de stories).
