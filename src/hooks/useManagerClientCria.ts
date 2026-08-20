@@ -91,6 +91,96 @@ export function useCriaClientInstagram(criaOwnerId: string | null | undefined) {
   });
 }
 
+// ===================== Instagram GERENCIADO (cliente sem conta Cria) =====================
+// A social mídia conectou o Instagram do cliente na conta DELA (social_connections
+// com crm_client_id). Os dados vivem nas mesmas tabelas do pipeline, separados
+// pelo crm_client_id, e a leitura é direta por RLS (user_id = ela). Devolve o
+// MESMO shape do RPC do cliente-com-Cria pra reaproveitar o painel inteiro.
+type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
+const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
+
+export function useManagedClientInstagram(crmClientId: string | null | undefined) {
+  const { agencyOwnerId } = useActiveAccount();
+  return useQuery<CriaClientInstagram>({
+    queryKey: ["managed-client-instagram", agencyOwnerId, crmClientId],
+    enabled: !!crmClientId && !!agencyOwnerId,
+    queryFn: async () => {
+      const { data: conn, error: connErr } = await sbFrom("social_connections")
+        .select("username, profile_picture_url, updated_at")
+        .eq("user_id", agencyOwnerId!).eq("crm_client_id", crmClientId!).eq("provider", "instagram")
+        .maybeSingle();
+      if (connErr) throw connErr;
+      if (!conn) return { connected: false };
+      const c = conn as { username: string | null; profile_picture_url: string | null; updated_at: string | null };
+      const since = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+      const [daily, media, audience, stories] = await Promise.all([
+        sbFrom("social_metrics_daily")
+          .select("date, followers, reach, profile_views, total_interactions")
+          .eq("user_id", agencyOwnerId!).eq("crm_client_id", crmClientId!).eq("provider", "instagram")
+          .gte("date", since).order("date", { ascending: true }),
+        sbFrom("social_insights")
+          .select("id, media_type, caption, permalink, thumbnail_url, posted_at, metrics, post_id")
+          .eq("user_id", agencyOwnerId!).eq("crm_client_id", crmClientId!).eq("provider", "instagram")
+          .eq("object_type", "media").order("posted_at", { ascending: false }).limit(48),
+        sbFrom("social_audience")
+          .select("metric, dimension, breakdown_value, value")
+          .eq("user_id", agencyOwnerId!).eq("crm_client_id", crmClientId!).eq("provider", "instagram")
+          .order("value", { ascending: false }).limit(500),
+        sbFrom("social_stories")
+          .select("external_story_id, media_type, permalink, thumbnail_url, media_url, posted_at, metrics")
+          .eq("user_id", agencyOwnerId!).eq("crm_client_id", crmClientId!).eq("provider", "instagram")
+          .order("posted_at", { ascending: false }).limit(60),
+      ]);
+      const firstErr = daily.error || media.error || audience.error || stories.error;
+      if (firstErr) throw firstErr;
+      return {
+        connected: true,
+        username: c.username, profile_picture_url: c.profile_picture_url, last_sync: c.updated_at,
+        daily: (daily.data ?? []) as unknown as CriaClientIgDaily[],
+        media: (media.data ?? []) as unknown as CriaClientIgMedia[],
+        audience: (audience.data ?? []) as unknown as CriaClientIgAudience[],
+        stories: (stories.data ?? []) as unknown as CriaClientIgStory[],
+      };
+    },
+  });
+}
+
+// Vínculo mídia↔post do Cria no modo GERENCIADO: as linhas de social_insights
+// são da própria social mídia, então é um update direto (RLS user_id = ela).
+export function useLinkManagedMedia(crmClientId: string | null | undefined) {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ mediaId, postId }: { mediaId: string; postId: string | null }) => {
+      const { error } = await sbFrom("social_insights").update({ post_id: postId } as never).eq("id", mediaId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["managed-client-instagram", agencyOwnerId, crmClientId] });
+      qc.invalidateQueries({ queryKey: ["cria-posts"] });
+    },
+  });
+}
+
+// Dispara o sync das conexões da social mídia (a edge roda TODAS: a própria e as
+// dos clientes) e recarrega o painel do cliente gerenciado.
+export function useSyncManagedInstagram(crmClientId: string | null | undefined) {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("instagram-sync");
+      if (error) throw error;
+      return data as { reconnect?: boolean } | null;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["managed-client-instagram", agencyOwnerId, crmClientId] });
+      qc.invalidateQueries({ queryKey: ["social-connection-client", crmClientId] });
+      if (data?.reconnect) return;
+    },
+  });
+}
+
 // Gestor vincula (ou desvincula, postId null) uma mídia do IG do cliente a um
 // post que ele fez no Cria Post. O resultado real volta pro post no banco.
 export function useLinkClientMedia(criaOwnerId: string | null | undefined) {

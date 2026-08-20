@@ -1,7 +1,11 @@
 import { useMemo, useState } from "react";
 import { Instagram, Heart, MessageCircle, Eye, Bookmark, Users, Play, Image as ImageIcon, Images, ExternalLink, RefreshCw, Zap, Link2, Layers, TrendingUp, X, Check, Loader2, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
-import { useCriaClientInstagram, useLinkClientMedia, type CriaClientIgMedia } from "@/hooks/useManagerClientCria";
+import {
+  useCriaClientInstagram, useLinkClientMedia, type CriaClientIgMedia,
+  useManagedClientInstagram, useLinkManagedMedia, useSyncManagedInstagram,
+} from "@/hooks/useManagerClientCria";
+import { connectInstagram } from "@/hooks/useSocialInsights";
 import { useExternalPosts } from "@/hooks/useCriaPost";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AudienceBreakdown } from "@/components/insights/AudienceBreakdown";
@@ -24,11 +28,29 @@ const MEDIA_ICON = (t: string | null) => (t === "VIDEO" || t === "REELS" ? Play 
 const MEDIA_LABEL: Record<string, string> = { IMAGE: "Foto", VIDEO: "Vídeo", REELS: "Reels", CAROUSEL_ALBUM: "Carrossel" };
 const dataBR = (s: string | null) => (s ? new Date(s).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }) : null);
 
-export function ClienteInstagramCria({ criaOwnerId, clientName, extClientId }: { criaOwnerId: string; clientName?: string; extClientId?: string | null }) {
-  const { data, isLoading, isError } = useCriaClientInstagram(criaOwnerId);
+// DOIS MODOS, um painel só:
+// - criaOwnerId: cliente que USA o Cria (dados sincronizados por ele, via RPC);
+// - crmClientId: cliente SEM Cria cuja conta a social mídia conectou aqui
+//   (social_connections com crm_client_id; ela mesma sincroniza e vincula).
+export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, extClientId }: { criaOwnerId?: string | null; crmClientId?: string | null; clientName?: string; extClientId?: string | null }) {
+  const gerenciado = !criaOwnerId && !!crmClientId;
+  const criaQ = useCriaClientInstagram(criaOwnerId ?? null);
+  const managedQ = useManagedClientInstagram(gerenciado ? crmClientId : null);
+  const { data, isLoading, isError } = gerenciado ? managedQ : criaQ;
   const { posts: criaPosts } = useExternalPosts(extClientId ?? null);
-  const link = useLinkClientMedia(criaOwnerId);
+  const linkCria = useLinkClientMedia(criaOwnerId ?? null);
+  const linkManaged = useLinkManagedMedia(gerenciado ? crmClientId : null);
+  const link = gerenciado ? linkManaged : linkCria;
+  const syncManaged = useSyncManagedInstagram(gerenciado ? crmClientId : null);
   const [linkingMedia, setLinkingMedia] = useState<CriaClientIgMedia | null>(null);
+
+  const atualizarAgora = async () => {
+    try {
+      const r = await syncManaged.mutateAsync();
+      if (r?.reconnect) toast.warning("A conexão com o Instagram expirou. Reconecte a conta do cliente.", { duration: 10000 });
+      else toast.success("Insights do cliente atualizados!");
+    } catch { toast.error("Não consegui atualizar agora."); }
+  };
 
   // Mapa post_id -> post do Cria (pra badge "Feito no Cria" e análise por formato).
   const postById = useMemo(() => {
@@ -116,7 +138,16 @@ export function ClienteInstagramCria({ criaOwnerId, clientName, extClientId }: {
       <div className="rounded-2xl border border-dashed border-border p-10 text-center">
         <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] grid place-items-center mx-auto mb-3"><Instagram className="h-7 w-7 text-white" /></div>
         <p className="text-sm font-body text-foreground font-medium">Instagram ainda não conectado</p>
-        <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">Peça pro cliente conectar o Instagram no CRIA dele (menu Insights). Assim que ele conectar, os números aparecem aqui automaticamente.</p>
+        {gerenciado ? (
+          <>
+            <p className="text-xs text-muted-foreground font-body mt-1 mb-4 max-w-sm mx-auto">Este cliente não usa o CRIA. Conecte o Instagram dele aqui (com o acesso da conta) pra puxar alcance, audiência e stories pros relatórios.</p>
+            <button onClick={() => void connectInstagram(crmClientId)} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] px-5 py-2.5 text-sm font-display font-bold text-white hover:opacity-90 transition-opacity">
+              <Instagram className="h-4 w-4" /> Conectar Instagram
+            </button>
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">Peça pro cliente conectar o Instagram no CRIA dele (menu Insights). Assim que ele conectar, os números aparecem aqui automaticamente.</p>
+        )}
       </div>
     );
   }
@@ -133,14 +164,34 @@ export function ClienteInstagramCria({ criaOwnerId, clientName, extClientId }: {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-display font-bold text-foreground truncate">@{data.username ?? clientName ?? "conta"}</p>
-          <p className="text-[11px] font-body text-muted-foreground flex items-center gap-1"><RefreshCw className="h-3 w-3" /> {lastSync ? `Atualizado em ${lastSync}` : "Aguardando primeira sincronização"} · sincronizado pelo cliente no CRIA dele</p>
+          <p className="text-[11px] font-body text-muted-foreground flex items-center gap-1">
+            <RefreshCw className="h-3 w-3" /> {lastSync ? `Atualizado em ${lastSync}` : "Aguardando primeira sincronização"}
+            {gerenciado ? " · conectado por você" : " · sincronizado pelo cliente no CRIA dele"}
+          </p>
         </div>
+        {/* No modo gerenciado, quem atualiza é a social mídia, daqui mesmo. */}
+        {gerenciado && (
+          <button onClick={() => void atualizarAgora()} disabled={syncManaged.isPending}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-1.5 text-[12px] font-display font-bold text-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50 shrink-0">
+            {syncManaged.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Atualizar
+          </button>
+        )}
       </div>
 
       {!hasData ? (
         <div className="rounded-2xl border border-dashed border-border p-8 text-center">
           <p className="text-sm font-body text-foreground font-medium">Conectado, mas ainda sem dados</p>
-          <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">O Instagram está conectado, só falta o cliente abrir a tela Insights no CRIA dele e clicar em "Atualizar" pra puxar os primeiros números.</p>
+          {gerenciado ? (
+            <>
+              <p className="text-xs text-muted-foreground font-body mt-1 mb-4 max-w-sm mx-auto">Clique em atualizar pra puxar os primeiros números do Instagram do cliente.</p>
+              <button onClick={() => void atualizarAgora()} disabled={syncManaged.isPending}
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-display font-bold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50">
+                {syncManaged.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Puxar os dados agora
+              </button>
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">O Instagram está conectado, só falta o cliente abrir a tela Insights no CRIA dele e clicar em "Atualizar" pra puxar os primeiros números.</p>
+          )}
         </div>
       ) : (
         <>

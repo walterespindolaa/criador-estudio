@@ -791,10 +791,17 @@ export default function ClienteHub() {
         </div>
       )}
 
-      {/* Instagram de cliente que USA O CRIA: dados reais sincronizados pelo próprio
-          cliente (independe do Cria Post estar ativado). Os demais casos seguem no ClientDetail. */}
-      {activeTab === "instagram" && client.cria_owner_id ? (
-        <ClienteInstagramCria criaOwnerId={client.cria_owner_id} clientName={displayName} extClientId={extClient?.id ?? null} />
+      {/* Instagram do cliente, nos DOIS casos com o mesmo painel completo:
+          - cliente que USA o Cria: dados sincronizados por ele (RPC);
+          - cliente SEM Cria: a social mídia conecta a conta aqui (OAuth com o
+            acesso dela) e sincroniza. É o que retroalimenta o relatório. */}
+      {activeTab === "instagram" ? (
+        <ClienteInstagramCria
+          criaOwnerId={client.cria_owner_id ?? null}
+          crmClientId={client.cria_owner_id ? null : id ?? null}
+          clientName={displayName}
+          extClientId={extClient?.id ?? null}
+        />
       ) : OPERACIONAIS.has(activeTab) && (
         extClient ? (
           <ClientDetail client={extClient} embedded activeTab={activeTab} onTabChange={goTab} />
