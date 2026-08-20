@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Plus, Users, Loader2, Link2, Search, Send, Upload, FolderOpen, Download } from "lucide-react";
 import { toast } from "sonner";
-import { useCrmClients, useCreateCrmClient, useUploadCrmAsset, useImportCriaClients, type CrmClient } from "@/hooks/useCrm";
+import { useCrmClients, useCreateCrmClient, useUploadCrmAsset, useImportCriaClients, useClientLimit, useBuyClientPacks, type CrmClient } from "@/hooks/useCrm";
 import { clienteInativo } from "@/lib/cliente-status";
 import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { useExternalClients, type ExternalClient } from "@/hooks/useCriaPost";
@@ -59,6 +59,14 @@ export default function Clientes() {
   const [q, setQ] = useState("");
   const [onlyPend, setOnlyPend] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
+  // Carteira: teto atual e compra de pacotes (+10 clientes por R$19,90/mês).
+  const { data: lim } = useClientLimit();
+  const buyPacks = useBuyClientPacks();
+  const [packOpen, setPackOpen] = useState(false);
+  const [packs, setPacks] = useState(1);
+  const carteiraCheia = !!lim && lim.usados >= lim.teto;
+  // Quantos pacotes PAGOS a pessoa teria ao todo se comprar o que está no stepper.
+  const abrirAmpliar = () => { setPacks(1); setPackOpen(true); };
   const [nName, setNName] = useState("");
   const [nIg, setNIg] = useState("");
   // Campos novos do cadastro: cor, logo (upload ou URL) e link do Drive.
@@ -137,13 +145,20 @@ export default function Clientes() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Clientes</h1>
           <p className="text-muted-foreground font-body text-sm mt-0.5">Todos os seus clientes num lugar só, usem o Cria ou aprovem por link.</p>
+          {lim && (
+            <button onClick={abrirAmpliar} title="Ampliar carteira"
+              className={`mt-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-body transition-colors ${carteiraCheia ? "border-amber-500/50 bg-amber-500/10 text-amber-700" : "border-border bg-card text-muted-foreground hover:text-foreground"}`}>
+              <span className="font-semibold">{lim.usados} de {lim.teto}</span> clientes na carteira
+              {carteiraCheia ? <span className="font-semibold">· ampliar</span> : <span className="opacity-70">· +10 por R$19,90/mês</span>}
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Button variant="outline" onClick={() => importCria.mutate()} disabled={importCria.isPending || managedAccounts.length === 0} className="shrink-0" title="Importar clientes do Cria">
             {importCria.isPending ? <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" /> : <Download className="h-4 w-4 sm:mr-1.5" />}
             <span className="hidden sm:inline">Importar do Cria</span>
           </Button>
-          <Button data-tour="cli-novo" onClick={() => setNewOpen(true)} className="shrink-0"><Plus className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Novo cliente</span><span className="sm:hidden">Novo</span></Button>
+          <Button data-tour="cli-novo" onClick={() => (carteiraCheia ? abrirAmpliar() : setNewOpen(true))} className="shrink-0"><Plus className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Novo cliente</span><span className="sm:hidden">Novo</span></Button>
         </div>
       </div>
 
@@ -224,6 +239,34 @@ export default function Clientes() {
           })}
         </div>
       )}
+
+      <Dialog open={packOpen} onOpenChange={setPackOpen}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display">Ampliar carteira de clientes</DialogTitle>
+            <DialogDescription className="font-body">
+              {carteiraCheia
+                ? `Você está usando ${lim?.usados ?? 0} de ${lim?.teto ?? 3} clientes. Pra cadastrar mais, adicione pacotes de +10.`
+                : `Sua carteira comporta ${lim?.teto ?? 3} clientes hoje. Cada pacote adiciona +10 por R$19,90/mês, sem fidelidade.`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-center gap-4 py-2">
+            <Button variant="outline" size="icon" onClick={() => setPacks((v) => Math.max(1, v - 1))} disabled={packs <= 1}>−</Button>
+            <div className="text-center min-w-[130px]">
+              <p className="text-2xl font-display font-extrabold text-foreground">+{packs * 10} clientes</p>
+              <p className="text-xs text-muted-foreground font-body">{packs} pacote(s) · R$ {(packs * 19.9).toFixed(2).replace(".", ",")}/mês</p>
+            </div>
+            <Button variant="outline" size="icon" onClick={() => setPacks((v) => Math.min(10, v + 1))}>+</Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground font-body text-center -mt-1">
+            O valor é somado à sua assinatura de pacotes (pró-rata). Cancela quando quiser, dentro do app.
+          </p>
+          <Button onClick={() => buyPacks.mutate(packs)} disabled={buyPacks.isPending} className="w-full">
+            {buyPacks.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+            Ampliar por R$ {(packs * 19.9).toFixed(2).replace(".", ",")}/mês
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={newOpen} onOpenChange={(o) => { if (createClient.isPending) return; setNewOpen(o); if (!o) resetNew(); }}>
         <DialogContent className="sm:max-w-lg max-h-[88vh] overflow-y-auto">

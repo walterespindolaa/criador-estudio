@@ -91,6 +91,19 @@ export type CrmClientRef = {
   image_url: string; note: string | null; sort_order: number; created_at: string;
 };
 
+// O trigger do banco (trg_crm_clients_guard_limite) devolve um erro cru quando a
+// carteira bate no teto. Aqui ele vira mensagem humana; os números vêm no próprio
+// erro ("limite_clientes_atingido: 3 de 3").
+export function msgErroCliente(e: unknown, fallback: string): string {
+  const raw = (e as Error)?.message ?? "";
+  if (raw.includes("limite_clientes_atingido")) {
+    const m = raw.match(/(\d+)\s+de\s+(\d+)/);
+    const teto = m?.[2] ?? "3";
+    return `Sua conta comporta ${teto} cliente(s) e todos estão em uso. Amplie a carteira em +10 clientes por R$19,90/mês.`;
+  }
+  return raw || fallback;
+}
+
 // types.ts não tem as tabelas crm_*, cast (igual useModules/usePartner)
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
@@ -133,7 +146,7 @@ export function useCreateCrmClient() {
       return data as unknown as CrmClient;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-clients", agencyOwnerId] }),
-    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao salvar cliente."),
+    onError: (e: unknown) => toast.error(msgErroCliente(e, "Erro ao salvar cliente.")),
   });
 }
 
@@ -243,7 +256,7 @@ export function useImportCriaClients() {
       qc.invalidateQueries({ queryKey: ["crm-clients", agencyOwnerId] });
       toast.success(r.imported > 0 ? `${r.imported} cliente(s) importado(s) do cria.` : "Nenhum cliente novo pra importar.");
     },
-    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao importar do cria."),
+    onError: (e: unknown) => toast.error(msgErroCliente(e, "Erro ao importar do cria.")),
   });
 }
 
@@ -777,5 +790,50 @@ export function useDeleteClientNote(scope: ClientNotesScope) {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm-client-notes", key] }),
     onError: () => toast.error("Erro ao excluir a nota."),
+  });
+}
+
+
+// ─────────────────────────────────────────────────────────────
+// Carteira de clientes: teto e ampliação (pacotes de +10)
+// ─────────────────────────────────────────────────────────────
+
+export type ClientLimitInfo = { usados: number; teto: number };
+
+// Lê usados/teto pela RPC cria_limite_info (security definer valida dono OU
+// colaborador via acts_for). O teto = 3 grátis + (bônus + pacotes pagos) × 10.
+export function useClientLimit() {
+  const { agencyOwnerId } = useActiveAccount();
+  return useQuery<ClientLimitInfo | null>({
+    queryKey: ["client-limit", agencyOwnerId],
+    enabled: !!agencyOwnerId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("cria_limite_info" as never, { _manager: agencyOwnerId } as never);
+      if (error) throw error;
+      const row = Array.isArray(data) ? (data as unknown[])[0] : data;
+      return (row as ClientLimitInfo) ?? null;
+    },
+  });
+}
+
+// Abre o checkout (ou atualiza a assinatura existente) dos pacotes de clientes.
+// Mesmo fluxo dos assentos de colaborador (useTeam.ts).
+export function useBuyClientPacks() {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (packs: number) => {
+      const { data, error } = await supabase.functions.invoke("client-packs-checkout", { body: { packs } });
+      if (error) throw error;
+      return data as { url?: string; updated?: boolean; packs?: number };
+    },
+    onSuccess: (d) => {
+      if (d?.url) { window.location.href = d.url; return; }
+      if (d?.updated) {
+        toast.success(`Carteira ampliada: agora são ${3 + (d.packs ?? 0) * 10}+ clientes.`);
+        qc.invalidateQueries({ queryKey: ["client-limit", agencyOwnerId] });
+      }
+    },
+    onError: () => toast.error("Não deu pra abrir o pagamento agora. Tenta de novo em instantes."),
   });
 }
