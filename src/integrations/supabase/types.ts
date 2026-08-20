@@ -3858,6 +3858,8 @@ export type Database = {
           bio_views: number | null
           brand_logo_url: string | null
           capture_cities: string[]
+          client_packs: number
+          client_packs_subscription_id: string | null
           collab_seats_subscription_id: string | null
           created_at: string | null
           default_shot_list: string[]
@@ -3870,6 +3872,7 @@ export type Database = {
           name: string
           niche: string | null
           onboarding_completed: boolean | null
+          paid_client_packs: number
           paid_collab_seats: number
           parked_at: string | null
           parked_until: string | null
@@ -3915,6 +3918,8 @@ export type Database = {
           bio_views?: number | null
           brand_logo_url?: string | null
           capture_cities?: string[]
+          client_packs?: number
+          client_packs_subscription_id?: string | null
           collab_seats_subscription_id?: string | null
           created_at?: string | null
           default_shot_list?: string[]
@@ -3927,6 +3932,7 @@ export type Database = {
           name: string
           niche?: string | null
           onboarding_completed?: boolean | null
+          paid_client_packs?: number
           paid_collab_seats?: number
           parked_at?: string | null
           parked_until?: string | null
@@ -3972,6 +3978,8 @@ export type Database = {
           bio_views?: number | null
           brand_logo_url?: string | null
           capture_cities?: string[]
+          client_packs?: number
+          client_packs_subscription_id?: string | null
           collab_seats_subscription_id?: string | null
           created_at?: string | null
           default_shot_list?: string[]
@@ -3984,6 +3992,7 @@ export type Database = {
           name?: string
           niche?: string | null
           onboarding_completed?: boolean | null
+          paid_client_packs?: number
           paid_collab_seats?: number
           parked_at?: string | null
           parked_until?: string | null
@@ -5245,6 +5254,14 @@ export type Database = {
         }[]
       }
       claim_account_invites: { Args: never; Returns: number }
+      cria_limite_clientes: { Args: { _manager: string }; Returns: number }
+      cria_limite_info: {
+        Args: { _manager: string }
+        Returns: {
+          teto: number
+          usados: number
+        }[]
+      }
       criapost_add_media: {
         Args: {
           p_bunny_video_id: string
