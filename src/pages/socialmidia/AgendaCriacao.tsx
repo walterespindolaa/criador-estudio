@@ -24,7 +24,7 @@ import {
 } from "@/hooks/useAgenda";
 import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient, type ExternalClient } from "@/hooks/useCriaPost";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
-import { useClientCriaAgendaPosts, useCriaClientProfiles, type ClientCriaAgendaPost, type ClientCriaLink } from "@/hooks/useManagerClientCria";
+import { useClientCriaAgendaPosts, useCriaClientProfiles, useManagerPublishClientPost, type ClientCriaAgendaPost, type ClientCriaLink } from "@/hooks/useManagerClientCria";
 import { useManagerMaterialsWithDue, useUpdateAgendaMaterial, type AgendaMaterial } from "@/hooks/useClientMaterials";
 // Relatório de produtividade da OPERAÇÃO (semana/mês): quantos posts, captações,
 // tarefas... É daqui da Agenda que a produção é tocada, então o botão mora aqui.
@@ -424,6 +424,10 @@ export default function AgendaCriacao() {
   const [editCreation, setEditCreation] = useState<Creation | null>(null);
   const [editPost, setEditPost] = useState<ExternalPostWithClient | null>(null);
   const updateExtPost = useUpdateExternalPost();
+  // Card do post do Cria DO CLIENTE aberto num diálogo (antes o clique jogava
+  // direto pro kanban do cliente, sem contexto nenhum).
+  const [criaCard, setCriaCard] = useState<ClientCriaAgendaPost | null>(null);
+  const publicarCliente = useManagerPublishClientPost();
 
   // Itens do dia já ordenados (mesma lista que a grade renderiza).
   const itensDoDia = (iso: string) => buildDayItems(
@@ -1195,10 +1199,12 @@ export default function AgendaCriacao() {
               // Visualmente distintos: verde tracejado + ícone. Clicar abre o Kanban do
               // cliente na ficha dele. Como não são arrastáveis, não têm período próprio:
               // entram na faixa DERIVADA do horário deles.
-              const renderCriaCard = (p: ClientCriaAgendaPost) => (
+              const renderCriaCard = (p: ClientCriaAgendaPost) => {
+                const publicado = p.status === "publicado";
+                return (
                 <button key={`cria:${p.id}`} type="button" title={p.title ?? undefined}
-                  onClick={() => { if (p.crm_client_id) navigate(`/socialmidia/clientes/${p.crm_client_id}/kanban-cliente`); }}
-                  className="rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95"
+                  onClick={() => setCriaCard(p)}
+                  className={cn("rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95", publicado && "opacity-60")}
                   style={{ borderColor: `${(p.client_color || CRIA_POST_COLOR)}80`, background: `${(p.client_color || CRIA_POST_COLOR)}0F` }}>
                   <div className="flex items-center gap-1" style={{ color: CRIA_POST_COLOR }}>
                     <Layers className="h-3 w-3 shrink-0" />
@@ -1208,10 +1214,24 @@ export default function AgendaCriacao() {
                     <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: CRIA_POST_COLOR }}>
                       {CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}
                     </span>
+                    {/* Check: marca o post DO CLIENTE como publicado (via RPC com
+                        validação de vínculo; o post é da conta do cliente). */}
+                    <span role="button" tabIndex={0} aria-label={publicado ? "Reabrir post" : "Marcar como publicado"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        publicarCliente.mutate({ postId: p.id, publicado: !publicado }, {
+                          onError: () => toast.error("Não consegui marcar. Rode o SQL da função manager_publish_client_post se ainda não rodou."),
+                        });
+                      }}
+                      className={cn("grid h-6 w-6 md:h-4 md:w-4 shrink-0 place-items-center rounded border cursor-pointer transition-colors",
+                        publicado ? "bg-emerald-500 border-emerald-500 text-white" : "border-border hover:border-emerald-500 hover:text-emerald-600")}>
+                      {publicado && <Check className="h-3 w-3" strokeWidth={3} />}
+                    </span>
                   </div>
-                  <p className="text-[12px] font-body font-semibold leading-tight truncate text-foreground">{p.title || "Post"}</p>
+                  <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", publicado ? "line-through text-muted-foreground" : "text-foreground")}>{p.title || "Post"}</p>
                 </button>
-              );
+                );
+              };
               // ANIVERSARIO: 7o tipo, LEMBRETE puro. Não é arrastável (fica fora do índice
               // do dnd, como os posts do Cria do cliente), não tem check de concluído e não
               // conta como trabalho do dia. Como é lembrete e não trabalho, não pertence a
@@ -1458,6 +1478,45 @@ export default function AgendaCriacao() {
           });
           setCapOpen(false); setEditCap(null);
         }} />
+      {/* Post do Cria DO CLIENTE: detalhes + marcar publicado + atalho pro kanban. */}
+      <Dialog open={!!criaCard} onOpenChange={(o) => { if (!o) setCriaCard(null); }}>
+        <DialogContent className="sm:max-w-md">
+          {criaCard && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display">{criaCard.title || "Post do cliente"}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-1.5 text-sm font-body text-foreground">
+                <p><span className="text-muted-foreground">Cliente:</span> {criaCard.client_name ?? "-"}</p>
+                <p><span className="text-muted-foreground">Quando:</span> {criaCard.scheduled_date ? new Date(criaCard.scheduled_date + "T00:00:00").toLocaleDateString("pt-BR") : "-"}{criaCard.scheduled_time ? ` às ${criaCard.scheduled_time.slice(0, 5)}` : ""}</p>
+                <p><span className="text-muted-foreground">Etapa:</span> {CRIA_POST_STATUS[criaCard.status ?? ""] ?? criaCard.status ?? "-"}{criaCard.format ? ` · ${criaCard.format}` : ""}</p>
+                <p className="text-[11.5px] text-muted-foreground pt-1">Este post vive no Cria do próprio cliente. Você pode marcar como publicado daqui ou abrir o kanban dele pra ver tudo.</p>
+              </div>
+              <DialogFooter className="sm:justify-between gap-2">
+                <Button
+                  type="button"
+                  variant={criaCard.status === "publicado" ? "outline" : "default"}
+                  disabled={publicarCliente.isPending}
+                  onClick={() => {
+                    const alvo = criaCard.status !== "publicado";
+                    publicarCliente.mutate({ postId: criaCard.id, publicado: alvo }, {
+                      onSuccess: () => { toast.success(alvo ? "Marcado como publicado!" : "Post reaberto."); setCriaCard(null); },
+                      onError: () => toast.error("Não consegui marcar. Confere se o SQL da manager_publish_client_post foi rodado."),
+                    });
+                  }}
+                >
+                  {publicarCliente.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
+                  {criaCard.status === "publicado" ? "Reabrir (não publicado)" : "Marcar como publicado"}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => { const cid = criaCard.crm_client_id; setCriaCard(null); if (cid) navigate(`/socialmidia/clientes/${cid}/kanban-cliente`); }}>
+                  Abrir o kanban do cliente
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <TaskDialog task={editTask} clients={clients}
         onClose={() => setEditTask(null)}
         onOpenCrm={() => { setEditTask(null); navigate("/socialmidia/criacrm/tarefas"); }}
@@ -1510,7 +1569,7 @@ export default function AgendaCriacao() {
         };
         // Linhas só leitura (Cria do cliente e aniversário), usadas nos dois modos do modal.
         const linhaCria = (p: ClientCriaAgendaPost) => (
-          <button key={`cc${p.id}`} onClick={() => { setDayModal(null); if (p.crm_client_id) navigate(`/socialmidia/clientes/${p.crm_client_id}/kanban-cliente`); }} className={rowCls}>
+          <button key={`cc${p.id}`} onClick={() => { setDayModal(null); setCriaCard(p); }} className={rowCls}>
             {dot(CRIA_POST_COLOR)}
             <span className="text-[13px] font-body font-semibold text-foreground truncate">{p.scheduled_time ? `${p.scheduled_time.slice(0, 5)} · ` : ""}{p.title || "Post"}</span>
             <span className="ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: CRIA_POST_COLOR }}>{CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}</span>

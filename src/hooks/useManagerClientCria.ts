@@ -266,6 +266,22 @@ export function useClientCriaAgendaPosts(links: ClientCriaLink[], from: string, 
   });
 }
 
+// Marca/desmarca como PUBLICADO um post do Cria DO CLIENTE, direto da Agenda.
+// Vai por RPC (manager_publish_client_post) porque o post pertence à conta do
+// cliente e a escrita do gestor precisa da validação de vínculo no servidor.
+export function useManagerPublishClientPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ postId, publicado }: { postId: string; publicado: boolean }) => {
+      const { error } = await sbRpc("manager_publish_client_post", { _post_id: postId, _publicado: publicado });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-cria-agenda-posts"] });
+    },
+  });
+}
+
 // ===================== Brandbook do cliente (modo leitura) =====================
 export type CriaClientBrandItem = { type: string; name: string; value: string | null };
 export type CriaClientPersona = {

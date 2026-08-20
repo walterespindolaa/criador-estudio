@@ -66,24 +66,33 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
   // seguidores nasce no dia em que a conta foi conectada (o Instagram não
   // entrega histórico retroativo de seguidores), então períodos anteriores à
   // conexão só têm os POSTS, não a linha de seguidores.
-  type PeriodoKey = "7d" | "30d" | "90d" | "mes-passado" | "este-mes";
+  type PeriodoKey = "7d" | "30d" | "90d" | "mes-passado" | "este-mes" | "custom";
   const [periodo, setPeriodo] = useState<PeriodoKey>("30d");
+  // Período PERSONALIZADO: a pessoa escolhe De/Até no calendário e o painel
+  // inteiro recorta por ali (posts, KPIs, seguidores, stories).
+  const [customDe, setCustomDe] = useState("");
+  const [customAte, setCustomAte] = useState("");
   const range = useMemo(() => {
     const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
     const amanha = new Date(hoje); amanha.setDate(amanha.getDate() + 1);
+    if (periodo === "custom" && customDe && customAte && customDe <= customAte) {
+      const de = new Date(customDe + "T00:00:00");
+      const ate = new Date(customAte + "T00:00:00"); ate.setDate(ate.getDate() + 1); // Até inclusivo
+      return { de, ate };
+    }
     if (periodo === "este-mes") return { de: new Date(hoje.getFullYear(), hoje.getMonth(), 1), ate: amanha };
     if (periodo === "mes-passado") return { de: new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1), ate: new Date(hoje.getFullYear(), hoje.getMonth(), 1) };
-    const dias = periodo === "7d" ? 7 : periodo === "30d" ? 30 : 90;
+    const dias = periodo === "7d" ? 7 : periodo === "90d" ? 90 : 30;
     const de = new Date(hoje); de.setDate(de.getDate() - (dias - 1));
     return { de, ate: amanha };
-  }, [periodo]);
+  }, [periodo, customDe, customAte]);
   const noRange = (iso: string | null | undefined) => {
     if (!iso) return false;
     const t = new Date(iso).getTime();
     return t >= range.de.getTime() && t < range.ate.getTime();
   };
   const PERIODOS: Array<[PeriodoKey, string]> = [
-    ["7d", "7 dias"], ["30d", "30 dias"], ["90d", "90 dias"], ["mes-passado", "Mês passado"], ["este-mes", "Este mês"],
+    ["7d", "7 dias"], ["30d", "30 dias"], ["90d", "90 dias"], ["mes-passado", "Mês passado"], ["este-mes", "Este mês"], ["custom", "Personalizado"],
   ];
 
   const mediaTotal = data?.media ?? [];
@@ -217,13 +226,22 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
       {/* Filtro de período: recorta KPIs, formatos, destaques, stories e a
           análise por post. */}
       {hasData && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           {PERIODOS.map(([k, rotulo]) => (
             <button key={k} type="button" onClick={() => setPeriodo(k)}
               className={`px-3 py-1.5 rounded-full text-xs font-body font-semibold border transition-colors ${periodo === k ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}>
               {rotulo}
             </button>
           ))}
+          {periodo === "custom" && (
+            <span className="flex items-center gap-1.5 text-xs font-body text-muted-foreground">
+              <input type="date" value={customDe} onChange={(e) => setCustomDe(e.target.value)}
+                className="h-8 rounded-lg border border-border bg-card px-2 text-xs font-body text-foreground" aria-label="De" />
+              até
+              <input type="date" value={customAte} onChange={(e) => setCustomAte(e.target.value)}
+                className="h-8 rounded-lg border border-border bg-card px-2 text-xs font-body text-foreground" aria-label="Até" />
+            </span>
+          )}
         </div>
       )}
 
