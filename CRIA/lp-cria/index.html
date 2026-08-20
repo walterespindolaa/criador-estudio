@@ -137,7 +137,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
    própria moldura: é a janela espiando acima da dobra. E o bloco azul vai até a
    faixa laranja, sem sobra de creme no meio. */
 .hero-wrap{position:relative;z-index:3;padding:30px 0 0}
-.topo::after{content:"";position:absolute;left:0;right:0;bottom:0;height:34px;background:var(--laranja);z-index:2}
+.topo::after{content:"";position:absolute;left:0;right:0;bottom:0;height:14px;background:var(--laranja);z-index:2}
 .hero-shot{width:min(920px,94%);margin:0 auto;max-height:min(56vh,560px);background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 18px 44px rgba(10,10,10,.32);position:relative;z-index:5}
 .hero-shot img{width:100%;height:auto;display:block}
 /* Sobre o azul o contorno escuro do botão some e o texto miúdo fica ilegível. */
@@ -148,7 +148,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 @media(max-width:860px){
   .hero-wrap{padding-top:20px}
   .hero-shot{width:92%;margin-bottom:0;max-height:min(40vh,300px);border-radius:14px}
-  .topo::after{height:22px}
+  .topo::after{height:8px}
 }
 /* O MOTOR: passos grandes, com o print de verdade em cada um. Alterna o lado
    pra criar ritmo, e a seta entre eles mostra que uma coisa PUXA a outra. */
@@ -604,8 +604,9 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
 .faq-q{width:100%;text-align:left;background:none;border:none;font-family:var(--font-display);font-weight:700;font-size:1.05rem;padding:20px 24px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:16px;color:var(--ink)}
 .faq-q .plus{font-size:1.4rem;transition:transform .3s;color:var(--laranja)}
 .faq-item.open .plus{transform:rotate(45deg)}
-.faq-a{max-height:0;overflow:hidden;transition:max-height .4s ease;padding:0 24px}
-.faq-item.open .faq-a{max-height:460px;padding-bottom:22px} /* 460px: a resposta mais longa (social media) passa de 220px no celular e cortava */
+.faq-a{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s ease;padding:0 24px}
+.faq-a>p{overflow:hidden;min-height:0;margin:0 0 22px}
+.faq-item.open .faq-a{grid-template-rows:1fr}
 .faq-a p{font-size:.95rem;opacity:.85}
 
 /* ---------- CTA final ---------- */
@@ -1191,11 +1192,14 @@ html,body{overflow-x:clip}
         <p class="desc">Pra tirar suas ideias de 4 apps diferentes.</p>
         <div class="preco">R$19,90<small>/mês</small></div>
         <ul>
-          <li><b>✓</b> Banco de ideias ilimitado</li>
-          <li><b>✓</b> Kanban da produção: da ideia ao publicado</li>
-          <li><b>✓</b> Calendário, tarefas e metas</li>
-          <li><b>✓</b> Brandbook + link in bio</li>
-          <li><b>✓</b> 10 gerações guiadas/mês (pra experimentar)</li>
+          <li><b>✓</b> Banco de ideias ilimitado: captura em 5 segundos, nunca mais perde</li>
+          <li><b>✓</b> Kanban da produção: da ideia ao publicado, arrastando</li>
+          <li><b>✓</b> Calendário de conteúdo + tarefas e metas da semana</li>
+          <li><b>✓</b> Brandbook da marca: tom, pilares e persona num lugar só</li>
+          <li><b>✓</b> Link na bio próprio, com captura de contato</li>
+          <li><b>✓</b> Dashboard do dia + resumo diário por notificação</li>
+          <li><b>✓</b> Instala como app no celular</li>
+          <li><b>✓</b> 10 gerações de IA/mês pra experimentar</li>
         </ul>
         <a href="comprar/essencial.html" class="btn btn-ghost">Assinar o Essencial</a>
         <a href="https://app.criasocialclub.com.br/signup" class="trial-link">ou teste grátis por 7 dias →</a>
@@ -1208,10 +1212,13 @@ html,body{overflow-x:clip}
         <div class="preco">R$32,90<small>/mês</small></div>
         <ul>
           <li><b>✓</b> Tudo do Essencial, e mais:</li>
-          <li><b>✓</b> 150 gerações/mês: legendas, roteiros, ganchos e nota</li>
-          <li><b>✓</b> Insights reais do Instagram + Meu Feed</li>
-          <li><b>✓</b> Melhor horário pra postar</li>
-          <li><b>✓</b> Tendências do seu nicho + Media Kit automático</li>
+          <li><b>✓</b> 150 gerações de IA/mês: legenda, roteiro e gancho no SEU tom</li>
+          <li><b>✓</b> Avaliação de gancho: nota antes de postar</li>
+          <li><b>✓</b> Insights reais do Instagram, post a post</li>
+          <li><b>✓</b> Melhor dia e horário pelo SEU histórico</li>
+          <li><b>✓</b> Meu Feed: a prévia do feed antes de publicar</li>
+          <li><b>✓</b> Tendências do seu nicho, atualizadas</li>
+          <li><b>✓</b> Media Kit automático + relatórios dos seus números</li>
         </ul>
         <a href="comprar/pro.html" class="btn btn-laranja">Assinar o Pro</a>
         <a href="https://app.criasocialclub.com.br/signup" class="trial-link" style="color:var(--creme)">ou teste grátis por 7 dias →</a>
@@ -1223,10 +1230,12 @@ html,body{overflow-x:clip}
         <div class="preco">R$49,90<small>/mês</small></div>
         <ul>
           <li><b>✓</b> Tudo do Pro, e mais:</li>
-          <li><b>✓</b> Cria Plano: o seu mês inteiro montado</li>
-          <li><b>✓</b> Cria Stories: o plano semanal de stories</li>
-          <li><b>✓</b> Collabs: parcerias, propostas e cachê</li>
-          <li><b>✓</b> 500 gerações/mês + Cria Prompter</li>
+          <li><b>✓</b> Cria Plano: o mês inteiro montado, post a post, com data e hora</li>
+          <li><b>✓</b> Cria Stories: a semana de stories planejada, com roteiro</li>
+          <li><b>✓</b> Cria Prompter: teleprompter pra gravar olhando pra câmera</li>
+          <li><b>✓</b> Collabs: funil de publis com proposta e cachê</li>
+          <li><b>✓</b> Estúdio: o prompt da arte de cada post</li>
+          <li><b>✓</b> 500 gerações de IA/mês</li>
         </ul>
         <a href="comprar/studio.html" class="btn btn-ghost">Assinar o Studio</a>
         <a href="https://app.criasocialclub.com.br/signup" class="trial-link">ou teste grátis por 7 dias →</a>

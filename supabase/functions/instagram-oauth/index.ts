@@ -5,8 +5,13 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const APP_URL = Deno.env.get('APP_URL') || 'https://app.criasocialclub.com.br';
 
-function redirect(status: 'connected' | 'error', detail?: string, toClient?: boolean) {
-  const base = toClient ? `${APP_URL}/socialmidia/criapost` : `${APP_URL}/app/insights`;
+// Volta pra ONDE a pessoa estava. Conexão de cliente volta pra aba Instagram
+// DAQUELE cliente (antes caía na home do Cria Post, sem toast nenhum: sucesso
+// e erro pareciam a mesma coisa, "não aconteceu nada").
+function redirect(status: 'connected' | 'error', detail?: string, crmClientId?: string | null) {
+  const base = crmClientId
+    ? `${APP_URL}/socialmidia/clientes/${crmClientId}/instagram`
+    : `${APP_URL}/app/insights`;
   const url = `${base}?ig=${status}${detail ? `&m=${encodeURIComponent(detail)}` : ''}`;
   return new Response(null, { status: 302, headers: { Location: url } });
 }
@@ -38,7 +43,6 @@ Deno.serve(async (req) => {
     }
     const criaUserId = (st as { user_id: string }).user_id;
     const crmClientId = (st as { crm_client_id: string | null }).crm_client_id ?? null;
-    const toClient = !!crmClientId;
 
     // 1) code -> token curto
     const form = new URLSearchParams({
@@ -66,7 +70,7 @@ Deno.serve(async (req) => {
       // usuário, e obrigava a cavar o log da função pra descobrir o porquê.
       const metaMsg = (longJson?.error?.message ?? longJson?.error_message ?? '') as string;
       const detalhe = metaMsg ? `token_exchange_long: ${metaMsg.slice(0, 160)}` : 'token_exchange_long';
-      return redirect('error', detalhe, toClient);
+      return redirect('error', detalhe, crmClientId);
     }
     const longToken = longJson.access_token as string;
     const expiresIn = Number(longJson.expires_in ?? 0);
@@ -78,7 +82,7 @@ Deno.serve(async (req) => {
     );
     const me = await meRes.json();
     const igId = String(me.user_id ?? me.id ?? '');
-    if (!igId) return redirect('error', 'account_fetch', toClient);
+    if (!igId) return redirect('error', 'account_fetch', crmClientId);
 
     // 4) grava a conexão (manual: índices parciais não funcionam bem com upsert onConflict).
     const payload = {
@@ -100,9 +104,14 @@ Deno.serve(async (req) => {
     const res = existing
       ? await admin.from('social_connections').update(payload as never).eq('id', (existing as { id: string }).id)
       : await admin.from('social_connections').insert(payload as never);
-    if (res.error) return redirect('error', 'save_failed', toClient);
+    if (res.error) {
+      console.error('[instagram-oauth] save falhou', JSON.stringify(res.error));
+      // O motivo REAL vai na URL: era isto que faltava pra diagnosticar o
+      // 'não aconteceu nada' (ex.: coluna crm_client_id ausente no banco).
+      return redirect('error', `save_failed: ${String(res.error.message ?? '').slice(0, 140)}`, crmClientId);
+    }
 
-    return redirect('connected', undefined, toClient);
+    return redirect('connected', undefined, crmClientId);
   } catch (_e) {
     return redirect('error', 'unexpected');
   }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock, FolderOpen, Package, File as FileIcon, RefreshCw, Kanban, StickyNote } from "lucide-react";
@@ -148,6 +149,7 @@ import { isPctRegime } from "@/lib/finance";
 export default function ClienteHub() {
   const { id, tab } = useParams<{ id: string; tab?: string }>();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { allowed: hasHubCria } = useHasHubCria();
   const { allowed: hasCaixa } = useHasModule("financeiro");
   const { allowed: hasPost } = useHasModule("aprovapost_externo");
@@ -307,6 +309,26 @@ export default function ClienteHub() {
   useEffect(() => {
     if (client) saveLastClient(client.id, displayName || client.name);
   }, [client, displayName]);
+
+  // Volta do OAuth do Instagram do CLIENTE (?ig=connected|error&m=motivo).
+  // Antes o retorno caía mudo numa página genérica: a Gabriela conectou, nada
+  // avisou nada, e ela refez o fluxo inteiro em loop. Agora: toast com o
+  // resultado, recarrega a conexão e limpa a URL.
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const ig = sp.get("ig");
+    if (!ig) return;
+    const motivo = sp.get("m") || "";
+    if (ig === "connected") {
+      toast.success("Instagram do cliente conectado! Os insights começam a puxar na próxima sincronização.");
+      qc.invalidateQueries({ queryKey: ["social-connection-client", id] });
+    } else {
+      toast.error(`Não consegui conectar o Instagram${motivo ? `: ${motivo}` : "."}`, { duration: 12000 });
+    }
+    sp.delete("ig"); sp.delete("m");
+    navigate({ search: sp.toString() ? `?${sp.toString()}` : "" }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // URL de um Cria de aba única (ex.: /cria-gestao) cai direto na ferramenta dele,
   // pra nunca abrir em branco quando a pessoa cola/salva o link.
