@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Instagram, Heart, MessageCircle, Eye, Bookmark, Users, Play, Image as ImageIcon, Images, ExternalLink, RefreshCw, Zap, Link2, Layers, TrendingUp, X, Check, Loader2, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import {
-  useCriaClientInstagram, useLinkClientMedia, type CriaClientIgMedia,
+  useCriaClientInstagram, useLinkClientMedia, type CriaClientIgMedia, type CriaClientIgDaily,
   useManagedClientInstagram, useLinkManagedMedia, useSyncManagedInstagram,
 } from "@/hooks/useManagerClientCria";
 import { connectInstagram } from "@/hooks/useSocialInsights";
@@ -59,11 +59,47 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
     return mm;
   }, [criaPosts]);
 
-  const media = data?.media ?? [];
+  // ── FILTRO DE PERÍODO ──
+  // O painel mostrava sempre "tudo que veio". A Gabriela quer olhar o mês
+  // passado, os últimos 7 dias etc. O recorte vale pra TUDO: KPIs, formatos,
+  // destaques, cruzamentos e a análise por post. Detalhe honesto: a série de
+  // seguidores nasce no dia em que a conta foi conectada (o Instagram não
+  // entrega histórico retroativo de seguidores), então períodos anteriores à
+  // conexão só têm os POSTS, não a linha de seguidores.
+  type PeriodoKey = "7d" | "30d" | "90d" | "mes-passado" | "este-mes";
+  const [periodo, setPeriodo] = useState<PeriodoKey>("30d");
+  const range = useMemo(() => {
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const amanha = new Date(hoje); amanha.setDate(amanha.getDate() + 1);
+    if (periodo === "este-mes") return { de: new Date(hoje.getFullYear(), hoje.getMonth(), 1), ate: amanha };
+    if (periodo === "mes-passado") return { de: new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1), ate: new Date(hoje.getFullYear(), hoje.getMonth(), 1) };
+    const dias = periodo === "7d" ? 7 : periodo === "30d" ? 30 : 90;
+    const de = new Date(hoje); de.setDate(de.getDate() - (dias - 1));
+    return { de, ate: amanha };
+  }, [periodo]);
+  const noRange = (iso: string | null | undefined) => {
+    if (!iso) return false;
+    const t = new Date(iso).getTime();
+    return t >= range.de.getTime() && t < range.ate.getTime();
+  };
+  const PERIODOS: Array<[PeriodoKey, string]> = [
+    ["7d", "7 dias"], ["30d", "30 dias"], ["90d", "90 dias"], ["mes-passado", "Mês passado"], ["este-mes", "Este mês"],
+  ];
+
+  const mediaTotal = data?.media ?? [];
+  const media = useMemo(() => mediaTotal.filter((mi) => noRange(mi.posted_at)), [mediaTotal, range]); // eslint-disable-line react-hooks/exhaustive-deps
+  const dailyPeriodo = useMemo(
+    () => (data?.daily ?? []).filter((d) => noRange(d.date + "T12:00:00")),
+    [data?.daily, range], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const storiesPeriodo = useMemo(
+    () => (data?.stories ?? []).filter((st) => noRange(st.posted_at)),
+    [data?.stories, range], // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const kpis = useMemo(() => {
     if (!data?.connected) return null;
-    const daily = data.daily ?? [];
+    const daily = dailyPeriodo;
     const withFollowers = daily.filter((d) => d.followers != null);
     const followers = withFollowers.length ? withFollowers[withFollowers.length - 1].followers : null;
     const followersDelta = withFollowers.length > 1
@@ -73,7 +109,7 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
     const interactions = media.reduce((a, mi) => a + interactionsOf(mi), 0);
     const eng = reach > 0 ? (interactions / reach) * 100 : 0;
     return { followers, followersDelta, reach, interactions, eng };
-  }, [data, media]);
+  }, [data, media, dailyPeriodo]);
 
   // Alcance médio por formato direto do tipo da mídia do IG (não depende de vínculo).
   const fmtLabel = (t: string | null) => (t === "VIDEO" || t === "REELS" ? "Reels" : t === "CAROUSEL_ALBUM" ? "Carrossel" : t === "IMAGE" ? "Foto" : "Outro");
@@ -152,7 +188,7 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
     );
   }
 
-  const hasData = media.length > 0 || (data.daily ?? []).length > 0;
+  const hasData = mediaTotal.length > 0 || (data.daily ?? []).length > 0;
   const lastSync = data.last_sync ? new Date(data.last_sync).toLocaleString("pt-BR") : null;
 
   return (
@@ -177,6 +213,24 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
           </button>
         )}
       </div>
+
+      {/* Filtro de período: recorta KPIs, formatos, destaques, stories e a
+          análise por post. */}
+      {hasData && (
+        <div className="flex flex-wrap gap-1.5">
+          {PERIODOS.map(([k, rotulo]) => (
+            <button key={k} type="button" onClick={() => setPeriodo(k)}
+              className={`px-3 py-1.5 rounded-full text-xs font-body font-semibold border transition-colors ${periodo === k ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}>
+              {rotulo}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Evolução de seguidores no período (série diária do nosso snapshot).
+          O Instagram não dá histórico retroativo: a linha começa no dia em que
+          a conta foi conectada e engorda um ponto por dia. */}
+      {hasData && <EvolucaoSeguidores daily={dailyPeriodo} />}
 
       {!hasData ? (
         <div className="rounded-2xl border border-dashed border-border p-8 text-center">
@@ -257,7 +311,7 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
           {/* Stories do cliente */}
           <div className="space-y-2">
             <p className="text-sm font-display font-bold text-foreground">Stories</p>
-            <StoriesSummary stories={data.stories} />
+            <StoriesSummary stories={storiesPeriodo} />
           </div>
 
           {/* Análise por post */}
@@ -335,6 +389,56 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// Linha de seguidores do período, em SVG puro (sem lib de gráfico): delta em
+// destaque + a curva dia a dia. Com menos de 2 pontos, explica a limitação em
+// vez de mostrar um gráfico vazio.
+function EvolucaoSeguidores({ daily }: { daily: CriaClientIgDaily[] }) {
+  const pts = daily.filter((d) => d.followers != null) as Array<CriaClientIgDaily & { followers: number }>;
+  const first = pts[0]; const last = pts[pts.length - 1];
+  const delta = pts.length > 1 ? last.followers - first.followers : 0;
+  const W = 600, H = 64, PAD = 4;
+  const linha = (() => {
+    if (pts.length < 2) return null;
+    const min = Math.min(...pts.map((p) => p.followers));
+    const max = Math.max(...pts.map((p) => p.followers));
+    const span = Math.max(1, max - min);
+    return pts.map((p, i) => {
+      const x = PAD + (i / (pts.length - 1)) * (W - 2 * PAD);
+      const y = H - PAD - ((p.followers - min) / span) * (H - 2 * PAD);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(" ");
+  })();
+  const diaBR = (s: string) => new Date(s + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+        <div className="flex items-center gap-2"><Users className="h-4 w-4 text-primary" /><p className="text-sm font-display font-bold text-foreground">Seguidores no período</p></div>
+        {pts.length > 1 && (
+          <span className={`text-[12px] font-display font-bold px-2 py-0.5 rounded-full ${delta > 0 ? "bg-emerald-500/15 text-emerald-700" : delta < 0 ? "bg-red-500/10 text-red-600" : "bg-muted text-muted-foreground"}`}>
+            {delta > 0 ? "+" : ""}{fmt(delta)} no período
+          </span>
+        )}
+      </div>
+      {pts.length < 2 ? (
+        <p className="text-[12px] font-body text-muted-foreground leading-relaxed">
+          A linha de seguidores é montada dia a dia a partir da conexão (o Instagram não entrega o histórico pra trás).
+          {pts.length === 1 ? ` Primeiro ponto registrado: ${fmt(pts[0].followers)} seguidores em ${diaBR(pts[0].date)}. Amanhã já dá pra ver a variação.` : " Sincronize pra registrar o primeiro ponto."}
+        </p>
+      ) : (
+        <>
+          <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-16" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points={linha!} fill="none" stroke="currentColor" strokeWidth="2.5" className="text-primary" strokeLinejoin="round" strokeLinecap="round" />
+          </svg>
+          <div className="flex items-center justify-between text-[11px] font-body text-muted-foreground">
+            <span>{diaBR(first.date)} · {fmt(first.followers)}</span>
+            <span>{diaBR(last.date)} · <b className="text-foreground">{fmt(last.followers)}</b></span>
+          </div>
+        </>
+      )}
     </div>
   );
 }
