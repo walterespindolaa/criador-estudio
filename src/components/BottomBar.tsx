@@ -148,7 +148,7 @@ export function BottomBar() {
           <div className="overflow-y-auto px-3 pb-2">
             {sections.map((sec) => (
               <div key={sec.title} className="mb-2">
-                <p className="text-[11px] uppercase tracking-wider font-bold text-primary/75 px-3 pt-2.5 pb-1">{sec.title}</p>
+                <p className="flex items-center gap-1.5 text-[12px] uppercase tracking-[0.1em] font-display font-extrabold text-primary px-3 pt-3 pb-1.5 before:content-[''] before:h-[3px] before:w-3 before:rounded-full before:bg-primary/70">{sec.title}</p>
                 <div className="space-y-0.5">
                   {sec.items.map((item) => {
                     const active = isActive(item.url);

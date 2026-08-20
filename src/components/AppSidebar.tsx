@@ -194,7 +194,7 @@ export function AppSidebar() {
           .map((group) => (
           <SidebarGroup key={group.label}>
             {!collapsed && (
-              <SidebarGroupLabel className="text-[11px] font-display font-semibold uppercase tracking-wider text-primary/75 px-3 mt-4 mb-1.5">
+              <SidebarGroupLabel className="flex items-center gap-1.5 text-[12px] font-display font-extrabold uppercase tracking-[0.1em] text-primary px-3 mt-5 mb-2 before:content-[''] before:h-[3px] before:w-3 before:rounded-full before:bg-primary/70">
                 {group.label}
               </SidebarGroupLabel>
             )}
@@ -244,7 +244,7 @@ export function AppSidebar() {
         {profile?.role === "admin" && (
           <SidebarGroup>
             {!collapsed && (
-              <SidebarGroupLabel className="text-[11px] font-display font-semibold uppercase tracking-wider text-primary/75 px-3 mt-4 mb-1.5">
+              <SidebarGroupLabel className="flex items-center gap-1.5 text-[12px] font-display font-extrabold uppercase tracking-[0.1em] text-primary px-3 mt-5 mb-2 before:content-[''] before:h-[3px] before:w-3 before:rounded-full before:bg-primary/70">
                 Admin
               </SidebarGroupLabel>
             )}
