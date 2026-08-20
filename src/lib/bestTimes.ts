@@ -6,6 +6,8 @@ export type BestTimes = {
   days: string;          // ex: "Ter, Qua e Qui"
   slots: string[];       // ex: ["12:00", "19:00", "21:00"]
   source: "heuristica" | "insights";
+  /** Quantos posts reais entraram no cálculo (só no modo insights). */
+  sample?: number;
 };
 
 const PLATFORM_BASE: Record<string, { days: string; slots: string[] }> = {
@@ -144,5 +146,6 @@ export function bestTimesFromMedia(media: MediaForBestTimes[] | undefined | null
     days: juntarDias(topDias.map((d) => DAY_LABELS[d])),
     slots: topHoras.map((h) => `${String(h).padStart(2, "0")}:00`),
     source: "insights",
+    sample: usados,
   };
 }

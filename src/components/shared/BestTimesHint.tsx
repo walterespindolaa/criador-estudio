@@ -63,7 +63,8 @@ export function BestTimesHint({ platform, niche, onPick, className }: Props) {
         </p>
       ) : (
         <p className="text-[10px] font-body text-primary/80 mt-2">
-          Baseado no seu Instagram: os dias e horários em que seus posts mais engajaram.
+          {/* A amostra na frase é a prova de que o dado é REAL, não tabela pronta. */}
+          Baseado no seu Instagram: {bt.sample ? `analisamos ${bt.sample} posts seus` : "seus posts"} e os dias e horários em que mais engajaram.
         </p>
       )}
     </div>
