@@ -120,8 +120,12 @@ export function LogosCabecalho({ agencia, cliente, fundo, style }: LogosCabecalh
     // da Laura) as pastilhas ficavam ENCOSTADAS e o logo escuro sumia dentro do
     // cabeçalho colorido. O anel separa cada marca do fundo e uma da outra.
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 18, flexWrap: "wrap", ...style }}>
-      {temAgencia && <LogoMarca src={agencia?.src} nome={agencia?.nome} tamanho={tamanho} fundo={fundo} />}
-      {temCliente && <LogoMarca src={cliente?.src} nome={cliente?.nome} tamanho={tamanho} fundo={fundo} />}
+      {/* A do cliente vem do CRM, onde quase sempre é uma foto/avatar já
+          recortado em círculo: com "contain" sobrava moldura e parecia que a
+          imagem não preenchia. A da agência segue como pastilha (logo inteiro),
+          só com respiro menor pra ocupar mais o círculo. */}
+      {temAgencia && <LogoMarca src={agencia?.src} nome={agencia?.nome} tamanho={tamanho} fundo={fundo} style={{ padding: 5 }} />}
+      {temCliente && <LogoMarca src={cliente?.src} nome={cliente?.nome} tamanho={tamanho} fundo={fundo} formato="avatar" />}
     </div>
   );
 }

@@ -25,6 +25,7 @@ export type ScriptApprovalItem = {
   orig_title: string;
   orig_content: string;
   orig_scenes: CaptureScene[] | null;
+  orig_reference: string | null;
   client_title: string | null;
   client_content: string | null;
   client_scenes: CaptureScene[] | null;
@@ -58,6 +59,11 @@ export function useScriptApprovals(month: string, crmClientId?: string | null, c
   return useQuery({
     queryKey: ["script-approvals", agencyOwnerId, month, crmClientId ?? clientName ?? ""],
     enabled: !!agencyOwnerId && !!month && (!!crmClientId || !!clientName),
+    // O cliente responde fora do app: se a tela servir cache, a social mídia
+    // volta e continua vendo "aguardando" depois da revisão ter chegado.
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     queryFn: async (): Promise<ScriptApproval[]> => {
       let q = sbFrom("script_approvals")
         .select("*, itens:script_approval_items(*)")
@@ -104,6 +110,7 @@ export function useCreateScriptApproval() {
         orig_title: r.title ?? "",
         orig_content: r.content ?? "",
         orig_scenes: cenasDe(r),
+        orig_reference: r.reference_url ?? null,
       }));
       if (itens.length) {
         const { error: e2 } = await sbFrom("script_approval_items").insert(itens);

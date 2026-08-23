@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import type { ReactNode } from "react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { GripVertical, Plus, Trash2, Loader2, Film, Video, Sparkles, Link2 } from "lucide-react";
+import { GripVertical, Plus, Trash2, Loader2, Film, Video, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CampoReferencias } from "@/components/captacao/Referencias";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -38,11 +41,19 @@ export type RoteiroFormValor = {
   content: string;
 };
 
-const FORMATOS = ["reels", "carrossel", "foto", "story"];
 
 const cenaVazia = (): CaptureScene => ({ fala: "", direcao: "" });
 
 /** Quebra um roteiro em texto corrido em cenas, respeitando "Cena N:". */
+/* O @hello-pangea/dnd posiciona o item arrastado em coordenadas da JANELA.
+   Dentro de um Dialog (que tem transform e overflow próprios) a conta sai
+   errada e a cena "escapa" do card enquanto é arrastada. Jogar só o item
+   arrastado num portal no body devolve o referencial certo. */
+function NoCorpoQuandoArrasta({ arrastando, children }: { arrastando: boolean; children: ReactNode }) {
+  if (!arrastando) return <>{children}</>;
+  return createPortal(<>{children}</>, document.body);
+}
+
 export function textoParaCenas(texto: string): CaptureScene[] {
   const t = (texto ?? "").trim();
   if (!t) return [cenaVazia()];
@@ -70,7 +81,7 @@ export function RoteiroEditor({ open, onOpenChange, inicial, salvando, onSalvar,
   sugerirIA?: (ctx: { title: string; about: string }) => Promise<CaptureScene[] | null>;
 }) {
   const [v, setV] = useState<RoteiroFormValor>({
-    title: "", about: "", reference_url: "", record_date: "", location: "", format: "reels",
+    title: "", about: "", reference_url: "", record_date: "", location: "", format: "reels", // roteiro de captação é sempre vídeo
     scenes: [cenaVazia()], content: "",
   });
   const [seed, setSeed] = useState("");
@@ -149,28 +160,11 @@ export function RoteiroEditor({ open, onOpenChange, inicial, salvando, onSalvar,
               <Textarea rows={2} value={v.about} onChange={(e) => setV((p) => ({ ...p, about: e.target.value }))}
                 placeholder="A ideia em 2 linhas: o que esse vídeo mostra e por que ele existe." className="rounded-xl text-sm" />
             </div>
-            <div>
-              <Rotulo>Referência (link do reel/tiktok)</Rotulo>
-              <Input value={v.reference_url} onChange={(e) => setV((p) => ({ ...p, reference_url: e.target.value }))}
-                placeholder="https://instagram.com/reel/..." className="h-10" />
-              {v.reference_url.trim() && (
-                <a href={v.reference_url} target="_blank" rel="noopener noreferrer"
-                  className="mt-1 inline-flex items-center gap-1 text-[11.5px] font-body font-semibold text-primary hover:underline">
-                  <Link2 className="h-3 w-3" /> abrir a referência
-                </a>
-              )}
-            </div>
-            <div>
-              <Rotulo>Formato</Rotulo>
-              <div className="flex flex-wrap gap-1.5">
-                {FORMATOS.map((f) => (
-                  <button key={f} type="button" onClick={() => setV((p) => ({ ...p, format: f }))}
-                    className={cn("h-9 px-3 rounded-full border text-xs font-body font-semibold capitalize transition-colors",
-                      v.format === f ? "border-primary bg-primary/[0.08] text-primary" : "border-border text-muted-foreground hover:border-primary/40")}>
-                    {f}
-                  </button>
-                ))}
-              </div>
+            <div className="sm:col-span-2">
+              {/* Quase nunca é UMA referência só: uma pro corte, outra pra luz.
+                  O campo aceita vários links e mostra a capa de cada um. */}
+              <Rotulo>Referências (reel, tiktok, youtube)</Rotulo>
+              <CampoReferencias valor={v.reference_url} onChange={(x) => setV((p) => ({ ...p, reference_url: x }))} />
             </div>
             <div>
               <Rotulo>Data da gravação</Rotulo>
@@ -210,6 +204,7 @@ export function RoteiroEditor({ open, onOpenChange, inicial, salvando, onSalvar,
                     {v.scenes.map((c, i) => (
                       <Draggable key={`cena-${i}`} draggableId={`cena-${i}`} index={i}>
                         {(drag, snap) => (
+                          <NoCorpoQuandoArrasta arrastando={snap.isDragging}>
                           <div ref={drag.innerRef} {...drag.draggableProps}
                             className={cn("rounded-2xl border border-border bg-card p-3", snap.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                             <div className="flex items-center gap-2 mb-2">
@@ -231,6 +226,7 @@ export function RoteiroEditor({ open, onOpenChange, inicial, salvando, onSalvar,
                                 className="rounded-lg text-[12.5px] bg-transparent border-none focus-visible:ring-0 min-h-0 py-1" />
                             </div>
                           </div>
+                          </NoCorpoQuandoArrasta>
                         )}
                       </Draggable>
                     ))}
@@ -240,9 +236,12 @@ export function RoteiroEditor({ open, onOpenChange, inicial, salvando, onSalvar,
               </Droppable>
             </DragDropContext>
 
-            <Button type="button" variant="outline" size="sm" onClick={addCena} className="rounded-xl h-9 mt-2 w-full sm:w-auto">
-              <Plus className="h-3.5 w-3.5 mr-1.5" /> Adicionar cena
-            </Button>
+            {/* Antes era outline sobre fundo creme: sumia. A cena é a ação
+                principal desta tela, então ela precisa se ver de longe. */}
+            <button type="button" onClick={addCena}
+              className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-primary/50 bg-primary/[0.06] px-4 h-11 text-[13px] font-body font-bold text-primary hover:bg-primary/[0.12] hover:border-primary transition-colors">
+              <Plus className="h-4 w-4" /> Adicionar cena
+            </button>
           </div>
         </div>
 

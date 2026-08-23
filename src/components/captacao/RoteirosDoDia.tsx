@@ -1,10 +1,11 @@
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { GripVertical, Plus, Trash2, Play, Copy, Pencil, FileText, Link2, Check, Loader2 } from "lucide-react";
+import { GripVertical, Plus, Trash2, Play, Copy, Pencil, FileText, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { confirmar } from "@/components/shared/Confirm";
 import { cenasDe, type CaptureScript } from "@/hooks/useCaptureScripts";
+import { ListaReferencias } from "@/components/captacao/Referencias";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    OS ROTEIROS DE UM DIA DE GRAVAÇÃO
@@ -92,15 +93,10 @@ export function RoteirosDoDia({
                                 {s.format && (
                                   <span className="shrink-0 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground capitalize">{s.format}</span>
                                 )}
-                                {s.reference_url && (
-                                  <a href={s.reference_url} target="_blank" rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="shrink-0 inline-flex items-center gap-1 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-primary/10 text-primary hover:underline">
-                                    <Link2 className="h-2.5 w-2.5" /> referência
-                                  </a>
-                                )}
+                                <ListaReferencias valor={s.reference_url} compacto />
                               </div>
                               {previa && <p className="mt-1 text-[11.5px] font-body text-muted-foreground line-clamp-2 leading-relaxed">{previa}</p>}
+                              <ListaReferencias valor={s.reference_url} className="mt-2" />
 
                               <div className="mt-2 flex flex-wrap items-center gap-1.5">
                                 <Button size="sm" onClick={() => onTeleprompter(s)} className="rounded-lg h-8"

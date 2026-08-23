@@ -1,4 +1,6 @@
 import { forwardRef } from "react";
+import { parseRefLinks, isRefLink } from "@/lib/refLinks";
+import { previaDeLink } from "@/lib/refPreview";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import { cenasDe, type CaptureScript } from "@/hooks/useCaptureScripts";
 
@@ -29,6 +31,10 @@ const C = {
   laranja: "#EA4918", verde: "#01A652", azul: "#0061EE",
   rosa: "#FF77B9", amarelo: "#FFCF03", lilas: "#7C90F0",
 };
+
+/** Referências do roteiro (o campo guarda um link por linha). */
+const refsDe = (r: { reference_url?: string | null }) =>
+  parseRefLinks(r.reference_url).filter(isRefLink).map(previaDeLink);
 
 const dataBR = (iso?: string | null) =>
   iso ? new Date(iso + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }) : null;
@@ -201,20 +207,28 @@ export const GuiaGravacaoPdf = forwardRef<HTMLDivElement, Props>(
                         <Bloco titulo="Local">{r.location?.trim() || "a combinar"}</Bloco>
                         <Bloco titulo="Formato">{(r.format || "reels").toUpperCase()}</Bloco>
                         {r.about?.trim() && <Bloco titulo="Sobre o vídeo">{r.about}</Bloco>}
-                        {r.reference_url?.trim() && (
+                        {refsDe(r).length > 0 && (
                           <div style={{ marginTop: 12 }}>
-                            <p style={{ fontSize: 9.5, letterSpacing: 1.5, textTransform: "uppercase", color: C.laranja, fontWeight: 800, margin: "0 0 6px" }}>Referência</p>
-                            {/* data-pdf-link: vira área clicável no PDF exportado. */}
-                            <a href={r.reference_url} data-pdf-link={r.reference_url} target="_blank" rel="noopener noreferrer"
-                              style={{ display: "block", border: `1px solid ${C.line}`, borderRadius: 12, padding: 11, background: C.cremeCard, textDecoration: "none" }}>
-                              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ width: 28, height: 28, borderRadius: 8, background: "#fff", border: `1px solid ${C.line}`, display: "grid", placeItems: "center", fontSize: 14, color: C.laranja }}>▶</span>
-                                <span style={{ fontSize: 11, fontWeight: 700, color: C.ink }}>Abrir o vídeo de referência</span>
-                              </span>
-                              <span style={{ display: "block", fontSize: 9, color: C.sub, marginTop: 5, wordBreak: "break-all" }}>
-                                {r.reference_url.replace(/^https?:\/\/(www\.)?/, "").slice(0, 54)}
-                              </span>
-                            </a>
+                            <p style={{ fontSize: 9.5, letterSpacing: 1.5, textTransform: "uppercase", color: C.laranja, fontWeight: 800, margin: "0 0 6px" }}>
+                              {refsDe(r).length === 1 ? "Referência" : "Referências"}
+                            </p>
+                            {/* Sem imagem de capa aqui de propósito: a capa vem de
+                                servidor externo e o html2canvas trava o PDF
+                                inteiro quando ela não libera CORS. No papel o que
+                                importa é abrir o vídeo, e data-pdf-link deixa a
+                                área clicável no PDF exportado. */}
+                            {refsDe(r).map((pv, ri) => (
+                              <a key={ri} href={pv.url} data-pdf-link={pv.url} target="_blank" rel="noopener noreferrer"
+                                style={{ display: "block", border: `1px solid ${C.line}`, borderRadius: 12, padding: 11, background: C.cremeCard, textDecoration: "none", marginBottom: 6 }}>
+                                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#fff", border: `1px solid ${C.line}`, display: "grid", placeItems: "center", fontSize: 14, color: C.laranja }}>▶</span>
+                                  <span style={{ fontSize: 11, fontWeight: 700, color: C.ink }}>Abrir no {pv.nome}</span>
+                                </span>
+                                <span style={{ display: "block", fontSize: 9, color: C.sub, marginTop: 5, wordBreak: "break-all" }}>
+                                  {pv.label}
+                                </span>
+                              </a>
+                            ))}
                           </div>
                         )}
                       </div>

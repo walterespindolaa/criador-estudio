@@ -79,6 +79,7 @@ export function PainelAprovacoes({
       <div className="space-y-2">
         {envios.map((a) => {
           const mudou = (a.itens ?? []).filter(itemFoiTocado).length;
+          const comentarios = (a.itens ?? []).filter((i) => !!i.client_comment?.trim()).length;
           const voltou = a.status === "enviado";
           const feito = a.status === "aplicado";
           return (
@@ -97,6 +98,7 @@ export function PainelAprovacoes({
                   <p className="text-[11.5px] font-body text-muted-foreground mt-0.5">
                     {(a.itens ?? []).length} roteiro(s) enviados
                     {voltou && (mudou > 0 ? ` · ${mudou} com ajuste` : " · nada foi alterado")}
+                    {comentarios > 0 && ` · ${comentarios} comentário(s)`}
                     {a.submitted_at && ` · devolvido em ${new Date(a.submitted_at).toLocaleDateString("pt-BR")}`}
                   </p>
                   {a.client_note && (
@@ -106,11 +108,11 @@ export function PainelAprovacoes({
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  {voltou && (
-                    <Button size="sm" onClick={() => setVendo(a)} className="rounded-xl h-8">
-                      Ver o que mudou
-                    </Button>
-                  )}
+                  <Button size="sm" variant={voltou ? "default" : "outline"} onClick={() => setVendo(a)}
+                    className="rounded-xl h-8"
+                    title="Abre o que o cliente escreveu: texto, ordem e comentários">
+                    {voltou ? "Ver o que mudou" : feito ? "Ver a revisão" : "Acompanhar"}
+                  </Button>
                   {!feito && (
                     <Button size="sm" variant="outline" onClick={() => void copiarLink(a)} className="rounded-xl h-8">
                       <Link2 className="h-3.5 w-3.5 mr-1" /> Link
@@ -138,9 +140,13 @@ export function PainelAprovacoes({
       <Dialog open={!!vendo} onOpenChange={(o) => { if (!o) setVendo(null); }}>
         <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-display">O que o cliente mudou</DialogTitle>
+            <DialogTitle className="font-display">
+              {vendo?.status === "aberto" ? "O que o cliente já escreveu" : "O que o cliente mudou"}
+            </DialogTitle>
             <DialogDescription className="font-body">
-              Confirmando, o texto do cliente vira o texto oficial do roteiro. O que ele não tocou fica como está.
+              {vendo?.status === "aberto"
+                ? "O cliente ainda não finalizou: isto é o rascunho dele até agora. Dá pra aplicar assim mesmo se já estiver bom."
+                : "Confirmando, o texto do cliente vira o texto oficial do roteiro. O que ele não tocou fica como está."}
             </DialogDescription>
           </DialogHeader>
 
@@ -152,12 +158,14 @@ export function PainelAprovacoes({
           </div>
 
           <div className="flex items-center gap-2 pt-1">
-            <Button className="rounded-xl flex-1" disabled={aplicar.isPending}
-              onClick={() => { if (vendo) aplicar.mutate(vendo.id, { onSuccess: () => setVendo(null) }); }}>
-              {aplicar.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Check className="h-4 w-4 mr-1.5" />}
-              Confirmar e aplicar nos roteiros
-            </Button>
-            <Button variant="ghost" className="rounded-xl" onClick={() => setVendo(null)}>Agora não</Button>
+            {vendo?.status !== "aplicado" && (
+              <Button className="rounded-xl flex-1" disabled={aplicar.isPending}
+                onClick={() => { if (vendo) aplicar.mutate(vendo.id, { onSuccess: () => setVendo(null) }); }}>
+                {aplicar.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Check className="h-4 w-4 mr-1.5" />}
+                Confirmar e aplicar nos roteiros
+              </Button>
+            )}
+            <Button variant="ghost" className="rounded-xl" onClick={() => setVendo(null)}>Fechar</Button>
           </div>
         </DialogContent>
       </Dialog>

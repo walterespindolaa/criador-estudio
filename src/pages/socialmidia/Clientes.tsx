@@ -55,7 +55,19 @@ export default function Clientes() {
 
   const [filter, setFilter] = useState<"todos" | "cria" | "link">("todos");
   // Filtro Ativos/Inativos: clicar de novo no chip selecionado limpa o filtro.
-  const [statusF, setStatusF] = useState<"" | "ativos" | "inativos">("");
+  // COMEÇA EM "Ativos" e LEMBRA a escolha. Quem já encerrou contrato reaparecia
+  // na vitrine toda vez que a tela abria, e a lista virava um cemitério.
+  const [statusF, setStatusF] = useState<"" | "ativos" | "inativos">(() => {
+    try {
+      const salvo = localStorage.getItem("clientes:status");
+      if (salvo === "" || salvo === "ativos" || salvo === "inativos") return salvo;
+    } catch { /* navegador sem storage: cai no padrão */ }
+    return "ativos";
+  });
+  const mudarStatus = (v: "" | "ativos" | "inativos") => {
+    setStatusF(v);
+    try { localStorage.setItem("clientes:status", v); } catch { /* sem storage, sem drama */ }
+  };
   const [q, setQ] = useState("");
   const [onlyPend, setOnlyPend] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
@@ -177,7 +189,7 @@ export default function Clientes() {
         <button onClick={() => setOnlyPend((v) => !v)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${onlyPend ? "bg-amber-500 text-white border-amber-500" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}>Com pendências</button>
         <span className="h-4 w-px bg-border mx-0.5" aria-hidden />
         {([["ativos", "Ativos"], ["inativos", "Inativos"]] as const).map(([k, l]) => (
-          <button key={k} onClick={() => setStatusF(statusF === k ? "" : k)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${statusF === k ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}>{l}</button>
+          <button key={k} onClick={() => mudarStatus(statusF === k ? "" : k)} className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${statusF === k ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}>{l}</button>
         ))}
       </div>
 

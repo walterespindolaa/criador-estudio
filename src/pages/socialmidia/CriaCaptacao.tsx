@@ -38,6 +38,7 @@ import { RoteiroEditor, type RoteiroFormValor } from "@/components/captacao/Rote
 import { GuiaGravacaoPdf } from "@/components/captacao/GuiaGravacaoPdf";
 import { RoteirosDoDia } from "@/components/captacao/RoteirosDoDia";
 import { BotaoEnviarAprovacao, PainelAprovacoes } from "@/components/captacao/AprovacaoRoteiros";
+import { ListaReferencias } from "@/components/captacao/Referencias";
 import { DragDropContext as DndRoteiros, Droppable as DropRoteiros, Draggable as DragRoteiro, type DropResult as DropRoteiroResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { nomeExibidoCliente } from "@/lib/cliente-nome";
@@ -1778,6 +1779,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
         const soltos = ordenados.filter((s) => !s.capture_id);
         const capsComRoteiro = caps.filter((c) => (c.roteiro ?? "").trim() && !scripts.some((s) => s.capture_id === c.id));
         const totalRoteiros = soltos.length + capsComRoteiro.length;
+        const noDia = scripts.filter((s) => !!s.capture_id).length;
         return (
       <div>
         <h3 className="flex items-center gap-1.5 text-sm font-display font-bold text-foreground mb-2">
@@ -1788,10 +1790,25 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
         </h3>
         {totalRoteiros === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-6 text-center">
-            <p className="text-sm font-body text-foreground font-medium">Nenhum roteiro neste mês</p>
-            <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">
-              Adicione quantos quiser no Novo roteiro{ext ? " ou puxe dos reels aprovados" : ""}. As setas do mês lá em cima mostram os meses anteriores e os próximos.
-            </p>
+            {/* Dizer "nenhum roteiro" com roteiros dentro das captações é
+                mentira e assusta: aqui em cima só moram os que não têm dia. */}
+            {noDia > 0 ? (
+              <>
+                <p className="text-sm font-body text-foreground font-medium">
+                  {noDia === 1 ? "O roteiro deste mês está" : `Os ${noDia} roteiros deste mês estão`} dentro das captações
+                </p>
+                <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">
+                  Abra o dia de gravação aqui embaixo pra ver, reordenar e editar. Esta lista mostra só os roteiros que ainda não têm dia marcado.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-body text-foreground font-medium">Nenhum roteiro neste mês</p>
+                <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">
+                  Adicione quantos quiser no Novo roteiro{ext ? " ou puxe dos reels aprovados" : ""}. As setas do mês lá em cima mostram os meses anteriores e os próximos.
+                </p>
+              </>
+            )}
           </div>
         ) : (
           /* LISTA NA ORDEM DE GRAVAÇÃO. A grade de cards não dizia o que gravar
@@ -1932,6 +1949,10 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
               crm_client_id: pasta.crmId, client_name: pasta.crmId ? null : pasta.nome,
               month, title: post.title || "Reels aprovado", content: post.script ?? "",
               source: "reel", source_post_id: post.id,
+              // A referência que o post já tinha vem junto: é a mesma coisa que
+              // a social mídia colaria de novo aqui na mão.
+              reference_url: post.reference_url ?? null,
+              format: "reels",
             });
           }} />
       )}
@@ -2031,11 +2052,7 @@ function RoteiroLinha({ script, indice, onOpen, onExcluir, handleProps, icone = 
               {diaMes(script.record_date)}
             </span>
           )}
-          {script.reference_url && (
-            <span className="inline-flex items-center gap-1 text-[10.5px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-primary/10 text-primary">
-              <Link2 className="h-2.5 w-2.5" /> referência
-            </span>
-          )}
+          <ListaReferencias valor={script.reference_url} compacto />
         </div>
       </button>
       {onExcluir && (
@@ -2206,7 +2223,7 @@ function ImportarReelsDialog({ open, onOpenChange, externalClientId, jaImportado
   open: boolean; onOpenChange: (o: boolean) => void;
   externalClientId: string;
   jaImportados: Set<string>;
-  onImportar: (post: { id: string; title: string; script: string | null }) => Promise<unknown>;
+  onImportar: (post: { id: string; title: string; script: string | null; reference_url: string | null }) => Promise<unknown>;
 }) {
   const { posts } = useExternalPosts(externalClientId);
   const [busy, setBusy] = useState<string | null>(null);
@@ -2216,7 +2233,7 @@ function ImportarReelsDialog({ open, onOpenChange, externalClientId, jaImportado
     () => posts.filter((p) => p.format === "reels" && (p.script ?? "").trim()
       && (p.approval_status === "aprovado" || p.approval_status === "postado")),
     [posts]);
-  const importar = async (p: { id: string; title: string; script: string | null }) => {
+  const importar = async (p: { id: string; title: string; script: string | null; reference_url: string | null }) => {
     setBusy(p.id);
     try { await onImportar(p); toast.success("Roteiro importado pra pasta."); }
     finally { setBusy(null); }
@@ -2239,7 +2256,7 @@ function ImportarReelsDialog({ open, onOpenChange, externalClientId, jaImportado
                   <div className="flex items-center gap-2">
                     <p className="min-w-0 flex-1 text-[13px] font-body font-semibold text-foreground truncate">{p.title || "Reels"}</p>
                     <Button size="sm" variant={feito ? "ghost" : "outline"} disabled={feito || busy === p.id}
-                      onClick={() => importar({ id: p.id, title: p.title, script: p.script })}
+                      onClick={() => importar({ id: p.id, title: p.title, script: p.script, reference_url: p.reference_url ?? null })}
                       className="rounded-lg h-8 shrink-0">
                       {feito ? <><Check className="h-3.5 w-3.5 mr-1" /> Importado</>
                         : busy === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" />

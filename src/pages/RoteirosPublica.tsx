@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Clapperboard, ChevronUp, ChevronDown, Check, Trash2, Undo2, PartyPopper, Plus, Minus } from "lucide-react";
+import { Clapperboard, ChevronUp, ChevronDown, Check, Trash2, Undo2, PartyPopper, Plus, Minus, PlayCircle } from "lucide-react";
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { LogosCabecalho } from "@/components/publico/CabecalhoPublico";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
+import { parseRefLinks, isRefLink } from "@/lib/refLinks";
+import { previaDeLink, type PreviaLink } from "@/lib/refPreview";
 
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
@@ -24,7 +26,7 @@ const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
 type Cena = { fala: string; direcao: string };
 type Item = {
   id: string; position: number; title: string; content: string;
-  scenes: Cena[]; comment: string | null; removed: boolean; tocado: boolean;
+  scenes: Cena[]; reference: string | null; comment: string | null; removed: boolean; tocado: boolean;
 };
 type Dados = {
   title: string; month: string; status: "aberto" | "enviado" | "aplicado";
@@ -46,6 +48,38 @@ function isDark(hex: string): boolean {
 function mesLabel(month: string): string {
   const [a, m] = (month || "").split("-");
   return MESES[Number(m) - 1] ? `${MESES[Number(m) - 1]} de ${a}` : month;
+}
+
+/* A referência é o "grava tipo aquele reel". Sem ela na tela, o cliente lê o
+   texto no escuro e responde no achismo. A capa vem de servidor externo e pode
+   não carregar (perfil fechado, hotlink bloqueado), então o cartão nunca
+   depende dela: some a imagem, fica o ícone e o link continua funcionando. */
+function CartaoReferencia({ p, accent }: { p: PreviaLink; accent: string }) {
+  const [semCapa, setSemCapa] = useState(false);
+  return (
+    <a href={p.url} target="_blank" rel="noopener noreferrer"
+      style={{
+        display: "flex", alignItems: "center", gap: 10, textDecoration: "none",
+        border: "1px solid #E5DFD3", borderRadius: 12, padding: 8, background: "#FFFDF9", marginBottom: 6,
+      }}>
+      <span style={{
+        width: 46, height: 46, borderRadius: 10, overflow: "hidden", flexShrink: 0,
+        background: "#F1ECE2", display: "grid", placeItems: "center",
+      }}>
+        {p.thumb && !semCapa ? (
+          <img src={p.thumb} alt="" referrerPolicy="no-referrer" loading="lazy"
+            onError={() => setSemCapa(true)}
+            style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          <PlayCircle style={{ width: 20, height: 20, color: accent }} />
+        )}
+      </span>
+      <span style={{ minWidth: 0, flex: 1 }}>
+        <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: "#2A2440" }}>Abrir no {p.nome}</span>
+        <span style={{ display: "block", fontSize: 12, color: "#8B8272", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.label}</span>
+      </span>
+    </a>
+  );
 }
 
 export default function RoteirosPublica() {
@@ -242,6 +276,16 @@ export default function RoteirosPublica() {
               {/* Cenas: é aqui que a edição realmente acontece */}
               {aberto && !it.removed && (
                 <div style={{ marginTop: 12 }}>
+                  {(() => {
+                    const refs = parseRefLinks(it.reference).filter(isRefLink).map(previaDeLink);
+                    if (refs.length === 0) return null;
+                    return (
+                      <div style={{ marginBottom: 14 }}>
+                        <p style={rotulo}>{refs.length === 1 ? "Referência" : "Referências"}</p>
+                        {refs.map((pv, ri) => <CartaoReferencia key={ri} p={pv} accent={accent} />)}
+                      </div>
+                    );
+                  })()}
                   {it.scenes.length > 0 ? it.scenes.map((c, ci) => (
                     <div key={ci} style={{ marginBottom: 12, paddingLeft: 12, borderLeft: `3px solid ${accent}33` }}>
                       <p style={{ ...rotulo, color: accent }}>Cena {ci + 1} · o que falar</p>
