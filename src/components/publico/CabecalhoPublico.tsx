@@ -67,6 +67,7 @@ export function LogoMarca({
     overflow: "hidden",
     background: fundo,
     borderRadius: "50%",
+    border: "2px solid rgba(255,255,255,.92)",
     boxShadow: "0 4px 14px -8px rgba(20,16,40,.45)",
     ...style,
   };
@@ -115,7 +116,10 @@ export function LogosCabecalho({ agencia, cliente, fundo, style }: LogosCabecalh
   const tamanho: TamanhoLogo = temAgencia && temCliente ? "md" : "lg";
 
   return (
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, flexWrap: "wrap", ...style }}>
+    // gap 18 + anel branco: com dois logos (um deles de fundo escuro, como o
+    // da Laura) as pastilhas ficavam ENCOSTADAS e o logo escuro sumia dentro do
+    // cabeçalho colorido. O anel separa cada marca do fundo e uma da outra.
+    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 18, flexWrap: "wrap", ...style }}>
       {temAgencia && <LogoMarca src={agencia?.src} nome={agencia?.nome} tamanho={tamanho} fundo={fundo} />}
       {temCliente && <LogoMarca src={cliente?.src} nome={cliente?.nome} tamanho={tamanho} fundo={fundo} />}
     </div>

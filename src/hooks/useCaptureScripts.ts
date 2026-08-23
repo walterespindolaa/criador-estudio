@@ -16,6 +16,9 @@ const sbFrom = (table: string) => (supabase as any).from(table);
 // LEITURA DEFENSIVA: antes de a migration rodar, o select falha; devolvemos []
 // pra página abrir normalmente (só sem roteiros salvos).
 
+/** Uma cena do roteiro: o que se FALA e o que se FAZ (direção de gravação). */
+export type CaptureScene = { fala: string; direcao: string };
+
 export type CaptureScript = {
   id: string;
   manager_id: string;
@@ -29,7 +32,35 @@ export type CaptureScript = {
   done: boolean;
   created_at: string;
   updated_at: string;
+  // v3 (roteiro estruturado). Opcionais: roteiro antigo não tem nada disso.
+  position?: number | null;
+  about?: string | null;          // "sobre o vídeo": a ideia em uma frase
+  reference_url?: string | null;  // reel/tiktok de referência (clicável)
+  record_date?: string | null;    // data da gravação (YYYY-MM-DD)
+  location?: string | null;
+  format?: string | null;         // reels | carrossel | foto | story
+  scenes?: CaptureScene[] | null;
 };
+
+/** Cenas do roteiro, tolerante ao que vier do banco (jsonb livre). */
+export function cenasDe(s: Pick<CaptureScript, "scenes">): CaptureScene[] {
+  const raw = s.scenes;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((c) => ({ fala: String((c as CaptureScene)?.fala ?? ""), direcao: String((c as CaptureScene)?.direcao ?? "") }))
+    .filter((c) => c.fala.trim() || c.direcao.trim());
+}
+
+/** Cenas viram texto corrido: teleprompter, copiar e "virar post" leem daqui. */
+export function cenasParaTexto(cenas: CaptureScene[]): string {
+  return cenas
+    .map((c, i) => {
+      const cabeca = `Cena ${i + 1}:`;
+      const dir = c.direcao.trim() ? `\n[${c.direcao.trim()}]` : "";
+      return `${cabeca}\n${c.fala.trim()}${dir}`;
+    })
+    .join("\n\n");
+}
 
 export type CaptureScriptInput = {
   crm_client_id?: string | null;
@@ -39,6 +70,13 @@ export type CaptureScriptInput = {
   content: string;
   source?: string;
   source_post_id?: string | null;
+  position?: number | null;
+  about?: string | null;
+  reference_url?: string | null;
+  record_date?: string | null;
+  location?: string | null;
+  format?: string | null;
+  scenes?: CaptureScene[] | null;
 };
 
 export function useCaptureScripts() {
@@ -49,6 +87,7 @@ export function useCaptureScripts() {
     queryFn: async () => {
       const { data, error } = await sbFrom("capture_scripts")
         .select("*").eq("manager_id", agencyOwnerId!)
+        .order("position", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
       if (error) return [];
       return (data ?? []) as CaptureScript[];
@@ -71,6 +110,13 @@ export function useAddCaptureScript() {
         content: input.content,
         source: input.source ?? "manual",
         source_post_id: input.source_post_id ?? null,
+        position: input.position ?? null,
+        about: input.about ?? null,
+        reference_url: input.reference_url ?? null,
+        record_date: input.record_date ?? null,
+        location: input.location ?? null,
+        format: input.format ?? null,
+        scenes: input.scenes ?? [],
       }).select("id").single();
       if (error) throw new Error(error.message);
       return (data as { id: string }).id;
@@ -85,13 +131,33 @@ export function useAddCaptureScript() {
 export function useUpdateCaptureScript() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<CaptureScript, "title" | "content" | "done" | "month" | "source_post_id">> }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<CaptureScript,
+      "title" | "content" | "done" | "month" | "source_post_id" |
+      "position" | "about" | "reference_url" | "record_date" | "location" | "format" | "scenes">> }) => {
       const { error } = await sbFrom("capture_scripts")
         .update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
       if (error) throw new Error(error.message);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["capture-scripts"] }),
     onError: () => toast.error("Não consegui salvar o roteiro."),
+  });
+}
+
+// Salva a ORDEM dos roteiros (arrastar). Grava position 0..n de uma vez; se a
+// coluna ainda não existir (SQL não rodado), avisa em vez de falhar calado.
+export function useReorderCaptureScripts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await Promise.all(ids.map((id, i) =>
+        sbFrom("capture_scripts").update({ position: i, updated_at: new Date().toISOString() }).eq("id", id)));
+      const err = res.find((r) => (r as { error?: { message?: string } }).error);
+      if (err) throw new Error(((err as { error: { message: string } }).error).message);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["capture-scripts"] }),
+    onError: (e) => toast.error(e instanceof Error && /column|does not exist/i.test(e.message)
+      ? "Rode o SQL novo da captação pra poder reordenar os roteiros."
+      : "Não consegui salvar a ordem."),
   });
 }
 

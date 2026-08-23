@@ -6,7 +6,7 @@ import {
   Plus, X, CheckCircle2, Clock, Pencil, CalendarRange, MapPinned, Camera,
   Play, FileText, Download, Repeat, ListChecks, Square, CheckSquare, ChevronDown,
   Sparkles, Route, Send, Settings, Clapperboard,
-  ArrowLeft, UserPlus, Trash2, Film, CalendarPlus,
+  ArrowLeft, UserPlus, Trash2, Film, CalendarPlus, GripVertical, Link2, FileDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,8 +27,12 @@ import { useCaptureCities, useDefaultShotList } from "@/hooks/useCaptureCities";
 import {
   useCaptureScripts, useAddCaptureScript, useUpdateCaptureScript, useDeleteCaptureScript,
   useCaptureExtraClients, useAddCaptureExtraClient, useDeleteCaptureExtraClient,
-  useSetClientCaptureShots, useScriptToPost, type CaptureScript,
+  useSetClientCaptureShots, useScriptToPost, useReorderCaptureScripts,
+  cenasDe, type CaptureScript,
 } from "@/hooks/useCaptureScripts";
+import { RoteiroEditor, type RoteiroFormValor } from "@/components/captacao/RoteiroEditor";
+import { GuiaGravacaoPdf } from "@/components/captacao/GuiaGravacaoPdf";
+import { DragDropContext as DndRoteiros, Droppable as DropRoteiros, Draggable as DragRoteiro, type DropResult as DropRoteiroResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { PrompterPlayer } from "@/components/prompter/PrompterPlayer";
@@ -828,6 +832,11 @@ function CriaCaptacaoInner() {
       )}
 
       {aba === "agenda" && (<>
+      {/* CALENDÁRIO DO MÊS: a agenda era uma pilha de cards, e ninguém enxerga
+          a semana numa pilha. Aqui ela bate o olho e vê os dias cheios, os
+          vazios e onde dá pra encaixar mais uma gravação. */}
+      <CalendarioCaptacoes month={month} caps={filtradas} clientById={clientById} />
+
       {/* Gráfico por cidade */}
       {porCidade.length > 0 && (
         <div data-tour="cap-grafico" className="rounded-2xl border border-border bg-card p-4 sm:p-5">
@@ -955,6 +964,79 @@ function CriaCaptacaoInner() {
 // daquela cidade ainda não captados e um botão "marcar neste dia" (cria a captação
 // no dia da ida, já com o horário habitual do cliente). Nada some da tela principal
 // e a social mídia pode dispensar o bloco inteiro.
+// ── CALENDÁRIO DO MÊS ─────────────────────────────────────────────────────────
+// A agenda mostrava só cards empilhados por dia: pra saber como estava a semana,
+// a pessoa tinha que rolar e somar de cabeça. A grade resolve isso em um olhar:
+// dia cheio, dia livre, e a cor de cada cliente dentro do dia.
+function CalendarioCaptacoes({ month, caps, clientById }: {
+  month: string;
+  caps: Capture[];
+  clientById: Map<string, { nome: string; city?: string; color?: string | null }>;
+}) {
+  const base = ymToDate(month);
+  const ano = base.getFullYear();
+  const mes = base.getMonth();
+  const primeiroDiaSemana = new Date(ano, mes, 1).getDay();
+  const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+  const hoje = hojeBR();
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  const porDia = new Map<string, Capture[]>();
+  for (const c of caps) {
+    const k = c.capture_date;
+    if (!porDia.has(k)) porDia.set(k, []);
+    porDia.get(k)!.push(c);
+  }
+
+  const celulas: (number | null)[] = [
+    ...Array.from({ length: primeiroDiaSemana }, () => null),
+    ...Array.from({ length: diasNoMes }, (_, i) => i + 1),
+  ];
+  const semanas = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3 sm:p-4">
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {semanas.map((d) => (
+          <div key={d} className="text-center text-[10.5px] font-body font-semibold text-muted-foreground py-1">{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {celulas.map((dia, i) => {
+          if (dia === null) return <div key={`v${i}`} className="min-h-[74px]" />;
+          const iso = `${ano}-${pad(mes + 1)}-${pad(dia)}`;
+          const doDia = porDia.get(iso) ?? [];
+          const ehHoje = iso === hoje;
+          return (
+            <div key={iso}
+              className={cn("min-h-[74px] rounded-lg border p-1 flex flex-col gap-0.5 overflow-hidden",
+                ehHoje ? "border-primary bg-primary/[0.04]" : "border-border bg-background")}>
+              <span className={cn("text-[10.5px] font-body font-bold w-5 h-5 grid place-items-center rounded-full shrink-0",
+                ehHoje ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{dia}</span>
+              {doDia.slice(0, 3).map((c) => {
+                const cli = c.crm_client_id ? clientById.get(c.crm_client_id) : null;
+                const nome = cli?.nome ?? c.client_name ?? "Captação";
+                const cor = cli?.color || "#EA4918";
+                const concluida = c.status === "concluida";
+                return (
+                  <span key={c.id} title={`${nome}${c.capture_time ? ` · ${c.capture_time.slice(0, 5)}` : ""}`}
+                    className={cn("truncate rounded px-1 py-0.5 text-[9.5px] font-body font-semibold", concluida && "opacity-55 line-through")}
+                    style={{ background: `${cor}1f`, color: cor }}>
+                    {c.capture_time ? `${c.capture_time.slice(0, 5)} ` : ""}{nome}
+                  </span>
+                );
+              })}
+              {doDia.length > 3 && (
+                <span className="text-[9.5px] font-body text-muted-foreground px-1">+{doDia.length - 3}</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function SugestoesViagem({ trips, onAdd, onDismiss }: {
   trips: TripSuggestion[];
   onAdd: (input: { clientId: string; date: string; time: string | null; location: string | null }) => Promise<unknown>;
@@ -1434,7 +1516,13 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   const addScript = useAddCaptureScript();
   const updScript = useUpdateCaptureScript();
   const delScript = useDeleteCaptureScript();
+  const reorderScripts = useReorderCaptureScripts();
   const toPost = useScriptToPost();
+  const { exportPdf } = usePdfExport();
+  const guiaRef = useRef<HTMLDivElement>(null);
+  const [gerandoGuia, setGerandoGuia] = useState(false);
+  // Ordem local (otimista) enquanto o arrasto não persiste.
+  const [ordemLocal, setOrdemLocal] = useState<string[] | null>(null);
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editando, setEditando] = useState<CaptureScript | null>(null);
@@ -1449,21 +1537,55 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   const [marcarOpen, setMarcarOpen] = useState(false);
   const [tomadasOpen, setTomadasOpen] = useState(false);
 
-  const salvarRoteiro = async (title: string, content: string) => {
+  const salvarRoteiro = async (v: RoteiroFormValor) => {
+    // Roteiro que vive DENTRO de uma captação continua sendo texto corrido.
     if (editandoCapId) {
-      await onSaveCapRoteiro(editandoCapId, content);
+      await onSaveCapRoteiro(editandoCapId, v.content);
       setEditorOpen(false); setEditandoCapId(null);
       return;
     }
+    const campos = {
+      title: v.title, content: v.content, about: v.about || null,
+      reference_url: v.reference_url || null, record_date: v.record_date || null,
+      location: v.location || null, format: v.format || null, scenes: v.scenes,
+    };
     if (editando) {
-      await updScript.mutateAsync({ id: editando.id, patch: { title, content } });
+      await updScript.mutateAsync({ id: editando.id, patch: campos });
     } else {
       await addScript.mutateAsync({
         crm_client_id: pasta.crmId, client_name: pasta.crmId ? null : pasta.nome,
-        month, title, content,
+        month, position: scripts.length, ...campos,
       });
     }
     setEditorOpen(false); setEditando(null);
+  };
+
+  // Ordem de gravação: arrastar reordena na hora e salva a posição no banco.
+  const ordenados = (() => {
+    if (!ordemLocal) return scripts;
+    const byId = new Map(scripts.map((s) => [s.id, s]));
+    const fora = scripts.filter((s) => !ordemLocal.includes(s.id));
+    return [...ordemLocal.map((id) => byId.get(id)).filter(Boolean) as CaptureScript[], ...fora];
+  })();
+
+  const aoArrastarRoteiro = (r: DropRoteiroResult) => {
+    if (!r.destination || r.destination.index === r.source.index) return;
+    const ids = ordenados.map((s) => s.id);
+    const [m] = ids.splice(r.source.index, 1);
+    ids.splice(r.destination.index, 0, m);
+    setOrdemLocal(ids);
+    reorderScripts.mutate(ids, { onSettled: () => setOrdemLocal(null) });
+  };
+
+  const baixarGuia = async () => {
+    if (scripts.length === 0) { toast.error("Adicione pelo menos um roteiro."); return; }
+    setGerandoGuia(true);
+    try {
+      const slug = pasta.nome.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+      await exportPdf(guiaRef, `guia-de-gravacao-${slug || "cliente"}-${month}`);
+      toast.success("Guia de gravação baixado!");
+    } catch { toast.error("Não consegui gerar o PDF agora."); }
+    finally { setGerandoGuia(false); }
   };
 
   const virarPost = async (s: CaptureScript) => {
@@ -1518,6 +1640,13 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
           <Button size="sm" variant="outline" onClick={() => setMarcarOpen(true)} className="rounded-xl h-9">
             <CalendarPlus className="h-3.5 w-3.5 mr-1.5" /> Marcar captação
           </Button>
+          {/* O GUIA: é o documento que ela leva pro dia da gravação e manda pro
+              cliente. Sem ele, o módulo só guardava texto. */}
+          <Button size="sm" variant="outline" onClick={() => void baixarGuia()} disabled={gerandoGuia || scripts.length === 0}
+            className="rounded-xl h-9" title="Baixa o guia de gravação do mês em PDF: um vídeo por página, com cenas e direção.">
+            {gerandoGuia ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5 mr-1.5" />}
+            Guia de gravação (PDF)
+          </Button>
         </div>
       </div>
 
@@ -1543,17 +1672,40 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             </p>
           </div>
         ) : (
-          /* Grade estilo Drive: miniatura do texto + título. Clicar abre o modal
-             com o roteiro inteiro e as ações (renomear, teleprompter, copiar...). */
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {scripts.map((s, i) => (
-              <RoteiroMiniCard key={s.id} script={s} indice={i} onOpen={() => setVerId(s.id)} />
-            ))}
-            {/* Roteiros que vivem dentro de uma captação do mês. */}
+          /* LISTA NA ORDEM DE GRAVAÇÃO. A grade de cards não dizia o que gravar
+             primeiro nem deixava reordenar: virava um monte de quadradinho
+             igual. Aqui cada linha é um vídeo, numerado, arrastável, mostrando
+             data, formato, quantas cenas tem e se já tem referência. */
+          <div className="space-y-2">
+            <DndRoteiros onDragEnd={aoArrastarRoteiro}>
+              <DropRoteiros droppableId="roteiros">
+                {(drop) => (
+                  <div ref={drop.innerRef} {...drop.droppableProps} className="space-y-2">
+                    {ordenados.map((s, i) => (
+                      <DragRoteiro key={s.id} draggableId={s.id} index={i}>
+                        {(drag, snap) => (
+                          <div ref={drag.innerRef} {...drag.draggableProps}
+                            className={cn("rounded-2xl border border-border bg-card", snap.isDragging && "shadow-lg ring-2 ring-primary/40")}>
+                            <RoteiroLinha script={s} indice={i} onOpen={() => setVerId(s.id)}
+                              handleProps={drag.dragHandleProps ?? undefined} />
+                          </div>
+                        )}
+                      </DragRoteiro>
+                    ))}
+                    {drop.placeholder}
+                  </div>
+                )}
+              </DropRoteiros>
+            </DndRoteiros>
+            {/* Roteiros que vivem dentro de uma captação do mês (não reordenam:
+                a ordem deles é a data da captação). */}
             {capsComRoteiro.map((c) => (
-              <RoteiroMiniCard key={`cap-${c.id}`}
-                script={{ title: `Captação ${diaMes(c.capture_date)}`, content: (c.roteiro ?? "").trim(), done: c.status === "concluida" }}
-                indice={0} icone="video" onOpen={() => setVerCapId(c.id)} />
+              <div key={`cap-${c.id}`} className="rounded-2xl border border-dashed border-border bg-card">
+                <RoteiroLinha
+                  script={{ id: `cap-${c.id}`, title: `Captação ${diaMes(c.capture_date)}`, content: (c.roteiro ?? "").trim(),
+                    done: c.status === "concluida", record_date: c.capture_date, format: null, reference_url: null, about: null, scenes: [] } as unknown as CaptureScript}
+                  indice={-1} icone="video" onOpen={() => setVerCapId(c.id)} />
+              </div>
             ))}
           </div>
         )}
@@ -1628,12 +1780,14 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
       )}
 
       {editorOpen && (
-        <RoteiroDialog open onOpenChange={(o) => { if (!o) { setEditorOpen(false); setEditando(null); setEditandoCapId(null); } }}
-          editando={!!editando || !!editandoCapId}
-          semTitulo={!!editandoCapId}
-          inicialTitulo={editando?.title ?? ""}
-          inicialTexto={editandoCapId ? (caps.find((c) => c.id === editandoCapId)?.roteiro ?? "") : editando?.content ?? ""}
-          salvando={addScript.isPending || updScript.isPending} onSalvar={salvarRoteiro} />
+        <RoteiroEditor
+          open
+          onOpenChange={(o) => { if (!o) { setEditorOpen(false); setEditando(null); setEditandoCapId(null); } }}
+          inicial={editandoCapId
+            ? ({ id: editandoCapId, title: "", content: caps.find((c) => c.id === editandoCapId)?.roteiro ?? "", scenes: [] } as unknown as CaptureScript)
+            : editando}
+          salvando={addScript.isPending || updScript.isPending}
+          onSalvar={salvarRoteiro} />
       )}
       {importOpen && ext && (
         <ImportarReelsDialog open onOpenChange={(o) => { if (!o) setImportOpen(false); }}
@@ -1675,6 +1829,11 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             onVirarPost={null} onVerPost={null} converting={false} />
         );
       })()}
+      {/* Fora da tela: é o que o exportador fotografa pra gerar o guia. */}
+      <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }} aria-hidden="true">
+        <GuiaGravacaoPdf ref={guiaRef} cliente={pasta.nome} mesLabel={monthLabel(month)} roteiros={ordenados} />
+      </div>
+
       {marcarOpen && (
         <MarcarCaptacaoDialog open onOpenChange={(o) => { if (!o) setMarcarOpen(false); }}
           salvando={addingCapture}
@@ -1688,6 +1847,64 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
 }
 
 // ── Card do roteiro estilo Drive: miniatura do texto + título ─────────────────
+// Uma linha da ordem de gravação: número, título, e os sinais que dizem se o
+// roteiro está PRONTO pra gravar (cenas, referência, data). É o que faltava:
+// olhar a lista e saber o que ainda precisa de trabalho.
+function RoteiroLinha({ script, indice, onOpen, handleProps, icone = "file" }: {
+  script: CaptureScript; indice: number; onOpen: () => void;
+  handleProps?: DraggableProvidedDragHandleProps;
+  icone?: "file" | "video";
+}) {
+  const Icone = icone === "video" ? Video : FileText;
+  const cenas = cenasDe(script);
+  const nCenas = cenas.length;
+  const previa = (cenas[0]?.fala || script.content || "").replace(/\s+/g, " ").trim();
+  return (
+    <div className="flex items-start gap-2.5 p-3">
+      {handleProps && (
+        <span {...handleProps} className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted-foreground/50 hover:text-foreground cursor-grab active:cursor-grabbing" aria-label="Mudar a ordem de gravação">
+          <GripVertical className="h-4 w-4" />
+        </span>
+      )}
+      <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {indice >= 0 && (
+            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[10px] font-display font-extrabold text-primary">{indice + 1}</span>
+          )}
+          <Icone className="h-3.5 w-3.5 shrink-0 text-primary" />
+          <span className="text-[13px] font-display font-bold text-foreground truncate">
+            {script.title?.trim() || `Roteiro ${indice + 1}`}
+          </span>
+          {script.done
+            ? <span className="shrink-0 text-[9.5px] font-body font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700">GRAVADO</span>
+            : <span className="shrink-0 text-[9.5px] font-body font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-700">A GRAVAR</span>}
+        </div>
+        {previa && <p className="mt-1 text-[11.5px] font-body text-muted-foreground line-clamp-2 leading-relaxed">{previa}</p>}
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {nCenas > 0 && (
+            <span className="text-[10.5px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
+              {nCenas} {nCenas === 1 ? "cena" : "cenas"}
+            </span>
+          )}
+          {script.format && (
+            <span className="text-[10.5px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground capitalize">{script.format}</span>
+          )}
+          {script.record_date && (
+            <span className="text-[10.5px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
+              {diaMes(script.record_date)}
+            </span>
+          )}
+          {script.reference_url && (
+            <span className="inline-flex items-center gap-1 text-[10.5px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-primary/10 text-primary">
+              <Link2 className="h-2.5 w-2.5" /> referência
+            </span>
+          )}
+        </div>
+      </button>
+    </div>
+  );
+}
+
 function RoteiroMiniCard({ script, indice, onOpen, icone = "file" }: {
   script: Pick<CaptureScript, "title" | "content" | "done">; indice: number; onOpen: () => void;
   icone?: "file" | "video";
