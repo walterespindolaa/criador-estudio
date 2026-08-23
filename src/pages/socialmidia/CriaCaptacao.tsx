@@ -35,7 +35,9 @@ import {
   cenasDe, type CaptureScript,
 } from "@/hooks/useCaptureScripts";
 import { RoteiroEditor, type RoteiroFormValor } from "@/components/captacao/RoteiroEditor";
-import { GuiaGravacaoPdf } from "@/components/captacao/GuiaGravacaoPdf";
+import { baixarGuiaGravacao } from "@/lib/guiaGravacaoPdf";
+import { useLinkPreviews } from "@/hooks/useLinkPreviews";
+import { parseRefLinks, isRefLink } from "@/lib/refLinks";
 import { RoteirosDoDia } from "@/components/captacao/RoteirosDoDia";
 import { BotaoEnviarAprovacao, PainelAprovacoes } from "@/components/captacao/AprovacaoRoteiros";
 import { ListaReferencias } from "@/components/captacao/Referencias";
@@ -703,6 +705,7 @@ function CriaCaptacaoInner() {
           logoCliente={pastaAberta.crmId ? (clientById.get(pastaAberta.crmId)?.logo ?? null) : null}
           logoAgencia={marcaAgencia?.brand_logo_url ?? null}
           elaboradoPor={marcaAgencia?.name ?? null}
+          corCliente={pastaAberta.crmId ? (clientById.get(pastaAberta.crmId)?.color ?? null) : null}
           scripts={scriptsDaPasta}
           caps={capsDaPasta}
           habit={pastaAberta.crmId
@@ -1557,13 +1560,15 @@ function FolhaDoDiaDialog({ open, onOpenChange, diaLabel, wd, local, items }: {
 // A pasta é o dossiê de gravação do cliente. O mês vem do cabeçalho da página
 // (as setas navegam meses passados e futuros). Aqui nasce roteiro manual,
 // roteiro puxado dos reels aprovados do Cria Post, e a captação marcada direto.
-function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingClientShots, onSaveClientShots, ext, onBack, onDeleteExtra, onPrompter, renderCapture, onSaveCapRoteiro, addCapture, addingCapture, logoCliente, logoAgencia, elaboradoPor }: {
+function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingClientShots, onSaveClientShots, ext, onBack, onDeleteExtra, onPrompter, renderCapture, onSaveCapRoteiro, addCapture, addingCapture, logoCliente, logoAgencia, elaboradoPor, corCliente }: {
   pasta: PastaInfo;
   // Marca do guia em PDF: as MESMAS logos do relatório do cliente, pra o
   // material que chega na mão dele ter sempre a mesma cara.
   logoCliente?: string | null;
   logoAgencia?: string | null;
   elaboradoPor?: string | null;
+  /** Cor da marca do cliente: a capa do guia sai na cor dele, não na do Cria. */
+  corCliente?: string | null;
   month: string;
   scripts: CaptureScript[];
   caps: Capture[];
@@ -1595,8 +1600,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   const delScript = useDeleteCaptureScript();
   const reorderScripts = useReorderCaptureScripts();
   const toPost = useScriptToPost();
-  const { exportPdf } = usePdfExport();
-  const guiaRef = useRef<HTMLDivElement>(null);
+
   const [gerandoGuia, setGerandoGuia] = useState(false);
   // Ordem local (otimista) enquanto o arrasto não persiste.
   const [ordemLocal, setOrdemLocal] = useState<string[] | null>(null);
@@ -1688,12 +1692,22 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
     return [...ordenados, ...daCaptacao].sort((a, b) => dia(a).localeCompare(dia(b)));
   })();
 
+  const capasGuia = useLinkPreviews(
+    roteirosDoGuia.flatMap((r) => parseRefLinks(r.reference_url).filter(isRefLink)));
+
   const baixarGuia = async () => {
     if (roteirosDoGuia.length === 0) { toast.error("Escreva pelo menos um roteiro deste mês pra gerar o guia."); return; }
     setGerandoGuia(true);
     try {
       const slug = pasta.nome.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-      await exportPdf(guiaRef, `guia-de-gravacao-${slug || "cliente"}-${month}`);
+      // Capas já resolvidas viram { link -> imagem } pro gerador não ter que
+      // adivinhar nada nem depender do DOM.
+      const capasMapa: Record<string, string | null> = {};
+      for (const [k, v] of Object.entries(capasGuia)) capasMapa[k] = v?.thumb ?? null;
+      await baixarGuiaGravacao({
+        cliente: pasta.nome, mesLabel: monthLabel(month), roteiros: roteirosDoGuia,
+        logoCliente, logoAgencia, elaboradoPor, cor: corCliente, capas: capasMapa,
+      }, `guia-de-gravacao-${slug || "cliente"}-${month}`);
       toast.success("Guia de gravação baixado!");
     } catch { toast.error("Não consegui gerar o PDF agora."); }
     finally { setGerandoGuia(false); }
@@ -1984,12 +1998,6 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             onVirarPost={null} onVerPost={null} converting={false} />
         );
       })()}
-      {/* Fora da tela: é o que o exportador fotografa pra gerar o guia. */}
-      <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }} aria-hidden="true">
-        <GuiaGravacaoPdf ref={guiaRef} cliente={pasta.nome} mesLabel={monthLabel(month)} roteiros={roteirosDoGuia}
-          logoCliente={logoCliente} logoAgencia={logoAgencia} elaboradoPor={elaboradoPor} />
-      </div>
-
       {marcarOpen && (
         <MarcarCaptacaoDialog open onOpenChange={(o) => { if (!o) setMarcarOpen(false); }}
           salvando={addingCapture}
