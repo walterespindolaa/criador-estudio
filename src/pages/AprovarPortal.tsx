@@ -226,10 +226,21 @@ function PostApproval({ client, post, index, busy, history, onApproveFast, onAdj
      com um elogio dentro: trabalho pronto voltando pra fila por falta de campo.
      Aqui o recado é OPCIONAL de verdade, e o botão de aprovar nunca fica
      desabilitado por causa dele. */
-  const [okOpen, setOkOpen] = useState(false);
+  // Recado enviado DEPOIS da aprovação: some o campo e vira confirmação.
+  const [recadoEnviado, setRecadoEnviado] = useState(false);
   const [nota, setNota] = useState("");
   const LIMITE_NOTA = 140;
-  const sendApprove = () => { onApproveFast(post.post_id, nota.trim() || undefined); setOkOpen(false); setNota(""); };
+  // Aprovar é UM clique: o botão aprova de verdade, sem tela de confirmação.
+  const sendApprove = () => onApproveFast(post.post_id);
+  // O recado é um extra que vem DEPOIS, e também num clique. A mesma RPC
+  // aceita ser chamada de novo com o post já aprovado: ela só grava o
+  // comentário e mantém o status, então não precisa de rota nova.
+  const enviarRecado = () => {
+    const t = nota.trim();
+    if (!t) return;
+    onApproveFast(post.post_id, t);
+    setNota(""); setRecadoEnviado(true);
+  };
 
   // Bloco de STATUS no TOPO do painel de info (antes da legenda e das ações), tanto na
   // visão rápida quanto na detalhada: data, título "Esta publicação", selo de status e
@@ -303,32 +314,37 @@ function PostApproval({ client, post, index, busy, history, onApproveFast, onAdj
             <div className="text-xs font-body text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5 mb-4 whitespace-pre-wrap">Você pediu:{"\n"}{post.last_comment}</div>
           )}
           {fullyApproved ? (
-            <div className="flex items-center gap-2 text-sm font-body font-bold text-green-700 bg-green-50 rounded-2xl px-4 py-3.5"><Check className="h-5 w-5" /> Aprovado, obrigada!</div>
-          ) : okOpen ? (
+            /* APROVADO. O recado deixou de ser um pedágio antes do "aprovar"
+               (dois cliques pra fazer uma coisa só) e virou um extra opcional
+               aqui, depois: quem não quiser comentar já terminou. */
             <div className="space-y-2.5">
-              <p className="text-[13px] font-body text-foreground font-semibold">Quer deixar um recado? <span className="font-normal text-muted-foreground">(opcional)</span></p>
-              <Textarea
-                value={nota}
-                onChange={(e) => setNota(e.target.value.slice(0, LIMITE_NOTA))}
-                maxLength={LIMITE_NOTA}
-                placeholder="Ex.: amei esse, ficou a cara da marca"
-                className="rounded-2xl"
-                rows={2}
-                autoFocus
-              />
-              <p className="text-[11px] font-body text-muted-foreground text-right">{nota.length}/{LIMITE_NOTA}</p>
-              <div className="flex gap-2.5">
-                {/* Sem `!nota.trim()` no disabled: o recado é opcional e aprovar
-                    sem escrever nada continua sendo um clique. */}
-                <Button className="flex-1 h-12 rounded-2xl" disabled={busy} onClick={sendApprove}>
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Confirmar aprovação</>}
-                </Button>
-                <Button variant="ghost" className="h-12 rounded-2xl" onClick={() => { setOkOpen(false); setNota(""); }} disabled={busy}>Voltar</Button>
-              </div>
+              <div className="flex items-center gap-2 text-sm font-body font-bold text-green-700 bg-green-50 rounded-2xl px-4 py-3.5"><Check className="h-5 w-5" /> Aprovado, obrigada!</div>
+              {recadoEnviado ? (
+                <p className="text-[12.5px] font-body text-muted-foreground px-1">Recado enviado, valeu!</p>
+              ) : (
+                <>
+                  <p className="text-[13px] font-body text-foreground font-semibold px-1">Quer deixar um recado? <span className="font-normal text-muted-foreground">(opcional)</span></p>
+                  <Textarea
+                    value={nota}
+                    onChange={(e) => setNota(e.target.value.slice(0, LIMITE_NOTA))}
+                    maxLength={LIMITE_NOTA}
+                    placeholder="Ex.: amei esse, ficou a cara da marca"
+                    className="rounded-2xl"
+                    rows={2}
+                  />
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-body text-muted-foreground">{nota.length}/{LIMITE_NOTA}</p>
+                    <Button variant="secondary" className="h-10 rounded-2xl" disabled={busy || !nota.trim()} onClick={enviarRecado}>
+                      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar recado"}
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           ) : !adjOpen ? (
             <div className="flex gap-3">
-              <Button className="flex-1 h-14 rounded-2xl text-base font-bold shadow-lg shadow-primary/25" onClick={() => setOkOpen(true)} disabled={busy}>{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Check className="h-5 w-5 mr-1.5" /> Aprovar</>}</Button>
+              {/* Um clique aprova. Nada de "confirmar aprovação" depois. */}
+              <Button className="flex-1 h-14 rounded-2xl text-base font-bold shadow-lg shadow-primary/25" onClick={sendApprove} disabled={busy}>{busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Check className="h-5 w-5 mr-1.5" /> Aprovar</>}</Button>
               <Button variant="secondary" className="h-14 rounded-2xl px-5" onClick={openAdjust} disabled={busy}><RotateCcw className="h-4 w-4 mr-1.5" /> Ajuste</Button>
             </div>
           ) : (
