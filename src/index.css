@@ -285,6 +285,81 @@ button, a, [role="button"] {
   letter-spacing: -0.02em;
 }
 
+/* ────────────────────────────────────────────────────────────────────────────
+   ROLAGEM DENTRO DE MODAL E POPUP
+
+   O modal tem canto arredondado (rounded-3xl) e overflow-y-auto. A barra de
+   rolagem NATIVA é desenhada num "trilho" retangular colado na borda direita:
+   ela sobrepõe o canto e o modal ganha aquele bico quadrado no canto de cima e
+   de baixo. Não é bug de um popup só, é de todo lugar que rola por dentro.
+
+   Aqui o trilho fica transparente e o polegar vira uma pílula com margem, então
+   nada mais encosta na borda e o arredondado se mantém. Vale pro dialog, pro
+   sheet, pros menus e pra qualquer coisa que role dentro deles.
+   ──────────────────────────────────────────────────────────────────────────── */
+[role="dialog"],
+[role="dialog"] *,
+[role="alertdialog"],
+[role="alertdialog"] *,
+[role="menu"],
+[role="listbox"],
+[data-radix-popper-content-wrapper] *,
+.rolagem-cria {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.28) transparent;
+}
+[role="dialog"]::-webkit-scrollbar,
+[role="dialog"] *::-webkit-scrollbar,
+[role="alertdialog"]::-webkit-scrollbar,
+[role="alertdialog"] *::-webkit-scrollbar,
+[role="menu"]::-webkit-scrollbar,
+[role="listbox"]::-webkit-scrollbar,
+[data-radix-popper-content-wrapper] *::-webkit-scrollbar,
+.rolagem-cria::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+[role="dialog"]::-webkit-scrollbar-track,
+[role="dialog"] *::-webkit-scrollbar-track,
+[role="alertdialog"]::-webkit-scrollbar-track,
+[role="alertdialog"] *::-webkit-scrollbar-track,
+[role="menu"]::-webkit-scrollbar-track,
+[role="listbox"]::-webkit-scrollbar-track,
+[data-radix-popper-content-wrapper] *::-webkit-scrollbar-track,
+.rolagem-cria::-webkit-scrollbar-track {
+  background: transparent;
+  border: none;
+}
+[role="dialog"]::-webkit-scrollbar-thumb,
+[role="dialog"] *::-webkit-scrollbar-thumb,
+[role="alertdialog"]::-webkit-scrollbar-thumb,
+[role="alertdialog"] *::-webkit-scrollbar-thumb,
+[role="menu"]::-webkit-scrollbar-thumb,
+[role="listbox"]::-webkit-scrollbar-thumb,
+[data-radix-popper-content-wrapper] *::-webkit-scrollbar-thumb,
+.rolagem-cria::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.28);
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+[role="dialog"]::-webkit-scrollbar-thumb:hover,
+[role="dialog"] *::-webkit-scrollbar-thumb:hover,
+[role="alertdialog"]::-webkit-scrollbar-thumb:hover,
+[role="alertdialog"] *::-webkit-scrollbar-thumb:hover,
+[role="menu"]::-webkit-scrollbar-thumb:hover,
+[role="listbox"]::-webkit-scrollbar-thumb:hover,
+[data-radix-popper-content-wrapper] *::-webkit-scrollbar-thumb:hover,
+.rolagem-cria::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.5);
+}
+[role="dialog"]::-webkit-scrollbar-corner,
+[role="dialog"] *::-webkit-scrollbar-corner,
+[role="alertdialog"]::-webkit-scrollbar-corner,
+[data-radix-popper-content-wrapper] *::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* Hide scrollbar but keep scroll */
 .scrollbar-none {
   scrollbar-width: none;
