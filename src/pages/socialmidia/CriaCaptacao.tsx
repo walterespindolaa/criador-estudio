@@ -36,6 +36,8 @@ import {
 } from "@/hooks/useCaptureScripts";
 import { RoteiroEditor, type RoteiroFormValor } from "@/components/captacao/RoteiroEditor";
 import { GuiaGravacaoPdf } from "@/components/captacao/GuiaGravacaoPdf";
+import { RoteirosDoDia } from "@/components/captacao/RoteirosDoDia";
+import { BotaoEnviarAprovacao, PainelAprovacoes } from "@/components/captacao/AprovacaoRoteiros";
 import { DragDropContext as DndRoteiros, Droppable as DropRoteiros, Draggable as DragRoteiro, type DropResult as DropRoteiroResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { nomeExibidoCliente } from "@/lib/cliente-nome";
@@ -617,7 +619,14 @@ function CriaCaptacaoInner() {
   };
 
   // Uma linha de captação, usada na Agenda do mês E dentro da pasta do cliente.
-  const renderCaptureRow = (c: Capture): ReactNode => {
+  const renderCaptureRow = (c: Capture, doDia?: {
+    roteiros: CaptureScript[];
+    acoes: {
+      adicionar: () => void; editar: (s: CaptureScript) => void; excluir: (s: CaptureScript) => void;
+      toggleGravado: (s: CaptureScript) => void; reordenar: (ids: string[]) => void;
+      teleprompter: (s: CaptureScript) => void; salvando?: boolean;
+    };
+  }): ReactNode => {
     // Estado de recorrência do GRUPO: a raiz (a própria captação, ou a origem
     // apontada por recurrence_source_id) manda no recurring/dia.
     const rootId = c.recurrence_source_id ?? c.id;
@@ -637,7 +646,9 @@ function CriaCaptacaoInner() {
         convertedPostId={c.converted_post_id ?? null}
         onVirarPost={() => virarPost(c)}
         onVerPost={() => navigate(`/socialmidia/clientes/${c.crm_client_id}/posts`)}
-        converting={captureToPost.isPending} />
+        converting={captureToPost.isPending}
+        roteirosDoDia={doDia?.roteiros}
+        acoesRoteiro={doDia?.acoes} />
     );
   };
 
@@ -1143,10 +1154,22 @@ function SugestoesViagem({ trips, onAdd, onDismiss }: {
 }
 
 // ── Uma captação (cliente + cidade + status + roteiro + copiar) ────────────────
-function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter, shotList, onSaveShotList, defaultShots, clientShots, recurring, recurrenceDay, onSetRecurring, convertedPostId, onVirarPost, onVerPost, converting }: {
+function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter, shotList, onSaveShotList, defaultShots, clientShots, recurring, recurrenceDay, onSetRecurring, convertedPostId, onVirarPost, onVerPost, converting, roteirosDoDia, acoesRoteiro }: {
   cap: Capture; nome: string; cidade: string;
   onToggle: () => void; onSaveRoteiro: (roteiro: string) => Promise<unknown>;
   onTeleprompter: () => void;
+  // VÁRIOS roteiros por dia (um por vídeo). Quando a pasta do cliente passa
+  // estas props, o campo único some e entra a lista com +, ordem e check.
+  roteirosDoDia?: CaptureScript[];
+  acoesRoteiro?: {
+    adicionar: () => void;
+    editar: (s: CaptureScript) => void;
+    excluir: (s: CaptureScript) => void;
+    toggleGravado: (s: CaptureScript) => void;
+    reordenar: (ids: string[]) => void;
+    teleprompter: (s: CaptureScript) => void;
+    salvando?: boolean;
+  };
   shotList: ShotItem[];
   onSaveShotList: (list: ShotItem[]) => void;
   // Lista padrão que a social mídia configurou (vazio = cai no fallback fixo).
@@ -1270,7 +1293,23 @@ function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter
         </button>
       </div>
 
-      {/* Roteiro da gravação: SEMPRE visível, com título e um estado vazio claro
+      {/* ROTEIROS DA GRAVAÇÃO.
+          Um dia rende vários vídeos: aqui é uma LISTA (com +, ordem, check e
+          lixeira), não mais um campo de texto único. O modo antigo continua
+          disponível como reserva pra telas que ainda não passam as ações. */}
+      {acoesRoteiro ? (
+        <RoteirosDoDia
+          roteiros={roteirosDoDia ?? []}
+          onAdicionar={acoesRoteiro.adicionar}
+          onEditar={acoesRoteiro.editar}
+          onExcluir={acoesRoteiro.excluir}
+          onToggleGravado={acoesRoteiro.toggleGravado}
+          onReordenar={acoesRoteiro.reordenar}
+          onTeleprompter={acoesRoteiro.teleprompter}
+          salvando={acoesRoteiro.salvando}
+        />
+      ) : (
+      <>{/* Roteiro da gravação: SEMPRE visível, com título e um estado vazio claro
           que convida a escrever. Assim que há texto, aparecem "Copiar roteiro" e
           "Usar como teleprompter" (antes escondidos atrás do "tem roteiro", e por
           isso a pessoa "não achava" onde copiar/abrir o teleprompter). */}
@@ -1316,7 +1355,8 @@ function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter
             </Button>
           </div>
         )}
-      </div>
+      </div></>
+      )}
 
       {/* Tomadas: o que precisa sair dessa gravação (mini-acordeão + contador). */}
       <div data-tour="cap-tomadas" className="mt-3 rounded-xl border border-border overflow-hidden">
@@ -1534,7 +1574,15 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   onBack: () => void;
   onDeleteExtra?: () => void;
   onPrompter: (title: string, text: string) => void;
-  renderCapture: (c: Capture) => ReactNode;
+  // A pasta manda pro CaptureRow os roteiros DAQUELE dia + as ações.
+  renderCapture: (c: Capture, roteiros?: {
+    roteiros: CaptureScript[];
+    acoes: {
+      adicionar: () => void; editar: (s: CaptureScript) => void; excluir: (s: CaptureScript) => void;
+      toggleGravado: (s: CaptureScript) => void; reordenar: (ids: string[]) => void;
+      teleprompter: (s: CaptureScript) => void; salvando?: boolean;
+    };
+  }) => ReactNode;
   // Salva o roteiro que vive DENTRO de uma captação (agenda_captures.roteiro).
   onSaveCapRoteiro: (id: string, roteiro: string) => Promise<unknown>;
   addCapture: (input: { capture_date: string; capture_time: string | null; location: string | null; crm_client_id: string | null; client_name: string | null }) => Promise<unknown>;
@@ -1554,6 +1602,8 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editando, setEditando] = useState<CaptureScript | null>(null);
+  // Dia de gravação que vai receber o roteiro novo (null = roteiro solto no mês).
+  const [capturaAlvo, setCapturaAlvo] = useState<Capture | null>(null);
   // Roteiro aberto no modal (card estilo Drive clicado). Guarda só o id: o
   // conteúdo vem SEMPRE da lista fresca, pra refletir edições na hora.
   const [verId, setVerId] = useState<string | null>(null);
@@ -1580,12 +1630,22 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
     if (editando) {
       await updScript.mutateAsync({ id: editando.id, patch: campos });
     } else {
+      // Roteiro criado DENTRO de um dia herda a data e o local da captação:
+      // ninguém quer redigitar o que já está marcado na agenda.
+      const doDia = capturaAlvo
+        ? {
+            capture_id: capturaAlvo.id,
+            record_date: campos.record_date || capturaAlvo.capture_date,
+            location: campos.location || capturaAlvo.location || null,
+            position: scripts.filter((s) => s.capture_id === capturaAlvo.id).length,
+          }
+        : { position: scripts.length };
       await addScript.mutateAsync({
         crm_client_id: pasta.crmId, client_name: pasta.crmId ? null : pasta.nome,
-        month, position: scripts.length, ...campos,
+        month, ...campos, ...doDia,
       });
     }
-    setEditorOpen(false); setEditando(null);
+    setEditorOpen(false); setEditando(null); setCapturaAlvo(null);
   };
 
   // Ordem de gravação: arrastar reordena na hora e salva a posição no banco.
@@ -1611,7 +1671,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   // desligado sem entender o porquê.
   const roteirosDoGuia = (() => {
     const daCaptacao = caps
-      .filter((c) => (c.roteiro ?? "").trim())
+      .filter((c) => (c.roteiro ?? "").trim() && !scripts.some((s) => s.capture_id === c.id))
       .map((c) => ({
         id: `cap-${c.id}`,
         title: `Captação ${diaMes(c.capture_date)}`,
@@ -1622,7 +1682,9 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
         format: null, reference_url: null, scenes: [],
         done: c.status === "concluida",
       })) as unknown as CaptureScript[];
-    return [...ordenados, ...daCaptacao];
+    const capturaDe = new Map(caps.map((c) => [c.id, c.capture_date]));
+    const dia = (r: CaptureScript) => r.record_date || (r.capture_id ? capturaDe.get(r.capture_id) : null) || "9999-12-31";
+    return [...ordenados, ...daCaptacao].sort((a, b) => dia(a).localeCompare(dia(b)));
   })();
 
   const baixarGuia = async () => {
@@ -1698,15 +1760,24 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             {gerandoGuia ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5 mr-1.5" />}
             Guia de gravação (PDF)
           </Button>
+          {/* O cliente revisa ANTES da gravação. Fora do sistema isso vira áudio
+              de WhatsApp e a social mídia reescreve tudo na mão. */}
+          <BotaoEnviarAprovacao month={month} crmClientId={pasta.crmId} clientName={pasta.nome} roteiros={roteirosDoGuia} />
         </div>
       </div>
+
+      {/* Revisões do cliente: link aberto, o que voltou e o botão de confirmar. */}
+      <PainelAprovacoes month={month} crmClientId={pasta.crmId} clientName={pasta.nome} />
 
       {/* Roteiros do mês: a biblioteca (quantos quiser) + os roteiros escritos
           DENTRO das captações do mês, tudo na MESMA grade. Antes o roteiro da
           captação ficava escondido na captação e a grade parecia vazia. */}
       {(() => {
-        const capsComRoteiro = caps.filter((c) => (c.roteiro ?? "").trim());
-        const totalRoteiros = scripts.length + capsComRoteiro.length;
+        // Os roteiros JÁ ligados a um dia moram dentro da captação: aqui em cima
+        // ficam só os soltos (pauta pronta, dia ainda não marcado).
+        const soltos = ordenados.filter((s) => !s.capture_id);
+        const capsComRoteiro = caps.filter((c) => (c.roteiro ?? "").trim() && !scripts.some((s) => s.capture_id === c.id));
+        const totalRoteiros = soltos.length + capsComRoteiro.length;
         return (
       <div>
         <h3 className="flex items-center gap-1.5 text-sm font-display font-bold text-foreground mb-2">
@@ -1732,7 +1803,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
               <DropRoteiros droppableId="roteiros">
                 {(drop) => (
                   <div ref={drop.innerRef} {...drop.droppableProps} className="space-y-2">
-                    {ordenados.map((s, i) => (
+                    {soltos.map((s, i) => (
                       <DragRoteiro key={s.id} draggableId={s.id} index={i}>
                         {(drag, snap) => (
                           <div ref={drag.innerRef} {...drag.draggableProps}
@@ -1795,7 +1866,18 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
                       {done ? "Concluída" : "Pendente"}
                     </span>
                   </summary>
-                  <div className="border-t border-border/60">{renderCapture(c)}</div>
+                  <div className="border-t border-border/60">{renderCapture(c, {
+                    roteiros: scripts.filter((s) => s.capture_id === c.id),
+                    acoes: {
+                      adicionar: () => { setEditando(null); setCapturaAlvo(c); setEditorOpen(true); },
+                      editar: (s) => { setEditando(s); setCapturaAlvo(c); setEditorOpen(true); },
+                      excluir: (s) => delScript.mutate(s.id, { onSuccess: () => toast.success("Roteiro excluído.") }),
+                      toggleGravado: (s) => updScript.mutate({ id: s.id, patch: { done: !s.done } }),
+                      reordenar: (ids) => reorderScripts.mutate(ids),
+                      teleprompter: (s) => onPrompter(s.title?.trim() || pasta.nome, s.content || ""),
+                      salvando: addScript.isPending,
+                    },
+                  })}</div>
                 </details>
               );
             })}
@@ -1834,7 +1916,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
       {editorOpen && (
         <RoteiroEditor
           open
-          onOpenChange={(o) => { if (!o) { setEditorOpen(false); setEditando(null); setEditandoCapId(null); } }}
+          onOpenChange={(o) => { if (!o) { setEditorOpen(false); setEditando(null); setEditandoCapId(null); setCapturaAlvo(null); } }}
           inicial={editandoCapId
             ? ({ id: editandoCapId, title: "", content: caps.find((c) => c.id === editandoCapId)?.roteiro ?? "", scenes: [] } as unknown as CaptureScript)
             : editando}

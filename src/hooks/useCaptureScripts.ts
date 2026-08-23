@@ -34,6 +34,8 @@ export type CaptureScript = {
   updated_at: string;
   // v3 (roteiro estruturado). Opcionais: roteiro antigo não tem nada disso.
   position?: number | null;
+  /** Dia de gravação a que este roteiro pertence (null = solto no mês). */
+  capture_id?: string | null;
   about?: string | null;          // "sobre o vídeo": a ideia em uma frase
   reference_url?: string | null;  // reel/tiktok de referência (clicável)
   record_date?: string | null;    // data da gravação (YYYY-MM-DD)
@@ -71,6 +73,7 @@ export type CaptureScriptInput = {
   source?: string;
   source_post_id?: string | null;
   position?: number | null;
+  capture_id?: string | null;
   about?: string | null;
   reference_url?: string | null;
   record_date?: string | null;
@@ -117,6 +120,7 @@ export function useAddCaptureScript() {
       };
       const extras = {
         position: input.position ?? null,
+        capture_id: input.capture_id ?? null,
         about: input.about ?? null,
         reference_url: input.reference_url ?? null,
         record_date: input.record_date ?? null,
@@ -147,12 +151,12 @@ export function useUpdateCaptureScript() {
   return useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<CaptureScript,
       "title" | "content" | "done" | "month" | "source_post_id" |
-      "position" | "about" | "reference_url" | "record_date" | "location" | "format" | "scenes">> }) => {
+      "position" | "capture_id" | "about" | "reference_url" | "record_date" | "location" | "format" | "scenes">> }) => {
       let { error } = await sbFrom("capture_scripts")
         .update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
       if (error && colunaFaltando(error.message)) {
-        const { position, about, reference_url, record_date, location, format, scenes, ...legado } = patch as Record<string, unknown>;
-        void position; void about; void reference_url; void record_date; void location; void format; void scenes;
+        const { position, capture_id, about, reference_url, record_date, location, format, scenes, ...legado } = patch as Record<string, unknown>;
+        void position; void capture_id; void about; void reference_url; void record_date; void location; void format; void scenes;
         toast.warning("Salvei o roteiro, mas sem cenas/data: rode o SQL novo da captação pra guardar tudo.", { duration: 9000 });
         ({ error } = await sbFrom("capture_scripts")
           .update({ ...legado, updated_at: new Date().toISOString() }).eq("id", id));
