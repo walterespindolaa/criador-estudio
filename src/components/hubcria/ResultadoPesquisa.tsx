@@ -220,6 +220,15 @@ function TopPostCard({ p, rank, aoUsarReferencia }: { p: Bruto; rank: number; ao
       {/* A ENGENHARIA REVERSA: a IA decompõe o roteiro em gancho, estrutura,
           CTA e a adaptação pro cliente. É o direcionamento pronto, não só o
           texto cru pra pessoa analisar sozinha. */}
+      {(() => {
+        // Limpa lixo de pesquisa antiga: campo gravado como "[object Object]"
+        // (antes da blindagem na edge) não aparece.
+        const eng = p.engenharia;
+        if (eng) for (const k of ["gancho", "cta", "porque", "adaptacao"]) {
+          if (typeof eng[k] === "string" && eng[k].includes("[object Object]")) eng[k] = "";
+        }
+        return null;
+      })()}
       {p.engenharia && (p.engenharia.gancho || p.engenharia.estrutura?.length > 0) && (
         <div className="border-t border-border/60 px-3 py-2.5 space-y-2" style={{ background: `${CRIA_HEX.amarelo}14` }}>
           <p className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">

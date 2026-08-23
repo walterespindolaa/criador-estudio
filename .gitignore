@@ -40,3 +40,6 @@ dist-ssr
 .claude/
 .vercel
 .env*
+
+# Zips pesados da LP nao vao pro Git (o GitHub barra acima de 100MB).
+CRIA/lp-cria/*.zip

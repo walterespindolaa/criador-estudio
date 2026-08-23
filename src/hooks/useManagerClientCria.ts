@@ -225,6 +225,11 @@ export type ClientCriaAgendaPost = {
   format: string | null;
   scheduled_date: string | null;
   scheduled_time: string | null;
+  // A social mídia precisa da LEGENDA e do LINK DO MATERIAL sem sair da Agenda:
+  // é o que ela copia pra publicar. Sem isso o card virava só um lembrete.
+  caption: string | null;
+  drive_folder_url: string | null;
+  reference_url: string | null;
   crm_client_id: string | null;   // resolvido no map (pra abrir o kanban do cliente)
   client_name: string | null;
   client_color: string | null;
@@ -243,7 +248,7 @@ export function useClientCriaAgendaPosts(links: ClientCriaLink[], from: string, 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("posts")
-        .select("id, user_id, title, status, platform, format, scheduled_date, scheduled_time")
+        .select("id, user_id, title, status, platform, format, scheduled_date, scheduled_time, caption, drive_folder_url, reference_url")
         .in("user_id", owners)
         .not("scheduled_date", "is", null)
         .gte("scheduled_date", from)

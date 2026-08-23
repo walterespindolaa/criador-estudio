@@ -394,6 +394,7 @@ async function engenhariaReversa(
 ${fonte}
 
 Responda SOMENTE JSON: {"analises":[{"i":0,"resumo":"...","gancho":"...","estrutura":["...","..."],"cta":"...","porque":"...","adaptacao":"..."}]}
+IMPORTANTE: cada campo é uma STRING corrida (estrutura é lista de strings). NUNCA use objeto aninhado dentro dos campos.
 Português BR, direto, sem markdown.`;
 
   try {
@@ -414,17 +415,27 @@ Português BR, direto, sem markdown.`;
     const st = s.indexOf("{"); const en = s.lastIndexOf("}");
     if (st >= 0 && en > st) s = s.slice(st, en + 1);
     const analises = (JSON.parse(s)?.analises ?? []) as Array<Record<string, unknown>>;
+    // O modelo às vezes devolve um campo como OBJETO ({frase, mecanismo}) mesmo
+    // com o prompt proibindo; String() disso vira "[object Object]" na tela.
+    // Achata qualquer coisa em frase.
+    const texto = (v: unknown): string => {
+      if (v == null) return "";
+      if (typeof v === "string") return v;
+      if (Array.isArray(v)) return v.map(texto).filter(Boolean).join(" · ");
+      if (typeof v === "object") return Object.values(v as Record<string, unknown>).map(texto).filter(Boolean).join(" · ");
+      return String(v);
+    };
     for (const a of analises) {
       const idx = Number(a?.i);
       if (!Number.isInteger(idx) || !items[idx]) continue;
       items[idx].engenharia = {
-        gancho: String(a.gancho || "").slice(0, 400),
-        estrutura: Array.isArray(a.estrutura) ? a.estrutura.map((e) => String(e).slice(0, 200)).slice(0, 6) : [],
-        cta: String(a.cta || "").slice(0, 250),
-        porque: String(a.porque || "").slice(0, 300),
-        adaptacao: String(a.adaptacao || "").slice(0, 400),
+        gancho: texto(a.gancho).slice(0, 400),
+        estrutura: Array.isArray(a.estrutura) ? a.estrutura.map((e) => texto(e).slice(0, 200)).filter(Boolean).slice(0, 6) : [],
+        cta: texto(a.cta).slice(0, 250),
+        porque: texto(a.porque).slice(0, 300),
+        adaptacao: texto(a.adaptacao).slice(0, 400),
       };
-      if (!items[idx].summary && a.resumo) items[idx].summary = String(a.resumo).slice(0, 300);
+      if (!items[idx].summary && a.resumo) items[idx].summary = texto(a.resumo).slice(0, 300);
     }
     return items;
   } catch (e) {

@@ -1490,6 +1490,44 @@ export default function AgendaCriacao() {
                 <p><span className="text-muted-foreground">Cliente:</span> {criaCard.client_name ?? "-"}</p>
                 <p><span className="text-muted-foreground">Quando:</span> {criaCard.scheduled_date ? new Date(criaCard.scheduled_date + "T00:00:00").toLocaleDateString("pt-BR") : "-"}{criaCard.scheduled_time ? ` às ${criaCard.scheduled_time.slice(0, 5)}` : ""}</p>
                 <p><span className="text-muted-foreground">Etapa:</span> {CRIA_POST_STATUS[criaCard.status ?? ""] ?? criaCard.status ?? "-"}{criaCard.format ? ` · ${criaCard.format}` : ""}</p>
+
+                {/* LEGENDA e MATERIAL: é o que ela realmente precisa na hora de
+                    publicar. Sem isso o card era só um lembrete e obrigava a
+                    abrir o kanban do cliente pra copiar o texto. */}
+                {criaCard.caption?.trim() && (
+                  <div className="rounded-xl border border-border bg-muted/25 p-2.5 mt-1">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="text-[10px] font-body font-bold uppercase tracking-wide text-muted-foreground">Legenda</span>
+                      <button type="button"
+                        onClick={() => { void navigator.clipboard.writeText(criaCard.caption ?? ""); toast.success("Legenda copiada!"); }}
+                        className="inline-flex items-center gap-1 text-[11px] font-display font-bold text-primary hover:underline">
+                        <Copy className="h-3 w-3" /> copiar
+                      </button>
+                    </div>
+                    <p className="max-h-40 overflow-y-auto whitespace-pre-wrap text-[12.5px] font-body leading-relaxed text-foreground">{criaCard.caption}</p>
+                  </div>
+                )}
+
+                {(() => {
+                  // O material pode estar na pasta do Drive (campo próprio) ou
+                  // nos links de referência do post. Mostra os dois caminhos.
+                  const links: string[] = [];
+                  if (criaCard.drive_folder_url) links.push(criaCard.drive_folder_url);
+                  for (const l of parseRefLinks(criaCard.reference_url)) if (!links.includes(l)) links.push(l);
+                  if (links.length === 0) return null;
+                  return (
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {links.map((l, i) => (
+                        <a key={`${l}-${i}`} href={l} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[11.5px] font-display font-bold text-foreground transition-colors hover:border-primary hover:text-primary">
+                          {isDriveUrl(l) ? <HardDrive className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
+                          {isDriveUrl(l) ? (i === 0 && criaCard.drive_folder_url === l ? "Pasta do Drive" : "Arquivo no Drive") : "Link do material"}
+                        </a>
+                      ))}
+                    </div>
+                  );
+                })()}
+
                 <p className="text-[11.5px] text-muted-foreground pt-1">Este post vive no Cria do próprio cliente. Você pode marcar como publicado daqui ou abrir o kanban dele pra ver tudo.</p>
               </div>
               <DialogFooter className="sm:justify-between gap-2">

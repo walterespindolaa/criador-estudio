@@ -240,7 +240,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
     <h1>Seu conteúdo inteiro, organizado. <span class="hl">Numa aba só.</span>
       <span class="hero-script">ufa, agora faz sentido!</span>
     </h1>
-    <p class="hero-sub">Ideia no print, pauta no Notion, legenda no bloco de notas e prazo na cabeça? Aqui a ideia entra, vira pauta, cai no quadro e preenche o calendário. Você enxerga a semana antes de ela te atropelar, e a IA ajuda no que você pedir.</p>
+    <p class="hero-sub">Ideia no print, planejamento no Notion, legenda no bloco de notas e prazo na cabeça? Aqui a ideia entra, vira post planejado, cai no quadro e preenche o calendário.<span class="sub-extra"> Você enxerga a semana antes de ela te atropelar, e a IA ajuda no que você pedir.</span></p>
     <div class="hero-ctas">
       <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Começar meus 7 dias grátis</a>
       <a href="#motor" class="btn btn-ghost">Ver como funciona ↓</a>
@@ -328,7 +328,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
     <div style="text-align:center;max-width:720px;margin:0 auto">
       <span class="kicker" style="background:var(--amarelo);color:var(--ink)">O motor do CRIA</span>
       <h2 style="color:var(--creme);margin-top:12px">Não é mais uma ferramenta.<br><span class="script" style="color:var(--amarelo);font-size:1.12em">é uma coisa puxando a outra</span></h2>
-      <p style="opacity:.9;margin-top:14px;font-size:1.05rem">Ferramenta solta você já tem de sobra. O que ninguém te deu foi a organização encadeada: a ideia vira pauta, a pauta entra no quadro, o quadro preenche o calendário e o mês se monta. Sem carregar nada de uma aba pra outra, e sem nada se perder no caminho.</p>
+      <p style="opacity:.9;margin-top:14px;font-size:1.05rem">Ferramenta solta você já tem de sobra. O que ninguém te deu foi a organização encadeada: a ideia vira post, o post entra no quadro, o quadro preenche o calendário e o mês se monta. Sem carregar nada de uma aba pra outra, e sem nada se perder no caminho.</p>
     </div>
 
     <div class="motor-fluxo">
@@ -359,11 +359,11 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
       <article class="motor-passo reveal">
         <span class="mp-num">3</span>
         <div class="mp-txt">
-          <span class="mp-tag">Ideia vira pauta</span>
-          <h3>Da frase solta a três pautas prontas</h3>
+          <span class="mp-tag">Ideia vira post</span>
+          <h3>Da frase solta a três posts planejados</h3>
           <p>Você escolhe o formato e o CRIA devolve o ângulo, o gancho e a estrutura, no seu tom, cruzando com o que está em alta no seu nicho. A frase de dez palavras vira reels, carrossel ou story com direção.</p>
         </div>
-        <div class="mp-img"><img loading="lazy" class="zoom" src="prints/card/ciclo-ideia.webp" data-full="prints/ciclo-ideia.webp" alt="Sugestões de IA transformando a ideia crua em pautas de reels, carrossel e story" decoding="async"></div>
+        <div class="mp-img"><img loading="lazy" class="zoom" src="prints/card/ciclo-ideia.webp" data-full="prints/ciclo-ideia.webp" alt="Sugestões de IA transformando a ideia crua em posts de reels, carrossel e story" decoding="async"></div>
       </article>
 
       <span class="motor-seta" aria-hidden="true">↓</span>
@@ -372,7 +372,7 @@ h2{font-size:clamp(1.9rem,4.4vw,3.2rem);margin-bottom:18px}
         <span class="mp-num">4</span>
         <div class="mp-txt">
           <span class="mp-tag">Produção</span>
-          <h3>A pauta vira post, com a prévia do lado</h3>
+          <h3>Do planejado ao post pronto, com a prévia do lado</h3>
           <p>Gancho, corpo e chamada já vêm estruturados no tom do seu brandbook. E a prévia mostra exatamente como o post vai ficar no feed, no reels ou no story, antes de você publicar.</p>
         </div>
         <div class="mp-img"><img loading="lazy" class="zoom" src="prints/card/escrita-guiada.webp" data-full="prints/escrita-guiada.webp" alt="Editor de post do CRIA com a prévia do Instagram ao lado" decoding="async"></div>
@@ -707,6 +707,11 @@ footer .logo{color:var(--creme);display:block;margin-bottom:10px}
 html,body{overflow-x:clip}
 @media(max-width:820px){
   h1{font-size:clamp(2rem,9.5vw,2.7rem);line-height:1.08}
+  /* motor com 6 passos: card mais enxuto encurta ~1 tela inteira de rolagem */
+  .motor-passo{padding:18px 16px;gap:14px;border-radius:20px}
+  .motor-passo h3{font-size:1.15rem}
+  .motor-passo p{font-size:.92rem;line-height:1.5}
+  .motor-seta{font-size:1.2rem;opacity:.6}
   .hero-script{font-size:1.45rem;margin-top:4px}
   h2{font-size:clamp(1.55rem,7vw,2.1rem)}
   .hero-tag{font-size:.76rem;padding:7px 14px;margin-bottom:18px}
@@ -735,7 +740,10 @@ html,body{overflow-x:clip}
   .stack-total{font-size:1rem}
   .plano h3{font-size:1.35rem}
   .preco{font-size:2.4rem}
-  .plano ul{font-size:.9rem}
+  .plano ul{font-size:.9rem;gap:8px;margin:20px 0 24px}
+  /* cards de plano ganharam mais bullets: no celular eles respiram menos */
+  .plano{padding:30px 22px}
+  .plano .preco{margin:14px 0 0}
   .plano .badge{top:-13px;right:16px;font-size:.7rem;padding:6px 12px}
   .garantia{padding:26px 22px}
   .garantia h3{font-size:1.12rem}
@@ -948,7 +956,7 @@ html,body{overflow-x:clip}
           <div class="tier-top"><span class="tier-nome script">Cria Radar</span><span class="tier-preco">R$49,90/mês</span></div>
           <div class="chips">
             <span class="chip"><i></i>O que os concorrentes do seu cliente postam</span>
-            <span class="chip"><i></i>Vira pauta pronta pra levar na reunião</span>
+            <span class="chip"><i></i>Vira ideia de post pronta pra reunião</span>
           </div>
         </div>
         <a href="social-media.html" class="tudo-link">ver o lado social media em detalhe →</a>
@@ -1329,6 +1337,12 @@ html,body{overflow-x:clip}
 @media(max-width:520px){
   h1{max-width:none}
   .hero-sub{max-width:none;font-size:1rem;line-height:1.5;margin-bottom:20px}
+  /* a 3ª frase do sub fica pro desktop: no celular ela empurrava o CTA pra
+     fora da dobra e a dobra é onde o tráfego pago decide ficar ou não */
+  .hero-sub .sub-extra{display:none}
+  /* coluna "Pro social media": chips dos módulos mais compactos */
+  .tudo-tier{padding:14px 12px}
+  .chips .chip{font-size:.82rem;padding:7px 10px}
   .hero-ctas{gap:10px}
   /* o segundo botão é "ver como funciona": no celular ele é secundário de
      verdade, então encolhe e para de disputar espaço com o que converte */
