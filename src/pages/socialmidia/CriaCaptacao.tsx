@@ -25,6 +25,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useCrmClients } from "@/hooks/useCrm";
+import { confirmar } from "@/components/shared/Confirm";
 import { useExternalClients, useExternalPosts } from "@/hooks/useCriaPost";
 import { useCaptureCities, useDefaultShotList } from "@/hooks/useCaptureCities";
 import {
@@ -1714,6 +1715,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
                           <div ref={drag.innerRef} {...drag.draggableProps}
                             className={cn("rounded-2xl border border-border bg-card", snap.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                             <RoteiroLinha script={s} indice={i} onOpen={() => setVerId(s.id)}
+                              onExcluir={() => delScript.mutate(s.id, { onSuccess: () => toast.success("Roteiro excluído.") })}
                               handleProps={drag.dragHandleProps ?? undefined} />
                           </div>
                         )}
@@ -1878,8 +1880,10 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
 // Uma linha da ordem de gravação: número, título, e os sinais que dizem se o
 // roteiro está PRONTO pra gravar (cenas, referência, data). É o que faltava:
 // olhar a lista e saber o que ainda precisa de trabalho.
-function RoteiroLinha({ script, indice, onOpen, handleProps, icone = "file" }: {
+function RoteiroLinha({ script, indice, onOpen, onExcluir, handleProps, icone = "file" }: {
   script: CaptureScript; indice: number; onOpen: () => void;
+  /** Excluir na PRÓPRIA linha: antes só existia dentro do modal e ninguém achava. */
+  onExcluir?: () => void;
   handleProps?: DraggableProvidedDragHandleProps;
   icone?: "file" | "video";
 }) {
@@ -1929,6 +1933,21 @@ function RoteiroLinha({ script, indice, onOpen, handleProps, icone = "file" }: {
           )}
         </div>
       </button>
+      {onExcluir && (
+        <button type="button" aria-label="Excluir roteiro" title="Excluir roteiro"
+          onClick={async (e) => {
+            e.stopPropagation();
+            const ok = await confirmar({
+              titulo: "Excluir este roteiro?",
+              descricao: `"${script.title?.trim() || "Roteiro"}" some da pasta deste mês. Não dá pra desfazer.`,
+              acao: "Excluir",
+            });
+            if (ok) onExcluir();
+          }}
+          className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/5 transition-colors">
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
     </div>
   );
 }

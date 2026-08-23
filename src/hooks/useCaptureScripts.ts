@@ -79,6 +79,10 @@ export type CaptureScriptInput = {
   scenes?: CaptureScene[] | null;
 };
 
+/** O banco reclamou de coluna que não existe? (SQL novo ainda não rodado) */
+const colunaFaltando = (msg: string) =>
+  /column .* does not exist|could not find the .* column|schema cache/i.test(msg ?? "");
+
 export function useCaptureScripts() {
   const { agencyOwnerId } = useActiveAccount();
   return useQuery<CaptureScript[]>({
@@ -101,7 +105,7 @@ export function useAddCaptureScript() {
   return useMutation({
     mutationFn: async (input: CaptureScriptInput) => {
       if (!agencyOwnerId) throw new Error("Sem sessão");
-      const { data, error } = await sbFrom("capture_scripts").insert({
+      const base = {
         manager_id: agencyOwnerId,
         crm_client_id: input.crm_client_id ?? null,
         client_name: input.client_name ?? null,
@@ -110,6 +114,8 @@ export function useAddCaptureScript() {
         content: input.content,
         source: input.source ?? "manual",
         source_post_id: input.source_post_id ?? null,
+      };
+      const extras = {
         position: input.position ?? null,
         about: input.about ?? null,
         reference_url: input.reference_url ?? null,
@@ -117,14 +123,22 @@ export function useAddCaptureScript() {
         location: input.location ?? null,
         format: input.format ?? null,
         scenes: input.scenes ?? [],
-      }).select("id").single();
+      };
+      let { data, error } = await sbFrom("capture_scripts").insert({ ...base, ...extras }).select("id").single();
+      // Banco ainda sem as colunas do roteiro estruturado (SQL não rodado):
+      // salva o essencial em vez de perder o que a pessoa escreveu.
+      if (error && colunaFaltando(error.message)) {
+        toast.warning("Salvei o roteiro, mas sem cenas/data: rode o SQL novo da captação pra guardar tudo.", { duration: 9000 });
+        ({ data, error } = await sbFrom("capture_scripts").insert(base).select("id").single());
+      }
       if (error) throw new Error(error.message);
       return (data as { id: string }).id;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["capture-scripts"] }),
-    onError: (e) => toast.error(e instanceof Error && /relation|does not exist/i.test(e.message)
+    onError: (e) => toast.error(e instanceof Error && /relation/i.test(e.message)
       ? "Rode o SQL da captação (capture_scripts) pra salvar roteiros."
-      : "Não consegui salvar o roteiro."),
+      : `Não consegui salvar o roteiro.${e instanceof Error ? ` (${e.message.slice(0, 90)})` : ""}`,
+      { duration: 10000 }),
   });
 }
 
@@ -134,8 +148,15 @@ export function useUpdateCaptureScript() {
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<CaptureScript,
       "title" | "content" | "done" | "month" | "source_post_id" |
       "position" | "about" | "reference_url" | "record_date" | "location" | "format" | "scenes">> }) => {
-      const { error } = await sbFrom("capture_scripts")
+      let { error } = await sbFrom("capture_scripts")
         .update({ ...patch, updated_at: new Date().toISOString() }).eq("id", id);
+      if (error && colunaFaltando(error.message)) {
+        const { position, about, reference_url, record_date, location, format, scenes, ...legado } = patch as Record<string, unknown>;
+        void position; void about; void reference_url; void record_date; void location; void format; void scenes;
+        toast.warning("Salvei o roteiro, mas sem cenas/data: rode o SQL novo da captação pra guardar tudo.", { duration: 9000 });
+        ({ error } = await sbFrom("capture_scripts")
+          .update({ ...legado, updated_at: new Date().toISOString() }).eq("id", id));
+      }
       if (error) throw new Error(error.message);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["capture-scripts"] }),
