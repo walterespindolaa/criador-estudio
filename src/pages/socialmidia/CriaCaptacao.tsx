@@ -1589,7 +1589,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   };
 
   // Ordem de gravação: arrastar reordena na hora e salva a posição no banco.
-  const ordenados = (() => {
+  const ordenados: CaptureScript[] = (() => {
     if (!ordemLocal) return scripts;
     const byId = new Map(scripts.map((s) => [s.id, s]));
     const fora = scripts.filter((s) => !ordemLocal.includes(s.id));
@@ -1605,8 +1605,28 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
     reorderScripts.mutate(ids, { onSettled: () => setOrdemLocal(null) });
   };
 
+  // O guia leva a biblioteca do mês MAIS os roteiros escritos dentro das
+  // captações: pra quem grava, os dois são "vídeo pra gravar". Antes só a
+  // biblioteca contava, e quem só tinha o roteiro da captação via o botão
+  // desligado sem entender o porquê.
+  const roteirosDoGuia = (() => {
+    const daCaptacao = caps
+      .filter((c) => (c.roteiro ?? "").trim())
+      .map((c) => ({
+        id: `cap-${c.id}`,
+        title: `Captação ${diaMes(c.capture_date)}`,
+        content: (c.roteiro ?? "").trim(),
+        about: c.note ?? null,
+        record_date: c.capture_date,
+        location: c.location ?? null,
+        format: null, reference_url: null, scenes: [],
+        done: c.status === "concluida",
+      })) as unknown as CaptureScript[];
+    return [...ordenados, ...daCaptacao];
+  })();
+
   const baixarGuia = async () => {
-    if (scripts.length === 0) { toast.error("Adicione pelo menos um roteiro."); return; }
+    if (roteirosDoGuia.length === 0) { toast.error("Escreva pelo menos um roteiro deste mês pra gerar o guia."); return; }
     setGerandoGuia(true);
     try {
       const slug = pasta.nome.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -1670,8 +1690,11 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
           </Button>
           {/* O GUIA: é o documento que ela leva pro dia da gravação e manda pro
               cliente. Sem ele, o módulo só guardava texto. */}
-          <Button size="sm" variant="outline" onClick={() => void baixarGuia()} disabled={gerandoGuia || scripts.length === 0}
-            className="rounded-xl h-9" title="Baixa o guia de gravação do mês em PDF: um vídeo por página, com cenas e direção.">
+          <Button size="sm" variant="outline" onClick={() => void baixarGuia()} disabled={gerandoGuia || roteirosDoGuia.length === 0}
+            className="rounded-xl h-9"
+            title={roteirosDoGuia.length === 0
+              ? "Escreva pelo menos um roteiro deste mês pra gerar o guia."
+              : `Baixa o guia em PDF com ${roteirosDoGuia.length} ${roteirosDoGuia.length === 1 ? "vídeo" : "vídeos"}: um por página, com cenas e direção.`}>
             {gerandoGuia ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5 mr-1.5" />}
             Guia de gravação (PDF)
           </Button>
@@ -1860,7 +1883,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
       })()}
       {/* Fora da tela: é o que o exportador fotografa pra gerar o guia. */}
       <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }} aria-hidden="true">
-        <GuiaGravacaoPdf ref={guiaRef} cliente={pasta.nome} mesLabel={monthLabel(month)} roteiros={ordenados}
+        <GuiaGravacaoPdf ref={guiaRef} cliente={pasta.nome} mesLabel={monthLabel(month)} roteiros={roteirosDoGuia}
           logoCliente={logoCliente} logoAgencia={logoAgencia} elaboradoPor={elaboradoPor} />
       </div>
 
