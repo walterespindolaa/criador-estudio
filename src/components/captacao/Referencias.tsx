@@ -3,7 +3,8 @@ import { Link2, Plus, X, Play, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { parseRefLinks, serializeRefLinks, isRefLink } from "@/lib/refLinks";
-import { previaDeLink, type PreviaLink } from "@/lib/refPreview";
+import { type PreviaLink } from "@/lib/refPreview";
+import { useLinkPreviews, comCapa } from "@/hooks/useLinkPreviews";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    REFERÊNCIAS DO ROTEIRO
@@ -16,7 +17,7 @@ import { previaDeLink, type PreviaLink } from "@/lib/refPreview";
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /** Capa do link. Instagram nem sempre libera, então cai no ícone sem quebrar. */
-export function CapaReferencia({ p, tamanho = 44 }: { p: PreviaLink; tamanho?: number }) {
+export function CapaReferencia({ p, tamanho = 52 }: { p: PreviaLink; tamanho?: number }) {
   const [falhou, setFalhou] = useState(false);
   const mostrarImg = !!p.thumb && !falhou;
   return (
@@ -39,13 +40,14 @@ export function ListaReferencias({
   valor, compacto, className,
 }: { valor?: string | null; compacto?: boolean; className?: string }) {
   const links = parseRefLinks(valor).filter(isRefLink);
+  const capas = useLinkPreviews(links);
   if (links.length === 0) return null;
 
   if (compacto) {
     return (
       <span className={cn("inline-flex flex-wrap items-center gap-1", className)}>
         {links.map((l, i) => {
-          const p = previaDeLink(l);
+          const p = comCapa(l, capas);
           return (
             <a key={i} href={p.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
               title={p.url}
@@ -61,7 +63,7 @@ export function ListaReferencias({
   return (
     <div className={cn("space-y-1.5", className)}>
       {links.map((l, i) => {
-        const p = previaDeLink(l);
+        const p = comCapa(l, capas);
         return (
           <a key={i} href={p.url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
             className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-2 hover:border-primary/50 transition-colors">
@@ -84,6 +86,7 @@ export function CampoReferencias({
 }: { valor: string; onChange: (v: string) => void }) {
   const links = parseRefLinks(valor);
   const linhas = links.length ? links : [""];
+  const capas = useLinkPreviews(links.filter(isRefLink));
 
   const mudar = (i: number, v: string) => {
     const novo = [...linhas];
@@ -96,7 +99,7 @@ export function CampoReferencias({
   return (
     <div className="space-y-2">
       {linhas.map((l, i) => {
-        const p = isRefLink(l) ? previaDeLink(l) : null;
+        const p = isRefLink(l) ? comCapa(l, capas) : null;
         return (
           <div key={i} className="space-y-1.5">
             <div className="flex items-center gap-1.5">
@@ -112,7 +115,7 @@ export function CampoReferencias({
             {p && (
               <a href={p.url} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-2.5 rounded-xl border border-border bg-muted/30 p-2 hover:border-primary/50 transition-colors">
-                <CapaReferencia p={p} tamanho={40} />
+                <CapaReferencia p={p} tamanho={52} />
                 <span className="min-w-0 flex-1">
                   <span className="block text-[12px] font-body font-semibold text-foreground">{p.nome}</span>
                   <span className="block truncate text-[11px] font-body text-muted-foreground">{p.label}</span>

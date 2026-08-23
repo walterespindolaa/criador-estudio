@@ -7,11 +7,10 @@ import { refLinkHref, refLinkLabel } from "@/lib/refLinks";
    não diz nada: quem abre o guia não sabe se é Instagram, TikTok ou YouTube,
    e no celular a URL ainda quebra o layout.
 
-   Aqui o link vira: plataforma reconhecida, rótulo curto e, quando dá pra
-   pegar de graça, uma capa. Só o YouTube tem thumbnail garantida por URL
-   pública; Instagram tem um endpoint de mídia que funciona em post público e
-   pode falhar (perfil fechado, hotlink bloqueado), então quem exibe precisa
-   ter fallback no onError. TikTok não tem, e aí fica só o cartão com ícone.
+   Aqui o link vira: plataforma reconhecida, rótulo curto e, quando sai de
+   graça, a capa. Só o YouTube entrega capa por URL pública. Instagram e TikTok
+   exigem ir buscar (é o que useLinkPreviews faz, uma vez por link), então aqui
+   eles saem sem thumb e quem exibe cai no ícone até a capa chegar.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export type Plataforma = "instagram" | "tiktok" | "youtube" | "drive" | "web";
@@ -61,10 +60,9 @@ export function previaDeLink(link: string): PreviaLink {
 
     if (host.endsWith("instagram.com")) {
       plataforma = "instagram";
-      const sc = shortcodeInstagram(url);
-      // Endpoint público de mídia: funciona em post aberto e falha em silêncio
-      // no resto, por isso quem renderiza precisa de onError.
-      if (sc) thumb = `https://www.instagram.com/p/${sc}/media/?size=m`;
+      // Sem capa por URL: o endpoint público /p/CODIGO/media/ foi desligado e o
+      // CDN bloqueia hotlink. A capa do Instagram vem do cache (useLinkPreviews),
+      // que busca uma vez pela edge e guarda a imagem num bucket nosso.
     } else if (host.endsWith("tiktok.com")) {
       plataforma = "tiktok";
     } else if (host.endsWith("youtube.com") || host.endsWith("youtu.be")) {

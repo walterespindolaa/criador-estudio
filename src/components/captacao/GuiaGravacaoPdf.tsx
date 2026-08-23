@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import { parseRefLinks, isRefLink } from "@/lib/refLinks";
-import { previaDeLink } from "@/lib/refPreview";
+import { useLinkPreviews, comCapa, type CapaDeLink } from "@/hooks/useLinkPreviews";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import { cenasDe, type CaptureScript } from "@/hooks/useCaptureScripts";
 
@@ -33,8 +33,8 @@ const C = {
 };
 
 /** Referências do roteiro (o campo guarda um link por linha). */
-const refsDe = (r: { reference_url?: string | null }) =>
-  parseRefLinks(r.reference_url).filter(isRefLink).map(previaDeLink);
+const refsDe = (r: { reference_url?: string | null }, capas: Record<string, CapaDeLink>) =>
+  parseRefLinks(r.reference_url).filter(isRefLink).map((l) => comCapa(l, capas));
 
 const dataBR = (iso?: string | null) =>
   iso ? new Date(iso + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }) : null;
@@ -91,6 +91,9 @@ type Props = {
 export const GuiaGravacaoPdf = forwardRef<HTMLDivElement, Props>(
   ({ cliente, mesLabel, roteiros, logoCliente, logoAgencia, elaboradoPor }, ref) => {
     const assina = elaboradoPor?.trim() || "sua social mídia";
+    // Capa das referências: no papel, o print do reel diz em um segundo o que
+    // três linhas de URL não dizem.
+    const capas = useLinkPreviews(roteiros.flatMap((r) => parseRefLinks(r.reference_url).filter(isRefLink)));
 
     // Página A4 com a mesma proporção do relatório (o exportador fotografa
     // cada [data-pdf-page] e vira uma folha).
@@ -207,21 +210,25 @@ export const GuiaGravacaoPdf = forwardRef<HTMLDivElement, Props>(
                         <Bloco titulo="Local">{r.location?.trim() || "a combinar"}</Bloco>
                         <Bloco titulo="Formato">{(r.format || "reels").toUpperCase()}</Bloco>
                         {r.about?.trim() && <Bloco titulo="Sobre o vídeo">{r.about}</Bloco>}
-                        {refsDe(r).length > 0 && (
+                        {refsDe(r, capas).length > 0 && (
                           <div style={{ marginTop: 12 }}>
                             <p style={{ fontSize: 9.5, letterSpacing: 1.5, textTransform: "uppercase", color: C.laranja, fontWeight: 800, margin: "0 0 6px" }}>
-                              {refsDe(r).length === 1 ? "Referência" : "Referências"}
+                              {refsDe(r, capas).length === 1 ? "Referência" : "Referências"}
                             </p>
-                            {/* Sem imagem de capa aqui de propósito: a capa vem de
-                                servidor externo e o html2canvas trava o PDF
-                                inteiro quando ela não libera CORS. No papel o que
-                                importa é abrir o vídeo, e data-pdf-link deixa a
-                                área clicável no PDF exportado. */}
-                            {refsDe(r).map((pv, ri) => (
+                            {/* A capa que entra aqui é a NOSSA cópia (bucket do
+                                Cria), que libera CORS: capa de CDN externo faria
+                                o html2canvas descartar a imagem. data-pdf-link
+                                deixa a área clicável no PDF exportado. */}
+                            {refsDe(r, capas).map((pv, ri) => (
                               <a key={ri} href={pv.url} data-pdf-link={pv.url} target="_blank" rel="noopener noreferrer"
                                 style={{ display: "block", border: `1px solid ${C.line}`, borderRadius: 12, padding: 11, background: C.cremeCard, textDecoration: "none", marginBottom: 6 }}>
                                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#fff", border: `1px solid ${C.line}`, display: "grid", placeItems: "center", fontSize: 14, color: C.laranja }}>▶</span>
+                                  {pv.thumb ? (
+                                    <img src={pv.thumb} alt="" crossOrigin="anonymous"
+                                      style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover", border: `1px solid ${C.line}`, display: "block" }} />
+                                  ) : (
+                                    <span style={{ width: 28, height: 28, borderRadius: 8, background: "#fff", border: `1px solid ${C.line}`, display: "grid", placeItems: "center", fontSize: 14, color: C.laranja }}>▶</span>
+                                  )}
                                   <span style={{ fontSize: 11, fontWeight: 700, color: C.ink }}>Abrir no {pv.nome}</span>
                                 </span>
                                 <span style={{ display: "block", fontSize: 9, color: C.sub, marginTop: 5, wordBreak: "break-all" }}>

@@ -33,6 +33,8 @@ type Dados = {
   client_label: string | null; client_note: string | null;
   accent: string | null; logo: string | null; by: string | null;
   client_color: string | null; client_logo: string | null;
+  /** { link -> capa } das referências citadas (o cliente é anônimo e não lê o cache). */
+  capas?: Record<string, string> | null;
   items: Item[];
 };
 
@@ -277,7 +279,13 @@ export default function RoteirosPublica() {
               {aberto && !it.removed && (
                 <div style={{ marginTop: 12 }}>
                   {(() => {
-                    const refs = parseRefLinks(it.reference).filter(isRefLink).map(previaDeLink);
+                    const capas = d.capas ?? {};
+                    const chave = (l: string) => previaDeLink(l).url.split("?")[0].replace(/\/$/, "");
+                    const refs = parseRefLinks(it.reference).filter(isRefLink).map((l) => {
+                      const p = previaDeLink(l);
+                      const t = capas[chave(l)];
+                      return t ? { ...p, thumb: t } : p;
+                    });
                     if (refs.length === 0) return null;
                     return (
                       <div style={{ marginBottom: 14 }}>
