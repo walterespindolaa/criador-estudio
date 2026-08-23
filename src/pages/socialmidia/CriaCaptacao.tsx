@@ -21,6 +21,9 @@ import {
   DEFAULT_SHOT_LIST, newShotId, normalizeShotList,
   type Capture, type ShotItem, type NewRecurringRow,
 } from "@/hooks/useAgenda";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useExternalClients, useExternalPosts } from "@/hooks/useCriaPost";
 import { useCaptureCities, useDefaultShotList } from "@/hooks/useCaptureCities";
@@ -186,6 +189,21 @@ function CriaCaptacaoInner() {
 
   const { data: captures = [], isLoading } = useCaptures();
   const { data: clients = [] } = useCrmClients();
+  // Marca da AGÊNCIA pro guia em PDF (mesma fonte do relatório do cliente:
+  // profiles.brand_logo_url do dono do tenant). Leitura defensiva: sem logo, o
+  // guia só assina com o nome.
+  const { agencyOwnerId } = useActiveAccount();
+  const { data: marcaAgencia } = useQuery<{ brand_logo_url: string | null; name: string | null } | null>({
+    queryKey: ["captacao-marca-agencia", agencyOwnerId],
+    enabled: !!agencyOwnerId,
+    staleTime: 300_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles")
+        .select("brand_logo_url, name").eq("id", agencyOwnerId!).maybeSingle();
+      if (error) return null;
+      return (data as { brand_logo_url: string | null; name: string | null } | null) ?? null;
+    },
+  });
   const { clients: extClients } = useExternalClients();
   const captureToPost = useCaptureToPost();
   const updCapture = useUpdateCapture();
@@ -274,12 +292,13 @@ function CriaCaptacaoInner() {
 
   // Cliente do CRM por id: nome exibido (apelido do gestor > name) e cidade.
   const clientById = useMemo(() => {
-    const m = new Map<string, { nome: string; city: string | null; color: string | null }>();
+    const m = new Map<string, { nome: string; city: string | null; color: string | null; logo: string | null }>();
     for (const c of clients) {
       m.set(c.id, {
         nome: nomeExibidoCliente(c),
         city: ((c as { city?: string | null }).city ?? null),
         color: c.color,
+        logo: ((c as { logo?: string | null }).logo ?? null),
       });
     }
     return m;
@@ -668,6 +687,9 @@ function CriaCaptacaoInner() {
         <PastaCliente
           pasta={pastaAberta}
           month={month}
+          logoCliente={pastaAberta.crmId ? (clientById.get(pastaAberta.crmId)?.logo ?? null) : null}
+          logoAgencia={marcaAgencia?.brand_logo_url ?? null}
+          elaboradoPor={marcaAgencia?.name ?? null}
           scripts={scriptsDaPasta}
           caps={capsDaPasta}
           habit={pastaAberta.crmId
@@ -1493,8 +1515,13 @@ function FolhaDoDiaDialog({ open, onOpenChange, diaLabel, wd, local, items }: {
 // A pasta é o dossiê de gravação do cliente. O mês vem do cabeçalho da página
 // (as setas navegam meses passados e futuros). Aqui nasce roteiro manual,
 // roteiro puxado dos reels aprovados do Cria Post, e a captação marcada direto.
-function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingClientShots, onSaveClientShots, ext, onBack, onDeleteExtra, onPrompter, renderCapture, onSaveCapRoteiro, addCapture, addingCapture }: {
+function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingClientShots, onSaveClientShots, ext, onBack, onDeleteExtra, onPrompter, renderCapture, onSaveCapRoteiro, addCapture, addingCapture, logoCliente, logoAgencia, elaboradoPor }: {
   pasta: PastaInfo;
+  // Marca do guia em PDF: as MESMAS logos do relatório do cliente, pra o
+  // material que chega na mão dele ter sempre a mesma cara.
+  logoCliente?: string | null;
+  logoAgencia?: string | null;
+  elaboradoPor?: string | null;
   month: string;
   scripts: CaptureScript[];
   caps: Capture[];
@@ -1831,7 +1858,8 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
       })()}
       {/* Fora da tela: é o que o exportador fotografa pra gerar o guia. */}
       <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }} aria-hidden="true">
-        <GuiaGravacaoPdf ref={guiaRef} cliente={pasta.nome} mesLabel={monthLabel(month)} roteiros={ordenados} />
+        <GuiaGravacaoPdf ref={guiaRef} cliente={pasta.nome} mesLabel={monthLabel(month)} roteiros={ordenados}
+          logoCliente={logoCliente} logoAgencia={logoAgencia} elaboradoPor={elaboradoPor} />
       </div>
 
       {marcarOpen && (
