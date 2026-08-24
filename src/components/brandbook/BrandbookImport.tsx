@@ -43,6 +43,13 @@ export const CAMPOS_CLIENTE: CampoDef[] = [
   { chave: "valueProp", rotulo: "Promessa da marca", multi: true },
   { chave: "contentThemes", rotulo: "Temas de conteúdo", multi: true },
   { chave: "archetype", rotulo: "Arquétipo" },
+  // Estratégia: sai do PDF quando o material é um planejamento, não só um
+  // manual de identidade visual.
+  { chave: "mainGoal", rotulo: "Meta principal", ajuda: "o objetivo da estratégia de conteúdo", multi: true },
+  { chave: "bigIdea", rotulo: "Big Idea", ajuda: "a ideia master que norteia o conteúdo", multi: true },
+  { chave: "promise", rotulo: "Promessa", ajuda: "a transformação prometida ao cliente", multi: true },
+  { chave: "mainProducts", rotulo: "Produtos ou serviços", multi: true },
+  { chave: "marketSince", rotulo: "Tempo de mercado" },
 ];
 
 const HEXES = /#[0-9a-f]{3,8}/gi;

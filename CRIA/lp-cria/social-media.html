@@ -21,12 +21,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-<link rel="preconnect" href="https://connect.facebook.net" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&family=Grand+Hotel&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&family=Grand+Hotel&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&family=Grand+Hotel&display=swap"></noscript>
 <!-- O print do herói é a maior imagem da dobra: pedir cedo tira ~0,4s do LCP. -->
 <link rel="preload" as="image" href="prints/home-copiloto.webp" fetchpriority="high">
 <!-- Rastreamento: o ID do pixel mora em track.js, numa variável só. -->
-<script src="track.js"></script>
+<script defer src="track.js"></script>
 <!-- defer: o GSAP só decora. No head sem defer ele segurava a pintura do herói,
      que é justo o que o tráfego pago precisa ver nos primeiros 2 segundos. -->
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
@@ -426,6 +425,7 @@ body.nav2-travado #sticky-cta{display:none!important}
   </div>
 </div>
 
+<main id="conteudo">
 <section id="hero">
   <div class="selo-marks" aria-hidden="true"><span class="smblob" style="top:20%;left:6%;animation-duration:15s"><img class="selo-w inv" src="cria-icone.webp" alt="" style="width:64px;transform:rotate(-10deg)" loading="lazy" decoding="async"></span><span class="smblob" style="bottom:14%;right:8%;animation-duration:12s"><img class="selo-w inv" src="cria-icone.webp" alt="" style="width:44px;transform:rotate(8deg)" loading="lazy" decoding="async"></span></div>
   <div class="hero-blob hb-1"></div>
@@ -1015,6 +1015,8 @@ body.nav2-travado #sticky-cta{display:none!important}
 }
 @media(min-width:821px){.dobra-btn{display:none}}
 </style>
+</main>
+
 <footer>
   <div class="container">
     <span class="logo"><img src="/logo-cria-white.webp" alt="Cria" style="height:30px;width:auto;display:block;margin:0 auto 10px" loading="lazy" decoding="async"></span>

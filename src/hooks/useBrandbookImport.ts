@@ -24,6 +24,8 @@ export type LeituraBrandbook = {
   campos: Partial<Record<
     | "colorPalette" | "typography" | "toneOfVoice" | "personality" | "audience"
     | "valueProp" | "avoid" | "visualExpression" | "contentThemes" | "archetype"
+    // Estratégia e cadastro, quando o PDF é um planejamento e não só o manual visual.
+    | "mainGoal" | "bigIdea" | "promise" | "mainProducts" | "marketSince"
     // Persona estruturada (dores/desejos/objeções/interesses/canais) lida do PDF.
     | "personaPains" | "personaDesires" | "personaObjections" | "personaInterests" | "personaChannels",
     CampoLido | null

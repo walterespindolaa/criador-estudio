@@ -519,6 +519,7 @@ REGRAS:
 - Cores: devolva os HEX que você vê nas páginas de paleta (ex: "#6B4E71"). Se a página mostra a cor mas não o código, estime o hex mais próximo e diga na origem que foi estimado.
 - Fontes: os nomes das famílias tipográficas, e pra que serve cada uma (título, corpo).
 - Persona/público: se o documento descreve o público-alvo, DESTRINCHE em campos separados: quem é (audience), dores/frustrações (personaPains), desejos/objetivos (personaDesires), OBJEÇÕES/medos/barreiras que travam a decisão (personaObjections), interesses/temas (personaInterests) e canais/onde consome conteúdo (personaChannels). Em cada um desses, separe os itens por ponto e vírgula (";"), não por vírgula, pra não picotar frases. Campo que o documento não trouxer vem null.
+- Estratégia: quando o documento for um PLANEJAMENTO (e não só manual visual), extraia também a meta principal (mainGoal), a Big Idea (bigIdea: a ideia master, original e contraintuitiva, que norteia toda a produção) e a promessa (promise: a transformação que o cliente vive com o produto). Extraia ainda o que a empresa vende (mainProducts) e há quanto tempo existe (marketSince), quando aparecerem.
 - "origem": em que página do documento você viu aquilo (número). Isso é o que permite a pessoa conferir.
 
 RESPONDA APENAS JSON válido:
@@ -537,7 +538,12 @@ RESPONDA APENAS JSON válido:
  "avoid":{"valor":"o que NUNCA fazer (visual e verbal)","origem":"..."} | null,
  "visualExpression":{"valor":"direção de arte: tipo de imagem, luz, composição","origem":"..."} | null,
  "contentThemes":{"valor":"temas/pilares de conteúdo","origem":"..."} | null,
- "archetype":{"valor":"arquétipo da marca","origem":"..."} | null
+ "archetype":{"valor":"arquétipo da marca","origem":"..."} | null,
+ "mainGoal":{"valor":"a meta principal da estratégia de conteúdo","origem":"..."} | null,
+ "bigIdea":{"valor":"a ideia master que norteia o conteúdo","origem":"..."} | null,
+ "promise":{"valor":"a transformação prometida ao cliente","origem":"..."} | null,
+ "mainProducts":{"valor":"produtos ou serviços que a empresa oferece","origem":"..."} | null,
+ "marketSince":{"valor":"há quanto tempo a empresa está no mercado","origem":"..."} | null
 },"resumo":"1 frase do que é esta marca"}`
 
       const conteudo: unknown[] = [

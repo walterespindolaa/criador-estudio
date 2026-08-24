@@ -4,9 +4,12 @@ import { useState } from "react";
 interface CopyButtonProps {
   text: string;
   className?: string;
+  /** Texto do botão. Sem isto ele diz só "Copiar", o que não basta quando há
+   *  dois botões de copiar lado a lado com conteúdos diferentes. */
+  label?: string;
 }
 
-export function CopyButton({ text, className }: CopyButtonProps) {
+export function CopyButton({ text, className, label }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -25,7 +28,7 @@ export function CopyButton({ text, className }: CopyButtonProps) {
       } ${className || ""}`}
     >
       {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-      {copied ? "Copiado!" : "Copiar"}
+      {copied ? "Copiado!" : (label ?? "Copiar")}
     </button>
   );
 }

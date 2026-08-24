@@ -355,9 +355,9 @@ function head({ title, description, canonical, image, tipo, extra }) {
 <link rel="alternate" type="application/rss+xml" title="Blog do CRIA" href="/blog/rss.xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&family=Grand+Hotel&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&family=Grand+Hotel&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&family=Grand+Hotel&display=swap"></noscript>
 <link rel="stylesheet" href="/blog/blog.css">
-<script src="/track.js"></script>
+<script defer src="/track.js"></script>
 ${extra || ''}
 </head>
 <body>`;

@@ -4,6 +4,7 @@ import {
   ArrowLeft, ArrowRight, Save, Trash2, Plus, X, ImagePlus, Pencil, Camera, Upload, Download,
   Instagram, Mail, Phone, Palette, Type, MessageSquare, Image as ImageIcon,
   Brain, HeartCrack, Heart, Lightbulb, Activity, NotebookPen, Target, Building2, Mic, Check,
+  HelpCircle, ShieldAlert, ClipboardList, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useActiveAccount } from "@/contexts/AccountContext";
@@ -37,7 +38,11 @@ import { confirmar } from "@/components/shared/Confirm";
 import { hojeBR } from "@/lib/date-br";
 import { clienteInativo } from "@/lib/cliente-status";
 import { InactivateClientDialog } from "@/components/accounts/crm/InactivateClientDialog";
+import { BriefingCliente } from "@/components/accounts/crm/BriefingCliente";
 
+/* Tons de voz: pares de opostos. A pessoa marca o que a marca é e o campo de
+   texto ao lado fica pro detalhe ("informal, mas sem gíria"). */
+const TONS = ["Formal", "Informal", "Emocional", "Racional", "Otimista e positivo", "Sério e objetivo", "Divertido", "Acolhedor", "Provocativo", "Técnico"];
 const CONSCIOUSNESS = ["Inconsciente do problema", "Consciente do problema", "Consciente da solução", "Consciente do produto", "Totalmente consciente"];
 const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "?");
 // Campos que o autosave persiste. persona vai como ARRAY (antes ia só a persona ativa, apagava as outras).
@@ -186,6 +191,18 @@ function ClientWorkspace() {
     ? "inativo"
     : (statusBruto === "inativo" ? "ativo" : statusBruto);
   const setBc = (k: string, v: string) => setForm({ ...form, brand_core: { ...bc, [k]: v } });
+
+  /* TOM DE VOZ: os selecionados moram no MESMO campo de texto (toneOfVoice),
+     separados por vírgula. Assim nada muda pra quem já preencheu na mão, e toda
+     a IA que já lê esse campo continua lendo uma frase. */
+  const tonsMarcados = (bc.toneOfVoice ?? "").split(",").map((t) => t.trim()).filter(Boolean);
+  const tomAtivo = (t: string) => tonsMarcados.some((x) => x.toLowerCase() === t.toLowerCase());
+  const alternarTom = (t: string) => {
+    const novos = tomAtivo(t)
+      ? tonsMarcados.filter((x) => x.toLowerCase() !== t.toLowerCase())
+      : [...tonsMarcados, t];
+    setBc("toneOfVoice", novos.join(", "));
+  };
   const setPe = (k: string, v: string) => {
     const arr = personas.slice(); arr[idx] = { ...(arr[idx] ?? {}), [k]: v };
     setForm({ ...form, persona: arr as unknown as CrmClient["persona"] });
@@ -383,6 +400,14 @@ function ClientWorkspace() {
                   {captureCities.map((c) => <option key={c} value={c} />)}
                 </datalist>
               </F>
+              <F label="Produtos ou serviços que oferece" className="sm:col-span-2">
+                <Input value={bc.mainProducts ?? ""} onChange={(e) => setBc("mainProducts", e.target.value)}
+                  placeholder="Ex.: harmonização facial, bioestimulador, skinbooster" className="rounded-xl" />
+              </F>
+              <F label="Há quanto tempo no mercado">
+                <Input value={bc.marketSince ?? ""} onChange={(e) => setBc("marketSince", e.target.value)}
+                  placeholder="Ex.: 8 anos (desde 2018)" className="rounded-xl" />
+              </F>
               <F label="Aniversário (lembrete)"><BirthdayPicker value={form.birthday ?? null} onChange={(v) => setForm({ ...form, birthday: v })} /></F>
               {/* COR DO CLIENTE: mesma paleta (e mesmo componente) do cockpit e do
                   cadastro. Antes eram 7 bolinhas aqui e uma paleta grande lá, então a
@@ -508,6 +533,8 @@ function ClientWorkspace() {
             />
           )}
 
+          <BriefingCliente cliente={form.name ?? "este cliente"} bc={bc as Record<string, string>} pe={pe as Record<string, string>} />
+
           {/* História & essência: as perguntas do briefing inicial (Relatório MESTRE)
               que dão contexto REAL pra IA e pra qualquer pessoa do time que pegar
               o cliente: por que a marca existe, no que acredita e aonde quer chegar. */}
@@ -517,6 +544,15 @@ function ClientWorkspace() {
             <F label="Impacto / transformação que quer gerar" className="mt-3"><MicTextarea value={bc.impact ?? ""} onChange={(v) => setBc("impact", v)} placeholder="O que muda no mercado e na vida do cliente por causa da marca." /></F>
             <F label="Onde a marca quer chegar (visão)" className="mt-3"><MicTextarea value={bc.vision ?? ""} onChange={(v) => setBc("vision", v)} placeholder="A visão de longo prazo: onde quer estar nos próximos anos." /></F>
             <F label="Marcas que admira (referências)" className="mt-3"><MicTextarea value={bc.admiredBrands ?? ""} onChange={(v) => setBc("admiredBrands", v)} placeholder="Uma por linha: @marca e por que é referência." /></F>
+          </Card>
+
+          {/* A ESTRATÉGIA vem antes da mensagem: é ela que diz pra que o conteúdo
+              existe. Sem meta, todo post é bonito e nenhum serve pra nada. */}
+          <Card icon={<Target />} title="Estratégia do conteúdo">
+            <p className="text-[11px] font-body text-muted-foreground mb-3 -mt-1">As três respostas que fazem o resto do brandbook virar plano.</p>
+            <F label="Meta principal" ajuda="A principal meta desta estratégia de conteúdo, em uma frase."><MicTextarea value={bc.mainGoal ?? ""} onChange={(v) => setBc("mainGoal", v)} placeholder="Ex.: encher a agenda de avaliação; virar referência em X na cidade..." /></F>
+            <F label="A Big Idea" ajuda="A ideia master que norteia toda a produção. Precisa ser original, intrigante e contraintuitiva." className="mt-3"><MicTextarea value={bc.bigIdea ?? ""} onChange={(v) => setBc("bigIdea", v)} placeholder="A tese da marca. Ex.: 'estética não é vaidade, é manutenção'." /></F>
+            <F label="Promessa" ajuda="A transformação que o cliente vive com o produto ou serviço." className="mt-3"><MicTextarea value={bc.promise ?? ""} onChange={(v) => setBc("promise", v)} placeholder="O que a pessoa sente ou consegue depois de comprar." /></F>
           </Card>
 
           {/* Mensagem & estratégia, é isso que alimenta as ideias de post da IA */}
@@ -545,7 +581,25 @@ function ClientWorkspace() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card icon={<MessageSquare />} title="Voz & personalidade">
               <F label="Arquétipo da marca"><Input value={bc.archetype ?? ""} onChange={(e) => setBc("archetype", e.target.value)} className="rounded-xl" /></F>
-              <F label="Tom de voz" className="mt-3"><Input value={bc.toneOfVoice ?? ""} onChange={(e) => setBc("toneOfVoice", e.target.value)} className="rounded-xl" /></F>
+              {/* Campo em branco pedindo "tom de voz" trava qualquer briefing:
+                  ninguém sabe responder do zero. Escolher entre opostos é fácil,
+                  e o texto continua livre pra quem quiser detalhar. */}
+              <F label="Tom de voz" className="mt-3">
+                <div className="flex gap-1.5 flex-wrap mb-2">
+                  {TONS.map((t) => {
+                    const on = tomAtivo(t);
+                    return (
+                      <button key={t} type="button" onClick={() => alternarTom(t)}
+                        className={cn("text-[11.5px] font-body font-semibold px-2.5 py-1.5 rounded-lg border transition-colors",
+                          on ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/40")}>
+                        {t}
+                      </button>
+                    );
+                  })}
+                </div>
+                <Input value={bc.toneOfVoice ?? ""} onChange={(e) => setBc("toneOfVoice", e.target.value)}
+                  placeholder="Ex.: informal e otimista, sem gíria" className="rounded-xl" />
+              </F>
               <F label="Personalidade" className="mt-3"><Textarea rows={2} value={bc.personality ?? ""} onChange={(e) => setBc("personality", e.target.value)} className="rounded-xl text-sm" /></F>
               <F label="Estilo de comunicação" className="mt-3"><Textarea rows={2} value={bc.communicationStyle ?? ""} onChange={(e) => setBc("communicationStyle", e.target.value)} className="rounded-xl text-sm" /></F>
             </Card>
@@ -644,13 +698,17 @@ function ClientWorkspace() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card icon={<HeartCrack />} title="Dores"><MicTextarea rows={4} value={pe.pains ?? ""} onChange={(v) => setPe("pains", v)} placeholder="Uma dor por linha... (🎤 pra ditar)" /></Card>
             <Card icon={<Heart />} title="Desejos"><MicTextarea rows={4} value={pe.desires ?? ""} onChange={(v) => setPe("desires", v)} placeholder="Um desejo por linha... (🎤 pra ditar)" /></Card>
+            {/* Dúvida é o que ela PERGUNTA antes de comprar: cada uma vira pauta.
+                Objeção é o que a IMPEDE de comprar: cada uma vira argumento.
+                Sem esses dois, o conteúdo fala da dor e nunca destrava a venda. */}
+            <Card icon={<HelpCircle />} title="Dúvidas"><MicTextarea rows={4} value={pe.doubts ?? ""} onChange={(v) => setPe("doubts", v)} placeholder="Uma dúvida por linha: o que sempre chegam perguntando." /></Card>
+            <Card icon={<ShieldAlert />} title="Objeções"><MicTextarea rows={4} value={pe.objections ?? ""} onChange={(v) => setPe("objections", v)} placeholder="Uma objeção por linha: 'é caro', 'não tenho tempo', 'será que funciona pra mim?'" /></Card>
           </div>
           {/* Relação com a marca: fecha o ciclo dor -> desejo -> por que a NOSSA marca. */}
           <Card icon={<Heart />} title="Relação com a marca">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <F label="O que busca ao escolher uma empresa assim"><MicTextarea value={pe.seeks ?? ""} onChange={(v) => setPe("seeks", v)} placeholder="Necessidades e problemas que espera resolver." /></F>
               <F label="O que faria virar cliente fiel"><MicTextarea value={pe.loyalty ?? ""} onChange={(v) => setPe("loyalty", v)} placeholder="Atendimento, qualidade, experiência, confiança..." /></F>
-              <F label="Dúvidas frequentes do público"><MicTextarea value={pe.doubts ?? ""} onChange={(v) => setPe("doubts", v)} placeholder="O que sempre chegam perguntando (vira pauta de conteúdo)." /></F>
               <F label="Como a empresa atende essa persona"><MicTextarea value={pe.howWeServe ?? ""} onChange={(v) => setPe("howWeServe", v)} placeholder="Como produto, atendimento e experiência resolvem as dores dela." /></F>
             </div>
           </Card>
@@ -904,8 +962,15 @@ function Card({ icon, title, children }: { icon: React.ReactNode; title: string;
     </div>
   );
 }
-function F({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
-  return <div className={cn("space-y-1.5", className)}><Label className="text-xs text-muted-foreground">{label}</Label>{children}</div>;
+function F({ label, ajuda, children, className }: { label: string; ajuda?: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn("space-y-1.5", className)}>
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      {/* A linha de ajuda é o que faz o campo virar pergunta de briefing. */}
+      {ajuda && <p className="text-[11px] font-body text-muted-foreground/80 leading-snug -mt-0.5">{ajuda}</p>}
+      {children}
+    </div>
+  );
 }
 // Aniversário só precisa de dia e mês (o ano é ignorado no lembrete). Guarda como
 // "2000-MM-DD" pra manter a coluna date e tudo que lê birthday (calendário/robô).

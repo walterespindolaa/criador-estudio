@@ -240,14 +240,42 @@ var CRIA_TRACK = {
     window.addEventListener("pagehide", function () { clearTimeout(t); }, { once: true });
   }
 
-  function iniciar() {
+  /* ── QUANDO CADA COISA COMEÇA ─────────────────────────────────────────────
+     O Lighthouse mediu 169 KiB do fbevents mais 26 KiB do SDK da OpenAI
+     brigando com a primeira pintura da página, e a LCP foi pra 6,8 s. Nenhum
+     dos dois precisa estar lá: pixel serve pra medir quem chegou, e quem
+     chegou continua chegando se ele subir dois segundos depois.
+
+     Então dividimos em duas partes:
+     · AGORA (no DOM pronto): guardar a origem e ligar os cliques. Isso não faz
+       requisição nenhuma, e precisa estar ativo desde o primeiro segundo,
+       senão um clique rápido no "testar grátis" perde o fbclid e a Meta não
+       liga o anúncio à venda.
+     · DEPOIS (janela ociosa após o load): carregar os pixels e os sinais de
+       leitura. O PageView continua sendo disparado, só que fora do caminho
+       crítico. */
+  function agora() {
     guardarOrigem();
+    cliques();
+  }
+
+  function depois() {
     var temMeta = carregarMeta();
     carregarChatGPT();
-    cliques();          // vale mesmo sem pixel: a origem precisa ser colada de qualquer jeito
     if (!temMeta && !window.oaiq) return;
     sinaisDeLeitura();
     tempoNaPagina();
+  }
+
+  function quandoSobrar(fn) {
+    if (window.requestIdleCallback) window.requestIdleCallback(fn, { timeout: 3000 });
+    else setTimeout(fn, 1200);
+  }
+
+  function iniciar() {
+    agora();
+    if (document.readyState === "complete") quandoSobrar(depois);
+    else window.addEventListener("load", function () { quandoSobrar(depois); }, { once: true });
   }
 
   if (document.readyState === "loading") {

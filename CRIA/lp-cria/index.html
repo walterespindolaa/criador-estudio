@@ -24,12 +24,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-<link rel="preconnect" href="https://connect.facebook.net" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&family=Grand+Hotel&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&family=Grand+Hotel&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&family=Grand+Hotel&display=swap"></noscript>
 <!-- O print do herói é a maior imagem da dobra: pedir cedo tira ~0,4s do LCP. -->
-<link rel="preload" as="image" href="prints/painel.webp" fetchpriority="high">
+<link rel="preload" as="image" href="prints/painel-900.webp" fetchpriority="high"
+  imagesrcset="prints/painel-900.webp 900w, prints/painel-1500.webp 1500w, prints/painel.webp 2200w"
+  imagesizes="(max-width:760px) 92vw, min(920px,94vw)">
 <!-- Rastreamento: o ID do pixel mora em track.js, numa variável só. -->
-<script src="track.js"></script>
+<script defer src="track.js"></script>
 <!-- defer: o GSAP só decora. No head sem defer ele segurava a pintura do herói,
      que é justo o que o tráfego pago precisa ver nos primeiros 2 segundos. -->
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
@@ -338,6 +339,7 @@ body.nav2-travado #sticky-cta{display:none!important}
   </div>
 </div>
 
+<main id="conteudo">
 <!-- ==================== HERO ==================== -->
 <!-- O bloco azul inteiro (texto + print) é UM palco só: as formas orgânicas
      flutuam por ele sem serem decepadas por uma borda interna. -->
@@ -368,7 +370,10 @@ body.nav2-travado #sticky-cta{display:none!important}
      da faixa seguinte. É a estrutura da LP de social mídia, igual. -->
 <div class="hero-wrap">
   <div class="hero-shot" id="heroShot">
-    <img class="zoom" src="prints/painel.webp" width="2200" height="1342" fetchpriority="high"
+    <img class="zoom" src="prints/painel-900.webp"
+      srcset="prints/painel-900.webp 900w, prints/painel-1500.webp 1500w, prints/painel.webp 2200w"
+      sizes="(max-width:760px) 92vw, min(920px,94vw)"
+      data-full="prints/painel.webp" width="2200" height="1342" fetchpriority="high"
       alt="Painel do CRIA: sua próxima melhor ação, captura rápida de ideia e o quadro da semana" decoding="async">
   </div>
 </div>
@@ -1506,6 +1511,8 @@ html,body{overflow-x:clip}
 }
 @media(min-width:821px){.dobra-btn{display:none}}
 </style>
+</main>
+
 <footer>
   <div class="container">
     <span class="logo"><img src="/logo-cria-white.webp" alt="Cria" style="height:30px;width:auto;display:block;margin:0 auto 10px" loading="lazy" decoding="async"></span>
