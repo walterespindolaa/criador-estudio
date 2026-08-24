@@ -7,6 +7,8 @@
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/favicon-512.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <meta name="description" content="O CRIA organiza seu conteúdo do começo ao fim: ideias, kanban, calendário, produção, stories e insights no mesmo lugar. Feito pro criador brasileiro. 7 dias grátis.">
 <meta property="og:type" content="website">
@@ -225,19 +227,22 @@ nav#navbar .logo{flex-shrink:0;line-height:0}
 .nav2-link.nav2-atual::after{content:"";position:absolute;left:13px;right:13px;bottom:9px;height:2px;background:var(--azul);border-radius:2px}
 
 .nav2-drop{
-  position:absolute;top:calc(100% - 6px);left:0;min-width:288px;
-  background:var(--branco,#FDFBF5);border:1.5px solid rgba(21,20,18,.12);border-radius:20px;
-  box-shadow:0 18px 40px rgba(21,20,18,.16);padding:10px;
-  opacity:0;visibility:hidden;transform:translateY(8px);
-  transition:opacity .2s,transform .2s,visibility .2s;
+  position:absolute;top:calc(100% - 4px);left:0;min-width:266px;
+  background:var(--branco,#FDFBF5);border:1.5px solid rgba(21,20,18,.14);border-radius:18px;
+  box-shadow:0 14px 34px rgba(21,20,18,.14);padding:8px;
+  opacity:0;visibility:hidden;transform:translateY(6px);
+  transition:opacity .18s,transform .18s,visibility .18s;
 }
 .nav2-item:hover>.nav2-drop,.nav2-item:focus-within>.nav2-drop,.nav2-item.aberto>.nav2-drop{opacity:1;visibility:visible;transform:translateY(0)}
-.nav2-drop a{display:flex;gap:12px;align-items:flex-start;padding:11px 13px;border-radius:14px;transition:background .16s}
-.nav2-drop a:hover{background:var(--creme-2)}
-.nav2-drop .ic{width:34px;height:34px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;font-size:1rem;line-height:1}
-.nav2-drop b{display:block;font-family:var(--font-display);font-size:1rem;font-weight:700;line-height:1.2}
-.nav2-drop small{display:block;font-size:.82rem;opacity:.66;line-height:1.35;margin-top:2px}
-.nav2-drop .sep{height:1px;background:rgba(21,20,18,.1);margin:8px 12px}
+/* Sem icone: o item é tipografia mais um traco na cor do assunto, que só
+   aparece no hover. Emoji e quadradinho pastel davam cara de template. */
+.nav2-drop a{display:block;position:relative;padding:10px 12px;border-radius:12px;transition:background .16s,padding .16s}
+.nav2-drop a::before{content:"";position:absolute;left:5px;top:11px;bottom:11px;width:3px;border-radius:3px;background:var(--cor,var(--laranja));opacity:0;transition:opacity .16s}
+.nav2-drop a:hover{background:var(--creme-2);padding-left:17px}
+.nav2-drop a:hover::before{opacity:1}
+.nav2-drop b{display:block;font-family:var(--font-display);font-size:.98rem;font-weight:700;line-height:1.25}
+.nav2-drop small{display:block;font-size:.8rem;opacity:.62;line-height:1.35;margin-top:1px}
+.nav2-drop .sep{height:1px;background:rgba(21,20,18,.1);margin:7px 12px}
 
 .nav2-dir{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .nav2-troca{
@@ -282,9 +287,9 @@ nav#navbar .nav-cta:hover{transform:translateY(-2px);box-shadow:0 6px 0 rgba(21,
 .nav2-painel .grupo-h .mais{width:10px;height:10px;border-right:2.4px solid var(--laranja);border-bottom:2.4px solid var(--laranja);transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s;flex-shrink:0;margin-right:6px}
 .nav2-painel .grupo[open] .grupo-h .mais{transform:rotate(225deg) translate(-2px,-2px)}
 .nav2-painel .grupo-c{padding:0 4px 14px;display:flex;flex-direction:column;gap:2px}
-.nav2-painel .grupo-c a{display:flex;align-items:center;gap:11px;padding:11px 8px;border-radius:12px;font-size:.98rem}
+.nav2-painel .grupo-c a{display:block;position:relative;padding:11px 8px 11px 16px;border-radius:12px;font-size:1rem}
+.nav2-painel .grupo-c a::before{content:"";position:absolute;left:2px;top:12px;bottom:12px;width:3px;border-radius:3px;background:var(--cor,var(--laranja))}
 .nav2-painel .grupo-c a:active{background:var(--creme-2)}
-.nav2-painel .grupo-c .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:.9rem;flex-shrink:0;line-height:1}
 .nav2-painel .solo{display:flex;align-items:center;justify-content:space-between;padding:16px 4px;font-family:var(--font-display);font-weight:700;font-size:1.14rem;border-bottom:1.5px dashed rgba(21,20,18,.16)}
 .nav2-pe{margin-top:auto;padding-top:20px;display:flex;flex-direction:column;gap:10px}
 .nav2-pe .pe-troca{display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border-radius:999px;background:rgba(0,97,238,.1);color:var(--azul);font-weight:600;font-size:.94rem}
@@ -313,7 +318,7 @@ body.nav2-travado #sticky-cta{display:none!important}
 <nav id="navbar">
   <a class="logo" href="/"><img src="/logo-cria.png" alt="Cria" style="height:30px;width:auto;display:block" decoding="async"></a>
   <div class="nav2-meio">
-    <div class="nav2-item tem-drop"><button class="nav2-link" aria-expanded="false">Produto <span class="seta"></span></button><div class="nav2-drop"><a href="#motor"><span class="ic" style="background:rgba(234,73,24,.14)">✦</span><span><b>Como funciona</b><small>O ciclo da ideia até o post publicado</small></span></a><a href="#telas"><span class="ic" style="background:rgba(0,97,238,.12)">◧</span><span><b>O CRIA por dentro</b><small>As telas, uma por uma</small></span></a><a href="funcionalidades.html"><span class="ic" style="background:rgba(255,119,185,.2)">✎</span><span><b>Funcionalidades</b><small>A lista completa do que tem lá</small></span></a><div class="sep"></div><a href="social-media.html"><span class="ic" style="background:rgba(1,166,82,.14)">◎</span><span><b>Pra quem atende clientes</b><small>O lado de quem vive de social media</small></span></a></div></div><div class="nav2-item"><a class="nav2-link" href="#planos">Planos</a></div><div class="nav2-item tem-drop"><button class="nav2-link" aria-expanded="false">Conteúdo <span class="seta"></span></button><div class="nav2-drop"><a href="/blog"><span class="ic" style="background:rgba(255,207,3,.28)">✍</span><span><b>Blog</b><small>Uma situação real por semana, e como sair dela</small></span></a><a href="#faq"><span class="ic" style="background:rgba(0,97,238,.12)">?</span><span><b>Dúvidas frequentes</b><small>Preço, cancelamento, como começar</small></span></a></div></div>
+    <div class="nav2-item tem-drop"><button class="nav2-link" aria-expanded="false">Produto <span class="seta"></span></button><div class="nav2-drop"><a href="#motor" style="--cor:var(--laranja)"><b>Como funciona</b><small>O ciclo da ideia até o post publicado</small></a><a href="#telas" style="--cor:var(--azul)"><b>O CRIA por dentro</b><small>As telas, uma por uma</small></a><a href="funcionalidades.html" style="--cor:var(--rosa)"><b>Funcionalidades</b><small>A lista completa do que tem lá</small></a><div class="sep"></div><a href="social-media.html" style="--cor:var(--verde)"><b>Pra quem atende clientes</b><small>O lado de quem vive de social media</small></a></div></div><div class="nav2-item"><a class="nav2-link" href="#planos">Planos</a></div><div class="nav2-item tem-drop"><button class="nav2-link" aria-expanded="false">Conteúdo <span class="seta"></span></button><div class="nav2-drop"><a href="/blog" style="--cor:var(--amarelo)"><b>Blog</b><small>Uma situação real por semana, e como sair dela</small></a><a href="#faq" style="--cor:var(--azul)"><b>Dúvidas frequentes</b><small>Preço, cancelamento, como começar</small></a></div></div>
   </div>
   <div class="nav2-dir">
     <a class="nav2-troca" href="social-media.html">Sou social media →</a>
@@ -323,7 +328,7 @@ body.nav2-travado #sticky-cta{display:none!important}
   </div>
 </nav>
 <div class="nav2-painel" id="menu-mobile">
-  <details class="grupo"><summary class="grupo-h">Produto <span class="mais"></span></summary><div class="grupo-c"><a href="#motor"><span class="ic" style="background:rgba(234,73,24,.14)">✦</span> Como funciona</a><a href="#telas"><span class="ic" style="background:rgba(0,97,238,.12)">◧</span> O CRIA por dentro</a><a href="funcionalidades.html"><span class="ic" style="background:rgba(255,119,185,.2)">✎</span> Funcionalidades</a><a href="social-media.html"><span class="ic" style="background:rgba(1,166,82,.14)">◎</span> Pra quem atende clientes</a></div></details><a class="solo" href="#planos">Planos <span class="mais">›</span></a><details class="grupo"><summary class="grupo-h">Conteúdo <span class="mais"></span></summary><div class="grupo-c"><a href="/blog"><span class="ic" style="background:rgba(255,207,3,.28)">✍</span> Blog</a><a href="#faq"><span class="ic" style="background:rgba(0,97,238,.12)">?</span> Dúvidas frequentes</a></div></details>
+  <details class="grupo"><summary class="grupo-h">Produto <span class="mais"></span></summary><div class="grupo-c"><a href="#motor" style="--cor:var(--laranja)">Como funciona</a><a href="#telas" style="--cor:var(--azul)">O CRIA por dentro</a><a href="funcionalidades.html" style="--cor:var(--rosa)">Funcionalidades</a><a href="social-media.html" style="--cor:var(--verde)">Pra quem atende clientes</a></div></details><a class="solo" href="#planos">Planos <span class="mais">›</span></a><details class="grupo"><summary class="grupo-h">Conteúdo <span class="mais"></span></summary><div class="grupo-c"><a href="/blog" style="--cor:var(--amarelo)">Blog</a><a href="#faq" style="--cor:var(--azul)">Dúvidas frequentes</a></div></details>
   <div class="nav2-pe">
     <a class="pe-troca" href="social-media.html">Sou social media →</a>
     <div class="pe-linha">
