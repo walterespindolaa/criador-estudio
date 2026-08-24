@@ -3,14 +3,12 @@
   "trailingSlash": false,
   "headers": [
     {
-      "//": "Imagens, fontes e ícones não mudam de conteúdo sem mudar de nome. Sem esta regra o Vercel serve com cache curto e o PageSpeed cobra 'vida útil de cache ineficiente' em toda visita repetida.",
       "source": "/(.*)\\.(webp|png|jpg|jpeg|svg|ico|woff2|woff|ttf|avif)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     },
     {
-      "//": "HTML precisa revalidar sempre: senão uma alteração de copy demora horas pra aparecer.",
       "source": "/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
