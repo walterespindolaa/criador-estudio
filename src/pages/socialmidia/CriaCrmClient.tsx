@@ -39,6 +39,7 @@ import { hojeBR } from "@/lib/date-br";
 import { clienteInativo } from "@/lib/cliente-status";
 import { InactivateClientDialog } from "@/components/accounts/crm/InactivateClientDialog";
 import { BriefingCliente } from "@/components/accounts/crm/BriefingCliente";
+import { LinkCadastroCliente } from "@/components/accounts/crm/LinkCadastroCliente";
 
 /* Tons de voz: pares de opostos. A pessoa marca o que a marca é e o campo de
    texto ao lado fica pro detalhe ("informal, mas sem gíria"). */
@@ -399,6 +400,10 @@ function ClientWorkspace() {
           <Card icon={<NotebookPen />} title="Sobre o cliente">
             <Textarea rows={3} value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Contexto, objetivo, observações..." className="rounded-xl text-sm" />
           </Card>
+          {/* O cliente preenche o próprio cadastro: os dados do contrato chegam
+              prontos e a primeira call já começa com as respostas na mão. */}
+          <LinkCadastroCliente crmClientId={form.id} clienteNome={form.name ?? "o cliente"} />
+
           {/* Informações gerais da empresa */}
           <Card icon={<NotebookPen />} title="Informações gerais">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

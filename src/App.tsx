@@ -70,6 +70,7 @@ const AprovarPortal = lazy(() => import("./pages/AprovarPortal"));
 const PropostaPublica = lazy(() => import("./pages/PropostaPublica"));
 const CronogramaPublica = lazy(() => import("./pages/CronogramaPublica"));
 const RoteirosPublica = lazy(() => import("./pages/RoteirosPublica"));
+const CadastroPublico = lazy(() => import("./pages/CadastroPublico"));
 const ManagerLayout = lazy(() => import("./components/accounts/ManagerLayout"));
 const ManagerHome = lazy(() => import("./pages/socialmidia/ManagerHome"));
 const CriaPost = lazy(() => import("./pages/socialmidia/CriaPost"));
@@ -214,6 +215,7 @@ const App = () => (
               <Route path="/proposta/:token" element={<PropostaPublica />} />
               <Route path="/cronograma/:token" element={<CronogramaPublica />} />
               <Route path="/roteiros/:token" element={<RoteirosPublica />} />
+              <Route path="/cadastro/:token" element={<CadastroPublico />} />
               <Route path="/ativar" element={<Ativar />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
