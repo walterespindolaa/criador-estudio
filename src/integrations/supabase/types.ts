@@ -687,42 +687,66 @@ export type Database = {
       }
       capture_scripts: {
         Row: {
+          about: string | null
+          capture_id: string | null
           client_name: string | null
           content: string
           created_at: string
           crm_client_id: string | null
           done: boolean
+          format: string | null
           id: string
+          location: string | null
           manager_id: string
           month: string
+          position: number | null
+          record_date: string | null
+          reference_url: string | null
+          scenes: Json
           source: string
           source_post_id: string | null
           title: string
           updated_at: string
         }
         Insert: {
+          about?: string | null
+          capture_id?: string | null
           client_name?: string | null
           content?: string
           created_at?: string
           crm_client_id?: string | null
           done?: boolean
+          format?: string | null
           id?: string
+          location?: string | null
           manager_id: string
           month: string
+          position?: number | null
+          record_date?: string | null
+          reference_url?: string | null
+          scenes?: Json
           source?: string
           source_post_id?: string | null
           title?: string
           updated_at?: string
         }
         Update: {
+          about?: string | null
+          capture_id?: string | null
           client_name?: string | null
           content?: string
           created_at?: string
           crm_client_id?: string | null
           done?: boolean
+          format?: string | null
           id?: string
+          location?: string | null
           manager_id?: string
           month?: string
+          position?: number | null
+          record_date?: string | null
+          reference_url?: string | null
+          scenes?: Json
           source?: string
           source_post_id?: string | null
           title?: string
@@ -730,7 +754,58 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "capture_scripts_capture_id_fkey"
+            columns: ["capture_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_captures"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "capture_scripts_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_intakes: {
+        Row: {
+          answers: Json
+          applied_at: string | null
+          created_at: string
+          crm_client_id: string | null
+          id: string
+          manager_id: string
+          status: string
+          submitted_at: string | null
+          token: string
+        }
+        Insert: {
+          answers?: Json
+          applied_at?: string | null
+          created_at?: string
+          crm_client_id?: string | null
+          id?: string
+          manager_id: string
+          status?: string
+          submitted_at?: string | null
+          token?: string
+        }
+        Update: {
+          answers?: Json
+          applied_at?: string | null
+          created_at?: string
+          crm_client_id?: string | null
+          id?: string
+          manager_id?: string
+          status?: string
+          submitted_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_intakes_crm_client_id_fkey"
             columns: ["crm_client_id"]
             isOneToOne: false
             referencedRelation: "crm_clients"
@@ -2766,6 +2841,33 @@ export type Database = {
           },
         ]
       }
+      link_previews: {
+        Row: {
+          author: string | null
+          caption: string | null
+          fetched_at: string
+          platform: string | null
+          thumb_url: string | null
+          url: string
+        }
+        Insert: {
+          author?: string | null
+          caption?: string | null
+          fetched_at?: string
+          platform?: string | null
+          thumb_url?: string | null
+          url: string
+        }
+        Update: {
+          author?: string | null
+          caption?: string | null
+          fetched_at?: string
+          platform?: string | null
+          thumb_url?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
       manager_member_permissions: {
         Row: {
           all_clients: boolean | null
@@ -4290,6 +4392,128 @@ export type Database = {
         }
         Relationships: []
       }
+      script_approval_items: {
+        Row: {
+          approval_id: string
+          client_comment: string | null
+          client_content: string | null
+          client_position: number | null
+          client_scenes: Json | null
+          client_title: string | null
+          created_at: string
+          id: string
+          orig_content: string
+          orig_reference: string | null
+          orig_scenes: Json
+          orig_title: string
+          position: number
+          removed: boolean
+          script_id: string | null
+        }
+        Insert: {
+          approval_id: string
+          client_comment?: string | null
+          client_content?: string | null
+          client_position?: number | null
+          client_scenes?: Json | null
+          client_title?: string | null
+          created_at?: string
+          id?: string
+          orig_content?: string
+          orig_reference?: string | null
+          orig_scenes?: Json
+          orig_title?: string
+          position?: number
+          removed?: boolean
+          script_id?: string | null
+        }
+        Update: {
+          approval_id?: string
+          client_comment?: string | null
+          client_content?: string | null
+          client_position?: number | null
+          client_scenes?: Json | null
+          client_title?: string | null
+          created_at?: string
+          id?: string
+          orig_content?: string
+          orig_reference?: string | null
+          orig_scenes?: Json
+          orig_title?: string
+          position?: number
+          removed?: boolean
+          script_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_approval_items_approval_id_fkey"
+            columns: ["approval_id"]
+            isOneToOne: false
+            referencedRelation: "script_approvals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "script_approval_items_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "capture_scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      script_approvals: {
+        Row: {
+          applied_at: string | null
+          client_name: string | null
+          client_note: string | null
+          created_at: string
+          crm_client_id: string | null
+          id: string
+          manager_id: string
+          month: string
+          status: string
+          submitted_at: string | null
+          title: string
+          token: string
+        }
+        Insert: {
+          applied_at?: string | null
+          client_name?: string | null
+          client_note?: string | null
+          created_at?: string
+          crm_client_id?: string | null
+          id?: string
+          manager_id: string
+          month: string
+          status?: string
+          submitted_at?: string | null
+          title?: string
+          token?: string
+        }
+        Update: {
+          applied_at?: string | null
+          client_name?: string | null
+          client_note?: string | null
+          created_at?: string
+          crm_client_id?: string | null
+          id?: string
+          manager_id?: string
+          month?: string
+          status?: string
+          submitted_at?: string | null
+          title?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_approvals_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_audience: {
         Row: {
           breakdown_value: string
@@ -5199,6 +5423,11 @@ export type Database = {
           used: number
         }[]
       }
+      apply_intake: {
+        Args: { _intake_id: string; _sobrescrever?: boolean }
+        Returns: number
+      }
+      apply_script_approval: { Args: { _approval_id: string }; Returns: number }
       approve_post: { Args: { _post_id: string }; Returns: boolean }
       approve_post_by_token: {
         Args: { _comment?: string; _post_id: string; _token: string }
@@ -5339,6 +5568,7 @@ export type Database = {
         Args: { _token: string }
         Returns: string
       }
+      get_intake_by_token: { Args: { _token: string }; Returns: Json }
       get_managed_profile: {
         Args: { _owner: string }
         Returns: {
@@ -5412,6 +5642,7 @@ export type Database = {
           niche: string
         }[]
       }
+      get_script_approval_by_token: { Args: { _token: string }; Returns: Json }
       get_token_period: {
         Args: { _token: string }
         Returns: {
@@ -5553,6 +5784,10 @@ export type Database = {
         Returns: undefined
       }
       manager_owns_cria_client: { Args: { _owner: string }; Returns: boolean }
+      manager_publish_client_post: {
+        Args: { _post_id: string; _publicado: boolean }
+        Returns: undefined
+      }
       member_can: {
         Args: { _code: string; _manager: string }
         Returns: boolean
@@ -5618,6 +5853,10 @@ export type Database = {
         Args: { _note?: string; _reason?: string; _token: string }
         Returns: undefined
       }
+      reorder_script_approval_by_token: {
+        Args: { _ids: string[]; _token: string }
+        Returns: undefined
+      }
       request_adjustment_by_token: {
         Args: { _comment: string; _post_id: string; _token: string }
         Returns: undefined
@@ -5648,6 +5887,22 @@ export type Database = {
         }
         Returns: undefined
       }
+      save_intake_by_token: {
+        Args: { _answers: Json; _token: string }
+        Returns: undefined
+      }
+      save_script_approval_item_by_token: {
+        Args: {
+          _comment: string
+          _content: string
+          _item_id: string
+          _removed: boolean
+          _scenes: Json
+          _title: string
+          _token: string
+        }
+        Returns: undefined
+      }
       set_cronograma_data_by_token: {
         Args: { _data_id: string; _selected: boolean; _token: string }
         Returns: boolean
@@ -5672,6 +5927,14 @@ export type Database = {
           _phone?: string
           _slug: string
         }
+        Returns: undefined
+      }
+      submit_intake_by_token: {
+        Args: { _answers: Json; _token: string }
+        Returns: undefined
+      }
+      submit_script_approval_by_token: {
+        Args: { _note: string; _token: string }
         Returns: undefined
       }
       token_allows_post: {
