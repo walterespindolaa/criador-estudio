@@ -518,11 +518,17 @@ export function useCreateCrmContract() {
 export function useUploadCrmAsset() {
   const { user } = useAuth();
   return useMutation({
-    mutationFn: async ({ clientId, file, kind }: { clientId: string; file: File; kind: "avatar" | "font" }): Promise<string> => {
+    mutationFn: async ({ clientId, file, kind }: { clientId: string; file: File; kind: "avatar" | "font" | "doc" }): Promise<string> => {
       if (!user?.id) throw new Error("Sem sessão");
-      if (file.size > 5 * 1024 * 1024) throw new Error("Arquivo máx. 5MB.");
+      // O briefing preenchido costuma vir em Word ou PDF com print dentro, por
+      // isso o teto dele é maior que o da foto.
+      const teto = kind === "doc" ? 15 : 5;
+      if (file.size > teto * 1024 * 1024) throw new Error(`Arquivo máx. ${teto}MB.`);
       if (kind === "avatar" && !file.type.startsWith("image/")) throw new Error("Selecione uma imagem.");
       if (kind === "font" && !/\.(ttf|otf|woff2?)$/i.test(file.name)) throw new Error("Use .ttf, .otf ou .woff.");
+      if (kind === "doc" && !/\.(pdf|docx?|txt|rtf|odt|png|jpe?g|webp)$/i.test(file.name)) {
+        throw new Error("Use PDF, Word, texto ou imagem.");
+      }
       const ext = file.name.split(".").pop()?.toLowerCase() || "bin";
       const path = `${user.id}/${clientId}/${kind}-${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from("crm").upload(path, file, { upsert: true, contentType: file.type || undefined });

@@ -259,6 +259,23 @@ function ClientWorkspace() {
     } catch { /* hook já avisa */ }
   };
 
+  /* O DOCUMENTO DO BRIEFING mora no cliente. Antes ele ficava no Drive ou no
+     WhatsApp de alguém, e quem pegava o cliente depois não sabia que existia. */
+  const anexarBriefing = async (file: File) => {
+    try {
+      const url = await uploadAsset.mutateAsync({ clientId: form.id, file, kind: "doc" });
+      const nbc = { ...bc, briefingFileUrl: url, briefingFileName: file.name };
+      setForm({ ...form, brand_core: nbc });
+      await update.mutateAsync({ id: form.id, brand_core: nbc });
+      toast.success("Briefing anexado!");
+    } catch { /* o hook já avisa */ }
+  };
+  const removerBriefing = async () => {
+    const nbc = { ...bc, briefingFileUrl: "", briefingFileName: "" };
+    setForm({ ...form, brand_core: nbc });
+    await update.mutateAsync({ id: form.id, brand_core: nbc });
+  };
+
   const swatches = parseHex(bc.colorPalette);
   const diagOverall = dg.overall && DIAG[dg.overall as keyof typeof DIAG];
 
@@ -533,7 +550,16 @@ function ClientWorkspace() {
             />
           )}
 
-          <BriefingCliente cliente={form.name ?? "este cliente"} bc={bc as Record<string, string>} pe={pe as Record<string, string>} />
+          <BriefingCliente
+            cliente={form.name ?? "este cliente"}
+            bc={bc as Record<string, string>}
+            pe={pe as Record<string, string>}
+            arquivoUrl={bc.briefingFileUrl || null}
+            arquivoNome={bc.briefingFileName || null}
+            onAnexar={anexarBriefing}
+            onRemoverAnexo={() => void removerBriefing()}
+            anexando={uploadAsset.isPending}
+          />
 
           {/* História & essência: as perguntas do briefing inicial (Relatório MESTRE)
               que dão contexto REAL pra IA e pra qualquer pessoa do time que pegar
