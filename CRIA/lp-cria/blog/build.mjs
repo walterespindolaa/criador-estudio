@@ -263,17 +263,53 @@ function renderBloco(tipo, titulo, interno) {
  * ------------------------------------------------------------------ */
 const NAV = `
 <nav id="navbar">
-  <a class="logo" href="/"><img src="/logo-cria.png" alt="CRIA" style="height:30px;width:auto;display:block"></a>
-  <div class="nav-links">
-    <a href="/">Pra criadores</a>
-    <a href="/social-media">Pra social medias</a>
-    <a href="/blog" class="nav-atual">Blog</a>
+  <a class="logo" href="/"><img src="/logo-cria.png" alt="Cria" style="height:30px;width:auto;display:block"></a>
+  <div class="nav2-meio">
+    <div class="nav2-item tem-drop">
+      <button class="nav2-link" aria-expanded="false">Produto <span class="seta"></span></button>
+      <div class="nav2-drop">
+        <a href="/"><span class="ic" style="background:rgba(234,73,24,.14)">\u2726</span><span><b>Pra criadores</b><small>Quem cria pro próprio perfil</small></span></a>
+        <a href="/social-media"><span class="ic" style="background:rgba(0,97,238,.12)">\u25ce</span><span><b>Pra social medias</b><small>Quem atende clientes</small></span></a>
+        <a href="/funcionalidades"><span class="ic" style="background:rgba(255,119,185,.2)">\u270e</span><span><b>Funcionalidades</b><small>A lista completa do que tem lá</small></span></a>
+      </div>
+    </div>
+    <div class="nav2-item"><a class="nav2-link" href="/#planos">Planos</a></div>
+    <div class="nav2-item tem-drop">
+      <button class="nav2-link nav2-atual" aria-expanded="false">Conteúdo <span class="seta"></span></button>
+      <div class="nav2-drop">
+        <a href="/blog"><span class="ic" style="background:rgba(255,207,3,.28)">\u270d</span><span><b>Blog</b><small>Uma situação real por semana, e como sair dela</small></span></a>
+        <a href="/#faq"><span class="ic" style="background:rgba(0,97,238,.12)">?</span><span><b>Dúvidas frequentes</b><small>Preço, cancelamento, como começar</small></span></a>
+      </div>
+    </div>
   </div>
-  <div style="display:flex;align-items:center;gap:8px">
+  <div class="nav2-dir">
     <a href="${APP}/login" class="nav-login">Entrar</a>
     <a href="${APP}/signup" class="btn btn-laranja nav-cta">Testar grátis</a>
+    <button class="nav2-burger" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu-mobile"><i></i><i></i><i></i></button>
   </div>
-</nav>`;
+</nav>
+<div class="nav2-painel" id="menu-mobile">
+  <details class="grupo"><summary class="grupo-h">Produto <span class="mais"></span></summary>
+    <div class="grupo-c">
+      <a href="/"><span class="ic" style="background:rgba(234,73,24,.14)">\u2726</span> Pra criadores</a>
+      <a href="/social-media"><span class="ic" style="background:rgba(0,97,238,.12)">\u25ce</span> Pra social medias</a>
+      <a href="/funcionalidades"><span class="ic" style="background:rgba(255,119,185,.2)">\u270e</span> Funcionalidades</a>
+    </div>
+  </details>
+  <a class="solo" href="/#planos">Planos <span class="mais" style="transform:rotate(-45deg) translate(-2px,-2px)"></span></a>
+  <details class="grupo" open><summary class="grupo-h">Conteúdo <span class="mais"></span></summary>
+    <div class="grupo-c">
+      <a href="/blog"><span class="ic" style="background:rgba(255,207,3,.28)">\u270d</span> Blog</a>
+      <a href="/#faq"><span class="ic" style="background:rgba(0,97,238,.12)">?</span> Dúvidas frequentes</a>
+    </div>
+  </details>
+  <div class="nav2-pe">
+    <div class="pe-linha">
+      <a class="pe-entrar" href="${APP}/login">Entrar</a>
+      <a class="pe-cta" href="${APP}/signup">Testar grátis</a>
+    </div>
+  </div>
+</div>`;
 
 const FOOTER = `
 <footer>
@@ -469,8 +505,9 @@ ${NAV}
     </div>
   </header>
 
-  <div class="container-post post-corpo">
+  <div class="post-layout">
     ${sumario}
+    <div class="post-corpo">
     ${post.html}
     ${faqHtml}
 
@@ -493,10 +530,45 @@ ${NAV}
         }).join('')}
       </div>
     </section>` : ''}
+    </div>
   </div>
 </article>
 
 ${FOOTER}
+<!-- Navbar v2: submenu no clique (desktop) e painel no celular.
+     O hover cobre o mouse; o clique cobre teclado e telas de toque. -->
+<script>
+(function(){
+  var itens = document.querySelectorAll('.nav2-item.tem-drop');
+  itens.forEach(function(item){
+    var botao = item.querySelector('.nav2-link');
+    if(!botao) return;
+    botao.addEventListener('click', function(e){
+      e.preventDefault();
+      var jaAberto = item.classList.contains('aberto');
+      itens.forEach(function(o){ o.classList.remove('aberto'); o.querySelector('.nav2-link').setAttribute('aria-expanded','false'); });
+      if(!jaAberto){ item.classList.add('aberto'); botao.setAttribute('aria-expanded','true'); }
+    });
+  });
+  document.addEventListener('click', function(e){
+    if(e.target.closest('.nav2-item')) return;
+    itens.forEach(function(o){ o.classList.remove('aberto'); o.querySelector('.nav2-link').setAttribute('aria-expanded','false'); });
+  });
+
+  var burger = document.querySelector('.nav2-burger');
+  var painel = document.querySelector('.nav2-painel');
+  if(burger && painel){
+    var alterna = function(abrir){
+      painel.classList.toggle('aberto', abrir);
+      burger.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+      document.body.classList.toggle('nav2-travado', abrir);
+    };
+    burger.addEventListener('click', function(){ alterna(!painel.classList.contains('aberto')); });
+    painel.addEventListener('click', function(e){ if(e.target.closest('a')) alterna(false); });
+    document.addEventListener('keydown', function(e){ if(e.key === 'Escape') alterna(false); });
+  }
+})();
+</script>
 </body>
 </html>`;
 }
@@ -608,6 +680,40 @@ ${FOOTER}
       if (vazio) vazio.hidden = visiveis > 0;
     });
   });
+})();
+</script>
+<!-- Navbar v2: submenu no clique (desktop) e painel no celular.
+     O hover cobre o mouse; o clique cobre teclado e telas de toque. -->
+<script>
+(function(){
+  var itens = document.querySelectorAll('.nav2-item.tem-drop');
+  itens.forEach(function(item){
+    var botao = item.querySelector('.nav2-link');
+    if(!botao) return;
+    botao.addEventListener('click', function(e){
+      e.preventDefault();
+      var jaAberto = item.classList.contains('aberto');
+      itens.forEach(function(o){ o.classList.remove('aberto'); o.querySelector('.nav2-link').setAttribute('aria-expanded','false'); });
+      if(!jaAberto){ item.classList.add('aberto'); botao.setAttribute('aria-expanded','true'); }
+    });
+  });
+  document.addEventListener('click', function(e){
+    if(e.target.closest('.nav2-item')) return;
+    itens.forEach(function(o){ o.classList.remove('aberto'); o.querySelector('.nav2-link').setAttribute('aria-expanded','false'); });
+  });
+
+  var burger = document.querySelector('.nav2-burger');
+  var painel = document.querySelector('.nav2-painel');
+  if(burger && painel){
+    var alterna = function(abrir){
+      painel.classList.toggle('aberto', abrir);
+      burger.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+      document.body.classList.toggle('nav2-travado', abrir);
+    };
+    burger.addEventListener('click', function(){ alterna(!painel.classList.contains('aberto')); });
+    painel.addEventListener('click', function(e){ if(e.target.closest('a')) alterna(false); });
+    document.addEventListener('keydown', function(e){ if(e.key === 'Escape') alterna(false); });
+  }
 })();
 </script>
 </body>

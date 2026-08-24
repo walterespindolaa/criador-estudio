@@ -236,24 +236,136 @@ html,body{overflow-x:clip}
    lugar de retângulos cinza fingindo ser interface. */
 .mod-visual--vazio{min-height:200px;flex-direction:column;text-align:center;padding:34px 30px}
 .mv-nota{font-family:var(--font-display);font-weight:700;font-size:1.02rem;line-height:1.45;color:#fff;opacity:.94;max-width:26ch}
+
+/* ============================================================
+   NAVBAR v2 (2026-08-24)
+   Menos itens no topo, submenus no desktop e painel no celular.
+   Este bloco vem depois do CSS antigo de propósito: ele reescreve
+   a barra sem precisar apagar as regras de cima.
+   ============================================================ */
+nav#navbar{height:64px;padding:0 10px 0 22px;gap:14px}
+nav#navbar .logo{flex-shrink:0;line-height:0}
+
+.nav2-meio{display:flex;align-items:center;gap:2px;height:100%}
+.nav2-item{position:relative;height:100%;display:flex;align-items:center}
+.nav2-link{
+  display:flex;align-items:center;gap:6px;height:38px;padding:0 13px;border-radius:999px;
+  font-family:var(--font-body);font-size:.95rem;font-weight:500;color:var(--ink);opacity:.82;
+  background:transparent;border:none;cursor:pointer;white-space:nowrap;
+  transition:background .18s,opacity .18s;position:relative;
+}
+.nav2-link:hover,.nav2-item:hover>.nav2-link,.nav2-item.aberto>.nav2-link{opacity:1;background:rgba(21,20,18,.06)}
+.nav2-link .seta{width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translate(-1px,-1px);opacity:.5;transition:transform .2s}
+.nav2-item:hover>.nav2-link .seta,.nav2-item.aberto>.nav2-link .seta{transform:rotate(225deg) translate(-2px,-2px)}
+.nav2-link.nav2-atual{opacity:1;font-weight:700}
+.nav2-link.nav2-atual::after{content:"";position:absolute;left:13px;right:13px;bottom:9px;height:2px;background:var(--azul);border-radius:2px}
+
+.nav2-drop{
+  position:absolute;top:calc(100% - 6px);left:0;min-width:288px;
+  background:var(--branco,#FDFBF5);border:1.5px solid rgba(21,20,18,.12);border-radius:20px;
+  box-shadow:0 18px 40px rgba(21,20,18,.16);padding:10px;
+  opacity:0;visibility:hidden;transform:translateY(8px);
+  transition:opacity .2s,transform .2s,visibility .2s;
+}
+.nav2-item:hover>.nav2-drop,.nav2-item:focus-within>.nav2-drop,.nav2-item.aberto>.nav2-drop{opacity:1;visibility:visible;transform:translateY(0)}
+.nav2-drop a{display:flex;gap:12px;align-items:flex-start;padding:11px 13px;border-radius:14px;transition:background .16s}
+.nav2-drop a:hover{background:var(--creme-2)}
+.nav2-drop .ic{width:34px;height:34px;border-radius:11px;flex-shrink:0;display:grid;place-items:center;font-size:1rem;line-height:1}
+.nav2-drop b{display:block;font-family:var(--font-display);font-size:1rem;font-weight:700;line-height:1.2}
+.nav2-drop small{display:block;font-size:.82rem;opacity:.66;line-height:1.35;margin-top:2px}
+.nav2-drop .sep{height:1px;background:rgba(21,20,18,.1);margin:8px 12px}
+
+.nav2-dir{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.nav2-troca{
+  display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:999px;
+  font-size:.86rem;font-weight:600;white-space:nowrap;transition:background .18s;
+  background:rgba(0,97,238,.1);color:var(--azul);
+}
+.nav2-troca:hover{background:rgba(0,97,238,.18)}
+.nav2-troca.laranja{background:rgba(234,73,24,.12);color:var(--laranja)}
+nav#navbar .nav-login{height:38px;padding:0 14px;display:flex;align-items:center}
+nav#navbar .nav-cta{height:44px;padding:0 22px;display:flex;align-items:center;box-shadow:0 4px 0 rgba(21,20,18,.85);font-size:.95rem}
+nav#navbar .nav-cta:hover{transform:translateY(-2px);box-shadow:0 6px 0 rgba(21,20,18,.85)}
+
+/* botao de menu do celular */
+.nav2-burger{display:none;width:44px;height:44px;border-radius:50%;background:rgba(21,20,18,.06);border:none;cursor:pointer;place-items:center;gap:4.5px;padding:0}
+.nav2-burger i{display:block;width:17px;height:2.2px;background:var(--ink);border-radius:2px;transition:transform .25s,opacity .2s}
+/* Aberto vira X. Girar as tres barras dava um resultado torto em alguns
+   tamanhos, entao some com elas e desenha o X num pseudo elemento. */
+.nav2-burger{position:relative}
+.nav2-burger[aria-expanded="true"] i{opacity:0}
+.nav2-burger[aria-expanded="true"]::after{
+  content:"";position:absolute;inset:0;
+  background:
+    linear-gradient(to bottom,transparent calc(50% - 1.1px),var(--ink) calc(50% - 1.1px),var(--ink) calc(50% + 1.1px),transparent calc(50% + 1.1px)),
+    linear-gradient(to right,transparent calc(50% - 1.1px),var(--ink) calc(50% - 1.1px),var(--ink) calc(50% + 1.1px),transparent calc(50% + 1.1px));
+  background-size:19px 19px,19px 19px;background-position:center;background-repeat:no-repeat;
+  transform:rotate(45deg);
+}
+
+/* painel do celular */
+.nav2-painel{
+  position:fixed;inset:0;z-index:99;background:var(--creme);
+  padding:96px 20px 24px;display:flex;flex-direction:column;
+  opacity:0;visibility:hidden;transform:translateY(-10px);
+  transition:opacity .25s,transform .25s,visibility .25s;overflow-y:auto;
+}
+.nav2-painel.aberto{opacity:1;visibility:visible;transform:translateY(0)}
+.nav2-painel .grupo{border-bottom:1.5px dashed rgba(21,20,18,.16)}
+.nav2-painel .grupo-h{display:flex;align-items:center;justify-content:space-between;padding:16px 4px;font-family:var(--font-display);font-weight:700;font-size:1.14rem;cursor:pointer;list-style:none}
+.nav2-painel .grupo-h::-webkit-details-marker{display:none}
+/* mesmo chevron do desktop, pra abrir e fechar ficar com a mesma linguagem */
+.nav2-painel .grupo-h .mais{width:10px;height:10px;border-right:2.4px solid var(--laranja);border-bottom:2.4px solid var(--laranja);transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s;flex-shrink:0;margin-right:6px}
+.nav2-painel .grupo[open] .grupo-h .mais{transform:rotate(225deg) translate(-2px,-2px)}
+.nav2-painel .grupo-c{padding:0 4px 14px;display:flex;flex-direction:column;gap:2px}
+.nav2-painel .grupo-c a{display:flex;align-items:center;gap:11px;padding:11px 8px;border-radius:12px;font-size:.98rem}
+.nav2-painel .grupo-c a:active{background:var(--creme-2)}
+.nav2-painel .grupo-c .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:.9rem;flex-shrink:0;line-height:1}
+.nav2-painel .solo{display:flex;align-items:center;justify-content:space-between;padding:16px 4px;font-family:var(--font-display);font-weight:700;font-size:1.14rem;border-bottom:1.5px dashed rgba(21,20,18,.16)}
+.nav2-pe{margin-top:auto;padding-top:20px;display:flex;flex-direction:column;gap:10px}
+.nav2-pe .pe-troca{display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border-radius:999px;background:rgba(0,97,238,.1);color:var(--azul);font-weight:600;font-size:.94rem}
+.nav2-pe .pe-troca.laranja{background:rgba(234,73,24,.12);color:var(--laranja)}
+.nav2-pe .pe-linha{display:flex;gap:10px}
+.nav2-pe .pe-entrar{flex:1;height:52px;border-radius:999px;border:2px solid var(--ink);display:grid;place-items:center;font-family:var(--font-display);font-weight:700}
+.nav2-pe .pe-cta{flex:1.4;height:52px;border-radius:999px;background:var(--laranja);color:#fff;display:grid;place-items:center;font-family:var(--font-display);font-weight:700;box-shadow:0 4px 0 rgba(21,20,18,.85)}
+body.nav2-travado{overflow:hidden}
+/* o CTA fixo do rodape nao pode aparecer por cima do menu aberto */
+body.nav2-travado #sticky-cta{display:none!important}
+
+@media(max-width:980px){
+  .nav2-meio,.nav2-troca{display:none}
+  .nav2-burger{display:grid}
+  nav#navbar{height:60px;padding:0 8px 0 16px}
+  nav#navbar .nav-login{display:none}
+  nav#navbar .nav-cta{height:42px;padding:0 16px;font-size:.88rem}
+}
+@media(min-width:981px){.nav2-painel{display:none}}
+@media(max-width:360px){nav#navbar .nav-cta{padding:0 13px;font-size:.82rem}}
 </style>
 </head>
 <body>
 <nav id="navbar">
-  <a class="logo" href="index.html"><img src="/logo-cria.png" alt="Cria" style="height:30px;width:auto;display:block" loading="lazy" decoding="async"></a>
-  <div class="nav-links">
-    <a href="index.html#telas">O produto</a>
-    <a href="funcionalidades.html" class="nav-atual">Pra criadores</a>
-    <a href="social-media.html#modulos">Pra social medias</a>
-    <a href="index.html#planos">Planos</a>
-    <a href="index.html#faq">Dúvidas</a>
+  <a class="logo" href="index.html"><img src="/logo-cria.png" alt="Cria" style="height:30px;width:auto;display:block" decoding="async"></a>
+  <div class="nav2-meio">
+    <div class="nav2-item tem-drop"><button class="nav2-link" aria-expanded="false">Produto <span class="seta"></span></button><div class="nav2-drop"><a href="index.html#motor"><span class="ic" style="background:rgba(234,73,24,.14)">✦</span><span><b>Como funciona</b><small>O ciclo da ideia até o post publicado</small></span></a><a href="funcionalidades.html"><span class="ic" style="background:rgba(255,119,185,.2)">✎</span><span><b>Funcionalidades</b><small>Você está aqui</small></span></a><a href="social-media.html"><span class="ic" style="background:rgba(1,166,82,.14)">◎</span><span><b>Pra quem atende clientes</b><small>O lado de quem vive de social media</small></span></a></div></div><div class="nav2-item"><a class="nav2-link" href="index.html#planos">Planos</a></div><div class="nav2-item tem-drop"><button class="nav2-link" aria-expanded="false">Conteúdo <span class="seta"></span></button><div class="nav2-drop"><a href="/blog"><span class="ic" style="background:rgba(255,207,3,.28)">✍</span><span><b>Blog</b><small>Uma situação real por semana, e como sair dela</small></span></a><a href="index.html#faq"><span class="ic" style="background:rgba(0,97,238,.12)">?</span><span><b>Dúvidas frequentes</b><small>Preço, cancelamento, como começar</small></span></a></div></div>
   </div>
-  <div style="display:flex;align-items:center;gap:8px">
-    <a href="#modulos" class="nav-atalho">Ferramentas</a>
+  <div class="nav2-dir">
+    <a class="nav2-troca" href="social-media.html">Sou social media →</a>
     <a href="https://app.criasocialclub.com.br/login" class="nav-login">Entrar</a>
     <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja nav-cta">Testar grátis</a>
+    <button class="nav2-burger" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu-mobile"><i></i><i></i><i></i></button>
   </div>
 </nav>
+<div class="nav2-painel" id="menu-mobile">
+  <details class="grupo"><summary class="grupo-h">Produto <span class="mais"></span></summary><div class="grupo-c"><a href="index.html#motor"><span class="ic" style="background:rgba(234,73,24,.14)">✦</span> Como funciona</a><a href="funcionalidades.html"><span class="ic" style="background:rgba(255,119,185,.2)">✎</span> Funcionalidades</a><a href="social-media.html"><span class="ic" style="background:rgba(1,166,82,.14)">◎</span> Pra quem atende clientes</a></div></details><a class="solo" href="index.html#planos">Planos <span class="mais">›</span></a><details class="grupo"><summary class="grupo-h">Conteúdo <span class="mais"></span></summary><div class="grupo-c"><a href="/blog"><span class="ic" style="background:rgba(255,207,3,.28)">✍</span> Blog</a><a href="index.html#faq"><span class="ic" style="background:rgba(0,97,238,.12)">?</span> Dúvidas frequentes</a></div></details>
+  <div class="nav2-pe">
+    <a class="pe-troca" href="social-media.html">Sou social media →</a>
+    <div class="pe-linha">
+      <a class="pe-entrar" href="https://app.criasocialclub.com.br/login">Entrar</a>
+      <a class="pe-cta" href="https://app.criasocialclub.com.br/signup">Testar grátis</a>
+    </div>
+  </div>
+</div>
 
 <section id="hero" style="padding:150px 0 70px">
   <div class="hero-blob hb-1"></div>
@@ -548,6 +660,7 @@ html,body{overflow-x:clip}
     <nav class="footer-links" aria-label="Links institucionais e legais">
       <a href="index.html">Página inicial</a>
       <a href="social-media.html">Pra social medias</a>
+      <a href="/blog">Blog</a>
       <a href="https://app.criasocialclub.com.br/termos">Termos de uso</a>
       <a href="https://app.criasocialclub.com.br/privacidade">Política de privacidade</a>
       <a href="https://app.criasocialclub.com.br/excluir-dados">Excluir meus dados</a>
@@ -655,6 +768,41 @@ if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') {
     lb.addEventListener('click',function(){ lb.classList.remove('on'); img.src=''; });
     document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ lb.classList.remove('on'); img.src=''; } });
   })();
+</script>
+
+<!-- Navbar v2: submenu no clique (desktop) e painel no celular.
+     O hover cobre o mouse; o clique cobre teclado e telas de toque. -->
+<script>
+(function(){
+  var itens = document.querySelectorAll('.nav2-item.tem-drop');
+  itens.forEach(function(item){
+    var botao = item.querySelector('.nav2-link');
+    if(!botao) return;
+    botao.addEventListener('click', function(e){
+      e.preventDefault();
+      var jaAberto = item.classList.contains('aberto');
+      itens.forEach(function(o){ o.classList.remove('aberto'); o.querySelector('.nav2-link').setAttribute('aria-expanded','false'); });
+      if(!jaAberto){ item.classList.add('aberto'); botao.setAttribute('aria-expanded','true'); }
+    });
+  });
+  document.addEventListener('click', function(e){
+    if(e.target.closest('.nav2-item')) return;
+    itens.forEach(function(o){ o.classList.remove('aberto'); o.querySelector('.nav2-link').setAttribute('aria-expanded','false'); });
+  });
+
+  var burger = document.querySelector('.nav2-burger');
+  var painel = document.querySelector('.nav2-painel');
+  if(burger && painel){
+    var alterna = function(abrir){
+      painel.classList.toggle('aberto', abrir);
+      burger.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+      document.body.classList.toggle('nav2-travado', abrir);
+    };
+    burger.addEventListener('click', function(){ alterna(!painel.classList.contains('aberto')); });
+    painel.addEventListener('click', function(e){ if(e.target.closest('a')) alterna(false); });
+    document.addEventListener('keydown', function(e){ if(e.key === 'Escape') alterna(false); });
+  }
+})();
 </script>
 </body>
 </html>
