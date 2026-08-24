@@ -1,0 +1,14 @@
+# O que não precisa ir pro servidor.
+# Fontes do blog: o HTML gerado vai, o markdown fica só no repo.
+blog/posts
+blog/build.mjs
+blog/README.md
+blog/PLANO-EDITORIAL.md
+
+# Material de trabalho
+*.zip
+*.bak
+*.md
+prints/_*.png
+prints/*.py
+.DS_Store

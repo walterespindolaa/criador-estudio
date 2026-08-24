@@ -1,0 +1,73 @@
+---
+title: "Título como a pessoa fala, com a palavra-chave dentro"
+title_seo: "Título da aba do navegador, até 60 caracteres | Blog do CRIA"
+slug: url-do-post-com-a-palavra-chave
+description: "Resumo em uma ou duas frases, até 155 caracteres. É o que aparece no Google e no compartilhamento."
+date: 2026-09-01
+trilha: situacao-ferramenta
+publico: "social media"
+keyword: "palavra-chave principal, variação 1, variação 2"
+destaque: false
+cta_titulo: "Chamada final do post"
+cta_texto: "Uma ou duas frases ligando o texto ao módulo certo, com preço quando fizer sentido."
+cta_botao: "Abrir minha conta grátis"
+cta_link: "https://app.criasocialclub.com.br/signup"
+faq:
+  - "Pergunta como a pessoa digitaria?||Resposta direta em 2 a 4 frases. A primeira frase já responde."
+  - "Outra pergunta?||Outra resposta."
+---
+
+:::resposta Resposta rápida
+De 50 a 80 palavras respondendo a pergunta do título de forma completa. Esse é o
+bloco que as IAs costumam citar e que o Google usa em trecho destacado. Escreva
+como se fosse a única coisa que a pessoa vai ler.
+:::
+
+## A situação
+
+A cena concreta, com hora, dia da semana e detalhe físico. Quem lê precisa se
+reconhecer nas três primeiras linhas.
+
+## Por que isso acontece
+
+A explicação da causa, em 3 ou 4 blocos curtos com subtítulo em negrito.
+
+:::destaque
+Uma frase que resume o texto inteiro e é fácil de citar.
+:::
+
+## Como resolver, em N passos
+
+### 1. Primeiro passo
+
+### 2. Segundo passo
+
+:::cria Como isso funciona no CRIA
+O que o módulo faz, sem prometer o que ele não faz, com o preço. Honestidade aqui
+vale mais que qualquer adjetivo.
+:::
+
+:::checklist Checklist
+- Item verificável
+- Outro item
+:::
+
+## Fechamento
+
+Um parágrafo curto que devolve a pessoa pra vida dela com uma ação pequena e
+possível pra essa semana.
+
+---
+
+REGRAS DO PADRÃO CRIA
+
+1. Nada de travessão. Use vírgula, parênteses ou dois-pontos.
+2. Nada de "no mundo de hoje", "cenário atual", "é importante ressaltar",
+   "descubra como", "revolucionário", "game changer".
+3. Frase curta. Se ela tem mais de duas vírgulas, quebre.
+4. Segunda pessoa ("você"), sem formalidade de manual.
+5. Número só quando for verdade verificável. Sem estatística inventada.
+6. Preço sempre com o valor real do módulo, conferido antes de publicar.
+7. O CRIA aparece depois da solução, nunca antes. Primeiro o problema resolvido,
+   depois a ferramenta.
+8. Cada post linka pelo menos um outro post do blog e uma página da LP.

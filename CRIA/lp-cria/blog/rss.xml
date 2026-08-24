@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>Blog do CRIA</title>
+  <link>https://criasocialclub.com.br/blog</link>
+  <atom:link href="https://criasocialclub.com.br/blog/rss.xml" rel="self" type="application/rss+xml"/>
+  <description>Situações reais de quem vive de conteúdo e o caminho pra sair delas.</description>
+  <language>pt-BR</language>
+  <item>
+    <title>Quanto cobrar pra gerenciar redes sociais: a conta que impede você de trabalhar de graça</title>
+    <link>https://criasocialclub.com.br/blog/quanto-cobrar-gerenciar-redes-sociais</link>
+    <guid isPermaLink="true">https://criasocialclub.com.br/blog/quanto-cobrar-gerenciar-redes-sociais</guid>
+    <description>Chutar o valor do pacote é o erro mais caro da carreira de social media. Um método em cinco passos pra chegar num preço que cabe no seu mês e sustenta o serviço que você entrega.</description>
+    <pubDate>Mon, 24 Aug 2026 12:00:00 GMT</pubDate>
+    <category>Rotina de social media</category>
+  </item>
+  <item>
+    <title>Deu branco na hora de gravar: como montar um banco de ideias que não seca</title>
+    <link>https://criasocialclub.com.br/blog/banco-de-ideias-de-conteudo</link>
+    <guid isPermaLink="true">https://criasocialclub.com.br/blog/banco-de-ideias-de-conteudo</guid>
+    <description>Você separa a tarde pra gravar, senta na frente da câmera e não sai nada. O problema quase nunca é falta de criatividade: é que a ideia foi pedida na hora errada.</description>
+    <pubDate>Mon, 24 Aug 2026 12:00:00 GMT</pubDate>
+    <category>Uma situação, uma ferramenta</category>
+  </item>
+  <item>
+    <title>Aprovação de post com cliente: como sair do vai e volta no WhatsApp</title>
+    <link>https://criasocialclub.com.br/blog/aprovacao-de-post-com-cliente</link>
+    <guid isPermaLink="true">https://criasocialclub.com.br/blog/aprovacao-de-post-com-cliente</guid>
+    <description>O cliente aprovou por áudio, mudou de ideia no story e ninguém sabe qual era a versão final. Um fluxo de aprovação em 5 passos pra fechar isso sem virar refém do WhatsApp.</description>
+    <pubDate>Mon, 24 Aug 2026 12:00:00 GMT</pubDate>
+    <category>Uma situação, uma ferramenta</category>
+  </item>
+</channel>
+</rss>
