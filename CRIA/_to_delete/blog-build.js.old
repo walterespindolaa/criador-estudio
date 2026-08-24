@@ -3,7 +3,7 @@
  * Gerador do blog do CRIA.
  *
  * Como usar:
- *   node blog/build.mjs
+ *   node blog/build.js
  *
  * Lê os arquivos .md de blog/posts/, gera:
  *   blog/index.html          listagem com trilhas
@@ -17,15 +17,11 @@
  * cobre o que a gente usa e nada além disso.
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+const fs = require('fs');
+const path = require('path');
 
-// ESM não tem __dirname: o repo tem "type": "module" no package.json.
-const AQUI = path.dirname(fileURLToPath(import.meta.url));
-
-const ROOT = path.resolve(AQUI, '..');           // lp-cria/
-const POSTS_DIR = path.join(AQUI, 'posts');
+const ROOT = path.resolve(__dirname, '..');      // lp-cria/
+const POSTS_DIR = path.join(__dirname, 'posts');
 const SITE = 'https://criasocialclub.com.br';
 const APP = 'https://app.criasocialclub.com.br';
 
@@ -101,8 +97,7 @@ function parseFrontMatter(raw) {
 function stripQuotes(s) {
   const t = s.trim();
   if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
-    // \" dentro do valor vira aspas de verdade (título que começa com fala).
-    return t.slice(1, -1).replace(/\\"/g, '"').replace(/\\'/g, "'");
+    return t.slice(1, -1);
   }
   return t;
 }
@@ -263,58 +258,22 @@ function renderBloco(tipo, titulo, interno) {
  * ------------------------------------------------------------------ */
 const NAV = `
 <nav id="navbar">
-  <a class="logo" href="/"><img src="/logo-cria.webp" alt="Cria" style="height:30px;width:auto;display:block"></a>
-  <div class="nav2-meio">
-    <div class="nav2-item tem-drop">
-      <button class="nav2-link" aria-expanded="false">Produto <span class="seta"></span></button>
-      <div class="nav2-drop">
-        <a href="/" style="--cor:var(--laranja)"><b>Pra criadores</b><small>Quem cria pro próprio perfil</small></a>
-        <a href="/social-media" style="--cor:var(--azul)"><b>Pra social medias</b><small>Quem atende clientes</small></a>
-        <a href="/funcionalidades" style="--cor:var(--rosa)"><b>Funcionalidades</b><small>A lista completa do que tem lá</small></a>
-      </div>
-    </div>
-    <div class="nav2-item"><a class="nav2-link" href="/#planos">Planos</a></div>
-    <div class="nav2-item tem-drop">
-      <button class="nav2-link nav2-atual" aria-expanded="false">Conteúdo <span class="seta"></span></button>
-      <div class="nav2-drop">
-        <a href="/blog" style="--cor:var(--amarelo)"><b>Blog</b><small>Uma situação real por semana, e como sair dela</small></a>
-        <a href="/#faq" style="--cor:var(--azul)"><b>Dúvidas frequentes</b><small>Preço, cancelamento, como começar</small></a>
-      </div>
-    </div>
+  <a class="logo" href="/"><img src="/logo-cria.png" alt="CRIA" style="height:30px;width:auto;display:block"></a>
+  <div class="nav-links">
+    <a href="/">Pra criadores</a>
+    <a href="/social-media">Pra social medias</a>
+    <a href="/blog" class="nav-atual">Blog</a>
   </div>
-  <div class="nav2-dir">
+  <div style="display:flex;align-items:center;gap:8px">
     <a href="${APP}/login" class="nav-login">Entrar</a>
     <a href="${APP}/signup" class="btn btn-laranja nav-cta">Testar grátis</a>
-    <button class="nav2-burger" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu-mobile"><i></i><i></i><i></i></button>
   </div>
-</nav>
-<div class="nav2-painel" id="menu-mobile">
-  <details class="grupo"><summary class="grupo-h">Produto <span class="mais"></span></summary>
-    <div class="grupo-c">
-      <a href="/" style="--cor:var(--laranja)">Pra criadores</a>
-      <a href="/social-media" style="--cor:var(--azul)">Pra social medias</a>
-      <a href="/funcionalidades" style="--cor:var(--rosa)">Funcionalidades</a>
-    </div>
-  </details>
-  <a class="solo" href="/#planos">Planos <span class="mais" style="transform:rotate(-45deg) translate(-2px,-2px)"></span></a>
-  <details class="grupo" open><summary class="grupo-h">Conteúdo <span class="mais"></span></summary>
-    <div class="grupo-c">
-      <a href="/blog" style="--cor:var(--amarelo)">Blog</a>
-      <a href="/#faq" style="--cor:var(--azul)">Dúvidas frequentes</a>
-    </div>
-  </details>
-  <div class="nav2-pe">
-    <div class="pe-linha">
-      <a class="pe-entrar" href="${APP}/login">Entrar</a>
-      <a class="pe-cta" href="${APP}/signup">Testar grátis</a>
-    </div>
-  </div>
-</div>`;
+</nav>`;
 
 const FOOTER = `
 <footer>
   <div class="container">
-    <img src="/logo-cria-white.webp" alt="CRIA" style="height:30px;width:auto;display:block;margin:0 auto 10px">
+    <img src="/logo-cria-white.png" alt="CRIA" style="height:30px;width:auto;display:block;margin:0 auto 10px">
     <p>© ${new Date().getFullYear()} CRIA Social Club · Feito no Brasil</p>
     <nav class="footer-links" aria-label="Links institucionais e legais">
       <a href="/">Pra criadores</a>
@@ -340,8 +299,6 @@ function head({ title, description, canonical, image, tipo, extra }) {
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="/favicon-512.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <meta property="og:type" content="${tipo || 'website'}">
 <meta property="og:title" content="${esc(title)}">
@@ -507,9 +464,8 @@ ${NAV}
     </div>
   </header>
 
-  <div class="post-layout">
+  <div class="container-post post-corpo">
     ${sumario}
-    <div class="post-corpo">
     ${post.html}
     ${faqHtml}
 
@@ -532,45 +488,10 @@ ${NAV}
         }).join('')}
       </div>
     </section>` : ''}
-    </div>
   </div>
 </article>
 
 ${FOOTER}
-<!-- Navbar v2: submenu no clique (desktop) e painel no celular.
-     O hover cobre o mouse; o clique cobre teclado e telas de toque. -->
-<script>
-(function(){
-  var itens = document.querySelectorAll('.nav2-item.tem-drop');
-  itens.forEach(function(item){
-    var botao = item.querySelector('.nav2-link');
-    if(!botao) return;
-    botao.addEventListener('click', function(e){
-      e.preventDefault();
-      var jaAberto = item.classList.contains('aberto');
-      itens.forEach(function(o){ o.classList.remove('aberto'); o.querySelector('.nav2-link').setAttribute('aria-expanded','false'); });
-      if(!jaAberto){ item.classList.add('aberto'); botao.setAttribute('aria-expanded','true'); }
-    });
-  });
-  document.addEventListener('click', function(e){
-    if(e.target.closest('.nav2-item')) return;
-    itens.forEach(function(o){ o.classList.remove('aberto'); o.querySelector('.nav2-link').setAttribute('aria-expanded','false'); });
-  });
-
-  var burger = document.querySelector('.nav2-burger');
-  var painel = document.querySelector('.nav2-painel');
-  if(burger && painel){
-    var alterna = function(abrir){
-      painel.classList.toggle('aberto', abrir);
-      burger.setAttribute('aria-expanded', abrir ? 'true' : 'false');
-      document.body.classList.toggle('nav2-travado', abrir);
-    };
-    burger.addEventListener('click', function(){ alterna(!painel.classList.contains('aberto')); });
-    painel.addEventListener('click', function(e){ if(e.target.closest('a')) alterna(false); });
-    document.addEventListener('keydown', function(e){ if(e.key === 'Escape') alterna(false); });
-  }
-})();
-</script>
 </body>
 </html>`;
 }
@@ -684,40 +605,6 @@ ${FOOTER}
   });
 })();
 </script>
-<!-- Navbar v2: submenu no clique (desktop) e painel no celular.
-     O hover cobre o mouse; o clique cobre teclado e telas de toque. -->
-<script>
-(function(){
-  var itens = document.querySelectorAll('.nav2-item.tem-drop');
-  itens.forEach(function(item){
-    var botao = item.querySelector('.nav2-link');
-    if(!botao) return;
-    botao.addEventListener('click', function(e){
-      e.preventDefault();
-      var jaAberto = item.classList.contains('aberto');
-      itens.forEach(function(o){ o.classList.remove('aberto'); o.querySelector('.nav2-link').setAttribute('aria-expanded','false'); });
-      if(!jaAberto){ item.classList.add('aberto'); botao.setAttribute('aria-expanded','true'); }
-    });
-  });
-  document.addEventListener('click', function(e){
-    if(e.target.closest('.nav2-item')) return;
-    itens.forEach(function(o){ o.classList.remove('aberto'); o.querySelector('.nav2-link').setAttribute('aria-expanded','false'); });
-  });
-
-  var burger = document.querySelector('.nav2-burger');
-  var painel = document.querySelector('.nav2-painel');
-  if(burger && painel){
-    var alterna = function(abrir){
-      painel.classList.toggle('aberto', abrir);
-      burger.setAttribute('aria-expanded', abrir ? 'true' : 'false');
-      document.body.classList.toggle('nav2-travado', abrir);
-    };
-    burger.addEventListener('click', function(){ alterna(!painel.classList.contains('aberto')); });
-    painel.addEventListener('click', function(e){ if(e.target.closest('a')) alterna(false); });
-    document.addEventListener('keydown', function(e){ if(e.key === 'Escape') alterna(false); });
-  }
-})();
-</script>
 </body>
 </html>`;
 }
@@ -822,47 +709,25 @@ ${linhas}
 /* ------------------------------------------------------------------ *
  * Build
  * ------------------------------------------------------------------ */
-// Data de hoje no fuso de Brasília, no formato AAAA-MM-DD.
-function hojeBr() {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
-}
-
 function build() {
-  const todos = lerPosts();
-  if (!todos.length) {
+  const posts = lerPosts();
+  if (!posts.length) {
     console.log('Nenhum post em blog/posts. Nada a fazer.');
     return;
   }
-
-  // Fila: post com data no futuro fica guardado e entra sozinho no dia certo.
-  // `--tudo` força a geração de todos, pra revisar um agendado antes da hora.
-  const forcar = process.argv.includes('--tudo');
-  const hoje = hojeBr();
-  const posts = forcar ? todos : todos.filter((p) => String(p.date) <= hoje);
-  const fila = todos.filter((p) => String(p.date) > hoje);
-
-  if (!posts.length) {
-    console.log(`Nenhum post com data até hoje (${hoje}). ${fila.length} na fila.`);
-    return;
-  }
-
   posts.forEach((p) => {
-    fs.writeFileSync(path.join(AQUI, `${p.slug}.html`), paginaPost(p, posts));
+    fs.writeFileSync(path.join(__dirname, `${p.slug}.html`), paginaPost(p, posts));
     console.log(`ok  blog/${p.slug}.html`);
   });
-  fs.writeFileSync(path.join(AQUI, 'index.html'), paginaIndex(posts));
-  fs.writeFileSync(path.join(AQUI, 'rss.xml'), rss(posts));
+  fs.writeFileSync(path.join(__dirname, 'index.html'), paginaIndex(posts));
+  fs.writeFileSync(path.join(__dirname, 'rss.xml'), rss(posts));
   fs.writeFileSync(path.join(ROOT, 'sitemap.xml'), sitemap(posts));
   fs.writeFileSync(path.join(ROOT, 'robots.txt'), robots());
   fs.writeFileSync(path.join(ROOT, 'llms.txt'), llms(posts));
   console.log(`ok  blog/index.html`);
   console.log(`ok  blog/rss.xml`);
   console.log(`ok  sitemap.xml, robots.txt, llms.txt`);
-  console.log(`\n${posts.length} post(s) no ar.`);
-  if (fila.length) {
-    console.log(`${fila.length} na fila, esperando a data:`);
-    fila.slice().reverse().forEach((p) => console.log(`    ${p.date}  ${p.title}`));
-  }
+  console.log(`\n${posts.length} post(s) publicado(s).`);
 }
 
 build();
