@@ -43,3 +43,4 @@ dist-ssr
 
 # Zips pesados da LP nao vao pro Git (o GitHub barra acima de 100MB).
 CRIA/lp-cria/*.zip
+CRIA/_to_delete/
