@@ -14,7 +14,7 @@
    inverte quem conduz a negociação.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-export type TipoCampo = "texto" | "longo" | "email" | "tel" | "aniversario" | "tags" | "escolha";
+export type TipoCampo = "texto" | "longo" | "email" | "tel" | "aniversario" | "dia" | "tags" | "escolha";
 
 export type CampoIntake = {
   /** A mesma chave que a ficha usa (coluna do cadastro ou campo do brandbook). */
@@ -56,6 +56,14 @@ export const ETAPAS_INTAKE: EtapaIntake[] = [
       { chave: "instagram", label: "@ do Instagram" },
       { chave: "address", label: "Endereço completo", ajuda: "Rua, número, bairro, cidade, estado e CEP.", largo: true },
       { chave: "city", label: "Cidade" },
+      // Preferência de pagamento, não negociação: o quanto continua sendo assunto
+      // da agência. Perguntar aqui evita a ida e volta de "qual dia fica melhor
+      // pra você?" depois que o contrato já saiu, e é o que alimenta o vencimento
+      // da mensalidade no Caixa.
+      { chave: "payment_method", label: "Como você prefere pagar?",
+        tipo: "escolha", opcoes: ["Pix", "Boleto", "Cartão de crédito", "Transferência / TED"], largo: true },
+      { chave: "payment_day", label: "Que dia do mês fica melhor pro pagamento?",
+        ajuda: "Escolha o dia que combina com o seu caixa.", tipo: "dia" },
       { chave: "marketSince", label: "Há quanto tempo você atua nesse mercado?", ajuda: "Ex.: 8 anos, desde 2018." },
       { chave: "birthday", label: "Seu aniversário", ajuda: "Só o dia e o mês. A gente gosta de lembrar.",
         tipo: "aniversario", soSe: { chave: "contract_type", valor: "Pessoa física" } },
@@ -159,7 +167,7 @@ export const CAMPOS_CADASTRO = new Set([
   // contract_type não é coluna: ele só decide quais campos aparecem e vai pro
   // brandbook como referência na hora de escrever o contrato.
   "company_name", "cnpj", "owner_name", "email", "phone", "whatsapp",
-  "address", "city", "instagram", "birthday",
+  "address", "city", "instagram", "birthday", "payment_method", "payment_day",
 ]);
 
 /** O campo está visível pra estas respostas? (o `soSe` é o que esconde o resto) */

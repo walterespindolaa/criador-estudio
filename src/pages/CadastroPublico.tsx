@@ -258,6 +258,20 @@ export default function CadastroPublico() {
       );
     }
 
+    if (c.tipo === "dia") {
+      // Dia do mês solto (1 a 31). Select em vez de campo aberto porque a ficha
+      // guarda número: "todo dia 10" ou "dia dez" não viraria vencimento nenhum.
+      const sel: CSSProperties = { ...campo, ...borda, appearance: "auto" };
+      return (
+        <select value={v} onChange={(e) => set(c.chave, e.target.value)} style={sel}>
+          <option value="">Escolher</option>
+          {Array.from({ length: 31 }, (_, i) => String(i + 1)).map((x) => (
+            <option key={x} value={x}>dia {x}</option>
+          ))}
+        </select>
+      );
+    }
+
     if (c.tipo === "longo") {
       return (
         <div style={{ position: "relative" }}>
