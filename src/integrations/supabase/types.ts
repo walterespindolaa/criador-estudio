@@ -778,6 +778,7 @@ export type Database = {
           id: string
           manager_id: string
           status: string
+          steps: number[] | null
           submitted_at: string | null
           token: string
         }
@@ -789,6 +790,7 @@ export type Database = {
           id?: string
           manager_id: string
           status?: string
+          steps?: number[] | null
           submitted_at?: string | null
           token?: string
         }
@@ -800,6 +802,7 @@ export type Database = {
           id?: string
           manager_id?: string
           status?: string
+          steps?: number[] | null
           submitted_at?: string | null
           token?: string
         }
