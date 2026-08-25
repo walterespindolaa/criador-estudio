@@ -227,34 +227,115 @@ export function useDeleteCrmClient() {
   });
 }
 
-// Importa as contas que a gestora já gerencia no cria (dedup por cria_owner_id)
+/* ── IMPORTAR AS CONTAS DO CRIA PRA CARTEIRA ──
+   A versão antiga só olhava cria_owner_id pra decidir se já tinha. Como a ficha
+   cadastrada na mão nasce com esse campo vazio, ela nunca era reconhecida: a
+   gestora terminava com duas "Padaria X", uma com o histórico e outra com o
+   vínculo, cada uma ocupando uma vaga da carteira.
+
+   Agora, antes de criar linha nova, procuramos uma ficha SEM vínculo que seja
+   claramente o mesmo cliente. Ordem de confiança:
+     1. e-mail igual (o mais forte que existe);
+     2. @ do Instagram igual;
+     3. nome igual depois de tirar acento, caixa e pontuação, e só quando UMA
+        única ficha bate. Dois "Studio Bella" na carteira derrubam o palpite,
+        porque errar aqui é misturar o histórico de dois clientes.
+   Uma ficha só pode ser reivindicada uma vez por rodada. */
+
+const semAcento = (s?: string | null) =>
+  (s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const semArroba = (s?: string | null) =>
+  (s ?? "").toLowerCase().replace(/^@+/, "").replace(/[^a-z0-9._]/g, "").trim();
+
+type FichaLivre = { id: string; name: string; display_name?: string | null; email: string | null; instagram: string | null };
+
+function acharFicha(livres: FichaLivre[], alvo: { email?: string; instagram?: string | null; nome?: string | null }): FichaLivre | null {
+  const email = (alvo.email ?? "").trim().toLowerCase();
+  if (email) {
+    const porEmail = livres.find((f) => (f.email ?? "").trim().toLowerCase() === email);
+    if (porEmail) return porEmail;
+  }
+  const arroba = semArroba(alvo.instagram);
+  if (arroba) {
+    const porArroba = livres.find((f) => semArroba(f.instagram) === arroba);
+    if (porArroba) return porArroba;
+  }
+  const nome = semAcento(alvo.nome);
+  if (nome.length >= 3) {
+    const batem = livres.filter((f) => semAcento(f.display_name || f.name) === nome);
+    if (batem.length === 1) return batem[0];
+  }
+  return null;
+}
+
 export function useImportCriaClients() {
   const { managedAccounts, agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (): Promise<{ imported: number }> => {
+    mutationFn: async (): Promise<{ vinculados: number; criados: number }> => {
       if (!agencyOwnerId) throw new Error("Sem sessão");
-      if (managedAccounts.length === 0) return { imported: 0 };
-      const { data: existing, error: exErr } = await sbFrom("crm_clients")
-        .select("cria_owner_id").eq("manager_id", agencyOwnerId).not("cria_owner_id", "is", null);
+      if (managedAccounts.length === 0) return { vinculados: 0, criados: 0 };
+
+      const { data: fichas, error: exErr } = await sbFrom("crm_clients")
+        .select("id, name, display_name, email, instagram, cria_owner_id")
+        .eq("manager_id", agencyOwnerId).is("deleted_at", null);
       if (exErr) throw exErr;
-      const have = new Set((existing ?? []).map((r: { cria_owner_id: string }) => r.cria_owner_id));
-      const toInsert = managedAccounts
-        .filter((a) => !have.has(a.owner_id))
-        .map((a) => ({
-          manager_id: agencyOwnerId,
-          cria_owner_id: a.owner_id,
-          name: a.name || "Sem nome",
-          instagram: a.instagram_handle ?? null,
-        }));
-      if (toInsert.length === 0) return { imported: 0 };
-      const { error } = await sbFrom("crm_clients").insert(toInsert as never);
-      if (error) throw error;
-      return { imported: toInsert.length };
+      const linhas = (fichas ?? []) as unknown as (FichaLivre & { cria_owner_id: string | null })[];
+      const jaLigadas = new Set(linhas.filter((l) => l.cria_owner_id).map((l) => l.cria_owner_id as string));
+      const livres: FichaLivre[] = linhas.filter((l) => !l.cria_owner_id);
+
+      // O e-mail das contas cobertas pelos assentos (é o casamento mais confiável).
+      // Se a chamada falhar ou vier vazia, o import continua pelos outros critérios.
+      const emailPorConta = new Map<string, string>();
+      try {
+        const { data: contas } = await supabase.rpc("agency_clients");
+        for (const c of (contas ?? []) as { id: string; email: string | null }[]) {
+          if (c.email) emailPorConta.set(c.id, c.email);
+        }
+      } catch { /* segue sem e-mail */ }
+
+      const reivindicadas = new Set<string>();
+      let vinculados = 0;
+      const novas: Record<string, unknown>[] = [];
+
+      for (const a of managedAccounts) {
+        if (jaLigadas.has(a.owner_id)) continue;
+        const emailConta = emailPorConta.get(a.owner_id);
+        const ficha = acharFicha(
+          livres.filter((f) => !reivindicadas.has(f.id)),
+          { email: emailConta, instagram: a.instagram_handle, nome: a.name },
+        );
+        if (ficha) {
+          reivindicadas.add(ficha.id);
+          const patch: Record<string, unknown> = { cria_owner_id: a.owner_id };
+          if (!String(ficha.email ?? "").trim() && emailConta) patch.email = emailConta;
+          if (!String(ficha.instagram ?? "").trim() && a.instagram_handle) patch.instagram = a.instagram_handle;
+          const { error } = await sbFrom("crm_clients").update(patch as never).eq("id", ficha.id);
+          if (error) throw error;
+          vinculados++;
+        } else {
+          novas.push({
+            manager_id: agencyOwnerId,
+            cria_owner_id: a.owner_id,
+            name: a.name || "Sem nome",
+            email: emailConta ?? null,
+            instagram: a.instagram_handle ?? null,
+          });
+        }
+      }
+
+      if (novas.length > 0) {
+        const { error } = await sbFrom("crm_clients").insert(novas as never);
+        if (error) throw error;
+      }
+      return { vinculados, criados: novas.length };
     },
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["crm-clients", agencyOwnerId] });
-      toast.success(r.imported > 0 ? `${r.imported} cliente(s) importado(s) do cria.` : "Nenhum cliente novo pra importar.");
+      const partes: string[] = [];
+      if (r.vinculados > 0) partes.push(`${r.vinculados} ficha(s) que você já tinha ganharam o vínculo`);
+      if (r.criados > 0) partes.push(`${r.criados} cliente(s) novo(s) na carteira`);
+      toast.success(partes.length > 0 ? partes.join(" e ") + ".": "Nenhum cliente novo pra importar.");
     },
     onError: (e: unknown) => toast.error(msgErroCliente(e, "Erro ao importar do cria.")),
   });

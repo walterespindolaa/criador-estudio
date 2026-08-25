@@ -11,9 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CopyButton } from "@/components/shared/CopyButton";
-import { isValidEmail } from "@/lib/sanitize";
 import { PLANS, type PlanId } from "@/lib/plans";
 import { cn } from "@/lib/utils";
+import { AdicionarClienteDialog, type ResultadoAdicionar } from "@/components/accounts/AdicionarClienteDialog";
 import { ClientsGrid } from "@/components/accounts/ClientsGrid";
 import { AgencyClients } from "@/components/accounts/AgencyClients";
 import { ManagerSectionTitle } from "@/components/accounts/ManagerSectionTitle";
@@ -39,41 +39,19 @@ export default function Contas() {
 
   // Adicionar cliente (coberto pelos assentos)
   const [addOpen, setAddOpen] = useState(false);
-  const [addName, setAddName] = useState("");
-  const [addEmail, setAddEmail] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [addResult, setAddResult] = useState<{ email: string; inviteLink: string } | null>(null);
+  const [addResult, setAddResult] = useState<ResultadoAdicionar | null>(null);
 
   // Expandir assentos (checkout)
   const [expandOpen, setExpandOpen] = useState(false);
   const [expandSeats, setExpandSeats] = useState(5);
   const [expanding, setExpanding] = useState(false);
 
-  const handleAddClient = async () => {
-    const name = addName.trim(); const email = addEmail.trim();
-    if (!name || !isValidEmail(email)) { toast.error("Preencha nome e e-mail válido."); return; }
-    setAdding(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("manager-add-client", { body: { name, email } });
-      const err = (data as { error?: string })?.error;
-      if (error || err) {
-        toast.error(err === "seats_full" ? "Seus assentos acabaram. Expanda o plano pra adicionar mais."
-          : err === "no_seats" ? "Você ainda não tem um plano de agência ativo."
-          : err === "use_different_email" ? "Use um e-mail diferente do seu de gestora."
-          : err === "rate_limited" ? "Muitas tentativas. Aguarde um minuto."
-          : err === "email_already_registered" ? "Esse e-mail já tem conta no CRIA. Peça pra pessoa aceitar o vínculo."
-          : err === "already_your_client" ? "Esse cliente já está vinculado à sua conta."
-          : "Não consegui adicionar agora.");
-        return;
-      }
-      const d = data as { email: string; inviteLink: string };
-      setAddResult({ email: d.email, inviteLink: d.inviteLink });
-      setAddOpen(false); setAddName(""); setAddEmail("");
-      qc.invalidateQueries({ queryKey: ["agency-seats-used", user?.id] });
-    } catch (e) {
-      console.error("[manager-add-client] failed:", e);
-      toast.error("Falha ao chamar o servidor.");
-    } finally { setAdding(false); }
+  const handleAdded = (r: ResultadoAdicionar) => {
+    setAddResult(r);
+    qc.invalidateQueries({ queryKey: ["agency-seats-used", user?.id] });
+    // A ficha do CRM mudou (ganhou o vínculo ou nasceu agora), então a carteira
+    // precisa reaparecer certa sem F5.
+    qc.invalidateQueries({ queryKey: ["crm-clients"] });
   };
 
   const handleExpand = async () => {
@@ -183,37 +161,7 @@ export default function Contas() {
       </div>
 
       {/* Adicionar cliente (assento) */}
-      <Dialog open={addOpen} onOpenChange={(o) => !adding && setAddOpen(o)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="font-display">Adicionar cliente</DialogTitle>
-            <DialogDescription className="font-body text-sm">Cria o acesso de criadora coberto pelo seu plano de agência. O cliente não paga nada.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-2">
-            <div className="space-y-1.5">
-              <Label className="font-body text-xs">Nome do cliente</Label>
-              <Input value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="Nome da marca/pessoa" disabled={adding} className="rounded-xl" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="font-body text-xs">E-mail do cliente</Label>
-              <Input type="email" inputMode="email" value={addEmail} onChange={(e) => setAddEmail(e.target.value)} placeholder="cliente@email.com" disabled={adding} className="rounded-xl" />
-            </div>
-          </div>
-          <div className="mt-4 rounded-xl bg-primary/[0.05] border border-primary/15 p-3">
-            <p className="text-[11px] font-body font-semibold text-primary uppercase tracking-wider mb-1.5">Depois de adicionar</p>
-            <ol className="space-y-1 text-[12px] font-body text-foreground/80 list-decimal list-inside">
-              <li>O cliente recebe um e-mail pra criar a senha (conta Studio completa, grátis pra ele).</li>
-              <li>Você abre a ficha dele em <strong>Clientes</strong> e monta posts, cronograma e relatório.</li>
-              <li>Ele aprova o conteúdo por link (ou dentro do Cria), acompanhe em <strong>Aprovações</strong>.</li>
-              <li>Tudo com a sua cara: relatórios e acesso white-label.</li>
-            </ol>
-          </div>
-          <div className="flex justify-end gap-2 mt-6">
-            <Button variant="outline" onClick={() => setAddOpen(false)} disabled={adding}>Cancelar</Button>
-            <Button onClick={handleAddClient} disabled={adding || !addName.trim() || !addEmail.trim()}>{adding && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}Adicionar</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AdicionarClienteDialog open={addOpen} onOpenChange={setAddOpen} onDone={handleAdded} />
 
       {/* Expandir/assinar assentos */}
       <Dialog open={expandOpen} onOpenChange={(o) => !expanding && setExpandOpen(o)}>
@@ -255,6 +203,22 @@ export default function Contas() {
             <DialogTitle className="font-display">Cliente adicionado</DialogTitle>
             <DialogDescription className="font-body text-sm">Já enviamos o acesso por e-mail pro cliente. Se quiser, mande também a mensagem abaixo (WhatsApp).</DialogDescription>
           </DialogHeader>
+          {addResult?.crmStatus === "carteira_cheia" && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-3 py-2.5 mt-1">
+              <p className="text-xs font-body text-foreground/85">
+                O acesso está criado e funcionando, mas a ficha dele não entrou na sua carteira porque ela está no teto.
+                Amplie a carteira em Clientes e depois use <strong>Importar do Cria</strong> pra trazer a ficha.
+              </p>
+            </div>
+          )}
+          {addResult?.crmStatus === "falhou" && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-3 py-2.5 mt-1">
+              <p className="text-xs font-body text-foreground/85">
+                O acesso está criado, mas não consegui atualizar a ficha na carteira agora. Em <strong>Clientes</strong>,
+                use <strong>Importar do Cria</strong> pra acertar isso.
+              </p>
+            </div>
+          )}
           {addResult && (
             <div className="rounded-xl border border-border bg-card px-3 py-2.5 mt-1">
               <div className="flex items-center justify-between gap-2 mb-1.5">

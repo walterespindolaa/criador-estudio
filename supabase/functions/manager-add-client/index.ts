@@ -1,5 +1,19 @@
 // Social mídia (manager) adiciona um cliente coberto pelos assentos da agência.
 // Gated por seat_limit. Cria a conta de criadora, vincula e devolve link branded /ativar.
+//
+// ── POR QUE ESTA FUNÇÃO MEXE NO CRM ──
+// Antes ela só criava a conta e ia embora. A ficha do cliente no CRM continuava
+// sem saber que aquela conta existe, e o botão "Importar do Cria" (que só compara
+// por cria_owner_id) criava uma SEGUNDA ficha com o mesmo nome. A gestora ficava
+// com dois cards, dois financeiros e duas agendas do mesmo negócio, e as duas
+// linhas ocupando vaga na carteira.
+//
+// Agora tem dois caminhos, e os dois terminam com UMA ficha só:
+//   · crm_client_id veio → a ficha já existe, a gente só carimba cria_owner_id
+//     nela (e completa o e-mail se estava vazio). Nada de linha nova.
+//   · crm_client_id não veio → cria a conta E a ficha, já vinculadas.
+// O trigger trg_crm_clients_guard_cria_owner deixa passar porque aqui é
+// service_role (auth.uid() nulo).
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
@@ -117,9 +131,13 @@ serve(async (req) => {
     if (seatLimit <= 0) return json({ error: "no_seats" }, 402);
 
     // Conta assentos usados (clientes cobertos por essa agência).
+    // Cliente pausado NÃO ocupa assento: é a mesma regra da RPC agency_seats_used
+    // que a tela usa. Sem o filtro, a tela mostrava "1 livre" e a chamada aqui
+    // respondia "assentos esgotados".
     const { count: used } = await svc.from("profiles")
       .select("id", { count: "exact", head: true })
-      .eq("agency_owner_id", user.id);
+      .eq("agency_owner_id", user.id)
+      .is("parked_at", null);
     if ((used ?? 0) >= seatLimit) return json({ error: "seats_full", used, seatLimit }, 409);
 
     const body = await req.json().catch(() => ({}));
@@ -127,6 +145,24 @@ serve(async (req) => {
     const email = String(body?.email ?? "").trim().toLowerCase();
     if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ error: "missing_fields" }, 400);
     if (email === (user.email ?? "").toLowerCase()) return json({ error: "use_different_email" }, 400);
+
+    // Ficha do CRM escolhida pela gestora (opcional). Valida ANTES de criar a
+    // conta: recusar depois deixaria um login órfão no ar.
+    const crmClientId = String(body?.crm_client_id ?? "").trim() || null;
+    let crmEmailVazio = false;
+    if (crmClientId) {
+      const { data: ficha } = await svc.from("crm_clients")
+        .select("id, email, cria_owner_id, manager_id, deleted_at")
+        .eq("id", crmClientId).maybeSingle();
+      const f = ficha as { email?: string | null; cria_owner_id?: string | null; manager_id?: string; deleted_at?: string | null } | null;
+      if (!f || f.manager_id !== user.id || f.deleted_at) {
+        return json({ error: "crm_client_not_found", message: "Não achei essa ficha na sua carteira." }, 404);
+      }
+      if (f.cria_owner_id) {
+        return json({ error: "crm_client_already_linked", message: "Esse cliente já tem uma conta do Cria vinculada." }, 409);
+      }
+      crmEmailVazio = !String(f.email ?? "").trim();
+    }
 
     const origin = resolveAppUrl(req);
 
@@ -179,11 +215,33 @@ serve(async (req) => {
       role: "manager", status: "active", accepted_at: new Date().toISOString(),
     }, { onConflict: "owner_id,member_email" });
 
+    // ── A ficha do CRM ──
+    // Best-effort de propósito: se der ruim aqui, a conta do cliente já existe e
+    // funciona. Devolvemos o motivo pra tela avisar em vez de fingir sucesso.
+    let crmStatus: "vinculado" | "criado" | "carteira_cheia" | "falhou" = "falhou";
+    try {
+      if (crmClientId) {
+        const patch: Record<string, unknown> = { cria_owner_id: creatorId };
+        if (crmEmailVazio) patch.email = email;
+        const { error } = await svc.from("crm_clients").update(patch).eq("id", crmClientId);
+        crmStatus = error ? "falhou" : "vinculado";
+        if (error) console.error("[manager-add-client] crm link failed:", error);
+      } else {
+        const { error } = await svc.from("crm_clients")
+          .insert({ manager_id: user.id, cria_owner_id: creatorId, name, email });
+        if (!error) crmStatus = "criado";
+        else {
+          crmStatus = /limite_clientes_atingido/.test(error.message ?? "") ? "carteira_cheia" : "falhou";
+          console.error("[manager-add-client] crm insert failed:", error);
+        }
+      }
+    } catch (e) { console.error("[manager-add-client] crm step threw:", e); }
+
     // E-mail automático pro cliente (best-effort, não bloqueia a resposta).
     try { await sendClientInvite(svc, email, String(caller?.name ?? ""), inviteLink); }
     catch (e) { console.error("[manager-add-client] email enqueue failed:", e); }
 
-    return json({ ok: true, email, inviteLink, used: (used ?? 0) + 1, seatLimit });
+    return json({ ok: true, email, inviteLink, used: (used ?? 0) + 1, seatLimit, crmStatus });
   } catch (e) {
     console.error("[manager-add-client] error:", e);
     return json({ error: "internal_error" }, 500);
