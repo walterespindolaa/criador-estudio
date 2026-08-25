@@ -519,6 +519,7 @@ export type Database = {
           email: string | null
           id: string
           name: string | null
+          page_id: string | null
           phone: string | null
           source: string
           user_id: string
@@ -528,6 +529,7 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string | null
+          page_id?: string | null
           phone?: string | null
           source?: string
           user_id: string
@@ -537,11 +539,20 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string | null
+          page_id?: string | null
           phone?: string | null
           source?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bio_leads_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "bio_pages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       bio_links: {
         Row: {
@@ -551,6 +562,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           link_type: string | null
+          page_id: string | null
           position: number | null
           thumbnail_url: string | null
           title: string
@@ -564,6 +576,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           link_type?: string | null
+          page_id?: string | null
           position?: number | null
           thumbnail_url?: string | null
           title: string
@@ -577,6 +590,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           link_type?: string | null
+          page_id?: string | null
           position?: number | null
           thumbnail_url?: string | null
           title?: string
@@ -585,10 +599,58 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "bio_links_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "bio_pages"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "bio_links_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bio_pages: {
+        Row: {
+          created_at: string
+          crm_client_id: string
+          id: string
+          manager_id: string
+          settings: Json
+          slug: string | null
+          updated_at: string
+          views: number
+        }
+        Insert: {
+          created_at?: string
+          crm_client_id: string
+          id?: string
+          manager_id: string
+          settings?: Json
+          slug?: string | null
+          updated_at?: string
+          views?: number
+        }
+        Update: {
+          created_at?: string
+          crm_client_id?: string
+          id?: string
+          manager_id?: string
+          settings?: Json
+          slug?: string | null
+          updated_at?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bio_pages_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
             referencedColumns: ["id"]
           },
         ]
@@ -5632,6 +5694,31 @@ export type Database = {
           url: string
         }[]
       }
+      get_public_bio_page_by_slug: {
+        Args: { _slug: string }
+        Returns: {
+          avatar_url: string
+          bio: string
+          bio_settings: Json
+          bio_slug: string
+          id: string
+          instagram_handle: string
+          name: string
+          niche: string
+        }[]
+      }
+      get_public_bio_page_links_by_slug: {
+        Args: { _slug: string }
+        Returns: {
+          icon: string
+          id: string
+          link_type: string
+          position: number
+          thumbnail_url: string
+          title: string
+          url: string
+        }[]
+      }
       get_public_profile_by_slug: {
         Args: { _slug: string }
         Returns: {
@@ -5672,6 +5759,7 @@ export type Database = {
         Args: { link_id: string }
         Returns: undefined
       }
+      increment_bio_page_view: { Args: { _slug: string }; Returns: undefined }
       increment_bio_view: { Args: { _slug: string }; Returns: undefined }
       increment_storage: {
         Args: { _delta: number; _user: string }
@@ -5769,6 +5857,14 @@ export type Database = {
         Returns: Json
       }
       manager_client_posts: { Args: { client_owner_id: string }; Returns: Json }
+      manager_clients_bio: {
+        Args: never
+        Returns: {
+          bio_slug: string
+          bio_views: number
+          cria_owner_id: string
+        }[]
+      }
       manager_clients_cria_profiles: {
         Args: never
         Returns: {
@@ -5789,6 +5885,10 @@ export type Database = {
       manager_owns_cria_client: { Args: { _owner: string }; Returns: boolean }
       manager_publish_client_post: {
         Args: { _post_id: string; _publicado: boolean }
+        Returns: undefined
+      }
+      manager_save_client_bio: {
+        Args: { _owner: string; _settings: Json; _slug: string }
         Returns: undefined
       }
       member_can: {
@@ -5924,6 +6024,15 @@ export type Database = {
         Returns: undefined
       }
       submit_bio_lead: {
+        Args: {
+          _email?: string
+          _name?: string
+          _phone?: string
+          _slug: string
+        }
+        Returns: undefined
+      }
+      submit_bio_page_lead: {
         Args: {
           _email?: string
           _name?: string
