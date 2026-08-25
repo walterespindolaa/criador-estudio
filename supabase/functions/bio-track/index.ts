@@ -51,7 +51,11 @@ serve(async (req) => {
       if (kind !== "page") await svc.rpc("increment_bio_view", { _slug: slug });
       if (kind !== "profile") await svc.rpc("increment_bio_page_view", { _slug: slug });
     } else if (type === "click" && linkId) {
+      // O id pode ser de um botão do formato antigo (bio_links) ou de um bloco
+      // do formato novo (bio_blocks). Cada função só encontra o seu, então
+      // chamar as duas soma uma vez só e evita a página ter que saber disso.
       await svc.rpc("increment_bio_link_click", { link_id: linkId });
+      await svc.rpc("increment_bio_block_click", { _id: linkId });
     }
     return ok();
   } catch (e) {

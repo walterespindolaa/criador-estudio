@@ -1,0 +1,897 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cria · Link na bio v2 (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&family=Grand+Hotel&display=swap">
+<style>
+:root{
+  --creme:#F5F3E7; --creme-2:#ECE8D5; --ink:#0A0A0A;
+  --laranja:#EA4918; --azul:#0061EE; --rosa:#FF77B9; --amarelo:#FFCF03; --verde:#01A652; --lilas:#7C90F0;
+  --branco:#FDFBF5;
+  --font-display:'Baloo 2',sans-serif; --font-body:'Roboto',sans-serif; --font-script:'Grand Hotel',cursive;
+  --linha:#DEDAC6;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-body);background:var(--creme);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--font-display);line-height:1.15}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+
+/* ── cabeçalho ── */
+header.top{background:var(--rosa);padding:26px 0 78px;position:relative;overflow:hidden}
+.blob{position:absolute;border-radius:44% 56% 52% 48%/50% 44% 56% 50%;opacity:.5;pointer-events:none}
+.b1{width:340px;height:340px;background:#fff;top:-160px;right:-90px;opacity:.16}
+.b2{width:220px;height:220px;background:var(--amarelo);bottom:-120px;left:-60px;opacity:.35}
+header.top .wrap{position:relative;z-index:2}
+.kicker{font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:rgba(10,10,10,.55)}
+header.top h1{font-size:clamp(1.9rem,4.4vw,2.9rem);margin-top:2px}
+.script{font-family:var(--font-script);font-size:clamp(1.4rem,3vw,2rem);display:block;margin-top:-2px}
+header.top p{max-width:620px;margin-top:8px;font-size:15px;color:rgba(10,10,10,.72)}
+
+/* ── abas ── */
+nav.abas{position:sticky;top:0;z-index:40;background:var(--creme);border-bottom:1px solid var(--linha)}
+nav.abas .wrap{display:flex;gap:6px;overflow-x:auto;padding-top:10px;padding-bottom:10px;scrollbar-width:none}
+nav.abas .wrap::-webkit-scrollbar{display:none}
+nav.abas button{font-family:var(--font-display);font-size:14px;font-weight:600;border:1.5px solid transparent;background:transparent;
+  color:rgba(10,10,10,.6);padding:8px 15px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:.15s}
+nav.abas button:hover{background:var(--creme-2)}
+nav.abas button.on{background:var(--ink);color:var(--creme);border-color:var(--ink)}
+
+main{padding:34px 0 90px}
+section.tela{display:none}
+section.tela.on{display:block}
+.intro{max-width:760px;margin-bottom:22px}
+.intro h2{font-size:1.5rem}
+.intro p{color:rgba(10,10,10,.7);margin-top:6px;font-size:15px}
+.nota{background:var(--creme-2);border-left:4px solid var(--amarelo);padding:11px 15px;border-radius:0 14px 14px 0;font-size:13.5px;margin-top:14px}
+.nota b{font-family:var(--font-display)}
+
+/* ── layout editor ── */
+.editor{display:grid;grid-template-columns:1fr 340px;gap:22px;align-items:start}
+@media(max-width:900px){.editor{grid-template-columns:1fr}}
+.card{background:var(--branco);border:1.5px solid var(--linha);border-radius:22px;padding:18px}
+.card + .card{margin-top:14px}
+.card h3{font-size:1.05rem;display:flex;align-items:center;gap:8px}
+.card .sub{font-size:12.5px;color:rgba(10,10,10,.6);margin-top:3px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;font-family:var(--font-display);
+  padding:3px 10px;border-radius:999px;background:var(--creme-2)}
+.pill.novo{background:var(--amarelo)}
+.pill.rosa{background:var(--rosa);color:#fff}
+
+/* ── paleta de blocos ── */
+.paleta{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px;margin-top:14px}
+.bloco-op{border:1.5px solid var(--linha);background:var(--creme);border-radius:15px;padding:11px 12px;cursor:pointer;transition:.15s;text-align:left}
+.bloco-op:hover{border-color:var(--ink);transform:translateY(-2px)}
+.bloco-op .ic{font-size:19px;line-height:1}
+.bloco-op b{display:block;font-family:var(--font-display);font-size:13.5px;margin-top:5px}
+.bloco-op span{display:block;font-size:11px;color:rgba(10,10,10,.58);line-height:1.35;margin-top:1px}
+
+/* ── lista de blocos montados ── */
+.linha-bloco{display:flex;gap:11px;align-items:flex-start;border:1.5px solid var(--linha);background:var(--creme);
+  border-radius:16px;padding:12px;margin-top:9px}
+.grip{color:rgba(10,10,10,.3);font-size:16px;cursor:grab;padding-top:2px}
+.mini{width:52px;height:52px;border-radius:11px;background:var(--creme-2);flex:0 0 auto;display:grid;place-items:center;
+  font-size:19px;overflow:hidden;border:1px solid var(--linha)}
+.linha-bloco .corpo{flex:1;min-width:0}
+.linha-bloco .corpo b{font-family:var(--font-display);font-size:14px;display:block}
+.linha-bloco .corpo .meta{font-size:11.5px;color:rgba(10,10,10,.58);margin-top:2px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.tagzinha{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--creme-2)}
+.tagzinha.on{background:var(--verde);color:#fff}
+.tagzinha.agendado{background:var(--lilas);color:#fff}
+.tagzinha.off{background:#ddd;color:rgba(10,10,10,.5)}
+.acoes{display:flex;gap:5px;align-items:center}
+.acoes button{border:1px solid var(--linha);background:var(--branco);border-radius:9px;width:29px;height:29px;cursor:pointer;font-size:13px}
+.acoes button:hover{border-color:var(--ink)}
+.barra-cliques{height:5px;border-radius:99px;background:var(--creme-2);margin-top:6px;overflow:hidden}
+.barra-cliques i{display:block;height:100%;background:var(--laranja);border-radius:99px}
+
+/* ── celular ── */
+.fone-col{position:sticky;top:74px}
+.fone{width:300px;margin:0 auto;border:9px solid #1B2233;border-radius:38px;background:#FDF2F8;overflow:hidden;box-shadow:0 18px 42px rgba(0,0,0,.16)}
+.fone .tela-fone{height:560px;overflow-y:auto;padding:20px 16px 28px}
+.fone .tela-fone::-webkit-scrollbar{width:0}
+.avatar{width:76px;height:76px;border-radius:50%;margin:0 auto;background:#ddd;border:3px solid var(--rosa);overflow:hidden;display:grid;place-items:center;font-size:26px}
+.nome-bio{text-align:center;font-family:var(--font-display);font-weight:700;font-size:16px;margin-top:9px}
+.sobre-bio{text-align:center;font-size:11.5px;color:rgba(10,10,10,.7);margin-top:4px;line-height:1.45}
+.btn-bio{background:#fff;border-radius:14px;padding:12px 14px;text-align:center;font-weight:700;font-size:13px;margin-top:10px;
+  box-shadow:0 2px 7px rgba(0,0,0,.07);text-wrap:balance}
+.btn-bio.com-capa{padding:0;overflow:hidden}
+.btn-bio.com-capa .capa{height:96px;background:linear-gradient(120deg,var(--laranja),var(--amarelo));display:grid;place-items:center;font-size:26px}
+.btn-bio.com-capa .rot{padding:11px 12px}
+.bloco-bio{background:#fff;border-radius:14px;padding:12px;margin-top:10px;box-shadow:0 2px 7px rgba(0,0,0,.07)}
+.bloco-bio .tit{font-family:var(--font-display);font-weight:700;font-size:12.5px;margin-bottom:6px}
+.video-fake{border-radius:10px;height:104px;background:#1B2233;display:grid;place-items:center;color:#fff;font-size:24px}
+.galeria{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px}
+.galeria i{display:block;height:52px;border-radius:8px;background:var(--creme-2)}
+.faq-item{border-top:1px solid #eee;padding:8px 0;font-size:11.5px;display:flex;justify-content:space-between;gap:8px}
+.faq-item:first-of-type{border-top:0}
+.contador{display:flex;gap:6px;justify-content:center}
+.contador div{background:var(--creme-2);border-radius:9px;padding:6px 9px;text-align:center;min-width:42px}
+.contador b{display:block;font-family:var(--font-display);font-size:15px}
+.contador span{font-size:8.5px;text-transform:uppercase;letter-spacing:.06em;color:rgba(10,10,10,.55)}
+.campo-fake{height:31px;border-radius:9px;background:#F1F1F1;display:flex;align-items:center;padding:0 9px;font-size:10.5px;color:#9a9a9a;margin-top:6px}
+.consent{display:flex;gap:5px;font-size:9px;color:rgba(10,10,10,.55);margin-top:7px;line-height:1.35}
+.consent i{width:9px;height:9px;border:1px solid currentColor;border-radius:2px;flex:0 0 auto;margin-top:2px}
+.cta-bio{background:var(--rosa);color:#fff;border-radius:11px;text-align:center;font-weight:700;font-size:12px;padding:9px;margin-top:8px}
+
+/* ── analytics ── */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px}
+.kpi{background:var(--creme);border:1.5px solid var(--linha);border-radius:17px;padding:14px}
+.kpi b{display:block;font-family:var(--font-display);font-size:1.7rem;line-height:1.1}
+.kpi span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:rgba(10,10,10,.55);font-weight:700}
+.kpi em{display:block;font-style:normal;font-size:11.5px;margin-top:5px;color:var(--verde);font-weight:700}
+.kpi em.cai{color:var(--laranja)}
+.grafico{display:flex;align-items:flex-end;gap:5px;height:130px;margin-top:16px;padding-top:8px;border-bottom:1.5px solid var(--linha)}
+.grafico i{flex:1;background:var(--rosa);border-radius:6px 6px 0 0;min-height:5px;position:relative}
+.grafico i:nth-child(even){background:var(--lilas)}
+.legenda-g{display:flex;justify-content:space-between;font-size:10.5px;color:rgba(10,10,10,.5);margin-top:6px}
+table.rank{width:100%;border-collapse:collapse;margin-top:14px;font-size:13.5px}
+table.rank th{text-align:left;font-family:var(--font-display);font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;
+  color:rgba(10,10,10,.55);padding:0 0 8px;border-bottom:1.5px solid var(--linha)}
+table.rank td{padding:10px 0;border-bottom:1px solid var(--linha)}
+table.rank td:last-child,table.rank th:last-child{text-align:right}
+.origem{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.origem div{background:var(--creme);border:1.5px solid var(--linha);border-radius:13px;padding:9px 13px;font-size:13px}
+.origem b{font-family:var(--font-display);display:block;font-size:16px}
+
+/* ── pipeline ── */
+.fluxo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px}
+.passo{background:var(--creme);border:1.5px solid var(--linha);border-radius:17px;padding:13px 15px;flex:1;min-width:172px}
+.passo .n{width:23px;height:23px;border-radius:50%;background:var(--ink);color:var(--creme);display:grid;place-items:center;
+  font-family:var(--font-display);font-size:12px;font-weight:700;margin-bottom:7px}
+.passo b{font-family:var(--font-display);font-size:14px;display:block}
+.passo span{font-size:12px;color:rgba(10,10,10,.62)}
+.seta{font-size:19px;color:rgba(10,10,10,.3)}
+@media(max-width:760px){.seta{display:none}}
+.kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:11px;margin-top:16px}
+.col-k{background:var(--creme);border:1.5px solid var(--linha);border-radius:17px;padding:11px}
+.col-k h4{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:rgba(10,10,10,.55)}
+.card-k{background:var(--branco);border:1.5px solid var(--linha);border-radius:13px;padding:10px;margin-top:8px}
+.card-k b{font-family:var(--font-display);font-size:13.5px;display:block}
+.card-k span{font-size:11px;color:rgba(10,10,10,.6)}
+.card-k .fonte{display:inline-block;margin-top:6px;font-size:9.5px;font-weight:700;background:var(--rosa);color:#fff;padding:2px 7px;border-radius:999px}
+
+/* ── comparativo ── */
+table.comp{width:100%;border-collapse:collapse;margin-top:16px;font-size:13.5px;background:var(--branco);
+  border:1.5px solid var(--linha);border-radius:18px;overflow:hidden}
+table.comp th{background:var(--creme-2);font-family:var(--font-display);font-size:12.5px;text-align:left;padding:11px 13px}
+table.comp td{padding:10px 13px;border-top:1px solid var(--linha)}
+table.comp td:not(:first-child){text-align:center;width:88px}
+.sim{color:var(--verde);font-weight:700}
+.nao{color:rgba(10,10,10,.3)}
+.quase{color:var(--amarelo);font-weight:700;text-shadow:0 0 1px rgba(0,0,0,.35)}
+
+/* ── navegador falso / modo Site ── */
+.browser{border:1.5px solid var(--linha);border-radius:18px;overflow:hidden;background:#fff;box-shadow:0 14px 34px rgba(0,0,0,.09);margin-top:14px}
+.browser .barra{display:flex;align-items:center;gap:7px;padding:9px 13px;background:var(--creme-2);border-bottom:1.5px solid var(--linha)}
+.browser .barra i{width:9px;height:9px;border-radius:50%;background:#CFC9B2;display:block}
+.browser .url{flex:1;background:#fff;border-radius:999px;padding:3px 12px;font-size:11px;color:rgba(10,10,10,.55);margin-left:6px}
+.browser .conteudo{max-height:600px;overflow-y:auto}
+.site-nav{display:flex;align-items:center;justify-content:space-between;padding:13px 22px;border-bottom:1px solid #EFEFEF;position:sticky;top:0;background:#fff;z-index:3}
+.site-nav .marca{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:700;font-size:14px}
+.site-nav .marca span.logo{width:26px;height:26px;border-radius:50%;background:var(--rosa);display:grid;place-items:center;font-size:13px}
+.site-nav ul{display:flex;gap:16px;list-style:none;font-size:12.5px;color:rgba(10,10,10,.65)}
+.site-nav .cta{background:var(--rosa);color:#fff;font-size:11.5px;font-weight:700;padding:6px 13px;border-radius:999px}
+@media(max-width:640px){.site-nav ul{display:none}}
+.site-hero{padding:34px 22px;display:grid;grid-template-columns:1.1fr .9fr;gap:22px;align-items:center;background:linear-gradient(160deg,#FFF4FA,#FDFBF5)}
+@media(max-width:640px){.site-hero{grid-template-columns:1fr}}
+.site-hero h2{font-size:1.7rem;line-height:1.1}
+.site-hero .script2{font-family:var(--font-script);color:var(--rosa);font-size:1.5rem;display:block}
+.site-hero p{font-size:13px;color:rgba(10,10,10,.68);margin-top:9px}
+.site-hero .botoes{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.bt{font-family:var(--font-display);font-size:12.5px;font-weight:700;padding:9px 16px;border-radius:999px;background:var(--ink);color:var(--creme)}
+.bt.claro{background:#fff;color:var(--ink);border:1.5px solid var(--ink)}
+.foto-hero{border-radius:20px;height:170px;background:linear-gradient(140deg,var(--rosa),var(--amarelo));display:grid;place-items:center;font-size:44px}
+.site-sec{padding:28px 22px;border-top:1px solid #EFEFEF}
+.site-sec .rot{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--rosa)}
+.site-sec h3{font-size:1.25rem;margin-top:3px}
+.grade-prod{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:13px;margin-top:16px}
+.prod{border:1.5px solid var(--linha);border-radius:16px;overflow:hidden;background:var(--branco)}
+.prod .img{height:104px;display:grid;place-items:center;font-size:30px}
+.prod .txt{padding:11px}
+.prod b{font-family:var(--font-display);font-size:13.5px;display:block}
+.prod .desc{font-size:11.5px;color:rgba(10,10,10,.6);line-height:1.4;margin-top:2px}
+.prod .preco{font-family:var(--font-display);font-weight:700;font-size:15px;margin-top:7px;display:flex;align-items:center;justify-content:space-between}
+.prod .preco span{font-size:10.5px;font-weight:700;background:var(--verde);color:#fff;padding:3px 9px;border-radius:999px}
+.sobre-grid{display:grid;grid-template-columns:150px 1fr;gap:18px;margin-top:14px;align-items:center}
+@media(max-width:640px){.sobre-grid{grid-template-columns:1fr}}
+.sobre-grid .retrato{height:150px;border-radius:18px;background:var(--creme-2);display:grid;place-items:center;font-size:40px}
+.sobre-grid p{font-size:13px;color:rgba(10,10,10,.7)}
+.posts{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:13px;margin-top:16px}
+.post-c{border:1.5px solid var(--linha);border-radius:16px;overflow:hidden;background:var(--branco)}
+.post-c .capa{height:88px;background:var(--creme-2);display:grid;place-items:center;font-size:26px}
+.post-c .txt{padding:11px}
+.post-c .data{font-size:10.5px;color:rgba(10,10,10,.5);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.post-c b{font-family:var(--font-display);font-size:13.5px;display:block;margin-top:3px;line-height:1.25}
+.dep{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:13px;margin-top:16px}
+.dep div{border:1.5px solid var(--linha);border-radius:16px;padding:13px;background:var(--branco);font-size:12.5px;color:rgba(10,10,10,.72)}
+.dep b{display:block;font-family:var(--font-display);font-size:12.5px;margin-top:8px;color:var(--ink)}
+.site-rodape{background:var(--ink);color:var(--creme);padding:22px;font-size:12px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.site-rodape b{font-family:var(--font-display);display:block;margin-bottom:4px;font-size:13px}
+.duas{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+@media(max-width:860px){.duas{grid-template-columns:1fr}}
+.mini-browser{border:1.5px solid var(--linha);border-radius:16px;overflow:hidden;background:#fff}
+.mini-browser .barra{display:flex;gap:5px;padding:7px 11px;background:var(--creme-2);border-bottom:1.5px solid var(--linha);font-size:10.5px;color:rgba(10,10,10,.55)}
+.mini-browser .c{padding:0;max-height:430px;overflow-y:auto}
+.det-capa{height:130px;background:linear-gradient(140deg,var(--laranja),var(--amarelo));display:grid;place-items:center;font-size:40px}
+.det{padding:15px}
+.det .volta{font-size:11.5px;color:rgba(10,10,10,.5)}
+.det h4{font-size:1.15rem;margin-top:6px}
+.det .p{font-family:var(--font-display);font-size:1.35rem;color:var(--verde);margin-top:4px}
+.det p.tx{font-size:12.5px;color:rgba(10,10,10,.7);margin-top:9px;line-height:1.55}
+.det ul{margin:9px 0 0 17px;font-size:12.5px;color:rgba(10,10,10,.7)}
+.det .galeria-min{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:11px}
+.det .galeria-min i{height:52px;border-radius:9px;background:var(--creme-2);display:block}
+.zap{display:block;margin-top:13px;background:var(--verde);color:#fff;text-align:center;font-family:var(--font-display);font-weight:700;
+  font-size:13px;padding:11px;border-radius:13px}
+.artigo{padding:15px}
+.artigo .data{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:700;color:var(--rosa)}
+.artigo h4{font-size:1.15rem;margin-top:4px;line-height:1.2}
+.artigo p{font-size:12.5px;color:rgba(10,10,10,.72);margin-top:9px;line-height:1.6}
+.artigo .cit{border-left:3px solid var(--amarelo);padding-left:11px;margin-top:11px;font-style:italic;font-size:12.5px;color:rgba(10,10,10,.65)}
+.estilos{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+@media(max-width:760px){.estilos{grid-template-columns:1fr}}
+.estilo-c{border:2px solid var(--linha);border-radius:18px;padding:15px;background:var(--creme)}
+.estilo-c.sel{border-color:var(--ink);background:var(--branco)}
+.estilo-c h4{font-size:1rem;display:flex;align-items:center;gap:7px}
+.estilo-c ul{margin:9px 0 0 16px;font-size:12.5px;color:rgba(10,10,10,.68);line-height:1.7}
+
+
+footer{border-top:1px solid var(--linha);padding:22px 0;font-size:12.5px;color:rgba(10,10,10,.55)}
+.selo{position:fixed;right:14px;bottom:14px;background:var(--ink);color:var(--creme);font-family:var(--font-display);
+  font-size:11.5px;padding:7px 13px;border-radius:999px;z-index:60}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <span class="blob b1"></span><span class="blob b2"></span>
+  <div class="wrap">
+    <p class="kicker">Mockup para aprovação</p>
+    <h1>Link na bio v2 <span class="script">a página de bio e o site, no mesmo lugar</span></h1>
+    <p>Engenharia reversa do que Linktree, Beacons e Stan Store entregam em 2026, adaptado pro Cria. Nada aqui está programado ainda: é pra você olhar, riscar e mandar mudar.</p>
+  </div>
+</header>
+
+<nav class="abas">
+  <div class="wrap" id="abas"></div>
+</nav>
+
+<main class="wrap">
+
+<!-- ══════════ 1. EDITOR ══════════ -->
+<section class="tela on" data-tela="editor">
+  <div class="intro">
+    <h2>O editor vira montagem de blocos</h2>
+    <p>Hoje a página só aceita botão de link. A partir daqui cada pedaço é um bloco que você arrasta, liga e desliga. É o que separa a nossa página das deles.</p>
+  </div>
+
+  <div class="editor">
+    <div>
+      <div class="card">
+        <h3>Estilo da página</h3>
+        <p class="sub">Trocar não apaga nada: cada estilo guarda a própria montagem, igual hoje.</p>
+        <div style="display:flex;gap:8px;margin-top:11px;flex-wrap:wrap">
+          <span class="pill rosa" style="font-size:13px;padding:7px 16px">📱 Clássico</span>
+          <span class="pill" style="font-size:13px;padding:7px 16px">🖥️ Site</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Adicionar bloco <span class="pill novo">novo</span></h3>
+        <p class="sub">Clique pra jogar no fim da página. Depois é só arrastar pra ordenar.</p>
+        <div class="paleta">
+          <button class="bloco-op"><span class="ic">🔗</span><b>Link</b><span>Botão simples, com ou sem capa</span></button>
+          <button class="bloco-op"><span class="ic">▶️</span><b>Vídeo</b><span>YouTube, TikTok ou Reels tocando na página</span></button>
+          <button class="bloco-op"><span class="ic">🖼️</span><b>Galeria</b><span>Fotos do trabalho, em grade</span></button>
+          <button class="bloco-op"><span class="ic">✍️</span><b>Texto</b><span>Um parágrafo livre entre os botões</span></button>
+          <button class="bloco-op"><span class="ic">❓</span><b>Perguntas frequentes</b><span>Abre e fecha, tira dúvida antes do contato</span></button>
+          <button class="bloco-op"><span class="ic">⏳</span><b>Contagem regressiva</b><span>Turma, promoção, evento</span></button>
+          <button class="bloco-op"><span class="ic">📩</span><b>Captura de contato</b><span>Nome, e-mail e telefone</span></button>
+          <button class="bloco-op"><span class="ic">🔒</span><b>Material com senha de e-mail</b><span>Só libera depois que a pessoa deixa o contato</span></button>
+          <button class="bloco-op"><span class="ic">📍</span><b>Endereço e mapa</b><span>Pra quem atende presencial</span></button>
+          <button class="bloco-op"><span class="ic">💬</span><b>WhatsApp com mensagem pronta</b><span>Abre a conversa já escrita</span></button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>A página de Anna Júlia</h3>
+        <p class="sub">Arraste pra ordenar. O número da direita é quanto cada bloco foi clicado nos últimos 30 dias.</p>
+
+        <div class="linha-bloco">
+          <span class="grip">⠿</span>
+          <div class="mini">💬</div>
+          <div class="corpo">
+            <b>Vamos conversar? Chama aqui!</b>
+            <div class="meta">
+              <span class="tagzinha on">no ar</span>
+              <span>WhatsApp com mensagem pronta</span>
+            </div>
+            <div class="barra-cliques"><i style="width:78%"></i></div>
+          </div>
+          <div class="acoes"><button title="Editar">✎</button><button title="Duplicar">⧉</button><button title="Excluir">🗑</button></div>
+        </div>
+
+        <div class="linha-bloco">
+          <span class="grip">⠿</span>
+          <div class="mini" style="background:linear-gradient(120deg,var(--laranja),var(--amarelo))">🍝</div>
+          <div class="corpo">
+            <b>Cardápio de outono</b>
+            <div class="meta">
+              <span class="tagzinha on">no ar</span>
+              <span class="tagzinha">com capa</span>
+              <span>Link</span>
+            </div>
+            <div class="barra-cliques"><i style="width:52%"></i></div>
+          </div>
+          <div class="acoes"><button title="Editar">✎</button><button title="Duplicar">⧉</button><button title="Excluir">🗑</button></div>
+        </div>
+
+        <div class="linha-bloco">
+          <span class="grip">⠿</span>
+          <div class="mini">▶️</div>
+          <div class="corpo">
+            <b>Bastidores do restaurante</b>
+            <div class="meta"><span class="tagzinha on">no ar</span><span>Vídeo do Instagram</span></div>
+            <div class="barra-cliques"><i style="width:34%"></i></div>
+          </div>
+          <div class="acoes"><button title="Editar">✎</button><button title="Duplicar">⧉</button><button title="Excluir">🗑</button></div>
+        </div>
+
+        <div class="linha-bloco">
+          <span class="grip">⠿</span>
+          <div class="mini">⏳</div>
+          <div class="corpo">
+            <b>Turma de setembro fecha em</b>
+            <div class="meta">
+              <span class="tagzinha agendado">some dia 12/09</span>
+              <span>Contagem regressiva</span>
+            </div>
+            <div class="barra-cliques"><i style="width:19%"></i></div>
+          </div>
+          <div class="acoes"><button title="Editar">✎</button><button title="Duplicar">⧉</button><button title="Excluir">🗑</button></div>
+        </div>
+
+        <div class="linha-bloco">
+          <span class="grip">⠿</span>
+          <div class="mini">❓</div>
+          <div class="corpo">
+            <b>Perguntas frequentes</b>
+            <div class="meta"><span class="tagzinha on">no ar</span><span>4 perguntas</span></div>
+            <div class="barra-cliques"><i style="width:12%"></i></div>
+          </div>
+          <div class="acoes"><button title="Editar">✎</button><button title="Duplicar">⧉</button><button title="Excluir">🗑</button></div>
+        </div>
+
+        <div class="linha-bloco" style="opacity:.6">
+          <span class="grip">⠿</span>
+          <div class="mini">📩</div>
+          <div class="corpo">
+            <b>Deixe seu contato e eu te chamo</b>
+            <div class="meta"><span class="tagzinha off">desligado</span><span>Captura de contato</span></div>
+          </div>
+          <div class="acoes"><button title="Editar">✎</button><button title="Duplicar">⧉</button><button title="Excluir">🗑</button></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Aparência</h3>
+        <p class="sub">Botão “Puxar do brandbook” monta cor, fonte e foto do cliente em um clique. É a vantagem que só nós temos: os dados já estão no Cria.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <span class="pill rosa">✨ Puxar do brandbook</span>
+          <span class="pill">Tema: Creme</span>
+          <span class="pill">Botão: arredondado</span>
+          <span class="pill">Fonte: Baloo 2</span>
+          <span class="pill novo">QR Code da página</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="fone-col">
+      <div class="card" style="padding:14px">
+        <p class="sub" style="text-align:center;margin:0 0 10px">Prévia ao vivo</p>
+        <div class="fone">
+          <div class="tela-fone">
+            <div class="avatar">👩</div>
+            <div class="nome-bio">Anna Júlia Spanholli</div>
+            <div class="sobre-bio">Atuo ao lado de restaurantes, hotéis e negócios gastronômicos, criando soluções personalizadas para tornar cada operação mais lucrativa.</div>
+
+            <div class="btn-bio">Vamos conversar?<br>Chama aqui!</div>
+
+            <div class="btn-bio com-capa">
+              <div class="capa">🍝</div>
+              <div class="rot">Cardápio de outono</div>
+            </div>
+
+            <div class="bloco-bio">
+              <div class="tit">Bastidores do restaurante</div>
+              <div class="video-fake">▶</div>
+            </div>
+
+            <div class="bloco-bio">
+              <div class="tit" style="text-align:center">Turma de setembro fecha em</div>
+              <div class="contador">
+                <div><b>04</b><span>dias</span></div>
+                <div><b>11</b><span>horas</span></div>
+                <div><b>39</b><span>min</span></div>
+              </div>
+            </div>
+
+            <div class="bloco-bio">
+              <div class="tit">Perguntas frequentes</div>
+              <div class="faq-item"><span>Atende fora de Joinville?</span><span>+</span></div>
+              <div class="faq-item"><span>Qual o prazo do projeto?</span><span>+</span></div>
+              <div class="faq-item"><span>Como funciona o pagamento?</span><span>+</span></div>
+            </div>
+
+            <div class="bloco-bio">
+              <div class="tit" style="text-align:center">Deixe seu contato e eu te chamo</div>
+              <div class="campo-fake">Seu nome</div>
+              <div class="campo-fake">Seu e-mail</div>
+              <div class="campo-fake">(00) 00000-0000</div>
+              <div class="consent"><i></i><span>Ao enviar, você autoriza o uso dos seus dados para contato e para fins de marketing.</span></div>
+              <div class="cta-bio">Enviar</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nota"><b>Decidido:</b> ficam os dois estilos. O Clássico é este, e o Vitrine vira <b>Site</b>, com páginas internas e blog. Veja na aba “O modo Site”.</div>
+</section>
+
+<!-- ══════════ 2. MODO SITE ══════════ -->
+<section class="tela" data-tela="site">
+  <div class="intro">
+    <h2>Dois estilos, um editor só</h2>
+    <p>O mesmo conteúdo, exibido de dois jeitos. Você troca no botão e não perde nada: cada estilo guarda a sua própria montagem.</p>
+  </div>
+
+  <div class="estilos">
+    <div class="estilo-c">
+      <h4>📱 Clássico</h4>
+      <p class="sub">Coluna estreita, um toque e sai. É o formato do Linktree e do Beacons.</p>
+      <ul>
+        <li>Foto, nome e uma linha de apresentação</li>
+        <li>Botões empilhados, com ou sem capa</li>
+        <li>Vídeo, FAQ e captura de contato entre os botões</li>
+        <li>Página única, sem menu e sem rolagem longa</li>
+      </ul>
+      <p class="sub" style="margin-top:10px"><b>Pra quem:</b> o cliente que só precisa direcionar o seguidor pro WhatsApp, pro cardápio ou pro agendamento.</p>
+    </div>
+    <div class="estilo-c sel">
+      <h4>🖥️ Site <span class="pill novo">novo</span></h4>
+      <p class="sub">Uma página de verdade, com menu, seções e páginas internas.</p>
+      <ul>
+        <li>Capa com título, frase e dois botões</li>
+        <li>Sobre com foto e texto longo</li>
+        <li>Produtos e serviços com preço, <b>cada um com página própria</b></li>
+        <li>Blog: o cliente escreve e publica</li>
+        <li>Depoimentos, contato e rodapé</li>
+      </ul>
+      <p class="sub" style="margin-top:10px"><b>Pra quem:</b> o cliente que precisa contar a história, explicar o que vende e ser achado no Google.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h3>A casa do Site</h3>
+    <p class="sub">criasocialclub.com.br/bio/annaspanholi visto no computador. No celular as mesmas seções empilham.</p>
+    <div class="browser">
+      <div class="barra"><i></i><i></i><i></i><span class="url">criasocialclub.com.br/bio/annaspanholi</span></div>
+      <div class="conteudo">
+
+        <div class="site-nav">
+          <div class="marca"><span class="logo">🍽️</span> Anna Júlia</div>
+          <ul><li>Sobre</li><li>Serviços</li><li>Blog</li><li>Contato</li></ul>
+          <span class="cta">Fale comigo</span>
+        </div>
+
+        <div class="site-hero">
+          <div>
+            <h2>Sua operação servindo melhor<span class="script2">e lucrando mais</span></h2>
+            <p>Consultoria para restaurantes, hotéis e negócios gastronômicos. Cardápio, custo, equipe e experiência do cliente, olhados juntos.</p>
+            <div class="botoes"><span class="bt">Quero uma conversa</span><span class="bt claro">Ver serviços</span></div>
+          </div>
+          <div class="foto-hero">👩‍🍳</div>
+        </div>
+
+        <div class="site-sec">
+          <p class="rot">Quem sou</p>
+          <h3>12 anos dentro de cozinha, não em teoria</h3>
+          <div class="sobre-grid">
+            <div class="retrato">👩</div>
+            <p>Comecei como auxiliar e passei por operação, compras e gestão antes de virar consultora. Hoje ajudo donos de restaurante a enxergar o que o dia a dia esconde: a margem que some no desperdício, o cardápio que trabalha contra a cozinha, a equipe que não sabe o que vender.<br><br>Atendo presencial em Santa Catarina e online no Brasil inteiro.</p>
+          </div>
+        </div>
+
+        <div class="site-sec">
+          <p class="rot">O que eu faço</p>
+          <h3>Serviços</h3>
+          <div class="grade-prod">
+            <div class="prod">
+              <div class="img" style="background:linear-gradient(140deg,var(--laranja),var(--amarelo))">📋</div>
+              <div class="txt">
+                <b>Diagnóstico de operação</b>
+                <p class="desc">Dois dias na sua casa, relatório com o que muda primeiro.</p>
+                <div class="preco">R$ 2.400 <span>ver mais</span></div>
+              </div>
+            </div>
+            <div class="prod">
+              <div class="img" style="background:linear-gradient(140deg,var(--rosa),#FFD5E9)">🍝</div>
+              <div class="txt">
+                <b>Engenharia de cardápio</b>
+                <p class="desc">Reorganiza o cardápio pela margem real de cada prato.</p>
+                <div class="preco">R$ 3.900 <span>ver mais</span></div>
+              </div>
+            </div>
+            <div class="prod">
+              <div class="img" style="background:linear-gradient(140deg,var(--verde),#9BE3BE)">👥</div>
+              <div class="txt">
+                <b>Treinamento de salão</b>
+                <p class="desc">Sua equipe sabendo o que sugerir e quando.</p>
+                <div class="preco">Sob consulta <span>ver mais</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="site-sec">
+          <p class="rot">Escrevo por aqui</p>
+          <h3>Blog</h3>
+          <div class="posts">
+            <div class="post-c"><div class="capa" style="background:linear-gradient(140deg,#FFE9F4,#FFF6D6)">📉</div>
+              <div class="txt"><p class="data">18 de agosto</p><b>O prato mais vendido pode ser o que te dá prejuízo</b></div></div>
+            <div class="post-c"><div class="capa" style="background:linear-gradient(140deg,#E6F6EE,#FFF6D6)">🧾</div>
+              <div class="txt"><p class="data">04 de agosto</p><b>Como calcular o custo de um prato sem planilha gigante</b></div></div>
+            <div class="post-c"><div class="capa" style="background:linear-gradient(140deg,#EDEBFF,#FFEFF7)">🕐</div>
+              <div class="txt"><p class="data">21 de julho</p><b>A hora morta do seu restaurante vale dinheiro</b></div></div>
+          </div>
+        </div>
+
+        <div class="site-sec">
+          <p class="rot">Quem já passou por aqui</p>
+          <h3>Depoimentos</h3>
+          <div class="dep">
+            <div>“Em dois meses a gente cortou 14% do desperdício sem tirar nada do cardápio.”<b>Marcos, Cantina do Porto</b></div>
+            <div>“Ela mexeu no cardápio e o ticket médio subiu sozinho. Nada de aumentar preço.”<b>Rita, Bistrô da Vila</b></div>
+          </div>
+        </div>
+
+        <div class="site-sec">
+          <p class="rot">Bora conversar</p>
+          <h3>Me conta do seu negócio</h3>
+          <div style="max-width:420px;margin-top:12px">
+            <div class="campo-fake" style="height:36px">Seu nome</div>
+            <div class="campo-fake" style="height:36px">Seu e-mail</div>
+            <div class="campo-fake" style="height:36px">(00) 00000-0000</div>
+            <div class="consent"><i></i><span>Ao enviar, você autoriza o uso dos seus dados para contato e para fins de marketing.</span></div>
+            <div class="cta-bio" style="border-radius:13px;padding:11px">Enviar</div>
+          </div>
+        </div>
+
+        <div class="site-rodape">
+          <div><b>Anna Júlia Spanholli</b>Consultoria gastronômica · Joinville, SC</div>
+          <div><b>Fale comigo</b>(47) 99812-4410 · anna@exemplo.com</div>
+          <div><b>Redes</b>Instagram · LinkedIn</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>As páginas internas <span class="pill novo">é isso que faz virar site</span></h3>
+    <p class="sub">Cada serviço e cada post do blog tem endereço próprio. É o que permite o cliente mandar o link de UM serviço no WhatsApp, e é o que faz o Google achar a página.</p>
+    <div class="duas">
+      <div class="mini-browser">
+        <div class="barra">criasocialclub.com.br/bio/annaspanholi/servico/engenharia-de-cardapio</div>
+        <div class="c">
+          <div class="det-capa">🍝</div>
+          <div class="det">
+            <p class="volta">← Voltar para serviços</p>
+            <h4>Engenharia de cardápio</h4>
+            <p class="p">R$ 3.900</p>
+            <p class="tx">Reorganizo seu cardápio pela margem real de cada prato, não pelo que vende mais. O resultado costuma ser o mesmo faturamento com uma cozinha mais leve e uma margem maior.</p>
+            <ul>
+              <li>Levantamento de ficha técnica</li>
+              <li>Custo real prato a prato</li>
+              <li>Reposicionamento e novo desenho</li>
+              <li>Acompanhamento por 30 dias</li>
+            </ul>
+            <div class="galeria-min"><i></i><i></i><i></i></div>
+            <span class="zap">💬 Quero saber mais deste serviço</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mini-browser">
+        <div class="barra">criasocialclub.com.br/bio/annaspanholi/blog/prato-mais-vendido-prejuizo</div>
+        <div class="c">
+          <div class="det-capa" style="background:linear-gradient(140deg,#FFE9F4,#FFF6D6);font-size:36px">📉</div>
+          <div class="artigo">
+            <p class="data">18 de agosto de 2026</p>
+            <h4>O prato mais vendido pode ser o que te dá prejuízo</h4>
+            <p>Todo dono de restaurante sabe de cor qual é o carro-chefe da casa. Poucos sabem quanto sobra dele depois de tirar insumo, tempo de cozinha e desperdício.</p>
+            <div class="cit">“A gente vendia 60 por noite. Descobrimos que cada um deixava R$ 1,80.”</div>
+            <p>Nas casas que atendo, é comum o prato campeão estar entre os três piores em margem. Ele vende porque está bem posicionado no cardápio, não porque é o melhor negócio.</p>
+            <span class="zap" style="background:var(--rosa)">💬 Quer que eu olhe o seu cardápio?</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Blocos que só existem no Site</h3>
+    <div class="paleta">
+      <button class="bloco-op"><span class="ic">🎬</span><b>Capa</b><span>Título, frase e dois botões no topo</span></button>
+      <button class="bloco-op"><span class="ic">👤</span><b>Sobre</b><span>Foto ao lado de um texto longo</span></button>
+      <button class="bloco-op"><span class="ic">🛍️</span><b>Produtos e serviços</b><span>Grade com preço, cada item com página própria</span></button>
+      <button class="bloco-op"><span class="ic">✍️</span><b>Blog</b><span>O cliente escreve e publica quando quiser</span></button>
+      <button class="bloco-op"><span class="ic">💬</span><b>Depoimentos</b><span>O que os clientes dele falam</span></button>
+      <button class="bloco-op"><span class="ic">🤝</span><b>Faixa de logos</b><span>Marcas atendidas ou parceiras</span></button>
+      <button class="bloco-op"><span class="ic">📍</span><b>Contato e rodapé</b><span>Endereço, telefone e redes</span></button>
+      <button class="bloco-op"><span class="ic">🧭</span><b>Menu do topo</b><span>Leva pras seções e pras páginas internas</span></button>
+    </div>
+    <div class="nota"><b>O que reaproveita do Cria:</b> a capa, as cores e a fonte vêm do brandbook. O texto do "Sobre" pode nascer do briefing que o cliente já respondeu no link de cadastro. E o post do blog pode sair de uma ideia que já está no banco de ideias dele.</div>
+  </div>
+
+  <div class="card">
+    <h3>O que o Site precisa que o Clássico não precisa</h3>
+    <p class="sub">Coisas que só aparecem quando a página deixa de ser um cartão e vira um endereço de verdade.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <span class="pill">Título e descrição pro Google</span>
+      <span class="pill">Imagem de compartilhamento no WhatsApp</span>
+      <span class="pill">Endereço próprio por página interna</span>
+      <span class="pill">Mapa do site pro buscador</span>
+      <span class="pill novo">domínio próprio: fase 3</span>
+    </div>
+    <div class="nota"><b>Vale saber:</b> o Linktree não oferece domínio próprio em nenhum plano, nem no mais caro. Se a gente entregar isso, vira um argumento de venda sozinho. Mas envolve certificado e apontamento de DNS, então deixei pra fase 3.</div>
+  </div>
+</section>
+
+<!-- ══════════ 3. CONVERSÃO ══════════ -->
+<section class="tela" data-tela="conversao">
+  <div class="intro">
+    <h2>Os três detalhes que fazem clicar mais</h2>
+    <p>Nas medições dos concorrentes, esses três mudam número, não só aparência.</p>
+  </div>
+
+  <div class="card">
+    <h3>1. Capa no link <span class="pill novo">converte mais</span></h3>
+    <p class="sub">Link com imagem é clicado mais que link só de texto. Hoje o campo existe, mas está escondido no fim do formulário. Passa a ser o segundo passo de todo link novo, com corte automático e sugestão puxada do próprio site.</p>
+    <div style="display:flex;gap:16px;margin-top:14px;flex-wrap:wrap">
+      <div style="width:190px">
+        <p style="font-size:11.5px;font-weight:700;color:rgba(10,10,10,.5);margin-bottom:6px">SEM CAPA</p>
+        <div style="background:#fff;border-radius:14px;padding:13px;text-align:center;font-weight:700;font-size:13px;border:1.5px solid var(--linha)">Cardápio de outono</div>
+      </div>
+      <div style="width:190px">
+        <p style="font-size:11.5px;font-weight:700;color:var(--verde);margin-bottom:6px">COM CAPA</p>
+        <div style="background:#fff;border-radius:14px;overflow:hidden;border:1.5px solid var(--linha)">
+          <div style="height:100px;background:linear-gradient(120deg,var(--laranja),var(--amarelo));display:grid;place-items:center;font-size:30px">🍝</div>
+          <div style="padding:12px;text-align:center;font-weight:700;font-size:13px">Cardápio de outono</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>2. Link com data de entrada e saída</h3>
+    <p class="sub">Você monta a promoção antes e esquece. O bloco aparece sozinho no dia marcado e some no fim, sem ninguém precisar lembrar de tirar.</p>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:12px">
+      <span class="pill">Sempre visível</span>
+      <span class="pill" style="background:var(--lilas);color:#fff">A partir de 01/09</span>
+      <span class="pill" style="background:var(--lilas);color:#fff">Até 12/09 às 23h59</span>
+    </div>
+    <div class="nota" style="margin-top:14px">Serve também pro caso da Gabriela: cliente que faz campanha sazonal e sempre esquece de tirar o link velho do ar.</div>
+  </div>
+
+  <div class="card">
+    <h3>3. QR Code da página</h3>
+    <p class="sub">Um botão que gera o QR com a cor do cliente pra imprimir em cardápio, vitrine, embalagem e crachá de evento. O que vier por ali aparece separado no relatório, então dá pra provar que o material impresso funcionou.</p>
+    <div style="display:flex;align-items:center;gap:16px;margin-top:14px;flex-wrap:wrap">
+      <div style="width:112px;height:112px;border-radius:15px;background:var(--ink);display:grid;place-items:center;color:var(--creme);font-size:38px">▦</div>
+      <div style="font-size:13.5px;color:rgba(10,10,10,.7);max-width:340px">
+        Baixa em PNG e em PDF pronto pra gráfica.<br>
+        Quem escaneia entra com a marcação <b>origem: qr</b>, e isso vira uma linha no relatório do cliente.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 3. LEAD VIRA CARD ══════════ -->
+<section class="tela" data-tela="lead">
+  <div class="intro">
+    <h2>O lead entra no pipeline sozinho</h2>
+    <p>Isso nenhum concorrente faz, porque nenhum deles tem o CRM do outro lado. No Linktree o lead vira uma linha numa planilha que alguém precisa lembrar de baixar.</p>
+  </div>
+
+  <div class="card">
+    <h3>O caminho</h3>
+    <div class="fluxo">
+      <div class="passo"><div class="n">1</div><b>Visitante preenche</b><span>Nome, e-mail e telefone na página do cliente</span></div>
+      <span class="seta">→</span>
+      <div class="passo"><div class="n">2</div><b>Vira lead no CRM</b><span>Na coluna Novo, com a origem marcada</span></div>
+      <span class="seta">→</span>
+      <div class="passo"><div class="n">3</div><b>Você é avisada</b><span>Notificação e push, com link direto pro card</span></div>
+      <span class="seta">→</span>
+      <div class="passo"><div class="n">4</div><b>Entra no relatório</b><span>“12 contatos vieram do link na bio este mês”</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Como fica no pipeline</h3>
+    <p class="sub">Mesmo quadro que já existe. O card só nasce com a etiqueta de onde veio.</p>
+    <div class="kanban">
+      <div class="col-k">
+        <h4>Novo · 3</h4>
+        <div class="card-k"><b>Marina Klein</b><span>marina@…  ·  (47) 99812-4410</span><span class="fonte">link na bio</span></div>
+        <div class="card-k"><b>Rodrigo Sanches</b><span>rodrigo@…</span><span class="fonte">link na bio</span></div>
+        <div class="card-k"><b>Bistrô da Vila</b><span>(47) 99640-2231</span><span class="fonte" style="background:var(--lilas)">qr do cardápio</span></div>
+      </div>
+      <div class="col-k"><h4>Conversando · 1</h4><div class="card-k"><b>Hotel Costa Verde</b><span>reunião quinta 14h</span></div></div>
+      <div class="col-k"><h4>Proposta · 0</h4></div>
+      <div class="col-k"><h4>Fechado · 2</h4></div>
+    </div>
+    <div class="nota"><b>Decidido:</b> vai por chave. Dentro do bloco de captura existe um interruptor <b>“mandar pro pipeline”</b>. Ligado no formulário de orçamento, desligado no material gratuito, pra o quadro não encher de quem só queria baixar um PDF.</div>
+  </div>
+</section>
+
+<!-- ══════════ 4. RELATÓRIO ══════════ -->
+<section class="tela" data-tela="numeros">
+  <div class="intro">
+    <h2>Números que servem pra reunião de cliente</h2>
+    <p>Hoje mostramos três totais que nunca mudam de assunto. O que a social mídia precisa é conseguir dizer o que funcionou e o que tirar do ar.</p>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <h3>Últimos 30 dias</h3>
+      <div style="display:flex;gap:6px">
+        <span class="pill">7 dias</span><span class="pill rosa">30 dias</span><span class="pill">90 dias</span>
+      </div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><span>Visitas</span><b>1.284</b><em>+18% vs. mês anterior</em></div>
+      <div class="kpi"><span>Cliques</span><b>736</b><em>+24%</em></div>
+      <div class="kpi"><span>Conversão</span><b>57%</b><em>+3 pontos</em></div>
+      <div class="kpi"><span>Contatos capturados</span><b>12</b><em class="cai">-2 vs. mês anterior</em></div>
+    </div>
+
+    <div class="grafico">
+      <i style="height:32%"></i><i style="height:48%"></i><i style="height:40%"></i><i style="height:66%"></i>
+      <i style="height:58%"></i><i style="height:82%"></i><i style="height:71%"></i><i style="height:94%"></i>
+      <i style="height:63%"></i><i style="height:77%"></i><i style="height:52%"></i><i style="height:88%"></i>
+    </div>
+    <div class="legenda-g"><span>28 de julho</span><span>visitas por dia</span><span>25 de agosto</span></div>
+  </div>
+
+  <div class="card">
+    <h3>Qual bloco puxa o clique</h3>
+    <table class="rank">
+      <tr><th>Bloco</th><th>Cliques</th><th>Do total</th></tr>
+      <tr><td>💬 Vamos conversar? Chama aqui!</td><td>418</td><td>57%</td></tr>
+      <tr><td>🍝 Cardápio de outono</td><td>203</td><td>28%</td></tr>
+      <tr><td>▶️ Bastidores do restaurante</td><td>81</td><td>11%</td></tr>
+      <tr><td>❓ Perguntas frequentes</td><td>34</td><td>4%</td></tr>
+    </table>
+    <div class="nota">Com isso você chega na reunião e diz: “o cardápio puxou 203 cliques, vamos subir ele pro topo e aposentar o bloco de FAQ”. Hoje não dá pra dizer isso.</div>
+  </div>
+
+  <div class="card">
+    <h3>De onde veio a visita</h3>
+    <div class="origem">
+      <div><b>71%</b>Instagram</div>
+      <div><b>14%</b>QR impresso</div>
+      <div><b>9%</b>WhatsApp</div>
+      <div><b>6%</b>Direto</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 5. COMPARATIVO ══════════ -->
+<section class="tela" data-tela="comparativo">
+  <div class="intro">
+    <h2>Onde a gente fica depois disso</h2>
+    <p>Levantei em agosto de 2026. Não é pra empatar em tudo: é pra não perder no que o cliente olha e ganhar no que só nós conseguimos fazer.</p>
+  </div>
+
+  <table class="comp">
+    <tr><th>Recurso</th><th>Cria hoje</th><th>Cria v2</th><th>Linktree</th><th>Beacons</th></tr>
+    <tr><td>Links ilimitados e temas</td><td class="sim">✓</td><td class="sim">✓</td><td class="sim">✓</td><td class="sim">✓</td></tr>
+    <tr><td>Blocos de conteúdo (vídeo, FAQ, galeria)</td><td class="nao">—</td><td class="sim">✓</td><td class="sim">✓</td><td class="sim">✓</td></tr>
+    <tr><td>Capa no link</td><td class="quase">parcial</td><td class="sim">✓</td><td class="sim">✓</td><td class="sim">✓</td></tr>
+    <tr><td>Link agendado</td><td class="nao">—</td><td class="sim">✓</td><td class="sim">✓</td><td class="sim">✓</td></tr>
+    <tr><td>Captura de contato</td><td class="sim">✓</td><td class="sim">✓</td><td class="sim">✓</td><td class="sim">✓</td></tr>
+    <tr><td>Material liberado por e-mail</td><td class="nao">—</td><td class="sim">✓</td><td class="sim">✓</td><td class="sim">✓</td></tr>
+    <tr><td>Analytics por link e por período</td><td class="nao">—</td><td class="sim">✓</td><td class="sim">✓</td><td class="sim">✓</td></tr>
+    <tr><td>QR Code da página</td><td class="nao">—</td><td class="sim">✓</td><td class="sim">✓</td><td class="sim">✓</td></tr>
+    <tr><td>Venda de produto digital</td><td class="nao">—</td><td class="nao">fase 3</td><td class="sim">✓</td><td class="sim">✓</td></tr>
+    <tr><td>Página interna por produto ou serviço</td><td class="nao">—</td><td class="sim">✓</td><td class="nao">—</td><td class="quase">parcial</td></tr>
+    <tr><td>Blog dentro da página</td><td class="nao">—</td><td class="sim">✓</td><td class="nao">—</td><td class="nao">—</td></tr>
+    <tr><td>Domínio próprio</td><td class="nao">—</td><td class="nao">fase 3</td><td class="nao">nem no plano caro</td><td class="sim">✓</td></tr>
+    <tr><td><b>Uma página por cliente da agência</b></td><td class="sim">✓</td><td class="sim">✓</td><td class="nao">—</td><td class="nao">—</td></tr>
+    <tr><td><b>Aparência puxada do brandbook</b></td><td class="nao">—</td><td class="sim">✓</td><td class="nao">—</td><td class="nao">—</td></tr>
+    <tr><td><b>Lead cai no pipeline do CRM</b></td><td class="nao">—</td><td class="sim">✓</td><td class="nao">—</td><td class="nao">—</td></tr>
+    <tr><td><b>Entra no relatório white-label do mês</b></td><td class="nao">—</td><td class="sim">✓</td><td class="nao">—</td><td class="nao">—</td></tr>
+  </table>
+
+  <div class="nota" style="margin-top:18px"><b>O argumento de venda que sai daqui:</b> a social mídia não precisa mais pagar Linktree Pro por cliente. A página já vem junto, com a cara da marca dele, e o contato capturado cai no lugar onde ela trabalha todo dia.</div>
+</section>
+
+<!-- ══════════ 6. ORDEM ══════════ -->
+<section class="tela" data-tela="ordem">
+  <div class="intro">
+    <h2>Em que ordem eu construiria</h2>
+    <p>Da que muda mais resultado com menos risco, pra maior. Cada fase sobe funcionando sozinha, sem depender da seguinte.</p>
+  </div>
+
+  <div class="card">
+    <h3>Fase 1 · A base de blocos</h3>
+    <p class="sub">Trocar a lista de botões por blocos, começando com os cinco que cobrem quase tudo: link com capa, vídeo, texto, FAQ e captura de contato. Junto vai a capa em destaque e o link agendado.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <span class="pill">1 tabela nova</span><span class="pill">reescreve o editor</span><span class="pill">a página pública já sabe renderizar</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Fase 2 · Os números</h3>
+    <p class="sub">Guardar cada clique com data e origem em vez de só somar num contador. Daí saem o gráfico por dia, o ranking por bloco e a origem da visita, e o mesmo dado entra no relatório do cliente.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <span class="pill">1 tabela de eventos</span><span class="pill">cuidado com volume</span><span class="pill">reaproveita o relatório</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Fase 3 · A amarração com o Cria</h3>
+    <p class="sub">Lead virando card no pipeline, aparência puxada do brandbook, QR Code e material liberado por e-mail. É a parte que nenhum concorrente consegue copiar, porque depende do resto do Cria existir.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <span class="pill">encosta no CRM</span><span class="pill">encosta no brandbook</span><span class="pill">vira argumento de venda</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Fase 2b · O modo Site</h3>
+    <p class="sub">Capa, sobre, grade de produtos e serviços com preço, blog, depoimentos e rodapé. Junto vêm as páginas internas com endereço próprio e o básico de Google (título, descrição e imagem de compartilhamento).</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <span class="pill">reaproveita o motor de blocos</span><span class="pill">rotas novas</span><span class="pill">o Vitrine de hoje migra pra cá</span>
+    </div>
+  </div>
+
+  <div class="nota"><b>Fora do escopo por enquanto:</b> venda de produto digital, agendamento pago e domínio próprio. Isso é território de Stan Store, mexe com pagamento e cobrança, e merece uma conversa separada.</div>
+</section>
+
+</main>
+
+<footer class="wrap">Mockup estático para aprovação. Nenhum botão aqui está ligado no sistema.</footer>
+<div class="selo">mockup · não é o sistema</div>
+
+<script>
+const TELAS = [
+  ["editor","O editor"],
+  ["site","O modo Site"],
+  ["conversao","Conversão"],
+  ["lead","Lead no pipeline"],
+  ["numeros","Números"],
+  ["comparativo","Nós x eles"],
+  ["ordem","Ordem de construção"],
+];
+const nav = document.getElementById("abas");
+TELAS.forEach(([id,rot],i)=>{
+  const b=document.createElement("button");
+  b.textContent=rot; b.dataset.alvo=id; if(i===0) b.classList.add("on");
+  b.onclick=()=>{
+    document.querySelectorAll("nav.abas button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");
+    document.querySelectorAll("section.tela").forEach(s=>s.classList.toggle("on", s.dataset.tela===id));
+    window.scrollTo({top:0,behavior:"smooth"});
+  };
+  nav.appendChild(b);
+});
+</script>
+</body>
+</html>

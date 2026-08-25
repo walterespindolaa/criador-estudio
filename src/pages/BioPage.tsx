@@ -8,6 +8,7 @@ import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { renderRichText } from "@/lib/richText";
 import { cn } from "@/lib/utils";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
+import { BlocoPublico } from "@/components/bio/BlocoPublico";
 
 type BgType = "color" | "gradient" | "image";
 type BgImageSize = "cover" | "contain";
@@ -351,6 +352,9 @@ function backgroundStyle(settings: BioSettings): React.CSSProperties {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sbRpc = (fn: string, args: Record<string, unknown>) => (supabase as any).rpc(fn, args);
 
+
+type BlocoLite = { id: string; kind: string; data: Record<string, unknown>; position: number };
+
 const BioPage = () => {
   const { slug } = useParams<{ slug: string }>();
   useForceLightTheme();
@@ -361,6 +365,7 @@ const BioPage = () => {
   // onde vêm os leads e como a visita é contada.
   const [ehDaAgencia, setDaAgencia] = useState(false);
   const [links, setLinks] = useState<BioLinkLite[]>([]);
+  const [blocos, setBlocos] = useState<BlocoLite[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -393,7 +398,14 @@ const BioPage = () => {
         ? await sbRpc("get_public_bio_page_links_by_slug", { _slug: slug })
         : await supabase.rpc("get_public_bio_links_by_slug", { _slug: slug });
 
+      // BLOCOS: o formato novo da página. Enquanto a migration não roda em
+      // produção, a RPC não existe e a lista volta vazia, então a página cai
+      // sozinha no formato antigo de links. Ninguém fica com a bio fora do ar
+      // esperando alguém abrir o Supabase.
+      const { data: blocoData } = await sbRpc("get_public_bio_blocks", { _slug: slug, _estilo: "classico" });
+
       if (cancelled) return;
+      setBlocos(Array.isArray(blocoData) ? (blocoData as BlocoLite[]) : []);
       setDaAgencia(daAgencia);
       setProfile(profileData as ProfileLite);
       setLinks((linkData ?? []) as BioLinkLite[]);
@@ -419,6 +431,11 @@ const BioPage = () => {
   const settings = useMemo(() => parseSettings(profile?.bio_settings), [profile?.bio_settings]);
   const radius = STYLE_RADIUS[settings.buttonStyle];
   const isOutline = settings.buttonStyle === "outline";
+  const visualDosBlocos = {
+    buttonColor: settings.buttonColor, buttonTextColor: settings.buttonTextColor,
+    cardColor: settings.cardColor, cardTextColor: settings.cardTextColor,
+    radius, isOutline,
+  };
   const fontStack = fontStackFor(settings.fontFamily);
 
   const trackClick = (id: string) => {
@@ -461,12 +478,16 @@ const BioPage = () => {
 
   return (
     <div
-      className="bio-font-scope relative min-h-screen w-full px-5 py-10 md:py-16 flex flex-col items-center"
+      className="bio-font-scope relative min-h-[100dvh] w-full px-5 py-10 md:py-16 flex flex-col items-center"
       style={backgroundStyle(settings)}
     >
       <BioFontStyle stack={fontStack} />
       <BgOverlay amount={settings.bgOverlay} />
-      <div className="relative z-10 w-full max-w-[520px] flex flex-col items-center">
+      {/* my-auto (e não justify-center): página com poucos links deixava um
+          vazio enorme embaixo, e justify-center num flex que estoura a tela
+          corta o topo no Safari. Com margem automática o conteúdo centraliza
+          quando cabe e volta a rolar normal quando não cabe. */}
+      <div className="relative z-10 w-full max-w-[520px] my-auto flex flex-col items-center">
         {/* BANNER = CAPA: fica ATRÁS da foto, como capa de perfil. Antes era um
             card solto no meio dos links e ficava perdido. */}
         {settings.bannerImage && settings.sections.some((x) => x.id === "banner" && x.on) && (
@@ -584,6 +605,48 @@ const BioPage = () => {
               </div>
             );
           }
+          // ── BLOCOS ──
+          // Quando a página já foi montada no formato novo, é ele que manda.
+          // O bloco de captura desenha o MESMO formulário da seção de lead,
+          // pra não existirem duas versões do mesmo componente.
+          if (blocos.length > 0) {
+            return (
+              <motion.div
+                key="blocos"
+                initial="hidden"
+                animate="visible"
+                variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06, delayChildren: 0.15 } } }}
+                className="w-full mt-7 space-y-3"
+              >
+                {blocos.map((b) => (
+                  <motion.div key={b.id} variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }}>
+                    <BlocoPublico
+                      kind={b.kind}
+                      data={b.data ?? {}}
+                      visual={visualDosBlocos}
+                      onClique={() => trackClick(b.id)}
+                      captura={
+                        <LeadForm
+                          slug={slug ?? ""} daAgencia={ehDaAgencia} blocoId={b.id}
+                          config={{
+                            title: String(b.data?.titulo ?? "Deixe seu contato"),
+                            subtitle: String(b.data?.subtitulo ?? ""),
+                            fields: (b.data?.campos === "email" || b.data?.campos === "phone" || b.data?.campos === "telefone")
+                              ? (b.data?.campos === "email" ? "email" : "phone") : "both",
+                            buttonText: String(b.data?.botao ?? "Enviar"),
+                            consentText: String(b.data?.consentimento ?? ""),
+                          }}
+                          buttonColor={settings.buttonColor} buttonTextColor={settings.buttonTextColor} radius={radius}
+                          cardColor={settings.cardColor} cardTextColor={settings.cardTextColor}
+                        />
+                      }
+                    />
+                  </motion.div>
+                ))}
+              </motion.div>
+            );
+          }
+
           return (
             <motion.div
               key="links"
@@ -650,7 +713,7 @@ const BioPage = () => {
                           />
                         </div>
                       )}
-                      <div className="px-5 py-4 text-center line-clamp-2">
+                      <div className="px-5 py-4 text-center whitespace-pre-line [text-wrap:balance]">
                         {!link.thumbnail_url && link.icon && (
                           <span className="mr-2">{link.icon}</span>
                         )}
@@ -900,12 +963,25 @@ function VitrineView({
   );
 }
 
+/** (00) 00000-0000 conforme digita. O visitante entende o campo sem ler o
+ *  rótulo, e o número chega no mesmo formato pra quem vai ligar. */
+function mascaraTelefone(v: string): string {
+  const d = (v || "").replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 2) return d.length ? `(${d}` : "";
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
 function LeadForm({
-  slug, daAgencia, config, buttonColor, buttonTextColor, radius, cardColor, cardTextColor,
+  slug, daAgencia, blocoId, config, buttonColor, buttonTextColor, radius, cardColor, cardTextColor,
 }: {
   slug: string;
   /** Página montada pela social mídia: o lead é dela, não de um criador. */
   daAgencia?: boolean;
+  /** De qual bloco veio. É o que permite o contato virar card no pipeline
+   *  quando a chave daquele bloco está ligada. */
+  blocoId?: string;
   config: BioLeadForm;
   buttonColor: string;
   buttonTextColor: string;
@@ -937,6 +1013,7 @@ function LeadForm({
         _name: name.trim() || null,
         _email: email.trim() || null,
         _phone: phone.trim() || null,
+        _block_id: blocoId ?? null,
       });
       if (error) throw error;
       setDone(true);
@@ -965,7 +1042,9 @@ function LeadForm({
       <div className="space-y-3">
         <input aria-label="Seu nome" value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu nome" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />
         {showEmail && <input aria-label="Seu email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Seu email" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />}
-        {showPhone && <input aria-label="Seu telefone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Seu telefone" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />}
+        {showPhone && <input aria-label="Seu telefone" type="tel" inputMode="tel" value={phone}
+          onChange={(e) => setPhone(mascaraTelefone(e.target.value))}
+          placeholder="(00) 00000-0000" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />}
         <label className={`flex items-start gap-2 text-[11px] leading-snug ${cardColor ? "opacity-85" : "text-gray-600"}`}>
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
           {config.consentText}

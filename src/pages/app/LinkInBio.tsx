@@ -47,6 +47,10 @@ import { useActiveAccount } from "@/contexts/AccountContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBioLinks, type BioLink } from "@/hooks/useBioLinks";
 import { useBioAlvo } from "@/contexts/BioAlvoContext";
+import { useBioBlocks } from "@/hooks/useBioBlocks";
+import { EditorBlocos } from "@/components/bio/EditorBlocos";
+import { BlocoPublico } from "@/components/bio/BlocoPublico";
+import type { BioBloco } from "@/lib/bioBlocks";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { validateUpload } from "@/lib/upload-validation";
@@ -614,6 +618,10 @@ const LinkInBio = () => {
   const { activeAccountId } = useActiveAccount();
   const { profile: selfProfile, updateProfile, isLoading: selfProfileLoading } = useProfile();
   const { links, isLoading, createLink, updateLink, deleteLink, reorderLinks } = useBioLinks();
+  // O formato novo da página. Enquanto a migration dos blocos não roda, a lista
+  // volta vazia e a tela continua mostrando o editor antigo de links, pra
+  // ninguém ficar sem conseguir mexer na bio que já está no ar.
+  const { blocos: blocosClassico } = useBioBlocks("classico");
   const queryClient = useQueryClient();
 
   // Quando o manager gerencia outro, lê/escreve no profile da conta ATIVA,
@@ -1518,6 +1526,11 @@ const LinkInBio = () => {
             {settings.layout === "classic" && (
               <>
             <Card className="p-4 md:p-5 rounded-2xl border-border">
+              <EditorBlocos estilo="classico" />
+            </Card>
+
+            {blocosClassico.length === 0 && sortedLinks.length > 0 && (
+            <Card className="p-4 md:p-5 rounded-2xl border-border">
               <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
                 <h2 className="font-display font-semibold text-foreground">Seus links</h2>
                 <div className="flex gap-2">
@@ -1571,7 +1584,12 @@ const LinkInBio = () => {
                   </Droppable>
                 </DragDropContext>
               )}
+              <p className="text-[11px] font-body text-muted-foreground mt-3">
+                Estes são os botões do formato antigo. Quando a atualização dos blocos entrar, eles viram blocos
+                sozinhos e esta lista some.
+              </p>
             </Card>
+            )}
 
             {/* ── Estrutura / Seções ─────────────────── */}
             <Card className="p-4 md:p-5 rounded-2xl border-border">
@@ -2017,7 +2035,7 @@ const LinkInBio = () => {
               <p className="text-xs text-center font-display font-semibold uppercase tracking-wider text-muted-foreground/80 mb-4">
                 Pré-visualização
               </p>
-              <BioPreview profile={profile} links={activeLinks} settings={settings} />
+              <BioPreview profile={profile} links={activeLinks} blocos={blocosClassico} settings={settings} />
             </Card>
           </div>
         </div>
@@ -2299,10 +2317,11 @@ function LinkCard({
 type PreviewProps = {
   profile: ReturnType<typeof useProfile>["profile"];
   links: BioLink[];
+  blocos?: BioBloco[];
   settings: BioSettings;
 };
 
-const BioPreview = memo(function BioPreview({ profile, links, settings }: PreviewProps) {
+const BioPreview = memo(function BioPreview({ profile, links, blocos = [], settings }: PreviewProps) {
   const radius = radiusFor(settings.buttonStyle);
   const isOutline = settings.buttonStyle === "outline";
   const hasSocials = SOCIAL_FIELDS.some((f) => settings.socialLinks[f.key].trim());
@@ -2362,7 +2381,7 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
               {settings.header?.name || profile.name || "Seu nome"}
             </h3>
             {(settings.header?.bio || profile.bio) && (
-              <p className="text-xs text-gray-800 text-center mt-1 line-clamp-3 font-body drop-shadow-sm">
+              <p className="text-xs text-gray-800 text-center mt-1 whitespace-pre-line font-body drop-shadow-sm">
                 {settings.header?.bio || profile.bio}
               </p>
             )}
@@ -2395,13 +2414,80 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
                   style={settings.cardColor ? { backgroundColor: settings.cardColor, color: settings.cardTextColor || undefined } : undefined}>
                   <p className={`font-display font-bold text-xs ${settings.cardColor ? "" : "text-gray-900"}`}>{settings.lead.title}</p>
                   {settings.lead.subtitle && <p className={`text-[10px] mt-0.5 mb-2 ${settings.cardColor ? "opacity-85" : "text-gray-600"}`}>{settings.lead.subtitle}</p>}
-                  <div className="h-7 rounded-md bg-gray-100 mb-2" />
+                  {/* A prévia mostrava UM retângulo cinza e escondia o aviso de
+                      consentimento. Quem monta a página não conseguia conferir
+                      nem quantos campos o visitante ia ver, nem se o aviso
+                      estava legível. Agora mostra os campos escolhidos, com o
+                      exemplo dentro, e o aviso embaixo do botão. */}
+                  <div className="space-y-1.5 mb-2 text-left">
+                    <div className="h-6 rounded-md bg-gray-100 flex items-center px-2 text-[9px] text-gray-400">Seu nome</div>
+                    {(settings.lead.fields === "email" || settings.lead.fields === "both") && (
+                      <div className="h-6 rounded-md bg-gray-100 flex items-center px-2 text-[9px] text-gray-400">Seu e-mail</div>
+                    )}
+                    {(settings.lead.fields === "phone" || settings.lead.fields === "both") && (
+                      <div className="h-6 rounded-md bg-gray-100 flex items-center px-2 text-[9px] text-gray-400">(00) 00000-0000</div>
+                    )}
+                  </div>
+                  {settings.lead.consentText && (
+                    <div className={`flex items-start gap-1 text-left text-[8px] leading-snug mb-2 ${settings.cardColor ? "opacity-85" : "text-gray-500"}`}>
+                      <span className="mt-[1px] w-2 h-2 rounded-[2px] border border-current shrink-0" />
+                      <span>{settings.lead.consentText}</span>
+                    </div>
+                  )}
                   <div className="h-7 rounded-md font-semibold text-[11px] flex items-center justify-center" style={{ backgroundColor: settings.buttonColor, color: settings.buttonTextColor }}>
                     {settings.lead.buttonText}
                   </div>
                 </div>
               );
             }
+            // BLOCOS na prévia: o MESMO componente da página pública. Se
+            // fossem dois desenhos, a prévia mentiria na primeira alteração.
+            if (blocos.length > 0) {
+              return (
+                <div key="blocos" className="space-y-2.5">
+                  {blocos.map((b) => (
+                    <div key={b.id} className={b.is_active ? "" : "opacity-40"}>
+                      <BlocoPublico
+                        kind={b.kind}
+                        data={b.data ?? {}}
+                        visual={{
+                          buttonColor: settings.buttonColor, buttonTextColor: settings.buttonTextColor,
+                          cardColor: settings.cardColor, cardTextColor: settings.cardTextColor,
+                          radius, isOutline,
+                        }}
+                        captura={
+                          <div className={`w-full rounded-2xl shadow-sm p-3 text-center ${settings.cardColor ? "" : "bg-white/90"}`}
+                            style={settings.cardColor ? { backgroundColor: settings.cardColor, color: settings.cardTextColor || undefined } : undefined}>
+                            <p className="font-display font-bold text-xs">{String(b.data?.titulo ?? "Deixe seu contato")}</p>
+                            {!!b.data?.subtitulo && <p className="text-[10px] opacity-80 mt-0.5 mb-2">{String(b.data.subtitulo)}</p>}
+                            <div className="space-y-1.5 mb-2 text-left">
+                              <div className="h-6 rounded-md bg-gray-100 flex items-center px-2 text-[9px] text-gray-400">Seu nome</div>
+                              {(b.data?.campos === "email" || b.data?.campos === "ambos" || !b.data?.campos) && (
+                                <div className="h-6 rounded-md bg-gray-100 flex items-center px-2 text-[9px] text-gray-400">Seu e-mail</div>
+                              )}
+                              {(b.data?.campos === "telefone" || b.data?.campos === "ambos" || !b.data?.campos) && (
+                                <div className="h-6 rounded-md bg-gray-100 flex items-center px-2 text-[9px] text-gray-400">(00) 00000-0000</div>
+                              )}
+                            </div>
+                            {!!b.data?.consentimento && (
+                              <div className="flex items-start gap-1 text-left text-[8px] leading-snug mb-2 opacity-70">
+                                <span className="mt-[1px] w-2 h-2 rounded-[2px] border border-current shrink-0" />
+                                <span>{String(b.data.consentimento)}</span>
+                              </div>
+                            )}
+                            <div className="h-7 rounded-md font-semibold text-[11px] flex items-center justify-center"
+                              style={{ backgroundColor: settings.buttonColor, color: settings.buttonTextColor }}>
+                              {String(b.data?.botao ?? "Enviar")}
+                            </div>
+                          </div>
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              );
+            }
+
             return links.length === 0 ? (
               <p key="links-empty" className="text-xs text-center text-gray-500 font-body py-6">
                 Adicione links para ver a prévia.
@@ -2428,7 +2514,7 @@ const BioPreview = memo(function BioPreview({ profile, links, settings }: Previe
                           <img src={link.thumbnail_url} alt="" loading="lazy" className="w-full h-full object-cover" />
                         </div>
                       )}
-                      <div className="px-4 py-3 text-center line-clamp-2">
+                      <div className="px-4 py-3 text-center whitespace-pre-line [text-wrap:balance]">
                         {!link.thumbnail_url && link.icon && <span className="mr-1.5">{link.icon}</span>}
                         {link.title || "Sem título"}
                       </div>
