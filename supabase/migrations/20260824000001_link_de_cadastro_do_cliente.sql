@@ -129,8 +129,11 @@ begin
                         then coalesce(nullif(btrim(_a->>'company_name'),''), company_name) else company_name end,
     cnpj         = case when _sobrescrever or coalesce(cnpj,'') = ''
                         then coalesce(nullif(btrim(_a->>'cnpj'),''), cnpj) else cnpj end,
+    -- Pessoa física assina em nome próprio: o formulário não pergunta o
+    -- responsável de novo, então o nome do contrato é o próprio responsável.
     owner_name   = case when _sobrescrever or coalesce(owner_name,'') = ''
-                        then coalesce(nullif(btrim(_a->>'owner_name'),''), owner_name) else owner_name end,
+                        then coalesce(nullif(btrim(_a->>'owner_name'),''),
+                                      nullif(btrim(_a->>'company_name'),''), owner_name) else owner_name end,
     email        = case when _sobrescrever or coalesce(email,'') = ''
                         then coalesce(nullif(btrim(_a->>'email'),''), email) else email end,
     phone        = case when _sobrescrever or coalesce(phone,'') = ''
@@ -155,6 +158,7 @@ begin
     'mainProducts','marketSince','history','brandValues','impact','vision','admiredBrands',
     'offer','valueProp','audience','contentThemes','avoid','specialty','coreMessage',
     'archetype','toneOfVoice','personality','communicationStyle','colorPalette','typography',
+    'contract_type',
     'visualExpression','mainGoal','bigIdea','promise'
   ] loop
     if coalesce(btrim(_a->>_txt), '') <> ''

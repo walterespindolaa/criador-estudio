@@ -14,7 +14,7 @@
    inverte quem conduz a negociação.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-export type TipoCampo = "texto" | "longo" | "email" | "tel" | "aniversario" | "tags";
+export type TipoCampo = "texto" | "longo" | "email" | "tel" | "aniversario" | "tags" | "escolha";
 
 export type CampoIntake = {
   /** A mesma chave que a ficha usa (coluna do cadastro ou campo do brandbook). */
@@ -22,8 +22,12 @@ export type CampoIntake = {
   label: string;
   ajuda?: string;
   tipo?: TipoCampo;
-  /** Sugestões clicáveis (tipo "tags"). */
+  /** Sugestões clicáveis (tipo "tags") ou alternativas (tipo "escolha"). */
   opcoes?: string[];
+  /** Só aparece quando a resposta de outro campo bate. */
+  soSe?: { chave: string; valor: string };
+  /** Texto de exemplo dentro do campo (vira placeholder). */
+  exemplo?: string;
   obrigatorio?: boolean;
   /** Ocupa a linha inteira no desktop. */
   largo?: boolean;
@@ -38,26 +42,33 @@ export const TONS_INTAKE = [
 
 export const ETAPAS_INTAKE: EtapaIntake[] = [
   {
-    titulo: "Dados da empresa",
+    titulo: "Dados pro contrato",
     descricao: "É o que a gente precisa pra emitir o contrato e a nota. Se você não souber algum, deixe em branco e a gente confere depois.",
     campos: [
-      { chave: "company_name", label: "Razão social", ajuda: "O nome que está no CNPJ.", obrigatorio: true, largo: true },
-      { chave: "cnpj", label: "CNPJ", ajuda: "Se você é pessoa física, pode colocar o CPF." },
+      { chave: "contract_type", label: "O contrato vai ser em nome de quem?", tipo: "escolha",
+        opcoes: ["Pessoa física", "Empresa (CNPJ)"], obrigatorio: true, largo: true },
+      { chave: "company_name", label: "Nome completo", ajuda: "Como está no seu documento.",
+        obrigatorio: true, largo: true, soSe: { chave: "contract_type", valor: "Pessoa física" } },
+      { chave: "cnpj", label: "CPF", soSe: { chave: "contract_type", valor: "Pessoa física" } },
+      { chave: "company_name", label: "Razão social", ajuda: "O nome que está no CNPJ.",
+        obrigatorio: true, largo: true, soSe: { chave: "contract_type", valor: "Empresa (CNPJ)" } },
+      { chave: "cnpj", label: "CNPJ", soSe: { chave: "contract_type", valor: "Empresa (CNPJ)" } },
       { chave: "instagram", label: "@ do Instagram" },
       { chave: "address", label: "Endereço completo", ajuda: "Rua, número, bairro, cidade, estado e CEP.", largo: true },
       { chave: "city", label: "Cidade" },
-      { chave: "marketSince", label: "Há quanto tempo a empresa existe?", ajuda: "Ex.: 8 anos, desde 2018." },
+      { chave: "marketSince", label: "Há quanto tempo você atua nesse mercado?", ajuda: "Ex.: 8 anos, desde 2018." },
     ],
   },
   {
-    titulo: "Quem responde pela empresa",
-    descricao: "A pessoa que assina o contrato e que a gente procura no dia a dia.",
+    titulo: "Contato",
+    descricao: "Como a gente fala com você no dia a dia.",
     campos: [
-      { chave: "owner_name", label: "Nome completo", obrigatorio: true, largo: true },
+      { chave: "owner_name", label: "Quem assina pela empresa", ajuda: "Nome completo de quem responde legalmente.",
+        obrigatorio: true, largo: true, soSe: { chave: "contract_type", valor: "Empresa (CNPJ)" } },
       { chave: "email", label: "E-mail", tipo: "email", obrigatorio: true },
       { chave: "whatsapp", label: "WhatsApp", tipo: "tel", obrigatorio: true },
       { chave: "phone", label: "Outro telefone", tipo: "tel" },
-      { chave: "birthday", label: "Aniversário", ajuda: "Só o dia e o mês. A gente gosta de lembrar.", tipo: "aniversario" },
+      { chave: "birthday", label: "Seu aniversário", ajuda: "Da pessoa que responde, não da empresa. Só dia e mês: a gente gosta de lembrar.", tipo: "aniversario" },
     ],
   },
   {
@@ -85,10 +96,14 @@ export const ETAPAS_INTAKE: EtapaIntake[] = [
     descricao: "Quanto mais específico, melhor o conteúdo. Pense num cliente real que você atendeu essa semana.",
     campos: [
       { chave: "audience", label: "Quem é o cliente ideal de vocês?", ajuda: "Idade, momento de vida, o que faz.", tipo: "longo", obrigatorio: true, largo: true },
-      { chave: "pains", label: "Quais problemas ele quer resolver?", ajuda: "Um por linha.", tipo: "longo", largo: true },
-      { chave: "desires", label: "O que ele quer conquistar ou sentir?", ajuda: "Um por linha.", tipo: "longo", largo: true },
-      { chave: "doubts", label: "Quais dúvidas ele sempre traz antes de fechar?", ajuda: "Um por linha.", tipo: "longo", largo: true },
-      { chave: "objections", label: "O que costuma fazer ele desistir?", ajuda: "Um por linha. Ex.: acha caro, não tem tempo, tem medo do resultado.", tipo: "longo", largo: true },
+      { chave: "pains", label: "Quais problemas ele quer resolver?", tipo: "longo", largo: true,
+        exemplo: "Ex.:\nnão consegue tempo pra cuidar de si\ntem medo de ficar com aparência artificial" },
+      { chave: "desires", label: "O que ele quer conquistar ou sentir?", tipo: "longo", largo: true,
+        exemplo: "Ex.:\nse olhar no espelho e gostar do que vê\nse sentir mais confiante nas fotos" },
+      { chave: "doubts", label: "Quais dúvidas ele sempre traz antes de fechar?", tipo: "longo", largo: true,
+        exemplo: "Ex.:\ndói?\nquanto tempo dura o resultado?" },
+      { chave: "objections", label: "O que costuma fazer ele desistir?", tipo: "longo", largo: true,
+        exemplo: "Ex.:\nacha caro\nnão tem tempo\ntem medo de não gostar do resultado" },
     ],
   },
   {
@@ -109,17 +124,40 @@ export const TODOS_CAMPOS_INTAKE = ETAPAS_INTAKE.flatMap((e) => e.campos);
 
 /** Chaves que viram COLUNA do cadastro (o resto vai pro brandbook/persona). */
 export const CAMPOS_CADASTRO = new Set([
+  // contract_type não é coluna: ele só decide quais campos aparecem e vai pro
+  // brandbook como referência na hora de escrever o contrato.
   "company_name", "cnpj", "owner_name", "email", "phone", "whatsapp",
   "address", "city", "instagram", "birthday",
 ]);
 
-/** Faltou algum obrigatório? Devolve os rótulos, pra dizer qual é. */
+/** O campo está visível pra estas respostas? (o `soSe` é o que esconde o resto) */
+export function campoVisivel(c: CampoIntake, respostas: Record<string, string>): boolean {
+  if (!c.soSe) return true;
+  return (respostas[c.soSe.chave] || "").trim() === c.soSe.valor;
+}
+
+/** Faltou algum obrigatório VISÍVEL? Campo escondido não pode travar o envio. */
 export function faltandoObrigatorios(respostas: Record<string, string>): string[] {
   return TODOS_CAMPOS_INTAKE
-    .filter((c) => c.obrigatorio && !(respostas[c.chave] || "").trim())
+    .filter((c) => c.obrigatorio && campoVisivel(c, respostas) && !(respostas[c.chave] || "").trim())
     .map((c) => c.label);
 }
 
 export function quantasRespondidas(respostas: Record<string, string>): number {
-  return TODOS_CAMPOS_INTAKE.filter((c) => (respostas[c.chave] || "").trim()).length;
+  const vistas = new Set<string>();
+  return TODOS_CAMPOS_INTAKE.filter((c) => {
+    if (!campoVisivel(c, respostas) || vistas.has(c.chave)) return false;
+    vistas.add(c.chave);
+    return (respostas[c.chave] || "").trim();
+  }).length;
+}
+
+/** Quantos campos a pessoa vai ver de fato (PF e PJ não somam juntos). */
+export function totalVisivel(respostas: Record<string, string>): number {
+  const vistas = new Set<string>();
+  return TODOS_CAMPOS_INTAKE.filter((c) => {
+    if (!campoVisivel(c, respostas) || vistas.has(c.chave)) return false;
+    vistas.add(c.chave);
+    return true;
+  }).length;
 }

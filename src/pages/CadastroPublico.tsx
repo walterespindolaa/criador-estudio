@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ClipboardList, Check, PartyPopper, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { ClipboardList, Check, PartyPopper, ArrowLeft, ArrowRight, Loader2, Mic } from "lucide-react";
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { LogosCabecalho } from "@/components/publico/CabecalhoPublico";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import {
-  ETAPAS_INTAKE, faltandoObrigatorios, quantasRespondidas, TODOS_CAMPOS_INTAKE,
+  ETAPAS_INTAKE, faltandoObrigatorios, quantasRespondidas, totalVisivel, campoVisivel,
   type CampoIntake,
 } from "@/lib/formularioCadastro";
 
@@ -46,6 +46,49 @@ function isDark(hex: string): boolean {
   if (h.length < 6) return true;
   const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
   return (0.299 * r + 0.587 * g + 0.114 * b) < 150;
+}
+
+/* Falar é muito mais rápido que digitar, e este formulário quase sempre é
+   aberto no celular, no meio do dia do cliente. O ditado usa o reconhecimento
+   do próprio navegador: nada sobe pro servidor e não custa nada. Onde não
+   existe (Safari antigo, Firefox), o botão nem aparece. */
+function BotaoMic({ onTexto, accent }: { onTexto: (t: string) => void; accent: string }) {
+  const [ouvindo, setOuvindo] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const SR = typeof window !== "undefined" ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) : null;
+  if (!SR) return null;
+
+  const começar = () => {
+    const r = new SR();
+    r.lang = "pt-BR"; r.continuous = true; r.interimResults = false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    r.onresult = (e: any) => {
+      let t = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript;
+      if (t.trim()) onTexto(t.trim());
+    };
+    r.onend = () => setOuvindo(false);
+    r.onerror = () => setOuvindo(false);
+    r.start(); recRef.current = r; setOuvindo(true);
+  };
+  const parar = () => { try { recRef.current?.stop(); } catch { /* ignora */ } setOuvindo(false); };
+
+  return (
+    <button type="button" onClick={() => (ouvindo ? parar() : começar())}
+      title={ouvindo ? "Parar de gravar" : "Falar em vez de digitar"}
+      aria-label={ouvindo ? "Parar de gravar" : "Falar em vez de digitar"}
+      style={{
+        position: "absolute", top: 8, right: 8, width: 32, height: 32, borderRadius: 9,
+        display: "grid", placeItems: "center", cursor: "pointer",
+        background: ouvindo ? "#D9534F" : "#fff",
+        border: `1px solid ${ouvindo ? "#D9534F" : "#E5DFD3"}`,
+        color: ouvindo ? "#fff" : accent,
+      }}>
+      <Mic style={{ width: 15, height: 15 }} />
+    </button>
+  );
 }
 
 export default function CadastroPublico() {
@@ -170,6 +213,26 @@ export default function CadastroPublico() {
       );
     }
 
+    if (c.tipo === "escolha") {
+      return (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {(c.opcoes ?? []).map((o) => {
+            const on = v === o;
+            return (
+              <button key={o} type="button" onClick={() => set(c.chave, o)}
+                style={{
+                  flex: 1, minWidth: 150, border: `1.5px solid ${on ? accent : (faltando ? "#D9534F" : "#E5DFD3")}`,
+                  background: on ? accent : "#FFFDF9", color: on ? onAccent : "#2A2440",
+                  borderRadius: 12, padding: "13px 16px", fontSize: 15, fontWeight: 600, cursor: "pointer",
+                }}>
+                {o}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
     if (c.tipo === "aniversario") {
       // Guarda no mesmo formato da ficha ("2000-MM-DD"): só dia e mês importam.
       const [, mm = "", dd = ""] = v ? v.split("-") : [];
@@ -192,8 +255,13 @@ export default function CadastroPublico() {
 
     if (c.tipo === "longo") {
       return (
-        <textarea value={v} onChange={(e) => set(c.chave, e.target.value)}
-          rows={3} style={{ ...campo, ...borda, resize: "vertical" }} />
+        <div style={{ position: "relative" }}>
+          <textarea value={v} onChange={(e) => set(c.chave, e.target.value)}
+            placeholder={c.exemplo}
+            rows={c.exemplo ? 4 : 3}
+            style={{ ...campo, ...borda, resize: "vertical", paddingRight: 46 }} />
+          <BotaoMic accent={accent} onTexto={(t) => set(c.chave, v ? v.trimEnd() + "\n" + t : t)} />
+        </div>
       );
     }
 
@@ -245,7 +313,7 @@ export default function CadastroPublico() {
               ))}
             </div>
             <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 700, color: "#8B8272", letterSpacing: ".06em", textTransform: "uppercase" }}>
-              Etapa {etapa + 1} de {ETAPAS_INTAKE.length} · {preenchidas} de {TODOS_CAMPOS_INTAKE.length} respondidas
+              Etapa {etapa + 1} de {ETAPAS_INTAKE.length} · {preenchidas} de {totalVisivel(resp)} respondidas
             </p>
             <h2 style={{ margin: "0 0 4px", fontSize: 21, fontWeight: 800, color: "#2A2440" }}>{et.titulo}</h2>
             <p style={{ margin: "0 0 18px", fontSize: 14, color: "#7C7566", lineHeight: 1.5 }}>{et.descricao}</p>
@@ -259,8 +327,8 @@ export default function CadastroPublico() {
             )}
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
-              {et.campos.map((c) => (
-                <div key={c.chave} style={{ gridColumn: c.largo ? "1 / -1" : "auto" }}>
+              {et.campos.filter((c) => campoVisivel(c, resp)).map((c) => (
+                <div key={`${c.chave}-${c.label}`} style={{ gridColumn: c.largo ? "1 / -1" : "auto" }}>
                   <label style={{ display: "block", fontSize: 14.5, fontWeight: 700, color: "#2A2440", marginBottom: 3 }}>
                     {c.label}{c.obrigatorio && <span style={{ color: accent }}> *</span>}
                   </label>
