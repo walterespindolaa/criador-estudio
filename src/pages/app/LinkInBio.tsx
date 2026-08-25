@@ -971,7 +971,8 @@ const LinkInBio = () => {
         if (error) throw error;
         if (!salvo) throw new Error("Não consegui salvar esta página. Recarregue e tente de novo.");
         queryClient.invalidateQueries({ queryKey: ["bio-page-profile", daFicha.pageId] });
-        queryClient.invalidateQueries({ queryKey: ["bio-page", daFicha.crmClientId] });
+        // Prefixo: a chave real é ["bio-page", agencyOwnerId, crmClientId].
+        queryClient.invalidateQueries({ queryKey: ["bio-page"] });
         queryClient.invalidateQueries({ queryKey: ["bio-pages"] });
       } else if (isOwnAccount) {
         await updateProfile.mutateAsync({

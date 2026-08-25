@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, ArrowRight, Save, Trash2, Plus, X, ImagePlus, Pencil, Camera, Upload, Download,
   Instagram, Mail, Phone, Palette, Type, MessageSquare, Image as ImageIcon,
   Brain, HeartCrack, Heart, Lightbulb, Activity, NotebookPen, Target, Building2, Mic, Check,
-  HelpCircle, ShieldAlert, ClipboardList, Sparkles,
+  HelpCircle, ShieldAlert, ClipboardList, Sparkles, Link2, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useActiveAccount } from "@/contexts/AccountContext";
@@ -403,6 +403,26 @@ function ClientWorkspace() {
           {/* O cliente preenche o próprio cadastro: os dados do contrato chegam
               prontos e a primeira call já começa com as respostas na mão. */}
           <LinkCadastroCliente crmClientId={form.id} clienteNome={form.name ?? "o cliente"} />
+
+          {/* Atalho pro Link na bio. O editor mora no cockpit do cliente, mas
+              quem está preenchendo a ficha é justamente quem vai montar a
+              página, e procurar por ela em outra tela é atrito à toa. */}
+          <div className="rounded-2xl border border-border bg-card px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 grid place-items-center shrink-0">
+              <Link2 className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-display font-semibold text-foreground">Link na bio deste cliente</p>
+              <p className="text-xs font-body text-muted-foreground mt-0.5">
+                A página de links pra colocar na bio do Instagram dele, com captura de lead.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" asChild className="shrink-0">
+              <Link to={`/socialmidia/clientes/${form.id}/link-bio`}>
+                <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Abrir
+              </Link>
+            </Button>
+          </div>
 
           {/* Informações gerais da empresa */}
           <Card icon={<NotebookPen />} title="Informações gerais">

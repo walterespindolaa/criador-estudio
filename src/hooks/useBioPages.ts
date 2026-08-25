@@ -72,17 +72,35 @@ export function useCreateBioPage() {
       const { data, error } = await sbFrom("bio_pages")
         .insert({ manager_id: agencyOwnerId, crm_client_id: crmClientId })
         .select("*").single();
+
+      // Já existe uma página pra este cliente (o índice único garante isso).
+      // Clicar de novo é sinal de que a tela não atualizou, e não de que a
+      // pessoa quer duas páginas. Devolve a que existe em vez de dar erro.
+      if (error && /duplicate key|unique constraint|23505/i.test(error.message ?? "")) {
+        const existente = await sbFrom("bio_pages").select("*").eq("crm_client_id", crmClientId).maybeSingle();
+        if (existente.data) return existente.data as BioPage;
+      }
       if (error) throw error;
       return data as BioPage;
     },
-    onSuccess: (p) => {
-      void qc.invalidateQueries({ queryKey: ["bio-page", p.crm_client_id] });
+    // Prefixo, não a chave inteira: a chave é ["bio-page", agencyOwnerId, id],
+    // e invalidar ["bio-page", id] não casava com nada. Resultado: a página
+    // nascia no banco e a tela continuava oferecendo "Criar a página".
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["bio-page"] });
       void qc.invalidateQueries({ queryKey: ["bio-pages"] });
     },
-    onError: (e: Error) =>
-      toast.error(tabelaFaltando(e.message)
-        ? "Rode a migration do link na bio (20260825000003) pra liberar isso."
-        : "Não consegui criar a página agora."),
+    onError: (e: Error) => {
+      const msg = e?.message ?? "";
+      console.error("[bio_pages] falha ao criar:", e);
+      toast.error(
+        tabelaFaltando(msg)
+          ? "Rode a migration do link na bio (20260825000003) no Supabase pra liberar isso."
+          : /row-level security|permission denied/i.test(msg)
+            ? "Sem permissão pra criar a página deste cliente. Rode a migration mais recente e tente de novo."
+            : msg || "Não consegui criar a página agora.",
+        { duration: 8000 });
+    },
   });
 }
 
