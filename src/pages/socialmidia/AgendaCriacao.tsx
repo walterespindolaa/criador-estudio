@@ -1170,16 +1170,6 @@ export default function AgendaCriacao() {
                           dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}>
                         <div className="flex items-center gap-1 min-w-0" style={{ color: cor }}>
                           <DragGrip className="opacity-40" handleProps={dragProvided.dragHandleProps ?? undefined} />
-                          {/* Check: marca o post como POSTADO (vai pra coluna Postado do
-                              kanban). Fica à ESQUERDA porque é a ação mais usada do card
-                              e, no fim da linha, sumia no corte das colunas estreitas. */}
-                          <span role="button" tabIndex={0} aria-label={posted ? "Reabrir post" : "Marcar como postado"}
-                            onClick={(e) => { e.stopPropagation(); updateExtPost.mutate({ id: p.id, patch: { approval_status: posted ? "aprovado" : "postado", approval_updated_at: new Date().toISOString() } }); }}
-                            style={posted ? undefined : { borderColor: `${cor}80` }}
-                            className={cn("grid h-5 w-5 shrink-0 place-items-center rounded border cursor-pointer transition-colors",
-                              posted ? "bg-emerald-500 border-emerald-500 text-white" : "bg-white/70 hover:border-emerald-500 hover:text-emerald-600")}>
-                            {posted && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
-                          </span>
                           <Send className="h-3 w-3 shrink-0" />
                           <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0">{item.time && <span className="tabular-nums">{item.time} · </span>}{cli?.name ?? "Post"}</span>
                           {/* Indicador discreto: post tem link do Drive no campo Ideia/Referência
@@ -1188,6 +1178,14 @@ export default function AgendaCriacao() {
                           {/* E indicador da PASTA do Drive (campo distinto drive_folder_url). */}
                           {p.drive_folder_url && <FolderOpen className="h-3 w-3 shrink-0 text-primary opacity-80" aria-label="Tem pasta no Drive" />}
                           {st && <span className={cn("shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}
+                          {/* Check: marca o post como POSTADO (vai pra coluna Postado do kanban). */}
+                          <span role="button" tabIndex={0} aria-label={posted ? "Reabrir post" : "Marcar como postado"}
+                            onClick={(e) => { e.stopPropagation(); updateExtPost.mutate({ id: p.id, patch: { approval_status: posted ? "aprovado" : "postado", approval_updated_at: new Date().toISOString() } }); }}
+                            style={posted ? undefined : { borderColor: `${cor}80` }}
+                            className={cn("grid h-6 w-6 md:h-4 md:w-4 shrink-0 place-items-center rounded border cursor-pointer transition-colors",
+                              posted ? "bg-emerald-500 border-emerald-500 text-white" : "hover:border-emerald-500 hover:text-emerald-600")}>
+                            {posted && <Check className="h-3 w-3" strokeWidth={3} />}
+                          </span>
                         </div>
                         <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", posted ? "line-through text-muted-foreground" : "text-foreground")}>{p.title || "Post"}</p>
                       </button>
