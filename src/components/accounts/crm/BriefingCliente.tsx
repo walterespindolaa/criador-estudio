@@ -60,9 +60,11 @@ export const ROTEIRO_BRIEFING: BlocoBrief[] = [
       { label: "Onde vocês querem chegar nos próximos anos?", chave: "vision" },
       { label: "O que guia as decisões estratégicas da marca hoje?" },
       { label: "Que tipo de legado a empresa quer construir?" },
-      { label: "Qual é a meta principal desta estratégia de conteúdo?", chave: "mainGoal" },
+      { label: "Qual é o principal objetivo de contratar uma social mídia hoje?", chave: "mainGoal", ajuda: "Passar autoridade, virar conteúdo, gerar oportunidades." },
       { label: "Qual é a Big Idea do conteúdo?", chave: "bigIdea", ajuda: "A ideia master que norteia toda a produção: original, intrigante e contraintuitiva." },
       { label: "Qual é a promessa?", chave: "promise", ajuda: "A experiência ou transformação que o cliente vive com o produto ou serviço." },
+      { label: "Como você gostaria que a marca fosse percebida daqui a 6 ou 12 meses?", chave: "perception6m" },
+      { label: "Como você vai saber que o conteúdo está funcionando?", chave: "successMetric", ajuda: "Mais vendas, marca mais forte, virar referência." },
     ],
   },
   {

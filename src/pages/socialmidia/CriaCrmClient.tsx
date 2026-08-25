@@ -584,6 +584,8 @@ function ClientWorkspace() {
             <F label="Meta principal" ajuda="A principal meta desta estratégia de conteúdo, em uma frase."><MicTextarea value={bc.mainGoal ?? ""} onChange={(v) => setBc("mainGoal", v)} placeholder="Ex.: encher a agenda de avaliação; virar referência em X na cidade..." /></F>
             <F label="A Big Idea" ajuda="A ideia master que norteia toda a produção. Precisa ser original, intrigante e contraintuitiva." className="mt-3"><MicTextarea value={bc.bigIdea ?? ""} onChange={(v) => setBc("bigIdea", v)} placeholder="A tese da marca. Ex.: 'estética não é vaidade, é manutenção'." /></F>
             <F label="Promessa" ajuda="A transformação que o cliente vive com o produto ou serviço." className="mt-3"><MicTextarea value={bc.promise ?? ""} onChange={(v) => setBc("promise", v)} placeholder="O que a pessoa sente ou consegue depois de comprar." /></F>
+            <F label="Como a marca quer ser percebida em 6 a 12 meses" className="mt-3"><MicTextarea value={bc.perception6m ?? ""} onChange={(v) => setBc("perception6m", v)} placeholder="O lugar que ela quer ocupar na cabeça do público." /></F>
+            <F label="Como o cliente vai saber que o conteúdo funcionou" ajuda="O critério dele, não o seu: é por isso que a renovação é decidida." className="mt-3"><MicTextarea value={bc.successMetric ?? ""} onChange={(v) => setBc("successMetric", v)} placeholder="Ex.: mais vendas, marca mais forte, virar referência." /></F>
           </Card>
 
           {/* Mensagem & estratégia, é isso que alimenta as ideias de post da IA */}

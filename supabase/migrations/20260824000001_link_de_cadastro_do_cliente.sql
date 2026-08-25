@@ -159,7 +159,7 @@ begin
     'offer','valueProp','audience','contentThemes','avoid','specialty','coreMessage',
     'archetype','toneOfVoice','personality','communicationStyle','colorPalette','typography',
     'contract_type',
-    'visualExpression','mainGoal','bigIdea','promise'
+    'visualExpression','mainGoal','bigIdea','promise','perception6m','successMetric'
   ] loop
     if coalesce(btrim(_a->>_txt), '') <> ''
        and (_sobrescrever or coalesce(btrim(_bc->>_txt), '') = '') then
