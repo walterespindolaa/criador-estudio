@@ -113,11 +113,19 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
 
   return (
     <div ref={slotRef} className="relative w-full h-full bg-black">
-      {/* Fundo desfocado: quando o frame não preenche o slot, o que sobra é a
-          própria imagem borrada, não uma tarja preta. */}
-      {thumb && (
+      {/* Fundo desfocado: preenche a sobra quando o frame não cobre o slot.
+          Só entra quando o poster NÍTIDO já carregou: sozinho, ele viraria a
+          imagem principal, e o cliente veria o vídeo lavado achando que a
+          qualidade é essa. */}
+      {thumb && thumbOk === true && (
         <img src={thumb} alt="" aria-hidden
           className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-60 pointer-events-none" />
+      )}
+      {/* Poster ainda não carregou: mostra a miniatura NÍTIDA e inteira, sem
+          desfoque. Melhor uma imagem contida que um borrão em cima do preto. */}
+      {thumb && thumbOk !== true && (
+        <img src={thumb} alt="" aria-hidden
+          className="absolute inset-0 w-full h-full object-contain pointer-events-none" />
       )}
       {/* O poster mora no VideoPoster: ele cuida do fallback do Drive, da
           retentativa e da TARJA PRETA queimada na miniatura (ver poster-letterbox). */}

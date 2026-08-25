@@ -12,7 +12,14 @@ import { onlineManager, useIsMutating, useQueryClient } from "@tanstack/react-qu
    por insegurança e aí sim perdia a alteração.
 
    Este componente torna o estado VISÍVEL:
-   - offline  → "Sem internet. Suas alterações ficam guardadas."
+   - offline  → "Sem internet" + quantas alterações estão esperando a rede
+
+   HONESTIDADE SOBRE O QUE ISSO GARANTE: a fila do react-query vive na MEMÓRIA
+   da aba. Enquanto ela estiver aberta, a alteração é reenviada sozinha quando a
+   rede volta. Se a pessoa FECHAR a aba (ou o iOS descarregar a página) com algo
+   pendente, aquilo se perde. Por isso o texto diz "deixe esta aba aberta" em vez
+   de "nada se perde": prometer mais do que se entrega faz a pessoa fechar o app
+   confiante e perder o trabalho.
    - voltou   → "Sincronizando 3 alterações..." e retoma a fila
    - terminou → "Tudo sincronizado" e some sozinho
    E avisa antes de fechar a aba com coisa pendente.
@@ -57,8 +64,8 @@ export function OfflineBanner() {
         titulo: "Sem internet",
         linha:
           pendentes > 0
-            ? `${pendentes} ${pendentes === 1 ? "alteração guardada" : "alterações guardadas"}. Envio assim que a rede voltar.`
-            : "Você continua usando. Nada se perde.",
+            ? `${pendentes} ${pendentes === 1 ? "alteração esperando" : "alterações esperando"} a rede voltar. Deixe esta aba aberta.`
+            : "Você continua vendo o que já carregou. O que mudar vai junto quando a rede voltar.",
         cor: "bg-amber-500",
       }
     : {
