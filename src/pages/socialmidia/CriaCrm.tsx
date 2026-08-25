@@ -21,6 +21,7 @@ import { PipelineBoard } from "@/components/accounts/crm/PipelineBoard";
 import { ContractsTab } from "@/components/accounts/crm/ContractsTab";
 import { TasksTab } from "@/components/accounts/crm/TasksTab";
 import { CrmCalendarTab } from "@/components/accounts/crm/CrmCalendarTab";
+import { LinksNaBioTab } from "@/components/accounts/crm/LinksNaBioTab";
 import { cn } from "@/lib/utils";
 
 import { formatBRL } from "@/lib/money";
@@ -41,7 +42,7 @@ export default function CriaCrm() {
   return <ModuleGate code="crm"><CrmInner /></ModuleGate>;
 }
 
-const CRM_TABS = ["clientes", "tarefas", "calendario", "pipeline", "contratos"] as const;
+const CRM_TABS = ["clientes", "tarefas", "calendario", "pipeline", "contratos", "linkbio"] as const;
 type CrmTab = typeof CRM_TABS[number];
 
 function CrmInner() {
@@ -60,13 +61,14 @@ function CrmInner() {
     { to: `${base}/calendario`, label: "Calendário" },
     { to: `${base}/pipeline`, label: "Pipeline" },
     { to: `${base}/contratos`, label: "Contratos" },
+    { to: `${base}/linkbio`, label: "Link na bio" },
   ];
 
   return (
     <div>
       <ModuleHero
         title="Cria Gestão"
-        subtitle="Carteira, tarefas, calendário, pipeline e contratos da sua operação."
+        subtitle="Carteira, tarefas, calendário, pipeline, contratos e link na bio da sua operação."
         color="rosa"
         tabs={tabs}
       />
@@ -75,6 +77,7 @@ function CrmInner() {
       {tab === "calendario" && <CrmCalendarTab />}
       {tab === "pipeline" && <PipelineBoard />}
       {tab === "contratos" && <ContractsTab />}
+      {tab === "linkbio" && <LinksNaBioTab />}
     </div>
   );
 }

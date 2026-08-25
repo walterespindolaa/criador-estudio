@@ -46,6 +46,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBioLinks, type BioLink } from "@/hooks/useBioLinks";
+import { useBioAlvo } from "@/contexts/BioAlvoContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { validateUpload } from "@/lib/upload-validation";
@@ -603,9 +604,13 @@ function getInitial(name?: string | null): string {
 // RPC nova ainda não está nos tipos gerados, cast (padrão do projeto).
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
+// bio_pages é tabela nova e ainda não está nos tipos gerados.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sbFrom = (table: string) => (supabase as any).from(table);
 
 const LinkInBio = () => {
   const { user } = useAuth();
+  const alvo = useBioAlvo();
   const { activeAccountId } = useActiveAccount();
   const { profile: selfProfile, updateProfile, isLoading: selfProfileLoading } = useProfile();
   const { links, isLoading, createLink, updateLink, deleteLink, reorderLinks } = useBioLinks();
@@ -613,8 +618,8 @@ const LinkInBio = () => {
 
   // Quando o manager gerencia outro, lê/escreve no profile da conta ATIVA,
   // não no useProfile (que controla auth/gate da SESSÃO).
-  const ownerId = activeAccountId || user?.id || "";
-  const isOwnAccount = !activeAccountId || activeAccountId === user?.id;
+  const ownerId = (alvo?.tipo === "conta" ? alvo.ownerId : activeAccountId) || user?.id || "";
+  const isOwnAccount = !alvo && (!activeAccountId || activeAccountId === user?.id);
   const managedProfileKey = ["bio-profile", ownerId] as const;
 
   type BioProfileSubset = Pick<
@@ -635,8 +640,41 @@ const LinkInBio = () => {
     },
   });
 
-  const profile = (isOwnAccount ? selfProfile : managedProfile) as Profile | null;
-  const profileLoading = isOwnAccount ? selfProfileLoading : managedLoading;
+  /* ── A PÁGINA DE UM CLIENTE SEM CONTA CRIA ──
+     Esse cliente não tem linha em profiles, então a página dele mora em
+     bio_pages. Aqui a gente monta um objeto com a MESMA cara de um perfil
+     (nome, foto, endereço, aparência) pra que o resto desta tela, que são
+     milhares de linhas, não precise saber de onde os dados vieram. */
+  const daFicha = alvo?.tipo === "ficha" ? alvo : null;
+  const { data: fichaBio, isLoading: fichaLoading } = useQuery<BioProfileSubset | null>({
+    queryKey: ["bio-page-profile", daFicha?.pageId ?? ""],
+    enabled: !!daFicha,
+    queryFn: async () => {
+      const [pg, cli] = await Promise.all([
+        sbFrom("bio_pages").select("id, slug, settings, views").eq("id", daFicha!.pageId).maybeSingle(),
+        sbFrom("crm_clients").select("name, display_name, logo, segment, instagram").eq("id", daFicha!.crmClientId).maybeSingle(),
+      ]);
+      const page = pg.data as { id: string; slug: string | null; settings: unknown; views: number | null } | null;
+      if (!page) return null;
+      const c = (cli.data ?? {}) as { name?: string; display_name?: string | null; logo?: string | null; segment?: string | null; instagram?: string | null };
+      return {
+        id: page.id,
+        name: c.display_name || c.name || "Cliente",
+        avatar_url: c.logo ?? null,
+        niche: c.segment ?? null,
+        instagram_handle: c.instagram ?? null,
+        bio: null,
+        bio_slug: page.slug,
+        bio_settings: page.settings,
+        // O contador desta página mora em bio_pages.views. Entra aqui com o
+        // mesmo nome de sempre pra o painel de visitas não precisar saber disso.
+        bio_views: page.views ?? 0,
+      } as unknown as BioProfileSubset;
+    },
+  });
+
+  const profile = (daFicha ? fichaBio : (isOwnAccount ? selfProfile : managedProfile)) as Profile | null;
+  const profileLoading = daFicha ? fichaLoading : (isOwnAccount ? selfProfileLoading : managedLoading);
   const [savingAppearance, setSavingAppearance] = useState(false);
   const isSavingAppearance = isOwnAccount ? updateProfile.isPending : savingAppearance;
 
@@ -794,7 +832,10 @@ const LinkInBio = () => {
   const uploadBioImage = async (file: File, prefix: string): Promise<string | null> => {
     const validation = validateUpload(file, "bioMedia");
     if (!validation.ok) { toast.error(validation.reason); return null; }
-    const path = `${ownerId}/${prefix}-${Date.now()}.${file.name.split(".").pop() ?? "jpg"}`;
+    // A pasta é a de quem está logado, e não a do dono da página: a policy do
+    // bucket compara com auth.uid(). Com o ownerId aqui, a gestora subindo
+    // imagem pra página de um cliente levava "não autorizado".
+    const path = `${user?.id ?? ownerId}/${prefix}-${Date.now()}.${file.name.split(".").pop() ?? "jpg"}`;
     const { error: upErr } = await supabase.storage
       .from("bio-media")
       .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
@@ -920,21 +961,33 @@ const LinkInBio = () => {
       return;
     }
     try {
-      if (isOwnAccount) {
+      if (daFicha) {
+        setSavingAppearance(true);
+        // .select() de propósito: sem ele, um bloqueio de permissão volta como
+        // "0 linhas alteradas" SEM erro, e a tela diria "salvo" sem ter salvo.
+        const { data: salvo, error } = await sbFrom("bio_pages")
+          .update({ slug: cleanSlug, settings, updated_at: new Date().toISOString() })
+          .eq("id", daFicha.pageId).select("id").maybeSingle();
+        if (error) throw error;
+        if (!salvo) throw new Error("Não consegui salvar esta página. Recarregue e tente de novo.");
+        queryClient.invalidateQueries({ queryKey: ["bio-page-profile", daFicha.pageId] });
+        queryClient.invalidateQueries({ queryKey: ["bio-page", daFicha.crmClientId] });
+        queryClient.invalidateQueries({ queryKey: ["bio-pages"] });
+      } else if (isOwnAccount) {
         await updateProfile.mutateAsync({
           bio_slug: cleanSlug,
           bio_settings: settings as unknown as never,
         });
       } else {
-        if (!activeAccountId) throw new Error("Conta ativa não identificada.");
+        // Conta de cliente: o update direto em profiles casava ZERO linhas (não
+        // existe policy de UPDATE pra gestora) e a tela dizia "salvo" mesmo
+        // assim. A RPC valida o vínculo e grava de verdade.
+        const alvoId = alvo?.tipo === "conta" ? alvo.ownerId : activeAccountId;
+        if (!alvoId) throw new Error("Conta ativa não identificada.");
         setSavingAppearance(true);
-        const { error } = await supabase
-          .from("profiles")
-          .update({
-            bio_slug: cleanSlug,
-            bio_settings: settings as unknown as never,
-          })
-          .eq("id", activeAccountId);
+        const { error } = await sbRpc("manager_save_client_bio", {
+          _owner: alvoId, _slug: cleanSlug, _settings: settings,
+        });
         if (error) throw error;
         queryClient.invalidateQueries({ queryKey: managedProfileKey });
       }

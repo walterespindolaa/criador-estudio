@@ -291,6 +291,7 @@ const App = () => (
                 <Route path="criacrm/calendario" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="criacrm/pipeline" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="criacrm/contratos" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
+                <Route path="criacrm/linkbio" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="criacrm/:id" element={<ErrorBoundary><CriaCrmClient /></ErrorBoundary>} />
                 {/* Cria Caixa: cada seção é uma rota de verdade
                     (/criacaixa/empresa/calendario, /pessoal/orcamento, …).

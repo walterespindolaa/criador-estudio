@@ -43,7 +43,13 @@ serve(async (req) => {
     if (rlErr || allowed === false) return ok({ ok: true, throttled: true });
 
     if (type === "view" && slug) {
-      await svc.rpc("increment_bio_view", { _slug: slug });
+      // O endereço pode ser de um criador (profiles) ou de uma página que a
+      // social mídia montou pra um cliente (bio_pages). O contador mora em
+      // lugares diferentes, e a página diz qual é no `kind`. Sem o kind, tenta
+      // os dois: só um deles vai encontrar o slug.
+      const kind = String(body?.kind ?? "");
+      if (kind !== "page") await svc.rpc("increment_bio_view", { _slug: slug });
+      if (kind !== "profile") await svc.rpc("increment_bio_page_view", { _slug: slug });
     } else if (type === "click" && linkId) {
       await svc.rpc("increment_bio_link_click", { link_id: linkId });
     }

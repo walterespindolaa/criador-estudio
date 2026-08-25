@@ -347,12 +347,19 @@ function backgroundStyle(settings: BioSettings): React.CSSProperties {
   return { backgroundColor: settings.bgColor };
 }
 
+// RPCs novas ainda não estão nos tipos gerados, cast (padrão do projeto).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sbRpc = (fn: string, args: Record<string, unknown>) => (supabase as any).rpc(fn, args);
+
 const BioPage = () => {
   const { slug } = useParams<{ slug: string }>();
   useForceLightTheme();
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [profile, setProfile] = useState<ProfileLite | null>(null);
+  // Página montada pela social mídia (não é a conta de um criador). Muda de
+  // onde vêm os leads e como a visita é contada.
+  const [ehDaAgencia, setDaAgencia] = useState(false);
   const [links, setLinks] = useState<BioLinkLite[]>([]);
 
   useEffect(() => {
@@ -360,21 +367,34 @@ const BioPage = () => {
     async function load() {
       if (!slug) return;
       setLoading(true);
-      const { data: profileRows, error: profileError } = await supabase
+      // Dois lugares podem responder por um endereço: a conta de um criador
+      // (profiles) ou a página que uma social mídia montou pra um cliente dela
+      // (bio_pages). O endereço é único entre os dois, então basta perguntar
+      // pro primeiro e cair no segundo.
+      const { data: profileRows } = await supabase
         .rpc("get_public_profile_by_slug", { _slug: slug });
-      const profileData = Array.isArray(profileRows) ? profileRows[0] : null;
+      let profileData = Array.isArray(profileRows) ? profileRows[0] : null;
+      let daAgencia = false;
+
+      if (!profileData) {
+        const { data: pageRows } = await sbRpc("get_public_bio_page_by_slug", { _slug: slug });
+        const row = Array.isArray(pageRows) ? pageRows[0] : null;
+        if (row) { profileData = row as typeof profileData; daAgencia = true; }
+      }
 
       if (cancelled) return;
-      if (profileError || !profileData) {
+      if (!profileData) {
         setNotFound(true);
         setLoading(false);
         return;
       }
 
-      const { data: linkData } = await supabase
-        .rpc("get_public_bio_links_by_slug", { _slug: slug });
+      const { data: linkData } = daAgencia
+        ? await sbRpc("get_public_bio_page_links_by_slug", { _slug: slug })
+        : await supabase.rpc("get_public_bio_links_by_slug", { _slug: slug });
 
       if (cancelled) return;
+      setDaAgencia(daAgencia);
       setProfile(profileData as ProfileLite);
       setLinks((linkData ?? []) as BioLinkLite[]);
       setLoading(false);
@@ -385,7 +405,7 @@ const BioPage = () => {
         try {
           if (!sessionStorage.getItem(key)) {
             sessionStorage.setItem(key, "1");
-            void supabase.functions.invoke("bio-track", { body: { type: "view", slug } });
+            void supabase.functions.invoke("bio-track", { body: { type: "view", slug, kind: daAgencia ? "page" : "profile" } });
           }
         } catch { /* sessionStorage indisponível: ignora */ }
       }
@@ -559,7 +579,7 @@ const BioPage = () => {
           if (sec.id === "lead") {
             return (
               <div key="lead" className="w-full mt-7">
-                <LeadForm slug={slug ?? ""} config={settings.lead} buttonColor={settings.buttonColor} buttonTextColor={settings.buttonTextColor} radius={radius}
+                <LeadForm slug={slug ?? ""} daAgencia={ehDaAgencia} config={settings.lead} buttonColor={settings.buttonColor} buttonTextColor={settings.buttonTextColor} radius={radius}
                   cardColor={settings.cardColor} cardTextColor={settings.cardTextColor} />
               </div>
             );
@@ -881,9 +901,11 @@ function VitrineView({
 }
 
 function LeadForm({
-  slug, config, buttonColor, buttonTextColor, radius, cardColor, cardTextColor,
+  slug, daAgencia, config, buttonColor, buttonTextColor, radius, cardColor, cardTextColor,
 }: {
   slug: string;
+  /** Página montada pela social mídia: o lead é dela, não de um criador. */
+  daAgencia?: boolean;
   config: BioLeadForm;
   buttonColor: string;
   buttonTextColor: string;
@@ -910,7 +932,7 @@ function LeadForm({
     try {
       const { error } = await (supabase.rpc as unknown as (
         fn: string, args: Record<string, unknown>
-      ) => Promise<{ error: { message: string } | null }>)("submit_bio_lead", {
+      ) => Promise<{ error: { message: string } | null }>)(daAgencia ? "submit_bio_page_lead" : "submit_bio_lead", {
         _slug: slug,
         _name: name.trim() || null,
         _email: email.trim() || null,
