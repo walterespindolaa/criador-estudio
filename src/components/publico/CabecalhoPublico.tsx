@@ -41,6 +41,8 @@ export function LogoMarca({
   cor = "#2A2440", fundo = "#ffffff", style,
 }: LogoMarcaProps) {
   const [falhou, setFalhou] = useState(false);
+  /** null = ainda não mediu. true = imagem quadrada (selo), preenche o círculo. */
+  const [quadrada, setQuadrada] = useState<boolean | null>(null);
   const url = src?.trim() || "";
   const temLogo = !!url && !falhou;
 
@@ -58,7 +60,8 @@ export function LogoMarca({
     width: size,
     minWidth: size,
     maxWidth: size,
-    padding: avatar ? 0 : 9,
+    // Selo quadrado preenche igual avatar; logo horizontal mantém o respiro.
+    padding: (avatar || quadrada) ? 0 : 9,
     boxSizing: "border-box",
     display: "inline-flex",
     alignItems: "center",
@@ -88,10 +91,16 @@ export function LogoMarca({
         alt={nome ? `Logo de ${nome}` : "Logo da marca"}
         loading="eager"
         onError={() => setFalhou(true)}
+        onLoad={(e) => {
+          const img = e.currentTarget;
+          const p = img.naturalWidth / (img.naturalHeight || 1);
+          // Entre 0,85 e 1,2 é selo quadrado: preenche o círculo inteiro.
+          setQuadrada(p >= 0.85 && p <= 1.2);
+        }}
         style={{
           height: "100%",
           width: "100%",
-          objectFit: avatar ? "cover" : "contain",
+          objectFit: (avatar || quadrada) ? "cover" : "contain",
           display: "block",
         }}
       />

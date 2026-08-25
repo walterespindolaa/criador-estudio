@@ -57,6 +57,10 @@ export const ETAPAS_INTAKE: EtapaIntake[] = [
       { chave: "address", label: "Endereço completo", ajuda: "Rua, número, bairro, cidade, estado e CEP.", largo: true },
       { chave: "city", label: "Cidade" },
       { chave: "marketSince", label: "Há quanto tempo você atua nesse mercado?", ajuda: "Ex.: 8 anos, desde 2018." },
+      { chave: "birthday", label: "Seu aniversário", ajuda: "Só o dia e o mês. A gente gosta de lembrar.",
+        tipo: "aniversario", soSe: { chave: "contract_type", valor: "Pessoa física" } },
+      { chave: "birthday", label: "Aniversário da empresa", ajuda: "O dia e o mês em que ela foi fundada. Vira conteúdo todo ano.",
+        tipo: "aniversario", soSe: { chave: "contract_type", valor: "Empresa (CNPJ)" } },
     ],
   },
   {
@@ -68,7 +72,6 @@ export const ETAPAS_INTAKE: EtapaIntake[] = [
       { chave: "email", label: "E-mail", tipo: "email", obrigatorio: true },
       { chave: "whatsapp", label: "WhatsApp", tipo: "tel", obrigatorio: true },
       { chave: "phone", label: "Outro telefone", tipo: "tel" },
-      { chave: "birthday", label: "Seu aniversário", ajuda: "Da pessoa que responde, não da empresa. Só dia e mês: a gente gosta de lembrar.", tipo: "aniversario" },
     ],
   },
   {

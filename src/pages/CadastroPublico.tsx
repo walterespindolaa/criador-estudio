@@ -274,19 +274,47 @@ export default function CadastroPublico() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#FBF7F0", fontFamily: "system-ui, -apple-system, sans-serif", paddingBottom: 48 }}>
-      <div style={{ background: accent, padding: "26px 20px 30px", textAlign: "center" }}>
-        <LogosCabecalho agencia={{ src: d.logo ?? undefined, nome: d.by ?? undefined }} fundo={accent} style={{ marginBottom: 16 }} />
-        <p style={{ margin: 0, color: onAccentSoft, fontSize: 12, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase" }}>
-          Cadastro e briefing
-        </p>
-        <h1 style={{ margin: "6px 0 0", color: onAccent, fontSize: 25, fontWeight: 800, lineHeight: 1.25 }}>
-          {d.client_label || "Vamos começar"}
-        </h1>
-        <p style={{ margin: "8px auto 0", color: onAccentSoft, fontSize: 14, maxWidth: 460, lineHeight: 1.5 }}>
-          {enviado
-            ? "Recebemos as suas respostas."
-            : "Leva uns 10 minutos. Pode fechar e voltar depois: o que você escrever fica salvo."}
-        </p>
+      {/* BOAS-VINDAS, não "formulário". Este é o primeiro contato do cliente com
+          a agência depois do sim, e a página estava com cara de cadastro de
+          banco: rótulo em caixa alta, nome do cliente e nada mais. As formas
+          orgânicas e a fonte manuscrita são as mesmas da marca. */}
+      <div style={{ background: accent, padding: "34px 20px 40px", textAlign: "center", position: "relative", overflow: "hidden" }}>
+        <span aria-hidden style={{ position: "absolute", top: -52, right: -40, width: 168, height: 168, borderRadius: "50%", background: "rgba(255,255,255,.10)" }} />
+        <span aria-hidden style={{ position: "absolute", bottom: -66, left: -34, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,.08)" }} />
+        <img src="/stickers/selo-sem-formula.png" alt="" aria-hidden draggable={false}
+          style={{ position: "absolute", top: 16, left: 18, width: 60, opacity: .28, transform: "rotate(-13deg)", pointerEvents: "none" }} />
+        <img src="/stickers/criatura-lampada.png" alt="" aria-hidden draggable={false}
+          style={{ position: "absolute", bottom: 12, right: 16, width: 52, opacity: .3, transform: "rotate(9deg)", pointerEvents: "none" }} />
+
+        <div style={{ position: "relative", maxWidth: 520, margin: "0 auto" }}>
+          <LogosCabecalho agencia={{ src: d.logo ?? undefined, nome: d.by ?? undefined }} fundo={accent} style={{ marginBottom: 18 }} />
+
+          <p style={{
+            margin: 0, color: onAccent, fontSize: "clamp(1.9rem, 7vw, 2.6rem)", lineHeight: 1,
+            fontFamily: "'Grand Hotel', cursive", fontWeight: 400,
+          }}>
+            seja bem-vindo!
+          </p>
+          <h1 style={{
+            margin: "10px 0 0", color: onAccent, fontSize: "clamp(1.15rem, 4.4vw, 1.45rem)", lineHeight: 1.3,
+            fontFamily: "'Baloo 2', system-ui, sans-serif", fontWeight: 800,
+          }}>
+            {enviado ? "Recebi tudo, obrigada!" : "Esse é o primeiro passo da nossa parceria"}
+          </h1>
+          <p style={{ margin: "12px auto 0", color: onAccentSoft, fontSize: 14.5, maxWidth: 440, lineHeight: 1.6 }}>
+            {enviado
+              ? "Suas respostas já estão comigo. Qualquer coisa que faltar, eu te chamo."
+              : "Este briefing é o que me faz entender a sua marca de verdade: o que você vende, pra quem, e do jeito que você fala. É daqui que sai todo o conteúdo daqui pra frente."}
+          </p>
+          {!enviado && (
+            <p style={{
+              display: "inline-block", margin: "16px 0 0", padding: "8px 16px", borderRadius: 999,
+              background: "rgba(255,255,255,.16)", color: onAccent, fontSize: 13, fontWeight: 600,
+            }}>
+              Leva uns 10 minutos · pode fechar e voltar depois
+            </p>
+          )}
+        </div>
       </div>
 
       <div style={{ maxWidth: 680, margin: "0 auto", padding: "20px 16px 0" }}>
@@ -294,10 +322,9 @@ export default function CadastroPublico() {
           <div style={{ background: "#EAF7EE", border: "1px solid #BFE6CC", borderRadius: 18, padding: 22, display: "flex", gap: 12 }}>
             <PartyPopper style={{ width: 22, height: 22, color: "#1E7A44", flexShrink: 0 }} />
             <div>
-              <p style={{ margin: 0, fontWeight: 800, color: "#175C34", fontSize: 16 }}>Tudo certo, obrigado!</p>
+              <p style={{ margin: 0, fontWeight: 800, color: "#175C34", fontSize: 16 }}>Tudo certo!</p>
               <p style={{ margin: "6px 0 0", color: "#3F6B50", fontSize: 14, lineHeight: 1.55 }}>
-                {d.by ? `${d.by} já recebeu` : "Já recebemos"} as suas respostas. Qualquer coisa que faltar, a gente te chama.
-                Pode fechar esta página.
+                Pode fechar esta página. A gente se fala na nossa conversa.
               </p>
             </div>
           </div>
@@ -315,7 +342,10 @@ export default function CadastroPublico() {
             <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 700, color: "#8B8272", letterSpacing: ".06em", textTransform: "uppercase" }}>
               Etapa {etapa + 1} de {ETAPAS_INTAKE.length} · {preenchidas} de {totalVisivel(resp)} respondidas
             </p>
-            <h2 style={{ margin: "0 0 4px", fontSize: 21, fontWeight: 800, color: "#2A2440" }}>{et.titulo}</h2>
+            <h2 style={{
+              margin: "0 0 4px", fontSize: 22, fontWeight: 800, color: "#2A2440",
+              fontFamily: "'Baloo 2', system-ui, sans-serif",
+            }}>{et.titulo}</h2>
             <p style={{ margin: "0 0 18px", fontSize: 14, color: "#7C7566", lineHeight: 1.5 }}>{et.descricao}</p>
 
             {erros.length > 0 && (
