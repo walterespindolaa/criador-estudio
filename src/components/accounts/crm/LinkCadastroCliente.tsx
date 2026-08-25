@@ -9,7 +9,9 @@ import {
   useClientIntakes, useCreateClientIntake, useApplyClientIntake, useDeleteClientIntake,
   type ClientIntake,
 } from "@/hooks/useClientIntakes";
-import { ETAPAS_INTAKE, CAMPOS_CADASTRO, quantasRespondidas, TODOS_CAMPOS_INTAKE } from "@/lib/formularioCadastro";
+import {
+  ETAPAS_INTAKE, ATALHOS_ETAPAS, etapasDoEnvio, CAMPOS_CADASTRO, quantasRespondidas, totalVisivel,
+} from "@/lib/formularioCadastro";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PEDIR OS DADOS PRO CLIENTE
@@ -27,6 +29,12 @@ export function LinkCadastroCliente({ crmClientId, clienteNome }: { crmClientId:
   const aplicar = useApplyClientIntake();
   const excluir = useDeleteClientIntake();
   const [vendo, setVendo] = useState<ClientIntake | null>(null);
+  /* O QUE VAI NO LINK. Mandar as 30 perguntas pra um cliente que só precisa
+     confirmar o CNPJ é o jeito mais rápido do formulário não voltar. */
+  const [escolhendo, setEscolhendo] = useState(false);
+  const [marcadas, setMarcadas] = useState<number[]>([0, 1, 2, 3, 4, 5]);
+  const alternar = (i: number) =>
+    setMarcadas((m) => (m.includes(i) ? m.filter((x) => x !== i) : [...m, i].sort((a, b) => a - b)));
 
   const linkDe = (t: string) => `${window.location.origin}/cadastro/${t}`;
 
@@ -37,8 +45,10 @@ export function LinkCadastroCliente({ crmClientId, clienteNome }: { crmClientId:
   };
 
   const gerar = async () => {
+    if (marcadas.length === 0) { toast.error("Escolha pelo menos uma etapa."); return; }
     try {
-      const i = await criar.mutateAsync(crmClientId);
+      const i = await criar.mutateAsync({ crmClientId, steps: marcadas });
+      setEscolhendo(false);
       await copiar(i.token);
     } catch { /* o hook já avisa */ }
   };
@@ -66,20 +76,64 @@ export function LinkCadastroCliente({ crmClientId, clienteNome }: { crmClientId:
                 <Link2 className="h-3.5 w-3.5 mr-1.5" /> Copiar o link
               </Button>
             ) : (
-              <Button size="sm" onClick={() => void gerar()} disabled={criar.isPending} className="rounded-xl h-9">
-                {criar.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
-                Gerar o link
+              <Button size="sm" onClick={() => setEscolhendo((v) => !v)} className="rounded-xl h-9">
+                <Send className="h-3.5 w-3.5 mr-1.5" /> Gerar o link
               </Button>
             )}
           </div>
         </div>
+
+        {escolhendo && (
+          <div className="mt-3 rounded-xl border border-border bg-card p-3.5">
+            <p className="text-[12.5px] font-body font-semibold text-foreground">O que este link vai pedir?</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {ATALHOS_ETAPAS.map((a) => {
+                const igual = a.steps.length === marcadas.length && a.steps.every((x) => marcadas.includes(x));
+                return (
+                  <button key={a.nome} type="button" onClick={() => setMarcadas(a.steps)}
+                    title={a.explica}
+                    className={cn("text-[11.5px] font-body font-semibold px-2.5 py-1.5 rounded-lg border transition-colors",
+                      igual ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
+                    {a.nome}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2.5 space-y-1">
+              {ETAPAS_INTAKE.map((e, i) => {
+                const on = marcadas.includes(i);
+                return (
+                  <button key={e.titulo} type="button" onClick={() => alternar(i)}
+                    className="w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-muted/50 transition-colors">
+                    <span className={cn("grid h-4.5 w-4.5 shrink-0 place-items-center rounded border transition-colors",
+                      on ? "bg-primary border-primary text-primary-foreground" : "border-border")}
+                      style={{ height: 18, width: 18 }}>
+                      {on && <Check className="h-3 w-3" strokeWidth={3} />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[12.5px] font-body font-semibold text-foreground">{i + 1}. {e.titulo}</span>
+                      <span className="block text-[11px] font-body text-muted-foreground">{e.campos.length} perguntas</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <Button size="sm" className="rounded-xl h-9 flex-1" onClick={() => void gerar()} disabled={criar.isPending}>
+                {criar.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5 mr-1.5" />}
+                Gerar e copiar o link
+              </Button>
+              <Button size="sm" variant="ghost" className="rounded-xl h-9" onClick={() => setEscolhendo(false)}>Cancelar</Button>
+            </div>
+          </div>
+        )}
 
         {envios.length > 0 && (
           <div className="mt-3 space-y-2">
             {envios.map((e) => {
               const chegou = e.status === "enviado";
               const feito = e.status === "aplicado";
-              const n = quantasRespondidas((e.answers ?? {}) as Record<string, string>);
+              const n = quantasRespondidas((e.answers ?? {}) as Record<string, string>, e.steps);
               return (
                 <div key={e.id}
                   className={cn("flex items-center gap-2.5 rounded-xl border p-2.5 flex-wrap",
@@ -93,7 +147,10 @@ export function LinkCadastroCliente({ crmClientId, clienteNome }: { crmClientId:
                       {chegou ? "O cliente respondeu" : feito ? "Respostas aplicadas na ficha" : "Aguardando o cliente"}
                     </p>
                     <p className="text-[11px] font-body text-muted-foreground">
-                      {n} de {TODOS_CAMPOS_INTAKE.length} respostas
+                      {n} de {totalVisivel((e.answers ?? {}) as Record<string, string>, e.steps)} respostas
+                      {e.steps?.length && e.steps.length < ETAPAS_INTAKE.length
+                        ? ` · ${e.steps.length} ${e.steps.length === 1 ? "etapa" : "etapas"}`
+                        : ""}
                       {e.submitted_at && ` · ${new Date(e.submitted_at).toLocaleDateString("pt-BR")}`}
                     </p>
                   </div>
@@ -141,7 +198,7 @@ export function LinkCadastroCliente({ crmClientId, clienteNome }: { crmClientId:
           </DialogHeader>
 
           <div className="space-y-3">
-            {ETAPAS_INTAKE.map((et) => {
+            {etapasDoEnvio(vendo?.steps).map((et) => {
               const respondidos = et.campos.filter((c) => ((vendo?.answers ?? {})[c.chave] || "").trim());
               if (respondidos.length === 0) return null;
               return (

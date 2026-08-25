@@ -24,6 +24,8 @@ export type ClientIntake = {
   token: string;
   status: "aberto" | "enviado" | "aplicado";
   answers: Record<string, string> | null;
+  /** Índices das etapas que este link leva (null = todas). */
+  steps: number[] | null;
   created_at: string;
   submitted_at: string | null;
   applied_at: string | null;
@@ -60,9 +62,9 @@ export function useCreateClientIntake() {
   const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (crmClientId: string) => {
+    mutationFn: async ({ crmClientId, steps }: { crmClientId: string; steps?: number[] }) => {
       const { data, error } = await sbFrom("client_intakes")
-        .insert({ manager_id: agencyOwnerId, crm_client_id: crmClientId })
+        .insert({ manager_id: agencyOwnerId, crm_client_id: crmClientId, steps: steps?.length ? steps : null })
         .select("*")
         .single();
       if (error) throw error;

@@ -135,6 +135,25 @@ export const ETAPAS_INTAKE: EtapaIntake[] = [
 
 export const TODOS_CAMPOS_INTAKE = ETAPAS_INTAKE.flatMap((e) => e.campos);
 
+/* ── QUAIS ETAPAS ESTE ENVIO LEVA ──
+   `steps` guarda os índices escolhidos na hora de gerar o link. Vazio ou null
+   significa TODAS: é o que vale pros links criados antes disso existir, e é o
+   padrão de quem não quiser escolher nada. */
+export function etapasDoEnvio(steps?: number[] | null): EtapaIntake[] {
+  if (!steps || steps.length === 0) return ETAPAS_INTAKE;
+  const escolhidas = steps
+    .filter((i) => i >= 0 && i < ETAPAS_INTAKE.length)
+    .sort((a, b) => a - b);
+  return escolhidas.length ? escolhidas.map((i) => ETAPAS_INTAKE[i]) : ETAPAS_INTAKE;
+}
+
+/** Presets pra não obrigar ninguém a marcar caixinha uma a uma. */
+export const ATALHOS_ETAPAS: { nome: string; steps: number[]; explica: string }[] = [
+  { nome: "Tudo", steps: [0, 1, 2, 3, 4, 5], explica: "cadastro completo e briefing de marca" },
+  { nome: "Só o cadastro", steps: [0, 1], explica: "dados do contrato e contato" },
+  { nome: "Só o briefing", steps: [2, 3, 4, 5], explica: "marca, público e tom de voz" },
+];
+
 /** Chaves que viram COLUNA do cadastro (o resto vai pro brandbook/persona). */
 export const CAMPOS_CADASTRO = new Set([
   // contract_type não é coluna: ele só decide quais campos aparecem e vai pro
@@ -149,28 +168,29 @@ export function campoVisivel(c: CampoIntake, respostas: Record<string, string>):
   return (respostas[c.soSe.chave] || "").trim() === c.soSe.valor;
 }
 
-/** Faltou algum obrigatório VISÍVEL? Campo escondido não pode travar o envio. */
-export function faltandoObrigatorios(respostas: Record<string, string>): string[] {
-  return TODOS_CAMPOS_INTAKE
+/** Faltou algum obrigatório VISÍVEL? Campo escondido não pode travar o envio.
+ *  Só cobra o que está NAS ETAPAS DESTE ENVIO: exigir resposta de uma etapa que
+ *  a pessoa nem viu é o jeito mais rápido de deixar o formulário travado. */
+export function faltandoObrigatorios(respostas: Record<string, string>, steps?: number[] | null): string[] {
+  return etapasDoEnvio(steps).flatMap((e) => e.campos)
     .filter((c) => c.obrigatorio && campoVisivel(c, respostas) && !(respostas[c.chave] || "").trim())
     .map((c) => c.label);
 }
 
-export function quantasRespondidas(respostas: Record<string, string>): number {
+function camposVistos(respostas: Record<string, string>, steps?: number[] | null): CampoIntake[] {
   const vistas = new Set<string>();
-  return TODOS_CAMPOS_INTAKE.filter((c) => {
-    if (!campoVisivel(c, respostas) || vistas.has(c.chave)) return false;
-    vistas.add(c.chave);
-    return (respostas[c.chave] || "").trim();
-  }).length;
-}
-
-/** Quantos campos a pessoa vai ver de fato (PF e PJ não somam juntos). */
-export function totalVisivel(respostas: Record<string, string>): number {
-  const vistas = new Set<string>();
-  return TODOS_CAMPOS_INTAKE.filter((c) => {
+  return etapasDoEnvio(steps).flatMap((e) => e.campos).filter((c) => {
     if (!campoVisivel(c, respostas) || vistas.has(c.chave)) return false;
     vistas.add(c.chave);
     return true;
-  }).length;
+  });
+}
+
+export function quantasRespondidas(respostas: Record<string, string>, steps?: number[] | null): number {
+  return camposVistos(respostas, steps).filter((c) => (respostas[c.chave] || "").trim()).length;
+}
+
+/** Quantos campos a pessoa vai ver de fato (PF e PJ não somam juntos). */
+export function totalVisivel(respostas: Record<string, string>, steps?: number[] | null): number {
+  return camposVistos(respostas, steps).length;
 }

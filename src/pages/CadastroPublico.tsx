@@ -7,7 +7,7 @@ import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { LogosCabecalho } from "@/components/publico/CabecalhoPublico";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import {
-  ETAPAS_INTAKE, faltandoObrigatorios, quantasRespondidas, totalVisivel, campoVisivel,
+  etapasDoEnvio, faltandoObrigatorios, quantasRespondidas, totalVisivel, campoVisivel,
   type CampoIntake,
 } from "@/lib/formularioCadastro";
 
@@ -34,6 +34,8 @@ const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
 type Dados = {
   status: "aberto" | "enviado" | "aplicado";
   answers: Record<string, string> | null;
+  /** Etapas escolhidas na hora de gerar o link (null = todas). */
+  steps: number[] | null;
   client_label: string | null;
   accent: string | null; logo: string | null; by: string | null;
 };
@@ -141,7 +143,8 @@ export default function CadastroPublico() {
     // salvar é estável o bastante; o que importa é a mudança das respostas.
   }, [resp, carregou, enviado]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const preenchidas = useMemo(() => quantasRespondidas(resp), [resp]);
+  const preenchidas = useMemo(
+    () => quantasRespondidas(resp, q.data?.steps), [resp, q.data?.steps]);
 
   if (q.isLoading) {
     return <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", color: "#857F9C", fontFamily: "system-ui" }}>Carregando…</div>;
@@ -161,8 +164,10 @@ export default function CadastroPublico() {
   const accent = d.accent || FALLBACK;
   const onAccent = isDark(accent) ? "#ffffff" : "#1A1626";
   const onAccentSoft = isDark(accent) ? "rgba(255,255,255,.82)" : "rgba(26,22,38,.7)";
-  const et = ETAPAS_INTAKE[etapa];
-  const ultima = etapa === ETAPAS_INTAKE.length - 1;
+  // Só as etapas que a social mídia escolheu mandar.
+  const etapas = etapasDoEnvio(d.steps);
+  const et = etapas[Math.min(etapa, etapas.length - 1)];
+  const ultima = etapa >= etapas.length - 1;
 
   const campo: CSSProperties = {
     width: "100%", border: "1px solid #E5DFD3", borderRadius: 12, padding: "11px 13px",
@@ -173,11 +178,11 @@ export default function CadastroPublico() {
   const set = (k: string, v: string) => setResp((r) => ({ ...r, [k]: v }));
 
   const enviar = () => {
-    const faltou = faltandoObrigatorios(resp);
+    const faltou = faltandoObrigatorios(resp, d.steps);
     if (faltou.length) {
       setErros(faltou);
       // Leva de volta pra primeira etapa que tem pendência.
-      const idx = ETAPAS_INTAKE.findIndex((e) => e.campos.some((c) => c.obrigatorio && !(resp[c.chave] || "").trim()));
+      const idx = etapas.findIndex((e) => e.campos.some((c) => c.obrigatorio && campoVisivel(c, resp) && !(resp[c.chave] || "").trim()));
       if (idx >= 0) setEtapa(idx);
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -311,7 +316,7 @@ export default function CadastroPublico() {
               display: "inline-block", margin: "16px 0 0", padding: "8px 16px", borderRadius: 999,
               background: "rgba(255,255,255,.16)", color: onAccent, fontSize: 13, fontWeight: 600,
             }}>
-              Leva uns 10 minutos · pode fechar e voltar depois
+              {etapas.length <= 2 ? "É rapidinho · pode fechar e voltar depois" : "Leva uns 10 minutos · pode fechar e voltar depois"}
             </p>
           )}
         </div>
@@ -332,7 +337,7 @@ export default function CadastroPublico() {
           <>
             {/* Progresso: uma etapa por vez, pra não parecer uma parede de campos */}
             <div style={{ display: "flex", gap: 5, marginBottom: 16 }}>
-              {ETAPAS_INTAKE.map((_, i) => (
+              {etapas.map((_, i) => (
                 <span key={i} style={{
                   flex: 1, height: 5, borderRadius: 999,
                   background: i <= etapa ? accent : "#E8E1D5",
@@ -340,7 +345,7 @@ export default function CadastroPublico() {
               ))}
             </div>
             <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 700, color: "#8B8272", letterSpacing: ".06em", textTransform: "uppercase" }}>
-              Etapa {etapa + 1} de {ETAPAS_INTAKE.length} · {preenchidas} de {totalVisivel(resp)} respondidas
+              Etapa {etapa + 1} de {etapas.length} · {preenchidas} de {totalVisivel(resp, d.steps)} respondidas
             </p>
             <h2 style={{
               margin: "0 0 4px", fontSize: 22, fontWeight: 800, color: "#2A2440",
