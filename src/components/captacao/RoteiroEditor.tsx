@@ -70,13 +70,15 @@ export function textoParaCenas(texto: string): CaptureScene[] {
   return cenas.length ? cenas : [cenaVazia()];
 }
 
-export function RoteiroEditor({ open, onOpenChange, inicial, salvando, onSalvar, sugerirIA }: {
+export function RoteiroEditor({ open, onOpenChange, inicial, salvando, onSalvar, sugerirIA, dentroDoDia }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   /** Roteiro em edição (null = novo). */
   inicial: CaptureScript | null;
   salvando: boolean;
   onSalvar: (v: RoteiroFormValor) => Promise<unknown> | void;
+  /** Roteiro criado DENTRO de um dia: data e local vêm da captação. */
+  dentroDoDia?: boolean;
   /** Opcional: gera cenas com IA a partir do título/sobre. */
   sugerirIA?: (ctx: { title: string; about: string }) => Promise<CaptureScene[] | null>;
 }) {
@@ -166,15 +168,22 @@ export function RoteiroEditor({ open, onOpenChange, inicial, salvando, onSalvar,
               <Rotulo>Referências (reel, tiktok, youtube)</Rotulo>
               <CampoReferencias valor={v.reference_url} onChange={(x) => setV((p) => ({ ...p, reference_url: x }))} />
             </div>
-            <div>
-              <Rotulo>Data da gravação</Rotulo>
-              <Input type="date" value={v.record_date} onChange={(e) => setV((p) => ({ ...p, record_date: e.target.value }))} className="h-10" />
-            </div>
-            <div>
-              <Rotulo>Local</Rotulo>
-              <Input value={v.location} onChange={(e) => setV((p) => ({ ...p, location: e.target.value }))}
-                placeholder="Ex.: consultório, estúdio" className="h-10" />
-            </div>
+            {/* Data e local só aparecem no roteiro SOLTO (sem dia marcado).
+                Dentro de uma captação eles já foram preenchidos lá, e perguntar
+                de novo só cria duas versões da mesma informação. */}
+            {!dentroDoDia && (
+              <>
+                <div>
+                  <Rotulo>Data da gravação</Rotulo>
+                  <Input type="date" value={v.record_date} onChange={(e) => setV((p) => ({ ...p, record_date: e.target.value }))} className="h-10" />
+                </div>
+                <div>
+                  <Rotulo>Local</Rotulo>
+                  <Input value={v.location} onChange={(e) => setV((p) => ({ ...p, location: e.target.value }))}
+                    placeholder="Ex.: consultório, estúdio" className="h-10" />
+                </div>
+              </>
+            )}
           </div>
 
           {/* ── AS CENAS ── */}

@@ -1952,6 +1952,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             ? ({ id: editandoCapId, title: "", content: caps.find((c) => c.id === editandoCapId)?.roteiro ?? "", scenes: [] } as unknown as CaptureScript)
             : editando}
           salvando={addScript.isPending || updScript.isPending}
+          dentroDoDia={!!capturaAlvo || !!editandoCapId}
           onSalvar={salvarRoteiro} />
       )}
       {importOpen && ext && (

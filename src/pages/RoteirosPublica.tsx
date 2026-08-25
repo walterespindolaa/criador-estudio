@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Clapperboard, ChevronUp, ChevronDown, Check, Trash2, Undo2, PartyPopper, Plus, Minus, PlayCircle } from "lucide-react";
+import { Clapperboard, ChevronUp, ChevronDown, Check, Trash2, Undo2, PartyPopper, Minus, PlayCircle } from "lucide-react";
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { LogosCabecalho } from "@/components/publico/CabecalhoPublico";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
@@ -90,7 +90,9 @@ export default function RoteirosPublica() {
   const qc = useQueryClient();
 
   const [rascunho, setRascunho] = useState<Record<string, Item>>({});
-  const [abertos, setAbertos] = useState<Record<string, boolean>>({});
+  /** Qual pastinha está aberta. Uma por vez: com todas abertas o cliente
+   *  encara uma parede de texto e fecha a página. */
+  const [abertoId, setAbertoId] = useState<string | null>(null);
   const [nota, setNota] = useState("");
   const [enviado, setEnviado] = useState(false);
 
@@ -196,9 +198,26 @@ export default function RoteirosPublica() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#FBF7F0", fontFamily: "system-ui, -apple-system, sans-serif", paddingBottom: 40 }}>
-      {/* Cabeçalho com a marca de quem mandou */}
-      <div style={{ background: accent, padding: "26px 20px 30px", textAlign: "center" }}>
+    <div style={{
+      minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif", paddingBottom: 40,
+      // Manchas suaves da paleta no fundo: é o que dá a cara do Cria sem roubar
+      // atenção do texto, que é o que a pessoa veio ler.
+      background: `radial-gradient(760px 340px at 108% 4%, ${accent}14, transparent 62%),
+                   radial-gradient(560px 300px at -12% 42%, #7C90F014, transparent 60%),
+                   radial-gradient(520px 280px at 106% 88%, #FFCF0318, transparent 62%),
+                   #FBF7F0`,
+    }}>
+      {/* Cabeçalho: a mesma linguagem de formas da marca. Sem isso a página fica
+          igual à de aprovar post e à do cronograma, e o cliente não percebe que
+          está num lugar diferente, fazendo outra coisa. */}
+      <div style={{ background: accent, padding: "30px 20px 46px", textAlign: "center", position: "relative", overflow: "hidden" }}>
+        <span aria-hidden style={{ position: "absolute", top: -46, right: -34, width: 156, height: 156, borderRadius: "50%", background: "rgba(255,255,255,.10)" }} />
+        <span aria-hidden style={{ position: "absolute", bottom: -60, left: -30, width: 132, height: 132, borderRadius: "50%", background: "rgba(255,255,255,.08)" }} />
+        <img src="/stickers/selo-sem-formula.png" alt="" aria-hidden draggable={false}
+          style={{ position: "absolute", top: 14, left: 16, width: 62, opacity: .3, transform: "rotate(-12deg)", pointerEvents: "none" }} />
+        <img src="/stickers/criatura-lampada.png" alt="" aria-hidden draggable={false}
+          style={{ position: "absolute", bottom: 10, right: 14, width: 54, opacity: .32, transform: "rotate(8deg)", pointerEvents: "none" }} />
+        <div style={{ position: "relative" }}>
         <LogosCabecalho
           agencia={{ src: d.logo ?? undefined, nome: d.by ?? undefined }}
           cliente={{ src: d.client_logo ?? undefined, nome: d.client_label ?? undefined }}
@@ -212,6 +231,14 @@ export default function RoteirosPublica() {
           {d.client_label || d.title}
         </h1>
         <p style={{ margin: "6px 0 0", color: onAccentSoft, fontSize: 14 }}>{mesLabel(d.month)}</p>
+        {/* Quantos vídeos: o cliente sabe de cara o tamanho da tarefa. */}
+        <p style={{
+          display: "inline-block", margin: "14px 0 0", padding: "7px 15px", borderRadius: 999,
+          background: "rgba(255,255,255,.16)", color: onAccent, fontSize: 13, fontWeight: 700,
+        }}>
+          {ordem.length} {ordem.length === 1 ? "vídeo pra gravar" : "vídeos pra gravar"}
+        </p>
+        </div>
       </div>
 
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "20px 16px 0" }}>
@@ -228,8 +255,8 @@ export default function RoteirosPublica() {
         ) : (
           <div style={{ background: "#fff", border: "1px solid #EDE7DC", borderRadius: 16, padding: 16, marginBottom: 16 }}>
             <p style={{ margin: 0, color: "#2A2440", fontSize: 14.5, lineHeight: 1.6 }}>
-              Leia os roteiros abaixo e mude o que quiser: o texto de cada cena, a ordem de gravação, ou tire um vídeo da lista.
-              Quando terminar, toque em <strong>Finalizar revisão</strong> no fim da página.
+              Abra um vídeo de cada vez e mude o que quiser: o texto das cenas, a ordem de gravação,
+              ou tire um da lista. Quando terminar, toque em <strong>Finalizar revisão</strong> lá embaixo.
             </p>
           </div>
         )}
@@ -239,45 +266,82 @@ export default function RoteirosPublica() {
         )}
 
         {ordem.map((it, idx) => {
-          const aberto = abertos[it.id] ?? true;
+          const aberto = abertoId === it.id;
+          const cenas = it.scenes.length;
+          const previa = (it.scenes[0]?.fala || it.content || "").replace(/\s+/g, " ").trim();
           return (
-            <div key={it.id} style={{ ...card, opacity: it.removed ? 0.55 : 1 }}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+            <div key={it.id} style={{
+              ...card, opacity: it.removed ? 0.55 : 1, padding: 0, overflow: "hidden",
+              border: aberto ? `1.5px solid ${accent}55` : "1px solid #EDE7DC",
+              boxShadow: aberto ? "0 10px 30px -18px rgba(20,16,40,.5)" : "none",
+            }}>
+              {/* A ABA DA PASTA: fechada mostra só o essencial (número, título,
+                  quantas cenas). O cliente escolhe qual abrir. */}
+              <button type="button" onClick={() => setAbertoId(aberto ? null : it.id)}
+                aria-expanded={aberto}
+                style={{
+                  width: "100%", display: "flex", alignItems: "center", gap: 11, textAlign: "left",
+                  background: aberto ? `${accent}0D` : "#fff", border: "none",
+                  padding: "15px 16px", cursor: "pointer", font: "inherit",
+                }}>
                 <span style={{
-                  display: "grid", placeItems: "center", width: 28, height: 28, borderRadius: 999, flexShrink: 0,
-                  background: accent, color: onAccent, fontSize: 13, fontWeight: 800,
+                  display: "grid", placeItems: "center", width: 34, height: 34, borderRadius: 11, flexShrink: 0,
+                  background: accent, color: onAccent, fontSize: 14.5, fontWeight: 800,
                 }}>{idx + 1}</span>
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <input
-                    value={it.title}
-                    disabled={travado || it.removed}
-                    onChange={(e) => mexer(it.id, { title: e.target.value })}
-                    onBlur={() => guardar(it.id)}
-                    placeholder={`Vídeo ${idx + 1}`}
-                    style={{ ...campo, fontWeight: 700, fontSize: 16, padding: "8px 10px" }}
-                  />
-                </div>
-
-                {!travado && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
-                    <button type="button" onClick={() => mover(it.id, -1)} disabled={idx === 0}
-                      aria-label="Gravar antes" title="Gravar antes"
-                      style={{ background: "#fff", border: "1px solid #E5DFD3", borderRadius: 8, width: 28, height: 24, cursor: idx === 0 ? "default" : "pointer", opacity: idx === 0 ? 0.4 : 1, display: "grid", placeItems: "center" }}>
-                      <ChevronUp style={{ width: 14, height: 14, color: "#8B8272" }} />
-                    </button>
-                    <button type="button" onClick={() => mover(it.id, 1)} disabled={idx === ordem.length - 1}
-                      aria-label="Gravar depois" title="Gravar depois"
-                      style={{ background: "#fff", border: "1px solid #E5DFD3", borderRadius: 8, width: 28, height: 24, cursor: idx === ordem.length - 1 ? "default" : "pointer", opacity: idx === ordem.length - 1 ? 0.4 : 1, display: "grid", placeItems: "center" }}>
-                      <ChevronDown style={{ width: 14, height: 14, color: "#8B8272" }} />
-                    </button>
-                  </div>
-                )}
-              </div>
+                <span style={{ minWidth: 0, flex: 1 }}>
+                  <span style={{
+                    display: "block", fontSize: 16, fontWeight: 700, color: "#2A2440", lineHeight: 1.3,
+                    textDecoration: it.removed ? "line-through" : "none",
+                  }}>
+                    {it.title?.trim() || `Vídeo ${idx + 1}`}
+                  </span>
+                  <span style={{ display: "block", fontSize: 12.5, color: "#8B8272", marginTop: 2 }}>
+                    {it.removed ? "você tirou este vídeo da lista"
+                      : cenas > 0 ? `${cenas} ${cenas === 1 ? "cena" : "cenas"}`
+                      : previa ? previa.slice(0, 46) + (previa.length > 46 ? "…" : "")
+                      : "toque pra abrir"}
+                    {it.tocado && !it.removed && " · você já mexeu aqui"}
+                  </span>
+                </span>
+                <ChevronDown style={{
+                  width: 19, height: 19, color: "#8B8272", flexShrink: 0,
+                  transform: aberto ? "rotate(180deg)" : "none", transition: "transform .2s",
+                }} />
+              </button>
 
               {/* Cenas: é aqui que a edição realmente acontece */}
               {aberto && !it.removed && (
-                <div style={{ marginTop: 12 }}>
+                <div style={{ padding: "4px 16px 16px" }}>
+                  <p style={rotulo}>Título do vídeo</p>
+                  <input
+                    value={it.title}
+                    disabled={travado}
+                    onChange={(e) => mexer(it.id, { title: e.target.value })}
+                    onBlur={() => guardar(it.id)}
+                    placeholder={`Vídeo ${idx + 1}`}
+                    style={{ ...campo, fontWeight: 700, marginBottom: 14 }}
+                  />
+                  {!travado && (
+                    <div style={{ display: "flex", gap: 7, marginBottom: 14 }}>
+                      <button type="button" onClick={() => mover(it.id, -1)} disabled={idx === 0}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 5, background: "#fff", color: "#5B5470",
+                          border: "1px solid #E5DFD3", borderRadius: 999, padding: "7px 13px", fontSize: 12.5,
+                          fontWeight: 600, cursor: idx === 0 ? "default" : "pointer", opacity: idx === 0 ? .4 : 1,
+                        }}>
+                        <ChevronUp style={{ width: 13, height: 13 }} /> gravar antes
+                      </button>
+                      <button type="button" onClick={() => mover(it.id, 1)} disabled={idx === ordem.length - 1}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 5, background: "#fff", color: "#5B5470",
+                          border: "1px solid #E5DFD3", borderRadius: 999, padding: "7px 13px", fontSize: 12.5,
+                          fontWeight: 600, cursor: idx === ordem.length - 1 ? "default" : "pointer",
+                          opacity: idx === ordem.length - 1 ? .4 : 1,
+                        }}>
+                        <ChevronDown style={{ width: 13, height: 13 }} /> gravar depois
+                      </button>
+                    </div>
+                  )}
                   {(() => {
                     const capas = d.capas ?? {};
                     const chave = (l: string) => previaDeLink(l).url.split("?")[0].replace(/\/$/, "");
@@ -341,21 +405,21 @@ export default function RoteirosPublica() {
                 </div>
               )}
 
-              {!travado && (
-                <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+              {!travado && (aberto || it.removed) && (
+                <div style={{ display: "flex", gap: 8, padding: "0 16px 16px", flexWrap: "wrap" }}>
                   <button type="button"
-                    onClick={() => { const novo = !it.removed; mexer(it.id, { removed: novo }); salvar.mutate({ ...it, removed: novo }); }}
+                    onClick={() => { const novo = !it.removed; mexer(it.id, { removed: novo }); salvar.mutate({ ...it, removed: novo }); if (novo) setAbertoId(null); }}
                     style={{
                       display: "inline-flex", alignItems: "center", gap: 6, background: it.removed ? accent : "#fff",
                       color: it.removed ? onAccent : "#B4453A", border: `1px solid ${it.removed ? accent : "#F0CFC9"}`,
-                      borderRadius: 999, padding: "7px 14px", fontSize: 13.5, fontWeight: 600, cursor: "pointer",
+                      borderRadius: 999, padding: "8px 15px", fontSize: 13.5, fontWeight: 600, cursor: "pointer",
                     }}>
                     {it.removed ? <><Undo2 style={{ width: 14, height: 14 }} /> Devolver pra lista</> : <><Trash2 style={{ width: 14, height: 14 }} /> Não quero este vídeo</>}
                   </button>
-                  {!it.removed && (
-                    <button type="button" onClick={() => setAbertos((a) => ({ ...a, [it.id]: !aberto }))}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", color: "#5B5470", border: "1px solid #E5DFD3", borderRadius: 999, padding: "7px 14px", fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}>
-                      {aberto ? <><Minus style={{ width: 14, height: 14 }} /> Recolher</> : <><Plus style={{ width: 14, height: 14 }} /> Ver o roteiro</>}
+                  {aberto && (
+                    <button type="button" onClick={() => setAbertoId(null)}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", color: "#5B5470", border: "1px solid #E5DFD3", borderRadius: 999, padding: "8px 15px", fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}>
+                      <Minus style={{ width: 14, height: 14 }} /> Fechar
                     </button>
                   )}
                 </div>
