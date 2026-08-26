@@ -8,6 +8,7 @@ import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { renderRichText } from "@/lib/richText";
 import { cn } from "@/lib/utils";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
+import { corDeDestaque, corSobre, faltaNoBloco } from "@/lib/bioBlocks";
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
 import { SiteBio, PaginaItem, type MarcaSite, type ItemLite } from "@/components/bio/SiteBio";
 
@@ -361,19 +362,6 @@ const sbRpc = (fn: string, args: Record<string, unknown>) => (supabase as any).r
 type BlocoLite = { id: string; kind: string; data: Record<string, unknown>; position: number };
 /** O telefone que a pessoa cadastrou no rodapé do site, pra a página de um
  *  serviço já abrir a conversa citando aquele serviço. */
-/** Luminância relativa simplificada. Serve pra decidir se a cor dá pra ler em
- *  cima de branco e qual cor de texto usar em cima dela. */
-function claridade(hex: string): number {
-  const h = (hex || "").replace("#", "");
-  if (h.length !== 6) return 1;
-  const r = parseInt(h.slice(0, 2), 16) / 255;
-  const g = parseInt(h.slice(2, 4), 16) / 255;
-  const b = parseInt(h.slice(4, 6), 16) / 255;
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-const corLegivelSobreBranco = (hex: string) => claridade(hex) < 0.62;
-const corSobre = (hex: string) => (claridade(hex) < 0.6 ? "#FFFFFF" : "#1A1626");
-
 function telefoneDoRodape(blocos: BlocoLite[]): string | undefined {
   const c = blocos.find((b) => b.kind === "contato");
   const t = c ? String((c.data as Record<string, unknown>)?.telefone ?? "") : "";
@@ -618,7 +606,7 @@ const BioPage = () => {
   // data do post, preço). O padrão do botão é branco, e branco sobre branco
   // some. Então: usa a cor do botão quando ela é escura o bastante, e cai no
   // preto da marca quando não é.
-  const corDestaque = corLegivelSobreBranco(settings.buttonColor) ? settings.buttonColor : "#1A1626";
+  const corDestaque = corDeDestaque(settings.buttonColor);
   const marcaSite: MarcaSite = {
     nome: headerName || "Site",
     logo: settings.header?.avatar || profile.avatar_url,

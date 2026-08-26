@@ -55,6 +55,7 @@ import { useBioItems } from "@/hooks/useBioItems";
 import type { AparenciaModelo } from "@/lib/bioTemplates";
 import { PainelDesempenho } from "@/components/bio/PainelDesempenho";
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
+import { corDeDestaque, corSobre } from "@/lib/bioBlocks";
 import type { BioBloco, EstiloBio } from "@/lib/bioBlocks";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -1962,7 +1963,8 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
   // pela do monitor: antes o site abria aqui com o menu de computador e a grade
   // de três colunas espremida em 300px, e a prévia mentia feio.
   if (settings.layout === "vitrine") {
-    const corDestaque = settings.buttonColor;
+    // Mesma correção da página pública: cor clara demais não vira texto.
+    const corDestaque = corDeDestaque(settings.buttonColor);
     return (
       <div className="w-[300px] mx-auto bg-white rounded-[40px] border-[8px] border-gray-800 p-2 shadow-2xl">
         <BioFontStyle stack={fontStack} />

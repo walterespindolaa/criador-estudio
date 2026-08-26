@@ -309,3 +309,31 @@ export function faltaAte(iso: string, agora = Date.now()): { d: number; h: numbe
   const s = Math.floor(ms / 1000);
   return { d: Math.floor(s / 86400), h: Math.floor((s % 86400) / 3600), m: Math.floor((s % 3600) / 60), s: s % 60, acabou: false };
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LEITURA DA COR DA MARCA
+
+   A cor de destaque vem do brandbook, e brandbook não pergunta se a cor dá
+   pra ler. Amarelo em cima de branco some; roxo escuro em cima de roxo escuro
+   some também. Estas três contas resolvem antes de a cor chegar na tela.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Luminância relativa simplificada, de 0 (preto) a 1 (branco). */
+export function claridade(hex: string): number {
+  const h = (hex || "").replace("#", "");
+  if (h.length !== 6) return 1;
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** A cor serve pra escrever em cima de branco? */
+export const corLegivelSobreBranco = (hex: string) => claridade(hex) < 0.62;
+
+/** Preto ou branco, o que for legível em cima desta cor. */
+export const corSobre = (hex: string) => (claridade(hex) < 0.6 ? "#FFFFFF" : "#1A1626");
+
+/** A cor da marca já corrigida pra uso como texto e detalhe sobre branco.
+ *  Cor clara demais cai pro grafite da identidade, em vez de sumir. */
+export const corDeDestaque = (hex: string) => (corLegivelSobreBranco(hex) ? hex : "#1A1626");
