@@ -49,6 +49,7 @@ import { useBioLinks, type BioLink } from "@/hooks/useBioLinks";
 import { useBioAlvo } from "@/contexts/BioAlvoContext";
 import { useBioBlocks } from "@/hooks/useBioBlocks";
 import { EditorBlocos } from "@/components/bio/EditorBlocos";
+import { PainelDesempenho } from "@/components/bio/PainelDesempenho";
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
 import type { BioBloco } from "@/lib/bioBlocks";
 import { supabase } from "@/integrations/supabase/client";
@@ -1181,7 +1182,13 @@ const LinkInBio = () => {
             </Card>
 
             <Card data-tour="bio-desempenho" className="p-4 md:p-5 rounded-2xl border-border">
-              <h2 className="font-display font-semibold text-foreground mb-4">Desempenho</h2>
+              <PainelDesempenho estilo={settings.layout === "vitrine" ? "site" : "classico"} />
+              {/* Os totais de sempre continuam embaixo: eles somam desde o
+                  primeiro dia, e o painel de cima olha só o período escolhido.
+                  São perguntas diferentes, não uma versão velha da outra. */}
+              <p className="text-[11px] font-body font-semibold uppercase tracking-wider text-muted-foreground mt-5 mb-2">
+                Desde o começo
+              </p>
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-muted/40 rounded-xl p-3 text-center">
                   <p className="text-2xl font-display font-extrabold text-foreground">{bioViews.toLocaleString("pt-BR")}</p>
@@ -1201,7 +1208,6 @@ const LinkInBio = () => {
                   Link mais clicado: <span className="font-semibold text-foreground">{topLink.title}</span> · {topLink.clicks} cliques
                 </p>
               )}
-              <p className="text-[11px] font-body text-muted-foreground/70 mt-2">Visitas contam 1x por visitante na sessão. Cliques somam todos os toques nos links.</p>
             </Card>
 
             {/* ── Controles da Vitrine ─────────────── */}

@@ -355,6 +355,35 @@ const sbRpc = (fn: string, args: Record<string, unknown>) => (supabase as any).r
 
 type BlocoLite = { id: string; kind: string; data: Record<string, unknown>; position: number };
 
+/* ── DE ONDE A PESSOA VEIO ──
+   Um rótulo curto, resolvido aqui e não no servidor, porque o referrer só
+   existe no navegador. A lista é fechada de propósito: guardar o endereço
+   completo de onde a pessoa estava seria guardar dado de terceiro sem
+   precisar, e ninguém filtra relatório por isso.
+
+   O `?src=` na frente do referrer porque é explícito: é o que a gestora cola
+   no QR do cardápio pra saber que aquela visita veio do material impresso. */
+function descobrirOrigem(): string {
+  try {
+    const src = new URLSearchParams(window.location.search).get("src");
+    if (src) {
+      const s = src.toLowerCase();
+      if (["qr", "instagram", "whatsapp", "facebook", "google", "tiktok"].includes(s)) return s;
+      return "outro";
+    }
+    const r = (document.referrer || "").toLowerCase();
+    if (!r) return "direto";
+    if (r.includes("instagram")) return "instagram";
+    if (r.includes("whatsapp") || r.includes("wa.me")) return "whatsapp";
+    if (r.includes("facebook") || r.includes("fb.com")) return "facebook";
+    if (r.includes("google")) return "google";
+    if (r.includes("tiktok")) return "tiktok";
+    // Mesmo domínio (a pessoa navegou dentro da própria página) não é origem.
+    if (r.includes(window.location.host)) return "direto";
+    return "outro";
+  } catch { return "direto"; }
+}
+
 const BioPage = () => {
   const { slug } = useParams<{ slug: string }>();
   useForceLightTheme();
@@ -417,7 +446,9 @@ const BioPage = () => {
         try {
           if (!sessionStorage.getItem(key)) {
             sessionStorage.setItem(key, "1");
-            void supabase.functions.invoke("bio-track", { body: { type: "view", slug, kind: daAgencia ? "page" : "profile" } });
+            void supabase.functions.invoke("bio-track", {
+              body: { type: "view", slug, kind: daAgencia ? "page" : "profile", origem: descobrirOrigem() },
+            });
           }
         } catch { /* sessionStorage indisponível: ignora */ }
       }
@@ -439,7 +470,7 @@ const BioPage = () => {
   const fontStack = fontStackFor(settings.fontFamily);
 
   const trackClick = (id: string) => {
-    void supabase.functions.invoke("bio-track", { body: { type: "click", linkId: id, slug } });
+    void supabase.functions.invoke("bio-track", { body: { type: "click", linkId: id, slug, origem: descobrirOrigem() } });
   };
 
   if (loading) {

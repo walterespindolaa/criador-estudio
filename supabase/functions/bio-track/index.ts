@@ -29,6 +29,10 @@ serve(async (req) => {
     const type = String(body?.type ?? "");
     const slug = body?.slug ? String(body.slug).slice(0, 120) : "";
     const linkId = body?.linkId ? String(body.linkId) : "";
+    // De onde a pessoa veio. A página manda um rótulo curto já resolvido; aqui
+    // só cortamos o tamanho. Guardar o referrer cru seria guardar endereço de
+    // terceiro sem precisar, e ninguém filtra relatório por isso.
+    const origem = body?.origem ? String(body.origem).slice(0, 20) : "direto";
     if (type !== "view" && type !== "click") return ok({ ok: false });
 
     const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
@@ -56,6 +60,18 @@ serve(async (req) => {
       // chamar as duas soma uma vez só e evita a página ter que saber disso.
       await svc.rpc("increment_bio_link_click", { link_id: linkId });
       await svc.rpc("increment_bio_block_click", { _id: linkId });
+    }
+
+    // Além dos totais de sempre, guarda o evento no agregado por dia, bloco e
+    // origem. É o que permite dizer "o cardápio puxou 203 cliques este mês" em
+    // vez de só "736 cliques desde sempre". Best-effort: se a migration das
+    // estatísticas ainda não rodou, o contador de cima já foi somado.
+    if (slug) {
+      try {
+        await svc.rpc("bio_registrar_evento", {
+          _slug: slug, _tipo: type, _block_id: type === "click" ? linkId : null, _origem: origem,
+        });
+      } catch (e) { console.error("[bio-track] estatística falhou:", e); }
     }
     return ok();
   } catch (e) {
