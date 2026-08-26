@@ -16,7 +16,7 @@ import {
   type BioBloco, type DadosBloco, type EstiloBio, type TipoBloco,
 } from "@/lib/bioBlocks";
 import { CampoTextoRico } from "@/lib/textoRico";
-import { modelosDoEstilo } from "@/lib/bioTemplates";
+import { modelosDoEstilo, type AparenciaModelo } from "@/lib/bioTemplates";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -590,7 +590,12 @@ function CartaoBloco({
 }
 
 /* ── A TELA ── */
-export function EditorBlocos({ estilo }: { estilo: EstiloBio }) {
+export function EditorBlocos({ estilo, aoAplicarAparencia }: {
+  estilo: EstiloBio;
+  /** Modelo não é só estrutura: leva cor, fonte e formato de botão junto. Quem
+   *  guarda a aparência é a tela de cima, então ela recebe por aqui. */
+  aoAplicarAparencia?: (a: AparenciaModelo) => void;
+}) {
   const { blocos, isLoading, criar, atualizar, excluir, duplicar, reordenar, aplicarModelo } = useBioBlocks(estilo);
   const [aberto, setAberto] = useState<string | null>(null);
   const [paletaAberta, setPaletaAberta] = useState(false);
@@ -637,22 +642,46 @@ export function EditorBlocos({ estilo }: { estilo: EstiloBio }) {
       {modelosAbertos && (
         <div className="rounded-2xl border border-border bg-muted/30 p-3">
           <p className="text-xs font-body text-muted-foreground mb-2.5">
-            Escolha o que mais parece com o negócio. Os blocos entram no fim, desligados, com texto de exemplo pra
-            você trocar. Nada do que já existe é apagado.
+            Escolha o que mais parece com o negócio. Vem tudo junto: as seções na ordem que costuma funcionar, o
+            texto de exemplo, e a cor, a fonte e o formato de botão. Os blocos entram desligados e nada do que já
+            existe é apagado. A aparência, essa sim, é substituída.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {modelos.map((m) => (
               <button key={m.id} type="button" disabled={aplicarModelo.isPending}
-                onClick={async () => { await aplicarModelo.mutateAsync(m.blocos); setModelosAbertos(false); }}
+                onClick={async () => {
+                  await aplicarModelo.mutateAsync(m.blocos);
+                  aoAplicarAparencia?.(m.aparencia);
+                  setModelosAbertos(false);
+                }}
                 className="text-left rounded-xl border border-border bg-card p-3 hover:border-primary/50 transition-all disabled:opacity-60">
-                <span className="flex items-center gap-2">
-                  <m.Icone className="h-4 w-4 text-primary shrink-0" />
-                  <span className="font-display font-semibold text-sm">{m.nome}</span>
-                  <span className="text-[10px] font-body text-muted-foreground ml-auto shrink-0">
-                    {m.blocos.length} blocos
+                <span className="flex items-start gap-2.5">
+                  {/* Miniatura com as cores e o formato de botão do modelo.
+                      Ver como fica é o que faz escolher; nome e ícone sozinhos
+                      não dizem se a página vai ficar escura ou clara. */}
+                  <span aria-hidden className="w-14 h-[74px] rounded-lg shrink-0 border border-border overflow-hidden p-1.5 flex flex-col gap-1"
+                    style={m.aparencia.bgType === "gradient" && m.aparencia.bgGradient
+                      ? { background: m.aparencia.bgGradient }
+                      : { backgroundColor: m.aparencia.bgColor }}>
+                    <span className="w-4 h-4 rounded-full mx-auto shrink-0" style={{ backgroundColor: m.aparencia.buttonColor, opacity: .5 }} />
+                    {[0, 1, 2].map((i) => (
+                      <span key={i} className={cn("block h-2.5 w-full shrink-0",
+                        m.aparencia.buttonStyle === "pill" ? "rounded-full"
+                          : m.aparencia.buttonStyle === "square" ? "rounded-none" : "rounded-[3px]")}
+                        style={{ backgroundColor: m.aparencia.buttonColor }} />
+                    ))}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5">
+                      <m.Icone className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="font-display font-semibold text-sm truncate">{m.nome}</span>
+                    </span>
+                    <span className="block text-[11.5px] font-body text-muted-foreground leading-snug mt-0.5">{m.paraQuem}</span>
+                    <span className="block text-[10px] font-body text-muted-foreground mt-1">
+                      {m.blocos.length} blocos · fonte {m.aparencia.fontFamily}
+                    </span>
                   </span>
                 </span>
-                <span className="block text-[11.5px] font-body text-muted-foreground leading-snug mt-1">{m.paraQuem}</span>
               </button>
             ))}
           </div>

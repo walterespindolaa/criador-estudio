@@ -20,6 +20,22 @@ import type { DadosBloco, EstiloBio, TipoBloco } from "@/lib/bioBlocks";
 
 export type BlocoDoModelo = { kind: TipoBloco; data: DadosBloco };
 
+/* ── A APARÊNCIA DO MODELO ──
+   Modelo que só monta a estrutura não é layout: a pessoa aplica, vê a mesma
+   página branca de sempre e pensa que não funcionou. Cada modelo carrega
+   também cor, fonte, formato de botão e fundo. */
+export type AparenciaModelo = {
+  bgType: "color" | "gradient";
+  bgColor: string;
+  bgGradient: string | null;
+  buttonColor: string;
+  buttonTextColor: string;
+  buttonStyle: "rounded" | "pill" | "square" | "outline";
+  cardColor: string;
+  cardTextColor: string;
+  fontFamily: string;
+};
+
 export type ModeloBio = {
   id: string;
   nome: string;
@@ -27,6 +43,7 @@ export type ModeloBio = {
   paraQuem: string;
   Icone: LucideIcon;
   estilo: EstiloBio;
+  aparencia: AparenciaModelo;
   blocos: BlocoDoModelo[];
 };
 
@@ -40,6 +57,11 @@ export const MODELOS: ModeloBio[] = [
     paraQuem: "Restaurante, clínica, salão, loja de bairro. Quem precisa ser encontrado e receber gente.",
     Icone: Store,
     estilo: "classico",
+    aparencia: {
+      bgType: "color", bgColor: "#FFF7ED", bgGradient: null,
+      buttonColor: "#C2410C", buttonTextColor: "#FFFFFF", buttonStyle: "rounded",
+      cardColor: "#FFFFFF", cardTextColor: "#1C1917", fontFamily: "Outfit",
+    },
     blocos: [
       { kind: "whatsapp", data: { titulo: "Chamar no WhatsApp", telefone: "", mensagem: "Oi! Vim pelo link da bio." } },
       { kind: "link", data: { titulo: "Ver o cardápio", url: "", icone: "", capa: "" } },
@@ -64,6 +86,11 @@ export const MODELOS: ModeloBio[] = [
     paraQuem: "Nutricionista, advogado, personal, consultor. Quem vende hora e precisa encher a agenda.",
     Icone: Briefcase,
     estilo: "classico",
+    aparencia: {
+      bgType: "color", bgColor: "#F5F7FA", bgGradient: null,
+      buttonColor: "#0F3D5C", buttonTextColor: "#FFFFFF", buttonStyle: "rounded",
+      cardColor: "#FFFFFF", cardTextColor: "#0F172A", fontFamily: "Sora",
+    },
     blocos: [
       { kind: "texto", data: { titulo: "", texto: "Escreva em uma frase o que você resolve e pra quem.\n\nEx.: ajudo mulheres acima dos 40 a recuperar energia sem dieta restritiva." } },
       { kind: "whatsapp", data: { titulo: "Agendar uma conversa", telefone: "", mensagem: "Oi! Quero agendar uma conversa." } },
@@ -88,6 +115,11 @@ export const MODELOS: ModeloBio[] = [
     paraQuem: "Quem vive de audiência: divulga conteúdo novo, produto próprio e parcerias.",
     Icone: Camera,
     estilo: "classico",
+    aparencia: {
+      bgType: "gradient", bgColor: "#1A1030", bgGradient: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)",
+      buttonColor: "#FFFFFF", buttonTextColor: "#1A1030", buttonStyle: "pill",
+      cardColor: "#FFFFFF", cardTextColor: "#1A1030", fontFamily: "Bricolage Grotesque",
+    },
     blocos: [
       { kind: "titulo", data: { titulo: "Novidade da semana" } },
       { kind: "link", data: { titulo: "Escreva aqui o que está em destaque", url: "", capa: "" } },
@@ -107,6 +139,11 @@ export const MODELOS: ModeloBio[] = [
     paraQuem: "Turma, promoção, evento. Quem tem data pra acabar e precisa criar pressa.",
     Icone: GraduationCap,
     estilo: "classico",
+    aparencia: {
+      bgType: "color", bgColor: "#0F0F17", bgGradient: null,
+      buttonColor: "#FACC15", buttonTextColor: "#0F0F17", buttonStyle: "square",
+      cardColor: "#1B1B26", cardTextColor: "#F5F3E7", fontFamily: "Space Grotesk",
+    },
     blocos: [
       { kind: "contagem", data: { titulo: "As inscrições fecham em", ate: "" } },
       { kind: "link", data: { titulo: "Garantir minha vaga", url: "", capa: "" } },
@@ -130,6 +167,11 @@ export const MODELOS: ModeloBio[] = [
     paraQuem: "Quem vende serviço com preço e precisa explicar cada um com calma.",
     Icone: Briefcase,
     estilo: "site",
+    aparencia: {
+      bgType: "color", bgColor: "#FFFFFF", bgGradient: null,
+      buttonColor: "#14532D", buttonTextColor: "#FFFFFF", buttonStyle: "pill",
+      cardColor: "#FFFFFF", cardTextColor: "#0F172A", fontFamily: "DM Serif Display",
+    },
     blocos: [
       { kind: "capa", data: {
         titulo: "A promessa da marca em uma linha",
@@ -159,6 +201,11 @@ export const MODELOS: ModeloBio[] = [
     paraQuem: "Quem tem ponto físico e produtos: precisa mostrar o que vende e onde fica.",
     Icone: UtensilsCrossed,
     estilo: "site",
+    aparencia: {
+      bgType: "color", bgColor: "#FFFFFF", bgGradient: null,
+      buttonColor: "#B45309", buttonTextColor: "#FFFFFF", buttonStyle: "rounded",
+      cardColor: "#FFFFFF", cardTextColor: "#1C1917", fontFamily: "Nunito",
+    },
     blocos: [
       { kind: "capa", data: {
         titulo: "O que o negócio faz, sem enrolar",
@@ -181,6 +228,11 @@ export const MODELOS: ModeloBio[] = [
     paraQuem: "Quem quer ser achado no Google pelo assunto, e não só pelo nome.",
     Icone: Newspaper,
     estilo: "site",
+    aparencia: {
+      bgType: "color", bgColor: "#FFFFFF", bgGradient: null,
+      buttonColor: "#1E293B", buttonTextColor: "#FFFFFF", buttonStyle: "square",
+      cardColor: "#FFFFFF", cardTextColor: "#0F172A", fontFamily: "Sora",
+    },
     blocos: [
       { kind: "capa", data: {
         titulo: "A tese que você defende",

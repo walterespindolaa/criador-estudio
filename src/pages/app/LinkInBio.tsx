@@ -50,6 +50,9 @@ import { useBioAlvo } from "@/contexts/BioAlvoContext";
 import { useBioBlocks } from "@/hooks/useBioBlocks";
 import { EditorBlocos } from "@/components/bio/EditorBlocos";
 import { EditorItens } from "@/components/bio/EditorItens";
+import { SiteBio, type ItemLite } from "@/components/bio/SiteBio";
+import { useBioItems } from "@/hooks/useBioItems";
+import type { AparenciaModelo } from "@/lib/bioTemplates";
 import { PainelDesempenho } from "@/components/bio/PainelDesempenho";
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
 import type { BioBloco } from "@/lib/bioBlocks";
@@ -626,6 +629,9 @@ const LinkInBio = () => {
   const { blocos: blocosClassico } = useBioBlocks("classico");
   // Os do modo Site, pra saber quando a Vitrine antiga pode sair de cena.
   const { blocos: blocosSite } = useBioBlocks("site");
+  // Os itens do Site alimentam as seções de Produtos e de Blog na prévia.
+  const { itens: produtosDoSite } = useBioItems("produto");
+  const { itens: postsDoSite } = useBioItems("post");
   const queryClient = useQueryClient();
 
   // Quando o manager gerencia outro, lê/escreve no profile da conta ATIVA,
@@ -1025,6 +1031,21 @@ const LinkInBio = () => {
     toast.success("Link copiado!");
   };
 
+  /** Modelo aplicado: a aparência dele substitui a atual. Estrutura acrescenta,
+   *  aparência troca, porque duas cores ao mesmo tempo não existe. */
+  const aplicarAparenciaDoModelo = (a: AparenciaModelo) => {
+    setSettings((x) => ({
+      ...x,
+      bgType: a.bgType, bgColor: a.bgColor, bgGradient: a.bgGradient,
+      buttonColor: a.buttonColor, buttonTextColor: a.buttonTextColor,
+      buttonStyle: a.buttonStyle,
+      cardColor: a.cardColor, cardTextColor: a.cardTextColor,
+      fontFamily: a.fontFamily,
+    }));
+    setAppearanceDirty(true);
+    toast.success("Modelo aplicado. Confira a prévia e clique em Salvar aparência.");
+  };
+
   const patchSettings = (patch: Partial<BioSettings>) => {
     setSettings((s) => ({ ...s, ...patch }));
     setAppearanceDirty(true);
@@ -1217,7 +1238,7 @@ const LinkInBio = () => {
             {settings.layout === "vitrine" && (
               <>
               <Card className="p-4 md:p-5 rounded-2xl border-border">
-                <EditorBlocos estilo="site" />
+                <EditorBlocos estilo="site" aoAplicarAparencia={aplicarAparenciaDoModelo} />
               </Card>
 
               <Card className="p-4 md:p-5 rounded-2xl border-border">
@@ -1230,144 +1251,6 @@ const LinkInBio = () => {
 
               {/* A Vitrine antiga continua abaixo enquanto quem montou nela não
                   migrar. Some sozinha quando a página passa a ter seções. */}
-              {blocosSite.length === 0 && (
-              <Card className="p-4 md:p-5 rounded-2xl border-border space-y-6">
-                <h2 className="font-display font-semibold text-foreground">Vitrine (formato antigo)</h2>
-                <p className="text-xs font-body text-muted-foreground -mt-4">
-                  Assim que você adicionar a primeira seção do Site lá em cima, esta parte some e a página passa a usar o formato novo.
-                </p>
-
-                {!settings.vitrine.cover && settings.vitrine.services.length === 0 && settings.vitrine.products.length === 0 && (
-                  <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-4">
-                    <p className="text-sm font-display font-semibold text-foreground">Monte a vitrine antiga em 3 passos</p>
-                    <p className="mt-0.5 mb-3 text-xs text-muted-foreground">Comece por aqui. Dá pra ajustar tudo depois.</p>
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      <button type="button" onClick={() => coverInputRef.current?.click()} className="text-left rounded-xl border border-border bg-background p-3 transition-colors hover:border-primary/40">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: "#EA4918" }}>1</span>
-                        <span className="mt-2 block text-sm font-semibold text-foreground">Escolha sua capa</span>
-                        <span className="block text-[11px] text-muted-foreground">Imagem de destaque no topo</span>
-                      </button>
-                      <button type="button" onClick={addService} className="text-left rounded-xl border border-border bg-background p-3 transition-colors hover:border-primary/40">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: "#0061EE" }}>2</span>
-                        <span className="mt-2 block text-sm font-semibold text-foreground">Adicione seus serviços</span>
-                        <span className="block text-[11px] text-muted-foreground">O que você oferece</span>
-                      </button>
-                      <button type="button" onClick={addProduct} className="text-left rounded-xl border border-border bg-background p-3 transition-colors hover:border-primary/40">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: "#01A652" }}>3</span>
-                        <span className="mt-2 block text-sm font-semibold text-foreground">Adicione seus produtos</span>
-                        <span className="block text-[11px] text-muted-foreground">Infoprodutos pra vender</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Cor base */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-display font-semibold">Cor base</Label>
-                  <p className="text-xs text-muted-foreground -mt-1">Pinta os cards de serviço, o corpo dos produtos, etiquetas, setas e sublinhados.</p>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {VITRINE_COLORS.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => patchVitrine({ baseColor: c })}
-                        className={cn(
-                          "w-8 h-8 rounded-full border-2 transition-all",
-                          settings.vitrine.baseColor.toLowerCase() === c.toLowerCase() ? "border-foreground ring-2 ring-foreground/20 scale-110" : "border-border"
-                        )}
-                        style={{ backgroundColor: c }}
-                        aria-label={`Cor ${c}`}
-                      />
-                    ))}
-                  </div>
-                  <ColorField
-                    value={settings.vitrine.baseColor}
-                    onChange={(v) => patchVitrine({ baseColor: v })}
-                    label="Cor personalizada (qualquer cor)"
-                  />
-                </div>
-
-                {/* Capa */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-display font-semibold">Capa</Label>
-                  {settings.vitrine.cover ? (
-                    <div className="relative rounded-xl overflow-hidden border border-border">
-                      <img src={settings.vitrine.cover} alt="Capa" loading="lazy" className="w-full h-40 object-cover" />
-                      <button type="button" onClick={() => patchVitrine({ cover: null })} className="absolute top-1.5 right-1.5 bg-background/90 rounded-full p-1 shadow">
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </button>
-                    </div>
-                  ) : null}
-                  <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
-                  <Button type="button" variant="outline" size="sm" disabled={uploadingCover} onClick={() => coverInputRef.current?.click()}>
-                    <ImagePlus className="h-4 w-4 mr-2" />
-                    {uploadingCover ? "Enviando..." : settings.vitrine.cover ? "Trocar capa" : "Enviar capa"}
-                  </Button>
-                </div>
-
-                {/* Serviços */}
-                <div className="space-y-3 pt-4 border-t border-border">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-display font-semibold">Serviços</Label>
-                    <Button type="button" variant="secondary" size="sm" onClick={addService}>
-                      <Plus className="h-4 w-4 mr-1" /> Serviço
-                    </Button>
-                  </div>
-                  {settings.vitrine.services.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">Nenhum serviço ainda.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {settings.vitrine.services.map((sv, i) => (
-                        <VitrineServiceEditor
-                          key={sv.id}
-                          item={sv}
-                          index={i}
-                          total={settings.vitrine.services.length}
-                          onUpdate={updateService}
-                          onRemove={removeService}
-                          onMove={moveService}
-                          onUploadImage={(file) => uploadBioImage(file, "service")}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Infoprodutos */}
-                <div className="space-y-3 pt-4 border-t border-border">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-display font-semibold">Infoprodutos</Label>
-                    <Button type="button" variant="secondary" size="sm" onClick={addProduct}>
-                      <Plus className="h-4 w-4 mr-1" /> Produto
-                    </Button>
-                  </div>
-                  {settings.vitrine.products.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">Nenhum infoproduto ainda.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {settings.vitrine.products.map((pr, i) => (
-                        <VitrineProductEditor
-                          key={pr.id}
-                          item={pr}
-                          index={i}
-                          total={settings.vitrine.products.length}
-                          onUpdate={updateProduct}
-                          onRemove={removeProduct}
-                          onMove={moveProduct}
-                          onUploadImage={(file) => uploadBioImage(file, "product")}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <Button onClick={handleSaveAppearance} disabled={!appearanceDirty || isSavingAppearance} className="w-full" variant="hero">
-                  <Save className="h-4 w-4 mr-2" />
-                  {isSavingAppearance ? "Salvando..." : "Salvar alterações"}
-                </Button>
-              </Card>
-              )}
-
               {/* Identidade do Site (nome e bio compartilhados) */}
               <Card className="p-4 md:p-5 rounded-2xl border-border space-y-3">
                 <div>
@@ -1554,7 +1437,7 @@ const LinkInBio = () => {
             {settings.layout === "classic" && (
               <>
             <Card className="p-4 md:p-5 rounded-2xl border-border">
-              <EditorBlocos estilo="classico" />
+              <EditorBlocos estilo="classico" aoAplicarAparencia={aplicarAparenciaDoModelo} />
             </Card>
 
             {blocosClassico.length === 0 && sortedLinks.length > 0 && (
@@ -2063,7 +1946,9 @@ const LinkInBio = () => {
               <p className="text-xs text-center font-display font-semibold uppercase tracking-wider text-muted-foreground/80 mb-4">
                 Pré-visualização
               </p>
-              <BioPreview profile={profile} links={activeLinks} blocos={blocosClassico} settings={settings} />
+              <BioPreview profile={profile} links={activeLinks}
+                blocos={settings.layout === "vitrine" ? blocosSite : blocosClassico}
+                produtos={produtosDoSite} posts={postsDoSite} settings={settings} />
             </Card>
           </div>
         </div>
@@ -2346,17 +2231,51 @@ type PreviewProps = {
   profile: ReturnType<typeof useProfile>["profile"];
   links: BioLink[];
   blocos?: BioBloco[];
+  produtos?: ItemLite[];
+  posts?: ItemLite[];
   settings: BioSettings;
 };
 
-const BioPreview = memo(function BioPreview({ profile, links, blocos = [], settings }: PreviewProps) {
+const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produtos = [], posts = [], settings }: PreviewProps) {
   const radius = radiusFor(settings.buttonStyle);
   const isOutline = settings.buttonStyle === "outline";
   const hasSocials = SOCIAL_FIELDS.some((f) => settings.socialLinks[f.key].trim());
   const fontStack = fontStackFor(settings.fontFamily);
 
+  // MODO SITE: a prévia usa o MESMO componente da página pública, dentro do
+  // celular. O SiteBio já é feito pra telefone primeiro, então ele cabe em 300px
+  // sem gambiarra, e a prévia para de ser um desenho paralelo que mente.
   if (settings.layout === "vitrine") {
-    return <VitrinePreview profile={profile} settings={settings} />;
+    const corDestaque = settings.buttonColor;
+    return (
+      <div className="w-[300px] mx-auto bg-white rounded-[40px] border-[8px] border-gray-800 p-2 shadow-2xl">
+        <BioFontStyle stack={fontStack} />
+        <div className="bio-font-scope w-full h-[560px] rounded-[32px] overflow-y-auto bg-white">
+          {blocos.length === 0 ? (
+            <div className="h-full grid place-items-center px-6 text-center">
+              <p className="text-xs font-body text-gray-500">
+                Adicione uma seção pra ver o site aqui. O jeito mais rápido é aplicar um modelo.
+              </p>
+            </div>
+          ) : (
+            <SiteBio
+              blocos={blocos.filter((b) => b.is_active).map((b) => ({ id: b.id, kind: b.kind, data: b.data ?? {}, position: b.position }))}
+              marca={{
+                nome: settings.header?.name || profile?.name || "Sua marca",
+                logo: settings.header?.avatar || profile?.avatar_url,
+                cor: corDestaque, corTexto: settings.buttonTextColor,
+              }}
+              produtos={produtos} posts={posts}
+              visual={{
+                buttonColor: settings.buttonColor, buttonTextColor: settings.buttonTextColor,
+                cardColor: settings.cardColor, cardTextColor: settings.cardTextColor,
+                radius: radiusFor(settings.buttonStyle), isOutline: settings.buttonStyle === "outline",
+              }}
+              aoAbrirProduto={() => {}} aoAbrirPost={() => {}} />
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -2367,17 +2286,14 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], setti
         style={backgroundStyle(settings)}
       >
         <BgOverlay amount={settings.bgOverlay} />
-        {/* BANNER = CAPA do topo: fica ATRÁS da foto, como capa de perfil. Antes
-            era um card solto no meio dos links, e ficava perdido. */}
-        {settings.bannerImage && settings.sections.some((x) => x.id === "banner" && x.on) && (
-          <div className="absolute inset-x-0 top-0 h-28 z-0 overflow-hidden">
-            <img src={settings.bannerImage} alt="" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10" />
-          </div>
-        )}
-        <div className={`relative z-10 px-5 flex flex-col items-center min-h-full ${settings.bannerImage && settings.sections.some((x) => x.id === "banner" && x.on) ? "pt-16 pb-7" : "py-7"}`}>
+        {/* O TOPO AQUI É O MESMO DA PÁGINA PÚBLICA, só em escala menor.
+            Antes a prévia desenhava o banner como uma faixa colada no topo e a
+            página pública desenhava como um card arredondado com a foto por
+            cima. Duas montagens diferentes pro mesmo lugar: a prévia mostrava
+            uma página que não existia, e a foto aparecia cortada. */}
+        <div className="relative z-10 px-5 py-6 flex flex-col items-center min-h-full">
         {hasSocials && (
-          <div className="flex items-center gap-2.5 mb-4">
+          <div className="order-last flex items-center gap-2.5 mt-5">
             {SOCIAL_FIELDS.map((f) =>
               settings.socialLinks[f.key].trim() ? (
                 <div
@@ -2392,9 +2308,15 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], setti
           </div>
         )}
 
+        {settings.bannerImage && settings.sections.some((x) => x.id === "banner" && x.on) && (
+          <div className="w-full -mt-1.5 mb-[-34px] rounded-2xl overflow-hidden shadow-md">
+            <img src={settings.bannerImage} alt="" className="w-full h-24 object-cover" />
+          </div>
+        )}
+
         {profile && (
           <>
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary via-purple-500 to-pink-500 p-[2px] mb-3">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary via-purple-500 to-pink-500 p-[2px] mb-3 shadow-xl">
               <div className="w-full h-full rounded-full bg-card overflow-hidden flex items-center justify-center">
                 {(settings.header?.avatar || profile.avatar_url) ? (
                   <img src={settings.header?.avatar || profile.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -2405,18 +2327,18 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], setti
                 )}
               </div>
             </div>
-            <h3 className="font-display font-bold text-base text-gray-900 text-center drop-shadow-sm">
+            <h3 className="font-display font-extrabold text-[17px] text-gray-900 text-center drop-shadow-sm">
               {settings.header?.name || profile.name || "Seu nome"}
             </h3>
             {(settings.header?.bio || profile.bio) && (
-              <p className="text-xs text-gray-800 text-center mt-1 whitespace-pre-line font-body drop-shadow-sm">
+              <p className="text-[12.5px] leading-relaxed text-gray-800 text-center mt-1.5 whitespace-pre-line font-body drop-shadow-sm">
                 {settings.header?.bio || profile.bio}
               </p>
             )}
           </>
         )}
 
-        <div className="w-full mt-5 space-y-2.5">
+        <div className="w-full mt-6 space-y-3">
           {settings.sections.filter((s) => s.on).map((sec) => {
             // O banner virou CAPA do topo (renderizada acima, atrás da foto).
             if (sec.id === "banner") return null;
@@ -2559,85 +2481,8 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], setti
   );
 });
 
-const VitrinePreview = memo(function VitrinePreview({ profile, settings }: { profile: PreviewProps["profile"]; settings: BioSettings }) {
-  const base = settings.vitrine.baseColor;
-  const name = settings.header?.name || profile?.name || "Seu nome";
-  const bio = settings.header?.bio || profile?.bio || "";
-  const activeSocials = SOCIAL_FIELDS.filter((f) => settings.socialLinks[f.key].trim());
-  const fontStack = fontStackFor(settings.fontFamily);
-  const untouchedBg = settings.bgType === "color" && settings.bgColor === DEFAULT_SETTINGS.bgColor;
-  const vitrineBg: React.CSSProperties = untouchedBg ? { backgroundColor: "#F5F3E7" } : backgroundStyle(settings);
-
-  return (
-    <div className="w-[300px] mx-auto bg-white rounded-[40px] border-[8px] border-gray-800 p-2 shadow-2xl">
-      <BioFontStyle stack={fontStack} />
-      <div className="bio-font-scope relative w-full h-[560px] rounded-[32px] overflow-y-auto" style={vitrineBg}>
-        <BgOverlay amount={settings.bgOverlay} />
-        <div className="relative z-10">
-        <div className="mx-4 mt-4">
-          <div
-            className="w-full h-40 rounded-2xl bg-cover bg-center shadow"
-            style={{ backgroundColor: "#cfcabb", backgroundImage: settings.vitrine.cover ? `url(${settings.vitrine.cover})` : undefined }}
-          />
-        </div>
-        <div className="px-4">
-          <h3 className="font-display font-extrabold text-lg text-gray-900 mt-3 leading-tight">{name}</h3>
-          {bio && <p className="text-xs text-gray-700 mt-1.5 whitespace-pre-line">{renderRichText(bio)}</p>}
-          {activeSocials.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2.5">
-              {activeSocials.map((f) => (
-                <span key={f.key} className="h-7 px-2.5 rounded-lg flex items-center text-[0.62rem] font-display font-bold tracking-wide text-white" style={{ backgroundColor: base }}>
-                  {f.label.toUpperCase()}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {settings.vitrine.services.length > 0 && (
-            <>
-              <p className="font-display font-extrabold text-sm text-gray-900 mt-5 mb-2">Serviços</p>
-              <div className="grid gap-2">
-                {settings.vitrine.services.map((sv) => (
-                  <div key={sv.id} className="h-14 rounded-xl overflow-hidden flex items-center justify-between" style={{ backgroundColor: base }}>
-                    <span className="text-white font-display font-bold text-xs pl-3 truncate">{sv.title || "Serviço"}</span>
-                    <span className="w-14 h-14 shrink-0 bg-cover bg-center" style={{ backgroundColor: "#b9b4a6", backgroundImage: sv.image ? `url(${sv.image})` : undefined }} />
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {settings.vitrine.products.length > 0 && (
-            <>
-              <p className="font-display font-extrabold text-sm text-gray-900 mt-5 mb-2">Infoprodutos</p>
-              <div className="flex gap-2.5 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
-                {settings.vitrine.products.map((pr) => (
-                  <div key={pr.id} className="shrink-0 w-40 rounded-2xl overflow-hidden shadow" style={{ backgroundColor: base }}>
-                    <div className="h-24 bg-cover bg-center" style={{ backgroundColor: "#b9b4a6", backgroundImage: pr.cover ? `url(${pr.cover})` : undefined }} />
-                    <div className="px-2.5 py-2 text-white">
-                      <b className="font-display font-bold text-xs leading-tight block">{pr.title || "Infoproduto"}</b>
-                      {pr.desc && <p className="text-[0.62rem] text-white/80 leading-snug mt-1 whitespace-pre-line line-clamp-3">{renderRichText(pr.desc)}</p>}
-                      <span className="font-display font-bold text-[0.62rem] text-white underline decoration-2 underline-offset-2 mt-1.5 inline-block" style={{ textDecorationColor: "#FFCF03" }}>
-                        {pr.ctaText || "Garanta o seu"} →
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-        <div className="flex justify-center py-5">
-          <span className="inline-flex items-center gap-1.5 text-[10px] text-gray-500">
-            feito com <img src="/logo-cria.png" alt="Cria" style={{ height: 14 }} />
-          </span>
-        </div>
-        </div>
-      </div>
-    </div>
-  );
-});
-
+/* VitrinePreview saiu: o modo Site agora é montado por blocos e a prévia
+   usa o mesmo SiteBio da página pública. */
 // ────────────────────────────────────────────────────────────
 // Vitrine editors
 // ────────────────────────────────────────────────────────────
