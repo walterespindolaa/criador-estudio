@@ -1958,14 +1958,15 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
   const fontStack = fontStackFor(settings.fontFamily);
 
   // MODO SITE: a prévia usa o MESMO componente da página pública, dentro do
-  // celular. O SiteBio já é feito pra telefone primeiro, então ele cabe em 300px
-  // sem gambiarra, e a prévia para de ser um desenho paralelo que mente.
+  // celular. E ele se monta pela largura DESTA moldura (container queries), não
+  // pela do monitor: antes o site abria aqui com o menu de computador e a grade
+  // de três colunas espremida em 300px, e a prévia mentia feio.
   if (settings.layout === "vitrine") {
     const corDestaque = settings.buttonColor;
     return (
       <div className="w-[300px] mx-auto bg-white rounded-[40px] border-[8px] border-gray-800 p-2 shadow-2xl">
         <BioFontStyle stack={fontStack} />
-        <div className="bio-font-scope w-full h-[560px] rounded-[32px] overflow-y-auto bg-white">
+        <div className="bio-font-scope w-full h-[560px] rounded-[32px] overflow-y-auto overflow-x-hidden bg-white">
           {blocos.length === 0 ? (
             <div className="h-full grid place-items-center px-6 text-center">
               <p className="text-xs font-body text-gray-500">
@@ -1986,7 +1987,7 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
                 cardColor: settings.cardColor, cardTextColor: settings.cardTextColor,
                 radius: radiusFor(settings.buttonStyle), isOutline: settings.buttonStyle === "outline",
               }}
-              aoAbrirProduto={() => {}} aoAbrirPost={() => {}} />
+              aoAbrirProduto={() => {}} aoAbrirPost={() => {}} alturaCheia={false} />
           )}
         </div>
       </div>

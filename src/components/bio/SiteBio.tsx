@@ -19,6 +19,12 @@ import { cn } from "@/lib/utils";
    tela grande é a quantidade de coisa por linha; o que nunca muda é a ORDEM em
    que a pessoa lê. Menu vira gaveta, grade de produtos vira lista de um por
    linha, e o rodapé empilha.
+
+   E "tela grande" aqui é o ESPAÇO DISPONÍVEL, não a janela: cq-sm, cq-md e
+   cq-lg no lugar de sm, md e lg. Com sm/md/lg, a prévia do celular no editor
+   (uma moldura de 300px num monitor de 1440px) montava o menu de computador e
+   a grade de três colunas dentro da moldura, cortando tudo. Quem montava a
+   página via um desenho que nenhum visitante ia ver.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export type ItemLite = {
@@ -58,7 +64,7 @@ function Topo({ marca, secoes, aoIr }: { marca: MarcaSite; secoes: { id: string;
           <span className="font-display font-bold text-[15px] truncate">{marca.nome}</span>
         </button>
 
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden cq-md:flex items-center gap-6">
           {secoes.map((s) => (
             <button key={s.id} type="button" onClick={() => ir(s.id)}
               className="text-[13.5px] text-gray-600 hover:text-gray-900 transition-colors">{s.nome}</button>
@@ -68,7 +74,7 @@ function Topo({ marca, secoes, aoIr }: { marca: MarcaSite; secoes: { id: string;
         {secoes.length > 0 && (
           <button type="button" aria-label={aberto ? "Fechar menu" : "Abrir menu"} aria-expanded={aberto}
             onClick={() => setAberto((v) => !v)}
-            className="md:hidden w-11 h-11 -mr-2 grid place-items-center text-gray-800">
+            className="cq-md:hidden w-11 h-11 -mr-2 grid place-items-center text-gray-800">
             {aberto ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         )}
@@ -76,7 +82,7 @@ function Topo({ marca, secoes, aoIr }: { marca: MarcaSite; secoes: { id: string;
 
       {/* Gaveta do celular: cada item com 48px de altura, dedo cabe. */}
       {aberto && (
-        <nav className="md:hidden border-t border-black/[0.07] bg-white">
+        <nav className="cq-md:hidden border-t border-black/[0.07] bg-white">
           {secoes.map((s) => (
             <button key={s.id} type="button" onClick={() => ir(s.id)}
               className="w-full text-left px-5 h-12 flex items-center text-[15px] text-gray-800 border-b border-black/[0.05] last:border-0">
@@ -126,7 +132,7 @@ function Secao({ id, fundo, marca, className, children }: {
   const f = estiloDoFundo(fundo ?? "claro", marca);
   return (
     <section id={id} style={f.estilo}
-      className={cn("px-5 py-10 md:py-14", f.classe, !fundo || fundo === "claro" ? "border-t border-black/[0.06]" : "", className)}>
+      className={cn("px-5 py-10 cq-md:py-14", f.classe, !fundo || fundo === "claro" ? "border-t border-black/[0.06]" : "", className)}>
       <div className="mx-auto max-w-5xl">{children}</div>
     </section>
   );
@@ -138,19 +144,19 @@ function SecaoCapa({ d, marca, aoClicar }: { d: DadosBloco; marca: MarcaSite; ao
   const b1 = txt(d, "botao1"), u1 = txt(d, "url1");
   const b2 = txt(d, "botao2"), u2 = txt(d, "url2");
   return (
-    <section id="topo" className="px-5 py-10 md:py-16" style={{ background: `linear-gradient(160deg, ${marca.cor}14, transparent)` }}>
+    <section id="topo" className="px-5 py-10 cq-md:py-16" style={{ background: `linear-gradient(160deg, ${marca.cor}14, transparent)` }}>
       {/* Uma coluna no celular, duas só a partir de 768px. A imagem vem DEPOIS
           do texto no telefone, pra a pessoa ler a proposta antes de rolar. */}
-      <div className="mx-auto max-w-5xl grid md:grid-cols-[1.1fr_.9fr] gap-7 md:gap-10 items-center">
+      <div className="mx-auto max-w-5xl grid cq-md:grid-cols-[1.1fr_.9fr] gap-7 cq-md:gap-10 items-center">
         <div>
-          <h1 className="font-display font-extrabold text-[1.75rem] md:text-[2.6rem] leading-[1.12] text-gray-900 [text-wrap:balance]">
+          <h1 className="font-display font-extrabold text-[1.75rem] cq-md:text-[2.6rem] leading-[1.12] text-gray-900 [text-wrap:balance]">
             {txt(d, "titulo")}
           </h1>
           {txt(d, "frase") && (
-            <p className="text-[15px] md:text-base text-gray-600 leading-relaxed mt-3 whitespace-pre-line">{txt(d, "frase")}</p>
+            <p className="text-[15px] cq-md:text-base text-gray-600 leading-relaxed mt-3 whitespace-pre-line">{txt(d, "frase")}</p>
           )}
           {(b1 || b2) && (
-            <div className="flex flex-col sm:flex-row gap-2.5 mt-6">
+            <div className="flex flex-col cq-sm:flex-row gap-2.5 mt-6">
               {b1 && u1 && (
                 <a href={u1} target="_blank" rel="noopener noreferrer" onClick={aoClicar}
                   className="rounded-full px-6 h-12 inline-flex items-center justify-center font-display font-bold text-[15px] transition active:scale-[.98]"
@@ -164,7 +170,7 @@ function SecaoCapa({ d, marca, aoClicar }: { d: DadosBloco; marca: MarcaSite; ao
           )}
         </div>
         {img && (
-          <img src={img} alt="" className="w-full rounded-3xl object-cover aspect-[4/3] md:aspect-square shadow-lg" />
+          <img src={img} alt="" className="w-full rounded-3xl object-cover aspect-[4/3] cq-md:aspect-square shadow-lg" />
         )}
       </div>
     </section>
@@ -176,8 +182,8 @@ function SecaoSobre({ d, marca }: { d: DadosBloco; marca: MarcaSite }) {
   return (
     <Secao id="sobre" fundo={txt(d, "fundo", "claro")} marca={marca}>
       <Rotulo cor={marca.cor} herda={txt(d, "fundo") === "escuro" || txt(d, "fundo") === "marca"}>{txt(d, "rotulo")}</Rotulo>
-      {txt(d, "titulo") && <h2 className="font-display font-bold text-[1.4rem] md:text-2xl">{txt(d, "titulo")}</h2>}
-      <div className={cn("mt-5 gap-6", img ? "grid md:grid-cols-[220px_1fr] items-start" : "")}>
+      {txt(d, "titulo") && <h2 className="font-display font-bold text-[1.4rem] cq-md:text-2xl">{txt(d, "titulo")}</h2>}
+      <div className={cn("mt-5 gap-6", img ? "grid cq-md:grid-cols-[220px_1fr] items-start" : "")}>
         {img && <img src={img} alt="" className="w-full max-w-[220px] rounded-2xl object-cover aspect-square" />}
         <TextoRico texto={txt(d, "texto")} className="text-[15px] leading-relaxed opacity-90" />
       </div>
@@ -192,11 +198,11 @@ function SecaoProdutos({ d, marca, itens, aoAbrir, aoClicar }: {
   return (
     <Secao id="servicos" fundo={txt(d, "fundo", "creme")} marca={marca}>
       <Rotulo cor={marca.cor} herda={txt(d, "fundo", "creme") === "escuro" || txt(d, "fundo") === "marca"}>{txt(d, "rotulo")}</Rotulo>
-      <h2 className="font-display font-bold text-[1.4rem] md:text-2xl">{txt(d, "titulo") || "Serviços"}</h2>
+      <h2 className="font-display font-bold text-[1.4rem] cq-md:text-2xl">{txt(d, "titulo") || "Serviços"}</h2>
       {txt(d, "subtitulo") && <p className="text-[14px] opacity-75 mt-1.5">{txt(d, "subtitulo")}</p>}
       {/* Um por linha no celular. Duas colunas em 390px viraria card de 170px
           com foto de 90px, que não vende nada. */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-5">
+      <div className="grid gap-3 cq-sm:grid-cols-2 cq-lg:grid-cols-3 mt-5">
         {itens.map((i) => {
           const preco = precoVisivel(i.preco, i.preco_texto);
           return (
@@ -229,8 +235,8 @@ function SecaoBlog({ d, marca, itens, aoAbrir, aoClicar }: {
   return (
     <Secao id="blog" fundo={txt(d, "fundo", "claro")} marca={marca}>
       <Rotulo cor={marca.cor} herda={txt(d, "fundo") === "escuro" || txt(d, "fundo") === "marca"}>{txt(d, "rotulo")}</Rotulo>
-      <h2 className="font-display font-bold text-[1.4rem] md:text-2xl">{txt(d, "titulo") || "Blog"}</h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-5">
+      <h2 className="font-display font-bold text-[1.4rem] cq-md:text-2xl">{txt(d, "titulo") || "Blog"}</h2>
+      <div className="grid gap-3 cq-sm:grid-cols-2 cq-lg:grid-cols-3 mt-5">
         {itens.slice(0, quantos).map((i) => (
           <button key={i.id} type="button" onClick={() => { aoClicar?.(); aoAbrir(i.slug); }}
             className="text-left rounded-2xl border border-black/[0.08] bg-white overflow-hidden shadow-sm hover:shadow-md transition active:scale-[.99]">
@@ -253,8 +259,8 @@ function SecaoDepoimentos({ d, marca }: { d: DadosBloco; marca: MarcaSite }) {
   return (
     <Secao id="depoimentos" fundo={txt(d, "fundo", "creme")} marca={marca}>
       <Rotulo cor={marca.cor} herda={txt(d, "fundo", "creme") === "escuro" || txt(d, "fundo") === "marca"}>{txt(d, "rotulo")}</Rotulo>
-      <h2 className="font-display font-bold text-[1.4rem] md:text-2xl">{txt(d, "titulo") || "Depoimentos"}</h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-5">
+      <h2 className="font-display font-bold text-[1.4rem] cq-md:text-2xl">{txt(d, "titulo") || "Depoimentos"}</h2>
+      <div className="grid gap-3 cq-sm:grid-cols-2 cq-lg:grid-cols-3 mt-5">
         {itens.map((i, n) => (
           <figure key={n} className="rounded-2xl border border-black/[0.08] bg-white p-4">
             <blockquote className="text-[14px] text-gray-700 leading-relaxed">“{i.texto}”</blockquote>
@@ -270,7 +276,7 @@ function Rodape({ d, marca, aoClicar }: { d: DadosBloco; marca: MarcaSite; aoCli
   const tel = txt(d, "telefone"), mail = txt(d, "email"), end = txt(d, "endereco"), ig = txt(d, "instagram");
   return (
     <footer id="contato" className="px-5 py-9 mt-2" style={{ backgroundColor: "#101014", color: "#F5F3E7" }}>
-      <div className="mx-auto max-w-5xl grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mx-auto max-w-5xl grid gap-6 cq-sm:grid-cols-2 cq-lg:grid-cols-3">
         <div>
           <p className="font-display font-bold text-[15px]">{txt(d, "titulo") || marca.nome}</p>
           {txt(d, "assinatura") && <p className="text-[13px] opacity-75 mt-1 whitespace-pre-line">{txt(d, "assinatura")}</p>}
@@ -313,6 +319,7 @@ function Rodape({ d, marca, aoClicar }: { d: DadosBloco; marca: MarcaSite; aoCli
 /* ── A HOME DO SITE ── */
 export function SiteBio({
   blocos, marca, produtos, posts, visual, aoAbrirProduto, aoAbrirPost, onClique, capturaDoBloco,
+  alturaCheia,
 }: {
   blocos: BlocoLite[];
   marca: MarcaSite;
@@ -323,6 +330,10 @@ export function SiteBio({
   aoAbrirPost: (slug: string) => void;
   onClique?: (blocoId: string) => void;
   capturaDoBloco?: (b: BlocoLite) => React.ReactNode;
+  /** Na página pública o site ocupa a altura da tela, pra não sobrar fundo
+   *  cinza embaixo numa página curta. Dentro da prévia isso viraria um vazio
+   *  branco enorme depois da última seção, então lá vai desligado. */
+  alturaCheia?: boolean;
 }) {
   // O menu lista só as seções que existem de verdade na página montada.
   const secoes = useMemo(() => {
@@ -343,8 +354,12 @@ export function SiteBio({
     else window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  /* [container-type:inline-size] é o que faz cq-sm/cq-md/cq-lg funcionarem:
+     a partir daqui, "grande" e "pequeno" passam a ser sobre a largura DESTA
+     caixa, não sobre a largura do monitor. É por isso que a prévia de 300px
+     no editor mostra a mesma página que o celular de verdade mostra. */
   return (
-    <div className="min-h-[100dvh] bg-white">
+    <div className={cn("bg-white [container-type:inline-size]", alturaCheia !== false && "min-h-[100dvh]")}>
       <Topo marca={marca} secoes={secoes} aoIr={irPara} />
       {blocos.map((b) => {
         switch (b.kind) {
@@ -393,11 +408,11 @@ export function PaginaItem({
   const cta = item.cta_url || (whatsapp ? linkWhatsapp(whatsapp, `Oi! Vi "${item.titulo}" no site e quero saber mais.`) : "");
 
   return (
-    <div className="min-h-[100dvh] bg-white">
+    <div className="min-h-[100dvh] bg-white [container-type:inline-size]">
       <Topo marca={marca} secoes={[]} aoIr={aoVoltar} />
-      {item.capa && <img src={item.capa} alt="" className="w-full aspect-[16/9] md:aspect-[21/9] object-cover" />}
+      {item.capa && <img src={item.capa} alt="" className="w-full aspect-[16/9] cq-md:aspect-[21/9] object-cover" />}
 
-      <article className="px-5 py-8 md:py-12">
+      <article className="px-5 py-8 cq-md:py-12">
         <div className="mx-auto max-w-[680px]">
           <button type="button" onClick={aoVoltar}
             className="inline-flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-800 min-h-[44px]">
@@ -409,7 +424,7 @@ export function PaginaItem({
               {dataBR(item.publicado_em)}
             </p>
           )}
-          <h1 className="font-display font-extrabold text-[1.6rem] md:text-[2.1rem] leading-[1.15] text-gray-900 mt-1.5 [text-wrap:balance]">
+          <h1 className="font-display font-extrabold text-[1.6rem] cq-md:text-[2.1rem] leading-[1.15] text-gray-900 mt-1.5 [text-wrap:balance]">
             {item.titulo}
           </h1>
           {!ehPost && preco && (
@@ -424,7 +439,7 @@ export function PaginaItem({
           )}
 
           {item.galeria.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-6">
+            <div className="grid grid-cols-2 cq-sm:grid-cols-3 gap-2 mt-6">
               {item.galeria.map((g, i) => (
                 <img key={i} src={g} alt="" loading="lazy" className="w-full aspect-square object-cover rounded-xl" />
               ))}

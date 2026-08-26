@@ -305,7 +305,7 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
           <TituloCartao>{txt(data, "titulo")}</TituloCartao>
           {/* Duas colunas no celular e três a partir do tablet: três quadradinhos
               numa tela de 390px viram miniaturas ilegíveis. */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-2 cq-sm:grid-cols-3 gap-1.5">
             {fotos.map((src, i) => (
               <img key={i} src={src} alt="" loading="lazy" className="w-full aspect-square object-cover rounded-lg" />
             ))}

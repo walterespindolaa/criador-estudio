@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
 
 export default {
   darkMode: ["class"],
@@ -114,5 +115,29 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+
+    /* ═══════════════════════════════════════════════════════════════════
+       MEDIDAS PELO ESPAÇO DISPONÍVEL, NÃO PELA TELA
+
+       sm:, md: e lg: perguntam o tamanho da JANELA. Isso quebra sempre que
+       um componente é desenhado dentro de uma caixa menor que a janela: a
+       prévia do celular no editor do Link na bio é uma moldura de 300px num
+       monitor de 1440px, então o site abria lá com o menu de computador e a
+       grade de três colunas, tudo espremido e cortado. A prévia mostrava uma
+       página que não existia.
+
+       cq-sm / cq-md / cq-lg perguntam o tamanho do PAI. Dentro da moldura de
+       300px o site se monta como celular; na página pública de verdade, como
+       computador. Um desenho só, honesto nos dois lugares.
+
+       Precisa que o pai declare [container-type:inline-size].
+       ═══════════════════════════════════════════════════════════════════ */
+    plugin(({ addVariant }) => {
+      addVariant("cq-sm", "@container (min-width: 560px)");
+      addVariant("cq-md", "@container (min-width: 720px)");
+      addVariant("cq-lg", "@container (min-width: 1000px)");
+    }),
+  ],
 } satisfies Config;
