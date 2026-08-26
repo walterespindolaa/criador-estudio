@@ -15,6 +15,7 @@ import {
   blocosDoEstilo, faltaNoBloco, lista, mascaraTelefone, metaDoBloco, resumoDoBloco, txt, bool,
   type BioBloco, type DadosBloco, type EstiloBio, type TipoBloco,
 } from "@/lib/bioBlocks";
+import { CampoTextoRico } from "@/lib/textoRico";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -85,6 +86,32 @@ function BotaoImagem({ valor, onTroca, rotulo }: { valor: string; onTroca: (url:
   );
 }
 
+/** Fundo da seção. Página inteira branca cansa e some: a alternância é o que
+ *  dá ritmo à rolagem. */
+function EscolherFundo({ valor, onTroca }: { valor: string; onTroca: (v: string) => void }) {
+  const opcoes: { v: string; r: string; amostra: string }[] = [
+    { v: "claro", r: "Branco", amostra: "#FFFFFF" },
+    { v: "creme", r: "Creme", amostra: "#F7F5EF" },
+    { v: "escuro", r: "Escuro", amostra: "#101014" },
+    { v: "marca", r: "Cor da marca", amostra: "" },
+  ];
+  return (
+    <LinhaCampo label="Fundo da seção" ajuda="Alterne entre as seções pra a página não virar uma parede só.">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {opcoes.map((o) => (
+          <button key={o.v} type="button" onClick={() => onTroca(o.v)}
+            className={cn("rounded-xl border-2 px-2.5 py-2 flex items-center gap-2 text-left transition-all",
+              valor === o.v ? "border-primary bg-primary/5" : "border-border hover:border-primary/30")}>
+            <span className="w-5 h-5 rounded-md border border-border shrink-0"
+              style={o.amostra ? { backgroundColor: o.amostra } : { background: "linear-gradient(135deg,hsl(var(--primary)),hsl(var(--primary)/.6))" }} />
+            <span className="text-[12px] font-body font-medium truncate">{o.r}</span>
+          </button>
+        ))}
+      </div>
+    </LinhaCampo>
+  );
+}
+
 /* ── O FORMULÁRIO DE CADA TIPO ── */
 function FormBloco({ bloco, salvar }: { bloco: BioBloco; salvar: (d: DadosBloco) => void }) {
   const d = bloco.data ?? {};
@@ -149,8 +176,8 @@ function FormBloco({ bloco, salvar }: { bloco: BioBloco; salvar: (d: DadosBloco)
             <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })} className="rounded-xl" />
           </LinhaCampo>
           <LinhaCampo label="Texto">
-            <Textarea rows={5} value={txt(d, "texto")} onChange={(e) => p({ texto: e.target.value })}
-              placeholder="Escreva como você falaria com o cliente." className="rounded-xl" />
+            <CampoTextoRico valor={txt(d, "texto")} onChange={(v) => p({ texto: v })} rows={6}
+              placeholder="Escreva como você falaria com o cliente." />
           </LinhaCampo>
         </div>
       );
@@ -359,8 +386,9 @@ function FormBloco({ bloco, salvar }: { bloco: BioBloco; salvar: (d: DadosBloco)
             <BotaoImagem valor={txt(d, "imagem")} onTroca={(u) => p({ imagem: u })} rotulo="Enviar foto" />
           </LinhaCampo>
           <LinhaCampo label="Texto" ajuda="A história. É daqui que sai o conteúdo que ninguém copia.">
-            <Textarea rows={7} value={txt(d, "texto")} onChange={(e) => p({ texto: e.target.value })} className="rounded-xl" />
+            <CampoTextoRico valor={txt(d, "texto")} onChange={(v) => p({ texto: v })} rows={8} />
           </LinhaCampo>
+          <EscolherFundo valor={txt(d, "fundo", "claro")} onTroca={(v) => p({ fundo: v })} />
         </div>
       );
 
@@ -394,6 +422,7 @@ function FormBloco({ bloco, salvar }: { bloco: BioBloco; salvar: (d: DadosBloco)
                 className="rounded-xl w-24" />
             </LinhaCampo>
           )}
+          <EscolherFundo valor={txt(d, "fundo", bloco.kind === "produtos" ? "creme" : "claro")} onTroca={(v) => p({ fundo: v })} />
         </div>
       );
 
@@ -426,6 +455,7 @@ function FormBloco({ bloco, salvar }: { bloco: BioBloco; salvar: (d: DadosBloco)
           <Button type="button" size="sm" variant="outline" onClick={() => p({ itens: [...deps, { texto: "", autor: "" }] })}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar depoimento
           </Button>
+          <EscolherFundo valor={txt(d, "fundo", "creme")} onTroca={(v) => p({ fundo: v })} />
         </div>
       );
     }

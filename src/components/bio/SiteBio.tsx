@@ -4,6 +4,7 @@ import { BlocoPublico, type VisualBio } from "@/components/bio/BlocoPublico";
 import {
   lista, linkWhatsapp, precoVisivel, txt, type DadosBloco,
 } from "@/lib/bioBlocks";
+import { TextoRico } from "@/lib/textoRico";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -88,16 +89,44 @@ function Topo({ marca, secoes, aoIr }: { marca: MarcaSite; secoes: { id: string;
   );
 }
 
-function Rotulo({ children, cor }: { children: React.ReactNode; cor: string }) {
+function Rotulo({ children, cor, herda }: { children: React.ReactNode; cor: string; herda?: boolean }) {
   if (!children) return null;
+  // Em fundo escuro ou da marca, a cor de destaque some. Aí o rótulo usa a
+  // própria cor do texto da seção, só um pouco mais apagada.
   return (
-    <p className="text-[11px] font-bold uppercase tracking-[0.13em] mb-1" style={{ color: cor }}>{children}</p>
+    <p className={cn("text-[11px] font-bold uppercase tracking-[0.13em] mb-1", herda && "opacity-70")}
+      style={herda ? undefined : { color: cor }}>{children}</p>
   );
 }
 
-function Secao({ id, className, children }: { id?: string; className?: string; children: React.ReactNode }) {
+/* ── O FUNDO DE CADA SEÇÃO ──
+   Uma página inteira branca cansa e some: tudo vira a mesma coisa e ninguém
+   percebe onde um assunto acaba e o outro começa. Aqui cada seção escolhe o
+   seu fundo, e a alternância é o que dá ritmo à rolagem.
+
+   Fundo escuro troca a cor do texto junto, senão a seção some. */
+export type FundoSecao = "claro" | "creme" | "escuro" | "marca";
+
+function estiloDoFundo(fundo: string, marca: MarcaSite): { classe: string; estilo?: React.CSSProperties; escuro: boolean } {
+  switch (fundo) {
+    case "creme": return { classe: "bg-[#F7F5EF] text-gray-900", escuro: false };
+    case "escuro": return { classe: "bg-[#101014] text-[#F5F3E7]", escuro: true };
+    case "marca": return {
+      classe: "",
+      estilo: { backgroundColor: marca.cor, color: marca.corTexto },
+      escuro: marca.corTexto.toLowerCase() !== "#1a1626",
+    };
+    default: return { classe: "bg-white text-gray-900", escuro: false };
+  }
+}
+
+function Secao({ id, fundo, marca, className, children }: {
+  id?: string; fundo?: string; marca: MarcaSite; className?: string; children: React.ReactNode;
+}) {
+  const f = estiloDoFundo(fundo ?? "claro", marca);
   return (
-    <section id={id} className={cn("px-5 py-10 md:py-14 border-t border-black/[0.06]", className)}>
+    <section id={id} style={f.estilo}
+      className={cn("px-5 py-10 md:py-14", f.classe, !fundo || fundo === "claro" ? "border-t border-black/[0.06]" : "", className)}>
       <div className="mx-auto max-w-5xl">{children}</div>
     </section>
   );
@@ -145,12 +174,12 @@ function SecaoCapa({ d, marca, aoClicar }: { d: DadosBloco; marca: MarcaSite; ao
 function SecaoSobre({ d, marca }: { d: DadosBloco; marca: MarcaSite }) {
   const img = txt(d, "imagem");
   return (
-    <Secao id="sobre">
-      <Rotulo cor={marca.cor}>{txt(d, "rotulo")}</Rotulo>
-      {txt(d, "titulo") && <h2 className="font-display font-bold text-[1.4rem] md:text-2xl text-gray-900">{txt(d, "titulo")}</h2>}
+    <Secao id="sobre" fundo={txt(d, "fundo", "claro")} marca={marca}>
+      <Rotulo cor={marca.cor} herda={txt(d, "fundo") === "escuro" || txt(d, "fundo") === "marca"}>{txt(d, "rotulo")}</Rotulo>
+      {txt(d, "titulo") && <h2 className="font-display font-bold text-[1.4rem] md:text-2xl">{txt(d, "titulo")}</h2>}
       <div className={cn("mt-5 gap-6", img ? "grid md:grid-cols-[220px_1fr] items-start" : "")}>
         {img && <img src={img} alt="" className="w-full max-w-[220px] rounded-2xl object-cover aspect-square" />}
-        <p className="text-[15px] leading-relaxed text-gray-700 whitespace-pre-line">{txt(d, "texto")}</p>
+        <TextoRico texto={txt(d, "texto")} className="text-[15px] leading-relaxed opacity-90" />
       </div>
     </Secao>
   );
@@ -161,10 +190,10 @@ function SecaoProdutos({ d, marca, itens, aoAbrir, aoClicar }: {
 }) {
   if (itens.length === 0) return null;
   return (
-    <Secao id="servicos">
-      <Rotulo cor={marca.cor}>{txt(d, "rotulo")}</Rotulo>
-      <h2 className="font-display font-bold text-[1.4rem] md:text-2xl text-gray-900">{txt(d, "titulo") || "Serviços"}</h2>
-      {txt(d, "subtitulo") && <p className="text-[14px] text-gray-600 mt-1.5">{txt(d, "subtitulo")}</p>}
+    <Secao id="servicos" fundo={txt(d, "fundo", "creme")} marca={marca}>
+      <Rotulo cor={marca.cor} herda={txt(d, "fundo", "creme") === "escuro" || txt(d, "fundo") === "marca"}>{txt(d, "rotulo")}</Rotulo>
+      <h2 className="font-display font-bold text-[1.4rem] md:text-2xl">{txt(d, "titulo") || "Serviços"}</h2>
+      {txt(d, "subtitulo") && <p className="text-[14px] opacity-75 mt-1.5">{txt(d, "subtitulo")}</p>}
       {/* Um por linha no celular. Duas colunas em 390px viraria card de 170px
           com foto de 90px, que não vende nada. */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-5">
@@ -198,9 +227,9 @@ function SecaoBlog({ d, marca, itens, aoAbrir, aoClicar }: {
   if (itens.length === 0) return null;
   const quantos = typeof d.quantos === "number" ? d.quantos : 6;
   return (
-    <Secao id="blog">
-      <Rotulo cor={marca.cor}>{txt(d, "rotulo")}</Rotulo>
-      <h2 className="font-display font-bold text-[1.4rem] md:text-2xl text-gray-900">{txt(d, "titulo") || "Blog"}</h2>
+    <Secao id="blog" fundo={txt(d, "fundo", "claro")} marca={marca}>
+      <Rotulo cor={marca.cor} herda={txt(d, "fundo") === "escuro" || txt(d, "fundo") === "marca"}>{txt(d, "rotulo")}</Rotulo>
+      <h2 className="font-display font-bold text-[1.4rem] md:text-2xl">{txt(d, "titulo") || "Blog"}</h2>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-5">
         {itens.slice(0, quantos).map((i) => (
           <button key={i.id} type="button" onClick={() => { aoClicar?.(); aoAbrir(i.slug); }}
@@ -222,9 +251,9 @@ function SecaoDepoimentos({ d, marca }: { d: DadosBloco; marca: MarcaSite }) {
   const itens = lista<{ texto?: string; autor?: string }>(d, "itens").filter((i) => (i.texto || "").trim());
   if (itens.length === 0) return null;
   return (
-    <Secao id="depoimentos" className="bg-black/[0.02]">
-      <Rotulo cor={marca.cor}>{txt(d, "rotulo")}</Rotulo>
-      <h2 className="font-display font-bold text-[1.4rem] md:text-2xl text-gray-900">{txt(d, "titulo") || "Depoimentos"}</h2>
+    <Secao id="depoimentos" fundo={txt(d, "fundo", "creme")} marca={marca}>
+      <Rotulo cor={marca.cor} herda={txt(d, "fundo", "creme") === "escuro" || txt(d, "fundo") === "marca"}>{txt(d, "rotulo")}</Rotulo>
+      <h2 className="font-display font-bold text-[1.4rem] md:text-2xl">{txt(d, "titulo") || "Depoimentos"}</h2>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-5">
         {itens.map((i, n) => (
           <figure key={n} className="rounded-2xl border border-black/[0.08] bg-white p-4">
@@ -329,7 +358,7 @@ export function SiteBio({
             // Os blocos comuns (vídeo, FAQ, mapa, captura) também servem no
             // Site: entram centralizados numa coluna de leitura confortável.
             return (
-              <Secao key={b.id}>
+              <Secao key={b.id} marca={marca} fundo={txt(b.data, "fundo", "claro")}>
                 <div className="mx-auto max-w-[620px]">
                   <BlocoPublico kind={b.kind} data={b.data} visual={visual}
                     onClique={() => onClique?.(b.id)} captura={capturaDoBloco?.(b)} />
@@ -391,7 +420,7 @@ export function PaginaItem({
           {item.conteudo && (
             // whitespace-pre-line em vez de HTML: o que a pessoa digitou é o
             // que aparece, sem risco de colar markup estranho na página.
-            <div className="text-[15.5px] leading-[1.75] text-gray-700 mt-5 whitespace-pre-line">{item.conteudo}</div>
+            <TextoRico texto={item.conteudo} className="text-[15.5px] leading-[1.75] text-gray-700 mt-5 space-y-4" />
           )}
 
           {item.galeria.length > 0 && (

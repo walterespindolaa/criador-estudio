@@ -4,6 +4,7 @@ import {
   bool, embedDeVideo, embedGoogleMaps, faltaAte, linkAppleMaps, linkGoogleMaps,
   linkWaze, linkWhatsapp, lista, txt, type DadosBloco,
 } from "@/lib/bioBlocks";
+import { TextoRico } from "@/lib/textoRico";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -263,7 +264,7 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
       return (
         <CartaoBase visual={visual} className="p-4">
           <TituloCartao>{txt(data, "titulo")}</TituloCartao>
-          <p className={cn("text-[14px] leading-relaxed whitespace-pre-line", visual.cardColor ? "opacity-90" : "text-gray-700")}>{t}</p>
+          <TextoRico texto={t} className={cn("text-[14px] leading-relaxed", visual.cardColor ? "opacity-90" : "text-gray-700")} />
         </CartaoBase>
       );
     }
