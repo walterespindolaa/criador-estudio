@@ -93,6 +93,54 @@ function BotaoMic({ onTexto, accent }: { onTexto: (t: string) => void; accent: s
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   O ANIVERSÁRIO
+
+   Eram dois selects que só gravavam quando OS DOIS estavam escolhidos, e a
+   escolha ficava guardada no valor gravado. Ou seja: a pessoa escolhia o dia,
+   nada era gravado (faltava o mês), o select voltava pra "Dia" no próximo
+   desenho, e escolher o mês também não gravava (agora faltava o dia). Não dava
+   pra preencher de jeito nenhum, e ninguém entendia por quê: o campo
+   simplesmente não obedecia.
+
+   Agora o meio do caminho mora aqui dentro. O valor lá fora só recebe a data
+   quando ela existe de verdade, e enquanto isso a escolha parcial fica na tela,
+   que é o que a pessoa espera ver.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function SeletorAniversario({ valor, aoMudar, campo }: {
+  valor: string; aoMudar: (v: string) => void; campo: CSSProperties;
+}) {
+  const [, mmSalvo = "", ddSalvo = ""] = valor ? valor.split("-") : [];
+  const [dd, setDd] = useState(ddSalvo);
+  const [mm, setMm] = useState(mmSalvo);
+
+  // Se o valor mudar por fora (rascunho recarregado), a tela acompanha.
+  useEffect(() => {
+    const [, m = "", d = ""] = valor ? valor.split("-") : [];
+    if (valor) { setDd(d); setMm(m); }
+  }, [valor]);
+
+  const trocar = (novoDd: string, novoMm: string) => {
+    setDd(novoDd); setMm(novoMm);
+    // Guarda no mesmo formato da ficha ("2000-MM-DD"): só dia e mês importam.
+    aoMudar(novoDd && novoMm ? `2000-${novoMm}-${novoDd}` : "");
+  };
+
+  const sel: CSSProperties = { ...campo, width: "auto", flex: 1, appearance: "auto" };
+  return (
+    <div style={{ display: "flex", gap: 8 }}>
+      <select value={dd} onChange={(e) => trocar(e.target.value, mm)} style={sel} aria-label="Dia do aniversário">
+        <option value="">Dia</option>
+        {Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0")).map((x) => <option key={x} value={x}>{x}</option>)}
+      </select>
+      <select value={mm} onChange={(e) => trocar(dd, e.target.value)} style={sel} aria-label="Mês do aniversário">
+        <option value="">Mês</option>
+        {MESES.map((m, i) => <option key={m} value={String(i + 1).padStart(2, "0")}>{m}</option>)}
+      </select>
+    </div>
+  );
+}
+
 export default function CadastroPublico() {
   const { token } = useParams<{ token: string }>();
   useForceLightTheme();
@@ -239,23 +287,7 @@ export default function CadastroPublico() {
     }
 
     if (c.tipo === "aniversario") {
-      // Guarda no mesmo formato da ficha ("2000-MM-DD"): só dia e mês importam.
-      const [, mm = "", dd = ""] = v ? v.split("-") : [];
-      const trocar = (novoDd: string, novoMm: string) =>
-        set(c.chave, novoDd && novoMm ? `2000-${novoMm}-${novoDd}` : "");
-      const sel: CSSProperties = { ...campo, width: "auto", flex: 1, appearance: "auto" };
-      return (
-        <div style={{ display: "flex", gap: 8 }}>
-          <select value={dd} onChange={(e) => trocar(e.target.value, mm)} style={sel}>
-            <option value="">Dia</option>
-            {Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0")).map((x) => <option key={x} value={x}>{x}</option>)}
-          </select>
-          <select value={mm} onChange={(e) => trocar(dd, e.target.value)} style={sel}>
-            <option value="">Mês</option>
-            {MESES.map((m, i) => <option key={m} value={String(i + 1).padStart(2, "0")}>{m}</option>)}
-          </select>
-        </div>
-      );
+      return <SeletorAniversario valor={v} aoMudar={(x) => set(c.chave, x)} campo={campo} />;
     }
 
     if (c.tipo === "dia") {

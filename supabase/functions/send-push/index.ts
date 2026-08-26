@@ -39,7 +39,13 @@ serve(async (req) => {
 
     let q = svc.from("push_subscriptions").select("endpoint, p256dh, auth, user_id, profiles!inner(account_type)");
     if (user_id) q = q.eq("user_id", user_id);
-    const { data: subs } = await q;
+    const { data: subs, error: erroSubs } = await q;
+    // O erro era descartado. Se a consulta falhasse, a função respondia
+    // "sent: 0" alegremente e ninguém nunca ia saber por quê.
+    if (erroSubs) {
+      console.error("[send-push] consulta de inscrições falhou:", erroSubs);
+      return json({ error: "query_failed", detalhe: erroSubs.message }, 500);
+    }
 
     const aud = audience ?? "todos";
     const filtered = (subs ?? []).filter((s: { profiles?: { account_type?: string | null } }) => {
@@ -54,6 +60,7 @@ serve(async (req) => {
     const list = filtered as { endpoint: string; p256dh: string; auth: string }[];
     let sent = 0;
     const stale: string[] = [];
+    const falhas: { code: number; motivo: string }[] = [];
     const BATCH = 50; // envia em lotes paralelos pra não estourar o tempo da function
     for (let i = 0; i < list.length; i += BATCH) {
       const chunk = list.slice(i, i + BATCH);
@@ -63,12 +70,27 @@ serve(async (req) => {
       results.forEach((r, j) => {
         if (r.status === "fulfilled") { sent++; return; }
         const code = (r.reason as { statusCode?: number })?.statusCode;
-        if (code === 404 || code === 410) stale.push(chunk[j].endpoint);
+        /* 404 e 410 são o aparelho que desinstalou: some da lista, normal.
+           QUALQUER OUTRO código era engolido em silêncio, e é aí que mora o
+           problema difícil: 403 é chave VAPID errada, 400 é payload torto, 429
+           é excesso. Todos davam exatamente o mesmo sintoma ("tudo funciona,
+           nada chega") sem deixar rastro nenhum. */
+        if (code === 404 || code === 410) { stale.push(chunk[j].endpoint); return; }
+        const motivo = (r.reason as { body?: string; message?: string });
+        console.error(`[send-push] falhou ${code ?? "sem código"}:`, motivo?.body || motivo?.message);
+        falhas.push({ code: code ?? 0, motivo: String(motivo?.body || motivo?.message || "").slice(0, 200) });
       });
     }
     // limpa inscrições mortas de uma vez
     if (stale.length) await svc.from("push_subscriptions").delete().in("endpoint", stale);
-    return json({ ok: true, sent });
+    /* Devolve o diagnóstico junto: quem chamou consegue mostrar na tela o
+       motivo real em vez de um "não foi possível" que não ajuda ninguém. */
+    return json({
+      ok: true, sent,
+      aparelhos: list.length,
+      removidos: stale.length,
+      falhas: falhas.slice(0, 5),
+    });
   } catch (e) {
     console.error("[send-push] error:", e);
     return json({ error: "internal_error" }, 500);

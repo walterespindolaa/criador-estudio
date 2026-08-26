@@ -1657,7 +1657,11 @@ const LinkInBio = () => {
           </div>
 
           {/* ── Preview ─────────────────────────────── */}
-          <div className="lg:sticky lg:top-4 lg:self-start">
+          {/* Gruda no topo e acompanha a rolagem: quem monta a página precisa
+              ver a mudança no mesmo instante em que mexe no campo, e não rolar
+              de volta pra conferir. A altura máxima é pra prévia alta não
+              esconder o próprio fim atrás da borda da tela. */}
+          <div className="lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:overflow-x-clip lg:pb-2">
             <Card className="p-5 rounded-2xl border-border">
               <p className="text-xs text-center font-display font-semibold uppercase tracking-wider text-muted-foreground/80 mb-4">
                 Pré-visualização

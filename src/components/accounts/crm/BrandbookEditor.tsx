@@ -12,6 +12,7 @@ import {
 import { BrandbookImport } from "@/components/brandbook/BrandbookImport";
 import { RelatorioImport } from "@/components/brandbook/RelatorioImport";
 import { BriefingCliente } from "@/components/accounts/crm/BriefingCliente";
+import { LinkCadastroCliente } from "@/components/accounts/crm/LinkCadastroCliente";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -284,7 +285,7 @@ export function Moodboard({ clientId }: { clientId: string }) {
 
 /* ─── BRANDBOOK ──────────────────────────────────────────────────────────── */
 
-export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincronizando, comPersona }: {
+export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincronizando, comPersona, comLinkCadastro }: {
   form: CrmClient;
   setForm: SetFicha;
   isCria: boolean;
@@ -294,6 +295,10 @@ export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincroni
   /** No cockpit a Persona entra como mais uma aba daqui. Na ficha do CRM ela já
    *  tem aba própria no nível de cima, então lá isso fica desligado. */
   comPersona?: boolean;
+  /** O link que o próprio cliente preenche, e as respostas que voltaram dele.
+   *  Na ficha do CRM ele mora na aba Resumo; no cockpit não existia aba Resumo,
+   *  então quem trabalha ali não via que o cliente já tinha respondido. */
+  comLinkCadastro?: boolean;
 }) {
   const update = useUpdateCrmClient();
   const [aba, setAba] = useState("essencia");
@@ -381,6 +386,10 @@ export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincroni
       {/* Relatório MESTRE / briefing completo: preenche AS QUATRO ABAS de uma
           vez (Brandbook, Persona, Diagnóstico, Concorrência). O import COMPLETA
           a ficha, nunca apaga o que já foi escrito à mão. */}
+
+      {comLinkCadastro && (
+        <LinkCadastroCliente crmClientId={form.id} clienteNome={form.name ?? "o cliente"} />
+      )}
 
       {/* ── UM LUGAR SÓ PRA SUBIR ARQUIVO ─────────────────────────────
           Antes eram três caixas de upload empilhadas: relatório completo,

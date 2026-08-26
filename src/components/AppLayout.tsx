@@ -324,7 +324,12 @@ const AppLayout = () => {
               </HeroBand>
             </div>
 
-            <main className="flex-1 pb-[96px] md:pb-0 w-full overflow-x-hidden">
+            {/* overflow-x CLIP, não hidden. Com `hidden` o navegador transforma este
+                <main> num contêiner de rolagem, e todo `position: sticky` lá dentro
+                para de grudar: era por isso que a pré-visualização do Link na bio
+                ficava cravada no topo em vez de acompanhar a rolagem. `clip` trava
+                o arrasto lateral do mesmo jeito, sem virar contêiner de rolagem. */}
+            <main className="flex-1 pb-[96px] md:pb-0 w-full overflow-x-clip">
               <div className="max-w-screen-2xl mx-auto px-4 py-4 md:px-8 md:py-6">
                 <BroadcastBanner audience="criadora" />
                 <NotificationNudge />

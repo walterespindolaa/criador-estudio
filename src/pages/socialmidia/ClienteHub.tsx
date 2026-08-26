@@ -1034,7 +1034,7 @@ function BrandbookDoCrmEditavel({ clientId, nomeCliente }: { clientId: string; n
 
       {/* comPersona: aqui a Persona entra como mais uma aba do editor. Na ficha
           do CRM ela já tem aba própria no nível de cima, então lá fica de fora. */}
-      <BrandbookEditor form={form} setForm={setForm} isCria={false} comPersona />
+      <BrandbookEditor form={form} setForm={setForm} isCria={false} comPersona comLinkCadastro />
     </div>
   );
 }

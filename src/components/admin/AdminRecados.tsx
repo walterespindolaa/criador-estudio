@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Send, Trash2, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { confirmar } from "@/components/shared/Confirm";
+import { toast } from "sonner";
 
 const LEVELS = [
   { value: "info", label: "Informação" },
@@ -28,12 +29,29 @@ export function AdminRecados() {
     if (!message.trim()) return;
     const payload = { title: title.trim() || null, message: message.trim(), level, audience };
     await create.mutateAsync(payload);
-    // Dispara também a notificação push (best-effort; ignora se a function não estiver no ar).
+    /* O resultado do push era jogado fora sem ninguém ler. Você apertava
+       "enviar", a função respondia "nenhum aparelho inscrito" ou "chave VAPID
+       errada", e a tela não contava nada: o recado parecia ter ido. É por isso
+       que "não chega notificação" virou um mistério de semanas. Agora o que
+       aconteceu de verdade aparece aqui. */
     try {
-      await supabase.functions.invoke("send-push", {
+      const { data, error } = await supabase.functions.invoke("send-push", {
         body: { title: payload.title, message: payload.message, audience, url: "/app" },
       });
-    } catch { /* push é opcional */ }
+      if (error) throw error;
+      const r = data as { sent?: number; aparelhos?: number; falhas?: { code: number; motivo: string }[] } | null;
+      const enviados = r?.sent ?? 0;
+      if (enviados > 0) {
+        toast.success(`Recado salvo e push enviado pra ${enviados} aparelho(s).`);
+      } else if ((r?.aparelhos ?? 0) === 0) {
+        toast.warning("Recado salvo, mas nenhum aparelho está inscrito pra receber push ainda.");
+      } else {
+        const f = r?.falhas?.[0];
+        toast.error(`Recado salvo, mas o push falhou${f ? ` (código ${f.code})` : ""}. Confira as chaves VAPID nos segredos.`);
+      }
+    } catch (e) {
+      toast.error(`Recado salvo, mas não consegui disparar o push: ${(e as Error)?.message ?? "erro"}`);
+    }
     setTitle(""); setMessage(""); setLevel("info"); setAudience("todos");
   };
 

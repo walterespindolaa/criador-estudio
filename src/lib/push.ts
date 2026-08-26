@@ -32,7 +32,7 @@ export async function isPushEnabled(): Promise<boolean> {
   } catch { return false; }
 }
 
-export async function enablePush(userId: string): Promise<{ ok: boolean; reason?: string }> {
+export async function enablePush(userId: string): Promise<{ ok: boolean; reason?: string; detalhe?: string }> {
   if (!pushSupported()) return { ok: false, reason: "unsupported" };
   try {
     const perm = await Notification.requestPermission();
@@ -55,17 +55,27 @@ export async function enablePush(userId: string): Promise<{ ok: boolean; reason?
       });
     }
     const json = sub.toJSON();
-    const { error } = await sbFrom("push_subscriptions").upsert(
-      {
-        user_id: userId,
-        endpoint: sub.endpoint,
-        p256dh: json.keys?.p256dh,
-        auth: json.keys?.auth,
-        user_agent: navigator.userAgent,
-      } as never,
-      { onConflict: "endpoint" },
-    );
-    if (error) return { ok: false, reason: "save" };
+    /* O endpoint é único POR APARELHO, não por conta. Quem usa duas contas no
+       mesmo celular (a de verdade e uma de teste) esbarrava nisso: a primeira
+       conta tomava posse do endpoint, e o upsert da segunda virava um UPDATE
+       numa linha de OUTRO dono, que o RLS barra. A tela dizia só "não foi
+       possível ativar agora" e a inscrição nunca era gravada.
+
+       Apagar primeiro resolve na raiz: o aparelho passa a pertencer a quem
+       acabou de ativar, que é exatamente o que a pessoa pediu ao tocar no
+       botão. E como o endpoint é a chave, não sobra lixo. */
+    await sbFrom("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+    const { error } = await sbFrom("push_subscriptions").insert({
+      user_id: userId,
+      endpoint: sub.endpoint,
+      p256dh: json.keys?.p256dh,
+      auth: json.keys?.auth,
+      user_agent: navigator.userAgent,
+    } as never);
+    if (error) {
+      console.error("[push] não consegui salvar a inscrição:", error);
+      return { ok: false, reason: "save", detalhe: error.message };
+    }
     return { ok: true };
   } catch (e) {
     console.error("[push] enable error:", e);
