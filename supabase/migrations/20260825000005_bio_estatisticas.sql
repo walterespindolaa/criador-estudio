@@ -93,6 +93,22 @@ begin
   if _tipo = 'view' then _block_id := null; end if;
   if _tipo = 'click' and _block_id is null then return; end if;
 
+  -- O id do clique tem que ser um bloco DESTA página. Duas razões:
+  --   · no formato antigo o que chega é um id de bio_links, e gravar isso
+  --     violaria a chave estrangeira (o erro voltaria calado e o evento
+  --     sumiria sem ninguém saber);
+  --   · sem essa conferência, um POST com o endereço de A e o id de um bloco
+  --     de B guardaria, no histórico de A, uma linha presa ao bloco de outro
+  --     inquilino, e apagar aquele bloco levaria junto o histórico de A.
+  if _tipo = 'click' and not exists (
+    select 1 from public.bio_blocks b
+    where b.id = _block_id
+      and ((_page is null and b.page_id is null and b.user_id = _user)
+        or (_page is not null and b.page_id = _page))
+  ) then
+    return;
+  end if;
+
   insert into public.bio_stats_daily (escopo, user_id, page_id, block_id, dia, origem, views, clicks)
   values (_escopo, _user, _page, _block_id, _dia, _org,
           case when _tipo = 'view' then 1 else 0 end,

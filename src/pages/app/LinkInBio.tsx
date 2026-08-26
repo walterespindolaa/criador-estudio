@@ -49,6 +49,7 @@ import { useBioLinks, type BioLink } from "@/hooks/useBioLinks";
 import { useBioAlvo } from "@/contexts/BioAlvoContext";
 import { useBioBlocks } from "@/hooks/useBioBlocks";
 import { EditorBlocos } from "@/components/bio/EditorBlocos";
+import { EditorItens } from "@/components/bio/EditorItens";
 import { PainelDesempenho } from "@/components/bio/PainelDesempenho";
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
 import type { BioBloco } from "@/lib/bioBlocks";
@@ -623,6 +624,8 @@ const LinkInBio = () => {
   // volta vazia e a tela continua mostrando o editor antigo de links, pra
   // ninguém ficar sem conseguir mexer na bio que já está no ar.
   const { blocos: blocosClassico } = useBioBlocks("classico");
+  // Os do modo Site, pra saber quando a Vitrine antiga pode sair de cena.
+  const { blocos: blocosSite } = useBioBlocks("site");
   const queryClient = useQueryClient();
 
   // Quando o manager gerencia outro, lê/escreve no profile da conta ATIVA,
@@ -1210,11 +1213,29 @@ const LinkInBio = () => {
               )}
             </Card>
 
-            {/* ── Controles da Vitrine ─────────────── */}
+            {/* ── MODO SITE: seções, serviços e blog ─────────────── */}
             {settings.layout === "vitrine" && (
               <>
+              <Card className="p-4 md:p-5 rounded-2xl border-border">
+                <EditorBlocos estilo="site" />
+              </Card>
+
+              <Card className="p-4 md:p-5 rounded-2xl border-border">
+                <EditorItens tipo="produto" slugPublico={slug || profile?.bio_slug} />
+              </Card>
+
+              <Card className="p-4 md:p-5 rounded-2xl border-border">
+                <EditorItens tipo="post" slugPublico={slug || profile?.bio_slug} />
+              </Card>
+
+              {/* A Vitrine antiga continua abaixo enquanto quem montou nela não
+                  migrar. Some sozinha quando a página passa a ter seções. */}
+              {blocosSite.length === 0 && (
               <Card className="p-4 md:p-5 rounded-2xl border-border space-y-6">
-                <h2 className="font-display font-semibold text-foreground">Vitrine</h2>
+                <h2 className="font-display font-semibold text-foreground">Vitrine (formato antigo)</h2>
+                <p className="text-xs font-body text-muted-foreground -mt-4">
+                  Assim que você adicionar a primeira seção do Site lá em cima, esta parte some e a página passa a usar o formato novo.
+                </p>
 
                 {!settings.vitrine.cover && settings.vitrine.services.length === 0 && settings.vitrine.products.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-4">
@@ -1345,6 +1366,7 @@ const LinkInBio = () => {
                   {isSavingAppearance ? "Salvando..." : "Salvar alterações"}
                 </Button>
               </Card>
+              )}
 
               {/* Identidade da vitrine (nome e bio compartilhados) */}
               <Card className="p-4 md:p-5 rounded-2xl border-border space-y-3">

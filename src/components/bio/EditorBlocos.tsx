@@ -308,6 +308,158 @@ function FormBloco({ bloco, salvar }: { bloco: BioBloco; salvar: (d: DadosBloco)
         </div>
       );
 
+    /* ── SEÇÕES DO MODO SITE ── */
+    case "capa":
+      return (
+        <div className="space-y-3.5">
+          <LinhaCampo label="Título grande" ajuda="A promessa em uma linha. É a primeira coisa que a pessoa lê.">
+            <Textarea rows={2} value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })}
+              placeholder="Sua operação servindo melhor e lucrando mais" className="rounded-xl resize-none" />
+          </LinhaCampo>
+          <LinhaCampo label="Frase de apoio">
+            <Textarea rows={3} value={txt(d, "frase")} onChange={(e) => p({ frase: e.target.value })}
+              placeholder="Pra quem é, o que resolve e onde atende." className="rounded-xl resize-none" />
+          </LinhaCampo>
+          <LinhaCampo label="Foto do topo">
+            <BotaoImagem valor={txt(d, "imagem")} onTroca={(u) => p({ imagem: u })} rotulo="Enviar foto" />
+          </LinhaCampo>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <LinhaCampo label="Botão principal">
+              <Input value={txt(d, "botao1")} onChange={(e) => p({ botao1: e.target.value })}
+                placeholder="Quero uma conversa" className="rounded-xl" />
+            </LinhaCampo>
+            <LinhaCampo label="Leva para">
+              <Input value={txt(d, "url1")} onChange={(e) => p({ url1: e.target.value })}
+                placeholder="https://" inputMode="url" className="rounded-xl" />
+            </LinhaCampo>
+            <LinhaCampo label="Botão secundário (opcional)">
+              <Input value={txt(d, "botao2")} onChange={(e) => p({ botao2: e.target.value })}
+                placeholder="Ver serviços" className="rounded-xl" />
+            </LinhaCampo>
+            <LinhaCampo label="Leva para">
+              <Input value={txt(d, "url2")} onChange={(e) => p({ url2: e.target.value })}
+                placeholder="#servicos" className="rounded-xl" />
+            </LinhaCampo>
+          </div>
+        </div>
+      );
+
+    case "sobre":
+      return (
+        <div className="space-y-3.5">
+          <LinhaCampo label="Rótulo pequeno" ajuda="A palavrinha em cima do título.">
+            <Input value={txt(d, "rotulo")} onChange={(e) => p({ rotulo: e.target.value })}
+              placeholder="Quem sou" className="rounded-xl" />
+          </LinhaCampo>
+          <LinhaCampo label="Título">
+            <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })}
+              placeholder="12 anos dentro de cozinha, não em teoria" className="rounded-xl" />
+          </LinhaCampo>
+          <LinhaCampo label="Foto">
+            <BotaoImagem valor={txt(d, "imagem")} onTroca={(u) => p({ imagem: u })} rotulo="Enviar foto" />
+          </LinhaCampo>
+          <LinhaCampo label="Texto" ajuda="A história. É daqui que sai o conteúdo que ninguém copia.">
+            <Textarea rows={7} value={txt(d, "texto")} onChange={(e) => p({ texto: e.target.value })} className="rounded-xl" />
+          </LinhaCampo>
+        </div>
+      );
+
+    case "produtos":
+    case "blog":
+      return (
+        <div className="space-y-3.5">
+          <div className="rounded-xl border border-primary/25 bg-primary/[0.04] px-3 py-2.5">
+            <p className="text-xs font-body text-foreground/80">
+              Esta seção mostra sozinha o que você cadastrar em
+              <strong>{bloco.kind === "blog" ? " Blog" : " Produtos e serviços"}</strong>, logo abaixo nesta mesma tela.
+              Aqui você só escreve o cabeçalho dela.
+            </p>
+          </div>
+          <LinhaCampo label="Rótulo pequeno">
+            <Input value={txt(d, "rotulo")} onChange={(e) => p({ rotulo: e.target.value })} className="rounded-xl" />
+          </LinhaCampo>
+          <LinhaCampo label="Título da seção">
+            <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })} className="rounded-xl" />
+          </LinhaCampo>
+          {bloco.kind === "produtos" && (
+            <LinhaCampo label="Frase de apoio (opcional)">
+              <Input value={txt(d, "subtitulo")} onChange={(e) => p({ subtitulo: e.target.value })} className="rounded-xl" />
+            </LinhaCampo>
+          )}
+          {bloco.kind === "blog" && (
+            <LinhaCampo label="Quantos posts mostrar" ajuda="Os mais recentes. Os outros continuam no ar pelo endereço deles.">
+              <Input type="number" min={1} max={30}
+                value={typeof d.quantos === "number" ? d.quantos : 6}
+                onChange={(e) => p({ quantos: Math.max(1, Math.min(30, Number(e.target.value) || 6)) })}
+                className="rounded-xl w-24" />
+            </LinhaCampo>
+          )}
+        </div>
+      );
+
+    case "depoimentos": {
+      const deps = lista<{ texto?: string; autor?: string }>(d, "itens");
+      const trocarDep = (i: number, patch: { texto?: string; autor?: string }) =>
+        p({ itens: deps.map((x, n) => (n === i ? { ...x, ...patch } : x)) });
+      return (
+        <div className="space-y-3.5">
+          <LinhaCampo label="Rótulo pequeno">
+            <Input value={txt(d, "rotulo")} onChange={(e) => p({ rotulo: e.target.value })} className="rounded-xl" />
+          </LinhaCampo>
+          <LinhaCampo label="Título da seção">
+            <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })} className="rounded-xl" />
+          </LinhaCampo>
+          {deps.map((it, i) => (
+            <div key={i} className="rounded-xl border border-border p-3 space-y-2 bg-muted/30">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] font-body font-semibold text-muted-foreground">Depoimento {i + 1}</span>
+                <Button type="button" size="sm" variant="ghost" onClick={() => p({ itens: deps.filter((_, n) => n !== i) })}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <Textarea rows={3} value={it.texto ?? ""} onChange={(e) => trocarDep(i, { texto: e.target.value })}
+                placeholder="O que o cliente falou" className="rounded-xl resize-none" />
+              <Input value={it.autor ?? ""} onChange={(e) => trocarDep(i, { autor: e.target.value })}
+                placeholder="Nome e negócio de quem falou" className="rounded-xl" />
+            </div>
+          ))}
+          <Button type="button" size="sm" variant="outline" onClick={() => p({ itens: [...deps, { texto: "", autor: "" }] })}>
+            <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar depoimento
+          </Button>
+        </div>
+      );
+    }
+
+    case "contato":
+      return (
+        <div className="space-y-3.5">
+          <LinhaCampo label="Nome no rodapé" ajuda="Vazio usa o nome da página.">
+            <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })} className="rounded-xl" />
+          </LinhaCampo>
+          <LinhaCampo label="Telefone"
+            ajuda="Também é o que abre a conversa nos botões das páginas de serviço.">
+            <Input value={txt(d, "telefone")} onChange={(e) => p({ telefone: mascaraTelefone(e.target.value) })}
+              placeholder="(00) 00000-0000" inputMode="tel" className="rounded-xl" />
+          </LinhaCampo>
+          <LinhaCampo label="E-mail">
+            <Input type="email" inputMode="email" value={txt(d, "email")} onChange={(e) => p({ email: e.target.value })}
+              className="rounded-xl" />
+          </LinhaCampo>
+          <LinhaCampo label="Endereço (opcional)">
+            <Textarea rows={2} value={txt(d, "endereco")} onChange={(e) => p({ endereco: e.target.value })}
+              className="rounded-xl resize-none" />
+          </LinhaCampo>
+          <LinhaCampo label="@ do Instagram">
+            <Input value={txt(d, "instagram")} onChange={(e) => p({ instagram: e.target.value })}
+              placeholder="@perfil" className="rounded-xl" />
+          </LinhaCampo>
+          <LinhaCampo label="Linha de assinatura">
+            <Textarea rows={2} value={txt(d, "assinatura")} onChange={(e) => p({ assinatura: e.target.value })}
+              placeholder="Consultoria gastronômica · Joinville, SC" className="rounded-xl resize-none" />
+          </LinhaCampo>
+        </div>
+      );
+
     default:
       return null;
   }

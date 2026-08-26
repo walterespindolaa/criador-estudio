@@ -14,7 +14,9 @@ export type EstiloBio = "classico" | "site";
 
 export type TipoBloco =
   | "link" | "titulo" | "texto" | "video" | "galeria"
-  | "faq" | "contagem" | "whatsapp" | "mapa" | "captura";
+  | "faq" | "contagem" | "whatsapp" | "mapa" | "captura"
+  // Só no modo Site: são SEÇÕES de largura cheia, não botões numa coluna.
+  | "capa" | "sobre" | "produtos" | "blog" | "depoimentos" | "contato";
 
 export type CamposCaptura = "email" | "telefone" | "ambos";
 
@@ -111,13 +113,55 @@ export const BLOCOS: MetaBloco[] = [
   },
 ];
 
+/* ── SÓ NO MODO SITE ──
+   Estes não são botões: são seções de largura cheia. Por isso ficam trancados
+   no estilo "site", senão a coluna estreita do Clássico tentaria desenhar uma
+   grade de produtos em 390px e ficaria ilegível. */
+export const BLOCOS_SITE: MetaBloco[] = [
+  {
+    tipo: "capa", nome: "Capa", emoji: "🎬", estilos: ["site"],
+    explica: "O topo do site: título, uma frase e dois botões.",
+    padrao: { titulo: "", frase: "", imagem: "", botao1: "Fale comigo", url1: "", botao2: "", url2: "" },
+  },
+  {
+    tipo: "sobre", nome: "Sobre", emoji: "👤", estilos: ["site"],
+    explica: "Foto ao lado de um texto longo. É onde a história é contada.",
+    padrao: { rotulo: "Quem sou", titulo: "", texto: "", imagem: "" },
+  },
+  {
+    tipo: "produtos", nome: "Produtos e serviços", emoji: "🛍️", estilos: ["site"],
+    explica: "Grade com preço. Cada item ganha página própria pra mandar no WhatsApp.",
+    padrao: { rotulo: "O que eu faço", titulo: "Serviços", subtitulo: "" },
+  },
+  {
+    tipo: "blog", nome: "Blog", emoji: "✍️", estilos: ["site"],
+    explica: "Os textos publicados, do mais novo pro mais antigo.",
+    padrao: { rotulo: "Escrevo por aqui", titulo: "Blog", quantos: 6 },
+  },
+  {
+    tipo: "depoimentos", nome: "Depoimentos", emoji: "💬", estilos: ["site"],
+    explica: "O que os clientes falam. Prova social sem precisar de print.",
+    padrao: { rotulo: "Quem já passou por aqui", titulo: "Depoimentos", itens: [{ texto: "", autor: "" }] },
+  },
+  {
+    tipo: "contato", nome: "Contato e rodapé", emoji: "📇", estilos: ["site"],
+    explica: "Fecha o site com telefone, e-mail, endereço e redes.",
+    padrao: { titulo: "", telefone: "", email: "", endereco: "", instagram: "", assinatura: "" },
+  },
+];
+
+const TODOS_BLOCOS = [...BLOCOS, ...BLOCOS_SITE];
+
 export const metaDoBloco = (t: string): MetaBloco =>
-  BLOCOS.find((b) => b.tipo === t) ?? {
+  TODOS_BLOCOS.find((b) => b.tipo === t) ?? {
     tipo: "link", nome: "Bloco", emoji: "🔗", explica: "", padrao: {},
   };
 
+/** No Site as seções vêm primeiro, porque é por elas que a montagem começa. */
 export const blocosDoEstilo = (e: EstiloBio): MetaBloco[] =>
-  BLOCOS.filter((b) => !b.estilos || b.estilos.includes(e));
+  e === "site"
+    ? [...BLOCOS_SITE, ...BLOCOS.filter((b) => !b.estilos || b.estilos.includes(e))]
+    : BLOCOS.filter((b) => !b.estilos || b.estilos.includes(e));
 
 /* ── LEITURA SEGURA ──
    O `data` é jsonb livre, então tudo que vem de lá pode ser qualquer coisa.
@@ -148,6 +192,12 @@ export function resumoDoBloco(b: { kind: string; data: DadosBloco }): string {
     case "contagem": return txt(d, "ate") ? `até ${txt(d, "ate").slice(0, 10).split("-").reverse().join("/")}` : "sem data ainda";
     case "mapa": return txt(d, "endereco") || "sem endereço ainda";
     case "captura": return bool(d, "paraPipeline") ? "vai pro pipeline" : "só na lista de leads";
+    case "capa": return txt(d, "frase").slice(0, 60) || "sem frase ainda";
+    case "sobre": return txt(d, "texto").slice(0, 60) || "sem texto ainda";
+    case "produtos": return "puxa os produtos cadastrados";
+    case "blog": return "puxa os posts publicados";
+    case "depoimentos": return `${lista(d, "itens").length} depoimento(s)`;
+    case "contato": return txt(d, "telefone") || txt(d, "email") || "sem contato ainda";
     default: return "";
   }
 }
@@ -163,6 +213,8 @@ export function faltaNoBloco(b: { kind: string; data: DadosBloco }): string | nu
     case "contagem": return txt(d, "ate").trim() ? null : "falta a data";
     case "mapa": return txt(d, "endereco").trim() ? null : "falta o endereço";
     case "texto": return txt(d, "texto").trim() ? null : "falta o texto";
+    case "capa": return txt(d, "titulo").trim() ? null : "falta o título";
+    case "sobre": return txt(d, "texto").trim() ? null : "falta o texto";
     default: return null;
   }
 }
@@ -202,6 +254,27 @@ export const linkAppleMaps = (endereco: string) =>
 /** Mapa embutido sem chave de API: o modo `q=` do embed é público. */
 export const embedGoogleMaps = (endereco: string) =>
   `https://maps.google.com/maps?q=${encodeURIComponent(endereco)}&output=embed&hl=pt-BR&z=15`;
+
+/* ── O ENDEREÇO DE CADA ITEM ──
+   "Engenharia de Cardápio" vira "engenharia-de-cardapio". Sem acento porque
+   endereço com acento vira aquele monte de %C3%A7 quando alguém cola no
+   WhatsApp, e aí ninguém entende o que é o link. */
+export function enderecoDoTitulo(t: string): string {
+  return (t || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+}
+
+/** R$ 3.900 quando tem número, o texto livre quando não tem. */
+export function precoVisivel(preco: number | null | undefined, texto: string | null | undefined): string {
+  if (typeof preco === "number" && Number.isFinite(preco) && preco > 0) {
+    return preco.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: preco % 1 === 0 ? 0 : 2 });
+  }
+  return (texto || "").trim();
+}
 
 /** (00) 00000-0000 conforme digita. */
 export function mascaraTelefone(v: string): string {

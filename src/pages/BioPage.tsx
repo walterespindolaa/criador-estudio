@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Loader2, Instagram, Youtube, Twitter, Music2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,7 @@ import { renderRichText } from "@/lib/richText";
 import { cn } from "@/lib/utils";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
+import { SiteBio, PaginaItem, type MarcaSite, type ItemLite } from "@/components/bio/SiteBio";
 
 type BgType = "color" | "gradient" | "image";
 type BgImageSize = "cover" | "contain";
@@ -354,6 +355,32 @@ const sbRpc = (fn: string, args: Record<string, unknown>) => (supabase as any).r
 
 
 type BlocoLite = { id: string; kind: string; data: Record<string, unknown>; position: number };
+/** O telefone que a pessoa cadastrou no rodapé do site, pra a página de um
+ *  serviço já abrir a conversa citando aquele serviço. */
+/** Luminância relativa simplificada. Serve pra decidir se a cor dá pra ler em
+ *  cima de branco e qual cor de texto usar em cima dela. */
+function claridade(hex: string): number {
+  const h = (hex || "").replace("#", "");
+  if (h.length !== 6) return 1;
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+const corLegivelSobreBranco = (hex: string) => claridade(hex) < 0.62;
+const corSobre = (hex: string) => (claridade(hex) < 0.6 ? "#FFFFFF" : "#1A1626");
+
+function telefoneDoRodape(blocos: BlocoLite[]): string | undefined {
+  const c = blocos.find((b) => b.kind === "contato");
+  const t = c ? String((c.data as Record<string, unknown>)?.telefone ?? "") : "";
+  return t.trim() || undefined;
+}
+
+type ItemPublico = {
+  tipo: string; slug: string; titulo: string; resumo: string | null; capa: string | null;
+  preco: number | null; preco_texto: string | null; conteudo: string | null;
+  galeria: string[]; cta_texto: string | null; cta_url: string | null; publicado_em: string;
+};
 
 /* ── DE ONDE A PESSOA VEIO ──
    Um rótulo curto, resolvido aqui e não no servidor, porque o referrer só
@@ -385,7 +412,9 @@ function descobrirOrigem(): string {
 }
 
 const BioPage = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, itemSlug } = useParams<{ slug: string; itemSlug?: string }>();
+  const navegar = useNavigate();
+  const location = useLocation();
   useForceLightTheme();
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -395,6 +424,10 @@ const BioPage = () => {
   const [ehDaAgencia, setDaAgencia] = useState(false);
   const [links, setLinks] = useState<BioLinkLite[]>([]);
   const [blocos, setBlocos] = useState<BlocoLite[]>([]);
+  const [produtos, setProdutos] = useState<ItemLite[]>([]);
+  const [posts, setPosts] = useState<ItemLite[]>([]);
+  const [item, setItem] = useState<ItemPublico | null>(null);
+  const [itemFaltou, setItemFaltou] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -431,7 +464,28 @@ const BioPage = () => {
       // produção, a RPC não existe e a lista volta vazia, então a página cai
       // sozinha no formato antigo de links. Ninguém fica com a bio fora do ar
       // esperando alguém abrir o Supabase.
-      const { data: blocoData } = await sbRpc("get_public_bio_blocks", { _slug: slug, _estilo: "classico" });
+      // O estilo mora na aparência salva, e vale pros dois mundos: a conta usa
+      // profiles.bio_settings, a página da agência usa bio_pages.settings, e a
+      // RPC devolve os dois com o mesmo nome de coluna.
+      const ehSite = (profileData as { bio_settings?: unknown } | null)
+        ? parseSettings((profileData as { bio_settings?: unknown }).bio_settings).layout === "vitrine"
+        : false;
+
+      const { data: blocoData } = await sbRpc("get_public_bio_blocks", {
+        _slug: slug, _estilo: ehSite ? "site" : "classico",
+      });
+
+      // Os itens só existem no modo Site, então nem vale a ida ao banco fora dele.
+      if (ehSite) {
+        const [pr, po] = await Promise.all([
+          sbRpc("get_public_bio_items", { _slug: slug, _tipo: "produto" }),
+          sbRpc("get_public_bio_items", { _slug: slug, _tipo: "post" }),
+        ]);
+        if (!cancelled) {
+          setProdutos(Array.isArray(pr.data) ? (pr.data as ItemLite[]) : []);
+          setPosts(Array.isArray(po.data) ? (po.data as ItemLite[]) : []);
+        }
+      }
 
       if (cancelled) return;
       setBlocos(Array.isArray(blocoData) ? (blocoData as BlocoLite[]) : []);
@@ -459,7 +513,59 @@ const BioPage = () => {
     };
   }, [slug]);
 
+  // ── PÁGINA INTERNA ──
+  // /bio/:slug/p/:item é um serviço, /bio/:slug/blog/:item é um post. Cada um
+  // tem endereço próprio pra o cliente mandar UM serviço no WhatsApp e pra o
+  // Google conseguir indexar cada assunto separadamente.
+  const tipoItem = itemSlug ? (location.pathname.includes("/blog/") ? "post" : "produto") : null;
+  useEffect(() => {
+    let cancelado = false;
+    if (!slug || !itemSlug || !tipoItem) { setItem(null); setItemFaltou(false); return; }
+    (async () => {
+      const { data } = await sbRpc("get_public_bio_item", { _slug: slug, _tipo: tipoItem, _item: itemSlug });
+      const row = Array.isArray(data) ? data[0] : null;
+      if (cancelado) return;
+      if (row) {
+        const r = row as ItemPublico & { galeria?: unknown };
+        setItem({ ...r, galeria: Array.isArray(r.galeria) ? (r.galeria as string[]) : [] });
+        setItemFaltou(false);
+      } else {
+        setItem(null);
+        setItemFaltou(true);
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [slug, itemSlug, tipoItem]);
+
   const settings = useMemo(() => parseSettings(profile?.bio_settings), [profile?.bio_settings]);
+
+  /* ── O QUE O GOOGLE E A ABA DO NAVEGADOR MOSTRAM ──
+     Sem isso toda página do Cria se chama igual, e o resultado de busca do
+     cliente aparece com o nome do sistema em vez do nome dele.
+
+     Limite honesto: como o site é montado no navegador, a prévia que o
+     WhatsApp mostra ao colar o link continua a genérica. Resolver isso exige
+     renderizar no servidor, e ficou pra depois. */
+  useEffect(() => {
+    if (!profile) return;
+    const nome = (settings.header?.name ?? "").trim() || profile.name || "";
+    const titulo = item ? `${item.titulo} · ${nome}` : nome;
+    if (titulo) document.title = titulo;
+
+    const desc = (item?.resumo || settings.header?.bio || profile.bio || "").trim().slice(0, 160);
+    if (desc) {
+      let tag = document.querySelector('meta[name="description"]');
+      if (!tag) {
+        tag = document.createElement("meta");
+        tag.setAttribute("name", "description");
+        document.head.appendChild(tag);
+      }
+      tag.setAttribute("content", desc);
+    }
+    // Sair da bio não pode deixar o nome do cliente na aba do navegador.
+    const antes = document.title;
+    return () => { document.title = antes; };
+  }, [profile, settings.header?.name, settings.header?.bio, item]);
   const radius = STYLE_RADIUS[settings.buttonStyle];
   const isOutline = settings.buttonStyle === "outline";
   const visualDosBlocos = {
@@ -503,7 +609,83 @@ const BioPage = () => {
   const initial = headerName?.charAt(0)?.toUpperCase() || "C";
   const activeSocials = SOCIAL_FIELDS.filter((f) => settings.socialLinks[f.key].trim());
 
+  // ── MODO SITE ──
+  // A cor de destaque do Site pinta TEXTO sobre fundo branco (rótulo de seção,
+  // data do post, preço). O padrão do botão é branco, e branco sobre branco
+  // some. Então: usa a cor do botão quando ela é escura o bastante, e cai no
+  // preto da marca quando não é.
+  const corDestaque = corLegivelSobreBranco(settings.buttonColor) ? settings.buttonColor : "#1A1626";
+  const marcaSite: MarcaSite = {
+    nome: headerName || "Site",
+    logo: settings.header?.avatar || profile.avatar_url,
+    cor: corDestaque,
+    corTexto: corSobre(corDestaque),
+  };
+  const voltarPraCasa = () => navegar(`/bio/${slug}`);
+  const capturaDoBloco = (b: BlocoLite) => (
+    <LeadForm
+      slug={slug ?? ""} daAgencia={ehDaAgencia} blocoId={b.id}
+      config={{
+        title: String(b.data?.titulo ?? "Deixe seu contato"),
+        subtitle: String(b.data?.subtitulo ?? ""),
+        fields: b.data?.campos === "email" ? "email" : b.data?.campos === "telefone" ? "phone" : "both",
+        buttonText: String(b.data?.botao ?? "Enviar"),
+        consentText: String(b.data?.consentimento ?? ""),
+      }}
+      buttonColor={settings.buttonColor} buttonTextColor={settings.buttonTextColor} radius={radius}
+      cardColor={settings.cardColor} cardTextColor={settings.cardTextColor} />
+  );
+
+  // Página interna de um serviço ou de um post.
+  if (itemSlug) {
+    if (itemFaltou) {
+      return (
+        <div className="min-h-[100dvh] grid place-items-center bg-white px-6 text-center">
+          <div>
+            <p className="font-display font-bold text-lg text-gray-900">Essa página não existe mais</p>
+            <button type="button" onClick={voltarPraCasa} className="text-sm text-gray-600 underline mt-2 min-h-[44px]">
+              Voltar para o início
+            </button>
+          </div>
+        </div>
+      );
+    }
+    if (!item) {
+      return <div className="min-h-[100dvh] grid place-items-center bg-white text-sm text-gray-400">Carregando...</div>;
+    }
+    return (
+      <>
+        <BioFontStyle stack={fontStack} />
+        <div className="bio-font-scope">
+          <PaginaItem
+            item={item} marca={marcaSite}
+            voltarRotulo={item.tipo === "post" ? "Voltar para o blog" : "Voltar para os serviços"}
+            aoVoltar={voltarPraCasa}
+            whatsapp={telefoneDoRodape(blocos)} />
+        </div>
+      </>
+    );
+  }
+
   if (settings.layout === "vitrine") {
+    // Site montado por blocos. Sem blocos, cai na Vitrine antiga, pra a página
+    // de quem montou no formato velho continuar no ar.
+    if (blocos.length > 0) {
+      return (
+        <>
+          <BioFontStyle stack={fontStack} />
+          <div className="bio-font-scope">
+            <SiteBio
+              blocos={blocos} marca={marcaSite} produtos={produtos} posts={posts}
+              visual={visualDosBlocos}
+              aoAbrirProduto={(sl) => navegar(`/bio/${slug}/p/${sl}`)}
+              aoAbrirPost={(sl) => navegar(`/bio/${slug}/blog/${sl}`)}
+              onClique={(id) => trackClick(id)}
+              capturaDoBloco={capturaDoBloco} />
+          </div>
+        </>
+      );
+    }
     return <VitrineView settings={settings} headerName={headerName} headerBio={headerBio} activeSocials={activeSocials} />;
   }
 

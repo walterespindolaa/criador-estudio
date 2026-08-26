@@ -58,7 +58,11 @@ function Numero({ rotulo, valor, children }: { rotulo: string; valor: string; ch
 export function PainelDesempenho({ estilo }: { estilo: "classico" | "site" }) {
   const [dias, setDias] = useState(30);
   const { data: s } = useBioStats(dias);
-  const { blocos } = useBioBlocks(estilo);
+  // Os DOIS estilos: o histórico não separa por estilo, então sem carregar os
+  // dois a montagem do outro apareceria como "Bloco removido" no ranking.
+  const { blocos: doEstilo } = useBioBlocks(estilo);
+  const { blocos: doOutro } = useBioBlocks(estilo === "site" ? "classico" : "site");
+  const blocos = useMemo(() => [...doEstilo, ...doOutro], [doEstilo, doOutro]);
 
   const ranking = useMemo(() => {
     if (!s) return [];
@@ -87,8 +91,8 @@ export function PainelDesempenho({ estilo }: { estilo: "classico" | "site" }) {
 
   // Blocos ligados que ninguém tocou: é a informação mais acionável da tela.
   const parados = useMemo(
-    () => blocos.filter((b) => b.is_active && metaDoBloco(b.kind).clicavel && !(s?.porBloco[b.id] ?? 0)),
-    [blocos, s],
+    () => doEstilo.filter((b) => b.is_active && metaDoBloco(b.kind).clicavel && !(s?.porBloco[b.id] ?? 0)),
+    [doEstilo, s],
   );
 
   const conversao = s && s.visitas > 0 ? Math.round((s.cliques / s.visitas) * 100) : 0;

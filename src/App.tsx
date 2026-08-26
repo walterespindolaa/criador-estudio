@@ -211,6 +211,11 @@ const App = () => (
             <Routes>
               <Route path="/" element={<RootRedirect />} />
               <Route path="/bio/:slug" element={<BioPage />} />
+              {/* Páginas internas do modo Site: cada serviço e cada post tem
+                  endereço próprio, pra mandar UM serviço no WhatsApp e pra o
+                  Google indexar cada assunto separadamente. */}
+              <Route path="/bio/:slug/p/:itemSlug" element={<BioPage />} />
+              <Route path="/bio/:slug/blog/:itemSlug" element={<BioPage />} />
               <Route path="/aprovar/:token" element={<AprovarPortal />} />
               <Route path="/proposta/:token" element={<PropostaPublica />} />
               <Route path="/cronograma/:token" element={<CronogramaPublica />} />
