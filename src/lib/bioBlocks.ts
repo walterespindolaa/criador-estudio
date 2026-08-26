@@ -182,9 +182,12 @@ export const bool = (d: DadosBloco, k: string, padrao = false): boolean => {
   const v = d?.[k];
   return typeof v === "boolean" ? v : padrao;
 };
+/* Além de garantir que é array, joga fora os buracos. Um `null` no meio da
+   lista fazia `i.texto` lançar e, sem rede de segurança na rota pública, isso
+   virava tela branca pro seguidor. */
 export const lista = <T,>(d: DadosBloco, k: string): T[] => {
   const v = d?.[k];
-  return Array.isArray(v) ? (v as T[]) : [];
+  return Array.isArray(v) ? (v.filter((x) => x !== null && x !== undefined) as T[]) : [];
 };
 
 /** O que aparece na lista do editor como resumo do bloco. */
@@ -221,6 +224,7 @@ export function faltaNoBloco(b: { kind: string; data: DadosBloco }): string | nu
     case "contagem": return txt(d, "ate").trim() ? null : "falta a data";
     case "mapa": return txt(d, "endereco").trim() ? null : "falta o endereço";
     case "texto": return (txt(d, "texto").trim() || txt(d, "imagem").trim()) ? null : "falta o texto";
+    case "faq": return lista<{ p?: string }>(d, "itens").some((i) => (i?.p ?? "").trim()) ? null : "nenhuma pergunta";
     case "capa": return txt(d, "titulo").trim() ? null : "falta o título";
     case "sobre": return txt(d, "texto").trim() ? null : "falta o texto";
     default: return null;
@@ -337,3 +341,37 @@ export const corSobre = (hex: string) => (claridade(hex) < 0.6 ? "#FFFFFF" : "#1
 /** A cor da marca já corrigida pra uso como texto e detalhe sobre branco.
  *  Cor clara demais cai pro grafite da identidade, em vez de sumir. */
 export const corDeDestaque = (hex: string) => (corLegivelSobreBranco(hex) ? hex : "#1A1626");
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ENDEREÇO QUE PODE VIRAR href
+
+   O `data` do bloco é jsonb livre e quem escreve nele é a pessoa logada. Só que
+   o resultado é uma página PÚBLICA: um "javascript:" salvo ali roda no navegador
+   de todo seguidor que clicar. O formato antigo de links já passava por
+   sanitizeUrl; os blocos novos tinham escapado, e a mesma página ficou com dois
+   pesos e duas medidas. Aqui é o único caminho.
+
+   Devolve string vazia quando não presta, pra quem chama poder simplesmente não
+   desenhar o botão em vez de desenhar um botão que não leva a lugar nenhum.
+   ═══════════════════════════════════════════════════════════════════════════ */
+export function linkSeguro(url: unknown): string {
+  const u = typeof url === "string" ? url.trim() : "";
+  if (!u) return "";
+  const testa = (v: string): string => {
+    try {
+      const p = new URL(v);
+      // mailto: e tel: são uso legítimo num botão de contato. javascript: e
+      // data: são os que precisam morrer aqui.
+      return ["http:", "https:", "mailto:", "tel:"].includes(p.protocol) ? p.toString() : "";
+    } catch { return ""; }
+  };
+  const direto = testa(u);
+  if (direto) return direto;
+  /* Muita gente cola "instagram.com/fulano" ou "wa.me/5541..." sem o https://,
+     e o campo é texto livre, então já tem link assim salvo. Descartar todos
+     esses faria botões que funcionavam simplesmente sumirem da página no dia
+     do deploy. Uma barra no meio e nenhum espaço: é endereço, completa. */
+  if (!u.includes(" ") && /^[\w.-]+\.[a-z]{2,}(\/|$|\?)/i.test(u)) return testa(`https://${u}`);
+  return "";
+}

@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Mail, MapPin, Menu, Phone, Quote, X } from "lucide-react";
 import { BlocoPublico, type VisualBio } from "@/components/bio/BlocoPublico";
 import {
-  faltaNoBloco, lista, linkWhatsapp, precoVisivel, txt, type DadosBloco,
+  faltaNoBloco, linkSeguro, lista, linkWhatsapp, precoVisivel, txt, type DadosBloco,
 } from "@/lib/bioBlocks";
 import { TextoRico } from "@/lib/textoRico";
+import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -43,8 +44,43 @@ export type MarcaSite = {
   corTexto: string;
 };
 
-const dataBR = (iso: string) =>
-  new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+/** Data que não dá pra ler vira nada. `toLocaleDateString` de uma data inválida
+ *  não lança: imprime "Invalid Date" em inglês no card que o cliente vai ver. */
+const dataBR = (iso: string) => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? ""
+    : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+};
+
+
+/** Foto que não carrega vira nada, em vez de virar quadro quebrado.
+ *  Link do Drive que expirou e arquivo apagado do bucket acontecem, e o ícone
+ *  de imagem partida numa página que a pessoa mandou pro cliente dela é pior
+ *  do que simplesmente não ter foto.
+ *
+ *  O estado é do React e não `style.display` na mão: mexendo no DOM direto, o
+ *  React reaproveita o mesmo <img> ao navegar de um item pro outro e a foto
+ *  BOA do item seguinte herdava o display:none da foto quebrada do anterior.
+ *  A `key` amarra o estado ao endereço, então trocar de foto zera sozinho. */
+function Foto({ src, alt = "", className, prioritaria }: {
+  src: string; alt?: string; className?: string; prioritaria?: boolean;
+}) {
+  const [quebrou, setQuebrou] = useState(false);
+  if (quebrou) return null;
+  return (
+    <img
+      key={src}
+      src={src}
+      alt={alt}
+      decoding="async"
+      loading={prioritaria ? "eager" : "lazy"}
+      fetchPriority={prioritaria ? "high" : undefined}
+      onError={() => setQuebrou(true)}
+      className={className}
+    />
+  );
+}
 
 /* ── Menu do topo ── */
 function Topo({ marca, secoes, aoIr }: { marca: MarcaSite; secoes: { id: string; nome: string }[]; aoIr: (id: string) => void }) {
@@ -60,7 +96,7 @@ function Topo({ marca, secoes, aoIr }: { marca: MarcaSite; secoes: { id: string;
       <div className="mx-auto max-w-5xl px-4 cq-md:px-5 h-[52px] flex items-center justify-between gap-2">
         <button type="button" onClick={() => ir("topo")} className="flex items-center gap-2 min-w-0 flex-1">
           {marca.logo
-            ? <img src={marca.logo} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+            ? <Foto src={marca.logo} className="w-7 h-7 rounded-full object-cover shrink-0" />
             : <span className="w-7 h-7 rounded-full grid place-items-center text-[11px] font-bold shrink-0"
                 style={{ backgroundColor: marca.cor, color: marca.corTexto }}>{marca.nome.slice(0, 1).toUpperCase()}</span>}
           <span className="font-display font-bold text-[14px] tracking-tight truncate">{marca.nome}</span>
@@ -131,6 +167,10 @@ function estiloDoFundo(fundo: string, marca: MarcaSite): { classe: string; estil
 function Secao({ id, fundo, marca, className, children }: {
   id?: string; fundo?: string; marca: MarcaSite; className?: string; children: React.ReactNode;
 }) {
+  // Filho nulo não vira faixa vazia. Sem isso, um bloco que decide não se
+  // desenhar (contagem vencida, FAQ sem pergunta) deixava 150px de branco no
+  // meio da página, que parece defeito de montagem.
+  if (children === null || children === undefined || children === false) return null;
   const f = estiloDoFundo(fundo ?? "claro", marca);
   return (
     <section id={id} style={f.estilo}
@@ -143,8 +183,10 @@ function Secao({ id, fundo, marca, className, children }: {
 /* ── As seções ── */
 function SecaoCapa({ d, marca, aoClicar }: { d: DadosBloco; marca: MarcaSite; aoClicar?: () => void }) {
   const img = txt(d, "imagem");
-  const b1 = txt(d, "botao1"), u1 = txt(d, "url1");
-  const b2 = txt(d, "botao2"), u2 = txt(d, "url2");
+  // Botão só existe se o endereço passar na checagem: um "javascript:" salvo
+  // aqui rodaria no navegador de todo seguidor que clicasse.
+  const b1 = txt(d, "botao1"), u1 = linkSeguro(txt(d, "url1"));
+  const b2 = txt(d, "botao2"), u2 = linkSeguro(txt(d, "url2"));
   return (
     <section id="topo" className="px-5 pt-11 pb-12 cq-md:py-24 scroll-mt-[52px]" style={{ background: `linear-gradient(160deg, ${marca.cor}14, transparent)` }}>
       {/* Uma coluna no celular, duas só a partir de 768px. A imagem vem DEPOIS
@@ -174,7 +216,7 @@ function SecaoCapa({ d, marca, aoClicar }: { d: DadosBloco; marca: MarcaSite; ao
           )}
         </div>
         {img && (
-          <img src={img} alt="" className="w-full rounded-3xl object-cover aspect-[4/3] cq-md:aspect-square shadow-lg" />
+          <Foto src={img} prioritaria className="w-full rounded-3xl object-cover aspect-[4/3] cq-md:aspect-square shadow-lg" />
         )}
       </div>
     </section>
@@ -188,7 +230,7 @@ function SecaoSobre({ d, marca }: { d: DadosBloco; marca: MarcaSite }) {
       <Rotulo cor={marca.cor} herda={txt(d, "fundo") === "escuro" || txt(d, "fundo") === "marca"}>{txt(d, "rotulo")}</Rotulo>
       {txt(d, "titulo") && <h2 className="font-display font-extrabold text-[1.28rem] cq-md:text-[1.8rem] leading-[1.15] tracking-[-0.015em] [text-wrap:balance]">{txt(d, "titulo")}</h2>}
       <div className={cn("mt-4 gap-6 cq-md:gap-9", img ? "grid cq-md:grid-cols-[240px_1fr] items-start" : "")}>
-        {img && <img src={img} alt="" className="w-full max-w-[240px] rounded-2xl object-cover aspect-square" />}
+        {img && <Foto src={img} className="w-full max-w-[240px] rounded-2xl object-cover aspect-square" />}
         {/* max-w de leitura: linha longa demais cansa e ninguém termina. */}
         <TextoRico texto={txt(d, "texto")} className="text-[14.5px] cq-md:text-[15.5px] leading-[1.68] opacity-85 max-w-[62ch]" />
       </div>
@@ -210,8 +252,13 @@ function SecaoSobre({ d, marca }: { d: DadosBloco; marca: MarcaSite }) {
 function CapaDoItem({ src, titulo, marca, proporcao }: {
   src: string | null; titulo: string; marca: MarcaSite; proporcao: string;
 }) {
-  if (src) {
-    return <img src={src} alt="" loading="lazy" className={cn("w-full object-cover", proporcao)} />;
+  const [quebrou, setQuebrou] = useState(false);
+  if (src && !quebrou) {
+    /* Se a capa quebrar, o card cai no bloco da marca em vez de ficar com um
+       buraco: a grade continua alinhada e ninguém percebe o problema. */
+    return <img key={src} src={src} alt="" loading="lazy" decoding="async"
+      onError={() => setQuebrou(true)}
+      className={cn("w-full object-cover", proporcao)} />;
   }
   return (
     <span className={cn("w-full grid place-items-center", proporcao)}
@@ -282,7 +329,10 @@ function SecaoBlog({ d, marca, itens, aoAbrir, aoClicar }: {
   d: DadosBloco; marca: MarcaSite; itens: ItemLite[]; aoAbrir: (slug: string) => void; aoClicar?: () => void;
 }) {
   if (itens.length === 0) return null;
-  const quantos = typeof d.quantos === "number" ? d.quantos : 6;
+  // Clampado: 0 esconderia o blog inteiro sem explicação, e NaN passa no
+  // typeof mas faz `slice(0, NaN)` devolver lista vazia.
+  const q = typeof d.quantos === "number" && Number.isFinite(d.quantos) ? Math.trunc(d.quantos) : 6;
+  const quantos = Math.min(Math.max(q, 1), 50);
   return (
     <Secao id="blog" fundo={txt(d, "fundo", "claro")} marca={marca}>
       <Rotulo cor={marca.cor} herda={txt(d, "fundo") === "escuro" || txt(d, "fundo") === "marca"}>{txt(d, "rotulo")}</Rotulo>
@@ -327,7 +377,7 @@ function SecaoDepoimentos({ d, marca }: { d: DadosBloco; marca: MarcaSite }) {
   );
 }
 
-function Rodape({ d, marca, aoClicar }: { d: DadosBloco; marca: MarcaSite; aoClicar?: () => void }) {
+function Rodape({ d, marca, aoClicar, comSelo }: { d: DadosBloco; marca: MarcaSite; aoClicar?: () => void; comSelo?: boolean }) {
   const tel = txt(d, "telefone"), mail = txt(d, "email"), end = txt(d, "endereco"), ig = txt(d, "instagram");
   return (
     /* Sem mt: a margem abria uma faixa da cor da seção anterior entre ela e o
@@ -363,13 +413,35 @@ function Rodape({ d, marca, aoClicar }: { d: DadosBloco; marca: MarcaSite; aoCli
               </p>
             )}
             {ig && (
-              <a href={`https://instagram.com/${ig.replace(/^@/, "")}`} target="_blank" rel="noopener noreferrer" onClick={aoClicar}
+              <a href={`https://instagram.com/${encodeURIComponent(ig.replace(/^@/, ""))}`} target="_blank" rel="noopener noreferrer" onClick={aoClicar}
                 className="text-[13.5px] opacity-85 inline-flex min-h-[44px] items-center">@{ig.replace(/^@/, "")}</a>
             )}
           </div>
         )}
       </div>
+      {comSelo && (
+        <div className="mx-auto max-w-5xl mt-8 pt-6 border-t border-white/10">
+          <SeloCria escuro />
+        </div>
+      )}
     </footer>
+  );
+}
+
+
+/* ── A ASSINATURA DO CRIA ──
+   Toda página pública que sai daqui carrega a marca no rodapé. É o canal de
+   aquisição mais barato que existe: quem clica já é exatamente o público que
+   a gente quer, porque acabou de ver o produto funcionando.
+
+   Discreto de propósito. Quem entrega o trabalho é a social mídia, e a marca
+   do topo é a do cliente dela. O Cria assina embaixo, como gráfica assina
+   livro: presente, sem disputar a capa. */
+function SeloCria({ escuro }: { escuro?: boolean }) {
+  return (
+    <div className={cn("w-full flex justify-center", escuro ? "" : "border-t border-black/[0.07]")}>
+      <AssinaturaCria variante="rodape" tom={escuro ? "escuro" : "claro"} className="py-5" />
+    </div>
   );
 }
 
@@ -405,10 +477,30 @@ export function SiteBio({
     return m;
   }, [blocos, produtos.length, posts.length]);
 
+  /* Quando o último bloco já é o rodapé escuro, o selo vai dentro dele. Solto
+     embaixo viraria uma faixa branca depois de um bloco preto, que é o tipo de
+     costura que faz a página parecer montada às pressas. */
+  const terminaNoRodape = (() => {
+    /* Último bloco VISÍVEL, não último da lista: um bloco vazio no fim não
+       desenha nada, e olhando só o último a gente achava que a página não
+       terminava no rodapé preto e colava o selo branco embaixo dele. */
+    for (let i = blocos.length - 1; i >= 0; i--) {
+      const b = blocos[i];
+      if (b.kind === "contato") return true;
+      if (!faltaNoBloco({ kind: b.kind, data: b.data })) return false;
+    }
+    return false;
+  })();
+
+  /* Movimento suave é agradável pra maioria e passa mal pra quem tem
+     sensibilidade vestibular. O sistema operacional já sabe disso: se a pessoa
+     pediu menos movimento, o salto é seco. */
   const irPara = (id: string) => {
+    const seco = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const behavior: ScrollBehavior = seco ? "auto" : "smooth";
     const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    else window.scrollTo({ top: 0, behavior: "smooth" });
+    if (el) el.scrollIntoView({ behavior, block: "start" });
+    else window.scrollTo({ top: 0, behavior });
   };
 
   /* [container-type:inline-size] é o que faz cq-sm/cq-md/cq-lg funcionarem:
@@ -425,7 +517,7 @@ export function SiteBio({
           case "produtos": return <SecaoProdutos key={b.id} d={b.data} marca={marca} itens={produtos} aoAbrir={aoAbrirProduto} aoClicar={() => onClique?.(b.id)} />;
           case "blog": return <SecaoBlog key={b.id} d={b.data} marca={marca} itens={posts} aoAbrir={aoAbrirPost} aoClicar={() => onClique?.(b.id)} />;
           case "depoimentos": return <SecaoDepoimentos key={b.id} d={b.data} marca={marca} />;
-          case "contato": return <Rodape key={b.id} d={b.data} marca={marca} aoClicar={() => onClique?.(b.id)} />;
+          case "contato": return <Rodape key={b.id} d={b.data} marca={marca} aoClicar={() => onClique?.(b.id)} comSelo={terminaNoRodape} />;
           default: {
             // Bloco pela metade não vira seção. Antes, um bloco de texto ainda
             // sem texto desenhava um <Secao> com o espaçamento inteiro e o
@@ -445,6 +537,7 @@ export function SiteBio({
           }
         }
       })}
+      {!terminaNoRodape && <SeloCria />}
     </div>
   );
 }
@@ -468,12 +561,12 @@ export function PaginaItem({
 
   const preco = precoVisivel(item.preco, item.preco_texto);
   const ehPost = item.tipo === "post";
-  const cta = item.cta_url || (whatsapp ? linkWhatsapp(whatsapp, `Oi! Vi "${item.titulo}" no site e quero saber mais.`) : "");
+  const cta = linkSeguro(item.cta_url) || (whatsapp ? linkWhatsapp(whatsapp, `Oi! Vi "${item.titulo}" no site e quero saber mais.`) : "");
 
   return (
     <div className="min-h-[100dvh] bg-white [container-type:inline-size]">
       <Topo marca={marca} secoes={[]} aoIr={aoVoltar} />
-      {item.capa && <img src={item.capa} alt="" className="w-full aspect-[16/9] cq-md:aspect-[21/9] object-cover" />}
+      {item.capa && <Foto src={item.capa} prioritaria className="w-full aspect-[16/9] cq-md:aspect-[21/9] object-cover" />}
 
       <article className="px-5 py-8 cq-md:py-12">
         <div className="mx-auto max-w-[680px]">
@@ -504,7 +597,7 @@ export function PaginaItem({
           {item.galeria.length > 0 && (
             <div className="grid grid-cols-2 cq-sm:grid-cols-3 gap-2 mt-6">
               {item.galeria.map((g, i) => (
-                <img key={i} src={g} alt="" loading="lazy" className="w-full aspect-square object-cover rounded-xl" />
+                <Foto key={i} src={g} className="w-full aspect-square object-cover rounded-xl" />
               ))}
             </div>
           )}
@@ -518,6 +611,7 @@ export function PaginaItem({
           )}
         </div>
       </article>
+      <SeloCria />
     </div>
   );
 }

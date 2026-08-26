@@ -30,7 +30,8 @@ html, body {
    elemento, e dentro de um flex o filho encolhe até 0 e o texto quebra LETRA
    POR LETRA na vertical ("v/e/n/c/e"). `break-word` quebra a palavra gigante
    sem mexer no cálculo de largura. É a diferença entre corrigir e destruir. */
-body, p, span, h1, h2, h3, h4, h5, h6, a, li, td, th, label {
+body, p, span, h1, h2, h3, h4, h5, h6, a, li, td, th, label,
+blockquote, figcaption, b, strong, em, dd, dt {
   overflow-wrap: break-word;
 }
 

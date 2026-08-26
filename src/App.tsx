@@ -187,6 +187,29 @@ const RootRedirect = () => {
   return <Navigate to={user ? "/app" : "/login"} replace />;
 };
 
+/* O que o seguidor vê se a bio quebrar de vez. Sem jargão, sem mensagem de
+   erro técnica, e com uma saída: quase sempre é falha momentânea de rede e
+   recarregar resolve. */
+function BioQuebrou() {
+  return (
+    <div className="min-h-[100dvh] grid place-items-center bg-white px-6 text-center">
+      <div className="max-w-xs">
+        <p className="text-[15px] font-semibold text-gray-900">Não conseguimos abrir esta página</p>
+        <p className="mt-1.5 text-[13px] text-gray-500 leading-relaxed">
+          Pode ser a conexão. Tente de novo em alguns segundos.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-5 h-11 px-5 rounded-full bg-gray-900 text-white text-[14px] font-semibold"
+        >
+          Tentar de novo
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -210,12 +233,17 @@ const App = () => (
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
               <Route path="/" element={<RootRedirect />} />
-              <Route path="/bio/:slug" element={<BioPage />} />
+              {/* A bio é a ÚNICA página que um estranho abre. Sem rede de
+                  segurança, um bloco com dado torto derruba a árvore inteira e
+                  o seguidor fica com a tela branca: nem erro, nem link, nem
+                  ideia do que aconteceu. As rotas do app já estavam protegidas;
+                  justamente a pública não estava. */}
+              <Route path="/bio/:slug" element={<ErrorBoundary fallback={<BioQuebrou />}><BioPage /></ErrorBoundary>} />
               {/* Páginas internas do modo Site: cada serviço e cada post tem
                   endereço próprio, pra mandar UM serviço no WhatsApp e pra o
                   Google indexar cada assunto separadamente. */}
-              <Route path="/bio/:slug/p/:itemSlug" element={<BioPage />} />
-              <Route path="/bio/:slug/blog/:itemSlug" element={<BioPage />} />
+              <Route path="/bio/:slug/p/:itemSlug" element={<ErrorBoundary fallback={<BioQuebrou />}><BioPage /></ErrorBoundary>} />
+              <Route path="/bio/:slug/blog/:itemSlug" element={<ErrorBoundary fallback={<BioQuebrou />}><BioPage /></ErrorBoundary>} />
               <Route path="/aprovar/:token" element={<AprovarPortal />} />
               <Route path="/proposta/:token" element={<PropostaPublica />} />
               <Route path="/cronograma/:token" element={<CronogramaPublica />} />

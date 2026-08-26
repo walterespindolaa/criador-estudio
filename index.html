@@ -29,6 +29,11 @@
     <meta property="og:url" content="https://app.criasocialclub.com.br" />
     <meta property="og:site_name" content="Cria Social Club" />
     <link rel="canonical" href="https://app.criasocialclub.com.br" />
+    <!-- A bio pública faz a primeira chamada ao banco antes de pintar
+         qualquer coisa. Sem preconnect, essa chamada paga DNS + TLS na hora
+         errada: no 4G isso é uns 300ms de rodinha a mais, sempre. -->
+    <link rel="preconnect" href="https://exuxlwdnkgmhtnwoyvwo.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://exuxlwdnkgmhtnwoyvwo.supabase.co" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,500;0,6..12,600;0,6..12,700;1,6..12,400&display=swap" rel="stylesheet" />

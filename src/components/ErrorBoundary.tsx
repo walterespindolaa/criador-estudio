@@ -2,7 +2,14 @@ import { Component, ReactNode, ErrorInfo } from "react";
 import * as Sentry from "@sentry/react";
 import { logError } from "@/lib/logError";
 
-interface Props { children: ReactNode; }
+interface Props {
+  children: ReactNode;
+  /** Tela alternativa. A padrão mostra a mensagem técnica do erro, o que serve
+   *  pra quem está usando o app e pode nos contar o que apareceu. Numa página
+   *  pública, aberta por um seguidor, essa mensagem não significa nada e ainda
+   *  vaza detalhe interno: ali passa-se um fallback próprio. */
+  fallback?: ReactNode;
+}
 interface State { hasError: boolean; error?: Error; }
 
 export class ErrorBoundary extends Component<Props, State> {
@@ -26,6 +33,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback) return <>{this.props.fallback}</>;
       return (
         <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8">
           <p className="text-lg font-medium">Algo deu errado nesta página.</p>

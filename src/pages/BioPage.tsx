@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
+import { MotionConfig, motion } from "framer-motion";
 import { Loader2, Instagram, Youtube, Twitter, Music2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { sanitizeUrl } from "@/lib/sanitize";
+import { isValidEmail, sanitizeUrl } from "@/lib/sanitize";
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { renderRichText } from "@/lib/richText";
 import { cn } from "@/lib/utils";
@@ -403,13 +403,17 @@ function descobrirOrigem(): string {
   } catch { return "direto"; }
 }
 
-const BioPage = () => {
+const ConteudoDaBio = () => {
   const { slug, itemSlug } = useParams<{ slug: string; itemSlug?: string }>();
   const navegar = useNavigate();
   const location = useLocation();
   useForceLightTheme();
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  /* Separado do notFound de propósito: "não existe" é definitivo e a pessoa vai
+     embora; "não carregou" pede pra tentar de novo. Misturar os dois fazia todo
+     mundo no metrô achar que a página do cliente tinha saído do ar. */
+  const [falhouRede, setFalhouRede] = useState(false);
   const [profile, setProfile] = useState<ProfileLite | null>(null);
   // Página montada pela social mídia (não é a conta de um criador). Muda de
   // onde vêm os leads e como a visita é contada.
@@ -424,70 +428,82 @@ const BioPage = () => {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      if (!slug) return;
+      if (!slug) { setLoading(false); return; }
       setLoading(true);
-      // Dois lugares podem responder por um endereço: a conta de um criador
-      // (profiles) ou a página que uma social mídia montou pra um cliente dela
-      // (bio_pages). O endereço é único entre os dois, então basta perguntar
-      // pro primeiro e cair no segundo.
-      const { data: profileRows } = await supabase
-        .rpc("get_public_profile_by_slug", { _slug: slug });
-      let profileData = Array.isArray(profileRows) ? profileRows[0] : null;
-      let daAgencia = false;
+      // Os dois zerados: trocar de endereço não pode herdar o "não existe" nem
+      // o "não carregou" da tentativa anterior.
+      setFalhouRede(false);
+      setNotFound(false);
+      /* try/catch/finally envolvendo TUDO. Antes, uma promessa rejeitada no
+         meio (RPC que não existe, sessão do supabase-js estourando, rede
+         caindo) pulava o setLoading(false) e o visitante ficava no rodinha
+         PARA SEMPRE, sem mensagem e sem botão. */
+      try {
+        // Dois lugares podem responder por um endereço: a conta de um criador
+        // (profiles) ou a página que uma social mídia montou pra um cliente dela
+        // (bio_pages). O endereço é único entre os dois, então basta perguntar
+        // pro primeiro e cair no segundo.
+        const { data: profileRows, error: erroPerfil } = await supabase
+          .rpc("get_public_profile_by_slug", { _slug: slug });
+        let profileData = Array.isArray(profileRows) ? profileRows[0] : null;
+        let daAgencia = false;
+        let houveErro = !!erroPerfil;
 
-      if (!profileData) {
-        const { data: pageRows } = await sbRpc("get_public_bio_page_by_slug", { _slug: slug });
-        const row = Array.isArray(pageRows) ? pageRows[0] : null;
-        if (row) { profileData = row as typeof profileData; daAgencia = true; }
-      }
-
-      if (cancelled) return;
-      if (!profileData) {
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
-
-      const { data: linkData } = daAgencia
-        ? await sbRpc("get_public_bio_page_links_by_slug", { _slug: slug })
-        : await supabase.rpc("get_public_bio_links_by_slug", { _slug: slug });
-
-      // BLOCOS: o formato novo da página. Enquanto a migration não roda em
-      // produção, a RPC não existe e a lista volta vazia, então a página cai
-      // sozinha no formato antigo de links. Ninguém fica com a bio fora do ar
-      // esperando alguém abrir o Supabase.
-      // O estilo mora na aparência salva, e vale pros dois mundos: a conta usa
-      // profiles.bio_settings, a página da agência usa bio_pages.settings, e a
-      // RPC devolve os dois com o mesmo nome de coluna.
-      const ehSite = (profileData as { bio_settings?: unknown } | null)
-        ? parseSettings((profileData as { bio_settings?: unknown }).bio_settings).layout === "vitrine"
-        : false;
-
-      const { data: blocoData } = await sbRpc("get_public_bio_blocks", {
-        _slug: slug, _estilo: ehSite ? "site" : "classico",
-      });
-
-      // Os itens só existem no modo Site, então nem vale a ida ao banco fora dele.
-      if (ehSite) {
-        const [pr, po] = await Promise.all([
-          sbRpc("get_public_bio_items", { _slug: slug, _tipo: "produto" }),
-          sbRpc("get_public_bio_items", { _slug: slug, _tipo: "post" }),
-        ]);
-        if (!cancelled) {
-          setProdutos(Array.isArray(pr.data) ? (pr.data as ItemLite[]) : []);
-          setPosts(Array.isArray(po.data) ? (po.data as ItemLite[]) : []);
+        if (!profileData) {
+          const { data: pageRows, error: erroPagina } = await sbRpc("get_public_bio_page_by_slug", { _slug: slug });
+          const row = Array.isArray(pageRows) ? pageRows[0] : null;
+          if (row) { profileData = row as typeof profileData; daAgencia = true; houveErro = false; }
+          else if (erroPagina) houveErro = true;
         }
-      }
 
-      if (cancelled) return;
-      setBlocos(Array.isArray(blocoData) ? (blocoData as BlocoLite[]) : []);
-      setDaAgencia(daAgencia);
-      setProfile(profileData as ProfileLite);
-      setLinks((linkData ?? []) as BioLinkLite[]);
-      setLoading(false);
+        if (cancelled) return;
+        if (!profileData) {
+          /* Erro de rede NÃO é página inexistente. No metrô, no elevador ou no
+             4G ruim a pessoa lia "esse link não existe" e ia embora achando que
+             o cliente tinha sumido da internet. São duas telas diferentes:
+             uma é definitiva, a outra pede pra tentar de novo. */
+          if (houveErro) setFalhouRede(true); else setNotFound(true);
+          return;
+        }
 
-      // Conta a visita 1x por sessão/navegador (evita inflar com refresh).
-      if (slug) {
+        // O estilo mora na aparência salva, e vale pros dois mundos: a conta usa
+        // profiles.bio_settings, a página da agência usa bio_pages.settings, e a
+        // RPC devolve os dois com o mesmo nome de coluna.
+        const ehSite = parseSettings((profileData as { bio_settings?: unknown }).bio_settings).layout === "vitrine";
+
+        /* Tudo o que falta vai JUNTO, não em fila. Eram até quatro idas ao
+           banco uma esperando a outra, e em 4G brasileiro isso é segundo e meio
+           de rodinha antes do primeiro pixel. Nenhuma delas depende do
+           resultado da outra: só do estilo, que a gente já sabe aqui.
+
+           No modo Site nem se pede a lista de links do formato antigo: ela não
+           é usada lá, era uma ida ao banco jogada fora em toda visita. */
+        const [linkRes, blocoRes, produtoRes, postRes] = await Promise.all([
+          ehSite
+            ? Promise.resolve({ data: [] as unknown })
+            : (daAgencia
+                ? sbRpc("get_public_bio_page_links_by_slug", { _slug: slug })
+                : supabase.rpc("get_public_bio_links_by_slug", { _slug: slug })),
+          // BLOCOS: o formato novo da página. Enquanto a migration não roda em
+          // produção, a RPC não existe e a lista volta vazia, então a página cai
+          // sozinha no formato antigo de links. Ninguém fica com a bio fora do ar
+          // esperando alguém abrir o Supabase.
+          sbRpc("get_public_bio_blocks", { _slug: slug, _estilo: ehSite ? "site" : "classico" }),
+          ehSite ? sbRpc("get_public_bio_items", { _slug: slug, _tipo: "produto" }) : Promise.resolve({ data: [] }),
+          ehSite ? sbRpc("get_public_bio_items", { _slug: slug, _tipo: "post" }) : Promise.resolve({ data: [] }),
+        ]);
+
+        if (cancelled) return;
+        setProdutos(Array.isArray(produtoRes.data) ? (produtoRes.data as ItemLite[]) : []);
+        setPosts(Array.isArray(postRes.data) ? (postRes.data as ItemLite[]) : []);
+        setBlocos(Array.isArray(blocoRes.data) ? (blocoRes.data as BlocoLite[]) : []);
+        setDaAgencia(daAgencia);
+        setProfile(profileData as ProfileLite);
+        // Array.isArray e não `?? []`: um objeto vindo daqui fazia links.map
+        // lançar, e sem rede de segurança isso era tela branca.
+        setLinks(Array.isArray(linkRes.data) ? (linkRes.data as BioLinkLite[]) : []);
+
+        // Conta a visita 1x por sessão/navegador (evita inflar com refresh).
         const key = `bioviewed:${slug}`;
         try {
           if (!sessionStorage.getItem(key)) {
@@ -496,10 +512,14 @@ const BioPage = () => {
               body: { type: "view", slug, kind: daAgencia ? "page" : "profile", origem: descobrirOrigem() },
             });
           }
-        } catch { /* sessionStorage indisponível: ignora */ }
+        } catch { /* sessionStorage indisponível (aba anônima do Safari): ignora */ }
+      } catch {
+        if (!cancelled) setFalhouRede(true);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
-    load();
+    void load();
     return () => {
       cancelled = true;
     };
@@ -540,6 +560,13 @@ const BioPage = () => {
      renderizar no servidor, e ficou pra depois. */
   useEffect(() => {
     if (!profile) return;
+    /* Guardar ANTES de escrever. Estava lá embaixo, depois do document.title já
+       ter sido trocado, então o cleanup "restaurava" o próprio nome do cliente
+       e ele ficava grudado na aba do navegador depois de sair da bio. */
+    const tituloAntes = document.title;
+    const tagExistia = !!document.querySelector('meta[name="description"]');
+    const descAntes = document.querySelector('meta[name="description"]')?.getAttribute("content") ?? null;
+
     const nome = (settings.header?.name ?? "").trim() || profile.name || "";
     const titulo = item ? `${item.titulo} · ${nome}` : nome;
     if (titulo) document.title = titulo;
@@ -554,9 +581,14 @@ const BioPage = () => {
       }
       tag.setAttribute("content", desc);
     }
-    // Sair da bio não pode deixar o nome do cliente na aba do navegador.
-    const antes = document.title;
-    return () => { document.title = antes; };
+    return () => {
+      document.title = tituloAntes;
+      const tag = document.querySelector('meta[name="description"]');
+      if (!tag) return;
+      // A tag que a gente criou some junto; a que já existia volta ao que era.
+      if (tagExistia) { if (descAntes !== null) tag.setAttribute("content", descAntes); }
+      else tag.remove();
+    };
   }, [profile, settings.header?.name, settings.header?.bio, item]);
   const radius = STYLE_RADIUS[settings.buttonStyle];
   const isOutline = settings.buttonStyle === "outline";
@@ -575,6 +607,26 @@ const BioPage = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (falhouRede) {
+    return (
+      <div className="min-h-[100dvh] grid place-items-center bg-white px-6 text-center">
+        <div className="max-w-xs">
+          <p className="text-[15px] font-display font-bold text-gray-900">Não conseguimos carregar a página</p>
+          <p className="mt-1.5 text-[13px] font-body text-gray-500 leading-relaxed">
+            Pode ser a sua conexão. A página continua no ar.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-5 h-11 px-5 rounded-full bg-gray-900 text-white text-[14px] font-display font-bold"
+          >
+            Tentar de novo
+          </button>
+        </div>
       </div>
     );
   }
@@ -805,7 +857,7 @@ const BioPage = () => {
                 className={`w-full mt-7 rounded-2xl shadow-md overflow-hidden text-left ${settings.cardColor ? "" : "bg-white/90 backdrop-blur-sm"}`}
                 style={settings.cardColor ? { backgroundColor: settings.cardColor, color: settings.cardTextColor || undefined } : undefined}>
                 {settings.about.image && (
-                  <img src={settings.about.image} alt="" loading="lazy" className="w-full max-h-56 object-cover" />
+                  <img src={settings.about.image} alt="" loading="lazy" decoding="async" className="w-full aspect-[16/9] object-cover" />
                 )}
                 <div className="p-5">
                   {settings.about.title && <h2 className={`font-display font-bold mb-2 ${settings.cardColor ? "" : "text-gray-900"}`}>{settings.about.title}</h2>}
@@ -1217,26 +1269,58 @@ function LeadForm({
   const showEmail = config.fields === "email" || config.fields === "both";
   const showPhone = config.fields === "phone" || config.fields === "both";
 
+  /* Guarda contra envio duplo. O `disabled` do botão só vale DEPOIS do
+     re-render, então dois toques rápidos no celular passavam os dois e a
+     gestora recebia o mesmo contato duas vezes. A ref é síncrona. */
+  const enviando = useRef(false);
+
   const submit = async () => {
-    if (!consent) return;
-    if (showEmail && !email.trim() && !(showPhone && phone.trim())) return;
-    if (!showEmail && showPhone && !phone.trim()) return;
+    /* Antes, cada uma destas checagens era um `return` mudo: a pessoa tocava
+       em Enviar e NADA acontecia, nem mensagem, nem borda vermelha. No celular
+       isso se lê como "o site travou", e ela vai embora. */
+    if (!consent) { setErr("Marque o aviso de consentimento pra continuar."); return; }
+
+    const tel = phone.replace(/\D/g, "");
+    const mail = email.trim();
+    if (showEmail && showPhone && !mail && !tel) { setErr("Informe seu e-mail ou seu telefone."); return; }
+    if (showEmail && !showPhone && !mail) { setErr("Informe seu e-mail."); return; }
+    if (!showEmail && showPhone && !tel) { setErr("Informe seu telefone."); return; }
+
+    /* Validar formato não é frescura: "joao" e "(41) 9" viram lead que ninguém
+       consegue contatar, e a lista da gestora enche de contato morto. O limite
+       de 10 dígitos é o mesmo que o bloco de WhatsApp já usa (DDD + número). */
+    if (mail && !isValidEmail(mail)) { setErr("Esse e-mail parece incompleto. Confira."); return; }
+    if (tel && tel.length < 10) { setErr("Telefone incompleto. Inclua o DDD."); return; }
+
+    if (enviando.current) return;
+    enviando.current = true;
+    setErr(null);
     setSending(true);
     try {
-      const { error } = await (supabase.rpc as unknown as (
-        fn: string, args: Record<string, unknown>
-      ) => Promise<{ error: { message: string } | null }>)(daAgencia ? "submit_bio_page_lead" : "submit_bio_lead", {
-        _slug: slug,
-        _name: name.trim() || null,
-        _email: email.trim() || null,
-        _phone: phone.trim() || null,
-        _block_id: blocoId ?? null,
+      /* Passa pela edge e não direto na RPC porque só a edge enxerga o IP.
+         Batendo direto, o único freio possível era por PÁGINA, e um robô que
+         estourasse esse teto trancava o formulário pra todos os visitantes de
+         verdade. Por IP, o robô para sozinho e a página continua funcionando. */
+      const { data, error } = await supabase.functions.invoke("bio-track", {
+        body: {
+          type: "lead", slug, daAgencia: !!daAgencia,
+          name: name.trim(), email: mail, phone: phone.trim(),
+          blockId: blocoId ?? null,
+        },
       });
       if (error) throw error;
+      const r = data as { ok?: boolean; erro?: string } | null;
+      if (!r?.ok) {
+        setErr(r?.erro === "muitas_tentativas"
+          ? "Muitas tentativas seguidas. Espere um minuto e tente de novo."
+          : "Não foi possível enviar. Tente novamente.");
+        return;
+      }
       setDone(true);
     } catch {
       setErr("Não foi possível enviar. Tente novamente.");
     } finally {
+      enviando.current = false;
       setSending(false);
     }
   };
@@ -1245,7 +1329,7 @@ function LeadForm({
     return (
       <div className={`w-full rounded-2xl shadow-md p-6 text-center ${cardColor ? "" : "bg-white/90 backdrop-blur-sm"}`}
         style={cardColor ? { backgroundColor: cardColor, color: cardTextColor || undefined } : undefined}>
-        <p className={`font-display font-bold ${cardColor ? "" : "text-gray-900"}`}>Recebido! 💜</p>
+        <p className={`font-display font-bold ${cardColor ? "" : "text-gray-900"}`}>Recebido!</p>
         <p className={`text-sm mt-1 ${cardColor ? "opacity-90" : "text-gray-700"}`}>Logo entro em contato.</p>
       </div>
     );
@@ -1262,17 +1346,32 @@ function LeadForm({
         {showPhone && <input aria-label="Seu telefone" type="tel" inputMode="tel" value={phone}
           onChange={(e) => setPhone(mascaraTelefone(e.target.value))}
           placeholder="(00) 00000-0000" className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />}
-        <label className={`flex items-start gap-2 text-[11px] leading-snug ${cardColor ? "opacity-85" : "text-gray-600"}`}>
-          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
-          {config.consentText}
+        {/* py-1.5 e o quadrado em 16px: o alvo de toque do consentimento era
+            do tamanho da letra, e no celular quem errava o dedo achava que o
+            formulário não respondia. */}
+        <label className={`flex items-start gap-2.5 py-1.5 cursor-pointer text-[11.5px] leading-snug ${cardColor ? "opacity-85" : "text-gray-600"}`}>
+          <input type="checkbox" checked={consent} onChange={(e) => { setConsent(e.target.checked); if (e.target.checked) setErr(null); }}
+            className="mt-[1px] h-4 w-4 shrink-0 accent-current" />
+          <span>{config.consentText}</span>
         </label>
-        <button type="button" onClick={submit} disabled={sending || !consent} className={cn("w-full font-body font-semibold py-3 shadow-md disabled:opacity-50 transition", radius)} style={{ backgroundColor: buttonColor, color: buttonTextColor }}>
+        <button type="button" onClick={submit} disabled={sending} className={cn("w-full min-h-[48px] font-body font-semibold py-3 shadow-md disabled:opacity-50 transition", radius)} style={{ backgroundColor: buttonColor, color: buttonTextColor }}>
           {sending ? "Enviando..." : config.buttonText}
         </button>
-        {err && <p role="alert" className="text-xs text-red-600 text-center">{err}</p>}
+        {err && <p role="alert" aria-live="polite" className="text-xs text-red-600 text-center">{err}</p>}
       </div>
     </div>
   );
 }
+
+/* MotionConfig com reducedMotion="user": quando a pessoa pediu menos movimento
+   no sistema, o framer-motion desliga as animações de entrada sozinho, em toda
+   a página, sem precisar lembrar disso em cada bloco. Isso não é enfeite: pra
+   quem tem sensibilidade vestibular, uma página que desliza inteira ao abrir
+   dá enjoo de verdade. */
+const BioPage = () => (
+  <MotionConfig reducedMotion="user">
+    <ConteudoDaBio />
+  </MotionConfig>
+);
 
 export default BioPage;

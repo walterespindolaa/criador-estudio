@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Check, Copy, MapPin, MessageCircle, Navigation } from "lucide-react";
 import {
   bool, embedDeVideo, embedGoogleMaps, faltaAte, linkAppleMaps, linkGoogleMaps,
-  linkWaze, linkWhatsapp, lista, txt, type DadosBloco,
+  linkSeguro, linkWaze, linkWhatsapp, lista, txt, type DadosBloco,
 } from "@/lib/bioBlocks";
 import { TextoRico } from "@/lib/textoRico";
 import { cn } from "@/lib/utils";
@@ -98,11 +98,17 @@ function BotaoGrande({
 function Contagem({ data, visual }: { data: DadosBloco; visual: VisualBio }) {
   const ate = txt(data, "ate");
   const [agora, setAgora] = useState(() => Date.now());
+  const f = faltaAte(ate, agora);
+  /* O relógio só bate enquanto tem o que contar. Sem essa guarda ele acordava
+     o componente uma vez por segundo PARA SEMPRE mesmo com a contagem já
+     vencida ou sem data nenhuma, o que não aparece na tela mas aparece na
+     bateria de quem deixou a aba aberta. */
+  const parado = !ate || f.acabou;
   useEffect(() => {
+    if (parado) return;
     const t = setInterval(() => setAgora(Date.now()), 1000);
     return () => clearInterval(t);
-  }, []);
-  const f = faltaAte(ate, agora);
+  }, [parado]);
   if (!ate) return null;
   // Acabou: some da página em vez de mostrar zero, que passa a impressão de
   // página abandonada.
@@ -236,7 +242,9 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
     }
 
     case "link": {
-      const url = txt(data, "url").trim();
+      // Endereço que não passa na checagem não vira botão: melhor o bloco
+      // sumir do que existir um botão que abre um "javascript:".
+      const url = linkSeguro(txt(data, "url"));
       if (!url) return null;
       const icone = txt(data, "icone");
       const capa = txt(data, "capa");
@@ -266,7 +274,11 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
          "Sobre mim" antigo tinha, e é de lá que a maioria destes blocos veio. */
       return (
         <CartaoBase visual={visual} className={foto ? "overflow-hidden" : "p-4"}>
-          {foto && <img src={foto} alt="" loading="lazy" className="w-full max-h-56 object-cover" />}
+          {/* Proporção fixa em vez de max-h: sem ela, o espaço só aparecia
+              quando a foto chegava, e todo o resto da página pulava pra baixo
+              na frente do visitante. */}
+          {foto && <img src={foto} alt="" loading="lazy" decoding="async"
+            className="w-full aspect-[16/9] object-cover" />}
           <div className={foto ? "p-4" : ""}>
             <TituloCartao>{txt(data, "titulo")}</TituloCartao>
             <TextoRico texto={t} className={cn("text-[14px] leading-relaxed", visual.cardColor ? "opacity-90" : "text-gray-700")} />
@@ -298,7 +310,7 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
     }
 
     case "galeria": {
-      const fotos = lista<string>(data, "imagens").filter(Boolean);
+      const fotos = lista<string>(data, "imagens").filter((x) => typeof x === "string" && x.trim());
       if (fotos.length === 0) return null;
       return (
         <CartaoBase visual={visual} className="p-3">

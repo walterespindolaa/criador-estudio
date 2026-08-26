@@ -33,10 +33,57 @@ serve(async (req) => {
     // só cortamos o tamanho. Guardar o referrer cru seria guardar endereço de
     // terceiro sem precisar, e ninguém filtra relatório por isso.
     const origem = body?.origem ? String(body.origem).slice(0, 20) : "direto";
-    if (type !== "view" && type !== "click") return ok({ ok: false });
+    if (type !== "view" && type !== "click" && type !== "lead") return ok({ ok: false });
 
     const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    /* O LEAD VEM ANTES do freio genérico de 30 eventos/min logo abaixo.
+       Aquele balde é por IP+página e é compartilhado com visita e clique. Numa
+       operadora móvel vários visitantes saem pelo MESMO IP, então uma bio com
+       movimento estoura os 30 sem esforço. E o que ele devolve é `ok: true`,
+       de propósito, porque perder uma métrica não é problema. Perder um LEAD é:
+       o formulário dizia "Recebido!" e o contato não tinha sido gravado em
+       lugar nenhum. O lead tem freio próprio, por IP, logo abaixo.
+
+       ── LEAD ─────────────────────────────────────────────────────────────
+       O envio do formulário passou a vir por aqui em vez de bater direto na
+       RPC. Motivo: a RPC não enxerga o IP, então o único freio possível lá era
+       por PÁGINA. Com freio por página, um robô sozinho enche a lista da
+       gestora de contato falso E, ao estourar o teto, TRANCA o formulário pros
+       visitantes de verdade, que passam a ver "não foi possível enviar" sem
+       ninguém entender por quê.
+
+       Aqui existe IP, então o freio é por pessoa: 3 envios por minuto. Quem
+       está preenchendo de boa-fé nunca chega perto disso, e o robô para sem
+       levar a página junto. */
+    if (type === "lead") {
+      if (!slug) return ok({ ok: false, erro: "slug" });
+      const { data: podeLead, error: leadRlErr } = await svc.rpc("rate_touch", { _key: `bio_lead_ip:${ip}`, _limit: 3 });
+      if (leadRlErr || podeLead === false) {
+        return ok({ ok: false, erro: "muitas_tentativas" });
+      }
+      const nome = body?.name ? String(body.name).slice(0, 120).trim() : "";
+      const email = body?.email ? String(body.email).slice(0, 160).trim() : "";
+      const fone = body?.phone ? String(body.phone).slice(0, 40).trim() : "";
+      const blocoId = body?.blockId ? String(body.blockId) : null;
+      if (!email && !fone) return ok({ ok: false, erro: "vazio" });
+
+      const fn = body?.daAgencia ? "submit_bio_page_lead" : "submit_bio_lead";
+      const { error: erroLead } = await svc.rpc(fn, {
+        _slug: slug,
+        _name: nome || null,
+        _email: email || null,
+        _phone: fone || null,
+        _block_id: blocoId,
+      });
+      if (erroLead) {
+        console.error("[bio-track] lead falhou:", erroLead);
+        return ok({ ok: false, erro: "falhou" });
+      }
+      return ok({ ok: true });
+    }
+
 
     // 30 eventos/min por IP+alvo. Se estourar, ignora silenciosamente (não conta).
     // Fail-CLOSED: este endpoint é público e anônimo (verify_jwt = false), então
