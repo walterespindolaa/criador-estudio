@@ -147,6 +147,10 @@ function normalizeSections(raw: unknown): BioSection[] {
     }
   }
   for (const def of DEFAULT_SECTIONS) { if (!seen.has(def.id)) out.push({ ...def }); }
+  /* A seção "links" fica SEMPRE ligada. O interruptor dela era um jeito fácil
+     de esvaziar a própria página sem entender por quê, e com os blocos ela
+     deixou de ser uma seção pra virar o lugar onde a página inteira mora. */
+  for (const s of out) { if (s.id === "links") s.on = true; }
   return out;
 }
 
@@ -703,7 +707,11 @@ const BioPage = () => {
       <div className="relative z-10 w-full max-w-[520px] my-auto flex flex-col items-center">
         {/* BANNER = CAPA: fica ATRÁS da foto, como capa de perfil. Antes era um
             card solto no meio dos links e ficava perdido. */}
-        {settings.bannerImage && settings.sections.some((x) => x.id === "banner" && x.on) && (
+        {/* Antes o banner só aparecia se a seção "banner" estivesse ligada num
+            interruptor separado, que vinha DESLIGADO de fábrica. A pessoa
+            subia a imagem, salvava, e nada acontecia. Agora subir a imagem é
+            o próprio ato de ligar: remover a imagem é que desliga. */}
+        {settings.bannerImage && (
           <div className="w-full -mt-2 mb-[-44px] rounded-2xl overflow-hidden shadow-md">
             <img src={settings.bannerImage} alt="" loading="lazy" className="w-full h-32 sm:h-40 object-cover" />
           </div>
@@ -798,6 +806,10 @@ const BioPage = () => {
         {settings.sections.filter((s) => s.on).map((sec) => {
           // O banner virou CAPA do topo (renderizada acima, atrás da foto).
           if (sec.id === "banner") return null;
+          // "Sobre mim" e "Captura de lead" viraram BLOCOS (Texto e Captura de
+          // contato). Quem já montou no formato novo tem os dois lá, então
+          // desenhar a seção antiga junto mostrava o mesmo card duas vezes.
+          if (blocos.length > 0 && (sec.id === "about" || sec.id === "lead")) return null;
           if (sec.id === "about") {
             if (!settings.about.text && !settings.about.image) return null;
             return (

@@ -260,11 +260,17 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
 
     case "texto": {
       const t = txt(data, "texto");
-      if (!t.trim()) return null;
+      const foto = txt(data, "imagem");
+      if (!t.trim() && !foto) return null;
+      /* A foto entra colada no topo, sem respiro em volta: é o desenho que o
+         "Sobre mim" antigo tinha, e é de lá que a maioria destes blocos veio. */
       return (
-        <CartaoBase visual={visual} className="p-4">
-          <TituloCartao>{txt(data, "titulo")}</TituloCartao>
-          <TextoRico texto={t} className={cn("text-[14px] leading-relaxed", visual.cardColor ? "opacity-90" : "text-gray-700")} />
+        <CartaoBase visual={visual} className={foto ? "overflow-hidden" : "p-4"}>
+          {foto && <img src={foto} alt="" loading="lazy" className="w-full max-h-56 object-cover" />}
+          <div className={foto ? "p-4" : ""}>
+            <TituloCartao>{txt(data, "titulo")}</TituloCartao>
+            <TextoRico texto={t} className={cn("text-[14px] leading-relaxed", visual.cardColor ? "opacity-90" : "text-gray-700")} />
+          </div>
         </CartaoBase>
       );
     }

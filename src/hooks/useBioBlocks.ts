@@ -115,7 +115,11 @@ export function useBioBlocks(estilo: EstiloBio) {
       const b = blocos.find((x) => x.id === id);
       if (!b || !userId) throw new Error("Bloco não encontrado");
       const copia = { ...(b.data as DadosBloco) };
-      delete copia.de_bio_link;   // a marca de origem não se herda
+      // A marca de origem não se herda: a cópia é um bloco novo, não a mesma
+      // seção antiga aparecendo de novo. Se herdasse, a migration acharia que
+      // já converteu tudo e pularia quem faltava.
+      delete copia.de_bio_link;
+      delete copia.de_bio_settings;
       const { error } = await sbFrom("bio_blocks").insert({
         user_id: userId, page_id: pageId, estilo, kind: b.kind,
         data: copia, position: blocos.length, is_active: false,

@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Copy, ExternalLink, Pencil } from "lucide-react";
+import {
+  BookOpen, Copy, ExternalLink, MessageSquare, Palette, Pencil, ShoppingBag,
+  Target, UserRound, type LucideIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { CrmClient } from "@/hooks/useCrm";
@@ -20,12 +23,13 @@ import { cn } from "@/lib/utils";
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type Campo = { chave: string; rotulo: string };
-type Grupo = { titulo: string; explica: string; campos: Campo[] };
+type Grupo = { titulo: string; explica: string; Icone: LucideIcon; campos: Campo[] };
 
 const GRUPOS: Grupo[] = [
   {
     titulo: "Estratégia",
     explica: "O norte. Se o post não serve a isso, ele não deveria existir.",
+    Icone: Target,
     campos: [
       { chave: "mainGoal", rotulo: "Meta principal" },
       { chave: "bigIdea", rotulo: "A Big Idea" },
@@ -37,6 +41,7 @@ const GRUPOS: Grupo[] = [
   {
     titulo: "O que vende e pra quem",
     explica: "O que entra no conteúdo e quem precisa ouvir.",
+    Icone: ShoppingBag,
     campos: [
       { chave: "offer", rotulo: "O que a marca vende" },
       { chave: "mainProducts", rotulo: "Produtos e serviços" },
@@ -50,6 +55,7 @@ const GRUPOS: Grupo[] = [
   {
     titulo: "Como falar",
     explica: "O jeito de escrever de todo post daqui pra frente.",
+    Icone: MessageSquare,
     campos: [
       { chave: "toneOfVoice", rotulo: "Tom de voz" },
       { chave: "archetype", rotulo: "Arquétipo" },
@@ -61,6 +67,7 @@ const GRUPOS: Grupo[] = [
   {
     titulo: "Visual",
     explica: "Cores, fontes e direção de arte.",
+    Icone: Palette,
     campos: [
       { chave: "colorPalette", rotulo: "Paleta" },
       { chave: "typography", rotulo: "Tipografia" },
@@ -70,6 +77,7 @@ const GRUPOS: Grupo[] = [
   {
     titulo: "História",
     explica: "É daqui que sai o conteúdo que ninguém copia.",
+    Icone: BookOpen,
     campos: [
       { chave: "history", rotulo: "Como a empresa nasceu" },
       { chave: "brandValues", rotulo: "Valores" },
@@ -198,10 +206,18 @@ export function BrandbookDoCrm({ client }: { client: CrmClient }) {
           </Button>
         </div>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
+        // columns: os cards têm alturas bem diferentes (Estratégia é curto,
+        // História é longo). Em grade, um card curto deixa um buraco enorme do
+        // lado; em colunas de alvenaria eles se encaixam.
+        <div className="gap-3 [column-fill:_balance] sm:columns-2 xl:columns-3 [&>div]:mb-3 [&>div]:break-inside-avoid">
           {gruposCheios.map((g) => (
-            <div key={g.titulo} className="rounded-2xl border border-border bg-card p-4">
-              <p className="font-display font-semibold text-foreground">{g.titulo}</p>
+            <div key={g.titulo} className="bg-card border border-border rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="h-8 w-8 rounded-xl bg-primary/10 grid place-items-center shrink-0">
+                  <g.Icone className="h-4 w-4 text-primary" />
+                </div>
+                <p className="text-sm font-display font-bold text-foreground">{g.titulo}</p>
+              </div>
               <p className="text-[11.5px] font-body text-muted-foreground mb-3">{g.explica}</p>
               <div className="space-y-3">
                 {g.campos.map((c) => <Item key={c.chave} rotulo={c.rotulo} valor={bc[c.chave]} />)}
@@ -211,10 +227,15 @@ export function BrandbookDoCrm({ client }: { client: CrmClient }) {
 
           {personasCheias.map((p, i) => (
             <div key={i} className={cn("rounded-2xl border border-primary/25 bg-primary/[0.03] p-4",
-              personasCheias.length === 1 && gruposCheios.length % 2 === 0 && "lg:col-span-2")}>
-              <p className="font-display font-semibold text-foreground">
-                Persona{personasCheias.length > 1 ? ` ${i + 1}` : ""}
-              </p>
+              )}>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="h-8 w-8 rounded-xl bg-primary/15 grid place-items-center shrink-0">
+                  <UserRound className="h-4 w-4 text-primary" />
+                </div>
+                <p className="text-sm font-display font-bold text-foreground">
+                  Persona{personasCheias.length > 1 ? ` ${i + 1}` : ""}
+                </p>
+              </div>
               <p className="text-[11.5px] font-body text-muted-foreground mb-3">
                 Pra quem cada post está falando. É o que separa conteúdo que conversa de conteúdo que anuncia.
               </p>

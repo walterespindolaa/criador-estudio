@@ -452,7 +452,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
     route: "/app/linkinbio",
     title: "Link in bio",
     valueProp:
-      "Sua vitrine oficial: uma página com seus links, produtos e destaques pra colocar na bio. Feita no CRIA, com a sua identidade, sem pagar mais uma assinatura de Linktree.",
+      "Sua página oficial: links, produtos e destaques num endereço só pra colocar na bio. Feita no CRIA, com a sua identidade, sem pagar mais uma assinatura de Linktree.",
     benefits: [
       "Página de links com a cara da sua marca",
       "Atualize na hora, sem depender de ninguém",
@@ -461,19 +461,31 @@ export const TOURS_CRIADOR: TourConfig[] = [
     steps: [
       {
         target: '[data-tour="bio-estilo"]',
-        title: "Escolha o estilo",
-        body: "Clássico é a lista de links direta ao ponto. Vitrine mostra serviços e produtos como uma lojinha. Trocar de estilo não apaga nada: cada um guarda o próprio conteúdo. E é aqui que você salva.",
+        title: "Passo 1: o estilo",
+        body: "Clássico é a lista de links direta ao ponto. Site é uma página de apresentação, com seções, produtos e blog. Trocar não apaga nada: cada um guarda o próprio conteúdo. E é aqui que você salva.",
         placement: "bottom",
       },
       {
+        target: '[data-tour="bio-conteudo"]',
+        title: "Passo 2: o conteúdo",
+        body: "Cada pedaço da página é um bloco: link, texto, vídeo, mapa, formulário de contato. Escolha um modelo pronto pra começar, ou vá adicionando bloco a bloco e arrastando pra ordenar.",
+        placement: "top",
+      },
+      {
+        target: '[data-tour="bio-aparencia"]',
+        title: "Passo 3: a sua cara",
+        body: "Foto, nome, cores, fonte e fundo. O que você ajusta aqui vale nos dois estilos, então não precisa configurar duas vezes.",
+        placement: "top",
+      },
+      {
         target: '[data-tour="bio-link"]',
-        title: "Seu endereço público",
+        title: "Passo 4: seu endereço público",
         body: "Escolha seu nome no link e copie pra colar na bio do Instagram. Editou a página depois? O link continua o mesmo, sempre atualizado.",
         placement: "bottom",
       },
       {
         target: '[data-tour="bio-desempenho"]',
-        title: "Visitas e cliques",
+        title: "Passo 5: visitas e cliques",
         body: "Quantas pessoas visitaram sua página e o que mais clicaram. É como você descobre qual link merece o topo.",
         placement: "top",
       },

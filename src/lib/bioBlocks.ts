@@ -79,8 +79,8 @@ export const BLOCOS: MetaBloco[] = [
   },
   {
     tipo: "texto", nome: "Texto", Icone: AlignLeft,
-    explica: "Um parágrafo livre entre os botões.",
-    padrao: { titulo: "", texto: "" },
+    explica: "Um parágrafo livre entre os botões, com foto se quiser.",
+    padrao: { titulo: "", texto: "", imagem: "" },
   },
   {
     tipo: "video", nome: "Vídeo", Icone: PlayCircle,
@@ -193,7 +193,7 @@ export function resumoDoBloco(b: { kind: string; data: DadosBloco }): string {
   switch (b.kind) {
     case "link": return txt(d, "url") || "sem endereço ainda";
     case "whatsapp": return txt(d, "telefone") || "sem telefone ainda";
-    case "texto": return txt(d, "texto").slice(0, 60) || "sem texto ainda";
+    case "texto": return txt(d, "texto").slice(0, 60) || (txt(d, "imagem") ? "só a foto" : "sem texto ainda");
     case "video": return txt(d, "url") || "sem vídeo ainda";
     case "galeria": return `${lista(d, "imagens").length} foto(s)`;
     case "faq": return `${lista(d, "itens").length} pergunta(s)`;
@@ -220,7 +220,7 @@ export function faltaNoBloco(b: { kind: string; data: DadosBloco }): string | nu
     case "galeria": return lista(d, "imagens").length ? null : "nenhuma foto";
     case "contagem": return txt(d, "ate").trim() ? null : "falta a data";
     case "mapa": return txt(d, "endereco").trim() ? null : "falta o endereço";
-    case "texto": return txt(d, "texto").trim() ? null : "falta o texto";
+    case "texto": return (txt(d, "texto").trim() || txt(d, "imagem").trim()) ? null : "falta o texto";
     case "capa": return txt(d, "titulo").trim() ? null : "falta o título";
     case "sobre": return txt(d, "texto").trim() ? null : "falta o texto";
     default: return null;

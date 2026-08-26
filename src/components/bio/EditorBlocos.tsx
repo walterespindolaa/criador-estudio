@@ -180,6 +180,9 @@ function FormBloco({ bloco, salvar }: { bloco: BioBloco; salvar: (d: DadosBloco)
             <CampoTextoRico valor={txt(d, "texto")} onChange={(v) => p({ texto: v })} rows={6}
               placeholder="Escreva como você falaria com o cliente." />
           </LinhaCampo>
+          <LinhaCampo label="Foto (opcional)" ajuda="Aparece acima do texto, no topo do card.">
+            <BotaoImagem valor={txt(d, "imagem")} onTroca={(u) => p({ imagem: u })} rotulo="Enviar foto" />
+          </LinhaCampo>
         </div>
       );
 

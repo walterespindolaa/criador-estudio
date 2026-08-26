@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import {
   DragDropContext,
@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { sanitizeUrl } from "@/lib/sanitize";
-import { RichTextInput, renderRichText } from "@/lib/richText";
+import { RichTextInput } from "@/lib/richText";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -55,7 +55,7 @@ import { useBioItems } from "@/hooks/useBioItems";
 import type { AparenciaModelo } from "@/lib/bioTemplates";
 import { PainelDesempenho } from "@/components/bio/PainelDesempenho";
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
-import type { BioBloco } from "@/lib/bioBlocks";
+import type { BioBloco, EstiloBio } from "@/lib/bioBlocks";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { validateUpload } from "@/lib/upload-validation";
@@ -182,12 +182,6 @@ function parseVitrine(raw: unknown): VitrineSettings {
 }
 
 const BIO_SECTION_IDS: BioSectionId[] = ["banner", "about", "links", "lead"];
-const SECTION_LABELS: Record<BioSectionId, string> = {
-  banner: "Banner",
-  about: "Sobre mim",
-  links: "Links",
-  lead: "Captura de lead",
-};
 const DEFAULT_SECTIONS: BioSection[] = [
   { id: "banner", on: false },
   { id: "about", on: false },
@@ -206,6 +200,10 @@ function normalizeSections(raw: unknown): BioSection[] {
     }
   }
   for (const def of DEFAULT_SECTIONS) { if (!seen.has(def.id)) out.push({ ...def }); }
+  /* A seção "links" fica SEMPRE ligada. O interruptor dela era um jeito fácil
+     de esvaziar a própria página sem entender por quê, e com os blocos ela
+     deixou de ser uma seção pra virar o lugar onde a página inteira mora. */
+  for (const s of out) { if (s.id === "links") s.on = true; }
   return out;
 }
 
@@ -617,6 +615,37 @@ const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sbFrom = (table: string) => (supabase as any).from(table);
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   OS PASSOS DO EDITOR
+
+   Antes a tela era uma pilha de nove cards na mesma hierarquia: link público,
+   desempenho, blocos, estrutura, perfil, aparência, leads. Quem abria pela
+   primeira vez não sabia por onde começar, e quem já tinha montado tropeçava
+   nos cards de configuração antes de chegar no conteúdo.
+
+   Agora é a ordem de quem monta de verdade: escolhe o estilo, monta o
+   conteúdo, dá a cara, publica, acompanha. Cada passo é um título numerado
+   com uma frase explicando pra que serve.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function Passo({ n, titulo, explica, marca, children }: {
+  n: number; titulo: string; explica: string; marca?: string; children: ReactNode;
+}) {
+  return (
+    <section data-tour={marca} className="space-y-3">
+      <div className="flex items-start gap-2.5 px-0.5 pt-1">
+        <span className="mt-[1px] h-6 w-6 shrink-0 rounded-full bg-primary text-primary-foreground grid place-items-center text-[12px] font-display font-bold">
+          {n}
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-[15px] font-display font-bold text-foreground leading-tight">{titulo}</h2>
+          <p className="text-[11.5px] font-body text-muted-foreground leading-snug mt-0.5">{explica}</p>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 const LinkInBio = () => {
   const { user } = useAuth();
   const alvo = useBioAlvo();
@@ -715,10 +744,8 @@ const LinkInBio = () => {
   const [appearanceDirty, setAppearanceDirty] = useState(false);
   const [uploadingBg, setUploadingBg] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
-  const [uploadingAbout, setUploadingAbout] = useState(false);
   const [uploadingHeader, setUploadingHeader] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement>(null);
-  const aboutInputRef = useRef<HTMLInputElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -871,15 +898,6 @@ const LinkInBio = () => {
     setUploadingBanner(false);
   };
 
-  const handleAboutImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; e.target.value = "";
-    if (!file || !user) return;
-    setUploadingAbout(true);
-    const url = await uploadBioImage(file, "about");
-    if (url) { setSettings((s) => ({ ...s, about: { ...s.about, image: url } })); setAppearanceDirty(true); }
-    setUploadingAbout(false);
-  };
-
   const handleHeaderAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = "";
     if (!file || !user) return;
@@ -894,79 +912,10 @@ const LinkInBio = () => {
     setAppearanceDirty(true);
   };
 
-  const patchAbout = (patch: Partial<BioAbout>) => {
-    setSettings((s) => ({ ...s, about: { ...s.about, ...patch } }));
-    setAppearanceDirty(true);
-  };
-
-  const patchLead = (patch: Partial<BioLeadForm>) => {
-    setSettings((s) => ({ ...s, lead: { ...s.lead, ...patch } }));
-    setAppearanceDirty(true);
-  };
-
-  // ── Vitrine ──────────────────────────────────
-  const [uploadingCover, setUploadingCover] = useState(false);
-  const coverInputRef = useRef<HTMLInputElement>(null);
-
-  const patchVitrine = (patch: Partial<BioSettings["vitrine"]>) => {
-    setSettings((s) => ({ ...s, vitrine: { ...s.vitrine, ...patch } }));
-    setAppearanceDirty(true);
-  };
-
-  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; e.target.value = "";
-    if (!file || !user) return;
-    setUploadingCover(true);
-    const url = await uploadBioImage(file, "cover");
-    if (url) patchVitrine({ cover: url });
-    setUploadingCover(false);
-  };
-
-  const addService = () => {
-    setSettings((s) => ({ ...s, vitrine: { ...s.vitrine, services: [...s.vitrine.services, { id: genBioId(), title: "", desc: "", image: null, url: "" }] } }));
-    setAppearanceDirty(true);
-  };
-  const updateService = (id: string, patch: Partial<VitrineService>) => {
-    setSettings((s) => ({ ...s, vitrine: { ...s.vitrine, services: s.vitrine.services.map((it) => (it.id === id ? { ...it, ...patch } : it)) } }));
-    setAppearanceDirty(true);
-  };
-  const removeService = (id: string) => {
-    setSettings((s) => ({ ...s, vitrine: { ...s.vitrine, services: s.vitrine.services.filter((it) => it.id !== id) } }));
-    setAppearanceDirty(true);
-  };
-  const moveService = (index: number, dir: -1 | 1) => {
-    setSettings((s) => {
-      const next = [...s.vitrine.services];
-      const j = index + dir;
-      if (j < 0 || j >= next.length) return s;
-      [next[index], next[j]] = [next[j], next[index]];
-      return { ...s, vitrine: { ...s.vitrine, services: next } };
-    });
-    setAppearanceDirty(true);
-  };
-
-  const addProduct = () => {
-    setSettings((s) => ({ ...s, vitrine: { ...s.vitrine, products: [...s.vitrine.products, { id: genBioId(), title: "", desc: "", cover: null, ctaText: "Garanta o seu", url: "" }] } }));
-    setAppearanceDirty(true);
-  };
-  const updateProduct = (id: string, patch: Partial<VitrineProduct>) => {
-    setSettings((s) => ({ ...s, vitrine: { ...s.vitrine, products: s.vitrine.products.map((it) => (it.id === id ? { ...it, ...patch } : it)) } }));
-    setAppearanceDirty(true);
-  };
-  const removeProduct = (id: string) => {
-    setSettings((s) => ({ ...s, vitrine: { ...s.vitrine, products: s.vitrine.products.filter((it) => it.id !== id) } }));
-    setAppearanceDirty(true);
-  };
-  const moveProduct = (index: number, dir: -1 | 1) => {
-    setSettings((s) => {
-      const next = [...s.vitrine.products];
-      const j = index + dir;
-      if (j < 0 || j >= next.length) return s;
-      [next[index], next[j]] = [next[j], next[index]];
-      return { ...s, vitrine: { ...s.vitrine, products: next } };
-    });
-    setAppearanceDirty(true);
-  };
+  /* patchAbout, patchLead e a Vitrine inteira (capa, serviços, produtos) saíram
+     daqui. "Sobre mim" e "Captura de lead" viraram blocos, e a Vitrine virou o
+     modo Site, também montado por blocos. Os dados continuam no bio_settings
+     salvo, mas quem escreve neles agora é o editor de blocos. */
 
   const handleSaveAppearance = async () => {
     const cleanSlug = normalizeSlug(slug);
@@ -1070,21 +1019,16 @@ const LinkInBio = () => {
     setAppearanceDirty(true);
   };
 
-  const toggleSection = (id: BioSectionId) => {
-    setSettings((s) => ({ ...s, sections: s.sections.map((sec) => (sec.id === id ? { ...sec, on: !sec.on } : sec)) }));
-    setAppearanceDirty(true);
-  };
+  /* O card "Estrutura da página" saiu. Ele ligava e ordenava seções fixas
+     (banner, sobre, links, captura) que hoje são BLOCOS: a pessoa liga e
+     arrasta bloco por bloco no passo 2. Ter os dois era pedir pra alguém
+     desligar a seção "links" e não entender por que a página ficou vazia.
+     As seções continuam no objeto salvo pra não quebrar quem já montou. */
 
-  const moveSection = (index: number, dir: -1 | 1) => {
-    setSettings((s) => {
-      const next = [...s.sections];
-      const j = index + dir;
-      if (j < 0 || j >= next.length) return s;
-      [next[index], next[j]] = [next[j], next[index]];
-      return { ...s, sections: next };
-    });
-    setAppearanceDirty(true);
-  };
+  /* Um editor de blocos só, que troca de estilo. O key força remontar: sem
+     ele o formulário aberto de um bloco do Clássico ficava na tela depois de
+     trocar pro Site, mostrando campos de outro bloco. */
+  const estiloBlocos: EstiloBio = settings.layout === "vitrine" ? "site" : "classico";
 
   if (profileLoading || isLoading) return <PageSkeleton />;
 
@@ -1115,30 +1059,19 @@ const LinkInBio = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6">
           {/* ── Editor ──────────────────────────────── */}
           <div className="space-y-5">
-            {/* ── Cabeçalho: seletor de estilo + salvar (fixo no topo) ─────── */}
+            {/* ── 1. Estilo (fixo no topo, junto do Salvar) ───────────────── */}
             <div data-tour="bio-estilo" className="sticky top-0 z-30 rounded-2xl border border-border bg-background/95 backdrop-blur-sm px-4 py-3 shadow-sm">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="inline-flex gap-1 rounded-full border border-border bg-muted/40 p-1">
-                  {([
-                    { id: "classic", label: "Clássico" },
-                    { id: "vitrine", label: "Site" },
-                  ] as { id: BioSettings["layout"]; label: string }[]).map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => patchSettings({ layout: opt.id })}
-                      className={cn(
-                        "px-5 py-1.5 rounded-full text-sm font-display font-semibold transition-colors",
-                        settings.layout === opt.id
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
+              {/* Título e Salvar na mesma linha, seletor embaixo: esta barra é
+                  fixa no topo, e cada linha a mais aqui é uma linha a menos de
+                  conteúdo visível no celular. */}
+              <div className="flex items-center justify-between gap-3 mb-2.5">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="h-6 w-6 shrink-0 rounded-full bg-primary text-primary-foreground grid place-items-center text-[12px] font-display font-bold">
+                    1
+                  </span>
+                  <h2 className="text-[15px] font-display font-bold text-foreground leading-tight truncate">Escolha o estilo</h2>
                 </div>
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2.5 shrink-0">
                   <span
                     className={cn(
                       "text-[11px] font-body hidden sm:inline",
@@ -1162,85 +1095,41 @@ const LinkInBio = () => {
                   </Button>
                 </div>
               </div>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="inline-flex gap-1 rounded-full border border-border bg-muted/40 p-1">
+                  {([
+                    { id: "classic", label: "Clássico" },
+                    { id: "vitrine", label: "Site" },
+                  ] as { id: BioSettings["layout"]; label: string }[]).map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => patchSettings({ layout: opt.id })}
+                      className={cn(
+                        "px-5 py-1.5 rounded-full text-sm font-display font-semibold transition-colors",
+                        settings.layout === opt.id
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <p className="mt-2 text-xs text-muted-foreground">
                 Clássico é a página de bio: coluna de botões, um toque e sai. Site é uma página de apresentação, com seções, produtos e blog. Trocar não apaga nada: cada estilo guarda o seu.
               </p>
             </div>
 
-            {/* ── Compartilhado: link público + desempenho (vale nos dois estilos) ─── */}
-            <Card data-tour="bio-link" className="p-4 md:p-5 rounded-2xl border-border">
-              <Label className="text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground/80">
-                Seu link público
-              </Label>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-sm font-body text-muted-foreground whitespace-nowrap">
-                  criasocialclub.com/bio/
-                </span>
-                <Input
-                  value={slug}
-                  onChange={(e) => {
-                    setSlug(e.target.value);
-                    setAppearanceDirty(true);
-                  }}
-                  placeholder="seu-nome"
-                  className="h-9 rounded-xl"
-                  maxLength={40}
-                />
-                <Button variant="outline" size="sm" onClick={handleCopy} disabled={!publicPath}>
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              {slug.trim() && (
-                <p className="mt-1.5 text-[11px] font-body flex items-center gap-1">
-                  {slugStatus === "checking" && (
-                    <span className="text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> verificando disponibilidade…</span>
-                  )}
-                  {slugStatus === "available" && (
-                    <span className="text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" /> disponível</span>
-                  )}
-                  {slugStatus === "taken" && (
-                    <span className="text-destructive flex items-center gap-1"><X className="h-3 w-3" /> já está em uso, escolha outro</span>
-                  )}
-                </p>
-              )}
-            </Card>
-
-            <Card data-tour="bio-desempenho" className="p-4 md:p-5 rounded-2xl border-border">
-              <PainelDesempenho estilo={settings.layout === "vitrine" ? "site" : "classico"} />
-              {/* Os totais de sempre continuam embaixo: eles somam desde o
-                  primeiro dia, e o painel de cima olha só o período escolhido.
-                  São perguntas diferentes, não uma versão velha da outra. */}
-              <p className="text-[11px] font-body font-semibold uppercase tracking-wider text-muted-foreground mt-5 mb-2">
-                Desde o começo
-              </p>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-muted/40 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-display font-extrabold text-foreground">{bioViews.toLocaleString("pt-BR")}</p>
-                  <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mt-0.5">Visitas</p>
-                </div>
-                <div className="bg-muted/40 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-display font-extrabold text-foreground">{totalClicks.toLocaleString("pt-BR")}</p>
-                  <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mt-0.5">Cliques</p>
-                </div>
-                <div className="bg-muted/40 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-display font-extrabold text-foreground">{conversao}%</p>
-                  <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mt-0.5">Conversão</p>
-                </div>
-              </div>
-              {topLink && (topLink.clicks ?? 0) > 0 && (
-                <p className="text-xs font-body text-muted-foreground mt-3">
-                  Link mais clicado: <span className="font-semibold text-foreground">{topLink.title}</span> · {topLink.clicks} cliques
-                </p>
-              )}
-            </Card>
-
-            {/* ── MODO SITE: seções, serviços e blog ─────────────── */}
-            {settings.layout === "vitrine" && (
-              <>
+            <Passo n={2} titulo="Monte o conteúdo" marca="bio-conteudo"
+              explica="Cada pedaço da página é um bloco: link, texto, vídeo, mapa, formulário. Adicione, arraste pra ordenar e ligue quando estiver pronto.">
               <Card className="p-4 md:p-5 rounded-2xl border-border">
-                <EditorBlocos estilo="site" aoAplicarAparencia={aplicarAparenciaDoModelo} />
+                <EditorBlocos key={estiloBlocos} estilo={estiloBlocos} aoAplicarAparencia={aplicarAparenciaDoModelo} />
               </Card>
 
+              {settings.layout === "vitrine" && (
+                <>
               <Card className="p-4 md:p-5 rounded-2xl border-border">
                 <EditorItens tipo="produto" slugPublico={slug || profile?.bio_slug} />
               </Card>
@@ -1248,20 +1137,89 @@ const LinkInBio = () => {
               <Card className="p-4 md:p-5 rounded-2xl border-border">
                 <EditorItens tipo="post" slugPublico={slug || profile?.bio_slug} />
               </Card>
+                </>
+              )}
 
-              {/* A Vitrine antiga continua abaixo enquanto quem montou nela não
-                  migrar. Some sozinha quando a página passa a ter seções. */}
-              {/* Identidade do Site (nome e bio compartilhados) */}
+              {settings.layout === "classic" && blocosClassico.length === 0 && sortedLinks.length > 0 && (
+              <Card className="p-4 md:p-5 rounded-2xl border-border">
+                <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+                  <h2 className="font-display font-semibold text-foreground">Seus links</h2>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handleAddHeader}>
+                      <TypeIcon className="h-4 w-4 mr-1" /> Título
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={handleAddLink}>
+                      <Plus className="h-4 w-4 mr-1" /> Link
+                    </Button>
+                  </div>
+                </div>
+
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="bio-links">
+                    {(provided) => (
+                      <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2">
+                        {sortedLinks.map((link, index) => (
+                          <Draggable key={link.id} draggableId={link.id} index={index}>
+                            {(prov, snapshot) => (
+                              <LinkCard
+                                link={link}
+                                maxClicks={maxClicks}
+                                provided={prov}
+                                isDragging={snapshot.isDragging}
+                                onUpdate={handleUpdate}
+                                onDelete={handleDelete}
+                                userId={user?.id}
+                              />
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+                <p className="text-[11px] font-body text-muted-foreground mt-3">
+                  Estes são os botões do formato antigo. Eles já viraram blocos lá em cima: edite por lá. Esta lista
+                  some sozinha assim que você mexer no primeiro bloco.
+                </p>
+              </Card>
+              )}
+            </Passo>
+
+            <Passo n={3} titulo="Deixe com a sua cara" marca="bio-aparencia"
+              explica="Foto, nome, cores e fonte. O que você ajustar aqui vale nos dois estilos: o Clássico e o Site usam a mesma identidade.">
+              {/* ── Perfil (topo) ──────────────────────── */}
               <Card className="p-4 md:p-5 rounded-2xl border-border space-y-3">
                 <div>
-                  <h2 className="font-display font-semibold text-foreground mb-1">Identidade</h2>
-                  <p className="text-xs text-muted-foreground">Nome e bio que aparecem no seu Site. Deixe em branco para usar os dados do seu perfil.</p>
+                  <h2 className="font-display font-semibold text-foreground mb-1">Quem aparece no topo</h2>
+                  <p className="text-xs text-muted-foreground">Foto, nome e bio que abrem a página, nos dois estilos. Deixe em branco pra usar o que já está no seu perfil.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-16 rounded-full overflow-hidden border border-border bg-muted shrink-0 flex items-center justify-center">
+                    {(settings.header.avatar || profile?.avatar_url) ? (
+                      <img src={settings.header.avatar || profile?.avatar_url || ""} alt="" loading="lazy" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-muted-foreground font-display font-bold text-xl">{(settings.header.name || profile?.name || "C").charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <input ref={headerInputRef} type="file" accept="image/*" className="hidden" onChange={handleHeaderAvatarUpload} />
+                    <Button type="button" variant="outline" size="sm" disabled={uploadingHeader} onClick={() => headerInputRef.current?.click()}>
+                      <ImagePlus className="h-4 w-4 mr-2" />
+                      {uploadingHeader ? "Enviando..." : "Trocar foto"}
+                    </Button>
+                    {settings.header.avatar && (
+                      <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => patchHeader({ avatar: "" })}>
+                        <Trash2 className="h-4 w-4 mr-2" /> Remover
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <input value={settings.header.name} onChange={(e) => patchHeader({ name: e.target.value })} placeholder={profile?.name || "Seu nome"} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
                 <RichTextInput value={settings.header.bio} onChange={(v) => patchHeader({ bio: v })} placeholder={profile?.bio || "Escreva uma bio curta"} rows={3} />
               </Card>
 
-              {/* Aparência do Site (fonte, fundo e redes compartilhados) */}
+              {/* ── Appearance ─────────────────────────── */}
               <Card className="p-4 md:p-5 rounded-2xl border-border space-y-6">
                 <h2 className="font-display font-semibold text-foreground">Aparência</h2>
 
@@ -1300,7 +1258,57 @@ const LinkInBio = () => {
                   </div>
                 </div>
 
-                {/* Fundo */}
+                {/* Themes (presets) */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-display font-semibold">Temas</Label>
+                  <p className="text-xs text-muted-foreground -mt-1">
+                    Aplica fundo, cor e estilo dos botões de uma vez.
+                  </p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {BIO_THEMES.map((theme) => {
+                      const previewBg = theme.bgGradient
+                        ? { backgroundImage: theme.bgGradient }
+                        : { backgroundColor: theme.bg };
+                      return (
+                        <button
+                          key={theme.key}
+                          type="button"
+                          onClick={() => applyTheme(theme)}
+                          className="group flex flex-col items-center gap-1 text-center"
+                        >
+                          <div
+                            className="w-full aspect-[3/5] rounded-lg border border-border overflow-hidden p-2 flex flex-col justify-center gap-1 transition-all group-hover:border-primary/40 group-hover:shadow-md"
+                            style={previewBg}
+                          >
+                            {[0, 1, 2].map((i) => (
+                              <div
+                                key={i}
+                                className={cn(
+                                  "h-1.5 w-full",
+                                  theme.buttonStyle === "pill" && "rounded-full",
+                                  theme.buttonStyle === "rounded" && "rounded-md",
+                                  theme.buttonStyle === "square" && "rounded-sm",
+                                  theme.buttonStyle === "outline" && "rounded-md border"
+                                )}
+                                style={{
+                                  backgroundColor:
+                                    theme.buttonStyle === "outline" ? "transparent" : theme.buttonColor,
+                                  borderColor:
+                                    theme.buttonStyle === "outline" ? theme.buttonTextColor : undefined,
+                                }}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-[10px] font-body font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                            {theme.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Background */}
                 <div className="space-y-3 pt-4 border-t border-border">
                   <Label className="text-sm font-display font-semibold">Fundo</Label>
                   <p className="text-xs text-muted-foreground -mt-1">
@@ -1406,7 +1414,69 @@ const LinkInBio = () => {
                   )}
                 </div>
 
-                {/* Redes sociais */}
+                {/* Button style */}
+                <div className="space-y-3 pt-4 border-t border-border">
+                  <Label className="text-sm font-display font-semibold">Estilo dos links</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {BUTTON_STYLES.map((s) => (
+                      <button
+                        key={s.key}
+                        type="button"
+                        onClick={() => patchSettings({ buttonStyle: s.key })}
+                        className={cn(
+                          "px-3 py-2 text-xs font-body border transition-all",
+                          s.radius,
+                          s.key === "outline" && "border-2 bg-transparent",
+                          settings.buttonStyle === s.key
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-card text-foreground border-border hover:border-primary/30"
+                        )}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-4 pt-1 flex-wrap">
+                    <ColorField
+                      value={settings.buttonColor}
+                      onChange={(v) => patchSettings({ buttonColor: v })}
+                      label="Cor do botão"
+                    />
+                    <ColorField
+                      value={settings.buttonTextColor}
+                      onChange={(v) => patchSettings({ buttonTextColor: v })}
+                      label="Cor do texto"
+                    />
+                  </div>
+
+                  {/* Cor dos CARDS: Sobre mim e Captura de lead eram brancos fixos e
+                      não seguiam a identidade da pessoa. Vazio = branco de antes. */}
+                  <div className="pt-2">
+                    <Label className="text-sm font-display font-semibold">Cards (blocos de texto e de contato)</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">Deixe vazio pra manter o card branco.</p>
+                    <div className="flex gap-4 pt-2 flex-wrap items-end">
+                      <ColorField
+                        value={settings.cardColor || "#FFFFFF"}
+                        onChange={(v) => patchSettings({ cardColor: v })}
+                        label="Cor do card"
+                      />
+                      <ColorField
+                        value={settings.cardTextColor || "#1F2937"}
+                        onChange={(v) => patchSettings({ cardTextColor: v })}
+                        label="Cor do texto do card"
+                      />
+                      {settings.cardColor && (
+                        <Button type="button" variant="ghost" size="sm" className="h-9"
+                          onClick={() => patchSettings({ cardColor: "", cardTextColor: "" })}>
+                          Voltar ao branco
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Social links */}
                 <div className="space-y-3 pt-4 border-t border-border">
                   <Label className="text-sm font-display font-semibold">Redes sociais</Label>
                   <p className="text-xs text-muted-foreground">Os ícones aparecem no topo da sua página.</p>
@@ -1426,518 +1496,163 @@ const LinkInBio = () => {
                   </div>
                 </div>
 
-                <Button onClick={handleSaveAppearance} disabled={!appearanceDirty || isSavingAppearance} className="w-full" variant="hero">
+                {/* Banner
+                    Só no Clássico: no modo Site quem faz esse papel é o bloco
+                    "Capa", que já tem título e botão junto. Mostrar aqui no
+                    Site seria oferecer um controle que não muda nada na tela. */}
+                {settings.layout === "classic" && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-display font-semibold">Banner</Label>
+                  <p className="text-xs text-muted-foreground -mt-1">Imagem larga no topo da página. Ela fica atrás da sua foto, como capa de perfil, e aparece assim que você envia.</p>
+                  {settings.bannerImage ? (
+                    <div className="relative rounded-xl overflow-hidden border border-border">
+                      <img src={settings.bannerImage} alt="Banner" loading="lazy" className="w-full h-24 object-cover" />
+                      <button type="button" onClick={() => patchSettings({ bannerImage: null })} className="absolute top-1.5 right-1.5 bg-background/90 rounded-full p-1 shadow">
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </button>
+                    </div>
+                  ) : null}
+                  <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
+                  <Button type="button" variant="outline" size="sm" disabled={uploadingBanner} onClick={() => bannerInputRef.current?.click()}>
+                    <ImagePlus className="h-4 w-4 mr-2" />
+                    {uploadingBanner ? "Enviando..." : settings.bannerImage ? "Trocar banner" : "Enviar banner"}
+                  </Button>
+                </div>
+                )}
+
+                {/* "Sobre mim" e "Captura de lead" saíram daqui: os dois viraram
+                    BLOCOS (Texto e Captura de contato), montados junto com o resto
+                    da página. Ter os mesmos campos em dois lugares fazia a pessoa
+                    editar num e não ver mudança no outro. */}
+
+                <Button
+                  onClick={handleSaveAppearance}
+                  disabled={!appearanceDirty || isSavingAppearance}
+                  className="w-full"
+                  variant="hero"
+                >
                   <Save className="h-4 w-4 mr-2" />
                   {isSavingAppearance ? "Salvando..." : "Salvar alterações"}
                 </Button>
               </Card>
-              </>
-            )}
+            </Passo>
 
-            {settings.layout === "classic" && (
-              <>
-            <Card className="p-4 md:p-5 rounded-2xl border-border">
-              <EditorBlocos estilo="classico" aoAplicarAparencia={aplicarAparenciaDoModelo} />
-            </Card>
-
-            {blocosClassico.length === 0 && sortedLinks.length > 0 && (
-            <Card className="p-4 md:p-5 rounded-2xl border-border">
-              <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-                <h2 className="font-display font-semibold text-foreground">Seus links</h2>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handleAddHeader}>
-                    <TypeIcon className="h-4 w-4 mr-1" /> Título
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={handleAddLink}>
-                    <Plus className="h-4 w-4 mr-1" /> Link
+            <Passo n={4} titulo="Publique e divulgue"
+              explica="Este é o endereço que você cola na bio do Instagram. Escolha um nome curto e fácil de digitar.">
+              <Card data-tour="bio-link" className="p-4 md:p-5 rounded-2xl border-border">
+                <Label className="text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground/80">
+                  Seu link público
+                </Label>
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-sm font-body text-muted-foreground whitespace-nowrap">
+                    criasocialclub.com/bio/
+                  </span>
+                  <Input
+                    value={slug}
+                    onChange={(e) => {
+                      setSlug(e.target.value);
+                      setAppearanceDirty(true);
+                    }}
+                    placeholder="seu-nome"
+                    className="h-9 rounded-xl"
+                    maxLength={40}
+                  />
+                  <Button variant="outline" size="sm" onClick={handleCopy} disabled={!publicPath}>
+                    <Copy className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-              </div>
-
-              {sortedLinks.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border bg-muted/30 p-5 text-center">
-                  <p className="text-sm font-display font-semibold text-foreground">Adicione seu primeiro link</p>
-                  <p className="mt-1 mb-3 text-xs text-muted-foreground font-body">
-                    Links levam seus seguidores pra onde importa: loja, WhatsApp, agenda, seus conteúdos.
+                {/* No topo da tela este botão some no celular, e é justamente no
+                    celular que a pessoa quer conferir a página antes de colar
+                    o link. Aqui ele fica junto do endereço, sempre visível. */}
+                {publicPath && (
+                  <a href={publicPath} target="_blank" rel="noopener noreferrer" className="mt-2.5 inline-flex">
+                    <Button variant="outline" size="sm">
+                      <ExternalLink className="h-4 w-4 mr-1.5" /> Abrir a página pública
+                    </Button>
+                  </a>
+                )}
+                {slug.trim() && (
+                  <p className="mt-1.5 text-[11px] font-body flex items-center gap-1">
+                    {slugStatus === "checking" && (
+                      <span className="text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> verificando disponibilidade…</span>
+                    )}
+                    {slugStatus === "available" && (
+                      <span className="text-emerald-600 flex items-center gap-1"><Check className="h-3 w-3" /> disponível</span>
+                    )}
+                    {slugStatus === "taken" && (
+                      <span className="text-destructive flex items-center gap-1"><X className="h-3 w-3" /> já está em uso, escolha outro</span>
+                    )}
                   </p>
-                  <div className="flex justify-center gap-2">
-                    <Button variant="hero" size="sm" onClick={handleAddLink}>
-                      <Plus className="h-4 w-4 mr-1" /> Adicionar link
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={handleAddHeader}>
-                      <TypeIcon className="h-4 w-4 mr-1" /> Título
-                    </Button>
+                )}
+              </Card>
+            </Passo>
+
+            <Passo n={5} titulo="Acompanhe os resultados"
+              explica="Quantos entraram, no que clicaram e quem deixou contato.">
+              <Card data-tour="bio-desempenho" className="p-4 md:p-5 rounded-2xl border-border">
+                <PainelDesempenho estilo={estiloBlocos} />
+                {/* Os totais de sempre continuam embaixo: eles somam desde o
+                    primeiro dia, e o painel de cima olha só o período escolhido.
+                    São perguntas diferentes, não uma versão velha da outra. */}
+                <p className="text-[11px] font-body font-semibold uppercase tracking-wider text-muted-foreground mt-5 mb-2">
+                  Desde o começo
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-muted/40 rounded-xl p-3 text-center">
+                    <p className="text-2xl font-display font-extrabold text-foreground">{bioViews.toLocaleString("pt-BR")}</p>
+                    <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mt-0.5">Visitas</p>
+                  </div>
+                  <div className="bg-muted/40 rounded-xl p-3 text-center">
+                    <p className="text-2xl font-display font-extrabold text-foreground">{totalClicks.toLocaleString("pt-BR")}</p>
+                    <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mt-0.5">Cliques</p>
+                  </div>
+                  <div className="bg-muted/40 rounded-xl p-3 text-center">
+                    <p className="text-2xl font-display font-extrabold text-foreground">{conversao}%</p>
+                    <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide mt-0.5">Conversão</p>
                   </div>
                 </div>
-              ) : (
-                <DragDropContext onDragEnd={handleDragEnd}>
-                  <Droppable droppableId="bio-links">
-                    {(provided) => (
-                      <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2">
-                        {sortedLinks.map((link, index) => (
-                          <Draggable key={link.id} draggableId={link.id} index={index}>
-                            {(prov, snapshot) => (
-                              <LinkCard
-                                link={link}
-                                maxClicks={maxClicks}
-                                provided={prov}
-                                isDragging={snapshot.isDragging}
-                                onUpdate={handleUpdate}
-                                onDelete={handleDelete}
-                                userId={user?.id}
-                              />
-                            )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
-                      </div>
-                    )}
-                  </Droppable>
-                </DragDropContext>
-              )}
-              <p className="text-[11px] font-body text-muted-foreground mt-3">
-                Estes são os botões do formato antigo. Quando a atualização dos blocos entrar, eles viram blocos
-                sozinhos e esta lista some.
-              </p>
-            </Card>
-            )}
+                {topLink && (topLink.clicks ?? 0) > 0 && (
+                  <p className="text-xs font-body text-muted-foreground mt-3">
+                    Link mais clicado: <span className="font-semibold text-foreground">{topLink.title}</span> · {topLink.clicks} cliques
+                  </p>
+                )}
+              </Card>
 
-            {/* ── Estrutura / Seções ─────────────────── */}
-            <Card className="p-4 md:p-5 rounded-2xl border-border">
-              <h2 className="font-display font-semibold text-foreground mb-1">Estrutura da página</h2>
-              <p className="text-xs text-muted-foreground mb-4">Ligue/desligue e ordene as seções da sua página pública.</p>
-              <div className="space-y-2">
-                {settings.sections.map((sec, i) => (
-                  <div key={sec.id} className="flex items-center gap-3 rounded-xl border border-border bg-background px-3 py-2">
-                    <div className="flex flex-col -my-1">
-                      <button type="button" aria-label="Subir" onClick={() => moveSection(i, -1)} disabled={i === 0} className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
-                        <ChevronUp className="w-4 h-4" />
-                      </button>
-                      <button type="button" aria-label="Descer" onClick={() => moveSection(i, 1)} disabled={i === settings.sections.length - 1} className="text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors">
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <span className="flex-1 text-sm font-medium text-foreground">{SECTION_LABELS[sec.id]}</span>
-                    <Switch checked={sec.on} onCheckedChange={() => toggleSection(sec.id)} />
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            {/* ── Perfil (topo) ──────────────────────── */}
-            <Card className="p-4 md:p-5 rounded-2xl border-border space-y-3">
-              <div>
-                <h2 className="font-display font-semibold text-foreground mb-1">Perfil (topo)</h2>
-                <p className="text-xs text-muted-foreground">Foto, nome e bio do topo. Deixe em branco para usar os dados do seu perfil.</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-16 h-16 rounded-full overflow-hidden border border-border bg-muted shrink-0 flex items-center justify-center">
-                  {(settings.header.avatar || profile?.avatar_url) ? (
-                    <img src={settings.header.avatar || profile?.avatar_url || ""} alt="" loading="lazy" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-muted-foreground font-display font-bold text-xl">{(settings.header.name || profile?.name || "C").charAt(0).toUpperCase()}</span>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <input ref={headerInputRef} type="file" accept="image/*" className="hidden" onChange={handleHeaderAvatarUpload} />
-                  <Button type="button" variant="outline" size="sm" disabled={uploadingHeader} onClick={() => headerInputRef.current?.click()}>
-                    <ImagePlus className="h-4 w-4 mr-2" />
-                    {uploadingHeader ? "Enviando..." : "Trocar foto"}
-                  </Button>
-                  {settings.header.avatar && (
-                    <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => patchHeader({ avatar: "" })}>
-                      <Trash2 className="h-4 w-4 mr-2" /> Remover
+              {/* ── Leads capturados ──────────────────── */}
+              <Card className="p-4 md:p-5 rounded-2xl border-border">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-display font-semibold text-foreground">
+                    Leads capturados {leads.length > 0 && <span className="text-muted-foreground font-normal">({leads.length})</span>}
+                  </h2>
+                  {leads.length > 0 && (
+                    <Button type="button" variant="outline" size="sm" onClick={exportLeadsCsv}>
+                      <Download className="h-4 w-4 mr-2" /> CSV
                     </Button>
                   )}
                 </div>
-              </div>
-              <input value={settings.header.name} onChange={(e) => patchHeader({ name: e.target.value })} placeholder={profile?.name || "Seu nome"} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-              <RichTextInput value={settings.header.bio} onChange={(v) => patchHeader({ bio: v })} placeholder={profile?.bio || "Escreva uma bio curta"} rows={3} />
-            </Card>
-
-            {/* ── Appearance ─────────────────────────── */}
-            <Card className="p-4 md:p-5 rounded-2xl border-border space-y-6">
-              <h2 className="font-display font-semibold text-foreground">Aparência</h2>
-
-              {/* Fonte */}
-              <div className="space-y-3">
-                <Label className="text-sm font-display font-semibold">Fonte</Label>
-                <p className="text-xs text-muted-foreground -mt-1">
-                  Muda a fonte da sua página pública (vale nos dois estilos). Cada opção mostra uma amostra.
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => patchSettings({ fontFamily: "" })}
-                    className={cn(
-                      "rounded-xl border px-3 py-2 text-left transition-colors",
-                      settings.fontFamily === "" ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
-                    )}
-                  >
-                    <span className="block text-sm font-semibold text-foreground">Padrão</span>
-                    <span className="block text-[11px] text-muted-foreground">Visual atual</span>
-                  </button>
-                  {BIO_FONTS.map((f) => (
-                    <button
-                      key={f.value}
-                      type="button"
-                      onClick={() => patchSettings({ fontFamily: f.value })}
-                      className={cn(
-                        "rounded-xl border px-3 py-2 text-left transition-colors",
-                        settings.fontFamily === f.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
-                      )}
-                    >
-                      <span className="block text-sm text-foreground leading-tight" style={{ fontFamily: f.stack }}>{f.label}</span>
-                      <span className="block text-[11px] text-muted-foreground" style={{ fontFamily: f.stack }}>Ag Bço 123</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Themes (presets) */}
-              <div className="space-y-3">
-                <Label className="text-sm font-display font-semibold">Temas</Label>
-                <p className="text-xs text-muted-foreground -mt-1">
-                  Aplica fundo, cor e estilo dos botões de uma vez.
-                </p>
-                <div className="grid grid-cols-4 gap-2">
-                  {BIO_THEMES.map((theme) => {
-                    const previewBg = theme.bgGradient
-                      ? { backgroundImage: theme.bgGradient }
-                      : { backgroundColor: theme.bg };
-                    return (
-                      <button
-                        key={theme.key}
-                        type="button"
-                        onClick={() => applyTheme(theme)}
-                        className="group flex flex-col items-center gap-1 text-center"
-                      >
-                        <div
-                          className="w-full aspect-[3/5] rounded-lg border border-border overflow-hidden p-2 flex flex-col justify-center gap-1 transition-all group-hover:border-primary/40 group-hover:shadow-md"
-                          style={previewBg}
-                        >
-                          {[0, 1, 2].map((i) => (
-                            <div
-                              key={i}
-                              className={cn(
-                                "h-1.5 w-full",
-                                theme.buttonStyle === "pill" && "rounded-full",
-                                theme.buttonStyle === "rounded" && "rounded-md",
-                                theme.buttonStyle === "square" && "rounded-sm",
-                                theme.buttonStyle === "outline" && "rounded-md border"
-                              )}
-                              style={{
-                                backgroundColor:
-                                  theme.buttonStyle === "outline" ? "transparent" : theme.buttonColor,
-                                borderColor:
-                                  theme.buttonStyle === "outline" ? theme.buttonTextColor : undefined,
-                              }}
-                            />
-                          ))}
+                {leadsLoading ? (
+                  <p className="text-sm text-muted-foreground">Carregando...</p>
+                ) : leads.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum lead ainda. Adicione um bloco de "Captura de contato" no passo 2 pra começar a coletar.</p>
+                ) : (
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {leads.map((ld) => (
+                      <div key={ld.id} className="flex items-start justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2">
+                        <div className="min-w-0">
+                          {ld.name && <p className="text-sm font-medium text-foreground truncate">{ld.name}</p>}
+                          {ld.email && <p className="text-xs text-muted-foreground truncate">{ld.email}</p>}
+                          {ld.phone && <p className="text-xs text-muted-foreground truncate">{ld.phone}</p>}
+                          <p className="text-[11px] text-muted-foreground/70 mt-0.5">{new Date(ld.created_at).toLocaleDateString("pt-BR")}</p>
                         </div>
-                        <span className="text-[10px] font-body font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                          {theme.label}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Background */}
-              <div className="space-y-3 pt-4 border-t border-border">
-                <Label className="text-sm font-display font-semibold">Fundo</Label>
-                <p className="text-xs text-muted-foreground -mt-1">
-                  Escolha cor sólida, gradiente ou imagem de fundo. Vale nos dois estilos (Clássico e Site).
-                </p>
-                <div className="flex gap-2 flex-wrap">
-                  {([
-                    { id: "color", label: "Cor sólida" },
-                    { id: "gradient", label: "Gradiente" },
-                    { id: "image", label: "Imagem" },
-                  ] as { id: BgType; label: string }[]).map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => patchSettings({ bgType: t.id })}
-                      className={cn(
-                        "px-3 py-1.5 rounded-full text-xs font-body border transition-colors",
-                        settings.bgType === t.id
-                          ? "bg-primary/10 text-primary border-primary/30"
-                          : "bg-card text-muted-foreground border-border hover:text-foreground"
-                      )}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-
-                {settings.bgType === "color" && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {BG_COLOR_PRESETS.map((c) => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => patchSettings({ bgColor: c })}
-                          className={cn(
-                            "w-8 h-8 rounded-full border-2 transition-all",
-                            settings.bgColor.toLowerCase() === c.toLowerCase()
-                              ? "border-primary ring-2 ring-primary/20 scale-110"
-                              : "border-border"
-                          )}
-                          style={{ backgroundColor: c }}
-                          aria-label={`Cor ${c}`}
-                        />
-                      ))}
-                    </div>
-                    <ColorField
-                      value={settings.bgColor}
-                      onChange={(v) => patchSettings({ bgColor: v })}
-                      label="Cor personalizada (qualquer cor)"
-                    />
-                  </div>
-                )}
-
-                {settings.bgType === "gradient" && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {GRADIENT_PRESETS.map((g) => (
-                      <button
-                        key={g.id}
-                        type="button"
-                        onClick={() => patchSettings({ bgGradient: g.css })}
-                        className={cn(
-                          "w-10 h-10 rounded-xl border-2 transition-all",
-                          settings.bgGradient === g.css
-                            ? "border-primary ring-2 ring-primary/20"
-                            : "border-transparent"
-                        )}
-                        style={{ backgroundImage: g.css }}
-                        aria-label={g.id}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {settings.bgType === "image" && (
-                  <BgImageField
-                    bgImage={settings.bgImage}
-                    uploading={uploadingBg}
-                    onBake={handleBgBake}
-                    onRemove={handleBgRemove}
-                  />
-                )}
-
-                {/* Sobreposição escura (legibilidade sobre imagem/gradiente) */}
-                {(settings.bgType === "image" || settings.bgType === "gradient") && (
-                  <div className="space-y-1 pt-1">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-[11px] text-muted-foreground">Escurecer o fundo</Label>
-                      <span className="text-[11px] font-mono text-muted-foreground tabular-nums">{Math.round(settings.bgOverlay * 100)}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={0.6}
-                      step={0.05}
-                      value={settings.bgOverlay}
-                      onChange={(e) => patchSettings({ bgOverlay: clamp01(Number(e.target.value), 0.6) })}
-                      className="w-full accent-primary cursor-pointer"
-                      aria-label="Escurecer o fundo para legibilidade"
-                    />
-                    <p className="text-[11px] text-muted-foreground/70">Ajuda o texto a ficar legível quando o fundo é claro ou movimentado.</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Button style */}
-              <div className="space-y-3 pt-4 border-t border-border">
-                <Label className="text-sm font-display font-semibold">Estilo dos links</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {BUTTON_STYLES.map((s) => (
-                    <button
-                      key={s.key}
-                      type="button"
-                      onClick={() => patchSettings({ buttonStyle: s.key })}
-                      className={cn(
-                        "px-3 py-2 text-xs font-body border transition-all",
-                        s.radius,
-                        s.key === "outline" && "border-2 bg-transparent",
-                        settings.buttonStyle === s.key
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-card text-foreground border-border hover:border-primary/30"
-                      )}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex gap-4 pt-1 flex-wrap">
-                  <ColorField
-                    value={settings.buttonColor}
-                    onChange={(v) => patchSettings({ buttonColor: v })}
-                    label="Cor do botão"
-                  />
-                  <ColorField
-                    value={settings.buttonTextColor}
-                    onChange={(v) => patchSettings({ buttonTextColor: v })}
-                    label="Cor do texto"
-                  />
-                </div>
-
-                {/* Cor dos CARDS: Sobre mim e Captura de lead eram brancos fixos e
-                    não seguiam a identidade da pessoa. Vazio = branco de antes. */}
-                <div className="pt-2">
-                  <Label className="text-sm font-display font-semibold">Cards (Sobre mim e Captura de lead)</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">Deixe vazio pra manter o card branco.</p>
-                  <div className="flex gap-4 pt-2 flex-wrap items-end">
-                    <ColorField
-                      value={settings.cardColor || "#FFFFFF"}
-                      onChange={(v) => patchSettings({ cardColor: v })}
-                      label="Cor do card"
-                    />
-                    <ColorField
-                      value={settings.cardTextColor || "#1F2937"}
-                      onChange={(v) => patchSettings({ cardTextColor: v })}
-                      label="Cor do texto do card"
-                    />
-                    {settings.cardColor && (
-                      <Button type="button" variant="ghost" size="sm" className="h-9"
-                        onClick={() => patchSettings({ cardColor: "", cardTextColor: "" })}>
-                        Voltar ao branco
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Social links */}
-              <div className="space-y-3 pt-4 border-t border-border">
-                <Label className="text-sm font-display font-semibold">Redes sociais</Label>
-                <p className="text-xs text-muted-foreground">Os ícones aparecem no topo da sua página.</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {SOCIAL_FIELDS.map((f) => (
-                    <div key={f.key} className="relative">
-                      <f.icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        value={settings.socialLinks[f.key]}
-                        onChange={(e) => patchSocial(f.key, e.target.value)}
-                        placeholder={`${f.label}: ${f.placeholder}`}
-                        className="h-9 rounded-xl pl-9 text-sm"
-                        maxLength={120}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Banner */}
-              <div className="space-y-3">
-                <Label className="text-sm font-display font-semibold">Banner</Label>
-                <p className="text-xs text-muted-foreground -mt-1">Imagem larga no topo da página (opcional).</p>
-                {settings.bannerImage ? (
-                  <div className="relative rounded-xl overflow-hidden border border-border">
-                    <img src={settings.bannerImage} alt="Banner" loading="lazy" className="w-full h-24 object-cover" />
-                    <button type="button" onClick={() => patchSettings({ bannerImage: null })} className="absolute top-1.5 right-1.5 bg-background/90 rounded-full p-1 shadow">
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </button>
-                  </div>
-                ) : null}
-                <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
-                <Button type="button" variant="outline" size="sm" disabled={uploadingBanner} onClick={() => bannerInputRef.current?.click()}>
-                  <ImagePlus className="h-4 w-4 mr-2" />
-                  {uploadingBanner ? "Enviando..." : settings.bannerImage ? "Trocar banner" : "Enviar banner"}
-                </Button>
-              </div>
-
-              {/* Sobre mim */}
-              <div className="space-y-3">
-                <Label className="text-sm font-display font-semibold">Sobre mim</Label>
-                {settings.about.image ? (
-                  <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-border">
-                    <img src={settings.about.image} alt="Sobre mim" loading="lazy" className="w-full h-full object-cover" />
-                    <button type="button" onClick={() => patchAbout({ image: null })} className="absolute top-1 right-1 bg-background/90 rounded-full p-1 shadow">
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </button>
-                  </div>
-                ) : null}
-                <input ref={aboutInputRef} type="file" accept="image/*" className="hidden" onChange={handleAboutImageUpload} />
-                <Button type="button" variant="outline" size="sm" disabled={uploadingAbout} onClick={() => aboutInputRef.current?.click()}>
-                  <ImagePlus className="h-4 w-4 mr-2" />
-                  {uploadingAbout ? "Enviando..." : settings.about.image ? "Trocar foto" : "Enviar foto"}
-                </Button>
-                <input value={settings.about.title} onChange={(e) => patchAbout({ title: e.target.value })} placeholder="Título (ex.: Sobre mim)" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-                <RichTextInput value={settings.about.text} onChange={(v) => patchAbout({ text: v })} placeholder="Escreva um pouco sobre você..." rows={4} />
-              </div>
-
-              {/* Captura de lead */}
-              <div className="space-y-3">
-                <Label className="text-sm font-display font-semibold">Captura de lead</Label>
-                <p className="text-xs text-muted-foreground -mt-1">Formulário pra visitantes deixarem o contato. Ative a seção "Captura de lead" em Estrutura da página.</p>
-                <input value={settings.lead.title} onChange={(e) => patchLead({ title: e.target.value })} placeholder="Título" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-                <input value={settings.lead.subtitle} onChange={(e) => patchLead({ subtitle: e.target.value })} placeholder="Subtítulo" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-                <div>
-                  <Label className="text-[11px] text-muted-foreground">Campos</Label>
-                  <div className="flex gap-2 mt-1">
-                    {(["email", "phone", "both"] as const).map((f) => (
-                      <button key={f} type="button" onClick={() => patchLead({ fields: f })} className={cn("flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors", settings.lead.fields === f ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
-                        {f === "email" ? "Email" : f === "phone" ? "Telefone" : "Ambos"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <input value={settings.lead.buttonText} onChange={(e) => patchLead({ buttonText: e.target.value })} placeholder="Texto do botão" className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-                <textarea value={settings.lead.consentText} onChange={(e) => patchLead({ consentText: e.target.value })} placeholder="Texto de consentimento" rows={2} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm resize-y" />
-              </div>
-
-              <Button
-                onClick={handleSaveAppearance}
-                disabled={!appearanceDirty || isSavingAppearance}
-                className="w-full"
-                variant="hero"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {isSavingAppearance ? "Salvando..." : "Salvar alterações"}
-              </Button>
-            </Card>
-
-            {/* ── Leads capturados ──────────────────── */}
-            <Card className="p-4 md:p-5 rounded-2xl border-border">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-display font-semibold text-foreground">
-                  Leads capturados {leads.length > 0 && <span className="text-muted-foreground font-normal">({leads.length})</span>}
-                </h2>
-                {leads.length > 0 && (
-                  <Button type="button" variant="outline" size="sm" onClick={exportLeadsCsv}>
-                    <Download className="h-4 w-4 mr-2" /> CSV
-                  </Button>
-                )}
-              </div>
-              {leadsLoading ? (
-                <p className="text-sm text-muted-foreground">Carregando...</p>
-              ) : leads.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhum lead ainda. Ative a seção "Captura de lead" pra começar a coletar.</p>
-              ) : (
-                <div className="space-y-2 max-h-72 overflow-y-auto">
-                  {leads.map((ld) => (
-                    <div key={ld.id} className="flex items-start justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2">
-                      <div className="min-w-0">
-                        {ld.name && <p className="text-sm font-medium text-foreground truncate">{ld.name}</p>}
-                        {ld.email && <p className="text-xs text-muted-foreground truncate">{ld.email}</p>}
-                        {ld.phone && <p className="text-xs text-muted-foreground truncate">{ld.phone}</p>}
-                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">{new Date(ld.created_at).toLocaleDateString("pt-BR")}</p>
+                        <button type="button" aria-label="Remover" onClick={() => deleteLead.mutate(ld.id)} className="text-muted-foreground hover:text-destructive shrink-0">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
-                      <button type="button" aria-label="Remover" onClick={() => deleteLead.mutate(ld.id)} className="text-muted-foreground hover:text-destructive shrink-0">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-              </>
-            )}
+                    ))}
+                  </div>
+                )}
+              </Card>
+            </Passo>
           </div>
 
           {/* ── Preview ─────────────────────────────── */}
@@ -2308,7 +2023,7 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
           </div>
         )}
 
-        {settings.bannerImage && settings.sections.some((x) => x.id === "banner" && x.on) && (
+        {settings.bannerImage && (
           <div className="w-full -mt-1.5 mb-[-34px] rounded-2xl overflow-hidden shadow-md">
             <img src={settings.bannerImage} alt="" className="w-full h-24 object-cover" />
           </div>
@@ -2342,6 +2057,10 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
           {settings.sections.filter((s) => s.on).map((sec) => {
             // O banner virou CAPA do topo (renderizada acima, atrás da foto).
             if (sec.id === "banner") return null;
+            // "Sobre mim" e "Captura de lead" viraram BLOCOS (Texto e Captura de
+            // contato). Quem já montou no formato novo tem os dois lá, então
+            // desenhar a seção antiga junto mostrava o mesmo card duas vezes.
+            if (blocos.length > 0 && (sec.id === "about" || sec.id === "lead")) return null;
             if (sec.id === "about") {
               if (!settings.about.text && !settings.about.image) return null;
               return (
