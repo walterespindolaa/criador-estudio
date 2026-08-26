@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  Activity, Brain, Building2, Download, Heart, HeartCrack, HelpCircle, Image as ImageIcon,
+  Activity, Brain, Building2, Download, FileUp, Heart, HeartCrack, HelpCircle, Image as ImageIcon,
   ImagePlus, Instagram, Lightbulb, MessageSquare, Mic, Palette, Pencil, Plus, Save,
-  ShieldAlert, Target, Trash2, Type, Upload, X,
+  ShieldAlert, Sparkles, Target, Trash2, Type, Upload, UserRound, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -59,6 +60,32 @@ export const personasDaFicha = (f: CrmClient): Record<string, string>[] => {
 };
 
 type SetFicha = (f: CrmClient) => void;
+
+/* Quantos campos daquela aba já têm resposta. Sem isso, a pessoa abre seis abas
+   pra descobrir onde falta coisa; com isso ela vê de fora e vai direto no buraco. */
+function preenchidos(fonte: Record<string, string | undefined>, chaves: string[]): number {
+  return chaves.filter((k) => (fonte[k] ?? "").trim()).length;
+}
+
+/** Gatilho de aba com o contador do lado. */
+function Aba({ valor, icone: Icone, rotulo, feitos, total }: {
+  valor: string; icone: typeof Target; rotulo: string; feitos: number; total: number;
+}) {
+  const completo = feitos === total;
+  return (
+    <TabsTrigger value={valor}
+      className="rounded-xl px-3 py-2 gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm shrink-0">
+      <Icone className="h-3.5 w-3.5 shrink-0" />
+      <span className="text-[13px] font-display font-semibold whitespace-nowrap">{rotulo}</span>
+      <span className={cn(
+        "text-[10.5px] font-body font-bold tabular-nums rounded-full px-1.5 py-0.5",
+        completo ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground",
+      )}>
+        {feitos}/{total}
+      </span>
+    </TabsTrigger>
+  );
+}
 
 /* ─── ESTADO + AUTOSAVE DA FICHA ─────────────────────────────────────────────
    Mora aqui porque o editor é usado em duas telas e as duas precisam do mesmo
@@ -257,15 +284,24 @@ export function Moodboard({ clientId }: { clientId: string }) {
 
 /* ─── BRANDBOOK ──────────────────────────────────────────────────────────── */
 
-export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincronizando }: {
+export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincronizando, comPersona }: {
   form: CrmClient;
   setForm: SetFicha;
   isCria: boolean;
   /** Só existe pra cliente que usa o Cria: puxa o brandbook da conta dele. */
   aoSincronizar?: () => void;
   sincronizando?: boolean;
+  /** No cockpit a Persona entra como mais uma aba daqui. Na ficha do CRM ela já
+   *  tem aba própria no nível de cima, então lá isso fica desligado. */
+  comPersona?: boolean;
 }) {
   const update = useUpdateCrmClient();
+  const [aba, setAba] = useState("essencia");
+  /* Qual arquivo a pessoa está mandando. Antes existiam TRÊS caixas de upload
+     empilhadas na mesma tela (relatório, brandbook, briefing) e a pergunta óbvia
+     era "mas onde eu subo o meu?". São três leituras diferentes do mesmo tipo de
+     PDF, então viraram um seletor: escolhe o que tem em mãos, sobe uma vez. */
+  const [tipoArquivo, setTipoArquivo] = useState<"relatorio" | "brandbook" | "briefing">("relatorio");
   const uploadAsset = useUploadCrmAsset();
   const fontInputRef = useRef<HTMLInputElement>(null);
 
@@ -345,169 +381,249 @@ export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincroni
       {/* Relatório MESTRE / briefing completo: preenche AS QUATRO ABAS de uma
           vez (Brandbook, Persona, Diagnóstico, Concorrência). O import COMPLETA
           a ficha, nunca apaga o que já foi escrito à mão. */}
-      <RelatorioImport
-        onSalvar={async (r) => {
-          const nbc = { ...bc };
-          for (const [k, v] of Object.entries(r.brand)) if (v.trim()) nbc[k] = v.trim();
-          // Personas: mantém as preenchidas à mão e completa as vagas (até 3).
-          const atuais = personas.filter((p) => Object.values(p).some((v) => (v ?? "").trim()));
-          const novasPersonas = [...atuais];
-          for (const p of r.personas) { if (novasPersonas.length >= 3) break; novasPersonas.push(p); }
-          const ndg = { ...dg };
-          for (const [k, v] of Object.entries(r.diagnostico)) if (v.trim()) ndg[k] = v.trim();
-          // Concorrentes: adiciona sem duplicar por nome.
-          const nomes = new Set(comps.map((c) => (c.name ?? "").trim().toLowerCase()).filter(Boolean));
-          const ncomps = [...comps];
-          for (const c of r.concorrentes) {
-            const key = c.name.trim().toLowerCase();
-            if (!key || nomes.has(key)) continue;
-            nomes.add(key);
-            ncomps.push(c as (typeof comps)[number]);
-          }
-          setForm({
-            ...form, brand_core: nbc, diagnosis: ndg,
-            persona: novasPersonas as unknown as CrmClient["persona"],
-            competitors: ncomps as CrmClient["competitors"],
-          });
-          await update.mutateAsync({
-            id: form.id, brand_core: nbc, diagnosis: ndg,
-            persona: novasPersonas, competitors: ncomps,
-          } as never);
-          toast.success("Ficha preenchida com o relatório. Confere as abas Persona, Diagnóstico e Concorrência também.");
-        }}
-      />
 
-      {!isCria && (
-        <BrandbookImport
-          alvo="cliente"
-          compacto
-          atual={bc as Record<string, string | undefined>}
-          titulo="Só o brandbook em PDF (cores, fontes, tom de voz)"
-          descricao="A gente lê e preenche esta aba. Você só confere antes de salvar."
-          onSalvar={async (valores) => {
-            const nbc = { ...bc, ...valores };
-            setForm({ ...form, brand_core: nbc });
-            await update.mutateAsync({ id: form.id, brand_core: nbc });
-            toast.success("Brandbook do cliente atualizado.");
-          }}
-        />
-      )}
-
-      <BriefingCliente
-        cliente={form.name ?? "este cliente"}
-        bc={bc as Record<string, string>}
-        pe={pe as Record<string, string>}
-        arquivoUrl={bc.briefingFileUrl || null}
-        arquivoNome={bc.briefingFileName || null}
-        onAnexar={anexarBriefing}
-        onRemoverAnexo={() => void removerBriefing()}
-        anexando={uploadAsset.isPending}
-      />
-
-      {/* História & essência: as perguntas do briefing inicial (Relatório MESTRE)
-          que dão contexto REAL pra IA e pra qualquer pessoa do time que pegar
-          o cliente: por que a marca existe, no que acredita e aonde quer chegar. */}
-      <Card icon={<Building2 />} title="História & essência (briefing)">
-        <F label="Como e por que a empresa nasceu"><MicTextarea value={bc.history ?? ""} onChange={(v) => setBc("history", v)} placeholder="A origem da marca: quem fundou, por quê, o que motivou..." /></F>
-        <F label="Valores da marca" className="mt-3"><MicTextarea value={bc.brandValues ?? ""} onChange={(v) => setBc("brandValues", v)} placeholder="No que a empresa acredita e não abre mão." /></F>
-        <F label="Impacto / transformação que quer gerar" className="mt-3"><MicTextarea value={bc.impact ?? ""} onChange={(v) => setBc("impact", v)} placeholder="O que muda no mercado e na vida do cliente por causa da marca." /></F>
-        <F label="Onde a marca quer chegar (visão)" className="mt-3"><MicTextarea value={bc.vision ?? ""} onChange={(v) => setBc("vision", v)} placeholder="A visão de longo prazo: onde quer estar nos próximos anos." /></F>
-        <F label="Marcas que admira (referências)" className="mt-3"><MicTextarea value={bc.admiredBrands ?? ""} onChange={(v) => setBc("admiredBrands", v)} placeholder="Uma por linha: @marca e por que é referência." /></F>
-      </Card>
-
-      {/* A ESTRATÉGIA vem antes da mensagem: é ela que diz pra que o conteúdo
-          existe. Sem meta, todo post é bonito e nenhum serve pra nada. */}
-      <Card icon={<Target />} title="Estratégia do conteúdo">
-        <p className="text-[11px] font-body text-muted-foreground mb-3 -mt-1">As três respostas que fazem o resto do brandbook virar plano.</p>
-        <F label="Meta principal" ajuda="A principal meta desta estratégia de conteúdo, em uma frase."><MicTextarea value={bc.mainGoal ?? ""} onChange={(v) => setBc("mainGoal", v)} placeholder="Ex.: encher a agenda de avaliação; virar referência em X na cidade..." /></F>
-        <F label="A Big Idea" ajuda="A ideia master que norteia toda a produção. Precisa ser original, intrigante e contraintuitiva." className="mt-3"><MicTextarea value={bc.bigIdea ?? ""} onChange={(v) => setBc("bigIdea", v)} placeholder="A tese da marca. Ex.: 'estética não é vaidade, é manutenção'." /></F>
-        <F label="Promessa" ajuda="A transformação que o cliente vive com o produto ou serviço." className="mt-3"><MicTextarea value={bc.promise ?? ""} onChange={(v) => setBc("promise", v)} placeholder="O que a pessoa sente ou consegue depois de comprar." /></F>
-        <F label="Como a marca quer ser percebida em 6 a 12 meses" className="mt-3"><MicTextarea value={bc.perception6m ?? ""} onChange={(v) => setBc("perception6m", v)} placeholder="O lugar que ela quer ocupar na cabeça do público." /></F>
-        <F label="Como o cliente vai saber que o conteúdo funcionou" ajuda="O critério dele, não o seu: é por isso que a renovação é decidida." className="mt-3"><MicTextarea value={bc.successMetric ?? ""} onChange={(v) => setBc("successMetric", v)} placeholder="Ex.: mais vendas, marca mais forte, virar referência." /></F>
-      </Card>
-
-      {/* Mensagem & estratégia, é isso que alimenta as ideias de post da IA */}
-      <Card icon={<Brain />} title="Mensagem & estratégia (alimenta as ideias de post)">
-        <p className="text-[11px] font-body text-muted-foreground mb-3 -mt-1">Quanto mais completo, melhores as ideias que a IA gera pra este cliente. Use o botão do microfone pra ditar por voz.</p>
-        <F label="O que a marca vende (produto/serviço)"><MicTextarea value={bc.offer ?? ""} onChange={(v) => setBc("offer", v)} placeholder="Ex.: consultoria financeira pra casais; app de organização..." /></F>
-        <F label="Proposta de valor / diferencial" className="mt-3"><MicTextarea value={bc.valueProp ?? ""} onChange={(v) => setBc("valueProp", v)} placeholder="Por que escolher essa marca e não outra?" /></F>
-        <F label="Público-alvo" className="mt-3"><MicTextarea value={bc.audience ?? ""} onChange={(v) => setBc("audience", v)} placeholder="Pra quem é? Dores, desejos, momento de vida..." /></F>
-        <F label="Temas / pilares de conteúdo" className="mt-3"><MicTextarea value={bc.contentThemes ?? ""} onChange={(v) => setBc("contentThemes", v)} placeholder="Sobre o que a marca posta? Ex.: educação financeira, bastidores, dicas..." /></F>
-        <F label="O que evitar" className="mt-3"><MicTextarea value={bc.avoid ?? ""} onChange={(v) => setBc("avoid", v)} placeholder="Assuntos, palavras ou tom que a marca não usa." /></F>
-        <F label="Principais produtos / serviços (categorias)" className="mt-3"><MicTextarea value={bc.products ?? ""} onChange={(v) => setBc("products", v)} placeholder="As categorias e o que cada uma entrega." /></F>
-        <F label="Especialidade / domínio técnico" className="mt-3"><MicTextarea value={bc.specialty ?? ""} onChange={(v) => setBc("specialty", v)} placeholder="No que a empresa é realmente forte tecnicamente." /></F>
-        <F label="Mensagem central do conteúdo" className="mt-3"><MicTextarea value={bc.coreMessage ?? ""} onChange={(v) => setBc("coreMessage", v)} placeholder="A ideia que TODO conteúdo deve transmitir + a transformação que o público deve sentir." /></F>
-      </Card>
-      {bc.criaBrandbook && (
-        <Card icon={<Instagram />} title="Brandbook do cliente (sincronizado do Cria)">
-          <p className="text-[13px] font-body text-muted-foreground whitespace-pre-wrap leading-relaxed">{bc.criaBrandbook}</p>
-        </Card>
-      )}
-      {bc.archetype && (
-        <div className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 to-card p-5 flex items-center gap-4">
-          <span className="font-display font-extrabold text-sm text-primary-foreground bg-primary px-4 py-2 rounded-xl">{bc.archetype}</span>
-          <span className="text-sm text-muted-foreground">Arquétipo da marca</span>
+      {/* ── UM LUGAR SÓ PRA SUBIR ARQUIVO ─────────────────────────────
+          Antes eram três caixas de upload empilhadas: relatório completo,
+          brandbook em PDF e briefing preenchido. Pra quem chega com um PDF na
+          mão, isso é a mesma pergunta feita três vezes, e a resposta certa não
+          é óbvia em nenhuma delas. Agora é uma caixa com um seletor: primeiro
+          diz o que você tem, depois sobe. */}
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="flex items-center gap-2.5 mb-1">
+          <div className="h-8 w-8 rounded-xl bg-primary/10 grid place-items-center shrink-0">
+            <FileUp className="h-4 w-4 text-primary" />
+          </div>
+          <h3 className="font-display font-bold text-[15px] text-foreground">Preencher a partir de um arquivo</h3>
         </div>
-      )}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card icon={<MessageSquare />} title="Voz & personalidade">
-          <F label="Arquétipo da marca"><Input value={bc.archetype ?? ""} onChange={(e) => setBc("archetype", e.target.value)} className="rounded-xl" /></F>
-          {/* Campo em branco pedindo "tom de voz" trava qualquer briefing:
-              ninguém sabe responder do zero. Escolher entre opostos é fácil,
-              e o texto continua livre pra quem quiser detalhar. */}
-          <F label="Tom de voz" className="mt-3">
-            <div className="flex gap-1.5 flex-wrap mb-2">
-              {TONS.map((t) => {
-                const on = tomAtivo(t);
-                return (
-                  <button key={t} type="button" onClick={() => alternarTom(t)}
-                    className={cn("text-[11.5px] font-body font-semibold px-2.5 py-1.5 rounded-lg border transition-colors",
-                      on ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/40")}>
-                    {t}
-                  </button>
-                );
-              })}
-            </div>
-            <Input value={bc.toneOfVoice ?? ""} onChange={(e) => setBc("toneOfVoice", e.target.value)}
-              placeholder="Ex.: informal e otimista, sem gíria" className="rounded-xl" />
-          </F>
-          <F label="Personalidade" className="mt-3"><Textarea rows={2} value={bc.personality ?? ""} onChange={(e) => setBc("personality", e.target.value)} className="rounded-xl text-sm" /></F>
-          <F label="Estilo de comunicação" className="mt-3"><Textarea rows={2} value={bc.communicationStyle ?? ""} onChange={(e) => setBc("communicationStyle", e.target.value)} className="rounded-xl text-sm" /></F>
-        </Card>
-        <Card icon={<Type />} title="Tipografia & visual">
-          <div className="rounded-xl border border-border bg-muted/40 p-5 mb-3">
-            <p className="font-display font-bold text-3xl tracking-tight text-foreground">Aa Bb Cc</p>
-            <p className="text-xs font-semibold text-muted-foreground mt-2">{bc.typography || "tipografia não definida"}</p>
-          </div>
-          <F label="Tipografia"><Input value={bc.typography ?? ""} onChange={(e) => setBc("typography", e.target.value)} placeholder="Ex: Fraunces + Inter" className="rounded-xl" /></F>
-          <div className="mt-3 flex items-center gap-2 flex-wrap">
-            <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => fontInputRef.current?.click()} disabled={uploadAsset.isPending}>
-              <Upload className="h-3.5 w-3.5 mr-1.5" /> Subir arquivo da fonte
-            </Button>
-            {bc.typographyFileUrl && (
-              <a href={bc.typographyFileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
-                <Download className="h-3.5 w-3.5" /> {bc.typographyFileName || "arquivo da fonte"}
-              </a>
-            )}
-            <input ref={fontInputRef} type="file" accept=".ttf,.otf,.woff,.woff2" className="hidden" onChange={onPickFont} />
-          </div>
-          <F label="Expressão visual" className="mt-3"><Textarea rows={2} value={bc.visualExpression ?? ""} onChange={(e) => setBc("visualExpression", e.target.value)} className="rounded-xl text-sm" /></F>
-        </Card>
+        <p className="text-[11.5px] font-body text-muted-foreground mb-3">
+          Ninguém preenche trinta campos na mão, e por isso o brandbook do cliente vive vazio e toda ideia que a IA
+          gera sai genérica. Se você já tem o conteúdo num PDF, mande o arquivo e confira o que a gente entendeu.
+        </p>
+        <div className="flex gap-1.5 flex-wrap mb-3.5">
+          {([
+            { id: "relatorio" as const, rotulo: "Relatório completo do cliente", ajuda: "Preenche Brandbook, Persona, Diagnóstico e Concorrência de uma vez." },
+            { id: "brandbook" as const, rotulo: "Brandbook ou moodboard", ajuda: "Cores, fontes e tom de voz. Preenche só esta aba." },
+            { id: "briefing" as const, rotulo: "Briefing da reunião", ajuda: "Fica guardado no cliente pra quem pegar depois." },
+          ]).filter((o) => o.id !== "brandbook" || !isCria).map((o) => (
+            <button key={o.id} type="button" onClick={() => setTipoArquivo(o.id)} title={o.ajuda}
+              className={cn("text-[12px] font-body font-semibold px-3 py-2 rounded-xl border transition-colors",
+                tipoArquivo === o.id
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background border-border text-muted-foreground hover:text-foreground hover:border-primary/40")}>
+              {o.rotulo}
+            </button>
+          ))}
+        </div>
+
+        {tipoArquivo === "relatorio" && (
+          <RelatorioImport
+            onSalvar={async (r) => {
+              const nbc = { ...bc };
+              for (const [k, v] of Object.entries(r.brand)) if (v.trim()) nbc[k] = v.trim();
+              // Personas: mantém as preenchidas à mão e completa as vagas (até 3).
+              const atuais = personas.filter((p) => Object.values(p).some((v) => (v ?? "").trim()));
+              const novasPersonas = [...atuais];
+              for (const p of r.personas) { if (novasPersonas.length >= 3) break; novasPersonas.push(p); }
+              const ndg = { ...dg };
+              for (const [k, v] of Object.entries(r.diagnostico)) if (v.trim()) ndg[k] = v.trim();
+              // Concorrentes: adiciona sem duplicar por nome.
+              const nomes = new Set(comps.map((c) => (c.name ?? "").trim().toLowerCase()).filter(Boolean));
+              const ncomps = [...comps];
+              for (const c of r.concorrentes) {
+                const key = c.name.trim().toLowerCase();
+                if (!key || nomes.has(key)) continue;
+                nomes.add(key);
+                ncomps.push(c as (typeof comps)[number]);
+              }
+              setForm({
+                ...form, brand_core: nbc, diagnosis: ndg,
+                persona: novasPersonas as unknown as CrmClient["persona"],
+                competitors: ncomps as CrmClient["competitors"],
+              });
+              await update.mutateAsync({
+                id: form.id, brand_core: nbc, diagnosis: ndg,
+                persona: novasPersonas, competitors: ncomps,
+              } as never);
+              toast.success("Ficha preenchida com o relatório. Confere as abas Persona, Diagnóstico e Concorrência também.");
+            }}
+          />
+
+        )}
+
+        {tipoArquivo === "brandbook" && !isCria && (
+          <BrandbookImport
+            alvo="cliente"
+            compacto
+            atual={bc as Record<string, string | undefined>}
+            titulo="Brandbook ou moodboard em PDF"
+            descricao="A gente lê cores, fontes e tom de voz e preenche as abas. Você só confere antes de salvar."
+            onSalvar={async (valores) => {
+              const nbc = { ...bc, ...valores };
+              setForm({ ...form, brand_core: nbc });
+              await update.mutateAsync({ id: form.id, brand_core: nbc });
+              toast.success("Brandbook do cliente atualizado.");
+            }}
+          />
+        )}
+
+        {tipoArquivo === "briefing" && (
+          <BriefingCliente
+            cliente={form.name ?? "este cliente"}
+            bc={bc as Record<string, string>}
+            pe={pe as Record<string, string>}
+            arquivoUrl={bc.briefingFileUrl || null}
+            arquivoNome={bc.briefingFileName || null}
+            onAnexar={anexarBriefing}
+            onRemoverAnexo={() => void removerBriefing()}
+            anexando={uploadAsset.isPending}
+          />
+
+        )}
       </div>
-      <Card icon={<Palette />} title="Paleta de cores">
-        {swatches.length > 0 && (
-          <div className="flex gap-2.5 flex-wrap mb-3">
-            {swatches.map((hex, i) => (
-              <div key={i} className="text-center">
-                <div className="w-14 h-14 rounded-xl border border-black/5" style={{ background: hex }} />
-                <p className="text-[10px] font-semibold text-muted-foreground mt-1.5 uppercase">{hex}</p>
-              </div>
-            ))}
+
+      {/* ── AS ABAS ──
+          Trinta campos numa página só é uma rolagem que ninguém termina: a
+          pessoa preenche os três primeiros e desiste. Em abas, cada uma é uma
+          conversa curta com começo e fim, e o contador ao lado do nome mostra
+          de fora onde ainda falta resposta. */}
+      <Tabs value={aba} onValueChange={setAba} className="w-full">
+        <TabsList className="w-full justify-start gap-1 rounded-2xl bg-muted/50 p-1.5 h-auto overflow-x-auto flex-nowrap">
+          <Aba valor="essencia" icone={Building2} rotulo="Essência"
+            feitos={preenchidos(bc, ["history", "brandValues", "impact", "vision", "admiredBrands"])} total={5} />
+          <Aba valor="estrategia" icone={Target} rotulo="Estratégia"
+            feitos={preenchidos(bc, ["mainGoal", "bigIdea", "promise", "perception6m", "successMetric"])} total={5} />
+          <Aba valor="mensagem" icone={Brain} rotulo="Mensagem"
+            feitos={preenchidos(bc, ["offer", "valueProp", "audience", "contentThemes", "avoid", "products", "specialty", "coreMessage"])} total={8} />
+          <Aba valor="vozvisual" icone={Sparkles} rotulo="Voz e visual"
+            feitos={preenchidos(bc, ["archetype", "toneOfVoice", "personality", "communicationStyle", "typography", "visualExpression", "colorPalette"])} total={7} />
+          {comPersona && (
+            <Aba valor="persona" icone={UserRound} rotulo="Persona"
+              feitos={preenchidos(pe as Record<string, string>, ["pains", "desires", "doubts", "objections", "seeks", "buying"])} total={6} />
+          )}
+        </TabsList>
+
+        <TabsContent value="essencia" className="mt-4 space-y-4">
+        {/* História & essência: as perguntas do briefing inicial (Relatório MESTRE)
+            que dão contexto REAL pra IA e pra qualquer pessoa do time que pegar
+            o cliente: por que a marca existe, no que acredita e aonde quer chegar. */}
+        <Card icon={<Building2 />} title="História & essência (briefing)">
+          <F label="Como e por que a empresa nasceu"><MicTextarea value={bc.history ?? ""} onChange={(v) => setBc("history", v)} placeholder="A origem da marca: quem fundou, por quê, o que motivou..." /></F>
+          <F label="Valores da marca" className="mt-3"><MicTextarea value={bc.brandValues ?? ""} onChange={(v) => setBc("brandValues", v)} placeholder="No que a empresa acredita e não abre mão." /></F>
+          <F label="Impacto / transformação que quer gerar" className="mt-3"><MicTextarea value={bc.impact ?? ""} onChange={(v) => setBc("impact", v)} placeholder="O que muda no mercado e na vida do cliente por causa da marca." /></F>
+          <F label="Onde a marca quer chegar (visão)" className="mt-3"><MicTextarea value={bc.vision ?? ""} onChange={(v) => setBc("vision", v)} placeholder="A visão de longo prazo: onde quer estar nos próximos anos." /></F>
+          <F label="Marcas que admira (referências)" className="mt-3"><MicTextarea value={bc.admiredBrands ?? ""} onChange={(v) => setBc("admiredBrands", v)} placeholder="Uma por linha: @marca e por que é referência." /></F>
+        </Card>
+
+        </TabsContent>
+
+        <TabsContent value="estrategia" className="mt-4 space-y-4">
+        {/* A ESTRATÉGIA vem antes da mensagem: é ela que diz pra que o conteúdo
+            existe. Sem meta, todo post é bonito e nenhum serve pra nada. */}
+        <Card icon={<Target />} title="Estratégia do conteúdo">
+          <p className="text-[11px] font-body text-muted-foreground mb-3 -mt-1">As três respostas que fazem o resto do brandbook virar plano.</p>
+          <F label="Meta principal" ajuda="A principal meta desta estratégia de conteúdo, em uma frase."><MicTextarea value={bc.mainGoal ?? ""} onChange={(v) => setBc("mainGoal", v)} placeholder="Ex.: encher a agenda de avaliação; virar referência em X na cidade..." /></F>
+          <F label="A Big Idea" ajuda="A ideia master que norteia toda a produção. Precisa ser original, intrigante e contraintuitiva." className="mt-3"><MicTextarea value={bc.bigIdea ?? ""} onChange={(v) => setBc("bigIdea", v)} placeholder="A tese da marca. Ex.: 'estética não é vaidade, é manutenção'." /></F>
+          <F label="Promessa" ajuda="A transformação que o cliente vive com o produto ou serviço." className="mt-3"><MicTextarea value={bc.promise ?? ""} onChange={(v) => setBc("promise", v)} placeholder="O que a pessoa sente ou consegue depois de comprar." /></F>
+          <F label="Como a marca quer ser percebida em 6 a 12 meses" className="mt-3"><MicTextarea value={bc.perception6m ?? ""} onChange={(v) => setBc("perception6m", v)} placeholder="O lugar que ela quer ocupar na cabeça do público." /></F>
+          <F label="Como o cliente vai saber que o conteúdo funcionou" ajuda="O critério dele, não o seu: é por isso que a renovação é decidida." className="mt-3"><MicTextarea value={bc.successMetric ?? ""} onChange={(v) => setBc("successMetric", v)} placeholder="Ex.: mais vendas, marca mais forte, virar referência." /></F>
+        </Card>
+
+        </TabsContent>
+
+        <TabsContent value="mensagem" className="mt-4 space-y-4">
+        {/* Mensagem & estratégia, é isso que alimenta as ideias de post da IA */}
+        <Card icon={<Brain />} title="Mensagem & estratégia (alimenta as ideias de post)">
+          <p className="text-[11px] font-body text-muted-foreground mb-3 -mt-1">Quanto mais completo, melhores as ideias que a IA gera pra este cliente. Use o botão do microfone pra ditar por voz.</p>
+          <F label="O que a marca vende (produto/serviço)"><MicTextarea value={bc.offer ?? ""} onChange={(v) => setBc("offer", v)} placeholder="Ex.: consultoria financeira pra casais; app de organização..." /></F>
+          <F label="Proposta de valor / diferencial" className="mt-3"><MicTextarea value={bc.valueProp ?? ""} onChange={(v) => setBc("valueProp", v)} placeholder="Por que escolher essa marca e não outra?" /></F>
+          <F label="Público-alvo" className="mt-3"><MicTextarea value={bc.audience ?? ""} onChange={(v) => setBc("audience", v)} placeholder="Pra quem é? Dores, desejos, momento de vida..." /></F>
+          <F label="Temas / pilares de conteúdo" className="mt-3"><MicTextarea value={bc.contentThemes ?? ""} onChange={(v) => setBc("contentThemes", v)} placeholder="Sobre o que a marca posta? Ex.: educação financeira, bastidores, dicas..." /></F>
+          <F label="O que evitar" className="mt-3"><MicTextarea value={bc.avoid ?? ""} onChange={(v) => setBc("avoid", v)} placeholder="Assuntos, palavras ou tom que a marca não usa." /></F>
+          <F label="Principais produtos / serviços (categorias)" className="mt-3"><MicTextarea value={bc.products ?? ""} onChange={(v) => setBc("products", v)} placeholder="As categorias e o que cada uma entrega." /></F>
+          <F label="Especialidade / domínio técnico" className="mt-3"><MicTextarea value={bc.specialty ?? ""} onChange={(v) => setBc("specialty", v)} placeholder="No que a empresa é realmente forte tecnicamente." /></F>
+          <F label="Mensagem central do conteúdo" className="mt-3"><MicTextarea value={bc.coreMessage ?? ""} onChange={(v) => setBc("coreMessage", v)} placeholder="A ideia que TODO conteúdo deve transmitir + a transformação que o público deve sentir." /></F>
+        </Card>
+        {bc.criaBrandbook && (
+          <Card icon={<Instagram />} title="Brandbook do cliente (sincronizado do Cria)">
+            <p className="text-[13px] font-body text-muted-foreground whitespace-pre-wrap leading-relaxed">{bc.criaBrandbook}</p>
+          </Card>
+        )}
+        </TabsContent>
+
+        <TabsContent value="vozvisual" className="mt-4 space-y-4">
+        {bc.archetype && (
+          <div className="rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 to-card p-5 flex items-center gap-4">
+            <span className="font-display font-extrabold text-sm text-primary-foreground bg-primary px-4 py-2 rounded-xl">{bc.archetype}</span>
+            <span className="text-sm text-muted-foreground">Arquétipo da marca</span>
           </div>
         )}
-        <F label="Paleta (cole os HEX separados por vírgula)"><Input value={bc.colorPalette ?? ""} onChange={(e) => setBc("colorPalette", e.target.value)} placeholder="#7A3B2E, #D98E5A, #F3E7D6" className="rounded-xl" /></F>
-      </Card>
-      <Moodboard clientId={form.id} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card icon={<MessageSquare />} title="Voz & personalidade">
+            <F label="Arquétipo da marca"><Input value={bc.archetype ?? ""} onChange={(e) => setBc("archetype", e.target.value)} className="rounded-xl" /></F>
+            {/* Campo em branco pedindo "tom de voz" trava qualquer briefing:
+                ninguém sabe responder do zero. Escolher entre opostos é fácil,
+                e o texto continua livre pra quem quiser detalhar. */}
+            <F label="Tom de voz" className="mt-3">
+              <div className="flex gap-1.5 flex-wrap mb-2">
+                {TONS.map((t) => {
+                  const on = tomAtivo(t);
+                  return (
+                    <button key={t} type="button" onClick={() => alternarTom(t)}
+                      className={cn("text-[11.5px] font-body font-semibold px-2.5 py-1.5 rounded-lg border transition-colors",
+                        on ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground hover:border-primary/40")}>
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
+              <Input value={bc.toneOfVoice ?? ""} onChange={(e) => setBc("toneOfVoice", e.target.value)}
+                placeholder="Ex.: informal e otimista, sem gíria" className="rounded-xl" />
+            </F>
+            <F label="Personalidade" className="mt-3"><Textarea rows={2} value={bc.personality ?? ""} onChange={(e) => setBc("personality", e.target.value)} className="rounded-xl text-sm" /></F>
+            <F label="Estilo de comunicação" className="mt-3"><Textarea rows={2} value={bc.communicationStyle ?? ""} onChange={(e) => setBc("communicationStyle", e.target.value)} className="rounded-xl text-sm" /></F>
+          </Card>
+          <Card icon={<Type />} title="Tipografia & visual">
+            <div className="rounded-xl border border-border bg-muted/40 p-5 mb-3">
+              <p className="font-display font-bold text-3xl tracking-tight text-foreground">Aa Bb Cc</p>
+              <p className="text-xs font-semibold text-muted-foreground mt-2">{bc.typography || "tipografia não definida"}</p>
+            </div>
+            <F label="Tipografia"><Input value={bc.typography ?? ""} onChange={(e) => setBc("typography", e.target.value)} placeholder="Ex: Fraunces + Inter" className="rounded-xl" /></F>
+            <div className="mt-3 flex items-center gap-2 flex-wrap">
+              <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => fontInputRef.current?.click()} disabled={uploadAsset.isPending}>
+                <Upload className="h-3.5 w-3.5 mr-1.5" /> Subir arquivo da fonte
+              </Button>
+              {bc.typographyFileUrl && (
+                <a href={bc.typographyFileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
+                  <Download className="h-3.5 w-3.5" /> {bc.typographyFileName || "arquivo da fonte"}
+                </a>
+              )}
+              <input ref={fontInputRef} type="file" accept=".ttf,.otf,.woff,.woff2" className="hidden" onChange={onPickFont} />
+            </div>
+            <F label="Expressão visual" className="mt-3"><Textarea rows={2} value={bc.visualExpression ?? ""} onChange={(e) => setBc("visualExpression", e.target.value)} className="rounded-xl text-sm" /></F>
+          </Card>
+        </div>
+        <Card icon={<Palette />} title="Paleta de cores">
+          {swatches.length > 0 && (
+            <div className="flex gap-2.5 flex-wrap mb-3">
+              {swatches.map((hex, i) => (
+                <div key={i} className="text-center">
+                  <div className="w-14 h-14 rounded-xl border border-black/5" style={{ background: hex }} />
+                  <p className="text-[10px] font-semibold text-muted-foreground mt-1.5 uppercase">{hex}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <F label="Paleta (cole os HEX separados por vírgula)"><Input value={bc.colorPalette ?? ""} onChange={(e) => setBc("colorPalette", e.target.value)} placeholder="#7A3B2E, #D98E5A, #F3E7D6" className="rounded-xl" /></F>
+        </Card>
+        <Moodboard clientId={form.id} />
+        </TabsContent>
+
+        {comPersona && (
+          <TabsContent value="persona" className="mt-4 space-y-4">
+            <PersonaEditor form={form} setForm={setForm} isCria={isCria} />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }

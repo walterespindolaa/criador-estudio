@@ -143,7 +143,7 @@ import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { LinkNaBioCliente } from "@/components/accounts/crm/LinkNaBioCliente";
 // O MESMO editor da ficha do CRM: aqui a aba Brandbook deixa de ser vitrine e
 // vira lugar de trabalho (ver BrandbookEditor.tsx).
-import { BrandbookEditor, PersonaEditor, personasDaFicha, useFichaEditavel } from "@/components/accounts/crm/BrandbookEditor";
+import { BrandbookEditor, personasDaFicha, useFichaEditavel } from "@/components/accounts/crm/BrandbookEditor";
 import { cn } from "@/lib/utils";
 import { confirmar } from "@/components/shared/Confirm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -1032,8 +1032,9 @@ function BrandbookDoCrmEditavel({ clientId, nomeCliente }: { clientId: string; n
         </div>
       </div>
 
-      <BrandbookEditor form={form} setForm={setForm} isCria={false} />
-      <PersonaEditor form={form} setForm={setForm} isCria={false} />
+      {/* comPersona: aqui a Persona entra como mais uma aba do editor. Na ficha
+          do CRM ela já tem aba própria no nível de cima, então lá fica de fora. */}
+      <BrandbookEditor form={form} setForm={setForm} isCria={false} comPersona />
     </div>
   );
 }
