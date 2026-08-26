@@ -130,6 +130,28 @@ export function useBioBlocks(estilo: EstiloBio) {
     onError: () => toast.error("Não consegui duplicar."),
   });
 
+  /** Cria vários blocos de uma vez, no fim da página e DESLIGADOS. Desligados
+   *  porque modelo vem com texto de exemplo, e ninguém quer "Escreva aqui
+   *  sobre você" no ar enquanto ainda está preenchendo. */
+  const aplicarModelo = useMutation({
+    mutationFn: async (novos: { kind: TipoBloco; data: DadosBloco }[]) => {
+      if (!userId) throw new Error("Sem sessão");
+      const linhas = novos.map((b, i) => ({
+        user_id: userId, page_id: pageId, estilo,
+        kind: b.kind, data: b.data,
+        position: blocos.length + i,
+        is_active: false,
+      }));
+      const { error } = await sbFrom("bio_blocks").insert(linhas);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["bio-blocks"] });
+      toast.success("Modelo aplicado. Os blocos entraram desligados: preencha e ligue um por um.");
+    },
+    onError: (e: Error) => toast.error(tabelaFaltando(e.message) ? AVISO_MIGRATION : "Não consegui aplicar o modelo."),
+  });
+
   const reordenar = useMutation({
     mutationFn: async (ids: string[]) => {
       await Promise.all(ids.map((id, i) => {
@@ -154,5 +176,5 @@ export function useBioBlocks(estilo: EstiloBio) {
     onSettled: () => { void qc.invalidateQueries({ queryKey: chave, refetchType: "none" }); },
   });
 
-  return { blocos, isLoading: q.isLoading, criar, atualizar, excluir, duplicar, reordenar };
+  return { blocos, isLoading: q.isLoading, criar, atualizar, excluir, duplicar, reordenar, aplicarModelo };
 }

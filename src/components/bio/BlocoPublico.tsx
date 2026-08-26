@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Copy, MapPin, Navigation } from "lucide-react";
+import { Check, Copy, MapPin, MessageCircle, Navigation } from "lucide-react";
 import {
   bool, embedDeVideo, embedGoogleMaps, faltaAte, linkAppleMaps, linkGoogleMaps,
   linkWaze, linkWhatsapp, lista, txt, type DadosBloco,
@@ -253,7 +253,7 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
       if (tel.replace(/\D/g, "").length < 10) return null;
       return (
         <BotaoGrande visual={visual} href={linkWhatsapp(tel, txt(data, "mensagem"))} onClique={onClique}>
-          <span aria-hidden>💬</span>{txt(data, "titulo") || "Falar no WhatsApp"}
+          <MessageCircle className="h-4 w-4 shrink-0" aria-hidden />{txt(data, "titulo") || "Falar no WhatsApp"}
         </BotaoGrande>
       );
     }

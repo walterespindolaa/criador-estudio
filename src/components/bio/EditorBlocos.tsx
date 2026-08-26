@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
-import { Calendar, Copy, GripVertical, ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
+import { Calendar, Copy, GripVertical, ImagePlus, LayoutTemplate, Loader2, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +16,7 @@ import {
   type BioBloco, type DadosBloco, type EstiloBio, type TipoBloco,
 } from "@/lib/bioBlocks";
 import { CampoTextoRico } from "@/lib/textoRico";
+import { modelosDoEstilo } from "@/lib/bioTemplates";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -525,8 +526,8 @@ function CartaoBloco({
         <span className="text-muted-foreground/50 cursor-grab pt-1.5 touch-none" aria-hidden><GripVertical className="h-4 w-4" /></span>
 
         <button type="button" onClick={onAbrir} className="flex items-start gap-2.5 flex-1 min-w-0 text-left">
-          <span className="w-11 h-11 rounded-xl bg-muted border border-border grid place-items-center text-lg shrink-0 overflow-hidden">
-            {capa ? <img src={capa} alt="" className="w-full h-full object-cover" /> : meta.emoji}
+          <span className="w-11 h-11 rounded-xl bg-muted border border-border grid place-items-center shrink-0 overflow-hidden text-muted-foreground">
+            {capa ? <img src={capa} alt="" className="w-full h-full object-cover" /> : <meta.Icone className="h-4 w-4" />}
           </span>
           <span className="min-w-0 flex-1">
             <span className="block font-display font-semibold text-sm truncate">
@@ -590,10 +591,12 @@ function CartaoBloco({
 
 /* ── A TELA ── */
 export function EditorBlocos({ estilo }: { estilo: EstiloBio }) {
-  const { blocos, isLoading, criar, atualizar, excluir, duplicar, reordenar } = useBioBlocks(estilo);
+  const { blocos, isLoading, criar, atualizar, excluir, duplicar, reordenar, aplicarModelo } = useBioBlocks(estilo);
   const [aberto, setAberto] = useState<string | null>(null);
   const [paletaAberta, setPaletaAberta] = useState(false);
+  const [modelosAbertos, setModelosAbertos] = useState(false);
   const disponiveis = useMemo(() => blocosDoEstilo(estilo), [estilo]);
+  const modelos = useMemo(() => modelosDoEstilo(estilo), [estilo]);
 
   const adicionar = async (tipo: TipoBloco) => {
     const novo = await criar.mutateAsync(tipo);
@@ -616,10 +619,45 @@ export function EditorBlocos({ estilo }: { estilo: EstiloBio }) {
           <h3 className="font-display font-semibold text-foreground">Os blocos da página</h3>
           <p className="text-xs font-body text-muted-foreground">Arraste pra ordenar. O interruptor tira do ar sem apagar.</p>
         </div>
-        <Button size="sm" onClick={() => setPaletaAberta((v) => !v)} data-tour="bio-add-bloco">
-          <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar bloco
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => { setModelosAbertos((v) => !v); setPaletaAberta(false); }}>
+            <LayoutTemplate className="h-3.5 w-3.5 mr-1" /> Modelos
+          </Button>
+          <Button size="sm" onClick={() => { setPaletaAberta((v) => !v); setModelosAbertos(false); }} data-tour="bio-add-bloco">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar bloco
+          </Button>
+        </div>
       </div>
+
+      {/* ── MODELOS ──
+          Página em branco é onde a montagem morre: a pessoa abre e não sabe se
+          começa pelo WhatsApp, pelo cardápio ou pela foto. O modelo entrega a
+          página montada na ordem que costuma funcionar, e o trabalho vira
+          TROCAR, que é bem mais fácil que CRIAR. */}
+      {modelosAbertos && (
+        <div className="rounded-2xl border border-border bg-muted/30 p-3">
+          <p className="text-xs font-body text-muted-foreground mb-2.5">
+            Escolha o que mais parece com o negócio. Os blocos entram no fim, desligados, com texto de exemplo pra
+            você trocar. Nada do que já existe é apagado.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {modelos.map((m) => (
+              <button key={m.id} type="button" disabled={aplicarModelo.isPending}
+                onClick={async () => { await aplicarModelo.mutateAsync(m.blocos); setModelosAbertos(false); }}
+                className="text-left rounded-xl border border-border bg-card p-3 hover:border-primary/50 transition-all disabled:opacity-60">
+                <span className="flex items-center gap-2">
+                  <m.Icone className="h-4 w-4 text-primary shrink-0" />
+                  <span className="font-display font-semibold text-sm">{m.nome}</span>
+                  <span className="text-[10px] font-body text-muted-foreground ml-auto shrink-0">
+                    {m.blocos.length} blocos
+                  </span>
+                </span>
+                <span className="block text-[11.5px] font-body text-muted-foreground leading-snug mt-1">{m.paraQuem}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {paletaAberta && (
         <div className="rounded-2xl border border-border bg-muted/30 p-3">
@@ -627,8 +665,8 @@ export function EditorBlocos({ estilo }: { estilo: EstiloBio }) {
             {disponiveis.map((b) => (
               <button key={b.tipo} type="button" disabled={criar.isPending} onClick={() => adicionar(b.tipo)}
                 className="text-left rounded-xl border border-border bg-card p-3 hover:border-primary/50 transition-all disabled:opacity-60">
-                <span className="text-lg leading-none">{b.emoji}</span>
-                <span className="block font-display font-semibold text-sm mt-1">{b.nome}</span>
+                <b.Icone className="h-4 w-4 text-primary" />
+                <span className="block font-display font-semibold text-sm mt-1.5">{b.nome}</span>
                 <span className="block text-[11px] font-body text-muted-foreground leading-snug mt-0.5">{b.explica}</span>
               </button>
             ))}
@@ -642,11 +680,17 @@ export function EditorBlocos({ estilo }: { estilo: EstiloBio }) {
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
           <p className="text-sm font-body font-medium text-foreground">A página está vazia</p>
           <p className="text-xs font-body text-muted-foreground mt-1 mb-4 max-w-sm mx-auto">
-            Comece pelo que o cliente mais quer que aconteça: o botão do WhatsApp, o cardápio, o agendamento.
+            O jeito mais rápido é partir de um modelo pronto e trocar os textos. Se preferir, monte na ordem que
+            quiser.
           </p>
-          <Button size="sm" onClick={() => setPaletaAberta(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar o primeiro bloco
-          </Button>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button size="sm" onClick={() => setModelosAbertos(true)}>
+              <LayoutTemplate className="h-3.5 w-3.5 mr-1" /> Começar com um modelo
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setPaletaAberta(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Montar do zero
+            </Button>
+          </div>
         </div>
       )}
 

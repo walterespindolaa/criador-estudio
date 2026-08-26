@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
-import { ExternalLink, GripVertical, ImagePlus, Loader2, Plus, Trash2, X } from "lucide-react";
+import { ExternalLink, GripVertical, ImagePlus, Loader2, PenLine, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -150,7 +150,9 @@ function CartaoItem({
         {!ehPost && <span className="text-muted-foreground/50 cursor-grab pt-1.5 touch-none"><GripVertical className="h-4 w-4" /></span>}
         <button type="button" onClick={onAbrir} className="flex items-start gap-2.5 flex-1 min-w-0 text-left">
           <span className="w-11 h-11 rounded-xl bg-muted border border-border grid place-items-center shrink-0 overflow-hidden">
-            {item.capa ? <img src={item.capa} alt="" className="w-full h-full object-cover" /> : <span className="text-lg">{ehPost ? "✍️" : "🛍️"}</span>}
+            {item.capa
+              ? <img src={item.capa} alt="" className="w-full h-full object-cover" />
+              : (ehPost ? <PenLine className="h-4 w-4 text-muted-foreground" /> : <ShoppingBag className="h-4 w-4 text-muted-foreground" />)}
           </span>
           <span className="min-w-0 flex-1">
             <span className="block font-display font-semibold text-sm truncate">{item.titulo || "Sem título"}</span>

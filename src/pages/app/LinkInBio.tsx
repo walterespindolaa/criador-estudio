@@ -1100,7 +1100,7 @@ const LinkInBio = () => {
                 <div className="inline-flex gap-1 rounded-full border border-border bg-muted/40 p-1">
                   {([
                     { id: "classic", label: "Clássico" },
-                    { id: "vitrine", label: "Vitrine" },
+                    { id: "vitrine", label: "Site" },
                   ] as { id: BioSettings["layout"]; label: string }[]).map((opt) => (
                     <button
                       key={opt.id}
@@ -1142,7 +1142,7 @@ const LinkInBio = () => {
                 </div>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Escolha um estilo e edite. Trocar de estilo não apaga o conteúdo do outro; cada estilo guarda o seu.
+                Clássico é a página de bio: coluna de botões, um toque e sai. Site é uma página de apresentação, com seções, produtos e blog. Trocar não apaga nada: cada estilo guarda o seu.
               </p>
             </div>
 
@@ -1239,7 +1239,7 @@ const LinkInBio = () => {
 
                 {!settings.vitrine.cover && settings.vitrine.services.length === 0 && settings.vitrine.products.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-4">
-                    <p className="text-sm font-display font-semibold text-foreground">Monte sua vitrine em 3 passos</p>
+                    <p className="text-sm font-display font-semibold text-foreground">Monte a vitrine antiga em 3 passos</p>
                     <p className="mt-0.5 mb-3 text-xs text-muted-foreground">Comece por aqui. Dá pra ajustar tudo depois.</p>
                     <div className="grid gap-2 sm:grid-cols-3">
                       <button type="button" onClick={() => coverInputRef.current?.click()} className="text-left rounded-xl border border-border bg-background p-3 transition-colors hover:border-primary/40">
@@ -1368,17 +1368,17 @@ const LinkInBio = () => {
               </Card>
               )}
 
-              {/* Identidade da vitrine (nome e bio compartilhados) */}
+              {/* Identidade do Site (nome e bio compartilhados) */}
               <Card className="p-4 md:p-5 rounded-2xl border-border space-y-3">
                 <div>
                   <h2 className="font-display font-semibold text-foreground mb-1">Identidade</h2>
-                  <p className="text-xs text-muted-foreground">Nome e bio que aparecem na sua vitrine. Deixe em branco para usar os dados do seu perfil.</p>
+                  <p className="text-xs text-muted-foreground">Nome e bio que aparecem no seu Site. Deixe em branco para usar os dados do seu perfil.</p>
                 </div>
                 <input value={settings.header.name} onChange={(e) => patchHeader({ name: e.target.value })} placeholder={profile?.name || "Seu nome"} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
                 <RichTextInput value={settings.header.bio} onChange={(v) => patchHeader({ bio: v })} placeholder={profile?.bio || "Escreva uma bio curta"} rows={3} />
               </Card>
 
-              {/* Aparência da vitrine (fonte, fundo e redes compartilhados) */}
+              {/* Aparência do Site (fonte, fundo e redes compartilhados) */}
               <Card className="p-4 md:p-5 rounded-2xl border-border space-y-6">
                 <h2 className="font-display font-semibold text-foreground">Aparência</h2>
 
@@ -1421,7 +1421,7 @@ const LinkInBio = () => {
                 <div className="space-y-3 pt-4 border-t border-border">
                   <Label className="text-sm font-display font-semibold">Fundo</Label>
                   <p className="text-xs text-muted-foreground -mt-1">
-                    Escolha cor sólida, gradiente ou imagem de fundo. Vale nos dois estilos (Clássico e Vitrine).
+                    Escolha cor sólida, gradiente ou imagem de fundo. Vale nos dois estilos (Clássico e Site).
                   </p>
                   <div className="flex gap-2 flex-wrap">
                     {([
@@ -1765,7 +1765,7 @@ const LinkInBio = () => {
               <div className="space-y-3 pt-4 border-t border-border">
                 <Label className="text-sm font-display font-semibold">Fundo</Label>
                 <p className="text-xs text-muted-foreground -mt-1">
-                  Escolha cor sólida, gradiente ou imagem de fundo. Vale nos dois estilos (Clássico e Vitrine).
+                  Escolha cor sólida, gradiente ou imagem de fundo. Vale nos dois estilos (Clássico e Site).
                 </p>
                 <div className="flex gap-2 flex-wrap">
                   {([

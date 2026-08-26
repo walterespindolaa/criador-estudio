@@ -10,6 +10,12 @@
    bloco mora num jsonb livre.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+import {
+  AlignLeft, CalendarClock, Contact, HelpCircle, Image as ImageIcon, Images,
+  Layers, Link2, MapPin, MessageCircle, PenLine, PlayCircle, Quote, Send,
+  ShoppingBag, Type, UserRound, type LucideIcon,
+} from "lucide-react";
+
 export type EstiloBio = "classico" | "site";
 
 export type TipoBloco =
@@ -43,9 +49,11 @@ export type MetaBloco = {
   nome: string;
   /** Frase da paleta: o que este bloco resolve, não o que ele é. */
   explica: string;
-  /** Emoji do card da paleta e da lista. Emoji e não ícone pra a paleta ficar
-   *  legível de longe e não pesar com 10 imports do lucide. */
-  emoji: string;
+  /** Ícone do card da paleta e da lista. Lucide, nunca emoji: emoji é desenhado
+   *  pelo sistema, então a mesma tela fica com cara de iPhone no Mac, de
+   *  Android no Android e de bloco quadrado no Windows. O ícone é nosso e é
+   *  igual em todo lugar. */
+  Icone: LucideIcon;
   padrao: DadosBloco;
   /** Em quais estilos ele aparece. Vazio = nos dois. */
   estilos?: EstiloBio[];
@@ -55,52 +63,52 @@ export type MetaBloco = {
 
 export const BLOCOS: MetaBloco[] = [
   {
-    tipo: "link", nome: "Link", emoji: "🔗", clicavel: true,
+    tipo: "link", nome: "Link", Icone: Link2, clicavel: true,
     explica: "Botão pra qualquer endereço, com ou sem imagem de capa.",
     padrao: { titulo: "", url: "", icone: "", capa: "" },
   },
   {
-    tipo: "whatsapp", nome: "WhatsApp", emoji: "💬", clicavel: true,
+    tipo: "whatsapp", nome: "WhatsApp", Icone: MessageCircle, clicavel: true,
     explica: "Abre a conversa já com a mensagem escrita.",
     padrao: { titulo: "Vamos conversar?", telefone: "", mensagem: "Oi! Vim pelo link da bio." },
   },
   {
-    tipo: "titulo", nome: "Título de seção", emoji: "🔠",
+    tipo: "titulo", nome: "Título de seção", Icone: Type,
     explica: "Separa os botões em grupos.",
     padrao: { titulo: "" },
   },
   {
-    tipo: "texto", nome: "Texto", emoji: "✍️",
+    tipo: "texto", nome: "Texto", Icone: AlignLeft,
     explica: "Um parágrafo livre entre os botões.",
     padrao: { titulo: "", texto: "" },
   },
   {
-    tipo: "video", nome: "Vídeo", emoji: "▶️",
+    tipo: "video", nome: "Vídeo", Icone: PlayCircle,
     explica: "YouTube, Instagram ou TikTok tocando na própria página.",
     padrao: { titulo: "", url: "" },
   },
   {
-    tipo: "galeria", nome: "Galeria", emoji: "🖼️",
+    tipo: "galeria", nome: "Galeria", Icone: Images,
     explica: "Fotos do trabalho, em grade.",
     padrao: { titulo: "", imagens: [] },
   },
   {
-    tipo: "faq", nome: "Perguntas frequentes", emoji: "❓",
+    tipo: "faq", nome: "Perguntas frequentes", Icone: HelpCircle,
     explica: "Abre e fecha. Tira a dúvida antes da pessoa desistir.",
     padrao: { titulo: "Perguntas frequentes", itens: [{ p: "", r: "" }] },
   },
   {
-    tipo: "contagem", nome: "Contagem regressiva", emoji: "⏳",
+    tipo: "contagem", nome: "Contagem regressiva", Icone: CalendarClock,
     explica: "Turma, promoção ou evento com hora pra acabar.",
     padrao: { titulo: "Faltam", ate: "" },
   },
   {
-    tipo: "mapa", nome: "Endereço e mapa", emoji: "📍", clicavel: true,
+    tipo: "mapa", nome: "Endereço e mapa", Icone: MapPin, clicavel: true,
     explica: "Pra loja física: mapa, rota no Waze e endereço pra copiar.",
     padrao: { titulo: "Onde estamos", endereco: "", horario: "", mostrarMapa: true },
   },
   {
-    tipo: "captura", nome: "Captura de contato", emoji: "📩",
+    tipo: "captura", nome: "Captura de contato", Icone: Send,
     explica: "Nome, e-mail e telefone. Pode cair direto no seu pipeline.",
     padrao: {
       titulo: "Deixe seu contato",
@@ -119,32 +127,32 @@ export const BLOCOS: MetaBloco[] = [
    grade de produtos em 390px e ficaria ilegível. */
 export const BLOCOS_SITE: MetaBloco[] = [
   {
-    tipo: "capa", nome: "Capa", emoji: "🎬", estilos: ["site"],
+    tipo: "capa", nome: "Capa", Icone: ImageIcon, estilos: ["site"],
     explica: "O topo do site: título, uma frase e dois botões.",
     padrao: { titulo: "", frase: "", imagem: "", botao1: "Fale comigo", url1: "", botao2: "", url2: "" },
   },
   {
-    tipo: "sobre", nome: "Sobre", emoji: "👤", estilos: ["site"],
+    tipo: "sobre", nome: "Sobre", Icone: UserRound, estilos: ["site"],
     explica: "Foto ao lado de um texto longo. É onde a história é contada.",
     padrao: { rotulo: "Quem sou", titulo: "", texto: "", imagem: "" },
   },
   {
-    tipo: "produtos", nome: "Produtos e serviços", emoji: "🛍️", estilos: ["site"],
+    tipo: "produtos", nome: "Produtos e serviços", Icone: ShoppingBag, estilos: ["site"],
     explica: "Grade com preço. Cada item ganha página própria pra mandar no WhatsApp.",
     padrao: { rotulo: "O que eu faço", titulo: "Serviços", subtitulo: "" },
   },
   {
-    tipo: "blog", nome: "Blog", emoji: "✍️", estilos: ["site"],
+    tipo: "blog", nome: "Blog", Icone: PenLine, estilos: ["site"],
     explica: "Os textos publicados, do mais novo pro mais antigo.",
     padrao: { rotulo: "Escrevo por aqui", titulo: "Blog", quantos: 6 },
   },
   {
-    tipo: "depoimentos", nome: "Depoimentos", emoji: "💬", estilos: ["site"],
+    tipo: "depoimentos", nome: "Depoimentos", Icone: Quote, estilos: ["site"],
     explica: "O que os clientes falam. Prova social sem precisar de print.",
     padrao: { rotulo: "Quem já passou por aqui", titulo: "Depoimentos", itens: [{ texto: "", autor: "" }] },
   },
   {
-    tipo: "contato", nome: "Contato e rodapé", emoji: "📇", estilos: ["site"],
+    tipo: "contato", nome: "Contato e rodapé", Icone: Contact, estilos: ["site"],
     explica: "Fecha o site com telefone, e-mail, endereço e redes.",
     padrao: { titulo: "", telefone: "", email: "", endereco: "", instagram: "", assinatura: "" },
   },
@@ -154,7 +162,7 @@ const TODOS_BLOCOS = [...BLOCOS, ...BLOCOS_SITE];
 
 export const metaDoBloco = (t: string): MetaBloco =>
   TODOS_BLOCOS.find((b) => b.tipo === t) ?? {
-    tipo: "link", nome: "Bloco", emoji: "🔗", explica: "", padrao: {},
+    tipo: "link", nome: "Bloco", Icone: Layers, explica: "", padrao: {},
   };
 
 /** No Site as seções vêm primeiro, porque é por elas que a montagem começa. */

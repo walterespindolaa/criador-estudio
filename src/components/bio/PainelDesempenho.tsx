@@ -3,6 +3,7 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { useBioStats } from "@/hooks/useBioStats";
 import { useBioBlocks } from "@/hooks/useBioBlocks";
 import { metaDoBloco, txt } from "@/lib/bioBlocks";
+import { Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -74,7 +75,7 @@ export function PainelDesempenho({ estilo }: { estilo: "classico" | "site" }) {
         return {
           id, cliques,
           nome: b ? (txt(b.data ?? {}, "titulo") || meta?.nome || "Bloco") : "Bloco removido",
-          emoji: meta?.emoji ?? "🔗",
+          Icone: meta?.Icone ?? Link2,
           fatia: total > 0 ? Math.round((cliques / total) * 100) : 0,
         };
       })
@@ -170,7 +171,7 @@ export function PainelDesempenho({ estilo }: { estilo: "classico" | "site" }) {
               <div className="space-y-2">
                 {ranking.map((r) => (
                   <div key={r.id} className="flex items-center gap-2.5">
-                    <span className="text-base shrink-0" aria-hidden>{r.emoji}</span>
+                    <r.Icone className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] font-body font-medium text-foreground truncate">{r.nome}</p>
                       <div className="h-1.5 rounded-full bg-muted mt-1 overflow-hidden">
