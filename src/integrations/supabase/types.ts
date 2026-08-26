@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -513,6 +513,69 @@ export type Database = {
         }
         Relationships: []
       }
+      bio_blocks: {
+        Row: {
+          clicks: number
+          created_at: string
+          data: Json
+          ends_at: string | null
+          estilo: string
+          id: string
+          is_active: boolean
+          kind: string
+          page_id: string | null
+          position: number
+          starts_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clicks?: number
+          created_at?: string
+          data?: Json
+          ends_at?: string | null
+          estilo?: string
+          id?: string
+          is_active?: boolean
+          kind: string
+          page_id?: string | null
+          position?: number
+          starts_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          clicks?: number
+          created_at?: string
+          data?: Json
+          ends_at?: string | null
+          estilo?: string
+          id?: string
+          is_active?: boolean
+          kind?: string
+          page_id?: string | null
+          position?: number
+          starts_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bio_blocks_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "bio_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bio_blocks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bio_leads: {
         Row: {
           created_at: string
@@ -618,6 +681,7 @@ export type Database = {
         Row: {
           created_at: string
           crm_client_id: string
+          estilo: string
           id: string
           manager_id: string
           settings: Json
@@ -628,6 +692,7 @@ export type Database = {
         Insert: {
           created_at?: string
           crm_client_id: string
+          estilo?: string
           id?: string
           manager_id: string
           settings?: Json
@@ -638,6 +703,7 @@ export type Database = {
         Update: {
           created_at?: string
           crm_client_id?: string
+          estilo?: string
           id?: string
           manager_id?: string
           settings?: Json
@@ -651,6 +717,60 @@ export type Database = {
             columns: ["crm_client_id"]
             isOneToOne: false
             referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bio_stats_daily: {
+        Row: {
+          block_id: string | null
+          clicks: number
+          created_at: string
+          dia: string
+          escopo: string
+          id: string
+          origem: string
+          page_id: string | null
+          user_id: string
+          views: number
+        }
+        Insert: {
+          block_id?: string | null
+          clicks?: number
+          created_at?: string
+          dia: string
+          escopo: string
+          id?: string
+          origem?: string
+          page_id?: string | null
+          user_id: string
+          views?: number
+        }
+        Update: {
+          block_id?: string | null
+          clicks?: number
+          created_at?: string
+          dia?: string
+          escopo?: string
+          id?: string
+          origem?: string
+          page_id?: string | null
+          user_id?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bio_stats_daily_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "bio_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bio_stats_daily_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "bio_pages"
             referencedColumns: ["id"]
           },
         ]
@@ -5507,6 +5627,26 @@ export type Database = {
         }
         Returns: undefined
       }
+      bio_lead_para_pipeline: {
+        Args: {
+          _block_id: string
+          _de: string
+          _email: string
+          _manager: string
+          _nome: string
+          _telefone: string
+        }
+        Returns: undefined
+      }
+      bio_registrar_evento: {
+        Args: {
+          _block_id?: string
+          _origem?: string
+          _slug: string
+          _tipo: string
+        }
+        Returns: undefined
+      }
       bio_slug_available: {
         Args: { _exclude?: string; _slug: string }
         Returns: boolean
@@ -5682,6 +5822,15 @@ export type Database = {
         }[]
       }
       get_proposal_by_token: { Args: { _token: string }; Returns: Json }
+      get_public_bio_blocks: {
+        Args: { _estilo?: string; _slug: string }
+        Returns: {
+          data: Json
+          id: string
+          kind: string
+          position: number
+        }[]
+      }
       get_public_bio_links_by_slug: {
         Args: { _slug: string }
         Returns: {
@@ -5755,6 +5904,7 @@ export type Database = {
           used: number
         }[]
       }
+      increment_bio_block_click: { Args: { _id: string }; Returns: undefined }
       increment_bio_link_click: {
         Args: { link_id: string }
         Returns: undefined
@@ -6025,6 +6175,7 @@ export type Database = {
       }
       submit_bio_lead: {
         Args: {
+          _block_id?: string
           _email?: string
           _name?: string
           _phone?: string
@@ -6034,6 +6185,7 @@ export type Database = {
       }
       submit_bio_page_lead: {
         Args: {
+          _block_id?: string
           _email?: string
           _name?: string
           _phone?: string
