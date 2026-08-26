@@ -141,6 +141,7 @@ import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { clienteInativo } from "@/lib/cliente-status";
 import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { LinkNaBioCliente } from "@/components/accounts/crm/LinkNaBioCliente";
+import { BrandbookDoCrm } from "@/components/accounts/crm/BrandbookDoCrm";
 import { confirmar } from "@/components/shared/Confirm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { MoneyInput } from "@/components/shared/MoneyInput";
@@ -823,18 +824,10 @@ export default function ClienteHub() {
         client.cria_owner_id ? (
           <ClienteBrandbookCria criaOwnerId={client.cria_owner_id} />
         ) : (
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-              <p className="text-sm font-body text-foreground font-medium">Este cliente não usa o Cria</p>
-              <p className="text-xs text-muted-foreground font-body mt-1 mb-4 max-w-md mx-auto">
-                O Brandbook (paleta, tom de voz, personas, moodboard) é preenchido pelo cliente na conta dele.
-                Sem conta Cria, preencha na mão pela ficha completa do CRM.
-              </p>
-              <Button variant="outline" asChild>
-                <Link to={`/socialmidia/criacrm/${id}`}><ExternalLink className="h-4 w-4 mr-1.5" /> Preencher no CRM</Link>
-              </Button>
-            </div>
-          </div>
+          // Cliente sem conta Cria: o brandbook é o que a social mídia preencheu
+          // na ficha. Antes esta aba só dizia "não usa o Cria" e mandava a
+          // pessoa procurar em outra tela, e quem monta post não ia atrás.
+          <BrandbookDoCrm client={client} />
         )
       )}
 

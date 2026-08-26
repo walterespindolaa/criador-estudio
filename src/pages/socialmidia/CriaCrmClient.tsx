@@ -563,9 +563,10 @@ function ClientWorkspace() {
           {!isCria && (
             <BrandbookImport
               alvo="cliente"
+              compacto
               atual={bc as Record<string, string | undefined>}
-              titulo={`Sobe o moodboard d${form.name?.match(/^[AaEeIiOoUu]/) ? "" : "o"} ${form.name}. O Cria preenche.`}
-              descricao="Se você já tem o brandbook deste cliente em PDF, não digite nada: a gente lê as cores, as fontes, o tom de voz e a direção de arte, e você só confere."
+              titulo="Só o brandbook em PDF (cores, fontes, tom de voz)"
+              descricao="A gente lê e preenche esta aba. Você só confere antes de salvar."
               onSalvar={async (valores) => {
                 const nbc = { ...bc, ...valores };
                 setForm({ ...form, brand_core: nbc });

@@ -64,9 +64,12 @@ type Props = {
   /** Texto do bloco de convite (muda entre criador e cliente). */
   titulo?: string;
   descricao?: string;
+  /** Barra fina em vez do bloco grande, pra telas que já têm outro caminho de
+   *  subir arquivo e ficariam com dois convites iguais um embaixo do outro. */
+  compacto?: boolean;
 };
 
-export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar, titulo, descricao }: Props) {
+export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar, titulo, descricao, compacto }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [arrastando, setArrastando] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -105,9 +108,51 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
 
   const lendo = etapa === "lendo" || etapa === "pensando";
 
+  const entrada = (
+    <input
+      ref={inputRef}
+      type="file"
+      accept="application/pdf,image/*"
+      multiple
+      className="hidden"
+      onChange={(e) => { pick(e.target.files); e.target.value = ""; }}
+    />
+  );
+
   return (
     <>
-      {/* ── O CONVITE ── */}
+      {/* ── O CONVITE ──
+          Em COMPACTO ele vira uma barra: nesta aba já existe outro caminho de
+          subir arquivo, e dois blocos grandes de upload um embaixo do outro
+          parecem a mesma coisa repetida. Barra fina resolve sem sumir. */}
+      {compacto ? (
+        <div
+          onDragOver={(e) => { e.preventDefault(); setArrastando(true); }}
+          onDragLeave={() => setArrastando(false)}
+          onDrop={(e) => { e.preventDefault(); setArrastando(false); pick(e.dataTransfer.files); }}
+          className={cn(
+            "rounded-2xl border px-3.5 py-3 flex flex-col sm:flex-row sm:items-center gap-3 transition-colors",
+            arrastando ? "border-primary bg-primary/[0.04]" : "border-border bg-card",
+          )}
+        >
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary shrink-0">
+            <FileText className="h-4 w-4" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="font-display font-semibold text-sm text-foreground">
+              {titulo ?? "Tem o brandbook em PDF? A gente lê."}
+            </p>
+            <p className="text-[11.5px] font-body text-muted-foreground">
+              {descricao ?? "PDF ou imagem, até 2 arquivos. Consome 1 geração da cota de IA."}
+            </p>
+          </div>
+          {entrada}
+          <Button variant="outline" size="sm" className="shrink-0" onClick={() => inputRef.current?.click()} disabled={lendo}>
+            {lendo ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 mr-1.5" />}
+            {lendo ? "Lendo..." : "Escolher arquivo"}
+          </Button>
+        </div>
+      ) : (
       <div
         onDragOver={(e) => { e.preventDefault(); setArrastando(true); }}
         onDragLeave={() => setArrastando(false)}
@@ -128,14 +173,7 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
             "Você já tem o brandbook em PDF. Não faz sentido digitar tudo de novo num formulário de vinte campos, a gente lê as cores, as fontes, o tom de voz e o que pode e o que não pode."}
         </p>
 
-        <input
-          ref={inputRef}
-          type="file"
-          accept="application/pdf,image/*"
-          multiple
-          className="hidden"
-          onChange={(e) => { pick(e.target.files); e.target.value = ""; }}
-        />
+        {entrada}
         <Button className="mt-4" onClick={() => inputRef.current?.click()} disabled={lendo}>
           {lendo ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
           {lendo ? "Lendo…" : "Escolher os arquivos"}
@@ -145,6 +183,7 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
           PDF ou imagem · até 2 arquivos · até 10 MB cada · consome 1 geração da cota de IA
         </p>
       </div>
+      )}
 
       {/* ── LENDO (o progresso é honesto: mostra o que está acontecendo) ── */}
       {lendo && (

@@ -141,21 +141,22 @@ export function RelatorioImport({ onSalvar }: { onSalvar: (r: RelatorioSalvar) =
   return (
     <>
       {/* Convite */}
-      <div className="rounded-2xl border-2 border-dashed border-primary/30 bg-primary/[0.04] p-4">
-        <div className="flex items-start gap-3 flex-wrap">
-          <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground grid place-items-center shrink-0">
-            <FileText className="h-5 w-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-display font-bold text-foreground">Tem o relatório/briefing completo do cliente? Sobe aqui.</p>
-            <p className="text-[12px] font-body text-muted-foreground mt-0.5">
-              A gente lê o PDF do briefing (história, personas, diagnóstico, concorrentes) e preenche as abas <strong>Brandbook, Persona, Diagnóstico e Concorrência</strong> de uma vez. Você só confere antes de salvar.
-            </p>
-          </div>
-          <Button size="sm" onClick={() => inputRef.current?.click()} className="rounded-xl shrink-0">
-            <Upload className="h-3.5 w-3.5 mr-1.5" /> Subir relatório
-          </Button>
+      {/* Barra fina, e não bloco em destaque: esta aba já tem outros dois
+          caminhos de subir arquivo (o brandbook em PDF e o anexo do briefing),
+          e três convites grandes seguidos pareciam a mesma coisa repetida. */}
+      <div className="rounded-2xl border border-border bg-card px-3.5 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary grid place-items-center shrink-0">
+          <FileText className="h-4 w-4" />
         </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-display font-semibold text-foreground">Relatório completo do cliente em PDF</p>
+          <p className="text-[11.5px] font-body text-muted-foreground">
+            Preenche Brandbook, Persona, Diagnóstico e Concorrência de uma vez. Você confere antes de salvar.
+          </p>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => inputRef.current?.click()} className="shrink-0">
+          <Upload className="h-3.5 w-3.5 mr-1.5" /> Escolher arquivo
+        </Button>
         <input ref={inputRef} type="file" accept=".pdf,image/*" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) importar(f); e.target.value = ""; }} />
       </div>

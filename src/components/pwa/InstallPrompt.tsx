@@ -59,6 +59,17 @@ const GANHOS = [
   { icon: WifiOff, t: "Funciona sem internet", d: "No elevador, no metrô: você continua usando e tudo sincroniza quando a rede volta." },
 ];
 
+/* ── ONDE ESTE CONVITE NÃO PODE APARECER ──
+   As páginas públicas são vistas por gente que não é cliente do Cria: o
+   seguidor que tocou no link na bio, o cliente do cliente aprovando um post.
+   Convidar essa pessoa a instalar o Cria é, na melhor hipótese, confuso; na
+   pior, ela fecha a página achando que caiu num lugar errado.
+
+   Vale também pra quando a social mídia abre o próprio link pra conferir: o
+   que ela quer ver é a página do cliente, não um convite. */
+const PUBLICAS = ["/bio/", "/aprovar/", "/proposta/", "/cronograma/", "/roteiros/", "/cadastro/"];
+const ehPaginaPublica = (caminho: string) => PUBLICAS.some((p) => caminho.startsWith(p));
+
 export function InstallPrompt() {
   const { user } = useAuth();
   const [bip, setBip] = useState<BIPEvent | null>(null);
@@ -92,6 +103,7 @@ export function InstallPrompt() {
   // do iPhone que instalou e nunca ligou o aviso.
   useEffect(() => {
     if (!user || !checou) return;
+    if (ehPaginaPublica(window.location.pathname)) return;
     const sessao = contarSessao();
     if (sessao < SESSAO_MINIMA) return;
     if (foiDispensadoRecentemente()) return;

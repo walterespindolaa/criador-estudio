@@ -768,7 +768,11 @@ const BioPage = () => {
           transition={{ duration: 0.45 }}
           className="flex flex-col items-center"
         >
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary via-purple-500 to-pink-500 p-[3px] mb-4 shadow-xl">
+          {/* A foto é o primeiro sinal de que a pessoa chegou no lugar certo.
+              Em 24 unidades ela competia de igual pra igual com os botões; em
+              32 ela ancora o topo sem empurrar o resto pra fora da primeira
+              tela do celular. */}
+          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary via-purple-500 to-pink-500 p-[3px] mb-4 shadow-xl">
             <div className="w-full h-full rounded-full bg-white overflow-hidden flex items-center justify-center">
               {headerAvatar ? (
                 <img
