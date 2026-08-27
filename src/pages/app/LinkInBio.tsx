@@ -1057,9 +1057,16 @@ const LinkInBio = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6">
+        {/* A prévia é um celular de largura FIXA (300px + moldura), então a
+            coluna dela é fixa também. Como fração (1fr) ela virava refém do
+            editor: bastava um link comprido sem espaço, um do WhatsApp com
+            parâmetros, pra coluna do editor exigir a largura inteira do texto e
+            espremer a prévia num filete de dois dedos, com o título caindo uma
+            letra por linha. minmax(0,1fr) é o que autoriza o editor a encolher:
+            coluna de grid não encolhe abaixo do próprio conteúdo por padrão. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_356px] gap-6 items-start">
           {/* ── Editor ──────────────────────────────── */}
-          <div className="space-y-5">
+          <div className="space-y-5 min-w-0">
             {/* ── 1. Estilo (fixo no topo, junto do Salvar) ───────────────── */}
             <div data-tour="bio-estilo" className="sticky top-0 z-30 rounded-2xl border border-border bg-background/95 backdrop-blur-sm px-4 py-3 shadow-sm">
               {/* Título e Salvar na mesma linha, seletor embaixo: esta barra é
@@ -1661,8 +1668,8 @@ const LinkInBio = () => {
               ver a mudança no mesmo instante em que mexe no campo, e não rolar
               de volta pra conferir. A altura máxima é pra prévia alta não
               esconder o próprio fim atrás da borda da tela. */}
-          <div className="lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:overflow-x-clip lg:pb-2">
-            <Card className="p-5 rounded-2xl border-border">
+          <div className="min-w-0 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:overflow-x-clip lg:pb-2">
+            <Card className="p-4 rounded-2xl border-border">
               <p className="text-xs text-center font-display font-semibold uppercase tracking-wider text-muted-foreground/80 mb-4">
                 Pré-visualização
               </p>

@@ -536,10 +536,13 @@ function CartaoBloco({
             <span className="block font-display font-semibold text-sm truncate">
               {txt(bloco.data ?? {}, "titulo") || meta.nome}
             </span>
-            <span className="flex flex-wrap items-center gap-1.5 mt-0.5">
+            {/* min-w-0 aqui e no resumo: sem isso o `truncate` não trunca
+                nada. Um link sem espaço não tem onde quebrar, vira a largura
+                mínima da linha e empurra a tela toda pra fora. */}
+            <span className="flex flex-wrap items-center gap-1.5 mt-0.5 min-w-0">
               <span className="text-[10px] font-body font-semibold uppercase tracking-wider text-muted-foreground">{meta.nome}</span>
               {falta && <span className="text-[10px] font-body font-semibold text-amber-600">{falta}</span>}
-              {!falta && <span className="text-[11px] font-body text-muted-foreground truncate">{resumoDoBloco(bloco)}</span>}
+              {!falta && <span className="text-[11px] font-body text-muted-foreground truncate min-w-0 max-w-full">{resumoDoBloco(bloco)}</span>}
               {(bloco.starts_at || bloco.ends_at) && (
                 <span className="text-[10px] font-body font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700">agendado</span>
               )}

@@ -285,7 +285,7 @@ const NAV = `
   <div class="nav2-dir">
     <a href="${APP}/login" class="nav-login">Entrar</a>
     <a href="${APP}/signup" class="btn btn-laranja nav-cta">Testar grátis</a>
-    <button class="nav2-burger" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu-mobile"><i></i><i></i><i></i></button>
+    <button class="nav2-burger" aria-label="Abrir menu" aria-expanded="false" aria-controls="menu-mobile"><span class="tracos"><i></i><i></i><i></i></span><span class="rot">Menu</span></button>
   </div>
 </nav>
 <div class="nav2-painel" id="menu-mobile">
