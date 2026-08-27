@@ -93,6 +93,17 @@ const BIRTHDAY_DEFAULT_COLOR = "#BE185D";
 // Roxo do sistema: precisava ser distinguível do rosa do aniversário, que é o
 // outro lembrete que divide o topo do dia.
 const COMEMORATIVA_COLOR = "#7C5CFC";
+
+/** Um cliente que tem esta data no cronograma dele. */
+type ClienteDaData = { id: string; nome: string; crmId: string | null; aprovada: boolean };
+/** Uma data comemorativa do dia, com todos os clientes que a pediram. */
+type ComemorativaDoDia = { chave: string; label: string; clientes: ClienteDaData[] };
+
+/* Agrupa "Dia do Café", "dia do cafe" e "Dia do café " como a mesma data. Cada
+   cliente tem o cronograma dele e digita do jeito dele; sem normalizar, a mesma
+   data viraria três chips por diferença de acento ou de maiúscula. */
+const chaveDaData = (label: string) =>
+  label.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ");
 // Paleta de cores pra tarefa (útil pra tarefa sem cliente ganhar destaque próprio).
 const TASK_COLORS = ["#0061EE", "#01A652", "#EA4918", "#FF77B9", "#4B3FA8", "#F5A623", "#111827"];
 // HH:MM a partir de "HH:MM:SS" (ou null).
@@ -278,6 +289,9 @@ export default function AgendaCriacao() {
   const toggleProducao = () => setProducaoOpen((v) => { const n = !v; try { localStorage.setItem("agenda_producao_open", n ? "1" : "0"); } catch { /* segue */ } return n; });
   // Painel "ver todos" de um dia cheio.
   const [dayModal, setDayModal] = useState<string | null>(null);
+  /* A data comemorativa aberta, quando ela tem mais de um cliente. Guarda o dia
+     junto pra o título do diálogo poder dizer a data por extenso. */
+  const [dataModal, setDataModal] = useState<{ iso: string; data: ComemorativaDoDia } | null>(null);
   // Relatório de produtividade (semana/mês) da operação.
   const [relatorioOpen, setRelatorioOpen] = useState(false);
   // "Períodos": ALTERNADOR ÚNICO da divisão do dia em faixas (manhã / tarde / noite).
@@ -743,24 +757,42 @@ export default function AgendaCriacao() {
      ano. Data comemorativa se repete todo ano, e guardar o ano faria ela sumir
      na virada de janeiro. */
   const comemorativasByDay = useMemo(() => {
-    const m = new Map<string, { id: string; label: string; cliente: string; crmId: string | null; aprovada: boolean }[]>();
+    const m = new Map<string, ComemorativaDoDia[]>();
     if (!filters.comemorativa || datasComemorativas.length === 0) return m;
+
     for (const d of days) {
       const iso = ymd(d);
       const ddmm = `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;   // "DD/MM" do dia da grade
+      /* AGRUPADO POR DATA, não por cliente. Dia Mundial da Fisioterapia com três
+         clientes de fisio na carteira empilhava três chips iguais no mesmo dia,
+         e a agenda virava uma parede de repetição. É UMA data, com N clientes
+         que precisam dela: o chip é um só e diz quantos são. */
+      const porData = new Map<string, ComemorativaDoDia>();
       for (const dt of datasComemorativas) {
         // Aceita "8/9" e "08/09": o campo é livre e a pessoa digita dos dois jeitos.
         const [dia = "", mes = ""] = dt.dia.split("/");
         if (!dia || !mes) continue;
         if (`${dia.padStart(2, "0")}/${mes.padStart(2, "0")}` !== ddmm) continue;
         if (!clientMatches(dt.crmClientId ?? "", dt.clienteNome)) continue;
-        (m.get(iso) ?? m.set(iso, []).get(iso)!).push({
-          id: dt.id, label: dt.label, cliente: dt.clienteNome, crmId: dt.crmClientId, aprovada: dt.aprovada,
-        });
+
+        const chave = chaveDaData(dt.label);
+        const atual = porData.get(chave);
+        const cliente = { id: dt.id, nome: dt.clienteNome, crmId: dt.crmClientId, aprovada: dt.aprovada };
+        if (atual) atual.clientes.push(cliente);
+        else porData.set(chave, { chave, label: dt.label, clientes: [cliente] });
       }
+      if (porData.size === 0) continue;
+
+      const lista = [...porData.values()];
+      for (const item of lista) {
+        // Quem já aprovou aparece primeiro: é o compromisso que existe de verdade.
+        item.clientes.sort((a, b) => Number(b.aprovada) - Number(a.aprovada) || a.nome.localeCompare(b.nome, "pt-BR"));
+      }
+      // Data com mais gente esperando sobe: é a que rende mais trabalho no dia.
+      lista.sort((a, b) => b.clientes.filter((c) => c.aprovada).length - a.clientes.filter((c) => c.aprovada).length
+        || b.clientes.length - a.clientes.length);
+      m.set(iso, lista);
     }
-    // Aprovada pelo cliente primeiro: é a que já virou compromisso.
-    for (const lista of m.values()) lista.sort((a, b) => Number(b.aprovada) - Number(a.aprovada));
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [datasComemorativas, days, filters.comemorativa, postClients, selectedCrmIds, selectedNames]);
@@ -1287,28 +1319,42 @@ export default function AgendaCriacao() {
                  Mostrar as duas é de propósito. Se aparecesse só a aprovada, a
                  pessoa ligava o filtro no começo do mês, não via nada (o cliente
                  ainda não abriu o link) e concluía que estava quebrado. */
-              const renderComemorativa = (c: { id: string; label: string; cliente: string; crmId: string | null; aprovada: boolean }) => (
-                <button key={`com:${c.id}`} type="button"
-                  title={c.aprovada
-                    ? `${c.label} · ${c.cliente} aprovou esta data no cronograma`
-                    : `${c.label} · proposta no cronograma de ${c.cliente}, ainda sem resposta`}
-                  onClick={() => { if (c.crmId) navigate(`/socialmidia/clientes/${c.crmId}/cronograma`); }}
-                  className={cn(
-                    "rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95",
-                    !c.aprovada && "opacity-60",
-                  )}
-                  style={{ borderColor: `${COMEMORATIVA_COLOR}80`, background: `${COMEMORATIVA_COLOR}0F` }}>
-                  <div className="flex items-center gap-1 min-w-0" style={{ color: COMEMORATIVA_COLOR }}>
-                    <PartyPopper className="h-3 w-3 shrink-0" />
-                    <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0 text-foreground/80">{c.cliente}</span>
-                    <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{ background: `${COMEMORATIVA_COLOR}26`, color: COMEMORATIVA_COLOR }}>
-                      {c.aprovada ? "Data" : "A confirmar"}
-                    </span>
-                  </div>
-                  <p className="text-[12px] font-body font-semibold leading-tight truncate text-foreground">{c.label}</p>
-                </button>
-              );
+              const renderComemorativa = (c: ComemorativaDoDia) => {
+                const aprovados = c.clientes.filter((x) => x.aprovada).length;
+                const total = c.clientes.length;
+                /* Um cliente só: vai direto pro cronograma dele, que é o que a
+                   pessoa quer fazer em seguida. Mais de um: abre a lista, porque
+                   a pergunta passa a ser OUTRA ("pra quais clientes eu preciso
+                   produzir isso?") e mandar pra um deles escolheria por ela. */
+                const irDireto = total === 1 && c.clientes[0].crmId;
+                return (
+                  <button key={`com:${c.chave}`} type="button"
+                    title={total === 1
+                      ? `${c.label} · ${c.clientes[0].nome}`
+                      : `${c.label} · ${total} clientes, ${aprovados} já aprovaram`}
+                    onClick={() => {
+                      if (irDireto) navigate(`/socialmidia/clientes/${c.clientes[0].crmId}/cronograma`);
+                      else setDataModal({ iso, data: c });
+                    }}
+                    className={cn(
+                      "rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95",
+                      aprovados === 0 && "opacity-60",
+                    )}
+                    style={{ borderColor: `${COMEMORATIVA_COLOR}80`, background: `${COMEMORATIVA_COLOR}0F` }}>
+                    <div className="flex items-center gap-1 min-w-0" style={{ color: COMEMORATIVA_COLOR }}>
+                      <PartyPopper className="h-3 w-3 shrink-0" />
+                      <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0 text-foreground/80">
+                        {total === 1 ? c.clientes[0].nome : `${total} clientes`}
+                      </span>
+                      <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ background: `${COMEMORATIVA_COLOR}26`, color: COMEMORATIVA_COLOR }}>
+                        {aprovados === 0 ? "A confirmar" : aprovados === total ? "Data" : `${aprovados} de ${total}`}
+                      </span>
+                    </div>
+                    <p className="text-[12px] font-body font-semibold leading-tight truncate text-foreground">{c.label}</p>
+                  </button>
+                );
+              };
 
               const renderAniv = (b: { clientId: string; nome: string; cor: string | null }) => {
                 const cor = b.cor || BIRTHDAY_DEFAULT_COLOR;
@@ -1651,6 +1697,54 @@ export default function AgendaCriacao() {
         onOpenClient={() => { if (editPost) { const crm = extById.get(editPost.external_client_id)?.crm_client_id; setEditPost(null); navigate(crm ? `/socialmidia/clientes/${crm}/posts` : "/socialmidia/criapost/aprovacoes"); } }} />
 
       {/* Painel "Ver todos" de um dia cheio: lista tudo, cada item clicável pra editar. */}
+      {/* ── A DATA COMEMORATIVA COM VÁRIOS CLIENTES ──
+          A pergunta que a pessoa faz ao ver "Dia Mundial da Fisioterapia" na
+          agenda não é "que data é essa", é "PRA QUEM eu preciso produzir isso".
+          Este diálogo responde exatamente isso: a lista de clientes, quem já
+          aprovou, e um caminho direto pro cronograma de cada um. */}
+      {dataModal && (
+        <Dialog open onOpenChange={(o) => { if (!o) setDataModal(null); }}>
+          <DialogContent className="sm:max-w-md rounded-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="font-display flex items-center gap-2">
+                <PartyPopper className="h-4 w-4 shrink-0" style={{ color: COMEMORATIVA_COLOR }} />
+                {dataModal.data.label}
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-[12px] font-body text-muted-foreground -mt-2 capitalize">
+              {parseDateOnly(dataModal.iso).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+              {" · "}
+              <span className="normal-case">
+                {dataModal.data.clientes.filter((c) => c.aprovada).length} de {dataModal.data.clientes.length} já aprovaram
+              </span>
+            </p>
+            <div className="space-y-1.5 mt-1">
+              {dataModal.data.clientes.map((c) => (
+                <button key={c.id}
+                  onClick={() => { setDataModal(null); if (c.crmId) navigate(`/socialmidia/clientes/${c.crmId}/cronograma`); }}
+                  disabled={!c.crmId}
+                  className={cn(
+                    "w-full flex items-center gap-2.5 rounded-xl border border-border p-2.5 text-left transition-colors",
+                    c.crmId ? "hover:border-primary/50 hover:bg-primary/5" : "opacity-70 cursor-default",
+                  )}>
+                  <span className="h-2 w-2 rounded-full shrink-0"
+                    style={{ background: c.aprovada ? COMEMORATIVA_COLOR : "transparent", border: `1.5px solid ${COMEMORATIVA_COLOR}` }} />
+                  <span className="text-[13px] font-body font-semibold text-foreground truncate flex-1 min-w-0">{c.nome}</span>
+                  <span className={cn("shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full",
+                    c.aprovada ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground")}>
+                    {c.aprovada ? "Aprovou" : "Sem resposta"}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] font-body text-muted-foreground mt-2 leading-relaxed">
+              Clique num cliente pra abrir o cronograma dele. Quem está sem resposta ainda não marcou esta data no
+              link que você mandou.
+            </p>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {dayModal && (() => {
         const iso = dayModal;
         const caps = capturesByDay.get(iso) ?? []; const tks = tasksByDay.get(iso) ?? [];
@@ -1689,15 +1783,27 @@ export default function AgendaCriacao() {
           </button>
         );
         const comem = comemorativasByDay.get(iso) ?? [];
-        const linhaComem = (c: { id: string; label: string; cliente: string; crmId: string | null; aprovada: boolean }) => (
-          <button key={`cm${c.id}`} onClick={() => { setDayModal(null); if (c.crmId) navigate(`/socialmidia/clientes/${c.crmId}/cronograma`); }}
-            className={cn(rowCls, !c.aprovada && "opacity-70")}>
-            {dot(COMEMORATIVA_COLOR)}
-            <span className="text-[13px] font-body font-semibold text-foreground truncate">{c.label}</span>
-            <span className="text-[11px] text-muted-foreground truncate">{c.cliente}</span>
-            <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">{c.aprovada ? "Data" : "A confirmar"}</span>
-          </button>
-        );
+        const linhaComem = (c: ComemorativaDoDia) => {
+          const aprovados = c.clientes.filter((x) => x.aprovada).length;
+          const total = c.clientes.length;
+          return (
+            <button key={`cm${c.chave}`}
+              onClick={() => {
+                if (total === 1 && c.clientes[0].crmId) { setDayModal(null); navigate(`/socialmidia/clientes/${c.clientes[0].crmId}/cronograma`); }
+                else { setDayModal(null); setDataModal({ iso, data: c }); }
+              }}
+              className={cn(rowCls, aprovados === 0 && "opacity-70")}>
+              {dot(COMEMORATIVA_COLOR)}
+              <span className="text-[13px] font-body font-semibold text-foreground truncate">{c.label}</span>
+              <span className="text-[11px] text-muted-foreground truncate">
+                {total === 1 ? c.clientes[0].nome : `${total} clientes`}
+              </span>
+              <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+                {aprovados === 0 ? "A confirmar" : aprovados === total ? "Data" : `${aprovados} de ${total}`}
+              </span>
+            </button>
+          );
+        };
         const linhaAniv = (b: { clientId: string; nome: string; cor: string | null }) => (
           <button key={`an${b.clientId}`} onClick={() => { setDayModal(null); navigate(`/socialmidia/clientes/${b.clientId}/visao-geral`); }} className={rowCls}>
             {dot(b.cor || BIRTHDAY_DEFAULT_COLOR)}
