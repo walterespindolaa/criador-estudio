@@ -109,8 +109,9 @@ export function useCronogramas() {
 export type DataComemorativaAgenda = {
   id: string;
   label: string;
-  /** "DD/MM" como a pessoa digitou. Sem ano de propósito: data comemorativa
-   *  se repete todo ano, e guardar o ano faria ela sumir em janeiro. */
+  /** O rótulo do dia como está salvo: "08/03", mas também "data móvel",
+   *  "2º domingo" ou vazio. Quem traduz isso pra um dia do calendário é o
+   *  `resolverDataComemorativa`, porque a resposta depende do ANO. */
   dia: string;
   /** O cliente marcou no link que quer trabalhar esta data. */
   aprovada: boolean;
@@ -144,8 +145,11 @@ export function useDatasComemorativasDosClientes() {
       return ((data ?? []) as unknown as Linha[])
         // Cronograma arquivado é histórico: as datas dele não voltam pra agenda.
         .filter((r) => r.cronogramas?.status !== "arquivado")
-        // Data sem dia não tem onde cair no calendário.
-        .filter((r) => !!(r.day_label ?? "").trim())
+        /* Data sem dia NÃO é descartada aqui. O catálogo conhece o dia de
+           quase tudo que foi escolhido na lista anual, então quem sabe resolver
+           é o calendário, não esta consulta. Descartar aqui fazia sumir em
+           silêncio justamente as datas móveis (Páscoa, Carnaval, Dia das Mães),
+           que são as que mais rendem conteúdo. */
         .map((r) => ({
           id: r.id,
           label: r.label,

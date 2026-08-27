@@ -308,3 +308,134 @@ export function segmentoDoTexto(txt?: string | null): SegmentKey | null {
 
 // Compat: a lista padrão (geral + gastronomia) que existia antes.
 export const DATAS_COMEMORATIVAS: DataComemorativaGroup[] = datasPara(["geral", "gastronomia"]);
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DE ROTULO DE DIA PARA DIA DE VERDADE
+
+   O catálogo guarda o dia como a pessoa lê: "08/03", mas também "data móvel",
+   "2º domingo", "última sexta" e "mês todo". Isso é ótimo pra montar a lista do
+   cronograma, e inútil pra colocar a data num calendário: só o "08/03" cai num
+   quadradinho sozinho.
+
+   Na prática isso derrubava justamente as datas que mais rendem conteúdo no
+   Brasil. Páscoa, Carnaval, Dia das Mães e Dia dos Pais são todas móveis, e
+   nenhuma delas aparecia. Aqui elas viram dia de verdade, calculadas pro ano
+   que a pessoa está olhando.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Domingo de Páscoa do ano (algoritmo de Meeus/Jones/Butcher). Dele saem
+ *  Carnaval, Sexta-feira Santa e Corpus Christi, que são deslocamentos fixos. */
+export function domingoDePascoa(ano: number): Date {
+  const a = ano % 19;
+  const b = Math.floor(ano / 100);
+  const c = ano % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31);      // 3 = março, 4 = abril
+  const dia = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(ano, mes - 1, dia);
+}
+
+const somaDias = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+
+/** A n-ésima ocorrência de um dia da semana no mês (n negativo = a última). */
+function enesimoDiaDaSemana(ano: number, mes: number, diaSemana: number, n: number): Date {
+  if (n > 0) {
+    const primeiro = new Date(ano, mes, 1);
+    const salto = (diaSemana - primeiro.getDay() + 7) % 7;
+    return new Date(ano, mes, 1 + salto + (n - 1) * 7);
+  }
+  const ultimo = new Date(ano, mes + 1, 0);
+  const recuo = (ultimo.getDay() - diaSemana + 7) % 7;
+  return new Date(ano, mes, ultimo.getDate() - recuo);
+}
+
+const SEM_ACENTO = (s: string) =>
+  s.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ");
+
+const DIAS_SEMANA: Record<string, number> = {
+  domingo: 0, segunda: 1, terca: 2, quarta: 3, quinta: 4, sexta: 5, sabado: 6,
+};
+
+/** Índice rótulo da data para o mês e o dia que o catálogo conhece. Um índice
+ *  só, com TODOS os segmentos: o cronograma guarda apenas o texto que a pessoa
+ *  escolheu, sem dizer de qual lista ele veio. */
+const INDICE_CATALOGO = (() => {
+  const m = new Map<string, { mes: number; dia: string }>();
+  for (const [, grupos] of Object.entries(DATAS_POR_SEGMENTO)) {
+    for (const g of grupos) {
+      const mes = MESES.indexOf(g.month as (typeof MESES)[number]);
+      if (mes < 0) continue;
+      for (const it of g.items) {
+        const chave = SEM_ACENTO(it.label);
+        if (!m.has(chave)) m.set(chave, { mes, dia: it.day });
+      }
+    }
+  }
+  return m;
+})();
+
+export type DiaResolvido =
+  /** Cai num dia certo do calendário. */
+  | { tipo: "dia"; mes: number; dia: number }
+  /** Campanha de mês inteiro (Outubro Rosa, Novembro Azul). */
+  | { tipo: "mes"; mes: number }
+  /** Não deu pra descobrir: data escrita à mão sem dia. */
+  | { tipo: "indefinido" };
+
+/**
+ * Descobre em que dia do ANO uma data comemorativa cai.
+ *
+ * Tenta, nesta ordem: o "DD/MM" que a pessoa digitou; o mesmo rótulo no
+ * catálogo; e por fim as regras de data móvel a partir do rótulo do dia.
+ */
+export function resolverDataComemorativa(label: string, dayLabel: string | null, ano: number): DiaResolvido {
+  const direto = /^(\d{1,2})\/(\d{1,2})$/.exec((dayLabel ?? "").trim());
+  if (direto) return { tipo: "dia", mes: Number(direto[2]) - 1, dia: Number(direto[1]) };
+
+  const doCatalogo = INDICE_CATALOGO.get(SEM_ACENTO(label));
+  const texto = SEM_ACENTO(dayLabel ?? doCatalogo?.dia ?? "");
+  const mesRef = doCatalogo?.mes;
+
+  // O catálogo pode ter o DD/MM mesmo quando o cronograma salvou sem dia.
+  const doCat = /^(\d{1,2})\/(\d{1,2})$/.exec((doCatalogo?.dia ?? "").trim());
+  if (doCat) return { tipo: "dia", mes: Number(doCat[2]) - 1, dia: Number(doCat[1]) };
+
+  // ── Móveis derivadas da Páscoa ──
+  const nome = SEM_ACENTO(label);
+  const pascoa = domingoDePascoa(ano);
+  const daPascoa = (deslocamento: number): DiaResolvido => {
+    const d = somaDias(pascoa, deslocamento);
+    return { tipo: "dia", mes: d.getMonth(), dia: d.getDate() };
+  };
+  if (nome.includes("pascoa")) return daPascoa(0);
+  if (nome.includes("carnaval")) return daPascoa(-47);
+  if (nome.includes("sexta-feira santa") || nome.includes("sexta feira santa")) return daPascoa(-2);
+  if (nome.includes("corpus christi")) return daPascoa(60);
+  if (nome.includes("quarta-feira de cinzas")) return daPascoa(-46);
+
+  // ── "2º domingo", "última sexta", "3º sábado" ──
+  if (mesRef !== undefined) {
+    const ordinal = /^(\d)[ºo]?\s+(domingo|segunda|terca|quarta|quinta|sexta|sabado)/.exec(texto);
+    if (ordinal) {
+      const d = enesimoDiaDaSemana(ano, mesRef, DIAS_SEMANA[ordinal[2]], Number(ordinal[1]));
+      return { tipo: "dia", mes: d.getMonth(), dia: d.getDate() };
+    }
+    const ultima = /^ultim[ao]\s+(domingo|segunda|terca|quarta|quinta|sexta|sabado)/.exec(texto);
+    if (ultima) {
+      const d = enesimoDiaDaSemana(ano, mesRef, DIAS_SEMANA[ultima[1]], -1);
+      return { tipo: "dia", mes: d.getMonth(), dia: d.getDate() };
+    }
+    // "mês todo", "3ª semana": não é um dia, é o mês inteiro.
+    if (texto) return { tipo: "mes", mes: mesRef };
+  }
+
+  return { tipo: "indefinido" };
+}

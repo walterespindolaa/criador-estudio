@@ -17,6 +17,7 @@ import {
   type CrmTask, type CrmTaskPriority, type CrmTaskStatus,
 } from "@/hooks/useCrm";
 import { useDatasComemorativasDosClientes } from "@/hooks/useCronograma";
+import { resolverDataComemorativa } from "@/lib/datasComemorativas";
 import {
   useCreations, useAddCreation, useUpdateCreation, useDeleteCreation,
   useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, useCollaboratorNames,
@@ -97,7 +98,7 @@ const COMEMORATIVA_COLOR = "#7C5CFC";
 /** Um cliente que tem esta data no cronograma dele. */
 type ClienteDaData = { id: string; nome: string; crmId: string | null; aprovada: boolean };
 /** Uma data comemorativa do dia, com todos os clientes que a pediram. */
-type ComemorativaDoDia = { chave: string; label: string; clientes: ClienteDaData[] };
+type ComemorativaDoDia = { chave: string; label: string; mesTodo: boolean; clientes: ClienteDaData[] };
 
 /* Agrupa "Dia do Café", "dia do cafe" e "Dia do café " como a mesma data. Cada
    cliente tem o cronograma dele e digita do jeito dele; sem normalizar, a mesma
@@ -762,24 +763,34 @@ export default function AgendaCriacao() {
 
     for (const d of days) {
       const iso = ymd(d);
-      const ddmm = `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;   // "DD/MM" do dia da grade
+      const ano = d.getFullYear(); const mesGrade = d.getMonth(); const diaGrade = d.getDate();
       /* AGRUPADO POR DATA, não por cliente. Dia Mundial da Fisioterapia com três
          clientes de fisio na carteira empilhava três chips iguais no mesmo dia,
          e a agenda virava uma parede de repetição. É UMA data, com N clientes
          que precisam dela: o chip é um só e diz quantos são. */
       const porData = new Map<string, ComemorativaDoDia>();
       for (const dt of datasComemorativas) {
-        // Aceita "8/9" e "08/09": o campo é livre e a pessoa digita dos dois jeitos.
-        const [dia = "", mes = ""] = dt.dia.split("/");
-        if (!dia || !mes) continue;
-        if (`${dia.padStart(2, "0")}/${mes.padStart(2, "0")}` !== ddmm) continue;
+        /* O ano vem do dia da grade, não de hoje: a Páscoa de 2026 cai em 5 de
+           abril e a de 2027 em 28 de março, e quem está olhando dezembro já vê
+           o ano seguinte na mesma tela. */
+        const quando = resolverDataComemorativa(dt.label, dt.dia, ano);
+        let mesTodo = false;
+        if (quando.tipo === "dia") {
+          if (quando.mes !== mesGrade || quando.dia !== diaGrade) continue;
+        } else if (quando.tipo === "mes") {
+          // Campanha de mês inteiro (Outubro Rosa, Novembro Azul): não é um dia,
+          // então ancora no dia 1, que é quando ela precisa começar a produzir.
+          if (quando.mes !== mesGrade || diaGrade !== 1) continue;
+          mesTodo = true;
+        } else continue;
+
         if (!clientMatches(dt.crmClientId ?? "", dt.clienteNome)) continue;
 
         const chave = chaveDaData(dt.label);
         const atual = porData.get(chave);
         const cliente = { id: dt.id, nome: dt.clienteNome, crmId: dt.crmClientId, aprovada: dt.aprovada };
         if (atual) atual.clientes.push(cliente);
-        else porData.set(chave, { chave, label: dt.label, clientes: [cliente] });
+        else porData.set(chave, { chave, label: dt.label, mesTodo, clientes: [cliente] });
       }
       if (porData.size === 0) continue;
 
@@ -1329,9 +1340,11 @@ export default function AgendaCriacao() {
                 const irDireto = total === 1 && c.clientes[0].crmId;
                 return (
                   <button key={`com:${c.chave}`} type="button"
-                    title={total === 1
-                      ? `${c.label} · ${c.clientes[0].nome}`
-                      : `${c.label} · ${total} clientes, ${aprovados} já aprovaram`}
+                    title={[
+                      c.label,
+                      c.mesTodo ? "campanha do mês inteiro" : null,
+                      total === 1 ? c.clientes[0].nome : `${total} clientes, ${aprovados} já aprovaram`,
+                    ].filter(Boolean).join(" · ")}
                     onClick={() => {
                       if (irDireto) navigate(`/socialmidia/clientes/${c.clientes[0].crmId}/cronograma`);
                       else setDataModal({ iso, data: c });
@@ -1348,7 +1361,7 @@ export default function AgendaCriacao() {
                       </span>
                       <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full"
                         style={{ background: `${COMEMORATIVA_COLOR}26`, color: COMEMORATIVA_COLOR }}>
-                        {aprovados === 0 ? "A confirmar" : aprovados === total ? "Data" : `${aprovados} de ${total}`}
+                        {c.mesTodo ? "Mês todo" : aprovados === 0 ? "A confirmar" : aprovados === total ? "Data" : `${aprovados} de ${total}`}
                       </span>
                     </div>
                     <p className="text-[12px] font-body font-semibold leading-tight truncate text-foreground">{c.label}</p>
@@ -1799,7 +1812,7 @@ export default function AgendaCriacao() {
                 {total === 1 ? c.clientes[0].nome : `${total} clientes`}
               </span>
               <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
-                {aprovados === 0 ? "A confirmar" : aprovados === total ? "Data" : `${aprovados} de ${total}`}
+                {c.mesTodo ? "Mês todo" : aprovados === 0 ? "A confirmar" : aprovados === total ? "Data" : `${aprovados} de ${total}`}
               </span>
             </button>
           );
