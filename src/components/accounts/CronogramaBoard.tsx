@@ -1,8 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Plus, Pencil, Trash2, Send, Link2, CalendarRange, Building2, PartyPopper, Check, AtSign, LayoutGrid, GripVertical } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { hojeBR } from "@/lib/date-br";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useQueryClient } from "@tanstack/react-query";
@@ -50,6 +51,9 @@ const tipoParaFormato = (tipo: string | null | undefined): string => {
 };
 
 // máscara DD/MM enquanto digita (ex.: "1505" -> "15/05")
+const MESES_TITULO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
 const maskDay = (v: string) => {
   const d = v.replace(/\D/g, "").slice(0, 4);
   return d.length <= 2 ? d : `${d.slice(0, 2)}/${d.slice(2)}`;
@@ -65,10 +69,25 @@ export function CronogramaBoard({ fixedClientId }: { fixedClientId?: string }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
+  /* O MÊS DO CRONOGRAMA, escolhido e não digitado. O título era texto livre, e
+     "setembro", "Setembro 2026" e "SET/26" eram três coisas diferentes pro
+     sistema: o link público não sabia de que mês era, e a data comemorativa
+     mandada da agenda caía em qualquer cronograma aberto. */
+  const [newMes, setNewMes] = useState(() => hojeBR().slice(0, 7));   // "YYYY-MM"
   // Trava síncrona contra clique duplo. Precisa nascer aqui em cima, antes de
   // qualquer return antecipado: hook chamado dentro de condição quebra a ordem
   // que o React espera em toda renderização.
   const criando = useRef(false);
+
+  /* O título acompanha o mês escolhido enquanto ninguém o editou à mão. Pedir o
+     mês E o título separados, com a pessoa digitando "Setembro" nos dois, seria
+     trabalho repetido pra ela e chance de os dois discordarem. */
+  const tituloTocado = useRef(false);
+  useEffect(() => {
+    if (tituloTocado.current || !newOpen) return;
+    const [a, m] = newMes.split("-").map(Number);
+    if (a && m) setNewTitle(`${MESES_TITULO[m - 1]} de ${a}`);
+  }, [newMes, newOpen]);
 
   const selected = selectedId ? cronogramas.find((c) => c.id === selectedId) ?? null : null;
   const selectedClient = clientId ? clients.find((c) => c.id === clientId) ?? null : null;
@@ -97,7 +116,13 @@ export function CronogramaBoard({ fixedClientId }: { fixedClientId?: string }) {
 
     criando.current = true;
     try {
-      const c = await create.mutateAsync({ title: titulo, external_client_id: selectedClient.id, client_label: selectedClient.name, client_handle: selectedClient.instagram_handle ?? null });
+      const c = await create.mutateAsync({
+        title: titulo,
+        mes_ref: newMes ? `${newMes}-01` : null,
+        external_client_id: selectedClient.id,
+        client_label: selectedClient.name,
+        client_handle: selectedClient.instagram_handle ?? null,
+      });
       setNewOpen(false); setNewTitle("");
       setSelectedId(c.id);
     } finally {
@@ -150,7 +175,18 @@ export function CronogramaBoard({ fixedClientId }: { fixedClientId?: string }) {
           <DialogContent className="sm:max-w-md">
             <DialogHeader><DialogTitle className="font-display">Novo cronograma · {selectedClient.name}</DialogTitle></DialogHeader>
             <div className="space-y-3 py-2">
-              <div><Label className="text-xs">Título</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Ex.: Julho 2026" className="rounded-xl" /></div>
+              <div>
+                <Label className="text-xs">Mês do cronograma</Label>
+                <Input type="month" value={newMes} onChange={(e) => setNewMes(e.target.value)} className="rounded-xl h-11" />
+                <p className="text-[11px] font-body text-muted-foreground mt-1 leading-relaxed">
+                  É o que aparece pro cliente no link e o que faz a data comemorativa que você manda da agenda cair
+                  no cronograma certo.
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs">Título</Label>
+                <Input value={newTitle} onChange={(e) => { tituloTocado.current = true; setNewTitle(e.target.value); }} placeholder="Ex.: Setembro" className="rounded-xl h-11" />
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setNewOpen(false)} className="rounded-xl">Cancelar</Button>

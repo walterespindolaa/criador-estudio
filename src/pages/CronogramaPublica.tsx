@@ -24,6 +24,7 @@ function linkify(text: string) {
 type Item = { id: string; title: string | null; copy: string | null; description: string | null; date: string | null; type: string | null; approval_status: string; client_comment: string | null; ref_url: string | null };
 type Data = { id: string; label: string; day_label: string | null; selected: boolean };
 type Cron = {
+  mes_ref?: string | null;
   title: string; client_label: string | null; client_handle: string | null; status: string;
   accent: string | null; logo: string | null; by: string | null; items: Item[]; datas: Data[];
   client_color?: string | null; client_logo?: string | null;
@@ -46,9 +47,27 @@ function isDark(hex: string): boolean {
 function ddmm(date: string): string {
   return date.split("-").reverse().slice(0, 2).join("/");
 }
-function periodLabel(items: Item[]): string | null {
+const MESES_LONGOS = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+];
+
+/* O QUE VAI EMBAIXO DO TÍTULO, no link que o cliente abre.
+   Antes era sempre o intervalo das datas PREENCHIDAS. Com dez posts e dois com
+   data, o cliente lia "15/09 a 16/09" e entendia que o mês inteiro tinha dois
+   dias de conteúdo. O número estava certo e a informação estava errada: os
+   outros oito posts existiam, só não tinham dia marcado ainda.
+
+   Agora: o mês de referência quando existe; senão, o intervalo só quando TODOS
+   os posts têm data, que é a única situação em que o intervalo descreve o
+   cronograma inteiro. Fora disso, o título fala por si. */
+function periodLabel(items: Item[], mesRef?: string | null): string | null {
+  if (mesRef) {
+    const [ano, mes] = mesRef.split("-").map(Number);
+    if (ano && mes) return `${MESES_LONGOS[mes - 1]} de ${ano}`;
+  }
   const dates = items.map((i) => i.date).filter(Boolean) as string[];
-  if (dates.length === 0) return null;
+  if (dates.length === 0 || dates.length !== items.length) return null;
   const sorted = [...dates].sort();
   return sorted[0] === sorted[sorted.length - 1] ? ddmm(sorted[0]) : `${ddmm(sorted[0])} a ${ddmm(sorted[sorted.length - 1])}`;
 }
@@ -114,7 +133,7 @@ export default function CronogramaPublica() {
   const months = monthKeys.map((k) => ({ key: k, label: MESES[Number(k.slice(5, 7)) - 1] }));
   const visible = period === "all" ? cron.items : cron.items.filter((i) => (i.date ?? "").slice(0, 7) === period);
   const approved = visible.filter((i) => i.approval_status === "aprovado").length;
-  const period_ = periodLabel(cron.items);
+  const period_ = periodLabel(cron.items, cron.mes_ref);
 
   const chip = (active: boolean): CSSProperties => ({
     background: active ? "#0A0A0A" : "#fff", color: active ? "#fff" : "#5b5470",

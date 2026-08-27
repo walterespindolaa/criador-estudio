@@ -21,6 +21,9 @@ export type Cronograma = {
   crm_client_id: string | null;
   cria_owner_id: string | null;
   status: CronogramaStatus;
+  /** Primeiro dia do mês de referência ("2026-09-01"). Nulo nos antigos, que
+   *  continuam se identificando só pelo título. */
+  mes_ref: string | null;
   token: string;
   created_at: string;
 };
@@ -65,7 +68,7 @@ export function useCronogramas() {
   });
 
   const create = useMutation({
-    mutationFn: async (input: { title: string; client_label?: string | null; client_handle?: string | null; external_client_id?: string | null; crm_client_id?: string | null; cria_owner_id?: string | null }) => {
+    mutationFn: async (input: { title: string; mes_ref?: string | null; client_label?: string | null; client_handle?: string | null; external_client_id?: string | null; crm_client_id?: string | null; cria_owner_id?: string | null }) => {
       if (!user?.id) throw new Error("Sem sessão");
       const { data, error } = await sbFrom("cronogramas")
         .insert({ ...input, manager_id: user.id } as never).select("*").single();
