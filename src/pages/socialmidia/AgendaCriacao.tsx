@@ -1452,9 +1452,9 @@ export default function AgendaCriacao() {
       {/* Edição de uma criação existente */}
       <AddCreationDialog open={!!editCreation} day={null} initial={editCreation} clients={clients} teamNames={teamNames}
         onClose={() => setEditCreation(null)}
-        onSave={(crm, name, team, note, time, title) => {
+        onSave={(crm, name, team, note, time, title, dia) => {
           if (editCreation) {
-            updCreation.mutate({ id: editCreation.id, patch: { crm_client_id: crm, client_name: name, team, note, event_time: time, title } },
+            updCreation.mutate({ id: editCreation.id, patch: { crm_client_id: crm, client_name: name, team, note, event_time: time, title, ...(dia ? { day: dia } : {}) } },
               { onSuccess: () => toast.success("Reunião atualizada."), onError: () => toast.error("Não consegui salvar.") });
           }
           setEditCreation(null);
@@ -1685,16 +1685,21 @@ function TeamDatalist({ names }: { names: string[] }) {
   return <datalist id="agenda-team-names">{names.map((n) => <option key={n} value={n} />)}</datalist>;
 }
 
-function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, onSave }: { open: boolean; day: string | null; initial?: Creation | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (crm: string | null, name: string | null, team: string | null, note: string | null, time: string | null, title: string | null) => void }) {
+function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, onSave }: { open: boolean; day: string | null; initial?: Creation | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (crm: string | null, name: string | null, team: string | null, note: string | null, time: string | null, title: string | null, dia: string | null) => void }) {
   const [crm, setCrm] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [team, setTeam] = useState("");
   const [note, setNote] = useState("");
   const [time, setTime] = useState("");
   const [titulo, setTitulo] = useState("");
+  /* Faltava a DATA. Editando uma reunião dava pra trocar a hora, o cliente, o
+     título e a nota, mas não o dia: pra remarcar, a pessoa precisava apagar e
+     criar de novo, perdendo a nota. O dia já vinha no `initial`, só não tinha
+     campo. */
+  const [dia, setDia] = useState("");
   const seed = open ? `${day ?? ""}:${initial?.id ?? "new"}` : "";
   const [seeded, setSeeded] = useState("");
-  if (open && seed !== seeded) { setSeeded(seed); setCrm(initial?.crm_client_id ?? null); setName(initial?.client_name ?? ""); setTeam(initial?.team ?? ""); setNote(initial?.note ?? ""); setTime(initial?.event_time ? initial.event_time.slice(0, 5) : ""); setTitulo(initial?.title ?? ""); }
+  if (open && seed !== seeded) { setSeeded(seed); setCrm(initial?.crm_client_id ?? null); setName(initial?.client_name ?? ""); setTeam(initial?.team ?? ""); setNote(initial?.note ?? ""); setTime(initial?.event_time ? initial.event_time.slice(0, 5) : ""); setTitulo(initial?.title ?? ""); setDia(initial?.day ?? day ?? ""); }
   if (!open && seeded) setSeeded("");
   const valid = !!crm || name.trim();
   return (
@@ -1707,7 +1712,13 @@ function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, on
             <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">Título (opcional)</p>
             <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex.: Alinhamento mensal" />
           </div>
-          <HoraInput label="Hora (opcional)" value={time} onChange={setTime} className="w-[140px]" />
+          <div className="flex gap-2 flex-wrap items-end">
+            <div>
+              <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">Dia</p>
+              <Input type="date" value={dia} onChange={(e) => setDia(e.target.value)} className="w-[165px]" />
+            </div>
+            <HoraInput label="Hora (opcional)" value={time} onChange={setTime} className="w-[140px]" />
+          </div>
           <div>
             <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">Equipe (opcional)</p>
             <Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Ex.: Ana, Bruno" list="agenda-team-names" />
@@ -1720,7 +1731,7 @@ function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, on
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => onSave(crm, name.trim() || null, team.trim() || null, note.trim() || null, time || null, titulo.trim() || null)} disabled={!valid}>{initial ? "Salvar" : "Adicionar"}</Button>
+          <Button onClick={() => onSave(crm, name.trim() || null, team.trim() || null, note.trim() || null, time || null, titulo.trim() || null, dia || null)} disabled={!valid}>{initial ? "Salvar" : "Adicionar"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

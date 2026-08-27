@@ -144,6 +144,7 @@ import { LinkNaBioCliente } from "@/components/accounts/crm/LinkNaBioCliente";
 // O MESMO editor da ficha do CRM: aqui a aba Brandbook deixa de ser vitrine e
 // vira lugar de trabalho (ver BrandbookEditor.tsx).
 import { BrandbookEditor, personasDaFicha, useFichaEditavel } from "@/components/accounts/crm/BrandbookEditor";
+import { BotaoBrandbookPdf } from "@/components/pdf/BrandbookClientePdf";
 import { cn } from "@/lib/utils";
 import { confirmar } from "@/components/shared/Confirm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -1013,10 +1014,15 @@ function BrandbookDoCrmEditavel({ clientId, nomeCliente }: { clientId: string; n
     <div className="space-y-4">
       <div className="rounded-2xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-display font-semibold text-foreground">Brandbook preenchido por você</p>
-          <p className="text-xs font-body text-muted-foreground mt-0.5">
-            Este cliente não tem conta no Cria, então a direção da marca vem da ficha do CRM. É a mesma que a IA usa
-            quando você gera ideia e legenda pra ele. Pode editar aqui mesmo, salva sozinho.
+          {/* O texto antigo abria explicando um detalhe interno ("este cliente
+              não tem conta no Cria, então a direção vem da ficha do CRM"), que
+              não é problema de ninguém que abre esta tela. O que a pessoa
+              precisa saber é o que ISSO faz por ela. */}
+          <p className="text-sm font-display font-semibold text-foreground">A direção da marca deste cliente</p>
+          <p className="text-xs font-body text-muted-foreground mt-0.5 leading-relaxed">
+            É daqui que sai o tom, os pilares e a persona de tudo que você escreve pra ele, e é isto que a IA lê
+            quando gera ideia, legenda e prompt de arte. Quanto mais completo, menos genérico sai. Edite direto nos
+            campos: salva sozinho.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -1029,6 +1035,9 @@ function BrandbookDoCrmEditavel({ clientId, nomeCliente }: { clientId: string; n
           <Button variant="outline" size="sm" onClick={copiarTudo}>
             <Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar tudo
           </Button>
+          {/* O "Copiar tudo" leva a marca pro chat de IA; o PDF leva a marca pro
+              cliente. São os dois destinos do mesmo conteúdo, então ficam lado a lado. */}
+          <BotaoBrandbookPdf form={form} nome={nomeCliente} />
         </div>
       </div>
 

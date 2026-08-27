@@ -1751,17 +1751,10 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       </div>
       {(stats.cycleDays !== null || stuck.length > 0 || highlight?.worst) && (
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 12 }}>
-          {stats.cycleDays !== null && (
-            <div style={{ flex: 1, minWidth: 190, border: `1px solid ${C.line}`, borderRadius: 12, padding: "13px 15px", background: C.cremeCard }}>
-              <div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Tempo até a aprovação</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: C.ink, marginTop: 4 }}>
-                {stats.cycleDays.toFixed(1).replace(".", ",")} <span style={{ fontSize: 12, fontWeight: 600 }}>dias</span>
-              </div>
-              <div style={{ fontSize: 10.5, color: C.sub, marginTop: 3 }}>
-                Média da criação da peça até a aprovação, em {stats.cycleSample} peça{stats.cycleSample === 1 ? "" : "s"} aprovada{stats.cycleSample === 1 ? "" : "s"} no período.
-              </div>
-            </div>
-          )}
+          {/* "Tempo até a aprovação" saiu do relatório: é métrica de processo
+              interno, e no documento que vai pro cliente ela vira cobrança
+              ("demorei 35 dias?"). O número continua existindo pra análise
+              interna, só não aparece aqui. */}
           {stuck.length > 0 && (
             <div style={{ flex: 1, minWidth: 210, border: `1px solid ${C.amber}`, borderRadius: 12, padding: "13px 15px", background: "#fffbeb" }}>
               <div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>Aguardando sua resposta</div>

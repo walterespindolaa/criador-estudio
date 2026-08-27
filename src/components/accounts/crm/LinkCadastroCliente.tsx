@@ -12,6 +12,7 @@ import {
 import {
   ETAPAS_INTAKE, ATALHOS_ETAPAS, etapasDoEnvio, CAMPOS_CADASTRO, quantasRespondidas, totalVisivel,
 } from "@/lib/formularioCadastro";
+import { useCrmClient, type CrmClient } from "@/hooks/useCrm";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PEDIR OS DADOS PRO CLIENTE
@@ -23,8 +24,25 @@ import {
    existe o botão de sobrescrever.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/** O valor que está na ficha HOJE pra uma chave do formulário. A chave pode ser
+ *  uma coluna do cadastro (name, cnpj, city) ou um campo do brandbook, que mora
+ *  dentro do jsonb. Procura nos dois. */
+function valorNaFicha(ficha: CrmClient | null | undefined, chave: string): string {
+  if (!ficha) return "";
+  const direto = (ficha as unknown as Record<string, unknown>)[chave];
+  if (typeof direto === "string" && direto.trim()) return direto;
+  const bc = (ficha.brand_core ?? {}) as Record<string, string>;
+  return (bc[chave] ?? "").trim();
+}
+
 export function LinkCadastroCliente({ crmClientId, clienteNome }: { crmClientId: string; clienteNome: string }) {
   const { data: envios = [] } = useClientIntakes(crmClientId);
+  /* A ficha atual entra aqui pra dar COMPARAÇÃO. Depois de aplicar, olhar as
+     respostas sozinhas não responde a pergunta que importa: "o que o cliente
+     mandou ainda é o que está valendo na ficha, ou eu editei depois?". Sem
+     isso, a pessoa aplicava, mexia no texto semanas depois e nunca mais sabia
+     de onde tinha vindo cada coisa. */
+  const { data: ficha } = useCrmClient(crmClientId);
   const criar = useCreateClientIntake();
   const aplicar = useApplyClientIntake();
   const excluir = useDeleteClientIntake();
@@ -193,7 +211,9 @@ export function LinkCadastroCliente({ crmClientId, clienteNome }: { crmClientId:
           <DialogHeader>
             <DialogTitle className="font-display">O que {clienteNome} respondeu</DialogTitle>
             <DialogDescription className="font-body">
-              Aplicar preenche só os campos que estão vazios na ficha. O que você já escreveu fica como está.
+              {vendo?.status === "aplicado"
+                ? "Já aplicado. Onde a ficha estiver diferente do que ele respondeu, o valor de hoje aparece em amarelo embaixo."
+                : "Aplicar preenche só os campos que estão vazios na ficha. O que você já escreveu fica como está."}
             </DialogDescription>
           </DialogHeader>
 
@@ -216,6 +236,17 @@ export function LinkCadastroCliente({ crmClientId, clienteNome }: { crmClientId:
                         <p className="text-[12.5px] font-body text-foreground whitespace-pre-wrap leading-relaxed">
                           {(vendo?.answers ?? {})[c.chave]}
                         </p>
+                        {(() => {
+                          const naFicha = valorNaFicha(ficha, c.chave);
+                          const respondido = ((vendo?.answers ?? {})[c.chave] ?? "").trim();
+                          if (!naFicha || naFicha.trim() === respondido) return null;
+                          return (
+                            <div className="mt-1.5 rounded-lg border border-amber-300/50 bg-amber-50 px-2.5 py-1.5">
+                              <p className="text-[10px] font-body font-bold uppercase tracking-wider text-amber-700">Na ficha hoje</p>
+                              <p className="text-[12px] font-body text-amber-900/90 whitespace-pre-wrap leading-relaxed">{naFicha}</p>
+                            </div>
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>

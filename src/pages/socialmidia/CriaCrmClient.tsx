@@ -27,6 +27,7 @@ import {
   BrandbookEditor, PersonaEditor, useFichaEditavel, payloadOf,
   Card, CF, F, MicTextarea,
 } from "@/components/accounts/crm/BrandbookEditor";
+import { BotaoBrandbookPdf } from "@/components/pdf/BrandbookClientePdf";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -365,7 +366,20 @@ function ClientWorkspace() {
         {/* BRANDBOOK: o formulário inteiro mora em BrandbookEditor, que o
             cockpit do cliente usa igual. Aqui a ficha só entrega o estado e o
             botão de sincronizar, que depende do id da rota. */}
-        <TabsContent value="brand" data-tour="crm-cli-brand" className="mt-0">
+        <TabsContent value="brand" data-tour="crm-cli-brand" className="mt-0 space-y-4">
+          {/* O mesmo botão do cockpit do cliente. Quem trabalha aqui e quem
+              trabalha lá precisa conseguir mandar o brandbook pro cliente sem
+              descobrir que só uma das duas telas exporta. A persona entra no
+              PDF mesmo estando na aba do lado: o documento é um só. */}
+          <div className="rounded-2xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-display font-semibold text-foreground">Brandbook em PDF</p>
+              <p className="text-xs font-body text-muted-foreground mt-0.5">
+                Gera o documento com tudo que está preenchido aqui e na Persona, no padrão do Cria, pra mandar pro cliente ou arquivar.
+              </p>
+            </div>
+            <BotaoBrandbookPdf form={form} nome={form.name ?? undefined} className="shrink-0 rounded-xl" />
+          </div>
           <BrandbookEditor
             form={form}
             setForm={setForm}

@@ -65,6 +65,10 @@ export function CronogramaBoard({ fixedClientId }: { fixedClientId?: string }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
+  // Trava síncrona contra clique duplo. Precisa nascer aqui em cima, antes de
+  // qualquer return antecipado: hook chamado dentro de condição quebra a ordem
+  // que o React espera em toda renderização.
+  const criando = useRef(false);
 
   const selected = selectedId ? cronogramas.find((c) => c.id === selectedId) ?? null : null;
   const selectedClient = clientId ? clients.find((c) => c.id === clientId) ?? null : null;
@@ -76,11 +80,29 @@ export function CronogramaBoard({ fixedClientId }: { fixedClientId?: string }) {
     return <CronogramaDetail c={selected} onBack={() => setSelectedId(null)} onUpdate={update.mutate} onDelete={async (id) => { await remove.mutateAsync(id); setSelectedId(null); }} />;
   }
 
+  /* Dois "Setembro" na lista vinham de duas linhas no banco, não de desenho
+     duplicado (a lista usa o id como chave). Duas portas levavam a isso: o
+     clique duplo no botão Criar, que disparava duas gravações antes do diálogo
+     fechar, e criar de novo um mês que já existia sem perceber. As duas fecham
+     aqui. */
   const createCronograma = async () => {
-    if (!newTitle.trim() || !selectedClient) return;
-    const c = await create.mutateAsync({ title: newTitle.trim(), external_client_id: selectedClient.id, client_label: selectedClient.name, client_handle: selectedClient.instagram_handle ?? null });
-    setNewOpen(false); setNewTitle("");
-    setSelectedId(c.id);
+    const titulo = newTitle.trim();
+    if (!titulo || !selectedClient || criando.current) return;
+
+    const igual = clientCronos.find((c) => c.title.trim().toLowerCase() === titulo.toLowerCase());
+    if (igual) {
+      toast.error(`Já existe um cronograma "${igual.title}" pra este cliente. Abra o que já está lá em vez de criar outro.`);
+      return;
+    }
+
+    criando.current = true;
+    try {
+      const c = await create.mutateAsync({ title: titulo, external_client_id: selectedClient.id, client_label: selectedClient.name, client_handle: selectedClient.instagram_handle ?? null });
+      setNewOpen(false); setNewTitle("");
+      setSelectedId(c.id);
+    } finally {
+      criando.current = false;
+    }
   };
 
   // Nível 2, cronogramas do cliente (histórico)
@@ -107,6 +129,14 @@ export function CronogramaBoard({ fixedClientId }: { fixedClientId?: string }) {
             {clientCronos.map((c) => (
               <button key={c.id} onClick={() => setSelectedId(c.id)} className="text-left bg-card border border-border rounded-2xl p-5 hover:border-primary/40 hover:shadow-md transition-all">
                 <div className="flex items-center gap-2 mb-1"><CalendarRange className="h-4 w-4 text-primary" /><span className="font-display font-bold text-foreground">{c.title}</span></div>
+                {/* A data de criação distingue dois cronogramas de mesmo nome:
+                    sem ela, dois "Setembro" na tela são indistinguíveis e não
+                    dá pra saber qual apagar. */}
+                {c.created_at && (
+                  <span className="block text-[11px] font-body text-muted-foreground">
+                    criado em {new Date(c.created_at).toLocaleDateString("pt-BR")}
+                  </span>
+                )}
                 <span className={cn("inline-block mt-3 text-[10px] font-bold px-2 py-0.5 rounded-full",
                   c.status === "aprovado" ? "bg-green-100 text-green-700" : c.status === "enviado" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground")}>
                   {c.status === "aprovado" ? "Aprovado" : c.status === "enviado" ? "Enviado" : "Rascunho"}
@@ -124,7 +154,9 @@ export function CronogramaBoard({ fixedClientId }: { fixedClientId?: string }) {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setNewOpen(false)} className="rounded-xl">Cancelar</Button>
-              <Button onClick={createCronograma} disabled={!newTitle.trim()} className="rounded-xl">Criar</Button>
+              <Button onClick={() => void createCronograma()} disabled={!newTitle.trim() || create.isPending} className="rounded-xl">
+                {create.isPending ? "Criando..." : "Criar"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  Activity, Brain, Building2, Download, FileUp, Heart, HeartCrack, HelpCircle, Image as ImageIcon,
-  ImagePlus, Instagram, Lightbulb, MessageSquare, Mic, Palette, Pencil, Plus, Save,
-  ShieldAlert, Sparkles, Target, Trash2, Type, Upload, UserRound, X,
+  Activity, Brain, Building2, ChevronDown, Download, FileText, FileUp, Heart, HeartCrack, HelpCircle,
+  Image as ImageIcon, ImagePlus, Instagram, Lightbulb, Maximize2, MessageSquare, Mic, Minimize2,
+  Palette, Pencil, Plus, Save, ShieldAlert, Sparkles, Target, Trash2, Type, Upload, UserRound, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -74,13 +74,20 @@ function Aba({ valor, icone: Icone, rotulo, feitos, total }: {
 }) {
   const completo = feitos === total;
   return (
+    /* Pílula com borda e fundo próprio. Antes a aba inativa era transparente
+       sobre o creme da barra: as cinco se misturavam num borrão e não dava pra
+       ver que eram botões separados. */
     <TabsTrigger value={valor}
-      className="rounded-xl px-3 py-2 gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm shrink-0">
+      className="group rounded-full border border-border bg-card px-3.5 py-2 gap-2 shrink-0 transition-colors
+        hover:border-primary/40
+        data-[state=active]:bg-primary data-[state=active]:border-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm">
       <Icone className="h-3.5 w-3.5 shrink-0" />
       <span className="text-[13px] font-display font-semibold whitespace-nowrap">{rotulo}</span>
       <span className={cn(
         "text-[10.5px] font-body font-bold tabular-nums rounded-full px-1.5 py-0.5",
-        completo ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground",
+        completo
+          ? "bg-emerald-100 text-emerald-700"
+          : "bg-muted text-muted-foreground group-data-[state=active]:bg-white/25 group-data-[state=active]:text-primary-foreground",
       )}>
         {feitos}/{total}
       </span>
@@ -217,10 +224,38 @@ export function MicButton({ onText }: { onText: (t: string) => void }) {
 }
 
 export function MicTextarea({ value, onChange, rows = 2, placeholder }: { value: string; onChange: (v: string) => void; rows?: number; placeholder?: string }) {
+  const [aberto, setAberto] = useState(false);
+  /* Persona é o campo mais longo da ficha: cinco dores, sete desejos, dez
+     objeções. Numa caixa de quatro linhas, ler o que já está escrito virava
+     arrastar a barrinha de dentro do campo, e na prática ninguém relia. Aqui
+     dá pra abrir o campo e ver tudo de uma vez. Só aparece quando o texto é
+     grande o suficiente pra não caber. */
+  const linhas = value ? value.split("\n").length : 0;
+  const cabeSemAbrir = linhas <= rows && value.length < rows * 70;
+
   return (
     <div className="relative">
-      <Textarea rows={rows} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="rounded-xl text-sm pr-11" />
-      <div className="absolute top-2 right-2"><MicButton onText={(t) => onChange((value ? value.trim() + " " : "") + t)} /></div>
+      <Textarea
+        rows={aberto ? Math.min(Math.max(linhas + 2, 12), 40) : rows}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="rounded-xl text-sm pr-11"
+      />
+      <div className="absolute top-2 right-2 flex flex-col gap-1.5">
+        <MicButton onText={(t) => onChange((value ? value.trim() + " " : "") + t)} />
+        {!cabeSemAbrir && (
+          <button
+            type="button"
+            onClick={() => setAberto((v) => !v)}
+            title={aberto ? "Fechar o campo" : "Abrir o campo pra ler tudo"}
+            aria-label={aberto ? "Fechar o campo" : "Abrir o campo pra ler tudo"}
+            className="h-7 w-7 rounded-full border border-border bg-card grid place-items-center text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+          >
+            {aberto ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -307,6 +342,7 @@ export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincroni
      era "mas onde eu subo o meu?". São três leituras diferentes do mesmo tipo de
      PDF, então viraram um seletor: escolhe o que tem em mãos, sobe uma vez. */
   const [tipoArquivo, setTipoArquivo] = useState<"relatorio" | "brandbook" | "briefing">("relatorio");
+  const [arquivoAberto, setArquivoAberto] = useState(false);
   const uploadAsset = useUploadCrmAsset();
   const fontInputRef = useRef<HTMLInputElement>(null);
 
@@ -397,13 +433,32 @@ export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincroni
           mão, isso é a mesma pergunta feita três vezes, e a resposta certa não
           é óbvia em nenhuma delas. Agora é uma caixa com um seletor: primeiro
           diz o que você tem, depois sobe. */}
-      <div className="rounded-2xl border border-border bg-card p-4">
-        <div className="flex items-center gap-2.5 mb-1">
+      {/* Fechada por padrão. Isso aqui é atalho de quem CHEGA com um PDF na
+          mão, não passo do caminho normal: aberta o tempo todo, ela empurrava o
+          formulário de verdade pra baixo da dobra em toda visita. */}
+      <div className="rounded-2xl border border-border bg-card">
+        <button
+          type="button"
+          onClick={() => setArquivoAberto((v) => !v)}
+          aria-expanded={arquivoAberto}
+          className="w-full flex items-center gap-2.5 p-4 text-left"
+        >
           <div className="h-8 w-8 rounded-xl bg-primary/10 grid place-items-center shrink-0">
             <FileUp className="h-4 w-4 text-primary" />
           </div>
-          <h3 className="font-display font-bold text-[15px] text-foreground">Preencher a partir de um arquivo</h3>
-        </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-display font-bold text-[15px] text-foreground">Preencher a partir de um arquivo</h3>
+            {!arquivoAberto && (
+              <p className="text-[11.5px] font-body text-muted-foreground">
+                Já tem o conteúdo num PDF? Mande o arquivo e a gente preenche.
+              </p>
+            )}
+          </div>
+          <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", arquivoAberto && "rotate-180")} />
+        </button>
+
+        {arquivoAberto && (
+        <div className="px-4 pb-4">
         <p className="text-[11.5px] font-body text-muted-foreground mb-3">
           Ninguém preenche trinta campos na mão, e por isso o brandbook do cliente vive vazio e toda ideia que a IA
           gera sai genérica. Se você já tem o conteúdo num PDF, mande o arquivo e confira o que a gente entendeu.
@@ -486,7 +541,8 @@ export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincroni
             onRemoverAnexo={() => void removerBriefing()}
             anexando={uploadAsset.isPending}
           />
-
+        )}
+        </div>
         )}
       </div>
 
@@ -496,7 +552,7 @@ export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincroni
           conversa curta com começo e fim, e o contador ao lado do nome mostra
           de fora onde ainda falta resposta. */}
       <Tabs value={aba} onValueChange={setAba} className="w-full">
-        <TabsList className="w-full justify-start gap-1 rounded-2xl bg-muted/50 p-1.5 h-auto overflow-x-auto flex-nowrap">
+        <TabsList className="w-full justify-start gap-2 rounded-none bg-transparent p-0 h-auto overflow-x-auto flex-nowrap">
           <Aba valor="essencia" icone={Building2} rotulo="Essência"
             feitos={preenchidos(bc, ["history", "brandValues", "impact", "vision", "admiredBrands"])} total={5} />
           <Aba valor="estrategia" icone={Target} rotulo="Estratégia"
