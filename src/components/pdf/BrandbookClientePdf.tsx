@@ -256,14 +256,28 @@ export const BrandbookClientePdfTemplate = forwardRef<HTMLDivElement, Props>(
     const swatches = parseHex(brandCore.colorPalette);
 
     // ── Peças de layout ──
+    /* A inicial é centralizada por line-height, não por flex. Centralizar texto
+       com flex é exatamente o que o html2canvas erra ao fotografar o DOM: na
+       tela fica no meio, no PDF a letra desce e encosta na borda de baixo do
+       círculo. line-height igual à altura resolve porque não depende do cálculo
+       de alinhamento, só da caixa da linha.
+
+       O fundo também mudou: cinza claro com letra laranja dava um contraste
+       fraco que, reduzido a 30px no cabeçalho, virava uma bolinha suja. Agora é
+       laranja cheio com a letra branca, que lê bem em qualquer tamanho. */
     const marcaRedonda = (tamanho: number, fonte: number) => (
       <div style={{
-        width: tamanho, height: tamanho, borderRadius: "50%", background: C.soft, overflow: "hidden",
-        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        width: tamanho, height: tamanho, borderRadius: "50%", overflow: "hidden", flexShrink: 0,
+        background: logoUrl ? C.soft : C.laranja,
       }}>
         {logoUrl
-          ? <img src={logoUrl} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          : <span style={{ fontWeight: 800, fontSize: fonte, color: C.laranja }}>{inicial}</span>}
+          ? <img src={logoUrl} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          : (
+            <span style={{
+              display: "block", width: "100%", height: tamanho, lineHeight: `${tamanho}px`,
+              textAlign: "center", fontWeight: 800, fontSize: fonte, color: "#fff",
+            }}>{inicial}</span>
+          )}
       </div>
     );
 
@@ -367,8 +381,8 @@ export const BrandbookClientePdfTemplate = forwardRef<HTMLDivElement, Props>(
       }
     });
 
-    // A capa também é uma folha, e por isso entra na contagem de páginas.
-    const total = folhas.length + 1;
+    // Capa e contracapa também são folhas, e por isso entram na contagem.
+    const total = folhas.length + 2;
 
     return (
       <div ref={ref} style={{ width: A4_LARGURA, fontFamily: "Inter, system-ui, sans-serif", background: "#fff", color: C.ink }}>
@@ -410,18 +424,70 @@ export const BrandbookClientePdfTemplate = forwardRef<HTMLDivElement, Props>(
             faz o cabeçalho e o rodapé desenhados aqui nascerem mesmo no alto e
             no pé da página do PDF, em vez de flutuarem no meio do texto. */}
         {folhas.map((folha, i) => (
+          /* O fundo da folha é a cor do RODAPÉ, não branco. A página do PDF é
+             um pouco mais alta que a folha (a altura daqui é menor de
+             propósito, senão o corte estoura e a folha seguinte nasce com uma
+             tira da anterior no topo). Essa diferença aparecia como uma
+             listrinha branca logo abaixo do rodapé creme, e num documento que
+             vai pro cliente isso lê como defeito de impressão. Pintando a folha
+             da cor do rodapé, a sobra continua o rodapé. */
           <div key={`${folha.titulo}-${i}`} data-pdf-block data-pdf-break="" style={{
-            width: A4_LARGURA, minHeight: A4_ALTURA, background: "#fff", boxSizing: "border-box",
+            width: A4_LARGURA, minHeight: A4_ALTURA, background: C.cremeCard, boxSizing: "border-box",
             display: "flex", flexDirection: "column",
           }}>
             {cabecalho(folha.titulo)}
-            <div style={{ flex: 1, padding: "20px 44px 10px" }}>
+            <div style={{ flex: 1, padding: "20px 44px 10px", background: "#fff" }}>
               {tituloCapitulo(folha.titulo, folha.cor)}
               {folha.pecas.map((p) => p.node)}
             </div>
             {rodape(i + 2, total)}
           </div>
         ))}
+
+        {/* ── CONTRACAPA ──
+            Documento que termina no meio da última resposta parece que acabou a
+            tinta. A contracapa fecha: retoma pra que aquilo serve, diz que é um
+            documento vivo (brandbook que ninguém revisita envelhece e volta a
+            gerar conteúdo genérico) e assina. É a página que fica aberta na
+            tela do cliente depois que ele terminou de ler. */}
+        <div data-pdf-block data-pdf-break="" style={{
+          width: A4_LARGURA, height: A4_ALTURA, position: "relative", overflow: "hidden",
+          background: C.creme, boxSizing: "border-box", padding: "96px 56px 40px",
+          display: "flex", flexDirection: "column",
+        }}>
+          <span style={{ position: "absolute", left: -90, top: -70, width: 240, height: 240, borderRadius: 999, background: C.lilas, opacity: 0.28 }} />
+          <span style={{ position: "absolute", right: -60, bottom: -60, width: 240, height: 240, borderRadius: 999, background: C.amarelo, opacity: 0.45 }} />
+          <span style={{ position: "absolute", right: 130, bottom: 190, width: 70, height: 70, borderRadius: 999, background: C.rosa, opacity: 0.5 }} />
+
+          <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", maxWidth: 520 }}>
+            <div style={{ width: 64, height: 6, borderRadius: 99, background: C.laranja, margin: "0 0 26px" }} />
+            <h2 style={{ fontSize: 30, fontWeight: 800, color: C.ink, margin: 0, lineHeight: 1.15 }}>
+              Isto aqui é um documento vivo
+            </h2>
+            <p style={{ fontSize: 13.5, color: C.sub, margin: "18px 0 0", lineHeight: 1.7 }}>
+              Marca não fica parada, e brandbook que ninguém revisita envelhece calado: seis meses depois o conteúdo
+              volta a sair genérico sem ninguém entender por quê. Sempre que a oferta mudar, o público mudar ou uma
+              resposta aqui deixar de ser verdade, é hora de atualizar.
+            </p>
+            <p style={{ fontSize: 13.5, color: C.sub, margin: "14px 0 0", lineHeight: 1.7 }}>
+              Enquanto ele estiver de pé, é daqui que sai o tom de cada legenda, o ângulo de cada ideia e a direção
+              de cada arte.
+            </p>
+
+            <div style={{ marginTop: 34, padding: "16px 18px", borderRadius: 14, background: "#fff", border: `1px solid ${C.line}` }}>
+              <p style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: C.laranja, margin: 0 }}>
+                Brandbook de
+              </p>
+              <p style={{ fontSize: 17, fontWeight: 800, color: C.ink, margin: "5px 0 0" }}>{nome}</p>
+              {arroba && <p style={{ fontSize: 12.5, color: C.sub, margin: "3px 0 0" }}>@{arroba}</p>}
+              <p style={{ fontSize: 11.5, color: C.sub, margin: "9px 0 0" }}>Gerado em {dataLonga}</p>
+            </div>
+          </div>
+
+          <div style={{ position: "relative" }}>
+            <AssinaturaCria variante="rodape" tom="claro" altura={24} style={{ width: "auto", alignItems: "flex-start" }} />
+          </div>
+        </div>
       </div>
     );
   },
