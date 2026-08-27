@@ -510,6 +510,40 @@ export function useIdeaToCronograma() {
   });
 }
 
+/* EDITAR A IDEIA DEPOIS DE ANOTADA.
+   O campo de captura é de uma linha só, de propósito: a ideia boa aparece no
+   meio do dia e o gesto tem que ser rápido. Só que a nota e o link de
+   referência ficavam escondidos atrás do "+ detalhes", e quem digitou e apertou
+   Enter direto perdia a chance pra sempre: não existia caminho de volta.
+   Sobrava apagar e escrever tudo de novo. */
+export function useUpdateIdea() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; title: string; rationale?: string | null; ref_url?: string | null }) => {
+      const title = input.title.trim();
+      if (!title) throw new Error("A ideia não pode ficar sem texto.");
+      const ref = input.ref_url?.trim() || null;
+      // Mesma checagem da criação: link pela metade vira botão que não abre nada.
+      if (ref && !/^https?:\/\//i.test(ref)) throw new Error("O link de referência precisa ser completo (https://…).");
+      const { error } = await sbFrom("creative_ideas")
+        .update({
+          title: title.slice(0, 500),
+          rationale: input.rationale?.trim() || null,
+          ref_url: ref,
+          updated_at: new Date().toISOString(),
+        } as never)
+        .eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas"] });
+      qc.invalidateQueries({ queryKey: ["hubcria-ideas-all"] });
+      toast.success("Ideia atualizada.");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Não consegui salvar."),
+  });
+}
+
 export function useUpdateIdeaStatus() {
   const qc = useQueryClient();
   return useMutation({

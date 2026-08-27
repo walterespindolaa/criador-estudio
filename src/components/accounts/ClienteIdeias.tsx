@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Lightbulb, Bookmark, Sparkles, Plus, Trash2, ExternalLink, Instagram, Loader2, ChevronLeft, ChevronRight, PenLine, Send, CalendarPlus, RotateCcw, Link2 } from "lucide-react";
+import { Lightbulb, Bookmark, Sparkles, Plus, Pencil, Trash2, ExternalLink, Instagram, Loader2, ChevronLeft, ChevronRight, PenLine, Send, CalendarPlus, RotateCcw, Link2 } from "lucide-react";
 import { useCriaClientIdeas, useCrmSavedRefs, useAddCrmSavedRef, useDeleteCrmSavedRef } from "@/hooks/useBancoIdeias";
-import { useCreativeIdeas, useUpdateIdeaStatus, useDeleteIdea, useAddManualIdea, useIdeaToPost, useIdeaToCronograma, type CreativeIdea } from "@/hooks/useHubCria";
+import { useCreativeIdeas, useUpdateIdeaStatus, useUpdateIdea, useDeleteIdea, useAddManualIdea, useIdeaToPost, useIdeaToCronograma, type CreativeIdea } from "@/hooks/useHubCria";
 import { useCronogramas } from "@/hooks/useCronograma";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -320,7 +320,25 @@ function MinhasIdeias({ clientId, ideias, loading, extClient }: {
   const toPost = useIdeaToPost();
   const toCrono = useIdeaToCronograma();
   const setStatus = useUpdateIdeaStatus();
+  const editar = useUpdateIdea();
   const delIdea = useDeleteIdea();
+  /* Qual ideia está aberta pra edição, e o rascunho dela. Fica aqui em cima e
+     não dentro do card porque só uma abre por vez: duas abertas ao mesmo tempo
+     viram dois formulários competindo pelo mesmo espaço. */
+  const [editando, setEditando] = useState<string | null>(null);
+  const [rasc, setRasc] = useState({ title: "", rationale: "", ref_url: "" });
+
+  const abrirEdicao = (i: CreativeIdea) => {
+    setEditando(i.id);
+    setRasc({ title: i.title ?? "", rationale: i.rationale ?? "", ref_url: i.ref_url ?? "" });
+  };
+  const salvarEdicao = () => {
+    if (!editando) return;
+    editar.mutate(
+      { id: editando, title: rasc.title, rationale: rasc.rationale, ref_url: rasc.ref_url },
+      { onSuccess: () => setEditando(null) },
+    );
+  };
   const { cronogramas, create: createCrono } = useCronogramas();
 
   // Captura: uma linha obrigatória; nota e link são opcionais, escondidos
@@ -435,13 +453,43 @@ function MinhasIdeias({ clientId, ideias, loading, extClient }: {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {visiveis.map((i) => (
               <div key={i.id} className="rounded-2xl border border-border bg-card p-4">
+                {editando === i.id ? (
+                  /* Modo edição. O campo de captura lá em cima é de uma linha só
+                     de propósito, pra a ideia boa não escapar no meio do dia. O
+                     preço disso era a nota e a referência ficarem pra trás sem
+                     caminho de volta: quem apertou Enter direto só tinha a opção
+                     de apagar e escrever tudo de novo. */
+                  <div className="space-y-2">
+                    <Input value={rasc.title} onChange={(e) => setRasc((r) => ({ ...r, title: e.target.value }))}
+                      placeholder="A ideia" className="rounded-xl text-sm font-semibold" maxLength={500} autoFocus />
+                    <Textarea rows={2} value={rasc.rationale} onChange={(e) => setRasc((r) => ({ ...r, rationale: e.target.value }))}
+                      placeholder="Nota: o ângulo, o gancho, o porquê..." className="rounded-xl text-sm" />
+                    <Input value={rasc.ref_url} onChange={(e) => setRasc((r) => ({ ...r, ref_url: e.target.value }))}
+                      placeholder="https://link de referência" className="rounded-xl text-sm" inputMode="url" />
+                    <div className="flex gap-1.5 flex-wrap">
+                      <Button size="sm" className="h-8 text-[11.5px]" disabled={editar.isPending || !rasc.title.trim()} onClick={salvarEdicao}>
+                        Salvar
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 text-[11.5px] text-muted-foreground" onClick={() => setEditando(null)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                <>
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-display font-bold text-foreground leading-snug">{i.title}</p>
-                  <button
-                    onClick={async () => { if (await confirmar({ titulo: "Excluir esta ideia de vez?" })) delIdea.mutate(i.id); }}
-                    className="text-muted-foreground hover:text-destructive shrink-0" aria-label="Excluir ideia">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button onClick={() => abrirEdicao(i)}
+                      className="text-muted-foreground hover:text-foreground" aria-label="Editar ideia" title="Editar">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={async () => { if (await confirmar({ titulo: "Excluir esta ideia de vez?" })) delIdea.mutate(i.id); }}
+                      className="text-muted-foreground hover:text-destructive" aria-label="Excluir ideia" title="Excluir">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
                 {i.rationale && <p className="text-[12.5px] font-body text-muted-foreground mt-1 whitespace-pre-wrap leading-relaxed">{i.rationale}</p>}
                 {i.ref_url && sanitizeUrl(i.ref_url) && (
@@ -449,6 +497,8 @@ function MinhasIdeias({ clientId, ideias, loading, extClient }: {
                     className="inline-flex items-center gap-1 text-[11.5px] font-body font-semibold text-primary mt-1.5">
                     <Link2 className="h-3 w-3" /> referência
                   </a>
+                )}
+                </>
                 )}
 
                 {/* Ações por estado. */}
