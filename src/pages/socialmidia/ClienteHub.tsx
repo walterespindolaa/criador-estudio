@@ -138,6 +138,7 @@ type CriaColor2 = CriaColor;
 // fonte de verdade (o banco espelha em external_clients.color por gatilho).
 import { formatBRL } from "@/lib/money";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
+import { useAgendaDatas } from "@/hooks/useAgendaDatas";
 import { clienteInativo } from "@/lib/cliente-status";
 import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { LinkNaBioCliente } from "@/components/accounts/crm/LinkNaBioCliente";
@@ -1381,7 +1382,31 @@ function Destaques({ clientId, clientSegment, clientBirthday, renewalDate, extCl
   const receita = recebido + aReceber;
   const margemPct = receita > 0 ? ((receita - custo) / receita) * 100 : 0;
 
-  const datas = useMemo(() => proximasDatas(clientSegment, clientBirthday), [clientSegment, clientBirthday]);
+  /* As datas que ELA cadastrou na agenda e marcou este cliente entram junto
+     com as do catálogo do segmento. Sem isso, a data que ela criou sabendo que
+     era assunto deste cliente ficava só na agenda dela, e quem abre a ficha do
+     cliente pra planejar o mês não via. */
+  const { datas: datasDaAgenda } = useAgendaDatas();
+  const datas = useMemo(() => {
+    const doCatalogo = proximasDatas(clientSegment, clientBirthday);
+    const hoje = new Date(hojeBR() + "T00:00:00");
+    const y = hoje.getFullYear();
+    const minhas: { label: string; date: Date; tipo: string }[] = [];
+    for (const d of datasDaAgenda) {
+      if (!d.clientes.some((c) => c.crmClientId === clientId)) continue;
+      const [ay, am, ad] = d.dia.split("-").map(Number);
+      if (!ay || !am || !ad) continue;
+      let dt = new Date(y, am - 1, ad);
+      // Repete todo ano: se já passou, mostra a próxima. Evento pontual mantém
+      // o ano dele e some da lista depois que acontece.
+      if (d.repete_anual) { if (dt < hoje) dt = new Date(y + 1, am - 1, ad); }
+      else { dt = new Date(ay, am - 1, ad); if (dt < hoje) continue; }
+      minhas.push({ label: d.label, date: dt, tipo: "comemorativa" });
+    }
+    return [...minhas, ...doCatalogo]
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(0, 4);
+  }, [clientSegment, clientBirthday, datasDaAgenda, clientId]);
 
   const laranja = CRIA_HEX.laranja; const azul = CRIA_HEX.azul;
 

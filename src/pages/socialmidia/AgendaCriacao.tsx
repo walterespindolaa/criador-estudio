@@ -34,6 +34,10 @@ import { RelatorioProdutividadeDialog } from "@/components/accounts/RelatorioPro
 import { isDriveMedia, isDriveUrl, isVideoMedia, getThumbnailUrl, getDriveImageFallbackUrl, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { clienteInativo } from "@/lib/cliente-status";
+// Data comemorativa cadastrada UMA vez aqui na agenda e espalhada pros clientes
+// escolhidos. Antes ela só nascia dentro do cronograma de um cliente por vez.
+import { useAgendaDatas, type AgendaData } from "@/hooks/useAgendaDatas";
+import { confirmar } from "@/components/shared/Confirm";
 import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { parseRefLinks, refLinkHref } from "@/lib/refLinks";
@@ -95,10 +99,24 @@ const BIRTHDAY_DEFAULT_COLOR = "#BE185D";
 // outro lembrete que divide o topo do dia.
 const COMEMORATIVA_COLOR = "#7C5CFC";
 
+// Paleta oferecida na hora de cadastrar uma data. As quatro primeiras são as
+// cores de TIPO que a grade já usa (comemorativa, aniversário, material, Cria do
+// cliente), então a bolinha escolhida aqui já é uma cor que a pessoa reconhece de
+// olhar a agenda; as três últimas vêm da paleta de tarefa, pra quem quiser separar
+// uma campanha das demais. O roxo vem pré-selecionado por ser a cor que a agenda
+// usa hoje pras datas comemorativas.
+const DATA_COLORS = [COMEMORATIVA_COLOR, BIRTHDAY_DEFAULT_COLOR, MATERIAL_DEFAULT_COLOR, CRIA_POST_COLOR, "#0061EE", "#EA4918", "#01A652"];
+
 /** Um cliente que tem esta data no cronograma dele. */
 type ClienteDaData = { id: string; nome: string; crmId: string | null; aprovada: boolean };
 /** Uma data comemorativa do dia, com todos os clientes que a pediram. */
-type ComemorativaDoDia = { chave: string; label: string; mesTodo: boolean; clientes: ClienteDaData[] };
+type ComemorativaDoDia = {
+  chave: string; label: string; mesTodo: boolean; clientes: ClienteDaData[];
+  /** Cor escolhida por ela quando a data foi cadastrada aqui na agenda. */
+  cor?: string | null;
+  /** Existe quando a data nasceu aqui: é o que permite clicar e editar. */
+  agendaDataId?: string;
+};
 
 /* Agrupa "Dia do Café", "dia do cafe" e "Dia do café " como a mesma data. Cada
    cliente tem o cronograma dele e digita do jeito dele; sem normalizar, a mesma
@@ -353,6 +371,9 @@ export default function AgendaCriacao() {
   const delCreation = useDeleteCreation();
   const { data: captures = [] } = useCaptures();
   const { data: datasComemorativas = [] } = useDatasComemorativasDosClientes();
+  // Datas cadastradas AQUI na agenda (uma data, vários clientes). Não se confundem
+  // com datasComemorativas acima, que são as que já vivem no cronograma de cada um.
+  const { datas: agendaDatas, criar: criarData, atualizar: atualizarData, excluir: excluirData } = useAgendaDatas();
   const { data: crmTasks = [] } = useCrmTasks();
   const addCapture = useAddCapture();
   const updCapture = useUpdateCapture();
@@ -443,6 +464,10 @@ export default function AgendaCriacao() {
   const [editTask, setEditTask] = useState<CrmTask | null>(null);
   const [editCreation, setEditCreation] = useState<Creation | null>(null);
   const [editPost, setEditPost] = useState<ExternalPostWithClient | null>(null);
+  /* Diálogo da data da agenda. Um estado só pros dois usos: "nova" abre em branco,
+     uma AgendaData abre preenchida pra editar. Com dois estados separados dava pra
+     abrir os dois ao mesmo tempo e um sobrescrevia o outro. */
+  const [dataDialog, setDataDialog] = useState<AgendaData | "nova" | null>(null);
   const updateExtPost = useUpdateExternalPost();
   // Card do post do Cria DO CLIENTE aberto num diálogo (antes o clique jogava
   // direto pro kanban do cliente, sem contexto nenhum).
@@ -790,8 +815,40 @@ export default function AgendaCriacao() {
         const atual = porData.get(chave);
         const cliente = { id: dt.id, nome: dt.clienteNome, crmId: dt.crmClientId, aprovada: dt.aprovada };
         if (atual) atual.clientes.push(cliente);
-        else porData.set(chave, { chave, label: dt.label, mesTodo, clientes: [cliente] });
+        else porData.set(chave, { chave, label: dt.label, mesTodo, cor: null, clientes: [cliente] });
       }
+      /* AS DATAS CADASTRADAS AQUI NA AGENDA entram no mesmo mapa das que vieram
+         do cronograma. Duas origens, um chip só: pra quem está olhando o dia,
+         "Dia Mundial da Fisioterapia" é uma coisa, não duas, mesmo que uma
+         parte tenha nascido no cronograma de um cliente e a outra tenha sido
+         cadastrada por ela aqui. */
+      for (const ad of agendaDatas) {
+        const [ay, am, ad2] = ad.dia.split("-").map(Number);
+        if (!ay || !am || !ad2) continue;
+        // repete_anual desligado é evento pontual: só acontece naquele ano.
+        if (!ad.repete_anual && ay !== ano) continue;
+        if (am - 1 !== mesGrade || ad2 !== diaGrade) continue;
+
+        /* Data sem nenhum cliente marcado ainda é lembrete legítimo: ela pode
+           cadastrar hoje e escolher os clientes depois. Some sozinha do filtro
+           por cliente, que é o comportamento certo. */
+        const doDia = ad.clientes.filter((c) => clientMatches(c.crmClientId, c.nome));
+        if (ad.clientes.length > 0 && doDia.length === 0) continue;
+
+        const chave = chaveDaData(ad.label);
+        const atual = porData.get(chave);
+        const novos = doDia.map((c) => ({ id: `${ad.id}:${c.crmClientId}`, nome: c.nome, crmId: c.crmClientId, aprovada: c.aprovada }));
+        if (atual) {
+          // Mesmo cliente vindo das duas origens conta uma vez só.
+          const jaTem = new Set(atual.clientes.map((c) => c.crmId));
+          for (const n of novos) if (!n.crmId || !jaTem.has(n.crmId)) atual.clientes.push(n);
+          if (!atual.cor) atual.cor = ad.cor;
+          atual.agendaDataId = ad.id;
+        } else {
+          porData.set(chave, { chave, label: ad.label, mesTodo: false, cor: ad.cor, agendaDataId: ad.id, clientes: novos });
+        }
+      }
+
       if (porData.size === 0) continue;
 
       const lista = [...porData.values()];
@@ -806,7 +863,7 @@ export default function AgendaCriacao() {
     }
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [datasComemorativas, days, filters.comemorativa, postClients, selectedCrmIds, selectedNames]);
+  }, [datasComemorativas, agendaDatas, days, filters.comemorativa, postClients, selectedCrmIds, selectedNames]);
 
   // Cor do material: a do cliente dono; sem cor, o dourado padrão do tipo. Mesmo helper
   // corDoItem da captação (material não tem cor própria).
@@ -847,6 +904,19 @@ export default function AgendaCriacao() {
     const future = pend.filter((t) => t.due_date! >= today).sort(byDate);
     return [...overdue, ...future].slice(0, 30);
   }, [crmTasks, today]);
+
+  /* Quem pode ser marcado numa data. Cliente encerrado fica de fora: mandar "Dia
+     Mundial da Fisioterapia" pro cronograma de quem já saiu da carteira é ruído
+     puro. clienteInativo respeita encerramento agendado pro futuro, então contrato
+     ainda vigente continua aparecendo aqui. */
+  const clientesParaData = useMemo(
+    () => clients
+      .filter((c) => !clienteInativo(c))
+      .map((c) => ({ id: c.id, nome: crmClientName(c) }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
+    // crmClientName só resolve o rótulo; quem alimenta a lista é `clients`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [clients, criaProfiles]);
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">
@@ -1333,11 +1403,17 @@ export default function AgendaCriacao() {
               const renderComemorativa = (c: ComemorativaDoDia) => {
                 const aprovados = c.clientes.filter((x) => x.aprovada).length;
                 const total = c.clientes.length;
+                // A cor que ela escolheu ao cadastrar; sem cor, o roxo do tipo.
+                const cor = c.cor || COMEMORATIVA_COLOR;
                 /* Um cliente só: vai direto pro cronograma dele, que é o que a
                    pessoa quer fazer em seguida. Mais de um: abre a lista, porque
                    a pergunta passa a ser OUTRA ("pra quais clientes eu preciso
-                   produzir isso?") e mandar pra um deles escolheria por ela. */
-                const irDireto = total === 1 && c.clientes[0].crmId;
+                   produzir isso?") e mandar pra um deles escolheria por ela.
+
+                   Data cadastrada por ela na agenda foge da regra: ali o gesto
+                   natural é editar, porque foi ela quem criou. */
+                const daAgenda = !!c.agendaDataId;
+                const irDireto = !daAgenda && total === 1 && c.clientes[0].crmId;
                 return (
                   <button key={`com:${c.chave}`} type="button"
                     title={[
@@ -1346,21 +1422,23 @@ export default function AgendaCriacao() {
                       total === 1 ? c.clientes[0].nome : `${total} clientes, ${aprovados} já aprovaram`,
                     ].filter(Boolean).join(" · ")}
                     onClick={() => {
-                      if (irDireto) navigate(`/socialmidia/clientes/${c.clientes[0].crmId}/cronograma`);
+                      const minha = c.agendaDataId ? agendaDatas.find((x) => x.id === c.agendaDataId) : null;
+                      if (minha) setDataDialog(minha);
+                      else if (irDireto) navigate(`/socialmidia/clientes/${c.clientes[0].crmId}/cronograma`);
                       else setDataModal({ iso, data: c });
                     }}
                     className={cn(
                       "rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95",
                       aprovados === 0 && "opacity-60",
                     )}
-                    style={{ borderColor: `${COMEMORATIVA_COLOR}80`, background: `${COMEMORATIVA_COLOR}0F` }}>
-                    <div className="flex items-center gap-1 min-w-0" style={{ color: COMEMORATIVA_COLOR }}>
+                    style={{ borderColor: `${cor}80`, background: `${cor}0F` }}>
+                    <div className="flex items-center gap-1 min-w-0" style={{ color: cor }}>
                       <PartyPopper className="h-3 w-3 shrink-0" />
                       <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0 text-foreground/80">
                         {total === 1 ? c.clientes[0].nome : `${total} clientes`}
                       </span>
                       <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ background: `${COMEMORATIVA_COLOR}26`, color: COMEMORATIVA_COLOR }}>
+                        style={{ background: `${cor}26`, color: cor }}>
                         {c.mesTodo ? "Mês todo" : aprovados === 0 ? "A confirmar" : aprovados === total ? "Data" : `${aprovados} de ${total}`}
                       </span>
                     </div>
@@ -1479,8 +1557,12 @@ export default function AgendaCriacao() {
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <p className="text-sm font-display font-bold text-foreground">Próximas captações e tarefas</p>
           <div className="flex items-center gap-2 flex-wrap">
-            <Button size="sm" variant="outline" className="h-8" onClick={() => { setAddKind("tarefa"); setAddDay(new Date().toLocaleDateString("sv-SE")); }}><Plus className="h-3.5 w-3.5 mr-1" /> Nova tarefa</Button>
-            <Button size="sm" className="h-8" onClick={() => setCapOpen(true)}><Plus className="h-3.5 w-3.5 mr-1" /> Nova captação</Button>
+            {/* Os três com a MESMA altura: 44px no toque, h-8 no desktop. Entrou um
+                terceiro botão na linha, e um alvo maior que os vizinhos ficaria torto
+                (além de 32px ser alvo curto pra dedo, que é como esta tela é usada). */}
+            <Button size="sm" variant="outline" className="h-11 md:h-8" onClick={() => { setAddKind("tarefa"); setAddDay(new Date().toLocaleDateString("sv-SE")); }}><Plus className="h-3.5 w-3.5 mr-1" /> Nova tarefa</Button>
+            <Button size="sm" variant="outline" className="h-11 md:h-8" onClick={() => setDataDialog("nova")}><PartyPopper className="h-3.5 w-3.5 mr-1" /> Nova data</Button>
+            <Button size="sm" className="h-11 md:h-8" onClick={() => setCapOpen(true)}><Plus className="h-3.5 w-3.5 mr-1" /> Nova captação</Button>
           </div>
         </div>
 
@@ -1526,6 +1608,56 @@ export default function AgendaCriacao() {
                   </select>
                   <button onClick={() => delCapture.mutate(c.id)} className="-m-1 grid h-10 w-10 shrink-0 place-items-center rounded-lg text-muted-foreground/50 hover:text-destructive hover:bg-destructive/5 transition-colors md:h-8 md:w-8" aria-label="Remover captação"><X className="h-4 w-4" /></button>
                 </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* DATAS COMEMORATIVAS cadastradas aqui na agenda.
+            Mora nesta seção porque é daqui que ela cadastra: a lista é o lugar de
+            conferir se a data já existe e de reabrir pra corrigir, sem precisar
+            caçar o dia certo na grade (data de setembro em fevereiro é longe). */}
+        <div className="flex items-center gap-1.5 mt-5 mb-2">
+          <PartyPopper className="h-3.5 w-3.5" style={{ color: COMEMORATIVA_COLOR }} />
+          <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">Datas comemorativas</p>
+          {agendaDatas.length > 0 && <span className="text-[10px] font-body font-semibold text-muted-foreground">{agendaDatas.length}</span>}
+        </div>
+        {agendaDatas.length === 0 ? (
+          <p className="text-[12px] font-body text-muted-foreground py-3 text-center rounded-xl border border-dashed border-border">
+            Nenhuma data cadastrada. Clique em "Nova data" pra criar a primeira e marcar de quais clientes ela é assunto.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {agendaDatas.map((d) => {
+              const dt = parseDateOnly(d.dia);
+              const aprovados = d.clientes.filter((c) => c.aprovada).length;
+              // Sem cor escolhida, a linha usa o roxo que a grade já dá pras comemorativas.
+              const cor = d.cor || COMEMORATIVA_COLOR;
+              return (
+                <button key={d.id} type="button" onClick={() => setDataDialog(d)}
+                  className="w-full min-h-[44px] flex items-center gap-3 rounded-xl border border-border p-3 text-left flex-wrap hover:border-primary/40 transition-colors">
+                  <span className="h-3.5 w-3.5 rounded-full shrink-0" style={{ background: cor }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-body font-semibold text-foreground truncate">{d.label}</p>
+                    <div className="flex items-center gap-2 flex-wrap text-[11px] font-body text-muted-foreground">
+                      {/* Repete todo ano: o ano some do rótulo, porque ele não quer dizer
+                          nada ali. Evento pontual mostra o ano, que é o que o diferencia. */}
+                      <span>{dt.toLocaleDateString("pt-BR", d.repete_anual ? { day: "2-digit", month: "long" } : { day: "2-digit", month: "long", year: "numeric" })}</span>
+                      <span>{d.repete_anual ? "Todo ano" : "Só uma vez"}</span>
+                    </div>
+                    {d.nota && <p className="text-[11px] font-body text-muted-foreground/80 mt-0.5 truncate italic">{d.nota}</p>}
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                    <span className="text-[11px] font-body font-semibold rounded-full px-2 py-1" style={{ background: `${cor}1f`, color: cor }}>
+                      {d.clientes.length === 0 ? "Sem cliente" : d.clientes.length === 1 ? "1 cliente" : `${d.clientes.length} clientes`}
+                    </span>
+                    {/* "Aprovou" = o cliente marcou a data no link do cronograma dele.
+                        Zero aprovações não é erro: é o normal enquanto ninguém abriu o link. */}
+                    <span className={cn("text-[11px] font-body font-semibold rounded-full px-2 py-1", aprovados > 0 ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground")}>
+                      {aprovados === 0 ? "Ninguém aprovou" : aprovados === 1 ? "1 aprovou" : `${aprovados} aprovaram`}
+                    </span>
+                  </div>
+                </button>
               );
             })}
           </div>
@@ -1612,6 +1744,33 @@ export default function AgendaCriacao() {
           });
           setCapOpen(false); setEditCap(null);
         }} />
+      {/* Data comemorativa da agenda. O MESMO diálogo cria e edita: os campos são os
+          mesmos, e ter duas telas quase iguais é como elas desandam com o tempo. */}
+      <AgendaDataDialog
+        open={!!dataDialog}
+        initial={dataDialog === "nova" ? null : dataDialog}
+        clientes={clientesParaData}
+        pending={criarData.isPending || atualizarData.isPending}
+        onClose={() => setDataDialog(null)}
+        onSave={(v) => {
+          if (dataDialog && dataDialog !== "nova") atualizarData.mutate({ id: dataDialog.id, ...v });
+          else criarData.mutate(v);
+          setDataDialog(null);
+        }}
+        onDelete={async () => {
+          if (!dataDialog || dataDialog === "nova") return;
+          // Confirmação de verdade (e não dois toques) porque aqui a exclusão mexe com
+          // o que o cliente já viu: vale gastar uma tela explicando o que fica pra trás.
+          const ok = await confirmar({
+            titulo: `Excluir "${dataDialog.label}"?`,
+            descricao: "A data sai da sua agenda. O que já entrou no cronograma dos clientes continua lá, porque eles podem ter planejado em cima dela.",
+            acao: "Excluir",
+          });
+          if (!ok) return;
+          excluirData.mutate(dataDialog.id);
+          setDataDialog(null);
+        }}
+      />
       {/* Post do Cria DO CLIENTE: detalhes + marcar publicado + atalho pro kanban. */}
       <Dialog open={!!criaCard} onOpenChange={(o) => { if (!o) setCriaCard(null); }}>
         <DialogContent className="sm:max-w-md">
@@ -1806,7 +1965,7 @@ export default function AgendaCriacao() {
                 else { setDayModal(null); setDataModal({ iso, data: c }); }
               }}
               className={cn(rowCls, aprovados === 0 && "opacity-70")}>
-              {dot(COMEMORATIVA_COLOR)}
+              {dot(c.cor || COMEMORATIVA_COLOR)}
               <span className="text-[13px] font-body font-semibold text-foreground truncate">{c.label}</span>
               <span className="text-[11px] text-muted-foreground truncate">
                 {total === 1 ? c.clientes[0].nome : `${total} clientes`}
@@ -2185,6 +2344,180 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
             <Button variant="outline" onClick={onClose}>Cancelar</Button>
             <Button onClick={() => onSave({ capture_date: date, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null, duration_hours: dur, ...(initial ? { status } : {}) })} disabled={!valid || pending}>
               {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : initial ? "Salvar" : "Agendar"}
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   DATA COMEMORATIVA DA AGENDA (cria e edita)
+
+   O formulário em si é banal: nome, dia, cor, nota. O que faz este diálogo
+   existir é a lista de CLIENTES. "Dia Mundial da Fisioterapia" não é assunto de
+   um cliente, é assunto de todos os fisioterapeutas da carteira, e até aqui a
+   única porta de entrada era o cronograma de UM cliente por vez: ela repetia a
+   mesma data cliente a cliente e quem ela esquecia perdia a data.
+   ──────────────────────────────────────────────────────────────────────────── */
+function AgendaDataDialog({ open, initial, clientes, onClose, onSave, onDelete, pending }: {
+  open: boolean;
+  initial?: AgendaData | null;
+  /** Clientes ativos do CRM, com o nome exibido já resolvido pelo pai. */
+  clientes: { id: string; nome: string }[];
+  onClose: () => void;
+  onSave: (v: { label: string; dia: string; repete_anual: boolean; cor: string | null; nota: string | null; clientes: string[] }) => void;
+  onDelete: () => void;
+  pending: boolean;
+}) {
+  const [label, setLabel] = useState("");
+  const [dia, setDia] = useState("");
+  const [repete, setRepete] = useState(true);
+  const [cor, setCor] = useState<string>(DATA_COLORS[0]);
+  const [nota, setNota] = useState("");
+  const [marcados, setMarcados] = useState<Set<string>>(new Set());
+  const [busca, setBusca] = useState("");
+  // Mesma "semeadura" dos outros diálogos daqui: só repovoa quando MUDA o que está
+  // aberto. Repovoar a cada render apagaria o que a pessoa acabou de digitar.
+  const seed = open ? (initial?.id ?? "nova") : "";
+  const [seeded, setSeeded] = useState("");
+  if (open && seed !== seeded) {
+    setSeeded(seed);
+    setLabel(initial?.label ?? "");
+    setDia(initial?.dia ?? "");
+    setRepete(initial?.repete_anual ?? true);
+    setCor(initial?.cor || DATA_COLORS[0]);
+    setNota(initial?.nota ?? "");
+    setMarcados(new Set((initial?.clientes ?? []).map((c) => c.crmClientId)));
+    setBusca("");
+  }
+  if (!open && seeded) setSeeded("");
+
+  const filtrados = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    return q ? clientes.filter((c) => c.nome.toLowerCase().includes(q)) : clientes;
+  }, [clientes, busca]);
+  /* "Marcar todos" age só no que está VISÍVEL. Com a busca preenchida, ele vira o
+     atalho de marcar um segmento inteiro de uma vez (digita "fisio", marca todos),
+     que é exatamente o trabalho que este diálogo veio resolver. */
+  const todosMarcados = filtrados.length > 0 && filtrados.every((c) => marcados.has(c.id));
+  const alternarTodos = () => setMarcados((prev) => {
+    const n = new Set(prev);
+    for (const c of filtrados) { if (todosMarcados) n.delete(c.id); else n.add(c.id); }
+    return n;
+  });
+  const alternarCliente = (id: string) => setMarcados((prev) => {
+    const n = new Set(prev);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+
+  const valido = !!label.trim() && !!dia;
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle className="font-display">{initial ? "Editar data" : "Nova data"}</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Nome da data</p>
+            <Input value={label} onChange={(e) => setLabel(e.target.value)} className="h-11" placeholder="Ex.: Dia Mundial da Fisioterapia" />
+          </div>
+          <div>
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Dia</p>
+            <Input type="date" value={dia} onChange={(e) => setDia(e.target.value)} className="w-full h-11" />
+          </div>
+
+          {/* Repetir todo ano: é o campo que separa data comemorativa de evento, e
+              ninguém adivinha isso pelo nome do interruptor, então a linha explica. */}
+          <div className="flex items-start justify-between gap-3 rounded-xl border border-border p-3">
+            <div className="min-w-0">
+              <p className="text-sm font-body font-semibold text-foreground">Repetir todo ano</p>
+              <p className="text-[11px] font-body text-muted-foreground mt-0.5 leading-relaxed">
+                Ligado: data comemorativa de verdade, volta no mesmo dia todo ano. Desligado: evento pontual, acontece uma vez e não volta.
+              </p>
+            </div>
+            <Switch checked={repete} onCheckedChange={setRepete} className="mt-0.5 shrink-0" />
+          </div>
+
+          {/* Cor: bolinha de 28px dentro de um botão de 44px. O alvo de toque é o
+              botão inteiro, então dá pra acertar no celular sem inflar o visual. */}
+          <div>
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Cor</p>
+            <div className="flex flex-wrap items-center gap-1">
+              {DATA_COLORS.map((hex) => (
+                <button key={hex} type="button" onClick={() => setCor(hex)} aria-label={`Cor ${hex}`} title={hex}
+                  className="grid h-11 w-11 place-items-center rounded-full">
+                  <span className={cn("h-7 w-7 rounded-full border-2 transition-transform", cor === hex ? "border-foreground scale-110" : "border-transparent hover:scale-105")}
+                    style={{ background: hex }} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Clientes: o coração do diálogo. */}
+          <div>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase">
+                Clientes{marcados.size > 0 ? ` · ${marcados.size === 1 ? "1 marcado" : `${marcados.size} marcados`}` : ""}
+              </p>
+              <button type="button" onClick={alternarTodos} disabled={filtrados.length === 0}
+                className="min-h-[44px] -mr-2 px-2 text-[11px] font-body font-semibold text-primary hover:underline disabled:opacity-40">
+                {todosMarcados ? "Desmarcar todos" : "Marcar todos"}
+              </button>
+            </div>
+            {/* Busca só quando a carteira é grande: com poucos clientes ela é um campo
+                a mais pra ignorar. Acima disso, rolar a lista atrás de um nome cansa. */}
+            {clientes.length > 8 && (
+              <Input value={busca} onChange={(e) => setBusca(e.target.value)} className="h-11 mb-1.5" placeholder="Buscar cliente pelo nome" />
+            )}
+            <div className="rounded-xl border border-border divide-y divide-border max-h-56 overflow-y-auto">
+              {filtrados.length === 0 ? (
+                <p className="text-[12px] font-body text-muted-foreground text-center py-4">
+                  {clientes.length === 0 ? "Nenhum cliente ativo na carteira." : "Nenhum cliente com esse nome."}
+                </p>
+              ) : filtrados.map((c) => {
+                const on = marcados.has(c.id);
+                return (
+                  <button key={c.id} type="button" onClick={() => alternarCliente(c.id)}
+                    className="w-full min-h-[44px] flex items-center gap-2.5 px-3 py-2 text-left hover:bg-muted/40 transition-colors">
+                    <span className={cn("grid h-5 w-5 shrink-0 place-items-center rounded-md border-2 transition-colors",
+                      on ? "border-primary bg-primary text-primary-foreground" : "border-border")}>
+                      {on && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-body text-foreground">{c.nome}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {/* Aviso honesto: a função do banco procura o cronograma vivo de cada
+                cliente (o mais recente que não foi arquivado) e pula quem não tem
+                nenhum, de propósito, pra não criar cronograma fantasma. Sem este
+                aviso a pessoa marca dez clientes e não entende por que só sete
+                receberam a data. */}
+            <p className="text-[11px] font-body text-muted-foreground mt-1.5 leading-relaxed">
+              A data entra no cronograma vivo de cada cliente marcado, pra ele aprovar no link. Quem não tem cronograma aberto fica de fora: nenhum cronograma novo é criado só pra abrigar a data.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Nota (opcional)</p>
+            <Textarea rows={2} value={nota} onChange={(e) => setNota(e.target.value)} className="rounded-xl text-sm"
+              placeholder="Ex.: puxar depoimento de paciente, gravar antes do feriado" />
+          </div>
+        </div>
+        <DialogFooter className="sm:justify-between gap-2">
+          {initial ? (
+            <Button type="button" variant="ghost" onClick={onDelete}
+              className="h-11 gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10">
+              <Trash2 className="h-4 w-4" /> Excluir
+            </Button>
+          ) : <span />}
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" className="h-11" onClick={onClose}>Cancelar</Button>
+            <Button className="h-11" disabled={!valido || pending}
+              onClick={() => onSave({ label: label.trim(), dia, repete_anual: repete, cor, nota: nota.trim() || null, clientes: [...marcados] })}>
+              {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : initial ? "Salvar" : "Criar data"}
             </Button>
           </div>
         </DialogFooter>
