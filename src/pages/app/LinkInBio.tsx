@@ -1064,7 +1064,7 @@ const LinkInBio = () => {
             espremer a prévia num filete de dois dedos, com o título caindo uma
             letra por linha. minmax(0,1fr) é o que autoriza o editor a encolher:
             coluna de grid não encolhe abaixo do próprio conteúdo por padrão. */}
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_356px] gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_356px] gap-6">
           {/* ── Editor ──────────────────────────────── */}
           <div className="space-y-5 min-w-0">
             {/* ── 1. Estilo (fixo no topo, junto do Salvar) ───────────────── */}
@@ -1666,9 +1666,20 @@ const LinkInBio = () => {
           {/* ── Preview ─────────────────────────────── */}
           {/* Gruda no topo e acompanha a rolagem: quem monta a página precisa
               ver a mudança no mesmo instante em que mexe no campo, e não rolar
-              de volta pra conferir. A altura máxima é pra prévia alta não
-              esconder o próprio fim atrás da borda da tela. */}
-          <div className="min-w-0 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:overflow-x-clip lg:pb-2">
+              de volta pra conferir.
+
+              DUAS CAIXAS, de propósito. A de fora é o item do grid e não tem
+              `sticky`: ela estica com a linha inteira, ou seja, fica do tamanho
+              da coluna do editor. É essa altura que vira o trilho por onde a
+              prévia corre. A de dentro é a que gruda.
+
+              Juntar as duas numa só (sticky no próprio item do grid, com
+              self-start) é o que estava quebrando: o item encolhia pro tamanho
+              do conteúdo, o trilho ficava do tamanho da própria prévia, e sem
+              trilho não existe pra onde grudar. A prévia simplesmente subia
+              junto com a página. */}
+          <div className="min-w-0">
+           <div className="lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:overflow-x-clip lg:pb-2">
             <Card className="p-4 rounded-2xl border-border">
               <p className="text-xs text-center font-display font-semibold uppercase tracking-wider text-muted-foreground/80 mb-4">
                 Pré-visualização
@@ -1677,6 +1688,7 @@ const LinkInBio = () => {
                 blocos={settings.layout === "vitrine" ? blocosSite : blocosClassico}
                 produtos={produtosDoSite} posts={postsDoSite} settings={settings} />
             </Card>
+           </div>
           </div>
         </div>
       </motion.div>
