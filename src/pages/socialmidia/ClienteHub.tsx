@@ -1403,7 +1403,18 @@ function Destaques({ clientId, clientSegment, clientBirthday, renewalDate, extCl
       else { dt = new Date(ay, am - 1, ad); if (dt < hoje) continue; }
       minhas.push({ label: d.label, date: dt, tipo: "comemorativa" });
     }
+    /* Sem duplicata. "Dia do Cliente" está no catálogo do segmento E ela pode
+       ter cadastrado o mesmo na agenda: apareciam as duas, com o mesmo nome e o
+       mesmo dia, e parecia defeito. As dela vêm primeiro na lista, então ganham
+       a vaga: é a que ela escolheu de propósito pra este cliente. */
+    const vistas = new Set<string>();
     return [...minhas, ...doCatalogo]
+      .filter((d) => {
+        const chave = `${d.label.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")}|${d.date.getMonth()}-${d.date.getDate()}`;
+        if (vistas.has(chave)) return false;
+        vistas.add(chave);
+        return true;
+      })
       .sort((a, b) => a.date.getTime() - b.date.getTime())
       .slice(0, 4);
   }, [clientSegment, clientBirthday, datasDaAgenda, clientId]);

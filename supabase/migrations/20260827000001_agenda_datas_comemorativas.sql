@@ -33,6 +33,13 @@ create table if not exists public.agenda_datas (
      acontece uma vez e não volta. */
   repete_anual boolean not null default true,
 
+  /* MANDAR PRO CRONOGRAMA DOS CLIENTES?
+     Nem toda data precisa de aprovação. "Dia do Cliente" é lembrete dela pra
+     preparar alguma coisa; "Dia Mundial da Fisioterapia" é pauta que o cliente
+     decide se quer. Forçar tudo pro cronograma enchia o link do cliente de
+     data que não era pergunta pra ele. */
+  no_cronograma boolean not null default true,
+
   /* Cor do chip na agenda. Nula = a cor padrão do tipo. */
   cor text,
   nota text,
@@ -55,6 +62,9 @@ create table if not exists public.agenda_data_clientes (
   created_at timestamptz not null default now(),
   unique (agenda_data_id, crm_client_id)
 );
+
+-- Pra quem já rodou este arquivo antes da coluna existir.
+alter table public.agenda_datas add column if not exists no_cronograma boolean not null default true;
 
 alter table public.agenda_datas enable row level security;
 alter table public.agenda_data_clientes enable row level security;
@@ -113,6 +123,8 @@ declare
 begin
   select * into d from public.agenda_datas where id = _agenda_data_id;
   if d.id is null then return 0; end if;
+  -- Marcada como lembrete só dela: não vai pro link de ninguém.
+  if not coalesce(d.no_cronograma, true) then return 0; end if;
   -- Só o dono (ou colaborador dele) mexe nisto, mesmo com security definer.
   if not public.acts_for(d.manager_id) then
     raise exception 'sem permissão para esta data';

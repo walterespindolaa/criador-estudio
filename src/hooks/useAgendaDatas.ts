@@ -28,6 +28,8 @@ export type AgendaData = {
   /** "YYYY-MM-DD". Quando repete_anual, só o dia e o mês importam. */
   dia: string;
   repete_anual: boolean;
+  /** Falso = lembrete só dela, não entra no cronograma nem no link do cliente. */
+  no_cronograma: boolean;
   cor: string | null;
   nota: string | null;
   clientes: { crmClientId: string; nome: string; aprovada: boolean }[];
@@ -57,7 +59,7 @@ export function useAgendaDatas() {
 
       type Linha = {
         id: string; manager_id: string; label: string; dia: string;
-        repete_anual: boolean; cor: string | null; nota: string | null;
+        repete_anual: boolean; no_cronograma?: boolean | null; cor: string | null; nota: string | null;
         agenda_data_clientes?: {
           crm_client_id: string;
           crm_clients?: { name?: string | null } | null;
@@ -67,7 +69,7 @@ export function useAgendaDatas() {
 
       return ((data ?? []) as Linha[]).map((r) => ({
         id: r.id, manager_id: r.manager_id, label: r.label, dia: r.dia,
-        repete_anual: r.repete_anual, cor: r.cor, nota: r.nota,
+        repete_anual: r.repete_anual, no_cronograma: r.no_cronograma !== false, cor: r.cor, nota: r.nota,
         clientes: (r.agenda_data_clientes ?? []).map((c) => ({
           crmClientId: c.crm_client_id,
           nome: (c.crm_clients?.name ?? "").trim() || "cliente",
@@ -87,7 +89,7 @@ export function useAgendaDatas() {
   };
 
   type Entrada = {
-    label: string; dia: string; repete_anual: boolean;
+    label: string; dia: string; repete_anual: boolean; no_cronograma: boolean;
     cor: string | null; nota: string | null; clientes: string[];
   };
 
@@ -116,6 +118,7 @@ export function useAgendaDatas() {
         label: v.label.trim().slice(0, 160),
         dia: v.dia,
         repete_anual: v.repete_anual,
+        no_cronograma: v.no_cronograma,
         cor: v.cor,
         nota: v.nota?.trim() || null,
       } as never).select("id").single();
@@ -124,9 +127,10 @@ export function useAgendaDatas() {
     },
     onSuccess: (_d, v) => {
       invalidar();
-      toast.success(v.clientes.length > 0
-        ? `Data criada e enviada pro cronograma de ${v.clientes.length} cliente(s).`
-        : "Data criada.");
+      toast.success(
+        v.clientes.length === 0 ? "Data criada."
+        : v.no_cronograma ? `Data criada e enviada pro cronograma de ${v.clientes.length} cliente(s).`
+        : `Data criada como lembrete pra ${v.clientes.length} cliente(s). O cliente não vê.`);
     },
     onError: (e: Error) => toast.error(tabelaFaltando(e.message) ? AVISO : (e.message || "Não consegui salvar a data.")),
   });
@@ -138,6 +142,7 @@ export function useAgendaDatas() {
         label: v.label.trim().slice(0, 160),
         dia: v.dia,
         repete_anual: v.repete_anual,
+        no_cronograma: v.no_cronograma,
         cor: v.cor,
         nota: v.nota?.trim() || null,
         updated_at: new Date().toISOString(),

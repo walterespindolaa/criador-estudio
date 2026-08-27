@@ -374,6 +374,26 @@ export default function AgendaCriacao() {
   // Datas cadastradas AQUI na agenda (uma data, vários clientes). Não se confundem
   // com datasComemorativas acima, que são as que já vivem no cronograma de cada um.
   const { datas: agendaDatas, criar: criarData, atualizar: atualizarData, excluir: excluirData } = useAgendaDatas();
+  /* A LISTA DE BAIXO mostra as PRÓXIMAS, não o histórico.
+     Data que repete todo ano nunca "passa": quando o dia chega e vai embora,
+     ela rola pro ano seguinte. Evento pontual (uma feira, um lançamento) some
+     depois que acontece, senão a lista vira um cemitério de coisas que já
+     foram e a próxima data de verdade fica soterrada embaixo. */
+  const datasProximas = useMemo(() => {
+    const hoje = parseDateOnly(hojeBR());
+    const y = hoje.getFullYear();
+    return agendaDatas
+      .map((d) => {
+        const [ay, am, ad] = d.dia.split("-").map(Number);
+        if (!ay || !am || !ad) return null;
+        let quando = new Date(y, am - 1, ad);
+        if (d.repete_anual) { if (quando < hoje) quando = new Date(y + 1, am - 1, ad); }
+        else { quando = new Date(ay, am - 1, ad); if (quando < hoje) return null; }
+        return { d, quando };
+      })
+      .filter((x): x is { d: AgendaData; quando: Date } => x !== null)
+      .sort((a, b) => a.quando.getTime() - b.quando.getTime());
+  }, [agendaDatas]);
   const { data: crmTasks = [] } = useCrmTasks();
   const addCapture = useAddCapture();
   const updCapture = useUpdateCapture();
@@ -1405,6 +1425,11 @@ export default function AgendaCriacao() {
                 const total = c.clientes.length;
                 // A cor que ela escolheu ao cadastrar; sem cor, o roxo do tipo.
                 const cor = c.cor || COMEMORATIVA_COLOR;
+                /* Data que ELA cadastrou não fica apagada nem diz "a confirmar".
+                   Ela criou, ela sabe que quer: quem precisa confirmar alguma
+                   coisa é o cliente, e isso é outro assunto. O "a confirmar"
+                   existe pra data que veio do cronograma e ninguém marcou. */
+                const minhaData = !!c.agendaDataId;
                 /* Um cliente só: vai direto pro cronograma dele, que é o que a
                    pessoa quer fazer em seguida. Mais de um: abre a lista, porque
                    a pergunta passa a ser OUTRA ("pra quais clientes eu preciso
@@ -1428,8 +1453,11 @@ export default function AgendaCriacao() {
                       else setDataModal({ iso, data: c });
                     }}
                     className={cn(
-                      "rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95",
-                      aprovados === 0 && "opacity-60",
+                      "rounded-lg px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95",
+                      // Borda cheia quando é dela (é compromisso), pontilhada
+                      // quando veio do cronograma e ainda é proposta.
+                      minhaData ? "border" : "border border-dashed",
+                      !minhaData && aprovados === 0 && "opacity-60",
                     )}
                     style={{ borderColor: `${cor}80`, background: `${cor}0F` }}>
                     <div className="flex items-center gap-1 min-w-0" style={{ color: cor }}>
@@ -1439,7 +1467,10 @@ export default function AgendaCriacao() {
                       </span>
                       <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full"
                         style={{ background: `${cor}26`, color: cor }}>
-                        {c.mesTodo ? "Mês todo" : aprovados === 0 ? "A confirmar" : aprovados === total ? "Data" : `${aprovados} de ${total}`}
+                        {c.mesTodo ? "Mês todo"
+                          : minhaData ? (total === 0 ? "Data" : aprovados === total ? "Data" : `${aprovados}/${total}`)
+                          : aprovados === 0 ? "A confirmar"
+                          : aprovados === total ? "Data" : `${aprovados} de ${total}`}
                       </span>
                     </div>
                     <p className="text-[12px] font-body font-semibold leading-tight truncate text-foreground">{c.label}</p>
@@ -1480,11 +1511,16 @@ export default function AgendaCriacao() {
                       <div ref={dropProvided.innerRef} data-dia={iso} {...dropProvided.droppableProps}
                         className={cn(colCls, dropSnapshot.isDraggingOver && "ring-2 ring-primary/40 border-primary/60 bg-primary/5")}>
                         {cabecalho}
+                        {/* A DATA VEM ANTES DE TUDO no dia. Ela não é uma tarefa
+                            entre outras: é a moldura do dia, o motivo de metade
+                            do que está embaixo existir. No fim da lista ela
+                            aparecia depois de dez posts e a pessoa só descobria
+                            que era Dia do Nutricionista rolando até embaixo. */}
+                        {dayComemorativas.map(renderComemorativa)}
+                        {dayBirthdays.map(renderAniv)}
                         {dayItems.map(renderItem)}
                         {dropProvided.placeholder}
                         {criaDay.map(renderCriaCard)}
-                        {dayBirthdays.map(renderAniv)}
-                        {dayComemorativas.map(renderComemorativa)}
                         {vazio}
                       </div>
                     )}
@@ -1533,11 +1569,14 @@ export default function AgendaCriacao() {
                                 <span className="hidden lg:inline text-[8px] font-body text-muted-foreground/50 shrink-0">{FAIXA_HINT[f]}</span>
                               </div>
                             )}
+                            {/* Mesma regra da coluna sem períodos: a data abre o
+                                dia, na primeira faixa. */}
+                            {f === "sem" && dayComemorativas.map(renderComemorativa)}
+                            {f === "sem" && anivs.map(renderAniv)}
                             {its.map(renderItem)}
                             {dp.placeholder}
                             {cris.map(renderCriaCard)}
-                            {anivs.map(renderAniv)}
-                            {f === "sem" && dayComemorativas.map(renderComemorativa)}
+                            {f !== "sem" && anivs.map(renderAniv)}
                           </div>
                         )}
                       </Droppable>
@@ -1620,16 +1659,15 @@ export default function AgendaCriacao() {
         <div className="flex items-center gap-1.5 mt-5 mb-2">
           <PartyPopper className="h-3.5 w-3.5" style={{ color: COMEMORATIVA_COLOR }} />
           <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">Datas comemorativas</p>
-          {agendaDatas.length > 0 && <span className="text-[10px] font-body font-semibold text-muted-foreground">{agendaDatas.length}</span>}
+          {datasProximas.length > 0 && <span className="text-[10px] font-body font-semibold text-muted-foreground">{datasProximas.length}</span>}
         </div>
-        {agendaDatas.length === 0 ? (
+        {datasProximas.length === 0 ? (
           <p className="text-[12px] font-body text-muted-foreground py-3 text-center rounded-xl border border-dashed border-border">
             Nenhuma data cadastrada. Clique em "Nova data" pra criar a primeira e marcar de quais clientes ela é assunto.
           </p>
         ) : (
           <div className="space-y-2">
-            {agendaDatas.map((d) => {
-              const dt = parseDateOnly(d.dia);
+            {datasProximas.map(({ d, quando: dt }) => {
               const aprovados = d.clientes.filter((c) => c.aprovada).length;
               // Sem cor escolhida, a linha usa o roxo que a grade já dá pras comemorativas.
               const cor = d.cor || COMEMORATIVA_COLOR;
@@ -1964,14 +2002,17 @@ export default function AgendaCriacao() {
                 if (total === 1 && c.clientes[0].crmId) { setDayModal(null); navigate(`/socialmidia/clientes/${c.clientes[0].crmId}/cronograma`); }
                 else { setDayModal(null); setDataModal({ iso, data: c }); }
               }}
-              className={cn(rowCls, aprovados === 0 && "opacity-70")}>
+              className={cn(rowCls, !c.agendaDataId && aprovados === 0 && "opacity-70")}>
               {dot(c.cor || COMEMORATIVA_COLOR)}
               <span className="text-[13px] font-body font-semibold text-foreground truncate">{c.label}</span>
               <span className="text-[11px] text-muted-foreground truncate">
                 {total === 1 ? c.clientes[0].nome : `${total} clientes`}
               </span>
               <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
-                {c.mesTodo ? "Mês todo" : aprovados === 0 ? "A confirmar" : aprovados === total ? "Data" : `${aprovados} de ${total}`}
+                {c.mesTodo ? "Mês todo"
+                  : c.agendaDataId ? (total === 0 || aprovados === total ? "Data" : `${aprovados}/${total}`)
+                  : aprovados === 0 ? "A confirmar"
+                  : aprovados === total ? "Data" : `${aprovados} de ${total}`}
               </span>
             </button>
           );
@@ -2015,8 +2056,8 @@ export default function AgendaCriacao() {
                   <>
                     {items.map(linhaItem)}
                     {criaCli.map(linhaCria)}
-                    {anivs.map(linhaAniv)}
                     {comem.map(linhaComem)}
+                    {anivs.map(linhaAniv)}
                   </>
                 )}
               </div>
@@ -2367,13 +2408,14 @@ function AgendaDataDialog({ open, initial, clientes, onClose, onSave, onDelete, 
   /** Clientes ativos do CRM, com o nome exibido já resolvido pelo pai. */
   clientes: { id: string; nome: string }[];
   onClose: () => void;
-  onSave: (v: { label: string; dia: string; repete_anual: boolean; cor: string | null; nota: string | null; clientes: string[] }) => void;
+  onSave: (v: { label: string; dia: string; repete_anual: boolean; no_cronograma: boolean; cor: string | null; nota: string | null; clientes: string[] }) => void;
   onDelete: () => void;
   pending: boolean;
 }) {
   const [label, setLabel] = useState("");
   const [dia, setDia] = useState("");
   const [repete, setRepete] = useState(true);
+  const [noCronograma, setNoCronograma] = useState(true);
   const [cor, setCor] = useState<string>(DATA_COLORS[0]);
   const [nota, setNota] = useState("");
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
@@ -2387,6 +2429,7 @@ function AgendaDataDialog({ open, initial, clientes, onClose, onSave, onDelete, 
     setLabel(initial?.label ?? "");
     setDia(initial?.dia ?? "");
     setRepete(initial?.repete_anual ?? true);
+    setNoCronograma(initial?.no_cronograma ?? true);
     setCor(initial?.cor || DATA_COLORS[0]);
     setNota(initial?.nota ?? "");
     setMarcados(new Set((initial?.clientes ?? []).map((c) => c.crmClientId)));
@@ -2455,6 +2498,23 @@ function AgendaDataDialog({ open, initial, clientes, onClose, onSave, onDelete, 
             </div>
           </div>
 
+          {/* MANDAR PRO CLIENTE OU NÃO.
+              Nem toda data é pergunta pro cliente. "Dia do Cliente" é lembrete
+              dela pra preparar alguma coisa; "Dia Mundial da Fisioterapia" é
+              pauta que ele decide se quer. Sem esta chave, tudo ia parar no link
+              do cliente e ele recebia pergunta que não era dele. */}
+          <label className="flex items-start gap-2.5 rounded-xl border border-border p-3 cursor-pointer">
+            <Switch checked={noCronograma} onCheckedChange={setNoCronograma} className="mt-0.5 shrink-0" />
+            <span className="min-w-0">
+              <span className="block text-[13px] font-body font-semibold text-foreground">Mandar pro cronograma dos clientes</span>
+              <span className="block text-[11.5px] font-body text-muted-foreground leading-relaxed mt-0.5">
+                {noCronograma
+                  ? "A data entra no cronograma de quem você marcar, e o cliente decide no link se quer trabalhar ela."
+                  : "Fica só na sua agenda. O cliente não vê e não precisa aprovar nada."}
+              </span>
+            </span>
+          </label>
+
           {/* Clientes: o coração do diálogo. */}
           <div>
             <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -2516,7 +2576,7 @@ function AgendaDataDialog({ open, initial, clientes, onClose, onSave, onDelete, 
           <div className="flex gap-2 justify-end">
             <Button variant="outline" className="h-11" onClick={onClose}>Cancelar</Button>
             <Button className="h-11" disabled={!valido || pending}
-              onClick={() => onSave({ label: label.trim(), dia, repete_anual: repete, cor, nota: nota.trim() || null, clientes: [...marcados] })}>
+              onClick={() => onSave({ label: label.trim(), dia, repete_anual: repete, no_cronograma: noCronograma, cor, nota: nota.trim() || null, clientes: [...marcados] })}>
               {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : initial ? "Salvar" : "Criar data"}
             </Button>
           </div>
