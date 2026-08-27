@@ -24,6 +24,9 @@ export type Cronograma = {
   /** Primeiro dia do mês de referência ("2026-09-01"). Nulo nos antigos, que
    *  continuam se identificando só pelo título. */
   mes_ref: string | null;
+  /** Recado interno sobre a estratégia do mês. NÃO vai pro link do cliente:
+   *  get_cronograma_by_token não devolve esta coluna. */
+  descricao: string | null;
   token: string;
   created_at: string;
 };
@@ -68,7 +71,7 @@ export function useCronogramas() {
   });
 
   const create = useMutation({
-    mutationFn: async (input: { title: string; mes_ref?: string | null; client_label?: string | null; client_handle?: string | null; external_client_id?: string | null; crm_client_id?: string | null; cria_owner_id?: string | null }) => {
+    mutationFn: async (input: { title: string; mes_ref?: string | null; descricao?: string | null; client_label?: string | null; client_handle?: string | null; external_client_id?: string | null; crm_client_id?: string | null; cria_owner_id?: string | null }) => {
       if (!user?.id) throw new Error("Sem sessão");
       const { data, error } = await sbFrom("cronogramas")
         .insert({ ...input, manager_id: user.id } as never).select("*").single();
@@ -81,10 +84,17 @@ export function useCronogramas() {
 
   const update = useMutation({
     mutationFn: async ({ id, ...patch }: { id: string } & Partial<Cronograma>) => {
-      const { error } = await sbFrom("cronogramas").update(patch as never).eq("id", id);
+      /* .select() de propósito: bloqueio de permissão devolve ZERO linhas e
+         NENHUM erro. Sem isto a tela diz "salvo" sem ter salvo nada. */
+      const { data, error } = await sbFrom("cronogramas")
+        .update(patch as never).eq("id", id).select("id").maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error("Não consegui salvar. Recarregue a página e tente de novo.");
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["cronogramas"] }),
+    // Sem toast de sucesso: esta mutação também roda em edição fina dentro do
+    // cronograma, e um aviso a cada ajuste vira ruído.
+    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao salvar o cronograma."),
   });
 
   const remove = useMutation({

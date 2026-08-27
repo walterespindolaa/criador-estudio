@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Plus, Pencil, Trash2, Send, Link2, CalendarRange, Building2, PartyPopper, Check, AtSign, LayoutGrid, GripVertical } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Send, Link2, CalendarRange, Building2, PartyPopper, Check, AtSign, LayoutGrid, GripVertical, Settings2 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -51,6 +51,15 @@ const tipoParaFormato = (tipo: string | null | undefined): string => {
 };
 
 // máscara DD/MM enquanto digita (ex.: "1505" -> "15/05")
+/** "2026-09-01" vira "Setembro de 2026". Fatiar a string em vez de passar por
+ *  Date de propósito: `new Date("2026-09-01")` é lido como UTC e no nosso fuso
+ *  volta um dia, virando agosto. */
+function mesPorExtenso(mesRef: string): string {
+  const [a, m] = mesRef.slice(0, 7).split("-").map(Number);
+  if (!a || !m || m < 1 || m > 12) return "sem mês definido";
+  return `${MESES_TITULO[m - 1]} de ${a}`;
+}
+
 const MESES_TITULO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -78,6 +87,40 @@ export function CronogramaBoard({ fixedClientId }: { fixedClientId?: string }) {
   // qualquer return antecipado: hook chamado dentro de condição quebra a ordem
   // que o React espera em toda renderização.
   const criando = useRef(false);
+
+  /* CONFIGURAR UM CRONOGRAMA QUE JÁ EXISTE.
+     Depois de criado, o cronograma era imutável pela lista: pra trocar o mês ou
+     corrigir o nome só apagando e refazendo, o que leva junto os posts. E não
+     havia onde registrar POR QUE o mês foi montado daquele jeito, então a
+     estratégia vivia só na cabeça de quem montou. */
+  const [cfg, setCfg] = useState<Cronograma | null>(null);
+  const [cfgTitulo, setCfgTitulo] = useState("");
+  const [cfgMes, setCfgMes] = useState("");
+  const [cfgRecado, setCfgRecado] = useState("");
+
+  const abrirConfig = (c: Cronograma) => {
+    setCfg(c);
+    setCfgTitulo(c.title);
+    setCfgMes(c.mes_ref ? c.mes_ref.slice(0, 7) : "");
+    setCfgRecado(c.descricao ?? "");
+  };
+
+  const salvarConfig = () => {
+    if (!cfg) return;
+    const titulo = cfgTitulo.trim();
+    if (!titulo) { toast.error("O cronograma precisa de um nome."); return; }
+    // Fecha só depois de gravar: fechar antes é o que faz a pessoa achar que
+    // salvou quando a gravação falhou lá atrás.
+    void update.mutateAsync({
+      id: cfg.id,
+      title: titulo,
+      mes_ref: cfgMes ? `${cfgMes}-01` : null,
+      descricao: cfgRecado.trim() || null,
+    }).then(() => {
+      toast.success("Cronograma atualizado.");
+      setCfg(null);
+    }).catch(() => { /* o erro já vira toast no hook */ });
+  };
 
   /* O título acompanha o mês escolhido enquanto ninguém o editou à mão. Pedir o
      mês E o título separados, com a pessoa digitando "Setembro" nos dois, seria
@@ -152,21 +195,38 @@ export function CronogramaBoard({ fixedClientId }: { fixedClientId?: string }) {
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {clientCronos.map((c) => (
-              <button key={c.id} onClick={() => setSelectedId(c.id)} className="text-left bg-card border border-border rounded-2xl p-5 hover:border-primary/40 hover:shadow-md transition-all">
-                <div className="flex items-center gap-2 mb-1"><CalendarRange className="h-4 w-4 text-primary" /><span className="font-display font-bold text-foreground">{c.title}</span></div>
-                {/* A data de criação distingue dois cronogramas de mesmo nome:
-                    sem ela, dois "Setembro" na tela são indistinguíveis e não
-                    dá pra saber qual apagar. */}
-                {c.created_at && (
+              /* Div por fora e não button: a engrenagem é um botão, e botão
+                 dentro de botão é HTML inválido (o navegador desmonta e o
+                 clique vira loteria). */
+              <div key={c.id} className="relative bg-card border border-border rounded-2xl hover:border-primary/40 hover:shadow-md transition-all">
+                <button onClick={() => setSelectedId(c.id)} className="text-left w-full p-5 pr-12 rounded-2xl">
+                  <div className="flex items-center gap-2 mb-1"><CalendarRange className="h-4 w-4 text-primary shrink-0" /><span className="font-display font-bold text-foreground">{c.title}</span></div>
+                  {/* A data de criação distingue dois cronogramas de mesmo nome:
+                      sem ela, dois "Setembro" na tela são indistinguíveis e não
+                      dá pra saber qual apagar. */}
                   <span className="block text-[11px] font-body text-muted-foreground">
-                    criado em {new Date(c.created_at).toLocaleDateString("pt-BR")}
+                    {c.mes_ref ? mesPorExtenso(c.mes_ref) : "sem mês definido"}
+                    {c.created_at && ` · criado em ${new Date(c.created_at).toLocaleDateString("pt-BR")}`}
                   </span>
-                )}
-                <span className={cn("inline-block mt-3 text-[10px] font-bold px-2 py-0.5 rounded-full",
-                  c.status === "aprovado" ? "bg-green-100 text-green-700" : c.status === "enviado" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground")}>
-                  {c.status === "aprovado" ? "Aprovado" : c.status === "enviado" ? "Enviado" : "Rascunho"}
-                </span>
-              </button>
+                  {/* O recado aparece no card, senão ele vira campo que ninguém
+                      lembra que existe. Duas linhas: é resumo, não leitura. */}
+                  {c.descricao && (
+                    <span className="block mt-2 text-[12px] font-body text-muted-foreground/90 leading-snug line-clamp-2">
+                      {c.descricao}
+                    </span>
+                  )}
+                  <span className={cn("inline-block mt-3 text-[10px] font-bold px-2 py-0.5 rounded-full",
+                    c.status === "aprovado" ? "bg-green-100 text-green-700" : c.status === "enviado" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground")}>
+                    {c.status === "aprovado" ? "Aprovado" : c.status === "enviado" ? "Enviado" : "Rascunho"}
+                  </span>
+                </button>
+                <button
+                  onClick={() => abrirConfig(c)}
+                  aria-label={`Configurar ${c.title}`}
+                  className="absolute top-3 right-3 h-9 w-9 rounded-xl grid place-items-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                  <Settings2 className="h-4 w-4" />
+                </button>
+              </div>
             ))}
           </div>
         )}
@@ -193,6 +253,42 @@ export function CronogramaBoard({ fixedClientId }: { fixedClientId?: string }) {
               <Button onClick={() => void createCronograma()} disabled={!newTitle.trim() || create.isPending} className="rounded-xl">
                 {create.isPending ? "Criando..." : "Criar"}
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!cfg} onOpenChange={(v) => !v && setCfg(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader><DialogTitle className="font-display">Configurar cronograma</DialogTitle></DialogHeader>
+            <div className="space-y-3 py-2">
+              <div>
+                <Label className="text-xs">Mês do cronograma</Label>
+                <Input type="month" value={cfgMes} onChange={(e) => setCfgMes(e.target.value)} className="rounded-xl h-11" />
+                <p className="text-[11px] font-body text-muted-foreground mt-1 leading-relaxed">
+                  É o que o cliente lê no cabeçalho do link e o que faz a data comemorativa mandada da agenda cair
+                  neste cronograma, e não no mais recente.
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs">Nome</Label>
+                <Input value={cfgTitulo} onChange={(e) => setCfgTitulo(e.target.value)} className="rounded-xl h-11" maxLength={120} />
+              </div>
+              <div>
+                <Label className="text-xs">Recado da estratégia</Label>
+                <Textarea
+                  value={cfgRecado}
+                  onChange={(e) => setCfgRecado(e.target.value)}
+                  placeholder="Ex.: mês de autoridade. Menos venda direta porque o cliente reclamou do último. Dois reels de bastidor pra aquecer o lançamento de outubro."
+                  className="rounded-xl min-h-[110px] resize-y"
+                  maxLength={2000} />
+                <p className="text-[11px] font-body text-muted-foreground mt-1 leading-relaxed">
+                  Anotação sua e do time. O cliente não vê isto em lugar nenhum, então pode ser franco.
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCfg(null)} className="rounded-xl">Cancelar</Button>
+              <Button onClick={salvarConfig} disabled={!cfgTitulo.trim()} className="rounded-xl">Salvar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
