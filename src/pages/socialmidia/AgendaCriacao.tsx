@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown, Trash2, Cake, Rows3, BarChart3 } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown, Trash2, Cake, PartyPopper, Rows3, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +16,7 @@ import {
   CRM_TASK_PRIORITIES, CRM_TASK_PRIORITY_LABELS, CRM_TASK_STATUSES,
   type CrmTask, type CrmTaskPriority, type CrmTaskStatus,
 } from "@/hooks/useCrm";
+import { useDatasComemorativasDosClientes } from "@/hooks/useCronograma";
 import {
   useCreations, useAddCreation, useUpdateCreation, useDeleteCreation,
   useCaptures, useAddCapture, useUpdateCapture, useDeleteCapture, useCollaboratorNames,
@@ -89,6 +90,9 @@ const MATERIAL_DEFAULT_COLOR = "#CA8A04";
 // (#FF77B9) e das outras cinco cores de chip. O card usa a cor do CLIENTE quando ela existe;
 // esta aqui é só o padrão de quem não tem cor cadastrada.
 const BIRTHDAY_DEFAULT_COLOR = "#BE185D";
+// Roxo do sistema: precisava ser distinguível do rosa do aniversário, que é o
+// outro lembrete que divide o topo do dia.
+const COMEMORATIVA_COLOR = "#7C5CFC";
 // Paleta de cores pra tarefa (útil pra tarefa sem cliente ganhar destaque próprio).
 const TASK_COLORS = ["#0061EE", "#01A652", "#EA4918", "#FF77B9", "#4B3FA8", "#F5A623", "#111827"];
 // HH:MM a partir de "HH:MM:SS" (ou null).
@@ -246,13 +250,13 @@ export default function AgendaCriacao() {
   };
   // Filtros por tipo de item na grade (criação, tarefa, captação, post, cria do cliente,
   // material, aniversário), persistidos.
-  const [filters, setFilters] = useState<{ criacao: boolean; tarefa: boolean; capta: boolean; post: boolean; criapost: boolean; material: boolean; aniversario: boolean }>(() => {
+  const [filters, setFilters] = useState<{ criacao: boolean; tarefa: boolean; capta: boolean; post: boolean; criapost: boolean; material: boolean; aniversario: boolean; comemorativa: boolean }>(() => {
     try {
       const s = JSON.parse(localStorage.getItem("agenda_filters") || "{}");
-      return { criacao: s.criacao ?? true, tarefa: s.tarefa ?? true, capta: s.capta ?? true, post: s.post ?? true, criapost: s.criapost ?? true, material: s.material ?? true, aniversario: s.aniversario ?? true };
-    } catch { return { criacao: true, tarefa: true, capta: true, post: true, criapost: true, material: true, aniversario: true }; }
+      return { criacao: s.criacao ?? true, tarefa: s.tarefa ?? true, capta: s.capta ?? true, post: s.post ?? true, criapost: s.criapost ?? true, material: s.material ?? true, aniversario: s.aniversario ?? true, comemorativa: s.comemorativa ?? true };
+    } catch { return { criacao: true, tarefa: true, capta: true, post: true, criapost: true, material: true, aniversario: true, comemorativa: true }; }
   });
-  const toggleFilter = (k: "criacao" | "tarefa" | "capta" | "post" | "criapost" | "material" | "aniversario") =>
+  const toggleFilter = (k: "criacao" | "tarefa" | "capta" | "post" | "criapost" | "material" | "aniversario" | "comemorativa") =>
     setFilters((f) => { const nf = { ...f, [k]: !f[k] }; try { localStorage.setItem("agenda_filters", JSON.stringify(nf)); } catch { /* segue */ } return nf; });
   // Multi-seleção de clientes para os posts (vazio = todos).
   const [postClients, setPostClients] = useState<Set<string>>(new Set());
@@ -333,6 +337,7 @@ export default function AgendaCriacao() {
   const addCreation = useAddCreation();
   const delCreation = useDeleteCreation();
   const { data: captures = [] } = useCaptures();
+  const { data: datasComemorativas = [] } = useDatasComemorativasDosClientes();
   const { data: crmTasks = [] } = useCrmTasks();
   const addCapture = useAddCapture();
   const updCapture = useUpdateCapture();
@@ -727,6 +732,39 @@ export default function AgendaCriacao() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clients, days, filters.aniversario, postClients, selectedCrmIds, selectedNames]);
 
+  /* DATAS COMEMORATIVAS DOS CLIENTES.
+     A informação já existia dentro do cronograma: a social mídia monta a lista,
+     manda o link, e o cliente marca quais quer trabalhar. Só que ela morria lá.
+     Pra lembrar que 8 de setembro é Dia Mundial da Fisioterapia, era preciso
+     abrir o cronograma daquele cliente, justo no mês em que ela já está olhando
+     a agenda inteira.
+
+     Mesma varredura do aniversário: comparo "DD/MM" com o dia da grade, sem
+     ano. Data comemorativa se repete todo ano, e guardar o ano faria ela sumir
+     na virada de janeiro. */
+  const comemorativasByDay = useMemo(() => {
+    const m = new Map<string, { id: string; label: string; cliente: string; crmId: string | null; aprovada: boolean }[]>();
+    if (!filters.comemorativa || datasComemorativas.length === 0) return m;
+    for (const d of days) {
+      const iso = ymd(d);
+      const ddmm = `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;   // "DD/MM" do dia da grade
+      for (const dt of datasComemorativas) {
+        // Aceita "8/9" e "08/09": o campo é livre e a pessoa digita dos dois jeitos.
+        const [dia = "", mes = ""] = dt.dia.split("/");
+        if (!dia || !mes) continue;
+        if (`${dia.padStart(2, "0")}/${mes.padStart(2, "0")}` !== ddmm) continue;
+        if (!clientMatches(dt.crmClientId ?? "", dt.clienteNome)) continue;
+        (m.get(iso) ?? m.set(iso, []).get(iso)!).push({
+          id: dt.id, label: dt.label, cliente: dt.clienteNome, crmId: dt.crmClientId, aprovada: dt.aprovada,
+        });
+      }
+    }
+    // Aprovada pelo cliente primeiro: é a que já virou compromisso.
+    for (const lista of m.values()) lista.sort((a, b) => Number(b.aprovada) - Number(a.aprovada));
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [datasComemorativas, days, filters.comemorativa, postClients, selectedCrmIds, selectedNames]);
+
   // Cor do material: a do cliente dono; sem cor, o dourado padrão do tipo. Mesmo helper
   // corDoItem da captação (material não tem cor própria).
   const corDoMaterial = (mat: AgendaMaterial) => corDoItem(
@@ -786,7 +824,7 @@ export default function AgendaCriacao() {
             <p className="text-sm font-display font-bold text-foreground">Agenda de criação</p>
             {/* data-tour="ag-filtros": alvo do passo "Filtrar por tipo" do tour da Agenda. */}
             <div data-tour="ag-filtros" className="flex items-center gap-1.5 flex-wrap">
-              {([["criacao", "Reuniões", "#4B3FA8"], ["tarefa", "Tarefas", "#0061EE"], ["capta", "Captações", "#FF77B9"], ["post", "Posts", "#EA4918"], ["criapost", "Cria do cliente", CRIA_POST_COLOR], ["material", "Materiais", MATERIAL_DEFAULT_COLOR], ["aniversario", "Aniversários", BIRTHDAY_DEFAULT_COLOR]] as const).map(([k, label, color]) => (
+              {([["criacao", "Reuniões", "#4B3FA8"], ["tarefa", "Tarefas", "#0061EE"], ["capta", "Captações", "#FF77B9"], ["post", "Posts", "#EA4918"], ["criapost", "Cria do cliente", CRIA_POST_COLOR], ["material", "Materiais", MATERIAL_DEFAULT_COLOR], ["aniversario", "Aniversários", BIRTHDAY_DEFAULT_COLOR], ["comemorativa", "Datas comemorativas", COMEMORATIVA_COLOR]] as const).map(([k, label, color]) => (
                 <button key={k} type="button" onClick={() => toggleFilter(k)}
                   className={cn("flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-body font-semibold transition-colors",
                     filters[k] ? "text-white border-transparent" : "bg-card border-border text-muted-foreground hover:text-foreground")}
@@ -940,6 +978,8 @@ export default function AgendaCriacao() {
               // Aniversário NÃO entra no totalDay: é lembrete, não trabalho do dia. Se
               // entrasse, um dia com dois aniversários e nada pra fazer diria "Ver todos (2)".
               const dayBirthdays = birthdaysByDay.get(iso) ?? [];
+              // Idem: lembrete, não trabalho do dia. Fora do totalDay.
+              const dayComemorativas = comemorativasByDay.get(iso) ?? [];
               const totalDay = caps.length + dayTasks.length + list.length + dayPosts.length + criaDay.length + dayMats.length; const isToday = iso === today;
               // Lista única do dia, ordenada por horário (sem hora primeiro). Os index dos
               // Draggable saem daqui (0..n-1 contíguos), casando com a ordem renderizada pro dnd.
@@ -1237,6 +1277,39 @@ export default function AgendaCriacao() {
               // conta como trabalho do dia. Como é lembrete e não trabalho, não pertence a
               // período nenhum: fica sempre no topo do dia. Visual próprio: borda pontilhada,
               // bolo e a etiqueta "Lembrete", na COR DO CLIENTE. Clicar abre a ficha dele.
+              /* DATA COMEMORATIVA: mesmo desenho do aniversário (lembrete, borda
+                 pontilhada, fora do arrasto e fora da contagem do dia), com duas
+                 diferenças que importam pra decidir o que fazer:
+
+                 · a APROVADA pelo cliente vem preenchida, é compromisso;
+                 · a que ainda está só proposta vem apagada, com "a confirmar".
+
+                 Mostrar as duas é de propósito. Se aparecesse só a aprovada, a
+                 pessoa ligava o filtro no começo do mês, não via nada (o cliente
+                 ainda não abriu o link) e concluía que estava quebrado. */
+              const renderComemorativa = (c: { id: string; label: string; cliente: string; crmId: string | null; aprovada: boolean }) => (
+                <button key={`com:${c.id}`} type="button"
+                  title={c.aprovada
+                    ? `${c.label} · ${c.cliente} aprovou esta data no cronograma`
+                    : `${c.label} · proposta no cronograma de ${c.cliente}, ainda sem resposta`}
+                  onClick={() => { if (c.crmId) navigate(`/socialmidia/clientes/${c.crmId}/cronograma`); }}
+                  className={cn(
+                    "rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95",
+                    !c.aprovada && "opacity-60",
+                  )}
+                  style={{ borderColor: `${COMEMORATIVA_COLOR}80`, background: `${COMEMORATIVA_COLOR}0F` }}>
+                  <div className="flex items-center gap-1 min-w-0" style={{ color: COMEMORATIVA_COLOR }}>
+                    <PartyPopper className="h-3 w-3 shrink-0" />
+                    <span className="text-[10px] font-body font-bold truncate flex-1 min-w-0 text-foreground/80">{c.cliente}</span>
+                    <span className="shrink-0 text-[8.5px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ background: `${COMEMORATIVA_COLOR}26`, color: COMEMORATIVA_COLOR }}>
+                      {c.aprovada ? "Data" : "A confirmar"}
+                    </span>
+                  </div>
+                  <p className="text-[12px] font-body font-semibold leading-tight truncate text-foreground">{c.label}</p>
+                </button>
+              );
+
               const renderAniv = (b: { clientId: string; nome: string; cor: string | null }) => {
                 const cor = b.cor || BIRTHDAY_DEFAULT_COLOR;
                 return (
@@ -1274,6 +1347,7 @@ export default function AgendaCriacao() {
                         {dropProvided.placeholder}
                         {criaDay.map(renderCriaCard)}
                         {dayBirthdays.map(renderAniv)}
+                        {dayComemorativas.map(renderComemorativa)}
                         {vazio}
                       </div>
                     )}
@@ -1326,6 +1400,7 @@ export default function AgendaCriacao() {
                             {dp.placeholder}
                             {cris.map(renderCriaCard)}
                             {anivs.map(renderAniv)}
+                            {f === "sem" && dayComemorativas.map(renderComemorativa)}
                           </div>
                         )}
                       </Droppable>
@@ -1613,6 +1688,16 @@ export default function AgendaCriacao() {
             <span className="ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: CRIA_POST_COLOR }}>{CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}</span>
           </button>
         );
+        const comem = comemorativasByDay.get(iso) ?? [];
+        const linhaComem = (c: { id: string; label: string; cliente: string; crmId: string | null; aprovada: boolean }) => (
+          <button key={`cm${c.id}`} onClick={() => { setDayModal(null); if (c.crmId) navigate(`/socialmidia/clientes/${c.crmId}/cronograma`); }}
+            className={cn(rowCls, !c.aprovada && "opacity-70")}>
+            {dot(COMEMORATIVA_COLOR)}
+            <span className="text-[13px] font-body font-semibold text-foreground truncate">{c.label}</span>
+            <span className="text-[11px] text-muted-foreground truncate">{c.cliente}</span>
+            <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">{c.aprovada ? "Data" : "A confirmar"}</span>
+          </button>
+        );
         const linhaAniv = (b: { clientId: string; nome: string; cor: string | null }) => (
           <button key={`an${b.clientId}`} onClick={() => { setDayModal(null); navigate(`/socialmidia/clientes/${b.clientId}/visao-geral`); }} className={rowCls}>
             {dot(b.cor || BIRTHDAY_DEFAULT_COLOR)}
@@ -1624,7 +1709,7 @@ export default function AgendaCriacao() {
           <Dialog open onOpenChange={(o) => { if (!o) setDayModal(null); }}>
             <DialogContent className="sm:max-w-md rounded-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader><DialogTitle className="font-display capitalize">{d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}</DialogTitle></DialogHeader>
-              <p className="text-[12px] font-body text-muted-foreground -mt-2">{items.length + criaCli.length + anivs.length} item(ns) · clique pra editar</p>
+              <p className="text-[12px] font-body text-muted-foreground -mt-2">{items.length + criaCli.length + anivs.length + comem.length} item(ns) · clique pra editar</p>
               <div className="space-y-1.5 mt-1">
                 {porPeriodo ? FAIXAS.map((f) => {
                   const its = bandasModal[f];
@@ -1653,6 +1738,7 @@ export default function AgendaCriacao() {
                     {items.map(linhaItem)}
                     {criaCli.map(linhaCria)}
                     {anivs.map(linhaAniv)}
+                    {comem.map(linhaComem)}
                   </>
                 )}
               </div>

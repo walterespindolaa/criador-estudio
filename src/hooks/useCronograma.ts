@@ -93,6 +93,73 @@ export function useCronogramas() {
   return { cronogramas: list.data ?? [], isLoading: list.isLoading, create, update, remove };
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   AS DATAS COMEMORATIVAS DE TODOS OS CLIENTES, DE UMA VEZ
+
+   Elas já existiam: a social mídia monta a lista no cronograma, o cliente abre
+   o link e marca quais quer trabalhar. O problema é que a informação morria
+   lá dentro. Pra saber que dia 8 de setembro é Dia Mundial da Fisioterapia, ela
+   precisava abrir o cronograma daquele cliente, num mês em que ela já está
+   olhando a agenda inteira.
+
+   Este hook puxa as datas de TODOS os cronogramas de uma vez, com o nome do
+   cliente junto, pra a agenda conseguir mostrar tudo no lugar onde o trabalho
+   já acontece.
+   ═══════════════════════════════════════════════════════════════════════════ */
+export type DataComemorativaAgenda = {
+  id: string;
+  label: string;
+  /** "DD/MM" como a pessoa digitou. Sem ano de propósito: data comemorativa
+   *  se repete todo ano, e guardar o ano faria ela sumir em janeiro. */
+  dia: string;
+  /** O cliente marcou no link que quer trabalhar esta data. */
+  aprovada: boolean;
+  clienteNome: string;
+  crmClientId: string | null;
+  externalClientId: string | null;
+  cronogramaId: string;
+};
+
+export function useDatasComemorativasDosClientes() {
+  const { user } = useAuth();
+
+  return useQuery<DataComemorativaAgenda[]>({
+    queryKey: ["cronograma-datas-todas", user?.id],
+    enabled: !!user?.id,
+    // O cliente marca no link público, fora daqui: revalidar ao voltar pra aba
+    // é o que faz a marcação dele aparecer sem precisar recarregar a página.
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("cronograma_datas")
+        .select("id, label, day_label, selected, cronograma_id, cronogramas!inner(id, manager_id, title, client_label, crm_client_id, external_client_id, status)")
+        .eq("cronogramas.manager_id", user!.id);
+      if (error) throw error;
+
+      type Linha = {
+        id: string; label: string; day_label: string | null; selected: boolean; cronograma_id: string;
+        cronogramas?: { title?: string | null; client_label?: string | null; crm_client_id?: string | null; external_client_id?: string | null; status?: string | null };
+      };
+
+      return ((data ?? []) as unknown as Linha[])
+        // Cronograma arquivado é histórico: as datas dele não voltam pra agenda.
+        .filter((r) => r.cronogramas?.status !== "arquivado")
+        // Data sem dia não tem onde cair no calendário.
+        .filter((r) => !!(r.day_label ?? "").trim())
+        .map((r) => ({
+          id: r.id,
+          label: r.label,
+          dia: (r.day_label ?? "").trim(),
+          aprovada: !!r.selected,
+          clienteNome: (r.cronogramas?.client_label ?? "").trim() || (r.cronogramas?.title ?? "").trim(),
+          crmClientId: r.cronogramas?.crm_client_id ?? null,
+          externalClientId: r.cronogramas?.external_client_id ?? null,
+          cronogramaId: r.cronograma_id,
+        }));
+    },
+  });
+}
+
 export function useCronogramaItems(cronogramaId: string | null) {
   const qc = useQueryClient();
 
