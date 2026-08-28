@@ -140,6 +140,34 @@ export function useAcoesDoParceiro(postId: string | null) {
   return { marcar, comentar };
 }
 
+export type AgenciaDoParceiro = {
+  agencia_id: string;
+  agencia_nome: string;
+  meu_papel: string;
+  vinculo_status: string;
+  abertos: number;
+  entregues_30d: number;
+};
+
+/** As agências que me acoplaram, com quanto está na minha mão em cada uma e o
+ *  que entreguei nos últimos 30 dias. A contagem de entregas é a semente do
+ *  "quanto cada agência me deve" da fase 3. */
+export function useMinhasAgencias() {
+  const { user } = useAuth();
+  return useQuery<AgenciaDoParceiro[]>({
+    queryKey: ["parceiro-agencias", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("parceiro_minhas_agencias");
+      if (error) {
+        if (/does not exist|schema cache/i.test(error.message)) return [];
+        throw error;
+      }
+      return (data ?? []) as AgenciaDoParceiro[];
+    },
+  });
+}
+
 /* ── O LADO DA SOCIAL MÍDIA ─────────────────────────────────────────────── */
 
 /** Os parceiros ativos da agência, pro botão "Enviar para". */

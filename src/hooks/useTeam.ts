@@ -26,6 +26,8 @@ export type MemberPermission = {
 export type TeamMember = {
   id: string; manager_id: string; member_id: string; name: string | null; email: string | null;
   status: "ativo" | "pausado"; created_at: string;
+  /** social_media = colaborador pleno; designer/editor_video/copy/trafego = parceiro. */
+  role: string;
   permissions: MemberPermission[];
 };
 

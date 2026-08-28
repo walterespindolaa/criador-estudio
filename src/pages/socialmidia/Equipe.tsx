@@ -155,6 +155,8 @@ export default function Equipe() {
             const enabled = new Set(m.permissions.map((p) => p.module_code));
             const scopedPerm = m.permissions.find((p) => !p.all_clients && p.client_ids?.length);
             const paused = m.status === "pausado";
+            const ROTULO: Record<string, string> = { designer: "Designer", editor_video: "Editor de vídeo", copy: "Copy", trafego: "Tráfego" };
+            const papelParc = ROTULO[m.role ?? ""];
             return (
               <div key={m.id} className={cn("bg-card border border-border rounded-2xl p-4", paused && "opacity-70")}>
                 <div className="flex items-center gap-3 flex-wrap">
@@ -165,6 +167,12 @@ export default function Equipe() {
                     <p className="text-sm font-body font-semibold text-foreground truncate">{m.name || "(sem nome)"}</p>
                     <p className="text-[12px] font-body text-muted-foreground truncate">{m.email}</p>
                   </div>
+                  {/* O papel na cara: sem isto a Gabriela olhava a lista e não
+                      sabia quem era colaborador e quem era a designer. */}
+                  <span className={cn("text-[10px] font-body font-bold px-2.5 py-1 rounded-full",
+                    papelParc ? "bg-violet-100 text-violet-700" : "bg-primary/10 text-primary")}>
+                    {papelParc ? `Parceiro · ${papelParc}` : "Colaborador"}
+                  </span>
                   <span className={cn("text-[10px] font-body px-2 py-0.5 rounded-full", paused ? "bg-muted text-muted-foreground" : "bg-emerald-500/12 text-emerald-600")}>
                     {paused ? "Pausado" : "Ativo"}
                   </span>
@@ -179,6 +187,14 @@ export default function Equipe() {
                     </button>
                   </div>
                 </div>
+                {papelParc ? (
+                  <div className="mt-3 pt-3 border-t border-border/60">
+                    <p className="text-[12px] font-body text-muted-foreground leading-relaxed">
+                      Recebe só os posts que você mandar pelo <strong className="text-foreground">"Enviar para"</strong> dentro
+                      do post, com prazo e a identidade do cliente. Não vê CRM, financeiro nem a carteira.
+                    </p>
+                  </div>
+                ) : (
                 <div className="mt-3 pt-3 border-t border-border/60">
                   <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                     Módulos liberados{scopedPerm ? ` · ${scopedPerm.client_ids.length} cliente(s) específico(s)` : " · todos os clientes"}
@@ -197,6 +213,7 @@ export default function Equipe() {
                     })}
                   </div>
                 </div>
+                )}
               </div>
             );
           })}
@@ -226,16 +243,20 @@ export default function Equipe() {
               <p className="text-[11px] font-body font-semibold text-foreground mb-1.5">Tipo de acesso</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button type="button" onClick={() => setTipoAcesso("colaborador")}
-                  className={cn("rounded-xl border px-3 py-2.5 text-left transition-colors",
-                    tipoAcesso === "colaborador" ? "border-primary bg-primary/[0.06]" : "border-border hover:border-primary/30")}>
+                  className={cn("rounded-xl border-2 bg-white px-3 py-2.5 text-left transition-all",
+                    tipoAcesso === "colaborador"
+                      ? "border-primary shadow-[0_4px_14px_rgba(234,73,24,0.16)]"
+                      : "border-border hover:border-primary/50 hover:shadow-sm")}>
                   <span className="block text-[13px] font-body font-bold text-foreground">Colaborador</span>
                   <span className="block text-[11px] font-body text-muted-foreground leading-snug mt-0.5">
                     Trabalha dentro da sua conta, nos módulos e clientes que você escolher. Usa assento.
                   </span>
                 </button>
                 <button type="button" onClick={() => setTipoAcesso("parceiro")}
-                  className={cn("rounded-xl border px-3 py-2.5 text-left transition-colors",
-                    tipoAcesso === "parceiro" ? "border-violet-400 bg-violet-50" : "border-border hover:border-violet-300")}>
+                  className={cn("rounded-xl border-2 bg-white px-3 py-2.5 text-left transition-all",
+                    tipoAcesso === "parceiro"
+                      ? "border-violet-500 shadow-[0_4px_14px_rgba(124,58,237,0.18)]"
+                      : "border-border hover:border-violet-400 hover:shadow-sm")}>
                   <span className="flex items-center gap-1.5 text-[13px] font-body font-bold text-foreground">
                     Parceiro de produção
                     <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-violet-100 text-violet-700">grátis</span>

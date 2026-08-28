@@ -140,9 +140,12 @@ serve(async (req) => {
     const existing = list?.users?.find((u) => u.email?.toLowerCase() === normEmail);
 
     const origin = resolveAppUrl(req); // F13: origin validado, não o header cru
+    // O destino depende do papel: parceiro cai direto na fila dele, não no
+    // dashboard da agência (que ele nem consegue usar).
+    const destino = ehParceiro ? "/app/demandas" : "/socialmidia/dashboard";
     const type: "magiclink" | "invite" = existing ? "magiclink" : "invite";
     const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({
-      type, email: normEmail, options: { redirectTo: origin + "/socialmidia/dashboard" },
+      type, email: normEmail, options: { redirectTo: origin + destino },
     });
     if (linkErr || !linkData?.user) {
       console.error("[manager-member-invite] generateLink failed:", linkErr);
@@ -151,7 +154,7 @@ serve(async (req) => {
     const memberId = linkData.user.id;
     const hashed = linkData.properties?.hashed_token;
     const actionLink = hashed
-      ? `${origin}/ativar?th=${hashed}&type=${type}&to=${encodeURIComponent("/socialmidia/dashboard")}`
+      ? `${origin}/ativar?th=${hashed}&type=${type}&to=${encodeURIComponent(destino)}`
       : (linkData.properties?.action_link ?? origin);
 
     // ── Vínculo + permissões default (todos os clientes nos módulos escolhidos) ──

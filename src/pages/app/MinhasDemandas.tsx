@@ -12,7 +12,8 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  useAcoesDoParceiro, useCardDoParceiro, useFilaDoParceiro, type CardDaFila,
+  ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useFilaDoParceiro,
+  useMinhasAgencias, type CardDaFila,
 } from "@/hooks/useParceiro";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -72,10 +73,15 @@ const EstadoPill = ({ s }: { s: CardDaFila["producao_status"] }) => (
 
 export default function MinhasDemandas() {
   const { data: fila = [], isLoading } = useFilaDoParceiro();
+  const { data: agencias = [] } = useMinhasAgencias();
   const [aberto, setAberto] = useState<string | null>(null);
+  const [visao, setVisao] = useState<"prazo" | "semana">("prazo");
   const hoje = hojeBR();
   const grupos = useMemo(() => porDia(fila), [fila]);
   const venceHoje = fila.filter((c) => c.prazo_producao === hoje).length;
+  const fazendo = fila.filter((c) => c.producao_status === "em_producao").length;
+  const emAjuste = fila.filter((c) => c.producao_status === "ajuste").length;
+  const entregues30 = agencias.reduce((t, a) => t + a.entregues_30d, 0);
 
   return (
     <div className="pb-20 md:pb-0">
@@ -94,6 +100,63 @@ export default function MinhasDemandas() {
           </div>
         </div>
 
+        {/* O RESUMO DO DIA: os quatro números que respondem "como estou?". O
+            último (entregues em 30 dias) é a semente da cobrança por entrega. */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+          {[
+            { v: venceHoje, l: "Vence hoje", cor: "bg-red-500" },
+            { v: fazendo, l: "Fazendo agora", cor: "bg-blue-500" },
+            { v: emAjuste, l: "Voltou pra ajuste", cor: "bg-violet-500" },
+            { v: entregues30, l: "Entregues em 30 dias", cor: "bg-green-600" },
+          ].map((k) => (
+            <Card key={k.l} className="rounded-2xl border-border p-3.5 flex items-center gap-3">
+              <span className={cn("w-2 h-9 rounded-full shrink-0", k.cor)} />
+              <span>
+                <span className="block font-display font-extrabold text-xl leading-none">{k.v}</span>
+                <span className="block text-[11px] font-body font-semibold text-muted-foreground mt-1">{k.l}</span>
+              </span>
+            </Card>
+          ))}
+        </div>
+
+        {/* QUEM ME ACOPLOU: as agências, com a carga em cada uma. É o "não
+            mostra quem tá vinculado a ele" resolvido, e a base da conversa de
+            cobrança no fim do mês. */}
+        {agencias.length > 0 && (
+          <div className="mb-5">
+            <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-2 px-0.5">
+              Trabalho com {agencias.length === 1 ? "esta agência" : `${agencias.length} agências`}
+            </p>
+            <div className="flex gap-2.5 overflow-x-auto pb-1">
+              {agencias.map((a) => (
+                <Card key={a.agencia_id} className="rounded-2xl border-border px-3.5 py-2.5 flex items-center gap-3 shrink-0">
+                  <span className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 text-white grid place-items-center text-xs font-bold shrink-0">
+                    {a.agencia_nome.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[13px] font-body font-bold text-foreground truncate max-w-[160px]">{a.agencia_nome}</span>
+                    <span className="block text-[11px] font-body text-muted-foreground">
+                      {ROTULO_PAPEL[a.meu_papel] ?? a.meu_papel} · {a.abertos} na mão · {a.entregues_30d} entregues/30d
+                    </span>
+                  </span>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* O SELETOR DE VISÃO: lista por prazo ou a semana em colunas. As
+            outras do mockup (quadro, mês) vêm na fase 2. */}
+        <div className="inline-flex gap-1 rounded-full border border-border bg-card p-1 mb-4">
+          {([["prazo", "Por prazo"], ["semana", "Semana"]] as const).map(([v, r]) => (
+            <button key={v} type="button" onClick={() => setVisao(v)}
+              className={cn("px-4 py-1.5 rounded-full text-[13px] font-display font-semibold transition-colors",
+                visao === v ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
+              {r}
+            </button>
+          ))}
+        </div>
+
         {isLoading ? (
           <div className="grid place-items-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : fila.length === 0 ? (
@@ -105,6 +168,8 @@ export default function MinhasDemandas() {
               identidade do cliente juntos. Você recebe aviso no celular na hora.
             </p>
           </Card>
+        ) : visao === "semana" ? (
+          <SemanaDoParceiro fila={fila} hoje={hoje} aoAbrir={setAberto} />
         ) : (
           grupos.map(([chave, cards]) => {
             const r = rotuloDoDia(chave, hoje);
@@ -150,6 +215,62 @@ export default function MinhasDemandas() {
       </motion.div>
 
       <CardAbertoDialog postId={aberto} aoFechar={() => setAberto(null)} />
+    </div>
+  );
+}
+
+/* ── A SEMANA ─────────────────────────────────────────────────────────────
+   Mesmo desenho da agenda da social mídia: sete colunas, hoje com anel, cada
+   entrega colorida pelo estado. Feita no cliente em cima da mesma fila, sem
+   consulta nova. */
+function SemanaDoParceiro({ fila, hoje, aoAbrir }: {
+  fila: CardDaFila[]; hoje: string; aoAbrir: (id: string) => void;
+}) {
+  const [h1, h2, h3] = hoje.split("-").map(Number);
+  const base = new Date(h1, h2 - 1, h3);
+  // Semana começando na segunda, como a agenda.
+  const seg = new Date(base); seg.setDate(base.getDate() - ((base.getDay() + 6) % 7));
+  const dias = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(seg); d.setDate(seg.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return { iso, dia: d.getDate(), rotulo: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"][i] };
+  });
+  const semPrazo = fila.filter((c) => !c.prazo_producao);
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-2">
+        {dias.map((d) => {
+          const doDia = fila.filter((c) => c.prazo_producao === d.iso);
+          return (
+            <div key={d.iso} className={cn("rounded-2xl border bg-card p-2.5 min-h-[150px]",
+              d.iso === hoje ? "border-violet-400 ring-1 ring-violet-300" : "border-border")}>
+              <p className="flex items-baseline gap-1.5 mb-2 px-0.5">
+                <span className="text-[9.5px] font-bold uppercase text-muted-foreground">{d.rotulo}</span>
+                <span className={cn("font-display font-extrabold text-[15px]", d.iso === hoje && "text-violet-600")}>{d.dia}</span>
+                {doDia.length > 0 && <span className="ml-auto text-[9.5px] font-bold text-muted-foreground bg-muted rounded-full px-1.5">{doDia.length}</span>}
+              </p>
+              {doDia.length === 0 ? (
+                <p className="text-[10.5px] font-body text-muted-foreground/50 text-center pt-6">livre</p>
+              ) : doDia.map((c) => (
+                <button key={c.post_id} onClick={() => aoAbrir(c.post_id)}
+                  className={cn("w-full text-left rounded-lg px-2 py-1.5 mb-1.5 border-l-[3px] text-[11px] leading-tight transition-transform hover:translate-x-0.5",
+                    c.producao_status === "ajuste" ? "bg-violet-50 border-violet-500"
+                    : c.producao_status === "em_producao" ? "bg-blue-50 border-blue-500"
+                    : "bg-orange-50 border-orange-500")}>
+                  <span className="block font-bold truncate">{c.titulo || "Sem título"}</span>
+                  <span className="block text-[9.5px] text-muted-foreground truncate mt-0.5">{c.cliente_nome}</span>
+                </button>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+      {semPrazo.length > 0 && (
+        <p className="text-[11.5px] font-body text-muted-foreground mt-3 px-0.5">
+          {semPrazo.length} card{semPrazo.length === 1 ? "" : "s"} sem prazo combinado (aparecem na visão Por prazo).
+        </p>
+      )}
     </div>
   );
 }
