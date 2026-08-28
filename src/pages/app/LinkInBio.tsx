@@ -1237,7 +1237,7 @@ const LinkInBio = () => {
                 </div>
               </div>
               <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="inline-flex gap-1 rounded-full border border-border bg-muted/40 p-1">
+                <div className="inline-flex gap-1 rounded-full border border-primary/15 bg-primary/[0.06] p-1">
                   {([
                     { id: "classic", label: "Clássico" },
                     { id: "vitrine", label: "Site" },
@@ -1250,7 +1250,7 @@ const LinkInBio = () => {
                         "px-5 py-1.5 rounded-full text-sm font-display font-semibold transition-colors",
                         settings.layout === opt.id
                           ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
+                          : "text-primary/70 hover:text-primary hover:bg-primary/10"
                       )}
                     >
                       {opt.label}
@@ -1280,7 +1280,10 @@ const LinkInBio = () => {
 
               {/* AS ABAS. Rolam na horizontal no celular em vez de quebrar em
                   duas linhas e comer a altura da barra fixa. */}
-              <div className="mt-3 -mx-1 px-1 flex gap-1 overflow-x-auto">
+              {/* Pílulas com contorno: sem elas as abas apagadas eram texto
+                  solto no creme e a barra inteira sumia. Agora se lê como um
+                  seletor mesmo antes de alguém clicar. */}
+              <div className="mt-3 -mx-1 px-1 flex gap-1.5 overflow-x-auto pb-0.5">
                 {ABAS_BIO.map((t) => {
                   const ativa = aba === t.id;
                   const alerta = t.id === "resultados" && leadsNovos > 0;
@@ -1291,8 +1294,10 @@ const LinkInBio = () => {
                       onClick={() => setAba(t.id)}
                       aria-current={ativa ? "page" : undefined}
                       className={cn(
-                        "relative shrink-0 px-3.5 h-9 rounded-xl text-[13px] font-display font-semibold transition-colors",
-                        ativa ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                        "relative shrink-0 px-4 h-9 rounded-full text-[13px] font-display font-semibold border transition-colors",
+                        ativa
+                          ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                          : "border-border bg-background text-muted-foreground hover:text-primary hover:border-primary/40 hover:bg-primary/[0.06]",
                       )}>
                       {t.nome}
                       {alerta && (
@@ -1651,12 +1656,11 @@ const LinkInBio = () => {
                 {/* Button style */}
                 <div className="space-y-3 pt-4 border-t border-border">
                   <Label className="text-sm font-display font-semibold">Estilo dos links</Label>
-                  {settings.layout === "vitrine" && (
-                    <p className="text-xs text-muted-foreground -mt-1">
-                      No Site vale nos blocos que você adiciona (texto, formulário, vídeo, mapa). As seções próprias
-                      do site, como Capa e Serviços, têm desenho fixo.
-                    </p>
-                  )}
+                  <p className="text-xs text-muted-foreground -mt-1">
+                    {settings.layout === "vitrine"
+                      ? "O canto dos botões: os dois da Capa e os dos blocos que você adiciona. Contorno deixa o botão vazado, só com a borda na cor da marca."
+                      : "O canto dos seus botões. Contorno deixa o botão vazado, só com a borda."}
+                  </p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {BUTTON_STYLES.map((s) => (
                       <button

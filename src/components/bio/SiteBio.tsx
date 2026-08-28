@@ -221,9 +221,12 @@ function SecaoCapa({ d, marca, visual, aoClicar }: { d: DadosBloco; marca: Marca
             os botões pra fora da primeira tela, e quem abre um link na bio
             decide nos primeiros três segundos. Retrato 3:4 com teto de largura
             deixa o título, a frase e os botões visíveis antes de rolar. */}
+        {/* 150px no celular. A foto aqui é apoio, não é o conteúdo: quem abre
+            um link na bio quer ler a proposta e achar o botão. Retrato pequeno
+            e centrado dá rosto à página sem comer a primeira tela. */}
         {img && (
           <Foto src={img} prioritaria
-            className="w-full max-w-[220px] cq-md:max-w-none mx-auto rounded-3xl object-cover aspect-[3/4] cq-md:aspect-[4/5] shadow-lg" />
+            className="w-[150px] cq-sm:w-[170px] cq-md:w-full cq-md:max-w-[320px] mx-auto rounded-2xl cq-md:rounded-3xl object-cover aspect-[4/5] shadow-md cq-md:shadow-lg" />
         )}
       </div>
     </section>
@@ -398,36 +401,36 @@ function Rodape({ d, marca, aoClicar, comSelo }: { d: DadosBloco; marca: MarcaSi
       {/* No celular isto virava uma coluna com 44px de alvo em cada linha, e o
           rodapé sozinho ocupava uma tela inteira de rolagem. Alvo de toque
           continua existindo (o padding da linha resolve), sem o espaço morto. */}
-      <div className="mx-auto max-w-5xl grid gap-5 cq-sm:gap-7 cq-sm:grid-cols-2 cq-lg:grid-cols-3">
+      <div className="mx-auto max-w-5xl grid gap-4 cq-sm:gap-7 cq-sm:grid-cols-2 cq-lg:grid-cols-3">
         <div>
           <p className="font-display font-extrabold text-[15px] tracking-tight">{txt(d, "titulo") || marca.nome}</p>
           {txt(d, "assinatura") && <p className="text-[13px] opacity-70 leading-[1.55] mt-1.5 whitespace-pre-line">{txt(d, "assinatura")}</p>}
         </div>
         {(tel || mail) && (
-          <div className="space-y-0.5">
+          <div className="space-y-px">
             <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] opacity-55 mb-1.5">Fale comigo</p>
             {tel && (
               <a href={linkWhatsapp(tel)} target="_blank" rel="noopener noreferrer" onClick={aoClicar}
-                className="flex items-center gap-2.5 text-[13.5px] opacity-85 py-2 -mx-1 px-1 rounded-lg hover:opacity-100 hover:bg-white/5 transition-colors">
+                className="flex items-center gap-2.5 text-[13.5px] opacity-85 py-1 -mx-1 px-1 rounded-lg hover:opacity-100 hover:bg-white/5 transition-colors">
                 <Phone className="h-3.5 w-3.5 shrink-0 opacity-70" /> {tel}
               </a>
             )}
             {mail && (
               <a href={`mailto:${mail}`} onClick={aoClicar}
-                className="flex items-center gap-2.5 text-[13.5px] opacity-85 py-2 -mx-1 px-1 rounded-lg break-all hover:opacity-100 hover:bg-white/5 transition-colors">
+                className="flex items-center gap-2.5 text-[13.5px] opacity-85 py-1 -mx-1 px-1 rounded-lg break-all hover:opacity-100 hover:bg-white/5 transition-colors">
                 <Mail className="h-3.5 w-3.5 shrink-0 opacity-70" /> {mail}
               </a>
             )}
           </div>
         )}
         {(end || ig) && (
-          <div className="space-y-0.5">
+          <div className="space-y-px">
             {end && (
               /* O endereço vira link pro mapa: quem lê endereço no celular quer
                  traçar rota, não decorar a rua. */
               <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`}
                 target="_blank" rel="noopener noreferrer" onClick={aoClicar}
-                className="flex items-start gap-2.5 text-[13.5px] opacity-85 py-2 -mx-1 px-1 rounded-lg hover:opacity-100 hover:bg-white/5 transition-colors">
+                className="flex items-start gap-2.5 text-[13.5px] opacity-85 py-1 -mx-1 px-1 rounded-lg hover:opacity-100 hover:bg-white/5 transition-colors">
                 <MapPin className="h-3.5 w-3.5 shrink-0 mt-[3px] opacity-70" />
                 <span className="whitespace-pre-line">{end}</span>
               </a>
@@ -436,7 +439,7 @@ function Rodape({ d, marca, aoClicar, comSelo }: { d: DadosBloco; marca: MarcaSi
               /* Com o ícone, o @ se lê como Instagram de longe. Sem ele era só
                  uma palavra solta com arroba na frente. */
               <a href={`https://instagram.com/${encodeURIComponent(ig.replace(/^@/, ""))}`} target="_blank" rel="noopener noreferrer" onClick={aoClicar}
-                className="flex items-center gap-2.5 text-[13.5px] opacity-85 py-2 -mx-1 px-1 rounded-lg hover:opacity-100 hover:bg-white/5 transition-colors">
+                className="flex items-center gap-2.5 text-[13.5px] opacity-85 py-1 -mx-1 px-1 rounded-lg hover:opacity-100 hover:bg-white/5 transition-colors">
                 <Instagram className="h-3.5 w-3.5 shrink-0 opacity-70" /> @{ig.replace(/^@/, "")}
               </a>
             )}
@@ -445,13 +448,17 @@ function Rodape({ d, marca, aoClicar, comSelo }: { d: DadosBloco; marca: MarcaSi
       </div>
       {/* O mapa fecha o rodapé quando o negócio é de rua. Sem borda arredondada
           por cima do fundo escuro, senão vira um cartão flutuando sem motivo. */}
+      {/* Discreto de propósito: o endereço logo acima já é clicável, e isto é
+          só o atalho pra quem procura o botão. Faixa grande no rodapé preto
+          roubava a atenção do que importa, que é o contato. */}
       {end && bool(d, "mostrarMapa", false) && (
-        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`}
-          target="_blank" rel="noopener noreferrer" onClick={aoClicar}
-          className="mx-auto max-w-5xl mt-7 flex items-center justify-center gap-2.5 h-[74px] rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] transition-colors">
-          <MapPin className="h-4 w-4 opacity-70" />
-          <span className="text-[13.5px] font-body font-semibold">Ver no mapa</span>
-        </a>
+        <div className="mx-auto max-w-5xl mt-4">
+          <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`}
+            target="_blank" rel="noopener noreferrer" onClick={aoClicar}
+            className="inline-flex items-center gap-1.5 text-[12.5px] font-body font-semibold opacity-70 hover:opacity-100 underline underline-offset-4 decoration-white/25 transition-opacity">
+            <MapPin className="h-3.5 w-3.5" /> Ver no mapa
+          </a>
+        </div>
       )}
       {comSelo && (
         <div className="mx-auto max-w-5xl mt-8 pt-6 border-t border-white/10">
