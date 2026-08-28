@@ -22,7 +22,7 @@ import { parseDateOnly, toISODateBR } from "@/lib/date-br";
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
-export type ProdPost = { id: string; title: string | null; platform: string | null; approval_status: string | null; scheduled_date: string; scheduled_time: string | null; external_client_id: string | null };
+export type ProdPost = { id: string; title: string | null; platform: string | null; format: string | null; approval_status: string | null; scheduled_date: string; scheduled_time: string | null; external_client_id: string | null };
 export type ProdCapture = {
   id: string;
   status: "agendada" | "concluida" | "cancelada";
@@ -66,7 +66,7 @@ export function useProdutividadePeriodo(from: string, to: string, enabled: boole
       const toWide = addDaysISO(to, 2);
       const [posts, caps, tasks, cris, mats] = await Promise.all([
         sbFrom("posts")
-          .select("id, title, platform, approval_status, scheduled_date, scheduled_time, external_client_id")
+          .select("id, title, platform, format, approval_status, scheduled_date, scheduled_time, external_client_id")
           .eq("user_id", agencyOwnerId!)
           .not("external_client_id", "is", null)
           .gte("scheduled_date", from).lte("scheduled_date", to),
@@ -102,6 +102,9 @@ export function useProdutividadePeriodo(from: string, to: string, enabled: boole
 
 export type ProdStats = {
   posts: { publicados: number; aprovados: number; emAprovacao: number; emProducao: number; total: number };
+  /** Quantos de cada formato, do mais produzido pro menos. Só o que apareceu:
+   *  listar sete formatos com seis zerados esconde o que interessa. */
+  formatos: { code: string; publicados: number; total: number }[];
   capt: { concluidas: number; agendadas: number; canceladas: number; total: number };
   tarefas: { concluidas: number; criadas: number; noPeriodo: ProdTask[] };
   criacoes: number;
@@ -135,6 +138,23 @@ export function computeProdStats(d: ProdutividadeRaw | undefined, from: string, 
   };
   const materiais = { total: materials.length, finalizados: materials.filter((m) => m.status === "finalizado").length };
 
+  /* O QUE FOI PRODUZIDO, POR FORMATO.
+     "72 posts" não diz se o mês foi de reels ou de carrossel, e é essa a
+     conversa da reunião com o cliente e do preço do pacote: reels custa tempo
+     de gravação e edição, estático não. Sem formato gravado o post cai em
+     "outros" em vez de sumir da conta. */
+  const porFormato = new Map<string, { publicados: number; total: number }>();
+  for (const p of posts) {
+    const code = (p.format ?? "").trim() || "outros";
+    const atual = porFormato.get(code) ?? { publicados: 0, total: 0 };
+    atual.total += 1;
+    if (p.approval_status === "postado") atual.publicados += 1;
+    porFormato.set(code, atual);
+  }
+  const formatos = [...porFormato.entries()]
+    .map(([code, v]) => ({ code, ...v }))
+    .sort((a, b) => b.total - a.total || a.code.localeCompare(b.code));
+
   const temAlgo =
     posts.length > 0 || captures.length > 0 || creations.length > 0 || materials.length > 0 ||
     tarefasCriadas > 0 || tarefasNoPeriodo.length > 0;
@@ -147,6 +167,7 @@ export function computeProdStats(d: ProdutividadeRaw | undefined, from: string, 
       emProducao,
       total: posts.length,
     },
+    formatos,
     capt,
     tarefas: { concluidas: tarefasConcluidas, criadas: tarefasCriadas, noPeriodo: tarefasNoPeriodo },
     criacoes: creations.length,

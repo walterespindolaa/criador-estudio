@@ -8,6 +8,7 @@ import { usePdfExport } from "@/hooks/usePdfExport";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useExternalClients } from "@/hooks/useCriaPost";
 import { computeProdStats, useProdutividadePeriodo, type ProdCapture, type ProdPost, type ProdutividadeRaw } from "@/hooks/useProdutividade";
+import { FORMAT_LABELS } from "@/lib/constants";
 import { nomeExibidoCliente } from "@/lib/cliente-nome";
 
 // ── RELATÓRIO DE PRODUTIVIDADE (da operação, não do cliente) ─────────────────
@@ -443,6 +444,32 @@ export function RelatorioProdutividadeDialog({ open, onOpenChange }: Props) {
                   {row("Publicados", stats.posts.publicados, d.publicados)}
                   {row("Total no fluxo", stats.posts.total, d.postsTotal)}
                 </div>
+
+                {/* POR FORMATO. "72 posts" não diz se o mês foi de reels ou de
+                    carrossel, e é essa a conversa da reunião com o cliente e do
+                    preço do pacote: reels custa tempo de gravação e edição,
+                    estático não. Só os formatos que apareceram, do mais
+                    produzido pro menos. */}
+                {stats.formatos.length > 0 && (
+                  <div data-pdf-block style={{ marginTop: 16 }}>
+                    {sectionTitle("Por formato")}
+                    {stats.formatos.map((f) => (
+                      <div key={f.code} style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, padding: "6px 0", borderBottom: `1px solid ${C.soft}` }}>
+                        <span style={{ fontSize: 12.5, color: C.ink }}>
+                          {FORMAT_LABELS[f.code] ?? (f.code === "outros" ? "Sem formato definido" : f.code)}
+                        </span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: C.ink, whiteSpace: "nowrap" }}>
+                          {nb(f.total)}
+                          {/* Quantos desses já saíram: o resto ainda está no
+                              fluxo, e misturar os dois vira número inflado. */}
+                          <span style={{ fontSize: 11, fontWeight: 600, color: C.sub, marginLeft: 6 }}>
+                            {f.publicados} publicado{f.publicados === 1 ? "" : "s"}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div data-pdf-block style={{ marginTop: 16 }}>
                   {sectionTitle("Captações")}
