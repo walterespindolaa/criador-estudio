@@ -316,6 +316,7 @@ export type Database = {
           id: string
           label: string
           manager_id: string
+          no_cronograma: boolean
           nota: string | null
           repete_anual: boolean
           updated_at: string
@@ -327,6 +328,7 @@ export type Database = {
           id?: string
           label: string
           manager_id: string
+          no_cronograma?: boolean
           nota?: string | null
           repete_anual?: boolean
           updated_at?: string
@@ -338,6 +340,7 @@ export type Database = {
           id?: string
           label?: string
           manager_id?: string
+          no_cronograma?: boolean
           nota?: string | null
           repete_anual?: boolean
           updated_at?: string
@@ -2278,6 +2281,7 @@ export type Database = {
           external_client_id: string | null
           id: string
           manager_id: string
+          mes_ref: string | null
           status: string
           title: string
           token: string | null
@@ -2293,6 +2297,7 @@ export type Database = {
           external_client_id?: string | null
           id?: string
           manager_id: string
+          mes_ref?: string | null
           status?: string
           title: string
           token?: string | null
@@ -2308,6 +2313,7 @@ export type Database = {
           external_client_id?: string | null
           id?: string
           manager_id?: string
+          mes_ref?: string | null
           status?: string
           title?: string
           token?: string | null
@@ -3262,6 +3268,7 @@ export type Database = {
           manager_id: string
           member_id: string
           name: string | null
+          role: string
           status: string | null
         }
         Insert: {
@@ -3271,6 +3278,7 @@ export type Database = {
           manager_id: string
           member_id: string
           name?: string | null
+          role?: string
           status?: string | null
         }
         Update: {
@@ -3280,6 +3288,7 @@ export type Database = {
           manager_id?: string
           member_id?: string
           name?: string | null
+          role?: string
           status?: string | null
         }
         Relationships: []
@@ -4138,6 +4147,8 @@ export type Database = {
           approval_updated_at: string | null
           archive_summary: string | null
           art: Json | null
+          assigned_at: string | null
+          assignee_id: string | null
           board_order: number
           calendar_synced_at: string | null
           caption: string | null
@@ -4158,6 +4169,8 @@ export type Database = {
           notes: string | null
           pillar_id: string | null
           platform: string
+          prazo_producao: string | null
+          producao_status: string | null
           published_at: string | null
           reference_link: string | null
           reference_url: string | null
@@ -4183,6 +4196,8 @@ export type Database = {
           approval_updated_at?: string | null
           archive_summary?: string | null
           art?: Json | null
+          assigned_at?: string | null
+          assignee_id?: string | null
           board_order?: number
           calendar_synced_at?: string | null
           caption?: string | null
@@ -4203,6 +4218,8 @@ export type Database = {
           notes?: string | null
           pillar_id?: string | null
           platform: string
+          prazo_producao?: string | null
+          producao_status?: string | null
           published_at?: string | null
           reference_link?: string | null
           reference_url?: string | null
@@ -4228,6 +4245,8 @@ export type Database = {
           approval_updated_at?: string | null
           archive_summary?: string | null
           art?: Json | null
+          assigned_at?: string | null
+          assignee_id?: string | null
           board_order?: number
           calendar_synced_at?: string | null
           caption?: string | null
@@ -4248,6 +4267,8 @@ export type Database = {
           notes?: string | null
           pillar_id?: string | null
           platform?: string
+          prazo_producao?: string | null
+          producao_status?: string | null
           published_at?: string | null
           reference_link?: string | null
           reference_url?: string | null
@@ -5894,6 +5915,7 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      eh_papel_parceiro: { Args: { _role: string }; Returns: boolean }
       email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
@@ -6256,6 +6278,15 @@ export type Database = {
         Args: { _client: string; _code: string; _manager: string }
         Returns: boolean
       }
+      meus_parceiros: {
+        Args: never
+        Returns: {
+          email: string
+          member_id: string
+          nome: string
+          role: string
+        }[]
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -6293,6 +6324,36 @@ export type Database = {
           owner_id: string
         }[]
       }
+      parceiro_abrir_card: { Args: { _post_id: string }; Returns: Json }
+      parceiro_comentar: {
+        Args: { _post_id: string; _texto: string }
+        Returns: string
+      }
+      parceiro_marcar: {
+        Args: { _post_id: string; _status: string }
+        Returns: undefined
+      }
+      parceiro_minha_fila: {
+        Args: never
+        Returns: {
+          agencia_id: string
+          agencia_nome: string
+          assigned_at: string
+          cliente_cor: string
+          cliente_handle: string
+          cliente_logo: string
+          cliente_nome: string
+          etiquetas: string[]
+          formato: string
+          plataforma: string
+          post_id: string
+          prazo_producao: string
+          producao_status: string
+          publica_em: string
+          titulo: string
+        }[]
+      }
+      parceiro_tem_o_card: { Args: { _post_id: string }; Returns: boolean }
       portal_mark_viewed: { Args: { _token: string }; Returns: undefined }
       rate_touch: { Args: { _key: string; _limit: number }; Returns: boolean }
       read_email_batch: {
