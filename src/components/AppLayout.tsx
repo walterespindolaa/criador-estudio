@@ -14,6 +14,7 @@ import { PlanBadge } from "@/components/shared/PlanBadge";
 import { AppFooter } from "@/components/shared/AppFooter";
 import { Settings, Lightbulb, Plus } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
+import { useSouParceiro } from "@/hooks/useParceiro";
 import { applyTheme } from "@/lib/applyTheme";
 import { BgShapes } from "@/components/BgShapes";
 import { TourProvider } from "@/components/tour/TourProvider";
@@ -77,6 +78,7 @@ function GreetingEmoji() {
 
 const AppLayout = () => {
   const { profile, isLoading } = useProfile();
+  const { data: souParceiro, isLoading: carregandoPapelParceiro } = useSouParceiro();
   const { isManaging, activeAccountId, managedAccounts, teamAccounts } = useActiveAccount();
   const location = useLocation();
   const navigate = useNavigate();
@@ -186,6 +188,13 @@ const AppLayout = () => {
   }
 
   if (!isLoading && profile && profile.onboarding_completed === false && profile.account_type !== "manager") {
+    /* Parceiro (designer, editor, copy) que nunca ativou o lado criador NÃO
+       faz o onboarding de criador: a área dele é /parceiro. Sem isto, o
+       PeJota redefiniu a senha e caiu no wizard "Sobre o que você cria?",
+       que não tem nada a ver com quem só produz peça pra agência. Espera o
+       papel carregar antes de decidir, senão manda pro lugar errado. */
+    if (carregandoPapelParceiro) return <LoadingScreen />;
+    if (souParceiro) return <Navigate to="/parceiro" replace />;
     if (location.pathname !== "/onboarding") {
       return <Navigate to="/onboarding" replace />;
     }

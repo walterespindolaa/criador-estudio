@@ -109,7 +109,10 @@ const ResetPassword = () => {
       toast.error(error.message || t("reset.error"));
     } else {
       toast.success(t("reset.success"));
-      navigate("/app");
+      // "/" (RootRedirect) manda cada um pro seu lugar: parceiro → /parceiro,
+      // criador/social mídia → /app. Foi o furo que jogou o PeJota no
+      // onboarding de criador depois de redefinir a senha.
+      navigate("/");
     }
   };
 

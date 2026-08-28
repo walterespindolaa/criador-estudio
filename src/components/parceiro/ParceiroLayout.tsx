@@ -68,11 +68,15 @@ export default function ParceiroLayout() {
 
         <div className="mt-auto border-t border-border pt-3 space-y-1">
           {/* Quem também é criador/social mídia volta pro app por aqui. Quem é
-              só parceiro pode ignorar: o app de criador não tem nada dele. */}
-          <NavLink to="/app"
-            className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-body font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-            <Layers className="h-4 w-4" strokeWidth={1.75} /> Meu Cria (criador)
-          </NavLink>
+              SÓ parceiro nem vê o atalho: o app de criador devolveria ele pra
+              cá (o gate pula o onboarding de criador pra parceiro), então o
+              link seria um botão que não leva a lugar nenhum. */}
+          {profile?.onboarding_completed && (
+            <NavLink to="/app"
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-body font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+              <Layers className="h-4 w-4" strokeWidth={1.75} /> Meu Cria (criador)
+            </NavLink>
+          )}
           <div className="flex items-center gap-2.5 px-2.5 py-1.5">
             <span className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-400 to-violet-700 text-white grid place-items-center text-[11px] font-bold shrink-0">
               {nome.charAt(0).toUpperCase()}

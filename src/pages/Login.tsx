@@ -57,7 +57,9 @@ const Login = () => {
     if (error) {
       toast.error(t("auth.wrongCredentials"));
     } else {
-      navigate("/app");
+      // "/" (RootRedirect) decide o destino: parceiro cai em /parceiro, o resto
+      // em /app. Ir direto pro /app jogava o designer no app de criador.
+      navigate("/");
     }
   };
 

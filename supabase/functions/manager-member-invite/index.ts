@@ -167,6 +167,16 @@ serve(async (req) => {
       return json({ error: "member_link_failed" }, 500);
     }
     if (ehParceiro) {
+      // Conta que NASCE de convite de parceiro não é uma conta de criador em
+      // trial: sem isto, o trigger de perfil dava 7 dias de Studio e o designer
+      // caia num dashboard com "todos os modulos ativos" que nao eram dele.
+      // Conta que JA EXISTIA (criador que tambem produz pra agencia) fica como
+      // esta: virar parceiro nao pode derrubar o plano de ninguem.
+      if (!existing) {
+        await svc.from("profiles")
+          .update({ plan: "free", trial_started_at: null, trial_ends_at: null })
+          .eq("id", memberId);
+      }
       // Parceiro não recebe módulo nenhum: o acesso dele é por card, via as
       // RPCs parceiro_*. Dar módulo aqui seria abrir o CRM pra quem só produz.
       await enviarEmailConvite(svc, prof, normEmail, actionLink, existing);
