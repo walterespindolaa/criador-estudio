@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, Copy, MapPin, MessageCircle, Navigation } from "lucide-react";
 import {
-  bool, embedDeVideo, embedGoogleMaps, faltaAte, linkAppleMaps, linkGoogleMaps,
+  bool, embedDeVideo, faltaAte, linkAppleMaps, linkGoogleMaps,
   linkSeguro, linkWaze, linkWhatsapp, lista, txt, type DadosBloco,
 } from "@/lib/bioBlocks";
 import { TextoRico } from "@/lib/textoRico";
@@ -186,14 +186,26 @@ function Mapa({ data, visual, onClique }: { data: DadosBloco; visual: VisualBio;
 
   return (
     <CartaoBase visual={visual} className="overflow-hidden">
+      {/* O GOOGLE FECHOU O EMBED SEM CHAVE.
+          Este iframe apontava pro `output=embed`, que era público e virou
+          "Este conteúdo está bloqueado" dentro da página: um retângulo cinza de
+          erro no meio da bio do cliente, pior que não ter mapa nenhum.
+          Enquanto não houver uma chave da API de Mapas configurada, a faixa é
+          um convite de um toque, que é o que a pessoa faz no celular de
+          qualquer jeito, e nunca aparece quebrada. */}
       {bool(data, "mostrarMapa", true) && (
-        <iframe
-          title="Mapa"
-          src={embedGoogleMaps(endereco)}
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-          className="w-full h-[170px] border-0 block"
-        />
+        <a href={linkGoogleMaps(endereco)} target="_blank" rel="noopener noreferrer" onClick={onClique}
+          className="block relative h-[104px] overflow-hidden"
+          style={{ background: `linear-gradient(135deg, ${visual.buttonColor}1f, ${visual.buttonColor}0a)` }}>
+          <span className="absolute inset-0 grid place-items-center text-center px-4">
+            <span>
+              <MapPin className="h-6 w-6 mx-auto mb-1.5" style={{ color: visual.buttonColor }} />
+              <span className="block text-[12px] font-body font-semibold" style={{ color: visual.buttonColor }}>
+                Ver no mapa
+              </span>
+            </span>
+          </span>
+        </a>
       )}
       <div className="p-4">
         <TituloCartao>{txt(data, "titulo")}</TituloCartao>

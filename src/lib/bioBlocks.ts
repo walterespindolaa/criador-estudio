@@ -287,9 +287,11 @@ export const linkWaze = (endereco: string) =>
   `https://www.waze.com/ul?q=${encodeURIComponent(endereco)}&navigate=yes`;
 export const linkAppleMaps = (endereco: string) =>
   `https://maps.apple.com/?q=${encodeURIComponent(endereco)}`;
-/** Mapa embutido sem chave de API: o modo `q=` do embed é público. */
-export const embedGoogleMaps = (endereco: string) =>
-  `https://maps.google.com/maps?q=${encodeURIComponent(endereco)}&output=embed&hl=pt-BR&z=15`;
+/* embedGoogleMaps saiu daqui de propósito. O modo `q=...&output=embed` era
+   público e o Google fechou: hoje ele responde com bloqueio de enquadramento e
+   o visitante vê "Este conteúdo está bloqueado" no lugar do mapa. Pra ter mapa
+   DENTRO da página de novo é preciso uma chave da Maps Embed API. Até lá, as
+   duas telas mandam pro app de mapas em vez de mostrar um erro. */
 
 /* ── O ENDEREÇO DE CADA ITEM ──
    "Engenharia de Cardápio" vira "engenharia-de-cardapio". Sem acento porque

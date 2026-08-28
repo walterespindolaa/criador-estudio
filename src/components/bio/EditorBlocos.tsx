@@ -18,6 +18,7 @@ import {
 import { CampoTextoRico } from "@/lib/textoRico";
 import { modelosDoEstilo, type AparenciaModelo } from "@/lib/bioTemplates";
 import { cn } from "@/lib/utils";
+import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { EditorItens } from "@/components/bio/EditorItens";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -65,6 +66,19 @@ function useUploadBio() {
 function BotaoImagem({ valor, onTroca, rotulo }: { valor: string; onTroca: (url: string) => void; rotulo: string }) {
   const ref = useRef<HTMLInputElement>(null);
   const { enviar, subindo } = useUploadBio();
+  /* ENQUADRAR ANTES DE SUBIR. A foto sai do celular em qualquer proporção e o
+     `object-cover` cortava por conta própria, quase sempre pela cabeça. Aqui a
+     pessoa escolhe o pedaço que importa, com zoom, e o que sobe já é o
+     recorte: a página nunca mais decide isso sozinha. */
+  const [paraCortar, setParaCortar] = useState<string | null>(null);
+
+  const subirRecorte = async (blob: Blob) => {
+    const arquivo = new File([blob], "imagem.jpg", { type: blob.type || "image/jpeg" });
+    const url = await enviar(arquivo, "bloco");
+    if (url) onTroca(url);
+    setParaCortar(null);
+  };
+
   return (
     <div className="flex items-center gap-2.5">
       <div className="w-16 h-16 rounded-xl bg-muted overflow-hidden shrink-0 grid place-items-center border border-border">
@@ -73,17 +87,29 @@ function BotaoImagem({ valor, onTroca, rotulo }: { valor: string; onTroca: (url:
       </div>
       <div className="flex flex-wrap gap-1.5">
         <input ref={ref} type="file" accept="image/*" className="hidden"
-          onChange={async (e) => {
+          onChange={(e) => {
             const f = e.target.files?.[0]; e.target.value = "";
             if (!f) return;
-            const url = await enviar(f, "bloco");
-            if (url) onTroca(url);
+            setParaCortar(URL.createObjectURL(f));
           }} />
         <Button type="button" size="sm" variant="outline" disabled={subindo} onClick={() => ref.current?.click()}>
           {subindo && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}{valor ? "Trocar" : rotulo}
         </Button>
+        {valor && (
+          <Button type="button" size="sm" variant="ghost" onClick={() => setParaCortar(valor)}>Enquadrar</Button>
+        )}
         {valor && <Button type="button" size="sm" variant="ghost" onClick={() => onTroca("")}>Remover</Button>}
       </div>
+
+      {paraCortar && (
+        <ImageCropModal
+          open
+          onOpenChange={(v) => { if (!v) setParaCortar(null); }}
+          imageSrc={paraCortar}
+          cropShape="rect"
+          aspectRatio={3 / 4}
+          onCropComplete={(blob) => void subirRecorte(blob)} />
+      )}
     </div>
   );
 }

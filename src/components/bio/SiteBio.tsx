@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Instagram, Mail, MapPin, Menu, Phone, Quote, X } from "lucide-react";
 import { BlocoPublico, type VisualBio } from "@/components/bio/BlocoPublico";
 import {
-  bool, embedGoogleMaps, faltaNoBloco, linkSeguro, lista, linkWhatsapp, precoVisivel, txt, type DadosBloco,
+  bool, faltaNoBloco, linkSeguro, lista, linkWhatsapp, precoVisivel, txt, type DadosBloco,
 } from "@/lib/bioBlocks";
 import { TextoRico } from "@/lib/textoRico";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
@@ -181,7 +181,7 @@ function Secao({ id, fundo, marca, className, children }: {
 }
 
 /* ── As seções ── */
-function SecaoCapa({ d, marca, aoClicar }: { d: DadosBloco; marca: MarcaSite; aoClicar?: () => void }) {
+function SecaoCapa({ d, marca, visual, aoClicar }: { d: DadosBloco; marca: MarcaSite; visual: VisualBio; aoClicar?: () => void }) {
   const img = txt(d, "imagem");
   // Botão só existe se o endereço passar na checagem: um "javascript:" salvo
   // aqui rodaria no navegador de todo seguidor que clicasse.
@@ -205,18 +205,25 @@ function SecaoCapa({ d, marca, aoClicar }: { d: DadosBloco; marca: MarcaSite; ao
             <div className="flex flex-col cq-sm:flex-row gap-2.5 mt-6">
               {b1 && u1 && (
                 <a href={u1} target="_blank" rel="noopener noreferrer" onClick={aoClicar}
-                  className="rounded-full px-6 h-12 inline-flex items-center justify-center font-display font-bold text-[14.5px] shadow-sm transition active:scale-[.98]"
-                  style={{ backgroundColor: marca.cor, color: marca.corTexto }}>{b1}</a>
+                  className={cn("px-6 h-12 inline-flex items-center justify-center font-display font-bold text-[14.5px] shadow-sm transition active:scale-[.98]", visual.radius)}
+                  style={visual.isOutline
+                    ? { border: `2px solid ${marca.cor}`, color: marca.cor, background: "transparent" }
+                    : { backgroundColor: marca.cor, color: marca.corTexto }}>{b1}</a>
               )}
               {b2 && u2 && (
                 <a href={u2} target="_blank" rel="noopener noreferrer" onClick={aoClicar}
-                  className="rounded-full px-6 h-12 inline-flex items-center justify-center font-display font-bold text-[14.5px] border border-gray-900/25 text-gray-900 transition active:scale-[.98] hover:border-gray-900/50">{b2}</a>
+                  className={cn("px-6 h-12 inline-flex items-center justify-center font-display font-bold text-[14.5px] border border-gray-900/25 text-gray-900 transition active:scale-[.98] hover:border-gray-900/50", visual.radius)}>{b2}</a>
               )}
             </div>
           )}
         </div>
+        {/* A foto era quadrada e do tamanho da coluna: no celular ela empurrava
+            os botões pra fora da primeira tela, e quem abre um link na bio
+            decide nos primeiros três segundos. Retrato 3:4 com teto de largura
+            deixa o título, a frase e os botões visíveis antes de rolar. */}
         {img && (
-          <Foto src={img} prioritaria className="w-full rounded-3xl object-cover aspect-[4/3] cq-md:aspect-square shadow-lg" />
+          <Foto src={img} prioritaria
+            className="w-full max-w-[220px] cq-md:max-w-none mx-auto rounded-3xl object-cover aspect-[3/4] cq-md:aspect-[4/5] shadow-lg" />
         )}
       </div>
     </section>
@@ -279,13 +286,15 @@ function VerMais({ marca, texto = "ver mais" }: { marca: MarcaSite; texto?: stri
   );
 }
 
-function CartaoItem({ item, marca, proporcao, rodape, aoAbrir }: {
+function CartaoItem({ item, marca, visual, proporcao, rodape, aoAbrir }: {
+  visual: VisualBio;
   item: ItemLite; marca: MarcaSite; proporcao: string;
   rodape: React.ReactNode; aoAbrir: () => void;
 }) {
   return (
     <button type="button" onClick={aoAbrir}
-      className="text-left rounded-2xl border border-black/[0.07] bg-white overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.09)] hover:-translate-y-0.5 transition-all duration-200 active:scale-[.99]">
+      className="text-left rounded-2xl border border-black/[0.07] overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.09)] hover:-translate-y-0.5 transition-all duration-200 active:scale-[.99]"
+      style={{ backgroundColor: visual.cardColor || "#fff", color: visual.cardTextColor || undefined }}>
       <CapaDoItem src={item.capa} titulo={item.titulo} marca={marca} proporcao={proporcao} />
       <span className="block p-3.5 cq-md:p-4">
         <span className="block font-display font-bold text-[14.5px] leading-[1.25] text-gray-900 [text-wrap:pretty]">{item.titulo}</span>
@@ -298,7 +307,8 @@ function CartaoItem({ item, marca, proporcao, rodape, aoAbrir }: {
   );
 }
 
-function SecaoProdutos({ d, marca, itens, aoAbrir, aoClicar }: {
+function SecaoProdutos({ d, marca, visual, itens, aoAbrir, aoClicar }: {
+  visual: VisualBio;
   d: DadosBloco; marca: MarcaSite; itens: ItemLite[]; aoAbrir: (slug: string) => void; aoClicar?: () => void;
 }) {
   if (itens.length === 0) return null;
@@ -311,7 +321,7 @@ function SecaoProdutos({ d, marca, itens, aoAbrir, aoClicar }: {
           com foto de 90px, que não vende nada. */}
       <div className="grid gap-3 cq-sm:grid-cols-2 cq-lg:grid-cols-3 mt-5">
         {itens.map((i) => (
-          <CartaoItem key={i.id} item={i} marca={marca} proporcao="aspect-[16/10]"
+          <CartaoItem key={i.id} item={i} marca={marca} visual={visual} proporcao="aspect-[16/10]"
             aoAbrir={() => { aoClicar?.(); aoAbrir(i.slug); }}
             rodape={<>
               <span className="font-display font-extrabold text-[15px] text-gray-900 truncate">
@@ -325,7 +335,8 @@ function SecaoProdutos({ d, marca, itens, aoAbrir, aoClicar }: {
   );
 }
 
-function SecaoBlog({ d, marca, itens, aoAbrir, aoClicar }: {
+function SecaoBlog({ d, marca, visual, itens, aoAbrir, aoClicar }: {
+  visual: VisualBio;
   d: DadosBloco; marca: MarcaSite; itens: ItemLite[]; aoAbrir: (slug: string) => void; aoClicar?: () => void;
 }) {
   if (itens.length === 0) return null;
@@ -339,7 +350,7 @@ function SecaoBlog({ d, marca, itens, aoAbrir, aoClicar }: {
       <h2 className="font-display font-extrabold text-[1.28rem] cq-md:text-[1.8rem] leading-[1.15] tracking-[-0.015em] [text-wrap:balance]">{txt(d, "titulo") || "Blog"}</h2>
       <div className="grid gap-3 cq-sm:grid-cols-2 cq-lg:grid-cols-3 mt-5">
         {itens.slice(0, quantos).map((i) => (
-          <CartaoItem key={i.id} item={i} marca={marca} proporcao="aspect-[16/9]"
+          <CartaoItem key={i.id} item={i} marca={marca} visual={visual} proporcao="aspect-[16/9]"
             aoAbrir={() => { aoClicar?.(); aoAbrir(i.slug); }}
             rodape={<>
               <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-gray-400 truncate">
@@ -353,7 +364,7 @@ function SecaoBlog({ d, marca, itens, aoAbrir, aoClicar }: {
   );
 }
 
-function SecaoDepoimentos({ d, marca }: { d: DadosBloco; marca: MarcaSite }) {
+function SecaoDepoimentos({ d, marca, visual }: { d: DadosBloco; marca: MarcaSite; visual: VisualBio }) {
   const itens = lista<{ texto?: string; autor?: string }>(d, "itens").filter((i) => (i.texto || "").trim());
   if (itens.length === 0) return null;
   return (
@@ -362,7 +373,8 @@ function SecaoDepoimentos({ d, marca }: { d: DadosBloco; marca: MarcaSite }) {
       <h2 className="font-display font-extrabold text-[1.28rem] cq-md:text-[1.8rem] leading-[1.15] tracking-[-0.015em] [text-wrap:balance]">{txt(d, "titulo") || "Depoimentos"}</h2>
       <div className="grid gap-3 cq-sm:grid-cols-2 cq-lg:grid-cols-3 mt-5">
         {itens.map((i, n) => (
-          <figure key={n} className="rounded-2xl border border-black/[0.07] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <figure key={n} className="rounded-2xl border border-black/[0.07] p-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
+            style={{ backgroundColor: visual.cardColor || "#fff", color: visual.cardTextColor || undefined }}>
             <Quote className="h-4 w-4 mb-2 opacity-40" style={{ color: marca.cor }} />
             <blockquote className="text-[13.5px] text-gray-700 leading-[1.6]">{i.texto}</blockquote>
             {i.autor && (
@@ -434,14 +446,12 @@ function Rodape({ d, marca, aoClicar, comSelo }: { d: DadosBloco; marca: MarcaSi
       {/* O mapa fecha o rodapé quando o negócio é de rua. Sem borda arredondada
           por cima do fundo escuro, senão vira um cartão flutuando sem motivo. */}
       {end && bool(d, "mostrarMapa", false) && (
-        <div className="mx-auto max-w-5xl mt-7 rounded-xl overflow-hidden border border-white/10">
-          <iframe
-            title="Mapa"
-            src={embedGoogleMaps(end)}
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            className="w-full h-[190px] cq-md:h-[240px] border-0 block" />
-        </div>
+        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`}
+          target="_blank" rel="noopener noreferrer" onClick={aoClicar}
+          className="mx-auto max-w-5xl mt-7 flex items-center justify-center gap-2.5 h-[74px] rounded-xl border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] transition-colors">
+          <MapPin className="h-4 w-4 opacity-70" />
+          <span className="text-[13.5px] font-body font-semibold">Ver no mapa</span>
+        </a>
       )}
       {comSelo && (
         <div className="mx-auto max-w-5xl mt-8 pt-6 border-t border-white/10">
@@ -536,11 +546,11 @@ export function SiteBio({
       <Topo marca={marca} secoes={secoes} aoIr={irPara} />
       {blocos.map((b) => {
         switch (b.kind) {
-          case "capa": return <SecaoCapa key={b.id} d={b.data} marca={marca} aoClicar={() => onClique?.(b.id)} />;
+          case "capa": return <SecaoCapa key={b.id} d={b.data} marca={marca} visual={visual} aoClicar={() => onClique?.(b.id)} />;
           case "sobre": return <SecaoSobre key={b.id} d={b.data} marca={marca} />;
-          case "produtos": return <SecaoProdutos key={b.id} d={b.data} marca={marca} itens={produtos} aoAbrir={aoAbrirProduto} aoClicar={() => onClique?.(b.id)} />;
-          case "blog": return <SecaoBlog key={b.id} d={b.data} marca={marca} itens={posts} aoAbrir={aoAbrirPost} aoClicar={() => onClique?.(b.id)} />;
-          case "depoimentos": return <SecaoDepoimentos key={b.id} d={b.data} marca={marca} />;
+          case "produtos": return <SecaoProdutos key={b.id} d={b.data} marca={marca} visual={visual} itens={produtos} aoAbrir={aoAbrirProduto} aoClicar={() => onClique?.(b.id)} />;
+          case "blog": return <SecaoBlog key={b.id} d={b.data} marca={marca} visual={visual} itens={posts} aoAbrir={aoAbrirPost} aoClicar={() => onClique?.(b.id)} />;
+          case "depoimentos": return <SecaoDepoimentos key={b.id} d={b.data} marca={marca} visual={visual} />;
           case "contato": return <Rodape key={b.id} d={b.data} marca={marca} aoClicar={() => onClique?.(b.id)} comSelo={terminaNoRodape} />;
           default: {
             // Bloco pela metade não vira seção. Antes, um bloco de texto ainda
