@@ -1,4 +1,4 @@
-import { Layers, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ROTULO_PAPEL, useMinhasAgencias } from "@/hooks/useParceiro";
 
@@ -11,18 +11,7 @@ export default function Marcas() {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-pink-700 flex items-center justify-center shadow-sm shrink-0">
-          <Layers className="h-5 w-5 text-white" strokeWidth={1.75} />
-        </div>
-        <div>
-          <h1 className="text-3xl font-display font-extrabold text-foreground tracking-tight">Marcas que atendo</h1>
-          <p className="text-muted-foreground font-body mt-0.5 text-sm">
-            As agências e social mídias que te acoplaram, e o trabalho em cada uma.
-          </p>
-        </div>
-      </div>
-
+      {/* O título mora na faixa hero do ParceiroLayout. */}
       {isLoading ? (
         <div className="grid place-items-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
       ) : agencias.length === 0 ? (

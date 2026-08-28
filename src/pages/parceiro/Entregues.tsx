@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,18 +44,12 @@ export default function Entregues() {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center shadow-sm shrink-0">
-          <CheckCircle2 className="h-5 w-5 text-white" strokeWidth={1.75} />
-        </div>
-        <div>
-          <h1 className="text-3xl font-display font-extrabold text-foreground tracking-tight">Entregues</h1>
-          <p className="text-muted-foreground font-body mt-0.5 text-sm">
-            {entregas.length === 0 ? "Suas entregas aparecem aqui, agrupadas por agência."
-              : `${entregas.length} peça${entregas.length === 1 ? "" : "s"} entregues, o seu histórico de trabalho.`}
-          </p>
-        </div>
-      </div>
+      {/* O título mora na faixa hero do ParceiroLayout. */}
+      {entregas.length > 0 && (
+        <p className="text-sm font-body text-muted-foreground mb-4">
+          {entregas.length} peça{entregas.length === 1 ? "" : "s"} entregues, o seu histórico de trabalho.
+        </p>
+      )}
 
       {isLoading ? (
         <div className="grid place-items-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>

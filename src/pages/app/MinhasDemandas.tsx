@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import {
-  Briefcase, Check, CheckCircle2, Clock, Copy as CopyIcon, ExternalLink, Folder,
-  Loader2, MessageCircle, Palette, Play, RotateCcw, Send,
+  Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
+  Copy as CopyIcon, ExternalLink, Folder, Loader2, MessageCircle, Palette,
+  Play, RotateCcw, Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -15,6 +17,8 @@ import {
   ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useFilaDoParceiro,
   useMinhasAgencias, type CardDaFila,
 } from "@/hooks/useParceiro";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MINHAS DEMANDAS, a tela do parceiro (designer, editor, copy)
@@ -75,7 +79,7 @@ export default function MinhasDemandas() {
   const { data: fila = [], isLoading } = useFilaDoParceiro();
   const { data: agencias = [] } = useMinhasAgencias();
   const [aberto, setAberto] = useState<string | null>(null);
-  const [visao, setVisao] = useState<"prazo" | "semana">("prazo");
+  const [visao, setVisao] = useState<"prazo" | "quadro" | "semana" | "mes">("prazo");
   const hoje = hojeBR();
   const grupos = useMemo(() => porDia(fila), [fila]);
   const venceHoje = fila.filter((c) => c.prazo_producao === hoje).length;
@@ -86,20 +90,8 @@ export default function MinhasDemandas() {
   return (
     <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center shadow-sm shrink-0">
-            <Briefcase className="h-5 w-5 text-white" strokeWidth={1.75} />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-3xl font-display font-extrabold text-foreground tracking-tight">Minhas demandas</h1>
-            <p className="text-muted-foreground font-body mt-0.5 text-sm">
-              {fila.length === 0
-                ? "Tudo entregue. Quando uma agência mandar um card, ele aparece aqui."
-                : `${fila.length} peça${fila.length === 1 ? "" : "s"} na sua mão${venceHoje > 0 ? ` · ${venceHoje} vence${venceHoje === 1 ? "" : "m"} hoje` : ""}`}
-            </p>
-          </div>
-        </div>
-
+        {/* O título mora na faixa hero do ParceiroLayout; aqui começa direto
+            no resumo, como os módulos da social mídia fazem. */}
         {/* O RESUMO DO DIA: os quatro números que respondem "como estou?". O
             último (entregues em 30 dias) é a semente da cobrança por entrega. */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
@@ -145,13 +137,13 @@ export default function MinhasDemandas() {
           </div>
         )}
 
-        {/* O SELETOR DE VISÃO: lista por prazo ou a semana em colunas. As
-            outras do mockup (quadro, mês) vêm na fase 2. */}
-        <div className="inline-flex gap-1 rounded-full border border-border bg-card p-1 mb-4">
-          {([["prazo", "Por prazo"], ["semana", "Semana"]] as const).map(([v, r]) => (
+        {/* O SELETOR DE VISÃO: as quatro do mockup aprovado. Pílulas no accent,
+            como as abas do resto do app. */}
+        <div className="inline-flex gap-1 rounded-full border border-border bg-card p-1 mb-4 flex-wrap">
+          {([["prazo", "Por prazo"], ["quadro", "Quadro"], ["semana", "Semana"], ["mes", "Mês"]] as const).map(([v, r]) => (
             <button key={v} type="button" onClick={() => setVisao(v)}
               className={cn("px-4 py-1.5 rounded-full text-[13px] font-display font-semibold transition-colors",
-                visao === v ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
+                visao === v ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
               {r}
             </button>
           ))}
@@ -170,6 +162,10 @@ export default function MinhasDemandas() {
           </Card>
         ) : visao === "semana" ? (
           <SemanaDoParceiro fila={fila} hoje={hoje} aoAbrir={setAberto} />
+        ) : visao === "quadro" ? (
+          <QuadroDoParceiro fila={fila} hoje={hoje} aoAbrir={setAberto} />
+        ) : visao === "mes" ? (
+          <MesDoParceiro fila={fila} hoje={hoje} aoAbrir={setAberto} />
         ) : (
           grupos.map(([chave, cards]) => {
             const r = rotuloDoDia(chave, hoje);
@@ -262,6 +258,179 @@ function SemanaDoParceiro({ fila, hoje, aoAbrir }: {
                   <span className="block text-[9.5px] text-muted-foreground truncate mt-0.5">{c.cliente_nome}</span>
                 </button>
               ))}
+            </div>
+          );
+        })}
+      </div>
+      {semPrazo.length > 0 && (
+        <p className="text-[11.5px] font-body text-muted-foreground mt-3 px-0.5">
+          {semPrazo.length} card{semPrazo.length === 1 ? "" : "s"} sem prazo combinado (aparecem na visão Por prazo).
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ── O QUADRO (estilo Trello) ─────────────────────────────────────────────
+   Colunas por etapa de produção, como o quadro que a Gabriela montava no
+   Trello: Novo, Fazendo, Ajuste e Entregue. As três primeiras vêm da fila; a
+   de Entregue puxa o histórico recente (a fila esconde entregue de propósito).
+   O card anda pelas ações de dentro dele (Estou fazendo / Marcar entregue),
+   não por arrasto: quem decide etapa é o trabalho, não o mouse. */
+function QuadroDoParceiro({ fila, hoje, aoAbrir }: {
+  fila: CardDaFila[]; hoje: string; aoAbrir: (id: string) => void;
+}) {
+  const { user } = useAuth();
+  // Mesma chave da tela Entregues: compartilha o cache, sem consulta dobrada.
+  const { data: entregues = [] } = useQuery<{ post_id: string; titulo: string; cliente_nome: string; cliente_cor: string | null; entregue_em: string }[]>({
+    queryKey: ["parceiro-entregues", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).rpc("parceiro_entregues");
+      if (error) {
+        if (/does not exist|schema cache/i.test(error.message)) return [];
+        throw error;
+      }
+      return data ?? [];
+    },
+  });
+
+  const COLUNAS = [
+    { chave: "aguardando", rotulo: "Novo", cor: "bg-orange-500", fundo: "bg-orange-50/70" },
+    { chave: "em_producao", rotulo: "Fazendo", cor: "bg-blue-500", fundo: "bg-blue-50/70" },
+    { chave: "ajuste", rotulo: "Ajuste", cor: "bg-violet-500", fundo: "bg-violet-50/70" },
+  ] as const;
+
+  const cartao = (c: CardDaFila) => {
+    const atrasado = c.prazo_producao && c.prazo_producao < hoje;
+    return (
+      <button key={c.post_id} onClick={() => aoAbrir(c.post_id)}
+        className="w-full text-left rounded-xl border border-border bg-card px-3 py-2.5 mb-2 shadow-sm hover:shadow transition-shadow">
+        <span className="flex items-center gap-2 mb-1.5">
+          <span className="w-5 h-5 rounded-md grid place-items-center text-white text-[9px] font-bold shrink-0 overflow-hidden"
+            style={{ background: c.cliente_cor || "#EA4918" }}>
+            {c.cliente_logo
+              ? <img src={c.cliente_logo} alt="" className="w-full h-full object-cover" />
+              : (c.cliente_nome || "C").charAt(0).toUpperCase()}
+          </span>
+          <span className="text-[10.5px] font-body font-semibold text-muted-foreground truncate">{c.cliente_nome}</span>
+        </span>
+        <span className="block font-display font-bold text-[13px] leading-tight">{c.titulo || "Sem título"}</span>
+        <span className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+          {c.formato && <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[c.formato] ?? c.formato}</span>}
+          {c.prazo_producao && (
+            <span className={cn("text-[9.5px] font-bold px-1.5 py-0.5 rounded-full",
+              atrasado ? "bg-red-600 text-white" : c.prazo_producao === hoje ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700")}>
+              {atrasado ? "atrasado" : c.prazo_producao === hoje ? "hoje" : dataBR(c.prazo_producao)}
+            </span>
+          )}
+        </span>
+      </button>
+    );
+  };
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-start">
+      {COLUNAS.map((col) => {
+        const cards = fila.filter((c) => c.producao_status === col.chave);
+        return (
+          <div key={col.chave} className={cn("rounded-2xl border border-border p-2.5", col.fundo)}>
+            <p className="flex items-center gap-2 px-1 pb-2">
+              <span className={cn("w-2 h-2 rounded-full", col.cor)} />
+              <span className="font-display font-bold text-[13px]">{col.rotulo}</span>
+              <span className="ml-auto text-[10px] font-bold text-muted-foreground bg-card rounded-full px-2 py-0.5 border border-border">{cards.length}</span>
+            </p>
+            {cards.length === 0
+              ? <p className="text-[11px] font-body text-muted-foreground/60 text-center py-6">vazio</p>
+              : cards.map(cartao)}
+          </div>
+        );
+      })}
+      <div className="rounded-2xl border border-border bg-green-50/70 p-2.5">
+        <p className="flex items-center gap-2 px-1 pb-2">
+          <span className="w-2 h-2 rounded-full bg-green-600" />
+          <span className="font-display font-bold text-[13px]">Entregue</span>
+          <span className="ml-auto text-[10px] font-bold text-muted-foreground bg-card rounded-full px-2 py-0.5 border border-border">{entregues.length}</span>
+        </p>
+        {entregues.length === 0
+          ? <p className="text-[11px] font-body text-muted-foreground/60 text-center py-6">vazio</p>
+          : entregues.slice(0, 6).map((e) => (
+            <button key={e.post_id} onClick={() => aoAbrir(e.post_id)}
+              className="w-full text-left rounded-xl border border-border bg-card px-3 py-2.5 mb-2 shadow-sm hover:shadow transition-shadow">
+              <span className="block font-display font-bold text-[13px] leading-tight">{e.titulo || "Sem título"}</span>
+              <span className="block text-[10.5px] font-body text-muted-foreground mt-1">
+                {e.cliente_nome} · ✓ {new Date(e.entregue_em).toLocaleDateString("pt-BR")}
+              </span>
+            </button>
+          ))}
+        {entregues.length > 6 && (
+          <p className="text-[10.5px] font-body text-muted-foreground text-center pt-1">o resto está em Entregues</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── O MÊS ────────────────────────────────────────────────────────────────
+   Mesma gramática do calendário da agenda: grade de sete colunas, navegação
+   por mês, hoje com anel, entrega pintada pelo estado. */
+function MesDoParceiro({ fila, hoje, aoAbrir }: {
+  fila: CardDaFila[]; hoje: string; aoAbrir: (id: string) => void;
+}) {
+  const [h1, h2] = hoje.split("-").map(Number);
+  const [ref, setRef] = useState({ ano: h1, mes: h2 }); // mes 1-12
+  const mudar = (delta: number) => {
+    const d = new Date(ref.ano, ref.mes - 1 + delta, 1);
+    setRef({ ano: d.getFullYear(), mes: d.getMonth() + 1 });
+  };
+  const primeiro = new Date(ref.ano, ref.mes - 1, 1);
+  const diasNoMes = new Date(ref.ano, ref.mes, 0).getDate();
+  const desloc = (primeiro.getDay() + 6) % 7; // semana começa na segunda
+  const celulas: (string | null)[] = [
+    ...Array.from({ length: desloc }, () => null),
+    ...Array.from({ length: diasNoMes }, (_, i) =>
+      `${ref.ano}-${String(ref.mes).padStart(2, "0")}-${String(i + 1).padStart(2, "0")}`),
+  ];
+  const rotuloMes = primeiro.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  const semPrazo = fila.filter((c) => !c.prazo_producao);
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <button type="button" onClick={() => mudar(-1)} className="p-1.5 rounded-lg border border-border bg-card hover:bg-muted transition-colors">
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <p className="font-display font-extrabold text-[15px] capitalize min-w-[160px] text-center">{rotuloMes}</p>
+        <button type="button" onClick={() => mudar(1)} className="p-1.5 rounded-lg border border-border bg-card hover:bg-muted transition-colors">
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((d) => (
+          <p key={d} className="text-[9.5px] font-bold uppercase text-muted-foreground text-center">{d}</p>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {celulas.map((iso, i) => {
+          if (!iso) return <div key={`v${i}`} />;
+          const doDia = fila.filter((c) => c.prazo_producao === iso);
+          return (
+            <div key={iso} className={cn("rounded-xl border bg-card p-1 min-h-[74px] md:min-h-[92px]",
+              iso === hoje ? "border-primary ring-1 ring-primary/40" : "border-border")}>
+              <p className={cn("text-[10px] font-display font-bold px-0.5", iso === hoje ? "text-primary" : "text-muted-foreground")}>
+                {Number(iso.slice(8))}
+              </p>
+              {doDia.slice(0, 3).map((c) => (
+                <button key={c.post_id} onClick={() => aoAbrir(c.post_id)} title={`${c.titulo} · ${c.cliente_nome}`}
+                  className={cn("w-full text-left rounded-md px-1 py-0.5 mb-0.5 border-l-2 text-[9px] leading-tight truncate block",
+                    c.producao_status === "ajuste" ? "bg-violet-50 border-violet-500"
+                    : c.producao_status === "em_producao" ? "bg-blue-50 border-blue-500"
+                    : "bg-orange-50 border-orange-500")}>
+                  {c.titulo || c.cliente_nome || "Card"}
+                </button>
+              ))}
+              {doDia.length > 3 && <p className="text-[8.5px] font-bold text-muted-foreground px-1">+{doDia.length - 3}</p>}
             </div>
           );
         })}
