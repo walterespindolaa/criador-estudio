@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRIA · Cria Parceiros · protótipo navegável</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --laranja:#EA4918;--amarelo:#FFCF03;--azul:#0061EE;--rosa:#FF77B9;--verde:#01A652;--lilas:#7C90F0;--roxo:#4B3FA8;
+    --tinta:#181815;--cinza:#5c5d63;--suave:#8f8c7f;--linha:#e9e6da;--creme:#F5F3E7;--card:#fff;--vermelho:#d64545;
+    --sombra:0 1px 2px rgba(24,24,21,.05),0 6px 18px rgba(24,24,21,.05);
+    --sombra-alta:0 24px 60px rgba(24,24,21,.16);
+    --disp:'Baloo 2',sans-serif;--body:'Plus Jakarta Sans',-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:#FBF9F2;color:var(--tinta);font-family:var(--body);font-size:14.5px;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit}
+  svg.ic{width:17px;height:17px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+  /* ═══════════ CASCA ═══════════ */
+  .app{display:flex;min-height:100vh}
+  .rail{width:210px;flex:none;background:var(--card);border-right:1px solid var(--linha);padding:18px 12px;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh}
+  .rail .marca{display:flex;align-items:center;gap:10px;padding:4px 8px 16px}
+  .rail .marca .l{width:38px;height:38px;border-radius:13px;background:linear-gradient(135deg,#EA4918,#c93c14);color:#fff;display:grid;place-items:center;font-family:var(--disp);font-weight:800;font-size:17px}
+  .rail .marca b{font-family:var(--disp);font-size:17px;letter-spacing:-.2px}
+  .rail .marca small{display:block;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--roxo);margin-top:-3px}
+  .rail .grp{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#b8b5a6;padding:14px 10px 6px}
+  .rail a{display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:11px;color:var(--cinza);text-decoration:none;font-weight:600;font-size:13.5px;position:relative}
+  .rail a:hover{background:var(--creme);color:var(--tinta)}
+  .rail a.on{background:#EDEBFB;color:var(--roxo);font-weight:800}
+  .rail a .n{margin-left:auto;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--vermelho);color:#fff;font-size:10px;font-weight:800;display:grid;place-items:center}
+  .rail a .n.cinza{background:var(--creme);color:var(--suave)}
+  /* Módulos no padrão do app: bolinha colorida ao lado do nome. Os que a
+     parceira ainda não tem aparecem com cadeado e viram a porta do upgrade. */
+  .rail a .pt{width:8px;height:8px;border-radius:50%;flex:none}
+  .rail a.trava{opacity:.62}
+  .rail a.trava:hover{opacity:1;background:#FFF6E8}
+  .rail a .lock{margin-left:auto;color:#c9c5b4}
+  .rail a.trava:hover .lock{color:#c98a00}
+  .rail .rodape{margin-top:auto;border-top:1px solid var(--linha);padding-top:10px}
+  .rail .eu{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:11px}
+  .rail .eu:hover{background:var(--creme)}
+  .rail .eu .a{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#7C90F0,#4B3FA8);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800}
+  .rail .eu b{font-size:13px;display:block;line-height:1.1}
+  .rail .eu small{font-size:11px;color:var(--suave)}
+
+  .main{flex:1;min-width:0;position:relative}
+  .bgshapes{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+  .bgshapes b{position:absolute;border-radius:50%;filter:blur(80px)}
+  .b1{width:460px;height:460px;background:var(--lilas);top:-160px;right:-80px;opacity:.10}
+  .b2{width:360px;height:360px;background:var(--rosa);top:48%;left:-150px;opacity:.09}
+  .b3{width:320px;height:320px;background:var(--amarelo);bottom:-110px;right:18%;opacity:.10}
+  .wrap{position:relative;z-index:1;padding:22px 26px 70px;max-width:1200px}
+
+  /* ═══════════ CABEÇALHO ═══════════ */
+  .hero{display:flex;align-items:center;gap:15px}
+  .hero h1{margin:0;font-family:var(--disp);font-size:26px;font-weight:800;letter-spacing:-.4px;line-height:1.1}
+  .hero .sub{font-size:13px;color:var(--cinza);margin-top:3px}
+  .hero .sub b{color:var(--vermelho)}
+  .hero .dir{margin-left:auto;display:flex;align-items:center;gap:14px}
+  .ags{display:flex;align-items:center}
+  .ags span{width:30px;height:30px;border-radius:50%;border:2.5px solid #FBF9F2;display:grid;place-items:center;color:#fff;font-size:10px;font-weight:800;margin-left:-9px;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+  .ags span:first-child{margin-left:0}
+  .ags .mais{background:var(--creme);color:var(--suave);font-size:9px}
+  .sino{position:relative;width:40px;height:40px;border-radius:13px;border:1px solid var(--linha);background:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:var(--sombra)}
+  .sino i{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--vermelho);color:#fff;font-size:10px;font-weight:800;display:grid;place-items:center;font-style:normal;border:2px solid #FBF9F2}
+
+  /* ═══════════ RESUMO DO DIA ═══════════ */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin:18px 0 4px}
+  @media(max-width:900px){.kpis{grid-template-columns:1fr 1fr}}
+  .kpi{background:#fff;border:1px solid var(--linha);border-radius:16px;padding:13px 15px;box-shadow:var(--sombra);display:flex;align-items:center;gap:12px}
+  .kpi .ico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:#fff;flex:none}
+  .kpi .v{font-family:var(--disp);font-size:21px;font-weight:800;line-height:1}
+  .kpi .l{font-size:11px;color:var(--suave);font-weight:700;margin-top:2px}
+
+  /* ═══════════ BARRA DE VISÕES ═══════════ */
+  .barra{display:flex;align-items:center;gap:10px;margin:20px 0 14px;flex-wrap:wrap}
+  .abas{display:inline-flex;background:#fff;border:1px solid var(--linha);border-radius:999px;padding:4px;box-shadow:var(--sombra)}
+  .abas button{border:none;background:transparent;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;color:var(--cinza);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.15s}
+  .abas button:hover{color:var(--tinta)}
+  .abas button.on{background:var(--tinta);color:#fff;box-shadow:0 2px 8px rgba(24,24,21,.22)}
+  .filtro{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--linha);background:#fff;border-radius:999px;padding:8px 14px;font-size:12.5px;font-weight:700;color:var(--cinza);cursor:pointer;box-shadow:var(--sombra)}
+  .filtro:hover{color:var(--tinta);border-color:#d8d4c4}
+  .navdata{margin-left:auto;display:flex;align-items:center;gap:9px;font-family:var(--disp);font-size:14.5px;font-weight:700}
+  .navdata button{border:1px solid var(--linha);background:#fff;border-radius:10px;width:32px;height:32px;display:grid;place-items:center;cursor:pointer;color:var(--tinta);box-shadow:var(--sombra)}
+  .navdata .hoje{width:auto;padding:0 13px;font-family:var(--body);font-weight:800;font-size:12px}
+
+  .visao{display:none}
+  .visao.on{display:block;animation:entra .18s ease}
+  @keyframes entra{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+  /* ═══════════ QUADRO (Trello) ═══════════ */
+  .board{display:flex;gap:13px;overflow-x:auto;padding:2px 2px 14px;align-items:flex-start}
+  .col{flex:none;width:270px;background:#F1EDE0;border-radius:15px;padding:10px;border:1px solid rgba(0,0,0,.03)}
+  .col > h4{margin:0 0 10px;padding:3px 6px;font-size:13px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .col > h4 .pt{width:9px;height:9px;border-radius:50%;flex:none}
+  .col > h4 .n{margin-left:auto;background:rgba(0,0,0,.06);border-radius:999px;font-size:10.5px;padding:2px 8px;font-weight:800;color:var(--cinza)}
+  .tc{background:#fff;border-radius:11px;box-shadow:0 1px 1px rgba(9,30,66,.12),0 0 1px rgba(9,30,66,.14);margin-bottom:8px;overflow:hidden;cursor:pointer;transition:.13s;border:2px solid transparent}
+  .tc:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(9,30,66,.13);border-color:#e4e0d0}
+  .tc .capa{height:92px;display:grid;place-items:center;font-size:26px;position:relative}
+  .tc .capa .fx{position:absolute;left:9px;top:9px;font-size:9.5px;font-weight:800;background:rgba(255,255,255,.92);border-radius:6px;padding:3px 8px;letter-spacing:.03em;color:var(--tinta)}
+  .tc .in{padding:9px 11px 11px}
+  .tc .ets{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:7px}
+  .tc .ets i{height:8px;width:40px;border-radius:4px;display:block;transition:.15s}
+  .tc:hover .ets i{height:15px;width:auto;min-width:40px}
+  .tc .ets i::after{content:attr(data-t);font-size:9px;font-weight:800;color:#fff;padding:0 7px;line-height:15px;display:none;font-style:normal}
+  .tc:hover .ets i::after{display:block}
+  .tc .tt{font-size:13.5px;font-weight:700;line-height:1.35}
+  .tc .pe{display:flex;align-items:center;gap:8px;margin-top:9px;color:#6b6f76;font-size:11.5px}
+  .tc .pe .d{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:6px;font-weight:800;font-size:10.5px}
+  .d.vence{background:#FBE3E3;color:var(--vermelho)}
+  .d.perto{background:#FFF1D6;color:#9a6b00}
+  .d.calmo{background:#EFF1F3;color:#6b6f76}
+  .d.feito{background:#E7F6ED;color:var(--verde)}
+  .tc .pe .mini{display:inline-flex;align-items:center;gap:3px;font-weight:700}
+  .tc .pe .av{margin-left:auto;width:24px;height:24px;border-radius:50%;color:#fff;font-size:9.5px;font-weight:800;display:grid;place-items:center;box-shadow:0 1px 2px rgba(0,0,0,.15)}
+  .col .fim{width:100%;border:none;background:transparent;border-radius:9px;padding:8px 6px;font-size:12px;font-weight:700;color:#8f8c7f;text-align:left;cursor:pointer}
+  .col .fim:hover{background:rgba(0,0,0,.05);color:var(--tinta)}
+
+  /* ═══════════ SEMANA ═══════════ */
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:9px}
+  @media(max-width:980px){.week{grid-template-columns:repeat(2,1fr)}}
+  .day{background:#fff;border:1px solid var(--linha);border-radius:15px;padding:10px 9px;min-height:210px;display:flex;flex-direction:column;box-shadow:var(--sombra)}
+  .day.hoje{box-shadow:0 0 0 2px var(--roxo) inset,var(--sombra)}
+  .day .dh{display:flex;align-items:baseline;gap:6px;margin-bottom:9px;padding:0 2px}
+  .day .dh .wd{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#b8b5a6}
+  .day .dh .dd{font-family:var(--disp);font-size:16px;font-weight:800}
+  .day.hoje .dh .dd{color:var(--roxo)}
+  .day .dh .cnt{margin-left:auto;font-size:9.5px;font-weight:800;color:#b8b5a6;background:var(--creme);border-radius:999px;padding:2px 7px}
+  .ev{border-radius:9px;padding:7px 8px;margin-bottom:6px;font-size:11px;line-height:1.3;border-left:3px solid;cursor:pointer;transition:.12s}
+  .ev:hover{transform:translateX(2px);filter:brightness(.98)}
+  .ev .tt{font-weight:800;display:block;margin-bottom:2px}
+  .ev .cl{font-size:10px;opacity:.75;display:flex;align-items:center;gap:4px;font-weight:600}
+  .ev.design{background:#FFF3EE;border-color:var(--laranja)}
+  .ev.video{background:#EAF1FF;border-color:var(--azul)}
+  .ev.copy{background:#E7F6ED;border-color:var(--verde)}
+  .ev.ajuste{background:#EDEBFB;border-color:var(--roxo)}
+  .day .vazio{margin:auto;text-align:center;color:#d4d0c0;font-size:11px;font-weight:700}
+
+  /* ═══════════ MÊS ═══════════ */
+  .mes{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .mes .hd{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#b8b5a6;text-align:center;padding:2px 0 5px}
+  .mc{background:#fff;border:1px solid var(--linha);border-radius:11px;min-height:96px;padding:7px 6px;transition:.12s}
+  .mc:hover{border-color:#d8d4c4;box-shadow:var(--sombra)}
+  .mc.fora{background:transparent;border-color:transparent;opacity:.38}
+  .mc.hoje{box-shadow:0 0 0 2px var(--roxo) inset}
+  .mc .n{font-size:11.5px;font-weight:800;margin-bottom:5px;color:var(--suave)}
+  .mc.hoje .n{color:var(--roxo)}
+  .mc .pil{font-size:9.5px;font-weight:700;border-radius:6px;padding:3.5px 6px;margin-bottom:3px;line-height:1.2;border-left:2.5px solid;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+  .mc .pil:hover{filter:brightness(.97)}
+
+  /* ═══════════ LISTA POR PRAZO ═══════════ */
+  .diahd{display:flex;align-items:center;gap:9px;font-family:var(--disp);font-size:14px;font-weight:800;margin:18px 2px 8px}
+  .diahd:first-child{margin-top:0}
+  .diahd .tag{font-family:var(--body);font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px}
+  .tag.hoje{background:#FBE3E3;color:var(--vermelho)}
+  .tag.amanha{background:#FFF1D6;color:#9a6b00}
+  .tag.folga{background:#E7F6ED;color:var(--verde)}
+  .lista{background:#fff;border:1px solid var(--linha);border-radius:16px;overflow:hidden;box-shadow:var(--sombra)}
+  .li-c{display:flex;align-items:center;gap:14px;padding:13px 16px;border-bottom:1px solid var(--linha);cursor:pointer;transition:.12s}
+  .li-c:last-child{border-bottom:none}
+  .li-c:hover{background:#fcfbf6}
+  .li-c .th{width:48px;height:48px;border-radius:13px;flex:none;display:grid;place-items:center;font-size:21px}
+  .li-c .bd{flex:1;min-width:0}
+  .li-c .tt{font-size:14.5px;font-weight:800;line-height:1.25}
+  .li-c .ss{font-size:12px;color:var(--cinza);margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .cli{display:inline-flex;align-items:center;gap:5px;font-weight:800;color:var(--tinta)}
+  .cav{width:17px;height:17px;border-radius:50%;color:#fff;font-size:8.5px;display:grid;place-items:center;font-weight:800;flex:none}
+  .via{font-size:11px;color:#a5a294;font-weight:600}
+  .fmt{font-size:10px;font-weight:800;padding:2.5px 8px;border-radius:999px;background:var(--creme);color:var(--cinza)}
+  .li-c .est{flex:none;font-size:11px;font-weight:800;padding:6px 13px;border-radius:999px}
+  .est.novo{background:var(--tinta);color:#fff}
+  .est.fazendo{background:#E9F0FF;color:var(--azul)}
+  .est.ajuste{background:#EDEBFB;color:var(--roxo)}
+
+  /* ═══════════ MODAL DO CARD ═══════════ */
+  .overlay{position:fixed;inset:0;background:rgba(20,18,14,.5);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;padding:26px 16px;z-index:60;overflow-y:auto}
+  .overlay.open{display:flex}
+  .modal{background:#F6F3EA;border-radius:18px;width:100%;max-width:920px;box-shadow:var(--sombra-alta);overflow:hidden;animation:sobe .22s ease}
+  @keyframes sobe{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .modal .capa{height:158px;background:linear-gradient(135deg,#0F6E56,#1d9e75);position:relative;display:grid;place-items:center}
+  .modal .capa .emoji{font-size:44px;filter:drop-shadow(0 4px 10px rgba(0,0,0,.2))}
+  .modal .capa .x{position:absolute;top:13px;right:13px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.92);display:grid;place-items:center;cursor:pointer;border:none}
+  .modal .capa .x:hover{background:#fff}
+  .modal .corpo{display:grid;grid-template-columns:1fr 280px}
+  @media(max-width:880px){.modal .corpo{grid-template-columns:1fr}}
+  .m-esq{padding:20px 22px 24px}
+  .m-tit{display:flex;gap:12px;align-items:flex-start}
+  .m-tit .ck{width:27px;height:27px;border-radius:50%;background:#fff;border:2px solid var(--linha);display:grid;place-items:center;flex:none;margin-top:3px;color:transparent;cursor:pointer}
+  .m-tit .ck:hover{border-color:var(--verde);color:var(--verde)}
+  .m-tit h2{margin:0;font-family:var(--disp);font-size:23px;font-weight:800;letter-spacing:-.3px;line-height:1.15}
+  .m-tit .cx{font-size:12.5px;color:var(--cinza);margin-top:5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .m-grp{margin-top:22px}
+  .m-lb{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#a5a294;margin-bottom:9px;display:flex;align-items:center;gap:7px}
+  .etq{display:flex;gap:6px;flex-wrap:wrap}
+  .etq span{font-size:11.5px;font-weight:800;padding:6px 13px;border-radius:8px;color:#fff;letter-spacing:.01em}
+  .slide{background:#fff;border:1px solid var(--linha);border-radius:11px;padding:11px 13px;margin-bottom:7px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .slide b{font-size:10px;color:var(--laranja);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+  .slide span{font-size:13.5px;line-height:1.6}
+  .verMais{font-size:12px;color:var(--roxo);font-weight:800;padding:5px 2px;cursor:pointer;display:inline-block}
+  .legenda{background:#fff;border:1px solid var(--linha);border-radius:11px;padding:13px;font-size:13.5px;line-height:1.65;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .copiar{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:var(--roxo);margin-top:8px;cursor:pointer}
+
+  .m-dir{background:#EFEBDD;padding:20px 17px 24px;border-left:1px solid rgba(0,0,0,.05);display:flex;flex-direction:column;gap:16px}
+  .bx{background:#fff;border:1px solid var(--linha);border-radius:12px;padding:12px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .bx.prazo{background:linear-gradient(135deg,#FBE3E3,#fdeeee);border-color:#f0c9c9}
+  .bx.prazo .d{font-family:var(--disp);font-size:19px;font-weight:800;color:var(--vermelho);line-height:1.1}
+  .bx.prazo .p{font-size:11.5px;color:#9a4747;margin-top:3px;font-weight:600}
+  .cores{display:flex;gap:6px;margin-bottom:10px}
+  .cores i{flex:1;height:34px;border-radius:9px;display:block;border:1px solid rgba(0,0,0,.07);position:relative;cursor:pointer}
+  .cores i:hover::after{content:attr(data-hex);position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;background:var(--tinta);color:#fff;padding:2px 7px;border-radius:5px;font-style:normal;white-space:nowrap;z-index:5}
+  .li2{display:flex;align-items:center;gap:9px;font-size:12.5px;padding:4.5px 0;color:var(--cinza)}
+  .li2 b{color:var(--tinta);font-weight:700}
+  .abtn{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--linha);border-radius:11px;padding:11px 13px;font-size:12.5px;font-weight:800;color:var(--tinta);text-decoration:none;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.03);transition:.12s}
+  .abtn:hover{transform:translateY(-1px);box-shadow:var(--sombra)}
+  .abtn small{display:block;font-size:10.5px;color:var(--suave);font-weight:600;margin-top:1px}
+  .drop{border:2px dashed #cfc9b3;border-radius:12px;padding:19px 12px;text-align:center;background:rgba(255,255,255,.55);cursor:pointer;transition:.15s}
+  .drop:hover{border-color:var(--roxo);background:rgba(255,255,255,.85)}
+  .drop p{margin:7px 0 0;font-size:12px;color:var(--cinza);line-height:1.45;font-weight:600}
+  .btn{border:none;border-radius:12px;padding:12px 16px;font-weight:800;font-size:13.5px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;transition:.13s}
+  .btn:hover{transform:translateY(-1px)}
+  .btn.pri{background:var(--verde);color:#fff;box-shadow:0 4px 12px rgba(1,166,82,.28)}
+  .btn.gh{background:#fff;color:var(--tinta);border:1.5px solid var(--linha)}
+
+  .m-cms{border-top:1px solid rgba(0,0,0,.06);padding:18px 22px 22px;background:#F1EDE0}
+  .cm{display:flex;gap:11px;margin-bottom:13px}
+  .cm .a{width:33px;height:33px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-size:11.5px;font-weight:800;box-shadow:0 1px 3px rgba(0,0,0,.14)}
+  .cm .bal{background:#fff;border:1px solid var(--linha);border-radius:13px;padding:10px 13px;font-size:13.5px;line-height:1.55;flex:1;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .cm .nm{font-size:11.5px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:7px}
+  .cm .nm i{font-style:normal;font-size:9px;font-weight:800;padding:2.5px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.05em}
+  .i-sm{background:#FFE9F3;color:#b52a6f}.i-cli{background:#E7F6ED;color:var(--verde)}.i-par{background:#EDEBFB;color:var(--roxo)}
+  .cm .qd{font-size:10.5px;color:#b8b5a6;font-weight:700;margin-left:auto}
+  .escrever{display:flex;gap:10px;align-items:center;background:#fff;border:1.5px solid var(--linha);border-radius:13px;padding:12px 14px;color:#b8b5a6;font-size:13px;font-weight:600;cursor:text}
+  .escrever:hover{border-color:#d8d4c4}
+
+  /* nota de estrutura */
+  .nota{font-size:12px;color:var(--cinza);background:rgba(255,255,255,.75);border:1px dashed #d8d4c4;border-radius:12px;padding:10px 14px;margin:14px 0 0;line-height:1.55}
+  .nota b{color:var(--tinta)}
+  .dica{display:inline-flex;align-items:center;gap:6px;background:#EDEBFB;color:var(--roxo);font-size:11px;font-weight:800;border-radius:999px;padding:5px 12px;margin-bottom:12px}
+</style></head>
+<body>
+<div class="app">
+
+  <!-- ═══ MENU LATERAL ═══ -->
+  <nav class="rail">
+    <div class="marca">
+      <div class="l">C</div>
+      <div><b>Cria</b><small>Parceiros</small></div>
+    </div>
+
+    <div class="grp">Produzir</div>
+    <a href="#" class="on"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg> Minhas demandas <span class="n">4</span></a>
+    <a href="#"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Entregues <span class="n cinza">27</span></a>
+    <a href="#"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/></svg> Arquivos</a>
+
+    <div class="grp">Meus clientes</div>
+    <a href="#"><svg class="ic" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Clientes próprios <span class="n cinza">2/3</span></a>
+    <a href="#"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg> Marcas que atendo <span class="n cinza">7</span></a>
+
+    <div class="grp">Módulos</div>
+    <a href="#"><span class="pt" style="background:var(--laranja)"></span> Cria Post</a>
+    <a href="#" class="trava"><span class="pt" style="background:var(--azul)"></span> Cria Gestão <svg class="ic lock" style="width:13px;height:13px" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></a>
+    <a href="#" class="trava"><span class="pt" style="background:var(--verde)"></span> Cria Caixa <svg class="ic lock" style="width:13px;height:13px" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></a>
+    <a href="#" class="trava"><span class="pt" style="background:var(--rosa)"></span> Cria Radar <svg class="ic lock" style="width:13px;height:13px" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></a>
+
+    <div class="rodape">
+      <div class="eu">
+        <div class="a">ÁC</div>
+        <div><b>Ágatha Chagas</b><small>Designer</small></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══ CONTEÚDO ═══ -->
+  <div class="main">
+  <div class="bgshapes"><b class="b1"></b><b class="b2"></b><b class="b3"></b></div>
+  <div class="wrap">
+
+    <span class="dica"><svg class="ic" style="width:13px;height:13px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg> Protótipo navegável: troque as visões e clique em qualquer card</span>
+    <p class="nota" style="margin:0 0 14px"><b>A sidebar segue o padrão do app</b> (grupos com rótulo, item com ícone,
+    módulos com a bolinha da cor). <b>Clientes próprios 2/3:</b> demanda de agência nunca consome slot; os clientes
+    que a Ágatha traz por conta têm 3 grátis, do quarto em diante é pacote pago, igual à carteira da social mídia.
+    <b>Cria Post</b> já vem liberado pros clientes próprios dela (kanban + aprovação por link). <b>Cria Gestão, Caixa e
+    Radar</b> aparecem com cadeado: são a porta do upgrade, no mesmo desenho de módulos que o resto do Cria usa.</p>
+
+    <div class="hero">
+      <div>
+        <h1>Oi, Ágatha 👋</h1>
+        <div class="sub">4 peças na sua mão · <b>1 vence hoje</b> · 2 chegaram desde ontem</div>
+      </div>
+      <div class="dir">
+        <div class="ags" title="Agências que te acoplaram">
+          <span style="background:#FF77B9">GK</span>
+          <span style="background:#0061EE">MD</span>
+          <span style="background:#01A652">AC</span>
+          <span class="mais">+4</span>
+        </div>
+        <div class="sino"><svg class="ic" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><i>2</i></div>
+      </div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="ico" style="background:var(--vermelho)"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div><div class="v">1</div><div class="l">Vence hoje</div></div></div>
+      <div class="kpi"><div class="ico" style="background:var(--azul)"><svg class="ic" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2 2 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div><div class="v">1</div><div class="l">Fazendo agora</div></div></div>
+      <div class="kpi"><div class="ico" style="background:var(--roxo)"><svg class="ic" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/></svg></div><div><div class="v">1</div><div class="l">Voltou pra ajuste</div></div></div>
+      <div class="kpi"><div class="ico" style="background:var(--verde)"><svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></div><div><div class="v">27</div><div class="l">Entregues no mês</div></div></div>
+    </div>
+
+    <div class="barra">
+      <div class="abas" id="abas">
+        <button class="on" data-v="quadro"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="18" rx="2"/><rect x="14" y="3" width="7" height="11" rx="2"/></svg> Quadro</button>
+        <button data-v="semana"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 11h18"/></svg> Semana</button>
+        <button data-v="mes"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 11h18M9 11v10M15 11v10"/></svg> Mês</button>
+        <button data-v="prazo"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Por prazo</button>
+      </div>
+      <button class="filtro"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg> Todas as marcas</button>
+      <div class="navdata" id="navdata"><button>‹</button> <span id="rotuloData">Agosto de 2026</span> <button>›</button><button class="hoje">Hoje</button></div>
+    </div>
+
+    <!-- ═══ VISÃO: QUADRO ═══ -->
+    <section class="visao on" id="v-quadro">
+      <div class="board">
+        <div class="col">
+          <h4><span class="pt" style="background:#b8b5a6"></span> A fazer <span class="n">2</span></h4>
+          <div class="tc" onclick="abrir()">
+            <div class="capa" style="background:linear-gradient(135deg,#0F6E56,#2b8f6f)"><span>🎠</span><span class="fx">CARROSSEL</span></div>
+            <div class="in">
+              <div class="ets"><i style="background:#F2A93B" data-t="Fazer Design"></i><i style="background:#d64545" data-t="Vence hoje"></i></div>
+              <div class="tt">A trajetória da Anna</div>
+              <div class="pe">
+                <span class="d vence">⏰ hoje</span>
+                <span class="mini">💬 3</span>
+                <span class="mini">☑ 0/6</span>
+                <span class="av" style="background:#FF77B9" title="Gabriela K.">GK</span>
+              </div>
+            </div>
+          </div>
+          <div class="tc" onclick="abrir()">
+            <div class="capa" style="background:linear-gradient(135deg,#FF77B9,#e0559b)"><span>🖼️</span><span class="fx">CARROSSEL</span></div>
+            <div class="in">
+              <div class="ets"><i style="background:#F2A93B" data-t="Fazer Design"></i></div>
+              <div class="tt">Setembro Amarelo</div>
+              <div class="pe">
+                <span class="d calmo">1 set</span>
+                <span class="av" style="background:#01A652" title="Ágatha C. (agência)">AC</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col">
+          <h4><span class="pt" style="background:var(--azul)"></span> Fazendo <span class="n">1</span></h4>
+          <div class="tc" onclick="abrir()">
+            <div class="capa" style="background:linear-gradient(135deg,#EA4918,#c93c14)"><span>🍽️</span><span class="fx">ESTÁTICO</span></div>
+            <div class="in">
+              <div class="ets"><i style="background:#F2A93B" data-t="Fazer Design"></i><i style="background:#0061EE" data-t="Feed"></i></div>
+              <div class="tt">3 erros ao montar cardápio</div>
+              <div class="pe">
+                <span class="d perto">amanhã</span>
+                <span class="mini">💬 1</span>
+                <span class="av" style="background:#0061EE" title="Marina D.">MD</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col">
+          <h4><span class="pt" style="background:var(--roxo)"></span> Em ajuste <span class="n">1</span></h4>
+          <div class="tc" onclick="abrir()">
+            <div class="capa" style="background:linear-gradient(135deg,#7C90F0,#4B3FA8)"><span>🎬</span><span class="fx">REELS</span></div>
+            <div class="in">
+              <div class="ets"><i style="background:#4B3FA8" data-t="Ajuste do cliente"></i></div>
+              <div class="tt">Bastidor da consulta</div>
+              <div class="pe">
+                <span class="d vence">⏰ hoje</span>
+                <span class="mini">💬 5</span>
+                <span class="av" style="background:#FF77B9" title="Gabriela K.">GK</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col">
+          <h4><span class="pt" style="background:var(--verde)"></span> Entregue <span class="n">3</span></h4>
+          <div class="tc" onclick="abrir()">
+            <div class="in" style="padding:11px">
+              <div class="tt" style="color:#8f8c7f">Cardápio de outubro</div>
+              <div class="pe"><span class="d feito">✓ 26 ago</span><span class="av" style="background:#0F6E56">A</span></div>
+            </div>
+          </div>
+          <div class="tc" onclick="abrir()">
+            <div class="in" style="padding:11px">
+              <div class="tt" style="color:#8f8c7f">Reels: 3 mitos da estética</div>
+              <div class="pe"><span class="d feito">✓ 25 ago</span><span class="av" style="background:#FF77B9">GK</span></div>
+            </div>
+          </div>
+          <div class="tc" onclick="abrir()">
+            <div class="in" style="padding:11px">
+              <div class="tt" style="color:#8f8c7f">Capa: podcast ep. 12</div>
+              <div class="pe"><span class="d feito">✓ 24 ago</span><span class="av" style="background:#0061EE">MD</span></div>
+            </div>
+          </div>
+          <button class="fim">Ver as 27 entregas do mês →</button>
+        </div>
+      </div>
+      <p class="nota"><b>Como ler este quadro:</b> as colunas são o estado da <b>sua produção</b>, e os cards chegam de
+      todas as agências juntas. O avatar no canto diz quem pediu. A coluna "Em ajuste" recebe tanto o ajuste que a
+      social mídia pediu quanto o que veio do cliente final, sempre com o comentário dentro do card.</p>
+    </section>
+
+    <!-- ═══ VISÃO: SEMANA ═══ -->
+    <section class="visao" id="v-semana">
+      <div class="week">
+        <div class="day"><div class="dh"><span class="wd">Seg</span><span class="dd">25</span></div><div class="vazio">livre</div></div>
+        <div class="day"><div class="dh"><span class="wd">Ter</span><span class="dd">26</span><span class="cnt">1</span></div>
+          <div class="ev copy" onclick="abrir()"><span class="tt">Legenda do lançamento</span><span class="cl">Café Aurora · via MD</span></div>
+        </div>
+        <div class="day"><div class="dh"><span class="wd">Qua</span><span class="dd">27</span></div><div class="vazio">livre</div></div>
+        <div class="day hoje"><div class="dh"><span class="wd">Qui</span><span class="dd">28</span><span class="cnt">2</span></div>
+          <div class="ev design" onclick="abrir()"><span class="tt">A trajetória da Anna</span><span class="cl">Anna Júlia · 6 slides</span></div>
+          <div class="ev ajuste" onclick="abrir()"><span class="tt">Bastidor da consulta</span><span class="cl">Lume · ajuste do cliente</span></div>
+        </div>
+        <div class="day"><div class="dh"><span class="wd">Sex</span><span class="dd">29</span><span class="cnt">1</span></div>
+          <div class="ev design" onclick="abrir()"><span class="tt">3 erros ao montar cardápio</span><span class="cl">Flor de Sal · via MD</span></div>
+        </div>
+        <div class="day"><div class="dh"><span class="wd">Sáb</span><span class="dd">30</span></div><div class="vazio">livre</div></div>
+        <div class="day"><div class="dh"><span class="wd">Dom</span><span class="dd">31</span></div><div class="vazio">livre</div></div>
+      </div>
+      <p class="nota"><b>Mesma linguagem da agenda</b> que a social mídia já usa no CRIA, mas cada bloco aqui é uma
+      entrega sua, colorida pelo tipo: <span style="color:var(--laranja);font-weight:800">design</span>,
+      <span style="color:var(--azul);font-weight:800">vídeo</span>,
+      <span style="color:var(--verde);font-weight:800">copy</span> e
+      <span style="color:var(--roxo);font-weight:800">ajuste</span>.</p>
+    </section>
+
+    <!-- ═══ VISÃO: MÊS ═══ -->
+    <section class="visao" id="v-mes">
+      <div class="mes">
+        <div class="hd">Seg</div><div class="hd">Ter</div><div class="hd">Qua</div><div class="hd">Qui</div><div class="hd">Sex</div><div class="hd">Sáb</div><div class="hd">Dom</div>
+        <div class="mc fora"><div class="n">28</div></div><div class="mc fora"><div class="n">29</div></div><div class="mc fora"><div class="n">30</div></div><div class="mc fora"><div class="n">31</div></div>
+        <div class="mc"><div class="n">1</div><span class="pil" style="background:#FFF3EE;border-color:var(--laranja)" onclick="abrir()">Carrossel · Lume</span></div>
+        <div class="mc"><div class="n">2</div></div><div class="mc"><div class="n">3</div></div>
+
+        <div class="mc"><div class="n">4</div><span class="pil" style="background:#EAF1FF;border-color:var(--azul)" onclick="abrir()">Reels · Café Aurora</span></div>
+        <div class="mc"><div class="n">5</div></div>
+        <div class="mc"><div class="n">6</div><span class="pil" style="background:#FFF3EE;border-color:var(--laranja)" onclick="abrir()">Estático · Anna</span></div>
+        <div class="mc"><div class="n">7</div></div>
+        <div class="mc"><div class="n">8</div><span class="pil" style="background:#E7F6ED;border-color:var(--verde)" onclick="abrir()">Copy · Trilha</span></div>
+        <div class="mc"><div class="n">9</div></div><div class="mc"><div class="n">10</div></div>
+
+        <div class="mc"><div class="n">11</div></div>
+        <div class="mc"><div class="n">12</div><span class="pil" style="background:#FFF3EE;border-color:var(--laranja)" onclick="abrir()">Carrossel · Flor de Sal</span></div>
+        <div class="mc"><div class="n">13</div></div>
+        <div class="mc"><div class="n">14</div><span class="pil" style="background:#EAF1FF;border-color:var(--azul)" onclick="abrir()">Reels · Lume</span></div>
+        <div class="mc"><div class="n">15</div></div><div class="mc"><div class="n">16</div></div><div class="mc"><div class="n">17</div></div>
+
+        <div class="mc"><div class="n">18</div><span class="pil" style="background:#FFF3EE;border-color:var(--laranja)" onclick="abrir()">Estático · Clínica</span></div>
+        <div class="mc"><div class="n">19</div></div>
+        <div class="mc"><div class="n">20</div><span class="pil" style="background:#FFF3EE;border-color:var(--laranja)" onclick="abrir()">Carrossel · Anna</span><span class="pil" style="background:#EAF1FF;border-color:var(--azul)" onclick="abrir()">Reels · Café</span></div>
+        <div class="mc"><div class="n">21</div></div>
+        <div class="mc"><div class="n">22</div><span class="pil" style="background:#E7F6ED;border-color:var(--verde)" onclick="abrir()">Copy · Trilha</span></div>
+        <div class="mc"><div class="n">23</div></div><div class="mc"><div class="n">24</div></div>
+
+        <div class="mc"><div class="n">25</div></div>
+        <div class="mc"><div class="n">26</div><span class="pil" style="background:#E7F6ED;border-color:var(--verde)" onclick="abrir()">Legenda · Café</span></div>
+        <div class="mc"><div class="n">27</div></div>
+        <div class="mc hoje"><div class="n">28</div><span class="pil" style="background:#FFF3EE;border-color:var(--laranja)" onclick="abrir()">Carrossel · Anna</span><span class="pil" style="background:#EDEBFB;border-color:var(--roxo)" onclick="abrir()">Ajuste · Lume</span></div>
+        <div class="mc"><div class="n">29</div><span class="pil" style="background:#FFF3EE;border-color:var(--laranja)" onclick="abrir()">Estático · Flor de Sal</span></div>
+        <div class="mc"><div class="n">30</div></div><div class="mc"><div class="n">31</div></div>
+      </div>
+      <p class="nota"><b>A visão que freelancer não tem em lugar nenhum:</b> onde o mês já está cheio. É o que sustenta
+      um "essa semana não dá, semana que vem sim" com o calendário na frente, na hora de combinar prazo com a agência.</p>
+    </section>
+
+    <!-- ═══ VISÃO: POR PRAZO ═══ -->
+    <section class="visao" id="v-prazo">
+      <div class="diahd">Hoje, 28 de agosto <span class="tag hoje">2 entregas</span></div>
+      <div class="lista">
+        <div class="li-c" onclick="abrir()">
+          <div class="th" style="background:linear-gradient(135deg,#0F6E56,#2b8f6f)">🎠</div>
+          <div class="bd">
+            <div class="tt">A trajetória da Anna</div>
+            <div class="ss">
+              <span class="cli"><span class="cav" style="background:#0F6E56">A</span> Anna Júlia Nutri</span>
+              <span class="via">via Gabriela K.</span>
+              <span class="fmt">Carrossel · 6 slides</span>
+            </div>
+          </div>
+          <span class="est novo">Novo</span>
+        </div>
+        <div class="li-c" onclick="abrir()">
+          <div class="th" style="background:linear-gradient(135deg,#7C90F0,#4B3FA8)">🎬</div>
+          <div class="bd">
+            <div class="tt">Bastidor da consulta</div>
+            <div class="ss">
+              <span class="cli"><span class="cav" style="background:#7C90F0">L</span> Lume Estética</span>
+              <span class="via">via Gabriela K.</span>
+              <span class="fmt">Reels</span>
+            </div>
+          </div>
+          <span class="est ajuste">Ajuste</span>
+        </div>
+      </div>
+
+      <div class="diahd">Amanhã, 29 de agosto <span class="tag amanha">1 entrega</span></div>
+      <div class="lista">
+        <div class="li-c" onclick="abrir()">
+          <div class="th" style="background:linear-gradient(135deg,#EA4918,#c93c14)">🍽️</div>
+          <div class="bd">
+            <div class="tt">3 erros ao montar cardápio</div>
+            <div class="ss">
+              <span class="cli"><span class="cav" style="background:#EA4918">F</span> Flor de Sal Bistrô</span>
+              <span class="via">via Marina D.</span>
+              <span class="fmt">Estático</span>
+            </div>
+          </div>
+          <span class="est fazendo">Fazendo</span>
+        </div>
+      </div>
+
+      <div class="diahd">Segunda, 1 de setembro <span class="tag folga">tem folga</span></div>
+      <div class="lista">
+        <div class="li-c" onclick="abrir()">
+          <div class="th" style="background:linear-gradient(135deg,#FF77B9,#e0559b)">🖼️</div>
+          <div class="bd">
+            <div class="tt">Setembro Amarelo</div>
+            <div class="ss">
+              <span class="cli"><span class="cav" style="background:#FF77B9">C</span> Clínica Lorem</span>
+              <span class="via">via Ágatha C.</span>
+              <span class="fmt">Carrossel · 4 slides</span>
+            </div>
+          </div>
+          <span class="est novo">Novo</span>
+        </div>
+      </div>
+      <p class="nota"><b>A tela de abrir de manhã:</b> tudo que é seu, de todas as agências, na ordem do que vence
+      primeiro. É a resposta pra "o que eu faço hoje?" sem abrir cinco quadros.</p>
+    </section>
+
+  </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL DO CARD ═══════════ -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)fechar()">
+  <div class="modal">
+    <div class="capa">
+      <span class="emoji">🎠</span>
+      <button class="x" onclick="fechar()"><svg class="ic" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="corpo">
+      <div class="m-esq">
+        <div class="m-tit">
+          <div class="ck" title="Marcar como entregue"><svg class="ic" style="width:15px;height:15px" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></svg></div>
+          <div>
+            <h2>A trajetória da Anna</h2>
+            <div class="cx">
+              <span class="cli"><span class="cav" style="background:#0F6E56">A</span> Anna Júlia Nutri</span>
+              <span class="via">delegado por <b style="color:var(--tinta)">Gabriela K.</b> · 26/08</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="m-grp">
+          <div class="m-lb">Etiquetas</div>
+          <div class="etq">
+            <span style="background:#F2A93B">Fazer Design</span>
+            <span style="background:#EA4918">Carrossel</span>
+            <span style="background:#d64545">Vence hoje</span>
+          </div>
+        </div>
+
+        <div class="m-grp">
+          <div class="m-lb">Roteiro · 6 slides</div>
+          <div class="slide"><b>Slide 1 · capa</b><span>Prazer, eu sou a Anna. E antes de falar sobre o que faço hoje, preciso te contar um pouco sobre o que me fez chegar até aqui.</span></div>
+          <div class="slide"><b>Slide 2</b><span>Antes de estar do lado de fora analisando operações, <b>eu vivi diferentes realidades por dentro</b>.</span></div>
+          <div class="slide"><b>Slide 3</b><span>Já acompanhei operações pequenas e grandes, e em todas o problema começava no mesmo lugar.</span></div>
+          <span class="verMais">Ver os 6 slides →</span>
+        </div>
+
+        <div class="m-grp">
+          <div class="m-lb">Legenda aprovada</div>
+          <div class="legenda">Você já parou pra pensar por que o cardápio que dá lucro não é o mais bonito? Salva esse post que amanhã eu volto com a parte 2. 🍽️</div>
+          <span class="copiar"><svg class="ic" style="width:13px;height:13px" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg> Copiar legenda</span>
+        </div>
+      </div>
+
+      <div class="m-dir">
+        <div>
+          <div class="m-lb">Entrega combinada</div>
+          <div class="bx prazo">
+            <div class="d">Hoje, 28/08</div>
+            <div class="p">o post publica em 02/09</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="m-lb">A marca do cliente</div>
+          <div class="bx">
+            <div class="cores">
+              <i style="background:#0F6E56" data-hex="#0F6E56"></i>
+              <i style="background:#E9DBC3" data-hex="#E9DBC3"></i>
+              <i style="background:#1F2937" data-hex="#1F2937"></i>
+            </div>
+            <div class="li2"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg> <b>Playfair</b> + Inter</div>
+            <div class="li2"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9h10"/></svg> acolhedor, técnico</div>
+            <div class="li2"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/></svg> @annajulia.nutri</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="m-lb">Material</div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <a class="abtn"><svg class="ic" viewBox="0 0 24 24"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/></svg><span>Fotos profissionais<small>pasta no Drive · 24 fotos</small></span></a>
+            <a class="abtn"><svg class="ic" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-9-9V3h10z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span>Brandbook completo<small>PDF · atualizado 08/08</small></span></a>
+          </div>
+        </div>
+
+        <div>
+          <div class="m-lb">Sua entrega</div>
+          <div class="drop">
+            <svg class="ic" viewBox="0 0 24 24" style="width:23px;height:23px;color:#a5a294"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+            <p>Solte a arte aqui<br>ou cole o link do Drive</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-top:10px">
+            <button class="btn pri"><svg class="ic" viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg> Marcar como entregue</button>
+            <button class="btn gh">Estou fazendo</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="m-cms">
+      <div class="m-lb" style="margin-bottom:13px">Conversa deste card</div>
+      <div class="cm">
+        <div class="a" style="background:#FF77B9">GK</div>
+        <div class="bal">
+          <div class="nm">Gabriela K. <i class="i-sm">social mídia</i> <span class="qd">26/08 · 17:47</span></div>
+          Ágatha, usa as fotos da pastinha "Ana". A do slide 1 é a que ela mais gostou.
+        </div>
+      </div>
+      <div class="cm">
+        <div class="a" style="background:#4B3FA8">ÁC</div>
+        <div class="bal">
+          <div class="nm">Ágatha C. <i class="i-par">parceiro</i> <span class="qd">27/08 · 09:12</span></div>
+          Fechado! Só confirma se posso usar o verde escuro no fundo do slide 1?
+        </div>
+      </div>
+      <div class="cm">
+        <div class="a" style="background:#01A652">AJ</div>
+        <div class="bal">
+          <div class="nm">Anna Júlia <i class="i-cli">cliente</i> <span class="qd">28/08 · 08:30</span></div>
+          Amei! Só deixa meu nome um pouquinho maior no primeiro slide. 💚
+        </div>
+      </div>
+      <div class="escrever">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Escrever um comentário... a Gabriela recebe na hora
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Troca de visão. O rótulo da data acompanha: semana mostra o intervalo,
+  // as outras mostram o mês.
+  const abas = document.getElementById('abas');
+  const rotulo = document.getElementById('rotuloData');
+  const rotulos = { quadro: 'Agosto de 2026', semana: '25 a 31 de agosto', mes: 'Agosto de 2026', prazo: 'Próximos 7 dias' };
+  abas.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    abas.querySelectorAll('button').forEach((x) => x.classList.remove('on'));
+    b.classList.add('on');
+    document.querySelectorAll('.visao').forEach((v) => v.classList.remove('on'));
+    document.getElementById('v-' + b.dataset.v).classList.add('on');
+    rotulo.textContent = rotulos[b.dataset.v];
+  });
+
+  const ov = document.getElementById('overlay');
+  function abrir(){ ov.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  function fechar(){ ov.classList.remove('open'); document.body.style.overflow = ''; }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') fechar(); });
+</script>
+</body></html>

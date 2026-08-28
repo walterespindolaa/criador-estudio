@@ -25,6 +25,7 @@ import {
   Video,
   Wand2,
   Instagram,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -47,6 +48,7 @@ import {
 import { Logo } from "@/components/shared/Logo";
 import { AiUsageBadge } from "@/components/shared/AiUsageBadge";
 import { useTier } from "@/hooks/useTier";
+import { useSouParceiro } from "@/hooks/useParceiro";
 import { FEATURES, tierAtLeast, type FeatureKey } from "@/lib/plans";
 import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
 
@@ -132,6 +134,9 @@ export function AppSidebar() {
   const { signOut } = useAuth();
   const { openCria } = useCriaAI();
   const { tier } = useTier();
+  /* Sou parceiro de alguma agência? Aí "Minhas demandas" entra no topo do menu.
+     É consulta cacheada 5 min: quem não é parceiro não paga nada por isto. */
+  const { data: souParceiro } = useSouParceiro();
 
   const handleSignOut = async () => {
     await signOut();
@@ -189,6 +194,26 @@ export function AppSidebar() {
       </button>
 
       <SidebarContent className="px-2">
+        {/* A porta do parceiro fica acima dos grupos: pra quem só produz, é a
+            tela inteira dele; pra quem também é social mídia, é um atalho. */}
+        {souParceiro && (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Minhas demandas">
+                    <NavLink to="/app/demandas"
+                      className="flex items-center gap-3 rounded-xl px-3 py-2 font-body font-semibold hover:bg-sidebar-accent"
+                      activeClassName="bg-violet-100 text-violet-800 hover:bg-violet-100">
+                      <Briefcase className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                      {!collapsed && <span>Minhas demandas</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
         {groups
           .filter((group) => !(group as { managerOnly?: boolean }).managerOnly || profile?.account_type === "manager")
           .map((group) => (

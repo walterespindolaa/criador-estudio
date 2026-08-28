@@ -94,9 +94,14 @@ serve(async (req) => {
     const { data: prof } = await svc.from("profiles").select("name, paid_collab_seats").eq("id", user.id).maybeSingle();
     const paidSeats = Math.max(0, Number((prof as { paid_collab_seats?: number } | null)?.paid_collab_seats) || 0);
     const allowed = 1 + paidSeats;
+    // Parceiro (designer, editor, copy, tráfego) NÃO consome assento: ele entra
+    // de graça e só enxerga o card atribuído a ele. Quem precisa de CRM,
+    // financeiro e carteira continua sendo colaborador e continua custando.
+    // São públicos diferentes, não dois preços pro mesmo acesso.
     const { count: activeCount } = await svc.from("manager_members")
       .select("id", { count: "exact", head: true })
-      .eq("manager_id", user.id).eq("status", "ativo");
+      .eq("manager_id", user.id).eq("status", "ativo")
+      .not("role", "in", "(designer,editor_video,copy,trafego)");
     if ((activeCount ?? 0) >= allowed) {
       return json({ error: "no_seats", allowed, used: activeCount ?? 0 }, 402);
     }

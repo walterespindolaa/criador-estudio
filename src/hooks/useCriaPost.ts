@@ -39,6 +39,10 @@ export type ExternalPost = {
   // Link da PASTA do Drive com os materiais do post (distinto da referência/ideia).
   // Coluna nova em posts (ver SQL). Aparece como atalho na aprovação do cliente.
   drive_folder_url: string | null;
+  /** Cria Parceiros: quem está produzindo esta peça (designer/editor/copy). */
+  assignee_id: string | null;
+  producao_status: string | null;
+  prazo_producao: string | null;
 };
 export type ExternalPostInput = { title: string; platform: string; format: string; caption?: string | null; hook?: string | null; script?: string | null; approval_mode?: "fast" | "flow" | "both"; scheduled_date?: string | null; scheduled_time?: string | null; reference_url?: string | null; drive_folder_url?: string | null };
 
@@ -48,7 +52,7 @@ export type ExternalPostInput = { title: string; platform: string; format: strin
 // demanda. Mantém board_order (ordenação), scheduled_time e external_client_id (usados
 // via cast pelas telas que consomem estas queries).
 const POST_BOARD_COLUMNS =
-  "id, title, platform, format, caption, hook, approval_status, scheduled_date, scheduled_time, created_at, approval_mode, script, approval_updated_at, reference_url, drive_folder_url, board_order, external_client_id";
+  "id, title, platform, format, caption, hook, approval_status, scheduled_date, scheduled_time, created_at, approval_mode, script, approval_updated_at, reference_url, drive_folder_url, board_order, external_client_id, assignee_id, producao_status, prazo_producao";
 
 // Invalida TODAS as queries que renderizam um mesmo post externo em telas diferentes.
 // O mesmo post aparece no kanban do cliente (cria-posts), na Agenda + painel de

@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useExternalClients, useExternalPosts, usePortalActivity, type ExternalClient, type ExternalPost, type ExternalPostInput } from "@/hooks/useCriaPost";
 import { toast } from "sonner";
 import { confirmar } from "@/components/shared/Confirm";
+import { EnviarParaParceiro } from "@/components/accounts/EnviarParaParceiro";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -907,6 +908,12 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               <InternalTagPicker selected={internalTags} onChange={setInternalTags} />
             </div>
             <div className="flex items-center gap-2 shrink-0 flex-wrap">
+              {/* Cria Parceiros: delegar a produção sem sair do post. Só em post
+                  já criado (rascunho ainda não tem id estável pro parceiro). */}
+              {editing && !draftId && (
+                <EnviarParaParceiro postId={editing.id} assigneeId={editing.assignee_id}
+                  producaoStatus={editing.producao_status} prazo={editing.prazo_producao} />
+              )}
               <Button variant="outline" size="sm" onClick={() => void requestCloseForm()}>Cancelar</Button>
               <Button size="sm" onClick={submit} disabled={create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : draftId ? "Criar post" : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar post"}</Button>
             </div>

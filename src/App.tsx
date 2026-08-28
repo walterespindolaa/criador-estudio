@@ -54,6 +54,7 @@ const Configuracoes = lazy(() => import("./pages/app/Configuracoes"));
 const Aprender = lazy(() => import("./pages/app/Aprender"));
 const Brandbook = lazy(() => import("./pages/app/Brandbook"));
 const LinkInBio = lazy(() => import("./pages/app/LinkInBio"));
+const MinhasDemandas = lazy(() => import("./pages/app/MinhasDemandas"));
 const Collabs = lazy(() => import("./pages/app/Collabs"));
 const Insights = lazy(() => import("./pages/app/Insights"));
 const Autopilot = lazy(() => import("./pages/app/Autopilot"));
@@ -307,6 +308,7 @@ const App = () => (
                 <Route path="aprender" element={<ErrorBoundary><Aprender /></ErrorBoundary>} />
                 <Route path="brandbook" element={<ErrorBoundary><Brandbook /></ErrorBoundary>} />
                 <Route path="linkinbio" element={<ErrorBoundary><LinkInBio /></ErrorBoundary>} />
+                <Route path="demandas" element={<ErrorBoundary><MinhasDemandas /></ErrorBoundary>} />
                 <Route path="collabs" element={<ErrorBoundary><UpgradeGate feature="collabs"><Collabs /></UpgradeGate></ErrorBoundary>} />
                 <Route path="insights" element={<ErrorBoundary><UpgradeGate feature="insights"><Insights /></UpgradeGate></ErrorBoundary>} />
                 <Route path="configuracoes" element={<ErrorBoundary><Configuracoes /></ErrorBoundary>} />
