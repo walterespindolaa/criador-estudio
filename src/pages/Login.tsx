@@ -63,8 +63,13 @@ const Login = () => {
 
   const onSubmitForgot = async (data: ForgotFormData) => {
     setForgotLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+    /* Pela edge, não pelo mailer interno do Supabase Auth: o Cria manda TODO
+       e-mail pela fila própria, e o mailer interno não está nesse caminho.
+       Era por isso que o "esqueci a senha" dava "Erro ao enviar email" e nunca
+       chegava nada. A edge sempre responde ok (não vaza se o e-mail existe),
+       então o fluxo aqui é só mostrar a confirmação. */
+    const { error } = await supabase.functions.invoke("password-reset", {
+      body: { email: data.email },
     });
     setForgotLoading(false);
     if (error) {
