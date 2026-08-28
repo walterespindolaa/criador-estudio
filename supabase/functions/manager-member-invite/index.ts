@@ -67,6 +67,29 @@ function emailHtml(opts: { managerName: string; actionLink: string }): string {
 </body></html>`;
 }
 
+// Convite por email, usado pelos dois caminhos (colaborador e parceiro).
+// deno-lint-ignore no-explicit-any
+async function enviarEmailConvite(svc: any, prof: unknown, normEmail: string, actionLink: string, existing: unknown) {
+  const managerName = (prof as { name?: string } | null)?.name ?? "Sua agência";
+  const messageId = crypto.randomUUID();
+  const unsub = await ensureUnsubscribeToken(svc, normEmail);
+  await svc.rpc("enqueue_email", {
+    queue_name: "transactional_emails",
+    payload: {
+      to: normEmail,
+      subject: "Você foi adicionado a uma equipe no cria",
+      from: "cria <noreply@criasocialclub.com.br>",
+      sender_domain: "notify.criasocialclub.com.br",
+      purpose: "transactional",
+      html: emailHtml({ managerName, actionLink }),
+      text: `${managerName} te adicionou à equipe no cria: ${actionLink}`,
+      label: existing ? "team_invite_existing" : "team_invite_new",
+      idempotency_key: messageId, unsubscribe_token: unsub, message_id: messageId,
+      queued_at: new Date().toISOString(),
+    },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -82,10 +105,16 @@ serve(async (req) => {
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const body = await req.json().catch(() => ({}));
-    const { email, name, modules, all_clients, client_ids } = body as {
-      email?: string; name?: string; modules?: string[]; all_clients?: boolean; client_ids?: string[];
+    const { email, name, modules, all_clients, client_ids, role } = body as {
+      email?: string; name?: string; modules?: string[]; all_clients?: boolean; client_ids?: string[]; role?: string;
     };
     if (!email) return json({ error: "missing_email" }, 400);
+
+    // Papel do vínculo. Lista fechada: qualquer coisa fora dela vira o
+    // colaborador padrão, nunca um papel inventado pelo chamador.
+    const PAPEIS = ["social_media", "designer", "editor_video", "copy", "trafego"];
+    const papel = PAPEIS.includes(role ?? "") ? (role as string) : "social_media";
+    const ehParceiro = papel !== "social_media";
 
     const normEmail = String(email).trim().toLowerCase();
     if (normEmail === user.email.toLowerCase()) return json({ error: "cannot_invite_self" }, 400);
@@ -102,7 +131,7 @@ serve(async (req) => {
       .select("id", { count: "exact", head: true })
       .eq("manager_id", user.id).eq("status", "ativo")
       .not("role", "in", "(designer,editor_video,copy,trafego)");
-    if ((activeCount ?? 0) >= allowed) {
+    if (!ehParceiro && (activeCount ?? 0) >= allowed) {
       return json({ error: "no_seats", allowed, used: activeCount ?? 0 }, 402);
     }
 
@@ -128,11 +157,19 @@ serve(async (req) => {
     // ── Vínculo + permissões default (todos os clientes nos módulos escolhidos) ──
     const { data: memberRow, error: mErr } = await svc.from("manager_members").upsert({
       manager_id: user.id, member_id: memberId, name: name ?? null, email: normEmail, status: "ativo",
+      role: papel,
     }, { onConflict: "manager_id,member_id" }).select("id").single();
     if (mErr || !memberRow) {
       console.error("[manager-member-invite] member upsert failed:", mErr);
       return json({ error: "member_link_failed" }, 500);
     }
+    if (ehParceiro) {
+      // Parceiro não recebe módulo nenhum: o acesso dele é por card, via as
+      // RPCs parceiro_*. Dar módulo aqui seria abrir o CRM pra quem só produz.
+      await enviarEmailConvite(svc, prof, normEmail, actionLink, existing);
+      return json({ ok: true, member_id: memberId, existed: !!existing, role: papel });
+    }
+
     const mods = Array.isArray(modules) && modules.length ? modules : DEFAULT_MODULES;
     // Escopo de clientes: "todos" (all_clients) ou lista específica (client_ids). Mesmo escopo p/ todos os módulos.
     const allCli = all_clients !== false; // default = todos
@@ -143,24 +180,7 @@ serve(async (req) => {
     await svc.from("manager_member_permissions").upsert(perms, { onConflict: "member_row_id,module_code" });
 
     // ── Email de convite ──
-    const managerName = (prof as { name?: string } | null)?.name ?? "Sua agência";
-    const messageId = crypto.randomUUID();
-    const unsub = await ensureUnsubscribeToken(svc, normEmail);
-    await svc.rpc("enqueue_email", {
-      queue_name: "transactional_emails",
-      payload: {
-        to: normEmail,
-        subject: "Você foi adicionado a uma equipe no cria",
-        from: "cria <noreply@criasocialclub.com.br>",
-        sender_domain: "notify.criasocialclub.com.br",
-        purpose: "transactional",
-        html: emailHtml({ managerName, actionLink }),
-        text: `${managerName} te adicionou à equipe no cria: ${actionLink}`,
-        label: existing ? "team_invite_existing" : "team_invite_new",
-        idempotency_key: messageId, unsubscribe_token: unsub, message_id: messageId,
-        queued_at: new Date().toISOString(),
-      },
-    });
+    await enviarEmailConvite(svc, prof, normEmail, actionLink, existing);
 
     return json({ ok: true, member_id: memberId, existed: !!existing });
   } catch (e) {

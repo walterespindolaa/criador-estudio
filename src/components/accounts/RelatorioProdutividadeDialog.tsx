@@ -437,10 +437,16 @@ export function RelatorioProdutividadeDialog({ open, onOpenChange }: Props) {
                 </div>
 
                 <div data-pdf-block style={{ marginTop: 16 }}>
-                  {sectionTitle("Posts no período")}
-                  {row("Em produção", stats.posts.emProducao, d.emProducao)}
-                  {row("Enviados pra aprovação", stats.posts.emAprovacao, d.emAprovacao)}
-                  {row("Aprovados", stats.posts.aprovados, d.aprovados)}
+                  {/* FOTO DE AGORA, não acumulado. O post só tem UM status por
+                      vez, então "aguardando aprovação: 3" significa 3 parados
+                      nessa etapa NESTE momento; os outros que passaram por lá
+                      já viraram aprovados ou publicados e contam nas linhas de
+                      baixo. O rótulo antigo ("Enviados pra aprovação") lia como
+                      soma do mês e a Gabriela estranhou o 3, com razão. */}
+                  {sectionTitle("Posts no período · onde cada um está agora")}
+                  {row("Em produção agora", stats.posts.emProducao, d.emProducao)}
+                  {row("Aguardando o cliente aprovar", stats.posts.emAprovacao, d.emAprovacao)}
+                  {row("Aprovados, faltando publicar", stats.posts.aprovados, d.aprovados)}
                   {row("Publicados", stats.posts.publicados, d.publicados)}
                   {row("Total no fluxo", stats.posts.total, d.postsTotal)}
                 </div>

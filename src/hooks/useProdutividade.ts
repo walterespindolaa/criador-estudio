@@ -145,7 +145,11 @@ export function computeProdStats(d: ProdutividadeRaw | undefined, from: string, 
      "outros" em vez de sumir da conta. */
   const porFormato = new Map<string, { publicados: number; total: number }>();
   for (const p of posts) {
-    const code = (p.format ?? "").trim() || "outros";
+    /* minúsculo SEMPRE. O formato foi texto livre em versões antigas, então o
+       banco tem "reels" e "Reels" convivendo, e sem normalizar cada grafia
+       virava uma linha própria: a Gabriela viu "Reels 39" e "Reels 1" no mesmo
+       relatório. Normalizar aqui junta as grafias sem mexer no dado gravado. */
+    const code = (p.format ?? "").trim().toLowerCase() || "outros";
     const atual = porFormato.get(code) ?? { publicados: 0, total: 0 };
     atual.total += 1;
     if (p.approval_status === "postado") atual.publicados += 1;

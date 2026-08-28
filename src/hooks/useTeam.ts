@@ -85,7 +85,7 @@ export function useTeamMembers() {
 export function useInviteMember() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { email: string; name?: string; modules?: string[]; all_clients?: boolean; client_ids?: string[] }) => {
+    mutationFn: async (input: { email: string; name?: string; modules?: string[]; all_clients?: boolean; client_ids?: string[]; role?: string }) => {
       const { data, error } = await supabase.functions.invoke("manager-member-invite", { body: input });
       if (error) throw new Error(error.message);
       const err = (data as { error?: string })?.error;

@@ -28,6 +28,11 @@ export default function Equipe() {
 
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
+  /* TIPO DE ACESSO. Colaborador entra na conta e consome assento; parceiro
+     (designer, editor, copy) só recebe cards, de graça, e não escolhe módulo
+     nem cliente: o acesso dele nasce da delegação, card a card. */
+  const [tipoAcesso, setTipoAcesso] = useState<"colaborador" | "parceiro">("colaborador");
+  const [papelParceiro, setPapelParceiro] = useState("designer");
   const [name, setName] = useState("");
   const [mods, setMods] = useState<Set<string>>(new Set(TEAM_MODULE_DEFAULT));
   const [scope, setScope] = useState<"all" | "some">("all");
@@ -52,7 +57,9 @@ export default function Equipe() {
     if (mods.size === 0) { toast.error("Marque ao menos um módulo."); return; }
     if (scope === "some" && cliIds.size === 0) { toast.error("Escolha ao menos um cliente ou marque 'Todos'."); return; }
     invite.mutate(
-      { email: e, name: name.trim() || undefined, modules: [...mods], all_clients: scope === "all", client_ids: scope === "some" ? [...cliIds] : [] },
+      tipoAcesso === "parceiro"
+        ? { email: e, name: name.trim() || undefined, role: papelParceiro }
+        : { email: e, name: name.trim() || undefined, modules: [...mods], all_clients: scope === "all", client_ids: scope === "some" ? [...cliIds] : [] },
       { onSuccess: () => { setOpen(false); resetForm(); } },
     );
   };
@@ -214,7 +221,50 @@ export default function Equipe() {
               </div>
             </div>
 
-            {/* Módulos */}
+            {/* Tipo de acesso: a escolha que muda todo o resto do formulário. */}
+            <div>
+              <p className="text-[11px] font-body font-semibold text-foreground mb-1.5">Tipo de acesso</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button type="button" onClick={() => setTipoAcesso("colaborador")}
+                  className={cn("rounded-xl border px-3 py-2.5 text-left transition-colors",
+                    tipoAcesso === "colaborador" ? "border-primary bg-primary/[0.06]" : "border-border hover:border-primary/30")}>
+                  <span className="block text-[13px] font-body font-bold text-foreground">Colaborador</span>
+                  <span className="block text-[11px] font-body text-muted-foreground leading-snug mt-0.5">
+                    Trabalha dentro da sua conta, nos módulos e clientes que você escolher. Usa assento.
+                  </span>
+                </button>
+                <button type="button" onClick={() => setTipoAcesso("parceiro")}
+                  className={cn("rounded-xl border px-3 py-2.5 text-left transition-colors",
+                    tipoAcesso === "parceiro" ? "border-violet-400 bg-violet-50" : "border-border hover:border-violet-300")}>
+                  <span className="flex items-center gap-1.5 text-[13px] font-body font-bold text-foreground">
+                    Parceiro de produção
+                    <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-violet-100 text-violet-700">grátis</span>
+                  </span>
+                  <span className="block text-[11px] font-body text-muted-foreground leading-snug mt-0.5">
+                    Designer, editor ou copy. Só vê os posts que você enviar pra ele, com prazo e a identidade do cliente.
+                  </span>
+                </button>
+              </div>
+              {tipoAcesso === "parceiro" && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {[
+                    { v: "designer", r: "Designer" },
+                    { v: "editor_video", r: "Editor de vídeo" },
+                    { v: "copy", r: "Copy" },
+                    { v: "trafego", r: "Tráfego" },
+                  ].map((o) => (
+                    <button key={o.v} type="button" onClick={() => setPapelParceiro(o.v)}
+                      className={cn("px-2.5 py-1.5 rounded-lg text-[12px] font-body border transition-colors",
+                        papelParceiro === o.v ? "bg-violet-100 border-violet-400 text-violet-800" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
+                      {o.r}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Módulos (só colaborador: parceiro não tem módulo, tem card) */}
+            {tipoAcesso === "colaborador" && (
             <div>
               <p className="text-[11px] font-body font-semibold text-foreground mb-1.5">O que ele pode acessar</p>
               <div className="flex flex-wrap gap-2">
@@ -241,8 +291,10 @@ export default function Equipe() {
                 </div>
               )}
             </div>
+            )}
 
             {/* Escopo de clientes */}
+            {tipoAcesso === "colaborador" && (
             <div>
               <p className="text-[11px] font-body font-semibold text-foreground mb-1.5">Quais clientes</p>
               <div className="flex gap-2 mb-2">
@@ -276,7 +328,12 @@ export default function Equipe() {
                 )
               )}
             </div>
-            <p className="text-[11px] font-body text-muted-foreground">Ele recebe um e-mail pra definir a senha e já entra na sua conta. Dá pra ajustar tudo isso depois.</p>
+            )}
+            <p className="text-[11px] font-body text-muted-foreground">
+              {tipoAcesso === "parceiro"
+                ? 'Ele recebe um e-mail pra definir a senha e cai direto na tela "Minhas demandas". Depois é só abrir um post e usar o "Enviar para".'
+                : "Ele recebe um e-mail pra definir a senha e já entra na sua conta. Dá pra ajustar tudo isso depois."}
+            </p>
           </div>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
