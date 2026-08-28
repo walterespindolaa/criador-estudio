@@ -190,6 +190,30 @@ export const lista = <T,>(d: DadosBloco, k: string): T[] => {
   return Array.isArray(v) ? (v.filter((x) => x !== null && x !== undefined) as T[]) : [];
 };
 
+/* ── O NOME DA MARCA NO MODO SITE ──
+   No Site, o card "Quem aparece no topo" saiu da tela: a bio dele não era usada
+   em lugar nenhum ali (quem conta a história é o bloco Sobre) e o campo só
+   gerava a pergunta "pra onde vai isso?". Sobraram nome e foto, que viram a
+   marca no menu do site.
+
+   A ordem aqui é do mais explícito pro mais genérico: o que a pessoa digitou
+   um dia naquele campo continua valendo, senão o título da Capa (que é o nome
+   grande que ela mesma escreveu no topo do site), senão o nome do perfil. */
+export function nomeDaMarcaSite(
+  blocos: { kind: string; data?: DadosBloco | null }[],
+  nomeDoCampo?: string | null,
+  nomeDoPerfil?: string | null,
+): string {
+  const digitado = (nomeDoCampo ?? "").trim();
+  if (digitado) return digitado;
+  const capa = blocos.find((b) => b.kind === "capa");
+  const tituloDaCapa = txt(capa?.data ?? {}, "titulo").trim();
+  // Título comprido é manchete, não marca: no menu ele viraria uma linha só de
+  // texto espremida. Aí é melhor o nome do perfil.
+  if (tituloDaCapa && tituloDaCapa.length <= 28) return tituloDaCapa;
+  return (nomeDoPerfil ?? "").trim() || tituloDaCapa || "Sua marca";
+}
+
 /** O que aparece na lista do editor como resumo do bloco. */
 export function resumoDoBloco(b: { kind: string; data: DadosBloco }): string {
   const d = b.data ?? {};

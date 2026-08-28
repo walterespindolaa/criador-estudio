@@ -39,6 +39,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { useProfile, type Profile } from "@/hooks/useProfile";
@@ -49,13 +50,12 @@ import { useBioLinks, type BioLink } from "@/hooks/useBioLinks";
 import { useBioAlvo } from "@/contexts/BioAlvoContext";
 import { useBioBlocks } from "@/hooks/useBioBlocks";
 import { EditorBlocos } from "@/components/bio/EditorBlocos";
-import { EditorItens } from "@/components/bio/EditorItens";
 import { SiteBio, type ItemLite } from "@/components/bio/SiteBio";
 import { useBioItems } from "@/hooks/useBioItems";
 import type { AparenciaModelo } from "@/lib/bioTemplates";
 import { PainelDesempenho } from "@/components/bio/PainelDesempenho";
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
-import { corDeDestaque, corSobre } from "@/lib/bioBlocks";
+import { corDeDestaque, corSobre, nomeDaMarcaSite } from "@/lib/bioBlocks";
 import type { BioBloco, EstiloBio } from "@/lib/bioBlocks";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -273,6 +273,18 @@ type BioThemePreset = {
   buttonTextColor: string;
   buttonStyle: ButtonStyle;
 };
+
+/* Quais blocos têm faixa própria e portanto fundo. Capa e rodapé têm desenho
+   fixo, e mexer no fundo deles quebra o contraste do menu e da assinatura. */
+const SECOES_COM_FUNDO = new Set(["sobre", "produtos", "blog", "depoimentos", "texto", "captura", "mapa", "faq"]);
+
+/** Luminância aproximada, só pra decidir se o tema é claro ou escuro. */
+function temaEscuro(hex: string): boolean {
+  const h = hex.replace("#", "");
+  if (h.length !== 6) return false;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  return (0.299 * r + 0.587 * g + 0.114 * b) < 128;
+}
 
 const BIO_THEMES: BioThemePreset[] = [
   { key: "clean", label: "Clean", bg: "#ffffff", bgGradient: null, buttonColor: "#0A0D12", buttonTextColor: "#ffffff", buttonStyle: "rounded" },
@@ -628,26 +640,52 @@ const sbFrom = (table: string) => (supabase as any).from(table);
    conteúdo, dá a cara, publica, acompanha. Cada passo é um título numerado
    com uma frase explicando pra que serve.
    ═══════════════════════════════════════════════════════════════════════════ */
-function Passo({ n, titulo, explica, marca, children }: {
-  n: number; titulo: string; explica: string; marca?: string; children: ReactNode;
-}) {
+type AbaBio = "conteudo" | "visual" | "publicar" | "resultados";
+
+/* A ordem é a do trabalho: monta, deixa com a cara da marca, publica, e só
+   então acompanha. Quem entra pela segunda vez em diante costuma ir direto na
+   primeira ou na última. */
+const ABAS_BIO: { id: AbaBio; nome: string }[] = [
+  { id: "conteudo", nome: "Conteúdo" },
+  { id: "visual", nome: "Visual" },
+  { id: "publicar", nome: "Publicar" },
+  { id: "resultados", nome: "Resultados" },
+];
+
+/** O título de cada aba já está no botão dela, então aqui sobra só a frase que
+ *  explica o que fazer. Repetir o nome logo abaixo do botão aceso era ruído. */
+function Aba({ explica, marca, children }: { explica: string; marca?: string; children: ReactNode }) {
   return (
     <section data-tour={marca} className="space-y-3">
-      <div className="flex items-start gap-2.5 px-0.5 pt-1">
-        <span className="mt-[1px] h-6 w-6 shrink-0 rounded-full bg-primary text-primary-foreground grid place-items-center text-[12px] font-display font-bold">
-          {n}
-        </span>
-        <div className="min-w-0">
-          <h2 className="text-[15px] font-display font-bold text-foreground leading-tight">{titulo}</h2>
-          <p className="text-[11.5px] font-body text-muted-foreground leading-snug mt-0.5">{explica}</p>
-        </div>
-      </div>
+      <p className="text-[11.5px] font-body text-muted-foreground leading-snug px-0.5 pt-0.5">{explica}</p>
       {children}
     </section>
   );
 }
 
+/* Quantos leads chegaram desde a última vez que ela abriu Resultados. Sem isto
+   a aba fica muda e o lead dorme: ninguém abre um painel de métricas por
+   hábito, mas todo mundo olha uma bolinha vermelha. */
+const CHAVE_LEADS_VISTOS = "cria:bio:leads-vistos";
+function useLeadsNovos(leads: { id: string; created_at: string }[], aba: AbaBio) {
+  const [visto, setVisto] = useState<number>(() => {
+    const g = Number(localStorage.getItem(CHAVE_LEADS_VISTOS) ?? 0);
+    return Number.isFinite(g) ? g : 0;
+  });
+  useEffect(() => {
+    if (aba !== "resultados") return;
+    const agora = Date.now();
+    localStorage.setItem(CHAVE_LEADS_VISTOS, String(agora));
+    setVisto(agora);
+  }, [aba, leads.length]);
+  // Na primeira visita (nunca marcou nada) não acusa nada: um badge com o
+  // histórico inteiro no primeiro acesso é alarme falso.
+  if (!visto) return 0;
+  return leads.filter((l) => new Date(l.created_at).getTime() > visto).length;
+}
+
 const LinkInBio = () => {
+  const [aba, setAba] = useState<AbaBio>("conteudo");
   const { user } = useAuth();
   const alvo = useBioAlvo();
   const { activeAccountId } = useActiveAccount();
@@ -658,7 +696,7 @@ const LinkInBio = () => {
   // ninguém ficar sem conseguir mexer na bio que já está no ar.
   const { blocos: blocosClassico } = useBioBlocks("classico");
   // Os do modo Site, pra saber quando a Vitrine antiga pode sair de cena.
-  const { blocos: blocosSite } = useBioBlocks("site");
+  const { blocos: blocosSite, atualizar: atualizarBlocoSite } = useBioBlocks("site");
   // Os itens do Site alimentam as seções de Produtos e de Blog na prévia.
   const { itens: produtosDoSite } = useBioItems("produto");
   const { itens: postsDoSite } = useBioItems("post");
@@ -730,6 +768,7 @@ const LinkInBio = () => {
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const [settings, setSettings] = useState<BioSettings>(DEFAULT_SETTINGS);
   const { leads, isLoading: leadsLoading, deleteLead } = useBioLeads();
+  const leadsNovos = useLeadsNovos(leads, aba);
   const exportLeadsCsv = () => {
     const rows = [["Nome", "Email", "Telefone", "Data"], ...leads.map((l) => [l.name ?? "", l.email ?? "", l.phone ?? "", new Date(l.created_at).toLocaleString("pt-BR")])];
     // escapeCsvCell: além de escapar aspas, neutraliza injeção de fórmula (=,+,-,@,TAB,CR).
@@ -1013,6 +1052,28 @@ const LinkInBio = () => {
       buttonTextColor: theme.buttonTextColor,
     }));
     setAppearanceDirty(true);
+
+    /* NO SITE O TEMA TAMBÉM PINTA AS SEÇÕES.
+       Antes ele mexia só no fundo da página, e no Site fundo de página não
+       existe: quem manda é o "Fundo da seção" de cada bloco. Resultado, metade
+       do tema não fazia nada e a pessoa clicava esperando ver o site mudar.
+
+       Agora ele preenche seção por seção, alternando pra a página não virar uma
+       parede de uma cor só, e continua dando pra ajustar bloco a bloco depois:
+       isto é um ponto de partida, não uma trava. */
+    if (settings.layout !== "vitrine") return;
+    const escuro = temaEscuro(theme.bg);
+    let i = 0;
+    for (const b of blocosSite) {
+      if (!SECOES_COM_FUNDO.has(b.kind)) continue;
+      const fundo = escuro
+        ? (i % 2 === 0 ? "escuro" : "claro")
+        : (i % 2 === 0 ? "claro" : "creme");
+      i += 1;
+      const atual = (b.data ?? {}) as Record<string, unknown>;
+      if (atual.fundo === fundo) continue;
+      atualizarBlocoSite.mutate({ id: b.id, patch: { data: { ...atual, fundo } } });
+    }
   };
 
   const patchSocial = (key: keyof SocialLinks, value: string) => {
@@ -1067,17 +1128,19 @@ const LinkInBio = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_356px] gap-6">
           {/* ── Editor ──────────────────────────────── */}
           <div className="space-y-5 min-w-0">
-            {/* ── 1. Estilo (fixo no topo, junto do Salvar) ───────────────── */}
+            {/* ── A BARRA DE COMANDO ───────────────────────────────────────
+                Antes esta tela era um rolo único de cinco passos, onde escolher
+                a fonte (uma vez na vida) tinha o mesmo peso e o mesmo lugar que
+                conferir um lead novo (toda semana). E o endereço público, que é
+                a única coisa que a pessoa vem buscar com pressa, ficava no
+                passo 4, a três telas de rolagem.
+
+                Agora o que é constante mora aqui em cima, grudado: o estilo, o
+                Salvar, o endereço e as quatro abas. O resto é conteúdo de aba. */}
             <div data-tour="bio-estilo" className="sticky top-0 z-30 rounded-2xl border border-border bg-background/95 backdrop-blur-sm px-4 py-3 shadow-sm">
-              {/* Título e Salvar na mesma linha, seletor embaixo: esta barra é
-                  fixa no topo, e cada linha a mais aqui é uma linha a menos de
-                  conteúdo visível no celular. */}
               <div className="flex items-center justify-between gap-3 mb-2.5">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="h-6 w-6 shrink-0 rounded-full bg-primary text-primary-foreground grid place-items-center text-[12px] font-display font-bold">
-                    1
-                  </span>
-                  <h2 className="text-[15px] font-display font-bold text-foreground leading-tight truncate">Escolha o estilo</h2>
+                  <h2 className="text-[15px] font-display font-bold text-foreground leading-tight truncate">Sua página</h2>
                 </div>
                 <div className="flex items-center gap-2.5 shrink-0">
                   <span
@@ -1124,29 +1187,72 @@ const LinkInBio = () => {
                     </button>
                   ))}
                 </div>
+                {/* O ENDEREÇO, sempre à mão. É o que se copia pra colar na bio
+                    do Instagram, e era o campo mais escondido da tela. */}
+                {publicPath && (
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="hidden xl:inline text-[11px] font-body text-muted-foreground truncate max-w-[210px]">
+                      criasocialclub.com/bio/{slug || profile?.bio_slug}
+                    </span>
+                    <Button variant="outline" size="sm" onClick={handleCopy} className="h-8 px-2.5" title="Copiar o endereço">
+                      <Copy className="h-3.5 w-3.5" />
+                      <span className="ml-1.5 hidden sm:inline text-xs">Copiar</span>
+                    </Button>
+                    <a href={publicPath} target="_blank" rel="noopener noreferrer">
+                      <Button variant="outline" size="sm" className="h-8 px-2.5" title="Abrir a página pública">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        <span className="ml-1.5 hidden sm:inline text-xs">Abrir</span>
+                      </Button>
+                    </a>
+                  </div>
+                )}
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Clássico é a página de bio: coluna de botões, um toque e sai. Site é uma página de apresentação, com seções, produtos e blog. Trocar não apaga nada: cada estilo guarda o seu.
-              </p>
+
+              {/* AS ABAS. Rolam na horizontal no celular em vez de quebrar em
+                  duas linhas e comer a altura da barra fixa. */}
+              <div className="mt-3 -mx-1 px-1 flex gap-1 overflow-x-auto">
+                {ABAS_BIO.map((t) => {
+                  const ativa = aba === t.id;
+                  const alerta = t.id === "resultados" && leadsNovos > 0;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setAba(t.id)}
+                      aria-current={ativa ? "page" : undefined}
+                      className={cn(
+                        "relative shrink-0 px-3.5 h-9 rounded-xl text-[13px] font-display font-semibold transition-colors",
+                        ativa ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                      )}>
+                      {t.nome}
+                      {alerta && (
+                        <span
+                          aria-label={`${leadsNovos} lead(s) novo(s)`}
+                          className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold grid place-items-center">
+                          {leadsNovos > 9 ? "9+" : leadsNovos}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <Passo n={2} titulo="Monte o conteúdo" marca="bio-conteudo"
-              explica="Cada pedaço da página é um bloco: link, texto, vídeo, mapa, formulário. Adicione, arraste pra ordenar e ligue quando estiver pronto.">
+            {aba === "conteudo" && (
+            <Aba marca="bio-conteudo"
+              explica="Cada pedaço da página é um bloco: link, texto, vídeo, formulário, endereço com mapa. Adicione, arraste pra ordenar e ligue quando estiver pronto.">
+              {/* A diferença entre os dois estilos vive aqui embaixo do seletor
+                  e não na barra fixa: é informação de quem está montando agora,
+                  não de quem só voltou pra copiar o link. */}
+              <p className="text-[11px] font-body text-muted-foreground/90 leading-snug px-0.5 -mt-1">
+                <strong className="font-semibold text-foreground/80">Clássico</strong> é a página de bio: coluna de
+                botões, um toque e sai. <strong className="font-semibold text-foreground/80">Site</strong> é uma página
+                de apresentação, com seções, produtos e blog. Trocar não apaga nada: cada estilo guarda o seu.
+              </p>
               <Card className="p-4 md:p-5 rounded-2xl border-border">
-                <EditorBlocos key={estiloBlocos} estilo={estiloBlocos} aoAplicarAparencia={aplicarAparenciaDoModelo} />
+                <EditorBlocos key={estiloBlocos} estilo={estiloBlocos} aoAplicarAparencia={aplicarAparenciaDoModelo}
+                  slugPublico={slug || profile?.bio_slug} />
               </Card>
-
-              {settings.layout === "vitrine" && (
-                <>
-              <Card className="p-4 md:p-5 rounded-2xl border-border">
-                <EditorItens tipo="produto" slugPublico={slug || profile?.bio_slug} />
-              </Card>
-
-              <Card className="p-4 md:p-5 rounded-2xl border-border">
-                <EditorItens tipo="post" slugPublico={slug || profile?.bio_slug} />
-              </Card>
-                </>
-              )}
 
               {settings.layout === "classic" && blocosClassico.length === 0 && sortedLinks.length > 0 && (
               <Card className="p-4 md:p-5 rounded-2xl border-border">
@@ -1192,11 +1298,21 @@ const LinkInBio = () => {
                 </p>
               </Card>
               )}
-            </Passo>
+            </Aba>
+            )}
 
-            <Passo n={3} titulo="Deixe com a sua cara" marca="bio-aparencia"
+            {aba === "visual" && (
+            <Aba marca="bio-aparencia"
               explica="Foto, nome, cores e fonte. O que você ajustar aqui vale nos dois estilos: o Clássico e o Site usam a mesma identidade.">
-              {/* ── Perfil (topo) ──────────────────────── */}
+              {/* ── Perfil (topo) ──────────────────────────────────────────
+                  SÓ NO CLÁSSICO. No Site este card era meio inútil e meio
+                  mentiroso: a bio digitada aqui não ia pra lugar nenhum (quem
+                  conta a história lá é o bloco Sobre) e só o nome e a foto
+                  eram usados, virando a marca no menu. Preencher um campo e
+                  não achar onde ele saiu é o tipo de coisa que faz a pessoa
+                  desconfiar do resto da tela. No Site a marca vem do título da
+                  Capa e da foto do perfil. */}
+              {settings.layout === "classic" && (
               <Card className="p-4 md:p-5 rounded-2xl border-border space-y-3">
                 <div>
                   <h2 className="font-display font-semibold text-foreground mb-1">Quem aparece no topo</h2>
@@ -1226,6 +1342,17 @@ const LinkInBio = () => {
                 <input value={settings.header.name} onChange={(e) => patchHeader({ name: e.target.value })} placeholder={profile?.name || "Seu nome"} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
                 <RichTextInput value={settings.header.bio} onChange={(v) => patchHeader({ bio: v })} placeholder={profile?.bio || "Escreva uma bio curta"} rows={3} />
               </Card>
+              )}
+
+              {/* No Site, quem manda no nome e na foto do menu é a Capa e o
+                  perfil. Uma linha explicando é melhor que um card sumido sem
+                  aviso: some a dúvida de "onde eu mudo isso agora?". */}
+              {settings.layout === "vitrine" && (
+                <p className="text-[11.5px] font-body text-muted-foreground leading-snug px-0.5">
+                  O nome e a foto que aparecem no menu do site saem do <strong className="text-foreground/80">título
+                  da Capa</strong> e da foto do seu perfil. Edite a Capa lá no Conteúdo.
+                </p>
+              )}
 
               {/* ── Appearance ─────────────────────────── */}
               <Card className="p-4 md:p-5 rounded-2xl border-border space-y-6">
@@ -1235,9 +1362,24 @@ const LinkInBio = () => {
                 <div className="space-y-3">
                   <Label className="text-sm font-display font-semibold">Fonte</Label>
                   <p className="text-xs text-muted-foreground -mt-1">
-                    Muda a fonte da sua página pública (vale nos dois estilos). Cada opção mostra uma amostra.
+                    Vale nos dois estilos. Cada opção mostra uma amostra da letra.
                   </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {/* DEZ AMOSTRAS ABERTAS ocupavam meia tela de rolagem por uma
+                      escolha que se faz uma vez e não se mexe mais. Agora é um
+                      campo só, e a grade abre por cima quando a pessoa quer. */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button"
+                        className="w-full flex items-center justify-between gap-3 rounded-xl border border-border hover:border-primary/40 bg-background px-3.5 h-11 text-left transition-colors">
+                        <span className="text-sm text-foreground truncate"
+                          style={{ fontFamily: fontStackFor(settings.fontFamily) ?? undefined }}>
+                          {BIO_FONTS.find((f) => f.value === settings.fontFamily)?.label ?? "Padrão"}
+                        </span>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-[min(420px,calc(100vw-2rem))] p-2 rounded-2xl">
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => patchSettings({ fontFamily: "" })}
@@ -1264,13 +1406,17 @@ const LinkInBio = () => {
                       </button>
                     ))}
                   </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {/* Themes (presets) */}
                 <div className="space-y-3">
                   <Label className="text-sm font-display font-semibold">Temas</Label>
                   <p className="text-xs text-muted-foreground -mt-1">
-                    Aplica fundo, cor e estilo dos botões de uma vez.
+                    {settings.layout === "vitrine"
+                      ? "Pinta as seções do site, a cor dos botões e o formato deles de uma vez. Depois dá pra ajustar seção por seção lá no Conteúdo."
+                      : "Aplica fundo, cor e estilo dos botões de uma vez."}
                   </p>
                   <div className="grid grid-cols-4 gap-2">
                     {BIO_THEMES.map((theme) => {
@@ -1543,9 +1689,11 @@ const LinkInBio = () => {
                   {isSavingAppearance ? "Salvando..." : "Salvar alterações"}
                 </Button>
               </Card>
-            </Passo>
+            </Aba>
+            )}
 
-            <Passo n={4} titulo="Publique e divulgue"
+            {aba === "publicar" && (
+            <Aba
               explica="Este é o endereço que você cola na bio do Instagram. Escolha um nome curto e fácil de digitar.">
               <Card data-tour="bio-link" className="p-4 md:p-5 rounded-2xl border-border">
                 <Label className="text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground/80">
@@ -1593,9 +1741,11 @@ const LinkInBio = () => {
                   </p>
                 )}
               </Card>
-            </Passo>
+            </Aba>
+            )}
 
-            <Passo n={5} titulo="Acompanhe os resultados"
+            {aba === "resultados" && (
+            <Aba
               explica="Quantos entraram, no que clicaram e quem deixou contato.">
               <Card data-tour="bio-desempenho" className="p-4 md:p-5 rounded-2xl border-border">
                 <PainelDesempenho estilo={estiloBlocos} />
@@ -1660,7 +1810,8 @@ const LinkInBio = () => {
                   </div>
                 )}
               </Card>
-            </Passo>
+            </Aba>
+            )}
           </div>
 
           {/* ── Preview ─────────────────────────────── */}
@@ -2002,7 +2153,7 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
             <SiteBio
               blocos={blocos.filter((b) => b.is_active).map((b) => ({ id: b.id, kind: b.kind, data: b.data ?? {}, position: b.position }))}
               marca={{
-                nome: settings.header?.name || profile?.name || "Sua marca",
+                nome: nomeDaMarcaSite(blocos, settings.header?.name, profile?.name),
                 logo: settings.header?.avatar || profile?.avatar_url,
                 cor: corDestaque, corTexto: settings.buttonTextColor,
               }}

@@ -8,7 +8,7 @@ import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { renderRichText } from "@/lib/richText";
 import { cn } from "@/lib/utils";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
-import { corDeDestaque, corSobre, faltaNoBloco } from "@/lib/bioBlocks";
+import { corDeDestaque, corSobre, faltaNoBloco, nomeDaMarcaSite } from "@/lib/bioBlocks";
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
 import { SiteBio, PaginaItem, type MarcaSite, type ItemLite } from "@/components/bio/SiteBio";
 
@@ -660,7 +660,7 @@ const ConteudoDaBio = () => {
   // preto da marca quando não é.
   const corDestaque = corDeDestaque(settings.buttonColor);
   const marcaSite: MarcaSite = {
-    nome: headerName || "Site",
+    nome: nomeDaMarcaSite(blocos, settings.header?.name, profile.name),
     logo: settings.header?.avatar || profile.avatar_url,
     cor: corDestaque,
     corTexto: corSobre(corDestaque),

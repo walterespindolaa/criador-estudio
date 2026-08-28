@@ -18,6 +18,7 @@ import {
 import { CampoTextoRico } from "@/lib/textoRico";
 import { modelosDoEstilo, type AparenciaModelo } from "@/lib/bioTemplates";
 import { cn } from "@/lib/utils";
+import { EditorItens } from "@/components/bio/EditorItens";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MONTAR A PÁGINA POR BLOCOS
@@ -114,7 +115,7 @@ function EscolherFundo({ valor, onTroca }: { valor: string; onTroca: (v: string)
 }
 
 /* ── O FORMULÁRIO DE CADA TIPO ── */
-function FormBloco({ bloco, salvar }: { bloco: BioBloco; salvar: (d: DadosBloco) => void }) {
+function FormBloco({ bloco, salvar, slugPublico }: { bloco: BioBloco; salvar: (d: DadosBloco) => void; slugPublico?: string | null }) {
   const d = bloco.data ?? {};
   const p = (patch: DadosBloco) => salvar({ ...d, ...patch });
 
@@ -400,13 +401,6 @@ function FormBloco({ bloco, salvar }: { bloco: BioBloco; salvar: (d: DadosBloco)
     case "blog":
       return (
         <div className="space-y-3.5">
-          <div className="rounded-xl border border-primary/25 bg-primary/[0.04] px-3 py-2.5">
-            <p className="text-xs font-body text-foreground/80">
-              Esta seção mostra sozinha o que você cadastrar em
-              <strong>{bloco.kind === "blog" ? " Blog" : " Produtos e serviços"}</strong>, logo abaixo nesta mesma tela.
-              Aqui você só escreve o cabeçalho dela.
-            </p>
-          </div>
           <LinhaCampo label="Rótulo pequeno">
             <Input value={txt(d, "rotulo")} onChange={(e) => p({ rotulo: e.target.value })} className="rounded-xl" />
           </LinhaCampo>
@@ -427,6 +421,17 @@ function FormBloco({ bloco, salvar }: { bloco: BioBloco; salvar: (d: DadosBloco)
             </LinhaCampo>
           )}
           <EscolherFundo valor={txt(d, "fundo", bloco.kind === "produtos" ? "creme" : "claro")} onTroca={(v) => p({ fundo: v })} />
+
+          {/* O QUE A SEÇÃO MOSTRA, cadastrado aqui dentro.
+              Antes isto vivia num card separado no fim da tela e este bloco só
+              escrevia o cabeçalho. Quem abria "Serviços" pra pôr o link do
+              WhatsApp de uma consultoria não achava: o campo do link existia,
+              só que a três telas de distância, noutro card. Duas telas pra uma
+              coisa só é o tipo de divisão que faz sentido pra quem escreveu o
+              código e pra mais ninguém. */}
+          <div className="pt-1 border-t border-border/60">
+            <EditorItens tipo={bloco.kind === "blog" ? "post" : "produto"} slugPublico={slugPublico} />
+          </div>
         </div>
       );
 
@@ -501,8 +506,9 @@ function FormBloco({ bloco, salvar }: { bloco: BioBloco; salvar: (d: DadosBloco)
 
 /* ── UM BLOCO NA LISTA ── */
 function CartaoBloco({
-  bloco, aberto, onAbrir, atualizar, excluir, duplicar, arrasteProps, arrasteRef, arrastando,
+  bloco, aberto, onAbrir, atualizar, excluir, duplicar, arrasteProps, arrasteRef, arrastando, slugPublico,
 }: {
+  slugPublico?: string | null;
   bloco: BioBloco;
   aberto: boolean;
   onAbrir: () => void;
@@ -558,7 +564,7 @@ function CartaoBloco({
 
       {aberto && (
         <div className="px-3 pb-3.5 pt-1 space-y-3.5 border-t border-border/60 mt-0.5">
-          <div className="pt-3.5"><FormBloco bloco={bloco} salvar={(data) => atualizar({ data })} /></div>
+          <div className="pt-3.5"><FormBloco bloco={bloco} salvar={(data) => atualizar({ data })} slugPublico={slugPublico} /></div>
 
           <button type="button" onClick={() => setAgendaAberta((v) => !v)}
             className="flex items-center gap-1.5 text-[12px] font-body font-semibold text-muted-foreground hover:text-foreground">
@@ -596,11 +602,13 @@ function CartaoBloco({
 }
 
 /* ── A TELA ── */
-export function EditorBlocos({ estilo, aoAplicarAparencia }: {
+export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico }: {
   estilo: EstiloBio;
   /** Modelo não é só estrutura: leva cor, fonte e formato de botão junto. Quem
    *  guarda a aparência é a tela de cima, então ela recebe por aqui. */
   aoAplicarAparencia?: (a: AparenciaModelo) => void;
+  /** Só pra montar o endereço de cada item cadastrado dentro do bloco. */
+  slugPublico?: string | null;
 }) {
   const { blocos, isLoading, criar, atualizar, excluir, duplicar, reordenar, aplicarModelo } = useBioBlocks(estilo);
   const [aberto, setAberto] = useState<string | null>(null);
@@ -744,6 +752,7 @@ export function EditorBlocos({ estilo, aoAplicarAparencia }: {
                         atualizar={(patch) => atualizar.mutate({ id: b.id, patch })}
                         excluir={() => excluir.mutate(b.id)}
                         duplicar={() => duplicar.mutate(b.id)}
+                        slugPublico={slugPublico}
                         arrasteProps={dd.dragHandleProps}
                         arrastando={snap.isDragging}
                       />
