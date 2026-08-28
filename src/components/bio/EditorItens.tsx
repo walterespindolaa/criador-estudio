@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
-import { ExternalLink, GripVertical, ImagePlus, Loader2, PenLine, Plus, ShoppingBag, Trash2, X } from "lucide-react";
+import { ExternalLink, GripVertical, ImagePlus, Loader2, MessageCircle, PenLine, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { validateUpload } from "@/lib/upload-validation";
 import { useBioItems, type BioItem, type TipoItem } from "@/hooks/useBioItems";
-import { enderecoDoTitulo, precoVisivel } from "@/lib/bioBlocks";
+import { enderecoDoTitulo, linkWhatsapp, precoVisivel } from "@/lib/bioBlocks";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { cn } from "@/lib/utils";
 
@@ -122,8 +122,9 @@ function Campo({ label, ajuda, children }: { label: string; ajuda?: string; chil
 }
 
 function CartaoItem({
-  item, tipo, aberto, onAbrir, salvar, excluir, enderecoPublico, arrasteProps, arrastando,
+  item, tipo, aberto, onAbrir, salvar, excluir, enderecoPublico, arrasteProps, arrastando, telefonePadrao,
 }: {
+  telefonePadrao?: string | null;
   item: BioItem;
   tipo: TipoItem;
   aberto: boolean;
@@ -265,6 +266,21 @@ function CartaoItem({
             <Campo label="Para onde o botão leva">
               <CampoTexto valor={item.cta_url ?? ""} salvar={(v) => salvar({ cta_url: v })}
                 placeholder="https://" className="rounded-xl" />
+              {/* MONTAR NA MÃO O LINK DO WHATSAPP é onde a pessoa desiste: tem
+                  que lembrar do wa.me, do 55 na frente, e codificar a mensagem.
+                  Um toque resolve, já com o nome do serviço na conversa: quem
+                  chama sabe do que está falando e quem atende também. */}
+              {telefonePadrao?.trim() ? (
+                <button type="button"
+                  onClick={() => salvar({ cta_url: linkWhatsapp(telefonePadrao, `Oi! Quero saber mais sobre ${item.titulo || "este serviço"}.`) })}
+                  className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-body font-semibold text-emerald-700 hover:text-emerald-800 hover:underline">
+                  <MessageCircle className="h-3.5 w-3.5" /> Usar meu WhatsApp com a mensagem pronta
+                </button>
+              ) : (
+                <p className="mt-1.5 text-[11px] font-body text-muted-foreground">
+                  Preencha o telefone no bloco "Contato e rodapé" pra gerar o link do WhatsApp com um toque.
+                </p>
+              )}
             </Campo>
           </div>
 
@@ -279,7 +295,11 @@ function CartaoItem({
   );
 }
 
-export function EditorItens({ tipo, slugPublico }: { tipo: TipoItem; slugPublico?: string | null }) {
+export function EditorItens({ tipo, slugPublico, telefonePadrao }: {
+  tipo: TipoItem; slugPublico?: string | null;
+  /** O telefone do bloco "Contato e rodapé", pra montar o link do WhatsApp. */
+  telefonePadrao?: string | null;
+}) {
   const { itens, isLoading, criar, atualizar, excluir, reordenar } = useBioItems(tipo);
   const [aberto, setAberto] = useState<string | null>(null);
   const r = ROTULO[tipo];
@@ -330,6 +350,7 @@ export function EditorItens({ tipo, slugPublico }: { tipo: TipoItem; slugPublico
         <div className="space-y-2">
           {itens.map((item) => (
             <CartaoItem
+              telefonePadrao={telefonePadrao}
               key={item.id} item={item} tipo={tipo}
               aberto={aberto === item.id}
               onAbrir={() => setAberto(aberto === item.id ? null : item.id)}
@@ -349,6 +370,7 @@ export function EditorItens({ tipo, slugPublico }: { tipo: TipoItem; slugPublico
                     {(dd, snap) => (
                       <div ref={dd.innerRef} {...dd.draggableProps}>
                         <CartaoItem
+                          telefonePadrao={telefonePadrao}
                           item={item} tipo={tipo}
                           aberto={aberto === item.id}
                           onAbrir={() => setAberto(aberto === item.id ? null : item.id)}

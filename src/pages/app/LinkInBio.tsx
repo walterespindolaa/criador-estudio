@@ -640,6 +640,75 @@ const sbFrom = (table: string) => (supabase as any).from(table);
    conteúdo, dá a cara, publica, acompanha. Cada passo é um título numerado
    com uma frase explicando pra que serve.
    ═══════════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════
+   A PRÉVIA QUE ACOMPANHA A ROLAGEM
+
+   Isto deveria ser uma linha de CSS (`position: sticky`) e foi, três vezes.
+   Nesta árvore ela não pega: com o editor aberto e alto, a prévia sobe junto
+   com a página em vez de grudar. Varri a cadeia inteira de ancestrais atrás
+   dos suspeitos de sempre (overflow que vira contêiner de rolagem, contain,
+   content-visibility, altura travada) e não achei nenhum. Sem conseguir
+   reproduzir aqui, cada tentativa nova era um palpite caro.
+
+   Então a prévia passa a ser posicionada por medição, que não depende de
+   descobrir quem está sabotando o sticky:
+
+   - o TRILHO é a grade inteira, e não a coluna da direita. A altura da grade
+     é a da linha, ou seja, a do editor, e ela é a mesma tenha a coluna
+     esticado ou não. Isso tira do caminho justamente a dúvida que sobrou.
+   - o deslocamento é `transform`, não `top`: não mexe no layout, não força
+     recálculo de largura e não briga com o `overflow` do painel.
+   - `capture: true` no scroll porque o evento de rolagem não borbulha. Se
+     quem rola for algum contêiner interno em vez da janela, ainda assim
+     chega aqui.
+
+   O limite embaixo (`sobra`) é o que impede a prévia de passar do fim do
+   formulário e sair flutuando sozinha no rodapé. */
+function usePainelGrudado(topo = 16) {
+  const trilho = useRef<HTMLDivElement>(null);
+  const painel = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const largo = window.matchMedia("(min-width: 1024px)");
+    let quadro = 0;
+
+    const posicionar = () => {
+      quadro = 0;
+      const t = trilho.current;
+      const p = painel.current;
+      if (!t || !p) return;
+      // No celular a prévia fica embaixo do editor, em coluna: nada a grudar.
+      if (!largo.matches) { p.style.transform = ""; return; }
+      const sobra = t.offsetHeight - p.offsetHeight;
+      if (sobra <= 0) { p.style.transform = ""; return; }
+      const y = Math.min(Math.max(topo - t.getBoundingClientRect().top, 0), sobra);
+      p.style.transform = y > 0 ? `translate3d(0, ${Math.round(y)}px, 0)` : "";
+    };
+
+    const agendar = () => { if (!quadro) quadro = requestAnimationFrame(posicionar); };
+
+    posicionar();
+    window.addEventListener("scroll", agendar, { passive: true, capture: true });
+    window.addEventListener("resize", agendar);
+    largo.addEventListener("change", agendar);
+    // Abrir um card faz o editor crescer, e o trilho junto. Sem observar isso,
+    // a prévia continuaria calculada pela altura antiga.
+    const observador = new ResizeObserver(agendar);
+    if (trilho.current) observador.observe(trilho.current);
+    if (painel.current) observador.observe(painel.current);
+
+    return () => {
+      if (quadro) cancelAnimationFrame(quadro);
+      window.removeEventListener("scroll", agendar, { capture: true });
+      window.removeEventListener("resize", agendar);
+      largo.removeEventListener("change", agendar);
+      observador.disconnect();
+    };
+  }, [topo]);
+
+  return { trilho, painel };
+}
+
 type AbaBio = "conteudo" | "visual" | "publicar" | "resultados";
 
 /* A ordem é a do trabalho: monta, deixa com a cara da marca, publica, e só
@@ -686,6 +755,7 @@ function useLeadsNovos(leads: { id: string; created_at: string }[], aba: AbaBio)
 
 const LinkInBio = () => {
   const [aba, setAba] = useState<AbaBio>("conteudo");
+  const { trilho: trilhoDaPrevia, painel: painelDaPrevia } = usePainelGrudado();
   const { user } = useAuth();
   const alvo = useBioAlvo();
   const { activeAccountId } = useActiveAccount();
@@ -1125,7 +1195,7 @@ const LinkInBio = () => {
             espremer a prévia num filete de dois dedos, com o título caindo uma
             letra por linha. minmax(0,1fr) é o que autoriza o editor a encolher:
             coluna de grid não encolhe abaixo do próprio conteúdo por padrão. */}
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_356px] gap-6">
+        <div ref={trilhoDaPrevia} className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_356px] gap-6">
           {/* ── Editor ──────────────────────────────── */}
           <div className="space-y-5 min-w-0">
             {/* ── A BARRA DE COMANDO ───────────────────────────────────────
@@ -1418,7 +1488,11 @@ const LinkInBio = () => {
                       ? "Pinta as seções do site, a cor dos botões e o formato deles de uma vez. Depois dá pra ajustar seção por seção lá no Conteúdo."
                       : "Aplica fundo, cor e estilo dos botões de uma vez."}
                   </p>
-                  <div className="grid grid-cols-4 gap-2">
+                  {/* Oito retângulos altos numa coluna larga viravam meia tela
+                      de amostra pra uma escolha de um clique. Fica mais gente
+                      por linha, cada um baixinho: dá pra comparar todos sem
+                      rolar, que é o que a pessoa quer aqui. */}
+                  <div className="grid grid-cols-4 cq-sm:grid-cols-4 gap-2">
                     {BIO_THEMES.map((theme) => {
                       const previewBg = theme.bgGradient
                         ? { backgroundImage: theme.bgGradient }
@@ -1431,14 +1505,14 @@ const LinkInBio = () => {
                           className="group flex flex-col items-center gap-1 text-center"
                         >
                           <div
-                            className="w-full aspect-[3/5] rounded-lg border border-border overflow-hidden p-2 flex flex-col justify-center gap-1 transition-all group-hover:border-primary/40 group-hover:shadow-md"
+                            className="w-full h-14 rounded-xl border border-border overflow-hidden px-2.5 flex flex-col justify-center gap-[3px] transition-all group-hover:border-primary/40 group-hover:shadow-sm"
                             style={previewBg}
                           >
                             {[0, 1, 2].map((i) => (
                               <div
                                 key={i}
                                 className={cn(
-                                  "h-1.5 w-full",
+                                  "h-[3px] w-full",
                                   theme.buttonStyle === "pill" && "rounded-full",
                                   theme.buttonStyle === "rounded" && "rounded-md",
                                   theme.buttonStyle === "square" && "rounded-sm",
@@ -1462,11 +1536,16 @@ const LinkInBio = () => {
                   </div>
                 </div>
 
-                {/* Background */}
+                {/* FUNDO DA PÁGINA: só existe no Clássico.
+                    No Site não há "fundo da página": quem pinta é o "Fundo da
+                    seção" de cada bloco, e o tema preenche todos de uma vez.
+                    Deixar o controle aqui era prometer uma mudança que não
+                    acontecia, que é o mesmo defeito do card de identidade. */}
+                {settings.layout === "classic" && (
                 <div className="space-y-3 pt-4 border-t border-border">
                   <Label className="text-sm font-display font-semibold">Fundo</Label>
                   <p className="text-xs text-muted-foreground -mt-1">
-                    Escolha cor sólida, gradiente ou imagem de fundo. Vale nos dois estilos (Clássico e Site).
+                    Cor sólida, gradiente ou imagem atrás dos seus botões.
                   </p>
                   <div className="flex gap-2 flex-wrap">
                     {([
@@ -1567,10 +1646,17 @@ const LinkInBio = () => {
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Button style */}
                 <div className="space-y-3 pt-4 border-t border-border">
                   <Label className="text-sm font-display font-semibold">Estilo dos links</Label>
+                  {settings.layout === "vitrine" && (
+                    <p className="text-xs text-muted-foreground -mt-1">
+                      No Site vale nos blocos que você adiciona (texto, formulário, vídeo, mapa). As seções próprias
+                      do site, como Capa e Serviços, têm desenho fixo.
+                    </p>
+                  )}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {BUTTON_STYLES.map((s) => (
                       <button
@@ -1630,7 +1716,11 @@ const LinkInBio = () => {
                   </div>
                 </div>
 
-                {/* Social links */}
+                {/* REDES SOCIAIS: os ícones do topo são coisa do Clássico.
+                    O Site já tem o Instagram no bloco "Contato e rodapé", e dois
+                    lugares pra guardar o mesmo @ é onde eles começam a
+                    discordar um do outro. */}
+                {settings.layout === "classic" && (
                 <div className="space-y-3 pt-4 border-t border-border">
                   <Label className="text-sm font-display font-semibold">Redes sociais</Label>
                   <p className="text-xs text-muted-foreground">Os ícones aparecem no topo da sua página.</p>
@@ -1649,6 +1739,7 @@ const LinkInBio = () => {
                     ))}
                   </div>
                 </div>
+                )}
 
                 {/* Banner
                     Só no Clássico: no modo Site quem faz esse papel é o bloco
@@ -1815,22 +1906,12 @@ const LinkInBio = () => {
           </div>
 
           {/* ── Preview ─────────────────────────────── */}
-          {/* Gruda no topo e acompanha a rolagem: quem monta a página precisa
-              ver a mudança no mesmo instante em que mexe no campo, e não rolar
-              de volta pra conferir.
-
-              DUAS CAIXAS, de propósito. A de fora é o item do grid e não tem
-              `sticky`: ela estica com a linha inteira, ou seja, fica do tamanho
-              da coluna do editor. É essa altura que vira o trilho por onde a
-              prévia corre. A de dentro é a que gruda.
-
-              Juntar as duas numa só (sticky no próprio item do grid, com
-              self-start) é o que estava quebrando: o item encolhia pro tamanho
-              do conteúdo, o trilho ficava do tamanho da própria prévia, e sem
-              trilho não existe pra onde grudar. A prévia simplesmente subia
-              junto com a página. */}
+          {/* Quem faz esta coluna acompanhar a rolagem é o usePainelGrudado lá
+              em cima, por medição. A explicação de por que não é `sticky` está
+              no comentário do gancho. */}
           <div className="min-w-0">
-           <div className="lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:overflow-x-clip lg:pb-2">
+           <div ref={painelDaPrevia}
+             className="lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:overflow-x-clip lg:pb-2 lg:will-change-transform">
             <Card className="p-4 rounded-2xl border-border">
               <p className="text-xs text-center font-display font-semibold uppercase tracking-wider text-muted-foreground/80 mb-4">
                 Pré-visualização

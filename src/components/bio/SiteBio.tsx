@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Mail, MapPin, Menu, Phone, Quote, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Instagram, Mail, MapPin, Menu, Phone, Quote, X } from "lucide-react";
 import { BlocoPublico, type VisualBio } from "@/components/bio/BlocoPublico";
 import {
-  faltaNoBloco, linkSeguro, lista, linkWhatsapp, precoVisivel, txt, type DadosBloco,
+  bool, embedGoogleMaps, faltaNoBloco, linkSeguro, lista, linkWhatsapp, precoVisivel, txt, type DadosBloco,
 } from "@/lib/bioBlocks";
 import { TextoRico } from "@/lib/textoRico";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
@@ -383,42 +383,66 @@ function Rodape({ d, marca, aoClicar, comSelo }: { d: DadosBloco; marca: MarcaSi
     /* Sem mt: a margem abria uma faixa da cor da seção anterior entre ela e o
        rodapé, e o rodapé preto parecia um cartão solto no fim da página. */
     <footer id="contato" className="px-5 py-10 cq-md:py-14 scroll-mt-[52px]" style={{ backgroundColor: "#101014", color: "#F5F3E7" }}>
-      <div className="mx-auto max-w-5xl grid gap-7 cq-sm:grid-cols-2 cq-lg:grid-cols-3">
+      {/* No celular isto virava uma coluna com 44px de alvo em cada linha, e o
+          rodapé sozinho ocupava uma tela inteira de rolagem. Alvo de toque
+          continua existindo (o padding da linha resolve), sem o espaço morto. */}
+      <div className="mx-auto max-w-5xl grid gap-5 cq-sm:gap-7 cq-sm:grid-cols-2 cq-lg:grid-cols-3">
         <div>
           <p className="font-display font-extrabold text-[15px] tracking-tight">{txt(d, "titulo") || marca.nome}</p>
           {txt(d, "assinatura") && <p className="text-[13px] opacity-70 leading-[1.55] mt-1.5 whitespace-pre-line">{txt(d, "assinatura")}</p>}
         </div>
         {(tel || mail) && (
-          <div className="space-y-2">
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] opacity-55">Fale comigo</p>
+          <div className="space-y-0.5">
+            <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] opacity-55 mb-1.5">Fale comigo</p>
             {tel && (
               <a href={linkWhatsapp(tel)} target="_blank" rel="noopener noreferrer" onClick={aoClicar}
-                className="flex items-center gap-2 text-[13.5px] opacity-85 min-h-[44px]">
-                <Phone className="h-3.5 w-3.5 shrink-0" /> {tel}
+                className="flex items-center gap-2.5 text-[13.5px] opacity-85 py-2 -mx-1 px-1 rounded-lg hover:opacity-100 hover:bg-white/5 transition-colors">
+                <Phone className="h-3.5 w-3.5 shrink-0 opacity-70" /> {tel}
               </a>
             )}
             {mail && (
               <a href={`mailto:${mail}`} onClick={aoClicar}
-                className="flex items-center gap-2 text-[13.5px] opacity-85 min-h-[44px] break-all">
-                <Mail className="h-3.5 w-3.5 shrink-0" /> {mail}
+                className="flex items-center gap-2.5 text-[13.5px] opacity-85 py-2 -mx-1 px-1 rounded-lg break-all hover:opacity-100 hover:bg-white/5 transition-colors">
+                <Mail className="h-3.5 w-3.5 shrink-0 opacity-70" /> {mail}
               </a>
             )}
           </div>
         )}
         {(end || ig) && (
-          <div className="space-y-2">
+          <div className="space-y-0.5">
             {end && (
-              <p className="flex items-start gap-2 text-[13.5px] opacity-85">
-                <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" /> <span className="whitespace-pre-line">{end}</span>
-              </p>
+              /* O endereço vira link pro mapa: quem lê endereço no celular quer
+                 traçar rota, não decorar a rua. */
+              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`}
+                target="_blank" rel="noopener noreferrer" onClick={aoClicar}
+                className="flex items-start gap-2.5 text-[13.5px] opacity-85 py-2 -mx-1 px-1 rounded-lg hover:opacity-100 hover:bg-white/5 transition-colors">
+                <MapPin className="h-3.5 w-3.5 shrink-0 mt-[3px] opacity-70" />
+                <span className="whitespace-pre-line">{end}</span>
+              </a>
             )}
             {ig && (
+              /* Com o ícone, o @ se lê como Instagram de longe. Sem ele era só
+                 uma palavra solta com arroba na frente. */
               <a href={`https://instagram.com/${encodeURIComponent(ig.replace(/^@/, ""))}`} target="_blank" rel="noopener noreferrer" onClick={aoClicar}
-                className="text-[13.5px] opacity-85 inline-flex min-h-[44px] items-center">@{ig.replace(/^@/, "")}</a>
+                className="flex items-center gap-2.5 text-[13.5px] opacity-85 py-2 -mx-1 px-1 rounded-lg hover:opacity-100 hover:bg-white/5 transition-colors">
+                <Instagram className="h-3.5 w-3.5 shrink-0 opacity-70" /> @{ig.replace(/^@/, "")}
+              </a>
             )}
           </div>
         )}
       </div>
+      {/* O mapa fecha o rodapé quando o negócio é de rua. Sem borda arredondada
+          por cima do fundo escuro, senão vira um cartão flutuando sem motivo. */}
+      {end && bool(d, "mostrarMapa", false) && (
+        <div className="mx-auto max-w-5xl mt-7 rounded-xl overflow-hidden border border-white/10">
+          <iframe
+            title="Mapa"
+            src={embedGoogleMaps(end)}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            className="w-full h-[190px] cq-md:h-[240px] border-0 block" />
+        </div>
+      )}
       {comSelo && (
         <div className="mx-auto max-w-5xl mt-8 pt-6 border-t border-white/10">
           <SeloCria escuro />

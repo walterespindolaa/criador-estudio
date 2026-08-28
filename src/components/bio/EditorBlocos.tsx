@@ -115,7 +115,7 @@ function EscolherFundo({ valor, onTroca }: { valor: string; onTroca: (v: string)
 }
 
 /* ── O FORMULÁRIO DE CADA TIPO ── */
-function FormBloco({ bloco, salvar, slugPublico }: { bloco: BioBloco; salvar: (d: DadosBloco) => void; slugPublico?: string | null }) {
+function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioBloco; salvar: (d: DadosBloco) => void; slugPublico?: string | null; telefonePadrao?: string | null }) {
   const d = bloco.data ?? {};
   const p = (patch: DadosBloco) => salvar({ ...d, ...patch });
 
@@ -430,7 +430,7 @@ function FormBloco({ bloco, salvar, slugPublico }: { bloco: BioBloco; salvar: (d
               coisa só é o tipo de divisão que faz sentido pra quem escreveu o
               código e pra mais ninguém. */}
           <div className="pt-1 border-t border-border/60">
-            <EditorItens tipo={bloco.kind === "blog" ? "post" : "produto"} slugPublico={slugPublico} />
+            <EditorItens tipo={bloco.kind === "blog" ? "post" : "produto"} slugPublico={slugPublico} telefonePadrao={telefonePadrao} />
           </div>
         </div>
       );
@@ -484,10 +484,27 @@ function FormBloco({ bloco, salvar, slugPublico }: { bloco: BioBloco; salvar: (d
             <Input type="email" inputMode="email" value={txt(d, "email")} onChange={(e) => p({ email: e.target.value })}
               className="rounded-xl" />
           </LinhaCampo>
-          <LinhaCampo label="Endereço (opcional)">
+          <LinhaCampo label="Endereço (opcional)"
+            ajuda="No site ele vira link: quem toca já abre a rota no mapa do celular.">
             <Textarea rows={2} value={txt(d, "endereco")} onChange={(e) => p({ endereco: e.target.value })}
               className="rounded-xl resize-none" />
           </LinhaCampo>
+          {/* Endereço escrito é informação; mapa é confiança. Pra quem atende em
+              consultório ou loja, ver a rua no mapa é o que faz a pessoa decidir
+              que dá pra ir. Fica opcional porque quem atende online não quer. */}
+          {txt(d, "endereco").trim() && (
+            <label className="flex items-start gap-2.5 rounded-xl border border-border bg-muted/30 px-3 py-2.5 cursor-pointer">
+              <input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary shrink-0"
+                checked={bool(d, "mostrarMapa", false)}
+                onChange={(e) => p({ mostrarMapa: e.target.checked })} />
+              <span className="min-w-0">
+                <span className="block text-xs font-body font-semibold text-foreground">Mostrar o mapa no rodapé</span>
+                <span className="block text-[11px] font-body text-muted-foreground leading-snug">
+                  Um mapa do Google com o ponto do endereço, logo abaixo do contato.
+                </span>
+              </span>
+            </label>
+          )}
           <LinhaCampo label="@ do Instagram">
             <Input value={txt(d, "instagram")} onChange={(e) => p({ instagram: e.target.value })}
               placeholder="@perfil" className="rounded-xl" />
@@ -506,9 +523,10 @@ function FormBloco({ bloco, salvar, slugPublico }: { bloco: BioBloco; salvar: (d
 
 /* ── UM BLOCO NA LISTA ── */
 function CartaoBloco({
-  bloco, aberto, onAbrir, atualizar, excluir, duplicar, arrasteProps, arrasteRef, arrastando, slugPublico,
+  bloco, aberto, onAbrir, atualizar, excluir, duplicar, arrasteProps, arrasteRef, arrastando, slugPublico, telefonePadrao,
 }: {
   slugPublico?: string | null;
+  telefonePadrao?: string | null;
   bloco: BioBloco;
   aberto: boolean;
   onAbrir: () => void;
@@ -564,7 +582,7 @@ function CartaoBloco({
 
       {aberto && (
         <div className="px-3 pb-3.5 pt-1 space-y-3.5 border-t border-border/60 mt-0.5">
-          <div className="pt-3.5"><FormBloco bloco={bloco} salvar={(data) => atualizar({ data })} slugPublico={slugPublico} /></div>
+          <div className="pt-3.5"><FormBloco bloco={bloco} salvar={(data) => atualizar({ data })} slugPublico={slugPublico} telefonePadrao={telefonePadrao} /></div>
 
           <button type="button" onClick={() => setAgendaAberta((v) => !v)}
             className="flex items-center gap-1.5 text-[12px] font-body font-semibold text-muted-foreground hover:text-foreground">
@@ -611,6 +629,9 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico }: {
   slugPublico?: string | null;
 }) {
   const { blocos, isLoading, criar, atualizar, excluir, duplicar, reordenar, aplicarModelo } = useBioBlocks(estilo);
+  /* O telefone mora no bloco "Contato e rodapé" e é reaproveitado pelos itens
+     pra montar o link do WhatsApp: um telefone só, num lugar só. */
+  const telefoneDoContato = txt(blocos.find((b) => b.kind === "contato")?.data ?? {}, "telefone") || null;
   const [aberto, setAberto] = useState<string | null>(null);
   const [paletaAberta, setPaletaAberta] = useState(false);
   const [modelosAbertos, setModelosAbertos] = useState(false);
@@ -753,6 +774,7 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico }: {
                         excluir={() => excluir.mutate(b.id)}
                         duplicar={() => duplicar.mutate(b.id)}
                         slugPublico={slugPublico}
+                        telefonePadrao={telefoneDoContato}
                         arrasteProps={dd.dragHandleProps}
                         arrastando={snap.isDragging}
                       />
