@@ -142,7 +142,7 @@ serve(async (req) => {
     const origin = resolveAppUrl(req); // F13: origin validado, não o header cru
     // O destino depende do papel: parceiro cai direto na fila dele, não no
     // dashboard da agência (que ele nem consegue usar).
-    const destino = ehParceiro ? "/app/demandas" : "/socialmidia/dashboard";
+    const destino = ehParceiro ? "/parceiro" : "/socialmidia/dashboard";
     const type: "magiclink" | "invite" = existing ? "magiclink" : "invite";
     const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({
       type, email: normEmail, options: { redirectTo: origin + destino },

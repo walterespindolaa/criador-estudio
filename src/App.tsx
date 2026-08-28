@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AccountProvider } from "@/contexts/AccountContext";
 import { AuthOnlyRoute, ProtectedRoute } from "@/components/ProtectedRoute";
+import { useSouParceiro } from "@/hooks/useParceiro";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import MetaPixelTracker from "@/components/MetaPixelTracker";
@@ -55,6 +56,9 @@ const Aprender = lazy(() => import("./pages/app/Aprender"));
 const Brandbook = lazy(() => import("./pages/app/Brandbook"));
 const LinkInBio = lazy(() => import("./pages/app/LinkInBio"));
 const MinhasDemandas = lazy(() => import("./pages/app/MinhasDemandas"));
+const ParceiroLayout = lazy(() => import("./components/parceiro/ParceiroLayout"));
+const ParceiroEntregues = lazy(() => import("./pages/parceiro/Entregues"));
+const ParceiroMarcas = lazy(() => import("./pages/parceiro/Marcas"));
 const Collabs = lazy(() => import("./pages/app/Collabs"));
 const Insights = lazy(() => import("./pages/app/Insights"));
 const Autopilot = lazy(() => import("./pages/app/Autopilot"));
@@ -184,8 +188,14 @@ const queryClient = new QueryClient({
  *  Logado → /app · Deslogado → /login */
 const RootRedirect = () => {
   const { user, loading } = useAuth();
-  if (loading) return <LoadingScreen />;
-  return <Navigate to={user ? "/app" : "/login"} replace />;
+  /* Quem tem vínculo de parceiro entra pela área de parceiro, não pelo app de
+     criador: foi o furo que fez o PeJota cair num dashboard cheio de módulos
+     que não eram dele. Quem também é criador tem o atalho "Meu Cria" na
+     lateral da área de parceiro. */
+  const { data: souParceiro, isLoading: carregandoPapel } = useSouParceiro();
+  if (loading || (user && carregandoPapel)) return <LoadingScreen />;
+  if (!user) return <Navigate to="/login" replace />;
+  return <Navigate to={souParceiro ? "/parceiro" : "/app"} replace />;
 };
 
 /* O que o seguidor vê se a bio quebrar de vez. Sem jargão, sem mensagem de
@@ -234,6 +244,14 @@ const App = () => (
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
               <Route path="/" element={<RootRedirect />} />
+              {/* ── CRIA PARCEIROS: a casca própria do designer/editor/copy.
+                  Fora do AppLayout de propósito: parceiro não vê módulos de
+                  criador, dashboard nem menu de agência. */}
+              <Route path="/parceiro" element={<AuthOnlyRoute><Suspense fallback={<LoadingScreen />}><ParceiroLayout /></Suspense></AuthOnlyRoute>}>
+                <Route index element={<ErrorBoundary><MinhasDemandas /></ErrorBoundary>} />
+                <Route path="entregues" element={<ErrorBoundary><ParceiroEntregues /></ErrorBoundary>} />
+                <Route path="marcas" element={<ErrorBoundary><ParceiroMarcas /></ErrorBoundary>} />
+              </Route>
               {/* A bio é a ÚNICA página que um estranho abre. Sem rede de
                   segurança, um bloco com dado torto derruba a árvore inteira e
                   o seguidor fica com a tela branca: nem erro, nem link, nem
@@ -308,7 +326,7 @@ const App = () => (
                 <Route path="aprender" element={<ErrorBoundary><Aprender /></ErrorBoundary>} />
                 <Route path="brandbook" element={<ErrorBoundary><Brandbook /></ErrorBoundary>} />
                 <Route path="linkinbio" element={<ErrorBoundary><LinkInBio /></ErrorBoundary>} />
-                <Route path="demandas" element={<ErrorBoundary><MinhasDemandas /></ErrorBoundary>} />
+                <Route path="demandas" element={<Navigate to="/parceiro" replace />} />
                 <Route path="collabs" element={<ErrorBoundary><UpgradeGate feature="collabs"><Collabs /></UpgradeGate></ErrorBoundary>} />
                 <Route path="insights" element={<ErrorBoundary><UpgradeGate feature="insights"><Insights /></UpgradeGate></ErrorBoundary>} />
                 <Route path="configuracoes" element={<ErrorBoundary><Configuracoes /></ErrorBoundary>} />
