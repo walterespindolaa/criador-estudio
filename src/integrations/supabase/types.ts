@@ -262,6 +262,88 @@ export type Database = {
           },
         ]
       }
+      agenda_data_clientes: {
+        Row: {
+          agenda_data_id: string
+          created_at: string
+          crm_client_id: string
+          cronograma_data_id: string | null
+          id: string
+        }
+        Insert: {
+          agenda_data_id: string
+          created_at?: string
+          crm_client_id: string
+          cronograma_data_id?: string | null
+          id?: string
+        }
+        Update: {
+          agenda_data_id?: string
+          created_at?: string
+          crm_client_id?: string
+          cronograma_data_id?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_data_clientes_agenda_data_id_fkey"
+            columns: ["agenda_data_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_datas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_data_clientes_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agenda_data_clientes_cronograma_data_id_fkey"
+            columns: ["cronograma_data_id"]
+            isOneToOne: false
+            referencedRelation: "cronograma_datas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agenda_datas: {
+        Row: {
+          cor: string | null
+          created_at: string
+          dia: string
+          id: string
+          label: string
+          manager_id: string
+          nota: string | null
+          repete_anual: boolean
+          updated_at: string
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string
+          dia: string
+          id?: string
+          label: string
+          manager_id: string
+          nota?: string | null
+          repete_anual?: boolean
+          updated_at?: string
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string
+          dia?: string
+          id?: string
+          label?: string
+          manager_id?: string
+          nota?: string | null
+          repete_anual?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       agenda_day_order: {
         Row: {
           day: string
@@ -569,6 +651,87 @@ export type Database = {
           },
           {
             foreignKeyName: "bio_blocks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bio_items: {
+        Row: {
+          capa: string | null
+          conteudo: string | null
+          created_at: string
+          cta_texto: string | null
+          cta_url: string | null
+          galeria: Json
+          id: string
+          page_id: string | null
+          position: number
+          preco: number | null
+          preco_texto: string | null
+          publicado: boolean
+          publicado_em: string
+          resumo: string | null
+          slug: string
+          tipo: string
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          capa?: string | null
+          conteudo?: string | null
+          created_at?: string
+          cta_texto?: string | null
+          cta_url?: string | null
+          galeria?: Json
+          id?: string
+          page_id?: string | null
+          position?: number
+          preco?: number | null
+          preco_texto?: string | null
+          publicado?: boolean
+          publicado_em?: string
+          resumo?: string | null
+          slug: string
+          tipo: string
+          titulo?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          capa?: string | null
+          conteudo?: string | null
+          created_at?: string
+          cta_texto?: string | null
+          cta_url?: string | null
+          galeria?: Json
+          id?: string
+          page_id?: string | null
+          position?: number
+          preco?: number | null
+          preco_texto?: string | null
+          publicado?: boolean
+          publicado_em?: string
+          resumo?: string | null
+          slug?: string
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bio_items_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "bio_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bio_items_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -2111,6 +2274,7 @@ export type Database = {
           created_at: string | null
           cria_owner_id: string | null
           crm_client_id: string | null
+          descricao: string | null
           external_client_id: string | null
           id: string
           manager_id: string
@@ -2125,6 +2289,7 @@ export type Database = {
           created_at?: string | null
           cria_owner_id?: string | null
           crm_client_id?: string | null
+          descricao?: string | null
           external_client_id?: string | null
           id?: string
           manager_id: string
@@ -2139,6 +2304,7 @@ export type Database = {
           created_at?: string | null
           cria_owner_id?: string | null
           crm_client_id?: string | null
+          descricao?: string | null
           external_client_id?: string | null
           id?: string
           manager_id?: string
@@ -5600,6 +5766,10 @@ export type Database = {
         }[]
       }
       agency_seats_used: { Args: never; Returns: number }
+      agenda_data_para_cronogramas: {
+        Args: { _agenda_data_id: string }
+        Returns: number
+      }
       ai_monthly_quota: { Args: never; Returns: number }
       ai_usage_this_month: {
         Args: never
@@ -5646,6 +5816,10 @@ export type Database = {
           _tipo: string
         }
         Returns: undefined
+      }
+      bio_secao_ligada: {
+        Args: { _id: string; _settings: Json }
+        Returns: boolean
       }
       bio_slug_available: {
         Args: { _exclude?: string; _slug: string }
@@ -5829,6 +6003,39 @@ export type Database = {
           id: string
           kind: string
           position: number
+        }[]
+      }
+      get_public_bio_item: {
+        Args: { _item: string; _slug: string; _tipo: string }
+        Returns: {
+          capa: string
+          conteudo: string
+          cta_texto: string
+          cta_url: string
+          galeria: Json
+          id: string
+          preco: number
+          preco_texto: string
+          publicado_em: string
+          resumo: string
+          slug: string
+          tipo: string
+          titulo: string
+        }[]
+      }
+      get_public_bio_items: {
+        Args: { _slug: string; _tipo: string }
+        Returns: {
+          capa: string
+          id: string
+          position: number
+          preco: number
+          preco_texto: string
+          publicado_em: string
+          resumo: string
+          slug: string
+          tipo: string
+          titulo: string
         }[]
       }
       get_public_bio_links_by_slug: {
