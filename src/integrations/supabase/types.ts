@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -6329,6 +6329,21 @@ export type Database = {
         Args: { _post_id: string; _texto: string }
         Returns: string
       }
+      parceiro_entregues: {
+        Args: never
+        Returns: {
+          agencia_id: string
+          agencia_nome: string
+          cliente_cor: string
+          cliente_logo: string
+          cliente_nome: string
+          entregue_em: string
+          formato: string
+          post_id: string
+          publica_em: string
+          titulo: string
+        }[]
+      }
       parceiro_marcar: {
         Args: { _post_id: string; _status: string }
         Returns: undefined
@@ -6351,6 +6366,17 @@ export type Database = {
           producao_status: string
           publica_em: string
           titulo: string
+        }[]
+      }
+      parceiro_minhas_agencias: {
+        Args: never
+        Returns: {
+          abertos: number
+          agencia_id: string
+          agencia_nome: string
+          entregues_30d: number
+          meu_papel: string
+          vinculo_status: string
         }[]
       }
       parceiro_tem_o_card: { Args: { _post_id: string }; Returns: boolean }
