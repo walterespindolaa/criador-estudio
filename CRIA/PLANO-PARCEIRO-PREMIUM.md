@@ -1,95 +1,121 @@
-# Cria Parceiros Premium: o parceiro é uma social mídia cujo cliente é a social mídia
+# Cria Parceiros Premium v2: as duas pontas do mesmo fio
 
-Data: 30/08/2026. Escrito depois do toque do Walter: "ele vai funcionar bem
-similar à social mídia, porém o cliente final dele vai ser a social mídia.
-Temos tudo pronto e você não tá sabendo conectar."
+Data: 30/08/2026, revisado depois de dois toques do Walter:
+1. "O parceiro vai funcionar bem similar à social mídia, porém o cliente
+   final dele vai ser a social mídia."
+2. "O parceiro também pode cadastrar clientes (social mídia OU cliente
+   final) e ter a mesma experiência. E o fluxo de produção serve os DOIS
+   lados: a social mídia precisa acompanhar o que está com cada parceiro, e
+   o parceiro precisa poder concordar ou sugerir outro prazo."
 
-## A tese (o que eu não tinha enxergado)
+## 1. A tese completa
 
-O Cria inteiro é uma máquina de UMA relação: prestador atende cliente.
-A social mídia usa essa máquina com empresas como clientes. O parceiro
-(designer, editor, copy, filmmaker) usa A MESMA máquina, um degrau abaixo:
-os clientes dele são as social mídias que o acoplam.
+A cadeia do Cria tem três elos, e o motor é sempre o mesmo (prestador atende
+cliente): Cliente final ← Social mídia ← Parceiro. Um fluxo de produção não
+é uma tela: é um FIO que atravessa duas contas. Cada estado do card precisa
+ter uma leitura em cada ponta:
 
-Ou seja: não se constrói um financeiro novo, um CRM novo, um relatório novo.
-Semeiam-se as agências como CLIENTES do parceiro e ligam-se quatro fios que
-hoje estão soltos. O Bonsai cobra US$ 15/mês e o HoneyBook US$ 29/mês pra
-entregar exatamente esses fios (proposta, contrato, fatura, retainer,
-lembrete de cobrança). O Cria já tem 80% disso construído.
-
-## O elo central que falta: entrega vira dinheiro sozinha
-
-Hoje o card morre no "entregue". A cadeia completa:
-
-1. ACOPLOU, VIROU CLIENTE. Quando a social mídia acopla o parceiro
-   (manager_members), nasce automaticamente uma ficha de cliente no CRM DELE
-   com o nome da agência. É a MESMA mecânica do auto-sync "cliente Cria vira
-   cliente do CRM da agência" que já existe, só que no sentido inverso.
-
-2. TABELA DE PREÇOS POR AGÊNCIA (rate card). Na ficha dessa agência-cliente,
-   o parceiro cadastra o combinado: reels R$ X, carrossel R$ Y, story R$ Z.
-   Ou pacote mensal (retainer): N peças por R$ M. Cada agência tem a sua
-   tabela, porque cada relação tem o seu preço.
-
-3. ENTREGOU, LANÇOU. Ao marcar entregue, o sistema cria o "a receber" no
-   Cria Caixa do parceiro com o valor da tabela daquela agência + formato,
-   vinculado ao post. Zero digitação. O Caixa já tem a receber, previsão,
-   calendário PJ/PF, impostos por regime e rentabilidade por cliente: tudo
-   passa a funcionar pro parceiro no dia em que o lançamento nasce sozinho.
-
-4. FIM DO MÊS, FATURA PRONTA. Relatório de cobrança por agência: as N
-   entregas do mês, peça a peça, valor a valor, total. Mesmo molde do
-   relatório white-label que a social mídia manda pro cliente dela, invertido:
-   quem emite é o parceiro pra social mídia. Um clique, PDF ou link público,
-   manda no WhatsApp. A cobrança sai com prova, não com memória.
-
-## Módulo a módulo: o que já existe e como aponta pro parceiro
-
-| Módulo existente | Versão parceiro | O que falta |
+| Estado | O parceiro vê | A social mídia vê |
 |---|---|---|
-| Cria Gestão (CRM) | "Marcas que atendo" vira CRM de verdade: ficha da agência com contatos, contrato, combinados | Semeadura automática + campos de rate card |
-| Cria Caixa | O financeiro dele, idêntico: a receber por agência, recebido, impostos MEI, PF/PJ, rentabilidade | Só o lançamento automático da entrega |
-| Relatório white-label | Fatura mensal de cobrança pra cada agência | Query (parceiro_entregues × rate card) + layout |
-| Contratos (disclaimer) | Contrato parceiro ↔ agência com aceite | Reaproveitar aprovação pública como aceite |
-| Media Kit | Portfólio do parceiro: entregas + pontualidade + taxa de ajuste, compartilhável pra fechar novas agências | Adaptar fonte de dados |
-| Captação | Já serve pro filmmaker como está | Nada |
-| Notificações + robô diário | Card chegou, ajuste pediu, cliente aprovou, "bom dia: 3 vencem hoje" | Só os gatilhos |
+| Delegado, prazo proposto | "Novo card, prazo sugerido 04/09. Topa?" | "Enviado pro PeJota, aguardando aceite do prazo" |
+| Prazo contraproposto | "Você sugeriu 06/09, aguardando a social mídia" | "PeJota sugeriu 06/09: aceitar ou conversar" |
+| Prazo aceito | Card entra na fila com contagem regressiva | "Combinado 04/09 · vence em 3 dias" (semáforo) |
+| Fazendo | "Estou fazendo" | "Em produção com o PeJota" |
+| Entregue | "Entregue, aguardando revisão" + status de aprovação | "PRA REVISAR" em destaque, com o link da entrega |
+| Ajuste | Card volta com o motivo consolidado | "Devolvido pra ajuste em 30/08" |
+| Aprovado/postado | Chip verde no card entregue | Fluxo normal do Cria Post |
 
-## Da pesquisa: o que as ferramentas de freelancer vendem e cabe aqui
+## 2. A carteira do parceiro: dois tipos de cliente, uma experiência
 
-- Retainer/pacote mensal (N peças/mês) além do preço por peça: os dois modos
-  no rate card.
-- Lembrete de cobrança automático (fatura não paga em X dias): a fila de
-  e-mail já existe.
-- Rush fee: peça com prazo menor que 48h pode ter acréscimo combinado
-  (campo opcional no rate card).
-- Tempo por card (opcional, ao entregar: "quanto tempo levou?"): alimenta a
-  rentabilidade real por agência. O parceiro descobre quem paga bem e quem
-  suga.
-- Proposta com aceite pra agência nova (fase posterior).
+O parceiro tem a MESMA tela de clientes da social mídia (lista, ficha
+cockpit, cor, brandbook), com dois tipos de linha:
 
-## Monetização (proposta, Walter decide)
+- CLIENTE AUTOMÁTICO (social mídia que usa o Cria e o acoplou): nasce
+  sozinho na carteira quando o vínculo é criado. Cards delegados entram
+  sozinhos, entregas contam sozinhas, fatura sai da tabela de preços.
+  NUNCA ocupa vaga, grátis pra sempre.
+- CLIENTE MANUAL (cadastrado por ele): pode ser uma social mídia que NÃO
+  usa o Cria, ou um cliente final direto (a loja que pediu artes). Aqui ele
+  mesmo cria os cards, prazos e valores. Consome vaga: 2 a 3 grátis, depois
+  pacote (mesma régua da carteira da social mídia).
 
-- Fila, quadro, entrega, conversa: grátis pra sempre (é o que faz cada
-  social mídia trazer 2 ou 3 parceiros pra dentro; aquisição viral).
-- Cria Parceiro Pro (sugestão R$ 19,90/mês): rate card + lançamento
-  automático no Caixa + fatura mensal + portfólio/reputação. É onde o valor
-  é sentido no bolso (é o que Bonsai/HoneyBook cobram em dólar).
-- Clientes finais próprios: caminho já definido (conta de gestão, 2-3
-  grátis, carteira paga). Não muda.
+A ficha do cliente engorda com cada módulo ativo, exatamente como no
+cockpit da social mídia:
+- Cria Gestão: contatos, contrato, brandbook, propostas, etiquetas.
+- Cria Post: kanban das peças daquele cliente + link de aprovação.
+- Cria Caixa: quanto entrou, quanto está a receber, rentabilidade.
+- Cria Captação: roteiros e tomadas (o filmmaker vive aqui).
+- Cria Radar: concorrência e referências do nicho DAQUELE cliente. Pro
+  designer: banco de referências visuais; pro filmmaker: engenharia reversa
+  de roteiro dos virais do nicho. (Radar entrou no menu e no escopo.)
 
-## Fases de execução
+## 3. O fluxo de produção visto dos dois lados
 
-- F2a O ELO (maior valor, menor esforço): semeadura agência vira cliente do
-  CRM + rate card na ficha + entrega gera "a receber" no Caixa + tela "Fechar
-  o mês" com a fatura por agência.
-- F2b PRESENÇA: gatilhos de push do parceiro + linha dele no robô diário.
-- F2c ENTREGA NO CARD: upload do arquivo final com preview (storage já
-  existe), matando o link externo.
-- F2d REPUTAÇÃO: portfólio compartilhável + pontualidade + taxa de ajuste.
+### 3a. Negociação de prazo (lado parceiro)
+Regra da Gabriela mantida: o parceiro NÃO recusa card. Mas prazo é
+combinado, não imposto:
+- Card chega com o prazo proposto e o estado "aguardando seu aceite".
+- Um toque: "Topo o prazo" (vira combinado) ou "Sugerir outra data" (data +
+  motivo curto). O card fica "prazo em negociação" até a social mídia
+  aceitar a sugestão ou responder no card.
+- Dados: `posts.prazo_status` (proposto | aceito | negociando) +
+  `prazo_sugerido` + comentário automático na conversa do card. RPCs:
+  `parceiro_responder_prazo`; lado social mídia resolve no popover
+  "Enviar para" (aceitar sugestão com um clique).
+- Enquanto negocia, o card já pode ser produzido (não trava o trabalho).
 
-## Decisões em aberto pro Walter
+### 3b. Painel "Produção externa" (lado social mídia)
+A tela que falta pra Gabriela: dentro do Cria Post, a aba "Com parceiros"
+mostrando TUDO que está fora da mão dela:
+- Agrupado por parceiro: PeJota (Designer) · 3 na mão · 1 vence hoje · 1
+  prazo em negociação. Filtro por cliente e formato.
+- Cada linha: peça, cliente, etapa (novo/fazendo/ajuste/entregue), prazo
+  combinado e CONTAGEM REGRESSIVA (vence em 2 dias / atrasou 1 dia).
+- Semáforo: verde no prazo, âmbar vence em 48h, vermelho estourado.
+- Topo em destaque: "Pra você revisar" (entregues aguardando ela levar pro
+  cliente) e "Prazos pra responder" (contrapropostas do parceiro).
+- No dashboard dela: card "Produção externa" com pendências e atrasos.
+- No cockpit do cliente: a etapa do parceiro aparece na linha do post.
+- Dados: RPC `producao_externa()` do lado dela (posts com assignee_id,
+  join no vínculo pra nome/papel do parceiro). Sem RLS nova: ela é dona
+  dos posts.
 
-1. Preço do Parceiro Pro (R$ 19,90?) e o que exatamente fica grátis.
-2. Fatura: PDF, link público, ou os dois?
-3. Tempo por card: pergunta opcional na entrega ou fica pra depois?
+### 3c. O que já está no ar (base construída nesta semana)
+Fila por prazo, quadro Trello, semana, mês; card com specs por formato,
+marca, material; entrega com link carimbado; ajuste com motivo consolidado
+obrigatório; status pós-entrega visível pro parceiro; entregues por
+agência.
+
+## 4. O elo financeiro (inalterado da v1, executa depois do fluxo)
+- Rate card por cliente-agência (por peça e/ou pacote mensal, rush fee
+  opcional pra prazo < 48h).
+- Entregou, nasceu o "a receber" no Cria Caixa dele, vinculado ao post.
+- Fim do mês: fatura por agência (molde do relatório white-label,
+  invertido), PDF/link, com lembrete de cobrança pela fila de e-mail.
+- Tempo por card (opcional na entrega) alimenta rentabilidade real por
+  agência.
+
+## 5. Monetização (consolidada)
+- Trabalho vindo de agência que usa o Cria: grátis pra sempre, sem vaga.
+  É o motor viral (cada social mídia traz 2-3 parceiros pra dentro).
+- Clientes manuais: 2-3 grátis, depois pacote de vagas (régua da carteira).
+- Módulos (Post, Gestão, Caixa, Captação, Radar): mesmos add-ons/planos,
+  comprados na casca do parceiro (/parceiro/planos).
+- Cria Parceiro Pro (a decidir, sugestão R$ 19,90/mês): rate card + a
+  receber automático + fatura + portfólio/reputação.
+
+## 6. Fases, na ordem que destrava a Gabriela primeiro
+- F3a FLUXO DOS DOIS LADOS: negociação de prazo + painel "Com parceiros"
+  no Cria Post da social mídia + card no dashboard dela. (É o que a
+  operação real precisa AGORA pra rodar com o PeJota.)
+- F3b CARTEIRA DO PARCEIRO: tela de clientes com os dois tipos, ficha
+  cockpit, vagas grátis/pagas, cards manuais pra cliente manual.
+- F3c ELO FINANCEIRO: rate card, a receber automático, fatura mensal.
+- F3d PRESENÇA E PROVA: push + robô diário do parceiro, entrega com upload
+  e preview no card, portfólio/reputação (pontualidade, taxa de ajuste).
+
+## 7. Decisões do Walter
+1. Preço do Parceiro Pro e o que exatamente fica grátis (sugestão acima).
+2. Quantas vagas manuais grátis: 2 ou 3?
+3. Fatura: PDF, link público, ou os dois?
+4. Confirma a ordem F3a antes do financeiro?

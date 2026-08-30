@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   Briefcase, Camera, CheckCircle2, ChevronsLeft, ChevronsRight, Gem, Layers,
-  Lock, LogOut, Send, Trash2, Users, Wallet,
+  Lock, LogOut, Search, Send, Trash2, Users, Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,6 +48,7 @@ const MODULOS = [
   { rotulo: "Cria Gestão", Icone: Users },
   { rotulo: "Cria Caixa", Icone: Wallet },
   { rotulo: "Cria Captação", Icone: Camera },
+  { rotulo: "Cria Radar", Icone: Search },
 ];
 
 const FAIXA: Record<string, { titulo: string; sub: string }> = {
