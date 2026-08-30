@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Check, Loader2, Send, X } from "lucide-react";
+import { Check, Loader2, RotateCcw, Send, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ROTULO_PAPEL, useDelegarPost, useMeusParceiros } from "@/hooks/useParceiro";
+import { Textarea } from "@/components/ui/textarea";
+import { ROTULO_PAPEL, useDelegarPost, useMeusParceiros, usePedirAjuste } from "@/hooks/useParceiro";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ENVIAR PARA (Cria Parceiros)
@@ -30,6 +31,9 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo }
   const [aberto, setAberto] = useState(false);
   const [escolhido, setEscolhido] = useState<string | null>(assigneeId);
   const [dataEntrega, setDataEntrega] = useState(prazo ?? "");
+  const [pedindoAjuste, setPedindoAjuste] = useState(false);
+  const [motivoAjuste, setMotivoAjuste] = useState("");
+  const pedirAjuste = usePedirAjuste();
 
   if (parceiros.length === 0) return null;
   const atual = parceiros.find((p) => p.member_id === assigneeId);
@@ -94,6 +98,36 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo }
             {delegar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : atual ? "Atualizar" : "Enviar"}
           </Button>
         </div>
+
+        {/* PEDIR AJUSTE: só quando o parceiro entregou. A pesquisa é unânime:
+            revisão sem feedback consolidado vira pingado de áudio e o
+            freelancer perde a conta. Motivo obrigatório, num texto só, que
+            entra na conversa do card. */}
+        {atual && producaoStatus === "entregue" && (
+          !pedindoAjuste ? (
+            <Button variant="outline" size="sm" className="w-full rounded-xl mt-2 border-orange-300 text-orange-700 hover:bg-orange-50"
+              onClick={() => setPedindoAjuste(true)}>
+              <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Pedir ajuste
+            </Button>
+          ) : (
+            <div className="mt-2 rounded-xl border border-orange-200 bg-orange-50/60 p-2.5 space-y-2">
+              <p className="text-[11px] font-body font-bold text-orange-900">
+                O que precisa mudar? Junte TUDO num texto só: é uma rodada, não um pingado.
+              </p>
+              <Textarea value={motivoAjuste} onChange={(e) => setMotivoAjuste(e.target.value)} rows={3}
+                placeholder="Ex.: trocar a foto do slide 2, aumentar o logo e ajustar a cor do fundo pro tom do brandbook"
+                className="rounded-lg resize-none text-[12.5px] bg-background" />
+              <Button size="sm" className="w-full rounded-xl bg-orange-600 hover:bg-orange-700"
+                disabled={!motivoAjuste.trim() || pedirAjuste.isPending}
+                onClick={async () => {
+                  await pedirAjuste.mutateAsync({ postId, motivo: motivoAjuste });
+                  setMotivoAjuste(""); setPedindoAjuste(false); setAberto(false);
+                }}>
+                {pedirAjuste.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Devolver pro parceiro com o motivo"}
+              </Button>
+            </div>
+          )
+        )}
       </PopoverContent>
     </Popover>
   );

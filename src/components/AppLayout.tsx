@@ -197,10 +197,14 @@ const AppLayout = () => {
        Espera o papel carregar antes de decidir, senão manda pro lugar errado. */
     if (carregandoPapelParceiro) return <LoadingScreen />;
     const parceiroSemPlano = souParceiro && deriveTier(profile) === "none";
-    if (parceiroSemPlano && location.pathname !== "/app/assinar") {
+    /* Sem exceção nenhuma: parceiro sem plano não entra no /app nem pra ver
+       planos (o Walter pegou o PeJota vendo a página de assinatura EMBRULHADA
+       no menu de criador). Os planos do parceiro vivem em /parceiro/planos,
+       dentro da casca dele. */
+    if (parceiroSemPlano) {
       return <Navigate to="/parceiro" replace />;
     }
-    if (!parceiroSemPlano && location.pathname !== "/onboarding") {
+    if (location.pathname !== "/onboarding") {
       return <Navigate to="/onboarding" replace />;
     }
   }

@@ -54,6 +54,9 @@ export type CardAberto = {
   producao_status: string;
   prazo_producao: string | null;
   publica_em: string | null;
+  /** Eixo de aprovação do CLIENTE, só leitura pro parceiro: depois de
+   *  entregar, ele vê onde a peça está (pendente, aprovado, postado...). */
+  aprovacao: string | null;
   agencia: string;
   marca: {
     nome: string | null;
@@ -114,10 +117,14 @@ export function useAcoesDoParceiro(postId: string | null) {
   };
 
   const marcar = useMutation({
-    mutationFn: async (status: "em_producao" | "entregue") => {
-      const { error } = await sbRpc("parceiro_marcar", { _post_id: postId, _status: status });
+    // Entregar aceita o link da versão final: é o antídoto do "qual arquivo é
+    // o final?" que apareceu em toda pesquisa de fluxo com freelancer.
+    mutationFn: async (v: { status: "em_producao" | "entregue"; link?: string }) => {
+      const { error } = await sbRpc("parceiro_marcar", {
+        _post_id: postId, _status: v.status, _link: v.link?.trim() || null,
+      });
       if (error) throw error;
-      return status;
+      return v.status;
     },
     onSuccess: (status) => {
       invalidar();
@@ -184,6 +191,34 @@ export function useMeusParceiros() {
       }
       return (data ?? []) as Parceiro[];
     },
+  });
+}
+
+/** Pedir ajuste (lado da social mídia). A pesquisa é unânime: rodada de
+ *  revisão sem feedback CONSOLIDADO vira pingado de "aumenta a fonte" por
+ *  áudio, e o freelancer perde a conta do que mudou. Por isso o motivo é
+ *  obrigatório e entra na conversa do card, com a voz da social mídia. */
+export function usePedirAjuste() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { postId: string; motivo: string }) => {
+      const motivo = v.motivo.trim();
+      if (!motivo) throw new Error("Escreva o que precisa mudar, consolidado num texto só.");
+      const { data, error } = await sbFrom("posts")
+        .update({ producao_status: "ajuste" } as never)
+        .eq("id", v.postId).select("id").maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Não consegui pedir o ajuste. Recarregue e tente de novo.");
+      const { error: cErr } = await sbFrom("post_approval_comments").insert({
+        post_id: v.postId, content: `Ajuste: ${motivo}`.slice(0, 4000), author_role: "social_media",
+      } as never);
+      if (cErr) throw cErr;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["external-posts"] });
+      toast.success("Ajuste pedido. O parceiro recebe o card de volta com o motivo.");
+    },
+    onError: (e: Error) => toast.error(e.message || "Não consegui pedir o ajuste."),
   });
 }
 

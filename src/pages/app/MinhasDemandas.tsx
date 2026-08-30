@@ -351,8 +351,10 @@ function CrescaComOCria() {
           </Card>
         ))}
       </div>
-      <Button className="mt-3 rounded-xl" onClick={() => navigate("/app/assinar")}>
-        <Sparkles className="h-4 w-4 mr-1.5" /> Conhecer os planos do Cria
+      {/* Pro /parceiro/planos, NUNCA pro /app/assinar: lá é o shell de criador
+          e o parceiro sem plano nem entra (paywall sem volta era o resultado). */}
+      <Button className="mt-3 rounded-xl" onClick={() => navigate("/parceiro/planos")}>
+        <Sparkles className="h-4 w-4 mr-1.5" /> Ver os caminhos e planos
       </Button>
     </div>
   );
@@ -532,10 +534,37 @@ function MesDoParceiro({ fila, hoje, aoAbrir }: {
 }
 
 /* ── O CARD ABERTO ────────────────────────────────────────────────────────── */
+
+/* Specs por formato: a pesquisa é unânime em que a MAIOR fonte de ida e volta
+   é peça sem especificação (proporção, medida, duração). Aqui o card já nasce
+   com a spec do formato, sem o parceiro precisar perguntar. */
+const SPEC_FORMATO: Record<string, string> = {
+  reels: "9:16 · 1080x1920 · até 90s",
+  carrossel: "4:5 · 1080x1350 por arte",
+  foto: "4:5 · 1080x1350",
+  story: "9:16 · 1080x1920",
+  video: "confirmar proporção no comentário",
+  shorts: "9:16 · 1080x1920 · até 60s",
+  live: "16:9",
+};
+
+/* Onde a peça está DEPOIS que saiu da mão do parceiro. Ele não mexe nesse
+   eixo, mas parar de ficar cego era pedido direto da pesquisa. */
+const ROTULO_APROVACAO: Record<string, { txt: string; cls: string }> = {
+  em_producao: { txt: "Com a social mídia", cls: "bg-slate-100 text-slate-700" },
+  pendente: { txt: "Aguardando o cliente aprovar", cls: "bg-amber-100 text-amber-700" },
+  ajuste_solicitado: { txt: "Cliente pediu ajuste", cls: "bg-orange-100 text-orange-700" },
+  aprovado: { txt: "Aprovado pelo cliente", cls: "bg-green-100 text-green-700" },
+  postado: { txt: "Postado", cls: "bg-slate-200 text-slate-600" },
+};
+
 function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFechar: () => void }) {
   const { data: card, isLoading } = useCardDoParceiro(postId);
   const { marcar, comentar } = useAcoesDoParceiro(postId);
   const [texto, setTexto] = useState("");
+  // Entregar em dois tempos: o clique abre o campo do link da versão final.
+  const [entregando, setEntregando] = useState(false);
+  const [linkEntrega, setLinkEntrega] = useState("");
 
   const enviar = async () => {
     const t = texto.trim();
@@ -566,6 +595,39 @@ function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFecha
                   <b className="text-foreground">{card.marca.nome}</b> · delegado por {card.agencia}
                   {card.publica_em && <> · publica em {dataBR(card.publica_em)}</>}
                 </p>
+
+                {/* ESPECIFICAÇÕES: a maior fonte de ida e volta na pesquisa é
+                    peça sem spec (proporção, medida, nº de artes). Aqui elas já
+                    vêm no card, sem o parceiro precisar perguntar. */}
+                <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                  {card.formato && (
+                    <span className="text-[10.5px] font-bold px-2 py-1 rounded-full bg-foreground text-background">
+                      {FORMATO[card.formato] ?? card.formato}
+                    </span>
+                  )}
+                  {card.formato && SPEC_FORMATO[card.formato] && (
+                    <span className="text-[10.5px] font-bold px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                      {SPEC_FORMATO[card.formato]}
+                    </span>
+                  )}
+                  {card.formato === "carrossel" && Array.isArray(card.blocos) && (card.blocos as unknown[]).length > 0 && (
+                    <span className="text-[10.5px] font-bold px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                      {(card.blocos as unknown[]).length} arte{(card.blocos as unknown[]).length === 1 ? "" : "s"}
+                    </span>
+                  )}
+                  {card.plataforma && (
+                    <span className="text-[10.5px] font-bold px-2 py-1 rounded-full bg-muted text-muted-foreground capitalize">
+                      {card.plataforma}
+                    </span>
+                  )}
+                  {/* Depois que saiu da mão dele, onde a peça está. Fim da
+                      cegueira pós-entrega. */}
+                  {card.producao_status === "entregue" && card.aprovacao && ROTULO_APROVACAO[card.aprovacao] && (
+                    <span className={cn("text-[10.5px] font-bold px-2 py-1 rounded-full", ROTULO_APROVACAO[card.aprovacao].cls)}>
+                      {ROTULO_APROVACAO[card.aprovacao].txt}
+                    </span>
+                  )}
+                </div>
 
                 {card.gancho?.trim() && (
                   <div className="mt-4">
@@ -671,27 +733,47 @@ function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFecha
 
                 <div className="pt-1 space-y-2">
                   {card.producao_status !== "entregue" ? (
-                    <>
-                      <Button className="w-full rounded-xl bg-green-600 hover:bg-green-700" disabled={marcar.isPending}
-                        onClick={() => marcar.mutate("entregue")}>
-                        <Check className="h-4 w-4 mr-1.5" /> Marcar como entregue
-                      </Button>
-                      {card.producao_status !== "em_producao" && (
-                        <Button variant="outline" className="w-full rounded-xl" disabled={marcar.isPending}
-                          onClick={() => marcar.mutate("em_producao")}>
-                          Estou fazendo
+                    !entregando ? (
+                      <>
+                        <Button className="w-full rounded-xl bg-green-600 hover:bg-green-700" disabled={marcar.isPending}
+                          onClick={() => setEntregando(true)}>
+                          <Check className="h-4 w-4 mr-1.5" /> Marcar como entregue
                         </Button>
-                      )}
-                    </>
+                        {card.producao_status !== "em_producao" && (
+                          <Button variant="outline" className="w-full rounded-xl" disabled={marcar.isPending}
+                            onClick={() => marcar.mutate({ status: "em_producao" })}>
+                            Estou fazendo
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      /* ENTREGA COM LINK: o antídoto do "qual arquivo é o
+                         final?". O link da versão final entra carimbado na
+                         conversa do card. */
+                      <div className="rounded-xl border border-green-300 bg-green-50/60 p-2.5 space-y-2">
+                        <p className="text-[11px] font-body font-bold text-green-900">Link da versão final (Drive, Dropbox...)</p>
+                        <input type="url" value={linkEntrega} onChange={(e) => setLinkEntrega(e.target.value)}
+                          placeholder="https://..." inputMode="url"
+                          className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[12.5px] font-body" />
+                        <Button className="w-full rounded-xl bg-green-600 hover:bg-green-700" disabled={marcar.isPending}
+                          onClick={() => { marcar.mutate({ status: "entregue", link: linkEntrega }); setEntregando(false); setLinkEntrega(""); }}>
+                          {marcar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Confirmar entrega</>}
+                        </Button>
+                        <button type="button" className="w-full text-[11px] font-body font-semibold text-muted-foreground"
+                          onClick={() => { marcar.mutate({ status: "entregue" }); setEntregando(false); }}>
+                          Entregar sem link (está na pasta de material)
+                        </button>
+                      </div>
+                    )
                   ) : (
                     <Button variant="outline" className="w-full rounded-xl" disabled={marcar.isPending}
-                      onClick={() => marcar.mutate("em_producao")}>
+                      onClick={() => marcar.mutate({ status: "em_producao" })}>
                       <RotateCcw className="h-4 w-4 mr-1.5" /> Reabrir (voltei a mexer)
                     </Button>
                   )}
                   <p className="text-[10.5px] font-body text-muted-foreground leading-relaxed">
-                    A arte final sobe na pasta de material ou pelo link no comentário. Ao marcar entregue,
-                    a social mídia revisa e manda pro cliente aprovar.
+                    Ao marcar entregue, a social mídia revisa e manda pro cliente aprovar. Se voltar,
+                    volta com o motivo escrito no card, nunca por áudio perdido.
                   </p>
                 </div>
               </div>
