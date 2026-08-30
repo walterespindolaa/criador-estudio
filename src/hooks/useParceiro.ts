@@ -26,6 +26,10 @@ export type CardDaFila = {
   plataforma: string | null;
   producao_status: "aguardando" | "em_producao" | "entregue" | "ajuste";
   prazo_producao: string | null;
+  /** null = sem prazo · proposto = aguardando o aceite do parceiro ·
+   *  negociando = parceiro sugeriu outra data · aceito = combinado. */
+  prazo_status: "proposto" | "negociando" | "aceito" | null;
+  prazo_sugerido: string | null;
   publica_em: string | null;
   assigned_at: string | null;
   agencia_id: string;
@@ -53,6 +57,8 @@ export type CardAberto = {
   etiquetas: string[];
   producao_status: string;
   prazo_producao: string | null;
+  prazo_status: "proposto" | "negociando" | "aceito" | null;
+  prazo_sugerido: string | null;
   publica_em: string | null;
   /** Eixo de aprovação do CLIENTE, só leitura pro parceiro: depois de
    *  entregar, ele vê onde a peça está (pendente, aprovado, postado...). */
@@ -144,7 +150,26 @@ export function useAcoesDoParceiro(postId: string | null) {
     onError: (e: Error) => toast.error(e.message || "Não consegui comentar."),
   });
 
-  return { marcar, comentar };
+  /* Responder ao prazo proposto: topar fecha o combinado; sugerir outra data
+     manda a contraproposta pra social mídia, com o motivo na conversa do
+     card. Negociar data não trava o trabalho: o card segue produzível. */
+  const responderPrazo = useMutation({
+    mutationFn: async (v: { aceita: boolean; sugestao?: string; motivo?: string }) => {
+      const { error } = await sbRpc("parceiro_responder_prazo", {
+        _post_id: postId, _aceita: v.aceita,
+        _sugestao: v.sugestao || null, _motivo: v.motivo?.trim() || null,
+      });
+      if (error) throw error;
+      return v.aceita;
+    },
+    onSuccess: (aceitou) => {
+      invalidar();
+      toast.success(aceitou ? "Prazo combinado!" : "Sugestão enviada. A social mídia recebe agora.");
+    },
+    onError: (e: Error) => toast.error(e.message || "Não consegui responder o prazo."),
+  });
+
+  return { marcar, comentar, responderPrazo };
 }
 
 export type AgenciaDoParceiro = {
@@ -194,6 +219,75 @@ export function useMeusParceiros() {
   });
 }
 
+/* ── PRODUÇÃO EXTERNA (lado da social mídia) ────────────────────────────── */
+
+export type PecaExterna = {
+  id: string;
+  title: string | null;
+  format: string | null;
+  producao_status: "aguardando" | "em_producao" | "entregue" | "ajuste" | null;
+  prazo_producao: string | null;
+  prazo_status: "proposto" | "negociando" | "aceito" | null;
+  prazo_sugerido: string | null;
+  approval_status: string | null;
+  scheduled_date: string | null;
+  assignee_id: string;
+  external_client_id: string | null;
+  updated_at: string | null;
+};
+
+/** Tudo que está na mão de parceiros: a matéria-prima do painel "Com
+ *  parceiros". Ela é dona dos posts, então é consulta direta (a RLS dela já
+ *  cobre, inclusive colaborador via acts_for). */
+export function usePecasComParceiros(temParceiros: boolean) {
+  const { user } = useAuth();
+  return useQuery<PecaExterna[]>({
+    queryKey: ["pecas-com-parceiros", user?.id],
+    enabled: !!user && temParceiros,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("posts")
+        .select("id, title, format, producao_status, prazo_producao, prazo_status, prazo_sugerido, approval_status, scheduled_date, assignee_id, external_client_id, updated_at")
+        .not("assignee_id", "is", null)
+        .order("prazo_producao", { ascending: true, nullsFirst: false })
+        .limit(300);
+      if (error) {
+        if (/does not exist|schema cache/i.test(error.message)) return [];
+        throw error;
+      }
+      return (data ?? []) as PecaExterna[];
+    },
+  });
+}
+
+/** A social mídia responde à sugestão de prazo do parceiro. Aceitar fecha o
+ *  combinado na data sugerida; ela também pode manter/propor outra data pelo
+ *  "Enviar para" (que reabre como proposto). Dona do post = update direto. */
+export function useResolverPrazoSugerido() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { postId: string; dataAceita: string }) => {
+      const { data, error } = await sbFrom("posts").update({
+        prazo_producao: v.dataAceita,
+        prazo_status: "aceito",
+        prazo_sugerido: null,
+      } as never).eq("id", v.postId).select("id").maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Não consegui fechar o prazo. Recarregue e tente de novo.");
+      const [a, m, d] = v.dataAceita.split("-");
+      const { error: cErr } = await sbFrom("post_approval_comments").insert({
+        post_id: v.postId, content: `Prazo combinado: ${d}/${m}/${a}`, author_role: "social_media",
+      } as never);
+      if (cErr) throw cErr;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
+      void qc.invalidateQueries({ queryKey: ["external-posts"] });
+      toast.success("Prazo combinado. O parceiro é avisado.");
+    },
+    onError: (e: Error) => toast.error(e.message || "Não consegui fechar o prazo."),
+  });
+}
+
 /** Pedir ajuste (lado da social mídia). A pesquisa é unânime: rodada de
  *  revisão sem feedback CONSOLIDADO vira pingado de "aumenta a fonte" por
  *  áudio, e o freelancer perde a conta do que mudou. Por isso o motivo é
@@ -231,6 +325,10 @@ export function useDelegarPost() {
       const { data, error } = await sbFrom("posts").update({
         assignee_id: v.assigneeId,
         prazo_producao: v.assigneeId ? v.prazo : null,
+        // Prazo nasce PROPOSTO: o parceiro topa ou sugere outra data. Sem
+        // data, não há o que aceitar (fica "a combinar").
+        prazo_status: v.assigneeId && v.prazo ? "proposto" : null,
+        prazo_sugerido: null,
         producao_status: v.assigneeId ? "aguardando" : null,
         assigned_at: v.assigneeId ? new Date().toISOString() : null,
       } as never).eq("id", v.postId).select("id").maybeSingle();

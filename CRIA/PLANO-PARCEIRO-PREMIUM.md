@@ -8,6 +8,36 @@ Data: 30/08/2026, revisado depois de dois toques do Walter:
    lados: a social mídia precisa acompanhar o que está com cada parceiro, e
    o parceiro precisa poder concordar ou sugerir outro prazo."
 
+## 0. Por que ele larga o Trello (pesquisa de 30/08)
+
+O que prende o designer/filmmaker no Trello: é grátis, o kanban bate com o
+modelo mental (Conceito, Rascunho, Aprovação, Entrega), etiquetas e
+checklists dão sensação de controle, e convidar a social mídia é um clique.
+
+O que ele ENGOLE sem perceber:
+- O plano grátis limita anexo a 10MB por arquivo (pago: 250MB). A
+  "qualidade full" no Trello free é mito: ele cola link de Drive, que é o
+  que já fazemos.
+- O board morre no "Done": ele nunca sabe se o cliente aprovou, pediu
+  ajuste ou postou.
+- Feedback é texto solto ("ajusta ali no meio"). Feedback ancorado (pin na
+  imagem, timestamp no vídeo) é OUTRA ferramenta, cara (Frame.io/Filestage,
+  em dólar).
+- Pra fatura, contrato e financeiro ele empilha 3 a 5 assinaturas
+  (US$ 59-77/mês no total, Bonsai/HoneyBook e cia) que não conversam.
+
+O nosso diferencial, em ordem de força:
+1. ELE NÃO ADOTA, ELE É PUXADO: a social mídia convida, e no primeiro dia
+   já tem cards com briefing, marca, legenda e material prontos. No Trello,
+   alguém digita tudo isso à mão. Custo de troca invertido.
+2. A ESTEIRA CONTINUA DEPOIS DO DONE: entrega entra na cadeia real
+   (revisão, aprovação do cliente, postado) e ele VÊ onde parou.
+3. O DINHEIRO ACONTECE SOZINHO: entrega vira a receber, mês vira fatura.
+   É o que as assinaturas extras dele fazem por US$ 60.
+4. FEEDBACK ANCORADO NA PEÇA (fase futura): pin na imagem, timestamp no
+   vídeo, dentro do MESMO card. Mata o Frame.io pra esse público.
+5. Uma frase: o Trello organiza o trabalho; o Cria CONECTA o trabalho.
+
 ## 1. A tese completa
 
 A cadeia do Cria tem três elos, e o motor é sempre o mesmo (prestador atende

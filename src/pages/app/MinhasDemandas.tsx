@@ -192,6 +192,12 @@ export default function MinhasDemandas() {
                           <span className="text-[11px] font-body text-muted-foreground">via {c.agencia_nome}</span>
                           {c.formato && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[c.formato] ?? c.formato}</span>}
                           {c.publica_em && <span className="text-[11px] font-body text-muted-foreground">publica {dataBR(c.publica_em)}</span>}
+                          {c.prazo_status === "proposto" && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">prazo pra confirmar</span>
+                          )}
+                          {c.prazo_status === "negociando" && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">prazo em negociação</span>
+                          )}
                         </span>
                       </span>
                       <EstadoPill s={c.producao_status} />
@@ -560,11 +566,15 @@ const ROTULO_APROVACAO: Record<string, { txt: string; cls: string }> = {
 
 function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFechar: () => void }) {
   const { data: card, isLoading } = useCardDoParceiro(postId);
-  const { marcar, comentar } = useAcoesDoParceiro(postId);
+  const { marcar, comentar, responderPrazo } = useAcoesDoParceiro(postId);
   const [texto, setTexto] = useState("");
   // Entregar em dois tempos: o clique abre o campo do link da versão final.
   const [entregando, setEntregando] = useState(false);
   const [linkEntrega, setLinkEntrega] = useState("");
+  // Negociação de prazo: sugerir abre data + motivo.
+  const [sugerindo, setSugerindo] = useState(false);
+  const [dataSugerida, setDataSugerida] = useState("");
+  const [motivoPrazo, setMotivoPrazo] = useState("");
 
   const enviar = async () => {
     const t = texto.trim();
@@ -690,15 +700,60 @@ function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFecha
 
               {/* A COLUNA DA DIREITA: prazo, marca, material, ações. */}
               <div className="bg-muted/40 border-l border-border p-4 space-y-4">
-                <div className={cn("rounded-xl border px-3.5 py-3",
-                  card.prazo_producao && card.prazo_producao <= hojeBR()
-                    ? "bg-red-50 border-red-200" : "bg-background border-border")}>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Clock className="h-3 w-3" /> Entrega combinada</p>
-                  <p className={cn("font-display font-extrabold text-lg mt-0.5",
-                    card.prazo_producao && card.prazo_producao <= hojeBR() ? "text-red-600" : "text-foreground")}>
-                    {card.prazo_producao ? `${dataBR(card.prazo_producao)}` : "A combinar"}
-                  </p>
-                </div>
+                {/* O PRAZO É COMBINADO, NÃO IMPOSTO. Proposto = o parceiro topa
+                    ou sugere outra data (com motivo, que entra na conversa);
+                    negociando = a bola está com a social mídia. Enquanto isso,
+                    o card segue produzível: negociar data não trava trabalho. */}
+                {card.prazo_status === "proposto" && card.prazo_producao ? (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50/70 px-3.5 py-3 space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
+                      <Clock className="h-3 w-3" /> Prazo proposto
+                    </p>
+                    <p className="font-display font-extrabold text-lg text-amber-900">{dataBR(card.prazo_producao)}</p>
+                    {!sugerindo ? (
+                      <div className="space-y-1.5">
+                        <Button size="sm" className="w-full rounded-xl" disabled={responderPrazo.isPending}
+                          onClick={() => responderPrazo.mutate({ aceita: true })}>
+                          {responderPrazo.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Topo esse prazo</>}
+                        </Button>
+                        <button type="button" onClick={() => setSugerindo(true)}
+                          className="w-full text-[11.5px] font-body font-bold text-amber-800">
+                          Sugerir outra data
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <input type="date" value={dataSugerida} onChange={(e) => setDataSugerida(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[12.5px] font-body" />
+                        <input type="text" value={motivoPrazo} onChange={(e) => setMotivoPrazo(e.target.value)}
+                          placeholder="Motivo (opcional, ex.: semana cheia)"
+                          className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[12.5px] font-body" />
+                        <Button size="sm" className="w-full rounded-xl" disabled={!dataSugerida || responderPrazo.isPending}
+                          onClick={() => { responderPrazo.mutate({ aceita: false, sugestao: dataSugerida, motivo: motivoPrazo }); setSugerindo(false); }}>
+                          {responderPrazo.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar sugestão"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : card.prazo_status === "negociando" && card.prazo_sugerido ? (
+                  <div className="rounded-xl border border-blue-200 bg-blue-50/70 px-3.5 py-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-800 flex items-center gap-1.5">
+                      <Clock className="h-3 w-3" /> Prazo em negociação
+                    </p>
+                    <p className="font-display font-extrabold text-lg mt-0.5 text-blue-900">{dataBR(card.prazo_sugerido)}</p>
+                    <p className="text-[11px] font-body text-blue-800/80 mt-0.5">Você sugeriu. Aguardando a social mídia.</p>
+                  </div>
+                ) : (
+                  <div className={cn("rounded-xl border px-3.5 py-3",
+                    card.prazo_producao && card.prazo_producao <= hojeBR()
+                      ? "bg-red-50 border-red-200" : "bg-background border-border")}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Clock className="h-3 w-3" /> Entrega combinada</p>
+                    <p className={cn("font-display font-extrabold text-lg mt-0.5",
+                      card.prazo_producao && card.prazo_producao <= hojeBR() ? "text-red-600" : "text-foreground")}>
+                      {card.prazo_producao ? `${dataBR(card.prazo_producao)}` : "A combinar"}
+                    </p>
+                  </div>
+                )}
 
                 <div className="rounded-xl border border-border bg-background px-3.5 py-3">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-2"><Palette className="h-3 w-3" /> A marca</p>
