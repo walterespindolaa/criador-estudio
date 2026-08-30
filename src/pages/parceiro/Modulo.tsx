@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import {
-  Camera, Check, FileText, Gem, KanbanSquare, LineChart, Link2, Mic, Search,
-  Send, Sparkles, Users, Wallet,
+  Camera, Check, FileText, Gem, KanbanSquare, LineChart, Link2, Loader2, Mic,
+  Search, Send, Sparkles, Users, Wallet,
 } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/hooks/useProfile";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -90,6 +94,49 @@ const MODULOS: Record<string, InfoModulo> = {
   },
 };
 
+/** Onde cada módulo vive no painel de gestão (o mesmo login, o outro lado). */
+export const DESTINO_GESTAO: Record<string, string> = {
+  criapost: "/socialmidia/criapost",
+  gestao: "/socialmidia/criacrm",
+  caixa: "/socialmidia/criacaixa",
+  captacao: "/socialmidia/captacao",
+  radar: "/socialmidia/hubcria",
+};
+
+/** Destravar o lado gestão SEM tela intermediária (toque do Walter: "ele já
+ *  está no modo gestão, só que para parceiros"). Um clique chama a RPC
+ *  tornar_conta_manager (a mesma do /comecar-agencia) e cai direto no módulo
+ *  que a pessoa estava olhando. Quem já destravou só abre. */
+export function BotaoDestravarGestao({ destinoAposAtivar }: { destinoAposAtivar: string }) {
+  const { profile } = useProfile();
+  const [ativando, setAtivando] = useState(false);
+  const jaTem = profile?.account_type === "manager" || ((profile as { seat_limit?: number } | null)?.seat_limit ?? 0) > 0;
+
+  const destravar = async () => {
+    if (jaTem) { window.location.assign(destinoAposAtivar); return; }
+    setAtivando(true);
+    try {
+      const { error } = await (supabase.rpc as unknown as (fn: string) => Promise<{ error: unknown }>)("tornar_conta_manager");
+      if (error) throw error;
+      toast.success("Pronto! O seu lado gestão está aberto, no mesmo login.");
+      // replace: voltar não deve cair de novo no botão de ativar.
+      window.location.replace(destinoAposAtivar);
+    } catch (e) {
+      console.error("[parceiro] destravar gestão:", e);
+      toast.error("Não consegui destravar agora. Tente de novo.");
+      setAtivando(false);
+    }
+  };
+
+  return (
+    <Button className="rounded-xl" disabled={ativando} onClick={() => void destravar()}>
+      {ativando ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+        <><Users className="h-4 w-4 mr-1.5" /> {jaTem ? "Abrir no meu painel de gestão" : "Destravar agora (grátis, sem cartão)"}</>
+      )}
+    </Button>
+  );
+}
+
 export default function ModuloParceiro() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -122,19 +169,21 @@ export default function ModuloParceiro() {
         ))}
       </div>
 
-      {/* COMO DESTRAVAR: os dois caminhos, sem misturar produto. */}
+      {/* COMO DESTRAVAR: sem tela intermediária. O parceiro JÁ É uma conta de
+          gestão apontada pra parceiros; um clique liga o outro lado do mesmo
+          login e a operação vira UMA: fila das agências + clientes próprios,
+          alternando pelo menu, com o histórico e o financeiro juntos. */}
       <Card className="rounded-2xl border-primary/30 bg-primary/5 p-5">
         <p className="font-display font-extrabold text-[15px] mb-1">Como destravar o {info.nome}</p>
         <p className="text-[12.5px] font-body text-muted-foreground leading-relaxed mb-3">
-          O seu trabalho pras agências segue grátis pra sempre. O {info.nome} entra quando você
-          quer usar isso com clientes SEUS: pela conta de gestão (gratuita pra começar, o mesmo
-          caminho das social mídias) ou pelos planos do Cria criador, se você também toca a
-          própria marca.
+          O seu trabalho pras agências segue grátis pra sempre, e continua neste mesmo login. Ao
+          destravar o lado gestão (grátis, sem cartão), você ganha a área de clientes próprios e o
+          {" "}{info.nome} passa a abrir de verdade: a sua operação inteira num lugar só, a fila das
+          agências de um lado e os SEUS clientes do outro. Se você também toca a própria marca como
+          criador, os planos do Cria criador são o outro caminho.
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button className="rounded-xl" onClick={() => navigate("/comecar-agencia")}>
-            <Users className="h-4 w-4 mr-1.5" /> Ativar meu lado gestão (grátis)
-          </Button>
+          <BotaoDestravarGestao destinoAposAtivar={DESTINO_GESTAO[slug!] ?? "/socialmidia/dashboard"} />
           <Button variant="outline" className="rounded-xl" asChild>
             <Link to="/parceiro/planos"><Gem className="h-4 w-4 mr-1.5" /> Ver os planos</Link>
           </Button>

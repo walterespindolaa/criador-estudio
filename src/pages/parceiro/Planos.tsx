@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { PLANS, type PlanId } from "@/lib/plans";
+import { BotaoDestravarGestao } from "@/pages/parceiro/Modulo";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PLANOS, NA CASCA DO PARCEIRO
@@ -65,9 +66,10 @@ export default function PlanosParceiro() {
               aprovação, agenda e financeiro. Ela é <b className="text-foreground">gratuita pra começar</b>,
               e você só paga quando a carteira crescer.
             </p>
-            <Button className="mt-3 rounded-xl" onClick={() => navigate("/comecar-agencia")}>
-              <Users className="h-4 w-4 mr-1.5" /> Ativar meu lado gestão (grátis)
-            </Button>
+            {/* Um clique, sem tela intermediária: o parceiro já é uma conta
+                de gestão apontada pra parceiros; aqui ele só liga o outro
+                lado do mesmo login. */}
+            <div className="mt-3"><BotaoDestravarGestao destinoAposAtivar="/socialmidia/dashboard" /></div>
           </div>
         </div>
       </Card>

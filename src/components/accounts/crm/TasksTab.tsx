@@ -19,6 +19,9 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { confirmar } from "@/components/shared/Confirm";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
+import { Paperclip, Check } from "lucide-react";
+import { useManagerMaterialsWithDue, useUpdateAgendaMaterial, type AgendaMaterial } from "@/hooks/useClientMaterials";
+import type { CrmClient } from "@/hooks/useCrm";
 
 const COLUMNS: { key: CrmTaskStatus; label: string }[] = [
   { key: "pendente", label: "Pendentes" },
@@ -320,6 +323,14 @@ export function TasksTab() {
           <span className="text-[11px] text-muted-foreground">O filtro de período vale no kanban; aqui o recorte é o mês.</span>
         )}
       </div>
+
+      {/* MATERIAIS PENDENTES: o Walter criou um material com prazo e ele não
+          aparecia em lugar nenhum como pendência (só na agenda e no quadro do
+          cliente). Aqui ele entra junto das tarefas: mesmo recorte de filtros,
+          chip na cor do cliente, atrasado em vermelho e check pra finalizar. */}
+      {view !== "concluidas" && (
+        <MateriaisPendentes clients={clients} clientFilter={clientFilter} view={view} today={today} weekEnd={weekEnd} />
+      )}
 
       {isLoading ? (
         <div className="grid md:grid-cols-3 gap-4">{[1, 2, 3].map((i) => <div key={i} className="h-40 rounded-2xl bg-muted animate-pulse" />)}</div>
@@ -656,6 +667,74 @@ function TasksCalendar({ tasks, today, corDe, nomeDe, onOpen, onNewAt, onMove }:
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/* ── MATERIAIS PENDENTES, junto das tarefas ─────────────────────────────────
+   O material com prazo é uma pendência de trabalho igual a tarefa, mas só
+   aparecia na agenda e no quadro do cliente: quem olhava a tela Tarefas
+   achava que estava tudo feito. Aqui ele entra como faixa própria (não vira
+   coluna do kanban porque o eixo dele é a fazer/finalizado, não o das
+   tarefas), respeitando os mesmos filtros de cliente e recorte de tempo. */
+function MateriaisPendentes({ clients, clientFilter, view, today, weekEnd }: {
+  clients: CrmClient[]; clientFilter: string; view: string; today: string; weekEnd: string;
+}) {
+  const { materials } = useManagerMaterialsWithDue();
+  const upd = useUpdateAgendaMaterial();
+
+  const pendentes = materials.filter((m: AgendaMaterial) => {
+    if (m.status === "finalizado") return false;
+    if (clientFilter !== "all" && m.crm_client_id !== clientFilter) return false;
+    if (view === "atrasadas") return !!m.due_date && m.due_date < today;
+    if (view === "hoje") return m.due_date === today;
+    if (view === "semana") return !!m.due_date && m.due_date >= today && m.due_date <= weekEnd;
+    return true;
+  });
+  if (pendentes.length === 0) return null;
+
+  const corDo = (m: AgendaMaterial) =>
+    clients.find((c) => c.id === m.crm_client_id)?.color ?? null;
+  const nomeDo = (m: AgendaMaterial) =>
+    clients.find((c) => c.id === m.crm_client_id)?.name ?? "Cliente";
+
+  return (
+    <div className="mb-4">
+      <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">
+        <Paperclip className="h-3.5 w-3.5" /> Materiais pendentes ({pendentes.length})
+      </p>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {pendentes.map((m: AgendaMaterial) => {
+          const atrasado = !!m.due_date && m.due_date < today;
+          const cor = corDo(m);
+          return (
+            <div key={m.id} title={m.description ?? undefined}
+              className="rounded-2xl border border-border bg-card px-3.5 py-2.5 flex items-center gap-2.5">
+              <button type="button" aria-label="Finalizar material"
+                onClick={() => upd.mutate({ id: m.id, patch: { status: "finalizado" } })}
+                className="grid h-5 w-5 shrink-0 place-items-center rounded border border-border hover:border-emerald-500 hover:text-emerald-600 transition-colors">
+                <Check className="h-3 w-3 opacity-0 hover:opacity-100" strokeWidth={3} />
+              </button>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-body font-bold text-foreground truncate">{m.title}</span>
+                <span className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  <Badge variant="outline" className="text-[10px] h-5 gap-1"
+                    style={cor ? { borderColor: `${cor}66`, background: `${cor}14`, color: cor } : undefined}>
+                    {cor && <span className="w-1.5 h-1.5 rounded-full" style={{ background: cor }} />}
+                    {nomeDo(m)}
+                  </Badge>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">Material</span>
+                  {m.due_date && (
+                    <span className={cn("text-[11px] font-body", atrasado ? "text-red-600 font-bold" : "text-muted-foreground")}>
+                      {m.due_date.split("-").reverse().slice(0, 2).join("/")}{atrasado ? " · atrasado" : ""}
+                    </span>
+                  )}
+                </span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

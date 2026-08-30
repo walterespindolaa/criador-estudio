@@ -16,7 +16,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { confirmar } from "@/components/shared/Confirm";
-import { Plus, MoreVertical, Loader2, User, CalendarDays, Paperclip, Upload, Link2, X, FileText, ExternalLink, GripVertical, Pencil } from "lucide-react";
+import { Plus, MoreVertical, Loader2, User, CalendarDays, Paperclip, Upload, Link2, X, FileText, ExternalLink, GripVertical, Pencil, Trash2 } from "lucide-react";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { cn } from "@/lib/utils";
 import { parseDateOnly } from "@/lib/date-br";
@@ -297,7 +297,16 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
               )}
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
+            {/* Excluir DENTRO da edição: o Walter tentou apagar por aqui e não
+                tinha como (só existia no menu do card). Mesma confirmação. */}
+            {editing && (
+              <Button variant="ghost" disabled={saving}
+                className="text-destructive hover:text-destructive sm:mr-auto"
+                onClick={async () => { const alvo = editing; setDialogOpen(false); await remove(alvo); }}>
+                <Trash2 className="h-4 w-4 mr-1.5" /> Excluir
+              </Button>
+            )}
             <Button variant="ghost" onClick={() => setDialogOpen(false)} disabled={saving}>Cancelar</Button>
             <Button onClick={save} disabled={saving || !form.title.trim()}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? "Salvar" : "Criar"}

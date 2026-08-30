@@ -41,14 +41,15 @@ const TRABALHO = [
    plano ficam com cadeado e levam pros planos: o menu inteiro vira vitrine
    do caminho de crescimento, não só a home. */
 const MODULOS = [
-  // Sem plano, o clique abre a VITRINE do módulo (a dor + o que destrava +
-  // como comprar), não a página genérica de planos: cadeado não vende.
-  // Com o lado criador ativo, vai pro /app, onde os módulos reais vivem.
-  { rotulo: "Cria Post", Icone: Send, slug: "criapost" },
-  { rotulo: "Cria Gestão", Icone: Users, slug: "gestao" },
-  { rotulo: "Cria Caixa", Icone: Wallet, slug: "caixa" },
-  { rotulo: "Cria Captação", Icone: Camera, slug: "captacao" },
-  { rotulo: "Cria Radar", Icone: Search, slug: "radar" },
+  // O parceiro JÁ É uma conta de gestão apontada pra parceiros (toque do
+  // Walter, 30/08): com o lado gestão destravado, o módulo abre DE VERDADE
+  // no /socialmidia (onde o ModuleGate vende cada módulo com os benefícios).
+  // Sem destravar, o clique abre a vitrine do módulo na voz do parceiro.
+  { rotulo: "Cria Post", Icone: Send, slug: "criapost", gestao: "/socialmidia/criapost" },
+  { rotulo: "Cria Gestão", Icone: Users, slug: "gestao", gestao: "/socialmidia/criacrm" },
+  { rotulo: "Cria Caixa", Icone: Wallet, slug: "caixa", gestao: "/socialmidia/criacaixa" },
+  { rotulo: "Cria Captação", Icone: Camera, slug: "captacao", gestao: "/socialmidia/captacao" },
+  { rotulo: "Cria Radar", Icone: Search, slug: "radar", gestao: "/socialmidia/hubcria" },
 ];
 
 const FAIXA: Record<string, { titulo: string; sub: string }> = {
@@ -87,6 +88,9 @@ export default function ParceiroLayout() {
     ? `${abertos} card${abertos === 1 ? "" : "s"} na sua mão`
     : faixa.sub;
   const temLadoCriador = !!profile?.onboarding_completed && deriveTier(profile) !== "none";
+  // Conta de gestão no MESMO login: o parceiro não "vira" outra coisa, ele
+  // destrava o lado que já era dele.
+  const temLadoGestao = profile?.account_type === "manager" || (profile?.seat_limit ?? 0) > 0;
 
   const avatar = (
     <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-white/40 bg-white/20 font-display font-bold text-white shadow-sm">
@@ -160,22 +164,26 @@ export default function ParceiroLayout() {
 
         <Secao nome="Módulos" />
         <div className="space-y-1">
-          {MODULOS.map(({ rotulo, Icone, slug }) => (
-            <button key={rotulo} type="button" title={temLadoCriador ? rotulo : `${rotulo} (conhecer)`}
-              onClick={() => navigate(temLadoCriador ? "/app" : `/parceiro/modulos/${slug}`)}
-              className={itemCls(false)}>
-              <Icone className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
-              {aberto && (
-                <>
-                  <span className="text-[13px] font-body font-semibold whitespace-nowrap">{rotulo}</span>
-                  {!temLadoCriador && <Lock className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />}
-                </>
-              )}
-              {!aberto && !temLadoCriador && (
-                <Lock className="absolute right-1 bottom-1 h-2.5 w-2.5 text-muted-foreground/50" />
-              )}
-            </button>
-          ))}
+          {MODULOS.map(({ rotulo, Icone, slug, gestao }) => {
+            const destravado = temLadoGestao || temLadoCriador;
+            const destino = temLadoGestao ? gestao : temLadoCriador ? "/app" : `/parceiro/modulos/${slug}`;
+            return (
+              <button key={rotulo} type="button" title={destravado ? rotulo : `${rotulo} (conhecer)`}
+                onClick={() => navigate(destino)}
+                className={itemCls(false)}>
+                <Icone className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+                {aberto && (
+                  <>
+                    <span className="text-[13px] font-body font-semibold whitespace-nowrap">{rotulo}</span>
+                    {!destravado && <Lock className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />}
+                  </>
+                )}
+                {!aberto && !destravado && (
+                  <Lock className="absolute right-1 bottom-1 h-2.5 w-2.5 text-muted-foreground/50" />
+                )}
+              </button>
+            );
+          })}
         </div>
 
         <Secao nome="Conta" />
@@ -184,6 +192,12 @@ export default function ParceiroLayout() {
             <Gem className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
             {aberto && <span className="text-[13px] font-body font-semibold whitespace-nowrap">Planos</span>}
           </NavLink>
+          {temLadoGestao && (
+            <button type="button" title="Minha área de gestão" onClick={() => navigate("/socialmidia/dashboard")} className={itemCls(false)}>
+              <Users className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+              {aberto && <span className="text-[13px] font-body font-semibold whitespace-nowrap">Minha área de gestão</span>}
+            </button>
+          )}
           {temLadoCriador && (
             <>
               <button type="button" title="Lixeira" onClick={() => navigate("/app/lixeira")} className={itemCls(false)}>
