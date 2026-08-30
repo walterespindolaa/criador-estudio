@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Briefcase, CheckCircle2, Layers, LogOut } from "lucide-react";
+import {
+  Briefcase, Camera, CheckCircle2, ChevronsLeft, ChevronsRight, Gem, Layers,
+  Lock, LogOut, Send, Trash2, Users, Wallet,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -14,21 +17,37 @@ import { deriveTier } from "@/hooks/useTier";
 /* ═══════════════════════════════════════════════════════════════════════════
    A CASCA DO PARCEIRO, NO MESMO DESENHO DA SOCIAL MÍDIA
 
-   O Walter mostrou lado a lado: o app real usa um RAIL flutuante de ícones à
-   esquerda (centrado na vertical, cantos de 24px, expande no hover mostrando
-   os nomes) com a HeroBand sangrando em largura total por trás dele. A minha
-   primeira sidebar era um cartão estático que não conversava com nada. Esta
-   versão copia a gramática do ManagerLayout: mesmo rail, mesma HeroBand,
-   mesmo recuo de 104px no conteúdo.
+   Rail flutuante à esquerda (cantos de 24px, centrado na vertical), HeroBand
+   sangrando em largura total por trás, e o menu com as MESMAS seções do
+   painel da social mídia: Trabalho (o dia a dia dele), Módulos (Cria Post,
+   Gestão, Caixa, Captação, com cadeado pra quem ainda não tem plano; o
+   cadeado leva pros planos, na casca dele) e Conta (planos, lixeira pra quem
+   tem o lado criador, sair).
 
-   O menu continua curto de propósito: demandas, entregues, marcas. Parceiro
-   sem plano não vê atalho pro app de criador (era o caminho do paywall).
+   Expande no hover E tem o botão de fixar (ChevronsRight/Left), igual ao
+   menu da social mídia: fixado fica aberto até a pessoa recolher, e a
+   escolha persiste no aparelho.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const ITENS = [
+const LS_RAIL = "cria_parceiro_rail_fixado";
+
+const TRABALHO = [
   { to: "/parceiro", fim: true, rotulo: "Minhas demandas", Icone: Briefcase, comBadge: true },
   { to: "/parceiro/entregues", fim: false, rotulo: "Entregues", Icone: CheckCircle2, comBadge: false },
   { to: "/parceiro/marcas", fim: false, rotulo: "Marcas que atendo", Icone: Layers, comBadge: false },
+];
+
+/* Os módulos do Cria, no menu do parceiro como estão no da social mídia. Sem
+   plano ficam com cadeado e levam pros planos: o menu inteiro vira vitrine
+   do caminho de crescimento, não só a home. */
+const MODULOS = [
+  // Quem TEM o lado criador cai na home dele (/app), onde os módulos reais
+  // vivem com as rotas certas pro tipo de conta; rota específica aqui seria
+  // chute (criador e gestor têm caminhos diferentes).
+  { rotulo: "Cria Post", Icone: Send },
+  { rotulo: "Cria Gestão", Icone: Users },
+  { rotulo: "Cria Caixa", Icone: Wallet },
+  { rotulo: "Cria Captação", Icone: Camera },
 ];
 
 const FAIXA: Record<string, { titulo: string; sub: string }> = {
@@ -44,7 +63,15 @@ export default function ParceiroLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: fila = [] } = useFilaDoParceiro();
-  const [railAberto, setRailAberto] = useState(false);
+  const [fixado, setFixado] = useState(() => localStorage.getItem(LS_RAIL) === "1");
+  const [hover, setHover] = useState(false);
+  const aberto = fixado || hover;
+
+  const alternarFixado = () => {
+    const v = !fixado;
+    setFixado(v);
+    localStorage.setItem(LS_RAIL, v ? "1" : "0");
+  };
 
   const sair = async () => { await signOut(); navigate("/"); };
   const nome = profile?.name || user?.email || "Parceiro";
@@ -63,46 +90,57 @@ export default function ParceiroLayout() {
     </div>
   );
 
+  const Secao = ({ nome: n }: { nome: string }) =>
+    aberto ? (
+      <p className="px-2.5 pt-3 pb-1 text-[10px] font-display font-extrabold uppercase tracking-[0.1em] text-muted-foreground/70 whitespace-nowrap">
+        {n}
+      </p>
+    ) : <div className="my-2 mx-2 border-t border-border" />;
+
+  const itemCls = (ativo: boolean) => cn(
+    "relative flex items-center rounded-2xl transition-colors w-full",
+    aberto ? "gap-2.5 px-3 py-2" : "justify-center p-2.5",
+    ativo ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+  );
+
   return (
     <div className="min-h-screen app-canvas relative">
       <BgShapes styleKey={(profile as { theme_bg?: string | null } | null | undefined)?.theme_bg ?? "organico"} />
 
-      {/* ── O RAIL: flutuante, centrado, expande no hover (padrão do app) ── */}
+      {/* ── O RAIL: flutuante, hover + fixável, padrão do app ── */}
       <nav
-        onMouseEnter={() => setRailAberto(true)}
-        onMouseLeave={() => setRailAberto(false)}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
         className={cn(
-          "fixed left-5 top-1/2 z-40 hidden -translate-y-1/2 flex-col rounded-[24px] border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] px-2 py-2.5 shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)] backdrop-blur-xl transition-[width] duration-200 md:flex",
-          railAberto ? "w-[240px] items-stretch" : "w-[64px] items-stretch",
+          "fixed left-5 top-1/2 z-40 hidden -translate-y-1/2 flex-col rounded-[24px] border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] px-2 py-2.5 shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)] backdrop-blur-xl transition-[width] duration-200 md:flex max-h-[calc(100vh-3rem)] overflow-y-auto",
+          aberto ? "w-[240px] items-stretch" : "w-[64px] items-stretch",
         )}
       >
-        <div className={cn("mb-2 flex items-center gap-2", railAberto ? "px-1" : "justify-center")}>
+        <div className={cn("mb-1 flex items-center gap-2", aberto ? "px-1" : "justify-center")}>
           <Logo icon className="h-8 w-8 shrink-0" />
-          {railAberto && (
-            <span className="text-[9px] font-display font-extrabold uppercase tracking-[0.14em] text-primary whitespace-nowrap">
-              Parceiros
-            </span>
+          {aberto && (
+            <>
+              <span className="text-[9px] font-display font-extrabold uppercase tracking-[0.14em] text-primary whitespace-nowrap">
+                Parceiros
+              </span>
+              {/* Fixar/recolher, igual ao menu da social mídia. */}
+              <button type="button" onClick={alternarFixado} title={fixado ? "Recolher o menu" : "Manter aberto"}
+                className="ml-auto p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                {fixado ? <ChevronsLeft className="h-4 w-4" /> : <ChevronsRight className="h-4 w-4" />}
+              </button>
+            </>
           )}
         </div>
 
-        {railAberto && (
-          <p className="px-2.5 pb-1 text-[10px] font-display font-extrabold uppercase tracking-[0.1em] text-muted-foreground/70 whitespace-nowrap">
-            Trabalho
-          </p>
-        )}
+        <Secao nome="Trabalho" />
         <div className="space-y-1">
-          {ITENS.map(({ to, fim, rotulo, Icone, comBadge }) => (
-            <NavLink key={to} to={to} end={fim}
-              title={rotulo}
-              className={({ isActive }) => cn(
-                "relative flex items-center rounded-2xl transition-colors",
-                railAberto ? "gap-2.5 px-3 py-2.5" : "justify-center p-2.5",
-                isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}>
+          {TRABALHO.map(({ to, fim, rotulo, Icone, comBadge }) => (
+            <NavLink key={to} to={to} end={fim} title={rotulo}
+              className={({ isActive }) => itemCls(isActive)}>
               <Icone className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
-              {railAberto && <span className="text-[13px] font-body font-semibold whitespace-nowrap">{rotulo}</span>}
+              {aberto && <span className="text-[13px] font-body font-semibold whitespace-nowrap">{rotulo}</span>}
               {comBadge && fila.length > 0 && (
-                railAberto ? (
+                aberto ? (
                   <span className="ml-auto min-w-[19px] h-[19px] px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold grid place-items-center">
                     {fila.length}
                   </span>
@@ -114,29 +152,66 @@ export default function ParceiroLayout() {
           ))}
         </div>
 
-        <div className="mt-2 border-t border-border pt-2 space-y-1">
-          {/* Quem também é criador (plano vigente) volta pro app por aqui. Quem
-              é só parceiro nem vê: sem plano, o /app é um paywall. */}
+        <Secao nome="Módulos" />
+        <div className="space-y-1">
+          {MODULOS.map(({ rotulo, Icone }) => (
+            <button key={rotulo} type="button" title={temLadoCriador ? rotulo : `${rotulo} (ver planos)`}
+              onClick={() => navigate(temLadoCriador ? "/app" : "/parceiro/planos")}
+              className={itemCls(false)}>
+              <Icone className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+              {aberto && (
+                <>
+                  <span className="text-[13px] font-body font-semibold whitespace-nowrap">{rotulo}</span>
+                  {!temLadoCriador && <Lock className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />}
+                </>
+              )}
+              {!aberto && !temLadoCriador && (
+                <Lock className="absolute right-1 bottom-1 h-2.5 w-2.5 text-muted-foreground/50" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        <Secao nome="Conta" />
+        <div className="space-y-1 pb-1">
+          <NavLink to="/parceiro/planos" title="Planos" className={({ isActive }) => itemCls(isActive)}>
+            <Gem className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+            {aberto && <span className="text-[13px] font-body font-semibold whitespace-nowrap">Planos</span>}
+          </NavLink>
           {temLadoCriador && (
-            <NavLink to="/app" title="Meu Cria (criador)"
-              className={cn("flex items-center rounded-2xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors",
-                railAberto ? "gap-2.5 px-3 py-2" : "justify-center p-2.5")}>
-              <Layers className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
-              {railAberto && <span className="text-[13px] font-body font-semibold whitespace-nowrap">Meu Cria (criador)</span>}
-            </NavLink>
+            <>
+              <button type="button" title="Lixeira" onClick={() => navigate("/app/lixeira")} className={itemCls(false)}>
+                <Trash2 className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+                {aberto && <span className="text-[13px] font-body font-semibold whitespace-nowrap">Lixeira</span>}
+              </button>
+              <button type="button" title="Meu Cria (criador)" onClick={() => navigate("/app")} className={itemCls(false)}>
+                <Layers className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+                {aberto && <span className="text-[13px] font-body font-semibold whitespace-nowrap">Meu Cria (criador)</span>}
+              </button>
+            </>
           )}
-          <button onClick={() => void sair()} title="Sair"
-            className={cn("w-full flex items-center rounded-2xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors",
-              railAberto ? "gap-2.5 px-3 py-2" : "justify-center p-2.5")}>
+          {aberto && (
+            <div className="flex items-center gap-2.5 px-2.5 py-1.5">
+              <span className="w-8 h-8 rounded-full bg-primary text-primary-foreground grid place-items-center text-[11px] font-display font-bold shrink-0 overflow-hidden">
+                {profile?.avatar_url
+                  ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                  : nome.charAt(0).toUpperCase()}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[12.5px] font-body font-bold text-foreground truncate">{nome}</span>
+                <span className="block text-[10px] font-body text-muted-foreground truncate">{user?.email}</span>
+              </span>
+            </div>
+          )}
+          <button onClick={() => void sair()} title="Sair" className={itemCls(false)}>
             <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
-            {railAberto && <span className="text-[13px] font-body font-semibold whitespace-nowrap">Sair</span>}
+            {aberto && <span className="text-[13px] font-body font-semibold whitespace-nowrap">Sair</span>}
           </button>
         </div>
       </nav>
 
       <div className="flex min-h-screen flex-col md:pl-[104px]">
-        {/* HeroBand (desktop): sangra em largura total por trás do rail,
-            exatamente como no painel da social mídia. */}
+        {/* HeroBand (desktop): sangra em largura total por trás do rail. */}
         <div className="hidden md:block md:-ml-[104px] md:w-[calc(100%+104px)]">
           <HeroBand eyebrow={eyebrow} title={faixa.titulo} avatar={avatar} />
         </div>
@@ -146,12 +221,16 @@ export default function ParceiroLayout() {
           <Logo className="h-6 w-auto" />
           <span className="text-[8.5px] font-display font-extrabold uppercase tracking-[0.14em] text-primary">Parceiros</span>
           <nav className="ml-auto flex gap-1">
-            {ITENS.map(({ to, fim, Icone }) => (
+            {TRABALHO.map(({ to, fim, Icone }) => (
               <NavLink key={to} to={to} end={fim}
                 className={({ isActive }) => cn("p-2 rounded-lg", isActive ? "bg-primary/10 text-primary" : "text-muted-foreground")}>
                 <Icone className="h-[18px] w-[18px]" strokeWidth={1.75} />
               </NavLink>
             ))}
+            <NavLink to="/parceiro/planos"
+              className={({ isActive }) => cn("p-2 rounded-lg", isActive ? "bg-primary/10 text-primary" : "text-muted-foreground")}>
+              <Gem className="h-[18px] w-[18px]" strokeWidth={1.75} />
+            </NavLink>
           </nav>
         </div>
         <FaixaMobile titulo={faixa.titulo} sub={eyebrow} />
