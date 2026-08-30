@@ -15,6 +15,7 @@ import { AppFooter } from "@/components/shared/AppFooter";
 import { Settings, Lightbulb, Plus } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { useSouParceiro } from "@/hooks/useParceiro";
+import { deriveTier } from "@/hooks/useTier";
 import { applyTheme } from "@/lib/applyTheme";
 import { BgShapes } from "@/components/BgShapes";
 import { TourProvider } from "@/components/tour/TourProvider";
@@ -188,14 +189,18 @@ const AppLayout = () => {
   }
 
   if (!isLoading && profile && profile.onboarding_completed === false && profile.account_type !== "manager") {
-    /* Parceiro (designer, editor, copy) que nunca ativou o lado criador NÃO
-       faz o onboarding de criador: a área dele é /parceiro. Sem isto, o
-       PeJota redefiniu a senha e caiu no wizard "Sobre o que você cria?",
-       que não tem nada a ver com quem só produz peça pra agência. Espera o
-       papel carregar antes de decidir, senão manda pro lugar errado. */
+    /* Parceiro (designer, editor, copy) SEM plano de criador não faz o
+       onboarding de criador: a área dele é /parceiro. Sem isto, o PeJota
+       redefiniu a senha e caiu no wizard "Sobre o que você cria?". As duas
+       exceções: a página de planos (é como o parceiro COMPRA o lado criador)
+       e o parceiro que já assinou (aí o onboarding vale, ele virou criador).
+       Espera o papel carregar antes de decidir, senão manda pro lugar errado. */
     if (carregandoPapelParceiro) return <LoadingScreen />;
-    if (souParceiro) return <Navigate to="/parceiro" replace />;
-    if (location.pathname !== "/onboarding") {
+    const parceiroSemPlano = souParceiro && deriveTier(profile) === "none";
+    if (parceiroSemPlano && location.pathname !== "/app/assinar") {
+      return <Navigate to="/parceiro" replace />;
+    }
+    if (!parceiroSemPlano && location.pathname !== "/onboarding") {
       return <Navigate to="/onboarding" replace />;
     }
   }

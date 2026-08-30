@@ -6,6 +6,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
+import { useSouParceiro } from "@/hooks/useParceiro";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ import { track, newEventId } from "@/lib/metaPixel";
 
 export default function Assinar() {
   const navigate = useNavigate();
+  const { data: souParceiro } = useSouParceiro();
   const { status } = useSubscription();
   const { profile } = useProfile();
   const { user } = useAuth();
@@ -139,7 +141,18 @@ export default function Assinar() {
       {/* Agora ela vive DENTRO do app (menu, rail, barra), então o fundo orgânico
           vem do próprio AppLayout. Ela deixou de ser "outro site". */}
       <div className="flex flex-col items-center pb-16">
-      {!isExpired && (
+      {/* Parceiro SEMPRE tem porta de saída: a área dele (/parceiro) não
+          depende de plano nenhum. Sem isto, o PeJota clicou em "Meu Cria",
+          caiu no paywall do trial expirado e ficou preso sem botão de volta. */}
+      {souParceiro ? (
+        <button
+          onClick={() => navigate("/parceiro")}
+          className="self-start flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar pra área de parceiro
+        </button>
+      ) : !isExpired && (
         <button
           onClick={() => navigate("/app")}
           className="self-start flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"

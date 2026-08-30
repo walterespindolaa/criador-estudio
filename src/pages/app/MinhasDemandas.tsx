@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
+  Briefcase, Camera, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
   Copy as CopyIcon, ExternalLink, Folder, Loader2, MessageCircle, Palette,
-  Play, RotateCcw, Send,
+  Play, RotateCcw, Send, Sparkles, Users, Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -152,14 +153,7 @@ export default function MinhasDemandas() {
         {isLoading ? (
           <div className="grid place-items-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : fila.length === 0 ? (
-          <Card className="p-10 rounded-2xl border-dashed text-center">
-            <CheckCircle2 className="h-8 w-8 mx-auto text-green-500 mb-3" />
-            <p className="text-sm font-body font-medium text-foreground">Nenhuma demanda aberta</p>
-            <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">
-              As social mídias que te acoplaram mandam os posts direto pra cá, com roteiro, prazo e a
-              identidade do cliente juntos. Você recebe aviso no celular na hora.
-            </p>
-          </Card>
+          <ComeceAqui />
         ) : visao === "semana" ? (
           <SemanaDoParceiro fila={fila} hoje={hoje} aoAbrir={setAberto} />
         ) : visao === "quadro" ? (
@@ -208,6 +202,8 @@ export default function MinhasDemandas() {
             );
           })
         )}
+
+        <CrescaComOCria />
       </motion.div>
 
       <CardAbertoDialog postId={aberto} aoFechar={() => setAberto(null)} />
@@ -267,6 +263,97 @@ function SemanaDoParceiro({ fila, hoje, aoAbrir }: {
           {semPrazo.length} card{semPrazo.length === 1 ? "" : "s"} sem prazo combinado (aparecem na visão Por prazo).
         </p>
       )}
+    </div>
+  );
+}
+
+/* ── COMECE POR AQUI ──────────────────────────────────────────────────────
+   O vazio de antes era um card seco. Pra quem acabou de ser acoplado, esta é
+   a primeira tela da vida dele no Cria: precisa dizer o que vai acontecer, em
+   que ordem, e o que resolve. Cada passo responde uma dor clássica do
+   freelancer de agência: briefing espalhado no WhatsApp, prazo de boca,
+   ajuste sem registro e cobrança de fim de mês sem prova. */
+function ComeceAqui() {
+  const PASSOS = [
+    {
+      Icone: Briefcase, cor: "bg-orange-100 text-orange-600", titulo: "1 · O card chega pronto",
+      texto: "A social mídia delega e o post cai aqui com roteiro, legenda aprovada, cores da marca, hashtags e a pasta de material. Nada de caçar briefing em três conversas de WhatsApp.",
+    },
+    {
+      Icone: Clock, cor: "bg-blue-100 text-blue-600", titulo: "2 · Prazo combinado, visível",
+      texto: "Cada card mostra a data de entrega combinada, e as visões Por prazo, Quadro, Semana e Mês organizam a sua semana. Marque \"Estou fazendo\" e todo mundo sabe que está na sua mão.",
+    },
+    {
+      Icone: MessageCircle, cor: "bg-violet-100 text-violet-600", titulo: "3 · Conversa dentro do card",
+      texto: "Dúvida, versão e ajuste ficam registrados no próprio card, com a voz de cada um etiquetada (você, social mídia, cliente). O ajuste volta marcado, não por áudio perdido.",
+    },
+    {
+      Icone: CheckCircle2, cor: "bg-green-100 text-green-700", titulo: "4 · Entrega vira histórico",
+      texto: "Ao marcar entregue, a social mídia revisa e leva pro cliente. A tela Entregues soma tudo por agência: no fim do mês, a sua cobrança sai com número, não com memória.",
+    },
+  ];
+  return (
+    <div>
+      <Card className="rounded-2xl border-border p-5 mb-4 bg-gradient-to-br from-orange-50/60 to-transparent">
+        <p className="font-display font-extrabold text-[17px]">Nenhuma demanda aberta por enquanto</p>
+        <p className="text-[13px] font-body text-muted-foreground mt-1 max-w-xl leading-relaxed">
+          Quando uma social mídia delegar um post pra você, ele aparece aqui e o aviso chega no seu
+          celular na hora. Enquanto isso, é assim que o trabalho flui:
+        </p>
+      </Card>
+      <div className="grid sm:grid-cols-2 gap-3">
+        {PASSOS.map((p) => (
+          <Card key={p.titulo} className="rounded-2xl border-border p-4">
+            <span className={cn("w-9 h-9 rounded-xl grid place-items-center mb-2.5", p.cor)}>
+              <p.Icone className="h-[18px] w-[18px]" strokeWidth={1.75} />
+            </span>
+            <p className="font-display font-bold text-[14px]">{p.titulo}</p>
+            <p className="text-[12.5px] font-body text-muted-foreground mt-1 leading-relaxed">{p.texto}</p>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── CRESÇA COM O CRIA ────────────────────────────────────────────────────
+   O parceiro entra de graça pelo trabalho das agências, e é exatamente por
+   isso que esta seção existe: quase todo designer e filmmaker também tem os
+   PRÓPRIOS clientes, e hoje gerencia esses jobs no caos. Os módulos do Cria
+   são o caminho: cliente vindo de agência nunca ocupa vaga; pagar é só pra
+   gerenciar clientes seus. */
+function CrescaComOCria() {
+  const navigate = useNavigate();
+  const MODULOS = [
+    { Icone: Send, nome: "Cria Post", texto: "Kanban da ideia ao publicado e link de aprovação pros seus clientes diretos." },
+    { Icone: Users, nome: "Cria Gestão", texto: "CRM, propostas, contratos e relatórios pra fechar e manter os seus próprios jobs." },
+    { Icone: Wallet, nome: "Cria Caixa", texto: "Quanto entrou de cada agência e cliente, impostos, custo e lucro por trabalho." },
+    { Icone: Camera, nome: "Cria Captação", texto: "Roteiros estruturados, teleprompter e guia de gravação pra quem também filma." },
+  ];
+  return (
+    <div className="mt-8">
+      <div className="flex items-center gap-2 mb-1 px-0.5">
+        <Sparkles className="h-4 w-4 text-primary" />
+        <p className="font-display font-extrabold text-[16px]">Tem clientes próprios? Monte a sua operação aqui dentro</p>
+      </div>
+      <p className="text-[12.5px] font-body text-muted-foreground mb-3 px-0.5 max-w-2xl leading-relaxed">
+        O trabalho que vem das agências é grátis pra sempre e não ocupa vaga nenhuma. Os planos do
+        Cria entram quando você quer gerenciar os SEUS clientes com as mesmas ferramentas da agência.
+      </p>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {MODULOS.map((m) => (
+          <Card key={m.nome} className="rounded-2xl border-border p-4">
+            <span className="w-9 h-9 rounded-xl grid place-items-center mb-2.5 bg-primary/10 text-primary">
+              <m.Icone className="h-[18px] w-[18px]" strokeWidth={1.75} />
+            </span>
+            <p className="font-display font-bold text-[14px]">{m.nome}</p>
+            <p className="text-[12px] font-body text-muted-foreground mt-1 leading-relaxed">{m.texto}</p>
+          </Card>
+        ))}
+      </div>
+      <Button className="mt-3 rounded-xl" onClick={() => navigate("/app/assinar")}>
+        <Sparkles className="h-4 w-4 mr-1.5" /> Conhecer os planos do Cria
+      </Button>
     </div>
   );
 }

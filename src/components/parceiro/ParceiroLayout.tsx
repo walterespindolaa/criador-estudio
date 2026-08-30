@@ -7,6 +7,7 @@ import { useFilaDoParceiro } from "@/hooks/useParceiro";
 import { Logo } from "@/components/shared/Logo";
 import { BgShapes } from "@/components/BgShapes";
 import { statusRamp } from "@/lib/statusRamp";
+import { deriveTier } from "@/hooks/useTier";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    A CASCA DO PARCEIRO, NA LÍNGUA DO CRIA
@@ -75,8 +76,8 @@ export default function ParceiroLayout() {
     <div className="min-h-screen flex w-full app-canvas relative">
       <BgShapes styleKey={(profile as { theme_bg?: string | null } | null | undefined)?.theme_bg ?? "organico"} />
 
-      {/* ── Menu lateral no padrão do app ── */}
-      <aside className="hidden md:flex w-[228px] flex-none flex-col border-r border-border bg-card/90 backdrop-blur-sm px-3 py-5 sticky top-0 h-screen z-[2]">
+      {/* ── Menu lateral: card flutuante arredondado, como o rail do app ── */}
+      <aside className="hidden md:flex w-[236px] flex-none flex-col rounded-[24px] border border-border bg-card/95 backdrop-blur-xl px-3 py-5 sticky top-4 self-start ml-4 my-4 max-h-[calc(100vh-2rem)] z-[2] shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)]">
         <div className="flex items-end gap-2 px-2.5 pb-5">
           <Logo className="h-7 w-auto" />
           <span className="text-[9px] font-display font-extrabold uppercase tracking-[0.14em] text-primary pb-0.5">Parceiros</span>
@@ -104,11 +105,11 @@ export default function ParceiroLayout() {
         </nav>
 
         <div className="mt-auto border-t border-border pt-3 space-y-1">
-          {/* Quem também é criador/social mídia volta pro app por aqui. Quem é
-              SÓ parceiro nem vê o atalho: o app de criador devolveria ele pra
-              cá (o gate pula o onboarding de criador pra parceiro), então o
-              link seria um botão que não leva a lugar nenhum. */}
-          {profile?.onboarding_completed && (
+          {/* Quem também é criador/social mídia (plano vigente) volta pro app
+              por aqui. Quem é SÓ parceiro nem vê o atalho: sem plano, o /app é
+              um paywall, e foi nele que o PeJota ficou preso. O convite pra
+              assinar mora na home, com contexto, não escondido num link. */}
+          {profile?.onboarding_completed && deriveTier(profile) !== "none" && (
             <NavLink to="/app"
               className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-[13px] font-body font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
               <Layers className="h-4 w-4" strokeWidth={1.75} /> Meu Cria (criador)
