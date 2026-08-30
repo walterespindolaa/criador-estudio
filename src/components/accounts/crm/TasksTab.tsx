@@ -198,6 +198,11 @@ export function TasksTab() {
     if (t.crm_lead_id) return leads.find((l) => l.id === t.crm_lead_id)?.name ?? "Lead";
     return null;
   };
+  /* A cor da FICHA do cliente pinta o chip do nome: bate o olho na lista e
+     sabe de quem é cada tarefa, igual na agenda. Lead fica neutro (cor de
+     lead é o item #105 do backlog). */
+  const colorFor = (t: CrmTask) =>
+    t.crm_client_id ? (clients.find((c) => c.id === t.crm_client_id)?.color ?? null) : null;
   const isLead = (t: CrmTask) => !t.crm_client_id && !!t.crm_lead_id;
 
   // Os chips (Todas/Atrasadas/Hoje/Esta semana/Concluídas) e o seletor de cliente valem
@@ -356,7 +361,13 @@ export function TasksTab() {
                             {t.description && <p className="text-xs text-muted-foreground truncate">{t.description}</p>}
                             <div className="flex flex-wrap items-center gap-1.5">
                               <Badge className={cn("text-[10px] h-5", PRIO_CLASS[t.priority])}>{CRM_TASK_PRIORITY_LABELS[t.priority]}</Badge>
-                              {nm && <Badge variant="outline" className="text-[10px] h-5">{isLead(t) ? "Lead: " : ""}{nm}</Badge>}
+                              {nm && (
+                                <Badge variant="outline" className="text-[10px] h-5 gap-1"
+                                  style={colorFor(t) ? { borderColor: `${colorFor(t)}66`, background: `${colorFor(t)}14`, color: colorFor(t)! } : undefined}>
+                                  {colorFor(t) && <span className="w-1.5 h-1.5 rounded-full" style={{ background: colorFor(t)! }} />}
+                                  {isLead(t) ? "Lead: " : ""}{nm}
+                                </Badge>
+                              )}
                               {overdue && <Badge className="text-[10px] h-5 bg-destructive/10 text-destructive gap-0.5"><AlertTriangle className="h-2.5 w-2.5" />Atrasada</Badge>}
                             </div>
                             {t.due_date && <div className="flex items-center gap-1 text-[11px] text-muted-foreground"><CalendarIcon className="h-3 w-3" />{shortDate(t.due_date)}</div>}

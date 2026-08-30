@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cria Parceiros · Operação unificada (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --laranja:#EA4918; --rosa:#FF77B9; --amarelo:#FFCF03; --azul:#0061EE;
+    --verde:#01A652; --creme:#FDFBF5; --tinta:#231946; --cinza:#6b7280;
+    --borda:#eee7db; --card:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0}
+  body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--creme);color:var(--tinta);min-height:100vh}
+  h1,h2,h3,.disp{font-family:'Bricolage Grotesque',sans-serif}
+  .blob{position:fixed;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.13;pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 20px 80px}
+
+  /* HERO */
+  .hero{background:linear-gradient(115deg,#b8451f,#e06a35);border-radius:0 0 26px 26px;color:#fff;padding:22px 28px 20px;margin:0 -20px 22px;position:relative;overflow:hidden}
+  .hero .b1{position:absolute;top:-70px;right:-40px;width:180px;height:180px;background:var(--amarelo);border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.7}
+  .hero .b2{position:absolute;bottom:-60px;right:22%;width:120px;height:120px;background:var(--rosa);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.6}
+  .hero h1{font-size:26px;font-weight:800;position:relative}
+  .hero p{font-size:13px;opacity:.88;position:relative;margin-top:2px}
+
+  .aviso{background:#fff7e8;border:1px solid #f3ddb2;border-radius:14px;padding:10px 14px;font-size:12.5px;color:#7a5b17;margin-bottom:18px}
+  .aviso b{color:#5c440e}
+
+  /* ═══ MESA DO DIA ═══ */
+  .mesa{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+  .kpi{background:var(--card);border:1px solid var(--borda);border-radius:18px;padding:14px 16px;cursor:pointer;transition:transform .15s, box-shadow .15s}
+  .kpi:hover{transform:translateY(-2px);box-shadow:0 10px 30px -18px rgba(35,25,70,.35)}
+  .kpi .num{font-family:'Bricolage Grotesque';font-size:26px;font-weight:800;line-height:1}
+  .kpi .lab{font-size:11px;font-weight:600;color:var(--cinza);margin-top:5px}
+  .kpi .sub{font-size:10.5px;color:var(--cinza);margin-top:2px}
+  .kpi.vermelho .num{color:#dc2626}.kpi.azulk .num{color:var(--azul)}
+  .kpi.verdek .num{color:var(--verde)}.kpi.dinheiro{background:linear-gradient(135deg,#f0fdf4,#fff);border-color:#bbe7c9}
+
+  .acao-linha{display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap}
+  .acao{flex:1;min-width:260px;border-radius:16px;padding:12px 16px;display:flex;align-items:center;gap:12px;border:1px solid;cursor:pointer;font-size:13px}
+  .acao.responder{background:#eff6ff;border-color:#bfd8ff}
+  .acao.revisao{background:#f5f0ff;border-color:#ded1fa}
+  .acao .tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+  .acao.responder .tag{color:#1d4ed8}.acao.revisao .tag{color:#6d28d9}
+  .acao b{font-family:'Bricolage Grotesque'}
+  .acao .btn-mini{margin-left:auto;background:var(--tinta);color:#fff;border:none;border-radius:10px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
+
+  /* ═══ QUADRO: eixo compartilhado + etapas pessoais ═══ */
+  .quadro-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .quadro-head h2{font-size:17px;font-weight:800}
+  .legenda{font-size:11px;color:var(--cinza)}
+  .btn-editar{margin-left:auto;background:#fff;border:1.5px solid var(--borda);border-radius:12px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;color:var(--tinta)}
+  .btn-editar:hover{border-color:var(--laranja);color:var(--laranja)}
+
+  .quadro{display:grid;grid-template-columns:220px 1fr 220px 220px;gap:12px;align-items:start}
+  .col{border-radius:18px;padding:10px;border:1px solid var(--borda)}
+  .col h3{font-size:12.5px;font-weight:800;display:flex;align-items:center;gap:7px;padding:2px 4px 8px}
+  .col h3 .dot{width:8px;height:8px;border-radius:50%}
+  .col h3 .qtd{margin-left:auto;font-size:10px;background:#fff;border:1px solid var(--borda);border-radius:99px;padding:1px 8px;color:var(--cinza)}
+  .col.novo{background:#fff4ec}.col.novo .dot{background:var(--laranja)}
+  .col.ajuste{background:#f5f0ff}.col.ajuste .dot{background:#8b5cf6}
+  .col.entregue{background:#effaf1}.col.entregue .dot{background:var(--verde)}
+
+  /* A coluna FAZENDO é a casa das etapas pessoais */
+  .col.fazendo{background:#eef4ff;border-style:solid}
+  .col.fazendo .dot{background:var(--azul)}
+  .col.fazendo .selo{font-size:9px;font-weight:800;background:var(--azul);color:#fff;border-radius:99px;padding:2px 8px;text-transform:uppercase;letter-spacing:.05em}
+  .sublanes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .sublane{background:rgba(255,255,255,.65);border:1px dashed #b9cdf3;border-radius:12px;padding:8px;min-height:120px}
+  .sublane h4{font-size:10.5px;font-weight:800;color:#28407c;display:flex;align-items:center;gap:5px;margin-bottom:7px}
+  .sublane h4 .edit{margin-left:auto;opacity:.35;cursor:pointer;font-size:10px}
+  .sublane h4 .edit:hover{opacity:1}
+  .dica-sub{grid-column:1/-1;font-size:10px;color:#4b64a3;padding:2px 4px}
+
+  .cardp{background:#fff;border:1px solid var(--borda);border-radius:12px;padding:9px 10px;margin-bottom:8px;cursor:pointer;box-shadow:0 2px 8px -6px rgba(35,25,70,.25);transition:transform .12s}
+  .cardp:hover{transform:translateY(-2px)}
+  .cardp .cli{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+  .cardp .cli .av{width:16px;height:16px;border-radius:5px;font-size:8px;color:#fff;display:grid;place-items:center;font-weight:800}
+  .cardp .cli span{font-size:9.5px;color:var(--cinza);font-weight:600}
+  .cardp .tit{font-family:'Bricolage Grotesque';font-size:12px;font-weight:700;line-height:1.25}
+  .chips{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;align-items:center}
+  .chip{font-size:8.5px;font-weight:800;border-radius:99px;padding:2px 7px}
+  .chip.fmt{background:#f1f0ee;color:var(--cinza)}
+  .chip.hoje{background:#fee2e2;color:#b91c1c}
+  .chip.ok{background:#dcfce7;color:#15803d}
+  .chip.atraso{background:#dc2626;color:#fff}
+  .chip.dinheiro{background:#ecfdf3;color:#067647;border:1px solid #bbe7c9}
+  .chip.negoc{background:#dbeafe;color:#1d4ed8}
+  .check-mini{font-size:9px;color:var(--cinza);display:flex;align-items:center;gap:3px}
+  .barra{height:4px;border-radius:99px;background:#eee;overflow:hidden;margin-top:6px}
+  .barra i{display:block;height:100%;background:var(--verde)}
+
+  /* ═══ MODAIS ═══ */
+  .veu{position:fixed;inset:0;background:rgba(35,25,70,.45);display:none;place-items:center;z-index:50;padding:20px}
+  .veu.aberto{display:grid}
+  .modal{background:#fff;border-radius:22px;max-width:860px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 40px 90px -30px rgba(35,25,70,.5)}
+  .m-capa{height:64px;background:linear-gradient(135deg,#E0195A,#ff5c93);border-radius:22px 22px 0 0;position:relative}
+  .m-capa .fechar{position:absolute;top:12px;right:14px;background:rgba(255,255,255,.25);border:none;color:#fff;border-radius:10px;width:30px;height:30px;font-size:15px;cursor:pointer}
+  .m-corpo{display:grid;grid-template-columns:1fr 265px}
+  .m-main{padding:20px 22px}
+  .m-main h2{font-size:20px;font-weight:800}
+  .m-main .meta{font-size:11.5px;color:var(--cinza);margin-top:3px}
+  .bloco{margin-top:16px}
+  .bloco .rot{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--cinza);margin-bottom:6px}
+  .caixa-txt{background:#faf8f3;border:1px solid var(--borda);border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.55}
+  .m-lado{background:#faf8f3;border-left:1px solid var(--borda);padding:16px;border-radius:0 0 22px 0}
+  .lado-box{background:#fff;border:1px solid var(--borda);border-radius:14px;padding:11px 13px;margin-bottom:11px}
+  .lado-box .rot{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--cinza)}
+  .lado-box .grande{font-family:'Bricolage Grotesque';font-size:17px;font-weight:800;margin-top:2px}
+  .lado-box.dinheiro{background:#f0fdf4;border-color:#bbe7c9}
+  .lado-box.dinheiro .grande{color:#067647}
+
+  /* checklist pessoal */
+  .privado{border:1.5px dashed #d9cff2;background:#faf7ff;border-radius:14px;padding:11px 13px;margin-top:16px}
+  .privado .rot{color:#6d28d9;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:5px}
+  .privado .rot .olho{margin-left:auto;font-weight:600;font-size:9px;color:#8b74c9;text-transform:none;letter-spacing:0}
+  .ck{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:5px 0}
+  .ck input{accent-color:#7c3aed;width:15px;height:15px}
+  .ck.feito span{text-decoration:line-through;color:var(--cinza)}
+  .ck-add{font-size:11.5px;color:#7c3aed;font-weight:700;cursor:pointer;padding-top:4px}
+
+  .botao{width:100%;border:none;border-radius:12px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;font-family:'Plus Jakarta Sans'}
+  .botao.entregar{background:var(--verde);color:#fff}
+  .botao.claro{background:#fff;border:1.5px solid var(--borda);color:var(--tinta);margin-top:7px}
+  .nota-entrega{font-size:10px;color:var(--cinza);margin-top:8px;line-height:1.5}
+
+  /* editor de etapas */
+  .modal.pequeno{max-width:430px}
+  .et-lista{padding:6px 22px 4px}
+  .et{display:flex;align-items:center;gap:10px;background:#faf8f3;border:1px solid var(--borda);border-radius:12px;padding:10px 12px;margin-bottom:8px;font-size:13px;font-weight:600}
+  .et .arr{color:#c9c2b4;cursor:grab}
+  .et .x{margin-left:auto;color:#c66;cursor:pointer;font-size:12px}
+  .et-add{margin:2px 22px 18px;font-size:12.5px;color:var(--laranja);font-weight:800;cursor:pointer}
+  .m-tit{padding:18px 22px 8px}
+  .m-tit h2{font-size:17px;font-weight:800}
+  .m-tit p{font-size:11.5px;color:var(--cinza);margin-top:3px;line-height:1.5}
+  .m-pe{padding:0 22px 20px}
+
+  .rodape-nota{margin-top:26px;font-size:11.5px;color:var(--cinza);background:#fff;border:1px solid var(--borda);border-radius:14px;padding:12px 16px;line-height:1.6}
+  .rodape-nota b{color:var(--tinta)}
+  @media(max-width:900px){.quadro{grid-template-columns:1fr}.sublanes{grid-template-columns:1fr}.mesa{grid-template-columns:repeat(2,1fr)}.m-corpo{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="blob" style="top:-120px;right:-90px;width:340px;height:340px;background:var(--rosa)"></div>
+<div class="blob" style="bottom:-100px;left:-80px;width:280px;height:280px;background:var(--amarelo)"></div>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="b1"></div><div class="b2"></div>
+    <h1>Boa tarde, PeJota!</h1>
+    <p>A sua operação inteira numa mesa: o que fazer, o que responder e o que receber.</p>
+  </div>
+
+  <div class="aviso"><b>Mockup navegável.</b> Clique nos números da mesa, nos cards do quadro (abre o card com a camada privada) e em "Editar minhas etapas". Nada aqui é tela final: é o desenho da interligação pra aprovarmos antes do código.</div>
+
+  <!-- ═══ A MESA DO DIA: fluxo + dinheiro + relações na mesma dobra ═══ -->
+  <div class="mesa">
+    <div class="kpi vermelho"><div class="num">2</div><div class="lab">vencem hoje</div><div class="sub">Nutri da Ana · Café Dom</div></div>
+    <div class="kpi azulk"><div class="num">3</div><div class="lab">fazendo agora</div><div class="sub">1 em Arte final</div></div>
+    <div class="kpi"><div class="num" style="color:#8b5cf6">1</div><div class="lab">voltou pra ajuste</div><div class="sub">com motivo no card</div></div>
+    <div class="kpi dinheiro verdek"><div class="num">R$ 1.240</div><div class="lab">a receber em agosto</div><div class="sub">Gabriela R$ 890 · Studio MX R$ 350</div></div>
+  </div>
+
+  <!-- O que espera resposta DELE ou é notícia -->
+  <div class="acao-linha">
+    <div class="acao responder">
+      <div><div class="tag">Prazo pra responder</div><div style="margin-top:2px"><b>Reels lançamento</b> · Gabriela propôs <b>02/09</b></div></div>
+      <button class="btn-mini">Topo</button>
+      <button class="btn-mini" style="background:#fff;color:var(--tinta);border:1.5px solid var(--borda)">Sugerir</button>
+    </div>
+    <div class="acao revisao">
+      <div><div class="tag">Boa notícia</div><div style="margin-top:2px"><b>Carrossel varejo</b> foi <b>aprovado pelo cliente</b> · virou R$ 120 a receber</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ O QUADRO DE DUAS CAMADAS ═══ -->
+  <div class="quadro-head">
+    <h2>Meu quadro</h2>
+    <span class="legenda">as 4 colunas de fora são o combinado com as agências; dentro do Fazendo, as etapas são SUAS</span>
+    <button class="btn-editar" onclick="abrir('m-etapas')">✎ Editar minhas etapas</button>
+  </div>
+
+  <div class="quadro">
+    <!-- EIXO COMPARTILHADO: Novo -->
+    <div class="col novo">
+      <h3><span class="dot"></span> Novo <span class="qtd">2</span></h3>
+      <div class="cardp" onclick="abrir('m-card')">
+        <div class="cli"><span class="av" style="background:#E0195A">N</span><span>Nutri da Ana · via Gabriela</span></div>
+        <div class="tit">Reels: 5 sinais de carência de ferro</div>
+        <div class="chips"><span class="chip fmt">Reels 9:16</span><span class="chip hoje">vence hoje</span><span class="chip dinheiro">R$ 150</span></div>
+      </div>
+      <div class="cardp">
+        <div class="cli"><span class="av" style="background:#0061EE">S</span><span>Studio MX · via Studio MX</span></div>
+        <div class="tit">Carrossel: bastidores do rebranding</div>
+        <div class="chips"><span class="chip fmt">Carrossel · 6 artes</span><span class="chip negoc">prazo pra confirmar</span><span class="chip dinheiro">R$ 120</span></div>
+      </div>
+    </div>
+
+    <!-- FAZENDO com as sub-etapas PESSOAIS -->
+    <div class="col fazendo">
+      <h3><span class="dot"></span> Fazendo <span class="selo">suas etapas</span> <span class="qtd">3</span></h3>
+      <div class="sublanes">
+        <div class="sublane">
+          <h4>Referências <span class="edit">✎</span></h4>
+          <div class="cardp">
+            <div class="cli"><span class="av" style="background:#01A652">C</span><span>Café Dom · via Gabriela</span></div>
+            <div class="tit">Story: promoção da semana</div>
+            <div class="chips"><span class="chip fmt">Story</span><span class="chip hoje">vence hoje</span></div>
+          </div>
+        </div>
+        <div class="sublane">
+          <h4>Rascunho <span class="edit">✎</span></h4>
+          <div class="cardp">
+            <div class="cli"><span class="av" style="background:#E0195A">N</span><span>Nutri da Ana · via Gabriela</span></div>
+            <div class="tit">Estático: depoimento paciente</div>
+            <div class="chips"><span class="chip fmt">4:5</span><span class="chip ok">04/09</span><span class="chip dinheiro">R$ 90</span></div>
+            <div class="check-mini">☑ 2/5 do seu checklist</div>
+            <div class="barra"><i style="width:40%"></i></div>
+          </div>
+        </div>
+        <div class="sublane">
+          <h4>Arte final <span class="edit">✎</span></h4>
+          <div class="cardp">
+            <div class="cli"><span class="av" style="background:#7c3aed">B</span><span>Boutique Lu · via Studio MX</span></div>
+            <div class="tit">Carrossel: looks de primavera</div>
+            <div class="chips"><span class="chip fmt">Carrossel · 8 artes</span><span class="chip atraso">atrasou 1 dia</span><span class="chip dinheiro">R$ 160</span></div>
+            <div class="check-mini">☑ 6/7 do seu checklist</div>
+            <div class="barra"><i style="width:85%"></i></div>
+          </div>
+        </div>
+        <div class="dica-sub">Arraste o card entre as SUAS etapas. A Gabriela vê só "Fazendo": o seu processo é seu.</div>
+      </div>
+    </div>
+
+    <!-- EIXO COMPARTILHADO: Ajuste -->
+    <div class="col ajuste">
+      <h3><span class="dot"></span> Ajuste <span class="qtd">1</span></h3>
+      <div class="cardp">
+        <div class="cli"><span class="av" style="background:#01A652">C</span><span>Café Dom · via Gabriela</span></div>
+        <div class="tit">Estático: novo cardápio</div>
+        <div class="chips"><span class="chip fmt">4:5</span><span class="chip hoje">motivo no card</span></div>
+      </div>
+    </div>
+
+    <!-- EIXO COMPARTILHADO: Entregue -->
+    <div class="col entregue">
+      <h3><span class="dot"></span> Entregue <span class="qtd">2</span></h3>
+      <div class="cardp">
+        <div class="cli"><span class="av" style="background:#E0195A">N</span><span>Nutri da Ana</span></div>
+        <div class="tit">Carrossel: mitos do jejum</div>
+        <div class="chips"><span class="chip ok">aguardando o cliente</span><span class="chip dinheiro">R$ 120</span></div>
+      </div>
+      <div class="cardp">
+        <div class="cli"><span class="av" style="background:#0061EE">S</span><span>Studio MX</span></div>
+        <div class="tit">Reels: manifesto da marca</div>
+        <div class="chips"><span class="chip ok">✓ aprovado</span><span class="chip dinheiro">R$ 150</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rodape-nota">
+    <b>A interligação que esta tela propõe:</b> cada card carrega o valor combinado com aquela agência
+    (tabela de preços na ficha dela). Quando anda pra "Entregue", o valor entra sozinho no "a receber"
+    da mesa e no Cria Caixa. No fim do mês, a fatura por agência sai pronta, peça a peça. O quadro é o
+    Trello dele; a mesa é o que o Trello nunca foi.
+  </div>
+</div>
+
+<!-- ═══ MODAL: CARD ABERTO (com a camada privada) ═══ -->
+<div class="veu" id="m-card" onclick="if(event.target===this)fechar('m-card')">
+  <div class="modal">
+    <div class="m-capa"><button class="fechar" onclick="fechar('m-card')">✕</button></div>
+    <div class="m-corpo">
+      <div class="m-main">
+        <h2>Reels: 5 sinais de carência de ferro</h2>
+        <p class="meta"><b>Nutri da Ana</b> · delegado por Gabriela · publica 05/09</p>
+        <div class="chips" style="margin-top:10px">
+          <span class="chip fmt" style="background:var(--tinta);color:#fff">Reels</span>
+          <span class="chip fmt">9:16 · 1080x1920 · até 90s</span>
+          <span class="chip fmt">Instagram</span>
+        </div>
+
+        <div class="bloco"><div class="rot">Roteiro aprovado</div>
+          <div class="caixa-txt">GANCHO: "Seu cabelo tá caindo e você culpa o shampoo?"... [cena 1: close no rosto] ... [cena 2: b-roll dos alimentos] ...</div>
+        </div>
+        <div class="bloco"><div class="rot">Conversa deste card</div>
+          <div class="caixa-txt" style="font-size:12px">
+            <b style="color:#E0195A">social mídia</b> · Prazo combinado: 01/09<br>
+            <b style="color:#7c3aed">você</b> · Ref de transição aprovada pela Ana em algum lugar?
+          </div>
+        </div>
+
+        <!-- A CAMADA PRIVADA: o Trello pessoal dentro do card -->
+        <div class="privado">
+          <div class="rot">Meu checklist <span class="olho">só você vê isto</span></div>
+          <label class="ck feito"><input type="checkbox" checked><span>Separar b-roll dos alimentos</span></label>
+          <label class="ck feito"><input type="checkbox" checked><span>Cortar os takes da fala principal</span></label>
+          <label class="ck"><input type="checkbox"><span>Legendas dinâmicas no CapCut</span></label>
+          <label class="ck"><input type="checkbox"><span>Color + export 4K</span></label>
+          <div class="ck-add">+ item</div>
+        </div>
+      </div>
+
+      <div class="m-lado">
+        <div class="lado-box"><div class="rot">Entrega combinada</div><div class="grande">Hoje, 30/08</div></div>
+        <div class="lado-box dinheiro"><div class="rot">Valor desta peça</div><div class="grande">R$ 150</div>
+          <div style="font-size:10px;color:#3f8f5f;margin-top:2px">entra no seu "a receber" quando entregar</div></div>
+        <div class="lado-box"><div class="rot">A marca</div>
+          <div style="display:flex;align-items:center;gap:7px;margin-top:5px"><span style="width:22px;height:22px;border-radius:7px;background:#E0195A"></span><span style="font-size:11px;color:var(--cinza)">#E0195A · @nutridaana</span></div>
+        </div>
+        <button class="botao entregar">✓ Marcar como entregue</button>
+        <button class="botao claro">Anexar versão final</button>
+        <p class="nota-entrega">Upload em qualidade original, sem compressão: a social mídia baixa o arquivo exatamente como você exportou (o Trello grátis corta em 10MB).</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: EDITAR ETAPAS PESSOAIS ═══ -->
+<div class="veu" id="m-etapas" onclick="if(event.target===this)fechar('m-etapas')">
+  <div class="modal pequeno">
+    <div class="m-tit">
+      <h2>Minhas etapas do Fazendo</h2>
+      <p>O seu jeito de trabalhar, do seu jeito: renomeie, reordene, crie e apague. Começamos com uma sugestão pro seu papel (designer), e as agências continuam vendo só "Fazendo".</p>
+    </div>
+    <div class="et-lista">
+      <div class="et"><span class="arr">⋮⋮</span> Referências <span class="x">remover</span></div>
+      <div class="et"><span class="arr">⋮⋮</span> Rascunho <span class="x">remover</span></div>
+      <div class="et"><span class="arr">⋮⋮</span> Arte final <span class="x">remover</span></div>
+    </div>
+    <div class="et-add">+ nova etapa</div>
+    <div class="m-pe"><button class="botao entregar" style="background:var(--laranja)" onclick="fechar('m-etapas')">Salvar</button></div>
+  </div>
+</div>
+
+<script>
+  function abrir(id){document.getElementById(id).classList.add('aberto')}
+  function fechar(id){document.getElementById(id).classList.remove('aberto')}
+</script>
+</body>
+</html>

@@ -116,6 +116,38 @@ marca, material; entrega com link carimbado; ajuste com motivo consolidado
 obrigatório; status pós-entrega visível pro parceiro; entregues por
 agência.
 
+## 3d. A interligação visual: Mesa do dia + quadro de duas camadas
+(v3, do toque do Walter: "cada um monta seu fluxo como quiser" + "um local
+unificado pra toda a operação" + mockup em CRIA/mockup-parceiro-operacao.html)
+
+O problema de fundo: o fluxo de produção é um CONTRATO entre duas contas
+(o "Fazendo" precisa significar o mesmo pra toda agência), mas o jeito de
+trabalhar é PESSOAL (é por isso que cada Trello é diferente). A resposta é
+o quadro de DUAS CAMADAS:
+
+- Camada compartilhada (fixa): Novo, Fazendo, Ajuste, Entregue. É o que a
+  social mídia lê; não se renomeia, porque é linguagem comum.
+- Camada pessoal (livre): DENTRO do Fazendo, o parceiro cria as etapas dele
+  (padrão sugerido por papel: designer ganha Referências/Rascunho/Arte
+  final; editor ganha Decupagem/Corte/Finalização), renomeia, reordena,
+  arrasta cards entre elas. A agência continua vendo só "Fazendo".
+- No card, a mesma dupla: o conteúdo do job é compartilhado; o CHECKLIST
+  PESSOAL e as notas privadas são só dele (paridade com o checklist do
+  Trello, que é o recurso que eles mais usam).
+- Dados: tabela parceiro_card_meta (member_id, post_id, etapa_pessoal,
+  checklist jsonb, notas) com RLS por member_id + tabela parceiro_etapas
+  (member_id, nome, ordem). Zero mudança no eixo compartilhado.
+
+A MESA DO DIA (home): fluxo, dinheiro e relações na mesma dobra, porque a
+unificação É o produto (hoje a cabeça dele é o integrador de N Trellos):
+- 4 números: vencem hoje, fazendo, ajuste, e A RECEBER NO MÊS (por agência).
+- Linha de ação: prazos pra responder + boas notícias (aprovado pelo
+  cliente = virou dinheiro).
+- Cada card do quadro carrega o VALOR da peça (rate card da agência) e o
+  progresso do checklist pessoal. Entregou, o valor anda sozinho pro Caixa.
+- Entrega com upload em qualidade ORIGINAL e download sem recompressão
+  (vantagem objetiva sobre o Trello grátis, que corta em 10MB).
+
 ## 4. O elo financeiro (inalterado da v1, executa depois do fluxo)
 - Rate card por cliente-agência (por peça e/ou pacote mensal, rush fee
   opcional pra prazo < 48h).
