@@ -331,10 +331,10 @@ function ComeceAqui() {
 function CrescaComOCria() {
   const navigate = useNavigate();
   const MODULOS = [
-    { Icone: Send, nome: "Cria Post", texto: "Kanban da ideia ao publicado e link de aprovação pros seus clientes diretos." },
-    { Icone: Users, nome: "Cria Gestão", texto: "CRM, propostas, contratos e relatórios pra fechar e manter os seus próprios jobs." },
-    { Icone: Wallet, nome: "Cria Caixa", texto: "Quanto entrou de cada agência e cliente, impostos, custo e lucro por trabalho." },
-    { Icone: Camera, nome: "Cria Captação", texto: "Roteiros estruturados, teleprompter e guia de gravação pra quem também filma." },
+    { Icone: Send, nome: "Cria Post", slug: "criapost", texto: "Kanban da ideia ao publicado e link de aprovação pros seus clientes diretos." },
+    { Icone: Users, nome: "Cria Gestão", slug: "gestao", texto: "CRM, propostas, contratos e relatórios pra fechar e manter os seus próprios jobs." },
+    { Icone: Wallet, nome: "Cria Caixa", slug: "caixa", texto: "Quanto entrou de cada agência e cliente, impostos, custo e lucro por trabalho." },
+    { Icone: Camera, nome: "Cria Captação", slug: "captacao", texto: "Roteiros estruturados, teleprompter e guia de gravação pra quem também filma." },
   ];
   return (
     <div className="mt-8">
@@ -348,7 +348,8 @@ function CrescaComOCria() {
       </p>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {MODULOS.map((m) => (
-          <Card key={m.nome} className="rounded-2xl border-border p-4">
+          <Card key={m.nome} onClick={() => navigate(`/parceiro/modulos/${m.slug}`)}
+            className="rounded-2xl border-border p-4 cursor-pointer hover:border-primary/40 transition-colors">
             <span className="w-9 h-9 rounded-xl grid place-items-center mb-2.5 bg-primary/10 text-primary">
               <m.Icone className="h-[18px] w-[18px]" strokeWidth={1.75} />
             </span>

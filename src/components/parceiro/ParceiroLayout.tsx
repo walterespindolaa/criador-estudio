@@ -41,14 +41,14 @@ const TRABALHO = [
    plano ficam com cadeado e levam pros planos: o menu inteiro vira vitrine
    do caminho de crescimento, não só a home. */
 const MODULOS = [
-  // Quem TEM o lado criador cai na home dele (/app), onde os módulos reais
-  // vivem com as rotas certas pro tipo de conta; rota específica aqui seria
-  // chute (criador e gestor têm caminhos diferentes).
-  { rotulo: "Cria Post", Icone: Send },
-  { rotulo: "Cria Gestão", Icone: Users },
-  { rotulo: "Cria Caixa", Icone: Wallet },
-  { rotulo: "Cria Captação", Icone: Camera },
-  { rotulo: "Cria Radar", Icone: Search },
+  // Sem plano, o clique abre a VITRINE do módulo (a dor + o que destrava +
+  // como comprar), não a página genérica de planos: cadeado não vende.
+  // Com o lado criador ativo, vai pro /app, onde os módulos reais vivem.
+  { rotulo: "Cria Post", Icone: Send, slug: "criapost" },
+  { rotulo: "Cria Gestão", Icone: Users, slug: "gestao" },
+  { rotulo: "Cria Caixa", Icone: Wallet, slug: "caixa" },
+  { rotulo: "Cria Captação", Icone: Camera, slug: "captacao" },
+  { rotulo: "Cria Radar", Icone: Search, slug: "radar" },
 ];
 
 const FAIXA: Record<string, { titulo: string; sub: string }> = {
@@ -56,6 +56,11 @@ const FAIXA: Record<string, { titulo: string; sub: string }> = {
   "/parceiro/entregues": { titulo: "Entregues", sub: "O seu histórico de trabalho, agrupado por agência." },
   "/parceiro/marcas": { titulo: "Marcas que atendo", sub: "Quem te acoplou e o trabalho em cada relação." },
   "/parceiro/planos": { titulo: "Cresça com o Cria", sub: "O trabalho das agências é grátis pra sempre. Isto aqui é pra ir além." },
+  "/parceiro/modulos/criapost": { titulo: "Cria Post", sub: "As ferramentas de produção pros clientes que são SEUS." },
+  "/parceiro/modulos/gestao": { titulo: "Cria Gestão", sub: "CRM, propostas e contratos pra fechar e manter os seus jobs." },
+  "/parceiro/modulos/caixa": { titulo: "Cria Caixa", sub: "O dinheiro de cada agência e cliente, com imposto e lucro." },
+  "/parceiro/modulos/captacao": { titulo: "Cria Captação", sub: "Roteiro, teleprompter e guia de gravação pra quem filma." },
+  "/parceiro/modulos/radar": { titulo: "Cria Radar", sub: "Referências e concorrência do nicho de cada cliente." },
 };
 
 export default function ParceiroLayout() {
@@ -155,9 +160,9 @@ export default function ParceiroLayout() {
 
         <Secao nome="Módulos" />
         <div className="space-y-1">
-          {MODULOS.map(({ rotulo, Icone }) => (
-            <button key={rotulo} type="button" title={temLadoCriador ? rotulo : `${rotulo} (ver planos)`}
-              onClick={() => navigate(temLadoCriador ? "/app" : "/parceiro/planos")}
+          {MODULOS.map(({ rotulo, Icone, slug }) => (
+            <button key={rotulo} type="button" title={temLadoCriador ? rotulo : `${rotulo} (conhecer)`}
+              onClick={() => navigate(temLadoCriador ? "/app" : `/parceiro/modulos/${slug}`)}
               className={itemCls(false)}>
               <Icone className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
               {aberto && (

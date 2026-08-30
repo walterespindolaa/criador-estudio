@@ -60,6 +60,7 @@ const ParceiroLayout = lazy(() => import("./components/parceiro/ParceiroLayout")
 const ParceiroEntregues = lazy(() => import("./pages/parceiro/Entregues"));
 const ParceiroMarcas = lazy(() => import("./pages/parceiro/Marcas"));
 const ParceiroPlanos = lazy(() => import("./pages/parceiro/Planos"));
+const ParceiroModulo = lazy(() => import("./pages/parceiro/Modulo"));
 const Collabs = lazy(() => import("./pages/app/Collabs"));
 const Insights = lazy(() => import("./pages/app/Insights"));
 const Autopilot = lazy(() => import("./pages/app/Autopilot"));
@@ -255,6 +256,9 @@ const App = () => (
                 {/* Planos DENTRO da casca do parceiro: mandar pro /app/assinar
                     embrulhava a página de criador no menu de criador. */}
                 <Route path="planos" element={<ErrorBoundary><ParceiroPlanos /></ErrorBoundary>} />
+                {/* Vitrine de cada módulo na voz do parceiro: cadeado não
+                    vende, página de benefícios vende. */}
+                <Route path="modulos/:slug" element={<ErrorBoundary><ParceiroModulo /></ErrorBoundary>} />
               </Route>
               {/* A bio é a ÚNICA página que um estranho abre. Sem rede de
                   segurança, um bloco com dado torto derruba a árvore inteira e
