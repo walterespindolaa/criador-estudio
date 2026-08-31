@@ -1040,6 +1040,11 @@ const Criando = () => {
                             onClick={() => openEdit(post)}
                             style={formatColorVars(post.format)}
                             className={cn("text-left rounded-lg border border-border bg-card px-2 py-1.5 shadow-sm hover:bg-muted/40 transition-colors cursor-grab active:cursor-grabbing border-l-[3px] max-w-[220px]", FORMAT_BORDER_CLASS)}>
+                            {/* Etapa TAMBÉM no sem-data (pedido do Walter, 31/08):
+                               sem ela não dava pra saber o que já está pronto. */}
+                            <span className={cn("inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight mb-0.5", getStatusClasses(post.status))}>
+                              {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
+                            </span>
                             <span className="block text-[11px] font-body font-semibold text-foreground leading-tight truncate">{post.title}</span>
                             <span className={cn("block text-[9px] font-body font-bold uppercase tracking-wide truncate", FORMAT_TEXT_CLASS)}>
                               {FORMAT_LABELS[post.format] ?? post.format}
@@ -1132,6 +1137,9 @@ const Criando = () => {
                                   onClick={() => openEdit(post)}
                                   style={formatColorVars(post.format)}
                                   className={cn("text-left rounded-lg border border-border bg-card px-2 py-1.5 shadow-sm hover:bg-muted/40 transition-colors cursor-grab active:cursor-grabbing border-l-[3px] max-w-[220px]", FORMAT_BORDER_CLASS)}>
+                                  <span className={cn("inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight mb-0.5", getStatusClasses(post.status))}>
+                                    {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
+                                  </span>
                                   <span className="block text-[11px] font-body font-semibold text-foreground leading-tight truncate">{post.title}</span>
                                   <span className={cn("block text-[9px] font-body font-bold uppercase tracking-wide truncate", FORMAT_TEXT_CLASS)}>
                                     {FORMAT_LABELS[post.format] ?? post.format}

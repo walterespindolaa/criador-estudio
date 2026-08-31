@@ -171,7 +171,8 @@ export default function RelatorioGerencial() {
               {l}
             </button>
           ))}
-          <div className="flex items-center gap-2 ml-auto">
+          {/* No celular o grupo de datas quebra pra linha de baixo em vez de espremer. */}
+          <div className="flex items-center gap-2 flex-wrap sm:ml-auto w-full sm:w-auto">
             {modo === "mes" && <Input type="month" value={mes} onChange={(e) => setMes(e.target.value)} className="h-8 w-40 rounded-xl text-xs" />}
             {modo === "semestre" && (
               <select value={semestre} onChange={(e) => setSemestre(e.target.value)} className="h-8 rounded-xl border border-border bg-card px-2 text-xs font-body">

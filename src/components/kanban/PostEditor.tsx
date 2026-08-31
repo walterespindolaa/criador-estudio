@@ -1288,13 +1288,24 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 <CircleHelp className="h-4 w-4" />
               </button>
 
-              {/* Título inline: só no desktop, onde sobra largura. */}
-              <div className="hidden sm:flex flex-1 min-w-0 items-center gap-3">
-                <input
+              {/* Título inline: só no desktop, onde sobra largura.
+                  Virou textarea auto-crescente (pedido do Walter, 31/08): título
+                  longo QUEBRA pra baixo em vez de escorrer por cima dos botões,
+                  e a fonte diminuiu um degrau. */}
+              <div className="hidden sm:flex flex-1 min-w-0 items-start gap-3">
+                <textarea
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  rows={1}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    e.currentTarget.style.height = "auto";
+                    e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                  }}
+                  ref={(el) => {
+                    if (el) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }
+                  }}
                   placeholder={isNew ? "Sobre o que é esse post?" : "Sem título"}
-                  className="flex-1 min-w-0 bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-display text-xl md:text-2xl font-extrabold text-foreground placeholder:text-muted-foreground/40"
+                  className="flex-1 min-w-0 bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-display text-lg md:text-xl font-extrabold text-foreground placeholder:text-muted-foreground/40 resize-none leading-snug max-h-[3.4em] overflow-hidden"
                 />
                 {autoSaveStatus && (
                   <span
@@ -1418,7 +1429,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               numerado rolável; à direita (~40%) a prévia do post fixa (sticky),
               sempre visível enquanto a pessoa escreve. */}
           <div ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/20">
-            <div className="mx-auto w-full max-w-3xl lg:max-w-none px-3 sm:px-6 py-4 sm:py-6 pb-[calc(3rem+env(safe-area-inset-bottom))] lg:grid lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-6 lg:items-start">
+            {/* Coluna da direita agora tem largura FIXA (a da prévia): antes era
+               2fr e a prévia de 380px boiava no meio dela, deixando faixas
+               vazias dos dois lados (pedido do Walter, 31/08: menos margem). */}
+            <div className="mx-auto w-full max-w-3xl lg:max-w-none px-3 sm:px-5 py-4 sm:py-6 pb-[calc(3rem+env(safe-area-inset-bottom))] lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-5 lg:items-start">
 
               {/* COLUNA ESQUERDA: o fluxo numerado (no mobile, a coluna única). */}
               <div className="space-y-4 min-w-0">
@@ -2594,7 +2608,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               {/* COLUNA DIREITA (só desktop): a PRÉVIA do post, fixa enquanto rola.
                   No mobile ela não aparece aqui: fica no botão "Prévia" do topo. */}
               <aside className="hidden lg:block lg:sticky lg:top-4 self-start">
-                <div className="mx-auto w-full max-w-[380px] rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
+                <div className="w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
                   <div className="px-3 py-2 border-b border-border bg-card/50 flex items-center gap-2">
                     <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-xs font-display font-semibold text-foreground">Prévia do post</span>

@@ -164,7 +164,9 @@ export function MetasPanel({ scope, externalClientId, compacto }: { scope: MetaS
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            {/* Mobile first: 2 colunas no celular (3 apertava o campo de data),
+               o prazo ocupa a linha de baixo inteira; no sm+ volta pra 3. */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <div className="space-y-1.5">
                 <Label className="text-xs">Valor alvo</Label>
                 <Input value={alvo} onChange={(e) => setAlvo(e.target.value)} placeholder="10" inputMode="numeric" className="rounded-xl" />
@@ -173,7 +175,7 @@ export function MetasPanel({ scope, externalClientId, compacto }: { scope: MetaS
                 <Label className="text-xs">Onde estou</Label>
                 <Input value={atual} onChange={(e) => setAtual(e.target.value)} placeholder="3" inputMode="numeric" className="rounded-xl" />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 col-span-2 sm:col-span-1">
                 <Label className="text-xs">Prazo</Label>
                 <Input type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} className="rounded-xl" />
               </div>
