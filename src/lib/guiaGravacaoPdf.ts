@@ -85,6 +85,29 @@ function hexRgb(hex: string): [number, number, number] {
 const dataBR = (iso?: string | null) =>
   iso ? new Date(iso + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }) : null;
 
+/* A referência nem sempre mora no campo Referência: a Gabriela colou o link
+   do reel DENTRO do texto da cena ("tipo assim: https://instagram.com/...")
+   e o guia saiu sem a seção, porque texto em PDF não vira link sozinho.
+   Aqui a gente caça toda URL que aparecer no roteiro (cenas, sobre, conteúdo)
+   e promove pra seção Referência, com prévia e clique. */
+function linksDoRoteiro(r: CaptureScript): string[] {
+  const doCampo = parseRefLinks(r.reference_url).filter(isRefLink);
+  const textos = [
+    r.about ?? "", r.content ?? "",
+    ...cenasDe(r).flatMap((c: CaptureScene) => [c.fala, c.direcao]),
+  ].join("\n");
+  const achados = textos.match(/https?:\/\/[^\s)\]}>",;]+/g) ?? [];
+  const todos = [...doCampo, ...achados.map((u) => u.replace(/[.,;:!?]+$/, ""))];
+  // Dedup pela URL sem query/barra final (mesma chave usada nas capas).
+  const vistos = new Set<string>();
+  return todos.filter((u) => {
+    const chave = u.split("?")[0].replace(/\/$/, "");
+    if (vistos.has(chave)) return false;
+    vistos.add(chave);
+    return true;
+  });
+}
+
 export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
   const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
   const cor = (d.cor && /^#[0-9a-f]{6}$/i.test(d.cor)) ? d.cor : LARANJA;
@@ -101,7 +124,7 @@ export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
   ]);
   const capas = new Map<string, Img | null>();
   for (const r of d.roteiros) {
-    for (const link of parseRefLinks(r.reference_url).filter(isRefLink)) {
+    for (const link of linksDoRoteiro(r)) {
       const p = previaDeLink(link);
       const chave = p.url.split("?")[0].replace(/\/$/, "");
       if (capas.has(chave)) continue;
@@ -212,7 +235,7 @@ export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
 
   d.roteiros.forEach((r, idx) => {
     const cenas = cenasDe(r);
-    const refs = parseRefLinks(r.reference_url).filter(isRefLink).map(previaDeLink);
+    const refs = linksDoRoteiro(r).map(previaDeLink);
     const titulo = r.title?.trim() || `Vídeo ${idx + 1}`;
 
     pdf.addPage();
