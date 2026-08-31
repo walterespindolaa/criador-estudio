@@ -103,6 +103,9 @@ const Configuracoes = () => {
 
   const [newPillarName, setNewPillarName] = useState("");
   const [newPillarColor, setNewPillarColor] = useState(PILLAR_COLORS[0]);
+  // Paleta grande demais na cara assustava ("20 cores", Walter 31/08): mostra
+  // as 7 primeiras e o resto abre sob demanda.
+  const [maisCoresPilar, setMaisCoresPilar] = useState(false);
   const [editingPillarId, setEditingPillarId] = useState<string | null>(null);
   const [editingPillarName, setEditingPillarName] = useState("");
   const [newHabitName, setNewHabitName] = useState("");
@@ -697,10 +700,14 @@ const Configuracoes = () => {
                         <Input placeholder="Novo pilar..." value={newPillarName} onChange={(e) => setNewPillarName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addPillar()} className="rounded-xl text-sm" />
                         <Button variant="outline" size="sm" type="button" onClick={addPillar}><Plus className="h-4 w-4" /></Button>
                       </div>
-                      <div className="flex gap-2 flex-wrap">
-                        {PILLAR_COLORS.map(c => (
+                      <div className="flex gap-2 flex-wrap items-center">
+                        {(maisCoresPilar ? PILLAR_COLORS : PILLAR_COLORS.slice(0, 7)).map(c => (
                           <button key={c} type="button" onClick={() => setNewPillarColor(c)} className={`w-6 h-6 rounded-full transition-all ${newPillarColor === c ? "ring-2 ring-offset-2 ring-primary" : ""}`} style={{ backgroundColor: c }} />
                         ))}
+                        <button type="button" onClick={() => setMaisCoresPilar(v => !v)}
+                          className="h-6 px-2 rounded-full border border-dashed border-border text-[10px] font-body text-muted-foreground hover:text-foreground transition-colors">
+                          {maisCoresPilar ? "menos" : `+${PILLAR_COLORS.length - 7} cores`}
+                        </button>
                       </div>
                     </div>
                   )}

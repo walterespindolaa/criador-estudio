@@ -767,8 +767,12 @@ const Criando = () => {
                 </div>
                 <Droppable droppableId={col.key}>
                 {(dropProvided, dropSnapshot) => (
+                /* ÁREA da coluna com tinta da capa bem clara (pedido do Walter,
+                   31/08): demarca o espaço de cada kanban e "segura" os cards,
+                   igual ficou no Cria Post. `0F` = ~6% de opacidade no hex. */
                 <div ref={dropProvided.innerRef} {...dropProvided.droppableProps}
-                  className={`space-y-3 flex-1 min-h-[200px] rounded-xl transition-all ${dropSnapshot.isDraggingOver ? "ring-2 ring-primary bg-primary/5" : ""}`}>
+                  style={!dropSnapshot.isDraggingOver && /^#[0-9a-fA-F]{6}$/.test(cFrom) ? { backgroundColor: `${cFrom}0F` } : undefined}
+                  className={`space-y-3 flex-1 min-h-[200px] rounded-xl p-1.5 transition-all ${dropSnapshot.isDraggingOver ? "ring-2 ring-primary bg-primary/5" : "bg-muted/30"}`}>
                   {colPosts.map((post, pIdx) => {
                     const pillar = getPillar(post.pillar_id);
                     const tc = taskCounts.get(post.id);
@@ -1234,7 +1238,9 @@ const Criando = () => {
                         <Pencil className="h-3.5 w-3.5 text-white/90" />
                       </button>
                     </div>
-                    <div className="flex flex-col gap-2.5 mt-3">
+                    {/* Mesma tinta clara da capa que o board desktop ganhou. */}
+                    <div className="flex flex-col gap-2.5 mt-3 rounded-xl p-1.5 bg-muted/30"
+                      style={/^#[0-9a-fA-F]{6}$/.test(from) ? { backgroundColor: `${from}0F` } : undefined}>
                       {colPosts.map(post => {
                         const pillar = getPillar(post.pillar_id);
                         const tc = taskCounts.get(post.id);
