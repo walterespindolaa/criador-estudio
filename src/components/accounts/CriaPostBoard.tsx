@@ -1143,8 +1143,11 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               </div>
             </div>
 
-            {/* Coluna direita: Mídia (própria altura, sem esticar a esquerda) */}
-            <div className="md:w-[46%] md:sticky md:top-0">
+            {/* Coluna direita: Mídia (própria altura, sem esticar a esquerda).
+               order-first: em tela ESTREITA (uma coluna) a Mídia vai pro TOPO,
+               não pro fim da rolagem (pedido do Walter, 31/08); no md+ volta
+               pra direita como sempre. */}
+            <div className="md:w-[46%] md:sticky md:top-0 order-first md:order-none">
               <div className="flex items-center justify-between gap-2 mb-1.5">
                 <label className="text-xs font-semibold">Mídia</label>
                 <button type="button" onClick={() => setBriefOpen(true)}

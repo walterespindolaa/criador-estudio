@@ -533,12 +533,14 @@ const Ideias = () => {
                   className={cn("relative break-inside-avoid bg-card rounded-xl border p-4 hover:shadow-warm-md hover:scale-[1.01] transition-all cursor-pointer group",
                     selecting && selIds.has(idea.id) ? "border-primary ring-2 ring-primary/30" : "border-border")}
                 >
-                  {selecting && (
-                    <span className={cn("absolute top-2 left-2 z-10 h-5 w-5 rounded-full grid place-items-center border-2",
-                      selIds.has(idea.id) ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border")}>
-                      {selIds.has(idea.id) && <Check className="h-3 w-3" />}
-                    </span>
-                  )}
+                  {/* Bolinha de seleção sempre à mão: o primeiro clique nela já
+                     liga o modo seleção. */}
+                  <button type="button" aria-label="Selecionar ideia"
+                    onClick={(e) => { e.stopPropagation(); if (!selecting) setSelecting(true); toggleSel(idea.id); }}
+                    className={cn("absolute top-2 left-2 z-10 h-5 w-5 rounded-full grid place-items-center border-2 transition-colors",
+                      selIds.has(idea.id) ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border opacity-70 hover:opacity-100 hover:border-primary")}>
+                    {selIds.has(idea.id) && <Check className="h-3 w-3" />}
+                  </button>
                   <div className="absolute top-2 right-2 flex gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity z-10">
                     <button
                       type="button"
@@ -708,11 +710,15 @@ const Ideias = () => {
               <div key={idea.id}>
                 <div className="px-3 sm:px-4 py-3 hover:bg-accent/30 group transition-colors">
                   <div onClick={() => (selecting ? toggleSel(idea.id) : openEdit(idea))} className="flex items-center gap-3 cursor-pointer">
-                    {/* Em modo seleção o quadradinho decorativo vira checkbox de verdade. */}
-                    <div className={cn("w-5 h-5 rounded border-2 shrink-0 transition-colors grid place-items-center",
-                      selecting && selIds.has(idea.id) ? "bg-primary border-primary text-primary-foreground" : "border-border group-hover:border-primary/50")}>
-                      {selecting && selIds.has(idea.id) && <Check className="h-3 w-3" />}
-                    </div>
+                    {/* A caixinha SEMPRE seleciona (Walter clicava nela esperando
+                       marcar e o card abria): o primeiro clique já liga o modo
+                       seleção, sem precisar achar o botão antes. */}
+                    <button type="button" aria-label="Selecionar ideia"
+                      onClick={(e) => { e.stopPropagation(); if (!selecting) setSelecting(true); toggleSel(idea.id); }}
+                      className={cn("w-5 h-5 rounded border-2 shrink-0 transition-colors grid place-items-center",
+                        selIds.has(idea.id) ? "bg-primary border-primary text-primary-foreground" : "border-border group-hover:border-primary/50 hover:border-primary")}>
+                      {selIds.has(idea.id) && <Check className="h-3 w-3" />}
+                    </button>
                     <p className="font-body text-sm text-foreground flex-1 truncate">{idea.title}</p>
                     <div className="hidden sm:flex gap-1 shrink-0">
                       {(() => {

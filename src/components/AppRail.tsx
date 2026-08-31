@@ -200,7 +200,9 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
               // Título de seção em DESTAQUE (pedido do Walter, rodada 2): só a
               // cor não bastou ("colorido mas sem destaque"), então o título
               // virou uma pílula com fundo, igual no AppSidebar.
-              "flex w-max max-w-full items-center gap-1.5 rounded-lg px-2.5 py-1 mx-1 text-left transition-colors",
+              // mb-1.5: a pílula do título ficava COLADA no primeiro item (print
+              // do Walter, 31/08).
+              "flex w-max max-w-full items-center gap-1.5 rounded-lg px-2.5 py-1 mx-1 mb-1.5 text-left transition-colors",
               active ? "bg-primary/15 text-primary" : "bg-primary/10 text-primary/90 hover:bg-primary/15 hover:text-primary",
             )}
           >

@@ -1378,8 +1378,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     <span className="hidden sm:inline">Reaproveitar</span>
                   </Button>
                 )}
+                {/* Publicar é fluxo de CELULAR (copia a legenda e abre o app do
+                   Instagram); no computador o botão só confundia (Walter, 31/08). */}
                 {(status === "editando" || status === "agendado") && (
-                  <PublishButton
+                  <span className="sm:hidden"><PublishButton
                     caption={caption}
                     mediaUrl={
                       mediaList.length > 0
@@ -1394,7 +1396,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         : undefined
                     }
                     mediaType={mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image"}
-                  />
+                  /></span>
                 )}
                 <Button variant="hero" size="sm" onClick={handleSave} disabled={!title.trim() || saving}>
                   {saving ? "Salvando…" : isNew ? "Criar" : "Salvar"}
@@ -1419,6 +1421,53 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 </p>
               )}
             </div>
+
+            {/* PILAR NO TOPO, estilo o "+ Etiqueta" do Cria Post (pedido do
+               Walter, 31/08): a etiqueta do post do criador é o pilar, e ela
+               mora logo abaixo do título, não enterrada no passo 1. */}
+            {pillars.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    {(() => {
+                      const p = pillars.find((x) => x.id === pillarId);
+                      return p ? (
+                        <button type="button"
+                          className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-body font-semibold transition-colors"
+                          style={{ backgroundColor: `${p.color}1c`, color: p.color, borderColor: `${p.color}66` }}>
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+                          {p.name}
+                          {pillarDays[p.id]?.length > 0 && (
+                            <span className="text-[10px] font-bold px-1.5 py-px rounded bg-white/60">{pillarDays[p.id].join(" · ")}</span>
+                          )}
+                        </button>
+                      ) : (
+                        <button type="button"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border px-3 py-1 text-xs font-body text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors">
+                          + Pilar
+                        </button>
+                      );
+                    })()}
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-60 p-1.5">
+                    <button type="button" onClick={() => setPillarId("")}
+                      className={cn("w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm font-body hover:bg-muted text-left", !pillarId && "font-semibold")}>
+                      <span className="w-2 h-2 rounded-full bg-muted-foreground/40" /> Sem pilar
+                    </button>
+                    {pillars.map((p) => (
+                      <button key={p.id} type="button" onClick={() => setPillarId(p.id)}
+                        className={cn("w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm font-body hover:bg-muted text-left", pillarId === p.id && "font-semibold")}>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                        <span className="flex-1 truncate">{p.name}</span>
+                        {pillarDays[p.id]?.length > 0 && (
+                          <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0">{pillarDays[p.id].join(" · ")}</span>
+                        )}
+                      </button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
           </DialogHeader>
 
           {/* CORPO: FLUXO NUMERADO + PRÉVIA
@@ -1437,9 +1486,244 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               {/* COLUNA ESQUERDA: o fluxo numerado (no mobile, a coluna única). */}
               <div className="space-y-4 min-w-0">
 
-              {/* 1. O CONTEUDO DO POST */}
+              {/* 1. A ARTE / MIDIA no TOPO do fluxo (Walter, 31/08: "poderia ficar em cima, igual no cria social media") */}
+              <section className="rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
+                <BlocoCabecalho numero={1} titulo="A arte / mídia" subtitulo="Imagem, vídeo ou o link do arquivo pronto." />
+
+                {format !== "carrossel" ? (
+                  <div className="space-y-2">
+                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                      Midia
+                    </Label>
+                    <div className="rounded-2xl border-2 border-dashed border-border/50 overflow-hidden bg-muted/20 hover:border-primary/30 transition-colors">
+                      {activeUpload ? (
+                        <div className="relative">
+                          <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
+                            <MediaPreparingPlaceholder pct={activeUpload.pct} label="Enviando vídeo..." />
+                          </div>
+                        </div>
+                      ) : mediaList.length > 0 ? (
+                        <div className="relative">
+                          <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
+                            {(() => {
+                              const primary = mediaList[0];
+                              const fileId = primary.external_file_id || primary.id;
+                              const isVideo = primary.file_type?.startsWith("video/");
+                              const isBunny = isVideo && primary.provider === "bunny";
+                              const isSupabaseUpload = !!primary.thumbnail_url
+                                && !primary.thumbnail_url.includes("drive.google")
+                                && !primary.thumbnail_url.includes("lh3.google");
+                              const driveImgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
+                              const imgSrc = primary.thumbnail_url || primary.view_url || driveImgSrc;
+                              return isBunny ? (
+                                <VideoMediaSlot viewUrl={primary.view_url ?? ""} videoGuid={primary.external_file_id} className="w-full h-full border-0" />
+                              ) : isVideo ? (
+                                <a
+                                  href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block w-full h-full relative bg-black group"
+                                >
+                                  <img
+                                    src={driveImgSrc}
+                                    alt={primary.file_name}
+                                    loading="lazy"
+                                    className="w-full h-full object-contain sm:object-cover"
+                                    onError={(e) => {
+                                      const el = e.target as HTMLImageElement;
+                                      el.classList.add("hidden");
+                                      el.nextElementSibling?.classList.remove("hidden");
+                                    }}
+                                  />
+                                  <div className="hidden absolute inset-0 bg-muted flex flex-col items-center justify-center gap-2 px-4 text-center">
+                                    <Video className="h-10 w-10 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground font-body truncate max-w-full">{primary.file_name}</span>
+                                    <span className="inline-flex items-center gap-1 text-[11px] text-primary font-body font-semibold">
+                                      <ExternalLink className="h-3 w-3" /> Abrir no Drive
+                                    </span>
+                                  </div>
+                                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-gradient-to-t from-black/30 to-transparent group-hover:from-black/40 transition-colors">
+                                    <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                      <Play className="h-6 w-6 text-black ml-0.5" fill="currentColor" />
+                                    </div>
+                                  </div>
+                                </a>
+                              ) : (
+                                <img
+                                  src={imgSrc}
+                                  alt={primary.file_name}
+                                  className="w-full h-full object-contain sm:object-cover"
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    const el = e.target as HTMLImageElement;
+                                    if (!isSupabaseUpload) {
+                                      el.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+                                    } else {
+                                      console.warn("[media] Supabase upload falhou ao carregar", {
+                                        src: el.src,
+                                        fileName: primary.file_name,
+                                        path: primary.external_file_id,
+                                      });
+                                      // Em vez de esconder, manter placeholder visivel para o usuario saber que algo quebrou.
+                                      el.src = "/placeholder.svg";
+                                      el.classList.add("opacity-40");
+                                    }
+                                  }}
+                                />
+                              );
+                            })()}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+                            <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+                              <div className="flex items-center gap-1 bg-black/40 backdrop-blur rounded-full px-2 py-0.5">
+                                <Cloud className="h-2.5 w-2.5 text-white" />
+                                <span className="text-[9px] text-white font-body truncate max-w-[120px]">{mediaList[0].file_name}</span>
+                              </div>
+                              <button
+                                onClick={() => handleRemoveAllMedia()}
+                                disabled={removingIds.size > 0}
+                                className="bg-black/40 backdrop-blur rounded-full p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <X className="h-3 w-3 text-white" />
+                              </button>
+                            </div>
+                          </div>
+                          {mediaList[0].file_type?.startsWith("video/") && mediaList[0].provider !== "bunny" && (
+                            <a
+                              href={`https://drive.google.com/file/d/${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}/view`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-primary font-body hover:underline mt-2 px-3"
+                            >
+                              <ExternalLink className="h-3 w-3" /> Abrir vídeo no Google Drive
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-3 p-3">
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={handleDrivePick}
+                              disabled={picking}
+                              className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
+                            >
+                              <Cloud className="h-6 w-6 text-muted-foreground" />
+                              <span className="text-xs font-body text-muted-foreground">
+                                {picking ? "Abrindo..." : "Google Drive"}
+                              </span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={openLocalFilePicker}
+                              disabled={uploadingLocal}
+                              className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
+                            >
+                              <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                              <span className="text-xs font-body text-muted-foreground">
+                                {uploadingLocal ? "Enviando..." : "Galeria / PC"}
+                              </span>
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground/60 font-body text-center">
+                            Para melhor qualidade, use arquivos do Google Drive. Uploads diretos ficam disponíveis por 30 dias.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* CARROSSEL: um lugar só pra TODA a mídia. Sobe várias imagens de
+                     uma vez e reordena arrastando pela barrinha. A ordem da tira é
+                     a ordem dos slides. Nada de mídia por lâmina no carrossel. */
+                  <div className="space-y-2">
+                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                      Imagens do carrossel
+                    </Label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={handleDrivePick}
+                        disabled={picking}
+                        className="flex items-center gap-1.5 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all px-3 py-2 text-xs font-body text-muted-foreground disabled:opacity-50"
+                      >
+                        <Cloud className="h-4 w-4" />
+                        {picking ? "Abrindo..." : "Google Drive"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={openLocalFilePicker}
+                        disabled={uploadingLocal}
+                        className="flex items-center gap-1.5 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all px-3 py-2 text-xs font-body text-muted-foreground disabled:opacity-50"
+                      >
+                        <ImageIcon className="h-4 w-4" />
+                        {uploadingLocal ? "Enviando..." : "Galeria / PC"}
+                      </button>
+                      {(uploadingLocal || activeUpload) && (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                      {mediaList.length > 0 && (
+                        <span className="ml-auto text-[11px] font-body text-muted-foreground tabular-nums">
+                          {mediaList.length} {mediaList.length === 1 ? "imagem" : "imagens"}
+                        </span>
+                      )}
+                    </div>
+                    {mediaList.length > 0 ? (
+                      <CarouselMediaStrip
+                        media={mediaList}
+                        onReorder={reorderMedia}
+                        onRemove={removeDriveRef}
+                        removingIds={removingIds}
+                      />
+                    ) : (
+                      <p className="text-[11px] font-body text-muted-foreground/70 rounded-xl border border-dashed border-border bg-muted/20 p-3 text-center">
+                        Nenhuma imagem ainda. Suba as imagens do carrossel pelos botões acima.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Link do conteudo final (Drive/Canva/arquivo pronto). */}
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
+                    <Cloud className="h-3 w-3" /> Link do conteúdo (Drive/Canva)
+                  </Label>
+                  <Input
+                    placeholder="Cole o link do Drive, Canva ou arquivo final..."
+                    value={contentLink}
+                    onChange={(e) => setContentLink(e.target.value)}
+                    className="rounded-xl h-10 text-sm bg-card"
+                  />
+                  {contentLink.trim() && /^https?:\/\//i.test(contentLink.trim()) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 mt-1"
+                      onClick={() => window.open(contentLink.trim(), "_blank", "noopener,noreferrer")}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" /> Abrir conteúdo
+                    </Button>
+                  )}
+                </div>
+
+                {/* Gerador de prompt do Estudio (arte a partir do conteudo real). */}
+                <div className="pt-1 border-t border-border/50">
+                  <ArtStudio
+                    titulo={title}
+                    formato={format}
+                    sections={sections}
+                    postId={post?.id ?? null}
+                    roteiro={[hook, script, cta].filter(Boolean).join("\n\n")}
+                    onSalvar={(texto) => setNotes((n) => (n ? `${n}\n\n${texto}` : texto))}
+                    onIrParaRoteiro={() => conteudoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                  />
+                </div>
+              </section>
+
+              {/* 2. O CONTEUDO DO POST */}
               <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
-                <BlocoCabecalho numero={1} titulo="O conteúdo do post" subtitulo="Escolha o formato e escreva a estrutura." />
+                <BlocoCabecalho numero={2} titulo="O conteúdo do post" subtitulo="Escolha o formato e escreva a estrutura." />
 
                 <div data-tour="editor-plataforma" className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -1483,56 +1767,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     VISÍVEIS e no topo do passo 1, logo depois de plataforma/formato.
                     Antes estavam escondidas num recolhível apagado no fim do passo. */}
                 <div className="space-y-3 rounded-2xl border border-border bg-muted/20 p-3">
-                  {pillars.length > 0 && (
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                        Pilar
-                      </Label>
-                      {/* Menu compacto (uma linha) no lugar da fileira de pilulas.
-                          A bolinha da cor do pilar vai de prefixo em cada opcao. */}
-                      <Select
-                        value={pillarId || "__none__"}
-                        onValueChange={(v) => setPillarId(v === "__none__" ? "" : v)}
-                      >
-                        <SelectTrigger className="rounded-xl h-10 bg-card">
-                          <SelectValue placeholder="Escolher pilar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Sem pilar</SelectItem>
-                          {pillars.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              <span className="flex items-center gap-2 w-full">
-                                <span
-                                  className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
-                                  style={{ backgroundColor: p.color }}
-                                />
-                                {p.name}
-                                {pillarDays[p.id]?.length > 0 && (
-                                  <span className="ml-auto pl-2 text-[10px] font-bold tracking-wide text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0">
-                                    {pillarDays[p.id].join(" · ")}
-                                  </span>
-                                )}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {/* Dia da linha editorial SEMPRE à vista (pedido do Walter,
-                         31/08): dentro do dropdown ninguém achava. Com pilar
-                         escolhido mostra o(s) dia(s) dele; sem linha cadastrada,
-                         aponta pra onde cadastrar. */}
-                      {pillarId && pillarDays[pillarId]?.length > 0 ? (
-                        <p className="text-[11px] font-body text-primary flex items-center gap-1">
-                          <span className="font-bold">{pillarDays[pillarId].join(" · ")}</span>
-                          <span className="text-muted-foreground">é o dia deste pilar na sua linha editorial.</span>
-                        </p>
-                      ) : Object.keys(pillarDays).length === 0 && pillars.length > 0 ? (
-                        <p className="text-[11px] font-body text-muted-foreground">
-                          Defina o dia de cada pilar em Configurações {">"} Linha editorial pra ver aqui em qual dia ele costuma sair.
-                        </p>
-                      ) : null}
-                    </div>
-                  )}
+                  {/* O PILAR saiu daqui: subiu pro topo do editor, logo abaixo
+                     do título, no estilo do "+ Etiqueta" do Cria Post
+                     (pedido do Walter, 31/08). */}
 
                   <div data-tour="editor-status" className="space-y-1.5">
                     <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
@@ -1882,241 +2119,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   );
                 })()}
 
-              </section>
-
-              {/* 2. A ARTE / MIDIA (subiu pra cima da legenda a pedido do Walter, 31/08) */}
-              <section className="rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
-                <BlocoCabecalho numero={2} titulo="A arte / mídia" subtitulo="Imagem, vídeo ou o link do arquivo pronto." />
-
-                {format !== "carrossel" ? (
-                  <div className="space-y-2">
-                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                      Midia
-                    </Label>
-                    <div className="rounded-2xl border-2 border-dashed border-border/50 overflow-hidden bg-muted/20 hover:border-primary/30 transition-colors">
-                      {activeUpload ? (
-                        <div className="relative">
-                          <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
-                            <MediaPreparingPlaceholder pct={activeUpload.pct} label="Enviando vídeo..." />
-                          </div>
-                        </div>
-                      ) : mediaList.length > 0 ? (
-                        <div className="relative">
-                          <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
-                            {(() => {
-                              const primary = mediaList[0];
-                              const fileId = primary.external_file_id || primary.id;
-                              const isVideo = primary.file_type?.startsWith("video/");
-                              const isBunny = isVideo && primary.provider === "bunny";
-                              const isSupabaseUpload = !!primary.thumbnail_url
-                                && !primary.thumbnail_url.includes("drive.google")
-                                && !primary.thumbnail_url.includes("lh3.google");
-                              const driveImgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
-                              const imgSrc = primary.thumbnail_url || primary.view_url || driveImgSrc;
-                              return isBunny ? (
-                                <VideoMediaSlot viewUrl={primary.view_url ?? ""} videoGuid={primary.external_file_id} className="w-full h-full border-0" />
-                              ) : isVideo ? (
-                                <a
-                                  href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="block w-full h-full relative bg-black group"
-                                >
-                                  <img
-                                    src={driveImgSrc}
-                                    alt={primary.file_name}
-                                    loading="lazy"
-                                    className="w-full h-full object-contain sm:object-cover"
-                                    onError={(e) => {
-                                      const el = e.target as HTMLImageElement;
-                                      el.classList.add("hidden");
-                                      el.nextElementSibling?.classList.remove("hidden");
-                                    }}
-                                  />
-                                  <div className="hidden absolute inset-0 bg-muted flex flex-col items-center justify-center gap-2 px-4 text-center">
-                                    <Video className="h-10 w-10 text-muted-foreground" />
-                                    <span className="text-xs text-muted-foreground font-body truncate max-w-full">{primary.file_name}</span>
-                                    <span className="inline-flex items-center gap-1 text-[11px] text-primary font-body font-semibold">
-                                      <ExternalLink className="h-3 w-3" /> Abrir no Drive
-                                    </span>
-                                  </div>
-                                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-gradient-to-t from-black/30 to-transparent group-hover:from-black/40 transition-colors">
-                                    <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                                      <Play className="h-6 w-6 text-black ml-0.5" fill="currentColor" />
-                                    </div>
-                                  </div>
-                                </a>
-                              ) : (
-                                <img
-                                  src={imgSrc}
-                                  alt={primary.file_name}
-                                  className="w-full h-full object-contain sm:object-cover"
-                                  loading="lazy"
-                                  onError={(e) => {
-                                    const el = e.target as HTMLImageElement;
-                                    if (!isSupabaseUpload) {
-                                      el.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
-                                    } else {
-                                      console.warn("[media] Supabase upload falhou ao carregar", {
-                                        src: el.src,
-                                        fileName: primary.file_name,
-                                        path: primary.external_file_id,
-                                      });
-                                      // Em vez de esconder, manter placeholder visivel para o usuario saber que algo quebrou.
-                                      el.src = "/placeholder.svg";
-                                      el.classList.add("opacity-40");
-                                    }
-                                  }}
-                                />
-                              );
-                            })()}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
-                            <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
-                              <div className="flex items-center gap-1 bg-black/40 backdrop-blur rounded-full px-2 py-0.5">
-                                <Cloud className="h-2.5 w-2.5 text-white" />
-                                <span className="text-[9px] text-white font-body truncate max-w-[120px]">{mediaList[0].file_name}</span>
-                              </div>
-                              <button
-                                onClick={() => handleRemoveAllMedia()}
-                                disabled={removingIds.size > 0}
-                                className="bg-black/40 backdrop-blur rounded-full p-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <X className="h-3 w-3 text-white" />
-                              </button>
-                            </div>
-                          </div>
-                          {mediaList[0].file_type?.startsWith("video/") && mediaList[0].provider !== "bunny" && (
-                            <a
-                              href={`https://drive.google.com/file/d/${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}/view`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs text-primary font-body hover:underline mt-2 px-3"
-                            >
-                              <ExternalLink className="h-3 w-3" /> Abrir vídeo no Google Drive
-                            </a>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-3 p-3">
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              type="button"
-                              onClick={handleDrivePick}
-                              disabled={picking}
-                              className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
-                            >
-                              <Cloud className="h-6 w-6 text-muted-foreground" />
-                              <span className="text-xs font-body text-muted-foreground">
-                                {picking ? "Abrindo..." : "Google Drive"}
-                              </span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={openLocalFilePicker}
-                              disabled={uploadingLocal}
-                              className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
-                            >
-                              <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                              <span className="text-xs font-body text-muted-foreground">
-                                {uploadingLocal ? "Enviando..." : "Galeria / PC"}
-                              </span>
-                            </button>
-                          </div>
-                          <p className="text-[10px] text-muted-foreground/60 font-body text-center">
-                            Para melhor qualidade, use arquivos do Google Drive. Uploads diretos ficam disponíveis por 30 dias.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  /* CARROSSEL: um lugar só pra TODA a mídia. Sobe várias imagens de
-                     uma vez e reordena arrastando pela barrinha. A ordem da tira é
-                     a ordem dos slides. Nada de mídia por lâmina no carrossel. */
-                  <div className="space-y-2">
-                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                      Imagens do carrossel
-                    </Label>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={handleDrivePick}
-                        disabled={picking}
-                        className="flex items-center gap-1.5 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all px-3 py-2 text-xs font-body text-muted-foreground disabled:opacity-50"
-                      >
-                        <Cloud className="h-4 w-4" />
-                        {picking ? "Abrindo..." : "Google Drive"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={openLocalFilePicker}
-                        disabled={uploadingLocal}
-                        className="flex items-center gap-1.5 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all px-3 py-2 text-xs font-body text-muted-foreground disabled:opacity-50"
-                      >
-                        <ImageIcon className="h-4 w-4" />
-                        {uploadingLocal ? "Enviando..." : "Galeria / PC"}
-                      </button>
-                      {(uploadingLocal || activeUpload) && (
-                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                      )}
-                      {mediaList.length > 0 && (
-                        <span className="ml-auto text-[11px] font-body text-muted-foreground tabular-nums">
-                          {mediaList.length} {mediaList.length === 1 ? "imagem" : "imagens"}
-                        </span>
-                      )}
-                    </div>
-                    {mediaList.length > 0 ? (
-                      <CarouselMediaStrip
-                        media={mediaList}
-                        onReorder={reorderMedia}
-                        onRemove={removeDriveRef}
-                        removingIds={removingIds}
-                      />
-                    ) : (
-                      <p className="text-[11px] font-body text-muted-foreground/70 rounded-xl border border-dashed border-border bg-muted/20 p-3 text-center">
-                        Nenhuma imagem ainda. Suba as imagens do carrossel pelos botões acima.
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Link do conteudo final (Drive/Canva/arquivo pronto). */}
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
-                    <Cloud className="h-3 w-3" /> Link do conteúdo (Drive/Canva)
-                  </Label>
-                  <Input
-                    placeholder="Cole o link do Drive, Canva ou arquivo final..."
-                    value={contentLink}
-                    onChange={(e) => setContentLink(e.target.value)}
-                    className="rounded-xl h-10 text-sm bg-card"
-                  />
-                  {contentLink.trim() && /^https?:\/\//i.test(contentLink.trim()) && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 mt-1"
-                      onClick={() => window.open(contentLink.trim(), "_blank", "noopener,noreferrer")}
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" /> Abrir conteúdo
-                    </Button>
-                  )}
-                </div>
-
-                {/* Gerador de prompt do Estudio (arte a partir do conteudo real). */}
-                <div className="pt-1 border-t border-border/50">
-                  <ArtStudio
-                    titulo={title}
-                    formato={format}
-                    sections={sections}
-                    postId={post?.id ?? null}
-                    roteiro={[hook, script, cta].filter(Boolean).join("\n\n")}
-                    onSalvar={(texto) => setNotes((n) => (n ? `${n}\n\n${texto}` : texto))}
-                    onIrParaRoteiro={() => conteudoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                  />
-                </div>
               </section>
 
               {/* 3. A LEGENDA */}
