@@ -4,8 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Briefcase, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
   Copy as CopyIcon, ExternalLink, Folder, Loader2, MessageCircle, Palette,
-  Play, RotateCcw, Send,
+  Pencil, Play, Plus, RotateCcw, Send, X,
 } from "lucide-react";
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { hojeBR } from "@/lib/date-br";
@@ -19,6 +20,10 @@ import {
 } from "@/hooks/useParceiro";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  useEtapasPessoais, useMetasDosCards, useSalvarCardMeta,
+  type CardMeta, type EtapaPessoal,
+} from "@/hooks/useParceiroPessoal";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MINHAS DEMANDAS, a tela do parceiro (designer, editor, copy)
@@ -79,7 +84,7 @@ export default function MinhasDemandas() {
   const { data: fila = [], isLoading } = useFilaDoParceiro();
   const { data: agencias = [] } = useMinhasAgencias();
   const [aberto, setAberto] = useState<string | null>(null);
-  const [visao, setVisao] = useState<"prazo" | "quadro" | "semana" | "mes">("prazo");
+  const [visao, setVisao] = useState<"prazo" | "quadro" | "cliente" | "semana" | "mes">("prazo");
   const hoje = hojeBR();
   const grupos = useMemo(() => porDia(fila), [fila]);
   const venceHoje = fila.filter((c) => c.prazo_producao === hoje).length;
@@ -140,7 +145,7 @@ export default function MinhasDemandas() {
         {/* O SELETOR DE VISÃO: as quatro do mockup aprovado. Pílulas no accent,
             como as abas do resto do app. */}
         <div className="inline-flex gap-1 rounded-full border border-border bg-card p-1 mb-4 flex-wrap">
-          {([["prazo", "Por prazo"], ["quadro", "Quadro"], ["semana", "Semana"], ["mes", "Mês"]] as const).map(([v, r]) => (
+          {([["prazo", "Por prazo"], ["quadro", "Quadro"], ["cliente", "Por cliente"], ["semana", "Semana"], ["mes", "Mês"]] as const).map(([v, r]) => (
             <button key={v} type="button" onClick={() => setVisao(v)}
               className={cn("px-4 py-1.5 rounded-full text-[13px] font-display font-semibold transition-colors",
                 visao === v ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
@@ -156,7 +161,9 @@ export default function MinhasDemandas() {
         ) : visao === "semana" ? (
           <SemanaDoParceiro fila={fila} hoje={hoje} aoAbrir={setAberto} />
         ) : visao === "quadro" ? (
-          <QuadroDoParceiro fila={fila} hoje={hoje} aoAbrir={setAberto} />
+          <QuadroDoParceiro fila={fila} hoje={hoje} aoAbrir={setAberto} papel={agencias[0]?.meu_papel ?? null} />
+        ) : visao === "cliente" ? (
+          <PorClienteDoParceiro fila={fila} hoje={hoje} aoAbrir={setAberto} />
         ) : visao === "mes" ? (
           <MesDoParceiro fila={fila} hoje={hoje} aoAbrir={setAberto} />
         ) : (
@@ -320,16 +327,21 @@ function ComeceAqui() {
   );
 }
 
-/* ── O QUADRO (estilo Trello) ─────────────────────────────────────────────
-   Colunas por etapa de produção, como o quadro que a Gabriela montava no
-   Trello: Novo, Fazendo, Ajuste e Entregue. As três primeiras vêm da fila; a
-   de Entregue puxa o histórico recente (a fila esconde entregue de propósito).
-   O card anda pelas ações de dentro dele (Estou fazendo / Marcar entregue),
-   não por arrasto: quem decide etapa é o trabalho, não o mouse. */
-function QuadroDoParceiro({ fila, hoje, aoAbrir }: {
-  fila: CardDaFila[]; hoje: string; aoAbrir: (id: string) => void;
+/* ── O QUADRO DE DUAS CAMADAS (mockup aprovado) ───────────────────────────
+   As 4 colunas de fora são o CONTRATO com as agências (Novo, Fazendo,
+   Ajuste, Entregue): não se renomeiam, porque são a língua que a social
+   mídia lê. DENTRO do Fazendo ficam as etapas PESSOAIS do parceiro
+   (Referências, Rascunho, Arte final... editáveis), e ele arrasta os cards
+   entre elas. A agência continua vendo só "Fazendo": o processo é dele. */
+function QuadroDoParceiro({ fila, hoje, aoAbrir, papel }: {
+  fila: CardDaFila[]; hoje: string; aoAbrir: (id: string) => void; papel: string | null;
 }) {
   const { user } = useAuth();
+  const { etapas, criar, renomear, excluir } = useEtapasPessoais(papel);
+  const { data: metas = {} } = useMetasDosCards();
+  const salvarMeta = useSalvarCardMeta();
+  const [editandoEtapas, setEditandoEtapas] = useState(false);
+
   // Mesma chave da tela Entregues: compartilha o cache, sem consulta dobrada.
   const { data: entregues = [] } = useQuery<{ post_id: string; titulo: string; cliente_nome: string; cliente_cor: string | null; entregue_em: string }[]>({
     queryKey: ["parceiro-entregues", user?.id],
@@ -345,57 +357,95 @@ function QuadroDoParceiro({ fila, hoje, aoAbrir }: {
     },
   });
 
-  const COLUNAS = [
-    { chave: "aguardando", rotulo: "Novo", cor: "bg-orange-500", fundo: "bg-orange-50/70" },
-    { chave: "em_producao", rotulo: "Fazendo", cor: "bg-blue-500", fundo: "bg-blue-50/70" },
-    { chave: "ajuste", rotulo: "Ajuste", cor: "bg-violet-500", fundo: "bg-violet-50/70" },
-  ] as const;
+  const novos = fila.filter((c) => c.producao_status === "aguardando");
+  const fazendo = fila.filter((c) => c.producao_status === "em_producao");
+  const ajustes = fila.filter((c) => c.producao_status === "ajuste");
 
-  const cartao = (c: CardDaFila) => {
-    const atrasado = c.prazo_producao && c.prazo_producao < hoje;
-    return (
-      <button key={c.post_id} onClick={() => aoAbrir(c.post_id)}
-        className="w-full text-left rounded-xl border border-border bg-card px-3 py-2.5 mb-2 shadow-sm hover:shadow transition-shadow">
-        <span className="flex items-center gap-2 mb-1.5">
-          <span className="w-5 h-5 rounded-md grid place-items-center text-white text-[9px] font-bold shrink-0 overflow-hidden"
-            style={{ background: c.cliente_cor || "#EA4918" }}>
-            {c.cliente_logo
-              ? <img src={c.cliente_logo} alt="" className="w-full h-full object-cover" />
-              : (c.cliente_nome || "C").charAt(0).toUpperCase()}
-          </span>
-          <span className="text-[10.5px] font-body font-semibold text-muted-foreground truncate">{c.cliente_nome}</span>
-        </span>
-        <span className="block font-display font-bold text-[13px] leading-tight">{c.titulo || "Sem título"}</span>
-        <span className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-          {c.formato && <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[c.formato] ?? c.formato}</span>}
-          {c.prazo_producao && (
-            <span className={cn("text-[9.5px] font-bold px-1.5 py-0.5 rounded-full",
-              atrasado ? "bg-red-600 text-white" : c.prazo_producao === hoje ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700")}>
-              {atrasado ? "atrasado" : c.prazo_producao === hoje ? "hoje" : dataBR(c.prazo_producao)}
-            </span>
-          )}
-        </span>
-      </button>
-    );
+  // Card sem etapa (ou com etapa apagada) mora na PRIMEIRA etapa dele.
+  const etapaDoCard = (postId: string): string => {
+    const e = metas[postId]?.etapa_id;
+    if (e && etapas.some((x) => x.id === e)) return e;
+    return etapas[0]?.id ?? "sem-etapa";
+  };
+
+  const onDragEnd = (r: DropResult) => {
+    if (!r.destination || r.destination.droppableId === r.source.droppableId) return;
+    salvarMeta.mutate({ postId: r.draggableId, etapaId: r.destination.droppableId });
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-start">
-      {COLUNAS.map((col) => {
-        const cards = fila.filter((c) => c.producao_status === col.chave);
-        return (
-          <div key={col.chave} className={cn("rounded-2xl border border-border p-2.5", col.fundo)}>
-            <p className="flex items-center gap-2 px-1 pb-2">
-              <span className={cn("w-2 h-2 rounded-full", col.cor)} />
-              <span className="font-display font-bold text-[13px]">{col.rotulo}</span>
-              <span className="ml-auto text-[10px] font-bold text-muted-foreground bg-card rounded-full px-2 py-0.5 border border-border">{cards.length}</span>
-            </p>
-            {cards.length === 0
-              ? <p className="text-[11px] font-body text-muted-foreground/60 text-center py-6">vazio</p>
-              : cards.map(cartao)}
+    <div className="grid grid-cols-1 xl:grid-cols-[230px_1fr_230px_230px] gap-3 items-start">
+      {/* ── NOVO (contrato) ── */}
+      <div className="rounded-2xl border border-border p-2.5 bg-orange-50/70">
+        <p className="flex items-center gap-2 px-1 pb-2">
+          <span className="w-2 h-2 rounded-full bg-orange-500" />
+          <span className="font-display font-bold text-[13px]">Novo</span>
+          <span className="ml-auto text-[10px] font-bold text-muted-foreground bg-card rounded-full px-2 py-0.5 border border-border">{novos.length}</span>
+        </p>
+        {novos.length === 0
+          ? <p className="text-[11px] font-body text-muted-foreground/60 text-center py-6">vazio</p>
+          : novos.map((c) => <CartaoQuadro key={c.post_id} c={c} hoje={hoje} meta={metas[c.post_id]} onOpen={() => aoAbrir(c.post_id)} />)}
+      </div>
+
+      {/* ── FAZENDO com as etapas PESSOAIS ── */}
+      <div className="rounded-2xl border border-border p-2.5 bg-blue-50/70">
+        <p className="flex items-center gap-2 px-1 pb-2">
+          <span className="w-2 h-2 rounded-full bg-blue-500" />
+          <span className="font-display font-bold text-[13px]">Fazendo</span>
+          <span className="text-[8.5px] font-bold uppercase tracking-wide bg-blue-600 text-white rounded-full px-2 py-0.5">suas etapas</span>
+          <button type="button" onClick={() => setEditandoEtapas(true)}
+            className="ml-auto inline-flex items-center gap-1 text-[10.5px] font-bold text-blue-800 hover:text-blue-900">
+            <Pencil className="h-3 w-3" /> Editar etapas
+          </button>
+        </p>
+        <DragDropContext onDragEnd={onDragEnd}>
+          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(etapas.length, 1)}, minmax(0, 1fr))` }}>
+            {(etapas.length > 0 ? etapas : [{ id: "sem-etapa", nome: "Fazendo", ordem: 0 }]).map((et) => {
+              const doLane = fazendo.filter((c) => etapaDoCard(c.post_id) === et.id);
+              return (
+                <Droppable key={et.id} droppableId={et.id}>
+                  {(prov, snap) => (
+                    <div ref={prov.innerRef} {...prov.droppableProps}
+                      className={cn("rounded-xl border border-dashed border-blue-200 bg-white/60 p-1.5 min-h-[120px] transition-colors",
+                        snap.isDraggingOver && "border-blue-500 bg-blue-100/50")}>
+                      <p className="text-[10px] font-bold text-blue-900/80 px-1 pb-1.5 truncate">{et.nome} <span className="opacity-60">({doLane.length})</span></p>
+                      {doLane.map((c, i) => (
+                        <Draggable key={c.post_id} draggableId={c.post_id} index={i}>
+                          {(dp, ds) => (
+                            <div ref={dp.innerRef} {...dp.draggableProps} {...dp.dragHandleProps}
+                              style={dp.draggableProps.style}
+                              className={cn(ds.isDragging && "rotate-1")}>
+                              <CartaoQuadro c={c} hoje={hoje} meta={metas[c.post_id]} onOpen={() => aoAbrir(c.post_id)} />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {prov.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              );
+            })}
           </div>
-        );
-      })}
+        </DragDropContext>
+        <p className="text-[9.5px] font-body text-blue-900/60 px-1 pt-1.5">
+          Arraste entre as SUAS etapas. A agência vê só "Fazendo": o processo é seu.
+        </p>
+      </div>
+
+      {/* ── AJUSTE (contrato) ── */}
+      <div className="rounded-2xl border border-border p-2.5 bg-violet-50/70">
+        <p className="flex items-center gap-2 px-1 pb-2">
+          <span className="w-2 h-2 rounded-full bg-violet-500" />
+          <span className="font-display font-bold text-[13px]">Ajuste</span>
+          <span className="ml-auto text-[10px] font-bold text-muted-foreground bg-card rounded-full px-2 py-0.5 border border-border">{ajustes.length}</span>
+        </p>
+        {ajustes.length === 0
+          ? <p className="text-[11px] font-body text-muted-foreground/60 text-center py-6">vazio</p>
+          : ajustes.map((c) => <CartaoQuadro key={c.post_id} c={c} hoje={hoje} meta={metas[c.post_id]} onOpen={() => aoAbrir(c.post_id)} />)}
+      </div>
+
+      {/* ── ENTREGUE (contrato) ── */}
       <div className="rounded-2xl border border-border bg-green-50/70 p-2.5">
         <p className="flex items-center gap-2 px-1 pb-2">
           <span className="w-2 h-2 rounded-full bg-green-600" />
@@ -417,6 +467,147 @@ function QuadroDoParceiro({ fila, hoje, aoAbrir }: {
           <p className="text-[10.5px] font-body text-muted-foreground text-center pt-1">o resto está em Entregues</p>
         )}
       </div>
+
+      <EditorEtapasDialog aberto={editandoEtapas} aoFechar={() => setEditandoEtapas(false)}
+        etapas={etapas} criar={criar} renomear={renomear} excluir={excluir} />
+    </div>
+  );
+}
+
+/** O cartão do quadro/por cliente: cliente na cor da ficha, formato, prazo
+ *  com semáforo e o progresso do checklist PESSOAL (só o dono vê). */
+function CartaoQuadro({ c, hoje, meta, onOpen }: {
+  c: CardDaFila; hoje: string; meta?: CardMeta; onOpen: () => void;
+}) {
+  const atrasado = c.prazo_producao && c.prazo_producao < hoje;
+  const total = meta?.checklist.length ?? 0;
+  const feitos = meta?.checklist.filter((i) => i.done).length ?? 0;
+  return (
+    <button onClick={onOpen}
+      className="w-full text-left rounded-xl border border-border bg-card px-3 py-2.5 mb-2 shadow-sm hover:shadow transition-shadow">
+      <span className="flex items-center gap-2 mb-1.5">
+        <span className="w-5 h-5 rounded-md grid place-items-center text-white text-[9px] font-bold shrink-0 overflow-hidden"
+          style={{ background: c.cliente_cor || "#EA4918" }}>
+          {c.cliente_logo
+            ? <img src={c.cliente_logo} alt="" className="w-full h-full object-cover" />
+            : (c.cliente_nome || "C").charAt(0).toUpperCase()}
+        </span>
+        <span className="text-[10.5px] font-body font-semibold text-muted-foreground truncate">{c.cliente_nome}</span>
+      </span>
+      <span className="block font-display font-bold text-[13px] leading-tight">{c.titulo || "Sem título"}</span>
+      <span className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+        {c.formato && <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[c.formato] ?? c.formato}</span>}
+        {c.prazo_producao && (
+          <span className={cn("text-[9.5px] font-bold px-1.5 py-0.5 rounded-full",
+            atrasado ? "bg-red-600 text-white" : c.prazo_producao === hoje ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700")}>
+            {atrasado ? "atrasado" : c.prazo_producao === hoje ? "hoje" : dataBR(c.prazo_producao)}
+          </span>
+        )}
+        {c.prazo_status === "proposto" && <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">prazo pra confirmar</span>}
+      </span>
+      {total > 0 && (
+        <>
+          <span className="block text-[9px] font-body text-muted-foreground mt-1.5">☑ {feitos}/{total} do seu checklist</span>
+          <span className="block h-1 rounded-full bg-muted overflow-hidden mt-1">
+            <span className="block h-full bg-green-500" style={{ width: `${Math.round((feitos / total) * 100)}%` }} />
+          </span>
+        </>
+      )}
+    </button>
+  );
+}
+
+/** Editar as etapas pessoais: renomear inline, criar, apagar. Direcionamento
+ *  padrão vem semeado pelo papel, mas o quadro é dele. */
+function EditorEtapasDialog({ aberto, aoFechar, etapas, criar, renomear, excluir }: {
+  aberto: boolean; aoFechar: () => void; etapas: EtapaPessoal[];
+  criar: { mutate: (nome: string) => void; isPending: boolean };
+  renomear: { mutate: (v: { id: string; nome: string }) => void };
+  excluir: { mutate: (id: string) => void };
+}) {
+  const [nova, setNova] = useState("");
+  return (
+    <Dialog open={aberto} onOpenChange={(v) => !v && aoFechar()}>
+      <DialogContent className="max-w-sm rounded-2xl">
+        <DialogTitle className="font-display font-extrabold">Minhas etapas do Fazendo</DialogTitle>
+        <p className="text-[12px] font-body text-muted-foreground -mt-1">
+          O seu jeito de trabalhar, do seu jeito. As agências continuam vendo só "Fazendo".
+        </p>
+        <div className="space-y-2 mt-1">
+          {etapas.map((et) => (
+            <div key={et.id} className="flex items-center gap-2">
+              <input defaultValue={et.nome}
+                onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== et.nome) renomear.mutate({ id: et.id, nome: v }); }}
+                className="flex-1 rounded-xl border border-border bg-muted/30 px-3 py-2 text-[13px] font-body font-semibold" />
+              <button type="button" aria-label={`Excluir ${et.nome}`} onClick={() => excluir.mutate(et.id)}
+                className="text-muted-foreground hover:text-destructive p-1.5"><X className="h-4 w-4" /></button>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <input value={nova} onChange={(e) => setNova(e.target.value)} placeholder="Nova etapa"
+            onKeyDown={(e) => { if (e.key === "Enter" && nova.trim()) { criar.mutate(nova); setNova(""); } }}
+            className="flex-1 rounded-xl border border-border bg-background px-3 py-2 text-[13px] font-body" />
+          <Button size="sm" className="rounded-xl" disabled={!nova.trim() || criar.isPending}
+            onClick={() => { criar.mutate(nova); setNova(""); }}>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ── POR CLIENTE ──────────────────────────────────────────────────────────
+   O mesmo trabalho recortado por MARCA: quem atende três agências e oito
+   marcas precisa responder "o que falta da Nutri?" sem caçar card por card. */
+function PorClienteDoParceiro({ fila, hoje, aoAbrir }: {
+  fila: CardDaFila[]; hoje: string; aoAbrir: (id: string) => void;
+}) {
+  const { data: metas = {} } = useMetasDosCards();
+  const grupos = useMemo(() => {
+    const mapa = new Map<string, CardDaFila[]>();
+    for (const c of fila) {
+      const chave = c.cliente_nome || "Cliente";
+      mapa.set(chave, [...(mapa.get(chave) ?? []), c]);
+    }
+    return [...mapa.entries()].sort((a, b) => b[1].length - a[1].length);
+  }, [fila]);
+
+  return (
+    <div className="space-y-5">
+      {grupos.map(([nome, cards]) => {
+        const primeiro = cards[0];
+        const atrasados = cards.filter((c) => c.prazo_producao && c.prazo_producao < hoje).length;
+        const ordenados = [...cards].sort((a, b) => (a.prazo_producao ?? "9999").localeCompare(b.prazo_producao ?? "9999"));
+        return (
+          <section key={nome}>
+            <p className="flex items-center gap-2 mb-2 px-0.5">
+              <span className="w-7 h-7 rounded-lg grid place-items-center text-white text-[10px] font-bold overflow-hidden"
+                style={{ background: primeiro.cliente_cor || "#EA4918" }}>
+                {primeiro.cliente_logo
+                  ? <img src={primeiro.cliente_logo} alt="" className="w-full h-full object-cover" />
+                  : nome.charAt(0).toUpperCase()}
+              </span>
+              <span className="font-display font-bold text-[14.5px]">{nome}</span>
+              <span className="text-[11px] font-body text-muted-foreground">via {primeiro.agencia_nome} · {cards.length} na mão</span>
+              {atrasados > 0 && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-600 text-white">
+                  {atrasados} atrasado{atrasados === 1 ? "" : "s"}
+                </span>
+              )}
+            </p>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+              {ordenados.map((c) => (
+                <div key={c.post_id} className="relative">
+                  <CartaoQuadro c={c} hoje={hoje} meta={metas[c.post_id]} onOpen={() => aoAbrir(c.post_id)} />
+                  <span className="absolute top-2 right-2"><EstadoPill s={c.producao_status} /></span>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -525,6 +716,11 @@ function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFecha
   // Entregar em dois tempos: o clique abre o campo do link da versão final.
   const [entregando, setEntregando] = useState(false);
   const [linkEntrega, setLinkEntrega] = useState("");
+  // Checklist pessoal (camada privada do card).
+  const { data: metasCards = {} } = useMetasDosCards();
+  const salvarMeta = useSalvarCardMeta();
+  const minhaMeta = postId ? metasCards[postId] : undefined;
+  const [novoItem, setNovoItem] = useState("");
   // Negociação de prazo: sugerir abre data + motivo.
   const [sugerindo, setSugerindo] = useState(false);
   const [dataSugerida, setDataSugerida] = useState("");
@@ -648,6 +844,45 @@ function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFecha
                     <Button size="sm" onClick={() => void enviar()} disabled={!texto.trim() || comentar.isPending} className="rounded-xl h-[42px]">
                       {comentar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </Button>
+                  </div>
+                </div>
+
+                {/* MEU CHECKLIST (privado): a paridade com o checklist do
+                    Trello, que é o recurso que eles mais usam. Só o parceiro
+                    vê; o progresso aparece no cartão do quadro. */}
+                <div className="mt-4 rounded-xl border border-dashed border-violet-200 bg-violet-50/40 px-3.5 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-violet-700 flex items-center gap-1.5 mb-2">
+                    Meu checklist <span className="ml-auto normal-case tracking-normal font-semibold text-violet-500/80">só você vê isto</span>
+                  </p>
+                  {(minhaMeta?.checklist ?? []).map((item, i) => (
+                    <label key={i} className="flex items-center gap-2 py-1 text-[13px] font-body cursor-pointer group">
+                      <input type="checkbox" checked={item.done} className="accent-violet-600 w-4 h-4"
+                        onChange={() => {
+                          const lista = [...(minhaMeta?.checklist ?? [])];
+                          lista[i] = { ...lista[i], done: !lista[i].done };
+                          salvarMeta.mutate({ postId: card.id, checklist: lista });
+                        }} />
+                      <span className={cn(item.done && "line-through text-muted-foreground")}>{item.t}</span>
+                      <button type="button" aria-label="Remover item"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          const lista = (minhaMeta?.checklist ?? []).filter((_, j) => j !== i);
+                          salvarMeta.mutate({ postId: card.id, checklist: lista });
+                        }}
+                        className="ml-auto opacity-0 group-hover:opacity-60 hover:opacity-100 text-muted-foreground">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </label>
+                  ))}
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <input value={novoItem} onChange={(e) => setNovoItem(e.target.value)} placeholder="+ item (ex.: cortar takes)"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && novoItem.trim()) {
+                          salvarMeta.mutate({ postId: card.id, checklist: [...(minhaMeta?.checklist ?? []), { t: novoItem.trim(), done: false }] });
+                          setNovoItem("");
+                        }
+                      }}
+                      className="flex-1 rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-[12.5px] font-body" />
                   </div>
                 </div>
               </div>
