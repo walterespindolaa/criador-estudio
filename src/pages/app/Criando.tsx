@@ -35,6 +35,7 @@ import { getStatusClasses } from "@/lib/statusColors";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, parseISO, isWithinInterval } from "date-fns";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
@@ -91,7 +92,6 @@ const COLUMN_TOOLTIPS: Record<string, string> = {
   agendado: "Pronto para publicar, com data e hora definidos.",
   publicado: "Já publicado! Use o Histórico para acompanhar resultados.",
 };
-type ContentBlocks = { tema?: string; roteiro?: string; midia?: string; legenda?: string };
 
 // Rótulo da etapa no calendário: os MESMOS nomes das colunas do board, pra o
 // calendário contar a mesma história (era só cor de fundo, e ninguém decora cor).
@@ -551,70 +551,100 @@ const Criando = () => {
               ))}
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              {pillars.length > 0 && (
-                <Select
-                  value={filterPillar ?? "all"}
-                  onValueChange={(v) => setFilterPillar(v === "all" ? null : v)}
-                >
-                  <SelectTrigger className="w-[180px] h-9 rounded-xl text-xs font-body bg-card">
-                    <SelectValue placeholder="Todos os pilares" />
+            {/* Pilar/semana/formato num popover "Filtros" só: 3 selects lado a
+               lado deixavam a linha extensa demais (pedido do Walter, 31/08). */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-body border transition-colors ${filterPillar || filterWeek != null || filterFormat ? "bg-primary/10 border-primary text-primary font-semibold" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}>
+                  <SlidersHorizontal className="h-3.5 w-3.5" /> Filtros
+                  {(filterPillar || filterWeek != null || filterFormat) && (
+                    <span className="h-4 min-w-[16px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold grid place-items-center">
+                      {[filterPillar, filterWeek != null ? 1 : null, filterFormat].filter(Boolean).length}
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-64 p-3 space-y-2.5">
+                {pillars.length > 0 && (
+                  <Select
+                    value={filterPillar ?? "all"}
+                    onValueChange={(v) => setFilterPillar(v === "all" ? null : v)}
+                  >
+                    <SelectTrigger className="w-full h-9 rounded-xl text-xs font-body bg-card">
+                      <SelectValue placeholder="Todos os pilares" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">
+                        <span className="font-body">Todos os pilares</span>
+                      </SelectItem>
+                      {pillars.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <span className="flex items-center gap-2 font-body">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: p.color }}
+                            />
+                            {p.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {posts.some((p) => p.week_number != null) && (
+                  <Select
+                    value={filterWeek == null ? "all" : String(filterWeek)}
+                    onValueChange={(v) => setFilterWeek(v === "all" ? null : Number(v))}
+                  >
+                    <SelectTrigger className="w-full h-9 rounded-xl text-xs font-body bg-card">
+                      <SelectValue placeholder="Todas as semanas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">
+                        <span className="font-body">Todas as semanas</span>
+                      </SelectItem>
+                      {Array.from(
+                        new Set(posts.map((p) => p.week_number).filter((n): n is number => n != null))
+                      )
+                        .sort((a, b) => a - b)
+                        .map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            <span className="font-body">Semana {n}</span>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                <Select value={filterFormat ?? "all"} onValueChange={(v) => setFilterFormat(v === "all" ? null : v)}>
+                  <SelectTrigger className="w-full h-9 rounded-xl text-xs font-body bg-card">
+                    <SelectValue placeholder="Todos os formatos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">
-                      <span className="font-body">Todos os pilares</span>
-                    </SelectItem>
-                    {pillars.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        <span className="flex items-center gap-2 font-body">
-                          <span
-                            className="w-2.5 h-2.5 rounded-full shrink-0"
-                            style={{ backgroundColor: p.color }}
-                          />
-                          {p.name}
-                        </span>
-                      </SelectItem>
+                    <SelectItem value="all"><span className="font-body">Todos os formatos</span></SelectItem>
+                    {FORMATS.map((f) => (
+                      <SelectItem key={f} value={f}><span className="font-body">{FORMAT_LABELS[f] || f}</span></SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              )}
+              </PopoverContent>
+            </Popover>
 
-              {posts.some((p) => p.week_number != null) && (
-                <Select
-                  value={filterWeek == null ? "all" : String(filterWeek)}
-                  onValueChange={(v) => setFilterWeek(v === "all" ? null : Number(v))}
-                >
-                  <SelectTrigger className="w-[160px] h-9 rounded-xl text-xs font-body bg-card">
-                    <SelectValue placeholder="Todas as semanas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">
-                      <span className="font-body">Todas as semanas</span>
-                    </SelectItem>
-                    {Array.from(
-                      new Set(posts.map((p) => p.week_number).filter((n): n is number => n != null))
-                    )
-                      .sort((a, b) => a - b)
-                      .map((n) => (
-                        <SelectItem key={n} value={String(n)}>
-                          <span className="font-body">Semana {n}</span>
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+            {/* Contadores no fim da linha de filtros (imagem 6): eles ocupavam
+               uma linha inteira só pra três números. */}
+            <div className="flex items-center gap-2 text-xs font-body text-muted-foreground whitespace-nowrap">
+              <span>{filteredPosts.length} posts</span>
+              <span>·</span>
+              <span>{filteredPosts.filter(p => p.status === "publicado").length} publicados</span>
+              <span>·</span>
+              <span>{filteredPosts.filter(p => p.scheduled_date).length} agendados</span>
+              {hasActiveFilters && (
+                <button onClick={() => { setFilterPlatform(null); setFilterPillar(null); setFilterWeek(null); setFilterFormat(null); setSearch(""); handlePeriodChange("tudo"); }}
+                  className="ml-1 text-primary hover:underline flex items-center gap-1">
+                  <X className="h-3 w-3" /> Limpar
+                </button>
               )}
-
-              <Select value={filterFormat ?? "all"} onValueChange={(v) => setFilterFormat(v === "all" ? null : v)}>
-                <SelectTrigger className="w-[150px] h-9 rounded-xl text-xs font-body bg-card">
-                  <SelectValue placeholder="Todos os formatos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all"><span className="font-body">Todos os formatos</span></SelectItem>
-                  {FORMATS.map((f) => (
-                    <SelectItem key={f} value={f}><span className="font-body">{FORMAT_LABELS[f] || f}</span></SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </div>
@@ -631,7 +661,9 @@ const Criando = () => {
           </div>
         )}
 
-        <div className="flex items-center gap-4 mb-4 text-xs font-body text-muted-foreground">
+        {/* No celular os contadores continuam numa linha própria (a barra de
+           filtros do desktop, que agora os carrega, é hidden lá). */}
+        <div className="flex md:hidden items-center gap-4 mb-4 text-xs font-body text-muted-foreground">
           <span>{filteredPosts.length} posts no período</span>
           <span>·</span>
           <span>{filteredPosts.filter(p => p.status === "publicado").length} publicados</span>
@@ -731,25 +763,39 @@ const Criando = () => {
                     const showApprovalBadge = temSocialMidia && post.status === "editando" && approvalStatus !== "aprovado";
                     const allDone = tc && tc.count > 0 && tc.done === tc.count;
                     const pendingTasks = tc ? tc.count - tc.done : 0;
-                    const blocks = (post.content_blocks ?? null) as ContentBlocks | null;
-                    return (
+                                        return (
                       <Draggable key={post.id} draggableId={post.id} index={pIdx}>
                       {(dragProvided, dragSnapshot) => (
                       <div ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps} onClick={() => openEdit(post)}
                         style={{ borderLeftColor: ramp[post.status ?? "ideia"]?.line ?? "transparent", borderLeftWidth: 4, ...dragProvided.draggableProps.style }}
-                        className={`criando-drag-card group relative bg-card rounded-xl p-4 shadow-warm-sm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-md transition-all duration-200 ${dragSnapshot.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""} ${isPublished ? "opacity-70" : ""}`}>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteTarget({ id: post.id, title: post.title });
-                          }}
-                          className="absolute top-2 right-2 h-6 w-6 rounded-full bg-destructive/80 hover:bg-destructive text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-10"
-                          aria-label="Excluir post"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                        <p className="font-body font-medium text-sm text-foreground mb-2 leading-snug line-clamp-2 pr-7">
+                        className={`criando-drag-card group relative bg-card rounded-xl p-3 shadow-warm-sm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-md transition-all duration-200 ${dragSnapshot.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""} ${isPublished ? "opacity-70" : ""}`}>
+                        {/* Editar + excluir lado a lado (pedido do Walter, 31/08:
+                            "ter um botao de editar e excluir"). O card inteiro já
+                            abre a edição, mas o lápis torna a ação visível. */}
+                        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity z-10">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); openEdit(post); }}
+                            className="h-6 w-6 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground text-muted-foreground flex items-center justify-center transition-colors"
+                            aria-label="Editar post"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget({ id: post.id, title: post.title });
+                            }}
+                            className="h-6 w-6 rounded-full bg-destructive/80 hover:bg-destructive text-white flex items-center justify-center transition-colors"
+                            aria-label="Excluir post"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                        {/* 1 linha só (line-clamp-1): título em 2 linhas engordava
+                            o card; o title= mostra o texto completo no hover. */}
+                        <p title={post.title} className="font-body font-medium text-sm text-foreground mb-1.5 leading-snug line-clamp-1 pr-14">
                           {showApprovalBadge && (
                             <span
                               className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-bold mr-1 align-middle"
@@ -759,16 +805,9 @@ const Criando = () => {
                           )}
                           {post.title}
                         </p>
-                        {blocks && (
-                          <div className="flex gap-1 mb-2">
-                            {(["tema", "roteiro", "midia", "legenda"] as const).map(k => (
-                              <span key={k} className={`w-2 h-2 rounded-full ${blocks[k] === "feito" ? "bg-secondary" : "bg-muted-foreground/30"}`} />
-                            ))}
-                          </div>
-                        )}
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <PlatformIcon platform={post.platform} size="sm" />
-                          <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-body">{FORMAT_LABELS[post.format] || post.format}</span>
+                          <span style={formatColorVars(post.format)} className={`text-[10px] font-body font-bold uppercase tracking-wide bg-muted/60 px-1.5 py-0.5 rounded ${FORMAT_TEXT_CLASS}`}>{FORMAT_LABELS[post.format] || post.format}</span>
                           {pillar && <span className="px-1.5 py-0.5 rounded text-xs font-body text-primary-foreground" style={{ backgroundColor: pillar.color }}>{pillar.name}</span>}
                           {post.week_number != null && (
                             <span className="px-1.5 py-0.5 rounded text-xs font-body bg-muted text-muted-foreground border border-border">
@@ -1182,23 +1221,33 @@ const Criando = () => {
                         const showApprovalBadge = temSocialMidia && post.status === "editando" && approvalStatus !== "aprovado";
                         const allDone = tc && tc.count > 0 && tc.done === tc.count;
                         const pendingTasks = tc ? tc.count - tc.done : 0;
-                        const blocks = (post.content_blocks ?? null) as ContentBlocks | null;
-                        return (
+                                                return (
                           <motion.div key={post.id} layout onClick={() => openEdit(post)}
                             style={{ borderLeftColor: ramp[post.status ?? "ideia"]?.line ?? "transparent", borderLeftWidth: 4 }}
-                            className={`group relative bg-card rounded-xl p-4 shadow-warm-sm border border-border cursor-pointer hover:shadow-warm-md transition-all duration-200 ${isPublished ? "opacity-70" : ""}`}>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteTarget({ id: post.id, title: post.title });
-                              }}
-                              className="absolute top-2 right-2 h-6 w-6 rounded-full bg-destructive/80 hover:bg-destructive text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-10"
-                              aria-label="Excluir post"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                            <p className="font-body font-medium text-sm text-foreground mb-2 leading-snug line-clamp-2 pr-7">
+                            className={`group relative bg-card rounded-xl p-3 shadow-warm-sm border border-border cursor-pointer hover:shadow-warm-md transition-all duration-200 ${isPublished ? "opacity-70" : ""}`}>
+                            {/* Editar + excluir lado a lado, iguais ao kanban desktop. */}
+                            <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); openEdit(post); }}
+                                className="h-6 w-6 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground text-muted-foreground flex items-center justify-center transition-colors"
+                                aria-label="Editar post"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteTarget({ id: post.id, title: post.title });
+                                }}
+                                className="h-6 w-6 rounded-full bg-destructive/80 hover:bg-destructive text-white flex items-center justify-center transition-colors"
+                                aria-label="Excluir post"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                            <p title={post.title} className="font-body font-medium text-sm text-foreground mb-1.5 leading-snug line-clamp-1 pr-14">
                               {showApprovalBadge && (
                                 <span
                                   className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-bold mr-1 align-middle"
@@ -1208,16 +1257,9 @@ const Criando = () => {
                               )}
                               {post.title}
                             </p>
-                            {blocks && (
-                              <div className="flex gap-1 mb-2">
-                                {(["tema", "roteiro", "midia", "legenda"] as const).map(k => (
-                                  <span key={k} className={`w-2 h-2 rounded-full ${blocks[k] === "feito" ? "bg-secondary" : "bg-muted-foreground/30"}`} />
-                                ))}
-                              </div>
-                            )}
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <PlatformIcon platform={post.platform} size="sm" />
-                              <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-body">{FORMAT_LABELS[post.format] || post.format}</span>
+                              <span style={formatColorVars(post.format)} className={`text-[10px] font-body font-bold uppercase tracking-wide bg-muted/60 px-1.5 py-0.5 rounded ${FORMAT_TEXT_CLASS}`}>{FORMAT_LABELS[post.format] || post.format}</span>
                               {pillar && <span className="px-1.5 py-0.5 rounded text-xs font-body text-primary-foreground" style={{ backgroundColor: pillar.color }}>{pillar.name}</span>}
                               {post.week_number != null && (
                                 <span className="px-1.5 py-0.5 rounded text-xs font-body bg-muted text-muted-foreground border border-border">

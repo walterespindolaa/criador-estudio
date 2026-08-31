@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, Trash2, Edit2, Sparkles, Loader2, Lightbulb, List, LayoutGrid, Clapperboard, Bookmark } from "lucide-react";
+import { Plus, Trash2, Edit2, Sparkles, Loader2, Lightbulb, List, LayoutGrid, Clapperboard, Bookmark, Folder, FolderPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -26,6 +26,7 @@ import { PostEditor } from "@/components/kanban/PostEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { sanitizeText } from "@/lib/sanitize";
 import { useIdeas, type Idea } from "@/hooks/useIdeas";
+import { useIdeaFolders, folderIdDaIdeia, CORES_PASTA } from "@/hooks/useIdeaFolders";
 import { hojeBR } from "@/lib/date-br";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { SharedIntake } from "@/components/pwa/SharedIntake";
@@ -102,6 +103,15 @@ const Ideias = () => {
   const [mainTab, setMainTab] = useState<"ideias" | "salvos">(sharedUrl ? "salvos" : "ideias");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
+  /* Pastas (estilo salvos do Instagram): activeFolder filtra a listagem,
+     formFolder é a pasta escolhida no diálogo de Nova/Editar Ideia. */
+  const { folders, criar: criarPasta, renomear: renomearPasta, excluir: excluirPasta, moverIdeia } = useIdeaFolders();
+  const [activeFolder, setActiveFolder] = useState<string | null>(null);
+  const [formFolder, setFormFolder] = useState<string | null>(null);
+  const [pastasOpen, setPastasOpen] = useState(false);
+  const [novaPastaNome, setNovaPastaNome] = useState("");
+  const [novaPastaCor, setNovaPastaCor] = useState<string>(CORES_PASTA[0]);
+
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<IdeaFormData>({
     resolver: zodResolver(ideaSchema),
   });
@@ -125,11 +135,14 @@ const Ideias = () => {
   const openNew = () => {
     setEditingIdea(null);
     reset({ title: "", pillar_id: "", platform: "", notes: "", objective: "", origin: "" });
+    // Criando de dentro de uma pasta, a ideia já nasce nela.
+    setFormFolder(activeFolder);
     setSheetOpen(true);
   };
 
   const openEdit = (idea: Idea) => {
     setEditingIdea(idea);
+    setFormFolder(folderIdDaIdeia(idea));
     reset({
       title: idea.title,
       pillar_id: idea.pillar_id || "",
@@ -154,9 +167,15 @@ const Ideias = () => {
     try {
       if (editingIdea) {
         await updateIdea.mutateAsync({ id: editingIdea.id, updates: payload });
+        // A pasta vai por fora do payload tipado (folder_id ainda não está
+        // nos tipos gerados); só grava se mudou.
+        if (formFolder !== folderIdDaIdeia(editingIdea)) {
+          await moverIdeia.mutateAsync({ ideaId: editingIdea.id, folderId: formFolder });
+        }
         toast.success("Ideia atualizada!");
       } else {
-        await createIdea.mutateAsync(payload);
+        const nova = await createIdea.mutateAsync(payload);
+        if (formFolder) await moverIdeia.mutateAsync({ ideaId: nova.id, folderId: formFolder });
         toast.success("Ideia capturada!");
       }
       setSheetOpen(false);
@@ -270,8 +289,27 @@ const Ideias = () => {
     const matchPillar = !filterPillar || idea.pillar_id === filterPillar;
     const matchObj = !filterObjective || idea.objective === filterObjective;
     const matchStatus = !filterStatus || idea.idea_status === filterStatus;
-    return matchSearch && matchPillar && matchObj && matchStatus;
+    const matchFolder = !activeFolder || folderIdDaIdeia(idea) === activeFolder;
+    return matchSearch && matchPillar && matchObj && matchStatus && matchFolder;
   });
+
+  // Contagem por pasta pro chip (igual os salvos do Instagram mostram).
+  const contagemPorPasta = ideas.reduce<Record<string, number>>((acc, i) => {
+    const f = folderIdDaIdeia(i);
+    if (f) acc[f] = (acc[f] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const handleCriarPasta = async () => {
+    const nome = novaPastaNome.trim();
+    if (!nome) return;
+    const nova = await criarPasta.mutateAsync({ name: nome, color: novaPastaCor });
+    setNovaPastaNome("");
+    // Já cai dentro da pasta recém-criada: o próximo passo natural é populá-la.
+    setActiveFolder(nova.id);
+    setPastasOpen(false);
+    toast.success("Pasta criada!");
+  };
 
   if (ideasLoading && ideas.length === 0) {
     return (
@@ -345,6 +383,34 @@ const Ideias = () => {
         </div>
 
         {mainTab === "salvos" && <SavedRefs initialUrl={sharedUrl} />}
+
+        {/* Pastas (estilo salvos do Instagram): Todas + uma pílula por pasta.
+            Some quando não há ideia nenhuma pra não poluir o estado vazio. */}
+        {mainTab === "ideias" && ideas.length > 0 && (
+          <div className="flex items-center gap-1.5 mb-4 overflow-x-auto scrollbar-none -mx-4 px-4">
+            <button type="button" onClick={() => setActiveFolder(null)}
+              className={cn("shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-body border transition-colors",
+                !activeFolder ? "bg-primary text-primary-foreground border-primary font-semibold" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
+              Todas <span className="opacity-70">{ideas.length}</span>
+            </button>
+            {folders.map(f => {
+              const ativa = activeFolder === f.id;
+              return (
+                <button key={f.id} type="button" onClick={() => setActiveFolder(ativa ? null : f.id)}
+                  className={cn("shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-body border transition-colors",
+                    ativa ? "font-semibold" : "bg-card border-border text-muted-foreground hover:text-foreground")}
+                  style={ativa ? { backgroundColor: `${f.color}1c`, color: f.color, borderColor: f.color } : undefined}>
+                  <Folder className="h-3 w-3" style={{ color: f.color }} />
+                  {f.name} <span className="opacity-70">{contagemPorPasta[f.id] ?? 0}</span>
+                </button>
+              );
+            })}
+            <button type="button" onClick={() => setPastasOpen(true)}
+              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-body border border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors">
+              <FolderPlus className="h-3.5 w-3.5" /> {folders.length > 0 ? "Pastas" : "Criar pasta"}
+            </button>
+          </div>
+        )}
 
         {/* A TELA DE IDEIAS NÃO TINHA ESTADO VAZIO e ela é a primeira coisa que
             um criador abre. Ele via um branco e concluía que tinha quebrado.
@@ -425,6 +491,15 @@ const Ideias = () => {
                     </p>
                   )}
                   <div className="flex flex-wrap gap-1">
+                    {(() => {
+                      const pasta = folders.find(f => f.id === folderIdDaIdeia(idea));
+                      return pasta ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-body font-medium"
+                          style={{ backgroundColor: `${pasta.color}1c`, color: pasta.color }}>
+                          <Folder className="h-2.5 w-2.5" /> {pasta.name}
+                        </span>
+                      ) : null;
+                    })()}
                     {pillar && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-body font-medium">
                         {pillar.name}
@@ -548,6 +623,15 @@ const Ideias = () => {
                     <div className="w-5 h-5 rounded border-2 border-border shrink-0 group-hover:border-primary/50 transition-colors" />
                     <p className="font-body text-sm text-foreground flex-1 truncate">{idea.title}</p>
                     <div className="hidden sm:flex gap-1 shrink-0">
+                      {(() => {
+                        const pasta = folders.find(f => f.id === folderIdDaIdeia(idea));
+                        return pasta ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-body whitespace-nowrap"
+                            style={{ backgroundColor: `${pasta.color}1c`, color: pasta.color }}>
+                            <Folder className="h-2.5 w-2.5" /> {pasta.name}
+                          </span>
+                        ) : null;
+                      })()}
                       {pillar && (
                         <span className="text-[10px] px-2 py-0.5 rounded-full font-body whitespace-nowrap"
                           style={{ backgroundColor: `${pillar.color}20`, color: pillar.color }}>{pillar.name}</span>
@@ -722,6 +806,29 @@ const Ideias = () => {
                 </div>
               </div>
             )}
+            {folders.length > 0 && (
+              <div className="space-y-2">
+                <Label>Pasta</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  <button type="button" onClick={() => setFormFolder(null)}
+                    className={cn("px-2.5 py-1 rounded-full text-xs font-body border transition-colors",
+                      !formFolder ? "bg-primary text-primary-foreground border-primary font-semibold" : "border-border bg-background text-muted-foreground hover:text-foreground")}>
+                    Sem pasta
+                  </button>
+                  {folders.map((f) => {
+                    const ativa = formFolder === f.id;
+                    return (
+                      <button key={f.id} type="button" onClick={() => setFormFolder(ativa ? null : f.id)}
+                        className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-body border transition-colors",
+                          ativa ? "border-transparent font-semibold" : "border-border bg-background text-muted-foreground hover:text-foreground")}
+                        style={ativa ? { backgroundColor: `${f.color}22`, color: f.color, borderColor: f.color } : undefined}>
+                        <Folder className="h-3 w-3" style={{ color: f.color }} /> {f.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Notas</Label>
               <Textarea {...register("notes")} placeholder="Mais detalhes..." />
@@ -745,6 +852,54 @@ const Ideias = () => {
           onSaved={() => { /* React Query invalidations handle refresh */ }}
         />
       )}
+
+      {/* Gerenciar pastas: criar (nome + cor), renomear no blur e excluir.
+          Excluir NÃO apaga as ideias, elas voltam pra "Todas". */}
+      <Dialog open={pastasOpen} onOpenChange={setPastasOpen}>
+        <DialogContent className="sm:max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
+          <DialogHeader><DialogTitle>Pastas de ideias</DialogTitle></DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input value={novaPastaNome} onChange={(e) => setNovaPastaNome(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleCriarPasta(); } }}
+                  placeholder="Nova pasta (ex.: Reels, Colabs...)" className="rounded-xl text-sm" />
+                <Button type="button" variant="hero" size="sm" onClick={() => void handleCriarPasta()}
+                  disabled={!novaPastaNome.trim() || criarPasta.isPending}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                {CORES_PASTA.map(c => (
+                  <button key={c} type="button" onClick={() => setNovaPastaCor(c)}
+                    className={cn("w-6 h-6 rounded-full transition-all", novaPastaCor === c && "ring-2 ring-offset-2 ring-primary")}
+                    style={{ backgroundColor: c }} aria-label={`Cor ${c}`} />
+                ))}
+              </div>
+            </div>
+            {folders.length > 0 && (
+              <div className="space-y-1.5">
+                {folders.map(f => (
+                  <div key={f.id} className="flex items-center gap-2 rounded-xl border border-border px-2.5 py-1.5">
+                    <Folder className="h-4 w-4 shrink-0" style={{ color: f.color }} />
+                    <Input defaultValue={f.name}
+                      onBlur={(e) => { const nome = e.target.value.trim(); if (nome && nome !== f.name) renomearPasta.mutate({ id: f.id, name: nome }); }}
+                      className="h-8 border-0 shadow-none px-1 text-sm font-body focus-visible:ring-1" />
+                    <span className="text-[11px] text-muted-foreground font-body shrink-0">{contagemPorPasta[f.id] ?? 0}</span>
+                    <button type="button"
+                      onClick={() => { excluirPasta.mutate(f.id); if (activeFolder === f.id) setActiveFolder(null); }}
+                      className="h-7 w-7 rounded-lg flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+                      aria-label={`Excluir pasta ${f.name}`}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <p className="text-[11px] text-muted-foreground font-body">Excluir uma pasta não apaga as ideias: elas voltam pra "Todas".</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>

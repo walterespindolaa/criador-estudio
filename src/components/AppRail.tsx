@@ -197,12 +197,15 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
             onClick={() => toggleGroup(n.id)}
             aria-expanded={isOpen}
             className={cn(
+              // Título de seção em DESTAQUE (pedido do Walter): mesma gramática
+              // do AppSidebar, com a barrinha do accent na frente. Cinza aqui
+              // fazia o menu parecer desligado da marca.
               "flex w-full items-center gap-1.5 rounded-lg px-3 pb-1 pt-1.5 text-left transition-colors",
-              // Grupo da tela atual denuncia onde a pessoa está, mesmo fechado.
-              active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+              "before:content-[''] before:h-[3px] before:w-3 before:rounded-full before:shrink-0",
+              active ? "text-primary before:bg-primary" : "text-primary/80 hover:text-primary before:bg-primary/60",
             )}
           >
-            <span className="truncate text-[10px] font-semibold uppercase tracking-wider">{t(n.label)}</span>
+            <span className="truncate text-[10.5px] font-display font-extrabold uppercase tracking-[0.1em]">{t(n.label)}</span>
             <ChevronDown className={cn("h-3 w-3 shrink-0 transition-transform duration-200", !isOpen && "-rotate-90")} />
           </button>
           {/* Abre/fecha deslizando (truque do grid 0fr → 1fr): nada de sumir

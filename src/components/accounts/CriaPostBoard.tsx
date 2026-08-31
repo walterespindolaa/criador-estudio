@@ -690,16 +690,31 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
             {APPROVAL_COLS.map((colKey) => {
               const st = STATUS[colKey];
               const colPosts = ordenarColuna(viewPosts.filter((p) => (p.approval_status ?? "pendente") === colKey));
+              /* Coluna com CORPO próprio (pedido do Walter, 31/08): cabeçalho
+                 sólido estilo Criando + fundo tingido segurando os cards, pra
+                 dar a sensação de "estarem juntos" em vez de flutuarem sobre
+                 o fundo da página. */
+              const TOM: Record<ApprovalKey, { head: string; area: string }> = {
+                em_producao: { head: "bg-gradient-to-br from-violet-500 to-violet-700", area: "bg-violet-100/50 dark:bg-violet-500/10" },
+                pendente: { head: "bg-gradient-to-br from-amber-500 to-amber-600", area: "bg-amber-100/50 dark:bg-amber-500/10" },
+                ajuste_solicitado: { head: "bg-gradient-to-br from-orange-500 to-orange-700", area: "bg-orange-100/50 dark:bg-orange-500/10" },
+                aprovado: { head: "bg-gradient-to-br from-emerald-500 to-emerald-700", area: "bg-emerald-100/50 dark:bg-emerald-500/10" },
+                postado: { head: "bg-gradient-to-br from-slate-500 to-slate-700", area: "bg-slate-200/50 dark:bg-slate-500/10" },
+              };
+              const tom = TOM[colKey];
               return (
-                <div key={colKey} className="w-[80vw] max-w-[300px] sm:w-72 shrink-0">
-                  <div className="flex items-center justify-between px-2 py-2">
-                    <span className={`text-[10px] font-body font-bold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{colPosts.length}</span>
+                <div key={colKey} className={`w-[80vw] max-w-[300px] sm:w-72 shrink-0 rounded-2xl p-1.5 ${tom.area}`}>
+                  <div className={`flex items-end justify-between rounded-xl px-3 py-2 mb-1.5 text-white shadow-sm ${tom.head}`}>
+                    <span className="min-w-0">
+                      <span className="block text-[8.5px] font-bold uppercase tracking-[0.12em] opacity-80">Status</span>
+                      <span className="block font-display font-extrabold text-[14px] leading-tight truncate">{st.label}</span>
+                    </span>
+                    <span className="shrink-0 text-[11px] font-bold min-w-[20px] h-5 px-1.5 rounded-full bg-white/25 grid place-items-center">{colPosts.length}</span>
                   </div>
                   <Droppable droppableId={colKey}>
                   {(dropP, dropS) => (
                   <div ref={dropP.innerRef} {...dropP.droppableProps}
-                    className={`min-h-[260px] rounded-xl p-2 space-y-2 transition-colors ${dropS.isDraggingOver ? "bg-primary/5 ring-2 ring-primary/30" : "bg-muted/30"}`}>
+                    className={`min-h-[260px] rounded-xl p-1.5 space-y-2 transition-colors ${dropS.isDraggingOver ? "bg-primary/10 ring-2 ring-primary/30" : ""}`}>
                     {colPosts.map((p, idx) => (
                       <Draggable key={p.id} draggableId={p.id} index={idx}>
                       {(dragP, dragS) => (

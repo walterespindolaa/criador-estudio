@@ -34,14 +34,23 @@ import { sanitizeText, sanitizeUrl } from "@/lib/sanitize";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { cn } from "@/lib/utils";
 
+/* Paleta ampliada (pedido do Walter, 31/08: "podia dar pra colocar mais
+   cores"). Todas com contraste suficiente pro texto branco do chip. */
 const PILLAR_COLORS = [
   "#7C3AED", // Roxo vibrante
   "#2563EB", // Azul elétrico
-  "#059669", // Verde esmeralda
-  "#DC2626", // Vermelho coral
-  "#D97706", // Amarelo âmbar
-  "#DB2777", // Rosa magenta
+  "#0EA5E9", // Azul céu
   "#0891B2", // Ciano profundo
+  "#0D9488", // Verde-água
+  "#059669", // Verde esmeralda
+  "#65A30D", // Verde lima
+  "#D97706", // Amarelo âmbar
+  "#EA580C", // Laranja queimado
+  "#DC2626", // Vermelho coral
+  "#E11D48", // Framboesa
+  "#DB2777", // Rosa magenta
+  "#9333EA", // Púrpura
+  "#78716C", // Pedra (neutro)
 ];
 const NICHE_OPTIONS = ["Lifestyle", "Moda", "Beleza", "Fitness", "Culinária", "Educação", "Negócios", "Entretenimento", "Saúde", "Tecnologia"];
 const EDITORIAL_DAYS = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"] as const;
@@ -688,7 +697,7 @@ const Configuracoes = () => {
                         <Input placeholder="Novo pilar..." value={newPillarName} onChange={(e) => setNewPillarName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addPillar()} className="rounded-xl text-sm" />
                         <Button variant="outline" size="sm" type="button" onClick={addPillar}><Plus className="h-4 w-4" /></Button>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         {PILLAR_COLORS.map(c => (
                           <button key={c} type="button" onClick={() => setNewPillarColor(c)} className={`w-6 h-6 rounded-full transition-all ${newPillarColor === c ? "ring-2 ring-offset-2 ring-primary" : ""}`} style={{ backgroundColor: c }} />
                         ))}
