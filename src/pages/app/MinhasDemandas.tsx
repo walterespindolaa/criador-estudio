@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Briefcase, Camera, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
+  Briefcase, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
   Copy as CopyIcon, ExternalLink, Folder, Loader2, MessageCircle, Palette,
-  Play, RotateCcw, Send, Sparkles, Users, Wallet,
+  Play, RotateCcw, Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -209,7 +208,6 @@ export default function MinhasDemandas() {
           })
         )}
 
-        <CrescaComOCria />
       </motion.div>
 
       <CardAbertoDialog postId={aberto} aoFechar={() => setAberto(null)} />
@@ -318,51 +316,6 @@ function ComeceAqui() {
           </Card>
         ))}
       </div>
-    </div>
-  );
-}
-
-/* ── CRESÇA COM O CRIA ────────────────────────────────────────────────────
-   O parceiro entra de graça pelo trabalho das agências, e é exatamente por
-   isso que esta seção existe: quase todo designer e filmmaker também tem os
-   PRÓPRIOS clientes, e hoje gerencia esses jobs no caos. Os módulos do Cria
-   são o caminho: cliente vindo de agência nunca ocupa vaga; pagar é só pra
-   gerenciar clientes seus. */
-function CrescaComOCria() {
-  const navigate = useNavigate();
-  const MODULOS = [
-    { Icone: Send, nome: "Cria Post", slug: "criapost", texto: "Kanban da ideia ao publicado e link de aprovação pros seus clientes diretos." },
-    { Icone: Users, nome: "Cria Gestão", slug: "gestao", texto: "CRM, propostas, contratos e relatórios pra fechar e manter os seus próprios jobs." },
-    { Icone: Wallet, nome: "Cria Caixa", slug: "caixa", texto: "Quanto entrou de cada agência e cliente, impostos, custo e lucro por trabalho." },
-    { Icone: Camera, nome: "Cria Captação", slug: "captacao", texto: "Roteiros estruturados, teleprompter e guia de gravação pra quem também filma." },
-  ];
-  return (
-    <div className="mt-8">
-      <div className="flex items-center gap-2 mb-1 px-0.5">
-        <Sparkles className="h-4 w-4 text-primary" />
-        <p className="font-display font-extrabold text-[16px]">Tem clientes próprios? Monte a sua operação aqui dentro</p>
-      </div>
-      <p className="text-[12.5px] font-body text-muted-foreground mb-3 px-0.5 max-w-2xl leading-relaxed">
-        O trabalho que vem das agências é grátis pra sempre e não ocupa vaga nenhuma. Os planos do
-        Cria entram quando você quer gerenciar os SEUS clientes com as mesmas ferramentas da agência.
-      </p>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {MODULOS.map((m) => (
-          <Card key={m.nome} onClick={() => navigate(`/parceiro/modulos/${m.slug}`)}
-            className="rounded-2xl border-border p-4 cursor-pointer hover:border-primary/40 transition-colors">
-            <span className="w-9 h-9 rounded-xl grid place-items-center mb-2.5 bg-primary/10 text-primary">
-              <m.Icone className="h-[18px] w-[18px]" strokeWidth={1.75} />
-            </span>
-            <p className="font-display font-bold text-[14px]">{m.nome}</p>
-            <p className="text-[12px] font-body text-muted-foreground mt-1 leading-relaxed">{m.texto}</p>
-          </Card>
-        ))}
-      </div>
-      {/* Pro /parceiro/planos, NUNCA pro /app/assinar: lá é o shell de criador
-          e o parceiro sem plano nem entra (paywall sem volta era o resultado). */}
-      <Button className="mt-3 rounded-xl" onClick={() => navigate("/parceiro/planos")}>
-        <Sparkles className="h-4 w-4 mr-1.5" /> Ver os caminhos e planos
-      </Button>
     </div>
   );
 }

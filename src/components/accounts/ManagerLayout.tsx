@@ -4,7 +4,7 @@ import { BroadcastBanner } from "@/components/BroadcastBanner";
 import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton, FeedbackDialog } from "@/components/FeedbackButton";
 import {
-  Home, Boxes, Handshake, DollarSign, Users, ListChecks, Menu, ChevronRight, Gift,
+  Home, Boxes, Briefcase, Handshake, DollarSign, Users, Layers, ListChecks, Menu, ChevronRight, Gift, PackageCheck,
   Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Camera, Trash2, UserPlus, Search, MessageSquarePlus, type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +23,7 @@ import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
 import { SettingsManagerDrawer } from "@/components/accounts/SettingsManagerDrawer";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { HeroBand } from "@/components/HeroBand";
+import { useFilaDoParceiro, useSouParceiro } from "@/hooks/useParceiro";
 import { useManagerApprovalOverview } from "@/hooks/useApprovals";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { GlobalSearch } from "@/components/shared/GlobalSearch";
@@ -79,6 +80,9 @@ const HERO_TITLES: Record<string, string> = {
   "/socialmidia/comissoes": "Comissões",
   "/socialmidia/contas": "Suas contas",
   "/socialmidia/aprovacoes": "Aprovações",
+  "/socialmidia/demandas": "Minhas demandas",
+  "/socialmidia/entregues": "Entregues",
+  "/socialmidia/marcas": "Marcas que atendo",
   "/socialmidia/equipe": "Equipe",
   "/socialmidia/lixeira": "Lixeira",
 };
@@ -181,6 +185,11 @@ export default function ManagerLayout() {
   // LoadingScreen/Navigate). Hook chamado depois de um return condicional roda
   // em um render e não roda no outro, e o React derruba a tela com o erro #310.
   const { overview } = useManagerApprovalOverview();
+  // O parceiro (designer/editor/copy) usa ESTA mesma casca: a área dele é uma
+  // seção do menu, não outro mundo (toque do Walter, 31/08: "ele já está no
+  // modo gestão, só que para parceiros"). Fila alimenta o badge vermelho.
+  const { data: souParceiro } = useSouParceiro();
+  const { data: filaParceiro = [] } = useFilaDoParceiro();
   const travados = overview.reduce((s, r) => s + (r.pendentes ?? 0), 0);
   // Bolinha com número no ícone do app (PWA instalado). A pessoa bate o olho na
   // tela do celular e vê "3 posts esperando o cliente", sem abrir nada.
@@ -195,7 +204,7 @@ export default function ManagerLayout() {
   if (profile?.must_change_password === true) return <Navigate to="/app/trocar-senha" replace />;
   // criadores (não-manager) não entram no hub, exceto quem gerencia contas ou é
   // colaborador de alguma agência (a conta de time é restaurada só no próximo render).
-  if (profile && profile.account_type !== "manager" && !hasManagedAccounts && !actingAsTeam && !isCollaborator) return <Navigate to="/app" replace />;
+  if (profile && profile.account_type !== "manager" && !hasManagedAccounts && !actingAsTeam && !isCollaborator && !souParceiro) return <Navigate to="/app" replace />;
 
   const ctx: ManagerOutletContext = { openModule, openSettings: () => setSettingsOpen(true) };
 
@@ -259,6 +268,16 @@ export default function ManagerLayout() {
               seção "Módulos" abaixo (pelo loop de `modules`), com cadeado/preço
               pra quem não tem e ponto verde pra quem ativou. */}
           {railNode(ListChecks, "Aprovações", { active: isActive("/socialmidia/aprovacoes"), onClick: () => navigate("/socialmidia/aprovacoes") })}
+          {/* ── PARCEIRO: quem produz pras agências tem a fila AQUI dentro,
+              na mesma casca da própria operação. Uma conta, dois papéis. ── */}
+          {souParceiro && railHovered && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Parceiro</p>}
+          {souParceiro && railNode(Briefcase, "Minhas demandas", {
+            active: isActive("/socialmidia/demandas"), onClick: () => navigate("/socialmidia/demandas"),
+            corner: filaParceiro.length > 0 ? <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-[hsl(var(--sidebar-background))]" /> : undefined,
+            tipBadge: filaParceiro.length > 0 ? <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold grid place-items-center">{filaParceiro.length}</span> : undefined,
+          })}
+          {souParceiro && railNode(PackageCheck, "Entregues", { active: isActive("/socialmidia/entregues"), onClick: () => navigate("/socialmidia/entregues") })}
+          {souParceiro && railNode(Layers, "Marcas que atendo", { active: isActive("/socialmidia/marcas"), onClick: () => navigate("/socialmidia/marcas") })}
           {railHovered && (modules.length > 0 || hasHubCria) && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Módulos</p>}
           {modules
             // hub_extra é PACOTE DE CRÉDITO, não é módulo nem destino: ele não

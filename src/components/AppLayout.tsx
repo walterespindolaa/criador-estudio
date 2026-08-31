@@ -202,7 +202,7 @@ const AppLayout = () => {
        no menu de criador). Os planos do parceiro vivem em /parceiro/planos,
        dentro da casca dele. */
     if (parceiroSemPlano) {
-      return <Navigate to="/parceiro" replace />;
+      return <Navigate to="/socialmidia/demandas" replace />;
     }
     if (location.pathname !== "/onboarding") {
       return <Navigate to="/onboarding" replace />;

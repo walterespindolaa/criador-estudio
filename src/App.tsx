@@ -56,11 +56,8 @@ const Aprender = lazy(() => import("./pages/app/Aprender"));
 const Brandbook = lazy(() => import("./pages/app/Brandbook"));
 const LinkInBio = lazy(() => import("./pages/app/LinkInBio"));
 const MinhasDemandas = lazy(() => import("./pages/app/MinhasDemandas"));
-const ParceiroLayout = lazy(() => import("./components/parceiro/ParceiroLayout"));
 const ParceiroEntregues = lazy(() => import("./pages/parceiro/Entregues"));
 const ParceiroMarcas = lazy(() => import("./pages/parceiro/Marcas"));
-const ParceiroPlanos = lazy(() => import("./pages/parceiro/Planos"));
-const ParceiroModulo = lazy(() => import("./pages/parceiro/Modulo"));
 const Collabs = lazy(() => import("./pages/app/Collabs"));
 const Insights = lazy(() => import("./pages/app/Insights"));
 const Autopilot = lazy(() => import("./pages/app/Autopilot"));
@@ -197,7 +194,7 @@ const RootRedirect = () => {
   const { data: souParceiro, isLoading: carregandoPapel } = useSouParceiro();
   if (loading || (user && carregandoPapel)) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
-  return <Navigate to={souParceiro ? "/parceiro" : "/app"} replace />;
+  return <Navigate to={souParceiro ? "/socialmidia/demandas" : "/app"} replace />;
 };
 
 /* O que o seguidor vê se a bio quebrar de vez. Sem jargão, sem mensagem de
@@ -246,20 +243,12 @@ const App = () => (
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
               <Route path="/" element={<RootRedirect />} />
-              {/* ── CRIA PARCEIROS: a casca própria do designer/editor/copy.
-                  Fora do AppLayout de propósito: parceiro não vê módulos de
-                  criador, dashboard nem menu de agência. */}
-              <Route path="/parceiro" element={<AuthOnlyRoute><Suspense fallback={<LoadingScreen />}><ParceiroLayout /></Suspense></AuthOnlyRoute>}>
-                <Route index element={<ErrorBoundary><MinhasDemandas /></ErrorBoundary>} />
-                <Route path="entregues" element={<ErrorBoundary><ParceiroEntregues /></ErrorBoundary>} />
-                <Route path="marcas" element={<ErrorBoundary><ParceiroMarcas /></ErrorBoundary>} />
-                {/* Planos DENTRO da casca do parceiro: mandar pro /app/assinar
-                    embrulhava a página de criador no menu de criador. */}
-                <Route path="planos" element={<ErrorBoundary><ParceiroPlanos /></ErrorBoundary>} />
-                {/* Vitrine de cada módulo na voz do parceiro: cadeado não
-                    vende, página de benefícios vende. */}
-                <Route path="modulos/:slug" element={<ErrorBoundary><ParceiroModulo /></ErrorBoundary>} />
-              </Route>
+              {/* A casca própria do parceiro foi aposentada: a área dele virou
+                  seção do painel de gestão. Links antigos continuam entrando. */}
+              <Route path="/parceiro" element={<Navigate to="/socialmidia/demandas" replace />} />
+              <Route path="/parceiro/entregues" element={<Navigate to="/socialmidia/entregues" replace />} />
+              <Route path="/parceiro/marcas" element={<Navigate to="/socialmidia/marcas" replace />} />
+              <Route path="/parceiro/*" element={<Navigate to="/socialmidia/demandas" replace />} />
               {/* A bio é a ÚNICA página que um estranho abre. Sem rede de
                   segurança, um bloco com dado torto derruba a árvore inteira e
                   o seguidor fica com a tela branca: nem erro, nem link, nem
@@ -334,7 +323,7 @@ const App = () => (
                 <Route path="aprender" element={<ErrorBoundary><Aprender /></ErrorBoundary>} />
                 <Route path="brandbook" element={<ErrorBoundary><Brandbook /></ErrorBoundary>} />
                 <Route path="linkinbio" element={<ErrorBoundary><LinkInBio /></ErrorBoundary>} />
-                <Route path="demandas" element={<Navigate to="/parceiro" replace />} />
+                <Route path="demandas" element={<Navigate to="/socialmidia/demandas" replace />} />
                 <Route path="collabs" element={<ErrorBoundary><UpgradeGate feature="collabs"><Collabs /></UpgradeGate></ErrorBoundary>} />
                 <Route path="insights" element={<ErrorBoundary><UpgradeGate feature="insights"><Insights /></UpgradeGate></ErrorBoundary>} />
                 <Route path="configuracoes" element={<ErrorBoundary><Configuracoes /></ErrorBoundary>} />
@@ -366,6 +355,11 @@ const App = () => (
                 <Route path="clientes/:id" element={<ErrorBoundary><ClienteHub /></ErrorBoundary>} />
                 <Route path="clientes/:id/:tab" element={<ErrorBoundary><ClienteHub /></ErrorBoundary>} />
                 <Route path="aprovacoes" element={<ErrorBoundary><Aprovacoes /></ErrorBoundary>} />
+                {/* PARCEIRO: a fila de quem produz pras agências mora na MESMA
+                    casca da gestão. Uma conta, dois papéis (Walter, 31/08). */}
+                <Route path="demandas" element={<ErrorBoundary><MinhasDemandas /></ErrorBoundary>} />
+                <Route path="entregues" element={<ErrorBoundary><ParceiroEntregues /></ErrorBoundary>} />
+                <Route path="marcas" element={<ErrorBoundary><ParceiroMarcas /></ErrorBoundary>} />
                 <Route path="agenda" element={<ErrorBoundary><AgendaCriacao /></ErrorBoundary>} />
                 <Route path="captacao" element={<ErrorBoundary><CriaCaptacao /></ErrorBoundary>} />
                 <Route path="equipe" element={<ErrorBoundary><Equipe /></ErrorBoundary>} />

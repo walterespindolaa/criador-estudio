@@ -142,7 +142,7 @@ serve(async (req) => {
     const origin = resolveAppUrl(req); // F13: origin validado, não o header cru
     // O destino depende do papel: parceiro cai direto na fila dele, não no
     // dashboard da agência (que ele nem consegue usar).
-    const destino = ehParceiro ? "/parceiro" : "/socialmidia/dashboard";
+    const destino = ehParceiro ? "/socialmidia/demandas" : "/socialmidia/dashboard";
     const type: "magiclink" | "invite" = existing ? "magiclink" : "invite";
     const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({
       type, email: normEmail, options: { redirectTo: origin + destino },
@@ -173,8 +173,11 @@ serve(async (req) => {
       // Conta que JA EXISTIA (criador que tambem produz pra agencia) fica como
       // esta: virar parceiro nao pode derrubar o plano de ninguem.
       if (!existing) {
+        // O parceiro JA NASCE conta de gestao (account_type manager): a area
+        // dele e uma secao do painel de gestao, nao outro mundo. Sem trial de
+        // criador (o trigger de perfil dava 7 dias de Studio).
         await svc.from("profiles")
-          .update({ plan: "free", trial_started_at: null, trial_ends_at: null })
+          .update({ plan: "free", trial_started_at: null, trial_ends_at: null, account_type: "manager" })
           .eq("id", memberId);
       }
       // Parceiro não recebe módulo nenhum: o acesso dele é por card, via as
