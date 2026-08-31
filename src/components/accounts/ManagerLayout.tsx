@@ -5,7 +5,7 @@ import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton, FeedbackDialog } from "@/components/FeedbackButton";
 import {
   Home, Boxes, Briefcase, Handshake, DollarSign, Users, Layers, ListChecks, Menu, ChevronRight, Gift, PackageCheck,
-  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Camera, Trash2, UserPlus, Search, MessageSquarePlus, type LucideIcon,
+  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Camera, Trash2, UserPlus, Search, MessageSquarePlus, BarChart3, type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -62,6 +62,9 @@ const MODULE_TEAM_CODE: Record<string, string> = {
 
 // Seção "Negócio" do rail (Equipe e Comissões têm tratamento próprio no render).
 const BUSINESS_NAV = [
+  // Relatório GERENCIAL da operação (31/08): produção + financeiro + carteira
+  // num período com comparativo. É visão de dona de negócio, então mora aqui.
+  { to: "/socialmidia/relatorio", label: "Relatório", icon: BarChart3 },
   { to: "/socialmidia/parceria", label: "Parceria", icon: Handshake },
   { to: "/socialmidia/comissoes", label: "Comissões", icon: DollarSign },
   { to: "/socialmidia/contas", label: "Suas contas", icon: Users },
@@ -76,6 +79,7 @@ const HERO_TITLES: Record<string, string> = {
   "/socialmidia/criapost": "Cria Post",
   "/socialmidia/criacrm": "Cria Gestão",
   "/socialmidia/criacaixa": "Cria Caixa",
+  "/socialmidia/relatorio": "Relatório da operação",
   "/socialmidia/parceria": "Parceria",
   "/socialmidia/comissoes": "Comissões",
   "/socialmidia/contas": "Suas contas",

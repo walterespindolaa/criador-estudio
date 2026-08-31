@@ -4,7 +4,9 @@ import { IdCard, Download, Pencil, Instagram, Upload, FileText, Trash2, External
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
 import { useSocialConnection, useDailyMetrics, useMediaInsights, useSyncInstagram, useSocialAccountOwner, connectInstagram } from "@/hooks/useSocialInsights";
-import { useMediaKitProfile, useSaveMediaKitProfile, useCustomMediaKit, type MediaKitProfile, type KitService } from "@/hooks/useMediaKit";
+import { useMediaKitProfile, useSaveMediaKitProfile, useCustomMediaKit, KIT_ACCENTS, type MediaKitProfile, type KitService } from "@/hooks/useMediaKit";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { AutoMediaKit, type KitStats, type KitTopPost } from "@/components/mediakit/AutoMediaKit";
 import { usePdfExport, LARGURA_A4 } from "@/hooks/usePdfExport";
 import { useTier } from "@/hooks/useTier";
@@ -14,6 +16,7 @@ import { toast } from "sonner";
 
 export default function MediaKit() {
   const { profile } = useProfile();
+  const { user } = useAuth();
   const { data: conn } = useSocialConnection();
   const { data: daily = [] } = useDailyMetrics(30);
   const { data: media = [] } = useMediaInsights();
@@ -72,18 +75,38 @@ export default function MediaKit() {
     return { followers, reachMonth, engagementPct, saves, profileViews, accountsEngaged, interactions, postsCount, avgReach, followersGrowth };
   }, [daily, media]);
 
+  const liveKitForPosts = (form ?? kit) as MediaKitProfile | undefined;
   const topPosts: KitTopPost[] = useMemo(() => {
-    return [...media]
-      .map((m) => ({
-        title: m.posts?.title || (m.caption || "").slice(0, 60) || "Publicação",
-        format: m.posts?.format || (m.media_type === "VIDEO" ? "Reels" : m.media_type === "CAROUSEL_ALBUM" ? "Carrossel" : "Foto"),
-        reach: m.metrics?.reach ?? 0,
-        saves: m.metrics?.saved ?? m.metrics?.saves ?? 0,
-        thumbnail_url: m.thumbnail_url,
-      }))
-      .sort((a, b) => b.reach - a.reach)
-      .slice(0, 3);
-  }, [media]);
+    // Seção opcional (a pessoa pode preferir não expor números por post).
+    if (liveKitForPosts?.show_top_posts === false) return [];
+    const mapear = (m: (typeof media)[number]): KitTopPost => ({
+      title: m.posts?.title || (m.caption || "").slice(0, 60) || "Publicação",
+      format: m.posts?.format || (m.media_type === "VIDEO" ? "Reels" : m.media_type === "CAROUSEL_ALBUM" ? "Carrossel" : "Foto"),
+      reach: m.metrics?.reach ?? 0,
+      saves: m.metrics?.saved ?? m.metrics?.saves ?? 0,
+      thumbnail_url: m.thumbnail_url,
+    });
+    // Escolhidos a dedo: a pessoa mostra os posts com mais a ver com a marca
+    // que vai contratá-la, não necessariamente os de maior alcance.
+    const escolhidos = liveKitForPosts?.featured_post_ids ?? null;
+    if (escolhidos && escolhidos.length > 0) {
+      return escolhidos
+        .map((id) => media.find((m) => m.id === id))
+        .filter((m): m is (typeof media)[number] => !!m)
+        .slice(0, 3)
+        .map(mapear);
+    }
+    return [...media].map(mapear).sort((a, b) => b.reach - a.reach).slice(0, 3);
+  }, [media, liveKitForPosts?.featured_post_ids, liveKitForPosts?.show_top_posts]);
+
+  // Quando os números foram puxados por último (pedido do Walter: a marca
+  // precisa saber de quando são os dados).
+  const dataDados = useMemo(() => {
+    const ultimaDaily = [...daily].map((d) => d.date).filter(Boolean).sort().pop();
+    const iso = ultimaDaily || conn?.updated_at || null;
+    if (!iso) return null;
+    try { return new Date(String(iso).length === 10 ? `${iso}T12:00:00` : String(iso)).toLocaleDateString("pt-BR"); } catch { return null; }
+  }, [daily, conn?.updated_at]);
 
   const handle = conn?.username ? `@${conn.username}` : (profile?.name ? `@${profile.name.split(" ")[0].toLowerCase()}` : "@voce");
 
@@ -103,6 +126,39 @@ export default function MediaKit() {
     const file = e.target.files?.[0];
     if (file) custom.upload.mutate(file);
     e.target.value = "";
+  };
+
+  // Foto própria do kit: a do IG vem de CDN que expira e a foto sumia do PDF.
+  // Sobe pro bucket avatars (público) e grava a URL estável no kit.
+  const [uploadingKitPhoto, setUploadingKitPhoto] = useState(false);
+  const onKitPhoto = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !user?.id || !form) return;
+    if (!file.type.startsWith("image/")) { toast.error("Envie uma imagem."); return; }
+    setUploadingKitPhoto(true);
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${user.id}/media-kit-foto-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      setForm((f) => f ? { ...f, avatar_url: data.publicUrl } : f);
+    } catch {
+      toast.error("Não consegui subir a foto.");
+    } finally {
+      setUploadingKitPhoto(false);
+    }
+  };
+
+  const toggleFeatured = (id: string) => {
+    setForm((f) => {
+      if (!f) return f;
+      const atual = f.featured_post_ids ?? [];
+      if (atual.includes(id)) return { ...f, featured_post_ids: atual.filter((x) => x !== id) };
+      if (atual.length >= 3) { toast.error("Escolha no máximo 3 posts."); return f; }
+      return { ...f, featured_post_ids: [...atual, id] };
+    });
   };
 
   if (!tierLoading && !isPaidOrTrial) {
@@ -160,6 +216,45 @@ export default function MediaKit() {
           <>
             {editing && form && (
               <div className="bg-card border border-border rounded-2xl p-4 mb-4 space-y-4">
+                {/* Identidade do kit: nome próprio, foto estável e cor de destaque
+                   (pedidos do Walter, 31/08: nome editável, foto escolhível e
+                   cores que não pareçam aleatórias). */}
+                <div className="flex flex-wrap items-end gap-4">
+                  <div className="min-w-[200px] flex-1">
+                    <Field label="Nome no kit">
+                      <input value={form.display_name ?? ""} onChange={(e) => setForm({ ...form, display_name: e.target.value })} placeholder={profile?.name ?? "Seu nome"} className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-body outline-none focus:ring-1 focus:ring-primary/30" />
+                    </Field>
+                  </div>
+                  <div>
+                    <p className="text-xs font-body text-muted-foreground mb-1.5">Foto do kit</p>
+                    <div className="flex items-center gap-2">
+                      <div className="w-11 h-11 rounded-full overflow-hidden bg-muted grid place-items-center shrink-0">
+                        {(form.avatar_url ?? profile?.avatar_url) ? (
+                          <img src={form.avatar_url ?? profile?.avatar_url ?? ""} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <IdCard className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <label className="cursor-pointer">
+                        <input type="file" accept="image/*" className="hidden" onChange={onKitPhoto} />
+                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent">
+                          {uploadingKitPhoto ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />} Trocar foto
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-body text-muted-foreground mb-1.5">Cor do kit</p>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {KIT_ACCENTS.map((c) => (
+                        <button key={c} type="button" onClick={() => setForm({ ...form, accent: c })}
+                          className={`w-7 h-7 rounded-full transition-all ${(form.accent ?? "#0F6E56") === c ? "ring-2 ring-offset-2 ring-primary" : ""}`}
+                          style={{ backgroundColor: c }} aria-label={`Cor ${c}`} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid sm:grid-cols-2 gap-3">
                   <Field label="Bio (frase de apresentação)"><textarea value={form.bio ?? profile?.bio ?? ""} onChange={(e) => setForm({ ...form, bio: e.target.value })} rows={2} className="w-full rounded-lg border border-border bg-card p-2.5 text-sm font-body outline-none resize-none focus:ring-1 focus:ring-primary/30" /></Field>
                   <Field label="Nichos (separe por vírgula)"><input value={form.niche ?? profile?.niche ?? ""} onChange={(e) => setForm({ ...form, niche: e.target.value })} className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm font-body outline-none focus:ring-1 focus:ring-primary/30" /></Field>
@@ -202,6 +297,50 @@ export default function MediaKit() {
                   </div>
                 </div>
 
+                {/* Melhores conteúdos: opcional e escolhível (a pessoa pode querer
+                   mostrar posts que casam com a marca, não os de maior alcance). */}
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-body text-foreground font-medium mb-2 cursor-pointer">
+                    <input type="checkbox" checked={form.show_top_posts !== false}
+                      onChange={(e) => setForm({ ...form, show_top_posts: e.target.checked })}
+                      className="h-4 w-4 rounded border-border accent-[var(--primary)]" />
+                    Mostrar a seção "Melhores conteúdos" no kit
+                  </label>
+                  {form.show_top_posts !== false && media.length > 0 && (
+                    <>
+                      <p className="text-xs font-body text-muted-foreground mb-2">
+                        Escolha até 3 posts pra destacar. Sem escolha, entram os 3 de maior alcance. As capas vêm do Instagram: se alguma sumir, clique em Atualizar lá em cima.
+                      </p>
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        {[...media].slice(0, 12).map((m) => {
+                          const sel = (form.featured_post_ids ?? []).includes(m.id);
+                          const titulo = m.posts?.title || (m.caption || "").slice(0, 40) || "Publicação";
+                          return (
+                            <button key={m.id} type="button" onClick={() => toggleFeatured(m.id)} title={titulo}
+                              className={`relative aspect-[4/5] rounded-lg overflow-hidden border-2 transition-all ${sel ? "border-primary ring-2 ring-primary/30" : "border-border opacity-80 hover:opacity-100"}`}>
+                              {m.thumbnail_url ? (
+                                <img src={m.thumbnail_url} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" loading="lazy" />
+                              ) : (
+                                <span className="absolute inset-0 grid place-items-center bg-muted text-[9px] font-body text-muted-foreground p-1 text-center">{titulo}</span>
+                              )}
+                              {sel && (
+                                <span className="absolute top-1 right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold grid place-items-center">
+                                  {(form.featured_post_ids ?? []).indexOf(m.id) + 1}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {(form.featured_post_ids ?? []).length > 0 && (
+                        <button type="button" onClick={() => setForm({ ...form, featured_post_ids: null })} className="text-xs font-body text-primary mt-2">
+                          Voltar pro top 3 automático
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+
                 <div className="flex justify-end gap-2 pt-1">
                   <Button variant="ghost" size="sm" onClick={() => { setForm(kit ?? null); setEditing(false); }}>Cancelar</Button>
                   <Button size="sm" onClick={doSave} disabled={save.isPending} className="gap-1.5">{save.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Salvar</Button>
@@ -213,14 +352,17 @@ export default function MediaKit() {
               {liveKit && (
                 <AutoMediaKit
                   ref={printRef}
-                  name={profile?.name ?? "Seu nome"}
+                  name={liveKit.display_name?.trim() || profile?.name || "Seu nome"}
                   handle={handle}
-                  avatarUrl={conn?.profile_picture_url ?? profile?.avatar_url ?? null}
+                  /* A foto do perfil do Cria (URL estável) vem ANTES da do IG:
+                     o CDN do Instagram expira e a foto sumia do kit. */
+                  avatarUrl={liveKit.avatar_url ?? profile?.avatar_url ?? conn?.profile_picture_url ?? null}
                   niche={liveKit.niche ?? profile?.niche ?? ""}
                   bio={liveKit.bio ?? profile?.bio ?? ""}
                   kit={liveKit}
                   stats={stats}
                   posts={topPosts}
+                  updatedAt={dataDados}
                 />
               )}
             </div>

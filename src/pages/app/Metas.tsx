@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { GoalsTab } from "@/components/plano/GoalsTab";
+import { useDailyMetrics } from "@/hooks/useSocialInsights";
 import { hojeBR } from "@/lib/date-br";
 
 const Metas = () => {
@@ -62,6 +63,23 @@ const Metas = () => {
       toast.error("Erro ao atualizar valor.");
     }
   };
+
+  /* META DE SEGUIDORES SE ATUALIZA SOZINHA (pedido do Walter, 31/08): com o
+     Instagram conectado, o número real de seguidores vira o "onde estou" de
+     toda meta da categoria Seguidores em andamento. Grava só quando difere,
+     senão cada visita à tela viraria um update no banco. */
+  const { data: dailyIG = [] } = useDailyMetrics(30);
+  const seguidoresIG = [...dailyIG].reverse().find((d) => d.followers != null)?.followers ?? null;
+  useEffect(() => {
+    if (seguidoresIG == null) return;
+    for (const g of goals) {
+      if (g.category !== "seguidores") continue;
+      if (g.status === "concluida") continue;
+      if ((g.current_value ?? 0) === seguidoresIG) continue;
+      updateGoalProgress.mutate({ id: g.id, current_value: seguidoresIG });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seguidoresIG, goals.length]);
 
   const updateGoalStatus = async (goalId: string, status: string) => {
     try {
@@ -187,6 +205,7 @@ const Metas = () => {
           onDeleteMilestone={deleteMilestone}
           onNewMilestoneNameChange={setNewMilestoneName}
           onExpandedGoalChange={setExpandedGoal}
+          igConectado={seguidoresIG != null}
         />
 
         <div data-tour="metas-reflexao" className="mt-8 rounded-2xl border border-border bg-card p-5">

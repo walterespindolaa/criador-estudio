@@ -21,6 +21,14 @@ export type MediaKitProfile = {
   services: KitService[] | null;
   accent: string | null;
   link: string | null;
+  /** Nome exibido no kit (se null, cai no nome do perfil). */
+  display_name: string | null;
+  /** Foto própria do kit (a do IG expira no CDN e sumia do PDF). */
+  avatar_url: string | null;
+  /** Seção "Melhores conteúdos" é opcional. */
+  show_top_posts: boolean | null;
+  /** Ids (media_insights.id) escolhidos a dedo; null = top 3 automático. */
+  featured_post_ids: string[] | null;
 };
 
 export const MEDIA_KIT_DEFAULTS: MediaKitProfile = {
@@ -43,7 +51,14 @@ export const MEDIA_KIT_DEFAULTS: MediaKitProfile = {
   ],
   accent: "#0F6E56",
   link: null,
+  display_name: null,
+  avatar_url: null,
+  show_top_posts: true,
+  featured_post_ids: null,
 };
+
+/** Cores de destaque prontas do kit (o verde era fixo e parecia aleatório). */
+export const KIT_ACCENTS = ["#0F6E56", "#7A1F3D", "#0061EE", "#EA4918", "#7C3AED", "#DB2777", "#B45309", "#1F2937"] as const;
 
 // Configuração editável do media kit (audiência, serviços/valores, contato…).
 export function useMediaKitProfile() {
@@ -53,7 +68,7 @@ export function useMediaKitProfile() {
     enabled: !!user?.id,
     queryFn: async () => {
       const { data, error } = await sbFrom("media_kit_profiles")
-        .select("headline,bio,niche,contact,cities,gender,audience,services,accent,link")
+        .select("headline,bio,niche,contact,cities,gender,audience,services,accent,link,display_name,avatar_url,show_top_posts,featured_post_ids")
         .eq("user_id", user!.id)
         .maybeSingle();
       if (error) throw error;

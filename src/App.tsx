@@ -82,6 +82,7 @@ const CriaCrm = lazy(() => import("./pages/socialmidia/CriaCrm"));
 const CriaCrmClient = lazy(() => import("./pages/socialmidia/CriaCrmClient"));
 const CriaCaixa = lazy(() => import("./pages/socialmidia/CriaCaixa"));
 const Parceria = lazy(() => import("./pages/socialmidia/Parceria"));
+const RelatorioGerencial = lazy(() => import("./pages/socialmidia/RelatorioGerencial"));
 const Comissoes = lazy(() => import("./pages/socialmidia/Comissoes"));
 const Contas = lazy(() => import("./pages/socialmidia/Contas"));
 const Clientes = lazy(() => import("./pages/socialmidia/Clientes"));
@@ -340,6 +341,7 @@ const App = () => (
                 <Route path="criacrm/tarefas" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="criacrm/calendario" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="criacrm/pipeline" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
+                <Route path="criacrm/metas" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="criacrm/contratos" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="criacrm/linkbio" element={<ErrorBoundary><CriaCrm /></ErrorBoundary>} />
                 <Route path="criacrm/:id" element={<ErrorBoundary><CriaCrmClient /></ErrorBoundary>} />
@@ -348,6 +350,7 @@ const App = () => (
                     Catch-all: o próprio componente lê o contexto e a seção do path. */}
                 <Route path="criacaixa/*" element={<ErrorBoundary><CriaCaixa /></ErrorBoundary>} />
                 <Route path="parceria" element={<ErrorBoundary><Parceria /></ErrorBoundary>} />
+                <Route path="relatorio" element={<ErrorBoundary><RelatorioGerencial /></ErrorBoundary>} />
                 <Route path="comissoes" element={<ErrorBoundary><Comissoes /></ErrorBoundary>} />
                 <Route path="contas" element={<ErrorBoundary><Contas /></ErrorBoundary>} />
                 <Route path="hubcria" element={<ErrorBoundary><HubCria /></ErrorBoundary>} />

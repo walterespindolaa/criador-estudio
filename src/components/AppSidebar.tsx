@@ -62,15 +62,10 @@ const groups = [
       // Dashboard/Início continua sendo a porta de entrada, no topo do primeiro grupo.
       { title: "Dashboard", url: "/app", icon: LayoutDashboard, end: true },
       { title: "Ideias", url: "/app/ideias", icon: Lightbulb },
-      // Cria Plano existia só no menu do celular e na URL: no desktop a pessoa
-      // não achava a ferramenta que mais impressiona. Entra aqui, antes do
-      // kanban, porque é ele que ENCHE o kanban.
-      { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, feature: "cria-plano" },
       { title: "Criando", url: "/app/criando", icon: Kanban },
       // Tarefa é o que destrava o post ("gravar o reel", "escrever a legenda"),
       // então mora ao lado do Criando e não em Planejar.
       { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
-      { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, feature: "stories" },
     ],
   },
   {
@@ -104,6 +99,10 @@ const groups = [
   {
     label: "Mundo CRIA",
     items: [
+      // Cria Plano e Cria Stories moraram no CRIAR até 31/08; o Walter achou
+      // que combinam mais com o Mundo CRIA (as ferramentas com cara de produto).
+      { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, feature: "cria-plano" },
+      { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, feature: "stories" },
       { title: "Tendências", url: "/app/tendencias", icon: TrendingUp, feature: "tendencias" },
       { title: "Cria Prompter", url: "/app/prompter", icon: Video, feature: "prompter" },
     ],
@@ -219,8 +218,8 @@ export function AppSidebar() {
           .map((group) => (
           <SidebarGroup key={group.label}>
             {!collapsed && (
-              <SidebarGroupLabel className="flex items-center gap-1.5 text-[12px] font-display font-extrabold uppercase tracking-[0.1em] text-primary px-3 mt-5 mb-2 before:content-[''] before:h-[3px] before:w-3 before:rounded-full before:bg-primary/70">
-                {group.label}
+              <SidebarGroupLabel className="mt-5 mb-2 px-1"><span className="inline-flex items-center rounded-lg bg-primary/10 px-2.5 py-1 text-[11px] font-display font-extrabold uppercase tracking-[0.1em] text-primary">
+                {group.label}</span>
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
@@ -269,8 +268,8 @@ export function AppSidebar() {
         {profile?.role === "admin" && (
           <SidebarGroup>
             {!collapsed && (
-              <SidebarGroupLabel className="flex items-center gap-1.5 text-[12px] font-display font-extrabold uppercase tracking-[0.1em] text-primary px-3 mt-5 mb-2 before:content-[''] before:h-[3px] before:w-3 before:rounded-full before:bg-primary/70">
-                Admin
+              <SidebarGroupLabel className="mt-5 mb-2 px-1"><span className="inline-flex items-center rounded-lg bg-primary/10 px-2.5 py-1 text-[11px] font-display font-extrabold uppercase tracking-[0.1em] text-primary">
+                Admin</span>
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>

@@ -858,11 +858,24 @@ const LinkInBio = () => {
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
+  /* BUG (31/08): a pessoa montava a bio, abria a página pública em outra aba
+     pra testar e, ao VOLTAR, tudo que não estava salvo sumia. O retorno do
+     foco faz o react-query refazer o fetch do perfil; bio_settings volta como
+     um objeto NOVO (mesmo conteúdo, outra referência), este efeito rodava de
+     novo e descartava o estado local. Regra agora: só re-hidrata do servidor
+     quando NÃO há mudança não salva, ou quando a conta ativa trocou. */
+  const dirtyRef = useRef(false);
+  useEffect(() => { dirtyRef.current = appearanceDirty; }, [appearanceDirty]);
+  const hydratedForRef = useRef<string | null>(null);
   useEffect(() => {
     if (!profile) return;
+    const trocouConta = hydratedForRef.current !== profile.id;
+    if (!trocouConta && dirtyRef.current) return;
+    hydratedForRef.current = profile.id;
     setSlug(profile.bio_slug ?? "");
     setSettings(parseSettings(profile.bio_settings));
     setAppearanceDirty(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id, profile?.bio_slug, profile?.bio_settings]);
 
   // Checagem de disponibilidade do slug (debounce).
@@ -2285,8 +2298,9 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
           </div>
         )}
 
+        {/* Mesmo raio da página pública (rounded-lg): prévia fiel. */}
         {settings.bannerImage && (
-          <div className="w-full -mt-1.5 mb-[-34px] rounded-2xl overflow-hidden shadow-md">
+          <div className="w-full -mt-1.5 mb-[-34px] rounded-lg overflow-hidden shadow-md">
             <img src={settings.bannerImage} alt="" className="w-full h-24 object-cover" />
           </div>
         )}

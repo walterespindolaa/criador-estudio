@@ -28,8 +28,6 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
   { title: "Criar", items: [
     { title: "Ideias", url: "/app/ideias", icon: Lightbulb, desc: "Banco de ideias e ganchos" },
     { title: "Em produção", url: "/app/criando", icon: Kanban, desc: "Seu kanban de posts" },
-    { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, hot: true, desc: "Cronograma do mês com IA" },
-    { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, desc: "Plano de stories da semana" },
   ]},
   { title: "Planejar", items: [
     { title: "Meu Feed", url: "/app/feed", icon: Grid3X3, desc: "Prévia do seu feed" },
@@ -50,6 +48,9 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
     { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
   ]},
   { title: "Mundo CRIA", items: [
+    // Cria Plano e Stories vieram do grupo CRIAR (pedido do Walter, 31/08).
+    { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, hot: true, desc: "Cronograma do mês com IA" },
+    { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, desc: "Plano de stories da semana" },
     { title: "Tendências", url: "/app/tendencias", icon: TrendingUp, hot: true, desc: "O que tá bombando no nicho" },
     { title: "Cria Prompter", url: "/app/prompter", icon: Video, hot: true, desc: "Teleprompter com comando de voz" },
   ]},
@@ -148,7 +149,7 @@ export function BottomBar() {
           <div className="overflow-y-auto px-3 pb-2">
             {sections.map((sec) => (
               <div key={sec.title} className="mb-2">
-                <p className="flex items-center gap-1.5 text-[12px] uppercase tracking-[0.1em] font-display font-extrabold text-primary px-3 pt-3 pb-1.5 before:content-[''] before:h-[3px] before:w-3 before:rounded-full before:bg-primary/70">{sec.title}</p>
+                <p className="px-3 pt-3 pb-1.5"><span className="inline-flex items-center rounded-lg bg-primary/10 px-2.5 py-1 text-[11px] uppercase tracking-[0.1em] font-display font-extrabold text-primary">{sec.title}</span></p>
                 <div className="space-y-0.5">
                   {sec.items.map((item) => {
                     const active = isActive(item.url);

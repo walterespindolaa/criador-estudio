@@ -54,6 +54,8 @@ type Props = {
   onDeleteMilestone: (id: string) => void;
   onNewMilestoneNameChange: (value: string) => void;
   onExpandedGoalChange: (id: string | null) => void;
+  /** Instagram conectado: meta de Seguidores se atualiza sozinha (selo no card). */
+  igConectado?: boolean;
 };
 
 export function GoalsTab({
@@ -76,6 +78,7 @@ export function GoalsTab({
   onDeleteMilestone,
   onNewMilestoneNameChange,
   onExpandedGoalChange,
+  igConectado,
 }: Props) {
   return (
     <div className="max-w-3xl space-y-6">
@@ -185,6 +188,11 @@ export function GoalsTab({
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] font-body px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{categoryLabel}</span>
+                        {goal.category === "seguidores" && igConectado && (
+                          <span className="text-[10px] font-body font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 flex items-center gap-0.5">
+                            <TrendingUp className="h-2.5 w-2.5" /> auto do Instagram
+                          </span>
+                        )}
                         <span className={`text-[10px] font-body px-1.5 py-0.5 rounded ${
                           goal.status === "concluida" ? "bg-secondary/20 text-secondary" :
                           goal.status === "pausada" ? "bg-muted text-muted-foreground" :

@@ -32,6 +32,8 @@ type Props = {
   kit: MediaKitProfile;
   stats: KitStats;
   posts: KitTopPost[];
+  /** Data (já formatada) em que os números foram puxados do Instagram. */
+  updatedAt?: string | null;
 };
 
 const hideImg = (e: SyntheticEvent<HTMLImageElement>) => { e.currentTarget.style.display = "none"; };
@@ -50,7 +52,7 @@ const POST_GRADS = [
 ];
 
 export const AutoMediaKit = forwardRef<HTMLDivElement, Props>(function AutoMediaKit(
-  { name, handle, niche, bio, avatarUrl, kit, stats, posts },
+  { name, handle, niche, bio, avatarUrl, kit, stats, posts, updatedAt },
   ref,
 ) {
   const accent = kit.accent || "#0F6E56";
@@ -210,7 +212,7 @@ export const AutoMediaKit = forwardRef<HTMLDivElement, Props>(function AutoMedia
         </div>
 
         <div style={{ padding: "20px 32px 26px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11.5, color: "#6b7670", flexWrap: "wrap", gap: 8 }}>
-          <span>Dados do Instagram · atualizados automaticamente.</span>
+          <span>Dados do Instagram{updatedAt ? ` · puxados em ${updatedAt}` : " · atualizados automaticamente"}.</span>
           {/* Assinatura com o logo, não com a palavra escrita: o media kit vai
               em PDF pra mão da marca. */}
           <AssinaturaCria variante="rodape" tom="claro" altura={24} style={{ width: "auto", alignItems: "flex-end" }} />

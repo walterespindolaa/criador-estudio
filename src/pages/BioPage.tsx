@@ -751,8 +751,10 @@ const ConteudoDaBio = () => {
             interruptor separado, que vinha DESLIGADO de fábrica. A pessoa
             subia a imagem, salvava, e nada acontecia. Agora subir a imagem é
             o próprio ato de ligar: remover a imagem é que desliga. */}
+        {/* rounded-lg (não 2xl): o canto muito redondo comia o desenho do
+            banner da marca (pedido do Walter, 31/08). */}
         {settings.bannerImage && (
-          <div className="w-full -mt-2 mb-[-44px] rounded-2xl overflow-hidden shadow-md">
+          <div className="w-full -mt-2 mb-[-44px] rounded-lg overflow-hidden shadow-md">
             <img src={settings.bannerImage} alt="" loading="lazy" className="w-full h-32 sm:h-40 object-cover" />
           </div>
         )}

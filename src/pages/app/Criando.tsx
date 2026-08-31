@@ -281,8 +281,13 @@ const Criando = () => {
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingFormat, setPendingFormat] = useState<string | null>(null);
+  // Coluna de nascimento do post: o + no cabeçalho de cada coluna cria o post
+  // já naquele status (pedido do Walter, 31/08: "adicionar direto no quadro
+  // que eu quero"). O Novo Post geral zera e nasce em Ideia.
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
 
-  const openNew = () => setPickerOpen(true);
+  const openNew = () => { setPendingStatus(null); setPickerOpen(true); };
+  const openNewInColumn = (statusKey: string) => { setPendingStatus(statusKey); setPickerOpen(true); };
   const startFromFormat = (fmt: string) => { setPendingFormat(fmt); setPickerOpen(false); setSelectedPost(null); setDrawerOpen(true); };
   const startBlank = () => { setPendingFormat(null); setPickerOpen(false); setSelectedPost(null); setDrawerOpen(true); };
   const openEdit = (post: Post) => { setSelectedPost(post); setDrawerOpen(true); };
@@ -411,7 +416,10 @@ const Criando = () => {
               <p className="text-muted-foreground font-body mt-0.5 text-sm hidden sm:block">Seu pipeline de criação. Arraste entre colunas.</p>
             </div>
           </div>
-          <Button data-tour="criando-novo" variant="hero" size="sm" onClick={openNew} className="shrink-0"><Plus className="h-4 w-4 mr-1" /> Novo Post</Button>
+          {/* No desktop o título fica no HeroBand, então o botão é o único filho
+             desta linha: ml-auto encosta ele na DIREITA (antes ficava perdido
+             na esquerda, "meio aleatório" nas palavras do Walter). */}
+          <Button data-tour="criando-novo" variant="hero" onClick={openNew} className="shrink-0 ml-auto shadow-warm-md"><Plus className="h-4 w-4 mr-1" /> Novo Post</Button>
         </div>
 
         {/* Filtros, mobile: busca + botão Filtros + chips ativos (gaveta) */}
@@ -747,8 +755,13 @@ const Criando = () => {
               <div key={col.key} className={`w-[85vw] max-w-[320px] sm:w-auto sm:max-w-none sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start flex flex-col ${showDividerBefore ? "border-l-2 border-dashed border-border pl-4" : ""}`}>
                 <div className="relative mb-3 group/cover">
                   <CoverHeader label="Status" title={cTitle} count={colPosts.length} from={cFrom} to={cTo} ink={cInk} sub={cSub} hint={COLUMN_TOOLTIPS[col.key]} compact />
+                  {/* + SEMPRE visível: cria o post já nesta coluna. */}
+                  <button onClick={() => openNewInColumn(col.key)} aria-label={`Novo post em ${cTitle}`}
+                    className="absolute top-2.5 right-12 z-10 h-7 w-7 rounded-full bg-white/20 hover:bg-white/35 backdrop-blur flex items-center justify-center transition-colors">
+                    <Plus className="h-4 w-4 text-white" />
+                  </button>
                   <button onClick={() => openEditCover(col.key)} aria-label="Editar capa"
-                    className="absolute top-2.5 right-12 z-10 h-7 w-7 rounded-full bg-white/15 backdrop-blur flex items-center justify-center opacity-0 group-hover/cover:opacity-100 transition-opacity">
+                    className="absolute top-2.5 right-[5.25rem] z-10 h-7 w-7 rounded-full bg-white/15 backdrop-blur flex items-center justify-center opacity-0 group-hover/cover:opacity-100 transition-opacity">
                     <Pencil className="h-3.5 w-3.5 text-white/90" />
                   </button>
                 </div>
@@ -1304,7 +1317,7 @@ const Criando = () => {
         </div>
         )}
       </motion.div>
-      <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={activeAccountId || user?.id || ""} onSaved={() => { /* invalidations */ }} initialFormat={pendingFormat ?? undefined} />
+      <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={activeAccountId || user?.id || ""} onSaved={() => { /* invalidations */ }} initialFormat={pendingFormat ?? undefined} initialStatus={pendingStatus ?? undefined} />
 
       <FormatPicker open={pickerOpen} onPick={startFromFormat} onBlank={startBlank} onOpenChange={setPickerOpen} />
 

@@ -32,10 +32,12 @@ const TOP: NavNode[] = [
     // a legenda): é execução, não planejamento. Fica logo abaixo do Em produção,
     // que é de onde a pessoa vem quando percebe que algo travou.
     { label: "nav.tasks", icon: ListTodo, to: "/app/tarefas" },
+  ]},
+  // Cria Plano e Cria Stories saíram do CRIAR pro Mundo CRIA (pedido do
+  // Walter, 31/08): é o grupo das ferramentas com cara de produto.
+  { id: "mundo", label: "nav.world", icon: Globe, children: [
     { label: "nav.criaPlan", icon: Wand2, to: "/app/autopilot" },
     { label: "nav.criaStories", icon: Clapperboard, to: "/app/stories" },
-  ]},
-  { id: "mundo", label: "nav.world", icon: Globe, children: [
     { label: "nav.trends", icon: TrendingUp, to: "/app/tendencias" },
     { label: "nav.criaPrompter", icon: Video, to: "/app/prompter" },
   ]},
@@ -197,12 +199,11 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
             onClick={() => toggleGroup(n.id)}
             aria-expanded={isOpen}
             className={cn(
-              // Título de seção em DESTAQUE (pedido do Walter): mesma gramática
-              // do AppSidebar, com a barrinha do accent na frente. Cinza aqui
-              // fazia o menu parecer desligado da marca.
-              "flex w-full items-center gap-1.5 rounded-lg px-3 pb-1 pt-1.5 text-left transition-colors",
-              "before:content-[''] before:h-[3px] before:w-3 before:rounded-full before:shrink-0",
-              active ? "text-primary before:bg-primary" : "text-primary/80 hover:text-primary before:bg-primary/60",
+              // Título de seção em DESTAQUE (pedido do Walter, rodada 2): só a
+              // cor não bastou ("colorido mas sem destaque"), então o título
+              // virou uma pílula com fundo, igual no AppSidebar.
+              "flex w-max max-w-full items-center gap-1.5 rounded-lg px-2.5 py-1 mx-1 text-left transition-colors",
+              active ? "bg-primary/15 text-primary" : "bg-primary/10 text-primary/90 hover:bg-primary/15 hover:text-primary",
             )}
           >
             <span className="truncate text-[10.5px] font-display font-extrabold uppercase tracking-[0.1em]">{t(n.label)}</span>

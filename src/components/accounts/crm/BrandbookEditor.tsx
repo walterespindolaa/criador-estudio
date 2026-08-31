@@ -11,6 +11,7 @@ import {
 } from "@/hooks/useCrm";
 import { BrandbookImport } from "@/components/brandbook/BrandbookImport";
 import { CORES_LINHA, useEditorialLineActions, useEditorialLinesByCrm } from "@/hooks/useEditorialLines";
+import { MetasPanel } from "@/components/metas/MetasPanel";
 import { RelatorioImport } from "@/components/brandbook/RelatorioImport";
 import { BriefingCliente } from "@/components/accounts/crm/BriefingCliente";
 import { LinkCadastroCliente } from "@/components/accounts/crm/LinkCadastroCliente";
@@ -599,6 +600,10 @@ export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincroni
             até a publicação (pedido do Walter, 30/08). */}
         <LinhasEditoriaisCard crmClientId={form.id} />
 
+        {/* METAS DO CLIENTE (pedido do Walter, 31/08): metas combinadas com
+            este cliente moram na estratégia dele, com criada em/concluída em. */}
+        <MetasDoClienteCard crmClientId={form.id} />
+
         </TabsContent>
 
         <TabsContent value="mensagem" className="mt-4 space-y-4">
@@ -814,6 +819,23 @@ export function PersonaEditor({ form, setForm, isCria }: { form: CrmClient; setF
    cronograma. As linhas são amarradas ao cliente do Cria Post (external),
    porque é nos posts dele que a etiqueta vive: se a ficha ainda não tem
    conta de posts vinculada, explicamos em vez de quebrar. */
+/* Metas do CLIENTE na estratégia. Reusa a mesma resolução ficha → conta do
+   Cria Post das linhas editoriais (a meta vive pendurada no external client). */
+function MetasDoClienteCard({ crmClientId }: { crmClientId: string }) {
+  const { externalId, resolvendo } = useEditorialLinesByCrm(crmClientId);
+  return (
+    <Card icon={<Target />} title="Metas deste cliente">
+      {resolvendo ? null : !externalId ? (
+        <p className="text-[12px] font-body text-muted-foreground bg-muted/40 border border-border rounded-xl px-3 py-2.5">
+          Este cliente ainda não tem a conta do Cria Post vinculada. Vincule a ficha e as metas destravam aqui.
+        </p>
+      ) : (
+        <MetasPanel scope="cliente" externalClientId={externalId} compacto />
+      )}
+    </Card>
+  );
+}
+
 function LinhasEditoriaisCard({ crmClientId }: { crmClientId: string }) {
   const { externalId, resolvendo, lines } = useEditorialLinesByCrm(crmClientId);
   const acoes = useEditorialLineActions(externalId);

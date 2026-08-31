@@ -259,13 +259,15 @@ function resolveTags(ids: string[] | undefined, catalog: PostTag[]): PostTag[] {
 
 // Card do KANBAN: chip pequeno com o nome. Mostra até 2 e resume o resto em "+N"
 // (o card já carrega formato, título, data, referência e avisos).
-function TagChips({ ids, catalog }: { ids: string[] | undefined; catalog: PostTag[] }) {
+function TagChips({ ids, catalog, topo }: { ids: string[] | undefined; catalog: PostTag[]; topo?: boolean }) {
   const tags = resolveTags(ids, catalog);
   if (!tags.length) return null;
   const visiveis = tags.slice(0, 2);
   const resto = tags.length - visiveis.length;
   return (
-    <div className="flex flex-wrap items-center gap-1 mt-1.5" title={`Etiquetas internas: ${tags.map((t) => t.name).join(", ")}`}>
+    // `topo`: usado dentro da faixa de pílulas no ALTO do card (sem a margem
+    // que fazia sentido quando isto morava no rodapé).
+    <div className={`flex flex-wrap items-center gap-1 ${topo ? "" : "mt-1.5"}`} title={`Etiquetas internas: ${tags.map((t) => t.name).join(", ")}`}>
       {visiveis.map((t) => (
         <span key={t.id} className={`text-[9.5px] font-body font-bold px-1.5 py-0.5 rounded-full border max-w-[110px] truncate ${TAG_COLOR_CLS[t.color] ?? TAG_COLOR_CLS.slate}`}>{t.name}</span>
       ))}
@@ -727,6 +729,25 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                         className={`bg-card border border-border rounded-xl p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${dragS.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""}`}>
                         <div className="flex items-start gap-2">
                           <div className="flex-1 min-w-0">
+                            {/* TOPO do card (pedido do Walter, 31/08): linha editorial e
+                               etiquetas internas em pílulas ANTES do título, estilo
+                               Trello. Só a equipe vê: nada disto vai pro cliente. */}
+                            {(() => {
+                              const el = linhaDoPost(p.editorial_line_id);
+                              const temTags = (tagsByPost[p.id] ?? []).length > 0;
+                              if (!el && !temTags) return null;
+                              return (
+                                <div className="flex flex-wrap items-center gap-1 mb-1.5">
+                                  {el && (
+                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                                      style={{ background: `${el.color}1f`, color: el.color }}>
+                                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: el.color }} />{el.name}
+                                    </span>
+                                  )}
+                                  <TagChips ids={tagsByPost[p.id]} catalog={tagCatalog} topo />
+                                </div>
+                              );
+                            })()}
                             <span className="text-[10px] font-body font-bold uppercase tracking-wide"><span style={formatColorVars(p.format)} className={FORMAT_TEXT_CLASS}>{FORMAT_LABELS[normalizarFormato(p.format)] ?? cap(p.format)}</span> <span className="text-muted-foreground">· {cap(p.platform)}</span></span>
                             <p className="font-display font-bold text-sm text-foreground truncate mt-1">{p.title}</p>
                             {/* Data direto no card, sem abrir o post. Reflete no calendário na hora. */}
@@ -782,17 +803,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                                 </div>
                               );
                             })()}
-                            {/* Rodapé do card: as etiquetas internas ocupam o lugar que era do
-                                tipo de aprovação. O tipo continua editável dentro do post, mas
-                                repetido em todo card não dizia nada sobre o que fazer com a peça.
-                                Só a agência vê isto: nunca vai pro portal do cliente. */}
-                            {(() => { const el = linhaDoPost(p.editorial_line_id); return el ? (
-                              <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full mr-1"
-                                style={{ background: `${el.color}1f`, color: el.color }}>
-                                <span className="w-1.5 h-1.5 rounded-full" style={{ background: el.color }} />{el.name}
-                              </span>
-                            ) : null; })()}
-                            <TagChips ids={tagsByPost[p.id]} catalog={tagCatalog} />
+                            {/* Linha editorial e etiquetas subiram pro TOPO do card. */}
                           </div>
                           <div className="flex flex-col gap-1.5 md:gap-1 shrink-0">
                             <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0" onClick={(e) => { e.stopPropagation(); openEdit(p); }} aria-label="Editar"><Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>

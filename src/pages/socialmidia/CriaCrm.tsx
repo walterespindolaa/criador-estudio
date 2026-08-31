@@ -22,6 +22,7 @@ import { ContractsTab } from "@/components/accounts/crm/ContractsTab";
 import { TasksTab } from "@/components/accounts/crm/TasksTab";
 import { CrmCalendarTab } from "@/components/accounts/crm/CrmCalendarTab";
 import { LinksNaBioTab } from "@/components/accounts/crm/LinksNaBioTab";
+import { MetasPanel } from "@/components/metas/MetasPanel";
 import { cn } from "@/lib/utils";
 
 import { formatBRL } from "@/lib/money";
@@ -42,7 +43,7 @@ export default function CriaCrm() {
   return <ModuleGate code="crm"><CrmInner /></ModuleGate>;
 }
 
-const CRM_TABS = ["clientes", "tarefas", "calendario", "pipeline", "contratos", "linkbio"] as const;
+const CRM_TABS = ["clientes", "tarefas", "calendario", "pipeline", "metas", "contratos", "linkbio"] as const;
 type CrmTab = typeof CRM_TABS[number];
 
 function CrmInner() {
@@ -60,6 +61,7 @@ function CrmInner() {
     { to: `${base}/tarefas`, label: "Tarefas" },
     { to: `${base}/calendario`, label: "Calendário" },
     { to: `${base}/pipeline`, label: "Pipeline" },
+    { to: `${base}/metas`, label: "Metas" },
     { to: `${base}/contratos`, label: "Contratos" },
     { to: `${base}/linkbio`, label: "Link na bio" },
   ];
@@ -76,6 +78,9 @@ function CrmInner() {
       {tab === "tarefas" && <TasksTab />}
       {tab === "calendario" && <CrmCalendarTab />}
       {tab === "pipeline" && <PipelineBoard />}
+      {/* Metas da OPERAÇÃO (pedido do Walter, 31/08): o negócio da social
+         mídia tem meta própria, separada das metas de cada cliente. */}
+      {tab === "metas" && <div className="mt-2"><MetasPanel scope="operacao" /></div>}
       {tab === "contratos" && <ContractsTab />}
       {tab === "linkbio" && <LinksNaBioTab />}
     </div>
