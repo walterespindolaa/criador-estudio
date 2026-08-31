@@ -285,9 +285,13 @@ const Criando = () => {
   // já naquele status (pedido do Walter, 31/08: "adicionar direto no quadro
   // que eu quero"). O Novo Post geral zera e nasce em Ideia.
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  // Data de nascimento do post: o + em cada DIA do calendário cria o post já
+  // com aquela data (pedido do Walter, 31/08, igual ao Cria Post).
+  const [pendingDate, setPendingDate] = useState<string | null>(null);
 
-  const openNew = () => { setPendingStatus(null); setPickerOpen(true); };
-  const openNewInColumn = (statusKey: string) => { setPendingStatus(statusKey); setPickerOpen(true); };
+  const openNew = () => { setPendingStatus(null); setPendingDate(null); setPickerOpen(true); };
+  const openNewInColumn = (statusKey: string) => { setPendingStatus(statusKey); setPendingDate(null); setPickerOpen(true); };
+  const openNewAtDay = (dateKey: string) => { setPendingStatus(null); setPendingDate(dateKey); setPickerOpen(true); };
   const startFromFormat = (fmt: string) => { setPendingFormat(fmt); setPickerOpen(false); setSelectedPost(null); setDrawerOpen(true); };
   const startBlank = () => { setPendingFormat(null); setPickerOpen(false); setSelectedPost(null); setDrawerOpen(true); };
   const openEdit = (post: Post) => { setSelectedPost(post); setDrawerOpen(true); };
@@ -1000,7 +1004,15 @@ const Criando = () => {
                             "min-h-[104px] border rounded-lg p-1.5 bg-background flex flex-col gap-1 overflow-hidden transition-all",
                             calDragOverKey === cell.key ? "ring-2 ring-primary border-primary" : (isToday ? "border-primary" : "border-border")
                           )}>
-                          <span className={cn("text-[11px] font-body font-semibold w-5 h-5 flex items-center justify-center rounded-full", isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{cell.day}</span>
+                          <span className="flex items-center justify-between">
+                            <span className={cn("text-[11px] font-body font-semibold w-5 h-5 flex items-center justify-center rounded-full", isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{cell.day}</span>
+                            {/* + do dia: cria o post já com esta data. */}
+                            <button type="button" onClick={(e) => { e.stopPropagation(); openNewAtDay(cell.key); }}
+                              aria-label={`Novo post em ${cell.key}`}
+                              className="h-5 w-5 rounded-full grid place-items-center text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-colors">
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </span>
                           {dayPosts.slice(0, 3).map(post => (
                             /* Card com ETAPA + título + FORMATO, igual ao calendário
                                do social mídia: cor sozinha não diz o que é a peça. */
@@ -1097,9 +1109,16 @@ const Criando = () => {
                               onDrop={() => { if (calDragId) reschedulePost(calDragId, key); setCalDragId(null); setCalDragOverKey(null); }}
                               className={cn("min-h-[320px] border rounded-lg p-1.5 bg-background flex flex-col gap-1 overflow-y-auto transition-all",
                                 calDragOverKey === key ? "ring-2 ring-primary border-primary" : (isToday ? "border-primary" : "border-border"))}>
-                              <div className="flex items-center justify-between px-0.5 mb-0.5">
+                              <div className="flex items-center justify-between px-0.5 mb-0.5 gap-1">
                                 <span className="text-[10px] font-body text-muted-foreground">{weekdays[i]}</span>
-                                <span className={cn("text-[11px] font-body font-semibold w-5 h-5 flex items-center justify-center rounded-full", isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{d.getDate()}</span>
+                                <span className="flex items-center gap-0.5">
+                                  <button type="button" onClick={(e) => { e.stopPropagation(); openNewAtDay(key); }}
+                                    aria-label={`Novo post em ${key}`}
+                                    className="h-5 w-5 rounded-full grid place-items-center text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-colors">
+                                    <Plus className="h-3.5 w-3.5" />
+                                  </button>
+                                  <span className={cn("text-[11px] font-body font-semibold w-5 h-5 flex items-center justify-center rounded-full", isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{d.getDate()}</span>
+                                </span>
                               </div>
                               {dayPosts.map(post => (
                                 /* Mesmo card da visão de mês: etapa + título + formato. */
@@ -1333,7 +1352,7 @@ const Criando = () => {
         </div>
         )}
       </motion.div>
-      <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={activeAccountId || user?.id || ""} onSaved={() => { /* invalidations */ }} initialFormat={pendingFormat ?? undefined} initialStatus={pendingStatus ?? undefined} />
+      <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={activeAccountId || user?.id || ""} onSaved={() => { /* invalidations */ }} initialFormat={pendingFormat ?? undefined} initialStatus={pendingStatus ?? undefined} initialDate={pendingDate ?? undefined} />
 
       <FormatPicker open={pickerOpen} onPick={startFromFormat} onBlank={startBlank} onOpenChange={setPickerOpen} />
 

@@ -161,6 +161,8 @@ interface PostEditorProps {
   initialFormat?: string;
   /** Post novo já nasce neste status (o + no cabeçalho da coluna do board). */
   initialStatus?: string;
+  /** Post novo já nasce com esta data (o + no dia do calendário). */
+  initialDate?: string;
 }
 
 interface DriveRef {
@@ -219,7 +221,7 @@ const FALLBACK_PROMPTS = [
   { title: "Carrossel", text: "Monte carrossel de 8 slides sobre [TEMA]. Slide 1 = hook. Último = CTA.", category: "roteiro" },
 ];
 
-export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved, initialFormat, initialStatus }: PostEditorProps) {
+export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved, initialFormat, initialStatus, initialDate }: PostEditorProps) {
   const { startTour } = useTour();
   const isNew = !post;
   const [title, setTitle] = useState("");
@@ -493,7 +495,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
     } else {
       setTitle(""); setPlatform("instagram"); setFormat(initialFormat || "reels");
       setPillarId(""); setStatus(initialStatus || "ideia"); setHook(""); setScript("");
-      setCaption(""); setCta(""); setScheduledDate(""); setScheduledTime(""); setNotes("");
+      setCaption(""); setCta(""); setScheduledDate(initialDate || ""); setScheduledTime(""); setNotes("");
       setWeekNumber(null);
       
       setViews(""); setSaves(""); setComments(""); setReach(""); setShares(""); setShowResults(false); setReferenceLink(""); setContentLink("");
