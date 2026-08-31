@@ -53,6 +53,8 @@ export type CronogramaItem = {
   approval_status: ItemStatus;
   client_comment: string | null;
   converted_post_id: string | null;
+  /** Linha editorial do cliente (editorial_lines.id); aparece no link público. */
+  editorial_line_id: string | null;
 };
 
 export function useCronogramas() {

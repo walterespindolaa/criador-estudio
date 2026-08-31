@@ -19,6 +19,7 @@ import {
   useCronogramas, useCronogramaItems, useCronogramaDatas, CRONOGRAMA_TYPES,
   type Cronograma, type CronogramaItem, type ItemStatus,
 } from "@/hooks/useCronograma";
+import { useEditorialLines } from "@/hooks/useEditorialLines";
 import { useExternalClients, invalidatePostsEverywhere } from "@/hooks/useCriaPost";
 import { SEGMENTOS, datasPara, segmentoDoTexto, type SegmentKey } from "@/lib/datasComemorativas";
 import { useCrmClients } from "@/hooks/useCrm";
@@ -336,6 +337,9 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
   const mesesDisp = Array.from(new Set(items.map((it) => it.date?.slice(0, 7)).filter(Boolean) as string[])).sort();
   const visible = mes === "all" ? items : items.filter((it) => (it.date ?? "").slice(0, 7) === mes);
 
+  // Linhas editoriais do cliente deste cronograma (cadastradas na estratégia).
+  const { data: linhas = [] } = useEditorialLines(c.external_client_id ?? null);
+  const linhaDe = (id: string | null) => (id ? linhas.find((el) => el.id === id) ?? null : null);
   // Segmento do cliente (do CRM), usado pra sugerir as datas comemorativas do nicho.
   const { clients: extClients } = useExternalClients();
   const { data: crmClientsList = [] } = useCrmClients();
@@ -398,6 +402,9 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
           // pro campo certo do post (antes a legenda ia pro caption errado e a copy sumia).
           caption: it.copy || null,
           script: roteiro,
+          // A linha editorial acompanha o item na conversão: a etiqueta segue
+          // o post até publicar, como o Walter pediu.
+          editorial_line_id: it.editorial_line_id ?? null,
           reference_url: refs[0] ?? null,
           status: "editando",
           approval_status: "em_producao",
@@ -448,8 +455,8 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
     savingRef.current = true;
     try {
       const ref = serializeRefLinks(refLinks);
-      if (editing) await updateItem.mutateAsync({ id: editing.id, title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: ref });
-      else await addItem.mutateAsync({ title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: ref });
+      if (editing) await updateItem.mutateAsync({ id: editing.id, title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: ref, editorial_line_id: f.editorial_line_id ?? null });
+      else await addItem.mutateAsync({ title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: ref, editorial_line_id: f.editorial_line_id ?? null });
       setFormOpen(false);
     } finally {
       savingRef.current = false;
@@ -551,6 +558,12 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
 
                             {/* Nome (título) do post */}
                             <p className="text-sm font-display font-bold text-foreground leading-snug">{it.title || it.copy || "(sem nome)"}</p>
+                            {(() => { const el = linhaDe(it.editorial_line_id); return el ? (
+                              <span className="inline-flex items-center gap-1 text-[9.5px] font-bold px-1.5 py-0.5 rounded-full mt-0.5"
+                                style={{ background: `${el.color}1f`, color: el.color }}>
+                                <span className="w-1.5 h-1.5 rounded-full" style={{ background: el.color }} />{el.name}
+                              </span>
+                            ) : null; })()}
 
                             {/* Copy em caixinha própria (separada do nome) */}
                             {it.copy && (
@@ -636,6 +649,30 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
                 </Select>
               </div>
             </div>
+            {/* LINHA EDITORIAL: cadastrada na estratégia do cliente; o cliente
+                vê a linha no link público do cronograma. Só aparece se houver
+                linhas cadastradas pra este cliente. */}
+            {linhas.length > 0 && (
+              <div>
+                <Label className="text-xs">Linha editorial</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  <button type="button" onClick={() => setF((p) => ({ ...p, editorial_line_id: null }))}
+                    className={`rounded-full border text-xs px-3 py-1.5 transition-colors ${!f.editorial_line_id ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground"}`}>
+                    Nenhuma
+                  </button>
+                  {linhas.map((el) => (
+                    <button key={el.id} type="button" onClick={() => setF((p) => ({ ...p, editorial_line_id: el.id }))}
+                      className="rounded-full border text-xs px-3 py-1.5 transition-colors inline-flex items-center gap-1.5"
+                      style={f.editorial_line_id === el.id
+                        ? { background: el.color, borderColor: el.color, color: "#fff" }
+                        : { borderColor: `${el.color}66`, color: el.color }}>
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: f.editorial_line_id === el.id ? "#fff" : el.color }} />
+                      {el.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {/* Referência: aceita mais de um link. O "+" ao lado abre outra linha. */}
             <div>
               <Label className="text-xs">Referência (link de inspiração)</Label>

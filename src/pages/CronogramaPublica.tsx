@@ -21,7 +21,7 @@ function linkify(text: string) {
   );
 }
 
-type Item = { id: string; title: string | null; copy: string | null; description: string | null; date: string | null; type: string | null; approval_status: string; client_comment: string | null; ref_url: string | null };
+type Item = { id: string; title: string | null; copy: string | null; description: string | null; date: string | null; type: string | null; approval_status: string; client_comment: string | null; ref_url: string | null; editorial_line?: { name: string; color: string } | null };
 type Data = { id: string; label: string; day_label: string | null; selected: boolean };
 type Cron = {
   mes_ref?: string | null;
@@ -210,6 +210,12 @@ export default function CronogramaPublica() {
               <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 8, flexWrap: "wrap" }}>
                 <span style={{ fontWeight: 800, color: "#C7BFA9", fontSize: 13 }}>#{i + 1}</span>
                 {it.type && <span style={{ fontSize: 11, fontWeight: 500, color: "#fff", background: TYPE_COLOR[it.type] ?? "#6B7280", padding: "3px 10px", borderRadius: 7 }}>{it.type}</span>}
+                {/* Linha editorial: o cliente vê qual linha está sendo trabalhada. */}
+                {it.editorial_line && (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: it.editorial_line.color, background: `${it.editorial_line.color}1f`, padding: "3px 10px", borderRadius: 7 }}>
+                    {it.editorial_line.name}
+                  </span>
+                )}
                 {it.date && <span style={{ fontSize: 12, color: "#A79F8C" }}>· {ddmm(it.date)}</span>}
                 {isApproved && <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "#0F6E56", background: "#E1F5EE", padding: "3px 10px", borderRadius: 7 }}>Aprovado ✓</span>}
                 {it.approval_status === "recusado" && <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "#A32D2D", background: "#FCEBEB", padding: "3px 10px", borderRadius: 7 }}>Recusado</span>}

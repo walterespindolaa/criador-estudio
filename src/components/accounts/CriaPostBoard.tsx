@@ -17,6 +17,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CronogramaBoard } from "@/components/accounts/CronogramaBoard";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useDragScroll } from "@/hooks/useDragScroll";
+import { useEditorialLines } from "@/hooks/useEditorialLines";
 import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X, ChevronDown, History, Hash, Check } from "lucide-react";
 import { usePostApprovalComments } from "@/hooks/useApprovals";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
@@ -301,6 +302,11 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const { data: tagCatalog = [] } = usePostTags();
   const { data: tagsByPost = {} } = usePostInternalTags(client.id);
   const setPostTags = useSetPostInternalTags(client.id);
+  // Linhas editoriais do cliente (cadastradas na estratégia): alimentam o
+  // seletor do editor e o chip do card. Query própria, mesmo racional das tags.
+  const { data: editorialLines = [] } = useEditorialLines(client.id);
+  const linhaDoPost = (id: string | null | undefined) =>
+    id ? editorialLines.find((el) => el.id === id) ?? null : null;
   // Clicar no vazio e arrastar pro lado rola o board (só mouse; no toque nada muda).
   const boardRef = useDragScroll<HTMLDivElement>();
   // Filtro de data/formato pra revisar/enviar só o que interessa. Persistido em
@@ -406,7 +412,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   // Cria Post, agora acompanha o cliente aqui dentro (embutido no ClienteHub).
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<ExternalPost | null>(null);
-  const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: null, scheduled_time: null, reference_url: null, drive_folder_url: null });
+  const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: null, scheduled_time: null, reference_url: null, drive_folder_url: null, editorial_line_id: null });
   // Ideia / Referência aceita VÁRIOS links. Na coluna continua um texto só, com
   // um link por linha (parseRefLinks/serializeRefLinks cuidam da conversão).
   const [refLinks, setRefLinks] = useState<string[]>([]);
@@ -418,7 +424,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   // Novo post: cria um RASCUNHO na hora. Assim o post.id já existe e a mídia pode ser
   // anexada de cara (o storage precisa do id). O rascunho não aparece pro cliente.
   const openNew = async (day?: string) => {
-    setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: day ?? null, scheduled_time: null, reference_url: null, drive_folder_url: null });
+    setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: day ?? null, scheduled_time: null, reference_url: null, drive_folder_url: null, editorial_line_id: null });
     setRefLinks([]);
     setInternalTags([]);
     setFormOpen(true);
@@ -428,7 +434,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       setEditing(draft);
     } catch { setFormOpen(false); }
   };
-  const openEdit = (p: ExternalPost) => { setDraftId(null); setEditing(p); setRefLinks(parseRefLinks(p.reference_url)); setInternalTags(tagsByPost[p.id] ?? []); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null, reference_url: p.reference_url ?? null, drive_folder_url: (p as { drive_folder_url?: string | null }).drive_folder_url ?? null }); setFormOpen(true); };
+  const openEdit = (p: ExternalPost) => { setDraftId(null); setEditing(p); setRefLinks(parseRefLinks(p.reference_url)); setInternalTags(tagsByPost[p.id] ?? []); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null, reference_url: p.reference_url ?? null, drive_folder_url: (p as { drive_folder_url?: string | null }).drive_folder_url ?? null, editorial_line_id: p.editorial_line_id ?? null }); setFormOpen(true); };
 
   // Cancelar um post novo apaga o rascunho (com a mídia que já subiu).
   const closeForm = async () => {
@@ -765,6 +771,12 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                                 tipo de aprovação. O tipo continua editável dentro do post, mas
                                 repetido em todo card não dizia nada sobre o que fazer com a peça.
                                 Só a agência vê isto: nunca vai pro portal do cliente. */}
+                            {(() => { const el = linhaDoPost(p.editorial_line_id); return el ? (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full mr-1"
+                                style={{ background: `${el.color}1f`, color: el.color }}>
+                                <span className="w-1.5 h-1.5 rounded-full" style={{ background: el.color }} />{el.name}
+                              </span>
+                            ) : null; })()}
                             <TagChips ids={tagsByPost[p.id]} catalog={tagCatalog} />
                           </div>
                           <div className="flex flex-col gap-1.5 md:gap-1 shrink-0">
@@ -979,6 +991,31 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   </div>
                 </div>
               </div>
+
+              {/* LINHA EDITORIAL: cadastrada na estratégia do cliente, vira
+                  etiqueta do post do cronograma até publicar. Só aparece se o
+                  cliente TEM linhas (seletor vazio é ruído, não recurso). */}
+              {editorialLines.length > 0 && (
+                <div>
+                  <label className="text-xs font-semibold mb-1.5 block">Linha editorial</label>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setF((p) => ({ ...p, editorial_line_id: null }))}
+                      className={`rounded-full border text-xs px-3 py-1.5 transition-colors ${!f.editorial_line_id ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground"}`}>
+                      Nenhuma
+                    </button>
+                    {editorialLines.map((el) => (
+                      <button key={el.id} type="button" onClick={() => setF((p) => ({ ...p, editorial_line_id: el.id }))}
+                        className="rounded-full border text-xs px-3 py-1.5 transition-colors inline-flex items-center gap-1.5"
+                        style={f.editorial_line_id === el.id
+                          ? { background: el.color, borderColor: el.color, color: "#fff" }
+                          : { borderColor: `${el.color}66`, color: el.color }}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: f.editorial_line_id === el.id ? "#fff" : el.color }} />
+                        {el.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Tipo de aprovação */}
               <div>

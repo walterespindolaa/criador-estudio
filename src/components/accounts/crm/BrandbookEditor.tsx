@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import {
   Activity, Brain, Building2, ChevronDown, Download, FileText, FileUp, Heart, HeartCrack, HelpCircle,
   Image as ImageIcon, ImagePlus, Instagram, Lightbulb, Maximize2, MessageSquare, Mic, Minimize2,
-  Palette, Pencil, Plus, Save, ShieldAlert, Sparkles, Target, Trash2, Type, Upload, UserRound, X,
+  Palette, Pencil, Plus, Save, ShieldAlert, Sparkles, Tags, Target, Trash2, Type, Upload, UserRound, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -10,6 +10,7 @@ import {
   useUploadCrmAsset, type CrmClient,
 } from "@/hooks/useCrm";
 import { BrandbookImport } from "@/components/brandbook/BrandbookImport";
+import { CORES_LINHA, useEditorialLineActions, useEditorialLinesByCrm } from "@/hooks/useEditorialLines";
 import { RelatorioImport } from "@/components/brandbook/RelatorioImport";
 import { BriefingCliente } from "@/components/accounts/crm/BriefingCliente";
 import { LinkCadastroCliente } from "@/components/accounts/crm/LinkCadastroCliente";
@@ -593,6 +594,11 @@ export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincroni
           <F label="Como o cliente vai saber que o conteúdo funcionou" ajuda="O critério dele, não o seu: é por isso que a renovação é decidida." className="mt-3"><MicTextarea value={bc.successMetric ?? ""} onChange={(v) => setBc("successMetric", v)} placeholder="Ex.: mais vendas, marca mais forte, virar referência." /></F>
         </Card>
 
+        {/* LINHAS EDITORIAIS: deixam de ser texto e viram entidade. Cada post
+            do cliente pode receber uma, e ela aparece do cronograma público
+            até a publicação (pedido do Walter, 30/08). */}
+        <LinhasEditoriaisCard crmClientId={form.id} />
+
         </TabsContent>
 
         <TabsContent value="mensagem" className="mt-4 space-y-4">
@@ -799,5 +805,74 @@ export function PersonaEditor({ form, setForm, isCria }: { form: CrmClient; setF
         </div>
       </Card>
     </div>
+  );
+}
+
+
+/* ── LINHAS EDITORIAIS DO CLIENTE ──────────────────────────────────────────
+   O catálogo mora aqui na estratégia; o uso mora no editor de post e no
+   cronograma. As linhas são amarradas ao cliente do Cria Post (external),
+   porque é nos posts dele que a etiqueta vive: se a ficha ainda não tem
+   conta de posts vinculada, explicamos em vez de quebrar. */
+function LinhasEditoriaisCard({ crmClientId }: { crmClientId: string }) {
+  const { externalId, resolvendo, lines } = useEditorialLinesByCrm(crmClientId);
+  const acoes = useEditorialLineActions(externalId);
+  const [nome, setNome] = useState("");
+  const [cor, setCor] = useState<string>(CORES_LINHA[0]);
+
+  const criar = async () => {
+    const n = nome.trim();
+    if (!n) return;
+    await acoes.criar.mutateAsync({ name: n, color: cor, ordem: lines.length });
+    setNome("");
+  };
+
+  return (
+    <Card icon={<Tags />} title="Linhas editoriais">
+      <p className="text-[11px] font-body text-muted-foreground mb-3 -mt-1">
+        Ex.: Autoridade, Bastidores, Venda, Educativo. Cada post do cliente pode receber uma
+        linha, e ela aparece no cronograma que o cliente aprova e segue no post até publicar.
+      </p>
+      {resolvendo ? null : !externalId ? (
+        <p className="text-[12px] font-body text-muted-foreground bg-muted/40 border border-border rounded-xl px-3 py-2.5">
+          Este cliente ainda não tem a conta do Cria Post vinculada. Crie o cliente na tela de
+          posts (ou vincule a ficha) e as linhas editoriais destravam aqui.
+        </p>
+      ) : (
+        <>
+          {lines.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {lines.map((el) => (
+                <span key={el.id} className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold"
+                  style={{ borderColor: `${el.color}66`, background: `${el.color}14`, color: el.color }}>
+                  <span className="w-2 h-2 rounded-full" style={{ background: el.color }} />
+                  {el.name}
+                  <button type="button" aria-label={`Excluir ${el.name}`}
+                    onClick={() => void acoes.excluir.mutateAsync(el.id)}
+                    className="ml-0.5 opacity-60 hover:opacity-100">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <Input value={nome} onChange={(e) => setNome(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void criar(); } }}
+              placeholder="Nova linha (ex.: Autoridade)" className="h-9 rounded-xl max-w-[220px]" />
+            <div className="flex items-center gap-1">
+              {CORES_LINHA.map((c) => (
+                <button key={c} type="button" aria-label={`Cor ${c}`} onClick={() => setCor(c)}
+                  className="w-6 h-6 rounded-full border-2 transition-transform"
+                  style={{ background: c, borderColor: cor === c ? "#231946" : "transparent", transform: cor === c ? "scale(1.15)" : undefined }} />
+              ))}
+            </div>
+            <Button size="sm" className="rounded-xl" disabled={!nome.trim() || acoes.criar.isPending} onClick={() => void criar()}>
+              <Plus className="h-4 w-4 mr-1" /> Adicionar
+            </Button>
+          </div>
+        </>
+      )}
+    </Card>
   );
 }
