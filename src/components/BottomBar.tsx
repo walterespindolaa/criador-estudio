@@ -26,14 +26,15 @@ const rightItems = [
 type MoreItem = { title: string; url: string; icon: typeof Home; hot?: boolean; desc?: string };
 const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
   { title: "Criar", items: [
-    { title: "Ideias", url: "/app/ideias", icon: Lightbulb, desc: "Banco de ideias e ganchos" },
+    // Ordem pedida pelo Walter (31/08): Produção, Ideias, Tarefas.
     { title: "Em produção", url: "/app/criando", icon: Kanban, desc: "Seu kanban de posts" },
+    { title: "Ideias", url: "/app/ideias", icon: Lightbulb, desc: "Banco de ideias e ganchos" },
+    { title: "Tarefas", url: "/app/tarefas", icon: ListTodo, desc: "O que falta pra cada post sair" },
   ]},
   { title: "Planejar", items: [
     { title: "Meu Feed", url: "/app/feed", icon: Grid3X3, desc: "Prévia do seu feed" },
     { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck, desc: "O que espera seu ok" },
     { title: "Calendário & Metas", url: "/app/metas", icon: CalendarDays, desc: "Calendário e objetivos" },
-    { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
     { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
   ]},
   { title: "Resultados", items: [

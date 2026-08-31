@@ -755,14 +755,16 @@ const Criando = () => {
               <div key={col.key} className={`w-[85vw] max-w-[320px] sm:w-auto sm:max-w-none sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start flex flex-col ${showDividerBefore ? "border-l-2 border-dashed border-border pl-4" : ""}`}>
                 <div className="relative mb-3 group/cover">
                   <CoverHeader label="Status" title={cTitle} count={colPosts.length} from={cFrom} to={cTo} ink={cInk} sub={cSub} hint={COLUMN_TOOLTIPS[col.key]} compact />
-                  {/* + SEMPRE visível: cria o post já nesta coluna. */}
+                  {/* + logo ABAIXO do contador, no mesmo tamanho do chip dele
+                     (pedido do Walter, 31/08: o + grande na linha de cima
+                     ficava feio). Cria o post já nesta coluna. */}
                   <button onClick={() => openNewInColumn(col.key)} aria-label={`Novo post em ${cTitle}`}
-                    className="absolute top-2.5 right-12 z-10 h-7 w-7 rounded-full bg-white/20 hover:bg-white/35 backdrop-blur flex items-center justify-center transition-colors">
-                    <Plus className="h-4 w-4 text-white" />
+                    className="absolute top-8 right-3.5 z-10 h-5 min-w-[28px] px-2 rounded-full bg-white/20 hover:bg-white/35 backdrop-blur flex items-center justify-center transition-colors">
+                    <Plus className="h-3 w-3 text-white" strokeWidth={3} />
                   </button>
                   <button onClick={() => openEditCover(col.key)} aria-label="Editar capa"
-                    className="absolute top-2.5 right-[5.25rem] z-10 h-7 w-7 rounded-full bg-white/15 backdrop-blur flex items-center justify-center opacity-0 group-hover/cover:opacity-100 transition-opacity">
-                    <Pencil className="h-3.5 w-3.5 text-white/90" />
+                    className="absolute top-2 right-12 z-10 h-6 w-6 rounded-full bg-white/15 backdrop-blur flex items-center justify-center opacity-0 group-hover/cover:opacity-100 transition-opacity">
+                    <Pencil className="h-3 w-3 text-white/90" />
                   </button>
                 </div>
                 <Droppable droppableId={col.key}>

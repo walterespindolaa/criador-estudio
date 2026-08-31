@@ -61,10 +61,9 @@ const groups = [
     items: [
       // Dashboard/Início continua sendo a porta de entrada, no topo do primeiro grupo.
       { title: "Dashboard", url: "/app", icon: LayoutDashboard, end: true },
-      { title: "Ideias", url: "/app/ideias", icon: Lightbulb },
+      // Ordem pedida pelo Walter (31/08): Produção primeiro, depois Ideias e Tarefas.
       { title: "Criando", url: "/app/criando", icon: Kanban },
-      // Tarefa é o que destrava o post ("gravar o reel", "escrever a legenda"),
-      // então mora ao lado do Criando e não em Planejar.
+      { title: "Ideias", url: "/app/ideias", icon: Lightbulb },
       { title: "Tarefas", url: "/app/tarefas", icon: ListTodo },
     ],
   },

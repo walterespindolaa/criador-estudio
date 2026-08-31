@@ -3,7 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, Trash2, Edit2, Sparkles, Loader2, Lightbulb, List, LayoutGrid, Clapperboard, Bookmark, Folder, FolderPlus } from "lucide-react";
+import { Plus, Trash2, Edit2, Sparkles, Loader2, Lightbulb, List, LayoutGrid, Clapperboard, Bookmark, Folder, FolderPlus, Check, X, FolderInput } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -111,6 +112,29 @@ const Ideias = () => {
   const [pastasOpen, setPastasOpen] = useState(false);
   const [novaPastaNome, setNovaPastaNome] = useState("");
   const [novaPastaCor, setNovaPastaCor] = useState<string>(CORES_PASTA[0]);
+
+  /* Seleção múltipla (pedido do Walter, 31/08): marcar várias ideias e mover
+     todas de uma vez pra uma pasta, em vez de abrir uma por uma. */
+  const [selecting, setSelecting] = useState(false);
+  const [selIds, setSelIds] = useState<Set<string>>(new Set());
+  const toggleSel = (id: string) => setSelIds((prev) => {
+    const n = new Set(prev);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+  const sairSelecao = () => { setSelecting(false); setSelIds(new Set()); };
+  const moverSelecionadas = async (folderId: string | null) => {
+    const ids = [...selIds];
+    if (!ids.length) return;
+    try {
+      await Promise.all(ids.map((id) => moverIdeia.mutateAsync({ ideaId: id, folderId })));
+      const nomePasta = folderId ? folders.find((f) => f.id === folderId)?.name : null;
+      toast.success(nomePasta ? `${ids.length} ${ids.length === 1 ? "ideia movida" : "ideias movidas"} pra "${nomePasta}".` : `${ids.length} ${ids.length === 1 ? "ideia" : "ideias"} sem pasta.`);
+      sairSelecao();
+    } catch {
+      toast.error("Não consegui mover tudo. Tente de novo.");
+    }
+  };
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<IdeaFormData>({
     resolver: zodResolver(ideaSchema),
@@ -384,30 +408,84 @@ const Ideias = () => {
 
         {mainTab === "salvos" && <SavedRefs initialUrl={sharedUrl} />}
 
-        {/* Pastas (estilo salvos do Instagram): Todas + uma pílula por pasta.
-            Some quando não há ideia nenhuma pra não poluir o estado vazio. */}
+        {/* PASTAS estilo salvos do Instagram (pedido do Walter, 31/08): cards
+            que você bate o olho e abre, não só um filtro em pílulas. */}
         {mainTab === "ideias" && ideas.length > 0 && (
-          <div className="flex items-center gap-1.5 mb-4 overflow-x-auto scrollbar-none -mx-4 px-4">
-            <button type="button" onClick={() => setActiveFolder(null)}
-              className={cn("shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-body border transition-colors",
-                !activeFolder ? "bg-primary text-primary-foreground border-primary font-semibold" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
-              Todas <span className="opacity-70">{ideas.length}</span>
-            </button>
-            {folders.map(f => {
-              const ativa = activeFolder === f.id;
-              return (
-                <button key={f.id} type="button" onClick={() => setActiveFolder(ativa ? null : f.id)}
-                  className={cn("shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-body border transition-colors",
-                    ativa ? "font-semibold" : "bg-card border-border text-muted-foreground hover:text-foreground")}
-                  style={ativa ? { backgroundColor: `${f.color}1c`, color: f.color, borderColor: f.color } : undefined}>
-                  <Folder className="h-3 w-3" style={{ color: f.color }} />
-                  {f.name} <span className="opacity-70">{contagemPorPasta[f.id] ?? 0}</span>
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">Pastas</p>
+              <button type="button"
+                onClick={() => (selecting ? sairSelecao() : setSelecting(true))}
+                className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-body border transition-colors",
+                  selecting ? "bg-primary text-primary-foreground border-primary font-semibold" : "border-border text-muted-foreground hover:text-foreground")}>
+                <FolderInput className="h-3.5 w-3.5" /> {selecting ? "Cancelar seleção" : "Selecionar ideias"}
+              </button>
+            </div>
+            <div className="flex gap-2.5 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1">
+              <button type="button" onClick={() => setActiveFolder(null)}
+                className={cn("shrink-0 w-[108px] rounded-2xl border p-3 text-left transition-all",
+                  !activeFolder ? "border-primary ring-2 ring-primary/20 bg-primary/5" : "border-border bg-card hover:border-primary/40")}>
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted mb-2"><Lightbulb className="h-4 w-4 text-muted-foreground" /></span>
+                <span className="block text-xs font-body font-semibold text-foreground truncate">Todas</span>
+                <span className="block text-[10px] font-body text-muted-foreground">{ideas.length} {ideas.length === 1 ? "ideia" : "ideias"}</span>
+              </button>
+              {folders.map(f => {
+                const ativa = activeFolder === f.id;
+                const n = contagemPorPasta[f.id] ?? 0;
+                return (
+                  <button key={f.id} type="button" onClick={() => setActiveFolder(ativa ? null : f.id)}
+                    className={cn("shrink-0 w-[108px] rounded-2xl border p-3 text-left transition-all",
+                      ativa ? "ring-2" : "border-border bg-card hover:border-primary/40")}
+                    style={ativa ? { borderColor: f.color, backgroundColor: `${f.color}0F`, ["--tw-ring-color" as string]: `${f.color}33` } : undefined}>
+                    <span className="grid h-9 w-9 place-items-center rounded-xl mb-2" style={{ backgroundColor: `${f.color}1f` }}>
+                      <Folder className="h-4 w-4" style={{ color: f.color }} />
+                    </span>
+                    <span className="block text-xs font-body font-semibold text-foreground truncate">{f.name}</span>
+                    <span className="block text-[10px] font-body text-muted-foreground">{n} {n === 1 ? "ideia" : "ideias"}</span>
+                  </button>
+                );
+              })}
+              <button type="button" onClick={() => setPastasOpen(true)}
+                className="shrink-0 w-[108px] rounded-2xl border border-dashed border-border p-3 text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted/60 mb-2"><FolderPlus className="h-4 w-4" /></span>
+                <span className="block text-xs font-body font-semibold truncate">{folders.length > 0 ? "Gerenciar" : "Criar pasta"}</span>
+                <span className="block text-[10px] font-body opacity-70">nova, renomear...</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Barra flutuante da seleção: mover em lote pra qualquer pasta. */}
+        {selecting && (
+          <div className="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-foreground text-background pl-4 pr-2 py-2 shadow-warm-lg">
+            <span className="text-xs font-body font-semibold whitespace-nowrap">{selIds.size} {selIds.size === 1 ? "selecionada" : "selecionadas"}</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button type="button" disabled={selIds.size === 0}
+                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-background text-foreground text-xs font-body font-semibold disabled:opacity-40">
+                  <FolderInput className="h-3.5 w-3.5" /> Mover pra pasta
                 </button>
-              );
-            })}
-            <button type="button" onClick={() => setPastasOpen(true)}
-              className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-body border border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors">
-              <FolderPlus className="h-3.5 w-3.5" /> {folders.length > 0 ? "Pastas" : "Criar pasta"}
+              </PopoverTrigger>
+              <PopoverContent side="top" align="center" className="w-56 p-1.5">
+                <button type="button" onClick={() => void moverSelecionadas(null)}
+                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm font-body hover:bg-muted text-left">
+                  <span className="w-2 h-2 rounded-full bg-muted-foreground/40" /> Sem pasta
+                </button>
+                {folders.map(f => (
+                  <button key={f.id} type="button" onClick={() => void moverSelecionadas(f.id)}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm font-body hover:bg-muted text-left">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: f.color }} />
+                    <span className="truncate">{f.name}</span>
+                  </button>
+                ))}
+                {folders.length === 0 && (
+                  <p className="px-2.5 py-2 text-xs font-body text-muted-foreground">Crie uma pasta primeiro.</p>
+                )}
+              </PopoverContent>
+            </Popover>
+            <button type="button" onClick={sairSelecao} aria-label="Cancelar seleção"
+              className="h-8 w-8 rounded-full grid place-items-center hover:bg-background/20">
+              <X className="h-4 w-4" />
             </button>
           </div>
         )}
@@ -448,9 +526,19 @@ const Ideias = () => {
               return (
                 <div
                   key={idea.id}
-                  onClick={() => { if (expandedIdeaId !== idea.id) openEdit(idea); }}
-                  className="relative break-inside-avoid bg-card rounded-xl border border-border p-4 hover:shadow-warm-md hover:scale-[1.01] transition-all cursor-pointer group"
+                  onClick={() => {
+                    if (selecting) { toggleSel(idea.id); return; }
+                    if (expandedIdeaId !== idea.id) openEdit(idea);
+                  }}
+                  className={cn("relative break-inside-avoid bg-card rounded-xl border p-4 hover:shadow-warm-md hover:scale-[1.01] transition-all cursor-pointer group",
+                    selecting && selIds.has(idea.id) ? "border-primary ring-2 ring-primary/30" : "border-border")}
                 >
+                  {selecting && (
+                    <span className={cn("absolute top-2 left-2 z-10 h-5 w-5 rounded-full grid place-items-center border-2",
+                      selIds.has(idea.id) ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border")}>
+                      {selIds.has(idea.id) && <Check className="h-3 w-3" />}
+                    </span>
+                  )}
                   <div className="absolute top-2 right-2 flex gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity z-10">
                     <button
                       type="button"
@@ -619,8 +707,12 @@ const Ideias = () => {
             return (
               <div key={idea.id}>
                 <div className="px-3 sm:px-4 py-3 hover:bg-accent/30 group transition-colors">
-                  <div onClick={() => openEdit(idea)} className="flex items-center gap-3 cursor-pointer">
-                    <div className="w-5 h-5 rounded border-2 border-border shrink-0 group-hover:border-primary/50 transition-colors" />
+                  <div onClick={() => (selecting ? toggleSel(idea.id) : openEdit(idea))} className="flex items-center gap-3 cursor-pointer">
+                    {/* Em modo seleção o quadradinho decorativo vira checkbox de verdade. */}
+                    <div className={cn("w-5 h-5 rounded border-2 shrink-0 transition-colors grid place-items-center",
+                      selecting && selIds.has(idea.id) ? "bg-primary border-primary text-primary-foreground" : "border-border group-hover:border-primary/50")}>
+                      {selecting && selIds.has(idea.id) && <Check className="h-3 w-3" />}
+                    </div>
                     <p className="font-body text-sm text-foreground flex-1 truncate">{idea.title}</p>
                     <div className="hidden sm:flex gap-1 shrink-0">
                       {(() => {

@@ -26,11 +26,9 @@ const TOP: NavNode[] = [
   { id: "dash", label: "nav.home", icon: LayoutDashboard, to: "/app", end: true },
   { id: "ia", label: "nav.criaAi", icon: Sparkles, action: "cria", featured: true },
   { id: "criar", label: "nav.create", icon: PenLine, children: [
-    { label: "nav.ideas", icon: Lightbulb, to: "/app/ideias" },
+    // Ordem pedida pelo Walter (31/08): Produção, Ideias, Tarefas.
     { label: "nav.inProduction", icon: Kanban, to: "/app/criando" },
-    // Tarefa aqui é "o que falta pra ESSE post sair" (gravar, editar, escrever
-    // a legenda): é execução, não planejamento. Fica logo abaixo do Em produção,
-    // que é de onde a pessoa vem quando percebe que algo travou.
+    { label: "nav.ideas", icon: Lightbulb, to: "/app/ideias" },
     { label: "nav.tasks", icon: ListTodo, to: "/app/tarefas" },
   ]},
   // Cria Plano e Cria Stories saíram do CRIAR pro Mundo CRIA (pedido do
