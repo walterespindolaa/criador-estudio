@@ -2379,11 +2379,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
               {/* COLUNA DIREITA (só desktop): a PRÉVIA do post, fixa enquanto rola.
                   No mobile ela não aparece aqui: fica no botão "Prévia" do topo. */}
-              <aside className="order-first lg:order-none w-full mb-4 lg:mb-0 lg:sticky lg:top-4 self-start space-y-4">
+              <aside className="order-first lg:order-none w-full mb-4 lg:mb-0 lg:sticky lg:top-3 self-start space-y-4 lg:space-y-0 lg:flex lg:flex-col lg:gap-3 lg:max-h-[calc(100dvh-7.5rem)]">
               {/* MIDIA no estilo Cria Post (Walter, 01/09): botoes de inserir EM CIMA,
                     junto da previa, na coluna da direita. No celular este card vem
                     primeiro, antes do conteudo. */}
-              <div className="rounded-3xl border border-border bg-card p-3 space-y-2.5">
+              <div className="rounded-3xl border border-border bg-card p-3 space-y-2.5 lg:shrink-0">
                 <div data-tour="editor-midia" className="flex items-center gap-2">
                   <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-xs font-display font-semibold text-foreground">Mídia</span>
@@ -2622,12 +2622,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   )}
                 </div>
               </div>
-                {/* A previa continua so no desktop; no celular ela mora no botao "Prévia". */}
-                <div className="hidden lg:block w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
+                {/* A previa continua so no desktop; no celular ela mora no botao "Prévia".
+                    flex-1 + rolagem interna: a previa fica SEMPRE na tela (Walter,
+                    01/09: "so vejo o preview rolando ate o final"), e e o miolo
+                    dela que rola quando o post e comprido. */}
+                <div className="hidden lg:flex lg:flex-col lg:flex-1 lg:min-h-0 w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
                   <div className="px-3 py-2 border-b border-border bg-card/50 flex items-center gap-2">
                     <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-xs font-display font-semibold text-foreground">Prévia do post</span>
                   </div>
+                  <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
                   <PostPreviewContent
                     key={platform}
                     title={title}
@@ -2642,6 +2646,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     mediaType={previewMediaType}
                     sections={sections}
                   />
+                  </div>
                 </div>
               </aside>
             </div>
