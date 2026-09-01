@@ -136,6 +136,46 @@ serve(async (req) => {
       accepted_at: new Date().toISOString(),
     }, { onConflict: "owner_id,member_email" });
 
+    /* O CONVITE PARAVA NO MEIO (bug do Walter, 01/09): o vínculo entrava em
+       account_members (a social mídia ganhava o ACESSO), mas a tela Clientes
+       dela lê o CRM (crm_clients), e nenhuma ficha era criada. A Gabi aceitou
+       o convite e "não caiu o Cria" pra ela. Agora o convite entrega a ficha:
+       reaproveita uma ficha solta com o mesmo e-mail (sem duplicar, mesma
+       regra do Importar do Cria) ou cria uma nova já com o vínculo. */
+    try {
+      const { data: fichaLigada } = await svc.from("crm_clients")
+        .select("id")
+        .eq("manager_id", targetUser.id)
+        .eq("cria_owner_id", user.id)
+        .limit(1).maybeSingle();
+      if (!fichaLigada) {
+        const ownerEmail = user.email?.toLowerCase() ?? "";
+        const { data: soltas } = await svc.from("crm_clients")
+          .select("id, email")
+          .eq("manager_id", targetUser.id)
+          .is("cria_owner_id", null)
+          .is("deleted_at", null)
+          .limit(200);
+        const candidata = (soltas ?? []).find(
+          (f) => !!ownerEmail && String(f.email ?? "").trim().toLowerCase() === ownerEmail,
+        );
+        if (candidata) {
+          await svc.from("crm_clients").update({ cria_owner_id: user.id }).eq("id", candidata.id);
+        } else {
+          await svc.from("crm_clients").insert({
+            manager_id: targetUser.id,
+            cria_owner_id: user.id,
+            name: ownerName,
+            email: user.email ?? null,
+          });
+        }
+      }
+    } catch (e) {
+      // A ficha é conveniência; o acesso já está de pé. Se o CRM falhar, o
+      // convite segue e a social mídia ainda pode usar o "Importar do Cria".
+      console.error("[account-invite] ficha do CRM falhou:", e);
+    }
+
     // Se for usuário novo (recém-criado pelo invite), marca como social media
     // e pula o fluxo de criadora (onboarding, trial, plano).
     if (!existing) {

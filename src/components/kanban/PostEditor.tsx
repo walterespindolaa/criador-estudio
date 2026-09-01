@@ -253,6 +253,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   // Melhores horários pra postar: acessível de forma compacta perto da data (topo),
   // escondido atrás de um clique pra não ocupar espaço no fluxo.
   const [showBestTimes, setShowBestTimes] = useState(false);
+  // Estúdio de arte recolhido: só abre pra quem pedir ajuda com a imagem.
+  const [ajudaArteAberta, setAjudaArteAberta] = useState(false);
   const [notes, setNotes] = useState("");
   const [weekNumber, setWeekNumber] = useState<number | null>(null);
   
@@ -1602,35 +1604,30 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                           )}
                         </div>
                       ) : (
-                        <div className="flex flex-col gap-3 p-3">
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              type="button"
-                              onClick={handleDrivePick}
-                              disabled={picking}
-                              className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
-                            >
-                              <Cloud className="h-6 w-6 text-muted-foreground" />
-                              <span className="text-xs font-body text-muted-foreground">
-                                {picking ? "Abrindo..." : "Google Drive"}
-                              </span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={openLocalFilePicker}
-                              disabled={uploadingLocal}
-                              className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all p-4 text-center"
-                            >
-                              <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                              <span className="text-xs font-body text-muted-foreground">
-                                {uploadingLocal ? "Enviando..." : "Galeria / PC"}
-                              </span>
-                            </button>
-                          </div>
-                          <p className="text-[10px] text-muted-foreground/60 font-body text-center">
-                            Para melhor qualidade, use arquivos do Google Drive. Uploads diretos ficam disponíveis por 30 dias.
-                          </p>
+                        /* Estado vazio COMPACTO (Walter, 01/09): botões em linha,
+                           estilo Cria Post, no lugar dos dois quadrados gigantes. */
+                        <div className="flex items-center gap-2 flex-wrap p-2.5">
+                          <button
+                            type="button"
+                            onClick={handleDrivePick}
+                            disabled={picking}
+                            className="flex items-center gap-1.5 rounded-xl border border-border bg-card hover:border-primary/40 transition-all px-3 h-9 text-xs font-body text-muted-foreground disabled:opacity-50"
+                          >
+                            <Cloud className="h-4 w-4" />
+                            {picking ? "Abrindo..." : "Google Drive"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={openLocalFilePicker}
+                            disabled={uploadingLocal}
+                            className="flex items-center gap-1.5 rounded-xl border border-border bg-card hover:border-primary/40 transition-all px-3 h-9 text-xs font-body text-muted-foreground disabled:opacity-50"
+                          >
+                            <ImageIcon className="h-4 w-4" />
+                            {uploadingLocal ? "Enviando..." : "Galeria / PC"}
+                          </button>
+                          <span className="text-[10px] text-muted-foreground/60 font-body">
+                            Prefira o Drive; upload direto dura 30 dias.
+                          </span>
                         </div>
                       )}
                     </div>
@@ -1710,8 +1707,20 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   )}
                 </div>
 
-                {/* Gerador de prompt do Estudio (arte a partir do conteudo real). */}
+                {/* Gerador de prompt do Estudio (arte a partir do conteudo real).
+                    RECOLHIDO atras de um botao (Walter, 01/09): os avisos e o
+                    botao de gerar pesavam a tela pra quem ja tem a arte pronta.
+                    Quem precisa de ajuda toca e o estudio abre. */}
                 <div className="pt-1 border-t border-border/50">
+                  {!ajudaArteAberta ? (
+                    <button
+                      type="button"
+                      onClick={() => setAjudaArteAberta(true)}
+                      className="w-full h-10 rounded-xl border border-dashed border-primary/40 text-primary text-sm font-body font-semibold inline-flex items-center justify-center gap-2 hover:bg-primary/5 transition-colors"
+                    >
+                      <Sparkles className="h-4 w-4" /> Preciso de ajuda com a imagem
+                    </button>
+                  ) : (
                   <ArtStudio
                     titulo={title}
                     formato={format}
@@ -1721,6 +1730,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     onSalvar={(texto) => setNotes((n) => (n ? `${n}\n\n${texto}` : texto))}
                     onIrParaRoteiro={() => conteudoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
                   />
+                  )}
                 </div>
               </section>
 
@@ -1769,7 +1779,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 {/* DETALHES (pilar, status, semana): decisões importantes, ficam
                     VISÍVEIS e no topo do passo 1, logo depois de plataforma/formato.
                     Antes estavam escondidas num recolhível apagado no fim do passo. */}
-                <div className="space-y-3 rounded-2xl border border-border bg-muted/20 p-3">
+                {/* Sem a caixa dentro da caixa (Walter, 01/09: "baita quadradão"):
+                    os detalhes ficam soltos e densos, semana/data/hora numa linha. */}
+                <div className="space-y-2.5">
                   {/* O PILAR saiu daqui: subiu pro topo do editor, logo abaixo
                      do título, no estilo do "+ Etiqueta" do Cria Post
                      (pedido do Walter, 31/08). */}
@@ -1800,43 +1812,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                        Semana
-                      </Label>
-                      <Select
-                        value={weekNumber === null ? "none" : String(weekNumber)}
-                        onValueChange={(val) => setWeekNumber(val === "none" ? null : Number(val))}
-                      >
-                        <SelectTrigger className="rounded-xl h-10 text-sm bg-card">
-                          <SelectValue placeholder="Sem semana" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">
-                            <span className="text-muted-foreground">Sem semana</span>
-                          </SelectItem>
-                          {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                            <SelectItem key={n} value={String(n)}>
-                              Semana {n}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
-                        <LinkIcon className="h-3 w-3" /> Link de referência
-                      </Label>
-                      <Input
-                        placeholder="Cole um link de vídeo de referência..."
-                        value={referenceLink}
-                        onChange={(e) => setReferenceLink(e.target.value)}
-                        className="rounded-xl h-10 text-sm bg-card"
-                      />
-                    </div>
-                  </div>
 
                   {/* DATA E HORA: compactos e no topo, junto dos detalhes. Antes
                       moravam num bloco grande so no fim do fluxo (passo 4), forcando
@@ -1844,7 +1819,30 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       melhores horarios virou um "ver melhores horarios" que expande,
                       logo abaixo, secundario. */}
                   <div data-tour="editor-agendamento" className="space-y-2">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                      <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                        <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                          Semana
+                        </Label>
+                        <Select
+                          value={weekNumber === null ? "none" : String(weekNumber)}
+                          onValueChange={(val) => setWeekNumber(val === "none" ? null : Number(val))}
+                        >
+                          <SelectTrigger className="rounded-xl h-9 text-sm bg-card">
+                            <SelectValue placeholder="Sem semana" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              <span className="text-muted-foreground">Sem semana</span>
+                            </SelectItem>
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                              <SelectItem key={n} value={String(n)}>
+                                Semana {n}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="space-y-1.5">
                         <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
                           <Calendar className="h-3 w-3" /> Data
@@ -1853,7 +1851,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                           type="date"
                           value={scheduledDate}
                           onChange={(e) => setScheduledDate(e.target.value)}
-                          className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left bg-card [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
+                          className="rounded-xl h-9 text-sm w-full min-w-0 px-3 text-left bg-card [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -1864,9 +1862,20 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                           type="time"
                           value={scheduledTime}
                           onChange={(e) => setScheduledTime(e.target.value)}
-                          className="rounded-xl h-10 text-sm w-full min-w-0 px-3 text-left bg-card [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
+                          className="rounded-xl h-9 text-sm w-full min-w-0 px-3 text-left bg-card [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
                         />
                       </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
+                        <LinkIcon className="h-3 w-3" /> Link de referência
+                      </Label>
+                      <Input
+                        placeholder="Cole um link de vídeo de referência..."
+                        value={referenceLink}
+                        onChange={(e) => setReferenceLink(e.target.value)}
+                        className="rounded-xl h-9 text-sm bg-card"
+                      />
                     </div>
                     <div>
                       <button
