@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
-import { Calendar, Copy, GripVertical, ImagePlus, LayoutTemplate, Loader2, Plus, Trash2, X } from "lucide-react";
+import { Calendar, ChevronDown, Copy, GripVertical, ImagePlus, LayoutTemplate, Loader2, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,7 +15,8 @@ import {
   blocosDoEstilo, faltaNoBloco, lista, mascaraTelefone, metaDoBloco, resumoDoBloco, txt, bool,
   type BioBloco, type DadosBloco, type EstiloBio, type TipoBloco,
 } from "@/lib/bioBlocks";
-import { ICONES_BLOCO } from "@/lib/bioIcones";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ICONES_BLOCO, iconeLucide } from "@/lib/bioIcones";
 import { CampoTextoRico } from "@/lib/textoRico";
 import { modelosDoEstilo, type AparenciaModelo } from "@/lib/bioTemplates";
 import { cn } from "@/lib/utils";
@@ -146,35 +147,56 @@ function EscolherFundo({ valor, onTroca }: { valor: string; onTroca: (v: string)
    deixava cada botão de um jeito. Tocar escolhe, tocar de novo tira, e o
    "Sem ícone" também tira. Emoji antigo continua valendo até a pessoa trocar. */
 function SeletorIcone({ valor, onTroca }: { valor: string; onTroca: (v: string) => void }) {
+  /* Fechado por padrão (pedido do Walter, 01/09): 26 ícones abertos ocupavam
+     duas linhas do formulário por uma escolha que se faz uma vez. Agora é um
+     campo só que mostra o escolhido; a grade abre por cima quando quer trocar. */
+  const [aberto, setAberto] = useState(false);
+  const IconeAtual = iconeLucide(valor);
+  const nomeAtual = valor.startsWith("lucide:")
+    ? ICONES_BLOCO.find((i) => `lucide:${i.id}` === valor)?.nome ?? "Ícone"
+    : "";
   const ehEmojiAntigo = !!valor && !valor.startsWith("lucide:");
+  const escolher = (v: string) => { onTroca(v); setAberto(false); };
   return (
-    <div className="flex flex-wrap gap-1.5">
-      <button type="button" onClick={() => onTroca("")}
-        className={cn(
-          "h-9 px-3 rounded-lg border text-[12px] font-body font-semibold transition-colors",
-          !valor ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:text-foreground",
-        )}>
-        Sem ícone
-      </button>
-      {ehEmojiAntigo && (
-        <span className="h-9 px-2.5 rounded-lg border border-primary bg-primary/10 grid place-items-center text-base" title="Emoji atual (escolha um ícone pra trocar)">
-          {valor}
-        </span>
-      )}
-      {ICONES_BLOCO.map((i) => {
-        const ativo = valor === `lucide:${i.id}`;
-        return (
-          <button key={i.id} type="button" title={i.nome} aria-label={i.nome}
-            onClick={() => onTroca(ativo ? "" : `lucide:${i.id}`)}
-            className={cn(
-              "w-9 h-9 grid place-items-center rounded-lg border transition-colors",
-              ativo ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/40",
-            )}>
-            <i.Icone className="h-4 w-4" />
-          </button>
-        );
-      })}
-    </div>
+    <Popover open={aberto} onOpenChange={setAberto}>
+      <PopoverTrigger asChild>
+        <button type="button"
+          className="w-full sm:w-64 h-10 flex items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 text-left text-sm hover:border-primary/40 transition-colors">
+          <span className="flex items-center gap-2 min-w-0 text-foreground">
+            {IconeAtual && <IconeAtual className="h-4 w-4 shrink-0 text-primary" />}
+            {ehEmojiAntigo && <span aria-hidden className="text-base leading-none">{valor}</span>}
+            <span className={cn("truncate", !valor && "text-muted-foreground")}>
+              {IconeAtual ? nomeAtual : ehEmojiAntigo ? "Emoji atual" : "Sem ícone"}
+            </span>
+          </span>
+          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[min(320px,calc(100vw-2rem))] p-2 rounded-2xl">
+        <button type="button" onClick={() => escolher("")}
+          className={cn(
+            "w-full h-9 mb-1.5 rounded-lg border text-[12px] font-body font-semibold transition-colors",
+            !valor ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:text-foreground",
+          )}>
+          Sem ícone
+        </button>
+        <div className="grid grid-cols-7 gap-1.5">
+          {ICONES_BLOCO.map((i) => {
+            const ativo = valor === `lucide:${i.id}`;
+            return (
+              <button key={i.id} type="button" title={i.nome} aria-label={i.nome}
+                onClick={() => escolher(ativo ? "" : `lucide:${i.id}`)}
+                className={cn(
+                  "w-9 h-9 grid place-items-center rounded-lg border transition-colors",
+                  ativo ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/40",
+                )}>
+                <i.Icone className="h-4 w-4" />
+              </button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
