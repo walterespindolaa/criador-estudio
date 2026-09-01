@@ -332,6 +332,10 @@ export function useImportCriaClients() {
     },
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["crm-clients", agencyOwnerId] });
+      /* A FICHA aberta usa outra chave ("crm-client" + id) e ficava com a foto
+         velha: a listagem dizia "usa o Cria" e a ficha "aprova por link" até um
+         F5 (caso do Walter, 01/09). Invalida o detalhe junto. */
+      qc.invalidateQueries({ queryKey: ["crm-client"] });
       const partes: string[] = [];
       if (r.vinculados > 0) partes.push(`${r.vinculados} ficha(s) que você já tinha ganharam o vínculo`);
       if (r.criados > 0) partes.push(`${r.criados} cliente(s) novo(s) na carteira`);
