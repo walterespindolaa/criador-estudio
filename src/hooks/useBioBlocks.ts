@@ -68,13 +68,24 @@ export function useBioBlocks(estilo: EstiloBio) {
 
   const atualizar = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<BioBloco, "data" | "is_active" | "starts_at" | "ends_at">> }) => {
-      const { data, error } = await sbFrom("bio_blocks")
-        .update({ ...patch, updated_at: new Date().toISOString() })
-        .eq("id", id).select("id").maybeSingle();
-      if (error) throw error;
       // .select() de propósito: bloqueio de permissão volta como zero linhas
       // SEM erro, e a tela diria "salvo" sem ter salvo.
-      if (!data) throw new Error("Não consegui salvar este bloco. Recarregue e tente de novo.");
+      const tentar = async () => {
+        const { data, error } = await sbFrom("bio_blocks")
+          .update({ ...patch, updated_at: new Date().toISOString() })
+          .eq("id", id).select("id").maybeSingle();
+        if (error) throw error;
+        return !!data;
+      };
+      if (await tentar()) return;
+      /* Zero linhas logo depois de CRIAR o bloco (caso da Organnah, 01/09): o
+         bloco existia no banco, a permissão estava certa, e mesmo assim o
+         primeiro salvar voltou vazio. Cheira a atraso de replicação do proxy.
+         Como o update é idempotente, esperar um pouco e tentar de novo é
+         seguro, e resolve o soluço sem incomodar ninguém. */
+      await new Promise((r) => setTimeout(r, 700));
+      if (await tentar()) return;
+      throw new Error("Não consegui salvar este bloco. Recarregue e tente de novo.");
     },
     // Otimista: digitar num campo não pode esperar ida e volta do servidor.
     onMutate: async ({ id, patch }) => {

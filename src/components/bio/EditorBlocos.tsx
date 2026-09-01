@@ -15,6 +15,7 @@ import {
   blocosDoEstilo, faltaNoBloco, lista, mascaraTelefone, metaDoBloco, resumoDoBloco, txt, bool,
   type BioBloco, type DadosBloco, type EstiloBio, type TipoBloco,
 } from "@/lib/bioBlocks";
+import { ICONES_BLOCO } from "@/lib/bioIcones";
 import { CampoTextoRico } from "@/lib/textoRico";
 import { modelosDoEstilo, type AparenciaModelo } from "@/lib/bioTemplates";
 import { cn } from "@/lib/utils";
@@ -140,6 +141,43 @@ function EscolherFundo({ valor, onTroca }: { valor: string; onTroca: (v: string)
   );
 }
 
+/* ── ESCOLHA DO ÍCONE DO BOTÃO ──
+   Grade fechada de ícones (pedido do Walter, 01/09): o campo de emoji livre
+   deixava cada botão de um jeito. Tocar escolhe, tocar de novo tira, e o
+   "Sem ícone" também tira. Emoji antigo continua valendo até a pessoa trocar. */
+function SeletorIcone({ valor, onTroca }: { valor: string; onTroca: (v: string) => void }) {
+  const ehEmojiAntigo = !!valor && !valor.startsWith("lucide:");
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      <button type="button" onClick={() => onTroca("")}
+        className={cn(
+          "h-9 px-3 rounded-lg border text-[12px] font-body font-semibold transition-colors",
+          !valor ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:text-foreground",
+        )}>
+        Sem ícone
+      </button>
+      {ehEmojiAntigo && (
+        <span className="h-9 px-2.5 rounded-lg border border-primary bg-primary/10 grid place-items-center text-base" title="Emoji atual (escolha um ícone pra trocar)">
+          {valor}
+        </span>
+      )}
+      {ICONES_BLOCO.map((i) => {
+        const ativo = valor === `lucide:${i.id}`;
+        return (
+          <button key={i.id} type="button" title={i.nome} aria-label={i.nome}
+            onClick={() => onTroca(ativo ? "" : `lucide:${i.id}`)}
+            className={cn(
+              "w-9 h-9 grid place-items-center rounded-lg border transition-colors",
+              ativo ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/40",
+            )}>
+            <i.Icone className="h-4 w-4" />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ── O FORMULÁRIO DE CADA TIPO ── */
 function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioBloco; salvar: (d: DadosBloco) => void; slugPublico?: string | null; telefonePadrao?: string | null }) {
   /* RASCUNHO LOCAL + DEBOUNCE (bug da Gabi, 31/08): antes cada TECLA virava um
@@ -201,9 +239,8 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioB
             <BotaoImagem valor={txt(d, "capa")} onTroca={(u) => p({ capa: u })} rotulo="Enviar capa" />
           </LinhaCampo>
           {!txt(d, "capa") && (
-            <LinhaCampo label="Emoji (opcional)" ajuda="Aparece antes do texto quando não tem capa.">
-              <Input value={txt(d, "icone")} onChange={(e) => p({ icone: e.target.value.slice(0, 4) })}
-                placeholder="🍝" className="rounded-xl w-24 text-center text-lg" />
+            <LinhaCampo label="Ícone (opcional)" ajuda="Aparece antes do texto do botão. Toque de novo pra tirar.">
+              <SeletorIcone valor={txt(d, "icone")} onTroca={(v) => p({ icone: v })} />
             </LinhaCampo>
           )}
         </div>

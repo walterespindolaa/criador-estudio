@@ -4,6 +4,7 @@ import {
   bool, embedDeSpotify, embedDeVideo, faltaAte, linkAppleMaps, linkGoogleMaps,
   linkSeguro, linkWaze, linkWhatsapp, lista, txt, type DadosBloco,
 } from "@/lib/bioBlocks";
+import { iconeLucide } from "@/lib/bioIcones";
 import { TextoRico } from "@/lib/textoRico";
 import { cn } from "@/lib/utils";
 
@@ -267,9 +268,13 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
       if (!url) return null;
       const icone = txt(data, "icone");
       const capa = txt(data, "capa");
+      // Ícone do catálogo (lucide:id) desenha o componente; emoji antigo
+      // continua saindo como texto. Sem ícone, o botão fica só com o rótulo.
+      const IconeL = iconeLucide(icone);
       return (
         <BotaoGrande visual={visual} href={url} onClique={onClique} capa={capa || undefined}>
-          {!capa && icone && <span aria-hidden>{icone}</span>}
+          {!capa && IconeL && <IconeL className="h-[18px] w-[18px] shrink-0" aria-hidden />}
+          {!capa && !IconeL && icone && <span aria-hidden>{icone}</span>}
           {txt(data, "titulo") || "Abrir"}
         </BotaoGrande>
       );
