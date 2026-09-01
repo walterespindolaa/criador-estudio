@@ -23,6 +23,18 @@ const Onboarding = lazy(() => import("./pages/Onboarding"));
 const ComecarAgencia = lazy(() => import("./pages/ComecarAgencia"));
 const Obrigado = lazy(() => import("./pages/Obrigado"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+
+/* ── DOMÍNIO CURTO DA BIO (criaclub.bio, Walter 01/09) ──
+   criaclub.bio/nome abre a bio direto (a rota /:slug lá embaixo resolve).
+   Já a RAIZ do domínio curto não tem nada pra mostrar: quem digita
+   criaclub.bio no navegador é levado pro site do Cria. O redirect roda aqui
+   no topo do módulo, antes de qualquer renderização, pra não piscar tela. */
+const HOSTS_BIO_CURTO = new Set(["criaclub.bio", "www.criaclub.bio"]);
+if (typeof window !== "undefined"
+  && HOSTS_BIO_CURTO.has(window.location.hostname)
+  && window.location.pathname === "/") {
+  window.location.replace("https://criasocialclub.com.br");
+}
 const Termos = lazy(() => import("./pages/Termos"));
 const Privacidade = lazy(() => import("./pages/Privacidade"));
 const ExcluirDados = lazy(() => import("./pages/ExcluirDados"));
