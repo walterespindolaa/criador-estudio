@@ -1736,12 +1736,31 @@ const LinkInBio = () => {
                   )}
 
                   {settings.bgType === "image" && (
-                    <BgImageField
-                      bgImage={settings.bgImage}
-                      uploading={uploadingBg}
-                      onBake={handleBgBake}
-                      onRemove={handleBgRemove}
-                    />
+                    <>
+                      <BgImageField
+                        bgImage={settings.bgImage}
+                        uploading={uploadingBg}
+                        onBake={handleBgBake}
+                        onRemove={handleBgRemove}
+                      />
+                      {/* Com foto de fundo o conteúdo mora num CARTÃO sólido e a
+                          foto vira moldura. A cor desse cartão é o bgColor, mas o
+                          seletor dele só aparecia no modo "Cor sólida": não havia
+                          NENHUM controle pra pintar o cartão (pergunta do Walter,
+                          01/09, na página da Organnah). Agora ele mora aqui. */}
+                      {settings.bgImage && (
+                        <div className="space-y-1 pt-1">
+                          <ColorField
+                            value={settings.bgColor}
+                            onChange={(v) => patchSettings({ bgColor: v })}
+                            label="Cor do cartão sobre a foto"
+                          />
+                          <p className="text-[11px] text-muted-foreground/70">
+                            Com fundo de foto, o conteúdo fica dentro de um cartão desta cor e a foto aparece em volta, como moldura.
+                          </p>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {/* Sobreposição escura (legibilidade sobre imagem/gradiente) */}
