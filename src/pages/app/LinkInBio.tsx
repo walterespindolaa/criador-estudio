@@ -1348,14 +1348,28 @@ const LinkInBio = () => {
             {aba === "conteudo" && (
             <Aba marca="bio-conteudo"
               explica="Cada pedaço da página é um bloco: link, texto, vídeo, formulário, endereço com mapa. Adicione, arraste pra ordenar e ligue quando estiver pronto.">
-              {/* A diferença entre os dois estilos vive aqui embaixo do seletor
-                  e não na barra fixa: é informação de quem está montando agora,
-                  não de quem só voltou pra copiar o link. */}
-              <p className="text-[11px] font-body text-muted-foreground/90 leading-snug px-0.5 -mt-1">
-                <strong className="font-semibold text-foreground/80">Clássico</strong> é a página de bio: coluna de
-                botões, um toque e sai. <strong className="font-semibold text-foreground/80">Site</strong> é uma página
-                de apresentação, com seções, produtos e blog. Trocar não apaga nada: cada estilo guarda o seu.
-              </p>
+              {/* O CAMINHO EM 3 PASSOS (pedido do Walter, 01/09: o fluxo estava
+                  "mal redigido e difícil de compreender"). Um parágrafo denso
+                  virou três passos curtos e numerados: escolher o estilo,
+                  montar os blocos, ajustar e publicar. É o mapa da tela. */}
+              <div className="rounded-2xl border border-primary/15 bg-primary/[0.04] px-4 py-3 space-y-2">
+                {[
+                  <>Escolha o estilo lá em cima: <strong className="font-semibold text-foreground/85">Clássico</strong> é
+                  a página de bio (coluna de botões, um toque e sai); <strong className="font-semibold text-foreground/85">Site</strong> é
+                  uma página completa, com seções, produtos e blog. Trocar não apaga nada: cada estilo guarda o seu.</>,
+                  <>Monte a página por <strong className="font-semibold text-foreground/85">blocos</strong>: toque em
+                  Adicionar, preencha e arraste pra ordenar. Tudo salva sozinho e aparece na prévia do celular.</>,
+                  <>Termine na aba <strong className="font-semibold text-foreground/85">Visual</strong> (cores, fonte e fundo)
+                  e copie o seu link na aba <strong className="font-semibold text-foreground/85">Publicar</strong>.</>,
+                ].map((passo, i) => (
+                  <p key={i} className="flex items-start gap-2.5 text-[12px] font-body text-muted-foreground leading-snug">
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-primary/15 text-primary text-[11px] font-display font-bold grid place-items-center mt-px">
+                      {i + 1}
+                    </span>
+                    <span>{passo}</span>
+                  </p>
+                ))}
+              </div>
               <Card className="p-4 md:p-5 rounded-2xl border-border">
                 <EditorBlocos key={estiloBlocos} estilo={estiloBlocos} aoAplicarAparencia={aplicarAparenciaDoModelo}
                   slugPublico={slug || profile?.bio_slug} />
@@ -2324,16 +2338,18 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
           style={settings.bgType === "image" && settings.bgImage ? { backgroundColor: settings.bgColor } : undefined}
         >
 
-        {/* Mesmo raio da página pública (rounded-lg): prévia fiel. */}
+        {/* Capa sangrada até as bordas, igual à página pública: o canto é
+            aparado pelo arredondado da "tela" do celular ou da coluna. */}
         {settings.bannerImage && (
-          <div className="w-full -mt-1.5 mb-[-34px] rounded-lg overflow-hidden shadow-md">
+          <div className="-mx-5 -mt-6 w-[calc(100%+2.5rem)] mb-[-34px] overflow-hidden shadow-md">
             <img src={settings.bannerImage} alt="" className="w-full h-24 object-cover" />
           </div>
         )}
 
         {profile && (
           <>
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary via-purple-500 to-pink-500 p-[2px] mb-3 shadow-xl">
+            {/* Moldura na cor do botão, igual à página pública. */}
+            <div className="w-24 h-24 rounded-full p-[2px] mb-3 shadow-xl" style={{ backgroundColor: settings.buttonColor }}>
               <div className="w-full h-full rounded-full bg-card overflow-hidden flex items-center justify-center">
                 {(settings.header?.avatar || profile.avatar_url) ? (
                   <img src={settings.header?.avatar || profile.avatar_url} alt="" className="w-full h-full object-cover" />

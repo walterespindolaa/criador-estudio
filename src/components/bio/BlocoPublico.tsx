@@ -182,29 +182,35 @@ function Mapa({ data, visual, onClique }: { data: DadosBloco; visual: VisualBio;
   // Três apps porque o celular de cada pessoa tem o seu. Abrir tudo em aba
   // nova deixa o app decidir: no celular o link do Waze e do Maps é capturado
   // pelo aplicativo instalado; no computador cai no site, que também serve.
-  const rota = "flex items-center justify-center gap-1.5 py-3 min-h-[44px] rounded-xl text-[13px] font-body font-semibold border transition active:scale-[.98]";
+  const chip = "flex items-center justify-center gap-1.5 h-10 rounded-xl text-[12.5px] font-body font-semibold border transition active:scale-[.98]";
+  const chipNeutro = visual.cardColor ? "border-current/25" : "border-gray-200 text-gray-800";
 
+  /* REDESENHO (pedido do Walter, 01/09: "feio e esticado"). O que era uma torre
+     de botões cheios de altura virou UM cartão enxuto: endereço em cima, uma
+     linha de atalhos embaixo. A "faixa do mapa" (o embed sem chave que o Google
+     fechou) virou um mapinha DESENHADO: linhas de rua em SVG na cor do texto e
+     o alfinete na cor do botão. Nunca quebra, e parece feito de propósito. */
   return (
     <CartaoBase visual={visual} className="overflow-hidden">
-      {/* O GOOGLE FECHOU O EMBED SEM CHAVE.
-          Este iframe apontava pro `output=embed`, que era público e virou
-          "Este conteúdo está bloqueado" dentro da página: um retângulo cinza de
-          erro no meio da bio do cliente, pior que não ter mapa nenhum.
-          Enquanto não houver uma chave da API de Mapas configurada, a faixa é
-          um convite de um toque, que é o que a pessoa faz no celular de
-          qualquer jeito, e nunca aparece quebrada. */}
-      {/* Faixa em CORRENTE (currentColor) + véu escuro: antes ela usava a cor
-         do botão sobre card da mesma cor e sumia inteira (o "mapa não aparece"
-         da Organnah era isto: um retângulo invisível). */}
       {bool(data, "mostrarMapa", true) && (
         <a href={linkGoogleMaps(endereco)} target="_blank" rel="noopener noreferrer" onClick={onClique}
-          className="block relative h-[96px] overflow-hidden bg-black/[.08]">
-          <span className="absolute inset-0 grid place-items-center text-center px-4">
-            <span>
-              <MapPin className="h-6 w-6 mx-auto mb-1" />
-              <span className="block text-[12px] font-body font-semibold underline underline-offset-2">
-                Ver no mapa
-              </span>
+          aria-label="Ver no mapa" className="block relative h-[88px] overflow-hidden bg-black/[.05]">
+          {/* Ruas estilizadas: decoração, não dado. aria-hidden pra leitor de tela. */}
+          <svg aria-hidden viewBox="0 0 400 88" preserveAspectRatio="xMidYMid slice"
+            className="absolute inset-0 w-full h-full opacity-[.16]">
+            <g stroke="currentColor" strokeWidth="3" fill="none" strokeLinecap="round">
+              <path d="M-10 24 H410" />
+              <path d="M-10 62 H410" />
+              <path d="M70 -10 V98" />
+              <path d="M210 -10 V98" />
+              <path d="M330 -10 V98" />
+              <path d="M-10 44 Q 120 30 210 44 T 410 40" strokeWidth="5" />
+            </g>
+          </svg>
+          <span className="absolute inset-0 grid place-items-center">
+            <span className="w-9 h-9 rounded-full grid place-items-center shadow-md"
+              style={{ backgroundColor: visual.buttonColor, color: visual.buttonTextColor }}>
+              <MapPin className="h-[18px] w-[18px]" />
             </span>
           </span>
         </a>
@@ -216,32 +222,31 @@ function Mapa({ data, visual, onClique }: { data: DadosBloco; visual: VisualBio;
           <span className="whitespace-pre-line">{endereco}</span>
         </p>
         {txt(data, "horario").trim() && (
-          <p className={cn("text-[12.5px] mt-2 whitespace-pre-line", visual.cardColor ? "opacity-80" : "text-gray-600")}>
+          <p className={cn("text-[12.5px] mt-1.5 whitespace-pre-line", visual.cardColor ? "opacity-80" : "text-gray-600")}>
             {txt(data, "horario")}
           </p>
         )}
 
         <a href={linkGoogleMaps(endereco)} target="_blank" rel="noopener noreferrer" onClick={onClique}
-          className={cn(rota, "w-full mt-3 border-transparent")}
+          className={cn(chip, "w-full mt-3.5 h-11 text-[13.5px] border-transparent shadow-sm")}
           style={{ backgroundColor: visual.buttonColor, color: visual.buttonTextColor }}>
           <Navigation className="h-4 w-4" /> Como chegar
         </a>
 
-        <div className="grid grid-cols-2 gap-2 mt-2">
+        {/* Uma linha só de atalhos secundários: era isso que esticava o card. */}
+        <div className="grid grid-cols-3 gap-1.5 mt-1.5">
           <a href={linkWaze(endereco)} target="_blank" rel="noopener noreferrer" onClick={onClique}
-            className={cn(rota, visual.cardColor ? "border-current/25" : "border-gray-200 text-gray-800")}>
+            className={cn(chip, chipNeutro)}>
             Waze
           </a>
           <a href={linkAppleMaps(endereco)} target="_blank" rel="noopener noreferrer" onClick={onClique}
-            className={cn(rota, visual.cardColor ? "border-current/25" : "border-gray-200 text-gray-800")}>
+            className={cn(chip, chipNeutro)}>
             Apple Maps
           </a>
+          <button type="button" onClick={copiar} className={cn(chip, chipNeutro)}>
+            {copiado ? <><Check className="h-3.5 w-3.5" /> Copiado</> : <><Copy className="h-3.5 w-3.5" /> Copiar</>}
+          </button>
         </div>
-
-        <button type="button" onClick={copiar}
-          className={cn(rota, "w-full mt-2", visual.cardColor ? "border-current/25" : "border-gray-200 text-gray-800")}>
-          {copiado ? <><Check className="h-4 w-4" /> Endereço copiado</> : <><Copy className="h-4 w-4" /> Copiar endereço</>}
-        </button>
       </div>
     </CartaoBase>
   );

@@ -776,10 +776,21 @@ const ConteudoDaBio = () => {
             interruptor separado, que vinha DESLIGADO de fábrica. A pessoa
             subia a imagem, salvava, e nada acontecia. Agora subir a imagem é
             o próprio ato de ligar: remover a imagem é que desliga. */}
-        {/* rounded-lg (não 2xl): o canto muito redondo comia o desenho do
-            banner da marca (pedido do Walter, 31/08). */}
+        {/* CAPA DE VERDADE (pedido do Walter, 01/09): o banner ia pro topo com o
+            respiro da coluna em volta e sobrava uma moldura escura feia. Agora
+            ele SANGRA até as bordas: dentro da coluna Hopp, as margens negativas
+            anulam o padding e o canto de cima é aparado pelo arredondado da
+            própria coluna; sem coluna, no celular ele cola nas bordas da tela
+            (como capa de perfil) e no desktop segue como cartão arredondado. */}
         {settings.bannerImage && (
-          <div className="w-full -mt-2 mb-[-44px] rounded-lg overflow-hidden shadow-md">
+          <div
+            className={cn(
+              "overflow-hidden shadow-md mb-[-44px]",
+              settings.bgType === "image" && settings.bgImage
+                ? "-mt-8 -mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)]"
+                : "-mt-10 -mx-5 w-[calc(100%+2.5rem)] sm:mt-[-24px] sm:mx-0 sm:w-full sm:rounded-xl",
+            )}
+          >
             <img src={settings.bannerImage} alt="" loading="lazy" className="w-full h-32 sm:h-40 object-cover" />
           </div>
         )}
@@ -793,7 +804,11 @@ const ConteudoDaBio = () => {
               Em 24 unidades ela competia de igual pra igual com os botões; em
               32 ela ancora o topo sem empurrar o resto pra fora da primeira
               tela do celular. */}
-          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-primary via-purple-500 to-pink-500 p-[3px] mb-4 shadow-xl">
+          {/* A moldura da foto era um gradiente roxo/rosa genérico e brigava com
+              qualquer marca que não fosse dessas cores (na Organnah, um anel
+              magenta sobre verde e dourado). Agora ela usa a COR DO BOTÃO, que é
+              a cor de destaque que a pessoa escolheu. */}
+          <div className="w-32 h-32 rounded-full p-[3px] mb-4 shadow-xl" style={{ backgroundColor: settings.buttonColor }}>
             <div className="w-full h-full rounded-full bg-white overflow-hidden flex items-center justify-center">
               {headerAvatar ? (
                 <img
