@@ -949,9 +949,11 @@ const LinkInBio = () => {
   );
 
   const publicPath = slug ? `/bio/${slug}` : null;
-  const publicUrl = publicPath
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}${publicPath}`
-    : "";
+  /* LINK CURTO (criaclub.bio, 01/09): o que a pessoa COPIA e vê na tela é o
+     domínio curto, feito pra caber bonito na bio do Instagram. O "Abrir"
+     continua no caminho interno (/bio/...), que funciona mesmo enquanto o
+     DNS do domínio novo ainda propaga. */
+  const linkCurto = slug ? `https://criaclub.bio/${slug}` : null;
 
   const handleAddLink = () =>
     createLink.mutate(
@@ -1117,8 +1119,8 @@ const LinkInBio = () => {
   };
 
   const handleCopy = async () => {
-    if (!publicUrl) return;
-    await navigator.clipboard.writeText(publicUrl);
+    if (!linkCurto) return;
+    await navigator.clipboard.writeText(linkCurto);
     toast.success("Link copiado!");
   };
 
@@ -1294,7 +1296,7 @@ const LinkInBio = () => {
                 {publicPath && (
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="hidden xl:inline text-[11px] font-body text-muted-foreground truncate max-w-[210px]">
-                      criasocialclub.com/bio/{slug || profile?.bio_slug}
+                      criaclub.bio/{slug || profile?.bio_slug}
                     </span>
                     <Button variant="outline" size="sm" onClick={handleCopy} className="h-8 px-2.5" title="Copiar o endereço">
                       <Copy className="h-3.5 w-3.5" />
@@ -1880,7 +1882,7 @@ const LinkInBio = () => {
                 </Label>
                 <div className="mt-2 flex items-center gap-2">
                   <span className="text-sm font-body text-muted-foreground whitespace-nowrap">
-                    criasocialclub.com/bio/
+                    criaclub.bio/
                   </span>
                   <Input
                     value={slug}
