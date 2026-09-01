@@ -107,6 +107,9 @@ const Ideias = () => {
   /* Pastas (estilo salvos do Instagram): activeFolder filtra a listagem,
      formFolder é a pasta escolhida no diálogo de Nova/Editar Ideia. */
   const { folders, criar: criarPasta, renomear: renomearPasta, excluir: excluirPasta, moverIdeia } = useIdeaFolders();
+  /* null = Todas · SEM_PASTA = só as ideias ainda não organizadas (pedido do
+     Walter, 31/08: depois de mover em lote ele precisa ver o que FALTA). */
+  const SEM_PASTA = "__sem_pasta__";
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
   const [formFolder, setFormFolder] = useState<string | null>(null);
   const [pastasOpen, setPastasOpen] = useState(false);
@@ -160,7 +163,7 @@ const Ideias = () => {
     setEditingIdea(null);
     reset({ title: "", pillar_id: "", platform: "", notes: "", objective: "", origin: "" });
     // Criando de dentro de uma pasta, a ideia já nasce nela.
-    setFormFolder(activeFolder);
+    setFormFolder(activeFolder === SEM_PASTA ? null : activeFolder);
     setSheetOpen(true);
   };
 
@@ -313,7 +316,8 @@ const Ideias = () => {
     const matchPillar = !filterPillar || idea.pillar_id === filterPillar;
     const matchObj = !filterObjective || idea.objective === filterObjective;
     const matchStatus = !filterStatus || idea.idea_status === filterStatus;
-    const matchFolder = !activeFolder || folderIdDaIdeia(idea) === activeFolder;
+    const matchFolder = !activeFolder
+      || (activeFolder === SEM_PASTA ? folderIdDaIdeia(idea) === null : folderIdDaIdeia(idea) === activeFolder);
     return matchSearch && matchPillar && matchObj && matchStatus && matchFolder;
   });
 
@@ -421,35 +425,50 @@ const Ideias = () => {
                 <FolderInput className="h-3.5 w-3.5" /> {selecting ? "Cancelar seleção" : "Selecionar ideias"}
               </button>
             </div>
-            <div className="flex gap-2.5 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1">
+            {/* Cards MAIORES (nome inteiro em até 2 linhas) + "Sem pasta" pra
+               enxergar o que ainda falta organizar (pedidos do Walter, 31/08). */}
+            <div className="flex gap-2.5 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1 items-stretch">
               <button type="button" onClick={() => setActiveFolder(null)}
-                className={cn("shrink-0 w-[108px] rounded-2xl border p-3 text-left transition-all",
+                className={cn("shrink-0 w-[150px] rounded-2xl border p-3 text-left transition-all",
                   !activeFolder ? "border-primary ring-2 ring-primary/20 bg-primary/5" : "border-border bg-card hover:border-primary/40")}>
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted mb-2"><Lightbulb className="h-4 w-4 text-muted-foreground" /></span>
-                <span className="block text-xs font-body font-semibold text-foreground truncate">Todas</span>
-                <span className="block text-[10px] font-body text-muted-foreground">{ideas.length} {ideas.length === 1 ? "ideia" : "ideias"}</span>
+                <span className="block text-[13px] font-body font-semibold text-foreground leading-tight">Todas</span>
+                <span className="block text-[11px] font-body text-muted-foreground mt-0.5">{ideas.length} {ideas.length === 1 ? "ideia" : "ideias"}</span>
               </button>
+              {folders.length > 0 && (() => {
+                const semPasta = ideas.filter((i) => folderIdDaIdeia(i) === null).length;
+                const ativa = activeFolder === SEM_PASTA;
+                return (
+                  <button type="button" onClick={() => setActiveFolder(ativa ? null : SEM_PASTA)}
+                    className={cn("shrink-0 w-[150px] rounded-2xl border p-3 text-left transition-all",
+                      ativa ? "border-primary ring-2 ring-primary/20 bg-primary/5" : "border-dashed border-border bg-card hover:border-primary/40")}>
+                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted mb-2"><Folder className="h-4 w-4 text-muted-foreground" /></span>
+                    <span className="block text-[13px] font-body font-semibold text-foreground leading-tight">Sem pasta</span>
+                    <span className="block text-[11px] font-body text-muted-foreground mt-0.5">{semPasta} pra organizar</span>
+                  </button>
+                );
+              })()}
               {folders.map(f => {
                 const ativa = activeFolder === f.id;
                 const n = contagemPorPasta[f.id] ?? 0;
                 return (
                   <button key={f.id} type="button" onClick={() => setActiveFolder(ativa ? null : f.id)}
-                    className={cn("shrink-0 w-[108px] rounded-2xl border p-3 text-left transition-all",
+                    className={cn("shrink-0 w-[150px] rounded-2xl border p-3 text-left transition-all",
                       ativa ? "ring-2" : "border-border bg-card hover:border-primary/40")}
                     style={ativa ? { borderColor: f.color, backgroundColor: `${f.color}0F`, ["--tw-ring-color" as string]: `${f.color}33` } : undefined}>
                     <span className="grid h-9 w-9 place-items-center rounded-xl mb-2" style={{ backgroundColor: `${f.color}1f` }}>
                       <Folder className="h-4 w-4" style={{ color: f.color }} />
                     </span>
-                    <span className="block text-xs font-body font-semibold text-foreground truncate">{f.name}</span>
-                    <span className="block text-[10px] font-body text-muted-foreground">{n} {n === 1 ? "ideia" : "ideias"}</span>
+                    <span className="block text-[13px] font-body font-semibold text-foreground leading-tight line-clamp-2" title={f.name}>{f.name}</span>
+                    <span className="block text-[11px] font-body text-muted-foreground mt-0.5">{n} {n === 1 ? "ideia" : "ideias"}</span>
                   </button>
                 );
               })}
               <button type="button" onClick={() => setPastasOpen(true)}
-                className="shrink-0 w-[108px] rounded-2xl border border-dashed border-border p-3 text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors">
+                className="shrink-0 w-[150px] rounded-2xl border border-dashed border-border p-3 text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors">
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted/60 mb-2"><FolderPlus className="h-4 w-4" /></span>
-                <span className="block text-xs font-body font-semibold truncate">{folders.length > 0 ? "Gerenciar" : "Criar pasta"}</span>
-                <span className="block text-[10px] font-body opacity-70">nova, renomear...</span>
+                <span className="block text-[13px] font-body font-semibold leading-tight">{folders.length > 0 ? "Gerenciar" : "Criar pasta"}</span>
+                <span className="block text-[11px] font-body opacity-70 mt-0.5">nova, renomear...</span>
               </button>
             </div>
           </div>
@@ -533,13 +552,14 @@ const Ideias = () => {
                   className={cn("relative break-inside-avoid bg-card rounded-xl border p-4 hover:shadow-warm-md hover:scale-[1.01] transition-all cursor-pointer group",
                     selecting && selIds.has(idea.id) ? "border-primary ring-2 ring-primary/30" : "border-border")}
                 >
-                  {/* Bolinha de seleção sempre à mão: o primeiro clique nela já
-                     liga o modo seleção. */}
+                  {/* Bolinha de seleção sempre à mão (e VISÍVEL: borda escura e
+                     sombra, a versão clarinha sumia no card branco). O primeiro
+                     clique nela já liga o modo seleção. */}
                   <button type="button" aria-label="Selecionar ideia"
                     onClick={(e) => { e.stopPropagation(); if (!selecting) setSelecting(true); toggleSel(idea.id); }}
-                    className={cn("absolute top-2 left-2 z-10 h-5 w-5 rounded-full grid place-items-center border-2 transition-colors",
-                      selIds.has(idea.id) ? "bg-primary border-primary text-primary-foreground" : "bg-card border-border opacity-70 hover:opacity-100 hover:border-primary")}>
-                    {selIds.has(idea.id) && <Check className="h-3 w-3" />}
+                    className={cn("absolute top-2 left-2 z-10 h-6 w-6 rounded-full grid place-items-center border-2 shadow-sm transition-colors",
+                      selIds.has(idea.id) ? "bg-primary border-primary text-primary-foreground" : "bg-card border-muted-foreground/50 hover:border-primary")}>
+                    {selIds.has(idea.id) && <Check className="h-3.5 w-3.5" />}
                   </button>
                   <div className="absolute top-2 right-2 flex gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity z-10">
                     <button
@@ -572,7 +592,9 @@ const Ideias = () => {
                       style={{ backgroundColor: pillar.color }}
                     />
                   )}
-                  <h3 className={cn("font-display font-semibold text-sm text-foreground line-clamp-2 mb-2", !pillar && "pr-16")}>
+                  {/* pl-8 quando não há a faixa do pilar: a bolinha de seleção
+                     fica em cima do começo do título sem este respiro. */}
+                  <h3 className={cn("font-display font-semibold text-sm text-foreground line-clamp-2 mb-2", !pillar && "pr-16 pl-8")}>
                     {idea.title}
                   </h3>
                   {idea.notes && (

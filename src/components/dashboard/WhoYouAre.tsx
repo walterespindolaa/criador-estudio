@@ -29,7 +29,13 @@ export function WhoYouAre() {
           {niche && (<div className="flex gap-2"><span className="min-w-[58px] shrink-0 text-xs text-muted-foreground">Nicho</span><span>{niche}</span></div>)}
           {tom.length > 0 && (
             <div className="flex gap-2"><span className="min-w-[58px] shrink-0 pt-1 text-xs text-muted-foreground">Tom</span>
-              <span className="flex flex-wrap gap-1.5">{tom.map((t) => (<span key={t} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">{t}</span>))}</span>
+              {/* Pílula redonda só pra item CURTO. Tom escrito como frase longa
+                 virava um balão rosa gigante (print do Walter, 31/08). */}
+              <span className="flex flex-wrap gap-1.5">{tom.map((t) => (
+                t.length <= 40
+                  ? <span key={t} className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">{t}</span>
+                  : <span key={t} className="text-[13px] leading-relaxed text-foreground/90">{t}</span>
+              ))}</span>
             </div>
           )}
           {pillars.length > 0 && (
