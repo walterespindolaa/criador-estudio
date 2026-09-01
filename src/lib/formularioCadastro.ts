@@ -56,12 +56,9 @@ export const ETAPAS_INTAKE: EtapaIntake[] = [
       { chave: "instagram", label: "@ do Instagram" },
       { chave: "address", label: "Endereço completo", ajuda: "Rua, número, bairro, cidade, estado e CEP.", largo: true },
       { chave: "city", label: "Cidade" },
-      // Preferência de pagamento, não negociação: o quanto continua sendo assunto
-      // da agência. Perguntar aqui evita a ida e volta de "qual dia fica melhor
-      // pra você?" depois que o contrato já saiu, e é o que alimenta o vencimento
-      // da mensalidade no Caixa.
-      { chave: "payment_method", label: "Como você prefere pagar?",
-        tipo: "escolha", opcoes: ["Pix", "Boleto", "Cartão de crédito", "Transferência / TED"], largo: true },
+      // A forma de pagamento saiu do formulário (pedido do Walter, 01/09):
+      // é assunto da negociação, não do cadastro. O dia do vencimento fica,
+      // porque é o que alimenta a mensalidade no Caixa.
       { chave: "payment_day", label: "Que dia do mês fica melhor pro pagamento?",
         ajuda: "Escolha o dia que combina com o seu caixa.", tipo: "dia" },
       { chave: "marketSince", label: "Há quanto tempo você atua nesse mercado?", ajuda: "Ex.: 8 anos, desde 2018." },
