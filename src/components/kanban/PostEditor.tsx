@@ -255,6 +255,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const [showBestTimes, setShowBestTimes] = useState(false);
   // Estúdio de arte recolhido: só abre pra quem pedir ajuda com a imagem.
   const [ajudaArteAberta, setAjudaArteAberta] = useState(false);
+  /* MÍDIA RETRÁTIL (Walter, 01/09): aberta enquanto não tem arquivo (convida a
+     subir); assim que a primeira mídia chega, recolhe sozinha e vira uma linha
+     de resumo, devolvendo a tela pra prévia. Reabre no toque pra trocar/somar. */
+  const [midiaAberta, setMidiaAberta] = useState(true);
+  const midiaCountRef = useRef(0);
   const [notes, setNotes] = useState("");
   const [weekNumber, setWeekNumber] = useState<number | null>(null);
   
@@ -1145,6 +1150,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   };
 
   const mediaList: DriveRef[] = isNew ? pendingDriveFiles : driveMedia;
+  // Recolhe a Midia quando o primeiro arquivo chega (definido depois de mediaList existir).
+  useEffect(() => {
+    if (midiaCountRef.current === 0 && mediaList.length > 0) setMidiaAberta(false);
+    midiaCountRef.current = mediaList.length;
+  }, [mediaList.length]);
   const activeUpload = uploads.find((u) => u.status === "uploading") ?? null;
 
   // Mídia da PRÉVIA (mockup do feed/Instagram). Derivada da mídia primária do post,
@@ -1441,7 +1451,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
             {/* Coluna da direita agora tem largura FIXA (a da prévia): antes era
                2fr e a prévia de 380px boiava no meio dela, deixando faixas
                vazias dos dois lados (pedido do Walter, 31/08: menos margem). */}
-            <div className="mx-auto w-full max-w-3xl lg:max-w-none px-2.5 sm:px-4 py-3 sm:py-4 pb-[calc(3rem+env(safe-area-inset-bottom))] flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-5 lg:items-start">
+            <div className="mx-auto w-full max-w-3xl lg:max-w-none px-2.5 sm:px-4 py-3 sm:py-4 pb-[calc(3rem+env(safe-area-inset-bottom))] flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_460px] lg:gap-5 lg:items-start">
 
               {/* COLUNA ESQUERDA: o fluxo numerado (no mobile, a coluna única). */}
               <div className="space-y-4 min-w-0">
@@ -2384,10 +2394,18 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     junto da previa, na coluna da direita. No celular este card vem
                     primeiro, antes do conteudo. */}
               <div className="rounded-3xl border border-border bg-card p-3 space-y-2.5 lg:shrink-0">
-                <div data-tour="editor-midia" className="flex items-center gap-2">
-                  <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                <button type="button" data-tour="editor-midia" onClick={() => setMidiaAberta((v) => !v)}
+                  className="w-full flex items-center gap-2 text-left">
+                  <ImageIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   <span className="text-xs font-display font-semibold text-foreground">Mídia</span>
-                </div>
+                  <span className="text-[11px] font-body text-muted-foreground truncate">
+                    {mediaList.length > 0
+                      ? `· ${mediaList.length} ${mediaList.length === 1 ? "arquivo" : "arquivos"}`
+                      : "· adicionar imagem ou vídeo"}
+                  </span>
+                  <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground ml-auto shrink-0 transition-transform", midiaAberta && "rotate-180")} />
+                </button>
+                {midiaAberta && (<>
 
                 {format !== "carrossel" ? (
                   <div className="space-y-2">
@@ -2594,6 +2612,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     </Button>
                   )}
                 </div>
+
+                </>)}
 
                 {/* Gerador de prompt do Estudio (arte a partir do conteudo real).
                     RECOLHIDO atras de um botao (Walter, 01/09): os avisos e o

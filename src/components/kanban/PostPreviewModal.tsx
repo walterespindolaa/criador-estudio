@@ -255,9 +255,11 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
 
   return (
     <Tabs defaultValue={platform || "instagram"} className="w-full">
-          <TabsList className="w-full rounded-none border-b border-border bg-card/80 backdrop-blur grid grid-cols-3 h-11">
+          {/* Seletor em pílulas (Walter, 01/09: as abas antigas estavam "muito
+              feias perto do sistema"): trilho arredondado, sem linhas duras. */}
+          <TabsList className="mx-2 mt-2 mb-1 grid grid-cols-3 h-8 rounded-xl bg-muted/60 p-0.5 gap-0.5">
             {["instagram", "tiktok", "youtube"].map(p => (
-              <TabsTrigger key={p} value={p} className="font-body text-[11px] gap-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary rounded-none">
+              <TabsTrigger key={p} value={p} className="font-body text-[11px] gap-1 rounded-[10px] data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm">
                 <PlatformIcon platform={p} size="sm" />
                 <span className="capitalize">{p === "youtube" ? "YT" : p === "instagram" ? "IG" : "TK"}</span>
               </TabsTrigger>
@@ -266,10 +268,10 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
 
           {/* INSTAGRAM */}
           <TabsContent value="instagram" className="m-0">
-            <div className="flex border-b border-border/50 bg-card/50">
+            <div className="mx-2 mb-1.5 grid grid-cols-2 gap-0.5 rounded-xl bg-muted/40 p-0.5">
               {(["feed", "reels"] as const).map(t => (
                 <button key={t} onClick={() => setIgTab(t)}
-                  className={`flex-1 py-1.5 text-[11px] font-body transition-colors ${igTab === t ? "text-primary border-b-2 border-primary" : "text-muted-foreground"}`}>
+                  className={`h-7 rounded-[10px] text-[10.5px] font-body font-semibold transition-colors ${igTab === t ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
                   {t === "feed" ? "Feed 4:5" : "Reels / Story"}
                 </button>
               ))}
