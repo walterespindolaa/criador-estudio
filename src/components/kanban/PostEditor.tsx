@@ -1272,18 +1272,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               Agora são duas faixas: em cima SÓ as ações (fechar, tutorial, excluir,
               PDF, prévia, salvar), embaixo o título com a linha inteira pra ele.
               No desktop volta pra uma faixa só, com o título no meio. */}
-          <DialogHeader className="px-4 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 shrink-0 border-b border-border gap-2">
+          <DialogHeader className="px-3 sm:px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-1.5 shrink-0 border-b border-border gap-1.5">
             <DialogTitle className="sr-only">{isNew ? "Novo Post" : "Editar Post"}</DialogTitle>
 
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <button
-                type="button"
-                onClick={() => startTour("post-editor")}
-                className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-primary shrink-0"
-                aria-label="Ver tutorial do editor"
-              >
-                <CircleHelp className="h-4 w-4" />
-              </button>
 
               {/* Título inline: só no desktop, onde sobra largura.
                   Virou textarea auto-crescente (pedido do Walter, 31/08): título
@@ -1398,7 +1390,15 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 <Button variant="hero" size="sm" onClick={handleSave} disabled={!title.trim() || saving}>
                   {saving ? "Salvando…" : isNew ? "Criar" : "Salvar"}
                 </Button>
-                {/* O X mora na DIREITA, depois do Salvar (Walter, 01/09). */}
+                {/* O "?" do tutorial e o X moram na DIREITA (Walter, 01/09). */}
+                <button
+                  type="button"
+                  onClick={() => startTour("post-editor")}
+                  className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-primary shrink-0"
+                  aria-label="Ver tutorial do editor"
+                >
+                  <CircleHelp className="h-4 w-4" />
+                </button>
                 <button
                   type="button"
                   onClick={() => onOpenChange(false)}
@@ -1428,9 +1428,25 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               )}
             </div>
 
-            {/* PILAR NO TOPO, estilo o "+ Etiqueta" do Cria Post (pedido do
-               Walter, 31/08): a etiqueta do post do criador é o pilar, e ela
-               mora logo abaixo do título, não enterrada no passo 1. */}
+          </DialogHeader>
+
+          {/* CORPO: FLUXO NUMERADO + PRÉVIA
+              No celular: uma coluna só, de cima pra baixo, na ordem que a cabeça
+              pensa (1 conteúdo, 2 legenda, 3 arte, 4 quando publicar); a prévia
+              abre pelo botão "Prévia" do topo, em tela cheia.
+              No desktop (lg pra cima): duas colunas. À esquerda (~60%) o fluxo
+              numerado rolável; à direita (~40%) a prévia do post fixa (sticky),
+              sempre visível enquanto a pessoa escreve. */}
+          <div ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/20">
+            {/* Coluna da direita agora tem largura FIXA (a da prévia): antes era
+               2fr e a prévia de 380px boiava no meio dela, deixando faixas
+               vazias dos dois lados (pedido do Walter, 31/08: menos margem). */}
+            <div className="mx-auto w-full max-w-3xl lg:max-w-none px-2.5 sm:px-4 py-3 sm:py-4 pb-[calc(3rem+env(safe-area-inset-bottom))] flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-5 lg:items-start">
+
+              {/* COLUNA ESQUERDA: o fluxo numerado (no mobile, a coluna única). */}
+              <div className="space-y-4 min-w-0">
+            {/* PILAR abaixo da borda do cabeçalho (Walter, 01/09): dentro do
+                 corpo, como primeira coisa do fluxo, não espremido no header. */}
             {pillars.length > 0 && (
               <div className="flex items-center gap-1.5 flex-wrap">
                 <Popover>
@@ -1474,23 +1490,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 </Popover>
               </div>
             )}
-          </DialogHeader>
 
-          {/* CORPO: FLUXO NUMERADO + PRÉVIA
-              No celular: uma coluna só, de cima pra baixo, na ordem que a cabeça
-              pensa (1 conteúdo, 2 legenda, 3 arte, 4 quando publicar); a prévia
-              abre pelo botão "Prévia" do topo, em tela cheia.
-              No desktop (lg pra cima): duas colunas. À esquerda (~60%) o fluxo
-              numerado rolável; à direita (~40%) a prévia do post fixa (sticky),
-              sempre visível enquanto a pessoa escreve. */}
-          <div ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/20">
-            {/* Coluna da direita agora tem largura FIXA (a da prévia): antes era
-               2fr e a prévia de 380px boiava no meio dela, deixando faixas
-               vazias dos dois lados (pedido do Walter, 31/08: menos margem). */}
-            <div className="mx-auto w-full max-w-3xl lg:max-w-none px-3 sm:px-5 py-4 sm:py-6 pb-[calc(3rem+env(safe-area-inset-bottom))] flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-5 lg:items-start">
-
-              {/* COLUNA ESQUERDA: o fluxo numerado (no mobile, a coluna única). */}
-              <div className="space-y-4 min-w-0">
 
               {/* 2. O CONTEUDO DO POST */}
               <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
@@ -2384,7 +2384,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     junto da previa, na coluna da direita. No celular este card vem
                     primeiro, antes do conteudo. */}
               <div className="rounded-3xl border border-border bg-card p-3 space-y-2.5">
-                <div className="flex items-center gap-2">
+                <div data-tour="editor-midia" className="flex items-center gap-2">
                   <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-xs font-display font-semibold text-foreground">Mídia</span>
                 </div>
@@ -2577,7 +2577,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 {/* Link do conteudo final (Drive/Canva/arquivo pronto). */}
                 <div className="space-y-1">
                   <Input
-                    placeholder="Link do conteúdo (Drive/Canva)..."
+                    placeholder="Link do arquivo final OU da pasta (Drive/Canva)"
                     value={contentLink}
                     onChange={(e) => setContentLink(e.target.value)}
                     className="rounded-xl h-9 text-xs bg-card"
@@ -2603,6 +2603,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   {!ajudaArteAberta ? (
                     <button
                       type="button"
+                      data-tour="editor-ajuda-arte"
                       onClick={() => setAjudaArteAberta(true)}
                       className="w-full h-9 rounded-xl border border-dashed border-primary/40 text-primary text-xs font-body font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-primary/5 transition-colors"
                     >

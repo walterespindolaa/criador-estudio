@@ -161,7 +161,6 @@ export const TOURS_CRIADOR: TourConfig[] = [
     steps: [
       {
         target: '[data-tour="editor-plataforma"]',
-        mobileOpenFirst: '[data-tour="editor-tab-config"]',
         title: "Plataforma e formato",
         body: "Comece dizendo ONDE esse post vai viver (Instagram, TikTok, YouTube) e em que formato (Reels, carrossel, foto...). O CRIA adapta a estrutura do editor pra esse formato: um Reels ganha cenas, um carrossel ganha lâminas.",
         mobileBody: "Na aba Config do editor você define ONDE esse post vai viver (Instagram, TikTok, YouTube) e em que formato (Reels, carrossel, foto...). O CRIA adapta a estrutura pra esse formato: um Reels ganha cenas, um carrossel ganha lâminas.",
@@ -169,7 +168,6 @@ export const TOURS_CRIADOR: TourConfig[] = [
       },
       {
         target: '[data-tour="editor-status"]',
-        mobileOpenFirst: '[data-tour="editor-tab-config"]',
         title: "Status: onde esse post está no fluxo",
         body: "Esses chips são as mesmas colunas do kanban. Mudou o status aqui, o card anda lá no board. Ideia é a faísca; Planejamento é escrever; Produzindo é gravar; Pronto é finalizado; Agendado tem data; Publicado está no ar.",
         mobileBody: "Os chips de Status (na aba Config) são as mesmas colunas do kanban: mudou aqui, o card anda lá no board. Ideia é a faísca; Planejamento é escrever; Produzindo é gravar; Pronto é finalizado; Agendado tem data; Publicado está no ar.",
@@ -177,19 +175,17 @@ export const TOURS_CRIADOR: TourConfig[] = [
       },
       {
         target: '[data-tour="editor-agendamento"]',
-        mobileOpenFirst: '[data-tour="editor-tab-config"]',
         title: "Agendamento e melhor horário",
         body: "Defina data e hora, e repare na sugestão de melhores horários: ela é baseada no seu nicho e na plataforma (e fica mais precisa com o Instagram conectado). Post com data aparece no calendário e no Dashboard.",
         mobileBody: "Em Agendamento (aba Config), defina data e hora e repare na sugestão de melhores horários: é baseada no seu nicho e na plataforma, e fica mais precisa com o Instagram conectado. Post com data aparece no calendário e no Dashboard.",
         placement: "right",
       },
       {
-        target: '[data-tour="editor-abas"]',
-        mobileOpenFirst: '[data-tour="editor-tab-criar"]',
-        title: "As abas do post",
-        body: "Legenda: o texto que vai no post. Roteiro: cena a cena do vídeo. Arte: o prompt da imagem, na sua marca. Tarefas: o que falta fazer pra esse post sair. Notas: anotações livres. Refs: referências e links de inspiração. Um post completo mora nessas abas.",
-        mobileBody: "Na área de conteúdo do post você encontra as abas. Legenda: o texto do post. Roteiro: cena a cena. Arte: o prompt da imagem, na sua marca. Tarefas: o que falta pra esse post sair. Notas: anotações livres. Refs: referências e inspiração.",
-        placement: "bottom",
+        target: '[data-tour="editor-midia"]',
+        title: "Mídia: a arte mora ao lado da prévia",
+        body: "Aqui entra a imagem ou o vídeo do post: suba do Google Drive ou da galeria, e no carrossel a ordem das imagens é a ordem das lâminas. O campo de link aceita tanto o arquivo final quanto a pasta do Drive/Canva. O que você subir aparece na prévia logo abaixo, do jeito que o seguidor vai ver.",
+        mobileBody: "Aqui entra a imagem ou o vídeo do post: suba do Google Drive ou da galeria. O campo de link aceita o arquivo final ou a pasta do Drive/Canva.",
+        placement: "left",
       },
       // O "amarrar com o que está quente" MUDOU de casa: saiu da aba Arte e foi
       // pro escritor de roteiro (CarouselWriter). O passo antigo apontava pra um
@@ -199,8 +195,6 @@ export const TOURS_CRIADOR: TourConfig[] = [
       // aparece centralizado, e o texto continua fazendo sentido).
       {
         target: '[data-tour="roteiro-ia"]',
-        openFirst: '[data-tour="editor-tab-roteiro"]',
-        mobileOpenFirst: '[data-tour="editor-tab-roteiro"]',
         title: "Roteiro com IA (e o que está quente)",
         body: "Na aba Roteiro, a IA escreve as páginas ou cenas do post no tom da sua marca. E o botão de amarrar com o que está quente puxa o assunto do momento pro texto: o post fica atual, mas envelhece em algumas semanas. Sem ele, sai atemporal, que serve o ano inteiro.",
         placement: "bottom",
@@ -212,10 +206,10 @@ export const TOURS_CRIADOR: TourConfig[] = [
       // ruim é culpa da IA (quase sempre é o Brandbook vazio).
       {
         target: '[data-tour="estudio-base"]',
-        // Sem isto o passo aponta pro vazio: a aba Arte está FECHADA quando o
-        // tour chega aqui. O openFirst clica nela antes de apontar.
-        openFirst: '[data-tour="editor-tab-arte"]',
-        mobileOpenFirst: '[data-tour="editor-tab-arte"]',
+        // O estúdio fica recolhido atrás do "Preciso de ajuda com a imagem";
+        // o openFirst clica nele antes de apontar.
+        openFirst: '[data-tour="editor-ajuda-arte"]',
+        mobileOpenFirst: '[data-tour="editor-ajuda-arte"]',
         title: "Arte: o prompt, não a imagem",
         body: "O CRIA não gera a imagem: ele escreve o PROMPT dela, com as suas cores e a sua fonte, pra você colar no gerador que já usa (Midjourney, Canva, ChatGPT). Repare nesta linha: ela diz de onde o prompt vai nascer. Se você já escreveu o texto das páginas, ele usa o SEU texto. Se não escreveu, ele parte só do título, e aí sai mais genérico.",
         mobileBody: "O CRIA não gera a imagem: ele escreve o PROMPT dela, com as suas cores e fontes, pra colar no Midjourney, Canva ou ChatGPT. Esta linha diz de onde o prompt nasce: do seu texto ou só do título.",
@@ -232,8 +226,8 @@ export const TOURS_CRIADOR: TourConfig[] = [
       // centralizado e o texto continua fazendo sentido.
       {
         target: '[data-tour="estudio-procedencia"]',
-        openFirst: '[data-tour="editor-tab-arte"]',
-        mobileOpenFirst: '[data-tour="editor-tab-arte"]',
+        openFirst: '[data-tour="editor-ajuda-arte"]',
+        mobileOpenFirst: '[data-tour="editor-ajuda-arte"]',
         title: "De onde esse prompt saiu",
         body: "Assim que os prompts ficam prontos, essa faixa verde conta a procedência: se o texto veio das páginas que você escreveu ou só do título do post, e quais das suas cores e fontes entraram. Ela existe pra quando a arte sai com a cara errada: o conserto quase nunca é gerar de novo, é preencher o Brandbook, e o link dali te leva direto pra lá.",
         mobileBody: "Com os prompts prontos, essa faixa verde conta a procedência: se o texto veio das suas páginas ou só do título, e quais cores e fontes entraram. Arte com cara errada quase sempre é Brandbook vazio.",
@@ -241,10 +235,9 @@ export const TOURS_CRIADOR: TourConfig[] = [
       },
       {
         target: '[data-tour="editor-ia"]',
-        mobileOpenFirst: '[data-tour="editor-tab-config"]',
         title: "Content Assistant",
-        body: "Escolha o tom (descontraído, profissional, provocativo...) e a IA escreve legenda e roteiro no estilo da sua marca, ou avalia o gancho que você escreveu. É o seu copywriter de plantão. E o botão ? aqui em cima reabre este tutorial quando quiser.",
-        mobileBody: "No Content Assistant (aba Config), escolha o tom (descontraído, profissional, provocativo...) e a IA escreve legenda e roteiro no estilo da sua marca, ou avalia seu gancho. O botão ? no topo do editor reabre este tutorial quando quiser.",
+        body: "Escolha o tom (descontraído, profissional, provocativo...) e a IA escreve legenda e roteiro no estilo da sua marca, ou avalia o gancho que você escreveu. É o seu copywriter de plantão. E o botão ? no canto direito do topo reabre este tutorial quando quiser.",
+        mobileBody: "No Content Assistant, escolha o tom (descontraído, profissional, provocativo...) e a IA escreve legenda e roteiro no estilo da sua marca, ou avalia seu gancho. O botão ? no topo reabre este tutorial.",
         placement: "right",
         aiPrompt: "Escreva uma legenda pra este post no tom da minha marca, com gancho forte e CTA.",
       },
