@@ -751,29 +751,29 @@ const Criando = () => {
             const step = ramp[col.key];
             const savedC = byStatus[col.key];
             const cFrom = savedC?.cover_from || step.from;
+            const cTo = savedC?.cover_type === "solid" ? (savedC?.cover_from || step.from) : (savedC?.cover_to || step.to);
+            const cInk = savedC ? "#fff" : step.ink;
+            const cSub = savedC ? "rgba(255,255,255,.78)" : step.sub;
             const cTitle = savedC?.label || col.label;
             return (
               <div key={col.key} className={`w-[85vw] max-w-[320px] sm:w-auto sm:max-w-none sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start flex flex-col ${showDividerBefore ? "border-l-2 border-dashed border-border pl-4" : ""}`}>
-                {/* Cabeçalho LIMPO no padrão do Cria Post (Walter, 31/08: o
-                   banner grande "não deu certo"): pílula com a cor da coluna,
-                   contador, + pra criar aqui e lápis (personalizar) no hover. */}
-                <div className="flex items-center justify-between px-1.5 py-2 group/cover gap-2">
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-body font-bold px-2.5 py-1 rounded-full min-w-0"
-                    style={{ backgroundColor: /^#[0-9a-fA-F]{6}$/.test(cFrom) ? `${cFrom}26` : undefined }}
-                    title={COLUMN_TOOLTIPS[col.key]}>
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cFrom }} />
-                    <span className="truncate">{cTitle}</span>
-                  </span>
-                  <span className="flex items-center gap-1 shrink-0">
+                {/* CAPA COLORIDA de volta (Walter, 01/09: "isso aqui tinha um
+                   fundo antes, tá feio assim"), na versão compacta e SEM
+                   itálico. O lápis (personalizar) aparece no hover e o + cria
+                   direto na coluna. */}
+                <div className="relative group/cover mb-2">
+                  <CoverHeader compact label="Status" title={cTitle} count={colPosts.length} from={cFrom} to={cTo} ink={cInk} sub={cSub} hint={COLUMN_TOOLTIPS[col.key]} />
+                  <span className="absolute bottom-2 right-2.5 z-10 flex items-center gap-1">
                     <button onClick={() => openEditCover(col.key)} aria-label="Personalizar coluna"
-                      className="h-5 w-5 rounded-full grid place-items-center text-muted-foreground/60 hover:text-primary hover:bg-primary/10 opacity-0 group-hover/cover:opacity-100 transition-all">
+                      className="h-6 w-6 rounded-full bg-white/15 backdrop-blur grid place-items-center opacity-0 group-hover/cover:opacity-100 transition-opacity"
+                      style={{ color: cInk }}>
                       <Pencil className="h-3 w-3" />
                     </button>
                     <button onClick={() => openNewInColumn(col.key)} aria-label={`Novo post em ${cTitle}`}
-                      className="h-5 w-5 rounded-full grid place-items-center text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors">
+                      className="h-6 w-6 rounded-full bg-white/15 backdrop-blur grid place-items-center hover:bg-white/25 transition-colors"
+                      style={{ color: cInk }}>
                       <Plus className="h-3.5 w-3.5" />
                     </button>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{colPosts.length}</span>
                   </span>
                 </div>
                 <Droppable droppableId={col.key}>

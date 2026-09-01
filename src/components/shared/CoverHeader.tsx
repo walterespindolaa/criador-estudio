@@ -16,9 +16,9 @@ export function CoverHeader({ label, title, count, from, to, ink = "#fff", sub =
       )}
       {count!=null && <span className={`absolute right-3.5 text-[11px] font-bold bg-white/15 px-2 py-0.5 rounded-full ${compact ? "top-2" : "top-3"}`} style={{ color: ink }}>{count}</span>}
       <div className={`relative flex items-end ${compact ? "mt-0.5" : "mt-3"}`} style={{ ["--ch-ink" as string]: ink }}>
-        {/* leading folgado + line-clamp em vez de truncate: itálico não clipa e título
-            longo quebra em 2 linhas em vez de ser cortado. */}
-        <h2 className={`font-display italic font-light leading-[1.08] tracking-tight min-w-0 line-clamp-2 break-words pr-1 pb-0.5 ${compact ? "text-[17px]" : "text-[2.4rem]"}`}
+        {/* SEM itálico (Walter, 01/09) e um peso acima, senão o light reto some.
+            line-clamp: título longo quebra em 2 linhas em vez de ser cortado. */}
+        <h2 className={`font-display font-semibold leading-[1.08] tracking-tight min-w-0 line-clamp-2 break-words pr-1 pb-0.5 ${compact ? "text-[17px]" : "text-[2.4rem]"}`}
             style={{ textShadow:'0 2px 18px rgba(0,0,0,.18)', color: ink }}>{title}</h2>
       </div>
     </div>
