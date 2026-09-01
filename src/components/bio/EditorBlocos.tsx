@@ -691,13 +691,15 @@ function CartaoBloco({
 }
 
 /* ── A TELA ── */
-export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico }: {
+export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }: {
   estilo: EstiloBio;
   /** Modelo não é só estrutura: leva cor, fonte e formato de botão junto. Quem
    *  guarda a aparência é a tela de cima, então ela recebe por aqui. */
   aoAplicarAparencia?: (a: AparenciaModelo) => void;
   /** Só pra montar o endereço de cada item cadastrado dentro do bloco. */
   slugPublico?: string | null;
+  /** Numeração do caminho da aba Conteúdo ("2" no Clássico, "1" no Site). */
+  numero?: string;
 }) {
   const { blocos, isLoading, criar, atualizar, excluir, duplicar, reordenar, aplicarModelo } = useBioBlocks(estilo);
   /* O telefone mora no bloco "Contato e rodapé" e é reaproveitado pelos itens
@@ -726,9 +728,17 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico }: {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h3 className="font-display font-semibold text-foreground">Os blocos da página</h3>
-          <p className="text-xs font-body text-muted-foreground">Arraste pra ordenar. O interruptor tira do ar sem apagar.</p>
+        <div className="flex items-center gap-2.5">
+          {/* O número faz parte do caminho 1-2 desenhado na aba Conteúdo. */}
+          {numero && (
+            <span className="w-6 h-6 rounded-full bg-primary/15 text-primary text-[12px] font-display font-bold grid place-items-center shrink-0">
+              {numero}
+            </span>
+          )}
+          <div>
+            <h3 className="font-display font-semibold text-foreground">{estilo === "site" ? "As seções do site" : "Os blocos da página"}</h3>
+            <p className="text-xs font-body text-muted-foreground">Arraste pra ordenar. O interruptor tira do ar sem apagar.</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={() => { setModelosAbertos((v) => !v); setPaletaAberta(false); }}>

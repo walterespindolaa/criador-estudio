@@ -1357,8 +1357,9 @@ const LinkInBio = () => {
                   <>Escolha o estilo lá em cima: <strong className="font-semibold text-foreground/85">Clássico</strong> é
                   a página de bio (coluna de botões, um toque e sai); <strong className="font-semibold text-foreground/85">Site</strong> é
                   uma página completa, com seções, produtos e blog. Trocar não apaga nada: cada estilo guarda o seu.</>,
-                  <>Monte a página por <strong className="font-semibold text-foreground/85">blocos</strong>: toque em
-                  Adicionar, preencha e arraste pra ordenar. Tudo salva sozinho e aparece na prévia do celular.</>,
+                  <>Monte de cima pra baixo: preencha <strong className="font-semibold text-foreground/85">o topo</strong> (banner,
+                  foto, nome e redes) e depois os <strong className="font-semibold text-foreground/85">blocos</strong>. Arraste pra
+                  ordenar; tudo salva sozinho e aparece na prévia do celular.</>,
                   <>Termine na aba <strong className="font-semibold text-foreground/85">Visual</strong> (cores, fonte e fundo)
                   e copie o seu link na aba <strong className="font-semibold text-foreground/85">Publicar</strong>.</>,
                 ].map((passo, i) => (
@@ -1370,9 +1371,122 @@ const LinkInBio = () => {
                   </p>
                 ))}
               </div>
+              {/* ── 1 · O TOPO DA PÁGINA (só no Clássico) ──
+                  A aba agora segue a ordem da própria página: primeiro o que o
+                  visitante vê ao abrir (banner, foto, nome, bio e redes),
+                  depois os blocos. Antes isso morava na aba Visual e ninguém
+                  achava (reclamação do Walter, 01/09: "fluxo difícil de
+                  compreender"). */}
+              {settings.layout === "classic" && (
+              <Card className="p-4 md:p-5 rounded-2xl border-border space-y-5">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-6 h-6 rounded-full bg-primary/15 text-primary text-[12px] font-display font-bold grid place-items-center shrink-0">1</span>
+                  <div>
+                    <h2 className="font-display font-semibold text-foreground leading-tight">O topo da página</h2>
+                    <p className="text-xs text-muted-foreground">Banner, foto, nome, bio e redes. É a primeira coisa que o visitante vê.</p>
+                  </div>
+                </div>
+
+                {/* Banner (capa atrás da foto) */}
+                <div className="space-y-2.5">
+                  <Label className="text-sm font-display font-semibold">Banner</Label>
+                  <p className="text-xs text-muted-foreground -mt-1">Imagem larga que preenche o topo, atrás da sua foto, como capa de perfil.</p>
+                  {settings.bannerImage ? (
+                    <div className="relative rounded-xl overflow-hidden border border-border">
+                      <img src={settings.bannerImage} alt="Banner" loading="lazy" className="w-full h-24 object-cover" />
+                      <button type="button" onClick={() => patchSettings({ bannerImage: null })} className="absolute top-1.5 right-1.5 bg-background/90 rounded-full p-1 shadow">
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </button>
+                    </div>
+                  ) : null}
+                  <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
+                  <Button type="button" variant="outline" size="sm" disabled={uploadingBanner} onClick={() => bannerInputRef.current?.click()}>
+                    <ImagePlus className="h-4 w-4 mr-2" />
+                    {uploadingBanner ? "Enviando..." : settings.bannerImage ? "Trocar banner" : "Enviar banner"}
+                  </Button>
+                </div>
+
+                {/* Foto, nome e bio */}
+                <div className="space-y-3 pt-4 border-t border-border">
+                  <div>
+                    <Label className="text-sm font-display font-semibold">Foto, nome e bio</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">Deixe em branco pra usar o que já está no seu perfil.</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 rounded-full overflow-hidden border border-border bg-muted shrink-0 flex items-center justify-center">
+                      {(settings.header.avatar || profile?.avatar_url) ? (
+                        <img src={settings.header.avatar || profile?.avatar_url || ""} alt="" loading="lazy" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-muted-foreground font-display font-bold text-xl">{(settings.header.name || profile?.name || "C").charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <input ref={headerInputRef} type="file" accept="image/*" className="hidden" onChange={handleHeaderAvatarUpload} />
+                      <Button type="button" variant="outline" size="sm" disabled={uploadingHeader} onClick={() => headerInputRef.current?.click()}>
+                        <ImagePlus className="h-4 w-4 mr-2" />
+                        {uploadingHeader ? "Enviando..." : "Trocar foto"}
+                      </Button>
+                      {settings.header.avatar && (
+                        <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => patchHeader({ avatar: "" })}>
+                          <Trash2 className="h-4 w-4 mr-2" /> Remover
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <input value={settings.header.name} onChange={(e) => patchHeader({ name: e.target.value })} placeholder={profile?.name || "Seu nome"} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+                  <RichTextInput value={settings.header.bio} onChange={(v) => patchHeader({ bio: v })} placeholder={profile?.bio || "Escreva uma bio curta"} rows={3} />
+                  {/* Cor do nome e da bio: antes era automática e pronto, e a Gabi
+                      não tinha como clarear o texto sobre uma foto escura. */}
+                  <div className="flex items-end gap-3 flex-wrap pt-1">
+                    <ColorField
+                      value={settings.headerColor || "#1A2420"}
+                      onChange={(v) => patchSettings({ headerColor: v })}
+                      label="Cor do nome e da bio"
+                    />
+                    {settings.headerColor && (
+                      <Button type="button" variant="ghost" size="sm" className="h-9"
+                        onClick={() => patchSettings({ headerColor: "" })}>
+                        Voltar à automática
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Redes sociais (ícones abaixo da bio) */}
+                <div className="space-y-3 pt-4 border-t border-border">
+                  <div>
+                    <Label className="text-sm font-display font-semibold">Redes sociais</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">Os ícones aparecem logo abaixo da bio.</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {SOCIAL_FIELDS.map((f) => (
+                      <div key={f.key} className="relative">
+                        <f.icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          value={settings.socialLinks[f.key]}
+                          onChange={(e) => patchSocial(f.key, e.target.value)}
+                          placeholder={`${f.label}: ${f.placeholder}`}
+                          className="h-9 rounded-xl pl-9 text-sm"
+                          maxLength={120}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+              )}
+
+              {/* No Site o topo é a Capa: o nome e a foto do menu saem dela. */}
+              {settings.layout === "vitrine" && (
+                <p className="text-[11.5px] font-body text-muted-foreground leading-snug px-0.5">
+                  O nome e a foto que aparecem no menu do site saem do <strong className="text-foreground/80">título
+                  da Capa</strong> e da foto do seu perfil. É a primeira seção aqui embaixo.
+                </p>
+              )}
+
               <Card className="p-4 md:p-5 rounded-2xl border-border">
                 <EditorBlocos key={estiloBlocos} estilo={estiloBlocos} aoAplicarAparencia={aplicarAparenciaDoModelo}
-                  slugPublico={slug || profile?.bio_slug} />
+                  slugPublico={slug || profile?.bio_slug} numero={settings.layout === "classic" ? "2" : "1"} />
               </Card>
 
               {settings.layout === "classic" && blocosClassico.length === 0 && sortedLinks.length > 0 && (
@@ -1424,71 +1538,10 @@ const LinkInBio = () => {
 
             {aba === "visual" && (
             <Aba marca="bio-aparencia"
-              explica="Foto, nome, cores e fonte. O que você ajustar aqui vale nos dois estilos: o Clássico e o Site usam a mesma identidade.">
-              {/* ── Perfil (topo) ──────────────────────────────────────────
-                  SÓ NO CLÁSSICO. No Site este card era meio inútil e meio
-                  mentiroso: a bio digitada aqui não ia pra lugar nenhum (quem
-                  conta a história lá é o bloco Sobre) e só o nome e a foto
-                  eram usados, virando a marca no menu. Preencher um campo e
-                  não achar onde ele saiu é o tipo de coisa que faz a pessoa
-                  desconfiar do resto da tela. No Site a marca vem do título da
-                  Capa e da foto do perfil. */}
-              {settings.layout === "classic" && (
-              <Card className="p-4 md:p-5 rounded-2xl border-border space-y-3">
-                <div>
-                  <h2 className="font-display font-semibold text-foreground mb-1">Quem aparece no topo</h2>
-                  <p className="text-xs text-muted-foreground">Foto, nome e bio que abrem a página, nos dois estilos. Deixe em branco pra usar o que já está no seu perfil.</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-16 h-16 rounded-full overflow-hidden border border-border bg-muted shrink-0 flex items-center justify-center">
-                    {(settings.header.avatar || profile?.avatar_url) ? (
-                      <img src={settings.header.avatar || profile?.avatar_url || ""} alt="" loading="lazy" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-muted-foreground font-display font-bold text-xl">{(settings.header.name || profile?.name || "C").charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <input ref={headerInputRef} type="file" accept="image/*" className="hidden" onChange={handleHeaderAvatarUpload} />
-                    <Button type="button" variant="outline" size="sm" disabled={uploadingHeader} onClick={() => headerInputRef.current?.click()}>
-                      <ImagePlus className="h-4 w-4 mr-2" />
-                      {uploadingHeader ? "Enviando..." : "Trocar foto"}
-                    </Button>
-                    {settings.header.avatar && (
-                      <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => patchHeader({ avatar: "" })}>
-                        <Trash2 className="h-4 w-4 mr-2" /> Remover
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <input value={settings.header.name} onChange={(e) => patchHeader({ name: e.target.value })} placeholder={profile?.name || "Seu nome"} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-                <RichTextInput value={settings.header.bio} onChange={(v) => patchHeader({ bio: v })} placeholder={profile?.bio || "Escreva uma bio curta"} rows={3} />
-                {/* Cor do nome e da bio: antes era automática e pronto, e a Gabi
-                    não tinha como clarear o texto sobre uma foto escura. */}
-                <div className="flex items-end gap-3 flex-wrap pt-1">
-                  <ColorField
-                    value={settings.headerColor || "#1A2420"}
-                    onChange={(v) => patchSettings({ headerColor: v })}
-                    label="Cor do nome e da bio"
-                  />
-                  {settings.headerColor && (
-                    <Button type="button" variant="ghost" size="sm" className="h-9"
-                      onClick={() => patchSettings({ headerColor: "" })}>
-                      Voltar à automática
-                    </Button>
-                  )}
-                </div>
-              </Card>
-              )}
-
-              {/* No Site, quem manda no nome e na foto do menu é a Capa e o
-                  perfil. Uma linha explicando é melhor que um card sumido sem
-                  aviso: some a dúvida de "onde eu mudo isso agora?". */}
-              {settings.layout === "vitrine" && (
-                <p className="text-[11.5px] font-body text-muted-foreground leading-snug px-0.5">
-                  O nome e a foto que aparecem no menu do site saem do <strong className="text-foreground/80">título
-                  da Capa</strong> e da foto do seu perfil. Edite a Capa lá no Conteúdo.
-                </p>
-              )}
+              explica="Cores, fonte, fundo e formato dos botões. O conteúdo do topo (foto, nome, banner e redes) mora na aba Conteúdo.">
+              {/* O card de identidade, o banner e as redes MUDARAM pra aba
+                  Conteúdo (01/09): são conteúdo do topo da página, e aqui no
+                  Visual ninguém os achava. Esta aba ficou só com aparência. */}
 
               {/* ── Appearance ─────────────────────────── */}
               <Card className="p-4 md:p-5 rounded-2xl border-border space-y-6">
@@ -1780,55 +1833,6 @@ const LinkInBio = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* REDES SOCIAIS: os ícones do topo são coisa do Clássico.
-                    O Site já tem o Instagram no bloco "Contato e rodapé", e dois
-                    lugares pra guardar o mesmo @ é onde eles começam a
-                    discordar um do outro. */}
-                {settings.layout === "classic" && (
-                <div className="space-y-3 pt-4 border-t border-border">
-                  <Label className="text-sm font-display font-semibold">Redes sociais</Label>
-                  <p className="text-xs text-muted-foreground">Os ícones aparecem no topo da sua página.</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {SOCIAL_FIELDS.map((f) => (
-                      <div key={f.key} className="relative">
-                        <f.icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          value={settings.socialLinks[f.key]}
-                          onChange={(e) => patchSocial(f.key, e.target.value)}
-                          placeholder={`${f.label}: ${f.placeholder}`}
-                          className="h-9 rounded-xl pl-9 text-sm"
-                          maxLength={120}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                )}
-
-                {/* Banner
-                    Só no Clássico: no modo Site quem faz esse papel é o bloco
-                    "Capa", que já tem título e botão junto. Mostrar aqui no
-                    Site seria oferecer um controle que não muda nada na tela. */}
-                {settings.layout === "classic" && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-display font-semibold">Banner</Label>
-                  <p className="text-xs text-muted-foreground -mt-1">Imagem larga no topo da página. Ela fica atrás da sua foto, como capa de perfil, e aparece assim que você envia.</p>
-                  {settings.bannerImage ? (
-                    <div className="relative rounded-xl overflow-hidden border border-border">
-                      <img src={settings.bannerImage} alt="Banner" loading="lazy" className="w-full h-24 object-cover" />
-                      <button type="button" onClick={() => patchSettings({ bannerImage: null })} className="absolute top-1.5 right-1.5 bg-background/90 rounded-full p-1 shadow">
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </button>
-                    </div>
-                  ) : null}
-                  <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
-                  <Button type="button" variant="outline" size="sm" disabled={uploadingBanner} onClick={() => bannerInputRef.current?.click()}>
-                    <ImagePlus className="h-4 w-4 mr-2" />
-                    {uploadingBanner ? "Enviando..." : settings.bannerImage ? "Trocar banner" : "Enviar banner"}
-                  </Button>
-                </div>
-                )}
 
                 {/* "Sobre mim" e "Captura de lead" saíram daqui: os dois viraram
                     BLOCOS (Texto e Captura de contato), montados junto com o resto
