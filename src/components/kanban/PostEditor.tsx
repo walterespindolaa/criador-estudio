@@ -1451,7 +1451,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
             {/* Coluna da direita agora tem largura FIXA (a da prévia): antes era
                2fr e a prévia de 380px boiava no meio dela, deixando faixas
                vazias dos dois lados (pedido do Walter, 31/08: menos margem). */}
-            <div className="mx-auto w-full max-w-3xl lg:max-w-none px-2.5 sm:px-4 py-3 sm:py-4 pb-[calc(3rem+env(safe-area-inset-bottom))] flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_460px] lg:gap-5 lg:items-start">
+            <div className="mx-auto w-full max-w-3xl lg:max-w-none px-2.5 sm:px-4 py-3 sm:py-4 pb-[calc(3rem+env(safe-area-inset-bottom))] lg:grid lg:grid-cols-[minmax(0,1fr)_460px] lg:gap-5 lg:items-start">
 
               {/* COLUNA ESQUERDA: o fluxo numerado (no mobile, a coluna única). */}
               <div className="space-y-4 min-w-0">
@@ -1505,6 +1505,260 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               {/* 2. O CONTEUDO DO POST */}
               <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
                 <BlocoCabecalho numero={1} titulo="O conteúdo do post" subtitulo="Escolha o formato e escreva a estrutura." />
+
+              {/* MIDIA no INICIO do ponto 1 (Walter, 01/09): a coluna da
+                  direita ficou SO com a previa, sempre visivel; a midia abre o
+                  fluxo de criacao e continua retratil (recolhe sozinha quando
+                  o primeiro arquivo chega). */}
+              <div className="rounded-2xl border border-border/70 bg-muted/20 p-3 space-y-2.5">
+                <button type="button" data-tour="editor-midia" onClick={() => setMidiaAberta((v) => !v)}
+                  className="w-full flex items-center gap-2 text-left">
+                  <ImageIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-xs font-display font-semibold text-foreground">Mídia</span>
+                  <span className="text-[11px] font-body text-muted-foreground truncate">
+                    {mediaList.length > 0
+                      ? `· ${mediaList.length} ${mediaList.length === 1 ? "arquivo" : "arquivos"}`
+                      : "· adicionar imagem ou vídeo"}
+                  </span>
+                  <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground ml-auto shrink-0 transition-transform", midiaAberta && "rotate-180")} />
+                </button>
+                {midiaAberta && (<>
+
+                {format !== "carrossel" ? (
+                  <div className="space-y-2">
+                    <div className="rounded-2xl border border-border/60 overflow-hidden bg-muted/10">
+                      {activeUpload ? (
+                        <div className="relative">
+                          <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
+                            <MediaPreparingPlaceholder pct={activeUpload.pct} label="Enviando vídeo..." />
+                          </div>
+                        </div>
+                      ) : mediaList.length > 0 ? (
+                        <div className="relative">
+                          <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
+                            {(() => {
+                              const primary = mediaList[0];
+                              const fileId = primary.external_file_id || primary.id;
+                              const isVideo = primary.file_type?.startsWith("video/");
+                              const isBunny = isVideo && primary.provider === "bunny";
+                              const isSupabaseUpload = !!primary.thumbnail_url
+                                && !primary.thumbnail_url.includes("drive.google")
+                                && !primary.thumbnail_url.includes("lh3.google");
+                              const driveImgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
+                              const imgSrc = primary.thumbnail_url || primary.view_url || driveImgSrc;
+                              return isBunny ? (
+                                <VideoMediaSlot viewUrl={primary.view_url ?? ""} videoGuid={primary.external_file_id} className="w-full h-full border-0" />
+                              ) : isVideo ? (
+                                <a
+                                  href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block w-full h-full relative bg-black group"
+                                >
+                                  <img
+                                    src={driveImgSrc}
+                                    alt={primary.file_name}
+                                    loading="lazy"
+                                    className="w-full h-full object-contain sm:object-cover"
+                                    onError={(e) => {
+                                      const el = e.target as HTMLImageElement;
+                                      el.classList.add("hidden");
+                                      el.nextElementSibling?.classList.remove("hidden");
+                                    }}
+                                  />
+                                  <div className="hidden absolute inset-0 bg-muted flex flex-col items-center justify-center gap-2 px-4 text-center">
+                                    <Video className="h-10 w-10 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground font-body truncate max-w-full">{primary.file_name}</span>
+                                    <span className="inline-flex items-center gap-1 text-[11px] text-primary font-body font-semibold">
+                                      <ExternalLink className="h-3 w-3" /> Abrir no Drive
+                                    </span>
+                                  </div>
+                                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-gradient-to-t from-black/30 to-transparent group-hover:from-black/40 transition-colors">
+                                    <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                      <Play className="h-6 w-6 text-black ml-0.5" fill="currentColor" />
+                                    </div>
+                                  </div>
+                                </a>
+                              ) : (
+                                <img
+                                  src={imgSrc}
+                                  alt={primary.file_name}
+                                  className="w-full h-full object-contain sm:object-cover"
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    const el = e.target as HTMLImageElement;
+                                    if (!isSupabaseUpload) {
+                                      el.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
+                                    } else {
+                                      console.warn("[media] Supabase upload falhou ao carregar", {
+                                        src: el.src,
+                                        fileName: primary.file_name,
+                                        path: primary.external_file_id,
+                                      });
+                                      // Em vez de esconder, manter placeholder visivel para o usuario saber que algo quebrou.
+                                      el.src = "/placeholder.svg";
+                                      el.classList.add("opacity-40");
+                                    }
+                                  }}
+                                />
+                              );
+                            })()}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
+                            <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+                              <div className="flex items-center gap-1 bg-black/40 backdrop-blur rounded-full px-2 py-0.5">
+                                <Cloud className="h-2.5 w-2.5 text-white" />
+                                <span className="text-[9px] text-white font-body truncate max-w-[120px]">{mediaList[0].file_name}</span>
+                              </div>
+                              <button
+                                onClick={() => handleRemoveAllMedia()}
+                                disabled={removingIds.size > 0}
+                                className="bg-black/40 backdrop-blur rounded-full p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <X className="h-3 w-3 text-white" />
+                              </button>
+                            </div>
+                          </div>
+                          {mediaList[0].file_type?.startsWith("video/") && mediaList[0].provider !== "bunny" && (
+                            <a
+                              href={`https://drive.google.com/file/d/${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}/view`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-primary font-body hover:underline mt-2 px-3"
+                            >
+                              <ExternalLink className="h-3 w-3" /> Abrir vídeo no Google Drive
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        /* Estado vazio COMPACTO (Walter, 01/09): botões em linha,
+                           estilo Cria Post, no lugar dos dois quadrados gigantes. */
+                        <div className="flex items-center gap-1.5 flex-wrap p-1.5">
+                          <button
+                            type="button"
+                            onClick={handleDrivePick}
+                            disabled={picking}
+                            className="flex items-center gap-1.5 rounded-xl border border-border bg-card hover:border-primary/40 transition-all px-3 h-9 text-xs font-body text-muted-foreground disabled:opacity-50"
+                          >
+                            <Cloud className="h-4 w-4" />
+                            {picking ? "Abrindo..." : "Google Drive"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={openLocalFilePicker}
+                            disabled={uploadingLocal}
+                            className="flex items-center gap-1.5 rounded-xl border border-border bg-card hover:border-primary/40 transition-all px-3 h-9 text-xs font-body text-muted-foreground disabled:opacity-50"
+                          >
+                            <ImageIcon className="h-4 w-4" />
+                            {uploadingLocal ? "Enviando..." : "Galeria / PC"}
+                          </button>
+                          <span className="text-[10px] text-muted-foreground/60 font-body">
+                            Prefira o Drive; upload direto dura 30 dias.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* CARROSSEL: um lugar só pra TODA a mídia. Sobe várias imagens de
+                     uma vez e reordena arrastando pela barrinha. A ordem da tira é
+                     a ordem dos slides. Nada de mídia por lâmina no carrossel. */
+                  <div className="space-y-2">
+                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                      Imagens do carrossel
+                    </Label>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={handleDrivePick}
+                        disabled={picking}
+                        className="flex items-center gap-1.5 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all px-3 py-2 text-xs font-body text-muted-foreground disabled:opacity-50"
+                      >
+                        <Cloud className="h-4 w-4" />
+                        {picking ? "Abrindo..." : "Google Drive"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={openLocalFilePicker}
+                        disabled={uploadingLocal}
+                        className="flex items-center gap-1.5 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all px-3 py-2 text-xs font-body text-muted-foreground disabled:opacity-50"
+                      >
+                        <ImageIcon className="h-4 w-4" />
+                        {uploadingLocal ? "Enviando..." : "Galeria / PC"}
+                      </button>
+                      {(uploadingLocal || activeUpload) && (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                      {mediaList.length > 0 && (
+                        <span className="ml-auto text-[11px] font-body text-muted-foreground tabular-nums">
+                          {mediaList.length} {mediaList.length === 1 ? "imagem" : "imagens"}
+                        </span>
+                      )}
+                    </div>
+                    {mediaList.length > 0 ? (
+                      <CarouselMediaStrip
+                        media={mediaList}
+                        onReorder={reorderMedia}
+                        onRemove={removeDriveRef}
+                        removingIds={removingIds}
+                      />
+                    ) : (
+                      <p className="text-[11px] font-body text-muted-foreground/70 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-1.5 text-center">
+                        Nenhuma imagem ainda. Suba pelos botões acima.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Link do conteudo final (Drive/Canva/arquivo pronto). */}
+                <div className="space-y-1">
+                  <Input
+                    placeholder="Link do arquivo final OU da pasta (Drive/Canva)"
+                    value={contentLink}
+                    onChange={(e) => setContentLink(e.target.value)}
+                    className="rounded-xl h-9 text-xs bg-card"
+                  />
+                  {contentLink.trim() && /^https?:\/\//i.test(contentLink.trim()) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 mt-1"
+                      onClick={() => window.open(contentLink.trim(), "_blank", "noopener,noreferrer")}
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" /> Abrir conteúdo
+                    </Button>
+                  )}
+                </div>
+
+                </>)}
+
+                {/* Gerador de prompt do Estudio (arte a partir do conteudo real).
+                    RECOLHIDO atras de um botao (Walter, 01/09): os avisos e o
+                    botao de gerar pesavam a tela pra quem ja tem a arte pronta.
+                    Quem precisa de ajuda toca e o estudio abre. */}
+                <div className="pt-1 border-t border-border/50">
+                  {!ajudaArteAberta ? (
+                    <button
+                      type="button"
+                      data-tour="editor-ajuda-arte"
+                      onClick={() => setAjudaArteAberta(true)}
+                      className="w-full h-9 rounded-xl border border-dashed border-primary/40 text-primary text-xs font-body font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-primary/5 transition-colors"
+                    >
+                      <Sparkles className="h-4 w-4" /> Preciso de ajuda com a imagem
+                    </button>
+                  ) : (
+                  <ArtStudio
+                    titulo={title}
+                    formato={format}
+                    sections={sections}
+                    postId={post?.id ?? null}
+                    roteiro={[hook, script, cta].filter(Boolean).join("\n\n")}
+                    onSalvar={(texto) => setNotes((n) => (n ? `${n}\n\n${texto}` : texto))}
+                    onIrParaRoteiro={() => conteudoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                  />
+                  )}
+                </div>
+              </div>
 
                 <div data-tour="editor-plataforma" className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -2389,264 +2643,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
               {/* COLUNA DIREITA (só desktop): a PRÉVIA do post, fixa enquanto rola.
                   No mobile ela não aparece aqui: fica no botão "Prévia" do topo. */}
-              <aside className="order-first lg:order-none w-full mb-4 lg:mb-0 lg:sticky lg:top-3 self-start space-y-4 lg:space-y-0 lg:flex lg:flex-col lg:gap-3 lg:max-h-[calc(100dvh-7.5rem)]">
-              {/* MIDIA no estilo Cria Post (Walter, 01/09): botoes de inserir EM CIMA,
-                    junto da previa, na coluna da direita. No celular este card vem
-                    primeiro, antes do conteudo. */}
-              <div className="rounded-3xl border border-border bg-card p-3 space-y-2.5 lg:shrink-0">
-                <button type="button" data-tour="editor-midia" onClick={() => setMidiaAberta((v) => !v)}
-                  className="w-full flex items-center gap-2 text-left">
-                  <ImageIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <span className="text-xs font-display font-semibold text-foreground">Mídia</span>
-                  <span className="text-[11px] font-body text-muted-foreground truncate">
-                    {mediaList.length > 0
-                      ? `· ${mediaList.length} ${mediaList.length === 1 ? "arquivo" : "arquivos"}`
-                      : "· adicionar imagem ou vídeo"}
-                  </span>
-                  <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground ml-auto shrink-0 transition-transform", midiaAberta && "rotate-180")} />
-                </button>
-                {midiaAberta && (<>
-
-                {format !== "carrossel" ? (
-                  <div className="space-y-2">
-                    <div className="rounded-2xl border border-border/60 overflow-hidden bg-muted/10">
-                      {activeUpload ? (
-                        <div className="relative">
-                          <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
-                            <MediaPreparingPlaceholder pct={activeUpload.pct} label="Enviando vídeo..." />
-                          </div>
-                        </div>
-                      ) : mediaList.length > 0 ? (
-                        <div className="relative">
-                          <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
-                            {(() => {
-                              const primary = mediaList[0];
-                              const fileId = primary.external_file_id || primary.id;
-                              const isVideo = primary.file_type?.startsWith("video/");
-                              const isBunny = isVideo && primary.provider === "bunny";
-                              const isSupabaseUpload = !!primary.thumbnail_url
-                                && !primary.thumbnail_url.includes("drive.google")
-                                && !primary.thumbnail_url.includes("lh3.google");
-                              const driveImgSrc = `https://lh3.googleusercontent.com/d/${encodeURIComponent(fileId)}=w600`;
-                              const imgSrc = primary.thumbnail_url || primary.view_url || driveImgSrc;
-                              return isBunny ? (
-                                <VideoMediaSlot viewUrl={primary.view_url ?? ""} videoGuid={primary.external_file_id} className="w-full h-full border-0" />
-                              ) : isVideo ? (
-                                <a
-                                  href={`https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="block w-full h-full relative bg-black group"
-                                >
-                                  <img
-                                    src={driveImgSrc}
-                                    alt={primary.file_name}
-                                    loading="lazy"
-                                    className="w-full h-full object-contain sm:object-cover"
-                                    onError={(e) => {
-                                      const el = e.target as HTMLImageElement;
-                                      el.classList.add("hidden");
-                                      el.nextElementSibling?.classList.remove("hidden");
-                                    }}
-                                  />
-                                  <div className="hidden absolute inset-0 bg-muted flex flex-col items-center justify-center gap-2 px-4 text-center">
-                                    <Video className="h-10 w-10 text-muted-foreground" />
-                                    <span className="text-xs text-muted-foreground font-body truncate max-w-full">{primary.file_name}</span>
-                                    <span className="inline-flex items-center gap-1 text-[11px] text-primary font-body font-semibold">
-                                      <ExternalLink className="h-3 w-3" /> Abrir no Drive
-                                    </span>
-                                  </div>
-                                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-gradient-to-t from-black/30 to-transparent group-hover:from-black/40 transition-colors">
-                                    <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                                      <Play className="h-6 w-6 text-black ml-0.5" fill="currentColor" />
-                                    </div>
-                                  </div>
-                                </a>
-                              ) : (
-                                <img
-                                  src={imgSrc}
-                                  alt={primary.file_name}
-                                  className="w-full h-full object-contain sm:object-cover"
-                                  loading="lazy"
-                                  onError={(e) => {
-                                    const el = e.target as HTMLImageElement;
-                                    if (!isSupabaseUpload) {
-                                      el.src = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
-                                    } else {
-                                      console.warn("[media] Supabase upload falhou ao carregar", {
-                                        src: el.src,
-                                        fileName: primary.file_name,
-                                        path: primary.external_file_id,
-                                      });
-                                      // Em vez de esconder, manter placeholder visivel para o usuario saber que algo quebrou.
-                                      el.src = "/placeholder.svg";
-                                      el.classList.add("opacity-40");
-                                    }
-                                  }}
-                                />
-                              );
-                            })()}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
-                            <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
-                              <div className="flex items-center gap-1 bg-black/40 backdrop-blur rounded-full px-2 py-0.5">
-                                <Cloud className="h-2.5 w-2.5 text-white" />
-                                <span className="text-[9px] text-white font-body truncate max-w-[120px]">{mediaList[0].file_name}</span>
-                              </div>
-                              <button
-                                onClick={() => handleRemoveAllMedia()}
-                                disabled={removingIds.size > 0}
-                                className="bg-black/40 backdrop-blur rounded-full p-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <X className="h-3 w-3 text-white" />
-                              </button>
-                            </div>
-                          </div>
-                          {mediaList[0].file_type?.startsWith("video/") && mediaList[0].provider !== "bunny" && (
-                            <a
-                              href={`https://drive.google.com/file/d/${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}/view`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs text-primary font-body hover:underline mt-2 px-3"
-                            >
-                              <ExternalLink className="h-3 w-3" /> Abrir vídeo no Google Drive
-                            </a>
-                          )}
-                        </div>
-                      ) : (
-                        /* Estado vazio COMPACTO (Walter, 01/09): botões em linha,
-                           estilo Cria Post, no lugar dos dois quadrados gigantes. */
-                        <div className="flex items-center gap-1.5 flex-wrap p-1.5">
-                          <button
-                            type="button"
-                            onClick={handleDrivePick}
-                            disabled={picking}
-                            className="flex items-center gap-1.5 rounded-xl border border-border bg-card hover:border-primary/40 transition-all px-3 h-9 text-xs font-body text-muted-foreground disabled:opacity-50"
-                          >
-                            <Cloud className="h-4 w-4" />
-                            {picking ? "Abrindo..." : "Google Drive"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={openLocalFilePicker}
-                            disabled={uploadingLocal}
-                            className="flex items-center gap-1.5 rounded-xl border border-border bg-card hover:border-primary/40 transition-all px-3 h-9 text-xs font-body text-muted-foreground disabled:opacity-50"
-                          >
-                            <ImageIcon className="h-4 w-4" />
-                            {uploadingLocal ? "Enviando..." : "Galeria / PC"}
-                          </button>
-                          <span className="text-[10px] text-muted-foreground/60 font-body">
-                            Prefira o Drive; upload direto dura 30 dias.
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  /* CARROSSEL: um lugar só pra TODA a mídia. Sobe várias imagens de
-                     uma vez e reordena arrastando pela barrinha. A ordem da tira é
-                     a ordem dos slides. Nada de mídia por lâmina no carrossel. */
-                  <div className="space-y-2">
-                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                      Imagens do carrossel
-                    </Label>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={handleDrivePick}
-                        disabled={picking}
-                        className="flex items-center gap-1.5 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all px-3 py-2 text-xs font-body text-muted-foreground disabled:opacity-50"
-                      >
-                        <Cloud className="h-4 w-4" />
-                        {picking ? "Abrindo..." : "Google Drive"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={openLocalFilePicker}
-                        disabled={uploadingLocal}
-                        className="flex items-center gap-1.5 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all px-3 py-2 text-xs font-body text-muted-foreground disabled:opacity-50"
-                      >
-                        <ImageIcon className="h-4 w-4" />
-                        {uploadingLocal ? "Enviando..." : "Galeria / PC"}
-                      </button>
-                      {(uploadingLocal || activeUpload) && (
-                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                      )}
-                      {mediaList.length > 0 && (
-                        <span className="ml-auto text-[11px] font-body text-muted-foreground tabular-nums">
-                          {mediaList.length} {mediaList.length === 1 ? "imagem" : "imagens"}
-                        </span>
-                      )}
-                    </div>
-                    {mediaList.length > 0 ? (
-                      <CarouselMediaStrip
-                        media={mediaList}
-                        onReorder={reorderMedia}
-                        onRemove={removeDriveRef}
-                        removingIds={removingIds}
-                      />
-                    ) : (
-                      <p className="text-[11px] font-body text-muted-foreground/70 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-1.5 text-center">
-                        Nenhuma imagem ainda. Suba pelos botões acima.
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Link do conteudo final (Drive/Canva/arquivo pronto). */}
-                <div className="space-y-1">
-                  <Input
-                    placeholder="Link do arquivo final OU da pasta (Drive/Canva)"
-                    value={contentLink}
-                    onChange={(e) => setContentLink(e.target.value)}
-                    className="rounded-xl h-9 text-xs bg-card"
-                  />
-                  {contentLink.trim() && /^https?:\/\//i.test(contentLink.trim()) && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 mt-1"
-                      onClick={() => window.open(contentLink.trim(), "_blank", "noopener,noreferrer")}
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" /> Abrir conteúdo
-                    </Button>
-                  )}
-                </div>
-
-                </>)}
-
-                {/* Gerador de prompt do Estudio (arte a partir do conteudo real).
-                    RECOLHIDO atras de um botao (Walter, 01/09): os avisos e o
-                    botao de gerar pesavam a tela pra quem ja tem a arte pronta.
-                    Quem precisa de ajuda toca e o estudio abre. */}
-                <div className="pt-1 border-t border-border/50">
-                  {!ajudaArteAberta ? (
-                    <button
-                      type="button"
-                      data-tour="editor-ajuda-arte"
-                      onClick={() => setAjudaArteAberta(true)}
-                      className="w-full h-9 rounded-xl border border-dashed border-primary/40 text-primary text-xs font-body font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-primary/5 transition-colors"
-                    >
-                      <Sparkles className="h-4 w-4" /> Preciso de ajuda com a imagem
-                    </button>
-                  ) : (
-                  <ArtStudio
-                    titulo={title}
-                    formato={format}
-                    sections={sections}
-                    postId={post?.id ?? null}
-                    roteiro={[hook, script, cta].filter(Boolean).join("\n\n")}
-                    onSalvar={(texto) => setNotes((n) => (n ? `${n}\n\n${texto}` : texto))}
-                    onIrParaRoteiro={() => conteudoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                  />
-                  )}
-                </div>
-              </div>
+              <aside className="hidden lg:flex lg:flex-col lg:sticky lg:top-3 self-start w-full lg:max-h-[calc(100dvh-7rem)]">
                 {/* A previa continua so no desktop; no celular ela mora no botao "Prévia".
                     flex-1 + rolagem interna: a previa fica SEMPRE na tela (Walter,
                     01/09: "so vejo o preview rolando ate o final"), e e o miolo
                     dela que rola quando o post e comprido. */}
-                <div className="hidden lg:flex lg:flex-col lg:flex-1 lg:min-h-0 w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
+                <div className="flex flex-col flex-1 min-h-0 w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
                   <div className="px-3 py-2 border-b border-border bg-card/50 flex items-center gap-2">
                     <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-xs font-display font-semibold text-foreground">Prévia do post</span>
