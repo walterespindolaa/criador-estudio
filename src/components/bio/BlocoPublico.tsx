@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Check, Copy, MapPin, MessageCircle, Navigation } from "lucide-react";
 import {
-  bool, embedDeVideo, faltaAte, linkAppleMaps, linkGoogleMaps,
+  bool, embedDeSpotify, embedDeVideo, faltaAte, linkAppleMaps, linkGoogleMaps,
   linkSeguro, linkWaze, linkWhatsapp, lista, txt, type DadosBloco,
 } from "@/lib/bioBlocks";
 import { TextoRico } from "@/lib/textoRico";
@@ -193,14 +193,16 @@ function Mapa({ data, visual, onClique }: { data: DadosBloco; visual: VisualBio;
           Enquanto não houver uma chave da API de Mapas configurada, a faixa é
           um convite de um toque, que é o que a pessoa faz no celular de
           qualquer jeito, e nunca aparece quebrada. */}
+      {/* Faixa em CORRENTE (currentColor) + véu escuro: antes ela usava a cor
+         do botão sobre card da mesma cor e sumia inteira (o "mapa não aparece"
+         da Organnah era isto: um retângulo invisível). */}
       {bool(data, "mostrarMapa", true) && (
         <a href={linkGoogleMaps(endereco)} target="_blank" rel="noopener noreferrer" onClick={onClique}
-          className="block relative h-[104px] overflow-hidden"
-          style={{ background: `linear-gradient(135deg, ${visual.buttonColor}1f, ${visual.buttonColor}0a)` }}>
+          className="block relative h-[96px] overflow-hidden bg-black/[.08]">
           <span className="absolute inset-0 grid place-items-center text-center px-4">
             <span>
-              <MapPin className="h-6 w-6 mx-auto mb-1.5" style={{ color: visual.buttonColor }} />
-              <span className="block text-[12px] font-body font-semibold" style={{ color: visual.buttonColor }}>
+              <MapPin className="h-6 w-6 mx-auto mb-1" />
+              <span className="block text-[12px] font-body font-semibold underline underline-offset-2">
                 Ver no mapa
               </span>
             </span>
@@ -293,8 +295,27 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
             className="w-full aspect-[16/9] object-cover" />}
           <div className={foto ? "p-4" : ""}>
             <TituloCartao>{txt(data, "titulo")}</TituloCartao>
-            <TextoRico texto={t} className={cn("text-[14px] leading-relaxed", visual.cardColor ? "opacity-90" : "text-gray-700")} />
+            {/* font-normal + leading-normal (pedidos da Gabi, 31/08): o corpo
+               saía pesado e com entrelinha larga demais, cansando a leitura. */}
+            <TextoRico texto={t} className={cn("text-[14px] font-normal leading-normal", visual.cardColor ? "opacity-90" : "text-gray-700")} />
           </div>
+        </CartaoBase>
+      );
+    }
+
+    case "spotify": {
+      const e = embedDeSpotify(txt(data, "url"));
+      if (!e) return null;
+      return (
+        <CartaoBase visual={visual} className="p-3">
+          <TituloCartao>{txt(data, "titulo")}</TituloCartao>
+          <iframe
+            title={txt(data, "titulo") || "Spotify"}
+            src={e.src}
+            loading="lazy"
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            className={cn("w-full border-0 rounded-xl", e.compacto ? "h-[152px]" : "h-[352px]")}
+          />
         </CartaoBase>
       );
     }

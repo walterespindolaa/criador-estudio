@@ -20,7 +20,7 @@ export type EstiloBio = "classico" | "site";
 
 export type TipoBloco =
   | "link" | "titulo" | "texto" | "video" | "galeria"
-  | "faq" | "contagem" | "whatsapp" | "mapa" | "captura"
+  | "faq" | "contagem" | "whatsapp" | "mapa" | "captura" | "spotify"
   // Só no modo Site: são SEÇÕES de largura cheia, não botões numa coluna.
   | "capa" | "sobre" | "produtos" | "blog" | "depoimentos" | "contato";
 
@@ -91,6 +91,11 @@ export const BLOCOS: MetaBloco[] = [
     tipo: "galeria", nome: "Galeria", Icone: Images,
     explica: "Fotos do trabalho, em grade.",
     padrao: { titulo: "", imagens: [] },
+  },
+  {
+    tipo: "spotify", nome: "Spotify", Icone: PlayCircle,
+    explica: "Playlist, álbum, faixa ou podcast tocando na página.",
+    padrao: { titulo: "", url: "" },
   },
   {
     tipo: "faq", nome: "Perguntas frequentes", Icone: HelpCircle,
@@ -222,6 +227,7 @@ export function resumoDoBloco(b: { kind: string; data: DadosBloco }): string {
     case "whatsapp": return txt(d, "telefone") || "sem telefone ainda";
     case "texto": return txt(d, "texto").slice(0, 60) || (txt(d, "imagem") ? "só a foto" : "sem texto ainda");
     case "video": return txt(d, "url") || "sem vídeo ainda";
+    case "spotify": return txt(d, "url") || "sem link ainda";
     case "galeria": return `${lista(d, "imagens").length} foto(s)`;
     case "faq": return `${lista(d, "itens").length} pergunta(s)`;
     case "contagem": return txt(d, "ate") ? `até ${txt(d, "ate").slice(0, 10).split("-").reverse().join("/")}` : "sem data ainda";
@@ -244,6 +250,7 @@ export function faltaNoBloco(b: { kind: string; data: DadosBloco }): string | nu
     case "link": return txt(d, "url").trim() ? null : "falta o endereço";
     case "whatsapp": return txt(d, "telefone").replace(/\D/g, "").length >= 10 ? null : "falta o telefone";
     case "video": return txt(d, "url").trim() ? null : "falta o link do vídeo";
+    case "spotify": return txt(d, "url").trim() ? null : "falta o link do Spotify";
     case "galeria": return lista(d, "imagens").length ? null : "nenhuma foto";
     case "contagem": return txt(d, "ate").trim() ? null : "falta a data";
     case "mapa": return txt(d, "endereco").trim() ? null : "falta o endereço";
@@ -275,6 +282,18 @@ export function embedDeVideo(url: string): { src: string; alto: boolean } | null
   if (tk) return { src: `https://www.tiktok.com/embed/v2/${tk[1]}`, alto: true };
 
   return null;
+}
+
+/* ── SPOTIFY ──
+   A pessoa cola o link do "Compartilhar" (playlist, álbum, faixa, podcast) e a
+   página toca no player oficial. Faixa e episódio ganham o player baixo. */
+export function embedDeSpotify(url: string): { src: string; compacto: boolean } | null {
+  const m = (url || "").trim().match(/open\.spotify\.com\/(?:intl-[a-z-]+\/)?(playlist|album|track|artist|show|episode)\/([A-Za-z0-9]+)/);
+  if (!m) return null;
+  return {
+    src: `https://open.spotify.com/embed/${m[1]}/${m[2]}`,
+    compacto: m[1] === "track" || m[1] === "episode",
+  };
 }
 
 /* ── MAPA E ROTA ──

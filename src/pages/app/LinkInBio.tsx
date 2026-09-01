@@ -22,6 +22,7 @@ import {
   Youtube,
   Twitter,
   Music2,
+  Facebook,
   Loader2,
   ChevronUp,
   ChevronDown,
@@ -116,6 +117,7 @@ type SocialLinks = {
   tiktok: string;
   youtube: string;
   twitter: string;
+  facebook: string;
 };
 
 type BioSectionId = "banner" | "about" | "links" | "lead";
@@ -224,6 +226,9 @@ export type BioSettings = {
   // o visual antigo. Existe porque o card era fixo e não seguia a identidade.
   cardColor: string;
   cardTextColor: string;
+  // Cor do nome e da bio no topo. Vazio = automática (contraste com o fundo).
+  // Nasceu do pedido da Gabi: "não consigo alterar a cor do título/subtítulo".
+  headerColor: string;
   socialLinks: SocialLinks;
   bannerImage: string | null;
   about: BioAbout;
@@ -248,7 +253,8 @@ const DEFAULT_SETTINGS: BioSettings = {
   buttonTextColor: "#1F2937",
   cardColor: "",
   cardTextColor: "",
-  socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "" },
+  headerColor: "",
+  socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "", facebook: "" },
   bannerImage: null,
   about: { image: null, title: "Sobre mim", text: "" },
   header: { name: "", avatar: "", bio: "" },
@@ -365,6 +371,17 @@ const SOCIAL_FIELDS: {
     icon: Twitter,
     urlBuilder: (h) => `https://twitter.com/${h.replace(/^@/, "")}`,
   },
+  {
+    key: "facebook",
+    label: "Facebook",
+    placeholder: "sua-pagina",
+    icon: Facebook,
+    urlBuilder: (h) => {
+      const v = h.trim();
+      if (/^https?:\/\//.test(v)) return v;
+      return `https://facebook.com/${v.replace(/^@/, "")}`;
+    },
+  },
 ];
 
 function radiusFor(style: ButtonStyle): string {
@@ -406,11 +423,13 @@ function parseSettings(raw: unknown): BioSettings {
       typeof t.buttonTextColor === "string" ? t.buttonTextColor : DEFAULT_SETTINGS.buttonTextColor,
     cardColor: typeof t.cardColor === "string" ? t.cardColor : "",
     cardTextColor: typeof t.cardTextColor === "string" ? t.cardTextColor : "",
+    headerColor: typeof t.headerColor === "string" ? t.headerColor : "",
     socialLinks: {
       instagram: typeof socialRaw.instagram === "string" ? socialRaw.instagram : "",
       tiktok: typeof socialRaw.tiktok === "string" ? socialRaw.tiktok : "",
       youtube: typeof socialRaw.youtube === "string" ? socialRaw.youtube : "",
       twitter: typeof socialRaw.twitter === "string" ? socialRaw.twitter : "",
+      facebook: typeof socialRaw.facebook === "string" ? socialRaw.facebook : "",
     },
     bannerImage: typeof t.bannerImage === "string" && t.bannerImage ? t.bannerImage : null,
     about: {
@@ -1429,6 +1448,21 @@ const LinkInBio = () => {
                 </div>
                 <input value={settings.header.name} onChange={(e) => patchHeader({ name: e.target.value })} placeholder={profile?.name || "Seu nome"} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
                 <RichTextInput value={settings.header.bio} onChange={(v) => patchHeader({ bio: v })} placeholder={profile?.bio || "Escreva uma bio curta"} rows={3} />
+                {/* Cor do nome e da bio: antes era automática e pronto, e a Gabi
+                    não tinha como clarear o texto sobre uma foto escura. */}
+                <div className="flex items-end gap-3 flex-wrap pt-1">
+                  <ColorField
+                    value={settings.headerColor || "#1A2420"}
+                    onChange={(v) => patchSettings({ headerColor: v })}
+                    label="Cor do nome e da bio"
+                  />
+                  {settings.headerColor && (
+                    <Button type="button" variant="ghost" size="sm" className="h-9"
+                      onClick={() => patchSettings({ headerColor: "" })}>
+                      Voltar à automática
+                    </Button>
+                  )}
+                </div>
               </Card>
               )}
 
@@ -2281,22 +2315,14 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
             página pública desenhava como um card arredondado com a foto por
             cima. Duas montagens diferentes pro mesmo lugar: a prévia mostrava
             uma página que não existia, e a foto aparecia cortada. */}
-        <div className="relative z-10 px-5 py-6 flex flex-col items-center min-h-full">
-        {hasSocials && (
-          <div className="order-last flex items-center gap-2.5 mt-5">
-            {SOCIAL_FIELDS.map((f) =>
-              settings.socialLinks[f.key].trim() ? (
-                <div
-                  key={f.key}
-                  className="w-7 h-7 rounded-full bg-white/80 backdrop-blur flex items-center justify-center shadow-sm"
-                  aria-label={f.label}
-                >
-                  <f.icon className="h-3.5 w-3.5 text-gray-900" />
-                </div>
-              ) : null
-            )}
-          </div>
-        )}
+        {/* ARQUITETURA HOPP, igual à página pública: fundo de FOTO ganha uma
+            coluna sólida na cor da marca; fundo de cor segue transparente. */}
+        <div
+          className={`relative z-10 px-5 py-6 flex flex-col items-center min-h-full ${
+            settings.bgType === "image" && settings.bgImage ? "m-2 rounded-[20px] shadow-2xl overflow-hidden min-h-0" : ""
+          }`}
+          style={settings.bgType === "image" && settings.bgImage ? { backgroundColor: settings.bgColor } : undefined}
+        >
 
         {/* Mesmo raio da página pública (rounded-lg): prévia fiel. */}
         {settings.bannerImage && (
@@ -2318,14 +2344,35 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
                 )}
               </div>
             </div>
-            <h3 className="font-display font-extrabold text-[17px] text-gray-900 text-center drop-shadow-sm">
-              {settings.header?.name || profile.name || "Seu nome"}
-            </h3>
-            {(settings.header?.bio || profile.bio) && (
-              <p className="text-[12.5px] leading-relaxed text-gray-800 text-center mt-1.5 whitespace-pre-line font-body drop-shadow-sm">
-                {settings.header?.bio || profile.bio}
-              </p>
-            )}
+            {/* Cor do cabeçalho e ícones ABAIXO da bio: espelho fiel da página
+                pública (estilo Hopp), senão a prévia mente. */}
+            {(() => {
+              const emColuna = settings.bgType === "image" && !!settings.bgImage;
+              const ink = settings.headerColor || (emColuna ? corSobre(settings.bgColor) : "#1A2420");
+              return (
+                <>
+                  <h3 className="font-display font-extrabold text-[17px] text-center drop-shadow-sm" style={{ color: ink }}>
+                    {settings.header?.name || profile.name || "Seu nome"}
+                  </h3>
+                  {(settings.header?.bio || profile.bio) && (
+                    <p className="text-[12.5px] leading-relaxed text-center mt-1.5 whitespace-pre-line font-body drop-shadow-sm opacity-90" style={{ color: ink }}>
+                      {settings.header?.bio || profile.bio}
+                    </p>
+                  )}
+                  {hasSocials && (
+                    <div className="flex items-center gap-1.5 mt-2.5">
+                      {SOCIAL_FIELDS.map((f) =>
+                        settings.socialLinks[f.key].trim() ? (
+                          <div key={f.key} className="w-7 h-7 grid place-items-center" aria-label={f.label} style={{ color: ink }}>
+                            <f.icon className="h-4 w-4" strokeWidth={1.8} />
+                          </div>
+                        ) : null
+                      )}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </>
         )}
 

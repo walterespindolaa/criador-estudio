@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import { MotionConfig, motion } from "framer-motion";
-import { Loader2, Instagram, Youtube, Twitter, Music2 } from "lucide-react";
+import { Loader2, Instagram, Youtube, Twitter, Music2, Facebook } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { isValidEmail, sanitizeUrl } from "@/lib/sanitize";
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
@@ -64,6 +64,7 @@ type SocialLinks = {
   tiktok: string;
   youtube: string;
   twitter: string;
+  facebook: string;
 };
 
 type BioSectionId = "banner" | "about" | "links" | "lead";
@@ -170,6 +171,8 @@ type BioSettings = {
   // Cor dos CARDS (Sobre mim e Captura de lead). Vazio = branco translúcido.
   cardColor: string;
   cardTextColor: string;
+  /** Cor do nome e da frase do topo. Vazio = automático (legível sobre o fundo). */
+  headerColor: string;
   socialLinks: SocialLinks;
   bannerImage: string | null;
   about: BioAbout;
@@ -194,7 +197,8 @@ const DEFAULT_SETTINGS: BioSettings = {
   buttonTextColor: "#1F2937",
   cardColor: "",
   cardTextColor: "",
-  socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "" },
+  headerColor: "",
+  socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "", facebook: "" },
   bannerImage: null,
   about: { image: null, title: "Sobre mim", text: "" },
   header: { name: "", avatar: "", bio: "" },
@@ -250,6 +254,16 @@ const SOCIAL_FIELDS: {
     label: "Twitter / X",
     icon: Twitter,
     urlBuilder: (h) => `https://twitter.com/${h.replace(/^@/, "")}`,
+  },
+  {
+    key: "facebook",
+    label: "Facebook",
+    icon: Facebook,
+    urlBuilder: (h) => {
+      const v = h.trim();
+      if (/^https?:\/\//.test(v)) return v;
+      return `https://facebook.com/${v.replace(/^@/, "")}`;
+    },
   },
 ];
 
@@ -308,11 +322,13 @@ function parseSettings(raw: unknown): BioSettings {
     buttonColor: typeof t.buttonColor === "string" ? t.buttonColor : DEFAULT_SETTINGS.buttonColor,
     buttonTextColor:
       typeof t.buttonTextColor === "string" ? t.buttonTextColor : DEFAULT_SETTINGS.buttonTextColor,
+    headerColor: typeof t.headerColor === "string" ? t.headerColor : "",
     socialLinks: {
       instagram: typeof socialRaw.instagram === "string" ? socialRaw.instagram : "",
       tiktok: typeof socialRaw.tiktok === "string" ? socialRaw.tiktok : "",
       youtube: typeof socialRaw.youtube === "string" ? socialRaw.youtube : "",
       twitter: typeof socialRaw.twitter === "string" ? socialRaw.twitter : "",
+      facebook: typeof socialRaw.facebook === "string" ? socialRaw.facebook : "",
     },
     bannerImage: typeof t.bannerImage === "string" && t.bannerImage ? t.bannerImage : null,
     about: {
@@ -744,7 +760,16 @@ const ConteudoDaBio = () => {
           vazio enorme embaixo, e justify-center num flex que estoura a tela
           corta o topo no Safari. Com margem automática o conteúdo centraliza
           quando cabe e volta a rolar normal quando não cabe. */}
-      <div className="relative z-10 w-full max-w-[520px] my-auto flex flex-col items-center">
+      {/* ARQUITETURA HOPP (referência puxada em 31/08): quando o fundo é FOTO,
+         o conteúdo mora numa COLUNA SÓLIDA na cor da marca (a foto vira moldura
+         nas laterais), em vez de cards soltos boiando sobre a imagem. Fundo de
+         cor/gradiente segue como era: a coluna fica transparente. */}
+      <div
+        className={cn(
+          "relative z-10 w-full max-w-[520px] my-auto flex flex-col items-center",
+          settings.bgType === "image" && settings.bgImage && "rounded-[28px] px-4 sm:px-6 py-8 shadow-2xl overflow-hidden",
+        )}
+        style={settings.bgType === "image" && settings.bgImage ? { backgroundColor: settings.bgColor } : undefined}>
         {/* BANNER = CAPA: fica ATRÁS da foto, como capa de perfil. Antes era um
             card solto no meio dos links e ficava perdido. */}
         {/* Antes o banner só aparecia se a seção "banner" estivesse ligada num
@@ -758,60 +783,6 @@ const ConteudoDaBio = () => {
             <img src={settings.bannerImage} alt="" loading="lazy" className="w-full h-32 sm:h-40 object-cover" />
           </div>
         )}
-        {/* Desktop: floating column of social icons to the left */}
-        {activeSocials.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4 }}
-            className="hidden md:flex absolute -left-16 top-32 flex-col gap-3 z-10"
-          >
-            {activeSocials.map((f) => {
-              const handle = settings.socialLinks[f.key];
-              const href = f.urlBuilder(handle);
-              return (
-                <a
-                  key={f.key}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={f.label}
-                  className="w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center hover:scale-110 transition-transform"
-                >
-                  <f.icon className="h-5 w-5 text-gray-900" />
-                </a>
-              );
-            })}
-          </motion.div>
-        )}
-
-        {/* Mobile: horizontal row above content */}
-        {activeSocials.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="md:hidden flex items-center gap-3 mb-6"
-          >
-            {activeSocials.map((f) => {
-              const handle = settings.socialLinks[f.key];
-              const href = f.urlBuilder(handle);
-              return (
-                <a
-                  key={f.key}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={f.label}
-                  className="w-10 h-10 rounded-full bg-white/85 backdrop-blur flex items-center justify-center shadow-md hover:scale-110 transition-transform"
-                >
-                  <f.icon className="h-4 w-4 text-gray-900" />
-                </a>
-              );
-            })}
-          </motion.div>
-        )}
-
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -835,14 +806,43 @@ const ConteudoDaBio = () => {
               )}
             </div>
           </div>
-          <h1 className="font-display font-extrabold text-xl text-gray-900 text-center drop-shadow-sm">
-            {headerName}
-          </h1>
-          {headerBio && (
-            <p className="text-sm text-gray-800 text-center mt-2 max-w-xs font-body whitespace-pre-line drop-shadow-sm">
-              {renderRichText(headerBio)}
-            </p>
-          )}
+          {/* Cor do cabeçalho: a escolhida pela pessoa, senão a legível sobre a
+             coluna (fundo de foto pinta a coluna com bgColor, então cinza
+             escuro fixo sumia no vinho da Gabi). */}
+          {(() => {
+            const emColuna = settings.bgType === "image" && !!settings.bgImage;
+            const inkAuto = emColuna ? corSobre(settings.bgColor) : "#1A2420";
+            const ink = settings.headerColor || inkAuto;
+            return (
+              <>
+                <h1 className="font-display font-extrabold text-xl text-center drop-shadow-sm" style={{ color: ink }}>
+                  {headerName}
+                </h1>
+                {headerBio && (
+                  <p className="text-sm text-center mt-2 max-w-xs font-body whitespace-pre-line drop-shadow-sm opacity-90" style={{ color: ink }}>
+                    {renderRichText(headerBio)}
+                  </p>
+                )}
+                {/* Redes sociais ABAIXO da bio, estilo Hopp: ícones limpos, sem
+                   bolinha branca, na cor do cabeçalho. Facebook incluído. */}
+                {activeSocials.length > 0 && (
+                  <div className="flex items-center gap-2 mt-3.5">
+                    {activeSocials.map((f) => {
+                      const handle = settings.socialLinks[f.key];
+                      const href = f.urlBuilder(handle);
+                      return (
+                        <a key={f.key} href={href} target="_blank" rel="noopener noreferrer" aria-label={f.label}
+                          className="w-10 h-10 grid place-items-center rounded-xl hover:scale-110 transition-transform"
+                          style={{ color: ink }}>
+                          <f.icon className="h-[22px] w-[22px]" strokeWidth={1.8} />
+                        </a>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </motion.div>
 
         {settings.sections.filter((s) => s.on).map((sec) => {

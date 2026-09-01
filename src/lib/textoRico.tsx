@@ -38,6 +38,11 @@ const MARCAS: { re: RegExp; tag: TagLinha }[] = [
 
 const LINK = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/;
 
+/* Marca que sobrou sem par NUNCA aparece na página: a Gabi abriu um `**` num
+   parágrafo e fechou noutro, e o visitante viu asterisco literal no meio do
+   texto. O par casado já virou <b>/<u> antes de chegar aqui. */
+const limparMarcasOrfas = (s: string) => s.replace(/\*\*|__/g, "");
+
 function pedacos(texto: string, chave: string): ReactNode[] {
   const nos: ReactNode[] = [];
   let resto = texto;
@@ -59,8 +64,8 @@ function pedacos(texto: string, chave: string): ReactNode[] {
       }
     }
 
-    if (!melhor) { nos.push(resto); break; }
-    if (melhor.pos > 0) nos.push(resto.slice(0, melhor.pos));
+    if (!melhor) { nos.push(limparMarcasOrfas(resto)); break; }
+    if (melhor.pos > 0) nos.push(limparMarcasOrfas(resto.slice(0, melhor.pos)));
 
     const k = `${chave}-${i}`; i += 1;
     if (melhor.tag === "a") {
@@ -136,7 +141,8 @@ export function TextoRico({ texto, className }: { texto: string; className?: str
   const blocos = separar(texto);
   if (blocos.length === 0) return null;
   return (
-    <div className={cn("space-y-3", className)}>
+    // space-y-2.5: respiro entre parágrafos sem parecer texto duplo-espaçado.
+    <div className={cn("space-y-2.5", className)}>
       {blocos.map((b, i) => {
         if (b.t === "titulo") {
           return <h3 key={i} className="font-display font-bold text-[1.05em] leading-snug pt-1">{pedacos(b.texto, `t${i}`)}</h3>;

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
 import { Calendar, Copy, GripVertical, ImagePlus, LayoutTemplate, Loader2, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -142,8 +142,39 @@ function EscolherFundo({ valor, onTroca }: { valor: string; onTroca: (v: string)
 
 /* ── O FORMULÁRIO DE CADA TIPO ── */
 function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioBloco; salvar: (d: DadosBloco) => void; slugPublico?: string | null; telefonePadrao?: string | null }) {
-  const d = bloco.data ?? {};
-  const p = (patch: DadosBloco) => salvar({ ...d, ...patch });
+  /* RASCUNHO LOCAL + DEBOUNCE (bug da Gabi, 31/08): antes cada TECLA virava um
+     UPDATE no banco + reescrita do cache + re-render, e o re-render no meio da
+     composição do teclado comia o acento ("ó" virava "oo") e brigava com o
+     campo de horário. Agora quem manda enquanto digita é o estado local; o
+     banco recebe meio segundo depois da última tecla e no desmontar. */
+  const [d, setD] = useState<DadosBloco>(bloco.data ?? {});
+  const dRef = useRef(d);
+  const salvarRef = useRef(salvar);
+  const sujoRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => { dRef.current = d; }, [d]);
+  useEffect(() => { salvarRef.current = salvar; }, [salvar]);
+  // Trocou de bloco: o rascunho re-hidrata do novo.
+  // Só no troca-de-bloco de propósito: re-hidratar a cada volta do banco
+  // recriaria o bug (o dado "velho" do cache atropelando o que se digita).
+  useEffect(() => {
+    setD(bloco.data ?? {});
+    sujoRef.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bloco.id]);
+  // Fechou/desmontou com mudança pendente: salva na hora, nada se perde.
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (sujoRef.current) salvarRef.current(dRef.current);
+  }, []);
+  const p = (patch: DadosBloco) => {
+    const novo = { ...dRef.current, ...patch };
+    dRef.current = novo;
+    setD(novo);
+    sujoRef.current = true;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => { sujoRef.current = false; salvarRef.current(novo); }, 500);
+  };
 
   switch (bloco.kind) {
     case "titulo":
@@ -223,6 +254,20 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioB
             ajuda="Cole o endereço do YouTube, do Reels, do TikTok ou do Vimeo. O vídeo toca dentro da página.">
             <Input value={txt(d, "url")} onChange={(e) => p({ url: e.target.value })}
               placeholder="https://www.instagram.com/reel/..." inputMode="url" className="rounded-xl" />
+          </LinhaCampo>
+        </div>
+      );
+
+    case "spotify":
+      return (
+        <div className="space-y-3.5">
+          <LinhaCampo label="Título (opcional)">
+            <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })} className="rounded-xl" />
+          </LinhaCampo>
+          <LinhaCampo label="Link do Spotify"
+            ajuda="Cole o link da playlist, do álbum, da faixa ou do podcast. O player toca dentro da página.">
+            <Input value={txt(d, "url")} onChange={(e) => p({ url: e.target.value })}
+              placeholder="https://open.spotify.com/playlist/..." inputMode="url" className="rounded-xl" />
           </LinhaCampo>
         </div>
       );
