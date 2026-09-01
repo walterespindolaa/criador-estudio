@@ -2631,7 +2631,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-xs font-display font-semibold text-foreground">Prévia do post</span>
                   </div>
-                  <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
+                  {/* CELULARZINHO, não retângulo gigante (Walter, 01/09: "tá
+                      horrível assim"): a prévia é estreita e centrada, no
+                      tamanho natural de um post, com respiro em volta. Se
+                      passar da altura, rola por dentro sem cortar. */}
+                  <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto p-3 bg-muted/20">
+                  <div className="mx-auto w-full max-w-[290px] rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
                   <PostPreviewContent
                     key={platform}
                     title={title}
@@ -2646,6 +2651,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     mediaType={previewMediaType}
                     sections={sections}
                   />
+                  </div>
                   </div>
                 </div>
               </aside>
