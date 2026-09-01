@@ -1278,14 +1278,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <button
                 type="button"
-                onClick={() => onOpenChange(false)}
-                className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
-                aria-label="Fechar"
-              >
-                <X className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
                 onClick={() => startTour("post-editor")}
                 className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-primary shrink-0"
                 aria-label="Ver tutorial do editor"
@@ -1406,6 +1398,15 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 <Button variant="hero" size="sm" onClick={handleSave} disabled={!title.trim() || saving}>
                   {saving ? "Salvando…" : isNew ? "Criar" : "Salvar"}
                 </Button>
+                {/* O X mora na DIREITA, depois do Salvar (Walter, 01/09). */}
+                <button
+                  type="button"
+                  onClick={() => onOpenChange(false)}
+                  className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
+                  aria-label="Fechar"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
             </div>
 
@@ -2382,7 +2383,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               {/* MIDIA no estilo Cria Post (Walter, 01/09): botoes de inserir EM CIMA,
                     junto da previa, na coluna da direita. No celular este card vem
                     primeiro, antes do conteudo. */}
-              <div className="rounded-3xl border border-border bg-card p-3.5 sm:p-4 space-y-3">
+              <div className="rounded-3xl border border-border bg-card p-3 space-y-2.5">
                 <div className="flex items-center gap-2">
                   <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-xs font-display font-semibold text-foreground">Mídia</span>
@@ -2390,10 +2391,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
                 {format !== "carrossel" ? (
                   <div className="space-y-2">
-                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
-                      Midia
-                    </Label>
-                    <div className="rounded-2xl border-2 border-dashed border-border/50 overflow-hidden bg-muted/20 hover:border-primary/30 transition-colors">
+                    <div className="rounded-2xl border border-border/60 overflow-hidden bg-muted/10">
                       {activeUpload ? (
                         <div className="relative">
                           <div className="aspect-[4/5] relative overflow-hidden max-h-[60vh] sm:max-h-[360px] bg-muted">
@@ -2499,7 +2497,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       ) : (
                         /* Estado vazio COMPACTO (Walter, 01/09): botões em linha,
                            estilo Cria Post, no lugar dos dois quadrados gigantes. */
-                        <div className="flex items-center gap-2 flex-wrap p-2.5">
+                        <div className="flex items-center gap-1.5 flex-wrap p-1.5">
                           <button
                             type="button"
                             onClick={handleDrivePick}
@@ -2569,23 +2567,20 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         removingIds={removingIds}
                       />
                     ) : (
-                      <p className="text-[11px] font-body text-muted-foreground/70 rounded-xl border border-dashed border-border bg-muted/20 p-3 text-center">
-                        Nenhuma imagem ainda. Suba as imagens do carrossel pelos botões acima.
+                      <p className="text-[11px] font-body text-muted-foreground/70 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-1.5 text-center">
+                        Nenhuma imagem ainda. Suba pelos botões acima.
                       </p>
                     )}
                   </div>
                 )}
 
                 {/* Link do conteudo final (Drive/Canva/arquivo pronto). */}
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
-                    <Cloud className="h-3 w-3" /> Link do conteúdo (Drive/Canva)
-                  </Label>
+                <div className="space-y-1">
                   <Input
-                    placeholder="Cole o link do Drive, Canva ou arquivo final..."
+                    placeholder="Link do conteúdo (Drive/Canva)..."
                     value={contentLink}
                     onChange={(e) => setContentLink(e.target.value)}
-                    className="rounded-xl h-10 text-sm bg-card"
+                    className="rounded-xl h-9 text-xs bg-card"
                   />
                   {contentLink.trim() && /^https?:\/\//i.test(contentLink.trim()) && (
                     <Button
@@ -2609,7 +2604,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     <button
                       type="button"
                       onClick={() => setAjudaArteAberta(true)}
-                      className="w-full h-10 rounded-xl border border-dashed border-primary/40 text-primary text-sm font-body font-semibold inline-flex items-center justify-center gap-2 hover:bg-primary/5 transition-colors"
+                      className="w-full h-9 rounded-xl border border-dashed border-primary/40 text-primary text-xs font-body font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-primary/5 transition-colors"
                     >
                       <Sparkles className="h-4 w-4" /> Preciso de ajuda com a imagem
                     </button>
