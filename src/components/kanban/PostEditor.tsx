@@ -1663,7 +1663,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                      uma vez e reordena arrastando pela barrinha. A ordem da tira é
                      a ordem dos slides. Nada de mídia por lâmina no carrossel. */
                   <div className="space-y-2">
-                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                    <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
                       Imagens do carrossel
                     </Label>
                     <div className="flex items-center gap-2 flex-wrap">
@@ -1762,7 +1762,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
                 <div data-tour="editor-plataforma" className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                    <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
                       Plataforma
                     </Label>
                     <Select value={platform} onValueChange={setPlatform}>
@@ -1782,7 +1782,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                    <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
                       Formato
                     </Label>
                     <Select value={format} onValueChange={setFormat}>
@@ -1809,7 +1809,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                      (pedido do Walter, 31/08). */}
 
                   <div data-tour="editor-status" className="space-y-1.5">
-                    <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                    <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
                       Status
                     </Label>
                     <div className="flex flex-wrap gap-1.5">
@@ -1843,7 +1843,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   <div data-tour="editor-agendamento" className="space-y-2">
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                       <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                        <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                        <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
                           Semana
                         </Label>
                         <Select
@@ -1866,7 +1866,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         </Select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
+                        <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75 flex items-center gap-1.5">
                           <Calendar className="h-3 w-3" /> Data
                         </Label>
                         <Input
@@ -1877,7 +1877,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
+                        <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75 flex items-center gap-1.5">
                           <Clock className="h-3 w-3" /> Hora
                         </Label>
                         <Input
@@ -1889,7 +1889,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 flex items-center gap-1.5">
+                      <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75 flex items-center gap-1.5">
                         <LinkIcon className="h-3 w-3" /> Link de referência
                       </Label>
                       <Input
@@ -2301,7 +2301,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         );
                       })()}
                       <div className="min-w-0 flex-1">
-                        <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80 mb-0.5">
+                        <p className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75 mb-0.5">
                           Nota de gancho
                         </p>
                         <p className="text-sm font-body text-foreground">{scoreResult.veredito}</p>
@@ -2318,7 +2318,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
                     {scoreResult.melhorias?.length > 0 && (
                       <div className="space-y-1">
-                        <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                        <p className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
                           Como melhorar
                         </p>
                         <ul className="space-y-1">
@@ -2342,7 +2342,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
                     {scoreResult.variacoes?.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                        <p className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
                           Variações prontas
                         </p>
                         {scoreResult.variacoes.map((v, i) => (
@@ -2408,7 +2408,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 {hashSuggested.length > 0 && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-[11px] uppercase tracking-wider font-display font-semibold text-muted-foreground/80">
+                      <p className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
                         Hashtags sugeridas
                       </p>
                       {hashSelected.length > 0 && (
