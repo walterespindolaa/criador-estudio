@@ -206,7 +206,23 @@ const RootRedirect = () => {
      lateral da área de parceiro. */
   const { data: souParceiro, isLoading: carregandoPapel } = useSouParceiro();
   if (loading || (user && carregandoPapel)) return <LoadingScreen />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    /* RAIZ DESLOGADA vai pro SITE (Walter, 01/09). O motivo imediato: o
+       criaclub.bio redireciona pra cá preservando o caminho, e a Cloudflare
+       não consegue interceptar a raiz (o Lovable manda na borda). Mas a regra
+       vale por si: quem cai na raiz sem sessão é visitante, e visitante entra
+       pela porta da frente. A EXCEÇÃO é o PWA instalado (abre em /?source=pwa
+       ou em janela standalone): esse é usuário do app com sessão vencida, e
+       jogar ele no site de vendas seria um tapa; segue pro login. */
+    const ehPwa =
+      new URLSearchParams(window.location.search).get("source") === "pwa" ||
+      (typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches);
+    if (!ehPwa) {
+      window.location.replace("https://criasocialclub.com.br");
+      return <LoadingScreen />;
+    }
+    return <Navigate to="/login" replace />;
+  }
   return <Navigate to={souParceiro ? "/socialmidia/demandas" : "/app"} replace />;
 };
 
