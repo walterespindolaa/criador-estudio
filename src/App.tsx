@@ -368,6 +368,17 @@ const App = () => (
                 <Route path="equipe" element={<ErrorBoundary><Equipe /></ErrorBoundary>} />
                 <Route path="lixeira" element={<ErrorBoundary><Lixeira /></ErrorBoundary>} />
               </Route>
+              {/* LINK CURTO DA BIO (Walter, 01/09): app.criasocialclub.com.br/bio/nome
+                  ficava gigante na bio do Instagram. Com o apanhador de raiz, a
+                  bio também responde SEM o /bio/ no caminho, e é isso que deixa
+                  um domínio curto (cria.bio.br) apontar direto pro app:
+                  cria.bio.br/gabriela abre a página da Gabriela. Fica por
+                  ÚLTIMO de propósito: toda rota de verdade ganha dele, e um
+                  endereço que não é slug de ninguém cai no "página não existe"
+                  da própria BioPage. */}
+              <Route path="/:slug" element={<ErrorBoundary fallback={<BioQuebrou />}><BioPage /></ErrorBoundary>} />
+              <Route path="/:slug/p/:itemSlug" element={<ErrorBoundary fallback={<BioQuebrou />}><BioPage /></ErrorBoundary>} />
+              <Route path="/:slug/blog/:itemSlug" element={<ErrorBoundary fallback={<BioQuebrou />}><BioPage /></ErrorBoundary>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
