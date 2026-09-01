@@ -429,7 +429,7 @@ const Ideias = () => {
                enxergar o que ainda falta organizar (pedidos do Walter, 31/08). */}
             <div className="flex gap-2.5 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1 items-stretch">
               <button type="button" onClick={() => setActiveFolder(null)}
-                className={cn("shrink-0 w-[150px] rounded-2xl border p-3 text-left transition-all",
+                className={cn("shrink-0 w-[180px] rounded-2xl border p-3 text-left transition-all",
                   !activeFolder ? "border-primary ring-2 ring-primary/20 bg-primary/5" : "border-border bg-card hover:border-primary/40")}>
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted mb-2"><Lightbulb className="h-4 w-4 text-muted-foreground" /></span>
                 <span className="block text-[13px] font-body font-semibold text-foreground leading-tight">Todas</span>
@@ -440,7 +440,7 @@ const Ideias = () => {
                 const ativa = activeFolder === SEM_PASTA;
                 return (
                   <button type="button" onClick={() => setActiveFolder(ativa ? null : SEM_PASTA)}
-                    className={cn("shrink-0 w-[150px] rounded-2xl border p-3 text-left transition-all",
+                    className={cn("shrink-0 w-[180px] rounded-2xl border p-3 text-left transition-all",
                       ativa ? "border-primary ring-2 ring-primary/20 bg-primary/5" : "border-dashed border-border bg-card hover:border-primary/40")}>
                     <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted mb-2"><Folder className="h-4 w-4 text-muted-foreground" /></span>
                     <span className="block text-[13px] font-body font-semibold text-foreground leading-tight">Sem pasta</span>
@@ -453,7 +453,7 @@ const Ideias = () => {
                 const n = contagemPorPasta[f.id] ?? 0;
                 return (
                   <button key={f.id} type="button" onClick={() => setActiveFolder(ativa ? null : f.id)}
-                    className={cn("shrink-0 w-[150px] rounded-2xl border p-3 text-left transition-all",
+                    className={cn("shrink-0 w-[180px] rounded-2xl border p-3 text-left transition-all",
                       ativa ? "ring-2" : "border-border bg-card hover:border-primary/40")}
                     style={ativa ? { borderColor: f.color, backgroundColor: `${f.color}0F`, ["--tw-ring-color" as string]: `${f.color}33` } : undefined}>
                     <span className="grid h-9 w-9 place-items-center rounded-xl mb-2" style={{ backgroundColor: `${f.color}1f` }}>
@@ -465,7 +465,7 @@ const Ideias = () => {
                 );
               })}
               <button type="button" onClick={() => setPastasOpen(true)}
-                className="shrink-0 w-[150px] rounded-2xl border border-dashed border-border p-3 text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors">
+                className="shrink-0 w-[180px] rounded-2xl border border-dashed border-border p-3 text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors">
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted/60 mb-2"><FolderPlus className="h-4 w-4" /></span>
                 <span className="block text-[13px] font-body font-semibold leading-tight">{folders.length > 0 ? "Gerenciar" : "Criar pasta"}</span>
                 <span className="block text-[11px] font-body opacity-70 mt-0.5">nova, renomear...</span>
@@ -478,6 +478,13 @@ const Ideias = () => {
         {selecting && (
           <div className="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-foreground text-background pl-4 pr-2 py-2 shadow-warm-lg">
             <span className="text-xs font-body font-semibold whitespace-nowrap">{selIds.size} {selIds.size === 1 ? "selecionada" : "selecionadas"}</span>
+            {/* Marcar todas as VISÍVEIS (respeita a pasta/filtro aberto): mover
+               uma pasta inteira deixou de ser clique por clique (Walter, 01/09). */}
+            <button type="button"
+              onClick={() => setSelIds(selIds.size === filtered.length ? new Set() : new Set(filtered.map((i) => i.id)))}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-background/40 text-xs font-body font-semibold hover:bg-background/15 whitespace-nowrap">
+              {selIds.size === filtered.length && filtered.length > 0 ? "Desmarcar todas" : "Marcar todas"}
+            </button>
             <Popover>
               <PopoverTrigger asChild>
                 <button type="button" disabled={selIds.size === 0}

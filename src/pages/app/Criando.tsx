@@ -821,9 +821,9 @@ const Criando = () => {
                             <X className="h-3 w-3" />
                           </button>
                         </div>
-                        {/* 1 linha só (line-clamp-1): título em 2 linhas engordava
-                            o card; o title= mostra o texto completo no hover. */}
-                        <p title={post.title} className="font-body font-medium text-sm text-foreground mb-1.5 leading-snug line-clamp-1 pr-14">
+                        {/* 2 linhas (Walter, 01/09): com 1 linha nao dava pra LER o
+                            titulo ("Voce ja..."); o de Cria Post mostra 2 e le-se bem. */}
+                        <p title={post.title} className="font-body font-medium text-sm text-foreground mb-1.5 leading-snug line-clamp-2 pr-14">
                           {showApprovalBadge && (
                             <span
                               className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-bold mr-1 align-middle"
@@ -1300,7 +1300,7 @@ const Criando = () => {
                                 <X className="h-3 w-3" />
                               </button>
                             </div>
-                            <p title={post.title} className="font-body font-medium text-sm text-foreground mb-1.5 leading-snug line-clamp-1 pr-14">
+                            <p title={post.title} className="font-body font-medium text-sm text-foreground mb-1.5 leading-snug line-clamp-2 pr-14">
                               {showApprovalBadge && (
                                 <span
                                   className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-bold mr-1 align-middle"
