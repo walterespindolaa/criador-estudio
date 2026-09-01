@@ -269,7 +269,7 @@ function DragGrip({ className, handleProps }: { className?: string; handleProps?
 
 export default function AgendaCriacao() {
   const navigate = useNavigate();
-  const [weekStart, setWeekStart] = useState(() => mondayOf(parseDateOnly(hojeBR())));
+  const [weekStart, setWeekStart] = useState(() => parseDateOnly(hojeBR()));
   // Visão: semana (padrão) ou mês. O mês usa a MESMA grade arrastável.
   const [view, setView] = useState<"semana" | "mes">(() => {
     try { return (localStorage.getItem("agenda_view") as "semana" | "mes") || "semana"; } catch { return "semana"; }
@@ -347,7 +347,8 @@ export default function AgendaCriacao() {
   // Semana = 7 dias a partir da segunda. Mês = grade completa (segunda a domingo) cobrindo o mês do anchor.
   const days = useMemo(() => {
     if (view === "semana") {
-      return Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d; });
+      const dom = mondayOf(weekStart);
+      return Array.from({ length: 7 }, (_, i) => { const d = new Date(dom); d.setDate(d.getDate() + i); return d; });
     }
     const first = new Date(weekStart.getFullYear(), weekStart.getMonth(), 1);
     const gridStart = mondayOf(first);
@@ -1004,7 +1005,7 @@ export default function AgendaCriacao() {
                   ? weekStart.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
                   : `${shortDate(days[0])}, ${shortDate(days[6])}`}
               </span>
-              <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => setWeekStart(mondayOf(parseDateOnly(hojeBR())))}>Hoje</Button>
+              <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => setWeekStart(parseDateOnly(hojeBR()))}>Hoje</Button>
               <Button variant="outline" size="sm" className="h-8 w-8 p-0"
                 onClick={() => setWeekStart((w) => { const n = new Date(w); view === "mes" ? n.setMonth(n.getMonth() + 1) : n.setDate(n.getDate() + 7); return n; })}>›</Button>
             </div>
