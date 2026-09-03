@@ -2214,6 +2214,7 @@ export type Database = {
           cronograma_id: string
           date: string | null
           description: string | null
+          editorial_line_id: string | null
           id: string
           ref_url: string | null
           sort_order: number
@@ -2230,6 +2231,7 @@ export type Database = {
           cronograma_id: string
           date?: string | null
           description?: string | null
+          editorial_line_id?: string | null
           id?: string
           ref_url?: string | null
           sort_order?: number
@@ -2246,6 +2248,7 @@ export type Database = {
           cronograma_id?: string
           date?: string | null
           description?: string | null
+          editorial_line_id?: string | null
           id?: string
           ref_url?: string | null
           sort_order?: number
@@ -2266,6 +2269,13 @@ export type Database = {
             columns: ["cronograma_id"]
             isOneToOne: false
             referencedRelation: "cronogramas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cronograma_items_editorial_line_id_fkey"
+            columns: ["editorial_line_id"]
+            isOneToOne: false
+            referencedRelation: "editorial_lines"
             referencedColumns: ["id"]
           },
         ]
@@ -2332,6 +2342,47 @@ export type Database = {
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      editorial_lines: {
+        Row: {
+          color: string
+          created_at: string | null
+          descricao: string | null
+          external_client_id: string
+          id: string
+          manager_id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          color?: string
+          created_at?: string | null
+          descricao?: string | null
+          external_client_id: string
+          id?: string
+          manager_id: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          descricao?: string | null
+          external_client_id?: string
+          id?: string
+          manager_id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "editorial_lines_external_client_id_fkey"
+            columns: ["external_client_id"]
+            isOneToOne: false
+            referencedRelation: "external_clients"
             referencedColumns: ["id"]
           },
         ]
@@ -3134,9 +3185,34 @@ export type Database = {
         }
         Relationships: []
       }
+      idea_folders: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ideas: {
         Row: {
           created_at: string | null
+          folder_id: string | null
           id: string
           idea_status: string | null
           notes: string | null
@@ -3150,6 +3226,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          folder_id?: string | null
           id?: string
           idea_status?: string | null
           notes?: string | null
@@ -3163,6 +3240,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          folder_id?: string | null
           id?: string
           idea_status?: string | null
           notes?: string | null
@@ -3175,6 +3253,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ideas_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "idea_folders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ideas_pillar_id_fkey"
             columns: ["pillar_id"]
@@ -3389,42 +3474,54 @@ export type Database = {
         Row: {
           accent: string | null
           audience: Json | null
+          avatar_url: string | null
           bio: string | null
           cities: string | null
           contact: string | null
+          display_name: string | null
+          featured_post_ids: Json | null
           gender: Json | null
           headline: string | null
           link: string | null
           niche: string | null
           services: Json | null
+          show_top_posts: boolean
           updated_at: string | null
           user_id: string
         }
         Insert: {
           accent?: string | null
           audience?: Json | null
+          avatar_url?: string | null
           bio?: string | null
           cities?: string | null
           contact?: string | null
+          display_name?: string | null
+          featured_post_ids?: Json | null
           gender?: Json | null
           headline?: string | null
           link?: string | null
           niche?: string | null
           services?: Json | null
+          show_top_posts?: boolean
           updated_at?: string | null
           user_id: string
         }
         Update: {
           accent?: string | null
           audience?: Json | null
+          avatar_url?: string | null
           bio?: string | null
           cities?: string | null
           contact?: string | null
+          display_name?: string | null
+          featured_post_ids?: Json | null
           gender?: Json | null
           headline?: string | null
           link?: string | null
           niche?: string | null
           services?: Json | null
+          show_top_posts?: boolean
           updated_at?: string | null
           user_id?: string
         }
@@ -3767,6 +3864,72 @@ export type Database = {
           provider?: string
           state?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      parceiro_card_meta: {
+        Row: {
+          checklist: Json
+          etapa_id: string | null
+          member_id: string
+          notas: string | null
+          post_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          checklist?: Json
+          etapa_id?: string | null
+          member_id: string
+          notas?: string | null
+          post_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          checklist?: Json
+          etapa_id?: string | null
+          member_id?: string
+          notas?: string | null
+          post_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parceiro_card_meta_etapa_id_fkey"
+            columns: ["etapa_id"]
+            isOneToOne: false
+            referencedRelation: "parceiro_etapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parceiro_card_meta_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parceiro_etapas: {
+        Row: {
+          created_at: string | null
+          id: string
+          member_id: string
+          nome: string
+          ordem: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          member_id: string
+          nome: string
+          ordem?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          member_id?: string
+          nome?: string
+          ordem?: number
         }
         Relationships: []
       }
@@ -4157,6 +4320,7 @@ export type Database = {
           cta: string | null
           deleted_at: string | null
           drive_folder_url: string | null
+          editorial_line_id: string | null
           external_client_id: string | null
           format: string
           google_event_id: string | null
@@ -4170,6 +4334,8 @@ export type Database = {
           pillar_id: string | null
           platform: string
           prazo_producao: string | null
+          prazo_status: string | null
+          prazo_sugerido: string | null
           producao_status: string | null
           published_at: string | null
           reference_link: string | null
@@ -4206,6 +4372,7 @@ export type Database = {
           cta?: string | null
           deleted_at?: string | null
           drive_folder_url?: string | null
+          editorial_line_id?: string | null
           external_client_id?: string | null
           format: string
           google_event_id?: string | null
@@ -4219,6 +4386,8 @@ export type Database = {
           pillar_id?: string | null
           platform: string
           prazo_producao?: string | null
+          prazo_status?: string | null
+          prazo_sugerido?: string | null
           producao_status?: string | null
           published_at?: string | null
           reference_link?: string | null
@@ -4255,6 +4424,7 @@ export type Database = {
           cta?: string | null
           deleted_at?: string | null
           drive_folder_url?: string | null
+          editorial_line_id?: string | null
           external_client_id?: string | null
           format?: string
           google_event_id?: string | null
@@ -4268,6 +4438,8 @@ export type Database = {
           pillar_id?: string | null
           platform?: string
           prazo_producao?: string | null
+          prazo_status?: string | null
+          prazo_sugerido?: string | null
           producao_status?: string | null
           published_at?: string | null
           reference_link?: string | null
@@ -4288,6 +4460,13 @@ export type Database = {
           week_number?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "posts_editorial_line_id_fkey"
+            columns: ["editorial_line_id"]
+            isOneToOne: false
+            referencedRelation: "editorial_lines"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "posts_external_client_id_fkey"
             columns: ["external_client_id"]
@@ -5335,13 +5514,17 @@ export type Database = {
       }
       structured_goals: {
         Row: {
+          auto_source: string | null
           category: string
+          concluida_em: string | null
           created_at: string | null
           current_value: number | null
           end_date: string | null
+          external_client_id: string | null
           id: string
           observation: string | null
           period: string | null
+          scope: string
           start_date: string | null
           status: string
           target_value: number | null
@@ -5350,13 +5533,17 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          auto_source?: string | null
           category?: string
+          concluida_em?: string | null
           created_at?: string | null
           current_value?: number | null
           end_date?: string | null
+          external_client_id?: string | null
           id?: string
           observation?: string | null
           period?: string | null
+          scope?: string
           start_date?: string | null
           status?: string
           target_value?: number | null
@@ -5365,13 +5552,17 @@ export type Database = {
           user_id: string
         }
         Update: {
+          auto_source?: string | null
           category?: string
+          concluida_em?: string | null
           created_at?: string | null
           current_value?: number | null
           end_date?: string | null
+          external_client_id?: string | null
           id?: string
           observation?: string | null
           period?: string | null
+          scope?: string
           start_date?: string | null
           status?: string
           target_value?: number | null
@@ -5380,6 +5571,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "structured_goals_external_client_id_fkey"
+            columns: ["external_client_id"]
+            isOneToOne: false
+            referencedRelation: "external_clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "structured_goals_user_id_fkey"
             columns: ["user_id"]
@@ -6345,7 +6543,7 @@ export type Database = {
         }[]
       }
       parceiro_marcar: {
-        Args: { _post_id: string; _status: string }
+        Args: { _link?: string; _post_id: string; _status: string }
         Returns: undefined
       }
       parceiro_minha_fila: {
@@ -6363,6 +6561,8 @@ export type Database = {
           plataforma: string
           post_id: string
           prazo_producao: string
+          prazo_status: string
+          prazo_sugerido: string
           producao_status: string
           publica_em: string
           titulo: string
@@ -6378,6 +6578,15 @@ export type Database = {
           meu_papel: string
           vinculo_status: string
         }[]
+      }
+      parceiro_responder_prazo: {
+        Args: {
+          _aceita: boolean
+          _motivo?: string
+          _post_id: string
+          _sugestao?: string
+        }
+        Returns: undefined
       }
       parceiro_tem_o_card: { Args: { _post_id: string }; Returns: boolean }
       portal_mark_viewed: { Args: { _token: string }; Returns: undefined }
@@ -6529,12 +6738,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6558,11 +6767,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6583,11 +6792,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6608,11 +6817,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -6625,11 +6834,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
