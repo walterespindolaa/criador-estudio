@@ -182,8 +182,8 @@ export const TOURS_CRIADOR: TourConfig[] = [
       },
       {
         target: '[data-tour="editor-midia"]',
-        title: "Mídia: a arte mora ao lado da prévia",
-        body: "Aqui entra a imagem ou o vídeo do post: suba do Google Drive ou da galeria, e no carrossel a ordem das imagens é a ordem das lâminas. O campo de link aceita tanto o arquivo final quanto a pasta do Drive/Canva. O que você subir aparece na prévia logo abaixo, do jeito que o seguidor vai ver.",
+        title: "Mídia: a arte abre o post",
+        body: "Aqui entra a imagem ou o vídeo do post: toque pra expandir, suba do Google Drive ou da galeria, e no carrossel a ordem das imagens é a ordem das lâminas. O campo de link aceita tanto o arquivo final quanto a pasta do Drive/Canva. O que você subir aparece na prévia à direita, do jeito que o seguidor vai ver.",
         mobileBody: "Aqui entra a imagem ou o vídeo do post: suba do Google Drive ou da galeria. O campo de link aceita o arquivo final ou a pasta do Drive/Canva.",
         placement: "left",
       },

@@ -873,8 +873,11 @@ REGRA MAIS IMPORTANTE: descubra no brandbook QUEM esta pessoa é (o que ela vend
 PLATAFORMA: ${data.platform || 'instagram'}
 PILAR: ${data.pilar || 'geral'}
 NICHO: ${data.niche || 'lifestyle'}
-Gere 3 posts. Títulos são hooks virais, não títulos de blog.`
-        maxTokens = 600
+Gere 3 posts. Títulos são hooks virais, não títulos de blog.
+RESPONDA APENAS COM O ARRAY JSON. Nenhuma palavra antes ou depois dele.`
+        // 600 cortava o array no meio quando os ângulos vinham descritivos,
+        // e JSON pela metade não parseia (erro do Walter, 01/09).
+        maxTokens = 900
         break
       case 'generate-caption':
         const toneGuide: Record<string, string> = {
