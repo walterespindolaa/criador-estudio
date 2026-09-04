@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, Trash2, Edit2, Sparkles, Loader2, Lightbulb, List, LayoutGrid, Clapperboard, Bookmark, Folder, FolderPlus, Check, X, FolderInput } from "lucide-react";
+import { Plus, Trash2, Edit2, Sparkles, Loader2, Lightbulb, List, LayoutGrid, Clapperboard, Bookmark, Folder, FolderPlus, Check, X, FolderInput, TrendingUp, ChevronDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import {
@@ -56,14 +56,23 @@ interface AISuggestion {
   formato: string;
   angulo: string;
   objetivo: string;
+  // v2 (04/09): sugestão completa. Campos opcionais pra tolerar resposta curta.
+  gancho?: string;
+  estrutura?: string[];
+  cta?: string;
+  porque?: string;
+  referencia_visual?: string;
+  tendencia?: string;
 }
 
-const PLATFORM_PRESETS = [
-  { value: "instagram", label: "Instagram" },
-  { value: "reels", label: "Reels" },
-  { value: "carrossel", label: "Carrossel" },
-  { value: "story", label: "Story" },
-  { value: "youtube", label: "YouTube" },
+/* Antes era "Instagram, Reels, Carrossel, Story, YouTube": misturava rede com
+   formato e ninguém sabia o que "Instagram" gerava. Agora é FORMATO, direto. */
+const FORMATOS_SUGESTAO = [
+  { value: "estatico", label: "Estático", postFormat: "foto", platform: "instagram" },
+  { value: "carrossel", label: "Carrossel", postFormat: "carrossel", platform: "instagram" },
+  { value: "reels", label: "Reels", postFormat: "reels", platform: "instagram" },
+  { value: "story", label: "Story", postFormat: "story", platform: "instagram" },
+  { value: "youtube", label: "YouTube", postFormat: "video", platform: "youtube" },
 ];
 
 const AI_LIMIT = 10;
@@ -88,7 +97,13 @@ function parseSuggestions(result: unknown): AISuggestion[] {
       && typeof (s as AISuggestion).formato === "string"
       && typeof (s as AISuggestion).angulo === "string"
       && typeof (s as AISuggestion).objetivo === "string"
-    );
+    ).map((s) => ({
+      ...s,
+      // "estrutura" pode vir como string única; normaliza pra lista.
+      estrutura: Array.isArray(s.estrutura)
+        ? s.estrutura.filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+        : typeof s.estrutura === "string" ? [s.estrutura] : undefined,
+    }));
   };
 
   if (typeof result !== "string") return valida(result);
@@ -170,9 +185,11 @@ const Ideias = () => {
   const [promotedPost, setPromotedPost] = useState<Post | null>(null);
 
   const [expandedIdeaId, setExpandedIdeaId] = useState<string | null>(null);
-  const [selectedPlatform, setSelectedPlatform] = useState<string>("instagram");
+  const [formatoSugestao, setFormatoSugestao] = useState<string>("reels");
+  const [modoSugestao, setModoSugestao] = useState<"padrao" | "tendencias">("padrao");
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
+  const [sugestaoAberta, setSugestaoAberta] = useState<number | null>(0);
 
   const today = hojeBR();
   const resetAt = profile?.ai_ideas_reset_at ?? today;
@@ -278,7 +295,7 @@ const Ideias = () => {
     }
     setExpandedIdeaId(ideaId);
     setAiSuggestions([]);
-    setSelectedPlatform("instagram");
+    setSugestaoAberta(0);
   };
 
   const handleGenerateSuggestions = async (idea: Idea) => {
@@ -286,9 +303,12 @@ const Ideias = () => {
     setAiSuggestions([]);
     try {
       const pillarName = pillars.find(p => p.id === idea.pillar_id)?.name;
-      const result = await getIdeaSuggestions({
+      const fmt = FORMATOS_SUGESTAO.find((f) => f.value === formatoSugestao) ?? FORMATOS_SUGESTAO[2];
+      const params = {
         ideiaTexto: idea.title,
-        platform: selectedPlatform,
+        platform: fmt.platform,
+        formato: fmt.value,
+        modo: modoSugestao,
         pilar: pillarName,
         objetivo: "engajamento",
         niche: profile?.niche || "lifestyle",
@@ -298,20 +318,14 @@ const Ideias = () => {
         // "contratar um creator". Quem a pessoa é e pra quem ela fala está
         // no brandbook, e é dali que a sugestão tem que partir.
         brandContext: hasBrandContext ? brandContext : undefined,
-      }, user?.id);
+      };
+      const result = await getIdeaSuggestions(params, user?.id);
       let parsed = parseSuggestions(result);
       /* Resposta veio mas sem JSON aproveitável: UMA nova tentativa
          automática antes de incomodar a pessoa (quase sempre a segunda vem
          certa). Conta mais 1 geração, mas errar e largar custa mais caro. */
       if (parsed.length === 0) {
-        const retry = await getIdeaSuggestions({
-          ideiaTexto: idea.title,
-          platform: selectedPlatform,
-          pilar: pillarName,
-          objetivo: "engajamento",
-          niche: profile?.niche || "lifestyle",
-          brandContext: hasBrandContext ? brandContext : undefined,
-        }, user?.id);
+        const retry = await getIdeaSuggestions(params, user?.id);
         parsed = parseSuggestions(retry);
       }
       if (parsed.length === 0) {
@@ -319,6 +333,7 @@ const Ideias = () => {
         return;
       }
       setAiSuggestions(parsed);
+      setSugestaoAberta(0);
     } catch (e) {
       /* Mostra o motivo REAL: antes o "Erro ao gerar sugestões" escondia até
          o limite mensal de gerações, e a pessoa achava que estava quebrado. */
@@ -335,12 +350,26 @@ const Ideias = () => {
 
   const handleCreateFromSuggestion = async (suggestion: AISuggestion, ideaId: string) => {
     try {
+      const fmt = FORMATOS_SUGESTAO.find((f) => f.value === (suggestion.formato || formatoSugestao))
+        ?? FORMATOS_SUGESTAO.find((f) => f.value === formatoSugestao)
+        ?? FORMATOS_SUGESTAO[2];
+      // O post já nasce com o gancho e a estrutura da sugestão no corpo, pra
+      // não perder o trabalho da IA no caminho até o editor.
+      const corpo = [
+        suggestion.gancho ? `Gancho: ${suggestion.gancho}` : "",
+        suggestion.estrutura?.length ? `\nEstrutura:\n${suggestion.estrutura.map((p) => `- ${p}`).join("\n")}` : "",
+        suggestion.cta ? `\nCTA: ${suggestion.cta}` : "",
+        suggestion.referencia_visual ? `\nReferência visual: ${suggestion.referencia_visual}` : "",
+        suggestion.tendencia ? `\nTendência: ${suggestion.tendencia}` : "",
+      ].filter(Boolean).join("\n").trim();
       await createPost.mutateAsync({
         title: suggestion.titulo,
-        format: suggestion.formato,
-        platform: selectedPlatform,
+        format: fmt.postFormat,
+        platform: fmt.platform,
         status: "roteiro",
-      });
+        hook: suggestion.gancho || undefined,
+        content: corpo || undefined,
+      } as never);
       await updateIdea.mutateAsync({
         id: ideaId,
         updates: { idea_status: "em_producao" },
@@ -351,6 +380,176 @@ const Ideias = () => {
     } catch {
       toast.error("Erro ao criar post.");
     }
+  };
+
+  /* PAINEL DE SUGESTÕES (um só pros dois layouts, lista e galeria).
+     Formato direto (estático, carrossel, reels, story, youtube), botão de
+     modo Tendências, e cada sugestão abre com gancho, estrutura, CTA, por que
+     funciona e referência visual. Antes só vinha título + 3 etiquetas. */
+  const renderPainelSugestoes = (idea: Idea, variante: "galeria" | "lista") => {
+    const caixa = variante === "galeria"
+      ? "bg-primary/5 border border-primary/15 rounded-xl p-3 space-y-3"
+      : "bg-primary/5 border-t border-primary/15 px-3 sm:px-4 py-4 space-y-3";
+    return (
+      <div className={caixa}>
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
+          <span className="text-xs font-body font-semibold text-primary">Sugestões de IA</span>
+        </div>
+
+        <div>
+          <p className="text-[10px] font-display font-bold uppercase tracking-wider text-primary/75 mb-1.5">Formato</p>
+          <div className="flex flex-wrap gap-1.5">
+            {FORMATOS_SUGESTAO.map((f) => (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => setFormatoSugestao(f.value)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-body border transition-colors ${
+                  formatoSugestao === f.value
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card border-border text-foreground hover:border-primary/40"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setModoSugestao(modoSugestao === "tendencias" ? "padrao" : "tendencias")}
+          className={`w-full flex items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition-colors ${
+            modoSugestao === "tendencias"
+              ? "border-primary bg-primary/10"
+              : "border-border bg-card hover:border-primary/40"
+          }`}
+          aria-pressed={modoSugestao === "tendencias"}
+        >
+          <span className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${modoSugestao === "tendencias" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+            <TrendingUp className="h-3.5 w-3.5" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-xs font-body font-semibold text-foreground">Tendências desse assunto</span>
+            <span className="block text-[10px] font-body text-muted-foreground leading-snug">
+              Cruza a ideia com o que está quente no seu nicho e devolve direção visual junto.
+            </span>
+          </span>
+          <span className={`ml-auto text-[10px] font-body font-semibold shrink-0 ${modoSugestao === "tendencias" ? "text-primary" : "text-muted-foreground"}`}>
+            {modoSugestao === "tendencias" ? "ligado" : "desligado"}
+          </span>
+        </button>
+
+        <Button
+          size="sm"
+          variant="hero"
+          onClick={() => handleGenerateSuggestions(idea)}
+          disabled={aiLoading}
+          className="w-full"
+        >
+          {aiLoading
+            ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Gerando...</>
+            : <><Sparkles className="h-3.5 w-3.5 mr-1.5" /> {modoSugestao === "tendencias" ? "Gerar com tendências" : "Gerar sugestões"}</>}
+        </Button>
+
+        {aiLoading && (
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="bg-card/60 border border-border rounded-xl p-3 animate-pulse">
+                <div className="h-3 w-3/4 bg-muted rounded mb-2" />
+                <div className="h-3 w-1/2 bg-muted rounded mb-2" />
+                <div className="flex gap-1.5">
+                  <div className="h-3 w-12 bg-muted rounded" />
+                  <div className="h-3 w-16 bg-muted rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!aiLoading && aiSuggestions.length > 0 && (
+          <div className="space-y-2">
+            {aiSuggestions.map((s, i) => {
+              const aberta = sugestaoAberta === i;
+              const temDetalhe = !!(s.gancho || s.estrutura?.length || s.cta || s.porque || s.referencia_visual);
+              return (
+                <motion.div
+                  key={`${idea.id}-${variante}-sug-${i}`}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="bg-card border border-primary/20 rounded-xl p-3 space-y-2"
+                >
+                  <button
+                    type="button"
+                    className="w-full text-left flex items-start gap-2"
+                    onClick={() => setSugestaoAberta(aberta ? null : i)}
+                  >
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-body font-semibold text-foreground leading-snug">{s.titulo}</span>
+                      {s.gancho && (
+                        <span className="block text-xs font-body text-muted-foreground mt-0.5 leading-snug">"{s.gancho}"</span>
+                      )}
+                    </span>
+                    {temDetalhe && (
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 mt-0.5 transition-transform ${aberta ? "rotate-180" : ""}`} />
+                    )}
+                  </button>
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-primary/10 text-primary capitalize">{s.formato}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-secondary/10 text-secondary">{s.angulo}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-muted text-muted-foreground capitalize">{s.objetivo}</span>
+                    {s.tendencia && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-amber-100 text-amber-900 inline-flex items-center gap-1">
+                        <TrendingUp className="h-2.5 w-2.5" /> {s.tendencia}
+                      </span>
+                    )}
+                  </div>
+
+                  {aberta && temDetalhe && (
+                    <div className="space-y-2 pt-1 border-t border-border/60">
+                      {s.estrutura && s.estrutura.length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-display font-bold uppercase tracking-wider text-primary/75 mb-1">Estrutura</p>
+                          <ol className="space-y-1">
+                            {s.estrutura.map((passo, k) => (
+                              <li key={k} className="flex gap-2 text-xs font-body text-foreground leading-snug">
+                                <span className="h-4 w-4 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center shrink-0 mt-px">{k + 1}</span>
+                                <span className="min-w-0">{passo}</span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+                      {s.cta && (
+                        <p className="text-xs font-body text-foreground"><span className="font-semibold text-primary/80">CTA:</span> {s.cta}</p>
+                      )}
+                      {s.porque && (
+                        <p className="text-xs font-body text-muted-foreground leading-snug"><span className="font-semibold text-foreground">Por que funciona:</span> {s.porque}</p>
+                      )}
+                      {s.referencia_visual && (
+                        <p className="text-xs font-body text-muted-foreground leading-snug"><span className="font-semibold text-foreground">Referência visual:</span> {s.referencia_visual}</p>
+                      )}
+                    </div>
+                  )}
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full h-7 text-xs"
+                    onClick={() => handleCreateFromSuggestion(s, idea.id)}
+                    disabled={createPost.isPending}
+                  >
+                    Criar post com essa ideia
+                  </Button>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const filtered = ideas.filter(idea => {
@@ -689,80 +888,7 @@ const Ideias = () => {
                         className="overflow-hidden mt-3"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="bg-primary/5 border border-primary/15 rounded-xl p-3 space-y-3">
-                          <div className="flex items-center gap-2">
-                            <Sparkles className="h-3.5 w-3.5 text-primary" />
-                            <span className="text-xs font-body font-semibold text-primary">Sugestões de IA</span>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {PLATFORM_PRESETS.map(p => (
-                              <button
-                                key={p.value}
-                                onClick={() => setSelectedPlatform(p.value)}
-                                className={`px-2.5 py-1 rounded-lg text-[11px] font-body border transition-colors ${
-                                  selectedPlatform === p.value
-                                    ? "bg-primary text-primary-foreground border-primary"
-                                    : "bg-card border-border text-foreground hover:border-primary/40"
-                                }`}
-                              >
-                                {p.label}
-                              </button>
-                            ))}
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="hero"
-                            onClick={() => handleGenerateSuggestions(idea)}
-                            disabled={aiLoading}
-                            className="w-full"
-                          >
-                            {aiLoading
-                              ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Gerando...</>
-                              : <><Sparkles className="h-3.5 w-3.5 mr-1.5" /> Gerar sugestões</>}
-                          </Button>
-                          {aiLoading && (
-                            <div className="space-y-2">
-                              {[0, 1, 2].map(i => (
-                                <div key={i} className="bg-card/60 border border-border rounded-xl p-3 animate-pulse">
-                                  <div className="h-3 w-3/4 bg-muted rounded mb-2" />
-                                  <div className="flex gap-1.5">
-                                    <div className="h-3 w-12 bg-muted rounded" />
-                                    <div className="h-3 w-16 bg-muted rounded" />
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {!aiLoading && aiSuggestions.length > 0 && (
-                            <div className="space-y-2">
-                              {aiSuggestions.map((s, i) => (
-                                <motion.div
-                                  key={`${idea.id}-gal-sug-${i}`}
-                                  initial={{ opacity: 0, y: 4 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ delay: i * 0.05 }}
-                                  className="bg-card border border-primary/20 rounded-xl p-3 space-y-2"
-                                >
-                                  <p className="text-sm font-body font-medium text-foreground leading-snug">{s.titulo}</p>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-primary/10 text-primary capitalize">{s.formato}</span>
-                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-secondary/10 text-secondary capitalize">{s.angulo}</span>
-                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-muted text-muted-foreground capitalize">{s.objetivo}</span>
-                                  </div>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="w-full h-7 text-xs"
-                                    onClick={() => handleCreateFromSuggestion(s, idea.id)}
-                                    disabled={createPost.isPending}
-                                  >
-                                    Criar post com essa ideia
-                                  </Button>
-                                </motion.div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        {renderPainelSugestoes(idea, "galeria")}
                       </motion.div>
                     </AnimatePresence>
                   )}
@@ -843,93 +969,7 @@ const Ideias = () => {
                       transition={{ duration: 0.25, ease: "easeOut" }}
                       className="overflow-hidden"
                     >
-                      <div className="bg-primary/5 border-t border-primary/15 px-3 sm:px-4 py-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="h-3.5 w-3.5 text-primary" />
-                          <span className="text-xs font-body font-semibold text-primary">Sugestões de IA</span>
-                        </div>
-
-                        <div className="flex flex-wrap gap-1.5">
-                          {PLATFORM_PRESETS.map(p => (
-                            <button
-                              key={p.value}
-                              onClick={() => setSelectedPlatform(p.value)}
-                              className={`px-2.5 py-1 rounded-lg text-[11px] font-body border transition-colors ${
-                                selectedPlatform === p.value
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : "bg-card border-border text-foreground hover:border-primary/40"
-                              }`}
-                            >
-                              {p.label}
-                            </button>
-                          ))}
-                        </div>
-
-                        <Button
-                          size="sm"
-                          variant="hero"
-                          onClick={() => handleGenerateSuggestions(idea)}
-                          disabled={aiLoading}
-                          className="w-full"
-                        >
-                          {aiLoading
-                            ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Gerando...</>
-                            : <><Sparkles className="h-3.5 w-3.5 mr-1.5" /> Gerar sugestões</>}
-                        </Button>
-
-                        {aiLoading && (
-                          <div className="space-y-2">
-                            {[0, 1, 2].map(i => (
-                              <div key={i} className="bg-card/60 border border-border rounded-xl p-3 animate-pulse">
-                                <div className="h-3 w-3/4 bg-muted rounded mb-2" />
-                                <div className="flex gap-1.5">
-                                  <div className="h-3 w-12 bg-muted rounded" />
-                                  <div className="h-3 w-14 bg-muted rounded" />
-                                  <div className="h-3 w-16 bg-muted rounded" />
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {!aiLoading && aiSuggestions.length > 0 && (
-                          <div className="space-y-2">
-                            {aiSuggestions.map((s, i) => (
-                              <motion.div
-                                key={`${idea.id}-sug-${i}`}
-                                initial={{ opacity: 0, y: 4 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.05 }}
-                                className="bg-card border border-primary/20 rounded-xl p-3 space-y-2"
-                              >
-                                <p className="text-sm font-body font-medium text-foreground leading-snug">
-                                  {s.titulo}
-                                </p>
-                                <div className="flex flex-wrap gap-1.5">
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-primary/10 text-primary capitalize">
-                                    {s.formato}
-                                  </span>
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-secondary/10 text-secondary capitalize">
-                                    {s.angulo}
-                                  </span>
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-muted text-muted-foreground capitalize">
-                                    {s.objetivo}
-                                  </span>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="w-full h-7 text-xs"
-                                  onClick={() => handleCreateFromSuggestion(s, idea.id)}
-                                  disabled={createPost.isPending}
-                                >
-                                  Criar post →
-                                </Button>
-                              </motion.div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      {renderPainelSugestoes(idea, "lista")}
                     </motion.div>
                   )}
                 </AnimatePresence>

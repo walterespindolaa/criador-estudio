@@ -195,6 +195,9 @@ export const TOURS_CRIADOR: TourConfig[] = [
       // aparece centralizado, e o texto continua fazendo sentido).
       {
         target: '[data-tour="roteiro-ia"]',
+        // Post de foto/estático não tem escritor de roteiro: o passo é pulado em
+        // vez de segurar a tela com o destaque do passo anterior (Walter, 04/09).
+        skipIfMissing: true,
         title: "Roteiro com IA (e o que está quente)",
         body: "Na aba Roteiro, a IA escreve as páginas ou cenas do post no tom da sua marca. E o botão de amarrar com o que está quente puxa o assunto do momento pro texto: o post fica atual, mas envelhece em algumas semanas. Sem ele, sai atemporal, que serve o ano inteiro.",
         placement: "bottom",

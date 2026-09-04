@@ -32,6 +32,13 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
     { title: "Ideias", url: "/app/ideias", icon: Lightbulb, desc: "Banco de ideias e ganchos" },
     { title: "Tarefas", url: "/app/tarefas", icon: ListTodo, desc: "O que falta pra cada post sair" },
   ]},
+  // Mundo CRIA acima de Planejar (Walter, 04/09), igual ao menu do desktop.
+  { title: "Mundo CRIA", items: [
+    { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, hot: true, desc: "Cronograma do mês com IA" },
+    { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, desc: "Plano de stories da semana" },
+    { title: "Tendências", url: "/app/tendencias", icon: TrendingUp, hot: true, desc: "O que tá bombando no nicho" },
+    { title: "Cria Prompter", url: "/app/prompter", icon: Video, hot: true, desc: "Teleprompter com comando de voz" },
+  ]},
   { title: "Planejar", items: [
     { title: "Meu Feed", url: "/app/feed", icon: Grid3X3, desc: "Prévia do seu feed" },
     // Filtrado na renderização: só aparece quando a conta tem social mídia
@@ -50,13 +57,6 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
     { title: "Link na bio", url: "/app/linkinbio", icon: Link2 },
     { title: "Media Kit", url: "/app/media-kit", icon: IdCard, hot: true, desc: "Seu portfólio pra marcas" },
     { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen },
-  ]},
-  { title: "Mundo CRIA", items: [
-    // Cria Plano e Stories vieram do grupo CRIAR (pedido do Walter, 31/08).
-    { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, hot: true, desc: "Cronograma do mês com IA" },
-    { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, desc: "Plano de stories da semana" },
-    { title: "Tendências", url: "/app/tendencias", icon: TrendingUp, hot: true, desc: "O que tá bombando no nicho" },
-    { title: "Cria Prompter", url: "/app/prompter", icon: Video, hot: true, desc: "Teleprompter com comando de voz" },
   ]},
   { title: "Aprender", items: [
     { title: "Cursos", url: "/app/aprender", icon: GraduationCap },

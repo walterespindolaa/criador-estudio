@@ -121,18 +121,21 @@ export function FeedGrid({ posts, pillars, thumbnails, igPosts = [], onRemove }:
               className="aspect-[4/5] relative overflow-hidden bg-muted block"
               aria-label="Post publicado no Instagram"
             >
-              {ig.thumb ? (
+              {/* Placeholder fica POR BAIXO da imagem: se o link da capa
+                  expirou (CDN da Meta), a img some e o icone aparece, em vez
+                  de um quadrado vazio. */}
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-muted/60">
+                <Instagram className="h-6 w-6 text-muted-foreground/50" strokeWidth={1.5} />
+              </div>
+              {ig.thumb && (
                 <img
                   src={ig.thumb}
                   alt=""
                   className="absolute inset-0 w-full h-full object-cover"
                   loading="lazy"
+                  referrerPolicy="no-referrer"
                   onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                 />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-muted/60">
-                  <Instagram className="h-6 w-6 text-muted-foreground/50" strokeWidth={1.5} />
-                </div>
               )}
               {(ig.mediaType === "VIDEO" || ig.mediaType === "REELS") && (
                 <span className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-foreground/55 text-white flex items-center justify-center">

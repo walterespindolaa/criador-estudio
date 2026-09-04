@@ -69,6 +69,17 @@ const groups = [
     ],
   },
   {
+    // Mundo CRIA subiu pra logo depois de Criar (Walter, 04/09): as ferramentas
+    // com cara de produto ficam na mao, antes do planejamento.
+    label: "Mundo CRIA",
+    items: [
+      { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, feature: "cria-plano" },
+      { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, feature: "stories" },
+      { title: "Tendências", url: "/app/tendencias", icon: TrendingUp, feature: "tendencias" },
+      { title: "Cria Prompter", url: "/app/prompter", icon: Video, feature: "prompter" },
+    ],
+  },
+  {
     label: "Planejar",
     items: [
       { title: "Meu Feed", url: "/app/feed", icon: Grid3X3, feature: "feed" },
@@ -96,17 +107,6 @@ const groups = [
       { title: "Link in Bio", url: "/app/linkinbio", icon: Link2 },
       { title: "Media Kit", url: "/app/media-kit", icon: IdCard, feature: "media-kit" },
       { title: "Biblioteca", url: "/app/biblioteca", icon: BookOpen, feature: "biblioteca" },
-    ],
-  },
-  {
-    label: "Mundo CRIA",
-    items: [
-      // Cria Plano e Cria Stories moraram no CRIAR até 31/08; o Walter achou
-      // que combinam mais com o Mundo CRIA (as ferramentas com cara de produto).
-      { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, feature: "cria-plano" },
-      { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, feature: "stories" },
-      { title: "Tendências", url: "/app/tendencias", icon: TrendingUp, feature: "tendencias" },
-      { title: "Cria Prompter", url: "/app/prompter", icon: Video, feature: "prompter" },
     ],
   },
   {

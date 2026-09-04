@@ -835,50 +835,82 @@ REGRAS DE COMPORTAMENTO:
         userPrompt = `Posts esta semana: ${data.postsThisWeek}, Meta semanal: ${data.weeklyGoal}, Pilar mais postado: ${data.topPillar}, Último post publicado: ${data.lastPublished || 'nunca'}`
         maxTokens = 60
         break
-      case 'idea-suggestions':
-        operationPrompt = `Você é um estrategista de conteúdo especialista em redes sociais brasileiras. Gere EXATAMENTE 3 posts prontos para executar.
+      case 'idea-suggestions': {
+        /* v2 (Walter, 04/09: "as sugestões estão genéricas demais"). O que mudou:
+           1. A pessoa escolhe o FORMATO (estático, carrossel, reels, story,
+              youtube), e cada formato tem regra de construção própria.
+           2. Modo TENDÊNCIAS: cruza a ideia com o banco de tendências do nicho
+              (content_trends) e devolve uma ideia mais profunda, amarrada ao
+              que está quente, com direção visual (moodboard em texto).
+           3. Cada sugestão vem COMPLETA: gancho literal, estrutura passo a
+              passo, CTA, por que funciona pra ESSA persona e referência visual.
+           4. Modelo mais forte e temperatura criativa (ver a chamada abaixo). */
+        const formatoPedido = String(data.formato || data.platform || 'reels').toLowerCase()
+        const REGRAS_FORMATO: Record<string, string> = {
+          estatico: 'POST ESTÁTICO (1 imagem): a headline na arte é o hook; a legenda desenvolve em 3 a 5 parágrafos curtos com uma virada no meio e CTA no fim. "estrutura" = [headline da arte, abertura da legenda, desenvolvimento, virada, CTA].',
+          carrossel: 'CARROSSEL (6 a 8 lâminas): lâmina 1 = hook que obriga a arrastar; cada lâmina seguinte com UMA ideia só, em frase curta; penúltima = síntese; última = CTA. "estrutura" = uma string por lâmina, começando com "L1:", "L2:"...',
+          reels: 'REELS (30 a 45s, vertical): os 2 primeiros segundos são o gancho falado + texto na tela; 3 a 5 cenas com fala e ação visual; final com CTA falado. "estrutura" = uma string por cena, com fala entre aspas e a ação visual entre colchetes.',
+          story: 'SEQUÊNCIA DE STORIES (4 a 6 telas): tela 1 prende com pergunta ou afirmação forte; use enquete, caixinha ou quiz em pelo menos 1 tela; a última tela pede resposta ou clique. "estrutura" = uma string por tela, começando com "T1:", "T2:"... e dizendo qual sticker usar.',
+          youtube: 'VÍDEO DE YOUTUBE (6 a 12 min): título com promessa clara + curiosidade; roteiro em blocos: gancho (0 a 30s), contexto, 3 a 5 blocos de conteúdo com exemplo real em cada, fechamento com próximo passo. "estrutura" = uma string por bloco, com a minutagem aproximada.',
+        }
+        const regraFormato = REGRAS_FORMATO[formatoPedido] ?? REGRAS_FORMATO.reels
+        const modoTendencias = data.modo === 'tendencias'
 
-FRAMEWORK DE PILARES DE CONTEÚDO:
-Cada sugestão deve cobrir um pilar diferente:
-1. EDUCACIONAL (40% do mix). How-tos, dicas, frameworks, erros comuns
-2. BASTIDORES (20%). Processo, rotina, dia-a-dia, vulnerabilidade
-3. ENGAJAMENTO (15%). Perguntas, debates, polêmicas leves, "qual você prefere?"
-4. PROVA SOCIAL (15%). Resultados, transformações, antes/depois, depoimentos
-5. PROMOCIONAL (10%). Produtos, serviços, ofertas, CTAs diretos
+        // Banco de tendências do nicho (tabela content_trends, alimentada pelo
+        // robô de tendências). Só no modo tendências, pra não gastar tokens à toa.
+        let blocoTendencias = ''
+        if (modoTendencias) {
+          try {
+            const nicho = String(data.niche || 'geral')
+            const { data: tr } = await supabase.from('content_trends')
+              .select('kind,title,description,niche')
+              .or(`niche.eq.${nicho},niche.eq.geral`)
+              .order('created_at', { ascending: false })
+              .limit(14)
+            const lista = (tr ?? []) as Array<{ kind: string; title: string; description: string | null; niche: string | null }>
+            if (lista.length) {
+              blocoTendencias = `\n\nTENDÊNCIAS DO MOMENTO (banco do CRIA, nicho ${nicho}):\n` +
+                lista.map((t) => `- [${t.kind}] ${t.title}${t.description ? `: ${t.description}` : ''}`).join('\n') +
+                `\n\nMODO TENDÊNCIAS: cada sugestão PRECISA se apoiar em UMA tendência acima (nomeie em "tendencia"), cruzando com a ideia da pessoa. Não copie a tendência: traduza pro universo e pra persona dela. Vá mais fundo que o normal: o "porque" explica o encontro entre a tendência e a dor da persona; a "referencia_visual" descreve um moodboard (cena, luz, enquadramento, cores e tipografia do brandbook, textura, ritmo de corte) que a pessoa consiga reproduzir com celular.`
+            } else {
+              blocoTendencias = `\n\nMODO TENDÊNCIAS: o banco de tendências está vazio pra este nicho. Use o que você sabe de formatos e assuntos em alta nas redes brasileiras em 2026 e nomeie a tendência escolhida em "tendencia".`
+            }
+          } catch (e) {
+            console.warn('idea-suggestions: tendências indisponíveis', String(e))
+          }
+        }
 
-FÓRMULAS DE HOOK POR PLATAFORMA:
-Instagram/Reels: "Save isso pra depois", "Testei [X] por [tempo]. Resultado:", "POV: você acabou de descobrir [benefício]", "O que [público] erra sobre [tema]:", "Meu processo exato pra [resultado]:"
-TikTok: "Espera, você ainda faz [jeito antigo]?", "O hack de [tema] que ninguém te mostrou", "Se você é [público], assiste isso", "Story time: [setup intrigante]"
-YouTube: "Tutorial completo:", "[número] erros que estão travando seu [tema]", "Testei por [tempo], vale a pena?"
+        operationPrompt = `Você é um diretor criativo sênior de conteúdo para redes sociais brasileiras. Sua marca registrada: ideias ESPECÍFICAS, com cena, número, nome de coisa, exemplo real. Nada de "dicas de X" ou "a importância de Y".
 
-REGRAS:
-- Títulos são HOOKS, a primeira coisa que a pessoa lê/ouve. Máximo 70 caracteres.
-- Cada sugestão com ângulo editorial DIFERENTE: tutorial, bastidor, opinião, storytelling, lista, antes/depois, mito vs verdade, trend adaptada
-- Formatos: varie entre reels, carrossel, foto, video, story, shorts
-- Objetivos: engajamento, autoridade, venda, relacionamento, varie entre as 3
-- Linguagem de rede social BR: informal, direta, como amigo falando
-- NUNCA use títulos genéricos como "Reflexão sobre X" ou "Dicas de X"
+O QUE TORNA UMA SUGESTÃO BOA (critério de aprovação):
+- Passa no teste do "só essa pessoa poderia postar isso": usa a profissão, o produto, a história e a persona do brandbook.
+- O gancho gera uma pergunta na cabeça de quem lê em 2 segundos (curiosidade, contradição, promessa concreta, confissão).
+- Tem um ângulo claro e diferente entre as 3: contra-intuitivo, bastidor com número, erro que custa caro, antes/depois, mito vs realidade, passo a passo com exemplo, opinião impopular.
+- A estrutura já é quase o roteiro: quem ler consegue gravar ou diagramar sem pensar mais.
+- Fala como gente, em português do Brasil, sem jargão de marketing.
 
-FORMATO JSON (APENAS o array, sem texto):
-[{"titulo":"max 70 chars","formato":"reels|carrossel|foto|video|story","angulo":"descritivo e específico","objetivo":"engajamento|autoridade|venda|relacionamento"}]
-
-EXEMPLO para "rotina matinal":
-[{"titulo":"Minha rotina antes de abrir o Instagram mudou tudo","formato":"reels","angulo":"bastidor com storytelling pessoal","objetivo":"relacionamento"},{"titulo":"5 coisas que faço antes das 8h que triplicaram meu engajamento","formato":"carrossel","angulo":"lista prática com resultados","objetivo":"autoridade"},{"titulo":"Sua rotina matinal tá sabotando seu conteúdo. Veja porquê.","formato":"story","angulo":"opinião provocativa com dica","objetivo":"engajamento"}]${data.brandContext ? `
+FORMATO ESCOLHIDO PELA PESSOA: ${formatoPedido}.
+${regraFormato}
+TODAS as 3 sugestões são nesse formato; o que muda entre elas é o ÂNGULO e o OBJETIVO (engajamento, autoridade, venda ou relacionamento, sem repetir).${blocoTendencias}${data.brandContext ? `
 
 BRANDBOOK DA PESSOA (fonte da verdade, leia ANTES de sugerir):
 ${data.brandContext}
 
-REGRA MAIS IMPORTANTE: descubra no brandbook QUEM esta pessoa é (o que ela vende, qual serviço presta) e PRA QUEM ela fala (a persona dela). As 3 sugestões falam COM essa persona, na posição profissional DELA. NÃO assuma que ela é "creator de conteúdo" genérico: se o brandbook diz que ela é social media, nutricionista ou advogada, o conteúdo é sobre O SERVIÇO DELA pro PÚBLICO DELA. Sugestão que contradiz o brandbook está errada.` : ''}`
-        userPrompt = `IDEIA: "${data.ideiaTexto || 'conteúdo geral'}"
-PLATAFORMA: ${data.platform || 'instagram'}
+REGRA MAIS IMPORTANTE: descubra no brandbook QUEM esta pessoa é (o que ela vende, qual serviço presta) e PRA QUEM ela fala (a persona dela). As 3 sugestões falam COM essa persona, na posição profissional DELA. Se o brandbook diz que ela é social media, nutricionista ou advogada, o conteúdo é sobre O SERVIÇO DELA pro PÚBLICO DELA. Sugestão que contradiz o brandbook está errada.` : ''}
+
+RESPONDA APENAS COM UM ARRAY JSON de 3 objetos, com estes campos (todos em português, sem markdown):
+[{"titulo":"o hook, máximo 70 caracteres","gancho":"a PRIMEIRA frase literal (falada ou escrita), máximo 140 caracteres","formato":"${formatoPedido}","angulo":"ângulo editorial específico, 3 a 8 palavras","objetivo":"engajamento|autoridade|venda|relacionamento","estrutura":["passo/lâmina/cena 1","passo 2","..."],"cta":"o pedido final, literal","porque":"1 frase: por que isso funciona pra ESSA persona","referencia_visual":"direção de arte em 1 ou 2 frases: cena, enquadramento, cores/tipografia do brandbook","tendencia":"nome da tendência usada, ou string vazia"}]`
+        userPrompt = `IDEIA CRUA DA PESSOA: "${data.ideiaTexto || 'conteúdo geral'}"
+FORMATO: ${formatoPedido}
 PILAR: ${data.pilar || 'geral'}
 NICHO: ${data.niche || 'lifestyle'}
-Gere 3 posts. Títulos são hooks virais, não títulos de blog.
+${modoTendencias ? 'MODO: tendências (cruze a ideia com o que está quente).' : 'MODO: padrão.'}
+Gere 3 sugestões completas. Seja específico: cena, número, exemplo. Zero genérico.
 RESPONDA APENAS COM O ARRAY JSON. Nenhuma palavra antes ou depois dele.`
-        // 600 cortava o array no meio quando os ângulos vinham descritivos,
-        // e JSON pela metade não parseia (erro do Walter, 01/09).
-        maxTokens = 900
+        // Sugestão completa (estrutura + moodboard) x3 não cabe em 900 tokens.
+        maxTokens = 2600
         break
+      }
       case 'generate-caption':
         const toneGuide: Record<string, string> = {
           descontraido: 'Casual, como conversa entre amigos. Usa gírias leves. Frases curtas.',
@@ -1418,13 +1450,16 @@ ${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA AGORA (use de verdade
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
+        // Sugestões de post são CRIAÇÃO, não leitura: o -lite a 0.2 devolvia
+        // "dicas de X" genéricas (Walter, 04/09). Modelo cheio + temperatura
+        // alta só nessa operação; o resto continua barato e previsível.
+        model: operation === 'idea-suggestions' ? 'google/gemini-2.5-flash' : 'google/gemini-2.5-flash-lite',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
         max_tokens: maxTokens,
-        temperature: operation === 'daily-insight' ? 0.7 : 0.2,
+        temperature: operation === 'daily-insight' ? 0.7 : operation === 'idea-suggestions' ? 0.85 : 0.2,
       }),
     })
 

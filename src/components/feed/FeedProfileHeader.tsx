@@ -39,7 +39,20 @@ export function FeedProfileHeader({ profile, postCount, ig, onEdit }: Props) {
         <div className="flex items-center gap-6">
           <div className="w-20 h-20 rounded-full ring-[3px] ring-primary/30 ring-offset-2 ring-offset-background overflow-hidden shrink-0">
             {avatar ? (
-              <img src={avatar} alt="" className="w-full h-full object-cover" loading="lazy" />
+              <img
+                src={avatar}
+                alt=""
+                className="w-full h-full object-cover"
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                // Link do CDN da Meta expirado: cai pra foto do perfil do CRIA
+                // em vez de mostrar o icone de imagem quebrada.
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if (profile?.avatar_url && img.src !== profile.avatar_url) img.src = profile.avatar_url;
+                  else img.style.display = "none";
+                }}
+              />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
                 <span className="text-2xl font-display font-bold text-white">{initial}</span>

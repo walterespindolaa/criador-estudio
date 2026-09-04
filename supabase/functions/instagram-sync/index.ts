@@ -121,9 +121,31 @@ async function syncConnection(
     dailyRow as never,
     { onConflict: 'user_id,crm_client_id,provider,date' },
   );
+  // Foto de perfil: mesmo problema das capas (link do CDN da Meta expira em
+  // dias e o Meu Feed ficava com o avatar quebrado). Baixa e guarda no Storage;
+  // se falhar, fica a URL da Meta mesmo.
+  let fotoPerfil: string | null = (me.profile_picture_url as string) ?? null;
+  if (fotoPerfil) {
+    try {
+      const r = await fetch(fotoPerfil);
+      const tipo = r.headers.get('content-type') ?? 'image/jpeg';
+      if (r.ok && tipo.startsWith('image/')) {
+        const bytes = new Uint8Array(await r.arrayBuffer());
+        const pasta = crmClientId ? `${userId}/c-${crmClientId}` : userId;
+        const caminho = `${pasta}/perfil.jpg`;
+        const { error: upErr } = await admin.storage.from('ig-thumbs')
+          .upload(caminho, bytes, { contentType: tipo, upsert: true, cacheControl: '86400' });
+        if (!upErr) {
+          const host = (Deno.env.get('SUPABASE_URL') ?? '').replace(/\/$/, '');
+          // ?v= evita o navegador segurar a foto antiga depois de um sync novo.
+          fotoPerfil = `${host}/storage/v1/object/public/ig-thumbs/${caminho}?v=${Date.now()}`;
+        }
+      }
+    } catch (e) { console.warn('[instagram-sync] foto de perfil nao cacheada', String(e)); }
+  }
   await admin.from('social_connections').update({
     username: me.username ?? null, account_type: me.account_type ?? null,
-    profile_picture_url: me.profile_picture_url ?? null, updated_at: new Date().toISOString(),
+    profile_picture_url: fotoPerfil, updated_at: new Date().toISOString(),
   } as never).eq('id', conn.id);
 
   // 1b) DEMOGRAFIA DE AUDIÊNCIA (follower_demographics / engaged_audience_demographics).
@@ -234,6 +256,52 @@ async function syncConnection(
     const rows = await Promise.all(chunk.map((it) => buildRow(it).catch(() => null)));
     for (const r of rows) if (r) built.push(r);
   }
+  // CAPAS PERMANENTES (Walter, 04/09: "os reels do media kit ficam só com cor").
+  // A thumbnail_url que a Meta devolve é um link do CDN dela que EXPIRA em
+  // poucos dias; depois disso a <img> falha e o card fica sem capa. Aqui a
+  // gente baixa a capa uma vez e guarda no Storage (bucket público ig-thumbs),
+  // gravando a URL nossa no lugar. Quem já está no nosso Storage não baixa de
+  // novo. Falhou o download? Fica a URL da Meta mesmo (melhor do que nada).
+  const supaHost = (Deno.env.get('SUPABASE_URL') ?? '').replace(/\/$/, '');
+  const jaNossa = (u: unknown) => typeof u === 'string' && u.startsWith(`${supaHost}/storage/v1/object/public/ig-thumbs/`);
+  const idsMidias = built.map((r) => String(r.object_id));
+  const jaCacheadas = new Map<string, string>();
+  if (idsMidias.length) {
+    const { data: antigas } = await admin.from('social_insights')
+      .select('object_id,thumbnail_url')
+      .eq('user_id', userId).eq('provider', 'instagram').eq('object_type', 'media')
+      .in('object_id', idsMidias);
+    for (const a of (antigas ?? []) as Array<{ object_id: string; thumbnail_url: string | null }>) {
+      if (jaNossa(a.thumbnail_url)) jaCacheadas.set(a.object_id, a.thumbnail_url as string);
+    }
+  }
+  const cacheiaCapa = async (row: Record<string, unknown>) => {
+    const id = String(row.object_id);
+    const pronta = jaCacheadas.get(id);
+    if (pronta) { row.thumbnail_url = pronta; return; }
+    const origem = row.thumbnail_url;
+    if (typeof origem !== 'string' || !origem) return;
+    try {
+      const r = await fetch(origem);
+      if (!r.ok) return;
+      const tipo = r.headers.get('content-type') ?? 'image/jpeg';
+      if (!tipo.startsWith('image/')) return; // vídeo sem thumbnail: não guardamos mp4
+      const bytes = new Uint8Array(await r.arrayBuffer());
+      if (!bytes.length || bytes.length > 4 * 1024 * 1024) return;
+      const pasta = crmClientId ? `${userId}/c-${crmClientId}` : userId;
+      const caminho = `${pasta}/${id}.jpg`;
+      const { error: upErr } = await admin.storage.from('ig-thumbs')
+        .upload(caminho, bytes, { contentType: tipo, upsert: true, cacheControl: '31536000' });
+      if (upErr) { console.warn('[instagram-sync] capa nao cacheada', id, upErr.message); return; }
+      row.thumbnail_url = `${supaHost}/storage/v1/object/public/ig-thumbs/${caminho}`;
+    } catch (e) {
+      console.warn('[instagram-sync] capa falhou', id, String(e));
+    }
+  };
+  for (let i = 0; i < built.length; i += POOL) {
+    await Promise.all(built.slice(i, i + POOL).map(cacheiaCapa));
+  }
+
   let saved = 0;
   if (built.length) {
     const { error: upErr } = await admin.from('social_insights')

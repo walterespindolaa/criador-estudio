@@ -147,6 +147,10 @@ export const getIdeaSuggestions = async (
   params: {
     ideiaTexto: string;
     platform?: string;
+    /** estatico | carrossel | reels | story | youtube: cada um tem regra de construção própria no edge. */
+    formato?: string;
+    /** "tendencias" cruza a ideia com o banco de tendências do nicho (content_trends). */
+    modo?: "padrao" | "tendencias";
     pilar?: string;
     objetivo?: string;
     niche?: string;

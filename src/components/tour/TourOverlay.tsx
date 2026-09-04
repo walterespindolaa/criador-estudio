@@ -137,6 +137,11 @@ export function TourOverlay({
     let cancelled = false;
     let rafSettle = 0;
     setMissing(false);
+    // Solta o alvo do passo ANTERIOR já na largada. Sem isto, enquanto o novo
+    // alvo não aparecia, o measure() (disparado por scroll/resize) continuava
+    // remedindo o elemento velho e o recorte ficava "preso" nele com o texto
+    // do passo novo por cima (era o passo 5 do editor, no post estático).
+    elRef.current = null;
 
     // Sem alvo utilizável: passo condicional sai do tour, o resto vira card centrado.
     const semAlvo = () => {
@@ -223,6 +228,9 @@ export function TourOverlay({
       // cliente que não usa o Cria). Espera curta e pula, em vez de segurar 4s e
       // mostrar um card explicando algo que não está na tela.
       const limite = current.skipIfMissing ? 16 : 80; // ~0,8s contra ~4s
+      // Passou de ~0,6s procurando: o recorte antigo já não faz sentido na tela.
+      // Some com ele (card fica centrado) em vez de segurar o destaque errado.
+      if (tries === 12) setRect(null);
       if (tries++ < limite) { window.setTimeout(find, 50); return; }
       semAlvo();                                     // sem alvo: card centrado, NUNCA fica mudo
     };

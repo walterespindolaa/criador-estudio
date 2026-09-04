@@ -2,7 +2,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
-import { Heart, MessageCircle, Send, Bookmark, Play, Music2, Share2, ChevronLeft, ChevronRight, Image } from "lucide-react";
+import { Heart, MessageCircle, Send, Bookmark, Play, Music2, Share2, ChevronLeft, ChevronRight, Image, X } from "lucide-react";
 import { VideoEmbed } from "./VideoEmbed";
 
 interface SectionData {
@@ -27,6 +27,8 @@ interface PostPreviewContentProps {
   thumbnail?: string;
   coverImage?: string;
   sections?: SectionData[];
+  // No modal, a fila de abas deixa um vao a direita pro X redondo nao cobrir o YT.
+  folgaParaFechar?: boolean;
 }
 
 interface PostPreviewProps extends PostPreviewContentProps {
@@ -36,7 +38,7 @@ interface PostPreviewProps extends PostPreviewContentProps {
 
 // Conteudo puro da previa (sem Dialog), reutilizavel: vive no modal fullscreen do
 // mobile E na coluna direita fixa do desktop dentro do PostEditor.
-export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections }: PostPreviewContentProps) {
+export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections, folgaParaFechar }: PostPreviewContentProps) {
   const initials = (userName || "C")[0].toUpperCase();
   const [igTab, setIgTab] = useState<"feed" | "reels">("feed");
   const [ytTab, setYtTab] = useState<"thumbnail" | "shorts">("thumbnail");
@@ -257,7 +259,7 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
     <Tabs defaultValue={platform || "instagram"} className="w-full">
           {/* Seletor em pílulas (Walter, 01/09: as abas antigas estavam "muito
               feias perto do sistema"): trilho arredondado, sem linhas duras. */}
-          <TabsList className="mx-2 mt-2 mb-1 grid grid-cols-3 h-8 rounded-xl bg-muted/60 p-0.5 gap-0.5">
+          <TabsList className={`ml-2 mt-2 mb-1 grid grid-cols-3 h-8 rounded-xl bg-muted/60 p-0.5 gap-0.5 ${folgaParaFechar ? "mr-12" : "mr-2"}`}>
             {["instagram", "tiktok", "youtube"].map(p => (
               <TabsTrigger key={p} value={p} className="font-body text-[11px] gap-1 rounded-[10px] data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm">
                 <PlatformIcon platform={p} size="sm" />
@@ -382,8 +384,21 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
 export function PostPreviewModal({ open, onOpenChange, ...rest }: PostPreviewProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-3xl border-0 shadow-2xl bg-background">
-        <PostPreviewContent {...rest} />
+      {/* O X padrao do DialogContent (absoluto no canto) caia EM CIMA da fila de
+          abas IG/TK/YT e parecia um botao perdido (Walter, 04/09). Escondemos o
+          padrao e desenhamos um X redondo com o mesmo alinhamento das abas. */}
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-3xl border-0 shadow-2xl bg-background [&>button:last-child]:hidden">
+        <div className="relative">
+          <PostPreviewContent {...rest} folgaParaFechar />
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            aria-label="Fechar prévia"
+            className="absolute top-2 right-2 h-8 w-8 rounded-full bg-muted/70 hover:bg-muted text-foreground flex items-center justify-center transition-colors"
+          >
+            <X className="h-4 w-4" strokeWidth={2} />
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   );
