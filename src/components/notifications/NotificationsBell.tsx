@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bell, Trophy, Lightbulb, CheckCircle2, Flame, UserPlus, Clock, Trash2, Package } from "lucide-react";
+import { Bell, Trophy, Lightbulb, CheckCircle2, Flame, UserPlus, Clock, Trash2, Package, Clapperboard, Handshake, CalendarDays, FileText, Video, Cake, MessageCircle, Sun, ShieldAlert } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,17 @@ const TYPE_ICONS: Record<string, { icon: typeof Bell; color: string }> = {
   lembrete_postar: { icon: Bell, color: "text-primary" },
   volte: { icon: Flame, color: "text-orange-500" },
   acesso_vencendo: { icon: Clock, color: "text-destructive" },
+  // Tipos que já eram gerados mas caíam no ícone genérico (pente fino 04/09).
+  story: { icon: Clapperboard, color: "text-pink-600" },
+  collab: { icon: Handshake, color: "text-violet-600" },
+  cronograma: { icon: CalendarDays, color: "text-secondary" },
+  roteiro: { icon: FileText, color: "text-secondary" },
+  captacao_amanha: { icon: Video, color: "text-primary" },
+  aniversario_cliente: { icon: Cake, color: "text-pink-600" },
+  comentario_cliente: { icon: MessageCircle, color: "text-secondary" },
+  resumo_dia: { icon: Sun, color: "text-amber-500" },
+  parceiro: { icon: Handshake, color: "text-violet-600" },
+  sistema: { icon: ShieldAlert, color: "text-destructive" },
 };
 
 // Cada tipo cai numa categoria; a ordem define como aparecem no painel.
@@ -38,6 +49,16 @@ const CATEGORY: Record<string, string> = {
   ideia_criada: "Ideias",
   volte: "Avisos",
   acesso_vencendo: "Avisos",
+  story: "Lembretes",
+  captacao_amanha: "Lembretes",
+  resumo_dia: "Lembretes",
+  aniversario_cliente: "Lembretes",
+  cronograma: "Cliente / Cria Post",
+  roteiro: "Cliente / Cria Post",
+  comentario_cliente: "Cliente / Cria Post",
+  collab: "Avisos",
+  parceiro: "Avisos",
+  sistema: "Avisos",
 };
 const CATEGORY_ORDER = [
   "Leads", "Cliente / Cria Post", "Lembretes", "Ganchos & dicas", "Conquistas", "Ideias", "Avisos", "Outras",

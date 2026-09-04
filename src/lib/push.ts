@@ -63,15 +63,22 @@ export async function enablePush(userId: string): Promise<{ ok: boolean; reason?
 
        Apagar primeiro resolve na raiz: o aparelho passa a pertencer a quem
        acabou de ativar, que é exatamente o que a pessoa pediu ao tocar no
-       botão. E como o endpoint é a chave, não sobra lixo. */
-    await sbFrom("push_subscriptions").delete().eq("endpoint", sub.endpoint);
-    const { error } = await sbFrom("push_subscriptions").insert({
-      user_id: userId,
-      endpoint: sub.endpoint,
-      p256dh: json.keys?.p256dh,
-      auth: json.keys?.auth,
-      user_agent: navigator.userAgent,
-    } as never);
+       botão. E como o endpoint é a chave, não sobra lixo.
+
+       PENTE FINO 04/09: o delete direto NÃO funcionava quando a linha era de
+       outra conta (o RLS só deixa apagar a própria: 0 linhas, em silêncio) e o
+       insert seguinte estourava no UNIQUE do endpoint. Agora a posse é tomada
+       por um RPC security definer (claim_push_endpoint), que grava a linha
+       inteira no nome de quem está logado. */
+    const { error } = await (supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>)(
+      "claim_push_endpoint",
+      {
+        _endpoint: sub.endpoint,
+        _p256dh: json.keys?.p256dh ?? "",
+        _auth: json.keys?.auth ?? "",
+        _user_agent: navigator.userAgent,
+      },
+    );
     if (error) {
       console.error("[push] não consegui salvar a inscrição:", error);
       return { ok: false, reason: "save", detalhe: error.message };

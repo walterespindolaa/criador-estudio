@@ -153,6 +153,65 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── RESUMO DO DIA (pente fino 04/09). A LP promete "post do dia, prazo
+    //    chegando e resumo diário no celular", mas até aqui o lembrete de post
+    //    só nascia quando a pessoa ABRIA o app (client-side). Quem não abria,
+    //    nunca era lembrado: o oposto do prometido. Agora o robô monta, por
+    //    usuário, UMA notificação de manhã com: posts agendados pra hoje,
+    //    tarefas vencendo hoje (ou atrasadas) e, pra social mídia, posts de
+    //    clientes esperando aprovação. Uma por pessoa por dia (dedupe). ──────
+    const hojeBR = fmtBR.format(new Date(now));
+    const [postsHoje, tarefasHoje, aprovPend] = await Promise.all([
+      svc.from("posts").select("user_id, title, status")
+        .eq("scheduled_date", hojeBR).is("deleted_at", null)
+        .not("status", "in", "(publicado)"),
+      svc.from("tasks").select("user_id, title, due_date")
+        .lte("due_date", hojeBR).neq("status", "concluida").neq("status", "done"),
+      // Posts em "Pronto" com cliente externo e aprovação pendente: cobra a social mídia.
+      svc.from("posts").select("user_id, title")
+        .eq("status", "editando").is("deleted_at", null)
+        .not("external_client_id", "is", null)
+        .or("approval_status.is.null,approval_status.eq.pendente"),
+    ]);
+    type Agg = { posts: string[]; tarefas: string[]; atrasadas: number; aprov: number };
+    const porUser = new Map<string, Agg>();
+    const pega = (id: string) => porUser.get(id) ?? porUser.set(id, { posts: [], tarefas: [], atrasadas: 0, aprov: 0 }).get(id)!;
+    for (const p of (postsHoje.data ?? []) as { user_id: string; title: string }[]) pega(p.user_id).posts.push(p.title);
+    for (const t of (tarefasHoje.data ?? []) as { user_id: string; title: string; due_date: string }[]) {
+      const a = pega(t.user_id);
+      if (t.due_date === hojeBR) a.tarefas.push(t.title); else a.atrasadas++;
+    }
+    for (const p of (aprovPend.data ?? []) as { user_id: string }[]) pega(p.user_id).aprov++;
+
+    if (porUser.size) {
+      const ids = [...porUser.keys()];
+      const { data: jaResumo } = await svc.from("notifications")
+        .select("user_id").eq("type", "resumo_dia")
+        .in("user_id", ids).gte("created_at", iso(now - 20 * 60 * 60 * 1000));
+      const jaTem = new Set((jaResumo ?? []).map((r: { user_id: string }) => r.user_id));
+      const corta = (s: string, n = 42) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+      for (const [uid, a] of porUser) {
+        if (jaTem.has(uid)) continue;
+        const partes: string[] = [];
+        if (a.posts.length === 1) partes.push(`post de hoje: "${corta(a.posts[0])}"`);
+        else if (a.posts.length > 1) partes.push(`${a.posts.length} posts agendados pra hoje`);
+        if (a.tarefas.length === 1) partes.push(`tarefa: "${corta(a.tarefas[0])}"`);
+        else if (a.tarefas.length > 1) partes.push(`${a.tarefas.length} tarefas vencem hoje`);
+        if (a.atrasadas) partes.push(`${a.atrasadas} tarefa${a.atrasadas > 1 ? "s" : ""} atrasada${a.atrasadas > 1 ? "s" : ""}`);
+        if (a.aprov) partes.push(`${a.aprov} post${a.aprov > 1 ? "s" : ""} esperando aprovação de cliente`);
+        if (!partes.length) continue;
+        const title = a.posts.length
+          ? "📌 Seu dia no CRIA: tem post pra sair hoje"
+          : a.aprov ? "📌 Seu dia no CRIA: aprovação pendente" : "📌 Seu dia no CRIA";
+        const descricao = partes.join(" · ");
+        rows.push({
+          user_id: uid, type: "resumo_dia", title,
+          description: descricao.charAt(0).toUpperCase() + descricao.slice(1) + ".",
+          link: a.posts.length ? "/app/criando" : a.aprov ? "/app/aprovacao" : "/app/tarefas",
+        });
+      }
+    }
+
     // Insert em lote (1 chamada), o trigger de push dispara por linha.
     // Checa o erro: sem isso, uma falha no insert passava batido e o cron
     // reportava "created:N" sem ter criado nada (e o heartbeat dizia ok:true).

@@ -120,18 +120,11 @@ async function runGenerate(userId: string) {
     }
   }
 
-  // 3. Scheduled posts for today
-  const todayScheduled = posts.filter(p => p.scheduled_date === today && p.status !== "publicado");
-  const todayScheduledNotif = existingNotifs.find(n => n.type === "lembrete_postar" && isTodayBR(n.created_at));
-  if (todayScheduled.length > 0 && !todayScheduledNotif) {
-    await supabase.from("notifications").insert({
-      user_id: userId,
-      type: "lembrete_postar",
-      title: `Você tem ${todayScheduled.length} post(s) pra hoje`,
-      description: "Confira seu plano de conteúdo.",
-      link: "/app/plano",
-    } as any);
-  }
+  // 3. Posts agendados pra hoje: SAIU daqui (pente fino 04/09). Agora quem
+  //    avisa é o robô diário no servidor (daily-notifications, tipo resumo_dia),
+  //    que chega no celular de manhã mesmo sem abrir o app. Aqui ele usava a
+  //    MESMA chave de dedup do bloco 2 (lembrete_postar + hoje), então ora
+  //    disparava os dois, ora nenhum.
 
   // 4. Posts em andamento (pendentes de publicação)
   const pendentes = posts.filter(p => p.status !== "publicado").length;

@@ -190,6 +190,22 @@ serve(async (req) => {
       return json({ error: "internal_error" }, 500);
     }
 
+    // A tela prometia "vamos te avisar assim que aprovarmos seu cadastro" e
+    // ninguém avisava (pente fino 04/09). Sino + push via trigger. Best-effort:
+    // a aprovação já aconteceu, aviso falhando não pode desfazer.
+    if (partner.user_id) {
+      const { error: nErr } = await svc.from("notifications").insert({
+        user_id: partner.user_id,
+        type: "parceiro",
+        title: "Seu cadastro de parceira foi aprovado!",
+        description: couponCode
+          ? `Seu cupom é ${couponCode}. Ele já está ativo pra você indicar.`
+          : "Você já pode começar a indicar o CRIA.",
+        link: "/socialmidia",
+      });
+      if (nErr) console.warn("[partner-approve] aviso nao enviado:", nErr.message);
+    }
+
     return json({ ok: true, coupon_code: couponCode });
   } catch (e) {
     console.error("[partner-approve] unhandled error:", e);

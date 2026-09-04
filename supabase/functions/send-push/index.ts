@@ -14,9 +14,14 @@ serve(async (req) => {
   try {
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Chamada interna (gatilho do banco) usa um segredo; senão exige admin logado.
+    // Chamada interna (gatilho do banco) usa um segredo; senão exige login.
+    // Admin pode mandar pra qualquer audiência; usuário comum SÓ pra si mesmo
+    // (é o botão "Enviar um teste pra este aparelho"). Antes qualquer não-admin
+    // tomava 403 ali, e a ferramenta feita pra provar que o push funciona era
+    // justamente a que quebrava pra 100% das criadoras (pente fino 04/09).
     const internalSecret = req.headers.get("x-internal-secret");
     const isInternal = !!internalSecret && internalSecret === Deno.env.get("INTERNAL_PUSH_SECRET");
+    let somenteParaSi: string | null = null;
     if (!isInternal) {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader) return json({ error: "unauthorized" }, 401);
@@ -26,10 +31,16 @@ serve(async (req) => {
       const { data: { user } } = await userClient.auth.getUser();
       if (!user) return json({ error: "unauthorized" }, 401);
       const { data: caller } = await svc.from("profiles").select("role").eq("id", user.id).single();
-      if (caller?.role !== "admin") return json({ error: "forbidden" }, 403);
+      if (caller?.role !== "admin") somenteParaSi = user.id;
     }
 
-    const { title, message, audience, url, user_id } = await req.json();
+    const body = await req.json();
+    const { title, message, audience, url } = body;
+    // Não-admin: o alvo é forçado pro próprio id, ignorando o que veio no corpo.
+    const user_id: string | undefined = somenteParaSi ?? body.user_id;
+    if (somenteParaSi && body.user_id && body.user_id !== somenteParaSi) {
+      return json({ error: "forbidden" }, 403);
+    }
     if (!message) return json({ error: "missing_message" }, 400);
 
     const pub = Deno.env.get("VAPID_PUBLIC_KEY");

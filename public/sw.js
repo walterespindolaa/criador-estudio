@@ -22,7 +22,7 @@
                                                         persistência do react-query)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const VERSION = "v3";
+const VERSION = "v4"; // v4: push com tag/renotify + badge (04/09)
 const SHELL = `cria-shell-${VERSION}`;
 const ASSETS = `cria-assets-${VERSION}`;
 const FONTS = `cria-fonts-${VERSION}`;
@@ -176,7 +176,7 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Share target (POST) — precisa vir antes do filtro de GET.
+  // Share target (POST): precisa vir antes do filtro de GET.
   if (req.method === "POST" && url.pathname === "/compartilhar") {
     event.respondWith(receberCompartilhamento(event));
     return;
@@ -216,7 +216,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Build do Vite: /assets/index-a1b2c3.js — o hash muda a cada deploy, então o
+  // Build do Vite: /assets/index-a1b2c3.js: o hash muda a cada deploy, então o
   // conteúdo de um arquivo nunca muda. Cache-first sem medo.
   if (url.origin === self.location.origin && url.pathname.startsWith("/assets/")) {
     event.respondWith(cacheFirst(req, ASSETS));
@@ -252,13 +252,23 @@ self.addEventListener("push", (event) => {
     data = { body: event.data ? event.data.text() : "" };
   }
   const title = data.title || "Cria";
+  const url = data.url || "/app";
   const options = {
     body: data.body || data.message || "",
     icon: "/app-icon-192.png",
     badge: "/favicon-32.png",
-    data: { url: data.url || "/app" },
+    // tag por destino: 10 avisos do mesmo lugar viram 1 banner atualizado, não 10.
+    tag: "cria-" + url,
+    renotify: true,
+    data: { url },
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, options),
+      // Bolinha no ícone do app instalado (quando a plataforma suporta).
+      "setAppBadge" in self.navigator ? self.navigator.setAppBadge().catch(function () {}) : Promise.resolve(),
+    ]),
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {
