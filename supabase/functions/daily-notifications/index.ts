@@ -212,6 +212,84 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── PRAZO CHEGANDO (criador): post agendado pra AMANHÃ que ainda não está
+    //    pronto (status antes de editando/agendado/publicado). Uma por pessoa/dia. ──
+    const { data: postsAmanha } = await svc.from("posts").select("user_id, title, status")
+      .eq("scheduled_date", amanhaBR).is("deleted_at", null)
+      .in("status", ["ideia", "planejamento", "roteiro", "producao", "produzindo"]);
+    const amanhaPorUser = new Map<string, string[]>();
+    for (const p of (postsAmanha ?? []) as { user_id: string; title: string }[]) {
+      (amanhaPorUser.get(p.user_id) ?? amanhaPorUser.set(p.user_id, []).get(p.user_id)!).push(p.title);
+    }
+    if (amanhaPorUser.size) {
+      const ids = [...amanhaPorUser.keys()];
+      const { data: jaPrazo } = await svc.from("notifications").select("user_id")
+        .eq("type", "prazo_amanha").in("user_id", ids).gte("created_at", iso(now - 20 * 60 * 60 * 1000));
+      const jaTem = new Set((jaPrazo ?? []).map((r: { user_id: string }) => r.user_id));
+      for (const [uid, titulos] of amanhaPorUser) {
+        if (jaTem.has(uid)) continue;
+        rows.push({
+          user_id: uid, type: "prazo_amanha",
+          title: titulos.length === 1 ? "⏳ Amanhã sai um post que ainda não está pronto" : `⏳ Amanhã saem ${titulos.length} posts que ainda não estão prontos`,
+          description: titulos.length === 1 ? `"${titulos[0].slice(0, 60)}". Dá tempo de fechar hoje.` : `${titulos.slice(0, 3).map((t) => `"${t.slice(0, 32)}"`).join(", ")}. Dá tempo de fechar hoje.`,
+          link: "/app/criando",
+        });
+      }
+    }
+
+    // ── RESUMO SEMANAL DO INSTAGRAM (segunda-feira): seguidores ganhos, alcance
+    //    da semana e o post que mais rendeu. Só pra quem tem a conta própria
+    //    conectada e com sync recente. ──
+    const diaSemanaBR = new Intl.DateTimeFormat("en-US", { timeZone: "America/Sao_Paulo", weekday: "short" }).format(new Date(now));
+    if (diaSemanaBR === "Mon") {
+      const semana = fmtBR.format(new Date(now - 7 * dayMs));
+      const { data: conns } = await svc.from("social_connections").select("user_id")
+        .eq("provider", "instagram").is("crm_client_id", null);
+      const donos = [...new Set(((conns ?? []) as { user_id: string }[]).map((c) => c.user_id))];
+      if (donos.length) {
+        const [metricas, midias, jaSemana] = await Promise.all([
+          svc.from("social_metrics_daily").select("user_id, date, followers, reach")
+            .eq("provider", "instagram").is("crm_client_id", null).in("user_id", donos).gte("date", semana).order("date"),
+          svc.from("social_insights").select("user_id, caption, metrics, posted_at")
+            .eq("provider", "instagram").eq("object_type", "media").is("crm_client_id", null)
+            .in("user_id", donos).gte("posted_at", `${semana}T00:00:00Z`),
+          svc.from("notifications").select("user_id").eq("type", "resumo_semana_ig")
+            .in("user_id", donos).gte("created_at", iso(now - 5 * dayMs)),
+        ]);
+        const jaTem = new Set((jaSemana.data ?? []).map((r: { user_id: string }) => r.user_id));
+        type M = { user_id: string; date: string; followers: number | null; reach: number | null };
+        const porDono = new Map<string, M[]>();
+        for (const m of (metricas.data ?? []) as M[]) (porDono.get(m.user_id) ?? porDono.set(m.user_id, []).get(m.user_id)!).push(m);
+        type Md = { user_id: string; caption: string | null; metrics: Record<string, number> | null };
+        const topPorDono = new Map<string, Md>();
+        for (const md of (midias.data ?? []) as Md[]) {
+          const atual = topPorDono.get(md.user_id);
+          if (!atual || (md.metrics?.reach ?? 0) > (atual.metrics?.reach ?? 0)) topPorDono.set(md.user_id, md);
+        }
+        const fmtN = (n: number) => n.toLocaleString("pt-BR");
+        for (const uid of donos) {
+          if (jaTem.has(uid)) continue;
+          const ms = porDono.get(uid) ?? [];
+          if (ms.length < 2) continue; // sem sync suficiente na semana, sem resumo
+          const comSeg = ms.filter((m) => typeof m.followers === "number");
+          const delta = comSeg.length >= 2 ? (comSeg[comSeg.length - 1].followers! - comSeg[0].followers!) : null;
+          const alcance = ms.reduce((s, m) => s + (m.reach ?? 0), 0);
+          const top = topPorDono.get(uid);
+          const partes: string[] = [];
+          if (delta !== null) partes.push(delta >= 0 ? `+${fmtN(delta)} seguidores` : `${fmtN(delta)} seguidores`);
+          if (alcance > 0) partes.push(`${fmtN(alcance)} de alcance`);
+          if (top) partes.push(`melhor post: "${(top.caption ?? "sem legenda").replace(/\s+/g, " ").slice(0, 40)}" (${fmtN(top.metrics?.reach ?? 0)} alcance)`);
+          if (!partes.length) continue;
+          rows.push({
+            user_id: uid, type: "resumo_semana_ig",
+            title: "📈 Sua semana no Instagram",
+            description: partes.join(" · ") + ".",
+            link: "/app/insights",
+          });
+        }
+      }
+    }
+
     // ── CLIENTE ATRASADO (Caixa) e RENOVAÇÃO/REAJUSTE (CRM). A LP da social
     //    mídia promete "aviso de cliente atrasado e de reajuste na hora de
     //    renovar" e nenhum dos dois existia (pente fino 04/09).
