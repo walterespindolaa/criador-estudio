@@ -9,6 +9,7 @@ import { usePosts, type Post } from "@/hooks/usePosts";
 import { useProfile, type Profile } from "@/hooks/useProfile";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { usePillars } from "@/hooks/usePillars";
+import { useSocialConnection, useDailyMetrics, useMediaInsights } from "@/hooks/useSocialInsights";
 
 // Subset do profile renderizado no header do feed; vem direto da conta ATIVA.
 type FeedProfile = Pick<Profile, "name" | "avatar_url" | "niche" | "instagram_handle" | "bio">;
@@ -63,6 +64,22 @@ const Feed = () => {
 
   const feedPosts = useMemo(() => posts.filter((p) => isFeedStatus(p.status)), [posts]);
 
+  /* FEED REAL (Walter, 04/09): com o Instagram conectado, a tela deixa de ser
+     maquete e vira espelho: foto, @, seguidores e os posts JA publicados vem
+     do sync. Os posts planejados entram POR CIMA desse pano de fundo, entao a
+     pessoa ve exatamente como o feed vai ficar quando eles sairem. */
+  const { data: igConn, isLoading: igConnLoading } = useSocialConnection();
+  const { data: dailyMetrics = [] } = useDailyMetrics(30);
+  const { data: igMedia = [] } = useMediaInsights();
+  const igConnected = !!igConn;
+  const igFollowers = useMemo(() => {
+    for (let i = dailyMetrics.length - 1; i >= 0; i--) {
+      const f = dailyMetrics[i]?.followers;
+      if (typeof f === "number") return f;
+    }
+    return null;
+  }, [dailyMetrics]);
+
   const [gridPosts, setGridPosts] = useState<Post[]>([]);
   const [availablePosts, setAvailablePosts] = useState<Post[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos");
@@ -74,6 +91,8 @@ const Feed = () => {
   useEffect(() => {
     if (initializedRef.current) return;
     if (postsLoading) return;
+    // Espera saber se o IG esta conectado: o padrao de montagem muda (abaixo).
+    if (igConnLoading) return;
     if (feedPosts.length === 0) {
       initializedRef.current = true;
       return;
@@ -105,6 +124,14 @@ const Feed = () => {
       const available = feedPosts.filter((p) => !usedIds.has(p.id));
       setGridPosts(grid);
       setAvailablePosts(available);
+    } else if (igConnected) {
+      // Com IG conectado, quem faz o papel de "ja publicado" sao as midias REAIS
+      // do sync. Os posts planejados (editando/agendado) entram no topo do grid;
+      // os "publicado" do CRIA ficam na lateral pra nao duplicar com o IG.
+      const planejados = feedPosts.filter((p) => p.status !== "publicado");
+      const publicados = feedPosts.filter((p) => p.status === "publicado").sort(sortPublishedDesc);
+      setGridPosts(planejados);
+      setAvailablePosts(publicados);
     } else {
       const published = feedPosts.filter((p) => p.status === "publicado").sort(sortPublishedDesc);
       const others = feedPosts.filter((p) => p.status !== "publicado");
@@ -112,7 +139,7 @@ const Feed = () => {
       setAvailablePosts(others);
     }
     initializedRef.current = true;
-  }, [postsLoading, feedPosts]);
+  }, [postsLoading, feedPosts, igConnLoading, igConnected]);
 
   useEffect(() => {
     if (!initializedRef.current) return;
@@ -144,6 +171,22 @@ const Feed = () => {
     });
     setGridPosts((prev) => prev.filter((p) => stillValidIds.has(p.id)));
   }, [feedPosts, gridPosts, availablePosts]);
+
+  // Midias reais do IG pro grid: mais recente primeiro (a query ja ordena).
+  // Se a midia esta vinculada a um post do CRIA que TAMBEM esta no grid, sai
+  // daqui: senao o mesmo conteudo aparecia duas vezes.
+  const igGridPosts = useMemo(() => {
+    if (!igConnected) return [];
+    const noGrid = new Set(gridPosts.map((p) => p.id));
+    return igMedia
+      .filter((m) => !(m.post_id && noGrid.has(m.post_id)))
+      .map((m) => ({
+        id: m.id,
+        thumb: m.thumbnail_url,
+        permalink: m.permalink,
+        mediaType: m.media_type,
+      }));
+  }, [igConnected, igMedia, gridPosts]);
 
   const relevantPostIds = useMemo(() => feedPosts.map((p) => p.id), [feedPosts]);
 
@@ -302,13 +345,15 @@ const Feed = () => {
             <section data-tour="feed-grid">
               <FeedProfileHeader
                 profile={profile}
-                postCount={gridPosts.length}
+                postCount={gridPosts.length + igGridPosts.length}
+                ig={igConnected ? { username: igConn?.username ?? null, avatarUrl: igConn?.profile_picture_url ?? null, followers: igFollowers } : null}
                 onEdit={isOwnAccount ? () => setEditProfileOpen(true) : undefined}
               />
               <FeedGrid
                 posts={gridPosts}
                 pillars={pillars}
                 thumbnails={thumbnails}
+                igPosts={igGridPosts}
                 onRemove={removeFromGrid}
               />
               {feedPosts.length === 0 && !postsLoading && (

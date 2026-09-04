@@ -49,6 +49,7 @@ import { Logo } from "@/components/shared/Logo";
 import { AiUsageBadge } from "@/components/shared/AiUsageBadge";
 import { useTier } from "@/hooks/useTier";
 import { useSouParceiro } from "@/hooks/useParceiro";
+import { useTemSocialMidia } from "@/hooks/useTemSocialMidia";
 import { FEATURES, tierAtLeast, type FeatureKey } from "@/lib/plans";
 import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
 
@@ -71,7 +72,9 @@ const groups = [
     label: "Planejar",
     items: [
       { title: "Meu Feed", url: "/app/feed", icon: Grid3X3, feature: "feed" },
-      { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck },
+      // So aparece quando a conta TEM social midia vinculada: e ela quem aprova
+      // por ali. Pro criador solo a aba era um corredor vazio (Walter, 04/09).
+      { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck, soComSocialMidia: true },
       { title: "Metas", url: "/app/metas", icon: Target },
       { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
     ],
@@ -135,6 +138,7 @@ export function AppSidebar() {
   /* Sou parceiro de alguma agência? Aí "Minhas demandas" entra no topo do menu.
      É consulta cacheada 5 min: quem não é parceiro não paga nada por isto. */
   const { data: souParceiro } = useSouParceiro();
+  const { temSocialMidia } = useTemSocialMidia();
 
   const handleSignOut = async () => {
     await signOut();
@@ -225,6 +229,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 {group.items
                   .filter((item) => !(item as { managerOnly?: boolean }).managerOnly || profile?.account_type === "manager")
+                  .filter((item) => !(item as { soComSocialMidia?: boolean }).soComSocialMidia || temSocialMidia)
                   .map((item) => {
                   // O item TRAVADO continua clicável, de propósito. Antes ele jogava
                   // a pessoa em /app/assinar (uma tabela de preços genérica). Agora

@@ -1,5 +1,5 @@
 import { Droppable, Draggable } from "@hello-pangea/dnd";
-import { FileText, Plus, X } from "lucide-react";
+import { FileText, Instagram, Play, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Post } from "@/hooks/usePosts";
 import type { Pillar } from "@/hooks/usePillars";
@@ -7,16 +7,26 @@ import type { Pillar } from "@/hooks/usePillars";
 export const GRID_DROPPABLE_ID = "feed-grid";
 const MIN_VISIBLE_CELLS = 9;
 
+// Post JA PUBLICADO no Instagram (vem do instagram-sync). Entra no fim do grid,
+// como pano de fundo real: os planejados ficam em cima, do jeito que vao cair.
+export type IgGridPost = {
+  id: string;
+  thumb: string | null;
+  permalink: string | null;
+  mediaType: string | null;
+};
+
 type Props = {
   posts: Post[];
   pillars: Pillar[];
   thumbnails: Record<string, string | null>;
+  igPosts?: IgGridPost[];
   onRemove: (postId: string) => void;
 };
 
-export function FeedGrid({ posts, pillars, thumbnails, onRemove }: Props) {
+export function FeedGrid({ posts, pillars, thumbnails, igPosts = [], onRemove }: Props) {
   const pillarById = new Map(pillars.map((p) => [p.id, p]));
-  const emptyCount = Math.max(0, MIN_VISIBLE_CELLS - posts.length);
+  const emptyCount = Math.max(0, MIN_VISIBLE_CELLS - posts.length - igPosts.length);
 
   return (
     <Droppable droppableId={GRID_DROPPABLE_ID}>
@@ -100,6 +110,37 @@ export function FeedGrid({ posts, pillars, thumbnails, onRemove }: Props) {
             );
           })}
           {provided.placeholder}
+          {/* O feed que JA existe no Instagram, na ordem real (mais recente
+              primeiro). Nao arrasta nem remove: e retrato, nao rascunho. */}
+          {igPosts.map((ig) => (
+            <a
+              key={`ig-${ig.id}`}
+              href={ig.permalink ?? undefined}
+              target="_blank"
+              rel="noreferrer"
+              className="aspect-[4/5] relative overflow-hidden bg-muted block"
+              aria-label="Post publicado no Instagram"
+            >
+              {ig.thumb ? (
+                <img
+                  src={ig.thumb}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                  loading="lazy"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-muted/60">
+                  <Instagram className="h-6 w-6 text-muted-foreground/50" strokeWidth={1.5} />
+                </div>
+              )}
+              {(ig.mediaType === "VIDEO" || ig.mediaType === "REELS") && (
+                <span className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-foreground/55 text-white flex items-center justify-center">
+                  <Play className="h-3 w-3" fill="currentColor" />
+                </span>
+              )}
+            </a>
+          ))}
           {Array.from({ length: emptyCount }).map((_, i) => (
             <div
               key={`empty-${i}`}

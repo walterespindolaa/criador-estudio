@@ -13,6 +13,7 @@ import { useTier } from "@/hooks/useTier";
 import { PlanTag } from "@/components/shared/PlanTag";
 import { seloDaRota } from "@/lib/plans";
 import { FeedbackDialog } from "@/components/FeedbackButton";
+import { useTemSocialMidia } from "@/hooks/useTemSocialMidia";
 
 const leftItems = [
   { title: "Início", url: "/app", icon: Home, exact: true },
@@ -23,7 +24,7 @@ const rightItems = [
   { title: "Criando", url: "/app/criando", icon: Kanban },
 ];
 
-type MoreItem = { title: string; url: string; icon: typeof Home; hot?: boolean; desc?: string };
+type MoreItem = { title: string; url: string; icon: typeof Home; hot?: boolean; desc?: string; soComSocialMidia?: boolean };
 const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
   { title: "Criar", items: [
     // Ordem pedida pelo Walter (31/08): Produção, Ideias, Tarefas.
@@ -33,7 +34,9 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
   ]},
   { title: "Planejar", items: [
     { title: "Meu Feed", url: "/app/feed", icon: Grid3X3, desc: "Prévia do seu feed" },
-    { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck, desc: "O que espera seu ok" },
+    // Filtrado na renderização: só aparece quando a conta tem social mídia
+    // vinculada (é ela quem aprova por ali). Ver soComSocialMidia abaixo.
+    { title: "Aprovações", url: "/app/aprovacao", icon: ClipboardCheck, desc: "O que espera seu ok", soComSocialMidia: true },
     { title: "Calendário & Metas", url: "/app/metas", icon: CalendarDays, desc: "Calendário e objetivos" },
     { title: "Arquivos", url: "/app/arquivos", icon: FolderOpen },
   ]},
@@ -80,11 +83,16 @@ export function BottomBar() {
   const { openCria } = useCriaAI();
   const { profile } = useProfile();
   const { tier } = useTier();
+  const { temSocialMidia } = useTemSocialMidia();
+  const base = MORE_SECTIONS.map((s) => ({
+    ...s,
+    items: s.items.filter((i) => !i.soComSocialMidia || temSocialMidia),
+  }));
   const sections = profile?.role === "admin"
-    ? MORE_SECTIONS.map((s) => s.title === "Mais"
+    ? base.map((s) => s.title === "Mais"
         ? { ...s, items: [...s.items, { title: "Admin", url: "/app/cf-admin-panel", icon: ShieldCheck }] }
         : s)
-    : MORE_SECTIONS;
+    : base;
   const allMoreItems = sections.flatMap((s) => s.items);
   const [searchParams, setSearchParams] = useSearchParams();
   const onCriando = location.pathname === "/app/criando";
