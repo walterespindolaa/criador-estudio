@@ -6,6 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { pushSupported, isPushEnabled, enablePush, disablePush } from "@/lib/push";
 import { estaInstalado, ehIOS } from "@/lib/pwa";
+import { Switch } from "@/components/ui/switch";
+import { useProfile } from "@/hooks/useProfile";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    LIGAR E TESTAR AS NOTIFICAÇÕES
@@ -169,6 +171,70 @@ export function NotificationToggle() {
           <p className="text-[12.5px] font-body text-destructive leading-relaxed">{diagnostico}</p>
         </div>
       )}
+      <NotificationPrefs />
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   O QUE CHEGA NO CELULAR (preferência por categoria, 04/09)
+
+   Era tudo ou nada. Agora cada categoria tem seu interruptor; desligar aqui
+   tira só o PUSH (o sino continua guardando tudo). Salvo em
+   profiles.notification_prefs, e o gatilho de push consulta antes de mandar.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const CATEGORIAS: { chave: string; titulo: string; desc: string }[] = [
+  { chave: "lembretes", titulo: "Lembretes do dia", desc: "Resumo da manhã, post agendado, tarefa vencendo, stories, captação de amanhã, aniversário de cliente." },
+  { chave: "clientes", titulo: "Clientes e aprovações", desc: "Aprovou, pediu ajuste, comentou, roteiro revisado, pagamento atrasado, renovação chegando." },
+  { chave: "leads", titulo: "Leads", desc: "Alguém deixou contato no seu link na bio." },
+  { chave: "conquistas", titulo: "Conquistas e dicas", desc: "Meta batida, dica do dia, ideia criada." },
+  { chave: "avisos", titulo: "Avisos da conta", desc: "Acesso vencendo, parcerias, collabs, sistema." },
+];
+
+function NotificationPrefs() {
+  const { profile, updateProfile } = useProfile();
+  const prefs = ((profile as unknown as { notification_prefs?: Record<string, boolean> } | null)?.notification_prefs) ?? {};
+  const [salvando, setSalvando] = useState<string | null>(null);
+
+  const alternar = async (chave: string, ligado: boolean) => {
+    setSalvando(chave);
+    try {
+      // false = desligado; ligado apaga a chave (ausente = ligado).
+      const proximo: Record<string, boolean> = { ...prefs };
+      if (ligado) delete proximo[chave]; else proximo[chave] = false;
+      await updateProfile.mutateAsync({ notification_prefs: proximo } as never);
+    } catch {
+      toast.error("Não consegui salvar a preferência.");
+    } finally {
+      setSalvando(null);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3.5 space-y-2.5">
+      <div>
+        <p className="text-[13px] font-display font-bold text-foreground">O que chega no celular</p>
+        <p className="text-[12px] font-body text-muted-foreground">Desligar aqui tira só o aviso no aparelho. O sino dentro do app continua com tudo.</p>
+      </div>
+      <ul className="divide-y divide-border/70">
+        {CATEGORIAS.map((c) => {
+          const ligado = prefs[c.chave] !== false;
+          return (
+            <li key={c.chave} className="flex items-center gap-3 py-2.5">
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-body font-semibold text-foreground">{c.titulo}</p>
+                <p className="text-[11.5px] font-body text-muted-foreground leading-snug">{c.desc}</p>
+              </div>
+              <Switch
+                checked={ligado}
+                disabled={salvando === c.chave}
+                onCheckedChange={(v) => void alternar(c.chave, v)}
+                aria-label={c.titulo}
+              />
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

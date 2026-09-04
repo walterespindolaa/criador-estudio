@@ -212,6 +212,80 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── CLIENTE ATRASADO (Caixa) e RENOVAÇÃO/REAJUSTE (CRM). A LP da social
+    //    mídia promete "aviso de cliente atrasado e de reajuste na hora de
+    //    renovar" e nenhum dos dois existia (pente fino 04/09).
+    //    Atrasado: entrada PJ ligada a cliente, pendente/atrasada, vencida.
+    //    Uma por cliente a cada 7 dias (cobrar todo dia irrita, esquecer custa).
+    //    Renovação: renewal_date em 15 dias e no dia, uma por cliente/semana. ──
+    const semanaAtras = iso(now - 7 * dayMs);
+    const [vencidas, renovacoes] = await Promise.all([
+      svc.from("fin_records").select("manager_id, crm_client_id, amount, date")
+        .eq("type", "entrada").eq("context", "pj")
+        .in("status", ["pendente", "atrasado"])
+        .not("crm_client_id", "is", null)
+        .lt("date", hojeBR),
+      svc.from("crm_clients").select("id, manager_id, name, display_name, renewal_date, monthly_value")
+        .not("renewal_date", "is", null).eq("status", "ativo").is("deleted_at", null),
+    ]);
+
+    const fmtBRL = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const dataBR = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+
+    // Atrasos agregados por cliente (várias parcelas do mesmo cliente = 1 aviso).
+    type Atraso = { manager_id: string; total: number; maisAntiga: string; qtd: number };
+    const atrasoPorCliente = new Map<string, Atraso>();
+    for (const r of (vencidas.data ?? []) as { manager_id: string; crm_client_id: string; amount: number; date: string }[]) {
+      const a = atrasoPorCliente.get(r.crm_client_id) ?? { manager_id: r.manager_id, total: 0, maisAntiga: r.date, qtd: 0 };
+      a.total += Number(r.amount ?? 0); a.qtd++;
+      if (r.date < a.maisAntiga) a.maisAntiga = r.date;
+      atrasoPorCliente.set(r.crm_client_id, a);
+    }
+    const em15 = fmtBR.format(new Date(now + 15 * dayMs));
+    const renovLista = ((renovacoes.data ?? []) as { id: string; manager_id: string; name: string | null; display_name: string | null; renewal_date: string; monthly_value: number | null }[])
+      .filter((c) => c.renewal_date === hojeBR || c.renewal_date === em15);
+
+    const idsClientes = [...new Set([...atrasoPorCliente.keys(), ...renovLista.map((c) => c.id)])];
+    if (idsClientes.length) {
+      const nomes = new Map<string, string>();
+      const { data: cli } = await svc.from("crm_clients").select("id, name, display_name").in("id", idsClientes);
+      for (const c of (cli ?? []) as { id: string; name: string | null; display_name: string | null }[]) {
+        nomes.set(c.id, c.display_name?.trim() || c.name?.trim() || "Cliente");
+      }
+      // Dedupe pelo link (contém o id do cliente) nos últimos 7 dias.
+      const { data: recentes } = await svc.from("notifications")
+        .select("user_id, type, link").in("type", ["cliente_atrasado", "renovacao_cliente"])
+        .gte("created_at", semanaAtras);
+      const jaFoi = new Set((recentes ?? []).map((r: { user_id: string; type: string; link: string }) => `${r.user_id}:${r.type}:${r.link}`));
+
+      for (const [clienteId, a] of atrasoPorCliente) {
+        const link = `/socialmidia/criacrm/${clienteId}`;
+        if (jaFoi.has(`${a.manager_id}:cliente_atrasado:${link}`)) continue;
+        const nome = nomes.get(clienteId) ?? "Cliente";
+        rows.push({
+          user_id: a.manager_id, type: "cliente_atrasado",
+          title: `💸 ${nome} está com pagamento atrasado`,
+          description: a.qtd === 1
+            ? `${fmtBRL(a.total)} venceu em ${dataBR(a.maisAntiga)}. Vale um lembrete gentil.`
+            : `${a.qtd} parcelas em aberto (${fmtBRL(a.total)}), a mais antiga de ${dataBR(a.maisAntiga)}.`,
+          link,
+        });
+      }
+      for (const c of renovLista) {
+        const link = `/socialmidia/criacrm/${c.id}`;
+        if (jaFoi.has(`${c.manager_id}:renovacao_cliente:${link}`)) continue;
+        const nome = nomes.get(c.id) ?? c.name ?? "Cliente";
+        const hoje = c.renewal_date === hojeBR;
+        rows.push({
+          user_id: c.manager_id, type: "renovacao_cliente",
+          title: hoje ? `🔁 Hoje renova o contrato de ${nome}` : `🔁 ${nome} renova em 15 dias`,
+          description: (c.monthly_value ? `Valor atual ${fmtBRL(Number(c.monthly_value))}. ` : "")
+            + (hoje ? "Confirme a renovação e o reajuste combinado." : "Hora de conversar sobre reajuste antes de renovar."),
+          link,
+        });
+      }
+    }
+
     // Insert em lote (1 chamada), o trigger de push dispara por linha.
     // Checa o erro: sem isso, uma falha no insert passava batido e o cron
     // reportava "created:N" sem ter criado nada (e o heartbeat dizia ok:true).
