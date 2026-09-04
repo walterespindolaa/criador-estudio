@@ -4524,6 +4524,7 @@ export type Database = {
           must_change_password: boolean
           name: string
           niche: string | null
+          notification_prefs: Json
           onboarding_completed: boolean | null
           paid_client_packs: number
           paid_collab_seats: number
@@ -4584,6 +4585,7 @@ export type Database = {
           must_change_password?: boolean
           name: string
           niche?: string | null
+          notification_prefs?: Json
           onboarding_completed?: boolean | null
           paid_client_packs?: number
           paid_collab_seats?: number
@@ -4644,6 +4646,7 @@ export type Database = {
           must_change_password?: boolean
           name?: string
           niche?: string | null
+          notification_prefs?: Json
           onboarding_completed?: boolean | null
           paid_client_packs?: number
           paid_collab_seats?: number
@@ -6081,6 +6084,15 @@ export type Database = {
         }[]
       }
       claim_account_invites: { Args: never; Returns: number }
+      claim_push_endpoint: {
+        Args: {
+          _auth: string
+          _endpoint: string
+          _p256dh: string
+          _user_agent?: string
+        }
+        Returns: undefined
+      }
       cria_limite_clientes: { Args: { _manager: string }; Returns: number }
       cria_limite_info: {
         Args: { _manager: string }
@@ -6522,6 +6534,7 @@ export type Database = {
           owner_id: string
         }[]
       }
+      notif_categoria: { Args: { _tipo: string }; Returns: string }
       parceiro_abrir_card: { Args: { _post_id: string }; Returns: Json }
       parceiro_comentar: {
         Args: { _post_id: string; _texto: string }
@@ -6590,6 +6603,7 @@ export type Database = {
       }
       parceiro_tem_o_card: { Args: { _post_id: string }; Returns: boolean }
       portal_mark_viewed: { Args: { _token: string }; Returns: undefined }
+      quer_push: { Args: { _tipo: string; _user: string }; Returns: boolean }
       rate_touch: { Args: { _key: string; _limit: number }; Returns: boolean }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
