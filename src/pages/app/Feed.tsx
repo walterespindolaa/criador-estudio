@@ -346,7 +346,13 @@ const Feed = () => {
               <FeedProfileHeader
                 profile={profile}
                 postCount={gridPosts.length + igGridPosts.length}
-                ig={igConnected ? { username: igConn?.username ?? null, avatarUrl: igConn?.profile_picture_url ?? null, followers: igFollowers } : null}
+                ig={igConnected ? {
+                  username: igConn?.username ?? null,
+                  avatarUrl: igConn?.profile_picture_url ?? null,
+                  // Contador da conexao (sync) tem prioridade; serie diaria e o reserva.
+                  followers: igConn?.followers_count ?? igFollowers,
+                  following: igConn?.follows_count ?? null,
+                } : null}
                 onEdit={isOwnAccount ? () => setEditProfileOpen(true) : undefined}
               />
               <FeedGrid

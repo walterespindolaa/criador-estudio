@@ -8,6 +8,7 @@ export type IgHeaderData = {
   username: string | null;
   avatarUrl: string | null;
   followers: number | null;
+  following?: number | null;
 };
 
 type Props = {
@@ -72,7 +73,9 @@ export function FeedProfileHeader({ profile, postCount, ig, onEdit }: Props) {
               <p className="text-xs text-muted-foreground font-body">seguidores</p>
             </div>
             <div className="text-center">
-              <p className="text-xl font-display font-extrabold text-foreground">-</p>
+              <p className="text-xl font-display font-extrabold text-foreground">
+                {typeof ig?.following === "number" ? formataSeguidores(ig.following) : "-"}
+              </p>
               <p className="text-xs text-muted-foreground font-body">seguindo</p>
             </div>
           </div>

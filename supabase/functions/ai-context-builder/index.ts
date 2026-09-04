@@ -908,7 +908,9 @@ ${modoTendencias ? 'MODO: tendências (cruze a ideia com o que está quente).' :
 Gere 3 sugestões completas. Seja específico: cena, número, exemplo. Zero genérico.
 RESPONDA APENAS COM O ARRAY JSON. Nenhuma palavra antes ou depois dele.`
         // Sugestão completa (estrutura + moodboard) x3 não cabe em 900 tokens.
-        maxTokens = 2600
+        // E o gemini-2.5-flash gasta parte do limite "pensando" antes de
+        // escrever: com 2600 a resposta chegava cortada (erro do Walter, 04/09).
+        maxTokens = 7000
         break
       }
       case 'generate-caption':
@@ -1461,7 +1463,8 @@ ${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA AGORA (use de verdade
         max_tokens: maxTokens,
         temperature: operation === 'daily-insight' ? 0.7 : operation === 'idea-suggestions' ? 0.85 : 0.2,
       }),
-    })
+    // Sugestões completas com modelo cheio levam mais que os 30s padrão.
+    }, operation === 'idea-suggestions' ? 55000 : 30000)
 
     if (!response.ok) {
       if (response.status === 429) {

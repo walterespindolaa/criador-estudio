@@ -115,7 +115,15 @@ function parseSuggestions(result: unknown): AISuggestion[] {
   if (m) {
     try { return valida(JSON.parse(m[0])); } catch { /* segue */ }
   }
-  return [];
+  // 3ª: resposta CORTADA no meio (limite de tokens). Resgata cada objeto que
+  // veio inteiro: os objetos não têm objeto aninhado (só arrays de string),
+  // então um regex de chaves balanceadas de 1 nível pega cada sugestão.
+  const objetos = limpo.match(/\{[^{}]*\}/g) ?? [];
+  const resgatados: unknown[] = [];
+  for (const o of objetos) {
+    try { resgatados.push(JSON.parse(o)); } catch { /* esse estava cortado */ }
+  }
+  return valida(resgatados);
 }
 
 const Ideias = () => {

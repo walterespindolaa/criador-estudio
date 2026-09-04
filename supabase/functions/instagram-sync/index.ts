@@ -71,7 +71,8 @@ async function syncConnection(
   // 1) conta -> métricas diárias + atualiza a conexão.
   // Token expirado/revogado: aborta ESTA conexão (não sobrescreve as métricas do
   // dia com null) e sinaliza reconexão só pra ela.
-  const meRes = await fetchGraph(`${GRAPH}/me?fields=username,account_type,followers_count,media_count,profile_picture_url&access_token=${token}`);
+  // follows_count = "seguindo" (pro Meu Feed espelhar o perfil de verdade).
+  const meRes = await fetchGraph(`${GRAPH}/me?fields=username,account_type,followers_count,follows_count,media_count,profile_picture_url&access_token=${token}`);
   if (!meRes.ok) {
     console.error('[instagram-sync] graph /me error', conn.id, meRes.status, meRes.body?.error);
     return { crm_client_id: crmClientId, ok: false, reconnect: true, detail: (meRes.body?.error as { message?: string } | undefined)?.message ?? 'graph_error' };
@@ -146,7 +147,16 @@ async function syncConnection(
   await admin.from('social_connections').update({
     username: me.username ?? null, account_type: me.account_type ?? null,
     profile_picture_url: fotoPerfil, updated_at: new Date().toISOString(),
+    // Colunas novas (SQL 04/09). Se ainda não existirem, o update inteiro
+    // falharia: por isso vão num segundo update separado, best-effort.
   } as never).eq('id', conn.id);
+  await admin.from('social_connections').update({
+    follows_count: (me.follows_count as number) ?? null,
+    followers_count: (me.followers_count as number) ?? null,
+    media_count: (me.media_count as number) ?? null,
+  } as never).eq('id', conn.id).then(({ error }) => {
+    if (error) console.warn('[instagram-sync] contadores nao gravados (rodar SQL das colunas):', error.message);
+  });
 
   // 1b) DEMOGRAFIA DE AUDIÊNCIA (follower_demographics / engaged_audience_demographics).
   // A API exige period=lifetime + timeframe + 1 chamada por breakdown. Cada chamada

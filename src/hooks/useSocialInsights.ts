@@ -21,6 +21,10 @@ export type SocialConnection = {
   token_expires_at: string | null;
   connected_at: string | null;
   updated_at: string | null;
+  // Contadores do perfil (SQL 04/09): opcionais pra ler antes da migration.
+  followers_count?: number | null;
+  follows_count?: number | null;
+  media_count?: number | null;
 };
 
 export type DailyMetric = {
@@ -108,7 +112,9 @@ export function useSocialConnection() {
     refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await sbFrom("social_connections")
-        .select("id,user_id,provider,external_account_id,username,account_type,profile_picture_url,token_expires_at,connected_at,updated_at")
+        // Lista explicita (o "*" tropeçaria no access_token, que tem grant de
+        // coluna negado). Os 3 contadores exigem o SQL de 04/09 rodado antes.
+        .select("id,user_id,provider,external_account_id,username,account_type,profile_picture_url,token_expires_at,connected_at,updated_at,followers_count,follows_count,media_count")
         .eq("user_id", ownerId!)
         .eq("provider", "instagram")
         .is("crm_client_id", null)
