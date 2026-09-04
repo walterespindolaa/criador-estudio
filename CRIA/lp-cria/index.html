@@ -385,7 +385,7 @@ body.nav2-travado #sticky-cta{display:none!important}
       <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Começar meus 7 dias grátis</a>
       <a href="#motor" class="btn btn-ghost">Ver como funciona ↓</a>
     </div>
-    <p class="micro">7 dias grátis · Cancela quando quiser · Sem burocracia</p>
+    <p class="micro">7 dias grátis · Cancela quando quiser · Funciona no celular e no computador</p>
   </div>
 
 </section>
@@ -616,7 +616,9 @@ body.nav2-travado #sticky-cta{display:none!important}
   </div>
 </section>
 
-<section id="adesivos" data-dobra="Ver o universo do CRIA">
+<!-- Sem data-dobra: era só decoração + CTA, e o botão "Ver o universo do CRIA"
+     abria pra não mostrar nada de útil (feedback do Walter, 04/09). -->
+<section id="adesivos">
   <img class="ade-sticker ade-s1" src="stickers/selo-da-ideia-ao-post-rosa.png" alt="" aria-hidden="true" loading="lazy" decoding="async">
   <img class="ade-sticker ade-s2" src="stickers/criatura-lampada.png" alt="" aria-hidden="true" loading="lazy" decoding="async">
   <img class="ade-sticker ade-s3" src="stickers/selo-social-club-azul.png" alt="" aria-hidden="true" loading="lazy" decoding="async">
@@ -626,7 +628,7 @@ body.nav2-travado #sticky-cta{display:none!important}
   <img class="ade-sticker ade-s7" src="stickers/selo-social-club-verde.png" alt="" aria-hidden="true" loading="lazy" decoding="async">
   <div class="ade-inner">
     <h2>Do caos da sua cabeça <span class="hl">ao post publicado</span></h2>
-    <p>Ideias, planejamento, produção e constância no mesmo lugar. Feito pra quem cria de verdade.</p>
+    <p>Ideias, planejamento, produção e constância no mesmo lugar, no celular e no computador. Feito pra quem cria de verdade.</p>
     <div class="ade-cta">
       <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Começar meus 7 dias grátis</a>
     </div>
@@ -1571,11 +1573,14 @@ html,body{overflow-x:clip}
    undefined e a página cairia eternamente no fallback sem animação. `defer`
    executa antes do DOMContentLoaded, então esperar por ele resolve os dois
    lados: com GSAP, anima; com GSAP bloqueado por adblock, o fallback assume. */
-document.addEventListener('DOMContentLoaded', function () {
-
 /* ---------- seções de apoio nascem dobradas no celular ----------
    Só no celular e só nas seções marcadas com data-dobra. Se o JS não rodar,
-   tudo continua aberto: o conteúdo nunca fica preso. */
+   tudo continua aberto: o conteúdo nunca fica preso.
+   IMPORTANTE: roda AGORA, fora do DOMContentLoaded. Antes esperava o GSAP
+   carregar, a página nascia alta e encolhia milhares de pixels DEPOIS do
+   primeiro paint; o Safari do iPhone guardava a altura velha de rolagem e
+   sobrava um vão bege gigante depois do rodapé. Como este script fica no fim
+   do body, o DOM já está inteiro aqui. */
 (function () {
   if (!window.matchMedia('(max-width:820px)').matches) return;
   document.querySelectorAll('[data-dobra]').forEach(function (sec) {
@@ -1596,12 +1601,16 @@ document.addEventListener('DOMContentLoaded', function () {
       sec.classList.toggle('dobrado');
       b.innerHTML = (abrindo ? 'Mostrar menos' : sec.dataset.dobra) + ' <span class="seta">\u2193</span>';
       if (!abrindo) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      /* Avisa Safari e ScrollTrigger que a altura da página mudou: sem isto,
+         fechar a dobra deixava espaço morto de rolagem no fim da página. */
+      window.dispatchEvent(new Event('resize'));
     });
   });
 })();
 
 /* ---------- FAQ: 5 na tela, o resto sob demanda ----------
-   Eram 13 dúvidas abertas em sequência, ~2,5 telas antes do CTA final. */
+   Eram 13 dúvidas abertas em sequência, ~2,5 telas antes do CTA final.
+   Também roda antes do primeiro paint, pelo mesmo motivo do vão no Safari. */
 (function () {
   if (!window.matchMedia('(max-width:820px)').matches) return;
   var itens = document.querySelectorAll('#faq .faq-item, #faq-gestor .faq-item');
@@ -1615,8 +1624,11 @@ document.addEventListener('DOMContentLoaded', function () {
   b.addEventListener('click', function () {
     escondidos.forEach(function (el) { el.style.display = ''; });
     b.remove();
+    window.dispatchEvent(new Event('resize'));
   });
 })();
+
+document.addEventListener('DOMContentLoaded', function () {
 
 /* UTM/fbclid agora vivem no track.js: guardados na sessão e colados no
    clique, cobrindo signup E checkout. O antigo só cuidava do signup. */

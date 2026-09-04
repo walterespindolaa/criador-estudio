@@ -465,7 +465,7 @@ body.nav2-travado #sticky-cta{display:none!important}
       <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Começar grátis</a>
       <a href="#modulos" class="btn btn-ghost">Ver os módulos ↓</a>
     </div>
-    <p class="micro" style="color:rgba(244,239,227,.7)">Conta de social media gratuita · Você ativa só os módulos que precisar</p>
+    <p class="micro" style="color:rgba(244,239,227,.7)">Conta de social media gratuita · Você ativa só os módulos que precisar · Funciona no celular e no computador</p>
   </div>
 </section>
 
@@ -1077,11 +1077,14 @@ body.nav2-travado #sticky-cta{display:none!important}
    página cairia eternamente no fallback sem animação. `defer` executa antes do
    DOMContentLoaded, então esperar por ele atende os dois casos: com GSAP anima,
    com GSAP bloqueado por adblock o fallback assume. */
-document.addEventListener('DOMContentLoaded', function () {
-
 /* ---------- seções de apoio nascem dobradas no celular ----------
    Só no celular e só nas seções marcadas com data-dobra. Se o JS não rodar,
-   tudo continua aberto: o conteúdo nunca fica preso. */
+   tudo continua aberto: o conteúdo nunca fica preso.
+   IMPORTANTE: roda AGORA, fora do DOMContentLoaded. Antes esperava o GSAP
+   carregar, a página nascia alta e encolhia milhares de pixels DEPOIS do
+   primeiro paint; o Safari do iPhone guardava a altura velha de rolagem e
+   sobrava um vão bege gigante depois do rodapé. Como este script fica no fim
+   do body, o DOM já está inteiro aqui. */
 (function () {
   if (!window.matchMedia('(max-width:820px)').matches) return;
   document.querySelectorAll('[data-dobra]').forEach(function (sec) {
@@ -1102,12 +1105,16 @@ document.addEventListener('DOMContentLoaded', function () {
       sec.classList.toggle('dobrado');
       b.innerHTML = (abrindo ? 'Mostrar menos' : sec.dataset.dobra) + ' <span class="seta">\u2193</span>';
       if (!abrindo) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      /* Avisa Safari e ScrollTrigger que a altura da página mudou: sem isto,
+         fechar a dobra deixava espaço morto de rolagem no fim da página. */
+      window.dispatchEvent(new Event('resize'));
     });
   });
 })();
 
 /* ---------- FAQ: 5 na tela, o resto sob demanda ----------
-   Eram 13 dúvidas abertas em sequência, ~2,5 telas antes do CTA final. */
+   Eram 13 dúvidas abertas em sequência, ~2,5 telas antes do CTA final.
+   Também roda antes do primeiro paint, pelo mesmo motivo do vão no Safari. */
 (function () {
   if (!window.matchMedia('(max-width:820px)').matches) return;
   var itens = document.querySelectorAll('#faq .faq-item, #faq-gestor .faq-item');
@@ -1121,8 +1128,12 @@ document.addEventListener('DOMContentLoaded', function () {
   b.addEventListener('click', function () {
     escondidos.forEach(function (el) { el.style.display = ''; });
     b.remove();
+    window.dispatchEvent(new Event('resize'));
   });
 })();
+
+document.addEventListener('DOMContentLoaded', function () {
+
 /* Barra de progresso da leitura */
 (function(){
   const bar=document.getElementById('progresso');
