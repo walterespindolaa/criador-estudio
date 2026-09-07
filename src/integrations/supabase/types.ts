@@ -6581,6 +6581,8 @@ export type Database = {
         Returns: {
           agencia_id: string
           agencia_nome: string
+          aprovacao: string
+          cache: number
           cliente_cor: string
           cliente_logo: string
           cliente_nome: string
@@ -6612,6 +6614,7 @@ export type Database = {
           agencia_id: string
           agencia_nome: string
           assigned_at: string
+          cache: number
           cliente_cor: string
           cliente_handle: string
           cliente_logo: string
