@@ -92,7 +92,7 @@ begin
     from public.manager_members m where m.member_id = new.assignee_id and m.manager_id = new.user_id limit 1;
     insert into public.notifications (user_id, type, title, description, link)
     values (new.user_id, 'demanda_entregue', '✅ ' || coalesce(_parceiro, 'Parceiro') || ' entregou: ' || _titulo,
-            'Revise e aprove, ou peça ajuste.', '/socialmidia/criapost');
+            'Revise e aprove, ou peça ajuste.', '/socialmidia/criapost/parceiros');
   end if;
 
   -- e) Parceiro sugeriu outro prazo -> social mídia
@@ -102,7 +102,7 @@ begin
     insert into public.notifications (user_id, type, title, description, link)
     values (new.user_id, 'demanda_prazo', '📅 ' || coalesce(_parceiro, 'Parceiro') || ' sugeriu outro prazo: ' || _titulo,
             coalesce('Propôs ' || to_char(new.prazo_sugerido, 'DD/MM') || '. Aceite ou responda.', 'Veja a proposta no painel Com parceiros.'),
-            '/socialmidia/criapost');
+            '/socialmidia/criapost/parceiros');
   end if;
   return new;
 end; $$;
@@ -126,7 +126,7 @@ begin
     from public.manager_members m where m.member_id = _assignee and m.manager_id = _dono limit 1;
     insert into public.notifications (user_id, type, title, description, link)
     values (_dono, 'demanda_comentario', '💬 ' || coalesce(_parceiro, 'Parceiro') || ' comentou: ' || coalesce(_titulo, 'post'),
-            '"' || left(new.content, 180) || '"', '/socialmidia/criapost');
+            '"' || left(new.content, 180) || '"', '/socialmidia/criapost/parceiros');
   else
     insert into public.notifications (user_id, type, title, description, link)
     values (_assignee, 'demanda_comentario', '💬 Comentário no card: ' || coalesce(_titulo, 'post'),

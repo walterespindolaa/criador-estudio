@@ -17,7 +17,7 @@ export default function Marcas() {
 
   return (
     <div className="space-y-4">
-      {/* O título mora na faixa hero do ParceiroLayout. */}
+      {/* O título mora na faixa do topo do ManagerLayout. */}
 
       {/* MEUS CACHÊS (fase 3): o que cada agência deve e já pagou. Nasce do
           cachê combinado no card, lançado no Caixa dela quando você entrega.

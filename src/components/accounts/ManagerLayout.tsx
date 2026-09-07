@@ -1,5 +1,7 @@
 import { Suspense, useEffect, useState, type ReactNode } from "react";
-import { Navigate, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
 import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton, FeedbackDialog } from "@/components/FeedbackButton";
@@ -91,7 +93,7 @@ const HERO_TITLES: Record<string, string> = {
   "/socialmidia/lixeira": "Lixeira",
 };
 
-export type ManagerOutletContext = { openModule: (m: ModuleWithStatus) => void; openSettings: () => void };
+export type ManagerOutletContext = { openModule: (m: ModuleWithStatus) => void; openSettings: () => void; parceiroPuro: boolean };
 export function useManagerOutlet() { return useOutletContext<ManagerOutletContext>(); }
 
 export default function ManagerLayout() {
@@ -194,6 +196,22 @@ export default function ManagerLayout() {
   // modo gestão, só que para parceiros"). Fila alimenta o badge vermelho.
   const { data: souParceiro } = useSouParceiro();
   const { data: filaParceiro = [] } = useFilaDoParceiro();
+  // VOLTA DO STRIPE (auditoria 07/09): a compra de módulo devolvia pra
+  // /app/modulos, uma tela da área de criador. O parceiro puro nem chega lá
+  // (é redirecionado) e perdia o "contratado!". Agora o Stripe volta pra cá,
+  // avisa e recarrega os módulos, então o rail completo aparece sem F5.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const c = searchParams.get("checkout");
+    if (!c) return;
+    if (c === "success") {
+      toast.success("Módulo contratado! Pode levar alguns segundos pra liberar.");
+      void queryClient.invalidateQueries({ queryKey: ["modules"] });
+      setTimeout(() => void queryClient.invalidateQueries({ queryKey: ["modules"] }), 8000);
+    } else if (c === "cancel") toast("Checkout cancelado.");
+    setSearchParams({}, { replace: true });
+  }, [searchParams, setSearchParams, queryClient]);
   /* PARCEIRO "PURO" (pedido do Walter, 31/08: "menu lateral infinito, lapidar").
      Quem só produz pras agências (designer/filmmaker) não tem operação própria:
      nenhum módulo ativo, nenhuma conta gerenciada, não é colaborador. Pra essa
@@ -218,7 +236,7 @@ export default function ManagerLayout() {
   // colaborador de alguma agência (a conta de time é restaurada só no próximo render).
   if (profile && profile.account_type !== "manager" && !hasManagedAccounts && !actingAsTeam && !isCollaborator && !souParceiro) return <Navigate to="/app" replace />;
 
-  const ctx: ManagerOutletContext = { openModule, openSettings: () => setSettingsOpen(true) };
+  const ctx: ManagerOutletContext = { openModule, openSettings: () => setSettingsOpen(true), parceiroPuro };
 
   // ═══ FAIXA DO TOPO ═══
   // Antes ela repetia "Bom dia, Gabriela" a MESMA saudação que já está no card
@@ -327,7 +345,11 @@ export default function ManagerLayout() {
           {!actingAsTeam && !parceiroPuro && railNode(UserPlus, "Equipe", { active: isActive("/socialmidia/equipe"), onClick: () => navigate("/socialmidia/equipe") })}
           {/* Parceiro puro: do bloco Negócio só as Comissões interessam
              (Relatório/Parceria/Contas são coisa de quem tem operação). */}
-          {BUSINESS_NAV.filter((n) => !parceiroPuro || n.to === "/socialmidia/comissoes").map((n) => {
+          {/* Comissões é o programa de AFILIADO (cupom Stripe), não o cachê do
+             parceiro: pro parceiro puro o item vira "Meus cachês", que mora em
+             Marcas que atendo (auditoria 07/09). */}
+          {parceiroPuro && railNode(DollarSign, "Meus cachês", { active: false, onClick: () => navigate("/socialmidia/marcas") })}
+          {BUSINESS_NAV.filter((n) => !parceiroPuro).map((n) => {
             const onClick = n.to === "/socialmidia/comissoes" ? onNavComissoes : () => navigate(n.to);
             return railNode(n.icon as LucideIcon, n.label, { active: isActive(n.to), onClick });
           })}
@@ -466,7 +488,7 @@ export default function ManagerLayout() {
             title: "Negócio",
             items: parceiroPuro
               // Parceiro puro: só as Comissões fazem sentido pra ele aqui.
-              ? [{ label: "Comissões", desc: "O que você já ganhou", icon: DollarSign as LucideIcon, onClick: onNavComissoes }]
+              ? [{ label: "Meus cachês", desc: "O que você tem a receber das agências", icon: DollarSign as LucideIcon, onClick: () => navigate("/socialmidia/marcas") }]
               : [
               ...(!actingAsTeam ? [{ label: "Equipe", desc: "Convidar colaboradores", icon: UserPlus as LucideIcon, onClick: () => navigate("/socialmidia/equipe") }] : []),
               { label: "Relatório da operação", desc: "Produção, financeiro e carteira no período", icon: BarChart3 as LucideIcon, onClick: () => navigate("/socialmidia/relatorio") },

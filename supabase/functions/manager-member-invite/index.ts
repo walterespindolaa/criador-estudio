@@ -44,7 +44,15 @@ async function ensureUnsubscribeToken(svc: SupabaseClient, email: string): Promi
   return (data?.token as string) ?? token;
 }
 
-function emailHtml(opts: { managerName: string; actionLink: string }): string {
+function emailHtml(opts: { managerName: string; actionLink: string; existing: boolean; parceiro: boolean }): string {
+  // Quem já tem conta recebe magiclink (não define senha nenhuma) e o parceiro
+  // não "entra na conta da agência": entra na fila dele (auditoria 07/09).
+  const acao = opts.existing
+    ? "Clique pra entrar com a sua conta de sempre"
+    : "Clique pra acessar e definir sua senha";
+  const onde = opts.parceiro
+    ? "as demandas que ela te mandar já aparecem na sua fila, com prazo e material."
+    : "você já entra direto na conta da agência pra trabalhar.";
   // Rodapé com o logo (e não com a palavra "cria" escrita).
   // Cuidados de e-mail: Gmail e Outlook bloqueiam imagem por padrão, então a URL
   // é absoluta e pública, width/height vão como ATRIBUTO (o Outlook ignora só o
@@ -56,7 +64,7 @@ function emailHtml(opts: { managerName: string; actionLink: string }): string {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:32px 16px"><tr><td align="center">
     <table role="presentation" width="480" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;width:100%;background:#fff;border-radius:16px;padding:40px 32px;box-shadow:0 1px 3px rgba(0,0,0,0.05)"><tr><td>
       <h1 style="margin:0 0 16px 0;font-size:22px;font-weight:700;color:#111827;line-height:1.3">Você foi adicionado à equipe</h1>
-      <p style="margin:0 0 28px 0;font-size:15px;line-height:1.55;color:#4b5563">${escapeHtml(opts.managerName)} te convidou pra colaborar no cria. Clique pra acessar e definir sua senha, você já entra direto na conta da agência pra trabalhar.</p>
+      <p style="margin:0 0 28px 0;font-size:15px;line-height:1.55;color:#4b5563">${escapeHtml(opts.managerName)} te convidou pra colaborar no cria. ${acao}: ${onde}</p>
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px 0"><tr><td style="border-radius:12px;background:#8B5CF6">
         <a href="${opts.actionLink}" style="display:inline-block;padding:12px 24px;color:#fff;font-size:15px;font-weight:600;text-decoration:none;border-radius:12px">Acessar a equipe</a>
       </td></tr></table>
@@ -69,7 +77,7 @@ function emailHtml(opts: { managerName: string; actionLink: string }): string {
 
 // Convite por email, usado pelos dois caminhos (colaborador e parceiro).
 // deno-lint-ignore no-explicit-any
-async function enviarEmailConvite(svc: any, prof: unknown, normEmail: string, actionLink: string, existing: unknown) {
+async function enviarEmailConvite(svc: any, prof: unknown, normEmail: string, actionLink: string, existing: unknown, parceiro = false) {
   const managerName = (prof as { name?: string } | null)?.name ?? "Sua agência";
   const messageId = crypto.randomUUID();
   const unsub = await ensureUnsubscribeToken(svc, normEmail);
@@ -81,7 +89,7 @@ async function enviarEmailConvite(svc: any, prof: unknown, normEmail: string, ac
       from: "cria <noreply@criasocialclub.com.br>",
       sender_domain: "notify.criasocialclub.com.br",
       purpose: "transactional",
-      html: emailHtml({ managerName, actionLink }),
+      html: emailHtml({ managerName, actionLink, existing: !!existing, parceiro }),
       text: `${managerName} te adicionou à equipe no cria: ${actionLink}`,
       label: existing ? "team_invite_existing" : "team_invite_new",
       idempotency_key: messageId, unsubscribe_token: unsub, message_id: messageId,
@@ -176,13 +184,20 @@ serve(async (req) => {
         // O parceiro JA NASCE conta de gestao (account_type manager): a area
         // dele e uma secao do painel de gestao, nao outro mundo. Sem trial de
         // criador (o trigger de perfil dava 7 dias de Studio).
-        await svc.from("profiles")
-          .update({ plan: "free", trial_started_at: null, trial_ends_at: null, account_type: "manager" })
-          .eq("id", memberId);
+        // O perfil nasce por trigger no auth.users; se o trigger ainda não
+        // tiver corrido, o update não acha linha e o parceiro cairia como
+        // criador em trial. Confere e tenta de novo uma vez (auditoria 07/09).
+        const ajuste = { plan: "free", trial_started_at: null, trial_ends_at: null, account_type: "manager" };
+        let { data: upd, error: updErr } = await svc.from("profiles").update(ajuste).eq("id", memberId).select("id");
+        if (updErr || !upd?.length) {
+          await new Promise((r) => setTimeout(r, 1500));
+          ({ data: upd, error: updErr } = await svc.from("profiles").update(ajuste).eq("id", memberId).select("id"));
+        }
+        if (updErr || !upd?.length) console.error("[manager-member-invite] perfil do parceiro não ajustado:", updErr?.message ?? "sem linha");
       }
       // Parceiro não recebe módulo nenhum: o acesso dele é por card, via as
       // RPCs parceiro_*. Dar módulo aqui seria abrir o CRM pra quem só produz.
-      await enviarEmailConvite(svc, prof, normEmail, actionLink, existing);
+      await enviarEmailConvite(svc, prof, normEmail, actionLink, existing, true);
       return json({ ok: true, member_id: memberId, existed: !!existing, role: papel });
     }
 

@@ -4,6 +4,7 @@ import { useExternalClients, useExternalPosts, usePortalActivity, type ExternalC
 import { toast } from "sonner";
 import { confirmar } from "@/components/shared/Confirm";
 import { EnviarParaParceiro } from "@/components/accounts/EnviarParaParceiro";
+import { useMeusParceiros, ROTULO_PAPEL } from "@/hooks/useParceiro";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -309,6 +310,16 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const { data: editorialLines = [] } = useEditorialLines(client.id);
   const linhaDoPost = (id: string | null | undefined) =>
     id ? editorialLines.find((el) => el.id === id) ?? null : null;
+  // Parceiros da agência: o card mostra COM QUEM a peça está e em que etapa.
+  // Antes só aparecia dentro do editor (auditoria 07/09).
+  const { data: parceiros = [] } = useMeusParceiros();
+  const nomeParceiro = (id: string | null | undefined) => parceiros.find((x) => x.member_id === id) ?? null;
+  const ETAPA_PARCEIRO: Record<string, { txt: string; cls: string }> = {
+    aguardando: { txt: "aguardando", cls: "bg-orange-100 text-orange-800" },
+    em_producao: { txt: "produzindo", cls: "bg-blue-100 text-blue-800" },
+    ajuste: { txt: "em ajuste", cls: "bg-violet-100 text-violet-800" },
+    entregue: { txt: "entregue", cls: "bg-green-100 text-green-800" },
+  };
   // Clicar no vazio e arrastar pro lado rola o board (só mouse; no toque nada muda).
   const boardRef = useDragScroll<HTMLDivElement>();
   // Filtro de data/formato pra revisar/enviar só o que interessa. Persistido em
@@ -737,6 +748,18 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                             })()}
                             <span className="text-[10px] font-body font-bold uppercase tracking-wide"><span style={formatColorVars(p.format)} className={FORMAT_TEXT_CLASS}>{FORMAT_LABELS[normalizarFormato(p.format)] ?? cap(p.format)}</span> <span className="text-muted-foreground">· {cap(p.platform)}</span></span>
                             <p className="font-display font-bold text-sm text-foreground truncate mt-1">{p.title}</p>
+                            {p.assignee_id && (() => {
+                              const quem = nomeParceiro(p.assignee_id);
+                              const et = ETAPA_PARCEIRO[p.producao_status ?? "aguardando"];
+                              return (
+                                <span className="mt-1 inline-flex items-center gap-1 max-w-full">
+                                  <span className="text-[10px] font-body font-semibold text-muted-foreground truncate">
+                                    {quem ? `${quem.nome.split(" ")[0]} (${ROTULO_PAPEL[quem.role] ?? quem.role})` : "Parceiro"}
+                                  </span>
+                                  {et && <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${et.cls}`}>{et.txt}</span>}
+                                </span>
+                              );
+                            })()}
                             {/* Data direto no card, sem abrir o post. Reflete no calendário na hora. */}
                             <input type="date" value={p.scheduled_date ?? ""}
                               onClick={(e) => e.stopPropagation()}

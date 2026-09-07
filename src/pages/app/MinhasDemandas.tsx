@@ -95,7 +95,7 @@ export default function MinhasDemandas() {
   return (
     <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        {/* O título mora na faixa hero do ParceiroLayout; aqui começa direto
+        {/* O título mora na faixa do topo do ManagerLayout; aqui começa direto
             no resumo, como os módulos da social mídia fazem. */}
         {/* O RESUMO DO DIA: os quatro números que respondem "como estou?". O
             último (entregues em 30 dias) é a semente da cobrança por entrega. */}
@@ -198,6 +198,11 @@ export default function MinhasDemandas() {
                           <span className="text-[11px] font-body text-muted-foreground">via {c.agencia_nome}</span>
                           {c.formato && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[c.formato] ?? c.formato}</span>}
                           {c.publica_em && <span className="text-[11px] font-body text-muted-foreground">publica {dataBR(c.publica_em)}</span>}
+                          {c.cache != null && c.cache > 0 && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-800">
+                              R$ {c.cache.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                            </span>
+                          )}
                           {c.prazo_status === "proposto" && (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">prazo pra confirmar</span>
                           )}
@@ -709,7 +714,7 @@ const ROTULO_APROVACAO: Record<string, { txt: string; cls: string }> = {
   postado: { txt: "Postado", cls: "bg-slate-200 text-slate-600" },
 };
 
-function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFechar: () => void }) {
+export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFechar: () => void }) {
   const { data: card, isLoading } = useCardDoParceiro(postId);
   const { marcar, comentar, responderPrazo, anexar } = useAcoesDoParceiro(postId);
   const [texto, setTexto] = useState("");
@@ -735,11 +740,17 @@ function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFecha
     setTexto("");
   };
 
-  const copiarLegenda = async () => {
-    if (!card?.legenda) return;
-    await navigator.clipboard.writeText(card.legenda);
-    toast.success("Legenda copiada.");
+  // Clipboard falha em iframe/HTTP/permissão negada: sem o try o erro
+  // estourava mudo e o botão parecia quebrado.
+  const copiar = async (txt: string, msg: string) => {
+    try {
+      await navigator.clipboard.writeText(txt);
+      toast.success(msg);
+    } catch {
+      toast.error("Não consegui copiar. Selecione o texto e copie manualmente.");
+    }
   };
+  const copiarLegenda = () => { if (card?.legenda) void copiar(card.legenda, "Legenda copiada."); };
 
   return (
     <Dialog open={!!postId} onOpenChange={(v) => !v && aoFechar()}>
@@ -754,7 +765,7 @@ function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFecha
               <div className="p-5">
                 <DialogTitle className="font-display text-xl font-extrabold leading-tight">{card.titulo || "Sem título"}</DialogTitle>
                 <p className="text-xs font-body text-muted-foreground mt-1.5">
-                  <b className="text-foreground">{card.marca.nome}</b> · delegado por {card.agencia}
+                  <b className="text-foreground">{card.marca.nome || "Cliente"}</b> · delegado por {card.agencia}
                   {card.publica_em && <> · publica em {dataBR(card.publica_em)}</>}
                 </p>
 
@@ -809,9 +820,48 @@ function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFecha
                   <div className="mt-4">
                     <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Legenda aprovada</p>
                     <p className="text-sm font-body whitespace-pre-line bg-muted/50 border border-border rounded-xl px-3 py-2.5 leading-relaxed">{card.legenda}</p>
-                    <button onClick={() => void copiarLegenda()} className="mt-1.5 inline-flex items-center gap-1.5 text-[11.5px] font-body font-bold text-primary">
+                    <button onClick={copiarLegenda} className="mt-1.5 inline-flex items-center gap-1.5 text-[11.5px] font-body font-bold text-primary">
                       <CopyIcon className="h-3.5 w-3.5" /> Copiar legenda
                     </button>
+                  </div>
+                )}
+
+                {/* DIREÇÃO DE ARTE E NOTAS: o RPC já mandava art e notes, mas a
+                    tela jogava fora. Quem mais precisa deles é justamente o
+                    designer (auditoria 07/09). */}
+                {(() => {
+                  const arte = card.arte as { resultado?: { estilo?: { descricao?: string }; paginas?: { n: number; titulo: string; pt: string }[] } } | null;
+                  const estilo = arte?.resultado?.estilo?.descricao?.trim();
+                  const paginas = arte?.resultado?.paginas ?? [];
+                  if (!estilo && paginas.length === 0) return null;
+                  return (
+                    <div className="mt-4">
+                      <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Direção de arte</p>
+                      <div className="text-sm font-body bg-muted/50 border border-border rounded-xl px-3 py-2.5 leading-relaxed space-y-2">
+                        {estilo && <p>{estilo}</p>}
+                        {paginas.length > 0 && (
+                          <details>
+                            <summary className="text-[12px] font-bold text-primary cursor-pointer">
+                              {paginas.length} {paginas.length === 1 ? "cena descrita" : "cenas descritas"}
+                            </summary>
+                            <ol className="mt-1.5 space-y-1.5">
+                              {paginas.map((pg) => (
+                                <li key={pg.n} className="text-[12.5px]">
+                                  <b>{pg.n}. {pg.titulo}</b>{pg.pt ? <> · {pg.pt}</> : null}
+                                </li>
+                              ))}
+                            </ol>
+                          </details>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {card.notas?.trim() && (
+                  <div className="mt-4">
+                    <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Observações da social mídia</p>
+                    <p className="text-sm font-body whitespace-pre-line bg-amber-50/60 border border-amber-200 rounded-xl px-3 py-2.5 leading-relaxed">{card.notas}</p>
                   </div>
                 )}
 
@@ -827,11 +877,15 @@ function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFecha
                     {card.comentarios.map((cm) => (
                       <div key={cm.id} className="rounded-xl border border-border bg-background px-3 py-2">
                         <p className="text-[10.5px] font-bold mb-0.5">
+                          {/* O cliente escreve com vários papéis (client, cliente,
+                              cliente_externo, cliente_externo_aprovacao). Todos
+                              contêm "client"; sem isso a fala dele saía rotulada
+                              como social mídia (auditoria 07/09). */}
                           <span className={cn("px-1.5 py-0.5 rounded-full uppercase tracking-wide text-[9px]",
                             cm.papel === "parceiro" ? "bg-violet-100 text-violet-700"
-                            : cm.papel === "cliente" || cm.papel === "client" ? "bg-green-100 text-green-700"
+                            : /client/.test(cm.papel) ? "bg-green-100 text-green-700"
                             : "bg-pink-100 text-pink-700")}>
-                            {cm.papel === "parceiro" ? "você" : (cm.papel === "cliente" || cm.papel === "client") ? "cliente" : "social mídia"}
+                            {cm.papel === "parceiro" ? "você" : /client/.test(cm.papel) ? "cliente" : "social mídia"}
                           </span>
                           <span className="text-muted-foreground font-medium ml-2">{new Date(cm.em).toLocaleDateString("pt-BR")}</span>
                         </p>
@@ -946,11 +1000,26 @@ function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFecha
                   </div>
                 )}
 
+                {/* O CACHÊ: combinado pela social mídia ao delegar. Antes ficava
+                    só no lado dela; o parceiro descobria o valor no fim do mês
+                    (auditoria 07/09). */}
+                {card.cache != null && card.cache > 0 && (
+                  <div className="rounded-xl border border-green-200 bg-green-50/60 px-3.5 py-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-green-800">Cachê desta peça</p>
+                    <p className="font-display font-extrabold text-lg mt-0.5 text-green-900">
+                      {card.cache.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </p>
+                    <p className="text-[10.5px] font-body text-green-800/80 mt-0.5">
+                      {card.producao_status === "entregue" ? "Já lançado no Caixa da agência." : "Entra no Caixa da agência quando você entregar."}
+                    </p>
+                  </div>
+                )}
+
                 <div className="rounded-xl border border-border bg-background px-3.5 py-3">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-2"><Palette className="h-3 w-3" /> A marca</p>
                   {card.marca.cor && (
                     <button
-                      onClick={() => { void navigator.clipboard.writeText(card.marca.cor!); toast.success(`${card.marca.cor} copiado.`); }}
+                      onClick={() => void copiar(card.marca.cor!, `${card.marca.cor} copiado.`)}
                       className="flex items-center gap-2 mb-2" title="Copiar o hex">
                       <span className="w-7 h-7 rounded-lg border border-border" style={{ background: card.marca.cor }} />
                       <span className="text-xs font-mono text-muted-foreground">{card.marca.cor}</span>

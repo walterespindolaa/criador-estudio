@@ -239,12 +239,22 @@ Deno.serve(async (req) => {
 
     // ── PRAZO DO PARCEIRO (Cria Parceiros, fase 3): demanda que vence hoje ou
     //    amanhã e ainda não foi entregue avisa o parceiro. Uma por pessoa/dia. ──
-    const { data: demandasPerto } = await svc.from("posts").select("assignee_id, title, prazo_producao")
+    const { data: demandasPerto } = await svc.from("posts").select("user_id, assignee_id, title, prazo_producao")
       .not("assignee_id", "is", null).is("deleted_at", null)
       .in("producao_status", ["aguardando", "em_producao", "ajuste"])
       .in("prazo_producao", [hojeBR, amanhaBR]);
+    // Parceiro desligado da agência (vínculo removido/pausado) não pode
+    // continuar recebendo cobrança de prazo de post que ele nem vê mais
+    // (auditoria 07/09). Só conta o par agência+parceiro com vínculo ativo.
+    const vinculosAtivos = new Set<string>();
+    if (demandasPerto?.length) {
+      const { data: vinc } = await svc.from("manager_members").select("manager_id, member_id")
+        .eq("status", "ativo").in("member_id", [...new Set((demandasPerto as { assignee_id: string }[]).map((d) => d.assignee_id))]);
+      for (const v of (vinc ?? []) as { manager_id: string; member_id: string }[]) vinculosAtivos.add(`${v.manager_id}:${v.member_id}`);
+    }
     const porParceiro = new Map<string, { hoje: string[]; amanha: string[] }>();
-    for (const d of (demandasPerto ?? []) as { assignee_id: string; title: string; prazo_producao: string }[]) {
+    for (const d of (demandasPerto ?? []) as { user_id: string; assignee_id: string; title: string; prazo_producao: string }[]) {
+      if (!vinculosAtivos.has(`${d.user_id}:${d.assignee_id}`)) continue;
       const a = porParceiro.get(d.assignee_id) ?? porParceiro.set(d.assignee_id, { hoje: [], amanha: [] }).get(d.assignee_id)!;
       (d.prazo_producao === hojeBR ? a.hoje : a.amanha).push(d.title);
     }

@@ -38,24 +38,31 @@ export default function Equipe() {
   const [scope, setScope] = useState<"all" | "some">("all");
   const [cliIds, setCliIds] = useState<Set<string>>(new Set());
 
-  const used = members.filter((m) => m.status === "ativo").length;
+  // Parceiro de produção (designer, editor, copy, tráfego) NÃO consome assento:
+  // o servidor já exclui esses papéis da contagem (manager-member-invite). A
+  // tela contava todo mundo e bloqueava o convite com "Sem assentos livres"
+  // depois do primeiro parceiro (auditoria 04/09).
+  const PAPEIS_PARCEIRO = ["designer", "editor_video", "copy", "trafego"];
+  const used = members.filter((m) => m.status === "ativo" && !PAPEIS_PARCEIRO.includes((m as { role?: string }).role ?? "")).length;
   const total = seats?.total ?? 1;
   const full = used >= total;
 
   const resetForm = () => { setEmail(""); setName(""); setMods(new Set(TEAM_MODULE_DEFAULT)); setScope("all"); setCliIds(new Set()); };
-  const openInvite = () => {
-    if (full) { toast.error("Sem assentos livres. Adicione um assento primeiro."); return; }
-    resetForm(); setOpen(true);
-  };
+  // O modal abre sempre: parceiro de produção não usa assento. A trava de
+  // assento cheio vale só na hora de enviar convite de COLABORADOR.
+  const openInvite = () => { resetForm(); setOpen(true); };
 
-  const toggleMod = (code: string) => setMods((s) => { const n = new Set(s); n.has(code) ? n.delete(code) : n.add(code); return n; });
-  const toggleCli = (id: string) => setCliIds((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleMod = (code: string) => setMods((s) => { const n = new Set(s); if (n.has(code)) n.delete(code); else n.add(code); return n; });
+  const toggleCli = (id: string) => setCliIds((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   const doInvite = () => {
     const e = email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { toast.error("Informe um e-mail válido."); return; }
-    if (mods.size === 0) { toast.error("Marque ao menos um módulo."); return; }
-    if (scope === "some" && cliIds.size === 0) { toast.error("Escolha ao menos um cliente ou marque 'Todos'."); return; }
+    if (tipoAcesso !== "parceiro") {
+      if (full) { toast.error("Sem assentos livres pra colaborador. Adicione um assento ou convide como parceiro de produção (não usa assento)."); return; }
+      if (mods.size === 0) { toast.error("Marque ao menos um módulo."); return; }
+      if (scope === "some" && cliIds.size === 0) { toast.error("Escolha ao menos um cliente ou marque 'Todos'."); return; }
+    }
     invite.mutate(
       tipoAcesso === "parceiro"
         ? { email: e, name: name.trim() || undefined, role: papelParceiro }

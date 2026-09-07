@@ -95,7 +95,10 @@ export function PainelComParceiros({ clientes }: {
   }, [parceiros]);
 
   // O que exige ação DELA, sempre em cima.
-  const praRevisar = pecas.filter((p) => p.producao_status === "entregue" && p.approval_status === "em_producao");
+  // Entregue e ainda não foi pro cliente. Inclui o caso "cliente pediu ajuste,
+  // parceiro entregou de novo": approval_status fica ajuste_solicitado e antes
+  // a peça sumia desta lista (auditoria 07/09).
+  const praRevisar = pecas.filter((p) => p.producao_status === "entregue" && !["pendente", "aprovado", "postado"].includes(p.approval_status ?? ""));
   const prazosPraResponder = pecas.filter((p) => p.prazo_status === "negociando" && p.prazo_sugerido);
   const abertas = pecas.filter((p) => p.producao_status !== "entregue");
 
@@ -110,6 +113,7 @@ export function PainelComParceiros({ clientes }: {
   const abrirPeca = (p: PecaExterna) => {
     // O card do post vive no workspace do cliente; sem cliente, fica aqui.
     if (p.external_client_id) navigate(`/socialmidia/clientes/${p.external_client_id}/posts`);
+    else navigate("/socialmidia/criapost"); // sem cliente: o quadro geral, nunca clique morto
   };
 
   const linhaPeca = (p: PecaExterna, extra?: React.ReactNode) => (

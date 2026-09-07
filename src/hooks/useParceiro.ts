@@ -30,6 +30,7 @@ export type CardDaFila = {
    *  negociando = parceiro sugeriu outra data · aceito = combinado. */
   prazo_status: "proposto" | "negociando" | "aceito" | null;
   prazo_sugerido: string | null;
+  cache: number | null;
   publica_em: string | null;
   assigned_at: string | null;
   agencia_id: string;
@@ -63,6 +64,9 @@ export type CardAberto = {
   /** Eixo de aprovação do CLIENTE, só leitura pro parceiro: depois de
    *  entregar, ele vê onde a peça está (pendente, aprovado, postado...). */
   aprovacao: string | null;
+  /** Valor combinado pela social mídia. Vira despesa no Caixa dela quando a
+   *  peça é entregue; o parceiro precisa ver o que vai receber. */
+  cache: number | null;
   agencia: string;
   marca: {
     nome: string | null;
@@ -83,12 +87,20 @@ export const ROTULO_PAPEL: Record<string, string> = {
   trafego: "Tráfego",
 };
 
+/* SINCRONIA ENTRE DOIS LADOS (auditoria 04/09): não há realtime no app, e o
+   cache global fica 5 min sem revalidar e não refaz ao focar a janela. Quem
+   delega de um lado e quem entrega do outro estão em sessões diferentes: sem
+   isto, a demanda nova só aparecia com F5. Estas queries revalidam a cada 45s
+   e ao voltar pra aba. */
+const SINCRONIA = { staleTime: 20_000, refetchInterval: 45_000, refetchOnWindowFocus: true } as const;
+
 /* ── A FILA DO PARCEIRO (todas as agências de uma vez) ──────────────────── */
 export function useFilaDoParceiro() {
   const { user } = useAuth();
   return useQuery<CardDaFila[]>({
     queryKey: ["parceiro-fila", user?.id],
     enabled: !!user,
+    ...SINCRONIA,
     queryFn: async () => {
       const { data, error } = await sbRpc("parceiro_minha_fila");
       if (error) {
@@ -106,6 +118,7 @@ export function useCardDoParceiro(postId: string | null) {
   return useQuery<CardAberto | null>({
     queryKey: ["parceiro-card", postId],
     enabled: !!postId,
+    ...SINCRONIA,
     queryFn: async () => {
       const { data, error } = await sbRpc("parceiro_abrir_card", { _post_id: postId });
       if (error) throw error;
@@ -119,6 +132,10 @@ export function useAcoesDoParceiro(postId: string | null) {
   const qc = useQueryClient();
   const invalidar = () => {
     void qc.invalidateQueries({ queryKey: ["parceiro-fila"] });
+    // Entregou: o card sai da fila e ENTRA em Entregues; sem invalidar aqui ele
+    // "sumia" até o cache vencer (auditoria 04/09).
+    void qc.invalidateQueries({ queryKey: ["parceiro-entregues"] });
+    void qc.invalidateQueries({ queryKey: ["parceiro-agencias"] });
     if (postId) void qc.invalidateQueries({ queryKey: ["parceiro-card", postId] });
   };
 
@@ -260,6 +277,7 @@ export function useConversaDoCard(postId: string | null) {
   const chave = ["conversa-card", postId] as const;
   const lista = useQuery<MensagemCard[]>({
     queryKey: chave,
+    ...SINCRONIA,
     enabled: !!postId,
     queryFn: async () => {
       const { data, error } = await sbFrom("post_approval_comments")
@@ -357,6 +375,7 @@ export function usePecasComParceiros(temParceiros: boolean) {
   const { user } = useAuth();
   return useQuery<PecaExterna[]>({
     queryKey: ["pecas-com-parceiros", user?.id],
+    ...SINCRONIA,
     enabled: !!user && temParceiros,
     queryFn: async () => {
       const { data, error } = await sbFrom("posts")
@@ -424,6 +443,7 @@ export function usePedirAjuste() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["external-posts"] });
+      void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
       toast.success("Ajuste pedido. O parceiro recebe o card de volta com o motivo.");
     },
     onError: (e: Error) => toast.error(e.message || "Não consegui pedir o ajuste."),
@@ -456,6 +476,7 @@ export function useDelegarPost() {
     },
     onSuccess: (v) => {
       void qc.invalidateQueries({ queryKey: ["external-posts"] });
+      void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
       toast.success(v.assigneeId
         ? `Enviado pra ${v.nomeParceiro ?? "o parceiro"}. Ele recebe o aviso na hora.`
         : "Delegação removida.");

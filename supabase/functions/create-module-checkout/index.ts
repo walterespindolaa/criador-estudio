@@ -118,8 +118,10 @@ serve(async (req) => {
       subscription_data: {
         metadata: { app: "cria", kind: "module", module_code: moduleCode, manager_id: user.id },
       },
-      success_url: `${origin}/app/modulos?checkout=success`,
-      cancel_url: `${origin}/app/modulos?checkout=cancel`,
+      // Volta pra área de gestão (quem compra módulo está nela). /app/modulos
+      // era tela de criador e o parceiro puro nem chegava lá (auditoria 07/09).
+      success_url: `${origin}/socialmidia/dashboard?checkout=success`,
+      cancel_url: `${origin}/socialmidia/dashboard?checkout=cancel`,
     });
 
     return new Response(JSON.stringify({ url: session.url }), {

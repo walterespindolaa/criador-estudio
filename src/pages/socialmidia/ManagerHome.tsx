@@ -25,6 +25,7 @@ import { clienteInativo } from "@/lib/cliente-status";
 import { useMonthMoneyPJ } from "@/hooks/useFinance";
 import { useAllExternalPosts, useExternalClients } from "@/hooks/useCriaPost";
 import { MonthOverviewPanel } from "@/components/accounts/MonthOverviewPanel";
+import ParceiroHome from "@/pages/socialmidia/ParceiroHome";
 
 // Card do painel. A cor é a do módulo pra onde ele leva: a pessoa aprende
 // a cor uma vez e depois navega no automático, sem ler.
@@ -66,6 +67,14 @@ function greeting(name?: string | null) {
 }
 
 export default function ManagerHome() {
+  // Parceiro puro (designer/editor sem operação própria) tem a própria home:
+  // a desta tela é a da social mídia e pra ele só mostrava zeros.
+  const { parceiroPuro } = useManagerOutlet();
+  if (parceiroPuro) return <ParceiroHome />;
+  return <ManagerHomeSocialMidia />;
+}
+
+function ManagerHomeSocialMidia() {
   const navigate = useNavigate();
   // Nome exibido: MESMA regra da página Clientes (apelido > nome ao vivo do
   // Cria > name do CRM). Antes a home usava o name cru e divergia.
