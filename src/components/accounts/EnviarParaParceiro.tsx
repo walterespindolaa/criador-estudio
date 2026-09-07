@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Check, Loader2, RotateCcw, Send, X } from "lucide-react";
+import { Check, Loader2, MessageCircle, RotateCcw, Send, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { ROTULO_PAPEL, useDelegarPost, useMeusParceiros, usePedirAjuste } from "@/hooks/useParceiro";
+import { ROTULO_PAPEL, useConversaDoCard, useDelegarPost, useMeusParceiros, usePedirAjuste } from "@/hooks/useParceiro";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ENVIAR PARA (Cria Parceiros)
@@ -20,20 +20,25 @@ import { ROTULO_PAPEL, useDelegarPost, useMeusParceiros, usePedirAjuste } from "
    vazia é convite pra frustração, não pra descoberta.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo }: {
+export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, cache }: {
   postId: string;
   assigneeId: string | null;
   producaoStatus: string | null;
   prazo: string | null;
+  /** Cachê combinado (R$). Vira despesa no Caixa quando o parceiro entregar. */
+  cache?: number | null;
 }) {
   const { data: parceiros = [] } = useMeusParceiros();
   const delegar = useDelegarPost();
   const [aberto, setAberto] = useState(false);
   const [escolhido, setEscolhido] = useState<string | null>(assigneeId);
   const [dataEntrega, setDataEntrega] = useState(prazo ?? "");
+  const [valorCache, setValorCache] = useState(cache != null ? String(cache) : "");
   const [pedindoAjuste, setPedindoAjuste] = useState(false);
   const [motivoAjuste, setMotivoAjuste] = useState("");
+  const [mensagem, setMensagem] = useState("");
   const pedirAjuste = usePedirAjuste();
+  const conversa = useConversaDoCard(assigneeId ? postId : null);
 
   if (parceiros.length === 0) return null;
   const atual = parceiros.find((p) => p.member_id === assigneeId);
@@ -41,7 +46,11 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo }
   const enviar = async () => {
     if (!escolhido) return;
     const nome = parceiros.find((p) => p.member_id === escolhido)?.nome;
-    await delegar.mutateAsync({ postId, assigneeId: escolhido, prazo: dataEntrega || null, nomeParceiro: nome });
+    const cacheNum = valorCache.trim() ? Number(valorCache.replace(",", ".")) : null;
+    await delegar.mutateAsync({
+      postId, assigneeId: escolhido, prazo: dataEntrega || null, nomeParceiro: nome,
+      cache: cacheNum != null && !Number.isNaN(cacheNum) && cacheNum > 0 ? cacheNum : null,
+    });
     setAberto(false);
   };
 
@@ -79,13 +88,19 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo }
           ))}
         </div>
 
-        <div className="mt-3">
-          <Label className="text-xs">Entregar até</Label>
-          <Input type="date" value={dataEntrega} onChange={(e) => setDataEntrega(e.target.value)} className="rounded-xl h-10 mt-1" />
-          <p className="text-[11px] font-body text-muted-foreground mt-1 leading-relaxed">
-            A data que vocês combinaram. Deixe vazio se ainda vão combinar.
-          </p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <div>
+            <Label className="text-xs">Entregar até</Label>
+            <Input type="date" value={dataEntrega} onChange={(e) => setDataEntrega(e.target.value)} className="rounded-xl h-10 mt-1" />
+          </div>
+          <div>
+            <Label className="text-xs">Cachê (R$)</Label>
+            <Input inputMode="decimal" placeholder="Ex.: 150" value={valorCache} onChange={(e) => setValorCache(e.target.value)} className="rounded-xl h-10 mt-1" />
+          </div>
         </div>
+        <p className="text-[11px] font-body text-muted-foreground mt-1 leading-relaxed">
+          Data e valor combinados. O cachê vira despesa no Caixa quando a entrega for marcada. Vazio = a combinar.
+        </p>
 
         <div className="flex gap-2 mt-3">
           {atual && (
@@ -127,6 +142,39 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo }
               </Button>
             </div>
           )
+        )}
+
+        {/* CONVERSA NO CARD (fase 3): a thread que o parceiro já vê no card
+            dele, agora também do lado de cá. Cada mensagem avisa o outro lado. */}
+        {atual && (
+          <div className="mt-3 border-t border-border pt-2.5">
+            <p className="text-[11px] font-display font-bold uppercase tracking-wider text-muted-foreground mb-1.5 inline-flex items-center gap-1">
+              <MessageCircle className="h-3 w-3" /> Conversa com {atual.nome.split(" ")[0]}
+            </p>
+            <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+              {conversa.mensagens.length === 0 && (
+                <p className="text-[11px] font-body text-muted-foreground">Nada ainda. O que você mandar aqui chega no card dele.</p>
+              )}
+              {conversa.mensagens.map((m) => (
+                <div key={m.id} className={cn("rounded-lg px-2.5 py-1.5 text-[12px] font-body leading-snug",
+                  m.author_role === "social_media" ? "bg-violet-50 text-violet-950 ml-6" : "bg-muted text-foreground mr-6")}>
+                  <span className="block text-[10px] text-muted-foreground mb-0.5">
+                    {m.author_role === "social_media" ? "Você" : atual.nome.split(" ")[0]} · {new Date(m.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                  </span>
+                  {m.content}
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-1.5 mt-2">
+              <Input value={mensagem} onChange={(e) => setMensagem(e.target.value)} placeholder="Escrever pro parceiro..."
+                className="rounded-xl h-9 text-[12.5px]"
+                onKeyDown={(e) => { if (e.key === "Enter" && mensagem.trim()) { void conversa.enviar.mutateAsync(mensagem).then(() => setMensagem("")); } }} />
+              <Button size="sm" className="rounded-xl h-9 px-3" disabled={!mensagem.trim() || conversa.enviar.isPending}
+                onClick={() => void conversa.enviar.mutateAsync(mensagem).then(() => setMensagem(""))}>
+                {conversa.enviar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+              </Button>
+            </div>
+          </div>
         )}
       </PopoverContent>
     </Popover>

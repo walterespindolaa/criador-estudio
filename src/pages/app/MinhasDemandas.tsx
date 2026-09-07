@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -711,11 +711,13 @@ const ROTULO_APROVACAO: Record<string, { txt: string; cls: string }> = {
 
 function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFechar: () => void }) {
   const { data: card, isLoading } = useCardDoParceiro(postId);
-  const { marcar, comentar, responderPrazo } = useAcoesDoParceiro(postId);
+  const { marcar, comentar, responderPrazo, anexar } = useAcoesDoParceiro(postId);
   const [texto, setTexto] = useState("");
   // Entregar em dois tempos: o clique abre o campo do link da versão final.
   const [entregando, setEntregando] = useState(false);
   const [linkEntrega, setLinkEntrega] = useState("");
+  // Entrega com ARQUIVO (fase 3): sobe direto pro card, sem passar por link.
+  const inputArquivo = useRef<HTMLInputElement | null>(null);
   // Checklist pessoal (camada privada do card).
   const { data: metasCards = {} } = useMetasDosCards();
   const salvarMeta = useSalvarCardMeta();
@@ -995,13 +997,25 @@ function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFecha
                          final?". O link da versão final entra carimbado na
                          conversa do card. */
                       <div className="rounded-xl border border-green-300 bg-green-50/60 p-2.5 space-y-2">
+                        {/* Arquivo direto no card: imagem ou vídeo até 80 MB. Acima disso, link. */}
+                        <input ref={inputArquivo} type="file" accept="image/*,video/*,.pdf" className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) { anexar.mutate({ arquivo: f, marcarEntregue: true }); setEntregando(false); }
+                            e.target.value = "";
+                          }} />
+                        <Button className="w-full rounded-xl bg-green-600 hover:bg-green-700" disabled={anexar.isPending}
+                          onClick={() => inputArquivo.current?.click()}>
+                          {anexar.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Subindo...</> : <><Check className="h-4 w-4 mr-1.5" /> Subir o arquivo final e entregar</>}
+                        </Button>
+                        <p className="text-[10.5px] font-body text-muted-foreground text-center">ou</p>
                         <p className="text-[11px] font-body font-bold text-green-900">Link da versão final (Drive, Dropbox...)</p>
                         <input type="url" value={linkEntrega} onChange={(e) => setLinkEntrega(e.target.value)}
                           placeholder="https://..." inputMode="url"
                           className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[12.5px] font-body" />
-                        <Button className="w-full rounded-xl bg-green-600 hover:bg-green-700" disabled={marcar.isPending}
+                        <Button variant="outline" className="w-full rounded-xl border-green-400 text-green-800 hover:bg-green-100" disabled={marcar.isPending || !linkEntrega.trim()}
                           onClick={() => { marcar.mutate({ status: "entregue", link: linkEntrega }); setEntregando(false); setLinkEntrega(""); }}>
-                          {marcar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Confirmar entrega</>}
+                          {marcar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Entregar com o link</>}
                         </Button>
                         <button type="button" className="w-full text-[11px] font-body font-semibold text-muted-foreground"
                           onClick={() => { marcar.mutate({ status: "entregue" }); setEntregando(false); }}>

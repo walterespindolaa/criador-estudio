@@ -38,6 +38,13 @@ const TYPE_ICONS: Record<string, { icon: typeof Bell; color: string }> = {
   renovacao_cliente: { icon: CalendarDays, color: "text-secondary" },
   parceiro: { icon: Handshake, color: "text-violet-600" },
   sistema: { icon: ShieldAlert, color: "text-destructive" },
+  // Cria Parceiros (fase 3)
+  demanda_nova: { icon: Clapperboard, color: "text-violet-600" },
+  demanda_ajuste: { icon: MessageCircle, color: "text-orange-500" },
+  demanda_prazo: { icon: CalendarDays, color: "text-violet-600" },
+  demanda_prazo_amanha: { icon: Clock, color: "text-orange-500" },
+  demanda_entregue: { icon: CheckCircle2, color: "text-green-600" },
+  demanda_comentario: { icon: MessageCircle, color: "text-violet-600" },
 };
 
 // Cada tipo cai numa categoria; a ordem define como aparecem no painel.
@@ -69,6 +76,12 @@ const CATEGORY: Record<string, string> = {
   collab: "Avisos",
   parceiro: "Avisos",
   sistema: "Avisos",
+  demanda_nova: "Cliente / Cria Post",
+  demanda_ajuste: "Cliente / Cria Post",
+  demanda_prazo: "Cliente / Cria Post",
+  demanda_prazo_amanha: "Lembretes",
+  demanda_entregue: "Cliente / Cria Post",
+  demanda_comentario: "Cliente / Cria Post",
 };
 const CATEGORY_ORDER = [
   "Leads", "Cliente / Cria Post", "Lembretes", "Ganchos & dicas", "Conquistas", "Ideias", "Avisos", "Outras",

@@ -169,7 +169,121 @@ export function useAcoesDoParceiro(postId: string | null) {
     onError: (e: Error) => toast.error(e.message || "Não consegui responder o prazo."),
   });
 
-  return { marcar, comentar, responderPrazo };
+  /* ENTREGA COM ARQUIVO (fase 3). O parceiro não enxerga external_media_refs
+     do dono (RLS), então: sobe no bucket `media` dentro da PRÓPRIA pasta (a
+     policy do bucket permite) e registra o anexo no post do dono pela RPC
+     security definer parceiro_anexar_entrega, que confere o card. */
+  const anexar = useMutation({
+    mutationFn: async (v: { arquivo: File; marcarEntregue?: boolean }) => {
+      if (!postId) throw new Error("Sem card.");
+      const { data: sess } = await supabase.auth.getUser();
+      const uid = sess.user?.id;
+      if (!uid) throw new Error("Faça login de novo.");
+      const MAX = 80 * 1024 * 1024;
+      if (v.arquivo.size > MAX) throw new Error("Arquivo acima de 80 MB: entregue pelo link da pasta.");
+      const safe = v.arquivo.name.replace(/[^\w.-]+/g, "_").slice(-80);
+      const caminho = `${uid}/entregas/${Date.now()}-${safe}`;
+      const { error: upErr } = await supabase.storage.from("media")
+        .upload(caminho, v.arquivo, { contentType: v.arquivo.type || undefined, upsert: false, cacheControl: "31536000" });
+      if (upErr) throw new Error(upErr.message);
+      const { data: pub } = supabase.storage.from("media").getPublicUrl(caminho);
+      const { error } = await sbRpc("parceiro_anexar_entrega", {
+        _post_id: postId, _view_url: pub.publicUrl, _file_name: v.arquivo.name,
+        _file_type: v.arquivo.type || null, _file_size: v.arquivo.size, _thumbnail_url: null,
+      });
+      if (error) throw error;
+      if (v.marcarEntregue) {
+        const { error: e2 } = await sbRpc("parceiro_marcar", { _post_id: postId, _status: "entregue", _link: null });
+        if (e2) throw e2;
+      }
+      return v.marcarEntregue ?? false;
+    },
+    onSuccess: (entregou) => {
+      invalidar();
+      toast.success(entregou ? "Arquivo anexado e card entregue!" : "Arquivo anexado ao card.");
+    },
+    onError: (e: Error) => toast.error(e.message || "Não consegui anexar."),
+  });
+
+  return { marcar, comentar, responderPrazo, anexar };
+}
+
+/* ── CACHÊS (fase 3) ─────────────────────────────────────────────────────── */
+export type CacheDaAgencia = {
+  manager_id: string; agencia: string; pendente: number; pago: number; pendente_qtd: number; ultimo_pago: string | null;
+};
+
+/** Lado parceiro: quanto cada agência deve e já pagou (fin_records ligado a mim). */
+export function useMeusCaches() {
+  const { user } = useAuth();
+  return useQuery<CacheDaAgencia[]>({
+    queryKey: ["parceiro-caches", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("parceiro_meus_caches");
+      if (error) return [];
+      return (data ?? []) as CacheDaAgencia[];
+    },
+  });
+}
+
+export type CacheDoParceiro = {
+  id: string; assignee_id: string; amount: number; status: string; date: string; description: string; post_id: string | null;
+};
+
+/** Lado social mídia: cachês lançados (despesas do Caixa ligadas a parceiro). */
+export function useCachesDosParceiros(managerId: string | null) {
+  return useQuery<CacheDoParceiro[]>({
+    queryKey: ["caches-parceiros", managerId],
+    enabled: !!managerId,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("fin_records")
+        .select("id, assignee_id, amount, status, date, description, post_id")
+        .eq("manager_id", managerId)
+        .not("assignee_id", "is", null)
+        .order("date", { ascending: false })
+        .limit(300);
+      if (error) return [];
+      return (data ?? []) as CacheDoParceiro[];
+    },
+  });
+}
+
+/* ── CONVERSA DO CARD (lado social mídia) ──────────────────────────────────
+   O parceiro já conversa pela RPC. A dona lê e escreve direto na thread
+   (post_approval_comments), que a RLS dela permite. Só os papéis do time
+   entram aqui: o que é do cliente externo fica no portal dele. */
+export type MensagemCard = { id: string; author_role: string; content: string; created_at: string };
+
+export function useConversaDoCard(postId: string | null) {
+  const qc = useQueryClient();
+  const chave = ["conversa-card", postId] as const;
+  const lista = useQuery<MensagemCard[]>({
+    queryKey: chave,
+    enabled: !!postId,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("post_approval_comments")
+        .select("id, author_role, content, created_at")
+        .eq("post_id", postId)
+        .in("author_role", ["parceiro", "social_media"])
+        .order("created_at", { ascending: true })
+        .limit(200);
+      if (error) return [];
+      return (data ?? []) as MensagemCard[];
+    },
+  });
+  const enviar = useMutation({
+    mutationFn: async (texto: string) => {
+      const { data: sess } = await supabase.auth.getUser();
+      const { error } = await sbFrom("post_approval_comments").insert({
+        post_id: postId, author_id: sess.user?.id ?? null, author_role: "social_media", content: texto.trim(),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: chave }); },
+    onError: () => toast.error("Não consegui enviar."),
+  });
+  return { mensagens: lista.data ?? [], carregando: lista.isLoading, enviar };
 }
 
 export type AgenciaDoParceiro = {
@@ -321,9 +435,11 @@ export function usePedirAjuste() {
 export function useDelegarPost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (v: { postId: string; assigneeId: string | null; prazo: string | null; nomeParceiro?: string }) => {
+    mutationFn: async (v: { postId: string; assigneeId: string | null; prazo: string | null; nomeParceiro?: string; cache?: number | null }) => {
       const { data, error } = await sbFrom("posts").update({
         assignee_id: v.assigneeId,
+        // Cachê combinado (fase 3): vira despesa no Caixa quando entregar.
+        cache_parceiro: v.assigneeId ? (v.cache ?? null) : null,
         prazo_producao: v.assigneeId ? v.prazo : null,
         // Prazo nasce PROPOSTO: o parceiro topa ou sugere outra data. Sem
         // data, não há o que aceitar (fica "a combinar").

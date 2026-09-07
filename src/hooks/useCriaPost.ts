@@ -43,6 +43,11 @@ export type ExternalPost = {
   assignee_id: string | null;
   producao_status: string | null;
   prazo_producao: string | null;
+  /** Prazo negociado (fase 3a) e cachê combinado (fase 3). Opcionais na
+   *  leitura pra não quebrar antes do SQL rodar. */
+  prazo_status?: string | null;
+  prazo_sugerido?: string | null;
+  cache_parceiro?: number | null;
   /** Linha editorial do cliente (id em editorial_lines). Etiqueta do post do
    *  cronograma até publicar; o catálogo mora na estratégia do cliente. */
   editorial_line_id: string | null;
@@ -55,7 +60,7 @@ export type ExternalPostInput = { title: string; platform: string; format: strin
 // demanda. Mantém board_order (ordenação), scheduled_time e external_client_id (usados
 // via cast pelas telas que consomem estas queries).
 const POST_BOARD_COLUMNS =
-  "id, title, platform, format, caption, hook, approval_status, scheduled_date, scheduled_time, created_at, approval_mode, script, approval_updated_at, reference_url, drive_folder_url, board_order, external_client_id, assignee_id, producao_status, prazo_producao, editorial_line_id";
+  "id, title, platform, format, caption, hook, approval_status, scheduled_date, scheduled_time, created_at, approval_mode, script, approval_updated_at, reference_url, drive_folder_url, board_order, external_client_id, assignee_id, producao_status, prazo_producao, prazo_status, prazo_sugerido, cache_parceiro, editorial_line_id";
 
 // Invalida TODAS as queries que renderizam um mesmo post externo em telas diferentes.
 // O mesmo post aparece no kanban do cliente (cria-posts), na Agenda + painel de

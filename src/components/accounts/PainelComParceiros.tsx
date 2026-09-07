@@ -1,14 +1,17 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, Check, CheckCircle2, Clock, Loader2, Send, Users } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Clock, Loader2, Send, Users, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hojeBR } from "@/lib/date-br";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import {
-  ROTULO_PAPEL, useMeusParceiros, usePecasComParceiros, useResolverPrazoSugerido,
+  ROTULO_PAPEL, useCachesDosParceiros, useMeusParceiros, usePecasComParceiros, useResolverPrazoSugerido,
   type PecaExterna,
 } from "@/hooks/useParceiro";
+
+const brl = (v: number) => `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /* ═══════════════════════════════════════════════════════════════════════════
    COM PARCEIROS: a produção externa vista pela social mídia
@@ -71,6 +74,19 @@ export function PainelComParceiros({ clientes }: {
   const { data: pecas = [], isLoading } = usePecasComParceiros(parceiros.length > 0);
   const resolver = useResolverPrazoSugerido();
   const hoje = hojeBR();
+  // Cachês (fase 3): despesas do Caixa ligadas a parceiro, agrupadas por pessoa.
+  const { agencyOwnerId } = useActiveAccount();
+  const { data: caches = [] } = useCachesDosParceiros(agencyOwnerId);
+  const cachesPorParceiro = useMemo(() => {
+    const m = new Map<string, { pendente: number; pago: number; qtd: number }>();
+    for (const c of caches) {
+      const a = m.get(c.assignee_id) ?? { pendente: 0, pago: 0, qtd: 0 };
+      if (c.status === "pago") a.pago += Number(c.amount); else { a.pendente += Number(c.amount); a.qtd++; }
+      m.set(c.assignee_id, a);
+    }
+    return m;
+  }, [caches]);
+  const totalCachePendente = [...cachesPorParceiro.values()].reduce((s, a) => s + a.pendente, 0);
 
   const nomeParceiro = useMemo(() => {
     const m = new Map<string, { nome: string; role: string }>();
@@ -203,6 +219,44 @@ export function PainelComParceiros({ clientes }: {
                 </section>
               );
             })
+          )}
+
+          {/* ── 4. CACHÊS: o que você deve aos parceiros (nasce ao entregar) ── */}
+          {cachesPorParceiro.size > 0 && (
+            <section>
+              <p className="flex items-center gap-2 mb-2 px-0.5">
+                <Wallet className="h-4 w-4 text-green-700" />
+                <span className="font-display font-bold text-[14px]">Cachês dos parceiros</span>
+                {totalCachePendente > 0 && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">{brl(totalCachePendente)} a pagar</span>
+                )}
+              </p>
+              <Card className="rounded-2xl border-border overflow-hidden divide-y divide-border">
+                {[...cachesPorParceiro.entries()].map(([id, a]) => {
+                  const quem = nomeParceiro.get(id);
+                  return (
+                    <button key={id} type="button" onClick={() => navigate("/socialmidia/criacaixa/empresa")}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors">
+                      <span className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-400 to-violet-700 text-white grid place-items-center text-[10px] font-bold shrink-0">
+                        {(quem?.nome ?? "P").charAt(0).toUpperCase()}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-display font-bold text-[13.5px] leading-tight truncate">{quem?.nome ?? "Parceiro"}</span>
+                        <span className="block text-[11px] font-body text-muted-foreground">
+                          {a.qtd > 0 ? `${a.qtd} entrega${a.qtd > 1 ? "s" : ""} a pagar` : "Em dia"} · {brl(a.pago)} já pago
+                        </span>
+                      </span>
+                      <span className={cn("text-[13px] font-display font-extrabold shrink-0", a.pendente > 0 ? "text-amber-800" : "text-green-700")}>
+                        {a.pendente > 0 ? brl(a.pendente) : "ok"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </Card>
+              <p className="text-[11px] font-body text-muted-foreground px-0.5 mt-1.5">
+                Cada cachê é uma despesa no Caixa (categoria pelo papel do parceiro, ligada ao cliente). Marque como pago lá, e o parceiro vê na área dele.
+              </p>
+            </section>
           )}
 
           <p className="text-[11px] font-body text-muted-foreground px-0.5 flex items-center gap-1.5">

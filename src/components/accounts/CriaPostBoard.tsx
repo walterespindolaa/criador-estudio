@@ -937,7 +937,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   já criado (rascunho ainda não tem id estável pro parceiro). */}
               {editing && !draftId && (
                 <EnviarParaParceiro postId={editing.id} assigneeId={editing.assignee_id}
-                  producaoStatus={editing.producao_status} prazo={editing.prazo_producao} />
+                  producaoStatus={editing.producao_status} prazo={editing.prazo_producao}
+                  cache={editing.cache_parceiro ?? null} />
               )}
               <Button variant="outline" size="sm" onClick={() => void requestCloseForm()}>Cancelar</Button>
               <Button size="sm" onClick={submit} disabled={create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : draftId ? "Criar post" : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar post"}</Button>

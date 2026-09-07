@@ -237,6 +237,36 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── PRAZO DO PARCEIRO (Cria Parceiros, fase 3): demanda que vence hoje ou
+    //    amanhã e ainda não foi entregue avisa o parceiro. Uma por pessoa/dia. ──
+    const { data: demandasPerto } = await svc.from("posts").select("assignee_id, title, prazo_producao")
+      .not("assignee_id", "is", null).is("deleted_at", null)
+      .in("producao_status", ["aguardando", "em_producao", "ajuste"])
+      .in("prazo_producao", [hojeBR, amanhaBR]);
+    const porParceiro = new Map<string, { hoje: string[]; amanha: string[] }>();
+    for (const d of (demandasPerto ?? []) as { assignee_id: string; title: string; prazo_producao: string }[]) {
+      const a = porParceiro.get(d.assignee_id) ?? porParceiro.set(d.assignee_id, { hoje: [], amanha: [] }).get(d.assignee_id)!;
+      (d.prazo_producao === hojeBR ? a.hoje : a.amanha).push(d.title);
+    }
+    if (porParceiro.size) {
+      const ids = [...porParceiro.keys()];
+      const { data: jaParc } = await svc.from("notifications").select("user_id")
+        .eq("type", "demanda_prazo_amanha").in("user_id", ids).gte("created_at", iso(now - 20 * 60 * 60 * 1000));
+      const jaTem = new Set((jaParc ?? []).map((r: { user_id: string }) => r.user_id));
+      for (const [uid, a] of porParceiro) {
+        if (jaTem.has(uid)) continue;
+        const partes: string[] = [];
+        if (a.hoje.length) partes.push(a.hoje.length === 1 ? `vence HOJE: "${a.hoje[0].slice(0, 40)}"` : `${a.hoje.length} vencem hoje`);
+        if (a.amanha.length) partes.push(a.amanha.length === 1 ? `amanhã: "${a.amanha[0].slice(0, 40)}"` : `${a.amanha.length} vencem amanhã`);
+        rows.push({
+          user_id: uid, type: "demanda_prazo_amanha",
+          title: a.hoje.length ? "⏰ Entrega vence hoje" : "⏰ Entrega vence amanhã",
+          description: partes.join(" · ") + ".",
+          link: "/socialmidia/demandas",
+        });
+      }
+    }
+
     // ── RESUMO SEMANAL DO INSTAGRAM (segunda-feira): seguidores ganhos, alcance
     //    da semana e o post que mais rendeu. Só pra quem tem a conta própria
     //    conectada e com sync recente. ──
