@@ -2758,6 +2758,7 @@ export type Database = {
       fin_records: {
         Row: {
           amount: number
+          assignee_id: string | null
           category: string | null
           context: string
           created_at: string
@@ -2767,6 +2768,7 @@ export type Database = {
           id: string
           manager_id: string
           payment_method: string | null
+          post_id: string | null
           recurring: boolean
           recurring_id: string | null
           status: string
@@ -2777,6 +2779,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          assignee_id?: string | null
           category?: string | null
           context?: string
           created_at?: string
@@ -2786,6 +2789,7 @@ export type Database = {
           id?: string
           manager_id: string
           payment_method?: string | null
+          post_id?: string | null
           recurring?: boolean
           recurring_id?: string | null
           status?: string
@@ -2796,6 +2800,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          assignee_id?: string | null
           category?: string | null
           context?: string
           created_at?: string
@@ -2805,6 +2810,7 @@ export type Database = {
           id?: string
           manager_id?: string
           payment_method?: string | null
+          post_id?: string | null
           recurring?: boolean
           recurring_id?: string | null
           status?: string
@@ -2819,6 +2825,13 @@ export type Database = {
             columns: ["crm_client_id"]
             isOneToOne: false
             referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_records_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
             referencedColumns: ["id"]
           },
           {
@@ -4313,6 +4326,7 @@ export type Database = {
           assigned_at: string | null
           assignee_id: string | null
           board_order: number
+          cache_parceiro: number | null
           calendar_synced_at: string | null
           caption: string | null
           content_blocks: Json | null
@@ -4365,6 +4379,7 @@ export type Database = {
           assigned_at?: string | null
           assignee_id?: string | null
           board_order?: number
+          cache_parceiro?: number | null
           calendar_synced_at?: string | null
           caption?: string | null
           content_blocks?: Json | null
@@ -4417,6 +4432,7 @@ export type Database = {
           assigned_at?: string | null
           assignee_id?: string | null
           board_order?: number
+          cache_parceiro?: number | null
           calendar_synced_at?: string | null
           caption?: string | null
           content_blocks?: Json | null
@@ -6545,6 +6561,17 @@ export type Database = {
       }
       notif_categoria: { Args: { _tipo: string }; Returns: string }
       parceiro_abrir_card: { Args: { _post_id: string }; Returns: Json }
+      parceiro_anexar_entrega: {
+        Args: {
+          _file_name: string
+          _file_size?: number
+          _file_type?: string
+          _post_id: string
+          _thumbnail_url?: string
+          _view_url: string
+        }
+        Returns: string
+      }
       parceiro_comentar: {
         Args: { _post_id: string; _texto: string }
         Returns: string
@@ -6567,6 +6594,17 @@ export type Database = {
       parceiro_marcar: {
         Args: { _link?: string; _post_id: string; _status: string }
         Returns: undefined
+      }
+      parceiro_meus_caches: {
+        Args: never
+        Returns: {
+          agencia: string
+          manager_id: string
+          pago: number
+          pendente: number
+          pendente_qtd: number
+          ultimo_pago: string
+        }[]
       }
       parceiro_minha_fila: {
         Args: never
