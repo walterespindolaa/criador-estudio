@@ -5126,7 +5126,10 @@ export type Database = {
           connected_at: string | null
           crm_client_id: string | null
           external_account_id: string
+          followers_count: number | null
+          follows_count: number | null
           id: string
+          media_count: number | null
           profile_picture_url: string | null
           provider: string
           scopes: string | null
@@ -5141,7 +5144,10 @@ export type Database = {
           connected_at?: string | null
           crm_client_id?: string | null
           external_account_id: string
+          followers_count?: number | null
+          follows_count?: number | null
           id?: string
+          media_count?: number | null
           profile_picture_url?: string | null
           provider?: string
           scopes?: string | null
@@ -5156,7 +5162,10 @@ export type Database = {
           connected_at?: string | null
           crm_client_id?: string | null
           external_account_id?: string
+          followers_count?: number | null
+          follows_count?: number | null
           id?: string
+          media_count?: number | null
           profile_picture_url?: string | null
           provider?: string
           scopes?: string | null
