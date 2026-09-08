@@ -199,6 +199,8 @@ export function HistoricoRadar() {
                   clientes={listaClientes.filter((c) => c.id !== s.crm_client_id)}
                   aoMover={(para) => mover.mutate({ id: s.id, para })}
                   aoDuplicar={(para) => copiar.mutate({ scrape: s, para, ideas: ideasByScrape[s.id] || [] })}
+                  crmClientId={s.crm_client_id}
+                  scrapeId={s.id}
                 />
               ))}
             </div>

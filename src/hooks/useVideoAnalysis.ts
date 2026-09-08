@@ -29,19 +29,49 @@ export type AnaliseVideo = {
   finished_at: string | null;
 };
 
+/** Um bloco da linha do tempo. `funcao` vem do vocabulário fechado da edge. */
+export type BlocoAnalise = {
+  inicio: number;
+  fim: number;
+  funcao: string;
+  o_que_acontece?: string;
+  o_que_aparece?: string;
+  /** Só no roteiro adaptado: o que a pessoa fala e o letreiro que entra. */
+  fala?: string;
+  na_tela?: string;
+};
+
+/**
+ * O resultado tratado da edge (versao 2). Tudo que é etiqueta já chega
+ * normalizado num vocabulário fechado, e os números de `metricas` são conta
+ * feita na edge, não chute do modelo. Análise antiga (sem `versao`) é
+ * detectada na tela e a pessoa roda de novo.
+ */
 export type ResultadoAnalise = {
+  versao?: number;
+  formula: string;
   resumo: string;
-  gancho: { texto: string; tecnica: string; segundos: number };
-  estrutura: { inicio: number; fim: number; o_que_acontece: string; funcao: string }[];
+  gancho: { texto: string; tecnica: string; segundos: number; por_que_prende: string };
+  estrutura: BlocoAnalise[];
   ritmo: { cortes_estimados: number; cadencia: string; onde_a_atencao_cai: string };
-  texto_na_tela: string[];
-  audio: { tipo: string; fala_resumida: string; musica: string };
-  visual: { enquadramento: string; cenario: string; iluminacao_e_cores: string; edicao: string };
-  cta: string;
+  letreiros: string[];
+  legendas: string;
+  audio: { tipo: string; musica: string };
+  visual: { enquadramento: string; enquadramento_txt?: string; cenario: string; luz_e_cores: string; edicao: string };
+  cta: { texto: string; tipo: string; segundo: number };
   por_que_funciona: string[];
-  como_adaptar: string[];
+  dificuldade: { nivel: string; o_que_precisa: string };
+  o_que_gravar: string[];
+  roteiro_adaptado: { titulo: string; blocos: BlocoAnalise[]; legenda_sugerida: string };
   notas: { gancho: number; ritmo: number; clareza: number; cta: number };
   formato_sugerido: string;
+  metricas: {
+    duracao: number | null;
+    cortes_por_minuto: number | null;
+    segundos_ate_cta: number | null;
+    pct_vendendo: number | null;
+    blocos: number;
+  };
 };
 
 /** Quem pode rodar hoje: admin. Quando entrar cota, a regra muda aqui. */

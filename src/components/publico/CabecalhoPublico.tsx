@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 
 // Peças compartilhadas do cabeçalho das páginas públicas (cronograma, portal de
 // aprovação, proposta). O que estas páginas precisam ter igual é o tratamento
@@ -32,61 +32,24 @@ type LogoMarcaProps = {
   /** Cor da inicial e do anel do fallback. */
   cor?: string;
   fundo?: string;
+  /** Respiro entre a borda do círculo e o logo. Só vale pro formato pastilha. */
+  respiro?: number;
   style?: CSSProperties;
   extra?: ReactNode;
 };
 
 export function LogoMarca({
   src, nome, tamanho = "md", formato = "pastilha", comFallback = false,
-  cor = "#2A2440", fundo = "#ffffff", style,
+  cor = "#2A2440", fundo = "#ffffff", respiro = 9, style,
 }: LogoMarcaProps) {
   const [falhou, setFalhou] = useState(false);
-  /** null = ainda não mediu. true = imagem quadrada (selo), preenche o círculo. */
-  const [quadrada, setQuadrada] = useState<boolean | null>(null);
-  /* LOGO COM FUNDO PRÓPRIO (Gabi, 08/09/2026): o logo dela é um retângulo
-     rosa com o selo redondo desenhado dentro. Com "contain" a gente encaixava
-     o retângulo INTEIRO no círculo, e aparecia um quadrado colorido dentro de
-     uma moldura redonda. Se a imagem não tem transparência, ela já traz o
-     próprio fundo: aí o certo é preencher o círculo (cover) e deixar o corte
-     acontecer nas beiradas, que é onde o logo costuma ter respiro. */
-  const [temFundoProprio, setTemFundoProprio] = useState(false);
   const url = src?.trim() || "";
   const temLogo = !!url && !falhou;
-
-  /* Lê os quatro cantos da imagem num canvas de 24px. Se todos forem opacos,
-     ela tem fundo. Usa uma cópia com crossOrigin só pra medir, então servidor
-     sem CORS não quebra a exibição: fica no comportamento antigo. */
-  useEffect(() => {
-    if (!url || formato === "avatar") return;
-    let vivo = true;
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      if (!vivo) return;
-      try {
-        const n = 24;
-        const cv = document.createElement("canvas");
-        cv.width = n; cv.height = n;
-        const ctx = cv.getContext("2d", { willReadFrequently: true });
-        if (!ctx) return;
-        ctx.drawImage(img, 0, 0, n, n);
-        const cantos = [[1, 1], [n - 2, 1], [1, n - 2], [n - 2, n - 2]];
-        const opacos = cantos.every(([x, y]) => ctx.getImageData(x, y, 1, 1).data[3] > 250);
-        setTemFundoProprio(opacos);
-      } catch { /* canvas contaminado por CORS: segue com contain */ }
-    };
-    img.src = url;
-    return () => { vivo = false; };
-  }, [url, formato]);
-
 
   if (!temLogo && !comFallback) return null;
 
   const size = TAMANHOS[tamanho];
   const avatar = formato === "avatar";
-
-  // Preenche o círculo quando é avatar, selo quadrado, ou logo com fundo próprio.
-  const preenche = avatar || !!quadrada || temFundoProprio;
 
   const caixa: CSSProperties = {
     // Círculo nos dois formatos: é o padrão da marca nas páginas públicas.
@@ -97,9 +60,9 @@ export function LogoMarca({
     width: size,
     minWidth: size,
     maxWidth: size,
-    // Selo quadrado preenche igual avatar; logo horizontal mantém o respiro.
-    padding: preenche ? 0 : 9,
+    padding: avatar ? 0 : respiro,
     boxSizing: "border-box",
+    position: "relative",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
@@ -123,21 +86,36 @@ export function LogoMarca({
 
   return (
     <span style={caixa}>
+      {/* FUNDO BORRADO (Gabi, 08/09/2026): o logo dela é um quadrado creme com o
+          selo desenhado dentro. Encaixado com "contain" num círculo, sobravam as
+          quinas retas e a moldura aparecia por baixo: quadrado dentro de redondo.
+          Medir a transparência num canvas resolvia, mas dependia de CORS e
+          falhava calado justamente com imagem de fora.
+          A cópia borrada da PRÓPRIA imagem preenche o círculo com a cor que já
+          está no logo. Some a emenda sem cortar, sem deformar e sem depender de
+          servidor nenhum. Logo com fundo transparente borra pra transparente e o
+          comportamento continua o de sempre. */}
+      {!avatar && (
+        <img
+          src={url} alt="" aria-hidden draggable={false} loading="eager"
+          style={{
+            position: "absolute", inset: 0, height: "100%", width: "100%",
+            objectFit: "cover", transform: "scale(1.7)", filter: "blur(11px)",
+            // Um respiro de opacidade: o logo em cima continua sendo o herói.
+            opacity: 0.92, pointerEvents: "none",
+          }}
+        />
+      )}
       <img
         src={url}
         alt={nome ? `Logo de ${nome}` : "Logo da marca"}
         loading="eager"
         onError={() => setFalhou(true)}
-        onLoad={(e) => {
-          const img = e.currentTarget;
-          const p = img.naturalWidth / (img.naturalHeight || 1);
-          // Entre 0,85 e 1,2 é selo quadrado: preenche o círculo inteiro.
-          setQuadrada(p >= 0.85 && p <= 1.2);
-        }}
         style={{
+          position: "relative",
           height: "100%",
           width: "100%",
-          objectFit: preenche ? "cover" : "contain",
+          objectFit: avatar ? "cover" : "contain",
           display: "block",
         }}
       />
@@ -170,7 +148,7 @@ export function LogosCabecalho({ agencia, cliente, fundo, style }: LogosCabecalh
           recortado em círculo: com "contain" sobrava moldura e parecia que a
           imagem não preenchia. A da agência segue como pastilha (logo inteiro),
           só com respiro menor pra ocupar mais o círculo. */}
-      {temAgencia && <LogoMarca src={agencia?.src} nome={agencia?.nome} tamanho={tamanho} fundo={fundo} style={{ padding: 5 }} />}
+      {temAgencia && <LogoMarca src={agencia?.src} nome={agencia?.nome} tamanho={tamanho} fundo={fundo} respiro={5} />}
       {temCliente && <LogoMarca src={cliente?.src} nome={cliente?.nome} tamanho={tamanho} fundo={fundo} formato="avatar" />}
     </div>
   );

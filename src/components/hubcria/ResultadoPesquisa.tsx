@@ -139,7 +139,13 @@ function BotaoReferencia({ onClick, rotulo = "virar pauta" }: { onClick: () => v
 // A pessoa lia "média de curtidas: 0" e fechava a tela. O dado do post
 // (capa, link, transcrição) já vinha do Apify, a tela é que jogava fora.
 // ═══════════════════════════════════════════════════════════════════════
-function TopPostCard({ p, rank, aoUsarReferencia }: { p: Bruto; rank: number; aoUsarReferencia?: (r: Referencia) => void }) {
+function TopPostCard({ p, rank, aoUsarReferencia, crmClientId, scrapeId }: {
+  p: Bruto; rank: number; aoUsarReferencia?: (r: Referencia) => void;
+  /** Quem é o cliente desta pesquisa. Vai pro prompt da análise profunda pra
+      que o roteiro adaptado saia no nome e no tom dele, não em conselho solto. */
+  crmClientId?: string | null;
+  scrapeId?: string | null;
+}) {
   const [aberto, setAberto] = useState(false);
   const legenda = String(p.caption || "");
   const transcricao = String(p.transcript || "");
@@ -272,7 +278,14 @@ function TopPostCard({ p, rank, aoUsarReferencia }: { p: Bruto; rank: number; ao
 
       {/* ANÁLISE PROFUNDA (TwelveLabs): só pra vídeo e só admin por enquanto. */}
       {p.url && (/clips|video|reel/i.test(String(p.format || "")) || !!p.video_url || !!transcricao) && (
-        <AnaliseProfunda postUrl={p.url} videoUrl={p.video_url ?? null} thumbnail={p.thumbnail ?? null} />
+        <AnaliseProfunda
+          postUrl={p.url}
+          videoUrl={p.video_url ?? null}
+          thumbnail={p.thumbnail ?? null}
+          crmClientId={crmClientId ?? null}
+          scrapeId={scrapeId ?? null}
+          aoVirarPauta={aoUsarReferencia}
+        />
       )}
 
       {/* A TRANSCRIÇÃO, é o roteiro do concorrente. É o produto desta análise. */}
@@ -369,6 +382,7 @@ export function SummaryCard({
   summary, handle, quando, custo, defaultOpen = false, onDelete, ideas, onIdeaStatus, onIdeaDelete,
   aoCriarPosts, criandoPosts,
   clienteNome, clientes, aoMover, aoDuplicar, aoRodarDeNovo, aoUsarReferencia,
+  crmClientId, scrapeId,
 }: {
   summary: Record<string, unknown>; handle: string;
   quando?: string; custo?: number | null;
@@ -385,6 +399,9 @@ export function SummaryCard({
   aoDuplicar?: (paraClienteId: string | null) => void;
   aoRodarDeNovo?: () => void;
   aoUsarReferencia?: (r: Referencia) => void;
+  /** Cliente e pesquisa de origem: descem até a análise profunda do vídeo. */
+  crmClientId?: string | null;
+  scrapeId?: string | null;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const s = summary as Bruto;
@@ -767,7 +784,7 @@ export function SummaryCard({
                   {kind === "transcription" ? "Os roteiros, do que mais rodou pro que menos" : "Do que mais engajou pro que menos"}
                 </p>
                 {s.top.slice(0, 10).map((p: Bruto, i: number) => (
-                  <TopPostCard key={i} p={p} rank={i + 1} aoUsarReferencia={aoUsarReferencia} />
+                  <TopPostCard key={i} p={p} rank={i + 1} aoUsarReferencia={aoUsarReferencia} crmClientId={crmClientId} scrapeId={scrapeId} />
                 ))}
               </div>
             )}

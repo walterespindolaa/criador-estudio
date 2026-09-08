@@ -446,7 +446,7 @@ function ClientWorkspace() {
               ) : (
                 <div className="space-y-2">
                   {hubDone.map((s, i) => (
-                    <SummaryCard key={s.id} summary={s.result_summary as Record<string, unknown>} handle={s.input_handle} defaultOpen={i === 0} onDelete={() => delScrape.mutate(s.id)} />
+                    <SummaryCard key={s.id} summary={s.result_summary as Record<string, unknown>} handle={s.input_handle} defaultOpen={i === 0} onDelete={() => delScrape.mutate(s.id)} crmClientId={id ?? null} scrapeId={s.id} />
                   ))}
                 </div>
               )}

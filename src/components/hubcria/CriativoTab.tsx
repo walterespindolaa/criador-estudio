@@ -738,6 +738,8 @@ export function CriativoTab({ clientId, clientName }: { clientId?: string; clien
                 aoDuplicar={(para) => copiar.mutate({ scrape: s, para, ideas: ideasByScrape[s.id] || [] })}
                 aoRodarDeNovo={() => rodarDeNovo(s)}
                 aoUsarReferencia={clientId ? salvarReferencia(s.id) : undefined}
+                crmClientId={clientId ?? null}
+                scrapeId={s.id}
                 aoCriarPosts={
                   clientId && extClient
                     ? () => genPlan.mutate({ externalClientId: (extClient as { id: string }).id, ideas: ideasByScrape[s.id] || [] })
