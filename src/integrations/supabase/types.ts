@@ -6230,6 +6230,7 @@ export type Database = {
         Returns: Json
       }
       first_handle: { Args: { _vals: string[] }; Returns: string }
+      frases_do_briefing: { Args: { _txt: string }; Returns: string[] }
       get_admin_stats: {
         Args: never
         Returns: {
