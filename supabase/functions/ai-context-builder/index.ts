@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
+import { VOZ_CRIA, humanizar, humanizarDeep } from "../_shared/voz-cria.ts"
 
 // Helpers embutidos (sem depender de _shared no bundle do deploy).
 const ALLOWED_ORIGINS = [
@@ -1443,7 +1444,22 @@ ${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA AGORA (use de verdade
         throw new Error('Invalid operation')
     }
 
-    const systemPrompt = `${userContext}\n\nTAREFA ESPECÍFICA:\n${operationPrompt}`
+    // A VOZ DO CRIA entra em toda operação que escreve texto pra gente ler.
+    // As de classificação (tag, filtro de referência) não precisam e só
+    // gastariam tokens. Vai DEPOIS da tarefa de propósito: o que vem por
+    // último no system prompt é o que o modelo mais respeita.
+    const OPS_SEM_VOZ = new Set(['tag-suggestion', 'reference-filter', 'archive-summary'])
+    const systemPrompt = OPS_SEM_VOZ.has(operation)
+      ? `${userContext}\n\nTAREFA ESPECÍFICA:\n${operationPrompt}`
+      : `${userContext}\n\nTAREFA ESPECÍFICA:\n${operationPrompt}\n\n${VOZ_CRIA}`
+
+    // Temperatura 0.2 em tudo era parte do "robotizado": o modelo escolhe
+    // sempre a frase mais provável, que é a mais genérica. Criação sobe.
+    const OPS_CRIATIVAS = new Set(['generate-caption', 'refine-caption', 'repurpose-content', 'carousel-script', 'story-plan-generate', 'autopilot-cronograma', 'cria-chat', 'onboarding-setup', 'art-brief'])
+    const temperatura = operation === 'daily-insight' ? 0.7
+      : operation === 'idea-suggestions' ? 0.85
+      : OPS_CRIATIVAS.has(operation) ? 0.6
+      : 0.2
 
     const response = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -1461,7 +1477,7 @@ ${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA AGORA (use de verdade
           { role: 'user', content: userPrompt },
         ],
         max_tokens: maxTokens,
-        temperature: operation === 'daily-insight' ? 0.7 : operation === 'idea-suggestions' ? 0.85 : 0.2,
+        temperature: temperatura,
       }),
     // Sugestões completas com modelo cheio levam mais que os 30s padrão.
     }, operation === 'idea-suggestions' ? 55000 : 30000)
@@ -1490,7 +1506,9 @@ ${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA AGORA (use de verdade
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
       const jsonStr = jsonMatch ? jsonMatch[0] : cleaned
       try {
-        return new Response(JSON.stringify({ result: JSON.parse(jsonStr) }), {
+        // humanizarDeep: markdown, travessão e emoji de enfeite fora, em
+        // cada string do JSON (legenda do cronograma, roteiro do story...).
+        return new Response(JSON.stringify({ result: humanizarDeep(JSON.parse(jsonStr)) }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       } catch {
@@ -1510,7 +1528,11 @@ ${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA AGORA (use de verdade
       }
     }
 
-    return new Response(JSON.stringify({ result: content.trim() }), {
+    // Texto puro (legenda, chat, hashtags...): passa pela limpeza também.
+    // idea-suggestions devolve JSON em texto e o front faz o parse tolerante,
+    // então nele a limpeza é feita campo a campo no cliente, não aqui.
+    const saida = operation === 'idea-suggestions' || OPS_SEM_VOZ.has(operation) ? content.trim() : humanizar(content)
+    return new Response(JSON.stringify({ result: saida }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
 

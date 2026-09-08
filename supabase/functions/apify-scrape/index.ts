@@ -23,6 +23,7 @@
 //    o custo do mês. Agora tem crédito, debitado por tipo de análise.
 // ═══════════════════════════════════════════════════════════════════════════
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { VOZ_CRIA } from "../_shared/voz-cria.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -406,7 +407,7 @@ Português BR, direto, sem markdown.`;
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-lite",
         messages: [
-          { role: "system", content: "Você é um roteirista sênior de conteúdo brasileiro, especialista em retenção de reels. Responda SOMENTE JSON válido." },
+          { role: "system", content: `Você é um roteirista sênior de conteúdo brasileiro, especialista em retenção de reels. Responda SOMENTE JSON válido.\n\n${VOZ_CRIA}` },
           { role: "user", content: usr },
         ],
         max_tokens: 3000, temperature: 0.3,
@@ -493,7 +494,7 @@ Conteúdo que o cliente JÁ fez (NÃO repita, complemente): ${recentes || "-"}`;
 Nicho/segmento: ${nicho}${brandLines ? `\n${brandLines}` : ""}${personaTxt ? `\nPersona (CRM): ${personaTxt}` : ""}`;
   }
 
-  const sys = `Você é estrategista de conteúdo brasileiro. Gere ideias PRONTAS pro cliente, SEMPRE dentro da marca e do nicho DELE. O concorrente serve só de inspiração de FORMATO/gancho/roteiro, nunca copie o assunto se for de outro nicho. Responda SOMENTE JSON válido.`;
+  const sys = `Você é estrategista de conteúdo brasileiro. Gere ideias PRONTAS pro cliente, SEMPRE dentro da marca e do nicho DELE. O concorrente serve só de inspiração de FORMATO/gancho/roteiro, nunca copie o assunto se for de outro nicho. Responda SOMENTE JSON válido.\n\n${VOZ_CRIA}`;
 
   const h = cleanHandle(inputHandle);
   let fonte = "";

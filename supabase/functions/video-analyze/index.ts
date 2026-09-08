@@ -14,6 +14,7 @@
 // que o modelo devolve, depois desenha layout, créditos e pacotes.
 // ═══════════════════════════════════════════════════════════════════════════
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { VOZ_CRIA, humanizarDeep } from "../_shared/voz-cria.ts";
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined;
 
@@ -44,7 +45,9 @@ O que observar:
 - Por que funciona: 3 a 5 razões concretas.
 - Como adaptar: 3 a 5 instruções práticas pra reproduzir a fórmula num cliente de outro nicho (fale de estrutura, não do assunto).
 - Notas de 0 a 10 pra gancho, ritmo, clareza e CTA.
-- Formato sugerido pra refazer: reels, carrossel, story ou youtube shorts.`;
+- Formato sugerido pra refazer: reels, carrossel, story ou youtube shorts.
+
+${VOZ_CRIA}`;
 
 const SCHEMA = {
   type: "object",
@@ -225,7 +228,7 @@ async function processar(svc: SupabaseClient, id: string, postUrl: string, video
     if (!resultado) { await falhar(`Resposta fora do formato (${out.finish_reason ?? "?"}): ${(out.data ?? "").slice(0, 200)}`); return; }
     await svc.from("video_analyses").update({
       status: "done",
-      result: resultado,
+      result: humanizarDeep(resultado),
       usage: { ...(out.usage as Record<string, unknown> ?? {}), finish_reason: out.finish_reason ?? null, truncado: out.finish_reason === "length" },
       finished_at: new Date().toISOString(),
     }).eq("id", id);

@@ -2,6 +2,7 @@
 // Higgsfield (modelo Soul). Assíncrono: action "generate" cria o job + envia à fila;
 // action "poll" consulta o status e traz as imagens prontas. Admin-only.
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { VOZ_CRIA } from "../_shared/voz-cria.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -97,9 +98,12 @@ function stripMdDeep<T>(obj: T): T {
 async function aiText(sys: string, usr: string, maxTokens = 1200): Promise<string> {
   const key = Deno.env.get("LOVABLE_API_KEY");
   if (!key) throw new Error("ai_not_configured");
+  // A VOZ DO CRIA entra em todo texto gerado aqui (roteiro de reels, texto
+  // das lâminas). Os prompts de imagem em inglês não sofrem: o bloco fala
+  // de como escrever em português e o modelo separa as duas coisas.
   const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST", headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "system", content: sys }, { role: "user", content: usr }], max_tokens: maxTokens, temperature: 0.5 }),
+    body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "system", content: `${sys}\n\n${VOZ_CRIA}` }, { role: "user", content: usr }], max_tokens: maxTokens, temperature: 0.6 }),
   });
   if (!r.ok) throw new Error(`ai_failed:IA ${r.status}`);
   const j = await r.json();
