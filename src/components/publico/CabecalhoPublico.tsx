@@ -43,6 +43,13 @@ export function LogoMarca({
   cor = "#2A2440", fundo = "#ffffff", respiro = 9, style,
 }: LogoMarcaProps) {
   const [falhou, setFalhou] = useState(false);
+  /* PROPORÇÃO DA IMAGEM: sai de naturalWidth/naturalHeight, que o navegador dá
+     de graça e sem depender de CORS (foi por isso que a leitura por canvas não
+     servia). Arquivo quase quadrado é selo: já foi desenhado pra caber num
+     círculo, e encaixá-lo com "contain" deixa o logo pequeno no meio de uma
+     moldura larga. Selo preenche o círculo inteiro. Logo horizontal continua
+     cabendo inteiro, sem corte. */
+  const [quadrada, setQuadrada] = useState(false);
   const url = src?.trim() || "";
   const temLogo = !!url && !falhou;
 
@@ -50,6 +57,7 @@ export function LogoMarca({
 
   const size = TAMANHOS[tamanho];
   const avatar = formato === "avatar";
+  const preenche = avatar || quadrada;
 
   const caixa: CSSProperties = {
     // Círculo nos dois formatos: é o padrão da marca nas páginas públicas.
@@ -60,7 +68,7 @@ export function LogoMarca({
     width: size,
     minWidth: size,
     maxWidth: size,
-    padding: avatar ? 0 : respiro,
+    padding: preenche ? 0 : respiro,
     boxSizing: "border-box",
     position: "relative",
     display: "inline-flex",
@@ -95,7 +103,7 @@ export function LogoMarca({
           está no logo. Some a emenda sem cortar, sem deformar e sem depender de
           servidor nenhum. Logo com fundo transparente borra pra transparente e o
           comportamento continua o de sempre. */}
-      {!avatar && (
+      {!preenche && (
         <img
           src={url} alt="" aria-hidden draggable={false} loading="eager"
           style={{
@@ -111,11 +119,17 @@ export function LogoMarca({
         alt={nome ? `Logo de ${nome}` : "Logo da marca"}
         loading="eager"
         onError={() => setFalhou(true)}
+        onLoad={(e) => {
+          const img = e.currentTarget;
+          const p = img.naturalWidth / (img.naturalHeight || 1);
+          // Entre 0,8 e 1,25 é selo: preenche o círculo inteiro.
+          setQuadrada(p >= 0.8 && p <= 1.25);
+        }}
         style={{
           position: "relative",
           height: "100%",
           width: "100%",
-          objectFit: avatar ? "cover" : "contain",
+          objectFit: preenche ? "cover" : "contain",
           display: "block",
         }}
       />
