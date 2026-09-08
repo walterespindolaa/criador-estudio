@@ -175,6 +175,7 @@ type BioSettings = {
   headerColor: string;
   socialLinks: SocialLinks;
   bannerImage: string | null;
+  headerBgImage: string | null;
   about: BioAbout;
   header: BioHeader;
   lead: BioLeadForm;
@@ -200,6 +201,7 @@ const DEFAULT_SETTINGS: BioSettings = {
   headerColor: "",
   socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "", facebook: "" },
   bannerImage: null,
+  headerBgImage: null,
   about: { image: null, title: "Sobre mim", text: "" },
   header: { name: "", avatar: "", bio: "" },
   lead: {
@@ -331,6 +333,7 @@ function parseSettings(raw: unknown): BioSettings {
       facebook: typeof socialRaw.facebook === "string" ? socialRaw.facebook : "",
     },
     bannerImage: typeof t.bannerImage === "string" && t.bannerImage ? t.bannerImage : null,
+    headerBgImage: typeof t.headerBgImage === "string" && t.headerBgImage ? t.headerBgImage : null,
     about: {
       image: typeof ta.image === "string" && ta.image ? ta.image : null,
       title: typeof ta.title === "string" ? ta.title : DEFAULT_SETTINGS.about.title,
@@ -782,15 +785,33 @@ const ConteudoDaBio = () => {
             anulam o padding e o canto de cima é aparado pelo arredondado da
             própria coluna; sem coluna, no celular ele cola nas bordas da tela
             (como capa de perfil) e no desktop segue como cartão arredondado. */}
-        {settings.bannerImage && (
-          <div
-            className={cn(
-              "overflow-hidden shadow-md mb-[-44px]",
-              settings.bgType === "image" && settings.bgImage
-                ? "-mt-8 -mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)]"
+        {/* FUNDO DO TOPO (pedido do Walter, 08/09): uma imagem atrás de banner,
+            foto, nome, bio e redes, até o primeiro botão. Sem ela o topo era
+            chapado na cor da coluna (Organnah), enquanto páginas de fundo claro
+            (Clínica TK) pareciam ter "capa". O embrulho sangra até as bordas
+            com as mesmas margens negativas do banner e devolve o respiro com
+            padding, então o banner dentro dele continua colado nas bordas. */}
+        {(() => {
+          const emColuna = settings.bgType === "image" && !!settings.bgImage;
+          const comFundo = !!settings.headerBgImage;
+          const bannerCls = cn(
+            "overflow-hidden shadow-md mb-[-44px]",
+            emColuna
+              ? "-mt-8 -mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)]"
+              : comFundo
+                ? "-mt-10 -mx-5 w-[calc(100%+2.5rem)] sm:mt-[-24px] sm:-mx-6 sm:w-[calc(100%+3rem)]"
                 : "-mt-10 -mx-5 w-[calc(100%+2.5rem)] sm:mt-[-24px] sm:mx-0 sm:w-full sm:rounded-xl",
-            )}
-          >
+          );
+          const wrapCls = !comFundo ? "contents" : cn(
+            "flex flex-col items-center bg-cover bg-center overflow-hidden pb-6",
+            emColuna
+              ? "-mt-8 -mx-4 sm:-mx-6 w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] px-4 sm:px-6 pt-8"
+              : "-mt-10 -mx-5 w-[calc(100%+2.5rem)] px-5 pt-10 sm:mt-[-24px] sm:mx-0 sm:w-full sm:px-6 sm:pt-6 sm:rounded-[22px] sm:shadow-lg",
+          );
+          return (
+        <div className={wrapCls} style={comFundo ? { backgroundImage: `url(${settings.headerBgImage})` } : undefined}>
+        {settings.bannerImage && (
+          <div className={bannerCls}>
             <img src={settings.bannerImage} alt="" loading="lazy" className="w-full h-32 sm:h-40 object-cover" />
           </div>
         )}
@@ -859,6 +880,9 @@ const ConteudoDaBio = () => {
             );
           })()}
         </motion.div>
+        </div>
+          );
+        })()}
 
         {settings.sections.filter((s) => s.on).map((sec) => {
           // O banner virou CAPA do topo (renderizada acima, atrás da foto).

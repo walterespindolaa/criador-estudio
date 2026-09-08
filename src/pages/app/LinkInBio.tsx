@@ -231,6 +231,10 @@ export type BioSettings = {
   headerColor: string;
   socialLinks: SocialLinks;
   bannerImage: string | null;
+  // Fundo do TOPO (pedido do Walter, 08/09): imagem atrás de banner, foto, nome,
+  // bio e redes. É o que dá ao topo a cara de "capa" (a Clínica TK tinha isso
+  // porque o fundo da página era claro; na Organnah o topo ficava chapado).
+  headerBgImage: string | null;
   about: BioAbout;
   header: BioHeader;
   lead: BioLeadForm;
@@ -256,6 +260,7 @@ const DEFAULT_SETTINGS: BioSettings = {
   headerColor: "",
   socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "", facebook: "" },
   bannerImage: null,
+  headerBgImage: null,
   about: { image: null, title: "Sobre mim", text: "" },
   header: { name: "", avatar: "", bio: "" },
   lead: {
@@ -432,6 +437,7 @@ function parseSettings(raw: unknown): BioSettings {
       facebook: typeof socialRaw.facebook === "string" ? socialRaw.facebook : "",
     },
     bannerImage: typeof t.bannerImage === "string" && t.bannerImage ? t.bannerImage : null,
+    headerBgImage: typeof t.headerBgImage === "string" && t.headerBgImage ? t.headerBgImage : null,
     about: {
       image: typeof ta.image === "string" && ta.image ? ta.image : null,
       title: typeof ta.title === "string" ? ta.title : DEFAULT_SETTINGS.about.title,
@@ -873,8 +879,10 @@ const LinkInBio = () => {
   const [appearanceDirty, setAppearanceDirty] = useState(false);
   const [uploadingBg, setUploadingBg] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [uploadingHeaderBg, setUploadingHeaderBg] = useState(false);
   const [uploadingHeader, setUploadingHeader] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const headerBgInputRef = useRef<HTMLInputElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
   /* BUG (31/08): a pessoa montava a bio, abria a página pública em outra aba
@@ -1040,6 +1048,15 @@ const LinkInBio = () => {
     const url = await uploadBioImage(file, "banner");
     if (url) { setSettings((s) => ({ ...s, bannerImage: url })); setAppearanceDirty(true); }
     setUploadingBanner(false);
+  };
+
+  const handleHeaderBgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = "";
+    if (!file || !user) return;
+    setUploadingHeaderBg(true);
+    const url = await uploadBioImage(file, "topo");
+    if (url) { setSettings((s) => ({ ...s, headerBgImage: url })); setAppearanceDirty(true); }
+    setUploadingHeaderBg(false);
   };
 
   const handleHeaderAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1405,6 +1422,28 @@ const LinkInBio = () => {
                   <Button type="button" variant="outline" size="sm" disabled={uploadingBanner} onClick={() => bannerInputRef.current?.click()}>
                     <ImagePlus className="h-4 w-4 mr-2" />
                     {uploadingBanner ? "Enviando..." : settings.bannerImage ? "Trocar banner" : "Enviar banner"}
+                  </Button>
+                </div>
+
+                {/* Fundo do topo: imagem atrás de banner + foto + nome + bio + redes. */}
+                <div className="space-y-2.5 pt-4 border-t border-border">
+                  <Label className="text-sm font-display font-semibold">Fundo do topo</Label>
+                  <p className="text-xs text-muted-foreground -mt-1">
+                    Imagem que fica atrás de tudo no topo (banner, foto, nome, bio e redes), até o primeiro botão.
+                    Use uma textura ou foto suave; o nome e a bio ficam por cima.
+                  </p>
+                  {settings.headerBgImage ? (
+                    <div className="relative rounded-xl overflow-hidden border border-border">
+                      <img src={settings.headerBgImage} alt="Fundo do topo" loading="lazy" className="w-full h-24 object-cover" />
+                      <button type="button" onClick={() => patchSettings({ headerBgImage: null })} className="absolute top-1.5 right-1.5 bg-background/90 rounded-full p-1 shadow">
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </button>
+                    </div>
+                  ) : null}
+                  <input ref={headerBgInputRef} type="file" accept="image/*" className="hidden" onChange={handleHeaderBgUpload} />
+                  <Button type="button" variant="outline" size="sm" disabled={uploadingHeaderBg} onClick={() => headerBgInputRef.current?.click()}>
+                    <ImagePlus className="h-4 w-4 mr-2" />
+                    {uploadingHeaderBg ? "Enviando..." : settings.headerBgImage ? "Trocar fundo do topo" : "Enviar fundo do topo"}
                   </Button>
                 </div>
 
@@ -2365,6 +2404,11 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
 
         {/* Capa sangrada até as bordas, igual à página pública: o canto é
             aparado pelo arredondado da "tela" do celular ou da coluna. */}
+        {/* Fundo do topo: o mesmo embrulho da página pública, em escala menor. */}
+        <div
+          className={settings.headerBgImage ? "-mx-5 -mt-6 w-[calc(100%+2.5rem)] px-5 pt-6 pb-4 flex flex-col items-center bg-cover bg-center" : "contents"}
+          style={settings.headerBgImage ? { backgroundImage: `url(${settings.headerBgImage})` } : undefined}
+        >
         {settings.bannerImage && (
           <div className="-mx-5 -mt-6 w-[calc(100%+2.5rem)] mb-[-34px] overflow-hidden shadow-md">
             <img src={settings.bannerImage} alt="" className="w-full h-24 object-cover" />
@@ -2416,6 +2460,7 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
             })()}
           </>
         )}
+        </div>
 
         <div className="w-full mt-6 space-y-3">
           {settings.sections.filter((s) => s.on).map((sec) => {
