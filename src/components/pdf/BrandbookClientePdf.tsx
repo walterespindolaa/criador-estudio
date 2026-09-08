@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useRef, useState, type ReactNode } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
+import { MarcaRedonda } from "@/components/shared/MarcaRedonda";
 import { Button } from "@/components/ui/button";
 import { parseHex, personasDaFicha } from "@/components/accounts/crm/BrandbookEditor";
 import { usePdfExport, LARGURA_A4 } from "@/hooks/usePdfExport";
@@ -252,33 +253,20 @@ export const BrandbookClientePdfTemplate = forwardRef<HTMLDivElement, Props>(
     const arroba = limpo(instagram).replace(/^@/, "");
     // O campo logo guarda ou uma URL de imagem ou uma inicial digitada à mão.
     const logoUrl = /^https?:\/\//.test(limpo(logo)) ? limpo(logo) : null;
-    const inicial = (nome.trim().charAt(0) || "?").toUpperCase();
     const swatches = parseHex(brandCore.colorPalette);
 
     // ── Peças de layout ──
-    /* A inicial é centralizada por line-height, não por flex. Centralizar texto
-       com flex é exatamente o que o html2canvas erra ao fotografar o DOM: na
-       tela fica no meio, no PDF a letra desce e encosta na borda de baixo do
-       círculo. line-height igual à altura resolve porque não depende do cálculo
-       de alinhamento, só da caixa da linha.
-
-       O fundo também mudou: cinza claro com letra laranja dava um contraste
-       fraco que, reduzido a 30px no cabeçalho, virava uma bolinha suja. Agora é
-       laranja cheio com a letra branca, que lê bem em qualquer tamanho. */
+    /* A regra do encaixe é uma só no app inteiro (MarcaRedonda): arquivo quase
+       quadrado é selo e preenche o círculo; logo horizontal cabe inteiro. Antes
+       aqui era `cover` puro e logo deitado saía com as pontas cortadas.
+       Sem logo, a inicial vai em laranja cheio com letra branca (cinza com
+       laranja, reduzido a 30px no cabeçalho, virava uma bolinha suja) e é
+       centralizada por line-height, porque flex é o que o html2canvas erra. */
     const marcaRedonda = (tamanho: number, fonte: number) => (
-      <div style={{
-        width: tamanho, height: tamanho, borderRadius: "50%", overflow: "hidden", flexShrink: 0,
-        background: logoUrl ? C.soft : C.laranja,
-      }}>
-        {logoUrl
-          ? <img src={logoUrl} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          : (
-            <span style={{
-              display: "block", width: "100%", height: tamanho, lineHeight: `${tamanho}px`,
-              textAlign: "center", fontWeight: 800, fontSize: fonte, color: "#fff",
-            }}>{inicial}</span>
-          )}
-      </div>
+      <MarcaRedonda
+        src={logoUrl} nome={nome} px={tamanho} fonte={fonte}
+        fundo={C.soft} corFallback={C.laranja}
+      />
     );
 
     const cabecalho = (capitulo: string) => (

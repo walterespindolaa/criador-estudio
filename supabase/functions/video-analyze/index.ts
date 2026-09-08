@@ -19,10 +19,19 @@
 // 2. NÚMERO EU CALCULO, NÃO PEÇO. Cortes por minuto, segundo em que o CTA
 //    entra e quanto do vídeo é venda saem de conta, não do modelo. Conta não
 //    alucina.
-// 3. A ANÁLISE TERMINA EM TRABALHO FEITO. O modelo recebe o brandbook do
-//    cliente e devolve o ROTEIRO ADAPTADO, bloco a bloco, cronometrado, com
-//    fala e o que aparece na tela, mais a lista do que precisa ser gravado.
-//    Ler análise não é entrega. Roteiro pronto é.
+// 3. A ANÁLISE TERMINA EM TRABALHO FEITO: roteiro adaptado ao cliente, bloco a
+//    bloco, cronometrado, com fala e o que aparece na tela, mais a lista do que
+//    precisa ser gravado. Ler análise não é entrega. Roteiro pronto é.
+//
+// DOIS MODELOS, DOIS TRABALHOS (corrigido em 08/09 depois de o Pegasus
+// entrar num loop de "!!!!!!" até estourar o max_tokens). O primeiro schema v2
+// pedia pro TwelveLabs ASSISTIR ao vídeo E ESCREVER o roteiro adaptado no
+// mesmo JSON. É pedir demais: Pegasus é um modelo de VÍDEO, não um redator de
+// português, e schema grande demais faz ele degenerar. Agora:
+//   etapa 1: TwelveLabs LÊ o vídeo (schema enxuto, só observação)
+//   etapa 2: o modelo de texto do gateway ESCREVE o roteiro do cliente a
+//            partir da estrutura observada + brandbook + Voz do CRIA
+// Se a etapa 2 falhar, a análise continua válida e é salva sem o roteiro.
 //
 // Fluxo: start -> cria a linha (queued) -> responde na hora -> o trabalho
 // pesado roda em EdgeRuntime.waitUntil. A tela faz polling em video_analyses.
@@ -175,12 +184,12 @@ function blocoCliente(c: ContextoCliente | null): string {
   return `O CLIENTE PARA QUEM VOCÊ VAI ADAPTAR:\n${linhas}\n\nO roteiro adaptado é DESTE cliente. Use o assunto, o produto e o vocabulário dele. Se um dado numérico for necessário e você não souber, deixe um marcador claro como [NÚMERO DO SEU MERCADO] em vez de inventar.`;
 }
 
-function montarPrompt(c: ContextoCliente | null): string {
+function montarPrompt(): string {
   return `Você é um diretor criativo sênior de conteúdo pra Instagram e TikTok. Uma social mídia brasileira está fazendo a engenharia reversa de um reel de concorrente pra reproduzir a FÓRMULA (nunca o conteúdo) com o cliente dela.
 
 Assista ao vídeo inteiro prestando atenção em imagem, som, fala e texto na tela. Responda SEMPRE em português do Brasil, direto, sem enrolação, como quem explica pra uma colega de agência. Nada de elogio genérico: cada linha tem que ser algo que dá pra copiar ou evitar.
 
-${blocoCliente(c)}
+Seu trabalho aqui é OBSERVAR o vídeo, não escrever roteiro novo. Descreva o que existe.
 
 VOCABULÁRIO OBRIGATÓRIO (use exatamente estas palavras nestes campos):
 - funcao de cada bloco: prender, provar, ensinar, tensionar, virar, vender, fechar. Uma palavra só por bloco, a principal.
@@ -201,8 +210,6 @@ REGRAS DE CADA CAMPO:
 - audio.tipo: fala direta pra câmera, narração em off, só música, trend de áudio.
 - por_que_funciona: 3 a 5 razões concretas e específicas deste vídeo.
 - dificuldade: o quanto dá trabalho reproduzir isso, e em o_que_precisa liste o que a social mídia vai ter que ter em mãos.
-- o_que_gravar: a lista de gravação. Cada item é UMA tomada que precisa existir pra montar o vídeo adaptado. Fale como quem passa ordem pro cliente que vai gravar sozinho no celular.
-- roteiro_adaptado: o roteiro JÁ ESCRITO pro cliente descrito acima, seguindo a mesma fórmula e a mesma cronometragem do original. Em cada bloco, fala é o que a pessoa DIZ (texto pronto pra ler, não instrução) e na_tela é o letreiro que entra. legenda_sugerida é a legenda do post.
 - notas: de 0 a 10 pra gancho, ritmo, clareza e CTA.
 
 ${VOZ_CRIA}`;
@@ -274,29 +281,6 @@ const SCHEMA = {
       properties: { nivel: { type: "string" }, o_que_precisa: { type: "string" } },
       required: ["nivel", "o_que_precisa"],
     },
-    o_que_gravar: { type: "array", items: { type: "string" } },
-    roteiro_adaptado: {
-      type: "object",
-      properties: {
-        titulo: { type: "string" },
-        blocos: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              inicio: { type: "number" },
-              fim: { type: "number" },
-              funcao: { type: "string" },
-              fala: { type: "string" },
-              na_tela: { type: "string" },
-            },
-            required: ["inicio", "fim", "funcao", "fala", "na_tela"],
-          },
-        },
-        legenda_sugerida: { type: "string" },
-      },
-      required: ["titulo", "blocos", "legenda_sugerida"],
-    },
     notas: {
       type: "object",
       properties: {
@@ -311,8 +295,7 @@ const SCHEMA = {
   },
   required: [
     "formula", "resumo", "gancho", "estrutura", "ritmo", "letreiros", "legendas", "audio",
-    "visual", "cta", "por_que_funciona", "dificuldade", "o_que_gravar", "roteiro_adaptado",
-    "notas", "formato_sugerido",
+    "visual", "cta", "por_que_funciona", "dificuldade", "notas", "formato_sugerido",
   ],
 };
 
@@ -375,14 +358,13 @@ function calcularMetricas(r: Record<string, unknown>, estrutura: Bloco[]) {
 }
 
 /** Passa o resultado bruto do modelo pelo vocabulário fechado e pelas contas. */
-function tratar(bruto: Record<string, unknown>) {
+function tratar(bruto: Record<string, unknown>, roteiro: Roteiro | null) {
   const estrutura = arrumarBlocos(bruto.estrutura);
   const gancho = (bruto.gancho ?? {}) as Record<string, unknown>;
   const ritmo = (bruto.ritmo ?? {}) as Record<string, unknown>;
   const visual = (bruto.visual ?? {}) as Record<string, unknown>;
   const cta = (bruto.cta ?? {}) as Record<string, unknown>;
   const dif = (bruto.dificuldade ?? {}) as Record<string, unknown>;
-  const rot = (bruto.roteiro_adaptado ?? {}) as Record<string, unknown>;
   const notas = (bruto.notas ?? {}) as Record<string, unknown>;
 
   const nota = (v: unknown) => Math.min(10, Math.max(0, Math.round(num(v))));
@@ -438,11 +420,11 @@ function tratar(bruto: Record<string, unknown>) {
       nivel: normalizar(dif.nivel, SINONIMOS_DIFICULDADE, "media"),
       o_que_precisa: String(dif.o_que_precisa ?? ""),
     },
-    o_que_gravar: (Array.isArray(bruto.o_que_gravar) ? bruto.o_que_gravar : []).map(String).slice(0, 10),
+    o_que_gravar: roteiro?.o_que_gravar ?? [],
     roteiro_adaptado: {
-      titulo: String(rot.titulo ?? ""),
-      blocos: arrumarBlocos(rot.blocos),
-      legenda_sugerida: String(rot.legenda_sugerida ?? ""),
+      titulo: roteiro?.titulo ?? "",
+      blocos: roteiro?.blocos ?? [],
+      legenda_sugerida: roteiro?.legenda_sugerida ?? "",
     },
     notas: {
       gancho: nota(notas.gancho), ritmo: nota(notas.ritmo),
@@ -451,6 +433,96 @@ function tratar(bruto: Record<string, unknown>) {
     formato_sugerido: normalizar(bruto.formato_sugerido, SINONIMOS_FORMATO, "reels"),
     metricas: calcularMetricas(bruto, estrutura),
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ETAPA 2: O ROTEIRO DO CLIENTE
+//
+// Quem escreve NÃO é o Pegasus. Ele acabou de assistir ao vídeo e descrever a
+// fórmula; escrever copy em português é outro ofício. Aqui entra o modelo de
+// texto do gateway, com a estrutura observada, o brandbook do cliente e a Voz
+// do CRIA. Se falhar, a análise continua de pé sem o roteiro.
+// ═══════════════════════════════════════════════════════════════════════════
+
+type Roteiro = {
+  titulo: string;
+  blocos: { inicio: number; fim: number; funcao: string; fala: string; na_tela: string }[];
+  legenda_sugerida: string;
+  o_que_gravar: string[];
+};
+
+async function escreverRoteiro(analise: Record<string, unknown>, c: ContextoCliente | null): Promise<Roteiro | null> {
+  const chaveIA = Deno.env.get("LOVABLE_API_KEY");
+  if (!chaveIA) return null;
+
+  const estrutura = (analise.estrutura as Bloco[] | undefined) ?? [];
+  if (!estrutura.length) return null;
+
+  const gancho = (analise.gancho ?? {}) as Record<string, unknown>;
+  const visual = (analise.visual ?? {}) as Record<string, unknown>;
+  const esqueleto = estrutura
+    .map((b) => `${Math.round(b.inicio)}s a ${Math.round(b.fim)}s | ${b.funcao} | ${b.o_que_acontece ?? ""}`)
+    .join("\n");
+
+  const sys = `Você é uma social mídia sênior brasileira escrevendo um roteiro de vídeo vertical pra um cliente. Responda APENAS JSON válido, sem markdown, sem crase.
+
+${VOZ_CRIA}`;
+
+  const usr = `Um concorrente publicou um vídeo que funcionou. A fórmula dele, observada quadro a quadro:
+
+FÓRMULA: ${String(analise.formula ?? "")}
+GANCHO (${String(gancho.tecnica ?? "")}): ${String(gancho.texto ?? "")}
+ESQUELETO (tempo | função | o que acontece):
+${esqueleto}
+CTA: ${String(((analise.cta ?? {}) as Record<string, unknown>).texto ?? "")}
+COMO FOI GRAVADO: ${String(visual.enquadramento ?? "")}, ${String(visual.cenario ?? "")}. Edição: ${String(visual.edicao ?? "")}
+
+${blocoCliente(c)}
+
+Escreva o roteiro DESTE cliente usando a MESMA fórmula e a MESMA cronometragem, no assunto dele. Não copie o conteúdo do concorrente, copie a arquitetura.
+
+Formato exato:
+{
+  "titulo": "do que é este vídeo, em até 90 caracteres",
+  "blocos": [{"inicio": 0, "fim": 8, "funcao": "prender", "fala": "o texto que a pessoa fala, pronto pra ler em voz alta", "na_tela": "o letreiro que entra"}],
+  "legenda_sugerida": "a legenda do post",
+  "o_que_gravar": ["cada item é UMA tomada que precisa existir, dita como ordem pra quem vai gravar sozinho no celular"]
+}
+
+Regras: use as mesmas funções e os mesmos tempos do esqueleto acima. "fala" é o texto pronto, nunca instrução ("aqui você fala sobre X" está proibido). Se precisar de um número que você não sabe, escreva [NÚMERO DO SEU MERCADO]. De 3 a 6 itens em o_que_gravar.`;
+
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${chaveIA}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [{ role: "system", content: sys }, { role: "user", content: usr }],
+        max_tokens: 3000,
+        temperature: 0.6,
+      }),
+      signal: AbortSignal.timeout(90000),
+    });
+    if (!r.ok) { console.warn("[video-analyze] gateway", r.status); return null; }
+    const j = await r.json();
+    const bruto = String(j.choices?.[0]?.message?.content ?? "").replace(/```json/gi, "").replace(/```/g, "").trim();
+    const m = bruto.match(/\{[\s\S]*\}/);
+    const obj = JSON.parse(m ? m[0] : bruto) as Record<string, unknown>;
+    const blocos = arrumarBlocos(obj.blocos).map((b) => ({
+      inicio: b.inicio, fim: b.fim, funcao: b.funcao,
+      fala: b.fala ?? "", na_tela: b.na_tela ?? "",
+    }));
+    if (!blocos.length) return null;
+    return {
+      titulo: String(obj.titulo ?? ""),
+      blocos,
+      legenda_sugerida: String(obj.legenda_sugerida ?? ""),
+      o_que_gravar: (Array.isArray(obj.o_que_gravar) ? obj.o_que_gravar : []).map(String).slice(0, 10),
+    };
+  } catch (e) {
+    console.warn("[video-analyze] roteiro falhou:", (e as Error).message);
+    return null;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -530,8 +602,7 @@ async function analisar(apiKey: string, video: Record<string, string>, prompt: s
       prompt,
       stream: false,
       temperature: 0.3,
-      // O roteiro adaptado dobrou o tamanho da resposta: com 4000 vinha cortada.
-      max_tokens: 6000,
+      max_tokens: 4000,
       response_format: { type: "json_schema", json_schema: SCHEMA },
     }),
     signal: AbortSignal.timeout(170000),
@@ -563,6 +634,19 @@ function parseResultado(data: string | undefined): Record<string, unknown> | nul
   return null;
 }
 
+/* Modelo de vídeo, quando o pedido é grande demais, TRAVA: em vez de responder
+   ele repete um caractere até estourar o max_tokens ("!!!!!!!!!!!..."). Sem
+   detectar isso, a tela mostrava o muro de "!" como se fosse uma mensagem de
+   erro nossa. Aqui o degenerado é reconhecido e vira frase de gente. */
+function degenerado(data: string | undefined): boolean {
+  const t = (data ?? "").trim();
+  if (t.length < 60) return false;
+  const primeiro = t[0];
+  let iguais = 0;
+  for (const ch of t) if (ch === primeiro) iguais++;
+  return iguais / t.length > 0.8;
+}
+
 // ── O trabalho pesado (roda depois da resposta) ─────────────────────────────
 async function processar(
   svc: SupabaseClient, id: string, postUrl: string, videoUrl: string | null,
@@ -575,7 +659,7 @@ async function processar(
     await svc.from("video_analyses").update({ status: "running" }).eq("id", id);
 
     const ctx = await contextoDoCliente(svc, crmClientId);
-    const prompt = montarPrompt(ctx);
+    const prompt = montarPrompt();
 
     const mp4 = await resolverVideoUrl(postUrl, videoUrl, apifyToken);
     if (!mp4) { await falhar("Não consegui obter o arquivo do vídeo (link do Instagram expirado e sem Apify)."); return; }
@@ -593,18 +677,35 @@ async function processar(
       out = await analisar(apiKey, { type: "base64_string", base64_string: b64 }, prompt);
     }
 
+    if (degenerado(out.data)) {
+      await falhar("O modelo travou no meio da leitura deste vídeo. Rode de novo: costuma passar na segunda tentativa.");
+      return;
+    }
     const bruto = parseResultado(out.data);
     if (!bruto) { await falhar(`Resposta fora do formato (${out.finish_reason ?? "?"}): ${(out.data ?? "").slice(0, 200)}`); return; }
 
     // humanizar ANTES de tratar: a limpeza de estilo mexe em texto, o
     // tratamento mexe em estrutura. Nesta ordem o vocabulário fechado é a
     // última palavra e não corre risco de ser reescrito.
-    const resultado = tratar(humanizarDeep(bruto) as Record<string, unknown>);
+    const observado = tratar(humanizarDeep(bruto) as Record<string, unknown>, null);
+
+    // ETAPA 2: outro modelo escreve o roteiro do cliente. Falhou aqui, a
+    // análise ainda vale: salva sem o roteiro em vez de perder tudo.
+    const roteiro = await escreverRoteiro(observado as unknown as Record<string, unknown>, ctx);
+    const resultado = roteiro
+      ? { ...observado, ...(humanizarDeep({ roteiro_adaptado: { titulo: roteiro.titulo, blocos: roteiro.blocos, legenda_sugerida: roteiro.legenda_sugerida }, o_que_gravar: roteiro.o_que_gravar }) as Record<string, unknown>) }
+      : observado;
 
     await svc.from("video_analyses").update({
       status: "done",
       result: resultado,
-      usage: { ...(out.usage as Record<string, unknown> ?? {}), finish_reason: out.finish_reason ?? null, truncado: out.finish_reason === "length", com_cliente: !!ctx },
+      usage: {
+        ...(out.usage as Record<string, unknown> ?? {}),
+        finish_reason: out.finish_reason ?? null,
+        truncado: out.finish_reason === "length",
+        com_cliente: !!ctx,
+        com_roteiro: !!roteiro,
+      },
       finished_at: new Date().toISOString(),
     }).eq("id", id);
   } catch (e) {

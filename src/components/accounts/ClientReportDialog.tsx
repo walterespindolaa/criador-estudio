@@ -15,6 +15,7 @@ import { parseDateOnly, toISODateBR, hojeBR } from "@/lib/date-br";
 import { FORMAT_LABELS, normalizarFormato } from "@/lib/constants";
 import type { ExternalClient, ExternalPost } from "@/hooks/useCriaPost";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
+import { MarcaRedonda, MarcaBarra } from "@/components/shared/MarcaRedonda";
 import {
   computeCrossAnalysis, crossHeadlines, computeAudienceBreakdown, computeStoriesSummary,
   fmtNum, type CrossItem, type AudienceLike, type StoryLike,
@@ -1542,12 +1543,15 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     return out;
   };
 
+  /* Antes era `cover` puro: logo deitado saía com as pontas comidas e selo
+     quadrado mostrava as quinas na moldura. Agora usa a regra única do
+     MarcaRedonda (selo preenche, logo horizontal cabe inteiro). */
   const logoClienteRedonda = (px: number, fontePx: number) => (
-    <div style={{ width: px, height: px, borderRadius: "50%", background: "#fff", boxShadow: "0 8px 26px -14px rgba(0,0,0,.35)", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-      {logoCliente
-        ? <img src={logoCliente} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        : <span style={{ fontWeight: 800, fontSize: fontePx, color: C.laranja }}>{client.name.charAt(0).toUpperCase()}</span>}
-    </div>
+    <MarcaRedonda
+      src={logoCliente} nome={client.name} px={px} fonte={fontePx}
+      fundo="#fff" corFallback={C.laranja}
+      style={{ boxShadow: "0 8px 26px -14px rgba(0,0,0,.35)" }}
+    />
   );
 
   // Capa: página inteira, estilo apresentação Cria.
@@ -1559,7 +1563,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       <span style={{ position: "absolute", bottom: "24%", right: 50, width: 42, height: 42, borderRadius: "50%", background: C.verde }} />
       <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         {agencyLogo
-          ? <img src={agencyLogo} alt={managerName ? `Logo ${managerName}` : "Logo da agência"} crossOrigin="anonymous" style={{ maxHeight: 42, maxWidth: 190, objectFit: "contain", display: "block", borderRadius: 10 }} />
+          ? <MarcaBarra src={agencyLogo} alt={managerName ? `Logo ${managerName}` : "Logo da agência"} altura={42} largura={190} />
           : <div style={{ fontSize: 15, fontWeight: 800, color: C.ink }}>{elaboradoPor}</div>}
         <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: "#fff", background: C.laranja, padding: "7px 15px", borderRadius: 999, whiteSpace: "nowrap" }}>
           Relatório de Entregas
@@ -1609,17 +1613,13 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   // Cabeçalho e rodapé das páginas de conteúdo.
   const cabecalhoPagina = (
     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "18px 32px 12px", borderBottom: `2px solid ${C.laranja}`, background: C.creme, flexShrink: 0 }}>
-      <div style={{ width: 30, height: 30, borderRadius: "50%", background: C.soft, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
-        {logoCliente
-          ? <img src={logoCliente} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          : <span style={{ fontWeight: 800, fontSize: 13, color: C.laranja }}>{client.name.charAt(0).toUpperCase()}</span>}
-      </div>
+      <MarcaRedonda src={logoCliente} nome={client.name} px={30} fonte={13} fundo={C.soft} corFallback={C.laranja} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 12.5, fontWeight: 800, color: C.ink }}>{client.name}</div>
         <div style={{ fontSize: 9.5, color: C.sub }}>Relatório de Entregas · {coverPeriodo}</div>
       </div>
       {agencyLogo && (
-        <img src={agencyLogo} alt="" crossOrigin="anonymous" style={{ maxHeight: 22, maxWidth: 110, objectFit: "contain", display: "block", flexShrink: 0, borderRadius: 6 }} />
+        <MarcaBarra src={agencyLogo} altura={22} largura={110} style={{ flexShrink: 0, borderRadius: 8, padding: "4px 7px" }} />
       )}
     </div>
   );

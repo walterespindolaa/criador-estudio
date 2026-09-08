@@ -73,10 +73,24 @@ async function carregarImagem(url: string, larguraMax = 700): Promise<Img | null
     cv.width = w; cv.height = h;
     const ctx = cv.getContext("2d");
     if (!ctx) return null;
+    /* FUNDO BRANCO ANTES DE DESENHAR: exportamos em JPEG (peso) e JPEG não tem
+       transparência. Sem isto, PNG com fundo transparente (a maioria dos logos)
+       saía com FUNDO PRETO no PDF, porque o canvas nasce com pixels zerados e o
+       encoder lê alfa 0 como preto. */
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, w, h);
     ctx.drawImage(img, 0, 0, w, h);
     return { data: cv.toDataURL("image/jpeg", 0.72), w, h };
   } catch { return null; }
 }
+
+/* Mesma regra do cabeçalho das páginas públicas (LogoMarca): arquivo quase
+   quadrado é SELO, já foi desenhado pra viver dentro de um círculo, então
+   preenche a moldura inteira. Logo horizontal cabe inteiro, sem corte. */
+const ehSelo = (im: Img) => {
+  const p = im.w / (im.h || 1);
+  return p >= 0.8 && p <= 1.25;
+};
 
 function hexRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
@@ -153,13 +167,28 @@ export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
 
   let y = 52;
   if (logoCli) {
-    // Círculo branco com a logo do cliente dentro (igual à capa do relatório).
+    /* Círculo branco com a logo do cliente dentro, mesma regra do cabeçalho
+       público. SELO (quase quadrado) preenche o círculo inteiro: recortamos
+       num clipe redondo pra que as quinas do arquivo não apareçam sobre a
+       moldura, que era o "quadrado dentro de redondo" que a Gabi apontou.
+       Logo horizontal continua cabendo inteiro, com respiro. */
     const D = 38;
     pdf.setFillColor(255, 255, 255);
     pdf.circle(L / 2, y + D / 2, D / 2, "F");
-    const esc = Math.min((D - 8) / logoCli.w, (D - 8) / logoCli.h);
-    const iw = logoCli.w * esc, ih = logoCli.h * esc;
-    pdf.addImage(logoCli.data, "JPEG", (L - iw) / 2, y + (D - ih) / 2, iw, ih);
+    if (ehSelo(logoCli)) {
+      const esc = Math.max(D / logoCli.w, D / logoCli.h);
+      const iw = logoCli.w * esc, ih = logoCli.h * esc;
+      pdf.saveGraphicsState();
+      pdf.circle(L / 2, y + D / 2, D / 2);
+      pdf.clip();
+      pdf.discardPath();
+      pdf.addImage(logoCli.data, "JPEG", (L - iw) / 2, y + (D - ih) / 2, iw, ih);
+      pdf.restoreGraphicsState();
+    } else {
+      const esc = Math.min((D - 8) / logoCli.w, (D - 8) / logoCli.h);
+      const iw = logoCli.w * esc, ih = logoCli.h * esc;
+      pdf.addImage(logoCli.data, "JPEG", (L - iw) / 2, y + (D - ih) / 2, iw, ih);
+    }
     y += D + 14;
   } else {
     y += 18;
@@ -200,8 +229,10 @@ export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
   }
 
   if (logoAge) {
-    const lw = 24;
-    const lh = Math.min((logoAge.h / logoAge.w) * lw, 14);
+    /* Cabe dentro de uma caixa de 24x14, mantendo a proporção. Antes a largura
+       era fixa em 24 e só a altura era limitada: logo alto era ACHATADO. */
+    const escala = Math.min(24 / logoAge.w, 14 / logoAge.h);
+    const lw = logoAge.w * escala, lh = logoAge.h * escala;
     pdf.addImage(logoAge.data, "JPEG", (L - lw) / 2, A - 46, lw, lh);
   }
   suave(); pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
