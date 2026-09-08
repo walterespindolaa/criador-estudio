@@ -61,9 +61,19 @@ function buildApifyInput(type: string, handle: string, limit: number, since?: st
     return { directUrls: [`https://www.instagram.com/${h}/`], resultsType: "mentions", resultsLimit: limit, addParentData: false, ...period };
   }
   if (type === "reels") {
-    return { directUrls: [`https://www.instagram.com/${h}/reels/`], resultsType: "posts", resultsLimit: limit, addParentData: false, ...period };
+    // PEDIR MAIS DO QUE MOSTRAR (08/09): a aba /reels/ do scraper devolve o
+    // FEED, não só reels. Pedindo 5 vinham 5 posts e, depois do filtro isReel,
+    // sobravam 2. Agora pedimos o triplo (piso 12, teto 60) e cortamos no
+    // número que a pessoa escolheu. O Apify cobra por item lido, e item de
+    // feed é barato: melhor gastar centavos do que entregar metade.
+    return { directUrls: [`https://www.instagram.com/${h}/reels/`], resultsType: "posts", resultsLimit: superAmostra(limit), addParentData: false, ...period };
   }
   return { directUrls: [`https://www.instagram.com/${h}/`], resultsType: "posts", resultsLimit: limit, addParentData: false, ...period };
+}
+
+/** Quantos itens pedir ao Apify quando a gente vai FILTRAR depois. */
+function superAmostra(limit: number): number {
+  return Math.min(Math.max(limit * 3, 12), 60);
 }
 
 function isReel(it: any): boolean {
@@ -634,13 +644,21 @@ Deno.serve(async (req) => {
 
       // Terminou. Baixa os itens.
       const dsId = run?.defaultDatasetId;
-      const itemsResp = await fetch(`https://api.apify.com/v2/datasets/${dsId}/items?token=${apifyToken}&clean=true&limit=${job.results_limit || 20}`);
+      // Em reels a gente pediu de propósito mais itens do que vai mostrar
+      // (o feed vem junto), então o download tem que acompanhar o over-fetch.
+      const tetoDownload = job.scrape_type === "reels"
+        ? superAmostra(job.results_limit || 20)
+        : (job.results_limit || 20);
+      const itemsResp = await fetch(`https://api.apify.com/v2/datasets/${dsId}/items?token=${apifyToken}&clean=true&limit=${tetoDownload}`);
       let items = await itemsResp.json() as any[];
       if (!Array.isArray(items)) items = [];
 
       if (job.scrape_type === "reels") {
         const onlyReels = items.filter(isReel);
-        if (onlyReels.length > 0) items = onlyReels;
+        // Fica com os reels e corta no que a pessoa pediu. Se o perfil não
+        // tiver reels nenhum, mantém o que veio (o aviso do card já diz que a
+        // leitura sai curta) mas ainda respeita o número escolhido.
+        items = (onlyReels.length > 0 ? onlyReels : items).slice(0, job.results_limit || 20);
       }
 
       // ── A transcrição volta PELADA e aqui a gente veste ela ──
