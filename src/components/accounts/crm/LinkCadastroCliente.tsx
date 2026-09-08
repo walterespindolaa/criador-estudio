@@ -10,7 +10,7 @@ import {
   type ClientIntake,
 } from "@/hooks/useClientIntakes";
 import {
-  ETAPAS_INTAKE, ATALHOS_ETAPAS, etapasDoEnvio, CAMPOS_CADASTRO, quantasRespondidas, totalVisivel,
+  ETAPAS_INTAKE, ATALHOS_ETAPAS, TODAS_ETAPAS, etapasDoEnvio, CAMPOS_CADASTRO, quantasRespondidas, totalVisivel,
 } from "@/lib/formularioCadastro";
 import { useCrmClient, type CrmClient } from "@/hooks/useCrm";
 
@@ -56,7 +56,8 @@ export function LinkCadastroCliente({ crmClientId, clienteNome, temCria = false 
   /* O QUE VAI NO LINK. Mandar as 30 perguntas pra um cliente que só precisa
      confirmar o CNPJ é o jeito mais rápido do formulário não voltar. */
   const [escolhendo, setEscolhendo] = useState(false);
-  const [marcadas, setMarcadas] = useState<number[]>([0, 1, 2, 3, 4, 5]);
+  // Deriva da lista: quando entra etapa nova, ela já vem marcada por padrão.
+  const [marcadas, setMarcadas] = useState<number[]>(TODAS_ETAPAS);
   const alternar = (i: number) =>
     setMarcadas((m) => (m.includes(i) ? m.filter((x) => x !== i) : [...m, i].sort((a, b) => a - b)));
 

@@ -41,6 +41,26 @@ export const TONS_INTAKE = [
 ];
 
 export const ETAPAS_INTAKE: EtapaIntake[] = [
+  /* COMEÇAR PELO PORQUÊ (pedido da Gabi, 08/09/2026). Antes o formulário
+     abria com CNPJ e endereço: burocracia de cara, com o cliente ainda frio.
+     Estas quatro perguntas são as que ele responde com vontade, e são as que
+     mais rendem conteúdo depois. A papelada vem quando ele já está embalado. */
+  {
+    titulo: "Por que conteúdo",
+    descricao: "Comece por aqui. É a parte que mais me ajuda a entender o que fazer com o seu perfil.",
+    campos: [
+      { chave: "whyContent", label: "Por que você quer começar ou fortalecer sua produção de conteúdo?",
+        tipo: "longo", obrigatorio: true, largo: true },
+      { chave: "mainGoal", label: "O que você espera conquistar através do conteúdo?",
+        ajuda: "Ex.: passar autoridade, transformar conhecimento em conteúdo, gerar mais oportunidades.",
+        tipo: "longo", largo: true },
+      { chave: "perception6m", label: "O que você gostaria que as pessoas pensassem sobre você depois de consumir seus conteúdos?",
+        tipo: "longo", largo: true },
+      { chave: "blockedTopic", label: "Existe algum tema que você gostaria de começar a abordar, mas ainda não encontrou uma forma de fazer isso?",
+        ajuda: "Pode ser um assunto que te trava, dá insegurança ou você não sabe por onde começar.",
+        tipo: "longo", largo: true },
+    ],
+  },
   {
     titulo: "Dados pro contrato",
     descricao: "É o que a gente precisa pra emitir o contrato e a nota. Se você não souber algum, deixe em branco e a gente confere depois.",
@@ -80,20 +100,15 @@ export const ETAPAS_INTAKE: EtapaIntake[] = [
     ],
   },
   {
-    titulo: "O que vocês fazem e o que esperam",
+    titulo: "O que você faz e o que espera",
     descricao: "Fale como você falaria pra um amigo. Não precisa ficar bonito, a gente organiza depois.",
     campos: [
-      { chave: "mainProducts", label: "Quais produtos ou serviços vocês oferecem?", tipo: "longo", obrigatorio: true, largo: true },
+      { chave: "mainProducts", label: "Quais produtos ou serviços você oferece?", tipo: "longo", obrigatorio: true, largo: true },
       { chave: "offer", label: "O que cada um resolve pro cliente? Algum precisa de destaque?", tipo: "longo", largo: true },
-      { chave: "specialty", label: "No que vocês são realmente bons?", ajuda: "A especialidade técnica, o que vocês dominam.", tipo: "longo", largo: true },
-      { chave: "valueProp", label: "Por que escolher vocês e não um concorrente?", tipo: "longo", largo: true },
-      { chave: "mainGoal", label: "Qual é o principal objetivo de contratar uma social mídia hoje?",
-        ajuda: "Ex.: passar autoridade, transformar conhecimento em conteúdo, gerar mais oportunidades.",
-        tipo: "longo", largo: true },
+      { chave: "specialty", label: "No que você é realmente bom?", ajuda: "A especialidade técnica, o que você domina.", tipo: "longo", largo: true },
+      { chave: "valueProp", label: "Por que escolher você e não um concorrente?", tipo: "longo", largo: true },
       { chave: "avoid", label: "O que você não quer transmitir na comunicação?",
         ajuda: "Vale citar tom, assunto ou qualquer coisa que não combina com a marca.",
-        tipo: "longo", largo: true },
-      { chave: "perception6m", label: "Como você gostaria que a marca fosse percebida daqui a 6 ou 12 meses?",
         tipo: "longo", largo: true },
       { chave: "successMetric", label: "Como você vai saber que o conteúdo está funcionando?",
         ajuda: "Ex.: mais vendas, marca mais forte, virar referência no assunto.",
@@ -104,17 +119,17 @@ export const ETAPAS_INTAKE: EtapaIntake[] = [
     titulo: "A história e o propósito",
     descricao: "É daqui que sai o conteúdo que ninguém consegue copiar.",
     campos: [
-      { chave: "history", label: "Como e por que a empresa nasceu?", tipo: "longo", largo: true },
-      { chave: "brandValues", label: "Quais valores vocês não abrem mão?", tipo: "longo", largo: true },
-      { chave: "impact", label: "Que transformação vocês querem gerar na vida do cliente?", tipo: "longo", largo: true },
-      { chave: "vision", label: "Onde vocês querem chegar nos próximos anos?", tipo: "longo", largo: true },
+      { chave: "history", label: "Como e por que tudo isso começou?", tipo: "longo", largo: true },
+      { chave: "brandValues", label: "De quais valores você não abre mão?", tipo: "longo", largo: true },
+      { chave: "impact", label: "Que transformação você quer gerar na vida do cliente?", tipo: "longo", largo: true },
+      { chave: "vision", label: "Onde você quer chegar nos próximos anos?", tipo: "longo", largo: true },
     ],
   },
   {
-    titulo: "Pra quem vocês vendem",
+    titulo: "Pra quem você vende",
     descricao: "Quanto mais específico, melhor o conteúdo. Pense num cliente real que você atendeu essa semana.",
     campos: [
-      { chave: "audience", label: "Quem é o cliente ideal de vocês?", ajuda: "Idade, momento de vida, o que faz.", tipo: "longo", obrigatorio: true, largo: true },
+      { chave: "audience", label: "Quem é o seu cliente ideal?", ajuda: "Idade, momento de vida, o que faz.", tipo: "longo", obrigatorio: true, largo: true },
       { chave: "pains", label: "Quais problemas ele quer resolver?", tipo: "longo", largo: true,
         exemplo: "Ex.:\nnão consegue tempo pra cuidar de si\ntem medo de ficar com aparência artificial" },
       { chave: "desires", label: "O que ele quer conquistar ou sentir?", tipo: "longo", largo: true,
@@ -126,14 +141,14 @@ export const ETAPAS_INTAKE: EtapaIntake[] = [
     ],
   },
   {
-    titulo: "Como vocês querem soar",
+    titulo: "Como você quer soar",
     descricao: "Isso define o jeito de escrever de todo post daqui pra frente.",
     campos: [
       { chave: "toneOfVoice", label: "Que tom combina com a marca?", ajuda: "Pode marcar mais de um.", tipo: "tags", opcoes: TONS_INTAKE, largo: true },
       { chave: "archetype", label: "Se a marca fosse uma pessoa, como ela seria?", tipo: "longo", largo: true },
-      { chave: "admiredBrands", label: "Que marcas vocês admiram na comunicação? Por quê?", tipo: "longo", largo: true },
-      { chave: "contentThemes", label: "Sobre o que vocês gostariam de falar nas redes?", tipo: "longo", largo: true },
-      { chave: "colorPalette", label: "Vocês já têm cores e fontes definidas?", ajuda: "Se tiver os códigos das cores, cole aqui.", largo: true },
+      { chave: "admiredBrands", label: "Que marcas você admira na comunicação? Por quê?", tipo: "longo", largo: true },
+      { chave: "contentThemes", label: "Sobre o que você gostaria de falar nas redes?", tipo: "longo", largo: true },
+      { chave: "colorPalette", label: "Você já tem cores e fontes definidas?", ajuda: "Se tiver os códigos das cores, cole aqui.", largo: true },
     ],
   },
 ];
@@ -153,10 +168,18 @@ export function etapasDoEnvio(steps?: number[] | null): EtapaIntake[] {
 }
 
 /** Presets pra não obrigar ninguém a marcar caixinha uma a uma. */
+/** Todos os índices, derivado da lista: etapa nova entra sozinha nos atalhos. */
+export const TODAS_ETAPAS = ETAPAS_INTAKE.map((_, i) => i);
+/* Índices por nome, pra ninguém mais ter que contar de cabeça quando entrar
+   ou sair uma etapa (a de "Por que conteúdo" entrou em 08/09 e empurrou tudo). */
+const iDe = (titulo: string) => ETAPAS_INTAKE.findIndex((e) => e.titulo === titulo);
+const CADASTRO = [iDe("Dados pro contrato"), iDe("Contato")].filter((i) => i >= 0);
+
 export const ATALHOS_ETAPAS: { nome: string; steps: number[]; explica: string }[] = [
-  { nome: "Tudo", steps: [0, 1, 2, 3, 4, 5], explica: "cadastro completo e briefing de marca" },
-  { nome: "Só o cadastro", steps: [0, 1], explica: "dados do contrato e contato" },
-  { nome: "Só o briefing", steps: [2, 3, 4, 5], explica: "marca, público e tom de voz" },
+  { nome: "Tudo", steps: TODAS_ETAPAS, explica: "cadastro completo e briefing de marca" },
+  { nome: "Só o cadastro", steps: CADASTRO, explica: "dados do contrato e contato" },
+  { nome: "Só o briefing", steps: TODAS_ETAPAS.filter((i) => !CADASTRO.includes(i)),
+    explica: "propósito, marca, público e tom de voz" },
 ];
 
 /** Chaves que viram COLUNA do cadastro (o resto vai pro brandbook/persona). */
