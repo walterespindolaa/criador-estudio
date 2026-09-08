@@ -5972,6 +5972,75 @@ export type Database = {
         }
         Relationships: []
       }
+      video_analyses: {
+        Row: {
+          created_at: string
+          crm_client_id: string | null
+          duration_s: number | null
+          error: string | null
+          finished_at: string | null
+          id: string
+          manager_id: string
+          origem: string
+          post_url: string
+          result: Json | null
+          scrape_id: string | null
+          status: string
+          thumbnail: string | null
+          usage: Json | null
+          video_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          crm_client_id?: string | null
+          duration_s?: number | null
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          manager_id: string
+          origem?: string
+          post_url: string
+          result?: Json | null
+          scrape_id?: string | null
+          status?: string
+          thumbnail?: string | null
+          usage?: Json | null
+          video_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          crm_client_id?: string | null
+          duration_s?: number | null
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          manager_id?: string
+          origem?: string
+          post_url?: string
+          result?: Json | null
+          scrape_id?: string | null
+          status?: string
+          thumbnail?: string | null
+          usage?: Json | null
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_analyses_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_analyses_scrape_id_fkey"
+            columns: ["scrape_id"]
+            isOneToOne: false
+            referencedRelation: "competitor_scrapes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
