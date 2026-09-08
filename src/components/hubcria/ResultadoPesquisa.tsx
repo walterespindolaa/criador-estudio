@@ -355,6 +355,16 @@ export const KIND_LABEL: Record<string, string> = {
   mentions: "Quem fala dele", transcription: "O roteiro do reel que bombou",
 };
 
+/* O MESMO NOME DO BOTÃO QUE A PESSOA CLICOU (08/09). O título do card diz o
+   que a pesquisa significa, e isso é bom, mas na hora de olhar o resultado a
+   pessoa não lembra qual das oito ela rodou: o Walter viu carrossel num card
+   e achou que tinha pedido reels (tinha pedido "Posts do feed"). */
+export const KIND_FORM_LABEL: Record<string, string> = {
+  profile: "Raio-x do perfil", comments: "Comentários de um post", ads: "Anúncios que ele paga",
+  posts: "Posts do feed", reels: "Reels", hashtag: "Hashtag do nicho",
+  mentions: "Quem marca esse perfil", transcription: "Reels com o roteiro transcrito",
+};
+
 export function SummaryCard({
   summary, handle, quando, custo, defaultOpen = false, onDelete, ideas, onIdeaStatus, onIdeaDelete,
   aoCriarPosts, criandoPosts,
@@ -417,6 +427,7 @@ export function SummaryCard({
               {KIND_LABEL[kind] || "Pesquisa"}
             </span>
             <span className="block text-[11.5px] font-body text-muted-foreground truncate">
+              {KIND_FORM_LABEL[kind] ? `${KIND_FORM_LABEL[kind]} · ` : ""}
               @{shortHandle.replace(/^@/, "")}
               {count != null && ` · ${count} ${count === 1 ? "item lido" : "itens lidos"}`}
               {ideas && ideas.length > 0 && ` · ${ideas.length} pautas`}
