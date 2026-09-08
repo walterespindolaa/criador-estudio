@@ -642,6 +642,49 @@ Deno.serve(async (req) => {
         return json({ ok: true, status: "error", error: `apify_${st}` });
       }
 
+      // ── ESTÁGIO 1 DA TRANSCRIÇÃO: acabou de descobrir as urls dos reels.
+      //    Agora sim dispara a transcrição com elas e segue no mesmo job. ──
+      const estagio = (job.result_summary as { estagio?: string } | null)?.estagio;
+      if (job.scrape_type === "transcription" && estagio === "descobrindo_reels") {
+        const dsBusca = run?.defaultDatasetId;
+        const rBusca = await fetch(`https://api.apify.com/v2/datasets/${dsBusca}/items?token=${apifyToken}&clean=true&limit=${superAmostra(job.results_limit || 5)}`);
+        const achados = await rBusca.json().catch(() => []) as any[];
+        const urls = (Array.isArray(achados) ? achados : [])
+          .filter(isReel)
+          .map((x: any) => String(x.url || x.reelUrl || (x.shortCode ? `https://www.instagram.com/reel/${x.shortCode}/` : "")))
+          .filter((u: string) => /instagram\.com/i.test(u))
+          .map((u: string) => u.split("?")[0].replace(/\/+$/, "") + "/")
+          .slice(0, job.results_limit || 5);
+
+        if (urls.length === 0) {
+          await svc.from("competitor_scrapes").update({
+            status: "error", result_summary: null,
+            error: "Não achei reels nesse perfil pra transcrever. Se ele posta pouco reel, cole os links direto no campo de baixo.",
+            finished_at: new Date().toISOString(),
+          }).eq("id", scrapeId);
+          return json({ ok: true, status: "error", error: "sem_reels" });
+        }
+
+        const runT = await fetch(`https://api.apify.com/v2/acts/linen_snack~instagram-reel-transcript-ai-extractor/runs?token=${apifyToken}`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reelUrls: urls, language: "pt", enableSummary: true }),
+        });
+        if (!runT.ok) {
+          await svc.from("competitor_scrapes").update({
+            status: "error", result_summary: null,
+            error: `Achei os reels mas não consegui iniciar a transcrição (Apify ${runT.status}).`,
+            finished_at: new Date().toISOString(),
+          }).eq("id", scrapeId);
+          return json({ ok: true, status: "error", error: "transcricao_nao_iniciou" });
+        }
+        const novoRunId = (await runT.json())?.data?.id;
+        await svc.from("competitor_scrapes").update({
+          apify_run_id: novoRunId,
+          result_summary: { estagio: "transcrevendo", reels: urls.length },
+        }).eq("id", scrapeId);
+        return json({ ok: true, status: "running" });
+      }
+
       // Terminou. Baixa os itens.
       const dsId = run?.defaultDatasetId;
       // Em reels a gente pediu de propósito mais itens do que vai mostrar
@@ -675,9 +718,31 @@ Deno.serve(async (req) => {
       // O CUSTO REAL, cobrado pelo Apify. Antes era um número chutado no código.
       const costUsd = Number(run?.usageTotalUsd ?? 0) || 0;
 
+      // Transcrição que volta com o campo de texto vazio em TODOS os reels:
+      // não é bug nosso, é reel sem fala (só música) ou áudio que o motor não
+      // entendeu. Dizer isso é melhor que "voltou vazia".
+      if (job.scrape_type === "transcription" && items.length > 0) {
+        const comFala = items.filter((x: any) =>
+          String(x.transcript || x.transcriptText || x.transcription || x.captions || x.text || "").trim().length > 0);
+        if (comFala.length === 0) {
+          await svc.from("competitor_scrapes").update({
+            status: "error", cost_usd: costUsd, result_summary: null,
+            error: `Os ${items.length} reels vieram sem fala reconhecida (só música, ou o áudio não foi entendido). Tente um reel em que a pessoa fala na câmera.`,
+            finished_at: new Date().toISOString(),
+          }).eq("id", scrapeId);
+          // Cobrar 3 créditos por transcrição que não transcreveu nada é roubo.
+          if (!isAdmin) {
+            const { error: refErr } = await svc.rpc("refund_hub_credits", { _manager: mgr, _cost: CREDITOS[job.scrape_type] ?? 1 });
+            if (refErr) console.error("[apify-scrape] refund (sem_fala)", refErr.message);
+          }
+          return json({ ok: true, status: "error", error: "sem_fala" });
+        }
+        items = comFala;
+      }
+
       if (items.length === 0) {
         await svc.from("competitor_scrapes").update({
-          status: "error", cost_usd: costUsd,
+          status: "error", cost_usd: costUsd, result_summary: null,
           error: "A análise rodou mas voltou vazia. Confira o @ (perfil privado não dá) ou tente outro período.",
           finished_at: new Date().toISOString(),
         }).eq("id", scrapeId);
@@ -795,16 +860,26 @@ Deno.serve(async (req) => {
       let input: Record<string, unknown>;
 
       if (type === "transcription") {
-        actor = "linen_snack~instagram-reel-transcript-ai-extractor";
         const isUrl = /instagram\.com|https?:\/\//i.test(inputHandle);
         if (isUrl) {
+          actor = "linen_snack~instagram-reel-transcript-ai-extractor";
           const urls = inputHandle.split(/[\s,]+/)
             .filter((u) => /instagram\.com/i.test(u))
             .map((u) => u.split("?")[0].replace(/\/+$/, "") + "/")
             .slice(0, 15);
           input = { reelUrls: urls, language: "pt", enableSummary: true };
         } else {
-          input = { usernames: [cleanHandle(inputHandle)], maxReelsPerUsername: limit, language: "pt", enableSummary: true };
+          // DOIS ESTÁGIOS (08/09/2026). O modo "usernames" do ator de
+          // transcrição está quebrado: devolve zero itens em 2 segundos, sem
+          // nem tentar (testado no Apify com bruno_perini). Então a gente faz
+          // o que ele deveria fazer: primeiro descobre as urls dos reels com o
+          // instagram-scraper, que funciona, e no poll dispara a transcrição
+          // com essas urls (modo reelUrls, esse funciona). O usuário não vê
+          // diferença: continua sendo um job só, com uma barra de progresso.
+          actor = "apify~instagram-scraper";
+          input = buildApifyInput("reels", inputHandle, limit, since);
+          await svc.from("competitor_scrapes")
+            .update({ result_summary: { estagio: "descobrindo_reels" } }).eq("id", scrapeId);
         }
       } else if (type === "ads") {
         actor = "apify~facebook-ads-scraper";
