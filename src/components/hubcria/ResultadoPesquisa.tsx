@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { CreativeIdea } from "@/hooks/useHubCria";
+import { AnaliseProfunda } from "@/components/hubcria/AnaliseProfunda";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    A ENTREGA DA PESQUISA
@@ -267,6 +268,11 @@ function TopPostCard({ p, rank, aoUsarReferencia }: { p: Bruto; rank: number; ao
             </p>
           )}
         </div>
+      )}
+
+      {/* ANÁLISE PROFUNDA (TwelveLabs): só pra vídeo e só admin por enquanto. */}
+      {p.url && (/clips|video|reel/i.test(String(p.format || "")) || !!p.video_url || !!transcricao) && (
+        <AnaliseProfunda postUrl={p.url} videoUrl={p.video_url ?? null} thumbnail={p.thumbnail ?? null} />
       )}
 
       {/* A TRANSCRIÇÃO, é o roteiro do concorrente. É o produto desta análise. */}

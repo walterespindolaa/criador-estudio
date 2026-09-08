@@ -241,6 +241,9 @@ function summarize(items: any[], type: string): { summary: Record<string, unknow
     format: x.productType || x.type || (type === "transcription" ? "clips" : "outro"),
     url: x.url || x.reelUrl || x.postUrl || (x.shortCode ? `https://www.instagram.com/p/${x.shortCode}/` : null),
     thumbnail: x.displayUrl || x.thumbnailUrl || x.thumbnail || x.coverUrl || x.images?.[0] || null,
+    // Link direto do mp4 (CDN do Instagram, expira em horas). A análise
+    // profunda de vídeo tenta este primeiro e só pede um novo se morreu.
+    video_url: x.videoUrl || x.video_url || null,
     posted_at: x.timestamp || x.takenAt || null,
     music: x.musicInfo?.song_name ?? null,
     duration: x.videoDuration ?? x.duration ?? null,
