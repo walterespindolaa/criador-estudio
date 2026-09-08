@@ -35,7 +35,13 @@ function valorNaFicha(ficha: CrmClient | null | undefined, chave: string): strin
   return (bc[chave] ?? "").trim();
 }
 
-export function LinkCadastroCliente({ crmClientId, clienteNome }: { crmClientId: string; clienteNome: string }) {
+export function LinkCadastroCliente({ crmClientId, clienteNome, temCria = false }: {
+  crmClientId: string;
+  clienteNome: string;
+  /** Cliente com conta no Cria: as respostas de marca entram no Brandbook DELE
+   *  (o apply_intake grava nas duas pontas), então o texto muda pra não mentir. */
+  temCria?: boolean;
+}) {
   const { data: envios = [] } = useClientIntakes(crmClientId);
   /* A ficha atual entra aqui pra dar COMPARAÇÃO. Depois de aplicar, olhar as
      respostas sozinhas não responde a pergunta que importa: "o que o cliente
@@ -86,6 +92,7 @@ export function LinkCadastroCliente({ crmClientId, clienteNome }: { crmClientId:
             <p className="text-[11.5px] font-body text-muted-foreground mt-0.5 leading-relaxed">
               Um link onde ele preenche CNPJ, razão social, endereço, responsável e já conta do negócio dele.
               Valor, vencimento e multa não aparecem: isso continua sendo só seu.
+              {temCria && " Como ele usa o Cria, o que for de marca (tom de voz, público, propósito) entra direto no Brandbook dele."}
             </p>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">

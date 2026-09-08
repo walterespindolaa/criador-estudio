@@ -828,7 +828,7 @@ export default function ClienteHub() {
           preencheu lá. Sem conta Cria, é o editor completo da ficha do CRM. */}
       {activeTab === "brandbook" && (
         client.cria_owner_id ? (
-          <ClienteBrandbookCria criaOwnerId={client.cria_owner_id} />
+          <ClienteBrandbookCria criaOwnerId={client.cria_owner_id} crmClientId={client.id} clienteNome={displayName} />
         ) : (
           // Cliente sem conta Cria: o brandbook é o que a social mídia preencheu
           // na ficha. Antes esta aba só dizia "não usa o Cria" e mandava a

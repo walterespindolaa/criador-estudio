@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { BookMarked, Heart, Users, Mic, Palette, BookOpen, Sparkles, RefreshCw } from "lucide-react";
 import { useCriaClientBrandbook, type CriaClientMoodboardEntry } from "@/hooks/useManagerClientCria";
+import { LinkCadastroCliente } from "@/components/accounts/crm/LinkCadastroCliente";
 
 // Brandbook do cliente que USA O CRIA, renderizado em modo LEITURA na aba Criativo
 // da ficha. Espelha as seções do Brandbook do lado criador (moodboard_entries,
@@ -23,7 +24,12 @@ const ITEM_TYPE_LABELS: Record<string, string> = {
 };
 const isHex = (v: string | null) => !!v && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v.trim());
 
-export function ClienteBrandbookCria({ criaOwnerId }: { criaOwnerId: string }) {
+export function ClienteBrandbookCria({ criaOwnerId, crmClientId, clienteNome }: {
+  criaOwnerId: string;
+  /** Ficha no CRM da agência: é o que amarra o link de briefing ao cliente. */
+  crmClientId?: string;
+  clienteNome?: string;
+}) {
   const { data, isLoading, isError } = useCriaClientBrandbook(criaOwnerId);
 
   const moodboardBySection = useMemo(() => {
@@ -75,7 +81,7 @@ export function ClienteBrandbookCria({ criaOwnerId }: { criaOwnerId: string }) {
           <Sparkles className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" strokeWidth={1.5} />
           <p className="text-sm font-body text-foreground font-medium">O cliente ainda não preencheu o Brandbook</p>
           <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">
-            Peça pra ele preencher o Brandbook no CRIA dele (nicho, tom de voz, persona e moodboard). Tudo aparece aqui automaticamente.
+            Ou ele preenche no CRIA dele, ou você manda o link de briefing aqui de baixo e as respostas entram no Brandbook dele sozinhas.
           </p>
         </div>
       ) : (
@@ -162,6 +168,14 @@ export function ClienteBrandbookCria({ criaOwnerId }: { criaOwnerId: string }) {
             </div>
           )}
         </div>
+      )}
+
+      {/* PEDIR PRO CLIENTE (08/09): antes esta tela mandava "peça pra ele
+          preencher" e não dava meio nenhum de pedir. O mesmo link de briefing
+          do cliente sem Cria, mas as respostas entram no Brandbook DELE (o
+          apply_intake grava nas duas pontas). */}
+      {crmClientId && (
+        <LinkCadastroCliente crmClientId={crmClientId} clienteNome={clienteNome ?? "o cliente"} temCria />
       )}
     </div>
   );
