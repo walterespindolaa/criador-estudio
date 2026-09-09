@@ -340,8 +340,12 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
             </div>
 
             {ytTab === "thumbnail" ? (
-              <div className="p-3 bg-card">
-                <div className="relative rounded-xl overflow-hidden aspect-video mb-3">
+              /* A capa vai de ponta a ponta, como no YouTube e como já era na
+                 aba do Instagram aqui do lado. Antes ela tinha 12px de respiro
+                 dos dois lados e canto arredondado dentro de um card de 290px:
+                 sobrava moldura e o vídeo ficava minúsculo (Walter, 09/09). */
+              <div className="bg-card">
+                <div className="relative overflow-hidden aspect-video">
                   {activeMediaUrl ? (
                     isBunnyVideo ? (
                       <VideoEmbed viewUrl={activeMediaUrl!} className="w-full h-full border-0" />
@@ -373,7 +377,7 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
                     <div className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded font-body pointer-events-none">8:42</div>
                   )}
                 </div>
-                <div className="flex gap-2.5">
+                <div className="flex gap-2.5 px-3 py-2.5">
                   <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">
                     {avatarUrl
                       ? <img src={avatarUrl} className="w-full h-full object-cover" alt={userName} loading="lazy" />
