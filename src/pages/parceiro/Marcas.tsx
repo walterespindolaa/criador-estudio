@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, ExternalLink, FolderOpen, Instagram, Link2, Loader2, Palette, Sparkles, Type } from "lucide-react";
+import { Copy, ExternalLink, FolderOpen, Instagram, Link2, Loader2, Palette, Sparkles, Type, X } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,20 +25,28 @@ const copiar = (t: string, msg: string) => { void navigator.clipboard.writeText(
 
 /** Um pedaço da ficha. Só aparece quando a agência preencheu: campo vazio com
  *  rótulo é pior do que campo ausente, dá a impressão de tela quebrada. */
-function Bloco({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+function Bloco({ titulo, cor, children }: { titulo: string; cor?: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[10.5px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-1">{titulo}</p>
+      <p className="text-[10.5px] font-body font-bold uppercase tracking-wider mb-1" style={{ color: cor ?? undefined }}>
+        {titulo}
+      </p>
       {children}
     </div>
   );
 }
 
-function Texto({ titulo, valor }: { titulo: string; valor: string | null }) {
+/* O texto sai do bege chapado e ganha um cartão com fio na cor da marca. Ler
+   dez parágrafos soltos no mesmo fundo era o que dava a sensação de tela
+   apagada (Walter, 09/09/2026). */
+function Texto({ titulo, valor, cor }: { titulo: string; valor: string | null; cor?: string }) {
   if (!valor?.trim()) return null;
   return (
-    <Bloco titulo={titulo}>
-      <p className="text-[13px] font-body text-foreground/90 leading-relaxed whitespace-pre-line">{valor}</p>
+    <Bloco titulo={titulo} cor={cor}>
+      <p className="text-[13px] font-body text-foreground/90 leading-relaxed whitespace-pre-line rounded-xl bg-card border border-border border-l-[3px] px-3 py-2"
+        style={{ borderLeftColor: cor ?? undefined }}>
+        {valor}
+      </p>
     </Bloco>
   );
 }
@@ -51,16 +59,33 @@ function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFechar: ()
   const links = (m.links ?? []).filter((l) => !!l?.url?.trim());
   return (
     <Dialog open={!!m} onOpenChange={(v) => !v && aoFechar()}>
-      <DialogContent className="max-w-lg p-0 gap-0 rounded-2xl overflow-hidden max-h-[88vh] overflow-y-auto">
-        <div className="h-20" style={{ background: `linear-gradient(135deg, ${cor}, ${cor}cc)` }} />
+      <DialogContent className="max-w-lg p-0 gap-0 rounded-2xl overflow-hidden max-h-[88vh] overflow-y-auto [&>button:last-child]:hidden">
+        {/* A CAPA DA MARCA. Faixa chapada é sem vida (Walter, 09/09/2026): o
+            logo entra borrado e ampliado no fundo, dando textura na cor da
+            própria marca, mais dois círculos de luz e sombra. O X é próprio,
+            redondo e com fundo, porque o padrão do dialog é cinza-claro e
+            desaparecia em cima da cor. */}
+        <div className="relative h-24 overflow-hidden" style={{ background: `linear-gradient(135deg, ${cor}, ${cor}aa)` }}>
+          {m.logo && (
+            <img src={m.logo} alt="" aria-hidden draggable={false}
+              className="absolute inset-0 w-full h-full object-cover opacity-30"
+              style={{ transform: "scale(1.8)", filter: "blur(26px) saturate(1.4)" }} />
+          )}
+          <span aria-hidden className="absolute -right-10 -top-12 h-36 w-36 rounded-full bg-white/15" />
+          <span aria-hidden className="absolute -left-8 -bottom-14 h-32 w-32 rounded-full bg-black/10" />
+          <button type="button" onClick={aoFechar} aria-label="Fechar"
+            className="absolute right-3 top-3 z-20 grid h-8 w-8 place-items-center rounded-full bg-black/25 text-white backdrop-blur-sm transition-colors hover:bg-black/45">
+            <X className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+        </div>
         <div className="p-5 space-y-4">
           <DialogHeader className="space-y-1">
             <div className="flex items-center gap-3">
-              <span className="w-12 h-12 rounded-full border-2 border-background bg-card overflow-hidden grid place-items-center shrink-0 -mt-10 shadow"
-                style={{ background: m.logo ? undefined : cor }}>
+              <span className="w-14 h-14 rounded-full border-[3px] border-background bg-card overflow-hidden grid place-items-center shrink-0 -mt-12 shadow-lg relative z-10"
+                style={{ background: m.logo ? "#fff" : cor }}>
                 {m.logo
                   ? <img src={m.logo} alt="" className="w-full h-full object-contain" loading="lazy" />
-                  : <span className="text-white font-display font-bold text-lg">{m.nome.charAt(0).toUpperCase()}</span>}
+                  : <span className="text-white font-display font-bold text-xl">{m.nome.charAt(0).toUpperCase()}</span>}
               </span>
               <div className="min-w-0">
                 <DialogTitle className="font-display text-lg font-extrabold leading-tight truncate">{m.nome}</DialogTitle>
@@ -100,7 +125,7 @@ function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFechar: ()
               Visuais / Site / Fotos Estúdio" do Trello. Ficam no topo, antes
               de qualquer texto: quem monta arte abre pasta, não lê parágrafo. */}
           {links.length > 0 && (
-            <Bloco titulo="Material e links da marca">
+            <Bloco titulo="Material e links da marca" cor={cor}>
               <div className="grid gap-1.5">
                 {links.map((l, i) => (
                   <a key={`${l.url}-${i}`} href={l.url} target="_blank" rel="noopener noreferrer"
@@ -117,35 +142,35 @@ function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFechar: ()
           )}
 
           {m.paleta?.trim() && (
-            <Bloco titulo="Paleta">
-              <p className="text-[13px] font-body text-foreground/90 leading-relaxed flex items-start gap-1.5">
+            <Bloco titulo="Paleta" cor={cor}>
+              <p className="text-[13px] font-body text-foreground/90 leading-relaxed flex items-start gap-1.5 rounded-xl bg-card border border-border border-l-[3px] px-3 py-2" style={{ borderLeftColor: cor }}>
                 <Palette className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />{m.paleta}
               </p>
             </Bloco>
           )}
           {m.fontes?.trim() && (
-            <Bloco titulo="Fontes">
-              <p className="text-[13px] font-body text-foreground/90 leading-relaxed flex items-start gap-1.5">
+            <Bloco titulo="Fontes" cor={cor}>
+              <p className="text-[13px] font-body text-foreground/90 leading-relaxed flex items-start gap-1.5 rounded-xl bg-card border border-border border-l-[3px] px-3 py-2" style={{ borderLeftColor: cor }}>
                 <Type className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />{m.fontes}
               </p>
             </Bloco>
           )}
-          <Texto titulo="Expressão visual" valor={m.expressao_visual} />
+          <Texto titulo="Expressão visual" valor={m.expressao_visual} cor={cor} />
 
           {/* A VOZ: como a marca fala. Serve pro copy e pro texto que entra na
               arte, que hoje o designer escreve no olho. */}
-          <Texto titulo="Tom de voz" valor={m.tom_de_voz} />
-          <Texto titulo="Personalidade" valor={m.personalidade} />
-          <Texto titulo="Estilo de comunicação" valor={m.estilo_comunicacao} />
-          <Texto titulo="Arquétipo" valor={m.arquetipo} />
+          <Texto titulo="Tom de voz" valor={m.tom_de_voz} cor={cor} />
+          <Texto titulo="Personalidade" valor={m.personalidade} cor={cor} />
+          <Texto titulo="Estilo de comunicação" valor={m.estilo_comunicacao} cor={cor} />
+          <Texto titulo="Arquétipo" valor={m.arquetipo} cor={cor} />
 
           {/* O NEGÓCIO: pra quem é e o que a marca vende. Sem isso a peça sai
               bonita e fora do alvo. */}
-          <Texto titulo="Público" valor={m.publico} />
-          <Texto titulo="O que a marca vende" valor={m.oferta} />
-          <Texto titulo="Temas que a marca trabalha" valor={m.temas} />
-          <Texto titulo="Ideia central" valor={m.ideia_central} />
-          <Texto titulo="Promessa" valor={m.promessa} />
+          <Texto titulo="Público" valor={m.publico} cor={cor} />
+          <Texto titulo="O que a marca vende" valor={m.oferta} cor={cor} />
+          <Texto titulo="Temas que a marca trabalha" valor={m.temas} cor={cor} />
+          <Texto titulo="Ideia central" valor={m.ideia_central} cor={cor} />
+          <Texto titulo="Promessa" valor={m.promessa} cor={cor} />
 
           {/* O QUE EVITAR é o campo que mais economiza retrabalho: é o
               "não usar o Frederico nas fotos individuais" do Trello dela. */}
@@ -165,7 +190,7 @@ function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFechar: ()
           )}
 
           {tags.length > 0 && (
-            <Bloco titulo="Hashtags da marca">
+            <Bloco titulo="Hashtags da marca" cor={cor}>
               <div className="flex flex-wrap gap-1.5">
                 {tags.map((h) => (
                   <button key={h} type="button" onClick={() => copiar(h, "Hashtag copiada.")}
@@ -182,7 +207,7 @@ function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFechar: ()
           )}
 
           {refs.length > 0 && (
-            <Bloco titulo={`Referências visuais (${refs.length})`}>
+            <Bloco titulo={`Referências visuais (${refs.length})`} cor={cor}>
               <div className="grid grid-cols-3 gap-1.5">
                 {refs.map((r, i) => (
                   <a key={i} href={r.url} target="_blank" rel="noopener noreferrer" title={r.nota ?? undefined}

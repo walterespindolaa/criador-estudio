@@ -423,6 +423,77 @@ export function useMeusCachesDetalhe() {
   });
 }
 
+/* ── O CACHÊ QUE ELE LANÇA NA MÃO ───────────────────────────────────────── */
+
+/** Anotação do próprio parceiro: pacote fechado, agência que não usa o Cria,
+ *  valor combinado no WhatsApp. Não é o Caixa, é o caderninho dele. */
+export type LancamentoDoParceiro = {
+  id: string;
+  cliente: string;
+  descricao: string | null;
+  valor: number;
+  valor_pago: number;
+  forma_pagamento: string | null;
+  data: string;
+};
+
+export function useMeusLancamentos() {
+  const { user } = useAuth();
+  return useQuery<LancamentoDoParceiro[]>({
+    queryKey: ["parceiro-lancamentos", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("parceiro_lancamentos")
+        .select("id, cliente, descricao, valor, valor_pago, forma_pagamento, data")
+        .order("data", { ascending: false })
+        .limit(300);
+      if (error) {
+        // Migration ainda não rodou: lista vazia em vez de tela quebrada.
+        if (/does not exist|schema cache/i.test(error.message)) return [];
+        throw error;
+      }
+      return (data ?? []) as LancamentoDoParceiro[];
+    },
+  });
+}
+
+export function useAcoesLancamento() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const invalidar = () => void qc.invalidateQueries({ queryKey: ["parceiro-lancamentos", user?.id] });
+
+  const salvar = useMutation({
+    mutationFn: async (v: Partial<LancamentoDoParceiro> & { cliente: string }) => {
+      const linha = {
+        member_id: user?.id,
+        cliente: v.cliente.trim(),
+        descricao: v.descricao?.trim() || null,
+        valor: Number(v.valor ?? 0),
+        valor_pago: Number(v.valor_pago ?? 0),
+        forma_pagamento: v.forma_pagamento?.trim() || null,
+        data: v.data,
+      };
+      const { error } = v.id
+        ? await sbFrom("parceiro_lancamentos").update(linha as never).eq("id", v.id)
+        : await sbFrom("parceiro_lancamentos").insert(linha as never);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidar(); toast.success("Cachê salvo."); },
+    onError: (e: Error) => toast.error(e.message || "Não consegui salvar. Rode o SQL da tabela parceiro_lancamentos."),
+  });
+
+  const excluir = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sbFrom("parceiro_lancamentos").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidar(); toast.success("Cachê excluído."); },
+    onError: () => toast.error("Não consegui excluir."),
+  });
+
+  return { salvar, excluir };
+}
+
 /* ── O LADO DA SOCIAL MÍDIA ─────────────────────────────────────────────── */
 
 /** Os parceiros ativos da agência, pro botão "Enviar para". */

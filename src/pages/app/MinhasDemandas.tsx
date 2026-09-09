@@ -762,7 +762,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
 
   return (
     <Dialog open={!!postId} onOpenChange={(v) => !v && aoFechar()}>
-      <DialogContent className="max-w-5xl p-0 gap-0 rounded-2xl overflow-hidden max-h-[88vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl p-0 gap-0 rounded-2xl overflow-hidden max-h-[88vh] overflow-y-auto [&>button:last-child]:hidden">
         {isLoading || !card ? (
           <div className="grid place-items-center py-20"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : (
@@ -782,6 +782,13 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
               )}
               <span aria-hidden className="absolute -right-10 -top-12 h-36 w-36 rounded-full bg-white/15" />
               <span aria-hidden className="absolute -left-8 -bottom-14 h-32 w-32 rounded-full bg-black/10" />
+              {/* O X PADRÃO DO DIALOG some (é cinza-claro e sumia em cima da
+                  capa colorida). Este é redondo, com fundo próprio, e continua
+                  legível em qualquer cor de marca (Walter, 09/09/2026). */}
+              <button type="button" onClick={aoFechar} aria-label="Fechar"
+                className="absolute right-3 top-3 z-20 grid h-8 w-8 place-items-center rounded-full bg-black/25 text-white backdrop-blur-sm transition-colors hover:bg-black/45">
+                <X className="h-4 w-4" strokeWidth={2.5} />
+              </button>
               <div className="relative h-full flex items-center gap-3 px-5">
                 {card.marca.logo && (
                   <span className="w-12 h-12 rounded-full bg-white/95 border-2 border-white/70 overflow-hidden grid place-items-center shrink-0 shadow-lg">
@@ -806,7 +813,9 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                 uma faixa cheia embaixo; no desktop o `order` recoloca ela no
                 meio. */}
             <div className="grid md:grid-cols-[minmax(0,1fr)_260px] lg:grid-cols-[minmax(0,1fr)_300px_260px]">
-              <div className="p-5 lg:order-1">
+              {/* A cor da marca vira um fio no topo de cada coluna: o card
+                  inteiro era bege e as três colunas se confundiam. */}
+              <div className="p-5 lg:order-1 border-t-2" style={{ borderTopColor: card.marca.cor || "#4B3FA8" }}>
                 <DialogTitle className="font-display text-xl font-extrabold leading-tight">{card.titulo || "Sem título"}</DialogTitle>
                 <p className="text-xs font-body text-muted-foreground mt-1.5">
                   <b className="text-foreground">{card.marca.nome || "Cliente"}</b> · delegado por {card.agencia}
@@ -857,14 +866,16 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                 {card.gancho?.trim() && (
                   <div className="mt-4">
                     <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Gancho</p>
-                    <p className="text-sm font-body bg-muted/50 border border-border rounded-xl px-3 py-2.5">{card.gancho}</p>
+                    <p className="text-sm font-body bg-card border border-border border-l-[3px] rounded-xl px-3 py-2.5"
+                      style={{ borderLeftColor: card.marca.cor || "#4B3FA8" }}>{card.gancho}</p>
                   </div>
                 )}
 
                 {card.roteiro?.trim() && (
                   <div className="mt-4">
                     <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Copy</p>
-                    <p className="text-sm font-body whitespace-pre-line bg-muted/50 border border-border rounded-xl px-3 py-2.5 leading-relaxed">{card.roteiro}</p>
+                    <p className="text-sm font-body whitespace-pre-line bg-card border border-border border-l-[3px] rounded-xl px-3 py-2.5 leading-relaxed"
+                      style={{ borderLeftColor: card.marca.cor || "#4B3FA8" }}>{card.roteiro}</p>
                   </div>
                 )}
 
@@ -895,7 +906,8 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                 {card.legenda?.trim() && (
                   <div className="mt-4">
                     <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Legenda aprovada</p>
-                    <p className="text-sm font-body whitespace-pre-line bg-muted/50 border border-border rounded-xl px-3 py-2.5 leading-relaxed">{card.legenda}</p>
+                    <p className="text-sm font-body whitespace-pre-line bg-card border border-border border-l-[3px] rounded-xl px-3 py-2.5 leading-relaxed"
+                      style={{ borderLeftColor: card.marca.cor || "#4B3FA8" }}>{card.legenda}</p>
                     <button onClick={copiarLegenda} className="mt-1.5 inline-flex items-center gap-1.5 text-[11.5px] font-body font-bold text-primary">
                       <CopyIcon className="h-3.5 w-3.5" /> Copiar legenda
                     </button>
@@ -982,7 +994,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
               </div>
 
               {/* A COLUNA DA DIREITA: prazo, marca, material, ações. */}
-              <div className="bg-muted/40 border-l border-border p-4 space-y-4 md:order-2 lg:order-3">
+              <div className="bg-muted/40 border-l border-border border-t-2 p-4 space-y-4 md:order-2 lg:order-3" style={{ borderTopColor: `${card.marca.cor || "#4B3FA8"}55` }}>
                 {/* O PRAZO É COMBINADO, NÃO IMPOSTO. Proposto = o parceiro topa
                     ou sugere outra data (com motivo, que entra na conversa);
                     negociando = a bola está com a social mídia. Enquanto isso,
@@ -1138,7 +1150,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                 </div>
               </div>
               {/* CONVERSA: coluna própria, do lado do briefing. */}
-              <div className="border-t md:border-t-0 lg:border-l border-border p-4 md:col-span-2 lg:col-span-1 lg:order-2">
+              <div className="lg:border-l border-border border-t-2 p-4 md:col-span-2 lg:col-span-1 lg:order-2" style={{ borderTopColor: `${card.marca.cor || "#4B3FA8"}55`, background: `${card.marca.cor || "#4B3FA8"}08` }}>
                 <div>
                   <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-2.5 flex items-center gap-1.5">
                     <MessageCircle className="h-3.5 w-3.5" /> Conversa deste card

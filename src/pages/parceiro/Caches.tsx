@@ -1,9 +1,17 @@
 import { useMemo, useState } from "react";
-import { CheckCircle2, Clock, Loader2, Wallet } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, Pencil, Plus, Trash2, Wallet } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { MoneyInput } from "@/components/shared/MoneyInput";
+import { useManagerOutlet } from "@/components/accounts/ManagerLayout";
+import { useModules } from "@/hooks/useModules";
+import { hojeBR } from "@/lib/date-br";
 import { cn } from "@/lib/utils";
 import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
-import { useMeusCaches, useMeusCachesDetalhe } from "@/hooks/useParceiro";
+import { useAcoesLancamento, useMeusCaches, useMeusCachesDetalhe, useMeusLancamentos, type LancamentoDoParceiro } from "@/hooks/useParceiro";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MEUS CACHÊS
@@ -24,11 +32,29 @@ const ehPago = (s: string) => /pago|recebid|quitad/i.test(s);
 export default function Caches() {
   const { data: porAgencia = [] } = useMeusCaches();
   const { data: linhas = [], isLoading } = useMeusCachesDetalhe();
+  const { data: meus = [] } = useMeusLancamentos();
+  const { salvar, excluir } = useAcoesLancamento();
+  const { openModule } = useManagerOutlet();
+  const { modules } = useModules();
   const [abrirCard, setAbrirCard] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<"aberto" | "pago" | "tudo">("aberto");
+  const [editando, setEditando] = useState<Partial<LancamentoDoParceiro> | null>(null);
 
-  const totalPendente = porAgencia.reduce((s, c) => s + Number(c.pendente ?? 0), 0);
-  const totalPago = porAgencia.reduce((s, c) => s + Number(c.pago ?? 0), 0);
+  /* Os totais somam as DUAS origens: o que veio das agências pelo Cria e o que
+     ele lançou na mão. Separar em dois números seria devolver pra ele a conta
+     que a página existe pra fazer (Walter, 09/09/2026). */
+  const meuAberto = meus.reduce((s, l) => s + Math.max(0, Number(l.valor ?? 0) - Number(l.valor_pago ?? 0)), 0);
+  const meuPago = meus.reduce((s, l) => s + Number(l.valor_pago ?? 0), 0);
+  const totalPendente = porAgencia.reduce((s, c) => s + Number(c.pendente ?? 0), 0) + meuAberto;
+  const totalPago = porAgencia.reduce((s, c) => s + Number(c.pago ?? 0), 0) + meuPago;
+
+  const meusVisiveis = useMemo(() => meus.filter((l) => {
+    if (filtro === "tudo") return true;
+    const quitado = Number(l.valor_pago ?? 0) >= Number(l.valor ?? 0);
+    return filtro === "pago" ? quitado : !quitado;
+  }), [meus, filtro]);
+
+  const criaCaixa = modules.find((m) => m.code === "criacaixa" || /caixa/i.test(m.name));
 
   const visiveis = useMemo(() => linhas.filter((l) => {
     if (filtro === "tudo") return true;
@@ -77,6 +103,11 @@ export default function Caches() {
           <h2 className="font-display font-bold text-[15px] text-foreground flex items-center gap-2">
             <Wallet className="h-4 w-4 text-primary" /> De onde vem esse valor
           </h2>
+          <div className="flex items-center gap-2">
+          <Button size="sm" className="rounded-xl"
+            onClick={() => setEditando({ cliente: "", valor: 0, valor_pago: 0, data: hojeBR() })}>
+            <Plus className="h-4 w-4 mr-1" /> Adicionar cachê
+          </Button>
           <div className="flex gap-1 rounded-xl bg-muted p-0.5">
             {([["aberto", "Em aberto"], ["pago", "Pagos"], ["tudo", "Tudo"]] as const).map(([k, l]) => (
               <button key={k} type="button" onClick={() => setFiltro(k)}
@@ -85,6 +116,7 @@ export default function Caches() {
                 {l}
               </button>
             ))}
+          </div>
           </div>
         </div>
 
@@ -95,7 +127,7 @@ export default function Caches() {
             <p className="text-sm font-body text-muted-foreground max-w-md mx-auto">
               {filtro === "pago"
                 ? "Nenhum cachê pago ainda."
-                : "Nenhum cachê em aberto. Quando você entregar uma peça com valor combinado, ela aparece aqui."}
+                : "Nenhum cachê em aberto pelas agências do Cria. Trabalho fechado por fora ou por pacote você anota em \"Adicionar cachê\"."}
             </p>
           </Card>
         ) : (
@@ -150,11 +182,134 @@ export default function Caches() {
         )}
       </section>
 
+      {/* O QUE ELE LANÇOU NA MÃO: pacote fechado, agência de fora do Cria,
+          valor combinado no WhatsApp. Sem isso a página respondia metade da
+          vida financeira dele e ele voltava pra planilha. */}
+      {meusVisiveis.length > 0 && (
+        <section>
+          <h2 className="font-display font-bold text-[15px] text-foreground mb-2 px-0.5">Lançados por você</h2>
+          <Card className="rounded-2xl border-border overflow-hidden">
+            <ul className="divide-y divide-border/70">
+              {meusVisiveis.map((l) => {
+                const falta = Math.max(0, Number(l.valor ?? 0) - Number(l.valor_pago ?? 0));
+                const quitado = falta <= 0;
+                return (
+                  <li key={l.id} className="flex items-center gap-3 px-4 py-3">
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-body font-semibold text-foreground truncate">{l.cliente}</span>
+                      <span className="block text-[11px] font-body text-muted-foreground truncate">
+                        {l.descricao ? `${l.descricao} · ` : ""}{dataBR(l.data)}
+                        {l.forma_pagamento ? ` · ${l.forma_pagamento}` : ""}
+                      </span>
+                    </span>
+                    <span className="text-right shrink-0">
+                      <span className={cn("block text-[13px] font-display font-extrabold", quitado ? "text-green-700" : "text-amber-800")}>
+                        {quitado ? brl(Number(l.valor)) : brl(falta)}
+                      </span>
+                      <span className={cn("block text-[10px] font-body font-bold", quitado ? "text-green-700" : "text-amber-700")}>
+                        {quitado ? "quitado" : Number(l.valor_pago) > 0 ? `falta, de ${brl(Number(l.valor))}` : "em aberto"}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-1 shrink-0">
+                      <button type="button" aria-label="Editar" onClick={() => setEditando(l)}
+                        className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button type="button" aria-label="Excluir" onClick={() => excluir.mutate(l.id)}
+                        className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-muted transition-colors">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        </section>
+      )}
+
       <p className="text-[11.5px] font-body text-muted-foreground px-0.5">
-        O valor de cada peça é combinado pela agência quando ela te manda o trabalho. Divergiu, é com ela.
+        O valor de cada peça delegada é combinado pela agência quando ela te manda o trabalho. Divergiu, é com ela.
+        O que você lançou na mão é só seu, nenhuma agência vê.
       </p>
 
+      {/* O CONVITE PRO CRIA CAIXA. Esta página é caderninho: soma o que entra e
+          o que falta. Quem precisa de fluxo de caixa, imposto, contas fixas e
+          recorrência tem o módulo, e é aqui que a dor aparece. */}
+      {criaCaixa && criaCaixa.status !== "active" && criaCaixa.status !== "past_due" && (
+        <button type="button" onClick={() => openModule(criaCaixa)}
+          className="w-full text-left rounded-2xl border border-border bg-card p-5 hover:border-primary/40 hover:shadow-sm transition-all">
+          <p className="text-[10.5px] font-body font-bold uppercase tracking-wider text-primary">Cria Caixa</p>
+          <p className="font-display font-bold text-[16px] text-foreground mt-1">
+            Isto aqui é o seu caderninho. O Caixa é o financeiro do seu negócio.
+          </p>
+          <p className="text-[12.5px] font-body text-muted-foreground leading-relaxed mt-1.5 max-w-2xl">
+            Contas a receber com aviso de atraso, despesas fixas, recorrência, quanto sobra de verdade no mês
+            e quanto cada cliente te dá de lucro. É a diferença entre saber que tem dinheiro entrando
+            e saber se o mês fechou no azul.
+          </p>
+          <span className="inline-flex items-center gap-1.5 mt-3 text-[12.5px] font-display font-bold text-primary">
+            Conhecer o Cria Caixa
+          </span>
+        </button>
+      )}
+
       <CardAbertoDialog postId={abrirCard} aoFechar={() => setAbrirCard(null)} />
+
+      {/* Lançar na mão: cliente, valor, quanto já entrou e como. Sem categoria,
+          sem centro de custo, sem plano de contas. É anotação, não contabilidade. */}
+      <Dialog open={!!editando} onOpenChange={(v) => !v && setEditando(null)}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display">{editando?.id ? "Editar cachê" : "Adicionar cachê"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Cliente ou agência</Label>
+              <Input value={editando?.cliente ?? ""} placeholder="Ex.: Zephyr Investimentos, ou o nome da agência"
+                onChange={(e) => setEditando((p) => ({ ...(p ?? {}), cliente: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">O que foi <span className="font-normal text-muted-foreground">opcional</span></Label>
+              <Input value={editando?.descricao ?? ""} placeholder="Ex.: pacote de 8 artes de setembro"
+                onChange={(e) => setEditando((p) => ({ ...(p ?? {}), descricao: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Valor combinado</Label>
+                <MoneyInput value={Number(editando?.valor ?? 0)} onChange={(v) => setEditando((p) => ({ ...(p ?? {}), valor: v }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Já recebi</Label>
+                <MoneyInput value={Number(editando?.valor_pago ?? 0)} onChange={(v) => setEditando((p) => ({ ...(p ?? {}), valor_pago: v }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Como foi pago</Label>
+                <Input value={editando?.forma_pagamento ?? ""} placeholder="Pix, transferência, boleto..."
+                  onChange={(e) => setEditando((p) => ({ ...(p ?? {}), forma_pagamento: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Data</Label>
+                <Input type="date" value={editando?.data ?? hojeBR()}
+                  onChange={(e) => setEditando((p) => ({ ...(p ?? {}), data: e.target.value }))} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditando(null)}>Cancelar</Button>
+            <Button disabled={!editando?.cliente?.trim() || salvar.isPending}
+              onClick={() => {
+                if (!editando?.cliente?.trim()) return;
+                salvar.mutate({ ...editando, cliente: editando.cliente, data: editando.data ?? hojeBR() },
+                  { onSuccess: () => setEditando(null) });
+              }}>
+              {salvar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
