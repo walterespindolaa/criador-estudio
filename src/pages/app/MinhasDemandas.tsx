@@ -932,13 +932,16 @@ function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexand
           return (
             <div key={cm.id} className={cn("flex flex-col", meu ? "items-end" : "items-start")}>
               <span className={cn("text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full mb-1",
-                meu ? "bg-violet-100 text-violet-700"
+                meu ? "bg-muted text-muted-foreground"
                 : doCliente ? "bg-green-100 text-green-700" : "bg-pink-100 text-pink-700")}>
                 {meu ? "você" : doCliente ? "cliente" : "social mídia"}
               </span>
+              {/* O BALÃO USA A COR DA MARCA (Walter, 09/09/2026): era roxo
+                  fixo e não acompanhava a cor escolhida no sistema, então o
+                  card do cliente azul tinha capa azul e conversa roxa. */}
               <div className={cn("max-w-[88%] rounded-2xl px-3 py-2 text-[13px] font-body leading-relaxed break-words",
-                meu ? "bg-violet-600 text-white rounded-br-sm"
-                : "bg-muted/70 border border-border rounded-bl-sm")}>
+                meu ? "text-white rounded-br-sm" : "bg-muted/70 border border-border rounded-bl-sm")}
+                style={meu ? { backgroundColor: cor } : undefined}>
                 <FalaFormatada texto={cm.texto} meu={meu} />
               </div>
               <span className="text-[9.5px] font-body text-muted-foreground mt-0.5 px-1">
@@ -976,8 +979,8 @@ function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexand
             placeholder="Escreva uma mensagem"
             className="flex-1 min-w-0 resize-none bg-transparent border-0 outline-none text-[13.5px] font-body leading-relaxed py-1.5 max-h-[92px] placeholder:text-muted-foreground/70" />
           <button type="button" onClick={() => void enviar()} disabled={!texto.trim() || enviando}
-            aria-label="Enviar"
-            className="shrink-0 grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:opacity-30">
+            aria-label="Enviar" style={{ backgroundColor: cor }}
+            className="shrink-0 grid h-8 w-8 place-items-center rounded-full text-white transition-opacity disabled:opacity-30">
             {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-[15px] w-[15px]" />}
           </button>
         </div>
@@ -997,6 +1000,8 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
   // Entregar em dois tempos: o clique abre o campo do link da versão final.
   const [entregando, setEntregando] = useState(false);
   const [linkEntrega, setLinkEntrega] = useState("");
+  // Link de arquivo grande (acima do limite de upload), mandado na conversa.
+  const [linkPrevia, setLinkPrevia] = useState("");
   // Entrega com ARQUIVO (fase 3): sobe direto pro card, sem passar por link.
   const inputArquivo = useRef<HTMLInputElement | null>(null);
   // Checklist pessoal (camada privada do card).
@@ -1050,7 +1055,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                 círculos translúcidos ocupavam a primeira dobra e não diziam
                 nada. Vira uma faixa fina de identificação, como o cabeçalho de
                 card do Trello. */}
-            <div className="relative h-20 shrink-0 overflow-hidden"
+            <div className="relative shrink-0 overflow-hidden"
               style={{ background: `linear-gradient(135deg, ${card.marca.cor || "#4B3FA8"}, ${card.marca.cor || "#4B3FA8"}cc)` }}>
               {card.marca.logo && (
                 <img src={card.marca.logo} alt="" aria-hidden draggable={false}
@@ -1064,19 +1069,30 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                 className="absolute right-3 top-3 z-20 grid h-8 w-8 place-items-center rounded-full bg-black/25 text-white backdrop-blur-sm transition-colors hover:bg-black/45">
                 <X className="h-4 w-4" strokeWidth={2.5} />
               </button>
-              <div className="relative h-full flex items-center gap-3 px-5">
+              <div className="relative flex items-start gap-3 px-5 pt-4 pb-4">
                 {card.marca.logo && (
-                  <span className="w-12 h-12 rounded-full bg-white/95 border-2 border-white/70 overflow-hidden grid place-items-center shrink-0 shadow-lg">
+                  <span className="w-11 h-11 rounded-full bg-white/95 border-2 border-white/70 overflow-hidden grid place-items-center shrink-0 shadow-lg">
                     <img src={card.marca.logo} alt="" className="w-full h-full object-contain" loading="lazy" />
                   </span>
                 )}
-                <span className="min-w-0">
-                  <span className="block font-display font-extrabold text-white text-lg leading-tight truncate drop-shadow">
-                    {card.marca.nome || "Cliente"}
+                <span className="min-w-0 flex-1 pr-10">
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className="text-[12px] font-body font-bold text-white/85 truncate">
+                      {card.marca.nome || "Cliente"}
+                      {card.marca.handle && <span className="font-normal text-white/65"> @{card.marca.handle.replace(/^@/, "")}</span>}
+                    </span>
                   </span>
-                  {card.marca.handle && (
-                    <span className="block text-[12px] font-body text-white/80 truncate">@{card.marca.handle.replace(/^@/, "")}</span>
-                  )}
+                  {/* O TÍTULO SUBIU PRA FAIXA (Walter, 09/09/2026): "a borda
+                      superior podia cobrir todo o topo do pop-up, ficar
+                      integrada". Com o nome da peça aqui, a faixa deixa de ser
+                      enfeite e vira o cabeçalho do card, como no Trello. */}
+                  <DialogTitle className="block font-display font-extrabold text-white text-[19px] leading-tight mt-0.5 drop-shadow">
+                    {card.titulo || "Sem título"}
+                  </DialogTitle>
+                  <span className="block text-[11.5px] font-body text-white/75 mt-1 truncate">
+                    delegado por {card.agencia}
+                    {card.publica_em && <> · publica em {dataBR(card.publica_em)}</>}
+                  </span>
                 </span>
               </div>
             </div>
@@ -1089,16 +1105,10 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                 meio. */}
             <div className="flex-1 min-h-0 grid md:grid-cols-[minmax(0,1fr)_262px] lg:grid-cols-[minmax(0,1fr)_262px_336px] overflow-y-auto lg:overflow-hidden">
               <div className="p-5 lg:order-1 lg:overflow-y-auto">
-                <DialogTitle className="font-display text-xl font-extrabold leading-tight">{card.titulo || "Sem título"}</DialogTitle>
-                <p className="text-xs font-body text-muted-foreground mt-1.5">
-                  <b className="text-foreground">{card.marca.nome || "Cliente"}</b> · delegado por {card.agencia}
-                  {card.publica_em && <> · publica em {dataBR(card.publica_em)}</>}
-                </p>
-
                 {/* ESPECIFICAÇÕES: a maior fonte de ida e volta na pesquisa é
                     peça sem spec (proporção, medida, nº de artes). Aqui elas já
                     vêm no card, sem o parceiro precisar perguntar. */}
-                <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   {card.formato && (
                     <span className="text-[10.5px] font-bold px-2 py-1 rounded-full bg-foreground text-background">
                       {FORMATO[card.formato] ?? card.formato}
@@ -1420,8 +1430,9 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                   </button>
                   {!card.pasta_drive && !card.referencia && (
                     <p className="text-[10.5px] font-body text-muted-foreground leading-snug px-0.5 pt-0.5">
-                      Esta peça veio sem pasta nem referência própria. Logo, o que vale é o material
-                      fixo da marca. Se faltar alguma coisa, peça na conversa aqui do lado.
+                      Esta peça veio sem pasta nem referência própria, então vale o material fixo da marca.
+                      Faltando alguma coisa, peça na conversa: a agência guarda isso na ficha do cliente,
+                      na aba Links úteis.
                     </p>
                   )}
                 </div>
@@ -1453,6 +1464,32 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                         Imagem, vídeo ou PDF até 80 MB. Fica no card, e a social mídia vê na hora.
                         Carrossel: suba uma arte de cada vez.
                       </p>
+
+                      {/* ARQUIVO GRANDE (Walter, 09/09/2026: "e se for um vídeo
+                          acima de 80 MB?"). O limite do upload é real, e o link
+                          só existia DENTRO do fluxo de entregar: quem só queria
+                          mandar o vídeo pra revisão não tinha caminho. Agora o
+                          link entra na conversa a qualquer momento, com a peça
+                          seguindo em produção. */}
+                      <div className="rounded-xl border border-dashed border-border p-2 space-y-1.5">
+                        <p className="text-[10.5px] font-body font-bold text-foreground px-0.5">
+                          Vídeo grande? Mande o link
+                        </p>
+                        <input type="url" value={linkPrevia} onChange={(e) => setLinkPrevia(e.target.value)}
+                          placeholder="https://drive.google.com/..." inputMode="url"
+                          className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[12px] font-body" />
+                        <Button variant="outline" size="sm" className="w-full rounded-lg h-8 text-[12px]"
+                          disabled={!linkPrevia.trim() || comentar.isPending}
+                          onClick={async () => {
+                            await comentar.mutateAsync(`Arquivo pra ver: ${linkPrevia.trim()}`);
+                            setLinkPrevia("");
+                          }}>
+                          {comentar.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Mandar o link na conversa"}
+                        </Button>
+                        <p className="text-[10px] font-body text-muted-foreground px-0.5 leading-snug">
+                          Vale pro Drive, Dropbox, WeTransfer. Confira se o link está liberado pra quem receber.
+                        </p>
+                      </div>
 
                       {!entregando ? (
                         <>

@@ -4,7 +4,7 @@ import { ArrowRight, Boxes, Briefcase, Clock, Layers, Wallet } from "lucide-reac
 import { Card } from "@/components/ui/card";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { useProfile } from "@/hooks/useProfile";
-import { useManagerOutlet } from "@/components/accounts/ManagerLayout";
+import { MODULE_ICON, useManagerOutlet } from "@/components/accounts/ManagerLayout";
 import { useModules } from "@/hooks/useModules";
 import { ROTULO_PAPEL, useFilaDoParceiro, useMeusCaches, useMinhasAgencias, useMinhasMarcas } from "@/hooks/useParceiro";
 import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
@@ -22,6 +22,17 @@ import { cn } from "@/lib/utils";
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const brl = (v: number) => `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/* Uma cor por módulo, a mesma família das seis da LP. Card branco com texto
+   cinza não diferencia nada: o ícone colorido é o que faz a pessoa reconhecer
+   o módulo de longe (Walter, 09/09/2026). */
+const COR_MODULO: Record<string, { fundo: string; tinta: string }> = {
+  aprovapost_externo: { fundo: "bg-blue-100", tinta: "text-blue-700" },
+  crm: { fundo: "bg-violet-100", tinta: "text-violet-700" },
+  financeiro: { fundo: "bg-green-100", tinta: "text-green-700" },
+  hub_cria: { fundo: "bg-amber-100", tinta: "text-amber-700" },
+  cria_captacao: { fundo: "bg-pink-100", tinta: "text-pink-700" },
+};
 
 function saudacao() {
   const h = new Date().getHours();
@@ -229,22 +240,55 @@ export default function ParceiroHome() {
            aqui. Antes ele largava a pessoa no topo do dashboard e a vitrine
            ficava escondida no rodapé (Walter, 09/09/2026). */}
       {vitrine.length > 0 && (
-        <section id="modulos" className="scroll-mt-24">
-          <p className="flex items-center gap-2 mb-2 px-0.5">
-            <Boxes className="h-4 w-4 text-primary" />
-            <span className="font-display font-bold text-[15px]">Tem cliente direto também?</span>
-          </p>
-          <p className="text-[12.5px] font-body text-muted-foreground mb-3 px-0.5">
-            O trabalho vindo das agências é sempre grátis. Os módulos são pra quem também atende cliente próprio.
-          </p>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-            {vitrine.slice(0, 4).map((m) => (
-              <button key={m.code} type="button" onClick={() => openModule(m)}
-                className="rounded-2xl border border-border bg-card p-3.5 text-left hover:shadow-md transition-shadow">
-                <span className="block font-display font-bold text-[13.5px] leading-tight">{m.name}</span>
-                <span className="block text-[11px] font-body text-muted-foreground mt-1 line-clamp-2">{m.description ?? "Conhecer o módulo"}</span>
-              </button>
-            ))}
+        <section id="modulos" className="scroll-mt-24 relative overflow-hidden rounded-3xl border border-border bg-card p-5 sm:p-6">
+          {/* A faixa era quatro caixas brancas de texto corrido, e o quinto
+              módulo nem aparecia por causa de um slice(0,4) (Walter,
+              09/09/2026: "tá parecendo um lixo morto"). Agora cada módulo tem
+              o ÍCONE do menu, a cor dele e o preço na cara, sobre a mesma
+              linguagem orgânica da LP. */}
+          <span aria-hidden className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-primary/[0.07]" />
+          <span aria-hidden className="pointer-events-none absolute -left-20 -bottom-24 h-56 w-56 rounded-full bg-amber-400/[0.09]" />
+          <div className="relative">
+            <p className="flex items-center gap-2 mb-1.5">
+              <Boxes className="h-[18px] w-[18px] text-primary" />
+              <span className="font-display font-extrabold text-[17px]">Tem cliente direto também?</span>
+            </p>
+            <p className="text-[12.5px] font-body text-muted-foreground mb-4 max-w-2xl leading-relaxed">
+              O trabalho que vem das agências é <b className="text-foreground">sempre grátis</b> pra você.
+              Estes módulos são pra quando o cliente é seu: você ativa só o que usa, e cancela quando quiser.
+            </p>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {vitrine.map((m) => {
+                const Icone = MODULE_ICON[m.code] ?? Boxes;
+                const cor = COR_MODULO[m.code] ?? { fundo: "bg-primary/10", tinta: "text-primary" };
+                return (
+                  <button key={m.code} type="button" onClick={() => openModule(m)}
+                    className="group relative text-left rounded-2xl border border-border bg-background p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:border-primary/40">
+                    <span className="flex items-start gap-3">
+                      <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-xl", cor.fundo, cor.tinta)}>
+                        <Icone className="h-[18px] w-[18px]" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-display font-extrabold text-[14.5px] leading-tight">{m.name}</span>
+                        <span className="block text-[11.5px] font-body text-muted-foreground mt-1 leading-snug line-clamp-3">
+                          {m.description ?? "Conhecer o módulo"}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="flex items-center justify-between mt-3 pt-3 border-t border-border/70">
+                      <span className="text-[12px] font-body font-bold text-foreground">
+                        {m.price_cents > 0
+                          ? <>{brl(m.price_cents / 100)}<span className="font-normal text-muted-foreground">/mês</span></>
+                          : "Grátis"}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[11.5px] font-body font-bold text-primary">
+                        conhecer <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </section>
       )}
