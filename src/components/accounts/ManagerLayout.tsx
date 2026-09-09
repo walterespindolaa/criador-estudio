@@ -324,14 +324,15 @@ export default function ManagerLayout() {
           })}
           {souParceiro && railNode(PackageCheck, "Entregues", { active: isActive("/socialmidia/entregues"), onClick: () => navigate("/socialmidia/entregues") })}
           {souParceiro && railNode(Layers, "Marcas que atendo", { active: isActive("/socialmidia/marcas"), onClick: () => navigate("/socialmidia/marcas") })}
-          {railHovered && !parceiroPuro && (modules.length > 0 || hasHubCria) && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Módulos</p>}
-          {/* Parceiro puro: UMA porta pros módulos (a home mostra os cards),
-             em vez de cinco ícones de cadeado enfileirados. */}
-          {parceiroPuro && railNode(Boxes, "Módulos do Cria", {
-            active: false,
-            onClick: () => navigate("/socialmidia/dashboard#modulos"),
-          })}
-          {!parceiroPuro && modules
+          {railHovered && (modules.length > 0 || hasHubCria) && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Módulos</p>}
+          {/* O PARCEIRO VÊ CADA MÓDULO NO MENU (Walter, 09/09/2026). Antes ele
+             tinha UMA porta ("Módulos do Cria") que levava pra vitrine na home,
+             pra não enfileirar cadeados. Só que assim os módulos existiam só
+             como card no rodapé de uma página: ninguém descobre um produto que
+             mora escondido. Agora cada um é um item, com o cadeado, e o clique
+             abre a mesma apresentação com preço que o resto do app usa. Quem
+             assina, o item vira destino de verdade. */}
+          {modules
             // hub_extra é PACOTE DE CRÉDITO, não é módulo nem destino: ele não
             // pode virar item de menu (a pessoa clica esperando abrir algo).
             .filter((m) => m.code !== "hub_extra")
@@ -487,10 +488,10 @@ export default function ManagerLayout() {
           // seção "Módulos" (pelo loop de `modules`), igual aos outros.
           {
             title: "Módulos",
-            items: parceiroPuro
-              // Parceiro puro: uma entrada só, sem a fileira de cadeados.
-              ? [{ label: "Módulos do Cria", desc: "Conheça as ferramentas de quem gerencia", icon: Boxes as LucideIcon, onClick: () => navigate("/socialmidia/dashboard") }]
-              : [
+            // O parceiro tinha UMA entrada aqui ("Módulos do Cria") que levava
+            // pra vitrine na home. Agora vê cada módulo, igual a todo mundo, com
+            // o cadeado e a apresentação com preço no clique (Walter, 09/09).
+            items: [
               // O CRIA RADAR APARECIA TRÊS VEZES no menu do celular:
               //   1. o módulo hub_cria, vindo do banco;
               //   2. o "Pacote Extra" (hub_extra), que também é uma linha em `modules`
@@ -514,7 +515,10 @@ export default function ManagerLayout() {
             title: "Negócio",
             items: parceiroPuro
               // Parceiro puro: só as Comissões fazem sentido pra ele aqui.
-              ? [{ label: "Meus cachês", desc: "O que você tem a receber das agências", icon: DollarSign as LucideIcon, onClick: () => navigate("/socialmidia/marcas") }]
+              ? [
+                { label: "Meus cachês", desc: "O que você tem a receber das agências", icon: DollarSign as LucideIcon, onClick: () => navigate("/socialmidia/marcas#caches") },
+                { label: "Parceria", desc: "Indique o CRIA e ganhe comissão", icon: Handshake as LucideIcon, onClick: () => navigate("/socialmidia/parceria") },
+              ]
               : [
               ...(!actingAsTeam ? [{ label: "Equipe", desc: "Convidar colaboradores", icon: UserPlus as LucideIcon, onClick: () => navigate("/socialmidia/equipe") }] : []),
               { label: "Relatório da operação", desc: "Produção, financeiro e carteira no período", icon: BarChart3 as LucideIcon, onClick: () => navigate("/socialmidia/relatorio") },
@@ -527,7 +531,7 @@ export default function ManagerLayout() {
             title: "Sistema",
             items: [
               { label: "Enviar feedback", desc: "Uma ideia ou um problema no app", icon: MessageSquarePlus as LucideIcon, onClick: () => setFeedbackOpen(true) },
-              ...(!parceiroPuro ? [{ label: "Lixeira", desc: "Recuperar o que você excluiu", icon: Trash2 as LucideIcon, onClick: () => navigate("/socialmidia/lixeira") }] : []),
+              { label: "Lixeira", desc: "Recuperar o que você excluiu", icon: Trash2 as LucideIcon, onClick: () => navigate("/socialmidia/lixeira") },
               { label: "Configurações", desc: "Perfil, visual e integrações", icon: SettingsIcon as LucideIcon, onClick: () => setSettingsOpen(true) },
             ],
           },

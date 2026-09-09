@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Boxes, Briefcase, Clock, Layers, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -5,7 +6,8 @@ import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { useProfile } from "@/hooks/useProfile";
 import { useManagerOutlet } from "@/components/accounts/ManagerLayout";
 import { useModules } from "@/hooks/useModules";
-import { ROTULO_PAPEL, useFilaDoParceiro, useMeusCaches, useMinhasAgencias } from "@/hooks/useParceiro";
+import { ROTULO_PAPEL, useFilaDoParceiro, useMeusCaches, useMinhasAgencias, useMinhasMarcas } from "@/hooks/useParceiro";
+import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
 import { hojeBR } from "@/lib/date-br";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +36,11 @@ export default function ParceiroHome() {
   const { data: fila = [] } = useFilaDoParceiro();
   const { data: agencias = [] } = useMinhasAgencias();
   const { data: caches = [] } = useMeusCaches();
+  const { data: marcas = [] } = useMinhasMarcas();
+  /* A home abre o CARD, não empurra pra lista. Antes toda linha levava pra
+     "Minhas demandas" e a pessoa tinha que achar de novo o que já estava
+     olhando (Walter, 09/09/2026). */
+  const [abrirCard, setAbrirCard] = useState<string | null>(null);
   const hoje = hojeBR();
 
   const venceHoje = fila.filter((c) => c.prazo_producao === hoje);
@@ -121,7 +128,7 @@ export default function ParceiroHome() {
               const ehHoje = c.prazo_producao === hoje;
               return (
                 <li key={c.post_id}>
-                  <button type="button" onClick={() => navigate("/socialmidia/demandas")}
+                  <button type="button" onClick={() => setAbrirCard(c.post_id)}
                     className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors">
                     <span className="w-9 h-9 rounded-xl grid place-items-center text-white font-display font-bold text-sm shrink-0 overflow-hidden"
                       style={{ background: c.cliente_cor || "#7C90F0" }}>
@@ -129,7 +136,22 @@ export default function ParceiroHome() {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block font-display font-bold text-[13.5px] leading-tight truncate">{c.titulo || "Sem título"}</span>
-                      <span className="block text-[11px] font-body text-muted-foreground truncate">{c.cliente_nome} · via {c.agencia_nome}</span>
+                      <span className="block text-[11px] font-body text-muted-foreground truncate">
+                        {c.cliente_nome} · via {c.agencia_nome}
+                        {/* HÁ QUANTOS DIAS ESTÁ NA MÃO DELE: o dado existia no
+                            banco (assigned_at) e nenhuma tela mostrava. É o que
+                            diz se a peça está encostando (Walter, 09/09/2026). */}
+                        {c.assigned_at && (() => {
+                          const dias = Math.floor((Date.now() - new Date(c.assigned_at).getTime()) / 86400000);
+                          return dias >= 1 ? ` · há ${dias} dia${dias > 1 ? "s" : ""} com você` : "";
+                        })()}
+                      </span>
+                      <span className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        {c.formato && <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-foreground text-background capitalize">{c.formato}</span>}
+                        {c.plataforma && <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground capitalize">{c.plataforma}</span>}
+                        {c.prazo_status === "proposto" && <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">confirmar prazo</span>}
+                        {c.producao_status === "ajuste" && <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700">voltou pra ajuste</span>}
+                      </span>
                     </span>
                     <span className={cn("text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0",
                       atrasado ? "bg-red-600 text-white" : ehHoje ? "bg-red-100 text-red-700" : "bg-muted text-muted-foreground")}>
@@ -165,6 +187,43 @@ export default function ParceiroHome() {
         </Card>
       )}
 
+      {/* ── AS MARCAS QUE PASSAM PELA MINHA MÃO ──
+           Atalho pra ficha de cada uma (cor, fontes, hashtags, o que evitar).
+           Antes essa informação vinha repetida dentro de cada card de peça e a
+           home não dizia nem quais marcas ele atende. */}
+      {marcas.length > 0 && (
+        <section className="mb-5">
+          <div className="flex items-center justify-between gap-2 mb-2 px-0.5">
+            <p className="font-display font-bold text-[15px] flex items-center gap-2">
+              <Layers className="h-4 w-4 text-primary" /> Suas marcas
+            </p>
+            <button type="button" onClick={() => navigate("/socialmidia/marcas")} className="text-[12px] font-bold text-primary">Ver as fichas</button>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {marcas.slice(0, 8).map((m) => (
+              <button key={m.external_client_id} type="button" onClick={() => navigate("/socialmidia/marcas")}
+                className="shrink-0 w-[150px] rounded-2xl border border-border bg-card overflow-hidden text-left hover:border-primary/40 transition-colors">
+                <span className="block h-1.5" style={{ background: m.cor || "#4B3FA8" }} />
+                <span className="flex items-center gap-2 p-2.5">
+                  <span className="w-7 h-7 rounded-full border border-border bg-background overflow-hidden grid place-items-center shrink-0"
+                    style={{ background: m.logo ? undefined : (m.cor || "#4B3FA8") }}>
+                    {m.logo
+                      ? <img src={m.logo} alt="" className="w-full h-full object-contain" loading="lazy" />
+                      : <span className="text-white font-display font-bold text-[11px]">{m.nome.charAt(0).toUpperCase()}</span>}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-display font-bold text-[12px] truncate">{m.nome}</span>
+                    <span className="block text-[10px] font-body text-muted-foreground">
+                      {m.abertos > 0 ? `${m.abertos} na sua mão` : "em dia"}
+                    </span>
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ── MÓDULOS DO CRIA: o "ir além" pros clientes diretos ──
            id="modulos": o item "Módulos do Cria" do menu abre a home e rola até
            aqui. Antes ele largava a pessoa no topo do dashboard e a vitrine
@@ -189,6 +248,8 @@ export default function ParceiroHome() {
           </div>
         </section>
       )}
+      {/* O card abre AQUI, sem tirar a pessoa da home. */}
+      <CardAbertoDialog postId={abrirCard} aoFechar={() => setAbrirCard(null)} />
     </div>
   );
 }
