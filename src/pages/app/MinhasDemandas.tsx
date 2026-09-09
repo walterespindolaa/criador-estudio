@@ -754,15 +754,22 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
 
   return (
     <Dialog open={!!postId} onOpenChange={(v) => !v && aoFechar()}>
-      <DialogContent className="max-w-3xl p-0 gap-0 rounded-2xl overflow-hidden max-h-[88vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl p-0 gap-0 rounded-2xl overflow-hidden max-h-[88vh] overflow-y-auto">
         {isLoading || !card ? (
           <div className="grid place-items-center py-20"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : (
           <>
             {/* Capa na cor do cliente: o parceiro sabe de quem é antes de ler. */}
             <div className="h-24 shrink-0" style={{ background: `linear-gradient(135deg, ${card.marca.cor || "#4B3FA8"}, ${card.marca.cor || "#4B3FA8"}cc)` }} />
-            <div className="grid md:grid-cols-[1fr_260px]">
-              <div className="p-5">
+            {/* TRÊS COLUNAS NO DESKTOP (Walter, 09/09/2026): briefing | conversa |
+                ações, no espírito do Trello. A conversa estava embaixo do
+                briefing, então quem estava lendo o roteiro não via o que tinha
+                sido combinado sem rolar. Na ordem do HTML a barra de ações vem
+                antes da conversa, porque no tablet (2 colunas) a conversa vira
+                uma faixa cheia embaixo; no desktop o `order` recoloca ela no
+                meio. */}
+            <div className="grid md:grid-cols-[minmax(0,1fr)_260px] lg:grid-cols-[minmax(0,1fr)_300px_260px]">
+              <div className="p-5 lg:order-1">
                 <DialogTitle className="font-display text-xl font-extrabold leading-tight">{card.titulo || "Sem título"}</DialogTitle>
                 <p className="text-xs font-body text-muted-foreground mt-1.5">
                   <b className="text-foreground">{card.marca.nome || "Cliente"}</b> · delegado por {card.agencia}
@@ -793,6 +800,14 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                       {card.plataforma}
                     </span>
                   )}
+                  {/* ETIQUETAS e LINHA EDITORIAL: o RPC já mandava, a tela
+                      jogava fora. É o que diz ao designer em que gaveta da
+                      estratégia a peça entra (Walter, 09/09/2026). */}
+                  {(card.etiquetas ?? []).map((et) => (
+                    <span key={et} className="text-[10.5px] font-bold px-2 py-1 rounded-full border border-border text-muted-foreground">
+                      {et}
+                    </span>
+                  ))}
                   {/* Depois que saiu da mão dele, onde a peça está. Fim da
                       cegueira pós-entrega. */}
                   {card.producao_status === "entregue" && card.aprovacao && ROTULO_APROVACAO[card.aprovacao] && (
@@ -815,6 +830,30 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                     <p className="text-sm font-body whitespace-pre-line bg-muted/50 border border-border rounded-xl px-3 py-2.5 leading-relaxed">{card.roteiro}</p>
                   </div>
                 )}
+
+                {/* AS ARTES DO CARROSSEL, uma a uma. Antes o card só dizia
+                    "3 artes" e o texto de cada slide ficava do lado da social
+                    mídia: o designer montava no escuro ou pedia por WhatsApp. */}
+                {(() => {
+                  const blocos = (Array.isArray(card.blocos) ? card.blocos : []) as { titulo?: string; texto?: string; conteudo?: string }[];
+                  if (blocos.length === 0) return null;
+                  return (
+                    <div className="mt-4">
+                      <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                        As artes, na ordem ({blocos.length})
+                      </p>
+                      <ol className="space-y-1.5">
+                        {blocos.map((b, i) => (
+                          <li key={i} className="text-sm font-body bg-muted/50 border border-border rounded-xl px-3 py-2 leading-relaxed">
+                            <span className="font-display font-bold text-primary mr-1.5">{i + 1}.</span>
+                            {b.titulo?.trim() && <b className="font-display">{b.titulo} </b>}
+                            <span className="whitespace-pre-line">{(b.texto ?? b.conteudo ?? "").trim()}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  );
+                })()}
 
                 {card.legenda?.trim() && (
                   <div className="mt-4">
@@ -865,44 +904,6 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                   </div>
                 )}
 
-                {/* Conversa: as três vozes com etiqueta. É o fim do telefone sem fio. */}
-                <div className="mt-5 border-t border-border pt-4">
-                  <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-2.5 flex items-center gap-1.5">
-                    <MessageCircle className="h-3.5 w-3.5" /> Conversa deste card
-                  </p>
-                  {card.comentarios.length === 0 && (
-                    <p className="text-xs font-body text-muted-foreground mb-3">Nenhum comentário ainda.</p>
-                  )}
-                  <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-                    {card.comentarios.map((cm) => (
-                      <div key={cm.id} className="rounded-xl border border-border bg-background px-3 py-2">
-                        <p className="text-[10.5px] font-bold mb-0.5">
-                          {/* O cliente escreve com vários papéis (client, cliente,
-                              cliente_externo, cliente_externo_aprovacao). Todos
-                              contêm "client"; sem isso a fala dele saía rotulada
-                              como social mídia (auditoria 07/09). */}
-                          <span className={cn("px-1.5 py-0.5 rounded-full uppercase tracking-wide text-[9px]",
-                            cm.papel === "parceiro" ? "bg-violet-100 text-violet-700"
-                            : /client/.test(cm.papel) ? "bg-green-100 text-green-700"
-                            : "bg-pink-100 text-pink-700")}>
-                            {cm.papel === "parceiro" ? "você" : /client/.test(cm.papel) ? "cliente" : "social mídia"}
-                          </span>
-                          <span className="text-muted-foreground font-medium ml-2">{new Date(cm.em).toLocaleDateString("pt-BR")}</span>
-                        </p>
-                        <p className="text-[13px] font-body leading-relaxed">{cm.texto}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-2 mt-3">
-                    <Textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={1}
-                      placeholder="Escrever um comentário... a social mídia recebe na hora"
-                      className="rounded-xl resize-none min-h-[42px] text-sm" />
-                    <Button size="sm" onClick={() => void enviar()} disabled={!texto.trim() || comentar.isPending} className="rounded-xl h-[42px]">
-                      {comentar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
-
                 {/* MEU CHECKLIST (privado): a paridade com o checklist do
                     Trello, que é o recurso que eles mais usam. Só o parceiro
                     vê; o progresso aparece no cartão do quadro. */}
@@ -944,7 +945,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
               </div>
 
               {/* A COLUNA DA DIREITA: prazo, marca, material, ações. */}
-              <div className="bg-muted/40 border-l border-border p-4 space-y-4">
+              <div className="bg-muted/40 border-l border-border p-4 space-y-4 md:order-2 lg:order-3">
                 {/* O PRAZO É COMBINADO, NÃO IMPOSTO. Proposto = o parceiro topa
                     ou sugere outra data (com motivo, que entra na conversa);
                     negociando = a bola está com a social mídia. Enquanto isso,
@@ -1000,23 +1001,25 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                   </div>
                 )}
 
-                {/* O CACHÊ: combinado pela social mídia ao delegar. Antes ficava
-                    só no lado dela; o parceiro descobria o valor no fim do mês
-                    (auditoria 07/09). */}
-                {card.cache != null && card.cache > 0 && (
-                  <div className="rounded-xl border border-green-200 bg-green-50/60 px-3.5 py-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-green-800">Cachê desta peça</p>
-                    <p className="font-display font-extrabold text-lg mt-0.5 text-green-900">
-                      {card.cache.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                    </p>
-                    <p className="text-[10.5px] font-body text-green-800/80 mt-0.5">
-                      {card.producao_status === "entregue" ? "Já lançado no Caixa da agência." : "Entra no Caixa da agência quando você entregar."}
-                    </p>
-                  </div>
-                )}
+                {/* O CACHÊ SAIU DAQUI (Walter, 09/09/2026): boa parte do
+                    trabalho é fechada por PACOTE mensal, e um valor por peça
+                    solto no card ou mentia sobre o combinado ou virava
+                    negociação no meio da produção. Dinheiro fica no Caixa da
+                    agência, que é onde o acerto acontece de verdade. */}
 
                 <div className="rounded-xl border border-border bg-background px-3.5 py-3">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-2"><Palette className="h-3 w-3" /> A marca</p>
+                  {/* O logo do cliente: quem monta a arte precisa dele à mão,
+                      e ele já vinha no card sem ser desenhado. */}
+                  {card.marca.logo && (
+                    <a href={card.marca.logo} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 mb-2 group" title="Abrir o logo em tamanho cheio">
+                      <span className="w-9 h-9 rounded-lg border border-border bg-background overflow-hidden grid place-items-center shrink-0">
+                        <img src={card.marca.logo} alt="" className="w-full h-full object-contain" loading="lazy" />
+                      </span>
+                      <span className="text-[11px] font-body font-bold text-primary group-hover:underline">abrir o logo</span>
+                    </a>
+                  )}
                   {card.marca.cor && (
                     <button
                       onClick={() => void copiar(card.marca.cor!, `${card.marca.cor} copiado.`)}
@@ -1103,6 +1106,46 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                     volta com o motivo escrito no card, nunca por áudio perdido.
                   </p>
                 </div>
+              </div>
+              {/* CONVERSA: coluna própria, do lado do briefing. */}
+              <div className="border-t md:border-t-0 lg:border-l border-border p-4 md:col-span-2 lg:col-span-1 lg:order-2">
+                <div>
+                  <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-2.5 flex items-center gap-1.5">
+                    <MessageCircle className="h-3.5 w-3.5" /> Conversa deste card
+                  </p>
+                  {card.comentarios.length === 0 && (
+                    <p className="text-xs font-body text-muted-foreground mb-3">Nenhum comentário ainda.</p>
+                  )}
+                  <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                    {card.comentarios.map((cm) => (
+                      <div key={cm.id} className="rounded-xl border border-border bg-background px-3 py-2">
+                        <p className="text-[10.5px] font-bold mb-0.5">
+                          {/* O cliente escreve com vários papéis (client, cliente,
+                              cliente_externo, cliente_externo_aprovacao). Todos
+                              contêm "client"; sem isso a fala dele saía rotulada
+                              como social mídia (auditoria 07/09). */}
+                          <span className={cn("px-1.5 py-0.5 rounded-full uppercase tracking-wide text-[9px]",
+                            cm.papel === "parceiro" ? "bg-violet-100 text-violet-700"
+                            : /client/.test(cm.papel) ? "bg-green-100 text-green-700"
+                            : "bg-pink-100 text-pink-700")}>
+                            {cm.papel === "parceiro" ? "você" : /client/.test(cm.papel) ? "cliente" : "social mídia"}
+                          </span>
+                          <span className="text-muted-foreground font-medium ml-2">{new Date(cm.em).toLocaleDateString("pt-BR")}</span>
+                        </p>
+                        <p className="text-[13px] font-body leading-relaxed">{cm.texto}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={1}
+                      placeholder="Escrever um comentário... a social mídia recebe na hora"
+                      className="rounded-xl resize-none min-h-[42px] text-sm" />
+                    <Button size="sm" onClick={() => void enviar()} disabled={!texto.trim() || comentar.isPending} className="rounded-xl h-[42px]">
+                      {comentar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+
               </div>
             </div>
           </>
