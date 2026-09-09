@@ -88,10 +88,14 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
   const isCurrentSlideVideo = false; // We don't have this info easily for slides yet, keeping as image for now
 
   // Gradient placeholder when no media
-  const GradientPlaceholder = ({ children, className = "" }: { children?: React.ReactNode; className?: string }) => (
+  /* `icone={false}` quando quem chama já desenha o próprio símbolo. Sem isso o
+     YouTube ficava com DOIS ícones empilhados (a moldura de imagem daqui mais o
+     play que a aba passava como filho), que foi o "meio feio" que o Walter viu
+     em 09/09/2026. */
+  const GradientPlaceholder = ({ children, className = "", icone = true }: { children?: React.ReactNode; className?: string; icone?: boolean }) => (
     <div className={`w-full h-full flex flex-col items-center justify-center ${className}`}
       style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" }}>
-      <Image className="h-10 w-10 text-white/20 mb-2" />
+      {icone && <Image className="h-10 w-10 text-white/20 mb-2" />}
       {children}
     </div>
   );
@@ -354,11 +358,20 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
                       <img src={drivePosterUrl || activeMediaUrl} alt="thumbnail" className="w-full h-full object-cover" loading="lazy" />
                     )
                   ) : (
-                    <GradientPlaceholder>
-                      <Play className="h-10 w-10 text-white/30" />
+                    <GradientPlaceholder icone={false}>
+                      {/* Botão de play do YouTube, não um ícone solto: é o que
+                          faz a caixa preta parecer um vídeo e não um erro. */}
+                      <span className="grid h-11 w-16 place-items-center rounded-xl bg-white/15 backdrop-blur-sm">
+                        <Play className="h-5 w-5 text-white/80" fill="currentColor" />
+                      </span>
+                      <span className="mt-2 text-[10px] font-body text-white/45">a capa do vídeo entra aqui</span>
                     </GradientPlaceholder>
                   )}
-                  <div className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded font-body pointer-events-none">8:42</div>
+                  {/* A duração só aparece quando existe mídia. Sem arquivo, o
+                      "8:42" fixo era um número inventado em cima de um vazio. */}
+                  {activeMediaUrl && (
+                    <div className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded font-body pointer-events-none">8:42</div>
+                  )}
                 </div>
                 <div className="flex gap-2.5">
                   <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">
@@ -368,7 +381,10 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground line-clamp-2 leading-snug">{title || hook || "Título do vídeo"}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{userName} · 0 visualizações · agora</p>
+                    {/* Número plausível, igual às curtidas do IG aqui do lado.
+                        "0 visualizações · agora" fazia a prévia parecer um vídeo
+                        que ninguém viu, e não um exemplo de como vai ficar. */}
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{userName} · 3,4 mil visualizações · há 2 horas</p>
                   </div>
                 </div>
               </div>
