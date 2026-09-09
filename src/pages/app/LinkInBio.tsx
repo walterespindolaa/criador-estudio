@@ -235,6 +235,12 @@ export type BioSettings = {
   // bio e redes. É o que dá ao topo a cara de "capa" (a Clínica TK tinha isso
   // porque o fundo da página era claro; na Organnah o topo ficava chapado).
   headerBgImage: string | null;
+  /* COR DO TOPO (Gabriela, 09/09/2026: "não consigo colocar cor, ele tá uma
+     coisa única"). Até aqui o topo só tinha IMAGEM de fundo: quem queria a
+     faixa verde escura da Organnah, com o resto da página em outro tom, tinha
+     que subir uma imagem chapada. Vazio = transparente, herda o fundo da
+     página, que é o comportamento de sempre. */
+  headerBgColor: string;
   about: BioAbout;
   header: BioHeader;
   lead: BioLeadForm;
@@ -261,6 +267,7 @@ const DEFAULT_SETTINGS: BioSettings = {
   socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "", facebook: "" },
   bannerImage: null,
   headerBgImage: null,
+  headerBgColor: "",
   about: { image: null, title: "Sobre mim", text: "" },
   header: { name: "", avatar: "", bio: "" },
   lead: {
@@ -438,6 +445,7 @@ function parseSettings(raw: unknown): BioSettings {
     },
     bannerImage: typeof t.bannerImage === "string" && t.bannerImage ? t.bannerImage : null,
     headerBgImage: typeof t.headerBgImage === "string" && t.headerBgImage ? t.headerBgImage : null,
+    headerBgColor: typeof t.headerBgColor === "string" ? t.headerBgColor : "",
     about: {
       image: typeof ta.image === "string" && ta.image ? ta.image : null,
       title: typeof ta.title === "string" ? ta.title : DEFAULT_SETTINGS.about.title,
@@ -1478,16 +1486,25 @@ const LinkInBio = () => {
                   <RichTextInput value={settings.header.bio} onChange={(v) => patchHeader({ bio: v })} placeholder={profile?.bio || "Escreva uma bio curta"} rows={3} />
                   {/* Cor do nome e da bio: antes era automática e pronto, e a Gabi
                       não tinha como clarear o texto sobre uma foto escura. */}
+                  {/* As duas cores do topo ficam aqui E na aba Visual, de
+                      propósito: a Gabi procurou em Visual e não achou, e quem
+                      está escrevendo o nome também quer pintar na hora. É a
+                      mesma chave nos dois lugares. */}
                   <div className="flex items-end gap-3 flex-wrap pt-1">
+                    <ColorField
+                      value={settings.headerBgColor || "#1A2420"}
+                      onChange={(v) => patchSettings({ headerBgColor: v })}
+                      label="Cor do topo"
+                    />
                     <ColorField
                       value={settings.headerColor || "#1A2420"}
                       onChange={(v) => patchSettings({ headerColor: v })}
                       label="Cor do nome e da bio"
                     />
-                    {settings.headerColor && (
+                    {(settings.headerBgColor || settings.headerColor) && (
                       <Button type="button" variant="ghost" size="sm" className="h-9"
-                        onClick={() => patchSettings({ headerColor: "" })}>
-                        Voltar à automática
+                        onClick={() => patchSettings({ headerBgColor: "", headerColor: "" })}>
+                        Voltar ao automático
                       </Button>
                     )}
                   </div>
@@ -1866,6 +1883,37 @@ const LinkInBio = () => {
                       onChange={(v) => patchSettings({ buttonTextColor: v })}
                       label="Cor do texto"
                     />
+                  </div>
+
+                  {/* COR DO TOPO (Gabriela, 09/09/2026): "eu não consigo colocar
+                      cor, ele tá uma coisa única, não tem essa parte sobreposta
+                      ao fundo pra escolher a cor". O topo só tinha imagem de
+                      fundo, então quem queria a faixa escura da Organnah tinha
+                      que subir uma imagem chapada. Agora é uma cor, e o nome e
+                      a bio se ajustam sozinhos pra continuar legíveis. */}
+                  <div className="pt-2 border-t border-border mt-2">
+                    <Label className="text-sm font-display font-semibold">Topo (foto, nome e redes)</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Pinta só a faixa de cima, atrás da capa e da foto. Deixe vazio pra ela seguir o fundo da página.
+                    </p>
+                    <div className="flex gap-4 pt-2 flex-wrap items-end">
+                      <ColorField
+                        value={settings.headerBgColor || "#1A2420"}
+                        onChange={(v) => patchSettings({ headerBgColor: v })}
+                        label="Cor do topo"
+                      />
+                      <ColorField
+                        value={settings.headerColor || "#1A2420"}
+                        onChange={(v) => patchSettings({ headerColor: v })}
+                        label="Cor do nome e da bio"
+                      />
+                      {(settings.headerBgColor || settings.headerColor) && (
+                        <Button type="button" variant="ghost" size="sm" className="h-9"
+                          onClick={() => patchSettings({ headerBgColor: "", headerColor: "" })}>
+                          Voltar ao automático
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Cor dos CARDS: Sobre mim e Captura de lead eram brancos fixos e
@@ -2406,8 +2454,11 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
             aparado pelo arredondado da "tela" do celular ou da coluna. */}
         {/* Fundo do topo: o mesmo embrulho da página pública, em escala menor. */}
         <div
-          className={settings.headerBgImage ? "-mx-5 -mt-6 w-[calc(100%+2.5rem)] px-5 pt-6 pb-4 flex flex-col items-center bg-cover bg-center" : "contents"}
-          style={settings.headerBgImage ? { backgroundImage: `url(${settings.headerBgImage})` } : undefined}
+          className={(settings.headerBgImage || settings.headerBgColor) ? "-mx-5 -mt-6 w-[calc(100%+2.5rem)] px-5 pt-6 pb-4 flex flex-col items-center bg-cover bg-center" : "contents"}
+          style={(settings.headerBgImage || settings.headerBgColor) ? {
+            backgroundColor: settings.headerBgColor || undefined,
+            backgroundImage: settings.headerBgImage ? `url(${settings.headerBgImage})` : undefined,
+          } : undefined}
         >
         {settings.bannerImage && (
           <div className="-mx-5 -mt-6 w-[calc(100%+2.5rem)] mb-[-34px] overflow-hidden shadow-md">
@@ -2433,7 +2484,9 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
                 pública (estilo Hopp), senão a prévia mente. */}
             {(() => {
               const emColuna = settings.bgType === "image" && !!settings.bgImage;
-              const ink = settings.headerColor || (emColuna ? corSobre(settings.bgColor) : "#1A2420");
+              const inkAuto = settings.headerBgColor ? corSobre(settings.headerBgColor)
+                : emColuna ? corSobre(settings.bgColor) : "#1A2420";
+              const ink = settings.headerColor || inkAuto;
               return (
                 <>
                   <h3 className="font-display font-extrabold text-[17px] text-center drop-shadow-sm" style={{ color: ink }}>

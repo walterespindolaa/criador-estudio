@@ -176,6 +176,8 @@ type BioSettings = {
   socialLinks: SocialLinks;
   bannerImage: string | null;
   headerBgImage: string | null;
+  /** Cor do bloco do topo. Vazio = transparente (herda o fundo da página). */
+  headerBgColor: string;
   about: BioAbout;
   header: BioHeader;
   lead: BioLeadForm;
@@ -202,6 +204,7 @@ const DEFAULT_SETTINGS: BioSettings = {
   socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "", facebook: "" },
   bannerImage: null,
   headerBgImage: null,
+  headerBgColor: "",
   about: { image: null, title: "Sobre mim", text: "" },
   header: { name: "", avatar: "", bio: "" },
   lead: {
@@ -334,6 +337,7 @@ function parseSettings(raw: unknown): BioSettings {
     },
     bannerImage: typeof t.bannerImage === "string" && t.bannerImage ? t.bannerImage : null,
     headerBgImage: typeof t.headerBgImage === "string" && t.headerBgImage ? t.headerBgImage : null,
+    headerBgColor: typeof t.headerBgColor === "string" ? t.headerBgColor : "",
     about: {
       image: typeof ta.image === "string" && ta.image ? ta.image : null,
       title: typeof ta.title === "string" ? ta.title : DEFAULT_SETTINGS.about.title,
@@ -809,7 +813,14 @@ const ConteudoDaBio = () => {
             padding, então o banner dentro dele continua colado nas bordas. */}
         {(() => {
           const emColuna = settings.bgType === "image" && !!settings.bgImage;
-          const comFundo = !!settings.headerBgImage;
+          /* COR PRÓPRIA DO TOPO (Gabriela, 09/09/2026): "ele tá uma coisa
+             única, não tem essa parte sobreposta ao fundo pra escolher a cor".
+             Era verdade: o topo só ganhava superfície com IMAGEM de fundo, e
+             quem queria a faixa escura da Organnah tinha que subir uma imagem
+             chapada. Agora cor e imagem seguem o mesmo caminho, e a cor fica
+             ATRÁS da imagem quando as duas existem. */
+          const corDoTopo = settings.headerBgColor?.trim() || "";
+          const comFundo = !!settings.headerBgImage || !!corDoTopo;
           const bannerCls = cn(
             "overflow-hidden shadow-md mb-[-44px]",
             emColuna
@@ -825,7 +836,10 @@ const ConteudoDaBio = () => {
               : "-mt-10 -mx-5 w-[calc(100%+2.5rem)] px-5 pt-10 sm:mt-[-24px] sm:mx-0 sm:w-full sm:px-6 sm:pt-6 sm:rounded-[22px] sm:shadow-lg",
           );
           return (
-        <div className={wrapCls} style={comFundo ? { backgroundImage: `url(${settings.headerBgImage})` } : undefined}>
+        <div className={wrapCls} style={comFundo ? {
+          backgroundColor: corDoTopo || undefined,
+          backgroundImage: settings.headerBgImage ? `url(${settings.headerBgImage})` : undefined,
+        } : undefined}>
         {settings.bannerImage && (
           <div className={bannerCls}>
             <img src={settings.bannerImage} alt="" loading="lazy" className="w-full h-32 sm:h-40 object-cover" />
@@ -862,8 +876,13 @@ const ConteudoDaBio = () => {
              coluna (fundo de foto pinta a coluna com bgColor, então cinza
              escuro fixo sumia no vinho da Gabi). */}
           {(() => {
-            const emColuna = settings.bgType === "image" && !!settings.bgImage;
-            const inkAuto = emColuna ? corSobre(settings.bgColor) : "#1A2420";
+            /* Com cor própria no topo, o contraste passa a ser calculado sobre
+               ELA: senão quem pintasse o topo de verde escuro ficava com o nome
+               em cinza quase invisível, e teria que descobrir sozinho que
+               precisa trocar a cor do texto também. */
+            const inkAuto = corDoTopo ? corSobre(corDoTopo)
+              : (settings.bgType === "image" && !!settings.bgImage) ? corSobre(settings.bgColor)
+              : "#1A2420";
             const ink = settings.headerColor || inkAuto;
             return (
               <>

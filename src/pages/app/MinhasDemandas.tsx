@@ -898,12 +898,20 @@ function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexand
 }) {
   const fim = useRef<HTMLDivElement | null>(null);
   const inputImagem = useRef<HTMLInputElement | null>(null);
+  const campo = useRef<HTMLTextAreaElement | null>(null);
   // Abrir a conversa já no fim: o que importa é a última fala, não a primeira.
   useEffect(() => { fim.current?.scrollIntoView({ block: "end" }); }, [mensagens.length]);
+  /* O campo cresce com o texto. Sem isso, uma mensagem de três linhas ficava
+     escondida dentro de uma caixa de uma linha. */
+  useEffect(() => {
+    const el = campo.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 92)}px`;
+  }, [texto]);
 
   return (
-    <div className="bg-card border-t-2 lg:border-l border-border flex flex-col min-h-0 md:col-span-2 lg:col-span-1 lg:order-3 lg:h-full"
-      style={{ borderTopColor: cor }}>
+    <div className="bg-card border-t lg:border-t-0 lg:border-l border-border flex flex-col min-h-0 md:col-span-2 lg:col-span-1 lg:order-3 lg:h-full">
       <p className="shrink-0 px-4 py-3 border-b border-border text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
         <MessageCircle className="h-3.5 w-3.5" style={{ color: cor }} /> Conversa deste card
       </p>
@@ -942,30 +950,40 @@ function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexand
         <div ref={fim} />
       </div>
 
+      {/* O CAMPO DE ESCREVER (Walter, 09/09/2026: "ali onde a pessoa escreve o
+          comentário tá zoado"). Eram três caixas soltas de alturas diferentes,
+          com o texto do placeholder quebrando pra fora. Virou UMA caixa: o
+          clipe e o avião moram dentro dela, e o campo cresce conforme a pessoa
+          escreve, até quatro linhas. */}
       <div className="shrink-0 border-t border-border p-2.5">
-        <div className="flex items-end gap-1.5">
-          <input ref={inputImagem} type="file" accept="image/*" className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) { aoMandarImagem(f); aoLimparTexto(); }
-              e.target.value = "";
-            }} />
+        <input ref={inputImagem} type="file" accept="image/*" className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) { aoMandarImagem(f); aoLimparTexto(); }
+            e.target.value = "";
+          }} />
+        <div className="flex items-end gap-1 rounded-2xl border border-border bg-background px-1.5 py-1.5 focus-within:border-primary/50 transition-colors">
           <button type="button" onClick={() => inputImagem.current?.click()} disabled={anexando}
             title="Mandar uma imagem (fica anexada ao card também)"
-            className="shrink-0 grid h-[42px] w-[38px] place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors disabled:opacity-50">
-            {anexando ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+            className="shrink-0 grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50">
+            {anexando ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-[18px] w-[18px]" />}
           </button>
-          <Textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={1}
+          <textarea ref={campo} value={texto} onChange={(e) => setTexto(e.target.value)} rows={1}
             onKeyDown={(e) => {
               // Enter manda, Shift+Enter pula linha: gramática de chat.
               if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void enviar(); }
             }}
-            placeholder="Escrever... a social mídia recebe na hora"
-            className="rounded-xl resize-none min-h-[42px] max-h-28 text-sm" />
-          <Button size="sm" onClick={() => void enviar()} disabled={!texto.trim() || enviando} className="rounded-xl h-[42px] shrink-0">
-            {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </Button>
+            placeholder="Escreva uma mensagem"
+            className="flex-1 min-w-0 resize-none bg-transparent border-0 outline-none text-[13.5px] font-body leading-relaxed py-1.5 max-h-[92px] placeholder:text-muted-foreground/70" />
+          <button type="button" onClick={() => void enviar()} disabled={!texto.trim() || enviando}
+            aria-label="Enviar"
+            className="shrink-0 grid h-8 w-8 place-items-center rounded-full bg-primary text-primary-foreground transition-opacity disabled:opacity-30">
+            {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-[15px] w-[15px]" />}
+          </button>
         </div>
+        <p className="text-[10px] font-body text-muted-foreground/80 px-2 pt-1.5">
+          Enter manda. A social mídia recebe na hora.
+        </p>
       </div>
     </div>
   );
@@ -1017,7 +1035,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
           tela, "sem pé nem cabeça". Agora ele ocupa uma altura definida e cada
           coluna rola por dentro: o chat começa no topo e termina no rodapé,
           como chat de verdade. */}
-      <DialogContent className="max-w-6xl w-[calc(100vw-1.5rem)] p-0 gap-0 rounded-2xl overflow-hidden h-[90vh] flex flex-col [&>button:last-child]:hidden">
+      <DialogContent className="max-w-6xl w-[calc(100vw-1.5rem)] p-0 gap-0 rounded-2xl overflow-hidden h-[90vh] flex flex-col bg-card [&>button:last-child]:hidden">
         {isLoading || !card ? (
           <div className="grid place-items-center py-20"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : (
@@ -1028,15 +1046,17 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                 textura e profundidade na cor da própria marca, e nítido na
                 frente junto do nome. Sem logo, continua o degradê da cor, mas
                 com o nome escrito: faixa vazia não diz de quem é a peça. */}
-            <div className="relative h-28 shrink-0 overflow-hidden"
-              style={{ background: `linear-gradient(135deg, ${card.marca.cor || "#4B3FA8"}, ${card.marca.cor || "#4B3FA8"}aa)` }}>
+            {/* A capa encolheu (Walter, 09/09/2026): 112px de degradê com dois
+                círculos translúcidos ocupavam a primeira dobra e não diziam
+                nada. Vira uma faixa fina de identificação, como o cabeçalho de
+                card do Trello. */}
+            <div className="relative h-20 shrink-0 overflow-hidden"
+              style={{ background: `linear-gradient(135deg, ${card.marca.cor || "#4B3FA8"}, ${card.marca.cor || "#4B3FA8"}cc)` }}>
               {card.marca.logo && (
                 <img src={card.marca.logo} alt="" aria-hidden draggable={false}
-                  className="absolute inset-0 w-full h-full object-cover opacity-30"
+                  className="absolute inset-0 w-full h-full object-cover opacity-25"
                   style={{ transform: "scale(1.8)", filter: "blur(26px) saturate(1.4)" }} />
               )}
-              <span aria-hidden className="absolute -right-10 -top-12 h-36 w-36 rounded-full bg-white/15" />
-              <span aria-hidden className="absolute -left-8 -bottom-14 h-32 w-32 rounded-full bg-black/10" />
               {/* O X PADRÃO DO DIALOG some (é cinza-claro e sumia em cima da
                   capa colorida). Este é redondo, com fundo próprio, e continua
                   legível em qualquer cor de marca (Walter, 09/09/2026). */}
@@ -1068,9 +1088,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                 uma faixa cheia embaixo; no desktop o `order` recoloca ela no
                 meio. */}
             <div className="flex-1 min-h-0 grid md:grid-cols-[minmax(0,1fr)_262px] lg:grid-cols-[minmax(0,1fr)_262px_336px] overflow-y-auto lg:overflow-hidden">
-              {/* A cor da marca vira um fio no topo de cada coluna: o card
-                  inteiro era bege e as três colunas se confundiam. */}
-              <div className="p-5 lg:order-1 border-t-2 lg:overflow-y-auto" style={{ borderTopColor: card.marca.cor || "#4B3FA8" }}>
+              <div className="p-5 lg:order-1 lg:overflow-y-auto">
                 <DialogTitle className="font-display text-xl font-extrabold leading-tight">{card.titulo || "Sem título"}</DialogTitle>
                 <p className="text-xs font-body text-muted-foreground mt-1.5">
                   <b className="text-foreground">{card.marca.nome || "Cliente"}</b> · delegado por {card.agencia}
@@ -1282,7 +1300,12 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
               </div>
 
               {/* A COLUNA DA DIREITA: prazo, marca, material, ações. */}
-              <div className="bg-muted/40 border-l border-border border-t-2 p-4 space-y-4 md:order-2 lg:overflow-y-auto" style={{ borderTopColor: `${card.marca.cor || "#4B3FA8"}55` }}>
+              {/* Uma superfície só, dividida por fio de 1px (Walter, 09/09/2026:
+                  "essa divisão tá muito grosseira"). Antes cada coluna tinha
+                  fundo e fio colorido próprios, e o card virava três blocos
+                  empilhados de cores diferentes. A cor da marca aparece na capa
+                  e nos detalhes, não em tapetes. */}
+              <div className="border-l border-border p-4 space-y-4 md:order-2 lg:overflow-y-auto">
                 {/* O PRAZO É COMBINADO, NÃO IMPOSTO. Proposto = o parceiro topa
                     ou sugere outra data (com motivo, que entra na conversa);
                     negociando = a bola está com a social mídia. Enquanto isso,
@@ -1364,72 +1387,126 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                   {card.marca.cor && <span className="w-4 h-4 rounded-md border border-border shrink-0" style={{ background: card.marca.cor }} />}
                 </button>
 
-                {card.pasta_drive && (
-                  <a href={card.pasta_drive} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2.5 rounded-xl border border-border bg-background px-3.5 py-3 text-sm font-body font-bold text-foreground hover:border-primary/40 transition-colors">
-                    <Folder className="h-4 w-4 text-primary" /> Pasta de material
-                    <ExternalLink className="h-3.5 w-3.5 ml-auto text-muted-foreground" />
-                  </a>
-                )}
-                {card.referencia && (
-                  <a href={card.referencia} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2.5 rounded-xl border border-border bg-background px-3.5 py-3 text-sm font-body font-bold text-foreground hover:border-primary/40 transition-colors">
-                    <Play className="h-4 w-4 text-primary" /> Referência
-                    <ExternalLink className="h-3.5 w-3.5 ml-auto text-muted-foreground" />
-                  </a>
-                )}
+                {/* ONDE ESTÃO OS MATERIAIS (Walter, 09/09/2026: "fiquei na
+                    dúvida onde a pessoa sobe a arte e onde está o acesso aos
+                    materiais de referência"). O bloco só aparecia quando a
+                    agência tinha preenchido pasta e referência NAQUELA peça, e
+                    quando não tinha a coluna ficava vazia, como se o Cria não
+                    tivesse o recurso. Agora o bloco existe sempre e, faltando
+                    link na peça, ele aponta pra ficha da marca, que é onde mora
+                    o material fixo do cliente. */}
+                <div className="rounded-xl border border-border bg-background p-2.5 space-y-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 px-0.5">
+                    <Folder className="h-3 w-3" /> Material pra fazer a peça
+                  </p>
+                  {card.pasta_drive && (
+                    <a href={card.pasta_drive} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-[12.5px] font-body font-bold text-foreground hover:border-primary/40 transition-colors">
+                      <Folder className="h-3.5 w-3.5 text-primary shrink-0" /> Pasta desta peça
+                      <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
+                    </a>
+                  )}
+                  {card.referencia && (
+                    <a href={card.referencia} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-[12.5px] font-body font-bold text-foreground hover:border-primary/40 transition-colors">
+                      <Play className="h-3.5 w-3.5 text-primary shrink-0" /> Referência desta peça
+                      <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
+                    </a>
+                  )}
+                  <button type="button" onClick={() => navigate("/socialmidia/marcas")}
+                    className="w-full flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-[12.5px] font-body font-bold text-foreground hover:border-primary/40 transition-colors">
+                    <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" /> Material fixo da marca
+                    <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
+                  </button>
+                  {!card.pasta_drive && !card.referencia && (
+                    <p className="text-[10.5px] font-body text-muted-foreground leading-snug px-0.5 pt-0.5">
+                      Esta peça veio sem pasta nem referência própria. Logo, o que vale é o material
+                      fixo da marca. Se faltar alguma coisa, peça na conversa aqui do lado.
+                    </p>
+                  )}
+                </div>
 
+                {/* ENTREGAR: era um botão só, e o "subir arquivo" ficava
+                    ESCONDIDO atrás dele. Quem abria o card não tinha como saber
+                    que dava pra mandar a arte por aqui. Agora subir é o gesto
+                    visível; entregar é a consequência. */}
                 <div className="pt-1 space-y-2">
+                  <input ref={inputArquivo} type="file" accept="image/*,video/*,.pdf" className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) { anexar.mutate({ arquivo: f, marcarEntregue: entregando }); setEntregando(false); }
+                      e.target.value = "";
+                    }} />
                   {card.producao_status !== "entregue" ? (
-                    !entregando ? (
-                      <>
-                        <Button className="w-full rounded-xl bg-green-600 hover:bg-green-700" disabled={marcar.isPending}
-                          onClick={() => setEntregando(true)}>
-                          <Check className="h-4 w-4 mr-1.5" /> Marcar como entregue
-                        </Button>
-                        {card.producao_status !== "em_producao" && (
-                          <Button variant="outline" className="w-full rounded-xl" disabled={marcar.isPending}
-                            onClick={() => marcar.mutate({ status: "em_producao" })}>
-                            Estou fazendo
+                    <>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-0.5">Sua entrega</p>
+                      {/* Subir sem entregar: serve pra mandar prévia e pedir
+                          opinião no meio do caminho, que é como o trabalho
+                          acontece de verdade. */}
+                      <Button variant="outline" className="w-full rounded-xl" disabled={anexar.isPending}
+                        onClick={() => { setEntregando(false); inputArquivo.current?.click(); }}>
+                        {anexar.isPending
+                          ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Subindo...</>
+                          : <><ImagePlus className="h-4 w-4 mr-1.5" /> Subir arte ou vídeo</>}
+                      </Button>
+                      <p className="text-[10px] font-body text-muted-foreground px-0.5 leading-snug">
+                        Imagem, vídeo ou PDF até 80 MB. Fica no card, e a social mídia vê na hora.
+                        Carrossel: suba uma arte de cada vez.
+                      </p>
+
+                      {!entregando ? (
+                        <>
+                          <Button className="w-full rounded-xl bg-green-600 hover:bg-green-700" disabled={marcar.isPending}
+                            onClick={() => setEntregando(true)}>
+                            <Check className="h-4 w-4 mr-1.5" /> Marcar como entregue
                           </Button>
-                        )}
-                      </>
-                    ) : (
-                      /* ENTREGA COM LINK: o antídoto do "qual arquivo é o
-                         final?". O link da versão final entra carimbado na
-                         conversa do card. */
-                      <div className="rounded-xl border border-green-300 bg-green-50/60 p-2.5 space-y-2">
-                        {/* Arquivo direto no card: imagem ou vídeo até 80 MB. Acima disso, link. */}
-                        <input ref={inputArquivo} type="file" accept="image/*,video/*,.pdf" className="hidden"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            if (f) { anexar.mutate({ arquivo: f, marcarEntregue: true }); setEntregando(false); }
-                            e.target.value = "";
-                          }} />
-                        <Button className="w-full rounded-xl bg-green-600 hover:bg-green-700" disabled={anexar.isPending}
-                          onClick={() => inputArquivo.current?.click()}>
-                          {anexar.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Subindo...</> : <><Check className="h-4 w-4 mr-1.5" /> Subir o arquivo final e entregar</>}
-                        </Button>
-                        <p className="text-[10.5px] font-body text-muted-foreground text-center">ou</p>
-                        <p className="text-[11px] font-body font-bold text-green-900">Link da versão final (Drive, Dropbox...)</p>
-                        <input type="url" value={linkEntrega} onChange={(e) => setLinkEntrega(e.target.value)}
-                          placeholder="https://..." inputMode="url"
-                          className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[12.5px] font-body" />
-                        <Button variant="outline" className="w-full rounded-xl border-green-400 text-green-800 hover:bg-green-100" disabled={marcar.isPending || !linkEntrega.trim()}
-                          onClick={() => { marcar.mutate({ status: "entregue", link: linkEntrega }); setEntregando(false); setLinkEntrega(""); }}>
-                          {marcar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Entregar com o link</>}
-                        </Button>
-                        <button type="button" className="w-full text-[11px] font-body font-semibold text-muted-foreground"
-                          onClick={() => { marcar.mutate({ status: "entregue" }); setEntregando(false); }}>
-                          Entregar sem link (está na pasta de material)
-                        </button>
-                      </div>
-                    )
+                          {card.producao_status !== "em_producao" && (
+                            <Button variant="outline" className="w-full rounded-xl" disabled={marcar.isPending}
+                              onClick={() => marcar.mutate({ status: "em_producao" })}>
+                              Estou fazendo
+                            </Button>
+                          )}
+                        </>
+                      ) : (
+                        /* ENTREGA COM LINK: o antídoto do "qual arquivo é o
+                           final?". O link da versão final entra carimbado na
+                           conversa do card. */
+                        <div className="rounded-xl border border-green-300 bg-green-50/60 p-2.5 space-y-2">
+                          <Button className="w-full rounded-xl bg-green-600 hover:bg-green-700" disabled={anexar.isPending}
+                            onClick={() => inputArquivo.current?.click()}>
+                            {anexar.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Subindo...</> : <><Check className="h-4 w-4 mr-1.5" /> Subir o arquivo final e entregar</>}
+                          </Button>
+                          <p className="text-[10.5px] font-body text-muted-foreground text-center">ou</p>
+                          <p className="text-[11px] font-body font-bold text-green-900">Link da versão final (Drive, Dropbox...)</p>
+                          <input type="url" value={linkEntrega} onChange={(e) => setLinkEntrega(e.target.value)}
+                            placeholder="https://..." inputMode="url"
+                            className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[12.5px] font-body" />
+                          <Button variant="outline" className="w-full rounded-xl border-green-400 text-green-800 hover:bg-green-100" disabled={marcar.isPending || !linkEntrega.trim()}
+                            onClick={() => { marcar.mutate({ status: "entregue", link: linkEntrega }); setEntregando(false); setLinkEntrega(""); }}>
+                            {marcar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Entregar com o link</>}
+                          </Button>
+                          <button type="button" className="w-full text-[11px] font-body font-semibold text-muted-foreground"
+                            onClick={() => { marcar.mutate({ status: "entregue" }); setEntregando(false); }}>
+                            Já subi o arquivo, pode entregar
+                          </button>
+                          <button type="button" className="w-full text-[11px] font-body font-semibold text-muted-foreground"
+                            onClick={() => setEntregando(false)}>
+                            cancelar
+                          </button>
+                        </div>
+                      )}
+                    </>
                   ) : (
-                    <Button variant="outline" className="w-full rounded-xl" disabled={marcar.isPending}
-                      onClick={() => marcar.mutate({ status: "em_producao" })}>
-                      <RotateCcw className="h-4 w-4 mr-1.5" /> Reabrir (voltei a mexer)
-                    </Button>
+                    <>
+                      <Button variant="outline" className="w-full rounded-xl" disabled={anexar.isPending}
+                        onClick={() => inputArquivo.current?.click()}>
+                        <ImagePlus className="h-4 w-4 mr-1.5" /> Subir nova versão
+                      </Button>
+                      <Button variant="outline" className="w-full rounded-xl" disabled={marcar.isPending}
+                        onClick={() => marcar.mutate({ status: "em_producao" })}>
+                        <RotateCcw className="h-4 w-4 mr-1.5" /> Reabrir (voltei a mexer)
+                      </Button>
+                    </>
                   )}
                   <p className="text-[10.5px] font-body text-muted-foreground leading-relaxed">
                     Ao marcar entregue, a social mídia revisa e manda pro cliente aprovar. Se voltar,
