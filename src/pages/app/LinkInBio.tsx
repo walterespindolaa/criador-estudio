@@ -235,12 +235,13 @@ export type BioSettings = {
   // bio e redes. É o que dá ao topo a cara de "capa" (a Clínica TK tinha isso
   // porque o fundo da página era claro; na Organnah o topo ficava chapado).
   headerBgImage: string | null;
-  /* COR DO TOPO (Gabriela, 09/09/2026: "não consigo colocar cor, ele tá uma
-     coisa única"). Até aqui o topo só tinha IMAGEM de fundo: quem queria a
-     faixa verde escura da Organnah, com o resto da página em outro tom, tinha
-     que subir uma imagem chapada. Vazio = transparente, herda o fundo da
-     página, que é o comportamento de sempre. */
-  headerBgColor: string;
+  /* COR DA COLUNA (Gabriela, 09/09/2026: "hoje tem uma cor e ela vale pra
+     TUDO, fica tudo uma coisa só"). O fundo da página e o CARTÃO onde moram
+     foto, nome e botões eram a mesma superfície: dava pra ter fundo verde, mas
+     não fundo verde com o cartão cinza em cima. Esta cor pinta só o cartão.
+     Vazio = transparente, como sempre foi (com fundo de FOTO ela continua
+     caindo em bgColor, que é a coluna sólida que já existia). */
+  columnColor: string;
   about: BioAbout;
   header: BioHeader;
   lead: BioLeadForm;
@@ -267,7 +268,7 @@ const DEFAULT_SETTINGS: BioSettings = {
   socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "", facebook: "" },
   bannerImage: null,
   headerBgImage: null,
-  headerBgColor: "",
+  columnColor: "",
   about: { image: null, title: "Sobre mim", text: "" },
   header: { name: "", avatar: "", bio: "" },
   lead: {
@@ -445,7 +446,7 @@ function parseSettings(raw: unknown): BioSettings {
     },
     bannerImage: typeof t.bannerImage === "string" && t.bannerImage ? t.bannerImage : null,
     headerBgImage: typeof t.headerBgImage === "string" && t.headerBgImage ? t.headerBgImage : null,
-    headerBgColor: typeof t.headerBgColor === "string" ? t.headerBgColor : "",
+    columnColor: typeof t.columnColor === "string" ? t.columnColor : "",
     about: {
       image: typeof ta.image === "string" && ta.image ? ta.image : null,
       title: typeof ta.title === "string" ? ta.title : DEFAULT_SETTINGS.about.title,
@@ -1486,25 +1487,16 @@ const LinkInBio = () => {
                   <RichTextInput value={settings.header.bio} onChange={(v) => patchHeader({ bio: v })} placeholder={profile?.bio || "Escreva uma bio curta"} rows={3} />
                   {/* Cor do nome e da bio: antes era automática e pronto, e a Gabi
                       não tinha como clarear o texto sobre uma foto escura. */}
-                  {/* As duas cores do topo ficam aqui E na aba Visual, de
-                      propósito: a Gabi procurou em Visual e não achou, e quem
-                      está escrevendo o nome também quer pintar na hora. É a
-                      mesma chave nos dois lugares. */}
                   <div className="flex items-end gap-3 flex-wrap pt-1">
-                    <ColorField
-                      value={settings.headerBgColor || "#1A2420"}
-                      onChange={(v) => patchSettings({ headerBgColor: v })}
-                      label="Cor do topo"
-                    />
                     <ColorField
                       value={settings.headerColor || "#1A2420"}
                       onChange={(v) => patchSettings({ headerColor: v })}
                       label="Cor do nome e da bio"
                     />
-                    {(settings.headerBgColor || settings.headerColor) && (
+                    {settings.headerColor && (
                       <Button type="button" variant="ghost" size="sm" className="h-9"
-                        onClick={() => patchSettings({ headerBgColor: "", headerColor: "" })}>
-                        Voltar ao automático
+                        onClick={() => patchSettings({ headerColor: "" })}>
+                        Voltar à automática
                       </Button>
                     )}
                   </div>
@@ -1885,31 +1877,31 @@ const LinkInBio = () => {
                     />
                   </div>
 
-                  {/* COR DO TOPO (Gabriela, 09/09/2026): "eu não consigo colocar
-                      cor, ele tá uma coisa única, não tem essa parte sobreposta
-                      ao fundo pra escolher a cor". O topo só tinha imagem de
-                      fundo, então quem queria a faixa escura da Organnah tinha
-                      que subir uma imagem chapada. Agora é uma cor, e o nome e
-                      a bio se ajustam sozinhos pra continuar legíveis. */}
+                  {/* O CARTÃO DA PÁGINA (Gabriela, 09/09/2026): "hoje tem uma
+                      cor e ela vale pra TUDO, fica tudo uma coisa só". Era
+                      isso: fundo e cartão eram a mesma superfície. Agora dá pra
+                      ter fundo verde com o cartão cinza em cima, que é a
+                      distinção que ela queria. */}
                   <div className="pt-2 border-t border-border mt-2">
-                    <Label className="text-sm font-display font-semibold">Topo (foto, nome e redes)</Label>
+                    <Label className="text-sm font-display font-semibold">Cartão da página</Label>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Pinta só a faixa de cima, atrás da capa e da foto. Deixe vazio pra ela seguir o fundo da página.
+                      É o bloco onde ficam a foto, o nome e os botões. Pinte ele numa cor e o fundo em outra
+                      pra separar os dois. Vazio = o cartão fica transparente, do jeito de antes.
                     </p>
                     <div className="flex gap-4 pt-2 flex-wrap items-end">
                       <ColorField
-                        value={settings.headerBgColor || "#1A2420"}
-                        onChange={(v) => patchSettings({ headerBgColor: v })}
-                        label="Cor do topo"
+                        value={settings.columnColor || "#FFFFFF"}
+                        onChange={(v) => patchSettings({ columnColor: v })}
+                        label="Cor do cartão"
                       />
                       <ColorField
                         value={settings.headerColor || "#1A2420"}
                         onChange={(v) => patchSettings({ headerColor: v })}
                         label="Cor do nome e da bio"
                       />
-                      {(settings.headerBgColor || settings.headerColor) && (
+                      {(settings.columnColor || settings.headerColor) && (
                         <Button type="button" variant="ghost" size="sm" className="h-9"
-                          onClick={() => patchSettings({ headerBgColor: "", headerColor: "" })}>
+                          onClick={() => patchSettings({ columnColor: "", headerColor: "" })}>
                           Voltar ao automático
                         </Button>
                       )}
@@ -2389,6 +2381,10 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
   const isOutline = settings.buttonStyle === "outline";
   const hasSocials = SOCIAL_FIELDS.some((f) => settings.socialLinks[f.key].trim());
   const fontStack = fontStackFor(settings.fontFamily);
+  /* Mesma conta da página pública: a cor do cartão é a escolhida, ou a coluna
+     sólida do fundo de foto. Sem isso a prévia mentiria. */
+  const corDaColunaPrev = settings.columnColor?.trim()
+    || (settings.bgType === "image" && settings.bgImage ? settings.bgColor : "");
 
   // MODO SITE: a prévia usa o MESMO componente da página pública, dentro do
   // celular. E ele se monta pela largura DESTA moldura (container queries), não
@@ -2441,24 +2437,22 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
             página pública desenhava como um card arredondado com a foto por
             cima. Duas montagens diferentes pro mesmo lugar: a prévia mostrava
             uma página que não existia, e a foto aparecia cortada. */}
-        {/* ARQUITETURA HOPP, igual à página pública: fundo de FOTO ganha uma
-            coluna sólida na cor da marca; fundo de cor segue transparente. */}
+        {/* O CARTÃO, igual à página pública: pintado pela cor escolhida, ou
+            pela cor de coluna do fundo de foto. Fundo de cor sem cartão segue
+            transparente, como sempre foi. */}
         <div
           className={`relative z-10 px-5 py-6 flex flex-col items-center min-h-full ${
-            settings.bgType === "image" && settings.bgImage ? "m-2 rounded-[20px] shadow-2xl overflow-hidden min-h-0" : ""
+            corDaColunaPrev ? "m-2 rounded-[20px] shadow-2xl overflow-hidden min-h-0" : ""
           }`}
-          style={settings.bgType === "image" && settings.bgImage ? { backgroundColor: settings.bgColor } : undefined}
+          style={corDaColunaPrev ? { backgroundColor: corDaColunaPrev } : undefined}
         >
 
         {/* Capa sangrada até as bordas, igual à página pública: o canto é
             aparado pelo arredondado da "tela" do celular ou da coluna. */}
         {/* Fundo do topo: o mesmo embrulho da página pública, em escala menor. */}
         <div
-          className={(settings.headerBgImage || settings.headerBgColor) ? "-mx-5 -mt-6 w-[calc(100%+2.5rem)] px-5 pt-6 pb-4 flex flex-col items-center bg-cover bg-center" : "contents"}
-          style={(settings.headerBgImage || settings.headerBgColor) ? {
-            backgroundColor: settings.headerBgColor || undefined,
-            backgroundImage: settings.headerBgImage ? `url(${settings.headerBgImage})` : undefined,
-          } : undefined}
+          className={settings.headerBgImage ? "-mx-5 -mt-6 w-[calc(100%+2.5rem)] px-5 pt-6 pb-4 flex flex-col items-center bg-cover bg-center" : "contents"}
+          style={settings.headerBgImage ? { backgroundImage: `url(${settings.headerBgImage})` } : undefined}
         >
         {settings.bannerImage && (
           <div className="-mx-5 -mt-6 w-[calc(100%+2.5rem)] mb-[-34px] overflow-hidden shadow-md">
@@ -2483,9 +2477,7 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
             {/* Cor do cabeçalho e ícones ABAIXO da bio: espelho fiel da página
                 pública (estilo Hopp), senão a prévia mente. */}
             {(() => {
-              const emColuna = settings.bgType === "image" && !!settings.bgImage;
-              const inkAuto = settings.headerBgColor ? corSobre(settings.headerBgColor)
-                : emColuna ? corSobre(settings.bgColor) : "#1A2420";
+              const inkAuto = corDaColunaPrev ? corSobre(corDaColunaPrev) : "#1A2420";
               const ink = settings.headerColor || inkAuto;
               return (
                 <>

@@ -177,7 +177,7 @@ type BioSettings = {
   bannerImage: string | null;
   headerBgImage: string | null;
   /** Cor do bloco do topo. Vazio = transparente (herda o fundo da página). */
-  headerBgColor: string;
+  columnColor: string;
   about: BioAbout;
   header: BioHeader;
   lead: BioLeadForm;
@@ -204,7 +204,7 @@ const DEFAULT_SETTINGS: BioSettings = {
   socialLinks: { instagram: "", tiktok: "", youtube: "", twitter: "", facebook: "" },
   bannerImage: null,
   headerBgImage: null,
-  headerBgColor: "",
+  columnColor: "",
   about: { image: null, title: "Sobre mim", text: "" },
   header: { name: "", avatar: "", bio: "" },
   lead: {
@@ -337,7 +337,7 @@ function parseSettings(raw: unknown): BioSettings {
     },
     bannerImage: typeof t.bannerImage === "string" && t.bannerImage ? t.bannerImage : null,
     headerBgImage: typeof t.headerBgImage === "string" && t.headerBgImage ? t.headerBgImage : null,
-    headerBgColor: typeof t.headerBgColor === "string" ? t.headerBgColor : "",
+    columnColor: typeof t.columnColor === "string" ? t.columnColor : "",
     about: {
       image: typeof ta.image === "string" && ta.image ? ta.image : null,
       title: typeof ta.title === "string" ? ta.title : DEFAULT_SETTINGS.about.title,
@@ -691,6 +691,11 @@ const ConteudoDaBio = () => {
   const headerBio = (settings.header?.bio ?? "").trim() || profile.bio;
   const initial = headerName?.charAt(0)?.toUpperCase() || "C";
   const activeSocials = SOCIAL_FIELDS.filter((f) => settings.socialLinks[f.key].trim());
+  /* A cor do CARTÃO onde moram foto, nome e botões, separada do fundo da
+     página. Quando não foi escolhida, o fundo de FOTO ainda cai em bgColor,
+     que é a coluna sólida do jeito Hopp que já existia. */
+  const corDaColuna = settings.columnColor?.trim()
+    || (settings.bgType === "image" && settings.bgImage ? settings.bgColor : "");
 
   // ── MODO SITE ──
   // A cor de destaque do Site pinta TEXTO sobre fundo branco (rótulo de seção,
@@ -787,12 +792,18 @@ const ConteudoDaBio = () => {
          o conteúdo mora numa COLUNA SÓLIDA na cor da marca (a foto vira moldura
          nas laterais), em vez de cards soltos boiando sobre a imagem. Fundo de
          cor/gradiente segue como era: a coluna fica transparente. */}
+      {/* O CARTÃO E O FUNDO VIRARAM DUAS COISAS (Gabriela, 09/09/2026): "hoje
+         tem uma cor e ela vale pra TUDO". Era literal: a coluna do conteúdo só
+         ganhava superfície quando o fundo era FOTO, e mesmo assim herdava a
+         `bgColor`, então não existia fundo verde com cartão cinza em cima.
+         Agora `columnColor` pinta o cartão, e o fundo de foto continua caindo
+         em `bgColor` pra não mudar o visual de quem já publicou assim. */}
       <div
         className={cn(
           "relative z-10 w-full max-w-[520px] my-auto flex flex-col items-center",
-          settings.bgType === "image" && settings.bgImage && "rounded-[28px] px-4 sm:px-6 py-8 shadow-2xl overflow-hidden",
+          corDaColuna && "rounded-[28px] px-4 sm:px-6 py-8 shadow-2xl overflow-hidden",
         )}
-        style={settings.bgType === "image" && settings.bgImage ? { backgroundColor: settings.bgColor } : undefined}>
+        style={corDaColuna ? { backgroundColor: corDaColuna } : undefined}>
         {/* BANNER = CAPA: fica ATRÁS da foto, como capa de perfil. Antes era um
             card solto no meio dos links e ficava perdido. */}
         {/* Antes o banner só aparecia se a seção "banner" estivesse ligada num
@@ -812,15 +823,8 @@ const ConteudoDaBio = () => {
             com as mesmas margens negativas do banner e devolve o respiro com
             padding, então o banner dentro dele continua colado nas bordas. */}
         {(() => {
-          const emColuna = settings.bgType === "image" && !!settings.bgImage;
-          /* COR PRÓPRIA DO TOPO (Gabriela, 09/09/2026): "ele tá uma coisa
-             única, não tem essa parte sobreposta ao fundo pra escolher a cor".
-             Era verdade: o topo só ganhava superfície com IMAGEM de fundo, e
-             quem queria a faixa escura da Organnah tinha que subir uma imagem
-             chapada. Agora cor e imagem seguem o mesmo caminho, e a cor fica
-             ATRÁS da imagem quando as duas existem. */
-          const corDoTopo = settings.headerBgColor?.trim() || "";
-          const comFundo = !!settings.headerBgImage || !!corDoTopo;
+          const emColuna = !!corDaColuna;
+          const comFundo = !!settings.headerBgImage;
           const bannerCls = cn(
             "overflow-hidden shadow-md mb-[-44px]",
             emColuna
@@ -836,10 +840,7 @@ const ConteudoDaBio = () => {
               : "-mt-10 -mx-5 w-[calc(100%+2.5rem)] px-5 pt-10 sm:mt-[-24px] sm:mx-0 sm:w-full sm:px-6 sm:pt-6 sm:rounded-[22px] sm:shadow-lg",
           );
           return (
-        <div className={wrapCls} style={comFundo ? {
-          backgroundColor: corDoTopo || undefined,
-          backgroundImage: settings.headerBgImage ? `url(${settings.headerBgImage})` : undefined,
-        } : undefined}>
+        <div className={wrapCls} style={comFundo ? { backgroundImage: `url(${settings.headerBgImage})` } : undefined}>
         {settings.bannerImage && (
           <div className={bannerCls}>
             <img src={settings.bannerImage} alt="" loading="lazy" className="w-full h-32 sm:h-40 object-cover" />
@@ -876,13 +877,10 @@ const ConteudoDaBio = () => {
              coluna (fundo de foto pinta a coluna com bgColor, então cinza
              escuro fixo sumia no vinho da Gabi). */}
           {(() => {
-            /* Com cor própria no topo, o contraste passa a ser calculado sobre
-               ELA: senão quem pintasse o topo de verde escuro ficava com o nome
-               em cinza quase invisível, e teria que descobrir sozinho que
-               precisa trocar a cor do texto também. */
-            const inkAuto = corDoTopo ? corSobre(corDoTopo)
-              : (settings.bgType === "image" && !!settings.bgImage) ? corSobre(settings.bgColor)
-              : "#1A2420";
+            /* O contraste se mede pela superfície onde o texto POUSA: se o
+               cartão tem cor própria, é sobre ela. Senão, sobre o fundo da
+               página. Sem isso, cartão verde escuro nascia com nome cinza. */
+            const inkAuto = corDaColuna ? corSobre(corDaColuna) : "#1A2420";
             const ink = settings.headerColor || inkAuto;
             return (
               <>
