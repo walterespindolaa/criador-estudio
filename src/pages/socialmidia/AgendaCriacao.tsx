@@ -1763,6 +1763,13 @@ export default function AgendaCriacao() {
               { onSuccess: () => toast.success("Reunião atualizada."), onError: () => toast.error("Não consegui salvar.") });
           }
           setEditCreation(null);
+        }}
+        onDelete={() => {
+          if (editCreation) {
+            delCreation.mutate(editCreation.id,
+              { onSuccess: () => toast.success("Reunião excluída."), onError: () => toast.error("Não consegui excluir.") });
+          }
+          setEditCreation(null);
         }} />
       <CaptureDialog open={capOpen || !!editCap} initial={editCap} clients={clients} teamNames={teamNames}
         onClose={() => { setCapOpen(false); setEditCap(null); }}
@@ -2091,7 +2098,7 @@ function TeamDatalist({ names }: { names: string[] }) {
   return <datalist id="agenda-team-names">{names.map((n) => <option key={n} value={n} />)}</datalist>;
 }
 
-function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, onSave }: { open: boolean; day: string | null; initial?: Creation | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (crm: string | null, name: string | null, team: string | null, note: string | null, time: string | null, title: string | null, dia: string | null) => void }) {
+function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, onSave, onDelete }: { open: boolean; day: string | null; initial?: Creation | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (crm: string | null, name: string | null, team: string | null, note: string | null, time: string | null, title: string | null, dia: string | null) => void; onDelete?: () => void }) {
   const [crm, setCrm] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [team, setTeam] = useState("");
@@ -2103,9 +2110,14 @@ function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, on
      criar de novo, perdendo a nota. O dia já vinha no `initial`, só não tinha
      campo. */
   const [dia, setDia] = useState("");
+  /* Excluir em dois toques (arma e confirma), igual à captação e à tarefa.
+     Antes só dava pra apagar pelo "x" que aparece ao passar o mouse no card da
+     coluna do dia: quem abria a reunião pelo calendário do mês caía neste
+     diálogo e ficava sem saída (Walter, 09/09/2026). */
+  const [confirmDel, setConfirmDel] = useState(false);
   const seed = open ? `${day ?? ""}:${initial?.id ?? "new"}` : "";
   const [seeded, setSeeded] = useState("");
-  if (open && seed !== seeded) { setSeeded(seed); setCrm(initial?.crm_client_id ?? null); setName(initial?.client_name ?? ""); setTeam(initial?.team ?? ""); setNote(initial?.note ?? ""); setTime(initial?.event_time ? initial.event_time.slice(0, 5) : ""); setTitulo(initial?.title ?? ""); setDia(initial?.day ?? day ?? ""); }
+  if (open && seed !== seeded) { setSeeded(seed); setCrm(initial?.crm_client_id ?? null); setName(initial?.client_name ?? ""); setTeam(initial?.team ?? ""); setNote(initial?.note ?? ""); setTime(initial?.event_time ? initial.event_time.slice(0, 5) : ""); setTitulo(initial?.title ?? ""); setDia(initial?.day ?? day ?? ""); setConfirmDel(false); }
   if (!open && seeded) setSeeded("");
   const valid = !!crm || name.trim();
   return (
@@ -2135,9 +2147,21 @@ function AddCreationDialog({ open, day, initial, clients, teamNames, onClose, on
             <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: pauta do alinhamento, assuntos do mês…" className="rounded-xl text-sm" />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => onSave(crm, name.trim() || null, team.trim() || null, note.trim() || null, time || null, titulo.trim() || null, dia || null)} disabled={!valid}>{initial ? "Salvar" : "Adicionar"}</Button>
+        <DialogFooter className="sm:justify-between gap-2">
+          {initial && onDelete ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className={cn("gap-1.5", confirmDel ? "text-destructive-foreground bg-destructive hover:bg-destructive/90" : "text-destructive hover:text-destructive")}
+              onClick={() => { if (confirmDel) onDelete(); else setConfirmDel(true); }}
+            >
+              <Trash2 className="h-4 w-4" /> {confirmDel ? "Confirmar exclusão" : "Excluir"}
+            </Button>
+          ) : <span />}
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button onClick={() => onSave(crm, name.trim() || null, team.trim() || null, note.trim() || null, time || null, titulo.trim() || null, dia || null)} disabled={!valid}>{initial ? "Salvar" : "Adicionar"}</Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
