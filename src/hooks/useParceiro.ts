@@ -40,6 +40,31 @@ export type CardDaFila = {
   cliente_cor: string | null;
   cliente_logo: string | null;
   etiquetas: string[];
+  /** Id do cliente na carteira da agência: é o que casa o card com a ficha da
+   *  marca (o "Infos Clientes" que a Gabriela mantém fixo no Trello). */
+  external_client_id: string | null;
+  /** Primeira mídia da peça (miniatura). É a capa do cartão no quadro por
+   *  cliente: arte pronta aparecendo é o que faz o quadro ficar bonito de
+   *  olhar, como no Trello (Walter, 09/09/2026). */
+  capa: string | null;
+};
+
+/** Uma peça já entregue, do jeito que `parceiro_entregues()` devolve. */
+export type EntregueDoParceiro = {
+  post_id: string;
+  titulo: string;
+  formato: string | null;
+  entregue_em: string;
+  publica_em: string | null;
+  agencia_id: string;
+  agencia_nome: string;
+  cliente_nome: string;
+  cliente_cor: string | null;
+  cliente_logo: string | null;
+  aprovacao: string | null;
+  cache: number | null;
+  external_client_id: string | null;
+  capa: string | null;
 };
 
 export type CardAberto = {
@@ -68,6 +93,9 @@ export type CardAberto = {
    *  peça é entregue; o parceiro precisa ver o que vai receber. */
   cache: number | null;
   agencia: string;
+  /** O que já está anexado nesta peça (referência da agência ou arquivo que o
+   *  próprio parceiro subiu). Ele mandava e nunca mais via. */
+  midias?: { url: string | null; thumb: string | null; nome: string | null; tipo: string | null }[];
   marca: {
     nome: string | null;
     handle: string | null;
@@ -109,6 +137,25 @@ export function useFilaDoParceiro() {
         throw error;
       }
       return (data ?? []) as CardDaFila[];
+    },
+  });
+}
+
+/* ── O QUE JÁ SAIU DA MÃO DELE ──────────────────────────────────────────────
+   Mesma chave que a tela Entregues usa desde a fase 1, de propósito: o quadro
+   e a tela compartilham o cache em vez de consultar duas vezes. */
+export function useEntreguesDoParceiro() {
+  const { user } = useAuth();
+  return useQuery<EntregueDoParceiro[]>({
+    queryKey: ["parceiro-entregues", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("parceiro_entregues");
+      if (error) {
+        if (/does not exist|schema cache/i.test(error.message)) return [];
+        throw error;
+      }
+      return (data ?? []) as EntregueDoParceiro[];
     },
   });
 }
@@ -191,7 +238,7 @@ export function useAcoesDoParceiro(postId: string | null) {
      policy do bucket permite) e registra o anexo no post do dono pela RPC
      security definer parceiro_anexar_entrega, que confere o card. */
   const anexar = useMutation({
-    mutationFn: async (v: { arquivo: File; marcarEntregue?: boolean }) => {
+    mutationFn: async (v: { arquivo: File; marcarEntregue?: boolean; naConversa?: boolean; legenda?: string }) => {
       if (!postId) throw new Error("Sem card.");
       const { data: sess } = await supabase.auth.getUser();
       const uid = sess.user?.id;
@@ -213,11 +260,25 @@ export function useAcoesDoParceiro(postId: string | null) {
         const { error: e2 } = await sbRpc("parceiro_marcar", { _post_id: postId, _status: "entregue", _link: null });
         if (e2) throw e2;
       }
-      return v.marcarEntregue ?? false;
+      /* MANDAR A ARTE NA CONVERSA (Walter, 09/09/2026): no Trello a designer
+         solta a imagem no próprio comentário e todo mundo vê a peça ali, sem
+         abrir anexo. Aqui o arquivo continua indo pro card, e a URL vira um
+         comentário: o chat renderiza imagem quando o texto é um link de
+         imagem. */
+      if (v.naConversa) {
+        const legenda = v.legenda?.trim();
+        const { error: e3 } = await sbRpc("parceiro_comentar", {
+          _post_id: postId,
+          _texto: legenda ? `${legenda}\n${pub.publicUrl}` : pub.publicUrl,
+        });
+        if (e3) throw e3;
+      }
+      return { entregou: v.marcarEntregue ?? false, naConversa: v.naConversa ?? false };
     },
-    onSuccess: (entregou) => {
+    onSuccess: (r) => {
       invalidar();
-      toast.success(entregou ? "Arquivo anexado e card entregue!" : "Arquivo anexado ao card.");
+      toast.success(r.entregou ? "Arquivo anexado e card entregue!"
+        : r.naConversa ? "Enviado na conversa." : "Arquivo anexado ao card.");
     },
     onError: (e: Error) => toast.error(e.message || "Não consegui anexar."),
   });

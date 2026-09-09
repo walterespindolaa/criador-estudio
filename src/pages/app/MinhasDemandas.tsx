@@ -1,12 +1,11 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
 import {
   Briefcase, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
-  Copy as CopyIcon, ExternalLink, Folder, Loader2, MessageCircle, Palette,
-  Pencil, Play, Plus, RotateCcw, Send, X,
+  Copy as CopyIcon, ExternalLink, Folder, ImagePlus, Loader2, MessageCircle, Palette,
+  Pencil, Play, Plus, RotateCcw, Send, Sparkles, X,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { toast } from "sonner";
@@ -16,12 +15,12 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { FichaDaMarca } from "@/pages/parceiro/Marcas";
 import {
-  ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useFilaDoParceiro,
-  useMinhasAgencias, type CardDaFila,
+  ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useEntreguesDoParceiro,
+  useFilaDoParceiro, useMinhasAgencias, useMinhasMarcas,
+  type CardDaFila, type EntregueDoParceiro, type MarcaDoParceiro,
 } from "@/hooks/useParceiro";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import {
   useEtapasPessoais, useMetasDosCards, useSalvarCardMeta,
   type CardMeta, type EtapaPessoal,
@@ -83,10 +82,18 @@ const EstadoPill = ({ s }: { s: CardDaFila["producao_status"] }) => (
 );
 
 export default function MinhasDemandas() {
-  const { data: fila = [], isLoading } = useFilaDoParceiro();
+  const { data: todas = [], isLoading } = useFilaDoParceiro();
   const { data: agencias = [] } = useMinhasAgencias();
   const [aberto, setAberto] = useState<string | null>(null);
   const [visao, setVisao] = useState<"prazo" | "quadro" | "cliente" | "semana" | "mes">("prazo");
+  /* FILTRAR POR AGÊNCIA (Walter, 09/09/2026): "não consigo clicar na social
+     mídia e ver os clientes dela". As agências já estavam desenhadas no topo,
+     mas eram enfeite. Agora cada uma é um botão que recorta a tela inteira
+     naquela agência e joga na visão por cliente, que é o quadro dela. */
+  const [soAgencia, setSoAgencia] = useState<string | null>(null);
+  const fila = useMemo(
+    () => (soAgencia ? todas.filter((c) => c.agencia_id === soAgencia) : todas),
+    [todas, soAgencia]);
   /* Quem se cadastrou como parceiro por conta própria ainda não tem agência
      nenhuma, e sem papel o quadro nascia sem etapas. O papel do perfil serve
      de base até a primeira agência acoplar (Walter, 09/09/2026). */
@@ -97,7 +104,9 @@ export default function MinhasDemandas() {
   const venceHoje = fila.filter((c) => c.prazo_producao === hoje).length;
   const fazendo = fila.filter((c) => c.producao_status === "em_producao").length;
   const emAjuste = fila.filter((c) => c.producao_status === "ajuste").length;
-  const entregues30 = agencias.reduce((t, a) => t + a.entregues_30d, 0);
+  const entregues30 = agencias
+    .filter((a) => !soAgencia || a.agencia_id === soAgencia)
+    .reduce((t, a) => t + a.entregues_30d, 0);
 
   return (
     <div className="pb-20 md:pb-0">
@@ -132,20 +141,36 @@ export default function MinhasDemandas() {
               Trabalho com {agencias.length === 1 ? "esta agência" : `${agencias.length} agências`}
             </p>
             <div className="flex gap-2.5 overflow-x-auto pb-1">
-              {agencias.map((a) => (
-                <Card key={a.agencia_id} className="rounded-2xl border-border px-3.5 py-2.5 flex items-center gap-3 shrink-0">
-                  <span className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 text-white grid place-items-center text-xs font-bold shrink-0">
-                    {a.agencia_nome.charAt(0).toUpperCase()}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-[13px] font-body font-bold text-foreground truncate max-w-[160px]">{a.agencia_nome}</span>
-                    <span className="block text-[11px] font-body text-muted-foreground">
-                      {ROTULO_PAPEL[a.meu_papel] ?? a.meu_papel} · {a.abertos} na mão · {a.entregues_30d} entregues/30d
+              {agencias.map((a) => {
+                const ativa = soAgencia === a.agencia_id;
+                return (
+                  <button key={a.agencia_id} type="button"
+                    onClick={() => { setSoAgencia(ativa ? null : a.agencia_id); if (!ativa) setVisao("cliente"); }}
+                    className={cn("rounded-2xl border bg-card px-3.5 py-2.5 flex items-center gap-3 shrink-0 text-left transition-all",
+                      ativa ? "border-primary ring-2 ring-primary/25 shadow-sm" : "border-border hover:border-primary/40")}>
+                    <span className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 text-white grid place-items-center text-xs font-bold shrink-0">
+                      {a.agencia_nome.charAt(0).toUpperCase()}
                     </span>
-                  </span>
-                </Card>
-              ))}
+                    <span className="min-w-0">
+                      <span className="block text-[13px] font-body font-bold text-foreground truncate max-w-[160px]">{a.agencia_nome}</span>
+                      <span className="block text-[11px] font-body text-muted-foreground">
+                        {ROTULO_PAPEL[a.meu_papel] ?? a.meu_papel} · {a.abertos} na mão · {a.entregues_30d} entregues/30d
+                      </span>
+                    </span>
+                    <span className={cn("text-[10px] font-body font-bold shrink-0 ml-1",
+                      ativa ? "text-primary" : "text-muted-foreground/70")}>
+                      {ativa ? "vendo só esta" : "ver clientes"}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
+            {soAgencia && (
+              <button type="button" onClick={() => setSoAgencia(null)}
+                className="mt-2 text-[11.5px] font-body font-bold text-primary hover:underline px-0.5">
+                mostrar todas as agências de novo
+              </button>
+            )}
           </div>
         )}
 
@@ -163,7 +188,7 @@ export default function MinhasDemandas() {
 
         {isLoading ? (
           <div className="grid place-items-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-        ) : fila.length === 0 ? (
+        ) : todas.length === 0 ? (
           <ComeceAqui />
         ) : visao === "semana" ? (
           <SemanaDoParceiro fila={fila} hoje={hoje} aoAbrir={setAberto} />
@@ -348,26 +373,12 @@ function ComeceAqui() {
 function QuadroDoParceiro({ fila, hoje, aoAbrir, papel }: {
   fila: CardDaFila[]; hoje: string; aoAbrir: (id: string) => void; papel: string | null;
 }) {
-  const { user } = useAuth();
   const { etapas, criar, renomear, excluir } = useEtapasPessoais(papel);
   const { data: metas = {} } = useMetasDosCards();
   const salvarMeta = useSalvarCardMeta();
   const [editandoEtapas, setEditandoEtapas] = useState(false);
-
   // Mesma chave da tela Entregues: compartilha o cache, sem consulta dobrada.
-  const { data: entregues = [] } = useQuery<{ post_id: string; titulo: string; cliente_nome: string; cliente_cor: string | null; entregue_em: string }[]>({
-    queryKey: ["parceiro-entregues", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any).rpc("parceiro_entregues");
-      if (error) {
-        if (/does not exist|schema cache/i.test(error.message)) return [];
-        throw error;
-      }
-      return data ?? [];
-    },
-  });
+  const { data: entregues = [] } = useEntreguesDoParceiro();
 
   const novos = fila.filter((c) => c.producao_status === "aguardando");
   const fazendo = fila.filter((c) => c.producao_status === "em_producao");
@@ -502,7 +513,15 @@ function CartaoQuadro({ c, hoje, meta, onOpen }: {
   return (
     <div role="button" tabIndex={0} onClick={onOpen}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
-      className="w-full text-left rounded-xl border border-border bg-card px-3 py-2.5 mb-2 shadow-sm hover:shadow transition-shadow cursor-pointer">
+      className="w-full text-left rounded-xl border border-border bg-card mb-2 shadow-sm hover:shadow transition-shadow cursor-pointer overflow-hidden">
+      {/* A CAPA DA PEÇA (Walter, 09/09/2026): quando o card já tem mídia, ela
+          vira a capa do cartão, como no Trello. `draggable={false}` porque
+          senão o navegador arrasta a IMAGEM em vez do cartão. */}
+      {c.capa && (
+        <img src={c.capa} alt="" loading="lazy" draggable={false}
+          className="w-full aspect-[4/5] object-cover border-b border-border" />
+      )}
+      <span className="block px-3 py-2.5">
       <span className="flex items-center gap-2 mb-1.5">
         <span className="w-5 h-5 rounded-md grid place-items-center text-white text-[9px] font-bold shrink-0 overflow-hidden"
           style={{ background: c.cliente_cor || "#EA4918" }}>
@@ -531,6 +550,7 @@ function CartaoQuadro({ c, hoje, meta, onOpen }: {
           </span>
         </>
       )}
+      </span>
     </div>
   );
 }
@@ -576,57 +596,148 @@ function EditorEtapasDialog({ aberto, aoFechar, etapas, criar, renomear, excluir
   );
 }
 
-/* ── POR CLIENTE ──────────────────────────────────────────────────────────
-   O mesmo trabalho recortado por MARCA: quem atende três agências e oito
-   marcas precisa responder "o que falta da Nutri?" sem caçar card por card. */
+/* ── POR CLIENTE, NO ESPÍRITO DO QUADRO DA GABRIELA ───────────────────────
+   Walter mandou o Trello dela: cada cliente é uma COLUNA, o primeiro cartão é
+   o "Infos Clientes" fixo (material da marca, refs, regras) e os cartões
+   seguintes mostram a ARTE PRONTA como capa. Bate o olho e ela sabe o que
+   existe, de quem é e o que falta, sem abrir nada.
+
+   Aqui é a mesma gramática: coluna por marca, na cor da marca, com a ficha
+   fixa no topo, as peças em produção no meio e as entregues no pé, com capa
+   quando a peça tem mídia. É o que faltava pro parceiro entender o sistema
+   sem ninguém explicar (Walter, 09/09/2026). */
 function PorClienteDoParceiro({ fila, hoje, aoAbrir }: {
   fila: CardDaFila[]; hoje: string; aoAbrir: (id: string) => void;
 }) {
   const { data: metas = {} } = useMetasDosCards();
-  const grupos = useMemo(() => {
-    const mapa = new Map<string, CardDaFila[]>();
+  const { data: marcas = [] } = useMinhasMarcas();
+  const { data: entregues = [] } = useEntreguesDoParceiro();
+  const [ficha, setFicha] = useState<MarcaDoParceiro | null>(null);
+
+  const colunas = useMemo(() => {
+    const mapa = new Map<string, { nome: string; cards: CardDaFila[]; prontas: EntregueDoParceiro[] }>();
     for (const c of fila) {
-      const chave = c.cliente_nome || "Cliente";
-      mapa.set(chave, [...(mapa.get(chave) ?? []), c]);
+      const chave = c.external_client_id || c.cliente_nome || "sem-cliente";
+      const g = mapa.get(chave) ?? { nome: c.cliente_nome || "Cliente", cards: [], prontas: [] };
+      g.cards.push(c);
+      mapa.set(chave, g);
     }
-    return [...mapa.entries()].sort((a, b) => b[1].length - a[1].length);
-  }, [fila]);
+    /* As entregues só entram em coluna que JÁ existe: a visão é "o que está
+       na minha mão agora", e o pronto é o rodapé dela, não o assunto. */
+    for (const e of entregues) {
+      const chave = e.external_client_id || e.cliente_nome || "sem-cliente";
+      const g = mapa.get(chave);
+      if (g) g.prontas.push(e);
+    }
+    return [...mapa.entries()].sort((a, b) => b[1].cards.length - a[1].cards.length);
+  }, [fila, entregues]);
 
   return (
-    <div className="space-y-5">
-      {grupos.map(([nome, cards]) => {
-        const primeiro = cards[0];
-        const atrasados = cards.filter((c) => c.prazo_producao && c.prazo_producao < hoje).length;
-        const ordenados = [...cards].sort((a, b) => (a.prazo_producao ?? "9999").localeCompare(b.prazo_producao ?? "9999"));
-        return (
-          <section key={nome}>
-            <p className="flex items-center gap-2 mb-2 px-0.5">
-              <span className="w-7 h-7 rounded-lg grid place-items-center text-white text-[10px] font-bold overflow-hidden"
-                style={{ background: primeiro.cliente_cor || "#EA4918" }}>
-                {primeiro.cliente_logo
-                  ? <img src={primeiro.cliente_logo} alt="" className="w-full h-full object-cover" />
-                  : nome.charAt(0).toUpperCase()}
-              </span>
-              <span className="font-display font-bold text-[14.5px]">{nome}</span>
-              <span className="text-[11px] font-body text-muted-foreground">via {primeiro.agencia_nome} · {cards.length} na mão</span>
-              {atrasados > 0 && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-600 text-white">
-                  {atrasados} atrasado{atrasados === 1 ? "" : "s"}
+    <>
+      {/* Rolagem horizontal, como quadro de verdade. No celular a coluna ocupa
+          quase a tela toda e o polegar desliza de cliente em cliente. */}
+      <div className="flex gap-3 overflow-x-auto pb-3 -mx-1 px-1 snap-x">
+        {colunas.map(([chave, g]) => {
+          const primeiro = g.cards[0];
+          const cor = primeiro?.cliente_cor || "#4B3FA8";
+          const marca = marcas.find((m) => m.external_client_id === chave);
+          const atrasados = g.cards.filter((c) => c.prazo_producao && c.prazo_producao < hoje).length;
+          const ordenados = [...g.cards].sort((a, b) =>
+            (a.prazo_producao ?? "9999").localeCompare(b.prazo_producao ?? "9999"));
+          return (
+            <section key={chave} className="w-[270px] sm:w-[292px] shrink-0 snap-start rounded-2xl border border-border overflow-hidden bg-card">
+              {/* CABEÇALHO NA COR DA MARCA: é o que dá identidade à coluna e
+                  mata o bege chapado que o Walter reclamou. */}
+              <header className="px-3 py-2.5 flex items-center gap-2.5"
+                style={{ background: `linear-gradient(135deg, ${cor}22, ${cor}0d)`, borderBottom: `2px solid ${cor}` }}>
+                <span className="w-8 h-8 rounded-lg grid place-items-center text-white text-[11px] font-bold overflow-hidden shrink-0 border border-white/60"
+                  style={{ background: cor }}>
+                  {primeiro?.cliente_logo
+                    ? <img src={primeiro.cliente_logo} alt="" className="w-full h-full object-cover" />
+                    : g.nome.charAt(0).toUpperCase()}
                 </span>
-              )}
-            </p>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-              {ordenados.map((c) => (
-                <div key={c.post_id} className="relative">
-                  <CartaoQuadro c={c} hoje={hoje} meta={metas[c.post_id]} onOpen={() => aoAbrir(c.post_id)} />
-                  <span className="absolute top-2 right-2"><EstadoPill s={c.producao_status} /></span>
-                </div>
-              ))}
-            </div>
-          </section>
-        );
-      })}
-    </div>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display font-bold text-[13.5px] leading-tight truncate">{g.nome}</span>
+                  <span className="block text-[10.5px] font-body text-muted-foreground truncate">
+                    via {primeiro?.agencia_nome} · {g.cards.length} na mão
+                  </span>
+                </span>
+                {atrasados > 0 && (
+                  <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-red-600 text-white shrink-0">
+                    {atrasados} atrasado{atrasados === 1 ? "" : "s"}
+                  </span>
+                )}
+              </header>
+
+              <div className="p-2 space-y-2 bg-muted/25">
+                {/* O CARTÃO FIXO DE INFOS DO CLIENTE. É o "Infos Clientes" que
+                    ela mantém no topo de cada lista: material, refs, regras.
+                    Fica sempre no mesmo lugar, em todas as colunas. */}
+                {marca ? (
+                  <button type="button" onClick={() => setFicha(marca)}
+                    className="w-full text-left rounded-xl border-2 border-dashed px-3 py-2.5 transition-colors hover:bg-card"
+                    style={{ borderColor: `${cor}66`, background: `${cor}0a` }}>
+                    <span className="flex items-center gap-1.5 font-display font-bold text-[12.5px]" style={{ color: cor }}>
+                      <Sparkles className="h-3.5 w-3.5" /> Infos do cliente
+                    </span>
+                    <span className="block text-[10.5px] font-body text-muted-foreground mt-0.5 leading-snug">
+                      {[marca.links?.length ? `${marca.links.length} link${marca.links.length === 1 ? "" : "s"} de material` : null,
+                        marca.referencias?.length ? `${marca.referencias.length} refs` : null,
+                        marca.evitar?.trim() ? "regras do que evitar" : null,
+                        marca.fontes?.trim() ? "fontes" : null]
+                        .filter(Boolean).join(" · ") || "cor, tom de voz e hashtags da marca"}
+                    </span>
+                  </button>
+                ) : (
+                  <p className="rounded-xl border border-dashed border-border px-3 py-2.5 text-[10.5px] font-body text-muted-foreground leading-snug">
+                    A ficha desta marca aparece aqui assim que a agência preencher o brandbook dela.
+                  </p>
+                )}
+
+                {ordenados.map((c) => (
+                  <div key={c.post_id} className="relative">
+                    <CartaoQuadro c={c} hoje={hoje} meta={metas[c.post_id]} onOpen={() => aoAbrir(c.post_id)} />
+                    <span className="absolute top-2 right-2"><EstadoPill s={c.producao_status} /></span>
+                  </div>
+                ))}
+
+                {/* O QUE JÁ FICOU PRONTO: é aqui que a capa da arte brilha. */}
+                {g.prontas.length > 0 && (
+                  <div className="pt-1">
+                    <p className="text-[9.5px] font-bold uppercase tracking-wider text-green-700 px-1 pb-1.5">
+                      Prontas ({g.prontas.length})
+                    </p>
+                    {g.prontas.slice(0, 4).map((e) => (
+                      <button key={e.post_id} type="button" onClick={() => aoAbrir(e.post_id)}
+                        className="w-full text-left rounded-xl border border-green-200 bg-green-50/50 overflow-hidden mb-2 hover:shadow-sm transition-shadow">
+                        {e.capa && (
+                          <img src={e.capa} alt="" loading="lazy"
+                            className="w-full aspect-[4/5] object-cover border-b border-green-200" />
+                        )}
+                        <span className="block px-3 py-2">
+                          <span className="block font-display font-bold text-[12.5px] leading-tight line-clamp-2">{e.titulo || "Sem título"}</span>
+                          <span className="block text-[10px] font-body text-green-800/80 mt-0.5">
+                            entregue em {new Date(e.entregue_em).toLocaleDateString("pt-BR")}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                    {g.prontas.length > 4 && (
+                      <p className="text-[10px] font-body text-muted-foreground text-center pb-1">o resto está em Entregues</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+      <p className="text-[11px] font-body text-muted-foreground px-0.5">
+        Uma coluna por cliente, como no seu quadro. O cartão pontilhado do topo guarda o material
+        e as regras da marca: abre uma vez e serve pra todas as peças dela.
+      </p>
+      <FichaDaMarca m={ficha} aoFechar={() => setFicha(null)} />
+    </>
   );
 }
 
@@ -727,6 +838,139 @@ const ROTULO_APROVACAO: Record<string, { txt: string; cls: string }> = {
   postado: { txt: "Postado", cls: "bg-slate-200 text-slate-600" },
 };
 
+/* ── O CHAT DO CARD ───────────────────────────────────────────────────────
+   Walter, 09/09/2026: "a conversa deveria ficar do lado direito e ser um chat
+   mesmo, hoje começa na metade do popup, sem pé nem cabeça, e deveria ficar em
+   branco em vez de bege".
+
+   Três mudanças de fundo, não de enfeite:
+   1. Coluna inteira, do topo ao rodapé, com fundo branco. O cabeçalho fica em
+      cima, as falas rolam no meio e o campo de escrever fica colado embaixo.
+   2. Balões: o que é seu vai pra direita, o que é dos outros pra esquerda. É a
+      leitura que qualquer pessoa já tem no dedo, de WhatsApp.
+   3. Imagem na conversa. No Trello a designer solta a arte no comentário e
+      todo mundo vê ali. Aqui link de imagem vira imagem, e o clipe manda uma
+      do computador (que também fica anexada ao card). */
+
+const EH_IMAGEM = /\.(png|jpe?g|gif|webp|avif|svg)(\?.*)?$/i;
+const ACHAR_URL = /(https?:\/\/[^\s]+)/g;
+
+/** Quebra o texto em pedaços: URL de imagem vira imagem, URL comum vira link
+ *  clicável, o resto é texto. É o "Ref https://pinterest..." do quadro dela
+ *  deixando de ser texto morto. */
+function FalaFormatada({ texto, meu }: { texto: string; meu: boolean }) {
+  const pedacos = texto.split(ACHAR_URL).filter((p) => p !== "");
+  return (
+    <>
+      {pedacos.map((p, i) => {
+        if (!/^https?:\/\//.test(p)) {
+          return <span key={i} className="whitespace-pre-line">{p}</span>;
+        }
+        if (EH_IMAGEM.test(p)) {
+          return (
+            <a key={i} href={p} target="_blank" rel="noopener noreferrer" className="block mt-1.5 first:mt-0">
+              <img src={p} alt="" loading="lazy"
+                className="rounded-lg border border-border max-h-56 w-auto object-contain bg-card" />
+            </a>
+          );
+        }
+        return (
+          <a key={i} href={p} target="_blank" rel="noopener noreferrer"
+            className={cn("underline break-all", meu ? "text-white/90" : "text-primary")}>
+            {p.replace(/^https?:\/\//, "").slice(0, 42)}{p.length > 50 ? "..." : ""}
+          </a>
+        );
+      })}
+    </>
+  );
+}
+
+function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexando, aoMandarImagem, aoLimparTexto }: {
+  cor: string;
+  mensagens: { id: string; texto: string; papel: string; em: string }[];
+  texto: string;
+  setTexto: (v: string) => void;
+  enviar: () => Promise<void>;
+  enviando: boolean;
+  anexando: boolean;
+  aoMandarImagem: (arquivo: File) => void;
+  aoLimparTexto: () => void;
+}) {
+  const fim = useRef<HTMLDivElement | null>(null);
+  const inputImagem = useRef<HTMLInputElement | null>(null);
+  // Abrir a conversa já no fim: o que importa é a última fala, não a primeira.
+  useEffect(() => { fim.current?.scrollIntoView({ block: "end" }); }, [mensagens.length]);
+
+  return (
+    <div className="bg-card border-t-2 lg:border-l border-border flex flex-col min-h-0 md:col-span-2 lg:col-span-1 lg:order-3 lg:h-full"
+      style={{ borderTopColor: cor }}>
+      <p className="shrink-0 px-4 py-3 border-b border-border text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+        <MessageCircle className="h-3.5 w-3.5" style={{ color: cor }} /> Conversa deste card
+      </p>
+
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-2 max-lg:max-h-[46vh]">
+        {mensagens.length === 0 ? (
+          <p className="text-xs font-body text-muted-foreground text-center py-8 px-4 leading-relaxed">
+            Nada combinado por aqui ainda. O que for escrito neste chat fica no card,
+            some do WhatsApp nunca mais.
+          </p>
+        ) : mensagens.map((cm) => {
+          /* O cliente escreve com vários papéis (client, cliente,
+             cliente_externo, cliente_externo_aprovacao). Todos contêm
+             "client"; sem isso a fala dele saía rotulada como social mídia
+             (auditoria 07/09). */
+          const meu = cm.papel === "parceiro";
+          const doCliente = /client/.test(cm.papel);
+          return (
+            <div key={cm.id} className={cn("flex flex-col", meu ? "items-end" : "items-start")}>
+              <span className={cn("text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full mb-1",
+                meu ? "bg-violet-100 text-violet-700"
+                : doCliente ? "bg-green-100 text-green-700" : "bg-pink-100 text-pink-700")}>
+                {meu ? "você" : doCliente ? "cliente" : "social mídia"}
+              </span>
+              <div className={cn("max-w-[88%] rounded-2xl px-3 py-2 text-[13px] font-body leading-relaxed break-words",
+                meu ? "bg-violet-600 text-white rounded-br-sm"
+                : "bg-muted/70 border border-border rounded-bl-sm")}>
+                <FalaFormatada texto={cm.texto} meu={meu} />
+              </div>
+              <span className="text-[9.5px] font-body text-muted-foreground mt-0.5 px-1">
+                {new Date(cm.em).toLocaleDateString("pt-BR")} às {new Date(cm.em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            </div>
+          );
+        })}
+        <div ref={fim} />
+      </div>
+
+      <div className="shrink-0 border-t border-border p-2.5">
+        <div className="flex items-end gap-1.5">
+          <input ref={inputImagem} type="file" accept="image/*" className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) { aoMandarImagem(f); aoLimparTexto(); }
+              e.target.value = "";
+            }} />
+          <button type="button" onClick={() => inputImagem.current?.click()} disabled={anexando}
+            title="Mandar uma imagem (fica anexada ao card também)"
+            className="shrink-0 grid h-[42px] w-[38px] place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors disabled:opacity-50">
+            {anexando ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+          </button>
+          <Textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={1}
+            onKeyDown={(e) => {
+              // Enter manda, Shift+Enter pula linha: gramática de chat.
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void enviar(); }
+            }}
+            placeholder="Escrever... a social mídia recebe na hora"
+            className="rounded-xl resize-none min-h-[42px] max-h-28 text-sm" />
+          <Button size="sm" onClick={() => void enviar()} disabled={!texto.trim() || enviando} className="rounded-xl h-[42px] shrink-0">
+            {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFechar: () => void }) {
   const navigate = useNavigate();
   const { data: card, isLoading } = useCardDoParceiro(postId);
@@ -768,7 +1012,12 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
 
   return (
     <Dialog open={!!postId} onOpenChange={(v) => !v && aoFechar()}>
-      <DialogContent className="max-w-5xl p-0 gap-0 rounded-2xl overflow-hidden max-h-[88vh] overflow-y-auto [&>button:last-child]:hidden">
+      {/* ALTURA FIXA, NÃO MÁXIMA (Walter, 09/09/2026): com `max-h` o diálogo
+          encolhia até o tamanho do briefing e a conversa nascia no meio da
+          tela, "sem pé nem cabeça". Agora ele ocupa uma altura definida e cada
+          coluna rola por dentro: o chat começa no topo e termina no rodapé,
+          como chat de verdade. */}
+      <DialogContent className="max-w-6xl w-[calc(100vw-1.5rem)] p-0 gap-0 rounded-2xl overflow-hidden h-[90vh] flex flex-col [&>button:last-child]:hidden">
         {isLoading || !card ? (
           <div className="grid place-items-center py-20"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : (
@@ -818,10 +1067,10 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                 antes da conversa, porque no tablet (2 colunas) a conversa vira
                 uma faixa cheia embaixo; no desktop o `order` recoloca ela no
                 meio. */}
-            <div className="grid md:grid-cols-[minmax(0,1fr)_260px] lg:grid-cols-[minmax(0,1fr)_300px_260px]">
+            <div className="flex-1 min-h-0 grid md:grid-cols-[minmax(0,1fr)_262px] lg:grid-cols-[minmax(0,1fr)_262px_336px] overflow-y-auto lg:overflow-hidden">
               {/* A cor da marca vira um fio no topo de cada coluna: o card
                   inteiro era bege e as três colunas se confundiam. */}
-              <div className="p-5 lg:order-1 border-t-2" style={{ borderTopColor: card.marca.cor || "#4B3FA8" }}>
+              <div className="p-5 lg:order-1 border-t-2 lg:overflow-y-auto" style={{ borderTopColor: card.marca.cor || "#4B3FA8" }}>
                 <DialogTitle className="font-display text-xl font-extrabold leading-tight">{card.titulo || "Sem título"}</DialogTitle>
                 <p className="text-xs font-body text-muted-foreground mt-1.5">
                   <b className="text-foreground">{card.marca.nome || "Cliente"}</b> · delegado por {card.agencia}
@@ -868,6 +1117,39 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                     </span>
                   )}
                 </div>
+
+                {/* O QUE JÁ ESTÁ ANEXADO NA PEÇA (Walter, 09/09/2026). No
+                    Trello a arte fica no card e vira capa dele. Aqui o arquivo
+                    ia pro banco e sumia da vista: o parceiro subia e não tinha
+                    como conferir se mandou a versão certa. */}
+                {(() => {
+                  const midias = (card.midias ?? []).filter((m) => m.url || m.thumb);
+                  if (midias.length === 0) return null;
+                  return (
+                    <div className="mt-4">
+                      <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                        Arquivos desta peça ({midias.length})
+                      </p>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                        {midias.map((m, i) => {
+                          const src = m.thumb || m.url || "";
+                          const ehImagem = /^image\//.test(m.tipo ?? "") || EH_IMAGEM.test(src);
+                          return (
+                            <a key={`${src}-${i}`} href={m.url || src} target="_blank" rel="noopener noreferrer"
+                              title={m.nome ?? undefined}
+                              className="block aspect-square rounded-lg overflow-hidden border border-border bg-muted hover:border-primary/50 transition-colors">
+                              {ehImagem
+                                ? <img src={src} alt={m.nome ?? ""} loading="lazy" className="w-full h-full object-cover" />
+                                : <span className="w-full h-full grid place-items-center px-1 text-[9px] font-body font-bold text-muted-foreground text-center leading-tight">
+                                    {m.nome?.slice(0, 22) || "arquivo"}
+                                  </span>}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {card.gancho?.trim() && (
                   <div className="mt-4">
@@ -1000,7 +1282,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
               </div>
 
               {/* A COLUNA DA DIREITA: prazo, marca, material, ações. */}
-              <div className="bg-muted/40 border-l border-border border-t-2 p-4 space-y-4 md:order-2 lg:order-3" style={{ borderTopColor: `${card.marca.cor || "#4B3FA8"}55` }}>
+              <div className="bg-muted/40 border-l border-border border-t-2 p-4 space-y-4 md:order-2 lg:overflow-y-auto" style={{ borderTopColor: `${card.marca.cor || "#4B3FA8"}55` }}>
                 {/* O PRAZO É COMBINADO, NÃO IMPOSTO. Proposto = o parceiro topa
                     ou sugere outra data (com motivo, que entra na conversa);
                     negociando = a bola está com a social mídia. Enquanto isso,
@@ -1155,46 +1437,12 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                   </p>
                 </div>
               </div>
-              {/* CONVERSA: coluna própria, do lado do briefing. */}
-              <div className="lg:border-l border-border border-t-2 p-4 md:col-span-2 lg:col-span-1 lg:order-2" style={{ borderTopColor: `${card.marca.cor || "#4B3FA8"}55`, background: `${card.marca.cor || "#4B3FA8"}08` }}>
-                <div>
-                  <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-2.5 flex items-center gap-1.5">
-                    <MessageCircle className="h-3.5 w-3.5" /> Conversa deste card
-                  </p>
-                  {card.comentarios.length === 0 && (
-                    <p className="text-xs font-body text-muted-foreground mb-3">Nenhum comentário ainda.</p>
-                  )}
-                  <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-                    {card.comentarios.map((cm) => (
-                      <div key={cm.id} className="rounded-xl border border-border bg-background px-3 py-2">
-                        <p className="text-[10.5px] font-bold mb-0.5">
-                          {/* O cliente escreve com vários papéis (client, cliente,
-                              cliente_externo, cliente_externo_aprovacao). Todos
-                              contêm "client"; sem isso a fala dele saía rotulada
-                              como social mídia (auditoria 07/09). */}
-                          <span className={cn("px-1.5 py-0.5 rounded-full uppercase tracking-wide text-[9px]",
-                            cm.papel === "parceiro" ? "bg-violet-100 text-violet-700"
-                            : /client/.test(cm.papel) ? "bg-green-100 text-green-700"
-                            : "bg-pink-100 text-pink-700")}>
-                            {cm.papel === "parceiro" ? "você" : /client/.test(cm.papel) ? "cliente" : "social mídia"}
-                          </span>
-                          <span className="text-muted-foreground font-medium ml-2">{new Date(cm.em).toLocaleDateString("pt-BR")}</span>
-                        </p>
-                        <p className="text-[13px] font-body leading-relaxed">{cm.texto}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-2 mt-3">
-                    <Textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={1}
-                      placeholder="Escrever um comentário... a social mídia recebe na hora"
-                      className="rounded-xl resize-none min-h-[42px] text-sm" />
-                    <Button size="sm" onClick={() => void enviar()} disabled={!texto.trim() || comentar.isPending} className="rounded-xl h-[42px]">
-                      {comentar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
-
-              </div>
+              {/* CONVERSA: coluna da DIREITA e chat de verdade. */}
+              <ChatDoCard cor={card.marca.cor || "#4B3FA8"} mensagens={card.comentarios}
+                texto={texto} setTexto={setTexto} enviar={enviar}
+                enviando={comentar.isPending} anexando={anexar.isPending}
+                aoMandarImagem={(arquivo) => anexar.mutate({ arquivo, naConversa: true, legenda: texto.trim() || undefined })}
+                aoLimparTexto={() => setTexto("")} />
             </div>
           </>
         )}

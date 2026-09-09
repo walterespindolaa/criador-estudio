@@ -51,7 +51,11 @@ function Texto({ titulo, valor, cor }: { titulo: string; valor: string | null; c
   );
 }
 
-function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFechar: () => void }) {
+/* Exportada porque o quadro por cliente das Minhas demandas abre a MESMA
+   ficha: é o card fixo "Infos Clientes" que a Gabriela mantém no topo de cada
+   coluna do Trello, e ele tem que ser o mesmo documento nos dois lugares
+   (Walter, 09/09/2026). */
+export function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFechar: () => void }) {
   if (!m) return null;
   const cor = m.cor || "#4B3FA8";
   const tags = (m.hashtags ?? []).filter(Boolean);
