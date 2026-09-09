@@ -351,11 +351,21 @@ export type MarcaDoParceiro = {
   entregues_30d: number;
   paleta: string | null;
   fontes: string | null;
+  expressao_visual: string | null;
   tom_de_voz: string | null;
+  personalidade: string | null;
+  estilo_comunicacao: string | null;
+  arquetipo: string | null;
   temas: string | null;
+  ideia_central: string | null;
+  promessa: string | null;
+  publico: string | null;
+  oferta: string | null;
   evitar: string | null;
   observacoes: string | null;
   segmento: string | null;
+  /** Os links que a agência guarda na ficha: Drive, Pinterest, site, fotos. */
+  links: { label: string; url: string }[] | null;
   referencias: { url: string; nota: string | null }[] | null;
 };
 
@@ -375,6 +385,40 @@ export function useMinhasMarcas() {
         throw error;
       }
       return (data ?? []) as MarcaDoParceiro[];
+    },
+  });
+}
+
+/** Uma linha de cachê: uma entrega que virou dinheiro a receber. */
+export type CacheDetalhe = {
+  id: string;
+  valor: number;
+  status: string;
+  data: string;
+  descricao: string | null;
+  post_id: string | null;
+  post_titulo: string | null;
+  cliente_nome: string | null;
+  cliente_logo: string | null;
+  cliente_cor: string | null;
+  agencia_id: string;
+  agencia_nome: string;
+};
+
+/** O cachê PEÇA A PEÇA. O total por agência não respondia "de quais entregas
+ *  vem esse valor", que é a pergunta que ele faz na hora de cobrar. */
+export function useMeusCachesDetalhe() {
+  const { user } = useAuth();
+  return useQuery<CacheDetalhe[]>({
+    queryKey: ["parceiro-caches-detalhe", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("parceiro_meus_caches_detalhe");
+      if (error) {
+        if (/does not exist|schema cache/i.test(error.message)) return [];
+        throw error;
+      }
+      return (data ?? []) as CacheDetalhe[];
     },
   });
 }

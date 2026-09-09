@@ -89,6 +89,7 @@ const HERO_TITLES: Record<string, string> = {
   "/socialmidia/demandas": "Minhas demandas",
   "/socialmidia/entregues": "Entregues",
   "/socialmidia/marcas": "Marcas que atendo",
+  "/socialmidia/caches": "Meus cachês",
   "/socialmidia/equipe": "Equipe",
   "/socialmidia/lixeira": "Lixeira",
 };
@@ -369,8 +370,8 @@ export default function ManagerLayout() {
              nenhum acendendo (Walter, 09/09/2026). Agora vai com âncora, a
              tela rola até o bloco de cachês e o item acende. */}
           {parceiroPuro && railNode(DollarSign, "Meus cachês", {
-            active: isActive("/socialmidia/marcas") && location.hash === "#caches",
-            onClick: () => navigate("/socialmidia/marcas#caches"),
+            active: isActive("/socialmidia/caches"),
+            onClick: () => navigate("/socialmidia/caches"),
           })}
           {/* PARCERIA e LIXEIRA faltavam pro parceiro (Walter, 09/09/2026).
              Indicar o CRIA e ganhar comissão vale pra ele igual, e apagar sem
@@ -516,7 +517,7 @@ export default function ManagerLayout() {
             items: parceiroPuro
               // Parceiro puro: só as Comissões fazem sentido pra ele aqui.
               ? [
-                { label: "Meus cachês", desc: "O que você tem a receber das agências", icon: DollarSign as LucideIcon, onClick: () => navigate("/socialmidia/marcas#caches") },
+                { label: "Meus cachês", desc: "O que você tem a receber, entrega por entrega", icon: DollarSign as LucideIcon, onClick: () => navigate("/socialmidia/caches") },
                 { label: "Parceria", desc: "Indique o CRIA e ganhe comissão", icon: Handshake as LucideIcon, onClick: () => navigate("/socialmidia/parceria") },
               ]
               : [

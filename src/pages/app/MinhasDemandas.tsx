@@ -767,8 +767,37 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
           <div className="grid place-items-center py-20"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : (
           <>
-            {/* Capa na cor do cliente: o parceiro sabe de quem é antes de ler. */}
-            <div className="h-24 shrink-0" style={{ background: `linear-gradient(135deg, ${card.marca.cor || "#4B3FA8"}, ${card.marca.cor || "#4B3FA8"}cc)` }} />
+            {/* A CAPA DA MARCA. Era uma faixa chapada na cor do cliente, e
+                ficava apagada (Walter, 09/09/2026). Agora ela usa o LOGO do
+                cliente de duas formas: borrado e ampliado no fundo, dando
+                textura e profundidade na cor da própria marca, e nítido na
+                frente junto do nome. Sem logo, continua o degradê da cor, mas
+                com o nome escrito: faixa vazia não diz de quem é a peça. */}
+            <div className="relative h-28 shrink-0 overflow-hidden"
+              style={{ background: `linear-gradient(135deg, ${card.marca.cor || "#4B3FA8"}, ${card.marca.cor || "#4B3FA8"}aa)` }}>
+              {card.marca.logo && (
+                <img src={card.marca.logo} alt="" aria-hidden draggable={false}
+                  className="absolute inset-0 w-full h-full object-cover opacity-30"
+                  style={{ transform: "scale(1.8)", filter: "blur(26px) saturate(1.4)" }} />
+              )}
+              <span aria-hidden className="absolute -right-10 -top-12 h-36 w-36 rounded-full bg-white/15" />
+              <span aria-hidden className="absolute -left-8 -bottom-14 h-32 w-32 rounded-full bg-black/10" />
+              <div className="relative h-full flex items-center gap-3 px-5">
+                {card.marca.logo && (
+                  <span className="w-12 h-12 rounded-full bg-white/95 border-2 border-white/70 overflow-hidden grid place-items-center shrink-0 shadow-lg">
+                    <img src={card.marca.logo} alt="" className="w-full h-full object-contain" loading="lazy" />
+                  </span>
+                )}
+                <span className="min-w-0">
+                  <span className="block font-display font-extrabold text-white text-lg leading-tight truncate drop-shadow">
+                    {card.marca.nome || "Cliente"}
+                  </span>
+                  {card.marca.handle && (
+                    <span className="block text-[12px] font-body text-white/80 truncate">@{card.marca.handle.replace(/^@/, "")}</span>
+                  )}
+                </span>
+              </div>
+            </div>
             {/* TRÊS COLUNAS NO DESKTOP (Walter, 09/09/2026): briefing | conversa |
                 ações, no espírito do Trello. A conversa estava embaixo do
                 briefing, então quem estava lendo o roteiro não via o que tinha

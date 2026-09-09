@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Copy, ExternalLink, Instagram, Loader2, Palette, Type, Wallet } from "lucide-react";
+import { Copy, ExternalLink, FolderOpen, Instagram, Link2, Loader2, Palette, Sparkles, Type } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ROTULO_PAPEL, useMeusCaches, useMinhasAgencias, useMinhasMarcas, type MarcaDoParceiro } from "@/hooks/useParceiro";
+import { ROTULO_PAPEL, useMinhasAgencias, useMinhasMarcas, type MarcaDoParceiro } from "@/hooks/useParceiro";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MARCAS QUE ATENDO
@@ -17,10 +17,9 @@ import { ROTULO_PAPEL, useMeusCaches, useMinhasAgencias, useMinhasMarcas, type M
    dentro de cada card do quadro e passa a morar aqui, numa FICHA por marca que
    o parceiro abre uma vez e consulta quantas quiser.
 
-   Ordem da tela: cachês (o que eu tenho a receber) > as marcas > as agências.
+   Cachê saiu daqui e virou página própria: dinheiro dividindo tela com
+   identidade de marca é confusão (Walter, 09/09/2026).
    ═══════════════════════════════════════════════════════════════════════════ */
-
-const brl = (v: number) => `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const copiar = (t: string, msg: string) => { void navigator.clipboard.writeText(t); toast.success(msg); };
 
@@ -49,6 +48,7 @@ function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFechar: ()
   const cor = m.cor || "#4B3FA8";
   const tags = (m.hashtags ?? []).filter(Boolean);
   const refs = m.referencias ?? [];
+  const links = (m.links ?? []).filter((l) => !!l?.url?.trim());
   return (
     <Dialog open={!!m} onOpenChange={(v) => !v && aoFechar()}>
       <DialogContent className="max-w-lg p-0 gap-0 rounded-2xl overflow-hidden max-h-[88vh] overflow-y-auto">
@@ -96,6 +96,26 @@ function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFechar: ()
             )}
           </div>
 
+          {/* OS LINKS SÃO O QUE ELE MAIS USA. É o "Material da Marca / Refs
+              Visuais / Site / Fotos Estúdio" do Trello. Ficam no topo, antes
+              de qualquer texto: quem monta arte abre pasta, não lê parágrafo. */}
+          {links.length > 0 && (
+            <Bloco titulo="Material e links da marca">
+              <div className="grid gap-1.5">
+                {links.map((l, i) => (
+                  <a key={`${l.url}-${i}`} href={l.url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-[12.5px] font-body font-bold text-foreground hover:border-primary/40 transition-colors">
+                    {/drive\.google|dropbox|onedrive/i.test(l.url)
+                      ? <FolderOpen className="h-3.5 w-3.5 text-primary shrink-0" />
+                      : <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />}
+                    <span className="truncate">{l.label?.trim() || l.url}</span>
+                    <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto shrink-0" />
+                  </a>
+                ))}
+              </div>
+            </Bloco>
+          )}
+
           {m.paleta?.trim() && (
             <Bloco titulo="Paleta">
               <p className="text-[13px] font-body text-foreground/90 leading-relaxed flex items-start gap-1.5">
@@ -110,8 +130,22 @@ function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFechar: ()
               </p>
             </Bloco>
           )}
+          <Texto titulo="Expressão visual" valor={m.expressao_visual} />
+
+          {/* A VOZ: como a marca fala. Serve pro copy e pro texto que entra na
+              arte, que hoje o designer escreve no olho. */}
           <Texto titulo="Tom de voz" valor={m.tom_de_voz} />
+          <Texto titulo="Personalidade" valor={m.personalidade} />
+          <Texto titulo="Estilo de comunicação" valor={m.estilo_comunicacao} />
+          <Texto titulo="Arquétipo" valor={m.arquetipo} />
+
+          {/* O NEGÓCIO: pra quem é e o que a marca vende. Sem isso a peça sai
+              bonita e fora do alvo. */}
+          <Texto titulo="Público" valor={m.publico} />
+          <Texto titulo="O que a marca vende" valor={m.oferta} />
           <Texto titulo="Temas que a marca trabalha" valor={m.temas} />
+          <Texto titulo="Ideia central" valor={m.ideia_central} />
+          <Texto titulo="Promessa" valor={m.promessa} />
 
           {/* O QUE EVITAR é o campo que mais economiza retrabalho: é o
               "não usar o Frederico nas fotos individuais" do Trello dela. */}
@@ -172,65 +206,16 @@ function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFechar: ()
 export default function Marcas() {
   const { data: agencias = [], isLoading } = useMinhasAgencias();
   const { data: marcas = [], isLoading: carregandoMarcas } = useMinhasMarcas();
-  const { data: caches = [] } = useMeusCaches();
   const [aberta, setAberta] = useState<MarcaDoParceiro | null>(null);
-  const cacheDe = (id: string) => caches.find((c) => c.manager_id === id);
-  const totalPendente = caches.reduce((s, c) => s + Number(c.pendente ?? 0), 0);
-  const totalPago = caches.reduce((s, c) => s + Number(c.pago ?? 0), 0);
 
   return (
     <div className="space-y-5">
       {/* O título mora na faixa do topo do ManagerLayout. */}
 
-      {/* MEUS CACHÊS (fase 3): o que cada agência deve e já pagou. Nasce do
-          cachê combinado no card, lançado no Caixa dela quando você entrega.
-          Só aparece quando existe algum lançamento. */}
-      {caches.length > 0 && (
-        /* id="caches": alvo do item "Meus cachês" do menu, que abre esta mesma
-           tela. Sem a âncora o clique largava a pessoa no topo e ela não via
-           por que tinha ido parar ali (Walter, 09/09/2026). */
-        <Card id="caches" className="rounded-2xl border-border p-4 sm:p-5 scroll-mt-24">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="h-8 w-8 rounded-xl bg-green-100 text-green-700 grid place-items-center"><Wallet className="h-4 w-4" /></span>
-            <div>
-              <p className="font-display font-bold text-[15px] text-foreground leading-tight">Meus cachês</p>
-              <p className="text-[11.5px] font-body text-muted-foreground">Cada entrega com cachê combinado entra aqui. Quem marca como pago é a agência, no Caixa dela.</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2.5 mb-3">
-            <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5">
-              <p className="font-display font-extrabold text-lg leading-none text-amber-800">{brl(totalPendente)}</p>
-              <p className="text-[11px] font-body font-semibold text-amber-900/70 mt-1">a receber</p>
-            </div>
-            <div className="rounded-xl bg-green-50 border border-green-200 px-3 py-2.5">
-              <p className="font-display font-extrabold text-lg leading-none text-green-700">{brl(totalPago)}</p>
-              <p className="text-[11px] font-body font-semibold text-green-800/70 mt-1">já recebido</p>
-            </div>
-          </div>
-          <ul className="divide-y divide-border/70">
-            {caches.map((c) => (
-              <li key={c.manager_id} className="flex items-center justify-between gap-3 py-2">
-                <span className="min-w-0">
-                  <span className="block text-[13px] font-body font-semibold text-foreground truncate">{c.agencia}</span>
-                  <span className="block text-[11px] font-body text-muted-foreground">
-                    {c.pendente_qtd > 0 ? `${c.pendente_qtd} entrega${c.pendente_qtd > 1 ? "s" : ""} em aberto` : "Tudo pago"}
-                    {c.ultimo_pago ? ` · último pagamento ${c.ultimo_pago.slice(8, 10)}/${c.ultimo_pago.slice(5, 7)}` : ""}
-                  </span>
-                </span>
-                <span className="text-right shrink-0">
-                  <span className="block text-[13px] font-display font-extrabold text-amber-800">{brl(Number(c.pendente))}</span>
-                  <span className="block text-[10.5px] font-body text-green-700">{brl(Number(c.pago))} pago</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
       {/* AS MARCAS: o miolo da tela. Cada uma abre a ficha. */}
       <section>
         <div className="flex items-baseline gap-2 mb-2 px-0.5">
-          <h2 className="font-display font-bold text-[15px] text-foreground">As marcas que passam pela sua mão</h2>
+          <h2 className="font-display font-bold text-[15px] text-foreground flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> As marcas que passam pela sua mão</h2>
           {marcas.length > 0 && <span className="text-[11.5px] font-body text-muted-foreground">{marcas.length}</span>}
         </div>
         <p className="text-[11.5px] font-body text-muted-foreground mb-3 px-0.5">
@@ -284,6 +269,11 @@ export default function Marcas() {
                           tem regra
                         </span>
                       )}
+                      {(m.links ?? []).length > 0 && (
+                        <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground inline-flex items-center gap-1">
+                          <FolderOpen className="h-2.5 w-2.5" /> {(m.links ?? []).length} link{(m.links ?? []).length > 1 ? "s" : ""}
+                        </span>
+                      )}
                     </span>
                   </span>
                 </button>
@@ -308,9 +298,7 @@ export default function Marcas() {
           </Card>
         ) : (
           <div className="grid sm:grid-cols-2 gap-3">
-            {agencias.map((a) => {
-              const cx = cacheDe(a.agencia_id);
-              return (
+            {agencias.map((a) => (
                 <Card key={a.agencia_id} className="rounded-2xl border-border p-4">
                   <div className="flex items-center gap-3">
                     <span className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 text-white grid place-items-center font-display font-bold shrink-0">
@@ -324,14 +312,8 @@ export default function Marcas() {
                       </span>
                     </span>
                   </div>
-                  {cx && Number(cx.pendente) > 0 && (
-                    <p className="mt-2 text-[11.5px] font-body text-amber-800">
-                      {brl(Number(cx.pendente))} a receber desta agência.
-                    </p>
-                  )}
                 </Card>
-              );
-            })}
+            ))}
           </div>
         )}
       </section>

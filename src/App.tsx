@@ -70,6 +70,7 @@ const LinkInBio = lazy(() => import("./pages/app/LinkInBio"));
 const MinhasDemandas = lazy(() => import("./pages/app/MinhasDemandas"));
 const ParceiroEntregues = lazy(() => import("./pages/parceiro/Entregues"));
 const ParceiroMarcas = lazy(() => import("./pages/parceiro/Marcas"));
+const ParceiroCaches = lazy(() => import("./pages/parceiro/Caches"));
 const Collabs = lazy(() => import("./pages/app/Collabs"));
 const Insights = lazy(() => import("./pages/app/Insights"));
 const Autopilot = lazy(() => import("./pages/app/Autopilot"));
@@ -391,6 +392,8 @@ const App = () => (
                 <Route path="demandas" element={<ErrorBoundary><MinhasDemandas /></ErrorBoundary>} />
                 <Route path="entregues" element={<ErrorBoundary><ParceiroEntregues /></ErrorBoundary>} />
                 <Route path="marcas" element={<ErrorBoundary><ParceiroMarcas /></ErrorBoundary>} />
+                {/* Cachê saiu de dentro de "Marcas que atendo": dinheiro tem tela própria. */}
+                <Route path="caches" element={<ErrorBoundary><ParceiroCaches /></ErrorBoundary>} />
                 <Route path="agenda" element={<ErrorBoundary><AgendaCriacao /></ErrorBoundary>} />
                 <Route path="captacao" element={<ErrorBoundary><CriaCaptacao /></ErrorBoundary>} />
                 <Route path="equipe" element={<ErrorBoundary><Equipe /></ErrorBoundary>} />
