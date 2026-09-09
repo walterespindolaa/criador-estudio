@@ -832,7 +832,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
 
                 {card.roteiro?.trim() && (
                   <div className="mt-4">
-                    <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Roteiro</p>
+                    <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Copy</p>
                     <p className="text-sm font-body whitespace-pre-line bg-muted/50 border border-border rounded-xl px-3 py-2.5 leading-relaxed">{card.roteiro}</p>
                   </div>
                 )}

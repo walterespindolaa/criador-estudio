@@ -425,7 +425,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   // Cria Post, agora acompanha o cliente aqui dentro (embutido no ClienteHub).
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<ExternalPost | null>(null);
-  const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: null, scheduled_time: null, reference_url: null, drive_folder_url: null, editorial_line_id: null });
+  const [f, setF] = useState<ExternalPostInput>({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", notes: "", scheduled_date: null, scheduled_time: null, reference_url: null, drive_folder_url: null, editorial_line_id: null });
   // Ideia / Referência aceita VÁRIOS links. Na coluna continua um texto só, com
   // um link por linha (parseRefLinks/serializeRefLinks cuidam da conversão).
   const [refLinks, setRefLinks] = useState<string[]>([]);
@@ -437,7 +437,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   // Novo post: cria um RASCUNHO na hora. Assim o post.id já existe e a mídia pode ser
   // anexada de cara (o storage precisa do id). O rascunho não aparece pro cliente.
   const openNew = async (day?: string) => {
-    setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", scheduled_date: day ?? null, scheduled_time: null, reference_url: null, drive_folder_url: null, editorial_line_id: null });
+    setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", notes: "", scheduled_date: day ?? null, scheduled_time: null, reference_url: null, drive_folder_url: null, editorial_line_id: null });
     setRefLinks([]);
     setInternalTags([]);
     setFormOpen(true);
@@ -447,7 +447,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       setEditing(draft);
     } catch { setFormOpen(false); }
   };
-  const openEdit = (p: ExternalPost) => { setDraftId(null); setEditing(p); setRefLinks(parseRefLinks(p.reference_url)); setInternalTags(tagsByPost[p.id] ?? []); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null, reference_url: p.reference_url ?? null, drive_folder_url: (p as { drive_folder_url?: string | null }).drive_folder_url ?? null, editorial_line_id: p.editorial_line_id ?? null }); setFormOpen(true); };
+  const openEdit = (p: ExternalPost) => { setDraftId(null); setEditing(p); setRefLinks(parseRefLinks(p.reference_url)); setInternalTags(tagsByPost[p.id] ?? []); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", notes: (p as { notes?: string | null }).notes ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null, reference_url: p.reference_url ?? null, drive_folder_url: (p as { drive_folder_url?: string | null }).drive_folder_url ?? null, editorial_line_id: p.editorial_line_id ?? null }); setFormOpen(true); };
 
   // Cancelar um post novo apaga o rascunho (com a mídia que já subiu).
   const closeForm = async () => {
@@ -1067,6 +1067,19 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   })()}
                 </div>
               )}
+
+              {/* OBSERVAÇÕES: a nota que o designer/filmmaker lê no card dele.
+                  Existia no banco e no card do parceiro, mas não havia campo
+                  aqui pra escrever (Gabriela, 09/09/2026). Não vai pro cliente:
+                  é recado interno de produção. */}
+              <div>
+                <label className="text-xs font-semibold mb-1.5 block">
+                  Observações <span className="font-normal text-muted-foreground">quem produz lê isto, o cliente não</span>
+                </label>
+                <Textarea rows={3} value={f.notes ?? ""} onChange={(e) => setF((p) => ({ ...p, notes: e.target.value }))}
+                  placeholder="Ex.: usar a foto de capa do Drive, seguir a referência do Pinterest, não usar o Frederico nas fotos individuais."
+                  className="rounded-xl text-sm" />
+              </div>
 
               {/* Tipo de aprovação */}
               <div>
