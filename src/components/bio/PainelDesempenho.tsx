@@ -22,7 +22,12 @@ const PERIODOS: { dias: number; rotulo: string }[] = [
 
 const NOME_ORIGEM: Record<string, string> = {
   instagram: "Instagram", whatsapp: "WhatsApp", qr: "QR impresso",
-  facebook: "Facebook", google: "Google", tiktok: "TikTok",
+  facebook: "Facebook", google: "Busca", tiktok: "TikTok",
+  messenger: "Messenger", linkedin: "LinkedIn", youtube: "YouTube",
+  x: "X (Twitter)", pinterest: "Pinterest", outrabio: "Outra bio",
+  // O encurtador da Meta não diz de qual app veio: Facebook, Instagram e
+  // Messenger usam o mesmo. Nomear de "Facebook" era chutar.
+  meta: "App da Meta",
   direto: "Direto", outro: "Outros",
 };
 
@@ -206,8 +211,12 @@ export function PainelDesempenho({ estilo }: { estilo: "classico" | "site" }) {
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] font-body text-muted-foreground mt-2.5">
-                Pra separar o material impresso, coloque <code className="font-mono">?src=qr</code> no fim do endereço do QR Code.
+              <p className="text-[11px] font-body text-muted-foreground mt-2.5 leading-relaxed">
+                Isto vem de onde o navegador diz que a pessoa estava, e nem sempre ele diz.
+                "Direto" costuma ser link colado no WhatsApp, digitado ou aberto de dentro de um app que não informa a origem.
+                "App da Meta" é quando o clique veio pelo encurtador que Facebook, Instagram e Messenger compartilham, sem dizer qual dos três.
+                Pra ter certeza de uma origem, marque o link: <code className="font-mono">?src=qr</code> no QR impresso,
+                <code className="font-mono">?src=instagram</code> na bio, e assim por diante.
               </p>
             </div>
           )}

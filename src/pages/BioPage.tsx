@@ -411,11 +411,27 @@ function descobrirOrigem(): string {
     }
     const r = (document.referrer || "").toLowerCase();
     if (!r) return "direto";
+
+    /* O ATALHO DA META ENGANA (Walter, 09/09/2026: "aparece Facebook e o link
+       nem está lá"). Quando alguém abre um link DENTRO de um app da Meta, o
+       referrer costuma vir do encurtador `l.facebook.com` / `lm.facebook.com`,
+       e isso acontece tanto no Facebook quanto no Instagram e no Messenger,
+       porque os três rodam na mesma engine no Android. Chamar tudo isso de
+       "Facebook" era inventar uma origem que não existe.
+       Agora o atalho vira uma categoria honesta ("veio de um app da Meta") e só
+       o domínio direto do Facebook conta como Facebook. */
+    if (r.includes("l.facebook.com") || r.includes("lm.facebook.com") || r.includes("l.messenger.com")) return "meta";
     if (r.includes("instagram")) return "instagram";
     if (r.includes("whatsapp") || r.includes("wa.me")) return "whatsapp";
+    if (r.includes("messenger.com") || r.includes("m.me")) return "messenger";
     if (r.includes("facebook") || r.includes("fb.com")) return "facebook";
-    if (r.includes("google")) return "google";
+    if (r.includes("google") || r.includes("bing.") || r.includes("duckduckgo")) return "google";
     if (r.includes("tiktok")) return "tiktok";
+    if (r.includes("linkedin")) return "linkedin";
+    if (r.includes("youtube") || r.includes("youtu.be")) return "youtube";
+    if (r.includes("t.co") || r.includes("twitter.com") || r.includes("x.com")) return "x";
+    if (r.includes("pinterest")) return "pinterest";
+    if (r.includes("linktr.ee") || r.includes("bio.link") || r.includes("beacons.ai")) return "outrabio";
     // Mesmo domínio (a pessoa navegou dentro da própria página) não é origem.
     if (r.includes(window.location.host)) return "direto";
     return "outro";
