@@ -26,7 +26,7 @@ import {
 } from "@/hooks/useAgenda";
 import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient, type ExternalClient } from "@/hooks/useCriaPost";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
-import { useClientCriaAgendaPosts, useCriaClientProfiles, useManagerPublishClientPost, type ClientCriaAgendaPost, type ClientCriaLink } from "@/hooks/useManagerClientCria";
+import { useClientCriaAgendaPosts, useCriaClientProfiles, useManagerPublishClientPost, useManagerRescheduleClientPost, type ClientCriaAgendaPost, type ClientCriaLink } from "@/hooks/useManagerClientCria";
 import { useManagerMaterialsWithDue, useUpdateAgendaMaterial, type AgendaMaterial } from "@/hooks/useClientMaterials";
 // Relatório de produtividade da OPERAÇÃO (semana/mês): quantos posts, captações,
 // tarefas... É daqui da Agenda que a produção é tocada, então o botão mora aqui.
@@ -494,6 +494,11 @@ export default function AgendaCriacao() {
   // direto pro kanban do cliente, sem contexto nenhum).
   const [criaCard, setCriaCard] = useState<ClientCriaAgendaPost | null>(null);
   const publicarCliente = useManagerPublishClientPost();
+  const reagendarCliente = useManagerRescheduleClientPost();
+  /* Rascunho da data/hora do post do cliente enquanto o diálogo está aberto.
+     Semeado a cada post que abre, pra não carregar o valor do anterior. */
+  const [criaDia, setCriaDia] = useState("");
+  const [criaHora, setCriaHora] = useState("");
 
   // Itens do dia já ordenados (mesma lista que a grade renderiza).
   const itensDoDia = (iso: string) => buildDayItems(
@@ -1377,7 +1382,7 @@ export default function AgendaCriacao() {
                 const publicado = p.status === "publicado";
                 return (
                 <button key={`cria:${p.id}`} type="button" title={p.title ?? undefined}
-                  onClick={() => setCriaCard(p)}
+                  onClick={() => { setCriaDia(p.scheduled_date ?? ""); setCriaHora(p.scheduled_time?.slice(0, 5) ?? ""); setCriaCard(p); }}
                   className={cn("rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95", publicado && "opacity-60")}
                   style={{ borderColor: `${(p.client_color || CRIA_POST_COLOR)}80`, background: `${(p.client_color || CRIA_POST_COLOR)}0F` }}>
                   <div className="flex items-center gap-1" style={{ color: CRIA_POST_COLOR }}>
@@ -1827,25 +1832,58 @@ export default function AgendaCriacao() {
               </DialogHeader>
               <div className="space-y-1.5 text-sm font-body text-foreground">
                 <p><span className="text-muted-foreground">Cliente:</span> {criaCard.client_name ?? "-"}</p>
-                <p><span className="text-muted-foreground">Quando:</span> {criaCard.scheduled_date ? new Date(criaCard.scheduled_date + "T00:00:00").toLocaleDateString("pt-BR") : "-"}{criaCard.scheduled_time ? ` às ${criaCard.scheduled_time.slice(0, 5)}` : ""}</p>
                 <p><span className="text-muted-foreground">Etapa:</span> {CRIA_POST_STATUS[criaCard.status ?? ""] ?? criaCard.status ?? "-"}{criaCard.format ? ` · ${criaCard.format}` : ""}</p>
+
+                {/* DATA EDITÁVEL: o card do cliente não é arrastável (fica fora
+                    do índice do dnd pra não quebrar o arrastar dos outros), então
+                    remarcar era impossível sem entrar no Cria dele. Aqui ela
+                    remarca; legenda, mídia e etapa continuam sendo do cliente. */}
+                <div className="flex gap-2 flex-wrap items-end pt-1">
+                  <div>
+                    <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-1">Dia</p>
+                    <Input type="date" value={criaDia} onChange={(e) => setCriaDia(e.target.value)} className="w-[165px]" />
+                  </div>
+                  <HoraInput label="Horário (opcional)" value={criaHora} onChange={setCriaHora} className="w-[140px]" />
+                  {(criaDia !== (criaCard.scheduled_date ?? "") || criaHora !== (criaCard.scheduled_time?.slice(0, 5) ?? "")) && (
+                    <Button type="button" size="sm" disabled={!criaDia || reagendarCliente.isPending}
+                      onClick={() => {
+                        reagendarCliente.mutate({ postId: criaCard.id, data: criaDia, hora: criaHora || null }, {
+                          onSuccess: () => { toast.success("Data remarcada no Cria do cliente."); setCriaCard(null); },
+                          onError: () => toast.error("Não consegui remarcar. Confere se o SQL da manager_reschedule_client_post foi rodado."),
+                        });
+                      }}>
+                      {reagendarCliente.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Remarcar"}
+                    </Button>
+                  )}
+                </div>
 
                 {/* LEGENDA e MATERIAL: é o que ela realmente precisa na hora de
                     publicar. Sem isso o card era só um lembrete e obrigava a
                     abrir o kanban do cliente pra copiar o texto. */}
-                {criaCard.caption?.trim() && (
-                  <div className="rounded-xl border border-border bg-muted/25 p-2.5 mt-1">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="text-[10px] font-body font-bold uppercase tracking-wide text-muted-foreground">Legenda</span>
+                {/* A legenda e o material aparecem SEMPRE, mesmo vazios. Antes o
+                    bloco inteiro sumia quando o cliente ainda não tinha escrito,
+                    e a social mídia não sabia se o Cria estava escondendo o texto
+                    ou se o texto não existia (Walter, 09/09/2026). Estado vazio
+                    dito em voz alta vale mais do que espaço em branco. */}
+                <div className="rounded-xl border border-border bg-muted/25 p-2.5 mt-1">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-[10px] font-body font-bold uppercase tracking-wide text-muted-foreground">Legenda</span>
+                    {criaCard.caption?.trim() && (
                       <button type="button"
                         onClick={() => { void navigator.clipboard.writeText(criaCard.caption ?? ""); toast.success("Legenda copiada!"); }}
                         className="inline-flex items-center gap-1 text-[11px] font-display font-bold text-primary hover:underline">
                         <Copy className="h-3 w-3" /> copiar
                       </button>
-                    </div>
-                    <p className="max-h-40 overflow-y-auto whitespace-pre-wrap text-[12.5px] font-body leading-relaxed text-foreground">{criaCard.caption}</p>
+                    )}
                   </div>
-                )}
+                  {criaCard.caption?.trim() ? (
+                    <p className="max-h-40 overflow-y-auto whitespace-pre-wrap text-[12.5px] font-body leading-relaxed text-foreground">{criaCard.caption}</p>
+                  ) : (
+                    <p className="text-[12px] font-body text-muted-foreground leading-relaxed">
+                      O cliente ainda não escreveu a legenda deste post no Cria dele. Abra o kanban do cliente pra escrever junto ou cobrar.
+                    </p>
+                  )}
+                </div>
 
                 {(() => {
                   // O material pode estar na pasta do Drive (campo próprio) ou
@@ -1853,25 +1891,37 @@ export default function AgendaCriacao() {
                   const links: string[] = [];
                   if (criaCard.drive_folder_url) links.push(criaCard.drive_folder_url);
                   for (const l of parseRefLinks(criaCard.reference_url)) if (!links.includes(l)) links.push(l);
-                  if (links.length === 0) return null;
                   return (
-                    <div className="flex flex-wrap gap-1.5 pt-0.5">
-                      {links.map((l, i) => (
-                        <a key={`${l}-${i}`} href={l} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[11.5px] font-display font-bold text-foreground transition-colors hover:border-primary hover:text-primary">
-                          {isDriveUrl(l) ? <HardDrive className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
-                          {isDriveUrl(l) ? (i === 0 && criaCard.drive_folder_url === l ? "Pasta do Drive" : "Arquivo no Drive") : "Link do material"}
-                        </a>
-                      ))}
+                    <div className="rounded-xl border border-border bg-muted/25 p-2.5">
+                      <span className="text-[10px] font-body font-bold uppercase tracking-wide text-muted-foreground">Mídia e anexos</span>
+                      {links.length === 0 ? (
+                        <p className="text-[12px] font-body text-muted-foreground leading-relaxed mt-1">
+                          Sem pasta do Drive nem link de material neste post do cliente.
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {links.map((l, i) => (
+                            <a key={`${l}-${i}`} href={l} target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[11.5px] font-display font-bold text-foreground transition-colors hover:border-primary hover:text-primary">
+                              {isDriveUrl(l) ? <HardDrive className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
+                              {isDriveUrl(l) ? (i === 0 && criaCard.drive_folder_url === l ? "Pasta do Drive" : "Arquivo no Drive") : "Link do material"}
+                            </a>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
 
-                <p className="text-[11.5px] text-muted-foreground pt-1">Este post vive no Cria do próprio cliente. Você pode marcar como publicado daqui ou abrir o kanban dele pra ver tudo.</p>
+                <p className="text-[11.5px] text-muted-foreground pt-1">Este post vive no Cria do próprio cliente. Daqui você remarca a data, marca como publicado e copia a legenda; escrever e trocar a mídia é no kanban dele.</p>
               </div>
-              <DialogFooter className="sm:justify-between gap-2">
+              <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+                <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { const cid = criaCard.crm_client_id; setCriaCard(null); if (cid) navigate(`/socialmidia/clientes/${cid}/kanban-cliente`); }}>
+                  Abrir o kanban do cliente
+                </Button>
                 <Button
                   type="button"
+                  className="w-full sm:w-auto"
                   variant={criaCard.status === "publicado" ? "outline" : "default"}
                   disabled={publicarCliente.isPending}
                   onClick={() => {
@@ -1884,9 +1934,6 @@ export default function AgendaCriacao() {
                 >
                   {publicarCliente.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 mr-1" />}
                   {criaCard.status === "publicado" ? "Reabrir (não publicado)" : "Marcar como publicado"}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => { const cid = criaCard.crm_client_id; setCriaCard(null); if (cid) navigate(`/socialmidia/clientes/${cid}/kanban-cliente`); }}>
-                  Abrir o kanban do cliente
                 </Button>
               </DialogFooter>
             </>

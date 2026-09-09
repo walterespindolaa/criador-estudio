@@ -1168,7 +1168,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
         }
         return first.thumbnail_url || first.view_url || `https://lh3.googleusercontent.com/d/${encodeURIComponent(fid)}=w800`;
       })()
-    : undefined;
+    /* SEM ANEXO, MAS COM LINK COLADO (Walter, 09/09/2026): quem trabalha com o
+       Drive raramente anexa o arquivo, cola a URL no campo de conteúdo. A prévia
+       só olhava pra `mediaList` e mostrava o quadrado cinza, dando a impressão
+       de que o post estava vazio. Agora, quando o link é de um ARQUIVO do Drive
+       (/file/d/ID), a gente monta a miniatura pelo id e a prévia enche.
+       Link de PASTA não tem miniatura, então continua no placeholder. */
+    : (() => {
+        const id = contentLink.match(/\/file\/d\/([^/?#]+)/)?.[1];
+        return id ? `https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w800` : undefined;
+      })();
   const previewMediaType = mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image";
 
   // Reordena a mídia (carrossel): a ordem da tira = a ordem dos slides.
@@ -1506,6 +1515,37 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
                 <BlocoCabecalho numero={1} titulo="O conteúdo do post" subtitulo="Escolha o formato e escreva a estrutura." />
 
+              {/* QUANDO VAI AO AR, ANTES DE TUDO (Walter, 09/09/2026): a data
+                  morava lá embaixo, depois de mídia, plataforma, formato e
+                  status. Só que ela é a primeira decisão de quem está montando
+                  o mês: define o dia e depois enche o post. Ficar rolando pra
+                  achar a data em cada card era o atrito. Semana continua junto
+                  dos outros detalhes, porque é organização interna, não prazo. */}
+              <div data-tour="editor-agendamento" className="flex flex-wrap items-end gap-2.5 rounded-2xl border border-primary/25 bg-primary/5 px-3 py-2.5">
+                <div className="space-y-1.5 min-w-[150px] flex-1">
+                  <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75 flex items-center gap-1.5">
+                    <Calendar className="h-3 w-3" /> Data
+                  </Label>
+                  <Input
+                    type="date"
+                    value={scheduledDate}
+                    onChange={(e) => setScheduledDate(e.target.value)}
+                    className="rounded-xl h-9 text-sm w-full min-w-0 px-3 text-left bg-card [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
+                  />
+                </div>
+                <div className="space-y-1.5 min-w-[120px] flex-1">
+                  <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75 flex items-center gap-1.5">
+                    <Clock className="h-3 w-3" /> Hora
+                  </Label>
+                  <Input
+                    type="time"
+                    value={scheduledTime}
+                    onChange={(e) => setScheduledTime(e.target.value)}
+                    className="rounded-xl h-9 text-sm w-full min-w-0 px-3 text-left bg-card [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
+                  />
+                </div>
+              </div>
+
               {/* MIDIA no INICIO do ponto 1 (Walter, 01/09): a coluna da
                   direita ficou SO com a previa, sempre visivel; a midia abre o
                   fluxo de criacao e continua retratil (recolhe sozinha quando
@@ -1835,14 +1875,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   </div>
 
 
-                  {/* DATA E HORA: compactos e no topo, junto dos detalhes. Antes
-                      moravam num bloco grande so no fim do fluxo (passo 4), forcando
-                      a pessoa a rolar ate embaixo pra definir a data. O widget de
-                      melhores horarios virou um "ver melhores horarios" que expande,
-                      logo abaixo, secundario. */}
-                  <div data-tour="editor-agendamento" className="space-y-2">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                      <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                  {/* Data e hora SUBIRAM pro topo do passo 1 (bloco destacado
+                      logo abaixo do cabeçalho). Aqui ficou o que é organização
+                      interna: semana, link de referência e os melhores horários. */}
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div className="space-y-1.5">
                         <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
                           Semana
                         </Label>
@@ -1864,28 +1902,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75 flex items-center gap-1.5">
-                          <Calendar className="h-3 w-3" /> Data
-                        </Label>
-                        <Input
-                          type="date"
-                          value={scheduledDate}
-                          onChange={(e) => setScheduledDate(e.target.value)}
-                          className="rounded-xl h-9 text-sm w-full min-w-0 px-3 text-left bg-card [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75 flex items-center gap-1.5">
-                          <Clock className="h-3 w-3" /> Hora
-                        </Label>
-                        <Input
-                          type="time"
-                          value={scheduledTime}
-                          onChange={(e) => setScheduledTime(e.target.value)}
-                          className="rounded-xl h-9 text-sm w-full min-w-0 px-3 text-left bg-card [&::-webkit-date-and-time-value]:text-left [&::-webkit-datetime-edit]:text-left"
-                        />
                       </div>
                     </div>
                     <div className="space-y-1.5">

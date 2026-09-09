@@ -287,6 +287,23 @@ export function useManagerPublishClientPost() {
   });
 }
 
+// Remarca DATA e HORA de um post do Cria DO CLIENTE, direto da Agenda.
+// O card não é arrastável (fica fora do índice do dnd), então sem isto a social
+// mídia não tinha como remexer a data de um post do cliente sem entrar no Cria
+// dele. Vai por RPC porque o post pertence à conta do cliente.
+export function useManagerRescheduleClientPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ postId, data, hora }: { postId: string; data: string; hora: string | null }) => {
+      const { error } = await sbRpc("manager_reschedule_client_post", { _post_id: postId, _data: data, _hora: hora });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-cria-agenda-posts"] });
+    },
+  });
+}
+
 // ===================== Brandbook do cliente (modo leitura) =====================
 export type CriaClientBrandItem = { type: string; name: string; value: string | null };
 export type CriaClientPersona = {
