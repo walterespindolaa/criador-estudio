@@ -535,7 +535,13 @@ export default function AgendaCriacao() {
     // Antes o drop no mesmo dia caía aqui e retornava sem fazer nada, e como a lista era
     // ordenada por horário o card "voltava" pro lugar. Desde então gravamos uma ORDEM
     // MANUAL persistida por dia (agenda_day_order) que sobrepõe a ordem por horário.
+    /* O post do Cria DO CLIENTE participa do arrasto ENTRE DIAS (remarcar a
+       data), mas fica fora da ordem manual e das faixas de período: essas duas
+       coisas são gravadas em tabelas nossas por chave de item, e o post não é
+       um item nosso, é da conta do cliente. Soltar no mesmo dia não faz nada. */
+    const postDoCliente = draggableId.startsWith("criapost:");
     if (src.iso === dst.iso) {
+      if (postDoCliente) return;
       // A faixa "Sem data (em produção)" só agrupa; não tem ordenação manual nem período.
       if (src.iso === NO_DATE) return;
       const iso = src.iso;
@@ -572,7 +578,7 @@ export default function AgendaCriacao() {
     const day = dst.iso; // dia de destino (ou NO_DATE)
     // Arrastar entre DIAS continua mudando a data. Se a faixa de destino for explícita,
     // o período vai junto (soltei na noite de quinta = quinta à noite).
-    if (day !== NO_DATE && dst.faixa) aplicaPeriodo(draggableId, dst.faixa);
+    if (day !== NO_DATE && dst.faixa && !postDoCliente) aplicaPeriodo(draggableId, dst.faixa);
     const sep = draggableId.indexOf(":");
     const kind = draggableId.slice(0, sep);
     const id = draggableId.slice(sep + 1);
@@ -601,6 +607,18 @@ export default function AgendaCriacao() {
       // Arrastar um post reprograma a data no Cria Post (reflete no kanban/calendário do cliente).
       qc.setQueriesData<ExternalPostWithClient[]>({ queryKey: ["external-posts-all"] }, (old) => old?.map((p) => (p.id === id ? { ...p, scheduled_date: day } : p)));
       movePost.mutate({ id, scheduled_date: day }, { onSuccess: ok, onError: fail });
+    } else if (kind === "criapost") {
+      // Remarca a data no Cria DO CLIENTE. Vai por RPC (o post é da conta dele);
+      // o cache local muda na hora pra o card não "voltar" enquanto salva.
+      // O horário do post é preservado: arrastar muda o DIA, não o horário que
+      // o cliente já tinha escolhido.
+      const horaAtual = clientCriaPosts.find((p) => p.id === id)?.scheduled_time?.slice(0, 5) ?? null;
+      qc.setQueriesData<ClientCriaAgendaPost[]>({ queryKey: ["client-cria-agenda-posts"] }, (old) => old?.map((p) => (p.id === id ? { ...p, scheduled_date: day } : p)));
+      reagendarCliente.mutate({ postId: id, data: day, hora: horaAtual }, {
+        onSuccess: ok,
+        onError: () => toast.error("Não consegui remarcar. Confere se o SQL da manager_reschedule_client_post foi rodado."),
+        onSettled: () => qc.invalidateQueries({ queryKey: ["client-cria-agenda-posts"] }),
+      });
     } else if (kind === "mat") {
       // Arrastar um material muda o PRAZO (due_date) dele, e isso reflete no kanban de
       // Materiais do cliente. Mesma lógica de tarefa/captação; o hook já é otimista.
@@ -1378,13 +1396,24 @@ export default function AgendaCriacao() {
               // Visualmente distintos: verde tracejado + ícone. Clicar abre o Kanban do
               // cliente na ficha dele. Como não são arrastáveis, não têm período próprio:
               // entram na faixa DERIVADA do horário deles.
-              const renderCriaCard = (p: ClientCriaAgendaPost) => {
+              /* ARRASTÁVEL desde 09/09/2026 (Walter). Antes ficava de fora do
+                 índice do dnd por medo de quebrar o arrastar dos outros, e o
+                 resultado era que o post do cliente com Cria era o único card
+                 da agenda que não dava pra mover: pra remarcar, a social mídia
+                 tinha que entrar no Cria dele.
+                 O índice continua o dos itens do dia (por isso o `base`), então
+                 as posições seguem contíguas dentro do mesmo Droppable. A
+                 escrita vai por RPC, porque o post é da conta do cliente. */
+              const renderCriaCard = (p: ClientCriaAgendaPost, i: number, base: number) => {
                 const publicado = p.status === "publicado";
                 return (
-                <button key={`cria:${p.id}`} type="button" title={p.title ?? undefined}
+                <Draggable key={`criapost:${p.id}`} draggableId={`criapost:${p.id}`} index={base + i} disableInteractiveElementBlocking>
+                  {(dragProvided, dragSnapshot) => (
+                <button type="button" title={p.title ?? undefined}
+                  ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
                   onClick={() => { setCriaDia(p.scheduled_date ?? ""); setCriaHora(p.scheduled_time?.slice(0, 5) ?? ""); setCriaCard(p); }}
-                  className={cn("rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95", publicado && "opacity-60")}
-                  style={{ borderColor: `${(p.client_color || CRIA_POST_COLOR)}80`, background: `${(p.client_color || CRIA_POST_COLOR)}0F` }}>
+                  className={cn("rounded-lg border border-dashed px-2 py-1.5 text-left w-full overflow-hidden transition-colors hover:brightness-95", publicado && "opacity-60", dragSnapshot.isDragging && "shadow-lg ring-2 ring-primary/40")}
+                  style={{ borderColor: `${(p.client_color || CRIA_POST_COLOR)}80`, background: `${(p.client_color || CRIA_POST_COLOR)}0F`, ...dragProvided.draggableProps.style }}>
                   <div className="flex items-center gap-1" style={{ color: CRIA_POST_COLOR }}>
                     <Layers className="h-3 w-3 shrink-0" />
                     <span className="text-[10px] font-body font-bold truncate flex-1 text-foreground/80">
@@ -1409,6 +1438,8 @@ export default function AgendaCriacao() {
                   </div>
                   <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", publicado ? "line-through text-muted-foreground" : "text-foreground")}>{p.title || "Post"}</p>
                 </button>
+                  )}
+                </Draggable>
                 );
               };
               // ANIVERSARIO: 7o tipo, LEMBRETE puro. Não é arrastável (fica fora do índice
@@ -1525,8 +1556,8 @@ export default function AgendaCriacao() {
                         {dayComemorativas.map(renderComemorativa)}
                         {dayBirthdays.map(renderAniv)}
                         {dayItems.map(renderItem)}
+                        {criaDay.map((p, i) => renderCriaCard(p, i, dayItems.length))}
                         {dropProvided.placeholder}
-                        {criaDay.map(renderCriaCard)}
                         {vazio}
                       </div>
                     )}
@@ -1580,8 +1611,8 @@ export default function AgendaCriacao() {
                             {f === "sem" && dayComemorativas.map(renderComemorativa)}
                             {f === "sem" && anivs.map(renderAniv)}
                             {its.map(renderItem)}
+                            {cris.map((p, i) => renderCriaCard(p, i, its.length))}
                             {dp.placeholder}
-                            {cris.map(renderCriaCard)}
                             {f !== "sem" && anivs.map(renderAniv)}
                           </div>
                         )}
