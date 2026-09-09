@@ -165,9 +165,12 @@ export default function ParceiroHome() {
         </Card>
       )}
 
-      {/* ── MÓDULOS DO CRIA: o "ir além" pros clientes diretos ── */}
+      {/* ── MÓDULOS DO CRIA: o "ir além" pros clientes diretos ──
+           id="modulos": o item "Módulos do Cria" do menu abre a home e rola até
+           aqui. Antes ele largava a pessoa no topo do dashboard e a vitrine
+           ficava escondida no rodapé (Walter, 09/09/2026). */}
       {vitrine.length > 0 && (
-        <section>
+        <section id="modulos" className="scroll-mt-24">
           <p className="flex items-center gap-2 mb-2 px-0.5">
             <Boxes className="h-4 w-4 text-primary" />
             <span className="font-display font-bold text-[15px]">Tem cliente direto também?</span>

@@ -415,7 +415,7 @@ function QuadroDoParceiro({ fila, hoje, aoAbrir, papel }: {
                         snap.isDraggingOver && "border-blue-500 bg-blue-100/50")}>
                       <p className="text-[10px] font-bold text-blue-900/80 px-1 pb-1.5 truncate">{et.nome} <span className="opacity-60">({doLane.length})</span></p>
                       {doLane.map((c, i) => (
-                        <Draggable key={c.post_id} draggableId={c.post_id} index={i}>
+                        <Draggable key={c.post_id} draggableId={c.post_id} index={i} disableInteractiveElementBlocking>
                           {(dp, ds) => (
                             <div ref={dp.innerRef} {...dp.draggableProps} {...dp.dragHandleProps}
                               style={dp.draggableProps.style}
@@ -487,9 +487,15 @@ function CartaoQuadro({ c, hoje, meta, onOpen }: {
   const atrasado = c.prazo_producao && c.prazo_producao < hoje;
   const total = meta?.checklist.length ?? 0;
   const feitos = meta?.checklist.filter((i) => i.done).length ?? 0;
+  /* NÃO É <button> (Walter, 09/09/2026): o @hello-pangea/dnd aborta o início
+     do arraste quando o nó do Draggable é um elemento interativo, e o cartão
+     inteiro era um botão. Resultado: no quadro do parceiro nada arrastava, nem
+     no mouse nem no toque. Mesmo problema, mesma correção da agenda
+     (AgendaCriacao.tsx). Vira div com papel de botão e teclado no braço. */
   return (
-    <button onClick={onOpen}
-      className="w-full text-left rounded-xl border border-border bg-card px-3 py-2.5 mb-2 shadow-sm hover:shadow transition-shadow">
+    <div role="button" tabIndex={0} onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
+      className="w-full text-left rounded-xl border border-border bg-card px-3 py-2.5 mb-2 shadow-sm hover:shadow transition-shadow cursor-pointer">
       <span className="flex items-center gap-2 mb-1.5">
         <span className="w-5 h-5 rounded-md grid place-items-center text-white text-[9px] font-bold shrink-0 overflow-hidden"
           style={{ background: c.cliente_cor || "#EA4918" }}>
@@ -518,7 +524,7 @@ function CartaoQuadro({ c, hoje, meta, onOpen }: {
           </span>
         </>
       )}
-    </button>
+    </div>
   );
 }
 

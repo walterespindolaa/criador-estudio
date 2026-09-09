@@ -107,6 +107,20 @@ export default function ManagerLayout() {
   const { allowed: hasHubCriaRaw } = useHasHubCria();
   const { data: teamPerms } = useMyTeamPermissions(actingAsTeam ? agencyOwnerId : null);
 
+  /* ROLAR ATÉ A ÂNCORA. O react-router não rola pro #hash sozinho, e os itens
+     de menu que apontam pra um pedaço da página ("Meus cachês" -> #caches,
+     "Módulos do Cria" -> #modulos) largavam a pessoa no topo, sem pista do
+     porquê de ter mudado de tela (Walter, 09/09/2026). O timeout de um quadro
+     é pra dar tempo do conteúdo da rota montar antes de procurar o elemento. */
+  useEffect(() => {
+    if (!location.hash) return;
+    const id = location.hash.slice(1);
+    const t = window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+    return () => window.clearTimeout(t);
+  }, [location.hash, location.pathname]);
+
   // Gate de módulo pro colaborador: só vê o que o gestor liberou. Gestor vê tudo.
   const canTeam = (code: string) => !actingAsTeam || (teamPerms?.has(code) ?? false);
   const modules = actingAsTeam
@@ -313,7 +327,10 @@ export default function ManagerLayout() {
           {railHovered && !parceiroPuro && (modules.length > 0 || hasHubCria) && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Módulos</p>}
           {/* Parceiro puro: UMA porta pros módulos (a home mostra os cards),
              em vez de cinco ícones de cadeado enfileirados. */}
-          {parceiroPuro && railNode(Boxes, "Módulos do Cria", { active: false, onClick: () => navigate("/socialmidia/dashboard") })}
+          {parceiroPuro && railNode(Boxes, "Módulos do Cria", {
+            active: false,
+            onClick: () => navigate("/socialmidia/dashboard#modulos"),
+          })}
           {!parceiroPuro && modules
             // hub_extra é PACOTE DE CRÉDITO, não é módulo nem destino: ele não
             // pode virar item de menu (a pessoa clica esperando abrir algo).
@@ -346,9 +363,18 @@ export default function ManagerLayout() {
           {/* Parceiro puro: do bloco Negócio só as Comissões interessam
              (Relatório/Parceria/Contas são coisa de quem tem operação). */}
           {/* Comissões é o programa de AFILIADO (cupom Stripe), não o cachê do
-             parceiro: pro parceiro puro o item vira "Meus cachês", que mora em
-             Marcas que atendo (auditoria 07/09). */}
-          {parceiroPuro && railNode(DollarSign, "Meus cachês", { active: false, onClick: () => navigate("/socialmidia/marcas") })}
+             parceiro. O item "Meus cachês" apontava pra MESMA tela de "Marcas
+             que atendo", com active:false: dois itens abrindo a mesma coisa e
+             nenhum acendendo (Walter, 09/09/2026). Agora vai com âncora, a
+             tela rola até o bloco de cachês e o item acende. */}
+          {parceiroPuro && railNode(DollarSign, "Meus cachês", {
+            active: isActive("/socialmidia/marcas") && location.hash === "#caches",
+            onClick: () => navigate("/socialmidia/marcas#caches"),
+          })}
+          {/* PARCERIA e LIXEIRA faltavam pro parceiro (Walter, 09/09/2026).
+             Indicar o CRIA e ganhar comissão vale pra ele igual, e apagar sem
+             ter como recuperar é o tipo de porta que não pode faltar. */}
+          {parceiroPuro && railNode(Handshake, "Parceria", { active: isActive("/socialmidia/parceria"), onClick: () => navigate("/socialmidia/parceria") })}
           {BUSINESS_NAV.filter((n) => !parceiroPuro).map((n) => {
             const onClick = n.to === "/socialmidia/comissoes" ? onNavComissoes : () => navigate(n.to);
             return railNode(n.icon as LucideIcon, n.label, { active: isActive(n.to), onClick });
@@ -357,7 +383,7 @@ export default function ManagerLayout() {
         <div className="flex-1" />
         <div className="my-2 h-px w-full bg-border" />
         <div className="flex w-full flex-col items-stretch gap-1">
-          {!parceiroPuro && railNode(Trash2, "Lixeira", { active: isActive("/socialmidia/lixeira"), onClick: () => navigate("/socialmidia/lixeira") })}
+          {railNode(Trash2, "Lixeira", { active: isActive("/socialmidia/lixeira"), onClick: () => navigate("/socialmidia/lixeira") })}
           {railNode(SettingsIcon, "Configurações", { onClick: () => setSettingsOpen(true), dataTour: "nav-config" })}
           {railNode(LogOut, "Sair", { onClick: handleSignOut })}
         </div>

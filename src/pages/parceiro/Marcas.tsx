@@ -23,7 +23,10 @@ export default function Marcas() {
           cachê combinado no card, lançado no Caixa dela quando você entrega.
           Só aparece quando existe algum lançamento. */}
       {caches.length > 0 && (
-        <Card className="rounded-2xl border-border p-4 sm:p-5">
+        /* id="caches": alvo do item "Meus cachês" do menu, que abre esta mesma
+           tela. Sem a âncora o clique largava a pessoa no topo e ela não via
+           por que tinha ido parar ali (Walter, 09/09/2026). */
+        <Card id="caches" className="rounded-2xl border-border p-4 sm:p-5 scroll-mt-24">
           <div className="flex items-center gap-2 mb-3">
             <span className="h-8 w-8 rounded-xl bg-green-100 text-green-700 grid place-items-center"><Wallet className="h-4 w-4" /></span>
             <div>
