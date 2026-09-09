@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -721,6 +722,7 @@ const ROTULO_APROVACAO: Record<string, { txt: string; cls: string }> = {
 };
 
 export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFechar: () => void }) {
+  const navigate = useNavigate();
   const { data: card, isLoading } = useCardDoParceiro(postId);
   const { marcar, comentar, responderPrazo, anexar } = useAcoesDoParceiro(postId);
   const [texto, setTexto] = useState("");
@@ -1013,32 +1015,25 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                     negociação no meio da produção. Dinheiro fica no Caixa da
                     agência, que é onde o acerto acontece de verdade. */}
 
-                <div className="rounded-xl border border-border bg-background px-3.5 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-2"><Palette className="h-3 w-3" /> A marca</p>
-                  {/* O logo do cliente: quem monta a arte precisa dele à mão,
-                      e ele já vinha no card sem ser desenhado. */}
-                  {card.marca.logo && (
-                    <a href={card.marca.logo} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 mb-2 group" title="Abrir o logo em tamanho cheio">
-                      <span className="w-9 h-9 rounded-lg border border-border bg-background overflow-hidden grid place-items-center shrink-0">
-                        <img src={card.marca.logo} alt="" className="w-full h-full object-contain" loading="lazy" />
-                      </span>
-                      <span className="text-[11px] font-body font-bold text-primary group-hover:underline">abrir o logo</span>
-                    </a>
-                  )}
-                  {card.marca.cor && (
-                    <button
-                      onClick={() => void copiar(card.marca.cor!, `${card.marca.cor} copiado.`)}
-                      className="flex items-center gap-2 mb-2" title="Copiar o hex">
-                      <span className="w-7 h-7 rounded-lg border border-border" style={{ background: card.marca.cor }} />
-                      <span className="text-xs font-mono text-muted-foreground">{card.marca.cor}</span>
-                    </button>
-                  )}
-                  {card.marca.handle && <p className="text-xs font-body text-muted-foreground">@{card.marca.handle.replace(/^@/, "")}</p>}
-                  {(card.marca.hashtags?.length ?? 0) > 0 && (
-                    <p className="text-[11px] font-body text-muted-foreground mt-1.5 leading-relaxed">{card.marca.hashtags!.slice(0, 6).join(" ")}</p>
-                  )}
-                </div>
+                {/* A MARCA VIROU UMA LINHA (Walter, 09/09/2026). Cor, hashtags
+                    e logo eram repetidos em TODO card, e isso não é informação
+                    de peça, é de cliente: agora mora na ficha da marca, em
+                    "Marcas que atendo". Aqui fica o essencial pra reconhecer de
+                    quem é a peça, e a porta pra ficha. */}
+                <button type="button" onClick={() => navigate("/socialmidia/marcas")}
+                  className="w-full flex items-center gap-2.5 rounded-xl border border-border bg-background px-3.5 py-3 text-left hover:border-primary/40 transition-colors">
+                  <span className="w-8 h-8 rounded-full border border-border bg-card overflow-hidden grid place-items-center shrink-0"
+                    style={{ background: card.marca.logo ? undefined : (card.marca.cor || "#4B3FA8") }}>
+                    {card.marca.logo
+                      ? <img src={card.marca.logo} alt="" className="w-full h-full object-contain" loading="lazy" />
+                      : <span className="text-white font-display font-bold text-[13px]">{(card.marca.nome || "C").charAt(0).toUpperCase()}</span>}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] font-display font-bold text-foreground truncate">{card.marca.nome || "Cliente"}</span>
+                    <span className="block text-[11px] font-body text-primary font-semibold">ver a ficha da marca</span>
+                  </span>
+                  {card.marca.cor && <span className="w-4 h-4 rounded-md border border-border shrink-0" style={{ background: card.marca.cor }} />}
+                </button>
 
                 {card.pasta_drive && (
                   <a href={card.pasta_drive} target="_blank" rel="noopener noreferrer"

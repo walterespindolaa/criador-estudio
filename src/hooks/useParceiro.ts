@@ -332,6 +332,53 @@ export function useMinhasAgencias() {
   });
 }
 
+/* ── A FICHA DA MARCA ───────────────────────────────────────────────────── */
+
+/** Uma marca que eu atendo, com tudo que serve pra PRODUZIR.
+ *  A identidade vinha repetida dentro de cada card de peça; ela não é
+ *  informação de peça, é de cliente (Walter, 09/09/2026, olhando o Trello da
+ *  Gabriela: lá existe um card fixo "Infos Clientes" por cliente). */
+export type MarcaDoParceiro = {
+  external_client_id: string;
+  nome: string;
+  handle: string | null;
+  logo: string | null;
+  cor: string | null;
+  hashtags: string[] | null;
+  agencia_id: string;
+  agencia_nome: string;
+  abertos: number;
+  entregues_30d: number;
+  paleta: string | null;
+  fontes: string | null;
+  tom_de_voz: string | null;
+  temas: string | null;
+  evitar: string | null;
+  observacoes: string | null;
+  segmento: string | null;
+  referencias: { url: string; nota: string | null }[] | null;
+};
+
+/** As marcas de quem eu já peguei peça, com a identidade e as regras delas.
+ *  Vínculo com a agência não basta pra aparecer aqui: seria abrir a carteira
+ *  inteira do gestor pra quem foi contratado pra três posts. */
+export function useMinhasMarcas() {
+  const { user } = useAuth();
+  return useQuery<MarcaDoParceiro[]>({
+    queryKey: ["parceiro-marcas", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("parceiro_minhas_marcas");
+      if (error) {
+        // Migration ainda não rodou: lista vazia em vez de tela quebrada.
+        if (/does not exist|schema cache/i.test(error.message)) return [];
+        throw error;
+      }
+      return (data ?? []) as MarcaDoParceiro[];
+    },
+  });
+}
+
 /* ── O LADO DA SOCIAL MÍDIA ─────────────────────────────────────────────── */
 
 /** Os parceiros ativos da agência, pro botão "Enviar para". */
