@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Activity, Brain, Building2, ChevronDown, Download, FileText, FileUp, Heart, HeartCrack, HelpCircle,
-  Image as ImageIcon, ImagePlus, Instagram, Lightbulb, Maximize2, MessageSquare, Mic, Minimize2,
+  Image as ImageIcon, ImagePlus, Instagram, Lightbulb, Loader2, Maximize2, MessageSquare, Mic, Minimize2,
   Palette, Pencil, Plus, Save, ShieldAlert, Sparkles, Tags, Target, Trash2, Type, Upload, UserRound, X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -12,6 +12,8 @@ import {
 import { BrandbookImport } from "@/components/brandbook/BrandbookImport";
 import { CORES_LINHA, useEditorialLineActions, useEditorialLinesByCrm } from "@/hooks/useEditorialLines";
 import { MetasPanel } from "@/components/metas/MetasPanel";
+import { useExternalClients } from "@/hooks/useCriaPost";
+import { useQueryClient } from "@tanstack/react-query";
 import { RelatorioImport } from "@/components/brandbook/RelatorioImport";
 import { BriefingCliente } from "@/components/accounts/crm/BriefingCliente";
 import { LinkCadastroCliente } from "@/components/accounts/crm/LinkCadastroCliente";
@@ -598,11 +600,11 @@ export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincroni
         {/* LINHAS EDITORIAIS: deixam de ser texto e viram entidade. Cada post
             do cliente pode receber uma, e ela aparece do cronograma público
             até a publicação (pedido do Walter, 30/08). */}
-        <LinhasEditoriaisCard crmClientId={form.id} />
+        <LinhasEditoriaisCard crmClientId={form.id} nomeCliente={form.name} />
 
         {/* METAS DO CLIENTE (pedido do Walter, 31/08): metas combinadas com
             este cliente moram na estratégia dele, com criada em/concluída em. */}
-        <MetasDoClienteCard crmClientId={form.id} />
+        <MetasDoClienteCard crmClientId={form.id} nomeCliente={form.name} />
 
         </TabsContent>
 
@@ -821,14 +823,38 @@ export function PersonaEditor({ form, setForm, isCria }: { form: CrmClient; setF
    conta de posts vinculada, explicamos em vez de quebrar. */
 /* Metas do CLIENTE na estratégia. Reusa a mesma resolução ficha → conta do
    Cria Post das linhas editoriais (a meta vive pendurada no external client). */
-function MetasDoClienteCard({ crmClientId }: { crmClientId: string }) {
+/* DESTRAVAR SEM SAIR DAQUI (Walter, 09/09/2026)
+   Linha editorial e meta são decisão de ESTRATÉGIA, tomadas nesta tela. Só que
+   as duas moram penduradas no cliente do Cria Post (é lá que a etiqueta vive,
+   no post e no cronograma), e quando a ficha ainda não tinha essa conta a tela
+   dizia "vá criar o cliente na tela de posts" e parava. Mandar a pessoa pra
+   outro módulo pra continuar uma decisão que ela está tomando aqui é atrito
+   puro. Agora ela cria o vínculo no lugar, com um clique, e continua. */
+function DestravarComPosts({ crmClientId, nomeCliente, texto }: { crmClientId: string; nomeCliente: string; texto: string }) {
+  const { create } = useExternalClients();
+  const qc = useQueryClient();
+  return (
+    <div className="bg-muted/40 border border-border rounded-xl px-3 py-2.5 space-y-2">
+      <p className="text-[12px] font-body text-muted-foreground">{texto}</p>
+      <Button type="button" size="sm" disabled={create.isPending}
+        onClick={() => {
+          create.mutate({ name: (nomeCliente || "Cliente").trim(), crm_client_id: crmClientId }, {
+            onSuccess: () => { void qc.invalidateQueries({ queryKey: ["editorial-lines-external"] }); },
+          });
+        }}>
+        {create.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Ativar agora"}
+      </Button>
+    </div>
+  );
+}
+
+function MetasDoClienteCard({ crmClientId, nomeCliente }: { crmClientId: string; nomeCliente: string }) {
   const { externalId, resolvendo } = useEditorialLinesByCrm(crmClientId);
   return (
     <Card icon={<Target />} title="Metas deste cliente">
       {resolvendo ? null : !externalId ? (
-        <p className="text-[12px] font-body text-muted-foreground bg-muted/40 border border-border rounded-xl px-3 py-2.5">
-          Este cliente ainda não tem a conta do Cria Post vinculada. Vincule a ficha e as metas destravam aqui.
-        </p>
+        <DestravarComPosts crmClientId={crmClientId} nomeCliente={nomeCliente}
+          texto="As metas ficam penduradas no cliente do Cria Post, que esta ficha ainda não tem. É um clique e elas destravam aqui." />
       ) : (
         <MetasPanel scope="cliente" externalClientId={externalId} compacto />
       )}
@@ -836,7 +862,7 @@ function MetasDoClienteCard({ crmClientId }: { crmClientId: string }) {
   );
 }
 
-function LinhasEditoriaisCard({ crmClientId }: { crmClientId: string }) {
+function LinhasEditoriaisCard({ crmClientId, nomeCliente }: { crmClientId: string; nomeCliente: string }) {
   const { externalId, resolvendo, lines } = useEditorialLinesByCrm(crmClientId);
   const acoes = useEditorialLineActions(externalId);
   const [nome, setNome] = useState("");
@@ -856,10 +882,8 @@ function LinhasEditoriaisCard({ crmClientId }: { crmClientId: string }) {
         linha, e ela aparece no cronograma que o cliente aprova e segue no post até publicar.
       </p>
       {resolvendo ? null : !externalId ? (
-        <p className="text-[12px] font-body text-muted-foreground bg-muted/40 border border-border rounded-xl px-3 py-2.5">
-          Este cliente ainda não tem a conta do Cria Post vinculada. Crie o cliente na tela de
-          posts (ou vincule a ficha) e as linhas editoriais destravam aqui.
-        </p>
+        <DestravarComPosts crmClientId={crmClientId} nomeCliente={nomeCliente}
+          texto="A linha editorial é uma etiqueta que vive nos posts do cliente, e esta ficha ainda não tem o Cria Post ativo. É um clique e as linhas destravam aqui." />
       ) : (
         <>
           {lines.length > 0 && (
