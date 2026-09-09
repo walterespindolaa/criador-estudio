@@ -616,7 +616,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
           <PopoverTrigger asChild>
             <button className={`inline-flex items-center gap-1 text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${filter.preset === "custom" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
               <CalendarDays className="h-3.5 w-3.5" />
-              {filter.preset === "custom" && (filter.from || filter.to) ? `${ddmm(filter.from) || "…"} – ${ddmm(filter.to) || "…"}` : "Período"}
+              {filter.preset === "custom" && (filter.from || filter.to) ? `${ddmm(filter.from) || "..."} a ${ddmm(filter.to) || "..."}` : "Período"}
             </button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-64">
@@ -1051,6 +1051,20 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                       </button>
                     ))}
                   </div>
+                  {/* A OBSERVAÇÃO da linha escolhida aparece aqui, na hora de
+                      escrever. Ela é o combinado do que entra nessa linha, e
+                      guardada só na estratégia ninguém lê no momento que
+                      importa (Walter, 09/09/2026). */}
+                  {(() => {
+                    const sel = editorialLines.find((el) => el.id === f.editorial_line_id);
+                    if (!sel?.descricao?.trim()) return null;
+                    return (
+                      <p className="mt-2 rounded-xl border px-2.5 py-2 text-[12px] font-body leading-relaxed"
+                        style={{ borderColor: `${sel.color}55`, background: `${sel.color}0F`, color: "inherit" }}>
+                        {sel.descricao}
+                      </p>
+                    );
+                  })()}
                 </div>
               )}
 

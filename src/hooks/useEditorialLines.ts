@@ -78,10 +78,11 @@ export function useEditorialLineActions(externalClientId: string | null) {
   const invalidar = () => void qc.invalidateQueries({ queryKey: ["editorial-lines", externalClientId] });
 
   const criar = useMutation({
-    mutationFn: async (v: { name: string; color: string; ordem: number }) => {
+    mutationFn: async (v: { name: string; color: string; ordem: number; descricao?: string | null }) => {
       const { error } = await sbFrom("editorial_lines").insert({
         manager_id: agencyOwnerId, external_client_id: externalClientId,
         name: v.name.trim(), color: v.color, sort_order: v.ordem,
+        descricao: v.descricao?.trim() || null,
       } as never);
       if (error) throw error;
     },
@@ -90,10 +91,13 @@ export function useEditorialLineActions(externalClientId: string | null) {
   });
 
   const atualizar = useMutation({
-    mutationFn: async (v: { id: string; name?: string; color?: string }) => {
-      const patch: Record<string, string> = {};
+    mutationFn: async (v: { id: string; name?: string; color?: string; descricao?: string | null }) => {
+      const patch: Record<string, string | null> = {};
       if (v.name !== undefined) patch.name = v.name.trim();
       if (v.color !== undefined) patch.color = v.color;
+      // A observação é o combinado do que entra nessa linha. Vazia vira null,
+      // pra não gravar string em branco e ter que testar os dois casos depois.
+      if (v.descricao !== undefined) patch.descricao = v.descricao?.trim() || null;
       const { error } = await sbFrom("editorial_lines").update(patch as never).eq("id", v.id);
       if (error) throw error;
     },

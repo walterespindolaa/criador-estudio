@@ -10,7 +10,7 @@ import {
   useUploadCrmAsset, type CrmClient,
 } from "@/hooks/useCrm";
 import { BrandbookImport } from "@/components/brandbook/BrandbookImport";
-import { CORES_LINHA, useEditorialLineActions, useEditorialLinesByCrm } from "@/hooks/useEditorialLines";
+import { CORES_LINHA, useEditorialLineActions, useEditorialLinesByCrm, type EditorialLine } from "@/hooks/useEditorialLines";
 import { MetasPanel } from "@/components/metas/MetasPanel";
 import { useExternalClients } from "@/hooks/useCriaPost";
 import { useQueryClient } from "@tanstack/react-query";
@@ -862,6 +862,46 @@ function MetasDoClienteCard({ crmClientId, nomeCliente }: { crmClientId: string;
   );
 }
 
+/* UMA LINHA DA LISTA, com a OBSERVAÇÃO editável (Walter, 09/09/2026).
+   A linha editorial sozinha é só uma palavra: "Autoridade" quer dizer coisas
+   diferentes em cada cliente. A observação é o combinado do que entra ali, e é
+   o que a social mídia (ou quem escrever o post no lugar dela) precisa reler na
+   hora de produzir. Salva ao sair do campo, sem botão: é anotação, não
+   formulário. */
+function LinhaEditorialItem({ el, acoes }: { el: EditorialLine; acoes: ReturnType<typeof useEditorialLineActions> }) {
+  const [obs, setObs] = useState(el.descricao ?? "");
+  const salvo = useRef(el.descricao ?? "");
+  useEffect(() => { setObs(el.descricao ?? ""); salvo.current = el.descricao ?? ""; }, [el.descricao]);
+
+  const salvar = () => {
+    if (obs.trim() === salvo.current.trim()) return;
+    salvo.current = obs;
+    acoes.atualizar.mutate({ id: el.id, descricao: obs });
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-2.5">
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold"
+          style={{ borderColor: `${el.color}66`, background: `${el.color}14`, color: el.color }}>
+          <span className="w-2 h-2 rounded-full" style={{ background: el.color }} />
+          {el.name}
+        </span>
+        <button type="button" aria-label={`Excluir ${el.name}`}
+          onClick={() => void acoes.excluir.mutateAsync(el.id)}
+          className="ml-auto text-muted-foreground/60 hover:text-destructive">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <Textarea
+        rows={2} value={obs} onChange={(e) => setObs(e.target.value)} onBlur={salvar}
+        placeholder="Observação: o que entra nesta linha, o que evitar, exemplos."
+        className="mt-2 rounded-xl text-[12.5px] font-body resize-y"
+      />
+    </div>
+  );
+}
+
 function LinhasEditoriaisCard({ crmClientId, nomeCliente }: { crmClientId: string; nomeCliente: string }) {
   const { externalId, resolvendo, lines } = useEditorialLinesByCrm(crmClientId);
   const acoes = useEditorialLineActions(externalId);
@@ -887,19 +927,8 @@ function LinhasEditoriaisCard({ crmClientId, nomeCliente }: { crmClientId: strin
       ) : (
         <>
           {lines.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-3">
-              {lines.map((el) => (
-                <span key={el.id} className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold"
-                  style={{ borderColor: `${el.color}66`, background: `${el.color}14`, color: el.color }}>
-                  <span className="w-2 h-2 rounded-full" style={{ background: el.color }} />
-                  {el.name}
-                  <button type="button" aria-label={`Excluir ${el.name}`}
-                    onClick={() => void acoes.excluir.mutateAsync(el.id)}
-                    className="ml-0.5 opacity-60 hover:opacity-100">
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
+            <div className="space-y-2 mb-3">
+              {lines.map((el) => <LinhaEditorialItem key={el.id} el={el} acoes={acoes} />)}
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2">
