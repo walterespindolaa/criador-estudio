@@ -11,7 +11,7 @@ import { useModules } from "@/hooks/useModules";
 import { hojeBR } from "@/lib/date-br";
 import { cn } from "@/lib/utils";
 import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
-import { useAcoesLancamento, useMeusCaches, useMeusCachesDetalhe, useMeusLancamentos, type LancamentoDoParceiro } from "@/hooks/useParceiro";
+import { useAcoesLancamento, useMeusCaches, useMeusCachesDetalhe, useMeusLancamentos, useMinhasAgencias, useMinhasMarcas, type LancamentoDoParceiro } from "@/hooks/useParceiro";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MEUS CACHÊS
@@ -33,6 +33,8 @@ export default function Caches() {
   const { data: porAgencia = [] } = useMeusCaches();
   const { data: linhas = [], isLoading } = useMeusCachesDetalhe();
   const { data: meus = [] } = useMeusLancamentos();
+  const { data: marcas = [] } = useMinhasMarcas();
+  const { data: agencias = [] } = useMinhasAgencias();
   const { salvar, excluir } = useAcoesLancamento();
   const { openModule } = useManagerOutlet();
   const { modules } = useModules();
@@ -55,6 +57,18 @@ export default function Caches() {
   }), [meus, filtro]);
 
   const criaCaixa = modules.find((m) => m.code === "criacaixa" || /caixa/i.test(m.name));
+
+  /* SUGESTÕES DE CLIENTE (Walter, 09/09/2026): digitar o nome na mão toda vez
+     erra a grafia e quebra o agrupamento depois. As marcas que ele já atende e
+     as agências que o acoplaram viram sugestão, mas o campo continua livre,
+     porque metade do trabalho dele vem de gente que não está no Cria. */
+  const sugestoes = useMemo(() => {
+    const nomes = new Set<string>();
+    for (const m of marcas) if (m.nome?.trim()) nomes.add(m.nome.trim());
+    for (const a of agencias) if (a.agencia_nome?.trim()) nomes.add(a.agencia_nome.trim());
+    for (const l of meus) if (l.cliente?.trim()) nomes.add(l.cliente.trim());
+    return Array.from(nomes).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [marcas, agencias, meus]);
 
   const visiveis = useMemo(() => linhas.filter((l) => {
     if (filtro === "tudo") return true;
@@ -266,8 +280,23 @@ export default function Caches() {
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Cliente ou agência</Label>
-              <Input value={editando?.cliente ?? ""} placeholder="Ex.: Zephyr Investimentos, ou o nome da agência"
+              <Input value={editando?.cliente ?? ""} list="parceiro-clientes"
+                placeholder={sugestoes.length > 0 ? "Escolha da lista ou digite" : "Ex.: Zephyr Investimentos, ou o nome da agência"}
                 onChange={(e) => setEditando((p) => ({ ...(p ?? {}), cliente: e.target.value }))} />
+              <datalist id="parceiro-clientes">
+                {sugestoes.map((n) => <option key={n} value={n} />)}
+              </datalist>
+              {sugestoes.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {sugestoes.slice(0, 6).map((n) => (
+                    <button key={n} type="button" onClick={() => setEditando((p) => ({ ...(p ?? {}), cliente: n }))}
+                      className={cn("text-[11px] font-body px-2 py-1 rounded-lg border transition-colors",
+                        editando?.cliente === n ? "border-primary bg-primary/10 text-primary font-bold" : "border-border bg-card text-muted-foreground hover:text-foreground")}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">O que foi <span className="font-normal text-muted-foreground">opcional</span></Label>

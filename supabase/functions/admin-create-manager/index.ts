@@ -138,9 +138,14 @@ serve(async (req) => {
     if (caller?.role !== "admin") return json({ error: "forbidden" }, 403);
 
     const body = await req.json();
-    const { name, email, phone, modules, creator } = body as {
+    const { name, email, phone, modules, creator, tipo, parceiro_role } = body as {
       name?: string; email?: string; phone?: string; modules?: string[];
       creator?: { email?: string; plan?: string } | null;
+      /* TIPO DE CONTA (09/09/2026): a mesma edge cria social mídia e PARCEIRO
+         (designer, editor, copy, tráfego). Antes o parceiro só nascia por
+         convite de uma agência, então o admin não tinha como criar um. */
+      tipo?: "manager" | "parceiro";
+      parceiro_role?: string;
     };
     if (!email || !name) {
       return json({ error: "missing_fields", message: "Nome e e-mail são obrigatórios." }, 400);
@@ -161,7 +166,11 @@ serve(async (req) => {
     const warnings: string[] = [];
 
     // 1) Cria a social media (manager)
-    const mgr = await inviteUser(svc, managerEmail, origin, "/socialmidia/dashboard");
+    const ehParceiro = tipo === "parceiro";
+    const papelParceiro = ["designer", "editor_video", "copy", "trafego"].includes(parceiro_role ?? "")
+      ? parceiro_role! : "designer";
+    // O parceiro pousa na fila dele, não no dashboard de gestão.
+    const mgr = await inviteUser(svc, managerEmail, origin, ehParceiro ? "/socialmidia/demandas" : "/socialmidia/dashboard");
     if ("error" in mgr) {
       console.error("[admin-create-manager] inviteUser (gestão) falhou:", mgr.error);
       return json({ error: "link_failed", message: `Não consegui gerar o acesso de ${managerEmail}: ${mgr.error.slice(0, 200)}` }, 400);
@@ -170,7 +179,10 @@ serve(async (req) => {
     // perfil ficou pra trás, o update em cima de 0 linhas "passava" sem criar
     // nada e a conta nascia quebrada. O upsert cura a meia-criação.
     const { error: profErr } = await svc.from("profiles").upsert({
-      id: mgr.userId, name, phone: phone ?? null, account_type: "manager", must_change_password: true,
+      id: mgr.userId, name, phone: phone ?? null,
+      account_type: ehParceiro ? "parceiro" : "manager",
+      ...(ehParceiro ? { parceiro_role: papelParceiro, plan: "free", trial_started_at: null, trial_ends_at: null } : {}),
+      must_change_password: true,
     }, { onConflict: "id" });
     if (profErr) {
       console.error("[admin-create-manager] perfil (gestão) falhou:", profErr);
@@ -189,8 +201,11 @@ serve(async (req) => {
         warnings.push(`Conta criada, mas os pacotes não foram liberados (${entErr.message.slice(0, 120)}). Libere manualmente.`);
       }
     }
-    const mailOk = await sendInvite(svc, managerEmail, "Sua conta de social media está pronta",
-      "Criamos sua conta de gestão no cria. Clique no botão para acessar e definir sua senha.", mgr.actionLink);
+    const mailOk = ehParceiro
+      ? await sendInvite(svc, managerEmail, "Sua conta de parceiro no cria está pronta",
+          "Criamos sua conta no cria. As agências que te acoplarem mandam as peças direto pra sua fila. Clique no botão para acessar e definir sua senha.", mgr.actionLink)
+      : await sendInvite(svc, managerEmail, "Sua conta de social media está pronta",
+          "Criamos sua conta de gestão no cria. Clique no botão para acessar e definir sua senha.", mgr.actionLink);
     if (!mailOk) warnings.push("Conta criada, mas o e-mail de boas-vindas falhou: reenvie por Ações.");
 
     // 3) Conta de criadora (Cria normal) com outro e-mail (opcional)

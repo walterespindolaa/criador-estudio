@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useProfile } from "@/hooks/useProfile";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -86,6 +87,11 @@ export default function MinhasDemandas() {
   const { data: agencias = [] } = useMinhasAgencias();
   const [aberto, setAberto] = useState<string | null>(null);
   const [visao, setVisao] = useState<"prazo" | "quadro" | "cliente" | "semana" | "mes">("prazo");
+  /* Quem se cadastrou como parceiro por conta própria ainda não tem agência
+     nenhuma, e sem papel o quadro nascia sem etapas. O papel do perfil serve
+     de base até a primeira agência acoplar (Walter, 09/09/2026). */
+  const { profile } = useProfile();
+  const papelDoPerfil = (profile as { parceiro_role?: string | null } | null)?.parceiro_role ?? null;
   const hoje = hojeBR();
   const grupos = useMemo(() => porDia(fila), [fila]);
   const venceHoje = fila.filter((c) => c.prazo_producao === hoje).length;
@@ -162,7 +168,7 @@ export default function MinhasDemandas() {
         ) : visao === "semana" ? (
           <SemanaDoParceiro fila={fila} hoje={hoje} aoAbrir={setAberto} />
         ) : visao === "quadro" ? (
-          <QuadroDoParceiro fila={fila} hoje={hoje} aoAbrir={setAberto} papel={agencias[0]?.meu_papel ?? null} />
+          <QuadroDoParceiro fila={fila} hoje={hoje} aoAbrir={setAberto} papel={agencias[0]?.meu_papel ?? papelDoPerfil} />
         ) : visao === "cliente" ? (
           <PorClienteDoParceiro fila={fila} hoje={hoje} aoAbrir={setAberto} />
         ) : visao === "mes" ? (

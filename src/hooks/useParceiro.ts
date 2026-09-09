@@ -647,8 +647,15 @@ export function useDelegarPost() {
   });
 }
 
-/** Sou parceiro de alguém? Decide se o item "Minhas demandas" aparece e se o
- *  login cai direto na fila. Papel de parceiro em QUALQUER vínculo ativo basta. */
+/** Sou parceiro? Decide se o item "Minhas demandas" aparece e se o login cai
+ *  direto na fila.
+ *
+ *  DUAS ORIGENS desde 09/09/2026. Antes só valia o VÍNCULO: papel de parceiro
+ *  em algum manager_members ativo. Isso deixava de fora quem se cadastra como
+ *  parceiro por conta própria e ainda não foi acoplado por ninguém, que caía na
+ *  casca da gestão como se fosse uma agência vazia. Agora o tipo da conta
+ *  (`account_type = 'parceiro'`) também vale, e o vínculo continua valendo
+ *  sozinho pra não quebrar quem já entrou por convite. */
 export function useSouParceiro() {
   const { user } = useAuth();
   return useQuery<boolean>({
@@ -656,6 +663,10 @@ export function useSouParceiro() {
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
+      const { data: perfil } = await sbFrom("profiles")
+        .select("account_type").eq("id", user!.id).maybeSingle();
+      if ((perfil as { account_type?: string | null } | null)?.account_type === "parceiro") return true;
+
       const { data, error } = await sbFrom("manager_members")
         .select("role")
         .eq("member_id", user!.id)

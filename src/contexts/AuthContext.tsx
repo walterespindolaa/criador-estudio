@@ -43,14 +43,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, name: string, meta?: Record<string, unknown>) => {
-    const isManager = meta?.account_intent === "manager";
+    const intencao = meta?.account_intent;
+    /* Cada tipo de conta pousa no lugar dele: social mídia no onboarding da
+       agência, parceiro direto na fila de demandas (ele não tem onboarding de
+       criador nem de agência) e criador no onboarding normal. */
+    const destino = intencao === "manager" ? "/comecar-agencia"
+      : intencao === "parceiro" ? "/socialmidia/demandas"
+      : "/onboarding";
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { name, ...(meta ?? {}) },
-        // Social mídia cai no onboarding da agência; criador no onboarding normal.
-        emailRedirectTo: `${window.location.origin}${isManager ? "/comecar-agencia" : "/onboarding"}`,
+        emailRedirectTo: `${window.location.origin}${destino}`,
       },
     });
     // Sem sessão de volta = o projeto exige confirmação por e-mail. Com sessão, a

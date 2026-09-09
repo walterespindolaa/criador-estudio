@@ -21,7 +21,11 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
   const navigate = useNavigate();
   const t = useT();
   const { signUp } = useAuth();
-  const [accountType, setAccountType] = useState<"creator" | "manager">(defaultManager ? "manager" : "creator");
+  const [accountType, setAccountType] = useState<"creator" | "manager" | "parceiro">(defaultManager ? "manager" : "creator");
+  /* Papel do parceiro. Define o vocabulário do quadro dele já no primeiro
+     acesso (Referências/Rascunho/Arte final pro designer, Decupagem/Corte/
+     Finalização pro editor) sem depender de agência nenhuma. */
+  const [parceiroRole, setParceiroRole] = useState<"designer" | "editor_video" | "copy" | "trafego">("designer");
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailValue, setEmailValue] = useState("");
@@ -80,7 +84,9 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
     setEmailValue(data.email);
     setFormError(null);
     setLoading(true);
-    const meta = accountType === "manager" ? { account_intent: "manager" } : undefined;
+    const meta = accountType === "manager" ? { account_intent: "manager" }
+      : accountType === "parceiro" ? { account_intent: "parceiro", parceiro_role: parceiroRole }
+      : undefined;
     const { error, needsConfirmation } = await signUp(data.email, data.password, data.name, meta);
     setLoading(false);
     if (error) {
@@ -90,7 +96,7 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
       setFormError(mapped.text);
       toast.error(mapped.text);
     } else {
-      track("CompleteRegistration", { content_name: accountType === "manager" ? "signup_agency" : "signup_email" });
+      track("CompleteRegistration", { content_name: accountType === "manager" ? "signup_agency" : accountType === "parceiro" ? "signup_parceiro" : "signup_email" });
       // Só mostra "confirme seu e-mail" quando o projeto REALMENTE exige confirmação.
       // Com o auto-confirm ligado a sessão já veio: a pessoa entra direto e quem leva
       // pro onboarding é o roteador, que reage à sessão nova.
@@ -100,7 +106,9 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
         toast.success("Conta criada! Bem-vinda ao CRIA.");
         // Mesmo destino do emailRedirectTo: sem guarda de rota pública, sem esse
         // navigate a pessoa ficava parada na tela de cadastro mesmo já logada.
-        navigate(accountType === "manager" ? "/comecar-agencia" : "/onboarding", { replace: true });
+        navigate(accountType === "manager" ? "/comecar-agencia"
+          : accountType === "parceiro" ? "/socialmidia/demandas"
+          : "/onboarding", { replace: true });
       }
     }
   };
@@ -183,7 +191,10 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
               {/* Tipo de conta */}
               <div className="mb-6">
                 <p className="text-xs [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]/60 uppercase tracking-wider mb-2">Você é</p>
-                <div className="grid grid-cols-2 gap-2">
+                {/* TRÊS TIPOS desde 09/09/2026. O parceiro (designer, editor,
+                    copy, tráfego) só existia como consequência de convite da
+                    agência: quem descobria o CRIA sozinho não tinha porta. */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <button type="button" onClick={() => setAccountType("creator")}
                     className={`rounded-2xl border-2 p-3 text-left transition-all duration-200 ${accountType === "creator" ? "border-[#EA4918] bg-[#FBE9E1] -translate-y-0.5 shadow-[0_4px_0_rgba(21,20,18,0.85)]" : "border-[#0A0A0A]/20 hover:border-[#0A0A0A]/50"}`}>
                     <span className="block text-sm [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">Criador de conteúdo</span>
@@ -194,7 +205,30 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
                     <span className="block text-sm [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">Social mídia / agência</span>
                     <span className="block text-[11px] font-body text-[#0A0A0A]/60 leading-snug mt-0.5">Gerencio clientes e equipe</span>
                   </button>
+                  <button type="button" onClick={() => setAccountType("parceiro")}
+                    className={`rounded-2xl border-2 p-3 text-left transition-all duration-200 ${accountType === "parceiro" ? "border-[#EA4918] bg-[#FBE9E1] -translate-y-0.5 shadow-[0_4px_0_rgba(21,20,18,0.85)]" : "border-[#0A0A0A]/20 hover:border-[#0A0A0A]/50"}`}>
+                    <span className="block text-sm [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">Designer / editor</span>
+                    <span className="block text-[11px] font-body text-[#0A0A0A]/60 leading-snug mt-0.5">Produzo pras agências</span>
+                  </button>
                 </div>
+
+                {accountType === "parceiro" && (
+                  <div className="mt-3">
+                    <p className="text-xs [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]/60 uppercase tracking-wider mb-2">O que você faz</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {([["designer", "Design"], ["editor_video", "Edição de vídeo"], ["copy", "Copy"], ["trafego", "Tráfego"]] as const).map(([k, l]) => (
+                        <button key={k} type="button" onClick={() => setParceiroRole(k)}
+                          className={`rounded-xl border-2 px-2.5 py-2 text-[12px] [font-family:'Baloo_2',sans-serif] font-bold transition-all ${parceiroRole === k ? "border-[#EA4918] bg-[#FBE9E1] text-[#0A0A0A]" : "border-[#0A0A0A]/20 text-[#0A0A0A]/70 hover:border-[#0A0A0A]/50"}`}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[11px] font-body text-[#0A0A0A]/55 mt-2 leading-snug">
+                      O trabalho que vem das agências é sempre grátis pra você. Os módulos do Cria ficam disponíveis
+                      se um dia você quiser atender cliente direto.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

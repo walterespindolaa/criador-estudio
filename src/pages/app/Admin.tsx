@@ -160,6 +160,11 @@ const AdminInner = () => {
   const [openCreateMgr, setOpenCreateMgr] = useState(false);
   const [mgrForm, setMgrForm] = useState({ name: "", email: "", phone: "" });
   const [mgrModules, setMgrModules] = useState<string[]>([]);
+  /* O MESMO DIÁLOGO CRIA OS DOIS (Walter, 09/09/2026). O parceiro só nascia
+     por convite de agência, então o admin não tinha como criar um. Como a
+     única diferença real é o tipo da conta e o pouso, não vale uma tela nova. */
+  const [mgrTipo, setMgrTipo] = useState<"manager" | "parceiro">("manager");
+  const [mgrPapel, setMgrPapel] = useState<"designer" | "editor_video" | "copy" | "trafego">("designer");
   const [giveCreator, setGiveCreator] = useState(false);
   const [creatorEmail, setCreatorEmail] = useState("");
   const [creatorPlan, setCreatorPlan] = useState("studio");
@@ -199,6 +204,7 @@ const AdminInner = () => {
         body: {
           name: mgrForm.name.trim(), email: emailNorm, phone: mgrForm.phone.trim() || null, modules: mgrModules,
           creator: giveCreator ? { email: creatorNorm, plan: creatorPlan } : null,
+          tipo: mgrTipo, parceiro_role: mgrTipo === "parceiro" ? mgrPapel : null,
         },
       });
       if (error || (data as { error?: string })?.error) {
@@ -209,11 +215,13 @@ const AdminInner = () => {
       setResult({ email: data.email, inviteLink: data.inviteLink, creator: data.creator ?? null });
       setOpenCreateMgr(false);
       setMgrForm({ name: "", email: "", phone: "" }); setMgrModules([]); setGiveCreator(false); setCreatorEmail(""); setCreatorPlan("studio");
+      setMgrTipo("manager"); setMgrPapel("designer");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
       // Conta criada mesmo com aviso (ex.: e-mail de boas-vindas falhou):
       // sucesso primeiro, avisos em seguida, sem desfazer nada.
-      toast.success(data.existed ? "Social mídia criada (a conta já existia e foi reaproveitada)." : "Social mídia criada!");
+      const rotulo = mgrTipo === "parceiro" ? "Parceiro" : "Social mídia";
+      toast.success(data.existed ? `${rotulo} criado (a conta já existia e foi reaproveitada).` : `${rotulo} criado!`);
       for (const w of (data.warnings as string[] | undefined) ?? []) toast.warning(w, { duration: 9000 });
     } catch (e) {
       toast.error(await motivoEdge(e, null, "Erro ao criar social mídia."));
@@ -662,9 +670,39 @@ const AdminInner = () => {
         <Dialog open={openCreateMgr} onOpenChange={(o) => !creatingMgr && setOpenCreateMgr(o)}>
           <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="font-display">Criar social mídia</DialogTitle>
+              <DialogTitle className="font-display">{mgrTipo === "parceiro" ? "Criar parceiro" : "Criar social mídia"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3 py-2">
+              <div className="space-y-1.5">
+                <Label className="font-body text-xs">Tipo de conta</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {([["manager", "Social mídia", "Gerencia clientes e equipe"], ["parceiro", "Parceiro", "Designer, editor, copy, tráfego"]] as const).map(([k, t, d]) => (
+                    <button key={k} type="button" onClick={() => setMgrTipo(k)} disabled={creatingMgr}
+                      className={cn("rounded-xl border-2 p-2.5 text-left transition-colors",
+                        mgrTipo === k ? "border-primary bg-primary/5" : "border-border hover:border-primary/40")}>
+                      <span className="block text-[13px] font-display font-bold text-foreground">{t}</span>
+                      <span className="block text-[11px] font-body text-muted-foreground leading-snug">{d}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {mgrTipo === "parceiro" && (
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs">O que ele faz</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([["designer", "Design"], ["editor_video", "Edição de vídeo"], ["copy", "Copy"], ["trafego", "Tráfego"]] as const).map(([k, l]) => (
+                      <button key={k} type="button" onClick={() => setMgrPapel(k)} disabled={creatingMgr}
+                        className={cn("rounded-xl border px-2.5 py-2 text-[12.5px] font-body font-semibold transition-colors",
+                          mgrPapel === k ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground")}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] font-body text-muted-foreground">
+                    Define as etapas padrão do quadro dele. Ele cai direto em Minhas demandas e não vê a casca de agência.
+                  </p>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label className="font-body text-xs">Nome</Label>
                 <Input value={mgrForm.name} onChange={(e) => setMgrForm({ ...mgrForm, name: e.target.value })} placeholder="Nome completo" className="rounded-xl" disabled={creatingMgr} />
