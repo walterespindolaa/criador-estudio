@@ -1029,8 +1029,17 @@ const Criando = () => {
                               style={formatColorVars(post.format)}
                               className={cn("w-full text-left rounded-lg border border-border bg-card px-1.5 py-1 shadow-sm hover:bg-muted/40 transition-colors cursor-grab active:cursor-grabbing",
                                 "border-l-[3px]", FORMAT_BORDER_CLASS)}>
-                              <span className={cn("inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight mb-0.5", getStatusClasses(post.status))}>
-                                {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
+                              {/* O ÍCONE DA PLATAFORMA (Walter, 10/09/2026): o card
+                                  dizia a etapa e o formato, mas não pra ONDE a peça
+                                  vai. Reels do Instagram e do TikTok são a mesma
+                                  palavra e trabalhos diferentes. O dado já vinha no
+                                  post, só não aparecia aqui. */}
+                              <span className="flex items-center gap-1 mb-0.5">
+                                <span className={cn("inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight", getStatusClasses(post.status))}>
+                                  {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
+                                </span>
+                                <PlatformIcon platform={post.platform} size="sm"
+                                  className="h-3 w-3 ml-auto shrink-0 text-muted-foreground" />
                               </span>
                               <span className="block text-[10px] font-body font-semibold text-foreground leading-tight truncate">{post.title}</span>
                               <span className={cn("block text-[8.5px] font-body font-bold uppercase tracking-wide truncate", FORMAT_TEXT_CLASS)}>
@@ -1065,8 +1074,12 @@ const Criando = () => {
                             className={cn("text-left rounded-lg border border-border bg-card px-2 py-1.5 shadow-sm hover:bg-muted/40 transition-colors cursor-grab active:cursor-grabbing border-l-[3px] max-w-[220px]", FORMAT_BORDER_CLASS)}>
                             {/* Etapa TAMBÉM no sem-data (pedido do Walter, 31/08):
                                sem ela não dava pra saber o que já está pronto. */}
-                            <span className={cn("inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight mb-0.5", getStatusClasses(post.status))}>
-                              {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
+                            <span className="flex items-center gap-1 mb-0.5">
+                              <span className={cn("inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight", getStatusClasses(post.status))}>
+                                {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
+                              </span>
+                              <PlatformIcon platform={post.platform} size="sm"
+                                className="h-3 w-3 ml-auto shrink-0 text-muted-foreground" />
                             </span>
                             <span className="block text-[11px] font-body font-semibold text-foreground leading-tight truncate">{post.title}</span>
                             <span className={cn("block text-[9px] font-body font-bold uppercase tracking-wide truncate", FORMAT_TEXT_CLASS)}>
@@ -1134,8 +1147,12 @@ const Criando = () => {
                                   style={formatColorVars(post.format)}
                                   className={cn("w-full text-left rounded-lg border border-border bg-card px-1.5 py-1 shadow-sm hover:bg-muted/40 transition-colors cursor-grab active:cursor-grabbing",
                                     "border-l-[3px]", FORMAT_BORDER_CLASS)}>
-                                  <span className={cn("inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight mb-0.5", getStatusClasses(post.status))}>
-                                    {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
+                                  <span className="flex items-center gap-1 mb-0.5">
+                                    <span className={cn("inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight", getStatusClasses(post.status))}>
+                                      {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
+                                    </span>
+                                    <PlatformIcon platform={post.platform} size="sm"
+                                      className="h-3 w-3 ml-auto shrink-0 text-muted-foreground" />
                                   </span>
                                   <span className="block text-[10px] font-body font-semibold text-foreground leading-tight truncate">{post.title}</span>
                                   <span className={cn("block text-[8.5px] font-body font-bold uppercase tracking-wide truncate", FORMAT_TEXT_CLASS)}>
@@ -1167,8 +1184,12 @@ const Criando = () => {
                                   onClick={() => openEdit(post)}
                                   style={formatColorVars(post.format)}
                                   className={cn("text-left rounded-lg border border-border bg-card px-2 py-1.5 shadow-sm hover:bg-muted/40 transition-colors cursor-grab active:cursor-grabbing border-l-[3px] max-w-[220px]", FORMAT_BORDER_CLASS)}>
-                                  <span className={cn("inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight mb-0.5", getStatusClasses(post.status))}>
-                                    {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
+                                  <span className="flex items-center gap-1 mb-0.5">
+                                    <span className={cn("inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight", getStatusClasses(post.status))}>
+                                      {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
+                                    </span>
+                                    <PlatformIcon platform={post.platform} size="sm"
+                                      className="h-3 w-3 ml-auto shrink-0 text-muted-foreground" />
                                   </span>
                                   <span className="block text-[11px] font-body font-semibold text-foreground leading-tight truncate">{post.title}</span>
                                   <span className={cn("block text-[9px] font-body font-bold uppercase tracking-wide truncate", FORMAT_TEXT_CLASS)}>
