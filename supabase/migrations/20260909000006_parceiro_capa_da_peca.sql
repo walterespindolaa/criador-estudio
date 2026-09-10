@@ -193,6 +193,9 @@ begin
     'cache', _p.cache_parceiro,
     'agencia', coalesce(_agencia, 'Agência'),
     'midias', _midias,
+    -- Elo com a ficha da marca: é o que deixa o card mostrar os LINKS do
+    -- cliente (Drive, refs, site) em vez de um botão genérico.
+    'external_client_id', _p.external_client_id,
     'marca', jsonb_build_object(
       'nome', coalesce(_cc.name, _ec.name),
       'handle', _ec.instagram_handle,

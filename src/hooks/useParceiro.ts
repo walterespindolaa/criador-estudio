@@ -96,6 +96,8 @@ export type CardAberto = {
   /** O que já está anexado nesta peça (referência da agência ou arquivo que o
    *  próprio parceiro subiu). Ele mandava e nunca mais via. */
   midias?: { url: string | null; thumb: string | null; nome: string | null; tipo: string | null }[];
+  /** Elo com a ficha da marca: o card mostra os links do cliente por aqui. */
+  external_client_id?: string | null;
   marca: {
     nome: string | null;
     handle: string | null;

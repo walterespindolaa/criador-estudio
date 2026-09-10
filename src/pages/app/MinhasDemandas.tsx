@@ -4,7 +4,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { motion } from "framer-motion";
 import {
   Briefcase, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
-  Copy as CopyIcon, ExternalLink, Folder, ImagePlus, Loader2, MessageCircle, Palette,
+  Copy as CopyIcon, ExternalLink, Folder, ImagePlus, Link2, Loader2, MessageCircle, Palette,
   Pencil, Play, Plus, RotateCcw, Send, Sparkles, X,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
@@ -992,6 +992,44 @@ function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexand
   );
 }
 
+/* ── PAINEL DE TEXTO DO BRIEFING ──────────────────────────────────────────
+   Copy, gancho e legenda são o que a pessoa mais LÊ no card, e estavam num
+   cartãozinho com fio colorido e rótulo miúdo em caixa alta. Aqui viram um
+   painel com cabeçalho (título + copiar) e corpo de leitura: fonte maior,
+   parágrafos separados e "SLIDE 1 / CENA 2" virando divisória, que é como o
+   texto chega da social mídia. */
+const EH_MARCADOR = /^\s*(slide|cena|card|arte|parte|bloco)\s*\d+\s*[:.)-]?\s*$/i;
+
+function PainelTexto({ titulo, texto, aoCopiar }: {
+  titulo: string; texto: string; aoCopiar: (t: string, msg: string) => void;
+}) {
+  const linhas = texto.split("\n");
+  return (
+    <div className="mt-4 rounded-xl border border-border overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border">
+        <p className="text-[11px] font-display font-bold text-foreground flex-1">{titulo}</p>
+        <button type="button" onClick={() => aoCopiar(texto, `${titulo} copiado.`)}
+          className="inline-flex items-center gap-1 text-[11px] font-body font-bold text-muted-foreground hover:text-primary transition-colors">
+          <CopyIcon className="h-3 w-3" /> copiar
+        </button>
+      </div>
+      <div className="px-3.5 py-3 bg-card">
+        {linhas.map((linha, i) => {
+          if (!linha.trim()) return <div key={i} className="h-2" />;
+          if (EH_MARCADOR.test(linha)) {
+            return (
+              <p key={i} className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mt-3 first:mt-0 pb-1 border-b border-border/70">
+                {linha.trim()}
+              </p>
+            );
+          }
+          return <p key={i} className="text-[14px] font-body leading-relaxed text-foreground/90 mt-1.5 first:mt-0">{linha}</p>;
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFechar: () => void }) {
   const navigate = useNavigate();
   const { data: card, isLoading } = useCardDoParceiro(postId);
@@ -1002,6 +1040,13 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
   const [linkEntrega, setLinkEntrega] = useState("");
   // Link de arquivo grande (acima do limite de upload), mandado na conversa.
   const [linkPrevia, setLinkPrevia] = useState("");
+  /* A ficha da marca DESTE cliente, pra mostrar os links dele no próprio card
+     e abrir a ficha por cima, sem mandar a pessoa pra outra tela. */
+  const { data: minhasMarcas = [] } = useMinhasMarcas();
+  const marcaDoCard = card?.external_client_id
+    ? minhasMarcas.find((m) => m.external_client_id === card.external_client_id) ?? null
+    : null;
+  const [fichaAberta, setFichaAberta] = useState<MarcaDoParceiro | null>(null);
   // Entrega com ARQUIVO (fase 3): sobe direto pro card, sem passar por link.
   const inputArquivo = useRef<HTMLInputElement | null>(null);
   // Checklist pessoal (camada privada do card).
@@ -1031,7 +1076,6 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
       toast.error("Não consegui copiar. Selecione o texto e copie manualmente.");
     }
   };
-  const copiarLegenda = () => { if (card?.legenda) void copiar(card.legenda, "Legenda copiada."); };
 
   return (
     <Dialog open={!!postId} onOpenChange={(v) => !v && aoFechar()}>
@@ -1040,7 +1084,11 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
           tela, "sem pé nem cabeça". Agora ele ocupa uma altura definida e cada
           coluna rola por dentro: o chat começa no topo e termina no rodapé,
           como chat de verdade. */}
-      <DialogContent className="max-w-[1240px] w-[calc(100vw-2rem)] p-0 gap-0 rounded-2xl border-0 overflow-hidden h-[92vh] flex flex-col bg-card [&>button:last-child]:hidden">
+      {/* `p-0 sm:p-0` (Walter, 09/09/2026: "ainda não está cobrindo a parte
+          superior"). O DialogContent do Cria tem `p-6 sm:p-7`, e o `p-0`
+          sozinho só anulava o p-6: no desktop sobravam 28px de branco em volta,
+          que é exatamente a moldura que aparecia em cima da faixa. */}
+      <DialogContent className="max-w-[1240px] w-[calc(100vw-2rem)] p-0 sm:p-0 gap-0 rounded-2xl border-0 overflow-hidden h-[92vh] flex flex-col bg-card [&>button:last-child]:hidden">
         {isLoading || !card ? (
           <div className="grid place-items-center py-20"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : (
@@ -1198,20 +1246,18 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                   );
                 })()}
 
+                {/* TEXTO PRA LER, NÃO CARTÃO PRA OLHAR (Walter, 09/09/2026:
+                    "essa parte do copy e legenda tá meio zoada ainda"). Eram
+                    caixas com fio colorido na esquerda, rótulo em caixa alta e
+                    texto apertado: enfeite em cima do que a pessoa precisa
+                    LER. Agora é painel com cabeçalho próprio, o botão de copiar
+                    na mesma linha do título, e o texto solto num corpo maior,
+                    com espaço entre parágrafos e o SLIDE 1 destacado. */}
                 {card.gancho?.trim() && (
-                  <div className="mt-4">
-                    <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Gancho</p>
-                    <p className="text-sm font-body bg-card border border-border border-l-[3px] rounded-xl px-3 py-2.5"
-                      style={{ borderLeftColor: card.marca.cor || "#4B3FA8" }}>{card.gancho}</p>
-                  </div>
+                  <PainelTexto titulo="Gancho" texto={card.gancho} aoCopiar={copiar} />
                 )}
-
                 {card.roteiro?.trim() && (
-                  <div className="mt-4">
-                    <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Copy</p>
-                    <p className="text-sm font-body whitespace-pre-line bg-card border border-border border-l-[3px] rounded-xl px-3 py-2.5 leading-relaxed"
-                      style={{ borderLeftColor: card.marca.cor || "#4B3FA8" }}>{card.roteiro}</p>
-                  </div>
+                  <PainelTexto titulo="Copy" texto={card.roteiro} aoCopiar={copiar} />
                 )}
 
                 {/* AS ARTES DO CARROSSEL, uma a uma. Antes o card só dizia
@@ -1239,14 +1285,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                 })()}
 
                 {card.legenda?.trim() && (
-                  <div className="mt-4">
-                    <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Legenda aprovada</p>
-                    <p className="text-sm font-body whitespace-pre-line bg-card border border-border border-l-[3px] rounded-xl px-3 py-2.5 leading-relaxed"
-                      style={{ borderLeftColor: card.marca.cor || "#4B3FA8" }}>{card.legenda}</p>
-                    <button onClick={copiarLegenda} className="mt-1.5 inline-flex items-center gap-1.5 text-[11.5px] font-body font-bold text-primary">
-                      <CopyIcon className="h-3.5 w-3.5" /> Copiar legenda
-                    </button>
-                  </div>
+                  <PainelTexto titulo="Legenda aprovada" texto={card.legenda} aoCopiar={copiar} />
                 )}
 
                 {/* ── SUA ENTREGA ──────────────────────────────────────────
@@ -1558,9 +1597,16 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                     tivesse o recurso. Agora o bloco existe sempre e, faltando
                     link na peça, ele aponta pra ficha da marca, que é onde mora
                     o material fixo do cliente. */}
+                {/* "MATERIAL FIXO DA MARCA" ERA UMA ABSTRAÇÃO (Walter,
+                    09/09/2026: "esse material fixo da marca é o que ainda tô
+                    confuso"). Botão genérico levando pra outra tela não diz o
+                    que tem lá dentro. Agora os LINKS DE VERDADE do cliente
+                    aparecem aqui na lista, com o nome que a agência deu (Drive,
+                    Refs, Site), e a ficha completa abre por cima, sem sair do
+                    card. */}
                 <div className="rounded-xl border border-border bg-background p-2.5 space-y-1.5">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 px-0.5">
-                    <Folder className="h-3 w-3" /> Material pra fazer a peça
+                    <Folder className="h-3 w-3" /> Material e referências
                   </p>
                   {card.pasta_drive && (
                     <a href={card.pasta_drive} target="_blank" rel="noopener noreferrer"
@@ -1576,16 +1622,31 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                       <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
                     </a>
                   )}
-                  <button type="button" onClick={() => navigate("/socialmidia/marcas")}
-                    className="w-full flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-[12.5px] font-body font-bold text-foreground hover:border-primary/40 transition-colors">
-                    <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" /> Material fixo da marca
-                    <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
-                  </button>
-                  {!card.pasta_drive && !card.referencia && (
+                  {(marcaDoCard?.links ?? []).filter((l) => l?.url?.trim()).map((l, i) => (
+                    <a key={`${l.url}-${i}`} href={l.url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-[12.5px] font-body font-bold text-foreground hover:border-primary/40 transition-colors">
+                      {/drive\.google|dropbox|onedrive/i.test(l.url)
+                        ? <Folder className="h-3.5 w-3.5 text-primary shrink-0" />
+                        : <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />}
+                      <span className="truncate">{l.label?.trim() || l.url}</span>
+                      <ExternalLink className="h-3 w-3 ml-auto shrink-0 text-muted-foreground" />
+                    </a>
+                  ))}
+                  {marcaDoCard ? (
+                    <button type="button" onClick={() => setFichaAberta(marcaDoCard)}
+                      className="w-full flex items-center gap-2 rounded-lg border border-dashed border-border bg-card px-2.5 py-2 text-[12px] font-body font-bold text-primary hover:border-primary/50 transition-colors">
+                      <Sparkles className="h-3.5 w-3.5 shrink-0" /> Ficha da marca: cores, fontes, o que evitar
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => navigate("/socialmidia/marcas")}
+                      className="w-full flex items-center gap-2 rounded-lg border border-dashed border-border bg-card px-2.5 py-2 text-[12px] font-body font-bold text-primary hover:border-primary/50 transition-colors">
+                      <Sparkles className="h-3.5 w-3.5 shrink-0" /> Marcas que atendo
+                    </button>
+                  )}
+                  {!card.pasta_drive && !card.referencia && (marcaDoCard?.links ?? []).length === 0 && (
                     <p className="text-[10.5px] font-body text-muted-foreground leading-snug px-0.5 pt-0.5">
-                      Esta peça veio sem pasta nem referência própria, então vale o material fixo da marca.
-                      Faltando alguma coisa, peça na conversa: a agência guarda isso na ficha do cliente,
-                      na aba Links úteis.
+                      Nenhum link cadastrado ainda, nem nesta peça nem no cliente. Peça na conversa:
+                      a agência cadastra na ficha do cliente, aba Links úteis, e aparece aqui em todas as peças dele.
                     </p>
                   )}
                 </div>
@@ -1620,6 +1681,9 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                 aoMandarImagem={(arquivo) => anexar.mutate({ arquivo, naConversa: true, legenda: texto.trim() || undefined })}
                 aoLimparTexto={() => setTexto("")} />
             </div>
+            {/* A ficha completa abre POR CIMA do card: quem está montando a
+                peça não deveria perder o briefing pra consultar a marca. */}
+            <FichaDaMarca m={fichaAberta} aoFechar={() => setFichaAberta(null)} />
           </>
         )}
       </DialogContent>
