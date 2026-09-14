@@ -212,10 +212,38 @@ export function getVideoFileUrl(m: MediaLike): string | null {
  * cai no view_url salvo se não achar id.
  */
 export function getDriveViewPageUrl(m: MediaLike): string | null {
+  /* VÍDEO DO BUNNY QUE VEIO DO DRIVE (Walter, 14/09/2026). Quando a social
+     mídia anexa um vídeo pelo picker, o arquivo é ingerido no Bunny e o
+     provider deixa de ser `gdrive`. Até aqui isso apagava a saída de
+     emergência: durante os minutos de transcodificação o cliente via um
+     quadrado preto e nem o botão "Assistir no Drive" aparecia, mesmo com o
+     vídeo já visível no Drive. Agora o link de origem fica em `download_url` e
+     continua valendo pra qualquer provider. */
+  const daOrigem = driveIdDeUrl(m.download_url);
+  if (daOrigem) return `https://drive.google.com/file/d/${encodeURIComponent(daOrigem)}/view`;
   if (!isDriveMedia(m)) return null;
   const id = getDriveFileId(m);
   if (id) return `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
   return m.view_url || null;
+}
+
+/** File id do Drive achado numa única URL (sem olhar o provider). */
+function driveIdDeUrl(url: string | null | undefined): string | null {
+  if (!url || !/drive\.google\.com/i.test(url)) return null;
+  return url.match(/\/(?:file\/)?d\/([-\w]{25,})/)?.[1]
+    || url.match(/[?&]id=([-\w]{25,})/)?.[1]
+    || null;
+}
+
+/**
+ * Miniatura de emergência: o frame do Drive pro vídeo que ainda está sendo
+ * transcodificado no Bunny (o thumbnail do CDN dá 404 até o encoding acabar).
+ * Devolve null quando a mídia não veio do Drive.
+ */
+export function getThumbDaOrigemDrive(m: MediaLike, size = 1000): string | null {
+  const id = driveIdDeUrl(m.download_url) || (isDriveMedia(m) ? getDriveFileId(m) : null);
+  if (!id) return null;
+  return `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${size}`;
 }
 
 // Nome de arquivo seguro pro download individual: <titulo>-<n>.<ext> sem acento/espaço.

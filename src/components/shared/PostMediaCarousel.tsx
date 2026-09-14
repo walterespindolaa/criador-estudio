@@ -24,7 +24,15 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
   const hasInlinePlayer = kind === "file" ? !!fileUrl : !!embedUrl;
   // Fallback só pro Drive: se o embed /preview for bloqueado pela conta do cliente,
   // ele ainda assiste abrindo a página do Drive em nova aba.
-  const driveViewUrl = kind === "drive" ? getDriveViewPageUrl(item) : null;
+  /* O ESCAPE VALE TAMBÉM PRO BUNNY (Walter, 14/09/2026): vídeo que a social
+     mídia anexa pelo Drive é ingerido no Bunny, e durante a transcodificação o
+     iframe mostra "Processing video" e a miniatura do CDN dá 404. O link do
+     arquivo original fica salvo, então dá pra assistir enquanto isso. */
+  const driveViewUrl = getDriveViewPageUrl(item);
+  /* Poster falhou num vídeo do Bunny = quase sempre encoding em andamento.
+     Nesse caso o play vai direto pro Drive, em vez de abrir uma tela de
+     "processando" que o cliente lê como defeito. */
+  const aindaProcessando = kind === "bunny" && thumbOk === false && !!driveViewUrl;
 
   // Proporção real do vídeo (medida na miniatura, mesma medição do poster) pra o
   // estado tocando cobrir o slot com o iframe do Drive (ver coverIframeStyle).
@@ -43,6 +51,7 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
   // Play robusto: monta o player embutido; sem player embutido (ex.: só a página do
   // Drive), abre a fonte em nova aba. O usuário SEMPRE consegue assistir.
   const onPlay = () => {
+    if (aindaProcessando && driveViewUrl) { window.open(driveViewUrl, "_blank", "noopener,noreferrer"); return; }
     if (hasInlinePlayer) { setPlaying(true); return; }
     const u = driveViewUrl || embedUrl || fileUrl;
     if (u) window.open(u, "_blank", "noopener,noreferrer");
@@ -135,7 +144,11 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
           rótulo "Assistir" pra deixar claro que dá pra tocar. */}
       <button type="button" onClick={onPlay} aria-label="Reproduzir vídeo" className="absolute inset-0 flex flex-col items-center justify-center gap-2">
         <span className="w-16 h-16 rounded-full bg-black/55 flex items-center justify-center shadow-lg"><Play className="h-8 w-8 text-white ml-1" /></span>
-        {thumbOk !== true && <span className="text-xs font-medium text-white/85">Assistir</span>}
+        {thumbOk !== true && (
+          <span className="text-xs font-medium text-white/85 text-center px-4 leading-snug">
+            {aindaProcessando ? "Assistir no Drive (o player está preparando este vídeo)" : "Assistir"}
+          </span>
+        )}
       </button>
       {/* Só pro Drive: atalho caso o embed /preview seja bloqueado pela conta do cliente. */}
       {driveViewUrl && (

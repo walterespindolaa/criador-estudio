@@ -322,7 +322,7 @@ export function useGoogleDrive() {
             if (postId) {
               // Post já existe: usa a MESMA lógica do upload de vídeo do aparelho
               // (create-video + TUS + criapost_add_media).
-              await uploadVideoFileToBunny(videoFile, postId);
+              await uploadVideoFileToBunny(videoFile, postId, `https://drive.google.com/file/d/${f.id}/view`);
             } else {
               // Post novo (sem id ainda): sobe pro Bunny e insere a ref direto com
               // post_id null, pra ser reconciliada no save (igual mídia de foto).
@@ -337,6 +337,8 @@ export function useGoogleDrive() {
                 file_size: f.sizeBytes || null,
                 thumbnail_url: bunny.thumbnail_url,
                 view_url: bunny.view_url,
+                // Enquanto o Bunny transcodifica, este é o caminho pra assistir.
+                download_url: `https://drive.google.com/file/d/${f.id}/view`,
                 bunny_video_id: bunny.videoGuid,
                 position: basePos + imported,
               });

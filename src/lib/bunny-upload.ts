@@ -72,12 +72,19 @@ export async function uploadFileToBunnyStream(file: File): Promise<BunnyStreamRe
  * Reaproveitado tanto pelo upload de vídeo do aparelho quanto pela ingestão
  * de vídeo vindo do Google Drive (Drive -> browser -> Bunny).
  */
-export async function uploadVideoFileToBunny(file: File, postId: string): Promise<void> {
+export async function uploadVideoFileToBunny(file: File, postId: string, origemDrive?: string | null): Promise<void> {
   const { videoGuid, view_url, thumbnail_url } = await uploadFileToBunnyStream(file);
+  /* GUARDAR A ORIGEM NO DRIVE (Walter, 14/09/2026). O Bunny leva minutos pra
+     transcodificar, e nesse meio tempo o iframe mostra "Processing video" e a
+     miniatura do CDN dá 404: o cliente abria o link de aprovação e via um
+     quadrado preto, mesmo com o vídeo já visível no Drive. Gravando o link do
+     Drive em `download_url`, o player tem pra onde mandar a pessoa enquanto o
+     encoding não termina. É só um campo que antes ia null. */
   const { error: addErr } = await sbRpc("criapost_add_media", {
     p_post_id: postId, p_provider: "bunny_stream", p_external_file_id: videoGuid,
     p_file_name: file.name, p_file_type: file.type || "video/mp4", p_file_size: file.size,
-    p_view_url: view_url, p_thumbnail_url: thumbnail_url, p_download_url: null, p_bunny_video_id: videoGuid,
+    p_view_url: view_url, p_thumbnail_url: thumbnail_url,
+    p_download_url: origemDrive || null, p_bunny_video_id: videoGuid,
   });
   if (addErr) throw new Error(addErr.message);
 }

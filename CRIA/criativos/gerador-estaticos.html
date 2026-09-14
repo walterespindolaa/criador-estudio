@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>CRIA · Estáticos para Meta Ads</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --amarelo:#FFCF03; --azul:#0061EE; --branco:#FDFBF5; --creme:#F5F3E7;
+  --ink:#0A0A0A; --laranja:#EA4918; --rosa:#FF77B9; --verde:#01A652;
+  --d:'Baloo 2', sans-serif; --b:'Roboto', sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#222;font-family:var(--b);display:flex;flex-wrap:wrap;gap:20px;padding:20px}
+
+.ad{
+  position:relative;width:1080px;height:1350px;overflow:hidden;flex:0 0 auto;
+  background:
+    repeating-linear-gradient(0deg, rgba(10,10,10,.04) 0 1px, transparent 1px 54px),
+    repeating-linear-gradient(90deg, rgba(10,10,10,.04) 0 1px, transparent 1px 54px),
+    radial-gradient(120% 90% at 50% 0%, #FBF8EF 0%, var(--creme) 62%, #EFEBDA 100%);
+}
+.ad::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.45;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/><feColorMatrix type='saturate' values='0'/></filter><rect width='200' height='200' filter='url(%23n)' opacity='0.2'/></svg>")}
+.blob{position:absolute;z-index:0}
+.st{position:absolute;z-index:3}
+.wrap{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;padding:72px 68px 0}
+
+.logo{height:72px;width:auto;align-self:flex-start}
+h1{font-family:var(--d);font-weight:800;font-size:82px;line-height:1.03;color:var(--ink);letter-spacing:-1px}
+h1 .la{color:var(--laranja)} h1 .az{color:var(--azul)} h1 .ve{color:var(--verde)}
+.sub{font-family:var(--b);font-size:32px;line-height:1.4;color:#5E5548;font-weight:400}
+
+.rodape{
+  position:absolute;left:0;right:0;bottom:0;height:150px;background:var(--ink);z-index:4;
+  display:flex;align-items:center;justify-content:space-between;padding:0 68px;
+}
+.rodape .cta{font-family:var(--d);font-weight:800;font-size:42px;color:#fff}
+.rodape .cta em{font-style:normal;color:var(--amarelo)}
+.rodape img{height:62px;opacity:.95}
+
+.pill{font-family:var(--d);font-weight:800;font-size:30px;padding:16px 32px;border-radius:999px;
+  box-shadow:0 12px 26px rgba(58,50,37,.22);display:inline-block}
+.p-la{background:var(--laranja);color:#fff} .p-am{background:var(--amarelo);color:var(--ink)}
+.p-az{background:var(--azul);color:#fff} .p-ro{background:var(--rosa);color:var(--ink)}
+.p-ve{background:var(--verde);color:#fff}
+
+/* ===== E1 conta da assinatura ===== */
+.conta{background:var(--branco);border-radius:34px 26px 34px 26px;padding:44px 52px;
+  box-shadow:0 24px 54px rgba(58,50,37,.18);transform:rotate(-.7deg)}
+.linha{display:flex;justify-content:space-between;align-items:center;padding:22px 0;
+  border-bottom:2px dashed #DED6C4;font-family:var(--b);font-size:38px;color:#3A342B}
+.linha:last-child{border:none}
+.linha b{font-family:var(--d);font-weight:700;font-size:40px}
+.total{display:flex;justify-content:space-between;align-items:center;margin-top:26px;
+  background:var(--ink);border-radius:20px;padding:26px 34px}
+.total span{font-family:var(--d);font-weight:700;font-size:36px;color:#fff}
+.total b{font-family:var(--d);font-weight:800;font-size:56px;color:var(--amarelo)}
+
+/* ===== E2 ciclo ===== */
+.ciclo{display:flex;flex-direction:column;gap:20px}
+.etapa{display:flex;align-items:center;gap:26px;background:var(--branco);border-radius:24px 18px 24px 18px;
+  padding:26px 34px;box-shadow:0 16px 34px rgba(58,50,37,.15)}
+.etapa .n{width:64px;height:64px;border-radius:50% 45% 52% 48%;display:flex;align-items:center;justify-content:center;
+  font-family:var(--d);font-weight:800;font-size:32px;color:#fff;flex:0 0 auto}
+.etapa .t{font-family:var(--d);font-weight:700;font-size:42px;color:var(--ink)}
+.etapa .d{font-family:var(--b);font-size:27px;color:#6E6355;margin-top:2px}
+
+/* ===== E3 espalhado ===== */
+.bagunca{position:relative;height:520px}
+.caco{position:absolute;background:#fff;border-radius:14px;padding:20px 26px;font-family:var(--b);
+  font-size:30px;color:#3A342B;box-shadow:0 12px 26px rgba(58,50,37,.18);border-left:8px solid #CFC6B2}
+.seta{font-family:var(--d);font-weight:800;font-size:64px;color:var(--laranja);text-align:center}
+.destino{background:var(--ink);border-radius:28px 22px 28px 22px;padding:38px 46px;
+  box-shadow:0 22px 48px rgba(58,50,37,.24)}
+.destino .k{font-family:var(--d);font-weight:800;font-size:26px;letter-spacing:3px;color:var(--amarelo);text-transform:uppercase}
+.destino .v{font-family:var(--d);font-weight:800;font-size:52px;color:#fff;margin-top:10px;line-height:1.12}
+
+/* ===== E4 publi ===== */
+.chat{display:flex;flex-direction:column;gap:22px}
+.msg{max-width:76%;padding:28px 34px;border-radius:28px;font-family:var(--b);font-size:34px;line-height:1.36;
+  box-shadow:0 12px 28px rgba(58,50,37,.14)}
+.msg.dela{background:#fff;color:#2A241C;border-bottom-left-radius:8px;align-self:flex-start}
+.msg.sua{background:var(--azul);color:#fff;border-bottom-right-radius:8px;align-self:flex-end}
+.msg .quem{display:block;font-family:var(--d);font-weight:700;font-size:24px;opacity:.65;margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ E1 · A CONTA DA ASSINATURA ══════════════ -->
+<div class="ad" id="E1">
+  <svg class="blob" style="left:-150px;top:-170px;width:480px;height:480px;opacity:.9" viewBox="-92 -92 184 184"><path fill="#FFCF03" d="M44.9,-65.3C57.4,-56.7,66.3,-43.2,71.6,-28.3C76.9,-13.4,78.5,2.9,74.4,17.5C70.3,32.1,60.4,45,47.8,54.9C35.2,64.8,17.6,71.7,0.9,70.5C-15.8,69.3,-31.6,60,-44.5,49.1C-57.4,38.2,-67.4,25.7,-71.3,11.1C-75.2,-3.5,-73,-20.2,-64.8,-32.9C-56.6,-45.6,-42.4,-54.3,-28.5,-62.4C-14.6,-70.5,-1,-78,13.4,-77.9C27.8,-77.8,41.7,-70,44.9,-65.3Z"/></svg>
+  <svg class="blob" style="right:-180px;bottom:120px;width:440px;height:440px;opacity:.8" viewBox="-92 -92 184 184"><path fill="#EA4918" d="M38.1,-65.1C48.8,-58.2,56.5,-46.9,63.3,-34.8C70.1,-22.7,76,-9.9,75.9,2.9C75.8,15.7,69.7,28.4,61.4,39.1C53.1,49.8,42.6,58.4,30.8,64.4C19,70.4,5.9,73.8,-7.4,73.4C-20.7,73,-34.2,68.8,-45.4,61C-56.6,53.2,-65.5,41.8,-70.4,28.9C-75.3,16,-76.2,1.6,-73.2,-11.6C-70.2,-24.8,-63.3,-36.8,-53.6,-44.4C-43.9,-52,-31.4,-55.2,-19.9,-61.6C-8.4,-68,2.1,-77.6,13.6,-78.4C25.1,-79.2,37.4,-71.9,38.1,-65.1Z"/></svg>
+  <div class="wrap">
+    <img class="logo" src="logo-cria.png">
+    <h1 style="margin-top:54px">Some o que você paga<br>pra postar <span class="la">sozinha</span>.</h1>
+    <div class="sub" style="margin-top:22px">Eu somei o meu. Deu isso aqui.</div>
+    <div class="conta" style="margin-top:44px">
+      <div class="linha"><span>Banco de artes</span><b>R$ 35</b></div>
+      <div class="linha"><span>Editor de vídeo</span><b>R$ 40</b></div>
+      <div class="linha"><span>Agendador de post</span><b>R$ 30</b></div>
+      <div class="linha"><span>IA pra escrever</span><b>R$ 100</b></div>
+      <div class="total"><span>Todo mês</span><b>R$ 205</b></div>
+    </div>
+  </div>
+  <img class="st" src="selo-sem-formula.png" style="right:50px;bottom:186px;width:168px;transform:rotate(-11deg)">
+  <div class="pill p-la st" style="left:64px;bottom:198px;transform:rotate(-3deg)">o CRIA faz as quatro</div>
+  <div class="rodape">
+    <div class="cta">Crie sua conta <em>de graça</em></div>
+    <img src="logo-cria-white.png">
+  </div>
+</div>
+
+<!-- ══════════════ E2 · DA IDEIA AO POST ══════════════ -->
+<div class="ad" id="E2">
+  <svg class="blob" style="right:-190px;top:-180px;width:490px;height:490px;opacity:.85" viewBox="-92 -92 184 184"><path fill="#0061EE" d="M54.3,-67.3C68.8,-59.2,78.3,-41.6,80.9,-23.7C83.5,-5.8,79.2,12.4,71.2,28.3C63.2,44.2,51.5,57.8,37.1,65.4C22.7,73,5.6,74.6,-11.2,72.5C-28,70.4,-44.5,64.6,-56.4,53.3C-68.3,42,-75.6,25.2,-77.3,7.8C-79,-9.6,-75.1,-27.6,-65.4,-40.9C-55.7,-54.2,-40.2,-62.8,-24.9,-70.3C-9.6,-77.8,5.5,-84.2,20.5,-81.9C35.5,-79.6,50.4,-68.6,54.3,-67.3Z"/></svg>
+  <svg class="blob" style="left:-170px;bottom:90px;width:420px;height:420px;opacity:.72" viewBox="-92 -92 184 184"><path fill="#FF77B9" d="M44.9,-65.3C57.4,-56.7,66.3,-43.2,71.6,-28.3C76.9,-13.4,78.5,2.9,74.4,17.5C70.3,32.1,60.4,45,47.8,54.9C35.2,64.8,17.6,71.7,0.9,70.5C-15.8,69.3,-31.6,60,-44.5,49.1C-57.4,38.2,-67.4,25.7,-71.3,11.1C-75.2,-3.5,-73,-20.2,-64.8,-32.9C-56.6,-45.6,-42.4,-54.3,-28.5,-62.4C-14.6,-70.5,-1,-78,13.4,-77.9C27.8,-77.8,41.7,-70,44.9,-65.3Z"/></svg>
+  <div class="wrap">
+    <img class="logo" src="logo-cria.png">
+    <h1 style="margin-top:48px">Da ideia ao post<br><span class="az">sem trocar de app</span>.</h1>
+    <div class="ciclo" style="margin-top:44px">
+      <div class="etapa"><div class="n" style="background:#FFCF03;color:#0A0A0A">1</div><div><div class="t">A ideia chega</div><div class="d">captura rápida, antes que você esqueça</div></div></div>
+      <div class="etapa"><div class="n" style="background:#EA4918">2</div><div><div class="t">Vira roteiro</div><div class="d">a IA já sabe seu tom e seu nicho</div></div></div>
+      <div class="etapa"><div class="n" style="background:#FF77B9;color:#0A0A0A">3</div><div><div class="t">Você grava lendo na tela</div><div class="d">teleprompter dentro do app</div></div></div>
+      <div class="etapa"><div class="n" style="background:#0061EE">4</div><div><div class="t">Entra no calendário</div><div class="d">com legenda e data prontas</div></div></div>
+      <div class="etapa"><div class="n" style="background:#01A652">5</div><div><div class="t">E você vê o que funcionou</div><div class="d">sem abrir outro aplicativo</div></div></div>
+    </div>
+  </div>
+  <img class="st" src="criatura-lampada.png" style="right:62px;top:58px;width:146px;transform:rotate(9deg)">
+  <div class="rodape">
+    <div class="cta">Tudo num app só. <em>Grátis pra começar</em></div>
+    <img src="logo-cria-white.png">
+  </div>
+</div>
+
+<!-- ══════════════ E3 · CEMITÉRIO DE IDEIAS ══════════════ -->
+<div class="ad" id="E3">
+  <svg class="blob" style="left:-180px;top:-150px;width:450px;height:450px;opacity:.8" viewBox="-92 -92 184 184"><path fill="#EA4918" d="M54.3,-67.3C68.8,-59.2,78.3,-41.6,80.9,-23.7C83.5,-5.8,79.2,12.4,71.2,28.3C63.2,44.2,51.5,57.8,37.1,65.4C22.7,73,5.6,74.6,-11.2,72.5C-28,70.4,-44.5,64.6,-56.4,53.3C-68.3,42,-75.6,25.2,-77.3,7.8C-79,-9.6,-75.1,-27.6,-65.4,-40.9C-55.7,-54.2,-40.2,-62.8,-24.9,-70.3C-9.6,-77.8,5.5,-84.2,20.5,-81.9C35.5,-79.6,50.4,-68.6,54.3,-67.3Z"/></svg>
+  <svg class="blob" style="right:-160px;bottom:150px;width:400px;height:400px;opacity:.75" viewBox="-92 -92 184 184"><path fill="#FFCF03" d="M38.1,-65.1C48.8,-58.2,56.5,-46.9,63.3,-34.8C70.1,-22.7,76,-9.9,75.9,2.9C75.8,15.7,69.7,28.4,61.4,39.1C53.1,49.8,42.6,58.4,30.8,64.4C19,70.4,5.9,73.8,-7.4,73.4C-20.7,73,-34.2,68.8,-45.4,61C-56.6,53.2,-65.5,41.8,-70.4,28.9C-75.3,16,-76.2,1.6,-73.2,-11.6C-70.2,-24.8,-63.3,-36.8,-53.6,-44.4C-43.9,-52,-31.4,-55.2,-19.9,-61.6C-8.4,-68,2.1,-77.6,13.6,-78.4C25.1,-79.2,37.4,-71.9,38.1,-65.1Z"/></svg>
+  <div class="wrap">
+    <img class="logo" src="logo-cria.png">
+    <h1 style="margin-top:50px">Suas ideias estão<br>em <span class="la">seis lugares</span>.<br>Nenhum é o certo.</h1>
+    <div class="bagunca" style="margin-top:38px">
+      <div class="caco" style="left:6px;top:10px;transform:rotate(-4deg);border-left-color:#EA4918">Bloco de notas</div>
+      <div class="caco" style="left:330px;top:0;transform:rotate(3deg);border-left-color:#0061EE">Print salvo</div>
+      <div class="caco" style="left:640px;top:22px;transform:rotate(-6deg);border-left-color:#FF77B9">Áudio pra você mesma</div>
+      <div class="caco" style="left:40px;top:132px;transform:rotate(5deg);border-left-color:#01A652">Rascunho do Insta</div>
+      <div class="caco" style="left:420px;top:148px;transform:rotate(-3deg);border-left-color:#FFCF03">Story que você salvou</div>
+      <div class="caco" style="left:230px;top:268px;transform:rotate(2deg);border-left-color:#6E6355">Papel na mesa</div>
+      <div class="seta" style="position:absolute;left:0;right:0;top:352px">↓</div>
+      <div class="destino" style="position:absolute;left:0;right:0;top:412px">
+        <div class="k">um lugar só</div>
+        <div class="v">Ideia → roteiro → post → calendário</div>
+      </div>
+    </div>
+  </div>
+  <img class="st" src="selo-social-club-azul.png" style="right:60px;top:112px;width:160px;transform:rotate(-12deg)">
+  <div class="rodape">
+    <div class="cta">Organize isso <em>de graça</em></div>
+    <img src="logo-cria-white.png">
+  </div>
+</div>
+
+<!-- ══════════════ E4 · A PUBLI ══════════════ -->
+<div class="ad" id="E4">
+  <svg class="blob" style="right:-170px;top:-160px;width:470px;height:470px;opacity:.85" viewBox="-92 -92 184 184"><path fill="#FF77B9" d="M44.9,-65.3C57.4,-56.7,66.3,-43.2,71.6,-28.3C76.9,-13.4,78.5,2.9,74.4,17.5C70.3,32.1,60.4,45,47.8,54.9C35.2,64.8,17.6,71.7,0.9,70.5C-15.8,69.3,-31.6,60,-44.5,49.1C-57.4,38.2,-67.4,25.7,-71.3,11.1C-75.2,-3.5,-73,-20.2,-64.8,-32.9C-56.6,-45.6,-42.4,-54.3,-28.5,-62.4C-14.6,-70.5,-1,-78,13.4,-77.9C27.8,-77.8,41.7,-70,44.9,-65.3Z"/></svg>
+  <svg class="blob" style="left:-160px;bottom:120px;width:430px;height:430px;opacity:.8" viewBox="-92 -92 184 184"><path fill="#01A652" d="M54.3,-67.3C68.8,-59.2,78.3,-41.6,80.9,-23.7C83.5,-5.8,79.2,12.4,71.2,28.3C63.2,44.2,51.5,57.8,37.1,65.4C22.7,73,5.6,74.6,-11.2,72.5C-28,70.4,-44.5,64.6,-56.4,53.3C-68.3,42,-75.6,25.2,-77.3,7.8C-79,-9.6,-75.1,-27.6,-65.4,-40.9C-55.7,-54.2,-40.2,-62.8,-24.9,-70.3C-9.6,-77.8,5.5,-84.2,20.5,-81.9C35.5,-79.6,50.4,-68.6,54.3,-67.3Z"/></svg>
+  <div class="wrap">
+    <img class="logo" src="logo-cria.png">
+    <h1 style="margin-top:52px">A marca te chamou<br>pra publi. Você<br>mandou <span class="ve">o quê</span>?</h1>
+    <div class="chat" style="margin-top:52px">
+      <div class="msg dela"><span class="quem">a marca</span>Oi! Adoramos seu perfil. Consegue mandar seu mídia kit e seus valores?</div>
+      <div class="msg sua"><span class="quem">você, 40 minutos depois</span>Ahh, eu não tenho um pronto... te mando um print dos seguidores?</div>
+    </div>
+    <div class="destino" style="margin-top:44px">
+      <div class="k">com o CRIA, você responde em 1 minuto</div>
+      <div class="v">Mídia kit que atualiza sozinho,<br>com números, público e trabalhos</div>
+    </div>
+  </div>
+  <div class="rodape">
+    <div class="cta">Monte o seu <em>de graça</em></div>
+    <img src="logo-cria-white.png">
+  </div>
+</div>
+
+</body>
+</html>

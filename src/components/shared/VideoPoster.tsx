@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { getDisplayImageUrl, getDriveImageFallbackUrl, isDriveMedia, type MediaLike } from "@/lib/driveMedia";
+import { getDisplayImageUrl, getDriveImageFallbackUrl, getThumbDaOrigemDrive, isDriveMedia, type MediaLike } from "@/lib/driveMedia";
 import { letterboxStyle, probeLetterbox, type LetterboxBox } from "@/lib/poster-letterbox";
 
 /**
@@ -93,6 +93,12 @@ export function VideoPoster({ item, onStatus, className = "" }: {
           const img = e.currentTarget;
           const fb = getDriveImageFallbackUrl(item);
           if (fb && !img.dataset.fb) { img.dataset.fb = "1"; img.src = fb; return; }
+          /* ÚLTIMA TENTATIVA: o frame do DRIVE DE ORIGEM. Vídeo ingerido no
+             Bunny fica sem miniatura enquanto transcodifica (404 no CDN), e o
+             cliente via um quadrado preto. O Drive já tem o frame desde o
+             primeiro segundo (Walter, 14/09/2026). */
+          const origem = getThumbDaOrigemDrive(item);
+          if (origem && !img.dataset.origem) { img.dataset.origem = "1"; img.src = origem; return; }
           setOk(false); onStatus?.(false);
         }}
       />
