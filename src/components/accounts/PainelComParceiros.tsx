@@ -101,6 +101,10 @@ export function PainelComParceiros({ clientes }: {
   const praRevisar = pecas.filter((p) => p.producao_status === "entregue" && !["pendente", "aprovado", "postado"].includes(p.approval_status ?? ""));
   const prazosPraResponder = pecas.filter((p) => p.prazo_status === "negociando" && p.prazo_sugerido);
   const abertas = pecas.filter((p) => p.producao_status !== "entregue");
+  /* ENTREGUE SEM CACHÊ (Walter, 14/09/2026): o parceiro fez o trabalho e a peça
+     não entrou no Caixa nem no "a receber" dele. Sem esta lista, o furo só
+     aparece quando ele cobra, e aí a conversa já começa errada. */
+  const semCache = pecas.filter((p) => p.producao_status === "entregue" && !Number(p.cache_parceiro ?? 0));
 
   const porParceiro = useMemo(() => {
     const mapa = new Map<string, PecaExterna[]>();
@@ -157,7 +161,9 @@ export function PainelComParceiros({ clientes }: {
               <Card className="rounded-2xl border-green-200 bg-green-50/40 overflow-hidden divide-y divide-green-100">
                 {praRevisar.map((p) => linhaPeca(p,
                   <span className="text-[11px] font-bold text-green-700 bg-green-100 rounded-full px-2.5 py-1">
-                    entregue {p.updated_at ? new Date(p.updated_at).toLocaleDateString("pt-BR") : ""}
+                    {/* entregue_em é gravado na transição de status. `updated_at`
+                        mudava a cada edição e mostrava a data errada aqui. */}
+                    entregue {p.entregue_em ? new Date(p.entregue_em).toLocaleDateString("pt-BR") : ""}
                   </span>))}
               </Card>
             </section>
@@ -183,6 +189,25 @@ export function PainelComParceiros({ clientes }: {
               </Card>
               <p className="text-[11px] font-body text-muted-foreground mt-1.5 px-0.5">
                 Prefere outra data? Abra o post e reenvie pelo "Enviar para" com o novo prazo.
+              </p>
+            </section>
+          )}
+
+          {/* ── 2b. ENTREGUE SEM CACHÊ COMBINADO ── */}
+          {semCache.length > 0 && (
+            <section>
+              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-800 mb-2 px-0.5">
+                <Wallet className="h-3.5 w-3.5" /> Entregas sem cachê combinado ({semCache.length})
+              </p>
+              <Card className="rounded-2xl border-amber-200 bg-amber-50/50 overflow-hidden divide-y divide-amber-100">
+                {semCache.map((p) => linhaPeca(p,
+                  <span className="text-[11px] font-bold text-amber-800 bg-amber-100 rounded-full px-2.5 py-1">
+                    definir valor
+                  </span>))}
+              </Card>
+              <p className="text-[11px] font-body text-muted-foreground mt-1.5 px-0.5">
+                Enquanto o valor estiver em branco, a peça não entra no seu Caixa nem no "a receber" do parceiro.
+                Abra o post e preencha o cachê no "Enviar para": corrigir ali não desfaz a entrega.
               </p>
             </section>
           )}

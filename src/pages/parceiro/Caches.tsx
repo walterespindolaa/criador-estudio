@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CheckCircle2, Clock, Loader2, Pencil, Plus, Trash2, Wallet } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Loader2, Pencil, Plus, Trash2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -11,7 +11,7 @@ import { useModules } from "@/hooks/useModules";
 import { hojeBR } from "@/lib/date-br";
 import { cn } from "@/lib/utils";
 import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
-import { useAcoesLancamento, useMeusCaches, useMeusCachesDetalhe, useMeusLancamentos, useMinhasAgencias, useMinhasMarcas, type LancamentoDoParceiro } from "@/hooks/useParceiro";
+import { useAcoesLancamento, useEntreguesDoParceiro, useMeusCaches, useMeusCachesDetalhe, useMeusLancamentos, useMinhasAgencias, useMinhasMarcas, type LancamentoDoParceiro } from "@/hooks/useParceiro";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MEUS CACHÊS
@@ -27,12 +27,19 @@ import { useAcoesLancamento, useMeusCaches, useMeusCachesDetalhe, useMeusLancame
 
 const brl = (v: number) => `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const dataBR = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
-const ehPago = (s: string) => /pago|recebid|quitad/i.test(s);
+/* PAGO É PAGO, E SÓ (Walter, 14/09/2026).
+   Aqui havia um regex (/pago|recebid|quitad/) enquanto a RPC que soma os totais
+   compara `status = 'pago'` na unha. Dois critérios pro mesmo dinheiro: bastava
+   alguém gravar "não pago" ou "a receber" pro card de cima e a lista de baixo
+   contarem histórias diferentes, e ele descobrir isso na hora de cobrar.
+   Os status do Caixa são três: pago, pendente, atrasado. Comparar é o suficiente. */
+const ehPago = (s: string) => (s ?? "").trim().toLowerCase() === "pago";
 
 export default function Caches() {
   const { data: porAgencia = [] } = useMeusCaches();
   const { data: linhas = [], isLoading } = useMeusCachesDetalhe();
   const { data: meus = [] } = useMeusLancamentos();
+  const { data: entregues = [] } = useEntreguesDoParceiro();
   const { data: marcas = [] } = useMinhasMarcas();
   const { data: agencias = [] } = useMinhasAgencias();
   const { salvar, excluir } = useAcoesLancamento();
@@ -55,6 +62,16 @@ export default function Caches() {
     const quitado = Number(l.valor_pago ?? 0) >= Number(l.valor ?? 0);
     return filtro === "pago" ? quitado : !quitado;
   }), [meus, filtro]);
+
+  /* TRABALHO ENTREGUE QUE NÃO VIROU DINHEIRO EM LUGAR NENHUM (Walter, 14/09/2026).
+     Quando a agência delega sem preencher o cachê, a peça é entregue, some do
+     "a receber" e nunca mais é cobrada. O silêncio favorece quem deve.
+     A agência já recebe o aviso pelo gatilho; aqui ele vê a lista e anota o
+     combinado em dois cliques, com cliente e peça já preenchidos. */
+  const semValor = useMemo(() => {
+    const comLancamento = new Set(linhas.map((l) => l.post_id).filter(Boolean) as string[]);
+    return entregues.filter((e) => !Number(e.cache ?? 0) && !comLancamento.has(e.post_id));
+  }, [entregues, linhas]);
 
   const criaCaixa = modules.find((m) => m.code === "criacaixa" || /caixa/i.test(m.name));
 
@@ -195,6 +212,57 @@ export default function Caches() {
           </div>
         )}
       </section>
+
+      {/* ENTREGUE SEM VALOR COMBINADO. Fica depois da lista que tem dinheiro, e
+          antes do caderninho, porque é a ponte entre as duas: é trabalho feito
+          esperando virar número. */}
+      {semValor.length > 0 && filtro !== "pago" && (
+        <section>
+          <Card className="rounded-2xl border-amber-200/80 bg-amber-50/40 overflow-hidden">
+            <div className="px-4 py-3 border-b border-amber-200/70">
+              <p className="font-display font-bold text-[14px] text-amber-900 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" /> Você entregou, mas ninguém combinou o valor
+              </p>
+              <p className="text-[11.5px] font-body text-amber-900/80 mt-0.5 max-w-xl">
+                {semValor.length === 1 ? "Esta peça saiu" : `Estas ${semValor.length} peças saíram`} sem cachê preenchido pela agência.
+                Ela já foi avisada. Se vocês fecharam por fora, anote aqui pra não perder de vista.
+              </p>
+            </div>
+            <ul className="divide-y divide-amber-200/60">
+              {semValor.slice(0, 8).map((e) => (
+                <li key={e.post_id} className="flex items-center gap-3 px-4 py-2.5">
+                  <span className="w-8 h-8 rounded-lg grid place-items-center text-white text-[11px] font-display font-bold shrink-0 overflow-hidden"
+                    style={{ background: e.cliente_cor || "#FFCF03" }}>
+                    {e.cliente_logo
+                      ? <img src={e.cliente_logo} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      : (e.cliente_nome || "C").charAt(0).toUpperCase()}
+                  </span>
+                  <button type="button" onClick={() => setAbrirCard(e.post_id)} className="min-w-0 flex-1 text-left">
+                    <span className="block text-[13px] font-body font-semibold text-amber-950 truncate">{e.titulo}</span>
+                    <span className="block text-[11px] font-body text-amber-900/70 truncate">
+                      {e.cliente_nome} · {e.agencia_nome} · ✓ {new Date(e.entregue_em).toLocaleDateString("pt-BR")}
+                    </span>
+                  </button>
+                  <Button size="sm" variant="outline" className="rounded-xl shrink-0 border-amber-300 bg-card text-amber-900 hover:bg-amber-100"
+                    onClick={() => setEditando({
+                      cliente: e.cliente_nome || e.agencia_nome,
+                      descricao: e.titulo,
+                      valor: 0, valor_pago: 0,
+                      data: e.entregue_em.slice(0, 10),
+                    })}>
+                    Anotar valor
+                  </Button>
+                </li>
+              ))}
+            </ul>
+            {semValor.length > 8 && (
+              <p className="px-4 py-2 text-[11px] font-body text-amber-900/70">
+                E mais {semValor.length - 8}. Vale cobrar a agência de uma vez.
+              </p>
+            )}
+          </Card>
+        </section>
+      )}
 
       {/* O QUE ELE LANÇOU NA MÃO: pacote fechado, agência de fora do Cria,
           valor combinado no WhatsApp. Sem isso a página respondia metade da

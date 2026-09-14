@@ -592,6 +592,12 @@ export type PecaExterna = {
   assignee_id: string;
   external_client_id: string | null;
   updated_at: string | null;
+  /** Valor combinado com o parceiro. Nulo = ninguém combinou, e a peça não
+   *  entra no Caixa quando for entregue. */
+  cache_parceiro: number | null;
+  /** Quando a peça foi marcada como entregue. Coluna própria desde 14/09/2026:
+   *  `updated_at` mudava a cada edição da agência e bagunçava a cobrança. */
+  entregue_em: string | null;
 };
 
 /** Tudo que está na mão de parceiros: a matéria-prima do painel "Com
@@ -605,7 +611,7 @@ export function usePecasComParceiros(temParceiros: boolean) {
     enabled: !!user && temParceiros,
     queryFn: async () => {
       const { data, error } = await sbFrom("posts")
-        .select("id, title, format, producao_status, prazo_producao, prazo_status, prazo_sugerido, approval_status, scheduled_date, assignee_id, external_client_id, updated_at")
+        .select("id, title, format, producao_status, prazo_producao, prazo_status, prazo_sugerido, approval_status, scheduled_date, assignee_id, external_client_id, updated_at, cache_parceiro, entregue_em")
         .not("assignee_id", "is", null)
         .order("prazo_producao", { ascending: true, nullsFirst: false })
         .limit(300);
@@ -677,35 +683,68 @@ export function usePedirAjuste() {
 }
 
 /** Delegar um card: quem escreve é a DONA do post, então aqui é update direto
- *  na tabela (a RLS dela já permite). `assignee_id` null remove a delegação. */
+ *  na tabela (a RLS dela já permite). `assignee_id` null remove a delegação.
+ *
+ *  CORRIGIR O COMBINADO NÃO APAGA A ENTREGA (Walter, 14/09/2026).
+ *  O mesmo popover que delega é o único lugar onde se ajusta o cachê. Antes ele
+ *  reescrevia o fluxo inteiro em todo "Atualizar": a peça entregue voltava pra
+ *  "aguardando", o prazo aceito virava proposto de novo e o parceiro via o card
+ *  ressuscitar na fila. Ou seja, arrumar o valor custava a entrega.
+ *
+ *  Agora o estado da produção só é reiniciado quando o RESPONSÁVEL muda, que é
+ *  quando faz sentido: outra pessoa, outro trabalho. Mesmo parceiro = só data e
+ *  valor mudam, e o prazo volta a "proposto" apenas se a data mudou de fato,
+ *  porque data nova é combinado novo. */
 export function useDelegarPost() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (v: { postId: string; assigneeId: string | null; prazo: string | null; nomeParceiro?: string; cache?: number | null }) => {
-      const { data, error } = await sbFrom("posts").update({
+      // Lê o estado atual em vez de confiar no que a tela achava que era: o
+      // popover pode estar aberto desde antes do parceiro entregar.
+      const { data: atual, error: lerErro } = await sbFrom("posts")
+        .select("assignee_id, prazo_producao, producao_status")
+        .eq("id", v.postId).maybeSingle();
+      if (lerErro) throw lerErro;
+      const anterior = (atual ?? null) as { assignee_id: string | null; prazo_producao: string | null; producao_status: string | null } | null;
+      const mesmoParceiro = !!v.assigneeId && anterior?.assignee_id === v.assigneeId;
+      const prazoMudou = (anterior?.prazo_producao ?? null) !== (v.prazo || null);
+
+      const patch: Record<string, unknown> = {
         assignee_id: v.assigneeId,
-        // Cachê combinado (fase 3): vira despesa no Caixa quando entregar.
+        // Cachê combinado (fase 3): vira despesa no Caixa quando entregar, e o
+        // gatilho corrige a despesa se o valor mudar antes da baixa.
         cache_parceiro: v.assigneeId ? (v.cache ?? null) : null,
         prazo_producao: v.assigneeId ? v.prazo : null,
+        prazo_sugerido: null,
+      };
+
+      if (mesmoParceiro) {
+        // Data nova pede aceite novo. Data igual não mexe em nada do prazo.
+        if (prazoMudou) patch.prazo_status = v.prazo ? "proposto" : null;
+        // producao_status e assigned_at ficam como estão: a entrega é dele.
+      } else {
         // Prazo nasce PROPOSTO: o parceiro topa ou sugere outra data. Sem
         // data, não há o que aceitar (fica "a combinar").
-        prazo_status: v.assigneeId && v.prazo ? "proposto" : null,
-        prazo_sugerido: null,
-        producao_status: v.assigneeId ? "aguardando" : null,
-        assigned_at: v.assigneeId ? new Date().toISOString() : null,
-      } as never).eq("id", v.postId).select("id").maybeSingle();
+        patch.prazo_status = v.assigneeId && v.prazo ? "proposto" : null;
+        patch.producao_status = v.assigneeId ? "aguardando" : null;
+        patch.assigned_at = v.assigneeId ? new Date().toISOString() : null;
+      }
+
+      const { data, error } = await sbFrom("posts").update(patch as never)
+        .eq("id", v.postId).select("id").maybeSingle();
       if (error) throw error;
       // Bloqueio de RLS devolve zero linhas sem erro; sem isto a tela diria
       // "enviado" sem ter enviado.
       if (!data) throw new Error("Não consegui delegar. Recarregue e tente de novo.");
-      return v;
+      return { ...v, mesmoParceiro };
     },
     onSuccess: (v) => {
       void qc.invalidateQueries({ queryKey: ["external-posts"] });
       void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
-      toast.success(v.assigneeId
-        ? `Enviado pra ${v.nomeParceiro ?? "o parceiro"}. Ele recebe o aviso na hora.`
-        : "Delegação removida.");
+      if (!v.assigneeId) { toast.success("Delegação removida."); return; }
+      toast.success(v.mesmoParceiro
+        ? "Combinado atualizado. A entrega e o histórico continuam como estavam."
+        : `Enviado pra ${v.nomeParceiro ?? "o parceiro"}. Ele recebe o aviso na hora.`);
     },
     onError: (e: Error) => toast.error(e.message || "Não consegui delegar."),
   });

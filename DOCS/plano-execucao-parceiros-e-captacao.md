@@ -199,9 +199,13 @@ Cada um fecha 100% antes do próximo começar.
 Confidencialidade e permissão. Janela de tempo e vínculo ativo na ficha da marca; filtrar a conversa do cliente; esconder títulos e nomes para desligado; trocar `acts_for` por `member_can` nas sete tabelas; cadeado nas rotas da agência.
 **Pronto quando:** um parceiro de teste, desligado, não consegue ver nada além do próprio dinheiro; e um parceiro ativo não vê o que o cliente escreveu no portal.
 
-### Circuito 2: blindar o dinheiro (parceiros)
+### Circuito 2: blindar o dinheiro (parceiros) · FEITO em 14/09/2026
 Coluna `entregue_em` própria; cachê que falha vira aviso, não warning no log; atualizar o valor quando muda antes da baixa; avisar a agência quando entregar peça sem cachê; unificar o critério de "pago".
 **Pronto quando:** mudar o cachê depois da entrega atualiza o Caixa, e editar o post não muda a data de entrega.
+
+Entregue: migration `20260914000003_parceiro_blindar_dinheiro.sql` (coluna + gatilho BEFORE que carimba só na mudança de status, `lancar_cache_parceiro` com correção/exclusão de valor e notificação `cache_aviso`, `parceiro_entregues` e `parceiro_minhas_agencias` lendo a data certa). No app: `ehPago` comparando `= 'pago'` igual à RPC, `useDelegarPost` só reinicia a produção quando o responsável muda (antes "Atualizar" ressuscitava a peça entregue), aviso de entrega sem cachê nos dois lados (bloco na tela Cachês do parceiro e seção no painel "Com parceiros").
+
+Um furo encontrado durante a revisão e corrigido de quebra: o único lugar que edita o cachê era o mesmo botão que delegava, então arrumar o valor custava a entrega, o prazo aceito e o histórico.
 
 ### Circuito 3: notificação que leva ao lugar certo (parceiros)
 `?post=<id>` em todos os gatilhos; as duas telas lendo o parâmetro e abrindo o card; ordem invertida no pedido de ajuste; categoria "produção" separada de "clientes"; aviso de atraso para a agência.

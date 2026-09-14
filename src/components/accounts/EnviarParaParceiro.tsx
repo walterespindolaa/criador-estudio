@@ -42,6 +42,11 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, 
 
   if (parceiros.length === 0) return null;
   const atual = parceiros.find((p) => p.member_id === assigneeId);
+  /* Entregou e o campo de cachê está vazio: é o furo que some do financeiro
+     dos dois lados. Olha o valor DIGITADO, não o salvo, pra o aviso apagar
+     assim que ela corrige (Walter, 14/09/2026). */
+  const entregueSemCache = producaoStatus === "entregue" && !!atual
+    && !(Number(valorCache.replace(",", ".")) > 0);
 
   const enviar = async () => {
     if (!escolhido) return;
@@ -99,8 +104,22 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, 
           </div>
         </div>
         <p className="text-[11px] font-body text-muted-foreground mt-1 leading-relaxed">
-          Data e valor combinados. O cachê vira despesa no Caixa quando a entrega for marcada. Vazio = a combinar.
+          {entregueSemCache
+            ? "Corrigir aqui não desfaz a entrega: só o valor e a data mudam, e o Caixa acompanha."
+            : "Data e valor combinados. O cachê vira despesa no Caixa quando a entrega for marcada. Vazio = a combinar."}
         </p>
+
+        {/* ENTREGOU E NINGUÉM COMBINOU O VALOR. Sem este aviso a peça some do
+            financeiro dos dois lados e ninguém percebe até a cobrança. */}
+        {entregueSemCache && (
+          <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2">
+            <p className="text-[11.5px] font-body text-amber-900 leading-snug">
+              <span className="font-bold">Entregue sem cachê.</span>{" "}
+              {atual?.nome.split(" ")[0] ?? "O parceiro"} fez o trabalho e esta peça não entrou no Caixa nem no
+              {" "}"a receber" dele. Preencha o valor combinado acima.
+            </p>
+          </div>
+        )}
 
         <div className="flex gap-2 mt-3">
           {atual && (
@@ -110,7 +129,10 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, 
             </Button>
           )}
           <Button size="sm" onClick={() => void enviar()} disabled={!escolhido || delegar.isPending} className="rounded-xl flex-1">
-            {delegar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : atual ? "Atualizar" : "Enviar"}
+            {delegar.isPending ? <Loader2 className="h-4 w-4 animate-spin" />
+              : !atual ? "Enviar"
+              : escolhido === assigneeId ? "Salvar combinado"
+              : "Trocar de parceiro"}
           </Button>
         </div>
 
