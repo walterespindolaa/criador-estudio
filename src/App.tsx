@@ -89,6 +89,10 @@ const CronogramaPublica = lazy(() => import("./pages/CronogramaPublica"));
 const RoteirosPublica = lazy(() => import("./pages/RoteirosPublica"));
 const CadastroPublico = lazy(() => import("./pages/CadastroPublico"));
 const ManagerLayout = lazy(() => import("./components/accounts/ManagerLayout"));
+/* Guard de PAPEL, não de módulo: quem só produz pras agências não entra nas
+   telas de operação por URL. Import direto (não lazy) porque ele é só um
+   redirect e precisa decidir antes de qualquer tela carregar. */
+import { SoOperacao } from "./components/accounts/SoOperacao";
 const ManagerHome = lazy(() => import("./pages/socialmidia/ManagerHome"));
 const CriaPost = lazy(() => import("./pages/socialmidia/CriaPost"));
 const CriaCrm = lazy(() => import("./pages/socialmidia/CriaCrm"));
@@ -379,14 +383,14 @@ const App = () => (
                     Catch-all: o próprio componente lê o contexto e a seção do path. */}
                 <Route path="criacaixa/*" element={<ErrorBoundary><CriaCaixa /></ErrorBoundary>} />
                 <Route path="parceria" element={<ErrorBoundary><Parceria /></ErrorBoundary>} />
-                <Route path="relatorio" element={<ErrorBoundary><RelatorioGerencial /></ErrorBoundary>} />
+                <Route path="relatorio" element={<SoOperacao><ErrorBoundary><RelatorioGerencial /></ErrorBoundary></SoOperacao>} />
                 <Route path="comissoes" element={<ErrorBoundary><Comissoes /></ErrorBoundary>} />
-                <Route path="contas" element={<ErrorBoundary><Contas /></ErrorBoundary>} />
+                <Route path="contas" element={<SoOperacao><ErrorBoundary><Contas /></ErrorBoundary></SoOperacao>} />
                 <Route path="hubcria" element={<ErrorBoundary><HubCria /></ErrorBoundary>} />
-                <Route path="clientes" element={<ErrorBoundary><Clientes /></ErrorBoundary>} />
-                <Route path="clientes/:id" element={<ErrorBoundary><ClienteHub /></ErrorBoundary>} />
-                <Route path="clientes/:id/:tab" element={<ErrorBoundary><ClienteHub /></ErrorBoundary>} />
-                <Route path="aprovacoes" element={<ErrorBoundary><Aprovacoes /></ErrorBoundary>} />
+                <Route path="clientes" element={<SoOperacao><ErrorBoundary><Clientes /></ErrorBoundary></SoOperacao>} />
+                <Route path="clientes/:id" element={<SoOperacao><ErrorBoundary><ClienteHub /></ErrorBoundary></SoOperacao>} />
+                <Route path="clientes/:id/:tab" element={<SoOperacao><ErrorBoundary><ClienteHub /></ErrorBoundary></SoOperacao>} />
+                <Route path="aprovacoes" element={<SoOperacao><ErrorBoundary><Aprovacoes /></ErrorBoundary></SoOperacao>} />
                 {/* PARCEIRO: a fila de quem produz pras agências mora na MESMA
                     casca da gestão. Uma conta, dois papéis (Walter, 31/08). */}
                 <Route path="demandas" element={<ErrorBoundary><MinhasDemandas /></ErrorBoundary>} />
@@ -394,9 +398,9 @@ const App = () => (
                 <Route path="marcas" element={<ErrorBoundary><ParceiroMarcas /></ErrorBoundary>} />
                 {/* Cachê saiu de dentro de "Marcas que atendo": dinheiro tem tela própria. */}
                 <Route path="caches" element={<ErrorBoundary><ParceiroCaches /></ErrorBoundary>} />
-                <Route path="agenda" element={<ErrorBoundary><AgendaCriacao /></ErrorBoundary>} />
+                <Route path="agenda" element={<SoOperacao><ErrorBoundary><AgendaCriacao /></ErrorBoundary></SoOperacao>} />
                 <Route path="captacao" element={<ErrorBoundary><CriaCaptacao /></ErrorBoundary>} />
-                <Route path="equipe" element={<ErrorBoundary><Equipe /></ErrorBoundary>} />
+                <Route path="equipe" element={<SoOperacao><ErrorBoundary><Equipe /></ErrorBoundary></SoOperacao>} />
                 <Route path="lixeira" element={<ErrorBoundary><Lixeira /></ErrorBoundary>} />
               </Route>
               {/* LINK CURTO DA BIO (Walter, 01/09): app.criasocialclub.com.br/bio/nome

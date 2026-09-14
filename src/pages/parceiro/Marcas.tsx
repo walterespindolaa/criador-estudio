@@ -185,13 +185,10 @@ export function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFec
               </p>
             </Bloco>
           )}
-          {m.observacoes?.trim() && (
-            <Bloco titulo="Observações da agência">
-              <p className="text-[13px] font-body text-foreground leading-relaxed whitespace-pre-line rounded-xl bg-amber-50/60 border border-amber-200 px-3 py-2.5">
-                {m.observacoes}
-              </p>
-            </Bloco>
-          )}
+          {/* "Observações da agência" SAIU (Walter, 14/09/2026). Era o campo
+              livre de anotação interna sobre o cliente, escrito pela agência
+              pensando nela mesma, nunca em terceiro lendo. O que é direção de
+              trabalho tem lugar próprio: "o que evitar" e a conversa do card. */}
 
           {tags.length > 0 && (
             <Bloco titulo="Hashtags da marca" cor={cor}>

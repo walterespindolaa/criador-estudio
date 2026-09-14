@@ -425,6 +425,7 @@ export type MarcaDoParceiro = {
   publico: string | null;
   oferta: string | null;
   evitar: string | null;
+  /** Sempre null desde 14/09/2026: nota interna da agência não sai daqui. */
   observacoes: string | null;
   segmento: string | null;
   /** Os links que a agência guarda na ficha: Drive, Pinterest, site, fotos. */
