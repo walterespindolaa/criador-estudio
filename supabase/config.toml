@@ -39,6 +39,9 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
   # cabeçalho (x-cleanup-secret), não por JWT de usuário.
   [functions.bunny-cleanup-publicados]
     verify_jwt = false
+  # Diagnóstico dos vídeos presos: mesma proteção por segredo no cabeçalho.
+  [functions.bunny-diagnostico]
+    verify_jwt = false
   [functions.get-instagram-config]
     verify_jwt = false
   [functions.instagram-oauth]
