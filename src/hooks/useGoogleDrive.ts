@@ -115,6 +115,36 @@ async function downloadDriveFileToBlob(fileId: string, accessToken: string): Pro
   return await res.blob();
 }
 
+/**
+ * INGESTÃO NO BUNNY POR TRÁS (Walter, 14/09/2026).
+ *
+ * A peça já existe e já toca pelo Drive quando isto começa. Aqui o vídeo é
+ * levado pro Bunny (que dá streaming adaptativo e funciona nas contas que
+ * bloqueiam o /preview do Drive) e, no fim, a MESMA linha de mídia é promovida.
+ *
+ * Falhar aqui não é acidente grave: a peça continua no Drive, funcionando. Por
+ * isso nada de toast de erro na cara de quem anexou, só registro no console.
+ */
+async function ingerirNoBunnyEmSegundoPlano(v: {
+  fileId: string; fileName: string; mimeType: string; accessToken: string; mediaId: string;
+}): Promise<void> {
+  try {
+    const blob = await downloadDriveFileToBlob(v.fileId, v.accessToken);
+    const arquivo = new File([blob], v.fileName, { type: v.mimeType || blob.type });
+    const bunny = await uploadFileToBunnyStream(arquivo);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).rpc("criapost_promover_para_bunny", {
+      p_media_id: v.mediaId,
+      p_view_url: bunny.view_url,
+      p_thumbnail_url: bunny.thumbnail_url,
+      p_bunny_video_id: bunny.videoGuid,
+    });
+    if (error) throw error;
+  } catch (e) {
+    console.warn(`[drive-import] ingestão no Bunny falhou para ${v.fileName} (a peça segue no Drive):`, e);
+  }
+}
+
 export function useGoogleDrive() {
   const { user } = useAuth();
   const { activeAccountId } = useActiveAccount();
@@ -294,7 +324,6 @@ export function useGoogleDrive() {
 
     let imported = 0;
     let failed = 0;
-    let videoIngestFailed = 0;
 
     // Continua a numeração do carrossel a partir do que já existe no post,
     // pra a ordem não zerar (senão a mídia nova entra sem position/ordem).
@@ -309,48 +338,44 @@ export function useGoogleDrive() {
     for (const f of files) {
       try {
         if (isVideoMime(f.mimeType)) {
-          // VÍDEO: em vez de manter no Drive (player /preview que algumas contas
-          // bloqueiam), INGERE no Bunny Stream: baixa o arquivo do Drive como Blob,
-          // vira File e sobe pro Bunny (transcodifica e toca sempre no nosso player).
-          // Não precisa mais deixar público no Drive (permissions.create anyone).
-          const toastId = `drive-video-${f.id}`;
-          toast.loading(`Enviando vídeo do Drive: ${f.name}...`, { id: toastId });
-          try {
-            const driveBlob = await downloadDriveFileToBlob(f.id, accessToken);
-            const videoFile = new File([driveBlob], f.name, { type: f.mimeType || driveBlob.type });
+          /* DRIVE NA HORA, BUNNY DEPOIS (Walter, 14/09/2026).
+             Antes o arquivo fazia Drive -> navegador dela -> Bunny, TUDO antes
+             de a peça existir: 300 MB de download mais 300 MB de upload na
+             internet da social mídia, com a aba presa, e o cliente ainda via
+             quadrado preto enquanto transcodificava.
 
-            if (postId) {
-              // Post já existe: usa a MESMA lógica do upload de vídeo do aparelho
-              // (create-video + TUS + criapost_add_media).
-              await uploadVideoFileToBunny(videoFile, postId, `https://drive.google.com/file/d/${f.id}/view`);
-            } else {
-              // Post novo (sem id ainda): sobe pro Bunny e insere a ref direto com
-              // post_id null, pra ser reconciliada no save (igual mídia de foto).
-              const bunny = await uploadFileToBunnyStream(videoFile);
-              const { error } = await supabase.from("external_media_refs").insert({
-                user_id: ownerId,
-                post_id: null,
-                provider: "bunny_stream",
-                external_file_id: bunny.videoGuid,
-                file_name: f.name,
-                file_type: f.mimeType || "video/mp4",
-                file_size: f.sizeBytes || null,
-                thumbnail_url: bunny.thumbnail_url,
-                view_url: bunny.view_url,
-                // Enquanto o Bunny transcodifica, este é o caminho pra assistir.
-                download_url: `https://drive.google.com/file/d/${f.id}/view`,
-                bunny_video_id: bunny.videoGuid,
-                position: basePos + imported,
-              });
-              if (error) throw error;
-            }
-            toast.success(`Vídeo pronto, processando: ${f.name}`, { id: toastId });
-          } catch (verr) {
-            console.error(`[drive-import] bunny ingest failed for ${f.name}:`, verr);
-            toast.error(`Não consegui enviar o vídeo "${f.name}" pro player.`, { id: toastId });
-            videoIngestFailed++;
-            continue;
-          }
+             Agora a mídia nasce como DRIVE e já é utilizável no mesmo segundo:
+             o /preview toca e a miniatura aparece. A ingestão no Bunny (que
+             continua valendo, porque o /preview é bloqueado em parte das contas
+             corporativas) roda POR TRÁS e, quando termina, promove a MESMA
+             linha, sem mexer na posição do carrossel. Se falhar, a peça fica no
+             Drive e ninguém perde nada. */
+          const drivePreview = `https://drive.google.com/file/d/${f.id}/preview`;
+          const driveView = `https://drive.google.com/file/d/${f.id}/view`;
+          const driveThumb = `https://drive.google.com/thumbnail?id=${f.id}&sz=w1000`;
+
+          const { data: novaMidia, error: insErr } = await supabase.from("external_media_refs").insert({
+            user_id: ownerId,
+            post_id: postId ?? null,
+            provider: "gdrive",
+            external_file_id: f.id,
+            file_name: f.name,
+            file_type: f.mimeType || "video/mp4",
+            file_size: f.sizeBytes || null,
+            thumbnail_url: driveThumb,
+            view_url: drivePreview,
+            // Guardado também aqui: é o que sobrevive à promoção pro Bunny e à
+            // limpeza depois de publicado.
+            download_url: driveView,
+            position: basePos + imported,
+          }).select("id").single();
+          if (insErr) throw insErr;
+
+          // Em segundo plano, sem await: quem anexou já pode seguir a vida.
+          void ingerirNoBunnyEmSegundoPlano({
+            fileId: f.id, fileName: f.name, mimeType: f.mimeType,
+            accessToken, mediaId: (novaMidia as { id: string }).id,
+          });
         } else {
           // FOTO: baixa do Drive → comprime → upload pro bucket media → ref como 'device'
           const driveBlob = await downloadDriveFileToBlob(f.id, accessToken);
@@ -388,11 +413,6 @@ export function useGoogleDrive() {
 
     if (imported > 0) toast.success(`${imported} arquivo(s) vinculado(s)!`);
     if (failed > 0) toast.error(`${failed} arquivo(s) falharam ao importar.`);
-    // Vídeos que falharam já mostraram toast próprio por item; aqui só um resumo
-    // se mais de um caiu, sem derrubar os outros itens importados.
-    if (videoIngestFailed > 1) {
-      toast.error(`${videoIngestFailed} vídeo(s) não puderam ser enviados pro player.`);
-    }
   }, [user, activeAccountId]);
 
   const pickAndSave = useCallback(async (postId?: string) => {

@@ -35,6 +35,10 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = true
   [functions.criapost-media-cleanup]
     verify_jwt = false
+  # Robô de limpeza do Bunny: chamado por cron, protegido pelo segredo no
+  # cabeçalho (x-cleanup-secret), não por JWT de usuário.
+  [functions.bunny-cleanup-publicados]
+    verify_jwt = false
   [functions.get-instagram-config]
     verify_jwt = false
   [functions.instagram-oauth]
