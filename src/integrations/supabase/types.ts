@@ -4374,6 +4374,7 @@ export type Database = {
           deleted_at: string | null
           drive_folder_url: string | null
           editorial_line_id: string | null
+          entregue_em: string | null
           external_client_id: string | null
           format: string
           google_event_id: string | null
@@ -4427,6 +4428,7 @@ export type Database = {
           deleted_at?: string | null
           drive_folder_url?: string | null
           editorial_line_id?: string | null
+          entregue_em?: string | null
           external_client_id?: string | null
           format: string
           google_event_id?: string | null
@@ -4480,6 +4482,7 @@ export type Database = {
           deleted_at?: string | null
           drive_folder_url?: string | null
           editorial_line_id?: string | null
+          entregue_em?: string | null
           external_client_id?: string | null
           format?: string
           google_event_id?: string | null
@@ -6091,6 +6094,7 @@ export type Database = {
       accept_proposal_by_token: { Args: { _token: string }; Returns: undefined }
       acts_for: { Args: { target: string }; Returns: boolean }
       acts_for_cria_owner: { Args: { _owner: string }; Returns: boolean }
+      acts_for_equipe: { Args: { target: string }; Returns: boolean }
       admin_definir_parceiro: {
         Args: { _papel?: string; _user_id: string }
         Returns: undefined
@@ -6519,6 +6523,14 @@ export type Database = {
       is_account_member: { Args: { _owner: string }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_team_member: { Args: { target: string }; Returns: boolean }
+      link_da_peca: {
+        Args: {
+          _external_client_id: string
+          _para_parceiro: boolean
+          _post_id: string
+        }
+        Returns: string
+      }
       list_materials_by_token: {
         Args: { _token: string }
         Returns: {
