@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Bell, Trophy, Lightbulb, CheckCircle2, Flame, UserPlus, Clock, Trash2, Package, Clapperboard, Handshake, CalendarDays, FileText, Video, Cake, MessageCircle, Sun, ShieldAlert } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Bell, Trophy, Lightbulb, CheckCircle2, Flame, UserPlus, Clock, Trash2, Package, Clapperboard, Handshake, CalendarDays, FileText, Video, Cake, MessageCircle, Sun, ShieldAlert, Wallet } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,8 @@ const TYPE_ICONS: Record<string, { icon: typeof Bell; color: string }> = {
   demanda_prazo_amanha: { icon: Clock, color: "text-orange-500" },
   demanda_entregue: { icon: CheckCircle2, color: "text-green-600" },
   demanda_comentario: { icon: MessageCircle, color: "text-violet-600" },
+  demanda_atrasada: { icon: Clock, color: "text-destructive" },
+  cache_aviso: { icon: Wallet, color: "text-amber-600" },
 };
 
 // Cada tipo cai numa categoria; a ordem define como aparecem no painel.
@@ -76,15 +79,22 @@ const CATEGORY: Record<string, string> = {
   collab: "Avisos",
   parceiro: "Avisos",
   sistema: "Avisos",
-  demanda_nova: "Cliente / Cria Post",
-  demanda_ajuste: "Cliente / Cria Post",
-  demanda_prazo: "Cliente / Cria Post",
-  demanda_prazo_amanha: "Lembretes",
-  demanda_entregue: "Cliente / Cria Post",
-  demanda_comentario: "Cliente / Cria Post",
+  /* PRODUÇÃO É UMA CATEGORIA PRÓPRIA (Walter, 14/09/2026).
+     Tudo que envolve parceiro caía em "Cliente / Cria Post", junto com aprovação
+     e comentário de cliente. Pro designer, que só recebe demanda, o painel
+     inteiro virava uma categoria só, e pra social mídia o recado do freela se
+     misturava com o recado do cliente. São duas conversas diferentes. */
+  demanda_nova: "Produção",
+  demanda_ajuste: "Produção",
+  demanda_prazo: "Produção",
+  demanda_prazo_amanha: "Produção",
+  demanda_atrasada: "Produção",
+  demanda_entregue: "Produção",
+  demanda_comentario: "Produção",
+  cache_aviso: "Produção",
 };
 const CATEGORY_ORDER = [
-  "Leads", "Cliente / Cria Post", "Lembretes", "Ganchos & dicas", "Conquistas", "Ideias", "Avisos", "Outras",
+  "Leads", "Produção", "Cliente / Cria Post", "Lembretes", "Ganchos & dicas", "Conquistas", "Ideias", "Avisos", "Outras",
 ];
 const categoryOf = (type: string) => CATEGORY[type] ?? "Outras";
 
@@ -100,6 +110,7 @@ function timeAgo(dateStr: string) {
 
 export function NotificationsBell() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { profile } = useProfile();
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteOne, clearAll } = useNotifications();
   const [open, setOpen] = useState(false);
@@ -124,13 +135,30 @@ export function NotificationsBell() {
     }
   };
 
+  /* CLICAR NA NOTIFICAÇÃO LEVA AO LUGAR CERTO (Walter, 14/09/2026).
+     O campo `link` existe desde o começo e era gravado por todos os gatilhos,
+     mas o clique só marcava como lida: o aviso dizia "fulano entregou tal peça"
+     e a pessoa tinha que caçar a peça na mão, num quadro de 40 cards. Aviso que
+     não leva a lugar nenhum é ruído, não é aviso.
+     Fecha o painel antes de navegar, senão o popover fica preso por cima da
+     tela nova. */
+  const abrir = (n: Notification) => {
+    if (!n.read) markAsRead.mutate(n.id);
+    if (!n.link) return;
+    setOpen(false);
+    navigate(n.link);
+  };
+
   const renderItem = (n: Notification) => {
     const typeInfo = TYPE_ICONS[n.type] || TYPE_ICONS.lembrete_postar;
     const Icon = typeInfo.icon;
     return (
       <div
         key={n.id}
-        onClick={() => markAsRead.mutate(n.id)}
+        role={n.link ? "button" : undefined}
+        tabIndex={n.link ? 0 : undefined}
+        onClick={() => abrir(n)}
+        onKeyDown={(e) => { if (n.link && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); abrir(n); } }}
         className={`group/item w-full text-left flex items-start gap-3 p-3 rounded-xl transition-colors cursor-pointer ${
           n.read ? "opacity-60" : "bg-primary/5 hover:bg-primary/10"
         }`}

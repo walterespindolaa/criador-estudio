@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useProfile } from "@/hooks/useProfile";
 import { motion } from "framer-motion";
 import {
@@ -100,6 +100,23 @@ export default function MinhasDemandas() {
   const { profile } = useProfile();
   const papelDoPerfil = (profile as { parceiro_role?: string | null } | null)?.parceiro_role ?? null;
   const hoje = hojeBR();
+
+  /* CHEGOU POR NOTIFICAÇÃO: ABRE O CARD (Walter, 14/09/2026).
+     Os avisos apontavam pra cá sem dizer QUAL peça, e ele caía num quadro com
+     dezenas de cards pra caçar o título que leu no aviso. Agora o gatilho manda
+     `?post=<id>` e a tela abre a peça direto.
+     Limpa o parâmetro da URL na mesma hora: se ficasse, fechar o card e dar
+     F5 reabriria ele pra sempre, e o botão voltar do celular ficaria preso. */
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    const id = params.get("post");
+    if (!id) return;
+    setAberto(id);
+    const limpo = new URLSearchParams(params);
+    limpo.delete("post");
+    setParams(limpo, { replace: true });
+  }, [params, setParams]);
+
   const grupos = useMemo(() => porDia(fila), [fila]);
   const venceHoje = fila.filter((c) => c.prazo_producao === hoje).length;
   const fazendo = fila.filter((c) => c.producao_status === "em_producao").length;

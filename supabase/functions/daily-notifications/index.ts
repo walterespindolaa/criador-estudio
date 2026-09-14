@@ -277,6 +277,61 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── ATRASO DO PARCEIRO -> A AGÊNCIA (14/09/2026) ──────────────────────
+    // O parceiro era cobrado do prazo todo dia e a agência não ficava sabendo
+    // de nada. Ela descobria o atraso quando o cliente perguntava do post, que
+    // é tarde demais pra remanejar. Agora a dona do post recebe o resumo do que
+    // passou do prazo e ainda não foi entregue, uma vez por dia.
+    const { data: atrasadas } = await svc.from("posts")
+      .select("user_id, assignee_id, title, prazo_producao")
+      .not("assignee_id", "is", null).is("deleted_at", null)
+      .in("producao_status", ["aguardando", "em_producao", "ajuste"])
+      .lt("prazo_producao", hojeBR);
+    if (atrasadas?.length) {
+      // Mesmo cuidado do bloco de cima: vínculo desfeito não gera cobrança.
+      const { data: vincA } = await svc.from("manager_members").select("manager_id, member_id, name")
+        .eq("status", "ativo")
+        .in("member_id", [...new Set((atrasadas as { assignee_id: string }[]).map((d) => d.assignee_id))]);
+      const nomePor = new Map<string, string>();
+      const ativos = new Set<string>();
+      for (const v of (vincA ?? []) as { manager_id: string; member_id: string; name: string | null }[]) {
+        ativos.add(`${v.manager_id}:${v.member_id}`);
+        if (v.name) nomePor.set(`${v.manager_id}:${v.member_id}`, v.name);
+      }
+      const porAgencia = new Map<string, { titulo: string; quem: string; dias: number }[]>();
+      for (const d of (atrasadas ?? []) as { user_id: string; assignee_id: string; title: string; prazo_producao: string }[]) {
+        const chave = `${d.user_id}:${d.assignee_id}`;
+        if (!ativos.has(chave)) continue;
+        const dias = Math.round(
+          (Date.parse(`${hojeBR}T00:00:00Z`) - Date.parse(`${d.prazo_producao}T00:00:00Z`)) / dayMs);
+        const lista = porAgencia.get(d.user_id) ?? [];
+        lista.push({ titulo: d.title, quem: (nomePor.get(chave) ?? "Parceiro").split(" ")[0], dias });
+        porAgencia.set(d.user_id, lista);
+      }
+      if (porAgencia.size) {
+        const donos = [...porAgencia.keys()];
+        const { data: jaAtraso } = await svc.from("notifications").select("user_id")
+          .eq("type", "demanda_atrasada").in("user_id", donos).gte("created_at", iso(now - 20 * 60 * 60 * 1000));
+        const jaAvisado = new Set((jaAtraso ?? []).map((r: { user_id: string }) => r.user_id));
+        for (const [uid, itens] of porAgencia) {
+          if (jaAvisado.has(uid)) continue;
+          // A mais atrasada primeiro: é a que precisa de decisão hoje.
+          itens.sort((a, b) => b.dias - a.dias);
+          const p = itens[0];
+          const resto = itens.length - 1;
+          rows.push({
+            user_id: uid, type: "demanda_atrasada",
+            title: itens.length === 1
+              ? `🔴 Entrega atrasada: ${p.titulo.slice(0, 40)}`
+              : `🔴 ${itens.length} entregas atrasadas com parceiros`,
+            description: `${p.quem} está ${p.dias} dia${p.dias === 1 ? "" : "s"} além do prazo em "${p.titulo.slice(0, 40)}"`
+              + (resto > 0 ? ` e mais ${resto}.` : ".") + " Cobre ou remaneje antes do cliente perguntar.",
+            link: "/socialmidia/criapost/parceiros",
+          });
+        }
+      }
+    }
+
     // ── RESUMO SEMANAL DO INSTAGRAM (segunda-feira): seguidores ganhos, alcance
     //    da semana e o post que mais rendeu. Só pra quem tem a conta própria
     //    conectada e com sync recente. ──

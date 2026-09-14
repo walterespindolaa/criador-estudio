@@ -663,15 +663,22 @@ export function usePedirAjuste() {
     mutationFn: async (v: { postId: string; motivo: string }) => {
       const motivo = v.motivo.trim();
       if (!motivo) throw new Error("Escreva o que precisa mudar, consolidado num texto só.");
+
+      /* O COMENTÁRIO VEM PRIMEIRO (Walter, 14/09/2026).
+         O gatilho `notify_parceiro_fluxo` monta o aviso de ajuste lendo o
+         ÚLTIMO comentário da social mídia. Quando o status era gravado antes,
+         esse último comentário ainda era o da rodada ANTERIOR: o parceiro
+         recebia o motivo velho e refazia a coisa errada. Gravando o motivo
+         primeiro, o gatilho lê o texto certo. */
+      const { error: cErr } = await sbFrom("post_approval_comments").insert({
+        post_id: v.postId, content: `Ajuste: ${motivo}`.slice(0, 4000), author_role: "social_media",
+      } as never);
+      if (cErr) throw cErr;
       const { data, error } = await sbFrom("posts")
         .update({ producao_status: "ajuste" } as never)
         .eq("id", v.postId).select("id").maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Não consegui pedir o ajuste. Recarregue e tente de novo.");
-      const { error: cErr } = await sbFrom("post_approval_comments").insert({
-        post_id: v.postId, content: `Ajuste: ${motivo}`.slice(0, 4000), author_role: "social_media",
-      } as never);
-      if (cErr) throw cErr;
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["external-posts"] });

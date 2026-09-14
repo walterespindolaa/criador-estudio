@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useExternalClients, useExternalPosts, usePortalActivity, type ExternalClient, type ExternalPost, type ExternalPostInput } from "@/hooks/useCriaPost";
 import { toast } from "sonner";
@@ -448,6 +449,27 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     } catch { setFormOpen(false); }
   };
   const openEdit = (p: ExternalPost) => { setDraftId(null); setEditing(p); setRefLinks(parseRefLinks(p.reference_url)); setInternalTags(tagsByPost[p.id] ?? []); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", notes: (p as { notes?: string | null }).notes ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null, reference_url: p.reference_url ?? null, drive_folder_url: (p as { drive_folder_url?: string | null }).drive_folder_url ?? null, editorial_line_id: p.editorial_line_id ?? null }); setFormOpen(true); };
+
+  /* LINK DIRETO PRA UMA PEÇA (Walter, 14/09/2026).
+     `?post=<id>` abre o editor daquele post assim que a lista carrega. É o que
+     faz a notificação "fulano entregou tal peça" virar um clique em vez de uma
+     caçada no quadro, e vale pra qualquer link colado no WhatsApp também.
+     Espera os posts chegarem (a query é assíncrona) e limpa o parâmetro depois,
+     senão fechar o editor e recarregar reabriria ele pra sempre. */
+  const [urlParams, setUrlParams] = useSearchParams();
+  useEffect(() => {
+    const id = urlParams.get("post");
+    if (!id || posts.length === 0) return;
+    const alvo = posts.find((p) => p.id === id);
+    if (alvo) openEdit(alvo);
+    else toast.error("Não achei essa peça aqui. Ela pode ter sido movida de cliente ou excluída.");
+    const limpo = new URLSearchParams(urlParams);
+    limpo.delete("post");
+    setUrlParams(limpo, { replace: true });
+    // openEdit muda a cada render (closure dos estados do form); depender dele
+    // reabriria o editor em loop. O gatilho é o parâmetro e a lista, só.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlParams, posts]);
 
   // Cancelar um post novo apaga o rascunho (com a mídia que já subiu).
   const closeForm = async () => {

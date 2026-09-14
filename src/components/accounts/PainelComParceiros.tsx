@@ -6,6 +6,7 @@ import { hojeBR } from "@/lib/date-br";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useActiveAccount } from "@/contexts/AccountContext";
+import { useExternalClients } from "@/hooks/useCriaPost";
 import {
   ROTULO_PAPEL, useCachesDosParceiros, useMeusParceiros, usePecasComParceiros, useResolverPrazoSugerido,
   type PecaExterna,
@@ -70,6 +71,8 @@ export function PainelComParceiros({ clientes }: {
   clientes: Record<string, string>;
 }) {
   const navigate = useNavigate();
+  // Só pra traduzir external_client_id -> crm_client_id na hora de abrir a peça.
+  const { clients: extClients } = useExternalClients();
   const { data: parceiros = [] } = useMeusParceiros();
   const { data: pecas = [], isLoading } = usePecasComParceiros(parceiros.length > 0);
   const resolver = useResolverPrazoSugerido();
@@ -114,10 +117,17 @@ export function PainelComParceiros({ clientes }: {
 
   if (parceiros.length === 0) return null;
 
+  /* CLIQUE MORTO, ACHADO NA REVISÃO DE 14/09/2026.
+     A rota é /socialmidia/clientes/<id do CRM>/posts, mas aqui ia o id do
+     external_clients. A tela procurava um cliente do CRM com esse id, não
+     achava, e a pessoa caía numa página vazia sem entender por quê. Agora
+     traduz um id no outro antes de navegar.
+     E `?post=` abre o editor DAQUELA peça, em vez de largar ela num kanban com
+     dezenas de cards pra achar o título de novo na mão. */
   const abrirPeca = (p: PecaExterna) => {
-    // O card do post vive no workspace do cliente; sem cliente, fica aqui.
-    if (p.external_client_id) navigate(`/socialmidia/clientes/${p.external_client_id}/posts`);
-    else navigate("/socialmidia/criapost"); // sem cliente: o quadro geral, nunca clique morto
+    const ec = p.external_client_id ? extClients.find((c) => c.id === p.external_client_id) : null;
+    if (ec?.crm_client_id) navigate(`/socialmidia/clientes/${ec.crm_client_id}/posts?post=${p.id}`);
+    else navigate("/socialmidia/criapost"); // sem cliente no CRM: o quadro geral, nunca clique morto
   };
 
   const linhaPeca = (p: PecaExterna, extra?: React.ReactNode) => (

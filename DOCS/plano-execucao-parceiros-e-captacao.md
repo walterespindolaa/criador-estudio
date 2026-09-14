@@ -207,9 +207,15 @@ Entregue: migration `20260914000003_parceiro_blindar_dinheiro.sql` (coluna + gat
 
 Um furo encontrado durante a revisão e corrigido de quebra: o único lugar que edita o cachê era o mesmo botão que delegava, então arrumar o valor custava a entrega, o prazo aceito e o histórico.
 
-### Circuito 3: notificação que leva ao lugar certo (parceiros)
+### Circuito 3: notificação que leva ao lugar certo (parceiros) · FEITO em 14/09/2026
 `?post=<id>` em todos os gatilhos; as duas telas lendo o parâmetro e abrindo o card; ordem invertida no pedido de ajuste; categoria "produção" separada de "clientes"; aviso de atraso para a agência.
 **Pronto quando:** clicar em qualquer notificação abre a peça, e o motivo do ajuste que chega é o motivo que foi escrito.
+
+Entregue: migration `20260914000004_notificacao_leva_ao_lugar.sql` (helper `link_da_peca`, os cinco avisos do fluxo e os dois de conversa gravando o link com a peça, categoria `producao` em `notif_categoria`), sino navegando pelo `link`, `?post=` lido em `MinhasDemandas` e em `ClientDetail`, `usePedirAjuste` gravando o motivo antes do status, interruptor "Produção com parceiros" nas preferências de push, e aviso `demanda_atrasada` no robô diário.
+
+Dois furos maiores que o previsto, achados no caminho:
+1. **O sino nunca navegou.** A coluna `link` era gravada por todos os gatilhos desde o começo e o clique só marcava como lida. Não era um problema dos parceiros: era de todas as notificações do produto.
+2. **O botão do painel "Com parceiros" levava o id errado** (external_clients em vez do id do CRM), então o clique caía numa página vazia. Corrigido na tela e na função do link.
 
 ### Circuito 4: parar de engolir erro (parceiros)
 Relançar erro real; mensagens humanas; menu que não some ao ativar módulo; parceiro pausado com tela própria.

@@ -186,6 +186,10 @@ export function NotificationToggle() {
 const CATEGORIAS: { chave: string; titulo: string; desc: string }[] = [
   { chave: "lembretes", titulo: "Lembretes do dia", desc: "Resumo da manhã, post agendado, tarefa vencendo, stories, captação de amanhã, aniversário de cliente." },
   { chave: "clientes", titulo: "Clientes e aprovações", desc: "Aprovou, pediu ajuste, comentou, roteiro revisado, pagamento atrasado, renovação chegando." },
+  /* Produção saiu de dentro de "clientes" em 14/09/2026: quem trabalha com
+     designer e filmmaker recebe os dois fluxos o dia inteiro, e querer o aviso
+     do cliente no celular não é a mesma coisa que querer o do freela. */
+  { chave: "producao", titulo: "Produção com parceiros", desc: "Demanda nova, prazo, entrega, ajuste, conversa no card e cachê a definir." },
   { chave: "leads", titulo: "Leads", desc: "Alguém deixou contato no seu link na bio." },
   { chave: "conquistas", titulo: "Conquistas e dicas", desc: "Meta batida, dica do dia, ideia criada." },
   { chave: "avisos", titulo: "Avisos da conta", desc: "Acesso vencendo, parcerias, collabs, sistema." },
