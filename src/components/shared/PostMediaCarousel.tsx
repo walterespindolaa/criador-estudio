@@ -154,7 +154,14 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
         <span className="w-16 h-16 rounded-full bg-black/55 flex items-center justify-center shadow-lg"><Play className="h-8 w-8 text-white ml-1" /></span>
         {thumbOk !== true && (
           <span className="text-xs font-medium text-white/85 text-center px-4 leading-snug">
-            {aindaProcessando ? "Assistir no Drive (o player está preparando este vídeo)" : "Assistir"}
+            {aindaProcessando
+              ? "Assistir no Drive (o player está preparando este vídeo)"
+              /* Bunny sem saída pelo Drive: é vídeo anexado ANTES de guardarmos
+                 o arquivo de origem, e às vezes com encoding travado. Dizer
+                 "Assistir" aqui é promessa que a tela não cumpre: o cliente
+                 clica e cai na tela de "Processing" do player. Melhor avisar. */
+              : kind === "bunny" ? "Vídeo em preparo. Se continuar assim, avise quem enviou."
+              : "Assistir"}
           </span>
         )}
       </button>
