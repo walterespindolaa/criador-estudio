@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import * as tus from "tus-js-client";
-import { BUNNY_CDN_HOSTNAME } from "@/lib/constants";
+import { BUNNY_CRIAPOST_CDN_HOSTNAME } from "@/lib/constants";
 
 // RPC sem tipos gerados (criapost_add_media não está no schema tipado do client).
 const sbRpc = supabase.rpc.bind(supabase) as unknown as (
@@ -60,9 +60,11 @@ export async function uploadFileToBunnyStream(file: File): Promise<BunnyStreamRe
     upload.start();
   });
   const view_url = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoGuid}`;
-  // Miniatura tem que vir do CDN da MESMA library onde o vídeo foi criado (Stream),
-  // senão dá 404. Antes usava o CDN da library criapost (vazia).
-  const thumbnail_url = `https://${BUNNY_CDN_HOSTNAME}/${videoGuid}/thumbnail.jpg`;
+  /* A MINIATURA VEM DO CDN DA MESMA LIBRARY onde o vídeo foi criado, senão dá
+     404 eterno e o card fica preto. Como a peça do Cria Post passa a viver na
+     library cria-criapost (Walter, 14/09/2026), o endereço acompanha o escopo.
+     Chave, id e CDN são um TRIO: errar um só já quebra tudo. */
+  const thumbnail_url = `https://${BUNNY_CRIAPOST_CDN_HOSTNAME}/${videoGuid}/thumbnail.jpg`;
   return { videoGuid, view_url, thumbnail_url };
 }
 

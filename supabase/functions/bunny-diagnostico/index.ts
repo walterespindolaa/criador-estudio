@@ -34,9 +34,15 @@ Deno.serve(async (req) => {
     if (req.headers.get("x-cleanup-secret") !== Deno.env.get("CRIAPOST_CLEANUP_SECRET")) {
       return json({ error: "unauthorized" }, 401);
     }
-    const apiKey = Deno.env.get("BUNNY_STREAM_API_KEY");
-    const lib = Deno.env.get("BUNNY_STREAM_LIBRARY_ID");
-    if (!apiKey || !lib) return json({ error: "Bunny secrets não configurados" }, 500);
+    /* DUAS LIBRARIES (14/09/2026). A peça do Cria Post passa a viver na
+       cria-criapost, e o que já existe está na do Cria. Procurar só numa dava
+       "não encontrado" em tudo e levava ao diagnóstico errado. Aqui procura nas
+       duas e DIZ em qual achou, que é a informação que importa. */
+    const libs = [
+      { nome: "criapost", id: Deno.env.get("BUNNY_CRIAPOST_LIBRARY_ID"), key: Deno.env.get("BUNNY_CRIAPOST_API_KEY") },
+      { nome: "cria", id: Deno.env.get("BUNNY_STREAM_LIBRARY_ID"), key: Deno.env.get("BUNNY_STREAM_API_KEY") },
+    ].filter((l) => l.id && l.key) as { nome: string; id: string; key: string }[];
+    if (libs.length === 0) return json({ error: "Bunny secrets não configurados" }, 500);
 
     const svc = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -56,32 +62,40 @@ Deno.serve(async (req) => {
     for (const r of refs ?? []) {
       let status: number | null = null;
       let progresso: number | null = null;
+      let tamanho: number | null = null;
+      let ondeEsta: string | null = null;
       let erro: string | null = null;
-      try {
-        const res = await fetch(
-          `https://video.bunnycdn.com/library/${lib}/videos/${r.bunny_video_id}`,
-          { headers: { AccessKey: apiKey, accept: "application/json" } },
-        );
-        if (res.status === 404) {
-          erro = "não existe mais nesta library do Bunny";
-        } else if (!res.ok) {
-          erro = `consulta falhou (${res.status})`;
-        } else {
+
+      for (const l of libs) {
+        try {
+          const res = await fetch(
+            `https://video.bunnycdn.com/library/${l.id}/videos/${r.bunny_video_id}`,
+            { headers: { AccessKey: l.key, accept: "application/json" } },
+          );
+          if (res.status === 404) continue;          // não é desta, tenta a próxima
+          if (!res.ok) { erro = `consulta falhou na library ${l.nome} (${res.status})`; continue; }
           const v = await res.json();
           status = typeof v.status === "number" ? v.status : null;
           progresso = typeof v.encodeProgress === "number" ? v.encodeProgress : null;
+          tamanho = typeof v.storageSize === "number" ? v.storageSize : null;
+          ondeEsta = l.nome;
+          break;
+        } catch (e) {
+          erro = String(e);
         }
-      } catch (e) {
-        erro = String(e);
       }
+      if (!ondeEsta && !erro) erro = "não está em nenhuma das duas libraries";
+
       linhas.push({
         arquivo: r.file_name,
         media_id: r.id,
         post_id: r.post_id,
         anexado_em: r.created_at,
+        library: ondeEsta,
         status,
         leitura: status === null ? (erro ?? "sem resposta") : (LEITURA[status] ?? `código ${status}`),
         progresso,
+        tamanho_bytes: tamanho,
       });
     }
 

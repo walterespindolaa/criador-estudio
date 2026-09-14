@@ -46,7 +46,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { fireConfetti } from "@/lib/confetti";
 import { StickerCelebration } from "@/components/shared/StickerCelebration";
-import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS, BUNNY_CDN_HOSTNAME } from "@/lib/constants";
+import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS, BUNNY_CRIAPOST_CDN_HOSTNAME } from "@/lib/constants";
 import * as tus from "tus-js-client";
 
 const VIDEO_EXTS = ["mov", "mp4", "m4v", "webm", "avi", "mkv", "hevc", "3gp"];
@@ -656,8 +656,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
           let createdRefId: string | null = null;   // ref já exibido (pra limpar se o envio falhar)
           let createdRefIsTemp = false;
           try {
+            /* `scope: "criapost"` (Walter, 14/09/2026): peça de cliente mora na
+               library cria-criapost. A do Cria fica só pros arquivos do próprio
+               produto. Sem o escopo, o vídeo do editor ia parar lá junto. */
             const { data: sig, error: sigErr } = await supabase.functions.invoke("bunny-create-video", {
-              body: { fileName: raw.name, accountId: userId },
+              body: { fileName: raw.name, accountId: userId, scope: "criapost" },
             });
             if (sigErr || !sig?.videoGuid) {
               let reason: string | undefined = (sig as { error?: string } | null)?.error;
@@ -677,7 +680,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
             };
 
             const viewUrl = `https://iframe.mediadelivery.net/embed/${libraryId}/${videoGuid}`;
-            const thumbUrl = `https://${BUNNY_CDN_HOSTNAME}/${videoGuid}/thumbnail.jpg`;
+            // A miniatura vem do CDN da MESMA library onde o vídeo foi criado.
+            const thumbUrl = `https://${BUNNY_CRIAPOST_CDN_HOSTNAME}/${videoGuid}/thumbnail.jpg`;
 
             // 1) Cacheia o arquivo local AGORA → já dá pra publicar na hora, sem esperar o envio.
             const _shareUrl = resolveShareableUrl(viewUrl, "bunny");

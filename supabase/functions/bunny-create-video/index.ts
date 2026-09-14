@@ -23,10 +23,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const apiKey = Deno.env.get("BUNNY_STREAM_API_KEY");
-    const libraryId = Deno.env.get("BUNNY_STREAM_LIBRARY_ID");
-    if (!apiKey || !libraryId) return json({ error: "Bunny secrets não configurados" }, 500);
-
     const authHeader = req.headers.get("Authorization") ?? "";
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -38,8 +34,26 @@ Deno.serve(async (req) => {
     if (userErr || !userData?.user) return json({ error: "Não autenticado" }, 401);
     const userId = userData.user.id;
 
-    const { fileName, accountId } = await req.json();
+    const { fileName, accountId, scope } = await req.json();
     const owner = accountId || userId;
+
+    /* CADA COISA NA SUA LIBRARY (Walter, 14/09/2026).
+       O front sempre mandou `scope: "criapost"`, e esta função IGNORAVA: tudo
+       ia parar na library do Cria (CriaSocialClub), misturando vídeo de peça de
+       cliente com arquivo interno do produto. Agora o escopo manda: peça do
+       Cria Post vai pra library cria-criapost, o resto segue na de sempre.
+
+       ATENÇÃO: a chave do Bunny é POR LIBRARY. Chave e id têm que ser do mesmo
+       par, senão a criação falha (ou pior: cria num lugar e o player procura em
+       outro, que é o sintoma de "Processing video" pra sempre). */
+    const ehCriaPost = scope === "criapost";
+    const apiKey = ehCriaPost
+      ? (Deno.env.get("BUNNY_CRIAPOST_API_KEY") ?? Deno.env.get("BUNNY_STREAM_API_KEY"))
+      : Deno.env.get("BUNNY_STREAM_API_KEY");
+    const libraryId = ehCriaPost
+      ? (Deno.env.get("BUNNY_CRIAPOST_LIBRARY_ID") ?? Deno.env.get("BUNNY_STREAM_LIBRARY_ID"))
+      : Deno.env.get("BUNNY_STREAM_LIBRARY_ID");
+    if (!apiKey || !libraryId) return json({ error: "Bunny secrets não configurados" }, 500);
 
     // Permissão: dono OU gerente ativo da conta
     // account_members: owner_id = conta gerenciada, member_id = o gerente, status = 'active'
