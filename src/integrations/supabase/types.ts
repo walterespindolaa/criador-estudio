@@ -3946,6 +3946,45 @@ export type Database = {
         }
         Relationships: []
       }
+      parceiro_lancamentos: {
+        Row: {
+          cliente: string
+          created_at: string
+          data: string
+          descricao: string | null
+          forma_pagamento: string | null
+          id: string
+          member_id: string
+          updated_at: string
+          valor: number
+          valor_pago: number
+        }
+        Insert: {
+          cliente: string
+          created_at?: string
+          data?: string
+          descricao?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          member_id: string
+          updated_at?: string
+          valor?: number
+          valor_pago?: number
+        }
+        Update: {
+          cliente?: string
+          created_at?: string
+          data?: string
+          descricao?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          member_id?: string
+          updated_at?: string
+          valor?: number
+          valor_pago?: number
+        }
+        Relationships: []
+      }
       partner_program_config: {
         Row: {
           deduction_pct: number
@@ -4544,6 +4583,7 @@ export type Database = {
           onboarding_completed: boolean | null
           paid_client_packs: number
           paid_collab_seats: number
+          parceiro_role: string | null
           parked_at: string | null
           parked_until: string | null
           phone: string | null
@@ -4605,6 +4645,7 @@ export type Database = {
           onboarding_completed?: boolean | null
           paid_client_packs?: number
           paid_collab_seats?: number
+          parceiro_role?: string | null
           parked_at?: string | null
           parked_until?: string | null
           phone?: string | null
@@ -4666,6 +4707,7 @@ export type Database = {
           onboarding_completed?: boolean | null
           paid_client_packs?: number
           paid_collab_seats?: number
+          parceiro_role?: string | null
           parked_at?: string | null
           parked_until?: string | null
           phone?: string | null
@@ -6049,6 +6091,10 @@ export type Database = {
       accept_proposal_by_token: { Args: { _token: string }; Returns: undefined }
       acts_for: { Args: { target: string }; Returns: boolean }
       acts_for_cria_owner: { Args: { _owner: string }; Returns: boolean }
+      admin_definir_parceiro: {
+        Args: { _papel?: string; _user_id: string }
+        Returns: undefined
+      }
       admin_list_referrals: {
         Args: never
         Returns: {
@@ -6156,6 +6202,17 @@ export type Database = {
         Args: { _cost: number; _manager: string }
         Returns: number
       }
+      bunny_limpaveis: {
+        Args: { _dias?: number }
+        Returns: {
+          bunny_video_id: string
+          media_id: string
+          origem_drive: string
+          post_id: string
+          publicado_em: string
+        }[]
+      }
+      bunny_soltar_midia: { Args: { _media_id: string }; Returns: undefined }
       can_client: {
         Args: { _client: string; _module?: string; _owner: string }
         Returns: boolean
@@ -6209,6 +6266,15 @@ export type Database = {
           p_view_url: string
         }
         Returns: string
+      }
+      criapost_promover_para_bunny: {
+        Args: {
+          p_bunny_video_id: string
+          p_media_id: string
+          p_thumbnail_url: string
+          p_view_url: string
+        }
+        Returns: undefined
       }
       criapost_reorder_media: {
         Args: { p_ids: string[]; p_post_id: string }
@@ -6571,6 +6637,10 @@ export type Database = {
         Args: { _post_id: string; _publicado: boolean }
         Returns: undefined
       }
+      manager_reschedule_client_post: {
+        Args: { _data: string; _hora?: string; _post_id: string }
+        Returns: undefined
+      }
       manager_save_client_bio: {
         Args: { _owner: string; _settings: Json; _slug: string }
         Returns: undefined
@@ -6653,10 +6723,12 @@ export type Database = {
           agencia_nome: string
           aprovacao: string
           cache: number
+          capa: string
           cliente_cor: string
           cliente_logo: string
           cliente_nome: string
           entregue_em: string
+          external_client_id: string
           formato: string
           post_id: string
           publica_em: string
@@ -6678,6 +6750,23 @@ export type Database = {
           ultimo_pago: string
         }[]
       }
+      parceiro_meus_caches_detalhe: {
+        Args: never
+        Returns: {
+          agencia_id: string
+          agencia_nome: string
+          cliente_cor: string
+          cliente_logo: string
+          cliente_nome: string
+          data: string
+          descricao: string
+          id: string
+          post_id: string
+          post_titulo: string
+          status: string
+          valor: number
+        }[]
+      }
       parceiro_minha_fila: {
         Args: never
         Returns: {
@@ -6685,11 +6774,13 @@ export type Database = {
           agencia_nome: string
           assigned_at: string
           cache: number
+          capa: string
           cliente_cor: string
           cliente_handle: string
           cliente_logo: string
           cliente_nome: string
           etiquetas: string[]
+          external_client_id: string
           formato: string
           plataforma: string
           post_id: string
@@ -6710,6 +6801,38 @@ export type Database = {
           entregues_30d: number
           meu_papel: string
           vinculo_status: string
+        }[]
+      }
+      parceiro_minhas_marcas: {
+        Args: never
+        Returns: {
+          abertos: number
+          agencia_id: string
+          agencia_nome: string
+          arquetipo: string
+          cor: string
+          entregues_30d: number
+          estilo_comunicacao: string
+          evitar: string
+          expressao_visual: string
+          external_client_id: string
+          fontes: string
+          handle: string
+          hashtags: string[]
+          ideia_central: string
+          links: Json
+          logo: string
+          nome: string
+          observacoes: string
+          oferta: string
+          paleta: string
+          personalidade: string
+          promessa: string
+          publico: string
+          referencias: Json
+          segmento: string
+          temas: string
+          tom_de_voz: string
         }[]
       }
       parceiro_responder_prazo: {
