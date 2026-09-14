@@ -1,9 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ImageOff, ChevronLeft, ChevronRight, X, Play, ExternalLink } from "lucide-react";
-import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isUnknownDriveMedia, isVideoMedia } from "@/lib/driveMedia";
+import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, getThumbnailUrl, getVideoEmbedUrl, getVideoFileUrl, getVideoKind, isDriveMedia, isUnknownDriveMedia, isVideoMedia } from "@/lib/driveMedia";
 import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
 import { VideoPoster, useDriveVideoRatio } from "@/components/shared/VideoPoster";
-import { coverIframeStyle } from "@/lib/poster-letterbox";
+import { coverIframeStyle, letterboxStyle, probeLetterbox, type LetterboxBox } from "@/lib/poster-letterbox";
 
 export type CarouselMedia = {
   id?: string; provider?: string | null; external_file_id?: string | null; view_url?: string | null;
@@ -108,7 +108,15 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
           {/* scrolling="no": a página de preview do Drive rola por conta própria e
               desenhava uma barra de rolagem DENTRO do player (o "risco" vertical que
               aparecia ao lado do vídeo na aprovação). */}
-          <iframe src={embedUrl} scrolling="no" style={cover ?? undefined} className={cover ? "bg-black" : "w-full h-full bg-black"} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />
+          {/* `relative z-10` (Walter, 14/09/2026: "tá meio esfumaçado"). O fundo
+              desfocado é posicionado (absolute) e o player, sem medição de
+              proporção, ficava ESTÁTICO. Em CSS, elemento posicionado pinta por
+              cima do estático irmão: o borrão cobria o vídeo inteiro, e a
+              pessoa via a peça lavada achando que era a qualidade do arquivo.
+              Com o player posicionado, ele volta pra frente. */}
+          <iframe src={embedUrl} scrolling="no" style={cover ?? undefined}
+            className={cover ? "relative z-10 bg-black" : "relative z-10 w-full h-full bg-black"}
+            allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />
           {driveViewUrl && (
             <button type="button" onClick={() => window.open(driveViewUrl, "_blank", "noopener,noreferrer")}
               className="absolute bottom-2 right-2 z-10 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/80">
@@ -161,6 +169,59 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
   );
 }
 
+/**
+ * A ARTE, sem a moldura preta que às vezes vem queimada no arquivo.
+ *
+ * O object-cover sozinho não resolve: ele recorta a imagem INTEIRA, tarja
+ * incluída, então a faixa preta continua aparecendo (Walter, 14/09/2026). Aqui
+ * a tarja é medida no pixel (poster-letterbox, o mesmo motor do poster de
+ * vídeo) e a arte é reposicionada pra a moldura ficar fora do quadro.
+ *
+ * A medição só roda no Drive, que é onde o lh3 libera CORS. Fora dele, e
+ * sempre que a arte vem limpa, cai no object-cover de antes: nada muda.
+ */
+function ArteSemTarja({ item, thumb, full, eager, onImgError }: {
+  item: CarouselMedia; thumb: string | null; full: string; eager?: boolean;
+  onImgError: (e: React.SyntheticEvent<HTMLImageElement>) => void;
+}) {
+  const wrap = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState<LetterboxBox | null>(null);
+  const [slotRatio, setSlotRatio] = useState(0);
+  const probe = isDriveMedia(item) ? getDriveImageFallbackUrl(item, 320) : null;
+
+  useEffect(() => {
+    let vivo = true;
+    setBox(null);
+    if (!probe) return;
+    probeLetterbox(probe).then((p) => { if (vivo) setBox(p?.box ?? null); });
+    return () => { vivo = false; };
+  }, [probe]);
+
+  const medir = (el: HTMLDivElement | null) => {
+    wrap.current = el;
+    if (el && el.clientHeight > 0) setSlotRatio(el.clientWidth / el.clientHeight);
+  };
+  const cortada = box && slotRatio > 0 ? letterboxStyle(box, slotRatio) : null;
+
+  if (cortada) {
+    return (
+      <div ref={medir} className="absolute inset-0 overflow-hidden bg-muted">
+        <img src={full} alt={item.file_name || ""} loading={eager ? undefined : "lazy"}
+          style={cortada} onError={onImgError} />
+      </div>
+    );
+  }
+  return (
+    <div ref={medir} className="absolute inset-0">
+      <ProgressiveImage
+        thumbSrc={thumb} fullSrc={full} alt={item.file_name || ""} eager={eager}
+        className="w-full h-full object-cover bg-muted"
+        onFullError={onImgError} onThumbError={onImgError}
+      />
+    </div>
+  );
+}
+
 function Slide({ item, onReady, eager }: { item: CarouselMedia; onReady?: () => void; eager?: boolean }) {
   if (isVideoMedia(item)) return <VideoSlide item={item} onReady={onReady} />;
   const full = getDisplayImageUrl(item) || "";
@@ -178,11 +239,13 @@ function Slide({ item, onReady, eager }: { item: CarouselMedia; onReady?: () => 
   };
   if (full) return (
     <div className="relative w-full h-full">
-      <ProgressiveImage
-        thumbSrc={thumb} fullSrc={full} alt={item.file_name || ""} eager={eager}
-        className="w-full h-full object-cover bg-muted"
-        onFullError={onImgError} onThumbError={onImgError}
-      />
+      {/* TARJA PRETA NA ARTE (Walter, 14/09/2026: "olha o preto embaixo da
+          imagem"). A arte às vezes vem exportada dentro de uma moldura preta
+          queimada no próprio pixel, e aí object-cover não adianta: ele recorta
+          a imagem inteira, tarja incluída. É o MESMO problema já resolvido no
+          poster de vídeo, então usa a mesma medição (poster-letterbox) e
+          reposiciona a arte pra a tarja ficar de fora. Sem tarja, nada liga. */}
+      <ArteSemTarja item={item} thumb={thumb} full={full} eager={eager} onImgError={onImgError} />
       {unknownDriveUrl && (
         <button type="button" onClick={(e) => { e.stopPropagation(); window.open(unknownDriveUrl, "_blank", "noopener,noreferrer"); }}
           className="absolute bottom-2 right-2 z-10 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/80">
@@ -208,7 +271,13 @@ export function PostMediaCarousel({ media, aspect = "4 / 5", onRemove, onVideoRe
 
   return (
     <div className="relative w-full bg-black overflow-hidden" style={{ aspectRatio: aspect }}>
-      <div ref={scroller} onScroll={onScroll} className="flex w-full h-full overflow-x-auto snap-x snap-mandatory [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+      {/* `overflow-y-hidden` (Walter, 14/09/2026: "essa parte de baixo parece
+          que faz scroll down"). Em CSS, definir só `overflow-x: auto` faz o
+          eixo Y virar `auto` junto. Qualquer slide um fio mais alto que o
+          quadro criava rolagem VERTICAL dentro do carrossel, e o que aparecia
+          embaixo era o fundo preto do trilho. O eixo Y agora fica travado: o
+          carrossel só anda pro lado. */}
+      <div ref={scroller} onScroll={onScroll} className="flex w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
         {media.map((m, i) => (
           <div key={m.id ?? i} className="relative w-full h-full shrink-0 snap-center">
             <Slide item={m} onReady={onVideoReady} eager={i === 0} />
