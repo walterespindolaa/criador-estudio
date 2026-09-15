@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption' | 'score-caption' | 'client-report-insight' | 'insights-reading' | 'autopilot-cronograma' | 'trend-bank-refresh' | 'admin-system-insight' | 'story-trend-refresh' | 'story-plan-generate' | 'art-prompt' | 'art-brief' | 'brandbook-read' | 'relatorio-read' | 'hot-news' | 'carousel-script';
+export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption' | 'score-caption' | 'client-report-insight' | 'insights-reading' | 'autopilot-cronograma' | 'trend-bank-refresh' | 'admin-system-insight' | 'story-trend-refresh' | 'story-plan-generate' | 'art-prompt' | 'art-brief' | 'brandbook-read' | 'relatorio-read' | 'hot-news' | 'carousel-script' | 'capture-scenes';
 
 export interface AutopilotPost {
   titulo: string;
@@ -79,7 +79,10 @@ export const clientReportInsight = async (
 interface AIRequest {
   userId?: string;
   operation: AIOperation;
-  data: any;
+  /* Cada operação manda um payload diferente (título, tom, métricas, cenas...),
+     então aqui é um saco de chaves mesmo. Era `any`, que desligava a checagem
+     inteira; `unknown` no valor mantém o saco aberto sem abrir mão do tipo. */
+  data: Record<string, unknown>;
 }
 
 export async function callAIContextBuilder(payload: AIRequest) {

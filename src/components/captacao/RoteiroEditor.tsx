@@ -80,7 +80,7 @@ export function RoteiroEditor({ open, onOpenChange, inicial, salvando, onSalvar,
   /** Roteiro criado DENTRO de um dia: data e local vêm da captação. */
   dentroDoDia?: boolean;
   /** Opcional: gera cenas com IA a partir do título/sobre. */
-  sugerirIA?: (ctx: { title: string; about: string }) => Promise<CaptureScene[] | null>;
+  sugerirIA?: (ctx: { title: string; about: string; formato?: string; temCenas?: boolean }) => Promise<CaptureScene[] | null>;
 }) {
   const [v, setV] = useState<RoteiroFormValor>({
     title: "", about: "", reference_url: "", record_date: "", location: "", format: "reels", // roteiro de captação é sempre vídeo
@@ -130,7 +130,11 @@ export function RoteiroEditor({ open, onOpenChange, inicial, salvando, onSalvar,
     if (!sugerirIA) return;
     setGerando(true);
     try {
-      const cenas = await sugerirIA({ title: v.title, about: v.about });
+      const cenas = await sugerirIA({
+        title: v.title, about: v.about, formato: v.format,
+        // Já tem cena escrita? Quem decide se sobrescreve é a pessoa, não a IA.
+        temCenas: v.scenes.some((c) => c.fala.trim() || c.direcao.trim()),
+      });
       if (cenas && cenas.length) setV((p) => ({ ...p, scenes: cenas }));
     } finally { setGerando(false); }
   };

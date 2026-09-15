@@ -276,9 +276,20 @@ Regra de design que mandou no layout: **tudo de um toque.** Quem está segurando
 
 Dois achados na revisão: `h-4.5`/`w-4.5` não existe na escala do Tailwind deste projeto (a classe não gera CSS e o ícone fica no tamanho padrão, e há outros pontos do app com o mesmo engano); e `shot_list` é jsonb livre, então tem que passar por `normalizeShotList` ou item sem `id` quebra a chave do React e o toggle.
 
-### Circuito 9: Captação, IA de cena
+### Circuito 9: Captação, IA de cena · FEITO em 15/09/2026
 Edge nova com brandbook e voz do Cria, ligada ao botão que já existe.
 **Pronto quando:** a cena sugerida passa no teste do áudio e não tem marca de IA.
+
+O botão "Sugerir cenas com IA" existia no `RoteiroEditor` desde agosto e **nunca apareceu na tela**: ele só renderiza quando quem usa o editor passa a prop `sugerirIA`, e nenhuma tela passava. Era botão morto no código.
+
+Mudei o plano num ponto: **não fiz edge nova.** O padrão da casa é operação dentro do `ai-context-builder`, que já tem auth, cota, rate limit fail-closed e a VOZ_CRIA entrando por último no system prompt. Edge nova seria repetir tudo isso pra ganhar isolamento que não precisamos. Entregue: operação `capture-scenes` + hook `useCenasIA` ligando os dois pontos de entrada (agenda e pasta do cliente).
+
+Três decisões:
+- **O tom é do CLIENTE.** Quem vai falar na câmera é o dono do negócio; se o texto não for a voz dele, ele lê e some do vídeo. O brandbook (tom, público, promessa, pilares e principalmente a lista de evitar) entra no prompt sempre que existe, e a lista de evitar é declarada como mandando mais que qualquer regra de estilo nossa.
+- **Modelo cheio, não o lite.** Dá pra economizar em classificação, não no texto que alguém vai falar na câmera: o lite escreve fala de robô.
+- **A direção é do mundo real.** O prompt proíbe drone, grua, travelling e "iluminação cinematográfica": é uma pessoa com celular e luz de janela.
+
+Roteiro de captação não é legenda, e é por isso que não deu pra reaproveitar o `carousel-script`: cada cena precisa de duas colunas, a fala (que vai pro teleprompter palavra por palavra) e a direção. Sem a direção, o cliente lê bonito parado na frente de uma parede branca.
 
 ### Circuito 10: mobile de produção
 Quadro do parceiro com breakpoint, mês em lista no celular, título nas telas, dia de gravação usável de pé.

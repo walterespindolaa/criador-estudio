@@ -36,6 +36,7 @@ import {
 } from "@/hooks/useCaptureScripts";
 import { RoteiroEditor, type RoteiroFormValor } from "@/components/captacao/RoteiroEditor";
 import { DiaDeGravacao } from "@/components/captacao/DiaDeGravacao";
+import { useCenasIA } from "@/hooks/useCenasIA";
 import { baixarGuiaGravacao } from "@/lib/guiaGravacaoPdf";
 import { useLinkPreviews } from "@/hooks/useLinkPreviews";
 import { parseRefLinks, isRefLink } from "@/lib/refLinks";
@@ -355,6 +356,12 @@ function CriaCaptacaoInner() {
     (c.crm_client_id ? clientById.get(c.crm_client_id)?.nome : null) || c.client_name || "Cliente";
   const capCity = (c: Capture): string =>
     (c.crm_client_id ? clientById.get(c.crm_client_id)?.city : null)?.trim() || SEM_CIDADE;
+
+  /* A IA de cena escreve na voz do CLIENTE, então precisa saber de QUAL cliente
+     é o roteiro. Na agenda isso vem do dia aberto no editor. Fica aqui embaixo
+     porque depende de `capName`, declarado logo acima. */
+  const cenasIA = useCenasIA(editorAgenda?.cap.crm_client_id ?? null,
+    editorAgenda ? capName(editorAgenda.cap) : null);
 
   // Captações do mês (exclui canceladas, que não entram no painel de gerência).
   const doMes = useMemo(() => {
@@ -1073,6 +1080,7 @@ function CriaCaptacaoInner() {
           onOpenChange={(o) => { if (!o) setEditorAgenda(null); }}
           inicial={editorAgenda.script}
           salvando={addScriptPg.isPending || updScriptPg.isPending}
+          sugerirIA={cenasIA.sugerir}
           dentroDoDia
           onSalvar={async (v) => {
             const cap = editorAgenda.cap;
@@ -1645,6 +1653,8 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   const toPost = useScriptToPost();
 
   const [gerandoGuia, setGerandoGuia] = useState(false);
+  // Na pasta o cliente é fixo: é a pasta aberta.
+  const cenasIA = useCenasIA(pasta.crmId, pasta.nome);
   // Ordem local (otimista) enquanto o arrasto não persiste.
   const [ordemLocal, setOrdemLocal] = useState<string[] | null>(null);
 
@@ -1964,6 +1974,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
           onOpenChange={(o) => { if (!o) { setEditorOpen(false); setEditando(null); setCapturaAlvo(null); } }}
           inicial={editando}
           salvando={addScript.isPending || updScript.isPending}
+          sugerirIA={cenasIA.sugerir}
           dentroDoDia={!!capturaAlvo}
           onSalvar={salvarRoteiro} />
       )}

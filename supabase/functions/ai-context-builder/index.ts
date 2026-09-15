@@ -1440,6 +1440,52 @@ ${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA AGORA (use de verdade
         maxTokens = 2500
         break
       }
+      // ═══════════════════════════════════════════════════════════════════
+      // CENAS DE GRAVAÇÃO (Cria Captação, circuito 9, 15/09/2026)
+      //
+      // O botão "Sugerir cenas com IA" existia no editor de roteiro desde
+      // agosto e NUNCA apareceu na tela: ele só renderiza quando a página
+      // passa a função `sugerirIA`, e nenhuma passava. Era botão morto.
+      //
+      // Roteiro de captação NÃO é legenda, e é por isso que não dava pra
+      // reaproveitar o carousel-script. Quem vai gravar precisa de duas
+      // colunas por cena: o que a pessoa FALA (vai pro teleprompter, palavra
+      // por palavra) e o que a câmera FAZ. Sem a direção, o cliente lê bonito
+      // parado na frente de uma parede branca.
+      // ═══════════════════════════════════════════════════════════════════
+      case 'capture-scenes': {
+        const n = Math.max(3, Math.min(8, Number(data.qtd) || 5))
+        const fmt = String(data.formato ?? 'reels').toLowerCase()
+        const curto = /reels|story|short/.test(fmt)
+
+        operationPrompt = `Você é uma social mídia brasileira que grava conteúdo para clientes toda semana: celular na mão, luz de janela, o que o cliente tem no balcão. Escreva ROTEIRO DE GRAVAÇÃO, não legenda.
+
+CADA CENA TEM DUAS PARTES:
+- "fala": o que a pessoa fala na câmera, palavra por palavra, do jeito que ela falaria. Vai direto pro teleprompter, então precisa ser natural de ler em voz alta e caber num fôlego.
+- "direcao": o que a câmera faz e o que aparece. Concreto e possível: enquadramento (close, plano médio), a ação da pessoa, o objeto em cena. NUNCA drone, grua, travelling, "iluminação cinematográfica" ou equipe. É uma pessoa com um celular.
+
+A 1ª CENA É O GANCHO: segura nos 2 primeiros segundos. Começa no meio da ação, com uma frase que o dono do problema reconhece. Nada de "oi gente", nada de se apresentar.
+A ÚLTIMA fecha com o próximo passo natural da conversa, não com ordem de engajamento.
+RITMO: ${curto ? 'cena curta, corte rápido, no máximo 2 frases por fala' : 'a cena aguenta ser mais desenvolvida, mas continua sendo fala de gente'}.
+
+NÃO INVENTE fato, número, preço, promoção nem história sobre o cliente. Use só o que está no contexto. Se faltar informação concreta, escreva a cena de um jeito que funcione sem ela.
+
+RESPONDA APENAS JSON válido:
+{"cenas":[{"fala":"o que ela fala, palavra por palavra","direcao":"o que a câmera mostra e a pessoa faz"}]}
+- Exatamente ${n} itens em "cenas".`
+
+        userPrompt = `Formato: ${data.formato || 'reels'}
+${data.cliente ? `Cliente: ${data.cliente}` : ''}
+Título do vídeo: ${data.titulo || '(sem título)'}
+${data.sobre ? `Sobre o vídeo (a ideia, escrita pela social mídia):\n${String(data.sobre).slice(0, 1200)}` : ''}
+${data.tom ? `Tom da marca: ${data.tom}` : ''}
+${data.publico ? `Público: ${data.publico}` : ''}
+${data.promessa ? `Proposta de valor: ${data.promessa}` : ''}
+${data.temas ? `Pilares de conteúdo: ${data.temas}` : ''}
+${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de estilo): ${data.evitar}` : ''}`
+        maxTokens = 2000
+        break
+      }
       default:
         throw new Error('Invalid operation')
     }
@@ -1455,7 +1501,7 @@ ${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA AGORA (use de verdade
 
     // Temperatura 0.2 em tudo era parte do "robotizado": o modelo escolhe
     // sempre a frase mais provável, que é a mais genérica. Criação sobe.
-    const OPS_CRIATIVAS = new Set(['generate-caption', 'refine-caption', 'repurpose-content', 'carousel-script', 'story-plan-generate', 'autopilot-cronograma', 'cria-chat', 'onboarding-setup', 'art-brief'])
+    const OPS_CRIATIVAS = new Set(['generate-caption', 'refine-caption', 'repurpose-content', 'carousel-script', 'capture-scenes', 'story-plan-generate', 'autopilot-cronograma', 'cria-chat', 'onboarding-setup', 'art-brief'])
     const temperatura = operation === 'daily-insight' ? 0.7
       : operation === 'idea-suggestions' ? 0.85
       : OPS_CRIATIVAS.has(operation) ? 0.6
@@ -1468,10 +1514,14 @@ ${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA AGORA (use de verdade
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        // Sugestões de post são CRIAÇÃO, não leitura: o -lite a 0.2 devolvia
-        // "dicas de X" genéricas (Walter, 04/09). Modelo cheio + temperatura
-        // alta só nessa operação; o resto continua barato e previsível.
-        model: operation === 'idea-suggestions' ? 'google/gemini-2.5-flash' : 'google/gemini-2.5-flash-lite',
+        /* Sugestões de post são CRIAÇÃO, não leitura: o -lite a 0.2 devolvia
+           "dicas de X" genéricas (Walter, 04/09). Modelo cheio + temperatura
+           alta nessas operações; o resto continua barato e previsível.
+           `capture-scenes` entrou aqui em 15/09: o roteiro tem que passar no
+           teste do áudio, e o -lite escreve fala de robô. Dá pra economizar em
+           classificação, não no texto que o cliente vai falar na câmera. */
+        model: operation === 'idea-suggestions' || operation === 'capture-scenes'
+          ? 'google/gemini-2.5-flash' : 'google/gemini-2.5-flash-lite',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -1479,8 +1529,8 @@ ${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA AGORA (use de verdade
         max_tokens: maxTokens,
         temperature: temperatura,
       }),
-    // Sugestões completas com modelo cheio levam mais que os 30s padrão.
-    }, operation === 'idea-suggestions' ? 55000 : 30000)
+    // Modelo cheio leva mais que os 30s padrão.
+    }, operation === 'idea-suggestions' || operation === 'capture-scenes' ? 55000 : 30000)
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -1501,7 +1551,7 @@ ${data.contextoQuente ? `\nAMARRAR COM O QUE ESTÁ EM ALTA AGORA (use de verdade
     const result = await response.json()
     const content = result.choices?.[0]?.message?.content || ''
 
-    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate' || operation === 'art-prompt' || operation === 'art-brief' || operation === 'carousel-script') {
+    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate' || operation === 'art-prompt' || operation === 'art-brief' || operation === 'carousel-script' || operation === 'capture-scenes') {
       const cleaned = String(content).replace(/```json/gi, '').replace(/```/g, '').trim()
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
       const jsonStr = jsonMatch ? jsonMatch[0] : cleaned
