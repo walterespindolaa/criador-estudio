@@ -195,9 +195,11 @@ Depois da reforma, R$ 19,90 fica barato para o que entrega. Vale discutir se Cap
 
 Cada um fecha 100% antes do próximo começar.
 
-### Circuito 1: fechar o vazamento (parceiros)
+### Circuito 1: fechar o vazamento (parceiros) · FEITO em 14/09/2026
 Confidencialidade e permissão. Janela de tempo e vínculo ativo na ficha da marca; filtrar a conversa do cliente; esconder títulos e nomes para desligado; trocar `acts_for` por `member_can` nas sete tabelas; cadeado nas rotas da agência.
 **Pronto quando:** um parceiro de teste, desligado, não consegue ver nada além do próprio dinheiro; e um parceiro ativo não vê o que o cliente escreveu no portal.
+
+Entregue: migration `20260914000002_parceiro_fechar_vazamento.sql` (helper `acts_for_equipe`, janela de tempo e vínculo ativo na ficha da marca, filtro dos comentários do portal no card do parceiro, troca de `acts_for` nas tabelas da agência).
 
 ### Circuito 2: blindar o dinheiro (parceiros) · FEITO em 14/09/2026
 Coluna `entregue_em` própria; cachê que falha vira aviso, não warning no log; atualizar o valor quando muda antes da baixa; avisar a agência quando entregar peça sem cachê; unificar o critério de "pago".

@@ -311,10 +311,20 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
                     <Bookmark className="h-5 w-5 ml-auto" />
                   </div>
                   <p className="text-[10px] text-muted-foreground mb-1">1.234 curtidas</p>
-                  {(caption || hook) && (
+                  {/* A LEGENDA É A LEGENDA (Walter, 15/09/2026).
+                      Aqui era `caption || hook`: com a legenda ainda vazia, a
+                      prévia mostrava o GANCHO no lugar dela. No carrossel isso
+                      fica pior ainda, porque o gancho é a capa (slide 1), ou
+                      seja, o texto que está DENTRO da arte aparecia de novo
+                      embaixo dela, como se fosse a legenda escrita. A pessoa
+                      olha a prévia e acha que já escreveu.
+                      Sem legenda, a prévia mostra que falta escrever. */}
+                  {caption ? (
                     <p className="text-[11px] text-foreground line-clamp-2">
-                      <span className="font-semibold">{userName}</span>{" "}{caption || hook}
+                      <span className="font-semibold">{userName}</span>{" "}{caption}
                     </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground/70 italic">A legenda aparece aqui</p>
                   )}
                 </div>
               </div>
