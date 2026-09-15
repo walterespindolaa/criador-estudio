@@ -32,7 +32,7 @@ import {
   useCaptureScripts, useAddCaptureScript, useUpdateCaptureScript, useDeleteCaptureScript,
   useCaptureExtraClients, useAddCaptureExtraClient, useDeleteCaptureExtraClient,
   useSetClientCaptureShots, useScriptToPost, useReorderCaptureScripts,
-  cenasDe, type CaptureScript,
+  cenasDe, cenasParaTexto, type CaptureScript,
 } from "@/hooks/useCaptureScripts";
 import { RoteiroEditor, type RoteiroFormValor } from "@/components/captacao/RoteiroEditor";
 import { baixarGuiaGravacao } from "@/lib/guiaGravacaoPdf";
@@ -89,6 +89,21 @@ type StatusFilter = "todas" | "pendentes" | "concluidas";
 
 // Um roteiro dentro da folha do dia (cliente + contexto + texto).
 type FolhaItem = { nome: string; cidade: string; horario: string; roteiro: string };
+
+/* Os roteiros de um DIA viram um texto só (folha do dia, "virar post",
+   teleprompter). Cada um vira um bloco com título; as cenas viram o corpo.
+   Existe porque o dia deixou de ter um roteiro e passou a ter vários
+   (circuito 7, 15/09/2026). */
+function textoDosRoteiros(lista: CaptureScript[]): string {
+  return lista
+    .map((s) => {
+      const corpo = cenasDe(s).length > 0 ? cenasParaTexto(cenasDe(s)) : (s.content ?? "").trim();
+      const titulo = (s.title ?? "").trim();
+      return titulo ? `${titulo}\n${corpo}` : corpo;
+    })
+    .filter((t) => t.trim())
+    .join("\n\n");
+}
 
 // Junta os roteiros de um dia/local num texto único, legível, pra copiar cru.
 // Separador em hifens (nunca travessão).
@@ -221,6 +236,16 @@ function CriaCaptacaoInner() {
   const { shots: defaultShots, save: saveDefaultShots } = useDefaultShotList();
   // v2: biblioteca de roteiros + clientes avulsos + tomadas por cliente.
   const { data: scripts = [] } = useCaptureScripts();
+  /* EDITOR DE ROTEIROS NA AGENDA (circuito 7, 15/09/2026).
+     Até aqui só a pasta do cliente sabia criar/editar roteiro; a Agenda do mês
+     caía no campo de texto do modelo velho. Por isso a mesma pessoa via duas
+     telas diferentes pro mesmo trabalho, dependendo de onde clicou. Agora as
+     duas usam o MESMO editor. */
+  const addScriptPg = useAddCaptureScript();
+  const updScriptPg = useUpdateCaptureScript();
+  const delScriptPg = useDeleteCaptureScript();
+  const reorderScriptsPg = useReorderCaptureScripts();
+  const [editorAgenda, setEditorAgenda] = useState<{ cap: Capture; script: CaptureScript | null } | null>(null);
   const { data: extraClients = [] } = useCaptureExtraClients();
   const addExtra = useAddCaptureExtraClient();
   const delExtra = useDeleteCaptureExtraClient();
@@ -349,8 +374,11 @@ function CriaCaptacaoInner() {
     () => doMes.find((c) => c.status === "agendada" && c.capture_date >= hojeStr) ?? null,
     [doMes, hojeStr]);
   const semRoteiro = useMemo(
-    () => doMes.filter((c) => c.status === "agendada" && !(c.roteiro ?? "").trim()).length,
-    [doMes]);
+    /* Conta o dia agendado que não tem NENHUM roteiro na biblioteca. Antes
+       olhava o campo antigo, enquanto a pessoa escrevia na lista nova: ela
+       escrevia três roteiros e o topo continuava dizendo "sem roteiro". */
+    () => doMes.filter((c) => c.status === "agendada" && !scripts.some((s) => s.capture_id === c.id)).length,
+    [doMes, scripts]);
   const roteirosDoMes = useMemo(() => scripts.filter((s) => s.month === month), [scripts, month]);
   const roteirosAGravar = roteirosDoMes.filter((s) => !s.done).length;
 
@@ -603,7 +631,10 @@ function CriaCaptacaoInner() {
     if (captureToPost.isPending) return;
     const nome = capName(cap);
     const dm = diaMes(cap.capture_date);
-    const roteiro = (cap.roteiro ?? "").trim();
+    /* O post nasce com TODOS os roteiros do dia, um embaixo do outro. Um dia
+       rende vários vídeos; antes ia só o texto único do campo antigo, e o que
+       estava na lista nova ficava pra trás. */
+    const roteiro = textoDosRoteiros(scripts.filter((s) => s.capture_id === cap.id));
     const nota = (cap.note ?? "").trim();
     // Legenda: deixa claro que é um rascunho da captação, pra ela montar com o material
     // gravado; junta a nota livre se houver. O roteiro vai pro campo de roteiro do post.
@@ -634,11 +665,24 @@ function CriaCaptacaoInner() {
     // apontada por recurrence_source_id) manda no recurring/dia.
     const rootId = c.recurrence_source_id ?? c.id;
     const root = capturesById.get(rootId) ?? c;
+    /* Sem `doDia` (é o caso da Agenda do mês), a linha usa as ações da própria
+       página. Antes ela caía no editor do modelo antigo. */
+    const roteirosDaLinha = doDia?.roteiros ?? scripts.filter((s) => s.capture_id === c.id);
+    const acoesDaLinha = doDia?.acoes ?? {
+      adicionar: () => setEditorAgenda({ cap: c, script: null }),
+      editar: (s: CaptureScript) => setEditorAgenda({ cap: c, script: s }),
+      excluir: (s: CaptureScript) => delScriptPg.mutate(s.id, { onSuccess: () => toast.success("Roteiro excluído.") }),
+      toggleGravado: (s: CaptureScript) => updScriptPg.mutate({ id: s.id, patch: { done: !s.done } }),
+      reordenar: (ids: string[]) => reorderScriptsPg.mutate(ids),
+      teleprompter: (s: CaptureScript) => setPrompter({
+        title: s.title?.trim() || capName(c),
+        text: cenasDe(s).length > 0 ? cenasParaTexto(cenasDe(s)) : (s.content ?? ""),
+      }),
+      salvando: addScriptPg.isPending,
+    };
     return (
       <CaptureRow key={c.id} cap={c} nome={capName(c)} cidade={capCity(c)}
         onToggle={() => updCapture.mutate({ id: c.id, patch: { status: c.status === "concluida" ? "agendada" : "concluida" } })}
-        onSaveRoteiro={(roteiro) => updCapture.mutateAsync({ id: c.id, patch: { roteiro } })}
-        onTeleprompter={() => setPrompter({ title: capName(c), text: (c.roteiro ?? "").trim() })}
         shotList={normalizeShotList(c.shot_list)}
         onSaveShotList={(list) => setShots.mutate({ id: c.id, shot_list: list })}
         defaultShots={defaultShots}
@@ -650,20 +694,20 @@ function CriaCaptacaoInner() {
         onVirarPost={() => virarPost(c)}
         onVerPost={() => navigate(`/socialmidia/clientes/${c.crm_client_id}/posts`)}
         converting={captureToPost.isPending}
-        roteirosDoDia={doDia?.roteiros}
-        acoesRoteiro={doDia?.acoes} />
+        roteirosDoDia={roteirosDaLinha}
+        acoesRoteiro={acoesDaLinha} />
     );
   };
 
   // Abre a folha do dia de um grupo (só as captações que já têm roteiro).
   const abrirFolha = (g: { date: string; local: string; caps: Capture[] }) => {
     const items: FolhaItem[] = g.caps
-      .filter((c) => (c.roteiro ?? "").trim())
+      .filter((c) => scripts.some((s) => s.capture_id === c.id))
       .map((c) => ({
         nome: capName(c),
         cidade: capCity(c) === SEM_CIDADE ? "" : capCity(c),
         horario: c.capture_time ? c.capture_time.slice(0, 5) : "",
-        roteiro: (c.roteiro ?? "").trim(),
+        roteiro: textoDosRoteiros(scripts.filter((s) => s.capture_id === c.id)),
       }));
     setFolha({
       diaLabel: diaMes(g.date),
@@ -721,7 +765,6 @@ function CriaCaptacaoInner() {
           onDeleteExtra={pastaAberta.extraId ? () => { delExtra.mutate(pastaAberta.extraId!); setPasta(null); } : undefined}
           onPrompter={(title, text) => setPrompter({ title, text })}
           renderCapture={renderCaptureRow}
-          onSaveCapRoteiro={(id, roteiro) => updCapture.mutateAsync({ id, patch: { roteiro } })}
           addCapture={(input) => addCapture.mutateAsync(input)}
           addingCapture={addCapture.isPending}
         />
@@ -948,7 +991,7 @@ function CriaCaptacaoInner() {
                   <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><span className="truncate">{g.local}</span>
                 </span>
                 <div className="ml-auto flex items-center gap-2 shrink-0">
-                  {g.caps.some((c) => (c.roteiro ?? "").trim()) && (
+                  {g.caps.some((c) => scripts.some((s) => s.capture_id === c.id)) && (
                     <Button data-tour="cap-folha" variant="outline" size="sm" onClick={() => abrirFolha(g)}
                       className="h-8 rounded-xl px-2.5 whitespace-nowrap"
                       title="Todos os roteiros desse dia num texto só, pra levar pra captação.">
@@ -985,6 +1028,41 @@ function CriaCaptacaoInner() {
       {folha && (
         <FolhaDoDiaDialog open onOpenChange={(o) => { if (!o) setFolha(null); }}
           diaLabel={folha.diaLabel} wd={folha.wd} local={folha.local} items={folha.items} />
+      )}
+
+      {/* O MESMO editor de roteiro da pasta do cliente, agora também na Agenda
+          do mês. O roteiro nasce dentro do dia, herdando data e local: ninguém
+          quer redigitar o que já está marcado na agenda. */}
+      {editorAgenda && (
+        <RoteiroEditor
+          open
+          onOpenChange={(o) => { if (!o) setEditorAgenda(null); }}
+          inicial={editorAgenda.script}
+          salvando={addScriptPg.isPending || updScriptPg.isPending}
+          dentroDoDia
+          onSalvar={async (v) => {
+            const cap = editorAgenda.cap;
+            const campos = {
+              title: v.title, content: v.content, about: v.about || null,
+              reference_url: v.reference_url || null, record_date: v.record_date || null,
+              location: v.location || null, format: v.format || null, scenes: v.scenes,
+            };
+            if (editorAgenda.script) {
+              await updScriptPg.mutateAsync({ id: editorAgenda.script.id, patch: campos });
+            } else {
+              await addScriptPg.mutateAsync({
+                crm_client_id: cap.crm_client_id ?? null,
+                client_name: cap.crm_client_id ? null : (cap.client_name ?? null),
+                month: cap.capture_date.slice(0, 7),
+                ...campos,
+                capture_id: cap.id,
+                record_date: campos.record_date || cap.capture_date,
+                location: campos.location || cap.location || null,
+                position: scripts.filter((s) => s.capture_id === cap.id).length,
+              });
+            }
+            setEditorAgenda(null);
+          }} />
       )}
 
       {/* Teleprompter em tela cheia: reusa o player do Cria Prompter (mesmo componente,
@@ -1158,14 +1236,12 @@ function SugestoesViagem({ trips, onAdd, onDismiss }: {
 }
 
 // ── Uma captação (cliente + cidade + status + roteiro + copiar) ────────────────
-function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter, shotList, onSaveShotList, defaultShots, clientShots, recurring, recurrenceDay, onSetRecurring, convertedPostId, onVirarPost, onVerPost, converting, roteirosDoDia, acoesRoteiro }: {
+function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, defaultShots, clientShots, recurring, recurrenceDay, onSetRecurring, convertedPostId, onVirarPost, onVerPost, converting, roteirosDoDia, acoesRoteiro }: {
   cap: Capture; nome: string; cidade: string;
-  onToggle: () => void; onSaveRoteiro: (roteiro: string) => Promise<unknown>;
-  onTeleprompter: () => void;
-  // VÁRIOS roteiros por dia (um por vídeo). Quando a pasta do cliente passa
-  // estas props, o campo único some e entra a lista com +, ordem e check.
-  roteirosDoDia?: CaptureScript[];
-  acoesRoteiro?: {
+  onToggle: () => void;
+  // VÁRIOS roteiros por dia (um por vídeo), a única forma desde o circuito 7.
+  roteirosDoDia: CaptureScript[];
+  acoesRoteiro: {
     adicionar: () => void;
     editar: (s: CaptureScript) => void;
     excluir: (s: CaptureScript) => void;
@@ -1191,10 +1267,6 @@ function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter
   converting: boolean;
 }) {
   const done = cap.status === "concluida";
-  const roteiro = (cap.roteiro ?? "").trim();
-  const [copied, setCopied] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(roteiro);
   const [saving, setSaving] = useState(false);
 
   // ── Tomadas (checklist da gravação) ──────────────────────────────────────────
@@ -1243,31 +1315,6 @@ function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter
     if (recurring) onSetRecurring(true, d).catch(() => toast.error("Não consegui salvar o dia da recorrência."));
   };
 
-  const copiar = async () => {
-    if (!roteiro) return;
-    try {
-      await navigator.clipboard.writeText(cap.roteiro ?? "");
-      setCopied(true);
-      toast.success("Roteiro copiado");
-      setTimeout(() => setCopied(false), 1600);
-    } catch {
-      toast.error("Não consegui copiar. Copie manualmente.");
-    }
-  };
-
-  const abrirEdicao = () => { setDraft(cap.roteiro ?? ""); setEditing(true); };
-  const salvar = async () => {
-    setSaving(true);
-    try {
-      await onSaveRoteiro(draft.trim());
-      setEditing(false);
-      toast.success("Roteiro salvo");
-    } catch {
-      toast.error("Não consegui salvar o roteiro.");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <div className="p-4">
@@ -1301,66 +1348,21 @@ function CaptureRow({ cap, nome, cidade, onToggle, onSaveRoteiro, onTeleprompter
           Um dia rende vários vídeos: aqui é uma LISTA (com +, ordem, check e
           lixeira), não mais um campo de texto único. O modo antigo continua
           disponível como reserva pra telas que ainda não passam as ações. */}
-      {acoesRoteiro ? (
-        <RoteirosDoDia
-          roteiros={roteirosDoDia ?? []}
-          onAdicionar={acoesRoteiro.adicionar}
-          onEditar={acoesRoteiro.editar}
-          onExcluir={acoesRoteiro.excluir}
-          onToggleGravado={acoesRoteiro.toggleGravado}
-          onReordenar={acoesRoteiro.reordenar}
-          onTeleprompter={acoesRoteiro.teleprompter}
-          salvando={acoesRoteiro.salvando}
-        />
-      ) : (
-      <>{/* Roteiro da gravação: SEMPRE visível, com título e um estado vazio claro
-          que convida a escrever. Assim que há texto, aparecem "Copiar roteiro" e
-          "Usar como teleprompter" (antes escondidos atrás do "tem roteiro", e por
-          isso a pessoa "não achava" onde copiar/abrir o teleprompter). */}
-      <div data-tour="cap-roteiro" className="mt-3 rounded-xl border border-border bg-muted/20 p-3">
-        <div className="flex items-center gap-2">
-          <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
-          <span className="text-xs font-body font-semibold text-foreground">Roteiro da gravação</span>
-        </div>
-        {editing ? (
-          <div className="mt-2.5">
-            <Textarea rows={4} value={draft} onChange={(e) => setDraft(e.target.value)} autoFocus
-              placeholder="Escreva o que vai ser falado/gravado nessa captação…" className="rounded-xl text-sm" />
-            <div className="flex items-center gap-2 mt-2">
-              <Button size="sm" onClick={salvar} disabled={saving} className="rounded-xl">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar roteiro"}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setEditing(false)} className="rounded-xl">Cancelar</Button>
-            </div>
-          </div>
-        ) : roteiro ? (
-          <div className="mt-2.5">
-            <p className="text-[13px] font-body text-foreground whitespace-pre-wrap break-words">{roteiro}</p>
-            <div className="flex items-center gap-2 mt-2.5 flex-wrap">
-              <Button data-tour="cap-teleprompter" size="sm" onClick={onTeleprompter} className="rounded-xl h-9"
-                title="Entregue o celular pro cliente ler o roteiro no teleprompter enquanto você grava na câmera.">
-                <Play className="h-3.5 w-3.5 mr-1.5" /> Usar como teleprompter
-              </Button>
-              <Button size="sm" variant="outline" onClick={copiar} className="rounded-xl h-9">
-                {copied ? <><Check className="h-3.5 w-3.5 mr-1.5" /> Copiado</> : <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar roteiro</>}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={abrirEdicao} className="rounded-xl h-9">
-                <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-2">
-            <p className="text-[11.5px] font-body text-muted-foreground">
-              Escreva o que vai ser falado ou gravado. Depois dá pra copiar o texto e abrir no teleprompter.
-            </p>
-            <Button size="sm" onClick={abrirEdicao} className="rounded-xl h-9 mt-2 w-full sm:w-auto">
-              <Pencil className="h-3.5 w-3.5 mr-1.5" /> Escrever roteiro
-            </Button>
-          </div>
-        )}
-      </div></>
-      )}
+      {/* ROTEIROS DESTA GRAVAÇÃO.
+          Um dia rende vários vídeos: é uma LISTA (com +, ordem, check e
+          lixeira). O campo de texto único que existia embaixo desta lista saiu
+          no circuito 7 (15/09/2026): eram dois roteiros no mesmo card, e quem
+          escrevia num via o contador do topo contar o outro. */}
+      <RoteirosDoDia
+        roteiros={roteirosDoDia ?? []}
+        onAdicionar={acoesRoteiro.adicionar}
+        onEditar={acoesRoteiro.editar}
+        onExcluir={acoesRoteiro.excluir}
+        onToggleGravado={acoesRoteiro.toggleGravado}
+        onReordenar={acoesRoteiro.reordenar}
+        onTeleprompter={acoesRoteiro.teleprompter}
+        salvando={acoesRoteiro.salvando}
+      />
 
       {/* Tomadas: o que precisa sair dessa gravação (mini-acordeão + contador). */}
       <div data-tour="cap-tomadas" className="mt-3 rounded-xl border border-border overflow-hidden">
@@ -1560,7 +1562,7 @@ function FolhaDoDiaDialog({ open, onOpenChange, diaLabel, wd, local, items }: {
 // A pasta é o dossiê de gravação do cliente. O mês vem do cabeçalho da página
 // (as setas navegam meses passados e futuros). Aqui nasce roteiro manual,
 // roteiro puxado dos reels aprovados do Cria Post, e a captação marcada direto.
-function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingClientShots, onSaveClientShots, ext, onBack, onDeleteExtra, onPrompter, renderCapture, onSaveCapRoteiro, addCapture, addingCapture, logoCliente, logoAgencia, elaboradoPor, corCliente }: {
+function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingClientShots, onSaveClientShots, ext, onBack, onDeleteExtra, onPrompter, renderCapture, addCapture, addingCapture, logoCliente, logoAgencia, elaboradoPor, corCliente }: {
   pasta: PastaInfo;
   // Marca do guia em PDF: as MESMAS logos do relatório do cliente, pra o
   // material que chega na mão dele ter sempre a mesma cara.
@@ -1590,7 +1592,6 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
     };
   }) => ReactNode;
   // Salva o roteiro que vive DENTRO de uma captação (agenda_captures.roteiro).
-  onSaveCapRoteiro: (id: string, roteiro: string) => Promise<unknown>;
   addCapture: (input: { capture_date: string; capture_time: string | null; location: string | null; crm_client_id: string | null; client_name: string | null }) => Promise<unknown>;
   addingCapture: boolean;
 }) {
@@ -1612,21 +1613,14 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   // Roteiro aberto no modal (card estilo Drive clicado). Guarda só o id: o
   // conteúdo vem SEMPRE da lista fresca, pra refletir edições na hora.
   const [verId, setVerId] = useState<string | null>(null);
-  // Roteiro DE CAPTAÇÃO aberto/em edição (o campo que vive dentro da captação
-  // aparece na MESMA grade, como card "Captação DD/MM").
-  const [verCapId, setVerCapId] = useState<string | null>(null);
-  const [editandoCapId, setEditandoCapId] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [marcarOpen, setMarcarOpen] = useState(false);
   const [tomadasOpen, setTomadasOpen] = useState(false);
 
   const salvarRoteiro = async (v: RoteiroFormValor) => {
-    // Roteiro que vive DENTRO de uma captação continua sendo texto corrido.
-    if (editandoCapId) {
-      await onSaveCapRoteiro(editandoCapId, v.content);
-      setEditorOpen(false); setEditandoCapId(null);
-      return;
-    }
+    /* O desvio "roteiro que vive dentro da captação continua sendo texto
+       corrido" saiu daqui no circuito 7: esse modelo acabou. Todo roteiro,
+       inclusive o de um dia de gravação, é um capture_script com cenas. */
     const campos = {
       title: v.title, content: v.content, about: v.about || null,
       reference_url: v.reference_url || null, record_date: v.record_date || null,
@@ -1670,26 +1664,15 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
     reorderScripts.mutate(ids, { onSettled: () => setOrdemLocal(null) });
   };
 
-  // O guia leva a biblioteca do mês MAIS os roteiros escritos dentro das
-  // captações: pra quem grava, os dois são "vídeo pra gravar". Antes só a
-  // biblioteca contava, e quem só tinha o roteiro da captação via o botão
-  // desligado sem entender o porquê.
+  /* O guia leva TODOS os roteiros do mês, em ordem de gravação.
+     Antes esta função juntava duas fontes: a biblioteca e o texto que vivia
+     dentro da captação. Desde o circuito 7 (15/09/2026) existe uma fonte só:
+     o campo antigo foi migrado pra cá e esvaziado. Menos código, e some a
+     classe de bug em que o mesmo roteiro aparecia duas vezes no PDF. */
   const roteirosDoGuia = (() => {
-    const daCaptacao = caps
-      .filter((c) => (c.roteiro ?? "").trim() && !scripts.some((s) => s.capture_id === c.id))
-      .map((c) => ({
-        id: `cap-${c.id}`,
-        title: `Captação ${diaMes(c.capture_date)}`,
-        content: (c.roteiro ?? "").trim(),
-        about: c.note ?? null,
-        record_date: c.capture_date,
-        location: c.location ?? null,
-        format: null, reference_url: null, scenes: [],
-        done: c.status === "concluida",
-      })) as unknown as CaptureScript[];
     const capturaDe = new Map(caps.map((c) => [c.id, c.capture_date]));
     const dia = (r: CaptureScript) => r.record_date || (r.capture_id ? capturaDe.get(r.capture_id) : null) || "9999-12-31";
-    return [...ordenados, ...daCaptacao].sort((a, b) => dia(a).localeCompare(dia(b)));
+    return [...ordenados].sort((a, b) => dia(a).localeCompare(dia(b)));
   })();
 
   const capasGuia = useLinkPreviews(
@@ -1791,8 +1774,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
         // Os roteiros JÁ ligados a um dia moram dentro da captação: aqui em cima
         // ficam só os soltos (pauta pronta, dia ainda não marcado).
         const soltos = ordenados.filter((s) => !s.capture_id);
-        const capsComRoteiro = caps.filter((c) => (c.roteiro ?? "").trim() && !scripts.some((s) => s.capture_id === c.id));
-        const totalRoteiros = soltos.length + capsComRoteiro.length;
+        const totalRoteiros = soltos.length;
         const noDia = scripts.filter((s) => !!s.capture_id).length;
         return (
       <div>
@@ -1851,16 +1833,6 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
                 )}
               </DropRoteiros>
             </DndRoteiros>
-            {/* Roteiros que vivem dentro de uma captação do mês (não reordenam:
-                a ordem deles é a data da captação). */}
-            {capsComRoteiro.map((c) => (
-              <div key={`cap-${c.id}`} className="rounded-2xl border border-dashed border-border bg-card">
-                <RoteiroLinha
-                  script={{ id: `cap-${c.id}`, title: `Captação ${diaMes(c.capture_date)}`, content: (c.roteiro ?? "").trim(),
-                    done: c.status === "concluida", record_date: c.capture_date, format: null, reference_url: null, about: null, scenes: [] } as unknown as CaptureScript}
-                  indice={-1} icone="video" onOpen={() => setVerCapId(c.id)} />
-              </div>
-            ))}
           </div>
         )}
       </div>
@@ -1882,7 +1854,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
           <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
             {caps.map((c) => {
               const done = c.status === "concluida";
-              const temRoteiro = !!(c.roteiro ?? "").trim();
+              const temRoteiro = scripts.some((s) => s.capture_id === c.id);
               return (
                 <details key={c.id} className="group/cap">
                   <summary className="flex items-center gap-2.5 px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:bg-muted/30 transition-colors">
@@ -1947,12 +1919,10 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
       {editorOpen && (
         <RoteiroEditor
           open
-          onOpenChange={(o) => { if (!o) { setEditorOpen(false); setEditando(null); setEditandoCapId(null); setCapturaAlvo(null); } }}
-          inicial={editandoCapId
-            ? ({ id: editandoCapId, title: "", content: caps.find((c) => c.id === editandoCapId)?.roteiro ?? "", scenes: [] } as unknown as CaptureScript)
-            : editando}
+          onOpenChange={(o) => { if (!o) { setEditorOpen(false); setEditando(null); setCapturaAlvo(null); } }}
+          inicial={editando}
           salvando={addScript.isPending || updScript.isPending}
-          dentroDoDia={!!capturaAlvo || !!editandoCapId}
+          dentroDoDia={!!capturaAlvo}
           onSalvar={salvarRoteiro} />
       )}
       {importOpen && ext && (
@@ -1985,18 +1955,6 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             onVirarPost={ext && !s.source_post_id ? () => virarPost(s) : null}
             onVerPost={s.source_post_id && pasta.crmId ? () => navigate(`/socialmidia/clientes/${pasta.crmId}/posts`) : null}
             converting={toPost.isPending} />
-        );
-      })()}
-      {verCapId && (() => {
-        const c = caps.find((x) => x.id === verCapId);
-        if (!c) return null;
-        return (
-          <RoteiroVerDialog
-            script={{ id: c.id, title: `Captação ${diaMes(c.capture_date)}${c.capture_time ? ` · ${c.capture_time.slice(0, 5)}` : ""}`, content: (c.roteiro ?? "").trim(), done: c.status === "concluida", source: "captacao" } as unknown as CaptureScript}
-            onOpenChange={(o) => { if (!o) setVerCapId(null); }}
-            onEditar={() => { setEditandoCapId(c.id); setEditorOpen(true); }}
-            onPrompter={() => onPrompter(pasta.nome, (c.roteiro ?? "").trim())}
-            onVirarPost={null} onVerPost={null} converting={false} />
         );
       })()}
       {marcarOpen && (

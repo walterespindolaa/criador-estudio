@@ -252,9 +252,17 @@ Decisões que valem registro:
 
 Limite conhecido: Story usa preview próprio (`StoryPreview`), fora do carrossel, então ainda não aceita alfinete. O segundo do vídeo está gravado e é exibido, mas quem marca o segundo ainda é a pessoa escrevendo, não um clique na linha do tempo.
 
-### Circuito 7: Captação, unificar o modelo
+### Circuito 7: Captação, unificar o modelo · FEITO em 15/09/2026
 Matar o campo antigo, migrar o que sobrou, consertar contadores, folha, envio e "virar post". É o circuito que conserta os bugs, sem tela nova.
-**Pronto quando:** não existe mais nenhum lugar no código lendo `agenda_captures.roteiro`.
+**Pronto quando:** não existe mais nenhum lugar no código lendo `agenda_captures.roteiro`. **Atingido:** zero leituras da coluna no app.
+
+O diagnóstico: o módulo não estava fraco por falta de recurso, estava **falando duas línguas**. Conviviam `agenda_captures.roteiro` (um texto por dia, modelo de agosto) e `capture_scripts` (vários roteiros por dia, com cenas, referência, ordem, gravado e aprovação do cliente, modelo de setembro). Os dois no mesmo card: a pessoa escrevia num e o contador do topo lia o outro. Pior, a Agenda do mês mostrava o editor velho e a pasta do cliente o novo, pro mesmo trabalho.
+
+Entregue: migration `20260915000002_captacao_um_modelo_so.sql` e a cirurgia em `CriaCaptacao.tsx` (19 pontos de leitura). O campo saiu do tipo `Capture` DE PROPÓSITO: deixar o compilador listar cada leitura é mais confiável que procurar na mão. O editor de roteiros passou a existir também na Agenda, então as duas telas usam o mesmo.
+
+Dois perigos achados na revisão, antes de rodar:
+1. **A migration de 23/08 já copiava esse campo**, com `source='captacao'`. Minha primeira versão filtrava por `source='agenda'`, o que teria **duplicado todo roteiro migrado em agosto**. O guard correto é por `capture_id`, igual ao de lá.
+2. **Esvaziar a coluna por "existe algum roteiro pra esta captação" perderia dado**: uma captação pode ter o texto velho E um roteiro novo (é justamente o bug). Nesse caso o insert pula e o update apagaria. Agora só esvazia quando existe um roteiro com exatamente aquele conteúdo.
 
 ### Circuito 8: Captação, o Dia de Gravação
 A tela nova, com tomadas no topo, roteiros na ordem, folha e teleprompter. Calendário clicável.

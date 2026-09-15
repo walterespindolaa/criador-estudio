@@ -43,10 +43,15 @@ export type Capture = {
   // Duração estimada da captação em horas (1..5; 5 = "5h ou mais"). Opcional e
   // defensivo: antes da migration o select("*") não traz e cai como undefined.
   duration_hours?: number | null;
-  // Roteiro da gravação (o texto que o gestor copia cru no Cria Captação). É
-  // separado de `note` (nota livre). Opcional no tipo pra leitura defensiva: antes
-  // da migration rodar, o select("*") não traz a coluna e cai como undefined.
-  roteiro?: string | null;
+  /* `roteiro` FOI APOSENTADO em 15/09/2026 (circuito 7).
+     O Cria Captação tinha DOIS modelos de roteiro vivos ao mesmo tempo: este
+     campo de texto por dia e a tabela `capture_scripts` (vários roteiros por
+     dia, com cenas, referência, ordem e aprovação do cliente). Os dois
+     apareciam no mesmo card, e o contador do topo lia um enquanto a pessoa
+     escrevia no outro.
+     O campo saiu daqui DE PROPÓSITO: tirar do tipo faz o compilador listar
+     cada leitura que sobrou, que é bem mais confiável do que eu procurar na
+     mão. A coluna continua no banco, vazia, até a limpeza. */
   // Lista de tomadas (checklist da gravação). Opcional/defensivo: antes da migration
   // o select("*") não traz a coluna e cai como undefined (a tela trata como []).
   shot_list?: ShotItem[] | null;
@@ -311,7 +316,7 @@ export function useAddCapture() {
 export function useUpdateCapture() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Capture, "status" | "capture_date" | "capture_time" | "location" | "team" | "note" | "roteiro" | "crm_client_id" | "client_name" | "shot_list" | "recurring" | "recurrence_day" | "duration_hours">> }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Capture, "status" | "capture_date" | "capture_time" | "location" | "team" | "note" | "crm_client_id" | "client_name" | "shot_list" | "recurring" | "recurrence_day" | "duration_hours">> }) => {
       const { error } = await sbFrom("agenda_captures").update(patch as never).eq("id", id);
       if (error) throw error;
     },
