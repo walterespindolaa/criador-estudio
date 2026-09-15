@@ -19,6 +19,60 @@ const sbRpc = (fn: string, args?: Record<string, unknown>) => (supabase as any).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sbFrom = (t: string) => (supabase as any).from(t);
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   PARAR DE ENGOLIR ERRO (Walter, 14/09/2026)
+
+   Este arquivo tinha onze consultas que faziam `return []` quando davam erro.
+   Três engoliam QUALQUER erro, inclusive rede caída. As outras oito engoliam
+   só "função não existe", que é o caso legítimo: a tela precisa abrir mesmo
+   com a migration ainda não rodada.
+
+   O problema é que as duas coisas viravam a MESMA imagem: tela vazia. Pro
+   parceiro, tela vazia significa "nenhuma agência te mandou trabalho". Ele
+   fecha o app e vai fazer outra coisa, sem saber que tinha entrega pra hoje.
+
+   Agora só o erro de "ainda não existe no banco" devolve lista vazia. Todo o
+   resto sobe, o react-query marca `isError`, e a tela mostra o aviso com o
+   botão de tentar de novo (ErroAoCarregar). ═══════════════════════════════ */
+
+/** Erro de objeto que ainda não existe no banco (migration pendente). É o
+ *  único caso em que devolver vazio é honesto: a funcionalidade não existe. */
+const aindaNaoExisteNoBanco = (msg: string | undefined | null) =>
+  /does not exist|schema cache|could not find the function/i.test(msg ?? "");
+
+/* MENSAGEM QUE A PESSOA ENTENDE (Walter, 14/09/2026).
+
+   Todo `onError` daqui fazia `toast.error(e.message || "...")`. O `e.message`
+   do Supabase é inglês técnico: "new row violates row-level security policy for
+   table posts", "JWT expired", "Failed to fetch". O designer lia isso no meio
+   do trabalho e não tinha o que fazer com a informação, além de se assustar.
+
+   Aqui os erros conhecidos viram frase em português com o PRÓXIMO PASSO junto.
+   As mensagens que nós mesmos escrevemos ("Escreva o que precisa mudar...")
+   passam intactas: já são humanas e são mais específicas que qualquer tradução
+   genérica. */
+export function mensagemHumana(e: unknown, padrao: string): string {
+  const bruta = e instanceof Error ? e.message : String(e ?? "");
+  if (!bruta) return padrao;
+  // Nossa própria mensagem: sem inglês, sem jargão de banco. Passa direto.
+  if (!/[a-z]+_[a-z]+|policy|violates|JWT|fetch|network|duplicate key|permission denied|payload|constraint/i.test(bruta)
+      && /[áàâãéêíóôõúçA-ZÀ-Ú]/.test(bruta)) return bruta;
+
+  if (/failed to fetch|network|networkerror|timeout|aborted/i.test(bruta))
+    return "Sem conexão agora. Tente de novo quando a internet voltar: nada foi perdido.";
+  if (/jwt|token|not authenticated|session/i.test(bruta))
+    return "Sua sessão expirou. Entre de novo e refaça esta ação.";
+  if (/row-level security|policy|permission denied|not authorized/i.test(bruta))
+    return "Você não tem acesso a esta peça. Pode ser que a agência tenha pausado o seu vínculo.";
+  if (/payload too large|body exceeded|413/i.test(bruta))
+    return "O arquivo é grande demais pra subir aqui. Mande pelo link da pasta.";
+  if (/duplicate key|already exists/i.test(bruta))
+    return "Isso já estava salvo. Recarregue a tela pra ver como está agora.";
+  if (aindaNaoExisteNoBanco(bruta))
+    return "Esta parte ainda não está disponível na sua conta. Avise o suporte do Cria.";
+  return padrao;
+}
+
 export type CardDaFila = {
   post_id: string;
   titulo: string;
@@ -96,6 +150,12 @@ export type CardAberto = {
   /** O que já está anexado nesta peça (referência da agência ou arquivo que o
    *  próprio parceiro subiu). Ele mandava e nunca mais via. */
   midias?: { url: string | null; thumb: string | null; nome: string | null; tipo: string | null }[];
+  /** Quantas vezes a peça voltou pra ajuste. Aparece no card dos dois lados:
+   *  é o número que separa "cliente exigente" de "briefing ruim". */
+  revisoes?: number;
+  /** Quantos arquivos de entregas anteriores existem (o botão de histórico só
+   *  aparece quando há o que mostrar). */
+  versoes_antigas?: number;
   /** Elo com a ficha da marca: o card mostra os links do cliente por aqui. */
   external_client_id?: string | null;
   marca: {
@@ -135,7 +195,7 @@ export function useFilaDoParceiro() {
       const { data, error } = await sbRpc("parceiro_minha_fila");
       if (error) {
         // Migration ainda não rodou: fila vazia em vez de tela quebrada.
-        if (/does not exist|schema cache/i.test(error.message)) return [];
+        if (aindaNaoExisteNoBanco(error.message)) return [];
         throw error;
       }
       return (data ?? []) as CardDaFila[];
@@ -154,10 +214,41 @@ export function useEntreguesDoParceiro() {
     queryFn: async () => {
       const { data, error } = await sbRpc("parceiro_entregues");
       if (error) {
-        if (/does not exist|schema cache/i.test(error.message)) return [];
+        if (aindaNaoExisteNoBanco(error.message)) return [];
         throw error;
       }
       return (data ?? []) as EntregueDoParceiro[];
+    },
+  });
+}
+
+/* ── O HISTÓRICO DE VERSÕES ─────────────────────────────────────────────────
+   Walter, 14/09/2026: "a parte de v1, v2, v3 do post poderia ter só uma opção
+   de um botão de histórico pra ver as outras versões". Então a tela mostra a
+   versão atual e nada mais; as antigas só são buscadas quando ele abre o
+   histórico (enabled: !!postId). */
+export type VersaoDaPeca = {
+  id: string;
+  rodada: number;
+  nome: string | null;
+  tipo: string | null;
+  url: string | null;
+  thumb: string | null;
+  atual: boolean;
+  em: string;
+};
+
+export function useVersoesDaPeca(postId: string | null) {
+  return useQuery<VersaoDaPeca[]>({
+    queryKey: ["parceiro-versoes", postId],
+    enabled: !!postId,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("parceiro_versoes_da_peca", { _post_id: postId });
+      if (error) {
+        if (aindaNaoExisteNoBanco(error.message)) return [];
+        throw error;
+      }
+      return (data ?? []) as VersaoDaPeca[];
     },
   });
 }
@@ -204,7 +295,7 @@ export function useAcoesDoParceiro(postId: string | null) {
         ? "Entregue! A social mídia recebeu o aviso."
         : "Marcado como em produção.");
     },
-    onError: (e: Error) => toast.error(e.message || "Não consegui atualizar."),
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui atualizar.")),
   });
 
   const comentar = useMutation({
@@ -213,7 +304,7 @@ export function useAcoesDoParceiro(postId: string | null) {
       if (error) throw error;
     },
     onSuccess: () => { invalidar(); },
-    onError: (e: Error) => toast.error(e.message || "Não consegui comentar."),
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui comentar.")),
   });
 
   /* Responder ao prazo proposto: topar fecha o combinado; sugerir outra data
@@ -232,7 +323,7 @@ export function useAcoesDoParceiro(postId: string | null) {
       invalidar();
       toast.success(aceitou ? "Prazo combinado!" : "Sugestão enviada. A social mídia recebe agora.");
     },
-    onError: (e: Error) => toast.error(e.message || "Não consegui responder o prazo."),
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui responder o prazo.")),
   });
 
   /* ENTREGA COM ARQUIVO (fase 3). O parceiro não enxerga external_media_refs
@@ -282,7 +373,7 @@ export function useAcoesDoParceiro(postId: string | null) {
       toast.success(r.entregou ? "Arquivo anexado e card entregue!"
         : r.naConversa ? "Enviado na conversa." : "Arquivo anexado ao card.");
     },
-    onError: (e: Error) => toast.error(e.message || "Não consegui anexar."),
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui anexar.")),
   });
 
   return { marcar, comentar, responderPrazo, anexar };
@@ -301,7 +392,10 @@ export function useMeusCaches() {
     enabled: !!user,
     queryFn: async () => {
       const { data, error } = await sbRpc("parceiro_meus_caches");
-      if (error) return [];
+      if (error) {
+        if (aindaNaoExisteNoBanco(error.message)) return [];
+        throw error;
+      }
       return (data ?? []) as CacheDaAgencia[];
     },
   });
@@ -323,7 +417,10 @@ export function useCachesDosParceiros(managerId: string | null) {
         .not("assignee_id", "is", null)
         .order("date", { ascending: false })
         .limit(300);
-      if (error) return [];
+      if (error) {
+        if (aindaNaoExisteNoBanco(error.message)) return [];
+        throw error;
+      }
       return (data ?? []) as CacheDoParceiro[];
     },
   });
@@ -349,7 +446,10 @@ export function useConversaDoCard(postId: string | null) {
         .in("author_role", ["parceiro", "social_media"])
         .order("created_at", { ascending: true })
         .limit(200);
-      if (error) return [];
+      if (error) {
+        if (aindaNaoExisteNoBanco(error.message)) return [];
+        throw error;
+      }
       return (data ?? []) as MensagemCard[];
     },
   });
@@ -362,7 +462,7 @@ export function useConversaDoCard(postId: string | null) {
       if (error) throw error;
     },
     onSuccess: () => { void qc.invalidateQueries({ queryKey: chave }); },
-    onError: () => toast.error("Não consegui enviar."),
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui enviar a mensagem. Ela continua escrita aqui: tente de novo.")),
   });
   return { mensagens: lista.data ?? [], carregando: lista.isLoading, enviar };
 }
@@ -387,7 +487,7 @@ export function useMinhasAgencias() {
     queryFn: async () => {
       const { data, error } = await sbRpc("parceiro_minhas_agencias");
       if (error) {
-        if (/does not exist|schema cache/i.test(error.message)) return [];
+        if (aindaNaoExisteNoBanco(error.message)) return [];
         throw error;
       }
       return (data ?? []) as AgenciaDoParceiro[];
@@ -445,7 +545,7 @@ export function useMinhasMarcas() {
       const { data, error } = await sbRpc("parceiro_minhas_marcas");
       if (error) {
         // Migration ainda não rodou: lista vazia em vez de tela quebrada.
-        if (/does not exist|schema cache/i.test(error.message)) return [];
+        if (aindaNaoExisteNoBanco(error.message)) return [];
         throw error;
       }
       return (data ?? []) as MarcaDoParceiro[];
@@ -479,7 +579,7 @@ export function useMeusCachesDetalhe() {
     queryFn: async () => {
       const { data, error } = await sbRpc("parceiro_meus_caches_detalhe");
       if (error) {
-        if (/does not exist|schema cache/i.test(error.message)) return [];
+        if (aindaNaoExisteNoBanco(error.message)) return [];
         throw error;
       }
       return (data ?? []) as CacheDetalhe[];
@@ -513,7 +613,7 @@ export function useMeusLancamentos() {
         .limit(300);
       if (error) {
         // Migration ainda não rodou: lista vazia em vez de tela quebrada.
-        if (/does not exist|schema cache/i.test(error.message)) return [];
+        if (aindaNaoExisteNoBanco(error.message)) return [];
         throw error;
       }
       return (data ?? []) as LancamentoDoParceiro[];
@@ -543,7 +643,7 @@ export function useAcoesLancamento() {
       if (error) throw error;
     },
     onSuccess: () => { invalidar(); toast.success("Cachê salvo."); },
-    onError: (e: Error) => toast.error(e.message || "Não consegui salvar. Rode o SQL da tabela parceiro_lancamentos."),
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui salvar este cachê. Tente de novo em instantes.")),
   });
 
   const excluir = useMutation({
@@ -552,7 +652,7 @@ export function useAcoesLancamento() {
       if (error) throw error;
     },
     onSuccess: () => { invalidar(); toast.success("Cachê excluído."); },
-    onError: () => toast.error("Não consegui excluir."),
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui excluir agora. Tente de novo em instantes.")),
   });
 
   return { salvar, excluir };
@@ -569,7 +669,7 @@ export function useMeusParceiros() {
     queryFn: async () => {
       const { data, error } = await sbRpc("meus_parceiros");
       if (error) {
-        if (/does not exist|schema cache/i.test(error.message)) return [];
+        if (aindaNaoExisteNoBanco(error.message)) return [];
         throw error;
       }
       return (data ?? []) as Parceiro[];
@@ -598,6 +698,9 @@ export type PecaExterna = {
   /** Quando a peça foi marcada como entregue. Coluna própria desde 14/09/2026:
    *  `updated_at` mudava a cada edição da agência e bagunçava a cobrança. */
   entregue_em: string | null;
+  /** Quantas vezes esta peça voltou pra ajuste. Três ou mais é conversa de
+   *  escopo, não de capricho. */
+  revisoes: number | null;
 };
 
 /** Tudo que está na mão de parceiros: a matéria-prima do painel "Com
@@ -611,12 +714,12 @@ export function usePecasComParceiros(temParceiros: boolean) {
     enabled: !!user && temParceiros,
     queryFn: async () => {
       const { data, error } = await sbFrom("posts")
-        .select("id, title, format, producao_status, prazo_producao, prazo_status, prazo_sugerido, approval_status, scheduled_date, assignee_id, external_client_id, updated_at, cache_parceiro, entregue_em")
+        .select("id, title, format, producao_status, prazo_producao, prazo_status, prazo_sugerido, approval_status, scheduled_date, assignee_id, external_client_id, updated_at, cache_parceiro, entregue_em, revisoes")
         .not("assignee_id", "is", null)
         .order("prazo_producao", { ascending: true, nullsFirst: false })
         .limit(300);
       if (error) {
-        if (/does not exist|schema cache/i.test(error.message)) return [];
+        if (aindaNaoExisteNoBanco(error.message)) return [];
         throw error;
       }
       return (data ?? []) as PecaExterna[];
@@ -649,7 +752,7 @@ export function useResolverPrazoSugerido() {
       void qc.invalidateQueries({ queryKey: ["external-posts"] });
       toast.success("Prazo combinado. O parceiro é avisado.");
     },
-    onError: (e: Error) => toast.error(e.message || "Não consegui fechar o prazo."),
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui fechar o prazo.")),
   });
 }
 
@@ -685,7 +788,7 @@ export function usePedirAjuste() {
       void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
       toast.success("Ajuste pedido. O parceiro recebe o card de volta com o motivo.");
     },
-    onError: (e: Error) => toast.error(e.message || "Não consegui pedir o ajuste."),
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui pedir o ajuste.")),
   });
 }
 
@@ -753,7 +856,7 @@ export function useDelegarPost() {
         ? "Combinado atualizado. A entrega e o histórico continuam como estavam."
         : `Enviado pra ${v.nomeParceiro ?? "o parceiro"}. Ele recebe o aviso na hora.`);
     },
-    onError: (e: Error) => toast.error(e.message || "Não consegui delegar."),
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui delegar.")),
   });
 }
 
@@ -766,24 +869,59 @@ export function useDelegarPost() {
  *  casca da gestão como se fosse uma agência vazia. Agora o tipo da conta
  *  (`account_type = 'parceiro'`) também vale, e o vínculo continua valendo
  *  sozinho pra não quebrar quem já entrou por convite. */
-export function useSouParceiro() {
+const PAPEIS_PARCEIRO = ["designer", "editor_video", "copy", "trafego"];
+
+/** Vínculos de produção desta pessoa, ATIVOS E PAUSADOS, mais o tipo da conta.
+ *  Base das duas perguntas que o app faz: "sou parceiro?" e "me pausaram?". */
+export function useVinculosDeParceiro() {
   const { user } = useAuth();
-  return useQuery<boolean>({
-    queryKey: ["sou-parceiro", user?.id],
+  return useQuery<{ contaParceiro: boolean; ativos: number; pausados: number }>({
+    queryKey: ["parceiro-vinculos", user?.id],
     enabled: !!user,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data: perfil } = await sbFrom("profiles")
-        .select("account_type").eq("id", user!.id).maybeSingle();
-      if ((perfil as { account_type?: string | null } | null)?.account_type === "parceiro") return true;
-
-      const { data, error } = await sbFrom("manager_members")
-        .select("role")
-        .eq("member_id", user!.id)
-        .eq("status", "ativo");
-      if (error) return false;
-      const papeis = (data ?? []) as { role?: string | null }[];
-      return papeis.some((p) => ["designer", "editor_video", "copy", "trafego"].includes(p.role ?? ""));
+      const [perfil, vinculos] = await Promise.all([
+        sbFrom("profiles").select("account_type").eq("id", user!.id).maybeSingle(),
+        sbFrom("manager_members").select("role, status").eq("member_id", user!.id),
+      ]);
+      /* ERRO AQUI NÃO PODE VIRAR "NÃO É PARCEIRO" (Walter, 14/09/2026).
+         Antes era `if (error) return false`, e a resposta falsa desmontava a
+         conta inteira dele: o menu de parceiro sumia e o ProtectedRoute mandava
+         pra tela de assinar. Um piscar de internet transformava o designer em
+         visitante. Deixando subir, o react-query tenta de novo e a tela segue
+         em carregamento, que é a verdade. */
+      if (vinculos.error && !aindaNaoExisteNoBanco(vinculos.error.message)) throw vinculos.error;
+      const contaParceiro = (perfil.data as { account_type?: string | null } | null)?.account_type === "parceiro";
+      const linhas = ((vinculos.data ?? []) as { role?: string | null; status?: string | null }[])
+        .filter((v) => PAPEIS_PARCEIRO.includes(v.role ?? ""));
+      return {
+        contaParceiro,
+        ativos: linhas.filter((v) => v.status === "ativo").length,
+        pausados: linhas.filter((v) => v.status !== "ativo").length,
+      };
     },
   });
+}
+
+/** Sou parceiro? Decide se o item "Minhas demandas" aparece e se o login cai
+ *  direto na fila.
+ *
+ *  DUAS ORIGENS desde 09/09/2026: o tipo da conta (`account_type = 'parceiro'`)
+ *  e o vínculo com papel de produção.
+ *
+ *  PAUSADO CONTINUA SENDO PARCEIRO (Walter, 14/09/2026). Antes só o vínculo
+ *  'ativo' contava. Quando a última agência pausava o vínculo, ele deixava de
+ *  ser parceiro aos olhos do app: perdia o menu, as entregas passadas e a tela
+ *  de cachês, justo quando ainda tinha dinheiro a receber. Pausar é pausar o
+ *  trabalho novo, não apagar o histórico de quem trabalhou. */
+export function useSouParceiro() {
+  const q = useVinculosDeParceiro();
+  return { ...q, data: q.data ? q.data.contaParceiro || q.data.ativos > 0 || q.data.pausados > 0 : undefined };
+}
+
+/** Todas as agências pausaram o vínculo: ele não recebe demanda nova, mas o
+ *  que já é dele continua no lugar. Merece tela própria, não silêncio. */
+export function usePausadoEmTudo() {
+  const { data } = useVinculosDeParceiro();
+  return !!data && data.ativos === 0 && data.pausados > 0;
 }

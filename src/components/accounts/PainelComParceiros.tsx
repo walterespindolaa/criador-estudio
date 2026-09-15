@@ -148,6 +148,17 @@ export function PainelComParceiros({ clientes }: {
           {p.prazo_status === "proposto" && (
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">aguardando aceite do prazo</span>
           )}
+          {/* QUANTAS VEZES ESTA PEÇA VOLTOU (Walter, 14/09/2026). Sem este
+              número, revisão vira sensação: ela lembra que "esse cliente pede
+              muito ajuste" mas não tem o que mostrar numa conversa de escopo.
+              A partir da terceira, o chip fica vermelho: aí não é capricho do
+              cliente, é briefing que saiu errado. */}
+          {(p.revisoes ?? 0) > 0 && (
+            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full",
+              (p.revisoes ?? 0) >= 3 ? "bg-red-100 text-red-700" : "bg-violet-100 text-violet-700")}>
+              {p.revisoes}ª revisão
+            </span>
+          )}
         </span>
       </span>
       <span className="shrink-0 flex items-center gap-2">

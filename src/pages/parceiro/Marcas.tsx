@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Copy, ExternalLink, FolderOpen, Instagram, Link2, Loader2, Palette, Sparkles, Type, X } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
+import { ErroAoCarregar } from "@/components/shared/ErroAoCarregar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ROTULO_PAPEL, useMinhasAgencias, useMinhasMarcas, type MarcaDoParceiro } from "@/hooks/useParceiro";
 
@@ -230,8 +231,8 @@ export function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFec
 }
 
 export default function Marcas() {
-  const { data: agencias = [], isLoading } = useMinhasAgencias();
-  const { data: marcas = [], isLoading: carregandoMarcas } = useMinhasMarcas();
+  const { data: agencias = [], isLoading, isError: erroAgencias, isFetching: buscandoAgencias, refetch: recarregarAgencias } = useMinhasAgencias();
+  const { data: marcas = [], isLoading: carregandoMarcas, isError: erroMarcas, isFetching: buscandoMarcas, refetch: recarregarMarcas } = useMinhasMarcas();
   const [aberta, setAberta] = useState<MarcaDoParceiro | null>(null);
 
   return (
@@ -251,6 +252,8 @@ export default function Marcas() {
 
         {carregandoMarcas ? (
           <div className="grid place-items-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : erroMarcas && marcas.length === 0 ? (
+          <ErroAoCarregar oQue="as marcas que você atende" aoTentarDeNovo={() => void recarregarMarcas()} tentando={buscandoMarcas} />
         ) : marcas.length === 0 ? (
           <Card className="p-8 rounded-2xl border-dashed text-center">
             <p className="text-sm font-body text-muted-foreground max-w-md mx-auto">
@@ -315,6 +318,8 @@ export default function Marcas() {
         <h2 className="font-display font-bold text-[15px] text-foreground mb-2 px-0.5">Quem me acoplou</h2>
         {isLoading ? (
           <div className="grid place-items-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : erroAgencias && agencias.length === 0 ? (
+          <ErroAoCarregar oQue="as suas agências" aoTentarDeNovo={() => void recarregarAgencias()} tentando={buscandoAgencias} />
         ) : agencias.length === 0 ? (
           <Card className="p-8 rounded-2xl border-dashed text-center">
             <p className="text-sm font-body text-muted-foreground max-w-md mx-auto">

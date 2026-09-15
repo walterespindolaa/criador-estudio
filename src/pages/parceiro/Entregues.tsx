@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ErroAoCarregar } from "@/components/shared/ErroAoCarregar";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
@@ -41,7 +42,7 @@ const FORMATO: Record<string, string> = {
 export default function Entregues() {
   const { user } = useAuth();
   const [aberto, setAberto] = useState<string | null>(null);
-  const { data: entregas = [], isLoading } = useQuery<Entrega[]>({
+  const { data: entregas = [], isLoading, isError, isFetching, refetch } = useQuery<Entrega[]>({
     queryKey: ["parceiro-entregues", user?.id],
     enabled: !!user,
     queryFn: async () => {
@@ -69,6 +70,10 @@ export default function Entregues() {
 
       {isLoading ? (
         <div className="grid place-items-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+      ) : isError && entregas.length === 0 ? (
+        /* Erro não pode virar "nada entregue ainda": é o histórico que ele usa
+           pra cobrar (Walter, 14/09/2026). */
+        <ErroAoCarregar oQue="seu histórico de entregas" aoTentarDeNovo={() => void refetch()} tentando={isFetching} />
       ) : entregas.length === 0 ? (
         <Card className="p-10 rounded-2xl border-dashed text-center">
           <p className="text-sm font-body text-muted-foreground">

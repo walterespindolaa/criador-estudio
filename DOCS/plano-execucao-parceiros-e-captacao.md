@@ -217,13 +217,26 @@ Dois furos maiores que o previsto, achados no caminho:
 1. **O sino nunca navegou.** A coluna `link` era gravada por todos os gatilhos desde o começo e o clique só marcava como lida. Não era um problema dos parceiros: era de todas as notificações do produto.
 2. **O botão do painel "Com parceiros" levava o id errado** (external_clients em vez do id do CRM), então o clique caía numa página vazia. Corrigido na tela e na função do link.
 
-### Circuito 4: parar de engolir erro (parceiros)
+### Circuito 4: parar de engolir erro (parceiros) · FEITO em 14/09/2026
 Relançar erro real; mensagens humanas; menu que não some ao ativar módulo; parceiro pausado com tela própria.
 **Pronto quando:** derrubar a rede mostra erro, não tela vazia.
 
-### Circuito 5: revisão e versão (parceiros)
+Entregue: componente `ErroAoCarregar` (o estado que faltava ao lado de EmptyState e skeleton), `aindaNaoExisteNoBanco()` separando migration pendente de erro de verdade nas 11 consultas do `useParceiro`, `mensagemHumana()` traduzindo os 11 `onError`, `useVinculosDeParceiro` como base única de "sou parceiro" e "me pausaram", tela `PausadoEmTudo`, e erro visível nas quatro telas do parceiro (fila, entregues, marcas, cachês).
+
+Três achados que não estavam previstos:
+1. **Pausar o vínculo apagava a conta inteira do parceiro.** `useSouParceiro` só contava vínculo `ativo`; quando a última agência pausava, ele deixava de ser parceiro pro app: perdia o menu, o histórico e a tela de cachês, justo com dinheiro a receber. E um erro de rede na mesma consulta fazia o mesmo estrago, porque o catch respondia `false`.
+2. **"Meus cachês" sumia do menu na hora de pagar.** O item era `parceiroPuro &&`, ou seja, existia só pra quem não tinha assinado nada.
+3. **Erro escondia lista boa.** A primeira versão do meu próprio fix trocava a lista em cache pela tela de erro numa falha de atualização em segundo plano. Agora a tela cheia de erro só aparece sem cache; com cache, vai uma faixa em cima e a lista fica.
+
+### Circuito 5: revisão e versão (parceiros) · FEITO em 14/09/2026
 Contador de revisões visível dos dois lados; botão de histórico de versões na mídia.
 **Pronto quando:** dá para saber, olhando o card, quantas vezes a peça voltou e qual é o arquivo atual.
+
+Entregue: migration `20260914000005_revisao_e_versao.sql` (`posts.revisoes` contado pelo gatilho BEFORE que já carimbava a entrega; `entrega`, `rodada` e `substituida` em `external_media_refs`; `parceiro_anexar_entrega` aposentando as rodadas anteriores; `list_posts_by_token`, `parceiro_abrir_card`, `parceiro_minha_fila` e `parceiro_entregues` lendo só o que vale; RPC `parceiro_versoes_da_peca`). No app: chip "Nª revisão" no painel da social mídia (vermelho a partir da terceira), rótulo de versão no card do parceiro e o diálogo `HistoricoDeVersoes` atrás de um botão só.
+
+O furo que este circuito fechou é maior do que o título sugere: **cada re-entrega virava um slide a mais no carrossel do cliente.** Ele pedia ajuste, o designer refazia, e o cliente recebia de volta a arte errada e a arte certa lado a lado, como se fosse um carrossel de duas páginas.
+
+Limite consciente do backfill: as peças que já estão com versões empilhadas hoje continuam como estão. Separar "três versões" de "três slides de um carrossel" no histórico exigiria chutar pelo intervalo de tempo, e o chute errado apaga da vista do cliente uma parte legítima da peça. O mecanismo passa a valer da próxima entrega em diante.
 
 ### Circuito 6: comentário ancorado (parceiros e cliente)
 Alfinete na imagem, segundo no vídeo, nos dois lados.

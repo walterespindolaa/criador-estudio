@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import {
   Briefcase, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
   Copy as CopyIcon, ExternalLink, Folder, ImagePlus, Link2, Loader2, MessageCircle, Palette,
-  Pencil, Play, Plus, RotateCcw, Send, Sparkles, X,
+  History, PauseCircle, Pencil, Play, Plus, RotateCcw, Send, Sparkles, X,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { toast } from "sonner";
@@ -16,10 +16,11 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { FichaDaMarca } from "@/pages/parceiro/Marcas";
+import { ErroAoCarregar } from "@/components/shared/ErroAoCarregar";
 import {
   ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useEntreguesDoParceiro,
-  useFilaDoParceiro, useMinhasAgencias, useMinhasMarcas,
-  type CardDaFila, type EntregueDoParceiro, type MarcaDoParceiro,
+  useFilaDoParceiro, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useVersoesDaPeca,
+  type CardDaFila, type EntregueDoParceiro, type MarcaDoParceiro, type VersaoDaPeca,
 } from "@/hooks/useParceiro";
 import {
   useEtapasPessoais, useMetasDosCards, useSalvarCardMeta,
@@ -82,8 +83,9 @@ const EstadoPill = ({ s }: { s: CardDaFila["producao_status"] }) => (
 );
 
 export default function MinhasDemandas() {
-  const { data: todas = [], isLoading } = useFilaDoParceiro();
+  const { data: todas = [], isLoading, isError, isFetching, refetch } = useFilaDoParceiro();
   const { data: agencias = [] } = useMinhasAgencias();
+  const pausado = usePausadoEmTudo();
   const [aberto, setAberto] = useState<string | null>(null);
   const [visao, setVisao] = useState<"prazo" | "quadro" | "cliente" | "semana" | "mes">("prazo");
   /* FILTRAR POR AGÊNCIA (Walter, 09/09/2026): "não consigo clicar na social
@@ -191,6 +193,15 @@ export default function MinhasDemandas() {
           </div>
         )}
 
+        {/* Falhou a atualização mas a lista de antes ainda está aqui: faixa
+            discreta em cima, lista intacta embaixo. */}
+        {isError && todas.length > 0 && (
+          <div className="mb-3">
+            <ErroAoCarregar compacto oQue="a versão mais nova da sua fila"
+              aoTentarDeNovo={() => void refetch()} tentando={isFetching} />
+          </div>
+        )}
+
         {/* O SELETOR DE VISÃO: as quatro do mockup aprovado. Pílulas no accent,
             como as abas do resto do app. */}
         <div className="inline-flex gap-1 rounded-full border border-border bg-card p-1 mb-4 flex-wrap">
@@ -205,6 +216,17 @@ export default function MinhasDemandas() {
 
         {isLoading ? (
           <div className="grid place-items-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : isError && todas.length === 0 ? (
+          /* A fila não carregou. Antes isto virava a MESMA tela do "nenhuma
+             agência te mandou trabalho", e ele ia embora achando que o dia
+             estava livre (Walter, 14/09/2026).
+             A tela cheia de erro só aparece quando NÃO há nada em cache: se a
+             lista velha ainda está aqui, ela continua na tela e o aviso vai
+             numa faixa em cima (logo abaixo). Trabalho em mão vale mais que
+             aviso de rede. */
+          <ErroAoCarregar oQue="suas demandas" aoTentarDeNovo={() => void refetch()} tentando={isFetching} />
+        ) : todas.length === 0 && pausado ? (
+          <PausadoEmTudo />
         ) : todas.length === 0 ? (
           <ComeceAqui />
         ) : visao === "semana" ? (
@@ -338,6 +360,120 @@ function SemanaDoParceiro({ fila, hoje, aoAbrir }: {
    que ordem, e o que resolve. Cada passo responde uma dor clássica do
    freelancer de agência: briefing espalhado no WhatsApp, prazo de boca,
    ajuste sem registro e cobrança de fim de mês sem prova. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAUSADO EM TODAS AS AGÊNCIAS (Walter, 14/09/2026)
+
+   Pausar o vínculo é coisa normal: contrato que acabou, mês parado, briga que
+   passa. O que não era normal era o silêncio. A fila simplesmente ficava vazia
+   e mostrava "nenhuma demanda por enquanto", como se ele fosse recém-chegado.
+   Ele ficava esperando trabalho que nunca ia cair.
+
+   Aqui a tela diz o que aconteceu, sem drama e sem culpa (pausa é decisão da
+   agência, não defeito dele), e mostra o que CONTINUA sendo dele: o histórico
+   de entregas e o dinheiro a receber, que pausa nenhuma apaga.
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   O HISTÓRICO DE VERSÕES (Walter, 14/09/2026)
+
+   "A parte de v1, v2, v3 do post poderia ter só uma opção de um botão de
+   histórico pra ver as outras versões." É o oposto do Frame.io, que enfileira
+   as versões na tela: quem está produzindo precisa olhar pra UMA arte, não
+   escolher entre quatro. As antigas existem, mas fora do caminho.
+
+   Agrupado por rodada, mais nova em cima, com a atual marcada. A rodada é o
+   número de vezes que a peça voltou: "Entrega original" na 0, "Revisão 1" na 1.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function HistoricoDeVersoes({ aberto, aoFechar, versoes, carregando }: {
+  aberto: boolean; aoFechar: () => void; versoes: VersaoDaPeca[]; carregando: boolean;
+}) {
+  const porRodada = useMemo(() => {
+    const m = new Map<number, VersaoDaPeca[]>();
+    for (const v of versoes) m.set(v.rodada, [...(m.get(v.rodada) ?? []), v]);
+    return [...m.entries()].sort((a, b) => b[0] - a[0]);
+  }, [versoes]);
+
+  return (
+    <Dialog open={aberto} onOpenChange={(v) => !v && aoFechar()}>
+      <DialogContent className="sm:max-w-lg rounded-2xl max-h-[85vh] overflow-y-auto">
+        <DialogTitle className="font-display font-bold text-[16px]">Versões desta peça</DialogTitle>
+        <p className="text-[12.5px] font-body text-muted-foreground -mt-1">
+          O que você entregou em cada rodada. A agência e o cliente veem só a versão atual.
+        </p>
+        {carregando ? (
+          <div className="grid place-items-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : porRodada.length === 0 ? (
+          <p className="text-[13px] font-body text-muted-foreground py-6 text-center">
+            Ainda só existe uma versão desta peça.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {porRodada.map(([rodada, itens]) => (
+              <section key={rodada}>
+                <p className="flex items-center gap-2 mb-1.5">
+                  <span className="font-display font-bold text-[13.5px] text-foreground">
+                    {rodada === 0 ? "Entrega original" : `Revisão ${rodada}`}
+                  </span>
+                  {itens[0]?.atual && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">é a que vale</span>
+                  )}
+                  <span className="text-[11px] font-body text-muted-foreground">
+                    {new Date(itens[0].em).toLocaleDateString("pt-BR")}
+                  </span>
+                </p>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                  {itens.map((v) => {
+                    const src = v.thumb || v.url || "";
+                    const ehImagem = /^image\//.test(v.tipo ?? "") || EH_IMAGEM.test(src);
+                    return (
+                      <a key={v.id} href={v.url || src} target="_blank" rel="noopener noreferrer" title={v.nome ?? undefined}
+                        className={cn("block aspect-square rounded-lg overflow-hidden border bg-muted transition-colors",
+                          v.atual ? "border-green-400" : "border-border opacity-70 hover:opacity-100")}>
+                        {ehImagem
+                          ? <img src={src} alt={v.nome ?? ""} loading="lazy" className="w-full h-full object-cover" />
+                          : <span className="w-full h-full grid place-items-center px-1 text-[9px] font-body font-bold text-muted-foreground text-center leading-tight">
+                              {v.nome?.slice(0, 22) || "arquivo"}
+                            </span>}
+                      </a>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PausadoEmTudo() {
+  const navigate = useNavigate();
+  return (
+    <Card className="rounded-2xl border-border p-8 text-center">
+      <span className="w-12 h-12 rounded-2xl bg-amber-100 grid place-items-center mx-auto mb-3">
+        <PauseCircle className="h-5 w-5 text-amber-700" />
+      </span>
+      <p className="font-display font-extrabold text-[17px] text-foreground">Suas agências pausaram o vínculo</p>
+      <p className="text-[13px] font-body text-muted-foreground mt-1.5 max-w-md mx-auto leading-relaxed">
+        Enquanto estiver assim, nenhuma demanda nova chega aqui. Não é nada com o seu trabalho:
+        pausa é o jeito da agência segurar a fila sem desfazer a parceria. Quando reativarem, seus
+        cards voltam a cair nesta tela.
+      </p>
+      <p className="text-[13px] font-body text-foreground mt-3 max-w-md mx-auto leading-relaxed">
+        O que já é seu continua no lugar:
+      </p>
+      <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+        <Button variant="outline" className="rounded-xl" onClick={() => navigate("/socialmidia/entregues")}>
+          Ver minhas entregas
+        </Button>
+        <Button className="rounded-xl" onClick={() => navigate("/socialmidia/caches")}>
+          Ver o que tenho a receber
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
 function ComeceAqui() {
   const PASSOS = [
     {
@@ -1064,6 +1200,9 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
     ? minhasMarcas.find((m) => m.external_client_id === card.external_client_id) ?? null
     : null;
   const [fichaAberta, setFichaAberta] = useState<MarcaDoParceiro | null>(null);
+  // Histórico de versões: só busca quando ele abre (a query espera o postId).
+  const [vendoHistorico, setVendoHistorico] = useState(false);
+  const { data: versoes = [], isLoading: carregandoVersoes } = useVersoesDaPeca(vendoHistorico ? postId : null);
   // Entrega com ARQUIVO (fase 3): sobe direto pro card, sem passar por link.
   const inputArquivo = useRef<HTMLInputElement | null>(null);
   // Checklist pessoal (camada privada do card).
@@ -1239,9 +1378,26 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                   if (midias.length === 0) return null;
                   return (
                     <div className="mt-4">
-                      <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                        Arquivos desta peça ({midias.length})
-                      </p>
+                      <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                        <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Arquivos desta peça ({midias.length})
+                          {(card.revisoes ?? 0) > 0 && (
+                            <span className="ml-1.5 normal-case tracking-normal text-[10.5px] font-body text-violet-700">
+                              versão {(card.revisoes ?? 0) + 1}
+                            </span>
+                          )}
+                        </p>
+                        {/* UM BOTÃO, NÃO V1/V2/V3 NA TELA (Walter, 14/09/2026).
+                            As versões antigas existem, mas quem está trabalhando
+                            precisa olhar pra UMA arte. O histórico fica a um
+                            clique, e só aparece quando há o que mostrar. */}
+                        {(card.versoes_antigas ?? 0) > 0 && (
+                          <button type="button" onClick={() => setVendoHistorico(true)}
+                            className="inline-flex items-center gap-1 text-[11.5px] font-body font-bold text-violet-700 hover:underline">
+                            <History className="h-3.5 w-3.5" /> Ver versões anteriores ({card.versoes_antigas})
+                          </button>
+                        )}
+                      </div>
                       <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
                         {midias.map((m, i) => {
                           const src = m.thumb || m.url || "";
@@ -1701,6 +1857,8 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
             {/* A ficha completa abre POR CIMA do card: quem está montando a
                 peça não deveria perder o briefing pra consultar a marca. */}
             <FichaDaMarca m={fichaAberta} aoFechar={() => setFichaAberta(null)} />
+            <HistoricoDeVersoes aberto={vendoHistorico} aoFechar={() => setVendoHistorico(false)}
+              versoes={versoes} carregando={carregandoVersoes} />
           </>
         )}
       </DialogContent>

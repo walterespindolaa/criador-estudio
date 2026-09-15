@@ -369,7 +369,13 @@ export default function ManagerLayout() {
              que atendo", com active:false: dois itens abrindo a mesma coisa e
              nenhum acendendo (Walter, 09/09/2026). Agora vai com âncora, a
              tela rola até o bloco de cachês e o item acende. */}
-          {parceiroPuro && railNode(DollarSign, "Meus cachês", {
+          {/* O ITEM SUMIA NA HORA DE PAGAR (Walter, 14/09/2026). Isto aqui era
+             `parceiroPuro &&`, ou seja: o parceiro perdia o acesso ao que tem a
+             receber no instante em que assinava qualquer módulo do Cria. A tela
+             do dinheiro dele é de QUEM É PARCEIRO, não de quem não comprou
+             nada. Agora acompanha `souParceiro`, igual aos outros três itens da
+             seção (demandas, entregues, marcas). */}
+          {souParceiro && railNode(DollarSign, "Meus cachês", {
             active: isActive("/socialmidia/caches"),
             onClick: () => navigate("/socialmidia/caches"),
           })}

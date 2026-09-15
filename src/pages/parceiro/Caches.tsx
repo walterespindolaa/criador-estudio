@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ErroAoCarregar } from "@/components/shared/ErroAoCarregar";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { useManagerOutlet } from "@/components/accounts/ManagerLayout";
 import { useModules } from "@/hooks/useModules";
@@ -36,8 +37,8 @@ const dataBR = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 const ehPago = (s: string) => (s ?? "").trim().toLowerCase() === "pago";
 
 export default function Caches() {
-  const { data: porAgencia = [] } = useMeusCaches();
-  const { data: linhas = [], isLoading } = useMeusCachesDetalhe();
+  const { data: porAgencia = [], isError: erroTotais, isFetching: buscandoTotais, refetch: recarregarTotais } = useMeusCaches();
+  const { data: linhas = [], isLoading, isError, isFetching, refetch } = useMeusCachesDetalhe();
   const { data: meus = [] } = useMeusLancamentos();
   const { data: entregues = [] } = useEntreguesDoParceiro();
   const { data: marcas = [] } = useMinhasMarcas();
@@ -106,6 +107,14 @@ export default function Caches() {
 
   return (
     <div className="space-y-5 pb-20 md:pb-0">
+      {/* TOTAL ERRADO É PIOR QUE TOTAL NENHUM (Walter, 14/09/2026).
+          Se a consulta dos totais falhar, os dois cards mostram R$ 0,00 com
+          cara de número real, e ele entende que não tem nada a receber. O aviso
+          vem ANTES dos números pra ele saber que aquilo ali está incompleto. */}
+      {erroTotais && (
+        <ErroAoCarregar compacto oQue="os totais das agências" aoTentarDeNovo={() => void recarregarTotais()} tentando={buscandoTotais} />
+      )}
+
       {/* O QUE EU TENHO A RECEBER: o número que abre a página. */}
       <div className="grid sm:grid-cols-2 gap-3">
         <Card className="rounded-2xl border-amber-200 bg-amber-50/60 p-5">
@@ -153,6 +162,8 @@ export default function Caches() {
 
         {isLoading ? (
           <div className="grid place-items-center py-14"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : isError && linhas.length === 0 ? (
+          <ErroAoCarregar oQue="as suas entregas pagas e a receber" aoTentarDeNovo={() => void refetch()} tentando={isFetching} />
         ) : visiveis.length === 0 ? (
           <Card className="p-10 rounded-2xl border-dashed text-center">
             <p className="text-sm font-body text-muted-foreground max-w-md mx-auto">
