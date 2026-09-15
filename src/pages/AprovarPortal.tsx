@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -6,9 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, RotateCcw, Loader2, ImageOff, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks, ChevronDown, Clapperboard, CalendarDays, BarChart3, CheckSquare, AlertTriangle, Package, Plus, FolderOpen, History } from "lucide-react";
+import { Check, RotateCcw, Loader2, ImageOff, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks, ChevronDown, Clapperboard, CalendarDays, BarChart3, CheckSquare, AlertTriangle, Package, Plus, FolderOpen, History, MapPin } from "lucide-react";
 import { hexToHsl } from "@/lib/applyTheme";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
+import { type Alfinete } from "@/components/shared/CamadaDeAlfinetes";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { postAspect } from "@/lib/post-aspect";
 import { EtapasChecklist, type Stage } from "@/components/aprovar/EtapasChecklist";
@@ -39,7 +40,14 @@ type ClientHeader = { client_name: string; client_logo: string | null; manager_n
 // Histórico da conversa de ajuste de UM post, como a RPC pública devolve:
 // só o lado ('cliente' = ele mesmo, 'equipe' = quem cuida do conteúdo), o
 // texto e a data. Nada de nomes internos, ids de comentário ou etiquetas.
-type PortalComment = { post_id: string; author_kind: "cliente" | "equipe"; content: string; created_at: string };
+type PortalComment = {
+  post_id: string; author_kind: "cliente" | "equipe"; content: string; created_at: string;
+  /* Alfinete (circuito 6, 15/09/2026). Opcionais: comentário sem ponto na arte
+     continua existindo e é o caso mais comum. Campos ausentes quando o banco
+     ainda não rodou a migration, por isso `?`. */
+  comment_id?: string; midia_indice?: number | null;
+  ancora_x?: number | null; ancora_y?: number | null; ancora_seg?: number | null;
+};
 type PortalSettings = { show_calendar?: boolean; show_report?: boolean };
 type PortalTab = "aprovacoes" | "calendario" | "relatorio";
 
@@ -78,7 +86,12 @@ function readableFg(hex: string): string {
   return luminance(hex) > 0.6 ? "24 10% 12%" : "0 0% 100%";
 }
 
-function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
+function CardIG({ client, post, alfinetes, modoApontar, aoFixar, aoAbrirAlfinete, alfineteSelecionado }: {
+  client: ClientHeader; post: PortalPost;
+  alfinetes?: Record<number, Alfinete[]>; modoApontar?: boolean;
+  aoFixar?: (indice: number, x: number, y: number) => void;
+  aoAbrirAlfinete?: (id: string) => void; alfineteSelecionado?: string | null;
+}) {
   const media = Array.isArray(post.media) ? post.media : [];
   // @ do Instagram: usa o handle real quando existe; senão placeholder neutro
   // ("perfil"), NUNCA o nome do cadastro do cliente.
@@ -122,7 +135,7 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
         </div>
       ) : vertical ? (
         <div className="relative">
-          <PostMediaCarousel media={media} aspect={aspect} />
+          <PostMediaCarousel media={media} aspect={aspect} alfinetes={alfinetes} modoApontar={modoApontar} aoFixar={aoFixar} aoAbrirAlfinete={aoAbrirAlfinete} alfineteSelecionado={alfineteSelecionado} />
           {/* Véu de rodapé CURTO. Antes eram 2/5 da altura em black/70: aquilo existia
               pra dar contraste na legenda sobreposta, que foi removida daqui (ver o
               comentário logo abaixo) e o véu ficou órfão, escurecendo 40% do vídeo à
@@ -140,7 +153,7 @@ function CardIG({ client, post }: { client: ClientHeader; post: PortalPost }) {
         </div>
       ) : (
         <>
-          <PostMediaCarousel media={media} aspect={aspect} />
+          <PostMediaCarousel media={media} aspect={aspect} alfinetes={alfinetes} modoApontar={modoApontar} aoFixar={aoFixar} aoAbrirAlfinete={aoAbrirAlfinete} alfineteSelecionado={alfineteSelecionado} />
           <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground">
             <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" /><Bookmark className="h-6 w-6 ml-auto" />
           </div>
@@ -201,10 +214,12 @@ function HistoricoAjustes({ history, managerName }: { history: PortalComment[]; 
   );
 }
 
-function PostApproval({ client, post, index, busy, history, onApproveFast, onAdjustFast, onApproveStage, onAdjustStage }: {
+function PostApproval({ client, post, index, busy, history, onApproveFast, onAdjustFast, onApproveStage, onAdjustStage, onPin, onRemovePin }: {
   client: ClientHeader; post: PortalPost; index: number; busy: boolean; history: PortalComment[];
   onApproveFast: (id: string, comment?: string) => void; onAdjustFast: (id: string, comment: string) => void;
   onApproveStage: (id: string, stage: Stage, comment?: string) => void; onAdjustStage: (id: string, stage: Stage, comment: string) => void;
+  onPin: (id: string, comment: string, indice: number, x: number, y: number) => void;
+  onRemovePin: (commentId: string) => void;
 }) {
   const mode = post.approval_mode ?? "fast";
   const [view, setView] = useState<"fast" | "flow">(mode === "flow" ? "flow" : "fast");
@@ -219,6 +234,50 @@ function PostApproval({ client, post, index, busy, history, onApproveFast, onAdj
 
   const openAdjust = () => { setAdjOpen(true); setComment(""); };
   const sendFast = () => { onAdjustFast(post.post_id, comment.trim()); setAdjOpen(false); setComment(""); };
+  /* Fecha a rodada: o texto (ou um resumo, quando só há alfinetes) vai como o
+     comentário do ajuste, e os pontos já estão salvos na peça. */
+  const sendFastComAlfinetes = (texto: string) => {
+    onAdjustFast(post.post_id, texto);
+    setAdjOpen(false); setComment(""); setApontando(false); setRascunhoAlfinete(null); setTextoAlfinete("");
+  };
+
+  /* ── APONTAR EM VEZ DE DESCREVER (circuito 6, 15/09/2026) ────────────────
+     "O logo ficou estranho" faz o designer abrir a arte e adivinhar: tamanho?
+     cor? posição? logo errado? Num carrossel de seis slides ele ainda tem que
+     achar de qual slide ela fala. Cada rodada dessas custa uma revisão.
+
+     O fluxo aqui tem três tempos de propósito:
+       1. ela liga o modo apontar e clica na arte;
+       2. escreve o que quer NAQUELE ponto (o alfinete fica salvo na hora);
+       3. fecha a rodada uma vez só, com todos os pontos juntos.
+     Fechar a rodada a cada alfinete devolveria o "pingado de áudio" que o
+     produto combateu: revisão é uma rodada, não três. */
+  const [apontando, setApontando] = useState(false);
+  const [rascunhoAlfinete, setRascunhoAlfinete] = useState<{ indice: number; x: number; y: number } | null>(null);
+  const [textoAlfinete, setTextoAlfinete] = useState("");
+  const [alfineteAberto, setAlfineteAberto] = useState<string | null>(null);
+
+  // Só os comentários que TÊM ponto viram alfinete, agrupados por slide.
+  const meusAlfinetes = useMemo(
+    () => history.filter((c) => c.ancora_x != null && c.ancora_y != null && c.comment_id),
+    [history]);
+  const alfinetesPorMidia = useMemo(() => {
+    const m: Record<number, Alfinete[]> = {};
+    for (const c of meusAlfinetes) {
+      const i = c.midia_indice ?? 0;
+      (m[i] ??= []).push({
+        id: c.comment_id!, x: Number(c.ancora_x), y: Number(c.ancora_y),
+        texto: c.content, deQuem: c.author_kind, segundo: c.ancora_seg ?? null,
+      });
+    }
+    return m;
+  }, [meusAlfinetes]);
+
+  const fixarAlfinete = () => {
+    if (!rascunhoAlfinete || !textoAlfinete.trim()) return;
+    onPin(post.post_id, textoAlfinete.trim(), rascunhoAlfinete.indice, rascunhoAlfinete.x, rascunhoAlfinete.y);
+    setRascunhoAlfinete(null); setTextoAlfinete("");
+  };
 
   /* O RECADO DE QUEM APROVA.
      Antes só existia caixa de texto no AJUSTE. Quem queria elogiar escrevia
@@ -349,10 +408,99 @@ function PostApproval({ client, post, index, busy, history, onApproveFast, onAdj
             </div>
           ) : (
             <div className="space-y-2.5">
-              <Textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="O que você quer ajustar?" className="rounded-2xl" rows={3} />
+              {/* APONTAR NA ARTE. Fica ANTES da caixa de texto porque é o
+                  caminho melhor: quem aponta escreve menos e é entendido mais.
+                  A caixa continua ali pro que não é sobre um ponto (data,
+                  legenda, estratégia). */}
+              <div className="rounded-2xl border border-border p-3">
+                <div className="flex items-start justify-between gap-2 flex-wrap">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-body font-bold text-foreground">Prefere apontar?</p>
+                    <p className="text-[12px] font-body text-muted-foreground leading-snug max-w-xs">
+                      Marque na arte exatamente o que mudar. É mais rápido que descrever, e evita ida e volta.
+                    </p>
+                  </div>
+                  <Button type="button" size="sm" variant={apontando ? "default" : "outline"}
+                    className="rounded-xl shrink-0"
+                    onClick={() => { setApontando((v) => !v); setRascunhoAlfinete(null); }}>
+                    <MapPin className="h-4 w-4 mr-1.5" /> {apontando ? "Parar de apontar" : "Apontar na arte"}
+                  </Button>
+                </div>
+
+                {apontando && !rascunhoAlfinete && (
+                  <p className="text-[12px] font-body text-primary font-semibold mt-2">
+                    Toque no ponto da arte que você quer mudar.
+                  </p>
+                )}
+
+                {/* O ponto foi marcado: agora ela diz o que quer ali. */}
+                {rascunhoAlfinete && (
+                  <div className="mt-2.5 space-y-2">
+                    <Textarea value={textoAlfinete} onChange={(e) => setTextoAlfinete(e.target.value)}
+                      placeholder="O que muda neste ponto? Ex.: o logo aqui ficou pequeno demais"
+                      className="rounded-xl" rows={2} autoFocus />
+                    <div className="flex gap-2">
+                      <Button size="sm" className="rounded-xl flex-1" disabled={!textoAlfinete.trim()} onClick={fixarAlfinete}>
+                        Marcar este ponto
+                      </Button>
+                      <Button size="sm" variant="ghost" className="rounded-xl"
+                        onClick={() => { setRascunhoAlfinete(null); setTextoAlfinete(""); }}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Os pontos já marcados, numerados igual às bolinhas da arte.
+                    Sem o número, três alfinetes viram três pontos idênticos e a
+                    lista não casa com nada. */}
+                {meusAlfinetes.length > 0 && (
+                  <>
+                  {/* O ponto é salvo no clique (nada se perde se o celular
+                      travar), mas a RODADA só fecha no botão de enviar. Sem
+                      esta linha ela marca três pontos, fecha a caixa achando
+                      que mandou, e fica esperando uma resposta que não vem. */}
+                  <p className="text-[11.5px] font-body text-muted-foreground mt-2.5">
+                    Os pontos ficam salvos aqui. A equipe só é avisada quando você tocar em <b>Enviar ajuste</b>.
+                  </p>
+                  <ol className="mt-2 space-y-1.5">
+                    {meusAlfinetes.map((c, i) => (
+                      <li key={c.comment_id} className="flex items-start gap-2">
+                        <span className={`mt-0.5 h-5 w-5 shrink-0 rounded-full grid place-items-center text-[10px] font-display font-extrabold text-white ${c.author_kind === "cliente" ? "bg-[#EA4918]" : "bg-[#7C90F0]"}`}>
+                          {i + 1}
+                        </span>
+                        <span className="min-w-0 flex-1 text-[12.5px] font-body text-foreground leading-snug">{c.content}</span>
+                        {c.author_kind === "cliente" && (
+                          <button type="button" onClick={() => onRemovePin(c.comment_id!)}
+                            className="text-[11px] font-body text-muted-foreground hover:text-destructive shrink-0">
+                            tirar
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                  </>
+                )}
+              </div>
+
+              <Textarea value={comment} onChange={(e) => setComment(e.target.value)}
+                placeholder={meusAlfinetes.length > 0
+                  ? "Quer completar alguma coisa? (os pontos marcados já vão junto)"
+                  : "O que você quer ajustar?"}
+                className="rounded-2xl" rows={3} />
               <div className="flex gap-2.5">
-                <Button className="flex-1 h-12 rounded-2xl" disabled={busy || !comment.trim()} onClick={sendFast}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar ajuste"}</Button>
-                <Button variant="ghost" className="h-12 rounded-2xl" onClick={() => setAdjOpen(false)} disabled={busy}>Cancelar</Button>
+                {/* Com ponto marcado, o texto vira opcional: o alfinete já diz
+                    o que precisa. Sem ponto nenhum, texto continua obrigatório,
+                    senão o ajuste chega vazio do outro lado. */}
+                <Button className="flex-1 h-12 rounded-2xl"
+                  disabled={busy || (!comment.trim() && meusAlfinetes.length === 0)}
+                  onClick={() => {
+                    const t = comment.trim();
+                    sendFastComAlfinetes(t || `Marquei ${meusAlfinetes.length} ponto${meusAlfinetes.length === 1 ? "" : "s"} na arte.`);
+                  }}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar ajuste"}
+                </Button>
+                <Button variant="ghost" className="h-12 rounded-2xl" onClick={() => { setAdjOpen(false); setApontando(false); setRascunhoAlfinete(null); }} disabled={busy}>Cancelar</Button>
               </div>
             </div>
           )}
@@ -379,7 +527,10 @@ function PostApproval({ client, post, index, busy, history, onApproveFast, onAdj
           Mobile: mantém o feed em coluna, exatamente como antes. */}
       <div className="lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-8 lg:items-start lg:bg-white lg:border lg:border-border lg:rounded-3xl lg:p-6 lg:shadow-[0_8px_30px_rgba(27,26,24,0.06)]">
         <div className={`w-full mx-auto lg:mx-0 ${vertical ? "max-w-[330px] lg:max-w-[300px]" : "lg:max-w-[360px]"}`}>
-          <CardIG client={client} post={post} />
+          <CardIG client={client} post={post}
+            alfinetes={alfinetesPorMidia} modoApontar={apontando}
+            aoFixar={(indice, x, y) => setRascunhoAlfinete({ indice, x, y })}
+            aoAbrirAlfinete={setAlfineteAberto} alfineteSelecionado={alfineteAberto} />
         </div>
         <div className="min-w-0">
           {/* No mobile a legenda completa aparece no bloco "Legenda" abaixo (lg:hidden),
@@ -496,10 +647,36 @@ export default function AprovarPortal() {
     if (/invalid_token/i.test(msg)) return "Este link expirou ou foi desativado. Peça um link novo pra sua social mídia.";
     if (/post_not_found/i.test(msg)) return "Este post não está mais disponível. Atualize a página.";
     if (/has_module|module/i.test(msg)) return "O módulo de aprovação está inativo. Avise sua social mídia.";
+    if (/muitos_alfinetes/i.test(msg)) return "Você já marcou 20 pontos nesta peça. Envie o ajuste e continue na próxima rodada.";
+    if (/could not find the function|does not exist|schema cache/i.test(msg)) return "Marcar pontos na arte ainda não está ligado nesta conta. Escreva o ajuste no campo abaixo.";
     return msg ? `${acao} falhou: ${msg}` : `${acao} falhou. Tente de novo.`;
   };
   const approveFast = useMutation({ mutationFn: async ({ id, comment }: { id: string; comment?: string }) => { const { error } = await sbRpc("approve_post_by_token", { _token: token, _post_id: id, _comment: comment ?? null }); if (error) throw error; }, onSuccess: (_d, v) => { toast.success(v?.comment ? "Aprovado, recado enviado!" : "Aprovado!"); inv(); }, onError: (e) => toast.error(motivoErro(e, "Aprovar")) });
   const adjustFast = useMutation({ mutationFn: async ({ id, comment }: { id: string; comment: string }) => { const { error } = await sbRpc("request_adjustment_by_token", { _token: token, _post_id: id, _comment: comment }); if (error) throw error; }, onSuccess: () => { toast.success("Ajuste enviado!"); inv(); }, onError: (e) => toast.error(motivoErro(e, "Enviar o ajuste")) });
+  /* ── ALFINETE (circuito 6) ───────────────────────────────────────────────
+     Marcar um ponto NÃO muda o status da peça: o ajuste é fechado uma vez só,
+     depois, com todos os pontos juntos. Se a migration ainda não rodou, a RPC
+     não existe e o aviso diz isso em português, sem quebrar o portal. */
+  const pinPoint = useMutation({
+    mutationFn: async ({ id, comment, indice, x, y }: { id: string; comment: string; indice: number; x: number; y: number }) => {
+      const { error } = await sbRpc("pin_comment_by_token", {
+        _token: token, _post_id: id, _comment: comment,
+        _midia_indice: indice, _ancora_x: x, _ancora_y: y, _ancora_seg: null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => { inv(); },
+    onError: (e) => toast.error(motivoErro(e, "Marcar o ponto")),
+  });
+  const removePin = useMutation({
+    mutationFn: async (commentId: string) => {
+      const { error } = await sbRpc("remove_pin_by_token", { _token: token, _comment_id: commentId });
+      if (error) throw error;
+    },
+    onSuccess: () => { inv(); },
+    onError: (e) => toast.error(motivoErro(e, "Tirar o ponto")),
+  });
+
   const approveStage = useMutation({ mutationFn: async ({ id, stage, comment }: { id: string; stage: Stage; comment?: string }) => { const { error } = await sbRpc("approve_stage_by_token", { _token: token, _post_id: id, _stage: stage, _comment: comment ?? null }); if (error) throw error; }, onSuccess: () => { toast.success("Etapa aprovada!"); inv(); }, onError: (e) => toast.error(motivoErro(e, "Aprovar a etapa")) });
   const adjustStage = useMutation({ mutationFn: async ({ id, stage, comment }: { id: string; stage: Stage; comment: string }) => { const { error } = await sbRpc("request_stage_adjustment_by_token", { _token: token, _post_id: id, _stage: stage, _comment: comment }); if (error) throw error; }, onSuccess: () => { toast.success("Ajuste enviado!"); inv(); }, onError: (e) => toast.error(motivoErro(e, "Enviar o ajuste")) });
 
@@ -568,7 +745,9 @@ export default function AprovarPortal() {
       onApproveFast={(id, comment) => approveFast.mutate({ id, comment })}
       onAdjustFast={(id, comment) => adjustFast.mutate({ id, comment })}
       onApproveStage={(id, stage, comment) => approveStage.mutate({ id, stage, comment })}
-      onAdjustStage={(id, stage, comment) => adjustStage.mutate({ id, stage, comment })} />
+      onAdjustStage={(id, stage, comment) => adjustStage.mutate({ id, stage, comment })}
+      onPin={(id, comment, indice, x, y) => pinPoint.mutate({ id, comment, indice, x, y })}
+      onRemovePin={(commentId) => removePin.mutate(commentId)} />
   );
 
   const tabBar = (variant: "mobile" | "desktop") =>

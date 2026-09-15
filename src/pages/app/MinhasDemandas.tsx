@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import {
   Briefcase, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
   Copy as CopyIcon, ExternalLink, Folder, ImagePlus, Link2, Loader2, MessageCircle, Palette,
-  History, PauseCircle, Pencil, Play, Plus, RotateCcw, Send, Sparkles, X,
+  History, MapPin, PauseCircle, Pencil, Play, Plus, RotateCcw, Send, Sparkles, X,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { FichaDaMarca } from "@/pages/parceiro/Marcas";
 import { ErroAoCarregar } from "@/components/shared/ErroAoCarregar";
+import { CamadaDeAlfinetes, segundoBonito } from "@/components/shared/CamadaDeAlfinetes";
 import {
   ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useEntreguesDoParceiro,
   useFilaDoParceiro, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useVersoesDaPeca,
@@ -1368,6 +1369,91 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                     </span>
                   )}
                 </div>
+
+                {/* ═══════════════════════════════════════════════════════════
+                    O QUE APONTARAM NA ARTE (circuito 6, 15/09/2026)
+
+                    Isto entra ANTES dos arquivos e antes do copy, e é de
+                    propósito: quando existe alfinete, ele é a instrução mais
+                    precisa que o card tem. "O logo ficou estranho" mandava o
+                    designer adivinhar; o ponto na arte acaba com a adivinhação.
+
+                    A arte aparece grande, com as bolinhas numeradas, e a lista
+                    ao lado usa os MESMOS números. Ver e ler batem.
+                    ═══════════════════════════════════════════════════════════ */}
+                {(() => {
+                  const apontados = (card.comentarios ?? []).filter(
+                    (c) => c.ancora_x != null && c.ancora_y != null);
+                  if (apontados.length === 0) return null;
+                  const midias = (card.midias ?? []).filter((m) => m.url || m.thumb);
+                  // Agrupa por slide: um carrossel pode ter ponto em vários.
+                  const porSlide = new Map<number, typeof apontados>();
+                  for (const c of apontados) {
+                    const i = c.midia_indice ?? 0;
+                    porSlide.set(i, [...(porSlide.get(i) ?? []), c]);
+                  }
+                  let n = 0;
+                  return (
+                    <div className="mt-4 rounded-2xl border border-[#EA4918]/30 bg-[#EA4918]/[0.04] p-3.5">
+                      <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#EA4918] mb-2 inline-flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5" /> Apontaram na arte ({apontados.length})
+                      </p>
+                      <div className="space-y-4">
+                        {[...porSlide.entries()].sort((a, b) => a[0] - b[0]).map(([slide, itens]) => {
+                          const m = midias[slide];
+                          const src = m?.thumb || m?.url || "";
+                          const ehImagem = !!src && (/^image\//.test(m?.tipo ?? "") || EH_IMAGEM.test(src));
+                          const base = n;
+                          n += itens.length;
+                          return (
+                            <div key={slide}>
+                              {midias.length > 1 && (
+                                <p className="text-[11px] font-body font-bold text-muted-foreground mb-1.5">
+                                  Peça {slide + 1} de {midias.length}
+                                </p>
+                              )}
+                              {ehImagem ? (
+                                <CamadaDeAlfinetes
+                                  className="rounded-xl overflow-hidden border border-border bg-muted max-w-sm"
+                                  alfinetes={itens.map((c, i) => ({
+                                    id: c.id, x: Number(c.ancora_x), y: Number(c.ancora_y),
+                                    texto: c.texto,
+                                    deQuem: /cliente/.test(c.papel) ? "cliente" as const : "equipe" as const,
+                                    segundo: c.ancora_seg ?? null,
+                                  }))}
+                                >
+                                  <img src={src} alt="" className="w-full h-auto block" loading="lazy" />
+                                </CamadaDeAlfinetes>
+                              ) : (
+                                <p className="text-[12px] font-body text-muted-foreground">
+                                  O ponto foi marcado num arquivo que não é imagem. O texto está abaixo.
+                                </p>
+                              )}
+                              <ol className="mt-2 space-y-1.5">
+                                {itens.map((c, i) => (
+                                  <li key={c.id} className="flex items-start gap-2">
+                                    <span className={cn("mt-0.5 h-5 w-5 shrink-0 rounded-full grid place-items-center text-[10px] font-display font-extrabold text-white",
+                                      /cliente/.test(c.papel) ? "bg-[#EA4918]" : "bg-[#7C90F0]")}>
+                                      {base + i + 1}
+                                    </span>
+                                    <span className="min-w-0 flex-1 text-[13px] font-body text-foreground leading-snug">
+                                      {c.texto}
+                                      {c.ancora_seg != null && (
+                                        <span className="ml-1.5 text-[11px] font-body font-bold text-muted-foreground">
+                                          no {segundoBonito(c.ancora_seg)}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ol>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* O QUE JÁ ESTÁ ANEXADO NA PEÇA (Walter, 09/09/2026). No
                     Trello a arte fica no card e vira capa dele. Aqui o arquivo

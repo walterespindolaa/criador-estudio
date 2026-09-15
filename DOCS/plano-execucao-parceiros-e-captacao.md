@@ -238,9 +238,19 @@ O furo que este circuito fechou é maior do que o título sugere: **cada re-entr
 
 Limite consciente do backfill: as peças que já estão com versões empilhadas hoje continuam como estão. Separar "três versões" de "três slides de um carrossel" no histórico exigiria chutar pelo intervalo de tempo, e o chute errado apaga da vista do cliente uma parte legítima da peça. O mecanismo passa a valer da próxima entrega em diante.
 
-### Circuito 6: comentário ancorado (parceiros e cliente)
+### Circuito 6: comentário ancorado (parceiros e cliente) · FEITO em 15/09/2026
 Alfinete na imagem, segundo no vídeo, nos dois lados.
 **Pronto quando:** o cliente consegue apontar em vez de descrever.
+
+Entregue: migration `20260915000001_comentario_ancorado.sql` (`midia_indice`, `ancora_x`, `ancora_y`, `ancora_seg` em `post_approval_comments`, com constraint de limite; `pin_comment_by_token` e `remove_pin_by_token` novas; `request_adjustment_by_token`, `list_post_comments_by_token`, `parceiro_comentar` e `parceiro_abrir_card` aceitando e devolvendo o ponto). No app: componente `CamadaDeAlfinetes`, carrossel aceitando alfinetes por slide, modo apontar no portal do cliente e bloco "Apontaram na arte" no card do parceiro.
+
+Decisões que valem registro:
+- **Fração, não pixel.** A posição é gravada de 0 a 1. A mesma arte é vista no celular do cliente e no monitor do designer.
+- **A bolinha tem número**, e a lista ao lado usa o mesmo número. Sem isso, três alfinetes viram três pontos idênticos.
+- **Três tempos, uma rodada.** Marcar o ponto salva na hora, mas o status da peça só muda quando ela envia. Fechar rodada a cada alfinete devolveria o "pingado de áudio" que o produto combateu.
+- **O cliente entra na thread do parceiro só quando aponta.** O card do parceiro filtrava `author_role in ('parceiro','social_media')` de propósito: conversa comercial não é da conta dele. O alfinete é a exceção, porque é instrução de produção desenhada em cima da arte dele.
+
+Limite conhecido: Story usa preview próprio (`StoryPreview`), fora do carrossel, então ainda não aceita alfinete. O segundo do vídeo está gravado e é exibido, mas quem marca o segundo ainda é a pessoa escrevendo, não um clique na linha do tempo.
 
 ### Circuito 7: Captação, unificar o modelo
 Matar o campo antigo, migrar o que sobrou, consertar contadores, folha, envio e "virar post". É o circuito que conserta os bugs, sem tela nova.

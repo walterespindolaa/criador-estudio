@@ -165,7 +165,13 @@ export type CardAberto = {
     logo: string | null;
     hashtags: string[] | null;
   };
-  comentarios: { id: string; texto: string; papel: string; em: string }[];
+  /** A conversa do card. Desde 15/09/2026 cada linha pode trazer um ALFINETE:
+   *  o ponto exato da arte sobre o qual o recado foi escrito. */
+  comentarios: {
+    id: string; texto: string; papel: string; em: string;
+    midia_indice?: number | null; ancora_x?: number | null;
+    ancora_y?: number | null; ancora_seg?: number | null;
+  }[];
 };
 
 export type Parceiro = { member_id: string; nome: string; email: string | null; role: string };

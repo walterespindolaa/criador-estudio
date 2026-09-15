@@ -4,6 +4,7 @@ import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, getT
 import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
 import { VideoPoster, useDriveVideoRatio } from "@/components/shared/VideoPoster";
 import { coverIframeStyle, letterboxStyle, probeLetterbox, type LetterboxBox } from "@/lib/poster-letterbox";
+import { CamadaDeAlfinetes, type Alfinete } from "@/components/shared/CamadaDeAlfinetes";
 
 export type CarouselMedia = {
   id?: string; provider?: string | null; external_file_id?: string | null; view_url?: string | null;
@@ -264,8 +265,21 @@ function Slide({ item, onReady, eager }: { item: CarouselMedia; onReady?: () => 
   return <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground"><ImageOff className="h-8 w-8" /></div>;
 }
 
-export function PostMediaCarousel({ media, aspect = "4 / 5", onRemove, onVideoReady }: {
+export function PostMediaCarousel({
+  media, aspect = "4 / 5", onRemove, onVideoReady,
+  alfinetes, modoApontar, aoFixar, aoAbrirAlfinete, alfineteSelecionado,
+}: {
   media: CarouselMedia[]; aspect?: string; onRemove?: (id: string) => void; onVideoReady?: () => void;
+  /* ── COMENTÁRIO ANCORADO (circuito 6, 15/09/2026) ────────────────────────
+     O carrossel já sabia em qual slide está (`idx`), que é exatamente o índice
+     que o alfinete precisa guardar. Por isso a camada mora aqui e não na tela:
+     qualquer lugar que mostra a peça ganha o alfinete de graça. */
+  /** Alfinetes por índice de mídia. Chave 0 = primeira peça do carrossel. */
+  alfinetes?: Record<number, Alfinete[]>;
+  modoApontar?: boolean;
+  aoFixar?: (indice: number, x: number, y: number) => void;
+  aoAbrirAlfinete?: (id: string) => void;
+  alfineteSelecionado?: string | null;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const [idx, setIdx] = useState(0);
@@ -287,7 +301,18 @@ export function PostMediaCarousel({ media, aspect = "4 / 5", onRemove, onVideoRe
       <div ref={scroller} onScroll={onScroll} className="flex w-full h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
         {media.map((m, i) => (
           <div key={m.id ?? i} className="relative w-full h-full shrink-0 snap-center">
-            <Slide item={m} onReady={onVideoReady} eager={i === 0} />
+            <CamadaDeAlfinetes
+              className="w-full h-full"
+              alfinetes={alfinetes?.[i] ?? []}
+              // Só o slide VISÍVEL aceita alfinete: sem isto, um clique que
+              // pegasse a borda do slide vizinho gravaria o ponto na arte errada.
+              modoApontar={!!modoApontar && i === idx}
+              aoFixar={aoFixar ? (x, y) => aoFixar(i, x, y) : undefined}
+              aoAbrir={aoAbrirAlfinete}
+              selecionado={alfineteSelecionado}
+            >
+              <Slide item={m} onReady={onVideoReady} eager={i === 0} />
+            </CamadaDeAlfinetes>
             {onRemove && m.id && (
               <button type="button" onClick={(e) => { e.stopPropagation(); onRemove(m.id!); }}
                 className="absolute top-2 left-2 z-20 bg-black/60 text-white rounded-full p-1.5 hover:bg-black/80"><X className="h-4 w-4" /></button>
