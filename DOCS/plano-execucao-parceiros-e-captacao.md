@@ -264,9 +264,17 @@ Dois perigos achados na revisão, antes de rodar:
 1. **A migration de 23/08 já copiava esse campo**, com `source='captacao'`. Minha primeira versão filtrava por `source='agenda'`, o que teria **duplicado todo roteiro migrado em agosto**. O guard correto é por `capture_id`, igual ao de lá.
 2. **Esvaziar a coluna por "existe algum roteiro pra esta captação" perderia dado**: uma captação pode ter o texto velho E um roteiro novo (é justamente o bug). Nesse caso o insert pula e o update apagaria. Agora só esvazia quando existe um roteiro com exatamente aquele conteúdo.
 
-### Circuito 8: Captação, o Dia de Gravação
+### Circuito 8: Captação, o Dia de Gravação · FEITO em 15/09/2026
 A tela nova, com tomadas no topo, roteiros na ordem, folha e teleprompter. Calendário clicável.
 **Pronto quando:** dá para montar e executar um dia com 3 clientes sem entrar em nenhuma pasta.
+
+A virada de eixo: **o módulo era organizado por cliente, mas ninguém grava por cliente.** Grava por DIA. Sai de casa às 8h, passa em três clientes, volta com dezoito vídeos. Pra montar esse dia, ela abria três pastas, copiava três roteiros, conferia três listas de tomada e juntava de cabeça.
+
+Entregue: componente `DiaDeGravacao.tsx` (placar, tomadas no topo, roteiros por cliente na ordem, teleprompter por roteiro e o dia inteiro em texto), calendário do mês clicável e botão "Abrir o dia" no cabeçalho de cada grupo da agenda.
+
+Regra de design que mandou no layout: **tudo de um toque.** Quem está segurando a câmera com uma mão não abre acordeão nem confirma diálogo. Marcar tomada, marcar roteiro gravado e abrir teleprompter são um toque cada, com alvo de 40px pra cima.
+
+Dois achados na revisão: `h-4.5`/`w-4.5` não existe na escala do Tailwind deste projeto (a classe não gera CSS e o ícone fica no tamanho padrão, e há outros pontos do app com o mesmo engano); e `shot_list` é jsonb livre, então tem que passar por `normalizeShotList` ou item sem `id` quebra a chave do React e o toggle.
 
 ### Circuito 9: Captação, IA de cena
 Edge nova com brandbook e voz do Cria, ligada ao botão que já existe.

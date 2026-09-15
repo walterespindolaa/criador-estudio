@@ -35,6 +35,7 @@ import {
   cenasDe, cenasParaTexto, type CaptureScript,
 } from "@/hooks/useCaptureScripts";
 import { RoteiroEditor, type RoteiroFormValor } from "@/components/captacao/RoteiroEditor";
+import { DiaDeGravacao } from "@/components/captacao/DiaDeGravacao";
 import { baixarGuiaGravacao } from "@/lib/guiaGravacaoPdf";
 import { useLinkPreviews } from "@/hooks/useLinkPreviews";
 import { parseRefLinks, isRefLink } from "@/lib/refLinks";
@@ -246,6 +247,10 @@ function CriaCaptacaoInner() {
   const delScriptPg = useDeleteCaptureScript();
   const reorderScriptsPg = useReorderCaptureScripts();
   const [editorAgenda, setEditorAgenda] = useState<{ cap: Capture; script: CaptureScript | null } | null>(null);
+  /* O DIA DE GRAVAÇÃO (circuito 8, 15/09/2026): a data aberta na tela do dia.
+     O módulo era organizado por cliente, mas ninguém grava por cliente: grava
+     por dia, passando em três clientes com a mesma câmera. */
+  const [diaAberto, setDiaAberto] = useState<string | null>(null);
   const { data: extraClients = [] } = useCaptureExtraClients();
   const addExtra = useAddCaptureExtraClient();
   const delExtra = useDeleteCaptureExtraClient();
@@ -916,7 +921,7 @@ function CriaCaptacaoInner() {
       {/* CALENDÁRIO DO MÊS: a agenda era uma pilha de cards, e ninguém enxerga
           a semana numa pilha. Aqui ela bate o olho e vê os dias cheios, os
           vazios e onde dá pra encaixar mais uma gravação. */}
-      <CalendarioCaptacoes month={month} caps={filtradas} clientById={clientById} />
+      <CalendarioCaptacoes month={month} caps={filtradas} clientById={clientById} aoAbrirDia={setDiaAberto} />
 
       {/* Gráfico por cidade */}
       {porCidade.length > 0 && (
@@ -991,6 +996,11 @@ function CriaCaptacaoInner() {
                   <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><span className="truncate">{g.local}</span>
                 </span>
                 <div className="ml-auto flex items-center gap-2 shrink-0">
+                  <Button size="sm" onClick={() => setDiaAberto(g.date)}
+                    className="h-8 rounded-xl px-2.5 whitespace-nowrap"
+                    title="Abre o dia inteiro: tomadas, roteiros na ordem e teleprompter, sem entrar em pasta nenhuma.">
+                    <Camera className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Abrir o dia</span>
+                  </Button>
                   {g.caps.some((c) => scripts.some((s) => s.capture_id === c.id)) && (
                     <Button data-tour="cap-folha" variant="outline" size="sm" onClick={() => abrirFolha(g)}
                       className="h-8 rounded-xl px-2.5 whitespace-nowrap"
@@ -1029,6 +1039,30 @@ function CriaCaptacaoInner() {
         <FolhaDoDiaDialog open onOpenChange={(o) => { if (!o) setFolha(null); }}
           diaLabel={folha.diaLabel} wd={folha.wd} local={folha.local} items={folha.items} />
       )}
+
+      {/* O DIA DE GRAVAÇÃO: tudo do dia num lugar só, na ordem em que acontece. */}
+      {diaAberto && (() => {
+        const capsDoDia = captures
+          .filter((c) => c.capture_date === diaAberto)
+          .sort((a, b) => (a.capture_time ?? "99:99").localeCompare(b.capture_time ?? "99:99"));
+        if (capsDoDia.length === 0) return null;
+        return (
+          <DiaDeGravacao
+            data={diaAberto}
+            caps={capsDoDia}
+            scripts={scripts}
+            nomeDe={capName}
+            cidadeDe={(c) => (capCity(c) === SEM_CIDADE ? "" : capCity(c))}
+            aoFechar={() => setDiaAberto(null)}
+            aoMarcarTomada={(id, lista) => setShots.mutate({ id, shot_list: lista })}
+            aoMarcarGravado={(s) => updScriptPg.mutate({ id: s.id, patch: { done: !s.done } })}
+            aoConcluirCaptacao={(c) => updCapture.mutate({
+              id: c.id,
+              patch: { status: c.status === "concluida" ? "agendada" : "concluida" },
+            })}
+            aoTeleprompter={(title, text) => setPrompter({ title, text })} />
+        );
+      })()}
 
       {/* O MESMO editor de roteiro da pasta do cliente, agora também na Agenda
           do mês. O roteiro nasce dentro do dia, herdando data e local: ninguém
@@ -1084,10 +1118,14 @@ function CriaCaptacaoInner() {
 // A agenda mostrava só cards empilhados por dia: pra saber como estava a semana,
 // a pessoa tinha que rolar e somar de cabeça. A grade resolve isso em um olhar:
 // dia cheio, dia livre, e a cor de cada cliente dentro do dia.
-function CalendarioCaptacoes({ month, caps, clientById }: {
+function CalendarioCaptacoes({ month, caps, clientById, aoAbrirDia }: {
   month: string;
   caps: Capture[];
   clientById: Map<string, { nome: string; city?: string; color?: string | null }>;
+  /* O calendário era enfeite: mostrava os dias cheios e não abria nada, então
+     ela batia o olho e voltava a rolar a lista pra achar o mesmo dia. Agora o
+     dia com gravação é botão, e o botão abre o Dia de Gravação (circuito 8). */
+  aoAbrirDia: (data: string) => void;
 }) {
   const base = ymToDate(month);
   const ano = base.getFullYear();
@@ -1123,9 +1161,13 @@ function CalendarioCaptacoes({ month, caps, clientById }: {
           const iso = `${ano}-${pad(mes + 1)}-${pad(dia)}`;
           const doDia = porDia.get(iso) ?? [];
           const ehHoje = iso === hoje;
+          const temDia = doDia.length > 0;
+          const Celula = temDia ? "button" : "div";
           return (
-            <div key={iso}
-              className={cn("min-h-[74px] rounded-lg border p-1 flex flex-col gap-0.5 overflow-hidden",
+            <Celula key={iso}
+              {...(temDia ? { type: "button" as const, onClick: () => aoAbrirDia(iso), title: "Abrir o dia de gravação" } : {})}
+              className={cn("min-h-[74px] rounded-lg border p-1 flex flex-col gap-0.5 overflow-hidden text-left",
+                temDia && "hover:border-primary/60 hover:shadow-sm transition-all cursor-pointer",
                 ehHoje ? "border-primary bg-primary/[0.04]" : "border-border bg-background")}>
               <span className={cn("text-[10.5px] font-body font-bold w-5 h-5 grid place-items-center rounded-full shrink-0",
                 ehHoje ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{dia}</span>
@@ -1145,7 +1187,7 @@ function CalendarioCaptacoes({ month, caps, clientById }: {
               {doDia.length > 3 && (
                 <span className="text-[9.5px] font-body text-muted-foreground px-1">+{doDia.length - 3}</span>
               )}
-            </div>
+            </Celula>
           );
         })}
       </div>
