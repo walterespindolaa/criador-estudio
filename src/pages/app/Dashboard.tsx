@@ -392,7 +392,7 @@ const Dashboard = () => {
                 >
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-5">
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm shrink-0" style={{ backgroundColor: s.accent.line }}>
-                      <s.icon className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-white" strokeWidth={1.75} />
+                      <s.icon className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-white" strokeWidth={1.75} />
                     </div>
                     <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
                       <p className="text-xl sm:text-2xl font-display font-extrabold text-foreground tracking-tight leading-none">{s.value}</p>

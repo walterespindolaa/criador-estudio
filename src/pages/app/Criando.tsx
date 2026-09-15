@@ -30,7 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { PostEditor } from "@/components/kanban/PostEditor";
 import { FORMAT_LABELS, STATUS_OPTIONS, FORMATS } from "@/lib/constants";
-import { formatColorVars, FORMAT_TEXT_CLASS, FORMAT_BORDER_CLASS } from "@/lib/format-colors";
+import { formatColorVars, FORMAT_TEXT_CLASS, FORMAT_BORDER_CLASS, FORMAT_DOT_CLASS } from "@/lib/format-colors";
 import { getStatusClasses } from "@/lib/statusColors";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -174,6 +174,15 @@ const Criando = () => {
   const [calWeekStart, setCalWeekStart] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [calDragId, setCalDragId] = useState<string | null>(null);
   const [calDragOverKey, setCalDragOverKey] = useState<string | null>(null);
+  /* O DIA TOCADO NO CELULAR (circuito 10, 15/09/2026).
+     O calendário é uma grade de 7 colunas: num aparelho de 390px cada dia
+     tem ~48px de largura, e o card do post (título em text-[10px] truncado)
+     virava um borrão de duas letras. Pior: o card é `draggable` do HTML5,
+     que simplesmente NÃO existe em tela de toque, então no celular a grade
+     não só era ilegível como não fazia nada.
+     Mesma gramática que o calendário da social mídia já usa: no celular o
+     dia mostra pontinhos e o total, e tocar abre a lista do dia. */
+  const [calDiaModal, setCalDiaModal] = useState<string | null>(null);
   const sx = useRef(0), sy = useRef(0), sw = useRef(false);
   const onTouchStart = (e: React.TouchEvent) => { sx.current = e.touches[0].clientX; sy.current = e.touches[0].clientY; sw.current = false; };
   const onTouchMove = (e: React.TouchEvent) => { if (Math.abs(e.touches[0].clientX - sx.current) > Math.abs(e.touches[0].clientY - sy.current) + 6) sw.current = true; };
@@ -888,12 +897,18 @@ const Criando = () => {
                 <table className="w-full text-sm font-body">
                   <thead>
                     <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
-                      <th className="px-4 py-2.5 font-medium">Título</th>
-                      <th className="px-4 py-2.5 font-medium">Status</th>
-                      <th className="px-4 py-2.5 font-medium">Formato</th>
-                      <th className="px-4 py-2.5 font-medium">Plataforma</th>
-                      <th className="px-4 py-2.5 font-medium">Pilar</th>
-                      <th className="px-4 py-2.5 font-medium">
+                      <th className="px-3 md:px-4 py-2.5 font-medium">Título</th>
+                      <th className="px-3 md:px-4 py-2.5 font-medium">Status</th>
+                      {/* AS COLUNAS QUE SOMEM NO CELULAR (circuito 10, 15/09/2026).
+                          A tabela tem 6 colunas e o container é `overflow-hidden`:
+                          num aparelho de 390px a tabela estourava e a coluna Data
+                          ficava CORTADA, sem rolagem pra alcançar. Some o que dá
+                          pra ver abrindo o post (formato, plataforma, pilar) e
+                          fica o que decide: título, etapa e data. */}
+                      <th className="hidden md:table-cell px-4 py-2.5 font-medium">Formato</th>
+                      <th className="hidden md:table-cell px-4 py-2.5 font-medium">Plataforma</th>
+                      <th className="hidden md:table-cell px-4 py-2.5 font-medium">Pilar</th>
+                      <th className="px-3 md:px-4 py-2.5 font-medium">
                         <button type="button" onClick={() => setDateSort((s) => (s === "asc" ? "desc" : "asc"))} className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
                           Data
                           {dateSort === "asc" ? <ArrowUp className="h-3 w-3" /> : dateSort === "desc" ? <ArrowDown className="h-3 w-3" /> : <ArrowUpDown className="h-3 w-3 opacity-40" />}
@@ -921,16 +936,16 @@ const Criando = () => {
                         return (
                           <tr key={post.id} onClick={() => openEdit(post)}
                             className="border-b border-border last:border-0 hover:bg-muted/40 cursor-pointer transition-colors">
-                            <td className="px-4 py-2.5 max-w-[340px]">
+                            <td className="px-3 md:px-4 py-2.5 max-w-[340px]">
                               <span className="font-medium text-foreground line-clamp-1">{post.title}</span>
                             </td>
-                            <td className="px-4 py-2.5">
+                            <td className="px-3 md:px-4 py-2.5">
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium"
                                 style={{ background: st.from, color: st.ink }}>{stLabel}</span>
                             </td>
-                            <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">{FORMAT_LABELS[post.format] || post.format}</td>
-                            <td className="px-4 py-2.5"><PlatformIcon platform={post.platform} size="sm" /></td>
-                            <td className="px-4 py-2.5">
+                            <td className="hidden md:table-cell px-4 py-2.5 text-muted-foreground whitespace-nowrap">{FORMAT_LABELS[post.format] || post.format}</td>
+                            <td className="hidden md:table-cell px-4 py-2.5"><PlatformIcon platform={post.platform} size="sm" /></td>
+                            <td className="hidden md:table-cell px-4 py-2.5">
                               {pil ? (
                                 <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                                   <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: pil.color }} />
@@ -938,7 +953,7 @@ const Criando = () => {
                                 </span>
                               ) : <span className="text-muted-foreground/50">-</span>}
                             </td>
-                            <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">
+                            <td className="px-3 md:px-4 py-2.5 text-muted-foreground whitespace-nowrap">
                               {post.scheduled_date ? parseISO(post.scheduled_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "-"}
                             </td>
                           </tr>
@@ -997,7 +1012,7 @@ const Criando = () => {
                   </div>
                   <div className="grid grid-cols-7 gap-1.5">
                     {cells.map((cell, i) => {
-                      if (!cell) return <div key={`e${i}`} className="min-h-[104px]" />;
+                      if (!cell) return <div key={`e${i}`} className="min-h-[62px] md:min-h-[104px]" />;
                       const dayPosts = filteredPosts.filter(p => (p.scheduled_date ?? "").slice(0, 10) === cell.key);
                       const isToday = cell.key === todayKey;
                       return (
@@ -1006,7 +1021,7 @@ const Criando = () => {
                           onDragLeave={() => setCalDragOverKey(prev => (prev === cell.key ? null : prev))}
                           onDrop={() => { if (calDragId) reschedulePost(calDragId, cell.key); setCalDragId(null); setCalDragOverKey(null); }}
                           className={cn(
-                            "min-h-[104px] border rounded-lg p-1.5 bg-background flex flex-col gap-1 overflow-hidden transition-all",
+                            "min-h-[62px] md:min-h-[104px] border rounded-lg p-1 md:p-1.5 bg-background flex flex-col gap-1 overflow-hidden transition-all",
                             calDragOverKey === cell.key ? "ring-2 ring-primary border-primary" : (isToday ? "border-primary" : "border-border")
                           )}>
                           <span className="flex items-center justify-between">
@@ -1014,10 +1029,24 @@ const Criando = () => {
                             {/* + do dia: cria o post já com esta data. */}
                             <button type="button" onClick={(e) => { e.stopPropagation(); openNewAtDay(cell.key); }}
                               aria-label={`Novo post em ${cell.key}`}
-                              className="h-5 w-5 rounded-full grid place-items-center text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-colors">
+                              className="hidden md:grid h-5 w-5 rounded-full place-items-center text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-colors">
                               <Plus className="h-3.5 w-3.5" />
                             </button>
                           </span>
+                          {/* No celular a grade é só o mapa do mês. O conteúdo
+                              do dia abre em lista, onde cabe ler e tocar. */}
+                          {dayPosts.length > 0 && (
+                            <button type="button" onClick={() => setCalDiaModal(cell.key)}
+                              aria-label={`Ver ${dayPosts.length} post(s) de ${cell.key}`}
+                              className="md:hidden w-full min-h-[26px] flex flex-wrap content-start items-center gap-0.5 rounded-md px-0.5 py-0.5 active:bg-muted/60 transition-colors">
+                              {dayPosts.slice(0, 4).map(post => (
+                                <span key={post.id} style={formatColorVars(post.format)}
+                                  className={cn("h-1.5 w-1.5 rounded-full", FORMAT_DOT_CLASS)} />
+                              ))}
+                              <span className="ml-auto text-[10px] font-body font-bold text-muted-foreground">{dayPosts.length}</span>
+                            </button>
+                          )}
+                          <div className="hidden md:flex md:flex-col md:gap-1">
                           {dayPosts.slice(0, 3).map(post => (
                             /* Card com ETAPA + título + FORMATO, igual ao calendário
                                do social mídia: cor sozinha não diz o que é a peça. */
@@ -1051,6 +1080,7 @@ const Criando = () => {
                           {dayPosts.length > 3 && (
                             <span className="text-[10px] text-muted-foreground font-body px-1">+{dayPosts.length - 3}</span>
                           )}
+                          </div>
                         </div>
                       );
                     })}
@@ -1115,7 +1145,9 @@ const Criando = () => {
                           <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => shiftWeek(7)}>›</Button>
                         </div>
                       </div>
-                      <div className="grid grid-cols-7 gap-1.5">
+                      {/* A semana empilha no celular: sete colunas de 48px não
+                          são uma semana, são sete tiras. */}
+                      <div className="grid grid-cols-1 md:grid-cols-7 gap-1.5">
                         {days.map((d, i) => {
                           const key = keyOf(d);
                           const dayPosts = filteredPosts.filter(p => (p.scheduled_date ?? "").slice(0, 10) === key);
@@ -1125,10 +1157,12 @@ const Criando = () => {
                               onDragOver={(e) => { e.preventDefault(); setCalDragOverKey(key); }}
                               onDragLeave={() => setCalDragOverKey(prev => (prev === key ? null : prev))}
                               onDrop={() => { if (calDragId) reschedulePost(calDragId, key); setCalDragId(null); setCalDragOverKey(null); }}
-                              className={cn("min-h-[320px] border rounded-lg p-1.5 bg-background flex flex-col gap-1 overflow-y-auto transition-all",
+                              className={cn("min-h-[84px] md:min-h-[320px] border rounded-lg p-1.5 bg-background flex flex-col gap-1 overflow-y-auto transition-all",
                                 calDragOverKey === key ? "ring-2 ring-primary border-primary" : (isToday ? "border-primary" : "border-border"))}>
                               <div className="flex items-center justify-between px-0.5 mb-0.5 gap-1">
-                                <span className="text-[10px] font-body text-muted-foreground">{weekdays[i]}</span>
+                                <span className="text-[12px] md:text-[10px] font-body font-semibold md:font-normal text-muted-foreground">
+                                  {weekdays[i]}<span className="md:hidden">, {fmt(d)}</span>
+                                </span>
                                 <span className="flex items-center gap-0.5">
                                   <button type="button" onClick={(e) => { e.stopPropagation(); openNewAtDay(key); }}
                                     aria-label={`Novo post em ${key}`}
@@ -1381,6 +1415,52 @@ const Criando = () => {
       <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={activeAccountId || user?.id || ""} onSaved={() => { /* invalidations */ }} initialFormat={pendingFormat ?? undefined} initialStatus={pendingStatus ?? undefined} initialDate={pendingDate ?? undefined} />
 
       <FormatPicker open={pickerOpen} onPick={startFromFormat} onBlank={startBlank} onOpenChange={setPickerOpen} />
+
+      {/* A LISTA DO DIA, no celular (circuito 10, 15/09/2026).
+          É aqui que o dia fica legível e tocável: título inteiro, etapa,
+          formato e horário, com alvo de 44px. E o botão de criar post já
+          nasce com a data do dia, que era o que o "+" da grade fazia e no
+          celular ninguém conseguia acertar. */}
+      {calDiaModal && (() => {
+        const doDia = filteredPosts.filter(p => (p.scheduled_date ?? "").slice(0, 10) === calDiaModal);
+        const [ay, am, ad] = calDiaModal.split("-").map(Number);
+        const rotulo = new Date(ay, am - 1, ad).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
+        return (
+          <Dialog open onOpenChange={(open) => { if (!open) setCalDiaModal(null); }}>
+            <DialogContent className="sm:max-w-md rounded-2xl max-h-[82vh] overflow-y-auto">
+              <DialogHeader className="text-left">
+                <DialogTitle className="font-display capitalize">{rotulo}</DialogTitle>
+              </DialogHeader>
+              <p className="text-[12px] font-body text-muted-foreground -mt-2">
+                {doDia.length} post{doDia.length === 1 ? "" : "s"}, toque pra abrir
+              </p>
+              <div className="space-y-1.5 mt-1">
+                {doDia.map(post => (
+                  <button key={post.id} onClick={() => { setCalDiaModal(null); openEdit(post); }}
+                    style={formatColorVars(post.format)}
+                    className={cn("w-full text-left rounded-xl border border-border bg-card px-3 py-2.5 min-h-[44px] border-l-[3px] active:bg-muted/60 transition-colors", FORMAT_BORDER_CLASS)}>
+                    <span className="flex items-center gap-1.5 mb-0.5">
+                      <span className={cn("inline-block rounded-full border px-1.5 py-px text-[9.5px] font-body font-bold leading-tight", getStatusClasses(post.status))}>
+                        {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
+                      </span>
+                      <PlatformIcon platform={post.platform} size="sm" className="h-3 w-3 ml-auto shrink-0 text-muted-foreground" />
+                    </span>
+                    <span className="block text-[13.5px] font-body font-semibold text-foreground leading-tight">{post.title}</span>
+                    <span className={cn("block text-[10px] font-body font-bold uppercase tracking-wide mt-0.5", FORMAT_TEXT_CLASS)}>
+                      {FORMAT_LABELS[post.format] ?? post.format}
+                      {post.scheduled_time ? <span className="text-muted-foreground font-medium normal-case"> · {post.scheduled_time.slice(0, 5)}</span> : null}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <Button variant="outline" className="w-full rounded-xl mt-1"
+                onClick={() => { const dia = calDiaModal; setCalDiaModal(null); openNewAtDay(dia); }}>
+                <Plus className="h-4 w-4 mr-1.5" /> Novo post neste dia
+              </Button>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
 
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent className="sm:max-w-lg rounded-2xl">

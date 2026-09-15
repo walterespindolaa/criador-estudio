@@ -88,7 +88,7 @@ export function FirstStepsPanel() {
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <Rocket className="h-4.5 w-4.5 text-primary" strokeWidth={1.75} />
+              <Rocket className="h-[18px] w-[18px] text-primary" strokeWidth={1.75} />
             </div>
             <div className="min-w-0">
               <h3 className="text-sm font-display font-bold text-foreground">Primeiros passos no Cria</h3>

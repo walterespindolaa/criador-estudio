@@ -291,9 +291,29 @@ Três decisões:
 
 Roteiro de captação não é legenda, e é por isso que não deu pra reaproveitar o `carousel-script`: cada cena precisa de duas colunas, a fala (que vai pro teleprompter palavra por palavra) e a direção. Sem a direção, o cliente lê bonito parado na frente de uma parede branca.
 
-### Circuito 10: mobile de produção
+### Circuito 10: mobile de produção · FEITO em 15/09/2026
 Quadro do parceiro com breakpoint, mês em lista no celular, título nas telas, dia de gravação usável de pé.
 **Pronto quando:** dá para trabalhar o dia inteiro no celular.
+
+**O que foi feito (revisão das 3 personas em 390px):**
+
+*Parceiro (designer/filmmaker)*
+- Quadro "Fazendo": as etapas eram `repeat(N, minmax(0,1fr))`, ou seja ~85px por coluna com 4 etapas. Virou trilho horizontal com coluna de 78vw (máx. 260px) e volta a grade de `sm` pra cima.
+- Visão Mês: grade de 7 colunas com card em `text-[9px]`. No celular virou lista dos dias que TÊM entrega, card com título, cliente e alvo de 44px.
+
+*Criador de conteúdo*
+- Calendário do mês: célula de ~48px com card arrastável (e `draggable` do HTML5 não funciona em toque). No celular a célula virou pontinhos por formato + total, e tocar abre a lista do dia, com botão "Novo post neste dia" (o `+` de 20px da grade sumiu no celular).
+- Calendário da semana: sete colunas de 320px de altura empilharam em lista, com o dia escrito por extenso.
+- Visão Lista: tabela de 6 colunas dentro de um `overflow-hidden`, a coluna Data ficava cortada e inalcançável. Formato, plataforma e pilar somem abaixo de `md`.
+
+*Social mídia*
+- Agenda do mês da Captação: chip com hora + nome do cliente em célula de 48px virou ponto na cor do cliente + total (a célula já abria o Dia de Gravação).
+- Aba Agenda do cliente (CRM): mesmo tratamento, e tocar o dia já abre a lista logo abaixo.
+- Calendário da gestão e quadros (Cria Post, pipeline, materiais) já tinham trilho/lista no celular: conferidos, sem mudança.
+
+*As três*
+- Nome da tela no celular: a `HeroBand` é `hidden md:block` e as telas pararam de escrever o próprio título, então NENHUMA tela tinha nome no celular. Faixa fina com o título, colada no header, no `ManagerLayout` e no `AppLayout`.
+- `h-4.5`/`w-4.5` não existe nesta escala do Tailwind (não gera CSS, o ícone volta pro tamanho natural). Corrigido em 6 lugares para `h-[18px] w-[18px]`.
 
 ### Depois (fase de retenção)
 Portfólio automático do parceiro, relatório dele, roteiro e guia no card do filmmaker, análise da própria entrega, ponte para o Cria Caixa.

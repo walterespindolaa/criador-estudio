@@ -220,7 +220,7 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
         <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden rounded-3xl">
           <div className="flex items-start gap-3 border-b border-border px-5 py-4 pr-12">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-600/12 text-emerald-700">
-              <Check className="h-4.5 w-4.5" />
+              <Check className="h-[18px] w-[18px]" />
             </span>
             <div className="min-w-0">
               <h3 className="font-display text-base font-extrabold text-foreground">Confere o que eu entendi</h3>

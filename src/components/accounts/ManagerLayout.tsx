@@ -463,6 +463,21 @@ export default function ManagerLayout() {
           </div>
         </header>
 
+        {/* ── O NOME DA TELA, NO CELULAR (circuito 10, 15/09/2026) ──────────
+            A HeroBand carrega o título de cada tela e é `hidden md:block`. No
+            celular, portanto, NENHUMA tela tinha nome: o header mostra só busca,
+            logo e atalhos. E as próprias telas deixaram de escrever o título
+            ("o título mora na faixa do topo do layout"), contando com uma faixa
+            que não existe ali. Resultado: a pessoa abre o app no celular e não
+            sabe em que tela está.
+            Esta é a versão magra da HeroBand: só o nome, grudada embaixo do
+            header, e só no celular. */}
+        <div className="md:hidden px-4 py-2.5 bg-background border-b border-border">
+          <h1 className="font-display font-extrabold text-[17px] text-foreground leading-tight truncate">
+            {heroTitle}
+          </h1>
+        </div>
+
         {/* max-w-6xl (1152px) deixava metade da tela vazia num monitor grande e o
             conteúdo espremido numa coluna no meio. 1600px usa a tela de trabalho
             de verdade; acima disso o texto ficaria longo demais pra ler. */}

@@ -139,7 +139,7 @@ export function CrmCalendarTab() {
             {DOW.map((d) => <div key={d} className="text-center text-[11px] font-medium text-muted-foreground py-1.5">{d}</div>)}
           </div>
           <div className="grid grid-cols-7 gap-1">
-            {Array.from({ length: firstDow }).map((_, i) => <div key={"e" + i} className="min-h-[84px] rounded-lg bg-muted/20" />)}
+            {Array.from({ length: firstDow }).map((_, i) => <div key={"e" + i} className="min-h-[58px] sm:min-h-[84px] rounded-lg bg-muted/20" />)}
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
               const ds = ymd(cursor.y, cursor.m, day);
               const evs = byDate.get(ds) ?? [];
@@ -147,9 +147,21 @@ export function CrmCalendarTab() {
               const isSel = selected === ds;
               return (
                 <button key={day} onClick={() => setSelected(isSel ? null : ds)}
-                  className={cn("min-h-[84px] p-1.5 rounded-lg border text-left transition-all", isSel ? "border-primary bg-primary/5 ring-1 ring-primary/20" : isToday ? "border-primary/50 bg-primary/5" : "border-transparent hover:bg-muted/30")}>
+                  className={cn("min-h-[58px] sm:min-h-[84px] p-1.5 rounded-lg border text-left transition-all", isSel ? "border-primary bg-primary/5 ring-1 ring-primary/20" : isToday ? "border-primary/50 bg-primary/5" : "border-transparent hover:bg-muted/30")}>
                   <span className={cn("text-[11px] font-medium", isToday && "text-primary")}>{day}</span>
-                  <div className="mt-0.5 space-y-0.5">
+                  {/* No celular o dia vira ponto (circuito 10, 15/09/2026): o
+                      chip com título + cliente não cabe em ~48px. Tocar o dia
+                      já abre a lista completa logo abaixo do calendário. */}
+                  {evs.length > 0 && (
+                    <span className="sm:hidden flex flex-wrap items-center gap-0.5 mt-1">
+                      {evs.slice(0, 4).map((e) => (
+                        <span key={e.id} className={cn("h-1.5 w-1.5 rounded-full", !e.cor && KIND_DOT[e.kind], e.done && "opacity-40")}
+                          style={e.cor ? { background: e.cor } : undefined} />
+                      ))}
+                      {evs.length > 1 && <span className="ml-auto text-[9.5px] font-bold text-muted-foreground">{evs.length}</span>}
+                    </span>
+                  )}
+                  <div className="hidden sm:block mt-0.5 space-y-0.5">
                     {evs.slice(0, 2).map((e) => (
                       // span clicável DENTRO do botão do dia: tarefa abre o
                       // popup direto; os outros tipos selecionam o dia.

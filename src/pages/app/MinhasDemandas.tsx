@@ -575,8 +575,17 @@ function QuadroDoParceiro({ fila, hoje, aoAbrir, papel }: {
             <Pencil className="h-3 w-3" /> Editar etapas
           </button>
         </p>
+        {/* AS ETAPAS NO CELULAR (circuito 10, 15/09/2026).
+            Era um grid de `repeat(N, minmax(0,1fr))`: com 4 etapas num aparelho
+            de 390px cada coluna ficava com ~85px, e o card virava um retângulo
+            com três letras. `minmax(0,1fr)` não deixa nem rolar pro lado: ele
+            espreme.
+            Agora é trilho horizontal com coluna de largura mínima, que é como
+            todo quadro de verdade se comporta no celular (Trello, Notion). No
+            desktop (sm pra cima) volta a dividir o espaço igualmente. */}
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(etapas.length, 1)}, minmax(0, 1fr))` }}>
+          <div className="flex gap-2 overflow-x-auto overflow-y-hidden -mx-1 px-1 pb-1 snap-x sm:grid sm:overflow-visible sm:mx-0 sm:px-0"
+            style={{ gridTemplateColumns: `repeat(${Math.max(etapas.length, 1)}, minmax(0, 1fr))` }}>
             {(etapas.length > 0 ? etapas : [{ id: "sem-etapa", nome: "Fazendo", ordem: 0 }]).map((et) => {
               const doLane = fazendo.filter((c) => etapaDoCard(c.post_id) === et.id);
               return (
@@ -584,6 +593,9 @@ function QuadroDoParceiro({ fila, hoje, aoAbrir, papel }: {
                   {(prov, snap) => (
                     <div ref={prov.innerRef} {...prov.droppableProps}
                       className={cn("rounded-xl border border-dashed border-blue-200 bg-white/60 p-1.5 min-h-[120px] transition-colors",
+                        // w-[78vw] no celular: a coluna seguinte fica espiando na
+                        // borda, que é o que ensina que dá pra arrastar pro lado.
+                        "w-[78vw] max-w-[260px] shrink-0 snap-start sm:w-auto sm:max-w-none sm:shrink",
                         snap.isDraggingOver && "border-blue-500 bg-blue-100/50")}>
                       <p className="text-[10px] font-bold text-blue-900/80 px-1 pb-1.5 truncate">{et.nome} <span className="opacity-60">({doLane.length})</span></p>
                       {doLane.map((c, i) => (
@@ -918,6 +930,22 @@ function MesDoParceiro({ fila, hoje, aoAbrir }: {
   const rotuloMes = primeiro.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   const semPrazo = fila.filter((c) => !c.prazo_producao);
 
+  /* O MÊS NO CELULAR É LISTA, NÃO GRADE (circuito 10, 15/09/2026).
+     Sete colunas num aparelho de 390px dão célula de ~50px, e o título do
+     card em text-[9px] virava "Reel..." truncado. Ninguém decide nada assim.
+     No celular mostramos só os dias que TÊM entrega, um embaixo do outro,
+     com o card inteiro legível. Dia vazio não ocupa linha: o que importa é
+     "o que eu entrego neste mês", não desenhar o calendário.
+     Da largura sm pra cima a grade continua igual. */
+  const diasComEntrega = celulas
+    .filter((iso): iso is string => !!iso)
+    .map((iso) => ({ iso, cards: fila.filter((c) => c.prazo_producao === iso) }))
+    .filter((d) => d.cards.length > 0);
+  const nomeDoDia = (iso: string) => {
+    const [a, m, d] = iso.split("-").map(Number);
+    return new Date(a, m - 1, d).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "short" });
+  };
+
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
@@ -929,12 +957,47 @@ function MesDoParceiro({ fila, hoje, aoAbrir }: {
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
-      <div className="grid grid-cols-7 gap-1 mb-1">
+      <div className="hidden sm:grid grid-cols-7 gap-1 mb-1">
         {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((d) => (
           <p key={d} className="text-[9.5px] font-bold uppercase text-muted-foreground text-center">{d}</p>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1">
+      {/* A LISTA DO CELULAR */}
+      <div className="sm:hidden space-y-2">
+        {diasComEntrega.length === 0 && (
+          <p className="text-[13px] font-body text-muted-foreground py-6 text-center">
+            Nada com prazo neste mês.
+          </p>
+        )}
+        {diasComEntrega.map(({ iso, cards }) => (
+          <div key={iso} className={cn("rounded-xl border bg-card p-2.5",
+            iso === hoje ? "border-primary ring-1 ring-primary/40" : "border-border")}>
+            <p className={cn("font-display font-bold text-[12.5px] capitalize mb-1.5",
+              iso === hoje ? "text-primary" : "text-muted-foreground")}>
+              {iso === hoje ? "Hoje · " : ""}{nomeDoDia(iso)}
+            </p>
+            <div className="space-y-1.5">
+              {cards.map((c) => (
+                /* min-h-[44px]: alvo de dedo, não de mouse. */
+                <button key={c.post_id} onClick={() => aoAbrir(c.post_id)}
+                  className={cn("w-full text-left rounded-lg px-2.5 py-2 border-l-4 min-h-[44px]",
+                    c.producao_status === "ajuste" ? "bg-violet-50 border-violet-500"
+                    : c.producao_status === "em_producao" ? "bg-blue-50 border-blue-500"
+                    : "bg-orange-50 border-orange-500")}>
+                  <p className="font-display font-bold text-[13.5px] text-foreground leading-tight">
+                    {c.titulo || "Card"}
+                  </p>
+                  <p className="text-[11.5px] font-body text-muted-foreground leading-tight mt-0.5 truncate">
+                    {c.cliente_nome}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* A GRADE, DA LARGURA sm PRA CIMA */}
+      <div className="hidden sm:grid grid-cols-7 gap-1">
         {celulas.map((iso, i) => {
           if (!iso) return <div key={`v${i}`} />;
           const doDia = fila.filter((c) => c.prazo_producao === iso);

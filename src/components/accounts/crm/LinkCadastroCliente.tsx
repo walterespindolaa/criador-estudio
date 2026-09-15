@@ -131,7 +131,7 @@ export function LinkCadastroCliente({ crmClientId, clienteNome, temCria = false 
                 return (
                   <button key={e.titulo} type="button" onClick={() => alternar(i)}
                     className="w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-muted/50 transition-colors">
-                    <span className={cn("grid h-4.5 w-4.5 shrink-0 place-items-center rounded border transition-colors",
+                    <span className={cn("grid h-[18px] w-[18px] shrink-0 place-items-center rounded border transition-colors",
                       on ? "bg-primary border-primary text-primary-foreground" : "border-border")}
                       style={{ height: 18, width: 18 }}>
                       {on && <Check className="h-3 w-3" strokeWidth={3} />}

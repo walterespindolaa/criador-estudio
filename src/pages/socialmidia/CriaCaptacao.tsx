@@ -1165,7 +1165,7 @@ function CalendarioCaptacoes({ month, caps, clientById, aoAbrirDia }: {
       </div>
       <div className="grid grid-cols-7 gap-1">
         {celulas.map((dia, i) => {
-          if (dia === null) return <div key={`v${i}`} className="min-h-[74px]" />;
+          if (dia === null) return <div key={`v${i}`} className="min-h-[58px] sm:min-h-[74px]" />;
           const iso = `${ano}-${pad(mes + 1)}-${pad(dia)}`;
           const doDia = porDia.get(iso) ?? [];
           const ehHoje = iso === hoje;
@@ -1174,11 +1174,30 @@ function CalendarioCaptacoes({ month, caps, clientById, aoAbrirDia }: {
           return (
             <Celula key={iso}
               {...(temDia ? { type: "button" as const, onClick: () => aoAbrirDia(iso), title: "Abrir o dia de gravação" } : {})}
-              className={cn("min-h-[74px] rounded-lg border p-1 flex flex-col gap-0.5 overflow-hidden text-left",
+              className={cn("min-h-[58px] sm:min-h-[74px] rounded-lg border p-1 flex flex-col gap-0.5 overflow-hidden text-left",
                 temDia && "hover:border-primary/60 hover:shadow-sm transition-all cursor-pointer",
                 ehHoje ? "border-primary bg-primary/[0.04]" : "border-border bg-background")}>
               <span className={cn("text-[10.5px] font-body font-bold w-5 h-5 grid place-items-center rounded-full shrink-0",
                 ehHoje ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{dia}</span>
+              {/* NO CELULAR, PONTO (circuito 10, 15/09/2026): a célula tem ~48px
+                  de largura num aparelho de 390px, e o chip com hora + nome do
+                  cliente virava três letras cortadas. A célula inteira já abre o
+                  dia de gravação, então no celular ela só precisa dizer QUE tem
+                  captação e de quem (a cor é a do cliente). O detalhe está a um
+                  toque de distância. */}
+              {doDia.length > 0 && (
+                <span className="sm:hidden flex flex-wrap items-center gap-0.5 mt-0.5">
+                  {doDia.slice(0, 4).map((c) => {
+                    const cli = c.crm_client_id ? clientById.get(c.crm_client_id) : null;
+                    return <span key={c.id} className="h-1.5 w-1.5 rounded-full"
+                      style={{ background: cli?.color || "#EA4918", opacity: c.status === "concluida" ? 0.45 : 1 }} />;
+                  })}
+                  {doDia.length > 1 && (
+                    <span className="ml-auto text-[9.5px] font-body font-bold text-muted-foreground">{doDia.length}</span>
+                  )}
+                </span>
+              )}
+              <span className="hidden sm:contents">
               {doDia.slice(0, 3).map((c) => {
                 const cli = c.crm_client_id ? clientById.get(c.crm_client_id) : null;
                 const nome = cli?.nome ?? c.client_name ?? "Captação";
@@ -1195,6 +1214,7 @@ function CalendarioCaptacoes({ month, caps, clientById, aoAbrirDia }: {
               {doDia.length > 3 && (
                 <span className="text-[9.5px] font-body text-muted-foreground px-1">+{doDia.length - 3}</span>
               )}
+              </span>
             </Celula>
           );
         })}

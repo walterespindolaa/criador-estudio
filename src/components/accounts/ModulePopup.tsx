@@ -198,7 +198,7 @@ export function ModulePopup({ module: m, onClose }: { module: ModuleWithStatus |
                   <ul className="space-y-2">
                     {benefits.map((b, i) => (
                       <li key={i} className="flex items-start gap-2.5 text-sm font-body text-foreground/90">
-                        <span className="mt-0.5 flex h-4.5 w-4.5 h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full" style={{ background: `${cor}1A` }}>
+                        <span className="mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full" style={{ background: `${cor}1A` }}>
                           <Check className="h-3 w-3" strokeWidth={3} style={{ color: cor }} />
                         </span>
                         {b}
