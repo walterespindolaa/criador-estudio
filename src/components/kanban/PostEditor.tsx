@@ -150,6 +150,9 @@ interface Pillar {
   id: string;
   name: string;
   color: string;
+  /** O combinado do pilar (circuito 13). Opcional: antes da migration ele não
+   *  vem, e o seletor simplesmente não mostra linha nenhuma embaixo do nome. */
+  descricao?: string | null;
 }
 
 interface PostEditorProps {
@@ -1499,13 +1502,25 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       className={cn("w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm font-body hover:bg-muted text-left", !pillarId && "font-semibold")}>
                       <span className="w-2 h-2 rounded-full bg-muted-foreground/40" /> Sem pilar
                     </button>
+                    {/* O COMBINADO JUNTO DA ESCOLHA (circuito 13, 16/09/2026).
+                        O pilar ganhou descrição no Brandbook, e é aqui que ela
+                        serve: é neste instante que a pessoa decide se a ideia
+                        cabe naquele pilar. Descrição guardada numa tela que
+                        ninguém abre na hora de escrever não muda nada. */}
                     {pillars.map((p) => (
                       <button key={p.id} type="button" onClick={() => setPillarId(p.id)}
-                        className={cn("w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm font-body hover:bg-muted text-left", pillarId === p.id && "font-semibold")}>
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-                        <span className="flex-1 truncate">{p.name}</span>
+                        className={cn("w-full flex items-start gap-2 px-2.5 py-2 rounded-lg text-sm font-body hover:bg-muted text-left", pillarId === p.id && "font-semibold")}>
+                        <span className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: p.color }} />
+                        <span className="flex-1 min-w-0">
+                          <span className="block truncate">{p.name}</span>
+                          {p.descricao?.trim() && (
+                            <span className="block text-[10.5px] font-normal text-muted-foreground leading-snug line-clamp-2 mt-0.5">
+                              {p.descricao}
+                            </span>
+                          )}
+                        </span>
                         {pillarDays[p.id]?.length > 0 && (
-                          <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0">{pillarDays[p.id].join(" · ")}</span>
+                          <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0 mt-0.5">{pillarDays[p.id].join(" · ")}</span>
                         )}
                       </button>
                     ))}

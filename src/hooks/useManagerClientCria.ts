@@ -317,9 +317,14 @@ export type CriaClientPersona = {
   how_you_help: string | null;
 };
 export type CriaClientMoodboardEntry = { section: string; question_key: string; answer: string | null };
+/* O pilar deixou de ser texto solto (circuito 13, 16/09/2026): agora vem com a
+   descrição que o criador escreveu e a cor dele. O tipo aceita `string` também
+   porque, antes da migration rodar, a RPC antiga ainda devolve nomes crus e a
+   ficha não pode quebrar por isso. */
+export type CriaClientPillar = { name: string; descricao?: string | null; color?: string | null };
 export type CriaClientBrandbook = {
   profile: { name: string | null; niche: string | null; avatar_url: string | null } | null;
-  pillars: string[];
+  pillars: (CriaClientPillar | string)[];
   brand_items: CriaClientBrandItem[];
   personas: CriaClientPersona[];
   moodboard: CriaClientMoodboardEntry[];

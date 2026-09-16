@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useBrandItems } from "./useBrandItems";
 import { usePersonas } from "./usePersonas";
 import { useMoodboard } from "./useMoodboard";
+import { usePillars } from "./usePillars";
 
 // Mapping `brand_items.type` and moodboard section keys to human labels
 // the AI can actually use. Anything not listed falls back to the raw key.
@@ -36,6 +37,7 @@ export function useBrandContext() {
   const { brandItems } = useBrandItems();
   const { personas } = usePersonas();
   const { entries } = useMoodboard();
+  const { pillars } = usePillars();
 
   const brandContext = useMemo(() => {
     const parts: string[] = [];
@@ -65,6 +67,17 @@ export function useBrandContext() {
       parts.push(`${label}: ${answers.join(". ")}`);
     }
 
+    /* OS PILARES, COM O COMBINADO (circuito 13, 16/09/2026).
+       O brandbook ia pra IA sem os pilares: ela sabia o tom da marca e não
+       sabia sobre o que a pessoa fala. Agora vai o nome E a descrição, que é
+       onde está a diferença entre "Minha História" ser vulnerabilidade ou ser
+       trajetória profissional. Sem isso, a IA escolhe sozinha, e escolhe
+       errado com frequência. */
+    if (pillars.length > 0) {
+      const linhas = pillars.map((p) => (p.descricao?.trim() ? `${p.name}: ${p.descricao.trim()}` : p.name));
+      parts.push(`Pilares de conteúdo:\n- ${linhas.join("\n- ")}`);
+    }
+
     // Personas (uma ou mais)
     personas.forEach((persona, idx) => {
       if (!persona?.name) return;
@@ -81,7 +94,7 @@ export function useBrandContext() {
     });
 
     return parts.join("\n");
-  }, [brandItems, personas, entries]);
+  }, [brandItems, personas, entries, pillars]);
 
   return { brandContext, hasBrandContext: brandContext.length > 0 };
 }

@@ -342,6 +342,19 @@ Duas decisões de data que valem registro:
 
 E o `✓` de pago vem do `fin_records` da agência, não da peça: só o lançamento sabe se o dinheiro saiu.
 
+### Circuito 13: o pilar é estratégia, e tem combinado · FEITO em 16/09/2026
+Pedido da Gabriela, em três partes: o pilar precisa de descrição como a linha editorial do cliente já tem, os pilares deveriam estar na estratégia e não na configuração, e o moodboard do cliente no Cria precisa de revisão.
+
+**1. O pilar ganhou descrição.** `pillars.descricao`, com o mesmo papel da observação da linha editorial do CRM: "Minha História" pode ser vulnerabilidade, bastidor ou trajetória, e a palavra sozinha não é combinado. A descrição salva ao sair do campo, sem botão, igual ao lado da social mídia.
+
+**2. Os pilares mudaram de casa.** Saíram de Configurações (onde ficavam ao lado de senha e tema) e foram pro Brandbook, na aba Linha Editorial, junto da semana. A aba antiga virou "Hábitos" e ficou com um aviso dizendo pra onde os pilares foram: quem já usava vai procurar no lugar velho.
+
+**3. O moodboard do cliente, revisto.** Duas coisas estavam erradas na leitura que a social mídia faz do brandbook do cliente:
+- os pilares eram sete etiquetas soltas, sem nada que dissesse o que cabe em cada uma. Agora vêm com a descrição e a cor (a RPC `manager_client_brandbook` devolve objeto, não texto);
+- as respostas do moodboard apareciam **sem a pergunta**. "Sim, principalmente à noite" não quer dizer nada sozinho. O catálogo de perguntas saiu de dentro da tela do criador e virou `src/lib/brandbook-perguntas.ts`, lido pelos dois lados, o que também impede as duas versões de divergirem.
+
+**E o combinado foi pros lugares onde ele serve:** no seletor de pilar do editor de post (é ali que a pessoa decide se a ideia cabe no pilar), no PDF do brandbook (é o documento que ela manda pra quem produz) e no `useBrandContext`, que é o que a IA lê. Este último era um buraco à parte: o brandbook ia pra IA sem os pilares, então ela sabia o tom da marca e não sabia sobre o que a pessoa fala.
+
 ### Depois (fase de retenção)
 Portfólio automático do parceiro, relatório dele, roteiro e guia no card do filmmaker, análise da própria entrega, ponte para o Cria Caixa.
 

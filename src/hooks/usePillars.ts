@@ -3,7 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import type { Database } from "@/integrations/supabase/types";
 
-export type Pillar = Database["public"]["Tables"]["pillars"]["Row"];
+/* `descricao` entrou na migration 20260916000003 e o types.ts gerado ainda não
+   a conhece (o arquivo é regenerado pelo Lovable, não por nós). O campo é
+   opcional aqui de propósito: antes da migration rodar ele chega undefined e a
+   tela só não mostra descrição nenhuma, em vez de quebrar. */
+export type Pillar = Database["public"]["Tables"]["pillars"]["Row"] & {
+  descricao?: string | null;
+};
 type PillarInsert = Database["public"]["Tables"]["pillars"]["Insert"];
 
 export type CreatePillarInput = Pick<PillarInsert, "name" | "color"> & {
@@ -53,11 +59,16 @@ export function usePillars() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 
+  /* Atualiza NOME e/ou DESCRIÇÃO. Só manda o que veio: sem isso, salvar a
+     descrição apagaria o nome, e vice-versa. */
   const updatePillar = useMutation({
-    mutationFn: async ({ id, name }: { id: string; name: string }): Promise<Pillar> => {
+    mutationFn: async ({ id, name, descricao }: { id: string; name?: string; descricao?: string }): Promise<Pillar> => {
+      const patch: Record<string, unknown> = {};
+      if (name !== undefined) patch.name = name;
+      if (descricao !== undefined) patch.descricao = descricao.trim() || null;
       const { data, error } = await supabase
         .from("pillars")
-        .update({ name })
+        .update(patch as never)
         .eq("id", id)
         .select()
         .single();

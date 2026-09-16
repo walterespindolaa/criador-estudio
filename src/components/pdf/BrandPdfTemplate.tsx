@@ -30,6 +30,8 @@ interface MoodboardEntryLike {
 interface PillarLike {
   name: string;
   color: string;
+  /** O combinado do pilar (circuito 13). Opcional: brandbook antigo não tem. */
+  descricao?: string | null;
 }
 
 interface BrandPdfProps {
@@ -227,9 +229,16 @@ export const BrandPdfTemplate = forwardRef<HTMLDivElement, BrandPdfProps>(
                 {secTitle("Pilares de conteúdo", C.laranja)}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
                   {pillars.map((p, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: C.cremeCard, borderRadius: 12 }}>
-                      <span style={{ width: 13, height: 13, borderRadius: 999, background: p.color || C.sub, flexShrink: 0 }} />
-                      <span style={{ fontSize: 13.5, fontWeight: 700 }}>{p.name}</span>
+                    <div key={i} style={{ padding: "10px 14px", background: C.cremeCard, borderRadius: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ width: 13, height: 13, borderRadius: 999, background: p.color || C.sub, flexShrink: 0 }} />
+                        <span style={{ fontSize: 13.5, fontWeight: 700 }}>{p.name}</span>
+                      </div>
+                      {/* O combinado do pilar entra no PDF (circuito 13): é o
+                          documento que a pessoa manda pra quem vai produzir. */}
+                      {p.descricao?.trim() && (
+                        <p style={{ fontSize: 11, color: C.sub, marginTop: 5, lineHeight: 1.45, whiteSpace: "pre-line" }}>{p.descricao}</p>
+                      )}
                     </div>
                   ))}
                 </div>

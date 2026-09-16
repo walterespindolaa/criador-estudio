@@ -14,7 +14,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
-import { usePillars } from "@/hooks/usePillars";
 import { useHabits } from "@/hooks/useHabits";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -34,26 +33,7 @@ import { sanitizeText, sanitizeUrl } from "@/lib/sanitize";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { cn } from "@/lib/utils";
 
-/* Paleta ampliada (pedido do Walter, 31/08: "podia dar pra colocar mais
-   cores"). Todas com contraste suficiente pro texto branco do chip. */
-const PILLAR_COLORS = [
-  "#7C3AED", // Roxo vibrante
-  "#2563EB", // Azul elétrico
-  "#0EA5E9", // Azul céu
-  "#0891B2", // Ciano profundo
-  "#0D9488", // Verde-água
-  "#059669", // Verde esmeralda
-  "#65A30D", // Verde lima
-  "#D97706", // Amarelo âmbar
-  "#EA580C", // Laranja queimado
-  "#DC2626", // Vermelho coral
-  "#E11D48", // Framboesa
-  "#DB2777", // Rosa magenta
-  "#9333EA", // Púrpura
-  "#78716C", // Pedra (neutro)
-];
 const NICHE_OPTIONS = ["Lifestyle", "Moda", "Beleza", "Fitness", "Culinária", "Educação", "Negócios", "Entretenimento", "Saúde", "Tecnologia"];
-const EDITORIAL_DAYS = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"] as const;
 
 const profileSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório").max(100, "Máximo 100 caracteres").trim(),
@@ -87,7 +67,6 @@ const Configuracoes = () => {
   const { openPortal, isLoading: portalLoading } = useManageSubscription();
   const { isManaging, managedAccounts, activeAccountId, setActiveAccount } = useActiveAccount();
   const managedName = managedAccounts.find((m) => m.owner_id === activeAccountId)?.name;
-  const { pillars, createPillar, updatePillar: updatePillarMutation, deletePillar: deletePillarMutation } = usePillars();
   const { habits, createHabit, deleteHabit: deleteHabitMutation } = useHabits();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -101,17 +80,9 @@ const Configuracoes = () => {
   const platforms = watch("platforms") || [];
   const weeklyGoal = watch("weekly_goal");
 
-  const [newPillarName, setNewPillarName] = useState("");
-  const [newPillarColor, setNewPillarColor] = useState(PILLAR_COLORS[0]);
   // Paleta grande demais na cara assustava ("20 cores", Walter 31/08): mostra
   // as 7 primeiras e o resto abre sob demanda.
-  const [maisCoresPilar, setMaisCoresPilar] = useState(false);
-  const [editingPillarId, setEditingPillarId] = useState<string | null>(null);
-  const [editingPillarName, setEditingPillarName] = useState("");
   const [newHabitName, setNewHabitName] = useState("");
-  const [editorialLine, setEditorialLine] = useState<Record<string, string>>({});
-  const [savingEditorialLine, setSavingEditorialLine] = useState(false);
-  const editorialLineHydratedRef = useRef(false);
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
   const [customNiche, setCustomNiche] = useState("");
   const [nichoOpen, setNichoOpen] = useState(false);
@@ -152,25 +123,8 @@ const Configuracoes = () => {
         .map((s) => s.trim())
         .filter(Boolean);
       setSelectedNiches(list);
-      if (!editorialLineHydratedRef.current) {
-        setEditorialLine(profile.editorial_line ?? {});
-        editorialLineHydratedRef.current = true;
-      }
     }
   }, [profile, reset]);
-
-  const saveEditorialLine = async () => {
-    if (savingEditorialLine) return;
-    setSavingEditorialLine(true);
-    try {
-      await updateProfile.mutateAsync({ editorial_line: editorialLine });
-      toast.success("Linha editorial salva!");
-    } catch {
-      toast.error("Erro ao salvar linha editorial.");
-    } finally {
-      setSavingEditorialLine(false);
-    }
-  };
 
   const toggleNiche = (n: string) => {
     setSelectedNiches((prev) => {
@@ -277,38 +231,6 @@ const Configuracoes = () => {
   const togglePlatform = (p: string) => {
     const current = watch("platforms") || [];
     setValue("platforms", current.includes(p) ? current.filter(x => x !== p) : [...current, p]);
-  };
-
-  const addPillar = async () => {
-    const sanitized = sanitizeText(newPillarName);
-    if (!sanitized || pillars.length >= 7) return;
-    try {
-      await createPillar.mutateAsync({ name: sanitized, color: newPillarColor });
-      setNewPillarName("");
-      toast.success("Pilar adicionado!");
-    } catch {
-      toast.error("Erro ao adicionar pilar.");
-    }
-  };
-
-  const handleDeletePillar = async (id: string) => {
-    try {
-      await deletePillarMutation.mutateAsync(id);
-    } catch {
-      toast.error("Erro ao remover pilar.");
-    }
-  };
-
-  const handleSavePillarEdit = async (id: string) => {
-    const sanitized = sanitizeText(editingPillarName).trim();
-    if (!sanitized) return;
-    try {
-      await updatePillarMutation.mutateAsync({ id, name: sanitized });
-      setEditingPillarId(null);
-      setEditingPillarName("");
-    } catch {
-      toast.error("Erro ao editar pilar.");
-    }
   };
 
   const addHabit = async (habitName?: string) => {
@@ -442,7 +364,7 @@ const Configuracoes = () => {
           <div className="overflow-x-auto mb-6 -mx-4 px-4 scrollbar-none scroll-snap-x">
             <TabsList data-tour="config-abas" className="inline-flex h-auto bg-card border border-border rounded-2xl p-1.5 gap-1 min-w-max">
               {!isManaging && <TabsTrigger value="perfil" className={TAB_PILL}><User className="h-3.5 w-3.5 shrink-0" /><span>Perfil</span></TabsTrigger>}
-              <TabsTrigger value="pilares" className={TAB_PILL}><LayoutGrid className="h-3.5 w-3.5 shrink-0" /><span>Pilares & Hábitos</span></TabsTrigger>
+              <TabsTrigger value="pilares" className={TAB_PILL}><LayoutGrid className="h-3.5 w-3.5 shrink-0" /><span>Hábitos</span></TabsTrigger>
               {!isManaging && <TabsTrigger value="visual" data-tour="config-tab-visual" className={TAB_PILL}><Paintbrush className="h-3.5 w-3.5 shrink-0" /><span>Marca & Visual</span></TabsTrigger>}
               {!isManaging && <TabsTrigger value="assinatura" data-tour="config-tab-assinatura" className={TAB_PILL}><CreditCard className="h-3.5 w-3.5 shrink-0" /><span>Assinatura</span></TabsTrigger>}
               {!isManaging && <TabsTrigger value="conexoes" className={TAB_PILL}><Plug className="h-3.5 w-3.5 shrink-0" /><span>Conexões</span></TabsTrigger>}
@@ -644,117 +566,24 @@ const Configuracoes = () => {
 
             <TabsContent value="pilares">
               <div className="max-w-2xl space-y-6">
-                <SectionHeader title="Pilares & Hábitos" desc="A base da sua linha editorial: temas que você cobre e rotinas que sustentam a produção." />
-                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
-                  <h3 className="font-display font-semibold text-foreground">Pilares de Conteúdo</h3>
-                  <p className="text-xs text-muted-foreground font-body">Máximo 7 pilares</p>
-                  {pillars.map(p => (
-                    <div key={p.id} className="flex items-center gap-3">
-                      <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
-                      {editingPillarId === p.id ? (
-                        <div className="flex items-center gap-2 flex-1">
-                          <input
-                            autoFocus
-                            value={editingPillarName}
-                            onChange={(e) => setEditingPillarName(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleSavePillarEdit(p.id);
-                              if (e.key === "Escape") setEditingPillarId(null);
-                            }}
-                            className="flex-1 h-7 px-2 rounded-lg border border-primary/40 bg-card text-sm font-body focus:outline-none focus:ring-1 focus:ring-primary/40"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleSavePillarEdit(p.id)}
-                            className="text-xs text-primary font-body font-medium hover:underline"
-                          >
-                            Salvar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingPillarId(null)}
-                            className="text-xs text-muted-foreground font-body hover:underline"
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 flex-1 group">
-                          <span className="flex-1 text-sm font-body">{p.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => { setEditingPillarId(p.id); setEditingPillarName(p.name); }}
-                            className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted"
-                            aria-label="Editar pilar"
-                          >
-                            <Pencil className="h-3 w-3 text-muted-foreground" />
-                          </button>
-                        </div>
-                      )}
-                      <button type="button" onClick={() => handleDeletePillar(p.id)} className="p-1 hover:bg-destructive/10 rounded"><Trash2 className="h-3.5 w-3.5 text-destructive" /></button>
-                    </div>
-                  ))}
-                  {pillars.length < 7 && (
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        <Input placeholder="Novo pilar..." value={newPillarName} onChange={(e) => setNewPillarName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addPillar()} className="rounded-xl text-sm" />
-                        <Button variant="outline" size="sm" type="button" onClick={addPillar}><Plus className="h-4 w-4" /></Button>
-                      </div>
-                      <div className="flex gap-2 flex-wrap items-center">
-                        {(maisCoresPilar ? PILLAR_COLORS : PILLAR_COLORS.slice(0, 7)).map(c => (
-                          <button key={c} type="button" onClick={() => setNewPillarColor(c)} className={`w-6 h-6 rounded-full transition-all ${newPillarColor === c ? "ring-2 ring-offset-2 ring-primary" : ""}`} style={{ backgroundColor: c }} />
-                        ))}
-                        <button type="button" onClick={() => setMaisCoresPilar(v => !v)}
-                          className="h-6 px-2 rounded-full border border-dashed border-border text-[10px] font-body text-muted-foreground hover:text-foreground transition-colors">
-                          {maisCoresPilar ? "menos" : `+${PILLAR_COLORS.length - 7} cores`}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <SectionHeader title="Hábitos" desc="As rotinas que sustentam a produção. Quando elas existem, o conteúdo não depende de vontade." />
 
-                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
-                  <div>
-                    <h3 className="font-display font-semibold text-foreground">Linha Editorial da Semana</h3>
-                    <p className="text-xs text-muted-foreground font-body mt-0.5">Escolha qual pilar trabalhar em cada dia da semana.</p>
-                  </div>
-                  {pillars.length === 0 ? (
-                    <p className="text-xs text-muted-foreground font-body">
-                      Cadastre pelo menos um pilar acima para montar a linha editorial.
-                    </p>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-7 gap-2">
-                        {EDITORIAL_DAYS.map((day) => (
-                          <div key={day} className="flex flex-col gap-1">
-                            <label className="text-[10px] font-body font-semibold uppercase tracking-wider text-muted-foreground">
-                              {day}
-                            </label>
-                            <select
-                              value={editorialLine[day] ?? ""}
-                              onChange={(e) => setEditorialLine(prev => ({ ...prev, [day]: e.target.value }))}
-                              className="rounded-lg border border-border bg-card text-xs font-body p-1.5"
-                            >
-                              <option value="">-</option>
-                              {pillars.map(p => (
-                                <option key={p.id} value={p.id}>{p.name}</option>
-                              ))}
-                            </select>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex justify-end">
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={saveEditorialLine}
-                          disabled={savingEditorialLine}
-                        >
-                          {savingEditorialLine ? "Salvando..." : "Salvar"}
-                        </Button>
-                      </div>
-                    </>
-                  )}
+                {/* OS PILARES MUDARAM DE CASA (circuito 13, 16/09/2026).
+                    Eles foram pro Brandbook, junto da linha editorial: pilar é
+                    estratégia, não configuração. Este aviso fica aqui porque
+                    quem já usava o produto vai procurar neste lugar, e sumir
+                    sem dizer pra onde é a forma mais rápida de fazer alguém
+                    achar que o recurso acabou. */}
+                <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-4">
+                  <p className="text-sm font-body text-foreground font-semibold">Os pilares saíram daqui</p>
+                  <p className="text-[12.5px] font-body text-muted-foreground mt-1">
+                    Agora eles moram no Brandbook, na aba Linha Editorial, junto da semana. É lá
+                    também que você escreve o que entra em cada pilar.
+                  </p>
+                  <Button type="button" variant="outline" size="sm" className="mt-3 rounded-xl"
+                    onClick={() => navigate("/app/brandbook")}>
+                    Abrir o Brandbook
+                  </Button>
                 </div>
 
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">

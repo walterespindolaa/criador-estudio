@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { BookMarked, Heart, Users, Mic, Palette, BookOpen, Sparkles, RefreshCw } from "lucide-react";
-import { useCriaClientBrandbook, type CriaClientMoodboardEntry } from "@/hooks/useManagerClientCria";
+import { useCriaClientBrandbook, type CriaClientMoodboardEntry, type CriaClientPillar } from "@/hooks/useManagerClientCria";
+import { LABEL_DA_PERGUNTA } from "@/lib/brandbook-perguntas";
 import { LinkCadastroCliente } from "@/components/accounts/crm/LinkCadastroCliente";
 
 // Brandbook do cliente que USA O CRIA, renderizado em modo LEITURA na aba Criativo
@@ -23,6 +24,11 @@ const ITEM_TYPE_LABELS: Record<string, string> = {
   cor: "Cores", fonte: "Fontes", tom: "Tom de voz", expressao: "Expressões que usa", evitar: "Palavras que evita", value: "Valores",
 };
 const isHex = (v: string | null) => !!v && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v.trim());
+
+/* O pilar vinha como texto e passou a vir como objeto (circuito 13). Enquanto a
+   migration não roda, as duas formas circulam, e a ficha lê as duas. */
+const normalizarPilar = (p: CriaClientPillar | string): CriaClientPillar =>
+  typeof p === "string" ? { name: p } : p;
 
 export function ClienteBrandbookCria({ criaOwnerId, crmClientId, clienteNome }: {
   criaOwnerId: string;
@@ -90,10 +96,27 @@ export function ClienteBrandbookCria({ criaOwnerId, crmClientId, clienteNome }: 
           {(data.profile?.niche || data.pillars.length > 0) && (
             <SectionCard icon={BookOpen} title="Nicho e pilares">
               {data.profile?.niche && <p className="text-sm font-body text-foreground mb-2">{data.profile.niche}</p>}
+              {/* O PILAR COM O COMBINADO JUNTO (circuito 13, 16/09/2026).
+                  Eram sete etiquetas soltas: "Minha História", "A Decisão". Quem
+                  vai escrever o post no lugar do cliente não tem como saber o
+                  que cabe dentro de cada uma. Agora vem a descrição que ele
+                  mesmo escreveu, que é exatamente o que precisa ser relido na
+                  hora de produzir. */}
               {data.pillars.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {data.pillars.map((p) => (
-                    <span key={p} className="text-[11px] font-body px-2 py-0.5 rounded-full bg-primary/10 text-primary">{p}</span>
+                <div className="space-y-1.5">
+                  {data.pillars.map(normalizarPilar).map((p, idx) => (
+                    <div key={`${p.name}-${idx}`} className="rounded-xl border border-border/60 p-2.5">
+                      <p className="text-[12.5px] font-body font-semibold text-foreground flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-full shrink-0"
+                          style={{ background: isHex(p.color ?? null) ? p.color! : "hsl(var(--primary))" }} />
+                        {p.name}
+                      </p>
+                      {p.descricao?.trim() && (
+                        <p className="text-[11.5px] font-body text-muted-foreground mt-1 leading-relaxed whitespace-pre-line">
+                          {p.descricao}
+                        </p>
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
@@ -193,14 +216,29 @@ function SectionCard({ icon: Icon, title, children }: { icon: typeof Users; titl
   );
 }
 
+/* A RESPOSTA COM A PERGUNTA (circuito 13, 16/09/2026).
+   Antes isto era uma lista de frases soltas com bolinha na frente. "Sim,
+   principalmente à noite" não quer dizer nada sem a pergunta que gerou. A
+   pergunta vem do mesmo catálogo que o criador respondeu (lib/brandbook-
+   perguntas), então as duas telas nunca divergem.
+   Quando a chave não está no catálogo (resposta antiga, pergunta aposentada),
+   cai no comportamento anterior em vez de esconder a resposta. */
 function AnswerList({ entries }: { entries: CriaClientMoodboardEntry[] }) {
   return (
-    <div className="space-y-1.5">
-      {entries.map((e) => (
-        <p key={`${e.section}-${e.question_key}`} className="text-xs font-body text-foreground/85 leading-relaxed">
-          <span className="text-muted-foreground/70">• </span>{e.answer}
-        </p>
-      ))}
+    <div className="space-y-2">
+      {entries.map((e) => {
+        const pergunta = LABEL_DA_PERGUNTA[e.question_key];
+        return (
+          <div key={`${e.section}-${e.question_key}`}>
+            {pergunta && (
+              <p className="text-[10.5px] font-body font-semibold text-muted-foreground/80 leading-snug">{pergunta}</p>
+            )}
+            <p className="text-xs font-body text-foreground/85 leading-relaxed whitespace-pre-line">
+              {!pergunta && <span className="text-muted-foreground/70">• </span>}{e.answer}
+            </p>
+          </div>
+        );
+      })}
     </div>
   );
 }
