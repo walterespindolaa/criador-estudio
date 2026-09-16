@@ -235,3 +235,46 @@ export function useAcoesDaAgenda() {
 
   return { criar, editar, concluir, apagar };
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   O EXTRATO DO MÊS (circuito 12, 16/09/2026)
+
+   Uma linha por coisa feita no período: peça entregue (pela data de ENTREGA) e
+   tarefa ou compromisso fechado (pela data em que foi marcado). Quem agrupa é a
+   tela; a função devolve o material cru, porque o mesmo material vira três
+   leituras diferentes (por agência, por cliente e o total).
+
+   Migration: 20260916000002_extrato_do_parceiro.sql
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+export type LinhaDoExtrato = {
+  tipo: "peca" | "tarefa" | "compromisso";
+  quando: string;
+  agencia_id: string | null;
+  agencia_nome: string;
+  cliente_nome: string;
+  cliente_cor: string | null;
+  referencia_id: string;
+  titulo: string;
+  formato: string | null;
+  revisoes: number | null;
+  aprovacao: string | null;
+  cache: number | null;
+  pago: boolean | null;
+};
+
+export function useExtratoDoParceiro(de: string, ate: string) {
+  const { user } = useAuth();
+  return useQuery<LinhaDoExtrato[]>({
+    queryKey: ["parceiro-extrato", user?.id, de, ate],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("parceiro_extrato", { _de: de, _ate: ate });
+      if (error) {
+        if (aindaNaoExisteNoBanco(error.message)) return [];
+        throw error;
+      }
+      return (data ?? []) as LinhaDoExtrato[];
+    },
+  });
+}

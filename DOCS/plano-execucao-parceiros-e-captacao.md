@@ -317,6 +317,31 @@ Quadro do parceiro com breakpoint, mês em lista no celular, título nas telas, 
 - Nome da tela no celular: a `HeroBand` é `hidden md:block` e as telas pararam de escrever o próprio título, então NENHUMA tela tinha nome no celular. Faixa fina com o título, colada no header, no `ManagerLayout` e no `AppLayout`.
 - `h-4.5`/`w-4.5` não existe nesta escala do Tailwind (não gera CSS, o ícone volta pro tamanho natural). Corrigido em 6 lugares para `h-[18px] w-[18px]`.
 
+### Circuito 11: a agenda do parceiro · FEITO em 16/09/2026
+Tela "Minha agenda" com entregas, gravações escaladas, tarefas e compromissos dele, num mês só.
+**Pronto quando:** ele consegue montar o dia sem abrir outro aplicativo.
+
+O diagnóstico: o parceiro tinha FILA e não tinha AGENDA. Fila diz o que entra; agenda diz o que cabe. Quem atende três agências precisa ver o dia inteiro num lugar, e sem isso o Cria virava consulta enquanto a vida acontecia no Google Agenda.
+
+Entregue: migration `20260916000001_agenda_do_parceiro.sql` (tabela `parceiro_agenda_itens` com RLS de dono, gatilho que carimba `feito_em` no banco, gatilho que recusa peça que não é dele, `agenda_captures.parceiro_id`, RPCs `parceiro_minhas_gravacoes` e `parceiro_titulos_das_pecas`), hook `useAgendaParceiro`, página `MinhaAgenda` e o seletor "Quem vai gravar" no diálogo de captação da social mídia.
+
+Três decisões:
+- **Tabela nova, não a `tasks` do criador.** Reaproveitar economizaria quatro colunas e custaria mexer numa tabela que toda conta de criador usa. E o parceiro precisa de duas coisas que ela não tem: hora do compromisso e a agência dona do item.
+- **`team` continua texto livre.** Ele serve pra escrever quem vai, não pra avisar quem vai. A coluna `parceiro_id` é o elo de verdade, e é ela que faz a gravação cair na agenda do filmmaker.
+- **A regra do circuito 1 vale olhando pra trás.** As duas RPCs novas exigem vínculo ativo: uma tarefa antiga amarrada numa peça de agência que pausou o vínculo seria o buraco por onde o nome do cliente continuaria saindo.
+
+### Circuito 12: o extrato do mês · FEITO em 16/09/2026
+Um documento com o que foi feito no mês, por cliente e por contratante, com valores num interruptor e PDF.
+**Pronto quando:** ele fecha o mês com a agência sem contar peça na tela.
+
+Entregue: migration `20260916000002_extrato_do_parceiro.sql` (RPC `parceiro_extrato`) e a página `Extrato`, com hierarquia contratante → cliente → peça, totais de pago e a receber, e exportação em PDF.
+
+Duas decisões de data que valem registro:
+- **Fuso.** Uma entrega às 21h do dia 30 em Brasília é 00h do dia 1 em UTC. Sem converter, ela cairia no mês seguinte. Num documento de cobrança isso não é detalhe, é erro, então todo recorte passa por `at time zone 'America/Sao_Paulo'`.
+- **O que conta como feito.** Peça entra pela data de ENTREGA, não de criação nem de publicação. Tarefa entra pelo dia em que foi marcada, e esse carimbo vem do banco (circuito 11) exatamente por causa disto.
+
+E o `✓` de pago vem do `fin_records` da agência, não da peça: só o lançamento sabe se o dinheiro saiu.
+
 ### Depois (fase de retenção)
 Portfólio automático do parceiro, relatório dele, roteiro e guia no card do filmmaker, análise da própria entrega, ponte para o Cria Caixa.
 

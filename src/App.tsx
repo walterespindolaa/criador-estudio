@@ -72,6 +72,7 @@ const ParceiroEntregues = lazy(() => import("./pages/parceiro/Entregues"));
 const ParceiroMarcas = lazy(() => import("./pages/parceiro/Marcas"));
 const ParceiroCaches = lazy(() => import("./pages/parceiro/Caches"));
 const ParceiroAgenda = lazy(() => import("./pages/parceiro/MinhaAgenda"));
+const ParceiroExtrato = lazy(() => import("./pages/parceiro/Extrato"));
 const Collabs = lazy(() => import("./pages/app/Collabs"));
 const Insights = lazy(() => import("./pages/app/Insights"));
 const Autopilot = lazy(() => import("./pages/app/Autopilot"));
@@ -399,6 +400,9 @@ const App = () => (
                     gravações em que foi escalado e as tarefas dele, num mês só. */}
                 <Route path="minha-agenda" element={<ErrorBoundary><ParceiroAgenda /></ErrorBoundary>} />
                 <Route path="entregues" element={<ErrorBoundary><ParceiroEntregues /></ErrorBoundary>} />
+                {/* O extrato do mês (circuito 12): o que foi feito, por cliente
+                    e por contratante, com PDF. */}
+                <Route path="extrato" element={<ErrorBoundary><ParceiroExtrato /></ErrorBoundary>} />
                 <Route path="marcas" element={<ErrorBoundary><ParceiroMarcas /></ErrorBoundary>} />
                 {/* Cachê saiu de dentro de "Marcas que atendo": dinheiro tem tela própria. */}
                 <Route path="caches" element={<ErrorBoundary><ParceiroCaches /></ErrorBoundary>} />

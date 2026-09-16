@@ -6,7 +6,7 @@ import { BroadcastBanner } from "@/components/BroadcastBanner";
 import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton, FeedbackDialog } from "@/components/FeedbackButton";
 import {
-  Home, Boxes, Briefcase, Handshake, DollarSign, Users, Layers, ListChecks, Menu, ChevronRight, Gift, PackageCheck, CalendarCheck,
+  Home, Boxes, Briefcase, Handshake, DollarSign, Users, Layers, ListChecks, Menu, ChevronRight, Gift, PackageCheck, CalendarCheck, FileText,
   Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Camera, Trash2, UserPlus, Search, MessageSquarePlus, BarChart3, type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -89,6 +89,7 @@ const HERO_TITLES: Record<string, string> = {
   "/socialmidia/demandas": "Minhas demandas",
   "/socialmidia/minha-agenda": "Minha agenda",
   "/socialmidia/entregues": "Entregues",
+  "/socialmidia/extrato": "Extrato do mês",
   "/socialmidia/marcas": "Marcas que atendo",
   "/socialmidia/caches": "Meus cachês",
   "/socialmidia/equipe": "Equipe",
@@ -326,6 +327,7 @@ export default function ManagerLayout() {
           })}
           {souParceiro && railNode(CalendarCheck, "Minha agenda", { active: isActive("/socialmidia/minha-agenda"), onClick: () => navigate("/socialmidia/minha-agenda") })}
           {souParceiro && railNode(PackageCheck, "Entregues", { active: isActive("/socialmidia/entregues"), onClick: () => navigate("/socialmidia/entregues") })}
+          {souParceiro && railNode(FileText, "Extrato do mês", { active: isActive("/socialmidia/extrato"), onClick: () => navigate("/socialmidia/extrato") })}
           {souParceiro && railNode(Layers, "Marcas que atendo", { active: isActive("/socialmidia/marcas"), onClick: () => navigate("/socialmidia/marcas") })}
           {railHovered && (modules.length > 0 || hasHubCria) && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Módulos</p>}
           {/* O PARCEIRO VÊ CADA MÓDULO NO MENU (Walter, 09/09/2026). Antes ele

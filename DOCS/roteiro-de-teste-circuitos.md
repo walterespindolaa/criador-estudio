@@ -1,6 +1,6 @@
-# Roteiro de teste: circuitos 1 a 10
+# Roteiro de teste: circuitos 1 a 12
 
-Escrito em 15/09/2026, depois de fechar o circuito 10.
+Escrito em 15/09/2026, depois de fechar o circuito 10. Ampliado em 16/09/2026 com os circuitos 11 e 12.
 
 Para testar de verdade você precisa de **duas contas**: a sua (social mídia) e uma conta de
 parceiro de teste, com um vínculo entre as duas. Vários testes só falham com a segunda conta,
@@ -174,6 +174,36 @@ Tudo aqui é em **390px** (iPhone padrão). Se puder, teste no aparelho, não s�
    diferentes conferindo isso.
 9. Ícones: nada desproporcional. Foram 6 lugares com uma classe de tamanho que não existia e
    por isso não gerava CSS nenhum.
+
+---
+
+## Circuito 11: a agenda do parceiro
+
+1. **P** Abra "Minha agenda". As entregas com prazo têm que aparecer sozinhas, no dia certo,
+   e tocar numa delas abre a peça.
+2. **P** Crie uma **tarefa** sem prazo. Ela vai pro bloco "Quando der", no fim, e não some.
+3. **P** Crie um **compromisso** sem dia: tem que recusar com explicação, não com erro técnico.
+4. **P** Marque uma tarefa como feita e desmarque. Some e volta na hora, sem esperar o banco.
+5. **S** Numa captação, escolha o parceiro em "Quem vai gravar" e salve.
+   **P** O dia tem que aparecer na agenda dele com cliente, horário, local e quantos roteiros existem.
+6. **S** Agora **pause** o vínculo desse parceiro. **P** A gravação para de mostrar o nome do
+   cliente na hora, mesmo já estando marcada. Idem pra tarefa antiga amarrada numa peça daquela agência.
+7. **P** No celular, confira que a agenda é lista de dias (o calendário de 7 colunas só existe
+   de tablet pra cima) e que "Agenda" está no dock de baixo.
+
+## Circuito 12: o extrato do mês
+
+1. **P** Abra "Extrato do mês". As peças entregues no mês aparecem agrupadas por contratante e,
+   dentro dele, por cliente.
+2. **P** Confira a **data de corte**: uma peça entregue no fim da noite do último dia do mês tem
+   que ficar NESTE mês, não no seguinte. Era o erro que o fuso causaria.
+3. **P** Toque em "Esconder valores": os cachês somem da tela **e do PDF**. Baixe o PDF nos dois
+   modos pra confirmar.
+4. **P** Confira que o `✓` de pago bate com o que a agência lançou no Caixa dela, e que
+   "A receber" é a diferença.
+5. **P** Marque uma tarefa como feita hoje e volte ao extrato: ela entra na lista do mês, marcada
+   como tarefa, sem valor.
+6. **P** Mês sem nada: tem que dizer que está vazio, e o botão de PDF fica desligado.
 
 ---
 
