@@ -988,9 +988,30 @@ const Criando = () => {
               const pad = (n: number) => String(n).padStart(2, "0");
               const t = new Date();
               const todayKey = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
-              const cells: ({ day: number; key: string } | null)[] = [];
-              for (let i = 0; i < startWeekday; i++) cells.push(null);
-              for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, key: `${y}-${pad(m + 1)}-${pad(d)}` });
+              /* O MÊS INTEIRO, SEM BURACO (Walter, 16/09/2026).
+                 As casas antes do dia 1 e depois do último dia eram `null`:
+                 quadrados vazios sem número, sem data e sem nada. A semana que
+                 vira o mês é justamente a mais trabalhada (o post de sexta cai
+                 no mês passado, o de segunda no mês que vem), e ela ficava
+                 partida ao meio.
+                 Agora as bordas mostram os dias de verdade dos meses vizinhos,
+                 apagados, como no calendário da social mídia. E são dias
+                 funcionais: dá pra soltar um post neles e criar ali, porque um
+                 dia que existe no calendário e não aceita nada é pior que
+                 buraco, é armadilha. */
+              const cells: { day: number; key: string; fora: boolean }[] = [];
+              const ultimoDoAnterior = new Date(y, m, 0).getDate();
+              for (let i = startWeekday - 1; i >= 0; i--) {
+                const d = ultimoDoAnterior - i;
+                const dt = new Date(y, m - 1, d);
+                cells.push({ day: d, key: `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(d)}`, fora: true });
+              }
+              for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, key: `${y}-${pad(m + 1)}-${pad(d)}`, fora: false });
+              // Completa a última linha com o começo do mês seguinte.
+              for (let d = 1; cells.length % 7 !== 0; d++) {
+                const dt = new Date(y, m + 1, d);
+                cells.push({ day: d, key: `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(d)}`, fora: true });
+              }
               const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
               const noDate = filteredPosts.filter(p => !p.scheduled_date && p.status !== "publicado");
               return (
@@ -1011,8 +1032,7 @@ const Criando = () => {
                     ))}
                   </div>
                   <div className="grid grid-cols-7 gap-1.5">
-                    {cells.map((cell, i) => {
-                      if (!cell) return <div key={`e${i}`} className="min-h-[62px] md:min-h-[104px]" />;
+                    {cells.map((cell) => {
                       const dayPosts = filteredPosts.filter(p => (p.scheduled_date ?? "").slice(0, 10) === cell.key);
                       const isToday = cell.key === todayKey;
                       return (
@@ -1022,10 +1042,14 @@ const Criando = () => {
                           onDrop={() => { if (calDragId) reschedulePost(calDragId, cell.key); setCalDragId(null); setCalDragOverKey(null); }}
                           className={cn(
                             "min-h-[62px] md:min-h-[104px] border rounded-lg p-1 md:p-1.5 bg-background flex flex-col gap-1 overflow-hidden transition-all",
+                            // Dia de outro mês: presente, legível, e claramente
+                            // não é deste mês.
+                            cell.fora && "bg-muted/25 border-dashed",
                             calDragOverKey === cell.key ? "ring-2 ring-primary border-primary" : (isToday ? "border-primary" : "border-border")
                           )}>
                           <span className="flex items-center justify-between">
-                            <span className={cn("text-[11px] font-body font-semibold w-5 h-5 flex items-center justify-center rounded-full", isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{cell.day}</span>
+                            <span className={cn("text-[11px] font-body font-semibold w-5 h-5 flex items-center justify-center rounded-full",
+                              isToday ? "bg-primary text-primary-foreground" : cell.fora ? "text-muted-foreground/45" : "text-muted-foreground")}>{cell.day}</span>
                             {/* + do dia: cria o post já com esta data. */}
                             <button type="button" onClick={(e) => { e.stopPropagation(); openNewAtDay(cell.key); }}
                               aria-label={`Novo post em ${cell.key}`}
