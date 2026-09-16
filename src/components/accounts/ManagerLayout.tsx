@@ -6,7 +6,7 @@ import { BroadcastBanner } from "@/components/BroadcastBanner";
 import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton, FeedbackDialog } from "@/components/FeedbackButton";
 import {
-  Home, Boxes, Briefcase, Handshake, DollarSign, Users, Layers, ListChecks, Menu, ChevronRight, Gift, PackageCheck,
+  Home, Boxes, Briefcase, Handshake, DollarSign, Users, Layers, ListChecks, Menu, ChevronRight, Gift, PackageCheck, CalendarCheck,
   Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Camera, Trash2, UserPlus, Search, MessageSquarePlus, BarChart3, type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -87,6 +87,7 @@ const HERO_TITLES: Record<string, string> = {
   "/socialmidia/contas": "Suas contas",
   "/socialmidia/aprovacoes": "Aprovações",
   "/socialmidia/demandas": "Minhas demandas",
+  "/socialmidia/minha-agenda": "Minha agenda",
   "/socialmidia/entregues": "Entregues",
   "/socialmidia/marcas": "Marcas que atendo",
   "/socialmidia/caches": "Meus cachês",
@@ -323,6 +324,7 @@ export default function ManagerLayout() {
             corner: filaParceiro.length > 0 ? <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-[hsl(var(--sidebar-background))]" /> : undefined,
             tipBadge: filaParceiro.length > 0 ? <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold grid place-items-center">{filaParceiro.length}</span> : undefined,
           })}
+          {souParceiro && railNode(CalendarCheck, "Minha agenda", { active: isActive("/socialmidia/minha-agenda"), onClick: () => navigate("/socialmidia/minha-agenda") })}
           {souParceiro && railNode(PackageCheck, "Entregues", { active: isActive("/socialmidia/entregues"), onClick: () => navigate("/socialmidia/entregues") })}
           {souParceiro && railNode(Layers, "Marcas que atendo", { active: isActive("/socialmidia/marcas"), onClick: () => navigate("/socialmidia/marcas") })}
           {railHovered && (modules.length > 0 || hasHubCria) && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Módulos</p>}
@@ -617,6 +619,9 @@ export default function ManagerLayout() {
                   {parceiroPuro ? (
                     <>
                       {dockItem(isActive("/socialmidia/demandas"), Briefcase, "Demandas", () => navigate("/socialmidia/demandas"))}
+                      {/* A agenda entra no dock (circuito 11): é tela de uso
+                          diário, e é no celular que ela olha o dia. */}
+                      {dockItem(isActive("/socialmidia/minha-agenda"), CalendarCheck, "Agenda", () => navigate("/socialmidia/minha-agenda"))}
                       {dockItem(isActive("/socialmidia/entregues"), PackageCheck, "Entregues", () => navigate("/socialmidia/entregues"))}
                       {dockItem(isActive("/socialmidia/marcas"), Layers, "Marcas", () => navigate("/socialmidia/marcas"))}
                     </>

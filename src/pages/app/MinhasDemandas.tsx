@@ -10,6 +10,7 @@ import {
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { formatColorVars, FORMAT_CHIP_SOLID_CLASS, FORMAT_CHIP_SOFT_CLASS } from "@/lib/format-colors";
 import { hojeBR } from "@/lib/date-br";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -1395,24 +1396,34 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                 {/* ESPECIFICAÇÕES: a maior fonte de ida e volta na pesquisa é
                     peça sem spec (proporção, medida, nº de artes). Aqui elas já
                     vêm no card, sem o parceiro precisar perguntar. */}
-                <div className="flex items-center gap-1.5 flex-wrap">
+                {/* NA COR DO FORMATO (Walter, 16/09/2026): eram três pílulas
+                    cinzas e uma preta, e a mais importante delas (o que a peça
+                    É) não se distinguia das outras. O app inteiro já fala por
+                    cor de formato (kanban, calendário, filtros): carrossel é
+                    verde, reels é azul, foto é laranja. O card do parceiro era
+                    o único lugar que ignorava essa língua.
+                    Cheio no formato, lavado no que acompanha ele (a spec e o
+                    número de artes, que são consequência do formato). A
+                    plataforma fica neutra de propósito: cor aqui significa
+                    FORMATO, e duas cores concorrendo não significam nada. */}
+                <div className="flex items-center gap-1.5 flex-wrap" style={formatColorVars(card.formato)}>
                   {card.formato && (
-                    <span className="text-[10.5px] font-bold px-2 py-1 rounded-full bg-foreground text-background">
+                    <span className={cn("text-[10.5px] font-bold px-2 py-1 rounded-full", FORMAT_CHIP_SOLID_CLASS)}>
                       {FORMATO[card.formato] ?? card.formato}
                     </span>
                   )}
                   {card.formato && SPEC_FORMATO[card.formato] && (
-                    <span className="text-[10.5px] font-bold px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                    <span className={cn("text-[10.5px] font-bold px-2 py-1 rounded-full", FORMAT_CHIP_SOFT_CLASS)}>
                       {SPEC_FORMATO[card.formato]}
                     </span>
                   )}
                   {card.formato === "carrossel" && Array.isArray(card.blocos) && (card.blocos as unknown[]).length > 0 && (
-                    <span className="text-[10.5px] font-bold px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                    <span className={cn("text-[10.5px] font-bold px-2 py-1 rounded-full", FORMAT_CHIP_SOFT_CLASS)}>
                       {(card.blocos as unknown[]).length} arte{(card.blocos as unknown[]).length === 1 ? "" : "s"}
                     </span>
                   )}
                   {card.plataforma && (
-                    <span className="text-[10.5px] font-bold px-2 py-1 rounded-full bg-muted text-muted-foreground capitalize">
+                    <span className="text-[10.5px] font-bold px-2 py-1 rounded-full border border-border text-muted-foreground capitalize">
                       {card.plataforma}
                     </span>
                   )}

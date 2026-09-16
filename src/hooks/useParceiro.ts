@@ -37,7 +37,7 @@ const sbFrom = (t: string) => (supabase as any).from(t);
 
 /** Erro de objeto que ainda não existe no banco (migration pendente). É o
  *  único caso em que devolver vazio é honesto: a funcionalidade não existe. */
-const aindaNaoExisteNoBanco = (msg: string | undefined | null) =>
+export const aindaNaoExisteNoBanco = (msg: string | undefined | null) =>
   /does not exist|schema cache|could not find the function/i.test(msg ?? "");
 
 /* MENSAGEM QUE A PESSOA ENTENDE (Walter, 14/09/2026).

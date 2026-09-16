@@ -47,3 +47,17 @@ export const FORMAT_TEXT_CLASS = "text-[color:var(--fmt)] dark:text-[color:var(-
 export const FORMAT_BORDER_CLASS = "border-l-[color:var(--fmt)] dark:border-l-[color:var(--fmt-dark)]";
 // Bolinha na cor do formato (chips de filtro).
 export const FORMAT_DOT_CLASS = "bg-[color:var(--fmt)] dark:bg-[color:var(--fmt-dark)]";
+
+/* CHIP CHEIO na cor do formato: fundo sólido, texto branco. É o rótulo que diz
+   O QUE a peça é ("Carrossel", "Reels"). Fundo sólido porque ele é o primeiro
+   da fila e precisa ganhar do resto. */
+export const FORMAT_CHIP_SOLID_CLASS = "bg-[color:var(--fmt)] dark:bg-[color:var(--fmt-dark)] text-white dark:text-background";
+
+/* CHIP LAVADO na mesma cor: fundo bem claro, texto na cor. É pro que ACOMPANHA
+   o formato (a spec, o número de artes). Fica do mesmo time visual do chip
+   cheio, sem brigar com ele.
+   `color-mix` em vez de um hex com alpha porque a cor vem de var: assim o tom
+   escuro do tema escuro entra sozinho, sem ninguém ler o tema em JS. */
+export const FORMAT_CHIP_SOFT_CLASS =
+  "bg-[color-mix(in_srgb,var(--fmt)_12%,transparent)] text-[color:var(--fmt)] " +
+  "dark:bg-[color-mix(in_srgb,var(--fmt-dark)_20%,transparent)] dark:text-[color:var(--fmt-dark)]";

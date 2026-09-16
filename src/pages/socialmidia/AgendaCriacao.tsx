@@ -38,6 +38,8 @@ import { clienteInativo } from "@/lib/cliente-status";
 // escolhidos. Antes ela só nascia dentro do cronograma de um cliente por vez.
 import { useAgendaDatas, type AgendaData } from "@/hooks/useAgendaDatas";
 import { confirmar } from "@/components/shared/Confirm";
+// Escalar parceiro no dia de gravação (circuito 11): mesma lista do "Enviar para".
+import { useMeusParceiros, ROTULO_PAPEL } from "@/hooks/useParceiro";
 import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { parseRefLinks, refLinkHref } from "@/lib/refLinks";
@@ -2409,7 +2411,7 @@ function AddAnyDialog({ open, day, clients, teamNames, onClose, onCreation, onTa
   );
 }
 
-function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pending, onDelete }: { open: boolean; initial?: Capture | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null; status?: Capture["status"]; duration_hours?: number | null }) => void; pending: boolean; onDelete?: () => void }) {
+function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pending, onDelete }: { open: boolean; initial?: Capture | null; clients: Client[]; teamNames: string[]; onClose: () => void; onSave: (v: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null; status?: Capture["status"]; duration_hours?: number | null; parceiro_id?: string | null }) => void; pending: boolean; onDelete?: () => void }) {
   // Excluir em dois toques (arma e confirma), igual à tarefa: agendou errado,
   // apaga dali mesmo em vez de caçar o X na lista de próximas captações.
   const [confirmDel, setConfirmDel] = useState(false);
@@ -2420,15 +2422,19 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
   const [loc, setLoc] = useState("");
   const [dur, setDur] = useState<number | null>(null);
   const [team, setTeam] = useState("");
+  const [parceiro, setParceiro] = useState("");
   const [note, setNote] = useState("");
   const [status, setStatus] = useState<Capture["status"]>("agendada");
+  // Quem pode ser escalado: os parceiros acoplados à agência (mesma lista do
+  // "Enviar para" do Cria Post).
+  const { data: parceiros = [] } = useMeusParceiros();
   const seed = open ? (initial?.id ?? "new") : "";
   const [seeded, setSeeded] = useState("");
   if (open && seed !== seeded) {
     setSeeded(seed);
     setCrm(initial?.crm_client_id ?? null); setName(initial?.client_name ?? "");
     setDate(initial?.capture_date ?? ""); setTime(initial?.capture_time ? initial.capture_time.slice(0, 5) : "");
-    setLoc(initial?.location ?? ""); setDur(initial?.duration_hours ?? null); setTeam(initial?.team ?? ""); setNote(initial?.note ?? ""); setStatus(initial?.status ?? "agendada");
+    setLoc(initial?.location ?? ""); setDur(initial?.duration_hours ?? null); setTeam(initial?.team ?? ""); setParceiro(initial?.parceiro_id ?? ""); setNote(initial?.note ?? ""); setStatus(initial?.status ?? "agendada");
     setConfirmDel(false);
   }
   if (!open && seeded) setSeeded("");
@@ -2458,6 +2464,29 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
             </div>
           </div>
           <div><p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Equipe (opcional)</p><Input value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Ex.: Ana, Bruno" list="agenda-team-names" /><TeamDatalist names={teamNames} /></div>
+          {/* ESCALAR O PARCEIRO (circuito 11, 16/09/2026).
+              "Equipe" é texto livre desde julho: serve pra escrever quem vai,
+              não pra AVISAR quem vai. Escalando aqui, o dia cai na agenda do
+              filmmaker sozinho, com cliente, hora, local e quantos roteiros
+              existem. Sem isto ele descobre a diária pelo WhatsApp e o Cria
+              fica de fora do combinado. */}
+          {parceiros.length > 0 && (
+            <div>
+              <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Quem vai gravar (opcional)</p>
+              <select value={parceiro} onChange={(e) => setParceiro(e.target.value)}
+                className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm font-body">
+                <option value="">Ninguém escalado</option>
+                {parceiros.map((p) => (
+                  <option key={p.member_id} value={p.member_id}>
+                    {p.nome}{ROTULO_PAPEL[p.role] ? ` · ${ROTULO_PAPEL[p.role]}` : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10.5px] font-body text-muted-foreground mt-1">
+                Aparece na agenda dele, com o cliente, o horário e o local.
+              </p>
+            </div>
+          )}
           <div>
             <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Notas (opcional)</p>
             <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ex.: captação mês de julho, captação de anúncio…" className="rounded-xl text-sm" />
@@ -2486,7 +2515,11 @@ function CaptureDialog({ open, initial, clients, teamNames, onClose, onSave, pen
           ) : <span />}
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button onClick={() => onSave({ capture_date: date, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null, duration_hours: dur, ...(initial ? { status } : {}) })} disabled={!valid || pending}>
+            <Button onClick={() => onSave({ capture_date: date, capture_time: time || null, location: loc.trim() || null, crm_client_id: crm, client_name: name.trim() || null, team: team.trim() || null, note: note.trim() || null, duration_hours: dur, /* Só manda a coluna quando há o que dizer: `undefined`
+              some do patch, e assim editar uma captação continua funcionando
+              antes da migration do parceiro_id rodar. `null` só vai quando
+              alguém estava escalado e foi tirado, que é mudança de verdade. */
+              parceiro_id: parceiro || (initial?.parceiro_id ? null : undefined), ...(initial ? { status } : {}) })} disabled={!valid || pending}>
               {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : initial ? "Salvar" : "Agendar"}
             </Button>
           </div>

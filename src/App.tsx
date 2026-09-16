@@ -71,6 +71,7 @@ const MinhasDemandas = lazy(() => import("./pages/app/MinhasDemandas"));
 const ParceiroEntregues = lazy(() => import("./pages/parceiro/Entregues"));
 const ParceiroMarcas = lazy(() => import("./pages/parceiro/Marcas"));
 const ParceiroCaches = lazy(() => import("./pages/parceiro/Caches"));
+const ParceiroAgenda = lazy(() => import("./pages/parceiro/MinhaAgenda"));
 const Collabs = lazy(() => import("./pages/app/Collabs"));
 const Insights = lazy(() => import("./pages/app/Insights"));
 const Autopilot = lazy(() => import("./pages/app/Autopilot"));
@@ -394,6 +395,9 @@ const App = () => (
                 {/* PARCEIRO: a fila de quem produz pras agências mora na MESMA
                     casca da gestão. Uma conta, dois papéis (Walter, 31/08). */}
                 <Route path="demandas" element={<ErrorBoundary><MinhasDemandas /></ErrorBoundary>} />
+                {/* A agenda DELE (circuito 11, 16/09/2026): entregas com prazo,
+                    gravações em que foi escalado e as tarefas dele, num mês só. */}
+                <Route path="minha-agenda" element={<ErrorBoundary><ParceiroAgenda /></ErrorBoundary>} />
                 <Route path="entregues" element={<ErrorBoundary><ParceiroEntregues /></ErrorBoundary>} />
                 <Route path="marcas" element={<ErrorBoundary><ParceiroMarcas /></ErrorBoundary>} />
                 {/* Cachê saiu de dentro de "Marcas que atendo": dinheiro tem tela própria. */}

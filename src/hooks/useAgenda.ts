@@ -43,6 +43,12 @@ export type Capture = {
   // Duração estimada da captação em horas (1..5; 5 = "5h ou mais"). Opcional e
   // defensivo: antes da migration o select("*") não traz e cai como undefined.
   duration_hours?: number | null;
+  /* O PARCEIRO ESCALADO pra este dia (circuito 11, 16/09/2026). `team` continua
+     sendo texto livre, porque nem todo mundo que vai na gravação tem conta no
+     Cria. Esta coluna é o elo de verdade: é ela que faz o dia aparecer na
+     agenda do filmmaker. Opcional e defensiva, igual à duração: antes da
+     migration o select("*") não traz e cai como undefined. */
+  parceiro_id?: string | null;
   /* `roteiro` FOI APOSENTADO em 15/09/2026 (circuito 7).
      O Cria Captação tinha DOIS modelos de roteiro vivos ao mesmo tempo: este
      campo de texto por dia e a tabela `capture_scripts` (vários roteiros por
@@ -297,14 +303,15 @@ export function useAddCapture() {
   const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null; duration_hours?: number | null }) => {
+    mutationFn: async (input: { capture_date: string; capture_time?: string | null; location?: string | null; crm_client_id?: string | null; client_name?: string | null; team?: string | null; note?: string | null; duration_hours?: number | null; parceiro_id?: string | null }) => {
       if (!agencyOwnerId) throw new Error("Not authenticated");
-      // Só manda a coluna quando há duração: sem ela, funciona mesmo antes da
-      // migration do duration_hours rodar.
-      const { duration_hours, ...resto } = input;
+      // Só manda a coluna quando há valor: sem ela, funciona mesmo antes das
+      // migrations do duration_hours e do parceiro_id rodarem.
+      const { duration_hours, parceiro_id, ...resto } = input;
       const { error } = await sbFrom("agenda_captures").insert({
         manager_id: agencyOwnerId, status: "agendada", ...resto,
         ...(duration_hours ? { duration_hours } : {}),
+        ...(parceiro_id ? { parceiro_id } : {}),
       } as never);
       if (error) throw error;
     },
@@ -316,8 +323,11 @@ export function useAddCapture() {
 export function useUpdateCapture() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Capture, "status" | "capture_date" | "capture_time" | "location" | "team" | "note" | "crm_client_id" | "client_name" | "shot_list" | "recurring" | "recurrence_day" | "duration_hours">> }) => {
-      const { error } = await sbFrom("agenda_captures").update(patch as never).eq("id", id);
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Pick<Capture, "status" | "capture_date" | "capture_time" | "location" | "team" | "note" | "crm_client_id" | "client_name" | "shot_list" | "recurring" | "recurrence_day" | "duration_hours" | "parceiro_id">> }) => {
+      // Chave com `undefined` vira coluna inexistente no PostgREST e derruba o
+      // update inteiro. Quem não tem o que dizer sobre um campo não fala dele.
+      const limpo = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined));
+      const { error } = await sbFrom("agenda_captures").update(limpo as never).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["agenda-captures"] }),
