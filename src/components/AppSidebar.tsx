@@ -152,9 +152,9 @@ export function AppSidebar() {
       <div className="flex items-center justify-center px-2 py-4 border-b border-sidebar-border/50">
         <Link to="/app" className="block transition-opacity hover:opacity-80" aria-label="Ir pra home">
           {collapsed ? (
-            <Logo icon className="h-8 w-8" />
+            <Logo icon pequeno className="h-8 w-8" />
           ) : (
-            <Logo className="h-9 w-auto" />
+            <Logo pequeno className="h-9 w-auto" />
           )}
         </Link>
       </div>

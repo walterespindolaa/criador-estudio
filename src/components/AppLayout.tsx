@@ -307,7 +307,7 @@ const AppLayout = () => {
                   className="flex items-center justify-self-center px-2"
                   aria-label="Subir ao topo"
                 >
-                  <Logo className="h-6 w-auto" />
+                  <Logo pequeno className="h-6 w-auto" />
                 </button>
 
                 <div className="flex items-center gap-0.5 justify-self-end">

@@ -170,7 +170,7 @@ export function ManagerHome({ embedded = false }: { embedded?: boolean }) {
       {/* Top bar */}
       {!embedded && (
       <header className="px-4 sm:px-6 py-4 flex items-center justify-between border-b border-border">
-        <Logo className="h-8 w-auto" />
+        <Logo pequeno className="h-8 w-auto" />
         <button
           onClick={handleSignOut}
           className="p-2 rounded-xl hover:bg-accent/60 transition-colors text-muted-foreground hover:text-foreground"

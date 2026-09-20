@@ -274,7 +274,7 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
       <div className={cn("flex h-[52px] shrink-0 items-center", expanded ? "pl-[22px] pr-2.5" : "justify-center")}>
         {expanded ? (
           <>
-            <Logo className="h-6 w-auto" />
+            <Logo pequeno className="h-6 w-auto" />
             <div className="flex-1" />
             <button
               type="button"
@@ -300,7 +300,7 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
             </button>
           </>
         ) : (
-          <Logo icon className="h-[38px] w-[38px] rounded-[12px]" />
+          <Logo icon pequeno className="h-[38px] w-[38px] rounded-[12px]" />
         )}
       </div>
 

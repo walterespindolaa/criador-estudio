@@ -304,7 +304,7 @@ export default function ManagerLayout() {
         )}
       >
         <div className={cn("mb-2 flex items-center gap-2", railHovered ? "px-1" : "justify-center")}>
-          {railHovered ? <Logo className="h-7 w-auto" /> : <Logo icon className="h-[38px] w-[38px] rounded-[12px]" />}
+          {railHovered ? <Logo pequeno className="h-7 w-auto" /> : <Logo icon pequeno className="h-[38px] w-[38px] rounded-[12px]" />}
         </div>
         <div className="flex w-full flex-col items-stretch gap-1">
           {railHovered && <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{parceiroPuro ? "Parceiro" : "Dia a dia"}</p>}
@@ -446,7 +446,7 @@ export default function ManagerLayout() {
             className="justify-self-center px-2"
             aria-label="Subir ao topo"
           >
-            <Logo className="h-6 w-auto" />
+            <Logo pequeno className="h-6 w-auto" />
           </button>
 
           <div className="flex items-center gap-0.5 justify-self-end">

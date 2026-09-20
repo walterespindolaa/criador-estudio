@@ -698,7 +698,13 @@ const Criando = () => {
           )}
         </div>
 
-        <div className="hidden md:flex items-center gap-3 flex-wrap mb-4">
+        {/* AS TRÊS VISÕES, TAMBÉM NO CELULAR (Walter, 20/09/2026).
+            Este seletor era `hidden md:flex`, então no celular só existia o
+            quadro: quem abre o app no telefone nunca viu a tabela nem o
+            calendário. E não era falta de tela pronta, era só a porta fechada.
+            O calendário virou lista de toque no circuito 10 e a tabela perdeu
+            três colunas abaixo de `md` no mesmo dia: as duas já cabem. */}
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap mb-4">
           <div data-tour="criando-views" className="flex items-center gap-1 bg-card rounded-xl border border-border p-1 w-max">
             {([
               { key: "board", label: "Board", icon: Kanban },
@@ -887,7 +893,7 @@ const Criando = () => {
         )}
 
         {posts.length > 0 && view === "tabela" && (
-          <div className="hidden md:block">
+          <div>
             {filteredPosts.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border p-12 text-center">
                 <p className="font-body text-sm text-muted-foreground">Nenhum post nos filtros atuais.</p>
@@ -966,7 +972,7 @@ const Criando = () => {
           </div>
         )}
         {posts.length > 0 && view === "calendario" && (
-          <div className="hidden md:block">
+          <div>
             <div className="flex items-center gap-1 bg-card rounded-xl border border-border p-1 w-max mb-4">
               {([{ key: "mes", label: "Mês" }, { key: "semana", label: "Semana" }] as const).map(o => (
                 <button key={o.key} onClick={() => setCalMode(o.key)}
@@ -1267,7 +1273,7 @@ const Criando = () => {
           </div>
         )}
 
-        {overview ? (
+        {posts.length > 0 && view === "board" && (overview ? (
           <div data-tour="criando-board-m" className="md:hidden">
             {/* onDragStart com vibração: o dedo SENTE que pegou o card. É o detalhe
             que separa "site num celular" de "app". iOS ignora, Android responde. */}
@@ -1434,7 +1440,7 @@ const Criando = () => {
             ))}
           </div>
         </div>
-        )}
+        ))}
       </motion.div>
       <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={activeAccountId || user?.id || ""} onSaved={() => { /* invalidations */ }} initialFormat={pendingFormat ?? undefined} initialStatus={pendingStatus ?? undefined} initialDate={pendingDate ?? undefined} />
 
