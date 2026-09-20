@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, Check, CheckCircle2, Clock, KanbanSquare, List, Loader2, Send, Users, Wallet } from "lucide-react";
+import { AlertTriangle, CalendarDays, Check, CheckCircle2, Clock, KanbanSquare, List, Loader2, Send, Users, Wallet } from "lucide-react";
+import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
+import { ManagerCalendar } from "@/components/accounts/ManagerCalendar";
 import { cn } from "@/lib/utils";
 import { hojeBR } from "@/lib/date-br";
 import { Button } from "@/components/ui/button";
@@ -258,10 +260,18 @@ export function PainelComParceiros({ clientes }: {
   const resolver = useResolverPrazoSugerido();
   /* Lista ou quadro, lembrado no navegador. O quadro é o jeito que a Gabriela
      já usa no Trello, então é o padrão. */
-  const [visao, setVisao] = useState<"quadro" | "lista">(() => {
-    try { return localStorage.getItem("cria.parceiros.visao") === "lista" ? "lista" : "quadro"; } catch { return "quadro"; }
+  type Visao = "quadro" | "lista" | "calendario";
+  const [visao, setVisao] = useState<Visao>(() => {
+    try {
+      const v = localStorage.getItem("cria.parceiros.visao");
+      return v === "lista" || v === "calendario" ? v : "quadro";
+    } catch { return "quadro"; }
   });
-  const trocarVisao = (v: "quadro" | "lista") => { setVisao(v); try { localStorage.setItem("cria.parceiros.visao", v); } catch { /* sem storage */ } };
+  const trocarVisao = (v: Visao) => { setVisao(v); try { localStorage.setItem("cria.parceiros.visao", v); } catch { /* sem storage */ } };
+  /* CLICAR NA PECA ABRE O CARD DO PARCEIRO (Walter, 20/09/2026), a mesma
+     janela que o designer ve, com a conversa. "Ir ate o post" dentro dela e o
+     que leva pro editor no cliente. */
+  const [cardAberto, setCardAberto] = useState<PecaExterna | null>(null);
   const hoje = hojeBR();
   // Cachês (fase 3): despesas do Caixa ligadas a parceiro, agrupadas por pessoa.
   const { agencyOwnerId } = useActiveAccount();
@@ -310,11 +320,12 @@ export function PainelComParceiros({ clientes }: {
      traduz um id no outro antes de navegar.
      E `?post=` abre o editor DAQUELA peça, em vez de largar ela num kanban com
      dezenas de cards pra achar o título de novo na mão. */
-  const abrirPeca = (p: PecaExterna) => {
+  const irAoPost = (p: PecaExterna) => {
     const ec = p.external_client_id ? extClients.find((c) => c.id === p.external_client_id) : null;
     if (ec?.crm_client_id) navigate(`/socialmidia/clientes/${ec.crm_client_id}/posts?post=${p.id}`);
     else navigate("/socialmidia/criapost"); // sem cliente no CRM: o quadro geral, nunca clique morto
   };
+  const abrirPeca = (p: PecaExterna) => setCardAberto(p);
 
   const linhaPeca = (p: PecaExterna, extra?: React.ReactNode) => (
     <button key={p.id} type="button" onClick={() => abrirPeca(p)}
@@ -426,7 +437,7 @@ export function PainelComParceiros({ clientes }: {
                 <Users className="h-3.5 w-3.5" /> Na mão de cada parceiro
               </p>
               <div className="inline-flex rounded-full border border-border bg-card p-0.5">
-                {([["quadro", KanbanSquare, "Quadro"], ["lista", List, "Lista"]] as const).map(([v, Icone, rotulo]) => (
+                {([["quadro", KanbanSquare, "Quadro"], ["lista", List, "Lista"], ["calendario", CalendarDays, "Calendário"]] as const).map(([v, Icone, rotulo]) => (
                   <button key={v} type="button" onClick={() => trocarVisao(v)}
                     className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-body font-semibold transition-colors",
                       visao === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
@@ -436,7 +447,11 @@ export function PainelComParceiros({ clientes }: {
               </div>
             </div>
 
-            {visao === "quadro" ? (
+            {visao === "calendario" ? (
+              /* O calendario geral, ja no modo Com parceiros e sem o botao de
+                 sair dele: entrega e postagem de cada peca, por parceiro. */
+              <ManagerCalendar somenteParceiros compacto />
+            ) : visao === "quadro" ? (
               <QuadroDoParceiro
                 parceiros={parceiros}
                 pecas={pecas}
@@ -524,9 +539,18 @@ export function PainelComParceiros({ clientes }: {
           )}
 
           <p className="text-[11px] font-body text-muted-foreground px-0.5 flex items-center gap-1.5">
-            <Send className="h-3 w-3" /> O parceiro vê a mesma peça na área dele, com specs, marca e
-            material. A conversa fica no card, dos dois lados.
+            <Send className="h-3 w-3" /> Clique numa peça pra abrir o card que o parceiro vê, com a conversa.
+            Dentro dele, "Ir até o post" leva pro editor.
           </p>
+
+          <CardAbertoDialog
+            postId={cardAberto?.id ?? null}
+            aoFechar={() => setCardAberto(null)}
+            agencia={cardAberto ? {
+              nomeDoParceiro: nomeParceiro.get(cardAberto.assignee_id)?.nome ?? null,
+              irAoPost: () => { const p = cardAberto; setCardAberto(null); irAoPost(p); },
+            } : undefined}
+          />
         </>
       )}
     </div>

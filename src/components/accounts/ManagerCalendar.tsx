@@ -105,7 +105,12 @@ function emRisco(p: CalPost): boolean {
 
 const dkey = (d: Date) => format(d, "yyyy-MM-dd");
 
-export function ManagerCalendar() {
+export function ManagerCalendar({ somenteParceiros = false, compacto = false }: {
+  /** Aba "Com parceiros": o modo parceiros vem ligado e sem o botao de desligar. */
+  somenteParceiros?: boolean;
+  /** Sem o titulo "Calendario" (a tela em volta ja tem o dela). */
+  compacto?: boolean;
+} = {}) {
   const { user } = useAuth();
   const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
@@ -129,7 +134,8 @@ export function ManagerCalendar() {
   // Modo "Com parceiros": só posts delegados, com entrega e postagem na grade.
   // `quemFiltro` vazio = todos os parceiros.
   const { data: parceiros = [] } = useMeusParceiros();
-  const [soParceiros, setSoParceiros] = useState(() => readFlag("cal_so_parceiros", false));
+  const [soParceirosLivre, setSoParceiros] = useState(() => readFlag("cal_so_parceiros", false));
+  const soParceiros = somenteParceiros || soParceirosLivre;
   const [quemFiltro, setQuemFiltro] = useState<string>("");
   const toggleSoParceiros = () => setSoParceiros((v) => { const n = !v; writeFlag("cal_so_parceiros", n); return n; });
   const nomeParceiro = useMemo(() => {
@@ -294,7 +300,17 @@ export function ManagerCalendar() {
         style={{ backgroundColor: `${color}1a`, borderLeft: `3px solid ${color}` }}
         title={`${nameOf[p.external_client_id] ?? ""} · ${p.title}${soParceiros && emRisco(p) ? " · entrega combinada no dia da postagem ou depois" : ""}`}
       >
-        {soParceiros && emRisco(p) && <AlertTriangle className="inline h-3 w-3 mr-1 text-red-600 -mt-0.5" />}
+        {/* NO MODO PARCEIROS O CARD DIZ O QUE E (Walter, 20/09/2026: "quando
+            aparece 2 posts nao fica claro"). Entrega e postagem do MESMO post
+            caem em dias diferentes, e sem rotulo pareciam dois posts. Aqui a
+            primeira linha diz "Postagem · cliente" e a de entrega diz "Entrega
+            · quem"; o titulo vem embaixo, nos dois. */}
+        {soParceiros && (
+          <span className="block text-[9px] font-bold uppercase tracking-wider opacity-80 truncate">
+            {emRisco(p) && <AlertTriangle className="inline h-2.5 w-2.5 mr-0.5 text-red-600 -mt-0.5" />}
+            Postagem · {nameOf[p.external_client_id] ?? ""}
+          </span>
+        )}
         {p.scheduled_time && <span className="font-semibold mr-1">{p.scheduled_time.slice(0, 5)}</span>}
         {p.title}
       </div>
@@ -321,11 +337,14 @@ export function ManagerCalendar() {
           : "bg-violet-50 border-violet-300 text-violet-900"}`}
         title={`Entrega de ${quem} · ${nameOf[p.external_client_id] ?? ""} · ${p.title}`}
       >
-        <span className={`inline-grid place-items-center w-3.5 h-3.5 rounded-full text-white text-[8px] font-bold mr-1 -mt-0.5 ${
-          entregue ? "bg-green-600" : atrasada ? "bg-red-600" : "bg-violet-600"}`}>
-          {entregue ? <Check className="h-2.5 w-2.5" /> : quem.charAt(0).toUpperCase()}
+        <span className="block text-[9px] font-bold uppercase tracking-wider truncate">
+          <span className={`inline-grid place-items-center w-3.5 h-3.5 rounded-full text-white text-[8px] font-bold mr-1 -mt-0.5 ${
+            entregue ? "bg-green-600" : atrasada ? "bg-red-600" : "bg-violet-600"}`}>
+            {entregue ? <Check className="h-2.5 w-2.5" /> : quem.charAt(0).toUpperCase()}
+          </span>
+          {entregue ? "Entregue" : atrasada ? "Entrega atrasada" : "Entrega"} · {quem.split(" ")[0]}
         </span>
-        <span className="font-semibold">{entregue ? "Entregue" : "Entrega"}</span> · {p.title}
+        <span className="block truncate">{p.title}</span>
       </button>
     );
   };
@@ -334,7 +353,7 @@ export function ManagerCalendar() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight">Calendário</h1>
+        {compacto ? <span /> : <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight">Calendário</h1>}
         <div className="flex items-center gap-1.5 flex-wrap">
           <div className="flex rounded-lg border border-border overflow-hidden mr-1">
             <button type="button" onClick={() => setView("mes")}
@@ -403,11 +422,13 @@ export function ManagerCalendar() {
       {/* Com parceiros: só o que está delegado, com entrega e postagem na grade. */}
       {parceiros.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
-          <button type="button" onClick={toggleSoParceiros}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-body font-semibold border transition-colors ${
-              soParceiros ? "bg-violet-600 text-white border-violet-600" : "border-border text-muted-foreground hover:text-foreground"}`}>
-            <Handshake className="h-3.5 w-3.5" /> Com parceiros
-          </button>
+          {!somenteParceiros && (
+            <button type="button" onClick={toggleSoParceiros}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-body font-semibold border transition-colors ${
+                soParceiros ? "bg-violet-600 text-white border-violet-600" : "border-border text-muted-foreground hover:text-foreground"}`}>
+              <Handshake className="h-3.5 w-3.5" /> Com parceiros
+            </button>
+          )}
           {soParceiros && (
             <>
               <button type="button" onClick={() => setQuemFiltro("")}

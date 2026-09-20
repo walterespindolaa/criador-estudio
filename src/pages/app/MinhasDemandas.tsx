@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { useProfile } from "@/hooks/useProfile";
 import { motion } from "framer-motion";
 import {
@@ -20,7 +21,7 @@ import { FichaDaMarca } from "@/pages/parceiro/Marcas";
 import { ErroAoCarregar } from "@/components/shared/ErroAoCarregar";
 import { CamadaDeAlfinetes, segundoBonito } from "@/components/shared/CamadaDeAlfinetes";
 import {
-  ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useEntreguesDoParceiro,
+  ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useConversaDoCard, useEntreguesDoParceiro,
   useFilaDoParceiro, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useVersoesDaPeca,
   type CardDaFila, type EntregueDoParceiro, type MarcaDoParceiro, type VersaoDaPeca,
 } from "@/hooks/useParceiro";
@@ -1248,10 +1249,30 @@ function PainelTexto({ titulo, texto, aoCopiar }: {
   );
 }
 
-export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; aoFechar: () => void }) {
+/* ═══════════════════════════════════════════════════════════════════════════
+   O MESMO CARD, VISTO PELA SOCIAL MIDIA (Walter, 20/09/2026)
+
+   "Quando clica no post no Com parceiros precisa abrir aquela janela em
+   sincronia com a do designer, e nao la dentro do cliente." Este dialogo e a
+   janela do designer. Com `agencia` preenchido ele abre em modo leitura pra
+   social midia: mesmo briefing, mesma conversa (ela escreve como
+   social_media), mesmos anexos e versoes. Some o que e so do parceiro (Sua
+   entrega, checklist pessoal, topar prazo) e entra o botao "Ir ate o post",
+   que leva pro editor no cliente.
+   ═══════════════════════════════════════════════════════════════════════════ */
+export function CardAbertoDialog({ postId, aoFechar, agencia }: {
+  postId: string | null;
+  aoFechar: () => void;
+  /** Presente = a social midia esta olhando, nao o parceiro. */
+  agencia?: { irAoPost: () => void; nomeDoParceiro?: string | null };
+}) {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { data: card, isLoading } = useCardDoParceiro(postId);
   const { marcar, comentar, responderPrazo, anexar } = useAcoesDoParceiro(postId);
+  // No modo agencia a mensagem sai como social_media, pela mesma tabela que o
+  // editor do cliente usa, e o card recarrega pra ela aparecer na hora.
+  const conversaAgencia = useConversaDoCard(agencia ? postId : null);
   const [texto, setTexto] = useState("");
   // Entregar em dois tempos: o clique abre o campo do link da versão final.
   const [entregando, setEntregando] = useState(false);
@@ -1283,7 +1304,12 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
   const enviar = async () => {
     const t = texto.trim();
     if (!t) return;
-    await comentar.mutateAsync(t);
+    if (agencia) {
+      await conversaAgencia.enviar.mutateAsync(t);
+      void qc.invalidateQueries({ queryKey: ["parceiro-card", postId] });
+    } else {
+      await comentar.mutateAsync(t);
+    }
     setTexto("");
   };
 
@@ -1378,7 +1404,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                     {card.titulo || "Sem título"}
                   </DialogTitle>
                   <span className="block text-[11.5px] font-body text-white/75 mt-1 truncate">
-                    delegado por {card.agencia}
+                    {agencia ? <>com {agencia.nomeDoParceiro ?? "o parceiro"}</> : <>delegado por {card.agencia}</>}
                     {card.publica_em && <> · publica em {dataBR(card.publica_em)}</>}
                   </span>
                 </span>
@@ -1627,7 +1653,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                     de link e três botões empilhados em 260px viravam uma torre.
                     Aqui a largura permite duas colunas lado a lado, subir e
                     mandar link, com o botão verde fechando embaixo. */}
-                {card.producao_status !== "entregue" && (
+                {!agencia && card.producao_status !== "entregue" && (
                   <div className="mt-5 rounded-2xl border-2 border-green-200 bg-green-50/40 p-4">
                     <p className="text-[10.5px] font-bold uppercase tracking-wider text-green-800 flex items-center gap-1.5 mb-0.5">
                       <Check className="h-3.5 w-3.5" /> Sua entrega
@@ -1737,7 +1763,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                     </p>
                   </div>
                 )}
-                {card.producao_status === "entregue" && (
+                {!agencia && card.producao_status === "entregue" && (
                   <div className="mt-5 rounded-2xl border border-border bg-muted/30 p-3 flex flex-wrap items-center gap-3">
                     <input ref={inputArquivo} type="file" accept="image/*,video/*,.pdf" className="hidden"
                       onChange={(e) => {
@@ -1797,7 +1823,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                 {/* MEU CHECKLIST (privado): a paridade com o checklist do
                     Trello, que é o recurso que eles mais usam. Só o parceiro
                     vê; o progresso aparece no cartão do quadro. */}
-                <div className="mt-4 rounded-xl border border-dashed border-violet-200 bg-violet-50/40 px-3.5 py-3">
+                {!agencia && <div className="mt-4 rounded-xl border border-dashed border-violet-200 bg-violet-50/40 px-3.5 py-3">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-violet-700 flex items-center gap-1.5 mb-2">
                     Meu checklist <span className="ml-auto normal-case tracking-normal font-semibold text-violet-500/80">só você vê isto</span>
                   </p>
@@ -1831,7 +1857,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                       }}
                       className="flex-1 rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-[12.5px] font-body" />
                   </div>
-                </div>
+                </div>}
               </div>
 
               {/* A COLUNA DA DIREITA: prazo, marca, material, ações. */}
@@ -1845,7 +1871,7 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                     ou sugere outra data (com motivo, que entra na conversa);
                     negociando = a bola está com a social mídia. Enquanto isso,
                     o card segue produzível: negociar data não trava trabalho. */}
-                {card.prazo_status === "proposto" && card.prazo_producao ? (
+                {!agencia && card.prazo_status === "proposto" && card.prazo_producao ? (
                   <div className="rounded-xl border border-amber-300 bg-amber-50/70 px-3.5 py-3 space-y-2">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
                       <Clock className="h-3 w-3" /> Prazo proposto
@@ -1989,13 +2015,24 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
                     outro. Entregar é o ato principal do card, então foi pra
                     coluna larga, logo abaixo da legenda. Aqui ficam só prazo,
                     marca, material e estado. */}
-                {card.producao_status !== "entregue" && (
+                {agencia && (
+                  <div className="pt-1 space-y-2">
+                    <Button className="w-full rounded-xl" onClick={agencia.irAoPost}>
+                      <ExternalLink className="h-4 w-4 mr-1.5" /> Ir até o post
+                    </Button>
+                    <p className="text-[10.5px] font-body text-muted-foreground leading-relaxed">
+                      Aqui você vê exatamente o que o parceiro vê e conversa com ele. Pra editar a peça,
+                      trocar o prazo ou o cachê, vá até o post.
+                    </p>
+                  </div>
+                )}
+                {!agencia && card.producao_status !== "entregue" && (
                   <p className="text-[10.5px] font-body text-muted-foreground leading-relaxed pt-1">
                     Terminou? O bloco <b className="text-foreground">Sua entrega</b> fica logo abaixo da
                     legenda, do lado esquerdo.
                   </p>
                 )}
-                {card.producao_status === "entregue" && (
+                {!agencia && card.producao_status === "entregue" && (
                   <div className="pt-1 space-y-2">
                     <p className="rounded-xl border border-green-200 bg-green-50/70 px-3 py-2.5 text-[11.5px] font-body text-green-900 leading-snug">
                       Entregue. A social mídia revisa e manda pro cliente aprovar.
@@ -2010,8 +2047,10 @@ export function CardAbertoDialog({ postId, aoFechar }: { postId: string | null; 
               {/* CONVERSA: coluna da DIREITA e chat de verdade. */}
               <ChatDoCard cor={card.marca.cor || "#4B3FA8"} mensagens={card.comentarios}
                 texto={texto} setTexto={setTexto} enviar={enviar}
-                enviando={comentar.isPending} anexando={anexar.isPending}
-                aoMandarImagem={(arquivo) => anexar.mutate({ arquivo, naConversa: true, legenda: texto.trim() || undefined })}
+                enviando={agencia ? conversaAgencia.enviar.isPending : comentar.isPending} anexando={anexar.isPending}
+                aoMandarImagem={agencia
+                  ? () => toast.message("Pra anexar arquivo, abra o post pelo botão Ir até o post.")
+                  : (arquivo) => anexar.mutate({ arquivo, naConversa: true, legenda: texto.trim() || undefined })}
                 aoLimparTexto={() => setTexto("")} />
             </div>
             {/* A ficha completa abre POR CIMA do card: quem está montando a

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link2, Plus, X, Play, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -84,17 +84,40 @@ export function ListaReferencias({
 export function CampoReferencias({
   valor, onChange,
 }: { valor: string; onChange: (v: string) => void }) {
-  const links = parseRefLinks(valor);
-  const linhas = links.length ? links : [""];
-  const capas = useLinkPreviews(links.filter(isRefLink));
+  /* AS LINHAS MORAM AQUI, NAO NO VALOR (Walter, 20/09/2026: "clico em outra
+     referencia e nao abre o campo"). O valor salvo descarta linha vazia (e
+     tem que descartar: link em branco nao vai pro banco). So que a linha nova
+     nasce vazia, entao ela era descartada no mesmo clique que a criava. O
+     campo em branco vive no estado local ate alguem digitar nele. */
+  const [linhas, setLinhas] = useState<string[]>(() => {
+    const l = parseRefLinks(valor);
+    return l.length ? l : [""];
+  });
+  // Se o valor mudar por fora (abrir outro roteiro), realinha; se so
+  // diferir por linhas em branco nossas, deixa como esta.
+  useEffect(() => {
+    const deFora = serializeRefLinks(parseRefLinks(valor)) ?? "";
+    const daqui = serializeRefLinks(linhas) ?? "";
+    if (deFora !== daqui) {
+      const l = parseRefLinks(valor);
+      setLinhas(l.length ? l : [""]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valor]);
 
+  const capas = useLinkPreviews(linhas.filter(isRefLink));
+
+  const aplicar = (novo: string[]) => {
+    setLinhas(novo.length ? novo : [""]);
+    onChange(serializeRefLinks(novo) ?? "");
+  };
   const mudar = (i: number, v: string) => {
     const novo = [...linhas];
     novo[i] = v;
-    onChange(serializeRefLinks(novo) ?? "");
+    aplicar(novo);
   };
-  const somar = () => onChange(serializeRefLinks([...linhas, ""]) ?? "");
-  const tirar = (i: number) => onChange(serializeRefLinks(linhas.filter((_, x) => x !== i)) ?? "");
+  const somar = () => setLinhas([...linhas, ""]);
+  const tirar = (i: number) => aplicar(linhas.filter((_, x) => x !== i));
 
   return (
     <div className="space-y-2">
@@ -104,6 +127,7 @@ export function CampoReferencias({
           <div key={i} className="space-y-1.5">
             <div className="flex items-center gap-1.5">
               <Input value={l} onChange={(e) => mudar(i, e.target.value)}
+                autoFocus={i === linhas.length - 1 && l === "" && linhas.length > 1}
                 placeholder="https://instagram.com/reel/..." className="h-10" />
               {linhas.length > 1 && (
                 <button type="button" onClick={() => tirar(i)} aria-label="Tirar esta referência"
