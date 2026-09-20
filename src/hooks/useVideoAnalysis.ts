@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
-import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -61,8 +60,18 @@ export type ResultadoAnalise = {
   cta: { texto: string; tipo: string; segundo: number };
   por_que_funciona: string[];
   dificuldade: { nivel: string; o_que_precisa: string };
-  o_que_gravar: string[];
-  roteiro_adaptado: { titulo: string; blocos: BlocoAnalise[]; legenda_sugerida: string };
+  /* O DIRECIONAMENTO (circuito 14, 20/09/2026): o "e agora" da análise.
+     Opcionais porque análise gravada antes desta data não tem. */
+  o_que_copiar?: string[];
+  o_que_evitar?: string[];
+  ganchos_alternativos?: string[];
+  checklist_de_gravacao?: string[];
+  o_que_testar?: string;
+  /* A ADAPTAÇÃO virou segundo passo, com botão. Só existe depois que alguém
+     pediu, e diz pra QUEM foi escrita. */
+  o_que_gravar?: string[];
+  roteiro_adaptado?: { titulo: string; blocos: BlocoAnalise[]; legenda_sugerida: string };
+  adaptado_para?: { id: string; nome: string };
   notas: { gancho: number; ritmo: number; clareza: number; cta: number };
   formato_sugerido: string;
   metricas: {
@@ -74,10 +83,12 @@ export type ResultadoAnalise = {
   };
 };
 
-/** Quem pode rodar hoje: admin. Quando entrar cota, a regra muda aqui. */
+/* QUEM PODE RODAR (circuito 14, 20/09/2026).
+   Era `role === "admin"`, o teste fechado da fase 1, e isso significava que a
+   social mídia (pra quem a análise foi feita) nunca a viu. A trava saiu do
+   cargo e foi pro custo: a edge tem teto diário por pessoa, fail-closed. */
 export function usePodeAnalisarVideo() {
-  const { profile } = useProfile();
-  return profile?.role === "admin";
+  return true;
 }
 
 export function useAnaliseVideo(postUrl: string | null | undefined) {
@@ -108,7 +119,7 @@ export function useRodarAnaliseVideo() {
   const qc = useQueryClient();
   const { agencyOwnerId } = useActiveAccount();
   return useMutation({
-    mutationFn: async (v: { post_url: string; video_url?: string | null; thumbnail?: string | null; crm_client_id?: string | null; scrape_id?: string | null; origem?: "radar" | "studio" }) => {
+    mutationFn: async (v: { post_url: string; video_url?: string | null; thumbnail?: string | null; crm_client_id?: string | null; scrape_id?: string | null; origem?: "radar" | "studio"; acao?: "analisar" | "adaptar" }) => {
       const { data, error } = await supabase.functions.invoke("video-analyze", {
         body: { ...v, manager_id: agencyOwnerId },
       });
@@ -119,6 +130,31 @@ export function useRodarAnaliseVideo() {
     },
     onSuccess: (_d, v) => {
       void qc.invalidateQueries({ queryKey: ["video-analysis", agencyOwnerId, v.post_url] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+/* ── ADAPTAR PRO CLIENTE (circuito 14, 20/09/2026) ─────────────────────────
+   Segundo passo, e só quando alguém pede. Não lê o vídeo de novo: escreve em
+   cima da análise que já está salva. Por isso adaptar o mesmo vídeo pra três
+   clientes custa uma leitura só. */
+export function useAdaptarAnalise() {
+  const qc = useQueryClient();
+  const { agencyOwnerId } = useActiveAccount();
+  return useMutation({
+    mutationFn: async (v: { post_url: string; crm_client_id: string }) => {
+      const { data, error } = await supabase.functions.invoke("video-analyze", {
+        body: { ...v, acao: "adaptar", manager_id: agencyOwnerId },
+      });
+      if (error) throw new Error(error.message);
+      const d = data as { ok?: boolean; error?: string; message?: string };
+      if (!d?.ok) throw new Error(d?.message || d?.error || "Não consegui adaptar agora.");
+      return d;
+    },
+    onSuccess: (_d, v) => {
+      void qc.invalidateQueries({ queryKey: ["video-analysis", agencyOwnerId, v.post_url] });
+      toast.success("Roteiro adaptado pro cliente.");
     },
     onError: (e: Error) => toast.error(e.message),
   });

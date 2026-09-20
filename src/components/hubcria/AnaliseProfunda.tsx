@@ -3,7 +3,8 @@ import { Clapperboard, Clock, Copy, Film, Loader2, RotateCcw, Scissors, Sparkles
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { CRIA_HEX } from "@/lib/moduleTheme";
-import { useAnaliseVideo, usePodeAnalisarVideo, useRodarAnaliseVideo, type BlocoAnalise, type ResultadoAnalise } from "@/hooks/useVideoAnalysis";
+import { useAnaliseVideo, usePodeAnalisarVideo, useRodarAnaliseVideo, useAdaptarAnalise, type BlocoAnalise, type ResultadoAnalise } from "@/hooks/useVideoAnalysis";
+import { useCrmClients } from "@/hooks/useCrm";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ANÁLISE PROFUNDA (dentro do card do reel no Radar)
@@ -22,7 +23,14 @@ import { useAnaliseVideo, usePodeAnalisarVideo, useRodarAnaliseVideo, type Bloco
       É aqui que a leitura vira trabalho entregue: copia, ou vira pauta.
 
    O resto (letreiros, visual, o que gravar) fica recolhido, porque é consulta,
-   não decisão. Só admin vê, fase de teste.
+   não decisão.
+
+   CIRCUITO 14 (20/09/2026): a análise deixou de escrever o roteiro do cliente
+   automaticamente. Ela é do VÍDEO, e por isso ganhou o direcionamento (o que
+   copiar, o que evitar, ganchos em outro assunto, checklist de gravação).
+   Adaptar pra um cliente virou um botão, e adaptar de novo pra outro cliente
+   não relê o vídeo. Também saiu a trava de admin: a trava agora é o teto
+   diário na edge, porque o risco é custo, não cargo.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const seg = (n: number) => `${Math.floor(n / 60)}:${String(Math.round(n % 60)).padStart(2, "0")}`;
@@ -237,12 +245,80 @@ function Resultado({ r, postUrl, aoVirarPauta }: { r: ResultadoAnalise; postUrl:
         </ol>
       </Bloco>
 
-      {/* 4. A ENTREGA. O que a social mídia leva pro cliente dela. */}
+      {/* 4. O DIRECIONAMENTO (circuito 14, 20/09/2026) · pedido do Walter.
+             A análise dizia o que o vídeo É e parava ali: dava pra concordar
+             com tudo e não saber o que fazer na segunda-feira. Estes quatro
+             blocos são o "e agora", e existem mesmo sem cliente nenhum: é a
+             fórmula, que serve pra qualquer um. */}
+      {(r.o_que_copiar ?? []).length > 0 && (
+        <Bloco titulo="O que copiar">
+          <ul className="space-y-1">
+            {r.o_que_copiar!.map((t, i) => (
+              <li key={i} className="text-[12.5px] font-body text-foreground leading-relaxed flex gap-1.5">
+                <span className="text-primary font-bold shrink-0">{i + 1}.</span>{t}
+              </li>
+            ))}
+          </ul>
+        </Bloco>
+      )}
+
+      {(r.o_que_evitar ?? []).length > 0 && (
+        <Bloco titulo="O que não dá pra copiar">
+          <ul className="space-y-1">
+            {r.o_que_evitar!.map((t, i) => (
+              <li key={i} className="text-[12.5px] font-body text-foreground/90 leading-relaxed flex gap-1.5">
+                <span className="text-destructive shrink-0">•</span>{t}
+              </li>
+            ))}
+          </ul>
+        </Bloco>
+      )}
+
+      {(r.ganchos_alternativos ?? []).length > 0 && (
+        <Bloco titulo="O mesmo gancho, em outro assunto">
+          <div className="space-y-1.5">
+            {r.ganchos_alternativos!.map((t, i) => (
+              <button key={i} type="button"
+                onClick={() => { void navigator.clipboard.writeText(t); toast.success("Gancho copiado."); }}
+                className="w-full text-left text-[12.5px] font-body text-foreground leading-relaxed rounded-lg border border-border bg-background/60 px-2.5 py-2 hover:border-primary/50 transition-colors">
+                {t}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10.5px] font-body text-muted-foreground mt-1.5">Toque pra copiar. Troque o [ASSUNTO] pelo tema da peça.</p>
+        </Bloco>
+      )}
+
+      {(r.checklist_de_gravacao ?? []).length > 0 && (
+        <Bloco titulo="Antes de gravar, tenha em mãos">
+          <ul className="space-y-0.5">
+            {r.checklist_de_gravacao!.map((t, i) => (
+              <li key={i} className="text-[12px] font-body text-foreground/90 leading-relaxed flex gap-1.5">
+                <span className="text-muted-foreground shrink-0">□</span>{t}
+              </li>
+            ))}
+          </ul>
+        </Bloco>
+      )}
+
+      {r.o_que_testar && (
+        <Bloco titulo="O que testar numa segunda versão">
+          <p className="text-[12.5px] font-body text-foreground/90 leading-relaxed">{r.o_que_testar}</p>
+        </Bloco>
+      )}
+
+      {/* 5. A ENTREGA, SOB DEMANDA. Escrever o roteiro do cliente deixou de ser
+             automático: a análise é do vídeo, e adaptar é uma decisão de quem
+             lê. Custa pouco porque não relê o vídeo. */}
+      {roteiro.length === 0 && <AdaptarPraCliente postUrl={postUrl} />}
+
       {roteiro.length > 0 && (
         <div className="rounded-xl border border-primary/40 bg-card p-3 space-y-2">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[10.5px] font-body font-bold uppercase tracking-wider text-primary">O roteiro pro seu cliente</p>
+              <p className="text-[10.5px] font-body font-bold uppercase tracking-wider text-primary">
+                {r.adaptado_para?.nome ? `Roteiro adaptado pra ${r.adaptado_para.nome}` : "O roteiro pro seu cliente"}
+              </p>
               {r.roteiro_adaptado?.titulo && (
                 <p className="text-[13px] font-display font-bold text-foreground leading-snug mt-0.5">{r.roteiro_adaptado.titulo}</p>
               )}
@@ -344,6 +420,65 @@ function Resultado({ r, postUrl, aoVirarPauta }: { r: ResultadoAnalise; postUrl:
   );
 }
 
+/* ── ADAPTAR PRO CLIENTE ───────────────────────────────────────────────────
+   O segundo passo. Fica fechado atrás de um botão porque adaptar é decisão,
+   não consequência: a maior parte das vezes a pessoa abre a análise pra
+   entender a fórmula, e sair um roteiro de cliente sem ninguém pedir é ruído.
+   O cliente é escolhido AQUI, na hora, e não herdado da pesquisa: a mesma
+   fórmula serve pra três clientes diferentes, e adaptar de novo é barato (não
+   relê o vídeo). */
+function AdaptarPraCliente({ postUrl }: { postUrl: string }) {
+  const { data: clients = [] } = useCrmClients();
+  const adaptar = useAdaptarAnalise();
+  const [clienteId, setClienteId] = useState("");
+  const [aberto, setAberto] = useState(false);
+
+  if (clients.length === 0) return null;
+
+  if (!aberto) {
+    return (
+      <button type="button" onClick={() => setAberto(true)}
+        className="w-full rounded-xl border border-dashed border-primary/50 bg-primary/[0.04] px-3 py-2.5 text-left hover:bg-primary/[0.08] transition-colors">
+        <span className="flex items-center gap-1.5 text-[12.5px] font-display font-bold text-primary">
+          <Sparkles className="h-3.5 w-3.5" /> Adaptar esta fórmula pra um cliente
+        </span>
+        <span className="block text-[11px] font-body text-muted-foreground mt-0.5">
+          Escreve o roteiro no assunto e no tom dele, com a mesma arquitetura.
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-primary/40 bg-card p-3 space-y-2">
+      <p className="text-[10.5px] font-body font-bold uppercase tracking-wider text-primary">Adaptar pra qual cliente</p>
+      <select value={clienteId} onChange={(e) => setClienteId(e.target.value)}
+        className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm font-body">
+        <option value="">Escolha o cliente...</option>
+        {clients.map((c) => (
+          <option key={c.id} value={c.id}>{c.company_name || c.owner_name || "Cliente"}</option>
+        ))}
+      </select>
+      <div className="flex gap-2">
+        <button type="button" onClick={() => setAberto(false)}
+          className="flex-1 h-9 rounded-xl border border-border text-[12.5px] font-body hover:bg-muted transition-colors">
+          Agora não
+        </button>
+        <button type="button" disabled={!clienteId || adaptar.isPending}
+          onClick={() => adaptar.mutate({ post_url: postUrl, crm_client_id: clienteId })}
+          className="flex-1 h-9 rounded-xl bg-primary text-primary-foreground text-[12.5px] font-body font-bold disabled:opacity-50 inline-flex items-center justify-center gap-1.5">
+          {adaptar.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+          Escrever o roteiro
+        </button>
+      </div>
+      <p className="text-[10.5px] font-body text-muted-foreground">
+        Usa o brandbook do cliente. Não lê o vídeo de novo, então dá pra adaptar a mesma análise
+        pra mais de um cliente.
+      </p>
+    </div>
+  );
+}
+
 export function AnaliseProfunda({ postUrl, videoUrl, thumbnail, scrapeId, crmClientId, aoVirarPauta }: {
   postUrl: string | null | undefined;
   videoUrl?: string | null;
@@ -368,7 +503,6 @@ export function AnaliseProfunda({ postUrl, videoUrl, thumbnail, scrapeId, crmCli
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
           <Clapperboard className="h-3 w-3" /> Análise profunda do vídeo
-          <span className="normal-case tracking-normal font-semibold text-[9.5px] px-1.5 py-0.5 rounded-full bg-foreground/10">teste · admin</span>
         </p>
         {analise?.status === "done" && !velha && (
           <button type="button" onClick={iniciar} disabled={processando}

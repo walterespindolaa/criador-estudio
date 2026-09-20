@@ -12,6 +12,8 @@ import {
 } from "@/hooks/useHubCria";
 import { CriativoTab } from "@/components/hubcria/CriativoTab";
 import { HistoricoRadar } from "@/components/hubcria/HistoricoRadar";
+// Ler UM vídeo sem passar por pesquisa nem por cliente (circuito 14).
+import { AnalisarPorLink } from "@/components/hubcria/AnalisarPorLink";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { CRIA_HEX } from "@/lib/moduleTheme";
 import { Button } from "@/components/ui/button";
@@ -239,6 +241,13 @@ export default function HubCria() {
           )}
         </div>
       )}
+
+      {/* O CAMINHO CURTO (circuito 14, 20/09/2026): cola o link, analisa.
+          Antes, pra ler um vídeo que a pessoa viu no explorar, era preciso
+          cadastrar um concorrente, rodar a pesquisa e caçar o post no meio do
+          resultado. A pesquisa por perfil continua valendo pro que ela serve:
+          entender um concorrente ao longo do tempo. */}
+      <AnalisarPorLink />
 
       {/* HISTÓRICO DE TUDO. A leitura custa crédito e demora: ela tem que ser
           fácil de reencontrar, de mandar pro outro cliente e de apagar. */}

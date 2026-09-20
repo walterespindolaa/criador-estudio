@@ -211,6 +211,11 @@ REGRAS DE CADA CAMPO:
 - por_que_funciona: 3 a 5 razões concretas e específicas deste vídeo.
 - dificuldade: o quanto dá trabalho reproduzir isso, e em o_que_precisa liste o que a social mídia vai ter que ter em mãos.
 - notas: de 0 a 10 pra gancho, ritmo, clareza e CTA.
+- o_que_copiar: 3 a 5 MOVIMENTOS concretos que dá pra repetir em outro assunto. Cada um é uma instrução que a pessoa executa hoje, não um elogio. Errado: "usa um gancho forte". Certo: "abre com o número inteiro na tela, em fonte gigante, antes de qualquer palavra falada".
+- o_que_evitar: 2 a 3 coisas deste vídeo que NÃO dá pra repetir, ou que se copiadas sem cuidado estragam. Inclui o que depende de autoridade, de base grande ou de assunto polêmico.
+- ganchos_alternativos: 3 reescritas do gancho, MESMA técnica, outro assunto. Frases prontas, com o marcador [ASSUNTO] onde entra o tema de quem for usar.
+- checklist_de_gravacao: 4 a 6 itens do que precisa estar em mãos antes de gravar isto. Coisas materiais e decisões: cenário, luz, dado na mão, roupa, tempo de edição.
+- o_que_testar: uma hipótese honesta do que mudar numa segunda versão pra ver se melhora. Uma frase.
 
 ${VOZ_CRIA}`;
 }
@@ -292,10 +297,19 @@ const SCHEMA = {
       required: ["gancho", "ritmo", "clareza", "cta"],
     },
     formato_sugerido: { type: "string" },
+    /* O DIRECIONAMENTO (circuito 14, 20/09/2026). A análise entregava o que o
+       vídeo É e parava ali: a pessoa lia, concordava e não sabia o que fazer
+       na segunda-feira. Estes cinco campos são o "e agora". */
+    o_que_copiar: { type: "array", items: { type: "string" } },
+    o_que_evitar: { type: "array", items: { type: "string" } },
+    ganchos_alternativos: { type: "array", items: { type: "string" } },
+    checklist_de_gravacao: { type: "array", items: { type: "string" } },
+    o_que_testar: { type: "string" },
   },
   required: [
     "formula", "resumo", "gancho", "estrutura", "ritmo", "letreiros", "legendas", "audio",
     "visual", "cta", "por_que_funciona", "dificuldade", "notas", "formato_sugerido",
+    "o_que_copiar", "o_que_evitar", "ganchos_alternativos", "checklist_de_gravacao", "o_que_testar",
   ],
 };
 
@@ -650,7 +664,7 @@ function degenerado(data: string | undefined): boolean {
 // ── O trabalho pesado (roda depois da resposta) ─────────────────────────────
 async function processar(
   svc: SupabaseClient, id: string, postUrl: string, videoUrl: string | null,
-  apiKey: string, apifyToken: string | null, crmClientId: string | null,
+  apiKey: string, apifyToken: string | null,
 ) {
   const falhar = async (msg: string) => {
     await svc.from("video_analyses").update({ status: "error", error: msg.slice(0, 500), finished_at: new Date().toISOString() }).eq("id", id);
@@ -658,7 +672,6 @@ async function processar(
   try {
     await svc.from("video_analyses").update({ status: "running" }).eq("id", id);
 
-    const ctx = await contextoDoCliente(svc, crmClientId);
     const prompt = montarPrompt();
 
     const mp4 = await resolverVideoUrl(postUrl, videoUrl, apifyToken);
@@ -687,24 +700,25 @@ async function processar(
     // humanizar ANTES de tratar: a limpeza de estilo mexe em texto, o
     // tratamento mexe em estrutura. Nesta ordem o vocabulário fechado é a
     // última palavra e não corre risco de ser reescrito.
+    /* ANALISAR É ANALISAR (circuito 14, 20/09/2026) · pedido do Walter.
+       Aqui a função fazia duas coisas de uma vez: lia o vídeo E já escrevia o
+       roteiro adaptado ao cliente. Isso criava dois problemas.
+       O primeiro é de produto: a análise saía sempre amarrada a um cliente,
+       então ler um vídeo sem ter cliente em mente era impossível, e o "como
+       adaptar" vinha automático mesmo quando ninguém pediu.
+       O segundo é de qualidade: a resposta se dividia entre observar e
+       escrever, e a observação saía resumida, sem direcionamento.
+       Agora a análise é só do vídeo, com o orçamento inteiro nela. Adaptar
+       virou um segundo passo, com botão, e é barato: não lê o vídeo de novo. */
     const observado = tratar(humanizarDeep(bruto) as Record<string, unknown>, null);
-
-    // ETAPA 2: outro modelo escreve o roteiro do cliente. Falhou aqui, a
-    // análise ainda vale: salva sem o roteiro em vez de perder tudo.
-    const roteiro = await escreverRoteiro(observado as unknown as Record<string, unknown>, ctx);
-    const resultado = roteiro
-      ? { ...observado, ...(humanizarDeep({ roteiro_adaptado: { titulo: roteiro.titulo, blocos: roteiro.blocos, legenda_sugerida: roteiro.legenda_sugerida }, o_que_gravar: roteiro.o_que_gravar }) as Record<string, unknown>) }
-      : observado;
 
     await svc.from("video_analyses").update({
       status: "done",
-      result: resultado,
+      result: observado,
       usage: {
         ...(out.usage as Record<string, unknown> ?? {}),
         finish_reason: out.finish_reason ?? null,
         truncado: out.finish_reason === "length",
-        com_cliente: !!ctx,
-        com_roteiro: !!roteiro,
       },
       finished_at: new Date().toISOString(),
     }).eq("id", id);
@@ -712,6 +726,52 @@ async function processar(
     console.error("[video-analyze] falhou:", e);
     await falhar((e as Error).message || "erro desconhecido");
   }
+}
+
+/* ── ADAPTAR PRO CLIENTE (circuito 14, 20/09/2026) ─────────────────────────
+   O segundo passo, e só quando alguém pede. Lê a análise que já está salva e
+   escreve o roteiro do cliente em cima dela. NÃO toca no TwelveLabs: o vídeo
+   já foi lido uma vez, e reler custaria crédito por um trabalho que é de
+   texto. Por isso adaptar o mesmo vídeo pra três clientes diferentes custa
+   uma leitura só. */
+async function adaptarParaCliente(
+  svc: SupabaseClient, linhaId: string, analise: Record<string, unknown>, crmClientId: string,
+): Promise<{ ok: boolean; message?: string }> {
+  const ctx = await contextoDoCliente(svc, crmClientId);
+  if (!ctx) return { ok: false, message: "Não encontrei a ficha deste cliente." };
+
+  const roteiro = await escreverRoteiro(analise, ctx);
+  if (!roteiro) return { ok: false, message: "Não consegui escrever o roteiro agora. Tente de novo." };
+
+  /* O `adaptado_para` fica gravado no resultado de propósito: sem ele, a tela
+     mostraria um roteiro e ninguém saberia de QUEM ele é. Com três clientes na
+     carteira, isso vira erro de envio. */
+  const merge = humanizarDeep({
+    roteiro_adaptado: { titulo: roteiro.titulo, blocos: roteiro.blocos, legenda_sugerida: roteiro.legenda_sugerida },
+    o_que_gravar: roteiro.o_que_gravar,
+    adaptado_para: { id: crmClientId, nome: ctx.nome },
+  }) as Record<string, unknown>;
+
+  const { error } = await svc.from("video_analyses")
+    .update({ result: { ...analise, ...merge }, crm_client_id: crmClientId })
+    .eq("id", linhaId);
+  if (error) return { ok: false, message: error.message };
+  return { ok: true };
+}
+
+// deno-lint-ignore no-explicit-any
+async function limiteDoDia(admin: any, userId: string, scope: string, limite: number): Promise<boolean> {
+  try {
+    // Janela de UM DIA (a do ai-context-builder é de minuto). Análise de vídeo
+    // custa crédito de fornecedor: o teto é diário, não por rajada.
+    const windowKey = new Date().toISOString().slice(0, 10);
+    const { data, error } = await admin.rpc("check_and_increment_rate_limit",
+      { _user_id: userId, _scope: scope, _window_key: windowKey, _limit: limite });
+    if (error) { console.error("[video-analyze] rate-limit falhou, fail-closed:", error.message); return false; }
+    if (data == null) return false;
+    const row = Array.isArray(data) ? data[0] : data;
+    return row?.allowed === true;
+  } catch (e) { console.error("[video-analyze] rate-limit exceção, fail-closed:", e); return false; }
 }
 
 Deno.serve(async (req) => {
@@ -741,10 +801,13 @@ Deno.serve(async (req) => {
       mgr = reqMgr;
     }
 
-    // FASE 1: só admin. Quem não é recebe 403 com mensagem clara; a tela nem
-    // mostra o botão, isto é a trava de verdade.
-    const { data: prof } = await svc.from("profiles").select("role").eq("id", user.id).single();
-    if (prof?.role !== "admin") return json({ error: "forbidden", message: "Análise profunda em teste fechado." }, 403);
+    /* A TRAVA DEIXOU DE SER O CARGO (circuito 14, 20/09/2026) · pedido do Walter.
+       Era `role === "admin"`, teste fechado da fase 1. A social mídia nunca viu
+       a análise, que é justamente pra ela. A trava agora é o CUSTO, que é o
+       risco de verdade: leitura de vídeo gasta crédito de fornecedor.
+       Teto diário por pessoa, fail-closed (se o contador falhar, não deixa
+       passar). Adaptar tem teto mais largo porque não lê vídeo nenhum. */
+    const acao = body.acao === "adaptar" ? "adaptar" : "analisar";
 
     const postUrl = String(body.post_url ?? "").trim();
     if (!/^https?:\/\//i.test(postUrl)) return json({ error: "post_url_invalida" }, 400);
@@ -761,6 +824,26 @@ Deno.serve(async (req) => {
       if (!dono) return json({ error: "forbidden_client" }, 403);
     }
 
+    // ── ADAPTAR: usa a análise que já existe, não lê o vídeo de novo ──────
+    if (acao === "adaptar") {
+      if (!crmClientId) return json({ error: "cliente_obrigatorio", message: "Escolha o cliente pra adaptar." }, 400);
+      if (!await limiteDoDia(svc, user.id, "video-adaptar", 30)) {
+        return json({ error: "rate_limited", message: "Você adaptou muitos roteiros hoje. Amanhã libera de novo." }, 429);
+      }
+      const { data: linhaExistente } = await svc.from("video_analyses")
+        .select("id, status, result").eq("manager_id", mgr).eq("post_url", postUrl).maybeSingle();
+      if (!linhaExistente || linhaExistente.status !== "done" || !linhaExistente.result) {
+        return json({ error: "sem_analise", message: "Analise o vídeo primeiro." }, 400);
+      }
+      const r = await adaptarParaCliente(svc, linhaExistente.id, linhaExistente.result as Record<string, unknown>, crmClientId);
+      if (!r.ok) return json({ error: "adaptar_falhou", message: r.message }, 500);
+      return json({ ok: true, id: linhaExistente.id });
+    }
+
+    if (!await limiteDoDia(svc, user.id, "video-analisar", 8)) {
+      return json({ error: "rate_limited", message: "Você já analisou oito vídeos hoje. Amanhã libera de novo." }, 429);
+    }
+
     // Uma linha por (gestor, post). Rodar de novo reaproveita a linha.
     const { data: linha, error: upErr } = await svc.from("video_analyses").upsert({
       manager_id: mgr, post_url: postUrl, video_url: videoUrl, thumbnail,
@@ -769,7 +852,7 @@ Deno.serve(async (req) => {
     }, { onConflict: "manager_id,post_url" }).select("id").single();
     if (upErr || !linha) return json({ error: "db", message: upErr?.message }, 500);
 
-    const tarefa = processar(svc, linha.id, postUrl, videoUrl, apiKey, apifyToken, crmClientId);
+    const tarefa = processar(svc, linha.id, postUrl, videoUrl, apiKey, apifyToken);
     if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) EdgeRuntime.waitUntil(tarefa);
     else await tarefa; // ambiente sem waitUntil (local): roda inline
 
