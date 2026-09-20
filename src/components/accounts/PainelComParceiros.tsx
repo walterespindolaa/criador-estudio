@@ -1,12 +1,12 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, Check, CheckCircle2, Clock, Loader2, Send, Users, Wallet } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Clock, KanbanSquare, List, Loader2, Send, Users, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { hojeBR } from "@/lib/date-br";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useActiveAccount } from "@/contexts/AccountContext";
-import { useExternalClients } from "@/hooks/useCriaPost";
+import { useExternalClients, type ExternalClient } from "@/hooks/useCriaPost";
 import {
   ROTULO_PAPEL, useCachesDosParceiros, useMeusParceiros, usePecasComParceiros, useResolverPrazoSugerido,
   type PecaExterna,
@@ -66,6 +66,186 @@ const ETAPA: Record<string, { txt: string; cls: string }> = {
   entregue: { txt: "Entregue", cls: "bg-green-100 text-green-700" },
 };
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   O QUADRO DO PARCEIRO, COLUNA POR CLIENTE (Walter, 20/09/2026)
+
+   A Gabriela tem um board no Trello chamado "DESIGN - Ágatha Chagas": uma
+   coluna por cliente, e dentro os cards que estão com a designer, cada um com
+   a etiqueta da etapa. É assim que ela bate o olho e sabe o que a Ágatha tem
+   de cada cliente na mão. A lista de cima responde "o que está atrasado";
+   o quadro responde "como está a entrega de cada prestador, por cliente".
+
+   Uma pessoa por vez, escolhida nas pílulas. Colunas = clientes que têm peça
+   com ela. Não tem arrastar, de propósito: a etapa quem move é o parceiro na
+   área dele. Aqui é leitura. Clicar no card abre a peça.
+
+   Entregues aparecem embaixo, apagadas, só as dos últimos 30 dias: é o
+   "Aprovado" do Trello dela, o que já saiu mas ainda é do mês.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const ORDEM_ETAPA: Record<string, number> = { ajuste: 0, aguardando: 1, em_producao: 2, entregue: 3 };
+
+function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeParceiro }: {
+  parceiros: { member_id: string; nome: string; role: string }[];
+  pecas: PecaExterna[];
+  extClients: ExternalClient[];
+  hoje: string;
+  abrirPeca: (p: PecaExterna) => void;
+  nomeParceiro: Map<string, { nome: string; role: string }>;
+}) {
+  const [quem, setQuem] = useState<string>(parceiros[0]?.member_id ?? "");
+  useEffect(() => {
+    if (!parceiros.some((p) => p.member_id === quem)) setQuem(parceiros[0]?.member_id ?? "");
+  }, [parceiros, quem]);
+
+  const limite30 = useMemo(() => {
+    const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString();
+  }, []);
+
+  const minhas = useMemo(() => pecas.filter((p) => p.assignee_id === quem), [pecas, quem]);
+
+  const colunas = useMemo(() => {
+    const mapa = new Map<string, { abertas: PecaExterna[]; entregues: PecaExterna[] }>();
+    for (const p of minhas) {
+      const k = p.external_client_id ?? "sem-cliente";
+      const c = mapa.get(k) ?? { abertas: [], entregues: [] };
+      if (p.producao_status === "entregue") {
+        if ((p.entregue_em ?? p.updated_at ?? "") >= limite30) c.entregues.push(p);
+      } else c.abertas.push(p);
+      mapa.set(k, c);
+    }
+    const ordenar = (a: PecaExterna, b: PecaExterna) => {
+      const e = (ORDEM_ETAPA[a.producao_status ?? ""] ?? 9) - (ORDEM_ETAPA[b.producao_status ?? ""] ?? 9);
+      if (e !== 0) return e;
+      return (a.prazo_producao ?? "9999").localeCompare(b.prazo_producao ?? "9999");
+    };
+    return [...mapa.entries()]
+      .filter(([, c]) => c.abertas.length + c.entregues.length > 0)
+      .map(([id, c]) => ({
+        id,
+        cliente: extClients.find((e) => e.id === id) ?? null,
+        abertas: c.abertas.sort(ordenar),
+        entregues: c.entregues,
+        atrasadas: c.abertas.filter((p) => p.prazo_producao && diasAte(p.prazo_producao, hoje) < 0).length,
+      }))
+      // Quem tem mais coisa aberta vem primeiro; atrasada desempata.
+      .sort((a, b) => (b.atrasadas - a.atrasadas) || (b.abertas.length - a.abertas.length));
+  }, [minhas, extClients, limite30, hoje]);
+
+  const cargaDe = (id: string) => {
+    const lista = pecas.filter((p) => p.assignee_id === id && p.producao_status !== "entregue");
+    return { abertas: lista.length, atrasadas: lista.filter((p) => p.prazo_producao && diasAte(p.prazo_producao, hoje) < 0).length };
+  };
+
+  const cartao = (p: PecaExterna, apagado = false) => {
+    const d = p.prazo_producao ? diasAte(p.prazo_producao, hoje) : null;
+    return (
+      <button key={p.id} type="button" onClick={() => abrirPeca(p)}
+        className={cn(
+          "w-full text-left rounded-xl border bg-card p-3 shadow-sm hover:shadow-md hover:-translate-y-px transition-all",
+          apagado ? "opacity-60 border-border" : d !== null && d < 0 ? "border-red-300" : "border-border",
+        )}>
+        <span className="flex items-center gap-1.5 flex-wrap mb-1.5">
+          {p.producao_status && ETAPA[p.producao_status] && (
+            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", ETAPA[p.producao_status].cls)}>
+              {ETAPA[p.producao_status].txt}
+            </span>
+          )}
+          {p.format && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[p.format] ?? p.format}</span>}
+          {(p.revisoes ?? 0) > 0 && (
+            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full",
+              (p.revisoes ?? 0) >= 3 ? "bg-red-100 text-red-700" : "bg-violet-100 text-violet-700")}>
+              {p.revisoes}ª rev.
+            </span>
+          )}
+        </span>
+        <span className="block font-display font-bold text-[13px] leading-snug line-clamp-3">{p.title || "Sem título"}</span>
+        <span className="block mt-2">
+          {apagado
+            ? <span className="text-[11px] font-body text-muted-foreground">entregue {p.entregue_em ? new Date(p.entregue_em).toLocaleDateString("pt-BR") : ""}</span>
+            : <ContagemPrazo prazo={p.prazo_producao} hoje={hoje} />}
+        </span>
+      </button>
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Quem: uma pílula por parceiro, com a carga dele. */}
+      <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+        {parceiros.map((pc) => {
+          const carga = cargaDe(pc.member_id);
+          const ativa = pc.member_id === quem;
+          return (
+            <button key={pc.member_id} type="button" onClick={() => setQuem(pc.member_id)}
+              className={cn(
+                "shrink-0 inline-flex items-center gap-2 rounded-full border pl-1.5 pr-3 py-1.5 transition-colors",
+                ativa ? "bg-violet-600 border-violet-600 text-white shadow-md" : "bg-card border-border hover:border-violet-300",
+              )}>
+              <span className={cn("w-6 h-6 rounded-full grid place-items-center text-[10px] font-bold",
+                ativa ? "bg-white/20 text-white" : "bg-gradient-to-br from-violet-400 to-violet-700 text-white")}>
+                {pc.nome.charAt(0).toUpperCase()}
+              </span>
+              <span className="text-[13px] font-display font-semibold whitespace-nowrap">{pc.nome.split(" ")[0]}</span>
+              <span className={cn("text-[10.5px] font-body", ativa ? "text-white/80" : "text-muted-foreground")}>
+                {ROTULO_PAPEL[pc.role] ?? pc.role}
+              </span>
+              <span className={cn("text-[10.5px] font-bold tabular-nums rounded-full px-1.5 py-0.5",
+                ativa ? "bg-white/25 text-white" : "bg-muted text-muted-foreground")}>
+                {carga.abertas}
+              </span>
+              {carga.atrasadas > 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-600 text-white">{carga.atrasadas} atrasada{carga.atrasadas === 1 ? "" : "s"}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {colunas.length === 0 ? (
+        <Card className="p-8 rounded-2xl border-dashed text-center">
+          <p className="text-sm font-body font-medium text-foreground">
+            Nada com {nomeParceiro.get(quem)?.nome.split(" ")[0] ?? "este parceiro"} agora
+          </p>
+          <p className="text-xs text-muted-foreground font-body mt-1">Delegue pelo "Enviar para" dentro do post.</p>
+        </Card>
+      ) : (
+        /* Trilho horizontal, igual ao quadro do parceiro: uma coluna por cliente,
+           78vw no celular, 260px no desktop. */
+        <div className="flex gap-3 overflow-x-auto pb-3 -mx-1 px-1 snap-x">
+          {colunas.map((col) => {
+            const cor = col.cliente?.color || col.cliente?.brand_color || null;
+            return (
+              <div key={col.id} className="w-[78vw] max-w-[260px] shrink-0 snap-start rounded-2xl bg-muted/40 border border-border p-2.5">
+                <div className="flex items-center gap-2 px-1 mb-2.5">
+                  {col.cliente?.logo_url
+                    ? <img src={col.cliente.logo_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+                    : <span className="w-6 h-6 rounded-full shrink-0 grid place-items-center text-[10px] font-bold text-white"
+                        style={{ backgroundColor: cor ?? "#9ca3af" }}>
+                        {(col.cliente?.name ?? "?").charAt(0).toUpperCase()}
+                      </span>}
+                  <span className="font-display font-bold text-[13px] truncate flex-1">{col.cliente?.name ?? "Sem cliente"}</span>
+                  <span className="text-[10.5px] font-bold tabular-nums rounded-full px-1.5 py-0.5 bg-card border border-border text-muted-foreground">{col.abertas.length}</span>
+                  {col.atrasadas > 0 && <span className="w-2 h-2 rounded-full bg-red-600" title={`${col.atrasadas} atrasada(s)`} />}
+                </div>
+                <div className="space-y-2">
+                  {col.abertas.map((p) => cartao(p))}
+                  {col.entregues.length > 0 && (
+                    <>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1 pt-1">Entregues · 30 dias</p>
+                      {col.entregues.map((p) => cartao(p, true))}
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function PainelComParceiros({ clientes }: {
   /** id do external_client → nome, vindo de quem monta a tela. */
   clientes: Record<string, string>;
@@ -76,6 +256,12 @@ export function PainelComParceiros({ clientes }: {
   const { data: parceiros = [] } = useMeusParceiros();
   const { data: pecas = [], isLoading } = usePecasComParceiros(parceiros.length > 0);
   const resolver = useResolverPrazoSugerido();
+  /* Lista ou quadro, lembrado no navegador. O quadro é o jeito que a Gabriela
+     já usa no Trello, então é o padrão. */
+  const [visao, setVisao] = useState<"quadro" | "lista">(() => {
+    try { return localStorage.getItem("cria.parceiros.visao") === "lista" ? "lista" : "quadro"; } catch { return "quadro"; }
+  });
+  const trocarVisao = (v: "quadro" | "lista") => { setVisao(v); try { localStorage.setItem("cria.parceiros.visao", v); } catch { /* sem storage */ } };
   const hoje = hojeBR();
   // Cachês (fase 3): despesas do Caixa ligadas a parceiro, agrupadas por pessoa.
   const { agencyOwnerId } = useActiveAccount();
@@ -233,43 +419,71 @@ export function PainelComParceiros({ clientes }: {
             </section>
           )}
 
-          {/* ── 3. NA MÃO DE CADA PARCEIRO ── */}
-          {porParceiro.length === 0 && praRevisar.length === 0 ? (
-            <Card className="p-10 rounded-2xl border-dashed text-center">
-              <Users className="h-7 w-7 mx-auto text-muted-foreground mb-2.5" />
-              <p className="text-sm font-body font-medium text-foreground">Nada com parceiros agora</p>
-              <p className="text-xs text-muted-foreground font-body mt-1 max-w-md mx-auto">
-                Delegue um post pelo botão <b>Enviar para</b> dentro do editor: ele aparece aqui com a
-                etapa e a contagem do prazo, e o parceiro recebe o aviso na hora.
+          {/* ── 3. NA MÃO DE CADA PARCEIRO: quadro por cliente ou lista ── */}
+          <section>
+            <div className="flex items-center justify-between gap-2 mb-2 px-0.5">
+              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                <Users className="h-3.5 w-3.5" /> Na mão de cada parceiro
               </p>
-            </Card>
-          ) : (
-            porParceiro.map(([assigneeId, lista]) => {
-              const quem = nomeParceiro.get(assigneeId);
-              const atrasadas = lista.filter((p) => p.prazo_producao && diasAte(p.prazo_producao, hoje) < 0).length;
-              return (
-                <section key={assigneeId}>
-                  <p className="flex items-center gap-2 mb-2 px-0.5">
-                    <span className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-400 to-violet-700 text-white grid place-items-center text-[10px] font-bold">
-                      {(quem?.nome ?? "P").charAt(0).toUpperCase()}
-                    </span>
-                    <span className="font-display font-bold text-[14px]">{quem?.nome ?? "Parceiro"}</span>
-                    <span className="text-[11px] font-body text-muted-foreground">
-                      {quem ? (ROTULO_PAPEL[quem.role] ?? quem.role) : ""} · {lista.length} na mão
-                    </span>
-                    {atrasadas > 0 && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-600 text-white">
-                        {atrasadas} atrasada{atrasadas === 1 ? "" : "s"}
-                      </span>
-                    )}
-                  </p>
-                  <Card className="rounded-2xl border-border overflow-hidden divide-y divide-border">
-                    {lista.map((p) => linhaPeca(p))}
-                  </Card>
-                </section>
-              );
-            })
-          )}
+              <div className="inline-flex rounded-full border border-border bg-card p-0.5">
+                {([["quadro", KanbanSquare, "Quadro"], ["lista", List, "Lista"]] as const).map(([v, Icone, rotulo]) => (
+                  <button key={v} type="button" onClick={() => trocarVisao(v)}
+                    className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-body font-semibold transition-colors",
+                      visao === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+                    <Icone className="h-3.5 w-3.5" /> {rotulo}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {visao === "quadro" ? (
+              <QuadroDoParceiro
+                parceiros={parceiros}
+                pecas={pecas}
+                extClients={extClients as ExternalClient[]}
+                hoje={hoje}
+                abrirPeca={abrirPeca}
+                nomeParceiro={nomeParceiro}
+              />
+            ) : porParceiro.length === 0 && praRevisar.length === 0 ? (
+              <Card className="p-10 rounded-2xl border-dashed text-center">
+                <Users className="h-7 w-7 mx-auto text-muted-foreground mb-2.5" />
+                <p className="text-sm font-body font-medium text-foreground">Nada com parceiros agora</p>
+                <p className="text-xs text-muted-foreground font-body mt-1 max-w-md mx-auto">
+                  Delegue um post pelo botão <b>Enviar para</b> dentro do editor: ele aparece aqui com a
+                  etapa e a contagem do prazo, e o parceiro recebe o aviso na hora.
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-5">
+                {porParceiro.map(([assigneeId, lista]) => {
+                  const quem = nomeParceiro.get(assigneeId);
+                  const atrasadas = lista.filter((p) => p.prazo_producao && diasAte(p.prazo_producao, hoje) < 0).length;
+                  return (
+                    <div key={assigneeId}>
+                      <p className="flex items-center gap-2 mb-2 px-0.5">
+                        <span className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-400 to-violet-700 text-white grid place-items-center text-[10px] font-bold">
+                          {(quem?.nome ?? "P").charAt(0).toUpperCase()}
+                        </span>
+                        <span className="font-display font-bold text-[14px]">{quem?.nome ?? "Parceiro"}</span>
+                        <span className="text-[11px] font-body text-muted-foreground">
+                          {quem ? (ROTULO_PAPEL[quem.role] ?? quem.role) : ""} · {lista.length} na mão
+                        </span>
+                        {atrasadas > 0 && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-600 text-white">
+                            {atrasadas} atrasada{atrasadas === 1 ? "" : "s"}
+                          </span>
+                        )}
+                      </p>
+                      <Card className="rounded-2xl border-border overflow-hidden divide-y divide-border">
+                        {lista.map((p) => linhaPeca(p))}
+                      </Card>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
 
           {/* ── 4. CACHÊS: o que você deve aos parceiros (nasce ao entregar) ── */}
           {cachesPorParceiro.size > 0 && (
