@@ -642,6 +642,84 @@ function BgImageField({
   );
 }
 
+/* ── A FOTO DO PERFIL, COM AJUSTE (Walter, 20/09/2026) ─────────────────────
+   Mesma gramática do fundo do topo: escolhe, ajusta, e a imagem sobe já
+   recortada. O recorte é redondo porque é assim que ela aparece na página, e
+   ver o círculo enquanto ajusta evita a surpresa de descobrir depois que o
+   queixo ficou de fora.
+   "Reajustar" reabre o recortador com a foto atual quando a original desta
+   sessão não está mais em memória (best-effort via CORS, igual ao fundo). */
+function FotoDoPerfil({ avatar, inicial, temPropria, uploading, aoRecortar, aoRemover }: {
+  avatar: string;
+  inicial: string;
+  temPropria: boolean;
+  uploading: boolean;
+  aoRecortar: (blob: Blob) => void;
+  aoRemover: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [bruta, setBruta] = useState<string | null>(null);
+  const [aberto, setAberto] = useState(false);
+
+  const escolher = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const v = validateUpload(file, "bioMedia");
+    if (!v.ok) { toast.error(v.reason); return; }
+    const reader = new FileReader();
+    reader.onload = () => { setBruta(reader.result as string); setAberto(true); };
+    reader.onerror = () => toast.error("Erro ao ler imagem.");
+    reader.readAsDataURL(file);
+  };
+
+  const reajustar = () => {
+    if (bruta) { setAberto(true); return; }
+    if (avatar) { setBruta(avatar); setAberto(true); }
+  };
+
+  return (
+    <div className="flex items-center gap-3 flex-wrap">
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={escolher} />
+      <div className="w-16 h-16 rounded-full overflow-hidden border border-border bg-muted shrink-0 flex items-center justify-center">
+        {avatar ? (
+          <img src={avatar} alt="" loading="lazy" className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-muted-foreground font-display font-bold text-xl">{inicial}</span>
+        )}
+      </div>
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => inputRef.current?.click()}>
+            {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ImagePlus className="h-4 w-4 mr-2" />}
+            {uploading ? "Enviando..." : "Trocar foto"}
+          </Button>
+          {avatar && (
+            <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={reajustar}>
+              <Crop className="h-4 w-4 mr-2" /> Ajustar
+            </Button>
+          )}
+        </div>
+        {temPropria && (
+          <Button type="button" variant="ghost" size="sm" className="text-destructive justify-start" onClick={aoRemover}>
+            <Trash2 className="h-4 w-4 mr-2" /> Remover
+          </Button>
+        )}
+      </div>
+      {bruta && (
+        <ImageCropModal
+          open={aberto}
+          onOpenChange={(o) => { setAberto(o); if (!o) setBruta(null); }}
+          imageSrc={bruta}
+          onCropComplete={aoRecortar}
+          aspectRatio={1}
+          cropShape="round"
+        />
+      )}
+    </div>
+  );
+}
+
 function normalizeSlug(input: string): string {
   return input
     .toLowerCase()
@@ -892,7 +970,6 @@ const LinkInBio = () => {
   const [uploadingHeader, setUploadingHeader] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const headerBgInputRef = useRef<HTMLInputElement>(null);
-  const headerInputRef = useRef<HTMLInputElement>(null);
 
   /* BUG (31/08): a pessoa montava a bio, abria a página pública em outra aba
      pra testar e, ao VOLTAR, tudo que não estava salvo sumia. O retorno do
@@ -1068,11 +1145,18 @@ const LinkInBio = () => {
     setUploadingHeaderBg(false);
   };
 
-  const handleHeaderAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; e.target.value = "";
-    if (!file || !user) return;
+  /* A FOTO AGORA PASSA PELO RECORTE (Walter, 20/09/2026).
+     Ela subia crua e a página desenhava com `object-cover` num círculo: quem
+     mandava uma foto em pé saía com a testa cortada e não tinha o que fazer,
+     porque não havia ajuste nenhum. O fundo do topo já tinha recorte desde
+     setembro; a foto, que é a parte que todo mundo olha primeiro, não tinha.
+     Agora ela abre o mesmo recortador, no formato redondo, e sobe já assada:
+     o que a pessoa vê no ajuste é exatamente o que vai pro ar. */
+  const handleHeaderAvatarPronta = async (blob: Blob) => {
+    if (!user) return;
     setUploadingHeader(true);
-    const url = await uploadBioImage(file, "header");
+    const arquivo = new File([blob], `avatar-${Date.now()}.jpg`, { type: "image/jpeg" });
+    const url = await uploadBioImage(arquivo, "header");
     if (url) { setSettings((s) => ({ ...s, header: { ...s.header, avatar: url } })); setAppearanceDirty(true); }
     setUploadingHeader(false);
   };
@@ -1462,27 +1546,14 @@ const LinkInBio = () => {
                     <Label className="text-sm font-display font-semibold">Foto, nome e bio</Label>
                     <p className="text-xs text-muted-foreground mt-0.5">Deixe em branco pra usar o que já está no seu perfil.</p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-16 h-16 rounded-full overflow-hidden border border-border bg-muted shrink-0 flex items-center justify-center">
-                      {(settings.header.avatar || profile?.avatar_url) ? (
-                        <img src={settings.header.avatar || profile?.avatar_url || ""} alt="" loading="lazy" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-muted-foreground font-display font-bold text-xl">{(settings.header.name || profile?.name || "C").charAt(0).toUpperCase()}</span>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <input ref={headerInputRef} type="file" accept="image/*" className="hidden" onChange={handleHeaderAvatarUpload} />
-                      <Button type="button" variant="outline" size="sm" disabled={uploadingHeader} onClick={() => headerInputRef.current?.click()}>
-                        <ImagePlus className="h-4 w-4 mr-2" />
-                        {uploadingHeader ? "Enviando..." : "Trocar foto"}
-                      </Button>
-                      {settings.header.avatar && (
-                        <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => patchHeader({ avatar: "" })}>
-                          <Trash2 className="h-4 w-4 mr-2" /> Remover
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                  <FotoDoPerfil
+                    avatar={settings.header.avatar || profile?.avatar_url || ""}
+                    inicial={(settings.header.name || profile?.name || "C").charAt(0).toUpperCase()}
+                    temPropria={!!settings.header.avatar}
+                    uploading={uploadingHeader}
+                    aoRecortar={handleHeaderAvatarPronta}
+                    aoRemover={() => patchHeader({ avatar: "" })}
+                  />
                   <input value={settings.header.name} onChange={(e) => patchHeader({ name: e.target.value })} placeholder={profile?.name || "Seu nome"} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
                   <RichTextInput value={settings.header.bio} onChange={(v) => patchHeader({ bio: v })} placeholder={profile?.bio || "Escreva uma bio curta"} rows={3} />
                   {/* Cor do nome e da bio: antes era automática e pronto, e a Gabi

@@ -390,13 +390,32 @@ export default function AgendaCriacao() {
         const [ay, am, ad] = d.dia.split("-").map(Number);
         if (!ay || !am || !ad) return null;
         let quando = new Date(y, am - 1, ad);
-        if (d.repete_anual) { if (quando < hoje) quando = new Date(y + 1, am - 1, ad); }
-        else { quando = new Date(ay, am - 1, ad); if (quando < hoje) return null; }
-        return { d, quando };
+        /* `virou` = a data anual deste ano já passou e o que está na lista é a
+           ocorrência do ANO QUE VEM. Sem esta marca, a linha mostrava só dia e
+           mês ("13 de setembro") e, lida no dia 20, parecia uma data vencida
+           parada no topo da agenda (Gabriela, 20/09/2026). */
+        let virou = false;
+        if (d.repete_anual) {
+          if (quando < hoje) { quando = new Date(y + 1, am - 1, ad); virou = true; }
+        } else {
+          quando = new Date(ay, am - 1, ad);
+          if (quando < hoje) return null;
+        }
+        const dias = Math.round((quando.getTime() - hoje.getTime()) / 86400000);
+        return { d, quando, virou, dias };
       })
-      .filter((x): x is { d: AgendaData; quando: Date } => x !== null)
+      .filter((x): x is { d: AgendaData; quando: Date; virou: boolean; dias: number } => x !== null)
       .sort((a, b) => a.quando.getTime() - b.quando.getTime());
   }, [agendaDatas]);
+
+  /* SÓ AS PRÓXIMAS (Gabriela, 20/09/2026: "deixar só as próximas, e não as
+     passadas"). Data anual que só acontece daqui a onze meses não é próxima
+     coisa nenhuma: ela ocupa o topo da agenda o ano inteiro. A lista mostra a
+     janela dos próximos 90 dias, e o resto fica a um clique. */
+  const JANELA_DIAS = 90;
+  const datasNaJanela = useMemo(() => datasProximas.filter((x) => x.dias <= JANELA_DIAS), [datasProximas]);
+  const [verTodasAsDatas, setVerTodasAsDatas] = useState(false);
+  const datasNaTela = verTodasAsDatas ? datasProximas : datasNaJanela;
   const { data: crmTasks = [] } = useCrmTasks();
   const addCapture = useAddCapture();
   const updCapture = useUpdateCapture();
@@ -1698,15 +1717,26 @@ export default function AgendaCriacao() {
         <div className="flex items-center gap-1.5 mt-5 mb-2">
           <PartyPopper className="h-3.5 w-3.5" style={{ color: COMEMORATIVA_COLOR }} />
           <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">Datas comemorativas</p>
-          {datasProximas.length > 0 && <span className="text-[10px] font-body font-semibold text-muted-foreground">{datasProximas.length}</span>}
+          {datasNaTela.length > 0 && <span className="text-[10px] font-body font-semibold text-muted-foreground">{datasNaTela.length}</span>}
+          {/* O que ficou de fora da janela continua alcançável, e o botão diz
+              quantas são: esconder sem contar é o que faz a pessoa achar que
+              o cadastro sumiu. */}
+          {datasProximas.length > datasNaJanela.length && (
+            <button type="button" onClick={() => setVerTodasAsDatas((v) => !v)}
+              className="ml-auto text-[10.5px] font-body font-bold text-primary hover:underline">
+              {verTodasAsDatas ? "ver só as próximas" : `ver todas (${datasProximas.length})`}
+            </button>
+          )}
         </div>
-        {datasProximas.length === 0 ? (
+        {datasNaTela.length === 0 ? (
           <p className="text-[12px] font-body text-muted-foreground py-3 text-center rounded-xl border border-dashed border-border">
-            Nenhuma data cadastrada. Clique em "Nova data" pra criar a primeira e marcar de quais clientes ela é assunto.
+            {datasProximas.length === 0
+              ? 'Nenhuma data cadastrada. Clique em "Nova data" pra criar a primeira e marcar de quais clientes ela é assunto.'
+              : "Nenhuma data nos próximos três meses. As que você cadastrou voltam quando o mês delas chegar."}
           </p>
         ) : (
           <div className="space-y-2">
-            {datasProximas.map(({ d, quando: dt }) => {
+            {datasNaTela.map(({ d, quando: dt, virou, dias }) => {
               const aprovados = d.clientes.filter((c) => c.aprovada).length;
               // Sem cor escolhida, a linha usa o roxo que a grade já dá pras comemorativas.
               const cor = d.cor || COMEMORATIVA_COLOR;
@@ -1719,8 +1749,14 @@ export default function AgendaCriacao() {
                     <div className="flex items-center gap-2 flex-wrap text-[11px] font-body text-muted-foreground">
                       {/* Repete todo ano: o ano some do rótulo, porque ele não quer dizer
                           nada ali. Evento pontual mostra o ano, que é o que o diferencia. */}
-                      <span>{dt.toLocaleDateString("pt-BR", d.repete_anual ? { day: "2-digit", month: "long" } : { day: "2-digit", month: "long", year: "numeric" })}</span>
+                      {/* A data anual que já virou o ano mostra o ano de
+                          propósito: sem ele, "13 de setembro" lido em 20 de
+                          setembro parece coisa vencida. */}
+                      <span>{dt.toLocaleDateString("pt-BR", d.repete_anual && !virou ? { day: "2-digit", month: "long" } : { day: "2-digit", month: "long", year: "numeric" })}</span>
                       <span>{d.repete_anual ? "Todo ano" : "Só uma vez"}</span>
+                      <span className={cn("font-semibold", dias <= 7 && "text-primary")}>
+                        {dias === 0 ? "é hoje" : dias === 1 ? "amanhã" : dias <= 60 ? `em ${dias} dias` : `em ${Math.round(dias / 30)} meses`}
+                      </span>
                     </div>
                     {d.nota && <p className="text-[11px] font-body text-muted-foreground/80 mt-0.5 truncate italic">{d.nota}</p>}
                   </div>
