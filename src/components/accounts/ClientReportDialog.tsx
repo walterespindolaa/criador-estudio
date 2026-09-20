@@ -671,6 +671,28 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     },
   });
 
+  /* MATERIAIS DO PERIODO (Walter, 20/09/2026): o que o cliente pediu pelo link
+     e o que a social midia produziu fora do fluxo de posts (flyer, apresentacao,
+     logo). Entra no relatorio porque e trabalho entregue que nao aparecia em
+     lugar nenhum: o cliente pedia, recebia, e no fim do mes o PDF nao contava.
+     Recorte por created_at (quando foi pedido) dentro do periodo. */
+  type MaterialRow = { id: string; title: string; description: string | null; kind: string; status: string; requested_by: string; due_date: string | null; created_at: string };
+  const { data: materiais = [] } = useQuery<MaterialRow[]>({
+    queryKey: ["report-materiais", agencyOwnerId, client.crm_client_id, dayRange.since, dayRange.until],
+    enabled: open && !!agencyOwnerId && !!client.crm_client_id,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("client_materials")
+        .select("id, title, description, kind, status, requested_by, due_date, created_at")
+        .eq("manager_id", agencyOwnerId!)
+        .eq("crm_client_id", client.crm_client_id!)
+        .gte("created_at", `${dayRange.since}T00:00:00-03:00`)
+        .lte("created_at", `${dayRange.until}T23:59:59-03:00`)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as MaterialRow[];
+    },
+  });
+
   const captureSummary = useMemo(() => {
     const total = captures.length;
     const valid = captures.filter((c) => c.status !== "cancelada");
@@ -2134,6 +2156,52 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       ))
     : [];
 
+  // Materiais do período: só quando existem. Título, tipo, quem pediu, prazo,
+  // status e a descrição (o briefing do pedido), que é o que o Walter pediu
+  // pra aparecer.
+  const MAT_TIPO: Record<string, string> = { apresentacao: "Apresentação", flyer: "Flyer", arte_avulsa: "Arte avulsa", logo: "Logo", outro: "Outro" };
+  const MAT_ST: Record<string, { txt: string; cor: string }> = {
+    solicitado: { txt: "Recebido", cor: C.amber }, a_fazer: { txt: "Na fila", cor: C.sub },
+    em_aprovacao: { txt: "Em aprovação", cor: C.azul }, ajuste: { txt: "Em ajuste", cor: C.orange },
+    finalizado: { txt: "Entregue", cor: C.green },
+  };
+  const materiaisPages = materiais.length
+    ? pack(materiais, (m) => 1 + estLinhas(m.description ?? ""), 26).map((grupo, gi, all) => (
+        <div key={`materiais-${gi}`}>
+          {sectionTitle(all.length > 1 ? `Materiais do período (${materiais.length}) · parte ${gi + 1}` : `Materiais do período (${materiais.length})`, C.amarelo)}
+          {gi === 0 && (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {statCard(materiais.length === 1 ? "Material" : "Materiais", nb(materiais.length))}
+              {statCard("Pedidos pelo cliente", nb(materiais.filter((m) => m.requested_by === "cliente").length))}
+              {statCard("Entregues", nb(materiais.filter((m) => m.status === "finalizado").length), C.green)}
+            </div>
+          )}
+          <div style={{ marginTop: gi === 0 ? 12 : 0, border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
+            {grupo.map((m, i) => {
+              const st = MAT_ST[m.status] ?? MAT_ST.a_fazer;
+              return (
+                <div key={m.id} style={{ display: "flex", gap: 12, padding: "10px 13px", borderTop: i === 0 ? "none" : `1px solid ${C.line}` }}>
+                  <div style={{ width: 56, flexShrink: 0 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 800, color: C.ink }}>{parseDateOnly(m.created_at.slice(0, 10)).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</div>
+                    <div style={{ fontSize: 10, color: C.sub }}>{m.requested_by === "cliente" ? "pedido seu" : "nossa iniciativa"}</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: C.ink }}>{m.title}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: C.sub, background: C.soft, borderRadius: 999, padding: "2px 8px" }}>{MAT_TIPO[m.kind] ?? "Material"}</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: st.cor, border: `1px solid ${st.cor}`, borderRadius: 999, padding: "1px 8px" }}>{st.txt}</span>
+                      {m.due_date && <span style={{ fontSize: 10, color: C.sub }}>pra {parseDateOnly(m.due_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</span>}
+                    </div>
+                    {m.description?.trim() && <div style={{ fontSize: 11, color: C.sub, marginTop: 3, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{m.description.trim()}</div>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))
+    : [];
+
   // Próximos passos: página(s) opcional(is) no final, com a mesma formatação
   // rica do recado (negrito, tópicos, divisor) e continuação quando longo.
   const proximosLinhas = proximos.trim() ? proximos.trim().split("\n") : [];
@@ -2179,6 +2247,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   shotsPages.forEach((b, i) => defs.push({ key: `print-${i}`, body: b }));
   captacaoPages.forEach((b, i) => defs.push({ key: `captacao-${i}`, body: b }));
   reunioesPages.forEach((b, i) => defs.push({ key: `reunioes-${i}`, body: b }));
+  materiaisPages.forEach((b, i) => defs.push({ key: `materiais-${i}`, body: b }));
   proximosPages.forEach((b, i) => defs.push({ key: `proximos-${i}`, body: b }));
   defs.push({ key: "final", body: paginaFinal, semChrome: true });
 

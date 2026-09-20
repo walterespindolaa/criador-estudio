@@ -24,6 +24,7 @@ import { toast } from "sonner";
 // Ordem padrão (mais recentes) x ordem por prazo. Só exibição.
 import { OrdemDataToggle } from "@/components/shared/OrdemDataToggle";
 import { useOrdemPorData } from "@/hooks/useOrdemPorData";
+import { useExternalClients } from "@/hooks/useCriaPost";
 import { ordenarPorData } from "@/lib/ordenar-por-data";
 
 const COLUMNS: { key: MaterialStatus; label: string; dot: string }[] = [
@@ -67,6 +68,18 @@ function DragGrip({ handleProps }: { handleProps?: DraggableProvidedDragHandlePr
 
 export function MateriaisBoard({ clientId, clientName }: { clientId: string; clientName: string }) {
   const { materials, isLoading, isError, createMaterial, updateMaterial, deleteMaterial, uploadAttachment } = useClientMaterials(clientId);
+  /* O LINK SO DE PEDIDOS (Walter, 20/09/2026). O cliente ja podia pedir pelo
+     link de aprovacao, mas ele vem com posts na frente. Este copia um link em
+     que a unica coisa que existe e pedir e acompanhar. Mesmo token. Precisa
+     que o cliente tenha portal (external_client) ligado a esta ficha. */
+  const { clients: extClients, copyLink } = useExternalClients();
+  const extDoCliente = (extClients as { id: string; crm_client_id: string | null }[]).find((c) => c.crm_client_id === clientId) ?? null;
+  const [copiando, setCopiando] = useState(false);
+  const copiarLinkDePedidos = async () => {
+    if (!extDoCliente) { toast.error("Este cliente ainda não tem portal. Crie o link de aprovação dele primeiro, na aba Cria Post."); return; }
+    setCopiando(true);
+    try { await copyLink(extDoCliente.id, null, "materiais"); } finally { setCopiando(false); }
+  };
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ClientMaterial | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -167,7 +180,7 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="min-w-0">
           <p className="text-[12px] font-body text-muted-foreground leading-relaxed">
-            Demandas de material fora do fluxo de posts (apresentação, flyer, arte avulsa, logo…). O que o cliente pedir pelo portal cai aqui em <span className="font-semibold text-foreground">Solicitado</span>.
+            Demandas de material fora do fluxo de posts (apresentação, flyer, arte avulsa, logo…). O que o cliente pedir pelo link cai aqui em <span className="font-semibold text-foreground">Solicitado</span> e entra na Agenda na data que ele marcou.
           </p>
           {pedidosCliente > 0 && (
             <p className="text-[12px] font-body text-amber-700 mt-1 flex items-center gap-1.5">
@@ -175,9 +188,16 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
             </p>
           )}
         </div>
-        <Button onClick={openNew} className="shrink-0 rounded-xl h-10">
-          <Plus className="h-4 w-4 mr-1.5" /> Novo material
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" onClick={copiarLinkDePedidos} disabled={copiando} className="rounded-xl h-10"
+            title="Link em que o cliente só pede material e acompanha o status">
+            {copiando ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />}
+            <span className="hidden sm:inline">Link de pedidos</span><span className="sm:hidden">Link</span>
+          </Button>
+          <Button onClick={openNew} className="rounded-xl h-10">
+            <Plus className="h-4 w-4 mr-1.5" /> Novo material
+          </Button>
+        </div>
       </div>
 
       {/* Ordem das colunas: como veio (mais recentes) ou pelo prazo. */}

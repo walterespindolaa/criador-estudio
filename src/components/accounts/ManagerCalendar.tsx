@@ -6,11 +6,12 @@ import {
   endOfWeek, endOfMonth, startOfYear, endOfYear, subDays,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, CalendarDays, Clock, ChevronDown, Users, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, Clock, ChevronDown, Users, Loader2, Handshake, AlertTriangle, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useExternalClients, invalidatePostsEverywhere } from "@/hooks/useCriaPost";
+import { useMeusParceiros } from "@/hooks/useParceiro";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,7 +71,37 @@ type CalPost = {
   id: string; title: string; format: string; platform: string;
   external_client_id: string; scheduled_date: string | null; scheduled_time: string | null;
   approval_status: string | null; caption: string | null;
+  /* Produção externa (parceiro). Vêm sempre, mas só entram na grade no modo
+     "Com parceiros". */
+  assignee_id: string | null; prazo_producao: string | null;
+  producao_status: "aguardando" | "em_producao" | "entregue" | "ajuste" | null;
 };
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   O MODO "COM PARCEIROS" DO CALENDÁRIO (Walter, 20/09/2026)
+
+   O calendário mostrava só a data de POSTAGEM. Só que entre a social mídia e
+   a postagem existe outra data: o prazo em que o designer ou o filmmaker
+   devolve a peça. Sem ela na grade, a pessoa só descobre que a entrega cai
+   depois da postagem quando o cliente cobra.
+
+   Ligado, o calendário passa a mostrar só os posts que estão com parceiro,
+   em DOIS marcos por post:
+     · a ENTREGA, no dia do prazo combinado, com a inicial de quem faz;
+     · a POSTAGEM, no dia agendado, com aviso quando o prazo cai no mesmo
+       dia ou depois dela (não sobra tempo pra revisar e aprovar).
+   Dá pra filtrar por um parceiro só, pra ver a semana de uma pessoa.
+   ═══════════════════════════════════════════════════════════════════════════ */
+type CalItem = { kind: "postagem" | "entrega"; post: CalPost };
+
+/** Postagem em risco: entrega combinada no mesmo dia ou depois da postagem,
+ *  ou sem prazo nenhum combinado. */
+function emRisco(p: CalPost): boolean {
+  if (!p.scheduled_date) return false;
+  if (p.producao_status === "entregue") return false;
+  if (!p.prazo_producao) return true;
+  return p.prazo_producao >= p.scheduled_date;
+}
 
 const dkey = (d: Date) => format(d, "yyyy-MM-dd");
 
@@ -95,6 +126,17 @@ export function ManagerCalendar() {
   const [period, setPeriod] = useState<PeriodKey>("tudo");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+  // Modo "Com parceiros": só posts delegados, com entrega e postagem na grade.
+  // `quemFiltro` vazio = todos os parceiros.
+  const { data: parceiros = [] } = useMeusParceiros();
+  const [soParceiros, setSoParceiros] = useState(() => readFlag("cal_so_parceiros", false));
+  const [quemFiltro, setQuemFiltro] = useState<string>("");
+  const toggleSoParceiros = () => setSoParceiros((v) => { const n = !v; writeFlag("cal_so_parceiros", n); return n; });
+  const nomeParceiro = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const pc of parceiros) m[pc.member_id] = pc.nome;
+    return m;
+  }, [parceiros]);
   // Guarda se houve arraste de verdade: evita que o clique disparado logo após um
   // drop abra o popup de edição (drag e clique coexistem no mesmo card).
   const draggingRef = useRef(false);
@@ -137,7 +179,7 @@ export function ManagerCalendar() {
     enabled: !!user,
     queryFn: async () => {
       const { data, error } = await sbFrom("posts")
-        .select("id, title, format, platform, external_client_id, scheduled_date, scheduled_time, approval_status, caption")
+        .select("id, title, format, platform, external_client_id, scheduled_date, scheduled_time, approval_status, caption, assignee_id, prazo_producao, producao_status")
         .eq("user_id", user!.id)
         .not("external_client_id", "is", null);
       if (error) throw error;
@@ -185,18 +227,31 @@ export function ManagerCalendar() {
     onError: () => toast.error("Não consegui salvar o post."),
   });
 
-  const visible = (p: CalPost) => !hidden.has(p.external_client_id);
+  const visible = (p: CalPost) => {
+    if (hidden.has(p.external_client_id)) return false;
+    if (soParceiros && !p.assignee_id) return false;
+    if (soParceiros && quemFiltro && p.assignee_id !== quemFiltro) return false;
+    return true;
+  };
+  const dentroDoPeriodo = (d: string) => !periodRange || (d >= periodRange.start && d <= periodRange.end);
   const byDay = useMemo(() => {
-    const map: Record<string, CalPost[]> = {};
+    const map: Record<string, CalItem[]> = {};
     for (const p of posts) {
-      if (!p.scheduled_date || !visible(p)) continue;
+      if (!visible(p)) continue;
       // Fora do período escolhido? Não entra na grade.
-      if (periodRange && (p.scheduled_date < periodRange.start || p.scheduled_date > periodRange.end)) continue;
-      (map[p.scheduled_date] ??= []).push(p);
+      if (p.scheduled_date && dentroDoPeriodo(p.scheduled_date)) (map[p.scheduled_date] ??= []).push({ kind: "postagem", post: p });
+      // No modo parceiros a ENTREGA vira um marco próprio, no dia do prazo.
+      if (soParceiros && p.prazo_producao && dentroDoPeriodo(p.prazo_producao)) (map[p.prazo_producao] ??= []).push({ kind: "entrega", post: p });
     }
+    // Entrega antes da postagem no mesmo dia, que é a ordem em que acontece.
+    for (const k of Object.keys(map)) map[k].sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "entrega" ? -1 : 1));
     return map;
-  }, [posts, hidden, periodRange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts, hidden, periodRange, soParceiros, quemFiltro]);
   const unscheduled = posts.filter((p) => !p.scheduled_date && visible(p));
+  const emRiscoLista = useMemo(() => soParceiros ? posts.filter((p) => visible(p) && emRisco(p)) : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [posts, hidden, soParceiros, quemFiltro]);
 
   // Mês: 6 semanas a partir do domingo da semana do dia 1. Semana: 7 dias.
   const gridStart = view === "mes"
@@ -219,7 +274,7 @@ export function ManagerCalendar() {
   const allowDrop = (e: React.DragEvent) => e.preventDefault();
 
   const toggleClient = (id: string) =>
-    setHidden((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setHidden((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   // Card do post: arrastável entre os dias e clicável pra abrir o popup editável.
   // O drag nativo não dispara "click" depois de um arraste real, então dá pra ter os dois.
@@ -237,13 +292,44 @@ export function ManagerCalendar() {
         onClick={() => { if (draggingRef.current) return; setEditPost(p); }}
         className="cursor-grab active:cursor-grabbing rounded-md px-1.5 py-1 mb-1 text-[10px] leading-tight truncate"
         style={{ backgroundColor: `${color}1a`, borderLeft: `3px solid ${color}` }}
-        title={`${nameOf[p.external_client_id] ?? ""} · ${p.title}`}
+        title={`${nameOf[p.external_client_id] ?? ""} · ${p.title}${soParceiros && emRisco(p) ? " · entrega combinada no dia da postagem ou depois" : ""}`}
       >
+        {soParceiros && emRisco(p) && <AlertTriangle className="inline h-3 w-3 mr-1 text-red-600 -mt-0.5" />}
         {p.scheduled_time && <span className="font-semibold mr-1">{p.scheduled_time.slice(0, 5)}</span>}
         {p.title}
       </div>
     );
   };
+
+  /* Marco de ENTREGA: não arrasta (arrastar aqui mudaria a data da postagem,
+     que é outra coisa). Clica e abre o post. Violeta é a cor do parceiro no
+     resto do app; vermelho quando o prazo passou e não entregou; verde quando
+     já entregou. */
+  const chipEntrega = (p: CalPost) => {
+    const hoje = dkey(new Date());
+    const entregue = p.producao_status === "entregue";
+    const atrasada = !entregue && !!p.prazo_producao && p.prazo_producao < hoje;
+    const quem = p.assignee_id ? (nomeParceiro[p.assignee_id] ?? "Parceiro") : "Parceiro";
+    return (
+      <button
+        key={`e-${p.id}`}
+        type="button"
+        onClick={() => setEditPost(p)}
+        className={`w-full text-left rounded-md px-1.5 py-1 mb-1 text-[10px] leading-tight truncate border border-dashed ${
+          entregue ? "bg-green-50 border-green-300 text-green-800"
+          : atrasada ? "bg-red-50 border-red-300 text-red-800"
+          : "bg-violet-50 border-violet-300 text-violet-900"}`}
+        title={`Entrega de ${quem} · ${nameOf[p.external_client_id] ?? ""} · ${p.title}`}
+      >
+        <span className={`inline-grid place-items-center w-3.5 h-3.5 rounded-full text-white text-[8px] font-bold mr-1 -mt-0.5 ${
+          entregue ? "bg-green-600" : atrasada ? "bg-red-600" : "bg-violet-600"}`}>
+          {entregue ? <Check className="h-2.5 w-2.5" /> : quem.charAt(0).toUpperCase()}
+        </span>
+        <span className="font-semibold">{entregue ? "Entregue" : "Entrega"}</span> · {p.title}
+      </button>
+    );
+  };
+  const renderItem = (it: CalItem) => (it.kind === "entrega" ? chipEntrega(it.post) : chip(it.post));
 
   return (
     <div className="space-y-4">
@@ -314,6 +400,62 @@ export function ManagerCalendar() {
         )}
       </div>
 
+      {/* Com parceiros: só o que está delegado, com entrega e postagem na grade. */}
+      {parceiros.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button type="button" onClick={toggleSoParceiros}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-body font-semibold border transition-colors ${
+              soParceiros ? "bg-violet-600 text-white border-violet-600" : "border-border text-muted-foreground hover:text-foreground"}`}>
+            <Handshake className="h-3.5 w-3.5" /> Com parceiros
+          </button>
+          {soParceiros && (
+            <>
+              <button type="button" onClick={() => setQuemFiltro("")}
+                className={`px-2.5 py-1 rounded-full text-xs font-body border transition-colors ${!quemFiltro ? "bg-violet-100 text-violet-900 border-violet-300" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                Todos
+              </button>
+              {parceiros.map((pc) => (
+                <button key={pc.member_id} type="button" onClick={() => setQuemFiltro(pc.member_id)}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-body border transition-colors ${
+                    quemFiltro === pc.member_id ? "bg-violet-100 text-violet-900 border-violet-300" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                  <span className="inline-grid place-items-center w-4 h-4 rounded-full bg-violet-600 text-white text-[9px] font-bold">{pc.nome.charAt(0).toUpperCase()}</span>
+                  {pc.nome.split(" ")[0]}
+                </button>
+              ))}
+              <span className="text-[11px] font-body text-muted-foreground ml-1">
+                tracejado = entrega do parceiro · cheio = postagem
+              </span>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Postagens em risco: a entrega combinada cai no dia da postagem ou
+          depois, ou nem tem prazo. É o cruzamento que o Walter pediu, em
+          lista, porque na grade a pessoa teria que comparar dois dias de cabeça. */}
+      {soParceiros && emRiscoLista.length > 0 && (
+        <div className="rounded-xl border border-red-200 bg-red-50/60 p-3">
+          <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-display font-semibold text-red-800 mb-1.5">
+            <AlertTriangle className="h-3.5 w-3.5" /> Postagem em risco ({emRiscoLista.length})
+          </p>
+          <div className="space-y-1">
+            {emRiscoLista.map((p) => (
+              <button key={p.id} type="button" onClick={() => setEditPost(p)}
+                className="w-full text-left flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-red-100/60 transition-colors">
+                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: colorOf[p.external_client_id] ?? "#EA4918" }} />
+                <span className="text-[12px] font-body font-semibold text-foreground truncate flex-1">{p.title}</span>
+                <span className="text-[11px] font-body text-red-800 shrink-0">
+                  {p.prazo_producao
+                    ? `entrega ${p.prazo_producao.slice(8, 10)}/${p.prazo_producao.slice(5, 7)} · posta ${p.scheduled_date!.slice(8, 10)}/${p.scheduled_date!.slice(5, 7)}`
+                    : `sem prazo combinado · posta ${p.scheduled_date!.slice(8, 10)}/${p.scheduled_date!.slice(5, 7)}`}
+                  {p.assignee_id && nomeParceiro[p.assignee_id] ? ` · ${nomeParceiro[p.assignee_id].split(" ")[0]}` : ""}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* A agendar: minimizada por padrão. O container inteiro continua sendo a zona de
           drop pra desagendar (arrastar um post pra cá), mesmo colapsada. */}
       <div
@@ -359,14 +501,16 @@ export function ManagerCalendar() {
                   {format(d, "d")}
                 </div>
                 {/* Desktop (md+): cards com texto e drag-and-drop, exatamente como antes. */}
-                <div className="hidden md:block">{list.map(chip)}</div>
+                <div className="hidden md:block">{list.map(renderItem)}</div>
                 {/* Mobile: indicador compacto (pontos por item + total). Tocar abre a lista do dia. */}
                 {list.length > 0 && (
                   <button type="button" onClick={() => setDayModal(dkey(d))}
                     className="md:hidden w-full min-h-[28px] flex flex-wrap content-start items-center gap-0.5 rounded-md px-0.5 py-0.5 hover:bg-muted/40 transition-colors"
                     aria-label={`Ver ${list.length} item(ns) do dia ${format(d, "d")}`}>
-                    {list.slice(0, 4).map((p) => (
-                      <span key={p.id} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: colorOf[p.external_client_id] ?? "#EA4918" }} />
+                    {list.slice(0, 4).map((it) => (
+                      <span key={`${it.kind}-${it.post.id}`}
+                        className={`h-1.5 w-1.5 rounded-full ${it.kind === "entrega" ? "ring-1 ring-violet-500 bg-transparent" : ""}`}
+                        style={it.kind === "entrega" ? undefined : { backgroundColor: colorOf[it.post.external_client_id] ?? "#EA4918" }} />
                     ))}
                     <span className="ml-auto text-[10px] font-body font-bold text-muted-foreground">{list.length}</span>
                   </button>
@@ -391,13 +535,15 @@ export function ManagerCalendar() {
               <DialogHeader><DialogTitle className="font-display capitalize">{format(d, "EEEE, d 'de' MMMM", { locale: ptBR })}</DialogTitle></DialogHeader>
               <p className="text-[12px] font-body text-muted-foreground -mt-2">{items.length} post(s) · toque pra editar</p>
               <div className="space-y-1.5 mt-1">
-                {items.map((p) => (
-                  <button key={p.id} onClick={() => { setDayModal(null); setEditPost(p); }}
-                    className="w-full flex items-center gap-2.5 rounded-xl border border-border p-3 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors">
+                {items.map(({ kind, post: p }) => (
+                  <button key={`${kind}-${p.id}`} onClick={() => { setDayModal(null); setEditPost(p); }}
+                    className={`w-full flex items-center gap-2.5 rounded-xl border p-3 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors ${kind === "entrega" ? "border-dashed border-violet-300 bg-violet-50/50" : "border-border"}`}>
                     <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: colorOf[p.external_client_id] ?? "#EA4918" }} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-body font-semibold text-foreground truncate">{p.title}</p>
-                      <p className="text-[11px] font-body text-muted-foreground truncate">{nameOf[p.external_client_id] ?? ""}{p.scheduled_time ? ` · ${p.scheduled_time.slice(0, 5)}` : ""}</p>
+                      <p className="text-[13px] font-body font-semibold text-foreground truncate">
+                        {kind === "entrega" ? `Entrega de ${p.assignee_id ? (nomeParceiro[p.assignee_id] ?? "parceiro").split(" ")[0] : "parceiro"}: ` : ""}{p.title}
+                      </p>
+                      <p className="text-[11px] font-body text-muted-foreground truncate">{nameOf[p.external_client_id] ?? ""}{kind === "postagem" && p.scheduled_time ? ` · ${p.scheduled_time.slice(0, 5)}` : ""}</p>
                     </div>
                   </button>
                 ))}

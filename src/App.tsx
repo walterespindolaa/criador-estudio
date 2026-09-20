@@ -86,6 +86,7 @@ const Assinar = lazy(() => import("./pages/app/Assinar"));
 const BioPage = lazy(() => import("./pages/BioPage"));
 const Ativar = lazy(() => import("./pages/Ativar"));
 const AprovarPortal = lazy(() => import("./pages/AprovarPortal"));
+const MateriaisPortal = lazy(() => import("./pages/MateriaisPortal"));
 const PropostaPublica = lazy(() => import("./pages/PropostaPublica"));
 const CronogramaPublica = lazy(() => import("./pages/CronogramaPublica"));
 const RoteirosPublica = lazy(() => import("./pages/RoteirosPublica"));
@@ -297,6 +298,8 @@ const App = () => (
               <Route path="/bio/:slug/p/:itemSlug" element={<ErrorBoundary fallback={<BioQuebrou />}><BioPage /></ErrorBoundary>} />
               <Route path="/bio/:slug/blog/:itemSlug" element={<ErrorBoundary fallback={<BioQuebrou />}><BioPage /></ErrorBoundary>} />
               <Route path="/aprovar/:token" element={<AprovarPortal />} />
+              {/* Link SO de pedidos de material: mesmo token do de aprovacao. */}
+              <Route path="/materiais/:token" element={<MateriaisPortal />} />
               <Route path="/proposta/:token" element={<PropostaPublica />} />
               <Route path="/cronograma/:token" element={<CronogramaPublica />} />
               <Route path="/roteiros/:token" element={<RoteirosPublica />} />
