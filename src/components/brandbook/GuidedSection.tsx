@@ -1,7 +1,5 @@
-import { useState } from "react";
-import { ChevronDown, Maximize2, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useLayoutEffect, useRef, useState, type TextareaHTMLAttributes } from "react";
+import { ChevronDown, Sparkles, type LucideIcon } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { VoiceInput } from "@/components/shared/VoiceInput";
@@ -26,7 +24,25 @@ type Props = {
   /** Chamado quando a pessoa sai do campo. É o gatilho do salvar sozinho. */
   onBlur: (questionKey: string) => void;
   chatPrompt?: string | null;
+  /** Ícone e cor do grupo. A cor vem da aba: cada aba tem a sua, e o card
+   *  herda, pra pessoa saber onde está sem ler o nome. */
+  icone?: LucideIcon;
+  cor?: { badge: string; feito: string };
 };
+
+/* O campo cresce com o texto. Antes havia um "abrir" que jogava a resposta
+   num popup: a pessoa saía do lugar onde estava pra ler o que já via, e voltava.
+   Se o campo tem o tamanho do texto, não existe nada pra abrir. */
+function CampoQueCresce(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.max(el.scrollHeight, 72)}px`;
+  }, [props.value]);
+  return <Textarea ref={ref} {...props} />;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    UM GRUPO DE PERGUNTAS (Walter, 20/09/2026: "essa parte de visualização do
@@ -52,8 +68,9 @@ export function GuidedSection({
   onAnswerChange,
   onBlur,
   chatPrompt,
+  icone: Icone,
+  cor,
 }: Props) {
-  const [expandida, setExpandida] = useState<Question | null>(null);
   const [promptAberto, setPromptAberto] = useState(false);
 
   const feitas = questions.filter((q) => (answers[q.key] ?? "").trim()).length;
@@ -62,15 +79,22 @@ export function GuidedSection({
   return (
     <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm">
       <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="min-w-0">
-          <h3 className="font-display font-bold text-base text-foreground">{title}</h3>
-          {descricao && (
-            <p className="text-[12px] font-body text-muted-foreground mt-0.5 leading-snug">{descricao}</p>
+        <div className="flex items-start gap-3 min-w-0">
+          {Icone && (
+            <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-xl", cor?.badge ?? "bg-primary/10 text-primary")}>
+              <Icone className="h-4 w-4" strokeWidth={1.75} />
+            </span>
           )}
+          <div className="min-w-0">
+            <h3 className="font-display font-bold text-base text-foreground">{title}</h3>
+            {descricao && (
+              <p className="text-[12px] font-body text-muted-foreground mt-0.5 leading-snug">{descricao}</p>
+            )}
+          </div>
         </div>
         <span className={cn(
           "shrink-0 text-[11px] font-body font-bold tabular-nums rounded-full px-2 py-0.5",
-          completo ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground",
+          completo ? (cor?.feito ?? "bg-emerald-100 text-emerald-700") : "bg-muted text-muted-foreground",
         )}>
           {feitas}/{questions.length}
         </span>
@@ -82,33 +106,21 @@ export function GuidedSection({
           const vazia = !valor.trim();
           return (
             <div key={q.key}>
-              <div className="flex items-start justify-between gap-2 mb-1.5">
-                <label
-                  htmlFor={idDaPergunta(sectionKey, q.key)}
-                  className="text-[13px] font-body font-semibold text-foreground leading-snug"
-                >
-                  {q.label}
-                </label>
-                {!vazia && (
-                  <button
-                    type="button"
-                    onClick={() => setExpandida(q)}
-                    title="Ver a resposta inteira"
-                    className="shrink-0 inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[11px] font-body text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <Maximize2 className="h-3 w-3" /> abrir
-                  </button>
-                )}
-              </div>
+              <label
+                htmlFor={idDaPergunta(sectionKey, q.key)}
+                className="block text-[13px] font-body font-semibold text-foreground leading-snug mb-1.5"
+              >
+                {q.label}
+              </label>
               <div className="relative">
-                <Textarea
+                <CampoQueCresce
                   id={idDaPergunta(sectionKey, q.key)}
                   value={valor}
                   onChange={(e) => onAnswerChange(q.key, e.target.value)}
                   onBlur={() => onBlur(q.key)}
                   placeholder={q.placeholder}
                   className={cn(
-                    "min-h-[72px] resize-y font-body text-sm rounded-xl pr-12",
+                    "min-h-[72px] resize-none overflow-hidden font-body text-sm rounded-xl pr-12 leading-relaxed",
                     vazia ? "border-dashed border-border" : "border-border",
                   )}
                 />
@@ -121,30 +133,6 @@ export function GuidedSection({
           );
         })}
       </div>
-
-      {/* Janela de leitura/edição. É a MESMA resposta (mesmo onAnswerChange):
-          fechar não perde nada, e o salvar sozinho grava ao sair do campo. */}
-      <Dialog open={!!expandida} onOpenChange={(o) => { if (!o && expandida) { onBlur(expandida.key); setExpandida(null); } }}>
-        <DialogContent className="sm:max-w-2xl">
-          {expandida && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="font-display text-base pr-6">{expandida.label}</DialogTitle>
-              </DialogHeader>
-              <Textarea
-                value={answers[expandida.key] || ""}
-                onChange={(e) => onAnswerChange(expandida.key, e.target.value)}
-                placeholder={expandida.placeholder}
-                className="min-h-[50vh] resize-y font-body text-sm border-border rounded-xl leading-relaxed"
-              />
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] font-body text-muted-foreground">Salva sozinho ao fechar.</p>
-                <Button variant="outline" size="sm" onClick={() => { onBlur(expandida.key); setExpandida(null); }}>Fechar</Button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* O prompt pra IA externa ficava aberto, com pré de 200px, embaixo de
           cada grupo. Virou uma linha que abre: quem quer, acha; quem está

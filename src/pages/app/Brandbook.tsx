@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   BookOpen, Users, Mic, Palette, Plus, Trash2, BookMarked, Download, Pencil, Bot, Wand2, Trophy, SmilePlus, Crown,
-  Briefcase, UserRound, ArrowRight, Check, Loader2, type LucideIcon,
+  Briefcase, UserRound, ArrowRight, Check, Loader2, Compass, Eye, Heart, Lightbulb, Sparkles, type LucideIcon,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -61,6 +61,20 @@ const PERSONA_ICON_MAP: Record<string, LucideIcon> = {
    usa (pílulas com feitos/total), que é a tela que o Walter apontou como a
    boa. As chaves das seções no banco NÃO mudaram; só o agrupamento na tela.
    ═══════════════════════════════════════════════════════════════════════════ */
+/* CADA ABA TEM UMA COR (Walter, 20/09/2026: "dar um pouco mais de vida").
+   As classes vêm escritas por inteiro, e não montadas com template, porque o
+   Tailwind só gera o CSS do que ele lê no código. */
+type CorDaAba = {
+  /** A pílula ativa: fundo cheio. */
+  ativa: string;
+  /** O ícone na pílula inativa e no card do grupo. */
+  badge: string;
+  /** O contador quando o grupo está completo. */
+  feito: string;
+  /** A faixa de introdução da aba. */
+  faixa: string;
+};
+
 type Aba = {
   valor: string;
   rotulo: string;
@@ -68,6 +82,7 @@ type Aba = {
   /** A frase que abre a aba: pra que servem estas respostas. */
   intro: string;
   secoes: readonly QuestionSectionKey[];
+  cor: CorDaAba;
 };
 
 const ABAS: readonly Aba[] = [
@@ -75,28 +90,46 @@ const ABAS: readonly Aba[] = [
     valor: "essencia", rotulo: "Quem você é", icone: UserRound,
     intro: "Sua história, seu porquê e o que você acredita. É daqui que a IA tira a voz de quem fala, não só o assunto.",
     secoes: ["sobre-voce", "moodboard-contexto", "visao-de-mundo"],
+    cor: { ativa: "data-[state=active]:bg-amber-600 data-[state=active]:border-amber-600", badge: "bg-amber-100 text-amber-700", feito: "bg-amber-100 text-amber-800", faixa: "bg-amber-50 border-amber-100 text-amber-950/80" },
   },
   {
     valor: "identidade", rotulo: "Identidade", icone: Palette,
     intro: "Como a marca se sente e se parece: sensações, estética, cores, fontes e o que te inspira.",
     secoes: ["moodboard-identidade", "moodboard-visual", "moodboard-inspiracoes"],
+    cor: { ativa: "data-[state=active]:bg-violet-600 data-[state=active]:border-violet-600", badge: "bg-violet-100 text-violet-700", feito: "bg-violet-100 text-violet-800", faixa: "bg-violet-50 border-violet-100 text-violet-950/80" },
   },
   {
     valor: "linha-editorial", rotulo: "Linha editorial", icone: BookOpen,
     intro: "Sobre o que você fala. Os pilares em cima, e as perguntas embaixo ajudam a chegar neles.",
     secoes: ["linha-editorial"],
+    cor: { ativa: "data-[state=active]:bg-sky-600 data-[state=active]:border-sky-600", badge: "bg-sky-100 text-sky-700", feito: "bg-sky-100 text-sky-800", faixa: "bg-sky-50 border-sky-100 text-sky-950/80" },
   },
   {
     valor: "persona", rotulo: "Persona", icone: Users,
     intro: "Pra quem você fala. Cadastre a pessoa e responda o que sabe dela; o resto a IA ajuda a montar.",
     secoes: ["persona-brand"],
+    cor: { ativa: "data-[state=active]:bg-emerald-600 data-[state=active]:border-emerald-600", badge: "bg-emerald-100 text-emerald-700", feito: "bg-emerald-100 text-emerald-800", faixa: "bg-emerald-50 border-emerald-100 text-emerald-950/80" },
   },
   {
     valor: "tom-de-voz", rotulo: "Tom de voz", icone: Mic,
     intro: "Como você fala. As etiquetas curtas vão primeiro pro prompt; as respostas longas dão o contexto.",
     secoes: ["tom-de-voz"],
+    cor: { ativa: "data-[state=active]:bg-rose-600 data-[state=active]:border-rose-600", badge: "bg-rose-100 text-rose-700", feito: "bg-rose-100 text-rose-800", faixa: "bg-rose-50 border-rose-100 text-rose-950/80" },
   },
 ];
+
+/** Um ícone por grupo de perguntas. A cor vem da aba. */
+const ICONE_DA_SECAO: Record<QuestionSectionKey, LucideIcon> = {
+  "sobre-voce": UserRound,
+  "moodboard-contexto": Compass,
+  "visao-de-mundo": Eye,
+  "moodboard-identidade": Heart,
+  "moodboard-visual": Palette,
+  "moodboard-inspiracoes": Lightbulb,
+  "linha-editorial": BookOpen,
+  "persona-brand": Users,
+  "tom-de-voz": Mic,
+};
 
 /** Uma frase por grupo de perguntas, mostrada no cabeçalho do card. */
 const INTRO_DA_SECAO: Partial<Record<QuestionSectionKey, string>> = {
@@ -535,7 +568,7 @@ const Brandbook = () => {
     );
   }
 
-  const renderGuidedSection = (sectionKey: QuestionSectionKey, showChatPrompt = false) => {
+  const renderGuidedSection = (sectionKey: QuestionSectionKey, cor: CorDaAba, showChatPrompt = false) => {
     const config = QUESTION_SECTIONS[sectionKey];
     return (
       <GuidedSection
@@ -543,6 +576,8 @@ const Brandbook = () => {
         sectionKey={sectionKey}
         title={config.title}
         descricao={INTRO_DA_SECAO[sectionKey]}
+        icone={ICONE_DA_SECAO[sectionKey]}
+        cor={{ badge: cor.badge, feito: cor.feito }}
         questions={config.questions}
         answers={answers[sectionKey] ?? {}}
         onAnswerChange={(key, value) => handleChange(sectionKey, key, value)}
@@ -648,17 +683,24 @@ const Brandbook = () => {
                   <TabsTrigger
                     key={aba.valor}
                     value={aba.valor}
-                    className="group rounded-full border border-border bg-card px-3.5 py-2 gap-2 shrink-0 transition-colors
-                      hover:border-primary/40
-                      data-[state=active]:bg-primary data-[state=active]:border-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+                    className={cn(
+                      "group rounded-full border border-border bg-card pl-1.5 pr-3 py-1.5 gap-2 shrink-0 transition-all hover:-translate-y-px hover:shadow-sm",
+                      "data-[state=active]:text-white data-[state=active]:shadow-md",
+                      aba.cor.ativa,
+                    )}
                   >
-                    <aba.icone className="h-3.5 w-3.5 shrink-0" />
+                    <span className={cn(
+                      "grid h-6 w-6 place-items-center rounded-full transition-colors",
+                      aba.cor.badge,
+                      "group-data-[state=active]:bg-white/20 group-data-[state=active]:text-white",
+                    )}>
+                      <aba.icone className="h-3.5 w-3.5" strokeWidth={2} />
+                    </span>
                     <span className="text-[13px] font-display font-semibold whitespace-nowrap">{aba.rotulo}</span>
                     <span className={cn(
                       "text-[10.5px] font-body font-bold tabular-nums rounded-full px-1.5 py-0.5",
-                      ok
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-muted text-muted-foreground group-data-[state=active]:bg-white/25 group-data-[state=active]:text-primary-foreground",
+                      ok ? aba.cor.feito : "bg-muted text-muted-foreground",
+                      "group-data-[state=active]:bg-white/25 group-data-[state=active]:text-white",
                     )}>
                       {c.feitas}/{c.total}
                     </span>
@@ -671,7 +713,10 @@ const Brandbook = () => {
           {ABAS.map((aba) => (
             <TabsContent key={aba.valor} value={aba.valor} className="mt-0">
               <motion.div key={aba.valor} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="space-y-4">
-                <p className="text-[13px] font-body text-muted-foreground leading-relaxed px-1">{aba.intro}</p>
+                <div className={cn("rounded-xl border px-4 py-2.5 flex items-start gap-2.5", aba.cor.faixa)}>
+                  <Sparkles className="h-4 w-4 shrink-0 mt-0.5 opacity-70" />
+                  <p className="text-[13px] font-body leading-relaxed">{aba.intro}</p>
+                </div>
 
                 {/* Os pilares vêm ANTES das perguntas (circuito 13): são a
                     decisão concreta; as perguntas ajudam a chegar nelas.
@@ -743,7 +788,7 @@ const Brandbook = () => {
                   </div>
                 )}
 
-                {aba.secoes.map((s) => renderGuidedSection(s, s === "linha-editorial" || s === "persona-brand" || s === "tom-de-voz"))}
+                {aba.secoes.map((s) => renderGuidedSection(s, aba.cor, s === "linha-editorial" || s === "persona-brand" || s === "tom-de-voz"))}
 
                 {aba.valor === "identidade" && (
                   <BrandValuesSection
