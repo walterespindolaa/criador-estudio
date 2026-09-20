@@ -147,6 +147,8 @@ export type CardAberto = {
    *  peça é entregue; o parceiro precisa ver o que vai receber. */
   cache: number | null;
   agencia: string;
+  /** Id da agência dona do post: é a chave da cor que o parceiro escolheu pra ela. */
+  agencia_id?: string | null;
   /** O que já está anexado nesta peça (referência da agência ou arquivo que o
    *  próprio parceiro subiu). Ele mandava e nunca mais via. */
   midias?: { url: string | null; thumb: string | null; nome: string | null; tipo: string | null }[];
@@ -470,7 +472,108 @@ export function useConversaDoCard(postId: string | null) {
     onSuccess: () => { void qc.invalidateQueries({ queryKey: chave }); },
     onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui enviar a mensagem. Ela continua escrita aqui: tente de novo.")),
   });
-  return { mensagens: lista.data ?? [], carregando: lista.isLoading, enviar };
+  /* MANDAR ARQUIVO NA CONVERSA, LADO DA AGÊNCIA (Walter, 20/09/2026: "não
+     consigo adicionar anexo nos comentários, se eu quiser mandar exemplo,
+     referência"). Sobe pro mesmo bucket e vira um comentário com a URL, que o
+     chat já renderiza como imagem. Não entra nas entregas do card: referência
+     que a social mídia manda não é versão da peça. */
+  const mandarImagem = useMutation({
+    mutationFn: async (v: { arquivo: File; legenda?: string }) => {
+      if (!postId) throw new Error("Sem card.");
+      const { data: sess } = await supabase.auth.getUser();
+      const uid = sess.user?.id;
+      if (!uid) throw new Error("Faça login de novo.");
+      const MAX = 80 * 1024 * 1024;
+      if (v.arquivo.size > MAX) throw new Error("Arquivo acima de 80 MB: mande pelo link da pasta.");
+      const safe = v.arquivo.name.replace(/[^\w.-]+/g, "_").slice(-80);
+      const caminho = `${uid}/conversa/${Date.now()}-${safe}`;
+      const { error: upErr } = await supabase.storage.from("media")
+        .upload(caminho, v.arquivo, { contentType: v.arquivo.type || undefined, upsert: false, cacheControl: "31536000" });
+      if (upErr) throw new Error(upErr.message);
+      const { data: pub } = supabase.storage.from("media").getPublicUrl(caminho);
+      const legenda = v.legenda?.trim();
+      const { error } = await sbFrom("post_approval_comments").insert({
+        post_id: postId, author_id: uid, author_role: "social_media",
+        content: legenda ? `${legenda}\n${pub.publicUrl}` : pub.publicUrl,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: chave }); toast.success("Enviado na conversa."); },
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui anexar.")),
+  });
+  return { mensagens: lista.data ?? [], carregando: lista.isLoading, enviar, mandarImagem };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROPOR OUTRA DATA, LADO DA AGÊNCIA (Walter, 20/09/2026: "botão para trocar
+   data, ou se a pessoa já aceitou, negociar, de ambos os lados")
+
+   A social mídia é dona do post: grava direto. A data volta pra "proposto",
+   que é o estado em que o parceiro topa ou sugere outra. O motivo entra na
+   conversa, como do lado dele, pra ninguém precisar perguntar "por quê?".
+   ═══════════════════════════════════════════════════════════════════════════ */
+export function useProporPrazo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { postId: string; data: string; motivo?: string }) => {
+      const { data: sess } = await supabase.auth.getUser();
+      const uid = sess.user?.id ?? null;
+      const { data, error } = await sbFrom("posts")
+        .update({ prazo_producao: v.data, prazo_status: "proposto", prazo_sugerido: null } as never)
+        .eq("id", v.postId).select("id").maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Não consegui trocar o prazo. Recarregue e tente de novo.");
+      const [a, m, d] = v.data.split("-");
+      let txt = `Prazo: propôs ${d}/${m}/${a}`;
+      if (v.motivo?.trim()) txt += ` (${v.motivo.trim().slice(0, 300)})`;
+      await sbFrom("post_approval_comments").insert({ post_id: v.postId, author_id: uid, author_role: "social_media", content: txt });
+      return v.postId;
+    },
+    onSuccess: (postId) => {
+      void qc.invalidateQueries({ queryKey: ["parceiro-card", postId] });
+      void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
+      void qc.invalidateQueries({ queryKey: ["conversa-card", postId] });
+      toast.success("Data proposta. O parceiro topa ou sugere outra.");
+    },
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui propor a data.")),
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   A COR QUE O PARCEIRO DÁ A CADA AGÊNCIA (profiles.cores_agencias)
+   ═══════════════════════════════════════════════════════════════════════════ */
+export function useCoresDasAgencias() {
+  const { user } = useAuth();
+  return useQuery<Record<string, string>>({
+    queryKey: ["cores-agencias", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("profiles").select("cores_agencias").eq("id", user!.id).maybeSingle();
+      if (error) {
+        if (aindaNaoExisteNoBanco(error.message)) return {};
+        throw error;
+      }
+      const raw = (data as { cores_agencias?: unknown } | null)?.cores_agencias;
+      return raw && typeof raw === "object" ? (raw as Record<string, string>) : {};
+    },
+  });
+}
+
+export function useSalvarCorDaAgencia() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { agenciaId: string; cor: string | null }) => {
+      const atual = qc.getQueryData<Record<string, string>>(["cores-agencias", user?.id]) ?? {};
+      const novo = { ...atual };
+      if (v.cor) novo[v.agenciaId] = v.cor; else delete novo[v.agenciaId];
+      const { error } = await sbFrom("profiles").update({ cores_agencias: novo } as never).eq("id", user!.id);
+      if (error) throw error;
+      return novo;
+    },
+    onSuccess: (novo) => { qc.setQueryData(["cores-agencias", user?.id], novo); },
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui salvar a cor.")),
+  });
 }
 
 export type AgenciaDoParceiro = {

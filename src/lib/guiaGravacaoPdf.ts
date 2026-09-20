@@ -124,6 +124,15 @@ function linksDoRoteiro(r: CaptureScript): string[] {
 
 export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
   const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
+
+  /* O LINK QUE NAO CLICAVA (Walter, 20/09/2026). O jsPDF grava o retangulo da
+     anotacao com y1 > y2 (ele converte "topo" e "base" pro sistema do PDF, que
+     cresce pra cima, e nao normaliza). Alguns leitores aceitam, outros (o
+     Preview do Mac, e o Chrome em certos casos) tratam o retangulo invertido
+     como area vazia. Passando a base como y e a altura negativa, os cantos
+     saem na ordem que o padrao PDF espera. */
+  const linkNormal = (x: number, y: number, w: number, h: number, url: string) =>
+    pdf.link(x, y + h, w, -h, { url });
   const cor = (d.cor && /^#[0-9a-f]{6}$/i.test(d.cor)) ? d.cor : LARANJA;
   const assina = d.elaboradoPor?.trim() || "sua social mídia";
 
@@ -304,17 +313,24 @@ export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
           pdf.addImage(img.data, "JPEG", COL_ESQ_X, ye, iw, ih);
           pdf.setDrawColor(...hexRgb(LINHA)); pdf.setLineWidth(0.2);
           pdf.rect(COL_ESQ_X, ye, iw, ih);
-          pdf.link(COL_ESQ_X, ye, iw, ih, { url: p.url });
+          linkNormal(COL_ESQ_X, ye, iw, ih, p.url);
           ye += ih + 3;
         }
+        // Com cara de link: sublinhado, e a area clicavel cobre o titulo E o
+        // endereco embaixo dele, nao so uma faixa de 5mm.
+        const yTopoLink = ye - 3;
         marca(); pdf.setFont("helvetica", "bold"); pdf.setFontSize(8.5);
-        pdf.text(`Abrir no ${p.nome}`, COL_ESQ_X, ye);
-        pdf.link(COL_ESQ_X, ye - 3, COL_ESQ_W, 5, { url: p.url });
+        const rotuloLink = `Abrir no ${p.nome}`;
+        pdf.text(rotuloLink, COL_ESQ_X, ye);
+        pdf.setDrawColor(...hexRgb(cor)); pdf.setLineWidth(0.25);
+        pdf.line(COL_ESQ_X, ye + 0.8, COL_ESQ_X + pdf.getTextWidth(rotuloLink), ye + 0.8);
         ye += 4;
         suave(); pdf.setFont("helvetica", "normal"); pdf.setFontSize(7);
         const ls = pdf.splitTextToSize(p.label, COL_ESQ_W);
         pdf.text(ls.slice(0, 2), COL_ESQ_X, ye);
-        ye += ls.slice(0, 2).length * 3.2 + 6;
+        const alturaLabel = ls.slice(0, 2).length * 3.2;
+        linkNormal(COL_ESQ_X, yTopoLink, COL_ESQ_W, (ye + alturaLabel) - yTopoLink, p.url);
+        ye += alturaLabel + 6;
       }
     }
 

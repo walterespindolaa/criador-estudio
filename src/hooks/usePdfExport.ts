@@ -161,7 +161,12 @@ async function buildPdf(element: HTMLDivElement, larguraFixa?: number) {
         const url = el.getAttribute("data-pdf-link");
         if (!url) continue;
         const r = el.getBoundingClientRect();
-        pdf.link((r.left - pageRect.left) * fator, (r.top - pageRect.top) * fator, r.width * fator, r.height * fator, { url });
+        // Base como y e altura negativa: o jsPDF nao normaliza o retangulo da
+        // anotacao, e alguns leitores ignoram retangulo invertido (mesma
+        // correcao do guia de gravacao, 20/09/2026).
+        const topo = (r.top - pageRect.top) * fator;
+        const alt = r.height * fator;
+        pdf.link((r.left - pageRect.left) * fator, topo + alt, r.width * fator, -alt, { url });
       }
     }
     return pdf;

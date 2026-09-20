@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCrmClient } from "@/hooks/useCrm";
 import { useProfile } from "@/hooks/useProfile";
 import { motion } from "framer-motion";
 import {
@@ -21,8 +22,8 @@ import { FichaDaMarca } from "@/pages/parceiro/Marcas";
 import { ErroAoCarregar } from "@/components/shared/ErroAoCarregar";
 import { CamadaDeAlfinetes, segundoBonito } from "@/components/shared/CamadaDeAlfinetes";
 import {
-  ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useConversaDoCard, useEntreguesDoParceiro,
-  useFilaDoParceiro, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useVersoesDaPeca,
+  ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useConversaDoCard, useCoresDasAgencias, useEntreguesDoParceiro,
+  useFilaDoParceiro, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useProporPrazo, useResolverPrazoSugerido, useVersoesDaPeca,
   type CardDaFila, type EntregueDoParceiro, type MarcaDoParceiro, type VersaoDaPeca,
 } from "@/hooks/useParceiro";
 import {
@@ -1104,9 +1105,14 @@ function FalaFormatada({ texto, meu }: { texto: string; meu: boolean }) {
   );
 }
 
-function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexando, aoMandarImagem, aoLimparTexto }: {
+function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexando, aoMandarImagem, aoLimparTexto, quem }: {
   cor: string;
   mensagens: { id: string; texto: string; papel: string; em: string }[];
+  /* QUEM É QUEM NO CHAT (Walter, 20/09/2026: "colocar nome do usuário ao invés
+     de social mídia"). O papel que está olhando vira "você"; o outro lado
+     ganha o nome de verdade e, quando o parceiro escolheu uma cor pra agência,
+     a fala dela sai nessa cor. */
+  quem?: { meuPapel: "parceiro" | "social_media"; nomeParceiro?: string | null; nomeAgencia?: string | null; corAgencia?: string | null };
   texto: string;
   setTexto: (v: string) => void;
   enviar: () => Promise<void>;
@@ -1146,21 +1152,30 @@ function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexand
              cliente_externo, cliente_externo_aprovacao). Todos contêm
              "client"; sem isso a fala dele saía rotulada como social mídia
              (auditoria 07/09). */
-          const meu = cm.papel === "parceiro";
+          const meuPapel = quem?.meuPapel ?? "parceiro";
+          const meu = cm.papel === meuPapel;
           const doCliente = /client/.test(cm.papel);
+          const daAgencia = cm.papel === "social_media";
+          const rotulo = meu ? "você"
+            : doCliente ? "cliente"
+            : daAgencia ? (quem?.nomeAgencia?.split(" ")[0] || "social mídia")
+            : (quem?.nomeParceiro?.split(" ")[0] || "parceiro");
+          const corDoOutro = !meu && daAgencia ? quem?.corAgencia : null;
           return (
             <div key={cm.id} className={cn("flex flex-col", meu ? "items-end" : "items-start")}>
               <span className={cn("text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full mb-1",
                 meu ? "bg-muted text-muted-foreground"
-                : doCliente ? "bg-green-100 text-green-700" : "bg-pink-100 text-pink-700")}>
-                {meu ? "você" : doCliente ? "cliente" : "social mídia"}
+                : doCliente ? "bg-green-100 text-green-700"
+                : corDoOutro ? "text-white" : "bg-pink-100 text-pink-700")}
+                style={corDoOutro ? { backgroundColor: corDoOutro } : undefined}>
+                {rotulo}
               </span>
               {/* O BALÃO USA A COR DA MARCA (Walter, 09/09/2026): era roxo
                   fixo e não acompanhava a cor escolhida no sistema, então o
                   card do cliente azul tinha capa azul e conversa roxa. */}
               <div className={cn("max-w-[88%] rounded-2xl px-3 py-2 text-[13px] font-body leading-relaxed break-words",
                 meu ? "text-white rounded-br-sm" : "bg-muted/70 border border-border rounded-bl-sm")}
-                style={meu ? { backgroundColor: cor } : undefined}>
+                style={meu ? { backgroundColor: cor } : corDoOutro ? { borderLeft: `3px solid ${corDoOutro}` } : undefined}>
                 <FalaFormatada texto={cm.texto} meu={meu} />
               </div>
               <span className="text-[9.5px] font-body text-muted-foreground mt-0.5 px-1">
@@ -1219,16 +1234,23 @@ function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexand
    texto chega da social mídia. */
 const EH_MARCADOR = /^\s*(slide|cena|card|arte|parte|bloco)\s*\d+\s*[:.)-]?\s*$/i;
 
-function PainelTexto({ titulo, texto, aoCopiar }: {
+function PainelTexto({ titulo, texto, aoCopiar, cor }: {
   titulo: string; texto: string; aoCopiar: (t: string, msg: string) => void;
+  /** Cor da marca: pinta a faixa do título e o botão copiar ("deixar
+   *  coloridinho", Walter, 20/09/2026). Sem cor, fica no cinza de antes. */
+  cor?: string | null;
 }) {
   const linhas = texto.split("\n");
+  const c = cor || null;
   return (
-    <div className="mt-4 rounded-xl border border-border overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b border-border">
+    <div className="mt-4 rounded-xl border overflow-hidden" style={c ? { borderColor: `${c}55` } : undefined}>
+      <div className={cn("flex items-center gap-2 px-3 py-2 border-b", !c && "bg-muted/50 border-border")}
+        style={c ? { backgroundColor: `${c}14`, borderColor: `${c}33` } : undefined}>
+        <span className="w-1.5 h-4 rounded-full shrink-0" style={{ backgroundColor: c ?? "#9ca3af" }} />
         <p className="text-[11px] font-display font-bold text-foreground flex-1">{titulo}</p>
         <button type="button" onClick={() => aoCopiar(texto, `${titulo} copiado.`)}
-          className="inline-flex items-center gap-1 text-[11px] font-body font-bold text-muted-foreground hover:text-primary transition-colors">
+          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-body font-bold transition-colors border"
+          style={c ? { color: c, borderColor: `${c}66`, backgroundColor: "#ffffffb3" } : undefined}>
           <CopyIcon className="h-3 w-3" /> copiar
         </button>
       </div>
@@ -1264,7 +1286,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
   postId: string | null;
   aoFechar: () => void;
   /** Presente = a social midia esta olhando, nao o parceiro. */
-  agencia?: { irAoPost: () => void; nomeDoParceiro?: string | null };
+  agencia?: { irAoPost: () => void; nomeDoParceiro?: string | null; crmClientId?: string | null };
 }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -1273,7 +1295,17 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
   // No modo agencia a mensagem sai como social_media, pela mesma tabela que o
   // editor do cliente usa, e o card recarrega pra ela aparecer na hora.
   const conversaAgencia = useConversaDoCard(agencia ? postId : null);
+  const proporPrazo = useProporPrazo();
+  const resolverPrazo = useResolverPrazoSugerido();
+  // A cor que EU (parceiro) dei a esta agência. No modo agência não se aplica.
+  const { data: coresAgencias = {} } = useCoresDasAgencias();
+  // Links úteis do cliente, lado da agência: a ficha do CRM é dela.
+  const { data: crmDoCard } = useCrmClient(agencia?.crmClientId ?? undefined);
   const [texto, setTexto] = useState("");
+  // Propor outra data (os dois lados): abre data + motivo.
+  const [propondo, setPropondo] = useState(false);
+  const [dataProposta, setDataProposta] = useState("");
+  const [motivoProposta, setMotivoProposta] = useState("");
   // Entregar em dois tempos: o clique abre o campo do link da versão final.
   const [entregando, setEntregando] = useState(false);
   const [linkEntrega, setLinkEntrega] = useState("");
@@ -1296,10 +1328,6 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
   const salvarMeta = useSalvarCardMeta();
   const minhaMeta = postId ? metasCards[postId] : undefined;
   const [novoItem, setNovoItem] = useState("");
-  // Negociação de prazo: sugerir abre data + motivo.
-  const [sugerindo, setSugerindo] = useState(false);
-  const [dataSugerida, setDataSugerida] = useState("");
-  const [motivoPrazo, setMotivoPrazo] = useState("");
 
   const enviar = async () => {
     const t = texto.trim();
@@ -1404,7 +1432,16 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     {card.titulo || "Sem título"}
                   </DialogTitle>
                   <span className="block text-[11.5px] font-body text-white/75 mt-1 truncate">
-                    {agencia ? <>com {agencia.nomeDoParceiro ?? "o parceiro"}</> : <>delegado por {card.agencia}</>}
+                    {agencia ? <>com {agencia.nomeDoParceiro ?? "o parceiro"}</> : (
+                      <>delegado por{" "}
+                        <span className="inline-flex items-center gap-1 font-semibold">
+                          {card.agencia_id && coresAgencias[card.agencia_id] && (
+                            <span className="inline-block w-2.5 h-2.5 rounded-full ring-1 ring-white/70" style={{ backgroundColor: coresAgencias[card.agencia_id] }} />
+                          )}
+                          {card.agencia}
+                        </span>
+                      </>
+                    )}
                     {card.publica_em && <> · publica em {dataBR(card.publica_em)}</>}
                   </span>
                 </span>
@@ -1613,10 +1650,10 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     na mesma linha do título, e o texto solto num corpo maior,
                     com espaço entre parágrafos e o SLIDE 1 destacado. */}
                 {card.gancho?.trim() && (
-                  <PainelTexto titulo="Gancho" texto={card.gancho} aoCopiar={copiar} />
+                  <PainelTexto titulo="Gancho" texto={card.gancho} aoCopiar={copiar} cor={card.marca.cor} />
                 )}
                 {card.roteiro?.trim() && (
-                  <PainelTexto titulo="Copy" texto={card.roteiro} aoCopiar={copiar} />
+                  <PainelTexto titulo="Copy" texto={card.roteiro} aoCopiar={copiar} cor={card.marca.cor} />
                 )}
 
                 {/* AS ARTES DO CARROSSEL, uma a uma. Antes o card só dizia
@@ -1644,7 +1681,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                 })()}
 
                 {card.legenda?.trim() && (
-                  <PainelTexto titulo="Legenda aprovada" texto={card.legenda} aoCopiar={copiar} />
+                  <PainelTexto titulo="Legenda aprovada" texto={card.legenda} aoCopiar={copiar} cor={card.marca.cor} />
                 )}
 
                 {/* ── SUA ENTREGA ──────────────────────────────────────────
@@ -1871,56 +1908,82 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     ou sugere outra data (com motivo, que entra na conversa);
                     negociando = a bola está com a social mídia. Enquanto isso,
                     o card segue produzível: negociar data não trava trabalho. */}
-                {!agencia && card.prazo_status === "proposto" && card.prazo_producao ? (
-                  <div className="rounded-xl border border-amber-300 bg-amber-50/70 px-3.5 py-3 space-y-2">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
-                      <Clock className="h-3 w-3" /> Prazo proposto
-                    </p>
-                    <p className="font-display font-extrabold text-lg text-amber-900">{dataBR(card.prazo_producao)}</p>
-                    {!sugerindo ? (
-                      <div className="space-y-1.5">
-                        <Button size="sm" className="w-full rounded-xl" disabled={responderPrazo.isPending}
-                          onClick={() => responderPrazo.mutate({ aceita: true })}>
-                          {responderPrazo.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Topo esse prazo</>}
-                        </Button>
-                        <button type="button" onClick={() => setSugerindo(true)}
-                          className="w-full text-[11.5px] font-body font-bold text-amber-800">
-                          Sugerir outra data
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5">
-                        <input type="date" value={dataSugerida} onChange={(e) => setDataSugerida(e.target.value)}
-                          className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[12.5px] font-body" />
-                        <input type="text" value={motivoPrazo} onChange={(e) => setMotivoPrazo(e.target.value)}
-                          placeholder="Motivo (opcional, ex.: semana cheia)"
-                          className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[12.5px] font-body" />
-                        <Button size="sm" className="w-full rounded-xl" disabled={!dataSugerida || responderPrazo.isPending}
-                          onClick={() => { responderPrazo.mutate({ aceita: false, sugestao: dataSugerida, motivo: motivoPrazo }); setSugerindo(false); }}>
-                          {responderPrazo.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar sugestão"}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ) : card.prazo_status === "negociando" && card.prazo_sugerido ? (
-                  <div className="rounded-xl border border-blue-200 bg-blue-50/70 px-3.5 py-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-blue-800 flex items-center gap-1.5">
-                      <Clock className="h-3 w-3" /> Prazo em negociação
-                    </p>
-                    <p className="font-display font-extrabold text-lg mt-0.5 text-blue-900">{dataBR(card.prazo_sugerido)}</p>
-                    <p className="text-[11px] font-body text-blue-800/80 mt-0.5">Você sugeriu. Aguardando a social mídia.</p>
-                  </div>
-                ) : (
-                  <div className={cn("rounded-xl border px-3.5 py-3",
-                    card.prazo_producao && card.prazo_producao <= hojeBR()
-                      ? "bg-red-50 border-red-200" : "bg-background border-border")}>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Clock className="h-3 w-3" /> Entrega combinada</p>
-                    <p className={cn("font-display font-extrabold text-lg mt-0.5",
-                      card.prazo_producao && card.prazo_producao <= hojeBR() ? "text-red-600" : "text-foreground")}>
-                      {card.prazo_producao ? `${dataBR(card.prazo_producao)}` : "A combinar"}
-                    </p>
-                  </div>
-                )}
+                {/* ═══ O PRAZO, NEGOCIÁVEL DOS DOIS LADOS (Walter, 20/09/2026) ═══
+                    Antes só o parceiro respondia, e só enquanto estava
+                    "proposto". Aceitou, acabou: mudar exigia reenviar o post.
+                    Agora qualquer um dos lados pode propor outra data a
+                    qualquer momento, e o outro topa ou contrapropõe. Cada
+                    proposta vira uma linha na conversa, com motivo. */}
+                {(() => {
+                  const st = card.prazo_status;
+                  const euSouAgencia = !!agencia;
+                  const bolaComigo = euSouAgencia ? st === "negociando" : st === "proposto";
+                  const outro = euSouAgencia ? (agencia?.nomeDoParceiro?.split(" ")[0] ?? "o parceiro") : (card.agencia.split(" ")[0] || "a social mídia");
+                  const dataEmJogo = st === "negociando" ? card.prazo_sugerido : card.prazo_producao;
+                  const atrasado = st !== "negociando" && !!card.prazo_producao && card.prazo_producao <= hojeBR() && card.producao_status !== "entregue";
+                  const tom = bolaComigo ? "border-amber-300 bg-amber-50/70" : st === "negociando" || st === "proposto" ? "border-blue-200 bg-blue-50/70" : atrasado ? "border-red-200 bg-red-50" : "border-border bg-background";
+                  const titulo = st === "negociando" ? "Prazo em negociação" : st === "proposto" ? "Prazo proposto" : "Entrega combinada";
+
+                  const aceitar = () => {
+                    if (euSouAgencia && card.prazo_sugerido) resolverPrazo.mutate({ postId: card.id, dataAceita: card.prazo_sugerido });
+                    else responderPrazo.mutate({ aceita: true });
+                  };
+                  const propor = () => {
+                    if (!dataProposta) return;
+                    if (euSouAgencia) proporPrazo.mutate({ postId: card.id, data: dataProposta, motivo: motivoProposta });
+                    else responderPrazo.mutate({ aceita: false, sugestao: dataProposta, motivo: motivoProposta });
+                    setPropondo(false); setDataProposta(""); setMotivoProposta("");
+                  };
+                  const ocupado = proporPrazo.isPending || responderPrazo.isPending || resolverPrazo.isPending;
+
+                  return (
+                    <div className={cn("rounded-xl border px-3.5 py-3 space-y-2", tom)}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Clock className="h-3 w-3" /> {titulo}
+                      </p>
+                      <p className={cn("font-display font-extrabold text-lg", atrasado ? "text-red-600" : "text-foreground")}>
+                        {dataEmJogo ? dataBR(dataEmJogo) : "A combinar"}
+                      </p>
+                      {st === "negociando" && !euSouAgencia && (
+                        <p className="text-[11px] font-body text-blue-800/80">Você sugeriu. Aguardando {outro}.</p>
+                      )}
+                      {st === "negociando" && euSouAgencia && (
+                        <p className="text-[11px] font-body text-amber-900/80">{outro} sugeriu essa data (o combinado era {dataBR(card.prazo_producao)}).</p>
+                      )}
+                      {st === "proposto" && euSouAgencia && (
+                        <p className="text-[11px] font-body text-blue-800/80">Aguardando {outro} topar.</p>
+                      )}
+
+                      {!propondo ? (
+                        <div className="space-y-1.5 pt-0.5">
+                          {bolaComigo && (
+                            <Button size="sm" className="w-full rounded-xl" disabled={ocupado} onClick={aceitar}>
+                              {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Topo {dataEmJogo ? dataBR(dataEmJogo) : "esse prazo"}</>}
+                            </Button>
+                          )}
+                          <button type="button" onClick={() => { setPropondo(true); setDataProposta(card.prazo_producao ?? ""); }}
+                            className={cn("w-full text-[11.5px] font-body font-bold", bolaComigo ? "text-amber-800" : "text-primary")}>
+                            {bolaComigo ? "Sugerir outra data" : card.prazo_producao ? "Propor outra data" : "Propor uma data"}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <input type="date" value={dataProposta} min={hojeBR()} onChange={(e) => setDataProposta(e.target.value)}
+                            className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[12.5px] font-body" />
+                          <input type="text" value={motivoProposta} onChange={(e) => setMotivoProposta(e.target.value)}
+                            placeholder="Motivo (opcional, ex.: semana cheia)"
+                            className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[12.5px] font-body" />
+                          <div className="flex gap-1.5">
+                            <Button size="sm" className="flex-1 rounded-xl" disabled={!dataProposta || ocupado} onClick={propor}>
+                              {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar"}
+                            </Button>
+                            <Button size="sm" variant="ghost" className="rounded-xl" onClick={() => setPropondo(false)}>Cancelar</Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* O CACHÊ SAIU DAQUI (Walter, 09/09/2026): boa parte do
                     trabalho é fechada por PACOTE mensal, e um valor por peça
@@ -1933,7 +1996,10 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     de peça, é de cliente: agora mora na ficha da marca, em
                     "Marcas que atendo". Aqui fica o essencial pra reconhecer de
                     quem é a peça, e a porta pra ficha. */}
-                <button type="button" onClick={() => navigate("/socialmidia/marcas")}
+                <button type="button"
+                  onClick={() => agencia
+                    ? (agencia.crmClientId ? navigate(`/socialmidia/clientes/${agencia.crmClientId}/brandbook`) : agencia.irAoPost())
+                    : navigate("/socialmidia/marcas")}
                   className="w-full flex items-center gap-2.5 rounded-xl border border-border bg-background px-3.5 py-3 text-left hover:border-primary/40 transition-colors">
                   <span className="w-8 h-8 rounded-full border border-border bg-card overflow-hidden grid place-items-center shrink-0"
                     style={{ background: card.marca.logo ? undefined : (card.marca.cor || "#4B3FA8") }}>
@@ -1943,7 +2009,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-display font-bold text-foreground truncate">{card.marca.nome || "Cliente"}</span>
-                    <span className="block text-[11px] font-body text-primary font-semibold">ver a ficha da marca</span>
+                    <span className="block text-[11px] font-body text-primary font-semibold">{agencia ? "abrir o brandbook do cliente" : "ver a ficha da marca"}</span>
                   </span>
                   {card.marca.cor && <span className="w-4 h-4 rounded-md border border-border shrink-0" style={{ background: card.marca.cor }} />}
                 </button>
@@ -1981,7 +2047,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                       <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
                     </a>
                   )}
-                  {(marcaDoCard?.links ?? []).filter((l) => l?.url?.trim()).map((l, i) => (
+                  {(agencia ? (crmDoCard?.useful_links ?? []) : (marcaDoCard?.links ?? [])).filter((l) => l?.url?.trim()).map((l, i) => (
                     <a key={`${l.url}-${i}`} href={l.url} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-[12.5px] font-body font-bold text-foreground hover:border-primary/40 transition-colors">
                       {/drive\.google|dropbox|onedrive/i.test(l.url)
@@ -1991,7 +2057,17 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                       <ExternalLink className="h-3 w-3 ml-auto shrink-0 text-muted-foreground" />
                     </a>
                   ))}
-                  {marcaDoCard ? (
+                  {/* LADO DA AGÊNCIA (Walter, 20/09/2026): "Marcas que atendo" é
+                      tela do parceiro. Aqui o padrão são os Links úteis do
+                      cliente (vão em TODA peça dele) e o opcional é a pasta e a
+                      referência desta peça, que vêm do post. */}
+                  {agencia ? (
+                    <button type="button"
+                      onClick={() => agencia.crmClientId ? navigate(`/socialmidia/clientes/${agencia.crmClientId}/links-uteis`) : agencia.irAoPost()}
+                      className="w-full flex items-center gap-2 rounded-lg border border-dashed border-border bg-card px-2.5 py-2 text-[12px] font-body font-bold text-primary hover:border-primary/50 transition-colors">
+                      <Link2 className="h-3.5 w-3.5 shrink-0" /> Links úteis do cliente (padrão de toda peça)
+                    </button>
+                  ) : marcaDoCard ? (
                     <button type="button" onClick={() => setFichaAberta(marcaDoCard)}
                       className="w-full flex items-center gap-2 rounded-lg border border-dashed border-border bg-card px-2.5 py-2 text-[12px] font-body font-bold text-primary hover:border-primary/50 transition-colors">
                       <Sparkles className="h-3.5 w-3.5 shrink-0" /> Ficha da marca: cores, fontes, o que evitar
@@ -2002,10 +2078,11 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                       <Sparkles className="h-3.5 w-3.5 shrink-0" /> Marcas que atendo
                     </button>
                   )}
-                  {!card.pasta_drive && !card.referencia && (marcaDoCard?.links ?? []).length === 0 && (
+                  {!card.pasta_drive && !card.referencia && (agencia ? (crmDoCard?.useful_links ?? []) : (marcaDoCard?.links ?? [])).length === 0 && (
                     <p className="text-[10.5px] font-body text-muted-foreground leading-snug px-0.5 pt-0.5">
-                      Nenhum link cadastrado ainda, nem nesta peça nem no cliente. Peça na conversa:
-                      a agência cadastra na ficha do cliente, aba Links úteis, e aparece aqui em todas as peças dele.
+                      {agencia
+                        ? "Nenhum link ainda. Cadastre em Links úteis do cliente (vale pra toda peça dele) e, no post, a pasta e a referência desta peça."
+                        : "Nenhum link cadastrado ainda, nem nesta peça nem no cliente. Peça na conversa: a agência cadastra na ficha do cliente, aba Links úteis, e aparece aqui em todas as peças dele."}
                     </p>
                   )}
                 </div>
@@ -2047,11 +2124,20 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
               {/* CONVERSA: coluna da DIREITA e chat de verdade. */}
               <ChatDoCard cor={card.marca.cor || "#4B3FA8"} mensagens={card.comentarios}
                 texto={texto} setTexto={setTexto} enviar={enviar}
-                enviando={agencia ? conversaAgencia.enviar.isPending : comentar.isPending} anexando={anexar.isPending}
+                enviando={agencia ? conversaAgencia.enviar.isPending : comentar.isPending}
+                anexando={agencia ? conversaAgencia.mandarImagem.isPending : anexar.isPending}
                 aoMandarImagem={agencia
-                  ? () => toast.message("Pra anexar arquivo, abra o post pelo botão Ir até o post.")
+                  ? (arquivo) => conversaAgencia.mandarImagem.mutate({ arquivo, legenda: texto.trim() || undefined }, {
+                      onSuccess: () => { setTexto(""); void qc.invalidateQueries({ queryKey: ["parceiro-card", postId] }); },
+                    })
                   : (arquivo) => anexar.mutate({ arquivo, naConversa: true, legenda: texto.trim() || undefined })}
-                aoLimparTexto={() => setTexto("")} />
+                aoLimparTexto={() => setTexto("")}
+                quem={{
+                  meuPapel: agencia ? "social_media" : "parceiro",
+                  nomeParceiro: agencia?.nomeDoParceiro ?? null,
+                  nomeAgencia: card.agencia,
+                  corAgencia: !agencia && card.agencia_id ? (coresAgencias[card.agencia_id] ?? null) : null,
+                }} />
             </div>
             {/* A ficha completa abre POR CIMA do card: quem está montando a
                 peça não deveria perder o briefing pra consultar a marca. */}

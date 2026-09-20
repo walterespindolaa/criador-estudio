@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Copy, ExternalLink, FolderOpen, Instagram, Link2, Loader2, Palette, Sparkles, Type, X } from "lucide-react";
+import { Check, Copy, ExternalLink, FolderOpen, Instagram, Link2, Loader2, Palette, Sparkles, Type, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { ErroAoCarregar } from "@/components/shared/ErroAoCarregar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ROTULO_PAPEL, useMinhasAgencias, useMinhasMarcas, type MarcaDoParceiro } from "@/hooks/useParceiro";
+import { ROTULO_PAPEL, useCoresDasAgencias, useMinhasAgencias, useMinhasMarcas, useSalvarCorDaAgencia, type MarcaDoParceiro } from "@/hooks/useParceiro";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MARCAS QUE ATENDO
@@ -230,8 +231,42 @@ export function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFec
   );
 }
 
+/* AS CORES QUE O PARCEIRO DÁ ÀS AGÊNCIAS (Walter, 20/09/2026: "deixar o
+   designer escolher a cor MINHA"). Quem atende cinco social mídias quer bater
+   o olho no card e saber de quem é. A cor é escolha dele, fica no perfil dele,
+   e pinta as falas da agência na conversa e o cabeçalho do card. */
+const CORES_DE_AGENCIA = ["#E91E8C", "#7C3AED", "#2563EB", "#0891B2", "#059669", "#CA8A04", "#EA580C", "#DC2626", "#64748B"];
+
+function CorDaAgencia({ agenciaId }: { agenciaId: string }) {
+  const { data: cores = {} } = useCoresDasAgencias();
+  const salvar = useSalvarCorDaAgencia();
+  const atual = cores[agenciaId] ?? null;
+  return (
+    <div className="mt-3 pt-3 border-t border-border/70">
+      <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Minha cor pra esta agência</p>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {CORES_DE_AGENCIA.map((c) => (
+          <button key={c} type="button" title={c}
+            onClick={() => salvar.mutate({ agenciaId, cor: atual === c ? null : c })}
+            className={cn("w-6 h-6 rounded-full grid place-items-center ring-2 ring-offset-1 transition-transform hover:scale-110",
+              atual === c ? "ring-foreground" : "ring-transparent")}
+            style={{ backgroundColor: c }}>
+            {atual === c && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+          </button>
+        ))}
+        {atual && (
+          <button type="button" onClick={() => salvar.mutate({ agenciaId, cor: null })}
+            className="text-[11px] font-body text-muted-foreground hover:text-foreground ml-1">sem cor</button>
+        )}
+      </div>
+      <p className="text-[10.5px] font-body text-muted-foreground mt-1.5">Pinta as mensagens dela e o topo do card. Só você vê.</p>
+    </div>
+  );
+}
+
 export default function Marcas() {
   const { data: agencias = [], isLoading, isError: erroAgencias, isFetching: buscandoAgencias, refetch: recarregarAgencias } = useMinhasAgencias();
+  const { data: coresAgencias = {} } = useCoresDasAgencias();
   const { data: marcas = [], isLoading: carregandoMarcas, isError: erroMarcas, isFetching: buscandoMarcas, refetch: recarregarMarcas } = useMinhasMarcas();
   const [aberta, setAberta] = useState<MarcaDoParceiro | null>(null);
 
@@ -332,7 +367,8 @@ export default function Marcas() {
             {agencias.map((a) => (
                 <Card key={a.agencia_id} className="rounded-2xl border-border p-4">
                   <div className="flex items-center gap-3">
-                    <span className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 text-white grid place-items-center font-display font-bold shrink-0">
+                    <span className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 text-white grid place-items-center font-display font-bold shrink-0"
+                      style={coresAgencias[a.agencia_id] ? { background: coresAgencias[a.agencia_id] } : undefined}>
                       {a.agencia_nome.charAt(0).toUpperCase()}
                     </span>
                     <span className="min-w-0">
@@ -343,6 +379,7 @@ export default function Marcas() {
                       </span>
                     </span>
                   </div>
+                  <CorDaAgencia agenciaId={a.agencia_id} />
                 </Card>
             ))}
           </div>

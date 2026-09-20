@@ -548,6 +548,9 @@ export function PainelComParceiros({ clientes }: {
             aoFechar={() => setCardAberto(null)}
             agencia={cardAberto ? {
               nomeDoParceiro: nomeParceiro.get(cardAberto.assignee_id)?.nome ?? null,
+              crmClientId: cardAberto.external_client_id
+                ? (extClients.find((c) => c.id === cardAberto.external_client_id)?.crm_client_id ?? null)
+                : null,
               irAoPost: () => { const p = cardAberto; setCardAberto(null); irAoPost(p); },
             } : undefined}
           />
