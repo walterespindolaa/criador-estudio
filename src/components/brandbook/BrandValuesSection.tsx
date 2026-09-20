@@ -1,20 +1,24 @@
-import { motion } from "framer-motion";
-import { Ban, Languages, MessageSquare, MessageSquareText, Paintbrush, Palette, Plus, Trash2 } from "lucide-react";
+import { Ban, Languages, MessageSquare, MessageSquareText, Paintbrush, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { BrandItem } from "@/hooks/useBrandItems";
 
 const BRAND_ITEM_SECTIONS = [
-  { type: "cor", label: "Cores da marca", icon: Paintbrush, placeholder: "Ex: #C4622D" },
-  { type: "fonte", label: "Fontes", icon: Languages, placeholder: "Ex: Playfair Display" },
-  { type: "tom", label: "Tom de voz", icon: MessageSquareText, placeholder: "Ex: Acolhedor e direto" },
-  { type: "expressao", label: "Expressões que uso", icon: MessageSquare, placeholder: "Ex: Bora!" },
-  { type: "evitar", label: "Palavras que evito", icon: Ban, placeholder: "Ex: Não use gírias" },
+  { type: "cor", label: "Cores da marca", ajuda: "Nome e o código hex. Vai pro prompt de arte e pro PDF.", icon: Paintbrush, placeholder: "Ex: #C4622D" },
+  { type: "fonte", label: "Fontes", ajuda: "As famílias que você usa nas artes.", icon: Languages, placeholder: "Ex: Playfair Display" },
+  { type: "tom", label: "Tom de voz em poucas palavras", ajuda: "Etiquetas curtas. A IA lê estas antes das respostas longas.", icon: MessageSquareText, placeholder: "Ex: Acolhedor e direto" },
+  { type: "expressao", label: "Expressões que uso", ajuda: "Gírias, bordões, jeitos de falar que são seus.", icon: MessageSquare, placeholder: "Ex: Bora!" },
+  { type: "evitar", label: "Palavras que evito", ajuda: "O que não pode aparecer numa legenda sua.", icon: Ban, placeholder: "Ex: Não use gírias" },
 ] as const;
+
+type TipoDeItem = (typeof BRAND_ITEM_SECTIONS)[number]["type"];
 
 type Props = {
   brandItems: BrandItem[];
+  /** Quais listas mostrar. Cores e fontes moram na Identidade; tom, expressões
+   *  e o que evitar moram no Tom de Voz. Antes as cinco viviam juntas numa aba
+   *  chamada Identidade, e "palavras que evito" não é identidade visual. */
+  tipos: ReadonlyArray<TipoDeItem>;
   activeSection: string | null;
   newItemName: string;
   newItemValue: string;
@@ -27,6 +31,7 @@ type Props = {
 
 export function BrandValuesSection({
   brandItems,
+  tipos,
   activeSection,
   newItemName,
   newItemValue,
@@ -36,91 +41,91 @@ export function BrandValuesSection({
   onAddBrandItem,
   onDeleteBrandItem,
 }: Props) {
+  const secoes = BRAND_ITEM_SECTIONS.filter((s) => tipos.includes(s.type));
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Palette className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h2 className="text-lg font-display font-semibold text-foreground">Identidade da Marca</h2>
-          <p className="text-sm text-muted-foreground font-body">
-            Cores, fontes, expressões e elementos visuais que compõem sua marca.
-          </p>
-        </div>
-      </div>
-
-      {BRAND_ITEM_SECTIONS.map(section => {
-        const items = brandItems.filter(i => i.type === section.type);
+    <div className="space-y-4">
+      {secoes.map((section) => {
+        const items = brandItems.filter((i) => i.type === section.type);
+        const aberta = activeSection === section.type;
         return (
-          <Card key={section.type} className="border-border shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
-                <section.icon className="h-4 w-4 text-primary/70" />
-                {section.label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {items.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {items.map(item => (
-                    <div
-                      key={item.id}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-background rounded-xl border border-border"
+          <div key={section.type} className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="min-w-0">
+                <h3 className="font-display font-bold text-base text-foreground flex items-center gap-2.5">
+                  <section.icon className="h-[18px] w-[18px] text-primary" />
+                  {section.label}
+                </h3>
+                <p className="text-[12px] font-body text-muted-foreground mt-0.5 leading-snug">{section.ajuda}</p>
+              </div>
+              <span className="shrink-0 text-[11px] font-body font-bold tabular-nums rounded-full px-2 py-0.5 bg-muted text-muted-foreground">
+                {items.length}
+              </span>
+            </div>
+
+            {items.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {items.map((item) => (
+                  <div key={item.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-background rounded-xl border border-border">
+                    {section.type === "cor" && item.value && (
+                      <div className="w-4 h-4 rounded-full border border-border" style={{ backgroundColor: item.value }} />
+                    )}
+                    <span className="text-sm font-body text-foreground">{item.name}</span>
+                    {item.value && section.type !== "cor" && (
+                      <span className="text-xs text-muted-foreground font-body">({item.value})</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onDeleteBrandItem(item.id)}
+                      aria-label={`Remover ${item.name}`}
+                      className="text-muted-foreground hover:text-destructive transition-colors"
                     >
-                      {section.type === "cor" && item.value && (
-                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: item.value }} />
-                      )}
-                      <span className="text-sm font-body text-foreground">{item.name}</span>
-                      {item.value && section.type !== "cor" && (
-                        <span className="text-xs text-muted-foreground font-body">({item.value})</span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => onDeleteBrandItem(item.id)}
-                        className="hover:text-destructive"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {activeSection === section.type ? (
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {aberta ? (
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Input
+                  autoFocus
+                  placeholder="Nome"
+                  value={newItemName}
+                  onChange={(e) => onNewItemNameChange(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && newItemName.trim()) onAddBrandItem(section.type); }}
+                  className="rounded-xl text-sm"
+                />
+                <Input
+                  placeholder={section.placeholder}
+                  value={newItemValue}
+                  onChange={(e) => onNewItemValueChange(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && newItemName.trim()) onAddBrandItem(section.type); }}
+                  className="rounded-xl text-sm"
+                />
                 <div className="flex gap-2">
-                  <Input
-                    placeholder="Nome"
-                    value={newItemName}
-                    onChange={(e) => onNewItemNameChange(e.target.value)}
-                    className="rounded-xl text-sm"
-                  />
-                  <Input
-                    placeholder={section.placeholder}
-                    value={newItemValue}
-                    onChange={(e) => onNewItemValueChange(e.target.value)}
-                    className="rounded-xl text-sm"
-                  />
-                  <Button size="sm" onClick={() => onAddBrandItem(section.type)} disabled={!newItemName.trim()}>
-                    <Plus className="h-4 w-4" />
+                  <Button size="sm" onClick={() => onAddBrandItem(section.type)} disabled={!newItemName.trim()} className="gap-1">
+                    <Plus className="h-4 w-4" /> Adicionar
                   </Button>
+                  <Button size="sm" variant="ghost" onClick={() => onActiveSectionChange(null)}>Fechar</Button>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onActiveSectionChange(section.type);
-                    onNewItemNameChange("");
-                    onNewItemValueChange("");
-                  }}
-                  className="text-sm text-primary font-body font-medium hover:underline"
-                >
-                  + Adicionar
-                </button>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  onActiveSectionChange(section.type);
+                  onNewItemNameChange("");
+                  onNewItemValueChange("");
+                }}
+                className="inline-flex items-center gap-1 text-sm text-primary font-body font-semibold hover:underline"
+              >
+                <Plus className="h-3.5 w-3.5" /> Adicionar
+              </button>
+            )}
+          </div>
         );
       })}
-    </motion.div>
+    </div>
   );
 }

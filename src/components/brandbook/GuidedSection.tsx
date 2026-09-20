@@ -1,13 +1,12 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Maximize2, Save, Sparkles } from "lucide-react";
+import { ChevronDown, Maximize2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { VoiceInput } from "@/components/shared/VoiceInput";
+import { cn } from "@/lib/utils";
+import { idDaPergunta } from "@/lib/brandbook-perguntas";
 
 type Question = {
   key: string;
@@ -18,102 +17,114 @@ type Question = {
 type Props = {
   sectionKey: string;
   title: string;
+  /** Uma frase dizendo pra que serve este grupo. É o que transforma o
+   *  formulário em conversa: a pessoa entende por que está respondendo. */
+  descricao?: string;
   questions: ReadonlyArray<Question>;
   answers: Record<string, string>;
-  progress: number;
-  saving: boolean;
   onAnswerChange: (questionKey: string, value: string) => void;
-  onSave: () => void;
+  /** Chamado quando a pessoa sai do campo. É o gatilho do salvar sozinho. */
+  onBlur: (questionKey: string) => void;
   chatPrompt?: string | null;
 };
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   UM GRUPO DE PERGUNTAS (Walter, 20/09/2026: "essa parte de visualização do
+   brandbook é muito esquisita e confusa")
+
+   Antes cada pergunta era um Card inteiro com cabeçalho, e cada grupo tinha
+   barra de progresso própria e um botão Salvar no fim. Seis grupos na mesma
+   aba viravam seis barras, seis botões e trinta cards: parecia um sistema, não
+   um caderno.
+
+   Agora o grupo é UM card, no mesmo desenho do brandbook do cliente na visão
+   da social mídia (título com ícone, contador no canto, campo embaixo de
+   campo). O Salvar sumiu: a resposta grava quando a pessoa sai do campo, igual
+   à descrição do pilar. Campo vazio tem borda tracejada, que é o único sinal
+   que a pessoa precisa pra achar o que falta sem ler tudo de novo.
+   ═══════════════════════════════════════════════════════════════════════════ */
 export function GuidedSection({
   sectionKey,
   title,
+  descricao,
   questions,
   answers,
-  progress,
-  saving,
   onAnswerChange,
-  onSave,
+  onBlur,
   chatPrompt,
 }: Props) {
-  // Resposta ABERTA em janela grande. A Gabriela preenche respostas longas
-  // (parágrafos inteiros vindos da estratégia) e o textarea de 80px vira um
-  // olho mágico: dá pra digitar, não dá pra LER. O expandir abre a resposta
-  // numa janela de leitura/edição confortável, estilo card do Trello.
   const [expandida, setExpandida] = useState<Question | null>(null);
+  const [promptAberto, setPromptAberto] = useState(false);
+
+  const feitas = questions.filter((q) => (answers[q.key] ?? "").trim()).length;
+  const completo = feitas === questions.length;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="space-y-5"
-      key={sectionKey}
-    >
-      <div className="flex items-center gap-3 mb-2">
-        <div className="flex-1">
-          <h3 className="text-base font-display font-semibold text-foreground">{title}</h3>
+    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="min-w-0">
+          <h3 className="font-display font-bold text-base text-foreground">{title}</h3>
+          {descricao && (
+            <p className="text-[12px] font-body text-muted-foreground mt-0.5 leading-snug">{descricao}</p>
+          )}
         </div>
-        <div className="text-right">
-          <span className="text-xs text-muted-foreground font-body">{progress}%</span>
-          <Progress value={progress} className="w-20 h-1.5 mt-1" />
-        </div>
+        <span className={cn(
+          "shrink-0 text-[11px] font-body font-bold tabular-nums rounded-full px-2 py-0.5",
+          completo ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground",
+        )}>
+          {feitas}/{questions.length}
+        </span>
       </div>
 
-      {questions.map((q, i) => (
-        <motion.div
-          key={q.key}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.04 }}
-        >
-          <Card className="border-border shadow-sm">
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between gap-2">
-                <CardTitle className="text-sm font-body font-semibold text-foreground">{q.label}</CardTitle>
-                {(answers[q.key] || "").trim() && (
+      <div className="space-y-5">
+        {questions.map((q) => {
+          const valor = answers[q.key] ?? "";
+          const vazia = !valor.trim();
+          return (
+            <div key={q.key}>
+              <div className="flex items-start justify-between gap-2 mb-1.5">
+                <label
+                  htmlFor={idDaPergunta(sectionKey, q.key)}
+                  className="text-[13px] font-body font-semibold text-foreground leading-snug"
+                >
+                  {q.label}
+                </label>
+                {!vazia && (
                   <button
                     type="button"
                     onClick={() => setExpandida(q)}
                     title="Ver a resposta inteira"
-                    className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-border bg-card px-2 py-1 text-[11px] font-body text-muted-foreground hover:text-primary hover:border-primary transition-colors"
+                    className="shrink-0 inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[11px] font-body text-muted-foreground hover:text-primary transition-colors"
                   >
-                    <Maximize2 className="h-3 w-3" /> expandir
+                    <Maximize2 className="h-3 w-3" /> abrir
                   </button>
                 )}
               </div>
-            </CardHeader>
-            <CardContent>
               <div className="relative">
                 <Textarea
-                  value={answers[q.key] || ""}
+                  id={idDaPergunta(sectionKey, q.key)}
+                  value={valor}
                   onChange={(e) => onAnswerChange(q.key, e.target.value)}
+                  onBlur={() => onBlur(q.key)}
                   placeholder={q.placeholder}
-                  className="min-h-[80px] resize-y font-body text-sm border-border rounded-xl pr-12"
+                  className={cn(
+                    "min-h-[72px] resize-y font-body text-sm rounded-xl pr-12",
+                    vazia ? "border-dashed border-border" : "border-border",
+                  )}
                 />
                 <VoiceInput
-                  onTranscript={(txt) => onAnswerChange(q.key, ((answers[q.key] || "").trim() ? answers[q.key] + " " : "") + txt)}
+                  onTranscript={(txt) => onAnswerChange(q.key, (valor.trim() ? valor + " " : "") + txt)}
                   className="absolute bottom-2 right-2"
                 />
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      ))}
-
-      <div className="flex justify-end">
-        <Button onClick={onSave} disabled={saving} className="gap-2">
-          <Save className="h-4 w-4" />
-          {saving ? "Salvando..." : "Salvar"}
-        </Button>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Janela de leitura/edição da resposta. Edição aqui é a MESMA resposta
-          (mesmo onAnswerChange): fechar não perde nada, e o Salvar da seção
-          continua sendo quem persiste. */}
-      <Dialog open={!!expandida} onOpenChange={(o) => !o && setExpandida(null)}>
+      {/* Janela de leitura/edição. É a MESMA resposta (mesmo onAnswerChange):
+          fechar não perde nada, e o salvar sozinho grava ao sair do campo. */}
+      <Dialog open={!!expandida} onOpenChange={(o) => { if (!o && expandida) { onBlur(expandida.key); setExpandida(null); } }}>
         <DialogContent className="sm:max-w-2xl">
           {expandida && (
             <>
@@ -127,40 +138,41 @@ export function GuidedSection({
                 className="min-h-[50vh] resize-y font-body text-sm border-border rounded-xl leading-relaxed"
               />
               <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] font-body text-muted-foreground">
-                  Pode editar aqui mesmo. Use o Salvar da seção pra gravar.
-                </p>
-                <Button variant="outline" size="sm" onClick={() => setExpandida(null)}>Fechar</Button>
+                <p className="text-[11px] font-body text-muted-foreground">Salva sozinho ao fechar.</p>
+                <Button variant="outline" size="sm" onClick={() => { onBlur(expandida.key); setExpandida(null); }}>Fechar</Button>
               </div>
             </>
           )}
         </DialogContent>
       </Dialog>
 
+      {/* O prompt pra IA externa ficava aberto, com pré de 200px, embaixo de
+          cada grupo. Virou uma linha que abre: quem quer, acha; quem está
+          respondendo, não tropeça nele. */}
       {chatPrompt && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              Seu Guia Editorial Personalizado
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-xs text-muted-foreground font-body">
-              Com base em tudo que você respondeu, esse prompt vai gerar um guia completo para nortear sua criação de conteúdo. Copie, cole no ChatGPT ou Claude e receba um plano prático feito para você.
-            </p>
-            <div className="bg-card rounded-xl p-4 border border-border max-h-48 overflow-y-auto">
-              <pre className="text-xs font-body text-foreground whitespace-pre-wrap">{chatPrompt}</pre>
-            </div>
-            <div className="bg-amber-500/8 border border-amber-500/20 rounded-xl px-4 py-3 mb-3">
-              <p className="text-xs font-body text-amber-700 leading-relaxed">
-                💡 <strong>Lembre-se:</strong> o guia gerado é um ponto de partida para destravar suas ideias e dar o primeiro passo. A sua essência, experiências e conhecimento são insubstituíveis, use o guia como bússola, não como roteiro fechado.
+        <div className="mt-5 pt-4 border-t border-border">
+          <button
+            type="button"
+            onClick={() => setPromptAberto((v) => !v)}
+            className="w-full flex items-center gap-2 text-left text-[12.5px] font-body text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="flex-1">Quer um guia a partir dessas respostas? Copie o prompt e cole no ChatGPT ou Claude.</span>
+            <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", promptAberto && "rotate-180")} />
+          </button>
+          {promptAberto && (
+            <div className="mt-3 space-y-3">
+              <div className="bg-muted/30 rounded-xl p-4 border border-border max-h-48 overflow-y-auto">
+                <pre className="text-xs font-body text-foreground whitespace-pre-wrap">{chatPrompt}</pre>
+              </div>
+              <p className="text-[11.5px] font-body text-muted-foreground leading-relaxed">
+                O guia é ponto de partida, não roteiro fechado. A sua essência e a sua experiência são o que a IA não tem.
               </p>
+              <CopyButton text={chatPrompt} />
             </div>
-            <CopyButton text={chatPrompt} />
-          </CardContent>
-        </Card>
+          )}
+        </div>
       )}
-    </motion.div>
+    </div>
   );
 }

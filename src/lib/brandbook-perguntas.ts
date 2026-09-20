@@ -142,3 +142,7 @@ export const LABEL_DA_PERGUNTA: Record<string, string> = Object.fromEntries(
     sec.questions.map((q) => [q.key, q.label] as const),
   ),
 );
+
+/** O id do campo de uma pergunta na tela, pra "Continuar de onde parou"
+ *  conseguir rolar e focar de fora do componente. */
+export const idDaPergunta = (section: string, key: string) => `pergunta-${section}-${key}`;

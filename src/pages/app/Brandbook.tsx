@@ -1,17 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { BookOpen, Users, Mic, Save, Sparkles, Eye, Palette, Heart, Paintbrush, Languages, MessageSquareText, MessageSquare, Ban, Plus, Trash2, BookMarked, Download, Pencil, Bot, Wand2, Trophy, SmilePlus, Crown, Briefcase, type LucideIcon } from "lucide-react";
+import {
+  BookOpen, Users, Mic, Palette, Plus, Trash2, BookMarked, Download, Pencil, Bot, Wand2, Trophy, SmilePlus, Crown,
+  Briefcase, UserRound, ArrowRight, Check, Loader2, type LucideIcon,
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { CopyButton } from "@/components/shared/CopyButton";
-import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { toast } from "sonner";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { useBrandItems } from "@/hooks/useBrandItems";
@@ -19,17 +15,13 @@ import { BrandbookImport, type CampoDef } from "@/components/brandbook/Brandbook
 import { useMoodboard } from "@/hooks/useMoodboard";
 import { usePersonas, MAX_PERSONAS } from "@/hooks/usePersonas";
 import { usePillars } from "@/hooks/usePillars";
-import { useProfile } from "@/hooks/useProfile";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { cn } from "@/lib/utils";
-import { BrandHubOverview } from "@/components/brandbook/BrandHubOverview";
 import { GuidedSection } from "@/components/brandbook/GuidedSection";
 import { BrandValuesSection } from "@/components/brandbook/BrandValuesSection";
 import { PersonaStructuredForm, type TagField } from "@/components/brandbook/PersonaStructuredForm";
-import { MoodboardSection } from "@/components/brandbook/MoodboardSection";
-import { EditorialSection } from "@/components/brandbook/EditorialSection";
-import { QUESTION_SECTIONS, type QuestionSectionKey } from "@/lib/brandbook-perguntas";
+import { QUESTION_SECTIONS, idDaPergunta, type QuestionSectionKey } from "@/lib/brandbook-perguntas";
 import { PilaresSection } from "@/components/brandbook/PilaresSection";
 import { BrandPdfTemplate } from "@/components/pdf/BrandPdfTemplate";
 
@@ -54,17 +46,70 @@ const PERSONA_ICON_MAP: Record<string, LucideIcon> = {
   bot: Bot, wand: Wand2, trophy: Trophy, smile: SmilePlus, crown: Crown, briefcase: Briefcase,
 };
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   AS CINCO ABAS (Walter, 20/09/2026: "muito esquisita e confusa")
 
+   A tela tinha três camadas de navegação que não falavam a mesma língua: seis
+   cards no topo (Identidade, Visual, Comunicação, Público, Valores, Tom), seis
+   abas com OUTROS nomes (Moodboard, Linha Editorial, Persona...), e dentro da
+   Visão Geral mais cinco cards com barras. "Identidade" no card de cima era
+   as perguntas de sensação; "Identidade" na aba era cores e fontes. Três
+   barras de progresso mediam três coisas diferentes.
 
-const MOODBOARD_KEYS: QuestionSectionKey[] = ["moodboard-identidade", "moodboard-visual", "moodboard-contexto", "moodboard-inspiracoes", "visao-de-mundo", "sobre-voce"];
+   Agora é uma camada só: cinco abas, com contador, na ordem em que uma marca
+   se constrói. É o mesmo desenho do brandbook do cliente que a social mídia
+   usa (pílulas com feitos/total), que é a tela que o Walter apontou como a
+   boa. As chaves das seções no banco NÃO mudaram; só o agrupamento na tela.
+   ═══════════════════════════════════════════════════════════════════════════ */
+type Aba = {
+  valor: string;
+  rotulo: string;
+  icone: LucideIcon;
+  /** A frase que abre a aba: pra que servem estas respostas. */
+  intro: string;
+  secoes: readonly QuestionSectionKey[];
+};
 
-const BRAND_ITEM_SECTIONS = [
-  { type: "cor", label: "Cores da marca", icon: Paintbrush, placeholder: "Ex: #C4622D" },
-  { type: "fonte", label: "Fontes", icon: Languages, placeholder: "Ex: Playfair Display" },
-  { type: "tom", label: "Tom de voz", icon: MessageSquareText, placeholder: "Ex: Acolhedor e direto" },
-  { type: "expressao", label: "Expressões que uso", icon: MessageSquare, placeholder: "Ex: Bora!" },
-  { type: "evitar", label: "Palavras que evito", icon: Ban, placeholder: "Ex: Não use gírias" },
+const ABAS: readonly Aba[] = [
+  {
+    valor: "essencia", rotulo: "Quem você é", icone: UserRound,
+    intro: "Sua história, seu porquê e o que você acredita. É daqui que a IA tira a voz de quem fala, não só o assunto.",
+    secoes: ["sobre-voce", "moodboard-contexto", "visao-de-mundo"],
+  },
+  {
+    valor: "identidade", rotulo: "Identidade", icone: Palette,
+    intro: "Como a marca se sente e se parece: sensações, estética, cores, fontes e o que te inspira.",
+    secoes: ["moodboard-identidade", "moodboard-visual", "moodboard-inspiracoes"],
+  },
+  {
+    valor: "linha-editorial", rotulo: "Linha editorial", icone: BookOpen,
+    intro: "Sobre o que você fala. Os pilares em cima, e as perguntas embaixo ajudam a chegar neles.",
+    secoes: ["linha-editorial"],
+  },
+  {
+    valor: "persona", rotulo: "Persona", icone: Users,
+    intro: "Pra quem você fala. Cadastre a pessoa e responda o que sabe dela; o resto a IA ajuda a montar.",
+    secoes: ["persona-brand"],
+  },
+  {
+    valor: "tom-de-voz", rotulo: "Tom de voz", icone: Mic,
+    intro: "Como você fala. As etiquetas curtas vão primeiro pro prompt; as respostas longas dão o contexto.",
+    secoes: ["tom-de-voz"],
+  },
 ];
+
+/** Uma frase por grupo de perguntas, mostrada no cabeçalho do card. */
+const INTRO_DA_SECAO: Partial<Record<QuestionSectionKey, string>> = {
+  "sobre-voce": "A trajetória que te trouxe até aqui.",
+  "moodboard-contexto": "Por que você cria e o que quer deixar.",
+  "visao-de-mundo": "As opiniões que fazem seu conteúdo ter posição.",
+  "moodboard-identidade": "O que a pessoa sente quando encontra sua marca.",
+  "moodboard-visual": "Direção estética, em palavras.",
+  "moodboard-inspiracoes": "De onde vêm suas referências.",
+  "linha-editorial": "Ideia central, temas e formatos.",
+  "persona-brand": "O que você já sabe de quem te acompanha.",
+  "tom-de-voz": "Estilo, vocabulário e o que fica de fora.",
+};
 
 /* Os campos que a gente importa pro criador e ESPALHA nas seções do brandbook.
    Cada chave abaixo tem um destino certo (ver distribuirDoPdf): cor/fonte vão
@@ -100,7 +145,6 @@ const Brandbook = () => {
     isLoading: personaLoading,
   } = usePersonas();
   const { pillars } = usePillars();
-  const { profile } = useProfile();
   // Brandbook é da CONTA ATIVA, nome/nicho no PDF e no slug refletem ela.
   const { profile: activeProfile } = useActiveProfile();
   const { exportPdf } = usePdfExport();
@@ -108,19 +152,11 @@ const Brandbook = () => {
   const [exporting, setExporting] = useState(false);
 
   const [answers, setAnswers] = useState<Record<string, EntryMap>>({});
-  const [activeTab, setActiveTab] = useState<string>("visao-geral");
-
-  const countSectionAnswers = useCallback((sectionKey: string) => {
-    const config = QUESTION_SECTIONS[sectionKey as QuestionSectionKey];
-    if (!config) return 0;
-    const sectionAnswers = answers[sectionKey] ?? {};
-    return config.questions.filter(q => (sectionAnswers[q.key] ?? "").trim().length > 0).length;
-  }, [answers]);
-  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>(ABAS[0].valor);
 
   const [newItemName, setNewItemName] = useState("");
   const [newItemValue, setNewItemValue] = useState("");
-  const [activeSection, setActiveSection] = useState("");
+  const [activeSection, setActiveSection] = useState<string | null>(null);
 
   const emptyPersona: PersonaData = {
     id: null, name: "", icon: "bot", age_range: "", gender: "",
@@ -134,49 +170,65 @@ const Brandbook = () => {
   const loaded = !moodboardLoading && !brandLoading && !personaLoading;
 
   const answersHydratedRef = useRef(false);
+  /* O que está GRAVADO, por pergunta. É a comparação que decide se sair do
+     campo precisa ir ao banco: sem isso, cada clique fora de um campo intocado
+     viraria um upsert. */
+  const persistidoRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
     if (answersHydratedRef.current || moodboardLoading) return;
     const grouped: Record<string, EntryMap> = {};
     allSectionKeys.forEach(k => { grouped[k] = {}; });
     moodboardEntries.forEach(e => {
-      if (grouped[e.section]) grouped[e.section][e.question_key] = e.answer || "";
+      if (grouped[e.section]) {
+        grouped[e.section][e.question_key] = e.answer || "";
+        persistidoRef.current[`${e.section}/${e.question_key}`] = e.answer || "";
+      }
     });
     setAnswers(grouped);
     answersHydratedRef.current = true;
   }, [moodboardEntries, allSectionKeys, moodboardLoading]);
 
-  const saveSection = useCallback(async (section: string) => {
-    const config = QUESTION_SECTIONS[section as QuestionSectionKey];
-    if (!config) return;
-    setSaving(true);
+  /* ═════════════════════════════════════════════════════════════════════════
+     SALVAR SOZINHO
+
+     Antes cada grupo tinha um botão Salvar que gravava as perguntas do grupo.
+     Trocar de aba sem clicar nele não perdia nada na tela, mas perdia tudo no
+     F5, e ninguém percebia até voltar no dia seguinte. Agora a resposta grava
+     ao sair do campo, só se mudou, e o cabeçalho mostra "Salvando" e "Salvo".
+     ═════════════════════════════════════════════════════════════════════════ */
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const pendentesRef = useRef(0);
+  const salvarPergunta = useCallback(async (section: string, key: string) => {
+    const atual = answers[section]?.[key] ?? "";
+    const chave = `${section}/${key}`;
+    if ((persistidoRef.current[chave] ?? "") === atual) return;
+    pendentesRef.current += 1;
+    setSaveState("saving");
     try {
-      for (const q of config.questions) {
-        await saveAnswer.mutateAsync({
-          section,
-          question_key: q.key,
-          answer: answers[section]?.[q.key] || "",
-        });
-      }
-      toast.success("Salvo com sucesso!");
+      await saveAnswer.mutateAsync({ section, question_key: key, answer: atual });
+      persistidoRef.current[chave] = atual;
     } catch {
-      toast.error("Erro ao salvar.");
+      toast.error("Não consegui salvar essa resposta. Tenta de novo.");
     } finally {
-      setSaving(false);
+      pendentesRef.current -= 1;
+      if (pendentesRef.current === 0) {
+        setSaveState("saved");
+        window.setTimeout(() => setSaveState((s) => (s === "saved" ? "idle" : s)), 2000);
+      }
     }
   }, [answers, saveAnswer]);
 
   /* ═════════════════════════════════════════════════════════════════════════
      IMPORTAR O BRANDBOOK DE UM (OU DOIS) PDF/IMAGEM E DISTRIBUIR NAS SEÇÕES
 
-     A leitura do arquivo não cai só na aba Identidade: cada pedaço vai pro lugar
-     que o Cria pré-determinou, exatamente como os cards do topo (BrandHubOverview):
+     A leitura do arquivo não cai numa aba só: cada pedaço vai pro lugar certo.
 
-       Identidade  → brand_items (cor) + moodboard-identidade/palavras-chave
-       Visual      → brand_items (cor, fonte) + moodboard-visual/cores, /estetica
-       Comunicação → linha-editorial/temas
-       Público     → personas (cria UMA persona se ainda não houver)
-       Valores     → moodboard-contexto/diferencial
+       Identidade  → brand_items (cor, fonte) + moodboard-identidade/palavras-chave
+                     + moodboard-visual/cores, /estetica
+       Linha edit. → linha-editorial/temas
+       Persona     → personas (cria UMA persona se ainda não houver)
+       Quem você é → moodboard-contexto/diferencial
        Tom de Voz  → brand_items (tom, evitar) + tom-de-voz/estilo, /evitar
 
      DUAS REGRAS QUE NÃO SE NEGOCIAM:
@@ -207,7 +259,7 @@ const Brandbook = () => {
     const paraLista = (v?: string) =>
       (v ?? "").split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean);
 
-    // 1) Itens de marca (Identidade/Visual/Tom): cor, fonte, tom, evitar. Só acrescenta.
+    // 1) Itens de marca (Identidade/Tom): cor, fonte, tom, evitar. Só acrescenta.
     const planos: { type: string; nomes: string[] }[] = [
       { type: "cor", nomes: paraLista(valores.colorPalette) },
       { type: "fonte", nomes: paraLista(valores.typography) },
@@ -233,8 +285,8 @@ const Brandbook = () => {
       }
     }
 
-    // 2) Perguntas guiadas (Visual, Identidade, Valores, Comunicação, Tom).
-    //    Só preenche o campo VAZIO nunca apaga o que a pessoa escreveu à mão.
+    // 2) Perguntas guiadas. Só preenche o campo VAZIO, nunca apaga o que a
+    //    pessoa escreveu à mão.
     const guiados: { section: string; key: string; valor?: string }[] = [
       { section: "moodboard-visual", key: "cores", valor: valores.colorPalette },
       { section: "moodboard-visual", key: "estetica", valor: valores.visualExpression },
@@ -253,6 +305,7 @@ const Brandbook = () => {
       const jaEscrito = (answers[g.section]?.[g.key] ?? "").trim();
       if (jaEscrito) continue; // respeita o que já estava preenchido
       await saveAnswer.mutateAsync({ section: g.section, question_key: g.key, answer: v });
+      persistidoRef.current[`${g.section}/${g.key}`] = v;
       novosAnswers[g.section] = { ...(novosAnswers[g.section] ?? {}), [g.key]: v };
       preenchidos++;
     }
@@ -260,10 +313,8 @@ const Brandbook = () => {
 
     // 3) Público-alvo: cria UMA persona a partir do que o arquivo trouxe, só se
     //    ainda não existir nenhuma. Nunca mexe numa persona que a pessoa criou.
-    //    Agora a persona vem ESTRUTURADA: dores, desejos, objeções, interesses e
-    //    canais viram arrays nos campos certos (não mais só um texto solto).
-    //    Listas de frases quebram só por ";" e quebra de linha vírgula picotaria
-    //    frases tipo "acha caro, não confia".
+    //    Listas de frases quebram só por ";" e quebra de linha: vírgula
+    //    picotaria frases tipo "acha caro, não confia".
     const paraFrases = (v?: string) =>
       (v ?? "").split(/[;\n]+/).map((s) => s.trim()).filter(Boolean);
 
@@ -307,7 +358,6 @@ const Brandbook = () => {
         position: brandItems.filter(i => i.type === type).length,
       });
       setNewItemName(""); setNewItemValue("");
-      toast.success("Item adicionado!");
     } catch {
       toast.error("Erro ao adicionar item.");
     }
@@ -421,12 +471,49 @@ const Brandbook = () => {
     setAnswers(prev => ({ ...prev, [section]: { ...prev[section], [key]: value } }));
   };
 
-  const getSectionProgress = (section: string) => {
-    const config = QUESTION_SECTIONS[section as QuestionSectionKey];
-    if (!config) return 0;
-    const qs = config.questions;
-    const filled = qs.filter(q => (answers[section]?.[q.key] || "").trim().length > 0).length;
-    return Math.round((filled / qs.length) * 100);
+  const respondida = useCallback((section: string, key: string) =>
+    (answers[section]?.[key] ?? "").trim().length > 0, [answers]);
+
+  const contarSecao = useCallback((sectionKey: QuestionSectionKey) => {
+    const qs = QUESTION_SECTIONS[sectionKey].questions;
+    return { feitas: qs.filter(q => respondida(sectionKey, q.key)).length, total: qs.length };
+  }, [respondida]);
+
+  const contarAba = useCallback((aba: Aba) =>
+    aba.secoes.reduce((acc, s) => {
+      const c = contarSecao(s);
+      return { feitas: acc.feitas + c.feitas, total: acc.total + c.total };
+    }, { feitas: 0, total: 0 }), [contarSecao]);
+
+  const geral = useMemo(() =>
+    ABAS.reduce((acc, a) => {
+      const c = contarAba(a);
+      return { feitas: acc.feitas + c.feitas, total: acc.total + c.total };
+    }, { feitas: 0, total: 0 }), [contarAba]);
+
+  /* "PRÓXIMA EM BRANCO": acha a primeira pergunta vazia, na ordem das abas,
+     troca de aba e foca o campo. É o atalho de quem chega com dez minutos e
+     quer avançar sem procurar onde parou. */
+  const proximaEmBranco = useMemo(() => {
+    for (const aba of ABAS) {
+      for (const s of aba.secoes) {
+        for (const q of QUESTION_SECTIONS[s].questions) {
+          if (!respondida(s, q.key)) return { aba: aba.valor, section: s, key: q.key };
+        }
+      }
+    }
+    return null;
+  }, [respondida]);
+
+  const irParaProxima = () => {
+    if (!proximaEmBranco) return;
+    setActiveTab(proximaEmBranco.aba);
+    requestAnimationFrame(() => {
+      const el = document.getElementById(idDaPergunta(proximaEmBranco.section, proximaEmBranco.key));
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      // O foco vem depois da rolagem pra ele não puxar a página no meio da animação.
+      window.setTimeout(() => el?.focus(), 350);
+    });
   };
 
   const buildPrompt = (section: string) => {
@@ -440,17 +527,6 @@ const Brandbook = () => {
     return prompt;
   };
 
-  const getOverallProgress = () => {
-    const allKeys = Object.keys(QUESTION_SECTIONS) as QuestionSectionKey[];
-    const total = allKeys.reduce((sum, k) => sum + QUESTION_SECTIONS[k].questions.length, 0);
-    const filled = allKeys.reduce((sum, k) => {
-      return sum + QUESTION_SECTIONS[k].questions.filter(q => (answers[k]?.[q.key] || "").trim().length > 0).length;
-    }, 0);
-    const brandFilled = brandItems.length > 0 ? 1 : 0;
-    const personaFilled = personas.length > 0 ? 1 : 0;
-    return Math.round(((filled + brandFilled + personaFilled) / (total + 2)) * 100);
-  };
-
   if (!loaded) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -459,355 +535,248 @@ const Brandbook = () => {
     );
   }
 
-  const renderGuidedSection = (sectionKey: string, showChatPrompt = false) => {
-    const config = QUESTION_SECTIONS[sectionKey as QuestionSectionKey];
-    if (!config) return null;
+  const renderGuidedSection = (sectionKey: QuestionSectionKey, showChatPrompt = false) => {
+    const config = QUESTION_SECTIONS[sectionKey];
     return (
       <GuidedSection
+        key={sectionKey}
         sectionKey={sectionKey}
         title={config.title}
+        descricao={INTRO_DA_SECAO[sectionKey]}
         questions={config.questions}
         answers={answers[sectionKey] ?? {}}
-        progress={getSectionProgress(sectionKey)}
-        saving={saving}
         onAnswerChange={(key, value) => handleChange(sectionKey, key, value)}
-        onSave={() => saveSection(sectionKey)}
+        onBlur={(key) => void salvarPergunta(sectionKey, key)}
         chatPrompt={showChatPrompt && "chatPrompt" in config ? buildPrompt(sectionKey) : null}
       />
     );
   };
 
+  const completo = geral.total > 0 && geral.feitas === geral.total;
+
   return (
     <div className="max-w-4xl pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <div className="flex items-start justify-between mb-6 gap-3">
+        {/* ── CABEÇALHO ──
+            Uma linha: título (no celular), progresso em número, o estado do
+            salvar sozinho e o PDF. A barra "Completude geral" e o card "Sua
+            marca em um só lugar" mediam a mesma coisa duas vezes. */}
+        <div className="flex items-start justify-between mb-5 gap-3">
           <div className="flex items-center gap-3 min-w-0 md:hidden">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-600 to-orange-500 flex items-center justify-center shadow-sm shrink-0">
               <BookMarked className="h-5 w-5 text-white" strokeWidth={1.75} />
             </div>
             <div className="min-w-0">
-              <h1 className="text-3xl font-display font-extrabold text-foreground tracking-tight">
+              <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight">
                 Brandbook <InfoTooltip text="O Brandbook define a identidade da sua marca. As respostas aqui personalizam todas as sugestões da IA para o seu estilo e público." side="bottom" />
               </h1>
-              <p className="text-muted-foreground font-body mt-0.5 text-sm">
-                O centro estratégico da sua marca pessoal. Tudo que define quem você é como criador.
-              </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <Button
-              data-tour="brandbook-importar"
-              variant="default"
-              size="sm"
-              onClick={() => {
-                // Leva pra Visão Geral e rola até o bloco de importar (o card fica
-                // logo no topo). Torna o upload acessível de qualquer aba.
-                setActiveTab("visao-geral");
-                requestAnimationFrame(() =>
-                  document.getElementById("brandbook-importar")?.scrollIntoView({ behavior: "smooth", block: "start" }),
-                );
-              }}
-              className="gap-1.5"
-            >
-              <Sparkles className="h-4 w-4" />
-              <span className="hidden sm:inline">Importar de PDF</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportPdf}
-              disabled={exporting}
-              className="gap-1.5"
-            >
+          <div className="flex items-center gap-2 shrink-0 ml-auto flex-wrap justify-end" data-tour="brandbook-hub">
+            <span className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-body font-semibold tabular-nums",
+              completo ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-border bg-card text-foreground",
+            )}>
+              {completo && <Check className="h-3.5 w-3.5" />}
+              {geral.feitas}/{geral.total} respondidas
+            </span>
+            <span className={cn(
+              "text-[11.5px] font-body text-muted-foreground inline-flex items-center gap-1 min-w-[64px] transition-opacity",
+              saveState === "idle" ? "opacity-0" : "opacity-100",
+            )} aria-live="polite">
+              {saveState === "saving" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3 text-emerald-600" />}
+              {saveState === "saving" ? "Salvando" : "Salvo"}
+            </span>
+            <Button variant="outline" size="sm" onClick={handleExportPdf} disabled={exporting} className="gap-1.5">
               <Download className="h-4 w-4" />
               <span className="hidden sm:inline">{exporting ? "Exportando..." : "Exportar PDF"}</span>
             </Button>
-            <div className="text-right hidden sm:block">
-              <span className="text-xs text-muted-foreground font-body">Completude geral</span>
-              <div className="flex items-center gap-2 mt-1">
-                <Progress value={getOverallProgress()} className="w-28 h-2" />
-                <span className="text-sm font-body font-semibold text-foreground">{getOverallProgress()}%</span>
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* Wrapper só pra ancorar o tour: o BrandHubOverview não repassa props. */}
-        <div data-tour="brandbook-hub">
-          <BrandHubOverview
-            counts={{
-              identidade: countSectionAnswers("moodboard-identidade"),
-              visual: countSectionAnswers("moodboard-visual") + brandItems.length,
-              comunicacao: countSectionAnswers("linha-editorial"),
-              publico: personas.length,
-              valores: countSectionAnswers("moodboard-contexto"),
-              tom: countSectionAnswers("tom-de-voz"),
-            }}
-            onSelect={setActiveTab}
+        {/* ── IMPORTAR ──
+            Era um bloco tracejado de 300px que dominava a entrada da tela, e
+            existia de novo dentro da aba Identidade. Virou uma barra, uma vez,
+            no topo: quem tem PDF vê; quem vai responder na mão passa reto. */}
+        <div id="brandbook-importar" data-tour="brandbook-importar" className="scroll-mt-24 mb-4">
+          <BrandbookImport
+            alvo="criador"
+            campos={CAMPOS_CRIADOR}
+            atual={identidadeAtual}
+            compacto
+            titulo="Tem manual de marca ou moodboard em PDF? O Cria lê e preenche."
+            descricao="Até 2 arquivos, PDF ou imagem. Você revisa antes de salvar. Consome 1 geração da cota de IA."
+            onSalvar={distribuirDoPdf}
           />
         </div>
 
+        {/* ── PRÓXIMA EM BRANCO ──
+            Só aparece enquanto falta alguma. É o convite pra responder: diz o
+            que falta, em número, e leva direto no campo. */}
+        {proximaEmBranco && (
+          <button
+            type="button"
+            onClick={irParaProxima}
+            className="w-full mb-4 rounded-2xl border border-primary/20 bg-primary/[0.05] px-4 py-3 flex items-center gap-3 text-left hover:bg-primary/[0.08] transition-colors group"
+          >
+            <span className="grid h-8 w-8 place-items-center rounded-xl bg-primary text-primary-foreground shrink-0">
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-[13.5px] font-display font-bold text-foreground">
+                Continuar de onde parou
+              </span>
+              <span className="block text-[12px] font-body text-muted-foreground truncate">
+                {geral.total - geral.feitas === 1
+                  ? "Falta 1 resposta. "
+                  : `Faltam ${geral.total - geral.feitas} respostas. `}
+                Próxima: {QUESTION_SECTIONS[proximaEmBranco.section].questions.find((q) => q.key === proximaEmBranco.key)?.label}
+              </span>
+            </span>
+          </button>
+        )}
+
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="overflow-x-auto mb-6">
-            <TabsList data-tour="brandbook-abas" className="inline-flex h-auto bg-card border border-border rounded-2xl p-1.5 gap-1 min-w-max">
-              <TabsTrigger value="visao-geral" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap">
-                <Eye className="h-3.5 w-3.5" /> Visão Geral
-              </TabsTrigger>
-              <TabsTrigger value="moodboard" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap">
-                <Heart className="h-3.5 w-3.5" /> Moodboard
-              </TabsTrigger>
-              <TabsTrigger value="linha-editorial" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap">
-                <BookOpen className="h-3.5 w-3.5" /> Linha Editorial
-              </TabsTrigger>
-              <TabsTrigger value="persona" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap">
-                <Users className="h-3.5 w-3.5" /> Persona
-              </TabsTrigger>
-              <TabsTrigger value="tom-de-voz" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap">
-                <Mic className="h-3.5 w-3.5" /> Tom de Voz
-              </TabsTrigger>
-              <TabsTrigger value="identidade" className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap">
-                <Palette className="h-3.5 w-3.5" /> Identidade
-              </TabsTrigger>
+          <div className="overflow-x-auto -mx-1 px-1 mb-5">
+            <TabsList data-tour="brandbook-abas" className="w-max justify-start gap-2 rounded-none bg-transparent p-0 h-auto flex-nowrap">
+              {ABAS.map((aba) => {
+                const c = contarAba(aba);
+                const ok = c.feitas === c.total;
+                return (
+                  /* Mesma pílula do brandbook do cliente (BrandbookEditor.Aba):
+                     borda própria, contador ao lado, ativa em cheio. */
+                  <TabsTrigger
+                    key={aba.valor}
+                    value={aba.valor}
+                    className="group rounded-full border border-border bg-card px-3.5 py-2 gap-2 shrink-0 transition-colors
+                      hover:border-primary/40
+                      data-[state=active]:bg-primary data-[state=active]:border-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+                  >
+                    <aba.icone className="h-3.5 w-3.5 shrink-0" />
+                    <span className="text-[13px] font-display font-semibold whitespace-nowrap">{aba.rotulo}</span>
+                    <span className={cn(
+                      "text-[10.5px] font-body font-bold tabular-nums rounded-full px-1.5 py-0.5",
+                      ok
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-muted text-muted-foreground group-data-[state=active]:bg-white/25 group-data-[state=active]:text-primary-foreground",
+                    )}>
+                      {c.feitas}/{c.total}
+                    </span>
+                  </TabsTrigger>
+                );
+              })}
             </TabsList>
           </div>
 
-          {/* ═══ VISÃO GERAL ═══ */}
-          <TabsContent value="visao-geral">
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              {/* IMPORTAR DE PDF proeminente, logo na entrada.
-                  Antes vivia escondido só na aba Identidade. Aqui é a primeira
-                  coisa que a pessoa vê, e a leitura preenche o brandbook INTEIRO
-                  (cores, fontes, tom, visual, valores, temas e público), não só
-                  a Identidade. */}
-              <div id="brandbook-importar" className="scroll-mt-24">
-                <BrandbookImport
-                  alvo="criador"
-                  campos={CAMPOS_CRIADOR}
-                  atual={identidadeAtual}
-                  titulo="Importar de PDF: o Cria preenche o brandbook todo"
-                  descricao="Sobe seu manual de marca, moodboard ou um print da paleta (até 2 arquivos). A gente lê e distribui nas seções certas: cores, fontes, tom de voz, visual, valores, temas e público. Você só confere."
-                  onSalvar={distribuirDoPdf}
-                />
-              </div>
+          {ABAS.map((aba) => (
+            <TabsContent key={aba.valor} value={aba.valor} className="mt-0">
+              <motion.div key={aba.valor} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="space-y-4">
+                <p className="text-[13px] font-body text-muted-foreground leading-relaxed px-1">{aba.intro}</p>
 
-              <Card className="border-primary/20 bg-primary/5">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <BookMarked className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-display font-semibold text-foreground">Sua marca em um só lugar</h2>
-                      <p className="text-sm text-muted-foreground font-body">
-                        Preencha cada seção para construir uma identidade forte e consistente.
-                      </p>
-                    </div>
-                  </div>
-                  <Progress value={getOverallProgress()} className="h-2 mb-2" />
-                  <p className="text-xs text-muted-foreground font-body">{getOverallProgress()}% completo</p>
-                </CardContent>
-              </Card>
+                {/* Os pilares vêm ANTES das perguntas (circuito 13): são a
+                    decisão concreta; as perguntas ajudam a chegar nelas.
+                    O PilaresSection já desenha os próprios cards. */}
+                {aba.valor === "linha-editorial" && <PilaresSection />}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[
-                  { key: "moodboard", label: "Moodboard", icon: Heart, desc: "Sensações, visual e inspirações", progress: Math.round(MOODBOARD_KEYS.reduce((s, k) => s + getSectionProgress(k), 0) / MOODBOARD_KEYS.length) },
-                  { key: "linha-editorial", label: "Linha Editorial", icon: BookOpen, desc: "Temas, transformação e conteúdo", progress: getSectionProgress("linha-editorial") },
-                  { key: "persona", label: "Persona", icon: Users, desc: "Quem é seu público", progress: Math.min(100, personas.length * Math.round(100 / MAX_PERSONAS)) },
-                  { key: "tom-de-voz", label: "Tom de Voz", icon: Mic, desc: "Como você se comunica", progress: getSectionProgress("tom-de-voz") },
-                  { key: "identidade", label: "Identidade", icon: Palette, desc: "Cores, fontes e elementos visuais", progress: brandItems.length > 0 ? Math.min(100, brandItems.length * 20) : 0 },
-                ].map(item => (
-                  <Card key={item.key} className="border-border hover:border-primary/30 transition-colors cursor-pointer group" onClick={() => {
-                    const tabTrigger = document.querySelector(`[data-state][value="${item.key}"]`) as HTMLElement;
-                    tabTrigger?.click();
-                  }}>
-                    <CardContent className="pt-5 pb-4">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
-                          <item.icon className="h-4 w-4 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-body font-semibold text-foreground">{item.label}</p>
-                          <p className="text-xs text-muted-foreground font-body truncate">{item.desc}</p>
-                        </div>
+                {aba.valor === "persona" && (
+                  <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-sm">
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div>
+                        <h3 className="font-display font-bold text-base text-foreground">Suas personas</h3>
+                        <p className="text-[12px] font-body text-muted-foreground mt-0.5">Até {MAX_PERSONAS}. A primeira é a principal.</p>
                       </div>
-                      <Progress value={item.progress} className="h-1.5" />
-                      <p className="text-[10px] text-muted-foreground font-body mt-1">{item.progress}% preenchido</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </motion.div>
-          </TabsContent>
-
-          {/* ═══ MOODBOARD ═══ */}
-          <TabsContent value="moodboard">
-            <MoodboardSection moodboardSectionKeys={MOODBOARD_KEYS} renderGuided={renderGuidedSection} />
-          </TabsContent>
-
-          {/* ═══ LINHA EDITORIAL ═══ */}
-          <TabsContent value="linha-editorial">
-            <EditorialSection>
-              {/* OS PILARES VÊM ANTES DAS PERGUNTAS (circuito 13, 16/09/2026).
-                  Eles moravam em Configurações, ao lado de senha e tema, como
-                  se fossem ajuste de sistema. Pilar é a decisão mais
-                  estratégica que o criador toma: sobre o que ele fala. O lugar
-                  dele é aqui, colado na linha editorial, que é a mesma decisão
-                  vista por outro ângulo (o quê, e em que dia).
-                  Em cima porque é o concreto: as perguntas guiadas abaixo
-                  ajudam a CHEGAR nos pilares, e ficam como aprofundamento. */}
-              <PilaresSection />
-              <div className="mt-8 pt-6 border-t border-border">
-                <p className="text-xs font-body font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-                  Aprofundar a linha editorial
-                </p>
-                {renderGuidedSection("linha-editorial", true)}
-              </div>
-            </EditorialSection>
-          </TabsContent>
-
-          {/* ═══ PERSONA ═══ */}
-          <TabsContent value="persona">
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-display font-semibold text-foreground">Personas</h2>
-                    <p className="text-sm text-muted-foreground font-body">
-                      Mapeie quem te acompanha. Até {MAX_PERSONAS} personas.
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  onClick={openNewPersona}
-                  disabled={personas.length >= MAX_PERSONAS}
-                  size="sm"
-                  className="gap-1.5"
-                >
-                  <Plus className="h-4 w-4" /> Nova Persona
-                </Button>
-              </div>
-
-              {personas.length === 0 ? (
-                <Card className="border-dashed border-border">
-                  <CardContent className="py-12 text-center">
-                    <Users className="h-8 w-8 text-muted-foreground/50 mx-auto mb-3" />
-                    <p className="text-sm font-body text-foreground mb-1">Nenhuma persona ainda</p>
-                    <p className="text-xs text-muted-foreground font-body mb-4">
-                      Crie sua primeira persona para personalizar as sugestões da IA.
-                    </p>
-                    <Button onClick={openNewPersona} size="sm" variant="outline" className="gap-1.5">
-                      <Plus className="h-4 w-4" /> Criar persona
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {personas.map(p => {
-                    const firstPain = p.pain_points?.[0];
-                    const PersonaIcon = PERSONA_ICON_MAP[p.icon ?? "bot"] ?? Bot;
-                    return (
-                      <Card key={p.id} className="border-border shadow-sm hover:border-primary/30 transition-colors">
-                        <CardContent className="pt-5 pb-4 flex flex-col gap-3">
-                          <div className="flex items-start gap-3">
-                            <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                              <PersonaIcon className="h-6 w-6" strokeWidth={1.5} />
+                      <Button onClick={openNewPersona} disabled={personas.length >= MAX_PERSONAS} size="sm" className="gap-1.5 shrink-0">
+                        <Plus className="h-4 w-4" /> Nova
+                      </Button>
+                    </div>
+                    {personas.length === 0 ? (
+                      <button
+                        type="button"
+                        onClick={openNewPersona}
+                        className="w-full rounded-xl border border-dashed border-border py-8 text-center hover:border-primary/40 hover:bg-primary/[0.03] transition-colors"
+                      >
+                        <Users className="h-7 w-7 text-muted-foreground/50 mx-auto mb-2" />
+                        <p className="text-sm font-body font-semibold text-foreground">Cadastrar a primeira persona</p>
+                        <p className="text-xs text-muted-foreground font-body mt-0.5">Nome, dores, desejos e onde ela está.</p>
+                      </button>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {personas.map(p => {
+                          const firstPain = p.pain_points?.[0];
+                          const PersonaIcon = PERSONA_ICON_MAP[p.icon ?? "bot"] ?? Bot;
+                          return (
+                            <div key={p.id} className="rounded-xl border border-border bg-background p-4 flex flex-col gap-3 hover:border-primary/30 transition-colors">
+                              <div className="flex items-start gap-3">
+                                <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                  <PersonaIcon className="h-5 w-5" strokeWidth={1.5} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-body font-semibold text-foreground truncate">{p.name || "Persona sem nome"}</p>
+                                  {firstPain ? (
+                                    <p className="text-xs text-muted-foreground font-body mt-0.5 line-clamp-2">
+                                      <span className="text-muted-foreground/70">Dor: </span>{firstPain}
+                                    </p>
+                                  ) : (
+                                    <p className="text-xs text-muted-foreground/60 font-body mt-0.5 italic">Sem dores cadastradas</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={() => openEditPersona(p.id)}>
+                                  <Pencil className="h-3.5 w-3.5" /> Editar
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-muted-foreground hover:text-destructive"
+                                  onClick={() => setDeletingPersonaId(p.id)}
+                                  aria-label={`Excluir ${p.name || "persona"}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-body font-semibold text-foreground truncate">{p.name || "Persona sem nome"}</p>
-                              {firstPain ? (
-                                <p className="text-xs text-muted-foreground font-body mt-1 line-clamp-2">
-                                  <span className="text-muted-foreground/70">Dor: </span>{firstPain}
-                                </p>
-                              ) : (
-                                <p className="text-xs text-muted-foreground/60 font-body mt-1 italic">Sem dores cadastradas</p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1 gap-1.5"
-                              onClick={() => openEditPersona(p.id)}
-                            >
-                              <Pencil className="h-3.5 w-3.5" /> Editar
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-muted-foreground hover:text-destructive"
-                              onClick={() => setDeletingPersonaId(p.id)}
-                              aria-label={`Excluir ${p.name || "persona"}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
 
-              {/* Insights de audiência (compartilhados, persona-brand do moodboard) */}
-              <div className="bg-primary/5 border border-primary/15 rounded-xl px-4 py-3 mb-4">
-                <p className="text-sm font-body text-foreground/80 leading-relaxed">
-                  💡 <strong className="text-foreground">Não sabe quem é a sua persona?</strong>{" "}
-                  Preencha as informações abaixo com o que você sabe até agora e peça ajuda
-                  ao ChatGPT ou Claude, eles vão te ajudar a construir sua persona ideal
-                  com base nas suas respostas.
-                </p>
-              </div>
-              {renderGuidedSection("persona-brand", true)}
-            </motion.div>
-          </TabsContent>
+                {aba.secoes.map((s) => renderGuidedSection(s, s === "linha-editorial" || s === "persona-brand" || s === "tom-de-voz"))}
 
-          {/* ═══ TOM DE VOZ ═══ */}
-          <TabsContent value="tom-de-voz">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Mic className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-lg font-display font-semibold text-foreground">Tom de Voz</h2>
-                <p className="text-sm text-muted-foreground font-body">Defina como você se comunica.</p>
-              </div>
-            </div>
-            {renderGuidedSection("tom-de-voz", true)}
-          </TabsContent>
+                {aba.valor === "identidade" && (
+                  <BrandValuesSection
+                    brandItems={brandItems}
+                    tipos={["cor", "fonte"]}
+                    activeSection={activeSection}
+                    newItemName={newItemName}
+                    newItemValue={newItemValue}
+                    onActiveSectionChange={setActiveSection}
+                    onNewItemNameChange={setNewItemName}
+                    onNewItemValueChange={setNewItemValue}
+                    onAddBrandItem={addBrandItem}
+                    onDeleteBrandItem={handleDeleteBrandItem}
+                  />
+                )}
 
-          {/* ═══ IDENTIDADE DA MARCA ═══ */}
-          <TabsContent value="identidade">
-            {/* SUBIR O BRANDBOOK EM PDF.
-                Preencher cor por cor, fonte por fonte, é o que faz esta aba
-                ficar vazia e brandbook vazio faz TODA a IA do Cria (legenda,
-                roteiro, prompt de arte) sair genérica. Quem já tem um moodboard
-                em PDF não devia digitar nada: sobe o arquivo e confere. */}
-            <div className="mb-5">
-              <BrandbookImport
-                alvo="criador"
-                campos={CAMPOS_CRIADOR}
-                atual={identidadeAtual}
-                titulo="Já tem sua identidade num PDF? Sobe aqui."
-                descricao="Se você tem um manual de marca, moodboard ou até um print da sua paleta, a gente lê as cores, as fontes e o seu tom de voz e você só confere. Pode subir até 2 arquivos."
-                onSalvar={distribuirDoPdf}
-              />
-            </div>
-            <BrandValuesSection
-              brandItems={brandItems}
-              activeSection={activeSection}
-              newItemName={newItemName}
-              newItemValue={newItemValue}
-              onActiveSectionChange={setActiveSection}
-              onNewItemNameChange={setNewItemName}
-              onNewItemValueChange={setNewItemValue}
-              onAddBrandItem={addBrandItem}
-              onDeleteBrandItem={handleDeleteBrandItem}
-            />
-          </TabsContent>
+                {aba.valor === "tom-de-voz" && (
+                  <BrandValuesSection
+                    brandItems={brandItems}
+                    tipos={["tom", "expressao", "evitar"]}
+                    activeSection={activeSection}
+                    newItemName={newItemName}
+                    newItemValue={newItemValue}
+                    onActiveSectionChange={setActiveSection}
+                    onNewItemNameChange={setNewItemName}
+                    onNewItemValueChange={setNewItemValue}
+                    onAddBrandItem={addBrandItem}
+                    onDeleteBrandItem={handleDeleteBrandItem}
+                  />
+                )}
+              </motion.div>
+            </TabsContent>
+          ))}
         </Tabs>
       </motion.div>
 
