@@ -147,6 +147,7 @@ export type Database = {
           location: string | null
           manager_id: string
           note: string | null
+          parceiro_id: string | null
           recurrence_day: number | null
           recurrence_source_id: string | null
           recurring: boolean
@@ -167,6 +168,7 @@ export type Database = {
           location?: string | null
           manager_id: string
           note?: string | null
+          parceiro_id?: string | null
           recurrence_day?: number | null
           recurrence_source_id?: string | null
           recurring?: boolean
@@ -187,6 +189,7 @@ export type Database = {
           location?: string | null
           manager_id?: string
           note?: string | null
+          parceiro_id?: string | null
           recurrence_day?: number | null
           recurrence_source_id?: string | null
           recurring?: boolean
@@ -2532,6 +2535,7 @@ export type Database = {
           bunny_video_id: string | null
           created_at: string | null
           download_url: string | null
+          entrega: boolean
           expires_at: string | null
           external_file_id: string
           file_name: string
@@ -2541,6 +2545,8 @@ export type Database = {
           position: number | null
           post_id: string | null
           provider: string
+          rodada: number
+          substituida: boolean
           thumbnail_url: string | null
           user_id: string
           view_url: string | null
@@ -2549,6 +2555,7 @@ export type Database = {
           bunny_video_id?: string | null
           created_at?: string | null
           download_url?: string | null
+          entrega?: boolean
           expires_at?: string | null
           external_file_id: string
           file_name: string
@@ -2558,6 +2565,8 @@ export type Database = {
           position?: number | null
           post_id?: string | null
           provider?: string
+          rodada?: number
+          substituida?: boolean
           thumbnail_url?: string | null
           user_id: string
           view_url?: string | null
@@ -2566,6 +2575,7 @@ export type Database = {
           bunny_video_id?: string | null
           created_at?: string | null
           download_url?: string | null
+          entrega?: boolean
           expires_at?: string | null
           external_file_id?: string
           file_name?: string
@@ -2575,6 +2585,8 @@ export type Database = {
           position?: number | null
           post_id?: string | null
           provider?: string
+          rodada?: number
+          substituida?: boolean
           thumbnail_url?: string | null
           user_id?: string
           view_url?: string | null
@@ -3880,6 +3892,68 @@ export type Database = {
         }
         Relationships: []
       }
+      parceiro_agenda_itens: {
+        Row: {
+          agencia_id: string | null
+          created_at: string
+          data: string | null
+          feito: boolean
+          feito_em: string | null
+          hora: string | null
+          id: string
+          local: string | null
+          nota: string | null
+          parceiro_id: string
+          post_id: string | null
+          prioridade: string
+          tipo: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          agencia_id?: string | null
+          created_at?: string
+          data?: string | null
+          feito?: boolean
+          feito_em?: string | null
+          hora?: string | null
+          id?: string
+          local?: string | null
+          nota?: string | null
+          parceiro_id: string
+          post_id?: string | null
+          prioridade?: string
+          tipo?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          agencia_id?: string | null
+          created_at?: string
+          data?: string | null
+          feito?: boolean
+          feito_em?: string | null
+          hora?: string | null
+          id?: string
+          local?: string | null
+          nota?: string | null
+          parceiro_id?: string
+          post_id?: string | null
+          prioridade?: string
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parceiro_agenda_itens_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parceiro_card_meta: {
         Row: {
           checklist: Json
@@ -4264,6 +4338,7 @@ export type Database = {
         Row: {
           color: string
           created_at: string | null
+          descricao: string | null
           id: string
           name: string
           position: number | null
@@ -4272,6 +4347,7 @@ export type Database = {
         Insert: {
           color: string
           created_at?: string | null
+          descricao?: string | null
           id?: string
           name: string
           position?: number | null
@@ -4280,6 +4356,7 @@ export type Database = {
         Update: {
           color?: string
           created_at?: string | null
+          descricao?: string | null
           id?: string
           name?: string
           position?: number | null
@@ -4297,27 +4374,39 @@ export type Database = {
       }
       post_approval_comments: {
         Row: {
+          ancora_seg: number | null
+          ancora_x: number | null
+          ancora_y: number | null
           author_id: string | null
           author_role: string
           content: string
           created_at: string
           id: string
+          midia_indice: number | null
           post_id: string
         }
         Insert: {
+          ancora_seg?: number | null
+          ancora_x?: number | null
+          ancora_y?: number | null
           author_id?: string | null
           author_role?: string
           content: string
           created_at?: string
           id?: string
+          midia_indice?: number | null
           post_id: string
         }
         Update: {
+          ancora_seg?: number | null
+          ancora_x?: number | null
+          ancora_y?: number | null
           author_id?: string | null
           author_role?: string
           content?: string
           created_at?: string
           id?: string
+          midia_indice?: number | null
           post_id?: string
         }
         Relationships: [
@@ -4399,6 +4488,7 @@ export type Database = {
           result_saves: number | null
           result_shares: number | null
           result_views: number | null
+          revisoes: number
           scheduled_date: string | null
           scheduled_time: string | null
           script: string | null
@@ -4453,6 +4543,7 @@ export type Database = {
           result_saves?: number | null
           result_shares?: number | null
           result_views?: number | null
+          revisoes?: number
           scheduled_date?: string | null
           scheduled_time?: string | null
           script?: string | null
@@ -4507,6 +4598,7 @@ export type Database = {
           result_saves?: number | null
           result_shares?: number | null
           result_views?: number | null
+          revisoes?: number
           scheduled_date?: string | null
           scheduled_time?: string | null
           script?: string | null
@@ -6545,9 +6637,14 @@ export type Database = {
       list_post_comments_by_token: {
         Args: { _token: string }
         Returns: {
+          ancora_seg: number
+          ancora_x: number
+          ancora_y: number
           author_kind: string
+          comment_id: string
           content: string
           created_at: string
+          midia_indice: number
           post_id: string
         }[]
       }
@@ -6725,7 +6822,14 @@ export type Database = {
         Returns: string
       }
       parceiro_comentar: {
-        Args: { _post_id: string; _texto: string }
+        Args: {
+          _ancora_seg?: number
+          _ancora_x?: number
+          _ancora_y?: number
+          _midia_indice?: number
+          _post_id: string
+          _texto: string
+        }
         Returns: string
       }
       parceiro_entregues: {
@@ -6744,6 +6848,25 @@ export type Database = {
           formato: string
           post_id: string
           publica_em: string
+          revisoes: number
+          titulo: string
+        }[]
+      }
+      parceiro_extrato: {
+        Args: { _ate: string; _de: string }
+        Returns: {
+          agencia_id: string
+          agencia_nome: string
+          aprovacao: string
+          cache: number
+          cliente_cor: string
+          cliente_nome: string
+          formato: string
+          pago: boolean
+          quando: string
+          referencia_id: string
+          revisoes: number
+          tipo: string
           titulo: string
         }[]
       }
@@ -6801,6 +6924,7 @@ export type Database = {
           prazo_sugerido: string
           producao_status: string
           publica_em: string
+          revisoes: number
           titulo: string
         }[]
       }
@@ -6813,6 +6937,22 @@ export type Database = {
           entregues_30d: number
           meu_papel: string
           vinculo_status: string
+        }[]
+      }
+      parceiro_minhas_gravacoes: {
+        Args: { _ate: string; _de: string }
+        Returns: {
+          agencia_id: string
+          agencia_nome: string
+          captura_id: string
+          cliente_nome: string
+          dia: string
+          duracao_horas: number
+          hora: string
+          local: string
+          nota: string
+          roteiros: number
+          status: string
         }[]
       }
       parceiro_minhas_marcas: {
@@ -6857,6 +6997,39 @@ export type Database = {
         Returns: undefined
       }
       parceiro_tem_o_card: { Args: { _post_id: string }; Returns: boolean }
+      parceiro_titulos_das_pecas: {
+        Args: { _ids: string[] }
+        Returns: {
+          cliente_nome: string
+          post_id: string
+          titulo: string
+        }[]
+      }
+      parceiro_versoes_da_peca: {
+        Args: { _post_id: string }
+        Returns: {
+          atual: boolean
+          em: string
+          id: string
+          nome: string
+          rodada: number
+          thumb: string
+          tipo: string
+          url: string
+        }[]
+      }
+      pin_comment_by_token: {
+        Args: {
+          _ancora_seg?: number
+          _ancora_x?: number
+          _ancora_y?: number
+          _comment: string
+          _midia_indice?: number
+          _post_id: string
+          _token: string
+        }
+        Returns: string
+      }
       portal_mark_viewed: { Args: { _token: string }; Returns: undefined }
       quer_push: { Args: { _tipo: string; _user: string }; Returns: boolean }
       rate_touch: { Args: { _key: string; _limit: number }; Returns: boolean }
@@ -6878,12 +7051,24 @@ export type Database = {
         Args: { _note?: string; _reason?: string; _token: string }
         Returns: undefined
       }
+      remove_pin_by_token: {
+        Args: { _comment_id: string; _token: string }
+        Returns: undefined
+      }
       reorder_script_approval_by_token: {
         Args: { _ids: string[]; _token: string }
         Returns: undefined
       }
       request_adjustment_by_token: {
-        Args: { _comment: string; _post_id: string; _token: string }
+        Args: {
+          _ancora_seg?: number
+          _ancora_x?: number
+          _ancora_y?: number
+          _comment: string
+          _midia_indice?: number
+          _post_id: string
+          _token: string
+        }
         Returns: undefined
       }
       request_material_by_token: {
