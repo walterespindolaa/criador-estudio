@@ -21,6 +21,7 @@ import { CampoTextoRico } from "@/lib/textoRico";
 import { modelosDoEstilo, type AparenciaModelo } from "@/lib/bioTemplates";
 import { cn } from "@/lib/utils";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
+import { FORMAS_DA_FOTO, formaValida, type FormaDaFoto } from "@/lib/bioFoto";
 import { EditorItens } from "@/components/bio/EditorItens";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -65,7 +66,28 @@ function useUploadBio() {
   return { enviar, subindo };
 }
 
-function BotaoImagem({ valor, onTroca, rotulo }: { valor: string; onTroca: (url: string) => void; rotulo: string }) {
+/* ── A FORMA DA FOTO (Walter, 20/09/2026) ──────────────────────────────────
+   "não faz sentido eu não conseguir colocar uma imagem horizontal num lugar
+   que é pra imagem ficar horizontal".
+
+   Ele estava certo, e o problema era pior do que faltar a opção: o recorte
+   aqui era fixo em 3:4 (em pé) e a página pública desenhava o mesmo bloco em
+   16:9 (deitado). A foto era cortada duas vezes, em direções opostas: primeiro
+   viravam as laterais em pé, depois o miolo dessa tira era esticado deitado.
+   Daí a sensação de "fica tudo zoado", que não era sensação.
+
+   Agora a forma é UMA decisão, tomada aqui, e a página obedece. A escolha fica
+   guardada no bloco, junto da foto, porque é dela: dois blocos de texto podem
+   querer formas diferentes na mesma página. */
+
+function BotaoImagem({ valor, onTroca, rotulo, forma, onForma }: {
+  valor: string;
+  onTroca: (url: string) => void;
+  rotulo: string;
+  /** Vazio = bloco antigo, que nasceu antes desta escolha existir. */
+  forma?: string;
+  onForma?: (f: FormaDaFoto) => void;
+}) {
   const ref = useRef<HTMLInputElement>(null);
   const { enviar, subindo } = useUploadBio();
   /* ENQUADRAR ANTES DE SUBIR. A foto sai do celular em qualquer proporção e o
@@ -73,15 +95,37 @@ function BotaoImagem({ valor, onTroca, rotulo }: { valor: string; onTroca: (url:
      pessoa escolhe o pedaço que importa, com zoom, e o que sobe já é o
      recorte: a página nunca mais decide isso sozinha. */
   const [paraCortar, setParaCortar] = useState<string | null>(null);
+  const [formaAtual, setFormaAtual] = useState<FormaDaFoto>(formaValida(forma ?? ""));
 
   const subirRecorte = async (blob: Blob) => {
     const arquivo = new File([blob], "imagem.jpg", { type: blob.type || "image/jpeg" });
     const url = await enviar(arquivo, "bloco");
-    if (url) onTroca(url);
+    if (url) { onTroca(url); onForma?.(formaAtual); }
     setParaCortar(null);
   };
 
+  /* Trocar a forma com foto no ar reabre o recorte na hora: o arquivo tem que
+     nascer na proporção nova, senão a página mostra a antiga esticada. */
+  const escolherForma = (f: FormaDaFoto) => {
+    setFormaAtual(f);
+    if (valor) setParaCortar(valor);
+    else onForma?.(f);
+  };
+
   return (
+    <div className="space-y-2">
+      {onForma && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[11px] font-body text-muted-foreground">Formato:</span>
+          {(Object.keys(FORMAS_DA_FOTO) as FormaDaFoto[]).map((f) => (
+            <button key={f} type="button" onClick={() => escolherForma(f)}
+              className={cn("rounded-lg border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors min-h-[28px]",
+                formaAtual === f ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground")}>
+              {FORMAS_DA_FOTO[f].rotulo}
+            </button>
+          ))}
+        </div>
+      )}
     <div className="flex items-center gap-2.5">
       <div className="w-16 h-16 rounded-xl bg-muted overflow-hidden shrink-0 grid place-items-center border border-border">
         {valor ? <img src={valor} alt="" className="w-full h-full object-cover" />
@@ -109,9 +153,10 @@ function BotaoImagem({ valor, onTroca, rotulo }: { valor: string; onTroca: (url:
           onOpenChange={(v) => { if (!v) setParaCortar(null); }}
           imageSrc={paraCortar}
           cropShape="rect"
-          aspectRatio={3 / 4}
+          aspectRatio={FORMAS_DA_FOTO[formaAtual].ratio}
           onCropComplete={(blob) => void subirRecorte(blob)} />
       )}
+    </div>
     </div>
   );
 }
@@ -298,7 +343,8 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioB
               placeholder="Escreva como você falaria com o cliente." />
           </LinhaCampo>
           <LinhaCampo label="Foto (opcional)" ajuda="Aparece acima do texto, no topo do card.">
-            <BotaoImagem valor={txt(d, "imagem")} onTroca={(u) => p({ imagem: u })} rotulo="Enviar foto" />
+            <BotaoImagem valor={txt(d, "imagem")} onTroca={(u) => p({ imagem: u })} rotulo="Enviar foto"
+              forma={txt(d, "imagem_forma")} onForma={(f) => p({ imagem_forma: f })} />
           </LinhaCampo>
         </div>
       );

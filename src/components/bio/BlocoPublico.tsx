@@ -6,6 +6,7 @@ import {
 } from "@/lib/bioBlocks";
 import { iconeLucide } from "@/lib/bioIcones";
 import { TextoRico } from "@/lib/textoRico";
+import { classeDaForma } from "@/lib/bioFoto";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -300,9 +301,13 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
         <CartaoBase visual={visual} className={foto ? "overflow-hidden" : "p-4"}>
           {/* Proporção fixa em vez de max-h: sem ela, o espaço só aparecia
               quando a foto chegava, e todo o resto da página pulava pra baixo
-              na frente do visitante. */}
+              na frente do visitante.
+              A proporção agora é a QUE A PESSOA ESCOLHEU no editor (Walter,
+              20/09/2026). Antes era 16:9 fixo aqui e 3:4 fixo no recorte: a
+              foto era cortada duas vezes, em direções opostas. Bloco antigo,
+              sem escolha gravada, continua em 16:9 como sempre esteve. */}
           {foto && <img src={foto} alt="" loading="lazy" decoding="async"
-            className="w-full aspect-[16/9] object-cover" />}
+            className={cn("w-full object-cover", classeDaForma(txt(data, "imagem_forma")))} />}
           <div className={foto ? "p-4" : ""}>
             <TituloCartao>{txt(data, "titulo")}</TituloCartao>
             {/* font-normal + leading-normal (pedidos da Gabi, 31/08): o corpo

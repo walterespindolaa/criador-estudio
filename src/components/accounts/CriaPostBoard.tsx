@@ -985,6 +985,19 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   producaoStatus={editing.producao_status} prazo={editing.prazo_producao}
                   cache={editing.cache_parceiro ?? null} />
               )}
+              {/* EXCLUIR DE DENTRO DO POST (Walter, 20/09/2026).
+                  A lixeira existia só no card do quadro. Quem abriu o post,
+                  leu e decidiu que ele não vai existir tinha que fechar,
+                  achar o card de novo no meio da coluna e só então apagar.
+                  Fecha o editor antes de perguntar: dois diálogos empilhados
+                  é a forma mais rápida de alguém confirmar sem ler. */}
+              {editing && !draftId && (
+                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"
+                  aria-label="Excluir este post"
+                  onClick={() => { const id = editing.id; setFormOpen(false); setEditing(null); setConfirmDelete(id); }}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={() => void requestCloseForm()}>Cancelar</Button>
               <Button size="sm" onClick={submit} disabled={create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : draftId ? "Criar post" : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar post"}</Button>
             </div>
