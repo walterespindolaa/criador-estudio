@@ -188,7 +188,12 @@ export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
       const esc = Math.max(D / logoCli.w, D / logoCli.h);
       const iw = logoCli.w * esc, ih = logoCli.h * esc;
       pdf.saveGraphicsState();
-      pdf.circle(L / 2, y + D / 2, D / 2);
+      /* O QUADRADO DENTRO DO REDONDO (Walter, 21/09/2026). O clipe estava
+         escrito, mas `circle()` SEM o quarto argumento desenha o traço e
+         consome o caminho: quando o clip() chegava, não tinha caminho nenhum
+         pra recortar, e a foto saía inteira, quadrada. Com `null` o jsPDF
+         deixa o caminho aberto só pro recorte. */
+      pdf.circle(L / 2, y + D / 2, D / 2, null);
       pdf.clip();
       pdf.discardPath();
       pdf.addImage(logoCli.data, "JPEG", (L - iw) / 2, y + (D - ih) / 2, iw, ih);
@@ -211,9 +216,15 @@ export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
   pdf.setFontSize(30);
   pdf.text(d.cliente, L / 2, y, { align: "center", maxWidth: L - 40 });
   y += 11;
+  /* A DATA UMA VEZ SÓ (Walter, 21/09/2026: "não precisa ter todas as datas
+     do lado, já sabemos que é dia 21"). Se todo roteiro do guia é do mesmo
+     dia, a data completa substitui o "Setembro de 2026" e some da lista. Se
+     há dias diferentes, volta o mês em cima e a data em cada linha. */
+  const datasDistintas = Array.from(new Set(d.roteiros.map((r) => r.record_date ?? "")));
+  const diaUnico = datasDistintas.length === 1 && datasDistintas[0] ? datasDistintas[0] : null;
   suave();
   pdf.setFont("helvetica", "normal"); pdf.setFontSize(13);
-  pdf.text(d.mesLabel, L / 2, y, { align: "center" });
+  pdf.text(diaUnico ? `Gravação em ${dataBR(diaUnico)}` : d.mesLabel, L / 2, y, { align: "center" });
   y += 18;
 
   // SUMÁRIO: a primeira página já responde "o que a gente grava neste dia".
@@ -226,10 +237,14 @@ export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
   const cabeNaCapa = d.roteiros.slice(0, 12);
   cabeNaCapa.forEach((r, i) => {
     tinta(); pdf.setFont("helvetica", "bold"); pdf.setFontSize(9.5);
-    const t = pdf.splitTextToSize(`${i + 1}. ${r.title?.trim() || `Vídeo ${i + 1}`}`, L - MARGEM * 2 - 62);
+    // Sem a coluna de data, o título ganha a largura inteira (antes cortava
+    // em "...melhorar o intestino" por causa dos 62mm reservados).
+    const t = pdf.splitTextToSize(`${i + 1}. ${r.title?.trim() || `Vídeo ${i + 1}`}`, L - MARGEM * 2 - (diaUnico ? 32 : 62));
     pdf.text(t[0], MARGEM + 16, y);
-    suave(); pdf.setFont("helvetica", "normal"); pdf.setFontSize(8.5);
-    pdf.text(dataBR(r.record_date) ?? "data a combinar", L - MARGEM - 16, y, { align: "right" });
+    if (!diaUnico) {
+      suave(); pdf.setFont("helvetica", "normal"); pdf.setFontSize(8.5);
+      pdf.text(dataBR(r.record_date) ?? "data a combinar", L - MARGEM - 16, y, { align: "right" });
+    }
     y += 7;
   });
   if (d.roteiros.length > cabeNaCapa.length) {
@@ -238,11 +253,25 @@ export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
   }
 
   if (logoAge) {
-    /* Cabe dentro de uma caixa de 24x14, mantendo a proporção. Antes a largura
-       era fixa em 24 e só a altura era limitada: logo alto era ACHATADO. */
-    const escala = Math.min(24 / logoAge.w, 14 / logoAge.h);
-    const lw = logoAge.w * escala, lh = logoAge.h * escala;
-    pdf.addImage(logoAge.data, "JPEG", (L - lw) / 2, A - 46, lw, lh);
+    if (ehSelo(logoAge)) {
+      // Selo da agência também vai redondo, na mesma regra do cliente.
+      const DA = 16;
+      const esc = Math.max(DA / logoAge.w, DA / logoAge.h);
+      const iw = logoAge.w * esc, ih = logoAge.h * esc;
+      const cy = A - 46 + DA / 2;
+      pdf.saveGraphicsState();
+      pdf.circle(L / 2, cy, DA / 2, null);
+      pdf.clip();
+      pdf.discardPath();
+      pdf.addImage(logoAge.data, "JPEG", (L - iw) / 2, cy - ih / 2, iw, ih);
+      pdf.restoreGraphicsState();
+    } else {
+      /* Cabe dentro de uma caixa de 24x14, mantendo a proporção. Antes a largura
+         era fixa em 24 e só a altura era limitada: logo alto era ACHATADO. */
+      const escala = Math.min(24 / logoAge.w, 14 / logoAge.h);
+      const lw = logoAge.w * escala, lh = logoAge.h * escala;
+      pdf.addImage(logoAge.data, "JPEG", (L - lw) / 2, A - 46, lw, lh);
+    }
   }
   suave(); pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
   pdf.text(`Preparado por ${assina}`, L / 2, A - 26, { align: "center" });
