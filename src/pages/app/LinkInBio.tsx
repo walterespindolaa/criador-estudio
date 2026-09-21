@@ -55,6 +55,7 @@ import { SiteBio, type ItemLite } from "@/components/bio/SiteBio";
 import { useBioItems } from "@/hooks/useBioItems";
 import type { AparenciaModelo } from "@/lib/bioTemplates";
 import { PainelDesempenho } from "@/components/bio/PainelDesempenho";
+import { useBioTotais } from "@/hooks/useBioStats";
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
 import { corDeDestaque, corSobre, nomeDaMarcaSite } from "@/lib/bioBlocks";
 import type { BioBloco, EstiloBio } from "@/lib/bioBlocks";
@@ -1030,12 +1031,12 @@ const LinkInBio = () => {
     [sortedLinks]
   );
 
-  // Analytics
-  const totalClicks = useMemo(
-    () => sortedLinks.reduce((s, l) => (l.link_type === "header" ? s : s + (l.clicks ?? 0)), 0),
-    [sortedLinks]
-  );
-  const bioViews = profile?.bio_views ?? 0;
+  /* Analytics. Os totais de "desde o começo" saem de bio_stats_daily, a mesma
+     fonte do painel por período: ver o comentário em useBioTotais. Somar
+     bio_links.clicks aqui dava zero desde que a página virou blocos. */
+  const totaisQ = useBioTotais();
+  const totalClicks = totaisQ.data?.cliques ?? 0;
+  const bioViews = totaisQ.data?.visitas ?? 0;
   const conversao = bioViews > 0 ? Math.min(100, Math.round((totalClicks / bioViews) * 100)) : 0;
   const topLink = useMemo(
     () => sortedLinks.filter((l) => l.link_type !== "header").sort((a, b) => (b.clicks ?? 0) - (a.clicks ?? 0))[0] ?? null,

@@ -43,6 +43,50 @@ const diaBR = (d: Date) => {
 
 const VAZIO: ResumoBio = { visitas: 0, cliques: 0, visitasAntes: 0, cliquesAntes: 0, porDia: [], porBloco: {}, porOrigem: {} };
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   OS TOTAIS DESDE O PRIMEIRO DIA (Walter, 21/09/2026)
+
+   "Desde o começo" mostrava 30 visitas e ZERO cliques, enquanto o painel de
+   30 dias logo acima mostrava 31 visitas e 12 cliques. Não era arredondamento:
+   eram duas fontes diferentes, e uma delas morreu.
+
+   Os cliques vinham de somar `bio_links.clicks`, a tabela da Bio v1. Desde que
+   a página passou a ser montada por BLOCOS, ninguém escreve mais nessa coluna:
+   o clique é gravado em bio_stats_daily com o id do bloco. Somar a tabela velha
+   dava zero pra sempre, e a conversão junto. As visitas vinham de outro lugar
+   ainda (o contador profiles.bio_views), que também não acompanha a página da
+   agência: daí 30 contra 31.
+
+   Agora os dois números saem da mesma fonte do painel de cima, só que sem corte
+   de data. Mesma pergunta, mesma régua.
+   ═══════════════════════════════════════════════════════════════════════════ */
+export function useBioTotais() {
+  const alvo = useBioAlvo();
+  const { activeAccountId } = useActiveAccount();
+  const pageId = alvo?.tipo === "ficha" ? alvo.pageId : null;
+  const userId = alvo ? (alvo.tipo === "conta" ? alvo.ownerId : alvo.managerId) : activeAccountId;
+
+  return useQuery<{ visitas: number; cliques: number }>({
+    queryKey: ["bio-totais", pageId ?? userId],
+    enabled: !!(pageId || userId),
+    staleTime: 60_000,
+    queryFn: async () => {
+      let s = sbFrom("bio_stats_daily").select("views, clicks");
+      s = pageId ? s.eq("page_id", pageId) : s.eq("user_id", userId!).is("page_id", null);
+      const { data, error } = await s;
+      if (error) {
+        if (tabelaFaltando(error.message)) return { visitas: 0, cliques: 0 };
+        throw error;
+      }
+      const linhas = (data ?? []) as { views: number; clicks: number }[];
+      return {
+        visitas: linhas.reduce((a, l) => a + (l.views ?? 0), 0),
+        cliques: linhas.reduce((a, l) => a + (l.clicks ?? 0), 0),
+      };
+    },
+  });
+}
+
 export function useBioStats(dias: number) {
   const alvo = useBioAlvo();
   const { activeAccountId } = useActiveAccount();

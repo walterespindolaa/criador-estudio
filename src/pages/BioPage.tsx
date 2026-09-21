@@ -413,8 +413,21 @@ function descobrirOrigem(): string {
       if (["qr", "instagram", "whatsapp", "facebook", "google", "tiktok"].includes(s)) return s;
       return "outro";
     }
+    const q = new URLSearchParams(window.location.search);
     const r = (document.referrer || "").toLowerCase();
+
+    /* SEM REFERRER, MAS COM RASTRO DA META (Walter, 21/09/2026: "aparece
+       Facebook e o link nem está lá"). No iOS o navegador de dentro do
+       Instagram não manda referrer nenhum, então a visita caía em "direto" e o
+       painel ficava com a maior fatia num rótulo que não ensina nada. Mas a
+       Meta carimba a URL: `igshid` só existe no Instagram, `fbclid` vale pros
+       apps da Meta em geral. Isso é o que o próprio link trouxe, não é palpite
+       em cima do aparelho. */
+    if (q.get("igshid")) return "instagram";
+    if (q.get("fbclid")) return "meta";
     if (!r) return "direto";
+    // O encurtador do Instagram é inequívoco, ao contrário do da Meta.
+    if (r.includes("l.instagram.com")) return "instagram";
 
     /* O ATALHO DA META ENGANA (Walter, 09/09/2026: "aparece Facebook e o link
        nem está lá"). Quando alguém abre um link DENTRO de um app da Meta, o
@@ -424,7 +437,8 @@ function descobrirOrigem(): string {
        "Facebook" era inventar uma origem que não existe.
        Agora o atalho vira uma categoria honesta ("veio de um app da Meta") e só
        o domínio direto do Facebook conta como Facebook. */
-    if (r.includes("l.facebook.com") || r.includes("lm.facebook.com") || r.includes("l.messenger.com")) return "meta";
+    if (r.includes("l.facebook.com") || r.includes("lm.facebook.com")
+        || r.includes("l.messenger.com") || r.includes("lm.instagram.com")) return "meta";
     if (r.includes("instagram")) return "instagram";
     if (r.includes("whatsapp") || r.includes("wa.me")) return "whatsapp";
     if (r.includes("messenger.com") || r.includes("m.me")) return "messenger";
