@@ -300,14 +300,24 @@ const AppLayout = () => {
                   <FeedbackButton origin="usuario" />
                 </div>
 
-                {/* A logo central sobe a página atual pro topo (não navega pra home). */}
+                {/* A logo central sobe a página atual pro topo (não navega pra home).
+
+                    NO CELULAR VAI O SELO, NÃO A ASSINATURA (Walter, 21/09/2026:
+                    "ainda tá meio ofuscado a parte superior no mobile"). O
+                    desenho da marca escrita tem traço fino: reduzido pra 24px de
+                    altura ele vira 44px de largura e só 30% dos pixels ficam
+                    opacos, o resto é antisserrilhado. Daí o efeito de marca
+                    d'água ao lado de ícones nítidos, que nenhuma troca de
+                    arquivo conserta, porque o problema é o tamanho. O selo é uma
+                    forma cheia e aguenta ser pequeno, que é o motivo de o rail
+                    já usar ele quando está fechado. */}
                 <button
                   type="button"
                   onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
                   className="flex items-center justify-self-center px-2"
                   aria-label="Subir ao topo"
                 >
-                  <Logo pequeno className="h-6 w-auto" />
+                  <Logo icon pequeno className="h-8 w-8" />
                 </button>
 
                 <div className="flex items-center gap-0.5 justify-self-end">

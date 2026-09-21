@@ -439,14 +439,16 @@ export default function ManagerLayout() {
             <FeedbackButton origin="gestor" />
           </div>
 
-          {/* A logo central sobe a página atual pro topo (não navega pra home). */}
+          {/* A logo central sobe a página atual pro topo (não navega pra home).
+              Selo em vez da marca escrita, mesmo motivo do topo do criador: o
+              traço fino some quando a assinatura é desenhada com 24px. */}
           <button
             type="button"
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="justify-self-center px-2"
+            className="flex items-center justify-self-center px-2"
             aria-label="Subir ao topo"
           >
-            <Logo pequeno className="h-6 w-auto" />
+            <Logo icon pequeno className="h-8 w-8" />
           </button>
 
           <div className="flex items-center gap-0.5 justify-self-end">

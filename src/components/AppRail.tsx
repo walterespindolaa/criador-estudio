@@ -274,7 +274,8 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
       <div className={cn("flex h-[52px] shrink-0 items-center", expanded ? "pl-[22px] pr-2.5" : "justify-center")}>
         {expanded ? (
           <>
-            <Logo pequeno className="h-6 w-auto" />
+            {/* h-7 e não h-6: com 24px a assinatura fica cinzenta de tão fina. */}
+            <Logo pequeno className="h-7 w-auto" />
             <div className="flex-1" />
             <button
               type="button"

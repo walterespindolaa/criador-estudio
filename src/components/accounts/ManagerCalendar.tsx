@@ -137,6 +137,9 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
   const [soParceirosLivre, setSoParceiros] = useState(() => readFlag("cal_so_parceiros", false));
   const soParceiros = somenteParceiros || soParceirosLivre;
   const [quemFiltro, setQuemFiltro] = useState<string>("");
+  /* Post cujo chip de ENTREGA está sob o mouse agora. Enquanto ele existe, a
+     postagem daquele mesmo post acende no dia dela. Null = ninguém. */
+  const [espiando, setEspiando] = useState<string | null>(null);
   const toggleSoParceiros = () => setSoParceiros((v) => { const n = !v; writeFlag("cal_so_parceiros", n); return n; });
   const nomeParceiro = useMemo(() => {
     const m: Record<string, string> = {};
@@ -254,6 +257,25 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posts, hidden, periodRange, soParceiros, quemFiltro]);
+  /* SÓ UM CHIP POR POST NO MODO PARCEIROS (Walter, 21/09/2026: "não precisa
+     aparecer os dois, vai gerar muita confusão"). Entrega e postagem são o
+     MESMO post em dois dias, e ver os dois na grade dava a impressão de dois
+     trabalhos. Agora manda a ENTREGA, que é o que a social mídia cobra; a
+     postagem só acende enquanto o mouse está em cima da entrega, pra ela ver
+     de relance quanto tempo sobra entre uma coisa e outra, e apaga ao sair.
+     Post sem prazo combinado não tem entrega na grade: esse continua
+     aparecendo como postagem, senão sumiria do calendário. */
+  const comEntrega = useMemo(() => {
+    const s = new Set<string>();
+    for (const lista of Object.values(byDay)) {
+      for (const it of lista) if (it.kind === "entrega") s.add(it.post.id);
+    }
+    return s;
+  }, [byDay]);
+  const naGrade = (lista: CalItem[]) =>
+    !soParceiros ? lista
+      : lista.filter((it) => it.kind === "entrega" || !comEntrega.has(it.post.id) || espiando === it.post.id);
+
   const unscheduled = posts.filter((p) => !p.scheduled_date && visible(p));
   const emRiscoLista = useMemo(() => soParceiros ? posts.filter((p) => visible(p) && emRisco(p)) : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -284,7 +306,7 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
 
   // Card do post: arrastável entre os dias e clicável pra abrir o popup editável.
   // O drag nativo não dispara "click" depois de um arraste real, então dá pra ter os dois.
-  const chip = (p: CalPost) => {
+  const chip = (p: CalPost, revelado = false) => {
     const color = colorOf[p.external_client_id] ?? "#EA4918";
     return (
       <div
@@ -296,7 +318,8 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
         // disparam logo após o drop já foi ignorado (o ref ainda está true nele).
         onDragEnd={() => { window.setTimeout(() => { draggingRef.current = false; }, 0); }}
         onClick={() => { if (draggingRef.current) return; setEditPost(p); }}
-        className="cursor-grab active:cursor-grabbing rounded-md px-1.5 py-1 mb-1 text-[10px] leading-tight truncate"
+        className={`cursor-grab active:cursor-grabbing rounded-md px-1.5 py-1 mb-1 text-[10px] leading-tight truncate ${
+          revelado ? "ring-2 ring-violet-400 ring-offset-1" : ""}`}
         style={{ backgroundColor: `${color}1a`, borderLeft: `3px solid ${color}` }}
         title={`${nameOf[p.external_client_id] ?? ""} · ${p.title}${soParceiros && emRisco(p) ? " · entrega combinada no dia da postagem ou depois" : ""}`}
       >
@@ -331,11 +354,18 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
         key={`e-${p.id}`}
         type="button"
         onClick={() => setEditPost(p)}
+        /* Passar o mouse aqui acende a postagem deste post no dia dela.
+           onFocus/onBlur repetem o gesto pra quem navega pelo teclado. */
+        onMouseEnter={() => setEspiando(p.id)}
+        onMouseLeave={() => setEspiando((atual) => (atual === p.id ? null : atual))}
+        onFocus={() => setEspiando(p.id)}
+        onBlur={() => setEspiando((atual) => (atual === p.id ? null : atual))}
         className={`w-full text-left rounded-md px-1.5 py-1 mb-1 text-[10px] leading-tight truncate border border-dashed ${
           entregue ? "bg-green-50 border-green-300 text-green-800"
           : atrasada ? "bg-red-50 border-red-300 text-red-800"
           : "bg-violet-50 border-violet-300 text-violet-900"}`}
-        title={`Entrega de ${quem} · ${nameOf[p.external_client_id] ?? ""} · ${p.title}`}
+        title={`Entrega de ${quem} · ${nameOf[p.external_client_id] ?? ""} · ${p.title}${
+          p.scheduled_date ? ` · posta em ${p.scheduled_date.slice(8, 10)}/${p.scheduled_date.slice(5, 7)}` : ""}`}
       >
         <span className="block text-[9px] font-bold uppercase tracking-wider truncate">
           <span className={`inline-grid place-items-center w-3.5 h-3.5 rounded-full text-white text-[8px] font-bold mr-1 -mt-0.5 ${
@@ -348,7 +378,8 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
       </button>
     );
   };
-  const renderItem = (it: CalItem) => (it.kind === "entrega" ? chipEntrega(it.post) : chip(it.post));
+  const renderItem = (it: CalItem) =>
+    it.kind === "entrega" ? chipEntrega(it.post) : chip(it.post, soParceiros && espiando === it.post.id);
 
   return (
     <div className="space-y-4">
@@ -444,7 +475,7 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
                 </button>
               ))}
               <span className="text-[11px] font-body text-muted-foreground ml-1">
-                tracejado = entrega do parceiro · cheio = postagem
+                cada post aparece uma vez, no dia da entrega. Passe o mouse em cima pra ver o dia em que ele vai ao ar.
               </span>
             </>
           )}
@@ -512,7 +543,7 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
           {days.map((d) => {
             const dim = view === "mes" && !isSameMonth(d, cursor);
             const today = isSameDay(d, new Date());
-            const list = byDay[dkey(d)] ?? [];
+            const list = naGrade(byDay[dkey(d)] ?? []);
             return (
               <div key={d.toISOString()}
                 onDrop={onDrop(dkey(d))} onDragOver={allowDrop}
