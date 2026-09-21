@@ -30,9 +30,12 @@ serve(async (req) => {
     const slug = body?.slug ? String(body.slug).slice(0, 120) : "";
     const linkId = body?.linkId ? String(body.linkId) : "";
     // De onde a pessoa veio. A página manda um rótulo curto já resolvido; aqui
-    // só cortamos o tamanho. Guardar o referrer cru seria guardar endereço de
-    // terceiro sem precisar, e ninguém filtra relatório por isso.
-    const origem = body?.origem ? String(body.origem).slice(0, 20) : "direto";
+    // só cortamos o tamanho. Continua sem referrer cru: o que pode chegar é um
+    // apelido ("instagram") ou o HOST do site de origem, nunca o endereço
+    // completo, que seria guardar dado de terceiro sem precisar.
+    // 40 e não 20 porque host de verdade não cabe em 20 (business.facebook.com
+    // tem 21) e era cortado no meio, virando lixo no relatório.
+    const origem = body?.origem ? String(body.origem).slice(0, 40) : "direto";
     if (type !== "view" && type !== "click" && type !== "lead") return ok({ ok: false });
 
     const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";

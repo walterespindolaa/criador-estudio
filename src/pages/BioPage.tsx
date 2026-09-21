@@ -442,7 +442,6 @@ function descobrirOrigem(): string {
     if (r.includes("instagram")) return "instagram";
     if (r.includes("whatsapp") || r.includes("wa.me")) return "whatsapp";
     if (r.includes("messenger.com") || r.includes("m.me")) return "messenger";
-    if (r.includes("facebook") || r.includes("fb.com")) return "facebook";
     if (r.includes("google") || r.includes("bing.") || r.includes("duckduckgo")) return "google";
     if (r.includes("tiktok")) return "tiktok";
     if (r.includes("linkedin")) return "linkedin";
@@ -452,7 +451,23 @@ function descobrirOrigem(): string {
     if (r.includes("linktr.ee") || r.includes("bio.link") || r.includes("beacons.ai")) return "outrabio";
     // Mesmo domínio (a pessoa navegou dentro da própria página) não é origem.
     if (r.includes(window.location.host)) return "direto";
-    return "outro";
+
+    /* DAQUI PRA BAIXO, O NOME DO SITE NO LUGAR DE UM PALPITE (Walter,
+       21/09/2026). Ele exportou os números e "facebook" aparecia todo dia, até
+       hoje, numa página que não está em lugar nenhum do Facebook. A correção de
+       09/09 (o encurtador da Meta) não explicava: não existe NENHUMA linha
+       'meta' na tabela, ou seja, esses acessos nunca passaram pelo encurtador.
+
+       O problema é que "facebook" e "outro" são apelidos que escondem qual site
+       era. `m.facebook.com` (alguém colou o link no Face), `business.facebook.com`
+       (a própria equipe abrindo pelo Meta Business Suite pra conferir) e
+       `mbasic.facebook.com` viravam a mesma palavra, e não dá pra agir em cima
+       dela. Agora guardamos o HOST, que é só o nome do site: continua sem
+       caminho, sem parâmetro e sem nada que identifique a pessoa, que era o
+       motivo de a lista ser fechada. O relatório passa a responder sozinho. */
+    let host = "";
+    try { host = new URL(document.referrer).hostname.toLowerCase().replace(/^www\./, ""); } catch { host = ""; }
+    return host ? host.slice(0, 40) : "outro";
   } catch { return "direto"; }
 }
 

@@ -29,6 +29,16 @@ const NOME_ORIGEM: Record<string, string> = {
   // Messenger usam o mesmo. Nomear de "Facebook" era chutar.
   meta: "App da Meta",
   direto: "Direto", outro: "Outros",
+  /* Origens que hoje chegam como HOST (ver descobrirOrigem em BioPage). O host
+     cru já é legível, mas estes três valem tradução porque confundem: os dois
+     primeiros são a própria equipe conferindo a página pelo painel da Meta, e
+     ninguém deveria ler isso como "meu cliente veio do Facebook". */
+  "business.facebook.com": "Meta Business Suite (sua equipe)",
+  "adsmanager.facebook.com": "Gerenciador de Anúncios",
+  "m.facebook.com": "Facebook (app)",
+  "facebook.com": "Facebook",
+  "mbasic.facebook.com": "Facebook (versão básica)",
+  "web.facebook.com": "Facebook (navegador)",
 };
 
 const diaCurto = (iso: string) => {
@@ -215,6 +225,7 @@ export function PainelDesempenho({ estilo }: { estilo: "classico" | "site" }) {
                 Isto vem de onde o navegador diz que a pessoa estava, e nem sempre ele diz.
                 "Direto" costuma ser link colado no WhatsApp, digitado ou aberto de dentro de um app que não informa a origem.
                 "App da Meta" é quando o clique veio pelo encurtador que Facebook, Instagram e Messenger compartilham, sem dizer qual dos três.
+                Quando aparece o endereço de um site, é porque o navegador informou esse site e ele não está na nossa lista: o nome fica aí cru mesmo, pra você decidir o que fazer com ele.
                 Pra ter certeza de uma origem, marque o link: <code className="font-mono">?src=qr</code> no QR impresso,
                 <code className="font-mono">?src=instagram</code> na bio, e assim por diante.
               </p>
