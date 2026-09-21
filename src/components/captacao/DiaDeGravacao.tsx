@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Camera, Check, Clock, Copy, FileText, MapPin, Play, X } from "lucide-react";
+import { Camera, Check, Clock, Copy, FileText, Loader2, MapPin, Play, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -50,11 +50,19 @@ export type DiaDeGravacaoProps = {
   aoMarcarGravado: (s: CaptureScript) => void;
   aoConcluirCaptacao: (c: Capture) => void;
   aoTeleprompter: (titulo: string, texto: string) => void;
+  /* VIRAR POST OS QUE JÁ GRAVOU (Walter, 21/09/2026: "ter uma opção em virar
+     post tudo que eu marcar como check"). Recebe os roteiros marcados como
+     gravados e ainda sem post; a página cria um reels por roteiro no kanban do
+     cliente, com o roteiro no campo de roteiro. Null quando nenhum cliente do
+     dia tem Cria Post ativo. */
+  aoVirarPosts?: ((roteiros: CaptureScript[]) => Promise<void>) | null;
+  virandoPosts?: boolean;
 };
 
 export function DiaDeGravacao({
   data, caps, scripts, nomeDe, cidadeDe, aoFechar,
   aoMarcarTomada, aoMarcarGravado, aoConcluirCaptacao, aoTeleprompter,
+  aoVirarPosts, virandoPosts,
 }: DiaDeGravacaoProps) {
   const { dia, semana } = dataPorExtenso(data);
   const [copiado, setCopiado] = useState(false);
@@ -71,6 +79,10 @@ export function DiaDeGravacao({
 
   const todosRoteiros = caps.flatMap((c) => porCaptura.get(c.id) ?? []);
   const gravados = todosRoteiros.filter((s) => s.done).length;
+  /* Os que já foram gravados e ainda não viraram post. `source_post_id` é o
+     carimbo de "já virou": sem ele o mesmo roteiro viraria dois posts a cada
+     clique. */
+  const prontosPraPost = todosRoteiros.filter((s) => s.done && !s.source_post_id);
   const locais = [...new Set(caps.map((c) => (c.location ?? "").trim()).filter(Boolean))];
   const clientes = [...new Set(caps.map((c) => nomeDe(c)))];
 
@@ -182,6 +194,32 @@ export function DiaDeGravacao({
                 {copiado ? <><Check className="h-3.5 w-3.5 mr-1.5" /> Copiado</> : <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar o dia</>}
               </Button>
             </div>
+
+            {/* GRAVOU, VIRA POST. O caminho antigo era um roteiro por vez,
+                dentro da pasta do cliente: quem grava oito num dia abria oito
+                vezes. Aqui sai tudo que está com o check, de uma vez, cada um
+                como reels no kanban do seu cliente. */}
+            {aoVirarPosts && prontosPraPost.length > 0 && (
+              <div className="mb-3 rounded-2xl border border-[hsl(var(--cria-verde)/0.35)] bg-[hsl(var(--cria-verde)/0.07)] p-3 flex items-center gap-3 flex-wrap">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[hsl(var(--cria-verde)/0.15)] text-[hsl(var(--cria-verde))]">
+                  <Send className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-display font-bold text-foreground">
+                    {prontosPraPost.length} {prontosPraPost.length === 1 ? "roteiro gravado" : "roteiros gravados"} pra virar post
+                  </p>
+                  <p className="text-[11.5px] font-body text-muted-foreground leading-snug">
+                    Cada um vira um reels em Produção, no kanban do cliente, já com o roteiro dentro.
+                  </p>
+                </div>
+                <Button size="sm" className="rounded-xl shrink-0" disabled={virandoPosts}
+                  onClick={() => { void aoVirarPosts(prontosPraPost); }}>
+                  {virandoPosts
+                    ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Criando...</>
+                    : <><Send className="h-3.5 w-3.5 mr-1.5" /> Virar post</>}
+                </Button>
+              </div>
+            )}
 
             <div className="space-y-3">
               {caps.map((c) => {

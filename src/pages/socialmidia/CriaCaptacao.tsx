@@ -46,6 +46,7 @@ import { ListaReferencias } from "@/components/captacao/Referencias";
 import { DragDropContext as DndRoteiros, Droppable as DropRoteiros, Draggable as DragRoteiro, type DropResult as DropRoteiroResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { nomeExibidoCliente } from "@/lib/cliente-nome";
+import { clienteInativo } from "@/lib/cliente-status";
 import { PrompterPlayer } from "@/components/prompter/PrompterPlayer";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
@@ -252,6 +253,9 @@ function CriaCaptacaoInner() {
      O módulo era organizado por cliente, mas ninguém grava por cliente: grava
      por dia, passando em três clientes com a mesma câmera. */
   const [diaAberto, setDiaAberto] = useState<string | null>(null);
+  /* O dia que o calendário está mostrando embaixo dele (Gabriela, 21/09/2026).
+     É diferente do `diaAberto`, que é o Dia de Gravação em tela cheia. */
+  const [diaEscolhido, setDiaEscolhido] = useState<string | null>(null);
   const { data: extraClients = [] } = useCaptureExtraClients();
   const addExtra = useAddCaptureExtraClient();
   const delExtra = useDeleteCaptureExtraClient();
@@ -414,8 +418,17 @@ function CriaCaptacaoInner() {
     }
     const out: PastaInfo[] = [];
     for (const cl of clients) {
-      if (cl.active === false || cl.status === "inativo") continue;
       const key = `crm:${cl.id}`;
+      /* QUEM SOME DA LISTA (Gabriela, 21/09/2026: "aparecendo usuários inativos").
+         O filtro antigo só olhava `status === "inativo"`, então contrato
+         encerrado (que vira inativo pela DATA) e cliente pausado continuavam
+         pedindo gravação. Agora vale o `clienteInativo` do app inteiro, mais o
+         pausado. A exceção existe pra não esconder trabalho: se ele TEM
+         captação ou roteiro neste mês, a pasta fica, senão o dado somia da
+         tela sem ter pra onde ir. */
+      const temMovimento = (capCount.get(key)?.total ?? 0) > 0 || (rotCount.get(key)?.total ?? 0) > 0;
+      const foraDaCarteira = clienteInativo(cl) || (cl.status ?? "ativo") === "pausado";
+      if (foraDaCarteira && !temMovimento) continue;
       out.push({
         key, nome: nomeExibidoCliente(cl), cidade: ((cl as { city?: string | null }).city ?? null),
         cor: cl.color, crmId: cl.id, extraId: null,
@@ -483,19 +496,6 @@ function CriaCaptacaoInner() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doMes, statusFilter, cityFilter, clientById]);
-
-  // Agrupamento por DIA + LOCAL: chave "data||local", ordenada por data e local.
-  const grupos = useMemo(() => {
-    const map = new Map<string, { date: string; local: string; caps: Capture[] }>();
-    for (const c of filtradas) {
-      const local = (c.location ?? "").trim() || SEM_LOCAL;
-      const key = `${c.capture_date}||${local}`;
-      if (!map.has(key)) map.set(key, { date: c.capture_date, local, caps: [] });
-      map.get(key)!.caps.push(c);
-    }
-    return Array.from(map.values()).sort((a, b) =>
-      a.date.localeCompare(b.date) || a.local.localeCompare(b.local));
-  }, [filtradas]);
 
   // ── SUGESTÃO 2 (base): padrão de dia/horário por cliente ─────────────────────
   // A partir do HISTÓRICO de cada cliente (captações já concluídas ou já passadas,
@@ -662,6 +662,46 @@ function CriaCaptacaoInner() {
       });
       navigate(`/socialmidia/clientes/${cap.crm_client_id}/posts`);
     } catch { /* o hook já avisa */ }
+  };
+
+  /* VIRAR POST EM LOTE, do Dia de Gravação (Walter, 21/09/2026). Um post POR
+     ROTEIRO (não um por dia): cada roteiro é um vídeo, e no kanban do cliente
+     cada vídeo tem que ter o próprio card pra andar sozinho. Reusa o mesmo
+     caminho do botão que já existia dentro da pasta (useScriptToPost), então o
+     post nasce como reels em Produção com o roteiro no campo certo, e o
+     roteiro fica carimbado pra não duplicar. */
+  const scriptToPost = useScriptToPost();
+  const [virandoLote, setVirandoLote] = useState(false);
+  const virarPostsEmLote = async (roteiros: CaptureScript[]) => {
+    if (virandoLote) return;
+    setVirandoLote(true);
+    let feitos = 0;
+    const semCriaPost = new Set<string>();
+    let ultimoCrm: string | null = null;
+    try {
+      for (const r of roteiros) {
+        const cap = r.capture_id ? capturesById.get(r.capture_id) : null;
+        const crmId = cap?.crm_client_id ?? r.crm_client_id ?? null;
+        const ext = crmId ? extByCrmId.get(crmId) : null;
+        if (!crmId || !ext) { semCriaPost.add(cap ? capName(cap) : (r.client_name ?? "Cliente")); continue; }
+        const nome = clientById.get(crmId)?.nome ?? capName(cap!);
+        const texto = cenasDe(r).length > 0 ? cenasParaTexto(cenasDe(r)) : (r.content ?? "");
+        await scriptToPost.mutateAsync({
+          scriptId: r.id,
+          externalClientId: ext.id,
+          title: `${nome} · ${(r.title ?? "").trim() || "roteiro"}`,
+          script: texto,
+        });
+        feitos++; ultimoCrm = crmId;
+      }
+    } finally { setVirandoLote(false); }
+    if (feitos > 0) {
+      toast.success(feitos === 1 ? "1 post criado em Produção." : `${feitos} posts criados em Produção.`);
+      if (semCriaPost.size === 0 && ultimoCrm) navigate(`/socialmidia/clientes/${ultimoCrm}/posts`);
+    }
+    if (semCriaPost.size > 0) {
+      toast.error(`Sem Cria Post ativo: ${[...semCriaPost].join(", ")}. Ative na ficha do cliente e tente de novo.`);
+    }
   };
 
   // Uma linha de captação, usada na Agenda do mês E dentro da pasta do cliente.
@@ -928,7 +968,7 @@ function CriaCaptacaoInner() {
       {/* CALENDÁRIO DO MÊS: a agenda era uma pilha de cards, e ninguém enxerga
           a semana numa pilha. Aqui ela bate o olho e vê os dias cheios, os
           vazios e onde dá pra encaixar mais uma gravação. */}
-      <CalendarioCaptacoes month={month} caps={filtradas} clientById={clientById} aoAbrirDia={setDiaAberto} />
+      <CalendarioCaptacoes month={month} caps={filtradas} clientById={clientById} aoAbrirDia={setDiaEscolhido} />
 
       {/* Gráfico por cidade */}
       {porCidade.length > 0 && (
@@ -972,7 +1012,15 @@ function CriaCaptacaoInner() {
         )}
       </div>
 
-      {/* Lista agrupada por dia + local */}
+      {/* ═══ O DIA ESCOLHIDO (Gabriela, 21/09/2026) ═══════════════════════
+          "Não gostei dessa forma de visualização, aparecer todos embaixo assim
+          listado. Deixa só por cliente mesmo. E se eu apertar no dia do
+          calendário, aparece o que eu tenho naquele dia."
+
+          Antes a aba despejava TODOS os dias do mês empilhados, cada um com os
+          roteiros abertos: uma rolagem que ninguém termina e que repetia o que
+          a pasta do cliente já faz melhor. Agora o calendário manda: toca no
+          dia e só aquele dia aparece aqui embaixo. */}
       {isLoading ? (
         <div className="h-40 rounded-2xl bg-muted animate-pulse" />
       ) : doMes.length === 0 ? (
@@ -984,47 +1032,69 @@ function CriaCaptacaoInner() {
             <CalendarRange className="h-4 w-4 mr-1.5" /> Ir para a Agenda
           </Button>
         </div>
-      ) : grupos.length === 0 ? (
+      ) : !diaEscolhido ? (
         <div className="rounded-2xl border border-dashed border-border py-10 text-center">
-          <p className="text-sm font-body font-medium text-foreground">Nada com esse filtro</p>
-          <p className="text-xs text-muted-foreground font-body mt-1">Ajuste o status ou a cidade pra ver as captações.</p>
+          <CalendarRange className="h-7 w-7 text-muted-foreground/50 mx-auto mb-2" />
+          <p className="text-sm font-body font-semibold text-foreground">Toque num dia do calendário</p>
+          <p className="text-xs text-muted-foreground font-body mt-1 max-w-xs mx-auto">
+            Aparece aqui o que tem naquele dia: clientes, horário e os roteiros.
+          </p>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {grupos.map((g) => (
-            <div key={`${g.date}||${g.local}`} data-tour="cap-grupo" className="rounded-2xl border border-border bg-card overflow-hidden">
-              {/* Cabeçalho do grupo: dia + local */}
-              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-muted/30">
-                <CalendarRange className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-sm font-display font-bold text-foreground">{diaMes(g.date)}</span>
-                <span className="text-xs font-body text-muted-foreground">{WD[parseDateOnly(g.date).getDay()]}</span>
-                <span className="text-muted-foreground/40">·</span>
-                <span className="inline-flex items-center gap-1 text-sm font-body font-semibold text-foreground min-w-0">
-                  <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><span className="truncate">{g.local}</span>
-                </span>
-                <div className="ml-auto flex items-center gap-2 shrink-0">
-                  <Button size="sm" onClick={() => setDiaAberto(g.date)}
+      ) : (() => {
+        const capsDoDia = filtradas
+          .filter((c) => c.capture_date === diaEscolhido)
+          .sort((a, b) => (a.capture_time ?? "99:99").localeCompare(b.capture_time ?? "99:99"));
+        const locaisDoDia = [...new Set(capsDoDia.map((c) => (c.location ?? "").trim()).filter(Boolean))];
+        return (
+          <div data-tour="cap-grupo" className="rounded-2xl border border-border bg-card overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-muted/30 flex-wrap">
+              <CalendarRange className="h-4 w-4 text-primary shrink-0" />
+              <span className="text-sm font-display font-bold text-foreground">{diaMes(diaEscolhido)}</span>
+              <span className="text-xs font-body text-muted-foreground">{WD[parseDateOnly(diaEscolhido).getDay()]}</span>
+              {locaisDoDia.length > 0 && (
+                <>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span className="inline-flex items-center gap-1 text-sm font-body font-semibold text-foreground min-w-0">
+                    <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="truncate">{locaisDoDia.join(", ")}</span>
+                  </span>
+                </>
+              )}
+              <div className="ml-auto flex items-center gap-2 shrink-0">
+                {capsDoDia.length > 0 && (
+                  <Button size="sm" onClick={() => setDiaAberto(diaEscolhido)}
                     className="h-8 rounded-xl px-2.5 whitespace-nowrap"
-                    title="Abre o dia inteiro: tomadas, roteiros na ordem e teleprompter, sem entrar em pasta nenhuma.">
+                    title="Abre o dia inteiro: tomadas, roteiros na ordem e teleprompter.">
                     <Camera className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Abrir o dia</span>
                   </Button>
-                  {g.caps.some((c) => scripts.some((s) => s.capture_id === c.id)) && (
-                    <Button data-tour="cap-folha" variant="outline" size="sm" onClick={() => abrirFolha(g)}
-                      className="h-8 rounded-xl px-2.5 whitespace-nowrap"
-                      title="Todos os roteiros desse dia num texto só, pra levar pra captação.">
-                      <FileText className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Folha do dia</span>
-                    </Button>
-                  )}
-                  <span className="text-[11px] font-body font-semibold text-muted-foreground tabular-nums">{g.caps.length}</span>
-                </div>
-              </div>
-              <div className="divide-y divide-border">
-                {g.caps.map((c) => renderCaptureRow(c))}
+                )}
+                {capsDoDia.some((c) => scripts.some((sc) => sc.capture_id === c.id)) && (
+                  <Button data-tour="cap-folha" variant="outline" size="sm"
+                    onClick={() => abrirFolha({ date: diaEscolhido, local: locaisDoDia.join(", ") || "Sem local", caps: capsDoDia })}
+                    className="h-8 rounded-xl px-2.5 whitespace-nowrap"
+                    title="Todos os roteiros desse dia num texto só, pra levar pra captação.">
+                    <FileText className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Folha do dia</span>
+                  </Button>
+                )}
+                <button type="button" onClick={() => setDiaEscolhido(null)}
+                  className="h-8 w-8 grid place-items-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  aria-label="Fechar o dia">
+                  <X className="h-4 w-4" />
+                </button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+            {capsDoDia.length === 0 ? (
+              <p className="px-4 py-6 text-center text-[13px] font-body text-muted-foreground">
+                Nada neste dia com o filtro atual.
+              </p>
+            ) : (
+              <div className="divide-y divide-border">
+                {capsDoDia.map((c) => renderCaptureRow(c))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       </>)}
       </>)}
@@ -1055,6 +1125,8 @@ function CriaCaptacaoInner() {
         if (capsDoDia.length === 0) return null;
         return (
           <DiaDeGravacao
+            aoVirarPosts={virarPostsEmLote}
+            virandoPosts={virandoLote || scriptToPost.isPending}
             data={diaAberto}
             caps={capsDoDia}
             scripts={scripts}
