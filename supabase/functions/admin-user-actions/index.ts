@@ -200,16 +200,42 @@ serve(async (req) => {
       const [{ data: mods }, { data: ent }, { data: tgt }, { count: seatsUsed }] = await Promise.all([
         svc.from("modules").select("code, name, coming_soon").order("sort_order"),
         svc.from("module_entitlements").select("module_code, status").eq("manager_id", user_id),
-        svc.from("profiles").select("account_type, seat_limit, agency_owner_id").eq("id", user_id).maybeSingle(),
+        svc.from("profiles").select("account_type, seat_limit, agency_owner_id, client_packs, paid_client_packs").eq("id", user_id).maybeSingle(),
         svc.from("profiles").select("id", { count: "exact", head: true }).eq("agency_owner_id", user_id),
       ]);
-      const t = (tgt ?? {}) as { account_type?: string; seat_limit?: number; agency_owner_id?: string };
+      const t = (tgt ?? {}) as {
+        account_type?: string; seat_limit?: number; agency_owner_id?: string;
+        client_packs?: number; paid_client_packs?: number;
+      };
       const active = (ent ?? []).filter((e: { status?: string }) => e.status === "active").map((e: { module_code: string }) => e.module_code);
       let ownerName: string | null = null;
       if (t.agency_owner_id) {
         const { data: o } = await svc.from("profiles").select("name").eq("id", t.agency_owner_id).maybeSingle();
         ownerName = (o as { name?: string })?.name ?? null;
       }
+      /* A CARTEIRA DO CRM É OUTRA COISA (Walter, 22/09/2026: "como eu aumento o
+         número de clientes de uma social mídia? não tenho essa opção").
+
+         Ele estava certo: não tinha. O que existia no painel era `seat_limit`,
+         que é o número de CONTAS CRIA que a agência pode abrir pros clientes
+         dela. O teto da carteira do CRM (o "9 de 13" da tela de Clientes) é
+         outra conta, feita na função cria_limite_clientes:
+
+             3 (base, fixa) + (client_packs + paid_client_packs) x 10
+
+         `paid_client_packs` é o que o Stripe escreve quando a pessoa compra os
+         pacotes de +10. `client_packs` é o lado de cortesia, e é o que o admin
+         precisa poder mexer. Sem isso, dar mais clientes pra alguém só dava por
+         UPDATE na mão no banco, porque a coluna é bloqueada pra `authenticated`
+         (só service_role escreve) justamente pra ninguém aumentar o próprio
+         teto pela API. Aqui a gente está DENTRO do service_role, com o admin já
+         autenticado lá em cima, que é o lugar certo pra isso existir. */
+      const cortesia = Number(t.client_packs ?? 0);
+      const pagos = Number(t.paid_client_packs ?? 0);
+      const { count: crmUsados } = await svc
+        .from("crm_clients").select("id", { count: "exact", head: true })
+        .eq("manager_id", user_id).is("deleted_at", null);
+
       return json({
         modules: mods ?? [], active,
         account_type: t.account_type ?? null,
@@ -218,15 +244,33 @@ serve(async (req) => {
         seats_used: seatsUsed ?? 0,
         agency_owner_id: t.agency_owner_id ?? null,
         agency_owner_name: ownerName,
+        // Carteira do CRM: o que o admin dá, o que o cliente pagou e o teto.
+        client_packs: cortesia,
+        paid_client_packs: pagos,
+        crm_limit: 3 + (cortesia + pagos) * 10,
+        crm_used: crmUsados ?? 0,
       });
     }
 
-    // Define os assentos de agência da conta (nº de clientes que ela pode cobrir).
+    // Define os assentos de agência da conta (nº de contas Cria que ela abre).
     if (action === "set_seats") {
       const seats = Math.max(0, Math.min(200, Number((body as { seats?: number }).seats) || 0));
       const { error } = await svc.from("profiles").update({ seat_limit: seats }).eq("id", user_id);
       if (error) { console.error("[admin-user-actions] set_seats failed:", error); return json({ error: "update_failed" }, 500); }
       return json({ ok: true, seat_limit: seats });
+    }
+
+    /* Pacotes de CORTESIA da carteira do CRM. Não encosta em
+       `paid_client_packs`: aquilo é espelho do Stripe e quem manda lá é o
+       webhook. Se o admin escrevesse por cima, o próximo evento da assinatura
+       desfaria em silêncio e ninguém entenderia por quê. */
+    if (action === "set_client_packs") {
+      const packs = Math.max(0, Math.min(100, Number((body as { packs?: number }).packs) || 0));
+      const { error } = await svc.from("profiles").update({ client_packs: packs }).eq("id", user_id);
+      if (error) { console.error("[admin-user-actions] set_client_packs failed:", error); return json({ error: "update_failed" }, 500); }
+      const { data: p } = await svc.from("profiles").select("paid_client_packs").eq("id", user_id).maybeSingle();
+      const pagos = Number((p as { paid_client_packs?: number } | null)?.paid_client_packs ?? 0);
+      return json({ ok: true, client_packs: packs, crm_limit: 3 + (packs + pagos) * 10 });
     }
 
     // Liga/desliga um módulo (add-on) pra conta.

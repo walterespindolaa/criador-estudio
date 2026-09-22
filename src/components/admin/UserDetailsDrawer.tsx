@@ -93,11 +93,12 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
   const [validity, setValidity] = useState<string>("lifetime");
   const [plan, setPlan] = useState<string>("");
   const [seats, setSeats] = useState<number | null>(null);
+  const [packs, setPacks] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmWipe, setConfirmWipe] = useState(false);
 
   // Reset do estado local ao trocar de usuário (evita vazar seleção de um pro outro).
-  useEffect(() => { setPlan(""); setValidity("lifetime"); setSeats(null); }, [userId]);
+  useEffect(() => { setPlan(""); setValidity("lifetime"); setSeats(null); setPacks(null); }, [userId]);
 
   const { data, isLoading, error } = useQuery<UserDetails | null>({
     queryKey: ["admin-user-details", userId],
@@ -165,7 +166,7 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
     onError: (e: Error) => toast.error(`Falha: ${e.message}`),
   });
 
-  type ModulesInfo = { modules: { code: string; name: string; coming_soon?: boolean }[]; active: string[]; account_type?: string | null; is_manager?: boolean; seat_limit?: number; seats_used?: number; agency_owner_id?: string | null; agency_owner_name?: string | null };
+  type ModulesInfo = { modules: { code: string; name: string; coming_soon?: boolean }[]; active: string[]; account_type?: string | null; is_manager?: boolean; seat_limit?: number; seats_used?: number; agency_owner_id?: string | null; agency_owner_name?: string | null; client_packs?: number; paid_client_packs?: number; crm_limit?: number; crm_used?: number };
   const { data: modulesData } = useQuery<ModulesInfo>({
     queryKey: ["admin-user-modules", userId],
     enabled: open && !!userId,
@@ -186,6 +187,19 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
     mutationFn: () => invokeAction({ user_id: userId, action: "set_seats", seats: seatsValue }),
     onSuccess: () => {
       toast.success("Assentos atualizados.");
+      queryClient.invalidateQueries({ queryKey: ["admin-user-modules", userId] });
+    },
+    onError: (e: Error) => toast.error(`Falha: ${e.message}`),
+  });
+
+  /* Pacotes de cortesia da carteira do CRM (ver o comentário na edge). Cada
+     pacote vale 10 clientes; o teto final é 3 + (cortesia + pago) x 10. */
+  const packsValue = packs ?? modulesData?.client_packs ?? 0;
+  const setPacksMutation = useMutation({
+    mutationFn: () => invokeAction({ user_id: userId, action: "set_client_packs", packs: packsValue }),
+    onSuccess: (r) => {
+      const teto = (r as { crm_limit?: number })?.crm_limit;
+      toast.success(teto ? `Carteira atualizada: até ${teto} clientes.` : "Carteira atualizada.");
       queryClient.invalidateQueries({ queryKey: ["admin-user-modules", userId] });
     },
     onError: (e: Error) => toast.error(`Falha: ${e.message}`),
@@ -347,24 +361,65 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                 </FieldBox>
 
                 {(data.plan === "agency" || modulesData?.is_manager) && (
-                  <FieldBox label="Assentos de agência (clientes)">
-                    <div className="flex flex-wrap items-center gap-2 mt-1 min-w-0">
-                      <Input
-                        type="number" min={0} max={200}
-                        value={seatsValue}
-                        onChange={(e) => setSeats(Math.max(0, Math.min(200, Number(e.target.value) || 0)))}
-                        className="h-9 w-24"
-                      />
-                      <Button size="sm" onClick={() => setSeatsMutation.mutate()} disabled={setSeatsMutation.isPending}>
-                        {setSeatsMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-                        Salvar
-                      </Button>
+                  <>
+                    {/* CARTEIRA DO CRM: é este o "9 de 13" que ela vê na tela de
+                        Clientes. Vem em primeiro porque é o que a gente mexe
+                        toda hora; os assentos de conta Cria quase nunca mudam. */}
+                    <FieldBox label="Carteira de clientes (CRM)">
+                      <div className="flex flex-wrap items-center gap-2 mt-1 min-w-0">
+                        <Input
+                          type="number" min={0} max={100}
+                          value={packsValue}
+                          onChange={(e) => setPacks(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+                          className="h-9 w-24"
+                        />
+                        <span className="text-[11px] font-body text-muted-foreground">pacotes de cortesia</span>
+                        <Button size="sm" onClick={() => setPacksMutation.mutate()} disabled={setPacksMutation.isPending}>
+                          {setPacksMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                          Salvar
+                        </Button>
+                      </div>
                       {modulesData && (
-                        <span className="text-[11px] font-body text-muted-foreground">{modulesData.seats_used ?? 0} usados de {modulesData.seat_limit ?? 0}</span>
+                        <p className="text-[11px] font-body text-foreground mt-2">
+                          Teto hoje: <b>{modulesData.crm_limit ?? 3}</b> clientes
+                          <span className="text-muted-foreground"> ({modulesData.crm_used ?? 0} em uso)</span>
+                          <span className="text-muted-foreground">
+                            {" · "}3 da base + {modulesData.client_packs ?? 0} cortesia
+                            {(modulesData.paid_client_packs ?? 0) > 0 ? ` + ${modulesData.paid_client_packs} pago` : ""}
+                            {" × 10"}
+                          </span>
+                        </p>
                       )}
-                    </div>
-                    <p className="text-[10px] font-body text-muted-foreground mt-1.5">Nº de clientes que a agência pode cobrir. Precisa ser &gt; 0 pra ela sair do banner e adicionar clientes em "Suas contas".</p>
-                  </FieldBox>
+                      <p className="text-[10px] font-body text-muted-foreground mt-1.5">
+                        Cada pacote vale 10 clientes. Aqui só a cortesia: o que ela comprar no Stripe entra sozinho e não é sobrescrito.
+                      </p>
+                    </FieldBox>
+
+                    {/* Rótulo reescrito: dizia "(clientes)" e falava em "nº de
+                        clientes que a agência pode cobrir", o que fazia qualquer
+                        um confundir com a carteira do CRM acima. São coisas
+                        diferentes e agora o texto diz qual é qual. */}
+                    <FieldBox label="Contas Cria pra clientes (assentos)">
+                      <div className="flex flex-wrap items-center gap-2 mt-1 min-w-0">
+                        <Input
+                          type="number" min={0} max={200}
+                          value={seatsValue}
+                          onChange={(e) => setSeats(Math.max(0, Math.min(200, Number(e.target.value) || 0)))}
+                          className="h-9 w-24"
+                        />
+                        <Button size="sm" onClick={() => setSeatsMutation.mutate()} disabled={setSeatsMutation.isPending}>
+                          {setSeatsMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                          Salvar
+                        </Button>
+                        {modulesData && (
+                          <span className="text-[11px] font-body text-muted-foreground">{modulesData.seats_used ?? 0} usados de {modulesData.seat_limit ?? 0}</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] font-body text-muted-foreground mt-1.5">
+                        Quantas CONTAS do Cria ela pode abrir pros clientes dela (login próprio, em "Suas contas"). Não é a carteira do CRM acima. Precisa ser &gt; 0 pra ela sair do banner de agência.
+                      </p>
+                    </FieldBox>
+                  </>
                 )}
 
                 {modulesData && (
