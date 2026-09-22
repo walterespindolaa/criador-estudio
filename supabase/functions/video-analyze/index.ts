@@ -736,6 +736,7 @@ async function processar(
    uma leitura só. */
 async function adaptarParaCliente(
   svc: SupabaseClient, linhaId: string, analise: Record<string, unknown>, crmClientId: string,
+  managerId: string,
 ): Promise<{ ok: boolean; message?: string }> {
   const ctx = await contextoDoCliente(svc, crmClientId);
   if (!ctx) return { ok: false, message: "Não encontrei a ficha deste cliente." };
@@ -743,18 +744,27 @@ async function adaptarParaCliente(
   const roteiro = await escreverRoteiro(analise, ctx);
   if (!roteiro) return { ok: false, message: "Não consegui escrever o roteiro agora. Tente de novo." };
 
-  /* O `adaptado_para` fica gravado no resultado de propósito: sem ele, a tela
-     mostraria um roteiro e ninguém saberia de QUEM ele é. Com três clientes na
-     carteira, isso vira erro de envio. */
+  /* CADA CLIENTE NA SUA LINHA (Walter, 21/09/2026: "eu to em outro cliente").
+     Isto aqui escrevia dentro de video_analyses.result, e a chave daquela
+     tabela é (gestor, post_url), sem cliente. Duas consequências: o cliente B
+     abria o vídeo já analisado e via o roteiro do A, e adaptar pro B apagava o
+     roteiro do A. A observação do vídeo continua uma só, porque reler o mesmo
+     reel daria o mesmo resultado e custaria crédito; o que é do cliente sai de
+     lá e vai pra video_script_adaptations, uma linha por (análise, cliente). */
   const merge = humanizarDeep({
-    roteiro_adaptado: { titulo: roteiro.titulo, blocos: roteiro.blocos, legenda_sugerida: roteiro.legenda_sugerida },
+    roteiro: { titulo: roteiro.titulo, blocos: roteiro.blocos, legenda_sugerida: roteiro.legenda_sugerida },
     o_que_gravar: roteiro.o_que_gravar,
-    adaptado_para: { id: crmClientId, nome: ctx.nome },
-  }) as Record<string, unknown>;
+  }) as { roteiro: unknown; o_que_gravar: unknown };
 
-  const { error } = await svc.from("video_analyses")
-    .update({ result: { ...analise, ...merge }, crm_client_id: crmClientId })
-    .eq("id", linhaId);
+  const { error } = await svc.from("video_script_adaptations").upsert({
+    video_analysis_id: linhaId,
+    crm_client_id: crmClientId,
+    manager_id: managerId,
+    cliente_nome: ctx.nome,
+    roteiro: merge.roteiro,
+    o_que_gravar: merge.o_que_gravar,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "video_analysis_id,crm_client_id" });
   if (error) return { ok: false, message: error.message };
   return { ok: true };
 }
@@ -835,7 +845,7 @@ Deno.serve(async (req) => {
       if (!linhaExistente || linhaExistente.status !== "done" || !linhaExistente.result) {
         return json({ error: "sem_analise", message: "Analise o vídeo primeiro." }, 400);
       }
-      const r = await adaptarParaCliente(svc, linhaExistente.id, linhaExistente.result as Record<string, unknown>, crmClientId);
+      const r = await adaptarParaCliente(svc, linhaExistente.id, linhaExistente.result as Record<string, unknown>, crmClientId, mgr);
       if (!r.ok) return json({ error: "adaptar_falhou", message: r.message }, 500);
       return json({ ok: true, id: linhaExistente.id });
     }

@@ -26,6 +26,8 @@ export type AnaliseVideo = {
   error: string | null;
   created_at: string;
   finished_at: string | null;
+  /** Pra quais clientes esta análise já virou roteiro. Preenchido no hook. */
+  adaptacoes?: AdaptacaoDoCliente[];
 };
 
 /** Um bloco da linha do tempo. `funcao` vem do vocabulário fechado da edge. */
@@ -91,10 +93,30 @@ export function usePodeAnalisarVideo() {
   return true;
 }
 
-export function useAnaliseVideo(postUrl: string | null | undefined) {
+/* ── A ANÁLISE, E O ROTEIRO DO CLIENTE QUE ESTÁ NA TELA ─────────────────────
+   A análise é do VÍDEO e vale pra qualquer cliente: chave (gestor, post_url).
+   O roteiro adaptado é do CLIENTE e mora em video_script_adaptations, com uma
+   linha por (análise, cliente).
+
+   Walter, 21/09/2026: "se é um reels que eu já li antes, ele tá trazendo esse
+   exemplo, mas não faz sentido, pq eu tô em outro cliente." Era exatamente
+   isto: o roteiro morava dentro do result da análise, e como a chave não tinha
+   cliente, quem abrisse o mesmo vídeo por outro cliente recebia o roteiro
+   alheio. Agora a busca traz a adaptação DAQUELE cliente, ou nenhuma, e a tela
+   oferece escrever a dele. `adaptacoes` lista pra quem mais já foi escrito,
+   pra dar pra trocar sem perder nada. */
+export type AdaptacaoDoCliente = {
+  crm_client_id: string;
+  cliente_nome: string | null;
+  roteiro: ResultadoAnalise["roteiro_adaptado"] | null;
+  o_que_gravar: string[] | null;
+  updated_at: string;
+};
+
+export function useAnaliseVideo(postUrl: string | null | undefined, crmClientId?: string | null) {
   const { agencyOwnerId } = useActiveAccount();
   return useQuery<AnaliseVideo | null>({
-    queryKey: ["video-analysis", agencyOwnerId, postUrl],
+    queryKey: ["video-analysis", agencyOwnerId, postUrl, crmClientId ?? ""],
     enabled: !!agencyOwnerId && !!postUrl,
     // Enquanto processa, pergunta a cada 4s; parado, deixa quieto.
     refetchInterval: (q) => {
@@ -110,7 +132,41 @@ export function useAnaliseVideo(postUrl: string | null | undefined) {
         if (/does not exist|schema cache/i.test(error.message)) return null;
         throw error;
       }
-      return (data ?? null) as AnaliseVideo | null;
+      const linha = (data ?? null) as AnaliseVideo | null;
+      if (!linha?.result) return linha;
+
+      /* O result pode carregar roteiro_adaptado de antes desta mudança, escrito
+         pra sabe-se lá qual cliente. Tiramos ele daqui SEMPRE: o que a tela
+         mostra vem da tabela por cliente, e só dela. A migration já copiou o
+         antigo pro dono certo, então nada se perde. */
+      const { roteiro_adaptado: _r, adaptado_para: _a, o_que_gravar: _g, ...soDoVideo } =
+        linha.result as ResultadoAnalise & Record<string, unknown>;
+      const base = { ...linha, result: soDoVideo as ResultadoAnalise };
+
+      const { data: adap, error: eAdap } = await sbFrom("video_script_adaptations")
+        .select("crm_client_id, cliente_nome, roteiro, o_que_gravar, updated_at")
+        .eq("video_analysis_id", linha.id);
+      if (eAdap) {
+        if (/does not exist|schema cache/i.test(eAdap.message)) return base;
+        throw eAdap;
+      }
+      const lista = ((adap ?? []) as AdaptacaoDoCliente[]);
+      const minha = crmClientId ? lista.find((a) => a.crm_client_id === crmClientId) : undefined;
+
+      return {
+        ...base,
+        adaptacoes: lista,
+        result: {
+          ...base.result,
+          ...(minha
+            ? {
+                roteiro_adaptado: minha.roteiro ?? undefined,
+                o_que_gravar: minha.o_que_gravar ?? undefined,
+                adaptado_para: { id: minha.crm_client_id, nome: minha.cliente_nome ?? "" },
+              }
+            : {}),
+        },
+      } as AnaliseVideo;
     },
   });
 }

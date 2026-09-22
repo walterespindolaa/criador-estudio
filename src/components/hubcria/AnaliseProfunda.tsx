@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Clapperboard, Clock, Copy, Film, Loader2, RotateCcw, Scissors, Sparkles, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { CRIA_HEX } from "@/lib/moduleTheme";
-import { useAnaliseVideo, usePodeAnalisarVideo, useRodarAnaliseVideo, useAdaptarAnalise, type BlocoAnalise, type ResultadoAnalise } from "@/hooks/useVideoAnalysis";
+import { useAnaliseVideo, usePodeAnalisarVideo, useRodarAnaliseVideo, useAdaptarAnalise, type AdaptacaoDoCliente, type BlocoAnalise, type ResultadoAnalise } from "@/hooks/useVideoAnalysis";
 import { useCrmClients } from "@/hooks/useCrm";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -159,7 +159,13 @@ function roteiroEmTexto(r: ResultadoAnalise): string {
 
 type VirarPauta = (r: { title: string; rationale?: string | null; ref_url?: string | null; format?: string | null }) => void;
 
-function Resultado({ r, postUrl, aoVirarPauta }: { r: ResultadoAnalise; postUrl: string; aoVirarPauta?: VirarPauta }) {
+function Resultado({ r, postUrl, aoVirarPauta, foco, adaptacoes, aoTrocarFoco }: {
+  r: ResultadoAnalise; postUrl: string; aoVirarPauta?: VirarPauta;
+  /** Cliente cujo roteiro está sendo mostrado. Vazio = nenhum. */
+  foco: string;
+  adaptacoes: AdaptacaoDoCliente[];
+  aoTrocarFoco: (clienteId: string) => void;
+}) {
   const [tudo, setTudo] = useState(false);
   const m = r.metricas ?? { duracao: null, cortes_por_minuto: null, segundos_ate_cta: null, pct_vendendo: null, blocos: 0 };
   const duracao = m.duracao ?? 0;
@@ -310,7 +316,10 @@ function Resultado({ r, postUrl, aoVirarPauta }: { r: ResultadoAnalise; postUrl:
       {/* 5. A ENTREGA, SOB DEMANDA. Escrever o roteiro do cliente deixou de ser
              automático: a análise é do vídeo, e adaptar é uma decisão de quem
              lê. Custa pouco porque não relê o vídeo. */}
-      {roteiro.length === 0 && <AdaptarPraCliente postUrl={postUrl} />}
+      {roteiro.length === 0 && (
+        <AdaptarPraCliente postUrl={postUrl} clientePadrao={foco} aoAdaptar={aoTrocarFoco}
+          jaAdaptado={adaptacoes} aoTrocarFoco={aoTrocarFoco} />
+      )}
 
       {roteiro.length > 0 && (
         <div className="rounded-xl border border-primary/40 bg-card p-3 space-y-2">
@@ -427,25 +436,52 @@ function Resultado({ r, postUrl, aoVirarPauta }: { r: ResultadoAnalise; postUrl:
    O cliente é escolhido AQUI, na hora, e não herdado da pesquisa: a mesma
    fórmula serve pra três clientes diferentes, e adaptar de novo é barato (não
    relê o vídeo). */
-function AdaptarPraCliente({ postUrl }: { postUrl: string }) {
+function AdaptarPraCliente({ postUrl, clientePadrao, aoAdaptar, jaAdaptado, aoTrocarFoco }: {
+  postUrl: string;
+  /** Cliente da tela: já vem escolhido no seletor, que é o caso comum. */
+  clientePadrao?: string;
+  aoAdaptar: (clienteId: string) => void;
+  /** Outros clientes que já têm roteiro deste mesmo vídeo. */
+  jaAdaptado: AdaptacaoDoCliente[];
+  aoTrocarFoco: (clienteId: string) => void;
+}) {
   const { data: clients = [] } = useCrmClients();
   const adaptar = useAdaptarAnalise();
-  const [clienteId, setClienteId] = useState("");
+  const [clienteId, setClienteId] = useState(clientePadrao ?? "");
   const [aberto, setAberto] = useState(false);
+  useEffect(() => { setClienteId(clientePadrao ?? ""); }, [clientePadrao]);
 
   if (clients.length === 0) return null;
 
+  /* Os outros donos aparecem como pílula, não como roteiro. Antes o roteiro do
+     outro cliente era simplesmente exibido, e era o bug que o Walter viu. */
+  const outros = jaAdaptado.filter((a) => a.crm_client_id !== clientePadrao);
+  const pilulas = outros.length > 0 && (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <span className="text-[10.5px] font-body text-muted-foreground">Já virou roteiro pra:</span>
+      {outros.map((a) => (
+        <button key={a.crm_client_id} type="button" onClick={() => aoTrocarFoco(a.crm_client_id)}
+          className="rounded-full border border-border bg-card px-2 py-0.5 text-[10.5px] font-body font-semibold text-foreground hover:border-primary/50 hover:text-primary transition-colors">
+          {a.cliente_nome || "Cliente"}
+        </button>
+      ))}
+    </div>
+  );
+
   if (!aberto) {
     return (
-      <button type="button" onClick={() => setAberto(true)}
-        className="w-full rounded-xl border border-dashed border-primary/50 bg-primary/[0.04] px-3 py-2.5 text-left hover:bg-primary/[0.08] transition-colors">
-        <span className="flex items-center gap-1.5 text-[12.5px] font-display font-bold text-primary">
-          <Sparkles className="h-3.5 w-3.5" /> Adaptar esta fórmula pra um cliente
-        </span>
-        <span className="block text-[11px] font-body text-muted-foreground mt-0.5">
-          Escreve o roteiro no assunto e no tom dele, com a mesma arquitetura.
-        </span>
-      </button>
+      <div className="space-y-1.5">
+        {pilulas}
+        <button type="button" onClick={() => setAberto(true)}
+          className="w-full rounded-xl border border-dashed border-primary/50 bg-primary/[0.04] px-3 py-2.5 text-left hover:bg-primary/[0.08] transition-colors">
+          <span className="flex items-center gap-1.5 text-[12.5px] font-display font-bold text-primary">
+            <Sparkles className="h-3.5 w-3.5" /> Adaptar esta fórmula pra um cliente
+          </span>
+          <span className="block text-[11px] font-body text-muted-foreground mt-0.5">
+            Escreve o roteiro no assunto e no tom dele, com a mesma arquitetura.
+          </span>
+        </button>
+      </div>
     );
   }
 
@@ -465,7 +501,8 @@ function AdaptarPraCliente({ postUrl }: { postUrl: string }) {
           Agora não
         </button>
         <button type="button" disabled={!clienteId || adaptar.isPending}
-          onClick={() => adaptar.mutate({ post_url: postUrl, crm_client_id: clienteId })}
+          onClick={() => adaptar.mutate({ post_url: postUrl, crm_client_id: clienteId },
+            { onSuccess: () => aoAdaptar(clienteId) })}
           className="flex-1 h-9 rounded-xl bg-primary text-primary-foreground text-[12.5px] font-body font-bold disabled:opacity-50 inline-flex items-center justify-center gap-1.5">
           {adaptar.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
           Escrever o roteiro
@@ -488,7 +525,14 @@ export function AnaliseProfunda({ postUrl, videoUrl, thumbnail, scrapeId, crmCli
   aoVirarPauta?: VirarPauta;
 }) {
   const pode = usePodeAnalisarVideo();
-  const { data: analise } = useAnaliseVideo(pode ? postUrl : null);
+  /* O CLIENTE EM FOCO (Walter, 21/09/2026). A análise é do vídeo e serve pra
+     todo mundo; o roteiro é de um cliente só. O foco começa no cliente da tela
+     (na pesquisa do cliente X, é o X) e muda quando a pessoa adapta pra outro
+     ou clica na pílula de quem já tem roteiro escrito. Sem foco (análise por
+     link avulso), nenhum roteiro aparece: melhor nada do que o de outro. */
+  const [foco, setFoco] = useState<string>(crmClientId ?? "");
+  useEffect(() => { setFoco(crmClientId ?? ""); }, [crmClientId]);
+  const { data: analise } = useAnaliseVideo(pode ? postUrl : null, foco || null);
   const rodar = useRodarAnaliseVideo();
   if (!pode || !postUrl) return null;
 
@@ -542,7 +586,8 @@ export function AnaliseProfunda({ postUrl, videoUrl, thumbnail, scrapeId, crmCli
 
       {analise?.status === "done" && analise.result && !velha && (
         <>
-          <Resultado r={analise.result} postUrl={postUrl} aoVirarPauta={aoVirarPauta} />
+          <Resultado r={analise.result} postUrl={postUrl} aoVirarPauta={aoVirarPauta}
+            foco={foco} adaptacoes={analise.adaptacoes ?? []} aoTrocarFoco={setFoco} />
           {/* Contagem de token saiu: era debug meu na tela dela. Só continua
               aparecendo o que ela pode resolver: resposta cortada pede rodar
               de novo. */}

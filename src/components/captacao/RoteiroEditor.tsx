@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { GripVertical, Plus, Trash2, Loader2, Film, Video, Sparkles } from "lucide-react";
+import { GripVertical, Plus, Trash2, Loader2, Film, Video, Sparkles, Copy, Check } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CampoReferencias } from "@/components/captacao/Referencias";
@@ -139,6 +140,32 @@ export function RoteiroEditor({ open, onOpenChange, inicial, salvando, onSalvar,
     } finally { setGerando(false); }
   };
 
+  /* ── COPIAR AS FALAS DE UMA VEZ (Walter, 21/09/2026) ──
+     "Pra não precisar ficar copiando cada bloco individual." Na hora de mandar
+     o roteiro pro cliente no WhatsApp, ou de jogar no teleprompter, o que
+     interessa é a fala seguida, na ordem. A direção de câmera fica de fora de
+     propósito: ela é instrução pra quem filma, não texto pra quem fala, e
+     colada no meio atrapalha a leitura. Cena vazia também não entra, senão o
+     texto sai com buracos numerados. */
+  const [copiado, setCopiado] = useState(false);
+  const falasEmTexto = () =>
+    v.scenes
+      .map((c) => c.fala.trim())
+      .filter(Boolean)
+      .map((fala, i) => `CENA ${i + 1}:\n${fala}`)
+      .join("\n\n");
+  const temFala = v.scenes.some((c) => c.fala.trim());
+  const copiarFalas = async () => {
+    try {
+      await navigator.clipboard.writeText(falasEmTexto());
+      setCopiado(true);
+      toast.success("Falas copiadas, cena por cena.");
+      window.setTimeout(() => setCopiado(false), 1800);
+    } catch {
+      toast.error("O navegador não deixou copiar. Selecione o texto na mão.");
+    }
+  };
+
   const temConteudo = v.title.trim() || v.scenes.some((c) => c.fala.trim() || c.direcao.trim());
 
   const salvar = async () => {
@@ -201,13 +228,21 @@ export function RoteiroEditor({ open, onOpenChange, inicial, salvando, onSalvar,
                   O que se FALA e o que se FAZ em cada cena. Arraste pra trocar a ordem.
                 </p>
               </div>
-              {sugerirIA && (
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <Button type="button" size="sm" variant="outline" className="rounded-xl h-9"
-                  disabled={gerando || !(v.title.trim() || v.about.trim())} onClick={() => void gerarComIA()}>
-                  {gerando ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
-                  Sugerir cenas com IA
+                  disabled={!temFala} onClick={() => void copiarFalas()}
+                  title="Copia a fala de todas as cenas de uma vez, na ordem">
+                  {copiado ? <Check className="h-3.5 w-3.5 mr-1.5 text-green-600" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
+                  {copiado ? "Copiado" : "Copiar falas"}
                 </Button>
-              )}
+                {sugerirIA && (
+                  <Button type="button" size="sm" variant="outline" className="rounded-xl h-9"
+                    disabled={gerando || !(v.title.trim() || v.about.trim())} onClick={() => void gerarComIA()}>
+                    {gerando ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
+                    Sugerir cenas com IA
+                  </Button>
+                )}
+              </div>
             </div>
 
             <DragDropContext onDragEnd={moverCena}>
