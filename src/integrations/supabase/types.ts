@@ -6680,6 +6680,7 @@ export type Database = {
       list_materials_by_token: {
         Args: { _token: string }
         Returns: {
+          attachments: Json
           created_at: string
           description: string
           due_date: string
@@ -7129,6 +7130,7 @@ export type Database = {
       }
       request_material_by_token: {
         Args: {
+          _attachments?: Json
           _description: string
           _due_date?: string
           _kind?: string
