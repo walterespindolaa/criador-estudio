@@ -1686,13 +1686,37 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     </div>
   );
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     O NÚMERO GRANDE VIRA O TOTAL ENTREGUE (Walter, 22/09/2026)
+
+     "Tem como fazer o total dos dois, que estão em aprovados e publicados?" e
+     "aqui se repete, por exemplo".
+
+     Os dois pedidos são o mesmo problema. O card grande dizia 22 PUBLICADOS e
+     logo embaixo a primeira caixinha do funil dizia 22 PUBLICADOS de novo:
+     gastava o lugar de maior destaque do relatório repetindo o que vinha na
+     linha seguinte. E o número que faltava era justamente o que responde "o
+     que vocês me entregaram neste período?", que é publicado MAIS aprovado
+     (aprovado é peça pronta, entregue, só ainda não foi ao ar).
+
+     Agora o grande é o TOTAL entregue, e a linha de baixo continua sendo a
+     quebra dele por etapa. Nada some: 22 e 24 seguem lá, agora somando 46. */
+  const entregues = stats.byStatus.postado + stats.byStatus.aprovado;
+
   const entregaNode = (
     <div>
       <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
         <div style={{ flex: 1, border: `1px solid ${C.green}`, borderRadius: 12, padding: "16px 18px", background: "#f0fdf4" }}>
-          <div style={{ fontSize: 36, fontWeight: 800, color: C.green, lineHeight: 1 }}>{nb(stats.published)}</div>
+          <div style={{ fontSize: 36, fontWeight: 800, color: C.green, lineHeight: 1 }}>{nb(entregues)}</div>
           <div style={{ fontSize: 11, color: C.sub, marginTop: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
-            {stats.published === 1 ? "Post publicado no período" : "Posts publicados no período"}
+            {entregues === 1 ? "Peça entregue no período" : "Peças entregues no período"}
+          </div>
+          {/* A composição na mesma caixa: quem bate o olho no 46 já entende de
+              onde ele vem, sem precisar somar as caixinhas de baixo. */}
+          <div style={{ fontSize: 10.5, color: C.sub, marginTop: 6 }}>
+            {nb(stats.byStatus.postado)} {stats.byStatus.postado === 1 ? "publicada" : "publicadas"}
+            {" + "}
+            {nb(stats.byStatus.aprovado)} {stats.byStatus.aprovado === 1 ? "aprovada" : "aprovadas"} aguardando a data
           </div>
         </div>
       </div>
