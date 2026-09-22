@@ -7,7 +7,7 @@ import { toast } from "sonner";
 // é nova e ainda não está no types.ts gerado, então usamos o cast sbFrom, igual
 // ao resto do CRM (useCrm/useModules).
 export type MaterialStatus = "solicitado" | "a_fazer" | "em_aprovacao" | "ajuste" | "finalizado";
-export type MaterialKind = "apresentacao" | "flyer" | "arte_avulsa" | "logo" | "outro";
+export type MaterialKind = "apresentacao" | "flyer" | "arte_avulsa" | "post_carrossel" | "logo" | "outro";
 export type MaterialOrigin = "gestor" | "cliente";
 
 // Anexo de um material: arquivo subido pro Storage ("file") ou link colado do
@@ -66,19 +66,42 @@ function sanitizeStoragePath(name: string): string {
   return `${clean}${ext.toLowerCase()}`;
 }
 
-export function useClientMaterials(crmClientId: string | undefined) {
+/* ═══════════════════════════════════════════════════════════════════════════
+   O PEDIDO QUE SUMIA ENTRE O PORTAL E O QUADRO (Gabriela, 21/09/2026: "mandei
+   um material e não caiu aqui")
+
+   Cada material carrega DUAS chaves de cliente: `crm_client_id` (a ficha do
+   CRM) e `external_client_id` (o cliente do portal, que é quem tem o token do
+   link). E cada lado lia por uma:
+
+     · o portal público (list_materials_by_token) lê por external_client_id;
+     · este quadro lia SÓ por crm_client_id.
+
+   Quando o cliente pede pelo link, a RPC copia o crm_client_id de dentro do
+   external_clients. Só que esse vínculo é opcional e editável ("Sem vínculo" na
+   aba Portal): se ele estiver vazio, o pedido nasce com crm_client_id nulo. O
+   portal continua mostrando, porque acha pelo token, e o quadro nunca encontra.
+   Do lado de fora parecia que o pedido tinha evaporado.
+
+   Agora o quadro procura pelas DUAS chaves. Assim ele acha o pedido mesmo sem
+   vínculo, que é justamente quando a pessoa mais precisa ver. A migration que
+   acompanha esta mudança religa os pedidos antigos e faz o vínculo passar a
+   adotar o que já existia.
+   ═══════════════════════════════════════════════════════════════════════════ */
+export function useClientMaterials(crmClientId: string | undefined, externalClientId?: string | null) {
   const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
-  const key = ["client-materials", crmClientId] as const;
+  const key = ["client-materials", crmClientId, externalClientId ?? ""] as const;
 
   const query = useQuery<ClientMaterial[]>({
     queryKey: key,
     enabled: !!crmClientId,
     queryFn: async () => {
-      const { data, error } = await sbFrom("client_materials")
-        .select("*")
-        .eq("crm_client_id", crmClientId!)
-        .order("created_at", { ascending: false });
+      let q = sbFrom("client_materials").select("*");
+      q = externalClientId
+        ? q.or(`crm_client_id.eq.${crmClientId},external_client_id.eq.${externalClientId}`)
+        : q.eq("crm_client_id", crmClientId!);
+      const { data, error } = await q.order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as ClientMaterial[];
     },

@@ -2159,7 +2159,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   // Materiais do período: só quando existem. Título, tipo, quem pediu, prazo,
   // status e a descrição (o briefing do pedido), que é o que o Walter pediu
   // pra aparecer.
-  const MAT_TIPO: Record<string, string> = { apresentacao: "Apresentação", flyer: "Flyer", arte_avulsa: "Arte avulsa", logo: "Logo", outro: "Outro" };
+  const MAT_TIPO: Record<string, string> = { apresentacao: "Apresentação", flyer: "Flyer", arte_avulsa: "Arte avulsa", post_carrossel: "Post / Carrossel", logo: "Logo", outro: "Outro" };
   const MAT_ST: Record<string, { txt: string; cor: string }> = {
     solicitado: { txt: "Recebido", cor: C.amber }, a_fazer: { txt: "Na fila", cor: C.sub },
     em_aprovacao: { txt: "Em aprovação", cor: C.azul }, ajuste: { txt: "Em ajuste", cor: C.orange },

@@ -67,13 +67,17 @@ function DragGrip({ handleProps }: { handleProps?: DraggableProvidedDragHandlePr
 }
 
 export function MateriaisBoard({ clientId, clientName }: { clientId: string; clientName: string }) {
-  const { materials, isLoading, isError, createMaterial, updateMaterial, deleteMaterial, uploadAttachment } = useClientMaterials(clientId);
   /* O LINK SO DE PEDIDOS (Walter, 20/09/2026). O cliente ja podia pedir pelo
      link de aprovacao, mas ele vem com posts na frente. Este copia um link em
      que a unica coisa que existe e pedir e acompanhar. Mesmo token. Precisa
-     que o cliente tenha portal (external_client) ligado a esta ficha. */
+     que o cliente tenha portal (external_client) ligado a esta ficha.
+
+     Subiu pra ANTES do useClientMaterials porque agora o quadro também procura
+     os materiais pelo id do portal, não só pelo da ficha: ver o comentário em
+     useClientMaterials. */
   const { clients: extClients, copyLink } = useExternalClients();
   const extDoCliente = (extClients as { id: string; crm_client_id: string | null }[]).find((c) => c.crm_client_id === clientId) ?? null;
+  const { materials, isLoading, isError, createMaterial, updateMaterial, deleteMaterial, uploadAttachment } = useClientMaterials(clientId, extDoCliente?.id ?? null);
   const [copiando, setCopiando] = useState(false);
   const copiarLinkDePedidos = async () => {
     if (!extDoCliente) { toast.error("Este cliente ainda não tem portal. Crie o link de aprovação dele primeiro, na aba Cria Post."); return; }

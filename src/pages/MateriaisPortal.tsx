@@ -68,14 +68,42 @@ export default function MateriaisPortal() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 pt-6 pb-10">
-        <div className="bg-white border border-border rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(27,26,24,0.05)]">
+      {/* A PÁGINA GANHOU CARA (Gabriela, 21/09/2026: "vamos melhorar o layout
+          dessa página, tá muito sem graça"). Era um card branco solto numa
+          folha bege. Agora tem uma faixa de abertura na cor do cliente, que diz
+          em uma frase pra que serve o link, e três passos curtos embaixo, que
+          é a dúvida real de quem chega aqui pela primeira vez: "pedi, e agora?" */}
+      <main className="max-w-2xl mx-auto px-4 pt-6 pb-12">
+        <div className="text-center mb-5">
+          <p className="text-[11px] font-body font-bold uppercase tracking-[0.14em]" style={{ color: brand }}>
+            Canal de pedidos
+          </p>
+          <h1 className="text-[22px] sm:text-[26px] font-display font-extrabold text-foreground leading-tight mt-1">
+            Precisou de uma arte? Peça por aqui.
+          </h1>
+          <p className="text-[13.5px] font-body text-muted-foreground mt-1.5 leading-relaxed">
+            Sem WhatsApp perdido, sem e-mail sem resposta. Você pede, marca a data e acompanha nesta mesma página.
+          </p>
+        </div>
+
+        <div className="bg-white border border-border rounded-3xl overflow-hidden shadow-[0_10px_34px_rgba(27,26,24,0.07)]">
           <SolicitarMaterial token={token} abertoPorPadrao semMoldura />
         </div>
-        <p className="text-[12px] text-muted-foreground font-body text-center mt-5 leading-relaxed">
-          Cada pedido entra na agenda de quem cuida do seu conteúdo na data que você marcar.
-          Volte aqui pra ver em que etapa está.
-        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-5">
+          {[
+            { n: "1", t: "Você pede", d: "Diz o que precisa e pra quando." },
+            { n: "2", t: "Entra na agenda", d: "Cai direto no dia que você marcou." },
+            { n: "3", t: "Você acompanha", d: "O selo muda conforme anda." },
+          ].map((p) => (
+            <div key={p.n} className="rounded-2xl border border-border bg-card/70 px-3.5 py-3">
+              <span className="inline-grid place-items-center w-6 h-6 rounded-full text-white text-[11px] font-display font-extrabold"
+                style={{ backgroundColor: brand }}>{p.n}</span>
+              <p className="text-[13px] font-display font-bold text-foreground mt-1.5">{p.t}</p>
+              <p className="text-[11.5px] font-body text-muted-foreground leading-snug">{p.d}</p>
+            </div>
+          ))}
+        </div>
       </main>
       <AssinaturaCria variante="rodape" tom="claro" style={{ paddingTop: 16, paddingBottom: 40 }} />
     </div>
