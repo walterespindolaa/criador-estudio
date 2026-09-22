@@ -457,11 +457,42 @@ Deno.serve(async (req) => {
         const { data: existing } = await supabase
           .from("partner_referrals").select("*").eq("stripe_subscription_id", subId).maybeSingle();
 
+        /* ═══════════════════════════════════════════════════════════════════
+           COMISSÃO RECORRENTE DE VERDADE (Walter, 22/09/2026)
+
+           Antes: uma linha por assinatura, valor gravado UMA vez na primeira
+           fatura. Renovação só incrementava um contador, então uma assinatura
+           de 24 meses pagava o mesmo que uma de 2, enquanto quatro telas
+           prometiam "comissão todo mês enquanto a pessoa seguir assinante".
+
+           Agora: a linha da assinatura é só o VÍNCULO (quem indicou quem), e
+           CADA fatura paga que cai dentro da regra vira um lançamento próprio
+           em partner_commission_entries.
+
+           A regra vem do banco, não daqui: percentual, teto de meses e a
+           fatura em que começa. Global em partner_program_config, com override
+           por parceira. Padrão: 20%, 12 meses, começando na 3ª fatura.
+
+           Por que a 3ª: sem cliente firme, sem comissão. Mata o incentivo de
+           trazer cadastro ruim só pra bater volume.
+
+           A idempotência saiu do código e foi pro banco: unique no
+           stripe_invoice_id. O Stripe reentrega webhook, e antes o
+           check-then-act daqui podia adiantar comissão em entregas
+           concorrentes (classificado como CRÍTICO na auditoria). Agora a
+           segunda tentativa bate no unique e não faz nada.
+           ═══════════════════════════════════════════════════════════════════ */
+        const seqDaFatura = billingReason === "subscription_create"
+          ? 1
+          : ((existing as { paid_invoices_count?: number } | null)?.paid_invoices_count ?? 1) + 1;
+
+        let referralId = (existing as { id?: string } | null)?.id ?? null;
+
         if (billingReason === "subscription_create") {
-          // 1ª fatura → cria pending (idempotente)
           if (!existing) {
-            const net = Math.round(amountPaid * (1 - deductionPct / 100));
-            await supabase.from("partner_referrals").insert({
+            // net_amount_cents fica zerado de propósito: quem guarda valor
+            // agora é o lançamento. Manter aqui seria ter duas fontes.
+            const { data: novo } = await supabase.from("partner_referrals").insert({
               partner_id: partnerId,
               referred_user_id: referredUserId,
               stripe_customer_id: inv.customer as string,
@@ -469,23 +500,57 @@ Deno.serve(async (req) => {
               first_invoice_id: inv.id,
               gross_amount_cents: amountPaid,
               deduction_pct: deductionPct,
-              net_amount_cents: net,
+              net_amount_cents: 0,
               currency: inv.currency || "brl",
               paid_invoices_count: 1,
-              status: "pending",
-            });
+              status: "payable",
+            }).select("id").maybeSingle();
+            referralId = (novo as { id?: string } | null)?.id ?? null;
           }
-        } else if (billingReason === "subscription_cycle") {
-          // renovação → incrementa; ao chegar a 2 pagas, libera
-          if (existing) {
-            const e = existing as { id: string; paid_invoices_count: number; status: string };
-            const newCount = (e.paid_invoices_count ?? 1) + 1;
-            const patch: Record<string, unknown> = { paid_invoices_count: newCount };
-            if (newCount >= 2 && e.status === "pending") {
-              patch.status = "payable";
-              patch.unlocked_at = new Date().toISOString();
+        } else if (billingReason === "subscription_cycle" && existing) {
+          const e = existing as { id: string; paid_invoices_count: number; status: string };
+          await supabase.from("partner_referrals").update({
+            paid_invoices_count: seqDaFatura,
+            // "pending" era o estado de carência do modelo antigo. Quem manda
+            // na carência agora é a fatura de início da regra.
+            status: e.status === "pending" ? "payable" : e.status,
+            unlocked_at: e.status === "pending" ? new Date().toISOString() : undefined,
+          }).eq("id", e.id);
+        }
+
+        if (referralId && amountPaid > 0) {
+          const { data: regra } = await supabase.rpc("partner_regra", { _partner_id: partnerId });
+          const r = (Array.isArray(regra) ? regra[0] : regra) as
+            { pct?: number; meses?: number; fatura_inicial?: number } | null;
+          const pct = Number(r?.pct ?? 20);
+          const meses = Number(r?.meses ?? 12);
+          const inicio = Number(r?.fatura_inicial ?? 3);
+
+          // Dentro da janela? Da fatura de início até (início + meses - 1).
+          const dentro = seqDaFatura >= inicio && seqDaFatura <= (inicio + meses - 1);
+          if (dentro) {
+            const valor = Math.round(amountPaid * (pct / 100));
+            // Competência no fuso de Brasília, que é o do caixa dele. Sem isso,
+            // fatura paga dia 1 às 00h30 cairia no mês anterior.
+            const agoraBR = new Date(Date.now() - 3 * 60 * 60 * 1000);
+            const competencia = `${agoraBR.getUTCFullYear()}-${String(agoraBR.getUTCMonth() + 1).padStart(2, "0")}-01`;
+            const { error: eIns } = await supabase.from("partner_commission_entries").insert({
+              referral_id: referralId,
+              partner_id: partnerId,
+              stripe_invoice_id: inv.id,
+              stripe_subscription_id: subId,
+              invoice_seq: seqDaFatura,
+              gross_cents: amountPaid,
+              commission_pct: pct,
+              amount_cents: valor,
+              currency: inv.currency || "brl",
+              competencia,
+              status: "payable",
+            });
+            // Violação de unique = reentrega do Stripe. É o caminho feliz.
+            if (eIns && !/duplicate key|unique/i.test(eIns.message ?? "")) {
+              console.error("[stripe-webhook] lançamento de comissão falhou:", eIns.message);
             }
-            await supabase.from("partner_referrals").update(patch).eq("id", e.id);
           }
         }
         break;
@@ -511,6 +576,16 @@ Deno.serve(async (req) => {
           })
           .eq("stripe_subscription_id", subId)
           .in("status", ["pending", "payable"]);
+
+        /* O ESTORNO TEM QUE ALCANÇAR O LANÇAMENTO (22/09/2026). Só cancelar o
+           vínculo deixaria a comissão daquela fatura de pé, e ela seria paga
+           no fechamento do mês em cima de dinheiro que voltou pro cliente.
+           Cancela só o lançamento DAQUELA fatura, e só se ainda não foi pago:
+           o que já saiu por PIX não dá pra desfazer daqui. */
+        await supabase.from("partner_commission_entries")
+          .update({ status: "canceled", canceled_reason: "refund" })
+          .eq("stripe_invoice_id", invId)
+          .eq("status", "payable");
         break;
       }
 

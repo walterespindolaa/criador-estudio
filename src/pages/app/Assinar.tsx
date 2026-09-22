@@ -15,6 +15,7 @@ import { PlanComparison } from "@/components/shared/PlanComparison";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { BgShapes } from "@/components/BgShapes";
 import { track, newEventId } from "@/lib/metaPixel";
+import { lerIndicacao } from "@/lib/indicacao";
 
 export default function Assinar() {
   const navigate = useNavigate();
@@ -48,8 +49,34 @@ export default function Assinar() {
   const isSelfSubscribeFlow = !!selfSubscribePlan && (selfSubscribePlan === "pro" || selfSubscribePlan === "studio");
   const prefilledRef = useRef(false);
 
+  /* De onde vem o código, em ordem de prioridade:
+       1. o fluxo self-subscribe (a gestora assinando pelo cliente);
+       2. o link /p/CODIGO que a parceira compartilhou, guardado no navegador.
+     O segundo é o caso novo: antes a pessoa precisava lembrar de digitar, e
+     quem esquecia virava venda sem dono. Ver src/pages/IndicacaoParceira.tsx. */
   useEffect(() => {
-    if (!isSelfSubscribeFlow || prefilledRef.current) return;
+    if (prefilledRef.current) return;
+    if (!isSelfSubscribeFlow) {
+      const doLink = lerIndicacao();
+      if (doLink) {
+        prefilledRef.current = true;
+        setPartnerCode(doLink);
+        void (async () => {
+          const { data } = await (supabase.rpc as unknown as (fn: string, args: unknown) => Promise<{ data: unknown }>)(
+            "validate_partner_code", { _code: doLink },
+          );
+          const row = Array.isArray(data) && data.length
+            ? (data[0] as { partner_name: string; discount_pct: number | null; duration_months: number | null })
+            : null;
+          if (row) setPartnerInfo({
+            name: row.partner_name,
+            discountPct: row.discount_pct != null ? Number(row.discount_pct) : null,
+            durationMonths: row.duration_months ?? null,
+          });
+        })();
+      }
+      return;
+    }
     prefilledRef.current = true;
     if (selfSubscribeCode) {
       setPartnerCode(selfSubscribeCode);
