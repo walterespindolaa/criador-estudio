@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -1539,31 +1539,40 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const negrito = (t: string, kb: string) =>
     t.split(/\*([^*]+)\*/g).map((parte, i) =>
       i % 2 === 1 ? <b key={`${kb}-${i}`}>{italico(parte, `${kb}-${i}`)}</b> : <span key={`${kb}-${i}`}>{italico(parte, `${kb}-${i}`)}</span>);
-  const renderTextoRico = (linhas: string[]) => {
-    const out: ReactNode[] = [];
+  /* O texto rico sai em BLOCOS, e cada bloco sabe quantas linhas do original
+     ele consumiu. Isso \u00e9 o que permite medir a altura de verdade e decidir onde
+     a p\u00e1gina quebra (ver o coment\u00e1rio em gruposRecado). Uma lista de t\u00f3picos
+     vira UM bloco que consome N linhas, por exemplo. */
+  type BlocoRico = { node: ReactNode; consome: number };
+  const blocosDoTextoRico = (linhas: string[]): BlocoRico[] => {
+    const out: BlocoRico[] = [];
     let bullets: string[] = [];
     const solta = () => {
       if (!bullets.length) return;
       const itens = [...bullets];
-      out.push(
-        <ul key={`ul-${out.length}`} style={{ margin: "4px 0 6px", paddingLeft: 18, listStyleType: "disc" }}>
-          {itens.map((b, i) => <li key={i} style={{ marginBottom: 3 }}>{negrito(b, `li-${out.length}-${i}`)}</li>)}
-        </ul>,
-      );
+      out.push({
+        consome: itens.length,
+        node: (
+          <ul key={`ul-${out.length}`} style={{ margin: "4px 0 6px", paddingLeft: 18, listStyleType: "disc" }}>
+            {itens.map((b, i) => <li key={i} style={{ marginBottom: 3 }}>{negrito(b, `li-${out.length}-${i}`)}</li>)}
+          </ul>
+        ),
+      });
       bullets = [];
     };
     linhas.forEach((ln, i) => {
       const t = ln.trim();
-      if (/^[-\u2013]{3,}$/.test(t)) { solta(); out.push(<div key={`hr-${i}`} style={{ borderTop: `1px solid ${C.line}`, margin: "9px 0" }} />); return; }
-      if (/^#{1,3}\s+/.test(t)) { solta(); out.push(<div key={`h-${i}`} style={{ fontWeight: 800, fontSize: 13, marginTop: out.length ? 8 : 0, marginBottom: 3 }}>{negrito(t.replace(/^#{1,3}\s+/, ""), `h-${i}`)}</div>); return; }
+      if (/^[-\u2013]{3,}$/.test(t)) { solta(); out.push({ consome: 1, node: <div key={`hr-${i}`} style={{ borderTop: `1px solid ${C.line}`, margin: "9px 0" }} /> }); return; }
+      if (/^#{1,3}\s+/.test(t)) { solta(); out.push({ consome: 1, node: <div key={`h-${i}`} style={{ fontWeight: 800, fontSize: 13, marginTop: out.length ? 8 : 0, marginBottom: 3 }}>{negrito(t.replace(/^#{1,3}\s+/, ""), `h-${i}`)}</div> }); return; }
       if (/^([-\u2022]|\*)\s+/.test(t)) { bullets.push(t.replace(/^([-\u2022]|\*)\s+/, "")); return; }
       solta();
-      if (t === "") { out.push(<div key={`br-${i}`} style={{ height: 7 }} />); return; }
-      out.push(<div key={`p-${i}`}>{negrito(ln, `p-${i}`)}</div>);
+      if (t === "") { out.push({ consome: 1, node: <div key={`br-${i}`} style={{ height: 7 }} /> }); return; }
+      out.push({ consome: 1, node: <div key={`p-${i}`}>{negrito(ln, `p-${i}`)}</div> });
     });
     solta();
     return out;
   };
+  const renderTextoRico = (linhas: string[]) => blocosDoTextoRico(linhas).map((b) => b.node);
 
   /* Antes era `cover` puro: logo deitado saía com as pontas comidas e selo
      quadrado mostrava as quinas na moldura. Agora usa a regra única do
@@ -1656,7 +1665,9 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   );
 
   // ── Blocos de conteúdo (cada um cabe na sua página) ──
-  const recadoLinhas = notes.trim() ? notes.trim().split("\n") : [];
+  /* Memorizado no texto: sem isso o array nasce novo a cada render e a medição
+     do recado (mais abaixo) rodaria em todo quadro sem necessidade. */
+  const recadoLinhas = useMemo(() => (notes.trim() ? notes.trim().split("\n") : []), [notes]);
   const recadoEst = recadoLinhas.reduce((a, l) => a + estLinhas(l), 0);
   const recadoCurto = recadoEst <= 16;
   const recadoBox = (linhas: string[], continuacao: boolean) => (
@@ -1667,11 +1678,116 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       <div style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.55 }}>{renderTextoRico(linhas)}</div>
     </div>
   );
+  /* ═══════════════════════════════════════════════════════════════════════
+     MEDIR, NÃO ADIVINHAR (Walter, 22/09/2026: "tá cortando o relatório")
+
+     O recado longo era dividido por uma ESTIMATIVA: cada linha valia
+     `comprimento / 95` linhas visuais, e cabiam 36 por página. Dois furos
+     grandes nessa conta.
+
+     O primeiro é que 95 caracteres por linha é um chute que só vale numa
+     largura específica, e a folha aqui é fluida (`aspectRatio: 210/297`, sem
+     largura fixa): numa janela mais estreita cabem uns 70, e a conta passa a
+     achar que cabe mais texto do que cabe. O segundo é que a estimativa ignora
+     o que ocupa altura sem ter comprimento: subtítulo em corpo maior com
+     margem, lista de tópicos com recuo e espaçamento entre itens, divisor.
+
+     Somando os dois, a última página do recado estourava a altura da folha, e
+     como a folha tem `overflow: hidden`, o excedente era simplesmente apagado.
+     Não era "cortado e continuava na próxima": SUMIA. Era o que a Gabriela via
+     no fim da página 4, a frase parando no meio e a página 5 começando em
+     outro assunto.
+
+     Agora a régua é a página de verdade: um clone invisível do bloco do
+     recado, com a MESMA largura e os MESMOS estilos da folha, é medido com
+     getBoundingClientRect, e a quebra acontece onde a altura real acaba. Muda
+     a janela, muda a medida junto.
+     ═══════════════════════════════════════════════════════════════════════ */
+  // blocosDoTextoRico é formatador puro (só lê as constantes de cor); fica de
+  // fora das deps porque é recriado a cada render e não muda de comportamento.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const blocosRecado = useMemo(() => blocosDoTextoRico(recadoLinhas), [recadoLinhas]);
+  const provaRef = useRef<HTMLDivElement>(null);
+  const folhaRef = useRef<HTMLDivElement>(null);
+  const [caixaFolha, setCaixaFolha] = useState<{ largura: number; altura: number }>({ largura: 0, altura: 0 });
+  const [gruposRecado, setGruposRecado] = useState<string[][]>([]);
+
+  // A folha muda de tamanho quando a janela muda: a régua acompanha.
+  useEffect(() => {
+    const el = folhaRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    /* clientWidth/Height incluem o padding da folha (14px em cima, 32 dos
+       lados, 6 embaixo). O que interessa é a caixa de dentro, que é onde o
+       texto realmente mora, então o padding sai da conta. */
+    const ler = () => setCaixaFolha((p) => {
+      const cs = getComputedStyle(el);
+      const px = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+      const py = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      const largura = Math.max(0, el.clientWidth - px);
+      const altura = Math.max(0, el.clientHeight - py);
+      return p.largura === largura && p.altura === altura ? p : { largura, altura };
+    });
+    ler();
+    const ro = new ResizeObserver(ler);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!blocosRecado.length || recadoCurto) { setGruposRecado((p) => (p.length ? [] : p)); return; }
+    const prova = provaRef.current;
+    if (!prova || caixaFolha.altura <= 0) return;
+    const filhos = Array.from(prova.children) as HTMLElement[];
+    if (filhos.length !== blocosRecado.length) return;
+
+    /* Quanto sobra pro texto: a altura da folha menos a moldura do recado
+       (padding, borda e a tarja "RECADO DE ..."). O valor sai do próprio clone,
+       que tem a moldura igual. Uma folga de 6px evita encostar na borda. */
+    const moldura = prova.parentElement;
+    const sobraDaMoldura = moldura ? moldura.getBoundingClientRect().height - prova.getBoundingClientRect().height : 0;
+    const disponivel = Math.max(80, caixaFolha.altura - sobraDaMoldura - 6);
+
+    const grupos: string[][] = [];
+    let atual: string[] = [];
+    let soma = 0;
+    let linha = 0;
+    blocosRecado.forEach((b, i) => {
+      const h = filhos[i].getBoundingClientRect().height;
+      const doBloco = recadoLinhas.slice(linha, linha + b.consome);
+      linha += b.consome;
+      // Bloco sozinho maior que a página não tem pra onde ir: fica na dele.
+      if (atual.length && soma + h > disponivel) { grupos.push(atual); atual = []; soma = 0; }
+      atual.push(...doBloco); soma += h;
+    });
+    if (atual.length) grupos.push(atual);
+
+    setGruposRecado((p) => (JSON.stringify(p) === JSON.stringify(grupos) ? p : grupos));
+  }, [blocosRecado, recadoLinhas, recadoCurto, caixaFolha.altura, caixaFolha.largura]);
+
+  /* O CLONE INVISÍVEL. Fora da tela (não `display: none`, senão não teria
+     altura pra medir), com a largura exata da área de conteúdo da folha. */
+  const provaDoRecado = !recadoCurto && blocosRecado.length && caixaFolha.largura > 0 ? (
+    <div aria-hidden style={{ position: "fixed", left: -99999, top: 0, width: caixaFolha.largura, pointerEvents: "none", opacity: 0, fontFamily: "Inter, system-ui, sans-serif", color: C.ink }}>
+      <div style={{ marginBottom: 14, padding: "12px 14px", border: `1px solid ${C.line}`, borderLeft: `3px solid ${C.brand}`, borderRadius: 12, background: C.soft }}>
+        <div style={{ fontSize: 10, color: C.sub, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5 }}>
+          {managerName ? `Recado de ${managerName}` : "Recado da social mídia"} (continuação)
+        </div>
+        <div ref={provaRef} style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.55 }}>
+          {blocosRecado.map((b) => b.node)}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   // Recado curto entra na página de resumo; recado longo vira página(s) própria(s)
   // e o texto CONTINUA na folha seguinte (antes ele sumia cortado).
   const recadoNode = recadoLinhas.length && recadoCurto ? recadoBox(recadoLinhas, false) : null;
+  /* Enquanto a medida não chega (primeiro quadro), a estimativa antiga segura
+     as pontas: melhor uma quebra imperfeita por um instante do que a prévia
+     piscar vazia. Assim que o clone é medido, a medida real manda. */
+  const gruposFinais = gruposRecado.length ? gruposRecado : pack(recadoLinhas, estLinhas, 30);
   const recadoPages = recadoLinhas.length && !recadoCurto
-    ? pack(recadoLinhas, estLinhas, 36).map((grupo, gi) => (
+    ? gruposFinais.map((grupo, gi) => (
         <div key={`recado-${gi}`}>{recadoBox(grupo, gi > 0)}</div>
       ))
     : [];
@@ -2335,17 +2451,22 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const sai = (p: { pularSeVazia?: boolean }) => !(p.pularSeVazia && !analiseTemTexto);
   const totalPaginas = defs.filter(sai).length;
   let numeroCorrente = 0;
+  /* A primeira folha com moldura vira a RÉGUA: é dela que sai a largura e a
+     altura reais da área de conteúdo, usadas pra medir o recado. */
+  let jaMarcouRegua = false;
   const paginasRender = defs.map((p) => {
     const entra = sai(p);
     if (entra) numeroCorrente += 1;
     const numero = numeroCorrente;
+    const ehRegua = !p.semChrome && !jaMarcouRegua;
+    if (ehRegua) jaMarcouRegua = true;
     return (
       <div key={p.key} style={{ boxShadow: "0 6px 20px -12px rgba(0,0,0,.35)", borderRadius: 6, overflow: "hidden", border: `1px solid ${C.line}`, opacity: entra ? 1 : 0.8 }}>
         <div data-pdf-page data-pdf-skip={entra ? undefined : "1"} style={{ width: "100%", aspectRatio: "210 / 297", background: "#ffffff", display: "flex", flexDirection: "column", overflow: "hidden", boxSizing: "border-box", fontFamily: "Inter, system-ui, sans-serif", color: C.ink }}>
           {p.semChrome ? p.body : (
             <>
               {cabecalhoPagina}
-              <div style={{ flex: 1, overflow: "hidden", padding: "14px 32px 6px" }}>{p.body}</div>
+              <div ref={ehRegua ? folhaRef : undefined} style={{ flex: 1, overflow: "hidden", padding: "14px 32px 6px" }}>{p.body}</div>
               {entra
                 ? rodapePagina(numero, totalPaginas)
                 : (
@@ -2590,6 +2711,8 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
           <div ref={reportRef} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {paginasRender}
           </div>
+          {/* Fora do reportRef de propósito: é régua, não entra no PDF. */}
+          {provaDoRecado}
         </div>
 
         </div>
