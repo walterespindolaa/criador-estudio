@@ -4059,23 +4059,151 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_commission_entries: {
+        Row: {
+          amount_cents: number
+          canceled_reason: string | null
+          commission_pct: number
+          competencia: string
+          created_at: string
+          currency: string
+          gross_cents: number
+          id: string
+          invoice_seq: number
+          partner_id: string
+          payout_id: string | null
+          referral_id: string
+          status: string
+          stripe_invoice_id: string
+          stripe_subscription_id: string | null
+        }
+        Insert: {
+          amount_cents: number
+          canceled_reason?: string | null
+          commission_pct: number
+          competencia: string
+          created_at?: string
+          currency?: string
+          gross_cents: number
+          id?: string
+          invoice_seq: number
+          partner_id: string
+          payout_id?: string | null
+          referral_id: string
+          status?: string
+          stripe_invoice_id: string
+          stripe_subscription_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          canceled_reason?: string | null
+          commission_pct?: number
+          competencia?: string
+          created_at?: string
+          currency?: string
+          gross_cents?: number
+          id?: string
+          invoice_seq?: number
+          partner_id?: string
+          payout_id?: string | null
+          referral_id?: string
+          status?: string
+          stripe_invoice_id?: string
+          stripe_subscription_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_commission_entries_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_commission_entries_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: false
+            referencedRelation: "partner_referrals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_payouts: {
+        Row: {
+          competencia: string
+          created_at: string
+          entries_count: number
+          id: string
+          note: string | null
+          paid_at: string | null
+          paid_by: string | null
+          partner_id: string
+          proof_url: string | null
+          status: string
+          total_cents: number
+        }
+        Insert: {
+          competencia: string
+          created_at?: string
+          entries_count?: number
+          id?: string
+          note?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          partner_id: string
+          proof_url?: string | null
+          status?: string
+          total_cents: number
+        }
+        Update: {
+          competencia?: string
+          created_at?: string
+          entries_count?: number
+          id?: string
+          note?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          partner_id?: string
+          proof_url?: string | null
+          status?: string
+          total_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_payouts_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_program_config: {
         Row: {
+          commission_months: number
+          commission_pct: number
           deduction_pct: number
           grace_invoices: number
           id: boolean
+          start_invoice: number
           updated_at: string
         }
         Insert: {
+          commission_months?: number
+          commission_pct?: number
           deduction_pct?: number
           grace_invoices?: number
           id?: boolean
+          start_invoice?: number
           updated_at?: string
         }
         Update: {
+          commission_months?: number
+          commission_pct?: number
           deduction_pct?: number
           grace_invoices?: number
           id?: boolean
+          start_invoice?: number
           updated_at?: string
         }
         Relationships: []
@@ -4168,7 +4296,11 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          cache_cents: number
+          cache_note: string | null
           commission_deduction_pct: number | null
+          commission_months: number | null
+          commission_pct: number | null
           coupon_code: string | null
           coupon_discount_pct: number | null
           coupon_duration_months: number | null
@@ -4182,6 +4314,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           pix_key: string | null
+          start_invoice: number | null
           status: string
           stripe_coupon_id: string | null
           stripe_promotion_code_id: string | null
@@ -4191,7 +4324,11 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          cache_cents?: number
+          cache_note?: string | null
           commission_deduction_pct?: number | null
+          commission_months?: number | null
+          commission_pct?: number | null
           coupon_code?: string | null
           coupon_discount_pct?: number | null
           coupon_duration_months?: number | null
@@ -4205,6 +4342,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           pix_key?: string | null
+          start_invoice?: number | null
           status?: string
           stripe_coupon_id?: string | null
           stripe_promotion_code_id?: string | null
@@ -4214,7 +4352,11 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          cache_cents?: number
+          cache_note?: string | null
           commission_deduction_pct?: number | null
+          commission_months?: number | null
+          commission_pct?: number | null
           coupon_code?: string | null
           coupon_discount_pct?: number | null
           coupon_duration_months?: number | null
@@ -4228,6 +4370,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           pix_key?: string | null
+          start_invoice?: number | null
           status?: string
           stripe_coupon_id?: string | null
           stripe_promotion_code_id?: string | null
@@ -6266,6 +6409,16 @@ export type Database = {
           unlocked_at: string
         }[]
       }
+      admin_pagar_competencia: {
+        Args: {
+          _competencia: string
+          _note?: string
+          _partner_id: string
+          _proof_url?: string
+        }
+        Returns: Json
+      }
+      admin_parceiras_resumo: { Args: never; Returns: Json }
       admin_wipe_user_content: { Args: { _user_id: string }; Returns: Json }
       agency_clients: {
         Args: never
@@ -6869,6 +7022,7 @@ export type Database = {
       painel_admin_atencao: { Args: never; Returns: Json }
       painel_admin_custo_ia: { Args: { _dias?: number }; Returns: Json }
       painel_admin_resumo: { Args: never; Returns: Json }
+      parceira_meu_extrato: { Args: never; Returns: Json }
       parceiro_abrir_card: { Args: { _post_id: string }; Returns: Json }
       parceiro_anexar_entrega: {
         Args: {
@@ -7076,6 +7230,14 @@ export type Database = {
           thumb: string
           tipo: string
           url: string
+        }[]
+      }
+      partner_regra: {
+        Args: { _partner_id: string }
+        Returns: {
+          fatura_inicial: number
+          meses: number
+          pct: number
         }[]
       }
       pin_comment_by_token: {
