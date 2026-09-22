@@ -719,6 +719,37 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const notesKey = useMemo(() => `${dayRange.since}_${dayRange.until}`, [dayRange]);
   const canPersistNotes = !!agencyOwnerId && !!client.crm_client_id;
 
+  /* ═══════════════════════════════════════════════════════════════════════
+     A LIMPEZA VEM ANTES DA LEITURA (Gabriela, 22/09/2026: "aqui tem o recado,
+     mas quando eu clico pra ver, ele some")
+
+     Havia dois efeitos brigando pelo mesmo estado:
+       · um LIMPAVA recado/análise/prints ao trocar de período;
+       · outro RESTAURAVA a nota salva daquele período.
+
+     O que restaura estava declarado ANTES, e o React roda os efeitos na ordem
+     em que foram declarados. Então, num commit em que os dois rodavam, quem
+     falava por último era a limpeza. Isso é invisível no caso comum, porque o
+     fetch demora e a restauração chega depois. Mas ao reabrir pelo Histórico a
+     resposta já está no cache do react-query: ela chega no MESMO commit em que
+     o período muda, a limpeza roda por último e apaga o que acabou de ser
+     lido. O recado existia no banco (por isso aparecia no histórico) e sumia
+     na tela.
+
+     Agora a limpeza está aqui em cima, antes da leitura, e é chaveada pelo
+     notesKey (o intervalo de datas) em vez do rótulo do período: é o intervalo
+     que decide de qual nota estamos falando, e dois presets que caem no mesmo
+     intervalo não têm por que limpar nada.
+     ═══════════════════════════════════════════════════════════════════════ */
+  useEffect(() => {
+    if (editorRef.current) editorRef.current.innerHTML = "";
+    setNotes("");
+    setProximos("");
+    setMetricShots([]);
+    setAnaliseTemTexto(false);
+    setShareUrl(null);
+  }, [notesKey]);
+
   // Carrega a nota salva pra este cliente+período. Se a tabela ainda não existir
   // (migration não rodou), a query falha e a nota fica só na sessão.
   const { data: savedNote, isFetched: notesFetched } = useQuery<{ body: string; analysis: string; proximos: string; shots: { path: string; url: string }[] }>({
@@ -757,9 +788,9 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     }
   }, [notesFetched, savedNote, notesKey]);
 
-  const saveNotes = async () => {
+  const saveNotes = async (silencioso = false) => {
     if (!canPersistNotes) return;
-    setNotesSaving(true);
+    if (!silencioso) setNotesSaving(true);
     try {
       const { error } = await sbFrom("client_report_notes").upsert({
         manager_id: agencyOwnerId, crm_client_id: client.crm_client_id,
@@ -778,11 +809,37 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       queryClient.invalidateQueries({ queryKey: ["report-notes", agencyOwnerId, client.crm_client_id] });
     } catch (e) {
       console.error("Salvar recado do relatório falhou", e);
-      toast.error("Não consegui salvar a nota. Tente de novo.");
+      // No automático não enche o saco: quem escreveu continua escrevendo, e o
+      // botão Salvar nota segue ali pra tentar de novo com aviso na tela.
+      if (!silencioso) toast.error("Não consegui salvar a nota. Tente de novo.");
     } finally {
-      setNotesSaving(false);
+      if (!silencioso) setNotesSaving(false);
     }
   };
+
+  /* ── SALVAR SOZINHO (Gabriela, 22/09/2026: "precisa ficar salvo") ──
+     O recado dela tem páginas de texto, e até aqui só existia o botão "Salvar
+     nota": fechar o diálogo sem clicar jogava tudo fora. Agora grava sozinho
+     dois segundos depois da última tecla, e o botão continua existindo pra quem
+     quer a confirmação na hora.
+
+     Duas travas contra apagar o que já estava salvo:
+       · só depois que a nota daquele período foi LIDA (notesFetched), senão o
+         automático correria contra a leitura e gravaria vazio por cima;
+       · nunca grava um recado vazio em cima de um recado que existe. Campo
+         vazio é quase sempre estado de transição, não decisão de apagar. Pra
+         apagar de verdade, o botão Salvar nota continua mandando. */
+  useEffect(() => {
+    if (!canPersistNotes || !notesFetched) return;
+    const igualAoSalvo = notes === (savedNote?.body ?? "") && proximos === (savedNote?.proximos ?? "");
+    if (igualAoSalvo) return;
+    const vaziosAgora = !notes.trim() && !proximos.trim();
+    const tinhaAlgo = !!(savedNote?.body?.trim() || savedNote?.proximos?.trim());
+    if (vaziosAgora && tinhaAlgo) return;
+    const t = window.setTimeout(() => { void saveNotes(true); }, 2000);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes, proximos, notesFetched, canPersistNotes, notesKey, savedNote]);
 
   // Persiste a lista de caminhos dos prints no mesmo registro da nota (coluna
   // metrics_images). Upsert só com esses campos: não mexe no `body`.
@@ -836,17 +893,8 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     if (open && customSince && customUntil) { setCustomFrom(customSince); setCustomTo(customUntil); }
   }, [open, customSince, customUntil]);
 
-  // Limpa a análise, o recado e o link publicado ao trocar de período (não valem
-  // pra outro recorte). Pra cliente com persistência, o recado salvo é recarregado
-  // logo em seguida pelo efeito da query de notas.
-  useEffect(() => {
-    if (editorRef.current) editorRef.current.innerHTML = "";
-    setNotes("");
-    setProximos("");
-    setMetricShots([]);
-    setAnaliseTemTexto(false);
-    setShareUrl(null);
-  }, [periodKey]);
+  // (A limpeza ao trocar de período subiu pra antes da leitura da nota salva:
+  //  ver o comentário lá em cima, junto do useEffect chaveado por notesKey.)
 
   const [active, setActive] = useState<Record<string, boolean>>({});
 
@@ -2573,7 +2621,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             placeholder="Ex.: um resumo do mês, os próximos passos, um recado pro cliente." />
           <p className="text-[11px] font-body text-muted-foreground mt-1">
             {canPersistNotes
-              ? "Nada é salvo sozinho: clique em Salvar nota (baixar ou compartilhar também salva). Assim período novo abre limpo."
+              ? "Salva sozinho enquanto você escreve, por período. O botão Salvar nota serve pra confirmar na hora."
               : "Vincule o cliente ao cadastro central pra guardar o recado entre sessões. Por ora ele sai só neste PDF."}
           </p>
         </div>
