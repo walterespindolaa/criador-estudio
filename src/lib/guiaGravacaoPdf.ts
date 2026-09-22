@@ -213,9 +213,18 @@ export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
   pdf.text("GUIA DE GRAVAÇÃO", L / 2, y, { align: "center" });
   y += 13;
   tinta();
+  /* NOME COMPRIDO NÃO PODE ATROPELAR A DATA (Gabriela, 21/09/2026: "cortando").
+     Aqui era `maxWidth`, que quebra o texto em duas linhas mas NÃO devolve
+     quantas foram: o y avançava 11mm fixos, como se sempre coubesse numa linha
+     só, e a segunda linha caía em cima da data. Com splitTextToSize a gente
+     sabe quantas linhas são antes de desenhar, e o resto da capa desce junto. */
   pdf.setFontSize(30);
-  pdf.text(d.cliente, L / 2, y, { align: "center", maxWidth: L - 40 });
-  y += 11;
+  const ALT_LINHA_TITULO = 11.5;
+  const linhasCliente = pdf.splitTextToSize(d.cliente, L - 40) as string[];
+  linhasCliente.forEach((ln, i) => {
+    pdf.text(ln, L / 2, y + i * ALT_LINHA_TITULO, { align: "center" });
+  });
+  y += (linhasCliente.length - 1) * ALT_LINHA_TITULO + 11;
   /* A DATA UMA VEZ SÓ (Walter, 21/09/2026: "não precisa ter todas as datas
      do lado, já sabemos que é dia 21"). Se todo roteiro do guia é do mesmo
      dia, a data completa substitui o "Setembro de 2026" e some da lista. Se
@@ -239,13 +248,16 @@ export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
     tinta(); pdf.setFont("helvetica", "bold"); pdf.setFontSize(9.5);
     // Sem a coluna de data, o título ganha a largura inteira (antes cortava
     // em "...melhorar o intestino" por causa dos 62mm reservados).
-    const t = pdf.splitTextToSize(`${i + 1}. ${r.title?.trim() || `Vídeo ${i + 1}`}`, L - MARGEM * 2 - (diaUnico ? 32 : 62));
-    pdf.text(t[0], MARGEM + 16, y);
+    const t = pdf.splitTextToSize(`${i + 1}. ${r.title?.trim() || `Vídeo ${i + 1}`}`, L - MARGEM * 2 - (diaUnico ? 32 : 62)) as string[];
+    /* Até DUAS linhas por item, não uma. Desenhar só t[0] cortava o título
+       calado, e na capa é justamente onde ela confere a lista do dia. */
+    const t2 = t.slice(0, 2);
+    pdf.text(t2, MARGEM + 16, y);
     if (!diaUnico) {
       suave(); pdf.setFont("helvetica", "normal"); pdf.setFontSize(8.5);
       pdf.text(dataBR(r.record_date) ?? "data a combinar", L - MARGEM - 16, y, { align: "right" });
     }
-    y += 7;
+    y += t2.length * 4.6 + 2.4;
   });
   if (d.roteiros.length > cabeNaCapa.length) {
     suave(); pdf.setFont("helvetica", "italic"); pdf.setFontSize(8.5);
@@ -305,7 +317,11 @@ export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
   d.roteiros.forEach((r, idx) => {
     const cenas = cenasDe(r);
     const refs = linksDoRoteiro(r).map(previaDeLink);
-    const titulo = r.title?.trim() || `Vídeo ${idx + 1}`;
+    /* O NÚMERO NA FRENTE (Gabriela, 21/09/2026: "tem como inserir um número?").
+       A capa lista "1., 2., 3." e o rodapé diz "Vídeo 2 de 6", mas a página do
+       roteiro não dizia qual era, então no meio da gravação não dava pra casar
+       a folha com a lista. Agora o número abre o título, igual ao sumário. */
+    const titulo = `${idx + 1}. ${r.title?.trim() || `Vídeo ${idx + 1}`}`;
 
     pdf.addPage();
     cabecalho(d.cliente, `Guia de gravação · ${d.mesLabel}`);
@@ -325,7 +341,11 @@ export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
       ye += ls.length * 4.6 + 5;
     };
     campo("Data da gravação", dataBR(r.record_date) ?? "a combinar");
-    campo("Local", r.location?.trim() || "a combinar");
+    /* O LOCAL SAIU (Gabriela, 21/09/2026: "esse local não tem necessidade no
+       relatório"). Quase sempre era "a combinar" ocupando um campo inteiro em
+       toda página, e quando tinha valor era o mesmo do dia todo, que ela já
+       sabe. Continua existindo no cadastro do roteiro e na Folha do dia, que é
+       onde a informação serve pra alguma coisa. */
     if (r.about?.trim()) campo("Sobre o vídeo", r.about.trim());
 
     if (refs.length > 0) {
@@ -371,9 +391,14 @@ export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
       pdf.addPage();
       paginaDoVideo += 1;
       cabecalho(d.cliente, `Guia de gravação · ${d.mesLabel}`);
+      /* TÍTULO DA CONTINUAÇÃO TAMBÉM QUEBRA (Gabriela, 21/09/2026: "tá
+         cortando"). Este era o corte de verdade: na página 1 o título já ia
+         partido na coluna estreita, mas aqui saía numa linha só e o que passava
+         da margem direita simplesmente sumia. */
       tinta(); pdf.setFont("helvetica", "bold"); pdf.setFontSize(11);
-      pdf.text(`${titulo} · continuação`, MARGEM, TOPO);
-      yd = TOPO + 8;
+      const lsCont = pdf.splitTextToSize(`${titulo} · continuação`, L - MARGEM * 2) as string[];
+      pdf.text(lsCont, MARGEM, TOPO);
+      yd = TOPO + lsCont.length * 5 + 3;
     };
     // Nas páginas de continuação o roteiro usa a folha inteira.
     const largura = () => (paginaDoVideo === 1 ? COL_DIR_W : L - MARGEM * 2);
