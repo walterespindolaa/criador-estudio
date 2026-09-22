@@ -664,6 +664,20 @@ function CriaCaptacaoInner() {
     } catch { /* o hook já avisa */ }
   };
 
+  /* O TÍTULO DO CARD É O DO ROTEIRO, SÓ ELE (Gabriela, 21/09/2026: "coloquei
+     pra virar post mas não caiu no Cria Post do cliente").
+
+     Caiu sim. O que aconteceu é que o card nascia chamado
+     "<nome do cliente> · <título do roteiro>", e o card do kanban corta o
+     título numa linha: em "Organnah Produtos Naturais · Ativos coreanos...",
+     o que sobrava na tela era "Organnah Produtos Naturais ...". Ela procurou o
+     roteiro dela, viu o nome do próprio cliente repetido e concluiu que era
+     outra coisa. O prefixo nunca teve utilidade: o card já está DENTRO do
+     quadro daquele cliente, dizer de quem é ali é gastar a única linha visível
+     com a informação que ela menos precisa. */
+  const tituloDoPost = (r: CaptureScript) =>
+    (r.title ?? "").trim() || "Roteiro de gravação";
+
   /* VIRAR POST EM LOTE, do Dia de Gravação (Walter, 21/09/2026). Um post POR
      ROTEIRO (não um por dia): cada roteiro é um vídeo, e no kanban do cliente
      cada vídeo tem que ter o próprio card pra andar sozinho. Reusa o mesmo
@@ -684,12 +698,12 @@ function CriaCaptacaoInner() {
         const crmId = cap?.crm_client_id ?? r.crm_client_id ?? null;
         const ext = crmId ? extByCrmId.get(crmId) : null;
         if (!crmId || !ext) { semCriaPost.add(cap ? capName(cap) : (r.client_name ?? "Cliente")); continue; }
-        const nome = clientById.get(crmId)?.nome ?? capName(cap!);
         const texto = cenasDe(r).length > 0 ? cenasParaTexto(cenasDe(r)) : (r.content ?? "");
         await scriptToPost.mutateAsync({
           scriptId: r.id,
           externalClientId: ext.id,
-          title: `${nome} · ${(r.title ?? "").trim() || "roteiro"}`,
+          // Sem o nome do cliente na frente: ver o comentário em tituloDoPost.
+          title: tituloDoPost(r),
           script: texto,
         });
         feitos++; ultimoCrm = crmId;
@@ -1843,7 +1857,10 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   const virarPost = async (s: CaptureScript) => {
     if (!ext) { toast.error("O Cria Post não está ativo pra este cliente."); return; }
     try {
-      await toPost.mutateAsync({ scriptId: s.id, externalClientId: ext.id, title: `${pasta.nome} · ${s.title.trim() || "roteiro"}`, script: s.content });
+      /* Título do roteiro puro, sem "<cliente> · " na frente: o card já nasce
+         dentro do quadro desse cliente, e o prefixo comia a única linha que o
+         card mostra (ver o comentário em tituloDoPost). */
+      await toPost.mutateAsync({ scriptId: s.id, externalClientId: ext.id, title: s.title.trim() || "Roteiro de gravação", script: s.content });
       if (pasta.crmId) navigate(`/socialmidia/clientes/${pasta.crmId}/posts`);
     } catch { /* o hook já avisa */ }
   };
