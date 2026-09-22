@@ -6866,6 +6866,9 @@ export type Database = {
         }[]
       }
       notif_categoria: { Args: { _tipo: string }; Returns: string }
+      painel_admin_atencao: { Args: never; Returns: Json }
+      painel_admin_custo_ia: { Args: { _dias?: number }; Returns: Json }
+      painel_admin_resumo: { Args: never; Returns: Json }
       parceiro_abrir_card: { Args: { _post_id: string }; Returns: Json }
       parceiro_anexar_entrega: {
         Args: {
