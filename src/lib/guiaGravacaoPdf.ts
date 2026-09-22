@@ -448,10 +448,40 @@ export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
   pdf.rect(0, 0, L, A, "F");
   pdf.setFillColor(...hexRgb(cor));
   pdf.rect(0, A - 6, L, 6, "F");
+  /* O SELO DE REC, DESENHADO (Gabriela, 21/09/2026: "tem como colocar um emoji
+     de gravação?"). Emoji não vai: a Helvetica embutida no PDF é Latin-1, e
+     qualquer caractere fora disso sai como caixinha ou lixo em boa parte dos
+     leitores. Então em vez de escrever um emoji, a gente DESENHA o símbolo: a
+     bolinha vermelha do REC, que é a mesma coisa e sai nítida em qualquer
+     zoom, em qualquer leitor, e ainda sai na impressão. */
+  const cyRec = A / 2 - 24;
+  pdf.setFillColor(214, 54, 54);
+  pdf.circle(L / 2 - 8.5, cyRec, 2.2, "F");
+  pdf.setFont("helvetica", "bold"); pdf.setFontSize(9);
+  pdf.setTextColor(214, 54, 54);
+  pdf.text("REC", L / 2 + 1.5, cyRec + 1.2, { align: "center" });
+
   tinta(); pdf.setFont("helvetica", "bold"); pdf.setFontSize(16);
-  pdf.text("Bora gravar.", L / 2, A / 2 - 6, { align: "center" });
+  pdf.text("Bora gravar?", L / 2, A / 2 - 6, { align: "center" });
   suave(); pdf.setFont("helvetica", "normal"); pdf.setFontSize(10);
-  pdf.text("Qualquer dúvida na hora da gravação, chama a gente.", L / 2, A / 2 + 3, { align: "center" });
+  /* Texto novo, da Gabriela. Em três linhas curtas porque é o que a pessoa lê
+     de pé, com o celular na mão, um segundo antes de começar a gravar. */
+  pdf.text("Agora é só seguir o roteiro e deixar acontecer.", L / 2, A / 2 + 3, { align: "center" });
+  pdf.text("Se precisarem de alguma coisa, estou por aqui.", L / 2, A / 2 + 9.5, { align: "center" });
+
+  /* A ASSINATURA DE QUEM PREPAROU (Gabriela: "podia ter o nome do social media
+     também ao final"). O guia chega no cliente pelo WhatsApp, longe de quem
+     escreveu: sem nome, "estou por aqui" não diz quem é. */
+  const nomeDeQuemFez = d.elaboradoPor?.trim();
+  if (nomeDeQuemFez) {
+    pdf.setDrawColor(...hexRgb(LINHA)); pdf.setLineWidth(0.3);
+    pdf.line(L / 2 - 18, A / 2 + 16, L / 2 + 18, A / 2 + 16);
+    tinta(); pdf.setFont("helvetica", "bold"); pdf.setFontSize(11);
+    pdf.text(nomeDeQuemFez, L / 2, A / 2 + 23, { align: "center" });
+    suave(); pdf.setFont("helvetica", "normal"); pdf.setFontSize(8.5);
+    pdf.text(d.cliente, L / 2, A / 2 + 28.5, { align: "center" });
+  }
+
   pdf.setFontSize(8);
   pdf.text("Feito no Cria Social Club", L / 2, A - 20, { align: "center" });
 
