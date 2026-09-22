@@ -4664,6 +4664,7 @@ export type Database = {
           client_packs: number
           client_packs_subscription_id: string | null
           collab_seats_subscription_id: string | null
+          cores_agencias: Json
           created_at: string | null
           default_shot_list: string[]
           editorial_line: Json | null
@@ -4726,6 +4727,7 @@ export type Database = {
           client_packs?: number
           client_packs_subscription_id?: string | null
           collab_seats_subscription_id?: string | null
+          cores_agencias?: Json
           created_at?: string | null
           default_shot_list?: string[]
           editorial_line?: Json | null
@@ -4788,6 +4790,7 @@ export type Database = {
           client_packs?: number
           client_packs_subscription_id?: string | null
           collab_seats_subscription_id?: string | null
+          cores_agencias?: Json
           created_at?: string | null
           default_shot_list?: string[]
           editorial_line?: Json | null
@@ -6178,6 +6181,57 @@ export type Database = {
           },
         ]
       }
+      video_script_adaptations: {
+        Row: {
+          cliente_nome: string | null
+          created_at: string
+          crm_client_id: string
+          id: string
+          manager_id: string
+          o_que_gravar: Json | null
+          roteiro: Json
+          updated_at: string
+          video_analysis_id: string
+        }
+        Insert: {
+          cliente_nome?: string | null
+          created_at?: string
+          crm_client_id: string
+          id?: string
+          manager_id: string
+          o_que_gravar?: Json | null
+          roteiro: Json
+          updated_at?: string
+          video_analysis_id: string
+        }
+        Update: {
+          cliente_nome?: string | null
+          created_at?: string
+          crm_client_id?: string
+          id?: string
+          manager_id?: string
+          o_que_gravar?: Json | null
+          roteiro?: Json
+          updated_at?: string
+          video_analysis_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_script_adaptations_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_script_adaptations_video_analysis_id_fkey"
+            columns: ["video_analysis_id"]
+            isOneToOne: false
+            referencedRelation: "video_analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -6628,10 +6682,12 @@ export type Database = {
         Returns: {
           created_at: string
           description: string
+          due_date: string
           id: string
           kind: string
           status: string
           title: string
+          updated_at: string
         }[]
       }
       list_post_comments_by_token: {
@@ -7074,6 +7130,7 @@ export type Database = {
       request_material_by_token: {
         Args: {
           _description: string
+          _due_date?: string
           _kind?: string
           _title: string
           _token: string
