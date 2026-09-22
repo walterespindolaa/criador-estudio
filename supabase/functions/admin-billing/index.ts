@@ -36,6 +36,7 @@ serve(async (req) => {
     let currency = "brl";
     // quebra por produto (somente assinaturas ATIVAS = pagantes reais)
     const breakdown: Record<string, { count: number; mrrCents: number; emails: string[] }> = {};
+    const productNames = new Map<string, string>();
 
     for (const status of ["active", "trialing"] as const) {
       let startingAfter: string | undefined;
@@ -44,7 +45,7 @@ serve(async (req) => {
           status,
           limit: 100,
           starting_after: startingAfter,
-          expand: ["data.items.data.price.product", "data.customer"],
+          expand: ["data.customer"],
         });
         for (const sub of res.data) {
           if (status === "active") active++; else trialing++;
@@ -63,7 +64,15 @@ serve(async (req) => {
             if (status === "active") mrrCents += monthly;
             subMrr += monthly;
             const product = price?.product as { name?: string } | string | undefined;
-            const pName = typeof product === "object" ? product?.name : undefined;
+            let pName = typeof product === "object" ? product?.name : undefined;
+            if (typeof product === "string") {
+              pName = productNames.get(product);
+              if (!pName) {
+                const productData = await stripe.products.retrieve(product);
+                pName = productData.name;
+                productNames.set(product, pName);
+              }
+            }
             label = pName || price?.nickname || label;
           }
           if (status === "active") {
