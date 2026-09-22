@@ -27,6 +27,7 @@ import {
   RefreshCw,
   Loader2,
   Clapperboard,
+  LayoutDashboard,
 } from "lucide-react";
 import { useTrends, useRefreshTrends } from "@/hooks/useTrends";
 import { useStoryTrends, useRefreshStoryTrends } from "@/hooks/useStoryTrends";
@@ -68,6 +69,7 @@ import { AdminRecados } from "@/components/admin/AdminRecados";
 import { AdminFaturamento } from "@/components/admin/AdminFaturamento";
 import { AdminFeedback } from "@/components/admin/AdminFeedback";
 import { AdminGrowth } from "@/components/admin/AdminGrowth";
+import { AdminHome } from "@/components/admin/AdminHome";
 import { UserDetailsDrawer } from "@/components/admin/UserDetailsDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { confirmar } from "@/components/shared/Confirm";
@@ -142,12 +144,46 @@ function initials(name: string | null | undefined) {
     .toUpperCase();
 }
 
+/* Segundo nível de navegação dentro de um grupo. Pílulas, não cartões: o
+   primeiro nível já gastou a atenção, aqui é só escolher a vista. */
+function SubAbas({ atual, aoTrocar, itens }: {
+  atual: string;
+  aoTrocar: (v: string) => void;
+  itens: { valor: string; rotulo: string }[];
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5 mb-4">
+      {itens.map((i) => (
+        <button
+          key={i.valor}
+          type="button"
+          onClick={() => aoTrocar(i.valor)}
+          className={`rounded-xl px-3 py-1.5 text-[12.5px] font-body font-semibold transition-colors ${
+            atual === i.valor
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {i.rotulo}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 const AdminInner = () => {
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("todos");
   const [roleFilter, setRoleFilter] = useState("todos");
   const [page, setPage] = useState(0);
-  const [tab, setTab] = useState("usuarios");
+  // Abre no Início: é a tela que responde "e aí, como estamos?".
+  const [tab, setTab] = useState("inicio");
+  // Segundo nível de cada grupo. Estado separado por grupo de propósito: voltar
+  // pra uma aba tem que devolver a pessoa onde ela estava, não ao começo.
+  const [subContas, setSubContas] = useState("lista");
+  const [subDinheiro, setSubDinheiro] = useState("faturamento");
+  const [subUso, setSubUso] = useState("crescimento");
+  const [subRede, setSubRede] = useState("parceiros");
   const [openCreate, setOpenCreate] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", plan: "trial" });
   const [validity, setValidity] = useState("lifetime");
@@ -340,43 +376,46 @@ const AdminInner = () => {
           </div>
         </div>
 
-        <TrendBankAdminCard />
-        <StoryBankAdminCard />
-
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 mb-6 bg-transparent h-auto p-0 auto-rows-fr">
+          {/* ── AS ABAS, REAGRUPADAS (Walter, 22/09/2026) ──────────────────
+              Eram NOVE cartões grandes lado a lado, cada um do tamanho de um
+              botão de menu, ocupando meia tela antes de qualquer conteúdo. E a
+              divisão era por ORIGEM do dado ("Logs", "Benchmarks"), não pelo
+              assunto de quem olha. Agora são cinco grupos por assunto, em
+              pílulas compactas, com um segundo nível dentro de cada um. Nada
+              foi removido: cada tela antiga continua existindo, só mudou de
+              endereço. */}
+          <TabsList className="flex flex-wrap gap-1.5 mb-5 bg-transparent h-auto p-0 justify-start">
             {[
-              { value: "usuarios", icon: Users, title: "Usuários", desc: "Contas, planos e permissões", hint: `${stats.totalUsers} usuário(s)` },
-              { value: "logs", icon: FileWarning, title: "Logs", desc: "Erros e incidentes do app", hint: "auto" },
-              { value: "faturamento", icon: DollarSign, title: "Faturamento", desc: "Receita e assinaturas (Stripe)", hint: "" },
-              { value: "parceiros", icon: Handshake, title: "Parceiros", desc: "Rede de parceiros", hint: "" },
-              { value: "comissoes", icon: CircleDollarSign, title: "Comissões", desc: "Indicações e pagamentos", hint: "" },
-              { value: "recados", icon: MessageSquare, title: "Recados", desc: "Avisos pros usuários", hint: "" },
-              { value: "feedback", icon: Inbox, title: "Feedback", desc: "Bugs e ideias dos usuários", hint: "" },
-              { value: "crescimento", icon: LineChart, title: "Crescimento", desc: "Novos usuários e uso do app", hint: "" },
-              // Custo de IA era invisível: dava pra descobrir que estava caro só
-              // olhando a fatura. Aqui dá pra ver ANTES.
-              { value: "benchmarks", icon: Gauge, title: "Benchmarks", desc: "Uso e custo das IAs (Cria IA, HUB, Estúdio)", hint: "" },
+              { value: "inicio", icon: LayoutDashboard, title: "Início" },
+              { value: "contas", icon: Users, title: "Contas", hint: `${stats.totalUsers}` },
+              { value: "dinheiro", icon: DollarSign, title: "Dinheiro" },
+              { value: "uso", icon: Gauge, title: "Uso e custo" },
+              { value: "rede", icon: Handshake, title: "Rede e conteúdo" },
             ].map((c) => (
               <TabsTrigger
                 key={c.value}
                 value={c.value}
-                className="flex flex-col items-start gap-1 text-left rounded-2xl border border-border bg-card p-4 h-full data-[state=active]:border-primary/50 data-[state=active]:bg-primary/[0.04] data-[state=active]:shadow-sm transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-card px-3.5 py-2 data-[state=active]:border-primary/50 data-[state=active]:bg-primary/[0.06] data-[state=active]:text-primary transition-colors"
               >
-                <div className="flex items-center gap-2 w-full">
-                  <span className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center shrink-0">
-                    <c.icon className="h-4 w-4 text-foreground/70" />
-                  </span>
-                  <span className="font-display font-bold text-foreground">{c.title}</span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground/40 ml-auto" />
-                </div>
-                <span className="text-xs text-muted-foreground font-body">{c.desc}</span>
-                {c.hint && <span className="text-[11px] text-primary font-body">{c.hint}</span>}
+                <c.icon className="h-3.5 w-3.5" />
+                <span className="font-display font-bold text-[13px]">{c.title}</span>
+                {c.hint && <span className="text-[11px] font-body text-muted-foreground">{c.hint}</span>}
               </TabsTrigger>
             ))}
           </TabsList>
 
-          <TabsContent value="usuarios" className="space-y-0">
+          <TabsContent value="inicio">
+            <AdminHome aoAbrirConta={setSelectedUserId} />
+          </TabsContent>
+
+          <TabsContent value="contas" className="space-y-0">
+            <SubAbas atual={subContas} aoTrocar={setSubContas} itens={[
+              { valor: "lista", rotulo: "Usuários" },
+              { valor: "logs", rotulo: "Erros do app" },
+            ]} />
+            {subContas === "logs" ? <AdminLogs /> : (
+          <>
         {/* Metric cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
           <StatCard
@@ -544,38 +583,45 @@ const AdminInner = () => {
             </div>
           )}
         </div>
+          </>
+          )}
           </TabsContent>
 
-          <TabsContent value="parceiros">
-            <AdminPartners />
+          <TabsContent value="dinheiro">
+            <SubAbas atual={subDinheiro} aoTrocar={setSubDinheiro} itens={[
+              { valor: "faturamento", rotulo: "Faturamento" },
+              { valor: "comissoes", rotulo: "Comissões" },
+            ]} />
+            {subDinheiro === "comissoes" ? <AdminReferrals /> : <AdminFaturamento />}
           </TabsContent>
 
-          <TabsContent value="comissoes">
-            <AdminReferrals />
+          <TabsContent value="uso">
+            <SubAbas atual={subUso} aoTrocar={setSubUso} itens={[
+              { valor: "crescimento", rotulo: "Crescimento" },
+              { valor: "ia", rotulo: "Custo das IAs" },
+            ]} />
+            {subUso === "ia" ? <AdminBenchmarks /> : <AdminGrowth />}
           </TabsContent>
 
-          <TabsContent value="logs">
-            <AdminLogs />
-          </TabsContent>
-
-          <TabsContent value="faturamento">
-            <AdminFaturamento />
-          </TabsContent>
-
-          <TabsContent value="recados">
-            <AdminRecados />
-          </TabsContent>
-
-          <TabsContent value="feedback">
-            <AdminFeedback />
-          </TabsContent>
-
-          <TabsContent value="benchmarks">
-            <AdminBenchmarks />
-          </TabsContent>
-
-          <TabsContent value="crescimento">
-            <AdminGrowth />
+          <TabsContent value="rede">
+            <SubAbas atual={subRede} aoTrocar={setSubRede} itens={[
+              { valor: "parceiros", rotulo: "Parceiros" },
+              { valor: "recados", rotulo: "Recados" },
+              { valor: "feedback", rotulo: "Feedback" },
+              { valor: "bancos", rotulo: "Bancos de tendência" },
+            ]} />
+            {subRede === "recados" && <AdminRecados />}
+            {subRede === "feedback" && <AdminFeedback />}
+            {subRede === "parceiros" && <AdminPartners />}
+            {/* Os dois bancos moravam no TOPO da página, acima das abas, então
+                apareciam em toda tela do painel mesmo sem ter nada a ver com
+                ela. São conteúdo, e agora vivem junto do resto do conteúdo. */}
+            {subRede === "bancos" && (
+              <div className="space-y-3">
+                <TrendBankAdminCard />
+                <StoryBankAdminCard />
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 

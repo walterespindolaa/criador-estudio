@@ -50,6 +50,75 @@ const EMPTY_STATS: AdminStats = {
   byPlan: { free: 0, pro: 0, studio: 0 },
 };
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   OS NÚMEROS DA HOME DO ADMIN (Walter, 22/09/2026)
+
+   Três RPCs novas (ver 20260922000001_painel_admin_metricas.sql). Leitura
+   defensiva em todas: migration não rodada devolve null em vez de derrubar o
+   painel inteiro, que é o padrão do resto do app.
+
+   O que NÃO está aqui de propósito: MRR e churn em dinheiro. Isso continua
+   vindo da edge admin-billing, que lê o Stripe direto. Calcular dinheiro a
+   partir do espelho local seria inventar número.
+   ═══════════════════════════════════════════════════════════════════════════ */
+export type AdminResumo = {
+  contas: { total: number; social_midia: number; criadoras: number; parceiros: number; clientes_de_agencia: number };
+  novos: { d7: number; d30: number; mes_atual: number; mes_passado_ate_hoje: number };
+  ativos: { d1: number; d7: number; d30: number };
+  ativacao: { entraram: number; onboarding: number; voltaram: number; produziram: number };
+  planos: { free: number; pro: number; studio: number; agency: number };
+  trial: { em_trial: number; vence_7d: number };
+  assinatura: { ativas: number; suspensas: number };
+  producao: { posts_30d: number; publicados_30d: number; clientes_crm: number };
+};
+
+export type ContaEmAtencao = {
+  id: string; nome: string | null; plano?: string | null; tipo?: string | null;
+  dias?: number; usados?: number; teto?: number; erros?: number; ultimo?: string | null;
+};
+export type AdminAtencao = {
+  travados: ContaEmAtencao[];
+  sumidos: ContaEmAtencao[];
+  trial_vencendo: ContaEmAtencao[];
+  no_teto: ContaEmAtencao[];
+  com_erro: ContaEmAtencao[];
+};
+
+export type AdminCustoIa = {
+  dias: number;
+  radar: { scrapes: number; custo_usd: number };
+  imagens_estudio: number;
+  chamadas_ia: number;
+  top_contas: { id: string; nome: string | null; plano: string | null; scrapes: number; custo_usd: number }[];
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const rpcAny = (fn: string, args?: Record<string, unknown>) => (supabase.rpc as any)(fn, args);
+const faltaNoBanco = (m: string) => /does not exist|schema cache|could not find/i.test(m ?? "");
+
+function usePainelRpc<T>(chave: string, fn: string, args?: Record<string, unknown>) {
+  const { profile } = useProfile();
+  const isAdmin = profile?.role === "admin";
+  return useQuery<T | null>({
+    queryKey: [chave, args ?? {}],
+    enabled: isAdmin,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await rpcAny(fn, args);
+      if (error) {
+        if (faltaNoBanco(error.message)) return null;
+        throw error;
+      }
+      return (data ?? null) as T | null;
+    },
+  });
+}
+
+export const useAdminResumo = () => usePainelRpc<AdminResumo>("admin-resumo", "painel_admin_resumo");
+export const useAdminAtencao = () => usePainelRpc<AdminAtencao>("admin-atencao", "painel_admin_atencao");
+export const useAdminCustoIa = (dias = 30) =>
+  usePainelRpc<AdminCustoIa>("admin-custo-ia", "painel_admin_custo_ia", { _dias: dias });
+
 export function useAdmin(filters: AdminFilters) {
   const { user } = useAuth();
   const { profile } = useProfile();
