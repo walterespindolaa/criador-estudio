@@ -1822,11 +1822,68 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     </div>
   );
 
-  const pecasPages = chunk(monthPosts, 11).map((grupo, gi, all) => (
+  /* ═══════════════════════════════════════════════════════════════════════
+     PEÇAS SEPARADAS POR MÊS (Walter, 22/09/2026)
+
+     "Puxei de três meses, mas as peças não ficam separadas por mês, aí fica
+     meio confuso."
+
+     A lista já vinha em ordem de acontecimento, só que corrida: num relatório
+     de junho a agosto, a peça do dia 30/06 e a do dia 01/07 apareciam coladas,
+     e a data em cada linha vinha curta ("30 jun") sem o ano nem destaque. Quem
+     lê não tem como saber onde um mês termina e o outro começa, e a conversa
+     com o cliente é MÊS A MÊS ("o que a gente fez em julho?").
+
+     Agora, quando o período atravessa mês, cada mês vira seu próprio bloco com
+     o nome do mês no título e a contagem dele. Período dentro de um mês só
+     continua exatamente como era: um bloco, "Peças do período (N)". Quebrar um
+     mês só em "Peças de setembro" seria repetir o que o cabeçalho já diz.
+     ═══════════════════════════════════════════════════════════════════════ */
+  const mesDaPeca = (p: ExternalPost) =>
+    (publishedDayOf(p) ?? p.scheduled_date ?? (p.created_at ? toISODateBR(new Date(p.created_at)) : "")).slice(0, 7);
+
+  const pecasPorMes = useMemo(() => {
+    const m = new Map<string, ExternalPost[]>();
+    for (const p of monthPosts) {
+      const k = mesDaPeca(p);
+      const atual = m.get(k);
+      if (atual) atual.push(p); else m.set(k, [p]);
+    }
+    return [...m.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [monthPosts]);
+  const quebraMes = pecasPorMes.length > 1;
+
+  const nomeDoMes = (ym: string) => {
+    if (!ym || ym.length < 7) return "sem data";
+    const [a, m] = ym.split("-");
+    const d = new Date(Number(a), Number(m) - 1, 1);
+    return d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  };
+
+  /* Uma entrada por bloco que vai virar página. Sem quebra de mês, é o mesmo
+     chunk de antes; com quebra, cada mês é fatiado por conta própria, pra um
+     mês nunca começar no rodapé da página do anterior. */
+  const blocosDePecas: { titulo: string; lista: ExternalPost[] }[] = quebraMes
+    ? pecasPorMes.flatMap(([ym, lista]) =>
+        chunk(lista, 11).map((parte, i, todas) => ({
+          titulo: todas.length > 1
+            ? `Peças · ${nomeDoMes(ym)} (${lista.length}) · parte ${i + 1}`
+            : `Peças · ${nomeDoMes(ym)} (${lista.length})`,
+          lista: parte,
+        })),
+      )
+    : chunk(monthPosts, 11).map((parte, i, todas) => ({
+        titulo: todas.length > 1
+          ? `Peças do período (${monthPosts.length}) · parte ${i + 1}`
+          : `Peças do período (${monthPosts.length})`,
+        lista: parte,
+      }));
+
+  const pecasPages = blocosDePecas.map((bloco, gi) => (
     <div key={`pecas-${gi}`}>
-      {sectionTitle(all.length > 1 ? `Peças do período (${monthPosts.length}) · parte ${gi + 1}` : `Peças do período (${monthPosts.length})`, C.verde)}
+      {sectionTitle(bloco.titulo, C.verde)}
       <div style={{ border: `1px solid ${C.line}`, borderRadius: 12, overflow: "hidden" }}>
-        {grupo.map((p, i) => {
+        {bloco.lista.map((p, i) => {
           const k = statusOf(p);
           const color = k === "postado" ? C.green : k === "aprovado" ? C.green
             : k === "pendente" ? C.amber : k === "ajuste_solicitado" ? C.orange : C.sub;
