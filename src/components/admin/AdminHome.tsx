@@ -116,9 +116,9 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
 }
 
 export function AdminHome({ aoAbrirConta }: { aoAbrirConta: (id: string) => void }) {
-  const { data: resumo, isLoading } = useAdminResumo();
-  const { data: atencao } = useAdminAtencao();
-  const { data: custo } = useAdminCustoIa(30);
+  const { dados: resumo, motivo, isLoading } = useAdminResumo();
+  const { dados: atencao } = useAdminAtencao();
+  const { dados: custo } = useAdminCustoIa(30);
 
   if (isLoading) {
     return (
@@ -128,13 +128,42 @@ export function AdminHome({ aoAbrirConta }: { aoAbrirConta: (id: string) => void
     );
   }
 
+  /* CADA MOTIVO COM A SUA SAÍDA. A versão anterior dizia "rode a migration" pra
+     qualquer problema, e o Walter rodou, deu certo, e continuou vendo o mesmo
+     pedido. Mensagem errada manda a pessoa refazer o que já funcionou. */
   if (!resumo) {
+    const conteudo = {
+      cache: {
+        titulo: "O banco já tem as funções, o Supabase ainda não enxergou",
+        corpo: (
+          <>
+            É o cache de schema do PostgREST, que demora um pouco pra virar depois de um SQL novo.
+            Rode isto no SQL Editor e recarregue a página:
+            <code className="block font-mono text-[12px] bg-muted rounded-lg px-3 py-2 mt-2 text-foreground">
+              notify pgrst, 'reload schema';
+            </code>
+          </>
+        ),
+      },
+      ausente: {
+        titulo: "As funções ainda não existem no banco",
+        corpo: (
+          <>
+            Rode a migration <code className="font-mono">20260922000001_painel_admin_metricas.sql</code> e recarregue.
+            As outras abas seguem funcionando.
+          </>
+        ),
+      },
+      "sem-admin": {
+        titulo: "As funções responderam, mas não te reconheceram como admin",
+        corpo: <>A trava está dentro da função: ela devolve vazio pra quem não tem <code className="font-mono">role = 'admin'</code> em <code className="font-mono">profiles</code>.</>,
+      },
+    }[motivo ?? "ausente"];
+
     return (
-      <div className="rounded-2xl border border-dashed border-border p-6 text-center">
-        <p className="text-sm font-display font-bold text-foreground">Os números novos ainda não estão no banco</p>
-        <p className="text-[12.5px] font-body text-muted-foreground mt-1">
-          Rode a migration <code className="font-mono">20260922000001_painel_admin_metricas.sql</code> e recarregue. As outras abas seguem funcionando.
-        </p>
+      <div className="rounded-2xl border border-dashed border-border p-6 text-center max-w-xl mx-auto">
+        <p className="text-sm font-display font-bold text-foreground">{conteudo.titulo}</p>
+        <div className="text-[12.5px] font-body text-muted-foreground mt-1.5 leading-relaxed">{conteudo.corpo}</div>
       </div>
     );
   }

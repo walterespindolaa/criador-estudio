@@ -94,24 +94,53 @@ export type AdminCustoIa = {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const rpcAny = (fn: string, args?: Record<string, unknown>) => (supabase.rpc as any)(fn, args);
-const faltaNoBanco = (m: string) => /does not exist|schema cache|could not find/i.test(m ?? "");
+
+/* POR QUE A TELA NÃO TEM NÚMERO (Walter, 22/09/2026: "rodei o SQL e ainda não
+   atualizou").
+
+   A primeira versão engolia qualquer erro e devolvia null, então a tela dizia
+   sempre a mesma coisa: "rode a migration". Ele rodou, deu "Query succeeded", e
+   a tela continuou pedindo pra rodar. Mensagem errada é pior que mensagem
+   nenhuma, porque manda a pessoa tentar de novo o que já funcionou.
+
+   São TRÊS motivos diferentes pra não ter número, e agora cada um se identifica:
+
+     · ausente  -> a função não existe mesmo (migration não rodou)
+     · cache    -> a função existe no banco, mas o PostgREST ainda não a
+                   enxerga. É o caso mais comum logo depois de rodar o SQL:
+                   o Supabase mantém um cache de schema e ele pode demorar
+                   pra virar. Resolve com `notify pgrst, 'reload schema';`
+     · sem-admin-> a função rodou e devolveu null, que é o que ela faz quando
+                   quem chamou não é admin
+*/
+export type MotivoSemDados = "ausente" | "cache" | "sem-admin" | null;
 
 function usePainelRpc<T>(chave: string, fn: string, args?: Record<string, unknown>) {
   const { profile } = useProfile();
   const isAdmin = profile?.role === "admin";
-  return useQuery<T | null>({
+  const q = useQuery<{ dados: T | null; motivo: MotivoSemDados }>({
     queryKey: [chave, args ?? {}],
     enabled: isAdmin,
     staleTime: 60_000,
+    // Cache de schema costuma resolver sozinho em segundos: vale insistir umas
+    // vezes antes de desistir e mandar a pessoa rodar um comando.
+    retry: (tentativas, erro) =>
+      tentativas < 3 && /schema cache|could not find/i.test((erro as Error)?.message ?? ""),
+    retryDelay: (t) => 1500 * (t + 1),
     queryFn: async () => {
       const { data, error } = await rpcAny(fn, args);
       if (error) {
-        if (faltaNoBanco(error.message)) return null;
+        const m = String(error.message ?? "");
+        if (/schema cache|could not find/i.test(m)) return { dados: null, motivo: "cache" as const };
+        if (/does not exist|undefined function/i.test(m)) return { dados: null, motivo: "ausente" as const };
         throw error;
       }
-      return (data ?? null) as T | null;
+      // Função existe e respondeu null: é a trava de admin lá dentro.
+      if (data == null) return { dados: null, motivo: "sem-admin" as const };
+      return { dados: data as T, motivo: null };
     },
   });
+  return { ...q, dados: q.data?.dados ?? null, motivo: q.data?.motivo ?? null };
 }
 
 export const useAdminResumo = () => usePainelRpc<AdminResumo>("admin-resumo", "painel_admin_resumo");

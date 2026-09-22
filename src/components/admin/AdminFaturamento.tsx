@@ -54,8 +54,35 @@ export function AdminFaturamento() {
       {isLoading ? (
         <p className="text-sm text-muted-foreground font-body py-6 text-center">Carregando do Stripe…</p>
       ) : error ? (
-        <div className="rounded-2xl border border-dashed border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive font-body">
-          Não consegui ler o Stripe. Confira se a function <code>admin-billing</code> foi deployada e se o <code>STRIPE_SECRET_KEY</code> está configurado.
+        /* O ERRO EXATO, EM VEZ DE TRÊS PALPITES (Walter, 22/09/2026). A caixa
+           dizia sempre a mesma frase genérica, e cada causa tem uma saída
+           diferente: chave ausente é um segredo pra cadastrar, forbidden é
+           permissão, e "Failed to send" é a function que não foi pro ar. */
+        <div className="rounded-2xl border border-dashed border-destructive/30 bg-destructive/5 p-5 font-body">
+          <p className="text-sm text-destructive font-semibold">Não consegui ler o Stripe.</p>
+          {(() => {
+            const m = String((error as Error)?.message ?? "");
+            if (/stripe_not_configured/i.test(m)) {
+              return (
+                <p className="text-[13px] text-destructive/90 mt-1.5 leading-relaxed">
+                  A function está no ar, mas sem a chave: cadastre <code className="font-mono">STRIPE_SECRET_KEY</code> nos
+                  segredos do Supabase e clique em Atualizar. (Não precisa me mandar a chave, cola direto lá.)
+                </p>
+              );
+            }
+            if (/forbidden|unauthorized/i.test(m)) {
+              return <p className="text-[13px] text-destructive/90 mt-1.5">A function respondeu que esta conta não é admin.</p>;
+            }
+            if (/failed to send|fetch|not found|404/i.test(m)) {
+              return (
+                <p className="text-[13px] text-destructive/90 mt-1.5 leading-relaxed">
+                  A function <code className="font-mono">admin-billing</code> não respondeu. Provavelmente ainda não foi
+                  deployada neste projeto.
+                </p>
+              );
+            }
+            return <p className="text-[13px] text-destructive/90 mt-1.5">Resposta: <code className="font-mono">{m || "erro sem mensagem"}</code></p>;
+          })()}
         </div>
       ) : (
         <>
