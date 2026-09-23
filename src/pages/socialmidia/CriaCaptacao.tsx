@@ -208,7 +208,15 @@ function CriaCaptacaoInner() {
   // v2: a tela tem duas visões (pastas por cliente x agenda por dia/local) e uma
   // pasta pode estar aberta (a tela vira o dossiê daquele cliente, mês a mês).
   const [aba, setAba] = useState<"clientes" | "agenda">("clientes");
-  const [pasta, setPasta] = useState<string | null>(null);
+  /* PASTA JÁ ABERTA PELA URL (Gabriela, 23/09/2026). A aba Cria Captação da
+     ficha do cliente manda `?cliente=<crmId>`, então quem vem de lá cai direto
+     na pasta daquele cliente em vez de ter que procurá-la na grade de novo.
+     Só o valor INICIAL: depois disso quem manda é o clique, e trocar de pasta
+     não precisa mexer na URL. */
+  const [pasta, setPasta] = useState<string | null>(() => {
+    const crmId = new URLSearchParams(window.location.search).get("cliente");
+    return crmId ? `crm:${crmId}` : null;
+  });
   const [novoAvulsoOpen, setNovoAvulsoOpen] = useState(false);
 
   const { data: captures = [], isLoading } = useCaptures();

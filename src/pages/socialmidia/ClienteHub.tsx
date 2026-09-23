@@ -25,6 +25,7 @@ import {
 import { ClienteIdeias } from "@/components/accounts/ClienteIdeias";
 import { ClientePortalTab } from "@/components/accounts/ClientePortalTab";
 import { ModuleUpsell, ModuleUpsellDialog } from "@/components/accounts/ModuleUpsell";
+import { ClienteCaptacaoTab } from "@/components/accounts/ClienteCaptacaoTab";
 import { useHasModule } from "@/hooks/useModules";
 import { ClientDetail } from "@/components/accounts/CriaPostBoard";
 import { MateriaisBoard } from "@/components/accounts/MateriaisBoard";
@@ -72,6 +73,7 @@ const TABS: TabDef[] = [
   { key: "instagram", label: "Instagram" },
   { key: "financeiro", label: "Financeiro", modulo: "azul", moduloNome: "Cria Caixa" },
   { key: "pesquisa", label: "Pesquisa", hub: true, modulo: "lilas", moduloNome: "Cria Radar" },
+  { key: "captacao", label: "Captação", modulo: "verde", moduloNome: "Cria Captação" },
   { key: "portal", label: "Portal", modulo: "laranja", moduloNome: "Cria Post" },
 ];
 const OPERACIONAIS = new Set(["posts", "cronograma", "relatorio", "instagram"]);
@@ -112,6 +114,7 @@ const SUB_META: Record<string, SubMeta> = {
   pesquisa: { label: "Pesquisa", desc: "Concorrência e tendências do nicho.", icon: Search },
   financeiro: { label: "Financeiro", desc: "Mensalidade, custo e rentabilidade só deste cliente.", icon: Wallet },
   instagram: { label: "Instagram", desc: "Insights dos posts publicados.", icon: Instagram },
+  captacao: { label: "Captação", desc: "As gravações e os roteiros deste cliente.", icon: Camera },
 };
 type Grp = { key: string; label: string; modulo?: CriaColor2; icon: LucideIcon; landing?: boolean; subs: string[] };
 const GROUPS: Grp[] = [
@@ -124,6 +127,11 @@ const GROUPS: Grp[] = [
   { key: "cria-caixa", label: "Cria Caixa", modulo: "azul", icon: Wallet, subs: ["financeiro"] },
   // O Radar ficou só com a Pesquisa: 1 sub = vai direto (landing de 1 card seria bobo).
   { key: "cria-radar", label: "Cria Radar", modulo: "lilas", icon: Search, subs: ["pesquisa"] },
+  /* A CAPTAÇÃO FALTAVA NA BARRA (Gabriela, 23/09/2026: "não tem como ter a
+     captação aqui em cima também? todos os outros têm"). Era o único módulo
+     ativo dela que não aparecia na ficha, então quem estava dentro do cliente
+     tinha que sair pro menu lateral e procurar a pasta dele de novo. */
+  { key: "cria-captacao", label: "Cria Captação", modulo: "verde", icon: Camera, subs: ["captacao"] },
   { key: "instagram", label: "Instagram", icon: Instagram, subs: ["instagram"] },
   // Links úteis vira aba de topo própria: o editor de rótulo+URL + as pastas do
   // Drive de cada link salvo. Antes o editor morava na Visão geral e o Drive era
@@ -162,6 +170,7 @@ export default function ClienteHub() {
   const { allowed: hasHubCria } = useHasHubCria();
   const { allowed: hasCaixa } = useHasModule("financeiro");
   const { allowed: hasPost } = useHasModule("aprovapost_externo");
+  const { allowed: hasCaptacao } = useHasModule("cria_captacao");
   // Bloco de notas do cliente: é recurso do Cria Gestão (mesmo gate das outras
   // áreas do CRM). Sem o módulo, o botão abre a vitrine em vez do bloco.
   const { allowed: hasCrm } = useHasModule("crm");
@@ -200,7 +209,7 @@ export default function ClienteHub() {
   const activeTab = tab && allTabKeys.has(tab) ? tab : "visao-geral";
   const activeGroup = GROUPS.find((g) => g.key === activeTab || g.subs.includes(activeTab)) ?? GROUPS[0];
   const onLanding = activeTab === activeGroup.key && activeGroup.landing === true;
-  const groupLocked = (g: Grp) => (g.key === "cria-post" && !hasPost) || (g.key === "cria-caixa" && !hasCaixa) || (g.key === "cria-radar" && !hasHubCria);
+  const groupLocked = (g: Grp) => (g.key === "cria-post" && !hasPost) || (g.key === "cria-caixa" && !hasCaixa) || (g.key === "cria-radar" && !hasHubCria) || (g.key === "cria-captacao" && !hasCaptacao);
   // Foto da conta CRIA do cliente sempre atual (não depende do sync manual do CRM).
   const { data: criaProfiles } = useCriaClientProfiles();
   const criaAvatar = client?.cria_owner_id ? (criaProfiles?.[client.cria_owner_id]?.avatar_url ?? null) : null;
@@ -888,6 +897,15 @@ export default function ClienteHub() {
             <Button onClick={enableCriaPost} disabled={createExt.isPending}>Ativar agora</Button>
           </div>
         )
+      )}
+
+      {/* CAPTAÇÃO. O recorte DESTE cliente: gravações e roteiros. O planejamento
+          de rota (quem mais gravar na mesma ida) segue no módulo, porque cruza
+          vários clientes e não cabe na ficha de um. */}
+      {activeTab === "captacao" && (
+        hasCaptacao
+          ? <ClienteCaptacaoTab clientId={id!} clientName={displayName} />
+          : <ModuleUpsell code="cria_captacao" clientName={displayName} />
       )}
 
       {/* MATERIAIS. Demandas fora do fluxo de posts. O cliente pede pelo portal. */}
