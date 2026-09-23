@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Handshake, Check, Clock, Ticket, TrendingUp, LineChart, HeartHandshake, Share2, Wallet } from "lucide-react";
 import { usePartner } from "@/hooks/usePartner";
 import { Button } from "@/components/ui/button";
+import { PartnerCommissions } from "@/components/accounts/PartnerCommissions";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { PartnerApplyDrawer } from "@/components/accounts/PartnerApplyDrawer";
 import { ManagerSectionTitle } from "@/components/accounts/ManagerSectionTitle";
@@ -38,6 +39,13 @@ export default function Parceria() {
               <CopyButton text={partner.coupon_code} />
             </div>
           )}
+          {/* A TELA DE APROVADA MOSTRAVA SÓ O CUPOM (Walter, 22/09/2026). O FAQ
+              logo abaixo prometia que "as regras de comissão, carência e
+              repasse aparecem no seu painel assim que o cadastro for aprovado",
+              e no painel não aparecia nada. Agora a regra, o link, os clientes
+              e o extrato ficam aqui mesmo, sem a parceira ter que caçar outra
+              tela pra saber quanto ganhou. */}
+          <PartnerCommissions />
         </div>
       ) : isPartnerPending ? (
         <div data-tour="parceria-programa" className="rounded-2xl border border-border bg-card/50 px-5 py-4 flex items-center gap-3">
@@ -117,7 +125,7 @@ export default function Parceria() {
             <p className="text-sm font-display font-bold text-foreground mb-2">Dúvidas rápidas</p>
             {[
               ["Pra quem faz sentido?", "Social mídias e agências que querem monetizar a própria rede: clientes, colegas de área, mentorados e criadores que já pedem indicação de ferramenta."],
-              ["Como e quando eu recebo?", "As regras de comissão, carência e repasse aparecem no seu painel de parceira assim que o cadastro é aprovado, tudo às claras antes de você divulgar."],
+              ["Como e quando eu recebo?", "A sua regra fica no topo desta página assim que o cadastro for aprovado, com o percentual, o prazo e a partir de qual mensalidade começa a contar. Tudo às claras antes de você divulgar."],
               ["Até quando eu ganho pela indicação?", "Enquanto a pessoa que usou seu cupom seguir assinante do Cria. Cancelou, para; voltou, volta."],
             ].map(([q, a]) => (
               <details key={q} className="border-b border-border last:border-0 py-2.5">

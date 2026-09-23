@@ -633,52 +633,69 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
       </div>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="sm:max-w-lg">
+        {/* A JANELA ERA ESTREITA DEMAIS (Walter, 23/09/2026). Era max-w-lg com
+            tudo empilhado numa coluna só: a copy ganhava três linhas visíveis
+            pra um texto que costuma ter vinte, e quem estava preenchendo rolava
+            a janela inteira pra chegar no tipo e na data. Agora a janela é larga
+            e quase quadrada, dividida em duas colunas: à esquerda o que se
+            ESCREVE (título, copy, descrição), à direita o que se ESCOLHE (data,
+            tipo, linha editorial, referência). No mobile volta a ser uma coluna
+            só, na mesma ordem. */}
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="sm:max-w-4xl">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Editar item" : "Novo item"}</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-2">
-            <div><Label className="text-xs">Nome (título do post)</Label><Input value={f.title ?? ""} onChange={(e) => setF((p) => ({ ...p, title: e.target.value }))} placeholder="Ex.: Reels de bastidores" className="rounded-xl" /></div>
-            <div><Label className="text-xs">Copy</Label><Textarea value={f.copy ?? ""} onChange={(e) => setF((p) => ({ ...p, copy: e.target.value }))} rows={3} placeholder="A legenda/copy do post" className="rounded-xl" /></div>
-            <div><Label className="text-xs">Descrição</Label><Textarea value={f.description ?? ""} onChange={(e) => setF((p) => ({ ...p, description: e.target.value }))} rows={3} placeholder="Roteiro, ideia, o que gravar…" className="rounded-xl" /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label className="text-xs">Data</Label><Input type="date" value={f.date ?? ""} onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))} className="rounded-xl" /></div>
-              <div>
-                <Label className="text-xs">Tipo</Label>
-                <Select value={f.type ?? "Reels"} onValueChange={(v) => setF((p) => ({ ...p, type: v }))}>
-                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>{CRONOGRAMA_TYPES.map((tp) => <SelectItem key={tp} value={tp}>{tp}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+          <div className="grid gap-x-6 gap-y-3 py-2 md:grid-cols-[1.35fr_1fr]">
+            {/* ── Coluna da escrita ── */}
+            <div className="space-y-3 min-w-0">
+              <div><Label className="text-xs">Nome (título do post)</Label><Input value={f.title ?? ""} onChange={(e) => setF((p) => ({ ...p, title: e.target.value }))} placeholder="Ex.: Reels de bastidores" className="rounded-xl" /></div>
+              {/* Campo alto e redimensionável: a copy é o texto mais longo do
+                  formulário e é onde a pessoa passa mais tempo. */}
+              <div><Label className="text-xs">Copy</Label><Textarea value={f.copy ?? ""} onChange={(e) => setF((p) => ({ ...p, copy: e.target.value }))} rows={12} placeholder="A legenda/copy do post" className="rounded-xl resize-y min-h-[180px]" /></div>
+              <div><Label className="text-xs">Descrição</Label><Textarea value={f.description ?? ""} onChange={(e) => setF((p) => ({ ...p, description: e.target.value }))} rows={5} placeholder="Roteiro, ideia, o que gravar…" className="rounded-xl resize-y min-h-[96px]" /></div>
             </div>
-            {/* LINHA EDITORIAL: cadastrada na estratégia do cliente; o cliente
-                vê a linha no link público do cronograma. Só aparece se houver
-                linhas cadastradas pra este cliente. */}
-            {linhas.length > 0 && (
-              <div>
-                <Label className="text-xs">Linha editorial</Label>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  <button type="button" onClick={() => setF((p) => ({ ...p, editorial_line_id: null }))}
-                    className={`rounded-full border text-xs px-3 py-1.5 transition-colors ${!f.editorial_line_id ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground"}`}>
-                    Nenhuma
-                  </button>
-                  {linhas.map((el) => (
-                    <button key={el.id} type="button" onClick={() => setF((p) => ({ ...p, editorial_line_id: el.id }))}
-                      className="rounded-full border text-xs px-3 py-1.5 transition-colors inline-flex items-center gap-1.5"
-                      style={f.editorial_line_id === el.id
-                        ? { background: el.color, borderColor: el.color, color: "#fff" }
-                        : { borderColor: `${el.color}66`, color: el.color }}>
-                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: f.editorial_line_id === el.id ? "#fff" : el.color }} />
-                      {el.name}
-                    </button>
-                  ))}
+
+            {/* ── Coluna das escolhas ── */}
+            <div className="space-y-3 min-w-0">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-1">
+                <div><Label className="text-xs">Data</Label><Input type="date" value={f.date ?? ""} onChange={(e) => setF((p) => ({ ...p, date: e.target.value }))} className="rounded-xl" /></div>
+                <div>
+                  <Label className="text-xs">Tipo</Label>
+                  <Select value={f.type ?? "Reels"} onValueChange={(v) => setF((p) => ({ ...p, type: v }))}>
+                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent>{CRONOGRAMA_TYPES.map((tp) => <SelectItem key={tp} value={tp}>{tp}</SelectItem>)}</SelectContent>
+                  </Select>
                 </div>
               </div>
-            )}
-            {/* Referência: aceita mais de um link. O "+" ao lado abre outra linha. */}
-            <div>
-              <Label className="text-xs">Referência (link de inspiração)</Label>
-              <MultiLinkInput value={refLinks} onChange={setRefLinks} className="mt-1"
-                placeholder="Cole um link de referência (Drive, post, Pinterest...)" />
-              <p className="text-[11px] font-body text-muted-foreground mt-1">Toque no + pra adicionar mais de uma referência.</p>
+              {/* LINHA EDITORIAL: cadastrada na estratégia do cliente; o cliente
+                  vê a linha no link público do cronograma. Só aparece se houver
+                  linhas cadastradas pra este cliente. */}
+              {linhas.length > 0 && (
+                <div>
+                  <Label className="text-xs">Linha editorial</Label>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    <button type="button" onClick={() => setF((p) => ({ ...p, editorial_line_id: null }))}
+                      className={`rounded-full border text-xs px-3 py-1.5 transition-colors ${!f.editorial_line_id ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground"}`}>
+                      Nenhuma
+                    </button>
+                    {linhas.map((el) => (
+                      <button key={el.id} type="button" onClick={() => setF((p) => ({ ...p, editorial_line_id: el.id }))}
+                        className="rounded-full border text-xs px-3 py-1.5 transition-colors inline-flex items-center gap-1.5"
+                        style={f.editorial_line_id === el.id
+                          ? { background: el.color, borderColor: el.color, color: "#fff" }
+                          : { borderColor: `${el.color}66`, color: el.color }}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: f.editorial_line_id === el.id ? "#fff" : el.color }} />
+                        {el.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Referência: aceita mais de um link. O "+" ao lado abre outra linha. */}
+              <div>
+                <Label className="text-xs">Referência (link de inspiração)</Label>
+                <MultiLinkInput value={refLinks} onChange={setRefLinks} className="mt-1"
+                  placeholder="Cole um link de referência (Drive, post, Pinterest...)" />
+                <p className="text-[11px] font-body text-muted-foreground mt-1">Toque no + pra adicionar mais de uma referência.</p>
+              </div>
             </div>
           </div>
           <DialogFooter>

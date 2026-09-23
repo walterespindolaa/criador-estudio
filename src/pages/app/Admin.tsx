@@ -70,6 +70,7 @@ import { AdminFaturamento } from "@/components/admin/AdminFaturamento";
 import { AdminFeedback } from "@/components/admin/AdminFeedback";
 import { AdminGrowth } from "@/components/admin/AdminGrowth";
 import { AdminHome } from "@/components/admin/AdminHome";
+import { AdminParceiras } from "@/components/admin/AdminParceiras";
 import { UserDetailsDrawer } from "@/components/admin/UserDetailsDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { confirmar } from "@/components/shared/Confirm";
@@ -590,9 +591,12 @@ const AdminInner = () => {
           <TabsContent value="dinheiro">
             <SubAbas atual={subDinheiro} aoTrocar={setSubDinheiro} itens={[
               { valor: "faturamento", rotulo: "Faturamento" },
-              { valor: "comissoes", rotulo: "Comissões" },
+              { valor: "parceiras", rotulo: "Parceiras e comissão" },
+              { valor: "comissoes", rotulo: "Indicações (histórico)" },
             ]} />
-            {subDinheiro === "comissoes" ? <AdminReferrals /> : <AdminFaturamento />}
+            {subDinheiro === "parceiras" && <AdminParceiras />}
+            {subDinheiro === "comissoes" && <AdminReferrals />}
+            {subDinheiro === "faturamento" && <AdminFaturamento />}
           </TabsContent>
 
           <TabsContent value="uso">
