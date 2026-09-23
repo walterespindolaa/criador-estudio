@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Plus, Pencil, Trash2, Send, Link2, CalendarRange, Building2, PartyPopper, Check, AtSign, LayoutGrid, GripVertical, Settings2 } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Send, Link2, CalendarRange, Building2, PartyPopper, Check, AtSign, LayoutGrid, GripVertical, Settings2, Maximize2, Minimize2 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -445,19 +445,37 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
   // Links de referência do item ficam em estado próprio (lista), porque o campo
   // aceita vários. Só na hora de salvar viram o texto da coluna ref_url.
   const [refLinks, setRefLinks] = useState<string[]>([]);
-  const openNew = () => { setEditing(null); setF({ type: "Reels" }); setRefLinks([]); setFormOpen(true); };
-  const openEdit = (it: CronogramaItem) => { setEditing(it); setF(it); setRefLinks(parseRefLinks(it.ref_url)); setFormOpen(true); };
+  // Copy em tela cheia: o formulário some e sobra só o campo da legenda, do
+  // tamanho da janela. Pra texto longo, escrever numa caixinha de 12 linhas
+  // com o resto do formulário disputando espaço atrapalha mais que ajuda.
+  const [copyFull, setCopyFull] = useState(false);
+  const openNew = () => { setEditing(null); setF({ type: "Reels" }); setRefLinks([]); setCopyFull(false); setFormOpen(true); };
+  const openEdit = (it: CronogramaItem) => { setEditing(it); setF(it); setRefLinks(parseRefLinks(it.ref_url)); setCopyFull(false); setFormOpen(true); };
   // Trava de reentrada: duplo clique/tap disparava dois inserts idênticos (o item duplicava).
   // O ref é síncrono, então bloqueia o 2º clique antes do React re-renderizar o botão.
   const savingRef = useRef(false);
-  const saveItem = async () => {
+  /* SALVAR E ADICIONAR OUTRO (Walter, 23/09/2026). Quem monta o mês inteiro
+     fazia: salvar, fechar, clicar em Adicionar item, esperar a janela, começar
+     de novo. Com continuar=true a janela fica aberta e o formulário volta
+     limpo, mas guardando TIPO e LINHA EDITORIAL: numa sequência de posts é
+     quase sempre o mesmo tipo e a mesma linha, e re-escolher os dois a cada
+     item era justamente o trabalho repetido. Data sai limpa de propósito,
+     porque duas peças no mesmo dia é o caso raro, não o comum. */
+  const saveItem = async (continuar = false) => {
     if (savingRef.current) return;
     savingRef.current = true;
     try {
       const ref = serializeRefLinks(refLinks);
       if (editing) await updateItem.mutateAsync({ id: editing.id, title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: ref, editorial_line_id: f.editorial_line_id ?? null });
       else await addItem.mutateAsync({ title: f.title ?? null, copy: f.copy ?? null, description: f.description ?? null, date: f.date ?? null, type: f.type ?? null, ref_url: ref, editorial_line_id: f.editorial_line_id ?? null });
-      setFormOpen(false);
+      if (continuar && !editing) {
+        setF((p) => ({ type: p.type ?? "Reels", editorial_line_id: p.editorial_line_id ?? null }));
+        setRefLinks([]);
+        setCopyFull(false);
+        toast.success("Item adicionado. Pode escrever o próximo.");
+      } else {
+        setFormOpen(false);
+      }
     } finally {
       savingRef.current = false;
     }
