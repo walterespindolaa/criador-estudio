@@ -659,16 +659,43 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
             ESCREVE (título, copy, descrição), à direita o que se ESCOLHE (data,
             tipo, linha editorial, referência). No mobile volta a ser uma coluna
             só, na mesma ordem. */}
-        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="sm:max-w-4xl">
-          <DialogHeader><DialogTitle className="font-display">{editing ? "Editar item" : "Novo item"}</DialogTitle></DialogHeader>
+        {/* Cmd+Enter (ou Ctrl+Enter) salva de qualquer campo, inclusive de dentro
+            da copy, onde o Enter sozinho precisa continuar quebrando linha. */}
+        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()} className="sm:max-w-4xl"
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); void saveItem(false); }
+          }}>
+          <DialogHeader><DialogTitle className="font-display">{copyFull ? "Copy do post" : editing ? "Editar item" : "Novo item"}</DialogTitle></DialogHeader>
+
+          {copyFull ? (
+            /* MODO TELA CHEIA DA COPY: o formulário não é desmontado por acaso,
+               é escondido de propósito. O estado (f, refLinks) vive no componente
+               de fora, então voltar do modo cheio não perde nada do que já foi
+               preenchido, e salvar daqui salva o item inteiro. */
+            <div className="py-2 flex flex-col min-h-[60vh]">
+              <ContadorCopy texto={f.copy ?? ""} />
+              <Textarea autoFocus value={f.copy ?? ""} onChange={(e) => setF((p) => ({ ...p, copy: e.target.value }))}
+                placeholder="A legenda/copy do post" className="rounded-xl resize-none flex-1 mt-1 text-[15px] leading-relaxed" />
+            </div>
+          ) : (
           <div className="grid gap-x-6 gap-y-3 py-2 md:grid-cols-[1.35fr_1fr]">
             {/* ── Coluna da escrita ── */}
             <div className="space-y-3 min-w-0">
               <div><Label className="text-xs">Nome (título do post)</Label><Input value={f.title ?? ""} onChange={(e) => setF((p) => ({ ...p, title: e.target.value }))} placeholder="Ex.: Reels de bastidores" className="rounded-xl" /></div>
               {/* Campo alto e redimensionável: a copy é o texto mais longo do
                   formulário e é onde a pessoa passa mais tempo. */}
-              <div><Label className="text-xs">Copy</Label><Textarea value={f.copy ?? ""} onChange={(e) => setF((p) => ({ ...p, copy: e.target.value }))} rows={12} placeholder="A legenda/copy do post" className="rounded-xl resize-y min-h-[180px]" /></div>
-              <div><Label className="text-xs">Descrição</Label><Textarea value={f.description ?? ""} onChange={(e) => setF((p) => ({ ...p, description: e.target.value }))} rows={5} placeholder="Roteiro, ideia, o que gravar…" className="rounded-xl resize-y min-h-[96px]" /></div>
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-xs">Copy</Label>
+                  <button type="button" onClick={() => setCopyFull(true)}
+                    className="inline-flex items-center gap-1 text-[11px] font-body text-muted-foreground hover:text-foreground transition-colors">
+                    <Maximize2 className="h-3 w-3" /> Tela cheia
+                  </button>
+                </div>
+                <Textarea value={f.copy ?? ""} onChange={(e) => setF((p) => ({ ...p, copy: e.target.value }))} rows={12} placeholder="A legenda/copy do post" className="rounded-xl resize-y min-h-[180px] mt-1" />
+                <ContadorCopy texto={f.copy ?? ""} />
+              </div>
+              <div><Label className="text-xs">Descrição</Label><Textarea value={f.description ?? ""} onChange={(e) => setF((p) => ({ ...p, description: e.target.value }))} rows={5} placeholder="Roteiro, ideia, o que gravar…" className="rounded-xl resize-y min-h-[96px] mt-1" /></div>
             </div>
 
             {/* ── Coluna das escolhas ── */}
@@ -716,13 +743,52 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFormOpen(false)} className="rounded-xl">Cancelar</Button>
-            <Button onClick={saveItem} disabled={addItem.isPending || updateItem.isPending} className="rounded-xl">{editing ? "Salvar" : "Adicionar"}</Button>
+          )}
+          <DialogFooter className="sm:justify-between gap-2">
+            {copyFull ? (
+              <Button variant="outline" onClick={() => setCopyFull(false)} className="rounded-xl gap-1.5">
+                <Minimize2 className="h-4 w-4" /> Voltar ao formulário
+              </Button>
+            ) : (
+              <Button variant="ghost" onClick={() => setFormOpen(false)} className="rounded-xl">Cancelar</Button>
+            )}
+            <div className="flex items-center gap-2">
+              {/* "Adicionar outro" só existe em item NOVO: editando, salvar e
+                  continuar na mesma janela não teria o que fazer em seguida. */}
+              {!editing && !copyFull && (
+                <Button variant="outline" onClick={() => void saveItem(true)} disabled={addItem.isPending} className="rounded-xl">
+                  Salvar e adicionar outro
+                </Button>
+              )}
+              <Button onClick={() => void saveItem(false)} disabled={addItem.isPending || updateItem.isPending} className="rounded-xl">{editing ? "Salvar" : "Adicionar"}</Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/* CONTADOR DA COPY (Walter, 23/09/2026). Dois números que mudam a escrita
+   enquanto ela acontece, não depois: o Instagram dobra a legenda com "...mais"
+   a partir de ~125 caracteres (então o que prende o leitor precisa caber antes
+   disso) e corta de vez em 2.200. Só avisa, nunca bloqueia: às vezes a legenda
+   longa é proposital. */
+const LIMITE_IG = 2200;
+const DOBRA_IG = 125;
+function ContadorCopy({ texto }: { texto: string }) {
+  const n = texto.length;
+  if (n === 0) return null;
+  const estourou = n > LIMITE_IG;
+  return (
+    <p className={`text-[11px] font-body mt-1 ${estourou ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+      {n.toLocaleString("pt-BR")} caracteres
+      {estourou
+        ? ` · passou do limite do Instagram (${LIMITE_IG.toLocaleString("pt-BR")})`
+        : n > DOBRA_IG
+          ? ` · o Instagram dobra em ${DOBRA_IG}, prenda o leitor antes disso`
+          : ""}
+    </p>
   );
 }
 
@@ -832,7 +898,7 @@ function AnnualDatesDialog({ open, onOpenChange, existingLabels, clientSegment, 
   onConfirm: (rows: { label: string; day_label: string | null }[]) => void;
 }) {
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const toggle = (key: string) => setPicked((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
+  const toggle = (key: string) => setPicked((prev) => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n; });
 
   // Segmentos: "geral" (feriados) sempre; o do cliente vem sugerido pelo campo Segmento.
   const sugerido = segmentoDoTexto(clientSegment);
@@ -843,7 +909,7 @@ function AnnualDatesDialog({ open, onOpenChange, existingLabels, clientSegment, 
   });
   const toggleSeg = (k: SegmentKey) => setSegs((prev) => {
     const n = new Set(prev);
-    n.has(k) ? n.delete(k) : n.add(k);
+    if (n.has(k)) n.delete(k); else n.add(k);
     if (n.size === 0) n.add("geral");   // nunca fica vazio
     return n;
   });
