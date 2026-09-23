@@ -1526,17 +1526,14 @@ function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, def
         onReordenar={acoesRoteiro.reordenar}
         onTeleprompter={acoesRoteiro.teleprompter}
         salvando={acoesRoteiro.salvando}
-      />
-
-      {/* MANDAR SÓ ESTA GRAVAÇÃO PRO CLIENTE (Gabriela, 23/09/2026).
-          O envio só existia na pasta, e de lá vai o mês inteiro. Quem grava
-          amanhã precisa mandar os roteiros DE AMANHÃ: era o que ela esperava
-          quando clicou e recebeu de volta um link com um roteiro de outro dia
-          junto. O `month` sai da data desta captação, não do mês que está
-          aberto na tela, porque um dia de dezembro aberto pela busca não pode
-          gravar o envio em novembro. */}
-      {(roteirosDoDia?.length ?? 0) > 0 && (
-        <div className="mt-2 flex justify-end">
+        /* MANDAR SÓ ESTA GRAVAÇÃO PRO CLIENTE (Gabriela, 23/09/2026).
+           O envio só existia na pasta, e de lá vai o mês inteiro. Quem grava
+           amanhã precisa mandar os roteiros DE AMANHÃ. Fica no cabeçalho da
+           lista, junto do "Adicionar roteiro": são as duas ações desta lista.
+           O `month` sai da data desta captação, não do mês aberto na tela,
+           porque um dia de dezembro aberto pela busca não pode gravar o envio
+           em novembro. */
+        acaoExtra={(roteirosDoDia?.length ?? 0) > 0 ? (
           <BotaoEnviarAprovacao
             month={cap.capture_date.slice(0, 7)}
             crmClientId={cap.crm_client_id}
@@ -1544,9 +1541,10 @@ function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, def
             roteiros={roteirosDoDia ?? []}
             titulo={`Roteiros de ${diaMes(cap.capture_date)}`}
             escopo="dia"
+            className="h-8"
           />
-        </div>
-      )}
+        ) : undefined}
+      />
 
       {/* Tomadas: o que precisa sair dessa gravação (mini-acordeão + contador). */}
       <div data-tour="cap-tomadas" className="mt-3 rounded-xl border border-border overflow-hidden">

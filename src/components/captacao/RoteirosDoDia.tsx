@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { GripVertical, Plus, Trash2, Play, Copy, Pencil, FileText, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -21,7 +22,7 @@ import { ListaReferencias } from "@/components/captacao/Referencias";
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export function RoteirosDoDia({
-  roteiros, onAdicionar, onEditar, onExcluir, onToggleGravado, onReordenar, onTeleprompter, salvando,
+  roteiros, onAdicionar, onEditar, onExcluir, onToggleGravado, onReordenar, onTeleprompter, salvando, acaoExtra,
 }: {
   roteiros: CaptureScript[];
   onAdicionar: () => void;
@@ -31,6 +32,11 @@ export function RoteirosDoDia({
   onReordenar: (ids: string[]) => void;
   onTeleprompter: (s: CaptureScript) => void;
   salvando?: boolean;
+  /* Ação a mais no CABEÇALHO da lista, ao lado de "Adicionar roteiro"
+     (Gabriela, 23/09/2026: "não gostei aqui embaixo"). O "Enviar esta gravação"
+     tinha nascido solto no rodapé, depois do último card e antes das Tomadas,
+     como se fosse de outra seção. As ações desta lista moram no topo dela. */
+  acaoExtra?: ReactNode;
 }) {
   const arrastou = (r: DropResult) => {
     if (!r.destination || r.destination.index === r.source.index) return;
@@ -49,10 +55,13 @@ export function RoteirosDoDia({
         <span className="text-xs font-body font-semibold text-foreground">
           Roteiros desta gravação {roteiros.length > 0 && <span className="text-muted-foreground">({gravados}/{roteiros.length} gravados)</span>}
         </span>
-        <Button size="sm" variant="outline" onClick={onAdicionar} disabled={salvando}
-          className="ml-auto rounded-xl h-8" title="Adiciona mais um vídeo pra gravar neste dia">
-          {salvando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Plus className="h-3.5 w-3.5 mr-1" /> Adicionar roteiro</>}
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          {acaoExtra}
+          <Button size="sm" variant="outline" onClick={onAdicionar} disabled={salvando}
+            className="rounded-xl h-8" title="Adiciona mais um vídeo pra gravar neste dia">
+            {salvando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Plus className="h-3.5 w-3.5 mr-1" /> Adicionar roteiro</>}
+          </Button>
+        </div>
       </div>
 
       {roteiros.length === 0 ? (
