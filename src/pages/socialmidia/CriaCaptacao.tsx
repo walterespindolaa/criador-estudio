@@ -43,8 +43,9 @@ import { parseRefLinks, isRefLink } from "@/lib/refLinks";
 import { RoteirosDoDia } from "@/components/captacao/RoteirosDoDia";
 import { BotaoEnviarAprovacao, BotaoEnviarEscolhendo, PainelAprovacoes } from "@/components/captacao/AprovacaoRoteiros";
 import { SeloProntidao, LinhaProntidao } from "@/components/captacao/SeloProntidao";
-import { prontidaoDa } from "@/lib/captacao-prontidao";
-import { useScriptApprovals } from "@/hooks/useScriptApprovals";
+import { prontidaoDa, estadoDaPasta } from "@/lib/captacao-prontidao";
+import { useScriptApprovals, useScriptApprovalsTodos } from "@/hooks/useScriptApprovals";
+import { PainelDeVoo } from "@/components/captacao/PainelDeVoo";
 import { ListaReferencias } from "@/components/captacao/Referencias";
 import { DragDropContext as DndRoteiros, Droppable as DropRoteiros, Draggable as DragRoteiro, type DropResult as DropRoteiroResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
@@ -210,7 +211,6 @@ function CriaCaptacaoInner() {
   const [folha, setFolha] = useState<{ diaLabel: string; wd: string; local: string; items: FolhaItem[] } | null>(null);
   // v2: a tela tem duas visões (pastas por cliente x agenda por dia/local) e uma
   // pasta pode estar aberta (a tela vira o dossiê daquele cliente, mês a mês).
-  const [aba, setAba] = useState<"clientes" | "agenda">("clientes");
   /* PASTA JÁ ABERTA PELA URL (Gabriela, 23/09/2026). A aba Cria Captação da
      ficha do cliente manda `?cliente=<crmId>`, então quem vem de lá cai direto
      na pasta daquele cliente em vez de ter que procurá-la na grade de novo.
@@ -387,27 +387,15 @@ function CriaCaptacaoInner() {
         || (a.capture_time ?? "99:99").localeCompare(b.capture_time ?? "99:99"));
   }, [captures, month]);
 
-  // Resumo: total, concluídas e faltam (agendadas = pendentes).
-  const resumo = useMemo(() => {
-    const total = doMes.length;
-    const concluidas = doMes.filter((c) => c.status === "concluida").length;
-    return { total, concluidas, faltam: total - concluidas };
-  }, [doMes]);
-
   // ── Direcionamento (dashboard): o que fazer agora ──────────────────────────
   const hojeStr = hojeBR();
-  // doMes já vem ordenado por data/hora, então o primeiro pendente >= hoje é a próxima.
-  const proxima = useMemo(
-    () => doMes.find((c) => c.status === "agendada" && c.capture_date >= hojeStr) ?? null,
-    [doMes, hojeStr]);
-  const semRoteiro = useMemo(
-    /* Conta o dia agendado que não tem NENHUM roteiro na biblioteca. Antes
-       olhava o campo antigo, enquanto a pessoa escrevia na lista nova: ela
-       escrevia três roteiros e o topo continuava dizendo "sem roteiro". */
-    () => doMes.filter((c) => c.status === "agendada" && !scripts.some((s) => s.capture_id === c.id)).length,
-    [doMes, scripts]);
+  /* PAINEL DE VOO (v4, ciclo 2). Os envios do mês entram no cálculo da
+     prontidão de cada gravação; o pedido de marcar vem da lista "falta pra
+     ficar pronto" e abre a pasta do cliente já com o dia sugerido. */
+  const { data: enviosDoMes = [] } = useScriptApprovalsTodos({ month });
+  const [marcarPedido, setMarcarPedido] = useState<{ crmId: string; date: string } | null>(null);
+  const capColor = (c: Capture) => (c.crm_client_id ? clientById.get(c.crm_client_id)?.color ?? null : null);
   const roteirosDoMes = useMemo(() => scripts.filter((s) => s.month === month), [scripts, month]);
-  const roteirosAGravar = roteirosDoMes.filter((s) => !s.done).length;
 
   // ── Pastas por cliente: carteira ativa do CRM + avulsos, com contadores do mês.
   const pastas = useMemo<PastaInfo[]>(() => {
@@ -844,111 +832,44 @@ function CriaCaptacaoInner() {
           renderCapture={renderCaptureRow}
           addCapture={(input) => addCapture.mutateAsync(input)}
           addingCapture={addCapture.isPending}
+          marcarInicial={marcarPedido && marcarPedido.crmId === pastaAberta.crmId ? marcarPedido.date : null}
+          onMarcarConsumido={() => setMarcarPedido(null)}
         />
       )}
 
       {!pastaAberta && (<>
-      {/* HERO do módulo: placar do mês + próxima gravação + pendências, num
-          painel só (substitui os 3 cards soltos e o bloco de direcionamento). */}
-      <div data-tour="cap-resumo" className="relative overflow-hidden rounded-3xl border border-primary/15 bg-card p-4 sm:p-5">
-        <span aria-hidden className="pointer-events-none absolute -top-14 -right-14 w-44 h-44 rounded-full bg-primary/10 blur-2xl" />
-        <div className="relative flex flex-col md:flex-row md:items-stretch gap-4">
-          {/* Placar */}
-          <div className="md:w-52 shrink-0">
-            <p className="flex items-center gap-1.5 text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">
-              <Video className="h-3.5 w-3.5" /> {monthLabel(month)}
-            </p>
-            <p className="mt-1.5 text-4xl font-display font-extrabold text-foreground leading-none tabular-nums">
-              {resumo.concluidas}<span className="text-xl text-muted-foreground/50">/{resumo.total}</span>
-            </p>
-            <p className="text-[11px] font-body text-muted-foreground mt-1">captações gravadas</p>
-            <div className="mt-2.5 h-2 rounded-full bg-muted overflow-hidden">
-              <div className="h-full rounded-full bg-[hsl(var(--cria-verde))] transition-all"
-                style={{ width: `${resumo.total > 0 ? Math.round((resumo.concluidas / resumo.total) * 100) : 0}%` }} />
-            </div>
-          </div>
-          <div className="hidden md:block w-px bg-border/60" />
-          {/* Próxima gravação + pendências */}
-          <div className="flex-1 min-w-0">
-            {proxima ? (() => {
-              const cor = (proxima.crm_client_id ? clientById.get(proxima.crm_client_id)?.color : null) || "#EA4918";
-              const nome = capName(proxima);
-              return (
-                <button type="button"
-                  onClick={() => {
-                    const k = proxima.crm_client_id ? `crm:${proxima.crm_client_id}` : null;
-                    if (k && pastas.some((p) => p.key === k)) setPasta(k); else setAba("agenda");
-                  }}
-                  className="w-full flex items-center gap-3 rounded-2xl border border-border bg-background px-3.5 py-3 text-left hover:border-primary/40 transition-colors">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white text-sm font-display font-extrabold" style={{ background: cor }}>
-                    {nome.slice(0, 1).toUpperCase()}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[10px] font-body font-bold uppercase tracking-wide text-primary">Próxima gravação</span>
-                    <span className="block text-sm font-display font-extrabold text-foreground truncate">{nome}</span>
-                    <span className="block text-[11.5px] font-body text-muted-foreground truncate">
-                      {diaMes(proxima.capture_date)} ({WD[parseDateOnly(proxima.capture_date).getDay()]})
-                      {proxima.capture_time ? ` · ${proxima.capture_time.slice(0, 5)}` : ""}
-                      {(proxima.location ?? "").trim() ? ` · ${(proxima.location ?? "").trim()}` : ""}
-                    </span>
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                </button>
-              );
-            })() : (
-              <div className="rounded-2xl border border-dashed border-border px-3.5 py-3">
-                <p className="text-sm font-body font-semibold text-foreground">Nenhuma gravação futura marcada</p>
-                <p className="text-[11.5px] font-body text-muted-foreground mt-0.5">Abra a pasta de um cliente e use o Marcar captação.</p>
-              </div>
-            )}
-            <div data-tour="cap-direcao" className="mt-2.5 flex flex-wrap gap-1.5">
-              {semRoteiro > 0 && (
-                <button type="button" onClick={() => { setAba("agenda"); setStatusFilter("pendentes"); }}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--cria-amarelo)/0.4)] bg-[hsl(var(--cria-amarelo)/0.12)] px-3 py-1.5 text-[11px] font-body font-bold text-[hsl(var(--cria-amarelo))] hover:brightness-95 transition-all">
-                  <FileText className="h-3 w-3" /> {semRoteiro} sem roteiro
-                </button>
-              )}
-              {roteirosAGravar > 0 && (
-                <button type="button" onClick={() => setAba("clientes")}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-[11px] font-body font-bold text-primary hover:bg-primary/15 transition-colors">
-                  <Film className="h-3 w-3" /> {roteirosAGravar} {roteirosAGravar === 1 ? "roteiro a gravar" : "roteiros a gravar"}
-                </button>
-              )}
-              {resumo.faltam > 0 && (
-                <button type="button" onClick={() => { setAba("agenda"); setStatusFilter("pendentes"); }}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1.5 text-[11px] font-body font-bold text-muted-foreground hover:text-foreground transition-colors">
-                  <Clock className="h-3 w-3" /> {resumo.faltam} {resumo.faltam === 1 ? "pendente no mês" : "pendentes no mês"}
-                </button>
-              )}
-              {resumo.total > 0 && resumo.faltam === 0 && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--cria-verde)/0.35)] bg-[hsl(var(--cria-verde)/0.12)] px-3 py-1.5 text-[11px] font-body font-bold text-[hsl(var(--cria-verde))]">
-                  <CheckCircle2 className="h-3 w-3" /> Mês 100% gravado
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* O PAINEL DE VOO (v4, ciclo 2): o que vem, o que falta, quem não foi
+          marcado. Substitui o hero de placar + pílulas, que dizia QUANTOS
+          faltavam sem dizer QUAIS nem o que fazer. */}
+      <PainelDeVoo
+        caps={doMes}
+        scripts={roteirosDoMes}
+        envios={enviosDoMes}
+        pastas={pastas}
+        habitos={clientHabits}
+        hoje={hojeStr}
+        mesEhAtualOuFuturo={month >= currentMonth}
+        nomeDe={capName}
+        corDe={capColor}
+        onAbrirDia={(d) => { setDiaEscolhido(d); setDiaAberto(d); }}
+        onAbrirPasta={(k) => { if (pastas.some((p) => p.key === k)) setPasta(k); }}
+        onMarcar={(crmId, dia) => {
+          // O hábito sugere o dia; se ele já passou neste mês, sugere hoje.
+          // Marcar no passado seria uma armadilha silenciosa.
+          let d = dia ? `${month}-${String(dia).padStart(2, "0")}` : `${month}-01`;
+          if (d < hojeStr) d = hojeStr;
+          setMarcarPedido({ crmId, date: d });
+          setPasta(`crm:${crmId}`);
+        }}
+      />
 
       {/* Sugestões "aproveita a viagem": valem nas duas visões, ficam acima das abas. */}
       {showSugestoes && (
         <SugestoesViagem trips={tripSuggestions} onAdd={marcarNoDia} onDismiss={() => setSugDismissed(month)} />
       )}
 
-      {/* Abas: pastas por cliente x agenda por dia/local. */}
-      <div data-tour="cap-abas" className="inline-flex rounded-xl border border-border bg-card p-0.5">
-        {([["clientes", "Clientes"], ["agenda", "Agenda do mês"]] as const).map(([k, label]) => (
-          <button key={k} type="button" data-tour={k === "agenda" ? "cap-aba-agenda" : undefined}
-            onClick={() => setAba(k)}
-            className={cn("px-3.5 py-1.5 text-xs font-body font-semibold rounded-lg transition-colors",
-              aba === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
-            {label}
-          </button>
-        ))}
-      </div>
-
       {/* Visão CLIENTES: uma pastinha por cliente (carteira ativa + avulsos). */}
-      {aba === "clientes" && (
+      {(
         <div data-tour="cap-pastas">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {pastas.map((p) => (
@@ -964,15 +885,18 @@ function CriaCaptacaoInner() {
                     <p className="text-[10.5px] font-body text-muted-foreground truncate">{p.cidade || (p.extraId ? "avulso" : "\u00a0")}</p>
                   </div>
                 </div>
-                <div className="mt-2.5 flex items-center gap-2 flex-wrap text-[11px] font-body text-muted-foreground">
-                  <span className="inline-flex items-center gap-1" title="Captações gravadas / marcadas no mês">
-                    <Video className="h-3 w-3" /> {p.caps.done}/{p.caps.total}
-                  </span>
-                  <span className="inline-flex items-center gap-1" title="Roteiros salvos no mês">
-                    <FileText className="h-3 w-3" /> {p.rots.total}
-                  </span>
-                  {p.caps.next && <span className="ml-auto font-semibold text-primary tabular-nums" title="Próxima captação">{diaMes(p.caps.next)}</span>}
-                </div>
+                {/* O ESTADO NO CARD (v4, ciclo 2): "2/3 · 5" dizia quantos, não
+                    em que pé. Agora a linha diz a data da próxima gravação (ou
+                    da última) e o degrau dela, na cor do que falta. */}
+                {(() => {
+                  const e = estadoDaPasta(p, doMes, roteirosDoMes, enviosDoMes, hojeStr);
+                  return (
+                    <p className={cn("mt-2.5 text-[11px] font-body font-semibold truncate",
+                      !e.p ? "text-muted-foreground" : e.p.tom === "atencao" ? "text-[hsl(var(--cria-amarelo))]" : e.p.tom === "ok" ? "text-[hsl(var(--cria-verde))]" : "text-muted-foreground")}>
+                      {e.texto}
+                    </p>
+                  );
+                })()}
               </button>
             ))}
             {/* Cliente avulso: pasta fora da carteira (job pontual). */}
@@ -989,7 +913,7 @@ function CriaCaptacaoInner() {
         </div>
       )}
 
-      {aba === "agenda" && (<>
+      {(<>
       {/* CALENDÁRIO DO MÊS: a agenda era uma pilha de cards, e ninguém enxerga
           a semana numa pilha. Aqui ela bate o olho e vê os dias cheios, os
           vazios e onde dá pra encaixar mais uma gravação. */}
@@ -1747,7 +1671,7 @@ function FolhaDoDiaDialog({ open, onOpenChange, diaLabel, wd, local, items }: {
 // A pasta é o dossiê de gravação do cliente. O mês vem do cabeçalho da página
 // (as setas navegam meses passados e futuros). Aqui nasce roteiro manual,
 // roteiro puxado dos reels aprovados do Cria Post, e a captação marcada direto.
-function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingClientShots, onSaveClientShots, ext, onBack, onDeleteExtra, onPrompter, renderCapture, addCapture, addingCapture, logoCliente, logoAgencia, elaboradoPor, corCliente }: {
+function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingClientShots, onSaveClientShots, ext, onBack, onDeleteExtra, onPrompter, renderCapture, addCapture, addingCapture, logoCliente, logoAgencia, elaboradoPor, corCliente, marcarInicial, onMarcarConsumido }: {
   pasta: PastaInfo;
   // Marca do guia em PDF: as MESMAS logos do relatório do cliente, pra o
   // material que chega na mão dele ter sempre a mesma cara.
@@ -1779,6 +1703,10 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   // Salva o roteiro que vive DENTRO de uma captação (agenda_captures.roteiro).
   addCapture: (input: { capture_date: string; capture_time: string | null; location: string | null; crm_client_id: string | null; client_name: string | null }) => Promise<unknown>;
   addingCapture: boolean;
+  /* Vindo da lista "falta pra ficar pronto" da home: abre o Marcar captação
+     já no dia sugerido pelo hábito do cliente. Consumido uma vez. */
+  marcarInicial?: string | null;
+  onMarcarConsumido?: () => void;
 }) {
   const navigate = useNavigate();
   const addScript = useAddCaptureScript();
@@ -1804,6 +1732,10 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   const [verId, setVerId] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [marcarOpen, setMarcarOpen] = useState(false);
+  const [marcarData, setMarcarData] = useState<string | null>(null);
+  useEffect(() => {
+    if (marcarInicial) { setMarcarData(marcarInicial); setMarcarOpen(true); onMarcarConsumido?.(); }
+  }, [marcarInicial, onMarcarConsumido]);
   const [tomadasOpen, setTomadasOpen] = useState(false);
 
   const salvarRoteiro = async (v: RoteiroFormValor) => {
@@ -2151,7 +2083,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
         );
       })()}
       {marcarOpen && (
-        <MarcarCaptacaoDialog open onOpenChange={(o) => { if (!o) setMarcarOpen(false); }}
+        <MarcarCaptacaoDialog open dataInicial={marcarData} onOpenChange={(o) => { if (!o) { setMarcarOpen(false); setMarcarData(null); } }}
           salvando={addingCapture}
           onSalvar={async (date, time) => {
             await addCapture({ capture_date: date, capture_time: time, location: null, crm_client_id: pasta.crmId, client_name: pasta.crmId ? null : pasta.nome });
@@ -2435,11 +2367,13 @@ function ImportarReelsDialog({ open, onOpenChange, externalClientId, jaImportado
 }
 
 // ── Marcar captação direto da pasta (cai na Agenda também) ────────────────────
-function MarcarCaptacaoDialog({ open, onOpenChange, salvando, onSalvar }: {
+function MarcarCaptacaoDialog({ open, onOpenChange, salvando, onSalvar, dataInicial }: {
   open: boolean; onOpenChange: (o: boolean) => void;
   salvando: boolean; onSalvar: (date: string, time: string | null) => Promise<unknown>;
+  /** Dia sugerido (do hábito do cliente) quando o pedido vem da home. */
+  dataInicial?: string | null;
 }) {
-  const [data, setData] = useState(hojeBR());
+  const [data, setData] = useState(dataInicial || hojeBR());
   const [hora, setHora] = useState("");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

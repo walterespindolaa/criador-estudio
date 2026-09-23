@@ -6,8 +6,9 @@ import { useCaptures } from "@/hooks/useAgenda";
 import { useCaptureScripts } from "@/hooks/useCaptureScripts";
 import { useScriptApprovalsTodos } from "@/hooks/useScriptApprovals";
 import { hojeBR } from "@/lib/date-br";
-import { prontidaoDa, DEGRAUS, type Prontidao } from "@/lib/captacao-prontidao";
+import { prontidaoDa } from "@/lib/captacao-prontidao";
 import { SeloProntidao } from "@/components/captacao/SeloProntidao";
+import { Escada } from "@/components/captacao/PainelDeVoo";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CRIA CAPTAÇÃO DENTRO DA FICHA DO CLIENTE (Gabriela, 23/09/2026)
@@ -174,51 +175,6 @@ export function ClienteCaptacaoTab({ clientId, clientName }: { clientId: string;
           <Link to={linkDoModulo}>Abrir no Cria Captação</Link>
         </Button>
       </div>
-    </div>
-  );
-}
-
-/* A ESCADA DESENHADA (Captação v4, ciclo 1)
-   Cinco degraus numa linha, os já subidos pintados, o atual em destaque. É a
-   versão visual do selo: quem bate o olho sabe em que ponto a gravação está e
-   quanto falta, sem ler. Só vale em espaço largo (o hero); em lista fica o selo. */
-function Escada({ p }: { p: Prontidao }) {
-  if (p.degrau === "cancelada") return null;
-  return (
-    <div className="mt-3 flex items-center gap-1.5 flex-wrap">
-      {DEGRAUS.map((d, i) => {
-        const nivel = i + 1;
-        const subido = p.nivel >= nivel;
-        const atual = p.nivel === nivel;
-        return (
-          <span key={d.degrau} className="inline-flex items-center gap-1.5">
-            <span className={
-              "text-[10.5px] font-body font-semibold px-2 py-0.5 rounded-full border " +
-              (atual
-                /* O degrau atual tem a cor do TOM, não verde fixo: "Marcada"
-                   sem roteiro é amarelo (falta ela agir), "Com roteiro"
-                   aguardando o cliente é cinza (falta outro), e só "Cliente
-                   revisou" pra cima fica verde. Verde em "sem roteiro" mentiria. */
-                ? (p.tom === "atencao"
-                  ? "border-[hsl(var(--cria-amarelo))] bg-[hsl(var(--cria-amarelo))] text-white"
-                  : p.tom === "espera"
-                    ? "border-muted-foreground/40 bg-muted text-foreground"
-                    : "border-[hsl(var(--cria-verde))] bg-[hsl(var(--cria-verde))] text-white")
-                : subido
-                  ? "border-[hsl(var(--cria-verde)/0.35)] bg-[hsl(var(--cria-verde)/0.10)] text-[hsl(var(--cria-verde))]"
-                  : "border-border text-muted-foreground/60")
-            }>
-              {d.rotulo}
-            </span>
-            {i < DEGRAUS.length - 1 && <span className={"h-px w-3 " + (p.nivel > nivel ? "bg-[hsl(var(--cria-verde)/0.5)]" : "bg-border")} />}
-          </span>
-        );
-      })}
-      {p.proximoPasso && p.tom === "atencao" && (
-        <span className="text-[11px] font-body font-semibold text-[hsl(var(--cria-amarelo))] ml-1">
-          agora: {p.proximoPasso.toLowerCase()}
-        </span>
-      )}
     </div>
   );
 }

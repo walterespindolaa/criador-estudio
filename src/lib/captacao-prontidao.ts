@@ -147,3 +147,31 @@ export const DEGRAUS: { degrau: Exclude<Degrau, "cancelada">; rotulo: string }[]
   { degrau: "gravada", rotulo: "Gravada" },
   { degrau: "virou_post", rotulo: "Virou post" },
 ];
+
+/* ── O estado de uma pasta de cliente (usado na grade da home) ──────────── */
+export type CapturaPainel = CapturaMin & {
+  capture_time: string | null;
+  location: string | null;
+  crm_client_id: string | null;
+  client_name: string | null;
+};
+export type PastaPainel = {
+  key: string; nome: string; crmId: string | null; cor: string | null;
+  caps: { total: number; next: string | null };
+};
+const ddmm = (iso: string) => { const [, m, d] = iso.split("-"); return `${d}/${m}`; };
+
+/** O que a grade de clientes mostra: o estado da próxima gravação do cliente
+    no mês, ou da última, ou "não marcada". */
+export function estadoDaPasta(
+  pasta: PastaPainel, caps: CapturaPainel[], scripts: RoteiroMin[], envios: AprovacaoMin[], hoje: string,
+): { p: Prontidao | null; texto: string } {
+  const minhas = caps
+    .filter((c) => c.status !== "cancelada" && (pasta.crmId ? c.crm_client_id === pasta.crmId : c.client_name?.trim().toLowerCase() === pasta.nome.trim().toLowerCase()))
+    .sort((a, b) => a.capture_date.localeCompare(b.capture_date));
+  if (minhas.length === 0) return { p: null, texto: "não marcada" };
+  const futura = minhas.find((c) => c.status === "agendada" && c.capture_date >= hoje);
+  const alvo = futura ?? minhas[minhas.length - 1];
+  const p = prontidaoDa(alvo, scripts, envios);
+  return { p, texto: `${ddmm(alvo.capture_date)} · ${p.rotulo.toLowerCase()}` };
+}

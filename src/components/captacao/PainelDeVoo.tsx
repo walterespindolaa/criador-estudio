@@ -1,0 +1,278 @@
+import { useMemo } from "react";
+import { Camera, Clock, MapPin, ArrowRight, ChevronRight, CalendarPlus, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { prontidaoDa, DEGRAUS, type Prontidao, type CapturaMin, type RoteiroMin, type AprovacaoMin, type CapturaPainel, type PastaPainel } from "@/lib/captacao-prontidao";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   O PAINEL DE VOO DO CRIA CAPTAÇÃO (v4, ciclo 2 · 23/09/2026)
+
+   A tela inicial do módulo era organizada por OBJETO: pastas de um lado, agenda
+   do outro. A social mídia não pensa em objetos, pensa em tempo, e em cada
+   momento faz uma pergunta diferente:
+
+     "o que vem?"          → a próxima gravação, com a escada de prontidão
+     "o que falta?"        → a lista de ação, ordenada pelo que vence antes
+     "quem eu não marquei?" → cliente ativo sem gravação no mês, com o hábito
+                              dele já sugerido ("costuma dia 10")
+
+   Este componente responde as três. O calendário e a grade de clientes ficam
+   na página, logo abaixo, porque já existiam e só precisavam de contexto em
+   cima. Ele não busca nada: recebe as listas prontas e calcula. É o mesmo
+   `prontidaoDa` do ciclo 1, então o que o card diz e o que a lista diz nunca
+   discordam.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+export type HabitoPainel = { day: number | null; time: string | null };
+
+type Falta = {
+  chave: string;
+  quando: string | null;      // ISO date ou null (não marcada)
+  ordem: number;              // pra ordenar: dias até a data; não marcada vai pro fim
+  quem: string;
+  cor: string | null;
+  texto: string;              // o que fazer
+  detalhe: string | null;
+  tom: Prontidao["tom"];
+  acao: () => void;
+  rotuloAcao: string;
+};
+
+const WD = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+function ddmm(iso: string) { const [, m, d] = iso.split("-"); return `${d}/${m}`; }
+function diaSemana(iso: string) { return WD[new Date(`${iso}T00:00:00`).getDay()]; }
+function diasAte(iso: string, hoje: string) {
+  return Math.round((new Date(`${iso}T00:00:00`).getTime() - new Date(`${hoje}T00:00:00`).getTime()) / 86400000);
+}
+function quando(iso: string, hoje: string) {
+  const d = diasAte(iso, hoje);
+  if (d === 0) return "hoje";
+  if (d === 1) return "amanhã";
+  if (d > 1 && d < 7) return `${diaSemana(iso)}, em ${d} dias`;
+  if (d >= 7) return `em ${d} dias`;
+  if (d === -1) return "ontem";
+  return `há ${Math.abs(d)} dias`;
+}
+
+export function PainelDeVoo({
+  caps, scripts, envios, pastas, habitos, hoje, mesEhAtualOuFuturo, nomeDe, corDe,
+  onAbrirDia, onAbrirPasta, onMarcar,
+}: {
+  caps: CapturaPainel[];
+  scripts: RoteiroMin[];
+  envios: AprovacaoMin[];
+  pastas: PastaPainel[];
+  habitos: Map<string, HabitoPainel>;
+  hoje: string;
+  /** Sugerir "não marcada" só faz sentido pra mês que ainda dá pra marcar. */
+  mesEhAtualOuFuturo: boolean;
+  nomeDe: (c: CapturaPainel) => string;
+  corDe: (c: CapturaPainel) => string | null;
+  onAbrirDia: (date: string) => void;
+  onAbrirPasta: (key: string) => void;
+  onMarcar: (crmId: string, diaSugerido: number | null) => void;
+}) {
+  // A próxima gravação: a primeira agendada de hoje em diante.
+  const proxima = useMemo(
+    () => [...caps]
+      .filter((c) => c.status === "agendada" && c.capture_date >= hoje)
+      .sort((a, b) => a.capture_date.localeCompare(b.capture_date) || (a.capture_time ?? "99").localeCompare(b.capture_time ?? "99"))[0] ?? null,
+    [caps, hoje],
+  );
+  const pProxima = proxima ? prontidaoDa(proxima, scripts, envios) : null;
+
+  /* A LISTA "FALTA PRA FICAR PRONTO". Três fontes, uma lista:
+     1. Gravações do mês cujo tom pede ação dela (sem roteiro, sem enviar,
+        gravada sem virar post). As que só esperam o cliente entram no fim,
+        em cinza: ela não faz nada, mas precisa saber que está esperando.
+     2. Clientes da carteira sem gravação no mês, com o hábito como sugestão.
+     Ordena pelo que vence antes: hoje e amanhã em cima, o passado (gravadas
+     sem virar post) depois do futuro próximo, não marcadas por último. */
+  const faltas = useMemo<Falta[]>(() => {
+    const out: Falta[] = [];
+    for (const c of caps) {
+      if (c.status === "cancelada") continue;
+      const p = prontidaoDa(c, scripts, envios);
+      if (!p.proximoPasso) continue;
+      const d = diasAte(c.capture_date, hoje);
+      out.push({
+        chave: `cap:${c.id}`,
+        quando: c.capture_date,
+        // Futuro: 0..N. Passado (gravada sem virar post): 100 + dias atrás,
+        // pra vir depois do futuro próximo mas antes das não marcadas.
+        ordem: d >= 0 ? d : 100 + Math.abs(d),
+        quem: nomeDe(c),
+        cor: corDe(c),
+        texto: p.proximoPasso,
+        detalhe: p.detalhe,
+        tom: p.tom,
+        acao: () => onAbrirDia(c.capture_date),
+        rotuloAcao: "Abrir o dia",
+      });
+    }
+    if (mesEhAtualOuFuturo) {
+      for (const pa of pastas) {
+        if (!pa.crmId || pa.caps.total > 0) continue;
+        const h = habitos.get(pa.crmId);
+        const crmId = pa.crmId;
+        out.push({
+          chave: `pasta:${pa.key}`,
+          quando: null,
+          ordem: 1000,
+          quem: pa.nome,
+          cor: pa.cor,
+          texto: "Marcar gravação",
+          detalhe: h?.day ? `costuma gravar dia ${h.day}${h.time ? ` às ${h.time}` : ""}` : "nenhuma gravação neste mês",
+          tom: "atencao",
+          acao: () => onMarcar(crmId, h?.day ?? null),
+          rotuloAcao: h?.day ? `Marcar dia ${h.day}` : "Marcar",
+        });
+      }
+    }
+    // Esperando o cliente vai pro fim do seu grupo: ela não age, só acompanha.
+    return out.sort((a, b) => (a.tom === "espera" ? 1 : 0) - (b.tom === "espera" ? 1 : 0) || a.ordem - b.ordem);
+  }, [caps, scripts, envios, pastas, habitos, hoje, mesEhAtualOuFuturo, nomeDe, corDe, onAbrirDia, onMarcar]);
+
+  const pendentes = faltas.filter((f) => f.tom !== "espera").length;
+
+  return (
+    <div className="space-y-3">
+      {/* ── O QUE VEM ── */}
+      <div className="rounded-3xl border border-border bg-card p-4 sm:p-5">
+        {proxima && pProxima ? (
+          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-white text-base font-display font-extrabold"
+                style={{ background: corDe(proxima) || "#EA4918" }}>
+                {nomeDe(proxima).slice(0, 1).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">
+                  Próxima gravação · {quando(proxima.capture_date, hoje)}
+                </p>
+                <p className="text-lg sm:text-xl font-display font-extrabold text-foreground leading-tight truncate">
+                  {nomeDe(proxima)}
+                </p>
+                <div className="mt-1 flex items-center gap-3 flex-wrap text-xs font-body text-muted-foreground">
+                  <span>{ddmm(proxima.capture_date)} ({diaSemana(proxima.capture_date)})</span>
+                  {proxima.capture_time && <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> {proxima.capture_time.slice(0, 5)}</span>}
+                  {proxima.location?.trim() && <span className="inline-flex items-center gap-1 min-w-0"><MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">{proxima.location.trim()}</span></span>}
+                </div>
+                <Escada p={pProxima} />
+              </div>
+            </div>
+            <div className="flex sm:flex-col gap-2 shrink-0">
+              <Button onClick={() => onAbrirDia(proxima.capture_date)} className="rounded-xl flex-1 sm:flex-none">
+                <Camera className="h-4 w-4 mr-1.5" /> Abrir o dia
+              </Button>
+              {proxima.crm_client_id && (
+                <Button variant="outline" onClick={() => onAbrirPasta(`crm:${proxima.crm_client_id}`)} className="rounded-xl flex-1 sm:flex-none">
+                  Pasta <ArrowRight className="h-4 w-4 ml-1.5" />
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-muted text-muted-foreground"><Camera className="h-5 w-5" /></span>
+            <div className="min-w-0 flex-1">
+              <p className="text-base font-display font-extrabold text-foreground">Nenhuma gravação marcada daqui pra frente</p>
+              <p className="text-xs font-body text-muted-foreground mt-0.5">
+                {faltas.some((f) => f.quando === null)
+                  ? "Tem cliente na carteira sem gravação neste mês. A lista abaixo mostra quem."
+                  : "Marque uma gravação pra ela aparecer aqui com o que falta pra ficar pronta."}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── O QUE FALTA ── */}
+      <div className="rounded-3xl border border-border bg-card p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <p className="text-sm font-display font-bold text-foreground flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" /> Falta pra ficar pronto
+          </p>
+          <span className={cn("text-[11px] font-body font-bold px-2 py-0.5 rounded-full",
+            pendentes === 0 ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]" : "bg-[hsl(var(--cria-amarelo)/0.15)] text-[hsl(var(--cria-amarelo))]")}>
+            {pendentes === 0 ? "tudo em dia" : `${pendentes} ${pendentes === 1 ? "item" : "itens"}`}
+          </span>
+        </div>
+        {faltas.length === 0 ? (
+          <p className="text-xs font-body text-muted-foreground py-2">
+            Nada pendente neste mês. Todas as gravações marcadas têm roteiro revisado ou já viraram post.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {faltas.slice(0, 8).map((f) => (
+              <li key={f.chave} className="flex items-center gap-3 py-2.5">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white text-[11px] font-display font-extrabold"
+                  style={{ background: f.cor || "#EA4918" }}>
+                  {f.quem.slice(0, 1).toUpperCase()}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-body font-semibold text-foreground truncate">
+                    {f.quem}
+                    {f.quando && <span className="font-normal text-muted-foreground"> · {ddmm(f.quando)}, {quando(f.quando, hoje)}</span>}
+                  </p>
+                  <p className={cn("text-[11.5px] font-body truncate",
+                    f.tom === "atencao" ? "text-[hsl(var(--cria-amarelo))] font-semibold" : "text-muted-foreground")}>
+                    {f.texto}{f.detalhe ? ` · ${f.detalhe}` : ""}
+                  </p>
+                </div>
+                <button type="button" onClick={f.acao}
+                  className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-body font-semibold text-foreground hover:border-primary/40 hover:text-primary transition-colors">
+                  {f.quando === null && <CalendarPlus className="h-3 w-3" />}
+                  <span className="hidden sm:inline">{f.rotuloAcao}</span>
+                  <ChevronRight className="h-3 w-3 sm:hidden" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {faltas.length > 8 && (
+          <p className="text-[11px] font-body text-muted-foreground mt-2">Mostrando os 8 mais urgentes de {faltas.length}.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* A escada de cinco degraus, a mesma da ficha do cliente. Vive aqui e não no
+   SeloProntidao porque precisa de largura: em lista fica o selo. */
+export function Escada({ p }: { p: Prontidao }) {
+  if (p.degrau === "cancelada") return null;
+  return (
+    <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+      {DEGRAUS.map((d, i) => {
+        const nivel = i + 1;
+        const subido = p.nivel >= nivel;
+        const atual = p.nivel === nivel;
+        return (
+          <span key={d.degrau} className="inline-flex items-center gap-1.5">
+            <span className={cn(
+              "text-[10.5px] font-body font-semibold px-2 py-0.5 rounded-full border",
+              atual
+                ? (p.tom === "atencao"
+                  ? "border-[hsl(var(--cria-amarelo))] bg-[hsl(var(--cria-amarelo))] text-white"
+                  : p.tom === "espera"
+                    ? "border-muted-foreground/40 bg-muted text-foreground"
+                    : "border-[hsl(var(--cria-verde))] bg-[hsl(var(--cria-verde))] text-white")
+                : subido
+                  ? "border-[hsl(var(--cria-verde)/0.35)] bg-[hsl(var(--cria-verde)/0.10)] text-[hsl(var(--cria-verde))]"
+                  : "border-border text-muted-foreground/60",
+            )}>
+              {d.rotulo}
+            </span>
+            {i < DEGRAUS.length - 1 && <span className={cn("h-px w-3", p.nivel > nivel ? "bg-[hsl(var(--cria-verde)/0.5)]" : "bg-border")} />}
+          </span>
+        );
+      })}
+      {p.proximoPasso && p.tom === "atencao" && (
+        <span className="text-[11px] font-body font-semibold text-[hsl(var(--cria-amarelo))] ml-1">
+          agora: {p.proximoPasso.toLowerCase()}
+        </span>
+      )}
+    </div>
+  );
+}
