@@ -21,6 +21,57 @@ function linkify(text: string) {
   );
 }
 
+/* COPY DOBRADA (Gabriela, 23/09/2026)
+   O cliente abria o link pra aprovar 8 posts e recebia oito carrosséis inteiros
+   empilhados, com SLIDE 1 a SLIDE 7 cada um. Pra decidir "aprovo ou não", ele
+   rolava metros de tela e perdia a noção de quantos posts ainda faltavam. Agora
+   a copy nasce dobrada em poucas linhas e abre no clique.
+
+   O botão só aparece quando o texto REALMENTE passa do limite: com 3 linhas de
+   copy, um "Ver mais" que não faz nada é ruído. Quem decide isso é a medição do
+   próprio elemento (scrollHeight maior que clientHeight), não um chute de
+   quantos caracteres cabem por linha, que varia com a largura da tela e com o
+   tamanho da fonte do aparelho.
+
+   A medição roda num callback ref em vez de useEffect porque assim ela acontece
+   assim que o nó existe, inclusive quando o item muda de posição na lista. */
+function TextoDobravel({ texto, linhas, estilo, rotulo }: { texto: string; linhas: number; estilo: CSSProperties; rotulo: string }) {
+  const [aberto, setAberto] = useState(false);
+  const [temMais, setTemMais] = useState(false);
+  const medir = (el: HTMLDivElement | null) => {
+    if (!el || aberto) return;
+    setTemMais(el.scrollHeight > el.clientHeight + 2);
+  };
+  return (
+    <div>
+      <div
+        ref={medir}
+        style={{
+          ...estilo,
+          whiteSpace: "pre-wrap",
+          ...(aberto ? {} : {
+            display: "-webkit-box",
+            WebkitLineClamp: linhas,
+            WebkitBoxOrient: "vertical" as const,
+            overflow: "hidden",
+          }),
+        }}
+      >
+        {linkify(texto)}
+      </div>
+      {temMais && (
+        <button
+          type="button"
+          onClick={() => setAberto((v) => !v)}
+          style={{ marginTop: 5, background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#0061EE" }}
+        >
+          {aberto ? "Ver menos" : rotulo}
+        </button>
+      )}
+    </div>
+  );
+}
+
 type Item = { id: string; title: string | null; copy: string | null; description: string | null; date: string | null; type: string | null; approval_status: string; client_comment: string | null; ref_url: string | null; editorial_line?: { name: string; color: string } | null };
 type Data = { id: string; label: string; day_label: string | null; selected: boolean };
 type Cron = {
@@ -228,8 +279,11 @@ export default function CronogramaPublica() {
                   cara do cliente é pior que nada, e a copy já diz do que se
                   trata. */}
               {it.title && <div style={{ fontWeight: 800, fontSize: 15.5, color: "#2A2440", lineHeight: 1.3 }}>{it.title}</div>}
-              {it.copy && <div style={{ fontSize: 13.5, color: "#2A2440", marginTop: 6, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{linkify(it.copy)}</div>}
-              {it.description && <div style={{ fontSize: 12.5, color: "#6b647e", marginTop: 6, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{linkify(it.description)}</div>}
+              {/* 4 linhas de copy: o suficiente pra reconhecer o post sem
+                  transformar a página num documento. A descrição é a orientação
+                  interna (o que gravar), então dobra mais curto ainda. */}
+              {it.copy && <TextoDobravel texto={it.copy} linhas={4} rotulo="Ver a copy completa" estilo={{ fontSize: 13.5, color: "#2A2440", marginTop: 6, lineHeight: 1.5 }} />}
+              {it.description && <TextoDobravel texto={it.description} linhas={3} rotulo="Ver a descrição completa" estilo={{ fontSize: 12.5, color: "#6b647e", marginTop: 6, lineHeight: 1.5 }} />}
               {/* Referências do post: o campo aceita vários links (um por linha).
                   Valor antigo com 1 link só continua caindo aqui do mesmo jeito. */}
               {parseRefLinks(it.ref_url).length > 0 && (
