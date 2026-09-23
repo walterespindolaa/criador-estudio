@@ -46,6 +46,7 @@ import { SeloProntidao, LinhaProntidao } from "@/components/captacao/SeloProntid
 import { prontidaoDa, estadoDaPasta } from "@/lib/captacao-prontidao";
 import { useScriptApprovals, useScriptApprovalsTodos } from "@/hooks/useScriptApprovals";
 import { PainelDeVoo } from "@/components/captacao/PainelDeVoo";
+import { ResumoCaptacaoCliente } from "@/components/captacao/ResumoCaptacaoCliente";
 import { ListaReferencias } from "@/components/captacao/Referencias";
 import { DragDropContext as DndRoteiros, Droppable as DropRoteiros, Draggable as DragRoteiro, type DropResult as DropRoteiroResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
@@ -220,6 +221,13 @@ function CriaCaptacaoInner() {
     const crmId = new URLSearchParams(window.location.search).get("cliente");
     return crmId ? `crm:${crmId}` : null;
   });
+  /* A AÇÃO QUE VEM DA FICHA (v4, ciclo 4). `?acao=novo-roteiro` abre o editor,
+     `?acao=marcar` abre o Marcar captação, já dentro da pasta certa. A ficha
+     não duplica o editor: ela manda a pessoa pra cá com a intenção pronta. */
+  const [acaoPedida, setAcaoPedida] = useState<"novo-roteiro" | "marcar" | null>(() => {
+    const a = new URLSearchParams(window.location.search).get("acao");
+    return a === "novo-roteiro" || a === "marcar" ? a : null;
+  });
   const [novoAvulsoOpen, setNovoAvulsoOpen] = useState(false);
 
   const { data: captures = [], isLoading } = useCaptures();
@@ -344,13 +352,14 @@ function CriaCaptacaoInner() {
 
   // Cliente do CRM por id: nome exibido (apelido do gestor > name) e cidade.
   const clientById = useMemo(() => {
-    const m = new Map<string, { nome: string; city: string | null; color: string | null; logo: string | null }>();
+    const m = new Map<string, { nome: string; city: string | null; color: string | null; logo: string | null; whatsapp: string | null }>();
     for (const c of clients) {
       m.set(c.id, {
         nome: nomeExibidoCliente(c),
         city: ((c as { city?: string | null }).city ?? null),
         color: c.color,
         logo: ((c as { logo?: string | null }).logo ?? null),
+        whatsapp: ((c as { whatsapp?: string | null }).whatsapp ?? null),
       });
     }
     return m;
@@ -834,6 +843,15 @@ function CriaCaptacaoInner() {
           addingCapture={addCapture.isPending}
           marcarInicial={marcarPedido && marcarPedido.crmId === pastaAberta.crmId ? marcarPedido.date : null}
           onMarcarConsumido={() => setMarcarPedido(null)}
+          acaoInicial={acaoPedida}
+          onAcaoConsumida={() => setAcaoPedida(null)}
+          todasCaps={captures.filter((c) => pastaAberta.crmId
+            ? c.crm_client_id === pastaAberta.crmId
+            : !c.crm_client_id && (c.client_name ?? "").trim().toLowerCase() === nomeKeyAberta)}
+          todosScripts={scripts.filter((sc) => pastaAberta.crmId
+            ? sc.crm_client_id === pastaAberta.crmId
+            : !sc.crm_client_id && (sc.client_name ?? "").trim().toLowerCase() === nomeKeyAberta)}
+          aoAbrirDia={(d) => { setPasta(null); setDiaEscolhido(d); setDiaAberto(d); }}
         />
       )}
 
@@ -1081,6 +1099,7 @@ function CriaCaptacaoInner() {
             scripts={scripts}
             nomeDe={capName}
             cidadeDe={(c) => (capCity(c) === SEM_CIDADE ? "" : capCity(c))}
+            whatsappDe={(c) => (c.crm_client_id ? clientById.get(c.crm_client_id)?.whatsapp ?? null : null)}
             aoFechar={() => setDiaAberto(null)}
             aoMarcarTomada={(id, lista) => setShots.mutate({ id, shot_list: lista })}
             aoMarcarGravado={(s) => updScriptPg.mutate({ id: s.id, patch: { done: !s.done } })}
@@ -1671,7 +1690,7 @@ function FolhaDoDiaDialog({ open, onOpenChange, diaLabel, wd, local, items }: {
 // A pasta é o dossiê de gravação do cliente. O mês vem do cabeçalho da página
 // (as setas navegam meses passados e futuros). Aqui nasce roteiro manual,
 // roteiro puxado dos reels aprovados do Cria Post, e a captação marcada direto.
-function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingClientShots, onSaveClientShots, ext, onBack, onDeleteExtra, onPrompter, renderCapture, addCapture, addingCapture, logoCliente, logoAgencia, elaboradoPor, corCliente, marcarInicial, onMarcarConsumido }: {
+function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingClientShots, onSaveClientShots, ext, onBack, onDeleteExtra, onPrompter, renderCapture, addCapture, addingCapture, logoCliente, logoAgencia, elaboradoPor, corCliente, marcarInicial, onMarcarConsumido, acaoInicial, onAcaoConsumida, todasCaps, todosScripts, aoAbrirDia }: {
   pasta: PastaInfo;
   // Marca do guia em PDF: as MESMAS logos do relatório do cliente, pra o
   // material que chega na mão dele ter sempre a mesma cara.
@@ -1707,6 +1726,12 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
      já no dia sugerido pelo hábito do cliente. Consumido uma vez. */
   marcarInicial?: string | null;
   onMarcarConsumido?: () => void;
+  acaoInicial?: "novo-roteiro" | "marcar" | null;
+  onAcaoConsumida?: () => void;
+  /** Todas as captações e roteiros do cliente (todos os meses), pro resumo. */
+  todasCaps: Capture[];
+  todosScripts: CaptureScript[];
+  aoAbrirDia: (date: string) => void;
 }) {
   const navigate = useNavigate();
   const addScript = useAddCaptureScript();
@@ -1736,6 +1761,14 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   useEffect(() => {
     if (marcarInicial) { setMarcarData(marcarInicial); setMarcarOpen(true); onMarcarConsumido?.(); }
   }, [marcarInicial, onMarcarConsumido]);
+  useEffect(() => {
+    if (!acaoInicial) return;
+    if (acaoInicial === "novo-roteiro") { setEditando(null); setEditorOpen(true); }
+    if (acaoInicial === "marcar") setMarcarOpen(true);
+    onAcaoConsumida?.();
+  }, [acaoInicial, onAcaoConsumida]);
+  // Envios de todos os meses deste cliente: o histórico do resumo precisa deles.
+  const { data: enviosTodos = [] } = useScriptApprovalsTodos({ crmClientId: pasta.crmId ?? undefined });
   const [tomadasOpen, setTomadasOpen] = useState(false);
 
   const salvarRoteiro = async (v: RoteiroFormValor) => {
@@ -1888,6 +1921,18 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             clientName={pasta.nome} roteiros={roteirosDoGuia} caps={caps} />
         </div>
       </div>
+
+      {/* O MESMO RESUMO DA FICHA (v4, ciclo 4): próxima gravação com escada,
+          três números e histórico com prontidão. Clicar num dia do histórico
+          abre o modo dia. */}
+      <ResumoCaptacaoCliente
+        captures={todasCaps}
+        scripts={todosScripts}
+        envios={pasta.crmId ? enviosTodos : envios}
+        clientName={pasta.nome}
+        aoAbrirDia={aoAbrirDia}
+        maxHistorico={6}
+      />
 
       {/* Revisões do cliente: link aberto, o que voltou e o botão de confirmar. */}
       <PainelAprovacoes month={month} crmClientId={pasta.crmId} clientName={pasta.nome} />

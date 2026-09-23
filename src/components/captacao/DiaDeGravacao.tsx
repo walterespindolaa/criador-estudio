@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Camera, Check, Clock, Copy, FileText, Loader2, MapPin, Play, Send, X } from "lucide-react";
+import { Camera, Check, Clock, Copy, FileText, Loader2, MapPin, Play, Send, X, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,8 @@ export type DiaDeGravacaoProps = {
   /** Nome de exibição do cliente de uma captação (vem da página). */
   nomeDe: (c: Capture) => string;
   cidadeDe: (c: Capture) => string;
+  /** WhatsApp do cliente (do CRM), pra avisar "estou chegando" da rota. */
+  whatsappDe?: (c: Capture) => string | null;
   aoFechar: () => void;
   aoMarcarTomada: (captureId: string, lista: ShotItem[]) => void;
   aoMarcarGravado: (s: CaptureScript) => void;
@@ -60,7 +62,7 @@ export type DiaDeGravacaoProps = {
 };
 
 export function DiaDeGravacao({
-  data, caps, scripts, nomeDe, cidadeDe, aoFechar,
+  data, caps, scripts, nomeDe, cidadeDe, whatsappDe, aoFechar,
   aoMarcarTomada, aoMarcarGravado, aoConcluirCaptacao, aoTeleprompter,
   aoVirarPosts, virandoPosts,
 }: DiaDeGravacaoProps) {
@@ -139,7 +141,66 @@ export function DiaDeGravacao({
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-5">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 pb-24 sm:pb-5 space-y-5">
+
+          {/* ── 1b. A ROTA (Captação v4, ciclo 3) ─────────────────────────
+              O dia de gravação foi desenhado como se ela estivesse no notebook.
+              Ela está no carro. A primeira coisa que precisa é a ORDEM das
+              paradas com hora e endereço, e um toque pra abrir o Waze. O
+              endereço é texto livre ("Bruder Bistrô"), então a busca vai com
+              a cidade junto pra não cair num homônimo em outro estado. O
+              WhatsApp vem do CRM: "estou chegando" é a mensagem mais mandada
+              do dia, e antes ela saía do app pra procurar o contato. */}
+          {caps.length > 0 && (
+            <section>
+              <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                A rota de hoje
+              </p>
+              <ol className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
+                {caps.map((c, i) => {
+                  const local = (c.location ?? "").trim();
+                  const cidade = cidadeDe(c);
+                  const busca = encodeURIComponent([local, cidade].filter(Boolean).join(", "));
+                  const zap = (whatsappDe?.(c) ?? "").replace(/\D/g, "");
+                  const concluida = c.status === "concluida";
+                  return (
+                    <li key={c.id} className="flex items-center gap-3 px-3.5 py-3">
+                      <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-full text-[12px] font-display font-extrabold",
+                        concluida ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]" : "bg-primary/10 text-primary")}>
+                        {concluida ? <Check className="h-4 w-4" /> : i + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className={cn("text-[13.5px] font-display font-bold text-foreground truncate", concluida && "line-through text-muted-foreground")}>
+                          {c.capture_time && <span className="tabular-nums mr-1.5">{c.capture_time.slice(0, 5)}</span>}{nomeDe(c)}
+                        </p>
+                        <p className="text-[11.5px] font-body text-muted-foreground truncate">
+                          {local || "sem local"}{cidade ? ` · ${cidade}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {local && (
+                          <a href={`https://waze.com/ul?q=${busca}&navigate=yes`} target="_blank" rel="noopener noreferrer"
+                            className="h-9 px-2.5 grid place-items-center rounded-xl border border-border text-[11px] font-body font-bold text-foreground hover:border-primary/40"
+                            aria-label="Abrir no Waze" title="Abrir no Waze">Waze</a>
+                        )}
+                        {local && (
+                          <a href={`https://www.google.com/maps/search/?api=1&query=${busca}`} target="_blank" rel="noopener noreferrer"
+                            className="h-9 w-9 grid place-items-center rounded-xl border border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                            aria-label="Abrir no Google Maps" title="Google Maps"><MapPin className="h-4 w-4" /></a>
+                        )}
+                        {zap && (
+                          <a href={`https://wa.me/${zap.length <= 11 ? `55${zap}` : zap}?text=${encodeURIComponent("Oi! Estou a caminho pra nossa gravação de hoje.")}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="h-9 w-9 grid place-items-center rounded-xl border border-[hsl(var(--cria-verde)/0.4)] text-[hsl(var(--cria-verde))] hover:bg-[hsl(var(--cria-verde)/0.08)]"
+                            aria-label="Avisar no WhatsApp que está chegando" title="Avisar que está chegando"><MessageCircle className="h-4 w-4" /></a>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
+          )}
 
           {/* ── 2. AS TOMADAS, no topo, porque é o que se esquece ────────── */}
           {caps.some((c) => normalizeShotList(c.shot_list).length > 0) && (
@@ -305,6 +366,32 @@ export function DiaDeGravacao({
             </p>
           )}
         </div>
+
+        {/* ── BARRA DO CELULAR (ciclo 3) ──────────────────────────────────
+            No celular a rolagem é longa e o placar do topo some no primeiro
+            scroll. A barra fixa mantém "quantos faltam" e o próximo roteiro
+            não gravado sempre à vista, com o teleprompter a um toque. */}
+        {todosRoteiros.length > 0 && (() => {
+          const proximo = todosRoteiros.find((s) => !s.done) ?? null;
+          const texto = proximo ? (cenasDe(proximo).length > 0 ? cenasParaTexto(cenasDe(proximo)) : (proximo.content ?? "").trim()) : "";
+          return (
+            <div className="sm:hidden absolute inset-x-0 bottom-0 border-t border-border bg-card/95 backdrop-blur px-4 py-3 flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">
+                  {gravados} de {todosRoteiros.length} gravados
+                </p>
+                <p className="text-[13px] font-body font-semibold text-foreground truncate">
+                  {proximo ? `Próximo: ${(proximo.title ?? "").trim() || "Roteiro"}` : "Tudo gravado. Bora virar post."}
+                </p>
+              </div>
+              {proximo && texto && (
+                <Button size="sm" className="rounded-xl h-10 shrink-0" onClick={() => aoTeleprompter((proximo.title ?? "").trim() || "Roteiro", texto)}>
+                  <Play className="h-4 w-4 mr-1.5" /> Ler
+                </Button>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Rodapé fixo: o dia inteiro em texto, pra quem prefere levar no bloco
             de notas ou mandar pro cliente antes de sair. */}
