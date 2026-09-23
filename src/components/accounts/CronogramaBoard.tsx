@@ -393,9 +393,10 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
         const { data, error } = await sbFrom("posts").insert({
           user_id: agencyOwnerId,
           external_client_id: c.external_client_id,
-          // Nome do post = titulo do item (cai pra copy se nao tiver nome). "||" trata
-          // string vazia como ausente, igual ao card do cronograma.
-          title: it.title || it.copy || "(sem título)",
+          // Nome do post = titulo do item. Sem titulo, um resumo CURTO da copy:
+          // o card do kanban mostra uma linha so, entao jogar a copy inteira ali
+          // enterrava o post (foi o "virar post nao caiu" da Organnah).
+          title: it.title || nomeCurtoDaCopy(it.copy) || "Sem nome",
           platform: "instagram",
           format: tipoParaFormato(it.type),
           // No cronograma "copy" e a LEGENDA e "description" e o ROTEIRO/ideia. Cada um vai
@@ -574,8 +575,15 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
                               {it.converted_post_id && <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full"><Check className="h-2.5 w-2.5" /> no Cria Post</span>}
                             </div>
 
-                            {/* Nome (título) do post */}
-                            <p className="text-sm font-display font-bold text-foreground leading-snug">{it.title || it.copy || "(sem nome)"}</p>
+                            {/* Nome (título) do post.
+                                ITEM SEM NOME DESPEJAVA A COPY INTEIRA AQUI (Gabriela, 23/09/2026).
+                                O fallback era `it.title || it.copy`, então um carrossel de 7 slides
+                                virava um "título" de dez linhas em negrito, e logo abaixo a MESMA
+                                copy aparecia de novo na caixinha dela. Como a copy já está logo
+                                ali, o lugar do nome só precisa dizer que ele falta. */}
+                            {it.title
+                              ? <p className="text-sm font-display font-bold text-foreground leading-snug">{it.title}</p>
+                              : <p className="text-sm font-display font-semibold text-muted-foreground/60 italic leading-snug">Sem nome</p>}
                             {(() => { const el = linhaDe(it.editorial_line_id); return el ? (
                               <span className="inline-flex items-center gap-1 text-[9.5px] font-bold px-1.5 py-0.5 rounded-full mt-0.5"
                                 style={{ background: `${el.color}1f`, color: el.color }}>
@@ -790,6 +798,25 @@ function ContadorCopy({ texto }: { texto: string }) {
           : ""}
     </p>
   );
+}
+
+/* NOME CURTO A PARTIR DA COPY (Gabriela, 23/09/2026)
+   Só pra quando o item vira post no Cria Post sem ter nome: o card do kanban
+   tem uma linha visível, então precisa de algo que identifique, não do texto
+   inteiro. Pula as marcações de estrutura que a copy quase sempre começa
+   ("CAPA", "SLIDE 1", "Gancho", "Cena 2") e pega a primeira frase de conteúdo
+   de verdade. Corta em 70 e no último espaço, pra não partir palavra no meio. */
+const MARCACOES = /^(capa|slide\s*\d*|cena\s*\d*|gancho|hook|cta|legenda|copy|título|titulo)\s*[:.-]?\s*$/i;
+function nomeCurtoDaCopy(copy?: string | null): string {
+  const linhas = (copy ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
+  const boa = linhas.find((l) => !MARCACOES.test(l));
+  if (!boa) return "";
+  // Tira uma marcação que veio grudada na frase ("SLIDE 1 Vinho, equipe e...").
+  const limpa = boa.replace(/^(capa|slide\s*\d*|cena\s*\d*|gancho|hook|cta)\s*[:.-]?\s*/i, "").trim() || boa;
+  if (limpa.length <= 70) return limpa;
+  const corte = limpa.slice(0, 70);
+  const espaco = corte.lastIndexOf(" ");
+  return `${(espaco > 40 ? corte.slice(0, espaco) : corte).replace(/[.,;:\s]+$/, "")}...`;
 }
 
 function DatasComemorativasSection({ cronogramaId, clientSegment }: { cronogramaId: string; clientSegment?: string | null }) {

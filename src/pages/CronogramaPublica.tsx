@@ -221,7 +221,13 @@ export default function CronogramaPublica() {
                 {it.approval_status === "recusado" && <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "#A32D2D", background: "#FCEBEB", padding: "3px 10px", borderRadius: 7 }}>Recusado</span>}
                 {it.approval_status === "ajuste" && <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "#854F0B", background: "#FAEEDA", padding: "3px 10px", borderRadius: 7 }}>Ajuste pedido</span>}
               </div>
-              <div style={{ fontWeight: 800, fontSize: 15.5, color: "#2A2440", lineHeight: 1.3 }}>{it.title || it.copy || "(sem título)"}</div>
+              {/* SEM TÍTULO NÃO VIRA COPY DUPLICADA (Gabriela, 23/09/2026). O
+                  fallback antigo era `it.title || it.copy`, então o cliente lia
+                  a legenda inteira em negrito no lugar do nome e DE NOVO logo
+                  abaixo. Aqui a linha simplesmente some: um "(sem título)" na
+                  cara do cliente é pior que nada, e a copy já diz do que se
+                  trata. */}
+              {it.title && <div style={{ fontWeight: 800, fontSize: 15.5, color: "#2A2440", lineHeight: 1.3 }}>{it.title}</div>}
               {it.copy && <div style={{ fontSize: 13.5, color: "#2A2440", marginTop: 6, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{linkify(it.copy)}</div>}
               {it.description && <div style={{ fontSize: 12.5, color: "#6b647e", marginTop: 6, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{linkify(it.description)}</div>}
               {/* Referências do post: o campo aceita vários links (um por linha).
