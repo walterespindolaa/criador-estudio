@@ -230,7 +230,14 @@ export default function RoteirosPublica() {
         <h1 style={{ margin: "6px 0 0", color: onAccent, fontSize: 26, fontWeight: 800, lineHeight: 1.2 }}>
           {d.client_label || d.title}
         </h1>
-        <p style={{ margin: "6px 0 0", color: onAccentSoft, fontSize: 14 }}>{mesLabel(d.month)}</p>
+        {/* O RECORTE DO ENVIO (23/09/2026). Só o mês aparecia aqui, então um
+            link com os roteiros de UM dia dizia "setembro de 2026" e o cliente
+            não tinha como saber que era a gravação de amanhã. Quando quem
+            enviou deu um nome ao envio ("Roteiros de 24/09"), é esse nome que
+            manda; sem nome, continua o mês. */}
+        <p style={{ margin: "6px 0 0", color: onAccentSoft, fontSize: 14 }}>
+          {d.title?.trim() && d.title.trim() !== "Roteiros de gravação" ? d.title.trim() : mesLabel(d.month)}
+        </p>
         {/* Quantos vídeos: o cliente sabe de cara o tamanho da tarefa. */}
         <p style={{
           display: "inline-block", margin: "14px 0 0", padding: "7px 15px", borderRadius: 999,

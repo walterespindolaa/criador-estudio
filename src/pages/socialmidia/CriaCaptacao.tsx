@@ -1528,6 +1528,26 @@ function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, def
         salvando={acoesRoteiro.salvando}
       />
 
+      {/* MANDAR SÓ ESTA GRAVAÇÃO PRO CLIENTE (Gabriela, 23/09/2026).
+          O envio só existia na pasta, e de lá vai o mês inteiro. Quem grava
+          amanhã precisa mandar os roteiros DE AMANHÃ: era o que ela esperava
+          quando clicou e recebeu de volta um link com um roteiro de outro dia
+          junto. O `month` sai da data desta captação, não do mês que está
+          aberto na tela, porque um dia de dezembro aberto pela busca não pode
+          gravar o envio em novembro. */}
+      {(roteirosDoDia?.length ?? 0) > 0 && (
+        <div className="mt-2 flex justify-end">
+          <BotaoEnviarAprovacao
+            month={cap.capture_date.slice(0, 7)}
+            crmClientId={cap.crm_client_id}
+            clientName={cap.crm_client_id ? null : (cap.client_name ?? nome)}
+            roteiros={roteirosDoDia ?? []}
+            titulo={`Roteiros de ${diaMes(cap.capture_date)}`}
+            escopo="dia"
+          />
+        </div>
+      )}
+
       {/* Tomadas: o que precisa sair dessa gravação (mini-acordeão + contador). */}
       <div data-tour="cap-tomadas" className="mt-3 rounded-xl border border-border overflow-hidden">
         <button type="button" onClick={() => setShotsOpen((o) => !o)}
@@ -1929,7 +1949,8 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
           </Button>
           {/* O cliente revisa ANTES da gravação. Fora do sistema isso vira áudio
               de WhatsApp e a social mídia reescreve tudo na mão. */}
-          <BotaoEnviarAprovacao month={month} crmClientId={pasta.crmId} clientName={pasta.nome} roteiros={roteirosDoGuia} />
+          <BotaoEnviarAprovacao month={month} crmClientId={pasta.crmId} clientName={pasta.nome}
+            roteiros={roteirosDoGuia} escopo="mes" titulo={`Roteiros de ${monthLabel(month)}`} />
         </div>
       </div>
 

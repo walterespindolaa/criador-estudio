@@ -24,24 +24,45 @@ const textoDe = (titulo: string | null, conteudo: string | null, cenas: CaptureS
   return c.trim();
 };
 
+/* O QUE VAI NO LINK (Gabriela, 23/09/2026: "aqui tem 5 / aqui tem 6, porque
+   está puxando esse primeiro que é de outro dia e não do dia específico").
+
+   O botão só existia na PASTA do cliente, e de lá ele manda o mês inteiro. Faz
+   sentido pra quem planeja o mês, mas não pra quem vai gravar amanhã: o cliente
+   recebia roteiro de uma gravação que já passou misturado com os de amanhã, e
+   ficava sem saber o que revisar.
+
+   Agora o mesmo botão serve nos dois lugares, e QUEM CHAMA decide o recorte:
+   a pasta passa o mês, o card do dia passa só os roteiros daquele dia. O
+   `escopo` existe só pra escrever a verdade no rótulo e no aviso, porque o
+   erro anterior não foi técnico, foi de expectativa: ela clicou achando que
+   mandava um recorte e mandava outro. */
 export function BotaoEnviarAprovacao({
-  month, crmClientId, clientName, roteiros, className,
+  month, crmClientId, clientName, roteiros, className, titulo, escopo = "mes",
 }: {
   month: string;
   crmClientId?: string | null;
   clientName?: string | null;
   roteiros: CaptureScript[];
   className?: string;
+  /** Nome do envio, que o cliente lê no topo da página. Ex.: "Roteiros de 24/09". */
+  titulo?: string;
+  escopo?: "mes" | "dia";
 }) {
   const criar = useCreateScriptApproval();
+  const doDia = escopo === "dia";
 
   const enviar = async () => {
-    if (roteiros.length === 0) { toast.error("Escreva pelo menos um roteiro deste mês pra mandar pro cliente."); return; }
+    if (roteiros.length === 0) {
+      toast.error(doDia ? "Escreva pelo menos um roteiro desta gravação." : "Escreva pelo menos um roteiro deste mês.");
+      return;
+    }
     try {
-      const a = await criar.mutateAsync({ month, crmClientId, clientName, roteiros });
+      const a = await criar.mutateAsync({ month, crmClientId, clientName, roteiros, title: titulo });
       const url = `${window.location.origin}/roteiros/${a.token}`;
-      try { await navigator.clipboard.writeText(url); toast.success("Link copiado! Mande pro cliente revisar."); }
-      catch { toast.success("Link gerado."); }
+      const quantos = `${roteiros.length} ${roteiros.length === 1 ? "roteiro" : "roteiros"}`;
+      try { await navigator.clipboard.writeText(url); toast.success(`Link copiado com ${quantos}. Mande pro cliente revisar.`); }
+      catch { toast.success(`Link gerado com ${quantos}.`); }
     } catch { /* o hook já avisa */ }
   };
 
@@ -49,10 +70,12 @@ export function BotaoEnviarAprovacao({
     <Button size="sm" variant="outline" onClick={() => void enviar()} disabled={criar.isPending || roteiros.length === 0}
       className={cn("rounded-xl h-9", className)}
       title={roteiros.length === 0
-        ? "Escreva pelo menos um roteiro deste mês."
-        : `Gera um link onde o cliente lê os ${roteiros.length} roteiros, ajusta o texto e a ordem, e devolve pra você conferir.`}>
+        ? (doDia ? "Escreva pelo menos um roteiro desta gravação." : "Escreva pelo menos um roteiro deste mês.")
+        : `Gera um link onde o cliente lê ${doDia ? "os roteiros DESTA gravação" : "os roteiros do MÊS INTEIRO"} (${roteiros.length}), ajusta o texto e a ordem, e devolve pra você conferir.`}>
       {criar.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
-      Enviar pro cliente
+      {/* O rótulo diz o recorte: era "Enviar pro cliente" nos dois, e a pessoa
+          não tinha como saber o que ia junto. */}
+      {doDia ? `Enviar esta gravação (${roteiros.length})` : `Enviar o mês (${roteiros.length})`}
     </Button>
   );
 }
