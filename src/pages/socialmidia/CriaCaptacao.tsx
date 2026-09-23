@@ -42,6 +42,9 @@ import { useLinkPreviews } from "@/hooks/useLinkPreviews";
 import { parseRefLinks, isRefLink } from "@/lib/refLinks";
 import { RoteirosDoDia } from "@/components/captacao/RoteirosDoDia";
 import { BotaoEnviarAprovacao, BotaoEnviarEscolhendo, PainelAprovacoes } from "@/components/captacao/AprovacaoRoteiros";
+import { SeloProntidao, LinhaProntidao } from "@/components/captacao/SeloProntidao";
+import { prontidaoDa } from "@/lib/captacao-prontidao";
+import { useScriptApprovals } from "@/hooks/useScriptApprovals";
 import { ListaReferencias } from "@/components/captacao/Referencias";
 import { DragDropContext as DndRoteiros, Droppable as DropRoteiros, Draggable as DragRoteiro, type DropResult as DropRoteiroResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
@@ -1783,6 +1786,8 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
   const delScript = useDeleteCaptureScript();
   const reorderScripts = useReorderCaptureScripts();
   const toPost = useScriptToPost();
+  // Envios pro cliente deste mês: é o que diz se uma gravação foi revisada.
+  const { data: envios = [] } = useScriptApprovals(month, pasta.crmId, pasta.nome);
 
   const [gerandoGuia, setGerandoGuia] = useState(false);
   // Na pasta o cliente é fixo: é a pasta aberta.
@@ -2041,21 +2046,20 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
              expandir mostra o card completo (roteiro, tomadas, virar post). */
           <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
             {caps.map((c) => {
-              const done = c.status === "concluida";
-              const temRoteiro = scripts.some((s) => s.capture_id === c.id);
+              /* PRONTIDÃO NO LUGAR DE "PENDENTE" (Captação v4, ciclo 1).
+                 A linha dizia "roteiro pronto · Pendente" pra uma gravação que
+                 o cliente nunca revisou e pra uma que ele já devolveu: a mesma
+                 coisa pra estados diferentes. Agora a linha diz o degrau e o
+                 que falta, sem precisar abrir o card. */
+              const p = prontidaoDa(c, scripts, envios);
               return (
                 <details key={c.id} className="group/cap">
                   <summary className="flex items-center gap-2.5 px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:bg-muted/30 transition-colors">
                     <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 transition-transform group-open/cap:rotate-90" />
                     <span className="text-sm font-display font-bold text-foreground tabular-nums shrink-0">{diaMes(c.capture_date)}</span>
                     {c.capture_time && <span className="text-[11px] font-body text-muted-foreground shrink-0">{c.capture_time.slice(0, 5)}</span>}
-                    <span className={cn("min-w-0 flex-1 truncate text-[11px] font-body", temRoteiro ? "text-muted-foreground" : "text-[hsl(var(--cria-amarelo))] font-semibold")}>
-                      {temRoteiro ? "roteiro pronto" : "sem roteiro"}
-                    </span>
-                    <span className={cn("shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-body font-bold",
-                      done ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]" : "bg-[hsl(var(--cria-amarelo)/0.15)] text-[hsl(var(--cria-amarelo))]")}>
-                      {done ? "Concluída" : "Pendente"}
-                    </span>
+                    <LinhaProntidao p={p} className="flex-1" />
+                    <SeloProntidao p={p} className="shrink-0" />
                   </summary>
                   <div className="border-t border-border/60">{renderCapture(c, {
                     roteiros: scripts.filter((s) => s.capture_id === c.id),

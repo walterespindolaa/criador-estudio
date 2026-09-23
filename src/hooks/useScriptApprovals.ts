@@ -81,6 +81,37 @@ export function useScriptApprovals(month: string, crmClientId?: string | null, c
   });
 }
 
+/* TODOS OS ENVIOS DA CONTA (Captação v4, ciclo 1)
+   A prontidão de uma gravação precisa saber se os roteiros dela já foram
+   devolvidos pelo cliente, e isso vale pra ficha (todos os meses) e pra home
+   (todos os clientes). O hook de cima filtra por mês E por cliente; este traz
+   tudo da conta e deixa o filtro pra quem calcula. Aprovação é tabela pequena
+   (um punhado por mês), então trazer inteira sai mais barato que uma query
+   por card. */
+export function useScriptApprovalsTodos(opts?: { month?: string; crmClientId?: string | null }) {
+  const { agencyOwnerId } = useActiveAccount();
+  return useQuery({
+    queryKey: ["script-approvals", "todos", agencyOwnerId, opts?.month ?? "", opts?.crmClientId ?? ""],
+    enabled: !!agencyOwnerId,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    queryFn: async (): Promise<ScriptApproval[]> => {
+      let q = sbFrom("script_approvals")
+        .select("*, itens:script_approval_items(*)")
+        .eq("manager_id", agencyOwnerId)
+        .order("created_at", { ascending: false });
+      if (opts?.month) q = q.eq("month", opts.month);
+      if (opts?.crmClientId) q = q.eq("crm_client_id", opts.crmClientId);
+      const { data, error } = await q;
+      if (error) {
+        if (tabelaFaltando(error.message)) return [];
+        throw error;
+      }
+      return (data ?? []) as ScriptApproval[];
+    },
+  });
+}
+
 /** Gera o link: guarda o "antes" de cada roteiro enviado. */
 export function useCreateScriptApproval() {
   const { agencyOwnerId } = useActiveAccount();
