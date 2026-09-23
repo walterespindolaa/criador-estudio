@@ -41,7 +41,7 @@ import { baixarGuiaGravacao } from "@/lib/guiaGravacaoPdf";
 import { useLinkPreviews } from "@/hooks/useLinkPreviews";
 import { parseRefLinks, isRefLink } from "@/lib/refLinks";
 import { RoteirosDoDia } from "@/components/captacao/RoteirosDoDia";
-import { BotaoEnviarAprovacao, PainelAprovacoes } from "@/components/captacao/AprovacaoRoteiros";
+import { BotaoEnviarAprovacao, BotaoEnviarEscolhendo, PainelAprovacoes } from "@/components/captacao/AprovacaoRoteiros";
 import { ListaReferencias } from "@/components/captacao/Referencias";
 import { DragDropContext as DndRoteiros, Droppable as DropRoteiros, Draggable as DragRoteiro, type DropResult as DropRoteiroResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
@@ -1949,8 +1949,8 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
           </Button>
           {/* O cliente revisa ANTES da gravação. Fora do sistema isso vira áudio
               de WhatsApp e a social mídia reescreve tudo na mão. */}
-          <BotaoEnviarAprovacao month={month} crmClientId={pasta.crmId} clientName={pasta.nome}
-            roteiros={roteirosDoGuia} escopo="mes" titulo={`Roteiros de ${monthLabel(month)}`} />
+          <BotaoEnviarEscolhendo month={month} mesLabel={monthLabel(month)} crmClientId={pasta.crmId}
+            clientName={pasta.nome} roteiros={roteirosDoGuia} caps={caps} />
         </div>
       </div>
 

@@ -80,6 +80,140 @@ export function BotaoEnviarAprovacao({
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   ESCOLHER O QUE VAI NO LINK (Gabriela, 23/09/2026: "ainda não deu de
+   selecionar a data")
+
+   O botão da pasta mandava o mês inteiro e pronto. Botei um botão por dia
+   dentro do card da gravação, mas ele só aparece quando o dia JÁ TEM roteiro,
+   e pra usá-lo ela tinha que rolar até o dia certo e abrir o card. Continuava
+   sem um lugar onde ela escolhe a data ANTES de gerar o link.
+
+   Agora o botão da pasta abre uma escolha: o mês inteiro, uma gravação
+   específica, ou os roteiros que ainda não têm dia marcado. Cada linha mostra
+   a data e quantos roteiros vão junto, então ela confere o número antes de
+   mandar, em vez de descobrir depois abrindo o link como cliente.
+   ═══════════════════════════════════════════════════════════════════════════ */
+type CapturaLeve = { id: string; capture_date: string; capture_time: string | null };
+const ddmmDe = (iso: string) => { const [, m, d] = iso.split("-"); return `${d}/${m}`; };
+
+export function BotaoEnviarEscolhendo({
+  month, mesLabel, crmClientId, clientName, roteiros, caps, className,
+}: {
+  month: string;
+  /** "setembro de 2026", só pra escrever o nome do envio do mês. */
+  mesLabel: string;
+  crmClientId?: string | null;
+  clientName?: string | null;
+  /** Todos os roteiros do mês (a mesma lista que vai no guia em PDF). */
+  roteiros: CaptureScript[];
+  /** As gravações marcadas do mês, pra virarem opção de recorte. */
+  caps: CapturaLeve[];
+  className?: string;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [escolha, setEscolha] = useState<string>("mes");
+  const criar = useCreateScriptApproval();
+
+  // Uma opção por gravação (com quantos roteiros tem), mais os sem dia marcado.
+  const porCaptura = new Map<string, CaptureScript[]>();
+  const soltos: CaptureScript[] = [];
+  for (const r of roteiros) {
+    if (r.capture_id) porCaptura.set(r.capture_id, [...(porCaptura.get(r.capture_id) ?? []), r]);
+    else soltos.push(r);
+  }
+  const opcoes = [
+    { valor: "mes", rotulo: "O mês inteiro", detalhe: mesLabel, lista: roteiros, titulo: `Roteiros de ${mesLabel}` },
+    ...[...caps]
+      .sort((a, b) => a.capture_date.localeCompare(b.capture_date))
+      .map((c) => ({
+        valor: `cap:${c.id}`,
+        rotulo: `Gravação de ${ddmmDe(c.capture_date)}`,
+        detalhe: c.capture_time ? `às ${c.capture_time.slice(0, 5)}` : "sem horário",
+        lista: porCaptura.get(c.id) ?? [],
+        titulo: `Roteiros de ${ddmmDe(c.capture_date)}`,
+      })),
+    ...(soltos.length > 0
+      ? [{ valor: "soltos", rotulo: "Só os sem dia marcado", detalhe: "ainda não estão numa gravação", lista: soltos, titulo: `Roteiros de ${mesLabel}` }]
+      : []),
+  ];
+  const atual = opcoes.find((o) => o.valor === escolha) ?? opcoes[0];
+
+  const gerar = async () => {
+    if (atual.lista.length === 0) return;
+    try {
+      const a = await criar.mutateAsync({
+        month, crmClientId, clientName, roteiros: atual.lista, title: atual.titulo,
+      });
+      const url = `${window.location.origin}/roteiros/${a.token}`;
+      const quantos = `${atual.lista.length} ${atual.lista.length === 1 ? "roteiro" : "roteiros"}`;
+      try { await navigator.clipboard.writeText(url); toast.success(`Link copiado com ${quantos}. Mande pro cliente revisar.`); }
+      catch { toast.success(`Link gerado com ${quantos}.`); }
+      setAberto(false);
+    } catch { /* o hook já avisa */ }
+  };
+
+  return (
+    <>
+      <Button size="sm" variant="outline" onClick={() => { setEscolha("mes"); setAberto(true); }}
+        disabled={roteiros.length === 0} className={cn("rounded-xl h-9", className)}
+        title={roteiros.length === 0
+          ? "Escreva pelo menos um roteiro deste mês."
+          : "Escolha o que o cliente vai revisar: o mês inteiro ou uma gravação específica."}>
+        <Send className="h-3.5 w-3.5 mr-1.5" /> Enviar pro cliente
+      </Button>
+
+      <Dialog open={aberto} onOpenChange={setAberto}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display">O que o cliente vai revisar?</DialogTitle>
+            <DialogDescription>
+              Ele abre um link, lê os roteiros, ajusta o texto e a ordem, e devolve pra você conferir.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-1">
+            {opcoes.map((o) => {
+              const vazia = o.lista.length === 0;
+              const marcada = o.valor === escolha;
+              return (
+                <button key={o.valor} type="button" disabled={vazia}
+                  onClick={() => setEscolha(o.valor)}
+                  className={cn(
+                    "w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors",
+                    vazia ? "border-border opacity-45 cursor-not-allowed"
+                      : marcada ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
+                  )}>
+                  <span className={cn("w-4 h-4 rounded-full border-2 shrink-0 grid place-items-center",
+                    marcada ? "border-primary" : "border-muted-foreground/40")}>
+                    {marcada && <span className="w-2 h-2 rounded-full bg-primary" />}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-body font-semibold text-foreground">{o.rotulo}</span>
+                    <span className="block text-xs font-body text-muted-foreground">{o.detalhe}</span>
+                  </span>
+                  <span className={cn("shrink-0 text-xs font-body font-bold px-2 py-1 rounded-full",
+                    vazia ? "text-muted-foreground bg-muted" : "text-primary bg-primary/10")}>
+                    {vazia ? "sem roteiro" : `${o.lista.length} ${o.lista.length === 1 ? "roteiro" : "roteiros"}`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setAberto(false)} className="rounded-xl">Cancelar</Button>
+            <Button onClick={() => void gerar()} disabled={criar.isPending || atual.lista.length === 0} className="rounded-xl">
+              {criar.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />}
+              Gerar link e copiar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 /** Painel dos envios: link aberto, revisão que voltou, e o histórico. */
 export function PainelAprovacoes({
   month, crmClientId, clientName,
