@@ -147,7 +147,12 @@ export default function CronogramaPublica() {
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["cronograma-pub", token] }); setReasonFor(null); setReason(""); },
+    // Sem isto o cliente clicava, nada acontecia e ele achava que não foi.
+    onError: () => { window.alert("Não consegui salvar agora. Confere a internet e tenta de novo."); },
   });
+  // Trava por item: enquanto salva, os botões daquele item ficam desligados
+  // (dois toques rápidos mandavam aprovado + recusado pro mesmo post).
+  const salvandoItem = setStatus.isPending ? setStatus.variables?.id : null;
 
   const toggleData = useMutation({
     mutationFn: async ({ id, selected }: { id: string; selected: boolean }) => {
@@ -305,9 +310,11 @@ export default function CronogramaPublica() {
 
               {!isApproved && !isReason && (
                 <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-                  <button onClick={() => setStatus.mutate({ id: it.id, status: "aprovado" })} style={{ ...btn("#01A652", "#fff"), flex: 1, justifyContent: "center" }}><Check style={ic} /> Aprovar</button>
-                  <button onClick={() => { setReasonFor({ id: it.id, status: "ajuste" }); setReason(it.client_comment ?? ""); }} style={btn("#fff", "#854F0B", "#FAC775")}><Pencil style={ic} /> Ajuste</button>
-                  <button onClick={() => { setReasonFor({ id: it.id, status: "recusado" }); setReason(it.client_comment ?? ""); }} style={btn("#fff", "#A32D2D", "#F09595")}><X style={ic} /> Recusar</button>
+                  <button disabled={salvandoItem === it.id} onClick={() => setStatus.mutate({ id: it.id, status: "aprovado" })} style={{ ...btn("#01A652", "#fff"), flex: 1, justifyContent: "center", opacity: salvandoItem === it.id ? 0.6 : 1 }}>
+                    <Check style={ic} /> {salvandoItem === it.id ? "Salvando..." : "Aprovar"}
+                  </button>
+                  <button disabled={salvandoItem === it.id} onClick={() => { setReasonFor({ id: it.id, status: "ajuste" }); setReason(it.client_comment ?? ""); }} style={btn("#fff", "#854F0B", "#FAC775")}><Pencil style={ic} /> Ajuste</button>
+                  <button disabled={salvandoItem === it.id} onClick={() => { setReasonFor({ id: it.id, status: "recusado" }); setReason(it.client_comment ?? ""); }} style={btn("#fff", "#A32D2D", "#F09595")}><X style={ic} /> Recusar</button>
                 </div>
               )}
 
@@ -316,12 +323,16 @@ export default function CronogramaPublica() {
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#854F0B", marginBottom: 6 }}>
                     {reasonFor.status === "recusado" ? "POR QUE A RECUSA?" : "POR QUE O AJUSTE?"}
                   </p>
-                  <textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Explique pro social media…"
-                    style={{ width: "100%", border: "1px solid #EFE9DA", borderRadius: 9, padding: 8, fontSize: 12.5, fontFamily: "inherit", resize: "none", height: 54, boxSizing: "border-box" }} />
+                  <textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Explique pro social media o que mudar (obrigatório)"
+                    style={{ width: "100%", border: "1px solid #EFE9DA", borderRadius: 9, padding: 8, fontSize: 14, fontFamily: "inherit", resize: "none", height: 64, boxSizing: "border-box" }} />
+                  {/* Motivo obrigatório: "ajuste" sem texto chegava na social mídia
+                      como um pedido vazio, e ela tinha que ligar pra perguntar. */}
                   <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                    <button onClick={() => setStatus.mutate({ id: it.id, status: reasonFor.status, comment: reason })}
-                      style={{ fontSize: 12, fontWeight: 700, background: "#854F0B", color: "#fff", border: "none", borderRadius: 9, padding: "7px 13px", cursor: "pointer" }}>Enviar</button>
-                    <button onClick={() => { setReasonFor(null); setReason(""); }} style={{ fontSize: 12, fontWeight: 700, background: "#fff", color: "#857F9C", border: "1px solid #EFE9DA", borderRadius: 9, padding: "7px 13px", cursor: "pointer" }}>Cancelar</button>
+                    <button disabled={reason.trim().length < 3 || salvandoItem === it.id} onClick={() => setStatus.mutate({ id: it.id, status: reasonFor.status, comment: reason.trim() })}
+                      style={{ fontSize: 13, fontWeight: 700, background: "#854F0B", color: "#fff", border: "none", borderRadius: 9, padding: "11px 16px", minHeight: 44, cursor: "pointer", opacity: reason.trim().length < 3 || salvandoItem === it.id ? 0.5 : 1 }}>
+                      {salvandoItem === it.id ? "Enviando..." : "Enviar"}
+                    </button>
+                    <button onClick={() => { setReasonFor(null); setReason(""); }} style={{ fontSize: 13, fontWeight: 700, background: "#fff", color: "#857F9C", border: "1px solid #EFE9DA", borderRadius: 9, padding: "11px 16px", minHeight: 44, cursor: "pointer" }}>Cancelar</button>
                   </div>
                 </div>
               )}
@@ -341,5 +352,6 @@ export default function CronogramaPublica() {
 
 const ic = { width: 14, height: 14 } as const;
 function btn(bg: string, color: string, border?: string): CSSProperties {
-  return { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 700, background: bg, color, border: `1px solid ${border ?? "#EFE9DA"}`, borderRadius: 11, padding: "9px 14px", cursor: "pointer" };
+  // minHeight 44: alvo de toque no celular, que é onde o cliente aprova.
+  return { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, background: bg, color, border: `1px solid ${border ?? "#EFE9DA"}`, borderRadius: 11, padding: "10px 14px", minHeight: 44, cursor: "pointer" };
 }

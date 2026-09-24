@@ -316,7 +316,7 @@ export function useClientSocialConnection(crmClientId: string | null | undefined
 
 // Inicia o OAuth do Instagram: pega o App ID público via edge function e redireciona pro consentimento.
 // clientId (crm_client_id) opcional: conecta a conta NO contexto de um cliente gerenciado.
-export async function connectInstagram(clientId?: string | null) {
+export async function connectInstagram(clientId?: string | null, returnTo?: string | null) {
   try {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
@@ -324,7 +324,7 @@ export async function connectInstagram(clientId?: string | null) {
     // A função autentica pelo header e devolve um "ticket" (state) de uso único
     // o JWT NÃO vai mais na URL do OAuth.
     const { data, error } = await supabase.functions.invoke("get-instagram-config", {
-      body: { crm_client_id: clientId ?? null },
+      body: { crm_client_id: clientId ?? null, return_to: returnTo ?? null },
     });
     if (error || !(data as { client_id?: string })?.client_id || !(data as { state?: string })?.state) {
       toast.error("Integração ainda não configurada. Tente novamente em breve.");

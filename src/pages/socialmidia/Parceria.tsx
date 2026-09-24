@@ -6,6 +6,7 @@ import { PartnerCommissions } from "@/components/accounts/PartnerCommissions";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { PartnerApplyDrawer } from "@/components/accounts/PartnerApplyDrawer";
 import { ManagerSectionTitle } from "@/components/accounts/ManagerSectionTitle";
+import { LABELS } from "@/lib/labels";
 
 // Paleta oficial (a mesma da LP e do relatório) pros acentos da página.
 const P = { laranja: "#EA4918", verde: "#01A652", azul: "#0061EE", rosa: "#FF77B9", amarelo: "#FFCF03", creme: "#F6F2E8" };
@@ -15,7 +16,7 @@ export default function Parceria() {
   const [partnerOpen, setPartnerOpen] = useState(false);
   return (
     <div>
-      <ManagerSectionTitle t="Parceria" s="Indique o Cria pros seus clientes e ganhe comissão recorrente." />
+      <ManagerSectionTitle t={LABELS.indique} s="Indique o Cria pros seus clientes e ganhe comissão recorrente." />
       {/* Os alvos do tour (parceria-programa e parceria-acao) aparecem nos três
           estados da tela: parceira aprovada, em análise e ainda não parceira.
           Só um ramo existe no DOM por vez, então o passo sempre acha o alvo. */}

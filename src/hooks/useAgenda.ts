@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 import { isPeriodo, type Periodo } from "@/lib/periodos-agenda";
+import { vazioOuErro } from "@/lib/erro-esquema";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
@@ -114,7 +115,7 @@ export function useCollaboratorNames() {
     queryFn: async () => {
       const { data, error } = await sbFrom("manager_members")
         .select("name").eq("manager_id", agencyOwnerId!).eq("status", "ativo");
-      if (error) return [];
+      if (error) return vazioOuErro(error, [] as string[]);
       return ((data ?? []) as { name: string | null }[]).map((m) => m.name).filter((n): n is string => !!n && n.trim().length > 0);
     },
   });
@@ -241,9 +242,8 @@ export function useItemPeriods() {
     queryFn: async () => {
       const { data, error } = await sbFrom("agenda_item_period")
         .select("item_key, period").eq("manager_id", agencyOwnerId!);
-      // Tabela ainda inexistente (migration não rodada) ou qualquer outra falha:
-      // devolve vazio em vez de derrubar a agenda inteira.
-      if (error) return {};
+      // Tabela ainda inexistente (migration não rodada): vazio. Outro erro sobe.
+      if (error) return vazioOuErro(error, {} as ItemPeriods);
       const m: ItemPeriods = {};
       for (const row of (data ?? []) as unknown as { item_key: string; period: string | null }[]) {
         if (isPeriodo(row.period)) m[row.item_key] = row.period;

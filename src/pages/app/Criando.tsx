@@ -48,6 +48,7 @@ import { toast } from "sonner";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { usePillars } from "@/hooks/usePillars";
 import { useTasks } from "@/hooks/useTasks";
+import { ROTULO_ETAPA } from "@/lib/labels";
 
 type PeriodKey = "tudo" | "hoje" | "semana" | "quinzenal" | "mes" | "ano" | "personalizado";
 
@@ -95,10 +96,7 @@ const COLUMN_TOOLTIPS: Record<string, string> = {
 
 // Rótulo da etapa no calendário: os MESMOS nomes das colunas do board, pra o
 // calendário contar a mesma história (era só cor de fundo, e ninguém decora cor).
-const CAL_ETAPA: Record<string, string> = {
-  ideia: "Ideia", roteiro: "Planejamento", gravando: "Produzindo",
-  editando: "Pronto", agendado: "Agendado", publicado: "Publicado",
-};
+const CAL_ETAPA: Record<string, string> = ROTULO_ETAPA;
 
 const Criando = () => {
   const { user } = useAuth();
@@ -278,6 +276,18 @@ const Criando = () => {
       return true;
     });
   }, [posts, filterPlatform, filterPillar, filterWeek, filterFormat, search, dateRange, period, customRange]);
+  // Índice por dia: o calendário varria a lista inteira em CADA célula
+  // (42 células x todos os posts a cada render). Agora é um Map montado uma vez.
+  const postsPorDia = useMemo(() => {
+    const m = new Map<string, typeof filteredPosts>();
+    for (const p of filteredPosts) {
+      const k = (p.scheduled_date ?? "").slice(0, 10);
+      if (!k) continue;
+      const arr = m.get(k);
+      if (arr) arr.push(p); else m.set(k, [p]);
+    }
+    return m;
+  }, [filteredPosts]);
 
   // Ordem das colunas do board: manual (arrastada, board_order) ou por data de
   // publicação. É EXIBIÇÃO: nada é regravado, então desligar devolve a ordem manual.
@@ -1027,9 +1037,9 @@ const Criando = () => {
                       {calMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
                     </h3>
                     <div className="flex items-center gap-1">
-                      <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setCalMonth(new Date(y, m - 1, 1))}>‹</Button>
+                      <Button aria-label="Anterior" variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => setCalMonth(new Date(y, m - 1, 1))}>‹</Button>
                       <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={() => setCalMonth(startOfMonth(new Date()))}>Hoje</Button>
-                      <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setCalMonth(new Date(y, m + 1, 1))}>›</Button>
+                      <Button aria-label="Próximo" variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => setCalMonth(new Date(y, m + 1, 1))}>›</Button>
                     </div>
                   </div>
                   <div className="grid grid-cols-7 gap-1.5 mb-1.5">
@@ -1039,7 +1049,7 @@ const Criando = () => {
                   </div>
                   <div className="grid grid-cols-7 gap-1.5">
                     {cells.map((cell) => {
-                      const dayPosts = filteredPosts.filter(p => (p.scheduled_date ?? "").slice(0, 10) === cell.key);
+                      const dayPosts = postsPorDia.get(cell.key) ?? [];
                       const isToday = cell.key === todayKey;
                       return (
                         <div key={cell.key}
@@ -1170,9 +1180,9 @@ const Criando = () => {
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-display font-bold text-lg">{fmt(calWeekStart)}, {fmt(days[6])}</h3>
                         <div className="flex items-center gap-1">
-                          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => shiftWeek(-7)}>‹</Button>
+                          <Button aria-label="Anterior" variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => shiftWeek(-7)}>‹</Button>
                           <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={() => setCalWeekStart(startOfWeek(new Date(), { weekStartsOn: 0 }))}>Hoje</Button>
-                          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => shiftWeek(7)}>›</Button>
+                          <Button aria-label="Próximo" variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => shiftWeek(7)}>›</Button>
                         </div>
                       </div>
                       {/* A semana empilha no celular: sete colunas de 48px não
@@ -1180,7 +1190,7 @@ const Criando = () => {
                       <div className="grid grid-cols-1 md:grid-cols-7 gap-1.5">
                         {days.map((d, i) => {
                           const key = keyOf(d);
-                          const dayPosts = filteredPosts.filter(p => (p.scheduled_date ?? "").slice(0, 10) === key);
+                          const dayPosts = postsPorDia.get(key) ?? [];
                           const isToday = key === todayKey;
                           return (
                             <div key={key}

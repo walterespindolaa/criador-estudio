@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { registrarErro, mensagemDe } from "../_shared/log.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -35,7 +36,10 @@ function resolveAppUrl(req: Request): string {
     "https://www.criasocialclub.com.br",
   ];
   if (allow.includes(origin)) return origin;
-  if (/^https:\/\/[a-z0-9-]+\.(lovableproject\.com|lovable\.app)$/.test(origin)) return origin;
+  /* SEM CURINGA DE PREVIEW (pente fino 23/09/2026, S1). Aceitar qualquer
+     *.lovable.app vindo do Origin deixava um atacante mandar o link de senha
+     da vítima pra um domínio dele. Preview do Lovable usa APP_URL ou cai no
+     canônico, que também funciona. */
   return CANONICAL_APP_URL;
 }
 
@@ -103,6 +107,15 @@ serve(async (req) => {
     const body = await req.json();
     const { user_id, action } = body as { user_id?: string; action?: string };
 
+    // TRILHA DO ADMIN (pente fino 23/09/2026): toda ação com alvo fica em
+    // admin_actions (quem, em quem, o quê, com que parâmetros). Leitura em
+    // lote (get_emails) não entra. Falha na trilha não derruba a ação.
+    if (action && action !== "get_emails" && action !== "get_modules") {
+      const { user_id: _u, action: _a, ...detalhe } = body as Record<string, unknown>;
+      await svc.from("admin_actions").insert({ admin_id: user.id, target_user_id: user_id ?? null, action, detail: detalhe })
+        .then(({ error }) => { if (error) console.warn("[admin-user-actions] trilha não gravada:", error.message); });
+    }
+
     // Batch: emails dos usuários (auth) para o painel admin
     if (action === "get_emails") {
       const ids = ((body as { user_ids?: string[] }).user_ids ?? []).slice(0, 200);
@@ -158,6 +171,26 @@ serve(async (req) => {
     }
 
     if (action === "delete") {
+      /* EXCLUIR PELO ADMIN CANCELA O STRIPE (pente fino 23/09/2026, B5). Apagar o
+         usuário e deixar a cobrança viva era o pior dos mundos: cliente sem
+         conta e cartão sendo debitado. Falha aqui não impede a exclusão, mas
+         fica no log pra cancelar na mão. */
+      try {
+        const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+        const { data: perfil } = await svc.from("profiles").select("stripe_customer_id").eq("id", user_id).maybeSingle();
+        const customerId = (perfil as { stripe_customer_id?: string | null } | null)?.stripe_customer_id;
+        if (stripeKey && customerId) {
+          const r = await fetch(`https://api.stripe.com/v1/subscriptions?customer=${encodeURIComponent(customerId)}&status=all&limit=100`, {
+            headers: { Authorization: `Bearer ${stripeKey}` },
+          });
+          const j = await r.json() as { data?: { id: string; status: string }[] };
+          for (const sub of j.data ?? []) {
+            if (sub.status === "canceled") continue;
+            await fetch(`https://api.stripe.com/v1/subscriptions/${sub.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${stripeKey}` } });
+            console.log("[admin-user-actions] stripe cancelado:", sub.id);
+          }
+        }
+      } catch (e) { console.error("[admin-user-actions] cancelar stripe antes de excluir", e); }
       const { error } = await svc.auth.admin.deleteUser(user_id);
       if (error) {
         console.error("[admin-user-actions] delete failed:", error);
@@ -342,7 +375,7 @@ serve(async (req) => {
 
     return json({ error: "unknown_action" }, 400);
   } catch (e) {
-    console.error("[admin-user-actions] unhandled error:", e);
+    await registrarErro(createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!), "admin-user-actions", mensagemDe(e));
     return json({ error: "internal_error" }, 500);
   }
 });

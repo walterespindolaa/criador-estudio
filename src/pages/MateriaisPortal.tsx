@@ -6,6 +6,7 @@ import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { LogoMarca } from "@/components/publico/CabecalhoPublico";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import { SolicitarMaterial } from "@/components/aprovar/SolicitarMaterial";
+import { corSeguraEmFundoClaro, readableFgHex } from "@/lib/cor-legivel";
 
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
@@ -52,6 +53,10 @@ export default function MateriaisPortal() {
     );
   }
   const brand = c.brand_color ?? "#CE4A1D";
+  // Como TEXTO na folha clara, a marca precisa de contraste; como FUNDO do
+  // número, o texto em cima precisa ser branco ou escuro conforme a marca.
+  const brandTexto = corSeguraEmFundoClaro(brand);
+  const brandFg = readableFgHex(brand);
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,7 +80,7 @@ export default function MateriaisPortal() {
           é a dúvida real de quem chega aqui pela primeira vez: "pedi, e agora?" */}
       <main className="max-w-2xl mx-auto px-4 pt-6 pb-12">
         <div className="text-center mb-5">
-          <p className="text-[11px] font-body font-bold uppercase tracking-[0.14em]" style={{ color: brand }}>
+          <p className="text-[11px] font-body font-bold uppercase tracking-[0.14em]" style={{ color: brandTexto }}>
             Canal de pedidos
           </p>
           <h1 className="text-[22px] sm:text-[26px] font-display font-extrabold text-foreground leading-tight mt-1">
@@ -97,8 +102,8 @@ export default function MateriaisPortal() {
             { n: "3", t: "Você acompanha", d: "O selo muda conforme anda." },
           ].map((p) => (
             <div key={p.n} className="rounded-2xl border border-border bg-card/70 px-3.5 py-3">
-              <span className="inline-grid place-items-center w-6 h-6 rounded-full text-white text-[11px] font-display font-extrabold"
-                style={{ backgroundColor: brand }}>{p.n}</span>
+              <span className="inline-grid place-items-center w-6 h-6 rounded-full text-[11px] font-display font-extrabold"
+                style={{ backgroundColor: brand, color: brandFg }}>{p.n}</span>
               <p className="text-[13px] font-display font-bold text-foreground mt-1.5">{p.t}</p>
               <p className="text-[11.5px] font-body text-muted-foreground leading-snug">{p.d}</p>
             </div>

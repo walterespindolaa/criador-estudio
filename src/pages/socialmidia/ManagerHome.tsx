@@ -18,7 +18,7 @@ import { validateUpload } from "@/lib/upload-validation";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useManagerOutlet, MODULE_ICON } from "@/components/accounts/ManagerLayout";
+import { useManagerOutlet, MODULE_ICON } from "@/components/accounts/managerOutlet";
 import { readLastClient } from "@/components/accounts/ClientSwitcher";
 import { useCrmClients } from "@/hooks/useCrm";
 import { clienteInativo } from "@/lib/cliente-status";
@@ -219,7 +219,7 @@ function ManagerHomeSocialMidia() {
                 ? <><strong className="text-foreground">{counts.total}</strong> {counts.total === 1 ? "coisa precisa" : "coisas precisam"} de você hoje{counts.red > 0 ? <>, <span className="whitespace-nowrap font-medium text-red-600/90">{counts.red} urgente{counts.red > 1 ? "s" : ""}</span></> : null}. Comece pelo topo da lista.</>
                 : ativos > 0
                   ? <>Tudo em dia. Bom momento pra adiantar a semana.</>
-                  : <>Bora colocar a sua operação de pé.</>}
+                  : <>Bora colocar a sua operação de pé. Comece cadastrando o primeiro cliente.</>}
             </p>
           </div>
 
@@ -348,6 +348,21 @@ function ManagerHomeSocialMidia() {
       {clientesOpen && (
       <TooltipProvider delayDuration={120}>
         <div data-tour="gh-clientes" className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
+          {/* CARTEIRA VAZIA (pente fino 23/09/2026): antes a home dizia "bora
+              colocar a operação de pé" e não tinha nenhum botão. Agora o card
+              de "primeiro cliente" leva pro onboarding da agência, que cria o
+              cliente, conecta o Instagram e mostra o que fazer depois. */}
+          {clientesHome.length === 0 && (
+            <button type="button" data-tour-adiar="" onClick={() => navigate("/comecar-agencia?step=2")}
+              className="col-span-2 lg:col-span-3 text-left rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 p-5 flex items-center gap-4 transition-colors hover:bg-primary/10 min-h-[88px]">
+              <span className="w-12 h-12 rounded-xl bg-primary text-primary-foreground grid place-items-center shrink-0"><Users className="h-6 w-6" /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-base font-display font-bold text-foreground">Cadastrar o primeiro cliente</span>
+                <span className="block text-sm font-body text-muted-foreground">Nome e @ bastam. Em dois minutos você já manda o primeiro post pra aprovação.</span>
+              </span>
+              <ArrowRight className="h-5 w-5 text-primary shrink-0" />
+            </button>
+          )}
           {clientesHome.map((c) => {
             const cor = (c as { color?: string | null }).color || "#0F6E56";
             const h = healthByClient.get(c.id);

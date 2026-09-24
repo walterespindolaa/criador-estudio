@@ -37,7 +37,6 @@ import {
 import { RoteiroEditor, type RoteiroFormValor } from "@/components/captacao/RoteiroEditor";
 import { DiaDeGravacao } from "@/components/captacao/DiaDeGravacao";
 import { useCenasIA } from "@/hooks/useCenasIA";
-import { baixarGuiaGravacao } from "@/lib/guiaGravacaoPdf";
 import { useLinkPreviews } from "@/hooks/useLinkPreviews";
 import { parseRefLinks, isRefLink } from "@/lib/refLinks";
 import { RoteirosDoDia } from "@/components/captacao/RoteirosDoDia";
@@ -1841,6 +1840,8 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
       // adivinhar nada nem depender do DOM.
       const capasMapa: Record<string, string | null> = {};
       for (const [k, v] of Object.entries(capasGuia)) capasMapa[k] = v?.thumb ?? null;
+      // jsPDF (~300 KB) só baixa na hora de gerar o guia, não ao abrir a tela.
+      const { baixarGuiaGravacao } = await import("@/lib/guiaGravacaoPdf");
       await baixarGuiaGravacao({
         cliente: pasta.nome, mesLabel: monthLabel(month), roteiros: roteirosDoGuia,
         logoCliente, logoAgencia, elaboradoPor, cor: corCliente, capas: capasMapa,

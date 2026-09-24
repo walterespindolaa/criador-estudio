@@ -4,12 +4,13 @@ import { ArrowRight, Boxes, Briefcase, Clock, Layers, Wallet } from "lucide-reac
 import { Card } from "@/components/ui/card";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { useProfile } from "@/hooks/useProfile";
-import { MODULE_ICON, useManagerOutlet } from "@/components/accounts/ManagerLayout";
+import { MODULE_ICON, useManagerOutlet } from "@/components/accounts/managerOutlet";
 import { useModules } from "@/hooks/useModules";
 import { ROTULO_PAPEL, useFilaDoParceiro, useMeusCaches, useMinhasAgencias, useMinhasMarcas } from "@/hooks/useParceiro";
 import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
 import { hojeBR } from "@/lib/date-br";
 import { cn } from "@/lib/utils";
+import { brlReais } from "@/lib/money";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    A HOME DO PARCEIRO PURO (designer, editor, copy, tráfego)
@@ -21,7 +22,7 @@ import { cn } from "@/lib/utils";
    e quanto tenho a receber. Os módulos do Cria ficam como convite, no fim.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const brl = (v: number) => `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const brl = brlReais;
 
 /* Uma cor por módulo, a mesma família das seis da LP. Card branco com texto
    cinza não diferencia nada: o ícone colorido é o que faz a pessoa reconhecer

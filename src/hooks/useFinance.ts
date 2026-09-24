@@ -310,9 +310,18 @@ export function useEnsureMonthly() {
       // O upsert acima NÃO atualiza instâncias que já existem. Então mudar o
       // "Dia de pagamento" ou o valor mensal do cliente não refletia no mês.
       // Aqui sincronizamos SÓ as instâncias pendentes com o valor/dia atual.
-      for (const r of rows) {
-        await sbFrom("fin_monthly").update({ due_date: r.due_date, amount: r.amount } as never)
-          .eq("crm_client_id", r.crm_client_id).eq("month_ref", r.month_ref).eq("status", "pendente");
+      // Uma ida só (RPC fin_monthly_sincronizar, migration 20260923000002).
+      // Antes era um UPDATE por cliente, em série, toda vez que o Caixa abria.
+      const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+      const { error: syncErr } = await rpc("fin_monthly_sincronizar", {
+        _rows: rows.map((r) => ({ crm_client_id: r.crm_client_id, month_ref: r.month_ref, due_date: r.due_date, amount: r.amount })),
+      });
+      if (syncErr) {
+        // Banco ainda sem a RPC: cai no caminho antigo pra não travar o Caixa.
+        for (const r of rows) {
+          await sbFrom("fin_monthly").update({ due_date: r.due_date, amount: r.amount } as never)
+            .eq("crm_client_id", r.crm_client_id).eq("month_ref", r.month_ref).eq("status", "pendente");
+        }
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["fin-monthly", agencyOwnerId] }),

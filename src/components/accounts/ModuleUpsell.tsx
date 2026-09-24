@@ -5,7 +5,7 @@ import {
   Camera, MapPin, FileText, Clapperboard,
 } from "lucide-react";
 import { useModules } from "@/hooks/useModules";
-import { useManagerOutlet } from "@/components/accounts/ManagerLayout";
+import { useManagerOutlet } from "@/components/accounts/managerOutlet";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";

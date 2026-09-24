@@ -100,11 +100,24 @@ serve(async (req) => {
     try {
       const { data: profile } = await admin
         .from("profiles")
-        .select("stripe_subscription_id")
+        .select("stripe_subscription_id, stripe_customer_id")
         .eq("id", user.id)
         .single();
 
-      if (profile?.stripe_subscription_id) {
+      /* TODAS AS ASSINATURAS DO CUSTOMER (pente fino 23/09/2026, B5). Antes só a
+         assinatura-base era cancelada; módulos, assentos de colaborador e
+         pacotes de cliente são assinaturas separadas no mesmo customer e
+         continuavam cobrando de uma conta que já não existia. */
+      if (profile?.stripe_customer_id) {
+        const lista = await stripe.subscriptions.list({ customer: profile.stripe_customer_id as string, status: "all", limit: 100 });
+        for (const sub of lista.data) {
+          if (sub.status === "canceled") continue;
+          try {
+            await stripe.subscriptions.cancel(sub.id);
+            console.log("[delete-account] stripe subscription canceled:", sub.id);
+          } catch (e) { console.error("[delete-account] cancel", sub.id, e); }
+        }
+      } else if (profile?.stripe_subscription_id) {
         await stripe.subscriptions.cancel(profile.stripe_subscription_id as string);
         console.log("[delete-account] stripe subscription canceled:", profile.stripe_subscription_id);
       }

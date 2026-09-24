@@ -1,15 +1,32 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import fs from "fs";
 import { componentTagger } from "lovable-tagger";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 
 // Source maps do Sentry: só ligam quando as envs SENTRY_AUTH_TOKEN + SENTRY_ORG
 // existem no build (setar no Vercel). Sem elas, o build fica IDÊNTICO ao de hoje
-// (sem sourcemap, sem plugin) — nada quebra. Com elas, o build gera os maps, sobe
+// (sem sourcemap, sem plugin): nada quebra. Com elas, o build gera os maps, sobe
 // pro Sentry e APAGA os .map do dist (não ficam públicos). Assim o stack no Sentry
 // mostra a linha real do código, não a minificada.
 const sentryUpload = !!process.env.SENTRY_AUTH_TOKEN && !!process.env.SENTRY_ORG;
+
+// Carimba o service worker com o id do build (ver public/sw.js). Roda depois
+// que o dist está pronto; o sw.js é copiado do public/ como está, então a
+// troca é feita no arquivo final.
+function swBuildId() {
+  return {
+    name: "cria-sw-build-id",
+    apply: "build" as const,
+    closeBundle() {
+      const alvo = path.resolve(__dirname, "dist/sw.js");
+      if (!fs.existsSync(alvo)) return;
+      const id = Date.now().toString(36);
+      fs.writeFileSync(alvo, fs.readFileSync(alvo, "utf8").replace(/__BUILD_ID__/g, id));
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -22,6 +39,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    swBuildId(),
     mode === "development" && componentTagger(),
     sentryUpload && sentryVitePlugin({
       org: process.env.SENTRY_ORG,

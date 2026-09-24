@@ -143,6 +143,19 @@ export default function Assinar() {
         },
       });
       if (error) throw error;
+      /* Já assinante: o servidor trocou o plano na assinatura existente (com
+         rateio) em vez de abrir outro checkout. Nada de segunda cobrança. */
+      if (data?.changed) {
+        toast.success(`Plano trocado pra ${String(data.plan ?? planId)}. A diferença é cobrada proporcionalmente na próxima fatura.`);
+        setLoadingPlan(null);
+        setTimeout(() => { window.location.href = "/app"; }, 900);
+        return;
+      }
+      if (data?.same) {
+        toast("Esse já é o seu plano atual.");
+        setLoadingPlan(null);
+        return;
+      }
       if (data?.url) {
         window.location.href = data.url;
       } else {

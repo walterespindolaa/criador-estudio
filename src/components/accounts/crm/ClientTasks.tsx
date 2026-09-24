@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { confirmar } from "@/components/shared/Confirm";
+import { hojeBR } from "@/lib/date-br";
 
 const PRIO_CLASS: Record<CrmTaskPriority, string> = {
   baixa: "bg-muted text-muted-foreground",
@@ -31,7 +32,7 @@ export function ClientTasks({ clientId }: { clientId: string }) {
   const [title, setTitle] = useState("");
   const [due, setDue] = useState("");
   const [editing, setEditing] = useState<CrmTask | null>(null);
-  const today = new Date().toISOString().split("T")[0];
+  const today = hojeBR(); // fuso BR, não UTC (depois das 21h o UTC já é amanhã)
 
   const tasks = useMemo(() => {
     return all.filter((t) => t.crm_client_id === clientId).sort((a, b) => {

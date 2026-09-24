@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { confirmar } from "@/components/shared/Confirm";
 import {
   useReferenceLibrary,
   useUserLibrary,
@@ -205,6 +206,7 @@ const Biblioteca = () => {
   };
 
   const deleteItem = async (type: SheetType, id: string) => {
+    if (!(await confirmar({ titulo: "Excluir da biblioteca?", acao: "Excluir", destrutivo: true }))) return;
     const table: LibraryUserTable = type === "hook" ? "user_hooks" : type === "format" ? "user_formats" : "user_prompts";
     try {
       await deleteLibraryItem.mutateAsync({ table, id });

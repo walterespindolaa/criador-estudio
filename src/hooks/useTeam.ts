@@ -168,3 +168,53 @@ export function useBuySeats() {
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Erro ao abrir o checkout."),
   });
 }
+
+/* ── CÓDIGO "ME ADICIONE NO CRIA" (pente fino 23/09/2026) ─────────────────
+   O parceiro que se cadastrou sozinho não tinha como chamar a agência. Ele
+   copia um código de 6 letras, manda no WhatsApp; a social mídia cola na
+   tela Equipe e o vínculo nasce sem convite por e-mail. RPCs na migration
+   20260923000002. `as never`: as RPCs ainda não estão nos tipos gerados. */
+type RpcSolto = (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+const rpc = supabase.rpc.bind(supabase) as unknown as RpcSolto;
+
+/** O código do parceiro logado (gera na primeira vez). */
+export function useMeuCodigoParceiro(habilitado = true) {
+  const { user } = useAuth();
+  return useQuery<string>({
+    queryKey: ["parceiro-codigo", user?.id],
+    enabled: !!user && habilitado,
+    staleTime: Infinity,
+    queryFn: async () => {
+      const { data, error } = await rpc("parceiro_meu_codigo");
+      if (error) throw new Error(error.message);
+      return String(data ?? "");
+    },
+  });
+}
+
+/** A agência cola o código e vincula o parceiro. */
+export function useVincularParceiroPorCodigo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (codigo: string) => {
+      const { data, error } = await rpc("agencia_vincular_parceiro", { _codigo: codigo });
+      if (error) throw new Error(error.message);
+      const r = (data ?? {}) as { ok?: boolean; erro?: string; nome?: string; papel?: string };
+      if (!r.ok) {
+        const msg: Record<string, string> = {
+          codigo_invalido: "Código inválido. São 6 letras e números, sem espaço.",
+          nao_encontrado: "Não achei ninguém com esse código. Confere com o parceiro?",
+          proprio_codigo: "Esse é o seu próprio código.",
+          muitas_tentativas: "Muitas tentativas. Espera um minuto e tenta de novo.",
+        };
+        throw new Error(msg[r.erro ?? ""] ?? "Não consegui vincular agora.");
+      }
+      return r;
+    },
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["team-members"] });
+      toast.success(`${r.nome ?? "Parceiro"} entrou na sua equipe de produção.`);
+    },
+    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Não consegui vincular."),
+  });
+}

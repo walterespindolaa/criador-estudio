@@ -9,6 +9,7 @@ import { useExtratoDoParceiro, type LinhaDoExtrato } from "@/hooks/useAgendaParc
 import { useProfile } from "@/hooks/useProfile";
 import { hojeBR } from "@/lib/date-br";
 import { toast } from "sonner";
+import { brlReais } from "@/lib/money";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    EXTRATO DO MÊS (circuito 12, 16/09/2026) · pedido do Walter
@@ -45,7 +46,7 @@ const FORMATO: Record<string, string> = {
 const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho",
   "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
-const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const brl = brlReais;
 const ddmm = (iso: string) => {
   const [, m, d] = iso.split("-");
   return `${d}/${m}`;

@@ -11,6 +11,13 @@ const TOKEN_ROUTES: { prefix: string; hasParam: boolean }[] = [
   { prefix: "/aprovar", hasParam: true },
   { prefix: "/proposta", hasParam: true },
   { prefix: "/cronograma", hasParam: true },
+  /* Rotas que nasceram depois da lista e ficaram vazando (pente fino 23/09/2026):
+     roteiros do cliente, cadastro/briefing, materiais, e o obrigado do checkout
+     (carrega o session_id do Stripe na query, que o claim-purchase aceita). */
+  { prefix: "/roteiros", hasParam: true },
+  { prefix: "/cadastro", hasParam: true },
+  { prefix: "/materiais", hasParam: true },
+  { prefix: "/app/obrigado", hasParam: false },
   { prefix: "/ativar", hasParam: false },
   { prefix: "/reset-password", hasParam: false },
 ];

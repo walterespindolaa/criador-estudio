@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ErroAoCarregar } from "@/components/shared/ErroAoCarregar";
 import { MoneyInput } from "@/components/shared/MoneyInput";
-import { useManagerOutlet } from "@/components/accounts/ManagerLayout";
+import { useManagerOutlet } from "@/components/accounts/managerOutlet";
 import { useModules } from "@/hooks/useModules";
 import { hojeBR } from "@/lib/date-br";
 import { cn } from "@/lib/utils";
 import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
 import { useAcoesLancamento, useEntreguesDoParceiro, useMeusCaches, useMeusCachesDetalhe, useMeusLancamentos, useMinhasAgencias, useMinhasMarcas, type LancamentoDoParceiro } from "@/hooks/useParceiro";
+import { brlReais } from "@/lib/money";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MEUS CACHÊS
@@ -26,7 +27,7 @@ import { useAcoesLancamento, useEntreguesDoParceiro, useMeusCaches, useMeusCache
    receber, quebra por agência, e lista peça a peça, com o card abrindo dali.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const brl = (v: number) => `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const brl = brlReais;
 const dataBR = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 /* PAGO É PAGO, E SÓ (Walter, 14/09/2026).
    Aqui havia um regex (/pago|recebid|quitad/) enquanto a RPC que soma os totais

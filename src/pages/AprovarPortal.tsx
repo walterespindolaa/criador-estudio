@@ -19,6 +19,7 @@ import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { LogoMarca } from "@/components/publico/CabecalhoPublico";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import { SolicitarMaterial } from "@/components/aprovar/SolicitarMaterial";
+import { shadeHex, readableFg, readableFgHex } from "@/lib/cor-legivel";
 
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
@@ -57,35 +58,6 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   ajuste_solicitado: { label: "Ajuste solicitado", cls: "bg-orange-100 text-orange-700" },
   aprovado: { label: "Aprovado", cls: "bg-green-100 text-green-700" },
 };
-
-// Escurece um hex (pct negativo) pra montar o gradiente do hero com a cor da marca.
-function shadeHex(hex: string, pct: number): string {
-  const clean = hex.replace("#", "");
-  if (clean.length !== 6) return hex;
-  const f = (i: number) => {
-    const v = parseInt(clean.slice(i, i + 2), 16);
-    const out = Math.min(255, Math.max(0, Math.round(v * (1 + pct / 100))));
-    return out.toString(16).padStart(2, "0");
-  };
-  return `#${f(0)}${f(2)}${f(4)}`;
-}
-
-// Luminância relativa (0 = preto, 1 = branco). Usada pra escolher texto legível
-// em cima da cor da marca: se a marca é clara (creme, bege, amarelo), texto
-// branco some aí o botão usa texto escuro.
-function luminance(hex: string): number {
-  const clean = hex.replace("#", "");
-  if (clean.length !== 6) return 1;
-  const ch = (i: number) => {
-    const v = parseInt(clean.slice(i, i + 2), 16) / 255;
-    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-  };
-  return 0.2126 * ch(0) + 0.7152 * ch(2) + 0.0722 * ch(4);
-}
-// Texto legível (HSL, pro --primary-foreground) em cima da cor da marca.
-function readableFg(hex: string): string {
-  return luminance(hex) > 0.6 ? "24 10% 12%" : "0 0% 100%";
-}
 
 function CardIG({ client, post, alfinetes, modoApontar, aoFixar, aoAbrirAlfinete, alfineteSelecionado }: {
   client: ClientHeader; post: PortalPost;
@@ -731,6 +703,8 @@ export default function AprovarPortal() {
   const heroBg = brand
     ? `linear-gradient(130deg, ${brand} 0%, ${shadeHex(brand, -32)} 100%)`
     : "linear-gradient(130deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.75) 100%)";
+  // Marca clara (creme, amarelo) deixava o título branco invisível no hero.
+  const heroFg = brand ? readableFgHex(brand) : "#ffffff";
 
   const settings = settingsQ.data ?? {};
   const tabs: { key: PortalTab; label: string; icon: typeof CheckSquare }[] = [
@@ -803,13 +777,13 @@ export default function AprovarPortal() {
             <LogoMarca src={c.client_logo} nome={c.client_name} tamanho="lg" comFallback
               formato="avatar" cor={brand ?? "#CE4A1D"} fundo="#ffffff" />
             <div className="min-w-0 flex-1">
-              <h1 className="font-display font-extrabold text-white text-3xl tracking-tight truncate">{c.client_name}</h1>
-              {c.manager_name && <p className="text-sm text-white/80 font-body mt-0.5">conteúdo por {c.manager_name}</p>}
+              <h1 className="font-display font-extrabold text-3xl tracking-tight truncate" style={{ color: heroFg }}>{c.client_name}</h1>
+              {c.manager_name && <p className="text-sm font-body mt-0.5" style={{ color: heroFg, opacity: 0.8 }}>conteúdo por {c.manager_name}</p>}
             </div>
             {total > 0 && (
               <div className="text-right shrink-0">
-                <p className="text-3xl font-display font-extrabold text-white leading-tight">{aprovados.length}<span className="text-white/60 text-xl"> de {total}</span></p>
-                <p className="text-[11px] text-white/80 font-body uppercase tracking-wider">posts aprovados</p>
+                <p className="text-3xl font-display font-extrabold leading-tight" style={{ color: heroFg }}>{aprovados.length}<span className="text-xl" style={{ opacity: 0.6 }}> de {total}</span></p>
+                <p className="text-[11px] font-body uppercase tracking-wider" style={{ color: heroFg, opacity: 0.8 }}>posts aprovados</p>
               </div>
             )}
           </motion.div>

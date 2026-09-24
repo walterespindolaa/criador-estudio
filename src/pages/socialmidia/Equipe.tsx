@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { cn } from "@/lib/utils";
 import {
   useTeamMembers, useCollabSeats, useInviteMember, useUpdateMemberStatus, useRemoveMember,
-  useSetMemberModule, useBuySeats, TEAM_MODULES, TEAM_MODULE_DEFAULT,
+  useSetMemberModule, useBuySeats, TEAM_MODULES, TEAM_MODULE_DEFAULT, useVincularParceiroPorCodigo,
 } from "@/hooks/useTeam";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { useCrmClients } from "@/hooks/useCrm";
@@ -28,6 +28,8 @@ export default function Equipe() {
 
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
+  const [codigoParceiro, setCodigoParceiro] = useState("");
+  const vincular = useVincularParceiroPorCodigo();
   /* TIPO DE ACESSO. Colaborador entra na conta e consome assento; parceiro
      (designer, editor, copy) só recebe cards, de graça, e não escolhe módulo
      nem cliente: o acesso dele nasce da delegação, card a card. */
@@ -42,7 +44,7 @@ export default function Equipe() {
   // o servidor já exclui esses papéis da contagem (manager-member-invite). A
   // tela contava todo mundo e bloqueava o convite com "Sem assentos livres"
   // depois do primeiro parceiro (auditoria 04/09).
-  const PAPEIS_PARCEIRO = ["designer", "editor_video", "copy", "trafego"];
+  const PAPEIS_PARCEIRO = ["designer", "editor_video", "copy", "trafego", "filmmaker"];
   const used = members.filter((m) => m.status === "ativo" && !PAPEIS_PARCEIRO.includes((m as { role?: string }).role ?? "")).length;
   const total = seats?.total ?? 1;
   const full = used >= total;
@@ -90,9 +92,21 @@ export default function Equipe() {
           <p className="text-sm font-display font-bold text-foreground">Assentos: {used} de {total} em uso</p>
           <p className="text-[12px] font-body text-muted-foreground">1 grátis + {seats?.paid ?? 0} pago(s). Cada assento extra é R$ 29,90/mês.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => buySeats.mutate((seats?.paid ?? 0) + 1)} disabled={buySeats.isPending}>
+        {/* COBRANÇA COM CONFIRMAÇÃO (pente fino 23/09/2026, UX 1). Com assinatura
+            ativa, um clique aqui alterava o Stripe na hora, com pró-rata, sem
+            perguntar. Agora diz o valor e o novo total antes. */}
+        <Button variant="outline" size="sm" disabled={buySeats.isPending}
+          onClick={async () => {
+            const novos = (seats?.paid ?? 0) + 1;
+            const ok = await confirmar({
+              titulo: `Adicionar 1 assento por R$ 29,90/mês?`,
+              descricao: `Você passa a ter ${novos} assento${novos === 1 ? "" : "s"} pago${novos === 1 ? "" : "s"} (R$ ${(novos * 29.9).toFixed(2).replace(".", ",")}/mês no total). ${(seats?.paid ?? 0) > 0 ? "A diferença deste mês entra proporcional na próxima fatura." : "Você vai pro checkout pra confirmar o pagamento."}`,
+              acao: "Adicionar e cobrar",
+            });
+            if (ok) buySeats.mutate(novos);
+          }}>
           {buySeats.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <CreditCard className="h-4 w-4 mr-1.5" />}
-          Adicionar assento
+          Adicionar assento (R$ 29,90/mês)
         </Button>
         {(seats?.paid ?? 0) > 0 && (
           <Button variant="ghost" size="sm" onClick={() => void openPortal()} disabled={portalLoading}
@@ -103,7 +117,18 @@ export default function Equipe() {
         )}
       </div>
 
-      <Button data-tour="eq-convidar" onClick={openInvite}><UserPlus className="h-4 w-4 mr-2" /> Convidar colaborador</Button>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <Button data-tour="eq-convidar" onClick={openInvite} className="min-h-[44px]"><UserPlus className="h-4 w-4 mr-2" /> Convidar colaborador</Button>
+        {/* Parceiro que já tem conta no Cria manda o código dele pelo WhatsApp;
+            a social mídia cola aqui e pronto, sem e-mail de convite. */}
+        <form className="flex items-center gap-2" onSubmit={(e) => { e.preventDefault(); if (codigoParceiro.trim()) vincular.mutate(codigoParceiro, { onSuccess: () => setCodigoParceiro("") }); }}>
+          <Input value={codigoParceiro} onChange={(e) => setCodigoParceiro(e.target.value.toUpperCase())} placeholder="Código do parceiro (ex.: K7M2XP)"
+            maxLength={8} className="h-11 w-full sm:w-64 rounded-xl uppercase tracking-widest font-mono" aria-label="Código do parceiro" />
+          <Button type="submit" variant="outline" className="min-h-[44px] shrink-0" disabled={vincular.isPending || codigoParceiro.trim().length < 6}>
+            {vincular.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Adicionar"}
+          </Button>
+        </form>
+      </div>
 
       {/* Lista */}
       {isLoading ? (
@@ -162,7 +187,7 @@ export default function Equipe() {
             const enabled = new Set(m.permissions.map((p) => p.module_code));
             const scopedPerm = m.permissions.find((p) => !p.all_clients && p.client_ids?.length);
             const paused = m.status === "pausado";
-            const ROTULO: Record<string, string> = { designer: "Designer", editor_video: "Editor de vídeo", copy: "Copy", trafego: "Tráfego" };
+            const ROTULO: Record<string, string> = { designer: "Designer", editor_video: "Editor de vídeo", copy: "Copy", trafego: "Tráfego", filmmaker: "Captação / filmmaker" };
             const papelParc = ROTULO[m.role ?? ""];
             return (
               <div key={m.id} className={cn("bg-card border border-border rounded-2xl p-4", paused && "opacity-70")}>
@@ -278,6 +303,7 @@ export default function Equipe() {
                   {[
                     { v: "designer", r: "Designer" },
                     { v: "editor_video", r: "Editor de vídeo" },
+                    { v: "filmmaker", r: "Captação / filmmaker" },
                     { v: "copy", r: "Copy" },
                     { v: "trafego", r: "Tráfego" },
                   ].map((o) => (

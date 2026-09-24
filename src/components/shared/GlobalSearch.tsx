@@ -37,10 +37,6 @@ export function GlobalSearch() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const { ideas = [] } = useIdeas();
-  const { posts = [] } = usePosts();
-  const { data: clientes = [] } = useCrmClients();
-
   // Cmd+K (Mac) e Ctrl+K (Windows). "/" também abre, como no Slack e no GitHub,
   // desde que a pessoa não esteja digitando num campo.
   useEffect(() => {
@@ -64,25 +60,11 @@ export function GlobalSearch() {
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  const termo = norm(q.trim());
-
-  const achados = useMemo(() => {
-    if (termo.length < 2) return { ideias: [], posts: [], clientes: [] };
-    const bate = (s?: string | null) => !!s && norm(s).includes(termo);
-    return {
-      ideias: ideas.filter((i) => bate(i.title) || bate(i.notes)).slice(0, 6),
-      posts: posts.filter((p) => bate(p.title) || bate(p.caption) || bate(p.hook)).slice(0, 6),
-      clientes: clientes.filter((c) => bate(c.name) || bate(c.instagram)).slice(0, 6),
-    };
-  }, [termo, ideas, posts, clientes]);
-
   const ir = (rota: string) => {
     setOpen(false);
     setQ("");
     navigate(rota);
   };
-
-  const vazio = termo.length >= 2 && !achados.ideias.length && !achados.posts.length && !achados.clientes.length;
 
   if (!user) return null;
 
@@ -108,6 +90,35 @@ export function GlobalSearch() {
           value={q}
           onValueChange={setQ}
         />
+        {/* Os dados só carregam com a busca ABERTA (pente fino 23/09/2026):
+            antes ideias, posts e clientes eram puxados no boot de toda tela,
+            no criador e na agência, só pra ficar de prontidão. */}
+        {open && <Resultados q={q} ir={ir} />}
+      </CommandDialog>
+    </>
+  );
+}
+
+function Resultados({ q, ir }: { q: string; ir: (rota: string) => void }) {
+  const { ideas = [] } = useIdeas();
+  const { posts = [] } = usePosts();
+  const { data: clientes = [] } = useCrmClients();
+  const termo = norm(q.trim());
+
+  const achados = useMemo(() => {
+    if (termo.length < 2) return { ideias: [], posts: [], clientes: [] };
+    const bate = (s?: string | null) => !!s && norm(s).includes(termo);
+    return {
+      ideias: ideas.filter((i) => bate(i.title) || bate(i.notes)).slice(0, 6),
+      posts: posts.filter((p) => bate(p.title) || bate(p.caption) || bate(p.hook)).slice(0, 6),
+      clientes: clientes.filter((c) => bate(c.name) || bate(c.instagram)).slice(0, 6),
+    };
+  }, [termo, ideas, posts, clientes]);
+
+  const vazio = termo.length >= 2 && !achados.ideias.length && !achados.posts.length && !achados.clientes.length;
+
+  return (
+    <>
         <CommandList>
           {termo.length < 2 && (
             <div className="px-4 py-6 text-center">
@@ -195,7 +206,6 @@ export function GlobalSearch() {
           </span>
           <span className="text-[11px] font-body text-muted-foreground">esc fecha</span>
         </div>
-      </CommandDialog>
     </>
   );
 }

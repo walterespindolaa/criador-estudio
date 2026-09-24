@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * PREFETCH DAS TELAS MAIS USADAS.
@@ -12,20 +13,42 @@ import { useEffect } from "react";
  * cache do SW: a troca de tela é instantânea.
  *
  * `requestIdleCallback` garante que isso NUNCA compete com o render inicial.
+ *
+ * POR PAPEL (pente fino 23/09/2026): antes baixava as 6 telas de criador E de
+ * agência pra todo mundo, inclusive pra quem estava só numa página pública de
+ * aprovação. Agora: sem sessão, não baixa nada; criador baixa as do criador;
+ * agência baixa as da agência. E respeita "economia de dados" do celular.
  */
 export function RoutePrefetch() {
+  const { user } = useAuth();
+
   useEffect(() => {
+    if (!user) return;
+    const con = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    if (con?.saveData || con?.effectiveType === "2g" || con?.effectiveType === "slow-2g") return;
+
+    const path = window.location.pathname;
+    const intencao = (user.user_metadata as { account_intent?: string } | undefined)?.account_intent;
+    const agencia = path.startsWith("/socialmidia") || (path === "/" && intencao === "manager");
+    const parceiro = intencao === "parceiro";
+
     const baixar = () => {
-      const telas = [
-        () => import("@/pages/app/Ideias"),
-        () => import("@/pages/app/Criando"),
-        () => import("@/pages/app/Dashboard"),
-        () => import("@/pages/socialmidia/ManagerHome"),
-        () => import("@/pages/socialmidia/Clientes"),
-        () => import("@/pages/socialmidia/ClienteHub"),
-      ];
-      // Em série, não em paralelo: 6 chunks de uma vez roubariam a banda de
-      // quem ainda está carregando dado de verdade.
+      const telas = parceiro
+        ? [() => import("@/pages/app/MinhasDemandas")]
+        : agencia
+          ? [
+            () => import("@/pages/socialmidia/ManagerHome"),
+            () => import("@/pages/socialmidia/Clientes"),
+            () => import("@/pages/socialmidia/ClienteHub"),
+            () => import("@/pages/socialmidia/Aprovacoes"),
+          ]
+          : [
+            () => import("@/pages/app/Ideias"),
+            () => import("@/pages/app/Criando"),
+            () => import("@/pages/app/Dashboard"),
+          ];
+      // Em série, não em paralelo: vários chunks de uma vez roubariam a banda
+      // de quem ainda está carregando dado de verdade.
       void telas.reduce<Promise<unknown>>(
         (fila, carregar) => fila.then(() => carregar().catch(() => {})),
         Promise.resolve(),
@@ -42,7 +65,7 @@ export function RoutePrefetch() {
     }
     const t = setTimeout(baixar, 3000);
     return () => clearTimeout(t);
-  }, []);
+  }, [user]);
 
   return null;
 }

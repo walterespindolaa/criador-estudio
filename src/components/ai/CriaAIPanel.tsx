@@ -116,8 +116,10 @@ export function CriaAIPanel() {
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const { profile } = useProfile();
-  const { posts } = usePosts();
-  const { ideas } = useIdeas();
+  // Só busca posts e ideias com o painel aberto: fechado, ele era mais uma
+  // aba puxando o kanban inteiro no boot de toda tela (pente fino 23/09).
+  const { posts } = usePosts({ enabled: open });
+  const { ideas } = useIdeas({ enabled: open });
   const { brandContext, hasBrandContext } = useBrandContext();
   // A Cria IA é um painel global, não tem rota própria: o tour dela é acionado
   // por id daqui de dentro, igual ao tour do editor de post.

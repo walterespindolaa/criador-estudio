@@ -47,6 +47,7 @@ import { parseRefLinks, refLinkHref } from "@/lib/refLinks";
 import { FAIXAS, FAIXA_LABEL, FAIXA_HINT, faixaDoItem, type Faixa } from "@/lib/periodos-agenda";
 // Regra de cor compartilhada com a aba Tarefas do Cria Gestão (era daqui, virou util).
 import { corDoItem, corDaTarefa as corDaTarefaCompartilhada } from "@/lib/cores-agenda";
+import { ROTULO_ETAPA } from "@/lib/labels";
 
 // Status dos posts na agenda (mesmas cores do kanban de 5 status).
 const POST_STATUS: Record<string, { label: string; cls: string }> = {
@@ -60,7 +61,7 @@ const POST_STATUS: Record<string, { label: string; cls: string }> = {
 // Rótulos dos estados do kanban do cliente (Tarefa B), pro pill do card. Cobre
 // todas as colunas do Criando.tsx porque a Agenda agora mostra qualquer post do
 // cliente COM data, inclusive os que ainda estão em coluna anterior a "Pronto".
-const CRIA_POST_STATUS: Record<string, string> = { ideia: "Ideia", roteiro: "Planejamento", gravando: "Produzindo", editando: "Pronto", agendado: "Agendado", publicado: "Publicado" };
+const CRIA_POST_STATUS: Record<string, string> = ROTULO_ETAPA;
 // Cor identidade dos posts do Cria do cliente na agenda (verde, distinta dos demais tipos).
 const CRIA_POST_COLOR = "#059669";
 
@@ -294,7 +295,7 @@ export default function AgendaCriacao() {
   const [postClients, setPostClients] = useState<Set<string>>(new Set());
   const togglePostClient = (id: string | null) => setPostClients((prev) => {
     if (id === null) return new Set();
-    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+    const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n;
   });
   // Faixa "Posts de:" (chips de cliente) minimizável, persistida. Com muitos
   // clientes ela ocupa a tela toda, então dá pra recolher.
@@ -1042,16 +1043,16 @@ export default function AgendaCriacao() {
               ))}
             </div>
             <div className="flex items-center gap-1">
-              <Button variant="outline" size="sm" className="h-8 w-8 p-0"
-                onClick={() => setWeekStart((w) => { const n = new Date(w); view === "mes" ? n.setMonth(n.getMonth() - 1) : n.setDate(n.getDate() - 7); return n; })}>‹</Button>
+              <Button aria-label="Anterior" variant="outline" size="sm" className="h-9 w-9 p-0"
+                onClick={() => setWeekStart((w) => { const n = new Date(w); if (view === "mes") n.setMonth(n.getMonth() - 1); else n.setDate(n.getDate() - 7); return n; })}>‹</Button>
               <span className="text-xs font-body text-muted-foreground px-1">
                 {view === "mes"
                   ? weekStart.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
                   : `${shortDate(days[0])}, ${shortDate(days[6])}`}
               </span>
               <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => setWeekStart(parseDateOnly(hojeBR()))}>Hoje</Button>
-              <Button variant="outline" size="sm" className="h-8 w-8 p-0"
-                onClick={() => setWeekStart((w) => { const n = new Date(w); view === "mes" ? n.setMonth(n.getMonth() + 1) : n.setDate(n.getDate() + 7); return n; })}>›</Button>
+              <Button aria-label="Próximo" variant="outline" size="sm" className="h-9 w-9 p-0"
+                onClick={() => setWeekStart((w) => { const n = new Date(w); if (view === "mes") n.setMonth(n.getMonth() + 1); else n.setDate(n.getDate() + 7); return n; })}>›</Button>
             </div>
           </div>
         </div>

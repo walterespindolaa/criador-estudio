@@ -50,6 +50,8 @@ import { InternalTagPicker } from "@/components/shared/InternalTagPicker";
 import { useClientHashtags, blocoParaColar, LIMITE_HASHTAGS_POST } from "@/hooks/useClientHashtags";
 import { usePostTags, usePostInternalTags, useSetPostInternalTags, POST_TAG_DOT_CLS, type PostTag } from "@/hooks/usePostTags";
 import { TAG_COLOR_CLS } from "@/hooks/useCrm";
+import { ROTULO_APROVACAO } from "@/lib/labels";
+import { useMoverPorToque, AlcaMover } from "@/components/shared/MoverPorToque";
 
 const PLATFORMS = ["instagram", "tiktok", "youtube"];
 const FORMATS = ["reels", "carrossel", "foto", "story", "video"];
@@ -135,11 +137,11 @@ function ApprovalHistory({ postId }: { postId: string }) {
   );
 }
 const STATUS: Record<string, { label: string; cls: string }> = {
-  em_producao: { label: "Em produção", cls: "bg-violet-100 text-violet-700" },
-  pendente: { label: "Aguardando cliente", cls: "bg-amber-100 text-amber-700" },
-  ajuste_solicitado: { label: "Ajuste solicitado", cls: "bg-orange-100 text-orange-700" },
-  aprovado: { label: "Aprovado", cls: "bg-green-100 text-green-700" },
-  postado: { label: "Postado", cls: "bg-slate-200 text-slate-600" },
+  em_producao: { label: ROTULO_APROVACAO.em_producao, cls: "bg-violet-100 text-violet-700" },
+  pendente: { label: ROTULO_APROVACAO.pendente, cls: "bg-amber-100 text-amber-700" },
+  ajuste_solicitado: { label: ROTULO_APROVACAO.ajuste_solicitado, cls: "bg-orange-100 text-orange-700" },
+  aprovado: { label: ROTULO_APROVACAO.aprovado, cls: "bg-green-100 text-green-700" },
+  postado: { label: ROTULO_APROVACAO.postado, cls: "bg-slate-200 text-slate-600" },
 };
 // 5 status: post nasce em produção; a social mídia libera pro cliente (aguardando);
 // cliente aprova ou pede ajuste; depois de publicado, vai pra Postado.
@@ -1296,14 +1298,17 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog 
 
   const today = calYmd(new Date());
   const dropOn = (day: string) => { if (dragId) onMove(dragId, day); setDragId(null); setOverDay(null); };
+  // No toque não existe arraste: alça no card + toque no dia (ver MoverPorToque).
+  const mover = useMoverPorToque(onMove);
 
   return (
     <div>
+      {mover.banner}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setAnchor((a) => { const n = new Date(a); n.setMonth(n.getMonth() - 1); return n; })}>‹</Button>
+          <Button variant="outline" size="sm" className="h-9 w-9 p-0" aria-label="Mês anterior" onClick={() => setAnchor((a) => { const n = new Date(a); n.setMonth(n.getMonth() - 1); return n; })}>‹</Button>
           <span className="text-sm font-display font-bold text-foreground px-2 capitalize">{anchor.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</span>
-          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setAnchor((a) => { const n = new Date(a); n.setMonth(n.getMonth() + 1); return n; })}>›</Button>
+          <Button variant="outline" size="sm" className="h-9 w-9 p-0" aria-label="Próximo mês" onClick={() => setAnchor((a) => { const n = new Date(a); n.setMonth(n.getMonth() + 1); return n; })}>›</Button>
           <Button variant="outline" size="sm" className="h-8 px-2 text-xs ml-1" onClick={() => setAnchor(new Date())}>Hoje</Button>
         </div>
       </div>
@@ -1323,22 +1328,30 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog 
               onDragOver={(e) => { e.preventDefault(); if (overDay !== iso) setOverDay(iso); }}
               onDragLeave={() => setOverDay((o) => (o === iso ? null : o))}
               onDrop={() => dropOn(iso)}
+              onClick={() => { mover.soltarEm(iso); }}
               className={`min-h-[104px] rounded-xl border p-2 flex flex-col gap-1.5 transition-colors
                 ${isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background"}
                 ${outMonth ? "opacity-45" : ""}
-                ${overDay === iso ? "ring-2 ring-primary/40 border-primary/60 bg-primary/5" : ""}`}>
+                ${overDay === iso ? "ring-2 ring-primary/40 border-primary/60 bg-primary/5" : ""}
+                ${mover.movendo ? "cursor-pointer ring-1 ring-primary/30" : ""}`}>
               <div className="flex items-center justify-between">
-                <span className={`text-sm font-display font-bold ${isToday ? "text-primary" : "text-foreground"}`}>{d.getDate()}</span>
-                <button onClick={() => onNewAt(iso)} className="text-muted-foreground hover:text-primary" aria-label="Novo post neste dia"><Plus className="h-3.5 w-3.5" /></button>
+                <span className={`text-sm font-display font-bold ${isToday ? "text-primary" : "text-foreground"}`}>
+                  {d.getDate()}
+                  {/* No celular o cabeçalho de dias da semana some: o dia vai junto do número. */}
+                  <span className="lg:hidden ml-1 text-[10px] font-body font-semibold uppercase text-muted-foreground">{CAL_WD[d.getDay()]}</span>
+                </span>
+                <button onClick={(e) => { e.stopPropagation(); onNewAt(iso); }} className="grid place-items-center h-7 w-7 -mr-1 text-muted-foreground hover:text-primary" aria-label="Novo post neste dia"><Plus className="h-3.5 w-3.5" /></button>
               </div>
               {list.map((p) => {
                 const st = STATUS[(p.approval_status ?? "pendente") as ApprovalKey];
                 return (
-                  <button key={p.id} draggable
+                  <div key={p.id} className="relative">
+                  <AlcaMover mover={mover} id={p.id} className="absolute -top-1.5 -right-1.5 z-10" />
+                  <button draggable
                     onDragStart={() => setDragId(p.id)} onDragEnd={() => { setDragId(null); setOverDay(null); }}
-                    type="button" onClick={() => onOpen(p)}
+                    type="button" onClick={(e) => { if (mover.movendo) { e.stopPropagation(); mover.soltarEm(iso); return; } e.stopPropagation(); onOpen(p); }}
                     style={{ ...formatColorVars(p.format), borderLeftWidth: 3 }}
-                    className={`rounded-lg border border-border ${FORMAT_BORDER_CLASS} bg-card px-1.5 py-1 text-left hover:bg-muted/40 transition-shadow cursor-grab active:cursor-grabbing ${dragId === p.id ? "opacity-50 shadow-lg" : ""}`}>
+                    className={`relative rounded-lg border border-border ${FORMAT_BORDER_CLASS} bg-card px-1.5 py-1 text-left hover:bg-muted/40 transition-shadow cursor-grab active:cursor-grabbing ${dragId === p.id ? "opacity-50 shadow-lg" : ""}`}>
                     <span className={`text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full ${st?.cls ?? ""}`}>{st?.label ?? "Pendente"}</span>
                     <p className="text-[11px] font-body font-semibold text-foreground leading-tight truncate mt-0.5">{p.title}</p>
                     {/* Formato e etiquetas na MESMA linha: a célula é apertada, então
@@ -1348,6 +1361,7 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog 
                       <TagDots ids={tagsByPost[p.id]} catalog={tagCatalog} />
                     </span>
                   </button>
+                  </div>
                 );
               })}
             </div>
@@ -1358,10 +1372,14 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog 
       {/* Posts ainda sem data: arraste pra um dia do calendário. */}
       {semData.length > 0 && (
         <div className="mt-4 rounded-xl border border-dashed border-border p-3">
-          <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">Sem data ({semData.length}), arraste pra um dia</p>
+          <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            Sem data ({semData.length})<span className="[@media(hover:none)]:hidden">, arraste pra um dia</span><span className="hidden [@media(hover:none)]:inline">, toque na alça e depois no dia</span>
+          </p>
           <div className="flex gap-2 flex-wrap">
             {semData.map((p) => (
-              <button key={p.id} draggable
+              <div key={p.id} className="relative">
+              <AlcaMover mover={mover} id={p.id} className="absolute -top-1.5 -right-1.5 z-10" />
+              <button draggable
                 onDragStart={() => setDragId(p.id)} onDragEnd={() => { setDragId(null); setOverDay(null); }}
                 type="button" onClick={() => onOpen(p)}
                 style={{ ...formatColorVars(p.format), borderLeftWidth: 3 }}
@@ -1372,6 +1390,7 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog 
                   <TagDots ids={tagsByPost[p.id]} catalog={tagCatalog} />
                 </span>
               </button>
+              </div>
             ))}
           </div>
         </div>

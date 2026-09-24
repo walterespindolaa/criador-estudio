@@ -65,14 +65,17 @@ export function useLinkPreviews(links: string[]) {
     if (faltando.length === 0) return;
 
     let cancelado = false;
+    // Teto por abertura de tela: cada busca é scrape pago no Apify. Uma tela
+    // com 40 links sem capa não pode virar 40 cobranças de uma vez.
+    const TETO = 6;
     (async () => {
-      for (const url of faltando) {
+      for (const url of faltando.slice(0, TETO)) {
         if (cancelado) return;
-        try {
-          const { data, error } = await supabase.functions.invoke("saved-fetch", { body: { url } });
-          if (error) continue;
-          const r = data as { thumbnail?: string | null; caption?: string | null; author?: string | null; platform?: string | null };
-          await sbFrom("link_previews").upsert({
+        // A falha também é gravada (thumb nula + fetched_at): antes, link que
+        // não tinha capa era buscado DE NOVO toda vez que a tela abria, pagando
+        // o scrape a cada tentativa. Com a linha no cache, ele sai de "faltando".
+        const gravar = (r?: { thumbnail?: string | null; caption?: string | null; author?: string | null; platform?: string | null }) =>
+          sbFrom("link_previews").upsert({
             url,
             platform: r?.platform ?? previaDeLink(url).plataforma,
             thumb_url: r?.thumbnail ?? null,
@@ -80,7 +83,11 @@ export function useLinkPreviews(links: string[]) {
             author: r?.author ?? null,
             fetched_at: new Date().toISOString(),
           }, { onConflict: "url" });
-        } catch { /* link problemático não pode travar a tela */ }
+        try {
+          const { data, error } = await supabase.functions.invoke("saved-fetch", { body: { url } });
+          if (error) { await gravar(); continue; }
+          await gravar(data as { thumbnail?: string | null; caption?: string | null; author?: string | null; platform?: string | null });
+        } catch { try { await gravar(); } catch { /* link problemático não pode travar a tela */ } }
       }
       if (!cancelado) void qc.invalidateQueries({ queryKey: ["link-previews", chave] });
     })();

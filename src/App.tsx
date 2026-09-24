@@ -10,9 +10,12 @@ import { AccountProvider } from "@/contexts/AccountContext";
 import { AuthOnlyRoute, ProtectedRoute } from "@/components/ProtectedRoute";
 import { useSouParceiro } from "@/hooks/useParceiro";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ConsentBanner } from "@/components/ConsentBanner";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import MetaPixelTracker from "@/components/MetaPixelTracker";
-import AppLayout from "./components/AppLayout";
+// AppLayout (casca do criador) também é lazy: quem entra pela LP, login ou
+// página pública de cliente não precisa baixar sidebar, tour e bell do app.
+const AppLayout = lazy(() => import("./components/AppLayout"));
 // Telas públicas/auth agora são lazy: não puxam framer-motion no boot de quem já
 // está logado (nem no primeiro paint de quem só quer entrar). Todas caem no mesmo
 // <Suspense> do topo. Login/Signup são o caminho crítico do primeiro acesso.
@@ -20,7 +23,7 @@ const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
-const ComecarAgencia = lazy(() => import("./pages/ComecarAgencia"));
+const OnboardingAgencia = lazy(() => import("./pages/OnboardingAgencia"));
 const Obrigado = lazy(() => import("./pages/Obrigado"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -259,7 +262,12 @@ function BioQuebrou() {
   );
 }
 
+/* BOUNDARY NA RAIZ (pente fino 23/09/2026). Sem ele, um erro na sidebar, no
+   sino ou em qualquer provider deixava a tela inteira em branco, sem botão.
+   O ErrorBoundary por rota continua (recarga automática em erro de chunk);
+   este é a última rede. */
 const App = () => (
+  <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <AccountProvider>
@@ -279,6 +287,7 @@ const App = () => (
         <BrowserRouter>
           <ScrollRestore />
           <MetaPixelTracker />
+          <ConsentBanner />
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
               <Route path="/" element={<RootRedirect />} />
@@ -299,13 +308,13 @@ const App = () => (
                   Google indexar cada assunto separadamente. */}
               <Route path="/bio/:slug/p/:itemSlug" element={<ErrorBoundary fallback={<BioQuebrou />}><BioPage /></ErrorBoundary>} />
               <Route path="/bio/:slug/blog/:itemSlug" element={<ErrorBoundary fallback={<BioQuebrou />}><BioPage /></ErrorBoundary>} />
-              <Route path="/aprovar/:token" element={<AprovarPortal />} />
+              <Route path="/aprovar/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><AprovarPortal /></ErrorBoundary>} />
               {/* Link SO de pedidos de material: mesmo token do de aprovacao. */}
-              <Route path="/materiais/:token" element={<MateriaisPortal />} />
-              <Route path="/proposta/:token" element={<PropostaPublica />} />
-              <Route path="/cronograma/:token" element={<CronogramaPublica />} />
-              <Route path="/roteiros/:token" element={<RoteirosPublica />} />
-              <Route path="/cadastro/:token" element={<CadastroPublico />} />
+              <Route path="/materiais/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><MateriaisPortal /></ErrorBoundary>} />
+              <Route path="/proposta/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><PropostaPublica /></ErrorBoundary>} />
+              <Route path="/cronograma/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><CronogramaPublica /></ErrorBoundary>} />
+              <Route path="/roteiros/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><RoteirosPublica /></ErrorBoundary>} />
+              <Route path="/cadastro/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><CadastroPublico /></ErrorBoundary>} />
               <Route path="/ativar" element={<Ativar />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
@@ -319,7 +328,7 @@ const App = () => (
                 <AuthOnlyRoute><Onboarding /></AuthOnlyRoute>
               } />
               <Route path="/comecar-agencia" element={
-                <AuthOnlyRoute><ComecarAgencia /></AuthOnlyRoute>
+                <AuthOnlyRoute><OnboardingAgencia /></AuthOnlyRoute>
               } />
               <Route path="/app/obrigado" element={
                 <AuthOnlyRoute><Obrigado /></AuthOnlyRoute>
@@ -436,6 +445,7 @@ const App = () => (
       </AccountProvider>
     </AuthProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState, type ReactNode } from "react";
-import { Navigate, Outlet, useLocation, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
+import { Navigate, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
@@ -14,6 +14,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { usePartner } from "@/hooks/usePartner";
 import { useModules, type ModuleWithStatus } from "@/hooks/useModules";
+import { MODULE_ICON, type ManagerOutletContext } from "./managerOutlet";
 import { useHasHubCria } from "@/hooks/useHubCria";
 import { useMyTeamPermissions } from "@/hooks/useTeam";
 import { cn } from "@/lib/utils";
@@ -36,12 +37,10 @@ import { VideoPublicConfirmProvider } from "@/contexts/VideoPublicConfirmContext
 import { HelpButton } from "@/components/tour/HelpButton";
 import { applySidebarColor } from "@/lib/sidebarTheme";
 import { applyThemeFont } from "@/components/settings/SettingsVisual";
+import { LABELS } from "@/lib/labels";
+import { brlCentavos } from "@/lib/money";
 
-const brl = (c: number) => `R$ ${(c / 100).toFixed(2).replace(".", ",")}`;
-// Ícone de cada módulo, casado pelo CÓDIGO DO CATÁLOGO (m.code). Fonte única da
-// verdade: o rail (desktop), o menu "Mais" (mobile) e os cards da home
-// (ManagerHome) leem daqui, pra o ícone do card ser o MESMO do menu lateral.
-export const MODULE_ICON: Record<string, LucideIcon> = { aprovapost_externo: Send, crm: Users2, financeiro: Wallet, hub_cria: Search, cria_captacao: Camera };
+const brl = brlCentavos;
 const MODULE_ROUTE: Record<string, string> = {
   aprovapost_externo: "/socialmidia/criapost",
   crm: "/socialmidia/criacrm",
@@ -67,7 +66,7 @@ const BUSINESS_NAV = [
   // Relatório GERENCIAL da operação (31/08): produção + financeiro + carteira
   // num período com comparativo. É visão de dona de negócio, então mora aqui.
   { to: "/socialmidia/relatorio", label: "Relatório", icon: BarChart3 },
-  { to: "/socialmidia/parceria", label: "Parceria", icon: Handshake },
+  { to: "/socialmidia/parceria", label: LABELS.indique, icon: Handshake },
   { to: "/socialmidia/comissoes", label: "Comissões", icon: DollarSign },
   { to: "/socialmidia/contas", label: "Suas contas", icon: Users },
 ] as const;
@@ -82,7 +81,7 @@ const HERO_TITLES: Record<string, string> = {
   "/socialmidia/criacrm": "Cria Gestão",
   "/socialmidia/criacaixa": "Cria Caixa",
   "/socialmidia/relatorio": "Relatório da operação",
-  "/socialmidia/parceria": "Parceria",
+  "/socialmidia/parceria": LABELS.indique,
   "/socialmidia/comissoes": "Comissões",
   "/socialmidia/contas": "Suas contas",
   "/socialmidia/aprovacoes": "Aprovações",
@@ -96,8 +95,8 @@ const HERO_TITLES: Record<string, string> = {
   "/socialmidia/lixeira": "Lixeira",
 };
 
-export type ManagerOutletContext = { openModule: (m: ModuleWithStatus) => void; openSettings: () => void; parceiroPuro: boolean };
-export function useManagerOutlet() { return useOutletContext<ManagerOutletContext>(); }
+// useManagerOutlet / MODULE_ICON moram em managerOutlet.ts (arquivo leve) pra
+// nenhuma tela puxar este layout inteiro só pra ler o contexto.
 
 export default function ManagerLayout() {
   const navigate = useNavigate();
@@ -386,7 +385,7 @@ export default function ManagerLayout() {
           {/* PARCERIA e LIXEIRA faltavam pro parceiro (Walter, 09/09/2026).
              Indicar o CRIA e ganhar comissão vale pra ele igual, e apagar sem
              ter como recuperar é o tipo de porta que não pode faltar. */}
-          {parceiroPuro && railNode(Handshake, "Parceria", { active: isActive("/socialmidia/parceria"), onClick: () => navigate("/socialmidia/parceria") })}
+          {parceiroPuro && railNode(Handshake, LABELS.indique, { active: isActive("/socialmidia/parceria"), onClick: () => navigate("/socialmidia/parceria") })}
           {BUSINESS_NAV.filter((n) => !parceiroPuro).map((n) => {
             const onClick = n.to === "/socialmidia/comissoes" ? onNavComissoes : () => navigate(n.to);
             return railNode(n.icon as LucideIcon, n.label, { active: isActive(n.to), onClick });
@@ -543,9 +542,12 @@ export default function ManagerLayout() {
             title: "Negócio",
             items: parceiroPuro
               // Parceiro puro: só as Comissões fazem sentido pra ele aqui.
+              // Walter pediu (09/09) que o parceiro também indique o Cria. O que
+              // confundia era o NOME: "Parceria" lido por um parceiro de produção
+              // parecia o papel dele. Virou "Indique e ganhe" (pente fino 23/09).
               ? [
                 { label: "Meus cachês", desc: "O que você tem a receber, entrega por entrega", icon: DollarSign as LucideIcon, onClick: () => navigate("/socialmidia/caches") },
-                { label: "Parceria", desc: "Indique o CRIA e ganhe comissão", icon: Handshake as LucideIcon, onClick: () => navigate("/socialmidia/parceria") },
+                { label: LABELS.indique, desc: "Indique o Cria e ganhe comissão", icon: Handshake as LucideIcon, onClick: () => navigate("/socialmidia/parceria") },
               ]
               : [
               ...(!actingAsTeam ? [{ label: "Equipe", desc: "Convidar colaboradores", icon: UserPlus as LucideIcon, onClick: () => navigate("/socialmidia/equipe") }] : []),

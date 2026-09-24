@@ -47,6 +47,13 @@ type Purchase = {
   status: string; claimed_by: string | null;
 };
 
+/** w****@gmail.com: dá pra reconhecer o próprio e-mail sem entregar o de outro. */
+function mascarar(email: string): string {
+  const [u, d] = (email ?? "").split("@");
+  if (!u || !d) return "";
+  return `${u.slice(0, 1)}****@${d}`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -86,7 +93,10 @@ serve(async (req) => {
       if (!sessionId) return json({ error: "missing_session" }, 400);
       const p = await resolveBySession(sessionId);
       if (!p) return json({ found: false });
-      return json({ found: true, email: p.email, plan: p.plan, claimed: p.status === "claimed" });
+      /* E-MAIL MASCARADO (pente fino 23/09/2026, S3). O peek é público: com um
+         session_id qualquer, devolvia o e-mail inteiro do comprador. Agora só
+         o suficiente pra tela dizer "compra encontrada pra w****@gmail.com". */
+      return json({ found: true, email: mascarar(p.email), plan: p.plan, claimed: p.status === "claimed" });
     }
 
     if (action === "claim") {
@@ -111,6 +121,15 @@ serve(async (req) => {
         }
       }
       if (!p) return json({ claimed: false });
+      /* A COMPRA É DE QUEM PAGOU (pente fino 23/09/2026, S3). Antes qualquer
+         conta logada com o session_id (ou só o mesmo e-mail digitado, sem
+         confirmar) tomava a assinatura de outra pessoa. Agora o e-mail da
+         compra tem que ser o e-mail CONFIRMADO da conta que está reivindicando. */
+      const emailConta = (user.email ?? "").toLowerCase();
+      if (!emailConta || !user.email_confirmed_at || p.email !== emailConta) {
+        console.warn("[claim-purchase] recusado: e-mail nao confere ou nao confirmado", { uid: user.id, sid: p.session_id });
+        return json({ claimed: false, error: "email_mismatch" }, 403);
+      }
       if (p.status === "claimed" && p.claimed_by !== user.id) {
         // Outra conta já levou esta compra: não entrega duas vezes.
         return json({ claimed: false, error: "already_claimed" });

@@ -71,18 +71,16 @@ export function useBioTotais() {
     enabled: !!(pageId || userId),
     staleTime: 60_000,
     queryFn: async () => {
-      let s = sbFrom("bio_stats_daily").select("views, clicks");
-      s = pageId ? s.eq("page_id", pageId) : s.eq("user_id", userId!).is("page_id", null);
-      const { data, error } = await s;
+      // Soma no banco (RPC bio_totais, migration 20260923000002): antes vinham
+      // todas as linhas dia x bloco x origem só pra somar dois números aqui.
+      const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+      const { data, error } = await rpc("bio_totais", { _page_id: pageId ?? null, _user_id: pageId ? null : userId ?? null });
       if (error) {
         if (tabelaFaltando(error.message)) return { visitas: 0, cliques: 0 };
         throw error;
       }
-      const linhas = (data ?? []) as { views: number; clicks: number }[];
-      return {
-        visitas: linhas.reduce((a, l) => a + (l.views ?? 0), 0),
-        cliques: linhas.reduce((a, l) => a + (l.clicks ?? 0), 0),
-      };
+      const linha = (Array.isArray(data) ? data[0] : data) as { visitas?: number | string; cliques?: number | string } | undefined;
+      return { visitas: Number(linha?.visitas ?? 0), cliques: Number(linha?.cliques ?? 0) };
     },
   });
 }

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Clock, RotateCcw, CheckCircle2, ChevronRight, ChevronsUpDown, Contact, Send, Palette, Instagram } from "lucide-react";
+import { ROTULO_APROVACAO } from "@/lib/labels";
 
 // Painel de aprovações por link (Cria Post): visão do fluxo por status, com filtro
 // por cliente. Não é mais uma lista de clientes: clicar em qualquer post abre o
@@ -23,11 +24,11 @@ type StatusKey = "em_producao" | "pendente" | "ajuste_solicitado" | "aprovado" |
 
 // Mesmas cores/rótulos do kanban do cliente (POST_STATUS em CriaPostBoard.tsx).
 const SECTIONS: { key: StatusKey; label: string; cls: string; icon: typeof Clock }[] = [
-  { key: "em_producao", label: "Em produção", cls: "bg-violet-100 text-violet-700", icon: Palette },
-  { key: "pendente", label: "Aguardando cliente", cls: "bg-amber-100 text-amber-700", icon: Clock },
-  { key: "ajuste_solicitado", label: "Ajuste solicitado", cls: "bg-orange-100 text-orange-700", icon: RotateCcw },
-  { key: "aprovado", label: "Aprovado", cls: "bg-green-100 text-green-700", icon: CheckCircle2 },
-  { key: "postado", label: "Postado", cls: "bg-slate-200 text-slate-600", icon: Instagram },
+  { key: "em_producao", label: ROTULO_APROVACAO.em_producao, cls: "bg-violet-100 text-violet-700", icon: Palette },
+  { key: "pendente", label: ROTULO_APROVACAO.pendente, cls: "bg-amber-100 text-amber-700", icon: Clock },
+  { key: "ajuste_solicitado", label: ROTULO_APROVACAO.ajuste_solicitado, cls: "bg-orange-100 text-orange-700", icon: RotateCcw },
+  { key: "aprovado", label: ROTULO_APROVACAO.aprovado, cls: "bg-green-100 text-green-700", icon: CheckCircle2 },
+  { key: "postado", label: ROTULO_APROVACAO.postado, cls: "bg-slate-200 text-slate-600", icon: Instagram },
 ];
 // Colunas de histórico (aprovado/postado) podem crescer muito: limita a prévia.
 const HISTORY_LIMIT = 10;

@@ -24,6 +24,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { VOZ_CRIA } from "../_shared/voz-cria.ts";
+import { registrarErro, mensagemDe } from "../_shared/log.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -633,6 +634,19 @@ Deno.serve(async (req) => {
 
       if (st === "RUNNING" || st === "READY") return json({ ok: true, status: "running" });
 
+      // CLAIM ATÔMICO (pente fino 23/09/2026). Duas abas (ou dois polls
+      // seguidos) chegavam aqui juntas e cada uma disparava a transcrição e a
+      // rodada de IA de novo: crédito pago em dobro e ideias duplicadas. Só
+      // quem virar a linha de "running" pra "processing" continua; o resto
+      // responde "running" e espera o resultado. Todo caminho abaixo termina
+      // em done/error ou devolve pra "running" (estágio 1 da transcrição).
+      const agora = Date.now();
+      const claimVelho = job.status === "processing" && job.claimed_at && (agora - new Date(job.claimed_at).getTime()) > 4 * 60_000;
+      const { data: claim } = await svc.from("competitor_scrapes")
+        .update({ status: "processing", claimed_at: new Date(agora).toISOString() })
+        .eq("id", scrapeId).eq("status", claimVelho ? "processing" : "running").select("id");
+      if (!claim || claim.length === 0) return json({ ok: true, status: "running" });
+
       if (st !== "SUCCEEDED") {
         await svc.from("competitor_scrapes").update({
           status: "error",
@@ -680,6 +694,7 @@ Deno.serve(async (req) => {
         const novoRunId = (await runT.json())?.data?.id;
         await svc.from("competitor_scrapes").update({
           apify_run_id: novoRunId,
+          status: "running", // devolve o claim: o próximo poll pega o estágio 2
           result_summary: { estagio: "transcrevendo", reels: urls.length },
         }).eq("id", scrapeId);
         return json({ ok: true, status: "running" });
@@ -930,7 +945,7 @@ Deno.serve(async (req) => {
       return json({ error: "scrape_failed", message: msg }, 500);
     }
   } catch (e) {
-    console.error("[apify-scrape] unhandled", e);
+    await registrarErro(createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!), "apify-scrape", mensagemDe(e));
     return json({ error: "internal_error" }, 500);
   }
 });

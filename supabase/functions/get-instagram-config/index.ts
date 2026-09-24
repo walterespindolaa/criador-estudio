@@ -31,12 +31,33 @@ Deno.serve(async (req) => {
 
   // crm_client_id opcional (conectar a conta no contexto de um cliente gerenciado).
   let crmClientId: string | null = null;
-  try { const b = await req.json(); if (b?.crm_client_id) crmClientId = String(b.crm_client_id); } catch { /* sem body */ }
+  let returnTo: string | null = null;
+  try {
+    const b = await req.json();
+    if (b?.crm_client_id) crmClientId = String(b.crm_client_id);
+    /* VOLTAR PRA ONDE ESTAVA (onboarding, 23/09/2026). Só caminho interno,
+       começando com "/" e sem "//": nada de open redirect pra fora do app. */
+    if (typeof b?.return_to === 'string' && /^\/(?!\/)[^\s]{0,300}$/.test(b.return_to)) returnTo = b.return_to;
+  } catch { /* sem body */ }
+
+  /* O CLIENTE TEM QUE SER SEU (pente fino 23/09/2026, S12). Antes qualquer
+     crm_client_id passava, e a conexão OAuth ficava gravada no cliente de
+     outra agência. */
+  if (crmClientId) {
+    const { data: dono } = await admin.from('crm_clients').select('manager_id').eq('id', crmClientId).maybeSingle();
+    const managerId = (dono as { manager_id?: string } | null)?.manager_id;
+    if (!managerId) return json({ error: 'client_not_found' }, 404);
+    if (managerId !== userId) {
+      const { data: membro } = await admin.from('manager_members')
+        .select('id').eq('manager_id', managerId).eq('member_id', userId).eq('status', 'ativo').maybeSingle();
+      if (!membro) return json({ error: 'forbidden' }, 403);
+    }
+  }
 
   // Ticket aleatório de uso único (~2 UUIDs de entropia).
   const state = `${crypto.randomUUID()}${crypto.randomUUID().replace(/-/g, '')}`;
   const { error: insErr } = await admin.from('oauth_states')
-    .insert({ state, user_id: userId, crm_client_id: crmClientId, provider: 'instagram' });
+    .insert({ state, user_id: userId, crm_client_id: crmClientId, provider: 'instagram', return_to: returnTo });
   if (insErr) return json({ error: 'state_create_failed' }, 500);
 
   return json({

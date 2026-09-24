@@ -6,11 +6,9 @@ import { usePillars } from "@/hooks/usePillars";
 import { statusRamp } from "@/lib/statusRamp";
 import { hojeBR } from "@/lib/date-br";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
+import { ROTULO_ETAPA } from "@/lib/labels";
 
-const STATUS_LABEL: Record<string, string> = {
-  ideia: "Ideia", roteiro: "Planejamento", gravando: "Produzindo",
-  editando: "Pronto", agendado: "Agendado", publicado: "Publicado",
-};
+const STATUS_LABEL: Record<string, string> = ROTULO_ETAPA;
 const MONTHS = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
 
 function dateLabel(iso: string) {

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useSavedRefs, useSavedFolders, useAddSavedRef, useUpdateSavedRef, useDeleteSavedRef, useRefreshSavedCover, useRecoverMissingCovers, type SavedRef } from "@/hooks/useSavedRefs";
 import { usePosts } from "@/hooks/usePosts";
+import { confirmar } from "@/components/shared/Confirm";
 
 // Sentinelas do seletor de pasta (não colidem com nomes reais de pasta).
 const FOLDER_NONE = "__none__";
@@ -186,7 +187,7 @@ export function SavedRefs({ initialUrl }: { initialUrl?: string }) {
             {paged.map((r) => (
               <SavedCard key={r.id} r={r} open={menuId === r.id} onToggleMenu={() => setMenuId(menuId === r.id ? null : r.id)}
                 onOpen={() => window.open(r.url, "_blank", "noopener")}
-                onCriar={() => criarPost(r)} onMove={() => move(r)} onDelete={() => { setMenuId(null); del.mutate(r.id); }}
+                onCriar={() => criarPost(r)} onMove={() => move(r)} onDelete={async () => { setMenuId(null); if (await confirmar({ titulo: "Excluir esta referência salva?", acao: "Excluir", destrutivo: true })) del.mutate(r.id); }}
                 onRefreshCover={() => refreshCover.mutate({ id: r.id, url: r.url })}
                 refreshing={refreshCover.isPending && refreshCover.variables?.id === r.id}
                 loadingCover={add.pendingPreviewIds.has(r.id)} />

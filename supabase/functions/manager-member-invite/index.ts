@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { registrarErro, mensagemDe } from "../_shared/log.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -33,7 +34,10 @@ function resolveAppUrl(req: Request): string {
     "https://www.criasocialclub.com.br",
   ];
   if (allow.includes(origin)) return origin;
-  if (/^https:\/\/[a-z0-9-]+\.(lovableproject\.com|lovable\.app)$/.test(origin)) return origin;
+  /* SEM CURINGA DE PREVIEW (pente fino 23/09/2026, S1). Aceitar qualquer
+     *.lovable.app vindo do Origin deixava um atacante mandar o link de senha
+     da vítima pra um domínio dele. Preview do Lovable usa APP_URL ou cai no
+     canônico, que também funciona. */
   return CANONICAL_APP_URL;
 }
 
@@ -120,7 +124,7 @@ serve(async (req) => {
 
     // Papel do vínculo. Lista fechada: qualquer coisa fora dela vira o
     // colaborador padrão, nunca um papel inventado pelo chamador.
-    const PAPEIS = ["social_media", "designer", "editor_video", "copy", "trafego"];
+    const PAPEIS = ["social_media", "designer", "editor_video", "copy", "trafego", "filmmaker"];
     const papel = PAPEIS.includes(role ?? "") ? (role as string) : "social_media";
     const ehParceiro = papel !== "social_media";
 
@@ -138,7 +142,7 @@ serve(async (req) => {
     const { count: activeCount } = await svc.from("manager_members")
       .select("id", { count: "exact", head: true })
       .eq("manager_id", user.id).eq("status", "ativo")
-      .not("role", "in", "(designer,editor_video,copy,trafego)");
+      .not("role", "in", "(designer,editor_video,copy,trafego,filmmaker)");
     if (!ehParceiro && (activeCount ?? 0) >= allowed) {
       return json({ error: "no_seats", allowed, used: activeCount ?? 0 }, 402);
     }
@@ -187,7 +191,10 @@ serve(async (req) => {
         // O perfil nasce por trigger no auth.users; se o trigger ainda não
         // tiver corrido, o update não acha linha e o parceiro cairia como
         // criador em trial. Confere e tenta de novo uma vez (auditoria 07/09).
-        const ajuste = { plan: "free", trial_started_at: null, trial_ends_at: null, account_type: "manager" };
+        // must_change_password: o e-mail diz "defina sua senha", mas o link
+        // mágico entrava sem senha nenhuma e, expirada a sessão, a pessoa não
+        // voltava mais. Com a flag, o app leva pra /app/trocar-senha na entrada.
+        const ajuste = { plan: "free", trial_started_at: null, trial_ends_at: null, account_type: "manager", must_change_password: true };
         let { data: upd, error: updErr } = await svc.from("profiles").update(ajuste).eq("id", memberId).select("id");
         if (updErr || !upd?.length) {
           await new Promise((r) => setTimeout(r, 1500));
@@ -199,6 +206,13 @@ serve(async (req) => {
       // RPCs parceiro_*. Dar módulo aqui seria abrir o CRM pra quem só produz.
       await enviarEmailConvite(svc, prof, normEmail, actionLink, existing, true);
       return json({ ok: true, member_id: memberId, existed: !!existing, role: papel });
+    }
+
+    // Colaborador novo (social mídia da equipe) também entra por link mágico
+    // sem senha: mesma trava, define a senha na primeira entrada.
+    if (!existing) {
+      const { error: senhaErr } = await svc.from("profiles").update({ must_change_password: true }).eq("id", memberId);
+      if (senhaErr) console.warn("[manager-member-invite] must_change_password não marcado:", senhaErr.message);
     }
 
     const mods = Array.isArray(modules) && modules.length ? modules : DEFAULT_MODULES;
@@ -215,7 +229,7 @@ serve(async (req) => {
 
     return json({ ok: true, member_id: memberId, existed: !!existing });
   } catch (e) {
-    console.error("[manager-member-invite] unhandled:", e);
+    await registrarErro(createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!), "manager-member-invite", mensagemDe(e));
     return json({ error: "internal_error" }, 500);
   }
 });

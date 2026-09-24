@@ -8,11 +8,17 @@ const APP_URL = Deno.env.get('APP_URL') || 'https://app.criasocialclub.com.br';
 // Volta pra ONDE a pessoa estava. Conexão de cliente volta pra aba Instagram
 // DAQUELE cliente (antes caía na home do Cria Post, sem toast nenhum: sucesso
 // e erro pareciam a mesma coisa, "não aconteceu nada").
-function redirect(status: 'connected' | 'error', detail?: string, crmClientId?: string | null) {
-  const base = crmClientId
-    ? `${APP_URL}/socialmidia/clientes/${crmClientId}/instagram`
-    : `${APP_URL}/app/insights`;
-  const url = `${base}?ig=${status}${detail ? `&m=${encodeURIComponent(detail)}` : ''}`;
+function redirect(status: 'connected' | 'error', detail?: string, crmClientId?: string | null, returnTo?: string | null) {
+  /* `returnTo` vem do ticket (validado na get-instagram-config: caminho
+     interno). É o que deixa o onboarding conectar o Instagram e voltar pro
+     passo seguinte, em vez de cair em /app/insights. */
+  const base = returnTo
+    ? `${APP_URL}${returnTo}`
+    : crmClientId
+      ? `${APP_URL}/socialmidia/clientes/${crmClientId}/instagram`
+      : `${APP_URL}/app/insights`;
+  const sep = base.includes('?') ? '&' : '?';
+  const url = `${base}${sep}ig=${status}${detail ? `&m=${encodeURIComponent(detail)}` : ''}`;
   return new Response(null, { status: 302, headers: { Location: url } });
 }
 
@@ -35,7 +41,7 @@ Deno.serve(async (req) => {
 
     // Troca o ticket (state) pelo usuário. Uso único: apaga logo após ler.
     const { data: st } = await admin.from('oauth_states')
-      .select('user_id, crm_client_id, expires_at').eq('state', state).maybeSingle();
+      .select('user_id, crm_client_id, expires_at, return_to').eq('state', state).maybeSingle();
     await admin.from('oauth_states').delete().eq('state', state);
     if (!st) return redirect('error', 'invalid_state');
     if (new Date((st as { expires_at: string }).expires_at).getTime() < Date.now()) {
@@ -43,6 +49,7 @@ Deno.serve(async (req) => {
     }
     const criaUserId = (st as { user_id: string }).user_id;
     const crmClientId = (st as { crm_client_id: string | null }).crm_client_id ?? null;
+    const returnTo = (st as { return_to?: string | null }).return_to ?? null;
 
     // 1) code -> token curto
     const form = new URLSearchParams({
@@ -53,7 +60,7 @@ Deno.serve(async (req) => {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form,
     });
     const shortJson = await shortRes.json();
-    if (!shortRes.ok || !shortJson.access_token) return redirect('error', 'token_exchange');
+    if (!shortRes.ok || !shortJson.access_token) return redirect('error', 'token_exchange', crmClientId, returnTo);
     const shortToken = shortJson.access_token as string;
 
     // 2) token curto -> token longo (60 dias)
@@ -70,7 +77,7 @@ Deno.serve(async (req) => {
       // usuário, e obrigava a cavar o log da função pra descobrir o porquê.
       const metaMsg = (longJson?.error?.message ?? longJson?.error_message ?? '') as string;
       const detalhe = metaMsg ? `token_exchange_long: ${metaMsg.slice(0, 160)}` : 'token_exchange_long';
-      return redirect('error', detalhe, crmClientId);
+      return redirect('error', detalhe, crmClientId, returnTo);
     }
     const longToken = longJson.access_token as string;
     const expiresIn = Number(longJson.expires_in ?? 0);
@@ -82,7 +89,7 @@ Deno.serve(async (req) => {
     );
     const me = await meRes.json();
     const igId = String(me.user_id ?? me.id ?? '');
-    if (!igId) return redirect('error', 'account_fetch', crmClientId);
+    if (!igId) return redirect('error', 'account_fetch', crmClientId, returnTo);
 
     // 4) grava a conexão (manual: índices parciais não funcionam bem com upsert onConflict).
     const payload = {
@@ -108,10 +115,10 @@ Deno.serve(async (req) => {
       console.error('[instagram-oauth] save falhou', JSON.stringify(res.error));
       // O motivo REAL vai na URL: era isto que faltava pra diagnosticar o
       // 'não aconteceu nada' (ex.: coluna crm_client_id ausente no banco).
-      return redirect('error', `save_failed: ${String(res.error.message ?? '').slice(0, 140)}`, crmClientId);
+      return redirect('error', `save_failed: ${String(res.error.message ?? '').slice(0, 140)}`, crmClientId, returnTo);
     }
 
-    return redirect('connected', undefined, crmClientId);
+    return redirect('connected', undefined, crmClientId, returnTo);
   } catch (_e) {
     return redirect('error', 'unexpected');
   }

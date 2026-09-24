@@ -71,9 +71,41 @@ serve(async (req) => {
     );
     const { data: profile } = await svc
       .from("profiles")
-      .select("stripe_customer_id, name")
+      .select("stripe_customer_id, name, stripe_subscription_id, subscription_status")
       .eq("id", user.id)
       .single();
+
+    /* TROCA DE PLANO NÃO ABRE OUTRO CHECKOUT (pente fino 23/09/2026, B1).
+       Quem já assina e clica em outro plano ganhava uma SEGUNDA assinatura, e a
+       primeira continuava cobrando. Agora, se existe assinatura de criador viva
+       no Stripe, o item dela é trocado pelo price novo com rateio (pró-rata) e
+       o webhook `subscription.updated` grava o plano pelo price. Só cai no
+       checkout quem não tem assinatura ou cuja assinatura já foi cancelada. */
+    if (!isAgency && profile?.stripe_subscription_id) {
+      try {
+        const atual = await stripe.subscriptions.retrieve(profile.stripe_subscription_id);
+        const viva = ["active", "trialing", "past_due"].includes(atual.status);
+        const item = atual.items?.data?.[0];
+        if (viva && item) {
+          if (item.price?.id === priceId) {
+            return new Response(JSON.stringify({ changed: false, same: true, plan }), {
+              status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          await stripe.subscriptions.update(atual.id, {
+            items: [{ id: item.id, price: priceId }],
+            proration_behavior: "create_prorations",
+            metadata: { ...(atual.metadata ?? {}), app: "cria", user_id: user.id, plan },
+          });
+          return new Response(JSON.stringify({ changed: true, plan }), {
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } catch (e) {
+        // Assinatura não existe mais no Stripe (deletada na mão): segue pro checkout.
+        console.warn("[create-checkout] assinatura antiga nao recuperavel, abrindo checkout novo", e);
+      }
+    }
 
     // Reusa customer existente ou cria
     let customerId = profile?.stripe_customer_id ?? undefined;

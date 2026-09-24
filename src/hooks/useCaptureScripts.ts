@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
+import { vazioOuErro } from "@/lib/erro-esquema";
 
 // Cast único: as tabelas novas ainda não existem nos types gerados.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -96,7 +97,7 @@ export function useCaptureScripts() {
         .select("*").eq("manager_id", agencyOwnerId!)
         .order("position", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
-      if (error) return [];
+      if (error) return vazioOuErro(error, [] as CaptureScript[]);
       return (data ?? []) as CaptureScript[];
     },
   });
@@ -219,7 +220,7 @@ export function useCaptureExtraClients() {
       const { data, error } = await sbFrom("capture_extra_clients")
         .select("*").eq("manager_id", agencyOwnerId!)
         .order("name", { ascending: true });
-      if (error) return [];
+      if (error) return vazioOuErro(error, [] as CaptureExtraClient[]);
       return (data ?? []) as CaptureExtraClient[];
     },
   });

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
-import { useManagerOutlet } from "@/components/accounts/ManagerLayout";
+import { useManagerOutlet } from "@/components/accounts/managerOutlet";
 
 /**
  * SÓ QUEM OPERA A AGÊNCIA PASSA (Walter, 14/09/2026).

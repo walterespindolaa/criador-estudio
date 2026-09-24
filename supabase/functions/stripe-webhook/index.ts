@@ -1,5 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14";
+import { enviarEmail } from "../_shared/enviar-email.ts";
+import { registrarErro, mensagemDe } from "../_shared/log.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
   apiVersion: "2024-06-20",
@@ -69,6 +71,52 @@ async function sendMetaPurchase(s: Stripe.Checkout.Session): Promise<void> {
   } catch (e) { console.error("[stripe-webhook] meta capi purchase failed", e); }
 }
 
+/** Mapeia o price do Stripe pro nome do plano. Null quando não é plano de criador. */
+function planFromPrice(priceId: string): string | null {
+  if (!priceId) return null;
+  if (priceId === Deno.env.get("STRIPE_PRICE_ESSENCIAL")) return "essencial";
+  if (priceId === Deno.env.get("STRIPE_PRICE_PRO")) return "pro";
+  if (priceId === Deno.env.get("STRIPE_PRICE_STUDIO")) return "studio";
+  return null;
+}
+
+/* E-MAIL DE PAGAMENTO FALHOU (pente fino 23/09/2026, B6). Antes o cliente
+   inadimplente descobria quando a IA parava. Vai pela mesma fila dos outros
+   transacionais. Falha aqui nunca derruba o webhook. */
+async function avisarPagamentoFalhou(email: string, nome: string | null, valorCents: number, moeda: string) {
+  try {
+    const valor = (valorCents / 100).toLocaleString("pt-BR", { style: "currency", currency: (moeda || "brl").toUpperCase() });
+    const appUrl = Deno.env.get("APP_URL") ?? "https://app.criasocialclub.com.br";
+    const link = `${appUrl}/app/assinar`;
+    const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#1a1a2e">
+      <p>Oi${nome ? `, ${nome}` : ""}.</p>
+      <p>Tentamos cobrar a sua assinatura do Cria (${valor}) e o pagamento não passou. Isso acontece por limite do cartão, cartão vencido ou bloqueio do banco.</p>
+      <p>O Stripe vai tentar de novo nos próximos dias. Se preferir resolver agora, atualize o cartão por aqui:</p>
+      <p><a href="${link}" style="display:inline-block;background:#EA4918;color:#fff;padding:12px 20px;border-radius:12px;text-decoration:none;font-weight:bold">Atualizar forma de pagamento</a></p>
+      <p style="color:#6b7280;font-size:13px">Enquanto isso, seu acesso continua. Se a cobrança não passar depois das tentativas, a assinatura é pausada.</p>
+    </div>`;
+    const messageId = crypto.randomUUID();
+    await supabase.rpc("enqueue_email", {
+      queue_name: "transactional_emails",
+      payload: {
+        to: email,
+        subject: "Não conseguimos cobrar sua assinatura do Cria",
+        from: "cria <noreply@criasocialclub.com.br>",
+        sender_domain: "notify.criasocialclub.com.br",
+        purpose: "transactional",
+        html,
+        text: `Tentamos cobrar sua assinatura do Cria (${valor}) e o pagamento não passou. Atualize o cartão em ${link}`,
+        label: "payment_failed",
+        idempotency_key: messageId,
+        message_id: messageId,
+        queued_at: new Date().toISOString(),
+      },
+    });
+  } catch (e) {
+    console.error("[webhook] avisarPagamentoFalhou", e);
+  }
+}
+
 Deno.serve(async (req) => {
   const signature = req.headers.get("stripe-signature");
   const body = await req.text();
@@ -110,8 +158,18 @@ Deno.serve(async (req) => {
 
   try {
     switch (event.type) {
-      case "checkout.session.completed": {
+      case "checkout.session.completed":
+      case "checkout.session.async_payment_succeeded": {
         const s = event.data.object as Stripe.Checkout.Session;
+        /* SÓ LIBERA O QUE FOI PAGO (pente fino 23/09/2026, S6). Com boleto ou
+           outro meio assíncrono, o `checkout.session.completed` chega ANTES do
+           dinheiro. Liberar aqui era dar acesso de graça até o boleto vencer.
+           Quando o pagamento assíncrono confirma, o Stripe manda
+           `async_payment_succeeded`, que cai neste mesmo bloco e libera. */
+        if (s.payment_status !== "paid" && s.payment_status !== "no_payment_required") {
+          console.log("[webhook] checkout ainda nao pago, aguardando:", s.id, s.payment_status);
+          break;
+        }
         // ── ASSENTOS DE COLABORADOR: provisiona paid_collab_seats ──
         if (s.metadata?.kind === "collab_seats") {
           const managerId = s.metadata?.manager_id;
@@ -148,11 +206,30 @@ Deno.serve(async (req) => {
               stripe_customer_id: s.customer as string,
               stripe_subscription_id: s.subscription as string,
               updated_at: new Date().toISOString(),
-            }, { onConflict: "stripe_subscription_id" }), "module_entitlements upsert");
+            /* A UNICIDADE DA TABELA É (manager_id, module_code) (pente fino
+               23/09/2026, B2). Com onConflict pelo subscription_id, recomprar um
+               módulo cancelado dava INSERT em cima da linha antiga, violava a
+               unicidade, o must() lançava, o evento era desfeito e o Stripe
+               reenviava pra sempre: a pessoa pagava e não recebia. */
+            }, { onConflict: "manager_id,module_code" }), "module_entitlements upsert");
             // Módulo traz ESPAÇO junto (3 GB base + 3 GB por módulo). Sem este
             // recálculo ela compra o módulo e continua com os 500 MB de trial 
             // bate numa parede invisível no meio da operação, com cliente esperando.
             await supabase.rpc("recalc_manager_storage", { _manager: managerId });
+            // E-mail de confirmação da compra do módulo (pente fino 23/09/2026).
+            const { data: dono } = await supabase.from("profiles").select("email, name").eq("id", managerId).maybeSingle();
+            const NOME_MODULO: Record<string, string> = { aprovapost_externo: "Cria Post", crm: "Cria Gestão", financeiro: "Cria Caixa", hub_cria: "Hub Cria", cria_captacao: "Cria Captação" };
+            if (dono?.email) {
+              await enviarEmail(supabase, {
+                para: dono.email, nome: dono.name, etiqueta: "modulo_comprado",
+                assunto: `${NOME_MODULO[moduleCode] ?? "Módulo"} ativado na sua conta`,
+                paragrafos: [
+                  `O ${NOME_MODULO[moduleCode] ?? "módulo"} já está liberado no seu painel. A cobrança é mensal e aparece no Stripe como "Cria".`,
+                  "Pra cancelar ou trocar o cartão, é em Configurações > Gerenciar cobrança, sem precisar falar com ninguém.",
+                ],
+                botao: { texto: "Abrir o painel", url: `${Deno.env.get("APP_URL") ?? "https://app.criasocialclub.com.br"}/socialmidia/dashboard` },
+              });
+            }
           }
           break;
         }
@@ -301,13 +378,18 @@ Deno.serve(async (req) => {
               stripe_subscription_id: sub.id,
               current_period_end: periodEnd,
               updated_at: new Date().toISOString(),
-            }, { onConflict: "stripe_subscription_id" });
+            }, { onConflict: "manager_id,module_code" });
             await supabase.rpc("recalc_manager_storage", { _manager: managerId });
           }
           break;
         }
         const userId = sub.metadata?.user_id;
-        const plan = sub.metadata?.plan;
+        /* O PLANO VEM DO PREÇO, NÃO DO METADATA (pente fino 23/09/2026, S13).
+           Quem troca de plano pelo Customer Portal do Stripe muda o price, mas
+           o metadata fica o antigo: a pessoa pagava Studio e continuava
+           Essencial no app (ou o contrário). O metadata só serve de reserva
+           pra assinatura de agência, que não tem price de plano. */
+        const plan = planFromPrice(sub.items?.data?.[0]?.price?.id ?? "") ?? sub.metadata?.plan;
 
         const status =
           sub.status === "active" ? "active" :
@@ -385,14 +467,36 @@ Deno.serve(async (req) => {
           await supabase.rpc("reconcile_agency_seats", { _manager: userId });
           break;
         }
+        let canceladoId: string | null = null;
         if (userId) {
           await supabase.from("profiles")
             .update({ subscription_status: "canceled" }).eq("id", userId);
+          canceladoId = userId;
         } else {
           const { data: p } = await supabase.from("profiles")
             .select("id").eq("stripe_subscription_id", sub.id).maybeSingle();
-          if (p) await supabase.from("profiles")
-            .update({ subscription_status: "canceled" }).eq("id", p.id);
+          if (p) {
+            await supabase.from("profiles")
+              .update({ subscription_status: "canceled" }).eq("id", p.id);
+            canceladoId = p.id;
+          }
+        }
+        // Confirmação de cancelamento (pente fino 23/09/2026): a pessoa
+        // cancelava e não recebia nada; dias depois perguntava se "deu certo".
+        if (canceladoId) {
+          const { data: pc } = await supabase.from("profiles").select("email, name").eq("id", canceladoId).maybeSingle();
+          if (pc?.email) {
+            await enviarEmail(supabase, {
+              para: pc.email, nome: pc.name, etiqueta: "assinatura_cancelada",
+              assunto: "Sua assinatura do Cria foi cancelada",
+              paragrafos: [
+                "Confirmado: a assinatura foi cancelada e não vai ter nova cobrança.",
+                "Seus dados (ideias, posts, brandbook, clientes) ficam guardados por 60 dias. Se quiser voltar nesse prazo, é só assinar de novo e está tudo lá.",
+                "Se cancelou por algum problema, responde este e-mail: a gente lê tudo.",
+              ],
+              botao: { texto: "Voltar quando quiser", url: `${Deno.env.get("APP_URL") ?? "https://app.criasocialclub.com.br"}/app/assinar` },
+            });
+          }
         }
         // B.2, cancelamento antes da liberação anula só 'pending'.
         // 'payable' (sobreviveu à carência) e 'paid' (já pagamos) são mantidos.
@@ -518,7 +622,15 @@ Deno.serve(async (req) => {
           }).eq("id", e.id);
         }
 
-        if (referralId && amountPaid > 0) {
+        /* INDICAÇÃO LEGADA NÃO RECEBE DUAS VEZES (pente fino 23/09/2026, B4).
+           Quem já ganhou o pagamento único do modelo antigo (90% da 1ª fatura)
+           virou lançamento no backfill de 22/09. Se entrar também na regra
+           recorrente, a parceira recebe pelo mesmo cliente nos dois modelos.
+           A coluna `modelo` marca essas linhas; o webhook pula a recorrência. */
+        const modeloLegado = (existing as { modelo?: string } | null)?.modelo === "legado";
+        if (modeloLegado) console.log("[webhook] indicacao legada, sem lancamento recorrente:", referralId);
+
+        if (referralId && amountPaid > 0 && !modeloLegado) {
           const { data: regra } = await supabase.rpc("partner_regra", { _partner_id: partnerId });
           const r = (Array.isArray(regra) ? regra[0] : regra) as
             { pct?: number; meses?: number; fatura_inicial?: number } | null;
@@ -556,6 +668,15 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "invoice.payment_failed": {
+        const inv = event.data.object as Stripe.Invoice;
+        const email = (inv.customer_email ?? "").toLowerCase();
+        if (!email) break;
+        const nome = (inv.customer_name ?? "").split(" ")[0] || null;
+        await avisarPagamentoFalhou(email, nome, inv.amount_due ?? 0, inv.currency ?? "brl");
+        break;
+      }
+
       case "charge.refunded": {
         // estorno total → anula comissão pending OU payable. Não toca em 'paid' (já transferimos).
         const charge = event.data.object as Stripe.Charge;
@@ -567,6 +688,16 @@ Deno.serve(async (req) => {
 
         const fullRefund = charge.refunded === true || (charge.amount_refunded >= charge.amount);
         if (!fullRefund) break;
+
+        /* REEMBOLSO TOTAL ENCERRA O ACESSO (pente fino 23/09/2026, S13). Antes só
+           a comissão era cancelada; o acesso ficava até o `subscription.deleted`,
+           que pode nunca chegar se o reembolso foi feito na mão sem cancelar.
+           Cancelar a assinatura no Stripe dispara o `deleted`, e é ele quem
+           marca o perfil: uma fonte de verdade só. */
+        try {
+          const subAtual = await stripe.subscriptions.retrieve(subId);
+          if (subAtual.status !== "canceled") await stripe.subscriptions.cancel(subId);
+        } catch (e) { console.error("[webhook] cancelar assinatura apos reembolso", e); }
 
         await supabase.from("partner_referrals")
           .update({
@@ -594,7 +725,9 @@ Deno.serve(async (req) => {
         break;
     }
   } catch (err) {
-    console.error("[stripe-webhook] handler error:", err);
+    // Fica visível no Admin > Logs (antes só no console do Supabase). O retry
+    // do Stripe vai tentar de novo; se falhar 3x, é hora de olhar o log.
+    await registrarErro(supabase, "stripe-webhook", mensagemDe(err), { event_type: event.type, event_id: event.id });
     // Desfaz a reivindicação para que o retry do Stripe possa reprocessar o evento.
     await supabase.from("billing_events")
       .delete().eq("gateway", "stripe").eq("event_id", event.id);

@@ -118,9 +118,23 @@ export function TourProvider({ children }: { children: ReactNode }) {
   // Auto-start: primeira visita da tela (depois que soubermos o que já foi visto)
   useEffect(() => {
     if (!seenLoaded || active || pendingId) return;
+    /* SEM TOUR EM CIMA DO ONBOARDING (onboarding v2, 23/09/2026). Quem acabou de
+       passar por seis passos caía no app com tour, checklist e pedido de
+       notificação empilhados. O tour fica pra próxima sessão. */
+    let adiado = false;
+    try { adiado = sessionStorage.getItem("cria.tour-adiado") === "1"; } catch { adiado = false; }
+    if (adiado) return;
     const tour = findTourByRoute(location.pathname);
     if (tour && !seenRef.current.has(tour.id) && !tourBloqueado(tour.id)) {
-      const id = window.setTimeout(() => begin(tour), 400); // deixa a tela montar
+      const id = window.setTimeout(() => {
+        /* TELA SEM CONTEÚDO PRA MOSTRAR (pente fino 23/09/2026). A tela pode
+           pedir pra adiar o tour com um marcador [data-tour-adiar] no DOM: a
+           home da gestora faz isso com a carteira vazia, porque o tour apontava
+           pra clientes e aprovações que ainda não existiam. Não marca como
+           visto: na próxima visita com conteúdo, o tour roda normalmente. */
+        if (document.querySelector("[data-tour-adiar]")) return;
+        begin(tour);
+      }, 400); // deixa a tela montar
       return () => window.clearTimeout(id);
     }
   }, [location.pathname, seenLoaded, active, pendingId, begin, tourBloqueado]);

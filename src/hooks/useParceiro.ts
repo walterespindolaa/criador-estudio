@@ -183,6 +183,7 @@ export const ROTULO_PAPEL: Record<string, string> = {
   editor_video: "Editor de vídeo",
   copy: "Copy",
   trafego: "Tráfego",
+  filmmaker: "Captação / filmmaker",
 };
 
 /* SINCRONIA ENTRE DOIS LADOS (auditoria 04/09): não há realtime no app, e o
@@ -978,7 +979,7 @@ export function useDelegarPost() {
  *  casca da gestão como se fosse uma agência vazia. Agora o tipo da conta
  *  (`account_type = 'parceiro'`) também vale, e o vínculo continua valendo
  *  sozinho pra não quebrar quem já entrou por convite. */
-const PAPEIS_PARCEIRO = ["designer", "editor_video", "copy", "trafego"];
+const PAPEIS_PARCEIRO = ["designer", "editor_video", "copy", "trafego", "filmmaker"];
 
 /** Vínculos de produção desta pessoa, ATIVOS E PAUSADOS, mais o tipo da conta.
  *  Base das duas perguntas que o app faz: "sou parceiro?" e "me pausaram?". */

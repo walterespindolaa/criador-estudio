@@ -160,6 +160,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { useManagerProfile } from "@/hooks/useModules";
 import { isPctRegime } from "@/lib/finance";
+import { ROTULO_APROVACAO } from "@/lib/labels";
 // Dinheiro nesta tela é sempre em REAIS (fin_records.amount e crm_clients.monthly_value).
 // formatBRL cuida da formatação, nada de dividir/multiplicar por 100 aqui.
 
@@ -1349,7 +1350,7 @@ function LinksUteis({ clientId, links }: { clientId: string; links: LinkUtil[] |
 // a saúde financeira do mês (Cria Caixa) e as próximas datas (comemorativas do
 // segmento + aniversário). O detalhe fica em cada módulo; aqui é o "bate o olho".
 // ═══════════════════════════════════════════════════════════════════════
-const STATUS_LABEL: Record<string, string> = { pendente: "Aguardando", ajuste_solicitado: "Em ajuste" };
+const STATUS_LABEL: Record<string, string> = { pendente: ROTULO_APROVACAO.pendente, ajuste_solicitado: ROTULO_APROVACAO.ajuste_solicitado };
 
 // Próximas datas: comemorativas do segmento (dia em "DD/MM") + aniversário do cliente.
 function proximasDatas(segment: string | null, birthday: string | null): { label: string; date: Date; tipo: string }[] {

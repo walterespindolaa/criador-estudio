@@ -13,8 +13,9 @@ import {
   ROTULO_PAPEL, useCachesDosParceiros, useMeusParceiros, usePecasComParceiros, useResolverPrazoSugerido,
   type PecaExterna,
 } from "@/hooks/useParceiro";
+import { brlReais } from "@/lib/money";
 
-const brl = (v: number) => `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const brl = brlReais;
 
 /* ═══════════════════════════════════════════════════════════════════════════
    COM PARCEIROS: a produção externa vista pela social mídia

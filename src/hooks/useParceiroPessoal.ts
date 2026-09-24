@@ -30,6 +30,7 @@ export const ETAPAS_PADRAO: Record<string, string[]> = {
   editor_video: ["Decupagem", "Corte", "Finalização"],
   copy: ["Pesquisa", "Rascunho", "Revisão"],
   trafego: ["Briefing", "Montagem", "Otimização"],
+  filmmaker: ["Roteiro lido", "Gravado", "Material entregue"],
 };
 
 export function useEtapasPessoais(papel?: string | null) {

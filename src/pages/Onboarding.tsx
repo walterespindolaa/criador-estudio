@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { track } from "@/lib/metaPixel";
 import {
   ArrowLeft,
@@ -31,6 +31,8 @@ import { Logo } from "@/components/shared/Logo";
 import { fireConfetti } from "@/lib/confetti";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { VoiceInput } from "@/components/shared/VoiceInput";
+import { connectInstagram, useSocialConnection } from "@/hooks/useSocialInsights";
+import { Instagram } from "lucide-react";
 
 const TOTAL_STEPS = 6;
 
@@ -104,20 +106,60 @@ const Onboarding = () => {
   const { user } = useAuth();
   const { updateProfile } = useProfile();
 
-  const [step, setStep] = useState(1);
+  /* RASCUNHO QUE SOBREVIVE À IDA AO INSTAGRAM (onboarding v2, 23/09/2026).
+     Conectar o Instagram sai do app e volta. Sem isto, tudo que a pessoa
+     digitou antes se perdia e ela recomeçava do zero. O rascunho fica no
+     sessionStorage (só esta aba) e é apagado no fim. */
+  const rascunho = (() => {
+    try { return JSON.parse(sessionStorage.getItem("cria.onb") ?? "null") as Record<string, unknown> | null; } catch { return null; }
+  })();
+  const [searchParams] = useSearchParams();
+  const stepDaUrl = Number(searchParams.get("step") ?? 0);
+  const voltouDoInstagram = searchParams.get("ig") === "connected";
+  const erroDoInstagram = searchParams.get("ig") === "error";
+
+  const [step, setStep] = useState(stepDaUrl >= 1 && stepDaUrl <= 6 ? stepDaUrl : 1);
   const [direction, setDirection] = useState<1 | -1>(1);
 
-  const [name, setName] = useState("");
-  const [handle, setHandle] = useState("");
+  const [name, setName] = useState((rascunho?.name as string) ?? "");
+  const [handle, setHandle] = useState((rascunho?.handle as string) ?? "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [niches, setNiches] = useState<string[]>([]);
+  const [niches, setNiches] = useState<string[]>((rascunho?.niches as string[]) ?? []);
   const [customNiche, setCustomNiche] = useState("");
-  const [platforms, setPlatforms] = useState<string[]>([]);
-  const [objetivo, setObjetivo] = useState<string>("");
-  const [publico, setPublico] = useState<string>("");
-  const [tom, setTom] = useState<string>("");
-  const [weeklyGoal, setWeeklyGoal] = useState<number>(3);
+  const [platforms, setPlatforms] = useState<string[]>((rascunho?.platforms as string[]) ?? ["instagram"]);
+  const [objetivo, setObjetivo] = useState<string>((rascunho?.objetivo as string) ?? "");
+  const [publico, setPublico] = useState<string>((rascunho?.publico as string) ?? "");
+  const [tom, setTom] = useState<string>((rascunho?.tom as string) ?? "");
+  const [weeklyGoal, setWeeklyGoal] = useState<number>((rascunho?.weeklyGoal as number) ?? 3);
+  const { data: igConexao } = useSocialConnection();
+  const igConectado = !!igConexao || voltouDoInstagram;
+
+  // Nome já veio do cadastro: não pedir de novo (a pessoa via o campo vazio).
+  useEffect(() => {
+    if (name.trim()) return;
+    const doCadastro = (user?.user_metadata?.name as string | undefined)?.trim();
+    if (doCadastro) setName(doCadastro);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (voltouDoInstagram) toast.success("Instagram conectado. Bora continuar.");
+    if (erroDoInstagram) toast.error("Não deu pra conectar o Instagram agora. Dá pra tentar depois em Insights.");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Guarda o rascunho a cada mudança (barato: um objeto pequeno).
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("cria.onb", JSON.stringify({ name, handle, niches, platforms, objetivo, publico, tom, weeklyGoal }));
+    } catch { /* modo privado */ }
+  }, [name, handle, niches, platforms, objetivo, publico, tom, weeklyGoal]);
+
+  const conectarInstagramAgora = () => {
+    // Volta pra este mesmo passo, com o rascunho preservado.
+    void connectInstagram(null, `/onboarding?step=${step}`);
+  };
 
   const [setupLoading, setSetupLoading] = useState(false);
   const [setupDone, setSetupDone] = useState(false);
@@ -189,7 +231,7 @@ const Onboarding = () => {
     if (step === 1) return name.trim().length > 0;
     if (step === 2) return niches.length > 0;
     if (step === 3) return platforms.length > 0;
-    if (step === 4) return objetivo.length > 0;
+    if (step === 4) return true; // objetivo, público e tom são opcionais: tem Pular
     if (step === 5) return weeklyGoal > 0;
     return false;
   })();
@@ -285,15 +327,43 @@ const Onboarding = () => {
       await updateProfile.mutateAsync(profileUpdates);
 
       if (finalPillars.length > 0) {
-        const { error: pillarsErr } = await supabase.from("pillars").insert(
+        const { data: pilaresCriados, error: pillarsErr } = await supabase.from("pillars").insert(
           finalPillars.map((p, i) => ({
             user_id: user.id,
             name: p.name,
             color: p.color,
             position: i,
           }))
-        );
+        ).select("id");
         if (pillarsErr) console.warn("[onboarding] pillars batch insert failed:", pillarsErr);
+        /* LINHA EDITORIAL JÁ PREENCHIDA (onboarding v2). O Dashboard mostrava
+           "-" nos 7 dias logo depois do onboarding, porque os pilares nasciam
+           mas ninguém distribuía. Seg a sex em rodízio, fim de semana livre. */
+        const ids = (pilaresCriados ?? []).map((r) => (r as { id: string }).id);
+        if (ids.length > 0) {
+          const dias = ["SEG", "TER", "QUA", "QUI", "SEX"];
+          const linha: Record<string, string> = {};
+          dias.forEach((d, i) => { linha[d] = ids[i % ids.length]; });
+          await supabase.from("profiles").update({ editorial_line: linha } as never).eq("id", user.id);
+        }
+      }
+
+      /* O QUE ELA DISSE NÃO SE PERDE MAIS (onboarding v2). Objetivo, público e
+         tom eram perguntados, iam pra IA e sumiam; o Brandbook perguntava tudo
+         de novo. Agora tom vira item do brandbook e público vira a primeira
+         persona, os mesmos lugares que o Brandbook lê. */
+      const marcaItens: { user_id: string; type: string; name: string }[] = [];
+      if (tom) marcaItens.push({ user_id: user.id, type: "tom", name: tom });
+      if (objetivo) marcaItens.push({ user_id: user.id, type: "objetivo", name: objetivo });
+      if (marcaItens.length > 0) {
+        const { error: eMarca } = await supabase.from("brand_items").insert(marcaItens as never);
+        if (eMarca) console.warn("[onboarding] brand_items insert failed:", eMarca);
+      }
+      if (publico.trim()) {
+        const { error: ePersona } = await supabase.from("personas").insert({
+          user_id: user.id, name: "Meu público", notes: sanitizeText(publico.trim()),
+        } as never);
+        if (ePersona) console.warn("[onboarding] persona insert failed:", ePersona);
       }
 
       if (habitsToCreate.length > 0) {
@@ -336,8 +406,13 @@ const Onboarding = () => {
 
   const enterApp = () => {
     track("StartTrial", { content_name: "onboarding_complete" });
-    toast.success("Bem-vindo ao cria!");
-    navigate("/app");
+    try { sessionStorage.removeItem("cria.onb"); } catch { /* ok */ }
+    /* TERMINA NUM ARTEFATO, NÃO NUM PAINEL (onboarding v2). As 5 ideias que a
+       IA gerou já estão salvas; a pessoa cai nelas com o botão "Criar post com
+       essa ideia" na mão. O tour do dashboard não abre nesta sessão. */
+    try { sessionStorage.setItem("cria.tour-adiado", "1"); } catch { /* ok */ }
+    toast.success("Tudo pronto. Suas primeiras ideias te esperam.");
+    navigate("/app/ideias");
   };
 
   const slideVariants = {
@@ -374,7 +449,7 @@ const Onboarding = () => {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16 pb-28 sm:pb-32">
         <AnimatePresence mode="wait" custom={direction}>
           {/* ─── Step 1: Quem é você ─── */}
           {step === 1 && (
@@ -441,19 +516,54 @@ const Onboarding = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Handle do Instagram (opcional)</Label>
-                <div className="relative">
-                  <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    value={handle}
-                    onChange={(e) => setHandle(e.target.value.replace(/^@/, ""))}
-                    placeholder="seuhandle"
-                    className="rounded-xl h-12 pl-9"
-                    maxLength={40}
-                  />
+              {/* INSTAGRAM DENTRO DO ONBOARDING (v2). Antes era só o @ digitado, e
+                  o próprio código admitia que isso confundia. Conectar de verdade
+                  traz os números e alimenta a IA; o @ fica como saída pra quem não
+                  tem conta profissional ainda. */}
+              <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] grid place-items-center shrink-0">
+                    <Instagram className="h-5 w-5 text-white" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-display font-bold text-foreground">
+                      {igConectado ? "Instagram conectado" : "Conecte seu Instagram"}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-body">
+                      {igConectado
+                        ? (igConexao?.username ? `@${igConexao.username} · seus números já entram no app` : "Seus números já entram no app.")
+                        : "Conta profissional ou de criador de conteúdo. Leva 20 segundos e volta pra cá."}
+                    </p>
+                  </div>
+                  {igConectado
+                    ? <Check className="h-5 w-5 text-[hsl(var(--cria-verde))] shrink-0" />
+                    : <Button type="button" size="sm" onClick={conectarInstagramAgora} className="rounded-xl shrink-0">Conectar</Button>}
                 </div>
+                {!igConectado && (
+                  <div className="space-y-1.5">
+                    <Label className="font-body text-xs text-muted-foreground">Ou só me diga seu @ por enquanto</Label>
+                    <div className="relative">
+                      <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        value={handle}
+                        onChange={(e) => setHandle(e.target.value.replace(/^@/, ""))}
+                        placeholder="seuperfil"
+                        className="rounded-xl h-11 pl-9"
+                        maxLength={40}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* PERSONA ERRADA TEM VOLTA (v2). O cadastro vinha com "criador"
+                  pré-marcado; quem errava passava por seis passos sobre nicho e
+                  não achava saída. */}
+              <p className="text-xs text-muted-foreground font-body">
+                Não é você? <Link to="/comecar-agencia" className="text-primary underline underline-offset-2">Sou social mídia ou agência</Link>
+                {" · "}
+                <Link to="/socialmidia/demandas" className="text-primary underline underline-offset-2">Sou designer, editor ou filmmaker</Link>
+              </p>
             </motion.div>
           )}
 
@@ -838,17 +948,26 @@ const Onboarding = () => {
 
         {/* Navigation footer */}
         {step < TOTAL_STEPS && (
-          <div className="mt-12 flex items-center justify-between gap-3">
-            {step > 1 ? (
-              <Button variant="ghost" size="sm" onClick={goBack}>
-                <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+          /* RODAPÉ FIXO (v2). No celular o passo dos 16 nichos empurrava o
+             "Próximo" pra fora da tela. Fixo embaixo, com safe-area, e com um
+             "Pular" em tudo que não é essencial. */
+          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur px-4 sm:px-6 py-3"
+            style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+            <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+              <div className="flex items-center gap-1">
+                {step > 1 ? (
+                  <Button variant="ghost" size="sm" onClick={goBack}>
+                    <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+                  </Button>
+                ) : <span />}
+                {(step === 3 || step === 4) && (
+                  <Button variant="ghost" size="sm" onClick={goNext} className="text-muted-foreground">Pular</Button>
+                )}
+              </div>
+              <Button variant="hero" size="lg" onClick={goNext} disabled={!canAdvance} className="min-h-[48px]">
+                {step === TOTAL_STEPS - 1 ? "Configurar tudo" : "Próximo"} <ArrowRight className="ml-1 h-5 w-5" />
               </Button>
-            ) : (
-              <span />
-            )}
-            <Button variant="hero" size="lg" onClick={goNext} disabled={!canAdvance}>
-              {step === TOTAL_STEPS - 1 ? "Configurar tudo" : "Próximo"} <ArrowRight className="ml-1 h-5 w-5" />
-            </Button>
+            </div>
           </div>
         )}
       </div>

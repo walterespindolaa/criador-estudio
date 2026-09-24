@@ -14,7 +14,7 @@ export type UpdatePostInput = { id: string; updates: PostUpdate };
 // Teto padrão pra não puxar histórico infinito (perf). Páginas que pedem menos passam um limit menor.
 const DEFAULT_POSTS_CAP = 1000;
 
-export function usePosts(options?: { limit?: number }) {
+export function usePosts(options?: { limit?: number; enabled?: boolean }) {
   const { activeAccountId } = useActiveAccount();
   const queryClient = useQueryClient();
   const userId = activeAccountId;
@@ -47,7 +47,8 @@ export function usePosts(options?: { limit?: number }) {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       });
     },
-    enabled: !!userId,
+    // `enabled: false` deixa o hook montado sem buscar (painel da IA fechado).
+    enabled: !!userId && options?.enabled !== false,
   });
 
   const createPost = useMutation({

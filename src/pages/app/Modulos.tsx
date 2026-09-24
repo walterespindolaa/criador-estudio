@@ -13,8 +13,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Check, Settings2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { brlCentavos } from "@/lib/money";
 
-const brl = (cents: number) => `R$ ${(cents / 100).toFixed(2).replace(".", ",")}`;
+const brl = brlCentavos;
 const CLIENT_RANGES = ["1", "2-5", "6-15", "15+"];
 
 export default function Modulos() {

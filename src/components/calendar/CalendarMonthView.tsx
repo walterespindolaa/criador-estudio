@@ -10,11 +10,9 @@ import type { Post } from "@/hooks/usePosts";
 
 // Rótulo da etapa: os MESMOS nomes das colunas do kanban (Criando), pro
 // calendário contar a mesma história do board, igual ao calendário do gestor.
-const STATUS_ROTULO: Record<string, string> = {
-  ideia: "Ideia", roteiro: "Planejamento", gravando: "Produzindo",
-  editando: "Pronto", agendado: "Agendado", publicado: "Publicado",
-};
+const STATUS_ROTULO: Record<string, string> = ROTULO_ETAPA;
 import type { Pillar } from "@/hooks/usePillars";
+import { ROTULO_ETAPA } from "@/lib/labels";
 
 const WEEK_DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MONTH_LABELS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];

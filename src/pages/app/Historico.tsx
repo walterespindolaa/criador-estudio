@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { RepurposeSheet } from "@/components/kanban/RepurposeSheet";
 import { usePillars } from "@/hooks/usePillars";
 import { FORMAT_LABELS } from "@/lib/constants";
+import { toISODateBR } from "@/lib/date-br";
 
 const PERIOD_OPTIONS = [
   { key: "month", label: "Este mês" },
@@ -37,7 +38,7 @@ const Historico = () => {
     if (posts.length === 0) return;
     const first = posts[0].published_at;
     if (!first) return;
-    const key = new Date(first).toISOString().slice(0, 7);
+    const key = toISODateBR(new Date(first)).slice(0, 7);
     setOpenMonths(prev => (prev.size === 0 ? new Set([key]) : prev));
   }, [posts]);
 
@@ -47,7 +48,7 @@ const Historico = () => {
     if (filterPillar) result = result.filter(p => p.pillar_id === filterPillar);
     if (filterPeriod !== "all") {
       const now = new Date();
-      let cutoff = new Date();
+      const cutoff = new Date();
       if (filterPeriod === "month") cutoff.setMonth(now.getMonth() - 1);
       else if (filterPeriod === "3months") cutoff.setMonth(now.getMonth() - 3);
       else if (filterPeriod === "year") cutoff.setFullYear(now.getFullYear() - 1);
@@ -60,7 +61,7 @@ const Historico = () => {
   const grouped = useMemo(() => {
     const map = new Map<string, Post[]>();
     filtered.forEach(p => {
-      const key = p.published_at ? new Date(p.published_at).toISOString().slice(0, 7) : "sem-data";
+      const key = p.published_at ? toISODateBR(new Date(p.published_at)).slice(0, 7) : "sem-data";
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(p);
     });
@@ -74,7 +75,7 @@ const Historico = () => {
     posts.forEach(p => {
       platformCounts[p.platform] = (platformCounts[p.platform] || 0) + 1;
       if (p.published_at) {
-        const m = new Date(p.published_at).toISOString().slice(0, 7);
+        const m = toISODateBR(new Date(p.published_at)).slice(0, 7);
         monthCounts[m] = (monthCounts[m] || 0) + 1;
       }
     });
@@ -148,7 +149,7 @@ const Historico = () => {
               <p className="text-xs text-muted-foreground font-body">Total publicados</p>
             </div>
             <div className="bg-card rounded-xl p-4 border border-border">
-              {stats.topPlatform !== "-" && <PlatformIcon platform={stats.topPlatform as any} size="sm" />}
+              {stats.topPlatform !== "-" && <PlatformIcon platform={stats.topPlatform} size="sm" />}
               <p className="text-xl font-bold text-foreground mt-1 capitalize tabular-nums tracking-tight">{stats.topPlatform}</p>
               <p className="text-xs text-muted-foreground font-body">Mais ativa</p>
             </div>
@@ -263,7 +264,7 @@ const Historico = () => {
                         return (
                           <div key={post.id} className="px-4 py-3 hover:bg-accent/20 transition-colors">
                             <div className="flex items-start gap-3">
-                              <PlatformIcon platform={post.platform as any} size="sm" className="mt-0.5 flex-shrink-0" />
+                              <PlatformIcon platform={post.platform} size="sm" className="mt-0.5 flex-shrink-0" />
                               <div className="flex-1 min-w-0">
                                 <p className="font-body font-medium text-sm text-foreground truncate">{post.title}</p>
                                 {post.archive_summary && (

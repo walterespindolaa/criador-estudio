@@ -308,11 +308,31 @@ serve(async (req) => {
     }
 
     const _isAdmin = accessRow.role === "admin";
-    const _isActive = accessRow.subscription_status === "active";
+    /* `past_due` conta como ativo aqui (pente fino 23/09/2026, B3). O front
+       (useTier) já tratava assim; a edge não, e a pessoa em atraso de
+       pagamento perdia a IA sem aviso enquanto o resto do app funcionava.
+       Quem some de vez é o Stripe, via `subscription.deleted`. */
+    const _isActive = accessRow.subscription_status === "active" || accessRow.subscription_status === "past_due";
     const _trialEnds = accessRow.trial_ends_at ? new Date(accessRow.trial_ends_at).getTime() : 0;
     const _trialOk = _trialEnds > Date.now();
 
+    /* MÓDULO PAGO LIBERA A IA (pente fino 23/09/2026, B3). A social mídia é
+       conta grátis: ganha 7 dias de trial e depois não tem assinatura pessoal.
+       Mas ela paga Cria Post/Gestão/Caixa/Captação, e a IA desses módulos
+       (briefing de arte, copy do cliente, relatório) parava no oitavo dia.
+       Um entitlement ativo vale como assinatura pra fins de cota. */
+    let _temModuloPago = false;
     if (!_isAdmin && !_isActive && !_trialOk) {
+      const { data: ent } = await supabase
+        .from("module_entitlements")
+        .select("module_code")
+        .eq("manager_id", user.id)
+        .eq("status", "active")
+        .limit(1);
+      _temModuloPago = !!(ent && ent.length > 0);
+    }
+
+    if (!_isAdmin && !_isActive && !_trialOk && !_temModuloPago) {
       return new Response(
         JSON.stringify({ error: "subscription_required", message: "Seu período de teste encerrou. Assine para continuar usando a IA." }),
         { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -339,7 +359,7 @@ serve(async (req) => {
     }
     const _minTier = OP_MIN_TIER[operation]
     if (_minTier && !_isAdmin) {
-      const _callerTier = _trialOk ? 'studio' : (_isActive ? String(accessRow.plan ?? 'none') : 'none')
+      const _callerTier = _trialOk ? 'studio' : (_isActive ? String(accessRow.plan ?? 'none') : (_temModuloPago ? 'pro' : 'none'))
       if ((TIER_RANK[_callerTier] ?? 0) < TIER_RANK[_minTier]) {
         const _label = _minTier === 'studio' ? 'Studio' : 'Pro'
         return new Response(

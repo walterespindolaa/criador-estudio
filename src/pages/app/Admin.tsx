@@ -201,7 +201,7 @@ const AdminInner = () => {
      por convite de agência, então o admin não tinha como criar um. Como a
      única diferença real é o tipo da conta e o pouso, não vale uma tela nova. */
   const [mgrTipo, setMgrTipo] = useState<"manager" | "parceiro">("manager");
-  const [mgrPapel, setMgrPapel] = useState<"designer" | "editor_video" | "copy" | "trafego">("designer");
+  const [mgrPapel, setMgrPapel] = useState<"designer" | "editor_video" | "copy" | "trafego" | "filmmaker">("designer");
   const [giveCreator, setGiveCreator] = useState(false);
   const [creatorEmail, setCreatorEmail] = useState("");
   const [creatorPlan, setCreatorPlan] = useState("studio");
@@ -740,7 +740,7 @@ const AdminInner = () => {
                 <div className="space-y-1.5">
                   <Label className="font-body text-xs">O que ele faz</Label>
                   <div className="grid grid-cols-2 gap-2">
-                    {([["designer", "Design"], ["editor_video", "Edição de vídeo"], ["copy", "Copy"], ["trafego", "Tráfego"]] as const).map(([k, l]) => (
+                    {([["designer", "Design"], ["editor_video", "Edição de vídeo"], ["filmmaker", "Captação / filmmaker"], ["copy", "Copy"], ["trafego", "Tráfego"]] as const).map(([k, l]) => (
                       <button key={k} type="button" onClick={() => setMgrPapel(k)} disabled={creatingMgr}
                         className={cn("rounded-xl border px-2.5 py-2 text-[12.5px] font-body font-semibold transition-colors",
                           mgrPapel === k ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground")}>

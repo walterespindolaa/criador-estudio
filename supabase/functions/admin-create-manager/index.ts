@@ -31,7 +31,10 @@ function resolveAppUrl(req: Request): string {
     "https://www.criasocialclub.com.br",
   ];
   if (allow.includes(origin)) return origin;
-  if (/^https:\/\/[a-z0-9-]+\.(lovableproject\.com|lovable\.app)$/.test(origin)) return origin;
+  /* SEM CURINGA DE PREVIEW (pente fino 23/09/2026, S1). Aceitar qualquer
+     *.lovable.app vindo do Origin deixava um atacante mandar o link de senha
+     da vítima pra um domínio dele. Preview do Lovable usa APP_URL ou cai no
+     canônico, que também funciona. */
   return CANONICAL_APP_URL;
 }
 
@@ -167,7 +170,7 @@ serve(async (req) => {
 
     // 1) Cria a social media (manager)
     const ehParceiro = tipo === "parceiro";
-    const papelParceiro = ["designer", "editor_video", "copy", "trafego"].includes(parceiro_role ?? "")
+    const papelParceiro = ["designer", "editor_video", "copy", "trafego", "filmmaker"].includes(parceiro_role ?? "")
       ? parceiro_role! : "designer";
     // O parceiro pousa na fila dele, não no dashboard de gestão.
     const mgr = await inviteUser(svc, managerEmail, origin, ehParceiro ? "/socialmidia/demandas" : "/socialmidia/dashboard");

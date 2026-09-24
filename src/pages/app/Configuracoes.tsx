@@ -83,6 +83,30 @@ const Configuracoes = () => {
   // Paleta grande demais na cara assustava ("20 cores", Walter 31/08): mostra
   // as 7 primeiras e o resto abre sob demanda.
   const [newHabitName, setNewHabitName] = useState("");
+  const [exportando, setExportando] = useState(false);
+  const exportarDados = async () => {
+    setExportando(true);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) { toast.error("Sessão expirada. Entra de novo."); return; }
+      const base = import.meta.env.VITE_SUPABASE_URL as string;
+      const r = await fetch(`${base}/functions/v1/export-my-data`, {
+        headers: { Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? import.meta.env.VITE_SUPABASE_ANON_KEY ?? "" },
+      });
+      if (r.status === 429) { toast.error("Você já exportou 3 vezes hoje. Tenta amanhã."); return; }
+      if (!r.ok) throw new Error(String(r.status));
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `meus-dados-cria-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      toast.success("Arquivo pronto.");
+    } catch {
+      toast.error("Não consegui montar o arquivo agora. Tenta de novo em um minuto.");
+    } finally { setExportando(false); }
+  };
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
   const [customNiche, setCustomNiche] = useState("");
   const [nichoOpen, setNichoOpen] = useState(false);
@@ -813,6 +837,17 @@ const Configuracoes = () => {
                   <div className="space-y-4">
                     <Button variant="outline" onClick={() => setPasswordOpen(true)} className="w-full sm:w-auto"><Lock className="h-4 w-4 mr-2" /> Alterar Senha</Button>
                   </div>
+                </div>
+                {/* SEUS DADOS (LGPD, portabilidade · pente fino 23/09/2026): um
+                    arquivo JSON com tudo que é da pessoa. Até 3 por dia. */}
+                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-3">
+                  <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><Shield className="h-5 w-5 text-primary" /> Seus dados</h3>
+                  <p className="text-sm text-muted-foreground font-body">
+                    Baixe uma cópia de tudo que está na sua conta (ideias, posts, brandbook, clientes, lançamentos) num arquivo que você pode guardar ou levar pra onde quiser.
+                  </p>
+                  <Button variant="outline" className="w-full sm:w-auto min-h-[44px]" disabled={exportando} onClick={() => void exportarDados()}>
+                    {exportando ? "Preparando..." : "Baixar meus dados (.json)"}
+                  </Button>
                 </div>
                 <div className="bg-card border-destructive/20 rounded-2xl p-6 shadow-[var(--shadow-warm)] border space-y-4">
                   <h3 className="font-display font-semibold text-destructive flex items-center gap-2"><AlertTriangle className="h-5 w-5" /> Zona de Perigo</h3>

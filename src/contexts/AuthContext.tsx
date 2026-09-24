@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { User, Session } from "@supabase/supabase-js";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { User, Session, AuthError } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -13,8 +13,8 @@ interface AuthContextType {
    * direto, então a tela de "confirme seu e-mail" não pode aparecer, senão promete
    * um e-mail que nunca é enviado e trava o usuário numa tela morta.
    */
-  signUp: (email: string, password: string, name: string, meta?: Record<string, unknown>) => Promise<{ error: any; needsConfirmation: boolean }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, name: string, meta?: Record<string, unknown>) => Promise<{ error: AuthError | null; needsConfirmation: boolean }>;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -29,7 +29,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setUser(session?.user ?? null);
+      /* SÓ TROCA O OBJETO `user` QUANDO A PESSOA MUDA (pente fino 23/09/2026).
+         A cada TOKEN_REFRESHED (a cada ~50 min) o Supabase entrega um objeto
+         novo com o mesmo usuário; trocar o `user` aqui re-renderizava os 85+
+         consumidores de useAuth e disparava de novo todo efeito com [user]
+         nas dependências (notificações, prefetch, tour...). Mesmo id = mesmo
+         objeto; a sessão (token) continua atualizando normalmente. */
+      setUser((atual) => {
+        const novo = session?.user ?? null;
+        if (atual && novo && atual.id === novo.id && atual.email === novo.email
+            && JSON.stringify(atual.user_metadata) === JSON.stringify(novo.user_metadata)) return atual;
+        return novo;
+      });
       setLoading(false);
     });
 
@@ -42,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, name: string, meta?: Record<string, unknown>) => {
+  const signUp = useCallback(async (email: string, password: string, name: string, meta?: Record<string, unknown>) => {
     const intencao = meta?.account_intent;
     /* Cada tipo de conta pousa no lugar dele: social mídia no onboarding da
        agência, parceiro direto na fila de demandas (ele não tem onboarding de
@@ -61,20 +72,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Sem sessão de volta = o projeto exige confirmação por e-mail. Com sessão, a
     // conta já está ativa e o fluxo segue direto pro app.
     return { error, needsConfirmation: !error && !data?.session };
-  };
+  }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     queryClient.clear();
-  };
+  }, [queryClient]);
+
+  // Valor memoizado: sem isto o Provider criava um objeto novo a cada render
+  // e todo consumidor re-renderizava junto, mesmo sem nada ter mudado.
+  const value = useMemo(() => ({ user, session, loading, signUp, signIn, signOut }), [user, session, loading, signUp, signIn, signOut]);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

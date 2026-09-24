@@ -676,7 +676,7 @@ export const TOURS_GESTOR: TourConfig[] = [
   {
     id: "gestor-parceria",
     route: "/socialmidia/parceria",
-    title: "Parceria: indique e ganhe",
+    title: "Indique e ganhe",
     valueProp:
       "Você já recomenda o Cria pros seus clientes. Com o cupom de parceira, essa indicação vira comissão recorrente em vez de favor.",
     benefits: [

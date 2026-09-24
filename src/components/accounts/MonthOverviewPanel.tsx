@@ -3,6 +3,7 @@ import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { ChevronLeft, ChevronRight, CalendarRange, CheckCircle2, Clock, RotateCcw, Eye, EyeOff } from "lucide-react";
 import { useAllExternalPosts } from "@/hooks/useCriaPost";
 import { toISODateBR, hojeBR, parseDateOnly } from "@/lib/date-br";
+import { ROTULO_APROVACAO } from "@/lib/labels";
 
 // Chave do localStorage pra lembrar se o painel está visível ou recolhido.
 const OPEN_KEY = "home_month_overview_open";
@@ -23,11 +24,11 @@ type StatusKey = "em_producao" | "pendente" | "ajuste_solicitado" | "aprovado" |
 // em produção=lilás, aguardando=amarelo, ajuste=laranja CRIA, aprovado=verde,
 // postado=muted (cinza). Usa hsl(var(--token)) em vez de hex fixo.
 const STATUS_META: { key: StatusKey; label: string; color: string }[] = [
-  { key: "em_producao", label: "Em produção", color: "hsl(var(--cria-lilas))" },
-  { key: "pendente", label: "Aguardando cliente", color: "hsl(var(--cria-amarelo))" },
-  { key: "ajuste_solicitado", label: "Ajuste solicitado", color: "hsl(var(--cria-laranja))" },
-  { key: "aprovado", label: "Aprovado", color: "hsl(var(--cria-verde))" },
-  { key: "postado", label: "Postado", color: "hsl(var(--muted-foreground))" },
+  { key: "em_producao", label: ROTULO_APROVACAO.em_producao, color: "hsl(var(--cria-lilas))" },
+  { key: "pendente", label: ROTULO_APROVACAO.pendente, color: "hsl(var(--cria-amarelo))" },
+  { key: "ajuste_solicitado", label: ROTULO_APROVACAO.ajuste_solicitado, color: "hsl(var(--cria-laranja))" },
+  { key: "aprovado", label: ROTULO_APROVACAO.aprovado, color: "hsl(var(--cria-verde))" },
+  { key: "postado", label: ROTULO_APROVACAO.postado, color: "hsl(var(--muted-foreground))" },
 ];
 
 // "YYYY-MM" de um post: usa a data agendada (o mês pra onde o post foi planejado);

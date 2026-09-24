@@ -32,6 +32,7 @@ import { UpcomingTasks } from "@/components/dashboard/UpcomingTasks";
 import { WhoYouAre } from "@/components/dashboard/WhoYouAre";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { AiUsageCard } from "@/components/shared/AiUsageCard";
+import { confirmar } from "@/components/shared/Confirm";
 
 const HOOKS_VIRAL = [
   { text: "Você sabia que [dado surpreendente]?", category: "curiosidade" },
@@ -219,6 +220,7 @@ const Dashboard = () => {
   };
 
   const handleDeleteHabit = async (habitId: string) => {
+    if (!(await confirmar({ titulo: "Remover este hábito?", descricao: "O histórico de dias marcados vai junto.", acao: "Remover", destrutivo: true }))) return;
     try {
       await deleteHabit.mutateAsync(habitId);
       toast.success("Hábito removido.");

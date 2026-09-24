@@ -1,11 +1,11 @@
 -- SEGURANÇA (pré-lançamento): colaborador com o módulo cria_caixa NÃO pode ver
 -- o financeiro PESSOAL (PF) do dono. As policies _team liberavam TODAS as linhas
 -- do manager_id (sem filtrar context), então a separação Empresa/Pessoal existia
--- só na UI — um colaborador lia o PF pelo console (select em fin_records context='pf').
+-- só na UI: um colaborador lia o PF pelo console (select em fin_records context='pf').
 --
 -- Correção: o colaborador (que só tem acesso via _team) passa a enxergar apenas
 -- context='pj'. O DONO continua vendo tudo pela policy própria "owner_all_*"
--- (manager_id = auth.uid()), que NÃO é tocada aqui — RLS é OR entre policies.
+-- (manager_id = auth.uid()), que NÃO é tocada aqui: RLS é OR entre policies.
 -- coalesce(context,'pj'): linhas antigas sem context são PJ por padrão (mesma
 -- regra do app, r.context ?? 'pj'), então nada some pro colaborador legítimo.
 -- fin_monthly NÃO tem coluna context (mensalidade é sempre PJ) → não muda.

@@ -39,7 +39,9 @@ export type CompetitorScrape = {
   competitor_id: string | null;
   scrape_type: ScrapeType;
   input_handle: string;
-  status: "queued" | "running" | "done" | "error";
+  // "processing": o poll reclamou o job e está gastando crédito (transcrição,
+  // IA). Pra tela é igual a "running".
+  status: "queued" | "running" | "processing" | "done" | "error";
   result_summary: Record<string, unknown> | null;
   cost_usd: number | null;
   error: string | null;

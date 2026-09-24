@@ -8,10 +8,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { useIdeas } from "@/hooks/useIdeas";
 import { usePosts } from "@/hooks/usePosts";
 import { useMoodboard } from "@/hooks/useMoodboard";
 import { useSocialConnection } from "@/hooks/useSocialInsights";
+import { useBioLinks } from "@/hooks/useBioLinks";
+import { useGoals } from "@/hooks/useGoals";
 
 type Step = {
   id: string;
@@ -21,39 +22,39 @@ type Step = {
   to: string;
   done: boolean;
   /** quando não há dado pra derivar, marca como concluído ao clicar */
-  markOnClick?: boolean;
 };
 
 export function FirstStepsPanel() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { ideas } = useIdeas({ limit: 5 });
   const { posts } = usePosts({ limit: 30 });
   const { entries } = useMoodboard();
   // Conexão REAL do Instagram (OAuth), não o @ digitado no perfil. Antes o passo
   // riscava só por ter texto no campo do @, então a pessoa achava que já estava
   // conectada e ficava sem entender por que os insights não vinham.
   const { data: conexaoInstagram } = useSocialConnection();
+  const { links: bioLinks } = useBioLinks();
+  const { structuredGoals } = useGoals();
 
   const dismissKey = user ? `cria-firststeps-dismissed-${user.id}` : "cria-firststeps-dismissed";
-  const clickedKey = user ? `cria-firststeps-clicked-${user.id}` : "cria-firststeps-clicked";
 
   const [dismissed, setDismissed] = useState(() => {
     try { return localStorage.getItem(dismissKey) === "1"; } catch { return false; }
   });
-  const [clicked, setClicked] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem(clickedKey) || "[]"); } catch { return []; }
-  });
 
   const hasPublished = useMemo(() => posts.some((p) => p.status === "publicado"), [posts]);
 
+  /* PROGRESSO DE VERDADE (onboarding v2, 23/09/2026). "Montar minha primeira
+     semana" nascia concluído (o onboarding cria as ideias) e link na bio e
+     metas contavam como feitos só por clicar. Cada item agora mede um dado
+     real: tem post criado? tem botão na bio? tem meta cadastrada? */
   const steps: Step[] = [
-    { id: "ideas", label: "Montar minha primeira semana", icon: Lightbulb, to: "/app/ideias", done: ideas.length > 0 },
     { id: "instagram", label: "Conectar meu Instagram", note: "conta profissional, pra ver seus números", icon: Instagram, to: "/app/insights", done: !!conexaoInstagram },
+    { id: "post", label: "Criar meu 1º post", note: "a partir de uma das suas ideias", icon: Lightbulb, to: "/app/ideias", done: posts.length > 0 },
     { id: "moodboard", label: "Preencher meu moodboard", note: "a Cria IA aprende seu estilo", icon: Palette, to: "/app/brandbook", done: (entries?.length ?? 0) > 0 },
-    { id: "post", label: "Publicar meu 1º post", icon: Send, to: "/app/criando", done: hasPublished },
-    { id: "bio", label: "Montar meu link in bio", icon: LinkIcon, to: "/app/linkinbio", done: clicked.includes("bio"), markOnClick: true },
-    { id: "metas", label: "Definir minhas metas", icon: Target, to: "/app/metas", done: clicked.includes("metas"), markOnClick: true },
+    { id: "publicado", label: "Publicar meu 1º post", icon: Send, to: "/app/criando", done: hasPublished },
+    { id: "bio", label: "Montar meu link na bio", icon: LinkIcon, to: "/app/linkinbio", done: bioLinks.length > 0 },
+    { id: "metas", label: "Definir minhas metas", icon: Target, to: "/app/metas", done: structuredGoals.length > 0 },
   ];
 
   const total = steps.length;
@@ -65,14 +66,7 @@ export function FirstStepsPanel() {
     try { localStorage.setItem(dismissKey, "1"); } catch { /* noop */ }
   };
 
-  const handleClick = (step: Step) => {
-    if (step.markOnClick && !clicked.includes(step.id)) {
-      const next = [...clicked, step.id];
-      setClicked(next);
-      try { localStorage.setItem(clickedKey, JSON.stringify(next)); } catch { /* noop */ }
-    }
-    navigate(step.to);
-  };
+  const handleClick = (step: Step) => { navigate(step.to); };
 
   if (dismissed || completed >= total) return null;
 

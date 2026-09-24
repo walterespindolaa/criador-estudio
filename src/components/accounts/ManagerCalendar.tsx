@@ -19,14 +19,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { CLIENT_COLORS } from "@/components/accounts/CriaPostBoard";
 import { toast } from "sonner";
+import { ROTULO_APROVACAO } from "@/lib/labels";
 
 // Estados de aprovação (mesmos rótulos do Cria Post) pro popup editável do post.
 const STATUS_OPTS: { key: string; label: string }[] = [
-  { key: "em_producao", label: "Em produção" },
-  { key: "pendente", label: "Aguardando cliente" },
-  { key: "ajuste_solicitado", label: "Ajuste solicitado" },
-  { key: "aprovado", label: "Aprovado" },
-  { key: "postado", label: "Postado" },
+  { key: "em_producao", label: ROTULO_APROVACAO.em_producao },
+  { key: "pendente", label: ROTULO_APROVACAO.pendente },
+  { key: "ajuste_solicitado", label: ROTULO_APROVACAO.ajuste_solicitado },
+  { key: "aprovado", label: ROTULO_APROVACAO.aprovado },
+  { key: "postado", label: ROTULO_APROVACAO.postado },
 ];
 
 // Lê um flag salvo em localStorage ("1"/"0"); usa o padrão quando não há nada.
@@ -574,7 +575,9 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
       </div>
 
       <p className="text-[11px] text-muted-foreground font-body flex items-center gap-1.5">
-        <Clock className="h-3 w-3" /> Arraste os posts entre os dias pra remarcar. Clique num post pra editar.
+        <Clock className="h-3 w-3" />
+        <span className="[@media(hover:none)]:hidden">Arraste os posts entre os dias pra remarcar. Clique num post pra editar.</span>
+        <span className="hidden [@media(hover:none)]:inline">Toque no dia, depois no post, e mude a data pra remarcar.</span>
       </p>
 
       {/* Mobile: lista dos itens do dia tocado. Cada item abre o popup de edição. */}

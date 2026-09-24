@@ -22,7 +22,12 @@
                                                         persistência do react-query)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const VERSION = "v4"; // v4: push com tag/renotify + badge (04/09)
+// __BUILD_ID__ é trocado pelo id do build no `vite build` (ver vite.config.ts).
+// Assim CADA deploy vira uma versão nova de cache: o activate apaga o shell
+// antigo e ninguém fica com index.html velho apontando pra chunk que já morreu
+// (era a raiz do "bugou o sistema" com erro 503 de chunk). Em dev fica o
+// literal, que também serve como versão.
+const VERSION = "v5-__BUILD_ID__"; // v4: push com tag/renotify + badge (04/09)
 const SHELL = `cria-shell-${VERSION}`;
 const ASSETS = `cria-assets-${VERSION}`;
 const FONTS = `cria-fonts-${VERSION}`;

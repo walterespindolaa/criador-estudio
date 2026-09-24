@@ -25,8 +25,12 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
   /* Papel do parceiro. Define o vocabulário do quadro dele já no primeiro
      acesso (Referências/Rascunho/Arte final pro designer, Decupagem/Corte/
      Finalização pro editor) sem depender de agência nenhuma. */
-  const [parceiroRole, setParceiroRole] = useState<"designer" | "editor_video" | "copy" | "trafego">("designer");
+  const [parceiroRole, setParceiroRole] = useState<"designer" | "editor_video" | "copy" | "trafego" | "filmmaker">("designer");
   const [loading, setLoading] = useState(false);
+  /* ACEITE DOS TERMOS (pente fino 23/09/2026, LGPD). A edge `accept-terms`
+     existia e ninguém chamava: nenhum cadastro tinha aceite registrado. */
+  const [aceitouTermos, setAceitouTermos] = useState(false);
+  const [erroTermos, setErroTermos] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [emailValue, setEmailValue] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -59,8 +63,10 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
       .then(({ data }) => {
         const d = data as { found?: boolean; email?: string; plan?: string } | null;
         if (d?.found && d.email) {
+          /* O peek agora devolve o e-mail MASCARADO (w****@gmail.com): serve pra
+             pessoa reconhecer a compra, não pra preencher o campo. Ela digita o
+             e-mail completo, e o resgate só acontece se bater com o do pagamento. */
           setCompraPaga({ email: d.email, plan: d.plan ?? "" });
-          setValue("email", d.email);
           setAccountType("creator");
         }
       })
@@ -81,6 +87,7 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
   };
 
   const onSubmit = async (data: SignupFormData) => {
+    if (!aceitouTermos) { setErroTermos(true); return; }
     setEmailValue(data.email);
     setFormError(null);
     setLoading(true);
@@ -97,6 +104,15 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
       toast.error(mapped.text);
     } else {
       track("CompleteRegistration", { content_name: accountType === "manager" ? "signup_agency" : accountType === "parceiro" ? "signup_parceiro" : "signup_email" });
+      /* Registra o aceite com IP e user-agent do lado do servidor. Se a conta
+         ainda precisa confirmar o e-mail, não há sessão agora: a marca fica no
+         localStorage e o ProtectedRoute registra no primeiro acesso logado. */
+      try { localStorage.setItem("cria.termos_pendentes", "1"); } catch { /* modo privado */ }
+      if (!needsConfirmation) {
+        void supabase.functions.invoke("accept-terms", { body: {} })
+          .then(() => { try { localStorage.removeItem("cria.termos_pendentes"); } catch { /* ok */ } })
+          .catch(() => { /* fica pendente, o ProtectedRoute tenta de novo */ });
+      }
       // Só mostra "confirme seu e-mail" quando o projeto REALMENTE exige confirmação.
       // Com o auto-confirm ligado a sessão já veio: a pessoa entra direto e quem leva
       // pro onboarding é o roteador, que reage à sessão nova.
@@ -216,7 +232,7 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
                   <div className="mt-3">
                     <p className="text-xs [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]/60 uppercase tracking-wider mb-2">O que você faz</p>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {([["designer", "Design"], ["editor_video", "Edição de vídeo"], ["copy", "Copy"], ["trafego", "Tráfego"]] as const).map(([k, l]) => (
+                      {([["designer", "Design"], ["editor_video", "Edição de vídeo"], ["filmmaker", "Captação / filmmaker"], ["copy", "Copy"], ["trafego", "Tráfego"]] as const).map(([k, l]) => (
                         <button key={k} type="button" onClick={() => setParceiroRole(k)}
                           className={`rounded-xl border-2 px-2.5 py-2 text-[12px] [font-family:'Baloo_2',sans-serif] font-bold transition-all ${parceiroRole === k ? "border-[#EA4918] bg-[#FBE9E1] text-[#0A0A0A]" : "border-[#0A0A0A]/20 text-[#0A0A0A]/70 hover:border-[#0A0A0A]/50"}`}>
                           {l}
@@ -279,6 +295,18 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
                     {formError}
                   </div>
                 )}
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input type="checkbox" checked={aceitouTermos}
+                    onChange={(e) => { setAceitouTermos(e.target.checked); if (e.target.checked) setErroTermos(false); }}
+                    className="mt-1 h-5 w-5 shrink-0 rounded border-2 border-[#0A0A0A]/30 accent-[#EA4918]" />
+                  <span className="text-[13px] text-[#0A0A0A]/70 font-body leading-snug">
+                    Li e aceito os{" "}
+                    <Link to="/termos" target="_blank" className="text-[#0061EE] underline underline-offset-2">Termos de Uso</Link>
+                    {" "}e a{" "}
+                    <Link to="/privacidade" target="_blank" className="text-[#0061EE] underline underline-offset-2">Política de Privacidade</Link>.
+                  </span>
+                </label>
+                {erroTermos && <p className="text-xs text-[#EA4918] -mt-2">Pra criar a conta, precisa aceitar os termos.</p>}
                 <Button
                   type="submit"
                   size="lg"

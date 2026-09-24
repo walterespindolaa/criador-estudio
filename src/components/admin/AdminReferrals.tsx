@@ -210,10 +210,13 @@ export function AdminReferrals() {
                       <span className="text-xs text-muted-foreground font-body">{new Date(r.created_at).toLocaleDateString("pt-BR")}</span>
                     </td>
                     <td className="px-4 py-3">
+                      {/* PAGAMENTO SÓ PELA TELA NOVA (pente fino 23/09/2026, B4).
+                          Esta lista é histórico. Pagar aqui marcava a indicação
+                          e não os lançamentos por fatura: dava pra pagar a mesma
+                          parceira duas vezes. O botão agora aponta pro
+                          fechamento mensal em "Parceiras e comissão". */}
                       {r.status === "payable" ? (
-                        <Button size="sm" onClick={() => setPayoutTarget(r)} className="h-8 text-xs">
-                          Marcar como paga
-                        </Button>
+                        <span className="text-[11px] text-muted-foreground font-body">pague em Parceiras e comissão</span>
                       ) : r.status === "paid" && r.payout_proof_url ? (
                         <a href={r.payout_proof_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
                           Comprovante

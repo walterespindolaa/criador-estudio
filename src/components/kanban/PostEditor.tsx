@@ -1343,6 +1343,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     variant="ghost"
                     size="sm"
                     className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    aria-label="Excluir post"
                     onClick={handleDelete}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -1362,6 +1363,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   variant="outline"
                   size="sm"
                   className="gap-1.5"
+                  aria-label="Prévia do post"
                   onClick={() => setPreviewOpen(true)}
                 >
                   <Eye className="h-3.5 w-3.5" />
@@ -2713,6 +2715,18 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 </div>
               </aside>
             </div>
+          </div>
+          {/* RODAPÉ FIXO NO CELULAR (pente fino 23/09/2026): o Salvar morava só
+              no cabeçalho, longe do polegar, e a pessoa rolava o editor inteiro
+              de volta pra cima pra salvar. No desktop o cabeçalho basta. */}
+          <div className="sm:hidden shrink-0 z-20 px-3 py-2.5 border-t border-border bg-background/95 backdrop-blur flex items-center gap-2"
+            style={{ paddingBottom: "max(0.625rem, env(safe-area-inset-bottom))" }}>
+            <Button variant="outline" size="sm" className="min-h-[44px] flex-1" onClick={() => setPreviewOpen(true)}>
+              <Eye className="h-4 w-4 mr-1.5" /> Prévia
+            </Button>
+            <Button variant="hero" size="sm" className="min-h-[44px] flex-[2]" onClick={handleSave} disabled={!title.trim() || saving}>
+              {saving ? "Salvando…" : isNew ? "Criar post" : "Salvar"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

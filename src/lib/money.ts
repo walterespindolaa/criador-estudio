@@ -36,3 +36,19 @@ export function formatBRL(v: number | null | undefined, opts?: { zeroAsDash?: bo
   if (n === 0 && (opts?.zeroAsDash ?? true)) return "-";
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
+
+/* ── Dois formatos únicos pro app inteiro (pente fino 23/09/2026) ──────────
+   Havia 17 `brl` locais: uns recebiam CENTAVOS (Stripe), outros REAIS
+   (Caixa), e a mesma tela às vezes misturava. Aqui o nome diz a unidade. */
+
+/** Reais -> "R$ 1.234,56". Zero vira "R$ 0,00" (não traço). */
+export function brlReais(v: number | null | undefined): string {
+  const n = Number(v);
+  if (v == null || !Number.isFinite(n)) return "R$ 0,00";
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+/** Centavos (Stripe) -> "R$ 1.234,56". */
+export function brlCentavos(c: number | null | undefined): string {
+  return brlReais((Number(c) || 0) / 100);
+}

@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { storageBytesForPlan, formatStorage, STORAGE_BYTES, TIER_LABEL, tierRank, type PlanId } from "@/lib/plans";
 import { useTier } from "@/hooks/useTier";
 import type { Database } from "@/integrations/supabase/types";
+import { confirmar } from "@/components/shared/Confirm";
 
 type DriveRef = Database["public"]["Tables"]["external_media_refs"]["Row"];
 
@@ -436,6 +437,8 @@ const Arquivos = () => {
   };
 
   const handleDelete = async (f: { id: string; storage_path: string; size_bytes?: number | null }) => {
+    // Apaga do storage de vez: sem lixeira. Por isso pergunta (pente fino 23/09).
+    if (!(await confirmar({ titulo: "Excluir este arquivo?", descricao: "Ele sai do seu armazenamento e não dá pra recuperar.", acao: "Excluir", destrutivo: true }))) return;
     try {
       await deleteFile.mutateAsync(f);
       toast.success("Arquivo removido.");

@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Sparkles, Check, Clock, Loader2, Send, Users2, Wallet, Radar, ArrowRight, Camera } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { brlCentavos } from "@/lib/money";
 
-const brl = (c: number) => `R$ ${(c / 100).toFixed(2).replace(".", ",")}`;
+const brl = brlCentavos;
 const ICONS: Record<string, typeof Sparkles> = { aprovapost_externo: Send, crm: Users2, financeiro: Wallet, hub_cria: Radar, hub_extra: Sparkles, cria_captacao: Camera };
 
 // Onde cada módulo ABRE. Sem isto, o popup de um módulo ativo vira um beco sem

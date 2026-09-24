@@ -27,6 +27,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { confirmar } from "@/components/shared/Confirm";
 import { Mail, ShieldOff, ShieldCheck, Trash2, Loader2, Eraser } from "lucide-react";
 
 interface UserDetailsDrawerProps {
@@ -353,7 +354,11 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                         <SelectItem value="agency">Agência</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button size="sm" onClick={() => setPlanMutation.mutate()} disabled={setPlanMutation.isPending}>
+                    <Button size="sm" disabled={setPlanMutation.isPending}
+                      onClick={async () => {
+                        const ok = await confirmar({ titulo: "Trocar o plano desta conta?", descricao: "Muda o que a pessoa acessa imediatamente e fica registrado na trilha do admin.", acao: "Trocar plano" });
+                        if (ok) setPlanMutation.mutate();
+                      }}>
                       {setPlanMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
                       Salvar
                     </Button>
@@ -489,7 +494,16 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => toggleSuspendMutation.mutate()}
+                      onClick={async () => {
+                        // Suspender fecha o app da pessoa na hora (ProtectedRoute): pede confirmação.
+                        const ok = await confirmar({
+                          titulo: isSuspended ? "Reativar esta conta?" : "Suspender esta conta?",
+                          descricao: isSuspended ? "A pessoa volta a entrar normalmente." : "A pessoa é barrada na entrada do app até você reativar. Os dados ficam guardados.",
+                          acao: isSuspended ? "Reativar" : "Suspender",
+                          destrutivo: !isSuspended,
+                        });
+                        if (ok) toggleSuspendMutation.mutate();
+                      }}
                       disabled={toggleSuspendMutation.isPending}
                     >
                       {toggleSuspendMutation.isPending ? (

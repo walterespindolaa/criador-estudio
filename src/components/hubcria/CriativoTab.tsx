@@ -225,7 +225,7 @@ export function CriativoTab({ clientId, clientName }: { clientId?: string; clien
   // Leituras que falharam ou ficaram penduradas eram INVISÍVEIS: sumiam da tela
   // e não davam pra apagar. A pessoa achava que o módulo tinha comido o crédito.
   const pendentes = useMemo(
-    () => scrapes.filter((s) => s.status === "error" || ((s.status === "queued" || s.status === "running") && Date.now() - new Date(s.created_at).getTime() < 30 * 60 * 1000)),
+    () => scrapes.filter((s) => s.status === "error" || ((s.status === "queued" || s.status === "running" || s.status === "processing") && Date.now() - new Date(s.created_at).getTime() < 30 * 60 * 1000)),
     [scrapes],
   );
 

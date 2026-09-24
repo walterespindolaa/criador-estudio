@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCrmClient } from "@/hooks/useCrm";
 import { useProfile } from "@/hooks/useProfile";
+import { useMeuCodigoParceiro } from "@/hooks/useTeam";
 import { motion } from "framer-motion";
 import {
   Briefcase, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
@@ -479,6 +480,15 @@ function PausadoEmTudo() {
 }
 
 function ComeceAqui() {
+  const { data: codigo, isLoading: codigoCarregando } = useMeuCodigoParceiro();
+  const mensagem = codigo
+    ? `Oi! Já estou no Cria. Me adiciona na sua equipe de produção com o meu código: ${codigo} (é só colar em Equipe > Código do parceiro).`
+    : "";
+  const copiarCodigo = async () => {
+    if (!codigo) return;
+    try { await navigator.clipboard.writeText(mensagem); toast.success("Mensagem copiada. Cola no WhatsApp da agência."); }
+    catch { toast.error("Não consegui copiar. O código é " + codigo); }
+  };
   const PASSOS = [
     {
       Icone: Briefcase, cor: "bg-orange-100 text-orange-600", titulo: "1 · O card chega pronto",
@@ -505,6 +515,23 @@ function ComeceAqui() {
           Quando uma social mídia delegar um post pra você, ele aparece aqui e o aviso chega no seu
           celular na hora. Enquanto isso, é assim que o trabalho flui:
         </p>
+      </Card>
+      {/* CHAME SUA AGÊNCIA (pente fino 23/09/2026). Era o beco sem saída: quem
+          se cadastrava sozinho via quatro cartões e nenhum botão. O código
+          vai no WhatsApp; a social mídia cola em Equipe e o vínculo nasce. */}
+      <Card className="rounded-2xl border-primary/40 bg-primary/5 p-5 mb-4">
+        <p className="font-display font-extrabold text-[15px]">Chame a sua agência</p>
+        <p className="text-[13px] font-body text-muted-foreground mt-1 leading-relaxed">
+          Manda o seu código pra social mídia que você atende. Ela cola em <strong className="text-foreground">Equipe</strong> e você entra na equipe de produção dela na hora.
+        </p>
+        <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+          <span className="inline-flex items-center justify-center h-11 px-4 rounded-xl bg-background border border-border font-mono text-lg tracking-[0.3em] font-bold text-foreground min-w-[140px]">
+            {codigoCarregando ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : (codigo || "......")}
+          </span>
+          <Button onClick={() => void copiarCodigo()} disabled={!codigo} className="min-h-[44px]">
+            <CopyIcon className="h-4 w-4 mr-2" /> Copiar mensagem pro WhatsApp
+          </Button>
+        </div>
       </Card>
       <div className="grid sm:grid-cols-2 gap-3">
         {PASSOS.map((p) => (
@@ -1691,7 +1718,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     Aqui a largura permite duas colunas lado a lado, subir e
                     mandar link, com o botão verde fechando embaixo. */}
                 {!agencia && card.producao_status !== "entregue" && (
-                  <div className="mt-5 rounded-2xl border-2 border-green-200 bg-green-50/40 p-4">
+                  <div id="bloco-sua-entrega" className="mt-5 rounded-2xl border-2 border-green-200 bg-green-50/40 p-4">
                     <p className="text-[10.5px] font-bold uppercase tracking-wider text-green-800 flex items-center gap-1.5 mb-0.5">
                       <Check className="h-3.5 w-3.5" /> Sua entrega
                     </p>
@@ -2145,6 +2172,21 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
             <HistoricoDeVersoes aberto={vendoHistorico} aoFechar={() => setVendoHistorico(false)}
               versoes={versoes} carregando={carregandoVersoes} />
           </>
+        )}
+        {/* RODAPÉ FIXO NO CELULAR (pente fino 23/09/2026): "Marcar como entregue"
+            ficava no fim de uma rolagem longa. Aqui ele mora perto do polegar e
+            leva pro bloco de entrega (que pede o arquivo ou o link). */}
+        {card && !agencia && card.producao_status !== "entregue" && !entregando && (
+          <div className="sm:hidden shrink-0 px-3 py-2.5 border-t border-border bg-background/95 backdrop-blur"
+            style={{ paddingBottom: "max(0.625rem, env(safe-area-inset-bottom))" }}>
+            <Button className="w-full min-h-[44px] rounded-xl bg-green-600 hover:bg-green-700" disabled={marcar.isPending}
+              onClick={() => {
+                setEntregando(true);
+                window.setTimeout(() => document.getElementById("bloco-sua-entrega")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+              }}>
+              <Check className="h-4 w-4 mr-1.5" /> Marcar como entregue
+            </Button>
+          </div>
         )}
       </DialogContent>
     </Dialog>

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Boxes, Lock } from "lucide-react";
 import { useModules } from "@/hooks/useModules";
-import { useManagerOutlet } from "@/components/accounts/ManagerLayout";
+import { useManagerOutlet } from "@/components/accounts/managerOutlet";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useMyTeamPermissions } from "@/hooks/useTeam";
 import { Button } from "@/components/ui/button";

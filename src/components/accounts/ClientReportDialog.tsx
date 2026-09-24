@@ -766,10 +766,14 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       const row = data as { body: string | null; metrics_images: string[] | null; analysis_html?: string | null; next_steps?: string | null } | null;
       const paths = row?.metrics_images ?? [];
       // Assina cada caminho do Storage pra renderizar (bucket privado).
+      // Uma chamada só pra todos os prints (createSignedUrls), não uma por
+      // imagem em série: relatório com 12 prints abria com 12 idas ao Storage.
       const shots: { path: string; url: string }[] = [];
-      for (const p of paths) {
-        const { data: s } = await supabase.storage.from("relatorios").createSignedUrl(p, 60 * 60 * 24 * 30);
-        if (s?.signedUrl) shots.push({ path: p, url: s.signedUrl });
+      if (paths.length > 0) {
+        const { data: assinadas } = await supabase.storage.from("relatorios").createSignedUrls(paths, 60 * 60 * 24 * 30);
+        for (const a of assinadas ?? []) {
+          if (a.signedUrl && a.path) shots.push({ path: a.path, url: a.signedUrl });
+        }
       }
       return { body: row?.body ?? "", analysis: row?.analysis_html ?? "", proximos: row?.next_steps ?? "", shots };
     },

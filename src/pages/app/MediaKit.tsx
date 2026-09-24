@@ -13,6 +13,7 @@ import { useTier } from "@/hooks/useTier";
 import { Link } from "react-router-dom";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
+import { confirmar } from "@/components/shared/Confirm";
 
 export default function MediaKit() {
   const { profile } = useProfile();
@@ -393,7 +394,7 @@ export default function MediaKit() {
                   <input type="file" accept="application/pdf" className="hidden" onChange={onUpload} />
                   <span className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-accent"><Upload className="h-3.5 w-3.5" /> Trocar</span>
                 </label>
-                <Button variant="ghost" size="sm" onClick={() => custom.remove.mutate()} className="gap-1.5 text-destructive hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
+                <Button variant="ghost" size="sm" aria-label="Remover media kit personalizado" onClick={async () => { if (await confirmar({ titulo: "Remover o media kit personalizado?", descricao: "O arquivo enviado é apagado. O media kit automático continua.", acao: "Remover", destrutivo: true })) custom.remove.mutate(); }} className="gap-1.5 text-destructive hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
               </div>
             </div>
           ) : (

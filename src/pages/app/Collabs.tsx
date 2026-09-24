@@ -20,6 +20,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { hojeBR } from "@/lib/date-br";
 
 const brl = (v?: number | null) =>
   v == null ? "-" : `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
@@ -45,7 +46,7 @@ export default function Collabs() {
   const archived = collabs.filter((c) => c.archived);
   const reminders = collabReminders(collabs);
 
-  const nowMonth = new Date().toISOString().slice(0, 7);
+  const nowMonth = hojeBR().slice(0, 7); // fuso BR: no último dia do mês o UTC já virava o mês seguinte
   const fechadoMes = active
     .filter((c) => ["fechado", "entregue", "pago"].includes(c.status) && c.updated_at.slice(0, 7) === nowMonth)
     .reduce((s, c) => s + (c.value ?? 0), 0);

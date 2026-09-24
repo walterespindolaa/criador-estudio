@@ -15,6 +15,7 @@ import { bestTimes } from "@/lib/bestTimes";
 import { useTrends, trendsToContext } from "@/hooks/useTrends";
 import { FORMAT_LABELS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
+import { toISODateBR } from "@/lib/date-br";
 
 const sbFrom = supabase.from.bind(supabase) as unknown as (t: string) => ReturnType<typeof supabase.from>;
 
@@ -87,7 +88,7 @@ export default function Autopilot() {
     return Array.from({ length: n }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() + 1 + Math.floor((i * days) / Math.max(1, n)));
-      return d.toISOString().slice(0, 10);
+      return toISODateBR(d); // fuso BR, não UTC
     });
   };
 

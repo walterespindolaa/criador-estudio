@@ -16,7 +16,7 @@ export type PromoteIdeaInput = {
   post: Omit<PostInsert, "user_id" | "id" | "created_at" | "updated_at">;
 };
 
-export function useIdeas(options?: { limit?: number }) {
+export function useIdeas(options?: { limit?: number; enabled?: boolean }) {
   const { activeAccountId } = useActiveAccount();
   const queryClient = useQueryClient();
   const userId = activeAccountId;
@@ -39,7 +39,8 @@ export function useIdeas(options?: { limit?: number }) {
       if (error) throw error;
       return (data ?? []) as Idea[];
     },
-    enabled: !!userId,
+    // `enabled: false` deixa o hook montado sem buscar (painel da IA fechado).
+    enabled: !!userId && options?.enabled !== false,
   });
 
   const createIdea = useMutation({

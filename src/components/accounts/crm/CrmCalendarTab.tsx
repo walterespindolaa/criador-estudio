@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { hojeBR } from "@/lib/date-br";
 
 /* O calendário do Cria Gestão estava mudo (Walter, 30/08): item sem dizer de
    QUAL cliente era, clique que não abria nada, e tudo na cor padrão. Agora o
@@ -82,7 +83,7 @@ export function CrmCalendarTab() {
 
   const daysInMonth = new Date(cursor.y, cursor.m + 1, 0).getDate();
   const firstDow = new Date(cursor.y, cursor.m, 1).getDay();
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = hojeBR(); // fuso BR, não UTC
 
   const go = (delta: number) => {
     setSelected(null);

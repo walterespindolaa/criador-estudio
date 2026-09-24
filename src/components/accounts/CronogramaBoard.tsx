@@ -26,12 +26,13 @@ import { useCrmClients } from "@/hooks/useCrm";
 import { confirmar } from "@/components/shared/Confirm";
 import { MultiLinkInput } from "@/components/shared/MultiLinkInput";
 import { parseRefLinks, serializeRefLinks, refLinkHref, refLinkLabel, isRefLink } from "@/lib/refLinks";
+import { ROTULO_CRONOGRAMA } from "@/lib/labels";
 
 const TYPE_COLOR: Record<string, string> = {
   "Reels": "bg-red-600", "Carrossel": "bg-green-700", "Feed": "bg-blue-700",
   "Stories": "bg-gray-500", "Carrossel/Stories": "bg-green-700", "Feed/Stories": "bg-blue-700",
 };
-const ST_LABEL: Record<ItemStatus, string> = { pendente: "Pendente", aprovado: "Aprovado", recusado: "Recusado", ajuste: "Ajuste pedido" };
+const ST_LABEL: Record<ItemStatus, string> = ROTULO_CRONOGRAMA as Record<ItemStatus, string>;
 const ST_CLASS: Record<ItemStatus, string> = {
   pendente: "bg-muted text-muted-foreground", aprovado: "bg-green-100 text-green-700",
   recusado: "bg-red-100 text-red-700", ajuste: "bg-amber-100 text-amber-700",

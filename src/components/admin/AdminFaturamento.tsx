@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { RefreshCw, TrendingUp, Users, Clock, Ticket, ChevronDown, ArrowUpRight, AlertCircle, UserMinus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { brlReais } from "@/lib/money";
 
 type PlanRow = { label: string; count: number; mrr: number; emails: string[] };
 type Billing = {
@@ -10,7 +11,7 @@ type Billing = {
   mrr: number; currency: string; planBreakdown?: PlanRow[];
 };
 
-const brl = (n: number) => "R$ " + (n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 });
+const brl = brlReais;
 
 function Card({ icon: Icon, label, value, sub }: { icon: typeof Users; label: string; value: string; sub?: string }) {
   return (

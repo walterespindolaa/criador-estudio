@@ -123,10 +123,6 @@ export default function Privacidade() {
                 de pagamentos (dados de cobrança)
               </li>
               <li>
-                <strong className="text-foreground">Resend:</strong> envio de
-                emails transacionais (somente email e conteúdo do email)
-              </li>
-              <li>
                 <strong className="text-foreground">Google Gemini (via Lovable AI Gateway):</strong>{" "}
                 processamento de requisições de IA (apenas o prompt enviado,
                 sem dados de cadastro)
@@ -135,7 +131,47 @@ export default function Privacidade() {
                 <strong className="text-foreground">Cloudflare:</strong> DNS e
                 proteção de infraestrutura
               </li>
+              <li>
+                <strong className="text-foreground">Meta (Facebook/Instagram):</strong>{" "}
+                conexão da sua conta do Instagram (só com a sua autorização) e,
+                se você aceitar no aviso de cookies, medição de anúncios via Pixel
+                e API de Conversões
+              </li>
+              <li>
+                <strong className="text-foreground">Perplexity e TwelveLabs:</strong>{" "}
+                pesquisa de tendências e análise de vídeo (recebem só o conteúdo
+                que você pede pra analisar)
+              </li>
+              <li>
+                <strong className="text-foreground">Apify:</strong> coleta de
+                dados públicos de perfis e posts que você indica como referência
+                ou concorrência
+              </li>
+              <li>
+                <strong className="text-foreground">Bunny.net:</strong> armazenamento
+                e entrega de vídeos enviados por você
+              </li>
+              <li>
+                <strong className="text-foreground">Higgsfield:</strong> geração
+                de imagens por IA a partir do briefing que você escreve
+              </li>
+              <li>
+                <strong className="text-foreground">Sentry:</strong> registro de
+                erros técnicos do app (sem conteúdo dos seus posts)
+              </li>
+              <li>
+                <strong className="text-foreground">Lovable:</strong> envio de
+                e-mails transacionais e infraestrutura de IA
+              </li>
             </ul>
+            <p className="text-muted-foreground leading-relaxed mt-3">
+              <strong className="text-foreground">Dados de terceiros que você cadastra.</strong>{" "}
+              Se você é social mídia ou agência, os dados dos seus clientes que
+              você registra no Cria (nome, contato, marca, posts) são tratados
+              por nós como operador, em seu nome. Você é responsável por ter base
+              legal pra tratá-los e por atender pedidos desses titulares; nós
+              garantimos a segurança e a exclusão quando você excluir a conta.
+            </p>
             <p className="text-muted-foreground leading-relaxed mt-3">
               Não vendemos, alugamos ou comercializamos seus dados pessoais a
               terceiros pra fins de marketing.

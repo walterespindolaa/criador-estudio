@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
+import { vazioOuErro } from "@/lib/erro-esquema";
 
 // ── CIDADES ATENDIDAS PELA SOCIAL MÍDIA ───────────────────────────────────────
 // Config do GESTOR (dono do tenant): a lista de cidades onde a agência faz
@@ -47,8 +48,8 @@ export function useCaptureCities() {
         .select("capture_cities")
         .eq("id", agencyOwnerId!)
         .maybeSingle();
-      // Coluna inexistente (migration não rodada) ou qualquer falha: lista vazia.
-      if (error) return [];
+      // Coluna inexistente (migration não rodada): lista vazia. Outro erro sobe.
+      if (error) return vazioOuErro(error, [] as string[]);
       const cities = (data as ProfileCities | null)?.capture_cities;
       return Array.isArray(cities) ? normalizeCities(cities) : [];
     },
@@ -117,7 +118,7 @@ export function useDefaultShotList() {
         .select("default_shot_list")
         .eq("id", agencyOwnerId!)
         .maybeSingle();
-      if (error) return [];
+      if (error) return vazioOuErro(error, [] as string[]);
       const shots = (data as ProfileShots | null)?.default_shot_list;
       return Array.isArray(shots) ? normalizeShots(shots) : [];
     },

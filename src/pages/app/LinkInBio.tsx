@@ -2134,7 +2134,7 @@ const LinkInBio = () => {
                           {ld.phone && <p className="text-xs text-muted-foreground truncate">{ld.phone}</p>}
                           <p className="text-[11px] text-muted-foreground/70 mt-0.5">{new Date(ld.created_at).toLocaleDateString("pt-BR")}</p>
                         </div>
-                        <button type="button" aria-label="Remover" onClick={() => deleteLead.mutate(ld.id)} className="text-muted-foreground hover:text-destructive shrink-0">
+                        <button type="button" aria-label="Remover" onClick={async () => { if (await confirmar({ titulo: "Remover este lead?", descricao: "O contato captado some da sua lista.", acao: "Remover", destrutivo: true })) deleteLead.mutate(ld.id); }} className="text-muted-foreground hover:text-destructive shrink-0">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>

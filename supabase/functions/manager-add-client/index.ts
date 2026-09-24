@@ -60,7 +60,10 @@ function resolveAppUrl(req: Request): string {
   const origin = req.headers.get("origin") ?? "";
   const allow = ["https://app.criasocialclub.com.br", "https://criasocialclub.com.br", "https://www.criasocialclub.com.br"];
   if (allow.includes(origin)) return origin;
-  if (/^https:\/\/[a-z0-9-]+\.(lovableproject\.com|lovable\.app)$/.test(origin)) return origin;
+  /* SEM CURINGA DE PREVIEW (pente fino 23/09/2026, S1). Aceitar qualquer
+     *.lovable.app vindo do Origin deixava um atacante mandar o link de senha
+     da vítima pra um domínio dele. Preview do Lovable usa APP_URL ou cai no
+     canônico, que também funciona. */
   return CANONICAL_APP_URL;
 }
 

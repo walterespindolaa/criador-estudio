@@ -20,17 +20,26 @@ export default function Termos() {
           Termos de Uso
         </h1>
         <p className="text-muted-foreground text-sm mb-12">
-          Última atualização: 28 de maio de 2026 · Versão 1.0
+          Última atualização: 23 de setembro de 2026 · Versão 1.1
         </p>
 
         <section className="prose prose-sm max-w-none space-y-8 text-foreground">
           <div>
             <h2 className="text-xl font-display font-semibold mb-3">1. Aceitação dos termos</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Ao criar uma conta ou utilizar o cria (criasocialclub.com.br), você
+              Ao criar uma conta ou utilizar o Cria (criasocialclub.com.br), você
               concorda integralmente com estes Termos de Uso e com a nossa Política
               de Privacidade. Se você não concorda com qualquer dispositivo, não
               utilize a plataforma.
+            </p>
+            {/* IDENTIFICAÇÃO DO PRESTADOR (LGPD/CDC, 23/09/2026). Termo sem razão
+                social e CNPJ não vale como contrato de consumo. Walter preenche
+                os dois campos abaixo com os dados da empresa antes do lançamento. */}
+            <p className="text-muted-foreground leading-relaxed mt-2">
+              O serviço é prestado por <strong className="text-foreground">[RAZÃO SOCIAL DA EMPRESA]</strong>,
+              inscrita no CNPJ sob o nº <strong className="text-foreground">[00.000.000/0001-00]</strong>,
+              com sede em <strong className="text-foreground">[CIDADE/UF]</strong>, doravante "Cria".
+              Contato: <a href="mailto:contato@criasocialclub.com.br" className="text-primary underline">contato@criasocialclub.com.br</a>.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
               Estes termos podem ser atualizados periodicamente. Mudanças
@@ -180,6 +189,26 @@ export default function Termos() {
               </Link>
               , que é parte integrante destes Termos. O cria está em conformidade
               com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-xl font-display font-semibold mb-3">
+              8.1. Dados dos seus clientes (operador)
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">
+              Quando você cadastra clientes, colaboradores ou leads na plataforma,
+              você é o controlador desses dados e o Cria atua como operador, nos
+              termos do art. 39 da LGPD: tratamos esses dados apenas conforme as
+              suas instruções e para a prestação do serviço, mantemos medidas
+              técnicas de segurança, comunicamos incidentes que afetem esses dados
+              e apagamos ou devolvemos as informações ao fim do contrato, salvo
+              obrigação legal de guarda. Você se compromete a ter base legal para
+              tratar os dados que insere.
+            </p>
+            <p className="text-muted-foreground leading-relaxed mt-2">
+              Você pode baixar uma cópia de todos os seus dados a qualquer momento
+              em Configurações, na seção "Seus dados".
             </p>
           </div>
 

@@ -4,6 +4,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeTrackingUrl, isSensitiveTokenRoute } from "@/lib/trackingUrl";
+import { podeRastrear, aoDecidirConsentimento } from "@/lib/consent";
 
 const PIXEL_ID = import.meta.env.VITE_META_PIXEL_ID as string | undefined;
 
@@ -15,7 +16,7 @@ function getCookie(name: string): string | undefined {
 
 // Envia o evento pro CAPI (fire-and-forget). Email opcional pra melhorar o match.
 function sendCapi(event: string, eventId?: string, params?: Record<string, unknown>): void {
-  if (!PIXEL_ID || typeof window === "undefined") return;
+  if (!PIXEL_ID || typeof window === "undefined" || !podeRastrear()) return;
   try {
     void supabase.functions.invoke("meta-capi", {
       body: {
@@ -42,7 +43,8 @@ let initialized = false;
 
 /** Injeta o script base do Pixel uma única vez. Seguro chamar várias vezes. */
 export function initMetaPixel(): void {
-  if (initialized || !PIXEL_ID || typeof window === "undefined") return;
+  // Sem consentimento, o script do Meta nem entra na página (LGPD, 23/09/2026).
+  if (initialized || !PIXEL_ID || typeof window === "undefined" || !podeRastrear()) return;
   /* eslint-disable */
   (function (f: any, b: any, e: string, v: string) {
     if (f.fbq) return;
@@ -64,7 +66,7 @@ export function newEventId(): string {
 
 /** Dispara um evento padrão do Pixel (PageView, Purchase, Lead, etc.) + espelha no CAPI. */
 export function track(event: string, params?: Record<string, unknown>, eventId?: string): void {
-  if (!PIXEL_ID || typeof window === "undefined") return;
+  if (!PIXEL_ID || typeof window === "undefined" || !podeRastrear()) return;
   initMetaPixel();
   const id = eventId ?? newEventId();
   // O pixel do browser captura window.location sozinho em rotas com token na
@@ -81,3 +83,9 @@ export function trackPageView(): void {
 }
 
 export const isPixelEnabled = !!PIXEL_ID;
+
+/* Quem recusou e depois aceitou (ou aceitou no banner depois de a página já
+   ter carregado) ganha o PageView que ficou pra trás. Registrado uma vez. */
+if (typeof window !== "undefined") {
+  aoDecidirConsentimento((v) => { if (v === "aceito") trackPageView(); });
+}

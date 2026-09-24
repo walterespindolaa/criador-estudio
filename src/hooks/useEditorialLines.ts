@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
+import { vazioOuErro } from "@/lib/erro-esquema";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    LINHAS EDITORIAIS (por cliente do Cria Post)
@@ -63,7 +64,7 @@ export function useEditorialLinesByCrm(crmClientId: string | null) {
       const { data, error } = await sbFrom("external_clients")
         .select("id").eq("crm_client_id", crmClientId!).eq("manager_id", agencyOwnerId!)
         .limit(1).maybeSingle();
-      if (error) return null;
+      if (error) return vazioOuErro(error, null as string | null);
       return (data as { id: string } | null)?.id ?? null;
     },
   });
