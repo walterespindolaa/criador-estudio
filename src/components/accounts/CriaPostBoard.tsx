@@ -1338,7 +1338,7 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog 
               onDragLeave={() => setOverDay((o) => (o === iso ? null : o))}
               onDrop={() => dropOn(iso)}
               onClick={() => { mover.soltarEm(iso); }}
-              className={`min-h-[104px] rounded-xl border p-2 flex flex-col gap-1.5 transition-colors
+              className={`min-h-[104px] min-w-0 rounded-xl border p-2 flex flex-col gap-1.5 transition-colors
                 ${isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background"}
                 ${outMonth ? "opacity-45" : ""}
                 ${overDay === iso ? "ring-2 ring-primary/40 border-primary/60 bg-primary/5" : ""}
@@ -1354,13 +1354,17 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog 
               {list.map((p) => {
                 const st = STATUS[(p.approval_status ?? "pendente") as ApprovalKey];
                 return (
-                  <div key={p.id} className="relative">
+                  /* min-w-0 + w-full (24/09/2026): quando a alça de mover por toque
+                     embrulhou o card num div, o botão deixou de esticar na célula e
+                     passou a ter a largura do título, vazando por cima dos dias
+                     vizinhos. Assim ele volta a ocupar só a célula e o título corta. */
+                  <div key={p.id} className="relative min-w-0 w-full">
                   <AlcaMover mover={mover} id={p.id} className="absolute -top-1.5 -right-1.5 z-10" />
                   <button draggable
                     onDragStart={() => setDragId(p.id)} onDragEnd={() => { setDragId(null); setOverDay(null); }}
                     type="button" onClick={(e) => { if (mover.movendo) { e.stopPropagation(); mover.soltarEm(iso); return; } e.stopPropagation(); onOpen(p); }}
                     style={{ ...formatColorVars(p.format), borderLeftWidth: 3 }}
-                    className={`relative rounded-lg border border-border ${FORMAT_BORDER_CLASS} bg-card px-1.5 py-1 text-left hover:bg-muted/40 transition-shadow cursor-grab active:cursor-grabbing ${dragId === p.id ? "opacity-50 shadow-lg" : ""}`}>
+                    className={`relative block w-full min-w-0 overflow-hidden rounded-lg border border-border ${FORMAT_BORDER_CLASS} bg-card px-1.5 py-1 text-left hover:bg-muted/40 transition-shadow cursor-grab active:cursor-grabbing ${dragId === p.id ? "opacity-50 shadow-lg" : ""}`}>
                     <span className={`text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full ${st?.cls ?? ""}`}>{st?.label ?? "Pendente"}</span>
                     <p className="text-[11px] font-body font-semibold text-foreground leading-tight truncate mt-0.5">{p.title}</p>
                     {/* Formato e etiquetas na MESMA linha: a célula é apertada, então
