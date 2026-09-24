@@ -445,6 +445,23 @@ function CriaCaptacaoInner() {
         rots: rotCount.get(nk) ?? { total: 0, feitos: 0 },
       });
     }
+    /* CAPTAÇÃO SEM PASTA (24/09/2026): gravação marcada na Agenda com nome
+       digitado à mão, que não bate com cliente da carteira nem com avulso.
+       Antes a lista "Falta pra ficar pronto" mostrava; com a grade virando o
+       único lugar, ela sumiria. Vira uma pasta pelo nome (a PastaCliente já
+       sabe abrir pasta sem crmId, casando pelo nome). */
+    const nomesCobertos = new Set(extraClients.map((ex) => nomeKey(ex.name)));
+    const nomeOriginal = new Map<string, string>();
+    for (const c of doMes) if (!c.crm_client_id && c.client_name?.trim()) nomeOriginal.set(nomeKey(c.client_name), c.client_name.trim());
+    for (const s of roteirosDoMes) if (!s.crm_client_id && s.client_name?.trim() && !nomeOriginal.has(nomeKey(s.client_name))) nomeOriginal.set(nomeKey(s.client_name), s.client_name.trim());
+    for (const [nk, nome] of nomeOriginal) {
+      if (nomesCobertos.has(nk)) continue;
+      out.push({
+        key: nk, nome, cidade: null, cor: null, crmId: null, extraId: null,
+        caps: capCount.get(nk) ?? { total: 0, done: 0, next: null },
+        rots: rotCount.get(nk) ?? { total: 0, feitos: 0 },
+      });
+    }
     // Quem tem movimento no mês vem primeiro; o resto por nome.
     return out.sort((a, b) =>
       (b.caps.total + b.rots.total) - (a.caps.total + a.rots.total)
@@ -854,6 +871,7 @@ function CriaCaptacaoInner() {
         onAbrirDia={(d) => setDiaAberto(d)}
         onAbrirPasta={(k) => { if (pastas.some((p) => p.key === k)) setPasta(k); }}
         onNovoAvulso={() => setNovoAvulsoOpen(true)}
+        carregando={isLoading}
         onMarcar={(crmId, dia) => {
           // O hábito sugere o dia; se ele já passou neste mês, sugere hoje.
           // Marcar no passado seria uma armadilha silenciosa.
@@ -1404,7 +1422,7 @@ function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, def
           {recurring && (
             <span className="inline-flex items-center gap-1 text-[12px] font-body text-muted-foreground whitespace-nowrap">
               · dia
-              <input type="number" inputMode="decimal" min={1} max={31} value={dayDraft}
+              <input type="number" inputMode="numeric" min={1} max={31} value={dayDraft}
                 onChange={(e) => changeDay(Number(e.target.value))}
                 className="w-14 h-9 rounded-lg border border-border bg-card px-1.5 text-center text-sm font-body text-foreground outline-none focus:border-primary/50" />
             </span>

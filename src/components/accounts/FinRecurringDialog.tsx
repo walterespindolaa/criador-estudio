@@ -114,7 +114,7 @@ export function FinRecurringDialog({ open, onOpenChange, ctx, defaultCats, custo
             <div className="grid grid-cols-2 gap-3">
               <Fld label="Valor"><MoneyInput value={f.amount ?? null} onChange={(v) => set({ amount: v ?? 0 })} /></Fld>
               <Fld label="Todo dia (1-28)">
-                <Input type="number" inputMode="decimal" min={1} max={28} value={f.due_day ?? 5} onChange={(e) => set({ due_day: Math.min(28, Math.max(1, Number(e.target.value) || 1)) })} className="rounded-xl" />
+                <Input type="number" inputMode="numeric" min={1} max={28} value={f.due_day ?? 5} onChange={(e) => set({ due_day: Math.min(28, Math.max(1, Number(e.target.value) || 1)) })} className="rounded-xl" />
               </Fld>
             </div>
 

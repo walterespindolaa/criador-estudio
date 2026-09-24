@@ -56,13 +56,15 @@ function quando(iso: string, hoje: string) {
 
 export function PainelDeVoo({
   caps, scripts, envios, pastas, habitos, hoje, mesEhAtualOuFuturo, nomeDe, corDe,
-  onAbrirDia, onAbrirPasta, onMarcar, onNovoAvulso,
+  onAbrirDia, onAbrirPasta, onMarcar, onNovoAvulso, carregando = false,
 }: {
   caps: CapturaPainel[];
   scripts: RoteiroMin[];
   envios: AprovacaoMin[];
   pastas: (PastaPainel & { cidade?: string | null; extraId?: string | null })[];
   onNovoAvulso?: () => void;
+  /** Enquanto as captações carregam, todo cliente pareceria "sem gravação". */
+  carregando?: boolean;
   habitos: Map<string, HabitoPainel>;
   hoje: string;
   /** Sugerir "não marcada" só faz sentido pra mês que ainda dá pra marcar. */
@@ -134,7 +136,6 @@ export function PainelDeVoo({
     return out.sort((a, b) => (a.tom === "espera" ? 1 : 0) - (b.tom === "espera" ? 1 : 0) || a.ordem - b.ordem);
   }, [caps, scripts, envios, pastas, habitos, hoje, mesEhAtualOuFuturo, nomeDe, corDe, onAbrirDia, onMarcar]);
 
-  const pendentes = faltas.filter((f) => f.tom !== "espera").length;
 
   /* UM CARD POR CLIENTE (Walter, 24/09/2026: "deixar só os quadrados, sem
      lista e depois os nomes de novo, fica repetitivo"). A lista "Falta pra
@@ -165,6 +166,13 @@ export function PainelDeVoo({
     return m;
   }, [faltas, caps, chaveDaCaptura]);
 
+  // O contador só conta o que aparece em algum card (senão diz "3" e mostra 2).
+  const pendentes = useMemo(() => {
+    let n = 0;
+    for (const pa of pastas) n += (faltasPorPasta.get(pa.key) ?? []).filter((f) => f.tom !== "espera").length;
+    return n;
+  }, [pastas, faltasPorPasta]);
+
   const pastasOrdenadas = useMemo(() => {
     const peso = (key: string) => {
       const f = faltasPorPasta.get(key)?.[0];
@@ -173,6 +181,17 @@ export function PainelDeVoo({
     };
     return pastas.map((p, i) => ({ p, i })).sort((a, b) => peso(a.p.key) - peso(b.p.key) || a.i - b.i).map((x) => x.p);
   }, [pastas, faltasPorPasta]);
+
+  if (carregando) {
+    return (
+      <div className="space-y-3">
+        <div className="h-28 rounded-3xl bg-muted animate-pulse" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {[0, 1, 2, 3].map((i) => <div key={i} className="h-32 rounded-2xl bg-muted animate-pulse" />)}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -204,8 +223,8 @@ export function PainelDeVoo({
               <Button onClick={() => onAbrirDia(proxima.capture_date)} className="rounded-xl flex-1 sm:flex-none">
                 <Camera className="h-4 w-4 mr-1.5" /> Abrir o dia
               </Button>
-              {proxima.crm_client_id && (
-                <Button variant="outline" onClick={() => onAbrirPasta(`crm:${proxima.crm_client_id}`)} className="rounded-xl flex-1 sm:flex-none">
+              {chaveDaCaptura(proxima) && (
+                <Button variant="outline" onClick={() => onAbrirPasta(chaveDaCaptura(proxima)!)} className="rounded-xl flex-1 sm:flex-none">
                   Pasta <ArrowRight className="h-4 w-4 ml-1.5" />
                 </Button>
               )}
@@ -237,6 +256,11 @@ export function PainelDeVoo({
             {pendentes === 0 ? "tudo em dia" : `${pendentes} ${pendentes === 1 ? "pendência" : "pendências"}`}
           </span>
         </div>
+        {pastas.length === 0 && (
+          <p className="rounded-2xl border border-dashed border-border px-4 py-6 mb-3 text-center text-[13px] font-body text-muted-foreground">
+            Nenhum cliente na carteira ainda. Cadastre em Clientes ou crie um cliente avulso aqui embaixo.
+          </p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {pastasOrdenadas.map((pa) => {
             const fs = faltasPorPasta.get(pa.key) ?? [];
@@ -246,7 +270,11 @@ export function PainelDeVoo({
             return (
               <div key={pa.key} role="button" tabIndex={0}
                 onClick={() => onAbrirPasta(pa.key)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrirPasta(pa.key); } }}
+                onKeyDown={(e) => {
+                  // Só o próprio card: Enter no botão de dentro não pode virar "abrir pasta".
+                  if (e.target !== e.currentTarget) return;
+                  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrirPasta(pa.key); }
+                }}
                 className={cn("flex flex-col rounded-2xl border bg-card p-3.5 text-left cursor-pointer hover:shadow-warm-sm transition-all",
                   f && f.tom === "atencao" ? "border-[hsl(var(--cria-amarelo)/0.45)] hover:border-[hsl(var(--cria-amarelo))]" : "border-border hover:border-primary/40")}>
                 <div className="flex items-center gap-2.5">

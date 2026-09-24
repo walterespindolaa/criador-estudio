@@ -359,15 +359,13 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     porData
       ? ordenarPorData(lista, (p) => p.scheduled_date, (p) => (p as { scheduled_time?: string | null }).scheduled_time, ordemDir)
       : lista;
-  // Listas por coluna calculadas UMA vez por mudança de dados/filtro, não a
-  // cada render (o quadro re-renderiza a cada tick de arraste; antes filtrava
-  // e ordenava os 5 status de novo em cada um). Pente fino 24/09/2026.
-  const postsPorColuna = useMemo(() => {
-    const m: Record<string, ExternalPost[]> = {};
-    for (const colKey of APPROVAL_COLS) m[colKey] = ordenarColuna(viewPosts.filter((p) => (p.approval_status ?? "pendente") === colKey));
-    return m;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewPosts.length, viewPosts.map((p) => `${p.id}:${p.approval_status}:${p.scheduled_date}:${(p as { board_order?: number | null }).board_order ?? ""}`).join("|"), porData, ordemDir]);
+  // Listas por coluna, UMA passada por render. Houve um useMemo aqui com chave
+  // feita à mão (id, status, data, ordem) e ele guardava a cópia velha do post:
+  // editar título, formato ou responsável não aparecia no card, e abrir o card
+  // levava o dado antigo pro editor. Voltou a ser cálculo direto, que com
+  // poucas dezenas de posts por cliente custa nada. (24/09/2026)
+  const postsPorColuna: Record<string, ExternalPost[]> = {};
+  for (const colKey of APPROVAL_COLS) postsPorColuna[colKey] = ordenarColuna(viewPosts.filter((p) => (p.approval_status ?? "pendente") === colKey));
   // Guarda o id do rascunho aberto: se o usuário cancelar, apagamos (não vira lixo).
   const [draftId, setDraftId] = useState<string | null>(null);
   // Kanban (padrão) ou Calendário. Preferência salva por dispositivo.
@@ -1394,7 +1392,7 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog 
               <AlcaMover mover={mover} id={p.id} className="absolute -top-1.5 -right-1.5 z-10" />
               <button draggable
                 onDragStart={() => setDragId(p.id)} onDragEnd={() => { setDragId(null); setOverDay(null); }}
-                type="button" onClick={() => onOpen(p)}
+                type="button" onClick={() => { if (mover.movendo) return; onOpen(p); }}
                 style={{ ...formatColorVars(p.format), borderLeftWidth: 3 }}
                 className={`rounded-lg border border-border ${FORMAT_BORDER_CLASS} bg-card px-2 py-1.5 text-left hover:bg-muted/40 transition-shadow cursor-grab active:cursor-grabbing ${dragId === p.id ? "opacity-50 shadow-lg" : ""}`}>
                 <p className="text-[11px] font-body font-semibold text-foreground truncate max-w-[160px]">{p.title}</p>

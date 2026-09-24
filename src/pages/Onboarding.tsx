@@ -33,6 +33,7 @@ import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { VoiceInput } from "@/components/shared/VoiceInput";
 import { connectInstagram, useSocialConnection } from "@/hooks/useSocialInsights";
 import { Instagram } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const TOTAL_STEPS = 6;
 
@@ -105,6 +106,27 @@ const Onboarding = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { updateProfile } = useProfile();
+  const qc = useQueryClient();
+
+  /* "SOU DESIGNER, EDITOR OU FILMMAKER" (24/09/2026). O link levava pra fila
+     de demandas com a conta ainda de criador, e o app devolvia pro onboarding.
+     Agora a pessoa escolhe o papel e a RPC troca a conta (account_type é
+     coluna travada, só muda pelo servidor). */
+  const [papeisAbertos, setPapeisAbertos] = useState(false);
+  const [virandoParceiro, setVirandoParceiro] = useState(false);
+  const virarParceiro = async (papel: string) => {
+    setVirandoParceiro(true);
+    const { error } = await (supabase.rpc as unknown as (fn: string, a: Record<string, unknown>) => Promise<{ error: unknown }>)("tornar_conta_parceiro", { _papel: papel });
+    if (error) {
+      console.error("[onboarding] tornar_conta_parceiro:", error);
+      toast.error("Não consegui trocar sua conta agora. Tenta de novo em instantes.");
+      setVirandoParceiro(false);
+      return;
+    }
+    try { sessionStorage.removeItem("cria.onb"); } catch { /* segue */ }
+    await qc.invalidateQueries({ queryKey: ["profile"] });
+    navigate("/socialmidia/demandas", { replace: true });
+  };
 
   /* RASCUNHO QUE SOBREVIVE À IDA AO INSTAGRAM (onboarding v2, 23/09/2026).
      Conectar o Instagram sai do app e volta. Sem isto, tudo que a pessoa
@@ -562,8 +584,21 @@ const Onboarding = () => {
               <p className="text-xs text-muted-foreground font-body">
                 Não é você? <Link to="/comecar-agencia" className="text-primary underline underline-offset-2">Sou social mídia ou agência</Link>
                 {" · "}
-                <Link to="/socialmidia/demandas" className="text-primary underline underline-offset-2">Sou designer, editor ou filmmaker</Link>
+                <button type="button" onClick={() => setPapeisAbertos((v) => !v)} className="text-primary underline underline-offset-2">Sou designer, editor ou filmmaker</button>
               </p>
+              {papeisAbertos && (
+                <div className="rounded-2xl border border-border bg-card p-3 space-y-2">
+                  <p className="text-xs font-body text-muted-foreground">O que você faz pras agências? Sua conta vira de parceiro de produção (sem mensalidade).</p>
+                  <div className="flex flex-wrap gap-2">
+                    {([["designer", "Design"], ["editor_video", "Edição de vídeo"], ["filmmaker", "Captação / filmmaker"], ["copy", "Copy"], ["trafego", "Tráfego"]] as const).map(([k, l]) => (
+                      <Button key={k} type="button" size="sm" variant="outline" disabled={virandoParceiro}
+                        onClick={() => void virarParceiro(k)} className="rounded-xl">
+                        {l}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 

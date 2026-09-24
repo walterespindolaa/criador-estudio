@@ -121,7 +121,7 @@ export function ClientContentWriter({ crmClientId, clienteNome, titulo, formato,
             />
           </div>
           <input
-            type="number" inputMode="decimal"
+            type="number" inputMode="numeric"
             min={2}
             max={12}
             value={qtd}

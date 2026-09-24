@@ -145,7 +145,7 @@ export function DiaDeGravacao({
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 pb-24 sm:pb-5 space-y-5">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-5">
 
           {/* ── 1b. A ROTA (Captação v4, ciclo 3) ─────────────────────────
               O dia de gravação foi desenhado como se ela estivesse no notebook.
@@ -372,6 +372,9 @@ export function DiaDeGravacao({
         </div>
 
         {/* ── BARRA DO CELULAR (ciclo 3) ──────────────────────────────────
+            (24/09/2026: saiu do "absolute" e entrou no fluxo, logo acima do
+            rodapé. Por cima, ela cobria o rodapé inteiro no celular, e com ele
+            o Copiar o dia e a Folha do dia.)
             No celular a rolagem é longa e o placar do topo some no primeiro
             scroll. A barra fixa mantém "quantos faltam" e o próximo roteiro
             não gravado sempre à vista, com o teleprompter a um toque. */}
@@ -379,7 +382,7 @@ export function DiaDeGravacao({
           const proximo = todosRoteiros.find((s) => !s.done) ?? null;
           const texto = proximo ? (cenasDe(proximo).length > 0 ? cenasParaTexto(cenasDe(proximo)) : (proximo.content ?? "").trim()) : "";
           return (
-            <div className="sm:hidden absolute inset-x-0 bottom-0 border-t border-border bg-card/95 backdrop-blur px-4 py-3 flex items-center gap-3">
+            <div className="sm:hidden shrink-0 border-t border-border bg-card px-4 py-3 flex items-center gap-3">
               <div className="min-w-0 flex-1">
                 <p className="text-[12px] font-body font-bold uppercase tracking-wider text-muted-foreground">
                   {gravados} de {todosRoteiros.length} gravados
@@ -400,16 +403,16 @@ export function DiaDeGravacao({
         {/* Rodapé fixo: o dia inteiro em texto, pra quem prefere levar no bloco
             de notas ou mandar pro cliente antes de sair. */}
         <div className="shrink-0 border-t border-border px-4 py-3 flex items-center gap-2">
-          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-          <p className="text-[12px] font-body text-muted-foreground min-w-0 flex-1">
+          <FileText className="hidden sm:block h-4 w-4 text-muted-foreground shrink-0" />
+          <p className="hidden sm:block text-[12px] font-body text-muted-foreground min-w-0 flex-1">
             Tudo o que está aqui cabe num texto só, pra levar offline.
           </p>
           {aoFolha && todosRoteiros.length > 0 && (
-            <Button size="sm" variant="outline" className="rounded-xl shrink-0" onClick={aoFolha}>
+            <Button size="sm" variant="outline" className="rounded-xl flex-1 sm:flex-none" onClick={aoFolha}>
               Folha do dia
             </Button>
           )}
-          <Button size="sm" className="rounded-xl shrink-0" onClick={copiarTudo}>
+          <Button size="sm" className="rounded-xl flex-1 sm:flex-none" onClick={copiarTudo}>
             {copiado ? "Copiado" : "Copiar o dia"}
           </Button>
         </div>

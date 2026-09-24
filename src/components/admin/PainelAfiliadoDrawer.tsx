@@ -397,7 +397,7 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
                     <div className="space-y-1.5">
                       <Label className="font-body text-xs">% de desconto</Label>
                       <Input
-                        type="number" inputMode="decimal"
+                        type="number" inputMode="numeric"
                         min={1}
                         max={100}
                         value={discountPct}
@@ -479,7 +479,7 @@ export function PainelAfiliadoDrawer({ open, onOpenChange, partner }: Props) {
                   <div className="space-y-1.5">
                     <Label className="font-body text-xs">% de desconto</Label>
                     <Input
-                      type="number" inputMode="decimal"
+                      type="number" inputMode="numeric"
                       min={1}
                       max={100}
                       value={discountPct}

@@ -269,7 +269,7 @@ export default function MediaKit() {
                     {(form.audience ?? []).map((b, i) => (
                       <div key={i} className="flex items-center gap-1.5">
                         <input value={b.label} onChange={(e) => setForm({ ...form, audience: form.audience!.map((x, idx) => idx === i ? { ...x, label: e.target.value } : x) })} className="w-full rounded-lg border border-border bg-card px-2 py-1.5 text-xs outline-none" />
-                        <input type="number" inputMode="decimal" value={b.pct} onChange={(e) => setForm({ ...form, audience: form.audience!.map((x, idx) => idx === i ? { ...x, pct: Number(e.target.value) } : x) })} className="w-14 rounded-lg border border-border bg-card px-2 py-1.5 text-xs outline-none" />
+                        <input type="number" value={b.pct} onChange={(e) => setForm({ ...form, audience: form.audience!.map((x, idx) => idx === i ? { ...x, pct: Number(e.target.value) } : x) })} className="w-14 rounded-lg border border-border bg-card px-2 py-1.5 text-xs outline-none" />
                       </div>
                     ))}
                   </div>
@@ -277,7 +277,7 @@ export default function MediaKit() {
 
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-body text-muted-foreground">Gênero %</span>
-                  <label className="text-xs flex items-center gap-1.5">Mulheres <input type="number" inputMode="decimal" value={form.gender?.women ?? 60} onChange={(e) => setForm({ ...form, gender: { women: Number(e.target.value), men: 100 - Number(e.target.value) } })} className="w-14 rounded-lg border border-border bg-card px-2 py-1.5 text-xs outline-none" /></label>
+                  <label className="text-xs flex items-center gap-1.5">Mulheres <input type="number" value={form.gender?.women ?? 60} onChange={(e) => setForm({ ...form, gender: { women: Number(e.target.value), men: 100 - Number(e.target.value) } })} className="w-14 rounded-lg border border-border bg-card px-2 py-1.5 text-xs outline-none" /></label>
                   <span className="text-xs text-muted-foreground">Homens {100 - (form.gender?.women ?? 60)}%</span>
                 </div>
 

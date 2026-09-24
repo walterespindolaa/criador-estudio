@@ -123,7 +123,7 @@ function Num({ label, value, onChange }: { label: string; value?: number; onChan
   return (
     <div className="space-y-1.5">
       <Label className="text-xs">{label}</Label>
-      <Input type="number" inputMode="decimal" value={value ?? ""} onChange={(e) => onChange(Number(e.target.value))} className="rounded-xl bg-card" />
+      <Input type="number" value={value ?? ""} onChange={(e) => onChange(Number(e.target.value))} className="rounded-xl bg-card" />
     </div>
   );
 }

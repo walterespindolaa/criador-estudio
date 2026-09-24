@@ -590,7 +590,7 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioB
           )}
           {bloco.kind === "blog" && (
             <LinhaCampo label="Quantos posts mostrar" ajuda="Os mais recentes. Os outros continuam no ar pelo endereço deles.">
-              <Input type="number" inputMode="decimal" min={1} max={30}
+              <Input type="number" inputMode="numeric" min={1} max={30}
                 value={typeof d.quantos === "number" ? d.quantos : 6}
                 onChange={(e) => p({ quantos: Math.max(1, Math.min(30, Number(e.target.value) || 6)) })}
                 className="rounded-xl w-24" />

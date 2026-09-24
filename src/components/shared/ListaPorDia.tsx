@@ -94,7 +94,9 @@ export function ListaPorDia({ dias, itensDe, hoje, aoAbrir, aoMover, aoCriarEm, 
                         {/* O input de data nativo fica invisível em cima do ícone: no
                             celular abre a rodinha de data do sistema, que é o melhor
                             seletor que existe ali. */}
-                        <input type="date" defaultValue={dia}
+                        {/* Controlado (value, não defaultValue): se a mudança
+                            falhar e voltar, o seletor volta pro dia certo. */}
+                        <input type="date" value={dia}
                           onChange={(e) => { const v = e.target.value; if (v && v !== dia) aoMover(it.id, v); }}
                           className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
                       </label>

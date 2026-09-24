@@ -584,7 +584,7 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
       <p className="text-[11px] text-muted-foreground font-body flex items-center gap-1.5">
         <Clock className="h-3 w-3" />
         <span className="[@media(hover:none)]:hidden">Arraste os posts entre os dias pra remarcar. Clique num post pra editar.</span>
-        <span className="hidden [@media(hover:none)]:inline">Toque no dia, depois no post, e mude a data pra remarcar.</span>
+        <span className="hidden [@media(hover:none)]:inline">Toque no post pra editar. Pra remarcar, use o ícone de calendário do lado do post.</span>
       </p>
 
       {/* Popup editável do post, sem sair pro cliente: título, data, horário, status e legenda. */}

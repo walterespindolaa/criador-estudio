@@ -2646,31 +2646,31 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       <Label className="font-body text-[10px] flex items-center gap-1">
                         <Eye className="h-3 w-3" /> Views
                       </Label>
-                      <Input type="number" inputMode="decimal" placeholder="0" value={views} onChange={(e) => setViews(e.target.value)} className="rounded-lg h-9 text-sm" />
+                      <Input type="number" inputMode="numeric" placeholder="0" value={views} onChange={(e) => setViews(e.target.value)} className="rounded-lg h-9 text-sm" />
                     </div>
                     <div className="space-y-1">
                       <Label className="font-body text-[10px] flex items-center gap-1">
                         <Bookmark className="h-3 w-3" /> Salvos
                       </Label>
-                      <Input type="number" inputMode="decimal" placeholder="0" value={saves} onChange={(e) => setSaves(e.target.value)} className="rounded-lg h-9 text-sm" />
+                      <Input type="number" inputMode="numeric" placeholder="0" value={saves} onChange={(e) => setSaves(e.target.value)} className="rounded-lg h-9 text-sm" />
                     </div>
                     <div className="space-y-1">
                       <Label className="font-body text-[10px] flex items-center gap-1">
                         <MessageSquare className="h-3 w-3" /> Coment.
                       </Label>
-                      <Input type="number" inputMode="decimal" placeholder="0" value={comments} onChange={(e) => setComments(e.target.value)} className="rounded-lg h-9 text-sm" />
+                      <Input type="number" inputMode="numeric" placeholder="0" value={comments} onChange={(e) => setComments(e.target.value)} className="rounded-lg h-9 text-sm" />
                     </div>
                     <div className="space-y-1">
                       <Label className="font-body text-[10px] flex items-center gap-1">
                         <Radio className="h-3 w-3" /> Alcance
                       </Label>
-                      <Input type="number" inputMode="decimal" placeholder="0" value={reach} onChange={(e) => setReach(e.target.value)} className="rounded-lg h-9 text-sm" />
+                      <Input type="number" inputMode="numeric" placeholder="0" value={reach} onChange={(e) => setReach(e.target.value)} className="rounded-lg h-9 text-sm" />
                     </div>
                     <div className="space-y-1">
                       <Label className="font-body text-[10px] flex items-center gap-1">
                         <Repeat2 className="h-3 w-3" /> Compart.
                       </Label>
-                      <Input type="number" inputMode="decimal" placeholder="0" value={shares} onChange={(e) => setShares(e.target.value)} className="rounded-lg h-9 text-sm" />
+                      <Input type="number" inputMode="numeric" placeholder="0" value={shares} onChange={(e) => setShares(e.target.value)} className="rounded-lg h-9 text-sm" />
                     </div>
                   </div>
                 </section>

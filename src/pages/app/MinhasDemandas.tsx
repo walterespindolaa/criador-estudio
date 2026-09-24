@@ -1737,7 +1737,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                         { n: 3, t: "Marcar entregue", ok: false },
                       ];
                       return (
-                        <ol className="flex items-center gap-1.5 mb-3" aria-label="Passos da entrega">
+                        <ol className="flex flex-wrap items-center gap-1.5 mb-3" aria-label="Passos da entrega">
                           {passos.map((p, i) => (
                             <li key={p.n} className="flex items-center gap-1.5 min-w-0">
                               <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] font-body font-bold",
