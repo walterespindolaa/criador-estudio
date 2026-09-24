@@ -33,12 +33,11 @@ export default function Termos() {
               utilize a plataforma.
             </p>
             {/* IDENTIFICAÇÃO DO PRESTADOR (LGPD/CDC, 23/09/2026). Termo sem razão
-                social e CNPJ não vale como contrato de consumo. Walter preenche
-                os dois campos abaixo com os dados da empresa antes do lançamento. */}
+                social e CNPJ não vale como contrato de consumo. */}
             <p className="text-muted-foreground leading-relaxed mt-2">
-              O serviço é prestado por <strong className="text-foreground">[RAZÃO SOCIAL DA EMPRESA]</strong>,
-              inscrita no CNPJ sob o nº <strong className="text-foreground">[00.000.000/0001-00]</strong>,
-              com sede em <strong className="text-foreground">[CIDADE/UF]</strong>, doravante "Cria".
+              O serviço é prestado por <strong className="text-foreground">WG Business &amp; Branding Ltda. - EPP</strong>,
+              inscrita no CNPJ sob o nº <strong className="text-foreground">59.816.277/0001-30</strong>,
+              com sede em <strong className="text-foreground">Itajaí/SC</strong>, doravante "Cria".
               Contato: <a href="mailto:contato@criasocialclub.com.br" className="text-primary underline">contato@criasocialclub.com.br</a>.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
@@ -234,7 +233,7 @@ export default function Termos() {
             </h2>
             <p className="text-muted-foreground leading-relaxed">
               Estes Termos são regidos pela legislação brasileira. Para dirimir
-              qualquer controvérsia, fica eleito o foro da comarca de Blumenau,
+              qualquer controvérsia, fica eleito o foro da comarca de Itajaí,
               Santa Catarina, salvo disposição legal específica em contrário.
             </p>
           </div>
