@@ -1402,6 +1402,7 @@ export type Database = {
       competitor_scrapes: {
         Row: {
           apify_run_id: string | null
+          claimed_at: string | null
           competitor_id: string | null
           cost_usd: number | null
           created_at: string
@@ -1418,6 +1419,7 @@ export type Database = {
         }
         Insert: {
           apify_run_id?: string | null
+          claimed_at?: string | null
           competitor_id?: string | null
           cost_usd?: number | null
           created_at?: string
@@ -1434,6 +1436,7 @@ export type Database = {
         }
         Update: {
           apify_run_id?: string | null
+          claimed_at?: string | null
           competitor_id?: string | null
           cost_usd?: number | null
           created_at?: string
@@ -2477,6 +2480,30 @@ export type Database = {
         }
         Relationships: []
       }
+      emails_ciclo: {
+        Row: {
+          id: string
+          ref: string | null
+          sent_at: string
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          ref?: string | null
+          sent_at?: string
+          tipo: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          ref?: string | null
+          sent_at?: string
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       external_clients: {
         Row: {
           active: boolean
@@ -2854,66 +2881,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      fin_records_backup_100x: {
-        Row: {
-          amount: number | null
-          category: string | null
-          context: string | null
-          created_at: string | null
-          crm_client_id: string | null
-          date: string | null
-          description: string | null
-          id: string | null
-          manager_id: string | null
-          payment_method: string | null
-          recurring: boolean | null
-          recurring_id: string | null
-          status: string | null
-          subcategory: string | null
-          transfer_group: string | null
-          type: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          amount?: number | null
-          category?: string | null
-          context?: string | null
-          created_at?: string | null
-          crm_client_id?: string | null
-          date?: string | null
-          description?: string | null
-          id?: string | null
-          manager_id?: string | null
-          payment_method?: string | null
-          recurring?: boolean | null
-          recurring_id?: string | null
-          status?: string | null
-          subcategory?: string | null
-          transfer_group?: string | null
-          type?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          amount?: number | null
-          category?: string | null
-          context?: string | null
-          created_at?: string | null
-          crm_client_id?: string | null
-          date?: string | null
-          description?: string | null
-          id?: string | null
-          manager_id?: string | null
-          payment_method?: string | null
-          recurring?: boolean | null
-          recurring_id?: string | null
-          status?: string | null
-          subcategory?: string | null
-          transfer_group?: string | null
-          type?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       fin_recurring: {
         Row: {
@@ -3871,6 +3838,7 @@ export type Database = {
           crm_client_id: string | null
           expires_at: string
           provider: string
+          return_to: string | null
           state: string
           user_id: string
         }
@@ -3879,6 +3847,7 @@ export type Database = {
           crm_client_id?: string | null
           expires_at?: string
           provider?: string
+          return_to?: string | null
           state: string
           user_id: string
         }
@@ -3887,6 +3856,7 @@ export type Database = {
           crm_client_id?: string | null
           expires_at?: string
           provider?: string
+          return_to?: string | null
           state?: string
           user_id?: string
         }
@@ -4218,6 +4188,7 @@ export type Database = {
           first_invoice_id: string | null
           gross_amount_cents: number | null
           id: string
+          modelo: string
           net_amount_cents: number | null
           paid_at: string | null
           paid_invoices_count: number
@@ -4240,6 +4211,7 @@ export type Database = {
           first_invoice_id?: string | null
           gross_amount_cents?: number | null
           id?: string
+          modelo?: string
           net_amount_cents?: number | null
           paid_at?: string | null
           paid_invoices_count?: number
@@ -4262,6 +4234,7 @@ export type Database = {
           first_invoice_id?: string | null
           gross_amount_cents?: number | null
           id?: string
+          modelo?: string
           net_amount_cents?: number | null
           paid_at?: string | null
           paid_invoices_count?: number
@@ -4806,6 +4779,7 @@ export type Database = {
           capture_cities: string[]
           client_packs: number
           client_packs_subscription_id: string | null
+          codigo_parceiro: string | null
           collab_seats_subscription_id: string | null
           cores_agencias: Json
           created_at: string | null
@@ -4869,6 +4843,7 @@ export type Database = {
           capture_cities?: string[]
           client_packs?: number
           client_packs_subscription_id?: string | null
+          codigo_parceiro?: string | null
           collab_seats_subscription_id?: string | null
           cores_agencias?: Json
           created_at?: string | null
@@ -4932,6 +4907,7 @@ export type Database = {
           capture_cities?: string[]
           client_packs?: number
           client_packs_subscription_id?: string | null
+          codigo_parceiro?: string | null
           collab_seats_subscription_id?: string | null
           cores_agencias?: Json
           created_at?: string | null
@@ -6420,6 +6396,7 @@ export type Database = {
       }
       admin_parceiras_resumo: { Args: never; Returns: Json }
       admin_wipe_user_content: { Args: { _user_id: string }; Returns: Json }
+      agencia_vincular_parceiro: { Args: { _codigo: string }; Returns: Json }
       agency_clients: {
         Args: never
         Returns: {
@@ -6443,6 +6420,7 @@ export type Database = {
           used: number
         }[]
       }
+      apify_scrapes_orfaos: { Args: never; Returns: number }
       apply_intake: {
         Args: { _intake_id: string; _sobrescrever?: boolean }
         Returns: number
@@ -6489,6 +6467,13 @@ export type Database = {
       bio_slug_available: {
         Args: { _exclude?: string; _slug: string }
         Returns: boolean
+      }
+      bio_totais: {
+        Args: { _page_id?: string; _user_id?: string }
+        Returns: {
+          cliques: number
+          visitas: number
+        }[]
       }
       bump_ai_quota: {
         Args: { _user: string }
@@ -6598,6 +6583,7 @@ export type Database = {
         Args: { _external_client_id: string }
         Returns: Json
       }
+      fin_monthly_sincronizar: { Args: { _rows: Json }; Returns: number }
       first_handle: { Args: { _vals: string[] }; Returns: string }
       frases_do_briefing: { Args: { _txt: string }; Returns: string[] }
       get_admin_stats: {
@@ -7088,6 +7074,7 @@ export type Database = {
         Args: { _link?: string; _post_id: string; _status: string }
         Returns: undefined
       }
+      parceiro_meu_codigo: { Args: never; Returns: string }
       parceiro_meus_caches: {
         Args: never
         Returns: {
@@ -7384,6 +7371,10 @@ export type Database = {
       }
       token_allows_post: {
         Args: { _post_id: string; _token: string }
+        Returns: boolean
+      }
+      token_rate_ok: {
+        Args: { _limite?: number; _token: string }
         Returns: boolean
       }
       tornar_conta_manager: { Args: never; Returns: undefined }
