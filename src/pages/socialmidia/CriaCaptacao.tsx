@@ -92,7 +92,6 @@ function diaMes(iso: string): string {
 }
 const WD = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
-type StatusFilter = "todas" | "pendentes" | "concluidas";
 
 // Um roteiro dentro da folha do dia (cliente + contexto + texto).
 type FolhaItem = { nome: string; cidade: string; horario: string; roteiro: string };
@@ -201,8 +200,6 @@ export default function CriaCaptacao() {
 function CriaCaptacaoInner() {
   const navigate = useNavigate();
   const [month, setMonth] = useState(() => hojeBR().slice(0, 7));
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("todas");
-  const [cityFilter, setCityFilter] = useState<string>(""); // "" = todas
   // Dialog de Configurações da captação (Cidades + Tomadas padrão).
   const [configOpen, setConfigOpen] = useState(false);
   // Teleprompter em tela cheia com o roteiro de uma captação (overlay z-60).
@@ -271,9 +268,6 @@ function CriaCaptacaoInner() {
      O módulo era organizado por cliente, mas ninguém grava por cliente: grava
      por dia, passando em três clientes com a mesma câmera. */
   const [diaAberto, setDiaAberto] = useState<string | null>(null);
-  /* O dia que o calendário está mostrando embaixo dele (Gabriela, 21/09/2026).
-     É diferente do `diaAberto`, que é o Dia de Gravação em tela cheia. */
-  const [diaEscolhido, setDiaEscolhido] = useState<string | null>(null);
   const { data: extraClients = [] } = useCaptureExtraClients();
   const addExtra = useAddCaptureExtraClient();
   const delExtra = useDeleteCaptureExtraClient();
@@ -492,17 +486,6 @@ function CriaCaptacaoInner() {
       .sort((a, b) => b.value - a.value);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doMes, clientById]);
-
-  // Aplica os filtros (status + cidade) sobre as captações do mês.
-  const filtradas = useMemo(() => {
-    return doMes.filter((c) => {
-      if (statusFilter === "pendentes" && c.status !== "agendada") return false;
-      if (statusFilter === "concluidas" && c.status !== "concluida") return false;
-      if (cityFilter && capCity(c) !== cityFilter) return false;
-      return true;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doMes, statusFilter, cityFilter, clientById]);
 
   // ── SUGESTÃO 2 (base): padrão de dia/horário por cliente ─────────────────────
   // A partir do HISTÓRICO de cada cliente (captações já concluídas ou já passadas,
@@ -850,7 +833,7 @@ function CriaCaptacaoInner() {
           todosScripts={scripts.filter((sc) => pastaAberta.crmId
             ? sc.crm_client_id === pastaAberta.crmId
             : !sc.crm_client_id && (sc.client_name ?? "").trim().toLowerCase() === nomeKeyAberta)}
-          aoAbrirDia={(d) => { setPasta(null); setDiaEscolhido(d); setDiaAberto(d); }}
+          aoAbrirDia={(d) => { setPasta(null); setDiaAberto(d); }}
         />
       )}
 
@@ -868,8 +851,9 @@ function CriaCaptacaoInner() {
         mesEhAtualOuFuturo={month >= currentMonth}
         nomeDe={capName}
         corDe={capColor}
-        onAbrirDia={(d) => { setDiaEscolhido(d); setDiaAberto(d); }}
+        onAbrirDia={(d) => setDiaAberto(d)}
         onAbrirPasta={(k) => { if (pastas.some((p) => p.key === k)) setPasta(k); }}
+        onNovoAvulso={() => setNovoAvulsoOpen(true)}
         onMarcar={(crmId, dia) => {
           // O hábito sugere o dia; se ele já passou neste mês, sugere hoje.
           // Marcar no passado seria uma armadilha silenciosa.
@@ -885,56 +869,14 @@ function CriaCaptacaoInner() {
         <SugestoesViagem trips={tripSuggestions} onAdd={marcarNoDia} onDismiss={() => setSugDismissed(month)} />
       )}
 
-      {/* Visão CLIENTES: uma pastinha por cliente (carteira ativa + avulsos). */}
-      {(
-        <div data-tour="cap-pastas">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {pastas.map((p) => (
-              <button key={p.key} type="button" onClick={() => setPasta(p.key)}
-                className="rounded-2xl border border-border bg-card p-3.5 text-left hover:border-primary/40 hover:shadow-warm-sm transition-all">
-                <div className="flex items-center gap-2">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-white text-xs font-display font-extrabold"
-                    style={{ background: p.cor || "#EA4918" }}>
-                    {p.nome.slice(0, 1).toUpperCase()}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-display font-bold text-foreground truncate">{p.nome}</p>
-                    <p className="text-[11px] font-body text-muted-foreground truncate">{p.cidade || (p.extraId ? "avulso" : "\u00a0")}</p>
-                  </div>
-                </div>
-                {/* O ESTADO NO CARD (v4, ciclo 2): "2/3 · 5" dizia quantos, não
-                    em que pé. Agora a linha diz a data da próxima gravação (ou
-                    da última) e o degrau dela, na cor do que falta. */}
-                {(() => {
-                  const e = estadoDaPasta(p, doMes, roteirosDoMes, enviosDoMes, hojeStr);
-                  return (
-                    <p className={cn("mt-2.5 text-[12px] font-body font-semibold truncate",
-                      !e.p ? "text-muted-foreground" : e.p.tom === "atencao" ? "text-[hsl(var(--cria-amarelo))]" : e.p.tom === "ok" ? "text-[hsl(var(--cria-verde))]" : "text-muted-foreground")}>
-                      {e.texto}
-                    </p>
-                  );
-                })()}
-              </button>
-            ))}
-            {/* Cliente avulso: pasta fora da carteira (job pontual). */}
-            <button type="button" onClick={() => setNovoAvulsoOpen(true)}
-              className="rounded-2xl border border-dashed border-border p-3.5 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors grid place-items-center min-h-[96px]">
-              <span className="inline-flex flex-col items-center gap-1 text-xs font-body font-semibold">
-                <UserPlus className="h-5 w-5" /> Cliente avulso
-              </span>
-            </button>
-          </div>
-          <p className="text-[12px] font-body text-muted-foreground mt-2">
-            Cada pasta guarda os roteiros e as captações do cliente, mês a mês (troque o mês nas setas lá em cima).
-          </p>
-        </div>
-      )}
-
       {(<>
       {/* CALENDÁRIO DO MÊS: a agenda era uma pilha de cards, e ninguém enxerga
           a semana numa pilha. Aqui ela bate o olho e vê os dias cheios, os
           vazios e onde dá pra encaixar mais uma gravação. */}
-      <CalendarioCaptacoes month={month} caps={filtradas} clientById={clientById} aoAbrirDia={setDiaEscolhido} />
+      {/* Toque no dia abre o Dia de Gravação direto (24/09/2026). Antes abria
+          um painel "dia escolhido" no fim da página, que repetia o Dia de
+          Gravação pior e ficava perdido lá embaixo. */}
+      <CalendarioCaptacoes month={month} caps={doMes} clientById={clientById} aoAbrirDia={setDiaAberto} />
 
       {/* Gráfico por cidade */}
       {porCidade.length > 0 && (
@@ -957,110 +899,6 @@ function CriaCaptacaoInner() {
           </ResponsiveContainer>
         </div>
       )}
-
-      {/* Filtros: status + cidade */}
-      <div data-tour="cap-filtros" className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-xl border border-border bg-card p-0.5">
-          {([["todas", "Todas"], ["pendentes", "Pendentes"], ["concluidas", "Concluídas"]] as const).map(([k, label]) => (
-            <button key={k} type="button" onClick={() => setStatusFilter(k)}
-              className={cn("px-3 py-1.5 text-xs font-body font-semibold rounded-lg transition-colors",
-                statusFilter === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
-              {label}
-            </button>
-          ))}
-        </div>
-        {porCidade.length > 0 && (
-          <select value={cityFilter} onChange={(e) => setCityFilter(e.target.value)}
-            className="h-9 rounded-xl border border-border bg-card px-3 text-xs font-body font-semibold text-foreground outline-none">
-            <option value="">Todas as cidades</option>
-            {porCidade.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
-          </select>
-        )}
-      </div>
-
-      {/* ═══ O DIA ESCOLHIDO (Gabriela, 21/09/2026) ═══════════════════════
-          "Não gostei dessa forma de visualização, aparecer todos embaixo assim
-          listado. Deixa só por cliente mesmo. E se eu apertar no dia do
-          calendário, aparece o que eu tenho naquele dia."
-
-          Antes a aba despejava TODOS os dias do mês empilhados, cada um com os
-          roteiros abertos: uma rolagem que ninguém termina e que repetia o que
-          a pasta do cliente já faz melhor. Agora o calendário manda: toca no
-          dia e só aquele dia aparece aqui embaixo. */}
-      {isLoading ? (
-        <div className="h-40 rounded-2xl bg-muted animate-pulse" />
-      ) : doMes.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border py-12 text-center">
-          <Camera className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
-          <p className="text-sm font-body font-semibold text-foreground">Nenhuma captação em {monthLabel(month).toLowerCase()}</p>
-          <p className="text-xs text-muted-foreground font-body mt-1 max-w-xs mx-auto">As captações que você marca na Agenda aparecem aqui pra você gerenciar roteiros e ver o que falta.</p>
-          <Button variant="outline" size="sm" onClick={() => navigate("/socialmidia/agenda")} className="mt-4 rounded-xl">
-            <CalendarRange className="h-4 w-4 mr-1.5" /> Ir para a Agenda
-          </Button>
-        </div>
-      ) : !diaEscolhido ? (
-        <div className="rounded-2xl border border-dashed border-border py-10 text-center">
-          <CalendarRange className="h-7 w-7 text-muted-foreground/50 mx-auto mb-2" />
-          <p className="text-sm font-body font-semibold text-foreground">Toque num dia do calendário</p>
-          <p className="text-xs text-muted-foreground font-body mt-1 max-w-xs mx-auto">
-            Aparece aqui o que tem naquele dia: clientes, horário e os roteiros.
-          </p>
-        </div>
-      ) : (() => {
-        const capsDoDia = filtradas
-          .filter((c) => c.capture_date === diaEscolhido)
-          .sort((a, b) => (a.capture_time ?? "99:99").localeCompare(b.capture_time ?? "99:99"));
-        const locaisDoDia = [...new Set(capsDoDia.map((c) => (c.location ?? "").trim()).filter(Boolean))];
-        return (
-          <div data-tour="cap-grupo" className="rounded-2xl border border-border bg-card overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border bg-muted/30 flex-wrap">
-              <CalendarRange className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-sm font-display font-bold text-foreground">{diaMes(diaEscolhido)}</span>
-              <span className="text-xs font-body text-muted-foreground">{WD[parseDateOnly(diaEscolhido).getDay()]}</span>
-              {locaisDoDia.length > 0 && (
-                <>
-                  <span className="text-muted-foreground/40">·</span>
-                  <span className="inline-flex items-center gap-1 text-sm font-body font-semibold text-foreground min-w-0">
-                    <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <span className="truncate">{locaisDoDia.join(", ")}</span>
-                  </span>
-                </>
-              )}
-              <div className="ml-auto flex items-center gap-2 shrink-0">
-                {capsDoDia.length > 0 && (
-                  <Button size="sm" onClick={() => setDiaAberto(diaEscolhido)}
-                    className="h-8 rounded-xl px-2.5 whitespace-nowrap"
-                    title="Abre o dia inteiro: tomadas, roteiros na ordem e teleprompter.">
-                    <Camera className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Abrir o dia</span>
-                  </Button>
-                )}
-                {capsDoDia.some((c) => scripts.some((sc) => sc.capture_id === c.id)) && (
-                  <Button data-tour="cap-folha" variant="outline" size="sm"
-                    onClick={() => abrirFolha({ date: diaEscolhido, local: locaisDoDia.join(", ") || "Sem local", caps: capsDoDia })}
-                    className="h-8 rounded-xl px-2.5 whitespace-nowrap"
-                    title="Todos os roteiros desse dia num texto só, pra levar pra captação.">
-                    <FileText className="h-3.5 w-3.5 sm:mr-1.5" /><span className="hidden sm:inline">Folha do dia</span>
-                  </Button>
-                )}
-                <button type="button" onClick={() => setDiaEscolhido(null)}
-                  className="h-8 w-8 grid place-items-center rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  aria-label="Fechar o dia">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            {capsDoDia.length === 0 ? (
-              <p className="px-4 py-6 text-center text-[13px] font-body text-muted-foreground">
-                Nada neste dia com o filtro atual.
-              </p>
-            ) : (
-              <div className="divide-y divide-border">
-                {capsDoDia.map((c) => renderCaptureRow(c))}
-              </div>
-            )}
-          </div>
-        );
-      })()}
 
       </>)}
       </>)}
@@ -1106,7 +944,11 @@ function CriaCaptacaoInner() {
               id: c.id,
               patch: { status: c.status === "concluida" ? "agendada" : "concluida" },
             })}
-            aoTeleprompter={(title, text) => setPrompter({ title, text })} />
+            aoTeleprompter={(title, text) => setPrompter({ title, text })}
+            aoFolha={() => {
+              const locais = [...new Set(capsDoDia.map((c) => (c.location ?? "").trim()).filter(Boolean))];
+              abrirFolha({ date: diaAberto, local: locais.join(", ") || "Sem local", caps: capsDoDia });
+            }} />
         );
       })()}
 

@@ -59,12 +59,16 @@ export type DiaDeGravacaoProps = {
      dia tem Cria Post ativo. */
   aoVirarPosts?: ((roteiros: CaptureScript[]) => Promise<void>) | null;
   virandoPosts?: boolean;
+  /* FOLHA DO DIA (24/09/2026): o painel "dia escolhido" embaixo do calendário
+     saiu da página (Walter: "ficou aleatório"), e era o único lugar com a
+     Folha. Agora ela mora aqui, no rodapé do próprio dia. */
+  aoFolha?: (() => void) | null;
 };
 
 export function DiaDeGravacao({
   data, caps, scripts, nomeDe, cidadeDe, whatsappDe, aoFechar,
   aoMarcarTomada, aoMarcarGravado, aoConcluirCaptacao, aoTeleprompter,
-  aoVirarPosts, virandoPosts,
+  aoVirarPosts, virandoPosts, aoFolha,
 }: DiaDeGravacaoProps) {
   const { dia, semana } = dataPorExtenso(data);
   const [copiado, setCopiado] = useState(false);
@@ -400,6 +404,11 @@ export function DiaDeGravacao({
           <p className="text-[12px] font-body text-muted-foreground min-w-0 flex-1">
             Tudo o que está aqui cabe num texto só, pra levar offline.
           </p>
+          {aoFolha && todosRoteiros.length > 0 && (
+            <Button size="sm" variant="outline" className="rounded-xl shrink-0" onClick={aoFolha}>
+              Folha do dia
+            </Button>
+          )}
           <Button size="sm" className="rounded-xl shrink-0" onClick={copiarTudo}>
             {copiado ? "Copiado" : "Copiar o dia"}
           </Button>

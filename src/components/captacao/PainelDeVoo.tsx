@@ -1,8 +1,8 @@
 import { useMemo } from "react";
-import { Camera, Clock, MapPin, ArrowRight, ChevronRight, CalendarPlus, Sparkles } from "lucide-react";
+import { Camera, Clock, MapPin, ArrowRight, ChevronRight, CalendarPlus, Sparkles, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { prontidaoDa, DEGRAUS, type Prontidao, type CapturaMin, type RoteiroMin, type AprovacaoMin, type CapturaPainel, type PastaPainel } from "@/lib/captacao-prontidao";
+import { prontidaoDa, estadoDaPasta, DEGRAUS, type Prontidao, type CapturaMin, type RoteiroMin, type AprovacaoMin, type CapturaPainel, type PastaPainel } from "@/lib/captacao-prontidao";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    O PAINEL DE VOO DO CRIA CAPTAÇÃO (v4, ciclo 2 · 23/09/2026)
@@ -16,9 +16,9 @@ import { prontidaoDa, DEGRAUS, type Prontidao, type CapturaMin, type RoteiroMin,
      "quem eu não marquei?" → cliente ativo sem gravação no mês, com o hábito
                               dele já sugerido ("costuma dia 10")
 
-   Este componente responde as três. O calendário e a grade de clientes ficam
-   na página, logo abaixo, porque já existiam e só precisavam de contexto em
-   cima. Ele não busca nada: recebe as listas prontas e calcula. É o mesmo
+   Este componente responde as três. Desde 24/09 a grade de clientes mora
+   aqui dentro (um card por cliente com a falta e o botão), e o calendário
+   fica na página, logo abaixo. Ele não busca nada: recebe as listas prontas e calcula. É o mesmo
    `prontidaoDa` do ciclo 1, então o que o card diz e o que a lista diz nunca
    discordam.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -56,12 +56,13 @@ function quando(iso: string, hoje: string) {
 
 export function PainelDeVoo({
   caps, scripts, envios, pastas, habitos, hoje, mesEhAtualOuFuturo, nomeDe, corDe,
-  onAbrirDia, onAbrirPasta, onMarcar,
+  onAbrirDia, onAbrirPasta, onMarcar, onNovoAvulso,
 }: {
   caps: CapturaPainel[];
   scripts: RoteiroMin[];
   envios: AprovacaoMin[];
-  pastas: PastaPainel[];
+  pastas: (PastaPainel & { cidade?: string | null; extraId?: string | null })[];
+  onNovoAvulso?: () => void;
   habitos: Map<string, HabitoPainel>;
   hoje: string;
   /** Sugerir "não marcada" só faz sentido pra mês que ainda dá pra marcar. */
@@ -135,6 +136,44 @@ export function PainelDeVoo({
 
   const pendentes = faltas.filter((f) => f.tom !== "espera").length;
 
+  /* UM CARD POR CLIENTE (Walter, 24/09/2026: "deixar só os quadrados, sem
+     lista e depois os nomes de novo, fica repetitivo"). A lista "Falta pra
+     ficar pronto" e a grade de pastas mostravam os mesmos clientes duas
+     vezes. Agora cada falta vai morar dentro do card do cliente dela, com o
+     botão da ação ali dentro, e a grade vem ordenada pela mesma regra da
+     lista antiga: o que vence antes fica em cima. */
+  const chaveDaCaptura = useMemo(() => {
+    const porNome = new Map<string, string>();
+    for (const pa of pastas) if (!pa.crmId) porNome.set(pa.nome.trim().toLowerCase(), pa.key);
+    return (c: CapturaPainel) => c.crm_client_id
+      ? `crm:${c.crm_client_id}`
+      : porNome.get((c.client_name ?? "").trim().toLowerCase()) ?? null;
+  }, [pastas]);
+
+  const faltasPorPasta = useMemo(() => {
+    const m = new Map<string, Falta[]>();
+    for (const f of faltas) {
+      let key: string | null = null;
+      if (f.chave.startsWith("pasta:")) key = f.chave.slice(6);
+      else {
+        const cap = caps.find((c) => `cap:${c.id}` === f.chave);
+        key = cap ? chaveDaCaptura(cap) : null;
+      }
+      if (!key) continue;
+      m.set(key, [...(m.get(key) ?? []), f]); // já vem ordenado por urgência
+    }
+    return m;
+  }, [faltas, caps, chaveDaCaptura]);
+
+  const pastasOrdenadas = useMemo(() => {
+    const peso = (key: string) => {
+      const f = faltasPorPasta.get(key)?.[0];
+      if (!f) return 10000;
+      return (f.tom === "espera" ? 5000 : 0) + f.ordem;
+    };
+    return pastas.map((p, i) => ({ p, i })).sort((a, b) => peso(a.p.key) - peso(b.p.key) || a.i - b.i).map((x) => x.p);
+  }, [pastas, faltasPorPasta]);
+
   return (
     <div className="space-y-3">
       {/* ── O QUE VEM ── */}
@@ -179,7 +218,7 @@ export function PainelDeVoo({
               <p className="text-base font-display font-extrabold text-foreground">Nenhuma gravação marcada daqui pra frente</p>
               <p className="text-xs font-body text-muted-foreground mt-0.5">
                 {faltas.some((f) => f.quando === null)
-                  ? "Tem cliente na carteira sem gravação neste mês. A lista abaixo mostra quem."
+                  ? "Tem cliente na carteira sem gravação neste mês. Os cards abaixo mostram quem."
                   : "Marque uma gravação pra ela aparecer aqui com o que falta pra ficar pronta."}
               </p>
             </div>
@@ -187,52 +226,86 @@ export function PainelDeVoo({
         )}
       </div>
 
-      {/* ── O QUE FALTA ── */}
-      <div className="rounded-3xl border border-border bg-card p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-2 mb-3">
+      {/* ── OS CLIENTES, cada um com o que falta dentro ── */}
+      <div data-tour="cap-pastas">
+        <div className="flex items-center justify-between gap-2 mb-3 px-1">
           <p className="text-sm font-display font-bold text-foreground flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" /> Falta pra ficar pronto
+            <Sparkles className="h-4 w-4 text-primary" /> Clientes do mês
           </p>
           <span className={cn("text-[12px] font-body font-bold px-2 py-0.5 rounded-full",
             pendentes === 0 ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]" : "bg-[hsl(var(--cria-amarelo)/0.15)] text-[hsl(var(--cria-amarelo))]")}>
-            {pendentes === 0 ? "tudo em dia" : `${pendentes} ${pendentes === 1 ? "item" : "itens"}`}
+            {pendentes === 0 ? "tudo em dia" : `${pendentes} ${pendentes === 1 ? "pendência" : "pendências"}`}
           </span>
         </div>
-        {faltas.length === 0 ? (
-          <p className="text-xs font-body text-muted-foreground py-2">
-            Nada pendente neste mês. Todas as gravações marcadas têm roteiro revisado ou já viraram post.
-          </p>
-        ) : (
-          <ul className="divide-y divide-border">
-            {faltas.slice(0, 8).map((f) => (
-              <li key={f.chave} className="flex items-center gap-3 py-2.5">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white text-[12px] font-display font-extrabold"
-                  style={{ background: f.cor || "#EA4918" }}>
-                  {f.quem.slice(0, 1).toUpperCase()}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-body font-semibold text-foreground truncate">
-                    {f.quem}
-                    {f.quando && <span className="font-normal text-muted-foreground"> · {ddmm(f.quando)}, {quando(f.quando, hoje)}</span>}
-                  </p>
-                  <p className={cn("text-[12px] font-body truncate",
-                    f.tom === "atencao" ? "text-[hsl(var(--cria-amarelo))] font-semibold" : "text-muted-foreground")}>
-                    {f.texto}{f.detalhe ? ` · ${f.detalhe}` : ""}
-                  </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {pastasOrdenadas.map((pa) => {
+            const fs = faltasPorPasta.get(pa.key) ?? [];
+            const f = fs[0] ?? null;
+            const outras = fs.length - 1;
+            const estado = f ? null : estadoDaPasta(pa, caps, scripts, envios, hoje);
+            return (
+              <div key={pa.key} role="button" tabIndex={0}
+                onClick={() => onAbrirPasta(pa.key)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAbrirPasta(pa.key); } }}
+                className={cn("flex flex-col rounded-2xl border bg-card p-3.5 text-left cursor-pointer hover:shadow-warm-sm transition-all",
+                  f && f.tom === "atencao" ? "border-[hsl(var(--cria-amarelo)/0.45)] hover:border-[hsl(var(--cria-amarelo))]" : "border-border hover:border-primary/40")}>
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white text-xs font-display font-extrabold"
+                    style={{ background: pa.cor || "#EA4918" }}>
+                    {pa.nome.slice(0, 1).toUpperCase()}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13.5px] font-display font-bold text-foreground truncate">{pa.nome}</p>
+                    <p className="text-[12px] font-body text-muted-foreground truncate">
+                      {f?.quando
+                        ? `${ddmm(f.quando)} · ${quando(f.quando, hoje)}`
+                        : estado ? estado.texto : (pa.cidade || (pa.extraId ? "avulso" : "sem gravação no mês"))}
+                    </p>
+                  </div>
                 </div>
-                <button type="button" onClick={f.acao}
-                  className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-body font-semibold text-foreground hover:border-primary/40 hover:text-primary transition-colors">
-                  {f.quando === null && <CalendarPlus className="h-3 w-3" />}
-                  <span className="hidden sm:inline">{f.rotuloAcao}</span>
-                  <ChevronRight className="h-3 w-3 sm:hidden" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        {faltas.length > 8 && (
-          <p className="text-[12px] font-body text-muted-foreground mt-2">Mostrando os 8 mais urgentes de {faltas.length}.</p>
-        )}
+
+                {f ? (
+                  <>
+                    <p className={cn("mt-2.5 text-[12.5px] font-body leading-snug",
+                      f.tom === "atencao" ? "text-[hsl(var(--cria-amarelo))] font-semibold" : "text-muted-foreground")}>
+                      {f.texto}{f.detalhe ? ` · ${f.detalhe}` : ""}
+                    </p>
+                    {outras > 0 && (
+                      <p className="text-[12px] font-body text-muted-foreground mt-0.5">
+                        + {outras} {outras === 1 ? "outra gravação pendente" : "outras gravações pendentes"}
+                      </p>
+                    )}
+                    <div className="mt-auto pt-3">
+                      <Button size="sm" variant={f.tom === "atencao" ? "default" : "outline"}
+                        onClick={(e) => { e.stopPropagation(); f.acao(); }}
+                        className="w-full h-9 rounded-xl text-[12.5px]">
+                        {f.quando === null ? <CalendarPlus className="h-3.5 w-3.5 mr-1.5" /> : <Camera className="h-3.5 w-3.5 mr-1.5" />}
+                        {f.rotuloAcao}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <p className={cn("mt-2.5 text-[12.5px] font-body font-semibold",
+                    estado?.p?.tom === "ok" ? "text-[hsl(var(--cria-verde))]" : "text-muted-foreground")}>
+                    {estado?.p ? "Nada pendente" : "Sem gravação neste mês"}
+                    <ChevronRight className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
+                  </p>
+                )}
+              </div>
+            );
+          })}
+          {onNovoAvulso && (
+            <button type="button" onClick={onNovoAvulso}
+              className="rounded-2xl border border-dashed border-border p-3.5 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors grid place-items-center min-h-[96px]">
+              <span className="inline-flex flex-col items-center gap-1 text-xs font-body font-semibold">
+                <UserPlus className="h-5 w-5" /> Cliente avulso
+              </span>
+            </button>
+          )}
+        </div>
+        <p className="text-[12px] font-body text-muted-foreground mt-2 px-1">
+          Toque no card pra abrir a pasta do cliente (roteiros, captações e tomadas). O botão faz a próxima ação.
+        </p>
       </div>
     </div>
   );

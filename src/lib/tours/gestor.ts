@@ -357,7 +357,7 @@ export const TOURS_GESTOR: TourConfig[] = [
         skipIfMissing: true,
         target: '[data-tour="cap-pastas"]',
         title: "A pasta de cada cliente",
-        body: "Toque num cliente pra abrir a pasta dele: vários roteiros salvos por mês (copiar, teleprompter, editar, virar post), as captações marcadas e as tomadas padrão dele. Dá pra puxar os roteiros dos reels aprovados no Cria Post e criar um cliente avulso de fora da carteira.",
+        body: "Um card por cliente, já na ordem do que vence antes. Cada card diz a data da gravação, o que falta pra ficar pronta e tem o botão da próxima ação (abrir o dia ou marcar). Toque no resto do card pra abrir a pasta com os roteiros, as captações e as tomadas dele.",
         placement: "top",
       },
       {
@@ -368,23 +368,6 @@ export const TOURS_GESTOR: TourConfig[] = [
         title: "Aproveita a viagem",
         body: "Já que você vai a uma cidade, o Cria mostra outros clientes de lá que ainda não foram captados este mês. Com um toque em Marcar você já agenda a captação no dia da ida, pra resolver tudo numa viagem só.",
         placement: "bottom",
-      },
-      {
-        // Os filtros moram na aba Agenda do mês; o openFirst clica nela primeiro.
-        skipIfMissing: true,
-        openFirst: '[data-tour="cap-aba-agenda"]',
-        target: '[data-tour="cap-filtros"]',
-        title: "Filtrar a lista",
-        body: "Quando o mês enche, filtre por status (pendentes ou concluídas) ou por cidade pra ver só o que interessa agora. É o jeito de focar na cidade da próxima gravação sem o resto atrapalhar.",
-        placement: "bottom",
-      },
-      {
-        // A lista de grupos só existe quando há captação no mês (e passando no filtro).
-        skipIfMissing: true,
-        target: '[data-tour="cap-grupo"]',
-        title: "Agrupado por dia e local",
-        body: "As captações vêm juntas por dia e por local, porque na prática você grava tudo do mesmo lugar de uma vez. Cada bloco mostra a data, o local e quantas gravações saem dali.",
-        placement: "top",
       },
       {
         // Roteiro (e os botões dele) só existe quando a captação já tem roteiro escrito.
@@ -422,14 +405,6 @@ export const TOURS_GESTOR: TourConfig[] = [
         title: "Marcar como concluída",
         body: "Toque aqui pra alternar a captação entre pendente e concluída. É o que atualiza o placar lá em cima e tira a gravação da sua lista de pendências do mês.",
         placement: "left",
-      },
-      {
-        // O botão só aparece quando o grupo tem captação com roteiro escrito.
-        skipIfMissing: true,
-        target: '[data-tour="cap-folha"]',
-        title: "A folha do dia",
-        body: "A folha junta todos os roteiros daquele dia e local num texto só, pra você levar pra captação sem abrir cliente por cliente. Dá pra copiar tudo de uma vez ou baixar em PDF.",
-        placement: "bottom",
       },
       {
         // O gráfico só existe quando há captação no mês (senão não há cidade pra contar).
