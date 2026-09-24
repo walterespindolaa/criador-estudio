@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14";
+import { enviarEmail } from "../_shared/enviar-email.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -204,6 +205,24 @@ serve(async (req) => {
         link: "/socialmidia",
       });
       if (nErr) console.warn("[partner-approve] aviso nao enviado:", nErr.message);
+      // E-mail de aprovação (Fase A ciclo 3, 24/09/2026): a parceira pode não
+      // estar com o app aberto no dia; o cupom precisa chegar na caixa dela.
+      const { data: perfil } = await svc.from("profiles").select("email, name").eq("id", partner.user_id).maybeSingle();
+      if (perfil?.email) {
+        const appUrl = Deno.env.get("APP_URL") ?? "https://app.criasocialclub.com.br";
+        await enviarEmail(svc, {
+          para: perfil.email, nome: perfil.name ?? (partner as { full_name?: string | null }).full_name ?? null,
+          etiqueta: "parceira_aprovada",
+          assunto: "Seu cadastro de parceira foi aprovado",
+          paragrafos: [
+            couponCode
+              ? `Você já pode indicar o Cria. Seu cupom é ${couponCode}: quem assinar com ele ganha o desconto e você recebe a comissão recorrente.`
+              : "Você já pode indicar o Cria e receber comissão recorrente por cada assinatura que vier de você.",
+            "Em Indique e ganhe tem o seu link pessoal, a regra da comissão e o extrato mês a mês.",
+          ],
+          botao: { texto: "Abrir Indique e ganhe", url: `${appUrl}/socialmidia/parceria` },
+        });
+      }
     }
 
     return json({ ok: true, coupon_code: couponCode });

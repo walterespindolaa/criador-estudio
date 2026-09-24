@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useExternalClients, useExternalPosts, usePortalActivity, type ExternalClient, type ExternalPost, type ExternalPostInput } from "@/hooks/useCriaPost";
@@ -26,7 +26,7 @@ import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { Calendar } from "@/components/ui/calendar";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
 import { ImportKanbanDialog } from "@/components/accounts/ImportKanbanDialog";
-import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
+import { ClientReportDialogLazy as ClientReportDialog } from "@/components/accounts/ClientReportDialogLazy";
 import { NotasRelatorioSalvas } from "@/components/accounts/NotasRelatorioSalvas";
 import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog";
 import { useProfile } from "@/hooks/useProfile";
@@ -359,6 +359,15 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     porData
       ? ordenarPorData(lista, (p) => p.scheduled_date, (p) => (p as { scheduled_time?: string | null }).scheduled_time, ordemDir)
       : lista;
+  // Listas por coluna calculadas UMA vez por mudança de dados/filtro, não a
+  // cada render (o quadro re-renderiza a cada tick de arraste; antes filtrava
+  // e ordenava os 5 status de novo em cada um). Pente fino 24/09/2026.
+  const postsPorColuna = useMemo(() => {
+    const m: Record<string, ExternalPost[]> = {};
+    for (const colKey of APPROVAL_COLS) m[colKey] = ordenarColuna(viewPosts.filter((p) => (p.approval_status ?? "pendente") === colKey));
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewPosts.length, viewPosts.map((p) => `${p.id}:${p.approval_status}:${p.scheduled_date}:${(p as { board_order?: number | null }).board_order ?? ""}`).join("|"), porData, ordemDir]);
   // Guarda o id do rascunho aberto: se o usuário cancelar, apagamos (não vira lixo).
   const [draftId, setDraftId] = useState<string | null>(null);
   // Kanban (padrão) ou Calendário. Preferência salva por dispositivo.
@@ -726,7 +735,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
           <div ref={boardRef} data-tour="prod-quadro" className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 kanban-scroll">
             {APPROVAL_COLS.map((colKey) => {
               const st = STATUS[colKey];
-              const colPosts = ordenarColuna(viewPosts.filter((p) => (p.approval_status ?? "pendente") === colKey));
+              const colPosts = postsPorColuna[colKey] ?? [];
               /* Cabeçalho ORIGINAL de volta (Walter, 31/08: o banner colorido
                  aqui "foi errado", o visual limpo é a cara deste quadro). */
               return (

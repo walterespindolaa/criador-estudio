@@ -108,11 +108,11 @@ export function ContractGeneratorDialog({ open, onOpenChange }: Props) {
             <Sec title="Escopo dos serviços">
               <Grid>
                 <Fld label="Rede social"><Input value={d.socialNetwork} onChange={(e) => set({ socialNetwork: e.target.value })} className="rounded-xl" /></Fld>
-                <Fld label="Publicações/mês"><Input type="number" value={d.postsPerMonth} onChange={(e) => set({ postsPerMonth: Number(e.target.value) })} className="rounded-xl" /></Fld>
-                <Fld label="Carrosséis"><Input type="number" value={d.carrosseis} onChange={(e) => set({ carrosseis: Number(e.target.value) })} className="rounded-xl" /></Fld>
-                <Fld label="Vídeos"><Input type="number" value={d.videos} onChange={(e) => set({ videos: Number(e.target.value) })} className="rounded-xl" /></Fld>
-                <Fld label="Horas de gravação/mês"><Input type="number" value={d.recHours} onChange={(e) => set({ recHours: Number(e.target.value) })} className="rounded-xl" /></Fld>
-                <Fld label="Reuniões/mês"><Input type="number" value={d.meetings} onChange={(e) => set({ meetings: Number(e.target.value) })} className="rounded-xl" /></Fld>
+                <Fld label="Publicações/mês"><Input type="number" inputMode="decimal" value={d.postsPerMonth} onChange={(e) => set({ postsPerMonth: Number(e.target.value) })} className="rounded-xl" /></Fld>
+                <Fld label="Carrosséis"><Input type="number" inputMode="decimal" value={d.carrosseis} onChange={(e) => set({ carrosseis: Number(e.target.value) })} className="rounded-xl" /></Fld>
+                <Fld label="Vídeos"><Input type="number" inputMode="decimal" value={d.videos} onChange={(e) => set({ videos: Number(e.target.value) })} className="rounded-xl" /></Fld>
+                <Fld label="Horas de gravação/mês"><Input type="number" inputMode="decimal" value={d.recHours} onChange={(e) => set({ recHours: Number(e.target.value) })} className="rounded-xl" /></Fld>
+                <Fld label="Reuniões/mês"><Input type="number" inputMode="decimal" value={d.meetings} onChange={(e) => set({ meetings: Number(e.target.value) })} className="rounded-xl" /></Fld>
                 <Fld label="Atendimento (horário)" full><Input value={d.supportHours} onChange={(e) => set({ supportHours: e.target.value })} className="rounded-xl" /></Fld>
               </Grid>
               <div className="flex gap-4 mt-1">
@@ -125,8 +125,8 @@ export function ContractGeneratorDialog({ open, onOpenChange }: Props) {
               <Grid>
                 <Fld label="Valor mensal (R$)"><Input value={d.value} onChange={(e) => set({ value: e.target.value })} className="rounded-xl" /></Fld>
                 <Fld label="Valor por extenso (opcional)"><Input value={d.valueExtenso} onChange={(e) => set({ valueExtenso: e.target.value })} placeholder="mil reais" className="rounded-xl" /></Fld>
-                <Fld label="Dia de vencimento"><Input type="number" value={d.dueDay} onChange={(e) => set({ dueDay: Number(e.target.value) })} className="rounded-xl" /></Fld>
-                <Fld label="Multa de rescisão (%)"><Input type="number" value={d.multaPct} onChange={(e) => set({ multaPct: Number(e.target.value) })} className="rounded-xl" /></Fld>
+                <Fld label="Dia de vencimento"><Input type="number" inputMode="decimal" value={d.dueDay} onChange={(e) => set({ dueDay: Number(e.target.value) })} className="rounded-xl" /></Fld>
+                <Fld label="Multa de rescisão (%)"><Input type="number" inputMode="decimal" value={d.multaPct} onChange={(e) => set({ multaPct: Number(e.target.value) })} className="rounded-xl" /></Fld>
                 <Fld label="Duração"><Input value={d.termText} onChange={(e) => set({ termText: e.target.value })} placeholder="3 meses" className="rounded-xl" /></Fld>
                 <Fld label="Início"><Input type="date" value={d.startDate} onChange={(e) => set({ startDate: e.target.value })} className="rounded-xl" /></Fld>
               </Grid>

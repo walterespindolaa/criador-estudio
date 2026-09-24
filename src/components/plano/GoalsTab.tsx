@@ -121,7 +121,7 @@ export function GoalsTab({
                 <Label className="text-xs font-body">Valor objetivo</Label>
                 <Input
                   placeholder="Ex: 10000"
-                  type="number"
+                  type="number" inputMode="decimal"
                   value={newGoalForm.target_value}
                   onChange={(e) => onNewGoalFormChange({ target_value: e.target.value })}
                   className="rounded-xl"
@@ -236,7 +236,7 @@ export function GoalsTab({
                       <div className="flex items-center gap-3">
                         <Label className="text-xs font-body whitespace-nowrap">Valor atual:</Label>
                         <Input
-                          type="number"
+                          type="number" inputMode="decimal"
                           value={current}
                           onChange={(e) => onUpdateGoalValue(goal.id, parseFloat(e.target.value) || 0)}
                           className="rounded-xl text-sm w-28"

@@ -191,7 +191,8 @@ function ClientsTab() {
         <div className="rounded-2xl border border-dashed border-border p-10 text-center">
           <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-3"><Building2 className="h-5 w-5 text-muted-foreground" /></div>
           <p className="text-sm font-body text-foreground font-medium">Nenhum cliente ainda</p>
-          <p className="text-xs text-muted-foreground font-body mt-1">Crie um cliente ou importe os que você já gerencia no cria.</p>
+          <p className="text-xs text-muted-foreground font-body mt-1">Crie um cliente ou importe os que você já gerencia no Cria.</p>
+          <Button size="sm" className="mt-4 min-h-[44px]" onClick={() => setCreating(true)}><Plus className="h-3.5 w-3.5 mr-1.5" /> Criar o primeiro cliente</Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

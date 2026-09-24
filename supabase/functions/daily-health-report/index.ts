@@ -3,6 +3,7 @@
 // por notificação in-app (que dispara o push via trg_notify_push). Assim ninguém
 // precisa abrir o painel: o resumo chega. Grava o próprio heartbeat em cron_runs.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { enviarEmail } from "../_shared/enviar-email.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -84,7 +85,7 @@ Deno.serve(async (req) => {
     const description = partes.join(" ").slice(0, 400);
 
     // 4) Admins que recebem o resumo.
-    const { data: admins } = await svc.from("profiles").select("id").eq("role", "admin");
+    const { data: admins } = await svc.from("profiles").select("id, email, name").eq("role", "admin");
     const adminIds = ((admins ?? []) as { id: string }[]).map((a) => a.id);
     if (adminIds.length === 0) { await heartbeat(true, "sem admin p/ notificar"); return json({ ok: true, notified: 0, saudavel, nErro, problemas }); }
 
@@ -98,6 +99,29 @@ Deno.serve(async (req) => {
     }));
     const { error: insErr } = await svc.from("notifications").insert(notifs);
     if (insErr) { await heartbeat(false, "notif: " + insErr.message); return json({ error: "notify_failed", message: insErr.message }, 500); }
+
+    /* E-MAIL PRO ADMIN (Fase C, 24/09/2026). Push some com o celular no
+       silencioso; e-mail fica. Só manda quando NÃO está saudável, ou uma vez
+       por semana (segunda) como "está tudo bem". Assim a caixa não vira ruído
+       e o dia que chega e-mail no meio da semana já é sinal. */
+    const ehSegunda = new Date().getUTCDay() === 1;
+    if (!saudavel || ehSegunda) {
+      const linhas = [
+        `${nErro} erro(s) e ${nAviso} aviso(s) registrados nas últimas 24 h.`,
+        top.length ? "Erros mais frequentes: " + top.map(([m, n]) => `${n}x ${m}`).join(" | ") : "Nenhum erro repetido.",
+        problemas.length ? "Robôs com problema: " + problemas.join("; ") : "Todos os robôs rodaram no horário.",
+      ];
+      for (const a of (admins ?? []) as { id: string; email: string | null; name: string | null }[]) {
+        if (!a.email) continue;
+        await enviarEmail(svc, {
+          para: a.email, nome: a.name, etiqueta: saudavel ? "saude_semanal" : "saude_atencao",
+          assunto: saudavel ? "Cria: semana começou saudável" : `Cria: atenção (${nErro} erro${nErro === 1 ? "" : "s"} em 24 h)`,
+          paragrafos: linhas,
+          botao: { texto: "Abrir Admin > Logs", url: `${Deno.env.get("APP_URL") ?? "https://app.criasocialclub.com.br"}/cf-admin-panel` },
+          rodape: "Relatório automático do robô de saúde. Chega quando algo pede atenção e toda segunda como confirmação.",
+        });
+      }
+    }
 
     await heartbeat(true, saudavel ? "ok" : description.slice(0, 100));
     return json({ ok: true, notified: adminIds.length, saudavel, nErro, nAviso, problemas });

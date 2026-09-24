@@ -445,7 +445,7 @@ export default function ClienteHub() {
                     <Button size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => void saveName()} title="Salvar apelido" aria-label="Salvar apelido"><Check className="h-4 w-4" /></Button>
                     <Button size="sm" variant="ghost" className="h-8 px-2 shrink-0" onClick={() => setEditingName(false)} title="Cancelar">Cancelar</Button>
                   </div>
-                  <p className="text-[11px] text-muted-foreground font-body">
+                  <p className="text-[12px] text-muted-foreground font-body">
                     Nome que só você vê, não muda a conta do cliente.
                     {(client?.display_name?.trim() || criaLiveName) && (
                       <button type="button" onClick={() => { setNameDraft(""); void saveName(); }} className="ml-1 text-primary hover:underline font-semibold">
@@ -468,8 +468,8 @@ export default function ClienteHub() {
               {/* SELOS linha própria abaixo do nome, sem sobrepor. */}
               <div className="flex gap-1.5 mt-1.5 flex-wrap">
                 {extClient
-                  ? <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-600 font-body font-semibold">Link de aprovação ativo</span>
-                  : <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body">Cria Post não ativado</span>}
+                  ? <span className="text-[12px] px-2 py-0.5 rounded-full bg-emerald-500/12 text-emerald-600 font-body font-semibold">Link de aprovação ativo</span>
+                  : <span className="text-[12px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body">Cria Post não ativado</span>}
                 {/* Selo clicável: leva pra Produção (kanban) do Cria Post, onde ficam
                     os posts aguardando o cliente. Atalho direto do cabeçalho. */}
                 {pendCount > 0 && (
@@ -478,7 +478,7 @@ export default function ClienteHub() {
                     onClick={() => goTab("posts")}
                     title="Ver os posts aguardando o cliente na Produção"
                     aria-label={`${pendCount} post${pendCount > 1 ? "s" : ""} aguardando o cliente. Abrir a Produção.`}
-                    className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-body font-semibold hover:bg-amber-200 transition-colors cursor-pointer"
+                    className="text-[12px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-body font-semibold hover:bg-amber-200 transition-colors cursor-pointer"
                   >
                     {pendCount} pendente{pendCount > 1 ? "s" : ""}
                   </button>
@@ -488,7 +488,7 @@ export default function ClienteHub() {
                     com data passada, mostra quando encerrou. */}
                 {(client as { contract_end_date?: string | null }).contract_end_date && (
                   clienteInativo(client) ? (
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body font-semibold">
+                    <span className="text-[12px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body font-semibold">
                       Encerrado em {parseDateOnly((client as { contract_end_date?: string | null }).contract_end_date!).toLocaleDateString("pt-BR")}
                     </span>
                   ) : (
@@ -496,7 +496,7 @@ export default function ClienteHub() {
                       type="button"
                       onClick={() => void setStatus("ativo")}
                       title="Cancelar o encerramento agendado (o cliente segue ativo)"
-                      className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-body font-semibold hover:bg-amber-200 transition-colors cursor-pointer"
+                      className="text-[12px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-body font-semibold hover:bg-amber-200 transition-colors cursor-pointer"
                     >
                       Encerra em {parseDateOnly((client as { contract_end_date?: string | null }).contract_end_date!).toLocaleDateString("pt-BR")} · cancelar
                     </button>
@@ -524,7 +524,7 @@ export default function ClienteHub() {
               <StickyNote className="h-4 w-4" />
               <span className="hidden sm:inline ml-1.5">Notas</span>
               {notesCount > 0 && (
-                <span className="ml-1.5 text-[10px] font-body font-bold rounded-full bg-primary/10 text-primary px-1.5 py-0.5 leading-none">
+                <span className="ml-1.5 text-[11px] font-body font-bold rounded-full bg-primary/10 text-primary px-1.5 py-0.5 leading-none">
                   {notesCount}
                 </span>
               )}
@@ -556,7 +556,7 @@ export default function ClienteHub() {
             </Button>
             {colorOpen && (
               <div className="absolute left-0 md:left-auto md:right-0 top-12 z-30 w-[280px] max-w-[calc(100vw-3rem)] max-h-[60vh] overflow-y-auto rounded-2xl border border-border bg-card p-3 shadow-xl">
-                <p className="text-[11px] font-body text-muted-foreground mb-2">Cor do cliente</p>
+                <p className="text-[12px] font-body text-muted-foreground mb-2">Cor do cliente</p>
                 <ClientColorPicker
                   value={(client as { color?: string | null }).color ?? null}
                   onChange={(hex) => setColor(hex)}
@@ -758,7 +758,7 @@ export default function ClienteHub() {
                 <StickyNote className="h-4 w-4 text-muted-foreground shrink-0" />
                 <p className="text-sm font-display font-bold text-foreground">Notas</p>
                 {notesCount > 0 && (
-                  <span className="text-[10px] font-body font-bold rounded-full bg-primary/10 text-primary px-1.5 py-0.5 leading-none">{notesCount}</span>
+                  <span className="text-[11px] font-body font-bold rounded-full bg-primary/10 text-primary px-1.5 py-0.5 leading-none">{notesCount}</span>
                 )}
               </div>
               <Button size="sm" variant="outline" onClick={() => { if (!hasCrm) { setUpsell("crm"); return; } setNotesOpen(true); }}>
@@ -775,7 +775,7 @@ export default function ClienteHub() {
                   <button key={n.id} type="button" onClick={() => setNotesOpen(true)}
                     className="w-full text-left py-2 group">
                     <p className="text-[13px] font-body font-semibold text-foreground truncate group-hover:text-primary transition-colors">{n.title?.trim() || "Sem título"}</p>
-                    <p className="text-[11.5px] text-muted-foreground font-body truncate">
+                    <p className="text-[12px] text-muted-foreground font-body truncate">
                       {new Date(n.updated_at).toLocaleDateString("pt-BR")} {notePreview(n.body)}
                     </p>
                   </button>
@@ -1229,7 +1229,7 @@ function DriveTab({ links }: { links: LinkUtil[] | null }) {
                   : <FileIcon className="h-5 w-5 text-muted-foreground shrink-0" />}
                 <span className="text-[13px] font-body text-foreground truncate flex-1 min-w-0">{it.name}</span>
                 {it.modifiedTime && (
-                  <span className="text-[11px] font-body text-muted-foreground shrink-0 hidden sm:inline">{fmtDriveDate(it.modifiedTime)}</span>
+                  <span className="text-[12px] font-body text-muted-foreground shrink-0 hidden sm:inline">{fmtDriveDate(it.modifiedTime)}</span>
                 )}
                 <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               </a>
@@ -1443,8 +1443,8 @@ function Destaques({ clientId, clientSegment, clientBirthday, renewalDate, extCl
   return (
     <div data-tour="cli-destaques">
       <div className="flex items-center gap-2 mb-2 px-1">
-        <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide">Destaques</p>
-        <span className="text-[11px] font-body text-muted-foreground/70">o resumo, o detalhe fica em cada Cria acima</span>
+        <p className="text-[12px] font-body text-muted-foreground uppercase tracking-wide">Destaques</p>
+        <span className="text-[12px] font-body text-muted-foreground/70">o resumo, o detalhe fica em cada Cria acima</span>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
 
@@ -1454,7 +1454,7 @@ function Destaques({ clientId, clientSegment, clientBirthday, renewalDate, extCl
             <div className="flex items-center gap-2 mb-2.5">
               <span className="h-2 w-2 rounded-full shrink-0" style={{ background: laranja }} />
               <p className="text-sm font-display font-bold text-foreground">Precisa de você</p>
-              <button onClick={() => onOpen("cria-post")} className="ml-auto flex items-center gap-1 text-[11.5px] font-body font-semibold text-muted-foreground hover:text-foreground">
+              <button onClick={() => onOpen("cria-post")} className="ml-auto flex items-center gap-1 text-[12px] font-body font-semibold text-muted-foreground hover:text-foreground">
                 Abrir Cria Post <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -1466,14 +1466,14 @@ function Destaques({ clientId, clientSegment, clientBirthday, renewalDate, extCl
                   <button key={p.id} onClick={() => onOpen("cria-post")} className="w-full flex items-center gap-2.5 rounded-xl border border-border bg-muted/30 px-3 py-2 text-left hover:border-primary/40 transition-colors">
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] font-body font-semibold text-foreground truncate">{p.title || "Post"}</p>
-                      {p.format && <p className="text-[11px] font-body text-muted-foreground truncate">{p.format}</p>}
+                      {p.format && <p className="text-[12px] font-body text-muted-foreground truncate">{p.format}</p>}
                     </div>
-                    <span className={`text-[10px] font-body font-bold px-2 py-0.5 rounded-full shrink-0 ${p.approval_status === "ajuste_solicitado" ? "bg-pink-100 text-pink-700" : "bg-amber-100 text-amber-700"}`}>
+                    <span className={`text-[11px] font-body font-bold px-2 py-0.5 rounded-full shrink-0 ${p.approval_status === "ajuste_solicitado" ? "bg-pink-100 text-pink-700" : "bg-amber-100 text-amber-700"}`}>
                       {STATUS_LABEL[p.approval_status ?? "pendente"]}
                     </span>
                   </button>
                 ))}
-                {pendentes.length > 3 && <p className="text-[11px] font-body text-muted-foreground px-1">+{pendentes.length - 3} esperando</p>}
+                {pendentes.length > 3 && <p className="text-[12px] font-body text-muted-foreground px-1">+{pendentes.length - 3} esperando</p>}
               </div>
             )}
           </div>
@@ -1485,7 +1485,7 @@ function Destaques({ clientId, clientSegment, clientBirthday, renewalDate, extCl
             <div className="flex items-center gap-2 mb-2.5">
               <span className="h-2 w-2 rounded-full shrink-0" style={{ background: azul }} />
               <p className="text-sm font-display font-bold text-foreground">Caixa deste cliente</p>
-              <button onClick={() => onOpen("cria-caixa")} className="ml-auto flex items-center gap-1 text-[11.5px] font-body font-semibold text-muted-foreground hover:text-foreground">
+              <button onClick={() => onOpen("cria-caixa")} className="ml-auto flex items-center gap-1 text-[12px] font-body font-semibold text-muted-foreground hover:text-foreground">
                 Abrir Cria Caixa <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -1504,7 +1504,7 @@ function Destaques({ clientId, clientSegment, clientBirthday, renewalDate, extCl
             <span className="h-2 w-2 rounded-full shrink-0" style={{ background: laranja }} />
             <p className="text-sm font-display font-bold text-foreground">Próximas datas</p>
           </div>
-          <p className="text-[11px] font-body text-muted-foreground mb-2.5">Comemorativas do nicho + aniversário do cliente.</p>
+          <p className="text-[12px] font-body text-muted-foreground mb-2.5">Comemorativas do nicho + aniversário do cliente.</p>
           {datas.length === 0 ? (
             <p className="text-[12.5px] font-body text-muted-foreground py-1">Sem datas próximas. Preencha o segmento e o aniversário do cliente.</p>
           ) : (
@@ -1512,7 +1512,7 @@ function Destaques({ clientId, clientSegment, clientBirthday, renewalDate, extCl
               {datas.map((d, i) => (
                 <div key={i} className="flex items-center gap-2 py-2 first:pt-0 last:pb-0">
                   <p className="text-[13px] font-body font-medium text-foreground truncate flex-1">{d.label}</p>
-                  <span className="text-[11px] font-body text-muted-foreground shrink-0 capitalize">
+                  <span className="text-[12px] font-body text-muted-foreground shrink-0 capitalize">
                     {d.date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}{d.tipo === "cliente" ? " · cliente" : ""}
                   </span>
                 </div>
@@ -1530,7 +1530,7 @@ function MiniStat({ k, v, tone }: { k: string; v: string; tone: "green" | "red" 
   const c = tone === "green" ? "text-green-600" : tone === "red" ? "text-red-500" : "text-foreground";
   return (
     <div className="min-w-0 border border-border rounded-xl px-3 py-2 bg-muted/30">
-      <p className="text-[11px] font-body text-muted-foreground truncate">{k}</p>
+      <p className="text-[12px] font-body text-muted-foreground truncate">{k}</p>
       {/* break-words: valor alto (ex.: R$ 120.000,00) quebra em vez de estourar o card no grid de 2 colunas do mobile. */}
       <p className={`text-[17px] font-display font-extrabold mt-0.5 leading-tight tabular-nums break-words ${c}`}>{v}</p>
     </div>
@@ -1580,7 +1580,7 @@ function CampoCliente({ clientId, label, valor, campo, tipo, placeholder, rodape
   return (
     <div className="group bg-card border border-border rounded-2xl p-4 transition-colors hover:border-primary/40">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide">{label}</p>
+        <p className="text-[12px] font-body text-muted-foreground uppercase tracking-wide">{label}</p>
         {!editando && (
           <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-colors" />
         )}
@@ -1634,7 +1634,7 @@ function CampoCliente({ clientId, label, valor, campo, tipo, placeholder, rodape
               <Plus className="h-3.5 w-3.5" /> adicionar
             </p>
           )}
-          {rodape && <p className="text-[10.5px] font-body text-muted-foreground mt-0.5 truncate">{rodape}</p>}
+          {rodape && <p className="text-[11px] font-body text-muted-foreground mt-0.5 truncate">{rodape}</p>}
         </button>
       )}
     </div>
@@ -1644,7 +1644,7 @@ function CampoCliente({ clientId, label, valor, campo, tipo, placeholder, rodape
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-card border border-border rounded-2xl p-4">
-      <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide">{label}</p>
+      <p className="text-[12px] font-body text-muted-foreground uppercase tracking-wide">{label}</p>
       <p className="text-sm font-body text-foreground mt-1 truncate">{value}</p>
     </div>
   );
@@ -1822,7 +1822,7 @@ function FinanceTab({ clientId, clientName, monthlyValue, paymentDay, clientStat
           </div>
         )}
         {monthlyValue ? (
-          <span className="text-[11px] font-body text-muted-foreground ml-auto">Mensalidade contratada: <strong className="text-foreground">{formatBRL(monthlyValue)}</strong></span>
+          <span className="text-[12px] font-body text-muted-foreground ml-auto">Mensalidade contratada: <strong className="text-foreground">{formatBRL(monthlyValue)}</strong></span>
         ) : null}
       </div>
 
@@ -1832,7 +1832,7 @@ function FinanceTab({ clientId, clientName, monthlyValue, paymentDay, clientStat
         <div className="bg-card border border-border rounded-2xl p-4 flex items-center gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-display font-bold text-foreground">Mensalidade de {labelMesBR(ymPrefix)}</p>
-            <p className="text-[11px] font-body text-muted-foreground mt-0.5">
+            <p className="text-[12px] font-body text-muted-foreground mt-0.5">
               vence {parseDateOnly(monthlyDoMes.due_date).toLocaleDateString("pt-BR")}
               {monthlyDoMes.status === "pendente" && monthlyDoMes.due_date < hojeStr ? " · vencida" : ""}
               {monthlyDoMes.status === "pulado" && monthlyDoMes.skip_reason ? ` · pulada: ${monthlyDoMes.skip_reason}` : ""}
@@ -1874,7 +1874,7 @@ function FinanceTab({ clientId, clientName, monthlyValue, paymentDay, clientStat
       <div className="bg-card border border-border rounded-2xl p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <p className="text-sm font-display font-bold text-foreground">Onde vai o dinheiro deste cliente</p>
-          <span className="text-[11px] font-body text-muted-foreground">custo total {formatBRL(custo)}</span>
+          <span className="text-[12px] font-body text-muted-foreground">custo total {formatBRL(custo)}</span>
         </div>
         {porCategoria.length === 0 ? (
           <p className="text-[12px] font-body text-muted-foreground py-2">
@@ -1949,26 +1949,26 @@ function FinanceTab({ clientId, clientName, monthlyValue, paymentDay, clientStat
           </span>
           <span className="min-w-0">
             <span className="block text-[12.5px] font-body font-semibold text-foreground">Repetir todo mês</span>
-            <span className="block text-[11px] font-body text-muted-foreground leading-tight">
+            <span className="block text-[12px] font-body text-muted-foreground leading-tight">
               Vira {type === "entrada" ? "uma entrada fixa" : "um custo fixo"} deste cliente. Aparece previsto no calendário do Caixa.
             </span>
           </span>
         </button>
 
-        <p className="text-[11px] text-muted-foreground font-body mt-2 flex items-center gap-1"><Wallet className="h-3 w-3" /> Vinculado a este cliente e unificado no Cria Caixa.</p>
+        <p className="text-[12px] text-muted-foreground font-body mt-2 flex items-center gap-1"><Wallet className="h-3 w-3" /> Vinculado a este cliente e unificado no Cria Caixa.</p>
       </div>
 
       {/* ENTRADAS E SAÍDAS FIXAS deste cliente */}
       {fixos.length > 0 && (
         <div className="bg-card border border-border rounded-2xl p-4">
           <p className="text-sm font-display font-bold text-foreground mb-1">Fixos deste cliente</p>
-          <p className="text-[11.5px] font-body text-muted-foreground mb-3">Se repetem todo mês. Gerencie no Cria Caixa → Recorrentes.</p>
+          <p className="text-[12px] font-body text-muted-foreground mb-3">Se repetem todo mês. Gerencie no Cria Caixa → Recorrentes.</p>
           <div className="space-y-1.5">
             {fixos.map((t) => (
               <div key={t.id} className={`flex items-center gap-3 rounded-xl border border-border px-3 py-2 ${!t.active ? "opacity-55" : ""}`}>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-body font-medium text-foreground truncate">{t.description}</p>
-                  <p className="text-[11px] font-body text-muted-foreground">
+                  <p className="text-[12px] font-body text-muted-foreground">
                     todo dia {t.due_day}{t.category ? ` · ${t.category}` : ""}{!t.active ? " · pausado" : ""}
                   </p>
                 </div>
@@ -2002,7 +2002,7 @@ function FinanceTab({ clientId, clientName, monthlyValue, paymentDay, clientStat
                 </button>
                 <div className="min-w-0 flex-1">
                   <p className={`text-sm font-body text-foreground truncate ${pago ? "" : "font-medium"}`}>{r.description}</p>
-                  <p className="text-[11px] text-muted-foreground font-body truncate">
+                  <p className="text-[12px] text-muted-foreground font-body truncate">
                     {parseDateOnly(r.date).toLocaleDateString("pt-BR")} · {pago ? "pago" : r.status}{r.category ? ` · ${r.category}` : ""}
                   </p>
                 </div>
@@ -2114,10 +2114,10 @@ function FinBox({ label, value, tone, hint }: { label: string; value: string; to
   const c = tone === "green" ? "text-green-600" : tone === "red" ? "text-red-500" : "text-foreground";
   return (
     <div className="bg-card border border-border rounded-2xl p-4">
-      <p className="text-[11px] font-body text-muted-foreground uppercase tracking-wide">{label}</p>
+      <p className="text-[12px] font-body text-muted-foreground uppercase tracking-wide">{label}</p>
       {/* break-words: valor alto quebra a linha em vez de estourar o card no grid de 2 colunas do mobile. */}
       <p className={`text-xl font-display font-extrabold mt-1 leading-tight tabular-nums break-words ${c}`}>{value}</p>
-      {hint && <p className="text-[10.5px] font-body text-muted-foreground mt-0.5 leading-tight">{hint}</p>}
+      {hint && <p className="text-[11px] font-body text-muted-foreground mt-0.5 leading-tight">{hint}</p>}
     </div>
   );
 }

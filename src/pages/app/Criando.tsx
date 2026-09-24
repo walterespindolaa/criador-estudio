@@ -28,7 +28,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { PostEditor } from "@/components/kanban/PostEditor";
+import { PostEditorLazy as PostEditor } from "@/components/kanban/PostEditorLazy";
 import { FORMAT_LABELS, STATUS_OPTIONS, FORMATS } from "@/lib/constants";
 import { formatColorVars, FORMAT_TEXT_CLASS, FORMAT_BORDER_CLASS, FORMAT_DOT_CLASS } from "@/lib/format-colors";
 import { getStatusClasses } from "@/lib/statusColors";
@@ -49,6 +49,8 @@ import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { usePillars } from "@/hooks/usePillars";
 import { useTasks } from "@/hooks/useTasks";
 import { ROTULO_ETAPA } from "@/lib/labels";
+import { ListaPorDia } from "@/components/shared/ListaPorDia";
+import { corDoFormato } from "@/lib/format-colors";
 
 type PeriodKey = "tudo" | "hoje" | "semana" | "quinzenal" | "mes" | "ano" | "personalizado";
 
@@ -180,7 +182,6 @@ const Criando = () => {
      não só era ilegível como não fazia nada.
      Mesma gramática que o calendário da social mídia já usa: no celular o
      dia mostra pontinhos e o total, e tocar abre a lista do dia. */
-  const [calDiaModal, setCalDiaModal] = useState<string | null>(null);
   const sx = useRef(0), sy = useRef(0), sw = useRef(false);
   const onTouchStart = (e: React.TouchEvent) => { sx.current = e.touches[0].clientX; sy.current = e.touches[0].clientY; sw.current = false; };
   const onTouchMove = (e: React.TouchEvent) => { if (Math.abs(e.touches[0].clientX - sx.current) > Math.abs(e.touches[0].clientY - sy.current) + 6) sw.current = true; };
@@ -297,6 +298,16 @@ const Criando = () => {
   // Post sem data agendada vai pro fim da coluna (nos dois sentidos da direção).
   const ordenarColuna = (lista: Post[]) =>
     porData ? ordenarPorData(lista, (p) => p.scheduled_date, (p) => p.scheduled_time, ordemDir) : lista;
+  // Uma lista por coluna, calculada só quando os dados ou a ordem mudam. O
+  // quadro re-renderiza a cada tick do arraste; antes filtrava e ordenava as
+  // seis colunas de novo em cada um (pente fino 24/09/2026).
+  const postsPorColuna = useMemo(() => {
+    const m: Record<string, Post[]> = {};
+    for (const p of filteredPosts) { const k = p.status ?? "ideia"; (m[k] ??= []).push(p); }
+    for (const k of Object.keys(m)) m[k] = ordenarColuna(m[k]);
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredPosts, porData, ordemDir]);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingFormat, setPendingFormat] = useState<string | null>(null);
@@ -769,7 +780,7 @@ const Criando = () => {
         {/* Clicar no vazio e arrastar pro lado rola o board (só mouse). */}
         <div ref={boardRef} data-tour="criando-board" className="hidden md:flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-proximity kanban-scroll">
           {COLUMNS.map(col => {
-            const colPosts = ordenarColuna(filteredPosts.filter(p => p.status === col.key));
+            const colPosts = postsPorColuna[col.key] ?? [];
             const isPublished = col.key === "publicado";
             const isAfterIdeia = col.key === "roteiro";
             const showDividerBefore = isPublished || isAfterIdeia;
@@ -1042,12 +1053,29 @@ const Criando = () => {
                       <Button aria-label="Próximo" variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => setCalMonth(new Date(y, m + 1, 1))}>›</Button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+                  {/* CELULAR: lista por dia (pente fino 24/09/2026). A grade
+                      continua no desktop, com arraste. */}
+                  <ListaPorDia
+                    className="md:hidden"
+                    dias={cells.filter((c) => !c.fora).map((c) => c.key)}
+                    hoje={todayKey}
+                    itensDe={(dia) => (postsPorDia.get(dia) ?? []).map((post) => ({
+                      id: post.id,
+                      titulo: post.title || "Sem título",
+                      detalhe: `${CAL_ETAPA[post.status ?? ""] ?? ""}${post.format ? ` · ${(FORMAT_LABELS[post.format] ?? post.format).toString()}` : ""}${post.scheduled_time ? ` · ${post.scheduled_time.slice(0, 5)}` : ""}`,
+                      cor: corDoFormato(post.format).base,
+                    }))}
+                    aoAbrir={(id) => { const p = filteredPosts.find((x) => x.id === id); if (p) openEdit(p); }}
+                    aoMover={(id, dia) => { void reschedulePost(id, dia); }}
+                    aoCriarEm={(dia) => openNewAtDay(dia)}
+                    vazio="Nenhum post com data neste mês."
+                  />
+                  <div className="hidden md:grid grid-cols-7 gap-1.5 mb-1.5">
                     {weekdays.map(w => (
                       <div key={w} className="text-center text-[11px] font-body font-medium text-muted-foreground py-1">{w}</div>
                     ))}
                   </div>
-                  <div className="grid grid-cols-7 gap-1.5">
+                  <div className="hidden md:grid grid-cols-7 gap-1.5">
                     {cells.map((cell) => {
                       const dayPosts = postsPorDia.get(cell.key) ?? [];
                       const isToday = cell.key === todayKey;
@@ -1073,19 +1101,6 @@ const Criando = () => {
                               <Plus className="h-3.5 w-3.5" />
                             </button>
                           </span>
-                          {/* No celular a grade é só o mapa do mês. O conteúdo
-                              do dia abre em lista, onde cabe ler e tocar. */}
-                          {dayPosts.length > 0 && (
-                            <button type="button" onClick={() => setCalDiaModal(cell.key)}
-                              aria-label={`Ver ${dayPosts.length} post(s) de ${cell.key}`}
-                              className="md:hidden w-full min-h-[26px] flex flex-wrap content-start items-center gap-0.5 rounded-md px-0.5 py-0.5 active:bg-muted/60 transition-colors">
-                              {dayPosts.slice(0, 4).map(post => (
-                                <span key={post.id} style={formatColorVars(post.format)}
-                                  className={cn("h-1.5 w-1.5 rounded-full", FORMAT_DOT_CLASS)} />
-                              ))}
-                              <span className="ml-auto text-[10px] font-body font-bold text-muted-foreground">{dayPosts.length}</span>
-                            </button>
-                          )}
                           <div className="hidden md:flex md:flex-col md:gap-1">
                           {dayPosts.slice(0, 3).map(post => (
                             /* Card com ETAPA + título + FORMATO, igual ao calendário
@@ -1290,7 +1305,7 @@ const Criando = () => {
         <DragDropContext onDragStart={() => tocar(12)} onDragEnd={(r) => { tocar(8); void handleDragEnd(r); }}>
             <div ref={boardMobileRef} className="flex gap-2.5 overflow-x-auto -mx-4 px-4 kanban-scroll h-[calc(100svh-230px)] min-h-[340px]">
               {COLUMNS.map((col, i) => {
-                const colPosts = ordenarColuna(filteredPosts.filter(p => (p.status ?? "ideia") === col.key));
+                const colPosts = postsPorColuna[col.key] ?? [];
                 const step = ramp[col.key];
                 return (
                   <div key={col.key} className="min-w-[172px] w-[172px] flex-none flex flex-col gap-2 h-full">
@@ -1342,7 +1357,7 @@ const Criando = () => {
                  style={{ transform: `translateX(-${activeCol * 100}%)`, transitionTimingFunction: 'cubic-bezier(.22,.61,.36,1)' }}
                  onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
               {COLUMNS.map(col => {
-                const colPosts = ordenarColuna(filteredPosts.filter(p => p.status === col.key));
+                const colPosts = postsPorColuna[col.key] ?? [];
                 const isPublished = col.key === "publicado";
                 const saved = byStatus[col.key];
                 const step = ramp[col.key];
@@ -1456,51 +1471,6 @@ const Criando = () => {
 
       <FormatPicker open={pickerOpen} onPick={startFromFormat} onBlank={startBlank} onOpenChange={setPickerOpen} />
 
-      {/* A LISTA DO DIA, no celular (circuito 10, 15/09/2026).
-          É aqui que o dia fica legível e tocável: título inteiro, etapa,
-          formato e horário, com alvo de 44px. E o botão de criar post já
-          nasce com a data do dia, que era o que o "+" da grade fazia e no
-          celular ninguém conseguia acertar. */}
-      {calDiaModal && (() => {
-        const doDia = filteredPosts.filter(p => (p.scheduled_date ?? "").slice(0, 10) === calDiaModal);
-        const [ay, am, ad] = calDiaModal.split("-").map(Number);
-        const rotulo = new Date(ay, am - 1, ad).toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
-        return (
-          <Dialog open onOpenChange={(open) => { if (!open) setCalDiaModal(null); }}>
-            <DialogContent className="sm:max-w-md rounded-2xl max-h-[82vh] overflow-y-auto">
-              <DialogHeader className="text-left">
-                <DialogTitle className="font-display capitalize">{rotulo}</DialogTitle>
-              </DialogHeader>
-              <p className="text-[12px] font-body text-muted-foreground -mt-2">
-                {doDia.length} post{doDia.length === 1 ? "" : "s"}, toque pra abrir
-              </p>
-              <div className="space-y-1.5 mt-1">
-                {doDia.map(post => (
-                  <button key={post.id} onClick={() => { setCalDiaModal(null); openEdit(post); }}
-                    style={formatColorVars(post.format)}
-                    className={cn("w-full text-left rounded-xl border border-border bg-card px-3 py-2.5 min-h-[44px] border-l-[3px] active:bg-muted/60 transition-colors", FORMAT_BORDER_CLASS)}>
-                    <span className="flex items-center gap-1.5 mb-0.5">
-                      <span className={cn("inline-block rounded-full border px-1.5 py-px text-[9.5px] font-body font-bold leading-tight", getStatusClasses(post.status))}>
-                        {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
-                      </span>
-                      <PlatformIcon platform={post.platform} size="sm" className="h-3 w-3 ml-auto shrink-0 text-muted-foreground" />
-                    </span>
-                    <span className="block text-[13.5px] font-body font-semibold text-foreground leading-tight">{post.title}</span>
-                    <span className={cn("block text-[10px] font-body font-bold uppercase tracking-wide mt-0.5", FORMAT_TEXT_CLASS)}>
-                      {FORMAT_LABELS[post.format] ?? post.format}
-                      {post.scheduled_time ? <span className="text-muted-foreground font-medium normal-case"> · {post.scheduled_time.slice(0, 5)}</span> : null}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <Button variant="outline" className="w-full rounded-xl mt-1"
-                onClick={() => { const dia = calDiaModal; setCalDiaModal(null); openNewAtDay(dia); }}>
-                <Plus className="h-4 w-4 mr-1.5" /> Novo post neste dia
-              </Button>
-            </DialogContent>
-          </Dialog>
-        );
-      })()}
 
       <Dialog open={!!editing} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent className="sm:max-w-lg rounded-2xl">

@@ -147,7 +147,7 @@ export function PainelDeVoo({
                 {nomeDe(proxima).slice(0, 1).toUpperCase()}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">
+                <p className="text-[12px] font-body font-bold uppercase tracking-wider text-muted-foreground">
                   Próxima gravação · {quando(proxima.capture_date, hoje)}
                 </p>
                 <p className="text-lg sm:text-xl font-display font-extrabold text-foreground leading-tight truncate">
@@ -193,7 +193,7 @@ export function PainelDeVoo({
           <p className="text-sm font-display font-bold text-foreground flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" /> Falta pra ficar pronto
           </p>
-          <span className={cn("text-[11px] font-body font-bold px-2 py-0.5 rounded-full",
+          <span className={cn("text-[12px] font-body font-bold px-2 py-0.5 rounded-full",
             pendentes === 0 ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]" : "bg-[hsl(var(--cria-amarelo)/0.15)] text-[hsl(var(--cria-amarelo))]")}>
             {pendentes === 0 ? "tudo em dia" : `${pendentes} ${pendentes === 1 ? "item" : "itens"}`}
           </span>
@@ -206,7 +206,7 @@ export function PainelDeVoo({
           <ul className="divide-y divide-border">
             {faltas.slice(0, 8).map((f) => (
               <li key={f.chave} className="flex items-center gap-3 py-2.5">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white text-[11px] font-display font-extrabold"
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white text-[12px] font-display font-extrabold"
                   style={{ background: f.cor || "#EA4918" }}>
                   {f.quem.slice(0, 1).toUpperCase()}
                 </span>
@@ -215,13 +215,13 @@ export function PainelDeVoo({
                     {f.quem}
                     {f.quando && <span className="font-normal text-muted-foreground"> · {ddmm(f.quando)}, {quando(f.quando, hoje)}</span>}
                   </p>
-                  <p className={cn("text-[11.5px] font-body truncate",
+                  <p className={cn("text-[12px] font-body truncate",
                     f.tom === "atencao" ? "text-[hsl(var(--cria-amarelo))] font-semibold" : "text-muted-foreground")}>
                     {f.texto}{f.detalhe ? ` · ${f.detalhe}` : ""}
                   </p>
                 </div>
                 <button type="button" onClick={f.acao}
-                  className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-body font-semibold text-foreground hover:border-primary/40 hover:text-primary transition-colors">
+                  className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-body font-semibold text-foreground hover:border-primary/40 hover:text-primary transition-colors">
                   {f.quando === null && <CalendarPlus className="h-3 w-3" />}
                   <span className="hidden sm:inline">{f.rotuloAcao}</span>
                   <ChevronRight className="h-3 w-3 sm:hidden" />
@@ -231,7 +231,7 @@ export function PainelDeVoo({
           </ul>
         )}
         {faltas.length > 8 && (
-          <p className="text-[11px] font-body text-muted-foreground mt-2">Mostrando os 8 mais urgentes de {faltas.length}.</p>
+          <p className="text-[12px] font-body text-muted-foreground mt-2">Mostrando os 8 mais urgentes de {faltas.length}.</p>
         )}
       </div>
     </div>
@@ -251,7 +251,7 @@ export function Escada({ p }: { p: Prontidao }) {
         return (
           <span key={d.degrau} className="inline-flex items-center gap-1.5">
             <span className={cn(
-              "text-[10.5px] font-body font-semibold px-2 py-0.5 rounded-full border",
+              "text-[11px] font-body font-semibold px-2 py-0.5 rounded-full border",
               atual
                 ? (p.tom === "atencao"
                   ? "border-[hsl(var(--cria-amarelo))] bg-[hsl(var(--cria-amarelo))] text-white"
@@ -269,7 +269,7 @@ export function Escada({ p }: { p: Prontidao }) {
         );
       })}
       {p.proximoPasso && p.tom === "atencao" && (
-        <span className="text-[11px] font-body font-semibold text-[hsl(var(--cria-amarelo))] ml-1">
+        <span className="text-[12px] font-body font-semibold text-[hsl(var(--cria-amarelo))] ml-1">
           agora: {p.proximoPasso.toLowerCase()}
         </span>
       )}

@@ -20,6 +20,8 @@ import { Label } from "@/components/ui/label";
 import { CLIENT_COLORS } from "@/components/accounts/CriaPostBoard";
 import { toast } from "sonner";
 import { ROTULO_APROVACAO } from "@/lib/labels";
+import { ListaPorDia } from "@/components/shared/ListaPorDia";
+import { hojeBR } from "@/lib/date-br";
 
 // Estados de aprovação (mesmos rótulos do Cria Post) pro popup editável do post.
 const STATUS_OPTS: { key: string; label: string }[] = [
@@ -125,9 +127,6 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
   const [chipsOpen, setChipsOpen] = useState(() => readFlag("cal_chips_open", clients.length <= 8));
   // Post aberto no popup editável (clicar num card do calendário geral).
   const [editPost, setEditPost] = useState<CalPost | null>(null);
-  // Dia aberto no mobile: como cada célula fica minúscula no celular, tocar no dia
-  // abre a lista dos itens dele num Dialog (cada item abre o popup de edição).
-  const [dayModal, setDayModal] = useState<string | null>(null);
   // Filtro por período (Tudo/Hoje/Semana/Quinzenal/Mês/Ano/Personalizado).
   const [period, setPeriod] = useState<PeriodKey>("tudo");
   const [customFrom, setCustomFrom] = useState("");
@@ -533,8 +532,29 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
         )}
       </div>
 
-      {/* Grade do mês */}
-      <div className="rounded-xl border border-border overflow-hidden bg-card">
+      {/* CELULAR: lista por dia (pente fino 24/09/2026). A grade de 7 colunas
+          em 390px virava célula de 50px com pontinhos e dois modais pra
+          remarcar. Aqui é um bloco por dia, título inteiro, e "Mover" abre o
+          seletor de data do sistema. A grade continua no desktop. */}
+      <ListaPorDia
+        className="md:hidden"
+        dias={days.filter((d) => view === "semana" || isSameMonth(d, cursor)).map((d) => dkey(d))}
+        hoje={hojeBR()}
+        itensDe={(dia) => naGrade(byDay[dia] ?? []).map(({ kind, post: p }) => ({
+          id: `${kind}:${p.id}`,
+          titulo: p.title,
+          detalhe: `${nameOf[p.external_client_id] ?? ""}${kind === "postagem" && p.scheduled_time ? ` · ${p.scheduled_time.slice(0, 5)}` : ""}${kind === "entrega" && p.assignee_id ? ` · ${(nomeParceiro[p.assignee_id] ?? "parceiro").split(" ")[0]}` : ""}`,
+          cor: kind === "entrega" ? "#7c3aed" : (colorOf[p.external_client_id] ?? "#EA4918"),
+          etiqueta: kind === "entrega" ? "Entrega" : null,
+          movivel: kind === "postagem",
+        }))}
+        aoAbrir={(id) => { const pid = id.split(":")[1]; const p = posts.find((x) => x.id === pid); if (p) setEditPost(p); }}
+        aoMover={(id, dia) => { const pid = id.split(":")[1]; reschedule.mutate({ id: pid, date: dia }); }}
+        vazio="Nenhum post agendado neste período."
+      />
+
+      {/* Grade do mês (desktop) */}
+      <div className="hidden md:block rounded-xl border border-border overflow-hidden bg-card">
         <div className="grid grid-cols-7 bg-muted/40 border-b border-border">
           {WEEKDAYS.map((w) => (
             <div key={w} className="text-[11px] font-body font-semibold text-muted-foreground text-center py-2">{w}</div>
@@ -555,19 +575,6 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
                 </div>
                 {/* Desktop (md+): cards com texto e drag-and-drop, exatamente como antes. */}
                 <div className="hidden md:block">{list.map(renderItem)}</div>
-                {/* Mobile: indicador compacto (pontos por item + total). Tocar abre a lista do dia. */}
-                {list.length > 0 && (
-                  <button type="button" onClick={() => setDayModal(dkey(d))}
-                    className="md:hidden w-full min-h-[28px] flex flex-wrap content-start items-center gap-0.5 rounded-md px-0.5 py-0.5 hover:bg-muted/40 transition-colors"
-                    aria-label={`Ver ${list.length} item(ns) do dia ${format(d, "d")}`}>
-                    {list.slice(0, 4).map((it) => (
-                      <span key={`${it.kind}-${it.post.id}`}
-                        className={`h-1.5 w-1.5 rounded-full ${it.kind === "entrega" ? "ring-1 ring-violet-500 bg-transparent" : ""}`}
-                        style={it.kind === "entrega" ? undefined : { backgroundColor: colorOf[it.post.external_client_id] ?? "#EA4918" }} />
-                    ))}
-                    <span className="ml-auto text-[10px] font-body font-bold text-muted-foreground">{list.length}</span>
-                  </button>
-                )}
               </div>
             );
           })}
@@ -579,34 +586,6 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
         <span className="[@media(hover:none)]:hidden">Arraste os posts entre os dias pra remarcar. Clique num post pra editar.</span>
         <span className="hidden [@media(hover:none)]:inline">Toque no dia, depois no post, e mude a data pra remarcar.</span>
       </p>
-
-      {/* Mobile: lista dos itens do dia tocado. Cada item abre o popup de edição. */}
-      {dayModal && (() => {
-        const items = byDay[dayModal] ?? [];
-        const d = new Date(`${dayModal}T00:00:00`);
-        return (
-          <Dialog open onOpenChange={(o) => { if (!o) setDayModal(null); }}>
-            <DialogContent className="sm:max-w-md rounded-2xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader><DialogTitle className="font-display capitalize">{format(d, "EEEE, d 'de' MMMM", { locale: ptBR })}</DialogTitle></DialogHeader>
-              <p className="text-[12px] font-body text-muted-foreground -mt-2">{items.length} post(s) · toque pra editar</p>
-              <div className="space-y-1.5 mt-1">
-                {items.map(({ kind, post: p }) => (
-                  <button key={`${kind}-${p.id}`} onClick={() => { setDayModal(null); setEditPost(p); }}
-                    className={`w-full flex items-center gap-2.5 rounded-xl border p-3 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors ${kind === "entrega" ? "border-dashed border-violet-300 bg-violet-50/50" : "border-border"}`}>
-                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: colorOf[p.external_client_id] ?? "#EA4918" }} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-body font-semibold text-foreground truncate">
-                        {kind === "entrega" ? `Entrega de ${p.assignee_id ? (nomeParceiro[p.assignee_id] ?? "parceiro").split(" ")[0] : "parceiro"}: ` : ""}{p.title}
-                      </p>
-                      <p className="text-[11px] font-body text-muted-foreground truncate">{nameOf[p.external_client_id] ?? ""}{kind === "postagem" && p.scheduled_time ? ` · ${p.scheduled_time.slice(0, 5)}` : ""}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </DialogContent>
-          </Dialog>
-        );
-      })()}
 
       {/* Popup editável do post, sem sair pro cliente: título, data, horário, status e legenda. */}
       <PostEditPopup

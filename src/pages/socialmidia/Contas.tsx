@@ -185,7 +185,7 @@ export default function Contas() {
           </div>
           <div className="flex items-center gap-2 mt-3">
             <Label className="font-body text-xs">Outro:</Label>
-            <Input type="number" min={3} max={50} value={expandSeats} onChange={(e) => setExpandSeats(Math.max(3, Math.min(50, Number(e.target.value) || 3)))} disabled={expanding} className="rounded-xl w-24" />
+            <Input type="number" inputMode="decimal" min={3} max={50} value={expandSeats} onChange={(e) => setExpandSeats(Math.max(3, Math.min(50, Number(e.target.value) || 3)))} disabled={expanding} className="rounded-xl w-24" />
             <span className="text-xs font-body text-muted-foreground">assentos</span>
           </div>
           <p className="text-sm font-body text-foreground mt-3">Total: <span className="font-bold">R$ {(expandSeats * 36.9).toFixed(2).replace(".", ",")}</span>/mês · {expandSeats} assentos</p>

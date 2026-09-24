@@ -899,7 +899,7 @@ function CriaCaptacaoInner() {
                   </span>
                   <div className="min-w-0">
                     <p className="text-[13px] font-display font-bold text-foreground truncate">{p.nome}</p>
-                    <p className="text-[10.5px] font-body text-muted-foreground truncate">{p.cidade || (p.extraId ? "avulso" : "\u00a0")}</p>
+                    <p className="text-[11px] font-body text-muted-foreground truncate">{p.cidade || (p.extraId ? "avulso" : "\u00a0")}</p>
                   </div>
                 </div>
                 {/* O ESTADO NO CARD (v4, ciclo 2): "2/3 · 5" dizia quantos, não
@@ -908,7 +908,7 @@ function CriaCaptacaoInner() {
                 {(() => {
                   const e = estadoDaPasta(p, doMes, roteirosDoMes, enviosDoMes, hojeStr);
                   return (
-                    <p className={cn("mt-2.5 text-[11px] font-body font-semibold truncate",
+                    <p className={cn("mt-2.5 text-[12px] font-body font-semibold truncate",
                       !e.p ? "text-muted-foreground" : e.p.tom === "atencao" ? "text-[hsl(var(--cria-amarelo))]" : e.p.tom === "ok" ? "text-[hsl(var(--cria-verde))]" : "text-muted-foreground")}>
                       {e.texto}
                     </p>
@@ -924,7 +924,7 @@ function CriaCaptacaoInner() {
               </span>
             </button>
           </div>
-          <p className="text-[11px] font-body text-muted-foreground mt-2">
+          <p className="text-[12px] font-body text-muted-foreground mt-2">
             Cada pasta guarda os roteiros e as captações do cliente, mês a mês (troque o mês nas setas lá em cima).
           </p>
         </div>
@@ -1199,7 +1199,7 @@ function CalendarioCaptacoes({ month, caps, clientById, aoAbrirDia }: {
     <div className="rounded-2xl border border-border bg-card p-3 sm:p-4">
       <div className="grid grid-cols-7 gap-1 mb-1">
         {semanas.map((d) => (
-          <div key={d} className="text-center text-[10.5px] font-body font-semibold text-muted-foreground py-1">{d}</div>
+          <div key={d} className="text-center text-[11px] font-body font-semibold text-muted-foreground py-1">{d}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1">
@@ -1216,7 +1216,7 @@ function CalendarioCaptacoes({ month, caps, clientById, aoAbrirDia }: {
               className={cn("min-h-[58px] sm:min-h-[74px] rounded-lg border p-1 flex flex-col gap-0.5 overflow-hidden text-left",
                 temDia && "hover:border-primary/60 hover:shadow-sm transition-all cursor-pointer",
                 ehHoje ? "border-primary bg-primary/[0.04]" : "border-border bg-background")}>
-              <span className={cn("text-[10.5px] font-body font-bold w-5 h-5 grid place-items-center rounded-full shrink-0",
+              <span className={cn("text-[11px] font-body font-bold w-5 h-5 grid place-items-center rounded-full shrink-0",
                 ehHoje ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>{dia}</span>
               {/* NO CELULAR, PONTO (circuito 10, 15/09/2026): a célula tem ~48px
                   de largura num aparelho de 390px, e o chip com hora + nome do
@@ -1232,7 +1232,7 @@ function CalendarioCaptacoes({ month, caps, clientById, aoAbrirDia }: {
                       style={{ background: cli?.color || "#EA4918", opacity: c.status === "concluida" ? 0.45 : 1 }} />;
                   })}
                   {doDia.length > 1 && (
-                    <span className="ml-auto text-[9.5px] font-body font-bold text-muted-foreground">{doDia.length}</span>
+                    <span className="ml-auto text-[11px] font-body font-bold text-muted-foreground">{doDia.length}</span>
                   )}
                 </span>
               )}
@@ -1244,14 +1244,14 @@ function CalendarioCaptacoes({ month, caps, clientById, aoAbrirDia }: {
                 const concluida = c.status === "concluida";
                 return (
                   <span key={c.id} title={`${nome}${c.capture_time ? ` · ${c.capture_time.slice(0, 5)}` : ""}`}
-                    className={cn("truncate rounded px-1 py-0.5 text-[9.5px] font-body font-semibold", concluida && "opacity-55 line-through")}
+                    className={cn("truncate rounded px-1 py-0.5 text-[11px] font-body font-semibold", concluida && "opacity-55 line-through")}
                     style={{ background: `${cor}1f`, color: cor }}>
                     {c.capture_time ? `${c.capture_time.slice(0, 5)} ` : ""}{nome}
                   </span>
                 );
               })}
               {doDia.length > 3 && (
-                <span className="text-[9.5px] font-body text-muted-foreground px-1">+{doDia.length - 3}</span>
+                <span className="text-[11px] font-body text-muted-foreground px-1">+{doDia.length - 3}</span>
               )}
               </span>
             </Celula>
@@ -1288,7 +1288,7 @@ function SugestoesViagem({ trips, onAdd, onDismiss }: {
         <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-display font-bold text-foreground">Aproveita a viagem</h2>
-          <p className="text-[11px] font-body text-muted-foreground mt-0.5">
+          <p className="text-[12px] font-body text-muted-foreground mt-0.5">
             Clientes da mesma cidade que ainda não foram captados este mês. Se quiser, agrupe numa ida só.
           </p>
         </div>
@@ -1318,7 +1318,7 @@ function SugestoesViagem({ trips, onAdd, onDismiss }: {
                     <div className="min-w-0 flex-1">
                       <span className="text-[13px] font-body text-foreground break-words">{cand.nome}</span>
                       {(dica || cand.pendingDate) && (
-                        <span className="block text-[10px] font-body text-muted-foreground">
+                        <span className="block text-[11px] font-body text-muted-foreground">
                           {dica}
                           {dica && cand.pendingDate ? " · " : ""}
                           {cand.pendingDate ? `já tem pendente ${diaMes(cand.pendingDate)}` : ""}
@@ -1431,12 +1431,12 @@ function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, def
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-body font-semibold text-foreground truncate">{nome}</span>
-            <span className="inline-flex items-center gap-1 text-[11px] font-body text-muted-foreground">
+            <span className="inline-flex items-center gap-1 text-[12px] font-body text-muted-foreground">
               <Building2 className="h-3 w-3" />{cidade}
             </span>
-            {cap.capture_time && <span className="inline-flex items-center gap-1 text-[11px] font-body text-muted-foreground"><Clock className="h-3 w-3" />{cap.capture_time.slice(0, 5)}</span>}
+            {cap.capture_time && <span className="inline-flex items-center gap-1 text-[12px] font-body text-muted-foreground"><Clock className="h-3 w-3" />{cap.capture_time.slice(0, 5)}</span>}
             {recurring && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] font-body font-bold uppercase tracking-wide"
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[11px] font-body font-bold uppercase tracking-wide"
                 title={`Repete todo mês, dia ${recurrenceDay ?? capDay}.`}>
                 <Repeat className="h-2.5 w-2.5" /> Recorrente
               </span>
@@ -1445,7 +1445,7 @@ function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, def
         </div>
         {/* Status: toca pra alternar pendente <-> concluída */}
         <button type="button" data-tour="cap-status" onClick={onToggle}
-          className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-body font-bold transition-colors",
+          className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-body font-bold transition-colors",
             done
               ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]"
               : "bg-[hsl(var(--cria-amarelo)/0.15)] text-[hsl(var(--cria-amarelo))]")}>
@@ -1498,12 +1498,12 @@ function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, def
           <ListChecks className="h-4 w-4 text-primary shrink-0" />
           <div className="min-w-0 flex-1">
             <span className="text-xs font-body font-semibold text-foreground">Tomadas (o que precisa gravar)</span>
-            <p className="text-[10.5px] font-body text-muted-foreground leading-snug">
+            <p className="text-[11px] font-body text-muted-foreground leading-snug">
               A lista do que tem que sair dessa gravação: reels, fotos, stories. Marque conforme grava, pra não faltar nada.
             </p>
           </div>
           {shotList.length > 0 && (
-            <span className={cn("shrink-0 text-[11px] font-body font-bold tabular-nums rounded-full px-1.5 py-0.5",
+            <span className={cn("shrink-0 text-[12px] font-body font-bold tabular-nums rounded-full px-1.5 py-0.5",
               feitas === shotList.length
                 ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]"
                 : "bg-muted text-muted-foreground")}>
@@ -1516,7 +1516,7 @@ function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, def
           <div className="px-3 pb-3 pt-0.5 space-y-1.5 border-t border-border">
             {shotList.length === 0 ? (
               <div className="pt-2 flex flex-col items-start gap-2">
-                <p className="text-[11px] font-body text-muted-foreground">Nenhuma tomada ainda. Liste o que precisa sair da gravação.</p>
+                <p className="text-[12px] font-body text-muted-foreground">Nenhuma tomada ainda. Liste o que precisa sair da gravação.</p>
                 <Button variant="outline" size="sm" onClick={usarPadrao} className="rounded-lg h-8">
                   <Plus className="h-3.5 w-3.5 mr-1.5" /> Usar tomadas padrão
                 </Button>
@@ -1560,9 +1560,9 @@ function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, def
           <Repeat className="h-3.5 w-3.5 text-primary shrink-0" />
           <span className="text-xs font-body text-foreground">Repetir todo mês</span>
           {recurring && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-body text-muted-foreground whitespace-nowrap">
+            <span className="inline-flex items-center gap-1 text-[12px] font-body text-muted-foreground whitespace-nowrap">
               · dia
-              <input type="number" min={1} max={31} value={dayDraft}
+              <input type="number" inputMode="decimal" min={1} max={31} value={dayDraft}
                 onChange={(e) => changeDay(Number(e.target.value))}
                 className="w-14 h-9 rounded-lg border border-border bg-card px-1.5 text-center text-sm font-body text-foreground outline-none focus:border-primary/50" />
             </span>
@@ -1573,7 +1573,7 @@ function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, def
 
       {/* Nota livre da captação (se houver), pra contexto */}
       {cap.note && cap.note.trim() && (
-        <p className="mt-2 text-[11px] font-body text-muted-foreground/80 italic break-words">{cap.note}</p>
+        <p className="mt-2 text-[12px] font-body text-muted-foreground/80 italic break-words">{cap.note}</p>
       )}
 
       {/* Virar post: manda o roteiro/nota desta captação pro Cria Post do cliente como
@@ -1581,7 +1581,7 @@ function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, def
       <div data-tour="cap-virarpost" className="mt-3 pt-3 border-t border-border/60">
         {convertedPostId ? (
           <button type="button" onClick={onVerPost}
-            className="inline-flex items-center gap-1.5 text-[11.5px] font-body font-semibold text-primary">
+            className="inline-flex items-center gap-1.5 text-[12px] font-body font-semibold text-primary">
             <Check className="h-3.5 w-3.5" /> Virou post · ver no Cria Post
           </button>
         ) : (
@@ -1880,7 +1880,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-display font-extrabold text-foreground truncate">{pasta.nome}</h2>
-            <p className="text-[11px] font-body text-muted-foreground truncate">
+            <p className="text-[12px] font-body text-muted-foreground truncate">
               {[pasta.cidade, habit, pasta.extraId ? "cliente avulso" : null].filter(Boolean).join(" · ") || "Pasta de captação"}
             </p>
           </div>
@@ -1952,7 +1952,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
         <h3 className="flex items-center gap-1.5 text-sm font-display font-bold text-foreground mb-2">
           <FileText className="h-4 w-4 text-primary" /> Roteiros de {monthLabel(month).toLowerCase()}
           {scripts.length > 0 && (
-            <span className="text-[11px] font-body font-semibold text-muted-foreground">({gravados}/{scripts.length} gravados)</span>
+            <span className="text-[12px] font-body font-semibold text-muted-foreground">({gravados}/{scripts.length} gravados)</span>
           )}
         </h3>
         {totalRoteiros === 0 ? (
@@ -2035,7 +2035,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
                   <summary className="flex items-center gap-2.5 px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:bg-muted/30 transition-colors">
                     <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 transition-transform group-open/cap:rotate-90" />
                     <span className="text-sm font-display font-bold text-foreground tabular-nums shrink-0">{diaMes(c.capture_date)}</span>
-                    {c.capture_time && <span className="text-[11px] font-body text-muted-foreground shrink-0">{c.capture_time.slice(0, 5)}</span>}
+                    {c.capture_time && <span className="text-[12px] font-body text-muted-foreground shrink-0">{c.capture_time.slice(0, 5)}</span>}
                     <LinhaProntidao p={p} className="flex-1" />
                     <SeloProntidao p={p} className="shrink-0" />
                   </summary>
@@ -2066,12 +2066,12 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             <Clapperboard className="h-4 w-4 text-primary shrink-0" />
             <div className="min-w-0 flex-1">
               <span className="text-sm font-display font-bold text-foreground">Tomadas padrão deste cliente</span>
-              <p className="text-[10.5px] font-body text-muted-foreground">
+              <p className="text-[11px] font-body text-muted-foreground">
                 O combo que você sempre grava pra ele. Quando existe, o Usar tomadas padrão usa esta lista em vez da geral.
               </p>
             </div>
             {clientShots.length > 0 && (
-              <span className="text-[11px] font-body font-bold text-muted-foreground tabular-nums shrink-0">{clientShots.length}</span>
+              <span className="text-[12px] font-body font-bold text-muted-foreground tabular-nums shrink-0">{clientShots.length}</span>
             )}
             <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", tomadasOpen && "rotate-180")} />
           </button>
@@ -2165,28 +2165,28 @@ function RoteiroLinha({ script, indice, onOpen, onExcluir, handleProps, icone = 
       <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
         <div className="flex items-center gap-1.5 flex-wrap">
           {indice >= 0 && (
-            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[10px] font-display font-extrabold text-primary">{indice + 1}</span>
+            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[11px] font-display font-extrabold text-primary">{indice + 1}</span>
           )}
           <Icone className="h-3.5 w-3.5 shrink-0 text-primary" />
           <span className="text-[13px] font-display font-bold text-foreground truncate">
             {script.title?.trim() || `Roteiro ${indice + 1}`}
           </span>
           {script.done
-            ? <span className="shrink-0 text-[9.5px] font-body font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700">GRAVADO</span>
-            : <span className="shrink-0 text-[9.5px] font-body font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-700">A GRAVAR</span>}
+            ? <span className="shrink-0 text-[11px] font-body font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700">GRAVADO</span>
+            : <span className="shrink-0 text-[11px] font-body font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-700">A GRAVAR</span>}
         </div>
-        {previa && <p className="mt-1 text-[11.5px] font-body text-muted-foreground line-clamp-2 leading-relaxed">{previa}</p>}
+        {previa && <p className="mt-1 text-[12px] font-body text-muted-foreground line-clamp-2 leading-relaxed">{previa}</p>}
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           {nCenas > 0 && (
-            <span className="text-[10.5px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
+            <span className="text-[11px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
               {nCenas} {nCenas === 1 ? "cena" : "cenas"}
             </span>
           )}
           {script.format && (
-            <span className="text-[10.5px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground capitalize">{script.format}</span>
+            <span className="text-[11px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground capitalize">{script.format}</span>
           )}
           {script.record_date && (
-            <span className="text-[10.5px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
+            <span className="text-[11px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
               {diaMes(script.record_date)}
             </span>
           )}
@@ -2222,7 +2222,7 @@ function RoteiroMiniCard({ script, indice, onOpen, icone = "file" }: {
       className="group rounded-xl border border-border bg-card overflow-hidden text-left hover:border-primary/40 hover:shadow-warm-sm transition-all">
       {/* A "miniatura": as primeiras linhas do texto em letra mínima, como no Drive. */}
       <div className="h-24 bg-background px-3 py-2.5 overflow-hidden border-b border-border/60">
-        <p className="text-[10px] leading-snug text-muted-foreground/80 whitespace-pre-wrap break-words">{script.content.slice(0, 300)}</p>
+        <p className="text-[11px] leading-snug text-muted-foreground/80 whitespace-pre-wrap break-words">{script.content.slice(0, 300)}</p>
       </div>
       <div className="flex items-center gap-1.5 px-2.5 py-2">
         <Icone className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -2277,7 +2277,7 @@ function RoteiroVerDialog({ script, onOpenChange, onRename, onToggleDone, onEdit
             <span className="min-w-0 flex-1 truncate text-sm font-display font-bold text-foreground">{script.title}</span>
           )}
           <button type="button" onClick={onToggleDone} disabled={!onToggleDone}
-            className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10.5px] font-body font-bold transition-colors",
+            className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-body font-bold transition-colors",
               script.done
                 ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]"
                 : "bg-muted text-muted-foreground",
@@ -2286,7 +2286,7 @@ function RoteiroVerDialog({ script, onOpenChange, onRename, onToggleDone, onEdit
           </button>
         </div>
         {script.source === "reel" && (
-          <p className="-mt-1 inline-flex items-center gap-1 text-[10.5px] font-body font-bold text-primary"><Film className="h-3 w-3" /> importado do Cria Post</p>
+          <p className="-mt-1 inline-flex items-center gap-1 text-[11px] font-body font-bold text-primary"><Film className="h-3 w-3" /> importado do Cria Post</p>
         )}
         <div className="flex-1 min-h-0 overflow-y-auto rounded-xl border border-border bg-muted/20 p-3.5">
           <p className="text-[13.5px] font-body text-foreground whitespace-pre-wrap break-words leading-relaxed">{texto}</p>
@@ -2303,7 +2303,7 @@ function RoteiroVerDialog({ script, onOpenChange, onRename, onToggleDone, onEdit
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
           </Button>
           {onVerPost ? (
-            <button type="button" onClick={onVerPost} className="inline-flex items-center gap-1 text-[11px] font-body font-semibold text-primary">
+            <button type="button" onClick={onVerPost} className="inline-flex items-center gap-1 text-[12px] font-body font-semibold text-primary">
               <Check className="h-3.5 w-3.5" /> Tem post
             </button>
           ) : onVirarPost ? (
@@ -2401,7 +2401,7 @@ function ImportarReelsDialog({ open, onOpenChange, externalClientId, jaImportado
                         : <><Download className="h-3.5 w-3.5 mr-1" /> Importar</>}
                     </Button>
                   </div>
-                  <p className="mt-1 text-[11.5px] font-body text-muted-foreground line-clamp-2 whitespace-pre-wrap">{(p.script ?? "").trim()}</p>
+                  <p className="mt-1 text-[12px] font-body text-muted-foreground line-clamp-2 whitespace-pre-wrap">{(p.script ?? "").trim()}</p>
                 </div>
               );
             })}
@@ -2428,11 +2428,11 @@ function MarcarCaptacaoDialog({ open, onOpenChange, salvando, onSalvar, dataInic
         <p className="text-xs text-muted-foreground font-body -mt-1">A captação entra aqui e na Agenda.</p>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[11px] font-body font-semibold text-muted-foreground">Dia</label>
+            <label className="text-[12px] font-body font-semibold text-muted-foreground">Dia</label>
             <Input type="date" value={data} onChange={(e) => setData(e.target.value)} className="rounded-xl mt-1" />
           </div>
           <div>
-            <label className="text-[11px] font-body font-semibold text-muted-foreground">Hora (opcional)</label>
+            <label className="text-[12px] font-body font-semibold text-muted-foreground">Hora (opcional)</label>
             <Input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className="rounded-xl mt-1" />
           </div>
         </div>

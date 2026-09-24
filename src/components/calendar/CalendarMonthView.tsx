@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { getStatusClasses } from "@/lib/statusColors";
 import { FORMAT_LABELS } from "@/lib/constants";
-import { formatColorVars, FORMAT_TEXT_CLASS, FORMAT_BORDER_CLASS, FORMAT_DOT_CLASS } from "@/lib/format-colors";
+import { formatColorVars, FORMAT_TEXT_CLASS, FORMAT_BORDER_CLASS } from "@/lib/format-colors";
 import type { Post } from "@/hooks/usePosts";
 
 // Rótulo da etapa: os MESMOS nomes das colunas do kanban (Criando), pro
@@ -13,6 +12,8 @@ import type { Post } from "@/hooks/usePosts";
 const STATUS_ROTULO: Record<string, string> = ROTULO_ETAPA;
 import type { Pillar } from "@/hooks/usePillars";
 import { ROTULO_ETAPA } from "@/lib/labels";
+import { ListaPorDia } from "@/components/shared/ListaPorDia";
+import { corDoFormato } from "@/lib/format-colors";
 
 const WEEK_DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MONTH_LABELS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -54,8 +55,6 @@ export function CalendarMonthView({ posts, pillars, currentMonth, onMonthChange,
   const cells = buildMonthCells(currentMonth);
   const [overDate, setOverDate] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-  // Mobile: tocar num dia abre a lista dos posts dele (na grade do celular não cabe texto).
-  const [dayModal, setDayModal] = useState<string | null>(null);
 
   const postsByDay = new Map<string, Post[]>();
   for (const post of posts) {
@@ -82,13 +81,31 @@ export function CalendarMonthView({ posts, pillars, currentMonth, onMonthChange,
         <p className="text-sm font-display font-bold text-foreground capitalize">{monthLabel}</p>
       </div>
 
-      <div className="grid grid-cols-7 border-b border-border bg-muted/20">
+      {/* CELULAR: lista por dia (pente fino 24/09/2026); a grade fica no desktop. */}
+      <div className="md:hidden p-3">
+        <ListaPorDia
+          dias={cells.filter((c) => !c.isOtherMonth).map((c) => c.date)}
+          hoje={today}
+          itensDe={(dia) => (postsByDay.get(dia) ?? []).map((post) => ({
+            id: post.id,
+            titulo: post.title || "Sem título",
+            detalhe: `${STATUS_ROTULO[post.status ?? ""] ?? ""}${post.format ? ` · ${(FORMAT_LABELS[post.format] ?? post.format).toString()}` : ""}${post.scheduled_time ? ` · ${post.scheduled_time.slice(0, 5)}` : ""}`,
+            cor: corDoFormato(post.format).base,
+          }))}
+          aoAbrir={(id) => { const p = posts.find((x) => x.id === id); if (p) onPostClick(p); }}
+          aoMover={onReschedule ? (id, dia) => onReschedule(id, dia) : undefined}
+          aoCriarEm={(dia) => onDayClick(dia)}
+          vazio="Nenhum post com data neste mês."
+        />
+      </div>
+
+      <div className="hidden md:grid grid-cols-7 border-b border-border bg-muted/20">
         {WEEK_DAY_LABELS.map((label) => (
           <div key={label} className="text-center py-2 text-[11px] uppercase tracking-wider font-body font-semibold text-muted-foreground">{label}</div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-px bg-border/40">
+      <div className="hidden md:grid grid-cols-7 gap-px bg-border/40">
         {cells.map((cell) => {
           const dayPosts = postsByDay.get(cell.date) ?? [];
           const isToday = cell.date === today;
@@ -141,53 +158,11 @@ export function CalendarMonthView({ posts, pillars, currentMonth, onMonthChange,
                 )}
               </div>
 
-              {/* Mobile: pontos coloridos (cor do pilar) + total. Tocar abre a lista do dia. */}
-              {dayPosts.length > 0 && (
-                <button type="button" onClick={() => setDayModal(cell.date)}
-                  className="md:hidden w-full min-h-[28px] flex flex-wrap content-start items-center gap-0.5 rounded-md px-0.5 py-0.5 hover:bg-muted/40 transition-colors"
-                  aria-label={`Ver ${dayPosts.length} post(s) do dia ${cell.dayNum}`}>
-                  {dayPosts.slice(0, 4).map((post) => (
-                    <span key={post.id} className={cn("h-1.5 w-1.5 rounded-full", FORMAT_DOT_CLASS)} style={formatColorVars(post.format)} />
-                  ))}
-                  <span className="ml-auto text-[10px] font-body font-bold text-muted-foreground">{dayPosts.length}</span>
-                </button>
-              )}
             </div>
           );
         })}
       </div>
 
-      {/* Mobile: lista dos posts do dia tocado. Cada item abre o editor (onPostClick). */}
-      {dayModal && (() => {
-        const items = postsByDay.get(dayModal) ?? [];
-        const d = new Date(`${dayModal}T00:00:00`);
-        return (
-          <Dialog open onOpenChange={(o) => { if (!o) setDayModal(null); }}>
-            <DialogContent className="sm:max-w-md rounded-2xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader><DialogTitle className="font-display capitalize">{d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}</DialogTitle></DialogHeader>
-              <p className="text-[12px] font-body text-muted-foreground -mt-2">{items.length} post(s) · toque pra editar</p>
-              <div className="space-y-1.5 mt-1">
-                {items.map((post) => (
-                  <button key={post.id} onClick={() => { setDayModal(null); onPostClick(post); }}
-                    style={formatColorVars(post.format)}
-                    className={cn("w-full flex items-center gap-2.5 rounded-xl border border-border border-l-[3px] p-3 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors", FORMAT_BORDER_CLASS)}>
-                    <div className="min-w-0 flex-1">
-                      <span className={cn("inline-block rounded-full border px-1.5 py-px text-[9px] font-body font-bold leading-tight mb-1", getStatusClasses(post.status))}>
-                        {STATUS_ROTULO[post.status ?? ""] ?? post.status ?? "Post"}
-                      </span>
-                      <p className="text-[13px] font-body font-semibold text-foreground truncate">{post.title}</p>
-                      <p className={cn("text-[10px] font-body font-bold uppercase tracking-wide", FORMAT_TEXT_CLASS)}>
-                        {(FORMAT_LABELS[post.format ?? ""] ?? post.format ?? "").toString()}
-                        {post.scheduled_time ? <span className="text-muted-foreground font-medium normal-case"> · {post.scheduled_time.slice(0, 5)}</span> : null}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </DialogContent>
-          </Dialog>
-        );
-      })()}
     </div>
   );
 }

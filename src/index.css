@@ -246,6 +246,19 @@ button, a, [role="button"] {
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* FOCO VISÍVEL (pente fino 24/09/2026). Quem navega por teclado (ou usa
+     leitor de tela) não via onde estava: o outline padrão tinha sido zerado
+     em vários lugares. `:focus-visible` só aparece no teclado, nunca no
+     clique/toque, então não muda nada pra quem usa o mouse. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  input:focus-visible, textarea:focus-visible, select:focus-visible, [contenteditable]:focus-visible {
+    outline-offset: 0;
+  }
+
   /* iOS não dá zoom ao focar um campo (fonte >= 16px no mobile) */
   @media (max-width: 640px) {
     input, textarea, select {

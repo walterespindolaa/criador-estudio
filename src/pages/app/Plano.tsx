@@ -22,7 +22,7 @@ import {
   Plus, Trash2, CalendarDays, Target, BarChart3, Check, ChevronLeft, ChevronRight,
   Flag, TrendingUp, ListChecks, Save, Milestone,
 } from "lucide-react";
-import { PostEditor } from "@/components/kanban/PostEditor";
+import { PostEditorLazy as PostEditor } from "@/components/kanban/PostEditorLazy";
 import { InfoTooltip } from "@/components/shared/InfoTooltip";
 import { WeekTab } from "@/components/plano/WeekTab";
 import { MonthTab } from "@/components/plano/MonthTab";

@@ -386,7 +386,7 @@ function StorySlotDialog({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[11px] font-body text-muted-foreground">Por</span>
-                    <Input type="number" min={1} max={12} value={weeks} onChange={(e) => setWeeks(Math.max(1, Math.min(12, Number(e.target.value) || 4)))} className="h-8 w-16" />
+                    <Input type="number" inputMode="decimal" min={1} max={12} value={weeks} onChange={(e) => setWeeks(Math.max(1, Math.min(12, Number(e.target.value) || 4)))} className="h-8 w-16" />
                     <span className="text-[11px] font-body text-muted-foreground">semanas</span>
                   </div>
                 </div>

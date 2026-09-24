@@ -65,7 +65,7 @@ export function RoteirosDoDia({
       </div>
 
       {roteiros.length === 0 ? (
-        <p className="mt-2 text-[11.5px] font-body text-muted-foreground">
+        <p className="mt-2 text-[12px] font-body text-muted-foreground">
           Nenhum roteiro neste dia ainda. Adicione um por vídeo que vai ser gravado: cada um com cenas, direção e referência.
         </p>
       ) : (
@@ -90,21 +90,21 @@ export function RoteirosDoDia({
 
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[10px] font-display font-extrabold text-primary">{i + 1}</span>
+                                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[11px] font-display font-extrabold text-primary">{i + 1}</span>
                                 <span className={cn("text-[13px] font-display font-bold truncate", s.done ? "text-muted-foreground line-through" : "text-foreground")}>
                                   {s.title?.trim() || `Vídeo ${i + 1}`}
                                 </span>
                                 {cenas.length > 0 && (
-                                  <span className="shrink-0 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
+                                  <span className="shrink-0 text-[11px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
                                     {cenas.length} {cenas.length === 1 ? "cena" : "cenas"}
                                   </span>
                                 )}
                                 {s.format && (
-                                  <span className="shrink-0 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground capitalize">{s.format}</span>
+                                  <span className="shrink-0 text-[11px] font-body font-semibold px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground capitalize">{s.format}</span>
                                 )}
                                 <ListaReferencias valor={s.reference_url} compacto />
                               </div>
-                              {previa && <p className="mt-1 text-[11.5px] font-body text-muted-foreground line-clamp-2 leading-relaxed">{previa}</p>}
+                              {previa && <p className="mt-1 text-[12px] font-body text-muted-foreground line-clamp-2 leading-relaxed">{previa}</p>}
                               <ListaReferencias valor={s.reference_url} className="mt-2" />
 
                               <div className="mt-2 flex flex-wrap items-center gap-1.5">

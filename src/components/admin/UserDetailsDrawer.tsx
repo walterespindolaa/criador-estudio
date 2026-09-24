@@ -373,7 +373,7 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                     <FieldBox label="Carteira de clientes (CRM)">
                       <div className="flex flex-wrap items-center gap-2 mt-1 min-w-0">
                         <Input
-                          type="number" min={0} max={100}
+                          type="number" inputMode="decimal" min={0} max={100}
                           value={packsValue}
                           onChange={(e) => setPacks(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
                           className="h-9 w-24"
@@ -407,7 +407,7 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                     <FieldBox label="Contas Cria pra clientes (assentos)">
                       <div className="flex flex-wrap items-center gap-2 mt-1 min-w-0">
                         <Input
-                          type="number" min={0} max={200}
+                          type="number" inputMode="decimal" min={0} max={200}
                           value={seatsValue}
                           onChange={(e) => setSeats(Math.max(0, Math.min(200, Number(e.target.value) || 0)))}
                           className="h-9 w-24"

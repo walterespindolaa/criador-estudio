@@ -153,7 +153,7 @@ export function DiaDeGravacao({
               do dia, e antes ela saía do app pra procurar o contato. */}
           {caps.length > 0 && (
             <section>
-              <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-2">
+              <p className="text-[12px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-2">
                 A rota de hoje
               </p>
               <ol className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
@@ -173,14 +173,14 @@ export function DiaDeGravacao({
                         <p className={cn("text-[13.5px] font-display font-bold text-foreground truncate", concluida && "line-through text-muted-foreground")}>
                           {c.capture_time && <span className="tabular-nums mr-1.5">{c.capture_time.slice(0, 5)}</span>}{nomeDe(c)}
                         </p>
-                        <p className="text-[11.5px] font-body text-muted-foreground truncate">
+                        <p className="text-[12px] font-body text-muted-foreground truncate">
                           {local || "sem local"}{cidade ? ` · ${cidade}` : ""}
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {local && (
                           <a href={`https://waze.com/ul?q=${busca}&navigate=yes`} target="_blank" rel="noopener noreferrer"
-                            className="h-9 px-2.5 grid place-items-center rounded-xl border border-border text-[11px] font-body font-bold text-foreground hover:border-primary/40"
+                            className="h-9 px-2.5 grid place-items-center rounded-xl border border-border text-[12px] font-body font-bold text-foreground hover:border-primary/40"
                             aria-label="Abrir no Waze" title="Abrir no Waze">Waze</a>
                         )}
                         {local && (
@@ -205,7 +205,7 @@ export function DiaDeGravacao({
           {/* ── 2. AS TOMADAS, no topo, porque é o que se esquece ────────── */}
           {caps.some((c) => normalizeShotList(c.shot_list).length > 0) && (
             <section>
-              <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-2">
+              <p className="text-[12px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-2">
                 Não esqueça de gravar
               </p>
               <div className="space-y-2.5">
@@ -219,7 +219,7 @@ export function DiaDeGravacao({
                     <div key={c.id} className="rounded-2xl border border-border bg-card p-3">
                       <p className="flex items-center gap-2 text-[12.5px] font-display font-bold text-foreground mb-2">
                         {nomeDe(c)}
-                        <span className="text-[11px] font-body font-normal text-muted-foreground">
+                        <span className="text-[12px] font-body font-normal text-muted-foreground">
                           {feitas}/{lista.length}
                         </span>
                       </p>
@@ -248,7 +248,7 @@ export function DiaDeGravacao({
           {/* ── 3. OS ROTEIROS, cliente por cliente, na ordem do dia ─────── */}
           <section>
             <div className="flex items-center justify-between gap-2 mb-2">
-              <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">
+              <p className="text-[12px] font-body font-bold uppercase tracking-wider text-muted-foreground">
                 O que gravar, na ordem
               </p>
               <Button size="sm" variant="outline" className="rounded-xl h-8" onClick={copiarTudo}>
@@ -269,7 +269,7 @@ export function DiaDeGravacao({
                   <p className="text-[13px] font-display font-bold text-foreground">
                     {prontosPraPost.length} {prontosPraPost.length === 1 ? "roteiro gravado" : "roteiros gravados"} pra virar post
                   </p>
-                  <p className="text-[11.5px] font-body text-muted-foreground leading-snug">
+                  <p className="text-[12px] font-body text-muted-foreground leading-snug">
                     Cada um vira um reels em Produção, no kanban do cliente, já com o roteiro dentro.
                   </p>
                 </div>
@@ -291,15 +291,15 @@ export function DiaDeGravacao({
                     <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-border bg-muted/30">
                       <span className="font-display font-bold text-[14px] text-foreground min-w-0 truncate">{nomeDe(c)}</span>
                       {c.capture_time && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-body text-muted-foreground shrink-0">
+                        <span className="inline-flex items-center gap-1 text-[12px] font-body text-muted-foreground shrink-0">
                           <Clock className="h-3 w-3" /> {c.capture_time.slice(0, 5)}
                         </span>
                       )}
                       {cidadeDe(c) && (
-                        <span className="text-[11px] font-body text-muted-foreground truncate hidden sm:inline">{cidadeDe(c)}</span>
+                        <span className="text-[12px] font-body text-muted-foreground truncate hidden sm:inline">{cidadeDe(c)}</span>
                       )}
                       <button type="button" onClick={() => aoConcluirCaptacao(c)}
-                        className={cn("ml-auto shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-body font-bold transition-colors",
+                        className={cn("ml-auto shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-body font-bold transition-colors",
                           concluida
                             ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]"
                             : "bg-muted text-muted-foreground hover:bg-muted/70")}>
@@ -336,7 +336,7 @@ export function DiaDeGravacao({
                                   <p className="text-[12px] font-body text-muted-foreground mt-0.5 line-clamp-2">{s.about}</p>
                                 )}
                                 {s.format?.trim() && (
-                                  <span className="inline-block mt-1 text-[10px] font-body font-bold uppercase tracking-wide text-muted-foreground">
+                                  <span className="inline-block mt-1 text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">
                                     {s.format}
                                   </span>
                                 )}
@@ -377,7 +377,7 @@ export function DiaDeGravacao({
           return (
             <div className="sm:hidden absolute inset-x-0 bottom-0 border-t border-border bg-card/95 backdrop-blur px-4 py-3 flex items-center gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">
+                <p className="text-[12px] font-body font-bold uppercase tracking-wider text-muted-foreground">
                   {gravados} de {todosRoteiros.length} gravados
                 </p>
                 <p className="text-[13px] font-body font-semibold text-foreground truncate">
@@ -397,7 +397,7 @@ export function DiaDeGravacao({
             de notas ou mandar pro cliente antes de sair. */}
         <div className="shrink-0 border-t border-border px-4 py-3 flex items-center gap-2">
           <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-          <p className="text-[11.5px] font-body text-muted-foreground min-w-0 flex-1">
+          <p className="text-[12px] font-body text-muted-foreground min-w-0 flex-1">
             Tudo o que está aqui cabe num texto só, pra levar offline.
           </p>
           <Button size="sm" className="rounded-xl shrink-0" onClick={copiarTudo}>

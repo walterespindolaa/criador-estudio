@@ -10,6 +10,7 @@ import { useManagerApprovalItems } from "@/hooks/useApprovals";
 import { useManagerPendingMaterials } from "@/hooks/useClientMaterials";
 import { useCrmClients } from "@/hooks/useCrm";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 // Tipos de pendência que a Central agrupa.
 type PendType = "criapost" | "cronograma" | "conteudo" | "material";
@@ -234,6 +235,11 @@ export default function Aprovacoes() {
           <p className="text-xs text-muted-foreground font-body mt-1">
             {filter ? "Nenhuma pendência deste tipo." : "Assim que algo precisar de aprovação, aparece nesta lista."}
           </p>
+          {!filter && (
+            <Button variant="outline" size="sm" className="mt-4 min-h-[44px]" onClick={() => navigate("/socialmidia/clientes")}>
+              Ir pros clientes e montar um post
+            </Button>
+          )}
         </div>
       ) : (
         <div data-tour="aprov-lista" className="rounded-2xl border border-border bg-card overflow-hidden">

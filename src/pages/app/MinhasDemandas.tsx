@@ -78,7 +78,7 @@ function rotuloDoDia(chave: string, hoje: string): { titulo: string; tom: "hoje"
 }
 
 const EstadoPill = ({ s }: { s: CardDaFila["producao_status"] }) => (
-  <span className={cn("shrink-0 text-[11px] font-bold px-3 py-1.5 rounded-full",
+  <span className={cn("shrink-0 text-[12px] font-bold px-3 py-1.5 rounded-full",
     s === "aguardando" && "bg-foreground text-background",
     s === "em_producao" && "bg-blue-100 text-blue-700",
     s === "ajuste" && "bg-violet-100 text-violet-700",
@@ -150,7 +150,7 @@ export default function MinhasDemandas() {
               <span className={cn("w-2 h-9 rounded-full shrink-0", k.cor)} />
               <span>
                 <span className="block font-display font-extrabold text-xl leading-none">{k.v}</span>
-                <span className="block text-[11px] font-body font-semibold text-muted-foreground mt-1">{k.l}</span>
+                <span className="block text-[12px] font-body font-semibold text-muted-foreground mt-1">{k.l}</span>
               </span>
             </Card>
           ))}
@@ -161,7 +161,7 @@ export default function MinhasDemandas() {
             cobrança no fim do mês. */}
         {agencias.length > 0 && (
           <div className="mb-5">
-            <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-2 px-0.5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 px-0.5">
               Trabalho com {agencias.length === 1 ? "esta agência" : `${agencias.length} agências`}
             </p>
             <div className="flex gap-2.5 overflow-x-auto pb-1">
@@ -177,11 +177,11 @@ export default function MinhasDemandas() {
                     </span>
                     <span className="min-w-0">
                       <span className="block text-[13px] font-body font-bold text-foreground truncate max-w-[160px]">{a.agencia_nome}</span>
-                      <span className="block text-[11px] font-body text-muted-foreground">
+                      <span className="block text-[12px] font-body text-muted-foreground">
                         {ROTULO_PAPEL[a.meu_papel] ?? a.meu_papel} · {a.abertos} na mão · {a.entregues_30d} entregues/30d
                       </span>
                     </span>
-                    <span className={cn("text-[10px] font-body font-bold shrink-0 ml-1",
+                    <span className={cn("text-[11px] font-body font-bold shrink-0 ml-1",
                       ativa ? "text-primary" : "text-muted-foreground/70")}>
                       {ativa ? "vendo só esta" : "ver clientes"}
                     </span>
@@ -191,7 +191,7 @@ export default function MinhasDemandas() {
             </div>
             {soAgencia && (
               <button type="button" onClick={() => setSoAgencia(null)}
-                className="mt-2 text-[11.5px] font-body font-bold text-primary hover:underline px-0.5">
+                className="mt-2 text-[12px] font-body font-bold text-primary hover:underline px-0.5">
                 mostrar todas as agências de novo
               </button>
             )}
@@ -249,7 +249,7 @@ export default function MinhasDemandas() {
               <section key={chave} className="mb-5">
                 <div className="flex items-center gap-2.5 mb-2 px-0.5">
                   <h2 className="font-display font-bold text-[15px] text-foreground">{r.titulo}</h2>
-                  <span className={cn("text-[10px] font-bold px-2.5 py-0.5 rounded-full",
+                  <span className={cn("text-[11px] font-bold px-2.5 py-0.5 rounded-full",
                     r.tom === "hoje" && "bg-red-100 text-red-700",
                     r.tom === "atrasado" && "bg-red-600 text-white",
                     r.tom === "perto" && "bg-amber-100 text-amber-700",
@@ -271,19 +271,19 @@ export default function MinhasDemandas() {
                         <span className="block font-display font-bold text-[14.5px] text-foreground leading-tight truncate">{c.titulo || "Sem título"}</span>
                         <span className="flex items-center gap-2 mt-1 flex-wrap">
                           <span className="text-xs font-body font-semibold text-foreground/85 truncate">{c.cliente_nome}</span>
-                          <span className="text-[11px] font-body text-muted-foreground">via {c.agencia_nome}</span>
-                          {c.formato && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[c.formato] ?? c.formato}</span>}
-                          {c.publica_em && <span className="text-[11px] font-body text-muted-foreground">publica {dataBR(c.publica_em)}</span>}
+                          <span className="text-[12px] font-body text-muted-foreground">via {c.agencia_nome}</span>
+                          {c.formato && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[c.formato] ?? c.formato}</span>}
+                          {c.publica_em && <span className="text-[12px] font-body text-muted-foreground">publica {dataBR(c.publica_em)}</span>}
                           {c.cache != null && c.cache > 0 && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-800">
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-800">
                               R$ {c.cache.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                             </span>
                           )}
                           {c.prazo_status === "proposto" && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">prazo pra confirmar</span>
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">prazo pra confirmar</span>
                           )}
                           {c.prazo_status === "negociando" && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">prazo em negociação</span>
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">prazo em negociação</span>
                           )}
                         </span>
                       </span>
@@ -330,20 +330,20 @@ function SemanaDoParceiro({ fila, hoje, aoAbrir }: {
             <div key={d.iso} className={cn("rounded-2xl border bg-card p-2.5 min-h-[150px]",
               d.iso === hoje ? "border-violet-400 ring-1 ring-violet-300" : "border-border")}>
               <p className="flex items-baseline gap-1.5 mb-2 px-0.5">
-                <span className="text-[9.5px] font-bold uppercase text-muted-foreground">{d.rotulo}</span>
+                <span className="text-[11px] font-bold uppercase text-muted-foreground">{d.rotulo}</span>
                 <span className={cn("font-display font-extrabold text-[15px]", d.iso === hoje && "text-violet-600")}>{d.dia}</span>
-                {doDia.length > 0 && <span className="ml-auto text-[9.5px] font-bold text-muted-foreground bg-muted rounded-full px-1.5">{doDia.length}</span>}
+                {doDia.length > 0 && <span className="ml-auto text-[11px] font-bold text-muted-foreground bg-muted rounded-full px-1.5">{doDia.length}</span>}
               </p>
               {doDia.length === 0 ? (
-                <p className="text-[10.5px] font-body text-muted-foreground/50 text-center pt-6">livre</p>
+                <p className="text-[11px] font-body text-muted-foreground/50 text-center pt-6">livre</p>
               ) : doDia.map((c) => (
                 <button key={c.post_id} onClick={() => aoAbrir(c.post_id)}
-                  className={cn("w-full text-left rounded-lg px-2 py-1.5 mb-1.5 border-l-[3px] text-[11px] leading-tight transition-transform hover:translate-x-0.5",
+                  className={cn("w-full text-left rounded-lg px-2 py-1.5 mb-1.5 border-l-[3px] text-[12px] leading-tight transition-transform hover:translate-x-0.5",
                     c.producao_status === "ajuste" ? "bg-violet-50 border-violet-500"
                     : c.producao_status === "em_producao" ? "bg-blue-50 border-blue-500"
                     : "bg-orange-50 border-orange-500")}>
                   <span className="block font-bold truncate">{c.titulo || "Sem título"}</span>
-                  <span className="block text-[9.5px] text-muted-foreground truncate mt-0.5">{c.cliente_nome}</span>
+                  <span className="block text-[11px] text-muted-foreground truncate mt-0.5">{c.cliente_nome}</span>
                 </button>
               ))}
             </div>
@@ -351,7 +351,7 @@ function SemanaDoParceiro({ fila, hoje, aoAbrir }: {
         })}
       </div>
       {semPrazo.length > 0 && (
-        <p className="text-[11.5px] font-body text-muted-foreground mt-3 px-0.5">
+        <p className="text-[12px] font-body text-muted-foreground mt-3 px-0.5">
           {semPrazo.length} card{semPrazo.length === 1 ? "" : "s"} sem prazo combinado (aparecem na visão Por prazo).
         </p>
       )}
@@ -419,9 +419,9 @@ function HistoricoDeVersoes({ aberto, aoFechar, versoes, carregando }: {
                     {rodada === 0 ? "Entrega original" : `Revisão ${rodada}`}
                   </span>
                   {itens[0]?.atual && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">é a que vale</span>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">é a que vale</span>
                   )}
-                  <span className="text-[11px] font-body text-muted-foreground">
+                  <span className="text-[12px] font-body text-muted-foreground">
                     {new Date(itens[0].em).toLocaleDateString("pt-BR")}
                   </span>
                 </p>
@@ -435,7 +435,7 @@ function HistoricoDeVersoes({ aberto, aoFechar, versoes, carregando }: {
                           v.atual ? "border-green-400" : "border-border opacity-70 hover:opacity-100")}>
                         {ehImagem
                           ? <img src={src} alt={v.nome ?? ""} loading="lazy" className="w-full h-full object-cover" />
-                          : <span className="w-full h-full grid place-items-center px-1 text-[9px] font-body font-bold text-muted-foreground text-center leading-tight">
+                          : <span className="w-full h-full grid place-items-center px-1 text-[11px] font-body font-bold text-muted-foreground text-center leading-tight">
                               {v.nome?.slice(0, 22) || "arquivo"}
                             </span>}
                       </a>
@@ -587,10 +587,10 @@ function QuadroDoParceiro({ fila, hoje, aoAbrir, papel }: {
         <p className="flex items-center gap-2 px-1 pb-2">
           <span className="w-2 h-2 rounded-full bg-orange-500" />
           <span className="font-display font-bold text-[13px]">Novo</span>
-          <span className="ml-auto text-[10px] font-bold text-muted-foreground bg-card rounded-full px-2 py-0.5 border border-border">{novos.length}</span>
+          <span className="ml-auto text-[11px] font-bold text-muted-foreground bg-card rounded-full px-2 py-0.5 border border-border">{novos.length}</span>
         </p>
         {novos.length === 0
-          ? <p className="text-[11px] font-body text-muted-foreground/60 text-center py-6">vazio</p>
+          ? <p className="text-[12px] font-body text-muted-foreground/60 text-center py-6">vazio</p>
           : novos.map((c) => <CartaoQuadro key={c.post_id} c={c} hoje={hoje} meta={metas[c.post_id]} onOpen={() => aoAbrir(c.post_id)} />)}
       </div>
 
@@ -601,7 +601,7 @@ function QuadroDoParceiro({ fila, hoje, aoAbrir, papel }: {
           <span className="font-display font-bold text-[13px]">Fazendo</span>
           <span className="text-[8.5px] font-bold uppercase tracking-wide bg-blue-600 text-white rounded-full px-2 py-0.5">suas etapas</span>
           <button type="button" onClick={() => setEditandoEtapas(true)}
-            className="ml-auto inline-flex items-center gap-1 text-[10.5px] font-bold text-blue-800 hover:text-blue-900">
+            className="ml-auto inline-flex items-center gap-1 text-[11px] font-bold text-blue-800 hover:text-blue-900">
             <Pencil className="h-3 w-3" /> Editar etapas
           </button>
         </p>
@@ -627,7 +627,7 @@ function QuadroDoParceiro({ fila, hoje, aoAbrir, papel }: {
                         // borda, que é o que ensina que dá pra arrastar pro lado.
                         "w-[78vw] max-w-[260px] shrink-0 snap-start sm:w-auto sm:max-w-none sm:shrink",
                         snap.isDraggingOver && "border-blue-500 bg-blue-100/50")}>
-                      <p className="text-[10px] font-bold text-blue-900/80 px-1 pb-1.5 truncate">{et.nome} <span className="opacity-60">({doLane.length})</span></p>
+                      <p className="text-[11px] font-bold text-blue-900/80 px-1 pb-1.5 truncate">{et.nome} <span className="opacity-60">({doLane.length})</span></p>
                       {doLane.map((c, i) => (
                         <Draggable key={c.post_id} draggableId={c.post_id} index={i} disableInteractiveElementBlocking>
                           {(dp, ds) => (
@@ -647,7 +647,7 @@ function QuadroDoParceiro({ fila, hoje, aoAbrir, papel }: {
             })}
           </div>
         </DragDropContext>
-        <p className="text-[9.5px] font-body text-blue-900/60 px-1 pt-1.5">
+        <p className="text-[11px] font-body text-blue-900/60 px-1 pt-1.5">
           Arraste entre as SUAS etapas. A agência vê só "Fazendo": o processo é seu.
         </p>
       </div>
@@ -657,10 +657,10 @@ function QuadroDoParceiro({ fila, hoje, aoAbrir, papel }: {
         <p className="flex items-center gap-2 px-1 pb-2">
           <span className="w-2 h-2 rounded-full bg-violet-500" />
           <span className="font-display font-bold text-[13px]">Ajuste</span>
-          <span className="ml-auto text-[10px] font-bold text-muted-foreground bg-card rounded-full px-2 py-0.5 border border-border">{ajustes.length}</span>
+          <span className="ml-auto text-[11px] font-bold text-muted-foreground bg-card rounded-full px-2 py-0.5 border border-border">{ajustes.length}</span>
         </p>
         {ajustes.length === 0
-          ? <p className="text-[11px] font-body text-muted-foreground/60 text-center py-6">vazio</p>
+          ? <p className="text-[12px] font-body text-muted-foreground/60 text-center py-6">vazio</p>
           : ajustes.map((c) => <CartaoQuadro key={c.post_id} c={c} hoje={hoje} meta={metas[c.post_id]} onOpen={() => aoAbrir(c.post_id)} />)}
       </div>
 
@@ -669,21 +669,21 @@ function QuadroDoParceiro({ fila, hoje, aoAbrir, papel }: {
         <p className="flex items-center gap-2 px-1 pb-2">
           <span className="w-2 h-2 rounded-full bg-green-600" />
           <span className="font-display font-bold text-[13px]">Entregue</span>
-          <span className="ml-auto text-[10px] font-bold text-muted-foreground bg-card rounded-full px-2 py-0.5 border border-border">{entregues.length}</span>
+          <span className="ml-auto text-[11px] font-bold text-muted-foreground bg-card rounded-full px-2 py-0.5 border border-border">{entregues.length}</span>
         </p>
         {entregues.length === 0
-          ? <p className="text-[11px] font-body text-muted-foreground/60 text-center py-6">vazio</p>
+          ? <p className="text-[12px] font-body text-muted-foreground/60 text-center py-6">vazio</p>
           : entregues.slice(0, 6).map((e) => (
             <button key={e.post_id} onClick={() => aoAbrir(e.post_id)}
               className="w-full text-left rounded-xl border border-border bg-card px-3 py-2.5 mb-2 shadow-sm hover:shadow transition-shadow">
               <span className="block font-display font-bold text-[13px] leading-tight">{e.titulo || "Sem título"}</span>
-              <span className="block text-[10.5px] font-body text-muted-foreground mt-1">
+              <span className="block text-[11px] font-body text-muted-foreground mt-1">
                 {e.cliente_nome} · ✓ {new Date(e.entregue_em).toLocaleDateString("pt-BR")}
               </span>
             </button>
           ))}
         {entregues.length > 6 && (
-          <p className="text-[10.5px] font-body text-muted-foreground text-center pt-1">o resto está em Entregues</p>
+          <p className="text-[11px] font-body text-muted-foreground text-center pt-1">o resto está em Entregues</p>
         )}
       </div>
 
@@ -719,28 +719,28 @@ function CartaoQuadro({ c, hoje, meta, onOpen }: {
       )}
       <span className="block px-3 py-2.5">
       <span className="flex items-center gap-2 mb-1.5">
-        <span className="w-5 h-5 rounded-md grid place-items-center text-white text-[9px] font-bold shrink-0 overflow-hidden"
+        <span className="w-5 h-5 rounded-md grid place-items-center text-white text-[11px] font-bold shrink-0 overflow-hidden"
           style={{ background: c.cliente_cor || "#EA4918" }}>
           {c.cliente_logo
             ? <img src={c.cliente_logo} alt="" className="w-full h-full object-cover" />
             : (c.cliente_nome || "C").charAt(0).toUpperCase()}
         </span>
-        <span className="text-[10.5px] font-body font-semibold text-muted-foreground truncate">{c.cliente_nome}</span>
+        <span className="text-[11px] font-body font-semibold text-muted-foreground truncate">{c.cliente_nome}</span>
       </span>
       <span className="block font-display font-bold text-[13px] leading-tight">{c.titulo || "Sem título"}</span>
       <span className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-        {c.formato && <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[c.formato] ?? c.formato}</span>}
+        {c.formato && <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[c.formato] ?? c.formato}</span>}
         {c.prazo_producao && (
-          <span className={cn("text-[9.5px] font-bold px-1.5 py-0.5 rounded-full",
+          <span className={cn("text-[11px] font-bold px-1.5 py-0.5 rounded-full",
             atrasado ? "bg-red-600 text-white" : c.prazo_producao === hoje ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700")}>
             {atrasado ? "atrasado" : c.prazo_producao === hoje ? "hoje" : dataBR(c.prazo_producao)}
           </span>
         )}
-        {c.prazo_status === "proposto" && <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">prazo pra confirmar</span>}
+        {c.prazo_status === "proposto" && <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">prazo pra confirmar</span>}
       </span>
       {total > 0 && (
         <>
-          <span className="block text-[9px] font-body text-muted-foreground mt-1.5">☑ {feitos}/{total} do seu checklist</span>
+          <span className="block text-[11px] font-body text-muted-foreground mt-1.5">☑ {feitos}/{total} do seu checklist</span>
           <span className="block h-1 rounded-full bg-muted overflow-hidden mt-1">
             <span className="block h-full bg-green-500" style={{ width: `${Math.round((feitos / total) * 100)}%` }} />
           </span>
@@ -846,7 +846,7 @@ function PorClienteDoParceiro({ fila, hoje, aoAbrir }: {
                   mata o bege chapado que o Walter reclamou. */}
               <header className="px-3 py-2.5 flex items-center gap-2.5"
                 style={{ background: `linear-gradient(135deg, ${cor}22, ${cor}0d)`, borderBottom: `2px solid ${cor}` }}>
-                <span className="w-8 h-8 rounded-lg grid place-items-center text-white text-[11px] font-bold overflow-hidden shrink-0 border border-white/60"
+                <span className="w-8 h-8 rounded-lg grid place-items-center text-white text-[12px] font-bold overflow-hidden shrink-0 border border-white/60"
                   style={{ background: cor }}>
                   {primeiro?.cliente_logo
                     ? <img src={primeiro.cliente_logo} alt="" className="w-full h-full object-cover" />
@@ -854,12 +854,12 @@ function PorClienteDoParceiro({ fila, hoje, aoAbrir }: {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block font-display font-bold text-[13.5px] leading-tight truncate">{g.nome}</span>
-                  <span className="block text-[10.5px] font-body text-muted-foreground truncate">
+                  <span className="block text-[11px] font-body text-muted-foreground truncate">
                     via {primeiro?.agencia_nome} · {g.cards.length} na mão
                   </span>
                 </span>
                 {atrasados > 0 && (
-                  <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full bg-red-600 text-white shrink-0">
+                  <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-red-600 text-white shrink-0">
                     {atrasados} atrasado{atrasados === 1 ? "" : "s"}
                   </span>
                 )}
@@ -876,7 +876,7 @@ function PorClienteDoParceiro({ fila, hoje, aoAbrir }: {
                     <span className="flex items-center gap-1.5 font-display font-bold text-[12.5px]" style={{ color: cor }}>
                       <Sparkles className="h-3.5 w-3.5" /> Infos do cliente
                     </span>
-                    <span className="block text-[10.5px] font-body text-muted-foreground mt-0.5 leading-snug">
+                    <span className="block text-[11px] font-body text-muted-foreground mt-0.5 leading-snug">
                       {[marca.links?.length ? `${marca.links.length} link${marca.links.length === 1 ? "" : "s"} de material` : null,
                         marca.referencias?.length ? `${marca.referencias.length} refs` : null,
                         marca.evitar?.trim() ? "regras do que evitar" : null,
@@ -885,7 +885,7 @@ function PorClienteDoParceiro({ fila, hoje, aoAbrir }: {
                     </span>
                   </button>
                 ) : (
-                  <p className="rounded-xl border border-dashed border-border px-3 py-2.5 text-[10.5px] font-body text-muted-foreground leading-snug">
+                  <p className="rounded-xl border border-dashed border-border px-3 py-2.5 text-[11px] font-body text-muted-foreground leading-snug">
                     A ficha desta marca aparece aqui assim que a agência preencher o brandbook dela.
                   </p>
                 )}
@@ -900,7 +900,7 @@ function PorClienteDoParceiro({ fila, hoje, aoAbrir }: {
                 {/* O QUE JÁ FICOU PRONTO: é aqui que a capa da arte brilha. */}
                 {g.prontas.length > 0 && (
                   <div className="pt-1">
-                    <p className="text-[9.5px] font-bold uppercase tracking-wider text-green-700 px-1 pb-1.5">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-green-700 px-1 pb-1.5">
                       Prontas ({g.prontas.length})
                     </p>
                     {g.prontas.slice(0, 4).map((e) => (
@@ -912,14 +912,14 @@ function PorClienteDoParceiro({ fila, hoje, aoAbrir }: {
                         )}
                         <span className="block px-3 py-2">
                           <span className="block font-display font-bold text-[12.5px] leading-tight line-clamp-2">{e.titulo || "Sem título"}</span>
-                          <span className="block text-[10px] font-body text-green-800/80 mt-0.5">
+                          <span className="block text-[11px] font-body text-green-800/80 mt-0.5">
                             entregue em {new Date(e.entregue_em).toLocaleDateString("pt-BR")}
                           </span>
                         </span>
                       </button>
                     ))}
                     {g.prontas.length > 4 && (
-                      <p className="text-[10px] font-body text-muted-foreground text-center pb-1">o resto está em Entregues</p>
+                      <p className="text-[11px] font-body text-muted-foreground text-center pb-1">o resto está em Entregues</p>
                     )}
                   </div>
                 )}
@@ -928,7 +928,7 @@ function PorClienteDoParceiro({ fila, hoje, aoAbrir }: {
           );
         })}
       </div>
-      <p className="text-[11px] font-body text-muted-foreground px-0.5">
+      <p className="text-[12px] font-body text-muted-foreground px-0.5">
         Uma coluna por cliente, como no seu quadro. O cartão pontilhado do topo guarda o material
         e as regras da marca: abre uma vez e serve pra todas as peças dela.
       </p>
@@ -962,7 +962,7 @@ function MesDoParceiro({ fila, hoje, aoAbrir }: {
 
   /* O MÊS NO CELULAR É LISTA, NÃO GRADE (circuito 10, 15/09/2026).
      Sete colunas num aparelho de 390px dão célula de ~50px, e o título do
-     card em text-[9px] virava "Reel..." truncado. Ninguém decide nada assim.
+     card em text-[11px] virava "Reel..." truncado. Ninguém decide nada assim.
      No celular mostramos só os dias que TÊM entrega, um embaixo do outro,
      com o card inteiro legível. Dia vazio não ocupa linha: o que importa é
      "o que eu entrego neste mês", não desenhar o calendário.
@@ -989,7 +989,7 @@ function MesDoParceiro({ fila, hoje, aoAbrir }: {
       </div>
       <div className="hidden sm:grid grid-cols-7 gap-1 mb-1">
         {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((d) => (
-          <p key={d} className="text-[9.5px] font-bold uppercase text-muted-foreground text-center">{d}</p>
+          <p key={d} className="text-[11px] font-bold uppercase text-muted-foreground text-center">{d}</p>
         ))}
       </div>
       {/* A LISTA DO CELULAR */}
@@ -1017,7 +1017,7 @@ function MesDoParceiro({ fila, hoje, aoAbrir }: {
                   <p className="font-display font-bold text-[13.5px] text-foreground leading-tight">
                     {c.titulo || "Card"}
                   </p>
-                  <p className="text-[11.5px] font-body text-muted-foreground leading-tight mt-0.5 truncate">
+                  <p className="text-[12px] font-body text-muted-foreground leading-tight mt-0.5 truncate">
                     {c.cliente_nome}
                   </p>
                 </button>
@@ -1034,12 +1034,12 @@ function MesDoParceiro({ fila, hoje, aoAbrir }: {
           return (
             <div key={iso} className={cn("rounded-xl border bg-card p-1 min-h-[74px] md:min-h-[92px]",
               iso === hoje ? "border-primary ring-1 ring-primary/40" : "border-border")}>
-              <p className={cn("text-[10px] font-display font-bold px-0.5", iso === hoje ? "text-primary" : "text-muted-foreground")}>
+              <p className={cn("text-[11px] font-display font-bold px-0.5", iso === hoje ? "text-primary" : "text-muted-foreground")}>
                 {Number(iso.slice(8))}
               </p>
               {doDia.slice(0, 3).map((c) => (
                 <button key={c.post_id} onClick={() => aoAbrir(c.post_id)} title={`${c.titulo} · ${c.cliente_nome}`}
-                  className={cn("w-full text-left rounded-md px-1 py-0.5 mb-0.5 border-l-2 text-[9px] leading-tight truncate block",
+                  className={cn("w-full text-left rounded-md px-1 py-0.5 mb-0.5 border-l-2 text-[11px] leading-tight truncate block",
                     c.producao_status === "ajuste" ? "bg-violet-50 border-violet-500"
                     : c.producao_status === "em_producao" ? "bg-blue-50 border-blue-500"
                     : "bg-orange-50 border-orange-500")}>
@@ -1052,7 +1052,7 @@ function MesDoParceiro({ fila, hoje, aoAbrir }: {
         })}
       </div>
       {semPrazo.length > 0 && (
-        <p className="text-[11.5px] font-body text-muted-foreground mt-3 px-0.5">
+        <p className="text-[12px] font-body text-muted-foreground mt-3 px-0.5">
           {semPrazo.length} card{semPrazo.length === 1 ? "" : "s"} sem prazo combinado (aparecem na visão Por prazo).
         </p>
       )}
@@ -1164,7 +1164,7 @@ function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexand
 
   return (
     <div className="bg-card border-t lg:border-t-0 lg:border-l border-border flex flex-col min-h-0 md:col-span-2 lg:col-span-1 lg:order-3 lg:h-full">
-      <p className="shrink-0 px-4 py-3 border-b border-border text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+      <p className="shrink-0 px-4 py-3 border-b border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
         <MessageCircle className="h-3.5 w-3.5" style={{ color: cor }} /> Conversa deste card
       </p>
 
@@ -1190,7 +1190,7 @@ function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexand
           const corDoOutro = !meu && daAgencia ? quem?.corAgencia : null;
           return (
             <div key={cm.id} className={cn("flex flex-col", meu ? "items-end" : "items-start")}>
-              <span className={cn("text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full mb-1",
+              <span className={cn("text-[11px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full mb-1",
                 meu ? "bg-muted text-muted-foreground"
                 : doCliente ? "bg-green-100 text-green-700"
                 : corDoOutro ? "text-white" : "bg-pink-100 text-pink-700")}
@@ -1205,7 +1205,7 @@ function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexand
                 style={meu ? { backgroundColor: cor } : corDoOutro ? { borderLeft: `3px solid ${corDoOutro}` } : undefined}>
                 <FalaFormatada texto={cm.texto} meu={meu} />
               </div>
-              <span className="text-[9.5px] font-body text-muted-foreground mt-0.5 px-1">
+              <span className="text-[11px] font-body text-muted-foreground mt-0.5 px-1">
                 {new Date(cm.em).toLocaleDateString("pt-BR")} às {new Date(cm.em).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
               </span>
             </div>
@@ -1245,7 +1245,7 @@ function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexand
             {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-[15px] w-[15px]" />}
           </button>
         </div>
-        <p className="text-[10px] font-body text-muted-foreground/80 px-2 pt-1.5">
+        <p className="text-[11px] font-body text-muted-foreground/80 px-2 pt-1.5">
           Enter manda. A social mídia recebe na hora.
         </p>
       </div>
@@ -1274,9 +1274,9 @@ function PainelTexto({ titulo, texto, aoCopiar, cor }: {
       <div className={cn("flex items-center gap-2 px-3 py-2 border-b", !c && "bg-muted/50 border-border")}
         style={c ? { backgroundColor: `${c}14`, borderColor: `${c}33` } : undefined}>
         <span className="w-1.5 h-4 rounded-full shrink-0" style={{ backgroundColor: c ?? "#9ca3af" }} />
-        <p className="text-[11px] font-display font-bold text-foreground flex-1">{titulo}</p>
+        <p className="text-[12px] font-display font-bold text-foreground flex-1">{titulo}</p>
         <button type="button" onClick={() => aoCopiar(texto, `${titulo} copiado.`)}
-          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-body font-bold transition-colors border"
+          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-body font-bold transition-colors border"
           style={c ? { color: c, borderColor: `${c}66`, backgroundColor: "#ffffffb3" } : undefined}>
           <CopyIcon className="h-3 w-3" /> copiar
         </button>
@@ -1286,7 +1286,7 @@ function PainelTexto({ titulo, texto, aoCopiar, cor }: {
           if (!linha.trim()) return <div key={i} className="h-2" />;
           if (EH_MARCADOR.test(linha)) {
             return (
-              <p key={i} className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mt-3 first:mt-0 pb-1 border-b border-border/70">
+              <p key={i} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mt-3 first:mt-0 pb-1 border-b border-border/70">
                 {linha.trim()}
               </p>
             );
@@ -1458,7 +1458,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   <DialogTitle className="block font-display font-extrabold text-white text-[19px] leading-tight mt-0.5 drop-shadow">
                     {card.titulo || "Sem título"}
                   </DialogTitle>
-                  <span className="block text-[11.5px] font-body text-white/75 mt-1 truncate">
+                  <span className="block text-[12px] font-body text-white/75 mt-1 truncate">
                     {agencia ? <>com {agencia.nomeDoParceiro ?? "o parceiro"}</> : (
                       <>delegado por{" "}
                         <span className="inline-flex items-center gap-1 font-semibold">
@@ -1498,22 +1498,22 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     FORMATO, e duas cores concorrendo não significam nada. */}
                 <div className="flex items-center gap-1.5 flex-wrap" style={formatColorVars(card.formato)}>
                   {card.formato && (
-                    <span className={cn("text-[10.5px] font-bold px-2 py-1 rounded-full", FORMAT_CHIP_SOLID_CLASS)}>
+                    <span className={cn("text-[11px] font-bold px-2 py-1 rounded-full", FORMAT_CHIP_SOLID_CLASS)}>
                       {FORMATO[card.formato] ?? card.formato}
                     </span>
                   )}
                   {card.formato && SPEC_FORMATO[card.formato] && (
-                    <span className={cn("text-[10.5px] font-bold px-2 py-1 rounded-full", FORMAT_CHIP_SOFT_CLASS)}>
+                    <span className={cn("text-[11px] font-bold px-2 py-1 rounded-full", FORMAT_CHIP_SOFT_CLASS)}>
                       {SPEC_FORMATO[card.formato]}
                     </span>
                   )}
                   {card.formato === "carrossel" && Array.isArray(card.blocos) && (card.blocos as unknown[]).length > 0 && (
-                    <span className={cn("text-[10.5px] font-bold px-2 py-1 rounded-full", FORMAT_CHIP_SOFT_CLASS)}>
+                    <span className={cn("text-[11px] font-bold px-2 py-1 rounded-full", FORMAT_CHIP_SOFT_CLASS)}>
                       {(card.blocos as unknown[]).length} arte{(card.blocos as unknown[]).length === 1 ? "" : "s"}
                     </span>
                   )}
                   {card.plataforma && (
-                    <span className="text-[10.5px] font-bold px-2 py-1 rounded-full border border-border text-muted-foreground capitalize">
+                    <span className="text-[11px] font-bold px-2 py-1 rounded-full border border-border text-muted-foreground capitalize">
                       {card.plataforma}
                     </span>
                   )}
@@ -1521,14 +1521,14 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                       jogava fora. É o que diz ao designer em que gaveta da
                       estratégia a peça entra (Walter, 09/09/2026). */}
                   {(card.etiquetas ?? []).map((et) => (
-                    <span key={et} className="text-[10.5px] font-bold px-2 py-1 rounded-full border border-border text-muted-foreground">
+                    <span key={et} className="text-[11px] font-bold px-2 py-1 rounded-full border border-border text-muted-foreground">
                       {et}
                     </span>
                   ))}
                   {/* Depois que saiu da mão dele, onde a peça está. Fim da
                       cegueira pós-entrega. */}
                   {card.producao_status === "entregue" && card.aprovacao && ROTULO_APROVACAO[card.aprovacao] && (
-                    <span className={cn("text-[10.5px] font-bold px-2 py-1 rounded-full", ROTULO_APROVACAO[card.aprovacao].cls)}>
+                    <span className={cn("text-[11px] font-bold px-2 py-1 rounded-full", ROTULO_APROVACAO[card.aprovacao].cls)}>
                       {ROTULO_APROVACAO[card.aprovacao].txt}
                     </span>
                   )}
@@ -1559,7 +1559,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   let n = 0;
                   return (
                     <div className="mt-4 rounded-2xl border border-[#EA4918]/30 bg-[#EA4918]/[0.04] p-3.5">
-                      <p className="text-[10.5px] font-bold uppercase tracking-wider text-[#EA4918] mb-2 inline-flex items-center gap-1.5">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-[#EA4918] mb-2 inline-flex items-center gap-1.5">
                         <MapPin className="h-3.5 w-3.5" /> Apontaram na arte ({apontados.length})
                       </p>
                       <div className="space-y-4">
@@ -1572,7 +1572,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                           return (
                             <div key={slide}>
                               {midias.length > 1 && (
-                                <p className="text-[11px] font-body font-bold text-muted-foreground mb-1.5">
+                                <p className="text-[12px] font-body font-bold text-muted-foreground mb-1.5">
                                   Peça {slide + 1} de {midias.length}
                                 </p>
                               )}
@@ -1596,14 +1596,14 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                               <ol className="mt-2 space-y-1.5">
                                 {itens.map((c, i) => (
                                   <li key={c.id} className="flex items-start gap-2">
-                                    <span className={cn("mt-0.5 h-5 w-5 shrink-0 rounded-full grid place-items-center text-[10px] font-display font-extrabold text-white",
+                                    <span className={cn("mt-0.5 h-5 w-5 shrink-0 rounded-full grid place-items-center text-[11px] font-display font-extrabold text-white",
                                       /cliente/.test(c.papel) ? "bg-[#EA4918]" : "bg-[#7C90F0]")}>
                                       {base + i + 1}
                                     </span>
                                     <span className="min-w-0 flex-1 text-[13px] font-body text-foreground leading-snug">
                                       {c.texto}
                                       {c.ancora_seg != null && (
-                                        <span className="ml-1.5 text-[11px] font-body font-bold text-muted-foreground">
+                                        <span className="ml-1.5 text-[12px] font-body font-bold text-muted-foreground">
                                           no {segundoBonito(c.ancora_seg)}
                                         </span>
                                       )}
@@ -1629,10 +1629,10 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   return (
                     <div className="mt-4">
                       <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
-                        <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                           Arquivos desta peça ({midias.length})
                           {(card.revisoes ?? 0) > 0 && (
-                            <span className="ml-1.5 normal-case tracking-normal text-[10.5px] font-body text-violet-700">
+                            <span className="ml-1.5 normal-case tracking-normal text-[11px] font-body text-violet-700">
                               versão {(card.revisoes ?? 0) + 1}
                             </span>
                           )}
@@ -1643,7 +1643,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                             clique, e só aparece quando há o que mostrar. */}
                         {(card.versoes_antigas ?? 0) > 0 && (
                           <button type="button" onClick={() => setVendoHistorico(true)}
-                            className="inline-flex items-center gap-1 text-[11.5px] font-body font-bold text-violet-700 hover:underline">
+                            className="inline-flex items-center gap-1 text-[12px] font-body font-bold text-violet-700 hover:underline">
                             <History className="h-3.5 w-3.5" /> Ver versões anteriores ({card.versoes_antigas})
                           </button>
                         )}
@@ -1658,7 +1658,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                               className="block aspect-square rounded-lg overflow-hidden border border-border bg-muted hover:border-primary/50 transition-colors">
                               {ehImagem
                                 ? <img src={src} alt={m.nome ?? ""} loading="lazy" className="w-full h-full object-cover" />
-                                : <span className="w-full h-full grid place-items-center px-1 text-[9px] font-body font-bold text-muted-foreground text-center leading-tight">
+                                : <span className="w-full h-full grid place-items-center px-1 text-[11px] font-body font-bold text-muted-foreground text-center leading-tight">
                                     {m.nome?.slice(0, 22) || "arquivo"}
                                   </span>}
                             </a>
@@ -1691,7 +1691,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   if (blocos.length === 0) return null;
                   return (
                     <div className="mt-4">
-                      <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
                         As artes, na ordem ({blocos.length})
                       </p>
                       <ol className="space-y-1.5">
@@ -1719,12 +1719,38 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     mandar link, com o botão verde fechando embaixo. */}
                 {!agencia && card.producao_status !== "entregue" && (
                   <div id="bloco-sua-entrega" className="mt-5 rounded-2xl border-2 border-green-200 bg-green-50/40 p-4">
-                    <p className="text-[10.5px] font-bold uppercase tracking-wider text-green-800 flex items-center gap-1.5 mb-0.5">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-green-800 flex items-center gap-1.5 mb-0.5">
                       <Check className="h-3.5 w-3.5" /> Sua entrega
                     </p>
-                    <p className="text-[11.5px] font-body text-green-900/70 mb-3 leading-snug">
+                    <p className="text-[12px] font-body text-green-900/70 mb-3 leading-snug">
                       Suba a arte a qualquer momento pra social mídia ver. Marcar como entregue é o passo final.
                     </p>
+                    {/* TRÊS PASSOS GUIADOS (pente fino 24/09/2026). O parceiro novo
+                        não sabia se "subir" já entregava. Agora ele vê onde está:
+                        1 fazendo, 2 arte subida, 3 entregue. */}
+                    {(() => {
+                      const fazendo = card.producao_status === "em_producao" || card.producao_status === "ajuste";
+                      const subiu = (card.midias ?? []).length > 0;
+                      const passos = [
+                        { n: 1, t: "Estou fazendo", ok: fazendo || subiu },
+                        { n: 2, t: "Subir a arte", ok: subiu },
+                        { n: 3, t: "Marcar entregue", ok: false },
+                      ];
+                      return (
+                        <ol className="flex items-center gap-1.5 mb-3" aria-label="Passos da entrega">
+                          {passos.map((p, i) => (
+                            <li key={p.n} className="flex items-center gap-1.5 min-w-0">
+                              <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] font-body font-bold",
+                                p.ok ? "bg-green-600 border-green-600 text-white" : "bg-card border-border text-muted-foreground")}>
+                                {p.ok ? <Check className="h-3 w-3" /> : <span className="w-3 text-center">{p.n}</span>}
+                                <span className="truncate">{p.t}</span>
+                              </span>
+                              {i < passos.length - 1 && <span className="h-px w-3 bg-border shrink-0" />}
+                            </li>
+                          ))}
+                        </ol>
+                      );
+                    })()}
                     <input ref={inputArquivo} type="file" accept="image/*,video/*,.pdf" className="hidden"
                       onChange={(e) => {
                         const f = e.target.files?.[0];
@@ -1736,14 +1762,14 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                           opinião no meio do caminho, que é como o trabalho
                           acontece de verdade. */}
                       <div className="rounded-xl border border-border bg-card p-3">
-                        <p className="text-[11.5px] font-body font-bold text-foreground mb-2">Arquivo até 80 MB</p>
+                        <p className="text-[12px] font-body font-bold text-foreground mb-2">Arquivo até 80 MB</p>
                         <Button variant="outline" className="w-full rounded-xl" disabled={anexar.isPending}
                           onClick={() => { setEntregando(false); inputArquivo.current?.click(); }}>
                           {anexar.isPending
                             ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Subindo...</>
                             : <><ImagePlus className="h-4 w-4 mr-1.5" /> Subir arte ou vídeo</>}
                         </Button>
-                        <p className="text-[10.5px] font-body text-muted-foreground mt-2 leading-snug">
+                        <p className="text-[11px] font-body text-muted-foreground mt-2 leading-snug">
                           Imagem, vídeo ou PDF. Fica no card e a social mídia vê na hora.
                           Carrossel: uma arte de cada vez.
                         </p>
@@ -1754,7 +1780,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                           só existia DENTRO do fluxo de entregar: quem só queria
                           mandar o vídeo pra revisão não tinha caminho. */}
                       <div className="rounded-xl border border-border bg-card p-3">
-                        <p className="text-[11.5px] font-body font-bold text-foreground mb-2">Passou de 80 MB? Mande o link</p>
+                        <p className="text-[12px] font-body font-bold text-foreground mb-2">Passou de 80 MB? Mande o link</p>
                         <div className="flex gap-1.5">
                           <input type="url" value={linkPrevia} onChange={(e) => setLinkPrevia(e.target.value)}
                             placeholder="https://drive.google.com/..." inputMode="url"
@@ -1768,7 +1794,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                             {comentar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                           </Button>
                         </div>
-                        <p className="text-[10.5px] font-body text-muted-foreground mt-2 leading-snug">
+                        <p className="text-[11px] font-body text-muted-foreground mt-2 leading-snug">
                           Drive, Dropbox, WeTransfer. O link entra na conversa. Confira se está liberado pra quem recebe.
                         </p>
                       </div>
@@ -1792,7 +1818,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                          final?". O link da versão final entra carimbado na
                          conversa do card. */
                       <div className="mt-3 rounded-xl border border-green-300 bg-card p-3 space-y-2">
-                        <p className="text-[11.5px] font-body font-bold text-green-900">Qual é a versão final?</p>
+                        <p className="text-[12px] font-body font-bold text-green-900">Qual é a versão final?</p>
                         <div className="grid sm:grid-cols-2 gap-2">
                           <Button className="rounded-xl bg-green-600 hover:bg-green-700" disabled={anexar.isPending}
                             onClick={() => inputArquivo.current?.click()}>
@@ -1810,18 +1836,18 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-4 pt-0.5">
-                          <button type="button" className="text-[11.5px] font-body font-bold text-green-800 hover:underline"
+                          <button type="button" className="text-[12px] font-body font-bold text-green-800 hover:underline"
                             onClick={() => { marcar.mutate({ status: "entregue" }); setEntregando(false); }}>
                             Já subi o arquivo, pode entregar
                           </button>
-                          <button type="button" className="text-[11.5px] font-body font-semibold text-muted-foreground hover:underline"
+                          <button type="button" className="text-[12px] font-body font-semibold text-muted-foreground hover:underline"
                             onClick={() => setEntregando(false)}>
                             cancelar
                           </button>
                         </div>
                       </div>
                     )}
-                    <p className="text-[10.5px] font-body text-green-900/70 leading-relaxed mt-2.5">
+                    <p className="text-[11px] font-body text-green-900/70 leading-relaxed mt-2.5">
                       Ao marcar entregue, a social mídia revisa e manda pro cliente aprovar. Se voltar,
                       volta com o motivo escrito no card, nunca por áudio perdido.
                     </p>
@@ -1855,7 +1881,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   if (!estilo && paginas.length === 0) return null;
                   return (
                     <div className="mt-4">
-                      <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Direção de arte</p>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Direção de arte</p>
                       <div className="text-sm font-body bg-muted/50 border border-border rounded-xl px-3 py-2.5 leading-relaxed space-y-2">
                         {estilo && <p>{estilo}</p>}
                         {paginas.length > 0 && (
@@ -1879,7 +1905,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
 
                 {card.notas?.trim() && (
                   <div className="mt-4">
-                    <p className="text-[10.5px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Observações da social mídia</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Observações da social mídia</p>
                     <p className="text-sm font-body whitespace-pre-line bg-amber-50/60 border border-amber-200 rounded-xl px-3 py-2.5 leading-relaxed">{card.notas}</p>
                   </div>
                 )}
@@ -1888,7 +1914,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     Trello, que é o recurso que eles mais usam. Só o parceiro
                     vê; o progresso aparece no cartão do quadro. */}
                 {!agencia && <div className="mt-4 rounded-xl border border-dashed border-violet-200 bg-violet-50/40 px-3.5 py-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-violet-700 flex items-center gap-1.5 mb-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-violet-700 flex items-center gap-1.5 mb-2">
                     Meu checklist <span className="ml-auto normal-case tracking-normal font-semibold text-violet-500/80">só você vê isto</span>
                   </p>
                   {(minhaMeta?.checklist ?? []).map((item, i) => (
@@ -1965,20 +1991,20 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
 
                   return (
                     <div className={cn("rounded-xl border px-3.5 py-3 space-y-2", tom)}>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                         <Clock className="h-3 w-3" /> {titulo}
                       </p>
                       <p className={cn("font-display font-extrabold text-lg", atrasado ? "text-red-600" : "text-foreground")}>
                         {dataEmJogo ? dataBR(dataEmJogo) : "A combinar"}
                       </p>
                       {st === "negociando" && !euSouAgencia && (
-                        <p className="text-[11px] font-body text-blue-800/80">Você sugeriu. Aguardando {outro}.</p>
+                        <p className="text-[12px] font-body text-blue-800/80">Você sugeriu. Aguardando {outro}.</p>
                       )}
                       {st === "negociando" && euSouAgencia && (
-                        <p className="text-[11px] font-body text-amber-900/80">{outro} sugeriu essa data (o combinado era {dataBR(card.prazo_producao)}).</p>
+                        <p className="text-[12px] font-body text-amber-900/80">{outro} sugeriu essa data (o combinado era {dataBR(card.prazo_producao)}).</p>
                       )}
                       {st === "proposto" && euSouAgencia && (
-                        <p className="text-[11px] font-body text-blue-800/80">Aguardando {outro} topar.</p>
+                        <p className="text-[12px] font-body text-blue-800/80">Aguardando {outro} topar.</p>
                       )}
 
                       {!propondo ? (
@@ -1989,7 +2015,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                             </Button>
                           )}
                           <button type="button" onClick={() => { setPropondo(true); setDataProposta(card.prazo_producao ?? ""); }}
-                            className={cn("w-full text-[11.5px] font-body font-bold", bolaComigo ? "text-amber-800" : "text-primary")}>
+                            className={cn("w-full text-[12px] font-body font-bold", bolaComigo ? "text-amber-800" : "text-primary")}>
                             {bolaComigo ? "Sugerir outra data" : card.prazo_producao ? "Propor outra data" : "Propor uma data"}
                           </button>
                         </div>
@@ -2036,7 +2062,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-display font-bold text-foreground truncate">{card.marca.nome || "Cliente"}</span>
-                    <span className="block text-[11px] font-body text-primary font-semibold">{agencia ? "abrir o brandbook do cliente" : "ver a ficha da marca"}</span>
+                    <span className="block text-[12px] font-body text-primary font-semibold">{agencia ? "abrir o brandbook do cliente" : "ver a ficha da marca"}</span>
                   </span>
                   {card.marca.cor && <span className="w-4 h-4 rounded-md border border-border shrink-0" style={{ background: card.marca.cor }} />}
                 </button>
@@ -2057,7 +2083,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     Refs, Site), e a ficha completa abre por cima, sem sair do
                     card. */}
                 <div className="rounded-xl border border-border bg-background p-2.5 space-y-1.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 px-0.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 px-0.5">
                     <Folder className="h-3 w-3" /> Material e referências
                   </p>
                   {card.pasta_drive && (
@@ -2106,7 +2132,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     </button>
                   )}
                   {!card.pasta_drive && !card.referencia && (agencia ? (crmDoCard?.useful_links ?? []) : (marcaDoCard?.links ?? [])).length === 0 && (
-                    <p className="text-[10.5px] font-body text-muted-foreground leading-snug px-0.5 pt-0.5">
+                    <p className="text-[11px] font-body text-muted-foreground leading-snug px-0.5 pt-0.5">
                       {agencia
                         ? "Nenhum link ainda. Cadastre em Links úteis do cliente (vale pra toda peça dele) e, no post, a pasta e a referência desta peça."
                         : "Nenhum link cadastrado ainda, nem nesta peça nem no cliente. Peça na conversa: a agência cadastra na ficha do cliente, aba Links úteis, e aparece aqui em todas as peças dele."}
@@ -2124,21 +2150,21 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     <Button className="w-full rounded-xl" onClick={agencia.irAoPost}>
                       <ExternalLink className="h-4 w-4 mr-1.5" /> Ir até o post
                     </Button>
-                    <p className="text-[10.5px] font-body text-muted-foreground leading-relaxed">
+                    <p className="text-[11px] font-body text-muted-foreground leading-relaxed">
                       Aqui você vê exatamente o que o parceiro vê e conversa com ele. Pra editar a peça,
                       trocar o prazo ou o cachê, vá até o post.
                     </p>
                   </div>
                 )}
                 {!agencia && card.producao_status !== "entregue" && (
-                  <p className="text-[10.5px] font-body text-muted-foreground leading-relaxed pt-1">
+                  <p className="text-[11px] font-body text-muted-foreground leading-relaxed pt-1">
                     Terminou? O bloco <b className="text-foreground">Sua entrega</b> fica logo abaixo da
                     legenda, do lado esquerdo.
                   </p>
                 )}
                 {!agencia && card.producao_status === "entregue" && (
                   <div className="pt-1 space-y-2">
-                    <p className="rounded-xl border border-green-200 bg-green-50/70 px-3 py-2.5 text-[11.5px] font-body text-green-900 leading-snug">
+                    <p className="rounded-xl border border-green-200 bg-green-50/70 px-3 py-2.5 text-[12px] font-body text-green-900 leading-snug">
                       Entregue. A social mídia revisa e manda pro cliente aprovar.
                     </p>
                     <Button variant="outline" className="w-full rounded-xl" disabled={marcar.isPending}

@@ -8,6 +8,7 @@ import { RepurposeSheet } from "@/components/kanban/RepurposeSheet";
 import { usePillars } from "@/hooks/usePillars";
 import { FORMAT_LABELS } from "@/lib/constants";
 import { toISODateBR } from "@/lib/date-br";
+import { Link } from "react-router-dom";
 
 const PERIOD_OPTIONS = [
   { key: "month", label: "Este mês" },
@@ -231,6 +232,9 @@ const Historico = () => {
             <p className="text-muted-foreground font-body max-w-sm mx-auto">
               Quando você publicar seus primeiros conteúdos, eles vão aparecer aqui.
             </p>
+            <Link to="/app/criando" className="inline-flex items-center justify-center mt-5 h-11 px-5 rounded-xl bg-primary text-primary-foreground text-sm font-body font-semibold">
+              Ir pro quadro de produção
+            </Link>
           </div>
         ) : filtered.length === 0 ? (
           <div className="bg-card rounded-xl p-8 shadow-warm border border-border text-center">

@@ -339,7 +339,7 @@ function ClientWorkspace() {
                 <F label="Valor mensal"><MoneyInput value={form.monthly_value} onChange={(v) => setForm({ ...form, monthly_value: v })} /></F>
                 <F label="Plano contratado"><Input value={form.plan_name ?? ""} onChange={(e) => setForm({ ...form, plan_name: e.target.value })} placeholder="Ex.: Gestão completa" className="rounded-xl" /></F>
                 <F label="Dia de pagamento">
-                  <Input type="number" min={1} max={31} value={form.payment_day ?? ""} placeholder="Ex.: 15"
+                  <Input type="number" inputMode="decimal" min={1} max={31} value={form.payment_day ?? ""} placeholder="Ex.: 15"
                     onChange={(e) => { const n = Number(e.target.value); setForm({ ...form, payment_day: e.target.value === "" ? null : Math.max(1, Math.min(31, n)) }); }}
                     className="rounded-xl" />
                 </F>

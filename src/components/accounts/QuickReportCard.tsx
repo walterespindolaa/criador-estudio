@@ -10,7 +10,7 @@ import { useCrmClients } from "@/hooks/useCrm";
 import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
 import { useProfile } from "@/hooks/useProfile";
-import { ClientReportDialog } from "@/components/accounts/ClientReportDialog";
+import { ClientReportDialogLazy as ClientReportDialog } from "@/components/accounts/ClientReportDialogLazy";
 
 // DD/MM/AAAA pro gatilho do campo de data (a string já é YYYY-MM-DD, dá pra fatiar).
 function ddmmyyyy(iso: string): string {
