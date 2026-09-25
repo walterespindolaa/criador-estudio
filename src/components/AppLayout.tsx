@@ -281,7 +281,7 @@ const AppLayout = () => {
                 sticky juntos, respeitando a safe-area do topo do celular. No desktop
                 o wrapper vira fluxo normal (md:static) e só o banner aparece, já que
                 o header é md:hidden. */}
-            <div className="sticky top-0 z-40 md:static md:z-auto">
+            <div className="sticky top-[env(safe-area-inset-top)] z-40 md:static md:z-auto">
               <ManagingBanner />
 
               {/* HEADER MOBILE: 3 zonas, logo no centro (2 à esquerda, logo centrado,
@@ -291,7 +291,6 @@ const AppLayout = () => {
                   respeita a safe-area do topo. */}
               <header
                 className="min-h-14 grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-background border-b border-border md:hidden"
-                style={{ paddingTop: isManaging ? undefined : "env(safe-area-inset-top)" }}
               >
                 <div className="flex items-center gap-0.5 justify-self-start">
                   <GlobalSearch />

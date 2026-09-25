@@ -6,6 +6,11 @@ import "./index.css";
 import { installGlobalErrorLogging } from "./lib/logError";
 import { applyTheme, applyAccent } from "./lib/applyTheme";
 import { applySidebarColor } from "./lib/sidebarTheme";
+import { estaInstalado } from "./lib/pwa";
+
+/* App instalado (tela de início): liga a faixa laranja da barra de status e o
+   recuo do topo. No navegador a classe não existe e nada muda. */
+if (estaInstalado()) document.documentElement.classList.add("pwa");
 
 // Sentry: monitoramento de erros. Convive com o app_logs (o Admin → Logs continua
 // funcionando); o Sentry agrupa/alerta/mostra a linha real via source map. Só liga
