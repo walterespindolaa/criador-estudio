@@ -32,6 +32,8 @@ export type ScriptApprovalItem = {
   client_position: number | null;
   client_comment: string | null;
   removed: boolean;
+  /** Quando o cliente tocou em "Aprovado, pode gravar" (25/09/2026). */
+  approved_at?: string | null;
 };
 
 export type ScriptApproval = {

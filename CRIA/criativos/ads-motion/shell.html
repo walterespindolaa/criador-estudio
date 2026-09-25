@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRIA Ads · __TITLE__</title>
+<style>
+@font-face{font-family:"Baloo 2";font-weight:700;src:url(data:font/woff2;base64,__F_baloo-2-latin-700-normal__) format("woff2")}
+@font-face{font-family:"Baloo 2";font-weight:800;src:url(data:font/woff2;base64,__F_baloo-2-latin-800-normal__) format("woff2")}
+@font-face{font-family:"Roboto";font-weight:400;src:url(data:font/woff2;base64,__F_roboto-latin-400-normal__) format("woff2")}
+@font-face{font-family:"Roboto";font-weight:500;src:url(data:font/woff2;base64,__F_roboto-latin-500-normal__) format("woff2")}
+@font-face{font-family:"Roboto";font-weight:700;src:url(data:font/woff2;base64,__F_roboto-latin-700-normal__) format("woff2")}
+@font-face{font-family:"Grand Hotel";font-weight:400;src:url(data:font/woff2;base64,__F_grand-hotel-latin-400-normal__) format("woff2")}
+html,body{margin:0;background:#0A0A0A;color:#F5F3E7;font-family:Roboto,system-ui,sans-serif}
+.wrap{min-height:100vh;display:flex;gap:32px;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;flex-wrap:wrap}
+canvas{height:min(86vh,1920px);max-width:92vw;aspect-ratio:9/16;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.5);background:#F5F3E7}
+.side{max-width:340px}h1{font-family:"Baloo 2";font-weight:800;font-size:32px;line-height:1.05;margin:0 0 12px;color:#FFCF03}
+p{font-size:15px;line-height:1.5;opacity:.85;margin:0 0 14px}
+button{font-family:"Baloo 2";font-weight:800;font-size:20px;border:0;border-radius:999px;padding:14px 26px;cursor:pointer;margin:0 8px 10px 0}
+#play{background:#F5F3E7;color:#0A0A0A}#rec{background:#FFCF03;color:#0A0A0A}button:disabled{opacity:.5;cursor:wait}
+input[type=range]{width:100%;accent-color:#EA4918;margin:6px 0 14px}#status{font-size:14px;color:#FFCF03;min-height:20px}label{font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div class="side">
+    <h1>__TITLE__</h1>
+    <p>__DESC__</p>
+    <button id="play">▶ Tocar com som</button><button id="rec">Baixar vídeo</button>
+    <input id="scrub" type="range" min="0" max="25" step="0.0333" value="0">
+    <label><input type="checkbox" id="safe"> mostrar área coberta pelo Instagram</label>
+    <div id="status"></div>
+  </div>
+</div>
+<script>const SRC={lamp:'__I_lamp__',semformula:'__I_semformula__',seloRosa:'__I_seloRosa__',seloAmarelo:'__I_seloAmarelo__',clubVerde:'__I_clubVerde__',logo:'__I_logo__'};</script>
+<script>
+__ENGINE__
+</script>
+<script>
+__ROTEIRO__
+</script>
+</body>
+</html>

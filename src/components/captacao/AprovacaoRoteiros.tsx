@@ -237,6 +237,7 @@ export function PainelAprovacoes({
         {envios.map((a) => {
           const mudou = (a.itens ?? []).filter(itemFoiTocado).length;
           const comentarios = (a.itens ?? []).filter((i) => !!i.client_comment?.trim()).length;
+          const aprovados = (a.itens ?? []).filter((i) => !!i.approved_at && !i.removed).length;
           const voltou = a.status === "enviado";
           const feito = a.status === "aplicado";
           return (
@@ -254,6 +255,7 @@ export function PainelAprovacoes({
                   </p>
                   <p className="text-[11.5px] font-body text-muted-foreground mt-0.5">
                     {(a.itens ?? []).length} roteiro(s) enviados
+                    {aprovados > 0 && ` · ${aprovados} aprovado(s) pelo cliente`}
                     {voltou && (mudou > 0 ? ` · ${mudou} com ajuste` : " · nada foi alterado")}
                     {comentarios > 0 && ` · ${comentarios} comentário(s)`}
                     {a.submitted_at && ` · devolvido em ${new Date(a.submitted_at).toLocaleDateString("pt-BR")}`}
@@ -343,11 +345,12 @@ function LinhaDiff({ item, numero }: { item: ScriptApprovalItem; numero: number 
         <span className="text-[13px] font-display font-bold text-foreground truncate">
           {item.client_title?.trim() || item.orig_title?.trim() || `Vídeo ${numero}`}
         </span>
+        {item.approved_at && !m.removido && <Etiqueta tom="ok">aprovado pelo cliente</Etiqueta>}
         {m.removido && <Etiqueta tom="ruim">o cliente tirou este vídeo</Etiqueta>}
         {m.ordem && <Etiqueta>mudou de posição</Etiqueta>}
         {m.titulo && <Etiqueta>título</Etiqueta>}
         {mudouTexto && <Etiqueta>texto</Etiqueta>}
-        {!itemFoiTocado(item) && <Etiqueta tom="neutro">sem alteração</Etiqueta>}
+        {!itemFoiTocado(item) && !item.approved_at && <Etiqueta tom="neutro">não revisado</Etiqueta>}
       </div>
 
       {item.client_comment && (
@@ -378,10 +381,11 @@ function LinhaDiff({ item, numero }: { item: ScriptApprovalItem; numero: number 
   );
 }
 
-function Etiqueta({ children, tom = "bom" }: { children: React.ReactNode; tom?: "bom" | "ruim" | "neutro" }) {
+function Etiqueta({ children, tom = "bom" }: { children: React.ReactNode; tom?: "bom" | "ruim" | "neutro" | "ok" }) {
   return (
     <span className={cn("shrink-0 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded-md",
       tom === "ruim" ? "bg-destructive/10 text-destructive"
+        : tom === "ok" ? "bg-emerald-500/10 text-emerald-700"
         : tom === "neutro" ? "bg-muted text-muted-foreground"
           : "bg-primary/10 text-primary")}>
       {children}

@@ -180,6 +180,8 @@ type TripSuggestion = {
 type PastaInfo = {
   key: string; nome: string; cidade: string | null; cor: string | null;
   crmId: string | null; extraId: string | null;
+  /** Logo do cliente (crm_clients.logo): o card mostra a marca, não só a inicial. */
+  logo?: string | null;
   caps: { total: number; done: number; next: string | null };
   rots: { total: number; feitos: number };
 };
@@ -432,7 +434,7 @@ function CriaCaptacaoInner() {
       if (foraDaCarteira && !temMovimento) continue;
       out.push({
         key, nome: nomeExibidoCliente(cl), cidade: ((cl as { city?: string | null }).city ?? null),
-        cor: cl.color, crmId: cl.id, extraId: null,
+        cor: cl.color, crmId: cl.id, extraId: null, logo: (cl as { logo?: string | null }).logo ?? null,
         caps: capCount.get(key) ?? { total: 0, done: 0, next: null },
         rots: rotCount.get(key) ?? { total: 0, feitos: 0 },
       });

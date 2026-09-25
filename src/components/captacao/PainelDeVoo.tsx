@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Camera, Clock, MapPin, ArrowRight, ChevronRight, CalendarPlus, Sparkles, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -61,7 +61,7 @@ export function PainelDeVoo({
   caps: CapturaPainel[];
   scripts: RoteiroMin[];
   envios: AprovacaoMin[];
-  pastas: (PastaPainel & { cidade?: string | null; extraId?: string | null })[];
+  pastas: (PastaPainel & { cidade?: string | null; extraId?: string | null; logo?: string | null })[];
   onNovoAvulso?: () => void;
   /** Enquanto as captações carregam, todo cliente pareceria "sem gravação". */
   carregando?: boolean;
@@ -200,10 +200,9 @@ export function PainelDeVoo({
         {proxima && pProxima ? (
           <div className="flex flex-col sm:flex-row sm:items-start gap-4">
             <div className="flex items-start gap-3 min-w-0 flex-1">
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-white text-base font-display font-extrabold"
-                style={{ background: corDe(proxima) || "#EA4918" }}>
-                {nomeDe(proxima).slice(0, 1).toUpperCase()}
-              </span>
+              <AvatarCliente nome={nomeDe(proxima)} cor={corDe(proxima)}
+                logo={pastas.find((pa) => pa.key === chaveDaCaptura(proxima))?.logo ?? null}
+                className="h-12 w-12 rounded-2xl text-base" />
               <div className="min-w-0 flex-1">
                 <p className="text-[12px] font-body font-bold uppercase tracking-wider text-muted-foreground">
                   Próxima gravação · {quando(proxima.capture_date, hoje)}
@@ -278,10 +277,7 @@ export function PainelDeVoo({
                 className={cn("flex flex-col rounded-2xl border bg-card p-3.5 text-left cursor-pointer hover:shadow-warm-sm transition-all",
                   f && f.tom === "atencao" ? "border-[hsl(var(--cria-amarelo)/0.45)] hover:border-[hsl(var(--cria-amarelo))]" : "border-border hover:border-primary/40")}>
                 <div className="flex items-center gap-2.5">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-white text-xs font-display font-extrabold"
-                    style={{ background: pa.cor || "#EA4918" }}>
-                    {pa.nome.slice(0, 1).toUpperCase()}
-                  </span>
+                  <AvatarCliente nome={pa.nome} cor={pa.cor} logo={pa.logo ?? null} className="h-9 w-9 rounded-xl text-xs" />
                   <div className="min-w-0 flex-1">
                     <p className="text-[13.5px] font-display font-bold text-foreground truncate">{pa.nome}</p>
                     <p className="text-[12px] font-body text-muted-foreground truncate">
@@ -336,6 +332,27 @@ export function PainelDeVoo({
         </p>
       </div>
     </div>
+  );
+}
+
+/* A MARCA DO CLIENTE NO CARD (Walter, 25/09/2026). Com doze bolinhas de
+   inicial, "L" de Lorem e "L" de Laura Jost ficavam iguais: a logo é o que o
+   olho reconhece primeiro. Sem logo, ou se a imagem não carregar, volta a
+   inicial na cor do cliente. */
+function AvatarCliente({ nome, cor, logo, className }: { nome: string; cor: string | null; logo: string | null; className?: string }) {
+  const [falhou, setFalhou] = useState(false);
+  if (logo && !falhou) {
+    return (
+      <span className={cn("shrink-0 overflow-hidden border border-border bg-white", className)}>
+        <img src={logo} alt="" loading="lazy" onError={() => setFalhou(true)} className="h-full w-full object-cover" />
+      </span>
+    );
+  }
+  return (
+    <span className={cn("grid shrink-0 place-items-center text-white font-display font-extrabold", className)}
+      style={{ background: cor || "#EA4918" }}>
+      {nome.slice(0, 1).toUpperCase()}
+    </span>
   );
 }
 

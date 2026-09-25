@@ -27,6 +27,8 @@ type Cena = { fala: string; direcao: string };
 type Item = {
   id: string; position: number; title: string; content: string;
   scenes: Cena[]; reference: string | null; comment: string | null; removed: boolean; tocado: boolean;
+  /** O cliente tocou em "Aprovado, pode gravar" (25/09/2026). */
+  approved?: boolean;
 };
 type Dados = {
   title: string; month: string; status: "aberto" | "enviado" | "aplicado";
@@ -133,6 +135,16 @@ export default function RoteirosPublica() {
     },
   });
 
+  /* APROVAR VÍDEO POR VÍDEO (Walter, 25/09/2026: "ficou confuso a pessoa não
+     ter um lugar pra falar que aprovou o roteiro ali, em específico"). Antes
+     o vídeo que o cliente aprovou e o que ele nem abriu chegavam iguais. */
+  const aprovar = useMutation({
+    mutationFn: async (v: { id: string; aprovado: boolean }) => {
+      const { error } = await sbRpc("approve_script_approval_item_by_token", { _token: token, _item_id: v.id, _aprovado: v.aprovado });
+      if (error) throw error;
+    },
+  });
+
   const finalizar = useMutation({
     mutationFn: async () => {
       const { error } = await sbRpc("submit_script_approval_by_token", { _token: token, _note: nota });
@@ -184,6 +196,20 @@ export default function RoteirosPublica() {
     });
     reordenar.mutate(ids);
   };
+
+  const marcarAprovado = (id: string, aprovado: boolean) => {
+    mexer(id, aprovado ? { approved: true, removed: false } : { approved: false });
+    aprovar.mutate({ id, aprovado });
+    if (aprovado) {
+      // Fecha este e já abre o próximo que falta, pra revisão andar sozinha.
+      const idx = ordem.findIndex((i) => i.id === id);
+      const prox = [...ordem.slice(idx + 1), ...ordem.slice(0, idx)].find((i) => !i.approved && !i.removed && i.id !== id);
+      setAbertoId(prox ? prox.id : null);
+    }
+  };
+  const ativos = ordem.filter((i) => !i.removed);
+  const aprovados = ativos.filter((i) => i.approved).length;
+  const verde = "#1E7A44";
 
   const card: CSSProperties = {
     background: "#fff", border: "1px solid #EDE7DC", borderRadius: 18, padding: 16, marginBottom: 14,
@@ -262,9 +288,20 @@ export default function RoteirosPublica() {
         ) : (
           <div style={{ background: "#fff", border: "1px solid #EDE7DC", borderRadius: 16, padding: 16, marginBottom: 16 }}>
             <p style={{ margin: 0, color: "#2A2440", fontSize: 14.5, lineHeight: 1.6 }}>
-              Abra um vídeo de cada vez e mude o que quiser: o texto das cenas, a ordem de gravação,
-              ou tire um da lista. Quando terminar, toque em <strong>Finalizar revisão</strong> lá embaixo.
+              Abra um vídeo de cada vez. Se estiver bom, toque em <strong>Aprovado, pode gravar</strong>.
+              Se quiser mudar, edite o texto, a ordem ou deixe um comentário. No fim, toque em
+              <strong> Enviar revisão</strong> lá embaixo.
             </p>
+            {ativos.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, fontWeight: 700, color: aprovados === ativos.length ? verde : "#5B5470", marginBottom: 6 }}>
+                  <span>{aprovados === ativos.length ? "Todos aprovados" : `${aprovados} de ${ativos.length} aprovados`}</span>
+                </div>
+                <div style={{ height: 6, borderRadius: 999, background: "#F1ECE2", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${ativos.length ? (aprovados / ativos.length) * 100 : 0}%`, background: verde, borderRadius: 999, transition: "width .3s" }} />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -293,8 +330,9 @@ export default function RoteirosPublica() {
                 }}>
                 <span style={{
                   display: "grid", placeItems: "center", width: 34, height: 34, borderRadius: 11, flexShrink: 0,
-                  background: accent, color: onAccent, fontSize: 14.5, fontWeight: 800,
-                }}>{idx + 1}</span>
+                  background: it.approved && !it.removed ? verde : accent,
+                  color: it.approved && !it.removed ? "#fff" : onAccent, fontSize: 14.5, fontWeight: 800,
+                }}>{it.approved && !it.removed ? <Check style={{ width: 17, height: 17 }} /> : idx + 1}</span>
                 <span style={{ minWidth: 0, flex: 1 }}>
                   <span style={{
                     display: "block", fontSize: 16, fontWeight: 700, color: "#2A2440", lineHeight: 1.3,
@@ -304,10 +342,11 @@ export default function RoteirosPublica() {
                   </span>
                   <span style={{ display: "block", fontSize: 12.5, color: "#8B8272", marginTop: 2 }}>
                     {it.removed ? "você tirou este vídeo da lista"
+                      : it.approved ? "aprovado, pode gravar"
                       : cenas > 0 ? `${cenas} ${cenas === 1 ? "cena" : "cenas"}`
                       : previa ? previa.slice(0, 46) + (previa.length > 46 ? "…" : "")
                       : "toque pra abrir"}
-                    {it.tocado && !it.removed && " · você já mexeu aqui"}
+                    {it.tocado && !it.removed && !it.approved && " · você já mexeu aqui"}
                   </span>
                 </span>
                 <ChevronDown style={{
@@ -414,8 +453,27 @@ export default function RoteirosPublica() {
 
               {!travado && (aberto || it.removed) && (
                 <div style={{ display: "flex", gap: 8, padding: "0 16px 16px", flexWrap: "wrap" }}>
+                  {aberto && !it.removed && (
+                    it.approved ? (
+                      <button type="button" onClick={() => marcarAprovado(it.id, false)}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 6, background: "#EAF7EE", color: verde,
+                          border: "1px solid #BFE6CC", borderRadius: 999, padding: "8px 15px", fontSize: 13.5, fontWeight: 700, cursor: "pointer",
+                        }}>
+                        <Check style={{ width: 14, height: 14 }} /> Aprovado · desfazer
+                      </button>
+                    ) : (
+                      <button type="button" onClick={() => { guardar(it.id); marcarAprovado(it.id, true); }}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 6, background: verde, color: "#fff",
+                          border: `1px solid ${verde}`, borderRadius: 999, padding: "9px 17px", fontSize: 14, fontWeight: 800, cursor: "pointer",
+                        }}>
+                        <Check style={{ width: 15, height: 15 }} /> Aprovado, pode gravar
+                      </button>
+                    )
+                  )}
                   <button type="button"
-                    onClick={() => { const novo = !it.removed; mexer(it.id, { removed: novo }); salvar.mutate({ ...it, removed: novo }); if (novo) setAbertoId(null); }}
+                    onClick={() => { const novo = !it.removed; mexer(it.id, novo ? { removed: true, approved: false } : { removed: false }); salvar.mutate({ ...it, removed: novo }); if (novo) setAbertoId(null); }}
                     style={{
                       display: "inline-flex", alignItems: "center", gap: 6, background: it.removed ? accent : "#fff",
                       color: it.removed ? onAccent : "#B4453A", border: `1px solid ${it.removed ? accent : "#F0CFC9"}`,
@@ -454,10 +512,14 @@ export default function RoteirosPublica() {
                 display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
               }}>
               <Check style={{ width: 18, height: 18 }} />
-              {finalizar.isPending ? "Enviando…" : "Finalizar revisão"}
+              {finalizar.isPending ? "Enviando…"
+                : ativos.length > 0 && aprovados === ativos.length ? "Enviar: tudo aprovado"
+                : "Enviar revisão"}
             </button>
             <p style={{ margin: "10px 0 0", fontSize: 12.5, color: "#8B8272", textAlign: "center", lineHeight: 1.5 }}>
-              Depois de finalizar, a social mídia recebe um aviso e confere os seus ajustes.
+              {aprovados < ativos.length && ativos.length > 0
+                ? `Faltam ${ativos.length - aprovados} sem aprovar. Pode enviar assim mesmo: a social mídia vê quais você aprovou e quais ajustou.`
+                : "A social mídia recebe um aviso e confere os seus ajustes."}
             </p>
           </div>
         )}
