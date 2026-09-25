@@ -28,6 +28,12 @@ type LogoProps = {
 
 export function Logo({ className = "h-8 w-auto", variant = "auto", icon = false, pequeno = false }: LogoProps) {
   const sufixo = pequeno ? "-sm" : "";
+  /* object-contain (25/09/2026): o selo não é quadrado (128x147) e as telas
+     desenham ele em caixa quadrada (h-8 w-8). Sem isto o navegador ESTICA a
+     imagem pra caber, e o esticado era metade do "esfumaçado" do topo no
+     celular. A outra metade eram os traços azuis finos: o arquivo -sm agora
+     tem os traços engrossados, pra continuarem traço (e não borrão) em 32px. */
+  className = `${className} object-contain`;
   const light = icon ? `/logo-icon${sufixo}.png` : `/logo-cria${sufixo}.png`;
   const dark = icon ? `/logo-icon-white${sufixo}.png` : `/logo-cria-white${sufixo}.png`;
 

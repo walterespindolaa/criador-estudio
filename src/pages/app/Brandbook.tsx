@@ -596,13 +596,17 @@ const Brandbook = () => {
             Uma linha: título (no celular), progresso em número, o estado do
             salvar sozinho e o PDF. A barra "Completude geral" e o card "Sua
             marca em um só lugar" mediam a mesma coisa duas vezes. */}
-        <div className="flex items-start justify-between mb-5 gap-3">
+        {/* flex-wrap + título sem quebra (25/09/2026): no celular o selo de
+            progresso e o botão do PDF espremiam o título até ele quebrar no
+            meio da palavra ("Brandbo / ok"). Agora, sem espaço, os botões
+            descem pra linha de baixo e a palavra fica inteira. */}
+        <div className="flex flex-wrap items-start justify-between mb-5 gap-3">
           <div className="flex items-center gap-3 min-w-0 md:hidden">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-600 to-orange-500 flex items-center justify-center shadow-sm shrink-0">
               <BookMarked className="h-5 w-5 text-white" strokeWidth={1.75} />
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight">
+              <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight whitespace-nowrap">
                 Brandbook <InfoTooltip text="O Brandbook define a identidade da sua marca. As respostas aqui personalizam todas as sugestões da IA para o seu estilo e público." side="bottom" />
               </h1>
             </div>

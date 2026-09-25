@@ -205,7 +205,7 @@ const Tarefas = () => {
               <ListTodo className="h-5 w-5 text-white" strokeWidth={1.75} />
             </div>
             <div className="min-w-0">
-              <h1 className="text-3xl font-display font-extrabold text-foreground tracking-tight">Central de Tarefas</h1>
+              <h1 className="text-3xl font-display font-extrabold text-foreground tracking-tight">Tarefas</h1>
               <p className="text-muted-foreground font-body mt-0.5 text-sm">Tudo o que você precisa executar.</p>
             </div>
           </div>
