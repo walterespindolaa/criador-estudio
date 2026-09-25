@@ -15,6 +15,18 @@ import { createPortal } from "react-dom";
    (memo com comparador sempre-true) e toda a vida acontece no useEffect.
    O DOM interno é do player; o React só entrega o esqueleto e desmonta o nó
    raiz inteiro na saída.
+
+   LAPIDAÇÃO 25/09/2026 (o que mudou pra quem grava):
+   · velocidade só em palavras por minuto, com − / + na lateral pra ajustar
+     lendo; os px/s saem do layout, então trocar a fonte não muda o ritmo;
+   · toque no texto pausa e continua; as barras somem lendo e voltam ao pausar;
+   · contagem só no começo do texto (e dá pra cancelar tocando);
+   · "Por voz" liberado no iPhone/iPad (é detecção de voz, não reconhecimento),
+     com vigia que cai pra Rolagem se o microfone não responder;
+   · "Cena 1:" vira título e "[direção]" vira nota: aparecem mas não são lidos;
+   · foco na linha de leitura, barra de progresso e tempo que falta;
+   · teclado / controle Bluetooth: espaço, setas, PageUp/Down, R, Esc;
+   · sair gravando para a gravação e abre o salvar (antes perdia o vídeo).
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type Props = {
@@ -181,6 +193,35 @@ const CSS = `
 .cpr.light:not(.camOn) #shutter{border-color:#0A0A0A;background:rgba(10,10,10,.05);box-shadow:none;}
 .cpr.light:not(.camOn) #shutterWrap small{color:#0A0A0A;text-shadow:none;}
 .cpr.light:not(.camOn) #cprToast{background:rgba(253,251,245,.95);color:#0A0A0A;border-color:rgba(10,10,10,.14);}
+/* ── LAPIDAÇÃO 25/09/2026 ──────────────────────────────────────────────────
+   Foco: o que já passou e o que ainda vem ficam esmaecidos; a faixa da linha
+   de leitura fica 100%. O olho não se perde procurando onde parou. */
+.cpr.focus:not(.cardMode):not(.mirrorY) #prompterViewport{
+  -webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.22) 0%,#000 calc(var(--readpos,35%) - 7%),#000 calc(var(--readpos,35%) + 22%),rgba(0,0,0,.4) 100%);
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.22) 0%,#000 calc(var(--readpos,35%) - 7%),#000 calc(var(--readpos,35%) + 22%),rgba(0,0,0,.4) 100%);}
+/* Cabeçalho de cena e direção: aparecem, mas NÃO são texto pra ler em voz alta
+   (antes "Cena 1:" e "[close no rosto]" rolavam como fala). */
+.cpr #prompterText .scene{font-family:var(--fontDisplay);font-size:.4em;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:1.4em 0 .5em;opacity:.95;}
+.cpr #prompterText .scene:first-child{margin-top:0;}
+.cpr #prompterText .dir{font-size:.46em;font-style:italic;line-height:1.35;color:rgba(255,255,255,.55);margin:-.2em auto .9em;max-width:26em;}
+.cpr.light:not(.camOn) #prompterText .dir,.cpr.cardMode #prompterText .dir{color:rgba(10,10,10,.5);}
+.cpr.cardMode.cardWhite #prompterText .dir{color:rgba(255,255,255,.6);}
+/* Barra de progresso fininha no topo (sempre visível, até com a barra escondida) */
+.cpr #progress{position:absolute;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,.12);z-index:12;pointer-events:none;}
+.cpr #progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s linear;}
+.cpr #remain{color:var(--cream);font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:700;font-family:var(--fontDisplay);opacity:.85;padding:0 4px;}
+.cpr.light #remain{color:#0A0A0A;}
+/* Velocidade ao vivo: − / + na lateral, dá pra ajustar lendo, sem parar */
+.cpr #speedPill{position:absolute;right:calc(10px + env(safe-area-inset-right));top:50%;transform:translateY(-50%);z-index:11;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 5px;border-radius:22px;background:rgba(10,10,10,.55);border:1px solid var(--glassBrd);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:opacity .3s;}
+.cpr #speedPill button{width:40px;height:40px;border-radius:50%;border:none;background:rgba(245,243,231,.12);color:var(--cream);font-size:22px;font-weight:700;line-height:1;cursor:pointer;display:grid;place-items:center;}
+.cpr #speedPill button:active{background:var(--accent);}
+.cpr #speedPill b{font-family:var(--fontDisplay);font-size:15px;color:var(--cream);font-variant-numeric:tabular-nums;}
+.cpr #speedPill small{font-size:9px;color:var(--dim);margin-top:-3px;}
+.cpr.barsHidden #speedPill{opacity:.35;}
+.cpr.light:not(.camOn) #speedPill{background:rgba(253,251,245,.92);border-color:rgba(10,10,10,.12);}
+.cpr.light:not(.camOn) #speedPill button{background:rgba(10,10,10,.06);color:#0A0A0A;}
+.cpr.light:not(.camOn) #speedPill b{color:#0A0A0A;}
+.cpr #countdown small{position:absolute;bottom:22%;font-size:15px;font-weight:600;color:var(--cream);opacity:.8;font-family:var(--fontDisplay);}
 `;
 
 /* Ícones Lucide embutidos (mesmos paths do protótipo sem CDN, sem flicker) */
@@ -213,6 +254,9 @@ const DEF = {
   camRes: "max", camFace: "user", fps: 30, readPos: 35, reels: false, fixMirror: true,
   cardOn: false, cardPos: "top", cardH: 35, cardW: 100, cardColor: "preto",
   theme: "dark", mode: "voice", micDeviceId: "",
+  /* 25/09/2026: sensibilidade da voz (baixa = lugar barulhento) e foco na
+     linha de leitura (esmaece o que já passou e o que vem longe). */
+  vadSens: "media", focus: true,
 };
 
 function PrompterPlayerInner({ title, text, onExit }: Props) {
@@ -269,12 +313,28 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     function normWord(w: string) {
       return w.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]/g, "");
     }
+    /* Blocos pra navegar com ← → (e controle remoto): cenas, se o roteiro
+       tiver; senão, parágrafos. */
+    let sceneEls: HTMLElement[] = [], paraEls: HTMLElement[] = [];
     function buildText() {
-      pt.innerHTML = ""; words = []; wordEls = [];
+      pt.innerHTML = ""; words = []; wordEls = []; sceneEls = []; paraEls = [];
       const paras = text.split(/\n+/);
       paras.forEach((p) => {
         if (/^\s*\[pausa\]\s*$/i.test(p)) {
           const d = document.createElement("div"); d.className = "pausebreak"; d.textContent = "●●●"; pt.appendChild(d); return;
+        }
+        /* "Cena 3:" ou "# Título": vira cabeçalho, não é lido. */
+        const cena = p.match(/^\s*(cena\s*\d+)\s*:?\s*$/i) || p.match(/^\s*#{1,3}\s+(.+?)\s*$/);
+        if (cena) {
+          const h = document.createElement("div"); h.className = "scene"; h.textContent = cena[1].trim();
+          pt.appendChild(h); sceneEls.push(h); return;
+        }
+        /* Linha inteira entre colchetes (fora [pausa]) é DIREÇÃO: "[close no
+           rosto]". Aparece pequena, em itálico, e não entra na conta de fala. */
+        const dir = p.match(/^\s*\[(.+)\]\s*$/);
+        if (dir) {
+          const d = document.createElement("div"); d.className = "dir"; d.textContent = dir[1].trim();
+          pt.appendChild(d); return;
         }
         const div = document.createElement("div"); div.style.marginBottom = "0.8em";
         let em = false;
@@ -289,12 +349,13 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
             words.push(normWord(w)); wordEls.push(sp);
           });
         });
-        if (div.childNodes.length) pt.appendChild(div);
+        if (div.childNodes.length) { pt.appendChild(div); paraEls.push(div); }
       });
     }
     function resetProgress() {
       pos = 0; wordEls.forEach((e) => e.classList.remove("done", "cur"));
-      vp.scrollTop = 0; stopPlay();
+      vp.scrollTop = 0; cancelCountdown(); stopPlay();
+      progT = 0; updateProgress();
     }
     function requestWake() {
       if ("wakeLock" in navigator) (navigator as any).wakeLock.request("screen").then((w: any) => (wakeLock = w)).catch(() => {});
@@ -324,6 +385,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       root.style.setProperty("--readpos", S.readPos + "%");
       root.classList.toggle("cardMode", S.cardOn);
       root.classList.toggle("cardWhite", S.cardOn && S.cardColor === "branco");
+      root.classList.toggle("focus", S.focus !== false);
       if (S.cardOn) {
         vp.style.height = S.cardH + "%";
         vp.style.width = S.cardW + "%";
@@ -349,8 +411,12 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       });
       $("#guide").style.display = S.guide ? "block" : "none";
       $("#vFont").textContent = S.font + "px"; $("#vMargin").textContent = S.margin + "%";
-      $("#vLine").textContent = String(S.line); $("#vSpeed").textContent = S.speed + " px/s";
-      $("#vWpm").textContent = S.wpm + " wpm"; $("#vCount").textContent = S.count + "s";
+      $("#vLine").textContent = String(S.line);
+      $("#vWpm").textContent = S.wpm + " palavras/min"; $("#vCount").textContent = S.count ? S.count + "s" : "sem";
+      $("#spVal").textContent = String(S.wpm);
+      /* fonte/margem mudam quantos pixels tem cada palavra: recalcula a
+         velocidade pra manter as MESMAS palavras por minuto. */
+      requestAnimationFrame(() => { if (!disposed) { computeSpeed(); updateProgress(); } });
       $("#vRead").textContent = S.readPos + "%";
       $("#vCardH").textContent = S.cardH + "%"; $("#vCardW").textContent = S.cardW + "%";
       updateFrameGuide();
@@ -366,8 +432,8 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
 
     function initSettingsUI() {
       $("#sFont").value = S.font; $("#sMargin").value = S.margin; $("#sLine").value = S.line;
-      $("#sFontFam").value = S.fontFam; $("#sSpeed").value = S.speed; $("#sUseWpm").checked = S.useWpm;
-      $("#sWpm").value = S.wpm; $("#sCount").value = S.count; $("#sMirX").checked = S.mirX;
+      $("#sFontFam").value = S.fontFam;
+      $("#sWpm").value = S.wpm; $("#sVadSens").value = S.vadSens || "media"; $("#sFocus").checked = S.focus !== false; $("#sCount").value = S.count; $("#sMirX").checked = S.mirX;
       $("#sMirY").checked = S.mirY; $("#sGuide").checked = S.guide; $("#sCamRes").value = S.camRes; $("#sCamFace").value = S.camFace;
       $("#sRead").value = S.readPos; $("#sReels").checked = S.reels; $("#sFps").value = String(S.fps);
       $("#sFixMirror").checked = S.fixMirror; $("#sCardOn").checked = S.cardOn; $("#sCardPos").value = S.cardPos;
@@ -376,14 +442,15 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         $(id).addEventListener("input", (e: any) => { S[key] = parse ? parse(e.target.value) : e.target.value; save(); applySettings(); });
       };
       bind("#sFont", "font", Number); bind("#sMargin", "margin", Number); bind("#sLine", "line", Number);
-      bind("#sFontFam", "fontFam"); bind("#sSpeed", "speed", Number); bind("#sWpm", "wpm", Number); bind("#sCount", "count", Number);
+      bind("#sFontFam", "fontFam"); bind("#sWpm", "wpm", Number); bind("#sCount", "count", Number);
+      $("#sVadSens").addEventListener("change", (e: any) => { S.vadSens = e.target.value; save(); });
       bind("#sRead", "readPos", Number); bind("#sCardH", "cardH", Number); bind("#sCardW", "cardW", Number);
       $("#sCardPos").addEventListener("change", (e: any) => { S.cardPos = e.target.value; save(); applySettings(); });
       $("#sCardColor").addEventListener("change", (e: any) => { S.cardColor = e.target.value; save(); applySettings(); });
       const bindChk = (id: string, key: string) => {
         $(id).addEventListener("change", (e: any) => { S[key] = e.target.checked; save(); applySettings(); syncQuick(); });
       };
-      bindChk("#sUseWpm", "useWpm"); bindChk("#sMirX", "mirX"); bindChk("#sMirY", "mirY"); bindChk("#sGuide", "guide");
+      bindChk("#sFocus", "focus"); bindChk("#sMirX", "mirX"); bindChk("#sMirY", "mirY"); bindChk("#sGuide", "guide");
       bindChk("#sReels", "reels"); bindChk("#sCardOn", "cardOn"); bindChk("#sFixMirror", "fixMirror");
       $("#sCamRes").addEventListener("change", (e: any) => { S.camRes = e.target.value; save(); if (camStream) startCamera(true); });
       $("#sCamFace").addEventListener("change", (e: any) => { S.camFace = e.target.value; save(); if (camStream) startCamera(true); });
@@ -407,14 +474,12 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
 
     /* ---------- modes ---------- */
     const MODE_META: Record<string, [string, string]> = { voice: ["mic", "Por voz"], auto: ["scroll-text", "Rolagem"], manual: ["hand", "Manual"] };
+    /* "Por voz" hoje é VAD (rola enquanto você fala, segura no silêncio),
+       lendo o nível do microfone. Isso roda no Safari do iPhone e do iPad; o
+       bloqueio antigo era da época do reconhecimento de fala, que não rodava.
+       Se o áudio não subir, o vigia em tickVoice cai pra Rolagem sozinho. */
     function setMode(m: string) {
-      /* iPhone/Safari não suporta seguir o texto pela voz. Ao escolher "Por voz"
-         no iOS, abre o aviso e cai na Rolagem automática. */
-      if (m === "voice" && isIOS) {
-        $("#iosVoiceSheet")?.classList.add("show");
-        setMode("auto");
-        return;
-      }
+      if (!MODE_META[m]) m = "auto";
       mode = m; S.mode = m; save();
       const [ic, lbl] = MODE_META[m];
       $("#modeBtn").innerHTML = '<i data-lucide="' + ic + '"></i><small>' + lbl + "</small>";
@@ -422,18 +487,18 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       stopPlay();
       $("#voiceStatus").style.display = m === "voice" ? "inline" : "none";
       $("#playBtn").style.display = m === "manual" ? "none" : "inline-flex";
+      $("#speedPill").style.display = m === "manual" ? "none" : "flex";
       refreshIcons($("#modeBtn"));
     }
     $("#modeBtn").onclick = (e: Event) => { e.stopPropagation(); $("#modeMenu").classList.toggle("show"); };
-    $$("#modeMenu button").forEach((b: any) => (b.onclick = () => { setMode(b.dataset.mode); $("#modeMenu").classList.remove("show"); }));
+    const MODE_HINT: Record<string, string> = {
+      voice: "Por voz: o texto anda enquanto você fala e para quando você para.",
+      auto: "Rolagem: o texto anda sozinho na velocidade do − / +.",
+      manual: "Manual: você rola o texto com o dedo.",
+    };
+    $$("#modeMenu button").forEach((b: any) => (b.onclick = () => { setMode(b.dataset.mode); $("#modeMenu").classList.remove("show"); toast(MODE_HINT[b.dataset.mode] || "", 3200); }));
     const onDocClick = (e: Event) => { if (!(e.target as Element).closest("#modeMenu,#modeBtn")) $("#modeMenu")?.classList.remove("show"); };
     document.addEventListener("click", onDocClick);
-    /* aviso do iOS sobre o modo por voz: só fecha o popup (o modo já está em Rolagem) */
-    $("#iosVoiceClose").onclick = () => $("#iosVoiceSheet").classList.remove("show");
-    $("#iosVoiceSpeed").onclick = () => {
-      $("#iosVoiceSheet").classList.remove("show");
-      $("#settingsPanel").classList.add("open"); $("#overlay").classList.add("show");
-    };
 
     /* ---------- quick actions ---------- */
     function syncQuick() {
@@ -455,46 +520,178 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       $("#playBtn").innerHTML = '<i data-lucide="' + (playing ? "pause" : "play") + '"></i><small>' + (playing ? "Pausar" : "Play") + "</small>";
       refreshIcons($("#playBtn"));
     }
-    $("#playBtn").onclick = () => { playing ? stopPlay() : startPlay(); };
-    $("#restartBtn").onclick = () => resetProgress();
+    /* No iOS o AudioContext só nasce "rodando" se for criado/retomado DENTRO
+       do toque. O modo por voz lia um contexto suspenso e o texto não andava.
+       Todo gesto que dá play passa por aqui primeiro. */
+    function unlockAudio() {
+      try {
+        const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
+        if (!audioCtx && AC) audioCtx = new AC();
+        if (audioCtx && audioCtx.state !== "running") audioCtx.resume().catch(() => {});
+      } catch { /* sem áudio: o vigia do modo voz cai pra Rolagem */ }
+    }
+    function togglePlay() {
+      if (mode === "manual") return;
+      unlockAudio();
+      if (cdIv) { cancelCountdown(); return; }
+      if (playing) stopPlay(); else startPlay();
+    }
+    $("#playBtn").onclick = () => togglePlay();
+    $("#restartBtn").onclick = () => { resetProgress(); toast("Do começo.", 1200); };
+    /* Contagem só quando começa do INÍCIO. Pausar pra respirar e voltar não
+       pode custar mais 3 segundos de contagem toda vez. */
+    function noInicio() { return vp.scrollTop < 8; }
     function startPlay(onReady?: () => void) {
       const go = () => {
         playing = true; setPlayIcon();
-        if (mode === "auto") { computeSpeed(); lastT = performance.now(); rafId = requestAnimationFrame(tick); }
+        computeSpeed();
+        if (mode === "auto") { lastT = performance.now(); rafId = requestAnimationFrame(tick); }
         else if (mode === "voice") startVoice();
+        scheduleHideBars();
         if (typeof onReady === "function") onReady();
       };
-      if (S.count > 0) countdown(S.count, go); else go();
+      if (S.count > 0 && noInicio()) countdown(S.count, go); else go();
     }
     function stopPlay() {
       playing = false; setPlayIcon();
       if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
       stopVoice();
+      showBars();
+    }
+    let cdIv: any = null;
+    function cancelCountdown() {
+      if (cdIv) { clearInterval(cdIv); cdIv = null; }
+      const el = $("#countdown"); if (el) el.style.display = "none";
     }
     function countdown(n: number, done: () => void) {
       const el = $("#countdown"); el.style.display = "flex";
-      let i = n; el.textContent = String(i);
-      const iv = setInterval(() => {
-        if (disposed) { clearInterval(iv); return; }
+      let i = n;
+      const pinta = () => { el.innerHTML = String(i) + "<small>toque pra cancelar</small>"; };
+      pinta();
+      cdIv = setInterval(() => {
+        if (disposed) { cancelCountdown(); return; }
         i--;
-        if (i <= 0) { clearInterval(iv); el.style.display = "none"; done(); } else el.textContent = String(i);
+        if (i <= 0) { cancelCountdown(); done(); } else pinta();
       }, 1000);
     }
+    $("#countdown").onclick = () => cancelCountdown();
+
+    /* Velocidade SEMPRE em palavras por minuto. Os pixels por segundo saem do
+       layout real (quantos px tem cada palavra com esta fonte e margem), então
+       trocar a fonte não deixa o texto mais rápido ou mais lento. */
+    let pxPorPalavra = 0;
     function computeSpeed() {
-      if (S.useWpm && words.length) {
-        const h = pt.scrollHeight - parseFloat(getComputedStyle(pt).paddingTop) - parseFloat(getComputedStyle(pt).paddingBottom);
-        pxPerSec = (S.wpm / 60) * (h / words.length);
-      } else pxPerSec = S.speed;
+      if (words.length > 1) {
+        const a = wordEls[0], z = wordEls[wordEls.length - 1];
+        const alt = (z.offsetTop + z.offsetHeight) - a.offsetTop;
+        if (alt > 0) pxPorPalavra = alt / words.length;
+      }
+      pxPerSec = pxPorPalavra > 0 ? (S.wpm / 60) * pxPorPalavra : 60;
     }
+    function mudarVelocidade(delta: number) {
+      S.wpm = Math.max(60, Math.min(300, (S.wpm || 140) + delta)); save();
+      const sl = $("#sWpm"); if (sl) sl.value = S.wpm;
+      $("#vWpm").textContent = S.wpm + " palavras/min";
+      $("#spVal").textContent = String(S.wpm);
+      computeSpeed(); updateProgress();
+    }
+    $("#spUp").onclick = (e: Event) => { e.stopPropagation(); mudarVelocidade(10); };
+    $("#spDown").onclick = (e: Event) => { e.stopPropagation(); mudarVelocidade(-10); };
+
+    let hlT = 0;
     function tick(t: number) {
       if (!playing || disposed) return;
       const dt = Math.min(0.1, (t - lastT) / 1000); lastT = t; /* clamp: 1o frame ou aba dormida não dá pulo */
       if (mode === "voice") tickVoice(t, dt);
-      else if (!userScrolling && !touchDown) vp.scrollTop += pxPerSec * dt; /* dedo no texto = rolagem livre */
+      else if (!userScrolling && !touchDown) {
+        vp.scrollTop += pxPerSec * dt; /* dedo no texto = rolagem livre */
+        /* na Rolagem também marca o que já foi lido (antes só no modo voz) */
+        if (t - hlT > 180) { hlT = t; const i = currentWordAtLine(); if (i !== pos) hardSetPos(i); }
+      }
+      updateProgress();
       if (vp.scrollTop + vp.clientHeight >= vp.scrollHeight - 2) { stopPlay(); toast("Fim do roteiro 🎉"); }
       else rafId = requestAnimationFrame(tick);
     }
-    vp.addEventListener("click", () => { if (playing) root.classList.toggle("barsHidden"); });
+
+    /* ---------- progresso + tempo que falta ---------- */
+    let progT = 0;
+    function updateProgress() {
+      const now = performance.now();
+      if (now - progT < 200) return; progT = now;
+      const max = vp.scrollHeight - vp.clientHeight;
+      const f = max > 0 ? Math.min(1, Math.max(0, vp.scrollTop / max)) : 0;
+      const bar = $("#progress i"); if (bar) bar.style.width = (f * 100).toFixed(1) + "%";
+      const faltam = Math.max(0, words.length - currentWordAtLine());
+      const seg = Math.round((faltam / Math.max(1, S.wpm)) * 60);
+      const r = $("#remain");
+      if (r) r.textContent = mode === "manual" || !words.length ? "" : (Math.floor(seg / 60) + ":" + String(seg % 60).padStart(2, "0"));
+    }
+    vp.addEventListener("scroll", () => updateProgress(), { passive: true });
+
+    /* ---------- barras: somem lendo, voltam ao pausar ---------- */
+    let hideT: any = null;
+    function showBars() { clearTimeout(hideT); root.classList.remove("barsHidden"); }
+    function scheduleHideBars() {
+      clearTimeout(hideT);
+      hideT = setTimeout(() => { if (playing && !disposed) root.classList.add("barsHidden"); }, 2500);
+    }
+    /* TOQUE NO TEXTO = pausa / continua. Quem grava sozinho, com o celular
+       longe, não acha botão pequeno; o texto inteiro vira o botão. No Manual o
+       toque só mostra/esconde as barras. */
+    vp.addEventListener("click", () => {
+      if (cdIv) { cancelCountdown(); return; }
+      if (mode === "manual") { root.classList.toggle("barsHidden"); return; }
+      togglePlay();
+      if (!playing) toast("Pausado. Toque de novo pra continuar.", 1400);
+    });
+
+    /* ---------- pular cena / parágrafo ---------- */
+    function blocos(): HTMLElement[] { return sceneEls.length > 1 ? sceneEls : paraEls; }
+    function irParaBloco(dir: 1 | -1) {
+      const lista = blocos(); if (!lista.length) return;
+      const linha = vp.scrollTop + vp.clientHeight * (S.readPos / 100);
+      let alvo: HTMLElement | null = null;
+      if (dir > 0) alvo = lista.find((el) => el.offsetTop > linha + 4) ?? null;
+      else {
+        const antes = lista.filter((el) => el.offsetTop < linha - 4);
+        /* voltar: se já passou do começo do bloco atual, volta pro começo dele */
+        alvo = antes.length ? antes[antes.length - 1] : lista[0];
+        if (antes.length && linha - alvo.offsetTop < 40 && antes.length > 1) alvo = antes[antes.length - 2];
+      }
+      if (!alvo) return;
+      autoScrollUntil = Date.now() + 700;
+      vp.scrollTo({ top: Math.max(0, alvo.offsetTop - vp.clientHeight * (S.readPos / 100)), behavior: "smooth" });
+      setTimeout(() => { if (!disposed) { hardSetPos(currentWordAtLine()); updateProgress(); } }, 720);
+    }
+
+    /* ---------- teclado e controle remoto Bluetooth ----------
+       Controle de teleprompter e passador de slide mandam setas, PageUp/Down
+       e espaço. No iPad com teclado vale o mesmo. */
+    const onKey = (e: KeyboardEvent) => {
+      const tg = e.target as HTMLElement | null;
+      if (tg && /^(INPUT|SELECT|TEXTAREA)$/.test(tg.tagName)) return;
+      if ($("#settingsPanel").classList.contains("open") && e.key !== "Escape") return;
+      /* Botão com foco + espaço/Enter = clique nativo NAQUELE botão (dava play
+         duas vezes, ou abria Ajustes). Tira o foco e trata aqui. */
+      if (tg && tg.tagName === "BUTTON" && (e.key === " " || e.key === "Enter")) tg.blur();
+      let ok = true;
+      switch (e.key) {
+        case " ": case "Enter": case "k": case "K": togglePlay(); break;
+        case "ArrowUp": if (mode === "manual") vp.scrollBy({ top: -vp.clientHeight / 3, behavior: "smooth" }); else mudarVelocidade(10); break;
+        case "ArrowDown": if (mode === "manual") vp.scrollBy({ top: vp.clientHeight / 3, behavior: "smooth" }); else mudarVelocidade(-10); break;
+        case "+": case "=": mudarVelocidade(10); break;
+        case "-": case "_": mudarVelocidade(-10); break;
+        case "ArrowRight": case "PageDown": irParaBloco(1); break;
+        case "ArrowLeft": case "PageUp": irParaBloco(-1); break;
+        case "r": case "R": resetProgress(); break;
+        case "Escape":
+          if ($("#settingsPanel").classList.contains("open")) { $("#closeSettings").click(); break; }
+          sair(); break;
+        default: ok = false;
+      }
+      if (ok) e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
 
     /* ============================================================
        VOICE FOLLOWING (pt-BR)
@@ -545,6 +742,17 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     function tickVoice(t: number, dt: number) {
       /* iOS às vezes suspende o AudioContext: tenta retomar (barato, no-op se não der) */
       if (audioCtx && audioCtx.state !== "running") { try { audioCtx.resume().catch(() => {}); } catch { /* ok */ } }
+      /* VIGIA (25/09/2026): se em 4 s o microfone não entregou nada (sem
+         permissão, contexto de áudio travado), não deixa a pessoa olhando pro
+         texto parado. Troca pra Rolagem e segue lendo. */
+      const audioOk = !!micAnalyser && !!audioCtx && audioCtx.state === "running";
+      if (audioOk) voiceOkSeen = true;
+      else if (!voiceOkSeen && !micPedindo && t - voiceStartT > 4000) {
+        setMode("auto");
+        toast("Não consegui ouvir o microfone. Mudei pra Rolagem: o texto anda sozinho (ajuste no − / +).", 5500);
+        const c = S.count; S.count = 0; startPlay(); S.count = c; /* sem nova contagem */
+        return;
+      }
       const lvl = readVoiceLevel();
       if (lvl < 0) return; /* analyser ainda não pronto: segura o texto */
       /* PISO DE RUÍDO adaptativo, robusto contra "falar já no começo": desce rápido
@@ -558,7 +766,8 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       vadEnv += (lvl - vadEnv) * (1 - Math.exp(-dt / tau));
       /* limiar = piso + margem, com mínimo absoluto: fala real (>~0.08) sempre passa,
          sala em silêncio (~0.01) não dispara. */
-      const thr = Math.max(0.03, vadFloor + 0.012);
+      const minThr = S.vadSens === "baixa" ? 0.05 : S.vadSens === "alta" ? 0.018 : 0.03;
+      const thr = Math.max(minThr, vadFloor + 0.012);
       if (vadEnv > thr) vadLastLoud = t;
       /* realce da palavra na linha de leitura, derivado da rolagem (throttle 140ms) */
       if (t - vadHlT > 140) { vadHlT = t; const i = currentWordAtLine(); if (i !== pos) hardSetPos(i); }
@@ -568,14 +777,19 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         vp.scrollTop += pxPerSec * dt * (0.7 + over * 0.45); /* 0.7x..1.15x pela energia */
       }
     }
+    let voiceStartT = 0, voiceOkSeen = false, micPedindo = false;
     function startVoice() {
       resetVad();
+      voiceStartT = performance.now(); voiceOkSeen = false;
       computeSpeed();
       /* garante o pipeline de microfone + analyser (VAD precisa de dado mesmo sem
          estar gravando). ensureMic é async: o tick já segura o texto até o mic vir. */
       if (micEnabled) {
         void (async () => {
+          /* enquanto o aviso de permissão está na tela o vigia não conta */
+          micPedindo = true;
           await ensureMic();
+          micPedindo = false; voiceStartT = performance.now();
           if (disposed) return;
           if (micLive()) { buildAnalyser(); watchMicTrack(); startVu(); $("#voiceDot")?.classList.add("live"); }
           else $("#voiceDot")?.classList.remove("live");
@@ -898,6 +1112,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     };
     $("#camBtn").onclick = () => { camStream ? stopCamera() : camFlow(); };
     $("#shutter").onclick = async () => {
+      unlockAudio();
       if (!camStream) { await camFlow(); return; }
       recorder && recorder.state === "recording" ? stopRec() : startRec();
     };
@@ -1207,10 +1422,27 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
       document.removeEventListener("visibilitychange", onVis);
       document.removeEventListener("click", onDocClick);
+      window.removeEventListener("keydown", onKey);
+      clearTimeout(hideT); if (cdIv) clearInterval(cdIv);
       window.removeEventListener("resize", onResize);
       try { (navigator.mediaDevices as any)?.removeEventListener?.("devicechange", onDeviceChange); } catch { /* ok */ }
     }
-    $("#prExit").onclick = () => { exitRef.current(); };
+    /* Sair gravando perdia o vídeo (o player desmontava antes do arquivo
+       ficar pronto). Agora sair durante a gravação só PARA a gravação e abre
+       a tela de salvar; aí a pessoa sai de verdade. */
+    function sair() {
+      if (recorder && recorder.state === "recording") {
+        stopRec();
+        toast("Gravação parada. Salve o vídeo antes de sair.", 3500);
+        return;
+      }
+      if ($("#saveSheet").classList.contains("show")) {
+        toast("Salve ou feche o vídeo antes de sair.", 3000);
+        return;
+      }
+      exitRef.current();
+    }
+    $("#prExit").onclick = () => sair();
 
     /* ---------- boot ---------- */
     buildText();
@@ -1219,18 +1451,24 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     applySettings();
     /* no iPhone o modo por voz não funciona: começa em Rolagem silenciosamente,
        sem popup no boot (o aviso só aparece quando a pessoa ativa "Por voz" de propósito) */
-    setMode(isIOS && (S.mode === "voice" || !S.mode) ? "auto" : (S.mode || "voice"));
+    setMode(S.mode || "voice");
     setPlayIcon();
     setCamIcon();
     setMicIcon();
     syncQuick();
     refreshIcons();
     requestWake();
-    if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+    /* iPad usa o prefixo webkit; iPhone não tem tela cheia de página (ok). */
     try {
-      if (!localStorage.getItem("cria_prompter_hint")) {
-        localStorage.setItem("cria_prompter_hint", "1");
-        setTimeout(() => { if (!disposed) toast("Botão redondo = liga a câmera e grava. Play = só o teleprompter, sem vídeo.", 7000); }, 600);
+      const de: any = document.documentElement;
+      if (de.requestFullscreen) de.requestFullscreen().catch(() => {});
+      else if (de.webkitRequestFullscreen) de.webkitRequestFullscreen();
+    } catch { /* ok */ }
+    progT = 0; updateProgress();
+    try {
+      if (!localStorage.getItem("cria_prompter_hint_v2")) {
+        localStorage.setItem("cria_prompter_hint_v2", "1");
+        setTimeout(() => { if (!disposed) toast("Toque no texto pra pausar e continuar. − / + muda a velocidade. Botão redondo grava.", 7000); }, 600);
       }
     } catch { /* ok */ }
 
@@ -1256,6 +1494,13 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       <div id="fgL" /><div id="fgR" />
       <div id="guide" />
       <div id="countdown" />
+      <div id="progress"><i /></div>
+      <div id="speedPill" aria-label="Velocidade">
+        <button id="spUp" aria-label="Mais rápido">+</button>
+        <b id="spVal">140</b>
+        <small>pal/min</small>
+        <button id="spDown" aria-label="Mais devagar">−</button>
+      </div>
 
       <div id="topBar">
         <button className="pbtn" id="prExit"><i data-lucide="chevron-left" />Sair</button>
@@ -1268,6 +1513,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <span id="recTimer">00:00</span>
+          <span id="remain" title="Tempo que falta na velocidade atual" />
           <span id="voiceStatus" style={{ display: "none", color: "#fff", fontSize: 13 }}><span id="voiceDot" /></span>
           <button className="pbtn" id="restartBtn" title="Recomeçar do início"><i data-lucide="rotate-ccw" /></button>
           <button className="pbtn" id="settingsBtn"><i data-lucide="settings" /></button>
@@ -1302,6 +1548,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           <div className="set"><label>Margens laterais <b id="vMargin" /></label><input type="range" id="sMargin" min={0} max={30} step={1} /></div>
           <div className="set"><label>Altura da linha <b id="vLine" /></label><input type="range" id="sLine" min={1.2} max={2.2} step={0.05} /></div>
           <div className="set"><label>Posição de leitura (altura) <b id="vRead" /></label><input type="range" id="sRead" min={12} max={50} step={1} /></div>
+          <div className="switchrow">Foco na linha de leitura<label className="sw"><input type="checkbox" id="sFocus" defaultChecked /><i /></label></div>
           <div className="set"><label>Fonte</label>
             <select id="sFontFam" defaultValue={DEF.fontFam}>
               <option value="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">Padrão (Sans)</option>
@@ -1315,10 +1562,16 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
 
         <div className="sgCard">
           <div className="sgHead"><span className="sgChip cYellow"><i data-lucide="gauge" /></span><p className="sgTitle">Ritmo</p></div>
-          <div className="set"><label>Velocidade (rolagem) <b id="vSpeed" /></label><input type="range" id="sSpeed" min={10} max={200} step={1} /></div>
-          <div className="switchrow">Usar palavras/minuto<label className="sw"><input type="checkbox" id="sUseWpm" /><i /></label></div>
-          <div className="set"><label>Palavras por minuto <b id="vWpm" /></label><input type="range" id="sWpm" min={80} max={220} step={5} /></div>
-          <div className="set"><label>Contagem regressiva <b id="vCount" /></label><input type="range" id="sCount" min={0} max={10} step={1} /></div>
+          <div className="set"><label>Velocidade <b id="vWpm" /></label><input type="range" id="sWpm" min={60} max={300} step={5} /></div>
+          <p className="sgSub" style={{ margin: "-4px 0 8px" }}>Fala calma fica perto de 120; ritmo de Reels, 150 a 170. Dá pra mudar lendo, no − / + da lateral.</p>
+          <div className="set"><label>Contagem antes de começar <b id="vCount" /></label><input type="range" id="sCount" min={0} max={10} step={1} /></div>
+          <div className="set"><label>Sensibilidade do modo Por voz</label>
+            <select id="sVadSens" defaultValue="media">
+              <option value="alta">Alta (fala baixinho, lugar silencioso)</option>
+              <option value="media">Normal</option>
+              <option value="baixa">Baixa (lugar com barulho)</option>
+            </select>
+          </div>
         </div>
 
         <div className="sgCard">
@@ -1377,6 +1630,9 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           <p className="sgSub" style={{ margin: "2px 4px 8px" }}>No iPhone o sistema escolhe a entrada sozinho: conecte por USB-C ou Bluetooth e ele assume. USB-C tem a melhor qualidade.</p>
         </div>
 
+        <p className="sgSub" style={{ margin: "14px 4px 0" }}>
+          Com teclado ou controle Bluetooth: espaço pausa e continua, ↑ ↓ mudam a velocidade, ← → pulam de cena, R volta pro começo.
+        </p>
         <button className="iconbtn" id="closeSettings" style={{ width: "100%", marginTop: 16 }}>Fechar</button>
       </div>
 
@@ -1413,17 +1669,6 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           <p id="micText" />
           <button className="ssBtn primary" id="micFix">Tentar de novo</button>
           <button className="ssBtn ghost" id="micKeep">Fechar</button>
-        </div>
-      </div>
-
-      {/* iPhone: modo por voz não roda no Safari */}
-      <div id="iosVoiceSheet" className="cSheet">
-        <div className="cSheetCard">
-          <span className="permIcon"><i data-lucide="mic" /></span>
-          <h3>O modo por voz não roda no iPhone</h3>
-          <p>Seguir o texto pela sua voz enquanto grava é uma limitação do Safari no iPhone. A sugestão do Cria é usar a Rolagem automática: o texto rola sozinho na velocidade que você ajusta. No Android e no computador o modo por voz funciona normalmente.</p>
-          <button className="ssBtn primary" id="iosVoiceClose">Usar Rolagem</button>
-          <button className="ssBtn ghost" id="iosVoiceSpeed">Ajustar velocidade</button>
         </div>
       </div>
 

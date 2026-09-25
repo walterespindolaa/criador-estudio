@@ -1909,7 +1909,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
                       excluir: (s) => delScript.mutate(s.id, { onSuccess: () => toast.success("Roteiro excluído.") }),
                       toggleGravado: (s) => updScript.mutate({ id: s.id, patch: { done: !s.done } }),
                       reordenar: (ids) => reorderScripts.mutate(ids),
-                      teleprompter: (s) => onPrompter(s.title?.trim() || pasta.nome, s.content || ""),
+                      teleprompter: (s) => onPrompter(s.title?.trim() || pasta.nome, cenasDe(s).length > 0 ? cenasParaTexto(cenasDe(s)) : (s.content || "")),
                       salvando: addScript.isPending,
                     },
                   })}</div>
@@ -1984,7 +1984,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             onToggleDone={() => updScript.mutate({ id: s.id, patch: { done: !s.done } })}
             onEditar={() => { setEditando(s); setEditorOpen(true); }}
             onExcluir={() => { if (window.confirm("Excluir este roteiro?")) { delScript.mutate(s.id); setVerId(null); } }}
-            onPrompter={() => onPrompter(pasta.nome, s.content)}
+            onPrompter={() => onPrompter(s.title?.trim() || pasta.nome, cenasDe(s).length > 0 ? cenasParaTexto(cenasDe(s)) : (s.content || ""))}
             onVirarPost={ext && !s.source_post_id ? () => virarPost(s) : null}
             onVerPost={s.source_post_id && pasta.crmId ? () => navigate(`/socialmidia/clientes/${pasta.crmId}/posts`) : null}
             converting={toPost.isPending} />

@@ -268,14 +268,22 @@ export default function CriaPrompter() {
       <div data-tour="prompter-voz" className="mt-8 bg-card border border-border rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-2">
           <Mic className="h-4 w-4 text-primary" />
-          <h2 className="text-sm font-display font-bold text-foreground">Como funciona o modo Por voz</h2>
+          <h2 className="text-sm font-display font-bold text-foreground">Como usar na gravação</h2>
         </div>
-        <p className="text-[13px] font-body text-muted-foreground leading-relaxed">
-          Toque em Play e comece a ler em voz alta: o texto acompanha a sua fala palavra por palavra.
-          Improvisou algo fora do roteiro? Ele espera. Voltou a ler? Continua do ponto certo.
-          No roteiro, use <span className="font-semibold text-foreground">**trecho**</span> pra destacar em amarelo e{" "}
-          <span className="font-semibold text-foreground">[pausa]</span> pra marcar uma pausa visual.
-        </p>
+        {/* Texto revisto em 25/09/2026: o modo por voz não segue palavra por
+            palavra (isso exigia reconhecimento de fala, que trava o microfone
+            no iPhone). Ele rola enquanto você fala e para no silêncio. */}
+        <ul className="text-[13px] font-body text-muted-foreground leading-relaxed space-y-1.5">
+          <li><span className="font-semibold text-foreground">Por voz:</span> o texto anda enquanto você fala e para quando você para. Funciona no iPhone, no Android e no computador.</li>
+          <li><span className="font-semibold text-foreground">Rolagem:</span> anda sozinho na velocidade que você escolhe no − / + da lateral (em palavras por minuto).</li>
+          <li><span className="font-semibold text-foreground">Toque no texto</span> pra pausar e continuar. As setas ← → pulam de cena num teclado ou controle Bluetooth.</li>
+          <li>
+            No roteiro: <span className="font-semibold text-foreground">**trecho**</span> destaca na cor da marca,{" "}
+            <span className="font-semibold text-foreground">[pausa]</span> marca uma respirada, uma linha{" "}
+            <span className="font-semibold text-foreground">Cena 2:</span> vira título de cena e uma linha{" "}
+            <span className="font-semibold text-foreground">[close no rosto]</span> vira direção (aparece, mas não é pra ler).
+          </li>
+        </ul>
       </div>
 
       {/* Editor */}
