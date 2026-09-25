@@ -85,9 +85,15 @@ input[type="time"]::-webkit-calendar-picker-indicator {
      top: env(safe-area-inset-top) pra parar embaixo dela. No navegador o
      inset é 0 e a classe .pwa não existe: nada muda. z 999 fica abaixo do
      teleprompter (1000), que tem a própria tela preta. */
+  /* --topo-app: altura reservada no topo. No app instalado ganha 12px a mais
+     que a área do relógio (Walter, 25/09/2026): o desfoque do iOS vai um pouco
+     além da barra de status, e com esse respiro ele cai só no fundo liso, nunca
+     em cima dos ícones do cabeçalho. No navegador fica 0 + inset (= 0). */
+  :root { --topo-app: env(safe-area-inset-top); }
+  html.pwa { --topo-app: calc(env(safe-area-inset-top) + 12px); }
   html.pwa body::before {
     content: ""; position: fixed; top: 0; left: 0; right: 0;
-    height: env(safe-area-inset-top); background: hsl(var(--background)); z-index: 999; pointer-events: none;
+    height: var(--topo-app); background: hsl(var(--background)); z-index: 999; pointer-events: none;
   }
   /* 25/09/2026 (2ª rodada, iOS 26/27): o sistema passou a IGNORAR a cor pedida
      pra barra de status e aplica um desfoque próprio na borda de cima, que
@@ -95,7 +101,7 @@ input[type="time"]::-webkit-calendar-picker-indicator {
      branco = degradê laranja borrado. Com a faixa da MESMA cor do header, o
      desfoque mistura branco com branco e some. O relógio fica escuro (o iOS
      escolhe sozinho pelo fundo). */
-  html.pwa #root { padding-top: env(safe-area-inset-top); }
+  html.pwa #root { padding-top: var(--topo-app); }
 }
 
 /* Toque: sem o flash cinza do Android/iOS e sem delay de 300ms. */

@@ -82,7 +82,7 @@ export function OfflineBanner() {
       role="status"
       aria-live="polite"
       className="fixed left-1/2 z-[120] -translate-x-1/2 flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-2.5 shadow-lg"
-      style={{ top: "calc(8px + env(safe-area-inset-top, 0px))", maxWidth: "92vw" }}
+      style={{ top: "calc(8px + var(--topo-app, 0px))", maxWidth: "92vw" }}
     >
       <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl text-white ${cor}`}>
         <Icone className={`h-4 w-4 ${!online && pendentes > 0 ? "animate-pulse" : ""}`} />

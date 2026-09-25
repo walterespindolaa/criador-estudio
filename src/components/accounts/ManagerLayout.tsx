@@ -427,7 +427,7 @@ export default function ManagerLayout() {
             uma tela que ele não conseguia abrir.
             Mesma estrutura do lado do criador: 2 à esquerda, logo no centro, 2 à direita. */}
         <header
-          className="min-h-14 sticky top-[env(safe-area-inset-top)] z-40 grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-background border-b border-border md:hidden"
+          className="min-h-14 sticky top-[var(--topo-app)] z-40 grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-background border-b border-border md:hidden"
         >
           <div className="flex items-center gap-0.5 justify-self-start">
             <GlobalSearch />

@@ -281,7 +281,7 @@ const AppLayout = () => {
                 sticky juntos, respeitando a safe-area do topo do celular. No desktop
                 o wrapper vira fluxo normal (md:static) e só o banner aparece, já que
                 o header é md:hidden. */}
-            <div className="sticky top-[env(safe-area-inset-top)] z-40 md:static md:z-auto">
+            <div className="sticky top-[var(--topo-app)] z-40 md:static md:z-auto">
               <ManagingBanner />
 
               {/* HEADER MOBILE: 3 zonas, logo no centro (2 à esquerda, logo centrado,

@@ -57,7 +57,7 @@ const DialogContent = React.forwardRef<
         // descontando as safe-areas, pra que título + botão X fiquem sempre visíveis e o
         // rodapé com "Salvar" não fique atrás do teclado do iOS quando um campo perto do
         // fim ganha foco. DESKTOP (sm:): volta ao centralizado original, sem mudança.
-        "fixed left-[50%] top-[calc(env(safe-area-inset-top)+0.5rem)] sm:top-[50%] z-50 flex flex-col w-[calc(100vw-2rem)] max-w-2xl max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1rem)] sm:max-h-[88vh] overflow-y-auto",
+        "fixed left-[50%] top-[calc(var(--topo-app)+0.5rem)] sm:top-[50%] z-50 flex flex-col w-[calc(100vw-2rem)] max-w-2xl max-h-[calc(100dvh-var(--topo-app)-env(safe-area-inset-bottom)-1rem)] sm:max-h-[88vh] overflow-y-auto",
         "translate-x-[-50%] translate-y-0 sm:translate-y-[-50%] gap-5 border bg-background p-6 sm:p-7 shadow-2xl rounded-3xl duration-200",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
         className,
