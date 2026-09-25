@@ -261,7 +261,9 @@ export default function RoteirosPublica() {
             não tinha como saber que era a gravação de amanhã. Quando quem
             enviou deu um nome ao envio ("Roteiros de 24/09"), é esse nome que
             manda; sem nome, continua o mês. */}
-        <p style={{ margin: "6px 0 0", color: onAccentSoft, fontSize: 14 }}>
+        {/* Maior e em negrito (25/09/2026): a data é o que diz ao cliente
+            QUAL gravação é essa, e em 14px ela sumia embaixo do nome. */}
+        <p style={{ margin: "8px 0 0", color: onAccent, fontSize: 19, fontWeight: 700, lineHeight: 1.3 }}>
           {d.title?.trim() && d.title.trim() !== "Roteiros de gravação" ? d.title.trim() : mesLabel(d.month)}
         </p>
         {/* Quantos vídeos: o cliente sabe de cara o tamanho da tarefa. */}
