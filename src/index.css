@@ -80,15 +80,21 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   .safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem); }
   .safe-top { padding-top: env(safe-area-inset-top); }
   /* BARRA DE STATUS DO APP INSTALADO (25/09/2026). Com black-translucent o
-     conteúdo vai até o topo da tela; esta faixa laranja sólida ocupa a altura
+     conteúdo vai até o topo da tela; esta faixa sólida ocupa a altura
      do relógio/bateria e o #root começa logo abaixo. Headers grudados usam
      top: env(safe-area-inset-top) pra parar embaixo dela. No navegador o
      inset é 0 e a classe .pwa não existe: nada muda. z 999 fica abaixo do
      teleprompter (1000), que tem a própria tela preta. */
   html.pwa body::before {
     content: ""; position: fixed; top: 0; left: 0; right: 0;
-    height: env(safe-area-inset-top); background: #CE4A1D; z-index: 999; pointer-events: none;
+    height: env(safe-area-inset-top); background: hsl(var(--background)); z-index: 999; pointer-events: none;
   }
+  /* 25/09/2026 (2ª rodada, iOS 26/27): o sistema passou a IGNORAR a cor pedida
+     pra barra de status e aplica um desfoque próprio na borda de cima, que
+     mistura a cor da faixa com o que vem logo abaixo. Faixa laranja + header
+     branco = degradê laranja borrado. Com a faixa da MESMA cor do header, o
+     desfoque mistura branco com branco e some. O relógio fica escuro (o iOS
+     escolhe sozinho pelo fundo). */
   html.pwa #root { padding-top: env(safe-area-inset-top); }
 }
 

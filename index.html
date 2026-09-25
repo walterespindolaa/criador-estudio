@@ -46,14 +46,17 @@
     <link rel="manifest" href="/manifest.json">
     <!-- theme-color estava roxo (#8B5CF6), cor que não existe mais na identidade.
          Agora é o laranja do CRIA, e muda no modo escuro. -->
-    <meta name="theme-color" content="#CE4A1D" media="(prefers-color-scheme: light)">
+    <!-- 25/09/2026: no iOS 26+ o app instalado usa o theme-color pra tingir a
+         área do relógio, com desfoque. Laranja ali + header branco = o degradê
+         "esfumaçado". Agora é a mesma cor do fundo do app (#FDFBF5). -->
+    <meta name="theme-color" content="#FDFBF5" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#1B1A17" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <!-- 25/09/2026: com "default" o iOS desenha a barra do relógio translúcida
          no app instalado, com o desfoque do conteúdo por baixo (o "esfumaçado").
          black-translucent deixa a faixa por nossa conta: o CSS pinta ela de
-         laranja sólido (html.pwa body::before) e o #root começa logo abaixo. -->
+         da cor do fundo (html.pwa body::before) e o #root começa logo abaixo. -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CRIA">
     <!-- Sem isso o iPhone abre o app instalado numa tela branca e a pessoa acha
