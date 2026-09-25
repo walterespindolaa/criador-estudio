@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { memo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CRIA PROMPTER PLAYER (teleprompter com voice-following pt-BR)
@@ -31,7 +32,7 @@ const SETTINGS_KEY = "cria_prompter_settings_v1";
 let sessionMic: MediaStream | null = null;
 
 const CSS = `
-.cpr{position:fixed;inset:0;z-index:60;background:#000;color:#F5F3E7;
+.cpr{position:fixed;inset:0;z-index:1000;background:#000;color:#F5F3E7;
   font-family:'Roboto',var(--active-font-body,var(--font-body,-apple-system)),'Segoe UI',sans-serif;
   --cream:#F5F3E7;--paper:#FDFBF5;--ink:#0A0A0A;--yellow:#FFCF03;--pink:#FF77B9;--blue:#0061EE;
   --panel:hsl(45 8% 10%);--panel2:hsl(45 6% 15%);--border:hsl(45 6% 22%);--txt:#F5F3E7;--dim:hsl(40 8% 66%);
@@ -1239,7 +1240,13 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
 
   /* Esqueleto estático. O React nunca re-renderiza isto (memo sempre-true):
      o DOM interno pertence à engine imperativa acima. */
-  return (
+  /* PORTAL NO BODY (25/09/2026, iPad). O player abria dentro do <main> do
+     layout, que tem `relative z-[1]` e por isso cria um contexto de
+     empilhamento próprio: o z-index do player valia só lá dentro, e o menu
+     lateral flutuante (z-40, fora do main) ficava por cima do texto. No
+     celular o menu some; no iPad (tela md) ele aparece. Montando direto no
+     body, o player fica acima de tudo, em qualquer tela que o abra. */
+  return createPortal(
     <div ref={rootRef} className="cpr" aria-label={title}>
       <style>{CSS}</style>
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
@@ -1421,7 +1428,8 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       </div>
 
       <div id="cprToast" />
-    </div>
+    </div>,
+    document.body,
   );
 }
 
