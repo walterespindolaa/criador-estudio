@@ -113,7 +113,7 @@ export default function HubCria() {
               <Radar className="h-3.5 w-3.5" />
               <span className="text-[10px] font-body font-bold uppercase tracking-wider">Cria Radar</span>
             </span>
-            <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
+            <h1 className="hidden md:block font-display text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
               Onde você precisa agir hoje
             </h1>
             <p className="text-sm font-body text-muted-foreground mt-1.5 max-w-2xl leading-relaxed">

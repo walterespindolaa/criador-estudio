@@ -247,7 +247,7 @@ function Header({ lastUpdated }: { lastUpdated: Date | null }) {
         <Clapperboard className="h-5 w-5 text-white" strokeWidth={1.75} />
       </div>
       <div>
-        <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Cria Stories</h1>
+        <h1 className="hidden md:block text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Cria Stories</h1>
         <p className="text-muted-foreground font-body text-sm mt-0.5 flex items-center gap-1.5">
           {lastUpdated ? (<><Globe className="h-3.5 w-3.5 text-primary" /> Pesquisado na web · atualizado em {lastUpdated.toLocaleDateString("pt-BR")}</>) : "Plano semanal de stories, no que está em alta e no seu tom."}
         </p>

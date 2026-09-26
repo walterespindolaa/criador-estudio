@@ -991,7 +991,7 @@ export default function AgendaCriacao() {
           <CalendarDays className="h-5 w-5 text-white" strokeWidth={1.75} />
         </div>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Agenda</h1>
+          <h1 className="hidden md:block text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Agenda</h1>
           <p className="text-muted-foreground font-body text-sm mt-0.5">Reuniões, tarefas e agenda de captações da semana.</p>
         </div>
       </div>

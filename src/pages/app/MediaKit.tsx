@@ -180,7 +180,7 @@ export default function MediaKit() {
           <IdCard className="h-5 w-5 text-white" strokeWidth={1.75} />
         </div>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Media Kit</h1>
+          <h1 className="hidden md:block text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Media Kit</h1>
           <p className="text-muted-foreground font-body text-sm mt-0.5">Seu portfólio pra fechar publis, automático com seus números, ou o seu PDF personalizado.</p>
         </div>
       </div>
