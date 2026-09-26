@@ -178,7 +178,7 @@ export default function Insights() {
   if (!conn) {
     return (
       <div className="max-w-2xl">
-        <div className="flex items-center gap-3 mb-6 hidden">
+        <div className="flex items-center gap-3 mb-6 md:hidden">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-pink-400 flex items-center justify-center shadow-sm shrink-0">
             <Instagram className="h-5 w-5 text-white" strokeWidth={1.75} />
           </div>
@@ -227,7 +227,7 @@ export default function Insights() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-      <div className="flex items-center gap-3 mb-6 hidden">
+      <div className="flex items-center gap-3 mb-6 md:hidden">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-pink-400 flex items-center justify-center shadow-sm shrink-0">
           <Instagram className="h-5 w-5 text-white" strokeWidth={1.75} />
         </div>

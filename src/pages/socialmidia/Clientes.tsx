@@ -155,7 +155,7 @@ export default function Clientes() {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">
       <div className="flex items-start justify-between gap-3 mb-1 flex-wrap">
         <div>
-          <h1 className="hidden md:block text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Clientes</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Clientes</h1>
           <p className="text-muted-foreground font-body text-sm mt-0.5">Todos os seus clientes num lugar só, usem o Cria ou aprovem por link.</p>
           {lim && (
             <button onClick={abrirAmpliar} title="Ampliar carteira"

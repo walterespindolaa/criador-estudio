@@ -25,7 +25,7 @@ export default function Lixeira() {
       <div data-tour="lixeira-header" className="flex items-center gap-3 mb-2">
         <div className="w-10 h-10 rounded-xl bg-muted grid place-items-center shrink-0"><Trash2 className="h-5 w-5 text-muted-foreground" strokeWidth={1.75} /></div>
         <div>
-          <h1 className="hidden md:block text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Lixeira</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Lixeira</h1>
           <p className="text-muted-foreground font-body text-sm mt-0.5">Itens excluídos ficam aqui por 30 dias, dá pra restaurar ou apagar de vez.</p>
         </div>
       </div>

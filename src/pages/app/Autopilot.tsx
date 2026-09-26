@@ -189,7 +189,7 @@ export default function Autopilot() {
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="hidden md:block text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Cria Plano</h1>
+            <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Cria Plano</h1>
             <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-gradient-to-r from-primary to-pink-400 text-white">Studio</span>
           </div>
           <p className="text-muted-foreground font-body text-sm mt-0.5">A IA monta seu mês (ou semana) de conteúdo usando seu brandbook, histórico e o que performou.</p>

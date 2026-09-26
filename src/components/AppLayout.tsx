@@ -339,11 +339,16 @@ const AppLayout = () => {
             sabe em que tela está.
             Esta é a versão magra da HeroBand: só o nome, grudada embaixo do
             header, e só no celular. */}
-        <div className="md:hidden px-4 py-2.5 bg-background border-b border-border">
-          <h1 className="font-display font-extrabold text-[17px] text-foreground leading-tight truncate">
-            {heroTitle}
-          </h1>
-        </div>
+        {/* 26/09/2026 (Walter): as telas já têm título próprio no celular (ícone
+            colorido + nome grande), e a faixa repetia o nome logo em cima. A
+            faixa agora só aparece no Início, onde ela é a saudação. */}
+        {isDash && (
+          <div className="md:hidden px-4 py-2.5 bg-background border-b border-border">
+            <h1 className="font-display font-extrabold text-[17px] text-foreground leading-tight truncate">
+              {heroTitle}
+            </h1>
+          </div>
+        )}
             </div>
 
             <TrialBanner />

@@ -601,7 +601,7 @@ const Brandbook = () => {
             meio da palavra ("Brandbo / ok"). Agora, sem espaço, os botões
             descem pra linha de baixo e a palavra fica inteira. */}
         <div className="flex flex-wrap items-start justify-between mb-5 gap-3">
-          <div className="flex items-center gap-3 min-w-0 hidden">
+          <div className="flex items-center gap-3 min-w-0 md:hidden">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-600 to-orange-500 flex items-center justify-center shadow-sm shrink-0">
               <BookMarked className="h-5 w-5 text-white" strokeWidth={1.75} />
             </div>

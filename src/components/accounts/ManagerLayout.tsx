@@ -476,11 +476,20 @@ export default function ManagerLayout() {
             sabe em que tela está.
             Esta é a versão magra da HeroBand: só o nome, grudada embaixo do
             header, e só no celular. */}
-        <div className="md:hidden px-4 py-2.5 bg-background border-b border-border">
-          <h1 className="font-display font-extrabold text-[17px] text-foreground leading-tight truncate">
-            {heroTitle}
-          </h1>
-        </div>
+        {/* 26/09/2026: some onde a própria tela já escreve o título grande
+            (Início com a saudação, Clientes e a ficha, Agenda, Radar, ficha do
+            CRM). Nas outras continua, porque elas não têm nome próprio. */}
+        {!(isDash
+          || location.pathname.startsWith("/socialmidia/clientes")
+          || location.pathname.startsWith("/socialmidia/agenda")
+          || location.pathname.startsWith("/socialmidia/hubcria")
+          || /^\/socialmidia\/criacrm\/[^/]+/.test(location.pathname)) && (
+          <div className="md:hidden px-4 py-2.5 bg-background border-b border-border">
+            <h1 className="font-display font-extrabold text-[17px] text-foreground leading-tight truncate">
+              {heroTitle}
+            </h1>
+          </div>
+        )}
 
         {/* max-w-6xl (1152px) deixava metade da tela vazia num monitor grande e o
             conteúdo espremido numa coluna no meio. 1600px usa a tela de trabalho
