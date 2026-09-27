@@ -27,3 +27,13 @@ export function clienteInativo(c: ClienteStatusLike, hoje: string = hojeBR()): b
   if (c.contract_end_date) return c.contract_end_date < hoje;
   return c.status === "inativo" || c.active === false;
 }
+
+/** Lista pra ESCOLHER cliente em trabalho novo (tarefa, captação, reunião,
+ *  contrato): só quem está ativo. O cliente já escolhido fica na lista mesmo
+ *  se inativo, senão editar algo antigo apagaria o vínculo sem ninguém ver.
+ *  (Walter, 27/09/2026: "está aparecendo clientes que já estão inativos") */
+export function clientesParaEscolher<T extends ClienteStatusLike & { id: string }>(
+  lista: T[], selecionado?: string | null, hoje: string = hojeBR(),
+): T[] {
+  return lista.filter((c) => c.id === selecionado || !clienteInativo(c, hoje));
+}

@@ -33,7 +33,7 @@ import { useManagerMaterialsWithDue, useUpdateAgendaMaterial, type AgendaMateria
 import { RelatorioProdutividadeDialog } from "@/components/accounts/RelatorioProdutividadeDialog";
 import { isDriveMedia, isDriveUrl, isVideoMedia, getThumbnailUrl, getDriveImageFallbackUrl, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
-import { clienteInativo } from "@/lib/cliente-status";
+import { clienteInativo, clientesParaEscolher } from "@/lib/cliente-status";
 // Data comemorativa cadastrada UMA vez aqui na agenda e espalhada pros clientes
 // escolhidos. Antes ela só nascia dentro do cronograma de um cliente por vez.
 import { useAgendaDatas, type AgendaData } from "@/hooks/useAgendaDatas";
@@ -2197,14 +2197,14 @@ export default function AgendaCriacao() {
   );
 }
 
-type Client = { id: string; name: string; display_name?: string | null };
+type Client = { id: string; name: string; display_name?: string | null; status?: string | null; active?: boolean | null; contract_end_date?: string | null };
 
 function ClientPicker({ clients, crm, name, onCrm, onName }: { clients: Client[]; crm: string | null; name: string; onCrm: (v: string | null) => void; onName: (v: string) => void }) {
   return (
     <>
       <select value={crm ?? ""} onChange={(e) => onCrm(e.target.value || null)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm font-body">
         <option value="">Cliente do CRM</option>
-        {clients.map((c) => <option key={c.id} value={c.id}>{nomeExibidoCliente(c)}</option>)}
+        {clientesParaEscolher(clients, crm).map((c) => <option key={c.id} value={c.id}>{nomeExibidoCliente(c)}</option>)}
       </select>
       {!crm && <Input value={name} onChange={(e) => onName(e.target.value)} placeholder="Ou nome livre" className="mt-2" />}
     </>
@@ -2806,7 +2806,7 @@ function TaskDialog({ task, clients, onClose, onOpenCrm, onSave, onDelete }: {
                 <p className="text-[11px] font-body font-semibold text-muted-foreground uppercase mb-1">Cliente</p>
                 <select value={clientId ?? ""} onChange={(e) => setClientId(e.target.value || null)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-sm font-body">
                   <option value="">Sem cliente</option>
-                  {clients.map((c) => <option key={c.id} value={c.id}>{nomeExibidoCliente(c)}</option>)}
+                  {clientesParaEscolher(clients, clientId).map((c) => <option key={c.id} value={c.id}>{nomeExibidoCliente(c)}</option>)}
                 </select>
               </div>
             )}

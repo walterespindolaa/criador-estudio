@@ -1,3 +1,4 @@
+import { clientesParaEscolher } from "@/lib/cliente-status";
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Calendar as CalendarIcon, CalendarDays, AlertTriangle, Trash2, ListTodo, CheckCircle2, Circle, X, ChevronDown } from "lucide-react";
 import {
@@ -450,7 +451,7 @@ function TaskDialog({ task, defaultDue, clients, saving, onClose, onCreate, onUp
           <div className="space-y-1.5"><Label className="text-xs">Título *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Gravar reels de quinta" className="rounded-xl" /></div>
           <div className="space-y-1.5"><Label className="text-xs">Cliente</Label>
             <select value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full h-10 rounded-xl border border-input bg-card px-3 text-sm">
-              <option value="">Sem cliente</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              <option value="">Sem cliente</option>{clientesParaEscolher(clients, clientId).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
