@@ -226,6 +226,14 @@ const FALLBACK_PROMPTS = [
 ];
 
 export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved, initialFormat, initialStatus, initialDate }: PostEditorProps) {
+  // lg do Tailwind (1024px): é onde a coluna da prévia aparece.
+  const [telaLarga, setTelaLarga] = useState(() => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const on = () => setTelaLarga(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
   const { startTour } = useTour();
   const isNew = !post;
   const [title, setTitle] = useState("");
@@ -1258,289 +1266,14 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
         : "bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/30"
     );
 
-  return (
+
+  /* DATA + MÍDIA NA DIREITA (Walter, 27/09/2026: "queria que fosse igual de
+     social media e ficasse essas infos do lado direito"). O bloco é o mesmo
+     JSX nos dois lugares, mas só UM é montado por vez (telaLarga), porque ele
+     tem input de arquivo com ref: montado duas vezes, o ref apontaria pro
+     errado. */
+  const blocoAgendaMidia = (
     <>
-      <StickerCelebration
-        show={showPublishCeleb}
-        title="Publicado!"
-        subtitle="Mais uma da ideia ao post."
-        onDone={() => setShowPublishCeleb(false)}
-      />
-
-      <Dialog
-        open={open}
-        onOpenChange={async (o) => {
-          if (!o && hasActiveUpload) {
-            // Confirma fechar enquanto há upload rolando, TUS continua via context, mas
-            // o ref insert do vídeo depende deste componente estar montado. Melhor avisar.
-            const ok = await confirmar({
-              titulo: "Tem um vídeo subindo agora",
-              descricao: "Se você fechar, o upload pode se perder e vai ter que começar de novo.",
-              acao: "Fechar mesmo assim",
-              cancelar: "Esperar o upload",
-            });
-            if (!ok) return;
-          }
-          onOpenChange(o);
-        }}
-      >
-        <DialogContent
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onInteractOutside={(e) => {
-            // Permite fechar via ESC, mas bloqueia "clique fora", que é falsamente
-            // disparado pelo file picker nativo do SO ao abrir <input type="file">.
-            // Issue conhecida: radix-ui/primitives#1280.
-            e.preventDefault();
-          }}
-          // No mobile o editor era um retângulo reto colado nas bordas: cara de
-          // página quebrada, não de app. Agora ele desce um pouco do topo e ganha
-          // canto arredondado em cima e embaixo, como uma folha sobre a tela.
-          className="[&>button:last-child]:hidden top-2 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 max-w-none w-[calc(100vw-0.75rem)] h-[calc(100dvh-1rem)] sm:w-[96vw] sm:h-[94vh] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-3xl sm:rounded-2xl"
-        >
-          {/* CABEÇALHO
-              No mobile o título disputava espaço com 6 botões e virava "O gargalo qu…".
-              Agora são duas faixas: em cima SÓ as ações (fechar, tutorial, excluir,
-              PDF, prévia, salvar), embaixo o título com a linha inteira pra ele.
-              No desktop volta pra uma faixa só, com o título no meio. */}
-          <DialogHeader className="px-3 sm:px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-1.5 shrink-0 border-b border-border gap-1.5">
-            <DialogTitle className="sr-only">{isNew ? "Novo Post" : "Editar Post"}</DialogTitle>
-
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-
-              {/* Título inline: só no desktop, onde sobra largura.
-                  Virou textarea auto-crescente (pedido do Walter, 31/08): título
-                  longo QUEBRA pra baixo em vez de escorrer por cima dos botões,
-                  e a fonte diminuiu um degrau. */}
-              <div className="hidden sm:flex flex-1 min-w-0 items-start gap-3">
-                <textarea
-                  value={title}
-                  rows={1}
-                  onChange={(e) => {
-                    setTitle(e.target.value);
-                    e.currentTarget.style.height = "auto";
-                    e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
-                  }}
-                  ref={(el) => {
-                    if (el) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }
-                  }}
-                  placeholder={isNew ? "Sobre o que é esse post?" : "Sem título"}
-                  className="flex-1 min-w-0 bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-display text-lg md:text-xl font-extrabold text-foreground placeholder:text-muted-foreground/40 resize-none leading-snug max-h-[3.4em] overflow-hidden"
-                />
-                {autoSaveStatus && (
-                  <span
-                    className={cn(
-                      "text-[10px] font-body font-medium whitespace-nowrap transition-opacity",
-                      autoSaveStatus === "saving" ? "text-muted-foreground" : autoSaveStatus === "error" ? "text-destructive" : "text-secondary"
-                    )}
-                  >
-                    {autoSaveStatus === "saving" ? "Salvando…" : autoSaveStatus === "error" ? "Não salvo, salve manualmente" : "Salvo ✓"}
-                  </span>
-                )}
-              </div>
-
-              {/* ml-auto empurra as ações pra direita; flex-wrap deixa elas caírem
-                  pra segunda linha no mobile em vez de estourar a tela e cortar o
-                  botão Salvar. */}
-              <div className="flex flex-wrap items-center justify-end gap-1.5 ml-auto min-w-0">
-                {!isNew && post && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    aria-label="Excluir post"
-                    onClick={handleDelete}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Excluir</span>
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => exportPdf(pdfRef, `roteiro-${title.slice(0, 20).replace(/\s+/g, "-").toLowerCase() || "post"}`)}
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">PDF</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  aria-label="Prévia do post"
-                  onClick={() => setPreviewOpen(true)}
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Prévia</span>
-                </Button>
-                {!isNew && post && status === "publicado" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    aria-label="Reciclar conteúdo (repostar com ângulo novo)"
-                    title="Reciclar conteúdo (repostar com ângulo novo)"
-                    onClick={() => { setRepurposeMode("recycle"); setRepurposeOpen(true); }}
-                  >
-                    <Recycle className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Reciclar</span>
-                  </Button>
-                )}
-                {!isNew && post && (status === "publicado" || status === "agendado") && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    aria-label="Reaproveitar (adaptar para outra plataforma)"
-                    title="Reaproveitar (adaptar para outra plataforma)"
-                    onClick={() => { setRepurposeMode("repurpose"); setRepurposeOpen(true); }}
-                  >
-                    <Repeat2 className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Reaproveitar</span>
-                  </Button>
-                )}
-                {/* Publicar é fluxo de CELULAR (copia a legenda e abre o app do
-                   Instagram); no computador o botão só confundia (Walter, 31/08). */}
-                {(status === "editando" || status === "agendado") && (
-                  <span className="sm:hidden"><PublishButton
-                    caption={caption}
-                    mediaUrl={
-                      mediaList.length > 0
-                        ? (() => {
-                            const first = mediaList[0];
-                            const fid = first.external_file_id || first.id;
-                            if (first.file_type?.includes("video")) {
-                              return first.view_url || `https://drive.google.com/uc?id=${encodeURIComponent(fid)}`;
-                            }
-                            return first.thumbnail_url || first.view_url || `https://lh3.googleusercontent.com/d/${encodeURIComponent(fid)}=w800`;
-                          })()
-                        : undefined
-                    }
-                    mediaType={mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image"}
-                  /></span>
-                )}
-                <Button variant="hero" size="sm" onClick={handleSave} disabled={!title.trim() || saving}>
-                  {saving ? "Salvando…" : isNew ? "Criar" : "Salvar"}
-                </Button>
-                {/* O "?" do tutorial e o X moram na DIREITA (Walter, 01/09). */}
-                <button
-                  type="button"
-                  onClick={() => startTour("post-editor")}
-                  className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-primary shrink-0"
-                  aria-label="Ver tutorial do editor"
-                >
-                  <CircleHelp className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onOpenChange(false)}
-                  className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
-                  aria-label="Fechar"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* MOBILE: o título ganha a linha inteira, como campo de verdade. */}
-            <div className="sm:hidden">
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder={isNew ? "Sobre o que é esse post?" : "Sem título"}
-                className="w-full bg-muted/40 rounded-2xl px-3.5 py-2.5 border border-border outline-none focus:border-primary/50 focus:ring-0 font-display text-lg font-extrabold text-foreground placeholder:text-muted-foreground/40 placeholder:font-body placeholder:font-normal"
-              />
-              {autoSaveStatus && (
-                <p className={cn(
-                  "mt-1 text-[11px] font-body font-medium",
-                  autoSaveStatus === "saving" ? "text-muted-foreground" : autoSaveStatus === "error" ? "text-destructive" : "text-secondary",
-                )}>
-                  {autoSaveStatus === "saving" ? "Salvando…" : autoSaveStatus === "error" ? "Não salvo, salve manualmente" : "Salvo ✓"}
-                </p>
-              )}
-            </div>
-
-          </DialogHeader>
-
-          {/* CORPO: FLUXO NUMERADO + PRÉVIA
-              No celular: uma coluna só, de cima pra baixo, na ordem que a cabeça
-              pensa (1 conteúdo, 2 legenda, 3 arte, 4 quando publicar); a prévia
-              abre pelo botão "Prévia" do topo, em tela cheia.
-              No desktop (lg pra cima): duas colunas. À esquerda (~60%) o fluxo
-              numerado rolável; à direita (~40%) a prévia do post fixa (sticky),
-              sempre visível enquanto a pessoa escreve. */}
-          <div ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/20">
-            {/* Coluna da direita agora tem largura FIXA (a da prévia): antes era
-               2fr e a prévia de 380px boiava no meio dela, deixando faixas
-               vazias dos dois lados (pedido do Walter, 31/08: menos margem). */}
-            <div className="mx-auto w-full max-w-3xl lg:max-w-none px-2.5 sm:px-4 py-3 sm:py-4 pb-[calc(3rem+env(safe-area-inset-bottom))] lg:grid lg:grid-cols-[minmax(0,1fr)_460px] lg:gap-5 lg:items-start">
-
-              {/* COLUNA ESQUERDA: o fluxo numerado (no mobile, a coluna única). */}
-              <div className="space-y-4 min-w-0">
-            {/* PILAR abaixo da borda do cabeçalho (Walter, 01/09): dentro do
-                 corpo, como primeira coisa do fluxo, não espremido no header. */}
-            {pillars.length > 0 && (
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    {(() => {
-                      const p = pillars.find((x) => x.id === pillarId);
-                      return p ? (
-                        <button type="button"
-                          className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-body font-semibold transition-colors"
-                          style={{ backgroundColor: `${p.color}1c`, color: p.color, borderColor: `${p.color}66` }}>
-                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
-                          {p.name}
-                          {pillarDays[p.id]?.length > 0 && (
-                            <span className="text-[10px] font-bold px-1.5 py-px rounded bg-white/60">{pillarDays[p.id].join(" · ")}</span>
-                          )}
-                        </button>
-                      ) : (
-                        <button type="button"
-                          className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border px-3 py-1 text-xs font-body text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors">
-                          + Pilar
-                        </button>
-                      );
-                    })()}
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-60 p-1.5">
-                    <button type="button" onClick={() => setPillarId("")}
-                      className={cn("w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm font-body hover:bg-muted text-left", !pillarId && "font-semibold")}>
-                      <span className="w-2 h-2 rounded-full bg-muted-foreground/40" /> Sem pilar
-                    </button>
-                    {/* O COMBINADO JUNTO DA ESCOLHA (circuito 13, 16/09/2026).
-                        O pilar ganhou descrição no Brandbook, e é aqui que ela
-                        serve: é neste instante que a pessoa decide se a ideia
-                        cabe naquele pilar. Descrição guardada numa tela que
-                        ninguém abre na hora de escrever não muda nada. */}
-                    {pillars.map((p) => (
-                      <button key={p.id} type="button" onClick={() => setPillarId(p.id)}
-                        className={cn("w-full flex items-start gap-2 px-2.5 py-2 rounded-lg text-sm font-body hover:bg-muted text-left", pillarId === p.id && "font-semibold")}>
-                        <span className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: p.color }} />
-                        <span className="flex-1 min-w-0">
-                          <span className="block truncate">{p.name}</span>
-                          {p.descricao?.trim() && (
-                            <span className="block text-[10.5px] font-normal text-muted-foreground leading-snug line-clamp-2 mt-0.5">
-                              {p.descricao}
-                            </span>
-                          )}
-                        </span>
-                        {pillarDays[p.id]?.length > 0 && (
-                          <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0 mt-0.5">{pillarDays[p.id].join(" · ")}</span>
-                        )}
-                      </button>
-                    ))}
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
-
-
-              {/* 2. O CONTEUDO DO POST */}
-              <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
-                <BlocoCabecalho numero={1} titulo="O conteúdo do post" subtitulo="Escolha o formato e escreva a estrutura." />
-
               {/* QUANDO VAI AO AR, ANTES DE TUDO (Walter, 09/09/2026): a data
                   morava lá embaixo, depois de mídia, plataforma, formato e
                   status. Só que ela é a primeira decisão de quem está montando
@@ -1825,6 +1558,296 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   )}
                 </div>
               </div>
+    </>
+  );
+
+  return (
+    <>
+      <StickerCelebration
+        show={showPublishCeleb}
+        title="Publicado!"
+        subtitle="Mais uma da ideia ao post."
+        onDone={() => setShowPublishCeleb(false)}
+      />
+
+      <Dialog
+        open={open}
+        onOpenChange={async (o) => {
+          if (!o && hasActiveUpload) {
+            // Confirma fechar enquanto há upload rolando, TUS continua via context, mas
+            // o ref insert do vídeo depende deste componente estar montado. Melhor avisar.
+            const ok = await confirmar({
+              titulo: "Tem um vídeo subindo agora",
+              descricao: "Se você fechar, o upload pode se perder e vai ter que começar de novo.",
+              acao: "Fechar mesmo assim",
+              cancelar: "Esperar o upload",
+            });
+            if (!ok) return;
+          }
+          onOpenChange(o);
+        }}
+      >
+        <DialogContent
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => {
+            // Permite fechar via ESC, mas bloqueia "clique fora", que é falsamente
+            // disparado pelo file picker nativo do SO ao abrir <input type="file">.
+            // Issue conhecida: radix-ui/primitives#1280.
+            e.preventDefault();
+          }}
+          // No mobile o editor era um retângulo reto colado nas bordas: cara de
+          // página quebrada, não de app. Agora ele desce um pouco do topo e ganha
+          // canto arredondado em cima e embaixo, como uma folha sobre a tela.
+          className="[&>button:last-child]:hidden top-2 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 max-w-none w-[calc(100vw-0.75rem)] h-[calc(100dvh-1rem)] sm:w-[96vw] sm:h-[94vh] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-3xl sm:rounded-2xl"
+        >
+          {/* CABEÇALHO
+              No mobile o título disputava espaço com 6 botões e virava "O gargalo qu…".
+              Agora são duas faixas: em cima SÓ as ações (fechar, tutorial, excluir,
+              PDF, prévia, salvar), embaixo o título com a linha inteira pra ele.
+              No desktop volta pra uma faixa só, com o título no meio. */}
+          <DialogHeader className="px-3 sm:px-4 pt-[max(0.5rem,env(safe-area-inset-top))] pb-1.5 shrink-0 border-b border-border gap-1.5">
+            <DialogTitle className="sr-only">{isNew ? "Novo Post" : "Editar Post"}</DialogTitle>
+
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+
+              {/* Título inline: só no desktop, onde sobra largura.
+                  Virou textarea auto-crescente (pedido do Walter, 31/08): título
+                  longo QUEBRA pra baixo em vez de escorrer por cima dos botões,
+                  e a fonte diminuiu um degrau. */}
+              <div className="hidden sm:flex flex-1 min-w-0 items-start gap-3">
+                <textarea
+                  value={title}
+                  rows={1}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    e.currentTarget.style.height = "auto";
+                    e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                  }}
+                  ref={(el) => {
+                    if (el) { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }
+                  }}
+                  placeholder={isNew ? "Sobre o que é esse post?" : "Sem título"}
+                  className="flex-1 min-w-0 bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-display text-lg md:text-xl font-extrabold text-foreground placeholder:text-muted-foreground/40 resize-none leading-snug max-h-[3.4em] overflow-hidden"
+                />
+                {autoSaveStatus && (
+                  <span
+                    className={cn(
+                      "text-[10px] font-body font-medium whitespace-nowrap transition-opacity",
+                      autoSaveStatus === "saving" ? "text-muted-foreground" : autoSaveStatus === "error" ? "text-destructive" : "text-secondary"
+                    )}
+                  >
+                    {autoSaveStatus === "saving" ? "Salvando…" : autoSaveStatus === "error" ? "Não salvo, salve manualmente" : "Salvo ✓"}
+                  </span>
+                )}
+              </div>
+
+              {/* ml-auto empurra as ações pra direita; flex-wrap deixa elas caírem
+                  pra segunda linha no mobile em vez de estourar a tela e cortar o
+                  botão Salvar. */}
+              <div className="flex flex-wrap items-center justify-end gap-1.5 ml-auto min-w-0">
+                {!isNew && post && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    aria-label="Excluir post"
+                    onClick={handleDelete}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Excluir</span>
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => exportPdf(pdfRef, `roteiro-${title.slice(0, 20).replace(/\s+/g, "-").toLowerCase() || "post"}`)}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">PDF</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  aria-label="Prévia do post"
+                  onClick={() => setPreviewOpen(true)}
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Prévia</span>
+                </Button>
+                {!isNew && post && status === "publicado" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    aria-label="Reciclar conteúdo (repostar com ângulo novo)"
+                    title="Reciclar conteúdo (repostar com ângulo novo)"
+                    onClick={() => { setRepurposeMode("recycle"); setRepurposeOpen(true); }}
+                  >
+                    <Recycle className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Reciclar</span>
+                  </Button>
+                )}
+                {!isNew && post && (status === "publicado" || status === "agendado") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    aria-label="Reaproveitar (adaptar para outra plataforma)"
+                    title="Reaproveitar (adaptar para outra plataforma)"
+                    onClick={() => { setRepurposeMode("repurpose"); setRepurposeOpen(true); }}
+                  >
+                    <Repeat2 className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Reaproveitar</span>
+                  </Button>
+                )}
+                {/* Publicar é fluxo de CELULAR (copia a legenda e abre o app do
+                   Instagram); no computador o botão só confundia (Walter, 31/08). */}
+                {(status === "editando" || status === "agendado") && (
+                  <span className="sm:hidden"><PublishButton
+                    caption={caption}
+                    mediaUrl={
+                      mediaList.length > 0
+                        ? (() => {
+                            const first = mediaList[0];
+                            const fid = first.external_file_id || first.id;
+                            if (first.file_type?.includes("video")) {
+                              return first.view_url || `https://drive.google.com/uc?id=${encodeURIComponent(fid)}`;
+                            }
+                            return first.thumbnail_url || first.view_url || `https://lh3.googleusercontent.com/d/${encodeURIComponent(fid)}=w800`;
+                          })()
+                        : undefined
+                    }
+                    mediaType={mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image"}
+                  /></span>
+                )}
+                <Button variant="hero" size="sm" onClick={handleSave} disabled={!title.trim() || saving}>
+                  {saving ? "Salvando…" : isNew ? "Criar" : "Salvar"}
+                </Button>
+                {/* O "?" do tutorial e o X moram na DIREITA (Walter, 01/09). */}
+                <button
+                  type="button"
+                  onClick={() => startTour("post-editor")}
+                  className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-primary shrink-0"
+                  aria-label="Ver tutorial do editor"
+                >
+                  <CircleHelp className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenChange(false)}
+                  className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground shrink-0"
+                  aria-label="Fechar"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* MOBILE: o título ganha a linha inteira, como campo de verdade. */}
+            <div className="sm:hidden">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={isNew ? "Sobre o que é esse post?" : "Sem título"}
+                className="w-full bg-muted/40 rounded-2xl px-3.5 py-2.5 border border-border outline-none focus:border-primary/50 focus:ring-0 font-display text-lg font-extrabold text-foreground placeholder:text-muted-foreground/40 placeholder:font-body placeholder:font-normal"
+              />
+              {autoSaveStatus && (
+                <p className={cn(
+                  "mt-1 text-[11px] font-body font-medium",
+                  autoSaveStatus === "saving" ? "text-muted-foreground" : autoSaveStatus === "error" ? "text-destructive" : "text-secondary",
+                )}>
+                  {autoSaveStatus === "saving" ? "Salvando…" : autoSaveStatus === "error" ? "Não salvo, salve manualmente" : "Salvo ✓"}
+                </p>
+              )}
+            </div>
+
+          </DialogHeader>
+
+          {/* CORPO: FLUXO NUMERADO + PRÉVIA
+              No celular: uma coluna só, de cima pra baixo, na ordem que a cabeça
+              pensa (1 conteúdo, 2 legenda, 3 arte, 4 quando publicar); a prévia
+              abre pelo botão "Prévia" do topo, em tela cheia.
+              No desktop (lg pra cima): duas colunas. À esquerda (~60%) o fluxo
+              numerado rolável; à direita (~40%) a prévia do post fixa (sticky),
+              sempre visível enquanto a pessoa escreve. */}
+          <div ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/20">
+            {/* Coluna da direita agora tem largura FIXA (a da prévia): antes era
+               2fr e a prévia de 380px boiava no meio dela, deixando faixas
+               vazias dos dois lados (pedido do Walter, 31/08: menos margem). */}
+            <div className="mx-auto w-full max-w-3xl lg:max-w-none px-2.5 sm:px-4 py-3 sm:py-4 pb-[calc(3rem+env(safe-area-inset-bottom))] lg:grid lg:grid-cols-[minmax(0,1fr)_460px] lg:gap-5 lg:items-start">
+
+              {/* COLUNA ESQUERDA: o fluxo numerado (no mobile, a coluna única). */}
+              <div className="space-y-4 min-w-0">
+            {/* PILAR abaixo da borda do cabeçalho (Walter, 01/09): dentro do
+                 corpo, como primeira coisa do fluxo, não espremido no header. */}
+            {pillars.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    {(() => {
+                      const p = pillars.find((x) => x.id === pillarId);
+                      return p ? (
+                        <button type="button"
+                          className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-body font-semibold transition-colors"
+                          style={{ backgroundColor: `${p.color}1c`, color: p.color, borderColor: `${p.color}66` }}>
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+                          {p.name}
+                          {pillarDays[p.id]?.length > 0 && (
+                            <span className="text-[10px] font-bold px-1.5 py-px rounded bg-white/60">{pillarDays[p.id].join(" · ")}</span>
+                          )}
+                        </button>
+                      ) : (
+                        <button type="button"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border px-3 py-1 text-xs font-body text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors">
+                          + Pilar
+                        </button>
+                      );
+                    })()}
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-60 p-1.5">
+                    <button type="button" onClick={() => setPillarId("")}
+                      className={cn("w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm font-body hover:bg-muted text-left", !pillarId && "font-semibold")}>
+                      <span className="w-2 h-2 rounded-full bg-muted-foreground/40" /> Sem pilar
+                    </button>
+                    {/* O COMBINADO JUNTO DA ESCOLHA (circuito 13, 16/09/2026).
+                        O pilar ganhou descrição no Brandbook, e é aqui que ela
+                        serve: é neste instante que a pessoa decide se a ideia
+                        cabe naquele pilar. Descrição guardada numa tela que
+                        ninguém abre na hora de escrever não muda nada. */}
+                    {pillars.map((p) => (
+                      <button key={p.id} type="button" onClick={() => setPillarId(p.id)}
+                        className={cn("w-full flex items-start gap-2 px-2.5 py-2 rounded-lg text-sm font-body hover:bg-muted text-left", pillarId === p.id && "font-semibold")}>
+                        <span className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: p.color }} />
+                        <span className="flex-1 min-w-0">
+                          <span className="block truncate">{p.name}</span>
+                          {p.descricao?.trim() && (
+                            <span className="block text-[10.5px] font-normal text-muted-foreground leading-snug line-clamp-2 mt-0.5">
+                              {p.descricao}
+                            </span>
+                          )}
+                        </span>
+                        {pillarDays[p.id]?.length > 0 && (
+                          <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0 mt-0.5">{pillarDays[p.id].join(" · ")}</span>
+                        )}
+                      </button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+
+
+              {/* 2. O CONTEUDO DO POST */}
+              <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
+                <BlocoCabecalho numero={1} titulo="O conteúdo do post" subtitulo="Escolha o formato e escreva a estrutura." />
+
+              {/* Data + mídia: no celular ficam aqui, no começo do bloco 1. Na
+                  tela larga sobem pra coluna da direita, em cima da prévia
+                  (27/09/2026), igual ao editor da social mídia. */}
+              {!telaLarga && blocoAgendaMidia}
 
                 <div data-tour="editor-plataforma" className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -2685,12 +2708,17 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
               {/* COLUNA DIREITA (só desktop): a PRÉVIA do post, fixa enquanto rola.
                   No mobile ela não aparece aqui: fica no botão "Prévia" do topo. */}
-              <aside className="hidden lg:flex lg:flex-col lg:sticky lg:top-3 self-start w-full lg:max-h-[calc(100dvh-7rem)]">
+              <aside className="hidden lg:flex lg:flex-col lg:gap-3 lg:sticky lg:top-3 self-start w-full lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto">
+                {telaLarga && (
+                  <div className="shrink-0 rounded-3xl border border-border bg-card p-4 space-y-3">
+                    {blocoAgendaMidia}
+                  </div>
+                )}
                 {/* A previa continua so no desktop; no celular ela mora no botao "Prévia".
                     flex-1 + rolagem interna: a previa fica SEMPRE na tela (Walter,
                     01/09: "so vejo o preview rolando ate o final"), e e o miolo
                     dela que rola quando o post e comprido. */}
-                <div className="flex flex-col flex-1 min-h-0 w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
+                <div className="flex flex-col flex-1 min-h-0 lg:min-h-[480px] shrink-0 w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
                   <div className="px-3 py-2 border-b border-border bg-card/50 flex items-center gap-2">
                     <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-xs font-display font-semibold text-foreground">Prévia do post</span>

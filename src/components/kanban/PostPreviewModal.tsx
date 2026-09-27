@@ -76,20 +76,26 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
     </div>
   );
 
-  const nSecoes = sections?.length ?? 0;
+  /* Quantas lâminas (27/09/2026, Walter: "fica fixo esses 5 slides mesmo tendo
+     só 1 ou 4"). O editor já nasce com 5 lâminas de texto vazias; contar elas
+     deixava a prévia sempre em 1/5. Agora: com imagens na tira, são as
+     imagens que dizem quantas lâminas existem. Sem imagem, contam só as
+     lâminas que têm texto ou mídia própria (mínimo 1). */
+  const secoesUsadas = (sections ?? []).filter((s) => !!(s.text?.trim() || s.driveThumbnail || s.driveFileId)).length;
   const nMidias = carouselMedia?.length ?? 0;
-  const isCarousel = format === "carrossel" && (nSecoes > 0 || nMidias > 0);
-  /* Quantas lâminas: o maior entre texto e imagens (até 10). Lâmina sem texto
-     mostra só a imagem; imagem a mais que o texto também vira lâmina. */
+  const isCarousel = format === "carrossel" && ((sections?.length ?? 0) > 0 || nMidias > 0);
+  const nLaminas = nMidias > 0 ? nMidias : Math.max(1, secoesUsadas);
   const carouselSlides: Partial<SectionData>[] = isCarousel
-    ? Array.from({ length: Math.min(10, Math.max(nSecoes, nMidias)) }, (_, i) => sections?.[i] ?? {})
+    ? Array.from({ length: Math.min(10, nLaminas) }, (_, i) => sections?.[i] ?? {})
     : [];
-  const currentSlide = carouselSlides[carouselIdx];
+  // Se a tira encolheu (tirou imagem), a lâmina aberta não pode passar do fim.
+  const slideIdx = Math.min(carouselIdx, Math.max(0, carouselSlides.length - 1));
+  const currentSlide = carouselSlides[slideIdx];
   // driveThumbnail (URL pronta, vem do Storage do upload local OU do Drive)
   // tem prioridade. driveFileId só vira URL lh3 quando é um ID real do Drive,
   // não um path do Storage (que tem "/").
-  const currentCarouselMedia = carouselMedia?.[carouselIdx]
-    ? carouselMedia[carouselIdx]
+  const currentCarouselMedia = carouselMedia?.[slideIdx]
+    ? carouselMedia[slideIdx]
     : currentSlide?.driveThumbnail
     ? currentSlide.driveThumbnail
     : currentSlide?.driveFileId
@@ -143,14 +149,14 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
       return (
         <div className="relative w-full aspect-[4/5] overflow-hidden">
           {imgUrl ? (
-            <img src={imgUrl} alt={`Lâmina ${carouselIdx + 1}`} className="w-full h-full object-cover" loading="lazy"
+            <img src={imgUrl} alt={`Lâmina ${slideIdx + 1}`} className="w-full h-full object-cover" loading="lazy"
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
           ) : (
             <GradientPlaceholder>
               {currentSlide?.text && <p className="text-white/60 text-xs text-center px-6 max-w-[200px]">{currentSlide.text}</p>}
             </GradientPlaceholder>
           )}
-          <CarouselNav total={carouselSlides.length} current={carouselIdx} onChange={setCarouselIdx} />
+          <CarouselNav total={carouselSlides.length} current={slideIdx} onChange={setCarouselIdx} />
         </div>
       );
     }

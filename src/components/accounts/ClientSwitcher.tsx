@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCrmClients } from "@/hooks/useCrm";
+// "Ir pro cliente" lista só a carteira ativa (+ o cliente aberto agora, se for inativo).
+import { clientesParaEscolher } from "@/lib/cliente-status";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ChevronsUpDown, Contact } from "lucide-react";
@@ -63,7 +65,7 @@ export function ClientSwitcher() {
           <CommandList>
             <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
             <CommandGroup heading="Seus clientes">
-              {clients.map((c) => (
+              {clientesParaEscolher(clients, currentId).map((c) => (
                 <CommandItem key={c.id} value={`${c.name} ${c.id}`} onSelect={() => pick(c.id)} className="gap-2.5">
                   <span className="relative grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full text-xs font-display font-bold text-white"
                     style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>

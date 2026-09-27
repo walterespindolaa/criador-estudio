@@ -64,6 +64,17 @@ const POST_STATUS: Record<string, { label: string; cls: string }> = {
 const CRIA_POST_STATUS: Record<string, string> = ROTULO_ETAPA;
 // Cor identidade dos posts do Cria do cliente na agenda (verde, distinta dos demais tipos).
 const CRIA_POST_COLOR = "#059669";
+/* Cor da ETIQUETA de etapa do post do cliente (27/09/2026, Walter: "deixar só
+   o Pronto em verde"). Antes toda etapa saía verde e Ideia parecia Pronto. */
+const CRIA_ETAPA_COR: Record<string, string> = {
+  ideia: "#64748B",       // cinza: ainda é só ideia
+  roteiro: "#D97706",     // âmbar: planejamento
+  gravando: "#7C3AED",    // roxo: produzindo
+  editando: "#059669",    // verde: pronto
+  agendado: "#2563EB",    // azul
+  publicado: "#475569",   // grafite
+};
+const corEtapaCria = (s: string | null | undefined) => CRIA_ETAPA_COR[s ?? ""] ?? CRIA_POST_COLOR;
 
 const WD = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 // Inverso de parseDateOnly: formata um Date de meia-noite LOCAL de volta para YYYY-MM-DD.
@@ -638,7 +649,9 @@ export default function AgendaCriacao() {
       qc.setQueriesData<ClientCriaAgendaPost[]>({ queryKey: ["client-cria-agenda-posts"] }, (old) => old?.map((p) => (p.id === id ? { ...p, scheduled_date: day } : p)));
       reagendarCliente.mutate({ postId: id, data: day, hora: horaAtual }, {
         onSuccess: ok,
-        onError: () => toast.error("Não consegui remarcar. Confere se o SQL da manager_reschedule_client_post foi rodado."),
+        // Mostra o motivo REAL (27/09/2026): a Gabriela via o card voltar e o
+        // aviso genérico não dizia se era permissão, SQL faltando ou rede.
+        onError: (e) => toast.error(`Não consegui remarcar o post do cliente: ${e instanceof Error ? e.message : "erro desconhecido"}`, { duration: 8000 }),
         onSettled: () => qc.invalidateQueries({ queryKey: ["client-cria-agenda-posts"] }),
       });
     } else if (kind === "mat") {
@@ -1441,7 +1454,7 @@ export default function AgendaCriacao() {
                     <span className="text-[10px] font-body font-bold truncate flex-1 text-foreground/80">
                       {p.scheduled_time && <span className="tabular-nums">{p.scheduled_time.slice(0, 5)} · </span>}{p.client_name ?? "Cliente"}
                     </span>
-                    <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: CRIA_POST_COLOR }}>
+                    <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: corEtapaCria(p.status) }}>
                       {CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}
                     </span>
                     {/* Check: marca o post DO CLIENTE como publicado (via RPC com
@@ -2114,7 +2127,7 @@ export default function AgendaCriacao() {
           <button key={`cc${p.id}`} onClick={() => { setDayModal(null); setCriaCard(p); }} className={rowCls}>
             {dot(CRIA_POST_COLOR)}
             <span className="text-[13px] font-body font-semibold text-foreground truncate">{p.scheduled_time ? `${p.scheduled_time.slice(0, 5)} · ` : ""}{p.title || "Post"}</span>
-            <span className="ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: CRIA_POST_COLOR }}>{CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}</span>
+            <span className="ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: corEtapaCria(p.status) }}>{CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}</span>
           </button>
         );
         const comem = comemorativasByDay.get(iso) ?? [];

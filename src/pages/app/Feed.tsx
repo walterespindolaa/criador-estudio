@@ -196,9 +196,12 @@ const Feed = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("external_media_refs")
-        .select("post_id, thumbnail_url, created_at")
+        .select("post_id, thumbnail_url, created_at, position")
         .eq("user_id", ownerId)
         .in("post_id", relevantPostIds)
+        // Capa = PRIMEIRA da tira (position), não a mais antiga (27/09/2026: a
+        // Gabriela reordenou o carrossel e o feed seguia mostrando o 2º slide).
+        .order("position", { ascending: true, nullsFirst: true })
         .order("created_at");
       if (error) throw error;
       const map: Record<string, string | null> = {};
