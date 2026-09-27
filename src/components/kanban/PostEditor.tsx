@@ -1186,6 +1186,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
         return id ? `https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w800` : undefined;
       })();
   const previewMediaType = mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image";
+  // Carrossel: cada imagem da tira vira a lâmina na mesma posição da prévia.
+  const previewCarouselMedia = useMemo(() => mediaList
+    .filter((m) => !m.file_type?.includes("video"))
+    .map((m) => m.thumbnail_url || m.view_url || `https://lh3.googleusercontent.com/d/${encodeURIComponent(m.external_file_id || m.id)}=w800`),
+  [mediaList]);
 
   // Reordena a mídia (carrossel): a ordem da tira = a ordem dos slides.
   // Atualiza o estado local na hora e, no post já salvo, grava a nova `position`
@@ -2709,6 +2714,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     mediaUrl={previewMediaUrl}
                     mediaType={previewMediaType}
                     sections={sections}
+                    carouselMedia={previewCarouselMedia}
                   />
                   </div>
                   </div>
@@ -2753,6 +2759,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
         mediaUrl={previewMediaUrl}
         mediaType={previewMediaType}
         sections={sections}
+        carouselMedia={previewCarouselMedia}
       />
       <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }}>
         <RoteiroPdfTemplate

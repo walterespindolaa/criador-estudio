@@ -27,6 +27,10 @@ interface PostPreviewContentProps {
   thumbnail?: string;
   coverImage?: string;
   sections?: SectionData[];
+  /** Imagens do carrossel, na ordem da tira de mídia do editor (27/09/2026).
+   *  A mídia do carrossel saiu das lâminas e virou uma tira só; a prévia ainda
+   *  lia a imagem de cada lâmina e ficava no placeholder. */
+  carouselMedia?: string[];
   // No modal, a fila de abas deixa um vao a direita pro X redondo nao cobrir o YT.
   folgaParaFechar?: boolean;
 }
@@ -38,7 +42,7 @@ interface PostPreviewProps extends PostPreviewContentProps {
 
 // Conteudo puro da previa (sem Dialog), reutilizavel: vive no modal fullscreen do
 // mobile E na coluna direita fixa do desktop dentro do PostEditor.
-export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections, folgaParaFechar }: PostPreviewContentProps) {
+export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections, carouselMedia, folgaParaFechar }: PostPreviewContentProps) {
   const initials = (userName || "C")[0].toUpperCase();
   const [igTab, setIgTab] = useState<"feed" | "reels">("feed");
   const [ytTab, setYtTab] = useState<"thumbnail" | "shorts">("thumbnail");
@@ -72,13 +76,21 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
     </div>
   );
 
-  const isCarousel = format === "carrossel" && sections && sections.length > 0;
-  const carouselSlides = isCarousel ? sections!.slice(0, 10) : [];
+  const nSecoes = sections?.length ?? 0;
+  const nMidias = carouselMedia?.length ?? 0;
+  const isCarousel = format === "carrossel" && (nSecoes > 0 || nMidias > 0);
+  /* Quantas lâminas: o maior entre texto e imagens (até 10). Lâmina sem texto
+     mostra só a imagem; imagem a mais que o texto também vira lâmina. */
+  const carouselSlides: Partial<SectionData>[] = isCarousel
+    ? Array.from({ length: Math.min(10, Math.max(nSecoes, nMidias)) }, (_, i) => sections?.[i] ?? {})
+    : [];
   const currentSlide = carouselSlides[carouselIdx];
   // driveThumbnail (URL pronta, vem do Storage do upload local OU do Drive)
   // tem prioridade. driveFileId só vira URL lh3 quando é um ID real do Drive,
   // não um path do Storage (que tem "/").
-  const currentCarouselMedia = currentSlide?.driveThumbnail
+  const currentCarouselMedia = carouselMedia?.[carouselIdx]
+    ? carouselMedia[carouselIdx]
+    : currentSlide?.driveThumbnail
     ? currentSlide.driveThumbnail
     : currentSlide?.driveFileId
       ? (currentSlide.driveFileId.includes("/")
