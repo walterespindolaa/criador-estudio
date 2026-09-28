@@ -67,7 +67,7 @@ const GANHOS = [
 
    Vale também pra quando a social mídia abre o próprio link pra conferir: o
    que ela quer ver é a página do cliente, não um convite. */
-const PUBLICAS = ["/bio/", "/aprovar/", "/proposta/", "/cronograma/", "/roteiros/", "/cadastro/"];
+const PUBLICAS = ["/bio/", "/aprovar/", "/proposta/", "/cronograma/", "/roteiros/", "/cadastro/", "/conectar/"];
 const ehPaginaPublica = (caminho: string) => PUBLICAS.some((p) => caminho.startsWith(p));
 
 export function InstallPrompt() {

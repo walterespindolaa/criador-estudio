@@ -95,6 +95,7 @@ const MateriaisPortal = lazy(() => import("./pages/MateriaisPortal"));
 const PropostaPublica = lazy(() => import("./pages/PropostaPublica"));
 const CronogramaPublica = lazy(() => import("./pages/CronogramaPublica"));
 const RoteirosPublica = lazy(() => import("./pages/RoteirosPublica"));
+const ConectarInstagram = lazy(() => import("./pages/ConectarInstagram"));
 const CadastroPublico = lazy(() => import("./pages/CadastroPublico"));
 const ManagerLayout = lazy(() => import("./components/accounts/ManagerLayout"));
 /* Guard de PAPEL, não de módulo: quem só produz pras agências não entra nas
@@ -314,6 +315,8 @@ const App = () => (
               <Route path="/proposta/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><PropostaPublica /></ErrorBoundary>} />
               <Route path="/cronograma/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><CronogramaPublica /></ErrorBoundary>} />
               <Route path="/roteiros/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><RoteirosPublica /></ErrorBoundary>} />
+              {/* Convite pra cliente liberar o Instagram (link do WhatsApp). */}
+              <Route path="/conectar/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><ConectarInstagram /></ErrorBoundary>} />
               <Route path="/cadastro/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><CadastroPublico /></ErrorBoundary>} />
               <Route path="/ativar" element={<Ativar />} />
               <Route path="/login" element={<Login />} />

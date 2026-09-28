@@ -13,6 +13,7 @@ import { StoriesSummary } from "@/components/insights/StoriesSummary";
 import { ReelsRanking } from "@/components/insights/ReelsRanking";
 import { ContentCrossAnalysis } from "@/components/insights/ContentCrossAnalysis";
 import { SugestoesVinculo } from "@/components/insights/SugestoesVinculo";
+import { ConviteInstagramCliente } from "@/components/accounts/ConviteInstagramCliente";
 import type { CrossItem } from "@/components/insights/insightsUtils";
 
 // Aba Instagram da ficha do cliente que USA O CRIA: mostra os dados que o pipeline
@@ -188,10 +189,8 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
         <p className="text-sm font-body text-foreground font-medium">Instagram ainda não conectado</p>
         {gerenciado ? (
           <>
-            <p className="text-xs text-muted-foreground font-body mt-1 mb-4 max-w-sm mx-auto">Este cliente não usa o CRIA. Conecte o Instagram dele aqui (com o acesso da conta) pra puxar alcance, audiência e stories pros relatórios.</p>
-            <button onClick={() => void connectInstagram(crmClientId)} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] px-5 py-2.5 text-sm font-display font-bold text-white hover:opacity-90 transition-opacity">
-              <Instagram className="h-4 w-4" /> Conectar Instagram
-            </button>
+            <p className="text-xs text-muted-foreground font-body mt-1 mb-4 max-w-sm mx-auto">Mande um link pra cliente liberar o Instagram dela pelo celular (sem passar senha). Os números de alcance, audiência e stories começam a aparecer aqui e nos relatórios.</p>
+            {crmClientId && <ConviteInstagramCliente crmClientId={crmClientId} nomeCliente={clientName} />}
           </>
         ) : (
           <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">Peça pro cliente conectar o Instagram no CRIA dele (menu Insights). Assim que ele conectar, os números aparecem aqui automaticamente.</p>

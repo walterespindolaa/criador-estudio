@@ -9,7 +9,7 @@ import { lerConsentimento, guardarConsentimento } from "@/lib/consent";
    cronograma, roteiros, materiais, bio): lá o Pixel nem dispara, e o cliente
    da agência não é usuário nosso pra tomar essa decisão. */
 // Onboarding tem rodapé fixo com "Próximo" no celular: o banner cobria o botão.
-const ROTAS_SEM_BANNER = ["/onboarding", "/comecar-agencia", "/aprovar", "/cronograma", "/roteiros", "/materiais", "/cadastro", "/proposta", "/bio", "/b/", "/site/"];
+const ROTAS_SEM_BANNER = ["/onboarding", "/comecar-agencia", "/aprovar", "/cronograma", "/roteiros", "/materiais", "/cadastro", "/proposta", "/bio", "/b/", "/site/", "/conectar"];
 
 export function ConsentBanner() {
   const { pathname } = useLocation();

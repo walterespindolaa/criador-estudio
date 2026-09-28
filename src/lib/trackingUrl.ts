@@ -17,6 +17,8 @@ const TOKEN_ROUTES: { prefix: string; hasParam: boolean }[] = [
   { prefix: "/roteiros", hasParam: true },
   { prefix: "/cadastro", hasParam: true },
   { prefix: "/materiais", hasParam: true },
+  // Convite pra cliente liberar o Instagram: o token dá acesso à conexão.
+  { prefix: "/conectar", hasParam: true },
   { prefix: "/app/obrigado", hasParam: false },
   { prefix: "/ativar", hasParam: false },
   { prefix: "/reset-password", hasParam: false },

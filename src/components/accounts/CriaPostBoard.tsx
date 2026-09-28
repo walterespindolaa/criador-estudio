@@ -35,6 +35,7 @@ import { useClientSocialConnection, connectInstagram } from "@/hooks/useSocialIn
 import { ClienteInstagramCria } from "@/components/accounts/ClienteInstagramCria";
 import { FORMATS_BY_PLATFORM, FORMAT_LABELS, normalizarFormato } from "@/lib/constants";
 import { SeloPublicacaoIg } from "@/components/shared/PublicarNoInstagram";
+import { ConviteInstagramCliente } from "@/components/accounts/ConviteInstagramCliente";
 // Cor por formato (fonte única): a pessoa bate o olho e sabe o que é.
 import { formatColorVars, FORMAT_TEXT_CLASS, FORMAT_BORDER_CLASS, FORMAT_DOT_CLASS } from "@/lib/format-colors";
 // Toggle Kanban/Calendário compartilhado com as outras telas de board.
@@ -899,8 +900,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                 <div className="flex items-center gap-2 text-green-700"><Instagram className="h-5 w-5" /> <span className="font-body text-sm font-medium">Conectado: @{igConn.username ?? "conta"}</span></div>
               ) : (
                 <>
-                  <p className="text-sm font-body text-foreground">Este cliente não usa o CRIA. Você pode conectar o Instagram dele aqui pra puxar os insights.</p>
-                  <Button onClick={() => connectInstagram(client.crm_client_id)} className="gap-1.5"><Instagram className="h-4 w-4" /> Conectar Instagram</Button>
+                  <p className="text-sm font-body text-foreground">Mande um link pra cliente liberar o Instagram dela pelo celular (sem passar senha) e os insights começam a aparecer aqui.</p>
+                  <ConviteInstagramCliente crmClientId={client.crm_client_id} nomeCliente={client.name} />
                 </>
               )
             ) : (

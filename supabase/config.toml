@@ -43,6 +43,10 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
   # x-internal-secret, os dois validados dentro da função.
   [functions.instagram-publish]
     verify_jwt = false
+  # Convite pra cliente conectar o Instagram: quem abre é a cliente, sem
+  # login no Cria. A função confere o token do convite.
+  [functions.ig-convite-iniciar]
+    verify_jwt = false
   # Robô de limpeza do Bunny: chamado por cron, protegido pelo segredo no
   # cabeçalho (x-cleanup-secret), não por JWT de usuário.
   [functions.bunny-cleanup-publicados]

@@ -22,13 +22,31 @@ function redirect(status: 'connected' | 'error', detail?: string, crmClientId?: 
   return new Response(null, { status: 302, headers: { Location: url } });
 }
 
+// CONVITE (link que a social mídia mandou pra cliente): a cliente não tem login
+// no Cria, então volta pra página PÚBLICA do convite, com o resultado.
+function voltaConvite(token: string, status: 'ok' | 'erro', detalhe?: string, usuario?: string | null) {
+  const qs = new URLSearchParams({ r: status });
+  if (detalhe) qs.set('m', detalhe.slice(0, 160));
+  if (usuario) qs.set('u', usuario);
+  return new Response(null, { status: 302, headers: { Location: `${APP_URL}/conectar/${token}?${qs}` } });
+}
+
 Deno.serve(async (req) => {
   try {
     const u = new URL(req.url);
     const code = u.searchParams.get('code');
     const state = u.searchParams.get('state'); // ticket de uso único (nonce)
     const err = u.searchParams.get('error');
-    if (err) return redirect('error', err);
+    if (err) {
+      // Cliente cancelou na tela do Instagram: se veio de convite, volta pro convite.
+      if (state) {
+        const { data: s0 } = await createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+          .from('oauth_states').select('convite_id, ig_convites(token)').eq('state', state).maybeSingle();
+        const tk = (s0 as { ig_convites?: { token?: string } | null } | null)?.ig_convites?.token;
+        if (tk) return voltaConvite(tk, 'erro', 'cancelado');
+      }
+      return redirect('error', err);
+    }
     if (!code || !state) return redirect('error', 'missing_code');
 
     const appId = Deno.env.get('INSTAGRAM_APP_ID')!.trim();
@@ -41,12 +59,20 @@ Deno.serve(async (req) => {
 
     // Troca o ticket (state) pelo usuário. Uso único: apaga logo após ler.
     const { data: st } = await admin.from('oauth_states')
-      .select('user_id, crm_client_id, expires_at, return_to').eq('state', state).maybeSingle();
+      .select('user_id, crm_client_id, expires_at, return_to, convite_id').eq('state', state).maybeSingle();
     await admin.from('oauth_states').delete().eq('state', state);
     if (!st) return redirect('error', 'invalid_state');
     if (new Date((st as { expires_at: string }).expires_at).getTime() < Date.now()) {
       return redirect('error', 'state_expired');
     }
+    const conviteId = (st as { convite_id?: string | null }).convite_id ?? null;
+    let conviteToken: string | null = null;
+    if (conviteId) {
+      const { data: cv } = await admin.from('ig_convites').select('token').eq('id', conviteId).maybeSingle();
+      conviteToken = (cv as { token?: string } | null)?.token ?? null;
+    }
+    // Veio de convite: erro e sucesso voltam pra página pública, não pro app.
+    const falha = (motivo: string) => conviteToken ? voltaConvite(conviteToken, 'erro', motivo) : null;
     const criaUserId = (st as { user_id: string }).user_id;
     const crmClientId = (st as { crm_client_id: string | null }).crm_client_id ?? null;
     const returnTo = (st as { return_to?: string | null }).return_to ?? null;
@@ -63,7 +89,7 @@ Deno.serve(async (req) => {
     // A Meta já devolveu esse corpo em dois formatos: plano ({access_token,
     // permissions}) e embrulhado ({data:[{...}]}). Aceita os dois.
     const shortJson = (Array.isArray(shortRaw?.data) ? shortRaw.data[0] : shortRaw) ?? {};
-    if (!shortRes.ok || !shortJson.access_token) return redirect('error', 'token_exchange', crmClientId, returnTo);
+    if (!shortRes.ok || !shortJson.access_token) return falha('token_exchange') ?? redirect('error', 'token_exchange', crmClientId, returnTo);
     const shortToken = shortJson.access_token as string;
 
     /* PERMISSÕES DE VERDADE (ciclo 2). Antes gravava a lista "no chute"; se a
@@ -92,7 +118,7 @@ Deno.serve(async (req) => {
       // usuário, e obrigava a cavar o log da função pra descobrir o porquê.
       const metaMsg = (longJson?.error?.message ?? longJson?.error_message ?? '') as string;
       const detalhe = metaMsg ? `token_exchange_long: ${metaMsg.slice(0, 160)}` : 'token_exchange_long';
-      return redirect('error', detalhe, crmClientId, returnTo);
+      return falha(detalhe) ?? redirect('error', detalhe, crmClientId, returnTo);
     }
     const longToken = longJson.access_token as string;
     const expiresIn = Number(longJson.expires_in ?? 0);
@@ -104,7 +130,7 @@ Deno.serve(async (req) => {
     );
     const me = await meRes.json();
     const igId = String(me.user_id ?? me.id ?? '');
-    if (!igId) return redirect('error', 'account_fetch', crmClientId, returnTo);
+    if (!igId) return falha('account_fetch') ?? redirect('error', 'account_fetch', crmClientId, returnTo);
 
     // 4) grava a conexão (manual: índices parciais não funcionam bem com upsert onConflict).
     const payload = {
@@ -132,7 +158,23 @@ Deno.serve(async (req) => {
       console.error('[instagram-oauth] save falhou', JSON.stringify(res.error));
       // O motivo REAL vai na URL: era isto que faltava pra diagnosticar o
       // 'não aconteceu nada' (ex.: coluna crm_client_id ausente no banco).
-      return redirect('error', `save_failed: ${String(res.error.message ?? '').slice(0, 140)}`, crmClientId, returnTo);
+      return falha('save_failed') ?? redirect('error', `save_failed: ${String(res.error.message ?? '').slice(0, 140)}`, crmClientId, returnTo);
+    }
+
+    if (conviteId && conviteToken) {
+      // Convite cumprido: marca como usado (link não serve mais) e avisa quem
+      // convidou, com o @ que foi conectado (se for a conta errada, ela vê na hora).
+      const usuario = (me.username as string | undefined) ?? null;
+      await admin.from('ig_convites').update({ usado_em: new Date().toISOString(), username_conectado: usuario } as never).eq('id', conviteId);
+      const { data: cli } = await admin.from('crm_clients').select('name').eq('id', crmClientId).maybeSingle();
+      await admin.from('notifications').insert({
+        user_id: criaUserId, type: 'cria_post',
+        title: 'Instagram da cliente conectado',
+        description: `${(cli as { name?: string } | null)?.name ?? 'A cliente'} liberou o acesso${usuario ? `: @${usuario}` : ''}. Os números já começam a aparecer.`,
+        link: crmClientId ? `/socialmidia/clientes/${crmClientId}/instagram` : '/socialmidia',
+        read: false,
+      } as never);
+      return voltaConvite(conviteToken, 'ok', undefined, usuario);
     }
 
     return redirect('connected', undefined, crmClientId, returnTo);
