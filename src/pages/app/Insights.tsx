@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   useSocialConnection, useDailyMetrics, useMediaInsights, useSyncInstagram, useDisconnectInstagram, useLinkMediaToPost,
-  useAudienceDemographics, useStories, useSocialAccountOwner, connectInstagram, estadoConexaoIg, type MediaInsight,
+  useAudienceDemographics, useStories, useSocialAccountOwner, connectInstagram, estadoConexaoIg, totaisConta30d, type MediaInsight,
 } from "@/hooks/useSocialInsights";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { usePillars } from "@/hooks/usePillars";
@@ -23,7 +23,8 @@ import { AudienceBreakdown } from "@/components/insights/AudienceBreakdown";
 import { StoriesSummary } from "@/components/insights/StoriesSummary";
 import { ReelsRanking } from "@/components/insights/ReelsRanking";
 import { ContentCrossAnalysis } from "@/components/insights/ContentCrossAnalysis";
-import { computeFollowersDelta, type CrossItem } from "@/components/insights/insightsUtils";
+import { SugestoesVinculo } from "@/components/insights/SugestoesVinculo";
+import { computeFollowersDelta, formatMediaLabel, interacoesDe, type CrossItem } from "@/components/insights/insightsUtils";
 import { STATUS_OPTIONS, FORMAT_LABELS } from "@/lib/constants";
 // Cor por formato (mesma fonte única do kanban/calendário do Cria Post).
 import { formatColorVars, FORMAT_TEXT_CLASS } from "@/lib/format-colors";
@@ -36,7 +37,7 @@ const fmt = (n: number | null | undefined) =>
   n == null ? "-" : n >= 1000 ? `${(n / 1000).toFixed(1).replace(".0", "")}k` : String(n);
 const m = (mi: MediaInsight, k: string) => Number(mi.metrics?.[k] ?? 0);
 const MEDIA_ICON = (t: string | null) => (t === "VIDEO" || t === "REELS" ? Play : t === "CAROUSEL_ALBUM" ? Images : ImageIcon);
-const MEDIA_KEY: Record<string, string> = { IMAGE: "insights.typeImage", VIDEO: "insights.typeVideo", REELS: "insights.typeReels", CAROUSEL_ALBUM: "insights.typeCarousel" };
+const MEDIA_KEY: Record<string, string> = { IMAGE: "insights.typeImage", VIDEO: "insights.typeReels", REELS: "insights.typeReels", CAROUSEL_ALBUM: "insights.typeCarousel" };
 const fmtTypeWith = (tr: (k: string) => string) => (mt: string | null) => (mt ? (MEDIA_KEY[mt] ? tr(MEDIA_KEY[mt]) : mt) : "-");
 const isVideo = (t: string | null) => t === "VIDEO" || t === "REELS";
 
@@ -56,7 +57,7 @@ export default function Insights() {
   // Conectar/atualizar/desconectar são ações do DONO da conta ativa. Uma gestora
   // dentro da conta de um criador só visualiza (e vincula posts): se ela clicasse
   // em "Conectar", o OAuth gravaria o Instagram DELA nesta tela.
-  const { isOwnAccount } = useSocialAccountOwner();
+  const { isOwnAccount, ownerId } = useSocialAccountOwner();
   const [linkFor, setLinkFor] = useState<MediaInsight | null>(null);
   const [aiRead, setAiRead] = useState<InsightsReading | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -109,15 +110,20 @@ export default function Insights() {
     if (aiLoading || media.length === 0) return;
     setAiLoading(true);
     try {
+      // A leitura diz "30 dias": usa só os posts do período (antes ia o
+      // histórico inteiro e a IA comparava coisas de meses diferentes).
+      const desde = Date.now() - 30 * 86400000;
+      const doMes = media.filter((mi) => mi.posted_at && new Date(mi.posted_at).getTime() >= desde);
+      const base = doMes.length ? doMes : media;
       const fmtAvg: Record<string, { sum: number; n: number }> = {};
-      media.forEach((mi) => {
-        const t = mi.media_type ?? "-";
+      base.forEach((mi) => {
+        const t = formatMediaLabel(mi.media_type);
         fmtAvg[t] = fmtAvg[t] || { sum: 0, n: 0 };
         fmtAvg[t].sum += m(mi, "reach"); fmtAvg[t].n += 1;
       });
       const fmts = Object.entries(fmtAvg).map(([t, v]) => ({ t, avg: v.n ? v.sum / v.n : 0 })).sort((a, b) => b.avg - a.avg);
-      const byReachL = [...media].sort((a, b) => m(b, "reach") - m(a, "reach"));
-      const bySavedL = [...media].sort((a, b) => (m(b, "saved") + m(b, "saves")) - (m(a, "saved") + m(a, "saves")));
+      const byReachL = [...base].sort((a, b) => m(b, "reach") - m(a, "reach"));
+      const bySavedL = [...base].sort((a, b) => (m(b, "saved") + m(b, "saves")) - (m(a, "saved") + m(a, "saves")));
       const res = await insightsReading({
         periodo: "30 dias",
         followers: kpis?.followers ?? null,
@@ -125,7 +131,7 @@ export default function Insights() {
         reach: kpis?.reach ?? 0,
         interactions: kpis?.interactions ?? 0,
         profileViews: kpis?.profileViews ?? null,
-        mediaCount: media.length,
+        mediaCount: doMes.length,
         bestFormat: fmts[0] ? `${fmtType(fmts[0].t)} (${Math.round(fmts[0].avg)} alcance médio)` : undefined,
         worstFormat: fmts.length > 1 ? `${fmtType(fmts[fmts.length - 1].t)} (${Math.round(fmts[fmts.length - 1].avg)} alcance médio)` : undefined,
         topPost: byReachL[0]?.caption ? `${byReachL[0].caption.slice(0, 60)}, ${m(byReachL[0], "reach")} alcance` : undefined,
@@ -143,9 +149,12 @@ export default function Insights() {
 
   const kpis = useMemo(() => {
     const last = daily[daily.length - 1];
-    // Alcance e interações somados dos posts (dado confiável da API por mídia)
-    const reach = media.reduce((a, mi) => a + m(mi, "reach"), 0);
-    const interactions = media.reduce((a, mi) => a + m(mi, "likes") + m(mi, "comments") + m(mi, "saved") + m(mi, "shares"), 0);
+    // Alcance e interações dos posts dos ÚLTIMOS 30 DIAS (o card diz "30 dias";
+    // antes somava todo o histórico carregado, até 200 posts).
+    const desde = Date.now() - 30 * 86400000;
+    const doMes = media.filter((mi) => mi.posted_at && new Date(mi.posted_at).getTime() >= desde);
+    const reach = doMes.reduce((a, mi) => a + m(mi, "reach"), 0);
+    const interactions = doMes.reduce((a, mi) => a + m(mi, "likes") + m(mi, "comments") + m(mi, "saved") + m(mi, "shares"), 0);
     if (!last && media.length === 0) return null;
     // Variação de seguidores só quando a série cobre ~30 dias de verdade (evita "+N" falso).
     const fd = computeFollowersDelta(daily);
@@ -153,7 +162,7 @@ export default function Insights() {
       followers: last?.followers ?? null,
       followersDelta: fd.delta,
       hasFollowersWindow: fd.hasWindow,
-      reach, interactions, profileViews: last?.profile_views ?? null,
+      reach, interactions, profileViews: totaisConta30d(daily).profileViews,
     };
   }, [daily, media]);
 
@@ -166,7 +175,7 @@ export default function Insights() {
       media_type: mi.media_type,
       posted_at: mi.posted_at,
       reach: m(mi, "reach"),
-      interactions: m(mi, "likes") + m(mi, "comments") + m(mi, "saved") + m(mi, "saves") + m(mi, "shares"),
+      interactions: interacoesDe(mi.metrics as Record<string, number> | null),
       pillar: mi.posts?.pillar_id ? (pillarById[mi.posts.pillar_id] ?? null) : null,
       hook: mi.posts?.hook ?? null,
     }));
@@ -368,7 +377,10 @@ export default function Insights() {
       <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3 flex items-center gap-2">
         O que postar mais <span className="text-[10px] font-normal normal-case tracking-normal text-muted-foreground">· cruzamentos do seu conteúdo</span>
       </h2>
-      <ContentCrossAnalysis items={crossItems} />
+      {/* Sugestões de ligar publicação ↔ post (ciclo 2 dos dados): antes da
+          análise, porque é o que faz pilar e gancho aparecerem nela. */}
+      <SugestoesVinculo conta={ownerId} />
+      <ContentCrossAnalysis items={crossItems} dicaLigar />
 
       {/* REELS por retenção (tempo médio assistido) */}
       <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">Reels · retenção</h2>

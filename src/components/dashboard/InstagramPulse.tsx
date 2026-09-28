@@ -10,34 +10,19 @@ import {
   useSocialAccountOwner,
   connectInstagram,
   type MediaInsight,
+  totaisConta30d,
 } from "@/hooks/useSocialInsights";
 import { computeCrossAnalysis, computeFollowersDelta, crossHeadlines, fmtNum, type CrossItem } from "@/components/insights/insightsUtils";
 
 // Lê uma métrica numérica do jsonb de uma mídia (mesma convenção da tela de Insights).
 const m = (mi: MediaInsight, k: string) => Number(mi.metrics?.[k] ?? 0);
 
-// Monta a faixa de direção (verde) a partir dos cruzamentos: formato mais forte + melhor dia.
-// Cai pra primeira headline pronta se não der pra montar a frase curta.
+// Faixa de direção (verde): a primeira frase da análise honesta (ciclo 3 dos
+// dados). Antes montava "Reels performam 2x" com 1 post de cada lado; agora só
+// aparece quando há amostra de verdade.
 function buildDirection(items: CrossItem[]): string | null {
   const cross = computeCrossAnalysis(items);
   if (!cross.hasData) return null;
-  const parts: string[] = [];
-  const [f1, f2] = cross.byFormat;
-  // Rótulos vêm no plural (Reels, Carrosséis, Fotos...), então "performam" concorda sempre.
-  if (f1 && f2 && f2.avgReach > 0) {
-    const ratio = f1.avgReach / f2.avgReach;
-    if (ratio >= 1.2) {
-      parts.push(`${f1.label} performam ${ratio.toFixed(1).replace(".0", "")}x melhor que ${f2.label}`);
-    } else {
-      parts.push(`Formato mais forte: ${f1.label}`);
-    }
-  } else if (f1) {
-    parts.push(`Formato mais forte: ${f1.label}`);
-  }
-  const topDay = cross.byWeekday[0];
-  if (topDay) parts.push(`Melhor dia: ${topDay.label.toLowerCase()}`);
-  if (parts.length > 0) return parts.join(". ") + ".";
-  // Fallback: headline acionável já pronta dos utils.
   return crossHeadlines(cross)[0] ?? null;
 }
 
@@ -95,8 +80,11 @@ export function InstagramPulse() {
   // Números do momento (mesma lógica confiável da tela de Insights).
   const kpis = useMemo(() => {
     const last = daily[daily.length - 1];
-    const reach = media.reduce((a, mi) => a + m(mi, "reach"), 0);
-    const interactions = media.reduce(
+    // Só os posts dos últimos 30 dias (mesma regra da tela de Insights).
+    const desde = Date.now() - 30 * 86400000;
+    const doMes = media.filter((mi) => mi.posted_at && new Date(mi.posted_at).getTime() >= desde);
+    const reach = doMes.reduce((a, mi) => a + m(mi, "reach"), 0);
+    const interactions = doMes.reduce(
       (a, mi) => a + m(mi, "likes") + m(mi, "comments") + m(mi, "saved") + m(mi, "saves") + m(mi, "shares"),
       0,
     );
@@ -108,7 +96,7 @@ export function InstagramPulse() {
       hasFollowersWindow: fd.hasWindow,
       reach,
       interactions,
-      profileViews: last?.profile_views ?? null,
+      profileViews: totaisConta30d(daily).profileViews,
       engagement: reach > 0 ? (interactions / reach) * 100 : null,
     };
   }, [daily, media]);

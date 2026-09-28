@@ -1,7 +1,7 @@
 import { BarChart3, Layers, Hash, CalendarDays, Clock, Sparkles, TrendingUp } from "lucide-react";
 import { computeCrossAnalysis, crossHeadlines, fmtNum, type CrossItem, type CrossGroup } from "./insightsUtils";
 
-// CRUZAMENTOS (o ouro): performance média por FORMATO, PILAR, TEMA/HOOK e
+// CRUZAMENTOS (o ouro): performance típica (mediana) por FORMATO, PILAR, TEMA/HOOK e
 // HORÁRIO/DIA-DA-SEMANA, com frases de direcionamento acionáveis. Cada tela mapeia
 // suas mídias pro shape CrossItem (alcance/interações já extraídos) e passa aqui.
 
@@ -17,14 +17,14 @@ function GroupBlock({ icon: Icon, title, rows, hint }: { icon: typeof BarChart3;
       {hint && <p className="text-[11px] font-body text-muted-foreground mb-3">{hint}</p>}
       <div className={`space-y-2.5 ${hint ? "" : "mt-3"}`}>
         {rows.map((r) => (
-          <div key={r.label} className="flex items-center gap-3">
+          <div key={r.label} className={`flex items-center gap-3 ${r.poucos ? "opacity-60" : ""}`} title={r.poucos ? "Poucos posts: ainda não dá pra concluir" : undefined}>
             <span className="w-24 sm:w-28 text-[12px] font-body font-semibold text-foreground shrink-0 truncate" title={r.label}>{r.label}</span>
             <span className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
               <span className="block h-full rounded-full" style={{ width: `${max > 0 ? Math.max(4, (r.avgReach / max) * 100) : 0}%`, background: r.color || "hsl(var(--primary))" }} />
             </span>
-            <span className="w-24 text-right text-[12px] font-body shrink-0">
-              <b className="text-foreground">{fmtNum(r.avgReach)}</b>
-              <span className="text-muted-foreground"> · {r.count}</span>
+            <span className="w-28 text-right text-[12px] font-body shrink-0">
+              <b className={r.poucos ? "text-muted-foreground" : "text-foreground"}>{fmtNum(r.avgReach)}</b>
+              <span className="text-muted-foreground"> · {r.count} {r.count === 1 ? "post" : "posts"}</span>
             </span>
           </div>
         ))}
@@ -33,7 +33,7 @@ function GroupBlock({ icon: Icon, title, rows, hint }: { icon: typeof BarChart3;
   );
 }
 
-export function ContentCrossAnalysis({ items }: { items: CrossItem[] | undefined | null }) {
+export function ContentCrossAnalysis({ items, dicaLigar = false }: { items: CrossItem[] | undefined | null; dicaLigar?: boolean }) {
   const data = computeCrossAnalysis(items);
 
   if (!data.hasData) {
@@ -48,7 +48,7 @@ export function ContentCrossAnalysis({ items }: { items: CrossItem[] | undefined
     );
   }
 
-  const headlines = crossHeadlines(data);
+  const headlines = crossHeadlines(data, { dicaLigar });
 
   return (
     <div className="space-y-3">
@@ -71,22 +71,26 @@ export function ContentCrossAnalysis({ items }: { items: CrossItem[] | undefined
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <GroupBlock icon={BarChart3} title="Alcance médio por formato" rows={data.byFormat} hint="Média de alcance de cada formato publicado." />
+        <GroupBlock icon={BarChart3} title="Alcance típico por formato" rows={data.byFormat} hint="Alcance de um post normal de cada formato (mediana)." />
         {data.byPillar.length > 0 && (
-          <GroupBlock icon={Layers} title="Alcance médio por pilar" rows={data.byPillar} hint="Cruzando com o pilar do conteúdo vinculado no CRIA." />
+          <GroupBlock icon={Layers} title="Alcance típico por pilar" rows={data.byPillar} hint="Posts ligados ao Cria, pelo pilar de cada um." />
+        )}
+        {data.byLinha.length > 0 && (
+          <GroupBlock icon={Layers} title="Alcance típico por linha editorial" rows={data.byLinha} hint="Posts ligados ao Cria, pela linha editorial." />
         )}
         {data.byWeekday.length > 1 && (
-          <GroupBlock icon={CalendarDays} title="Alcance médio por dia" rows={data.byWeekday} hint="Dia da semana da publicação (fuso BR)." />
+          <GroupBlock icon={CalendarDays} title="Alcance típico por dia" rows={data.byWeekday} hint="Dia da semana da publicação (horário de Brasília)." />
         )}
         {data.byTime.length > 1 && (
-          <GroupBlock icon={Clock} title="Alcance médio por período" rows={data.byTime} hint="Faixa do dia da publicação (fuso BR)." />
+          <GroupBlock icon={Clock} title="Alcance típico por período" rows={data.byTime} hint="Faixa do dia da publicação (horário de Brasília)." />
         )}
         {data.byHook.length > 0 && (
-          <GroupBlock icon={Hash} title="Hooks que mais alcançaram" rows={data.byHook} hint="Temas/ganchos dos posts vinculados com melhor desempenho." />
+          <GroupBlock icon={Hash} title="Ganchos que mais alcançaram" rows={data.byHook} hint="Agrupados pelo começo do gancho, nos posts ligados ao Cria." />
         )}
       </div>
       <p className="text-[11px] font-body text-muted-foreground">
-        Alcance e interações são dados diretos da API do Instagram. Médias por pilar/hook consideram apenas posts vinculados ao conteúdo do CRIA.
+        {data.analisados} posts analisados{data.recentesFora > 0 ? ` (${data.recentesFora} com menos de 3 dias ficaram de fora, o alcance deles ainda está crescendo)` : ""}.
+        Alcance típico = o de um post normal, sem deixar um viral isolado puxar a conta. Grupo apagado tem poucos posts e ainda não vira conclusão.
       </p>
     </div>
   );

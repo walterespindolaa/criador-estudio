@@ -77,6 +77,9 @@ export type CriaClientInstagram = {
   media?: CriaClientIgMedia[];
   audience?: CriaClientIgAudience[];   // demografia de audiência
   stories?: CriaClientIgStory[];       // snapshot de stories
+  // Dono dos dados do Instagram (pra sugestões de ligar post ↔ publicação).
+  conta?: string | null;
+  crm?: string | null;
 };
 
 export function useCriaClientInstagram(criaOwnerId: string | null | undefined) {
@@ -105,41 +108,31 @@ export function useManagedClientInstagram(crmClientId: string | null | undefined
     queryKey: ["managed-client-instagram", agencyOwnerId, crmClientId],
     enabled: !!crmClientId && !!agencyOwnerId,
     queryFn: async () => {
-      const { data: conn, error: connErr } = await sbFrom("social_connections")
-        .select("username, profile_picture_url, updated_at")
-        .eq("user_id", agencyOwnerId!).eq("crm_client_id", crmClientId!).eq("provider", "instagram")
-        .maybeSingle();
-      if (connErr) throw connErr;
-      if (!conn) return { connected: false };
-      const c = conn as { username: string | null; profile_picture_url: string | null; updated_at: string | null };
-      const since = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
-      const [daily, media, audience, stories] = await Promise.all([
-        sbFrom("social_metrics_daily")
-          .select("date, followers, reach, profile_views, total_interactions")
-          .eq("user_id", agencyOwnerId!).eq("crm_client_id", crmClientId!).eq("provider", "instagram")
-          .gte("date", since).order("date", { ascending: true }),
-        sbFrom("social_insights")
-          .select("id, media_type, caption, permalink, thumbnail_url, posted_at, metrics, post_id")
-          .eq("user_id", agencyOwnerId!).eq("crm_client_id", crmClientId!).eq("provider", "instagram")
-          .eq("object_type", "media").order("posted_at", { ascending: false }).limit(48),
-        sbFrom("social_audience")
-          .select("metric, dimension, breakdown_value, value")
-          .eq("user_id", agencyOwnerId!).eq("crm_client_id", crmClientId!).eq("provider", "instagram")
-          .order("value", { ascending: false }).limit(500),
-        sbFrom("social_stories")
-          .select("external_story_id, media_type, permalink, thumbnail_url, media_url, posted_at, metrics")
-          .eq("user_id", agencyOwnerId!).eq("crm_client_id", crmClientId!).eq("provider", "instagram")
-          .order("posted_at", { ascending: false }).limit(60),
-      ]);
-      const firstErr = daily.error || media.error || audience.error || stories.error;
-      if (firstErr) throw firstErr;
+      /* Mesma fonte do relatório (ciclo 5 dos dados, 28/09/2026). Antes lia
+         direto as tabelas filtrando por user_id = dono da agência: quando quem
+         conectou o Instagram do cliente foi um MEMBRO da equipe, os dados
+         ficavam no nome dele e a aba mostrava "não conectado". A função acha
+         a conexão pelo cliente, seja quem for que clicou. 90 dias de histórico
+         e até 500 posts (antes 48). */
+      const agora = Date.now();
+      const { data, error } = await (supabase.rpc as unknown as (fn: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)(
+        "ig_relatorio_cliente",
+        { _crm_client_id: crmClientId, _since: new Date(agora - 90 * 86400000).toISOString(), _until: new Date(agora + 86400000).toISOString() },
+      );
+      if (error) throw error;
+      const d = (data ?? {}) as Record<string, unknown>;
+      if (!d.connected) return { connected: false };
       return {
         connected: true,
-        username: c.username, profile_picture_url: c.profile_picture_url, last_sync: c.updated_at,
-        daily: (daily.data ?? []) as unknown as CriaClientIgDaily[],
-        media: (media.data ?? []) as unknown as CriaClientIgMedia[],
-        audience: (audience.data ?? []) as unknown as CriaClientIgAudience[],
-        stories: (stories.data ?? []) as unknown as CriaClientIgStory[],
+        username: (d.username as string | null) ?? null,
+        profile_picture_url: (d.profile_picture_url as string | null) ?? null,
+        last_sync: (d.last_sync as string | null) ?? null,
+        conta: (d.conta as string | null) ?? null,
+        crm: (d.crm as string | null) ?? null,
+        daily: (d.daily ?? []) as unknown as CriaClientIgDaily[],
+        media: (d.media ?? []) as unknown as CriaClientIgMedia[],
+        audience: (d.audience ?? []) as unknown as CriaClientIgAudience[],
+        stories: (d.stories ?? []) as unknown as CriaClientIgStory[],
       };
     },
   });

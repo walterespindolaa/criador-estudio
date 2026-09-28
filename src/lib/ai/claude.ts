@@ -159,6 +159,8 @@ export const getIdeaSuggestions = async (
     niche?: string;
     /** Brandbook resumido (useBrandContext): sem ele a IA inventa quem é a pessoa. */
     brandContext?: string;
+    /** O que performou no Instagram (useResumoDesempenho), ciclo 4 dos dados. */
+    desempenho?: string;
   },
   userId?: string
 ) => {

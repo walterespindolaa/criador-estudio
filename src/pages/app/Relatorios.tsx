@@ -46,6 +46,7 @@ import {
 } from "@/hooks/useSocialInsights";
 import {
   computeCrossAnalysis,
+  interacoesDe,
   crossHeadlines,
   fmtNum,
   formatMediaLabel,
@@ -382,7 +383,7 @@ const Relatorios = () => {
         media_type: mi.media_type,
         posted_at: mi.posted_at,
         reach: mVal(mi, "reach"),
-        interactions: mInteractions(mi),
+        interactions: interacoesDe(mi.metrics as Record<string, number> | null),
         pillar: mi.posts?.pillar_id ? pillarById.get(mi.posts.pillar_id)?.name ?? null : null,
         hook: mi.posts?.hook ?? null,
       })),
@@ -567,11 +568,14 @@ const Relatorios = () => {
       );
     }
     // Formato com alcance abaixo da média geral.
-    if (cross.byFormat.length > 1 && avgReach > 0) {
-      const weak = cross.byFormat[cross.byFormat.length - 1];
+    // Só com amostra (>= 3 posts do formato): "Fotos rendem abaixo" com 1 foto
+    // era ruído virando conselho.
+    const formatosComBase = cross.byFormat.filter((g) => !g.poucos);
+    if (formatosComBase.length > 1 && avgReach > 0) {
+      const weak = formatosComBase[formatosComBase.length - 1];
       if (weak.avgReach > 0 && weak.avgReach < avgReach * 0.75) {
         out.push(
-          `${weak.label} vêm rendendo abaixo da média (${fmtNum(weak.avgReach)} de alcance). Repense o tema ou teste outro formato.`
+          `${weak.label} vêm rendendo abaixo do seu normal (${fmtNum(weak.avgReach)} de alcance típico em ${weak.count} posts). Repense o tema ou teste outro formato.`
         );
       }
     }
@@ -1208,7 +1212,7 @@ const Relatorios = () => {
           </div>
 
           {/* Best time */}
-          <BestTimeToPost posts={posts} />
+          <BestTimeToPost media={media} niche={activeProfile?.niche} />
 
           {/* AI Insight */}
           <div className="bg-gradient-to-br from-primary/10 via-purple-500/5 to-pink-500/10 rounded-xl border border-primary/15 p-5">

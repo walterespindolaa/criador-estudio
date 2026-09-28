@@ -925,6 +925,7 @@ RESPONDA APENAS COM UM ARRAY JSON de 3 objetos, com estes campos (todos em portu
 FORMATO: ${formatoPedido}
 PILAR: ${data.pilar || 'geral'}
 NICHO: ${data.niche || 'lifestyle'}
+${data.desempenho ? `O QUE JÁ FUNCIONOU NO INSTAGRAM DESTA PESSOA (use pra escolher ângulo e gancho; não cite números): ${String(data.desempenho).slice(0, 700)}` : ''}
 ${modoTendencias ? 'MODO: tendências (cruze a ideia com o que está quente).' : 'MODO: padrão.'}
 Gere 3 sugestões completas. Seja específico: cena, número, exemplo. Zero genérico.
 RESPONDA APENAS COM O ARRAY JSON. Nenhuma palavra antes ou depois dele.`

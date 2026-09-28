@@ -12,6 +12,7 @@ import { AudienceBreakdown } from "@/components/insights/AudienceBreakdown";
 import { StoriesSummary } from "@/components/insights/StoriesSummary";
 import { ReelsRanking } from "@/components/insights/ReelsRanking";
 import { ContentCrossAnalysis } from "@/components/insights/ContentCrossAnalysis";
+import { SugestoesVinculo } from "@/components/insights/SugestoesVinculo";
 import type { CrossItem } from "@/components/insights/insightsUtils";
 
 // Aba Instagram da ficha do cliente que USA O CRIA: mostra os dados que o pipeline
@@ -25,7 +26,7 @@ const m = (mi: CriaClientIgMedia, k: string) => Number(mi.metrics?.[k] ?? 0);
 const interactionsOf = (mi: CriaClientIgMedia) => m(mi, "likes") + m(mi, "comments") + m(mi, "saved") + m(mi, "saves") + m(mi, "shares");
 const engOf = (mi: CriaClientIgMedia) => { const r = m(mi, "reach"); return r > 0 ? (interactionsOf(mi) / r) * 100 : 0; };
 const MEDIA_ICON = (t: string | null) => (t === "VIDEO" || t === "REELS" ? Play : t === "CAROUSEL_ALBUM" ? Images : ImageIcon);
-const MEDIA_LABEL: Record<string, string> = { IMAGE: "Foto", VIDEO: "Vídeo", REELS: "Reels", CAROUSEL_ALBUM: "Carrossel" };
+const MEDIA_LABEL: Record<string, string> = { IMAGE: "Foto", VIDEO: "Reels", REELS: "Reels", CAROUSEL_ALBUM: "Carrossel" };
 const dataBR = (s: string | null) => (s ? new Date(s).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }) : null);
 
 // DOIS MODOS, um painel só:
@@ -155,7 +156,9 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
       reach: m(mi, "reach"),
       interactions: interactionsOf(mi),
       pillar: null,
-      hook: mi.post_id ? (postById[mi.post_id]?.hook ?? null) : null,
+      hook: mi.post_id ? (postById[mi.post_id]?.hook ?? (mi as { linked_hook?: string | null }).linked_hook ?? null) : null,
+      // Linha editorial da peça ligada (vem da fonte única, ciclo 5 dos dados).
+      linha: (mi as { linked_linha?: string | null }).linked_linha ?? null,
     })),
   [media, postById]);
 
@@ -311,6 +314,8 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
           {media.length > 0 && (
             <div className="space-y-2">
               <p className="text-sm font-display font-bold text-foreground">O que postar mais</p>
+              {/* Ligar publicações do cliente às peças do Cria Post (ciclo 5). */}
+              {gerenciado && data?.conta && <SugestoesVinculo conta={data.conta} crmClientId={data.crm ?? null} />}
               <ContentCrossAnalysis items={crossItems} />
             </div>
           )}

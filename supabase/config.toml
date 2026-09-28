@@ -54,8 +54,10 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = false
   [functions.instagram-oauth]
     verify_jwt = false
+  # Ciclo 1 dos dados (28/09): o robô chama sem JWT (x-internal-secret); o
+  # clique do usuário continua validado por getUser() dentro da função.
   [functions.instagram-sync]
-    verify_jwt = true
+    verify_jwt = false
   [functions.ai-context-builder]
     verify_jwt = false
   [functions.create-checkout]

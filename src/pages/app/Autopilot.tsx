@@ -10,6 +10,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { usePillars } from "@/hooks/usePillars";
 import { usePosts } from "@/hooks/usePosts";
 import { useBrandContext } from "@/hooks/useBrandContext";
+import { useResumoDesempenho } from "@/hooks/useResumoDesempenho";
 import { generateAutopilot, type AutopilotPost } from "@/lib/ai/claude";
 import { bestTimes } from "@/lib/bestTimes";
 import { useTrends, trendsToContext } from "@/hooks/useTrends";
@@ -48,6 +49,9 @@ export default function Autopilot() {
   const { posts, createPost } = usePosts();
   const { brandContext, hasBrandContext } = useBrandContext();
   const { data: trends = [] } = useTrends();
+  // O que performou no Instagram (ciclo 4 dos dados): vai pra IA priorizar e
+  // dá os horários reais. Antes o campo "performou" do prompt ia sempre vazio.
+  const desempenho = useResumoDesempenho();
   const qc = useQueryClient();
 
   const [periodo, setPeriodo] = useState<"semana" | "mes">("semana");
@@ -62,7 +66,11 @@ export default function Autopilot() {
   const [publico, setPublico] = useState("");
   const [horarioPref, setHorarioPref] = useState<"auto" | "conta" | "recomendado">("auto");
 
-  const userSlots = useMemo(() => deriveUserSlots(posts), [posts]);
+  // "Da minha conta": primeiro o horário em que os posts RENDEM mais (Instagram
+  // real); sem base, o horário em que a pessoa costuma agendar.
+  const habito = useMemo(() => deriveUserSlots(posts), [posts]);
+  const userSlots = desempenho.horarios?.slots ?? habito;
+  const slotsPorDesempenho = !!desempenho.horarios;
   const usingConta = horarioPref === "conta" || (horarioPref === "auto" && !!userSlots);
   const activeSlots = useMemo(
     () => (usingConta && userSlots ? userSlots : bestTimes(plataforma, profile?.niche).slots),
@@ -113,6 +121,7 @@ export default function Autopilot() {
         qtd,
         periodo,
         recentes: recentes || undefined,
+        performou: desempenho.texto || undefined,
         contexto: contexto || undefined,
         publico: publico || undefined,
         tendencias: trends.length ? trendsToContext(trends) : undefined,
@@ -243,7 +252,9 @@ export default function Autopilot() {
               </div>
               <p className="text-[11px] font-body text-muted-foreground mt-1">
                 {usingConta
-                  ? `Distribui nos seus horários: ${activeSlots.join(", ")}.`
+                  ? slotsPorDesempenho
+                    ? `Horários em que seus posts rendem mais no Instagram: ${activeSlots.join(", ")}.`
+                    : `Distribui nos seus horários: ${activeSlots.join(", ")}.`
                   : userSlots
                   ? `Padrão do nicho: ${activeSlots.join(", ")}.`
                   : `Sem dados suficientes ainda, usando o recomendado (${activeSlots.join(", ")}). Publique mais pra liberar "da minha conta".`}

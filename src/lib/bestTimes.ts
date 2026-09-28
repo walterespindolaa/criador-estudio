@@ -101,49 +101,58 @@ function juntarDias(labels: string[]): string {
 
 // Calcula os melhores dias/horários pelo desempenho real dos posts. Devolve null
 // quando não há posts com dado suficiente pra afirmar algo (aí usa a heurística).
+//
+// Honestidade (ciclo 3 dos dados, 28/09/2026): post com menos de 3 dias fica
+// de fora (ainda está crescendo); cada dia/hora só entra no ranking com pelo
+// menos 2 posts; e o valor do grupo é a MEDIANA, pra um viral isolado não
+// transformar uma hora qualquer em "melhor horário".
+const MIN_POR_GRUPO = 2;
+const medianaDe = (xs: number[]) => {
+  const o = [...xs].sort((a, b) => a - b);
+  const meio = Math.floor(o.length / 2);
+  return o.length % 2 ? o[meio] : (o[meio - 1] + o[meio]) / 2;
+};
+
 export function bestTimesFromMedia(media: MediaForBestTimes[] | undefined | null): BestTimes | null {
   if (!media || media.length === 0) return null;
 
-  type Acc = { soma: number; n: number };
-  const porDia = new Map<number, Acc>();
-  const porHora = new Map<number, Acc>();
+  const porDia = new Map<number, number[]>();
+  const porHora = new Map<number, number[]>();
+  const corte = Date.now() - 3 * 86400000;
   let usados = 0;
 
   for (const item of media) {
     if (!item.posted_at) continue;
+    if (new Date(item.posted_at).getTime() > corte) continue;
     const eng = engajamento(item.metrics);
     if (eng <= 0) continue;
     const dh = diaHoraBR(item.posted_at);
     if (!dh) continue;
     usados++;
-    const d = porDia.get(dh.dia) ?? { soma: 0, n: 0 };
-    d.soma += eng; d.n++; porDia.set(dh.dia, d);
-    const h = porHora.get(dh.hora) ?? { soma: 0, n: 0 };
-    h.soma += eng; h.n++; porHora.set(dh.hora, h);
+    porDia.set(dh.dia, [...(porDia.get(dh.dia) ?? []), eng]);
+    porHora.set(dh.hora, [...(porHora.get(dh.hora) ?? []), eng]);
   }
 
   if (usados < MIN_POSTS_BEST_TIMES) return null;
 
-  // Rankeia por MÉDIA de engajamento (não por soma): um horário com 1 post
-  // campeão não deve empurrar pra frente um horário com 5 posts consistentes.
-  const topDias = [...porDia.entries()]
-    .map(([dia, a]) => ({ dia, media: a.soma / a.n }))
-    .sort((x, y) => y.media - x.media)
+  const ranking = (mapa: Map<number, number[]>) => [...mapa.entries()]
+    .filter(([, vals]) => vals.length >= MIN_POR_GRUPO)
+    .map(([k, vals]) => ({ k, valor: medianaDe(vals) }))
+    .sort((x, y) => y.valor - x.valor)
     .slice(0, 3)
-    .map((x) => x.dia)
+    .map((x) => x.k)
     .sort((a, b) => a - b);
 
-  const topHoras = [...porHora.entries()]
-    .map(([hora, a]) => ({ hora, media: a.soma / a.n }))
-    .sort((x, y) => y.media - x.media)
-    .slice(0, 3)
-    .map((x) => x.hora)
-    .sort((a, b) => a - b);
+  const topDias = ranking(porDia);
+  const topHoras = ranking(porHora);
 
-  if (topDias.length === 0 || topHoras.length === 0) return null;
+  // Horário é o que manda. Dia sem repetição suficiente (posts espalhados em
+  // dias diferentes) não derruba a sugestão de horário: só diz que não há
+  // dia de destaque ainda.
+  if (topHoras.length === 0) return null;
 
   return {
-    days: juntarDias(topDias.map((d) => DAY_LABELS[d])),
+    days: topDias.length ? juntarDias(topDias.map((d) => DAY_LABELS[d])) : "sem dia de destaque ainda",
     slots: topHoras.map((h) => `${String(h).padStart(2, "0")}:00`),
     source: "insights",
     sample: usados,

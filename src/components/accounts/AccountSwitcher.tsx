@@ -1,7 +1,7 @@
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
-import { ChevronsUpDown, Settings, User, Users } from "lucide-react";
+import { Briefcase, ChevronsUpDown, Settings, User, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -9,14 +9,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function AccountSwitcher({ compact = false }: { compact?: boolean }) {
-  const { managedAccounts, hasManagedAccounts, activeAccountId, isManaging, setActiveAccount } = useActiveAccount();
+  const { managedAccounts, hasManagedAccounts, teamAccounts, actingAsTeam, activeAccountId, isManaging, setActiveAccount } = useActiveAccount();
   const { profile } = useProfile();
   const isManager = profile?.account_type === "manager";
   const navigate = useNavigate();
-  if (!hasManagedAccounts) return null;
+  // Quem é colaborador de uma agência E tem conta própria com clientes não era
+  // levado pra conta da agência no login (só cai lá quem não tem clientes) e
+  // este menu só listava clientes: não havia caminho nenhum pra entrar na
+  // agência que convidou (bug de 28/09). Agora as equipes aparecem aqui.
+  if (!hasManagedAccounts && teamAccounts.length === 0) return null;
 
-  const current = managedAccounts.find((m) => m.owner_id === activeAccountId);
-  const label = isManaging ? current?.name ?? "Cliente" : "Minha conta";
+  const current = [...managedAccounts, ...teamAccounts].find((m) => m.owner_id === activeAccountId);
+  const label = !isManaging ? "Minha conta" : actingAsTeam ? `Equipe: ${current?.name ?? "Agência"}` : current?.name ?? "Cliente";
 
   return (
     <DropdownMenu>
@@ -45,7 +49,19 @@ export function AccountSwitcher({ compact = false }: { compact?: boolean }) {
         <DropdownMenuItem onClick={() => setActiveAccount(null)}>
           <User className="h-4 w-4 mr-2" /> Minha conta
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        {teamAccounts.length > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-xs">Equipes que eu atendo</DropdownMenuLabel>
+            {teamAccounts.map((m) => (
+              <DropdownMenuItem key={`time-${m.owner_id}`} onClick={() => { setActiveAccount(m.owner_id); navigate("/socialmidia/dashboard"); }}>
+                <Briefcase className="h-4 w-4 mr-2 shrink-0" />
+                <span className="truncate">{m.name}</span>
+              </DropdownMenuItem>
+            ))}
+          </>
+        )}
+        {hasManagedAccounts && <DropdownMenuSeparator />}
         {managedAccounts.map((m) => (
           <DropdownMenuItem key={m.owner_id} onClick={() => setActiveAccount(m.owner_id)}>
             <span className="truncate">{m.name}</span>

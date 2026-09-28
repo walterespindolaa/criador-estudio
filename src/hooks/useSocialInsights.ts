@@ -51,7 +51,32 @@ export type DailyMetric = {
   website_clicks: number | null;
   accounts_engaged: number | null;
   total_interactions: number | null;
+  // Totais de 30 dias da conta ficam aqui (*_30d) desde o ciclo 1 dos dados;
+  // as colunas acima guardam só o valor DAQUELE dia.
+  metrics?: Record<string, number | boolean | null> | null;
 };
+
+/* Totais de conta dos últimos 30 dias (visitas ao perfil, contas engajadas,
+   interações). Preferência: o total que a própria Meta calculou (*_30d, na
+   linha mais recente que tiver). Sem ele, soma os valores diários. Antes a
+   tela lia a última linha e o Media Kit somava todas, e as duas contas
+   estavam erradas de jeitos diferentes. */
+export function totaisConta30d(daily: DailyMetric[] | undefined | null) {
+  const lista = daily ?? [];
+  const comTotal = [...lista].reverse().find((d) => d.metrics && d.metrics.profile_views_30d != null);
+  const desde = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const recentes = lista.filter((d) => d.date >= desde);
+  const soma = (k: "profile_views" | "accounts_engaged" | "total_interactions") => {
+    const vals = recentes.map((d) => d[k]).filter((v): v is number => v != null);
+    return vals.length ? vals.reduce((a, b) => a + b, 0) : null;
+  };
+  const doTotal = (k: string) => (comTotal?.metrics?.[k] as number | null | undefined) ?? null;
+  return {
+    profileViews: doTotal("profile_views_30d") ?? soma("profile_views"),
+    accountsEngaged: doTotal("accounts_engaged_30d") ?? soma("accounts_engaged"),
+    interactions: doTotal("total_interactions_30d") ?? soma("total_interactions"),
+  };
+}
 
 export type LinkedPost = {
   title: string | null;
@@ -149,7 +174,7 @@ export function useDailyMetrics(days = 30) {
     queryFn: async () => {
       const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
       const { data, error } = await sbFrom("social_metrics_daily")
-        .select("date,followers,reach,impressions,profile_views,website_clicks,accounts_engaged,total_interactions")
+        .select("date,followers,reach,impressions,profile_views,website_clicks,accounts_engaged,total_interactions,metrics")
         .eq("user_id", ownerId!)
         .eq("provider", "instagram")
         .is("crm_client_id", null) // conta própria (contas por-cliente ficam separadas)

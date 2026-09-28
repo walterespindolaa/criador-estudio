@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { IdCard, Download, Pencil, Instagram, Upload, FileText, Trash2, ExternalLink, Loader2, Plus, X, RefreshCw, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/useProfile";
-import { useSocialConnection, useDailyMetrics, useMediaInsights, useSyncInstagram, useSocialAccountOwner, connectInstagram } from "@/hooks/useSocialInsights";
+import { useSocialConnection, useDailyMetrics, useMediaInsights, useSyncInstagram, useSocialAccountOwner, connectInstagram, totaisConta30d } from "@/hooks/useSocialInsights";
 import { useMediaKitProfile, useSaveMediaKitProfile, useCustomMediaKit, KIT_ACCENTS, type MediaKitProfile, type KitService } from "@/hooks/useMediaKit";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,11 +65,14 @@ export default function MediaKit() {
     const firstFollowers = daily.find((d) => d.followers != null)?.followers ?? 0;
     const followersGrowth = followers && firstFollowers ? followers - firstFollowers : 0;
     const reachMonth = daily.reduce((s, d) => s + (d.reach ?? 0), 0);
-    const interactions = daily.reduce((s, d) => s + (d.total_interactions ?? 0), 0);
+    // Totais de conta de 30 dias do jeito certo (antes somava o total de 30
+    // dias gravado em cada dia, e o número saía multiplicado).
+    const tot = totaisConta30d(daily);
+    const interactions = tot.interactions ?? 0;
     const engagementPct = reachMonth > 0 ? Math.min(100, (interactions / reachMonth) * 100) : 0;
     const saves = media.reduce((s, m) => s + (m.metrics?.saved ?? m.metrics?.saves ?? 0), 0);
-    const profileViews = daily.reduce((s, d) => s + (d.profile_views ?? 0), 0);
-    const accountsEngaged = daily.reduce((s, d) => s + (d.accounts_engaged ?? 0), 0);
+    const profileViews = tot.profileViews ?? 0;
+    const accountsEngaged = tot.accountsEngaged ?? 0;
     const postsCount = media.length;
     const reachPosts = media.filter((m) => (m.metrics?.reach ?? 0) > 0);
     const avgReach = reachPosts.length ? Math.round(reachPosts.reduce((s, m) => s + (m.metrics?.reach ?? 0), 0) / reachPosts.length) : 0;

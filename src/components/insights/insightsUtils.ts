@@ -18,8 +18,10 @@ export const fmtNum = (n: number | null | undefined): string =>
 // ("Reels performam...", "Carrosséis performam..."), sem "Foto"/"Carrossel" no singular.
 export const formatMediaLabel = (t: string | null | undefined): string => {
   const k = (t ?? "").toString().trim().toLowerCase();
-  if (k === "reels" || k === "reel") return "Reels";
-  if (k === "video" || k === "vídeo" || k === "reel de video" || k === "reel de vídeo") return "Vídeos";
+  // Todo vídeo do Instagram virou Reels (2023). O VIDEO que aparece em posts
+  // antigos, ou quando a coleta não trazia media_product_type, é Reels também:
+  // separar "Vídeos" de "Reels" partia o mesmo formato em dois na análise.
+  if (k === "reels" || k === "reel" || k === "video" || k === "vídeo" || k === "reel de video" || k === "reel de vídeo") return "Reels";
   if (k === "carousel_album" || k === "carousel" || k === "carrossel" || k === "carrosseis" || k === "carrosséis") return "Carrosséis";
   if (k === "image" || k === "photo" || k === "foto" || k === "fotos") return "Fotos";
   if (k === "story" || k === "stories") return "Stories";
@@ -134,6 +136,18 @@ export function computeStoriesSummary(stories: StoryLike[] | undefined | null): 
 }
 
 // ============================ Cruzamentos (o ouro) ============================
+// Lapidação honesta (ciclo 3 dos dados do Instagram, 28/09/2026):
+//   - post com menos de 3 dias fica FORA da comparação (o alcance dele ainda
+//     está crescendo; comparar com post de 2 meses era injusto);
+//   - "alcance típico" = MEDIANA, não média: um viral isolado não arrasta mais
+//     a conclusão do grupo inteiro;
+//   - só tira conclusão de grupo com pelo menos MIN_AMOSTRA posts; grupo menor
+//     aparece no gráfico marcado como "poucos posts", mas não vira frase;
+//   - linha editorial entra como dimensão; gancho é agrupado pelo começo
+//     (4 primeiras palavras), não pelo texto exato.
+export const MIN_AMOSTRA = 3;
+export const IDADE_MINIMA_DIAS = 3;
+
 export type CrossItem = {
   media_type: string | null;
   posted_at: string | null;
@@ -141,22 +155,43 @@ export type CrossItem = {
   interactions: number;
   pillar?: string | null;
   hook?: string | null;
+  linha?: string | null; // linha editorial do post vinculado
 };
 export type CrossGroup = {
   label: string;
-  avgReach: number;
-  avgEng: number; // interações ÷ alcance médio (%)
+  avgReach: number; // alcance TÍPICO (mediana) do grupo
+  avgEng: number; // interações ÷ alcance (%), mediana do grupo
   count: number;
+  poucos?: boolean; // menos que MIN_AMOSTRA: mostrar, mas não concluir
   color?: string | null;
 };
 export type CrossAnalysisData = {
   hasData: boolean;
-  overallAvgReach: number;
+  overallAvgReach: number; // alcance típico geral (mediana)
+  analisados: number; // posts que entraram na conta
+  recentesFora: number; // posts novos demais, deixados de fora
   byFormat: CrossGroup[];
   byPillar: CrossGroup[];
+  byLinha: CrossGroup[];
   byHook: CrossGroup[];
   byWeekday: CrossGroup[];
   byTime: CrossGroup[];
+};
+
+// Interações de um post do jeito que TODAS as telas devem contar: o total que a
+// Meta dá; sem ele, curtidas + comentários + salvos + compartilhamentos. Antes
+// cada tela somava de um jeito e os números não batiam entre Insights e Relatório.
+export function interacoesDe(metrics: Record<string, number> | null | undefined): number {
+  const m = metrics ?? {};
+  if (m.total_interactions != null && m.total_interactions > 0) return Number(m.total_interactions);
+  return Number(m.likes ?? 0) + Number(m.comments ?? 0) + Number(m.saved ?? m.saves ?? 0) + Number(m.shares ?? 0);
+}
+
+const mediana = (xs: number[]): number => {
+  if (xs.length === 0) return 0;
+  const o = [...xs].sort((a, b) => a - b);
+  const meio = Math.floor(o.length / 2);
+  return o.length % 2 ? o[meio] : (o[meio - 1] + o[meio]) / 2;
 };
 
 // Dia da semana e hora no fuso do Brasil (posted_at é timestamptz).
@@ -178,48 +213,58 @@ function hourBR(iso: string): number {
   try { return parseInt(hFmt.format(new Date(iso)), 10) % 24; } catch { return -1; }
 }
 
-// Agrupa por chave, calcula alcance médio e engajamento médio, ordena por alcance.
+// Gancho agrupado pelo começo: "3 erros que...", "3 erros que eu..." viram o mesmo.
+function chaveGancho(h: string | null | undefined): string | null {
+  const t = (h ?? "").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
+  if (!t) return null;
+  const palavras = t.split(" ").slice(0, 4).join(" ");
+  return palavras.charAt(0).toUpperCase() + palavras.slice(1) + (t.split(" ").length > 4 ? "..." : "");
+}
+
+// Agrupa por chave: alcance e engajamento TÍPICOS (mediana), ordenados por alcance.
 function groupBy(
   items: CrossItem[],
   keyOf: (i: CrossItem) => string | null,
-  opts: { sort?: "reach" | "fixed"; order?: string[]; colorOf?: (i: CrossItem) => string | null | undefined; top?: number } = {},
+  opts: { sort?: "reach" | "fixed"; order?: string[]; top?: number } = {},
 ): CrossGroup[] {
-  const acc: Record<string, { reach: number; eng: number; n: number; color?: string | null }> = {};
+  const acc: Record<string, { reach: number[]; eng: number[] }> = {};
   items.forEach((i) => {
     const k = keyOf(i);
     if (!k) return;
-    acc[k] = acc[k] ?? { reach: 0, eng: 0, n: 0, color: opts.colorOf?.(i) ?? null };
-    acc[k].reach += i.reach;
-    acc[k].eng += i.reach > 0 ? (i.interactions / i.reach) * 100 : 0;
-    acc[k].n += 1;
+    acc[k] = acc[k] ?? { reach: [], eng: [] };
+    acc[k].reach.push(i.reach);
+    if (i.reach > 0) acc[k].eng.push((i.interactions / i.reach) * 100);
   });
   let rows: CrossGroup[] = Object.entries(acc).map(([label, v]) => ({
     label,
-    avgReach: v.n > 0 ? Math.round(v.reach / v.n) : 0,
-    avgEng: v.n > 0 ? v.eng / v.n : 0,
-    count: v.n,
-    color: v.color,
+    avgReach: Math.round(mediana(v.reach)),
+    avgEng: mediana(v.eng),
+    count: v.reach.length,
+    poucos: v.reach.length < MIN_AMOSTRA,
   }));
   if (opts.sort === "fixed" && opts.order) {
     rows.sort((a, b) => opts.order!.indexOf(a.label) - opts.order!.indexOf(b.label));
   } else {
-    rows.sort((a, b) => b.avgReach - a.avgReach);
+    // Grupos com amostra boa primeiro; dentro deles, maior alcance típico.
+    rows.sort((a, b) => Number(!!a.poucos) - Number(!!b.poucos) || b.avgReach - a.avgReach);
   }
   if (opts.top) rows = rows.slice(0, opts.top);
   return rows;
 }
 
 export function computeCrossAnalysis(items: CrossItem[] | undefined | null): CrossAnalysisData {
-  const list = (items ?? []).filter((i) => i.reach > 0 || i.interactions > 0);
-  if (list.length === 0) {
-    return { hasData: false, overallAvgReach: 0, byFormat: [], byPillar: [], byHook: [], byWeekday: [], byTime: [] };
-  }
-  const totalReach = list.reduce((a, i) => a + i.reach, 0);
-  const overallAvgReach = list.length > 0 ? Math.round(totalReach / list.length) : 0;
+  const corte = Date.now() - IDADE_MINIMA_DIAS * 86400000;
+  const comDado = (items ?? []).filter((i) => i.reach > 0 || i.interactions > 0);
+  const list = comDado.filter((i) => !i.posted_at || new Date(i.posted_at).getTime() <= corte);
+  const recentesFora = comDado.length - list.length;
+  const vazio = { hasData: false, overallAvgReach: 0, analisados: 0, recentesFora, byFormat: [], byPillar: [], byLinha: [], byHook: [], byWeekday: [], byTime: [] };
+  if (list.length === 0) return vazio;
+  const overallAvgReach = Math.round(mediana(list.map((i) => i.reach)));
 
   const byFormat = groupBy(list, (i) => formatMediaLabel(i.media_type));
-  const byPillar = groupBy(list, (i) => (i.pillar ? i.pillar : null), { colorOf: () => null });
-  const byHook = groupBy(list, (i) => (i.hook ? i.hook.trim() : null), { top: 4 });
+  const byPillar = groupBy(list, (i) => (i.pillar ? i.pillar : null));
+  const byLinha = groupBy(list, (i) => (i.linha ? i.linha : null));
+  const byHook = groupBy(list, (i) => chaveGancho(i.hook), { top: 5 });
   const byWeekday = groupBy(
     list.filter((i) => i.posted_at),
     (i) => { const w = weekdayBR(i.posted_at!); return w >= 0 ? WD_PT[w] : null; },
@@ -233,58 +278,43 @@ export function computeCrossAnalysis(items: CrossItem[] | undefined | null): Cro
     },
   );
 
-  return { hasData: true, overallAvgReach, byFormat, byPillar, byHook, byWeekday, byTime };
+  return { hasData: true, overallAvgReach, analisados: list.length, recentesFora, byFormat, byPillar, byLinha, byHook, byWeekday, byTime };
 }
 
-// Gera frases acionáveis (direcionamento) a partir dos cruzamentos calculados.
-export function crossHeadlines(data: CrossAnalysisData): string[] {
+// Frases de direção. Regra de ouro: só afirma com amostra (>= MIN_AMOSTRA posts
+// em CADA grupo comparado) e com diferença que importa (>= 20%). Sem base,
+// não inventa: devolve uma frase dizendo o que falta.
+// opts.dicaLigar: só na tela de Insights da própria conta. No relatório que
+// vai pro cliente a frase "ligue as publicações" seria instrução interna.
+export function crossHeadlines(data: CrossAnalysisData, opts: { dicaLigar?: boolean } = {}): string[] {
   const out: string[] = [];
   const base = data.overallAvgReach;
-  const ratio = (v: number) => (base > 0 ? v / base : 0);
+  const bons = (g: CrossGroup[]) => g.filter((x) => !x.poucos);
+  const pct = (a: number, b: number) => Math.round((a / b - 1) * 100);
 
-  // Frase neutra: os rótulos vêm sempre no plural (Reels, Carrosséis, Fotos...),
-  // então "performam" concorda pra qualquer formato sem quebrar a gramática.
-  const [f1, f2] = data.byFormat;
-  if (f1 && data.byFormat.length > 1 && base > 0) {
-    if (f2 && f2.avgReach > 0 && f1.avgReach / f2.avgReach >= 1.2) {
-      const x = (f1.avgReach / f2.avgReach).toFixed(1).replace(".0", "");
-      out.push(`${f1.label} performam ${x}x melhor que ${f2.label} (${fmtNum(f1.avgReach)} de alcance médio). Priorize esse formato na próxima leva.`);
-    } else {
-      const r = ratio(f1.avgReach);
-      if (r >= 1.15) {
-        out.push(`Formato mais forte: ${f1.label} (${r.toFixed(1)}x a média geral, ${fmtNum(f1.avgReach)} de alcance médio). Vale priorizar.`);
-      }
-    }
+  const fmts = bons(data.byFormat);
+  if (fmts.length >= 2 && fmts[1].avgReach > 0 && fmts[0].avgReach >= fmts[1].avgReach * 1.2) {
+    const x = (fmts[0].avgReach / fmts[1].avgReach).toFixed(1).replace(".0", "").replace(".", ",");
+    out.push(`${fmts[0].label} alcançam ${x}x mais que ${fmts[1].label} (${fmtNum(fmts[0].avgReach)} de alcance típico em ${fmts[0].count} posts). Priorize esse formato na próxima leva.`);
   }
-  // Formato que mais ENGAJA (interações ÷ alcance), quando for outro que o campeão de
-  // alcance: alcance grande nem sempre é o que mais gera relacionamento. Só com >=2 posts
-  // pra a média fazer sentido.
-  const engFormats = data.byFormat.filter((g) => g.count >= 2 && g.avgEng > 0);
-  if (engFormats.length > 1) {
-    const topEng = [...engFormats].sort((a, b) => b.avgEng - a.avgEng)[0];
-    if (topEng && (!f1 || topEng.label !== f1.label) && topEng.avgEng >= 1) {
-      out.push(`${topEng.label} são os que mais engajam: ${topEng.avgEng.toFixed(1).replace(".", ",")}% de interações sobre o alcance. Bom formato pra fortalecer relacionamento com a audiência.`);
-    }
+  const engF = fmts.filter((g) => g.avgEng > 0).sort((a, b) => b.avgEng - a.avgEng);
+  if (engF.length >= 2 && engF[0].label !== fmts[0]?.label && engF[0].avgEng >= engF[1].avgEng * 1.2) {
+    out.push(`${engF[0].label} são os que mais engajam: ${engF[0].avgEng.toFixed(1).replace(".", ",")}% de interações sobre o alcance. Bom pra fortalecer relacionamento.`);
   }
 
-  const topPillar = data.byPillar[0];
-  if (topPillar && data.byPillar.length > 1) {
-    out.push(`O pilar "${topPillar.label}" puxa mais alcance (${fmtNum(topPillar.avgReach)} em média). Vale reforçar esse tema.`);
-  }
-  const topDay = data.byWeekday[0];
-  if (topDay && data.byWeekday.length > 1) {
-    out.push(`Melhor dia pra publicar: ${topDay.label} (${fmtNum(topDay.avgReach)} de alcance médio).`);
-  }
-  const topTime = data.byTime[0];
-  if (topTime && data.byTime.length > 1) {
-    out.push(`Seus posts da ${topTime.label.toLowerCase()} rendem mais (${fmtNum(topTime.avgReach)} de alcance médio). Concentre as publicações nesse período.`);
-  }
+  const topo = (g: CrossGroup[], frase: (x: CrossGroup, p: number) => string) => {
+    const b = bons(g);
+    if (b.length >= 2 && base > 0 && b[0].avgReach >= base * 1.2) out.push(frase(b[0], pct(b[0].avgReach, base)));
+  };
+  topo(data.byPillar, (x, p) => `O pilar "${x.label}" alcança ${p}% acima do seu normal (${x.count} posts). Vale reforçar esse tema.`);
+  topo(data.byLinha, (x, p) => `A linha editorial "${x.label}" rende ${p}% acima do seu normal (${x.count} posts).`);
+  topo(data.byWeekday, (x, p) => `${x.label} é o seu melhor dia: ${p}% acima do normal (${x.count} posts).`);
+  topo(data.byTime, (x, p) => `Posts da ${x.label.toLowerCase()} alcançam ${p}% acima do normal (${x.count} posts). Concentre as publicações nesse período.`);
+  topo(data.byHook, (x, p) => `Ganchos que começam com "${x.label}" rendem ${p}% acima do normal (${x.count} posts). Explore mais esse ângulo.`);
 
-  // Gancho/tema (dos posts vinculados) que vem rendendo acima da média: >=2 posts e
-  // pelo menos 10% acima da média geral pra ser um sinal, não ruído.
-  const topHook = data.byHook[0];
-  if (topHook && topHook.count >= 2 && base > 0 && topHook.avgReach >= base * 1.1) {
-    out.push(`Ganchos tipo "${topHook.label}" vêm rendendo acima da média (${fmtNum(topHook.avgReach)} de alcance médio em ${topHook.count} posts). Explore mais esse ângulo.`);
+  // Pilar/linha sem base porque os posts não estão ligados: diz o caminho.
+  if (opts.dicaLigar && data.byPillar.length === 0 && data.analisados >= MIN_AMOSTRA * 2) {
+    out.push("Ligue as publicações aos posts do Cria (logo acima) pra ver quais pilares e linhas editoriais rendem mais.");
   }
   return out;
 }

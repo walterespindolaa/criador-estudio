@@ -17,7 +17,7 @@ import type { ExternalClient, ExternalPost } from "@/hooks/useCriaPost";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import { MarcaRedonda, MarcaBarra } from "@/components/shared/MarcaRedonda";
 import {
-  computeCrossAnalysis, crossHeadlines, computeAudienceBreakdown, computeStoriesSummary,
+  computeCrossAnalysis, crossHeadlines, computeAudienceBreakdown, computeStoriesSummary, interacoesDe,
   fmtNum, type CrossItem, type AudienceLike, type StoryLike,
 } from "@/components/insights/insightsUtils";
 
@@ -44,15 +44,16 @@ type IgMediaRow = {
   // Vínculo com a peça que a agência produziu no Cria Post (external_post), quando houver.
   post_id?: string | null;
   linked_title?: string | null; linked_format?: string | null; linked_hook?: string | null;
+  linked_linha?: string | null;
 };
 // Série diária da conta (seguidores/alcance). A RPC só devolve `daily` depois da
 // migration nova (ver entrega); antes disso vem undefined e a seção some sozinha.
 type IgDailyRow = { date: string; followers: number | null; reach: number | null };
 // Retorno da RPC get_client_ig_report (mídias + demografia + stories do cliente).
 type IgReport = { media: IgMediaRow[]; audience: AudienceLike[]; stories: StoryLike[]; daily: IgDailyRow[] };
-const MEDIA_PT: Record<string, string> = { IMAGE: "Imagem", VIDEO: "Vídeo", REELS: "Reels", CAROUSEL_ALBUM: "Carrossel" };
-const engOf = (m: Record<string, number> | null) =>
-  m ? (Number(m.likes) || 0) + (Number(m.comments) || 0) + (Number(m.saved) || 0) + (Number(m.shares) || 0) : 0;
+const MEDIA_PT: Record<string, string> = { IMAGE: "Imagem", VIDEO: "Reels", REELS: "Reels", CAROUSEL_ALBUM: "Carrossel" };
+// Mesma conta de interações de todas as telas (ciclo 3 dos dados).
+const engOf = (m: Record<string, number> | null) => interacoesDe(m);
 
 const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -988,81 +989,38 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
     until: period.until.toISOString(),
   }), [period]);
 
-  // Caminho 1: snapshot do IG do cliente que usa o Cria.
-  type CriaIgRaw = {
-    media?: IgMediaRow[]; audience?: AudienceLike[]; stories?: StoryLike[];
-    daily?: IgDailyRow[];
+  // FONTE ÚNICA (ciclo 5 dos dados do Instagram, 28/09/2026): ig_relatorio_cliente
+  // acha a conexão certa (conectada pela agência OU a conta Cria do cliente),
+  // filtra pelo período no servidor e já traz a peça do Cria ligada em cada
+  // post. Antes eram dois caminhos: o do cliente conectado pela agência vinha
+  // sempre vazio, e o do cliente Cria cortava em 48 posts e sem as peças.
+  const buscarIg = async (since: Date, until: Date): Promise<IgReport> => {
+    const { data, error } = await sbRpcR("ig_relatorio_cliente", {
+      _crm_client_id: client.crm_client_id,
+      _since: since.toISOString(),
+      _until: until.toISOString(),
+    });
+    if (error) throw error;
+    const d = (data as Partial<IgReport> | null) ?? {};
+    return { media: d.media ?? [], audience: d.audience ?? [], stories: d.stories ?? [], daily: d.daily ?? [] };
   };
-  const { data: criaIgRaw } = useQuery<CriaIgRaw>({
-    queryKey: ["report-ig-cria", criaOwnerId],
-    enabled: open && !!criaOwnerId,
-    queryFn: async () => {
-      const { data, error } = await sbRpcR("manager_client_instagram", { client_owner_id: criaOwnerId });
-      if (error) throw error;
-      const d = (data as (CriaIgRaw & { connected?: boolean }) | null) ?? {};
-      return { media: d.media ?? [], audience: d.audience ?? [], stories: d.stories ?? [], daily: d.daily ?? [] };
-    },
-  });
-
-  // Caminho 2: RPC por crm_client_id (só quando NÃO é cliente Cria).
   const { data: igReportRpc } = useQuery<IgReport>({
-    queryKey: ["report-ig-data", client.crm_client_id, period.key],
-    enabled: open && !!client.crm_client_id && !criaOwnerId,
-    queryFn: async () => {
-      const { data, error } = await sbRpcR("get_client_ig_report", {
-        _crm_client_id: client.crm_client_id,
-        _since: monthRange.since,
-        _until: monthRange.until,
-      });
-      if (error) throw error;
-      const d = (data as Partial<IgReport> | null) ?? {};
-      return { media: d.media ?? [], audience: d.audience ?? [], stories: d.stories ?? [], daily: d.daily ?? [] };
-    },
+    queryKey: ["report-ig-data", client.crm_client_id, monthRange.since, monthRange.until],
+    enabled: open && !!client.crm_client_id,
+    queryFn: () => buscarIg(period.since, period.until),
   });
   const { data: prevIgRpc } = useQuery<IgMediaRow[]>({
     queryKey: ["report-ig-prev", client.crm_client_id, prevPeriod.since.toISOString(), prevPeriod.until.toISOString()],
-    enabled: open && !!client.crm_client_id && !criaOwnerId,
-    queryFn: async () => {
-      const { data, error } = await sbRpcR("get_client_ig_report", {
-        _crm_client_id: client.crm_client_id,
-        _since: prevPeriod.since.toISOString(),
-        _until: prevPeriod.until.toISOString(),
-      });
-      if (error) throw error;
-      return ((data as Partial<IgReport> | null)?.media) ?? [];
-    },
+    enabled: open && !!client.crm_client_id,
+    queryFn: async () => (await buscarIg(prevPeriod.since, prevPeriod.until)).media,
   });
 
-  // Filtra por período (posted_at dentro de [since, until); `until` exclusivo).
-  const inRange = (iso: string | null | undefined, since: Date, until: Date) => {
-    if (!iso) return false;
-    const t = new Date(iso).getTime();
-    return t >= since.getTime() && t < until.getTime();
-  };
-
-  // Bundle final do IG: caminho Cria (filtrado por período) ou RPC.
-  const igReport = useMemo<IgReport>(() => {
-    if (criaOwnerId && criaIgRaw) {
-      const sinceDay = toISODateBR(period.since);
-      const untilDay = toISODateBR(new Date(period.until.getTime() - 1));
-      return {
-        media: (criaIgRaw.media ?? []).filter((m) => inRange(m.posted_at, period.since, period.until)),
-        stories: (criaIgRaw.stories ?? []).filter((s) => inRange((s as { posted_at?: string | null }).posted_at, period.since, period.until)),
-        // Demografia é snapshot (não tem série por dia), então vai inteira.
-        audience: criaIgRaw.audience ?? [],
-        daily: (criaIgRaw.daily ?? []).filter((d) => d.date >= sinceDay && d.date <= untilDay),
-      };
-    }
-    return igReportRpc ?? { media: [], audience: [], stories: [], daily: [] };
-  }, [criaOwnerId, criaIgRaw, igReportRpc, period]);
-
+  const igReport = useMemo<IgReport>(
+    () => igReportRpc ?? { media: [], audience: [], stories: [], daily: [] },
+    [igReportRpc],
+  );
   const igMedia = useMemo<IgMediaRow[]>(() => igReport?.media ?? [], [igReport]);
-  const prevIgMedia = useMemo<IgMediaRow[]>(() => {
-    if (criaOwnerId && criaIgRaw) {
-      return (criaIgRaw.media ?? []).filter((m) => inRange(m.posted_at, prevPeriod.since, prevPeriod.until));
-    }
-    return prevIgRpc ?? [];
-  }, [criaOwnerId, criaIgRaw, prevIgRpc, prevPeriod]);
+  const prevIgMedia = useMemo<IgMediaRow[]>(() => prevIgRpc ?? [], [prevIgRpc]);
   const audience = useMemo(() => computeAudienceBreakdown(igReport?.audience), [igReport]);
   const stories = useMemo(() => computeStoriesSummary(igReport?.stories), [igReport]);
   const perf = useMemo(() => perfOf(igMedia), [igMedia]);
@@ -1078,8 +1036,9 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
   const bestHour = useMemo(() => {
     const top = ranking[0];
     if (!top?.posted_at) return null;
-    const d = new Date(top.posted_at);
-    return `${String(d.getHours()).padStart(2, "0")}h`;
+    // Horário de Brasília (antes usava o fuso do navegador de quem abria).
+    const h = new Date(top.posted_at).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit" });
+    return `${h.slice(0, 2)}h`;
   }, [ranking]);
   const dtFmt = (s: string | null) =>
     s ? new Date(s).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
@@ -1091,9 +1050,11 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       media_type: r.media_type,
       posted_at: r.posted_at,
       reach: Number(r.metrics?.reach) || 0,
-      interactions: engOf(r.metrics),
+      interactions: interacoesDe(r.metrics),
       pillar: null,
-      hook: null,
+      // Peça do Cria ligada (ciclo 5): gancho e linha editorial entram na análise.
+      hook: r.linked_hook ?? null,
+      linha: r.linked_linha ?? null,
     }));
     return computeCrossAnalysis(items);
   }, [igMedia]);

@@ -35,6 +35,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { usePillars } from "@/hooks/usePillars";
 import { useProfile } from "@/hooks/useProfile";
 import { useBrandContext } from "@/hooks/useBrandContext";
+import { useResumoDesempenho } from "@/hooks/useResumoDesempenho";
 import { usePosts, type Post } from "@/hooks/usePosts";
 import { getIdeaSuggestions } from "@/lib/ai/claude";
 import { SavedRefs } from "@/components/ideas/SavedRefs";
@@ -133,6 +134,7 @@ const Ideias = () => {
   const { pillars } = usePillars();
   const { profile } = useProfile();
   const { brandContext, hasBrandContext } = useBrandContext();
+  const desempenho = useResumoDesempenho();
   const { createPost } = usePosts();
 
   const [search, setSearch] = useState("");
@@ -326,6 +328,9 @@ const Ideias = () => {
         // "contratar um creator". Quem a pessoa é e pra quem ela fala está
         // no brandbook, e é dali que a sugestão tem que partir.
         brandContext: hasBrandContext ? brandContext : undefined,
+        // O que já rendeu no Instagram dela (ciclo 4 dos dados): a sugestão
+        // puxa pro formato/ângulo que funciona, em vez de chutar.
+        desempenho: desempenho.texto || undefined,
       };
       const result = await getIdeaSuggestions(params, user?.id);
       let parsed = parseSuggestions(result);

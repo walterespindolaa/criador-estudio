@@ -3,7 +3,11 @@
 // Coleta insights do Instagram e grava no cache local.
 // Tabelas: social_metrics_daily (1/dia), social_insights (1/mídia), social_audience
 // (demografia por dimensão) e social_stories (snapshot de stories).
-// Invocada pelo frontend (botão "Atualizar") com o JWT do usuário CRIA.
+// Invocada pelo frontend (botão "Atualizar") com o JWT do usuário CRIA, e
+// (28/09/2026, ciclo 1 dos dados do Instagram) pelo ROBÔ com x-internal-secret:
+//   { modo: 'completo' } a cada 20 min: atualiza as conexões mais antigas
+//                        (cada conta fica com no máximo ~1 dia de atraso);
+//   { modo: 'stories' }  a cada 3 h: só stories (somem em 24 h).
 //
 // Cobre TODAS as conexões de Instagram do usuário: a própria (crm_client_id null)
 // e as conectadas no contexto de um cliente (crm_client_id setado). Cada conexão
@@ -12,7 +16,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ALLOWED_ORIGIN') || '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-internal-secret',
 };
 const GRAPH = 'https://graph.instagram.com';
 
@@ -60,10 +64,70 @@ type Conn = { id: string; access_token: string; external_account_id: string | nu
 
 // Sincroniza UMA conexão. Isolada em try/catch pelo chamador: uma falha (token
 // revogado de um cliente) não derruba as demais conexões do usuário.
+// STORIES (somem em 24 h: o robô passa a cada 3 h pra não perder).
+async function syncStories(admin: ReturnType<typeof createClient>, userId: string, conn: Conn): Promise<number> {
+  const token = conn.access_token;
+  const crmClientId = conn.crm_client_id ?? null;
+  let storiesSynced = 0;
+  try {
+    const storiesRes = await getJson(`${GRAPH}/me/stories?fields=id,media_type,timestamp,permalink,thumbnail_url,media_url&access_token=${token}`);
+    const storyItems = (storiesRes.data ?? []) as Array<Record<string, unknown>>;
+
+    const buildStory = async (st: Record<string, unknown>) => {
+      const id = String(st.id);
+      const metrics: Record<string, number> = {};
+      // Lote de métricas de story; se a API recusar o conjunto, tenta uma a uma
+      // (impressions/taps_* podem estar depreciados na conta).
+      const batch = await getJson(`${GRAPH}/${id}/insights?metric=reach,replies,total_interactions,navigation&access_token=${token}`);
+      const batchRows = (batch.data ?? []) as Array<{ name: string; values?: Array<{ value: number }> }>;
+      if (batchRows.length) {
+        for (const r of batchRows) metrics[r.name] = Number(r.values?.[0]?.value ?? 0);
+      } else {
+        for (const m of ['reach', 'replies', 'total_interactions', 'navigation']) {
+          try {
+            const one = await getJson(`${GRAPH}/${id}/insights?metric=${m}&access_token=${token}`);
+            const rr = (one.data ?? []) as Array<{ name: string; values?: Array<{ value: number }> }>;
+            if (rr[0]) metrics[rr[0].name] = Number(rr[0].values?.[0]?.value ?? 0);
+          } catch { /* métrica indisponível: segue */ }
+        }
+      }
+      return {
+        user_id: userId, crm_client_id: crmClientId, provider: 'instagram',
+        external_story_id: id, media_type: (st.media_type as string) ?? null,
+        permalink: (st.permalink as string) ?? null,
+        thumbnail_url: (st.thumbnail_url as string) ?? (st.media_url as string) ?? null,
+        media_url: (st.media_url as string) ?? null,
+        posted_at: (st.timestamp as string) ?? null, metrics,
+        captured_at: new Date().toISOString(),
+      };
+    };
+
+    const storyRows: Array<Record<string, unknown>> = [];
+    for (let i = 0; i < storyItems.length; i += POOL) {
+      const chunk = storyItems.slice(i, i + POOL);
+      const rows = await Promise.all(chunk.map((st) => buildStory(st).catch(() => null)));
+      for (const r of rows) if (r) storyRows.push(r);
+    }
+    if (storyRows.length) {
+      const { error: stErr } = await admin.from('social_stories')
+        .upsert(storyRows as never, { onConflict: 'user_id,crm_client_id,provider,external_story_id' });
+      if (!stErr) storiesSynced = storyRows.length;
+      else console.error('[instagram-sync] stories upsert error', stErr);
+    }
+  } catch (e) {
+    console.warn('[instagram-sync] stories fail', String(e));
+  }
+
+  return storiesSynced;
+}
+
+type Opcoes = { maxMedia?: number };
+
 async function syncConnection(
   admin: ReturnType<typeof createClient>,
   userId: string,
   conn: Conn,
+  opcoes: Opcoes = {},
 ): Promise<{ crm_client_id: string | null; ok: boolean; reconnect?: boolean; followers?: number | null; media_synced?: number; stories_synced?: number; demographics_rows?: number; detail?: string }> {
   const token = conn.access_token;
   const crmClientId = conn.crm_client_id ?? null;
@@ -75,7 +139,12 @@ async function syncConnection(
   const meRes = await fetchGraph(`${GRAPH}/me?fields=username,account_type,followers_count,follows_count,media_count,profile_picture_url&access_token=${token}`);
   if (!meRes.ok) {
     console.error('[instagram-sync] graph /me error', conn.id, meRes.status, meRes.body?.error);
-    return { crm_client_id: crmClientId, ok: false, reconnect: true, detail: (meRes.body?.error as { message?: string } | undefined)?.message ?? 'graph_error' };
+    // Só é "reconecte" quando o problema é o TOKEN (190/OAuthException/401).
+    // Limite de uso, 5xx e queda de rede são passageiros: o robô marcaria a
+    // conta como morta por um soluço e ela pararia de atualizar pra sempre.
+    const err = (meRes.body?.error ?? {}) as { code?: number; type?: string; message?: string };
+    const tokenMorto = err.code === 190 || err.type === 'OAuthException' || meRes.status === 401;
+    return { crm_client_id: crmClientId, ok: false, reconnect: tokenMorto, detail: err.message ?? 'graph_error' };
   }
   const me = meRes.body as Record<string, number | string | undefined>;
   // Dia de calendário no fuso do Brasil (servidor roda em UTC).
@@ -96,27 +165,50 @@ async function syncConnection(
   if (reachRows.length) {
     await admin.from('social_metrics_daily').upsert(reachRows as never, { onConflict: 'user_id,crm_client_id,provider,date' });
   }
+  // TOTAIS DE CONTA (visitas ao perfil, contas engajadas, interações).
+  // Antes: o total de 30 dias era gravado na linha de CADA dia, e quem somava
+  // os dias (Media Kit) multiplicava o número. Agora (ciclo 1 dos dados):
+  //   - o total de 30 dias vai no metrics da linha de hoje (*_30d), pra tela
+  //     mostrar "últimos 30 dias" sem precisar de histórico;
+  //   - as colunas do dia guardam o valor DAQUELE dia (ontem, que já fechou).
   const acctTotals = await getJson(`${GRAPH}/me/insights?metric=profile_views,accounts_engaged,total_interactions&period=day&metric_type=total_value&since=${since}&until=${until}&access_token=${token}`);
   const tot: Record<string, number> = {};
   for (const row of (acctTotals.data ?? []) as Array<{ name: string; total_value?: { value: number }; values?: Array<{ value: number }> }>) {
     tot[row.name] = Number(row.total_value?.value ?? row.values?.[0]?.value ?? 0);
   }
+  // Meia-noite de hoje no horário de Brasília (UTC-3).
+  const inicioHoje = Math.floor(new Date(`${today}T00:00:00-03:00`).getTime() / 1000);
+  // Os 3 últimos dias fechados (uma chamada por dia): se o robô passar mais
+  // de 24 h sem atualizar esta conta, o dia do meio não fica sem valor.
+  for (let voltar = 1; voltar <= 3; voltar++) {
+    const ini = inicioHoje - voltar * 86400;
+    const dia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date((ini + 3600) * 1000));
+    const r = await getJson(`${GRAPH}/me/insights?metric=profile_views,accounts_engaged,total_interactions&period=day&metric_type=total_value&since=${ini}&until=${ini + 86400}&access_token=${token}`);
+    const valores: Record<string, unknown> = {};
+    for (const row of (r.data ?? []) as Array<{ name: string; total_value?: { value: number }; values?: Array<{ value: number }> }>) {
+      valores[row.name] = Number(row.total_value?.value ?? row.values?.[0]?.value ?? 0);
+    }
+    if (Object.keys(valores).length) {
+      await admin.from('social_metrics_daily').upsert(
+        { user_id: userId, crm_client_id: crmClientId, provider: 'instagram', date: dia, ...valores, captured_at: capturedAt } as never,
+        { onConflict: 'user_id,crm_client_id,provider,date' },
+      );
+    }
+  }
 
   // Payload base do dia: só o que veio do /me (sempre disponível quando meRes.ok).
-  // Os totais de conta (profile_views/accounts_engaged/total_interactions) vêm de
-  // uma chamada best-effort que pode falhar por rate limit e voltar VAZIA. Se
-  // incluíssemos essas chaves sempre, um sync que falhou os totais gravaria null
-  // por cima do valor já capturado do dia. Por isso só damos spread dos campos de
-  // `tot` que realmente vieram (chave presente no objeto), preservando o resto.
+  // Os totais de 30 dias só entram se a chamada voltou (rate limit devolve vazio
+  // e não pode gravar null por cima do que já tinha).
+  const metricsHoje: Record<string, unknown> = { media_count: me.media_count ?? null };
+  if ('profile_views' in tot) metricsHoje.profile_views_30d = tot.profile_views;
+  if ('accounts_engaged' in tot) metricsHoje.accounts_engaged_30d = tot.accounts_engaged;
+  if ('total_interactions' in tot) metricsHoje.total_interactions_30d = tot.total_interactions;
   const dailyRow: Record<string, unknown> = {
     user_id: userId, crm_client_id: crmClientId, provider: 'instagram', date: today,
     followers: me.followers_count ?? null,
-    metrics: { media_count: me.media_count ?? null },
+    metrics: metricsHoje,
     captured_at: new Date().toISOString(),
   };
-  if ('profile_views' in tot) dailyRow.profile_views = tot.profile_views;
-  if ('accounts_engaged' in tot) dailyRow.accounts_engaged = tot.accounts_engaged;
-  if ('total_interactions' in tot) dailyRow.total_interactions = tot.total_interactions;
 
   await admin.from('social_metrics_daily').upsert(
     dailyRow as never,
@@ -216,31 +308,42 @@ async function syncConnection(
   // 2) MÍDIAS + insights por post (com paginação até MAX_MEDIA).
   const items: Array<Record<string, unknown>> = [];
   let nextUrl: string | null =
-    `${GRAPH}/me/media?fields=id,caption,media_type,thumbnail_url,media_url,permalink,timestamp,like_count,comments_count&limit=${MEDIA_PAGE}&access_token=${token}`;
-  while (nextUrl && items.length < MAX_MEDIA) {
+    `${GRAPH}/me/media?fields=id,caption,media_type,media_product_type,thumbnail_url,media_url,permalink,timestamp,like_count,comments_count&limit=${MEDIA_PAGE}&access_token=${token}`;
+  const maxMedia = opcoes.maxMedia ?? MAX_MEDIA;
+  while (nextUrl && items.length < maxMedia) {
     const page: Record<string, unknown> & { data?: unknown; paging?: { next?: string } } = await getJson(nextUrl);
     const pageItems = (page.data ?? []) as Array<Record<string, unknown>>;
     items.push(...pageItems);
     nextUrl = (page.paging?.next as string | undefined) ?? null;
     if (!pageItems.length) break;
   }
-  const mediaItems = items.slice(0, MAX_MEDIA);
+  const mediaItems = items.slice(0, maxMedia);
 
   // Monta a linha de cada mídia (chamadas de insight em paralelo, com pool de concorrência).
   const buildRow = async (it: Record<string, unknown>) => {
     const id = String(it.id);
-    const type = String(it.media_type ?? '');
+    const tipoBase = String(it.media_type ?? '');
+    // REELS DE VERDADE (ciclo 1 dos dados): a Meta devolve media_type=VIDEO pra
+    // Reels; quem diz que é Reels é o media_product_type. Antes todo Reels
+    // aparecia como "Vídeos" na análise e cada tela chamava de um jeito.
+    const type = String(it.media_product_type ?? '') === 'REELS' ? 'REELS' : tipoBase;
     const isVideo = type === 'VIDEO' || type === 'REELS';
-    const [reachIns, extraIns] = await Promise.all([
+    // Cada grupo numa chamada separada: se a Meta recusar um (métrica que não
+    // vale pra aquele tipo), os outros continuam.
+    const [reachIns, extraIns, viewsIns, perfilIns] = await Promise.all([
       getJson(`${GRAPH}/${id}/insights?metric=reach&access_token=${token}`),
       getJson(`${GRAPH}/${id}/insights?metric=saved,shares,total_interactions&access_token=${token}`),
+      // views vale pra todos os tipos desde 2025 (plays e impressions foram desligados).
+      getJson(`${GRAPH}/${id}/insights?metric=views&access_token=${token}`),
+      // Quantos visitaram o perfil e quantos seguiram a partir deste post.
+      getJson(`${GRAPH}/${id}/insights?metric=profile_visits,follows&access_token=${token}`),
     ]);
-    const rows = [...(reachIns.data as unknown[] ?? []), ...(extraIns.data as unknown[] ?? [])];
+    const rows = [
+      ...(reachIns.data as unknown[] ?? []), ...(extraIns.data as unknown[] ?? []),
+      ...(viewsIns.data as unknown[] ?? []), ...(perfilIns.data as unknown[] ?? []),
+    ];
     if (isVideo) {
-      let v = await getJson(`${GRAPH}/${id}/insights?metric=views&access_token=${token}`);
-      if (!((v.data as unknown[])?.length)) v = await getJson(`${GRAPH}/${id}/insights?metric=plays&access_token=${token}`);
-      rows.push(...(v.data as unknown[] ?? []));
-      // RETENÇÃO DE REELS (defensivo, chamada separada pra não derrubar 'views').
+      // RETENÇÃO DE REELS (defensivo, chamada separada).
       const ret = await getJson(`${GRAPH}/${id}/insights?metric=ig_reels_avg_watch_time,ig_reels_video_view_total_time&access_token=${token}`);
       if ((ret.data as unknown[])?.length) rows.push(...(ret.data as unknown[]));
     }
@@ -320,56 +423,7 @@ async function syncConnection(
     else console.error('[instagram-sync] bulk upsert error', upErr);
   }
 
-  // 3) STORIES (somem em 24h -> guardamos o snapshot do que capturarmos).
-  let storiesSynced = 0;
-  try {
-    const storiesRes = await getJson(`${GRAPH}/me/stories?fields=id,media_type,timestamp,permalink,thumbnail_url,media_url&access_token=${token}`);
-    const storyItems = (storiesRes.data ?? []) as Array<Record<string, unknown>>;
-
-    const buildStory = async (st: Record<string, unknown>) => {
-      const id = String(st.id);
-      const metrics: Record<string, number> = {};
-      // Lote de métricas de story; se a API recusar o conjunto, tenta uma a uma
-      // (impressions/taps_* podem estar depreciados na conta).
-      const batch = await getJson(`${GRAPH}/${id}/insights?metric=reach,replies,total_interactions,navigation&access_token=${token}`);
-      const batchRows = (batch.data ?? []) as Array<{ name: string; values?: Array<{ value: number }> }>;
-      if (batchRows.length) {
-        for (const r of batchRows) metrics[r.name] = Number(r.values?.[0]?.value ?? 0);
-      } else {
-        for (const m of ['reach', 'replies', 'total_interactions', 'navigation']) {
-          try {
-            const one = await getJson(`${GRAPH}/${id}/insights?metric=${m}&access_token=${token}`);
-            const rr = (one.data ?? []) as Array<{ name: string; values?: Array<{ value: number }> }>;
-            if (rr[0]) metrics[rr[0].name] = Number(rr[0].values?.[0]?.value ?? 0);
-          } catch { /* métrica indisponível: segue */ }
-        }
-      }
-      return {
-        user_id: userId, crm_client_id: crmClientId, provider: 'instagram',
-        external_story_id: id, media_type: (st.media_type as string) ?? null,
-        permalink: (st.permalink as string) ?? null,
-        thumbnail_url: (st.thumbnail_url as string) ?? (st.media_url as string) ?? null,
-        media_url: (st.media_url as string) ?? null,
-        posted_at: (st.timestamp as string) ?? null, metrics,
-        captured_at: new Date().toISOString(),
-      };
-    };
-
-    const storyRows: Array<Record<string, unknown>> = [];
-    for (let i = 0; i < storyItems.length; i += POOL) {
-      const chunk = storyItems.slice(i, i + POOL);
-      const rows = await Promise.all(chunk.map((st) => buildStory(st).catch(() => null)));
-      for (const r of rows) if (r) storyRows.push(r);
-    }
-    if (storyRows.length) {
-      const { error: stErr } = await admin.from('social_stories')
-        .upsert(storyRows as never, { onConflict: 'user_id,crm_client_id,provider,external_story_id' });
-      if (!stErr) storiesSynced = storyRows.length;
-      else console.error('[instagram-sync] stories upsert error', stErr);
-    }
-  } catch (e) {
-    console.warn('[instagram-sync] stories fail', String(e));
-  }
+  const storiesSynced = await syncStories(admin, userId, conn);
 
   return {
     crm_client_id: crmClientId, ok: true,
@@ -385,6 +439,63 @@ Deno.serve(async (req) => {
     new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   try {
+    // ── ROBÔ (ciclo 1 dos dados do Instagram, 28/09/2026) ──────────────────
+    // Antes a coleta só rodava quando o DONO clicava em Atualizar: número
+    // parado por semanas, stories perdidos e a social mídia sem como atualizar
+    // o criador. Agora o robô passa sozinho.
+    const interno = req.headers.get('x-internal-secret');
+    if (interno) {
+      if (interno !== Deno.env.get('INTERNAL_PUSH_SECRET')) return json({ error: 'unauthorized' }, 401);
+      const adminR = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+      const corpo = await req.json().catch(() => ({}));
+      const modo = corpo?.modo === 'stories' ? 'stories' : 'completo';
+      const inicio = Date.now();
+      const feitos: Array<Record<string, unknown>> = [];
+
+      const colTentativa = modo === 'stories' ? 'stories_tentativa_em' : 'ultima_tentativa_em';
+      let q = adminR.from('social_connections')
+        .select('id,user_id,access_token,external_account_id,crm_client_id,ultimo_sync_em')
+        .eq('provider', 'instagram').eq('needs_reconnect', false).not('access_token', 'is', null);
+      if (modo === 'completo') {
+        // Quem sincronizou nas últimas 20 h espera. A ordem é pela TENTATIVA:
+        // conta que falhou ou estourou o tempo vai pro fim e não trava a fila.
+        q = q.or(`ultimo_sync_em.is.null,ultimo_sync_em.lt.${new Date(Date.now() - 20 * 3600_000).toISOString()}`).limit(3);
+      }
+      q = q.order(colTentativa, { ascending: true, nullsFirst: true });
+      const { data: fila } = await q;
+      for (const c of (fila ?? []) as Array<Conn & { user_id: string }>) {
+        // Teto de tempo da função: o que sobrar fica pra próxima passada.
+        if (Date.now() - inicio > (modo === 'stories' ? 120_000 : 60_000)) break;
+        await adminR.from('social_connections').update({ [colTentativa]: new Date().toISOString() } as never).eq('id', c.id);
+        try {
+          if (modo === 'stories') {
+            feitos.push({ id: c.id, ok: true, stories: await syncStories(adminR, c.user_id, c) });
+          } else {
+            // 60 posts mais recentes no automático: são os que ainda mudam (post
+            // antigo quase não ganha alcance) e cabe no tempo da função. O botão
+            // Atualizar continua indo até 150.
+            const r = await syncConnection(adminR, c.user_id, c, { maxMedia: 60 });
+            if (r.reconnect) {
+              await adminR.from('social_connections').update({ needs_reconnect: true } as never).eq('id', c.id);
+            } else if (r.ok) {
+              await adminR.from('social_connections').update({ ultimo_sync_em: new Date().toISOString() } as never).eq('id', c.id);
+            }
+            feitos.push({ id: c.id, ok: r.ok, midias: r.media_synced ?? 0 });
+          }
+        } catch (e) {
+          console.error('[instagram-sync] robô', c.id, String(e));
+          feitos.push({ id: c.id, ok: false });
+        }
+      }
+      await adminR.from('cron_runs').upsert(
+        { job: modo === 'stories' ? 'instagram-stories' : 'instagram-sync', last_run_at: new Date().toISOString(),
+          // Honesto: rodada em que TODAS as contas falharam não conta como ok.
+          ok: feitos.length === 0 || feitos.some((f) => f.ok), detail: `${feitos.filter((f) => f.ok).length}/${feitos.length} contas` } as never,
+        { onConflict: 'job' } as never,
+      );
+      return json({ ok: true, modo, feitos });
+    }
+
     const authHeader = req.headers.get('Authorization') || '';
     const jwt = authHeader.replace('Bearer ', '');
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -409,7 +520,11 @@ Deno.serve(async (req) => {
     for (const conn of list) {
       if (!conn.access_token) { results.push({ crm_client_id: conn.crm_client_id ?? null, ok: false, reconnect: true, detail: 'no_token' }); continue; }
       try {
-        results.push(await syncConnection(admin, userId, conn));
+        const r = await syncConnection(admin, userId, conn);
+        results.push(r);
+        // Marca quando foi a última coleta (o robô pula quem acabou de atualizar
+        // e a tela mostra "atualizado há X").
+        if (r.ok) await admin.from('social_connections').update({ ultimo_sync_em: new Date().toISOString() } as never).eq('id', conn.id);
       } catch (e) {
         console.error('[instagram-sync] connection failed', conn.id, String(e));
         results.push({ crm_client_id: conn.crm_client_id ?? null, ok: false, detail: String(e) });
