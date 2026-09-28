@@ -8,6 +8,7 @@ import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { CriaPostPublishButton } from "@/components/accounts/CriaPostPublishButton";
+import { PublicarNoInstagram } from "@/components/shared/PublicarNoInstagram";
 import { postAspect } from "@/lib/post-aspect";
 import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, isDriveMedia, isVideoMedia, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { parseRefLinks, refLinkHref } from "@/lib/refLinks";
@@ -313,6 +314,9 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
 
   return (
     <div className="space-y-3">
+      {/* Publicar direto pelo Cria (ciclo 5). Só aparece pra conta que pode;
+          antes da aprovação do cliente mostra que libera depois. */}
+      <PublicarNoInstagram postId={postId} />
       {approved && (
         <div className="rounded-2xl border border-green-200 bg-green-50 p-3 space-y-2">
           <p className="text-xs font-body font-bold text-green-800">Aprovado pelo cliente, pronto pra publicar.</p>

@@ -39,6 +39,10 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
   # dentro da função (o robô de publicação chama sem sessão de usuário).
   [functions.instagram-preparar-midia]
     verify_jwt = false
+  # Publicar no Instagram (ciclos 4 e 6): clique com JWT ou robô da fila com
+  # x-internal-secret, os dois validados dentro da função.
+  [functions.instagram-publish]
+    verify_jwt = false
   # Robô de limpeza do Bunny: chamado por cron, protegido pelo segredo no
   # cabeçalho (x-cleanup-secret), não por JWT de usuário.
   [functions.bunny-cleanup-publicados]

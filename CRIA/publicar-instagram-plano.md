@@ -90,6 +90,12 @@ Criado em 28/09/2026. Cada ciclo só começa quando o anterior passar no **port�
 - Mídia de post agendado **não expira** até ser publicada (L7).
 - **Portão:** teste com 1 foto PNG, 1 carrossel misto, 1 Reels do Bunny e 1 arquivo do Drive; todos viram URLs válidas.
 
+### Ciclos 4, 5 e 6 · código pronto (28/09), testar depois do ciclo 3
+- `000008`: trava contra duas publicações (`ig_travar_publicacao`), liga/desliga automático com as regras (`ig_agendar_publicacao`), horário acompanha mudança de data/hora, números do Instagram ligam sozinhos ao post publicado, robô `cria-ig-publicar-fila` a cada minuto (só chama a função quando há post vencido).
+- `_shared/ig-publicar.ts` + função `instagram-publish`: foto, Reels e carrossel; espera o processamento; continua do contêiner guardado se o vídeo demorar; marca publicado nos dois status (criador e Cria Post); erro traduzido; token morto marca reconectar; aviso no sino e no celular; apaga a cópia do vídeo do Drive no Bunny depois de publicar. Robô tenta até 3 vezes com espera de 10 e 20 min.
+- Tela: caixa "Publicar no Instagram" no editor do criador (abaixo da data) e no Cria Post (acima da mídia); selo nos cards do quadro do criador e do Cria Post. Só aparece pra conta que pode publicar.
+- Material da análise da Meta (ciclo 7): `CRIA/meta-analise-publicar.md`.
+
 ### Ciclo 4 · Motor de publicação (servidor)
 - Função `instagram-publish`: cria o contêiner, espera o processamento do vídeo, publica, grava `ig_media_id` + link, marca o post como publicado nos dois sistemas de status (L8) e liga automaticamente aos números (insights).
 - Carrossel até 10 itens na ordem da tira; legenda até 2.200 caracteres e 30 hashtags (valida antes).

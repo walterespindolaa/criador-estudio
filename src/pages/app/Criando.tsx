@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { SeloPublicacaoIg } from "@/components/shared/PublicarNoInstagram";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -872,6 +873,7 @@ const Criando = () => {
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <PlatformIcon platform={post.platform} size="sm" />
                           <span style={formatColorVars(post.format)} className={`text-[10px] font-body font-bold uppercase tracking-wide bg-muted/60 px-1.5 py-0.5 rounded ${FORMAT_TEXT_CLASS}`}>{FORMAT_LABELS[post.format] || post.format}</span>
+                          <SeloPublicacaoIg status={post.publish_status} autoPublish={post.auto_publish} />
                           {pillar && <span className="px-1.5 py-0.5 rounded text-xs font-body text-primary-foreground" style={{ backgroundColor: pillar.color }}>{pillar.name}</span>}
                           {post.week_number != null && (
                             <span className="px-1.5 py-0.5 rounded text-xs font-body bg-muted text-muted-foreground border border-border">

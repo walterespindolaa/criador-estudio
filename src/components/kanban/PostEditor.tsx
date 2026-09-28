@@ -98,6 +98,7 @@ import { EmojiPicker } from "@/components/shared/EmojiPicker";
 import { RepurposeSheet } from "./RepurposeSheet";
 import { BestTimesHint } from "@/components/shared/BestTimesHint";
 import { PostPreviewModal, PostPreviewContent } from "./PostPreviewModal";
+import { PublicarNoInstagram } from "@/components/shared/PublicarNoInstagram";
 import { PublishButton } from "./PublishButton";
 import { useProfile } from "@/hooks/useProfile";
 import { usePostPreviewIdentity } from "@/hooks/usePostPreviewIdentity";
@@ -1304,6 +1305,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   />
                 </div>
               </div>
+
+              {/* PUBLICAR NO INSTAGRAM (ciclo 5 do plano de publicar): logo
+                  abaixo da data, porque "publicar sozinho na data e hora" é a
+                  continuação natural dela. Só aparece pra conta que pode
+                  publicar pelo Cria; pros outros a tela fica igual. */}
+              {post?.id && <PublicarNoInstagram postId={post.id} />}
 
               {/* MIDIA no INICIO do ponto 1 (Walter, 01/09): a coluna da
                   direita ficou SO com a previa, sempre visivel; a midia abre o

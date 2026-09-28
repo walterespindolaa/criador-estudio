@@ -34,6 +34,7 @@ import { useCrmClients } from "@/hooks/useCrm";
 import { useClientSocialConnection, connectInstagram } from "@/hooks/useSocialInsights";
 import { ClienteInstagramCria } from "@/components/accounts/ClienteInstagramCria";
 import { FORMATS_BY_PLATFORM, FORMAT_LABELS, normalizarFormato } from "@/lib/constants";
+import { SeloPublicacaoIg } from "@/components/shared/PublicarNoInstagram";
 // Cor por formato (fonte única): a pessoa bate o olho e sabe o que é.
 import { formatColorVars, FORMAT_TEXT_CLASS, FORMAT_BORDER_CLASS, FORMAT_DOT_CLASS } from "@/lib/format-colors";
 // Toggle Kanban/Calendário compartilhado com as outras telas de board.
@@ -778,6 +779,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                               );
                             })()}
                             <span className="text-[10px] font-body font-bold uppercase tracking-wide"><span style={formatColorVars(p.format)} className={FORMAT_TEXT_CLASS}>{FORMAT_LABELS[normalizarFormato(p.format)] ?? cap(p.format)}</span> <span className="text-muted-foreground">· {cap(p.platform)}</span></span>
+                            <SeloPublicacaoIg status={p.publish_status} autoPublish={p.auto_publish} />
                             <p className="font-display font-bold text-sm text-foreground truncate mt-1">{p.title}</p>
                             {p.assignee_id && (() => {
                               const quem = nomeParceiro(p.assignee_id);
