@@ -3275,6 +3275,21 @@ export type Database = {
           },
         ]
       }
+      ig_publicacao_testadores: {
+        Row: {
+          criado_em: string
+          user_id: string
+        }
+        Insert: {
+          criado_em?: string
+          user_id: string
+        }
+        Update: {
+          criado_em?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       link_previews: {
         Row: {
           author: string | null
@@ -4569,6 +4584,7 @@ export type Database = {
           art: Json | null
           assigned_at: string | null
           assignee_id: string | null
+          auto_publish: boolean
           board_order: number
           cache_parceiro: number | null
           calendar_synced_at: string | null
@@ -4586,6 +4602,9 @@ export type Database = {
           hook: string | null
           id: string
           idea_id: string | null
+          ig_container_id: string | null
+          ig_media_id: string | null
+          ig_permalink: string | null
           internal_tags: string[]
           is_draft: boolean
           learnings: string | null
@@ -4596,6 +4615,11 @@ export type Database = {
           prazo_status: string | null
           prazo_sugerido: string | null
           producao_status: string | null
+          publicar_em: string | null
+          publish_attempts: number
+          publish_by: string | null
+          publish_error: string | null
+          publish_status: string | null
           published_at: string | null
           reference_link: string | null
           reference_url: string | null
@@ -4624,6 +4648,7 @@ export type Database = {
           art?: Json | null
           assigned_at?: string | null
           assignee_id?: string | null
+          auto_publish?: boolean
           board_order?: number
           cache_parceiro?: number | null
           calendar_synced_at?: string | null
@@ -4641,6 +4666,9 @@ export type Database = {
           hook?: string | null
           id?: string
           idea_id?: string | null
+          ig_container_id?: string | null
+          ig_media_id?: string | null
+          ig_permalink?: string | null
           internal_tags?: string[]
           is_draft?: boolean
           learnings?: string | null
@@ -4651,6 +4679,11 @@ export type Database = {
           prazo_status?: string | null
           prazo_sugerido?: string | null
           producao_status?: string | null
+          publicar_em?: string | null
+          publish_attempts?: number
+          publish_by?: string | null
+          publish_error?: string | null
+          publish_status?: string | null
           published_at?: string | null
           reference_link?: string | null
           reference_url?: string | null
@@ -4679,6 +4712,7 @@ export type Database = {
           art?: Json | null
           assigned_at?: string | null
           assignee_id?: string | null
+          auto_publish?: boolean
           board_order?: number
           cache_parceiro?: number | null
           calendar_synced_at?: string | null
@@ -4696,6 +4730,9 @@ export type Database = {
           hook?: string | null
           id?: string
           idea_id?: string | null
+          ig_container_id?: string | null
+          ig_media_id?: string | null
+          ig_permalink?: string | null
           internal_tags?: string[]
           is_draft?: boolean
           learnings?: string | null
@@ -4706,6 +4743,11 @@ export type Database = {
           prazo_status?: string | null
           prazo_sugerido?: string | null
           producao_status?: string | null
+          publicar_em?: string | null
+          publish_attempts?: number
+          publish_by?: string | null
+          publish_error?: string | null
+          publish_status?: string | null
           published_at?: string | null
           reference_link?: string | null
           reference_url?: string | null
@@ -4752,6 +4794,13 @@ export type Database = {
             columns: ["pillar_id"]
             isOneToOne: false
             referencedRelation: "pillars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_publish_by_fkey"
+            columns: ["publish_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -5224,6 +5273,7 @@ export type Database = {
       script_approval_items: {
         Row: {
           approval_id: string
+          approved_at: string | null
           client_comment: string | null
           client_content: string | null
           client_position: number | null
@@ -5241,6 +5291,7 @@ export type Database = {
         }
         Insert: {
           approval_id: string
+          approved_at?: string | null
           client_comment?: string | null
           client_content?: string | null
           client_position?: number | null
@@ -5258,6 +5309,7 @@ export type Database = {
         }
         Update: {
           approval_id?: string
+          approved_at?: string | null
           client_comment?: string | null
           client_content?: string | null
           client_position?: number | null
@@ -5405,6 +5457,7 @@ export type Database = {
           follows_count: number | null
           id: string
           media_count: number | null
+          needs_reconnect: boolean
           profile_picture_url: string | null
           provider: string
           scopes: string | null
@@ -5423,6 +5476,7 @@ export type Database = {
           follows_count?: number | null
           id?: string
           media_count?: number | null
+          needs_reconnect?: boolean
           profile_picture_url?: string | null
           provider?: string
           scopes?: string | null
@@ -5441,6 +5495,7 @@ export type Database = {
           follows_count?: number | null
           id?: string
           media_count?: number | null
+          needs_reconnect?: boolean
           profile_picture_url?: string | null
           provider?: string
           scopes?: string | null
@@ -6431,6 +6486,10 @@ export type Database = {
         Args: { _comment?: string; _post_id: string; _token: string }
         Returns: undefined
       }
+      approve_script_approval_item_by_token: {
+        Args: { _aprovado: boolean; _item_id: string; _token: string }
+        Returns: undefined
+      }
       approve_stage_by_token: {
         Args: {
           _comment?: string
@@ -6793,6 +6852,17 @@ export type Database = {
           used: number
         }[]
       }
+      ig_conexao_do_post: {
+        Args: { _actor?: string; _post_id: string }
+        Returns: {
+          connection_id: string
+          ig_user_id: string
+          motivo: string
+          origem: string
+          pode_publicar: boolean
+          username: string
+        }[]
+      }
       increment_bio_block_click: { Args: { _id: string }; Returns: undefined }
       increment_bio_link_click: {
         Args: { link_id: string }
@@ -6803,6 +6873,10 @@ export type Database = {
       increment_storage: {
         Args: { _delta: number; _user: string }
         Returns: undefined
+      }
+      instante_brasilia: {
+        Args: { _data: string; _hora: string }
+        Returns: string
       }
       is_account_manager: { Args: { _owner: string }; Returns: boolean }
       is_account_member: { Args: { _owner: string }; Returns: boolean }
@@ -7378,6 +7452,7 @@ export type Database = {
         Returns: boolean
       }
       tornar_conta_manager: { Args: never; Returns: undefined }
+      tornar_conta_parceiro: { Args: { _papel?: string }; Returns: undefined }
       touch_last_seen: { Args: never; Returns: undefined }
       user_tier: { Args: never; Returns: string }
       validate_partner_code: {
