@@ -30,6 +30,7 @@ export type EstadoPublicacao = {
   approval_status: string | null;
   scheduled_date: string | null;
   scheduled_time: string | null;
+  published_at: string | null;
 };
 
 export type ConexaoDoPost = {
@@ -54,7 +55,7 @@ export function usePublicacaoDoPost(postId: string | null | undefined) {
     refetchInterval: (q) => (q.state.data?.publish_status === "publicando" ? 4000 : false),
     queryFn: async () => {
       const { data, error } = await sbFrom("posts")
-        .select("id,auto_publish,publish_status,publish_error,publicar_em,ig_permalink,external_client_id,approval_status,scheduled_date,scheduled_time")
+        .select("id,auto_publish,publish_status,publish_error,publicar_em,ig_permalink,external_client_id,approval_status,scheduled_date,scheduled_time,published_at")
         .eq("id", postId!)
         .maybeSingle();
       if (error) throw error;
