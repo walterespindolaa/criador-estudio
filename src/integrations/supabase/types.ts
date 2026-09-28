@@ -3314,6 +3314,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ig_vinculo_recusado: {
+        Row: {
+          criado_em: string
+          insight_id: string
+          post_id: string
+        }
+        Insert: {
+          criado_em?: string
+          insight_id: string
+          post_id: string
+        }
+        Update: {
+          criado_em?: string
+          insight_id?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ig_vinculo_recusado_insight_id_fkey"
+            columns: ["insight_id"]
+            isOneToOne: false
+            referencedRelation: "social_insights"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ig_vinculo_recusado_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       link_previews: {
         Row: {
           author: string | null
@@ -5488,7 +5521,10 @@ export type Database = {
           profile_picture_url: string | null
           provider: string
           scopes: string | null
+          stories_tentativa_em: string | null
           token_expires_at: string | null
+          ultima_tentativa_em: string | null
+          ultimo_sync_em: string | null
           updated_at: string | null
           user_id: string
           username: string | null
@@ -5507,7 +5543,10 @@ export type Database = {
           profile_picture_url?: string | null
           provider?: string
           scopes?: string | null
+          stories_tentativa_em?: string | null
           token_expires_at?: string | null
+          ultima_tentativa_em?: string | null
+          ultimo_sync_em?: string | null
           updated_at?: string | null
           user_id: string
           username?: string | null
@@ -5526,7 +5565,10 @@ export type Database = {
           profile_picture_url?: string | null
           provider?: string
           scopes?: string | null
+          stories_tentativa_em?: string | null
           token_expires_at?: string | null
+          ultima_tentativa_em?: string | null
+          ultimo_sync_em?: string | null
           updated_at?: string | null
           user_id?: string
           username?: string | null
@@ -6895,6 +6937,124 @@ export type Database = {
           origem: string
           pode_publicar: boolean
           username: string
+        }[]
+      }
+      ig_decidir_vinculo: {
+        Args: { _aceitar: boolean; _insight_id: string; _post_id: string }
+        Returns: undefined
+      }
+      ig_formato_compativel: {
+        Args: { _formato: string; _media_type: string }
+        Returns: number
+      }
+      ig_legenda_base: { Args: { _t: string }; Returns: string }
+      ig_nota_vinculo: {
+        Args: {
+          _i_legenda: string
+          _i_postado: string
+          _i_tipo: string
+          _p_data: string
+          _p_formato: string
+          _p_legenda: string
+        }
+        Returns: {
+          dias: number
+          nota: number
+          sim_legenda: number
+        }[]
+      }
+      ig_posts_candidatos: {
+        Args: { _conta: string; _crm: string; _perto?: string }
+        Returns: {
+          approval_mode: string
+          approval_stages: Json | null
+          approval_status: string | null
+          approval_updated_at: string | null
+          archive_summary: string | null
+          art: Json | null
+          assigned_at: string | null
+          assignee_id: string | null
+          auto_publish: boolean
+          board_order: number
+          cache_parceiro: number | null
+          calendar_synced_at: string | null
+          caption: string | null
+          content_blocks: Json | null
+          created_at: string | null
+          cta: string | null
+          deleted_at: string | null
+          drive_folder_url: string | null
+          editorial_line_id: string | null
+          entregue_em: string | null
+          external_client_id: string | null
+          format: string
+          google_event_id: string | null
+          hook: string | null
+          id: string
+          idea_id: string | null
+          ig_container_id: string | null
+          ig_media_id: string | null
+          ig_permalink: string | null
+          internal_tags: string[]
+          is_draft: boolean
+          learnings: string | null
+          notes: string | null
+          pillar_id: string | null
+          platform: string
+          prazo_producao: string | null
+          prazo_status: string | null
+          prazo_sugerido: string | null
+          producao_status: string | null
+          publicar_em: string | null
+          publish_attempts: number
+          publish_by: string | null
+          publish_error: string | null
+          publish_started_at: string | null
+          publish_status: string | null
+          published_at: string | null
+          reference_link: string | null
+          reference_url: string | null
+          result_comments: number | null
+          result_reach: number | null
+          result_saves: number | null
+          result_shares: number | null
+          result_views: number | null
+          revisoes: number
+          scheduled_date: string | null
+          scheduled_time: string | null
+          script: string | null
+          sections: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+          week_number: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "posts"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      ig_relatorio_cliente: {
+        Args: { _crm_client_id: string; _since: string; _until: string }
+        Returns: Json
+      }
+      ig_sugestoes_vinculo: {
+        Args: { _conta: string; _crm?: string }
+        Returns: {
+          caption: string
+          insight_id: string
+          media_type: string
+          motivo: string
+          nota: number
+          post_date: string
+          post_format: string
+          post_id: string
+          post_title: string
+          posted_at: string
+          thumbnail_url: string
         }[]
       }
       ig_travar_publicacao: {
