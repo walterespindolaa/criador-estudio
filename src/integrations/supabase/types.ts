@@ -2569,6 +2569,14 @@ export type Database = {
           file_size: number | null
           file_type: string | null
           id: string
+          ig_altura: number | null
+          ig_bunny_guid: string | null
+          ig_duracao: number | null
+          ig_erro: string | null
+          ig_largura: number | null
+          ig_preparado_em: string | null
+          ig_tipo: string | null
+          ig_url: string | null
           position: number | null
           post_id: string | null
           provider: string
@@ -2589,6 +2597,14 @@ export type Database = {
           file_size?: number | null
           file_type?: string | null
           id?: string
+          ig_altura?: number | null
+          ig_bunny_guid?: string | null
+          ig_duracao?: number | null
+          ig_erro?: string | null
+          ig_largura?: number | null
+          ig_preparado_em?: string | null
+          ig_tipo?: string | null
+          ig_url?: string | null
           position?: number | null
           post_id?: string | null
           provider?: string
@@ -2609,6 +2625,14 @@ export type Database = {
           file_size?: number | null
           file_type?: string | null
           id?: string
+          ig_altura?: number | null
+          ig_bunny_guid?: string | null
+          ig_duracao?: number | null
+          ig_erro?: string | null
+          ig_largura?: number | null
+          ig_preparado_em?: string | null
+          ig_tipo?: string | null
+          ig_url?: string | null
           position?: number | null
           post_id?: string | null
           provider?: string
