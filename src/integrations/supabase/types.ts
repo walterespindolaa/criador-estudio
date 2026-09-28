@@ -3299,6 +3299,50 @@ export type Database = {
           },
         ]
       }
+      ig_convites: {
+        Row: {
+          cancelado_em: string | null
+          criado_em: string
+          criado_por: string
+          crm_client_id: string
+          expira_em: string
+          id: string
+          token: string
+          usado_em: string | null
+          username_conectado: string | null
+        }
+        Insert: {
+          cancelado_em?: string | null
+          criado_em?: string
+          criado_por: string
+          crm_client_id: string
+          expira_em?: string
+          id?: string
+          token?: string
+          usado_em?: string | null
+          username_conectado?: string | null
+        }
+        Update: {
+          cancelado_em?: string | null
+          criado_em?: string
+          criado_por?: string
+          crm_client_id?: string
+          expira_em?: string
+          id?: string
+          token?: string
+          usado_em?: string | null
+          username_conectado?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ig_convites_crm_client_id_fkey"
+            columns: ["crm_client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ig_publicacao_testadores: {
         Row: {
           criado_em: string
@@ -3906,6 +3950,7 @@ export type Database = {
       }
       oauth_states: {
         Row: {
+          convite_id: string | null
           created_at: string
           crm_client_id: string | null
           expires_at: string
@@ -3915,6 +3960,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          convite_id?: string | null
           created_at?: string
           crm_client_id?: string | null
           expires_at?: string
@@ -3924,6 +3970,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          convite_id?: string | null
           created_at?: string
           crm_client_id?: string | null
           expires_at?: string
@@ -3932,7 +3979,15 @@ export type Database = {
           state?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "oauth_states_convite_id_fkey"
+            columns: ["convite_id"]
+            isOneToOne: false
+            referencedRelation: "ig_convites"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       parceiro_agenda_itens: {
         Row: {
@@ -6928,6 +6983,7 @@ export type Database = {
           publish_status: string
         }[]
       }
+      ig_cancelar_convite: { Args: { _id: string }; Returns: undefined }
       ig_conexao_do_post: {
         Args: { _actor?: string; _post_id: string }
         Returns: {
@@ -6937,6 +6993,27 @@ export type Database = {
           origem: string
           pode_publicar: boolean
           username: string
+        }[]
+      }
+      ig_convite_publico: { Args: { _token: string }; Returns: Json }
+      ig_convites_do_cliente: {
+        Args: { _crm_client_id: string }
+        Returns: {
+          criado_em: string
+          expira_em: string
+          id: string
+          situacao: string
+          token: string
+          usado_em: string
+          username_conectado: string
+        }[]
+      }
+      ig_criar_convite: {
+        Args: { _crm_client_id: string }
+        Returns: {
+          expira_em: string
+          id: string
+          token: string
         }[]
       }
       ig_decidir_vinculo: {
@@ -6963,6 +7040,7 @@ export type Database = {
           sim_legenda: number
         }[]
       }
+      ig_pode_convidar: { Args: { _crm_client_id: string }; Returns: boolean }
       ig_posts_candidatos: {
         Args: { _conta: string; _crm: string; _perto?: string }
         Returns: {
