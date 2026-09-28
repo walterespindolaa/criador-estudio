@@ -9,12 +9,42 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("BUNNY_CRIAPOST_API_KEY")!, lib = Deno.env.get("BUNNY_CRIAPOST_LIBRARY_ID");
 
     const { data: refs } = await svc.from("external_media_refs")
-      .select("id, provider, external_file_id, bunny_video_id")
+      .select("id, provider, external_file_id, bunny_video_id, post_id")
       .not("expires_at", "is", null).lt("expires_at", new Date().toISOString()).limit(200);
+
+    /* MÍDIA DE POST QUE AINDA VAI SAIR NÃO VENCE (ciclo 3 do plano de publicar,
+       28/09/2026). Antes a mídia vencia em 7 dias contados do upload, sem olhar
+       o post: um post agendado pra daqui 10 dias perdia a mídia antes da data
+       e a publicação automática falharia. Agora pula quando o post está na
+       fila de publicação, publicando, ou tem data de hoje em diante e ainda
+       não foi publicado. Esses voltam pra fila depois que o post sair. */
+    const postIds = [...new Set((refs ?? []).map((r) => r.post_id).filter(Boolean))] as string[];
+    const protegidos = new Set<string>();
+    if (postIds.length) {
+      const hoje = new Date().toISOString().slice(0, 10);
+      const { data: posts } = await svc.from("posts")
+        .select("id, scheduled_date, published_at, publish_status, approval_status, status, deleted_at")
+        .in("id", postIds);
+      for (const p of (posts ?? []) as Array<Record<string, string | null>>) {
+        if (p.deleted_at) continue;
+        const publicado = !!p.published_at || p.publish_status === "publicado"
+          || p.approval_status === "postado" || p.status === "publicado";
+        const naFila = p.publish_status === "na_fila" || p.publish_status === "publicando";
+        const vaiSair = !publicado && !!p.scheduled_date && p.scheduled_date >= hoje;
+        if (naFila || vaiSair) protegidos.add(p.id as string);
+      }
+    }
     let removed = 0;
     // 404 = o arquivo já não existe no Bunny → tratamos como sucesso (ok deletar a ref).
     const okOrGone = (res: Response) => res.ok || res.status === 404;
     for (const r of refs ?? []) {
+      if (r.post_id && protegidos.has(r.post_id)) {
+        // Empurra a validade 2 dias: sem isso as protegidas voltariam sempre
+        // no topo da lista (limite 200) e travariam a faxina das outras.
+        await svc.from("external_media_refs")
+          .update({ expires_at: new Date(Date.now() + 2 * 86400000).toISOString() }).eq("id", r.id);
+        continue;
+      }
       try {
         // Só apagamos a ref do banco (nosso ÚNICO índice do arquivo) se o delete
         // remoto realmente confirmou. Se o Bunny falhar (rate limit / instabilidade),

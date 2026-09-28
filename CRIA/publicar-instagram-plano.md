@@ -76,6 +76,13 @@ Criado em 28/09/2026. Cada ciclo só começa quando o anterior passar no **port�
 - **Portão:** você reconecta a sua conta e a de um cliente de teste; o Cria mostra "pode publicar" nas duas.
 
 ### Ciclo 3 · Preparar a mídia (a parte mais delicada)
+
+**Código pronto (28/09), aguardando validar o ciclo 2:**
+- `000007`: colunas `ig_*` em `external_media_refs` (URL pronta, tipo, tamanho, duração, erro); reordenar e renovar mídia passam a aceitar a equipe.
+- `_shared/ig-midia.ts` + função `instagram-preparar-midia` (JWT ou segredo interno + actor): JPEG bom passa direto; PNG/WebP/GIF/JPEG > 8 MB vira JPEG 1440px no bucket `media/<dono>/ig/<post>/`; HEIC dá erro claro; Drive (só com link aberto) é copiado pro nosso bucket (foto) ou pro Bunny por stream (vídeo); Bunny devolve o MP4 direto (exige "MP4 Fallback" ligado na biblioteca). Valida regras por formato (foto 1 imagem, Reels 1 vídeo 3 s a 15 min, carrossel 2 a 10, vídeo de carrossel até 60 s, proporção 4:5 a 1.91:1). Resultado fica guardado; chamar de novo continua de onde parou.
+- `criapost-media-cleanup`: não apaga mídia de post na fila ou com data de hoje em diante ainda não publicado (empurra a validade 2 dias).
+- Achados pro ciclo 4: vídeo do Drive copiado pro Bunny (`ig_bunny_guid`) tem que ser apagado depois de publicar; as funções de status/apagar vídeo do Bunny usam a biblioteca antiga (STREAM) enquanto os vídeos novos nascem na CRIAPOST.
+
 - Antes de publicar, o servidor garante um arquivo público e no formato certo:
   - imagem: converte pra JPEG, respeita proporção (4:5 a 1.91:1 no feed, 9:16 no story);
   - vídeo: pega o MP4 do Bunny (ou do nosso armazenamento); confere duração e proporção de Reels;
