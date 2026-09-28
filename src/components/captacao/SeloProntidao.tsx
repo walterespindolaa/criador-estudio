@@ -8,7 +8,7 @@ import type { Prontidao } from "@/lib/captacao-prontidao";
    pedem ação dela, então os dois são amarelos. Verde é "está bem", cinza é
    "esperando alguém" ou "encerrada". */
 const TOM_CLASS: Record<Prontidao["tom"], string> = {
-  atencao: "bg-[hsl(var(--cria-amarelo)/0.15)] text-[hsl(var(--cria-amarelo))]",
+  atencao: "bg-[hsl(var(--cria-amarelo)/0.15)] text-amber-700 dark:text-amber-400",
   espera: "bg-muted text-muted-foreground",
   ok: "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]",
   neutro: "bg-muted text-muted-foreground/70",
@@ -29,7 +29,7 @@ export function SeloProntidao({ p, comDetalhe = false, className }: { p: Prontid
 export function LinhaProntidao({ p, className }: { p: Prontidao; className?: string }) {
   if (!p.detalhe && !p.proximoPasso) return null;
   return (
-    <span className={cn("min-w-0 truncate text-[11px] font-body", p.tom === "atencao" ? "text-[hsl(var(--cria-amarelo))] font-semibold" : "text-muted-foreground", className)}>
+    <span className={cn("min-w-0 truncate text-[11px] font-body", p.tom === "atencao" ? "text-amber-700 dark:text-amber-400 font-semibold" : "text-muted-foreground", className)}>
       {p.detalhe ?? p.proximoPasso}
     </span>
   );

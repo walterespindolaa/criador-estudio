@@ -251,7 +251,7 @@ export function PainelDeVoo({
             <Sparkles className="h-4 w-4 text-primary" /> Clientes do mês
           </p>
           <span className={cn("text-[12px] font-body font-bold px-2 py-0.5 rounded-full",
-            pendentes === 0 ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]" : "bg-[hsl(var(--cria-amarelo)/0.15)] text-[hsl(var(--cria-amarelo))]")}>
+            pendentes === 0 ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]" : "bg-[hsl(var(--cria-amarelo)/0.15)] text-amber-700 dark:text-amber-400")}>
             {pendentes === 0 ? "tudo em dia" : `${pendentes} ${pendentes === 1 ? "pendência" : "pendências"}`}
           </span>
         </div>
@@ -291,7 +291,7 @@ export function PainelDeVoo({
                 {f ? (
                   <>
                     <p className={cn("mt-2.5 text-[12.5px] font-body leading-snug",
-                      f.tom === "atencao" ? "text-[hsl(var(--cria-amarelo))] font-semibold" : "text-muted-foreground")}>
+                      f.tom === "atencao" ? "text-amber-700 dark:text-amber-400 font-semibold" : "text-muted-foreground")}>
                       {f.texto}{f.detalhe ? ` · ${f.detalhe}` : ""}
                     </p>
                     {outras > 0 && (
@@ -372,7 +372,7 @@ export function Escada({ p }: { p: Prontidao }) {
               "text-[11px] font-body font-semibold px-2 py-0.5 rounded-full border",
               atual
                 ? (p.tom === "atencao"
-                  ? "border-[hsl(var(--cria-amarelo))] bg-[hsl(var(--cria-amarelo))] text-white"
+                  ? "border-[hsl(var(--cria-amarelo))] bg-[hsl(var(--cria-amarelo))] text-amber-950"
                   : p.tom === "espera"
                     ? "border-muted-foreground/40 bg-muted text-foreground"
                     : "border-[hsl(var(--cria-verde))] bg-[hsl(var(--cria-verde))] text-white")
@@ -387,7 +387,7 @@ export function Escada({ p }: { p: Prontidao }) {
         );
       })}
       {p.proximoPasso && p.tom === "atencao" && (
-        <span className="text-[12px] font-body font-semibold text-[hsl(var(--cria-amarelo))] ml-1">
+        <span className="text-[12px] font-body font-semibold text-amber-700 dark:text-amber-400 ml-1">
           agora: {p.proximoPasso.toLowerCase()}
         </span>
       )}

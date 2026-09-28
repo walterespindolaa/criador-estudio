@@ -649,7 +649,24 @@ function CriaCaptacaoInner() {
       toast.error("O Cria Post não está ativo pra este cliente. Ative na ficha dele (aba Cria Post) e volte aqui pra mandar a captação pro post.");
       return;
     }
-    if (captureToPost.isPending) return;
+    if (captureToPost.isPending || virandoLote) return;
+    /* UM CARD POR ROTEIRO (Walter, 28/09/2026). Antes o post nascia com todos
+       os roteiros do dia empilhados no campo de roteiro, num card só. Cada
+       roteiro é um vídeo e precisa andar sozinho no kanban, então quando a
+       captação tem roteiros ela usa o mesmo caminho do lote do Dia de Gravação
+       (um post por roteiro, roteiro carimbado pra não duplicar). O post único
+       abaixo fica só pra captação sem roteiro (só com a nota). */
+    const roteirosDaCap = scripts.filter((s) => s.capture_id === cap.id);
+    if (roteirosDaCap.length > 0) {
+      const pendentes = roteirosDaCap.filter((s) => !s.source_post_id);
+      if (pendentes.length === 0) {
+        toast.info("Todos os roteiros desta captação já viraram post.");
+        navigate(`/socialmidia/clientes/${cap.crm_client_id}/posts`);
+        return;
+      }
+      await virarPostsEmLote(pendentes);
+      return;
+    }
     const nome = capName(cap);
     const dm = diaMes(cap.capture_date);
     /* O post nasce com TODOS os roteiros do dia, um embaixo do outro. Um dia
@@ -765,10 +782,15 @@ function CriaCaptacaoInner() {
         recurring={!!root.recurring}
         recurrenceDay={root.recurrence_day ?? null}
         onSetRecurring={(on, day) => updCapture.mutateAsync({ id: rootId, patch: { recurring: on, recurrence_day: day } })}
-        convertedPostId={c.converted_post_id ?? null}
-        onVirarPost={() => virarPost(c)}
+        /* Com roteiros, "virou post" = TODOS os roteiros carimbados (um card
+           por roteiro). O carimbo antigo da captação não vale mais sozinho:
+           captação que virou um card único antes pode ser refeita. */
+        convertedPostId={roteirosDaLinha.length > 0
+          ? (roteirosDaLinha.every((s) => !!s.source_post_id) ? roteirosDaLinha[0].source_post_id ?? null : null)
+          : (c.converted_post_id ?? null)}
+        onVirarPost={() => void virarPost(c)}
         onVerPost={() => navigate(`/socialmidia/clientes/${c.crm_client_id}/posts`)}
-        converting={captureToPost.isPending}
+        converting={captureToPost.isPending || virandoLote}
         roteirosDoDia={roteirosDaLinha}
         acoesRoteiro={acoesDaLinha} />
     );
@@ -1310,7 +1332,7 @@ function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, def
           className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-body font-bold transition-colors",
             done
               ? "bg-[hsl(var(--cria-verde)/0.12)] text-[hsl(var(--cria-verde))]"
-              : "bg-[hsl(var(--cria-amarelo)/0.15)] text-[hsl(var(--cria-amarelo))]")}>
+              : "bg-[hsl(var(--cria-amarelo)/0.15)] text-amber-700 dark:text-amber-400")}>
           {done ? <><CheckCircle2 className="h-3.5 w-3.5" /> Concluída</> : <><Clock className="h-3.5 w-3.5" /> Pendente</>}
         </button>
       </div>
@@ -2093,7 +2115,7 @@ function RoteiroMiniCard({ script, indice, onOpen, icone = "file" }: {
         </span>
         {script.done
           ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[hsl(var(--cria-verde))]" />
-          : <Clock className="h-3.5 w-3.5 shrink-0 text-[hsl(var(--cria-amarelo))]" />}
+          : <Clock className="h-3.5 w-3.5 shrink-0 text-amber-700 dark:text-amber-400" />}
       </div>
     </button>
   );

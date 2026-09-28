@@ -152,7 +152,7 @@ export default function Equipe() {
                     "Alguém pediu sua senha pra ajudar e você (com razão) travou",
                   ].map((b) => (
                     <div key={b} className="flex items-start gap-2 text-[13px] font-body text-foreground">
-                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-[hsl(var(--cria-amarelo))]" /> {b}
+                      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-700 dark:text-amber-400" /> {b}
                     </div>
                   ))}
                 </div>
