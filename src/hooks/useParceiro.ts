@@ -167,6 +167,9 @@ export type CardAberto = {
   canal_recado?: string | null;
   canal_pasta?: string | null;
   canal_links?: { label?: string | null; url: string }[] | null;
+  /** A marca liberada pra este cliente (Canal da marca > O que o parceiro vê).
+   *  Já vem filtrada do banco: o que está desligado nem chega. */
+  marca_liberada?: MarcaLiberada | null;
   marca: {
     nome: string | null;
     handle: string | null;
@@ -181,6 +184,14 @@ export type CardAberto = {
     midia_indice?: number | null; ancora_x?: number | null;
     ancora_y?: number | null; ancora_seg?: number | null;
   }[];
+};
+
+export type MarcaLiberada = {
+  paleta?: string; fontes?: string; expressao_visual?: string;
+  tom_de_voz?: string; personalidade?: string; estilo_comunicacao?: string; arquetipo?: string;
+  publico?: string; segmento?: string;
+  ideia_central?: string; promessa?: string; oferta?: string; temas?: string;
+  evitar?: string; hashtags?: string[]; referencias?: { url: string | null; nota: string | null }[];
 };
 
 export type Parceiro = { member_id: string; nome: string; email: string | null; role: string };

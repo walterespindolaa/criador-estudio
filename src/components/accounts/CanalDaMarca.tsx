@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { useCrmClient, useCrmClients, useUpdateCrmClient } from "@/hooks/useCrm";
 import { useExternalClients, type ExternalClient } from "@/hooks/useCriaPost";
 import { usePecasComParceiros, useMeusParceiros } from "@/hooks/useParceiro";
@@ -43,7 +44,25 @@ type CrmComCanal = {
   pasta_parceiros?: string | null;
   recado_parceiros?: string | null;
   brand_core?: Record<string, unknown> | null;
+  hashtags?: string[] | null;
+  compartilhar_parceiros?: Record<string, boolean> | null;
 };
+
+/* O QUE O PARCEIRO VÊ, POR CLIENTE (Walter, 28/09/2026). Cada chave liga ou
+   desliga um grupo do brandbook pra TODA peça deste cliente. O filtro é
+   aplicado no banco (migration 20260928000016): desligado aqui, o dado nem
+   sai do servidor pro parceiro. Chave ausente = liberado. */
+const GRUPOS: { chave: string; rotulo: string; campos: string[]; ajuda: string }[] = [
+  { chave: "visual", rotulo: "Identidade visual", campos: ["colorPalette", "typography", "visualExpression"], ajuda: "cores, fontes e expressão visual" },
+  { chave: "evitar", rotulo: "O que evitar", campos: ["avoid"], ajuda: "o que não pode aparecer" },
+  { chave: "tom", rotulo: "Tom de voz e personalidade", campos: ["toneOfVoice", "personality", "communicationStyle", "archetype"], ajuda: "como a marca fala" },
+  { chave: "publico", rotulo: "Público", campos: ["audience"], ajuda: "pra quem é o conteúdo, e o segmento" },
+  { chave: "mensagem", rotulo: "Mensagem e oferta", campos: ["coreMessage", "promise", "offer", "products", "contentThemes"], ajuda: "ideia central, promessa, produtos, temas" },
+  { chave: "hashtags", rotulo: "Hashtags", campos: [], ajuda: "as hashtags do cadastro" },
+  { chave: "referencias", rotulo: "Referências visuais", campos: [], ajuda: "as imagens de referência da ficha" },
+  { chave: "links", rotulo: "Links úteis", campos: [], ajuda: "os links da seção acima" },
+  { chave: "pasta", rotulo: "Pasta geral", campos: [], ajuda: "a pasta de fotos, logos e brutos" },
+];
 
 const txt = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 
@@ -79,13 +98,27 @@ function EditorDoCanal({ clienteId, pecasAbertas }: { clienteId: string; pecasAb
   }
 
   const bc = (c.brand_core ?? {}) as Record<string, unknown>;
-  const marca = [
-    { r: "Cores", v: txt(bc.colorPalette) },
-    { r: "Fontes", v: txt(bc.typography) },
-    { r: "Expressão visual", v: txt(bc.visualExpression) },
-    { r: "Tom de voz", v: txt(bc.toneOfVoice) },
-    { r: "O que evitar", v: txt(bc.avoid) },
-  ].filter((x) => x.v);
+  /* PASTA GERAL AUTOMÁTICA: sem pasta escolhida, vale o primeiro link de
+     Drive/Dropbox dos Links úteis (o mesmo critério do banco). */
+  const pastaDoCadastro = (c.useful_links ?? []).find((l) => /^https?:\/\//i.test(l?.url ?? "") && /drive\.google|dropbox|onedrive|sharepoint/i.test(l.url))?.url ?? null;
+  const pastaEfetiva = c.pasta_parceiros?.trim() || pastaDoCadastro;
+  const conf = c.compartilhar_parceiros ?? {};
+  const liberado = (chave: string) => conf[chave] !== false;
+  // O grupo tem conteúdo? Grupo vazio aparece, mas avisa que não há o que mostrar.
+  const temConteudo = (g: (typeof GRUPOS)[number]) => {
+    if (g.chave === "hashtags") return (c.hashtags ?? []).length > 0;
+    if (g.chave === "links") return (c.useful_links ?? []).some((l) => !!l?.url?.trim());
+    if (g.chave === "pasta") return !!pastaEfetiva;
+    if (g.chave === "referencias") return true; // a ficha não vem nesta consulta; o banco decide
+    return g.campos.some((k) => !!txt(bc[k]));
+  };
+  const alternar = (chave: string) => {
+    const novo = { ...conf, [chave]: !liberado(chave) };
+    update.mutate({ id: clienteId, compartilhar_parceiros: novo } as never, {
+      onSuccess: () => { setSalvo("conf"); window.setTimeout(() => setSalvo(null), 1800); },
+    });
+  };
+
   const cor = c.color || "#7C90F0";
   const nome = nomeExibidoCliente(c as never);
 
@@ -142,14 +175,19 @@ function EditorDoCanal({ clienteId, pecasAbertas }: { clienteId: string; pecasAb
         <div className="flex gap-2">
           <Input value={pasta} onChange={(e) => setPasta(e.target.value)} onBlur={() => gravar("pasta_parceiros", pasta)}
             onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-            inputMode="url" placeholder="https://drive.google.com/drive/folders/..." className="rounded-xl h-10 flex-1 min-w-0" />
-          {c.pasta_parceiros && (
-            <a href={hrefSeguro(c.pasta_parceiros)} target="_blank" rel="noopener noreferrer" aria-label="Abrir pasta"
+            inputMode="url" placeholder={pastaDoCadastro ? "Usando a pasta do Drive do cadastro" : "https://drive.google.com/drive/folders/..."} className="rounded-xl h-10 flex-1 min-w-0" />
+          {pastaEfetiva && (
+            <a href={hrefSeguro(pastaEfetiva)} target="_blank" rel="noopener noreferrer" aria-label="Abrir pasta"
               className="w-10 h-10 rounded-xl border border-border grid place-items-center text-muted-foreground hover:text-primary shrink-0">
               <ExternalLink className="h-4 w-4" />
             </a>
           )}
         </div>
+        {!c.pasta_parceiros?.trim() && pastaDoCadastro && (
+          <p className="text-[11.5px] font-body text-green-800 mt-2 leading-snug">
+            Já vai sozinha: o parceiro recebe a pasta do Drive que está nos Links úteis. Só preencha aqui se quiser outra.
+          </p>
+        )}
       </Card>
 
       {/* 3. LINKS ÚTEIS: o MESMO editor da ficha do cliente. */}
@@ -160,32 +198,39 @@ function EditorDoCanal({ clienteId, pecasAbertas }: { clienteId: string; pecasAb
         </p>
       </div>
 
-      {/* 4. A MARCA, COMO O PARCEIRO VÊ */}
+      {/* 4. O QUE O PARCEIRO VÊ DESTE CLIENTE: uma chave por grupo. */}
       <Card className="rounded-2xl p-4">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-1">
           <Eye className="h-4 w-4 text-muted-foreground" />
-          <p className="text-[13px] font-display font-bold flex-1">O que o parceiro vê da marca</p>
-          <Link to={`/socialmidia/clientes/${c.id}/brandbook`} className="text-[12px] font-body font-bold text-primary hover:underline">
-            Editar brandbook
-          </Link>
+          <p className="text-[13px] font-display font-bold flex-1">O que o parceiro vê deste cliente</p>
+          <Salvo campo="conf" />
         </div>
-        {marca.length === 0 ? (
-          <p className="text-[12.5px] font-body text-muted-foreground leading-relaxed">
-            O brandbook deste cliente ainda está vazio. Cores, fontes e o que evitar são o que o designer mais consulta:
-            vale preencher.
-          </p>
-        ) : (
-          <dl className="grid gap-2">
-            {marca.map((m) => (
-              <div key={m.r} className="grid grid-cols-[110px_1fr] gap-2 text-[12.5px] font-body">
-                <dt className="text-muted-foreground font-semibold">{m.r}</dt>
-                <dd className="text-foreground whitespace-pre-line line-clamp-3">{m.v}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-        <p className="text-[11px] font-body text-muted-foreground mt-2.5 flex items-center gap-1">
-          <Sparkles className="h-3 w-3" /> As anotações internas do cliente continuam só com você.
+        <p className="text-[12px] font-body text-muted-foreground mb-3 leading-snug">
+          Vale pra toda peça deste cliente, sem precisar fazer nada no post. Aparece dentro do card, no bloco
+          "Marca deste cliente", e na ficha da marca do parceiro.{" "}
+          <Link to={`/socialmidia/clientes/${c.id}/brandbook`} className="font-bold text-primary hover:underline">Editar brandbook</Link>
+        </p>
+        <div className="grid sm:grid-cols-2 gap-2">
+          {GRUPOS.map((g) => {
+            const on = liberado(g.chave);
+            const vazio = !temConteudo(g);
+            return (
+              <label key={g.chave}
+                className={cn("flex items-start gap-3 rounded-xl border px-3 py-2.5 cursor-pointer transition-colors",
+                  on ? "border-primary/40 bg-primary/[0.04]" : "border-border bg-card")}>
+                <Switch checked={on} onCheckedChange={() => alternar(g.chave)} disabled={update.isPending} className="mt-0.5" />
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-body font-bold text-foreground">{g.rotulo}</span>
+                  <span className="block text-[11.5px] font-body text-muted-foreground leading-snug">
+                    {vazio ? "vazio no cadastro" : g.ajuda}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+        <p className="text-[11px] font-body text-muted-foreground mt-3 flex items-center gap-1">
+          <Sparkles className="h-3 w-3" /> Nome, logo, cor e o recado fixo sempre vão. As anotações internas do cliente nunca vão.
         </p>
       </Card>
     </div>

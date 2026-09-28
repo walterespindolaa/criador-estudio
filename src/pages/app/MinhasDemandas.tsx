@@ -26,7 +26,7 @@ import { CamadaDeAlfinetes, segundoBonito } from "@/components/shared/CamadaDeAl
 import {
   ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useConversaDoCard, useCoresDasAgencias, useEntreguesDoParceiro,
   useFilaDoParceiro, useMarcarConversaLida, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useProporPrazo, useResolverPrazoSugerido, useVersoesDaPeca,
-  type CardDaFila, type EntregueDoParceiro, type MarcaDoParceiro, type VersaoDaPeca,
+  type CardDaFila, type EntregueDoParceiro, type MarcaDoParceiro, type MarcaLiberada, type VersaoDaPeca,
 } from "@/hooks/useParceiro";
 import {
   useEtapasPessoais, useMetasDosCards, useSalvarCardMeta,
@@ -1314,6 +1314,125 @@ function PainelTexto({ titulo, texto, aoCopiar, cor }: {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   A MARCA DENTRO DO CARD (Walter, 28/09/2026: "sempre que for um post daquele
+   cliente já liberar essas informações pro designer, e no card ele ter isso
+   de fácil acesso")
+
+   O que a social mídia liberou no Canal da marca aparece aqui, sem abrir a
+   ficha: o que evitar em destaque (é o que mais gera retrabalho), as cores
+   como amostras que copiam o código com um toque, e o resto em linhas curtas.
+   Recolhível, e o card lembra a escolha.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function MarcaNoCard({ m, cor, agencia, aoEditar, aoCopiar }: {
+  m: MarcaLiberada | null | undefined; cor: string | null;
+  agencia: boolean; aoEditar?: () => void;
+  aoCopiar: (t: string, msg: string) => void;
+}) {
+  const [aberta, setAberta] = useState<boolean>(() => {
+    try { return localStorage.getItem("cria.card.marca") !== "fechada"; } catch { return true; }
+  });
+  const alternar = () => setAberta((v) => { try { localStorage.setItem("cria.card.marca", v ? "fechada" : "aberta"); } catch { /* sem storage */ } return !v; });
+  const d = m ?? {};
+  const linhas: [string, string | undefined][] = [
+    ["Fontes", d.fontes], ["Expressão visual", d.expressao_visual],
+    ["Tom de voz", d.tom_de_voz], ["Personalidade", d.personalidade], ["Estilo", d.estilo_comunicacao], ["Arquétipo", d.arquetipo],
+    ["Público", d.publico], ["Segmento", d.segmento],
+    ["Ideia central", d.ideia_central], ["Promessa", d.promessa], ["Oferta", d.oferta], ["Temas", d.temas],
+  ];
+  const cheias = linhas.filter(([, v]) => !!v?.trim());
+  const hex = Array.from(new Set((d.paleta ?? "").match(/#(?:[0-9a-f]{6}|[0-9a-f]{3})\b/gi) ?? []));
+  const tags = (d.hashtags ?? []).filter(Boolean);
+  const refs = (d.referencias ?? []).filter((r) => !!hrefSeguro(r.url));
+  const vazio = !d.evitar && !d.paleta && cheias.length === 0 && tags.length === 0 && refs.length === 0;
+
+  if (vazio && !agencia) return null;
+  const c = cor || "#4B3FA8";
+  return (
+    <div className="mt-4 rounded-xl border overflow-hidden" style={{ borderColor: `${c}40` }}>
+      <button type="button" onClick={alternar} aria-expanded={aberta}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left" style={{ backgroundColor: `${c}10` }}>
+        <Palette className="h-3.5 w-3.5 shrink-0" style={{ color: c }} />
+        <span className="text-[12px] font-display font-bold text-foreground flex-1">Marca deste cliente</span>
+        {agencia && aoEditar && (
+          <span role="link" tabIndex={0} onClick={(e) => { e.stopPropagation(); aoEditar(); }}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); aoEditar(); } }}
+            className="text-[11.5px] font-body font-bold text-primary hover:underline">escolher o que vai</span>
+        )}
+        <ChevronRight className={cn("h-4 w-4 text-muted-foreground transition-transform", aberta && "rotate-90")} />
+      </button>
+      {aberta && (
+        <div className="px-3.5 py-3 bg-card space-y-3">
+          {vazio ? (
+            <p className="text-[12px] font-body text-muted-foreground leading-snug">
+              Nada da marca liberado pra este cliente ainda. Escolha o que o parceiro vê em Equipe &gt; Canal da marca.
+            </p>
+          ) : (
+            <>
+              {d.evitar && (
+                <div className="rounded-lg border border-red-200 bg-red-50/70 px-3 py-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-red-800 mb-0.5">Evite</p>
+                  <p className="text-[13px] font-body text-foreground whitespace-pre-line leading-relaxed">{d.evitar}</p>
+                </div>
+              )}
+              {d.paleta && (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Cores</p>
+                  {hex.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-1.5">
+                      {hex.map((h) => (
+                        <button key={h} type="button" onClick={() => aoCopiar(h, `${h} copiado.`)} title="Copiar o código"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background pl-1 pr-2.5 py-1 hover:border-primary/40 transition-colors">
+                          <span className="w-5 h-5 rounded-full border border-border" style={{ background: h }} />
+                          <span className="text-[11.5px] font-mono text-muted-foreground">{h}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-[12.5px] font-body text-foreground/85 whitespace-pre-line leading-relaxed line-clamp-4">{d.paleta}</p>
+                </div>
+              )}
+              {cheias.length > 0 && (
+                <dl className="grid sm:grid-cols-2 gap-x-4 gap-y-2">
+                  {cheias.map(([r, v]) => (
+                    <div key={r} className="min-w-0">
+                      <dt className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{r}</dt>
+                      <dd className="text-[12.5px] font-body text-foreground/90 whitespace-pre-line leading-relaxed line-clamp-4">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              {tags.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex-1">Hashtags</p>
+                    <button type="button" onClick={() => aoCopiar(tags.map((t) => (t.startsWith("#") ? t : `#${t}`)).join(" "), "Hashtags copiadas.")}
+                      className="text-[11.5px] font-body font-bold text-primary hover:underline">copiar todas</button>
+                  </div>
+                  <p className="text-[12.5px] font-body text-foreground/85">{tags.map((t) => (t.startsWith("#") ? t : `#${t}`)).join(" ")}</p>
+                </div>
+              )}
+              {refs.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Referências visuais</p>
+                  <div className="flex gap-1.5 overflow-x-auto pb-1">
+                    {refs.map((r, i) => (
+                      <a key={`${r.url}-${i}`} href={hrefSeguro(r.url)} target="_blank" rel="noopener noreferrer" title={r.nota ?? undefined}
+                        className="shrink-0 w-16 h-16 rounded-lg overflow-hidden border border-border bg-muted">
+                        <img src={r.url ?? ""} alt={r.nota ?? ""} loading="lazy" className="w-full h-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    O MESMO CARD, VISTO PELA SOCIAL MIDIA (Walter, 20/09/2026)
 
    "Quando clica no post no Com parceiros precisa abrir aquela janela em
@@ -1699,6 +1818,11 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     </div>
                   );
                 })()}
+
+                <MarcaNoCard m={card.marca_liberada} cor={card.marca.cor} agencia={!!agencia} aoCopiar={copiar}
+                  aoEditar={(agencia?.crmClientId ?? card.crm_client_id)
+                    ? () => navigate(`/socialmidia/equipe/canal?cliente=${agencia?.crmClientId ?? card.crm_client_id}`)
+                    : undefined} />
 
                 {/* OBSERVAÇÕES DA SOCIAL MÍDIA SUBIRAM (28/09/2026): moravam no
                     fim do card, depois da entrega e da direção de arte, e quase
