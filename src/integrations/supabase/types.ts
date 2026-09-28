@@ -4643,6 +4643,7 @@ export type Database = {
           publish_attempts: number
           publish_by: string | null
           publish_error: string | null
+          publish_started_at: string | null
           publish_status: string | null
           published_at: string | null
           reference_link: string | null
@@ -4707,6 +4708,7 @@ export type Database = {
           publish_attempts?: number
           publish_by?: string | null
           publish_error?: string | null
+          publish_started_at?: string | null
           publish_status?: string | null
           published_at?: string | null
           reference_link?: string | null
@@ -4771,6 +4773,7 @@ export type Database = {
           publish_attempts?: number
           publish_by?: string | null
           publish_error?: string | null
+          publish_started_at?: string | null
           publish_status?: string | null
           published_at?: string | null
           reference_link?: string | null
@@ -6876,6 +6879,13 @@ export type Database = {
           used: number
         }[]
       }
+      ig_agendar_publicacao: {
+        Args: { _ligar: boolean; _post_id: string }
+        Returns: {
+          publicar_em: string
+          publish_status: string
+        }[]
+      }
       ig_conexao_do_post: {
         Args: { _actor?: string; _post_id: string }
         Returns: {
@@ -6886,6 +6896,10 @@ export type Database = {
           pode_publicar: boolean
           username: string
         }[]
+      }
+      ig_travar_publicacao: {
+        Args: { _actor: string; _post_id: string }
+        Returns: string
       }
       increment_bio_block_click: { Args: { _id: string }; Returns: undefined }
       increment_bio_link_click: {
