@@ -260,10 +260,18 @@ export function MonthOverviewPanel() {
           {/* Barras dos últimos 14 dias (CSS puro) */}
           <div className="flex items-end gap-1 h-10">
             {evolution.days.map((d) => (
-              <div key={d.date} className="flex-1 flex items-end" title={`${d.date.slice(8)}/${d.date.slice(5, 7)}: ${d.count} post(s)`}>
-                <div className="w-full rounded-sm bg-primary/70" style={{ height: `${(d.count / evolution.max) * 100}%`, minHeight: d.count > 0 ? 3 : 1, opacity: d.count > 0 ? 1 : 0.25 }} />
+              /* h-full na coluna: sem altura definida, o height em % da barra
+                 não tinha referência e todas ficavam do mesmo tamanho (a
+                 "linha" rosa achatada). */
+              <div key={d.date} className="flex-1 h-full flex items-end" title={`${d.date.slice(8)}/${d.date.slice(5, 7)}: ${d.count} post(s)`}>
+                <div className="w-full rounded-sm bg-primary/70" style={{ height: `${(d.count / evolution.max) * 100}%`, minHeight: d.count > 0 ? 4 : 2, opacity: d.count > 0 ? 1 : 0.25 }} />
               </div>
             ))}
+          </div>
+          {/* Régua: de onde a onde vai a série (14 dias até hoje). */}
+          <div className="flex justify-between mt-1 text-[10px] font-body text-muted-foreground tabular-nums">
+            <span>{evolution.days[0] ? `${evolution.days[0].date.slice(8)}/${evolution.days[0].date.slice(5, 7)}` : ""}</span>
+            <span>hoje</span>
           </div>
         </div>
       )}
