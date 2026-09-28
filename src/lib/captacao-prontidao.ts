@@ -92,14 +92,28 @@ export function prontidaoDa(cap: CapturaMin, roteiros: RoteiroMin[], aprovacoes:
   const concluida = cap.status === "concluida" || (total > 0 && gravados === total);
 
   if (concluida) {
-    if (total > 0 && viraramPost === total) {
-      return base("virou_post", "Virou post", `${total} ${total === 1 ? "post" : "posts"}`, null, "ok", total, gravados, viraramPost, false);
+    /* SÓ VIRA POST O QUE TEM CHECK DE GRAVADO (Gabriela, 28/09/2026). Antes a
+       conta era "todos os roteiros do dia menos os que viraram post": roteiro
+       que não foi gravado (ficou pra outro dia, cliente desistiu) aparecia
+       como pendência de "virar post", e não tem vídeo pra virar post nenhum. */
+    const aptos = meus.filter((r) => r.done && !r.source_post_id).length;
+    const naoGravados = meus.filter((r) => !r.done && !r.source_post_id).length;
+    const sobra = naoGravados > 0 ? ` · ${naoGravados} não ${naoGravados === 1 ? "gravado" : "gravados"}` : "";
+    if (aptos > 0) {
+      return base(
+        "gravada", "Gravada",
+        `${aptos} ${aptos === 1 ? "roteiro gravado" : "roteiros gravados"} sem virar post`,
+        "Virar post", "atencao",
+        total, gravados, viraramPost, false,
+      );
     }
-    const faltam = total - viraramPost;
+    if (viraramPost > 0) {
+      return base("virou_post", "Virou post", `${viraramPost} ${viraramPost === 1 ? "post" : "posts"}${sobra}`, null, "ok", total, gravados, viraramPost, false);
+    }
     return base(
       "gravada", "Gravada",
-      total === 0 ? "sem roteiro registrado" : `${faltam} ${faltam === 1 ? "roteiro" : "roteiros"} sem virar post`,
-      total === 0 ? null : "Virar post",
+      total === 0 ? "sem roteiro registrado" : "nenhum roteiro marcado como gravado",
+      total === 0 ? null : "Marcar gravados",
       total === 0 ? "neutro" : "atencao",
       total, gravados, viraramPost, false,
     );

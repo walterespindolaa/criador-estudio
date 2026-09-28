@@ -658,9 +658,16 @@ function CriaCaptacaoInner() {
        abaixo fica só pra captação sem roteiro (só com a nota). */
     const roteirosDaCap = scripts.filter((s) => s.capture_id === cap.id);
     if (roteirosDaCap.length > 0) {
-      const pendentes = roteirosDaCap.filter((s) => !s.source_post_id);
+      // Só o que tem check de gravado vira post (Gabriela, 28/09/2026):
+      // roteiro não gravado não tem vídeo pra virar post.
+      const pendentes = roteirosDaCap.filter((s) => s.done && !s.source_post_id);
       if (pendentes.length === 0) {
-        toast.info("Todos os roteiros desta captação já viraram post.");
+        const semCheck = roteirosDaCap.some((s) => !s.done && !s.source_post_id);
+        if (semCheck) {
+          toast.info("Marque com ✅ os roteiros que foram gravados. Só eles viram post.");
+          return;
+        }
+        toast.info("Todos os roteiros gravados desta captação já viraram post.");
         navigate(`/socialmidia/clientes/${cap.crm_client_id}/posts`);
         return;
       }
@@ -2007,7 +2014,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
             onEditar={() => { setEditando(s); setEditorOpen(true); }}
             onExcluir={() => { if (window.confirm("Excluir este roteiro?")) { delScript.mutate(s.id); setVerId(null); } }}
             onPrompter={() => onPrompter(s.title?.trim() || pasta.nome, cenasDe(s).length > 0 ? cenasParaTexto(cenasDe(s)) : (s.content || ""))}
-            onVirarPost={ext && !s.source_post_id ? () => virarPost(s) : null}
+            onVirarPost={ext && s.done && !s.source_post_id ? () => virarPost(s) : null}
             onVerPost={s.source_post_id && pasta.crmId ? () => navigate(`/socialmidia/clientes/${pasta.crmId}/posts`) : null}
             converting={toPost.isPending} />
         );
@@ -2194,6 +2201,9 @@ function RoteiroVerDialog({ script, onOpenChange, onRename, onToggleDone, onEdit
             <Button size="sm" variant="outline" onClick={onVirarPost} disabled={converting} className="rounded-xl h-9">
               {converting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />} Virar post
             </Button>
+          ) : !script.done ? (
+            // Sem check de gravado não vira post: diz o caminho em vez de sumir.
+            <span className="text-[12px] font-body text-muted-foreground">Marque ✅ gravado pra virar post</span>
           ) : null}
           {onExcluir && (
             <button type="button" onClick={onExcluir}

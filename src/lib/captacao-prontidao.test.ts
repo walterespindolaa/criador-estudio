@@ -56,7 +56,7 @@ describe("prontidaoDa", () => {
   it("todos gravados = gravada, mesmo sem status concluida", () => {
     const p = prontidaoDa(cap(), [rot({ done: true }), rot({ id: "r2", done: true })]);
     expect(p.degrau).toBe("gravada");
-    expect(p.detalhe).toBe("2 roteiros sem virar post");
+    expect(p.detalhe).toBe("2 roteiros gravados sem virar post");
     expect(p.proximoPasso).toBe("Virar post");
   });
 
@@ -65,6 +65,24 @@ describe("prontidaoDa", () => {
     expect(p.degrau).toBe("virou_post");
     expect(p.tom).toBe("ok");
     expect(p.nivel).toBe(5);
+  });
+
+  it("só roteiro com check de gravado conta pra virar post", () => {
+    const p = prontidaoDa(cap({ status: "concluida" }), [rot({ done: true }), rot({ id: "r2" }), rot({ id: "r3" })]);
+    expect(p.detalhe).toBe("1 roteiro gravado sem virar post");
+    expect(p.proximoPasso).toBe("Virar post");
+  });
+
+  it("concluída sem nenhum check pede pra marcar os gravados", () => {
+    const p = prontidaoDa(cap({ status: "concluida" }), [rot(), rot({ id: "r2" })]);
+    expect(p.detalhe).toBe("nenhum roteiro marcado como gravado");
+    expect(p.proximoPasso).toBe("Marcar gravados");
+  });
+
+  it("gravados viraram post e o resto não foi gravado = virou post", () => {
+    const p = prontidaoDa(cap({ status: "concluida" }), [rot({ done: true, source_post_id: "p1" }), rot({ id: "r2" })]);
+    expect(p.degrau).toBe("virou_post");
+    expect(p.detalhe).toBe("1 post · 1 não gravado");
   });
 
   it("concluida sem roteiro registrado é neutra, não vermelha", () => {
