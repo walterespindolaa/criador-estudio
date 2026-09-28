@@ -60,10 +60,26 @@ Deno.serve(async (req) => {
     .insert({ state, user_id: userId, crm_client_id: crmClientId, provider: 'instagram', return_to: returnTo });
   if (insErr) return json({ error: 'state_create_failed' }, 500);
 
+  /* PERMISSÃO DE PUBLICAR (ciclo 2 do plano de publicar, 28/09/2026).
+     Enquanto a Meta não aprova a análise, a permissão só vale pra conta
+     testadora do app. Pedir pra todo mundo arrisca a Meta recusar o login
+     inteiro de quem não é testador, e aí nem os insights conectam. Então:
+       - INSTAGRAM_PUBLISH_ALL=true (depois da aprovação): pede pra todos;
+       - senão, só pra quem está em ig_publicacao_testadores e só na conta
+         PRÓPRIA (o Instagram de cliente não é testador do app). */
+  const escopos = ['instagram_business_basic', 'instagram_business_manage_insights'];
+  let pedePublicar = Deno.env.get('INSTAGRAM_PUBLISH_ALL')?.trim() === 'true';
+  if (!pedePublicar && !crmClientId) {
+    const { data: testador } = await admin.from('ig_publicacao_testadores')
+      .select('user_id').eq('user_id', userId).maybeSingle();
+    pedePublicar = !!testador;
+  }
+  if (pedePublicar) escopos.push('instagram_business_content_publish');
+
   return json({
     client_id: clientId,
     redirect_uri: `${supabaseUrl}/functions/v1/instagram-oauth`,
-    scope: 'instagram_business_basic,instagram_business_manage_insights',
+    scope: escopos.join(','),
     state,
   });
 });

@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Trash2, Camera, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, Users, LayoutGrid, Plug, Settings, Pencil, CreditCard, Instagram, Bell } from "lucide-react";
 import { NotificationToggle } from "@/components/NotificationToggle";
-import { useSocialConnection, connectInstagram, useDisconnectInstagram } from "@/hooks/useSocialInsights";
+import { useSocialConnection, connectInstagram, useDisconnectInstagram, estadoConexaoIg } from "@/hooks/useSocialInsights";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -646,10 +646,21 @@ const Configuracoes = () => {
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] grid place-items-center text-white font-bold shrink-0"><Instagram className="h-5 w-5" /></div>
                         <div className="min-w-0">
                           <p className="text-sm font-body font-semibold text-foreground truncate">{igConnection.username ? `@${igConnection.username}` : "Conta conectada"}</p>
-                          <p className="text-xs font-body text-muted-foreground">Conectado{igConnection.account_type ? ` · ${igConnection.account_type}` : ""}</p>
+                          <p className="text-xs font-body text-muted-foreground">
+                            {estadoConexaoIg(igConnection).reconectar ? "Conexão vencida" : "Conectado"}
+                            {igConnection.account_type ? ` · ${igConnection.account_type}` : ""}
+                            {/* Selo de teste da publicação (ciclo 2): confirma que a
+                                Meta deu a permissão de publicar nesta conexão. */}
+                            {estadoConexaoIg(igConnection).podePublicar ? " · Publicação pelo Cria liberada" : ""}
+                          </p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => igDisconnect.mutate()} className="shrink-0"><Unplug className="h-4 w-4 mr-2" /> Desconectar</Button>
+                      <div className="flex gap-2 shrink-0">
+                        {estadoConexaoIg(igConnection).reconectar && (
+                          <Button variant="hero" size="sm" onClick={() => connectInstagram()}><Instagram className="h-4 w-4 mr-2" /> Reconectar</Button>
+                        )}
+                        <Button variant="outline" size="sm" onClick={() => igDisconnect.mutate()}><Unplug className="h-4 w-4 mr-2" /> Desconectar</Button>
+                      </div>
                     </div>
                   ) : (
                     <Button variant="hero" onClick={() => connectInstagram()} className="w-full sm:w-auto"><Instagram className="h-4 w-4 mr-2" /> Conectar Instagram</Button>

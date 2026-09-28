@@ -37,6 +37,9 @@ Deno.serve(async (req) => {
       .from('social_connections')
       .select('id, access_token, token_expires_at')
       .eq('provider', 'instagram')
+      // Token já marcado como morto sai da fila: só volta quando a pessoa
+      // reconectar (o instagram-oauth zera a marca).
+      .eq('needs_reconnect', false)
       .or(`token_expires_at.is.null,token_expires_at.lte.${cutoff}`);
 
     if (error) {
@@ -61,14 +64,15 @@ Deno.serve(async (req) => {
           // essa conexão precisa que o usuário reconecte, e volta pra fila todo dia.
           const definitiva = r.status === 400 || r.status === 401 || r.status === 403;
           console.error('[instagram-refresh] refresh failed', c.id, r.status, body?.error, definitiva ? '(token morto/definitivo precisa reconectar)' : '(possivelmente transitório)');
-          // TODO(schema): social_connections NÃO tem coluna de status/reconexão
-          // (colunas: username, account_type, access_token, token_expires_at, scopes,
-          // connected_at, updated_at, profile_picture_url, crm_client_id). Hoje o
-          // instagram-sync só sinaliza `reconnect` no PAYLOAD de resposta, sem persistir.
-          // Sem uma coluna tipo `needs_reconnect boolean` (+ `last_refresh_error text`)
-          // não dá pra marcar o token morto e tirar a conexão da fila diária. Quando a
-          // coluna existir: aqui, se `definitiva`, setar needs_reconnect=true na conexão.
-          if (definitiva) dead++;
+          /* Token morto vira needs_reconnect (ciclo 2 do plano de publicar).
+             É o que faz o Cria mostrar "Reconecte o Instagram" e o que impede
+             um post agendado de tentar sair por uma conexão que não funciona
+             mais. Falha transitória (5xx, rede) NÃO marca: tenta amanhã. */
+          if (definitiva) {
+            dead++;
+            await admin.from('social_connections')
+              .update({ needs_reconnect: true } as never).eq('id', c.id);
+          }
           failed++;
           continue;
         }
@@ -77,6 +81,7 @@ Deno.serve(async (req) => {
         const { error: upErr } = await admin.from('social_connections').update({
           access_token: body.access_token as string,
           token_expires_at: expiresAt,
+          needs_reconnect: false,
           updated_at: new Date().toISOString(),
         } as never).eq('id', c.id);
         if (upErr) { failed++; continue; }

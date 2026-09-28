@@ -59,9 +59,24 @@ Deno.serve(async (req) => {
     const shortRes = await fetch('https://api.instagram.com/oauth/access_token', {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form,
     });
-    const shortJson = await shortRes.json();
+    const shortRaw = await shortRes.json();
+    // A Meta já devolveu esse corpo em dois formatos: plano ({access_token,
+    // permissions}) e embrulhado ({data:[{...}]}). Aceita os dois.
+    const shortJson = (Array.isArray(shortRaw?.data) ? shortRaw.data[0] : shortRaw) ?? {};
     if (!shortRes.ok || !shortJson.access_token) return redirect('error', 'token_exchange', crmClientId, returnTo);
     const shortToken = shortJson.access_token as string;
+
+    /* PERMISSÕES DE VERDADE (ciclo 2). Antes gravava a lista "no chute"; se a
+       pessoa desmarcasse "publicar" na tela da Meta, o Cria acharia que pode
+       publicar e o post agendado falharia na hora H. Agora grava o que a Meta
+       devolveu. Sem essa informação na resposta, cai no básico (nunca supõe
+       publicar). */
+    const permsRaw = shortJson.permissions as string | string[] | undefined;
+    const permsLista = (Array.isArray(permsRaw) ? permsRaw : String(permsRaw ?? '').split(','))
+      .map((p) => String(p).trim()).filter(Boolean);
+    const escoposConcedidos = permsLista.length
+      ? permsLista.join(',')
+      : 'instagram_business_basic,instagram_business_manage_insights';
 
     // 2) token curto -> token longo (60 dias)
     // Se a troca falhar, ABORTA, não salvar o token curto (~1h) como se estivesse
@@ -101,7 +116,9 @@ Deno.serve(async (req) => {
       account_type: me.account_type ?? null,
       access_token: longToken,
       token_expires_at: expiresAt,
-      scopes: 'instagram_business_basic,instagram_business_manage_insights',
+      scopes: escoposConcedidos,
+      // Conectou de novo: o aviso "Reconecte" some.
+      needs_reconnect: false,
       updated_at: new Date().toISOString(),
     };
     let q = admin.from('social_connections').select('id')

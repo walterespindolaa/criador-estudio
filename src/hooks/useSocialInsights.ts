@@ -25,7 +25,22 @@ export type SocialConnection = {
   followers_count?: number | null;
   follows_count?: number | null;
   media_count?: number | null;
+  // Ciclo 2 do plano de publicar (SQL 20260928000006). Permissões que a Meta
+  // deu de verdade e marca de token morto (a renovação diária não conseguiu).
+  scopes?: string | null;
+  needs_reconnect?: boolean | null;
 };
+
+/* Estado da conexão pra tela. "reconectar": token vencido ou morto, os dados
+   param de atualizar e (no futuro) nada é publicado por ela. "pode_publicar":
+   a Meta deu a permissão de publicar e a conexão está viva. */
+export function estadoConexaoIg(conn: Pick<SocialConnection, "token_expires_at" | "needs_reconnect" | "scopes"> | null | undefined) {
+  if (!conn) return { reconectar: false, podePublicar: false };
+  const vencido = !!conn.token_expires_at && new Date(conn.token_expires_at).getTime() <= Date.now();
+  const reconectar = !!conn.needs_reconnect || vencido;
+  const temPermissao = (conn.scopes ?? "").includes("instagram_business_content_publish");
+  return { reconectar, podePublicar: temPermissao && !reconectar };
+}
 
 export type DailyMetric = {
   date: string;
@@ -114,7 +129,7 @@ export function useSocialConnection() {
       const { data, error } = await sbFrom("social_connections")
         // Lista explicita (o "*" tropeçaria no access_token, que tem grant de
         // coluna negado). Os 3 contadores exigem o SQL de 04/09 rodado antes.
-        .select("id,user_id,provider,external_account_id,username,account_type,profile_picture_url,token_expires_at,connected_at,updated_at,followers_count,follows_count,media_count")
+        .select("id,user_id,provider,external_account_id,username,account_type,profile_picture_url,token_expires_at,connected_at,updated_at,followers_count,follows_count,media_count,scopes,needs_reconnect")
         .eq("user_id", ownerId!)
         .eq("provider", "instagram")
         .is("crm_client_id", null)
@@ -304,7 +319,7 @@ export function useClientSocialConnection(crmClientId: string | null | undefined
     enabled: !!crmClientId,
     queryFn: async () => {
       const { data, error } = await sbFrom("social_connections")
-        .select("id,user_id,provider,external_account_id,username,account_type,token_expires_at,connected_at,updated_at")
+        .select("id,user_id,provider,external_account_id,username,account_type,token_expires_at,connected_at,updated_at,scopes,needs_reconnect")
         .eq("crm_client_id", crmClientId!)
         .eq("provider", "instagram")
         .maybeSingle();

@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   useSocialConnection, useDailyMetrics, useMediaInsights, useSyncInstagram, useDisconnectInstagram, useLinkMediaToPost,
-  useAudienceDemographics, useStories, useSocialAccountOwner, connectInstagram, type MediaInsight,
+  useAudienceDemographics, useStories, useSocialAccountOwner, connectInstagram, estadoConexaoIg, type MediaInsight,
 } from "@/hooks/useSocialInsights";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { usePillars } from "@/hooks/usePillars";
@@ -245,7 +245,8 @@ export default function Insights() {
         <div className="min-w-0">
           <p className="font-display font-bold text-sm">{conn.username ? `@${conn.username}` : t("insights.connectedAccount")}</p>
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> {t("insights.connected")}
+            <span className={`w-1.5 h-1.5 rounded-full ${estadoConexaoIg(conn).reconectar ? "bg-amber-500" : "bg-green-500"}`} />
+            {estadoConexaoIg(conn).reconectar ? "Conexão vencida" : t("insights.connected")}
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
@@ -266,6 +267,29 @@ export default function Insights() {
           )}
         </div>
       </div>
+
+      {/* CONEXÃO VENCIDA (ciclo 2 do plano de publicar). Antes o token morria
+          em silêncio: a tela seguia "Conectado" com número parado. Só quem é
+          dono consegue reconectar (o login grava a conexão em nome de quem
+          clica); a gestora vê o aviso pra combinar com o dono. */}
+      {estadoConexaoIg(conn).reconectar && (
+        <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-2.5 flex-wrap">
+          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="text-[13px] font-body text-amber-900 leading-snug flex-1 min-w-[200px]">
+            <p className="font-bold">A conexão com o Instagram venceu.</p>
+            <p className="mt-0.5">
+              {isOwnAccount
+                ? "Os números pararam de atualizar. Reconecte pra voltar a puxar os dados (leva 1 minuto, é só aceitar de novo na tela do Instagram)."
+                : "Os números pararam de atualizar. Quem é dono desta conta precisa entrar no Cria e reconectar o Instagram."}
+            </p>
+          </div>
+          {isOwnAccount && (
+            <Button size="sm" onClick={() => connectInstagram()} className="shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
+              Reconectar
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Aviso de conta NÃO profissional: o Instagram só devolve seguidores, alcance e
           insights pra contas Comercial/Criador. Se a conta for pessoal, tudo fica "-" e

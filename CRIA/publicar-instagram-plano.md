@@ -66,6 +66,10 @@ Criado em 28/09/2026. Cada ciclo só começa quando o anterior passar no **port�
 - **Portão:** SQL roda sem erro; teste de acesso (dono vê, membro vê, estranho não vê); nada muda na tela.
 
 ### Ciclo 2 · Login com a permissão nova
+
+**Passo 0 (28/09) ✅:** robôs religados (`000004`) e segredo interno movido pro cofre (`000005`). O segredo do gatilho não batia com o das funções: robôs e push no celular respondiam 401. Teste manual: 200.
+
+**Feito (28/09):** `000006` (lista de testadores + needs_reconnect visível); `get-instagram-config` pede publicar só pra testador na conta própria (ou pra todos com `INSTAGRAM_PUBLISH_ALL=true` depois da aprovação); `instagram-oauth` grava as permissões reais; `instagram-refresh` marca token morto e tira da fila; aviso "Conexão vencida / Reconectar" em Insights e Configurações, e selo "Publicação pelo Cria liberada".
 - Pedir `instagram_business_content_publish` no login (L1) e gravar as permissões que a Meta devolveu de verdade (L2).
 - Renovação marca `needs_reconnect` quando o token morre (L10).
 - Aviso "Reconecte o Instagram pra publicar pelo Cria" onde a conta não tem a permissão.
