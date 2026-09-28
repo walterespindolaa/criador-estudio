@@ -410,6 +410,9 @@ export default function ManagerLayout() {
               className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-body font-semibold text-white backdrop-blur transition-colors hover:bg-white/25">
               <Gift className="h-3.5 w-3.5" /> Indique e ganhe
             </button>
+            {/* Trocar de conta (minha / equipes que atendo / clientes). Some sozinho
+                quando não há pra onde trocar. */}
+            <AccountSwitcher hero />
             <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
               <GlobalSearch />
               {canClients && <ClientSwitcher />}
