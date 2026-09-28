@@ -655,7 +655,7 @@ const Configuracoes = () => {
                           </p>
                         </div>
                       </div>
-                      <div className="flex gap-2 shrink-0">
+                      <div className="flex gap-2 w-full sm:w-auto [&>button]:flex-1 sm:[&>button]:flex-none">
                         {estadoConexaoIg(igConnection).reconectar && (
                           <Button variant="hero" size="sm" onClick={() => connectInstagram()}><Instagram className="h-4 w-4 mr-2" /> Reconectar</Button>
                         )}

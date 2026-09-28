@@ -779,7 +779,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                               );
                             })()}
                             <span className="text-[10px] font-body font-bold uppercase tracking-wide"><span style={formatColorVars(p.format)} className={FORMAT_TEXT_CLASS}>{FORMAT_LABELS[normalizarFormato(p.format)] ?? cap(p.format)}</span> <span className="text-muted-foreground">· {cap(p.platform)}</span></span>
-                            <SeloPublicacaoIg status={p.publish_status} autoPublish={p.auto_publish} />
+                            <SeloPublicacaoIg status={p.publish_status} autoPublish={p.auto_publish} className="ml-1.5" />
                             <p className="font-display font-bold text-sm text-foreground truncate mt-1">{p.title}</p>
                             {p.assignee_id && (() => {
                               const quem = nomeParceiro(p.assignee_id);

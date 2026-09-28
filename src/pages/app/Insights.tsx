@@ -284,7 +284,7 @@ export default function Insights() {
             </p>
           </div>
           {isOwnAccount && (
-            <Button size="sm" onClick={() => connectInstagram()} className="shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
+            <Button size="sm" onClick={() => connectInstagram()} className="w-full sm:w-auto h-11 sm:h-9 rounded-xl shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
               Reconectar
             </Button>
           )}
