@@ -9,6 +9,7 @@ import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { CriaPostPublishButton } from "@/components/accounts/CriaPostPublishButton";
 import { PublicarNoInstagram } from "@/components/shared/PublicarNoInstagram";
+import { CapaSobreVideo, EditorDeCapa, temCapa, useCapaDoPost } from "@/components/accounts/CapaDoReels";
 import { postAspect } from "@/lib/post-aspect";
 import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, isDriveMedia, isVideoMedia, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { parseRefLinks, refLinkHref } from "@/lib/refLinks";
@@ -96,6 +97,9 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
   const [order, setOrder] = useState<string[]>([]);
   const dirty = useRef(false);
   const busy = uploadImage.isPending || uploadVideo.isPending || addDriveLink.isPending;
+  // Capa do Reels (28/09/2026): só formatos de vídeo têm capa no Instagram.
+  const comCapa = temCapa(format);
+  const { capa } = useCapaDoPost(comCapa ? postId : null);
 
   const media = list.data ?? [];
   const count = media.length;
@@ -350,6 +354,9 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
         </div>
       )}
 
+      {/* A capa mora logo abaixo dos botões de mídia: é parte do que sobe. */}
+      {comCapa && <EditorDeCapa postId={postId} />}
+
       {ordered.length > 1 && (
         <div>
           <div className="flex items-center gap-2 mb-1.5">
@@ -495,7 +502,11 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
       <div className={`bg-white border border-border rounded-2xl overflow-hidden mx-auto ${vertical ? "max-w-[360px]" : "max-w-[440px]"}`}>
         {vertical ? (
           <div className="relative">
-            <PostMediaCarousel media={ordered} aspect={aspect} onRemove={onRemoveMedia} onVideoReady={onReady} />
+            {/* Com capa, a prévia abre NA CAPA, como o Reels aparece no feed;
+                tocar mostra o vídeo. */}
+            <CapaSobreVideo capa={comCapa && ordered.length <= 1 ? capa : null}>
+              <PostMediaCarousel media={ordered} aspect={aspect} onRemove={onRemoveMedia} onVideoReady={onReady} />
+            </CapaSobreVideo>
             <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/65 to-transparent pointer-events-none" />
             <div className="absolute right-3 bottom-14 z-10 flex flex-col items-center gap-3.5 text-white pointer-events-none [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.6))]">
               <Heart className="h-6 w-6" /><MessageCircle className="h-6 w-6" /><Send className="h-6 w-6" /><Bookmark className="h-6 w-6" />
@@ -508,7 +519,9 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
           </div>
         ) : (
           <>
-            <PostMediaCarousel media={ordered} aspect={aspect} onRemove={onRemoveMedia} onVideoReady={onReady} />
+            <CapaSobreVideo capa={comCapa && ordered.length <= 1 ? capa : null}>
+              <PostMediaCarousel media={ordered} aspect={aspect} onRemove={onRemoveMedia} onVideoReady={onReady} />
+            </CapaSobreVideo>
             <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground/80">
               <Heart className="h-5 w-5" /><MessageCircle className="h-5 w-5" /><Send className="h-5 w-5" /><Bookmark className="h-5 w-5 ml-auto" />
             </div>

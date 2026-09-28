@@ -1,47 +1,40 @@
-import { useEffect, useMemo } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
-import { Contact } from "lucide-react";
+import { useEffect } from "react";
+import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
+import { Contact, Users } from "lucide-react";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { ModuleHero, type SubTab } from "@/components/brand/ModuleHero";
 import { ExternalApprovalsPanel } from "@/components/accounts/ExternalApprovalsPanel";
 import { ManagerCalendar } from "@/components/accounts/ManagerCalendar";
-import { PainelComParceiros } from "@/components/accounts/PainelComParceiros";
 import { QuickReportCard } from "@/components/accounts/QuickReportCard";
 import { Button } from "@/components/ui/button";
-import { useExternalClients } from "@/hooks/useCriaPost";
 import { useMeusParceiros } from "@/hooks/useParceiro";
 
 // O Cria Post virou o painel de APROVAÇÕES por link. A lista de clientes que morava
 // aqui foi consolidada em /socialmidia/clientes (hub único): clicar em qualquer post
 // abre o cliente lá. Assim não existem mais duas listas de clientes concorrentes.
+//
+// "COM PARCEIROS" SAIU DAQUI (Walter, 28/09/2026): a produção com designers e
+// editores foi pra Equipe, que é onde se pensa em gente. O endereço antigo
+// continua valendo (avisos antigos no sino apontam pra ele): redireciona pra
+// Equipe > Produção levando o ?post= junto.
 export default function CriaPost() {
   const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
+  const { search } = useLocation();
   const { data: parceiros = [] } = useMeusParceiros();
-  const { clients } = useExternalClients();
-  const ativa = tab === "calendario" ? "calendario" : tab === "parceiros" ? "parceiros" : "aprovacoes";
+  const ativa = tab === "calendario" ? "calendario" : "aprovacoes";
 
   // /criapost sem aba → cai na de aprovações (senão nenhuma aba fica marcada).
   useEffect(() => {
-    if (!tab) navigate("/socialmidia/criapost/aprovacoes", { replace: true });
-  }, [tab, navigate]);
+    if (tab === "parceiros") navigate(`/socialmidia/equipe/producao${search}`, { replace: true });
+    else if (!tab) navigate("/socialmidia/criapost/aprovacoes", { replace: true });
+  }, [tab, navigate, search]);
 
   // Aba = rota. Dá pra favoritar o calendário geral e o "voltar" funciona.
-  // "Com parceiros" só existe pra quem TEM parceiro acoplado: aba que abre
-  // uma tela vazia é ruído, não recurso.
   const tabs: SubTab[] = [
     { to: "/socialmidia/criapost/aprovacoes", label: "Aprovações" },
     { to: "/socialmidia/criapost/calendario", label: "Calendário geral" },
-    ...(parceiros.length > 0
-      ? [{ to: "/socialmidia/criapost/parceiros", label: "Com parceiros" }]
-      : []),
   ];
-
-  const nomesClientes = useMemo(() => {
-    const m: Record<string, string> = {};
-    for (const c of clients as { id: string; name: string | null }[]) m[c.id] = c.name ?? "Cliente";
-    return m;
-  }, [clients]);
 
   return (
     <ModuleGate code="aprovapost_externo">
@@ -51,9 +44,17 @@ export default function CriaPost() {
         color="laranja"
         tabs={tabs}
         actions={
-          <Button variant="outline" size="sm" className="bg-background/70" asChild>
-            <Link to="/socialmidia/clientes"><Contact className="h-4 w-4 mr-1.5" /> Ver clientes</Link>
-          </Button>
+          <>
+            {/* Atalho pra quem ainda procura a produção aqui. */}
+            {parceiros.length > 0 && (
+              <Button variant="outline" size="sm" className="bg-background/70" asChild>
+                <Link to="/socialmidia/equipe/producao"><Users className="h-4 w-4 mr-1.5" /> Com parceiros</Link>
+              </Button>
+            )}
+            <Button variant="outline" size="sm" className="bg-background/70" asChild>
+              <Link to="/socialmidia/clientes"><Contact className="h-4 w-4 mr-1.5" /> Ver clientes</Link>
+            </Button>
+          </>
         }
       />
 
@@ -63,8 +64,6 @@ export default function CriaPost() {
           <QuickReportCard />
           <ExternalApprovalsPanel />
         </>
-      ) : ativa === "parceiros" ? (
-        <PainelComParceiros clientes={nomesClientes} />
       ) : (
         <ManagerCalendar />
       )}

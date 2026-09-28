@@ -427,6 +427,8 @@ const App = () => (
                 <Route path="agenda" element={<SoOperacao><ErrorBoundary><AgendaCriacao /></ErrorBoundary></SoOperacao>} />
                 <Route path="captacao" element={<ErrorBoundary><CriaCaptacao /></ErrorBoundary>} />
                 <Route path="equipe" element={<SoOperacao><ErrorBoundary><Equipe /></ErrorBoundary></SoOperacao>} />
+                {/* Abas da Equipe (28/09/2026): produção, conversas e pessoas. */}
+                <Route path="equipe/:aba" element={<SoOperacao><ErrorBoundary><Equipe /></ErrorBoundary></SoOperacao>} />
                 <Route path="lixeira" element={<ErrorBoundary><Lixeira /></ErrorBoundary>} />
               </Route>
               {/* LINK CURTO DA BIO (Walter, 01/09): app.criasocialclub.com.br/bio/nome

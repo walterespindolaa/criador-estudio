@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { hrefSeguro } from "@/lib/href-seguro";
 import { Check, Copy, ExternalLink, FolderOpen, Instagram, Link2, Loader2, Palette, Sparkles, Type, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -62,7 +63,8 @@ export function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFec
   const cor = m.cor || "#4B3FA8";
   const tags = (m.hashtags ?? []).filter(Boolean);
   const refs = m.referencias ?? [];
-  const links = (m.links ?? []).filter((l) => !!l?.url?.trim());
+  // Só http(s) vira link: o que a agência grava o parceiro abre (lib/href-seguro).
+  const links = (m.links ?? []).filter((l) => !!hrefSeguro(l?.url));
   return (
     <Dialog open={!!m} onOpenChange={(v) => !v && aoFechar()}>
       <DialogContent className="max-w-lg p-0 gap-0 rounded-2xl overflow-hidden max-h-[88vh] overflow-y-auto [&>button:last-child]:hidden">
@@ -130,6 +132,15 @@ export function FichaDaMarca({ m, aoFechar }: { m: MarcaDoParceiro | null; aoFec
           {/* OS LINKS SÃO O QUE ELE MAIS USA. É o "Material da Marca / Refs
               Visuais / Site / Fotos Estúdio" do Trello. Ficam no topo, antes
               de qualquer texto: quem monta arte abre pasta, não lê parágrafo. */}
+          {/* O RECADO FIXO DA SOCIAL MÍDIA (28/09/2026): o que ela repetia peça
+              por peça no WhatsApp ("logo branca em fundo escuro"). Fica acima de
+              tudo porque é regra, não material. */}
+          {m.observacoes?.trim() && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-3.5 py-3">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-amber-900 mb-1">Recado da social mídia</p>
+              <p className="text-[13px] font-body text-foreground whitespace-pre-line leading-relaxed">{m.observacoes}</p>
+            </div>
+          )}
           {links.length > 0 && (
             <Bloco titulo="Material e links da marca" cor={cor}>
               <div className="grid gap-1.5">

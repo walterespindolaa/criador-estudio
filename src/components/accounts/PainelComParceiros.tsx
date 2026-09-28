@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { AlertTriangle, CalendarDays, Check, CheckCircle2, Clock, KanbanSquare, List, Loader2, Send, Users, Wallet } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { AlertTriangle, CalendarDays, Check, CheckCircle2, Clock, KanbanSquare, List, Loader2, MessageCircle, Send, Users, Wallet } from "lucide-react";
 import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
 import { ManagerCalendar } from "@/components/accounts/ManagerCalendar";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useExternalClients, type ExternalClient } from "@/hooks/useCriaPost";
 import {
-  ROTULO_PAPEL, useCachesDosParceiros, useMeusParceiros, usePecasComParceiros, useResolverPrazoSugerido,
+  ROTULO_PAPEL, useCachesDosParceiros, useConversasComParceiros, useMeusParceiros, usePecasComParceiros, useResolverPrazoSugerido,
   type PecaExterna,
 } from "@/hooks/useParceiro";
 import { brlReais } from "@/lib/money";
@@ -249,6 +249,172 @@ function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
   );
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   O QUADRO DE PRODUÇÃO, TODO MUNDO JUNTO (Walter, 28/09/2026: "o kanban onde
+   eu vejo o que tá com ele, achar um lugar melhor")
+
+   O quadro de antes mostrava UM parceiro por vez, com uma coluna por cliente:
+   bom pra conferir a carga da designer, ruim pra responder "o que está em
+   ajuste agora?" sem clicar em cada pessoa. Este é o kanban da operação:
+
+     Novo · Fazendo · Ajuste · Entregue (30 dias)
+
+   com filtro por parceiro e por cliente em cima. É leitura, de propósito: a
+   etapa quem move é o parceiro (Estou fazendo, Marcar entregue) e o ajuste
+   quem pede é ela, dentro do card. Clicar abre o card com a conversa.
+   A visão antiga (colunas por cliente) continua no "Agrupar por cliente".
+   ═══════════════════════════════════════════════════════════════════════════ */
+const COLUNAS_ETAPA: { etapa: string; titulo: string; fundo: string; ponto: string }[] = [
+  { etapa: "aguardando", titulo: "Novo", fundo: "bg-orange-50/60", ponto: "bg-orange-500" },
+  { etapa: "em_producao", titulo: "Fazendo", fundo: "bg-blue-50/60", ponto: "bg-blue-500" },
+  { etapa: "ajuste", titulo: "Ajuste", fundo: "bg-violet-50/60", ponto: "bg-violet-500" },
+  { etapa: "entregue", titulo: "Entregue · 30 dias", fundo: "bg-green-50/60", ponto: "bg-green-600" },
+];
+
+function QuadroDeProducao({ parceiros, pecas, extClients, hoje, abrirPeca, nomeParceiro, naoLidas }: {
+  parceiros: { member_id: string; nome: string; role: string }[];
+  pecas: PecaExterna[];
+  extClients: ExternalClient[];
+  hoje: string;
+  abrirPeca: (p: PecaExterna) => void;
+  nomeParceiro: Map<string, { nome: string; role: string }>;
+  naoLidas: Map<string, number>;
+}) {
+  const [quem, setQuem] = useState<string>("todos");
+  const [cliente, setCliente] = useState<string>("todos");
+  const limite30 = useMemo(() => {
+    const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString();
+  }, []);
+
+  const clientesComPeca = useMemo(() => {
+    const ids = new Set(pecas.map((p) => p.external_client_id).filter(Boolean) as string[]);
+    return extClients.filter((c) => ids.has(c.id)).sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+  }, [pecas, extClients]);
+
+  const visiveis = useMemo(() => pecas.filter((p) =>
+    (quem === "todos" || p.assignee_id === quem)
+    && (cliente === "todos" || p.external_client_id === cliente)
+    && (p.producao_status !== "entregue" || (p.entregue_em ?? p.updated_at ?? "") >= limite30)),
+  [pecas, quem, cliente, limite30]);
+
+  const porEtapa = useMemo(() => {
+    const m = new Map<string, PecaExterna[]>();
+    for (const c of COLUNAS_ETAPA) m.set(c.etapa, []);
+    for (const p of visiveis) {
+      const e = p.producao_status ?? "aguardando";
+      (m.get(e) ?? m.get("aguardando")!).push(p);
+    }
+    // Atrasada primeiro, depois o prazo mais perto. Entregue: a mais recente em cima.
+    for (const [e, lista] of m) {
+      lista.sort(e === "entregue"
+        ? (a, b) => (b.entregue_em ?? "").localeCompare(a.entregue_em ?? "")
+        : (a, b) => (a.prazo_producao ?? "9999").localeCompare(b.prazo_producao ?? "9999"));
+    }
+    return m;
+  }, [visiveis]);
+
+  const carga = (id: string) => pecas.filter((p) => p.assignee_id === id && p.producao_status !== "entregue").length;
+
+  const cartao = (p: PecaExterna) => {
+    const cli = p.external_client_id ? extClients.find((c) => c.id === p.external_client_id) : null;
+    const cor = cli?.color || cli?.brand_color || "#9ca3af";
+    const d = p.prazo_producao ? diasAte(p.prazo_producao, hoje) : null;
+    const entregue = p.producao_status === "entregue";
+    const novas = naoLidas.get(p.id) ?? 0;
+    const pc = nomeParceiro.get(p.assignee_id);
+    return (
+      <button key={p.id} type="button" onClick={() => abrirPeca(p)}
+        className={cn("w-full text-left rounded-xl border bg-card shadow-sm hover:shadow-md hover:-translate-y-px transition-all overflow-hidden",
+          !entregue && d !== null && d < 0 ? "border-red-300" : "border-border", entregue && "opacity-75")}>
+        <span className="block h-1" style={{ backgroundColor: cor }} />
+        <span className="block p-2.5">
+          <span className="flex items-center gap-1.5 mb-1">
+            <span className="text-[11px] font-body font-semibold text-muted-foreground truncate flex-1">{cli?.name ?? "Sem cliente"}</span>
+            {novas > 0 && (
+              <span className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground" title={`${novas} mensagem(ns) nova(s)`}>
+                <MessageCircle className="h-2.5 w-2.5" /> {novas}
+              </span>
+            )}
+          </span>
+          <span className="block font-display font-bold text-[13px] leading-snug line-clamp-3">{p.title || "Sem título"}</span>
+          <span className="flex items-center gap-1.5 flex-wrap mt-2">
+            <span className="w-5 h-5 rounded-full bg-gradient-to-br from-violet-400 to-violet-700 text-white grid place-items-center text-[9px] font-bold shrink-0"
+              title={pc ? `${pc.nome} · ${ROTULO_PAPEL[pc.role] ?? pc.role}` : "Parceiro"}>
+              {(pc?.nome ?? "P").charAt(0).toUpperCase()}
+            </span>
+            {p.format && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[p.format] ?? p.format}</span>}
+            {(p.revisoes ?? 0) > 0 && (
+              <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full",
+                (p.revisoes ?? 0) >= 3 ? "bg-red-100 text-red-700" : "bg-violet-100 text-violet-700")}>
+                {p.revisoes}ª rev.
+              </span>
+            )}
+            {p.prazo_status === "negociando" && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800">prazo pra responder</span>
+            )}
+          </span>
+          <span className="block mt-1.5">
+            {entregue
+              ? <span className="text-[11px] font-body text-muted-foreground">entregue {p.entregue_em ? new Date(p.entregue_em).toLocaleDateString("pt-BR") : ""}</span>
+              : <ContagemPrazo prazo={p.prazo_producao} hoje={hoje} />}
+          </span>
+        </span>
+      </button>
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Filtros: quem e de qual cliente. */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-0.5 scrollbar-none flex-1 min-w-0">
+          {[{ member_id: "todos", nome: "Todos", role: "" }, ...parceiros].map((pc) => {
+            const ativa = pc.member_id === quem;
+            const n = pc.member_id === "todos" ? pecas.filter((p) => p.producao_status !== "entregue").length : carga(pc.member_id);
+            return (
+              <button key={pc.member_id} type="button" onClick={() => setQuem(pc.member_id)}
+                className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-body font-semibold transition-colors",
+                  ativa ? "bg-violet-600 border-violet-600 text-white" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
+                {pc.member_id === "todos" ? "Todos" : pc.nome.split(" ")[0]}
+                <span className={cn("text-[10.5px] font-bold tabular-nums rounded-full px-1.5", ativa ? "bg-white/25" : "bg-muted")}>{n}</span>
+              </button>
+            );
+          })}
+        </div>
+        {clientesComPeca.length > 1 && (
+          <select value={cliente} onChange={(e) => setCliente(e.target.value)} aria-label="Filtrar por cliente"
+            className="h-9 rounded-xl border border-border bg-card px-3 text-[13px] font-body sm:w-56">
+            <option value="todos">Todos os clientes</option>
+            {clientesComPeca.map((c) => <option key={c.id} value={c.id}>{c.name ?? "Cliente"}</option>)}
+          </select>
+        )}
+      </div>
+
+      {/* Quatro colunas no desktop; no celular vira trilho de lado, 78vw cada. */}
+      <div className="flex lg:grid lg:grid-cols-4 gap-3 overflow-x-auto lg:overflow-visible pb-3 -mx-1 px-1 snap-x">
+        {COLUNAS_ETAPA.map((col) => {
+          const lista = porEtapa.get(col.etapa) ?? [];
+          return (
+            <div key={col.etapa} className={cn("w-[78vw] max-w-[300px] lg:w-auto lg:max-w-none shrink-0 snap-start rounded-2xl border border-border p-2.5", col.fundo)}>
+              <div className="flex items-center gap-2 px-1 mb-2.5">
+                <span className={cn("w-2 h-2 rounded-full", col.ponto)} />
+                <span className="font-display font-bold text-[13px] flex-1">{col.titulo}</span>
+                <span className="text-[10.5px] font-bold tabular-nums rounded-full px-1.5 py-0.5 bg-card border border-border text-muted-foreground">{lista.length}</span>
+              </div>
+              <div className="space-y-2">
+                {lista.length === 0
+                  ? <p className="text-[11.5px] font-body text-muted-foreground text-center py-4">nada aqui</p>
+                  : lista.map(cartao)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function PainelComParceiros({ clientes }: {
   /** id do external_client → nome, vindo de quem monta a tela. */
   clientes: Record<string, string>;
@@ -259,6 +425,15 @@ export function PainelComParceiros({ clientes }: {
   const { data: parceiros = [] } = useMeusParceiros();
   const { data: pecas = [], isLoading } = usePecasComParceiros(parceiros.length > 0);
   const resolver = useResolverPrazoSugerido();
+  // Mensagens novas por peça: o quadro mostra a bolinha em cima do card.
+  const { data: conversas = [] } = useConversasComParceiros(parceiros.length > 0);
+  const naoLidas = useMemo(() => new Map(conversas.map((c) => [c.post_id, c.nao_lidas ?? 0])), [conversas]);
+  /* Agrupar o quadro por ETAPA (padrão, todo mundo junto) ou por CLIENTE (a
+     visão de antes, um parceiro por vez, igual ao board do Trello dela). */
+  const [agrupar, setAgrupar] = useState<"etapa" | "cliente">(() => {
+    try { return localStorage.getItem("cria.parceiros.agrupar") === "cliente" ? "cliente" : "etapa"; } catch { return "etapa"; }
+  });
+  const trocarAgrupar = (v: "etapa" | "cliente") => { setAgrupar(v); try { localStorage.setItem("cria.parceiros.agrupar", v); } catch { /* sem storage */ } };
   /* Lista ou quadro, lembrado no navegador. O quadro é o jeito que a Gabriela
      já usa no Trello, então é o padrão. */
   type Visao = "quadro" | "lista" | "calendario";
@@ -273,6 +448,19 @@ export function PainelComParceiros({ clientes }: {
      janela que o designer ve, com a conversa. "Ir ate o post" dentro dela e o
      que leva pro editor no cliente. */
   const [cardAberto, setCardAberto] = useState<PecaExterna | null>(null);
+  /* O AVISO DO SINO ABRE A PEÇA (28/09/2026): "sugeriu outro prazo" e peça sem
+     cliente no CRM chegam aqui com ?post=. Abre o card uma vez e limpa a URL,
+     senão fechar o card e dar F5 abriria de novo. */
+  const [params, setParams] = useSearchParams();
+  const postDaUrl = params.get("post");
+  useEffect(() => {
+    if (!postDaUrl || isLoading) return;
+    const p = pecas.find((x) => x.id === postDaUrl);
+    /* Fora da lista (ela vem com teto de 300): abre mesmo assim. O card busca
+       tudo pelo id; só o nome do parceiro fica em branco no cabeçalho. */
+    setCardAberto(p ?? ({ id: postDaUrl, assignee_id: "", external_client_id: null } as unknown as PecaExterna));
+    const n = new URLSearchParams(params); n.delete("post"); setParams(n, { replace: true });
+  }, [postDaUrl, pecas, isLoading, params, setParams]);
   const hoje = hojeBR();
   // Cachês (fase 3): despesas do Caixa ligadas a parceiro, agrupadas por pessoa.
   const { agencyOwnerId } = useActiveAccount();
@@ -435,7 +623,7 @@ export function PainelComParceiros({ clientes }: {
           <section>
             <div className="flex items-center justify-between gap-2 mb-2 px-0.5">
               <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                <Users className="h-3.5 w-3.5" /> Na mão de cada parceiro
+                <Users className="h-3.5 w-3.5" /> Produção com parceiros
               </p>
               <div className="inline-flex rounded-full border border-border bg-card p-0.5">
                 {([["quadro", KanbanSquare, "Quadro"], ["lista", List, "Lista"], ["calendario", CalendarDays, "Calendário"]] as const).map(([v, Icone, rotulo]) => (
@@ -453,14 +641,38 @@ export function PainelComParceiros({ clientes }: {
                  sair dele: entrega e postagem de cada peca, por parceiro. */
               <ManagerCalendar somenteParceiros compacto />
             ) : visao === "quadro" ? (
-              <QuadroDoParceiro
-                parceiros={parceiros}
-                pecas={pecas}
-                extClients={extClients as ExternalClient[]}
-                hoje={hoje}
-                abrirPeca={abrirPeca}
-                nomeParceiro={nomeParceiro}
-              />
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-1.5 text-[12px] font-body">
+                  <span className="text-muted-foreground">Agrupar por</span>
+                  {(["etapa", "cliente"] as const).map((v) => (
+                    <button key={v} type="button" onClick={() => trocarAgrupar(v)}
+                      className={cn("rounded-full px-2.5 py-0.5 font-semibold border transition-colors",
+                        agrupar === v ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
+                      {v === "etapa" ? "etapa" : "cliente (um parceiro por vez)"}
+                    </button>
+                  ))}
+                </div>
+                {agrupar === "etapa" ? (
+                  <QuadroDeProducao
+                    parceiros={parceiros}
+                    pecas={pecas}
+                    extClients={extClients as ExternalClient[]}
+                    hoje={hoje}
+                    abrirPeca={abrirPeca}
+                    nomeParceiro={nomeParceiro}
+                    naoLidas={naoLidas}
+                  />
+                ) : (
+                  <QuadroDoParceiro
+                    parceiros={parceiros}
+                    pecas={pecas}
+                    extClients={extClients as ExternalClient[]}
+                    hoje={hoje}
+                    abrirPeca={abrirPeca}
+                    nomeParceiro={nomeParceiro}
+                  />
+                )}
+              </div>
             ) : porParceiro.length === 0 && praRevisar.length === 0 ? (
               <Card className="p-10 rounded-2xl border-dashed text-center">
                 <Users className="h-7 w-7 mx-auto text-muted-foreground mb-2.5" />

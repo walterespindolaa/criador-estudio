@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, UserPlus, Users, Plus, Trash2, Pause, Play, Check, CreditCard, Info, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,117 @@ import {
 import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { useCrmClients } from "@/hooks/useCrm";
 import { confirmar } from "@/components/shared/Confirm";
+import { useNavigate, useParams } from "react-router-dom";
+import { ModuleHero, type SubTab } from "@/components/brand/ModuleHero";
+import { PainelComParceiros } from "@/components/accounts/PainelComParceiros";
+import { ConversasComParceiros } from "@/components/accounts/ConversasComParceiros";
+import { CanalDaMarca } from "@/components/accounts/CanalDaMarca";
+import { useHasModule } from "@/hooks/useModules";
+import { useActiveAccount } from "@/contexts/AccountContext";
+import { useExternalClients } from "@/hooks/useCriaPost";
+import { useConversasComParceiros, useMeusParceiros } from "@/hooks/useParceiro";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EQUIPE, A CENTRAL DE PRODUÇÃO (Walter, 28/09/2026)
+
+   "Os posts que estão com parceiros deviam ficar na Equipe, hoje está
+   escondido dentro do Cria Post." O painel de produção morava numa aba do
+   Cria Post que só aparecia pra quem sabia procurar. Agora a Equipe junta
+   tudo o que é trabalho com gente:
+
+     Produção   o que está com cada parceiro, prazos e entregas pra revisar
+     Conversas  todas as conversas com os parceiros num lugar só
+     Canal      o material fixo de cada cliente pros parceiros (recado,
+                pasta geral, links úteis)
+     Pessoas    convites, papéis, pausar e remover (o que a tela já era)
+
+   Produção, Conversas e Canal dependem do Cria Post, e isso é de propósito
+   (Walter: "não faz sentido se não tiver"): a peça delegada É um post do
+   Cria Post. Sem o módulo, a Equipe continua sendo só Pessoas, como antes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+type Aba = "producao" | "conversas" | "canal" | "pessoas";
 
 export default function Equipe() {
+  const { aba } = useParams<{ aba?: string }>();
+  const navigate = useNavigate();
+  const { allowed: temCriaPost, isLoading: carregandoModulo } = useHasModule("aprovapost_externo");
+  const { data: parceiros = [], isLoading: carregandoParceiros } = useMeusParceiros();
+  const { data: conversas = [] } = useConversasComParceiros(temCriaPost && parceiros.length > 0);
+  const { clients } = useExternalClients();
+
+  const naoLidas = conversas.reduce((s, c) => s + (c.nao_lidas ?? 0), 0);
+  // Colaborador agindo por outra agência não chega aqui pelo menu; se vier pela
+  // URL, fica só em Pessoas (a produção é da dona da conta, revisão 28/09).
+  const { actingAsTeam } = useActiveAccount();
+  const producaoLiberada = temCriaPost && !actingAsTeam;
+  const carregando = carregandoModulo || carregandoParceiros;
+  const padrao: Aba = producaoLiberada && parceiros.length > 0 ? "producao" : "pessoas";
+  const ativa: Aba = !producaoLiberada
+    ? "pessoas"
+    : aba === "producao" || aba === "conversas" || aba === "canal" || aba === "pessoas" ? aba : padrao;
+
+  // /equipe sem aba (ou aba que não existe) cai na certa, sem deixar a URL mentindo.
+  useEffect(() => {
+    if (carregandoModulo || carregandoParceiros) return;
+    if (aba !== ativa) navigate(`/socialmidia/equipe/${ativa}${window.location.search}`, { replace: true });
+  }, [aba, ativa, carregandoModulo, carregandoParceiros, navigate]);
+
+  const nomesClientes = (() => {
+    const m: Record<string, string> = {};
+    for (const c of clients as { id: string; name: string | null }[]) m[c.id] = c.name ?? "Cliente";
+    return m;
+  })();
+
+  const tabs: SubTab[] | undefined = producaoLiberada
+    ? [
+        { to: "/socialmidia/equipe/producao", label: "Produção" },
+        { to: "/socialmidia/equipe/conversas", label: naoLidas > 0 ? `Conversas (${naoLidas})` : "Conversas" },
+        { to: "/socialmidia/equipe/canal", label: "Canal da marca" },
+        { to: "/socialmidia/equipe/pessoas", label: "Pessoas" },
+      ]
+    : undefined;
+
+  return (
+    <>
+      <ModuleHero
+        title="Equipe"
+        subtitle={producaoLiberada
+          ? "Tudo o que está com designers, editores e filmmakers: produção, conversas e pessoas."
+          : "Convide colaboradores e parceiros de produção."}
+        color="lilas"
+        tabs={tabs}
+      />
+      {carregando ? (
+        <div className="grid place-items-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+      ) : ativa === "producao" ? (
+        parceiros.length === 0 ? <SemParceiroAinda aoConvidar={() => navigate("/socialmidia/equipe/pessoas")} /> : <PainelComParceiros clientes={nomesClientes} />
+      ) : ativa === "conversas" ? (
+        <ConversasComParceiros />
+      ) : ativa === "canal" ? (
+        <CanalDaMarca />
+      ) : (
+        <PessoasDaEquipe />
+      )}
+    </>
+  );
+}
+
+/** Produção sem ninguém na equipe: diz o próximo passo em vez de uma tela vazia. */
+function SemParceiroAinda({ aoConvidar }: { aoConvidar: () => void }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
+      <Users className="h-7 w-7 mx-auto text-muted-foreground mb-2.5" />
+      <p className="text-sm font-body font-semibold text-foreground">Ninguém produzindo com você ainda</p>
+      <p className="text-xs font-body text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
+        Convide um designer, editor de vídeo ou filmmaker como <b>parceiro de produção</b> (é grátis).
+        Depois é só abrir um post e usar o <b>Enviar para</b>: a peça aparece aqui, com prazo e conversa.
+      </p>
+      <Button className="mt-4" onClick={aoConvidar}><UserPlus className="h-4 w-4 mr-2" /> Convidar parceiro</Button>
+    </div>
+  );
+}
+
+function PessoasDaEquipe() {
   const { data: members = [], isLoading } = useTeamMembers();
   const { data: seats } = useCollabSeats();
   const { data: clients = [] } = useCrmClients();
@@ -385,7 +494,7 @@ export default function Equipe() {
             )}
             <p className="text-[11px] font-body text-muted-foreground">
               {tipoAcesso === "parceiro"
-                ? 'Ele recebe um e-mail pra definir a senha e cai direto na tela "Minhas demandas". Depois é só abrir um post e usar o "Enviar para".'
+                ? 'Ele recebe um e-mail pra definir a senha e cai direto na área de parceiro. Depois é só abrir um post e usar o "Enviar para": a peça aparece em Equipe > Produção.'
                 : "Ele recebe um e-mail pra definir a senha e já entra na sua conta. Dá pra ajustar tudo isso depois."}
             </p>
           </div>

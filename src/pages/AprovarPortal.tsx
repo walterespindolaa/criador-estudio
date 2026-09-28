@@ -6,14 +6,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, RotateCcw, Loader2, ImageOff, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks, ChevronDown, Clapperboard, CalendarDays, BarChart3, CheckSquare, AlertTriangle, Package, Plus, FolderOpen, History, MapPin } from "lucide-react";
+import { Check, RotateCcw, Loader2, ImageOff, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks, ChevronDown, Clapperboard, CalendarDays, BarChart3, CheckSquare, AlertTriangle, Package, Plus, FolderOpen, History, MapPin, LayoutGrid, List } from "lucide-react";
 import { hexToHsl } from "@/lib/applyTheme";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { type Alfinete } from "@/components/shared/CamadaDeAlfinetes";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { postAspect } from "@/lib/post-aspect";
 import { EtapasChecklist, type Stage } from "@/components/aprovar/EtapasChecklist";
-import { PortalCalendario } from "@/components/aprovar/PortalCalendario";
+import { PortalFeed, PortalMes } from "@/components/aprovar/PortalVisoes";
+import { CapaSobreVideo } from "@/components/accounts/CapaDoReels";
 import { PortalRelatorio } from "@/components/aprovar/PortalRelatorio";
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { LogoMarca } from "@/components/publico/CabecalhoPublico";
@@ -59,8 +60,10 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   aprovado: { label: "Aprovado", cls: "bg-green-100 text-green-700" },
 };
 
-function CardIG({ client, post, alfinetes, modoApontar, aoFixar, aoAbrirAlfinete, alfineteSelecionado }: {
+function CardIG({ client, post, alfinetes, modoApontar, aoFixar, aoAbrirAlfinete, alfineteSelecionado, capa }: {
   client: ClientHeader; post: PortalPost;
+  /** Capa do Reels escolhida pela social mídia (28/09/2026). */
+  capa?: string | null;
   alfinetes?: Record<number, Alfinete[]>; modoApontar?: boolean;
   aoFixar?: (indice: number, x: number, y: number) => void;
   aoAbrirAlfinete?: (id: string) => void; alfineteSelecionado?: string | null;
@@ -108,7 +111,11 @@ function CardIG({ client, post, alfinetes, modoApontar, aoFixar, aoAbrirAlfinete
         </div>
       ) : vertical ? (
         <div className="relative">
-          <PostMediaCarousel media={media} aspect={aspect} alfinetes={alfinetes} modoApontar={modoApontar} aoFixar={aoFixar} aoAbrirAlfinete={aoAbrirAlfinete} alfineteSelecionado={alfineteSelecionado} />
+          {/* O cliente vê o Reels como vai aparecer no feed: na capa. Tocar
+              mostra o vídeo. Marcando ponto na arte, a capa sai da frente. */}
+          <CapaSobreVideo capa={modoApontar || media.length > 1 || Object.keys(alfinetes ?? {}).length > 0 ? null : capa}>
+            <PostMediaCarousel media={media} aspect={aspect} alfinetes={alfinetes} modoApontar={modoApontar} aoFixar={aoFixar} aoAbrirAlfinete={aoAbrirAlfinete} alfineteSelecionado={alfineteSelecionado} />
+          </CapaSobreVideo>
           {/* Véu de rodapé CURTO. Antes eram 2/5 da altura em black/70: aquilo existia
               pra dar contraste na legenda sobreposta, que foi removida daqui (ver o
               comentário logo abaixo) e o véu ficou órfão, escurecendo 40% do vídeo à
@@ -187,8 +194,9 @@ function HistoricoAjustes({ history, managerName }: { history: PortalComment[]; 
   );
 }
 
-function PostApproval({ client, post, index, busy, history, onApproveFast, onAdjustFast, onApproveStage, onAdjustStage, onPin, onRemovePin }: {
+function PostApproval({ client, post, index, busy, history, onApproveFast, onAdjustFast, onApproveStage, onAdjustStage, onPin, onRemovePin, capa }: {
   client: ClientHeader; post: PortalPost; index: number; busy: boolean; history: PortalComment[];
+  capa?: string | null;
   onApproveFast: (id: string, comment?: string) => void; onAdjustFast: (id: string, comment: string) => void;
   onApproveStage: (id: string, stage: Stage, comment?: string) => void; onAdjustStage: (id: string, stage: Stage, comment: string) => void;
   onPin: (id: string, comment: string, indice: number, x: number, y: number) => void;
@@ -500,7 +508,7 @@ function PostApproval({ client, post, index, busy, history, onApproveFast, onAdj
           Mobile: mantém o feed em coluna, exatamente como antes. */}
       <div className="lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-8 lg:items-start lg:bg-white lg:border lg:border-border lg:rounded-3xl lg:p-6 lg:shadow-[0_8px_30px_rgba(27,26,24,0.06)]">
         <div className={`w-full mx-auto lg:mx-0 ${vertical ? "max-w-[330px] lg:max-w-[300px]" : "lg:max-w-[360px]"}`}>
-          <CardIG client={client} post={post}
+          <CardIG client={client} post={post} capa={capa}
             alfinetes={alfinetesPorMidia} modoApontar={apontando}
             aoFixar={(indice, x, y) => setRascunhoAlfinete({ indice, x, y })}
             aoAbrirAlfinete={setAlfineteAberto} alfineteSelecionado={alfineteAberto} />
@@ -596,6 +604,19 @@ export default function AprovarPortal() {
     },
   });
 
+  // Capas dos Reels (28/09/2026). RPC à parte: se a migration não rodou, o
+  // portal segue sem capa, como antes.
+  const capasQ = useQuery({
+    queryKey: ["portal-capas", token], enabled: !!token && !!clientQ.data,
+    queryFn: async (): Promise<Record<string, string>> => {
+      const { data, error } = await sbRpc("capas_by_token", { _token: token });
+      if (error) return {};
+      const m: Record<string, string> = {};
+      for (const r of (data as { post_id: string; cover_url: string }[]) ?? []) m[r.post_id] = r.cover_url;
+      return m;
+    },
+  });
+
   // Histórico de ajustes POR post (pedido do cliente + resposta da equipe).
   // Se a RPC ainda não existir no banco, o portal segue sem o bloco
   // (retrocompatível, mesmo padrão do get_portal_settings).
@@ -667,6 +688,9 @@ export default function AprovarPortal() {
 
   const [showApproved, setShowApproved] = useState(false);
   const [tab, setTab] = useState<PortalTab>("aprovacoes");
+  /* LISTA, FEED OU CALENDÁRIO (Walter, 28/09/2026): o cliente enxerga o mês,
+     não só a fila. Aprovar continua na lista; as outras duas levam até ela. */
+  const [visao, setVisao] = useState<"lista" | "feed" | "calendario">("lista");
 
   // Registra que o cliente abriu o portal (fire and forget, não bloqueia nada).
   useEffect(() => {
@@ -714,8 +738,21 @@ export default function AprovarPortal() {
   ];
   const activeTab: PortalTab = tabs.some((t) => t.key === tab) ? tab : "aprovacoes";
 
+  const capas = capasQ.data ?? {};
+  /* Tocou num post do feed ou do calendário: volta pra lista e rola até ele
+     (abrindo o grupo de aprovados, se for um deles). */
+  const abrirNaLista = (id: string) => {
+    const alvo = posts.find((x) => x.post_id === id);
+    setTab("aprovacoes");
+    setVisao("lista");
+    if (alvo?.approval_status === "aprovado") setShowApproved(true);
+    window.setTimeout(() => document.getElementById(`post-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 280);
+  };
+  const temData = posts.some((p) => !!p.scheduled_date);
+
   const renderPost = (p: PortalPost, i: number) => (
-    <PostApproval key={p.post_id} client={c} post={p} index={i} busy={pendingId === p.post_id}
+    <div key={p.post_id} id={`post-${p.post_id}`} className="scroll-mt-24">
+    <PostApproval client={c} post={p} index={i} busy={pendingId === p.post_id} capa={capas[p.post_id] ?? null}
       history={commentsQ.data?.[p.post_id] ?? []}
       onApproveFast={(id, comment) => approveFast.mutate({ id, comment })}
       onAdjustFast={(id, comment) => adjustFast.mutate({ id, comment })}
@@ -723,6 +760,7 @@ export default function AprovarPortal() {
       onAdjustStage={(id, stage, comment) => adjustStage.mutate({ id, stage, comment })}
       onPin={(id, comment, indice, x, y) => pinPoint.mutate({ id, comment, indice, x, y })}
       onRemovePin={(commentId) => removePin.mutate(commentId)} />
+    </div>
   );
 
   const tabBar = (variant: "mobile" | "desktop") =>
@@ -806,7 +844,7 @@ export default function AprovarPortal() {
         <AnimatePresence mode="wait">
           <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2, ease: "easeOut" }}>
             {activeTab === "calendario" ? (
-              <PortalCalendario posts={posts} brand={brand} />
+              <PortalMes posts={posts} capas={capas} brand={brand} aoAbrir={abrirNaLista} />
             ) : activeTab === "relatorio" ? (
               <PortalRelatorio posts={posts} client={{ name: c.client_name, logo: c.client_logo, manager: c.manager_name }} brand={brand}
                 periodStart={periodQ.data?.period_start ?? null} periodEnd={periodQ.data?.period_end ?? null} />
@@ -815,6 +853,20 @@ export default function AprovarPortal() {
                 <div className="text-center mb-6 lg:mb-10">
                   <h1 className="font-display font-extrabold text-foreground text-xl lg:text-2xl">Aprove seus posts</h1>
                   <p className="text-sm text-muted-foreground font-body mt-1">Revise o conteúdo e aprove ou peça ajustes.</p>
+                  {total > 0 && (
+                    <div role="tablist" aria-label="Como ver os posts" className="inline-flex mt-4 bg-white border border-border rounded-2xl p-1 shadow-[0_4px_20px_rgba(27,26,24,0.05)]">
+                      {([
+                        ["lista", List, "Lista"],
+                        ["feed", LayoutGrid, "Feed"],
+                        ...(temData ? [["calendario", CalendarDays, "Calendário"]] : []),
+                      ] as [typeof visao, typeof List, string][]).map(([v, Icone, rotulo]) => (
+                        <button key={v} type="button" role="tab" aria-selected={visao === v} onClick={() => setVisao(v)}
+                          className={`flex items-center gap-1.5 px-4 min-h-[40px] rounded-xl text-[13px] font-body font-extrabold transition-colors ${visao === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                          <Icone className="h-4 w-4" /> {rotulo}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {postsQ.isLoading ? (
@@ -828,6 +880,10 @@ export default function AprovarPortal() {
                       {postsQ.isFetching ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-2" />} Tentar de novo
                     </Button>
                   </div>
+                ) : total > 0 && visao === "feed" ? (
+                  <PortalFeed posts={posts} capas={capas} brand={brand} aoAbrir={abrirNaLista} />
+                ) : total > 0 && visao === "calendario" ? (
+                  <PortalMes posts={posts} capas={capas} brand={brand} aoAbrir={abrirNaLista} />
                 ) : total === 0 ? (
                   <div className="text-center py-16 text-muted-foreground font-body"><Check className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="font-medium text-foreground">Tudo em dia!</p><p className="text-sm mt-1">Nenhum post aguardando sua revisão agora.</p></div>
                 ) : (

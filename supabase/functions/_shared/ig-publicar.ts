@@ -187,7 +187,25 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
         const c = await chamar('POST', `${igUser}/media`, { image_url: itens[0].url!, caption }, token, 'Criando a publicação');
         containerId = String(c.id);
       } else if (formato === 'reels') {
-        const c = await chamar('POST', `${igUser}/media`, { media_type: 'REELS', video_url: itens[0].url!, caption, share_to_feed: 'true' }, token, 'Criando o Reels');
+        /* CAPA DO REELS (28/09/2026): a que a social mídia escolheu no Cria
+           Post vai junto. Leitura à parte e tolerante: se a coluna ainda não
+           existir no banco, publica sem capa (primeiro frame), como antes. */
+        let capa: string | null = null;
+        {
+          const { data: cv, error: cvErr } = await admin.from('posts').select('cover_url').eq('id', postId).maybeSingle();
+          if (!cvErr) capa = String((cv as { cover_url?: string | null } | null)?.cover_url ?? '').trim() || null;
+        }
+        const corpo: Record<string, string> = { media_type: 'REELS', video_url: itens[0].url!, caption, share_to_feed: 'true' };
+        if (capa && /^https:\/\//i.test(capa)) corpo.cover_url = capa;
+        let c: Record<string, unknown>;
+        try {
+          c = await chamar('POST', `${igUser}/media`, corpo, token, 'Criando o Reels');
+        } catch (e) {
+          // Capa recusada não pode derrubar a publicação: tenta de novo sem ela.
+          if (!corpo.cover_url) throw e;
+          delete corpo.cover_url;
+          c = await chamar('POST', `${igUser}/media`, corpo, token, 'Criando o Reels');
+        }
         containerId = String(c.id);
       } else {
         // Carrossel: um contêiner por mídia, na ordem da tira, depois o pai.

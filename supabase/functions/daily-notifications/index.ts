@@ -326,7 +326,7 @@ Deno.serve(async (req) => {
               : `🔴 ${itens.length} entregas atrasadas com parceiros`,
             description: `${p.quem} está ${p.dias} dia${p.dias === 1 ? "" : "s"} além do prazo em "${p.titulo.slice(0, 40)}"`
               + (resto > 0 ? ` e mais ${resto}.` : ".") + " Cobre ou remaneje antes do cliente perguntar.",
-            link: "/socialmidia/criapost/parceiros",
+            link: "/socialmidia/equipe/producao",
           });
         }
       }

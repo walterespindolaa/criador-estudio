@@ -563,7 +563,7 @@ export default function ManagerLayout() {
                 { label: LABELS.indique, desc: "Indique o Cria e ganhe comissão", icon: Handshake as LucideIcon, onClick: () => navigate("/socialmidia/parceria") },
               ]
               : [
-              ...(!actingAsTeam ? [{ label: "Equipe", desc: "Convidar colaboradores", icon: UserPlus as LucideIcon, onClick: () => navigate("/socialmidia/equipe") }] : []),
+              ...(!actingAsTeam ? [{ label: "Equipe", desc: "Produção, conversas e pessoas", icon: UserPlus as LucideIcon, onClick: () => navigate("/socialmidia/equipe") }] : []),
               { label: "Relatório da operação", desc: "Produção, financeiro e carteira no período", icon: BarChart3 as LucideIcon, onClick: () => navigate("/socialmidia/relatorio") },
               { label: "Parceria", desc: "Indique o CRIA e ganhe comissão", icon: Handshake as LucideIcon, onClick: () => navigate("/socialmidia/parceria") },
               { label: "Comissões", desc: "O que você já ganhou", icon: DollarSign as LucideIcon, onClick: onNavComissoes },

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCrmClient } from "@/hooks/useCrm";
@@ -8,13 +8,14 @@ import { motion } from "framer-motion";
 import {
   Briefcase, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
   Copy as CopyIcon, ExternalLink, Folder, ImagePlus, Link2, Loader2, MessageCircle, Palette,
-  History, MapPin, PauseCircle, Pencil, Play, Plus, RotateCcw, Send, Sparkles, X,
+  History, MapPin, PanelRightClose, PauseCircle, Pencil, Play, Plus, RotateCcw, Send, Sparkles, X,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatColorVars, FORMAT_CHIP_SOLID_CLASS, FORMAT_CHIP_SOFT_CLASS } from "@/lib/format-colors";
 import { hojeBR } from "@/lib/date-br";
+import { hrefSeguro } from "@/lib/href-seguro";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -24,7 +25,7 @@ import { ErroAoCarregar } from "@/components/shared/ErroAoCarregar";
 import { CamadaDeAlfinetes, segundoBonito } from "@/components/shared/CamadaDeAlfinetes";
 import {
   ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useConversaDoCard, useCoresDasAgencias, useEntreguesDoParceiro,
-  useFilaDoParceiro, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useProporPrazo, useResolverPrazoSugerido, useVersoesDaPeca,
+  useFilaDoParceiro, useMarcarConversaLida, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useProporPrazo, useResolverPrazoSugerido, useVersoesDaPeca,
   type CardDaFila, type EntregueDoParceiro, type MarcaDoParceiro, type VersaoDaPeca,
 } from "@/hooks/useParceiro";
 import {
@@ -1132,8 +1133,16 @@ function FalaFormatada({ texto, meu }: { texto: string; meu: boolean }) {
   );
 }
 
-function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexando, aoMandarImagem, aoLimparTexto, quem }: {
+export function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexando, aoMandarImagem, aoLimparTexto, quem, className, titulo, rodape, colunaUnica }: {
   cor: string;
+  /** Troca a moldura (a da caixa de entrada da Equipe não é coluna de grid). */
+  className?: string;
+  /** Cabeçalho da conversa. Padrão: "Conversa deste card". */
+  titulo?: ReactNode;
+  /** Texto de ajuda embaixo do campo. Padrão: fala do lado do parceiro. */
+  rodape?: string;
+  /** Card com a coluna do meio recolhida: no tablet não há 2 colunas pra ocupar. */
+  colunaUnica?: boolean;
   mensagens: { id: string; texto: string; papel: string; em: string }[];
   /* QUEM É QUEM NO CHAT (Walter, 20/09/2026: "colocar nome do usuário ao invés
      de social mídia"). O papel que está olhando vira "você"; o outro lado
@@ -1149,10 +1158,14 @@ function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexand
   aoLimparTexto: () => void;
 }) {
   const fim = useRef<HTMLDivElement | null>(null);
+  const lista = useRef<HTMLDivElement | null>(null);
   const inputImagem = useRef<HTMLInputElement | null>(null);
   const campo = useRef<HTMLTextAreaElement | null>(null);
   // Abrir a conversa já no fim: o que importa é a última fala, não a primeira.
-  useEffect(() => { fim.current?.scrollIntoView({ block: "end" }); }, [mensagens.length]);
+  /* Rola SÓ a lista de falas. scrollIntoView rolava também o diálogo: no
+     celular (colunas empilhadas) o card abria lá embaixo, na conversa, em vez
+     de no briefing (achado no teste visual de 28/09/2026). */
+  useEffect(() => { const el = lista.current; if (el) el.scrollTop = el.scrollHeight; }, [mensagens.length]);
   /* O campo cresce com o texto. Sem isso, uma mensagem de três linhas ficava
      escondida dentro de uma caixa de uma linha. */
   useEffect(() => {
@@ -1163,12 +1176,14 @@ function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexand
   }, [texto]);
 
   return (
-    <div className="bg-card border-t lg:border-t-0 lg:border-l border-border flex flex-col min-h-0 md:col-span-2 lg:col-span-1 lg:order-3 lg:h-full">
-      <p className="shrink-0 px-4 py-3 border-b border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-        <MessageCircle className="h-3.5 w-3.5" style={{ color: cor }} /> Conversa deste card
-      </p>
+    <div className={className ?? cn("bg-card border-t lg:border-t-0 lg:border-l border-border flex flex-col min-h-0 lg:col-span-1 lg:order-3 lg:h-full", !colunaUnica && "md:col-span-2")}>
+      {titulo ?? (
+        <p className="shrink-0 px-4 py-3 border-b border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <MessageCircle className="h-3.5 w-3.5" style={{ color: cor }} /> Conversa deste card
+        </p>
+      )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-2 max-lg:max-h-[46vh]">
+      <div ref={lista} className={cn("flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-2", !className && "max-lg:max-h-[46vh]")}>
         {mensagens.length === 0 ? (
           <p className="text-xs font-body text-muted-foreground text-center py-8 px-4 leading-relaxed">
             Nada combinado por aqui ainda. O que for escrito neste chat fica no card,
@@ -1246,7 +1261,7 @@ function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, anexand
           </button>
         </div>
         <p className="text-[11px] font-body text-muted-foreground/80 px-2 pt-1.5">
-          Enter manda. A social mídia recebe na hora.
+          {rodape ?? "Enter manda. A social mídia recebe na hora."}
         </p>
       </div>
     </div>
@@ -1322,6 +1337,15 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
   // No modo agencia a mensagem sai como social_media, pela mesma tabela que o
   // editor do cliente usa, e o card recarrega pra ela aparecer na hora.
   const conversaAgencia = useConversaDoCard(agencia ? postId : null);
+  /* Abriu o card pelo lado da agência = leu a conversa. Sem este carimbo, a
+     caixa de entrada da Equipe continuava dizendo "2 novas" de uma conversa
+     que ela acabou de ler aqui. Refaz quando chega fala nova com o card aberto. */
+  const marcarLida = useMarcarConversaLida();
+  const qtdFalas = card?.comentarios?.length ?? 0;
+  useEffect(() => {
+    if (agencia && postId) marcarLida.mutate(postId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agencia ? postId : null, qtdFalas]);
   const proporPrazo = useProporPrazo();
   const resolverPrazo = useResolverPrazoSugerido();
   // A cor que EU (parceiro) dei a esta agência. No modo agência não se aplica.
@@ -1345,6 +1369,20 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
     ? minhasMarcas.find((m) => m.external_client_id === card.external_client_id) ?? null
     : null;
   const [fichaAberta, setFichaAberta] = useState<MarcaDoParceiro | null>(null);
+  /* A COLUNA DO MEIO PODE SER RECOLHIDA (Walter, 28/09/2026). Lembrada no
+     navegador: quem prefere o briefing largo não precisa recolher de novo em
+     cada card. */
+  const [lateralAberta, setLateralAberta] = useState<boolean>(() => {
+    try { return localStorage.getItem("cria.card.lateral") !== "recolhida"; } catch { return true; }
+  });
+  /* Prazo esperando resposta DESTE lado: a coluna abre sozinha, mesmo
+     recolhida. Esconder o "topo/sugerir outra data" seria esconder a ação. */
+  const prazoNaMinhaMao = !!card && (agencia ? card.prazo_status === "negociando" : card.prazo_status === "proposto");
+  const colunaVisivel = lateralAberta || prazoNaMinhaMao;
+  const alternarLateral = (aberta: boolean) => {
+    setLateralAberta(aberta);
+    try { localStorage.setItem("cria.card.lateral", aberta ? "aberta" : "recolhida"); } catch { /* sem storage */ }
+  };
   // Histórico de versões: só busca quando ele abre (a query espera o postId).
   const [vendoHistorico, setVendoHistorico] = useState(false);
   const { data: versoes = [], isLoading: carregandoVersoes } = useVersoesDaPeca(vendoHistorico ? postId : null);
@@ -1481,7 +1519,13 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                 antes da conversa, porque no tablet (2 colunas) a conversa vira
                 uma faixa cheia embaixo; no desktop o `order` recoloca ela no
                 meio. */}
-            <div className="flex-1 min-h-0 grid md:grid-cols-[minmax(0,1fr)_280px] lg:grid-cols-[minmax(0,1fr)_280px_370px] overflow-y-auto lg:overflow-hidden">
+            {/* grid-cols-[minmax(0,1fr)] no celular: sem isso a coluna única
+                crescia até o conteúdo mais largo do bloco de entrega e o card do
+                parceiro vazava pra direita (teste visual de 28/09/2026). */}
+            <div className={cn("flex-1 min-h-0 grid grid-cols-[minmax(0,1fr)] overflow-y-auto lg:overflow-hidden",
+              colunaVisivel
+                ? "md:grid-cols-[minmax(0,1fr)_280px] lg:grid-cols-[minmax(0,1fr)_280px_370px]"
+                : "lg:grid-cols-[minmax(0,1fr)_370px]")}>
               <div className="p-5 lg:order-1 lg:overflow-y-auto">
                 {/* ESPECIFICAÇÕES: a maior fonte de ida e volta na pesquisa é
                     peça sem spec (proporção, medida, nº de artes). Aqui elas já
@@ -1533,6 +1577,138 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     </span>
                   )}
                 </div>
+
+                {/* ═══ O PRAZO QUANDO A COLUNA ESTÁ RECOLHIDA (28/09/2026) ═══
+                    Recolher a coluna do meio não pode esconder a data: ela
+                    vira uma pílula aqui em cima, e tocar nela reabre a coluna. */}
+                {/* No celular a coluna do prazo cai lá embaixo, depois do
+                    briefing inteiro. A pílula leva até ela. */}
+                {(
+                  <button type="button"
+                    onClick={() => document.getElementById("bloco-prazo")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    className="md:hidden mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-[12px] font-body font-bold text-foreground">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    {card.prazo_status === "negociando" ? "Prazo em negociação"
+                      : card.prazo_status === "proposto" ? "Prazo proposto: responder" : "Entrega"}
+                    {" "}{(card.prazo_status === "negociando" ? card.prazo_sugerido : card.prazo_producao)
+                      ? dataBR((card.prazo_status === "negociando" ? card.prazo_sugerido : card.prazo_producao)!) : "a combinar"}
+                  </button>
+                )}
+                {!colunaVisivel && (
+                  <div className="hidden md:flex flex-wrap items-center gap-2 mt-3">
+                  <button type="button" onClick={() => alternarLateral(true)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-[12px] font-body font-bold text-foreground hover:border-primary/40 transition-colors">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    {card.prazo_status === "negociando" ? "Prazo em negociação"
+                      : card.prazo_status === "proposto" ? "Prazo proposto" : "Entrega"}
+                    {" "}{(card.prazo_status === "negociando" ? card.prazo_sugerido : card.prazo_producao)
+                      ? dataBR((card.prazo_status === "negociando" ? card.prazo_sugerido : card.prazo_producao)!) : "a combinar"}
+                    <span className="text-primary font-semibold ml-1">mostrar coluna</span>
+                  </button>
+                  {/* As ações da coluna não somem junto com ela. */}
+                  {agencia && (
+                    <Button size="sm" className="rounded-full h-8" onClick={agencia.irAoPost}>
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Ir até o post
+                    </Button>
+                  )}
+                  {!agencia && card.producao_status === "entregue" && (
+                    <Button size="sm" variant="outline" className="rounded-full h-8" disabled={marcar.isPending}
+                      onClick={() => marcar.mutate({ status: "em_producao" })}>
+                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Reabrir
+                    </Button>
+                  )}
+                  </div>
+                )}
+
+                {/* ═══ O RECADO FIXO DA SOCIAL MÍDIA (Canal da marca, 28/09/2026) ═══
+                    A regra que vale pra toda peça deste cliente. Primeira coisa
+                    que o parceiro lê, antes do briefing. */}
+                {card.canal_recado && (
+                  <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/70 px-3.5 py-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-amber-900 mb-1">
+                      Recado fixo {agencia ? "(o parceiro vê isto em todo card)" : "da social mídia pra este cliente"}
+                    </p>
+                    <p className="text-[13.5px] font-body text-foreground whitespace-pre-line leading-relaxed">{card.canal_recado}</p>
+                  </div>
+                )}
+
+                {/* ═══ MATERIAL NO TOPO (Walter, 28/09/2026: "não ter sempre a
+                    material referência no meio, conseguir minimizar essa parte do
+                    meio ou colocar pra cima") ═══
+                    Era um bloco na coluna do meio, abaixo do prazo. Virou uma
+                    faixa de botões aqui em cima: pasta da peça, referência, pasta
+                    geral do cliente, os links úteis e a ficha. Quem monta arte
+                    abre pasta antes de ler parágrafo. */}
+                {(() => {
+                  const linksCliente = (card.canal_links
+                    ?? (agencia ? (crmDoCard?.useful_links ?? []) : (marcaDoCard?.links ?? []))) as { label?: string | null; url: string }[];
+                  const itens: { chave: string; rotulo: string; url: string; icone: "pasta" | "ref" | "link" }[] = [];
+                  // Só http(s) vira link (ver lib/href-seguro).
+                  const add = (chave: string, rotulo: string, url: string | null | undefined, icone: "pasta" | "ref" | "link") => {
+                    const h = hrefSeguro(url);
+                    if (h) itens.push({ chave, rotulo, url: h, icone });
+                  };
+                  add("pasta-peca", "Pasta desta peça", card.pasta_drive, "pasta");
+                  add("ref", "Referência desta peça", card.referencia, "ref");
+                  add("pasta-geral", "Pasta geral do cliente", card.canal_pasta, "pasta");
+                  linksCliente.filter((l) => l?.url?.trim() && l.url !== card.canal_pasta).forEach((l, i) =>
+                    add(`l${i}`, l.label?.trim() || "Link", l.url, /drive\.google|dropbox|onedrive/i.test(l.url) ? "pasta" : "link"));
+                  const Icone = ({ t }: { t: "pasta" | "ref" | "link" }) => t === "pasta"
+                    ? <Folder className="h-3.5 w-3.5 shrink-0" style={{ color: card.marca.cor || undefined }} />
+                    : t === "ref" ? <Play className="h-3.5 w-3.5 shrink-0" style={{ color: card.marca.cor || undefined }} />
+                    : <Link2 className="h-3.5 w-3.5 shrink-0" style={{ color: card.marca.cor || undefined }} />;
+                  return (
+                    <div className="mt-4">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                        <Folder className="h-3 w-3" /> Material e referências
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {itens.map((it) => (
+                          <a key={it.chave} href={it.url} target="_blank" rel="noopener noreferrer" title={it.url}
+                            className="inline-flex items-center gap-1.5 max-w-full rounded-full border border-border bg-background px-3 py-1.5 text-[12.5px] font-body font-bold text-foreground hover:border-primary/40 transition-colors">
+                            <Icone t={it.icone} />
+                            <span className="truncate max-w-[220px]">{it.rotulo}</span>
+                            <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />
+                          </a>
+                        ))}
+                        {/* A ficha da marca: pro parceiro abre por cima do card;
+                            pra social mídia leva ao brandbook do cliente. */}
+                        {agencia ? (
+                          <button type="button"
+                            onClick={() => (agencia.crmClientId ?? card.crm_client_id)
+                              ? navigate(`/socialmidia/equipe/canal?cliente=${agencia.crmClientId ?? card.crm_client_id}`)
+                              : agencia.irAoPost()}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-primary/40 bg-card px-3 py-1.5 text-[12.5px] font-body font-bold text-primary hover:border-primary transition-colors">
+                            <Sparkles className="h-3.5 w-3.5" /> Editar canal da marca
+                          </button>
+                        ) : (
+                          <button type="button"
+                            onClick={() => marcaDoCard ? setFichaAberta(marcaDoCard) : navigate("/socialmidia/marcas")}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-primary/40 bg-card px-3 py-1.5 text-[12.5px] font-body font-bold text-primary hover:border-primary transition-colors">
+                            <Sparkles className="h-3.5 w-3.5" /> Ficha da marca
+                          </button>
+                        )}
+                      </div>
+                      {itens.length === 0 && (
+                        <p className="text-[11.5px] font-body text-muted-foreground mt-1.5 leading-snug">
+                          {agencia
+                            ? "Nenhum material ainda. Deixe a pasta geral e os links do cliente no Canal da marca (vale pra toda peça) e, no post, a pasta e a referência desta peça."
+                            : "Nenhum link ainda, nem nesta peça nem no cliente. Peça na conversa: a social mídia cadastra uma vez e aparece aqui em todas as peças do cliente."}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* OBSERVAÇÕES DA SOCIAL MÍDIA SUBIRAM (28/09/2026): moravam no
+                    fim do card, depois da entrega e da direção de arte, e quase
+                    ninguém rolava até lá. É instrução de briefing, fica no topo. */}
+                {card.notas?.trim() && (
+                  <div className="mt-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Observações da social mídia</p>
+                    <p className="text-sm font-body whitespace-pre-line bg-amber-50/60 border border-amber-200 rounded-xl px-3 py-2.5 leading-relaxed">{card.notas}</p>
+                  </div>
+                )}
 
                 {/* ═══════════════════════════════════════════════════════════
                     O QUE APONTARAM NA ARTE (circuito 6, 15/09/2026)
@@ -1903,13 +2079,6 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   );
                 })()}
 
-                {card.notas?.trim() && (
-                  <div className="mt-4">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Observações da social mídia</p>
-                    <p className="text-sm font-body whitespace-pre-line bg-amber-50/60 border border-amber-200 rounded-xl px-3 py-2.5 leading-relaxed">{card.notas}</p>
-                  </div>
-                )}
-
                 {/* MEU CHECKLIST (privado): a paridade com o checklist do
                     Trello, que é o recurso que eles mais usam. Só o parceiro
                     vê; o progresso aparece no cartão do quadro. */}
@@ -1956,7 +2125,20 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   fundo e fio colorido próprios, e o card virava três blocos
                   empilhados de cores diferentes. A cor da marca aparece na capa
                   e nos detalhes, não em tapetes. */}
-              <div className="border-l border-border p-4 space-y-4 md:order-2 lg:overflow-y-auto">
+              {(
+              /* Recolhida só do tablet pra cima: no celular ela é a pilha de
+                 baixo e nunca atrapalhou (e a escolha feita no computador não
+                 pode sumir com o prazo do celular). */
+              <div className={cn("border-l border-border p-4 space-y-4 md:order-2 lg:overflow-y-auto", !colunaVisivel && "md:hidden")}>
+                {/* RECOLHER A COLUNA (Walter, 28/09/2026: "conseguir minimizar
+                    essa parte do meio"). Só no tablet/desktop, onde ela disputa
+                    largura com o briefing. A escolha fica lembrada. */}
+                <div className={cn("hidden justify-end -mt-1 -mb-2", !prazoNaMinhaMao && "md:flex")}>
+                  <button type="button" onClick={() => alternarLateral(false)}
+                    className="inline-flex items-center gap-1 text-[11.5px] font-body font-semibold text-muted-foreground hover:text-foreground">
+                    <PanelRightClose className="h-3.5 w-3.5" /> recolher coluna
+                  </button>
+                </div>
                 {/* O PRAZO É COMBINADO, NÃO IMPOSTO. Proposto = o parceiro topa
                     ou sugere outra data (com motivo, que entra na conversa);
                     negociando = a bola está com a social mídia. Enquanto isso,
@@ -1990,7 +2172,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   const ocupado = proporPrazo.isPending || responderPrazo.isPending || resolverPrazo.isPending;
 
                   return (
-                    <div className={cn("rounded-xl border px-3.5 py-3 space-y-2", tom)}>
+                    <div id="bloco-prazo" className={cn("rounded-xl border px-3.5 py-3 space-y-2 scroll-mt-4", tom)}>
                       <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                         <Clock className="h-3 w-3" /> {titulo}
                       </p>
@@ -2044,101 +2226,9 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     negociação no meio da produção. Dinheiro fica no Caixa da
                     agência, que é onde o acerto acontece de verdade. */}
 
-                {/* A MARCA VIROU UMA LINHA (Walter, 09/09/2026). Cor, hashtags
-                    e logo eram repetidos em TODO card, e isso não é informação
-                    de peça, é de cliente: agora mora na ficha da marca, em
-                    "Marcas que atendo". Aqui fica o essencial pra reconhecer de
-                    quem é a peça, e a porta pra ficha. */}
-                <button type="button"
-                  onClick={() => agencia
-                    ? (agencia.crmClientId ? navigate(`/socialmidia/clientes/${agencia.crmClientId}/brandbook`) : agencia.irAoPost())
-                    : navigate("/socialmidia/marcas")}
-                  className="w-full flex items-center gap-2.5 rounded-xl border border-border bg-background px-3.5 py-3 text-left hover:border-primary/40 transition-colors">
-                  <span className="w-8 h-8 rounded-full border border-border bg-card overflow-hidden grid place-items-center shrink-0"
-                    style={{ background: card.marca.logo ? undefined : (card.marca.cor || "#4B3FA8") }}>
-                    {card.marca.logo
-                      ? <img src={card.marca.logo} alt="" className="w-full h-full object-contain" loading="lazy" />
-                      : <span className="text-white font-display font-bold text-[13px]">{(card.marca.nome || "C").charAt(0).toUpperCase()}</span>}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-display font-bold text-foreground truncate">{card.marca.nome || "Cliente"}</span>
-                    <span className="block text-[12px] font-body text-primary font-semibold">{agencia ? "abrir o brandbook do cliente" : "ver a ficha da marca"}</span>
-                  </span>
-                  {card.marca.cor && <span className="w-4 h-4 rounded-md border border-border shrink-0" style={{ background: card.marca.cor }} />}
-                </button>
-
-                {/* ONDE ESTÃO OS MATERIAIS (Walter, 09/09/2026: "fiquei na
-                    dúvida onde a pessoa sobe a arte e onde está o acesso aos
-                    materiais de referência"). O bloco só aparecia quando a
-                    agência tinha preenchido pasta e referência NAQUELA peça, e
-                    quando não tinha a coluna ficava vazia, como se o Cria não
-                    tivesse o recurso. Agora o bloco existe sempre e, faltando
-                    link na peça, ele aponta pra ficha da marca, que é onde mora
-                    o material fixo do cliente. */}
-                {/* "MATERIAL FIXO DA MARCA" ERA UMA ABSTRAÇÃO (Walter,
-                    09/09/2026: "esse material fixo da marca é o que ainda tô
-                    confuso"). Botão genérico levando pra outra tela não diz o
-                    que tem lá dentro. Agora os LINKS DE VERDADE do cliente
-                    aparecem aqui na lista, com o nome que a agência deu (Drive,
-                    Refs, Site), e a ficha completa abre por cima, sem sair do
-                    card. */}
-                <div className="rounded-xl border border-border bg-background p-2.5 space-y-1.5">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 px-0.5">
-                    <Folder className="h-3 w-3" /> Material e referências
-                  </p>
-                  {card.pasta_drive && (
-                    <a href={card.pasta_drive} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-[12.5px] font-body font-bold text-foreground hover:border-primary/40 transition-colors">
-                      <Folder className="h-3.5 w-3.5 text-primary shrink-0" /> Pasta desta peça
-                      <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
-                    </a>
-                  )}
-                  {card.referencia && (
-                    <a href={card.referencia} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-[12.5px] font-body font-bold text-foreground hover:border-primary/40 transition-colors">
-                      <Play className="h-3.5 w-3.5 text-primary shrink-0" /> Referência desta peça
-                      <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
-                    </a>
-                  )}
-                  {(agencia ? (crmDoCard?.useful_links ?? []) : (marcaDoCard?.links ?? [])).filter((l) => l?.url?.trim()).map((l, i) => (
-                    <a key={`${l.url}-${i}`} href={l.url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-[12.5px] font-body font-bold text-foreground hover:border-primary/40 transition-colors">
-                      {/drive\.google|dropbox|onedrive/i.test(l.url)
-                        ? <Folder className="h-3.5 w-3.5 text-primary shrink-0" />
-                        : <Link2 className="h-3.5 w-3.5 text-primary shrink-0" />}
-                      <span className="truncate">{l.label?.trim() || l.url}</span>
-                      <ExternalLink className="h-3 w-3 ml-auto shrink-0 text-muted-foreground" />
-                    </a>
-                  ))}
-                  {/* LADO DA AGÊNCIA (Walter, 20/09/2026): "Marcas que atendo" é
-                      tela do parceiro. Aqui o padrão são os Links úteis do
-                      cliente (vão em TODA peça dele) e o opcional é a pasta e a
-                      referência desta peça, que vêm do post. */}
-                  {agencia ? (
-                    <button type="button"
-                      onClick={() => agencia.crmClientId ? navigate(`/socialmidia/clientes/${agencia.crmClientId}/links-uteis`) : agencia.irAoPost()}
-                      className="w-full flex items-center gap-2 rounded-lg border border-dashed border-border bg-card px-2.5 py-2 text-[12px] font-body font-bold text-primary hover:border-primary/50 transition-colors">
-                      <Link2 className="h-3.5 w-3.5 shrink-0" /> Links úteis do cliente (padrão de toda peça)
-                    </button>
-                  ) : marcaDoCard ? (
-                    <button type="button" onClick={() => setFichaAberta(marcaDoCard)}
-                      className="w-full flex items-center gap-2 rounded-lg border border-dashed border-border bg-card px-2.5 py-2 text-[12px] font-body font-bold text-primary hover:border-primary/50 transition-colors">
-                      <Sparkles className="h-3.5 w-3.5 shrink-0" /> Ficha da marca: cores, fontes, o que evitar
-                    </button>
-                  ) : (
-                    <button type="button" onClick={() => navigate("/socialmidia/marcas")}
-                      className="w-full flex items-center gap-2 rounded-lg border border-dashed border-border bg-card px-2.5 py-2 text-[12px] font-body font-bold text-primary hover:border-primary/50 transition-colors">
-                      <Sparkles className="h-3.5 w-3.5 shrink-0" /> Marcas que atendo
-                    </button>
-                  )}
-                  {!card.pasta_drive && !card.referencia && (agencia ? (crmDoCard?.useful_links ?? []) : (marcaDoCard?.links ?? [])).length === 0 && (
-                    <p className="text-[11px] font-body text-muted-foreground leading-snug px-0.5 pt-0.5">
-                      {agencia
-                        ? "Nenhum link ainda. Cadastre em Links úteis do cliente (vale pra toda peça dele) e, no post, a pasta e a referência desta peça."
-                        : "Nenhum link cadastrado ainda, nem nesta peça nem no cliente. Peça na conversa: a agência cadastra na ficha do cliente, aba Links úteis, e aparece aqui em todas as peças dele."}
-                    </p>
-                  )}
-                </div>
+                {/* MARCA E MATERIAL SAÍRAM DAQUI (28/09/2026): viraram a faixa
+                    "Material e referências" no topo do briefing, onde o parceiro
+                    vê sem rolar. Esta coluna fica só com prazo e ações. */}
 
                 {/* A ENTREGA SAIU DAQUI (Walter, 09/09/2026): a coluna de 260px
                     espremia upload, campo de link e três botões um em cima do
@@ -2174,6 +2264,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   </div>
                 )}
               </div>
+              )}
               {/* CONVERSA: coluna da DIREITA e chat de verdade. */}
               <ChatDoCard cor={card.marca.cor || "#4B3FA8"} mensagens={card.comentarios}
                 texto={texto} setTexto={setTexto} enviar={enviar}
@@ -2185,6 +2276,8 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     })
                   : (arquivo) => anexar.mutate({ arquivo, naConversa: true, legenda: texto.trim() || undefined })}
                 aoLimparTexto={() => setTexto("")}
+                rodape={agencia ? "Enter manda. O parceiro recebe o aviso na hora." : undefined}
+                colunaUnica={!colunaVisivel}
                 quem={{
                   meuPapel: agencia ? "social_media" : "parceiro",
                   nomeParceiro: agencia?.nomeDoParceiro ?? null,

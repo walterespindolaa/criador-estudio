@@ -160,6 +160,13 @@ export type CardAberto = {
   versoes_antigas?: number;
   /** Elo com a ficha da marca: o card mostra os links do cliente por aqui. */
   external_client_id?: string | null;
+  /** Ficha do cliente no CRM da agência (pra abrir o brandbook do lado dela). */
+  crm_client_id?: string | null;
+  /** CANAL DA MARCA (28/09/2026): o que a social mídia deixa fixo pro
+   *  parceiro em todo card do cliente. Vem do banco igual pros dois lados. */
+  canal_recado?: string | null;
+  canal_pasta?: string | null;
+  canal_links?: { label?: string | null; url: string }[] | null;
   marca: {
     nome: string | null;
     handle: string | null;
@@ -506,6 +513,59 @@ export function useConversaDoCard(postId: string | null) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   A CAIXA DE ENTRADA DAS CONVERSAS (Walter, 28/09/2026: "tem que ter um campo
+   único de visualização da conversa entre a social media e os prestadores")
+
+   Uma linha por card que tem conversa, a mais recente em cima, com quantas
+   falas do parceiro ela ainda não leu. "Lido" é carimbado quando ela abre a
+   conversa (aqui ou no card), pela RPC marcar_conversa_lida.
+   ═══════════════════════════════════════════════════════════════════════════ */
+export type ConversaResumo = {
+  post_id: string;
+  titulo: string | null;
+  formato: string | null;
+  external_client_id: string | null;
+  assignee_id: string;
+  producao_status: string;
+  ultima_texto: string;
+  ultima_papel: string;
+  ultima_em: string;
+  total: number;
+  nao_lidas: number;
+};
+
+export function useConversasComParceiros(ativo: boolean) {
+  const { user } = useAuth();
+  return useQuery<ConversaResumo[]>({
+    queryKey: ["conversas-parceiros", user?.id],
+    enabled: !!user && ativo,
+    ...SINCRONIA,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("conversas_com_parceiros");
+      if (error) {
+        // Migration 20260928000013 ainda não rodou: caixa vazia, tela de pé.
+        if (aindaNaoExisteNoBanco(error.message)) return [];
+        throw error;
+      }
+      return (data ?? []) as ConversaResumo[];
+    },
+  });
+}
+
+export function useMarcarConversaLida() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      const { error } = await sbRpc("marcar_conversa_lida", { _post_id: postId });
+      // Carimbo de leitura é conveniência: se falhar, a conversa continua
+      // aberta e legível. Não vale um toast de erro.
+      if (error && !aindaNaoExisteNoBanco(error.message)) throw error;
+    },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ["conversas-parceiros"] }); },
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    PROPOR OUTRA DATA, LADO DA AGÊNCIA (Walter, 20/09/2026: "botão para trocar
    data, ou se a pessoa já aceitou, negociar, de ambos os lados")
 
@@ -826,6 +886,8 @@ export function usePecasComParceiros(temParceiros: boolean) {
       const { data, error } = await sbFrom("posts")
         .select("id, title, format, producao_status, prazo_producao, prazo_status, prazo_sugerido, approval_status, scheduled_date, assignee_id, external_client_id, updated_at, cache_parceiro, entregue_em, revisoes")
         .not("assignee_id", "is", null)
+        // Post na lixeira não é produção em andamento (revisão 28/09).
+        .is("deleted_at", null)
         .order("prazo_producao", { ascending: true, nullsFirst: false })
         .limit(300);
       if (error) {
