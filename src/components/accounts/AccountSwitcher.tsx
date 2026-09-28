@@ -1,7 +1,6 @@
 import { useActiveAccount } from "@/contexts/AccountContext";
-import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
-import { Briefcase, ChevronsUpDown, Settings, User, Users } from "lucide-react";
+import { Briefcase, ChevronsUpDown, User, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -11,18 +10,18 @@ import {
 /* hero: pílula com texto na barra colorida do desktop (HeroBand). No desktop
    o seletor não existia e a colaboradora não achava onde trocar (28/09). */
 export function AccountSwitcher({ compact = false, hero = false }: { compact?: boolean; hero?: boolean }) {
-  const { managedAccounts, hasManagedAccounts, teamAccounts, actingAsTeam, activeAccountId, isManaging, setActiveAccount } = useActiveAccount();
-  const { profile } = useProfile();
-  const isManager = profile?.account_type === "manager";
+  const { teamAccounts, actingAsTeam, activeAccountId, isManaging, setActiveAccount } = useActiveAccount();
   const navigate = useNavigate();
   // Quem é colaborador de uma agência E tem conta própria com clientes não era
   // levado pra conta da agência no login (só cai lá quem não tem clientes) e
   // este menu só listava clientes: não havia caminho nenhum pra entrar na
   // agência que convidou (bug de 28/09). Agora as equipes aparecem aqui.
-  if (!hasManagedAccounts && teamAccounts.length === 0) return null;
+  // 28/09: os clientes com Cria saíram daqui (o clique não levava pra conta
+  // deles e confundia). Este menu agora é só: minha conta x equipes que atendo.
+  if (teamAccounts.length === 0) return null;
 
-  const current = [...managedAccounts, ...teamAccounts].find((m) => m.owner_id === activeAccountId);
-  const label = !isManaging ? "Minha conta" : actingAsTeam ? `Equipe: ${current?.name ?? "Agência"}` : current?.name ?? "Cliente";
+  const current = teamAccounts.find((m) => m.owner_id === activeAccountId);
+  const label = actingAsTeam ? `Equipe: ${current?.name ?? "Agência"}` : "Minha conta";
 
   return (
     <DropdownMenu>
@@ -40,8 +39,8 @@ export function AccountSwitcher({ compact = false, hero = false }: { compact?: b
       >
         {hero ? (
           <>
-            {isManaging ? <Users className="h-3.5 w-3.5 shrink-0" /> : <User className="h-3.5 w-3.5 shrink-0" />}
-            <span className="max-w-[180px] truncate">{isManaging ? label : "Trocar de conta"}</span>
+            {actingAsTeam ? <Users className="h-3.5 w-3.5 shrink-0" /> : <User className="h-3.5 w-3.5 shrink-0" />}
+            <span className="max-w-[180px] truncate">{actingAsTeam ? label : "Trocar de conta"}</span>
             <ChevronsUpDown className="h-3 w-3 opacity-70 shrink-0" />
           </>
         ) : isManaging
@@ -59,8 +58,7 @@ export function AccountSwitcher({ compact = false, hero = false }: { compact?: b
         <DropdownMenuItem onClick={() => setActiveAccount(null)}>
           <User className="h-4 w-4 mr-2" /> Minha conta
         </DropdownMenuItem>
-        {teamAccounts.length > 0 && (
-          <>
+        <>
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-xs">Equipes que eu atendo</DropdownMenuLabel>
             {teamAccounts.map((m) => (
@@ -69,21 +67,7 @@ export function AccountSwitcher({ compact = false, hero = false }: { compact?: b
                 <span className="truncate">{m.name}</span>
               </DropdownMenuItem>
             ))}
-          </>
-        )}
-        {hasManagedAccounts && <DropdownMenuSeparator />}
-        {managedAccounts.map((m) => (
-          <DropdownMenuItem key={m.owner_id} onClick={() => setActiveAccount(m.owner_id)}>
-            <span className="truncate">{m.name}</span>
-            {m.instagram_handle && (
-              <span className="ml-auto text-xs text-muted-foreground">@{m.instagram_handle.replace(/^@/, "")}</span>
-            )}
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => { setActiveAccount(null); navigate(isManager ? "/socialmidia/dashboard" : "/app/configuracoes"); }}>
-          <Settings className="h-4 w-4 mr-2" /> Minha conta (configurações)
-        </DropdownMenuItem>
+        </>
       </DropdownMenuContent>
     </DropdownMenu>
   );

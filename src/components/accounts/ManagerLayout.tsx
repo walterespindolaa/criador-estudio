@@ -275,7 +275,9 @@ export default function ManagerLayout() {
     : (Object.entries(HERO_TITLES).find(([k]) => location.pathname.startsWith(k))?.[1] ?? "Gestão");
 
   // A linha de cima (eyebrow): o alarme. Se não tem nada travado, fica quieta.
-  const heroEyebrow = isDash
+  // Colaboradora na conta da agência: nada de alarme de posts (ela pode nem ter
+  // o Cria Post liberado e o número confundia, 28/09).
+  const heroEyebrow = isDash && !actingAsTeam
     ? (travados > 0
         ? `${travados} ${travados === 1 ? "post aguardando" : "posts aguardando"} o cliente`
         : "Nada travado por aqui")

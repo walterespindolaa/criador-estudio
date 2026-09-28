@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
-  useCrmClients, useCrmTasks, useUpdateCrmTask, useCreateCrmTask, useDeleteCrmTask, useCrmLeads,
+  useAgendaClients, useCrmTasks, useUpdateCrmTask, useCreateCrmTask, useDeleteCrmTask, useCrmLeads,
   CRM_TASK_PRIORITIES, CRM_TASK_PRIORITY_LABELS, CRM_TASK_STATUSES,
   type CrmTask, type CrmTaskPriority, type CrmTaskStatus,
 } from "@/hooks/useCrm";
@@ -377,7 +377,7 @@ export default function AgendaCriacao() {
   const today = hojeBR();
   const curMonth = weekStart.getMonth();
 
-  const { data: clients = [] } = useCrmClients();
+  const { data: clients = [] } = useAgendaClients();
   const { data: leads = [] } = useCrmLeads();
   const createTask = useCreateCrmTask();
   const { data: teamNames = [] } = useCollaboratorNames();

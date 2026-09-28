@@ -26,6 +26,8 @@ import { useMonthMoneyPJ } from "@/hooks/useFinance";
 import { useAllExternalPosts, useExternalClients } from "@/hooks/useCriaPost";
 import { MonthOverviewPanel } from "@/components/accounts/MonthOverviewPanel";
 import ParceiroHome from "@/pages/socialmidia/ParceiroHome";
+import { useActiveAccount } from "@/contexts/AccountContext";
+import { useMyTeamPermissions } from "@/hooks/useTeam";
 
 // Card do painel. A cor é a do módulo pra onde ele leva: a pessoa aprende
 // a cor uma vez e depois navega no automático, sem ler.
@@ -70,8 +72,79 @@ export default function ManagerHome() {
   // Parceiro puro (designer/editor sem operação própria) tem a própria home:
   // a desta tela é a da social mídia e pra ele só mostrava zeros.
   const { parceiroPuro } = useManagerOutlet();
+  const { actingAsTeam } = useActiveAccount();
   if (parceiroPuro) return <ParceiroHome />;
+  if (actingAsTeam) return <EquipeHome />;
   return <ManagerHomeSocialMidia />;
+}
+
+/* ═══ HOME DA COLABORADORA (28/09) ═══
+   Dentro da conta da agência, a home da social mídia mostrava os módulos da
+   conta DELA e números da operação que ela nem tem permissão de ler (0
+   clientes, faturamento). Aqui ela vê só onde está e o que foi liberado. */
+const AREAS_EQUIPE: Array<{ code: string; nome: string; desc: string; to: string; icon: typeof Send; cor: CriaColor }> = [
+  { code: "agenda", nome: "Agenda de criação", desc: "Captações, reuniões e tarefas da semana", to: "/socialmidia/agenda", icon: CalendarDays, cor: "amarelo" },
+  { code: "cria_post", nome: "Cria Post", desc: "Posts e aprovação dos clientes", to: "/socialmidia/criapost", icon: Send, cor: "laranja" },
+  { code: "cria_gestao", nome: "Cria Gestão", desc: "Clientes, tarefas e pipeline", to: "/socialmidia/criacrm", icon: Users, cor: "rosa" },
+  { code: "hub_cria", nome: "Cria Radar", desc: "Pesquisa de concorrentes e pautas", to: "/socialmidia/hubcria", icon: Sparkles, cor: "verde" },
+  { code: "cria_caixa", nome: "Cria Caixa", desc: "Financeiro da operação", to: "/socialmidia/criacaixa", icon: Wallet, cor: "azul" },
+  { code: "cria_captacao", nome: "Cria Captação", desc: "Painel de captações", to: "/socialmidia/captacao", icon: Camera, cor: "lilas" },
+];
+
+function EquipeHome() {
+  const navigate = useNavigate();
+  const { profile } = useProfile();
+  const { teamAccounts, activeAccountId, agencyOwnerId, setActiveAccount } = useActiveAccount();
+  const { data: perms, isLoading } = useMyTeamPermissions(agencyOwnerId);
+  const agencia = teamAccounts.find((t) => t.owner_id === activeAccountId)?.name ?? "agência";
+  const areas = AREAS_EQUIPE.filter((a) => perms?.has(a.code));
+  return (
+    <div>
+      <section className="relative overflow-hidden rounded-3xl border border-border bg-card p-5 sm:p-7 mb-6">
+        <OrganicBlobs color="laranja" />
+        <div className="relative">
+          <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">{greeting(profile?.name)}</h1>
+          <p className="text-sm text-[0.9375rem] leading-relaxed text-muted-foreground font-body mt-1.5">
+            Você está na equipe da <strong className="text-foreground">{agencia}</strong>. Aqui aparece só o que foi liberado pra você.
+          </p>
+          <button type="button" onClick={() => setActiveAccount(null)}
+            className="mt-3 inline-flex items-center gap-1.5 text-xs font-body font-semibold text-primary hover:underline">
+            <RotateCcw className="h-3.5 w-3.5" /> Voltar pra minha conta
+          </button>
+        </div>
+      </section>
+
+      <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Liberado pra você</h2>
+      {isLoading ? null : areas.length === 0 ? (
+        <p className="text-sm font-body text-muted-foreground border border-dashed border-border rounded-2xl py-8 px-4 text-center">
+          Nenhuma área liberada ainda. Peça pra quem te convidou liberar em Equipe.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          {areas.map((a) => {
+            const cor = CRIA_HEX[a.cor] ?? CRIA_HEX.laranja;
+            const Icon = a.icon;
+            return (
+              <button key={a.code} type="button" onClick={() => navigate(a.to)}
+                className="text-left bg-card border border-border rounded-2xl p-4 transition-all hover:-translate-y-0.5 hover:shadow-md"
+                style={{ borderLeftWidth: 3, borderLeftColor: cor }}>
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: `${cor}1f`, color: cor }}>
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-display font-bold text-foreground text-sm leading-tight">{a.nome}</span>
+                    <span className="block text-xs text-muted-foreground font-body mt-0.5 truncate">{a.desc}</span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ManagerHomeSocialMidia() {

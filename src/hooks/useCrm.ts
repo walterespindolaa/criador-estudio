@@ -122,6 +122,34 @@ export function useCrmClients() {
   });
 }
 
+/* Clientes pra AGENDA (28/09). A tabela crm_clients só abre pra colaboradora
+   com o módulo Gestão (F22). Quem tem só a Agenda recebia zero clientes e a
+   captação aparecia como "Cliente". A RPC agenda_clientes_equipe devolve só o
+   que a agenda usa (nome, cor, aniversário, situação), sem valores nem
+   contatos, pra quem tem o módulo agenda. Dono e quem tem Gestão seguem
+   lendo a tabela direto. */
+export function useAgendaClients() {
+  const { agencyOwnerId, actingAsTeam } = useActiveAccount();
+  const crm = useCrmClients();
+  const semGestao = actingAsTeam && !crm.isLoading && (crm.data?.length ?? 0) === 0;
+  const equipe = useQuery<CrmClient[]>({
+    queryKey: ["agenda-clientes-equipe", agencyOwnerId],
+    enabled: semGestao && !!agencyOwnerId,
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message?: string } | null }>)(
+        "agenda_clientes_equipe", { _manager: agencyOwnerId },
+      );
+      if (error) {
+        // RPC ainda não criada no banco: segue sem nomes em vez de quebrar a agenda.
+        if (/function .* does not exist|PGRST202/i.test(error.message ?? "")) return [];
+        throw error;
+      }
+      return ((data ?? []) as unknown[]) as CrmClient[];
+    },
+  });
+  return semGestao ? equipe : crm;
+}
+
 export function useCrmClient(id: string | undefined) {
   const { user } = useAuth();
   return useQuery<CrmClient | null>({
