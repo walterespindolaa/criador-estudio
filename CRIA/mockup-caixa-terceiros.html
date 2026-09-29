@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cria Caixa · Terceiros (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --laranja:#EA4918; --rosa:#FF77B9; --amarelo:#FFCF03; --azul:#0061EE;
+    --verde:#01A652; --creme:#FDFBF5; --tinta:#231946; --cinza:#6b7280;
+    --borda:#eee7db; --card:#ffffff; --ambar:#92400e; --ambarbg:#fef3c7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--creme);color:var(--tinta);min-height:100vh}
+  h1,h2,h3,.disp{font-family:'Bricolage Grotesque',sans-serif}
+  button{font-family:inherit;cursor:pointer}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+
+  /* barra do mockup */
+  .demo{position:sticky;top:0;z-index:20;background:var(--tinta);color:#fff;font-size:12px;padding:8px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .demo b{font-family:'Bricolage Grotesque'}
+  .demo .seg{display:flex;background:rgba(255,255,255,.12);border-radius:99px;padding:3px}
+  .demo .seg button{background:none;border:none;color:#fff;font-size:12px;font-weight:700;padding:5px 12px;border-radius:99px;opacity:.7}
+  .demo .seg button.on{background:#fff;color:var(--tinta);opacity:1}
+
+  /* HERO do Caixa (azul) */
+  .hero{background:linear-gradient(115deg,#0a4fc4,#2f7bf5);border-radius:0 0 26px 26px;color:#fff;padding:22px 28px 0;margin:0 -20px 18px;position:relative;overflow:hidden}
+  .hero .b1{position:absolute;top:-70px;right:-40px;width:180px;height:180px;background:var(--amarelo);border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.6}
+  .hero .b2{position:absolute;bottom:-60px;right:24%;width:120px;height:120px;background:var(--rosa);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.5}
+  .hero h1{font-size:26px;font-weight:800;position:relative}
+  .hero p{font-size:13px;opacity:.88;position:relative;margin-top:2px}
+  .tabs{display:flex;gap:4px;margin-top:16px;position:relative;overflow-x:auto;scrollbar-width:none}
+  .tabs span{font-size:13px;font-weight:700;padding:10px 14px;border-radius:12px 12px 0 0;opacity:.75;white-space:nowrap}
+  .tabs span.on{background:var(--creme);color:var(--tinta);opacity:1}
+  .tabs span .novo{font-size:9px;background:var(--amarelo);color:var(--tinta);border-radius:99px;padding:1px 6px;margin-left:5px;vertical-align:2px}
+
+  .aviso{background:#fff7e8;border:1px solid #f3ddb2;border-radius:14px;padding:10px 14px;font-size:12.5px;color:#7a5b17;margin-bottom:16px;display:none}
+  .aviso b{color:#5c440e}
+  body.gabi .aviso{display:block}
+
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+  .kpi{background:var(--card);border:1px solid var(--borda);border-radius:18px;padding:14px 16px}
+  .kpi .num{font-family:'Bricolage Grotesque';font-size:24px;font-weight:800;line-height:1}
+  .kpi .lab{font-size:11px;font-weight:600;color:var(--cinza);margin-top:6px}
+  .kpi.apagar{background:linear-gradient(135deg,#fffbeb,#fff);border-color:#f5dfa0}.kpi.apagar .num{color:var(--ambar)}
+  .kpi.pago .num{color:var(--verde)}
+
+  /* layout lista + ficha */
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:start}
+  .col-h{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .col-h h2{font-size:16px;font-weight:800}
+  .btn{border:none;border-radius:12px;padding:9px 14px;font-size:12.5px;font-weight:700}
+  .btn.prim{background:var(--tinta);color:#fff}
+  .btn.azul{background:var(--azul);color:#fff}
+  .btn.ghost{background:#fff;border:1.5px solid var(--borda);color:var(--tinta)}
+  .btn.ghost:hover{border-color:var(--azul);color:var(--azul)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .col-h .btn{margin-left:auto;padding:7px 12px;font-size:12px}
+
+  .lista{background:#fff;border:1px solid var(--borda);border-radius:18px;overflow:hidden}
+  .item{border:0;display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:1px solid var(--borda);cursor:pointer;width:100%;background:none;border-left:3px solid transparent;text-align:left;color:inherit}
+  .item:last-child{border-bottom:none}
+  .item:hover{background:#faf8f3}
+  .item.on{background:#eef4ff;border-left-color:var(--azul)}
+  .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;flex-shrink:0}
+  .av.v{background:linear-gradient(135deg,#a78bfa,#6d28d9)}
+  .av.c{background:linear-gradient(135deg,#9ca3af,#4b5563)}
+  .item .nm{font-family:'Bricolage Grotesque';font-weight:700;font-size:14px;line-height:1.15}
+  .item .meta{font-size:11px;color:var(--cinza);margin-top:2px}
+  .item .val{margin-left:auto;text-align:right;flex-shrink:0}
+  .item .val b{font-family:'Bricolage Grotesque';font-size:14px;display:block}
+  .item .val small{font-size:10px;color:var(--cinza)}
+  .chip{display:inline-block;font-size:9.5px;font-weight:800;border-radius:99px;padding:1px 7px;vertical-align:1px}
+  .chip.cria{background:#ede9fe;color:#5b21b6}
+  .chip.avulso{background:#f3f4f6;color:#4b5563}
+  .chip.fecha{background:var(--ambarbg);color:var(--ambar)}
+
+  /* ficha */
+  .ficha{background:#fff;border:1px solid var(--borda);border-radius:22px;padding:20px}
+  .f-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .f-top .av{width:46px;height:46px;font-size:17px}
+  .f-top h2{font-size:21px;font-weight:800;line-height:1.1}
+  .f-top .sub{font-size:12px;color:var(--cinza);margin-top:2px}
+  .f-top .acoes{margin-left:auto;display:flex;gap:8px}
+
+  .bloco{margin-top:18px}
+  .bloco h3{font-size:13px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .bloco h3 small{font-family:'Plus Jakarta Sans';font-weight:500;color:var(--cinza);font-size:11px}
+
+  .nota{background:#fffdf4;border:1.5px dashed #ecd88a;border-radius:14px;padding:12px 14px;font-size:13px;line-height:1.55;white-space:pre-line;position:relative}
+  .nota .edit{position:absolute;top:8px;right:10px;font-size:11px;font-weight:700;color:var(--azul);background:none;border:none}
+  .nota textarea{width:100%;min-height:110px;border:none;background:transparent;font:inherit;color:inherit;resize:vertical;outline:none}
+  .nota-info{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .nota-info span{font-size:11.5px;background:#f6f3ec;border-radius:10px;padding:5px 10px}
+  .nota-info b{font-weight:700}
+
+  /* fechamento */
+  .periodo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .periodo .seg{display:flex;background:#f3efe6;border-radius:12px;padding:3px}
+  .periodo .seg button{background:none;border:none;font-size:12px;font-weight:700;padding:6px 11px;border-radius:9px;color:var(--cinza)}
+  .periodo .seg button.on{background:#fff;color:var(--tinta);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  .periodo .rotulo{font-size:12px;color:var(--cinza)}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--cinza);font-weight:700;padding:8px 8px;border-bottom:1px solid var(--borda)}
+  td{padding:10px 8px;border-bottom:1px solid #f3eee4;vertical-align:middle}
+  td.v{text-align:right;font-weight:700;white-space:nowrap}
+  th.v{text-align:right}
+  tr.pago td{color:#9ca3af}
+  tr.pago td.v{text-decoration:line-through}
+  .cli{display:inline-flex;align-items:center;gap:6px}
+  .cli i{width:14px;height:14px;border-radius:4px;display:inline-block}
+  .st{font-size:10px;font-weight:800;border-radius:99px;padding:2px 8px;white-space:nowrap}
+  .st.pend{background:var(--ambarbg);color:var(--ambar)}
+  .st.ok{background:#dcfce7;color:#166534}
+  .st.av{background:#e0ecff;color:#1d4ed8}
+  .tot{display:flex;align-items:center;gap:12px;padding:14px 8px 0;flex-wrap:wrap}
+  .tot .t{font-size:12px;color:var(--cinza)}
+  .tot .t b{display:block;font-family:'Bricolage Grotesque';font-size:22px;color:var(--tinta)}
+  .tot .dir{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .trava{font-size:11px;color:var(--cinza);display:none}
+  body.gabi .trava{display:inline}
+
+  .rodape{font-size:11px;color:var(--cinza);margin-top:14px;line-height:1.5}
+
+  /* modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(35,25,70,.4);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+  .modal-bg.on{display:flex}
+  .modal{background:#fff;border-radius:22px;padding:20px;width:100%;max-width:440px}
+  .modal h3{font-size:18px;font-weight:800;margin-bottom:4px}
+  .modal p.s{font-size:12px;color:var(--cinza);margin-bottom:14px}
+  .campo{margin-bottom:11px}
+  .campo label{display:block;font-size:11.5px;font-weight:700;margin-bottom:4px}
+  .campo input,.campo select,.campo textarea{width:100%;border:1.5px solid var(--borda);border-radius:11px;padding:9px 11px;font:inherit;font-size:13px;color:var(--tinta);background:#fff}
+  .campo textarea{min-height:80px;resize:vertical}
+  .dupla{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .modal .pe{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+  .resumo{background:#f6f3ec;border-radius:14px;padding:12px 14px;font-size:13px;margin-bottom:12px;line-height:1.6}
+  .resumo b{font-family:'Bricolage Grotesque'}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--tinta);color:#fff;font-size:13px;padding:10px 16px;border-radius:12px;display:none;z-index:60}
+
+  /* mobile */
+  @media (max-width:820px){
+    .wrap{padding:0 16px 80px}
+    .hero{margin:0 -16px 16px;padding:18px 18px 0}
+    .kpis{grid-template-columns:1fr 1fr}
+    .kpis .kpi:last-child{grid-column:1/-1}
+    .grid{grid-template-columns:1fr}
+    .f-top .acoes{margin-left:0;width:100%}
+    .f-top .acoes .btn{flex:1}
+    .esconde-m{display:none}
+    .tot .dir{margin-left:0;width:100%}
+    .tot .dir .btn{flex:1}
+  }
+</style>
+</head>
+<body>
+
+<div class="demo">
+  <b>Mockup</b> · ver a tela como:
+  <div class="seg">
+    <button class="on" data-quem="walter">Walter (dono)</button>
+    <button data-quem="gabi">Gabi (colaboradora)</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="b1"></div><div class="b2"></div>
+    <h1>Cria Caixa</h1>
+    <p>O financeiro da sua operação, empresa e pessoal, separados.</p>
+    <nav class="tabs">
+      <span>Visão geral</span><span>Clientes</span><span>Calendário</span><span>Mensalidades</span>
+      <span class="on">Terceiros<em class="novo">novo</em></span><span>Relatórios</span>
+    </nav>
+  </header>
+
+  <div class="aviso">Você vê e lança os valores dos terceiros. <b>Marcar como pago</b> fica só com o dono da conta.</div>
+
+  <section class="kpis">
+    <div class="kpi apagar"><div class="num" id="kpiPagar">R$ 1.395,00</div><div class="lab">a pagar pra terceiros</div></div>
+    <div class="kpi"><div class="num" id="kpiFecha">15/10</div><div class="lab">próximo fechamento (Agatha)</div></div>
+    <div class="kpi pago"><div class="num">R$ 2.180,00</div><div class="lab">pago em setembro</div></div>
+  </section>
+
+  <div class="grid">
+    <!-- LISTA -->
+    <aside>
+      <div class="col-h">
+        <h2>Terceiros</h2>
+        <button class="btn prim" onclick="abrir('mNovo')">+ Novo</button>
+      </div>
+      <div class="lista" id="lista"></div>
+      <p class="rodape">Quem tem conta no Cria entra aqui sozinho quando vira parceiro. Quem não tem (filmmaker de diária, fotógrafo) você cadastra à mão.</p>
+    </aside>
+
+    <!-- FICHA -->
+    <main class="ficha" id="ficha"></main>
+  </div>
+</div>
+
+<!-- MODAL: novo terceiro -->
+<div class="modal-bg" id="mNovo">
+  <div class="modal">
+    <h3>Novo terceiro</h3>
+    <p class="s">Pra quem não tem conta no Cria. Parceiro que entra pela Equipe aparece aqui sozinho.</p>
+    <div class="campo"><label>Nome</label><input placeholder="Ex.: Bruno filmmaker"></div>
+    <div class="dupla">
+      <div class="campo"><label>O que faz</label>
+        <select><option>Filmmaker</option><option>Fotógrafo</option><option>Designer</option><option>Editor de vídeo</option><option>Copy</option><option>Tráfego</option><option>Outro</option></select></div>
+      <div class="campo"><label>Fechamento</label>
+        <select><option>Por serviço</option><option>Todo dia 15</option><option>Quinzenal (15 e 30)</option><option>Mensal (dia 30)</option></select></div>
+    </div>
+    <div class="campo"><label>O combinado</label><textarea placeholder="Valores, forma de pagamento, o que está incluso..."></textarea></div>
+    <div class="pe"><button class="btn ghost" onclick="fechar('mNovo')">Cancelar</button><button class="btn prim" onclick="fechar('mNovo');toast('Terceiro cadastrado')">Salvar</button></div>
+  </div>
+</div>
+
+<!-- MODAL: lançamento avulso -->
+<div class="modal-bg" id="mAvulso">
+  <div class="modal">
+    <h3>Lançar valor avulso</h3>
+    <p class="s">Diária, deslocamento, extra. Entra como custo do cliente no Caixa.</p>
+    <div class="campo"><label>Descrição</label><input placeholder="Ex.: Diária de gravação"></div>
+    <div class="dupla">
+      <div class="campo"><label>Cliente</label><select><option>Padaria Grão</option><option>Clínica Sorrir</option><option>Ótica Visão</option><option>Sem cliente (custo da agência)</option></select></div>
+      <div class="campo"><label>Valor</label><input placeholder="R$ 0,00"></div>
+    </div>
+    <div class="campo"><label>Data do serviço</label><input type="date" value="2026-09-29"></div>
+    <div class="pe"><button class="btn ghost" onclick="fechar('mAvulso')">Cancelar</button><button class="btn prim" onclick="fechar('mAvulso');toast('Lançado como a pagar')">Lançar</button></div>
+  </div>
+</div>
+
+<!-- MODAL: pagar fechamento -->
+<div class="modal-bg" id="mPagar">
+  <div class="modal">
+    <h3>Pagar fechamento</h3>
+    <p class="s">Tudo que está pendente no período vira pago, com a data de hoje.</p>
+    <div class="resumo" id="resumoPagar"></div>
+    <div class="campo"><label>Data do pagamento</label><input type="date" value="2026-09-29"></div>
+    <div class="pe"><button class="btn ghost" onclick="fechar('mPagar')">Cancelar</button><button class="btn azul" onclick="pagar()">Confirmar pagamento</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CLI = {"Padaria Grão":"#EA4918","Clínica Sorrir":"#0061EE","Ótica Visão":"#01A652"};
+const T = [
+  {id:"agatha", nome:"Agatha", papel:"Designer", tipo:"cria", ini:"A", fecha:"Todo dia 15",
+   nota:"Arte de feed: R$ 40\nCarrossel até 8 telas: R$ 90\nStory: R$ 25\nPagamento no Pix dela, todo dia 15, depois de conferir a lista.\nAjuste simples não cobra. Refação completa cobra de novo.",
+   pix:"Pix: celular", periodos:{
+     atual:{rot:"16/09 a 15/10", itens:[
+       {d:"17/09", c:"Padaria Grão", t:"Carrossel pão de fermentação", v:90, s:"pend"},
+       {d:"19/09", c:"Clínica Sorrir", t:"Arte clareamento", v:40, s:"pend"},
+       {d:"22/09", c:"Padaria Grão", t:"Story promo café", v:25, s:"pend"},
+       {d:"23/09", c:"Ótica Visão", t:"Arte lançamento armações", v:40, s:"pend"},
+       {d:"25/09", c:"Clínica Sorrir", t:"Carrossel mitos da gengiva", v:90, s:"pend"},
+       {d:"26/09", c:"Padaria Grão", t:"Arte fim de semana", v:40, s:"pend"},
+       {d:"28/09", c:"Ótica Visão", t:"Story provador", v:25, s:"pend"},
+     ]},
+     anterior:{rot:"16/08 a 15/09", itens:[
+       {d:"20/08", c:"Padaria Grão", t:"Carrossel história da padaria", v:90, s:"ok"},
+       {d:"28/08", c:"Clínica Sorrir", t:"Arte check-up", v:40, s:"ok"},
+       {d:"04/09", c:"Ótica Visão", t:"Arte óculos de sol", v:40, s:"ok"},
+       {d:"11/09", c:"Padaria Grão", t:"Story vagas", v:25, s:"ok"},
+     ]}
+   }},
+  {id:"leo", nome:"Léo", papel:"Editor de vídeo", tipo:"cria", ini:"L", fecha:"Quinzenal (15 e 30)",
+   nota:"Reels até 60s: R$ 120\nReels acima de 60s: R$ 160\nLegenda embutida inclusa.", pix:"Pix: CNPJ",
+   periodos:{
+     atual:{rot:"16/09 a 30/09", itens:[
+       {d:"18/09", c:"Clínica Sorrir", t:"Reels depoimento", v:120, s:"pend"},
+       {d:"24/09", c:"Padaria Grão", t:"Reels bastidor forno", v:160, s:"pend"},
+       {d:"27/09", c:"Ótica Visão", t:"Reels antes e depois", v:120, s:"pend"},
+     ]},
+     anterior:{rot:"01/09 a 15/09", itens:[
+       {d:"05/09", c:"Padaria Grão", t:"Reels receita", v:120, s:"ok"},
+     ]}
+   }},
+  {id:"bruno", nome:"Bruno", papel:"Filmmaker", tipo:"avulso", ini:"B", fecha:"Por serviço",
+   nota:"Diária de gravação: R$ 450 (até 6h)\nDeslocamento fora de Itajaí: R$ 80\nEntrega o bruto no Drive em 48h.", pix:"Pix: e-mail",
+   periodos:{
+     atual:{rot:"setembro", itens:[
+       {d:"12/09", c:"Clínica Sorrir", t:"Diária de gravação", v:450, s:"ok", av:true},
+       {d:"26/09", c:"Padaria Grão", t:"Diária de gravação", v:450, s:"pend", av:true},
+       {d:"26/09", c:"Padaria Grão", t:"Deslocamento Balneário", v:80, s:"pend", av:true},
+     ]},
+     anterior:{rot:"agosto", itens:[]}
+   }},
+];
+let sel="agatha", per="atual", editando=false, quem="walter";
+const brl=v=>v.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const pend=t=>Object.values(t.periodos).flatMap(p=>p.itens).filter(i=>i.s==="pend").reduce((s,i)=>s+i.v,0);
+
+function renderLista(){
+  document.getElementById("lista").innerHTML = T.map(t=>{
+    const p=pend(t);
+    return `<button class="item ${t.id===sel?"on":""}" onclick="escolher('${t.id}')">
+      <span class="av ${t.tipo==="cria"?"v":"c"}">${t.ini}</span>
+      <span style="min-width:0">
+        <span class="nm">${t.nome}</span>
+        <span class="meta" style="display:block">${t.papel} · <span class="chip ${t.tipo}">${t.tipo==="cria"?"no Cria":"avulso"}</span></span>
+      </span>
+      <span class="val"><b style="color:${p?"var(--ambar)":"var(--verde)"}">${p?brl(p):"em dia"}</b><small>${t.fecha}</small></span>
+    </button>`;}).join("");
+  document.getElementById("kpiPagar").textContent = brl(T.reduce((s,t)=>s+pend(t),0));
+}
+
+function renderFicha(){
+  const t=T.find(x=>x.id===sel), P=t.periodos[per];
+  const pendItens=P.itens.filter(i=>i.s==="pend"), totPend=pendItens.reduce((s,i)=>s+i.v,0), tot=P.itens.reduce((s,i)=>s+i.v,0);
+  const ehGabi = quem==="gabi";
+  document.getElementById("ficha").innerHTML = `
+    <div class="f-top">
+      <span class="av ${t.tipo==="cria"?"v":"c"}">${t.ini}</span>
+      <div><h2>${t.nome}</h2><div class="sub">${t.papel} · ${t.tipo==="cria"?"parceira no Cria, vê os cachês na área dela":"sem conta no Cria"}</div></div>
+      <div class="acoes"><button class="btn ghost" onclick="abrir('mAvulso')">+ Lançar avulso</button></div>
+    </div>
+
+    <div class="bloco">
+      <h3>O combinado <small>só a agência vê</small></h3>
+      <div class="nota">${editando
+        ? `<textarea id="notaTxt">${t.nota}</textarea>`
+        : t.nota}
+        <button class="edit" onclick="${editando?"salvarNota()":"editando=true;renderFicha()"}">${editando?"Salvar":"Editar"}</button>
+      </div>
+      <div class="nota-info">
+        <span>Fechamento: <b>${t.fecha}</b></span>
+        <span>${t.pix}</span>
+      </div>
+    </div>
+
+    <div class="bloco">
+      <h3>Fechamento</h3>
+      <div class="periodo">
+        <div class="seg">
+          <button class="${per==="atual"?"on":""}" onclick="per='atual';renderFicha()">Atual</button>
+          <button class="${per==="anterior"?"on":""}" onclick="per='anterior';renderFicha()">Anterior</button>
+        </div>
+        <span class="rotulo">${P.rot}</span>
+      </div>
+      ${P.itens.length? `
+      <table>
+        <thead><tr><th>Entrega</th><th>Cliente</th><th class="esconde-m">Peça</th><th>Status</th><th class="v">Valor</th></tr></thead>
+        <tbody>${P.itens.map(i=>`
+          <tr class="${i.s==="ok"?"pago":""}">
+            <td>${i.d}</td>
+            <td><span class="cli"><i style="background:${CLI[i.c]}"></i>${i.c}</span></td>
+            <td class="esconde-m">${i.t}${i.av?' <span class="st av">avulso</span>':""}</td>
+            <td><span class="st ${i.s==="ok"?"ok":"pend"}">${i.s==="ok"?"pago":"a pagar"}</span></td>
+            <td class="v">${brl(i.v)}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>
+      <div class="tot">
+        <div class="t">A pagar no período<b>${brl(totPend)}</b></div>
+        <div class="t">Total do período<b style="font-size:16px">${brl(tot)}</b></div>
+        <div class="dir">
+          <button class="btn ghost" onclick="toast('Lista copiada pra mandar no WhatsApp')">Copiar lista pra conferir</button>
+          <button class="btn azul" ${(!totPend||ehGabi)?"disabled":""} onclick="abrirPagar()">Pagar fechamento</button>
+          <span class="trava">Só o dono marca como pago</span>
+        </div>
+      </div>` : `<p class="rodape">Nada nesse período.</p>`}
+      <p class="rodape">Cada linha é uma despesa no Caixa ligada ao cliente, então já entra na margem dele em "Clientes". ${t.tipo==="cria"?"Os cachês nascem sozinhos quando a peça é entregue com valor.":"Pra terceiro avulso, os valores entram pelo \"Lançar avulso\"."}</p>
+    </div>`;
+}
+
+function escolher(id){sel=id;per="atual";editando=false;renderLista();renderFicha();
+  if(innerWidth<820) document.getElementById("ficha").scrollIntoView({behavior:"smooth"});}
+function salvarNota(){const t=T.find(x=>x.id===sel);t.nota=document.getElementById("notaTxt").value;editando=false;renderFicha();toast("Combinado salvo");}
+function abrir(id){document.getElementById(id).classList.add("on")}
+function fechar(id){document.getElementById(id).classList.remove("on")}
+function abrirPagar(){
+  const t=T.find(x=>x.id===sel),P=t.periodos[per],it=P.itens.filter(i=>i.s==="pend");
+  document.getElementById("resumoPagar").innerHTML=`<b>${t.nome}</b> · ${P.rot}<br>${it.length} ${it.length>1?"itens":"item"} · <b>${brl(it.reduce((s,i)=>s+i.v,0))}</b>`;
+  abrir("mPagar");
+}
+function pagar(){const t=T.find(x=>x.id===sel);t.periodos[per].itens.forEach(i=>{if(i.s==="pend")i.s="ok"});fechar("mPagar");renderLista();renderFicha();toast(t.tipo==="cria"?"Pago. Ela já vê em Meus cachês.":"Pago.");}
+function toast(m){const e=document.getElementById("toast");e.textContent=m;e.style.display="block";clearTimeout(window._t);window._t=setTimeout(()=>e.style.display="none",2200);}
+document.querySelectorAll(".modal-bg").forEach(m=>m.addEventListener("click",e=>{if(e.target===m)m.classList.remove("on")}));
+document.querySelectorAll(".demo .seg button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".demo .seg button").forEach(x=>x.classList.remove("on"));b.classList.add("on");
+  quem=b.dataset.quem;document.body.classList.toggle("gabi",quem==="gabi");renderFicha();});
+renderLista();renderFicha();
+</script>
+</body>
+</html>

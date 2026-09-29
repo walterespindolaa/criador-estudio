@@ -17,6 +17,7 @@ import { ModuleHero, type SubTab } from "@/components/brand/ModuleHero";
 import { FinCompanyDialog } from "@/components/accounts/FinCompanyDialog";
 import { FinRecurringDialog } from "@/components/accounts/FinRecurringDialog";
 import { FinTransferDialog } from "@/components/accounts/FinTransferDialog";
+import { CaixaTerceiros } from "@/components/accounts/CaixaTerceiros";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -396,6 +397,7 @@ function CaixaInner() {
         { to: `${base}/clientes`, label: "Clientes" },
         { to: `${base}/calendario`, label: "Calendário" },
         { to: `${base}/mensalidades`, label: "Mensalidades" },
+        { to: `${base}/terceiros`, label: "Terceiros" },
         { to: `${base}/relatorios`, label: "Relatórios" },
       ]
     : [
@@ -547,6 +549,8 @@ function CaixaInner() {
       ))}
 
       {/* ═══════ CALENDÁRIO ═══════ */}
+      {show("terceiros") && isPj && <CaixaTerceiros />}
+
       {show("calendario") && (
         <CalendarioFinanceiro
           monthlies={isPj ? visibleMonthlies : []}
