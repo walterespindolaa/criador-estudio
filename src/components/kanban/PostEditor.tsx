@@ -2032,7 +2032,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         <CarouselWriter
                           titulo={title}
                           formato={format}
-                          pilar={pillarId ?? undefined}
+                          /* NOME do pilar, não o id (29/09/2026): ia o UUID pro
+                             prompt ("Pilar: 1f73e788-...") e a IA não tinha como
+                             saber que era "Casa e organização". */
+                          pilar={pillars.find((p) => p.id === pillarId)?.name || undefined}
                           sections={sections}
                           onChange={setSections}
                           hook={hook}

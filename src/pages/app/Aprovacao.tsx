@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { dataHoraCurta } from "@/lib/data-curta";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useActiveAccount } from "@/contexts/AccountContext";
@@ -204,7 +205,7 @@ function DetailDialog({ post, thumb, isOwner, onClose, onApprove, onRequestAdjus
                   <StatusBadge p={post} />
                 </div>
                 {post.scheduled_date && (
-                  <p className="text-xs text-muted-foreground font-body inline-flex items-center gap-1"><Calendar className="h-3 w-3" /> {post.scheduled_date}{post.scheduled_time ? ` às ${post.scheduled_time}` : ""}</p>
+                  <p className="text-xs text-muted-foreground font-body inline-flex items-center gap-1"><Calendar className="h-3 w-3" /> {dataHoraCurta(post.scheduled_date, post.scheduled_time)}</p>
                 )}
                 {post.hook && <div><p className="text-[11px] uppercase tracking-wide text-muted-foreground font-body mb-0.5">Hook</p><p className="text-sm font-body">{post.hook}</p></div>}
                 {post.caption && <div><p className="text-[11px] uppercase tracking-wide text-muted-foreground font-body mb-0.5">Legenda</p><p className="text-sm font-body whitespace-pre-wrap">{post.caption}</p></div>}

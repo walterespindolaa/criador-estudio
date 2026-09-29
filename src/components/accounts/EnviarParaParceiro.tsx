@@ -20,20 +20,33 @@ import { ROTULO_PAPEL, useConversaDoCard, useDelegarPost, useMeusParceiros, useP
    vazia é convite pra frustração, não pra descoberta.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, cache }: {
+/** Escolha feita num post que AINDA NÃO FOI SALVO: guarda aqui e o editor
+ *  delega de verdade depois do Salvar (ver CriaPostBoard.submit). */
+export type EnvioPendente = { assigneeId: string; prazo: string | null; cache: number | null; nome?: string };
+
+export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, cache, adiado, pendente, onAdiar }: {
   postId: string;
   assigneeId: string | null;
   producaoStatus: string | null;
   prazo: string | null;
   /** Cachê combinado (R$). Vira despesa no Caixa quando o parceiro entregar. */
   cache?: number | null;
+  /* POST NOVO (Gabriela, 29/09/2026): "só aparece depois que eu crio o post,
+     salvo, e tenho que voltar nele pra adicionar a pessoa". Agora aparece desde
+     o "+". Num rascunho a escolha fica guardada e só vira delegação quando ela
+     salva: se cancelar, o rascunho some e o parceiro nunca recebe um card
+     fantasma. */
+  adiado?: boolean;
+  pendente?: EnvioPendente | null;
+  onAdiar?: (v: EnvioPendente | null) => void;
 }) {
   const { data: parceiros = [] } = useMeusParceiros();
   const delegar = useDelegarPost();
   const [aberto, setAberto] = useState(false);
-  const [escolhido, setEscolhido] = useState<string | null>(assigneeId);
-  const [dataEntrega, setDataEntrega] = useState(prazo ?? "");
-  const [valorCache, setValorCache] = useState(cache != null ? String(cache) : "");
+  const [escolhido, setEscolhido] = useState<string | null>(adiado ? (pendente?.assigneeId ?? null) : assigneeId);
+  const [dataEntrega, setDataEntrega] = useState((adiado ? pendente?.prazo : prazo) ?? "");
+  const [valorCache, setValorCache] = useState(
+    adiado ? (pendente?.cache != null ? String(pendente.cache) : "") : (cache != null ? String(cache) : ""));
   const [pedindoAjuste, setPedindoAjuste] = useState(false);
   const [motivoAjuste, setMotivoAjuste] = useState("");
   const [mensagem, setMensagem] = useState("");
@@ -41,7 +54,8 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, 
   const conversa = useConversaDoCard(assigneeId ? postId : null);
 
   if (parceiros.length === 0) return null;
-  const atual = parceiros.find((p) => p.member_id === assigneeId);
+  const atual = adiado ? undefined : parceiros.find((p) => p.member_id === assigneeId);
+  const escolhaGuardada = adiado && pendente ? parceiros.find((p) => p.member_id === pendente.assigneeId) : undefined;
   /* Entregou e o campo de cachê está vazio: é o furo que some do financeiro
      dos dois lados. Olha o valor DIGITADO, não o salvo, pra o aviso apagar
      assim que ela corrige (Walter, 14/09/2026). */
@@ -52,6 +66,14 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, 
     if (!escolhido) return;
     const nome = parceiros.find((p) => p.member_id === escolhido)?.nome;
     const cacheNum = valorCache.trim() ? Number(valorCache.replace(",", ".")) : null;
+    if (adiado) {
+      onAdiar?.({
+        assigneeId: escolhido, prazo: dataEntrega || null, nome,
+        cache: cacheNum != null && !Number.isNaN(cacheNum) && cacheNum > 0 ? cacheNum : null,
+      });
+      setAberto(false);
+      return;
+    }
     await delegar.mutateAsync({
       postId, assigneeId: escolhido, prazo: dataEntrega || null, nomeParceiro: nome,
       cache: cacheNum != null && !Number.isNaN(cacheNum) && cacheNum > 0 ? cacheNum : null,
@@ -67,10 +89,11 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, 
   return (
     <Popover open={aberto} onOpenChange={setAberto}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className={cn(atual && "border-violet-300 bg-violet-50 text-violet-800 hover:bg-violet-100")}>
+        <Button variant="outline" size="sm" className={cn((atual || escolhaGuardada) && "border-violet-300 bg-violet-50 text-violet-800 hover:bg-violet-100")}>
           <Send className="h-3.5 w-3.5 mr-1.5" />
           {atual
             ? `Com ${atual.nome.split(" ")[0]}${producaoStatus === "entregue" ? " · entregue" : ""}`
+            : escolhaGuardada ? `Pra ${escolhaGuardada.nome.split(" ")[0]} ao salvar`
             : "Enviar para"}
         </Button>
       </PopoverTrigger>
@@ -121,7 +144,19 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, 
           </div>
         )}
 
+        {adiado && (
+          <p className="text-[11px] font-body text-violet-800 bg-violet-50 border border-violet-200 rounded-lg px-2.5 py-1.5 mt-2 leading-snug">
+            Post novo: o card chega pro parceiro quando você clicar em <b>Salvar</b>.
+          </p>
+        )}
+
         <div className="flex gap-2 mt-3">
+          {adiado && escolhaGuardada && (
+            <Button variant="ghost" size="sm" onClick={() => { onAdiar?.(null); setEscolhido(null); setAberto(false); }}
+              className="rounded-xl text-destructive hover:text-destructive">
+              <X className="h-3.5 w-3.5 mr-1" /> Tirar
+            </Button>
+          )}
           {atual && (
             <Button variant="ghost" size="sm" onClick={() => void remover()} disabled={delegar.isPending}
               className="rounded-xl text-destructive hover:text-destructive">
@@ -130,6 +165,7 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, 
           )}
           <Button size="sm" onClick={() => void enviar()} disabled={!escolhido || delegar.isPending} className="rounded-xl flex-1">
             {delegar.isPending ? <Loader2 className="h-4 w-4 animate-spin" />
+              : adiado ? "Enviar ao salvar"
               : !atual ? "Enviar"
               : escolhido === assigneeId ? "Salvar combinado"
               : "Trocar de parceiro"}

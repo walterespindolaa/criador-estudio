@@ -193,8 +193,13 @@ export function useMediaInsights() {
     queryKey: ["social-media-insights", ownerId],
     enabled: !!ownerId,
     queryFn: async () => {
+      // FK NOMEADA NO EMBED (29/09/2026): a tabela ig_vinculo_recusado (Dados IG,
+      // ciclo 2) criou um segundo caminho social_insights -> posts. Com "posts(...)"
+      // puro o PostgREST responde 300 (PGRST201, relação ambígua), a query quebra
+      // e o app inteiro mostrava "Não consegui carregar alguns dados" pra quem
+      // abre o Dashboard. O alias mantém a chave "posts" que o resto do código lê.
       const { data, error } = await sbFrom("social_insights")
-        .select("id,object_id,media_type,caption,permalink,thumbnail_url,posted_at,metrics,post_id,posts(title,format,hook,pillar_id)")
+        .select("id,object_id,media_type,caption,permalink,thumbnail_url,posted_at,metrics,post_id,posts:posts!social_insights_post_id_fkey(title,format,hook,pillar_id)")
         .eq("user_id", ownerId!)
         .eq("provider", "instagram")
         .eq("object_type", "media")

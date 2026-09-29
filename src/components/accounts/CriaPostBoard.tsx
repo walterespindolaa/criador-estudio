@@ -4,8 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useExternalClients, useExternalPosts, usePortalActivity, type ExternalClient, type ExternalPost, type ExternalPostInput } from "@/hooks/useCriaPost";
 import { toast } from "sonner";
 import { confirmar } from "@/components/shared/Confirm";
-import { EnviarParaParceiro } from "@/components/accounts/EnviarParaParceiro";
-import { useMeusParceiros, ROTULO_PAPEL } from "@/hooks/useParceiro";
+import { EnviarParaParceiro, type EnvioPendente } from "@/components/accounts/EnviarParaParceiro";
+import { useMeusParceiros, useDelegarPost, ROTULO_PAPEL } from "@/hooks/useParceiro";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -449,6 +449,9 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const [internalTags, setInternalTags] = useState<string[]>([]);
   const [copying, setCopying] = useState(false);
   const [briefOpen, setBriefOpen] = useState(false);
+  // "Enviar para" escolhido num post que ainda não foi salvo (ver EnviarParaParceiro).
+  const [envioPendente, setEnvioPendente] = useState<EnvioPendente | null>(null);
+  const delegarPost = useDelegarPost();
 
   // Novo post: cria um RASCUNHO na hora. Assim o post.id já existe e a mídia pode ser
   // anexada de cara (o storage precisa do id). O rascunho não aparece pro cliente.
@@ -456,6 +459,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", notes: "", scheduled_date: day ?? null, scheduled_time: null, reference_url: null, drive_folder_url: null, editorial_line_id: null });
     setRefLinks([]);
     setInternalTags([]);
+    setEnvioPendente(null);
     setFormOpen(true);
     try {
       const draft = await createDraft.mutateAsync({ scheduled_date: day ?? null });
@@ -489,6 +493,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   // Cancelar um post novo apaga o rascunho (com a mídia que já subiu).
   const closeForm = async () => {
     setFormOpen(false);
+    setEnvioPendente(null);
     if (draftId) { await remove.mutateAsync(draftId).catch(() => { /* silencioso */ }); setDraftId(null); }
     setEditing(null);
   };
@@ -543,6 +548,14 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       toast.success("Post criado! Está em produção. Libere pro cliente quando quiser.");
       postId = draftId;
       setDraftId(null);
+      // Parceiro escolhido antes de salvar: agora que o post existe de verdade,
+      // delega. Se falhar, o post continua salvo e o erro aparece no toast.
+      if (envioPendente) {
+        const v = envioPendente;
+        setEnvioPendente(null);
+        await delegarPost.mutateAsync({ postId: draftId, assigneeId: v.assigneeId, prazo: v.prazo, nomeParceiro: v.nome, cache: v.cache })
+          .catch(() => { /* o hook já mostra o erro */ });
+      }
     } else if (editing) {
       await update.mutateAsync({ id: editing.id, resend: editing.approval_status === "ajuste_solicitado", ...payload });
       postId = editing.id;
@@ -994,12 +1007,18 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               <InternalTagPicker selected={internalTags} onChange={setInternalTags} />
             </div>
             <div className="flex items-center gap-2 shrink-0 flex-wrap">
-              {/* Cria Parceiros: delegar a produção sem sair do post. Só em post
-                  já criado (rascunho ainda não tem id estável pro parceiro). */}
+              {/* Cria Parceiros: delegar a produção sem sair do post. Em post
+                  NOVO (rascunho) também aparece, desde o "+" (Gabriela,
+                  29/09/2026): a escolha fica guardada e vira delegação no Salvar. */}
               {editing && !draftId && (
-                <EnviarParaParceiro postId={editing.id} assigneeId={editing.assignee_id}
+                <EnviarParaParceiro key={editing.id} postId={editing.id} assigneeId={editing.assignee_id}
                   producaoStatus={editing.producao_status} prazo={editing.prazo_producao}
                   cache={editing.cache_parceiro ?? null} />
+              )}
+              {draftId && (
+                <EnviarParaParceiro key={`novo-${draftId}`} postId={draftId} assigneeId={null}
+                  producaoStatus={null} prazo={null} cache={null}
+                  adiado pendente={envioPendente} onAdiar={setEnvioPendente} />
               )}
               {/* EXCLUIR DE DENTRO DO POST (Walter, 20/09/2026).
                   A lixeira existia só no card do quadro. Quem abriu o post,

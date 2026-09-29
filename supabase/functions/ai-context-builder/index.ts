@@ -1528,7 +1528,7 @@ ${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de 
       : OPS_CRIATIVAS.has(operation) ? 0.6
       : 0.2
 
-    const response = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const pedirIA = () => aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${lovableApiKey}`,
@@ -1552,6 +1552,7 @@ ${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de 
       }),
     // Modelo cheio leva mais que os 30s padrão.
     }, operation === 'idea-suggestions' || operation === 'capture-scenes' ? 55000 : 30000)
+    const response = await pedirIA()
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -1570,16 +1571,41 @@ ${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de 
     }
 
     const result = await response.json()
-    const content = result.choices?.[0]?.message?.content || ''
+    let content = result.choices?.[0]?.message?.content || ''
 
     if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate' || operation === 'art-prompt' || operation === 'art-brief' || operation === 'carousel-script' || operation === 'capture-scenes') {
-      const cleaned = String(content).replace(/```json/gi, '').replace(/```/g, '').trim()
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
-      const jsonStr = jsonMatch ? jsonMatch[0] : cleaned
+      const extrair = (txt: string) => {
+        const cleaned = String(txt).replace(/```json/gi, '').replace(/```/g, '').trim()
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
+        return { cleaned, jsonStr: jsonMatch ? jsonMatch[0] : cleaned }
+      }
+      let { cleaned, jsonStr } = extrair(content)
+      let parsed: unknown = undefined
+      try { parsed = JSON.parse(jsonStr) } catch { /* tenta de novo abaixo */ }
+
+      /* UMA SEGUNDA CHANCE (29/09/2026). O -lite de vez em quando devolve o
+         JSON cortado ou com aspas soltas. Antes isso virava "internal_error"
+         e a pessoa via "Não consegui escrever agora" no botão "A IA escreve as
+         páginas" (pego gravando o manual do criador: falhou 2 vezes seguidas e
+         funcionou na 3ª com o mesmo pedido). Repetir a chamada custa uma
+         requisição e resolve quase sempre; a cota da pessoa não é cobrada 2x. */
+      if (parsed === undefined) {
+        try {
+          const r2 = await pedirIA()
+          if (r2.ok) {
+            const j2 = await r2.json()
+            content = j2.choices?.[0]?.message?.content || ''
+            ;({ cleaned, jsonStr } = extrair(content))
+            parsed = JSON.parse(jsonStr)
+          }
+        } catch { /* cai no tratamento de erro de sempre */ }
+      }
+
       try {
+        if (parsed === undefined) throw new Error('parse')
         // humanizarDeep: markdown, travessão e emoji de enfeite fora, em
         // cada string do JSON (legenda do cronograma, roteiro do story...).
-        return new Response(JSON.stringify({ result: humanizarDeep(JSON.parse(jsonStr)) }), {
+        return new Response(JSON.stringify({ result: humanizarDeep(parsed) }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       } catch {

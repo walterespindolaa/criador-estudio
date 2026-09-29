@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { formatColorVars, FORMAT_CHIP_SOLID_CLASS, FORMAT_CHIP_SOFT_CLASS } from "@/lib/format-colors";
 import { hojeBR } from "@/lib/date-br";
 import { hrefSeguro } from "@/lib/href-seguro";
+import { parseRefLinks, refLinkHref, refLinkLabel } from "@/lib/refLinks";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -1874,7 +1875,11 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     if (h) itens.push({ chave, rotulo, url: h, icone });
                   };
                   add("pasta-peca", "Pasta desta peça", card.pasta_drive, "pasta");
-                  add("ref", "Referência desta peça", card.referencia, "ref");
+                  // A REFERÊNCIA DESTA PEÇA SAIU DAQUI (Gabriela, 29/09/2026). O
+                  // campo guarda VÁRIOS links, um por linha; aqui virava um botão
+                  // só com os dois links colados, e o clique abria endereço
+                  // quebrado. Agora cada link aparece por extenso logo abaixo das
+                  // Observações, que é onde fica o briefing desta peça.
                   add("pasta-geral", "Pasta geral do cliente", card.canal_pasta, "pasta");
                   linksCliente.filter((l) => l?.url?.trim() && l.url !== card.canal_pasta).forEach((l, i) =>
                     add(`l${i}`, l.label?.trim() || "Link", l.url, /drive\.google|dropbox|onedrive/i.test(l.url) ? "pasta" : "link"));
@@ -1939,6 +1944,34 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     <p className="text-sm font-body whitespace-pre-line bg-amber-50/60 border border-amber-200 rounded-xl px-3 py-2.5 leading-relaxed"><TextoComLinks texto={card.notas} /></p>
                   </div>
                 )}
+
+                {/* REFERÊNCIAS DESTA PEÇA (Gabriela, 29/09/2026): o campo "Ideia /
+                    Referência (links)" do post. Um link por linha no banco; aqui
+                    cada um vira uma linha clicável própria, com o endereço à
+                    mostra, pra quem produz saber o que vai abrir. */}
+                {(() => {
+                  const refs = parseRefLinks(card.referencia)
+                    .map((l) => ({ bruto: l, href: hrefSeguro(refLinkHref(l)) }))
+                    .filter((r): r is { bruto: string; href: string } => !!r.href);
+                  if (refs.length === 0) return null;
+                  return (
+                    <div className="mt-4">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                        <Play className="h-3 w-3" /> {refs.length > 1 ? "Referências desta peça" : "Referência desta peça"}
+                      </p>
+                      <div className="flex flex-col gap-1.5">
+                        {refs.map((r, i) => (
+                          <a key={`${r.href}-${i}`} href={r.href} target="_blank" rel="noopener noreferrer" title={r.href}
+                            className="flex items-center gap-2 min-w-0 rounded-xl border border-border bg-background px-3 py-2 text-[13px] font-body font-semibold text-primary hover:border-primary/40 hover:underline transition-colors">
+                            <Link2 className="h-3.5 w-3.5 shrink-0" style={{ color: card.marca.cor || undefined }} />
+                            <span className="truncate">{refs.length > 1 ? `${i + 1}. ` : ""}{refLinkLabel(r.bruto, 80)}</span>
+                            <ExternalLink className="h-3 w-3 shrink-0 ml-auto text-muted-foreground" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* ═══════════════════════════════════════════════════════════
                     O QUE APONTARAM NA ARTE (circuito 6, 15/09/2026)
