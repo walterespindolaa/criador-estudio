@@ -1498,6 +1498,32 @@ export type Database = {
         }
         Relationships: []
       }
+      conversa_lida: {
+        Row: {
+          lido_em: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          lido_em?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          lido_em?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversa_lida_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_purchases: {
         Row: {
           course_id: string
@@ -1746,6 +1772,7 @@ export type Database = {
           cnpj: string | null
           color: string | null
           company_name: string | null
+          compartilhar_parceiros: Json
           competitors: Json
           contract_date: string | null
           contract_end_date: string | null
@@ -1765,11 +1792,13 @@ export type Database = {
           name: string
           notes: string | null
           owner_name: string | null
+          pasta_parceiros: string | null
           payment_day: number | null
           payment_method: string | null
           persona: Json
           phone: string | null
           plan_name: string | null
+          recado_parceiros: string | null
           renewal_date: string | null
           segment: string | null
           services: string[] | null
@@ -1789,6 +1818,7 @@ export type Database = {
           cnpj?: string | null
           color?: string | null
           company_name?: string | null
+          compartilhar_parceiros?: Json
           competitors?: Json
           contract_date?: string | null
           contract_end_date?: string | null
@@ -1808,11 +1838,13 @@ export type Database = {
           name: string
           notes?: string | null
           owner_name?: string | null
+          pasta_parceiros?: string | null
           payment_day?: number | null
           payment_method?: string | null
           persona?: Json
           phone?: string | null
           plan_name?: string | null
+          recado_parceiros?: string | null
           renewal_date?: string | null
           segment?: string | null
           services?: string[] | null
@@ -1832,6 +1864,7 @@ export type Database = {
           cnpj?: string | null
           color?: string | null
           company_name?: string | null
+          compartilhar_parceiros?: Json
           competitors?: Json
           contract_date?: string | null
           contract_end_date?: string | null
@@ -1851,11 +1884,13 @@ export type Database = {
           name?: string
           notes?: string | null
           owner_name?: string | null
+          pasta_parceiros?: string | null
           payment_day?: number | null
           payment_method?: string | null
           persona?: Json
           phone?: string | null
           plan_name?: string | null
+          recado_parceiros?: string | null
           renewal_date?: string | null
           segment?: string | null
           services?: string[] | null
@@ -4702,6 +4737,7 @@ export type Database = {
           calendar_synced_at: string | null
           caption: string | null
           content_blocks: Json | null
+          cover_url: string | null
           created_at: string | null
           cta: string | null
           deleted_at: string | null
@@ -4767,6 +4803,7 @@ export type Database = {
           calendar_synced_at?: string | null
           caption?: string | null
           content_blocks?: Json | null
+          cover_url?: string | null
           created_at?: string | null
           cta?: string | null
           deleted_at?: string | null
@@ -4832,6 +4869,7 @@ export type Database = {
           calendar_synced_at?: string | null
           caption?: string | null
           content_blocks?: Json | null
+          cover_url?: string | null
           created_at?: string | null
           cta?: string | null
           deleted_at?: string | null
@@ -6587,6 +6625,7 @@ export type Database = {
         }[]
       }
       agency_seats_used: { Args: never; Returns: number }
+      agenda_clientes_equipe: { Args: { _manager: string }; Returns: Json[] }
       agenda_data_para_cronogramas: {
         Args: { _agenda_data_id: string }
         Returns: number
@@ -6692,6 +6731,13 @@ export type Database = {
         Args: { _external: string; _owner: string }
         Returns: boolean
       }
+      capas_by_token: {
+        Args: { _token: string }
+        Returns: {
+          cover_url: string
+          post_id: string
+        }[]
+      }
       check_and_increment_rate_limit: {
         Args: {
           _limit: number
@@ -6714,6 +6760,22 @@ export type Database = {
           _user_agent?: string
         }
         Returns: undefined
+      }
+      conversas_com_parceiros: {
+        Args: never
+        Returns: {
+          assignee_id: string
+          external_client_id: string
+          formato: string
+          nao_lidas: number
+          post_id: string
+          producao_status: string
+          titulo: string
+          total: number
+          ultima_em: string
+          ultima_papel: string
+          ultima_texto: string
+        }[]
       }
       cria_limite_clientes: { Args: { _manager: string }; Returns: number }
       cria_limite_info: {
@@ -7058,6 +7120,7 @@ export type Database = {
           calendar_synced_at: string | null
           caption: string | null
           content_blocks: Json | null
+          cover_url: string | null
           created_at: string | null
           cta: string | null
           deleted_at: string | null
@@ -7165,6 +7228,10 @@ export type Database = {
           _post_id: string
         }
         Returns: string
+      }
+      links_para_parceiro: {
+        Args: { _cc: Database["public"]["Tables"]["crm_clients"]["Row"] }
+        Returns: Json
       }
       list_materials_by_token: {
         Args: { _token: string }
@@ -7300,6 +7367,11 @@ export type Database = {
         Args: { _owner: string; _settings: Json; _slug: string }
         Returns: undefined
       }
+      marca_para_parceiro: {
+        Args: { _cc: Database["public"]["Tables"]["crm_clients"]["Row"] }
+        Returns: Json
+      }
+      marcar_conversa_lida: { Args: { _post_id: string }; Returns: undefined }
       member_can: {
         Args: { _code: string; _manager: string }
         Returns: boolean
@@ -7556,6 +7628,7 @@ export type Database = {
           titulo: string
         }[]
       }
+      parceiro_ve: { Args: { _chave: string; _conf: Json }; Returns: boolean }
       parceiro_versoes_da_peca: {
         Args: { _post_id: string }
         Returns: {
@@ -7576,6 +7649,10 @@ export type Database = {
           meses: number
           pct: number
         }[]
+      }
+      pasta_geral_do_cliente: {
+        Args: { _cc: Database["public"]["Tables"]["crm_clients"]["Row"] }
+        Returns: string
       }
       pin_comment_by_token: {
         Args: {
