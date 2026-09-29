@@ -324,6 +324,96 @@ export function Moodboard({ clientId }: { clientId: string }) {
 
 /* ─── BRANDBOOK ──────────────────────────────────────────────────────────── */
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   MAIS DE UMA FONTE (Walter, 29/09/2026: "precisa ter opção de escrever mais
+   de um tipo"). Marca quase sempre tem uma fonte de título e outra de texto,
+   e o campo único virava "Fraunces + Inter" que ninguém sabia qual era qual.
+
+   Cada linha é papel + nome. Salva como texto legível no MESMO campo de
+   sempre ("Títulos: Fraunces; Textos: Inter"), porque é ele que o PDF do
+   brandbook, a IA e o card do parceiro leem. Texto antigo sem papel
+   continua abrindo, uma fonte por linha.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const PAPEIS_FONTE = ["Títulos", "Textos", "Destaque", "Apoio"];
+type Fonte = { papel: string; nome: string };
+
+function lerFontes(texto: string | null | undefined): Fonte[] {
+  const t = (texto ?? "").trim();
+  if (!t) return [{ papel: "Títulos", nome: "" }];
+  let partes = t.split(/;|\n/).map((x) => x.trim()).filter(Boolean);
+  if (partes.length === 1 && /\s\+\s/.test(partes[0])) partes = partes[0].split(/\s\+\s/).map((x) => x.trim());
+  return partes.map((x) => {
+    const m = x.match(/^([^:]{1,20}):\s*(.+)$/);
+    return m ? { papel: m[1].trim(), nome: m[2].trim() } : { papel: "", nome: x };
+  });
+}
+function escreverFontes(fontes: Fonte[]): string {
+  return fontes.filter((f) => f.nome.trim())
+    .map((f) => (f.papel ? `${f.papel}: ${f.nome.trim()}` : f.nome.trim())).join("; ");
+}
+
+function EditorTipografia({ valor, aoMudar, chave }: { valor: string | null | undefined; aoMudar: (t: string) => void; chave: string }) {
+  const [fontes, setFontes] = useState<Fonte[]>(() => lerFontes(valor));
+  // Trocou de cliente (ou o valor veio de fora, ex.: importado do PDF): relê.
+  const ultimo = useRef(escreverFontes(fontes));
+  useEffect(() => {
+    if ((valor ?? "") !== ultimo.current) { const f = lerFontes(valor); setFontes(f); ultimo.current = escreverFontes(f); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chave, valor]);
+  const mudar = (novas: Fonte[]) => {
+    setFontes(novas);
+    const txt = escreverFontes(novas);
+    ultimo.current = txt;
+    aoMudar(txt);
+  };
+  const cheias = fontes.filter((f) => f.nome.trim());
+  return (
+    <div>
+      {/* A prévia mostra cada fonte com o nome dela (se estiver instalada no
+          computador, aparece desenhada; se não, na fonte padrão). */}
+      <div className="rounded-xl border border-border bg-muted/40 p-4 mb-3 space-y-2.5">
+        {cheias.length === 0 ? (
+          <>
+            <p className="font-display font-bold text-3xl tracking-tight text-foreground">Aa Bb Cc</p>
+            <p className="text-xs font-semibold text-muted-foreground">tipografia não definida</p>
+          </>
+        ) : cheias.map((f, i) => (
+          <div key={i}>
+            <p className="text-2xl tracking-tight text-foreground truncate" style={{ fontFamily: `"${f.nome}", var(--font-display, inherit)` }}>Aa Bb Cc</p>
+            <p className="text-[11px] font-semibold text-muted-foreground">{f.papel ? `${f.papel} · ` : ""}{f.nome}</p>
+          </div>
+        ))}
+      </div>
+      <Label className="text-xs font-body text-muted-foreground">Tipografia</Label>
+      <div className="space-y-2 mt-1.5">
+        {fontes.map((f, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <select value={f.papel} onChange={(e) => mudar(fontes.map((x, j) => (j === i ? { ...x, papel: e.target.value } : x)))}
+              aria-label="Uso da fonte"
+              className="h-10 w-[110px] shrink-0 rounded-xl border border-input bg-background px-2 text-[13px] font-body">
+              <option value="">Uso</option>
+              {PAPEIS_FONTE.map((pp) => <option key={pp} value={pp}>{pp}</option>)}
+            </select>
+            <Input value={f.nome} onChange={(e) => mudar(fontes.map((x, j) => (j === i ? { ...x, nome: e.target.value } : x)))}
+              placeholder={i === 0 ? "Ex.: Fraunces" : "Ex.: Inter"} className="rounded-xl flex-1 min-w-0" />
+            {fontes.length > 1 && (
+              <button type="button" onClick={() => mudar(fontes.filter((_, j) => j !== i))} aria-label="Tirar esta fonte"
+                className="h-10 w-10 shrink-0 grid place-items-center rounded-xl border border-border text-muted-foreground hover:text-destructive">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        ))}
+        <button type="button"
+          onClick={() => mudar([...fontes, { papel: PAPEIS_FONTE[Math.min(fontes.length, PAPEIS_FONTE.length - 1)], nome: "" }])}
+          className="inline-flex items-center gap-1 text-[12.5px] font-body font-bold text-primary hover:underline">
+          <Plus className="h-3.5 w-3.5" /> Adicionar fonte
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincronizando, comPersona, comLinkCadastro }: {
   form: CrmClient;
   setForm: SetFicha;
@@ -371,16 +461,37 @@ export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincroni
     setBc("toneOfVoice", novos.join(", "));
   };
 
+  /* Vários arquivos de fonte (29/09/2026): uma marca com duas fontes tem dois
+     arquivos. Ficam em typographyFiles (JSON, porque o brand_core guarda só
+     texto); o primeiro continua em typographyFileUrl, que é o que o resto do
+     app já lê. */
+  const arquivosFonte: { url: string; name: string }[] = (() => {
+    let lista: { url: string; name: string }[] = [];
+    try { lista = JSON.parse(bc.typographyFiles || "[]"); } catch { lista = []; }
+    if (Array.isArray(lista) && lista.length) return lista;
+    return bc.typographyFileUrl ? [{ url: bc.typographyFileUrl, name: bc.typographyFileName || "arquivo da fonte" }] : [];
+  })();
   const onPickFont = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; e.target.value = "";
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []); e.target.value = "";
+    if (!files.length) return;
     try {
-      const url = await uploadAsset.mutateAsync({ clientId: form.id, file, kind: "font" });
-      const nbc = { ...bc, typographyFileUrl: url, typographyFileName: file.name };
+      const novos: { url: string; name: string }[] = [];
+      for (const file of files) {
+        const url = await uploadAsset.mutateAsync({ clientId: form.id, file, kind: "font" });
+        novos.push({ url, name: file.name });
+      }
+      const todos = [...arquivosFonte, ...novos];
+      const nbc = { ...bc, typographyFiles: JSON.stringify(todos), typographyFileUrl: todos[0].url, typographyFileName: todos[0].name };
       setForm({ ...form, brand_core: nbc });
       await update.mutateAsync({ id: form.id, brand_core: nbc });
-      toast.success("Fonte enviada!");
+      toast.success(novos.length > 1 ? `${novos.length} fontes enviadas!` : "Fonte enviada!");
     } catch { /* hook já avisa */ }
+  };
+  const tirarArquivoFonte = async (url: string) => {
+    const todos = arquivosFonte.filter((a) => a.url !== url);
+    const nbc = { ...bc, typographyFiles: JSON.stringify(todos), typographyFileUrl: todos[0]?.url ?? "", typographyFileName: todos[0]?.name ?? "" };
+    setForm({ ...form, brand_core: nbc });
+    await update.mutateAsync({ id: form.id, brand_core: nbc });
   };
 
   /* O DOCUMENTO DO BRIEFING mora no cliente. Antes ele ficava no Drive ou no
@@ -641,7 +752,7 @@ export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincroni
             {/* Campo em branco pedindo "tom de voz" trava qualquer briefing:
                 ninguém sabe responder do zero. Escolher entre opostos é fácil,
                 e o texto continua livre pra quem quiser detalhar. */}
-            <F label="Tom de voz" className="mt-3">
+            <F label="Tom de voz (marque quantos quiser)" className="mt-3">
               <div className="flex gap-1.5 flex-wrap mb-2">
                 {TONS.map((t) => {
                   const on = tomAtivo(t);
@@ -661,21 +772,21 @@ export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincroni
             <F label="Estilo de comunicação" className="mt-3"><Textarea rows={2} value={bc.communicationStyle ?? ""} onChange={(e) => setBc("communicationStyle", e.target.value)} className="rounded-xl text-sm" /></F>
           </Card>
           <Card icon={<Type />} title="Tipografia & visual">
-            <div className="rounded-xl border border-border bg-muted/40 p-5 mb-3">
-              <p className="font-display font-bold text-3xl tracking-tight text-foreground">Aa Bb Cc</p>
-              <p className="text-xs font-semibold text-muted-foreground mt-2">{bc.typography || "tipografia não definida"}</p>
-            </div>
-            <F label="Tipografia"><Input value={bc.typography ?? ""} onChange={(e) => setBc("typography", e.target.value)} placeholder="Ex: Fraunces + Inter" className="rounded-xl" /></F>
+            <EditorTipografia valor={bc.typography} aoMudar={(t) => setBc("typography", t)} chave={form.id} />
             <div className="mt-3 flex items-center gap-2 flex-wrap">
               <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => fontInputRef.current?.click()} disabled={uploadAsset.isPending}>
-                <Upload className="h-3.5 w-3.5 mr-1.5" /> Subir arquivo da fonte
+                <Upload className="h-3.5 w-3.5 mr-1.5" /> {arquivosFonte.length ? "Subir mais arquivos de fonte" : "Subir arquivos da fonte"}
               </Button>
-              {bc.typographyFileUrl && (
-                <a href={bc.typographyFileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
-                  <Download className="h-3.5 w-3.5" /> {bc.typographyFileName || "arquivo da fonte"}
-                </a>
-              )}
-              <input ref={fontInputRef} type="file" accept=".ttf,.otf,.woff,.woff2" className="hidden" onChange={onPickFont} />
+              {arquivosFonte.map((a) => (
+                <span key={a.url} className="inline-flex items-center gap-1 rounded-lg border border-border bg-card pl-2 pr-1 py-1">
+                  <a href={a.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
+                    <Download className="h-3.5 w-3.5" /> {a.name}
+                  </a>
+                  <button type="button" onClick={() => void tirarArquivoFonte(a.url)} aria-label="Tirar este arquivo"
+                    className="h-5 w-5 grid place-items-center rounded text-muted-foreground hover:text-destructive"><X className="h-3 w-3" /></button>
+                </span>
+              ))}
+              <input ref={fontInputRef} type="file" accept=".ttf,.otf,.woff,.woff2" multiple className="hidden" onChange={onPickFont} />
             </div>
             <F label="Expressão visual" className="mt-3"><Textarea rows={2} value={bc.visualExpression ?? ""} onChange={(e) => setBc("visualExpression", e.target.value)} className="rounded-xl text-sm" /></F>
           </Card>

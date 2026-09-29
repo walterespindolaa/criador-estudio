@@ -89,6 +89,20 @@ export function invalidatePostsEverywhere(
   qc.invalidateQueries({ queryKey: ["manager-calendar"] });
 }
 
+/* O "último comentário" do card é o da conversa com o CLIENTE (29/09/2026):
+   a conversa com o designer mora na mesma tabela, e o card mostrava "Prazo
+   combinado" como se fosse o pedido do cliente. Com a coluna `canal`
+   (migration 20260929000001) filtra no banco; sem ela, cai no filtro por papel. */
+async function comentariosDoCliente(ids: string[]): Promise<{ post_id: string; content: string; author_role: string }[]> {
+  type Linha = { post_id: string; content: string; author_role: string; canal?: string | null };
+  const r = await sbFrom("post_approval_comments").select("post_id, content, author_role, created_at, canal")
+    .in("post_id", ids).eq("canal", "cliente").order("created_at", { ascending: false });
+  if (!r.error) return (r.data as Linha[]) ?? [];
+  const r2 = await sbFrom("post_approval_comments").select("post_id, content, author_role, created_at")
+    .in("post_id", ids).order("created_at", { ascending: false });
+  return ((r2.data as Linha[]) ?? []).filter((c) => c.author_role !== "parceiro");
+}
+
 export function useExternalClients() {
   const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
@@ -274,8 +288,7 @@ export function useExternalPosts(clientId: string | null) {
       const ids = posts.map((p) => p.id);
       const comments: Record<string, { content: string; author_role: string }> = {};
       if (ids.length) {
-        const { data: cdata } = await sbFrom("post_approval_comments").select("post_id, content, author_role, created_at").in("post_id", ids).order("created_at", { ascending: false });
-        for (const c of (cdata as { post_id: string; content: string; author_role: string }[]) ?? []) if (!comments[c.post_id]) comments[c.post_id] = { content: c.content, author_role: c.author_role };
+        for (const c of await comentariosDoCliente(ids)) if (!comments[c.post_id]) comments[c.post_id] = { content: c.content, author_role: c.author_role };
       }
       return posts.map((p) => ({ ...p, last_comment: comments[p.id]?.content ?? null, last_comment_role: comments[p.id]?.author_role ?? null }))
         // Ordem manual do kanban (board_order asc); created_at desc como desempate.
@@ -479,8 +492,7 @@ export function useAllExternalPosts() {
       const ids = posts.filter((p) => p.approval_status === "ajuste_solicitado").map((p) => p.id);
       const comments: Record<string, { content: string; author_role: string }> = {};
       if (ids.length) {
-        const { data: cdata } = await sbFrom("post_approval_comments").select("post_id, content, author_role, created_at").in("post_id", ids).order("created_at", { ascending: false });
-        for (const c of (cdata as { post_id: string; content: string; author_role: string }[]) ?? []) if (!comments[c.post_id]) comments[c.post_id] = { content: c.content, author_role: c.author_role };
+        for (const c of await comentariosDoCliente(ids)) if (!comments[c.post_id]) comments[c.post_id] = { content: c.content, author_role: c.author_role };
       }
       return posts.map((p) => ({ ...p, last_comment: comments[p.id]?.content ?? p.last_comment ?? null, last_comment_role: comments[p.id]?.author_role ?? p.last_comment_role ?? null }));
     },

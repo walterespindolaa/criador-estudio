@@ -20,7 +20,7 @@ import { CronogramaBoard } from "@/components/accounts/CronogramaBoard";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { useEditorialLines } from "@/hooks/useEditorialLines";
-import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X, ChevronDown, History, Hash, Check } from "lucide-react";
+import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X, ChevronDown, History, Hash, Check, Users } from "lucide-react";
 import { usePostApprovalComments } from "@/hooks/useApprovals";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { Calendar } from "@/components/ui/calendar";
@@ -104,7 +104,11 @@ function fmtDateTimeBR(iso: string): string {
 // último): cada pedido de ajuste do cliente ("cliente_externo") e cada reenvio
 // nosso ("social_media"). Fica recolhido por padrão pra não poluir o editor.
 function ApprovalHistory({ postId }: { postId: string }) {
-  const { comments, isLoading } = usePostApprovalComments(postId);
+  const { comments: todos, isLoading } = usePostApprovalComments(postId);
+  /* SÓ A CONVERSA COM O CLIENTE (Walter, 29/09/2026). A conversa com o
+     designer mora na mesma tabela e aparecia aqui ("Prazo combinado", papo de
+     produção). Ela tem lugar próprio: o card do parceiro e Equipe > Conversas. */
+  const comments = todos.filter((c) => c.author_role !== "parceiro" && (c as { canal?: string | null }).canal !== "parceiro");
   const [open, setOpen] = useState(false);
   if (isLoading || comments.length === 0) return null;
   return (
@@ -719,7 +723,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         </div>
       )}
       {view === "calendario" ? (
-        <PostsCalendar posts={viewPosts} onOpen={openEdit} onNewAt={(d) => openNew(d)}
+        <PostsCalendar posts={viewPosts} onOpen={openEdit} onNewAt={(d) => openNew(d)} parceiroDe={nomeParceiro}
           onMove={(id, d) => setDate.mutate({ id, scheduled_date: d })}
           tagsByPost={tagsByPost} tagCatalog={tagCatalog} />
       ) : isLoading ? (
@@ -1275,8 +1279,11 @@ function calYmd(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1)
 // Semana começa no DOMINGO (padrão do iPhone/calendários BR).
 function calWeekStart(d: Date) { const x = new Date(d); x.setDate(x.getDate() - x.getDay()); x.setHours(0, 0, 0, 0); return x; }
 
-function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog }: {
+function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog, parceiroDe }: {
   posts: ExternalPost[];
+  /** Quem da equipe está com a peça (Walter, 29/09/2026: "quando está com
+   *  alguém da equipe, dá pra ficar uma tag ao lado do status?"). */
+  parceiroDe?: (id: string | null | undefined) => { nome: string; role: string } | null;
   onOpen: (p: ExternalPost) => void;
   onNewAt: (day: string) => void;
   onMove: (id: string, day: string) => void;
@@ -1366,7 +1373,22 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog 
                     type="button" onClick={(e) => { if (mover.movendo) { e.stopPropagation(); mover.soltarEm(iso); return; } e.stopPropagation(); onOpen(p); }}
                     style={{ ...formatColorVars(p.format), borderLeftWidth: 3 }}
                     className={`relative block w-full min-w-0 overflow-hidden rounded-lg border border-border ${FORMAT_BORDER_CLASS} bg-card px-1.5 py-1 text-left hover:bg-muted/40 transition-shadow cursor-grab active:cursor-grabbing ${dragId === p.id ? "opacity-50 shadow-lg" : ""}`}>
-                    <span className={`text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full ${st?.cls ?? ""}`}>{st?.label ?? "Pendente"}</span>
+                    <span className="flex items-center gap-1 min-w-0">
+                      <span className={`shrink-0 text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full ${st?.cls ?? ""}`}>{st?.label ?? "Pendente"}</span>
+                      {/* Com alguém da equipe: pílula violeta com o primeiro nome
+                          (a cor de "parceiro" no app todo). Entregue fica verde. */}
+                      {p.assignee_id && (() => {
+                        const quem = parceiroDe?.(p.assignee_id);
+                        const entregue = p.producao_status === "entregue";
+                        return (
+                          <span title={quem ? `Com ${quem.nome}${entregue ? " (entregue)" : ""}` : "Com parceiro"}
+                            className={`min-w-0 inline-flex items-center gap-0.5 text-[9px] font-body font-bold px-1.5 py-0.5 rounded-full ${entregue ? "bg-green-600 text-white" : "bg-violet-600 text-white"}`}>
+                            <Users className="h-2.5 w-2.5 shrink-0" />
+                            <span className="truncate">{quem ? quem.nome.split(" ")[0] : "Parceiro"}</span>
+                          </span>
+                        );
+                      })()}
+                    </span>
                     <p className="text-[11px] font-body font-semibold text-foreground leading-tight truncate mt-0.5">{p.title}</p>
                     {/* Formato e etiquetas na MESMA linha: a célula é apertada, então
                         a etiqueta entra como bolinha colorida (nome no tooltip). */}

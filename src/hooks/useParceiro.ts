@@ -453,6 +453,27 @@ export function useCachesDosParceiros(managerId: string | null) {
   });
 }
 
+/* ═══ A CONVERSA DE PRODUÇÃO TEM CANAL PRÓPRIO (Walter, 29/09/2026) ═══
+   Designer e cliente conversam na mesma tabela, e a social mídia escreve com
+   o mesmo papel nas duas. O que separa é `canal` (migration 20260929000001):
+   tudo que a social mídia escreve PRO PARCEIRO vai marcado 'parceiro'. Se a
+   migration ainda não rodou, grava sem a coluna em vez de quebrar a conversa. */
+async function inserirNaConversaDoParceiro(linha: Record<string, unknown>) {
+  const { error } = await sbFrom("post_approval_comments").insert({ ...linha, canal: "parceiro" });
+  if (error && /canal/i.test(error.message ?? "")) {
+    const { error: e2 } = await sbFrom("post_approval_comments").insert(linha);
+    return { error: e2 };
+  }
+  return { error };
+}
+
+/** Faz parte da conversa com o parceiro? Com a coluna, decide o canal; sem
+ *  ela (banco antigo), vale o papel como antes. */
+function daConversaDoParceiro(c: { author_role: string; canal?: string | null }) {
+  if (c.canal) return c.canal === "parceiro";
+  return c.author_role === "parceiro" || c.author_role === "social_media";
+}
+
 /* ── CONVERSA DO CARD (lado social mídia) ──────────────────────────────────
    O parceiro já conversa pela RPC. A dona lê e escreve direto na thread
    (post_approval_comments), que a RLS dela permite. Só os papéis do time
@@ -467,23 +488,24 @@ export function useConversaDoCard(postId: string | null) {
     ...SINCRONIA,
     enabled: !!postId,
     queryFn: async () => {
+      // select("*") traz `canal` quando existe, sem quebrar quando não existe.
       const { data, error } = await sbFrom("post_approval_comments")
-        .select("id, author_role, content, created_at")
+        .select("*")
         .eq("post_id", postId)
         .in("author_role", ["parceiro", "social_media"])
         .order("created_at", { ascending: true })
-        .limit(200);
+        .limit(300);
       if (error) {
         if (aindaNaoExisteNoBanco(error.message)) return [];
         throw error;
       }
-      return (data ?? []) as MensagemCard[];
+      return ((data ?? []) as (MensagemCard & { canal?: string | null })[]).filter(daConversaDoParceiro);
     },
   });
   const enviar = useMutation({
     mutationFn: async (texto: string) => {
       const { data: sess } = await supabase.auth.getUser();
-      const { error } = await sbFrom("post_approval_comments").insert({
+      const { error } = await inserirNaConversaDoParceiro({
         post_id: postId, author_id: sess.user?.id ?? null, author_role: "social_media", content: texto.trim(),
       });
       if (error) throw error;
@@ -511,7 +533,7 @@ export function useConversaDoCard(postId: string | null) {
       if (upErr) throw new Error(upErr.message);
       const { data: pub } = supabase.storage.from("media").getPublicUrl(caminho);
       const legenda = v.legenda?.trim();
-      const { error } = await sbFrom("post_approval_comments").insert({
+      const { error } = await inserirNaConversaDoParceiro({
         post_id: postId, author_id: uid, author_role: "social_media",
         content: legenda ? `${legenda}\n${pub.publicUrl}` : pub.publicUrl,
       });
@@ -598,7 +620,7 @@ export function useProporPrazo() {
       const [a, m, d] = v.data.split("-");
       let txt = `Prazo: propôs ${d}/${m}/${a}`;
       if (v.motivo?.trim()) txt += ` (${v.motivo.trim().slice(0, 300)})`;
-      await sbFrom("post_approval_comments").insert({ post_id: v.postId, author_id: uid, author_role: "social_media", content: txt });
+      await inserirNaConversaDoParceiro({ post_id: v.postId, author_id: uid, author_role: "social_media", content: txt });
       return v.postId;
     },
     onSuccess: (postId) => {
@@ -925,9 +947,9 @@ export function useResolverPrazoSugerido() {
       if (error) throw error;
       if (!data) throw new Error("Não consegui fechar o prazo. Recarregue e tente de novo.");
       const [a, m, d] = v.dataAceita.split("-");
-      const { error: cErr } = await sbFrom("post_approval_comments").insert({
+      const { error: cErr } = await inserirNaConversaDoParceiro({
         post_id: v.postId, content: `Prazo combinado: ${d}/${m}/${a}`, author_role: "social_media",
-      } as never);
+      });
       if (cErr) throw cErr;
     },
     onSuccess: () => {
@@ -956,9 +978,9 @@ export function usePedirAjuste() {
          esse último comentário ainda era o da rodada ANTERIOR: o parceiro
          recebia o motivo velho e refazia a coisa errada. Gravando o motivo
          primeiro, o gatilho lê o texto certo. */
-      const { error: cErr } = await sbFrom("post_approval_comments").insert({
+      const { error: cErr } = await inserirNaConversaDoParceiro({
         post_id: v.postId, content: `Ajuste: ${motivo}`.slice(0, 4000), author_role: "social_media",
-      } as never);
+      });
       if (cErr) throw cErr;
       const { data, error } = await sbFrom("posts")
         .update({ producao_status: "ajuste" } as never)
