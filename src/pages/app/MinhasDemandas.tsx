@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import {
   Briefcase, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
   Copy as CopyIcon, ExternalLink, Folder, ImagePlus, Link2, Loader2, MessageCircle, Palette,
-  History, MapPin, PanelRightClose, PauseCircle, Pencil, Play, Plus, RotateCcw, Send, Sparkles, X,
+  History, MapPin, PauseCircle, Pencil, Play, Plus, RotateCcw, Send, Sparkles, X,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import { hrefSeguro } from "@/lib/href-seguro";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { FichaDaMarca } from "@/pages/parceiro/Marcas";
 import { ErroAoCarregar } from "@/components/shared/ErroAoCarregar";
@@ -26,7 +27,7 @@ import { CamadaDeAlfinetes, segundoBonito } from "@/components/shared/CamadaDeAl
 import {
   ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useConversaDoCard, useCoresDasAgencias, useEntreguesDoParceiro,
   useFilaDoParceiro, useMarcarConversaLida, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useProporPrazo, useResolverPrazoSugerido, useVersoesDaPeca,
-  type CardDaFila, type EntregueDoParceiro, type MarcaDoParceiro, type MarcaLiberada, type VersaoDaPeca,
+  type CardAberto, type CardDaFila, type EntregueDoParceiro, type MarcaDoParceiro, type MarcaLiberada, type VersaoDaPeca,
 } from "@/hooks/useParceiro";
 import {
   useEtapasPessoais, useMetasDosCards, useSalvarCardMeta,
@@ -1306,10 +1307,37 @@ function PainelTexto({ titulo, texto, aoCopiar, cor }: {
               </p>
             );
           }
-          return <p key={i} className="text-[14px] font-body leading-relaxed text-foreground/90 mt-1.5 first:mt-0">{linha}</p>;
+          return <p key={i} className="text-[14px] font-body leading-relaxed text-foreground/90 mt-1.5 first:mt-0"><TextoComLinks texto={linha} /></p>;
         })}
       </div>
     </div>
+  );
+}
+
+/* LINK NO TEXTO VIRA LINK (Walter, 28/09/2026: "o link do material da marca
+   não está vindo clicável, vem em formato de texto"). O brandbook, o recado e
+   o briefing são texto livre, e a social mídia cola link no meio deles
+   ("Material da Marca: https://drive..."). Aqui o link vira clicável, curto na
+   tela e inteiro no hover. Só http(s) vira link (lib/href-seguro). */
+function TextoComLinks({ texto }: { texto: string }) {
+  const partes = texto.split(/(https?:\/\/[^\s<>"')\]]+)/g);
+  return (
+    <>
+      {partes.map((p, i) => {
+        const h = /^https?:\/\//i.test(p) ? hrefSeguro(p.replace(/[.,;:!?]+$/, "")) : undefined;
+        if (!h) return <span key={i}>{p}</span>;
+        const sobra = p.slice(h.length);
+        const curto = h.replace(/^https?:\/\/(www\.)?/, "");
+        return (
+          <span key={i}>
+            <a href={h} target="_blank" rel="noopener noreferrer" title={h}
+              className="font-semibold text-primary underline underline-offset-2 break-all">
+              {curto.length > 42 ? `${curto.slice(0, 40)}…` : curto}
+            </a>{sobra}
+          </span>
+        );
+      })}
+    </>
   );
 }
 
@@ -1371,7 +1399,7 @@ function MarcaNoCard({ m, cor, agencia, aoEditar, aoCopiar }: {
               {d.evitar && (
                 <div className="rounded-lg border border-red-200 bg-red-50/70 px-3 py-2">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-red-800 mb-0.5">Evite</p>
-                  <p className="text-[13px] font-body text-foreground whitespace-pre-line leading-relaxed">{d.evitar}</p>
+                  <p className="text-[13px] font-body text-foreground whitespace-pre-line leading-relaxed"><TextoComLinks texto={d.evitar} /></p>
                 </div>
               )}
               {d.paleta && (
@@ -1388,7 +1416,7 @@ function MarcaNoCard({ m, cor, agencia, aoEditar, aoCopiar }: {
                       ))}
                     </div>
                   )}
-                  <p className="text-[12.5px] font-body text-foreground/85 whitespace-pre-line leading-relaxed line-clamp-4">{d.paleta}</p>
+                  <p className="text-[12.5px] font-body text-foreground/85 whitespace-pre-line leading-relaxed line-clamp-4"><TextoComLinks texto={d.paleta} /></p>
                 </div>
               )}
               {cheias.length > 0 && (
@@ -1396,7 +1424,7 @@ function MarcaNoCard({ m, cor, agencia, aoEditar, aoCopiar }: {
                   {cheias.map(([r, v]) => (
                     <div key={r} className="min-w-0">
                       <dt className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{r}</dt>
-                      <dd className="text-[12.5px] font-body text-foreground/90 whitespace-pre-line leading-relaxed line-clamp-4">{v}</dd>
+                      <dd className="text-[12.5px] font-body text-foreground/90 whitespace-pre-line leading-relaxed line-clamp-4"><TextoComLinks texto={v ?? ""} /></dd>
                     </div>
                   ))}
                 </dl>
@@ -1488,20 +1516,81 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
     ? minhasMarcas.find((m) => m.external_client_id === card.external_client_id) ?? null
     : null;
   const [fichaAberta, setFichaAberta] = useState<MarcaDoParceiro | null>(null);
-  /* A COLUNA DO MEIO PODE SER RECOLHIDA (Walter, 28/09/2026). Lembrada no
-     navegador: quem prefere o briefing largo não precisa recolher de novo em
-     cada card. */
-  const [lateralAberta, setLateralAberta] = useState<boolean>(() => {
-    try { return localStorage.getItem("cria.card.lateral") !== "recolhida"; } catch { return true; }
-  });
-  /* Prazo esperando resposta DESTE lado: a coluna abre sozinha, mesmo
-     recolhida. Esconder o "topo/sugerir outra data" seria esconder a ação. */
-  const prazoNaMinhaMao = !!card && (agencia ? card.prazo_status === "negociando" : card.prazo_status === "proposto");
-  const colunaVisivel = lateralAberta || prazoNaMinhaMao;
-  const alternarLateral = (aberta: boolean) => {
-    setLateralAberta(aberta);
-    try { localStorage.setItem("cria.card.lateral", aberta ? "aberta" : "recolhida"); } catch { /* sem storage */ }
+  /* O PRAZO NA FAIXA DE CIMA (28/09/2026). O bloco inteiro (topar, sugerir,
+     propor com motivo) abre num popover a partir da pílula; o "Topo" rápido
+     fica visível direto na faixa quando a bola está com quem está olhando. */
+  const [prazoAberto, setPrazoAberto] = useState(false);
+  const renderPrazo = (card: CardAberto) => {
+                  const st = card.prazo_status;
+                  const euSouAgencia = !!agencia;
+                  const bolaComigo = euSouAgencia ? st === "negociando" : st === "proposto";
+                  const outro = euSouAgencia ? (agencia?.nomeDoParceiro?.split(" ")[0] ?? "o parceiro") : (card.agencia.split(" ")[0] || "a social mídia");
+                  const dataEmJogo = st === "negociando" ? card.prazo_sugerido : card.prazo_producao;
+                  const atrasado = st !== "negociando" && !!card.prazo_producao && card.prazo_producao <= hojeBR() && card.producao_status !== "entregue";
+                  const tom = bolaComigo ? "border-amber-300 bg-amber-50/70" : st === "negociando" || st === "proposto" ? "border-blue-200 bg-blue-50/70" : atrasado ? "border-red-200 bg-red-50" : "border-border bg-background";
+                  const titulo = st === "negociando" ? "Prazo em negociação" : st === "proposto" ? "Prazo proposto" : "Entrega combinada";
+
+                  const aceitar = () => {
+                    if (euSouAgencia && card.prazo_sugerido) resolverPrazo.mutate({ postId: card.id, dataAceita: card.prazo_sugerido });
+                    else responderPrazo.mutate({ aceita: true });
+                  };
+                  const propor = () => {
+                    if (!dataProposta) return;
+                    if (euSouAgencia) proporPrazo.mutate({ postId: card.id, data: dataProposta, motivo: motivoProposta });
+                    else responderPrazo.mutate({ aceita: false, sugestao: dataProposta, motivo: motivoProposta });
+                    setPropondo(false); setDataProposta(""); setMotivoProposta("");
+                  };
+                  const ocupado = proporPrazo.isPending || responderPrazo.isPending || resolverPrazo.isPending;
+
+                  return (
+                    <div className={cn("rounded-xl border px-3.5 py-3 space-y-2", tom)}>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Clock className="h-3 w-3" /> {titulo}
+                      </p>
+                      <p className={cn("font-display font-extrabold text-lg", atrasado ? "text-red-600" : "text-foreground")}>
+                        {dataEmJogo ? dataBR(dataEmJogo) : "A combinar"}
+                      </p>
+                      {st === "negociando" && !euSouAgencia && (
+                        <p className="text-[12px] font-body text-blue-800/80">Você sugeriu. Aguardando {outro}.</p>
+                      )}
+                      {st === "negociando" && euSouAgencia && (
+                        <p className="text-[12px] font-body text-amber-900/80">{outro} sugeriu essa data (o combinado era {dataBR(card.prazo_producao)}).</p>
+                      )}
+                      {st === "proposto" && euSouAgencia && (
+                        <p className="text-[12px] font-body text-blue-800/80">Aguardando {outro} topar.</p>
+                      )}
+
+                      {!propondo ? (
+                        <div className="space-y-1.5 pt-0.5">
+                          {bolaComigo && (
+                            <Button size="sm" className="w-full rounded-xl" disabled={ocupado} onClick={aceitar}>
+                              {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Topo {dataEmJogo ? dataBR(dataEmJogo) : "esse prazo"}</>}
+                            </Button>
+                          )}
+                          <button type="button" onClick={() => { setPropondo(true); setDataProposta(card.prazo_producao ?? ""); }}
+                            className={cn("w-full text-[12px] font-body font-bold", bolaComigo ? "text-amber-800" : "text-primary")}>
+                            {bolaComigo ? "Sugerir outra data" : card.prazo_producao ? "Propor outra data" : "Propor uma data"}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <input type="date" value={dataProposta} min={hojeBR()} onChange={(e) => setDataProposta(e.target.value)}
+                            className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[12.5px] font-body" />
+                          <input type="text" value={motivoProposta} onChange={(e) => setMotivoProposta(e.target.value)}
+                            placeholder="Motivo (opcional, ex.: semana cheia)"
+                            className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[12.5px] font-body" />
+                          <div className="flex gap-1.5">
+                            <Button size="sm" className="flex-1 rounded-xl" disabled={!dataProposta || ocupado} onClick={propor}>
+                              {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar"}
+                            </Button>
+                            <Button size="sm" variant="ghost" className="rounded-xl" onClick={() => setPropondo(false)}>Cancelar</Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
   };
+
   // Histórico de versões: só busca quando ele abre (a query espera o postId).
   const [vendoHistorico, setVendoHistorico] = useState(false);
   const { data: versoes = [], isLoading: carregandoVersoes } = useVersoesDaPeca(vendoHistorico ? postId : null);
@@ -1595,13 +1684,13 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   </>
                 );
               })()}
-              <div className="relative flex items-start gap-3 px-5 pt-4 pb-4">
+              <div className="relative flex flex-wrap items-start gap-x-3 gap-y-2.5 px-5 pt-4 pb-4">
                 {card.marca.logo && (
                   <span className="w-11 h-11 rounded-full bg-white/95 border-2 border-white/70 overflow-hidden grid place-items-center shrink-0 shadow-lg">
                     <img src={card.marca.logo} alt="" className="w-full h-full object-contain" loading="lazy" />
                   </span>
                 )}
-                <span className="min-w-0 flex-1 pr-10">
+                <span className="min-w-0 flex-1 pr-10 md:pr-0 basis-[60%]">
                   <span className="flex items-center gap-2 min-w-0">
                     <span className="text-[12px] font-body font-bold text-white/85 truncate">
                       {card.marca.nome || "Cliente"}
@@ -1629,6 +1718,63 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     {card.publica_em && <> · publica em {dataBR(card.publica_em)}</>}
                   </span>
                 </span>
+                {/* ═══ PRAZO E AÇÕES NA FAIXA (Walter, 28/09/2026) ═══
+                    Moravam numa coluna do meio que, sem material e marca,
+                    tinha sobrado só com a data. Agora ficam aqui em cima: a
+                    pílula do prazo (abre o combinado completo), o "Topo" rápido
+                    quando a resposta é de quem olha, e o atalho do lado. No
+                    celular a fileira desce pra baixo do título. */}
+                {(() => {
+                  const st = card.prazo_status;
+                  const bolaComigo = agencia ? st === "negociando" : st === "proposto";
+                  const dataEmJogo = st === "negociando" ? card.prazo_sugerido : card.prazo_producao;
+                  const atrasado = st !== "negociando" && !!card.prazo_producao && card.prazo_producao <= hojeBR() && card.producao_status !== "entregue";
+                  const rotulo = st === "negociando" ? "Prazo em negociação" : st === "proposto" ? "Prazo proposto" : "Entrega";
+                  const ocupado = responderPrazo.isPending || resolverPrazo.isPending;
+                  return (
+                    <div className="w-full md:w-auto md:mr-11 flex flex-wrap items-center gap-2 md:justify-end shrink-0">
+                      <Popover open={prazoAberto} onOpenChange={setPrazoAberto}>
+                        <PopoverTrigger asChild>
+                          <button type="button"
+                            className={cn("inline-flex items-center gap-1.5 rounded-full px-3 h-9 text-[12.5px] font-body font-bold shadow-sm transition-colors",
+                              bolaComigo ? "bg-amber-300 text-amber-950 hover:bg-amber-200"
+                                : atrasado ? "bg-red-600 text-white hover:bg-red-500"
+                                : "bg-white/95 text-foreground hover:bg-white")}>
+                            <Clock className="h-3.5 w-3.5" />
+                            {/* No celular o rótulo encurta pra pílula e o Topo caberem numa linha. */}
+                            <span className="hidden sm:inline">{rotulo}</span><span className="sm:hidden">Prazo</span>
+                            {" "}{dataEmJogo ? dataBR(dataEmJogo) : "a combinar"}
+                            <ChevronRight className="h-3.5 w-3.5 rotate-90 opacity-70" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-[290px] p-2 rounded-2xl">
+                          {renderPrazo(card)}
+                        </PopoverContent>
+                      </Popover>
+                      {bolaComigo && dataEmJogo && (
+                        <Button size="sm" className="rounded-full h-9 bg-white text-foreground hover:bg-white/90 shadow-sm" disabled={ocupado}
+                          onClick={() => {
+                            if (agencia && card.prazo_sugerido) resolverPrazo.mutate({ postId: card.id, dataAceita: card.prazo_sugerido });
+                            else responderPrazo.mutate({ aceita: true });
+                          }}>
+                          {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1" /> Topo {dataBR(dataEmJogo)}</>}
+                        </Button>
+                      )}
+                      {agencia && (
+                        <Button size="sm" className="rounded-full h-9 bg-white text-foreground hover:bg-white/90 shadow-sm" onClick={agencia.irAoPost}
+                          title="Pra editar a peça, trocar o prazo ou o cachê">
+                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Ir até o post
+                        </Button>
+                      )}
+                      {!agencia && card.producao_status === "entregue" && (
+                        <Button size="sm" className="rounded-full h-9 bg-white text-foreground hover:bg-white/90 shadow-sm" disabled={marcar.isPending}
+                          onClick={() => marcar.mutate({ status: "em_producao" })}>
+                          <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Reabrir
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
             {/* TRÊS COLUNAS NO DESKTOP (Walter, 09/09/2026): briefing | conversa |
@@ -1641,10 +1787,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
             {/* grid-cols-[minmax(0,1fr)] no celular: sem isso a coluna única
                 crescia até o conteúdo mais largo do bloco de entrega e o card do
                 parceiro vazava pra direita (teste visual de 28/09/2026). */}
-            <div className={cn("flex-1 min-h-0 grid grid-cols-[minmax(0,1fr)] overflow-y-auto lg:overflow-hidden",
-              colunaVisivel
-                ? "md:grid-cols-[minmax(0,1fr)_280px] lg:grid-cols-[minmax(0,1fr)_280px_370px]"
-                : "lg:grid-cols-[minmax(0,1fr)_370px]")}>
+            <div className="flex-1 min-h-0 grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_370px] overflow-y-auto lg:overflow-hidden">
               <div className="p-5 lg:order-1 lg:overflow-y-auto">
                 {/* ESPECIFICAÇÕES: a maior fonte de ida e volta na pesquisa é
                     peça sem spec (proporção, medida, nº de artes). Aqui elas já
@@ -1697,48 +1840,6 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   )}
                 </div>
 
-                {/* ═══ O PRAZO QUANDO A COLUNA ESTÁ RECOLHIDA (28/09/2026) ═══
-                    Recolher a coluna do meio não pode esconder a data: ela
-                    vira uma pílula aqui em cima, e tocar nela reabre a coluna. */}
-                {/* No celular a coluna do prazo cai lá embaixo, depois do
-                    briefing inteiro. A pílula leva até ela. */}
-                {(
-                  <button type="button"
-                    onClick={() => document.getElementById("bloco-prazo")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                    className="md:hidden mt-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-[12px] font-body font-bold text-foreground">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    {card.prazo_status === "negociando" ? "Prazo em negociação"
-                      : card.prazo_status === "proposto" ? "Prazo proposto: responder" : "Entrega"}
-                    {" "}{(card.prazo_status === "negociando" ? card.prazo_sugerido : card.prazo_producao)
-                      ? dataBR((card.prazo_status === "negociando" ? card.prazo_sugerido : card.prazo_producao)!) : "a combinar"}
-                  </button>
-                )}
-                {!colunaVisivel && (
-                  <div className="hidden md:flex flex-wrap items-center gap-2 mt-3">
-                  <button type="button" onClick={() => alternarLateral(true)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-[12px] font-body font-bold text-foreground hover:border-primary/40 transition-colors">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    {card.prazo_status === "negociando" ? "Prazo em negociação"
-                      : card.prazo_status === "proposto" ? "Prazo proposto" : "Entrega"}
-                    {" "}{(card.prazo_status === "negociando" ? card.prazo_sugerido : card.prazo_producao)
-                      ? dataBR((card.prazo_status === "negociando" ? card.prazo_sugerido : card.prazo_producao)!) : "a combinar"}
-                    <span className="text-primary font-semibold ml-1">mostrar coluna</span>
-                  </button>
-                  {/* As ações da coluna não somem junto com ela. */}
-                  {agencia && (
-                    <Button size="sm" className="rounded-full h-8" onClick={agencia.irAoPost}>
-                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Ir até o post
-                    </Button>
-                  )}
-                  {!agencia && card.producao_status === "entregue" && (
-                    <Button size="sm" variant="outline" className="rounded-full h-8" disabled={marcar.isPending}
-                      onClick={() => marcar.mutate({ status: "em_producao" })}>
-                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Reabrir
-                    </Button>
-                  )}
-                  </div>
-                )}
-
                 {/* ═══ O RECADO FIXO DA SOCIAL MÍDIA (Canal da marca, 28/09/2026) ═══
                     A regra que vale pra toda peça deste cliente. Primeira coisa
                     que o parceiro lê, antes do briefing. */}
@@ -1747,7 +1848,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     <p className="text-[11px] font-bold uppercase tracking-wider text-amber-900 mb-1">
                       Recado fixo {agencia ? "(o parceiro vê isto em todo card)" : "da social mídia pra este cliente"}
                     </p>
-                    <p className="text-[13.5px] font-body text-foreground whitespace-pre-line leading-relaxed">{card.canal_recado}</p>
+                    <p className="text-[13.5px] font-body text-foreground whitespace-pre-line leading-relaxed"><TextoComLinks texto={card.canal_recado} /></p>
                   </div>
                 )}
 
@@ -1830,7 +1931,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                 {card.notas?.trim() && (
                   <div className="mt-4">
                     <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Observações da social mídia</p>
-                    <p className="text-sm font-body whitespace-pre-line bg-amber-50/60 border border-amber-200 rounded-xl px-3 py-2.5 leading-relaxed">{card.notas}</p>
+                    <p className="text-sm font-body whitespace-pre-line bg-amber-50/60 border border-amber-200 rounded-xl px-3 py-2.5 leading-relaxed"><TextoComLinks texto={card.notas} /></p>
                   </div>
                 )}
 
@@ -2243,152 +2344,9 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                 </div>}
               </div>
 
-              {/* A COLUNA DA DIREITA: prazo, marca, material, ações. */}
-              {/* Uma superfície só, dividida por fio de 1px (Walter, 09/09/2026:
-                  "essa divisão tá muito grosseira"). Antes cada coluna tinha
-                  fundo e fio colorido próprios, e o card virava três blocos
-                  empilhados de cores diferentes. A cor da marca aparece na capa
-                  e nos detalhes, não em tapetes. */}
-              {(
-              /* Recolhida só do tablet pra cima: no celular ela é a pilha de
-                 baixo e nunca atrapalhou (e a escolha feita no computador não
-                 pode sumir com o prazo do celular). */
-              <div className={cn("border-l border-border p-4 space-y-4 md:order-2 lg:overflow-y-auto", !colunaVisivel && "md:hidden")}>
-                {/* RECOLHER A COLUNA (Walter, 28/09/2026: "conseguir minimizar
-                    essa parte do meio"). Só no tablet/desktop, onde ela disputa
-                    largura com o briefing. A escolha fica lembrada. */}
-                <div className={cn("hidden justify-end -mt-1 -mb-2", !prazoNaMinhaMao && "md:flex")}>
-                  <button type="button" onClick={() => alternarLateral(false)}
-                    className="inline-flex items-center gap-1 text-[11.5px] font-body font-semibold text-muted-foreground hover:text-foreground">
-                    <PanelRightClose className="h-3.5 w-3.5" /> recolher coluna
-                  </button>
-                </div>
-                {/* O PRAZO É COMBINADO, NÃO IMPOSTO. Proposto = o parceiro topa
-                    ou sugere outra data (com motivo, que entra na conversa);
-                    negociando = a bola está com a social mídia. Enquanto isso,
-                    o card segue produzível: negociar data não trava trabalho. */}
-                {/* ═══ O PRAZO, NEGOCIÁVEL DOS DOIS LADOS (Walter, 20/09/2026) ═══
-                    Antes só o parceiro respondia, e só enquanto estava
-                    "proposto". Aceitou, acabou: mudar exigia reenviar o post.
-                    Agora qualquer um dos lados pode propor outra data a
-                    qualquer momento, e o outro topa ou contrapropõe. Cada
-                    proposta vira uma linha na conversa, com motivo. */}
-                {(() => {
-                  const st = card.prazo_status;
-                  const euSouAgencia = !!agencia;
-                  const bolaComigo = euSouAgencia ? st === "negociando" : st === "proposto";
-                  const outro = euSouAgencia ? (agencia?.nomeDoParceiro?.split(" ")[0] ?? "o parceiro") : (card.agencia.split(" ")[0] || "a social mídia");
-                  const dataEmJogo = st === "negociando" ? card.prazo_sugerido : card.prazo_producao;
-                  const atrasado = st !== "negociando" && !!card.prazo_producao && card.prazo_producao <= hojeBR() && card.producao_status !== "entregue";
-                  const tom = bolaComigo ? "border-amber-300 bg-amber-50/70" : st === "negociando" || st === "proposto" ? "border-blue-200 bg-blue-50/70" : atrasado ? "border-red-200 bg-red-50" : "border-border bg-background";
-                  const titulo = st === "negociando" ? "Prazo em negociação" : st === "proposto" ? "Prazo proposto" : "Entrega combinada";
-
-                  const aceitar = () => {
-                    if (euSouAgencia && card.prazo_sugerido) resolverPrazo.mutate({ postId: card.id, dataAceita: card.prazo_sugerido });
-                    else responderPrazo.mutate({ aceita: true });
-                  };
-                  const propor = () => {
-                    if (!dataProposta) return;
-                    if (euSouAgencia) proporPrazo.mutate({ postId: card.id, data: dataProposta, motivo: motivoProposta });
-                    else responderPrazo.mutate({ aceita: false, sugestao: dataProposta, motivo: motivoProposta });
-                    setPropondo(false); setDataProposta(""); setMotivoProposta("");
-                  };
-                  const ocupado = proporPrazo.isPending || responderPrazo.isPending || resolverPrazo.isPending;
-
-                  return (
-                    <div id="bloco-prazo" className={cn("rounded-xl border px-3.5 py-3 space-y-2 scroll-mt-4", tom)}>
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                        <Clock className="h-3 w-3" /> {titulo}
-                      </p>
-                      <p className={cn("font-display font-extrabold text-lg", atrasado ? "text-red-600" : "text-foreground")}>
-                        {dataEmJogo ? dataBR(dataEmJogo) : "A combinar"}
-                      </p>
-                      {st === "negociando" && !euSouAgencia && (
-                        <p className="text-[12px] font-body text-blue-800/80">Você sugeriu. Aguardando {outro}.</p>
-                      )}
-                      {st === "negociando" && euSouAgencia && (
-                        <p className="text-[12px] font-body text-amber-900/80">{outro} sugeriu essa data (o combinado era {dataBR(card.prazo_producao)}).</p>
-                      )}
-                      {st === "proposto" && euSouAgencia && (
-                        <p className="text-[12px] font-body text-blue-800/80">Aguardando {outro} topar.</p>
-                      )}
-
-                      {!propondo ? (
-                        <div className="space-y-1.5 pt-0.5">
-                          {bolaComigo && (
-                            <Button size="sm" className="w-full rounded-xl" disabled={ocupado} onClick={aceitar}>
-                              {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="h-4 w-4 mr-1.5" /> Topo {dataEmJogo ? dataBR(dataEmJogo) : "esse prazo"}</>}
-                            </Button>
-                          )}
-                          <button type="button" onClick={() => { setPropondo(true); setDataProposta(card.prazo_producao ?? ""); }}
-                            className={cn("w-full text-[12px] font-body font-bold", bolaComigo ? "text-amber-800" : "text-primary")}>
-                            {bolaComigo ? "Sugerir outra data" : card.prazo_producao ? "Propor outra data" : "Propor uma data"}
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="space-y-1.5">
-                          <input type="date" value={dataProposta} min={hojeBR()} onChange={(e) => setDataProposta(e.target.value)}
-                            className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[12.5px] font-body" />
-                          <input type="text" value={motivoProposta} onChange={(e) => setMotivoProposta(e.target.value)}
-                            placeholder="Motivo (opcional, ex.: semana cheia)"
-                            className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-[12.5px] font-body" />
-                          <div className="flex gap-1.5">
-                            <Button size="sm" className="flex-1 rounded-xl" disabled={!dataProposta || ocupado} onClick={propor}>
-                              {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar"}
-                            </Button>
-                            <Button size="sm" variant="ghost" className="rounded-xl" onClick={() => setPropondo(false)}>Cancelar</Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {/* O CACHÊ SAIU DAQUI (Walter, 09/09/2026): boa parte do
-                    trabalho é fechada por PACOTE mensal, e um valor por peça
-                    solto no card ou mentia sobre o combinado ou virava
-                    negociação no meio da produção. Dinheiro fica no Caixa da
-                    agência, que é onde o acerto acontece de verdade. */}
-
-                {/* MARCA E MATERIAL SAÍRAM DAQUI (28/09/2026): viraram a faixa
-                    "Material e referências" no topo do briefing, onde o parceiro
-                    vê sem rolar. Esta coluna fica só com prazo e ações. */}
-
-                {/* A ENTREGA SAIU DAQUI (Walter, 09/09/2026): a coluna de 260px
-                    espremia upload, campo de link e três botões um em cima do
-                    outro. Entregar é o ato principal do card, então foi pra
-                    coluna larga, logo abaixo da legenda. Aqui ficam só prazo,
-                    marca, material e estado. */}
-                {agencia && (
-                  <div className="pt-1 space-y-2">
-                    <Button className="w-full rounded-xl" onClick={agencia.irAoPost}>
-                      <ExternalLink className="h-4 w-4 mr-1.5" /> Ir até o post
-                    </Button>
-                    <p className="text-[11px] font-body text-muted-foreground leading-relaxed">
-                      Aqui você vê exatamente o que o parceiro vê e conversa com ele. Pra editar a peça,
-                      trocar o prazo ou o cachê, vá até o post.
-                    </p>
-                  </div>
-                )}
-                {!agencia && card.producao_status !== "entregue" && (
-                  <p className="text-[11px] font-body text-muted-foreground leading-relaxed pt-1">
-                    Terminou? O bloco <b className="text-foreground">Sua entrega</b> fica logo abaixo da
-                    legenda, do lado esquerdo.
-                  </p>
-                )}
-                {!agencia && card.producao_status === "entregue" && (
-                  <div className="pt-1 space-y-2">
-                    <p className="rounded-xl border border-green-200 bg-green-50/70 px-3 py-2.5 text-[12px] font-body text-green-900 leading-snug">
-                      Entregue. A social mídia revisa e manda pro cliente aprovar.
-                    </p>
-                    <Button variant="outline" className="w-full rounded-xl" disabled={marcar.isPending}
-                      onClick={() => marcar.mutate({ status: "em_producao" })}>
-                      <RotateCcw className="h-4 w-4 mr-1.5" /> Reabrir (voltei a mexer)
-                    </Button>
-                  </div>
-                )}
-              </div>
-              )}
+              {/* A COLUNA DO MEIO SAIU (Walter, 28/09/2026: "essa parte centralizada
+                  que agora só resta a data poderia ir pro card superior"). Prazo e
+                  ações moram na faixa de cima; o corpo fica só conteúdo + conversa. */}
               {/* CONVERSA: coluna da DIREITA e chat de verdade. */}
               <ChatDoCard cor={card.marca.cor || "#4B3FA8"} mensagens={card.comentarios}
                 texto={texto} setTexto={setTexto} enviar={enviar}
@@ -2401,7 +2359,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   : (arquivo) => anexar.mutate({ arquivo, naConversa: true, legenda: texto.trim() || undefined })}
                 aoLimparTexto={() => setTexto("")}
                 rodape={agencia ? "Enter manda. O parceiro recebe o aviso na hora." : undefined}
-                colunaUnica={!colunaVisivel}
+                colunaUnica
                 quem={{
                   meuPapel: agencia ? "social_media" : "parceiro",
                   nomeParceiro: agencia?.nomeDoParceiro ?? null,
