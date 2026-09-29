@@ -1,10 +1,10 @@
-import { useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   DragDropContext, Droppable, Draggable,
   type DropResult, type DraggableProvidedDragHandleProps, type DraggableProvidedDraggableProps,
 } from "@hello-pangea/dnd";
 import {
-  useClientMaterials, type ClientMaterial, type MaterialAttachment, type MaterialStatus,
+  useClientMaterials, type ClientMaterial, type MaterialAttachment, type MaterialKind, type MaterialStatus,
 } from "@/hooks/useClientMaterials";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { confirmar } from "@/components/shared/Confirm";
-import { Plus, MoreVertical, Loader2, User, CalendarDays, Paperclip, Upload, Link2, X, FileText, ExternalLink, GripVertical, Pencil, Trash2 } from "lucide-react";
+import { Plus, MoreVertical, Loader2, User, CalendarDays, Paperclip, Upload, Link2, X, FileText, ExternalLink, GripVertical, Pencil, Trash2, MessageCircle, Send } from "lucide-react";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { cn } from "@/lib/utils";
 import { parseDateOnly } from "@/lib/date-br";
@@ -26,6 +26,24 @@ import { OrdemDataToggle } from "@/components/shared/OrdemDataToggle";
 import { useOrdemPorData } from "@/hooks/useOrdemPorData";
 import { useExternalClients } from "@/hooks/useCriaPost";
 import { ordenarPorData } from "@/lib/ordenar-por-data";
+import { useSearchParams } from "react-router-dom";
+import { MoneyInput } from "@/components/shared/MoneyInput";
+import { brlReais } from "@/lib/money";
+import { ROTULO_PAPEL, useMeusParceiros } from "@/hooks/useParceiro";
+import { TIPO_MATERIAL, useDelegarMaterial } from "@/hooks/useMaterialParceiro";
+import { MaterialAbertoDialog } from "@/components/parceiro/MaterialAbertoDialog";
+
+/* Tipos que aparecem no seletor (Gabriela, 29/09/2026: "apresentação, cartão
+   de visita, flyer e etc"). O tipo vai pro card do parceiro, que sabe na hora
+   que tipo de peça é sem ler o briefing inteiro. */
+const TIPOS_NO_SELETOR: MaterialKind[] = ["apresentacao", "cartao_visita", "flyer", "arte_avulsa", "logo", "outro"];
+
+const ETAPA_PARCEIRO: Record<string, { txt: string; cls: string }> = {
+  aguardando: { txt: "Novo", cls: "bg-orange-100 text-orange-700" },
+  em_producao: { txt: "Fazendo", cls: "bg-blue-100 text-blue-700" },
+  ajuste: { txt: "Em ajuste", cls: "bg-violet-100 text-violet-700" },
+  entregue: { txt: "Entregue", cls: "bg-green-100 text-green-700" },
+};
 
 const COLUMNS: { key: MaterialStatus; label: string; dot: string }[] = [
   { key: "solicitado", label: "Solicitado", dot: "bg-amber-500" },
@@ -42,8 +60,12 @@ function fmtDate(d: string | null): string | null {
   } catch { return null; }
 }
 
-type FormState = { title: string; description: string; due_date: string; attachments: MaterialAttachment[] };
-const EMPTY: FormState = { title: "", description: "", due_date: "", attachments: [] };
+type FormState = {
+  title: string; description: string; due_date: string; attachments: MaterialAttachment[]; kind: MaterialKind;
+  // "Enviar para": parceiro, prazo de produção e cachê (29/09/2026).
+  parceiroId: string; prazo: string; cache: number | null;
+};
+const EMPTY: FormState = { title: "", description: "", due_date: "", attachments: [], kind: "arte_avulsa", parceiroId: "", prazo: "", cache: null };
 
 // ARRASTE NO KANBAN DE MATERIAIS (mesmo padrão da Agenda, e pelos mesmos motivos):
 //  1) disableInteractiveElementBlocking em cada <Draggable>: sem isso o dnd cancela o
@@ -95,9 +117,41 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
   const openNew = () => { setEditing(null); setForm(EMPTY); setDriveUrl(""); setDialogOpen(true); };
   const openEdit = (m: ClientMaterial) => {
     setEditing(m);
-    setForm({ title: m.title, description: m.description ?? "", due_date: m.due_date ?? "", attachments: m.attachments ?? [] });
+    setForm({
+      title: m.title, description: m.description ?? "", due_date: m.due_date ?? "", attachments: m.attachments ?? [],
+      kind: (m.kind ?? "arte_avulsa") as MaterialKind,
+      parceiroId: m.assignee_id ?? "", prazo: m.prazo_producao ?? "", cache: m.cache_parceiro ?? null,
+    });
     setDriveUrl("");
     setDialogOpen(true);
+  };
+
+  /* PARCEIROS DA EQUIPE e o card do material (entrega + conversa). */
+  const { data: parceiros = [] } = useMeusParceiros();
+  const nomeDoParceiro = (id?: string | null) => parceiros.find((p) => p.member_id === id)?.nome ?? null;
+  const delegar = useDelegarMaterial();
+  const [materialAberto, setMaterialAberto] = useState<string | null>(null);
+  // Veio do sino (?material=): abre o card e limpa a URL.
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    const id = params.get("material");
+    if (!id) return;
+    setMaterialAberto(id);
+    const limpo = new URLSearchParams(params);
+    limpo.delete("material");
+    setParams(limpo, { replace: true });
+  }, [params, setParams]);
+
+  /* Delega DEPOIS de salvar o material (no novo, o id só existe depois do
+     insert). Só chama se algo do combinado mudou, senão cada "Salvar" do
+     briefing reenviaria o aviso pro parceiro. */
+  const delegarSeMudou = (id: string, antes: ClientMaterial | null) => {
+    const assignee = form.parceiroId || null;
+    const mudou = (antes?.assignee_id ?? null) !== assignee
+      || (antes?.prazo_producao ?? "") !== (assignee ? form.prazo : "")
+      || Number(antes?.cache_parceiro ?? 0) !== Number(assignee ? (form.cache ?? 0) : 0);
+    if (!mudou) return;
+    delegar.mutate({ id, assigneeId: assignee, prazo: form.prazo || null, cache: form.cache, nome: nomeDoParceiro(assignee) ?? undefined });
   };
 
   // Sobe os arquivos escolhidos pro Storage e anexa ao material (na hora, no form).
@@ -136,11 +190,13 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
       description: form.description.trim() || null,
       due_date: form.due_date || null,
       attachments: form.attachments,
+      kind: form.kind,
     };
     if (editing) {
-      updateMaterial.mutate({ id: editing.id, ...payload }, { onSuccess: () => setDialogOpen(false) });
+      const antes = editing;
+      updateMaterial.mutate({ id: editing.id, ...payload }, { onSuccess: () => { delegarSeMudou(antes.id, antes); setDialogOpen(false); } });
     } else {
-      createMaterial.mutate(payload, { onSuccess: () => setDialogOpen(false) });
+      createMaterial.mutate(payload, { onSuccess: (novo) => { delegarSeMudou(novo.id, null); setDialogOpen(false); } });
     }
   };
 
@@ -251,6 +307,8 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
                                 draggableProps={dragProvided.draggableProps}
                                 handleProps={dragProvided.dragHandleProps ?? undefined}
                                 dragging={dragSnapshot.isDragging}
+                                parceiroNome={nomeDoParceiro(m.assignee_id)}
+                                onAbrir={() => setMaterialAberto(m.id)}
                                 onEdit={() => openEdit(m)} onRemove={() => remove(m)} onMove={(s) => move(m, s)} />
                             )}
                           </Draggable>
@@ -275,6 +333,18 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
             <div>
               <label className="text-xs font-body font-semibold text-muted-foreground">Título</label>
               <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Ex.: Flyer de aniversário" className="mt-1" autoFocus />
+            </div>
+            <div>
+              <label className="text-xs font-body font-semibold text-muted-foreground">Tipo</label>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {TIPOS_NO_SELETOR.map((k) => (
+                  <button key={k} type="button" onClick={() => setForm({ ...form, kind: k })}
+                    className={cn("rounded-full border px-3 py-1 text-[12px] font-body font-semibold transition-colors",
+                      form.kind === k ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
+                    {TIPO_MATERIAL[k]}
+                  </button>
+                ))}
+              </div>
             </div>
             <div>
               <label className="text-xs font-body font-semibold text-muted-foreground">Briefing</label>
@@ -320,6 +390,43 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
                 </ul>
               )}
             </div>
+
+            {/* ENVIAR PARA (Gabriela, 29/09/2026): o material vai pro parceiro
+                com o mesmo circuito dos posts. Aviso, entrega, conversa e cachê
+                no Caixa. Vale no material novo também: delega ao Salvar. */}
+            {parceiros.length > 0 && (
+              <div className="rounded-2xl border border-violet-200 bg-violet-50/50 p-3 space-y-2.5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-violet-800 flex items-center gap-1.5">
+                  <Send className="h-3.5 w-3.5" /> Enviar para
+                </p>
+                <select value={form.parceiroId} onChange={(e) => setForm({ ...form, parceiroId: e.target.value })}
+                  aria-label="Parceiro" className="w-full h-9 rounded-xl border border-border bg-card px-3 text-[13px] font-body">
+                  <option value="">Ninguém (a equipe faz)</option>
+                  {parceiros.map((p) => (
+                    <option key={p.member_id} value={p.member_id}>{p.nome} · {ROTULO_PAPEL[p.role] ?? p.role}</option>
+                  ))}
+                </select>
+                {form.parceiroId && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[11px] font-body font-semibold text-muted-foreground">Prazo pro parceiro</label>
+                      <Input type="date" value={form.prazo} onChange={(e) => setForm({ ...form, prazo: e.target.value })} className="mt-1 h-9 rounded-xl bg-card" />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-body font-semibold text-muted-foreground">Cachê</label>
+                      <MoneyInput value={form.cache} onChange={(v) => setForm({ ...form, cache: v })} className="mt-1 h-9 rounded-xl bg-card" />
+                    </div>
+                  </div>
+                )}
+                <p className="text-[11px] font-body text-violet-900/70 leading-snug">
+                  {editing?.assignee_id && form.parceiroId && editing.assignee_id !== form.parceiroId
+                    ? "Trocar de parceiro recomeça o material do zero com a pessoa nova."
+                    : form.parceiroId
+                      ? "O parceiro recebe o aviso ao salvar. O cachê entra no Caixa quando ele entregar."
+                      : editing?.assignee_id ? "Salvar assim tira o material do parceiro." : "Escolha alguém pra delegar."}
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             {/* Excluir DENTRO da edição: o Walter tentou apagar por aqui e não
@@ -338,12 +445,15 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MaterialAbertoDialog materialId={materialAberto} aoFechar={() => setMaterialAberto(null)} />
     </div>
   );
 }
 
-function MaterialCard({ m, onEdit, onRemove, onMove, innerRef, draggableProps, handleProps, dragging }: {
+function MaterialCard({ m, onEdit, onRemove, onMove, innerRef, draggableProps, handleProps, dragging, parceiroNome, onAbrir }: {
   m: ClientMaterial; onEdit: () => void; onRemove: () => void; onMove: (s: MaterialStatus) => void;
+  parceiroNome?: string | null; onAbrir?: () => void;
   innerRef?: (el: HTMLElement | null) => void;
   draggableProps?: DraggableProvidedDraggableProps;
   handleProps?: DraggableProvidedDragHandleProps;
@@ -425,7 +535,39 @@ function MaterialCard({ m, onEdit, onRemove, onMove, innerRef, draggableProps, h
             <CalendarDays className="h-3 w-3" /> {due}
           </span>
         )}
+        {m.kind && m.kind !== "arte_avulsa" && TIPO_MATERIAL[m.kind] && (
+          <span className="text-[10px] font-body font-bold rounded-md px-1.5 py-0.5 bg-muted text-muted-foreground">{TIPO_MATERIAL[m.kind]}</span>
+        )}
       </div>
+      {/* COM O PARCEIRO: quem, em que etapa, e o atalho pra entrega e a
+          conversa. Entregue e ainda não revisado ganha destaque verde. */}
+      {m.assignee_id && (
+        <div className={cn("mt-2.5 rounded-xl border px-2.5 py-2",
+          m.producao_status === "entregue" && !["em_aprovacao", "finalizado"].includes(m.status)
+            ? "border-green-300 bg-green-50" : "border-violet-200 bg-violet-50/60")}>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="w-5 h-5 rounded-full bg-gradient-to-br from-violet-400 to-violet-700 text-white grid place-items-center text-[9px] font-bold shrink-0">
+              {(parceiroNome ?? "P").charAt(0).toUpperCase()}
+            </span>
+            <span className="text-[11.5px] font-body font-semibold text-foreground truncate max-w-[110px]">{parceiroNome?.split(" ")[0] ?? "Parceiro"}</span>
+            {m.producao_status && ETAPA_PARCEIRO[m.producao_status] && (
+              <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full", ETAPA_PARCEIRO[m.producao_status].cls)}>
+                {ETAPA_PARCEIRO[m.producao_status].txt}
+              </span>
+            )}
+            {m.cache_parceiro != null && Number(m.cache_parceiro) > 0
+              ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-50 text-green-800 border border-green-200">{brlReais(Number(m.cache_parceiro))}</span>
+              : <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">sem cachê</span>}
+          </div>
+          {onAbrir && (
+            <button type="button" onClick={(e) => { e.stopPropagation(); onAbrir(); }}
+              className="mt-1.5 inline-flex items-center gap-1 text-[11.5px] font-body font-bold text-violet-700 hover:underline">
+              <MessageCircle className="h-3.5 w-3.5" />
+              {m.producao_status === "entregue" && !["em_aprovacao", "finalizado"].includes(m.status) ? "Revisar entrega" : "Entrega e conversa"}
+            </button>
+          )}
+        </div>
+      )}
     </article>
   );
 }

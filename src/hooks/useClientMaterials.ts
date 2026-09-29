@@ -7,7 +7,7 @@ import { toast } from "sonner";
 // é nova e ainda não está no types.ts gerado, então usamos o cast sbFrom, igual
 // ao resto do CRM (useCrm/useModules).
 export type MaterialStatus = "solicitado" | "a_fazer" | "em_aprovacao" | "ajuste" | "finalizado";
-export type MaterialKind = "apresentacao" | "flyer" | "arte_avulsa" | "post_carrossel" | "logo" | "outro";
+export type MaterialKind = "apresentacao" | "flyer" | "arte_avulsa" | "post_carrossel" | "logo" | "cartao_visita" | "outro";
 export type MaterialOrigin = "gestor" | "cliente";
 
 // Anexo de um material: arquivo subido pro Storage ("file") ou link colado do
@@ -37,6 +37,14 @@ export type ClientMaterial = {
   position: number;
   created_at: string;
   updated_at: string;
+  // Produção com parceiro (migration 20260929000003). Opcionais: antes dela
+  // rodar, o select("*") simplesmente não traz.
+  assignee_id?: string | null;
+  producao_status?: "aguardando" | "em_producao" | "ajuste" | "entregue" | null;
+  prazo_producao?: string | null;
+  cache_parceiro?: number | null;
+  revisoes?: number | null;
+  entregue_em?: string | null;
 };
 
 export type MaterialInput = {

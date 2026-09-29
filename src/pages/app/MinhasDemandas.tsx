@@ -18,6 +18,7 @@ import { hojeBR } from "@/lib/date-br";
 import { hrefSeguro } from "@/lib/href-seguro";
 import { parseRefLinks, refLinkHref, refLinkLabel } from "@/lib/refLinks";
 import { PainelDaAgenciaNoCard } from "@/components/accounts/RevisaoDaEntrega";
+import { MateriaisDoParceiro } from "@/components/parceiro/MateriaisDoParceiro";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -210,6 +211,10 @@ export default function MinhasDemandas() {
               aoTentarDeNovo={() => void refetch()} tentando={isFetching} />
           </div>
         )}
+
+        {/* MATERIAIS (apresentação, flyer, cartão): faixa própria, só quando
+            existe. Não entram nas visões abaixo porque não são posts. */}
+        <MateriaisDoParceiro hoje={hoje} soAgencia={soAgencia} />
 
         {/* O SELETOR DE VISÃO: as quatro do mockup aprovado. Pílulas no accent,
             como as abas do resto do app. */}
