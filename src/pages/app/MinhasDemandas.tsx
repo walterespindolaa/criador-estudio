@@ -1650,8 +1650,13 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
             {/* A capa encolheu (Walter, 09/09/2026): 112px de degradê com dois
                 círculos translúcidos ocupavam a primeira dobra e não diziam
                 nada. Vira uma faixa fina de identificação, como o cabeçalho de
-                card do Trello. */}
-            <div className="relative shrink-0 overflow-hidden"
+                card do Trello.
+                OVERFLOW-CLIP, NÃO HIDDEN (29/09/2026): o logo borrado em
+                scale(1.8) deixa a faixa com 1.7x de largura "rolável". Com
+                hidden, o navegador rolava a faixa pro lado quando o foco voltava
+                do popover do prazo, e o título e a foto sumiam pela esquerda.
+                Clip corta igual, mas não deixa rolar. */}
+            <div className="relative shrink-0 overflow-clip"
               style={{ background: `linear-gradient(135deg, ${card.marca.cor || "#4B3FA8"}, ${card.marca.cor || "#4B3FA8"}cc)` }}>
               {card.marca.logo && (
                 <img src={card.marca.logo} alt="" aria-hidden draggable={false}
