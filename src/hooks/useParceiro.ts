@@ -997,6 +997,95 @@ export function usePedirAjuste() {
   });
 }
 
+/** APROVAR A ENTREGA DO PARCEIRO (Walter, 29/09/2026: "tá pra eu revisar, mas
+ *  não tem onde eu dar check que tá ok").
+ *
+ *  A lista "Pra você revisar" é: entregue pelo parceiro e ainda NÃO foi pro
+ *  cliente (approval_status fora de pendente/aprovado/postado). Então "tá ok"
+ *  tem que tirar a peça dali, e o jeito que já existe no fluxo é o próximo
+ *  passo dela:
+ *   - `cliente`: vai pra "Aguardando cliente" (pendente), igual a mover o card
+ *     no quadro do Cria Post. É o caminho normal.
+ *   - `direto`: cliente que não aprova peça a peça. Vai direto pra "Aprovado".
+ *  Nenhuma coluna nova: o que marca "revisei" é a peça andar no quadro.
+ *  O recado entra na conversa com o parceiro, pra ele saber que fechou. */
+export function useAprovarEntrega() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { postId: string; destino: "cliente" | "direto" }) => {
+      const status = v.destino === "cliente" ? "pendente" : "aprovado";
+      const { data, error } = await sbFrom("posts")
+        .update({ approval_status: status, approval_updated_at: new Date().toISOString() } as never)
+        .eq("id", v.postId).select("id").maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Não consegui aprovar. Recarregue e tente de novo.");
+      // Recado é cortesia: se falhar, a aprovação já valeu e não desfaz.
+      await inserirNaConversaDoParceiro({
+        post_id: v.postId,
+        content: v.destino === "cliente" ? "Entrega aprovada ✅ Seguiu pro cliente aprovar." : "Entrega aprovada ✅",
+        author_role: "social_media",
+      });
+      return v;
+    },
+    onSuccess: (v) => {
+      void qc.invalidateQueries({ queryKey: ["external-posts"] });
+      void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
+      void qc.invalidateQueries({ queryKey: ["parceiro-card"] });
+      toast.success(v.destino === "cliente" ? "Aprovada. A peça foi pra \"Aguardando cliente\"." : "Aprovada.");
+    },
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui aprovar.")),
+  });
+}
+
+/** SÓ O CACHÊ (Walter, 29/09/2026: "acabei não colocando de uns, queria
+ *  revisar todos"). Mexe numa coluna só, de propósito: o "Enviar para"
+ *  regrava parceiro e prazo junto, e aqui ela só quer acertar o valor sem
+ *  arriscar reabrir o combinado. O gatilho `lancar_cache_parceiro` cuida do
+ *  Caixa: corrige a despesa que existe e, desde a migration de 29/09, lança
+ *  a que faltava quando a peça já tinha sido entregue sem valor. */
+export function useAtualizarCache() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { postId: string; cache: number | null }) => {
+      const valor = v.cache && v.cache > 0 ? Math.round(v.cache * 100) / 100 : null;
+      const { data, error } = await sbFrom("posts")
+        .update({ cache_parceiro: valor } as never)
+        .eq("id", v.postId).select("id").maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Não consegui salvar o cachê. Recarregue e tente de novo.");
+      return valor;
+    },
+    onSuccess: (valor) => {
+      void qc.invalidateQueries({ queryKey: ["external-posts"] });
+      void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
+      void qc.invalidateQueries({ queryKey: ["caches-parceiros"] });
+      void qc.invalidateQueries({ queryKey: ["parceiro-card"] });
+      toast.success(valor ? "Cachê salvo." : "Cachê removido.");
+    },
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui salvar o cachê.")),
+  });
+}
+
+/** Logo e cor de cada cliente, lidas da FICHA do CRM (Walter, 29/09/2026: "dá
+ *  pra deixar o ícone com a logo?"). O portal (external_clients) quase nunca
+ *  tem logo própria: quem tem é a ficha. Uma consulta pra todos os clientes
+ *  do quadro, pelo id do CRM. */
+export function useMarcaDosClientes(crmIds: string[]) {
+  const ids = [...new Set(crmIds.filter(Boolean))].sort();
+  return useQuery<Map<string, { logo: string | null; color: string | null }>>({
+    queryKey: ["marca-dos-clientes", ids],
+    enabled: ids.length > 0,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("crm_clients").select("id, logo, color").in("id", ids);
+      if (error) throw error;
+      const m = new Map<string, { logo: string | null; color: string | null }>();
+      for (const r of (data ?? []) as { id: string; logo: string | null; color: string | null }[]) m.set(r.id, { logo: r.logo, color: r.color });
+      return m;
+    },
+  });
+}
+
 /** Delegar um card: quem escreve é a DONA do post, então aqui é update direto
  *  na tabela (a RLS dela já permite). `assignee_id` null remove a delegação.
  *

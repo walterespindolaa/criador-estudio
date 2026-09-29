@@ -17,6 +17,7 @@ import { formatColorVars, FORMAT_CHIP_SOLID_CLASS, FORMAT_CHIP_SOFT_CLASS } from
 import { hojeBR } from "@/lib/date-br";
 import { hrefSeguro } from "@/lib/href-seguro";
 import { parseRefLinks, refLinkHref, refLinkLabel } from "@/lib/refLinks";
+import { PainelDaAgenciaNoCard } from "@/components/accounts/RevisaoDaEntrega";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -1845,6 +1846,13 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     </span>
                   )}
                 </div>
+
+                {/* Só a social mídia vê: revisar a entrega (Tá ok / Pedir
+                    ajuste) e o cachê, sem sair do card (29/09/2026). */}
+                {agencia && (
+                  <PainelDaAgenciaNoCard postId={card.id} producaoStatus={card.producao_status}
+                    aprovacao={card.aprovacao} cache={card.cache} nomeParceiro={agencia.nomeDoParceiro} />
+                )}
 
                 {/* ═══ O RECADO FIXO DA SOCIAL MÍDIA (Canal da marca, 28/09/2026) ═══
                     A regra que vale pra toda peça deste cliente. Primeira coisa

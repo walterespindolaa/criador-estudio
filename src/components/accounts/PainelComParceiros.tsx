@@ -14,8 +14,41 @@ import {
   type PecaExterna,
 } from "@/hooks/useParceiro";
 import { brlReais } from "@/lib/money";
+import { FORMAT_CHIP_SOLID_CLASS, formatColorVars } from "@/lib/format-colors";
+import { useMarcaDosClientes } from "@/hooks/useParceiro";
+import { AcoesDeRevisao } from "@/components/accounts/RevisaoDaEntrega";
 
 const brl = brlReais;
+
+/* ETIQUETA DE FORMATO NA COR DO FORMATO (Walter, 29/09/2026: "deixar
+   coloridinho as etiquetas de formato"). Mesma língua do resto do app:
+   carrossel verde, reels azul, estático laranja. */
+function ChipFormato({ formato, className }: { formato: string | null; className?: string }) {
+  if (!formato) return null;
+  return (
+    <span style={formatColorVars(formato)}
+      className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", FORMAT_CHIP_SOLID_CLASS, className)}>
+      {FORMATO[formato] ?? formato}
+    </span>
+  );
+}
+
+/* O CACHÊ À VISTA NO CARD (Walter, 29/09/2026: "acabei não colocando de uns,
+   queria revisar todos"). Com valor: discreto. Sem valor: âmbar, pra saltar. */
+function ChipCache({ valor }: { valor: number | null }) {
+  const n = Number(valor ?? 0);
+  return n > 0
+    ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-50 text-green-800 border border-green-200 tabular-nums">{brl(n)}</span>
+    : <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">sem cachê</span>;
+}
+
+/* Fundo "beeem clarinho" da cor do cliente (Walter, 29/09/2026). Só aceita
+   hex de 6 dígitos: é o que a ficha grava; qualquer outra coisa cai no cinza
+   padrão em vez de virar CSS inválido. */
+function tintaDoCliente(cor: string | null | undefined): React.CSSProperties | undefined {
+  if (!cor || !/^#[0-9a-f]{6}$/i.test(cor)) return undefined;
+  return { backgroundColor: `${cor}14`, borderColor: `${cor}40` };
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    COM PARCEIROS: a produção externa vista pela social mídia
@@ -106,6 +139,7 @@ function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
   }, []);
 
   const minhas = useMemo(() => pecas.filter((p) => p.assignee_id === quem), [pecas, quem]);
+  const { data: marcas } = useMarcaDosClientes(extClients.map((c) => c.crm_client_id ?? "").filter(Boolean));
 
   const colunas = useMemo(() => {
     const mapa = new Map<string, { abertas: PecaExterna[]; entregues: PecaExterna[] }>();
@@ -154,13 +188,14 @@ function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
               {ETAPA[p.producao_status].txt}
             </span>
           )}
-          {p.format && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[p.format] ?? p.format}</span>}
+          <ChipFormato formato={p.format} />
           {(p.revisoes ?? 0) > 0 && (
             <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full",
               (p.revisoes ?? 0) >= 3 ? "bg-red-100 text-red-700" : "bg-violet-100 text-violet-700")}>
               {p.revisoes}ª rev.
             </span>
           )}
+          <ChipCache valor={p.cache_parceiro} />
         </span>
         <span className="block font-display font-bold text-[13px] leading-snug line-clamp-3">{p.title || "Sem título"}</span>
         <span className="block mt-2">
@@ -217,12 +252,18 @@ function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
            78vw no celular, 260px no desktop. */
         <div className="flex gap-3 overflow-x-auto pb-3 -mx-1 px-1 snap-x">
           {colunas.map((col) => {
-            const cor = col.cliente?.color || col.cliente?.brand_color || null;
+            // A ficha do CRM manda (é onde a Gabriela cadastra logo e cor);
+            // o portal é o reserva.
+            const ficha = col.cliente?.crm_client_id ? marcas?.get(col.cliente.crm_client_id) : undefined;
+            const cor = ficha?.color || col.cliente?.color || col.cliente?.brand_color || null;
+            const logo = ficha?.logo || col.cliente?.logo_url || null;
+            const tinta = tintaDoCliente(cor);
             return (
-              <div key={col.id} className="w-[78vw] max-w-[260px] shrink-0 snap-start rounded-2xl bg-muted/40 border border-border p-2.5">
+              <div key={col.id} style={tinta}
+                className={cn("w-[78vw] max-w-[260px] shrink-0 snap-start rounded-2xl border p-2.5", tinta ? "" : "bg-muted/40 border-border")}>
                 <div className="flex items-center gap-2 px-1 mb-2.5">
-                  {col.cliente?.logo_url
-                    ? <img src={col.cliente.logo_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+                  {logo
+                    ? <img src={logo} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 bg-white ring-1 ring-black/5" />
                     : <span className="w-6 h-6 rounded-full shrink-0 grid place-items-center text-[10px] font-bold text-white"
                         style={{ backgroundColor: cor ?? "#9ca3af" }}>
                         {(col.cliente?.name ?? "?").charAt(0).toUpperCase()}
@@ -343,13 +384,14 @@ function QuadroDeProducao({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
               title={pc ? `${pc.nome} · ${ROTULO_PAPEL[pc.role] ?? pc.role}` : "Parceiro"}>
               {(pc?.nome ?? "P").charAt(0).toUpperCase()}
             </span>
-            {p.format && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[p.format] ?? p.format}</span>}
+            <ChipFormato formato={p.format} className="px-1.5" />
             {(p.revisoes ?? 0) > 0 && (
               <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full",
                 (p.revisoes ?? 0) >= 3 ? "bg-red-100 text-red-700" : "bg-violet-100 text-violet-700")}>
                 {p.revisoes}ª rev.
               </span>
             )}
+            <ChipCache valor={p.cache_parceiro} />
             {p.prazo_status === "negociando" && (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800">prazo pra responder</span>
             )}
@@ -525,7 +567,7 @@ export function PainelComParceiros({ clientes }: {
           {p.external_client_id && clientes[p.external_client_id] && (
             <span className="text-[11.5px] font-body font-semibold text-foreground/85">{clientes[p.external_client_id]}</span>
           )}
-          {p.format && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[p.format] ?? p.format}</span>}
+          <ChipFormato formato={p.format} />
           {p.producao_status && ETAPA[p.producao_status] && (
             <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", ETAPA[p.producao_status].cls)}>
               {ETAPA[p.producao_status].txt}
@@ -566,13 +608,27 @@ export function PainelComParceiros({ clientes }: {
                 <CheckCircle2 className="h-3.5 w-3.5" /> Pra você revisar ({praRevisar.length})
               </p>
               <Card className="rounded-2xl border-green-200 bg-green-50/40 overflow-hidden divide-y divide-green-100">
-                {praRevisar.map((p) => linhaPeca(p,
-                  <span className="text-[11px] font-bold text-green-700 bg-green-100 rounded-full px-2.5 py-1">
-                    {/* entregue_em é gravado na transição de status. `updated_at`
-                        mudava a cada edição e mostrava a data errada aqui. */}
-                    entregue {p.entregue_em ? new Date(p.entregue_em).toLocaleDateString("pt-BR") : ""}
-                  </span>))}
+                {/* Linha + ações (Walter, 29/09/2026: "não tem onde eu dar
+                    check que tá ok ou pedir ajuste"). As ações ficam FORA do
+                    botão da linha: botão dentro de botão é HTML inválido e o
+                    clique vazava pra abrir o card. */}
+                {praRevisar.map((p) => (
+                  <div key={p.id}>
+                    {linhaPeca(p,
+                      <span className="text-[11px] font-bold text-green-700 bg-green-100 rounded-full px-2.5 py-1">
+                        {/* entregue_em é gravado na transição de status. `updated_at`
+                            mudava a cada edição e mostrava a data errada aqui. */}
+                        entregue {p.entregue_em ? new Date(p.entregue_em).toLocaleDateString("pt-BR") : ""}
+                      </span>)}
+                    <div className="px-4 pb-3 -mt-1">
+                      <AcoesDeRevisao postId={p.id} nomeParceiro={nomeParceiro.get(p.assignee_id)?.nome} compacto />
+                    </div>
+                  </div>
+                ))}
               </Card>
+              <p className="text-[11px] font-body text-muted-foreground mt-1.5 px-0.5">
+                Abra a peça pra ver o material. <b>Tá ok</b> manda pra "Aguardando cliente"; <b>Pedir ajuste</b> devolve pro parceiro com o motivo.
+              </p>
             </section>
           )}
 
@@ -614,7 +670,7 @@ export function PainelComParceiros({ clientes }: {
               </Card>
               <p className="text-[11px] font-body text-muted-foreground mt-1.5 px-0.5">
                 Enquanto o valor estiver em branco, a peça não entra no seu Caixa nem no "a receber" do parceiro.
-                Abra o post e preencha o cachê no "Enviar para": corrigir ali não desfaz a entrega.
+                Clique na peça e preencha o "Cachê desta peça" no card: salva só o valor, sem mexer na entrega nem no prazo.
               </p>
             </section>
           )}
