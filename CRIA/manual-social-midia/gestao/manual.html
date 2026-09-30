@@ -1,0 +1,262 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Manual Cria Gestão · Cria</title><style>@font-face{font-family:"Baloo 2";font-weight:600;src:url(baloo-2-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Baloo 2";font-weight:700;src:url(baloo-2-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Baloo 2";font-weight:800;src:url(baloo-2-latin-800-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:400;src:url(nunito-sans-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:400;font-style:italic;src:url(nunito-sans-latin-400-italic.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:600;src:url(nunito-sans-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:700;src:url(nunito-sans-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:800;src:url(nunito-sans-latin-800-normal.woff2) format("woff2")}
+
+
+:root{
+  --laranja:#EA4918; --verde:#01A652; --azul:#0061EE; --rosa:#FF77B9; --amarelo:#FFCF03; --lilas:#7C90F0;
+  --ink:#141311; --muted:#6B665C; --line:#E9E3D5; --paper:#FDFBF5; --surface:#FFFFFF;
+}
+@page{size:A4;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#d9d4c7}
+body{font-family:"Nunito Sans",sans-serif;color:var(--ink);font-size:10.4pt;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:210mm;height:297mm;background:var(--paper);position:relative;overflow:hidden;padding:17mm 16mm 20mm;page-break-after:always;break-after:page}
+.page:last-child{page-break-after:auto}
+h1,h2,h3,h4,.display{font-family:"Baloo 2",sans-serif;line-height:1.05;letter-spacing:-.01em}
+h2{font-size:25pt;font-weight:800}
+h3{font-size:14pt;font-weight:800;margin:0 0 2.5mm}
+h4{font-size:11.5pt;font-weight:800;margin:0 0 1.5mm}
+p{margin:0 0 2.6mm}
+b,strong{font-weight:800}
+.muted{color:var(--muted)}
+.small{font-size:8.8pt}
+
+/* rodapé */
+.rodape{position:absolute;left:16mm;right:16mm;bottom:9mm;display:flex;align-items:center;justify-content:space-between;font-size:8pt;color:var(--muted)}
+.rodape img{height:6.5mm}
+.rodape .num{font-family:"Baloo 2";font-weight:800;font-size:11pt;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:.6mm 3.2mm}
+
+/* abertura de seção */
+.abre{border-radius:9mm;padding:7.5mm 10mm 7mm;color:#fff;position:relative;overflow:hidden;margin-bottom:5.5mm}
+.abre .n{font-family:"Baloo 2";font-weight:800;font-size:11pt;opacity:.85;letter-spacing:.08em}
+.abre h2{color:#fff;margin:1mm 0 2mm;font-size:27pt}
+.abre p{color:rgba(255,255,255,.92);font-size:11pt;max-width:130mm;margin:0}
+.abre .bolha{position:absolute;border-radius:50%;background:rgba(255,255,255,.14)}
+.abre.amarelo{color:var(--ink)} .abre.amarelo h2{color:var(--ink)} .abre.amarelo p{color:rgba(20,19,17,.8)}
+.bg-laranja{background:var(--laranja)} .bg-verde{background:var(--verde)} .bg-azul{background:var(--azul)}
+.bg-rosa{background:#E9559A} .bg-amarelo{background:var(--amarelo)} .bg-lilas{background:#5F74E3}
+
+/* blocos */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:5.5mm;padding:5mm 5.5mm}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:4.5mm}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm}
+.stack>*+*{margin-top:4mm}
+.dica{border-radius:5mm;padding:4mm 5mm;background:#FFF6CC;border:1px solid #F4DC72;display:flex;gap:3mm;align-items:flex-start}
+.dica .ic{font-family:"Baloo 2";font-weight:800;background:var(--amarelo);border-radius:99px;min-width:7mm;height:7mm;display:grid;place-items:center;font-size:10pt}
+.alerta{border-radius:5mm;padding:4mm 5mm;background:#FFE6F1;border:1px solid #FBB6D5;display:flex;gap:3mm;align-items:flex-start}
+.alerta .ic{font-family:"Baloo 2";font-weight:800;background:#E9559A;color:#fff;border-radius:99px;min-width:7mm;height:7mm;display:grid;place-items:center;font-size:10pt}
+.dica p:last-child,.alerta p:last-child{margin:0}
+
+/* passos */
+.passos{counter-reset:p;display:flex;flex-direction:column;gap:3.2mm}
+.passo{display:flex;gap:3.5mm;align-items:flex-start}
+.passo .bola{counter-increment:p;min-width:8.5mm;height:8.5mm;border-radius:99px;background:var(--ink);color:#fff;font-family:"Baloo 2";font-weight:800;font-size:11.5pt;display:grid;place-items:center}
+.passo .bola::before{content:counter(p)}
+.passo.verde .bola{background:var(--verde)} .passo.laranja .bola{background:var(--laranja)} .passo.azul .bola{background:var(--azul)}
+.passo p{margin:.8mm 0 0}
+.fluxo-pg .passos{gap:1.8mm}.fluxo-pg .passo p{font-size:9.4pt;line-height:1.42}.fluxo-pg .fluxo{margin-bottom:4.5mm!important}
+
+/* elementos que imitam a tela */
+.btn{display:inline-flex;align-items:center;gap:1.5mm;border-radius:99px;padding:1.2mm 3.6mm;font-weight:800;font-size:8.8pt;white-space:nowrap;border:1px solid transparent;font-family:"Nunito Sans"}
+.btn.pri{background:linear-gradient(90deg,#E4406F,#EA4918);color:#fff}
+.btn.rosa{background:#E9559A;color:#fff}
+.btn.out{background:#fff;border-color:var(--line);color:var(--ink)}
+.btn.verde{background:var(--verde);color:#fff}
+.btn.ig{background:linear-gradient(90deg,#DD2A7B,#8134AF);color:#fff}
+.chip{display:inline-block;border-radius:99px;padding:.4mm 2.4mm;font-size:8pt;font-weight:800;border:1px solid var(--line);background:#fff;white-space:nowrap}
+.chip.novo{background:#EEF1FD;border-color:#CAD2F7;color:#3C4FB8}
+.chip.fazendo{background:#FFF1E9;border-color:#F8C9B0;color:#B8390F}
+.chip.ajuste{background:#FFE6F1;border-color:#FBB6D5;color:#B42A68}
+.chip.entregue{background:#E3F6EC;border-color:#A6DEBF;color:#017A3C}
+.chip.amar{background:#FFF6CC;border-color:#F4DC72;color:#7A5B00}
+.kbd{font-family:"Nunito Sans";font-weight:800;background:#F3EFE5;border:1px solid var(--line);border-radius:1.6mm;padding:0 1.4mm;font-size:8.6pt}
+.rot{font-weight:800}
+
+/* tabela */
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:9.4pt}
+th{font-family:"Baloo 2";font-weight:800;text-align:left;font-size:9.5pt;padding:2.2mm 3mm;background:#F3EFE5;border-bottom:1px solid var(--line)}
+th:first-child{border-top-left-radius:3.5mm} th:last-child{border-top-right-radius:3.5mm}
+td{padding:2.2mm 3mm;border-bottom:1px solid var(--line);vertical-align:top;background:#fff}
+tr:last-child td:first-child{border-bottom-left-radius:3.5mm} tr:last-child td:last-child{border-bottom-right-radius:3.5mm}
+.tabela{border:1px solid var(--line);border-radius:3.5mm;overflow:hidden}
+
+/* índice */
+.indice{display:grid;grid-template-columns:1fr 1fr;gap:3.5mm}
+.indice .it{display:flex;align-items:center;gap:3.5mm;background:#fff;border:1px solid var(--line);border-radius:5mm;padding:3.4mm 4mm}
+.indice .it .n{font-family:"Baloo 2";font-weight:800;font-size:15pt;width:11mm;height:11mm;border-radius:3.5mm;display:grid;place-items:center;color:#fff}
+.indice .it b{display:block;font-family:"Baloo 2";font-size:11.5pt;line-height:1.1}
+.indice .it span{font-size:8.6pt;color:var(--muted)}
+
+/* fluxo */
+.fluxo{display:flex;align-items:stretch;gap:0}
+.fluxo .et{flex:1;background:#fff;border:1px solid var(--line);border-radius:5mm;padding:3.2mm 3mm;text-align:center;position:relative}
+.fluxo .et .t{font-family:"Baloo 2";font-weight:800;font-size:10.5pt;line-height:1.1;margin:1.4mm 0 1mm}
+.fluxo .et .d{font-size:8pt;color:var(--muted);line-height:1.35}
+.fluxo .seta{width:6mm;display:grid;place-items:center;font-family:"Baloo 2";font-weight:800;color:var(--muted);font-size:13pt}
+
+/* anatomia do card */
+.anat{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:3mm;font-size:8.6pt}
+.zona{border-radius:4mm;padding:3mm;border:1.5px dashed}
+.zona .tag{display:inline-block;font-family:"Baloo 2";font-weight:800;font-size:8.8pt;border-radius:99px;padding:.2mm 2.6mm;color:#fff;margin-bottom:1.6mm}
+.zona ul{padding-left:3.8mm;margin:0} .zona li{margin:.6mm 0}
+
+/* capa */
+.capa{padding:0;background:var(--paper)}
+.capa .topo{height:178mm;background:var(--laranja);position:relative;overflow:hidden;border-bottom-left-radius:26mm;border-bottom-right-radius:26mm}
+.capa .topo .b1{position:absolute;width:120mm;height:120mm;border-radius:50%;background:#F26A3C;right:-30mm;top:-40mm}
+.capa .topo .b2{position:absolute;width:70mm;height:70mm;border-radius:50%;background:var(--rosa);left:-18mm;bottom:-22mm;opacity:.9}
+.capa .topo .b3{position:absolute;width:26mm;height:26mm;border-radius:50%;background:var(--amarelo);right:40mm;bottom:20mm}
+.capa .logo{position:absolute;left:18mm;top:20mm;width:62mm}
+.capa .criatura{position:absolute;right:14mm;top:52mm;width:74mm;transform:rotate(8deg)}
+.capa .titulo{position:absolute;left:18mm;bottom:22mm;color:#fff;max-width:120mm}
+.capa .titulo .sobre{font-family:"Baloo 2";font-weight:800;letter-spacing:.12em;font-size:10pt;opacity:.9}
+.capa .titulo h1{font-size:52pt;font-weight:800;line-height:.92;margin:2mm 0 3mm}
+.capa .titulo p{font-size:12.5pt;opacity:.95;margin:0}
+.capa .baixo{padding:14mm 18mm 0;display:flex;gap:8mm;align-items:flex-start}
+.capa .baixo .txt{flex:1}
+.capa .baixo .txt h3{font-size:15pt}
+.capa .selo{width:40mm;transform:rotate(-10deg)}
+.pilulas{display:flex;flex-wrap:wrap;gap:2mm;margin-top:3mm}
+.pilulas span{border-radius:99px;padding:1mm 3.4mm;font-weight:800;font-size:9pt;color:#fff}
+
+.mini-tela{background:#fff;border:1px solid var(--line);border-radius:5mm;padding:3.5mm;box-shadow:0 2mm 5mm rgba(20,19,17,.05)}
+.linha-fila{display:flex;align-items:center;gap:2.4mm;padding:2.2mm 2.6mm;border:1px solid var(--line);border-radius:3.5mm;background:#fff;font-size:8.6pt}
+.linha-fila + .linha-fila{margin-top:1.8mm}
+.linha-fila .tt{font-weight:800;flex:1}
+.cor{width:3mm;height:3mm;border-radius:99px;display:inline-block}
+.col-q{background:#F6F2E8;border-radius:4mm;padding:2.5mm}
+.col-q .h{font-family:"Baloo 2";font-weight:800;font-size:9.5pt;margin-bottom:1.6mm;display:flex;justify-content:space-between}
+.mini-card{background:#fff;border:1px solid var(--line);border-radius:3mm;padding:2mm 2.2mm;font-size:7.8pt;margin-bottom:1.6mm}
+.mini-card b{display:block;font-size:8.2pt}
+.check-lista{list-style:none;padding:0;margin:0}
+.check-lista li{display:flex;gap:2.6mm;align-items:flex-start;padding:1.8mm 0;border-bottom:1px dashed var(--line)}
+.check-lista li:last-child{border-bottom:0}
+.check-lista .cx{min-width:4.6mm;height:4.6mm;border:1.6px solid var(--ink);border-radius:1.2mm;margin-top:.6mm}
+.faq h4{margin-top:0}
+.faq .q{padding:3.2mm 0;border-bottom:1px solid var(--line)}
+.faq .q:last-child{border-bottom:0}
+.print{position:relative;border-radius:4mm;overflow:hidden;border:1px solid var(--line);box-shadow:0 2mm 6mm rgba(20,19,17,.10);background:#fff;margin:0}
+.print img{width:100%;display:block}
+.pin{position:absolute;transform:translate(-50%,-50%);width:6.6mm;height:6.6mm;border-radius:99px;background:var(--laranja);color:#fff;font-family:"Baloo 2";font-weight:800;font-size:10.5pt;display:grid;place-items:center;border:.6mm solid #fff;box-shadow:0 .8mm 2.4mm rgba(0,0,0,.35);line-height:1;padding-top:.4mm}
+ol.leg{list-style:none;counter-reset:l;padding:0;margin:4mm 0 3mm;display:flex;flex-direction:column;gap:1.8mm}
+ol.leg li{counter-increment:l;display:block;position:relative;padding-left:8mm;font-size:9.3pt;line-height:1.4}
+ol.leg li::before{position:absolute;left:0;top:0;content:counter(l);min-width:5.6mm;height:5.6mm;border-radius:99px;background:var(--laranja);color:#fff;font-family:"Baloo 2";font-weight:800;font-size:9pt;display:grid;place-items:center;margin-top:.2mm;padding-top:.3mm}
+ol.leg.duas{display:grid;grid-template-columns:1fr 1fr;column-gap:6mm;row-gap:1.8mm}
+.lado{display:flex;gap:6mm;align-items:flex-start}
+.lado>div,.lado>ol{flex:1}
+.lado ol.leg{margin-top:0}
+.cel{display:flex;gap:8mm;justify-content:center}
+.cel .print{width:68mm}
+.abre{padding:6mm 10mm 6mm;margin-bottom:5mm}
+.abre h2{font-size:24pt}
+.abre p{font-size:10.5pt}
+
+.cel .print{width:62mm}
+.cel{align-items:flex-start}
+.menu-mapa{display:grid;grid-template-columns:1fr 1fr;gap:3.2mm 5mm;flex:1}
+.gm{background:#fff;border:1px solid var(--line);border-radius:4.5mm;padding:3mm 3.6mm}
+.gt{font-family:"Baloo 2";font-weight:800;font-size:8.6pt;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:1.2mm}
+.gi{display:flex;flex-direction:column;padding:1mm 0;border-bottom:1px dashed var(--line)}
+.gi:last-child{border-bottom:0}
+.gi b{font-size:9.6pt}.gi span{font-size:8.2pt;color:var(--muted);line-height:1.3}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:5mm;align-items:start}
+.cap{font-size:8.4pt;color:var(--muted);margin:1.4mm 0 0;text-align:center}
+.modcard{background:#fff;border:1px solid var(--line);border-radius:5mm;padding:3.6mm 4mm;border-left:2mm solid var(--laranja)}
+.modcard h4{margin:0 0 1mm}.modcard p{font-size:8.8pt;margin:0 0 1.4mm}.modcard .liga{font-size:8.3pt;color:var(--muted);margin:0}
+.cels4{display:grid;grid-template-columns:repeat(4,1fr);gap:4mm;align-items:start}
+.cels4 .print{border-radius:5mm}
+.stack .modcard + .modcard{margin-top:3mm}
+/* PDF sem sombra: o Preview do Mac desenha box-shadow como bloco cinza. */
+.print{box-shadow:none!important;border:1.2px solid #DDD5C3}
+.pin{box-shadow:none!important;background:var(--pin,#E0441A)!important;border:.7mm solid #fff!important;outline:.35mm solid var(--pin,#E0441A);width:6.2mm;height:6.2mm;font-size:10pt}
+ol.leg li::before{background:var(--pin,#E0441A)!important}
+.mini-tela,.indice .it,.card,.gm,.modcard{box-shadow:none!important}
+</style></head><body><section class="page capa" style="--pin:#D6337F">
+  <div class="topo" style="background:#C22A73">
+    <div class="b1" style="background:#E0559A"></div><div class="b2" style="background:var(--amarelo);bottom:-56mm;left:-30mm"></div><div class="b3" style="background:var(--laranja)"></div>
+    <img class="logo" src="logo-cria-white.png" alt="Cria">
+    <img class="criatura" src="criatura-lampada.png" alt="">
+    <div class="titulo">
+      <div class="sobre">CRIA SOCIAL CLUB · MANUAL DA SOCIAL MÍDIA</div>
+      <h1>Cria Gestão</h1>
+      <p>O CRM de quem vive de social mídia: carteira, ficha completa do cliente, tarefas, pipeline de novos clientes, contratos e link na bio.</p>
+    </div>
+  </div>
+  <div class="baixo">
+    <div class="txt">
+      <h3>Pra quem quer tratar a operação como empresa</h3>
+      <p class="muted">Saber quanto entra por mês, quem está pra fechar, o que falta fazer por cliente e ter a marca de cada um documentada. Sem planilha, sem caderno, sem depender da memória.</p>
+      <div class="pilulas">
+        <span style="background:#E9559A">Carteira</span>
+        <span style="background:var(--laranja)">Brandbook</span>
+        <span style="background:var(--azul)">Pipeline</span>
+        <span style="background:var(--verde)">Contratos</span>
+      </div>
+      <p class="small muted" style="margin-top:6mm">Versão 1.0 · 30 de setembro de 2026 · app.criasocialclub.com.br<br>Manual do módulo. O que é da conta toda (Início, Clientes, Agenda, Equipe) está no Manual Geral.</p>
+    </div>
+    <img class="selo" src="selo-social-club-verde.png" alt="">
+  </div></section>
+<section class="page " style="--pin:#D6337F"><div class="abre bg-rosa"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">COMECE AQUI</div><h2>O Cria Gestão em 1 minuto</h2><p>Todo cliente começa como lead, vira cliente com contrato e ganha uma ficha com a marca documentada. O resto do Cria lê dessa ficha.</p></div>
+  <h3>O caminho de todo cliente</h3>
+  <div class="fluxo" style="margin-bottom:6mm">
+    <div class="et"><span class="chip novo">Lead</span><div class="t">Prospecta</div><div class="d">No pipeline</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip fazendo">Fechado</span><div class="t">Fecha</div><div class="d">Vira cliente e contrato</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip amar">Ficha</span><div class="t">Documenta</div><div class="d">Brandbook e persona</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip entregue">Rotina</span><div class="t">Organiza</div><div class="d">Tarefas e calendário</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip ajuste">Bio</span><div class="t">Capta</div><div class="d">Link na bio com leads</div></div>
+  </div>
+  <h3>Por que vale a pena</h3>
+  <div class="duo" style="margin-bottom:5mm">
+    <div class="card"><h4>A ficha alimenta o resto</h4><p class="small">O brandbook e a persona que você preenche aqui são o que a IA do Cria usa pra escrever pelo cliente e o que vai no briefing de arte pro designer.</p></div>
+    <div class="card"><h4>Fechou, já está tudo pronto</h4><p class="small">Arrastou o lead pra Fechado: ele vira cliente na carteira e ganha contrato, e a mensalidade passa a contar no Caixa.</p></div>
+    <div class="card"><h4>O cliente preenche por você</h4><p class="small">Mande um link e ele mesmo completa CNPJ, endereço, responsável e conta do negócio. Você só confere.</p></div>
+    <div class="card"><h4>Contrato em minutos</h4><p class="small">Um modelo de prestação de serviços de social mídia que se preenche com os dados do cliente e sai em PDF.</p></div>
+  </div>
+  <h3>O que tem neste manual</h3>
+  <div class="indice">
+    <div class="it"><span class="n bg-rosa">1</span><div><b>Carteira e ficha</b><span>seus clientes e tudo sobre cada um</span></div></div>
+    <div class="it"><span class="n bg-laranja">2</span><div><b>Brandbook e persona</b><span>a marca documentada</span></div></div>
+    <div class="it"><span class="n bg-azul">3</span><div><b>Tarefas e calendário</b><span>o que falta fazer, por cliente</span></div></div>
+    <div class="it"><span class="n bg-verde">4</span><div><b>Pipeline, metas e contratos</b><span>crescer a carteira</span></div></div>
+    <div class="it"><span class="n bg-lilas">5</span><div><b>Link na bio</b><span>a página de cada cliente</span></div></div>
+    <div class="it"><span class="n bg-rosa">6</span><div><b>Sincronia e rotina</b><span>pra onde vai cada dado</span></div></div>
+  </div>
+  <p class="small muted" style="margin-top:4mm">Os nomes, fotos, contatos e valores das telas deste manual são fictícios. As telas são do sistema de verdade.</p>
+<div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Gestão · Social Mídia</span><span class="num">2</span></div></section>
+<section class="page " style="--pin:#D6337F"><div class="abre bg-rosa"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">1 · CARTEIRA E FICHA</div><h2>A carteira de clientes</h2><p>No menu, Cria Gestão. A primeira aba é a sua carteira: cada cliente com o valor mensal e como ele trabalha com você.</p></div><figure class="print"><img src="g-cart.jpg" alt=""><span class="pin" style="left:48.6%;top:15.7%">1</span><span class="pin" style="left:75.0%;top:23.0%">2</span><span class="pin" style="left:93.9%;top:19.7%">3</span><span class="pin" style="left:12.8%;top:29.3%">4</span><span class="pin" style="left:73.3%;top:29.3%">5</span><span class="pin" style="left:90.0%;top:26.8%">6</span><span class="pin" style="left:90.0%;top:36.9%">7</span><span class="pin" style="left:17.8%;top:39.4%">8</span><span class="pin" style="left:19.4%;top:50.2%">9</span></figure><ol class="leg duas"><li><b>As abas do módulo:</b> clientes, tarefas, calendário, pipeline, metas, contratos e link na bio.</li><li><b>Importar do Cria:</b> traz um cliente que já usa o Cria.</li><li><b>Novo cliente</b> na mão.</li><li><b>Busca</b> por nome.</li><li><b>Ativos, todos ou inativos.</b></li><li><b>Filtro</b> por segmento e situação.</li><li><b>Valor mensal</b> do cliente.</li><li><b>Selo "cria":</b> esse cliente tem conta no Cria.</li><li><b>Abrir no Cria:</b> entra na conta dele.</li></ol><div class="dica"><span class="ic">!</span><div><p><b>Clique no card pra abrir a ficha.</b> É nela que mora tudo sobre o cliente: dados, valor, brandbook, persona, diagnóstico e as tarefas dele.</p></div></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Gestão · Social Mídia</span><span class="num">3</span></div></section>
+<section class="page " style="--pin:#D6337F"><h2 style="margin-bottom:1.5mm">A ficha do cliente</h2><p class="muted" style="margin-bottom:4mm">Salva sozinha enquanto você digita. O botão Salvar é só pra confirmar na hora.</p><figure class="print"><img src="g-ficha.jpg" alt=""><span class="pin" style="left:29.8%;top:15.9%">1</span><span class="pin" style="left:74.4%;top:8.3%">2</span><span class="pin" style="left:11.7%;top:22.2%">3</span><span class="pin" style="left:48.6%;top:34.1%">4</span><span class="pin" style="left:20.6%;top:58.2%">5</span><span class="pin" style="left:20.0%;top:66.5%">6</span><span class="pin" style="left:17.8%;top:75.2%">7</span></figure><ol class="leg duas"><li><b>Situação, segmento e etiquetas.</b> Inativar tira o cliente da receita.</li><li><b>Salva automático.</b></li><li><b>Valor mensal, cliente desde, renovação e diagnóstico</b> num olhar.</li><li><b>As abas da ficha:</b> resumo, tarefas, brandbook, persona, diagnóstico e concorrência.</li><li><b>Peça os dados pro cliente:</b> gera um link pra ele preencher.</li><li><b>Link na bio</b> desse cliente, a um clique.</li><li><b>Informações gerais:</b> razão social, CNPJ, responsável, contato, endereço.</li></ol><p class="small" style="margin-top:2mm">Descendo: aniversário (vira lembrete no calendário), cor do cliente (pinta o card na agenda), contato, <b>valor mensal, dia e forma de pagamento</b> e as datas do contrato.</p><div class="dica"><span class="ic">!</span><div><p><b>O link de dados é seguro pra mandar.</b> O cliente vê só os campos do cadastro. Valor, vencimento e multa não aparecem. O que ele responde só entra nos campos que estão vazios; pra trocar o que você já tinha, existe o botão de sobrescrever.</p></div></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Gestão · Social Mídia</span><span class="num">4</span></div></section>
+<section class="page " style="--pin:#E0441A"><div class="abre bg-laranja"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">2 · BRANDBOOK E PERSONA</div><h2>A marca do cliente, documentada</h2><p>O que você escreve aqui é o que a IA usa pra falar como o cliente e o que vai pro designer. Quanto mais completo, menos retrabalho.</p></div><figure class="print"><img src="g-bb.jpg" alt=""><span class="pin" style="left:86.7%;top:8.9%">1</span><span class="pin" style="left:25.0%;top:23.5%">2</span><span class="pin" style="left:50.6%;top:38.5%">3</span><span class="pin" style="left:18.9%;top:59.5%">4</span><span class="pin" style="left:96.7%;top:66.9%">5</span></figure><ol class="leg duas"><li><b>Baixar PDF:</b> o brandbook no padrão do Cria, pra mandar pro cliente.</li><li><b>Preencher a partir de um arquivo:</b> suba o PDF que ele já tem e o Cria preenche.</li><li><b>As quatro partes</b> (essência, estratégia, mensagem, voz e visual) com o quanto já foi preenchido.</li><li><b>Os campos,</b> um por pergunta.</li><li><b>Microfone:</b> fale em vez de digitar.</li></ol><h3 style="margin-top:4mm">Persona</h3><figure class="print"><img src="g-per.jpg" alt=""><span class="pin" style="left:12.8%;top:8.8%">1</span><span class="pin" style="left:85.6%;top:8.8%">2</span><span class="pin" style="left:33.9%;top:18.7%">3</span><span class="pin" style="left:27.2%;top:40.0%">4</span></figure><ol class="leg duas"><li><b>Até três personas</b> por cliente.</li><li><b>Nova persona.</b></li><li><b>Toque no card</b> pra editar aquela persona.</li><li><b>O perfil:</b> idade, região, gasto, rotina, o que valoriza e como compra.</li></ol><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Gestão · Social Mídia</span><span class="num">5</span></div></section>
+<section class="page " style="--pin:#E0441A"><h2 style="margin-bottom:1.5mm">Diagnóstico do perfil</h2><p class="muted" style="margin-bottom:3mm">A primeira coisa a fazer com cliente novo: o perfil dele transmite clareza?</p><figure class="print"><img src="g-diag.jpg" alt=""><span class="pin" style="left:28.9%;top:9.6%">1</span><span class="pin" style="left:88.3%;top:22.9%">2</span><span class="pin" style="left:21.1%;top:86.2%">3</span></figure><ol class="leg"><li><b>Arrumando a casa:</b> sete perguntas de sim ou não sobre bio, feed, fixados, destaques e contato.</li><li><b>Sim ou Não</b> em cada item.</li><li><b>Primeiros ajustes:</b> bio, nome do perfil, destaques e fixados sugeridos.</li></ol><h2 style="margin:5mm 0 1.5mm">Concorrência</h2><p class="muted" style="margin-bottom:3mm">As análises que o Cria Radar fez pra esse cliente, guardadas na ficha dele.</p><figure class="print"><img src="g-conc.jpg" alt=""><span class="pin" style="left:18.9%;top:8.8%">1</span><span class="pin" style="left:81.1%;top:8.8%">2</span><span class="pin" style="left:73.3%;top:51.4%">3</span><span class="pin" style="left:19.7%;top:83.9%">4</span></figure><ol class="leg duas"><li><b>Análises do Cria Radar</b> desse cliente.</li><li><b>Nova análise</b> vai pro Radar.</li><li><b>Reels lidos, média de curtidas e de views.</b></li><li><b>Cada roteiro</b> com gancho, estrutura e como usar no cliente.</li></ol><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Gestão · Social Mídia</span><span class="num">6</span></div></section>
+<section class="page " style="--pin:#0061EE"><div class="abre bg-azul"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">3 · TAREFAS E CALENDÁRIO</div><h2>O que falta fazer, cliente por cliente</h2><p>Cada tarefa é de um cliente (ou de um lead). Você vê tudo junto ou filtra por um só.</p></div><figure class="print"><img src="g-tar.jpg" alt=""><span class="pin" style="left:75.6%;top:8.3%">1</span><span class="pin" style="left:94.4%;top:4.1%">2</span><span class="pin" style="left:36.3%;top:16.6%">3</span><span class="pin" style="left:59.4%;top:13.1%">4</span><span class="pin" style="left:16.7%;top:23.7%">5</span><span class="pin" style="left:11.1%;top:42.5%">6</span><span class="pin" style="left:17.8%;top:55.9%">7</span><span class="pin" style="left:20.8%;top:92.2%">8</span><span class="pin" style="left:87.2%;top:51.3%">9</span></figure><ol class="leg duas"><li><b>Kanban ou Calendário.</b></li><li><b>Nova tarefa.</b></li><li><b>Todas, atrasadas, hoje, semana, concluídas,</b> com a contagem.</li><li><b>Cliente e período.</b></li><li><b>Materiais pendentes</b> que vieram do Cria Post, com o atraso.</li><li><b>Pendentes, em andamento e concluídas.</b> Arraste entre as colunas.</li><li><b>Prioridade e cliente</b> em cada tarefa.</li><li><b>Tarefa de lead:</b> reunião, orçamento, apresentação.</li><li><b>Concluída</b> fica riscada, pra você ver o que já entregou.</li></ol><div class="dica"><span class="ic">!</span><div><p><b>As tarefas com data aparecem na sua Agenda</b> e no calendário do Cria Gestão. Tarefa sem data é a que some da cabeça: dê data a todas.</p></div></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Gestão · Social Mídia</span><span class="num">7</span></div></section>
+<section class="page " style="--pin:#0061EE"><h2 style="margin-bottom:1.5mm">Calendário da gestão</h2><p class="muted" style="margin-bottom:4mm">O mês da sua operação: tarefas, leads, renovações de contrato e aniversários dos clientes.</p><figure class="print"><img src="g-cal.jpg" alt=""><span class="pin" style="left:55.6%;top:5.8%">1</span><span class="pin" style="left:74.4%;top:5.8%">2</span><span class="pin" style="left:27.2%;top:25.0%">3</span><span class="pin" style="left:57.0%;top:87.5%">4</span></figure><ol class="leg"><li><b>Legenda:</b> tarefa, lead, renovação e aniversário, cada item na cor do cliente.</li><li><b>Hoje e troca de mês.</b></li><li><b>Concluída</b> aparece riscada.</li><li><b>O dia de hoje</b> destacado.</li></ol><div class="tabela" style="margin-top:4mm"><table><tr><th>Aparece no calendário</th><th>De onde vem</th></tr><tr><td><b>Tarefa</b></td><td>Tarefas com data, de cliente ou suas</td></tr><tr><td><b>Lead</b></td><td>Tarefas dos leads do pipeline</td></tr><tr><td><b>Renovação</b></td><td>A data de renovação na ficha do cliente</td></tr><tr><td><b>Aniversário</b></td><td>O aniversário na ficha. Bom dia pra um post ou um mimo.</td></tr></table></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Gestão · Social Mídia</span><span class="num">8</span></div></section>
+<section class="page " style="--pin:#01934A"><div class="abre bg-verde"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">4 · PIPELINE, METAS E CONTRATOS</div><h2>Pipeline: os próximos clientes</h2><p>Cada lead é um card. Você arrasta de etapa em etapa até fechar. Fechou, ele vira cliente sozinho.</p></div><figure class="print"><img src="g-pipe.jpg" alt=""><span class="pin" style="left:11.1%;top:6.6%">1</span><span class="pin" style="left:36.7%;top:6.6%">2</span><span class="pin" style="left:54.4%;top:6.6%">3</span><span class="pin" style="left:85.6%;top:6.6%">4</span><span class="pin" style="left:88.3%;top:26.8%">5</span><span class="pin" style="left:5.6%;top:37.9%">6</span><span class="pin" style="left:87.8%;top:56.1%">7</span></figure><ol class="leg duas"><li><b>Pipeline ativo:</b> quanto vale tudo que está em aberto.</li><li><b>Em negociação.</b></li><li><b>Fechados.</b></li><li><b>Receita mensal:</b> a mesma conta do Caixa.</li><li><b>Novo lead.</b></li><li><b>As etapas:</b> lead, contato, reunião, proposta, negociação, fechado e perdido.</li><li><b>O card:</b> nome, segmento e valor mensal proposto.</li></ol><div class="tabela" style="margin-top:3mm"><table><tr><th>Quando você...</th><th>O Cria faz</th></tr><tr><td><b>Arrasta pra Fechado</b></td><td>Cria o cliente na carteira (com nome, contato, segmento e valor) e um contrato fechado. A mensalidade passa a contar na receita e no Caixa.</td></tr><tr><td><b>Tira de Fechado</b></td><td>Pergunta antes. O cliente deixa de contar na receita e fica inativo, sem apagar o histórico.</td></tr><tr><td><b>Arrasta pra Perdido</b></td><td>Guarda o lead fora do pipeline ativo, pra você ver depois o que não fechou.</td></tr></table></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Gestão · Social Mídia</span><span class="num">9</span></div></section>
+<section class="page " style="--pin:#01934A"><h2 style="margin-bottom:1.5mm">Metas do seu negócio</h2><div class="lado" style="gap:6mm;align-items:flex-start;margin-bottom:5mm"><figure class="print" style="width:62mm;flex:none"><img src="g-meta.jpg" alt=""><span class="pin" style="left:48.4%;top:17.3%">1</span><span class="pin" style="left:18.8%;top:32.6%">2</span><span class="pin" style="left:21.9%;top:51.4%">3</span></figure><div><ol class="leg"><li><b>O que você quer alcançar.</b> Ex.: chegar a 10 clientes ativos.</li><li><b>Categoria:</b> clientes, receita, entregas, seguidores, engajamento, vendas.</li><li><b>Valor alvo, onde você está e prazo.</b> Você acompanha o progresso.</li></ol><p class="small muted">Metas são suas, não do cliente. Ficam com data de criação e de conclusão, pra você ver o quanto cresceu.</p></div></div><h2 style="margin-bottom:1.5mm">Contratos</h2><figure class="print"><img src="g-cont.jpg" alt=""><span class="pin" style="left:75.0%;top:6.4%">1</span><span class="pin" style="left:93.9%;top:2.3%">2</span><span class="pin" style="left:1.7%;top:12.4%">3</span><span class="pin" style="left:76.1%;top:30.7%">4</span><span class="pin" style="left:91.3%;top:27.9%">5</span><span class="pin" style="left:97.4%;top:30.7%">6</span></figure><ol class="leg duas"><li><b>Gerar contrato</b> a partir do modelo.</li><li><b>Novo contrato</b> pra registrar um que você já tem.</li><li><b>Aviso:</b> é modelo de apoio, revise com advogado.</li><li><b>Valor mensal</b> do contrato.</li><li><b>Situação:</b> fechado, em negociação.</li><li><b>Editar ou excluir.</b></li></ol><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Gestão · Social Mídia</span><span class="num">10</span></div></section>
+<section class="page " style="--pin:#01934A"><h2 style="margin-bottom:1.5mm">Gerar contrato</h2><p class="muted" style="margin-bottom:4mm">Um modelo de gerenciamento de redes sociais que se monta com o que você preenche.</p><div class="duo"><figure class="print"><img src="g-gc1.jpg" alt=""><span class="pin" style="left:94.4%;top:12.6%">1</span><span class="pin" style="left:34.3%;top:21.0%">2</span><span class="pin" style="left:26.9%;top:61.7%">3</span><span class="pin" style="left:43.9%;top:96.5%">4</span></figure><div><figure class="print"><img src="g-gc2.jpg" alt=""><span class="pin" style="left:25.9%;top:5.6%">1</span><span class="pin" style="left:51.9%;top:91.5%">2</span></figure><ol class="leg"><li><b>Dados da sua empresa:</b> vêm de Configurações. Preencha uma vez.</li><li><b>Escolha o cliente da carteira</b> e os dados dele entram sozinhos.</li><li><b>Escopo:</b> rede, publicações, carrosséis, vídeos, gravação, reuniões, atendimento.</li><li><b>Extras:</b> edição de reels e relatório de métricas.</li><li><b>Prévia</b> do contrato, atualizando enquanto você preenche.</li><li><b>Baixar contrato</b> em PDF.</li></ol></div></div><p class="small" style="margin-top:3mm">No meio do formulário ficam <b>preço e prazo</b> (valor, vencimento, multa de rescisão, duração, início e renovação automática), o <b>representante</b> do cliente e o <b>foro, assinatura e testemunhas</b>.</p><div class="alerta"><span class="ic">!</span><div><p><b>Os contratos são modelos de apoio.</b> Não substituem orientação jurídica. Revise com um advogado antes de mandar pro cliente, principalmente multa e foro.</p></div></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Gestão · Social Mídia</span><span class="num">11</span></div></section>
+<section class="page " style="--pin:#5F74E3"><div class="abre bg-lilas"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">5 · LINK NA BIO</div><h2>A página de links de cada cliente</h2><p>Uma página pra colocar na bio do Instagram, com os botões, o formulário de contato e o endereço. Você monta e ela fica no ar no link do Cria.</p></div><figure class="print"><img src="g-bio.jpg" alt=""><span class="pin" style="left:18.2%;top:6.1%">1</span><span class="pin" style="left:27.3%;top:24.1%">2</span><span class="pin" style="left:19.0%;top:30.1%">3</span><span class="pin" style="left:71.1%;top:28.9%">4</span><span class="pin" style="left:47.4%;top:36.7%">5</span><span class="pin" style="left:31.4%;top:93.7%">6</span></figure><ol class="leg duas"><li><b>Busca</b> por cliente.</li><li><b>O endereço</b> da página.</li><li><b>Visitas e leads</b> que a página trouxe.</li><li><b>Na conta dele:</b> o cliente usa o Cria e a página é da conta dele.</li><li><b>Editar, copiar o link e abrir.</b></li><li><b>Montar:</b> cria a página de quem ainda não tem.</li></ol><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Gestão · Social Mídia</span><span class="num">12</span></div></section>
+<section class="page " style="--pin:#5F74E3"><h2 style="margin-bottom:1.5mm">Montando a página</h2><p class="muted" style="margin-bottom:4mm">Abre dentro da ficha do cliente, em Cria Gestão, Link na bio. Tudo salva sozinho e aparece na prévia do celular.</p><figure class="print"><img src="g-bioed.jpg" alt=""><span class="pin" style="left:23.9%;top:3.4%">1</span><span class="pin" style="left:59.4%;top:9.6%">2</span><span class="pin" style="left:16.7%;top:29.8%">3</span><span class="pin" style="left:41.1%;top:29.8%">4</span><span class="pin" style="left:32.2%;top:35.9%">5</span><span class="pin" style="left:54.1%;top:24.1%">6</span><span class="pin" style="left:78.3%;top:23.8%">7</span><span class="pin" style="left:17.8%;top:66.1%">8</span></figure><ol class="leg duas"><li><b>Brandbook e Link na bio</b> do cliente, lado a lado.</li><li><b>Aviso:</b> se o cliente usa o Cria, você edita a página da conta dele.</li><li><b>Clássico ou Site:</b> coluna de botões ou página completa. Trocar não apaga nada.</li><li><b>O link</b> pra colocar na bio, com copiar e abrir.</li><li><b>Conteúdo, Visual, Publicar e Resultados.</b></li><li><b>Tudo salvo.</b></li><li><b>Prévia</b> no celular, ao vivo.</li><li><b>O topo:</b> banner, foto, nome, bio e redes. Depois vêm os blocos.</li></ol><div class="dica"><span class="ic">!</span><div><p><b>Os blocos:</b> link, texto, vídeo, formulário, perguntas frequentes e endereço com mapa. Arraste pra ordenar; o interruptor tira do ar sem apagar. Em Resultados você acompanha visitas e leads da página.</p></div></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Gestão · Social Mídia</span><span class="num">13</span></div></section>
+<section class="page " style="--pin:#D6337F"><div class="abre bg-rosa"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">6 · SINCRONIA E ROTINA</div><h2>Pra onde vai cada coisa</h2><p>A ficha do Cria Gestão é a fonte. Você preenche uma vez e o resto do Cria usa.</p></div><div class="tabela"><table><tr><th>O que você preenche</th><th>Onde aparece</th></tr><tr><td><b>Valor mensal e dia de pagamento</b></td><td>A mensalidade nasce no Cria Caixa. O previsto do mês e a mensalidade vencida aparecem no Início.</td></tr><tr><td><b>Brandbook e persona</b></td><td>A IA do Cria (legendas, roteiros, ideias) e o Briefing de arte do Cria Post, que vai pro designer.</td></tr><tr><td><b>Cor do cliente</b></td><td>Pinta o card na Agenda, no Calendário geral do Cria Post e nas listas.</td></tr><tr><td><b>Aniversário e renovação</b></td><td>Calendário do Cria Gestão.</td></tr><tr><td><b>Tarefas com data</b></td><td>Agenda e calendário do Cria Gestão.</td></tr><tr><td><b>Lead em Fechado</b></td><td>Cliente novo na carteira, contrato e receita mensal.</td></tr><tr><td><b>Segmento e persona</b></td><td>A análise da IA no relatório do cliente (Cria Post).</td></tr><tr><td><b>Dados da sua empresa</b> (Configurações)</td><td>A parte CONTRATADA dos contratos.</td></tr></table></div><div class="dica"><span class="ic">!</span><div><p><b>Ficha vazia faz a IA inventar.</b> Sem brandbook, o Briefing de arte avisa que não tem como montar, e a IA escreve genérico. Preencha pelo menos a Essência e a Voz antes de pedir conteúdo.</p></div></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Gestão · Social Mídia</span><span class="num">14</span></div></section>
+<section class="page " style="--pin:#141311"><div class="abre bg-amarelo amarelo"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">PRA FECHAR</div><h2>Tirando o máximo do Cria Gestão</h2><p>Uma rotina simples e as dúvidas que mais aparecem.</p></div>
+  <ul class="check-lista">
+    <li><span class="cx"></span><div><b>Uma vez:</b> preencha os Dados da minha empresa em Configurações. É o que vai nos contratos.</div></li>
+    <li><span class="cx"></span><div><b>Cliente novo:</b> mande o link de dados, faça o diagnóstico do perfil e preencha brandbook e persona na primeira semana.</div></li>
+    <li><span class="cx"></span><div><b>Toda segunda:</b> Tarefas, filtro "Esta semana". O que não tem data, dê data.</div></li>
+    <li><span class="cx"></span><div><b>Depois de cada conversa com possível cliente:</b> atualize o pipeline. É ele que diz quanto você pode faturar.</div></li>
+    <li><span class="cx"></span><div><b>Fim do mês:</b> metas e renovações do mês seguinte no calendário.</div></li>
+  </ul>
+  <h3 style="margin-top:6mm">Perguntas rápidas</h3>
+  <div class="faq card">
+    <div class="q"><h4>Qual a diferença entre Clientes (menu) e a carteira do Cria Gestão?</h4><p class="small">São os mesmos clientes. Clientes é o cockpit do dia a dia; a carteira do Cria Gestão é a visão do negócio, com valor e dados de cadastro.</p></div>
+    <div class="q"><h4>Arrastei pra Fechado sem querer.</h4><p class="small">Volte o card pra etapa certa. O Cria pergunta antes e o cliente fica inativo, sem contar na receita.</p></div>
+    <div class="q"><h4>O cliente já tem brandbook em PDF.</h4><p class="small">Use "Preencher a partir de um arquivo" na aba Brandbook e confira o que entrou.</p></div>
+    <div class="q"><h4>O cliente usa o Cria. Quem edita o link na bio?</h4><p class="small">Os dois. A página é da conta dele, e o que você muda ele vê quando entra.</p></div>
+  </div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Gestão · Social Mídia</span><span class="num">15</span></div></section></body></html>
