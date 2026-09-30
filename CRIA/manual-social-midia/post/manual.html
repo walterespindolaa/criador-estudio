@@ -1,0 +1,264 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Manual Cria Post · Cria</title><style>@font-face{font-family:"Baloo 2";font-weight:600;src:url(baloo-2-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Baloo 2";font-weight:700;src:url(baloo-2-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Baloo 2";font-weight:800;src:url(baloo-2-latin-800-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:400;src:url(nunito-sans-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:400;font-style:italic;src:url(nunito-sans-latin-400-italic.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:600;src:url(nunito-sans-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:700;src:url(nunito-sans-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:800;src:url(nunito-sans-latin-800-normal.woff2) format("woff2")}
+
+
+:root{
+  --laranja:#EA4918; --verde:#01A652; --azul:#0061EE; --rosa:#FF77B9; --amarelo:#FFCF03; --lilas:#7C90F0;
+  --ink:#141311; --muted:#6B665C; --line:#E9E3D5; --paper:#FDFBF5; --surface:#FFFFFF;
+}
+@page{size:A4;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#d9d4c7}
+body{font-family:"Nunito Sans",sans-serif;color:var(--ink);font-size:10.4pt;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:210mm;height:297mm;background:var(--paper);position:relative;overflow:hidden;padding:17mm 16mm 20mm;page-break-after:always;break-after:page}
+.page:last-child{page-break-after:auto}
+h1,h2,h3,h4,.display{font-family:"Baloo 2",sans-serif;line-height:1.05;letter-spacing:-.01em}
+h2{font-size:25pt;font-weight:800}
+h3{font-size:14pt;font-weight:800;margin:0 0 2.5mm}
+h4{font-size:11.5pt;font-weight:800;margin:0 0 1.5mm}
+p{margin:0 0 2.6mm}
+b,strong{font-weight:800}
+.muted{color:var(--muted)}
+.small{font-size:8.8pt}
+
+/* rodapé */
+.rodape{position:absolute;left:16mm;right:16mm;bottom:9mm;display:flex;align-items:center;justify-content:space-between;font-size:8pt;color:var(--muted)}
+.rodape img{height:6.5mm}
+.rodape .num{font-family:"Baloo 2";font-weight:800;font-size:11pt;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:.6mm 3.2mm}
+
+/* abertura de seção */
+.abre{border-radius:9mm;padding:7.5mm 10mm 7mm;color:#fff;position:relative;overflow:hidden;margin-bottom:5.5mm}
+.abre .n{font-family:"Baloo 2";font-weight:800;font-size:11pt;opacity:.85;letter-spacing:.08em}
+.abre h2{color:#fff;margin:1mm 0 2mm;font-size:27pt}
+.abre p{color:rgba(255,255,255,.92);font-size:11pt;max-width:130mm;margin:0}
+.abre .bolha{position:absolute;border-radius:50%;background:rgba(255,255,255,.14)}
+.abre.amarelo{color:var(--ink)} .abre.amarelo h2{color:var(--ink)} .abre.amarelo p{color:rgba(20,19,17,.8)}
+.bg-laranja{background:var(--laranja)} .bg-verde{background:var(--verde)} .bg-azul{background:var(--azul)}
+.bg-rosa{background:#E9559A} .bg-amarelo{background:var(--amarelo)} .bg-lilas{background:#5F74E3}
+
+/* blocos */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:5.5mm;padding:5mm 5.5mm}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:4.5mm}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm}
+.stack>*+*{margin-top:4mm}
+.dica{border-radius:5mm;padding:4mm 5mm;background:#FFF6CC;border:1px solid #F4DC72;display:flex;gap:3mm;align-items:flex-start}
+.dica .ic{font-family:"Baloo 2";font-weight:800;background:var(--amarelo);border-radius:99px;min-width:7mm;height:7mm;display:grid;place-items:center;font-size:10pt}
+.alerta{border-radius:5mm;padding:4mm 5mm;background:#FFE6F1;border:1px solid #FBB6D5;display:flex;gap:3mm;align-items:flex-start}
+.alerta .ic{font-family:"Baloo 2";font-weight:800;background:#E9559A;color:#fff;border-radius:99px;min-width:7mm;height:7mm;display:grid;place-items:center;font-size:10pt}
+.dica p:last-child,.alerta p:last-child{margin:0}
+
+/* passos */
+.passos{counter-reset:p;display:flex;flex-direction:column;gap:3.2mm}
+.passo{display:flex;gap:3.5mm;align-items:flex-start}
+.passo .bola{counter-increment:p;min-width:8.5mm;height:8.5mm;border-radius:99px;background:var(--ink);color:#fff;font-family:"Baloo 2";font-weight:800;font-size:11.5pt;display:grid;place-items:center}
+.passo .bola::before{content:counter(p)}
+.passo.verde .bola{background:var(--verde)} .passo.laranja .bola{background:var(--laranja)} .passo.azul .bola{background:var(--azul)}
+.passo p{margin:.8mm 0 0}
+.fluxo-pg .passos{gap:1.8mm}.fluxo-pg .passo p{font-size:9.4pt;line-height:1.42}.fluxo-pg .fluxo{margin-bottom:4.5mm!important}
+
+/* elementos que imitam a tela */
+.btn{display:inline-flex;align-items:center;gap:1.5mm;border-radius:99px;padding:1.2mm 3.6mm;font-weight:800;font-size:8.8pt;white-space:nowrap;border:1px solid transparent;font-family:"Nunito Sans"}
+.btn.pri{background:linear-gradient(90deg,#E4406F,#EA4918);color:#fff}
+.btn.rosa{background:#E9559A;color:#fff}
+.btn.out{background:#fff;border-color:var(--line);color:var(--ink)}
+.btn.verde{background:var(--verde);color:#fff}
+.btn.ig{background:linear-gradient(90deg,#DD2A7B,#8134AF);color:#fff}
+.chip{display:inline-block;border-radius:99px;padding:.4mm 2.4mm;font-size:8pt;font-weight:800;border:1px solid var(--line);background:#fff;white-space:nowrap}
+.chip.novo{background:#EEF1FD;border-color:#CAD2F7;color:#3C4FB8}
+.chip.fazendo{background:#FFF1E9;border-color:#F8C9B0;color:#B8390F}
+.chip.ajuste{background:#FFE6F1;border-color:#FBB6D5;color:#B42A68}
+.chip.entregue{background:#E3F6EC;border-color:#A6DEBF;color:#017A3C}
+.chip.amar{background:#FFF6CC;border-color:#F4DC72;color:#7A5B00}
+.kbd{font-family:"Nunito Sans";font-weight:800;background:#F3EFE5;border:1px solid var(--line);border-radius:1.6mm;padding:0 1.4mm;font-size:8.6pt}
+.rot{font-weight:800}
+
+/* tabela */
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:9.4pt}
+th{font-family:"Baloo 2";font-weight:800;text-align:left;font-size:9.5pt;padding:2.2mm 3mm;background:#F3EFE5;border-bottom:1px solid var(--line)}
+th:first-child{border-top-left-radius:3.5mm} th:last-child{border-top-right-radius:3.5mm}
+td{padding:2.2mm 3mm;border-bottom:1px solid var(--line);vertical-align:top;background:#fff}
+tr:last-child td:first-child{border-bottom-left-radius:3.5mm} tr:last-child td:last-child{border-bottom-right-radius:3.5mm}
+.tabela{border:1px solid var(--line);border-radius:3.5mm;overflow:hidden}
+
+/* índice */
+.indice{display:grid;grid-template-columns:1fr 1fr;gap:3.5mm}
+.indice .it{display:flex;align-items:center;gap:3.5mm;background:#fff;border:1px solid var(--line);border-radius:5mm;padding:3.4mm 4mm}
+.indice .it .n{font-family:"Baloo 2";font-weight:800;font-size:15pt;width:11mm;height:11mm;border-radius:3.5mm;display:grid;place-items:center;color:#fff}
+.indice .it b{display:block;font-family:"Baloo 2";font-size:11.5pt;line-height:1.1}
+.indice .it span{font-size:8.6pt;color:var(--muted)}
+
+/* fluxo */
+.fluxo{display:flex;align-items:stretch;gap:0}
+.fluxo .et{flex:1;background:#fff;border:1px solid var(--line);border-radius:5mm;padding:3.2mm 3mm;text-align:center;position:relative}
+.fluxo .et .t{font-family:"Baloo 2";font-weight:800;font-size:10.5pt;line-height:1.1;margin:1.4mm 0 1mm}
+.fluxo .et .d{font-size:8pt;color:var(--muted);line-height:1.35}
+.fluxo .seta{width:6mm;display:grid;place-items:center;font-family:"Baloo 2";font-weight:800;color:var(--muted);font-size:13pt}
+
+/* anatomia do card */
+.anat{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:3mm;font-size:8.6pt}
+.zona{border-radius:4mm;padding:3mm;border:1.5px dashed}
+.zona .tag{display:inline-block;font-family:"Baloo 2";font-weight:800;font-size:8.8pt;border-radius:99px;padding:.2mm 2.6mm;color:#fff;margin-bottom:1.6mm}
+.zona ul{padding-left:3.8mm;margin:0} .zona li{margin:.6mm 0}
+
+/* capa */
+.capa{padding:0;background:var(--paper)}
+.capa .topo{height:178mm;background:var(--laranja);position:relative;overflow:hidden;border-bottom-left-radius:26mm;border-bottom-right-radius:26mm}
+.capa .topo .b1{position:absolute;width:120mm;height:120mm;border-radius:50%;background:#F26A3C;right:-30mm;top:-40mm}
+.capa .topo .b2{position:absolute;width:70mm;height:70mm;border-radius:50%;background:var(--rosa);left:-18mm;bottom:-22mm;opacity:.9}
+.capa .topo .b3{position:absolute;width:26mm;height:26mm;border-radius:50%;background:var(--amarelo);right:40mm;bottom:20mm}
+.capa .logo{position:absolute;left:18mm;top:20mm;width:62mm}
+.capa .criatura{position:absolute;right:14mm;top:52mm;width:74mm;transform:rotate(8deg)}
+.capa .titulo{position:absolute;left:18mm;bottom:22mm;color:#fff;max-width:120mm}
+.capa .titulo .sobre{font-family:"Baloo 2";font-weight:800;letter-spacing:.12em;font-size:10pt;opacity:.9}
+.capa .titulo h1{font-size:52pt;font-weight:800;line-height:.92;margin:2mm 0 3mm}
+.capa .titulo p{font-size:12.5pt;opacity:.95;margin:0}
+.capa .baixo{padding:14mm 18mm 0;display:flex;gap:8mm;align-items:flex-start}
+.capa .baixo .txt{flex:1}
+.capa .baixo .txt h3{font-size:15pt}
+.capa .selo{width:40mm;transform:rotate(-10deg)}
+.pilulas{display:flex;flex-wrap:wrap;gap:2mm;margin-top:3mm}
+.pilulas span{border-radius:99px;padding:1mm 3.4mm;font-weight:800;font-size:9pt;color:#fff}
+
+.mini-tela{background:#fff;border:1px solid var(--line);border-radius:5mm;padding:3.5mm;box-shadow:0 2mm 5mm rgba(20,19,17,.05)}
+.linha-fila{display:flex;align-items:center;gap:2.4mm;padding:2.2mm 2.6mm;border:1px solid var(--line);border-radius:3.5mm;background:#fff;font-size:8.6pt}
+.linha-fila + .linha-fila{margin-top:1.8mm}
+.linha-fila .tt{font-weight:800;flex:1}
+.cor{width:3mm;height:3mm;border-radius:99px;display:inline-block}
+.col-q{background:#F6F2E8;border-radius:4mm;padding:2.5mm}
+.col-q .h{font-family:"Baloo 2";font-weight:800;font-size:9.5pt;margin-bottom:1.6mm;display:flex;justify-content:space-between}
+.mini-card{background:#fff;border:1px solid var(--line);border-radius:3mm;padding:2mm 2.2mm;font-size:7.8pt;margin-bottom:1.6mm}
+.mini-card b{display:block;font-size:8.2pt}
+.check-lista{list-style:none;padding:0;margin:0}
+.check-lista li{display:flex;gap:2.6mm;align-items:flex-start;padding:1.8mm 0;border-bottom:1px dashed var(--line)}
+.check-lista li:last-child{border-bottom:0}
+.check-lista .cx{min-width:4.6mm;height:4.6mm;border:1.6px solid var(--ink);border-radius:1.2mm;margin-top:.6mm}
+.faq h4{margin-top:0}
+.faq .q{padding:3.2mm 0;border-bottom:1px solid var(--line)}
+.faq .q:last-child{border-bottom:0}
+.print{position:relative;border-radius:4mm;overflow:hidden;border:1px solid var(--line);box-shadow:0 2mm 6mm rgba(20,19,17,.10);background:#fff;margin:0}
+.print img{width:100%;display:block}
+.pin{position:absolute;transform:translate(-50%,-50%);width:6.6mm;height:6.6mm;border-radius:99px;background:var(--laranja);color:#fff;font-family:"Baloo 2";font-weight:800;font-size:10.5pt;display:grid;place-items:center;border:.6mm solid #fff;box-shadow:0 .8mm 2.4mm rgba(0,0,0,.35);line-height:1;padding-top:.4mm}
+ol.leg{list-style:none;counter-reset:l;padding:0;margin:4mm 0 3mm;display:flex;flex-direction:column;gap:1.8mm}
+ol.leg li{counter-increment:l;display:block;position:relative;padding-left:8mm;font-size:9.3pt;line-height:1.4}
+ol.leg li::before{position:absolute;left:0;top:0;content:counter(l);min-width:5.6mm;height:5.6mm;border-radius:99px;background:var(--laranja);color:#fff;font-family:"Baloo 2";font-weight:800;font-size:9pt;display:grid;place-items:center;margin-top:.2mm;padding-top:.3mm}
+ol.leg.duas{display:grid;grid-template-columns:1fr 1fr;column-gap:6mm;row-gap:1.8mm}
+.lado{display:flex;gap:6mm;align-items:flex-start}
+.lado>div,.lado>ol{flex:1}
+.lado ol.leg{margin-top:0}
+.cel{display:flex;gap:8mm;justify-content:center}
+.cel .print{width:68mm}
+.abre{padding:6mm 10mm 6mm;margin-bottom:5mm}
+.abre h2{font-size:24pt}
+.abre p{font-size:10.5pt}
+
+.cel .print{width:62mm}
+.cel{align-items:flex-start}
+.menu-mapa{display:grid;grid-template-columns:1fr 1fr;gap:3.2mm 5mm;flex:1}
+.gm{background:#fff;border:1px solid var(--line);border-radius:4.5mm;padding:3mm 3.6mm}
+.gt{font-family:"Baloo 2";font-weight:800;font-size:8.6pt;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:1.2mm}
+.gi{display:flex;flex-direction:column;padding:1mm 0;border-bottom:1px dashed var(--line)}
+.gi:last-child{border-bottom:0}
+.gi b{font-size:9.6pt}.gi span{font-size:8.2pt;color:var(--muted);line-height:1.3}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:5mm;align-items:start}
+.cap{font-size:8.4pt;color:var(--muted);margin:1.4mm 0 0;text-align:center}
+.modcard{background:#fff;border:1px solid var(--line);border-radius:5mm;padding:3.6mm 4mm;border-left:2mm solid var(--laranja)}
+.modcard h4{margin:0 0 1mm}.modcard p{font-size:8.8pt;margin:0 0 1.4mm}.modcard .liga{font-size:8.3pt;color:var(--muted);margin:0}
+.cels4{display:grid;grid-template-columns:repeat(4,1fr);gap:4mm;align-items:start}
+.cels4 .print{border-radius:5mm}
+.stack .modcard + .modcard{margin-top:3mm}
+/* PDF sem sombra: o Preview do Mac desenha box-shadow como bloco cinza. */
+.print{box-shadow:none!important;border:1.2px solid #DDD5C3}
+.pin{box-shadow:none!important;background:var(--pin,#E0441A)!important;border:.7mm solid #fff!important;outline:.35mm solid var(--pin,#E0441A);width:6.2mm;height:6.2mm;font-size:10pt}
+ol.leg li::before{background:var(--pin,#E0441A)!important}
+.mini-tela,.indice .it,.card,.gm,.modcard{box-shadow:none!important}
+</style></head><body><section class="page capa" style="--pin:#D6337F">
+  <div class="topo" style="background:#D8401A">
+    <div class="b1" style="background:#EE6A3C"></div><div class="b2" style="background:var(--amarelo);bottom:-56mm;left:-30mm"></div><div class="b3" style="background:#FF77B9"></div>
+    <img class="logo" src="logo-cria-white.png" alt="Cria">
+    <img class="criatura" src="criatura-lampada.png" alt="">
+    <div class="titulo">
+      <div class="sobre">CRIA SOCIAL CLUB · MANUAL DA SOCIAL MÍDIA</div>
+      <h1>Cria Post</h1>
+      <p>Da ideia ao post aprovado, sem print no WhatsApp. Monte o post, mande o link e o cliente aprova do celular, sem criar conta.</p>
+    </div>
+  </div>
+  <div class="baixo">
+    <div class="txt">
+      <h3>Pra quem aprova conteúdo com vários clientes</h3>
+      <p class="muted">Chega de "viu o post que te mandei?", de aprovação perdida no meio da conversa e de legenda antiga indo pro ar. Cada post tem uma casa, um status e um histórico.</p>
+      <div class="pilulas">
+        <span style="background:var(--laranja)">Produção</span>
+        <span style="background:var(--azul)">Link de aprovação</span>
+        <span style="background:var(--verde)">Calendário</span>
+        <span style="background:#E9559A">Relatório</span>
+      </div>
+      <p class="small muted" style="margin-top:6mm">Versão 1.0 · 30 de setembro de 2026 · app.criasocialclub.com.br<br>Manual do módulo. O que é da conta toda (Início, Clientes, Agenda, Equipe) está no Manual Geral.</p>
+    </div>
+    <img class="selo" src="selo-da-ideia-ao-post-rosa.png" alt="">
+  </div></section>
+<section class="page " style="--pin:#E0441A"><div class="abre bg-laranja"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">COMECE AQUI</div><h2>O Cria Post em 1 minuto</h2><p>O post nasce dentro da ficha do cliente, anda por etapas e o cliente aprova por um link. Você nunca mais pergunta "e aí, aprovou?".</p></div>
+  <h3>O caminho de todo post</h3>
+  <div class="fluxo" style="margin-bottom:6mm">
+    <div class="et"><span class="chip novo">Ideia</span><div class="t">Anota</div><div class="d">Banco de ideias do cliente</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip fazendo">Em produção</span><div class="t">Monta</div><div class="d">Arte, legenda, data</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip amar">Aguardando</span><div class="t">Envia</div><div class="d">O link vai pro cliente</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip entregue">Aprovado</span><div class="t">Publica</div><div class="d">Ou volta com ajuste</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip ajuste">Postado</span><div class="t">Mostra</div><div class="d">Entra no relatório</div></div>
+  </div>
+  <h3>Por que vale a pena</h3>
+  <div class="duo" style="margin-bottom:5mm">
+    <div class="card"><h4>O cliente não precisa de conta</h4><p class="small">Ele abre um link, vê o post como vai sair no feed e toca em Aprovar ou Ajuste. Sem senha, sem cadastro, do celular.</p></div>
+    <div class="card"><h4>Tudo fica registrado</h4><p class="small">Quem aprovou, quando, o que pediu de ajuste e em que versão. Acabou a discussão de "eu não aprovei isso".</p></div>
+    <div class="card"><h4>Um quadro por cliente, um painel de todos</h4><p class="small">Dentro do cliente você produz. No painel do Cria Post você vê o que está parado em todos de uma vez.</p></div>
+    <div class="card"><h4>Conversa com o resto do Cria</h4><p class="small">A data vai pra Agenda, a aprovação pro Início, a peça pro parceiro na Equipe e o resultado pro relatório.</p></div>
+  </div>
+  <h3>O que tem neste manual</h3>
+  <div class="indice">
+    <div class="it"><span class="n bg-laranja">1</span><div><b>Onde fica</b><span>as abas do Cria Post no cliente</span></div></div>
+    <div class="it"><span class="n bg-laranja">2</span><div><b>Produção</b><span>o quadro e o post por dentro</span></div></div>
+    <div class="it"><span class="n bg-azul">3</span><div><b>Aprovação por link</b><span>o que você manda e o que ele vê</span></div></div>
+    <div class="it"><span class="n bg-verde">4</span><div><b>Planejamento</b><span>ideias, cronograma e kanban do cliente</span></div></div>
+    <div class="it"><span class="n bg-rosa">5</span><div><b>Relatório e materiais</b><span>prova de trabalho e pedidos avulsos</span></div></div>
+    <div class="it"><span class="n bg-lilas">6</span><div><b>Painel e sincronia</b><span>todos os clientes e pra onde vai cada dado</span></div></div>
+  </div>
+  <p class="small muted" style="margin-top:4mm">Os nomes, fotos, contatos e valores das telas deste manual são fictícios. As telas são do sistema de verdade.</p>
+<div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Post · Social Mídia</span><span class="num">2</span></div></section>
+<section class="page " style="--pin:#E0441A"><div class="abre bg-laranja"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">1 · ONDE FICA</div><h2>O Cria Post mora no cliente</h2><p>Abra o cliente em Clientes e toque na aba Cria Post. Cada cartão leva pra uma parte do trabalho daquele cliente.</p></div><figure class="print"><img src="o-land.jpg" alt=""><span class="pin" style="left:27.8%;top:14.0%">1</span><span class="pin" style="left:17.2%;top:21.0%">2</span><span class="pin" style="left:14.1%;top:36.9%">3</span><span class="pin" style="left:60.3%;top:36.9%">4</span><span class="pin" style="left:15.2%;top:54.3%">5</span><span class="pin" style="left:68.7%;top:54.3%">6</span><span class="pin" style="left:13.7%;top:71.7%">7</span><span class="pin" style="left:61.4%;top:71.7%">8</span><span class="pin" style="left:11.7%;top:89.0%">9</span><span class="pin" style="left:87.0%;top:5.3%">10</span></figure><ol class="leg duas"><li><b>Link de aprovação ativo</b> e quantos posts estão pendentes com o cliente.</li><li><b>Aba Cria Post</b> dentro da ficha do cliente.</li><li><b>Produção:</b> o quadro dos posts desse cliente.</li><li><b>Ideias:</b> o banco de ideias pra virar post.</li><li><b>Cronograma:</b> o mês do cliente com link público.</li><li><b>Kanban do cliente:</b> o quadro do Cria dele, pra quem usa o Cria.</li><li><b>Relatório:</b> o resultado do mês em PDF, com a sua marca.</li><li><b>Materiais:</b> pedidos fora dos posts (flyer, apresentação, logo).</li><li><b>Portal:</b> como o link aparece pro cliente.</li><li><b>Entrar no Cria dele:</b> só pra quem usa o Cria.</li></ol><div class="dica"><span class="ic">!</span><div><p><b>Cliente que aprova por link ou cliente que usa o Cria?</b> Quem aprova por link não tem conta: você faz tudo e ele só aprova. Quem usa o Cria tem o próprio quadro, e a aba Kanban do cliente te deixa mexer nele daqui.</p></div></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Post · Social Mídia</span><span class="num">3</span></div></section>
+<section class="page " style="--pin:#E0441A"><div class="abre bg-laranja"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">2 · PRODUÇÃO</div><h2>O quadro de posts do cliente</h2><p>Cada coluna é uma etapa. O card anda sozinho quando o cliente responde; o resto você arrasta.</p></div><figure class="print"><img src="o-prod.jpg" alt=""><span class="pin" style="left:13.3%;top:4.8%">1</span><span class="pin" style="left:55.3%;top:4.8%">2</span><span class="pin" style="left:71.3%;top:4.8%">3</span><span class="pin" style="left:95.0%;top:1.2%">4</span><span class="pin" style="left:30.2%;top:14.0%">5</span><span class="pin" style="left:31.7%;top:21.9%">6</span><span class="pin" style="left:17.8%;top:30.1%">7</span><span class="pin" style="left:34.8%;top:38.8%">8</span><span class="pin" style="left:15.2%;top:57.8%">9</span><span class="pin" style="left:19.7%;top:62.9%">10</span><span class="pin" style="left:97.4%;top:38.8%">11</span></figure><ol class="leg duas"><li><b>Kanban ou Calendário:</b> o mesmo conteúdo em colunas ou no mês.</li><li><b>Link de aprovação:</b> copia o link do cliente (tudo ou só um período).</li><li><b>Importar do kanban:</b> traz posts prontos do Cria do cliente.</li><li><b>Novo post</b> em branco.</li><li><b>Período e ordem:</b> manual (arrastando) ou por data.</li><li><b>Filtro por formato:</b> estático, carrossel, reels.</li><li><b>Etiquetas</b> suas, pra organizar (série, campanha, gravar).</li><li><b>As etapas:</b> em produção, aguardando cliente, ajuste, aprovado.</li><li><b>Parceiro no card:</b> quem está fazendo a arte e em que pé está.</li><li><b>Data de publicação</b> direto no card, sem abrir o post.</li><li><b>Postado:</b> o que já foi ao ar.</li></ol><div class="tabela" style="margin-top:3mm"><table><tr><th>Etapa</th><th>Quem move</th></tr><tr><td><b>Em produção</b></td><td>Você, enquanto monta. O cliente ainda não vê.</td></tr><tr><td><b>Aguardando cliente</b></td><td>Você, quando está pronto pra ele ver. Aparece no link.</td></tr><tr><td><b>Ajuste solicitado</b> e <b>Aprovado</b></td><td>O cliente, pelo link. O card muda de coluna sozinho e você é avisado.</td></tr><tr><td><b>Postado</b></td><td>Você, depois que publicar. É o que conta como entregue no relatório.</td></tr></table></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Post · Social Mídia</span><span class="num">4</span></div></section>
+<section class="page " style="--pin:#E0441A"><h2 style="margin-bottom:1.5mm">O post por dentro</h2><p class="muted" style="margin-bottom:4mm">Toque no lápis do card (ou em Novo post). Tudo que o post precisa fica num lugar só.</p><figure class="print"><img src="o-edit.jpg" alt=""><span class="pin" style="left:12.2%;top:9.4%">1</span><span class="pin" style="left:57.3%;top:8.2%">2</span><span class="pin" style="left:8.0%;top:15.0%">3</span><span class="pin" style="left:29.5%;top:39.5%">4</span><span class="pin" style="left:14.9%;top:53.2%">5</span><span class="pin" style="left:11.6%;top:64.0%">6</span><span class="pin" style="left:17.2%;top:75.9%">7</span><span class="pin" style="left:15.1%;top:85.5%">8</span><span class="pin" style="left:9.2%;top:95.5%">9</span><span class="pin" style="left:58.6%;top:15.0%">10</span><span class="pin" style="left:83.3%;top:15.0%">11</span><span class="pin" style="left:92.4%;top:34.4%">12</span></figure><ol class="leg duas"><li><b>Etiqueta:</b> marca o post (série, campanha, "gravar").</li><li><b>Com Amanda:</b> manda a peça pro parceiro. O nome é de quem está com ela.</li><li><b>Título, plataforma e formato.</b></li><li><b>Observações:</b> só quem produz lê. O cliente nunca vê.</li><li><b>Tipo de aprovação:</b> simplificada (1 clique) ou detalhada (4 etapas).</li><li><b>Data e horário</b> de publicação. Vão pro calendário e pra Agenda.</li><li><b>Referências:</b> links de inspiração, quantos quiser.</li><li><b>Pasta do Drive</b> com o material bruto.</li><li><b>Legenda,</b> com botão de copiar na hora de postar.</li><li><b>Mídia:</b> imagem, vídeo, arquivo do Drive ou link (até 20).</li><li><b>Briefing de arte:</b> monta o recado pro designer com a marca do cliente.</li><li><b>Prévia</b> de como sai no feed, igual o cliente vai ver.</li></ol><div class="dica"><span class="ic">!</span><div><p><b>Aprovação detalhada</b> separa o post em Tema, Conteúdo, Mídia e Legenda. O cliente aprova cada parte e pede ajuste só no que precisa. Use em cliente exigente ou em post de campanha; no dia a dia, a simplificada resolve.</p></div></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Post · Social Mídia</span><span class="num">5</span></div></section>
+<section class="page " style="--pin:#0061EE"><div class="abre bg-azul"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">3 · APROVAÇÃO POR LINK</div><h2>Um link por cliente, pra sempre</h2><p>O link é fixo. Você manda uma vez, ele salva, e todo post que você colocar em Aguardando cliente aparece lá.</p></div><div class="lado" style="gap:6mm;align-items:flex-start"><figure class="print" style="width:78mm;flex:none"><img src="o-link.jpg" alt=""></figure><div><h4 style="margin-top:0">Dois jeitos de mandar</h4><p class="small"><b>Todos os posts:</b> o cliente vê tudo que está na fila de aprovação. É o link do dia a dia.</p><p class="small"><b>Só um período:</b> escolha início e fim e o link mostra só os posts agendados nesse intervalo. Bom pra aprovar "a semana que vem" ou o mês fechado.</p><h4>O que acontece depois</h4><p class="small">Quando ele aprova ou pede ajuste, o card muda de coluna sozinho, chega aviso no sino (e no celular, se estiver instalado) e aparece em <b>Aprovações recentes</b> no Início.</p><p class="small">Se ele não abre, o Início te avisa com <b>Aprovação parada</b>. No card em Aguardando cliente aparece <b>Visto pelo cliente</b>, com quando ele abriu o link.</p></div></div><h3 style="margin-top:5mm">Aprovação simplificada x detalhada</h3><div class="tabela"><table><tr><th></th><th>Simplificada</th><th>Detalhada</th></tr><tr><td><b>O cliente vê</b></td><td>O post inteiro</td><td>O post dividido em Tema, Conteúdo, Mídia e Legenda</td></tr><tr><td><b>Ele responde</b></td><td>Aprovar ou Ajuste, um clique</td><td>Aprova ou pede ajuste em cada parte</td></tr><tr><td><b>Use quando</b></td><td>Rotina, cliente que confia</td><td>Campanha, cliente detalhista, post caro</td></tr><tr><td><b>Ambas</b></td><td colspan="2">O cliente escolhe como prefere responder.</td></tr></table></div><div class="dica"><span class="ic">!</span><div><p><b>Mande o link no grupo do cliente e fixe a mensagem.</b> Como ele não muda, o cliente sempre sabe onde aprovar, e você para de mandar print.</p></div></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Post · Social Mídia</span><span class="num">6</span></div></section>
+<section class="page " style="--pin:#0061EE"><h2 style="margin-bottom:1.5mm">O que o cliente vê</h2><p class="muted" style="margin-bottom:4mm">A página que abre no celular dele. Sem senha, sem cadastro, com o nome e a cor da marca.</p><div class="grid3" style="align-items:start"><div><figure class="print" style="border-radius:5mm"><img src="c-lista.jpg" alt=""></figure><p class="cap"><b>Lista:</b> o post como sai no feed, a data, a legenda e os botões Aprovar e Ajuste. No topo, quantos já aprovou.</p></div><div><figure class="print" style="border-radius:5mm"><img src="c-ajuste.jpg" alt=""></figure><p class="cap"><b>Ajuste:</b> ele escreve o que mudar ou aponta direto na arte. O pedido chega no card.</p></div><div><figure class="print" style="border-radius:5mm"><img src="c-cal.jpg" alt=""></figure><p class="cap"><b>Calendário:</b> o mês com o que já foi aprovado e quando sai. Embaixo, ele pede material avulso.</p></div></div><div class="dica"><span class="ic">!</span><div><p><b>"Apontar na arte" corta ida e volta.</b> Em vez de "muda aquele negócio lá em cima", o cliente toca no ponto exato. Mostre isso pra ele na primeira aprovação.</p></div></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Post · Social Mídia</span><span class="num">7</span></div></section>
+<section class="page " style="--pin:#0061EE"><h2 style="margin-bottom:1.5mm">Portal: a cara do link</h2><p class="muted" style="margin-bottom:4mm">Na aba Portal do cliente você decide o que ele vê e organiza o que só você vê.</p><figure class="print"><img src="o-portal.jpg" alt=""><span class="pin" style="left:79.4%;top:3.4%">1</span><span class="pin" style="left:49.2%;top:17.4%">2</span><span class="pin" style="left:11.1%;top:25.9%">3</span><span class="pin" style="left:10.6%;top:40.3%">4</span><span class="pin" style="left:10.0%;top:46.9%">5</span><span class="pin" style="left:8.9%;top:85.7%">6</span><span class="pin" style="left:60.0%;top:15.6%">7</span><span class="pin" style="left:60.6%;top:55.2%">8</span><span class="pin" style="left:64.8%;top:65.6%">9</span></figure><ol class="leg duas"><li><b>Copiar link e Abrir:</b> o link do cliente e a página como ele vê.</li><li><b>Prévia</b> do topo da página dele.</li><li><b>Nome exibido e @</b> do Instagram.</li><li><b>Logo da marca</b> no topo do link.</li><li><b>Cor da marca:</b> pinta botões e destaques.</li><li><b>Abas do link:</b> liga o Calendário e o Relatório pra ele.</li><li><b>Cor do cliente:</b> só pra você, pinta o card na agenda e no calendário.</li><li><b>Ficha do cliente:</b> liga esta página à ficha do Cria Gestão.</li><li><b>Desativar ou excluir</b> o Cria Post do cliente.</li></ol><div class="dica"><span class="ic">!</span><div><p><b>Ligue a aba Relatório do link.</b> O cliente vê o que foi entregue no período, com a marca dele. Vira prova de trabalho sem você mandar nada.</p></div></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Post · Social Mídia</span><span class="num">8</span></div></section>
+<section class="page " style="--pin:#01934A"><div class="abre bg-verde"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">4 · PLANEJAMENTO</div><h2>Ideias: tudo que inspira o cliente</h2><p>Anote na hora que a ideia vier. Marque as boas como Usar e elas viram post com um toque.</p></div><figure class="print"><img src="o-ideias.jpg" alt=""><span class="pin" style="left:3.2%;top:12.5%">1</span><span class="pin" style="left:69.9%;top:12.5%">2</span><span class="pin" style="left:39.4%;top:90.0%">3</span></figure><ol class="leg"><li><b>As cinco fontes de ideia</b> do cliente, cada uma com a sua contagem.</li><li><b>Do HUB:</b> ideias que a IA tirou dos concorrentes dele no Cria Radar.</li><li><b>Usar, Usada ou Descartar.</b> O que você marca como Usar vira post.</li></ol><div class="tabela" style="margin-top:3mm"><table><tr><th>Fonte</th><th>De onde vem</th></tr><tr><td><b>Suas ideias</b></td><td>O que você anotou (nota ou link de referência)</td></tr><tr><td><b>Do cliente</b></td><td>O que ele mesmo anotou no Cria dele</td></tr><tr><td><b>Salvos dele</b></td><td>Posts que ele guardou como referência no Cria dele. É o gosto dele, em imagem</td></tr><tr><td><b>Do HUB</b></td><td>Pautas geradas pela IA a partir dos concorrentes (Cria Radar)</td></tr><tr><td><b>Seus salvos</b></td><td>O que você guardou pensando nele</td></tr></table></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Post · Social Mídia</span><span class="num">9</span></div></section>
+<section class="page " style="--pin:#01934A"><h2 style="margin-bottom:1.5mm">Cronograma do mês</h2><div class="lado" style="gap:6mm;align-items:flex-start;margin-bottom:5mm"><figure class="print" style="width:68mm;flex:none"><img src="o-cron.jpg" alt=""></figure><div><p class="small">O cronograma é a visão do mês pro cliente: as datas comemorativas e o que vai sair, num link público. Crie um por mês em <b>Novo cronograma</b>.</p><p class="small">O mês escolhido é o que faz a data comemorativa que você manda da Agenda cair no cronograma certo.</p><p class="small muted">A aprovação post a post continua na Produção. O cronograma é pra ele enxergar o mês inteiro.</p></div></div><h2 style="margin-bottom:1.5mm">Kanban do cliente</h2><p class="muted" style="margin-bottom:3mm">Só aparece pra cliente que usa o Cria. É o quadro dele de verdade: o que você muda aqui, muda lá, ao vivo.</p><figure class="print"><img src="o-kan.jpg" alt=""><span class="pin" style="left:63.9%;top:4.0%">1</span><span class="pin" style="left:87.2%;top:12.8%">2</span><span class="pin" style="left:35.0%;top:17.0%">3</span><span class="pin" style="left:66.1%;top:17.0%">4</span><span class="pin" style="left:23.1%;top:29.8%">5</span><span class="pin" style="left:11.7%;top:39.4%">6</span></figure><ol class="leg duas"><li><b>Aviso de quadro real.</b> Criar, editar ou arrastar muda os posts dele.</li><li><b>Novo Post</b> direto no Cria do cliente.</li><li><b>Período:</b> hoje, semana, quinzena, mês, ano.</li><li><b>Redes</b> e o contador de publicados e agendados.</li><li><b>Board, Tabela ou Calendário.</b></li><li><b>As colunas dele:</b> ideia, planejamento, produzindo, pronto, agendado, publicado.</li></ol><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Post · Social Mídia</span><span class="num">10</span></div></section>
+<section class="page " style="--pin:#D6337F"><div class="abre bg-rosa"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">5 · RELATÓRIO E MATERIAIS</div><h2>O relatório que o cliente entende</h2><p>Produção, desempenho do Instagram e análise da IA, com a marca do cliente, pronto pra mandar em PDF.</p></div><figure class="print"><img src="o-rel.jpg" alt=""><span class="pin" style="left:30.6%;top:14.0%">1</span><span class="pin" style="left:38.1%;top:42.0%">2</span><span class="pin" style="left:38.1%;top:71.9%">3</span><span class="pin" style="left:91.9%;top:13.1%">4</span><span class="pin" style="left:72.5%;top:90.8%">5</span></figure><ol class="leg duas"><li><b>Período:</b> 7 ou 30 dias, um mês fechado ou datas livres.</li><li><b>Recado da social mídia:</b> abre o relatório. Salva sozinho, por período.</li><li><b>Próximos passos:</b> vira a última página. Opcional.</li><li><b>Prévia:</b> cada folha é uma página do PDF. Clique na análise pra editar.</li><li><b>Baixar PDF</b> pronto pra enviar.</li></ol><p class="small" style="margin-top:2mm">Rolando o painel da esquerda: <b>Métricas do Instagram</b> (suba o print do app, ótimo pra cliente sem Instagram conectado), <b>Gerar análise (IA)</b>, que usa a persona e o segmento do cliente, e <b>Compartilhar</b> por link, WhatsApp ou e-mail. Cada relatório fica no <b>Histórico</b> da aba.</p><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Post · Social Mídia</span><span class="num">11</span></div></section>
+<section class="page " style="--pin:#D6337F"><h2 style="margin-bottom:1.5mm">Materiais: o que não é post</h2><p class="muted" style="margin-bottom:4mm">Apresentação, flyer, cartão de visita, logo, arte avulsa. O cliente pede pelo link, você organiza num quadro.</p><figure class="print"><img src="o-mat.jpg" alt=""><span class="pin" style="left:71.3%;top:25.2%">1</span><span class="pin" style="left:92.8%;top:5.2%">2</span><span class="pin" style="left:10.6%;top:63.0%">3</span></figure><ol class="leg"><li><b>Link de pedidos:</b> o cliente pede sem te chamar no WhatsApp.</li><li><b>Novo material,</b> quando o pedido chega por outro caminho.</li><li><b>As etapas:</b> solicitado, a fazer, em aprovação, ajuste, finalizado.</li></ol><div class="lado" style="gap:6mm;align-items:flex-start;margin-top:4mm"><figure class="print" style="width:66mm;flex:none"><img src="o-matn.jpg" alt=""><span class="pin" style="left:14.1%;top:21.3%">1</span><span class="pin" style="left:18.8%;top:34.4%">2</span><span class="pin" style="left:60.9%;top:60.3%">3</span><span class="pin" style="left:37.5%;top:70.7%">4</span><span class="pin" style="left:37.5%;top:86.5%">5</span></figure><div><ol class="leg"><li><b>Tipo</b> do material.</li><li><b>Briefing:</b> medidas, textos, cores, o que não pode faltar.</li><li><b>Prazo</b> pra ficar pronto (opcional).</li><li><b>Anexos:</b> arquivo ou link do Drive.</li><li><b>Enviar para</b> um parceiro da Equipe, ou ninguém (a equipe faz).</li></ol><p class="small" style="margin-top:3mm">O que o cliente pede pelo link cai em <b>Solicitado</b> e entra na Agenda na data que ele marcou.</p></div></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Post · Social Mídia</span><span class="num">12</span></div></section>
+<section class="page " style="--pin:#5F74E3"><div class="abre bg-lilas"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">6 · PAINEL E SINCRONIA</div><h2>Todos os clientes numa tela</h2><p>O Cria Post do menu é o painel: as aprovações de todos os clientes juntas e o calendário geral. Pra criar e editar, abra o cliente.</p></div><figure class="print"><img src="o-painel.jpg" alt=""><span class="pin" style="left:21.1%;top:17.4%">1</span><span class="pin" style="left:74.8%;top:6.6%">2</span><span class="pin" style="left:31.1%;top:29.6%">3</span><span class="pin" style="left:83.3%;top:35.2%">4</span><span class="pin" style="left:16.7%;top:46.0%">5</span><span class="pin" style="left:17.8%;top:55.4%">6</span><span class="pin" style="left:46.7%;top:62.4%">7</span></figure><ol class="leg duas"><li><b>Aprovações ou Calendário geral.</b></li><li><b>Com parceiros e Ver clientes:</b> atalhos pra Equipe e pra carteira.</li><li><b>Relatório rápido:</b> escolhe o cliente e o período e gera, sem personalizar.</li><li><b>Gerar relatório</b> em um clique.</li><li><b>Todos os clientes</b> ou um só, com quantos estão aguardando.</li><li><b>Mais recentes</b> ou por data.</li><li><b>As etapas de todos</b> os clientes. Toque no post pra abrir no cliente.</li></ol><div class="dica"><span class="ic">!</span><div><p><b>Comece o dia pela coluna Aguardando cliente.</b> O que está lá há mais tempo mostra "Esperando há X dias". É a sua lista de quem cobrar.</p></div></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Post · Social Mídia</span><span class="num">13</span></div></section>
+<section class="page " style="--pin:#5F74E3"><h2 style="margin-bottom:1.5mm">Calendário geral</h2><p class="muted" style="margin-bottom:4mm">O mês de todos os clientes, cada um na sua cor. Bom pra ver dia lotado e semana vazia de uma vez.</p><figure class="print"><img src="o-cal.jpg" alt=""><span class="pin" style="left:63.9%;top:3.5%">1</span><span class="pin" style="left:95.0%;top:3.5%">2</span><span class="pin" style="left:12.2%;top:8.6%">3</span><span class="pin" style="left:43.9%;top:13.4%">4</span><span class="pin" style="left:11.7%;top:18.2%">5</span><span class="pin" style="left:12.8%;top:23.5%">6</span><span class="pin" style="left:29.4%;top:35.8%">7</span></figure><ol class="leg duas"><li><b>Mês ou semana.</b></li><li><b>Troca o mês</b> e Hoje volta pro atual.</li><li><b>Clientes:</b> mostra todos ou só alguns.</li><li><b>Período</b> rápido.</li><li><b>Com parceiros:</b> só o que está com alguém da Equipe.</li><li><b>A agendar:</b> posts sem data. Dê data antes que fiquem pra trás.</li><li><b>Post na cor do cliente.</b> Toque pra abrir.</li></ol><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Post · Social Mídia</span><span class="num">14</span></div></section>
+<section class="page " style="--pin:#5F74E3"><h2 style="margin-bottom:1.5mm">Pra onde vai cada coisa</h2><p class="muted" style="margin-bottom:4mm">Você mexe no post uma vez e o Cria leva a informação pro lugar certo. Nada de atualizar em dois lugares.</p><div class="tabela"><table><tr><th>Quando você...</th><th>Aparece em...</th></tr><tr><td><b>Dá data a um post</b></td><td>Calendário do cliente, Calendário geral e Agenda da semana. O aviso de "semana sem post" some do Início.</td></tr><tr><td><b>Coloca em Aguardando cliente</b></td><td>No link do cliente, em Aprovações e no contador de posts esperando do Início.</td></tr><tr><td><b>O cliente não responde</b></td><td>"Aprovação parada" em Sua operação hoje, no Início.</td></tr><tr><td><b>O cliente aprova ou pede ajuste</b></td><td>O card muda de coluna, chega aviso no sino e no celular e entra em Aprovações recentes.</td></tr><tr><td><b>Manda a peça pro parceiro</b></td><td>Equipe, aba Produção, e a fila do parceiro. O status dele aparece no card.</td></tr><tr><td><b>O parceiro entrega</b></td><td>Os arquivos entram no post e a peça aparece em "Pra você revisar", na Equipe.</td></tr><tr><td><b>Mexe no kanban de quem usa o Cria</b></td><td>No Cria do cliente, ao vivo.</td></tr><tr><td><b>Marca como Postado</b></td><td>Relatório do cliente, na produção do período.</td></tr><tr><td><b>O cliente pede material</b></td><td>Materiais, em Solicitado, e na Agenda na data que ele marcou.</td></tr></table></div><div class="alerta"><span class="ic">!</span><div><p><b>A mídia do post é de passagem.</b> O arquivo que você sobe serve pra aprovação e publicação; depois que o post sai, ele é apagado em alguns dias. O original fica no Drive do cliente, e o link da pasta vai no post.</p></div></div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Post · Social Mídia</span><span class="num">15</span></div></section>
+<section class="page " style="--pin:#141311"><div class="abre bg-amarelo amarelo"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div><div class="n">PRA FECHAR</div><h2>Tirando o máximo do Cria Post</h2><p>Uma rotina simples e as dúvidas que mais aparecem.</p></div>
+  <ul class="check-lista">
+    <li><span class="cx"></span><div><b>Uma vez por cliente:</b> ajuste o Portal (logo, cor, abas) e mande o link no grupo dele, fixado.</div></li>
+    <li><span class="cx"></span><div><b>Todo dia:</b> painel do Cria Post, coluna Aguardando cliente. Quem está esperando há mais tempo, cobre.</div></li>
+    <li><span class="cx"></span><div><b>Ao montar o mês:</b> Ideias do cliente, marque as boas como Usar, crie os posts e dê data a todos. Nada em "A agendar".</div></li>
+    <li><span class="cx"></span><div><b>Ao delegar arte:</b> use o Briefing de arte e o "Com parceiro" do post. O designer recebe tudo junto.</div></li>
+    <li><span class="cx"></span><div><b>Depois de publicar:</b> arraste pra Postado. É o que conta no relatório.</div></li>
+    <li><span class="cx"></span><div><b>Fim do mês:</b> relatório de cada cliente, com recado e próximos passos.</div></li>
+  </ul>
+  <h3 style="margin-top:6mm">Perguntas rápidas</h3>
+  <div class="faq card">
+    <div class="q"><h4>O cliente perdeu o link.</h4><p class="small">Copie de novo em Link de aprovação, na Produção, ou em Copiar link, no Portal. É sempre o mesmo.</p></div>
+    <div class="q"><h4>Quero que ele aprove só a semana que vem.</h4><p class="small">Em Link de aprovação, use "Só um período" com o início e o fim da semana.</p></div>
+    <div class="q"><h4>O post não aparece pro cliente.</h4><p class="small">Ele só aparece em Aguardando cliente. Em produção é só seu.</p></div>
+    <div class="q"><h4>O cliente pediu ajuste, e agora?</h4><p class="small">O pedido fica no card. Ajuste, e mande de novo pra Aguardando cliente. O histórico de ajustes fica salvo.</p></div>
+  </div><div class="rodape"><img src="logo-cria.png" alt=""><span>Manual Cria Post · Social Mídia</span><span class="num">16</span></div></section></body></html>
