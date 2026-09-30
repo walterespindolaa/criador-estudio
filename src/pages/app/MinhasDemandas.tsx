@@ -29,7 +29,7 @@ import { ErroAoCarregar } from "@/components/shared/ErroAoCarregar";
 import { CamadaDeAlfinetes, segundoBonito } from "@/components/shared/CamadaDeAlfinetes";
 import {
   ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useConversaDoCard, useCoresDasAgencias, useEntreguesDoParceiro,
-  useFilaDoParceiro, useMarcarConversaLida, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useProporPrazo, useResolverPrazoSugerido, useVersoesDaPeca,
+  useFilaDoParceiro, useMarcarConversaLida, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useProporPrazo, useResolverPrazoSugerido, useVersoesDaPeca, useEntregasRemoviveis,
   type CardAberto, type CardDaFila, type EntregueDoParceiro, type MarcaDoParceiro, type MarcaLiberada, type VersaoDaPeca,
 } from "@/hooks/useParceiro";
 import {
@@ -1487,7 +1487,10 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { data: card, isLoading } = useCardDoParceiro(postId);
-  const { marcar, comentar, responderPrazo, anexar } = useAcoesDoParceiro(postId);
+  const { marcar, comentar, responderPrazo, anexar, remover } = useAcoesDoParceiro(postId);
+  /* O que o parceiro ainda pode tirar do card (a entrega DELE nesta rodada,
+     antes de marcar entregue). No modo agência não se aplica. */
+  const { data: removiveis = [] } = useEntregasRemoviveis(postId, !agencia);
   // No modo agencia a mensagem sai como social_media, pela mesma tabela que o
   // editor do cliente usa, e o card recarrega pra ela aparecer na hora.
   const conversaAgencia = useConversaDoCard(agencia ? postId : null);
@@ -2104,16 +2107,32 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                         {midias.map((m, i) => {
                           const src = m.thumb || m.url || "";
                           const ehImagem = /^image\//.test(m.tipo ?? "") || EH_IMAGEM.test(src);
+                          /* APAGAR O ANEXO ERRADO (Walter, 30/09/2026): a designer
+                             subiu a arte no post errado e não tinha como tirar.
+                             O X só aparece no que é dela nesta rodada. */
+                          const podeTirar = !agencia && card.producao_status !== "entregue" && !!m.url && removiveis.includes(m.url);
                           return (
-                            <a key={`${src}-${i}`} href={m.url || src} target="_blank" rel="noopener noreferrer"
-                              title={m.nome ?? undefined}
-                              className="block aspect-square rounded-lg overflow-hidden border border-border bg-muted hover:border-primary/50 transition-colors">
-                              {ehImagem
-                                ? <img src={src} alt={m.nome ?? ""} loading="lazy" className="w-full h-full object-cover" />
-                                : <span className="w-full h-full grid place-items-center px-1 text-[11px] font-body font-bold text-muted-foreground text-center leading-tight">
-                                    {m.nome?.slice(0, 22) || "arquivo"}
-                                  </span>}
-                            </a>
+                            <div key={`${src}-${i}`} className="relative">
+                              <a href={m.url || src} target="_blank" rel="noopener noreferrer"
+                                title={m.nome ?? undefined}
+                                className="block aspect-square rounded-lg overflow-hidden border border-border bg-muted hover:border-primary/50 transition-colors">
+                                {ehImagem
+                                  ? <img src={src} alt={m.nome ?? ""} loading="lazy" className="w-full h-full object-cover" />
+                                  : <span className="w-full h-full grid place-items-center px-1 text-[11px] font-body font-bold text-muted-foreground text-center leading-tight">
+                                      {m.nome?.slice(0, 22) || "arquivo"}
+                                    </span>}
+                              </a>
+                              {podeTirar && (
+                                <button type="button" aria-label={`Remover ${m.nome ?? "arquivo"}`} title="Remover este arquivo"
+                                  disabled={remover.isPending}
+                                  onClick={() => {
+                                    if (window.confirm(`Remover "${m.nome ?? "este arquivo"}" do card?`)) remover.mutate(m.url as string);
+                                  }}
+                                  className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/60 text-white shadow hover:bg-red-600 transition-colors disabled:opacity-50">
+                                  {remover.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3.5 w-3.5" strokeWidth={2.5} />}
+                                </button>
+                              )}
+                            </div>
                           );
                         })}
                       </div>
@@ -2254,9 +2273,19 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
 
                     {!entregando ? (
                       <div className="flex flex-wrap gap-2 mt-3">
+                        {/* ENTREGA EM UM CLIQUE (Walter, 30/09/2026). A designer
+                            subia tudo, clicava em "Marcar como entregue" e parava:
+                            o clique só abria o "Qual é a versão final?" e a peça
+                            ficava com ela. Se ela já subiu arquivo nesta rodada,
+                            entrega direto. O segundo passo fica só pra quem
+                            ainda não anexou nada (sobe ali ou cola o link). */}
                         <Button className="flex-1 min-w-[180px] rounded-xl bg-green-600 hover:bg-green-700" disabled={marcar.isPending}
-                          onClick={() => setEntregando(true)}>
-                          <Check className="h-4 w-4 mr-1.5" /> Marcar como entregue
+                          onClick={() => {
+                            if (removiveis.length > 0) marcar.mutate({ status: "entregue" });
+                            else setEntregando(true);
+                          }}>
+                          {marcar.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Check className="h-4 w-4 mr-1.5" />}
+                          {removiveis.length > 0 ? `Entregar (${removiveis.length} ${removiveis.length === 1 ? "arquivo" : "arquivos"})` : "Marcar como entregue"}
                         </Button>
                         {card.producao_status !== "em_producao" && (
                           <Button variant="outline" className="flex-1 min-w-[140px] rounded-xl bg-card" disabled={marcar.isPending}

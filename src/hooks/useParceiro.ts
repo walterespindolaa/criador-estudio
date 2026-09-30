@@ -280,6 +280,27 @@ export function useVersoesDaPeca(postId: string | null) {
   });
 }
 
+/* ── ANEXOS QUE O PARCEIRO AINDA PODE TIRAR (Walter, 30/09/2026) ─────────
+   A designer subiu a arte no post errado e não tinha como apagar. Só entram
+   aqui os arquivos que ELE entregou nesta rodada, enquanto a peça não foi
+   marcada como entregue: depois disso, quem mexe é a social mídia. A lista
+   é de URLs porque o card do parceiro (parceiro_abrir_card) não traz o id. */
+export function useEntregasRemoviveis(postId: string | null, ativo: boolean) {
+  return useQuery<string[]>({
+    queryKey: ["parceiro-removiveis", postId],
+    enabled: !!postId && ativo,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("parceiro_entregas_da_rodada", { _post_id: postId });
+      if (error) {
+        // SQL ainda não rodou: sem X nos arquivos, o resto do card segue igual.
+        if (aindaNaoExisteNoBanco(error.message)) return [];
+        throw error;
+      }
+      return ((data ?? []) as { url: string | null }[]).map((r) => r.url).filter((u): u is string => !!u);
+    },
+  });
+}
+
 /* ── O CARD ABERTO ──────────────────────────────────────────────────────── */
 export function useCardDoParceiro(postId: string | null) {
   return useQuery<CardAberto | null>({
@@ -304,6 +325,7 @@ export function useAcoesDoParceiro(postId: string | null) {
     void qc.invalidateQueries({ queryKey: ["parceiro-entregues"] });
     void qc.invalidateQueries({ queryKey: ["parceiro-agencias"] });
     if (postId) void qc.invalidateQueries({ queryKey: ["parceiro-card", postId] });
+    if (postId) void qc.invalidateQueries({ queryKey: ["parceiro-removiveis", postId] });
   };
 
   const marcar = useMutation({
@@ -399,11 +421,42 @@ export function useAcoesDoParceiro(postId: string | null) {
       invalidar();
       toast.success(r.entregou ? "Arquivo anexado e card entregue!"
         : r.naConversa ? "Enviado na conversa." : "Arquivo anexado ao card.");
+      void qc.invalidateQueries({ queryKey: ["parceiro-removiveis", postId] });
     },
     onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui anexar.")),
   });
 
-  return { marcar, comentar, responderPrazo, anexar };
+  /* TIRAR O ANEXO ERRADO. A RPC confere card, rodada e se ainda não foi
+     entregue, apaga a referência e deixa "Arquivo removido" na conversa.
+     O arquivo em si mora na pasta do próprio parceiro no bucket `media`:
+     tenta apagar lá também, mas se a policy não deixar, não trava nada. */
+  const remover = useMutation({
+    mutationFn: async (url: string) => {
+      if (!postId) throw new Error("Sem card.");
+      const { error } = await sbRpc("parceiro_remover_entrega", { _post_id: postId, _url: url });
+      if (error) {
+        if (/ja_entregue/.test(error.message)) throw new Error("A peça já foi entregue. Peça pra social mídia tirar o arquivo.");
+        if (/nao_removivel/.test(error.message)) throw new Error("Esse arquivo não é da sua entrega atual, então quem tira é a social mídia.");
+        throw error;
+      }
+      const { data: sess } = await supabase.auth.getUser();
+      const uid = sess.user?.id;
+      const marca = "/object/public/media/";
+      const i = url.indexOf(marca);
+      const caminho = i >= 0 ? decodeURIComponent(url.slice(i + marca.length)) : "";
+      if (uid && caminho.startsWith(`${uid}/`)) {
+        await supabase.storage.from("media").remove([caminho]).catch(() => undefined);
+      }
+    },
+    onSuccess: () => {
+      invalidar();
+      void qc.invalidateQueries({ queryKey: ["parceiro-removiveis", postId] });
+      toast.success("Arquivo removido do card.");
+    },
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui remover o arquivo.")),
+  });
+
+  return { marcar, comentar, responderPrazo, anexar, remover };
 }
 
 /* ── CACHÊS (fase 3) ─────────────────────────────────────────────────────── */
