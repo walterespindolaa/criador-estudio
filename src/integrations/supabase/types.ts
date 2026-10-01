@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      _clone_tutorial_relatorio: {
+        Row: {
+          copiados: number | null
+          em: string | null
+          exemplo_erro: string | null
+          pulados: number | null
+          tab: string | null
+        }
+        Insert: {
+          copiados?: number | null
+          em?: string | null
+          exemplo_erro?: string | null
+          pulados?: number | null
+          tab?: string | null
+        }
+        Update: {
+          copiados?: number | null
+          em?: string | null
+          exemplo_erro?: string | null
+          pulados?: number | null
+          tab?: string | null
+        }
+        Relationships: []
+      }
       account_deletion_log: {
         Row: {
           deleted_at: string | null
