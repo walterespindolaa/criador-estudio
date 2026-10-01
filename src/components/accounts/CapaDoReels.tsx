@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ImagePlus, Loader2, Play, Trash2 } from "lucide-react";
+import { HardDrive, ImagePlus, Loader2, Play, Trash2 } from "lucide-react";
+import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -116,7 +117,14 @@ export function useCapaDoPost(postId: string | null) {
 export function EditorDeCapa({ postId }: { postId: string }) {
   const { capa, subir, salvar } = useCapaDoPost(postId);
   const input = useRef<HTMLInputElement | null>(null);
-  const ocupado = subir.isPending || salvar.isPending;
+  /* DO DRIVE TAMBÉM (Gabriela, 30/09/2026: "preciso que dê pra eu selecionar
+     do drive a capa do reels"). As artes do cliente moram no Drive; baixar
+     pro computador só pra subir de novo era passo à toa. O arquivo escolhido
+     passa pelo MESMO caminho do upload (vira JPEG e sobe no bucket), então a
+     capa continua valendo na publicação do Reels. */
+  const { pickOneImage, picking } = useGoogleDrive();
+  const doDrive = async () => { const f = await pickOneImage(); if (f) subir.mutate(f); };
+  const ocupado = subir.isPending || salvar.isPending || picking;
 
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-2.5">
@@ -132,12 +140,17 @@ export function EditorDeCapa({ postId }: { postId: string }) {
       <div className="min-w-0 flex-1">
         <p className="text-[12.5px] font-body font-bold text-foreground">Capa do Reels</p>
         <p className="text-[11px] font-body text-muted-foreground leading-snug">
-          {capa ? "Aparece na prévia, no link do cliente e no grid do perfil." : "Opcional. 1080x1920, JPG ou PNG. Sem capa, vale o primeiro frame do vídeo."}
+          {capa ? "Aparece na prévia, no link do cliente e no grid do perfil." : "Opcional. 1080x1920, do computador ou do Drive. Sem capa, vale o primeiro frame do vídeo."}
         </p>
       </div>
       <div className="flex items-center gap-1 shrink-0">
         <Button type="button" size="sm" variant="outline" className="h-8" disabled={ocupado} onClick={() => input.current?.click()}>
           {capa ? "Trocar" : "Escolher"}
+        </Button>
+        <Button type="button" size="sm" variant="outline" className="h-8 px-2.5" disabled={ocupado} onClick={doDrive}
+          title="Escolher a capa no Google Drive">
+          {picking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <HardDrive className="h-3.5 w-3.5" />}
+          <span className="hidden sm:inline ml-1">Drive</span>
         </Button>
         {capa && (
           <button type="button" aria-label="Remover capa" disabled={ocupado}
@@ -163,19 +176,38 @@ export function CapaSobreVideo({ capa, children }: { capa: string | null | undef
 
 function CapaSobreVideoInterna({ capa, children }: { capa: string | null | undefined; children: ReactNode }) {
   const [vendoVideo, setVendoVideo] = useState(false);
+  /* CAPA SÓ APARECE INTEIRA (Walter, 01/10/2026: "tive que carregar 3x a
+     página porque tava cortando a imagem"). A capa é um JPEG de 200 a 300 KB
+     e o navegador pinta a imagem conforme os bytes chegam, de cima pra baixo.
+     No 4G do cliente, por alguns segundos, a metade de cima era a capa e a de
+     baixo o frame do vídeo que estava embaixo: parecia imagem cortada. Ao
+     recarregar ela já vinha do cache e o problema sumia, por isso o "3x".
+     Agora a capa fica invisível até terminar de carregar e entra inteira, de
+     uma vez (sem fade: durante o fade o frame do vídeo aparecia por baixo). Enquanto isso, um fundo escuro neutro cobre o slot (sem o
+     selo "capa", que antes aparecia em cima do frame errado). Se a capa
+     falhar, o overlay sai e o vídeo fica à mostra, em vez de imagem quebrada. */
+  const [carregada, setCarregada] = useState(false);
+  const [falhou, setFalhou] = useState(false);
+  // Imagem que já estava no cache pode terminar antes do React ligar o onLoad.
+  const jaPronta = (el: HTMLImageElement | null) => { if (el?.complete && el.naturalWidth > 0) setCarregada(true); };
   return (
     <div className="relative">
       {children}
-      {capa && !vendoVideo && (
+      {capa && !vendoVideo && !falhou && (
         <button type="button" onClick={() => setVendoVideo(true)} aria-label="Ver o vídeo"
-          className="absolute inset-0 z-[5] block w-full h-full group">
-          <img src={capa} alt="Capa do Reels" className="absolute inset-0 w-full h-full object-cover" />
+          className="absolute inset-0 z-[5] block w-full h-full overflow-hidden group">
+          {/* Fundo SÓLIDO: o pulse anima opacidade, e se fosse nele o frame do vídeo
+              aparecia por baixo a cada pulso. Só o brilho de cima pulsa. */}
+          {!carregada && <span className="absolute inset-0 bg-neutral-900" aria-hidden><span className="absolute inset-0 bg-white/[0.06] animate-pulse" /></span>}
+          <img ref={jaPronta} src={capa} alt="Capa do Reels" decoding="async"
+            onLoad={() => setCarregada(true)} onError={() => setFalhou(true)}
+            className={`absolute inset-0 w-full h-full object-cover ${carregada ? "opacity-100" : "opacity-0"}`} />
           <span className="absolute inset-0 grid place-items-center">
             <span className="grid h-14 w-14 place-items-center rounded-full bg-black/45 text-white backdrop-blur-sm transition-transform group-hover:scale-105">
               <Play className="h-6 w-6 translate-x-0.5" fill="currentColor" />
             </span>
           </span>
-          <span className="absolute left-2.5 top-2.5 rounded-full bg-black/55 px-2 py-0.5 text-[10.5px] font-body font-bold text-white">capa</span>
+          {carregada && <span className="absolute left-2.5 top-2.5 rounded-full bg-black/55 px-2 py-0.5 text-[10.5px] font-body font-bold text-white">capa</span>}
         </button>
       )}
     </div>

@@ -225,7 +225,12 @@ export function useGoogleDrive() {
     return result.token;
   }, []);
 
-  const openPicker = useCallback(async (accessToken: string, clientId: string): Promise<PickedFile[]> => {
+  const openPicker = useCallback(async (
+    accessToken: string, clientId: string,
+    // CAPA DO REELS (Gabriela, 30/09/2026): pede uma imagem só, sem pastas nem
+    // vídeos na frente. O padrão continua o de antes (tudo, várias de uma vez).
+    opcoes?: { soUmaImagem?: boolean },
+  ): Promise<PickedFile[]> => {
     return new Promise((resolve) => {
       const neutralize = () => {
         const allToDisable = Array.from(document.querySelectorAll("*")).filter((el) => {
@@ -262,15 +267,26 @@ export function useGoogleDrive() {
       // aos arquivos escolhidos → permissions.create cai em "appNotAuthorizedToFile".
       const appId = clientId.split("-")[0];
 
-      const picker = new window.google.picker.PickerBuilder()
-        .addView(new window.google.picker.DocsView().setIncludeFolders(true).setSelectFolderEnabled(false))
-        .addView(new window.google.picker.DocsView(window.google.picker.ViewId.DOCS_IMAGES))
-        .addView(new window.google.picker.DocsView(window.google.picker.ViewId.DOCS_VIDEOS))
+      const gp = window.google.picker;
+      let builder = new gp.PickerBuilder();
+      if (opcoes?.soUmaImagem) {
+        // Pastas navegáveis (a capa costuma estar na pasta do cliente), mas só
+        // imagem é selecionável.
+        builder = builder
+          .addView(new gp.DocsView(gp.ViewId.DOCS_IMAGES).setIncludeFolders(true).setSelectFolderEnabled(false))
+          .setTitle("Escolher a capa no Google Drive");
+      } else {
+        builder = builder
+          .addView(new gp.DocsView().setIncludeFolders(true).setSelectFolderEnabled(false))
+          .addView(new gp.DocsView(gp.ViewId.DOCS_IMAGES))
+          .addView(new gp.DocsView(gp.ViewId.DOCS_VIDEOS))
+          .enableFeature(gp.Feature.MULTISELECT_ENABLED)
+          .setTitle("Selecionar do Google Drive");
+      }
+      const picker = builder
         .setOAuthToken(accessToken)
         .setAppId(appId)
         .setDeveloperKey("")
-        .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED)
-        .setTitle("Selecionar do Google Drive")
         .setCallback((data: any) => {
           if (data.action === "picked" || data.action === "cancel") {
             restore();
@@ -463,5 +479,39 @@ export function useGoogleDrive() {
     }
   }, [picking, loadGoogleScripts, getAccessToken, openPicker, saveExternalRefs]);
 
-  return { pickAndSave, picking, pickerSupported: isPickerSupported() };
+  /* UMA IMAGEM DO DRIVE COMO ARQUIVO (Gabriela, 30/09/2026: "preciso que dê
+     pra eu selecionar do drive a capa do reels"). Mesmo login e mesmo seletor
+     do pickAndSave, mas em vez de virar mídia do post, devolve o File pra
+     quem chamou decidir o destino (a capa converte pra JPEG e sobe no bucket).
+     null = cancelou, não suportado no aparelho ou deu erro (já avisado). */
+  const pickOneImage = useCallback(async (): Promise<File | null> => {
+    if (picking) return null;
+    if (!isPickerSupported()) {
+      toast.info("No celular o seletor do Google não abre. Salve a imagem no aparelho (no app do Drive: Fazer download) e use Escolher.");
+      return null;
+    }
+    setPicking(true);
+    try {
+      await loadGoogleScripts();
+      const { data } = await supabase.functions.invoke("get-google-config");
+      if (!data?.client_id) { toast.error("Google Drive não configurado."); return null; }
+      const token = await getAccessToken(data.client_id);
+      const [f] = await openPicker(token, data.client_id, { soUmaImagem: true });
+      if (!f) return null;
+      if (f.mimeType && !f.mimeType.startsWith("image/")) {
+        toast.error("Escolha uma imagem (JPG, PNG ou WebP).");
+        return null;
+      }
+      const blob = await downloadDriveFileToBlob(f.id, token);
+      return new File([blob], f.name, { type: f.mimeType || blob.type || "image/jpeg" });
+    } catch (err: any) {
+      if (!err?.message?.includes("popup_closed")) toast.error(driveErrorMessage(err));
+      console.error("[drive-picker/capa]", err);
+      return null;
+    } finally {
+      setPicking(false);
+    }
+  }, [picking, loadGoogleScripts, getAccessToken, openPicker]);
+
+  return { pickAndSave, pickOneImage, picking, pickerSupported: isPickerSupported() };
 }

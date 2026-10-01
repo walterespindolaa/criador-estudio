@@ -12,8 +12,12 @@ export type CarouselMedia = {
   file_type?: string | null; file_name?: string | null;
 };
 
-function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => void }) {
-  const [playing, setPlaying] = useState(false);
+function VideoSlide({ item, onReady, onPlaying }: { item: CarouselMedia; onReady?: () => void; onPlaying?: () => void }) {
+  const [playing, setPlayingState] = useState(false);
+  /* Avisa quem desenha por cima (rodapé e ícones de Instagram no portal) que o
+     player entrou: aquilo é enfeite da capa e, tocando, ficava em cima dos
+     controles do player do Drive (Walter, 01/10/2026). */
+  const setPlaying = (v: boolean) => { setPlayingState(v); if (v) onPlaying?.(); };
   const thumb = getDisplayImageUrl(item);
   const [thumbOk, setThumbOk] = useState<boolean | null>(thumb ? null : false);
   // Player por tipo: Bunny/Drive são iframe (embedUrl); storage/device é arquivo (<video>).
@@ -118,9 +122,11 @@ function VideoSlide({ item, onReady }: { item: CarouselMedia; onReady?: () => vo
           <iframe src={embedUrl} scrolling="no" style={cover ?? undefined}
             className={cover ? "relative z-10 bg-black" : "relative z-10 w-full h-full bg-black"}
             allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={item.file_name || "vídeo"} />
+          {/* No TOPO À ESQUERDA enquanto toca: embaixo tampava a tela cheia e
+              a engrenagem do player do Drive, e à direita o ícone de abrir dele (Walter, 01/10/2026). */}
           {driveViewUrl && (
             <button type="button" onClick={() => window.open(driveViewUrl, "_blank", "noopener,noreferrer")}
-              className="absolute bottom-2 right-2 z-10 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/80">
+              className="absolute top-2 left-2 z-20 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-black/80">
               <ExternalLink className="h-3 w-3" /> Assistir no Drive
             </button>
           )}
@@ -230,8 +236,8 @@ function ArteSemTarja({ item, thumb, full, eager, onImgError }: {
   );
 }
 
-function Slide({ item, onReady, eager }: { item: CarouselMedia; onReady?: () => void; eager?: boolean }) {
-  if (isVideoMedia(item)) return <VideoSlide item={item} onReady={onReady} />;
+function Slide({ item, onReady, eager, onPlaying }: { item: CarouselMedia; onReady?: () => void; eager?: boolean; onPlaying?: () => void }) {
+  if (isVideoMedia(item)) return <VideoSlide item={item} onReady={onReady} onPlaying={onPlaying} />;
   const full = getDisplayImageUrl(item) || "";
   // Miniatura leve pro placeholder; a cheia (full) entra por cima ao carregar.
   const thumb = getThumbnailUrl(item);
@@ -266,10 +272,12 @@ function Slide({ item, onReady, eager }: { item: CarouselMedia; onReady?: () => 
 }
 
 export function PostMediaCarousel({
-  media, aspect = "4 / 5", onRemove, onVideoReady,
+  media, aspect = "4 / 5", onRemove, onVideoReady, onPlaying,
   alfinetes, modoApontar, aoFixar, aoAbrirAlfinete, alfineteSelecionado,
 }: {
   media: CarouselMedia[]; aspect?: string; onRemove?: (id: string) => void; onVideoReady?: () => void;
+  /** Chamado quando um vídeo começa a tocar (o player embutido entrou). */
+  onPlaying?: () => void;
   /* ── COMENTÁRIO ANCORADO (circuito 6, 15/09/2026) ────────────────────────
      O carrossel já sabia em qual slide está (`idx`), que é exatamente o índice
      que o alfinete precisa guardar. Por isso a camada mora aqui e não na tela:
@@ -311,7 +319,7 @@ export function PostMediaCarousel({
               aoAbrir={aoAbrirAlfinete}
               selecionado={alfineteSelecionado}
             >
-              <Slide item={m} onReady={onVideoReady} eager={i === 0} />
+              <Slide item={m} onReady={onVideoReady} eager={i === 0} onPlaying={onPlaying} />
             </CamadaDeAlfinetes>
             {onRemove && m.id && (
               <button type="button" onClick={(e) => { e.stopPropagation(); onRemove(m.id!); }}

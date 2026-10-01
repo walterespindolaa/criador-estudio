@@ -69,6 +69,9 @@ function CardIG({ client, post, alfinetes, modoApontar, aoFixar, aoAbrirAlfinete
   aoAbrirAlfinete?: (id: string) => void; alfineteSelecionado?: string | null;
 }) {
   const media = Array.isArray(post.media) ? post.media : [];
+  // Vídeo tocando: some o enfeite de Instagram (véu e ícones) que ficava por
+  // cima dos controles do player.
+  const [tocando, setTocando] = useState(false);
   // @ do Instagram: usa o handle real quando existe; senão placeholder neutro
   // ("perfil"), NUNCA o nome do cadastro do cliente.
   const handle = client.instagram_handle ? client.instagram_handle.replace(/^@/, "") : "perfil";
@@ -114,7 +117,7 @@ function CardIG({ client, post, alfinetes, modoApontar, aoFixar, aoAbrirAlfinete
           {/* O cliente vê o Reels como vai aparecer no feed: na capa. Tocar
               mostra o vídeo. Marcando ponto na arte, a capa sai da frente. */}
           <CapaSobreVideo capa={modoApontar || media.length > 1 || Object.keys(alfinetes ?? {}).length > 0 ? null : capa}>
-            <PostMediaCarousel media={media} aspect={aspect} alfinetes={alfinetes} modoApontar={modoApontar} aoFixar={aoFixar} aoAbrirAlfinete={aoAbrirAlfinete} alfineteSelecionado={alfineteSelecionado} />
+            <PostMediaCarousel media={media} aspect={aspect} alfinetes={alfinetes} modoApontar={modoApontar} aoFixar={aoFixar} aoAbrirAlfinete={aoAbrirAlfinete} alfineteSelecionado={alfineteSelecionado} onPlaying={() => setTocando(true)} />
           </CapaSobreVideo>
           {/* Véu de rodapé CURTO. Antes eram 2/5 da altura em black/70: aquilo existia
               pra dar contraste na legenda sobreposta, que foi removida daqui (ver o
@@ -122,8 +125,8 @@ function CardIG({ client, post, alfinetes, modoApontar, aoFixar, aoAbrirAlfinete
               toa. Era a "margem preta" que o cliente viu no celular. Agora é só o
               assento dos ícones e do botão do Drive, como no Instagram, e os ícones
               seguem com drop-shadow próprio pra legibilidade. */}
-          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
-          <div className="absolute right-3 bottom-16 z-10 flex flex-col items-center gap-4 text-white pointer-events-none [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.6))]">
+          {!tocando && <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />}
+          <div className={`${tocando ? "hidden " : ""}absolute right-3 bottom-16 z-10 flex flex-col items-center gap-4 text-white pointer-events-none [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.6))]`}>
             <Heart className="h-7 w-7" /><MessageCircle className="h-7 w-7" /><Send className="h-7 w-7" /><Bookmark className="h-7 w-7" />
           </div>
           {/* Legenda sobreposta REMOVIDA no vídeo/vertical: colidia com o botão "Assistir
