@@ -1169,49 +1169,73 @@ export type Database = {
       }
       client_materials: {
         Row: {
+          assigned_at: string | null
+          assignee_id: string | null
           attachments: Json
+          cache_parceiro: number | null
           created_at: string
           crm_client_id: string | null
           description: string | null
           due_date: string | null
+          entregas: Json
+          entregue_em: string | null
           external_client_id: string | null
           id: string
           kind: string
           manager_id: string
           position: number
+          prazo_producao: string | null
+          producao_status: string | null
           requested_by: string
+          revisoes: number
           status: string
           title: string
           updated_at: string
         }
         Insert: {
+          assigned_at?: string | null
+          assignee_id?: string | null
           attachments?: Json
+          cache_parceiro?: number | null
           created_at?: string
           crm_client_id?: string | null
           description?: string | null
           due_date?: string | null
+          entregas?: Json
+          entregue_em?: string | null
           external_client_id?: string | null
           id?: string
           kind?: string
           manager_id: string
           position?: number
+          prazo_producao?: string | null
+          producao_status?: string | null
           requested_by?: string
+          revisoes?: number
           status?: string
           title: string
           updated_at?: string
         }
         Update: {
+          assigned_at?: string | null
+          assignee_id?: string | null
           attachments?: Json
+          cache_parceiro?: number | null
           created_at?: string
           crm_client_id?: string | null
           description?: string | null
           due_date?: string | null
+          entregas?: Json
+          entregue_em?: string | null
           external_client_id?: string | null
           id?: string
           kind?: string
           manager_id?: string
           position?: number
+          prazo_producao?: string | null
+          producao_status?: string | null
           requested_by?: string
+          revisoes?: number
           status?: string
           title?: string
           updated_at?: string
@@ -2612,6 +2636,10 @@ export type Database = {
           ig_preparado_em: string | null
           ig_tipo: string | null
           ig_url: string | null
+          ingest_bunny_guid: string | null
+          ingest_erro: string | null
+          ingest_status: string | null
+          ingest_tentado_em: string | null
           position: number | null
           post_id: string | null
           provider: string
@@ -2640,6 +2668,10 @@ export type Database = {
           ig_preparado_em?: string | null
           ig_tipo?: string | null
           ig_url?: string | null
+          ingest_bunny_guid?: string | null
+          ingest_erro?: string | null
+          ingest_status?: string | null
+          ingest_tentado_em?: string | null
           position?: number | null
           post_id?: string | null
           provider?: string
@@ -2668,6 +2700,10 @@ export type Database = {
           ig_preparado_em?: string | null
           ig_tipo?: string | null
           ig_url?: string | null
+          ingest_bunny_guid?: string | null
+          ingest_erro?: string | null
+          ingest_status?: string | null
+          ingest_tentado_em?: string | null
           position?: number | null
           post_id?: string | null
           provider?: string
@@ -2865,12 +2901,15 @@ export type Database = {
           description: string
           id: string
           manager_id: string
+          material_id: string | null
+          pago_em: string | null
           payment_method: string | null
           post_id: string | null
           recurring: boolean
           recurring_id: string | null
           status: string
           subcategory: string | null
+          terceiro_id: string | null
           transfer_group: string | null
           type: string
           updated_at: string
@@ -2886,12 +2925,15 @@ export type Database = {
           description: string
           id?: string
           manager_id: string
+          material_id?: string | null
+          pago_em?: string | null
           payment_method?: string | null
           post_id?: string | null
           recurring?: boolean
           recurring_id?: string | null
           status?: string
           subcategory?: string | null
+          terceiro_id?: string | null
           transfer_group?: string | null
           type: string
           updated_at?: string
@@ -2907,12 +2949,15 @@ export type Database = {
           description?: string
           id?: string
           manager_id?: string
+          material_id?: string | null
+          pago_em?: string | null
           payment_method?: string | null
           post_id?: string | null
           recurring?: boolean
           recurring_id?: string | null
           status?: string
           subcategory?: string | null
+          terceiro_id?: string | null
           transfer_group?: string | null
           type?: string
           updated_at?: string
@@ -2923,6 +2968,13 @@ export type Database = {
             columns: ["crm_client_id"]
             isOneToOne: false
             referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_records_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "client_materials"
             referencedColumns: ["id"]
           },
           {
@@ -2937,6 +2989,13 @@ export type Database = {
             columns: ["recurring_id"]
             isOneToOne: false
             referencedRelation: "fin_recurring"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fin_records_terceiro_id_fkey"
+            columns: ["terceiro_id"]
+            isOneToOne: false
+            referencedRelation: "fin_terceiros"
             referencedColumns: ["id"]
           },
         ]
@@ -3005,6 +3064,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      fin_terceiros: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          fechamento: string
+          id: string
+          manager_id: string
+          member_id: string | null
+          nome: string
+          nota: string
+          pagamento: string
+          papel: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          fechamento?: string
+          id?: string
+          manager_id: string
+          member_id?: string | null
+          nome?: string
+          nota?: string
+          pagamento?: string
+          papel?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          fechamento?: string
+          id?: string
+          manager_id?: string
+          member_id?: string | null
+          nome?: string
+          nota?: string
+          pagamento?: string
+          papel?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       google_drive_connections: {
         Row: {
@@ -3571,6 +3672,41 @@ export type Database = {
           whatsapp?: string | null
         }
         Relationships: []
+      }
+      material_comments: {
+        Row: {
+          author_id: string | null
+          author_role: string
+          content: string
+          created_at: string
+          id: string
+          material_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          author_role: string
+          content: string
+          created_at?: string
+          id?: string
+          material_id: string
+        }
+        Update: {
+          author_id?: string | null
+          author_role?: string
+          content?: string
+          created_at?: string
+          id?: string
+          material_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_comments_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "client_materials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       media_items: {
         Row: {
@@ -4657,6 +4793,7 @@ export type Database = {
           ancora_y: number | null
           author_id: string | null
           author_role: string
+          canal: string
           content: string
           created_at: string
           id: string
@@ -4669,6 +4806,7 @@ export type Database = {
           ancora_y?: number | null
           author_id?: string | null
           author_role?: string
+          canal?: string
           content: string
           created_at?: string
           id?: string
@@ -4681,6 +4819,7 @@ export type Database = {
           ancora_y?: number | null
           author_id?: string | null
           author_role?: string
+          canal?: string
           content?: string
           created_at?: string
           id?: string
@@ -6723,6 +6862,7 @@ export type Database = {
         }[]
       }
       bunny_soltar_midia: { Args: { _media_id: string }; Returns: undefined }
+      caixa_do_time: { Args: { target: string }; Returns: boolean }
       can_client: {
         Args: { _client: string; _module?: string; _owner: string }
         Returns: boolean
@@ -7372,6 +7512,11 @@ export type Database = {
         Returns: Json
       }
       marcar_conversa_lida: { Args: { _post_id: string }; Returns: undefined }
+      material_abrir: { Args: { _id: string }; Returns: Json }
+      material_comentar: {
+        Args: { _id: string; _texto: string }
+        Returns: undefined
+      }
       member_can: {
         Args: { _code: string; _manager: string }
         Returns: boolean
@@ -7443,6 +7588,16 @@ export type Database = {
         }
         Returns: string
       }
+      parceiro_anexar_material: {
+        Args: {
+          _id: string
+          _nome?: string
+          _tamanho?: number
+          _tipo?: string
+          _url: string
+        }
+        Returns: undefined
+      }
       parceiro_comentar: {
         Args: {
           _ancora_seg?: number
@@ -7453,6 +7608,13 @@ export type Database = {
           _texto: string
         }
         Returns: string
+      }
+      parceiro_entregas_da_rodada: {
+        Args: { _post_id: string }
+        Returns: {
+          id: string
+          url: string
+        }[]
       }
       parceiro_entregues: {
         Args: never
@@ -7496,6 +7658,10 @@ export type Database = {
         Args: { _link?: string; _post_id: string; _status: string }
         Returns: undefined
       }
+      parceiro_marcar_material: {
+        Args: { _id: string; _status: string }
+        Returns: undefined
+      }
       parceiro_meu_codigo: { Args: never; Returns: string }
       parceiro_meus_caches: {
         Args: never
@@ -7523,6 +7689,25 @@ export type Database = {
           post_titulo: string
           status: string
           valor: number
+        }[]
+      }
+      parceiro_meus_materiais: {
+        Args: never
+        Returns: {
+          agencia_id: string
+          agencia_nome: string
+          assigned_at: string
+          cache: number
+          cliente_cor: string
+          cliente_logo: string
+          cliente_nome: string
+          entregue_em: string
+          material_id: string
+          prazo_producao: string
+          producao_status: string
+          revisoes: number
+          tipo: string
+          titulo: string
         }[]
       }
       parceiro_minha_fila: {
@@ -7610,6 +7795,14 @@ export type Database = {
           tom_de_voz: string
         }[]
       }
+      parceiro_remover_anexo_material: {
+        Args: { _id: string; _url: string }
+        Returns: undefined
+      }
+      parceiro_remover_entrega: {
+        Args: { _post_id: string; _url: string }
+        Returns: string
+      }
       parceiro_responder_prazo: {
         Args: {
           _aceita: boolean
@@ -7620,6 +7813,7 @@ export type Database = {
         Returns: undefined
       }
       parceiro_tem_o_card: { Args: { _post_id: string }; Returns: boolean }
+      parceiro_tem_o_material: { Args: { _id: string }; Returns: boolean }
       parceiro_titulos_das_pecas: {
         Args: { _ids: string[] }
         Returns: {
@@ -7795,6 +7989,19 @@ export type Database = {
       submit_script_approval_by_token: {
         Args: { _note: string; _token: string }
         Returns: undefined
+      }
+      terceiros_da_agencia: {
+        Args: { _manager: string }
+        Returns: {
+          fechamento: string
+          member_id: string
+          no_cria: boolean
+          nome: string
+          nota: string
+          pagamento: string
+          papel: string
+          terceiro_id: string
+        }[]
       }
       token_allows_post: {
         Args: { _post_id: string; _token: string }
