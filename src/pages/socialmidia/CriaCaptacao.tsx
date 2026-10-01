@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { flushSync } from "react-dom";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Cell, LabelList } from "recharts";
 import {
   Video, ChevronLeft, ChevronRight, Copy, Check, MapPin, Building2, Loader2,
@@ -32,7 +33,7 @@ import {
   useCaptureScripts, useAddCaptureScript, useUpdateCaptureScript, useDeleteCaptureScript,
   useCaptureExtraClients, useAddCaptureExtraClient, useDeleteCaptureExtraClient,
   useSetClientCaptureShots, useScriptToPost, useReorderCaptureScripts,
-  cenasDe, cenasParaTexto, type CaptureScript,
+  cenasDe, cenasParaTexto, type CaptureScript, type CaptureScene,
 } from "@/hooks/useCaptureScripts";
 import { RoteiroEditor, type RoteiroFormValor } from "@/components/captacao/RoteiroEditor";
 import { DiaDeGravacao } from "@/components/captacao/DiaDeGravacao";
@@ -1671,8 +1672,30 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
       reference_url: v.reference_url || null, record_date: v.record_date || null,
       location: v.location || null, format: v.format || null, scenes: v.scenes,
     };
+    /* Walter, 01/10/2026: a data da gravação preenchida no roteiro bate com
+       uma captação marcada deste cliente? O roteiro vai sozinho pra dentro
+       daquele dia. Antes ficava solto no mês e precisava ser movido na mão. */
+    const capDaData = !capturaAlvo && campos.record_date ? capturaNaData(campos.record_date) : null;
     if (editando) {
-      await updScript.mutateAsync({ id: editando.id, patch: campos });
+      let liga: Record<string, unknown> = {};
+      if (capDaData && editando.capture_id !== capDaData.id) {
+        liga = { capture_id: capDaData.id, month: capDaData.capture_date.slice(0, 7), location: campos.location || capDaData.location || null,
+          position: scripts.filter((x) => x.capture_id === capDaData.id).length };
+      } else if (!capDaData && !capturaAlvo && editando.capture_id) {
+        // Mudou a data pra um dia sem captação: sai do dia antigo e volta pra lista do mês.
+        const antiga = todasCaps.find((c) => c.id === editando.capture_id);
+        if (antiga && campos.record_date && antiga.capture_date !== campos.record_date) liga = { capture_id: null };
+      }
+      await updScript.mutateAsync({ id: editando.id, patch: { ...campos, ...liga } as never });
+      if (liga.capture_id) toast.success(`Roteiro foi pra gravação de ${diaMes(capDaData!.capture_date)}.`);
+    } else if (capDaData) {
+      await addScript.mutateAsync({
+        crm_client_id: pasta.crmId, client_name: pasta.crmId ? null : pasta.nome,
+        month: capDaData.capture_date.slice(0, 7), ...campos,
+        capture_id: capDaData.id, location: campos.location || capDaData.location || null,
+        position: scripts.filter((x) => x.capture_id === capDaData.id).length,
+      });
+      toast.success(`Roteiro foi pra gravação de ${diaMes(capDaData.capture_date)}.`);
     } else {
       // Roteiro criado DENTRO de um dia herda a data e o local da captação:
       // ninguém quer redigitar o que já está marcado na agenda.
@@ -1700,11 +1723,37 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
     return [...ordemLocal.map((id) => byId.get(id)).filter(Boolean) as CaptureScript[], ...fora];
   })();
 
+  /** Captação deste cliente marcada na data (a primeira do dia, se tiver mais de uma). */
+  const capturaNaData = (iso: string) =>
+    [...todasCaps].filter((c) => c.capture_date === iso && c.status !== "cancelada")
+      .sort((a, b) => (a.capture_time || "").localeCompare(b.capture_time || ""))[0] ?? null;
+
+  /* Walter, 01/10/2026: arrastar um roteiro solto do mês pra um dia de
+     gravação. Leva junto a data e o local do dia. */
+  const moverProDia = (scriptId: string, capId: string) => {
+    const cap = todasCaps.find((c) => c.id === capId) ?? caps.find((c) => c.id === capId);
+    const sc = scripts.find((x) => x.id === scriptId);
+    if (!cap || !sc) return;
+    updScript.mutate({ id: sc.id, patch: {
+      capture_id: cap.id, record_date: cap.capture_date, month: cap.capture_date.slice(0, 7),
+      location: sc.location || cap.location || null,
+      position: scripts.filter((x) => x.capture_id === cap.id).length,
+    } as never }, { onSuccess: () => toast.success(`Roteiro foi pra gravação de ${diaMes(cap.capture_date)}.`) });
+  };
+  const [arrastandoRoteiro, setArrastandoRoteiro] = useState(false);
+
   const aoArrastarRoteiro = (r: DropRoteiroResult) => {
-    if (!r.destination || r.destination.index === r.source.index) return;
-    const ids = ordenados.map((s) => s.id);
-    const [m] = ids.splice(r.source.index, 1);
-    ids.splice(r.destination.index, 0, m);
+    setArrastandoRoteiro(false);
+    if (!r.destination) return;
+    if (r.destination.droppableId.startsWith("cap:")) { moverProDia(r.draggableId, r.destination.droppableId.slice(4)); return; }
+    if (r.destination.index === r.source.index) return;
+    /* A lista mostra só os SOLTOS: o índice do arraste é dentro deles. Antes
+       usava a lista inteira e trocava o roteiro errado quando havia algum
+       já dentro de uma captação. */
+    const soltosIds = ordenados.filter((x) => !x.capture_id).map((x) => x.id);
+    const [m] = soltosIds.splice(r.source.index, 1);
+    soltosIds.splice(r.destination.index, 0, m);
+    const ids = [...soltosIds, ...ordenados.filter((x) => x.capture_id).map((x) => x.id)];
     setOrdemLocal(ids);
     reorderScripts.mutate(ids, { onSettled: () => setOrdemLocal(null) });
   };
@@ -1875,7 +1924,9 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
              igual. Aqui cada linha é um vídeo, numerado, arrastável, mostrando
              data, formato, quantas cenas tem e se já tem referência. */
           <div className="space-y-2">
-            <DndRoteiros onDragEnd={aoArrastarRoteiro}>
+            {/* onBeforeCapture (e não onDragStart): os alvos dos dias precisam estar
+                na tela ANTES da biblioteca medir as áreas de soltar. */}
+            <DndRoteiros onBeforeCapture={() => flushSync(() => setArrastandoRoteiro(true))} onDragEnd={aoArrastarRoteiro}>
               <DropRoteiros droppableId="roteiros">
                 {(drop) => (
                   <div ref={drop.innerRef} {...drop.droppableProps} className="space-y-2">
@@ -1895,6 +1946,27 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
                   </div>
                 )}
               </DropRoteiros>
+              {/* Alvos pra soltar: aparecem só enquanto arrasta, um por dia de gravação. */}
+              {caps.length > 0 && (
+                <div className={cn("transition-all", arrastandoRoteiro ? "opacity-100" : "hidden")}>
+                  <p className="text-[11px] font-body font-semibold text-muted-foreground mb-1.5">Solte num dia de gravação:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {caps.filter((c) => c.status !== "cancelada").map((c) => (
+                      <DropRoteiros key={c.id} droppableId={"cap:" + c.id}>
+                        {(dz, st) => (
+                          <div ref={dz.innerRef} {...dz.droppableProps}
+                            className={cn("min-w-[130px] rounded-xl border-2 border-dashed px-3 py-2.5 text-center text-[13px] font-display font-bold transition-colors",
+                              st.isDraggingOver ? "border-primary bg-primary/10 text-primary" : "border-border bg-muted/30 text-foreground")}>
+                            <Video className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+                            {diaMes(c.capture_date)}{c.capture_time ? " · " + c.capture_time.slice(0, 5) : ""}
+                            <div className="hidden">{dz.placeholder}</div>
+                          </div>
+                        )}
+                      </DropRoteiros>
+                    ))}
+                  </div>
+                </div>
+              )}
             </DndRoteiros>
           </div>
         )}
@@ -2002,6 +2074,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
               // social mídia colaria de novo aqui na mão.
               reference_url: r.reference_url,
               format: "reels",
+              scenes: r.scenes,
             });
           }} />
       )}
@@ -2265,7 +2338,25 @@ type ItemCronoReels = {
   type: string | null; ref_url: string | null; converted_post_id: string | null;
   cronogramas: { title: string | null; status: string | null } | null;
 };
-export type ReelParaImportar = { postId: string | null; title: string; script: string; reference_url: string | null };
+export type ReelParaImportar = { postId: string | null; title: string; script: string; reference_url: string | null; scenes: CaptureScene[] };
+
+/* Copy do cronograma vira CENAS do roteiro estruturado: quebra em "Cena N",
+   rótulos soltos ("Gancho", "CTA") saem, e a descrição vira a direção da
+   primeira cena. Assim o editor e o prompter mostram tudo no lugar certo. */
+function copyParaCenas(fala: string | null, direcao: string | null): CaptureScene[] {
+  const cenas: CaptureScene[] = [];
+  let atual: string[] = [];
+  const fecha = () => { const t = atual.join("\n").trim(); if (t) cenas.push({ fala: t, direcao: "" }); atual = []; };
+  for (const l of (fala ?? "").split("\n")) {
+    if (/^\s*cena\s*\d+\s*:?\s*$/i.test(l)) { fecha(); continue; }
+    if (/^\s*(gancho|hook|cta|chamada|desenvolvimento|fechamento)\s*:?\s*$/i.test(l)) continue;
+    atual.push(l);
+  }
+  fecha();
+  const dir = (direcao ?? "").split("\n").map((l) => l.trim()).filter(Boolean).join(" · ");
+  if (dir) { if (cenas.length) cenas[0] = { ...cenas[0], direcao: dir }; else cenas.push({ fala: "", direcao: dir }); }
+  return cenas;
+}
 
 /* "Gancho", "CTA" sozinhos na linha viram cabeçalho no prompter (não são lidos). */
 function roteiroFalado(fala: string | null, direcao: string | null): string {
@@ -2302,7 +2393,7 @@ function ImportarReelsDialog({ open, onOpenChange, externalClientId, jaImportado
   });
   const postPorId = useMemo(() => new Map(posts.map((p) => [p.id, p])), [posts]);
 
-  type Linha = { key: string; titulo: string; texto: string; postId: string | null; ref: string | null; selo: string; origem: string };
+  type Linha = { key: string; titulo: string; texto: string; postId: string | null; ref: string | null; selo: string; origem: string; cenas: CaptureScene[] };
   const { prontos, semRoteiro } = useMemo(() => {
     const linhas: Linha[] = [];
     const ligados = new Set<string>();
@@ -2313,20 +2404,22 @@ function ImportarReelsDialog({ open, onOpenChange, externalClientId, jaImportado
       if (it.converted_post_id) ligados.add(it.converted_post_id);
       if (post?.approval_status === "postado") continue; // já foi ao ar, não tem o que gravar
       // Se o post existe, a copy dele (caption) é a versão mais nova do roteiro.
-      const texto = roteiroFalado(post?.caption?.trim() ? post.caption : it.copy, it.description);
+      const falaCopy = post?.caption?.trim() ? post.caption : it.copy;
+      const texto = roteiroFalado(falaCopy, it.description);
+      const cenas = (falaCopy ?? "").trim() ? copyParaCenas(falaCopy, it.description) : [];
       linhas.push({
         key: "i" + it.id, titulo: it.title || post?.title || "Reels", texto,
         postId: post?.id ?? it.converted_post_id ?? null,
         ref: parseRefLinks(it.ref_url)[0] ?? post?.reference_url ?? null,
         selo: post ? (ROTULO_APROVACAO[post.approval_status ?? "pendente"] ?? "") : "ainda não virou post",
-        origem: it.cronogramas?.title || "Cronograma",
+        origem: it.cronogramas?.title || "Cronograma", cenas,
       });
     }
     // Reels criado direto no Cria Post (sem cronograma) e em produção também é gravável.
     for (const p of posts) {
       if (p.format !== "reels" || p.approval_status !== "em_producao" || ligados.has(p.id)) continue;
       const fala = [p.hook?.trim() ? "**" + p.hook.trim() + "**" : "", (p.script ?? "").trim()].filter(Boolean).join("\n\n");
-      linhas.push({ key: "p" + p.id, titulo: p.title || "Reels", texto: fala, postId: p.id, ref: p.reference_url ?? null, selo: ROTULO_APROVACAO.em_producao, origem: "Direto no Cria Post" });
+      linhas.push({ key: "p" + p.id, titulo: p.title || "Reels", texto: fala, postId: p.id, ref: p.reference_url ?? null, selo: ROTULO_APROVACAO.em_producao, origem: "Direto no Cria Post", cenas: fala ? [{ fala: fala.replace(/\*\*/g, ""), direcao: "" }] : [] });
     }
     return { prontos: linhas.filter((l) => l.texto.trim()), semRoteiro: linhas.filter((l) => !l.texto.trim()) };
   }, [itens, posts, postPorId]);
@@ -2334,7 +2427,7 @@ function ImportarReelsDialog({ open, onOpenChange, externalClientId, jaImportado
   const importar = async (l: Linha) => {
     setBusy(l.key);
     try {
-      await onImportar({ postId: l.postId, title: l.titulo, script: l.texto, reference_url: l.ref });
+      await onImportar({ postId: l.postId, title: l.titulo, script: l.cenas.length ? cenasParaTexto(l.cenas) : l.texto, reference_url: l.ref, scenes: l.cenas });
       toast.success("Roteiro importado pra pasta.");
     } finally { setBusy(null); }
   };
