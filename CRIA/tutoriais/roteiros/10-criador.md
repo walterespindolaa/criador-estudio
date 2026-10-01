@@ -1,0 +1,256 @@
+# Tutorial · Criador de conteúdo
+
+Roteiro v1 · 01/10/2026 · conta fake de criador
+
+| # | Vídeo | Duração |
+|---|---|---|
+| 0 | **Visão geral do Cria pra quem cria** | ~2min |
+| 1 | Comece pelo Brandbook | ~55s |
+| 2 | Ideias e o Criando | ~1min |
+| 3 | O editor do post e a IA | ~1min10 |
+| 4 | Cria Plano: o mês pronto | ~50s |
+| 5 | Meu Feed | ~40s |
+| 6 | Prompter: gravar sem decorar (Studio) | ~50s |
+| 7 | Cria Stories (Studio) | ~50s |
+| 8 | Link na bio | ~55s |
+| 9 | Metas e Mídia Kit | ~55s |
+
+---
+
+## Vídeo 0 · Visão geral
+
+### Cena 1
+- **Tela:** Dashboard da conta fake.
+- **Cursor:** zoom leve na "próxima melhor ação".
+- **Voz:** "Abrir o celular, não saber o que postar e acabar rolando o feed dos outros. O Cria é o seu estúdio de conteúdo: toda ideia vira post, todo post tem uma etapa, e você sempre sabe o que falta."
+
+### Cena 2
+- **Tela:** captura rápida no Dashboard.
+- **Cursor:** escreve uma ideia e captura.
+- **Voz:** "Teve uma ideia? Captura na hora, sem sair da tela. Ela vai pro seu banco de ideias."
+
+### Cena 3
+- **Tela:** Criando, visão Board.
+- **Cursor:** arrasta um card de Produzindo pra Pronto.
+- **Voz:** "No Criando, cada post tem uma etapa, da ideia ao publicado. Arraste conforme ele avança."
+
+### Cena 4
+- **Tela:** editor do post, IA escrevendo as páginas.
+- **Cursor:** clica em "Escrever as páginas".
+- **Voz:** "Travou? A IA escreve as páginas do carrossel ou as cenas do reels, no seu tom, porque leu o seu brandbook. Você ajusta e pronto."
+
+### Cena 5
+- **Tela:** Meu Feed.
+- **Cursor:** arrasta um post pro grid.
+- **Voz:** "Antes de postar, veja como o seu feed vai ficar e teste a ordem."
+
+### Cena 6
+- **Tela:** Prompter.
+- **Cursor:** toca no play.
+- **Voz:** "Na hora de gravar, o roteiro rola na tela do celular. Sem decorar."
+
+### Cena 7
+- **Tela:** Link na bio, prévia.
+- **Cursor:** passa pelos blocos.
+- **Voz:** "E a sua vitrine: link na bio com WhatsApp pra publi, captura de e-mail e os números de quem clicou."
+
+### Cena 8
+- **Tela:** Dashboard.
+- **Cursor:** zoom saindo.
+- **Voz:** "Comece pelo brandbook, capture as ideias, e deixe o Cria te dizer o próximo passo."
+
+**Total:** ~220 palavras · ~1min35
+
+---
+
+## Vídeo 1 · Comece pelo Brandbook
+
+### Cena 1
+- **Tela:** Brandbook, aba Quem você é.
+- **Cursor:** passa pelas cinco abas e pelo contador.
+- **Voz:** "Tudo que a IA do Cria escreve usa o que você preencheu aqui. Por isso, comece pelo brandbook: quem você é, identidade, linha editorial, persona e tom de voz."
+
+### Cena 2
+- **Tela:** microfone ao lado de um campo.
+- **Cursor:** toca no microfone.
+- **Voz:** "Não precisa digitar. Responda falando, como se fosse um áudio."
+
+### Cena 3
+- **Tela:** "Escolher arquivo" e "Exportar PDF".
+- **Cursor:** passa pelos dois.
+- **Voz:** "Já tem um manual de marca? Suba o PDF e o Cria preenche. E exporte o seu brandbook pra mandar pra marcas e parceiros."
+
+**Total:** ~85 palavras · ~40s
+
+---
+
+## Vídeo 2 · Ideias e o Criando
+
+### Cena 1
+- **Tela:** Ideias, galeria.
+- **Cursor:** clica em "Nova ideia"; escolhe o pilar.
+- **Voz:** "No banco de ideias, cada ideia tem um pilar de conteúdo e pode ir pra uma pasta, como uma série ou as publis do mês."
+
+### Cena 2
+- **Tela:** botão "Virar post".
+- **Cursor:** clica.
+- **Voz:** "Gostou de uma? Vire post. Ela vai pro Criando já com título e pilar."
+
+### Cena 3
+- **Tela:** Criando, Board.
+- **Cursor:** passa pelas seis colunas.
+- **Voz:** "No Criando: ideia, planejamento, produzindo, pronto, agendado e publicado."
+
+### Cena 4
+- **Tela:** Calendário com a faixa de posts sem data.
+- **Cursor:** arrasta um post sem data pra sexta.
+- **Voz:** "No calendário, arraste os posts sem data pro dia de postar. Toda segunda, uma olhada aqui e a semana está planejada."
+
+**Total:** ~100 palavras · ~45s
+
+---
+
+## Vídeo 3 · O editor do post e a IA
+
+### Cena 1
+- **Tela:** editor, linha editorial e formato.
+- **Cursor:** escolhe Carrossel e um pilar.
+- **Voz:** "No post, escolha o formato e o pilar. A capa é o gancho, e o Cria tem ideias de gancho prontas."
+
+### Cena 2
+- **Tela:** "Escrever as páginas".
+- **Cursor:** escolhe 5 páginas; clica.
+- **Voz:** "Peça as páginas: escolha quantas e, se quiser, um ângulo. A IA devolve o gancho, cada página e a chamada final. Dá até pra amarrar com uma notícia do momento."
+
+### Cena 3
+- **Tela:** opções da legenda.
+- **Cursor:** clica em "Avaliar legenda".
+- **Voz:** "Na legenda, reescreva, encurte ou deixe mais casual. E avalie antes de postar pra saber o que melhorar."
+
+### Cena 4
+- **Tela:** prévia e data.
+- **Cursor:** define data e hora; zoom na prévia.
+- **Voz:** "Defina a data, suba a mídia e veja a prévia do jeito que vai sair no Instagram."
+
+**Total:** ~110 palavras · ~50s
+
+---
+
+## Vídeo 4 · Cria Plano: o mês pronto
+
+### Cena 1
+- **Tela:** Cria Plano.
+- **Cursor:** escolhe mês, quantidade e o foco "engajar".
+- **Voz:** "Sem tempo pra planejar? Escolha semana ou mês, quantos posts e o foco: crescer, engajar, vender ou lançamento."
+
+### Cena 2
+- **Tela:** cards do plano.
+- **Cursor:** abre um card e mostra o "porquê".
+- **Voz:** "Cada post vem com formato, data, gancho e o porquê daquele post. Você aprende estratégia enquanto planeja."
+
+### Cena 3
+- **Tela:** botão Aceitar.
+- **Cursor:** aceita três cards.
+- **Voz:** "Aceite os que fizerem sentido e eles entram no seu Criando."
+
+**Total:** ~70 palavras · ~35s
+
+---
+
+## Vídeo 5 · Meu Feed
+
+### Cena 1
+- **Tela:** Meu Feed.
+- **Cursor:** arrasta um post da esquerda pro grid.
+- **Voz:** "O Meu Feed é o seu perfil, com o que já saiu e o que vem. Arraste os posts pro grid e veja como fica."
+
+### Cena 2
+- **Tela:** grid reorganizado.
+- **Cursor:** troca dois de lugar.
+- **Voz:** "Trocou dois de lugar e o perfil já parece outro. Com o Instagram conectado, o grid puxa as publicações reais."
+
+**Total:** ~45 palavras · ~25s
+
+---
+
+## Vídeo 6 · Prompter (Studio)
+
+### Cena 1
+- **Tela:** Prompter com o roteiro do post.
+- **Cursor:** toca no play.
+- **Voz:** "No Prompter, o roteiro do post rola na tela enquanto você grava pela câmera do próprio celular."
+
+### Cena 2
+- **Tela:** modo voz.
+- **Cursor:** liga o modo voz.
+- **Voz:** "No modo voz, o texto anda quando você fala e para quando você pausa. Toque no texto pra pausar e ajuste a velocidade."
+
+### Cena 3
+- **Tela:** botão redondo de gravar.
+- **Cursor:** toca.
+- **Voz:** "O botão redondo grava com áudio, inclusive no iPhone. Sem decorar e sem app à parte."
+
+**Total:** ~70 palavras · ~35s
+
+---
+
+## Vídeo 7 · Cria Stories (Studio)
+
+### Cena 1
+- **Tela:** Cria Stories, aba Criar.
+- **Cursor:** passa por uma tendência com o exemplo.
+- **Voz:** "Story é o conteúdo do dia a dia e o mais esquecido. No Cria Stories, cada formato em alta vem com um exemplo pronto pra gravar."
+
+### Cena 2
+- **Tela:** quantos por dia e por quantos dias.
+- **Cursor:** escolhe 3 por dia, 7 dias; gera.
+- **Voz:** "Escolha quantos stories por dia e por quantos dias, e o Cria monta a semana."
+
+### Cena 3
+- **Tela:** aba Semana.
+- **Cursor:** arrasta um story de terça pra quinta.
+- **Voz:** "Na semana, arraste entre os dias. Funcionou? Repita em outro dia."
+
+**Total:** ~70 palavras · ~35s
+
+---
+
+## Vídeo 8 · Link na bio
+
+### Cena 1
+- **Tela:** Link na bio, estilos Clássico e Site.
+- **Cursor:** escolhe Clássico.
+- **Voz:** "Monte o seu link na bio em blocos: clássico, com links, ou site, com seções."
+
+### Cena 2
+- **Tela:** blocos.
+- **Cursor:** adiciona um bloco de WhatsApp com a mensagem de publi.
+- **Voz:** "Adicione links, um WhatsApp com a mensagem de publi já escrita e uma captura de e-mail pra sua lista."
+
+### Cena 3
+- **Tela:** aba Resultados.
+- **Cursor:** troca o período pra 30 dias.
+- **Voz:** "Em resultados, visitas, cliques e os contatos capturados. Agora você sabe qual botão funciona."
+
+**Total:** ~70 palavras · ~35s
+
+---
+
+## Vídeo 9 · Metas e Mídia Kit
+
+### Cena 1
+- **Tela:** Metas.
+- **Cursor:** cria uma meta de 12 posts no mês.
+- **Voz:** "Crie metas com alvo e prazo. A de seguidores se atualiza sozinha com o Instagram conectado."
+
+### Cena 2
+- **Tela:** Reflexão do mês.
+- **Cursor:** abre.
+- **Voz:** "No fim do mês, a reflexão mostra o que funcionou e o que repetir."
+
+### Cena 3
+- **Tela:** Mídia Kit.
+- **Cursor:** passa pelo automático; mostra a opção de subir PDF.
+- **Voz:** "E pra fechar publi, o mídia kit: automático, com os seus números sempre atualizados, ou o seu PDF do Canva."
+
+**Total:** ~70 palavras · ~35s
