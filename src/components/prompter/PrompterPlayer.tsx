@@ -56,7 +56,7 @@ const CSS = `
 .cpr #camVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;transform:scaleX(-1);}
 .cpr #prompterViewport{position:absolute;inset:0;overflow-y:scroll;scrollbar-width:none;z-index:2;}
 .cpr #prompterViewport::-webkit-scrollbar{display:none;}
-.cpr #prompterText{padding:45vh 6vw 60vh;font-size:42px;line-height:1.5;font-weight:600;text-align:center;word-wrap:break-word;}
+.cpr #prompterText{padding:45vh 6vw 60vh;font-size:42px;line-height:1.25;font-weight:400;text-align:left;word-wrap:break-word;}
 .cpr #prompterText .w{color:rgba(255,255,255,.92);}
 .cpr.dimRead #prompterText .w.done{color:rgba(255,255,255,.28);}
 .cpr #prompterText .w.cur{color:var(--accent);}
@@ -250,8 +250,12 @@ const ICONS: Record<string, string> = {
   crop: '<path d="M6 2v14a2 2 0 0 0 2 2h14" /> <path d="M18 22V8a2 2 0 0 0-2-2H2" />',
 };
 
+/* Walter, 01/10/2026 (iPad + tela vertical na frente da Osmo, referência
+   teleprompter.com): linhas mais juntas, letra mais fina e texto alinhado à
+   esquerda, que é o padrão de teleprompter (o olho acha o começo da linha). */
+const LAYOUT_V = 2;
 const DEF = {
-  font: 42, margin: 6, line: 1.5,
+  font: 42, margin: 6, line: 1.25, weight: 400, align: "left",
   fontFam: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif",
   speed: 60, useWpm: false, wpm: 140, count: 3, mirX: false, mirY: false, guide: true,
   camRes: "max", camFace: "user", fps: 30, readPos: 35, reels: false, fixMirror: true,
@@ -281,6 +285,12 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (raw) S = Object.assign({}, DEF, JSON.parse(raw));
     } catch { /* primeiro uso */ }
+    /* Quem já usava salvou line 1.5 sem saber (o save grava tudo). Na troca
+       de layout aplica o novo padrão uma vez; depois vale o que a pessoa ajustar. */
+    if (S.layoutV !== LAYOUT_V) {
+      S.line = DEF.line; S.weight = DEF.weight; S.align = DEF.align; S.layoutV = LAYOUT_V;
+      try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(S)); } catch { /* quota */ }
+    }
     const save = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(S)); } catch { /* quota */ } };
 
     /* ---------- ícones ---------- */
@@ -383,6 +393,8 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     function applySettings() {
       pt.style.fontSize = S.font + "px";
       pt.style.lineHeight = String(S.line);
+      pt.style.fontWeight = String(S.weight || 400);
+      pt.style.textAlign = S.align === "center" ? "center" : "left";
       pt.style.fontFamily = S.fontFam;
       pt.style.paddingLeft = S.margin + "vw"; pt.style.paddingRight = S.margin + "vw";
       root.classList.toggle("mirrorX", S.mirX);
@@ -417,7 +429,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       });
       $("#guide").style.display = S.guide ? "block" : "none";
       $("#vFont").textContent = S.font + "px"; $("#vMargin").textContent = S.margin + "%";
-      $("#vLine").textContent = String(S.line);
+      $("#vLine").textContent = Number(S.line).toFixed(2).replace(".", ",") + "x";
       $("#vWpm").textContent = S.wpm + " palavras/min"; $("#vCount").textContent = S.count ? S.count + "s" : "sem";
       $("#spVal").textContent = String(S.wpm);
       /* fonte/margem mudam quantos pixels tem cada palavra: recalcula a
@@ -439,6 +451,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     function initSettingsUI() {
       $("#sFont").value = S.font; $("#sMargin").value = S.margin; $("#sLine").value = S.line;
       $("#sFontFam").value = S.fontFam;
+      $("#sWeight").value = String(S.weight || 400); $("#sAlign").value = S.align === "center" ? "center" : "left";
       $("#sWpm").value = S.wpm; $("#sVadSens").value = S.vadSens || "media"; $("#sDimRead").checked = S.dimRead === true; $("#sCount").value = S.count; $("#sMirX").checked = S.mirX;
       $("#sMirY").checked = S.mirY; $("#sGuide").checked = S.guide; $("#sCamRes").value = S.camRes; $("#sCamFace").value = S.camFace;
       $("#sRead").value = S.readPos; $("#sReels").checked = S.reels; $("#sFps").value = String(S.fps);
@@ -448,7 +461,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         $(id).addEventListener("input", (e: any) => { S[key] = parse ? parse(e.target.value) : e.target.value; save(); applySettings(); });
       };
       bind("#sFont", "font", Number); bind("#sMargin", "margin", Number); bind("#sLine", "line", Number);
-      bind("#sFontFam", "fontFam"); bind("#sWpm", "wpm", Number); bind("#sCount", "count", Number);
+      bind("#sFontFam", "fontFam"); bind("#sWeight", "weight", Number); bind("#sAlign", "align"); bind("#sWpm", "wpm", Number); bind("#sCount", "count", Number);
       $("#sVadSens").addEventListener("change", (e: any) => { S.vadSens = e.target.value; save(); });
       bind("#sRead", "readPos", Number); bind("#sCardH", "cardH", Number); bind("#sCardW", "cardW", Number);
       $("#sCardPos").addEventListener("change", (e: any) => { S.cardPos = e.target.value; save(); applySettings(); });
@@ -1552,7 +1565,22 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           <div className="sgHead"><span className="sgChip"><i data-lucide="type" /></span><p className="sgTitle">Texto</p></div>
           <div className="set"><label>Tamanho da fonte <b id="vFont" /></label><input type="range" id="sFont" min={20} max={90} step={1} /></div>
           <div className="set"><label>Margens laterais <b id="vMargin" /></label><input type="range" id="sMargin" min={0} max={30} step={1} /></div>
-          <div className="set"><label>Altura da linha <b id="vLine" /></label><input type="range" id="sLine" min={1.2} max={2.2} step={0.05} /></div>
+          <div className="set"><label>Espaço entre linhas <b id="vLine" /></label><input type="range" id="sLine" min={0.9} max={2.2} step={0.05} /></div>
+          <div className="set"><label>Espessura da letra</label>
+            <select id="sWeight" defaultValue="400">
+              <option value="300">Fina</option>
+              <option value="400">Normal</option>
+              <option value="500">Média</option>
+              <option value="600">Seminegrito</option>
+              <option value="700">Negrito</option>
+            </select>
+          </div>
+          <div className="set"><label>Alinhamento</label>
+            <select id="sAlign" defaultValue="left">
+              <option value="left">À esquerda (padrão teleprompter)</option>
+              <option value="center">Centralizado</option>
+            </select>
+          </div>
           <div className="set"><label>Posição de leitura (altura) <b id="vRead" /></label><input type="range" id="sRead" min={12} max={50} step={1} /></div>
           <div className="switchrow">Esmaecer o que já foi lido<label className="sw"><input type="checkbox" id="sDimRead" /><i /></label></div>
           <div className="set"><label>Fonte</label>
