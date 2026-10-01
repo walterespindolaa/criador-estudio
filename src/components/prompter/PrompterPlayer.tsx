@@ -94,6 +94,14 @@ const CSS = `
 /* barra inferior: UMA linha sempre 5 botões flexíveis + obturador fixo no meio */
 .cpr #bottomBar{bottom:0;gap:5px;padding:12px 8px 10px;padding-bottom:calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(10,10,10,.82));justify-content:space-evenly;flex-wrap:nowrap;}
 .cpr.barsHidden #topBar,.cpr.barsHidden #bottomBar{opacity:0;pointer-events:none;}
+/* Walter, 01/10/2026: modo "Só leitura". O aparelho vira só a tela do texto
+   (iPad numa tela vertical na frente da Osmo, quem grava é a câmera). Some
+   tudo que é de gravação; sobra Modo, Play, velocidade e Ajustes. */
+.cpr.readOnly #shutterWrap,.cpr.readOnly #micBtn,.cpr.readOnly #camBtn,
+.cpr.readOnly #qFlip,.cpr.readOnly #qCard,.cpr.readOnly #qReels,.cpr.readOnly #recTimer,
+.cpr.readOnly #camVideo,.cpr.readOnly #camDim,.cpr.readOnly #fgL,.cpr.readOnly #fgR{display:none!important;}
+.cpr.readOnly #bottomBar{justify-content:center;gap:14px;}
+.cpr.readOnly #bottomBar .pbtn{flex:0 0 auto;width:76px;max-width:none;}
 .cpr .pbtn{background:var(--glass);border:1px solid var(--glassBrd);color:var(--cream);border-radius:999px;padding:9px 13px;font-size:14px;cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:inline-flex;align-items:center;justify-content:center;gap:6px;}
 .cpr .pbtn small{font-family:var(--fontDisplay);}
 .cpr .pbtn.on{background:var(--accent);color:var(--accentFg);border-color:var(--accent);font-weight:700;box-shadow:0 3px 14px rgba(234,73,24,.45);}
@@ -247,6 +255,7 @@ const ICONS: Record<string, string> = {
   "rotate-ccw": '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /> <path d="M3 3v5h5" />',
   type: '<polyline points="4 7 4 4 20 4 20 7" /> <line x1="9" x2="15" y1="20" y2="20" /> <line x1="12" x2="12" y1="4" y2="20" />',
   gauge: '<path d="m12 14 4-4" /> <path d="M3.34 19a10 10 0 1 1 17.32 0" />',
+  monitor: '<rect width="20" height="14" x="2" y="3" rx="2" /> <line x1="8" x2="16" y1="21" y2="21" /> <line x1="12" x2="12" y1="17" y2="21" />',
   crop: '<path d="M6 2v14a2 2 0 0 0 2 2h14" /> <path d="M18 22V8a2 2 0 0 0-2-2H2" />',
 };
 
@@ -267,6 +276,7 @@ const DEF = {
   /* Walter, 01/10/2026: substitui o antigo "focus" (que vinha ligado). Chave
      nova de propósito: quem já tinha focus:true salvo volta pra cor única. */
   dimRead: false,
+  readOnly: false,
 };
 
 function PrompterPlayerInner({ title, text, onExit }: Props) {
@@ -404,6 +414,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       root.classList.toggle("cardMode", S.cardOn);
       root.classList.toggle("cardWhite", S.cardOn && S.cardColor === "branco");
       root.classList.toggle("dimRead", S.dimRead === true);
+      root.classList.toggle("readOnly", S.readOnly === true);
       if (S.cardOn) {
         vp.style.height = S.cardH + "%";
         vp.style.width = S.cardW + "%";
@@ -452,7 +463,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       $("#sFont").value = S.font; $("#sMargin").value = S.margin; $("#sLine").value = S.line;
       $("#sFontFam").value = S.fontFam;
       $("#sWeight").value = String(S.weight || 400); $("#sAlign").value = S.align === "center" ? "center" : "left";
-      $("#sWpm").value = S.wpm; $("#sVadSens").value = S.vadSens || "media"; $("#sDimRead").checked = S.dimRead === true; $("#sCount").value = S.count; $("#sMirX").checked = S.mirX;
+      $("#sWpm").value = S.wpm; $("#sVadSens").value = S.vadSens || "media"; $("#sDimRead").checked = S.dimRead === true; $("#sReadOnly").checked = S.readOnly === true; $("#sCount").value = S.count; $("#sMirX").checked = S.mirX;
       $("#sMirY").checked = S.mirY; $("#sGuide").checked = S.guide; $("#sCamRes").value = S.camRes; $("#sCamFace").value = S.camFace;
       $("#sRead").value = S.readPos; $("#sReels").checked = S.reels; $("#sFps").value = String(S.fps);
       $("#sFixMirror").checked = S.fixMirror; $("#sCardOn").checked = S.cardOn; $("#sCardPos").value = S.cardPos;
@@ -469,7 +480,8 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       const bindChk = (id: string, key: string) => {
         $(id).addEventListener("change", (e: any) => { S[key] = e.target.checked; save(); applySettings(); syncQuick(); });
       };
-      bindChk("#sDimRead", "dimRead"); bindChk("#sMirX", "mirX"); bindChk("#sMirY", "mirY"); bindChk("#sGuide", "guide");
+      bindChk("#sDimRead", "dimRead");
+      $("#sReadOnly").addEventListener("change", (e: any) => setReadOnly(e.target.checked)); bindChk("#sMirX", "mirX"); bindChk("#sMirY", "mirY"); bindChk("#sGuide", "guide");
       bindChk("#sReels", "reels"); bindChk("#sCardOn", "cardOn"); bindChk("#sFixMirror", "fixMirror");
       $("#sCamRes").addEventListener("change", (e: any) => { S.camRes = e.target.value; save(); if (camStream) startCamera(true); });
       $("#sCamFace").addEventListener("change", (e: any) => { S.camFace = e.target.value; save(); if (camStream) startCamera(true); });
@@ -508,6 +520,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       $("#playBtn").style.display = m === "manual" ? "none" : "inline-flex";
       $("#speedPill").style.display = m === "manual" ? "none" : "flex";
       refreshIcons($("#modeBtn"));
+      if (S.readOnly && m === "manual") readHideBars(); else showBars();
     }
     $("#modeBtn").onclick = (e: Event) => { e.stopPropagation(); $("#modeMenu").classList.toggle("show"); };
     const MODE_HINT: Record<string, string> = {
@@ -524,6 +537,24 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       $("#qCard").classList.toggle("on", S.cardOn);
       $("#qReels").classList.toggle("on", S.reels);
       $("#qMir").classList.toggle("on", S.mirX);
+      $("#qRead").classList.toggle("on", S.readOnly === true);
+    }
+    /* Liga/desliga o modo Só leitura. Gravando não deixa trocar (a câmera
+       sumiria no meio da tomada). Ao ligar, desliga a câmera do aparelho. */
+    function setReadOnly(on: boolean) {
+      if (on && recorder && recorder.state === "recording") {
+        toast("Pare a gravação antes de ir pro modo Só leitura.");
+        $("#sReadOnly").checked = false; return;
+      }
+      S.readOnly = on; $("#sReadOnly").checked = on; save();
+      if (on && camStream) stopCamera(true);
+      applySettings(); syncQuick();
+      if (on) {
+        toast(mode === "manual"
+          ? "Só leitura. Toque embaixo avança, no meio volta, no topo mostra os botões."
+          : "Só leitura. Toque no texto pausa e continua.", 4200);
+        readHideBars();
+      } else showBars();
     }
     $("#qFlip").onclick = () => {
       S.camFace = S.camFace === "user" ? "environment" : "user"; $("#sCamFace").value = S.camFace; save();
@@ -531,6 +562,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     };
     $("#qCard").onclick = () => { S.cardOn = !S.cardOn; $("#sCardOn").checked = S.cardOn; save(); applySettings(); syncQuick(); };
     $("#qReels").onclick = () => { S.reels = !S.reels; $("#sReels").checked = S.reels; save(); applySettings(); syncQuick(); };
+    $("#qRead").onclick = () => setReadOnly(!S.readOnly);
     $("#qMir").onclick = () => { S.mirX = !S.mirX; $("#sMirX").checked = S.mirX; save(); applySettings(); syncQuick(); };
     $("#qTheme").onclick = () => { S.theme = S.theme === "light" ? "dark" : "light"; save(); applyTheme(); };
 
@@ -657,8 +689,30 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     /* TOQUE NO TEXTO = pausa / continua. Quem grava sozinho, com o celular
        longe, não acha botão pequeno; o texto inteiro vira o botão. No Manual o
        toque só mostra/esconde as barras. */
-    vp.addEventListener("click", () => {
+    /* Só leitura + Manual: a tela vira três zonas, pra quem lê sozinho
+       controlar sem achar botão. Topo (15%) mostra as barras, até 45% volta,
+       o resto avança. Barras somem sozinhas depois de 3s. */
+    function readHideBars() {
+      clearTimeout(hideT);
+      hideT = setTimeout(() => {
+        if (!disposed && S.readOnly && mode === "manual" && !$("#settingsPanel").classList.contains("open")) root.classList.add("barsHidden");
+      }, 3000);
+    }
+    function stepManual(dir: 1 | -1) {
+      autoScrollUntil = Date.now() + 600;
+      vp.scrollBy({ top: dir * vp.clientHeight * 0.3, behavior: "smooth" });
+      setTimeout(() => { if (!disposed) { hardSetPos(currentWordAtLine()); updateProgress(); } }, 620);
+    }
+    vp.addEventListener("click", (e: MouseEvent) => {
       if (cdIv) { cancelCountdown(); return; }
+      if (mode === "manual" && S.readOnly) {
+        const r = vp.getBoundingClientRect();
+        const y = (e.clientY - r.top) / Math.max(1, r.height);
+        const yy = S.mirY ? 1 - y : y; /* tela de ponta-cabeça: zonas invertem junto */
+        if (yy < 0.15) { showBars(); readHideBars(); return; }
+        stepManual(yy < 0.45 ? -1 : 1);
+        return;
+      }
       if (mode === "manual") { root.classList.toggle("barsHidden"); return; }
       togglePlay();
       if (!playing) toast("Pausado. Toque de novo pra continuar.", 1400);
@@ -696,8 +750,8 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       let ok = true;
       switch (e.key) {
         case " ": case "Enter": case "k": case "K": togglePlay(); break;
-        case "ArrowUp": if (mode === "manual") vp.scrollBy({ top: -vp.clientHeight / 3, behavior: "smooth" }); else mudarVelocidade(10); break;
-        case "ArrowDown": if (mode === "manual") vp.scrollBy({ top: vp.clientHeight / 3, behavior: "smooth" }); else mudarVelocidade(-10); break;
+        case "ArrowUp": if (mode === "manual") stepManual(-1); else mudarVelocidade(10); break;
+        case "ArrowDown": if (mode === "manual") stepManual(1); else mudarVelocidade(-10); break;
         case "+": case "=": mudarVelocidade(10); break;
         case "-": case "_": mudarVelocidade(-10); break;
         case "ArrowRight": case "PageDown": irParaBloco(1); break;
@@ -1527,6 +1581,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           <button className="pbtn" id="qFlip" title="Trocar câmera"><i data-lucide="switch-camera" /><small>Trocar</small></button>
           <button className="pbtn" id="qCard" title="Modo card"><i data-lucide="gallery-thumbnails" /><small>Card</small></button>
           <button className="pbtn" id="qReels" title="Reels 9:16"><i data-lucide="smartphone" /><small>9:16</small></button>
+          <button className="pbtn" id="qRead" title="Só leitura (aparelho vira só a tela do texto)"><i data-lucide="monitor" /><small>Leitura</small></button>
           <button className="pbtn" id="qMir" title="Espelhar"><i data-lucide="flip-horizontal-2" /><small>Espelho</small></button>
           <button className="pbtn" id="qTheme" title="Tema claro/escuro"><i data-lucide="sun-moon" /><small>Tema</small></button>
         </div>
@@ -1582,6 +1637,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
             </select>
           </div>
           <div className="set"><label>Posição de leitura (altura) <b id="vRead" /></label><input type="range" id="sRead" min={12} max={50} step={1} /></div>
+          <div className="switchrow">Só leitura (sem câmera, tela só do texto)<label className="sw"><input type="checkbox" id="sReadOnly" /><i /></label></div>
           <div className="switchrow">Esmaecer o que já foi lido<label className="sw"><input type="checkbox" id="sDimRead" /><i /></label></div>
           <div className="set"><label>Fonte</label>
             <select id="sFontFam" defaultValue={DEF.fontFam}>

@@ -27,4 +27,17 @@ describe("teleprompter (montagem e controles)", () => {
     expect(onExit).toHaveBeenCalled();
     vi.useRealTimers();
   });
+  /* Walter, 01/10/2026: modo Só leitura (iPad como tela na frente da Osmo) */
+  it("liga o modo Só leitura e esconde a parte de gravação", () => {
+    localStorage.removeItem("cria_prompter_settings_v1");
+    render(<PrompterPlayer title="t" text="Olá pessoal tudo bem" onExit={() => {}} />);
+    const root = document.querySelectorAll(".cpr")[document.querySelectorAll(".cpr").length - 1];
+    expect(root.classList.contains("readOnly")).toBe(false);
+    fireEvent.click(root.querySelector("#qRead")!);
+    expect(root.classList.contains("readOnly")).toBe(true);
+    expect((root.querySelector("#sReadOnly") as HTMLInputElement).checked).toBe(true);
+    expect(JSON.parse(localStorage.getItem("cria_prompter_settings_v1")!).readOnly).toBe(true);
+    fireEvent.click(root.querySelector("#qRead")!);
+    expect(root.classList.contains("readOnly")).toBe(false);
+  });
 });
