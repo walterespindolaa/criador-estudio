@@ -39,6 +39,7 @@ import { DiaDeGravacao } from "@/components/captacao/DiaDeGravacao";
 import { useCenasIA } from "@/hooks/useCenasIA";
 import { useLinkPreviews } from "@/hooks/useLinkPreviews";
 import { parseRefLinks, isRefLink } from "@/lib/refLinks";
+import { ROTULO_APROVACAO } from "@/lib/labels";
 import { RoteirosDoDia } from "@/components/captacao/RoteirosDoDia";
 import { BotaoEnviarAprovacao, BotaoEnviarEscolhendo, PainelAprovacoes } from "@/components/captacao/AprovacaoRoteiros";
 import { SeloProntidao, LinhaProntidao } from "@/components/captacao/SeloProntidao";
@@ -1579,7 +1580,7 @@ function FolhaDoDiaDialog({ open, onOpenChange, diaLabel, wd, local, items }: {
 // ── Pasta do cliente: roteiros do mês (vários), captações e tomadas dele ──────
 // A pasta é o dossiê de gravação do cliente. O mês vem do cabeçalho da página
 // (as setas navegam meses passados e futuros). Aqui nasce roteiro manual,
-// roteiro puxado dos reels aprovados do Cria Post, e a captação marcada direto.
+// roteiro puxado dos reels aprovados no Cronograma, e a captação marcada direto.
 function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingClientShots, onSaveClientShots, ext, onBack, onDeleteExtra, onPrompter, renderCapture, addCapture, addingCapture, logoCliente, logoAgencia, elaboradoPor, corCliente, marcarInicial, onMarcarConsumido, acaoInicial, onAcaoConsumida, todasCaps, todosScripts, aoAbrirDia }: {
   pasta: PastaInfo;
   // Marca do guia em PDF: as MESMAS logos do relatório do cliente, pra o
@@ -1790,8 +1791,8 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
           </Button>
           {ext && (
             <Button size="sm" variant="outline" onClick={() => setImportOpen(true)} className="rounded-xl h-9"
-              title="Importa os roteiros dos reels aprovados no Cria Post deste cliente.">
-              <Film className="h-3.5 w-3.5 mr-1.5" /> Puxar dos reels aprovados
+              title="Importa os roteiros dos reels que o cliente aprovou no Cronograma.">
+              <Film className="h-3.5 w-3.5 mr-1.5" /> Puxar reels do cronograma
             </Button>
           )}
           <Button size="sm" variant="outline" onClick={() => setMarcarOpen(true)} className="rounded-xl h-9">
@@ -1863,7 +1864,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
               <>
                 <p className="text-sm font-body text-foreground font-medium">Nenhum roteiro neste mês</p>
                 <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">
-                  Adicione quantos quiser no Novo roteiro{ext ? " ou puxe dos reels aprovados" : ""}. As setas do mês lá em cima mostram os meses anteriores e os próximos.
+                  Adicione quantos quiser no Novo roteiro{ext ? " ou puxe os reels do cronograma" : ""}. As setas do mês lá em cima mostram os meses anteriores e os próximos.
                 </p>
               </>
             )}
@@ -1991,14 +1992,15 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
         <ImportarReelsDialog open onOpenChange={(o) => { if (!o) setImportOpen(false); }}
           externalClientId={ext.id}
           jaImportados={new Set(scripts.map((s) => s.source_post_id).filter(Boolean) as string[])}
-          onImportar={async (post) => {
+          titulosImportados={new Set(scripts.map((s) => (s.title ?? "").trim().toLowerCase()).filter(Boolean))}
+          onImportar={async (r) => {
             await addScript.mutateAsync({
               crm_client_id: pasta.crmId, client_name: pasta.crmId ? null : pasta.nome,
-              month, title: post.title || "Reels aprovado", content: post.script ?? "",
-              source: "reel", source_post_id: post.id,
-              // A referência que o post já tinha vem junto: é a mesma coisa que
-              // a social mídia colaria de novo aqui na mão.
-              reference_url: post.reference_url ?? null,
+              month, title: r.title || "Reels", content: r.script,
+              source: "reel", source_post_id: r.postId,
+              // A referência do item/post vem junto: é a mesma coisa que a
+              // social mídia colaria de novo aqui na mão.
+              reference_url: r.reference_url,
               format: "reels",
             });
           }} />
@@ -2250,55 +2252,143 @@ function RoteiroDialog({ open, onOpenChange, editando, semTitulo, inicialTitulo,
   );
 }
 
-// ── Importar roteiros dos reels APROVADOS do Cria Post ────────────────────────
-function ImportarReelsDialog({ open, onOpenChange, externalClientId, jaImportados, onImportar }: {
+// ── Importar roteiros dos reels pra gravar ───────────────────────────────────
+// Walter, 01/10/2026: o fluxo é Cronograma (cliente aprova a ideia) > vira post
+// "Em produção" no Cria Post > é AÍ que se grava. O "Aprovado" do kanban só vem
+// depois do vídeo gravado, então filtrar por ele deixava a lista vazia justo na
+// hora de gravar. A fonte agora é o item de Reels APROVADO no cronograma do
+// cliente; o post do Cria Post (quando existe) só diz em que pé está.
+// No cronograma o roteiro falado fica na COPY e a DESCRIÇÃO é a orientação de
+// gravação: a orientação entra como [direção] (aparece no prompter, não é lida).
+type ItemCronoReels = {
+  id: string; title: string | null; copy: string | null; description: string | null;
+  type: string | null; ref_url: string | null; converted_post_id: string | null;
+  cronogramas: { title: string | null; status: string | null } | null;
+};
+export type ReelParaImportar = { postId: string | null; title: string; script: string; reference_url: string | null };
+
+/* "Gancho", "CTA" sozinhos na linha viram cabeçalho no prompter (não são lidos). */
+function roteiroFalado(fala: string | null, direcao: string | null): string {
+  const corpo = (fala ?? "").split("\n")
+    .map((l) => (/^\s*(gancho|hook|cta|chamada|desenvolvimento|fechamento)\s*:?\s*$/i.test(l) ? "# " + l.trim().replace(/:$/, "") : l))
+    .join("\n").trim();
+  const dir = (direcao ?? "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => "[" + l.replace(/[[\]]/g, "") + "]").join("\n");
+  return [dir, corpo].filter(Boolean).join("\n\n");
+}
+
+function ImportarReelsDialog({ open, onOpenChange, externalClientId, jaImportados, titulosImportados, onImportar }: {
   open: boolean; onOpenChange: (o: boolean) => void;
   externalClientId: string;
   jaImportados: Set<string>;
-  onImportar: (post: { id: string; title: string; script: string | null; reference_url: string | null }) => Promise<unknown>;
+  /** Item do cronograma que ainda não virou post não tem id de post: confere pelo título. */
+  titulosImportados: Set<string>;
+  onImportar: (r: ReelParaImportar) => Promise<unknown>;
 }) {
   const { posts } = useExternalPosts(externalClientId);
   const [busy, setBusy] = useState<string | null>(null);
-  // Só reels com roteiro escrito e já aprovados/postados: é o material validado
-  // pelo cliente, pronto pra virar pauta de gravação.
-  const candidatos = useMemo(
-    () => posts.filter((p) => p.format === "reels" && (p.script ?? "").trim()
-      && (p.approval_status === "aprovado" || p.approval_status === "postado")),
-    [posts]);
-  const importar = async (p: { id: string; title: string; script: string | null; reference_url: string | null }) => {
-    setBusy(p.id);
-    try { await onImportar(p); toast.success("Roteiro importado pra pasta."); }
-    finally { setBusy(null); }
+  const { data: itens = [], isLoading } = useQuery<ItemCronoReels[]>({
+    queryKey: ["captacao-reels-cronograma", externalClientId],
+    enabled: open && !!externalClientId,
+    staleTime: 0,
+    queryFn: async () => {
+      const { data, error } = await (supabase.from as unknown as (t: string) => ReturnType<typeof supabase.from>)("cronograma_items")
+        .select("id, title, copy, description, type, ref_url, converted_post_id, sort_order, cronogramas!inner(title, status, external_client_id, created_at)")
+        .eq("cronogramas.external_client_id", externalClientId)
+        .eq("approval_status", "aprovado")
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as ItemCronoReels[];
+    },
+  });
+  const postPorId = useMemo(() => new Map(posts.map((p) => [p.id, p])), [posts]);
+
+  type Linha = { key: string; titulo: string; texto: string; postId: string | null; ref: string | null; selo: string; origem: string };
+  const { prontos, semRoteiro } = useMemo(() => {
+    const linhas: Linha[] = [];
+    const ligados = new Set<string>();
+    for (const it of itens) {
+      if (!(it.type ?? "").toLowerCase().includes("reels")) continue;
+      if (it.cronogramas?.status === "arquivado") continue;
+      const post = it.converted_post_id ? postPorId.get(it.converted_post_id) : undefined;
+      if (it.converted_post_id) ligados.add(it.converted_post_id);
+      if (post?.approval_status === "postado") continue; // já foi ao ar, não tem o que gravar
+      // Se o post existe, a copy dele (caption) é a versão mais nova do roteiro.
+      const texto = roteiroFalado(post?.caption?.trim() ? post.caption : it.copy, it.description);
+      linhas.push({
+        key: "i" + it.id, titulo: it.title || post?.title || "Reels", texto,
+        postId: post?.id ?? it.converted_post_id ?? null,
+        ref: parseRefLinks(it.ref_url)[0] ?? post?.reference_url ?? null,
+        selo: post ? (ROTULO_APROVACAO[post.approval_status ?? "pendente"] ?? "") : "ainda não virou post",
+        origem: it.cronogramas?.title || "Cronograma",
+      });
+    }
+    // Reels criado direto no Cria Post (sem cronograma) e em produção também é gravável.
+    for (const p of posts) {
+      if (p.format !== "reels" || p.approval_status !== "em_producao" || ligados.has(p.id)) continue;
+      const fala = [p.hook?.trim() ? "**" + p.hook.trim() + "**" : "", (p.script ?? "").trim()].filter(Boolean).join("\n\n");
+      linhas.push({ key: "p" + p.id, titulo: p.title || "Reels", texto: fala, postId: p.id, ref: p.reference_url ?? null, selo: ROTULO_APROVACAO.em_producao, origem: "Direto no Cria Post" });
+    }
+    return { prontos: linhas.filter((l) => l.texto.trim()), semRoteiro: linhas.filter((l) => !l.texto.trim()) };
+  }, [itens, posts, postPorId]);
+
+  const importar = async (l: Linha) => {
+    setBusy(l.key);
+    try {
+      await onImportar({ postId: l.postId, title: l.titulo, script: l.texto, reference_url: l.ref });
+      toast.success("Roteiro importado pra pasta.");
+    } finally { setBusy(null); }
   };
+  const grupos = useMemo(() => {
+    const m = new Map<string, Linha[]>();
+    for (const l of prontos) m.set(l.origem, [...(m.get(l.origem) ?? []), l]);
+    return [...m.entries()];
+  }, [prontos]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg sm:max-h-[85vh] overflow-y-auto">
-        <DialogHeader><DialogTitle className="font-display">Puxar dos reels aprovados</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="font-display">Puxar reels do cronograma</DialogTitle></DialogHeader>
         <p className="text-xs text-muted-foreground font-body -mt-1">
-          Os roteiros dos reels que o cliente já aprovou no Cria Post. Importar traz o texto pra pasta, pronto pro teleprompter.
+          Os reels que o cliente aprovou no Cronograma. Importar traz o roteiro pra pasta, pronto pro teleprompter; a descrição entra como orientação de gravação, que aparece mas não é lida.
         </p>
-        {candidatos.length === 0 ? (
-          <p className="text-sm font-body text-foreground py-6 text-center">Nenhum reels aprovado com roteiro por enquanto.</p>
+        {isLoading ? (
+          <div className="py-6 flex justify-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+        ) : prontos.length + semRoteiro.length === 0 ? (
+          <p className="text-sm font-body text-foreground py-6 text-center">Nenhum reels aprovado no cronograma deste cliente ainda.</p>
         ) : (
-          <div className="space-y-2">
-            {candidatos.map((p) => {
-              const feito = jaImportados.has(p.id);
-              return (
-                <div key={p.id} className="rounded-xl border border-border p-3">
-                  <div className="flex items-center gap-2">
-                    <p className="min-w-0 flex-1 text-[13px] font-body font-semibold text-foreground truncate">{p.title || "Reels"}</p>
-                    <Button size="sm" variant={feito ? "ghost" : "outline"} disabled={feito || busy === p.id}
-                      onClick={() => importar({ id: p.id, title: p.title, script: p.script, reference_url: p.reference_url ?? null })}
-                      className="rounded-lg h-8 shrink-0">
-                      {feito ? <><Check className="h-3.5 w-3.5 mr-1" /> Importado</>
-                        : busy === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        : <><Download className="h-3.5 w-3.5 mr-1" /> Importar</>}
-                    </Button>
-                  </div>
-                  <p className="mt-1 text-[12px] font-body text-muted-foreground line-clamp-2 whitespace-pre-wrap">{(p.script ?? "").trim()}</p>
+          <div className="space-y-4">
+            {grupos.map(([origem, linhas]) => (
+              <div key={origem} className="space-y-2">
+                <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">{origem}</p>
+                {linhas.map((l) => {
+                  const feito = (l.postId && jaImportados.has(l.postId)) || titulosImportados.has(l.titulo.trim().toLowerCase());
+                  return (
+                    <div key={l.key} className="rounded-xl border border-border p-3">
+                      <div className="flex items-center gap-2">
+                        <p className="min-w-0 flex-1 text-[13px] font-body font-semibold text-foreground truncate">{l.titulo}</p>
+                        <Button size="sm" variant={feito ? "ghost" : "outline"} disabled={!!feito || busy === l.key}
+                          onClick={() => importar(l)} className="rounded-lg h-8 shrink-0">
+                          {feito ? <><Check className="h-3.5 w-3.5 mr-1" /> Importado</>
+                            : busy === l.key ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            : <><Download className="h-3.5 w-3.5 mr-1" /> Importar</>}
+                        </Button>
+                      </div>
+                      {l.selo && <p className="mt-0.5 text-[11px] font-body text-muted-foreground">{l.selo}</p>}
+                      <p className="mt-1 text-[12px] font-body text-muted-foreground line-clamp-2 whitespace-pre-wrap">{l.texto.replace(/\*\*/g, "").replace(/^# /gm, "")}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+            {semRoteiro.map((l) => (
+              <div key={l.key} className="rounded-xl border border-dashed border-border p-3 opacity-60">
+                <div className="flex items-center gap-2">
+                  <p className="min-w-0 flex-1 text-[13px] font-body font-semibold text-foreground truncate">{l.titulo}</p>
+                  <span className="text-[11px] font-body text-muted-foreground shrink-0">sem roteiro</span>
                 </div>
-              );
-            })}
+                <p className="mt-1 text-[12px] font-body text-muted-foreground">Escreva a copy no cronograma (ou o roteiro no post) e ele aparece aqui pra importar.</p>
+              </div>
+            ))}
           </div>
         )}
       </DialogContent>
