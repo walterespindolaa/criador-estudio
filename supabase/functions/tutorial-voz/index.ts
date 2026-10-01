@@ -8,7 +8,13 @@
 //
 // Ações:
 //   { acao: "vozes" }                                   -> lista as vozes da conta
-//   { acao: "gerar", id, texto, voz, velocidade? }      -> gera e guarda uma cena
+//   { acao: "gerar", id, texto, voz, velocidade?, ajustes? } -> gera e guarda uma cena
+//
+// ajustes (opcional, pra deixar a voz menos robótica):
+//   modelo     eleven_multilingual_v2 (padrão) | eleven_v3 | eleven_turbo_v2_5
+//   estabilidade 0..1 (menor = mais expressiva), similaridade 0..1, estilo 0..1
+//   anterior / proximo: texto da cena de antes e de depois. A ElevenLabs usa pra
+//   manter a entonação contínua entre cenas geradas separadas.
 // ═══════════════════════════════════════════════════════════════════════════
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -55,20 +61,33 @@ Deno.serve(async (req) => {
       if (!id || !texto || !voz || !/^[a-z0-9\-_/]+$/i.test(id)) return json({ error: "id, texto e voz são obrigatórios" }, 400);
       // A ElevenLabs aceita velocidade de 0.7 a 1.2. Walter pediu entre 1.05 e 1.10.
       const velocidade = Math.min(1.2, Math.max(0.7, Number(body.velocidade) || 1.08));
+      const aj = (body.ajustes ?? {}) as Record<string, unknown>;
+      const MODELOS = ["eleven_multilingual_v2", "eleven_v3", "eleven_turbo_v2_5"];
+      const modelo = MODELOS.includes(String(aj.modelo)) ? String(aj.modelo) : "eleven_multilingual_v2";
+      const num = (v: unknown, padrao: number) => { const n = Number(v); return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : padrao; };
+      const pedido: Record<string, unknown> = {
+        text: texto,
+        model_id: modelo,
+        language_code: "pt",
+        voice_settings: {
+          stability: num(aj.estabilidade, 0.5), similarity_boost: num(aj.similaridade, 0.8),
+          style: num(aj.estilo, 0.15), use_speaker_boost: true, speed: velocidade,
+        },
+      };
+      // Continuidade entre cenas (o v3 não aceita, então só manda nos outros modelos).
+      if (modelo !== "eleven_v3") {
+        if (typeof aj.anterior === "string" && aj.anterior) pedido.previous_text = aj.anterior.slice(0, 1000);
+        if (typeof aj.proximo === "string" && aj.proximo) pedido.next_text = aj.proximo.slice(0, 1000);
+      }
       const r = await fetch(`${XI}/text-to-speech/${encodeURIComponent(voz)}/with-timestamps?output_format=mp3_44100_128`, {
         method: "POST",
         headers: { "xi-api-key": chave, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: texto,
-          model_id: "eleven_multilingual_v2",
-          language_code: "pt",
-          voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.15, use_speaker_boost: true, speed: velocidade },
-        }),
+        body: JSON.stringify(pedido),
       });
       if (!r.ok) return json({ error: "elevenlabs recusou", status: r.status, detalhe: (await r.text()).slice(0, 400) }, 502);
       const j = await r.json();
       const bin = Uint8Array.from(atob(j.audio_base64 as string), (c) => c.charCodeAt(0));
-      const alinhamento = JSON.stringify({ texto, velocidade, alignment: j.alignment ?? null, normalized: j.normalized_alignment ?? null });
+      const alinhamento = JSON.stringify({ texto, velocidade, modelo, ajustes: aj, alignment: j.alignment ?? null, normalized: j.normalized_alignment ?? null });
 
       const up1 = await svc.storage.from("tutoriais").upload(`${id}.mp3`, bin, { contentType: "audio/mpeg", upsert: true });
       if (up1.error) return json({ error: "upload do áudio falhou", detalhe: up1.error.message }, 500);
