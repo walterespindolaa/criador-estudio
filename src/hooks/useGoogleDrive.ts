@@ -4,7 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 import { compressImage } from "@/lib/image-compress";
-import { uploadVideoFileToBunny, uploadFileToBunnyStream } from "@/lib/bunny-upload";
+import { uploadVideoFileToBunny } from "@/lib/bunny-upload";
+import { levarVideoDoDriveProBunny } from "@/lib/bunny-ingestao";
 
 const sanitizeStoragePath = (name: string): string => {
   const lastDot = name.lastIndexOf(".");
@@ -37,7 +38,10 @@ interface PickedFile {
 
 const REQUIRED_SCOPE = "drive.file";
 
-const getStoredToken = (): string | null => {
+/** Token do Drive desta sessão, se ainda válido (sem abrir popup). */
+export const tokenDriveEmCache = (): string | null => getStoredToken();
+
+function getStoredToken(): string | null {
   try {
     const token = sessionStorage.getItem("gd_access_token");
     const expires = sessionStorage.getItem("gd_token_expires");
@@ -50,7 +54,7 @@ const getStoredToken = (): string | null => {
     return token;
   } catch { /* ignore */ }
   return null;
-};
+}
 
 const setStoredToken = (token: string, scope: string, expiresInSeconds = 3600) => {
   try {
@@ -128,21 +132,11 @@ async function downloadDriveFileToBlob(fileId: string, accessToken: string): Pro
 async function ingerirNoBunnyEmSegundoPlano(v: {
   fileId: string; fileName: string; mimeType: string; accessToken: string; mediaId: string;
 }): Promise<void> {
-  try {
-    const blob = await downloadDriveFileToBlob(v.fileId, v.accessToken);
-    const arquivo = new File([blob], v.fileName, { type: v.mimeType || blob.type });
-    const bunny = await uploadFileToBunnyStream(arquivo);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).rpc("criapost_promover_para_bunny", {
-      p_media_id: v.mediaId,
-      p_view_url: bunny.view_url,
-      p_thumbnail_url: bunny.thumbnail_url,
-      p_bunny_video_id: bunny.videoGuid,
-    });
-    if (error) throw error;
-  } catch (e) {
-    console.warn(`[drive-import] ingestão no Bunny falhou para ${v.fileName} (a peça segue no Drive):`, e);
-  }
+  /* PELO SERVIDOR (01/10/2026). Antes este passo baixava o vídeo inteiro pro
+     navegador e subia de novo pro Bunny: fechou a aba no meio, falhava sem
+     aviso e o vídeo ficava preso no player do Drive. Agora só entrega o token
+     do seletor pro servidor, e o Bunny busca o arquivo direto no Drive. */
+  await levarVideoDoDriveProBunny(v.mediaId, v.accessToken);
 }
 
 export function useGoogleDrive() {

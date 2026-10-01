@@ -4,7 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
-import { useGoogleDrive } from "@/hooks/useGoogleDrive";
+import { useGoogleDrive, tokenDriveEmCache } from "@/hooks/useGoogleDrive";
+import { levarVideoDoDriveProBunny } from "@/lib/bunny-ingestao";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { CriaPostPublishButton } from "@/components/accounts/CriaPostPublishButton";
@@ -112,6 +113,18 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
   const attCount = count + refLinks.length;
 
   useEffect(() => { if (!dirty.current) setOrder(media.map((m) => m.id)); }, [media]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* RESGATE DO VÍDEO PRESO NO DRIVE (01/10/2026). Vídeo anexado antes da
+     passagem pelo servidor pode ter ficado no player do Drive (qualidade baixa,
+     barra do Google). Abrir o post já pede a passagem pro Bunny: com o token do
+     Drive desta sessão se houver, senão pelo download público. Ninguém clica em
+     nada, e a edge ignora o que já foi ou está indo. */
+  useEffect(() => {
+    for (const m of media) {
+      const video = (m.file_type ?? "").startsWith("video/");
+      if (m.provider === "gdrive" && video) void levarVideoDoDriveProBunny(m.id, tokenDriveEmCache());
+    }
+  }, [media]);
 
   useEffect(() => {
     if (!dirty.current) return;
