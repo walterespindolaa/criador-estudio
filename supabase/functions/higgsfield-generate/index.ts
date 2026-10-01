@@ -2,6 +2,7 @@
 // Higgsfield (modelo Soul). Assíncrono: action "generate" cria o job + envia à fila;
 // action "poll" consulta o status e traz as imagens prontas. Admin-only.
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { iaFetch, chaveIA } from "../_shared/ia.ts";
 import { VOZ_CRIA } from "../_shared/voz-cria.ts";
 
 const cors = {
@@ -96,12 +97,12 @@ function stripMdDeep<T>(obj: T): T {
 
 // Texto livre via Lovable AI (Gemini). Lança erro "ai_not_configured" / "ai_failed:...".
 async function aiText(sys: string, usr: string, maxTokens = 1200): Promise<string> {
-  const key = Deno.env.get("LOVABLE_API_KEY");
+  const key = chaveIA();
   if (!key) throw new Error("ai_not_configured");
   // A VOZ DO CRIA entra em todo texto gerado aqui (roteiro de reels, texto
   // das lâminas). Os prompts de imagem em inglês não sofrem: o bloco fala
   // de como escrever em português e o modelo separa as duas coisas.
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const r = await iaFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST", headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "system", content: `${sys}\n\n${VOZ_CRIA}` }, { role: "user", content: usr }], max_tokens: maxTokens, temperature: 0.6 }),
   });
@@ -242,7 +243,7 @@ ${brandbook ? `\nO QUE A MARCA/PRODUTO REALMENTE É (Brandbook do criador, esta 
 
     // IA escreve o PROMPT MASTER (linha editorial/estilo) + o texto e prompt de cada slide.
     async function writePages(): Promise<{ master: string; pages: Array<{ role?: string; screen_text?: string; prompt?: string }> }> {
-      const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+      const lovableKey = chaveIA();
       if (!lovableKey) throw new Error("ai_not_configured");
       const sys = `Você é diretor de arte + copywriter especialista em carrosséis de Instagram no Brasil. Cria um PROMPT MASTER (linha editorial/visual que vale pra todas as páginas) E o texto + prompt de cada slide, mantendo IDENTIDADE VISUAL 100% consistente. Você NUNCA inventa fatos sobre a marca/produto: usa só o CONTEXTO DA MARCA, o roteiro e a pesquisa. Responda SOMENTE JSON válido.`;
       const usr = `CONTEXTO DA MARCA (entenda o que a marca/produto É antes de escrever):
@@ -274,7 +275,7 @@ ${withText
 Responda SOMENTE JSON:
 {"master_prompt":"editorial + style anchor in English","pages":[{"role":"capa|desenvolvimento|prova|cta","screen_text":"texto PT curto e concreto","prompt":"variação da cena em inglês"}]}
 Gere EXATAMENTE ${slides} página(s).`;
-      const air = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const air = await iaFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST", headers: { "Authorization": `Bearer ${lovableKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "system", content: sys }, { role: "user", content: usr }], max_tokens: 4096, temperature: 0.4 }),
       });

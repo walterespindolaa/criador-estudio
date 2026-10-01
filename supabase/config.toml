@@ -127,3 +127,28 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = false
   [functions.trash-purge]
     verify_jwt = false
+
+  [functions.exportar-storage]
+    verify_jwt = true
+  [functions.tutorial-voz]
+    verify_jwt = true
+  [functions.bunny-ingerir-drive]
+    verify_jwt = false
+  [functions.lifecycle-emails]
+    verify_jwt = false
+  [functions.password-reset]
+    verify_jwt = false
+  [functions.material-anexo]
+    verify_jwt = false
+  [functions.client-packs-checkout]
+    verify_jwt = true
+  [functions.collab-seats-checkout]
+    verify_jwt = true
+  [functions.export-my-data]
+    verify_jwt = true
+  [functions.manager-member-invite]
+    verify_jwt = true
+  [functions.video-analyze]
+    verify_jwt = true
+  [functions.migrar-segredos]
+    verify_jwt = true

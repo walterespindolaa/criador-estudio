@@ -1,3 +1,5 @@
+import { iaFetch } from "./ia.ts";
+
 // Wrapper de fetch com timeout (AbortController) pra chamadas ao gateway de IA.
 // Evita function travada esperando resposta que nunca vem. Estouro → AiTimeoutError (504).
 
@@ -12,7 +14,7 @@ export async function aiFetch(url: string, init: RequestInit, timeoutMs = 30_000
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), timeoutMs);
   try {
-    return await fetch(url, { ...init, signal: ac.signal });
+    return await iaFetch(url, { ...init, signal: ac.signal });
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") throw new AiTimeoutError();
     throw e;

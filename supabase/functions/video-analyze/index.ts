@@ -39,6 +39,7 @@
 // Fase 1: SÓ ADMIN. Sem cobrança, sem cota.
 // ═══════════════════════════════════════════════════════════════════════════
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { iaFetch, chaveIA as chaveIAGlobal } from "../_shared/ia.ts";
 import { VOZ_CRIA, humanizarDeep } from "../_shared/voz-cria.ts";
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined;
@@ -466,7 +467,7 @@ type Roteiro = {
 };
 
 async function escreverRoteiro(analise: Record<string, unknown>, c: ContextoCliente | null): Promise<Roteiro | null> {
-  const chaveIA = Deno.env.get("LOVABLE_API_KEY");
+  const chaveIA = chaveIAGlobal();
   if (!chaveIA) return null;
 
   const estrutura = (analise.estrutura as Bloco[] | undefined) ?? [];
@@ -506,7 +507,7 @@ Formato exato:
 Regras: use as mesmas funções e os mesmos tempos do esqueleto acima. "fala" é o texto pronto, nunca instrução ("aqui você fala sobre X" está proibido). Se precisar de um número que você não sabe, escreva [NÚMERO DO SEU MERCADO]. De 3 a 6 itens em o_que_gravar.`;
 
   try {
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const r = await iaFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${chaveIA}`, "Content-Type": "application/json" },
       body: JSON.stringify({

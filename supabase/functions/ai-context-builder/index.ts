@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { iaFetch, chaveIA } from "../_shared/ia.ts";
 import { createClient } from "npm:@supabase/supabase-js@2"
 import { VOZ_CRIA, humanizar, humanizarDeep } from "../_shared/voz-cria.ts"
 
@@ -249,7 +250,7 @@ serve(async (req) => {
       if (cronOp !== 'trend-bank-refresh' && cronOp !== 'story-trend-refresh') {
         return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
-      const url = Deno.env.get('SUPABASE_URL'); const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'); const lk = Deno.env.get('LOVABLE_API_KEY')
+      const url = Deno.env.get('SUPABASE_URL'); const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'); const lk = chaveIA()
       if (!url || !key || !lk) throw new Error('Missing credentials')
       const cronAdmin = createClient(url, key)
       return cronOp === 'story-trend-refresh'
@@ -267,7 +268,7 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '')
     const supabaseUrl = Deno.env.get("SUPABASE_URL")
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")
+    const lovableApiKey = chaveIA()
 
     if (!supabaseUrl || !serviceRoleKey) {
       throw new Error("Missing Supabase credentials")
