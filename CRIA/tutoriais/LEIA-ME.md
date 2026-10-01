@@ -46,4 +46,5 @@ Cada módulo tem uma visão geral (1min30 a 2min) e vídeos curtos por função 
 - **01-cria-post-01, cena 3:** a voz tropeça em "legenda" (sai "legendia legenda") e estica o "cópia" em "copia num toque". Regerar a cena (exige login de admin), testando estabilidade mais alta ou outra frase.
 - **01-cria-post-03, cena 2:** a voz diz "aprovou o tema e o conteúdo", a tela mostra três partes aprovadas (tema, conteúdo e mídia). Decidir: trocar a fala ou deixar.
 - **01-cria-post-03, cena 3:** setinha cinza do mouse real aparece em duas capturas do card.
-- **01-cria-post-04:** conferir se "Vida Leve Suplementos" (texto das ideias do Radar) é marca real antes de publicar.
+- ~~**01-cria-post-04:** conferir se "Vida Leve Suplementos" é marca real.~~ Resolvido: é cliente fictício da conta fake.
+- **Conta fake, Canal da marca:** o recado fixo do Ateliê Flor de Sal (e outros clientes) tem links do Pinterest "kwkgabriela", copiados de dado real. O do Studio Lumen já foi trocado por texto neutro. Limpar os outros antes de gravar o módulo Parceiro.
