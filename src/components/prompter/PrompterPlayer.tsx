@@ -58,7 +58,7 @@ const CSS = `
 .cpr #prompterViewport::-webkit-scrollbar{display:none;}
 .cpr #prompterText{padding:45vh 6vw 60vh;font-size:42px;line-height:1.5;font-weight:600;text-align:center;word-wrap:break-word;}
 .cpr #prompterText .w{color:rgba(255,255,255,.92);}
-.cpr #prompterText .w.done{color:rgba(255,255,255,.28);}
+.cpr.dimRead #prompterText .w.done{color:rgba(255,255,255,.28);}
 .cpr #prompterText .w.cur{color:var(--accent);}
 .cpr.mirrorX #prompterViewport{transform:scaleX(-1);}
 .cpr.mirrorY #prompterViewport{transform:scaleY(-1);}
@@ -67,7 +67,7 @@ const CSS = `
 .cpr.camOn #camDim{display:block;}
 .cpr #guide{position:absolute;left:0;top:var(--readpos,35%);width:0;height:0;border-top:10px solid transparent;border-bottom:10px solid transparent;border-left:14px solid var(--accent);opacity:.85;z-index:3;pointer-events:none;}
 .cpr #prompterText .w.em{color:var(--accent);font-weight:800;}
-.cpr #prompterText .w.em.done{color:rgba(234,73,24,.35);}
+.cpr.dimRead #prompterText .w.em.done{color:rgba(234,73,24,.35);}
 .cpr .pausebreak{color:var(--accent);opacity:.75;font-size:.55em;letter-spacing:14px;margin:.5em 0;}
 .cpr.reels #prompterText{max-width:calc(100vh * 9 / 16);margin:0 auto;}
 .cpr #fgL,.cpr #fgR{position:absolute;top:0;bottom:0;background:rgba(0,0,0,.55);z-index:4;pointer-events:none;display:none;}
@@ -76,12 +76,12 @@ const CSS = `
 .cpr.reels.camOn #fgL,.cpr.reels.camOn #fgR{display:block;}
 .cpr.cardMode #prompterViewport{background:rgba(205,205,210,.38);border-radius:18px;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
 .cpr.cardMode #prompterText .w{color:rgba(0,0,0,.92);text-shadow:none!important;}
-.cpr.cardMode #prompterText .w.done{color:rgba(0,0,0,.25);}
+.cpr.dimRead.cardMode #prompterText .w.done{color:rgba(0,0,0,.25);}
 .cpr.cardMode #prompterText .w.cur{color:#B33D0F;font-weight:800;}
 .cpr.cardMode #prompterText .w.em{color:#A0370D;font-weight:800;}
 .cpr.cardMode.cardWhite #prompterViewport{background:rgba(35,35,42,.5);}
 .cpr.cardMode.cardWhite #prompterText .w{color:rgba(255,255,255,.95);}
-.cpr.cardMode.cardWhite #prompterText .w.done{color:rgba(255,255,255,.3);}
+.cpr.dimRead.cardMode.cardWhite #prompterText .w.done{color:rgba(255,255,255,.3);}
 .cpr.cardMode.cardWhite #prompterText .w.cur{color:var(--accent);}
 .cpr.cardMode.cardWhite #prompterText .w.em{color:var(--accent);}
 .cpr.cardMode #camDim{display:none!important;}
@@ -180,7 +180,7 @@ const CSS = `
 .cpr #shutterWrap small{font-size:10px;font-weight:700;font-family:var(--fontDisplay);color:var(--cream);text-shadow:0 1px 4px rgba(0,0,0,.7);white-space:nowrap;}
 .cpr.light{--panel:#FDFBF5;--panel2:#F5F3E7;--border:rgba(10,10,10,.14);--txt:#0A0A0A;--dim:rgba(10,10,10,.55);background:#F5F3E7;color:#0A0A0A;}
 .cpr.light:not(.camOn) #prompterText .w{color:rgba(10,10,10,.9);}
-.cpr.light:not(.camOn) #prompterText .w.done{color:rgba(10,10,10,.24);}
+.cpr.dimRead.light:not(.camOn) #prompterText .w.done{color:rgba(10,10,10,.24);}
 .cpr.light:not(.camOn) #prompterText .w.cur,.cpr.light:not(.camOn) #prompterText .w.em{color:var(--accent);}
 .cpr.light #topBar{background:rgba(253,251,245,.92);border-color:rgba(10,10,10,.12);}
 .cpr.light #quickBar .pbtn,.cpr.light #topBar>div:last-child .pbtn{color:#0A0A0A;background:transparent;border:none;}
@@ -193,10 +193,13 @@ const CSS = `
 .cpr.light:not(.camOn) #shutter{border-color:#0A0A0A;background:rgba(10,10,10,.05);box-shadow:none;}
 .cpr.light:not(.camOn) #shutterWrap small{color:#0A0A0A;text-shadow:none;}
 .cpr.light:not(.camOn) #cprToast{background:rgba(253,251,245,.95);color:#0A0A0A;border-color:rgba(10,10,10,.14);}
+/* Walter, 01/10/2026: o texto lido NÃO apaga mais por padrão. Na rolagem
+   manual ele perdia o lugar porque as falas ficavam claras. O esmaecimento
+   (cor .done + máscara de foco abaixo) só vale com a opção "dimRead" ligada. */
 /* ── LAPIDAÇÃO 25/09/2026 ──────────────────────────────────────────────────
    Foco: o que já passou e o que ainda vem ficam esmaecidos; a faixa da linha
    de leitura fica 100%. O olho não se perde procurando onde parou. */
-.cpr.focus:not(.cardMode):not(.mirrorY) #prompterViewport{
+.cpr.dimRead:not(.cardMode):not(.mirrorY) #prompterViewport{
   -webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.22) 0%,#000 calc(var(--readpos,35%) - 7%),#000 calc(var(--readpos,35%) + 22%),rgba(0,0,0,.4) 100%);
   mask-image:linear-gradient(to bottom,rgba(0,0,0,.22) 0%,#000 calc(var(--readpos,35%) - 7%),#000 calc(var(--readpos,35%) + 22%),rgba(0,0,0,.4) 100%);}
 /* Cabeçalho de cena e direção: aparecem, mas NÃO são texto pra ler em voz alta
@@ -256,7 +259,10 @@ const DEF = {
   theme: "dark", mode: "voice", micDeviceId: "",
   /* 25/09/2026: sensibilidade da voz (baixa = lugar barulhento) e foco na
      linha de leitura (esmaece o que já passou e o que vem longe). */
-  vadSens: "media", focus: true,
+  vadSens: "media",
+  /* Walter, 01/10/2026: substitui o antigo "focus" (que vinha ligado). Chave
+     nova de propósito: quem já tinha focus:true salvo volta pra cor única. */
+  dimRead: false,
 };
 
 function PrompterPlayerInner({ title, text, onExit }: Props) {
@@ -385,7 +391,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       root.style.setProperty("--readpos", S.readPos + "%");
       root.classList.toggle("cardMode", S.cardOn);
       root.classList.toggle("cardWhite", S.cardOn && S.cardColor === "branco");
-      root.classList.toggle("focus", S.focus !== false);
+      root.classList.toggle("dimRead", S.dimRead === true);
       if (S.cardOn) {
         vp.style.height = S.cardH + "%";
         vp.style.width = S.cardW + "%";
@@ -433,7 +439,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     function initSettingsUI() {
       $("#sFont").value = S.font; $("#sMargin").value = S.margin; $("#sLine").value = S.line;
       $("#sFontFam").value = S.fontFam;
-      $("#sWpm").value = S.wpm; $("#sVadSens").value = S.vadSens || "media"; $("#sFocus").checked = S.focus !== false; $("#sCount").value = S.count; $("#sMirX").checked = S.mirX;
+      $("#sWpm").value = S.wpm; $("#sVadSens").value = S.vadSens || "media"; $("#sDimRead").checked = S.dimRead === true; $("#sCount").value = S.count; $("#sMirX").checked = S.mirX;
       $("#sMirY").checked = S.mirY; $("#sGuide").checked = S.guide; $("#sCamRes").value = S.camRes; $("#sCamFace").value = S.camFace;
       $("#sRead").value = S.readPos; $("#sReels").checked = S.reels; $("#sFps").value = String(S.fps);
       $("#sFixMirror").checked = S.fixMirror; $("#sCardOn").checked = S.cardOn; $("#sCardPos").value = S.cardPos;
@@ -450,7 +456,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       const bindChk = (id: string, key: string) => {
         $(id).addEventListener("change", (e: any) => { S[key] = e.target.checked; save(); applySettings(); syncQuick(); });
       };
-      bindChk("#sFocus", "focus"); bindChk("#sMirX", "mirX"); bindChk("#sMirY", "mirY"); bindChk("#sGuide", "guide");
+      bindChk("#sDimRead", "dimRead"); bindChk("#sMirX", "mirX"); bindChk("#sMirY", "mirY"); bindChk("#sGuide", "guide");
       bindChk("#sReels", "reels"); bindChk("#sCardOn", "cardOn"); bindChk("#sFixMirror", "fixMirror");
       $("#sCamRes").addEventListener("change", (e: any) => { S.camRes = e.target.value; save(); if (camStream) startCamera(true); });
       $("#sCamFace").addEventListener("change", (e: any) => { S.camFace = e.target.value; save(); if (camStream) startCamera(true); });
@@ -1548,7 +1554,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           <div className="set"><label>Margens laterais <b id="vMargin" /></label><input type="range" id="sMargin" min={0} max={30} step={1} /></div>
           <div className="set"><label>Altura da linha <b id="vLine" /></label><input type="range" id="sLine" min={1.2} max={2.2} step={0.05} /></div>
           <div className="set"><label>Posição de leitura (altura) <b id="vRead" /></label><input type="range" id="sRead" min={12} max={50} step={1} /></div>
-          <div className="switchrow">Foco na linha de leitura<label className="sw"><input type="checkbox" id="sFocus" defaultChecked /><i /></label></div>
+          <div className="switchrow">Esmaecer o que já foi lido<label className="sw"><input type="checkbox" id="sDimRead" /><i /></label></div>
           <div className="set"><label>Fonte</label>
             <select id="sFontFam" defaultValue={DEF.fontFam}>
               <option value="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">Padrão (Sans)</option>
