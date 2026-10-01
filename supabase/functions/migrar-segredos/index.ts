@@ -5,9 +5,9 @@
 // Supabase, pela API de gerenciamento da Supabase. Nenhum valor aparece na
 // resposta, no log ou no chat: a função só devolve os NOMES copiados.
 //
-// Precisa de dois segredos nesta Lovable (colados pelo Walter, sem mostrar):
-//   SUPABASE_PAT         token pessoal da conta Supabase (Account > Access Tokens)
-//   SUPABASE_NOVO_REF    ref do projeto novo (não é segredo)
+// Precisa de dois segredos nesta Lovable (colados pelo Walter, sem mostrar; a Lovable não aceita o prefixo SUPABASE_):
+//   MIGRACAO_PAT         token pessoal da conta Supabase (Account > Access Tokens)
+//   MIGRACAO_NOVO_REF    ref do projeto novo (não é segredo)
 //
 //   { acao: "previa" }   -> nomes que seriam copiados e os que faltam
 //   { acao: "copiar" }   -> copia e devolve só os nomes
@@ -46,9 +46,9 @@ Deno.serve(async (req) => {
     const { data: caller } = await svc.from("profiles").select("role").eq("id", user.id).single();
     if (caller?.role !== "admin") return json({ error: "forbidden" }, 403);
 
-    const pat = Deno.env.get("SUPABASE_PAT");
-    const ref = Deno.env.get("SUPABASE_NOVO_REF");
-    if (!pat || !ref) return json({ error: "faltam SUPABASE_PAT e/ou SUPABASE_NOVO_REF nos segredos da Lovable" }, 400);
+    const pat = Deno.env.get("MIGRACAO_PAT");
+    const ref = Deno.env.get("MIGRACAO_NOVO_REF");
+    if (!pat || !ref) return json({ error: "faltam MIGRACAO_PAT e/ou MIGRACAO_NOVO_REF nos segredos da Lovable" }, 400);
     if (!/^[a-z0-9]{20}$/.test(ref) || Deno.env.get("SUPABASE_URL")!.includes(ref)) return json({ error: "ref do projeto novo inválido" }, 400);
 
     const tem = NOMES.filter((n) => (Deno.env.get(n) ?? "") !== "");

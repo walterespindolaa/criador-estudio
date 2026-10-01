@@ -35,7 +35,7 @@ A Lovable exporta o banco **uma vez a cada 24h**. A exportação de sábado é a
 ## Antes de sábado (pode ser na sexta)
 
 1. **Supabase:** criar a organização "Cria Social Club" no plano Pro (com o mesmo login, pra eu enxergar pelo conector). Não criar o projeto; eu crio no sábado, em `sa-east-1`.
-2. **Token pessoal da Supabase:** Account → Access Tokens → gerar. Colar como segredo `SUPABASE_PAT` **na Lovable** (não mandar no chat).
+2. **Token pessoal da Supabase:** Account → Access Tokens → gerar. Colar como segredo `MIGRACAO_PAT` **na Lovable** (a Lovable não aceita nome começando com SUPABASE_) (não mandar no chat).
 3. **Resend:** criar conta, adicionar o domínio `criasocialclub.com.br`, colocar os registros DNS na Cloudflare e esperar ficar "Verified". Gerar a API key e guardar no `cria-segredos.env`.
 4. **Gemini:** aistudio.google.com → Get API key → guardar no `cria-segredos.env`.
 5. **No Mac:** instalar o cliente do Postgres: `brew install libpq && brew link --force libpq`. Conferir `npx supabase --version`.
@@ -62,7 +62,7 @@ A Lovable exporta o banco **uma vez a cada 24h**. A exportação de sábado é a
 
 ### Fase 3 · Chaves e funções (≈ 30 min)
 
-1. Lovable: segredo `SUPABASE_NOVO_REF` com o ref do projeto novo → rodar `migrar-segredos` (prévia, depois copiar).
+1. Lovable: segredo `MIGRACAO_NOVO_REF` = `ecbzfjzoqidowrsfsfih` → rodar `migrar-segredos` (prévia, depois copiar).
 2. `npx supabase secrets set --env-file ~/Downloads/cria-segredos.env --project-ref <novo>` (Gemini e Resend).
 3. `npx supabase functions deploy --project-ref <novo>` (publica todas de uma vez, com o `config.toml`).
 4. Robôs (pg_cron): recriar no projeto novo com o endereço novo. Lista hoje: cria-ig-refresh, cria-daily-notif, story-notifications-15min, trash-purge-daily, cria-lifecycle-emails, cria-daily-health, storage-cleanup-daily, criapost-media-cleanup-daily, agency-inventory-cleanup, rl-buckets-cleanup, trend-bank-weekly, cria-bunny-ingerir, e o processador da fila de e-mail. Eu confiro no dump o que existe de fato.
@@ -119,7 +119,7 @@ Na Cloudflare, apontar `app.criasocialclub.com.br` de volta pra Lovable e reativ
 
 ### Depois (dias seguintes)
 
-- Apagar as funções temporárias `exportar-storage` e `migrar-segredos` e o segredo `SUPABASE_PAT` (revogar o token na Supabase).
+- Apagar as funções temporárias `exportar-storage` e `migrar-segredos` e os segredos `MIGRACAO_PAT` e `MIGRACAO_NOVO_REF` (revogar o token na Supabase).
 - Apagar o arquivo de exportação e o `cria-segredos.env` do Mac.
 - Atualizar o CONTEXTO.md (stack nova) e registrar no DECISOES.md.
 - Depois de uns dias estável: remover a Lovable Cloud do projeto.
