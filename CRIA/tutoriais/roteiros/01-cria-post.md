@@ -18,7 +18,7 @@ Roteiro v1.1 · 01/10/2026 · tom e formato aprovados
 | 1 | Criar e organizar posts | ~1min15 | O quadro, o post por dentro, a prévia |
 | 2 | Mandar pro cliente aprovar | ~1min15 | O link fixo, o que o cliente vê, apontar na arte |
 | 3 | Aprovação detalhada e ajustes | ~1min | Tema, Conteúdo, Mídia e Legenda; o ajuste voltando pro card |
-| 4 | Ideias e pautas | ~50s | As cinco fontes, Usar, Criar posts |
+| 4 | Ideias e pautas | ~50s | As cinco fontes, Usar, Virar post |
 | 5 | Materiais | ~50s | O link de pedidos e as etapas |
 | 6 | Relatório do mês | ~1min | Montar e baixar o PDF com a sua marca |
 
@@ -188,9 +188,10 @@ Os vídeos curtos repetem o essencial da visão geral com mais calma, para quem 
 - **Voz:** "Marque as boas como usar e descarte o resto. Nada de ideia perdida em print."
 
 ### Cena 3
-- **Tela:** botão "Criar posts" e o quadro com os posts novos.
-- **Cursor:** clica em "Criar posts"; os cards aparecem em "Em produção".
-- **Voz:** "Toque em criar posts e as ideias marcadas viram posts no quadro, prontas pra produzir."
+- **Tela:** Suas ideias: anota uma ideia, ela aparece na lista com "Virar post" e "Cronograma"; depois o quadro com o post novo em "Em produção".
+- **Cursor:** digita a ideia, clica em "Virar post"; o card aparece em "Em produção".
+- **Voz:** "Anotou uma ideia? Toque em virar post e ela cai direto no quadro, pronta pra produzir. Se preferir, mande pro cronograma do cliente."
+- **Nota (01/10/2026):** o roteiro antigo falava num botão "Criar posts" que não existe na aba Ideias. O botão real é "Virar post", em Suas ideias.
 
 **Total:** ~90 palavras · ~45s
 
