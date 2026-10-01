@@ -48,3 +48,7 @@ Cada módulo tem uma visão geral (1min30 a 2min) e vídeos curtos por função 
 - **01-cria-post-03, cena 3:** setinha cinza do mouse real aparece em duas capturas do card.
 - ~~**01-cria-post-04:** conferir se "Vida Leve Suplementos" é marca real.~~ Resolvido: é cliente fictício da conta fake.
 - **Conta fake, Canal da marca:** o recado fixo do Ateliê Flor de Sal (e outros clientes) tem links do Pinterest "kwkgabriela", copiados de dado real. O do Studio Lumen já foi trocado por texto neutro. Limpar os outros antes de gravar o módulo Parceiro.
+- **01-cria-post-04, cena 2:** a tela já mostra "Usar" e "Descartar" marcados um instante antes do clique do cursor.
+- **00-social-midia-04, cena 4:** tela provisória (quadro de produção sem entrega). Falta capturar "Pra você revisar / Tá ok": alguém entra como Bia (testetestado@gmail.com) e entrega a peça "Bastidores".
+- **00-social-midia-00 cena 4 e 00-social-midia-01 cena 3:** a fala cita "vermelho", mas na conta fake só há bolinha verde e amarela.
+- **00-social-midia-03, cena 2:** o "arrastar" é antes/depois com o cursor fazendo o gesto; o card não se move na tela.
