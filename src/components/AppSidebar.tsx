@@ -26,6 +26,7 @@ import {
   Wand2,
   Instagram,
   Briefcase,
+  PlayCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NavLink } from "@/components/NavLink";
@@ -113,6 +114,7 @@ const groups = [
     label: "Aprender",
     items: [
       { title: "Aprender", url: "/app/aprender", icon: GraduationCap },
+      { title: "Tutoriais", url: "/app/tutoriais", icon: PlayCircle },
     ],
   },
   {

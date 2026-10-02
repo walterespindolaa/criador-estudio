@@ -58,7 +58,7 @@ const TOP: NavNode[] = [
   ]},
   { id: "aprender", label: "nav.learn", icon: GraduationCap, children: [
     { label: "nav.courses", icon: BookMarked, to: "/app/aprender" },
-    { label: "nav.tutorials", icon: PlayCircle, to: "/app/aprender" },
+    { label: "nav.tutorials", icon: PlayCircle, to: "/app/tutoriais" },
   ]},
   { id: "parcerias", label: "nav.partnerships", icon: BadgeDollarSign, to: "/app/collabs" },
 ];

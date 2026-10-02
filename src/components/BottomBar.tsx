@@ -60,7 +60,7 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
   ]},
   { title: "Aprender", items: [
     { title: "Cursos", url: "/app/aprender", icon: GraduationCap },
-    { title: "Tutoriais", url: "/app/aprender", icon: PlayCircle },
+    { title: "Tutoriais", url: "/app/tutoriais", icon: PlayCircle },
   ]},
   { title: "Mais", items: [
     { title: "Parcerias", url: "/app/collabs", icon: Handshake },

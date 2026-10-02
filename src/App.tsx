@@ -70,6 +70,7 @@ const Arquivos = lazy(() => import("./pages/app/Arquivos"));
 const Historico = lazy(() => import("./pages/app/Historico"));
 const Configuracoes = lazy(() => import("./pages/app/Configuracoes"));
 const Aprender = lazy(() => import("./pages/app/Aprender"));
+const Tutoriais = lazy(() => import("./pages/app/Tutoriais"));
 const Brandbook = lazy(() => import("./pages/app/Brandbook"));
 const LinkInBio = lazy(() => import("./pages/app/LinkInBio"));
 const MinhasDemandas = lazy(() => import("./pages/app/MinhasDemandas"));
@@ -375,6 +376,7 @@ const App = () => (
                 <Route path="arquivos" element={<ErrorBoundary><Arquivos /></ErrorBoundary>} />
                 <Route path="historico" element={<ErrorBoundary><UpgradeGate feature="historico"><Historico /></UpgradeGate></ErrorBoundary>} />
                 <Route path="aprender" element={<ErrorBoundary><Aprender /></ErrorBoundary>} />
+                <Route path="tutoriais" element={<ErrorBoundary><Tutoriais /></ErrorBoundary>} />
                 <Route path="brandbook" element={<ErrorBoundary><Brandbook /></ErrorBoundary>} />
                 <Route path="linkinbio" element={<ErrorBoundary><LinkInBio /></ErrorBoundary>} />
                 <Route path="demandas" element={<Navigate to="/socialmidia/demandas" replace />} />
@@ -430,6 +432,8 @@ const App = () => (
                 {/* Abas da Equipe (28/09/2026): produção, conversas e pessoas. */}
                 <Route path="equipe/:aba" element={<SoOperacao><ErrorBoundary><Equipe /></ErrorBoundary></SoOperacao>} />
                 <Route path="lixeira" element={<ErrorBoundary><Lixeira /></ErrorBoundary>} />
+                {/* Tutoriais em vídeo: a mesma tela do /app, com a trilha da agência (ou do parceiro). */}
+                <Route path="tutoriais" element={<ErrorBoundary><Tutoriais /></ErrorBoundary>} />
               </Route>
               {/* LINK CURTO DA BIO (Walter, 01/09): app.criasocialclub.com.br/bio/nome
                   ficava gigante na bio do Instagram. Com o apanhador de raiz, a

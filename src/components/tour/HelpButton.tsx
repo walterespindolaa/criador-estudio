@@ -1,8 +1,10 @@
 /**
  * Botão "?" da barra superior, reabre o tour da tela atual quando quiser.
+ * Desde 02/10/2026 também abre o vídeo tutorial da tela (quando existe) e a
+ * página com todos os tutoriais.
  */
-import { CircleHelp, PlayCircle, Route } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { CircleHelp, Clapperboard, MonitorPlay, PlayCircle, Route } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,11 +13,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTour } from "./TourProvider";
+import { duracaoTexto, tutorialDaRota, useCatalogoTutoriais } from "@/hooks/useTutoriais";
 
 export function HelpButton({ light = false }: { light?: boolean }) {
   const { startTour, startTraining, hasTourForRoute } = useTour();
   const location = useLocation();
   const available = hasTourForRoute(location.pathname);
+  const navigate = useNavigate();
+  const { data: tutoriais } = useCatalogoTutoriais();
+  const video = tutorialDaRota(tutoriais, location.pathname);
+  const baseTutoriais = location.pathname.startsWith("/socialmidia") ? "/socialmidia/tutoriais" : "/app/tutoriais";
 
   return (
     <DropdownMenu>
@@ -32,6 +39,18 @@ export function HelpButton({ light = false }: { light?: boolean }) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
+        {video && (
+          <>
+            <DropdownMenuItem onClick={() => navigate(`${baseTutoriais}?v=${video.slug}`)} className="gap-2 font-body">
+              <MonitorPlay className="h-4 w-4 text-[#E8458B]" />
+              <div className="flex flex-col">
+                <span className="font-semibold">Assistir o vídeo desta tela</span>
+                <span className="text-[11px] text-muted-foreground">{video.titulo}{video.duracao_s ? ` · ${duracaoTexto(video.duracao_s)}` : ""}</span>
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuItem
           disabled={!available}
           onClick={() => startTour()}
@@ -47,6 +66,10 @@ export function HelpButton({ light = false }: { light?: boolean }) {
             <span>Fazer o tour completo</span>
             <span className="text-[11px] text-muted-foreground">Todas as telas, uma por uma</span>
           </div>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate(baseTutoriais)} className="gap-2 font-body">
+          <Clapperboard className="h-4 w-4" />
+          Ver todos os tutoriais
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

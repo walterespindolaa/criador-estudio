@@ -21,7 +21,7 @@
     "ordem": 1,
     "titulo": "O Início: o que fazer hoje",
     "duracao_s": 36,
-    "rota": "/app"
+    "rota": "/socialmidia/dashboard"
   },
   {
     "slug": "00-social-midia-02-clientes-e-ficha",
@@ -33,7 +33,7 @@
     "ordem": 2,
     "titulo": "Clientes e a ficha do cliente",
     "duracao_s": 45,
-    "rota": "/app/clientes"
+    "rota": "/socialmidia/clientes"
   },
   {
     "slug": "00-social-midia-03-agenda-e-aprovacoes",
@@ -45,7 +45,7 @@
     "ordem": 3,
     "titulo": "Agenda e aprovações",
     "duracao_s": 24,
-    "rota": "/app/agenda"
+    "rota": "/socialmidia/agenda"
   },
   {
     "slug": "00-social-midia-04-equipe",
@@ -57,7 +57,7 @@
     "ordem": 4,
     "titulo": "Equipe: parceiros e colaboradores",
     "duracao_s": 47,
-    "rota": "/app/equipe"
+    "rota": "/socialmidia/equipe"
   },
   {
     "slug": "01-cria-post-00-visao-geral",
@@ -81,7 +81,7 @@
     "ordem": 1,
     "titulo": "Criar e organizar posts",
     "duracao_s": 52,
-    "rota": "/app/criapost"
+    "rota": null
   },
   {
     "slug": "01-cria-post-02-mandar-pro-cliente-aprovar",
@@ -93,7 +93,7 @@
     "ordem": 2,
     "titulo": "Mandar pro cliente aprovar",
     "duracao_s": 46,
-    "rota": null
+    "rota": "/socialmidia/criapost"
   },
   {
     "slug": "01-cria-post-03-aprovacao-detalhada",
@@ -201,7 +201,7 @@
     "ordem": 4,
     "titulo": "Cria Plano",
     "duracao_s": 23,
-    "rota": null
+    "rota": "/app/autopilot"
   },
   {
     "slug": "10-criador-05-meu-feed",

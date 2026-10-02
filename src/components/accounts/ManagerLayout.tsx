@@ -7,7 +7,7 @@ import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton, FeedbackDialog } from "@/components/FeedbackButton";
 import {
   Home, Boxes, Briefcase, Handshake, DollarSign, Users, Layers, ListChecks, Menu, ChevronRight, Gift, PackageCheck, CalendarCheck, FileText,
-  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Camera, Trash2, UserPlus, Search, MessageSquarePlus, BarChart3, type LucideIcon,
+  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Camera, Trash2, UserPlus, Search, MessageSquarePlus, BarChart3, PlayCircle, type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -93,6 +93,7 @@ const HERO_TITLES: Record<string, string> = {
   "/socialmidia/caches": "Meus cachês",
   "/socialmidia/equipe": "Equipe",
   "/socialmidia/lixeira": "Lixeira",
+  "/socialmidia/tutoriais": "Tutoriais",
 };
 
 // useManagerOutlet / MODULE_ICON moram em managerOutlet.ts (arquivo leve) pra
@@ -396,6 +397,7 @@ export default function ManagerLayout() {
         <div className="flex-1" />
         <div className="my-2 h-px w-full bg-border" />
         <div className="flex w-full flex-col items-stretch gap-1">
+          {railNode(PlayCircle, "Tutoriais", { active: isActive("/socialmidia/tutoriais"), onClick: () => navigate("/socialmidia/tutoriais") })}
           {railNode(Trash2, "Lixeira", { active: isActive("/socialmidia/lixeira"), onClick: () => navigate("/socialmidia/lixeira") })}
           {railNode(SettingsIcon, "Configurações", { onClick: () => setSettingsOpen(true), dataTour: "nav-config" })}
           {railNode(LogOut, "Sair", { onClick: handleSignOut })}
@@ -573,6 +575,7 @@ export default function ManagerLayout() {
           {
             title: "Sistema",
             items: [
+              { label: "Tutoriais", desc: "Vídeos curtos de cada tela", icon: PlayCircle as LucideIcon, onClick: () => navigate("/socialmidia/tutoriais") },
               { label: "Enviar feedback", desc: "Uma ideia ou um problema no app", icon: MessageSquarePlus as LucideIcon, onClick: () => setFeedbackOpen(true) },
               { label: "Lixeira", desc: "Recuperar o que você excluiu", icon: Trash2 as LucideIcon, onClick: () => navigate("/socialmidia/lixeira") },
               { label: "Configurações", desc: "Perfil, visual e integrações", icon: SettingsIcon as LucideIcon, onClick: () => setSettingsOpen(true) },
