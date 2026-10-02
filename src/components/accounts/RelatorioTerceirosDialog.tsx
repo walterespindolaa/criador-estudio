@@ -13,7 +13,7 @@
 // variáveis CSS em oklch (mesma regra do RelatorioProdutividadeDialog).
 import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Loader2 } from "lucide-react";
+import { Download, FileText, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,8 @@ import { brlReais } from "@/lib/money";
 import { hojeBR, toISODateBR } from "@/lib/date-br";
 import { FORMAT_LABELS } from "@/lib/constants";
 import { dentro, type Periodo } from "@/lib/fechamento";
-import { ROTULO_PAPEL_TERCEIRO, chaveTerceiro, type LinhaTerceiro, type Terceiro } from "@/hooks/useTerceiros";
+import { ROTULO_PAPEL_TERCEIRO, chaveTerceiro, useLinhasTerceiros, useTerceiros, type LinhaTerceiro, type Terceiro } from "@/hooks/useTerceiros";
+import { useCrmClients } from "@/hooks/useCrm";
 
 // types.ts travado: consulta por cast, padrão do projeto.
 const sbFrom = (t: string) => (supabase.from as unknown as (t: string) => ReturnType<typeof supabase.from>)(t);
@@ -266,5 +267,26 @@ export function RelatorioTerceirosDialog({ open, onOpenChange, terceiros, linhas
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** O MESMO relatório em outro lugar (Walter, 02/10/2026: "não tem como deixar
+ *  isso na aba dos meus parceiros? ter nos 2 lugares"). Equipe > Produção não
+ *  carrega os dados do Caixa, então este botão busca sozinho. */
+export function BotaoRelatorioTerceiros({ className }: { className?: string }) {
+  const [aberto, setAberto] = useState(false);
+  const { data: terceiros = [] } = useTerceiros();
+  const { data: linhas = [] } = useLinhasTerceiros();
+  const { data: clientes = [] } = useCrmClients();
+  const nomeCliente = useMemo(() => new Map(clientes.map((c) => [c.id, c.name])), [clientes]);
+  return (
+    <>
+      <Button size="sm" variant="outline" className={className} onClick={() => setAberto(true)} disabled={terceiros.length === 0}>
+        <FileText className="h-3.5 w-3.5 mr-1" /> Relatório por período
+      </Button>
+      {aberto && (
+        <RelatorioTerceirosDialog open onOpenChange={setAberto} terceiros={terceiros} linhas={linhas} nomeCliente={nomeCliente} />
+      )}
+    </>
   );
 }

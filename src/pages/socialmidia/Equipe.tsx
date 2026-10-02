@@ -15,6 +15,7 @@ import { confirmar } from "@/components/shared/Confirm";
 import { useNavigate, useParams } from "react-router-dom";
 import { ModuleHero, type SubTab } from "@/components/brand/ModuleHero";
 import { PainelComParceiros } from "@/components/accounts/PainelComParceiros";
+import { BotaoRelatorioTerceiros } from "@/components/accounts/RelatorioTerceirosDialog";
 import { ConversasComParceiros } from "@/components/accounts/ConversasComParceiros";
 import { CanalDaMarca } from "@/components/accounts/CanalDaMarca";
 import { useHasModule } from "@/hooks/useModules";
@@ -95,7 +96,13 @@ export default function Equipe() {
       {carregando ? (
         <div className="grid place-items-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
       ) : ativa === "producao" ? (
-        parceiros.length === 0 ? <SemParceiroAinda aoConvidar={() => navigate("/socialmidia/equipe/pessoas")} /> : <PainelComParceiros clientes={nomesClientes} />
+        parceiros.length === 0 ? <SemParceiroAinda aoConvidar={() => navigate("/socialmidia/equipe/pessoas")} /> : (
+          <>
+            {/* Mesmo relatório do Caixa > Terceiros, aqui também (Walter, 02/10/2026). */}
+            <div className="flex justify-end mb-3"><BotaoRelatorioTerceiros className="h-8 rounded-xl" /></div>
+            <PainelComParceiros clientes={nomesClientes} />
+          </>
+        )
       ) : ativa === "conversas" ? (
         <ConversasComParceiros />
       ) : ativa === "canal" ? (

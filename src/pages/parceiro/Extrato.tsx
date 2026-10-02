@@ -1,13 +1,17 @@
 import { useMemo, useRef, useState } from "react";
-import { Download, Loader2, Eye, EyeOff } from "lucide-react";
+import { Download, Loader2, Eye, EyeOff, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { ptBR } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ErroAoCarregar } from "@/components/shared/ErroAoCarregar";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { useExtratoDoParceiro, type LinhaDoExtrato } from "@/hooks/useAgendaParceiro";
 import { useProfile } from "@/hooks/useProfile";
-import { hojeBR } from "@/lib/date-br";
+import { hojeBR, toISODateBR } from "@/lib/date-br";
 import { toast } from "sonner";
 import { brlReais } from "@/lib/money";
 
@@ -72,9 +76,26 @@ export default function Extrato() {
   const { exportPdf } = usePdfExport();
   const { profile: perfil } = useProfile();
 
+  /* SELETOR DE PERÍODO (Agatha, 02/10/2026: "na página de extrato, pra filtrar
+     as datas, seria interessante um date picker"). O campo era <input
+     type="month">, que o Safari do Mac e o Firefox não desenham: aparece um
+     texto "2026-10" pra digitar na mão. Agora: setas de mês, um calendário de
+     meses e "Escolher datas" pra um intervalo livre (ex.: fechamento do dia 15). */
+  const [faixa, setFaixa] = useState<{ de: string; ate: string } | null>(null);
+  const [rascunho, setRascunho] = useState<DateRange | undefined>(undefined);
+  const [abertoMes, setAbertoMes] = useState(false);
+  const [abertoDatas, setAbertoDatas] = useState(false);
+  const [anoGrade, setAnoGrade] = useState(Number(hoje.slice(0, 4)));
+
   const [ano, m] = mes.split("-").map(Number);
-  const de = `${mes}-01`;
-  const ate = `${mes}-${String(new Date(ano, m, 0).getDate()).padStart(2, "0")}`;
+  const de = faixa?.de ?? `${mes}-01`;
+  const ate = faixa?.ate ?? `${mes}-${String(new Date(ano, m, 0).getDate()).padStart(2, "0")}`;
+  const irMes = (delta: number) => {
+    const d = new Date(ano, m - 1 + delta, 1);
+    setMes(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    setFaixa(null);
+  };
+  const dmy = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 
   const { data: linhas = [], isLoading, isError, isFetching, refetch } = useExtratoDoParceiro(de, ate);
 
@@ -117,7 +138,7 @@ export default function Extrato() {
   const baixar = async () => {
     setBaixando(true);
     try {
-      await exportPdf(folha, `extrato-${mes}`);
+      await exportPdf(folha, faixa ? `extrato-${faixa.de}-a-${faixa.ate}` : `extrato-${mes}`);
     } catch {
       toast.error("Não consegui gerar o PDF agora. Tente de novo.");
     } finally {
@@ -125,14 +146,81 @@ export default function Extrato() {
     }
   };
 
-  const rotuloMes = `${MESES[m - 1]} de ${ano}`;
+  const rotuloMes = faixa ? `${dmy(faixa.de)} a ${dmy(faixa.ate)}` : `${MESES[m - 1]} de ${ano}`;
 
   return (
     <div>
       {/* ── CONTROLES (não entram no PDF) ─────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <Input type="month" value={mes} onChange={(e) => setMes(e.target.value || hoje.slice(0, 7))}
-          className="rounded-xl h-9 w-auto" aria-label="Mês do extrato" />
+        <div className="flex items-center rounded-xl border border-input bg-background h-9">
+          <button type="button" onClick={() => irMes(-1)} className="h-full px-2 text-muted-foreground hover:text-foreground" aria-label="Mês anterior">
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <Popover open={abertoMes} onOpenChange={(o) => { setAbertoMes(o); if (o) setAnoGrade(ano); }}>
+            <PopoverTrigger asChild>
+              <button type="button" className={cn("h-full px-2 text-[13px] font-semibold capitalize min-w-[132px]", faixa && "text-muted-foreground")}
+                aria-label="Escolher o mês">
+                {MESES[m - 1]} de {ano}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-[264px] p-3 rounded-2xl">
+              <div className="flex items-center justify-between mb-2">
+                <button type="button" onClick={() => setAnoGrade((a) => a - 1)} className="p-1 rounded-lg hover:bg-muted" aria-label="Ano anterior"><ChevronLeft className="h-4 w-4" /></button>
+                <span className="text-sm font-bold">{anoGrade}</span>
+                <button type="button" onClick={() => setAnoGrade((a) => a + 1)} className="p-1 rounded-lg hover:bg-muted" aria-label="Próximo ano"><ChevronRight className="h-4 w-4" /></button>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {MESES.map((nome, i) => {
+                  const valor = `${anoGrade}-${String(i + 1).padStart(2, "0")}`;
+                  const atual = !faixa && valor === mes;
+                  return (
+                    <button key={nome} type="button"
+                      onClick={() => { setMes(valor); setFaixa(null); setAbertoMes(false); }}
+                      className={cn("rounded-lg py-2 text-[12.5px] capitalize transition-colors",
+                        atual ? "bg-primary text-primary-foreground font-bold" : "hover:bg-muted",
+                        valor === hoje.slice(0, 7) && !atual && "ring-1 ring-primary/40")}>
+                      {nome.slice(0, 3)}
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <button type="button" onClick={() => irMes(1)} className="h-full px-2 text-muted-foreground hover:text-foreground" aria-label="Próximo mês">
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+        <Popover open={abertoDatas} onOpenChange={(o) => {
+          setAbertoDatas(o);
+          if (o) setRascunho(faixa ? { from: new Date(faixa.de + "T12:00:00"), to: new Date(faixa.ate + "T12:00:00") } : undefined);
+        }}>
+          <PopoverTrigger asChild>
+            <Button variant={faixa ? "default" : "outline"} className="h-9 rounded-xl text-[12.5px]">
+              <CalendarDays className="h-4 w-4 mr-1.5" />
+              {faixa ? `${dmy(faixa.de).slice(0, 5)} a ${dmy(faixa.ate).slice(0, 5)}` : "Escolher datas"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-auto p-2 rounded-2xl">
+            <Calendar mode="range" locale={ptBR} numberOfMonths={1} selected={rascunho} onSelect={setRascunho}
+              defaultMonth={rascunho?.from ?? new Date(ano, m - 1, 1)} initialFocus />
+            <div className="flex items-center justify-between gap-2 px-2 pb-1">
+              {faixa ? (
+                <button type="button" className="text-[12px] text-muted-foreground underline underline-offset-2"
+                  onClick={() => { setFaixa(null); setAbertoDatas(false); }}>
+                  voltar pro mês
+                </button>
+              ) : <span className="text-[11.5px] text-muted-foreground">Toque no início e no fim</span>}
+              <Button size="sm" className="h-8 rounded-lg" disabled={!rascunho?.from}
+                onClick={() => {
+                  const a = toISODateBR(rascunho!.from!), b = toISODateBR(rascunho!.to ?? rascunho!.from!);
+                  setFaixa({ de: a <= b ? a : b, ate: a <= b ? b : a });
+                  setAbertoDatas(false);
+                }}>
+                Aplicar
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
         <Button variant="outline" className="h-9 rounded-xl text-[12.5px]"
           onClick={() => setMostrarValores((v) => !v)}>
           {mostrarValores ? <EyeOff className="h-4 w-4 mr-1.5" /> : <Eye className="h-4 w-4 mr-1.5" />}
@@ -168,7 +256,7 @@ export default function Extrato() {
 
             {linhas.length === 0 ? (
               <p style={{ fontSize: 13, color: C.sub, padding: "28px 0", textAlign: "center" }}>
-                Nada registrado neste mês. Peça entregue e tarefa marcada como feita entram aqui sozinhas.
+                {faixa ? "Nada registrado nessas datas." : "Nada registrado neste mês."} Peça entregue e tarefa marcada como feita entram aqui sozinhas.
               </p>
             ) : (
               <>
