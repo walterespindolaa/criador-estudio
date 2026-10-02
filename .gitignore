@@ -47,3 +47,6 @@ CRIA/_to_delete/
 
 # Lixo que o Vite deixa ao carregar o config (pente fino 23/09/2026)
 vite.config.ts.timestamp-*
+
+# Tutoriais: os mp4 vivem no Bunny, não no git
+CRIA/tutoriais/videos/*.mp4

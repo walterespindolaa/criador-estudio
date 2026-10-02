@@ -132,6 +132,8 @@ project_id = "exuxlwdnkgmhtnwoyvwo"
     verify_jwt = true
   [functions.tutorial-voz]
     verify_jwt = true
+  [functions.tutorial-bunny]
+    verify_jwt = true
   [functions.bunny-ingerir-drive]
     verify_jwt = false
   [functions.lifecycle-emails]
