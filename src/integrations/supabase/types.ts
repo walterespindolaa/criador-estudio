@@ -6429,6 +6429,101 @@ export type Database = {
           },
         ]
       }
+      tutoriais: {
+        Row: {
+          bunny_library_id: string | null
+          bunny_video_id: string | null
+          bunny_video_pendente: string | null
+          created_at: string
+          descricao: string | null
+          duracao_s: number | null
+          id: string
+          modulo: string
+          modulo_nome: string
+          modulo_ordem: number
+          ordem: number
+          publico: string
+          rota: string | null
+          slug: string
+          status: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          bunny_library_id?: string | null
+          bunny_video_id?: string | null
+          bunny_video_pendente?: string | null
+          created_at?: string
+          descricao?: string | null
+          duracao_s?: number | null
+          id?: string
+          modulo: string
+          modulo_nome: string
+          modulo_ordem?: number
+          ordem?: number
+          publico: string
+          rota?: string | null
+          slug: string
+          status?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          bunny_library_id?: string | null
+          bunny_video_id?: string | null
+          bunny_video_pendente?: string | null
+          created_at?: string
+          descricao?: string | null
+          duracao_s?: number | null
+          id?: string
+          modulo?: string
+          modulo_nome?: string
+          modulo_ordem?: number
+          ordem?: number
+          publico?: string
+          rota?: string | null
+          slug?: string
+          status?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tutoriais_progresso: {
+        Row: {
+          atualizado_em: string
+          pct: number
+          segundos: number
+          tutorial_id: string
+          user_id: string
+          visto: boolean
+        }
+        Insert: {
+          atualizado_em?: string
+          pct?: number
+          segundos?: number
+          tutorial_id: string
+          user_id?: string
+          visto?: boolean
+        }
+        Update: {
+          atualizado_em?: string
+          pct?: number
+          segundos?: number
+          tutorial_id?: string
+          user_id?: string
+          visto?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutoriais_progresso_tutorial_id_fkey"
+            columns: ["tutorial_id"]
+            isOneToOne: false
+            referencedRelation: "tutoriais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_formats: {
         Row: {
           created_at: string | null
