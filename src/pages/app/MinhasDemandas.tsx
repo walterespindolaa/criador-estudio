@@ -1627,6 +1627,19 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
   const minhaMeta = postId ? metasCards[postId] : undefined;
   const [novoItem, setNovoItem] = useState("");
 
+  /* RASCUNHO É DO CARD, NÃO DA JANELA (Agatha, 02/10/2026: "quando coloco um
+     link num card, todos os outros que eu abro já estão com esse link").
+     O popup é o mesmo componente pra todos os cards: troca só o postId, e os
+     campos digitados (link da entrega, link de arquivo grande, mensagem,
+     proposta de prazo, item do checklist) ficavam com o valor do card
+     anterior. Ela entregava a peça B com o link da peça A. Trocou de card,
+     zera tudo. */
+  useEffect(() => {
+    setTexto(""); setPropondo(false); setDataProposta(""); setMotivoProposta("");
+    setEntregando(false); setLinkEntrega(""); setLinkPrevia("");
+    setFichaAberta(null); setPrazoAberto(false); setVendoHistorico(false); setNovoItem("");
+  }, [postId]);
+
   const enviar = async () => {
     const t = texto.trim();
     if (!t) return;
