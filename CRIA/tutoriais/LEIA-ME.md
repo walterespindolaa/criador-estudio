@@ -52,3 +52,6 @@ Cada módulo tem uma visão geral (1min30 a 2min) e vídeos curtos por função 
 - **00-social-midia-04, cena 4:** tela provisória (quadro de produção sem entrega). Falta capturar "Pra você revisar / Tá ok": alguém entra como Bia (testetestado@gmail.com) e entrega a peça "Bastidores".
 - **00-social-midia-00 cena 4 e 00-social-midia-01 cena 3:** a fala cita "vermelho", mas na conta fake só há bolinha verde e amarela.
 - **00-social-midia-03, cena 2:** o "arrastar" é antes/depois com o cursor fazendo o gesto; o card não se move na tela.
+- **10-criador-06 (Prompter):** o roteiro usado é curto e o texto quase não rola na captura; o modo voz e a câmera não aparecem ligados (pediriam permissão de microfone e câmera). Regravar com um roteiro longo, de preferência no celular.
+- **10-criador-08 e 09:** a conta fake não tem Instagram conectado, então o Mídia Kit automático mostra "Conecte o Instagram" e os resultados do link na bio têm só 1 visita.
+- **Conta fake de criador (Duda Reis), Prompter:** os roteiros "XPTO" (notícia de empresa real, com nome de jornalista) e "IA na prática: como eu uso pra escalar meus negócios" parecem dado real. Foram escondidos só na tela durante a gravação; apagar da conta.
