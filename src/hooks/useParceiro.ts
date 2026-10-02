@@ -1050,6 +1050,57 @@ export function usePedirAjuste() {
   });
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   O QUE O CLIENTE PEDIU (Walter, 02/10/2026)
+
+   Quando o cliente final pede ajuste numa peça que o parceiro já entregou, a
+   peça cai em "Pra você revisar" da social mídia, mas sem o texto do cliente:
+   ela tinha que abrir o post pra descobrir o que era. E o parceiro via só um
+   selo "Cliente pediu ajuste", sem o pedido (o card dele lê a conversa de
+   produção, canal 'parceiro'; o pedido mora no canal 'cliente').
+
+   Decisão do Walter: a SOCIAL MÍDIA filtra. Ela lê o pedido aqui e escolhe:
+   mandar pro parceiro (vira o motivo do ajuste, já preenchido) ou resolver
+   ela mesma (ex.: só legenda). O parceiro não vê nada até ela mandar.
+
+   Só conta pedido escrito DEPOIS da última entrega: um pedido mais antigo já
+   foi tratado numa rodada anterior.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const PAPEIS_CLIENTE = ["cliente", "cliente_externo", "cliente_externo_aprovacao"];
+export type PedidoDoCliente = { texto: string; em: string };
+
+export function usePedidosDoCliente(postIds: string[]) {
+  const ids = [...new Set(postIds)].sort();
+  return useQuery<Record<string, PedidoDoCliente>>({
+    queryKey: ["pedidos-do-cliente", ids.join(",")],
+    enabled: ids.length > 0,
+    ...SINCRONIA,
+    queryFn: async () => {
+      const [{ data: posts, error: e1 }, { data: coms, error: e2 }] = await Promise.all([
+        sbFrom("posts").select("id, entregue_em").in("id", ids),
+        sbFrom("post_approval_comments").select("post_id, content, author_role, created_at, canal")
+          .in("post_id", ids).in("author_role", PAPEIS_CLIENTE)
+          .order("created_at", { ascending: false }).limit(200),
+      ]);
+      if (e1) throw e1;
+      if (e2) {
+        if (aindaNaoExisteNoBanco(e2.message)) return {};
+        throw e2;
+      }
+      const entrega = new Map((posts ?? []).map((p: { id: string; entregue_em: string | null }) => [p.id, p.entregue_em]));
+      const out: Record<string, PedidoDoCliente> = {};
+      for (const c of (coms ?? []) as { post_id: string; content: string; created_at: string; canal?: string | null }[]) {
+        if (out[c.post_id] || (c.canal && c.canal !== "cliente")) continue;
+        const ent = entrega.get(c.post_id);
+        if (ent && c.created_at < ent) continue;
+        if (!(c.content ?? "").trim()) continue;
+        out[c.post_id] = { texto: c.content.trim(), em: c.created_at };
+      }
+      return out;
+    },
+  });
+}
+
 /** APROVAR A ENTREGA DO PARCEIRO (Walter, 29/09/2026: "tá pra eu revisar, mas
  *  não tem onde eu dar check que tá ok").
  *

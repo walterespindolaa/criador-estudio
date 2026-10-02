@@ -1094,6 +1094,21 @@ const ROTULO_APROVACAO: Record<string, { txt: string; cls: string }> = {
   postado: { txt: "Postado", cls: "bg-slate-200 text-slate-600" },
 };
 
+/* O EIXO DO PARCEIRO (Walter e Gabriela, 02/10/2026). O "Aguardando o cliente
+   aprovar" confundia até a social mídia: "cliente" era o cliente DELA ou ela,
+   que é cliente da designer? E o parceiro não precisa acompanhar a aprovação do
+   cliente final. Pra ele: a social mídia aprovou (ou não) e, no fim, postou.
+   Pedido de ajuste do cliente só chega se a social mídia mandar, e aí o card
+   volta pra coluna Ajuste dele com o motivo. A social mídia segue vendo o
+   rótulo completo (ROTULO_APROVACAO). */
+const ROTULO_APROVACAO_PARCEIRO: Record<string, { txt: string; cls: string }> = {
+  em_producao: { txt: "Com a social mídia pra revisar", cls: "bg-slate-100 text-slate-700" },
+  pendente: { txt: "Aprovada pela social mídia", cls: "bg-green-100 text-green-700" },
+  ajuste_solicitado: { txt: "Aprovada pela social mídia", cls: "bg-green-100 text-green-700" },
+  aprovado: { txt: "Aprovada pela social mídia", cls: "bg-green-100 text-green-700" },
+  postado: { txt: "Postada", cls: "bg-slate-200 text-slate-600" },
+};
+
 /* ── O CHAT DO CARD ───────────────────────────────────────────────────────
    Walter, 09/09/2026: "a conversa deveria ficar do lado direito e ser um chat
    mesmo, hoje começa na metade do popup, sem pé nem cabeça, e deveria ficar em
@@ -1848,23 +1863,46 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   ))}
                   {/* Depois que saiu da mão dele, onde a peça está. Fim da
                       cegueira pós-entrega. */}
-                  {card.producao_status === "entregue" && card.aprovacao && ROTULO_APROVACAO[card.aprovacao] && (
-                    <span className={cn("text-[11px] font-bold px-2 py-1 rounded-full", ROTULO_APROVACAO[card.aprovacao].cls)}>
-                      {ROTULO_APROVACAO[card.aprovacao].txt}
-                    </span>
-                  )}
+                  {(() => {
+                    const mapa = agencia ? ROTULO_APROVACAO : ROTULO_APROVACAO_PARCEIRO;
+                    const r = card.producao_status === "entregue" && card.aprovacao ? mapa[card.aprovacao] : null;
+                    return r ? <span className={cn("text-[11px] font-bold px-2 py-1 rounded-full", r.cls)}>{r.txt}</span> : null;
+                  })()}
                 </div>
 
                 {/* Só a social mídia vê: revisar a entrega (Tá ok / Pedir
                     ajuste) e o cachê, sem sair do card (29/09/2026). */}
                 {agencia && (
                   <PainelDaAgenciaNoCard postId={card.id} producaoStatus={card.producao_status}
-                    aprovacao={card.aprovacao} cache={card.cache} nomeParceiro={agencia.nomeDoParceiro} />
+                    aprovacao={card.aprovacao} cache={card.cache} nomeParceiro={agencia.nomeDoParceiro} onEuResolvo={agencia.irAoPost} />
                 )}
 
                 {/* ═══ O RECADO FIXO DA SOCIAL MÍDIA (Canal da marca, 28/09/2026) ═══
                     A regra que vale pra toda peça deste cliente. Primeira coisa
                     que o parceiro lê, antes do briefing. */}
+                {/* O QUE AJUSTAR NESTA RODADA (Agatha, 02/10/2026: "não soube achar
+                    o ajustar o texto, era pra aparecer dentro do card?"). O motivo
+                    ia só pra conversa, misturado com o resto. Com a peça em
+                    Ajuste, ele fica em destaque antes de tudo. */}
+                {card.producao_status === "ajuste" && (() => {
+                  const ultimo = [...(card.comentarios ?? [])].reverse()
+                    .find((c) => c.papel === "social_media" && /^ajuste:/i.test(c.texto ?? ""));
+                  if (!ultimo) return null;
+                  return (
+                    <div className="mt-4 rounded-xl border-2 border-violet-300 bg-violet-50 px-3.5 py-3">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-violet-900 mb-1 flex items-center gap-1.5">
+                        <RotateCcw className="h-3.5 w-3.5" /> O que ajustar nesta rodada
+                      </p>
+                      <p className="text-[13.5px] font-body text-violet-950 whitespace-pre-line leading-relaxed">
+                        {ultimo.texto.replace(/^ajuste:\s*/i, "")}
+                      </p>
+                      <p className="text-[11px] font-body text-violet-900/70 mt-1.5">
+                        pedido em {new Date(ultimo.em).toLocaleDateString("pt-BR")}
+                      </p>
+                    </div>
+                  );
+                })()}
+
                 {card.canal_recado && (
                   <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/70 px-3.5 py-3">
                     <p className="text-[11px] font-bold uppercase tracking-wider text-amber-900 mb-1">

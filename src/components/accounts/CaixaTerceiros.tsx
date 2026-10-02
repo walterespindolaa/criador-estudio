@@ -7,7 +7,8 @@
 // Cada valor é uma despesa do Caixa ligada ao cliente, então já entra na margem
 // dele em "Clientes".
 import { useMemo, useState } from "react";
-import { Plus, Copy, Wallet, Pencil, Archive } from "lucide-react";
+import { Plus, Copy, Wallet, Pencil, Archive, FileText } from "lucide-react";
+import { RelatorioTerceirosDialog } from "@/components/accounts/RelatorioTerceirosDialog";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +65,7 @@ export function CaixaTerceiros() {
 
   const [sel, setSel] = useState<string | null>(null);
   const [novoAberto, setNovoAberto] = useState(false);
+  const [relatorioAberto, setRelatorioAberto] = useState(false);
   const atual = terceiros.find((t) => chaveTerceiro(t) === sel) ?? terceiros[0] ?? null;
 
   // ── KPIs ──
@@ -113,7 +115,11 @@ export function CaixaTerceiros() {
         <aside>
           <div className="flex items-center gap-2 mb-2">
             <h3 className="font-display font-extrabold text-[15px]">Terceiros</h3>
-            <Button size="sm" className="ml-auto h-8" onClick={() => setNovoAberto(true)}>
+            {/* Gabriela, 02/10/2026: produtividade, entregas e valores por período, em PDF. */}
+            <Button size="sm" variant="outline" className="ml-auto h-8" onClick={() => setRelatorioAberto(true)} disabled={terceiros.length === 0}>
+              <FileText className="h-3.5 w-3.5 mr-1" /> Relatório
+            </Button>
+            <Button size="sm" className="h-8" onClick={() => setNovoAberto(true)}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Novo
             </Button>
           </div>
@@ -168,6 +174,9 @@ export function CaixaTerceiros() {
         )}
       </div>
 
+      {relatorioAberto && (
+        <RelatorioTerceirosDialog open onOpenChange={setRelatorioAberto} terceiros={terceiros} linhas={linhas} nomeCliente={nomeCliente} />
+      )}
       <NovoTerceiro aberto={novoAberto} aoFechar={() => setNovoAberto(false)} aoCriar={(id) => setSel(`t:${id}`)} />
     </div>
   );

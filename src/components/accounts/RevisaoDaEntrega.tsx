@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MoneyInput } from "@/components/shared/MoneyInput";
-import { useAprovarEntrega, useAtualizarCache, usePedirAjuste } from "@/hooks/useParceiro";
+import { useAprovarEntrega, useAtualizarCache, usePedidosDoCliente, usePedirAjuste, type PedidoDoCliente } from "@/hooks/useParceiro";
 import { brlReais } from "@/lib/money";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -30,14 +30,23 @@ export function precisaRevisar(producaoStatus: string | null | undefined, aprova
 
 /** Os botões de revisão. `compacto` é a versão da linha da lista (sem textos
  *  de apoio); o card usa a completa. */
-export function AcoesDeRevisao({ postId, nomeParceiro, compacto = false }: {
+export function AcoesDeRevisao({ postId, nomeParceiro, compacto = false, pedidoCliente, onEuResolvo }: {
   postId: string; nomeParceiro?: string | null; compacto?: boolean;
+  /** Pedido de ajuste do cliente final, ainda não tratado (02/10/2026). */
+  pedidoCliente?: PedidoDoCliente | null;
+  /** "Eu resolvo": leva ao post pra ela mesma ajustar e reenviar ao cliente. */
+  onEuResolvo?: () => void;
 }) {
   const aprovar = useAprovarEntrega();
   const ajuste = usePedirAjuste();
   const [pedindo, setPedindo] = useState(false);
   const [motivo, setMotivo] = useState("");
   useEffect(() => { setPedindo(false); setMotivo(""); }, [postId]);
+  const abrirPedido = () => {
+    // Pedido do cliente já entra como motivo: ela só edita se quiser.
+    if (pedidoCliente && !motivo.trim()) setMotivo(`O cliente pediu: "${pedidoCliente.texto}"`);
+    setPedindo(true);
+  };
   const ocupado = aprovar.isPending || ajuste.isPending;
   const quem = nomeParceiro?.split(" ")[0] ?? "o parceiro";
 
@@ -62,6 +71,29 @@ export function AcoesDeRevisao({ postId, nomeParceiro, compacto = false }: {
     );
   }
 
+  if (pedidoCliente) {
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <div className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2">
+          <p className="text-[10.5px] font-bold uppercase tracking-wider text-orange-800">O cliente pediu ajuste</p>
+          <p className={cn("text-[12.5px] font-body text-orange-950 whitespace-pre-line", compacto && "line-clamp-3")}>{pedidoCliente.texto}</p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" className="rounded-xl h-8 bg-violet-600 hover:bg-violet-700 text-white" disabled={ocupado} onClick={abrirPedido}
+            title={`Volta pra coluna Ajuste de ${quem}, com o pedido do cliente`}>
+            <RotateCcw className="h-3.5 w-3.5 mr-1" /> Mandar pro {quem}
+          </Button>
+          {onEuResolvo && (
+            <Button size="sm" variant="outline" className="rounded-xl h-8" disabled={ocupado} onClick={onEuResolvo}
+              title="Ajuste que você mesma faz (legenda, data). Abre o post.">
+              Eu resolvo
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
       <Button size="sm" className="rounded-xl h-8 bg-green-600 hover:bg-green-700 text-white" disabled={ocupado}
@@ -70,7 +102,7 @@ export function AcoesDeRevisao({ postId, nomeParceiro, compacto = false }: {
         {aprovar.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Check className="h-3.5 w-3.5 mr-1" /> Tá ok</>}
       </Button>
       <Button size="sm" variant="outline" className="rounded-xl h-8 border-violet-300 text-violet-700 hover:bg-violet-50" disabled={ocupado}
-        onClick={() => setPedindo(true)}>
+        onClick={abrirPedido}>
         <RotateCcw className="h-3.5 w-3.5 mr-1" /> Pedir ajuste
       </Button>
       {!compacto && (
@@ -84,12 +116,13 @@ export function AcoesDeRevisao({ postId, nomeParceiro, compacto = false }: {
 }
 
 /** Bloco que entra no card aberto quando quem abre é a social mídia. */
-export function PainelDaAgenciaNoCard({ postId, producaoStatus, aprovacao, cache, nomeParceiro }: {
+export function PainelDaAgenciaNoCard({ postId, producaoStatus, aprovacao, cache, nomeParceiro, onEuResolvo }: {
   postId: string;
   producaoStatus: string | null | undefined;
   aprovacao: string | null | undefined;
   cache: number | null | undefined;
   nomeParceiro?: string | null;
+  onEuResolvo?: () => void;
 }) {
   const salvarCache = useAtualizarCache();
   const [valor, setValor] = useState<number | null>(cache ?? null);
@@ -98,18 +131,22 @@ export function PainelDaAgenciaNoCard({ postId, producaoStatus, aprovacao, cache
   const mudou = Number(valor ?? 0) !== Number(cache ?? 0);
   const revisar = precisaRevisar(producaoStatus, aprovacao);
   const semCache = !cache || Number(cache) <= 0;
+  const { data: pedidos = {} } = usePedidosDoCliente(revisar && aprovacao === "ajuste_solicitado" ? [postId] : []);
+  const pedido = pedidos[postId] ?? null;
 
   return (
     <div className="mt-4 space-y-3">
       {revisar && (
         <div className="rounded-2xl border-2 border-green-200 bg-green-50/60 p-3.5">
           <p className="text-[11px] font-bold uppercase tracking-wider text-green-800 flex items-center gap-1.5 mb-0.5">
-            <CheckCircle2 className="h-3.5 w-3.5" /> Entrega pra você revisar
+            <CheckCircle2 className="h-3.5 w-3.5" /> {pedido ? "Volta do cliente pra você decidir" : "Entrega pra você revisar"}
           </p>
           <p className="text-[12px] font-body text-green-900/75 mb-2.5 leading-snug">
-            Confira o material. <b>Tá ok</b> manda a peça pra "Aguardando cliente". <b>Pedir ajuste</b> devolve pro parceiro com o motivo.
+            {pedido
+              ? <>O parceiro ainda não sabe deste pedido. <b>Mandar pro parceiro</b> devolve a peça pra ele com o texto do cliente; <b>Eu resolvo</b> é quando o ajuste é seu (legenda, data).</>
+              : <>Confira o material. <b>Tá ok</b> manda a peça pra "Aguardando cliente". <b>Pedir ajuste</b> devolve pro parceiro com o motivo.</>}
           </p>
-          <AcoesDeRevisao postId={postId} nomeParceiro={nomeParceiro} />
+          <AcoesDeRevisao postId={postId} nomeParceiro={nomeParceiro} pedidoCliente={pedido} onEuResolvo={onEuResolvo} />
         </div>
       )}
 

@@ -15,7 +15,7 @@ import {
 } from "@/hooks/useParceiro";
 import { brlReais } from "@/lib/money";
 import { FORMAT_CHIP_SOLID_CLASS, formatColorVars } from "@/lib/format-colors";
-import { useMarcaDosClientes } from "@/hooks/useParceiro";
+import { useMarcaDosClientes, usePedidosDoCliente } from "@/hooks/useParceiro";
 import { AcoesDeRevisao } from "@/components/accounts/RevisaoDaEntrega";
 
 const brl = brlReais;
@@ -529,6 +529,10 @@ export function PainelComParceiros({ clientes }: {
   // parceiro entregou de novo": approval_status fica ajuste_solicitado e antes
   // a peça sumia desta lista (auditoria 07/09).
   const praRevisar = pecas.filter((p) => p.producao_status === "entregue" && !["pendente", "aprovado", "postado"].includes(p.approval_status ?? ""));
+  // Pedido do cliente final ainda não tratado (02/10/2026): a linha mostra o
+  // texto e troca os botões por "Mandar pro parceiro" / "Eu resolvo".
+  const { data: pedidos = {} } = usePedidosDoCliente(
+    praRevisar.filter((p) => p.approval_status === "ajuste_solicitado").map((p) => p.id));
   const prazosPraResponder = pecas.filter((p) => p.prazo_status === "negociando" && p.prazo_sugerido);
   const abertas = pecas.filter((p) => p.producao_status !== "entregue");
   /* ENTREGUE SEM CACHÊ (Walter, 14/09/2026): o parceiro fez o trabalho e a peça
@@ -614,20 +618,23 @@ export function PainelComParceiros({ clientes }: {
                     clique vazava pra abrir o card. */}
                 {praRevisar.map((p) => (
                   <div key={p.id}>
-                    {linhaPeca(p,
-                      <span className="text-[11px] font-bold text-green-700 bg-green-100 rounded-full px-2.5 py-1">
+                    {linhaPeca(p, pedidos[p.id]
+                      ? <span className="text-[11px] font-bold text-orange-800 bg-orange-100 rounded-full px-2.5 py-1">cliente pediu ajuste</span>
+                      : <span className="text-[11px] font-bold text-green-700 bg-green-100 rounded-full px-2.5 py-1">
                         {/* entregue_em é gravado na transição de status. `updated_at`
                             mudava a cada edição e mostrava a data errada aqui. */}
                         entregue {p.entregue_em ? new Date(p.entregue_em).toLocaleDateString("pt-BR") : ""}
                       </span>)}
                     <div className="px-4 pb-3 -mt-1">
-                      <AcoesDeRevisao postId={p.id} nomeParceiro={nomeParceiro.get(p.assignee_id)?.nome} compacto />
+                      <AcoesDeRevisao postId={p.id} nomeParceiro={nomeParceiro.get(p.assignee_id)?.nome} compacto
+                        pedidoCliente={pedidos[p.id] ?? null} onEuResolvo={() => irAoPost(p)} />
                     </div>
                   </div>
                 ))}
               </Card>
               <p className="text-[11px] font-body text-muted-foreground mt-1.5 px-0.5">
                 Abra a peça pra ver o material. <b>Tá ok</b> manda pra "Aguardando cliente"; <b>Pedir ajuste</b> devolve pro parceiro com o motivo.
+                Quando é o cliente que pediu ajuste, o parceiro só fica sabendo se você <b>mandar pra ele</b>.
               </p>
             </section>
           )}
