@@ -69,6 +69,10 @@ async function funcao(token, corpo) {
     body: JSON.stringify(corpo),
   });
   const j = await r.json().catch(() => ({}));
+  if (r.status === 404 && !j.error) {
+    console.error("\nA função tutorial-bunny não está publicada na Supabase (404). Nada foi enviado.\nPublique a função e rode de novo.");
+    process.exit(1);
+  }
   if (!r.ok) throw new Error(`${r.status} ${j.error || ""} ${j.detalhe || ""}`.trim());
   return j;
 }
