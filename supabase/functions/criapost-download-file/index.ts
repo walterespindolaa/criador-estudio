@@ -37,6 +37,26 @@ function fetchHostAllowed(raw: string): boolean {
   return false;
 }
 
+/** File id do Drive numa URL (/file/d/<id> ou ?id=<id>). Só caracteres de id: a
+ *  URL de download é montada AQUI, nunca a que veio do banco (sem SSRF). */
+function driveIdDe(url: string | null | undefined): string | null {
+  if (!url || !/drive\.google\.com|drive\.usercontent\.google\.com/i.test(url)) return null;
+  return url.match(/\/(?:file\/)?d\/([-\w]{25,})/)?.[1] || url.match(/[?&]id=([-\w]{25,})/)?.[1] || null;
+}
+
+/** Arquivo original do Drive: com o token da pessoa (arquivo que ela escolheu
+ *  pelo seletor do Google) e, se não der, pelo download público. */
+async function baixarDoDrive(id: string, token: string | null): Promise<Response> {
+  if (token) {
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media&supportsAllDrives=true`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (r.ok && r.body) return r;
+    try { await r.body?.cancel(); } catch { /* ignore */ }
+  }
+  return await fetch(`https://drive.usercontent.google.com/download?id=${encodeURIComponent(id)}&export=download&confirm=t`);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -48,7 +68,7 @@ Deno.serve(async (req) => {
     if (ue || !ud?.user) return json({ error: "Não autenticado" }, 401);
     const userId = ud.user.id;
 
-    const { media_id } = await req.json();
+    const { media_id, drive_token } = await req.json();
     if (!media_id) return json({ error: "media_id obrigatório" }, 400);
 
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -75,21 +95,31 @@ Deno.serve(async (req) => {
     }
     if (!owns) return json({ error: "Sem permissão" }, 403);
 
-    // Vídeo do Bunny Stream não tem arquivo direto pra baixar por aqui.
-    if (ref.bunny_video_id || (ref.provider ?? "").toLowerCase() === "bunny_stream") {
-      return json({ error: "Vídeo não pode ser baixado por aqui." }, 422);
+    /* VÍDEO QUE VEIO DO DRIVE (Walter, 03/10/2026). O vídeo colado do Drive é
+       copiado pro Bunny pra tocar melhor, mas o link de origem continua em
+       download_url (bunny-ingerir-drive não apaga). O Bunny não entrega MP4
+       dessa library, e a cópia dele ainda expira com a limpeza; o arquivo
+       original do Drive não. Então o download desse vídeo sai do Drive.
+       Vídeo subido direto no Bunny (sem origem no Drive) continua recusado. */
+    const ehBunny = !!ref.bunny_video_id || (ref.provider ?? "").toLowerCase() === "bunny_stream";
+    let upstream: Response;
+    if (ehBunny) {
+      const driveId = driveIdDe(ref.download_url);
+      if (!driveId) return json({ error: "Vídeo não pode ser baixado por aqui." }, 422);
+      upstream = await baixarDoDrive(driveId, typeof drive_token === "string" ? drive_token : null);
+      const tipo = upstream.headers.get("content-type") ?? "";
+      if (!upstream.ok || !upstream.body || tipo.includes("text/html")) {
+        try { await upstream.body?.cancel(); } catch { /* ignore */ }
+        return json({ error: "O Drive não liberou esse vídeo. Ele precisa estar como \"qualquer pessoa com o link\"." }, 422);
+      }
+    } else {
+      const src = ref.download_url || ref.view_url;
+      if (!src) return json({ error: "Arquivo indisponível." }, 404);
+      if (!fetchHostAllowed(src)) return json({ error: "Origem do arquivo não permitida." }, 400);
+      upstream = await fetch(src);
+      if (!upstream.ok || !upstream.body) return json({ error: `Falha ao buscar arquivo (${upstream.status}).` }, 502);
     }
 
-    const src = ref.download_url || ref.view_url;
-    if (!src) return json({ error: "Arquivo indisponível." }, 404);
-
-    // F25 (SSRF): so busca em host esperado e por https.
-    if (!fetchHostAllowed(src)) return json({ error: "Origem do arquivo não permitida." }, 400);
-
-    const upstream = await fetch(src);
-    if (!upstream.ok || !upstream.body) return json({ error: `Falha ao buscar arquivo (${upstream.status}).` }, 502);
-
-    // Nome seguro pro header (o front também manda seu próprio nome no <a download>).
     const name = (ref.file_name || "arquivo").replace(/[^\w.\-]+/g, "_");
     // Content-Type octet-stream garante que o supabase.functions.invoke devolva Blob
     // (ele só faz .blob() pra application/octet-stream; outros mimes viram texto).

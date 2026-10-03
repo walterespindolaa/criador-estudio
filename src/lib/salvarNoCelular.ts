@@ -13,8 +13,10 @@
    esse "crédito" do toque expira no meio. Então: 1º toque prepara, 2º toque
    salva. Mesmo padrão do Prompter (PrompterPlayer, "Salvar vídeo").
 
-   Vídeo do Bunny Stream fica de fora: o proxy recusa (não existe arquivo MP4
-   pra puxar dessa library). Ele aparece na lista com "abrir à parte".
+   Vídeo no Bunny Stream: o Bunny não entrega o MP4 dessa library. Se o vídeo
+   veio do Drive, o link de origem continua no download_url e o proxy baixa o
+   ORIGINAL do Drive (melhor ainda: qualidade cheia, e não some quando a cópia
+   do Bunny expira). Só o vídeo subido direto no Bunny fica "abrir à parte".
    ═══════════════════════════════════════════════════════════════════════════ */
 import { supabase } from "@/integrations/supabase/client";
 import { mediaDownloadName, type MediaLike } from "@/lib/driveMedia";
@@ -33,9 +35,16 @@ export function podeSalvarNoCelular(): boolean {
   }
 }
 
-/** Vídeo hospedado no Bunny Stream: não tem arquivo pra baixar por aqui. */
+/** Vídeo hospedado no Bunny Stream. */
 export const ehVideoDoBunny = (m: MediaLike) =>
   !!m.bunny_video_id || (m.provider ?? "").toLowerCase() === "bunny_stream";
+
+/** Tem arquivo de origem no Drive (o vídeo colado do Drive guarda o link mesmo depois de ir pro Bunny). */
+export const temOrigemNoDrive = (m: MediaLike) =>
+  /drive\.google\.com|drive\.usercontent\.google\.com/i.test(m.download_url ?? "");
+
+/** Dá pra mandar junto pro celular? Tudo, menos vídeo subido direto no Bunny. */
+export const vaiJunto = (m: MediaLike) => !ehVideoDoBunny(m) || temOrigemNoDrive(m);
 
 /* O proxy devolve application/octet-stream. O celular só oferece "Salvar imagem"
    quando o arquivo diz o que é, então a gente lê o começo dos bytes e descobre o
@@ -72,8 +81,11 @@ export async function tipoReal(blob: Blob): Promise<{ mime: string; ext: string 
 }
 
 /** Baixa uma mídia do post e devolve um File com nome e tipo certos. */
-export async function prepararMidia(m: MediaLike & { id: string }, titulo: string | undefined, indice: number): Promise<File> {
-  const { data, error } = await supabase.functions.invoke("criapost-download-file", { body: { media_id: m.id } });
+export async function prepararMidia(m: MediaLike & { id: string }, titulo: string | undefined, indice: number, driveToken?: string | null): Promise<File> {
+  // O token do Drive desta sessão (se houver) deixa baixar o original de um
+  // vídeo que a pessoa escolheu pelo seletor do Google, mesmo sem link público.
+  const body = driveToken && temOrigemNoDrive(m) ? { media_id: m.id, drive_token: driveToken } : { media_id: m.id };
+  const { data, error } = await supabase.functions.invoke("criapost-download-file", { body });
   if (error || !(data instanceof Blob) || data.size === 0) throw new Error("Não consegui baixar.");
   const tipo = await tipoReal(data);
   if (!tipo) throw new Error("O arquivo não veio como foto ou vídeo.");

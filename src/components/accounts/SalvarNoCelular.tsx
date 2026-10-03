@@ -13,7 +13,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { downloadMediaFile, getThumbnailUrl, isVideoMedia, mediaDownloadName, type MediaLike } from "@/lib/driveMedia";
-import { ehVideoDoBunny, emLotes, podeSalvarNoCelular, prepararMidia } from "@/lib/salvarNoCelular";
+import { emLotes, podeSalvarNoCelular, prepararMidia, vaiJunto } from "@/lib/salvarNoCelular";
+import { tokenDriveEmCache } from "@/hooks/useGoogleDrive";
 
 type Midia = MediaLike & { id: string; file_name: string };
 type Estado = { status: "baixando" | "pronto" | "erro"; file?: File };
@@ -26,16 +27,17 @@ export function SalvarNoCelular({ midias, titulo }: { midias: Midia[]; titulo?: 
   const [salvando, setSalvando] = useState(false);
   const rodada = useRef(0);
 
-  const salvaveis = useMemo(() => midias.filter((m) => !ehVideoDoBunny(m)), [midias]);
-  const aParte = useMemo(() => midias.filter((m) => ehVideoDoBunny(m)), [midias]);
+  const salvaveis = useMemo(() => midias.filter(vaiJunto), [midias]);
+  const aParte = useMemo(() => midias.filter((m) => !vaiJunto(m)), [midias]);
   const indiceDe = useMemo(() => new Map(midias.map((m, i) => [m.id, i])), [midias]);
 
   const baixar = (lista: Midia[]) => {
     const minha = rodada.current;
+    const driveToken = tokenDriveEmCache();
     setEstados((e) => ({ ...e, ...Object.fromEntries(lista.map((m) => [m.id, { status: "baixando" } as Estado])) }));
     void emLotes(lista, 3, async (m) => {
       try {
-        const file = await prepararMidia(m, titulo, indiceDe.get(m.id) ?? 0);
+        const file = await prepararMidia(m, titulo, indiceDe.get(m.id) ?? 0, driveToken);
         if (rodada.current === minha) setEstados((e) => ({ ...e, [m.id]: { status: "pronto", file } }));
       } catch {
         if (rodada.current === minha) setEstados((e) => ({ ...e, [m.id]: { status: "erro" } }));

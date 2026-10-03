@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ehVideoDoBunny, emLotes, tipoReal } from "./salvarNoCelular";
+import { ehVideoDoBunny, emLotes, tipoReal, vaiJunto } from "./salvarNoCelular";
 
 // O proxy devolve octet-stream: o tipo certo sai dos primeiros bytes. Sem isso o
 // iPhone não oferece "Salvar imagem" e a página de aviso do Drive virava "foto".
@@ -31,6 +31,19 @@ describe("ehVideoDoBunny", () => {
     expect(ehVideoDoBunny({ provider: "bunny_stream" })).toBe(true);
     expect(ehVideoDoBunny({ provider: "gdrive", file_type: "video/mp4" })).toBe(false);
     expect(ehVideoDoBunny({ provider: "bunny_storage", file_type: "image/jpeg" })).toBe(false);
+  });
+});
+
+describe("vaiJunto", () => {
+  const driveLink = "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view";
+  it("vídeo que veio do Drive vai junto, mesmo depois de ir pro Bunny", () => {
+    expect(vaiJunto({ provider: "bunny_stream", bunny_video_id: "g", download_url: driveLink })).toBe(true);
+  });
+  it("vídeo subido direto no Bunny fica à parte", () => {
+    expect(vaiJunto({ provider: "bunny_stream", bunny_video_id: "g", download_url: null })).toBe(false);
+  });
+  it("foto vai sempre", () => {
+    expect(vaiJunto({ provider: "bunny_storage", file_type: "image/jpeg", download_url: "https://x.b-cdn.net/a.jpg" })).toBe(true);
   });
 });
 
