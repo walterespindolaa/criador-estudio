@@ -9,6 +9,7 @@ import { levarVideoDoDriveProBunny } from "@/lib/bunny-ingestao";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { CriaPostPublishButton } from "@/components/accounts/CriaPostPublishButton";
+import { SalvarNoCelular } from "@/components/accounts/SalvarNoCelular";
 import { PublicarNoInstagram } from "@/components/shared/PublicarNoInstagram";
 import { CapaSobreVideo, EditorDeCapa, temCapa, useCapaDoPost } from "@/components/accounts/CapaDoReels";
 import { postAspect } from "@/lib/post-aspect";
@@ -343,6 +344,9 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
           </div>
         </div>
       )}
+
+      {/* Celular: todas as mídias pra Galeria de uma vez (no computador não aparece). */}
+      <SalvarNoCelular midias={ordered} titulo={title} />
 
       <div className="flex items-center gap-2 flex-wrap">
         <input ref={imgRef} type="file" accept="image/*,.heic,.heif" multiple hidden onChange={(e) => onPick(e, "image")} />

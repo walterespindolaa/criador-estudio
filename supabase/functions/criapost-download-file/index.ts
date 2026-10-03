@@ -59,9 +59,19 @@ Deno.serve(async (req) => {
 
     // Posse: dono da mídia OU dono do post ao qual ela pertence.
     let owns = ref.user_id === userId;
+    let donoDaConta: string | null = ref.user_id ?? null;
     if (!owns && ref.post_id) {
       const { data: post } = await svc.from("posts").select("user_id").eq("id", ref.post_id).maybeSingle();
       owns = post?.user_id === userId;
+      if (post?.user_id) donoDaConta = post.user_id;
+    }
+    /* EQUIPE TAMBÉM BAIXA (Walter, 03/10/2026 · "Salvar no celular").
+       A colaboradora ativa da conta (manager_members, papel que não é de
+       parceiro) já vê e edita esses posts pela RLS; só o download recusava.
+       is_team_member roda com o token DELA, então checa auth.uid() certo. */
+    if (!owns && donoDaConta) {
+      const { data: daEquipe } = await userClient.rpc("is_team_member", { target: donoDaConta });
+      owns = daEquipe === true;
     }
     if (!owns) return json({ error: "Sem permissão" }, 403);
 
