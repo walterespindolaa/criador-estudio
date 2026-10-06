@@ -263,7 +263,7 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
         // Um CARTÃO inteiro: overflow-hidden aqui garante os 4 cantos redondos
         // sempre; quem rola é o miolo lá embaixo, nunca o cartão (era isso que
         // deixava o lado direito "quadrado" com a barra grudada na borda).
-        "cria-rail-capsule fixed left-5 top-[calc(50%+0.75rem)] z-40 hidden max-h-[92vh] -translate-y-1/2 flex-col items-stretch overflow-hidden rounded-[24px] border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)] backdrop-blur-xl transition-[width] duration-200 md:flex",
+        "cria-rail-capsule fixed left-5 top-[calc(50%+0.75rem)] z-40 hidden max-h-[92vh] supports-[height:100dvh]:max-h-[calc(100dvh-2.5rem)] -translate-y-1/2 flex-col items-stretch overflow-hidden rounded-[24px] border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)] backdrop-blur-xl transition-[width] duration-200 md:flex",
         expanded ? "w-[248px]" : "w-[64px]",
       )}
     >

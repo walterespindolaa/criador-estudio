@@ -301,13 +301,19 @@ export default function ManagerLayout() {
         onMouseEnter={() => setRailHovered(true)}
         onMouseLeave={() => setRailHovered(false)}
         className={cn(
-          "fixed left-5 top-[calc(50%+0.75rem)] z-40 hidden -translate-y-1/2 flex-col rounded-[24px] border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] px-2 py-2.5 shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)] backdrop-blur-xl transition-[width] duration-200 md:flex",
+          "fixed left-5 top-[calc(50%+0.75rem)] z-40 hidden max-h-[calc(100vh-2.5rem)] supports-[height:100dvh]:max-h-[calc(100dvh-2.5rem)] -translate-y-1/2 flex-col overflow-hidden rounded-[24px] border border-[hsl(var(--sidebar-border))] bg-[hsl(var(--sidebar-background))] py-2.5 shadow-[0_22px_60px_-22px_rgba(35,25,70,0.3)] backdrop-blur-xl transition-[width] duration-200 md:flex",
           railHovered ? "w-[240px] items-stretch" : "w-[64px] items-stretch",
         )}
       >
-        <div className={cn("mb-2 flex items-center gap-2", railHovered ? "px-1" : "justify-center")}>
+        <div className={cn("mx-2 mb-2 flex shrink-0 items-center gap-2", railHovered ? "px-1" : "justify-center")}>
           {railHovered ? <Logo pequeno className="h-7 w-auto" /> : <Logo icon pequeno className="h-[38px] w-[38px] rounded-[12px]" />}
         </div>
+        {/* MIOLO QUE ROLA (Walter, 06/10/2026). No iPad deitado a tela tem
+            ~740px úteis e o rail passou disso: centralizado, cortava em cima e
+            embaixo sem rolar. Agora o cartão tem teto na altura visível (dvh,
+            que desconta as barras do Safari) e só o miolo rola. O px-2 mora
+            aqui dentro pra marca de "ativo" (-left-2) não ser cortada. */}
+        <div className="cria-rail-scroll flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-2">
         <div className="flex w-full flex-col items-stretch gap-1">
           {railHovered && <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{parceiroPuro ? "Parceiro" : "Dia a dia"}</p>}
           {railNode(Home, "Início", { active: isActive("/socialmidia/dashboard"), onClick: () => navigate("/socialmidia/dashboard") })}
@@ -401,6 +407,7 @@ export default function ManagerLayout() {
           {railNode(Trash2, "Lixeira", { active: isActive("/socialmidia/lixeira"), onClick: () => navigate("/socialmidia/lixeira") })}
           {railNode(SettingsIcon, "Configurações", { onClick: () => setSettingsOpen(true), dataTour: "nav-config" })}
           {railNode(LogOut, "Sair", { onClick: handleSignOut })}
+        </div>
         </div>
       </nav>
 
