@@ -52,7 +52,11 @@ export const aindaNaoExisteNoBanco = (msg: string | undefined | null) =>
    passam intactas: já são humanas e são mais específicas que qualquer tradução
    genérica. */
 export function mensagemHumana(e: unknown, padrao: string): string {
-  const bruta = e instanceof Error ? e.message : String(e ?? "");
+  /* O erro do Supabase (PostgrestError) é um objeto comum, não um Error: o
+     String() dele virava "[object Object]" na tela (Walter, 06/10/2026, ao
+     aceitar prazo). Lê o .message de qualquer objeto que tenha um. */
+  const msg = e && typeof e === "object" && "message" in e ? (e as { message?: unknown }).message : undefined;
+  const bruta = e instanceof Error ? e.message : typeof msg === "string" ? msg : typeof e === "string" ? e : "";
   if (!bruta) return padrao;
   // Nossa própria mensagem: sem inglês, sem jargão de banco. Passa direto.
   if (!/[a-z]+_[a-z]+|policy|violates|JWT|fetch|network|duplicate key|permission denied|payload|constraint/i.test(bruta)
@@ -512,6 +516,14 @@ export function useCachesDosParceiros(managerId: string | null) {
    tudo que a social mídia escreve PRO PARCEIRO vai marcado 'parceiro'. Se a
    migration ainda não rodou, grava sem a coluna em vez de quebrar a conversa. */
 async function inserirNaConversaDoParceiro(linha: Record<string, unknown>) {
+  /* AUTOR SEMPRE PREENCHIDO (Walter, 06/10/2026). A regra de insert da tabela
+     (pac_insert) exige author_id = auth.uid(). "Prazo combinado", "Ajuste:" e
+     "Entrega aprovada" eram gravados sem author_id e o banco recusava: o
+     Aceitar prazo dava erro e o Pedir ajuste parava no comentário. */
+  if (!linha.author_id) {
+    const { data } = await supabase.auth.getUser();
+    if (data.user?.id) linha = { ...linha, author_id: data.user.id };
+  }
   const { error } = await sbFrom("post_approval_comments").insert({ ...linha, canal: "parceiro" });
   if (error && /canal/i.test(error.message ?? "")) {
     const { error: e2 } = await sbFrom("post_approval_comments").insert(linha);
@@ -999,11 +1011,13 @@ export function useResolverPrazoSugerido() {
       } as never).eq("id", v.postId).select("id").maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Não consegui fechar o prazo. Recarregue e tente de novo.");
+      // O prazo já valeu no update acima. O recado na conversa é cortesia: se
+      // falhar, não pode aparecer erro pra quem acabou de aceitar com sucesso.
       const [a, m, d] = v.dataAceita.split("-");
       const { error: cErr } = await inserirNaConversaDoParceiro({
         post_id: v.postId, content: `Prazo combinado: ${d}/${m}/${a}`, author_role: "social_media",
       });
-      if (cErr) throw cErr;
+      if (cErr) console.warn("[prazo] recado na conversa não gravou", cErr);
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
