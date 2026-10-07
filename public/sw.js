@@ -70,9 +70,15 @@ async function cacheFirst(req, cacheName) {
   const cache = await caches.open(cacheName);
   const hit = await cache.match(req);
   if (hit) return hit;
-  const res = await fetch(req);
-  if (res.ok) cache.put(req, res.clone());
-  return res;
+  try {
+    const res = await fetch(req);
+    if (res.ok) cache.put(req, res.clone());
+    return res;
+  } catch {
+    // Sem rede: devolve erro de rede "limpo" em vez de estourar promessa
+    // não tratada no console. Quem decide o que mostrar é o app (ErrorBoundary).
+    return Response.error();
+  }
 }
 
 async function staleWhileRevalidate(req, cacheName, max) {
@@ -92,18 +98,31 @@ async function staleWhileRevalidate(req, cacheName, max) {
 }
 
 // Navegação: tenta a rede (pra pegar deploy novo), mas não deixa a pessoa
-// esperando pra sempre. 3,5s e serve o shell do cache.
+// esperando pra sempre: depois de 3,5s serve o shell do cache.
+//
+// CORREÇÃO (Walter, 07/10/2026): quando NÃO havia shell no cache (primeira
+// visita, ou logo depois do ErrorBoundary limpar o shell por erro de chunk),
+// o timeout de 3,5s devolvia Response.error() e o Chrome mostrava ERR_FAILED
+// em TODA página do app, mesmo com o servidor no ar. Agora: sem cópia
+// guardada, espera a rede terminar em vez de desistir. Response.error() só
+// quando a rede falhou de verdade E não existe cópia.
 async function networkFirstNav(req) {
   const cache = await caches.open(SHELL);
-  try {
-    const res = await Promise.race([
-      fetch(req),
-      new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 3500)),
-    ]);
+  const rede = fetch(req).then((res) => {
     if (res && res.ok) cache.put("/index.html", res.clone());
     return res;
+  });
+  rede.catch(() => {}); // a falha é tratada abaixo; não vira erro solto
+  const guardado = async () => (await cache.match("/index.html")) || (await cache.match("/"));
+  try {
+    const primeiro = await Promise.race([
+      rede,
+      new Promise((resolve) => setTimeout(() => resolve(null), 3500)),
+    ]);
+    if (primeiro) return primeiro;
+    return (await guardado()) || (await rede);
   } catch {
-    return (await cache.match("/index.html")) || (await cache.match("/")) || Response.error();
+    return (await guardado()) || Response.error();
   }
 }
 
