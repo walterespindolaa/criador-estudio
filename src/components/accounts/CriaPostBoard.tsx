@@ -1197,6 +1197,22 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   placeholder="Cole o link da pasta do Drive com os materiais" className="rounded-xl" />
               </div>
 
+              {/* Roteiro / copy sempre disponível (também no Simplificada). */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-body">{f.approval_mode !== "fast" ? "Roteiro / conteúdo (etapa \"Conteúdo\")" : "Roteiro / copy (carrossel, reels...)"}</Label>
+                {f.approval_mode !== "fast" && (
+                  <ClientContentWriter
+                    crmClientId={client.crm_client_id ?? null}
+                    clienteNome={client.name}
+                    titulo={f.title}
+                    formato={f.format}
+                    valor={f.script ?? ""}
+                    onChange={(texto) => setF((p) => ({ ...p, script: texto }))}
+                  />
+                )}
+                <Textarea value={f.script ?? ""} onChange={(e) => setF((p) => ({ ...p, script: e.target.value }))} rows={6} placeholder="Copy do carrossel slide a slide, ou o roteiro do reels..." className="rounded-xl" />
+              </div>
+
               {/* Legenda (maior) */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
@@ -1232,22 +1248,6 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                 {f.format === "story" && (f.caption ?? "").trim() !== "" && (
                   <p className="text-[11px] text-muted-foreground font-body">Story não exibe legenda. Esse texto não aparece no preview.</p>
                 )}
-              </div>
-
-              {/* Roteiro / copy sempre disponível (também no Simplificada). */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-body">{f.approval_mode !== "fast" ? "Roteiro / conteúdo (etapa \"Conteúdo\")" : "Roteiro / copy (carrossel, reels...)"}</Label>
-                {f.approval_mode !== "fast" && (
-                  <ClientContentWriter
-                    crmClientId={client.crm_client_id ?? null}
-                    clienteNome={client.name}
-                    titulo={f.title}
-                    formato={f.format}
-                    valor={f.script ?? ""}
-                    onChange={(texto) => setF((p) => ({ ...p, script: texto }))}
-                  />
-                )}
-                <Textarea value={f.script ?? ""} onChange={(e) => setF((p) => ({ ...p, script: e.target.value }))} rows={6} placeholder="Copy do carrossel slide a slide, ou o roteiro do reels..." className="rounded-xl" />
               </div>
             </div>
 
