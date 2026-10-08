@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -1000,6 +1000,18 @@ export function usePecasComParceiros(temParceiros: boolean) {
 /** A social mídia responde à sugestão de prazo do parceiro. Aceitar fecha o
  *  combinado na data sugerida; ela também pode manter/propor outra data pelo
  *  "Enviar para" (que reabre como proposto). Dona do post = update direto. */
+
+/* A chave ["external-posts"] não existe em nenhuma query (o quadro do Cria Post
+   usa ["cria-posts", clientId]). Invalidar só ela deixava o card e o editor com
+   o post antigo: o parceiro era gravado no banco mas sumia da tela até um F5, e
+   a social mídia escolhia de novo (Gabriela, 08/10/2026). Prefixos pegam todos
+   os clientes de uma vez. */
+function invalidarQuadrosDePost(qc: QueryClient) {
+  for (const k of ["cria-posts", "external-posts-all", "external-pending", "operation-posts", "manager-calendar"]) {
+    void qc.invalidateQueries({ queryKey: [k] });
+  }
+}
+
 export function useResolverPrazoSugerido() {
   const qc = useQueryClient();
   return useMutation({
@@ -1021,7 +1033,7 @@ export function useResolverPrazoSugerido() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
-      void qc.invalidateQueries({ queryKey: ["external-posts"] });
+      invalidarQuadrosDePost(qc);
       toast.success("Prazo combinado. O parceiro é avisado.");
     },
     onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui fechar o prazo.")),
@@ -1056,7 +1068,7 @@ export function usePedirAjuste() {
       if (!data) throw new Error("Não consegui pedir o ajuste. Recarregue e tente de novo.");
     },
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["external-posts"] });
+      invalidarQuadrosDePost(qc);
       void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
       toast.success("Ajuste pedido. O parceiro recebe o card de volta com o motivo.");
     },
@@ -1146,7 +1158,7 @@ export function useAprovarEntrega() {
       return v;
     },
     onSuccess: (v) => {
-      void qc.invalidateQueries({ queryKey: ["external-posts"] });
+      invalidarQuadrosDePost(qc);
       void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
       void qc.invalidateQueries({ queryKey: ["parceiro-card"] });
       toast.success(v.destino === "cliente" ? "Aprovada. A peça foi pra \"Aguardando cliente\"." : "Aprovada.");
@@ -1174,7 +1186,7 @@ export function useAtualizarCache() {
       return valor;
     },
     onSuccess: (valor) => {
-      void qc.invalidateQueries({ queryKey: ["external-posts"] });
+      invalidarQuadrosDePost(qc);
       void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
       void qc.invalidateQueries({ queryKey: ["caches-parceiros"] });
       void qc.invalidateQueries({ queryKey: ["parceiro-card"] });
@@ -1261,7 +1273,7 @@ export function useDelegarPost() {
       return { ...v, mesmoParceiro };
     },
     onSuccess: (v) => {
-      void qc.invalidateQueries({ queryKey: ["external-posts"] });
+      invalidarQuadrosDePost(qc);
       void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
       if (!v.assigneeId) { toast.success("Delegação removida."); return; }
       toast.success(v.mesmoParceiro
