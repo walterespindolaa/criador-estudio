@@ -507,16 +507,29 @@ export function PainelComParceiros({ clientes }: {
   // Cachês (fase 3): despesas do Caixa ligadas a parceiro, agrupadas por pessoa.
   const { agencyOwnerId } = useActiveAccount();
   const { data: caches = [] } = useCachesDosParceiros(agencyOwnerId);
+  /* FEITO x AINDA NÃO FEITO (Walter, 08/10/2026). O cachê só vira despesa no
+     Caixa quando a peça é entregue; até lá ele mora no card (cache_parceiro).
+     Agora cada parceiro mostra o que já foi feito e está a pagar (forte) e,
+     ao lado e mais claro, o total contando o que ainda está em produção. */
   const cachesPorParceiro = useMemo(() => {
-    const m = new Map<string, { pendente: number; pago: number; qtd: number }>();
+    const m = new Map<string, { pendente: number; pago: number; qtd: number; emProducao: number; qtdProducao: number }>();
+    const pegar = (id: string) => m.get(id) ?? { pendente: 0, pago: 0, qtd: 0, emProducao: 0, qtdProducao: 0 };
     for (const c of caches) {
-      const a = m.get(c.assignee_id) ?? { pendente: 0, pago: 0, qtd: 0 };
+      const a = pegar(c.assignee_id);
       if (c.status === "pago") a.pago += Number(c.amount); else { a.pendente += Number(c.amount); a.qtd++; }
       m.set(c.assignee_id, a);
     }
+    for (const p of pecas) {
+      const v = Number(p.cache_parceiro ?? 0);
+      if (!v || !p.assignee_id || p.producao_status === "entregue") continue;
+      const a = pegar(p.assignee_id);
+      a.emProducao += v; a.qtdProducao++;
+      m.set(p.assignee_id, a);
+    }
     return m;
-  }, [caches]);
+  }, [caches, pecas]);
   const totalCachePendente = [...cachesPorParceiro.values()].reduce((s, a) => s + a.pendente, 0);
+  const totalCacheProducao = [...cachesPorParceiro.values()].reduce((s, a) => s + a.emProducao, 0);
 
   const nomeParceiro = useMemo(() => {
     const m = new Map<string, { nome: string; role: string }>();
@@ -783,7 +796,10 @@ export function PainelComParceiros({ clientes }: {
                 <Wallet className="h-4 w-4 text-green-700" />
                 <span className="font-display font-bold text-[14px]">Cachês dos parceiros</span>
                 {totalCachePendente > 0 && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">{brl(totalCachePendente)} a pagar</span>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">{brl(totalCachePendente)} a pagar</span>
+                )}
+                {totalCacheProducao > 0 && (
+                  <span className="text-[11px] font-body text-muted-foreground">+ {brl(totalCacheProducao)} em produção</span>
                 )}
               </p>
               <Card className="rounded-2xl border-border overflow-hidden divide-y divide-border">
@@ -798,11 +814,22 @@ export function PainelComParceiros({ clientes }: {
                       <span className="min-w-0 flex-1">
                         <span className="block font-display font-bold text-[13.5px] leading-tight truncate">{quem?.nome ?? "Parceiro"}</span>
                         <span className="block text-[11px] font-body text-muted-foreground">
-                          {a.qtd > 0 ? `${a.qtd} entrega${a.qtd > 1 ? "s" : ""} a pagar` : "Em dia"} · {brl(a.pago)} já pago
+                          {a.qtd > 0 ? `${a.qtd} entrega${a.qtd > 1 ? "s" : ""} a pagar` : "Nada a pagar"}
+                          {a.qtdProducao > 0 && ` · ${a.qtdProducao} em produção (${brl(a.emProducao)})`}
+                          {" · "}{brl(a.pago)} já pago
                         </span>
                       </span>
-                      <span className={cn("text-[13px] font-display font-extrabold shrink-0", a.pendente > 0 ? "text-amber-800" : "text-green-700")}>
-                        {a.pendente > 0 ? brl(a.pendente) : "ok"}
+                      {/* Forte: o que já foi feito e falta pagar. Claro, ao lado:
+                          o total contando o que ainda está em produção. */}
+                      <span className="shrink-0 text-right leading-tight">
+                        <span className={cn("block text-[13.5px] font-display font-extrabold", a.pendente > 0 ? "text-amber-800" : "text-green-700")}>
+                          {a.pendente > 0 ? brl(a.pendente) : a.emProducao > 0 ? brl(0) : "ok"}
+                        </span>
+                        {a.emProducao > 0 && (
+                          <span className="block text-[11px] font-body text-muted-foreground" title="Já feito a pagar + o que ainda está em produção">
+                            de {brl(a.pendente + a.emProducao)} no total
+                          </span>
+                        )}
                       </span>
                     </button>
                   );
