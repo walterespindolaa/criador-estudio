@@ -341,8 +341,9 @@ const Criando = () => {
       return;
     }
     if (newStatus === "publicado") {
-      const { fireConfetti } = await import("@/lib/confetti");
-      fireConfetti();
+      // Confete só na primeira publicação da semana (ver lib/confetti).
+      const { fireConfetti, primeiraPublicacaoDaSemana } = await import("@/lib/confetti");
+      if (primeiraPublicacaoDaSemana(user.id)) fireConfetti();
       await supabase.from("audit_log").insert({
         user_id: user.id,
         action: "post_published",
@@ -409,8 +410,8 @@ const Criando = () => {
 
     // Publicou (e persistiu): confetti + audit, como no fluxo antigo.
     if (changedStatus && destStatus === "publicado" && user) {
-      const { fireConfetti } = await import("@/lib/confetti");
-      fireConfetti();
+      const { fireConfetti, primeiraPublicacaoDaSemana } = await import("@/lib/confetti");
+      if (primeiraPublicacaoDaSemana(user.id)) fireConfetti();
       await supabase.from("audit_log").insert({ user_id: user.id, action: "post_published", entity_type: "post", entity_id: draggableId } as never);
     }
   };

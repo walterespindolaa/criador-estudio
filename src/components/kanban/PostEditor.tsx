@@ -44,7 +44,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { fireConfetti } from "@/lib/confetti";
+import { fireConfetti, primeiraPublicacaoDaSemana } from "@/lib/confetti";
 import { StickerCelebration } from "@/components/shared/StickerCelebration";
 import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS, BUNNY_CRIAPOST_CDN_HOSTNAME } from "@/lib/constants";
 import * as tus from "tus-js-client";
@@ -1010,10 +1010,17 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
     }
 
     if (wasPublished) {
-      fireConfetti();
-      setShowPublishCeleb(true);
+      // Confete + selo só na primeira publicação da semana (ver lib/confetti).
+      if (primeiraPublicacaoDaSemana(userId)) {
+        fireConfetti();
+        setShowPublishCeleb(true);
+      }
       toast.success("Conteúdo publicado!");
-      setShowResults(true);
+      /* APERTOU, SALVOU (Gabriela, 09/10/2026): "deixar liso igual de social
+         mídia". Publicar mantinha o editor aberto pra preencher resultados, e
+         ela tinha que fechar na mão. Agora fecha como qualquer save; os campos
+         de resultado aparecem quando ela reabrir o post (status publicado). */
+      onOpenChange(false);
     } else {
       toast.success(post ? "Post atualizado!" : "Post criado!");
       onOpenChange(false);
