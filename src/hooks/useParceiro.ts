@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CRIA PARCEIROS, o lado de quem produz
@@ -976,13 +977,20 @@ export type PecaExterna = {
  *  cobre, inclusive colaborador via acts_for). */
 export function usePecasComParceiros(temParceiros: boolean) {
   const { user } = useAuth();
+  /* SÓ AS PEÇAS DA CONTA ABERTA (Gabriela, 09/10/2026). Sem este filtro a
+     consulta trazia todo post com parceiro que o RLS deixa ver, e quem é
+     equipe de outra agência via as peças de lá misturadas com as suas, como
+     "Sem cliente" (o cliente é da outra conta) e somadas nos cachês. O dono
+     do post externo é sempre a agência (posts.user_id). */
+  const { agencyOwnerId } = useActiveAccount();
   return useQuery<PecaExterna[]>({
-    queryKey: ["pecas-com-parceiros", user?.id],
+    queryKey: ["pecas-com-parceiros", user?.id, agencyOwnerId],
     ...SINCRONIA,
-    enabled: !!user && temParceiros,
+    enabled: !!user && !!agencyOwnerId && temParceiros,
     queryFn: async () => {
       const { data, error } = await sbFrom("posts")
         .select("id, title, format, producao_status, prazo_producao, prazo_status, prazo_sugerido, approval_status, scheduled_date, assignee_id, external_client_id, updated_at, cache_parceiro, entregue_em, revisoes")
+        .eq("user_id", agencyOwnerId!)
         .not("assignee_id", "is", null)
         // Post na lixeira não é produção em andamento (revisão 28/09).
         .is("deleted_at", null)
