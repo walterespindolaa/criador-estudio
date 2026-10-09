@@ -635,12 +635,17 @@ export type ConversaResumo = {
 
 export function useConversasComParceiros(ativo: boolean) {
   const { user } = useAuth();
+  // Mesma regra do useMeusParceiros: agindo como equipe, as conversas são as
+  // da agência aberta (e só com a chave ligada pela dona).
+  const { actingAsTeam, agencyOwnerId } = useActiveAccount();
   return useQuery<ConversaResumo[]>({
-    queryKey: ["conversas-parceiros", user?.id],
-    enabled: !!user && ativo,
+    queryKey: ["conversas-parceiros", user?.id, actingAsTeam ? agencyOwnerId : "proprias"],
+    enabled: !!user && ativo && (!actingAsTeam || !!agencyOwnerId),
     ...SINCRONIA,
     queryFn: async () => {
-      const { data, error } = await sbRpc("conversas_com_parceiros");
+      const { data, error } = actingAsTeam
+        ? await sbRpc("conversas_com_parceiros_da_conta", { _manager: agencyOwnerId })
+        : await sbRpc("conversas_com_parceiros");
       if (error) {
         // Migration 20260928000013 ainda não rodou: caixa vazia, tela de pé.
         if (aindaNaoExisteNoBanco(error.message)) return [];
@@ -929,14 +934,24 @@ export function useAcoesLancamento() {
 
 /* ── O LADO DA SOCIAL MÍDIA ─────────────────────────────────────────────── */
 
-/** Os parceiros ativos da agência, pro botão "Enviar para". */
+/** Os parceiros ativos da agência, pro botão "Enviar para".
+ *
+ *  DA CONTA ABERTA (09/10/2026). Antes era sempre meus_parceiros(), que filtra
+ *  auth.uid(): a colaboradora dentro da conta de outra agência via os parceiros
+ *  DELA no "Enviar para" e podia mandar peça da agência pra quem não é parceiro
+ *  de lá. Agora, agindo como equipe, a lista vem de parceiros_da_conta(), que
+ *  só responde se a dona ligou "Gerenciar produção com parceiros" pra ela.
+ *  Desligado, a lista vem vazia e o "Enviar para" some, como deve. */
 export function useMeusParceiros() {
   const { user } = useAuth();
+  const { actingAsTeam, agencyOwnerId } = useActiveAccount();
   return useQuery<Parceiro[]>({
-    queryKey: ["meus-parceiros", user?.id],
-    enabled: !!user,
+    queryKey: ["meus-parceiros", user?.id, actingAsTeam ? agencyOwnerId : "proprios"],
+    enabled: !!user && (!actingAsTeam || !!agencyOwnerId),
     queryFn: async () => {
-      const { data, error } = await sbRpc("meus_parceiros");
+      const { data, error } = actingAsTeam
+        ? await sbRpc("parceiros_da_conta", { _manager: agencyOwnerId })
+        : await sbRpc("meus_parceiros");
       if (error) {
         if (aindaNaoExisteNoBanco(error.message)) return [];
         throw error;

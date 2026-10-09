@@ -18,6 +18,11 @@ export const TEAM_MODULES = [
 export type TeamModuleCode = (typeof TEAM_MODULES)[number]["code"];
 // Módulo financeiro (sensível): NÃO entra marcado por padrão no convite.
 // Libera só o financeiro da EMPRESA; o Pessoal do dono nunca aparece pro colaborador.
+/* Não é módulo pago: é uma permissão a mais pra COLABORADORA (nunca pra
+   parceiro). Liga Produção, Conversas e Canal da marca dentro da conta da
+   agência e o "Enviar para" com os parceiros dela. Vem desligada e não entra
+   no convite: quem decide é a dona, no cartão da pessoa (09/10/2026). */
+export const PERM_PARCEIROS = "parceiros_producao";
 export const TEAM_MODULE_DEFAULT = TEAM_MODULES.filter((m) => m.code !== "cria_caixa").map((m) => m.code);
 
 export type MemberPermission = {

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import {
   useTeamMembers, useCollabSeats, useInviteMember, useUpdateMemberStatus, useRemoveMember,
   useSetMemberModule, useBuySeats, TEAM_MODULES, TEAM_MODULE_DEFAULT, useVincularParceiroPorCodigo,
+  useMyTeamPermissions, PERM_PARCEIROS,
 } from "@/hooks/useTeam";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { useCrmClients } from "@/hooks/useCrm";
@@ -52,21 +53,26 @@ export default function Equipe() {
   const { clients } = useExternalClients();
 
   const naoLidas = conversas.reduce((s, c) => s + (c.nao_lidas ?? 0), 0);
-  // Colaborador agindo por outra agência não chega aqui pelo menu; se vier pela
-  // URL, fica só em Pessoas (a produção é da dona da conta, revisão 28/09).
-  const { actingAsTeam } = useActiveAccount();
-  const producaoLiberada = temCriaPost && !actingAsTeam;
-  const carregando = carregandoModulo || carregandoParceiros;
-  const padrao: Aba = producaoLiberada && parceiros.length > 0 ? "producao" : "pessoas";
-  const ativa: Aba = !producaoLiberada
-    ? "pessoas"
-    : aba === "producao" || aba === "conversas" || aba === "canal" || aba === "pessoas" ? aba : padrao;
+  /* COLABORADORA DENTRO DA AGÊNCIA (09/10/2026). Antes, agindo como equipe, a
+     Equipe ficava só em Pessoas (a produção é da dona). Agora a dona pode ligar
+     "Gerenciar produção com parceiros" no cartão dela: aí ela vê Produção,
+     Conversas e Canal da marca DESTA conta. Pessoas continua só com a dona.
+     Precisa do Cria Post liberado também: a peça delegada é um post. */
+  const { actingAsTeam, agencyOwnerId } = useActiveAccount();
+  const { data: permsEquipe, isLoading: carregandoPerms } = useMyTeamPermissions(actingAsTeam ? agencyOwnerId : null);
+  const geridaPorMim = !actingAsTeam
+    || (!!permsEquipe?.has(PERM_PARCEIROS) && !!permsEquipe?.has("cria_post"));
+  const producaoLiberada = temCriaPost && geridaPorMim;
+  const carregando = carregandoModulo || carregandoParceiros || (actingAsTeam && carregandoPerms);
+  const padrao: Aba = actingAsTeam || (producaoLiberada && parceiros.length > 0) ? "producao" : "pessoas";
+  const abaValida = aba === "producao" || aba === "conversas" || aba === "canal" || (aba === "pessoas" && !actingAsTeam);
+  const ativa: Aba = !producaoLiberada ? "pessoas" : abaValida ? (aba as Aba) : padrao;
 
   // /equipe sem aba (ou aba que não existe) cai na certa, sem deixar a URL mentindo.
   useEffect(() => {
-    if (carregandoModulo || carregandoParceiros) return;
+    if (carregando) return;
     if (aba !== ativa) navigate(`/socialmidia/equipe/${ativa}${window.location.search}`, { replace: true });
-  }, [aba, ativa, carregandoModulo, carregandoParceiros, navigate]);
+  }, [aba, ativa, carregando, navigate]);
 
   const nomesClientes = (() => {
     const m: Record<string, string> = {};
@@ -79,7 +85,8 @@ export default function Equipe() {
         { to: "/socialmidia/equipe/producao", label: "Produção" },
         { to: "/socialmidia/equipe/conversas", label: naoLidas > 0 ? `Conversas (${naoLidas})` : "Conversas" },
         { to: "/socialmidia/equipe/canal", label: "Canal da marca" },
-        { to: "/socialmidia/equipe/pessoas", label: "Pessoas" },
+        // Pessoas (convites, assentos, permissões) é só da dona da conta.
+        ...(actingAsTeam ? [] : [{ to: "/socialmidia/equipe/pessoas", label: "Pessoas" }]),
       ]
     : undefined;
 
@@ -87,7 +94,9 @@ export default function Equipe() {
     <>
       <ModuleHero
         title="Equipe"
-        subtitle={producaoLiberada
+        subtitle={actingAsTeam && producaoLiberada
+          ? "Produção com os parceiros desta agência. Pessoas e pagamentos ficam com a dona da conta."
+          : producaoLiberada
           ? "Tudo o que está com designers, editores e filmmakers: produção, conversas e pessoas."
           : "Convide colaboradores e parceiros de produção."}
         color="lilas"
@@ -96,10 +105,11 @@ export default function Equipe() {
       {carregando ? (
         <div className="grid place-items-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
       ) : ativa === "producao" ? (
-        parceiros.length === 0 ? <SemParceiroAinda aoConvidar={() => navigate("/socialmidia/equipe/pessoas")} /> : (
+        parceiros.length === 0 ? <SemParceiroAinda aoConvidar={actingAsTeam ? null : () => navigate("/socialmidia/equipe/pessoas")} /> : (
           <>
-            {/* Mesmo relatório do Caixa > Terceiros, aqui também (Walter, 02/10/2026). */}
-            <div className="flex justify-end mb-3"><BotaoRelatorioTerceiros className="h-8 rounded-xl" /></div>
+            {/* Mesmo relatório do Caixa > Terceiros, aqui também (Walter, 02/10/2026).
+                É financeiro: fica com a dona, não com a colaboradora. */}
+            {!actingAsTeam && <div className="flex justify-end mb-3"><BotaoRelatorioTerceiros className="h-8 rounded-xl" /></div>}
             <PainelComParceiros clientes={nomesClientes} />
           </>
         )
@@ -115,7 +125,20 @@ export default function Equipe() {
 }
 
 /** Produção sem ninguém na equipe: diz o próximo passo em vez de uma tela vazia. */
-function SemParceiroAinda({ aoConvidar }: { aoConvidar: () => void }) {
+function SemParceiroAinda({ aoConvidar }: { aoConvidar: (() => void) | null }) {
+  // Colaboradora dentro da agência não convida: quem vincula parceiro é a dona.
+  if (!aoConvidar) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
+        <Users className="h-7 w-7 mx-auto text-muted-foreground mb-2.5" />
+        <p className="text-sm font-body font-semibold text-foreground">Esta agência ainda não tem parceiros</p>
+        <p className="text-xs font-body text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
+          Quem vincula designer, editor ou filmmaker é a dona da conta, em Equipe &gt; Pessoas.
+          Depois disso eles aparecem aqui e no <b>Enviar para</b> dos posts.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
       <Users className="h-7 w-7 mx-auto text-muted-foreground mb-2.5" />
@@ -360,6 +383,32 @@ function PessoasDaEquipe() {
                       );
                     })}
                   </div>
+                  {/* Chave separada dos módulos: não é produto, é confiança.
+                      Vem desligada; quem liga é a dona (Gabriela/Walter, 09/10/2026). */}
+                  {(() => {
+                    const gere = enabled.has(PERM_PARCEIROS);
+                    return (
+                      <div className="mt-3 pt-3 border-t border-border/60">
+                        <label className="flex items-center justify-between gap-4 min-h-[44px] cursor-pointer">
+                          <span className="min-w-0">
+                            <span className="block text-[13px] font-body font-semibold text-foreground">Gerenciar produção com parceiros</span>
+                            <span className="block text-[12px] font-body text-muted-foreground leading-relaxed">
+                              Envia peças pros parceiros desta conta, acompanha prazos e entregas e conversa no card.
+                              Pessoas e marcar pagamento continuam só com você.
+                            </span>
+                          </span>
+                          <input type="checkbox" checked={gere} disabled={setModule.isPending}
+                            onChange={() => setModule.mutate({ memberRowId: m.id, moduleCode: PERM_PARCEIROS, enabled: !gere })}
+                            className="h-5 w-5 shrink-0 accent-[hsl(var(--primary))]" />
+                        </label>
+                        {gere && !enabled.has("cria_post") && (
+                          <p className="mt-1 text-[12px] font-body text-amber-700 dark:text-amber-400">
+                            Libere também o Cria Post pra ela: a peça enviada ao parceiro é um post.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 )}
               </div>

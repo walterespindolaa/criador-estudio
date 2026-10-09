@@ -126,6 +126,10 @@ export default function ManagerLayout() {
 
   // Gate de módulo pro colaborador: só vê o que o gestor liberou. Gestor vê tudo.
   const canTeam = (code: string) => !actingAsTeam || (teamPerms?.has(code) ?? false);
+  /* Equipe dentro da conta da agência: só pra colaboradora que a dona liberou
+     em "Gerenciar produção com parceiros" (e com Cria Post). Na própria conta,
+     sempre (09/10/2026). */
+  const veEquipe = !actingAsTeam || (canTeam("cria_post") && canTeam("parceiros_producao"));
   const modules = actingAsTeam
     ? allModules.filter((m) => MODULE_TEAM_CODE[m.code] && canTeam(MODULE_TEAM_CODE[m.code]))
     : allModules;
@@ -373,7 +377,7 @@ export default function ManagerLayout() {
           })}
           <div className="my-2 h-px w-full bg-border" />
           {railHovered && <p className="px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Negócio</p>}
-          {!actingAsTeam && !parceiroPuro && railNode(UserPlus, "Equipe", { active: isActive("/socialmidia/equipe"), onClick: () => navigate("/socialmidia/equipe") })}
+          {veEquipe && !parceiroPuro && railNode(UserPlus, "Equipe", { active: isActive("/socialmidia/equipe"), onClick: () => navigate("/socialmidia/equipe") })}
           {/* Parceiro puro: do bloco Negócio só as Comissões interessam
              (Relatório/Parceria/Contas são coisa de quem tem operação). */}
           {/* Comissões é o programa de AFILIADO (cupom Stripe), não o cachê do
@@ -572,7 +576,7 @@ export default function ManagerLayout() {
                 { label: LABELS.indique, desc: "Indique o Cria e ganhe comissão", icon: Handshake as LucideIcon, onClick: () => navigate("/socialmidia/parceria") },
               ]
               : [
-              ...(!actingAsTeam ? [{ label: "Equipe", desc: "Produção, conversas e pessoas", icon: UserPlus as LucideIcon, onClick: () => navigate("/socialmidia/equipe") }] : []),
+              ...(veEquipe ? [{ label: "Equipe", desc: actingAsTeam ? "Produção e conversas com parceiros" : "Produção, conversas e pessoas", icon: UserPlus as LucideIcon, onClick: () => navigate("/socialmidia/equipe") }] : []),
               { label: "Relatório da operação", desc: "Produção, financeiro e carteira no período", icon: BarChart3 as LucideIcon, onClick: () => navigate("/socialmidia/relatorio") },
               { label: "Parceria", desc: "Indique o CRIA e ganhe comissão", icon: Handshake as LucideIcon, onClick: () => navigate("/socialmidia/parceria") },
               { label: "Comissões", desc: "O que você já ganhou", icon: DollarSign as LucideIcon, onClick: onNavComissoes },
