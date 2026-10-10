@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FichaDaMarca } from "@/pages/parceiro/Marcas";
 import { ErroAoCarregar } from "@/components/shared/ErroAoCarregar";
 import { CamadaDeAlfinetes, segundoBonito } from "@/components/shared/CamadaDeAlfinetes";
+import { GaleriaDePecas } from "@/components/shared/GaleriaDePecas";
 import {
   ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useConversaDoCard, useCoresDasAgencias, useEntreguesDoParceiro,
   useFilaDoParceiro, useMarcarConversaLida, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useProporPrazo, useResolverPrazoSugerido, useVersoesDaPeca, useEntregasRemoviveis,
@@ -1618,6 +1619,8 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
 
   // Histórico de versões: só busca quando ele abre (a query espera o postId).
   const [vendoHistorico, setVendoHistorico] = useState(false);
+  // Peça aberta na galeria (null = fechada). Ver GaleriaDePecas.
+  const [pecaNaGaleria, setPecaNaGaleria] = useState<number | null>(null);
   const { data: versoes = [], isLoading: carregandoVersoes } = useVersoesDaPeca(vendoHistorico ? postId : null);
   // Entrega com ARQUIVO (fase 3): sobe direto pro card, sem passar por link.
   const inputArquivo = useRef<HTMLInputElement | null>(null);
@@ -2164,8 +2167,15 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                           const podeTirar = !agencia && card.producao_status !== "entregue" && !!m.url && removiveis.includes(m.url);
                           return (
                             <div key={`${src}-${i}`} className="relative">
+                              {/* Clique abre a galeria aqui mesmo (setas / teclado).
+                                  Ctrl/Cmd+clique ou botão do meio ainda abre em aba nova. */}
                               <a href={m.url || src} target="_blank" rel="noopener noreferrer"
                                 title={m.nome ?? undefined}
+                                onClick={(e) => {
+                                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                                  e.preventDefault();
+                                  setPecaNaGaleria(i);
+                                }}
                                 className="block aspect-square rounded-lg overflow-hidden border border-border bg-muted hover:border-primary/50 transition-colors">
                                 {ehImagem
                                   ? <img src={src} alt={m.nome ?? ""} loading="lazy" className="w-full h-full object-cover" />
@@ -2503,6 +2513,11 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
             <FichaDaMarca m={fichaAberta} aoFechar={() => setFichaAberta(null)} />
             <HistoricoDeVersoes aberto={vendoHistorico} aoFechar={() => setVendoHistorico(false)}
               versoes={versoes} carregando={carregandoVersoes} />
+            <GaleriaDePecas
+              pecas={(card.midias ?? []).filter((m) => m.url || m.thumb)}
+              indice={pecaNaGaleria}
+              aoMudar={setPecaNaGaleria}
+              aoFechar={() => setPecaNaGaleria(null)} />
           </>
         )}
         {/* RODAPÉ FIXO NO CELULAR (pente fino 23/09/2026): "Marcar como entregue"
