@@ -7036,6 +7036,22 @@ export type Database = {
           ultima_texto: string
         }[]
       }
+      conversas_com_parceiros_da_conta: {
+        Args: { _manager: string }
+        Returns: {
+          assignee_id: string
+          external_client_id: string
+          formato: string
+          nao_lidas: number
+          post_id: string
+          producao_status: string
+          titulo: string
+          total: number
+          ultima_em: string
+          ultima_papel: string
+          ultima_texto: string
+        }[]
+      }
       cria_limite_clientes: { Args: { _manager: string }; Returns: number }
       cria_limite_info: {
         Args: { _manager: string }
@@ -7955,6 +7971,15 @@ export type Database = {
           url: string
         }[]
       }
+      parceiros_da_conta: {
+        Args: { _manager: string }
+        Returns: {
+          email: string
+          member_id: string
+          nome: string
+          role: string
+        }[]
+      }
       partner_regra: {
         Args: { _partner_id: string }
         Returns: {
@@ -7979,6 +8004,7 @@ export type Database = {
         }
         Returns: string
       }
+      pode_gerir_parceiros: { Args: { _manager: string }; Returns: boolean }
       portal_mark_viewed: { Args: { _token: string }; Returns: undefined }
       quer_push: { Args: { _tipo: string; _user: string }; Returns: boolean }
       rate_touch: { Args: { _key: string; _limit: number }; Returns: boolean }
