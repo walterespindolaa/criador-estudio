@@ -11,6 +11,13 @@
 //
 //   { acao: "previa" }   -> nomes que seriam copiados e os que faltam
 //   { acao: "copiar" }   -> copia e devolve só os nomes
+//   { acao: "cofre" }    -> (12/10/2026) DEPOIS de restaurar o banco no projeto
+//                           novo: refaz no cofre (Vault) de lá os 2 segredos que
+//                           a restauração traz ilegíveis (são criptografados com
+//                           a chave do projeto velho):
+//                             internal_push_secret         = INTERNAL_PUSH_SECRET daqui
+//                             email_queue_service_role_key = service_role do projeto novo
+//                           Os valores vão de API pra API; a resposta só diz "ok".
 // ═══════════════════════════════════════════════════════════════════════════
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -37,6 +44,42 @@ const NOMES = [
 ];
 // O webhook do Stripe NÃO vai: o projeto novo ganha um webhook novo, com segredo novo.
 
+/* Dollar-quoting com etiqueta aleatória: o valor entra no SQL sem escape e sem
+   chance de fechar a string (a etiqueta é sorteada e conferida contra o valor). */
+function literal(valor: string): string {
+  let tag = "";
+  do { tag = "v" + crypto.randomUUID().replace(/-/g, "").slice(0, 12); } while (valor.includes(tag));
+  return `$${tag}$${valor}$${tag}$`;
+}
+
+async function refazerCofre(pat: string, ref: string): Promise<Response> {
+  const push = Deno.env.get("INTERNAL_PUSH_SECRET") ?? "";
+  if (!push) return json({ error: "INTERNAL_PUSH_SECRET não existe aqui" }, 400);
+
+  const rk = await fetch(`https://api.supabase.com/v1/projects/${ref}/api-keys?reveal=true`, {
+    headers: { Authorization: `Bearer ${pat}` },
+  });
+  if (!rk.ok) return json({ error: "não consegui ler as chaves do projeto novo", status: rk.status }, 502);
+  const chaves = (await rk.json()) as { name?: string; api_key?: string }[];
+  const service = chaves.find((k) => k.name === "service_role")?.api_key ?? "";
+  if (!service.startsWith("eyJ")) return json({ error: "service_role legada (JWT) não encontrada no projeto novo" }, 502);
+
+  const sql = [
+    "delete from vault.secrets where name in ('internal_push_secret', 'email_queue_service_role_key');",
+    `select vault.create_secret(${literal(push)}, 'internal_push_secret', 'x-internal-secret dos robôs e do push. Tem que ser igual ao INTERNAL_PUSH_SECRET das Edge Functions.');`,
+    `select vault.create_secret(${literal(service)}, 'email_queue_service_role_key', 'service_role usada pela fila de e-mail.');`,
+  ].join("\n");
+  const rq = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${pat}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ query: sql }),
+  });
+  // Nunca devolver o corpo de sucesso: ele traz os ids criados, e o de erro pode
+  // ecoar o SQL. Só o status.
+  if (!rq.ok) return json({ error: "a Supabase recusou o SQL do cofre", status: rq.status }, 502);
+  return json({ ok: true, cofre: ["internal_push_secret", "email_queue_service_role_key"] });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -57,6 +100,7 @@ Deno.serve(async (req) => {
     const faltam = NOMES.filter((n) => !tem.includes(n));
     const { acao } = await req.json().catch(() => ({}));
     if (acao === "previa") return json({ destino: ref, vai_copiar: tem, nao_existe_aqui: faltam });
+    if (acao === "cofre") return await refazerCofre(pat, ref);
     if (acao !== "copiar") return json({ error: "ação inválida" }, 400);
 
     const r = await fetch(`https://api.supabase.com/v1/projects/${ref}/secrets`, {
