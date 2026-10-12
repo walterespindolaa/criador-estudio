@@ -18,6 +18,20 @@ export function chaveIA(): string | undefined {
   return Deno.env.get("GEMINI_API_KEY") ?? Deno.env.get("LOVABLE_API_KEY") ?? undefined;
 }
 
+/* MODELO NA CHAVE PRÓPRIA (12/10/2026). Testado na chave nova do AI Studio:
+   "models/gemini-2.5-flash-lite is no longer available to new users. Please
+   update your code to use models/gemini-3.5-flash-lite". A Lovable ainda tinha
+   acesso ao 2.5; conta nova no Google, não. O código das funções continua
+   pedindo "google/gemini-2.5-flash(-lite)" e a troca acontece só aqui.
+   Quando o Google aposentar de novo: trocar os segredos GEMINI_MODELO_FLASH /
+   GEMINI_MODELO_LITE no painel, sem mexer em código. */
+function modeloGemini(pedido: string): string {
+  const nome = pedido.replace(/^google\//, "");
+  if (/flash-lite/.test(nome)) return Deno.env.get("GEMINI_MODELO_LITE") ?? "gemini-3.5-flash-lite";
+  if (/flash/.test(nome)) return Deno.env.get("GEMINI_MODELO_FLASH") ?? "gemini-3.5-flash";
+  return nome;
+}
+
 /** fetch do chat da IA. Recebe a mesma chamada de antes e redireciona pro Gemini quando houver chave. */
 export async function iaFetch(url: string, init: RequestInit): Promise<Response> {
   const gemini = Deno.env.get("GEMINI_API_KEY");
@@ -29,8 +43,8 @@ export async function iaFetch(url: string, init: RequestInit): Promise<Response>
   if (typeof body === "string") {
     try {
       const j = JSON.parse(body);
-      // O gateway usava "google/gemini-2.5-flash"; o Google usa "gemini-2.5-flash".
-      if (typeof j.model === "string") j.model = j.model.replace(/^google\//, "");
+      // O gateway usava "google/gemini-2.5-flash"; o Google usa "gemini-...".
+      if (typeof j.model === "string") j.model = modeloGemini(j.model);
       body = JSON.stringify(j);
     } catch { /* corpo não é JSON: segue como veio */ }
   }
