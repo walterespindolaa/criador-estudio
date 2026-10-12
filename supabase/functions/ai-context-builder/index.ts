@@ -23,7 +23,9 @@ class AiTimeoutError extends Error { constructor() { super("ai_timeout"); this.n
 async function aiFetch(url: string, init: RequestInit, timeoutMs = 30000): Promise<Response> {
   const ac = new AbortController()
   const t = setTimeout(() => ac.abort(), timeoutMs)
-  try { return await fetch(url, { ...init, signal: ac.signal }) }
+  // Passa pelo iaFetch (12/10/2026): sem isto as 6 chamadas de IA desta função
+  // continuavam indo pro gateway da Lovable mesmo com GEMINI_API_KEY no projeto novo.
+  try { return await iaFetch(url, { ...init, signal: ac.signal }) }
   catch (e) { if (e instanceof DOMException && e.name === "AbortError") throw new AiTimeoutError(); throw e }
   finally { clearTimeout(t) }
 }
