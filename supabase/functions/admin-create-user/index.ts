@@ -136,7 +136,7 @@ serve(async (req) => {
     // Enfileira o e-mail (1 botão, sem senha visível)
     const html = emailHtml({
       title: "Sua conta está pronta",
-      paragraph: "Criamos sua conta no cria. Clique no botão para acessar e definir sua senha.",
+      paragraph: "Criamos sua conta no Cria. Clique no botão para acessar e definir sua senha.",
       buttonLabel: "Acessar minha conta",
       actionLink,
       secondary: `Se o botão não funcionar, copie e cole este link no navegador:<br/><span style="word-break:break-all;color:#6b7280">${escapeHtml(actionLink)}</span>`,
@@ -146,11 +146,11 @@ serve(async (req) => {
     await svc.rpc("enqueue_email", {
       queue_name: "transactional_emails",
       payload: {
-        to: normEmail, subject: "Seu acesso ao cria",
+        to: normEmail, subject: "Seu acesso ao Cria",
         from: REMETENTE_CRIA,
         sender_domain: "notify.criasocialclub.com.br",
         purpose: "transactional",
-        html, text: `Sua conta no cria está pronta. Acesse: ${actionLink}`,
+        html, text: `Sua conta no Cria está pronta. Acesse: ${actionLink}`,
         label: "admin_invite", idempotency_key: messageId, unsubscribe_token: unsubscribeToken,
         message_id: messageId, queued_at: new Date().toISOString(),
       },

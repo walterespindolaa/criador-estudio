@@ -77,16 +77,16 @@ function emailHtml(opts: { title: string; paragraph: string; actionLink: string 
 }
 
 async function sendClientInvite(svc: SupabaseClient, email: string, agencyName: string, actionLink: string) {
-  const paragraph = `${escapeHtml(agencyName || "Sua social mídia")} criou sua conta no cria pra cuidar do seu conteúdo. Clique no botão pra acessar e definir sua senha.`;
+  const paragraph = `${escapeHtml(agencyName || "Sua social mídia")} criou sua conta no Cria pra cuidar do seu conteúdo. Clique no botão pra acessar e definir sua senha.`;
   const html = emailHtml({ title: "Seu acesso ao cria está pronto", paragraph, actionLink });
   const messageId = crypto.randomUUID();
   const unsubscribeToken = await ensureUnsubscribeToken(svc, email);
   await svc.rpc("enqueue_email", {
     queue_name: "transactional_emails",
     payload: {
-      to: email, subject: "Seu acesso ao cria", from: REMETENTE_CRIA,
+      to: email, subject: "Seu acesso ao Cria", from: REMETENTE_CRIA,
       sender_domain: "notify.criasocialclub.com.br", purpose: "transactional",
-      html, text: `Sua conta no cria está pronta. Acesse: ${actionLink}`,
+      html, text: `Sua conta no Cria está pronta. Acesse: ${actionLink}`,
       label: "manager_add_client", idempotency_key: messageId, unsubscribe_token: unsubscribeToken,
       message_id: messageId, queued_at: new Date().toISOString(),
     },

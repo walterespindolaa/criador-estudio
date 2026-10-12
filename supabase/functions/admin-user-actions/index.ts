@@ -329,7 +329,7 @@ serve(async (req) => {
 
       const html = emailHtml({
         title: "Redefina sua senha",
-        paragraph: "O administrador do cria gerou um link para você definir uma nova senha. Clique no botão abaixo para continuar.",
+        paragraph: "O administrador do Cria gerou um link para você definir uma nova senha. Clique no botão abaixo para continuar.",
         buttonLabel: "Definir nova senha",
         actionLink,
         secondary: `Se o botão não funcionar, copie e cole este link no navegador:<br/><span style="word-break:break-all;color:#6b7280">${escapeHtml(actionLink)}</span>`,
@@ -339,7 +339,7 @@ serve(async (req) => {
       await svc.rpc("enqueue_email", {
         queue_name: "transactional_emails",
         payload: {
-          to: email, subject: "Redefinir senha do cria",
+          to: email, subject: "Redefina sua senha no Cria",
           from: REMETENTE_CRIA,
           sender_domain: "notify.criasocialclub.com.br",
           purpose: "transactional",

@@ -176,7 +176,7 @@ serve(async (req) => {
 
     const html = emailHtml({
       title: "Você foi convidado",
-      paragraph: `${escapeHtml(ownerName)} convidou você para gerenciar a conta dele(a) no cria como social media. Clique no botão abaixo para acessar, você define sua senha e já entra direto.`,
+      paragraph: `${escapeHtml(ownerName)} convidou você para gerenciar a conta dele(a) no Cria como social media. Clique no botão abaixo para acessar, você define sua senha e já entra direto.`,
       buttonLabel: "Aceitar convite e acessar",
       actionLink,
       secondary: "Depois de entrar, selecione o cliente no seletor de contas no topo.",
@@ -187,12 +187,12 @@ serve(async (req) => {
       queue_name: "transactional_emails",
       payload: {
         to: normEmail,
-        subject: `${ownerName} convidou você para gerenciar uma conta no cria`,
+        subject: `${ownerName} convidou você para gerenciar uma conta no Cria`,
         from: REMETENTE_CRIA,
         sender_domain: "notify.criasocialclub.com.br",
         purpose: "transactional",
         html,
-        text: `${ownerName} convidou você para gerenciar a conta dele(a) no cria. Acesse: ${actionLink}`,
+        text: `${ownerName} convidou você para gerenciar a conta dele(a) no Cria. Acesse: ${actionLink}`,
         label: existing ? "manager_invite_existing" : "manager_invite_new",
         idempotency_key: messageId,
         unsubscribe_token: unsubscribeToken,

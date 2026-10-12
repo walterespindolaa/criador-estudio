@@ -96,9 +96,9 @@ async function sendInvite(svc: SupabaseClient, email: string, title: string, par
     const { error } = await svc.rpc("enqueue_email", {
       queue_name: "transactional_emails",
       payload: {
-        to: email, subject: "Seu acesso ao cria", from: REMETENTE_CRIA,
+        to: email, subject: "Seu acesso ao Cria", from: REMETENTE_CRIA,
         sender_domain: "notify.criasocialclub.com.br", purpose: "transactional",
-        html, text: `Sua conta no cria está pronta. Acesse: ${actionLink}`,
+        html, text: `Sua conta no Cria está pronta. Acesse: ${actionLink}`,
         label: "admin_create_manager", idempotency_key: messageId, unsubscribe_token: unsubscribeToken,
         message_id: messageId, queued_at: new Date().toISOString(),
       },
@@ -192,10 +192,10 @@ serve(async (req) => {
       }
     }
     const mailOk = ehParceiro
-      ? await sendInvite(svc, managerEmail, "Sua conta de parceiro no cria está pronta",
-          "Criamos sua conta no cria. As agências que te acoplarem mandam as peças direto pra sua fila. Clique no botão para acessar e definir sua senha.", mgr.actionLink)
+      ? await sendInvite(svc, managerEmail, "Sua conta de parceiro no Cria está pronta",
+          "Criamos sua conta no Cria. As agências que te acoplarem mandam as peças direto pra sua fila. Clique no botão para acessar e definir sua senha.", mgr.actionLink)
       : await sendInvite(svc, managerEmail, "Sua conta de social media está pronta",
-          "Criamos sua conta de gestão no cria. Clique no botão para acessar e definir sua senha.", mgr.actionLink);
+          "Criamos sua conta de gestão no Cria. Clique no botão para acessar e definir sua senha.", mgr.actionLink);
     if (!mailOk) warnings.push("Conta criada, mas o e-mail de boas-vindas falhou: reenvie por Ações.");
 
     // 3) Conta de criadora (Cria normal) com outro e-mail (opcional)
@@ -227,8 +227,8 @@ serve(async (req) => {
           console.error("[admin-create-manager] vínculo gestora-criadora falhou:", linkErr);
           warnings.push(`Contas criadas, mas o vínculo gestora-criadora falhou: ${linkErr.message.slice(0, 120)}`);
         }
-        const crMailOk = await sendInvite(svc, creatorEmail, "Seu acesso de criadora no cria",
-          "Criamos sua conta de criadora no cria. Clique no botão para acessar e definir sua senha.", cr.actionLink);
+        const crMailOk = await sendInvite(svc, creatorEmail, "Seu acesso de criadora no Cria",
+          "Criamos sua conta de criadora no Cria. Clique no botão para acessar e definir sua senha.", cr.actionLink);
         if (!crMailOk) warnings.push("Conta de criadora criada, mas o e-mail dela falhou: reenvie por Ações.");
         creatorOut = { email: creatorEmail, inviteLink: cr.actionLink };
       }

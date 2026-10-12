@@ -141,7 +141,7 @@ serve(async (req) => {
     const html = emailHtml({
       title: "Confirme seu acesso e finalize a assinatura",
       paragraph:
-        "Você (ou sua social media) iniciou uma assinatura do cria pra essa conta. Clique no botão pra acessar e finalizar o pagamento, você define sua senha e cai direto na tela de assinatura.",
+        "Você (ou sua social media) iniciou uma assinatura do Cria pra essa conta. Clique no botão pra acessar e finalizar o pagamento, você define sua senha e cai direto na tela de assinatura.",
       buttonLabel: "Acessar e assinar",
       actionLink,
       secondary: `Se o botão não funcionar, copie este link no navegador:<br/><span style="word-break:break-all;color:#6b7280">${actionLink}</span>`,
@@ -152,12 +152,12 @@ serve(async (req) => {
       queue_name: "transactional_emails",
       payload: {
         to: normEmail,
-        subject: "Finalize sua assinatura no cria",
+        subject: "Finalize sua assinatura no Cria",
         from: REMETENTE_CRIA,
         sender_domain: "notify.criasocialclub.com.br",
         purpose: "transactional",
         html,
-        text: `Confirme seu acesso e finalize a assinatura no cria: ${actionLink}`,
+        text: `Confirme seu acesso e finalize a assinatura no Cria: ${actionLink}`,
         label: existing ? "self_subscribe_existing" : "self_subscribe_new",
         idempotency_key: messageId,
         unsubscribe_token: unsubscribeToken,
