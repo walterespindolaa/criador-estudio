@@ -200,10 +200,7 @@ function AjusteForaDoCria({ postId, aprovacao, nomeParceiro }: {
 
   if (!pedindo) {
     return (
-      <div className="rounded-2xl border border-border bg-muted/30 p-3.5 flex items-center gap-3 flex-wrap">
-        <p className="text-[12px] font-body text-muted-foreground leading-snug flex-1 min-w-[180px]">
-          {aprovado ? "O cliente aprovou" : "Está com o cliente"}, mas pediu alteração pelo WhatsApp?
-        </p>
+      <div>
         <Button size="sm" variant="outline" className="rounded-xl h-8 border-violet-300 text-violet-700 hover:bg-violet-50"
           onClick={() => setPedindo(true)}>
           <RotateCcw className="h-3.5 w-3.5 mr-1" /> Pedir ajuste pro {quem}

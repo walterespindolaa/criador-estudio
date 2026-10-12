@@ -519,9 +519,15 @@ export function PainelComParceiros({ clientes }: {
       if (c.status === "pago") a.pago += Number(c.amount); else { a.pendente += Number(c.amount); a.qtd++; }
       m.set(c.assignee_id, a);
     }
+    /* PEÇA EM AJUSTE NÃO É PEÇA NOVA (Walter, 12/10/2026: "coloquei 2 pra
+       ajuste e tá contabilizando +100"). Peça que já foi entregue uma vez tem
+       a despesa no Caixa (uma por post). Quando volta pra ajuste, o status sai
+       de "entregue" e ela era somada DE NOVO em "em produção". Quem já tem
+       lançamento no Caixa conta só lá. */
+    const jaNoCaixa = new Set(caches.map((c) => c.post_id).filter(Boolean));
     for (const p of pecas) {
       const v = Number(p.cache_parceiro ?? 0);
-      if (!v || !p.assignee_id || p.producao_status === "entregue") continue;
+      if (!v || !p.assignee_id || p.producao_status === "entregue" || jaNoCaixa.has(p.id)) continue;
       const a = pegar(p.assignee_id);
       a.emProducao += v; a.qtdProducao++;
       m.set(p.assignee_id, a);
