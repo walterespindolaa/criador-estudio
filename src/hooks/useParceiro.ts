@@ -488,6 +488,7 @@ export function useMeusCaches() {
 
 export type CacheDoParceiro = {
   id: string; assignee_id: string; amount: number; status: string; date: string; description: string; post_id: string | null;
+  material_id?: string | null;
 };
 
 /** Lado social mídia: cachês lançados (despesas do Caixa ligadas a parceiro). */
@@ -497,7 +498,7 @@ export function useCachesDosParceiros(managerId: string | null) {
     enabled: !!managerId,
     queryFn: async () => {
       const { data, error } = await sbFrom("fin_records")
-        .select("id, assignee_id, amount, status, date, description, post_id")
+        .select("id, assignee_id, amount, status, date, description, post_id, material_id")
         .eq("manager_id", managerId)
         .not("assignee_id", "is", null)
         .order("date", { ascending: false })
@@ -985,6 +986,10 @@ export type PecaExterna = {
   /** Quantas vezes esta peça voltou pra ajuste. Três ou mais é conversa de
    *  escopo, não de capricho. */
   revisoes: number | null;
+  /** Preenchido quando a "peça" é um MATERIAL (client_materials: apresentação,
+   *  flyer...) e não um post. O painel de Produção mostra os dois juntos
+   *  (Walter, 12/10/2026), mas abre cada um no card certo. */
+  material?: { tipo: string | null } | null;
 };
 
 /** Tudo que está na mão de parceiros: a matéria-prima do painel "Com

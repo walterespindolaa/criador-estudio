@@ -17,6 +17,8 @@ import { brlReais } from "@/lib/money";
 import { FORMAT_CHIP_SOLID_CLASS, formatColorVars } from "@/lib/format-colors";
 import { useMarcaDosClientes, usePedidosDoCliente } from "@/hooks/useParceiro";
 import { AcoesDeRevisao } from "@/components/accounts/RevisaoDaEntrega";
+import { MaterialAbertoDialog } from "@/components/parceiro/MaterialAbertoDialog";
+import { TIPO_MATERIAL, useMateriaisComParceiros } from "@/hooks/useMaterialParceiro";
 
 const brl = brlReais;
 
@@ -31,6 +33,19 @@ function ChipFormato({ formato, className }: { formato: string | null; className
       {FORMATO[formato] ?? formato}
     </span>
   );
+}
+
+/* Post mostra o formato (Carrossel, Reels...); material mostra o tipo
+   (Apresentação, Flyer...) num chip neutro, pra não confundir com formato. */
+function ChipTipo({ p, className }: { p: PecaExterna; className?: string }) {
+  if (p.material) {
+    return (
+      <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-700 text-white", className)}>
+        {TIPO_MATERIAL[p.material.tipo ?? "outro"] ?? "Material"}
+      </span>
+    );
+  }
+  return <ChipFormato formato={p.format} className={className} />;
 }
 
 /* O CACHÊ À VISTA NO CARD (Walter, 29/09/2026: "acabei não colocando de uns,
@@ -188,7 +203,7 @@ function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
               {ETAPA[p.producao_status].txt}
             </span>
           )}
-          <ChipFormato formato={p.format} />
+          <ChipTipo p={p} />
           {(p.revisoes ?? 0) > 0 && (
             <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full",
               (p.revisoes ?? 0) >= 3 ? "bg-red-100 text-red-700" : "bg-violet-100 text-violet-700")}>
@@ -384,7 +399,7 @@ function QuadroDeProducao({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
               title={pc ? `${pc.nome} · ${ROTULO_PAPEL[pc.role] ?? pc.role}` : "Parceiro"}>
               {(pc?.nome ?? "P").charAt(0).toUpperCase()}
             </span>
-            <ChipFormato formato={p.format} className="px-1.5" />
+            <ChipTipo p={p} className="px-1.5" />
             {(p.revisoes ?? 0) > 0 && (
               <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full",
                 (p.revisoes ?? 0) >= 3 ? "bg-red-100 text-red-700" : "bg-violet-100 text-violet-700")}>
@@ -465,7 +480,37 @@ export function PainelComParceiros({ clientes }: {
   // Só pra traduzir external_client_id -> crm_client_id na hora de abrir a peça.
   const { clients: extClients } = useExternalClients();
   const { data: parceiros = [] } = useMeusParceiros();
-  const { data: pecas = [], isLoading } = usePecasComParceiros(parceiros.length > 0);
+  const { data: pecasDePost = [], isLoading } = usePecasComParceiros(parceiros.length > 0);
+  /* POSTS + MATERIAIS NO MESMO QUADRO (Walter, 12/10/2026). O material vira
+     uma "peça" com `material` preenchido: entra nas mesmas colunas, filtros e
+     cachês, e o clique abre o card do material. Aprovação do material:
+     "Em aprovação" no quadro dele = aguardando cliente; Finalizado = aprovado.
+     Cliente: o material pode ter só a ficha do CRM; aí acha o cliente do
+     portal ligado a ela, pra cair na coluna certa. */
+  const { data: materiais = [] } = useMateriaisComParceiros(parceiros.length > 0);
+  const pecas = useMemo<PecaExterna[]>(() => [
+    ...pecasDePost,
+    ...materiais.map((m): PecaExterna => ({
+      id: m.id,
+      title: m.title,
+      format: null,
+      producao_status: m.producao_status ?? "aguardando",
+      prazo_producao: m.prazo_producao,
+      prazo_status: null,
+      prazo_sugerido: null,
+      approval_status: m.status === "em_aprovacao" ? "pendente" : m.status === "finalizado" ? "aprovado" : null,
+      scheduled_date: null,
+      assignee_id: m.assignee_id,
+      external_client_id: m.external_client_id
+        ?? (m.crm_client_id ? (extClients.find((c) => c.crm_client_id === m.crm_client_id)?.id ?? null) : null),
+      updated_at: m.updated_at,
+      cache_parceiro: m.cache_parceiro,
+      entregue_em: m.entregue_em,
+      revisoes: m.revisoes,
+      material: { tipo: m.kind },
+    })),
+  ], [pecasDePost, materiais, extClients]);
+  const [materialAberto, setMaterialAberto] = useState<string | null>(null);
   const resolver = useResolverPrazoSugerido();
   // Mensagens novas por peça: o quadro mostra a bolinha em cima do card.
   const { data: conversas = [] } = useConversasComParceiros(parceiros.length > 0);
@@ -524,7 +569,7 @@ export function PainelComParceiros({ clientes }: {
        a despesa no Caixa (uma por post). Quando volta pra ajuste, o status sai
        de "entregue" e ela era somada DE NOVO em "em produção". Quem já tem
        lançamento no Caixa conta só lá. */
-    const jaNoCaixa = new Set(caches.map((c) => c.post_id).filter(Boolean));
+    const jaNoCaixa = new Set(caches.flatMap((c) => [c.post_id, c.material_id]).filter(Boolean));
     for (const p of pecas) {
       const v = Number(p.cache_parceiro ?? 0);
       if (!v || !p.assignee_id || p.producao_status === "entregue" || jaNoCaixa.has(p.id)) continue;
@@ -579,7 +624,7 @@ export function PainelComParceiros({ clientes }: {
     if (ec?.crm_client_id) navigate(`/socialmidia/clientes/${ec.crm_client_id}/posts?post=${p.id}`);
     else navigate("/socialmidia/criapost"); // sem cliente no CRM: o quadro geral, nunca clique morto
   };
-  const abrirPeca = (p: PecaExterna) => setCardAberto(p);
+  const abrirPeca = (p: PecaExterna) => (p.material ? setMaterialAberto(p.id) : setCardAberto(p));
 
   const linhaPeca = (p: PecaExterna, extra?: React.ReactNode) => (
     <button key={p.id} type="button" onClick={() => abrirPeca(p)}
@@ -590,7 +635,7 @@ export function PainelComParceiros({ clientes }: {
           {p.external_client_id && clientes[p.external_client_id] && (
             <span className="text-[11.5px] font-body font-semibold text-foreground/85">{clientes[p.external_client_id]}</span>
           )}
-          <ChipFormato formato={p.format} />
+          <ChipTipo p={p} />
           {p.producao_status && ETAPA[p.producao_status] && (
             <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", ETAPA[p.producao_status].cls)}>
               {ETAPA[p.producao_status].txt}
@@ -644,10 +689,11 @@ export function PainelComParceiros({ clientes }: {
                             mudava a cada edição e mostrava a data errada aqui. */}
                         entregue {p.entregue_em ? new Date(p.entregue_em).toLocaleDateString("pt-BR") : ""}
                       </span>)}
-                    <div className="px-4 pb-3 -mt-1">
+                    {/* Material revisa dentro do card dele (Tá ok / Pedir ajuste). */}
+                    {!p.material && <div className="px-4 pb-3 -mt-1">
                       <AcoesDeRevisao postId={p.id} nomeParceiro={nomeParceiro.get(p.assignee_id)?.nome} compacto
                         pedidoCliente={pedidos[p.id] ?? null} onEuResolvo={() => irAoPost(p)} />
-                    </div>
+                    </div>}
                   </div>
                 ))}
               </Card>
@@ -851,6 +897,8 @@ export function PainelComParceiros({ clientes }: {
             <Send className="h-3 w-3" /> Clique numa peça pra abrir o card que o parceiro vê, com a conversa.
             Dentro dele, "Ir até o post" leva pro editor.
           </p>
+
+          <MaterialAbertoDialog materialId={materialAberto} aoFechar={() => setMaterialAberto(null)} />
 
           <CardAbertoDialog
             postId={cardAberto?.id ?? null}

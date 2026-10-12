@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { aindaNaoExisteNoBanco, mensagemHumana } from "@/hooks/useParceiro";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -205,6 +206,40 @@ export function useMarcarMaterial(id: string | null) {
 }
 
 /* ── LADO DA AGÊNCIA ──────────────────────────────────────────────────── */
+
+export type MaterialComParceiro = {
+  id: string; title: string | null; kind: string | null; status: string | null;
+  producao_status: EtapaProducao | null; prazo_producao: string | null; assignee_id: string;
+  crm_client_id: string | null; external_client_id: string | null; cache_parceiro: number | null;
+  entregue_em: string | null; revisoes: number | null; updated_at: string | null;
+};
+
+/** MATERIAL NA PRODUÇÃO (Walter, 12/10/2026: "criei um material, enviei para
+ *  designer, mas não aparece aqui na produção"). O painel Equipe > Produção só
+ *  lia posts; material delegado ia pro parceiro e nunca aparecia do lado de
+ *  cá. Mesma regra dos posts: só da conta aberta e só o que tem responsável. */
+export function useMateriaisComParceiros(ativo: boolean) {
+  const { user } = useAuth();
+  const { agencyOwnerId } = useActiveAccount();
+  return useQuery<MaterialComParceiro[]>({
+    queryKey: ["materiais-com-parceiros", user?.id, agencyOwnerId],
+    enabled: !!user && !!agencyOwnerId && ativo,
+    ...SINCRONIA,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("client_materials")
+        .select("id, title, kind, status, producao_status, prazo_producao, assignee_id, crm_client_id, external_client_id, cache_parceiro, entregue_em, revisoes, updated_at")
+        .eq("manager_id", agencyOwnerId!)
+        .not("assignee_id", "is", null)
+        .order("prazo_producao", { ascending: true, nullsFirst: false })
+        .limit(300);
+      if (error) {
+        if (aindaNaoExisteNoBanco(error.message)) return [];
+        throw error;
+      }
+      return (data ?? []) as MaterialComParceiro[];
+    },
+  });
+}
 
 /** Delegar (ou trocar/tirar) o parceiro do material. Mesmo parceiro de novo
  *  só corrige prazo e cachê: a etapa e a entrega continuam (o gatilho só
