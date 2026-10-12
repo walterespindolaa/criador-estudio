@@ -1087,7 +1087,9 @@ HISTÓRICO:
 
 ${Array.isArray(data.historico) ? data.historico.map((m: any) => `${m.role}: ${m.content}`).join('\n') : 'Início da conversa.'}${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}`
         userPrompt = data.mensagem || 'Olá!'
-        maxTokens = 600
+        // 1000 (era 600): desde 12/10/2026 a resposta termina com o bloco
+        // ```cria das ideias (os cartões da Cria IA); com 600 o JSON cortava.
+        maxTokens = 1000
         break
       case 'repurpose-content':
         operationPrompt = `Você é um especialista em repurposing de conteúdo para redes sociais brasileiras.
