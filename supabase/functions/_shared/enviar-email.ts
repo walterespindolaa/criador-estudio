@@ -9,6 +9,8 @@
    vai pro log, não derruba a ação que o disparou.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+import { molduraCria, REMETENTE_CRIA, type TemaCria } from "./email-moldura.ts";
+
 // deno-lint-ignore no-explicit-any
 type Svc = { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }> } & Record<string, any>;
 
@@ -25,6 +27,11 @@ export type EmailCria = {
   rodape?: string | null;
   /** Etiqueta pra métrica/dedupe no process-email-queue. */
   etiqueta: string;
+  /** Visual (12/10/2026): título grande, etiqueta e cor da faixa. Sem eles,
+   *  o título é o assunto, a etiqueta é "Recado do Cria" e a cor é azul. */
+  titulo?: string;
+  tag?: string;
+  tema?: TemaCria;
 };
 
 const APP_URL = () => Deno.env.get("APP_URL") ?? "https://app.criasocialclub.com.br";
@@ -34,19 +41,16 @@ function esc(s: string) {
 }
 
 export function montarHtml(e: EmailCria): string {
-  const ps = e.paragrafos.map((p) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1a1a2e">${esc(p)}</p>`).join("");
-  const botao = e.botao
-    ? `<p style="margin:22px 0"><a href="${e.botao.url}" style="display:inline-block;background:#EA4918;color:#fff;padding:13px 22px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:15px">${esc(e.botao.texto)}</a></p>`
-    : "";
-  const rodape = e.rodape ? `<p style="margin:26px 0 0;font-size:12px;line-height:1.5;color:#6b7280">${esc(e.rodape)}</p>` : "";
-  return `<div style="background:#faf7f2;padding:28px 12px">
-  <div style="font-family:Arial,Helvetica,sans-serif;max-width:540px;margin:0 auto;background:#fff;border-radius:18px;padding:30px 28px;border:1px solid #efe9da">
-    <p style="margin:0 0 20px;font-size:22px;font-weight:800;color:#EA4918;letter-spacing:-0.5px">cria</p>
-    <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1a1a2e">Oi${e.nome ? `, ${esc(e.nome.split(" ")[0])}` : ""}.</p>
-    ${ps}${botao}${rodape}
-    <p style="margin:26px 0 0;font-size:12px;color:#9ca3af">Cria Social Club · <a href="${APP_URL()}/privacidade" style="color:#9ca3af">privacidade</a></p>
-  </div>
-</div>`;
+  const oi = `<p style="margin:0 0 14px;">Oi${e.nome ? `, ${esc(e.nome.split(" ")[0])}` : ""}.</p>`;
+  const ps = e.paragrafos.map((p) => `<p style="margin:0 0 14px;">${esc(p)}</p>`).join("");
+  return molduraCria({
+    tag: e.tag ?? "Recado do Cria",
+    tema: e.tema ?? "azul",
+    titulo: esc(e.titulo ?? e.assunto),
+    corpoHtml: oi + ps,
+    botao: e.botao ? { texto: esc(e.botao.texto), url: e.botao.url } : null,
+    notaHtml: e.rodape ? esc(e.rodape) : null,
+  });
 }
 
 export function montarTexto(e: EmailCria): string {
@@ -66,7 +70,7 @@ export async function enviarEmail(svc: Svc, e: EmailCria): Promise<boolean> {
       payload: {
         to: e.para,
         subject: e.assunto,
-        from: "Cria <noreply@criasocialclub.com.br>",
+        from: REMETENTE_CRIA,
         sender_domain: "notify.criasocialclub.com.br",
         purpose: "transactional",
         html: montarHtml(e),

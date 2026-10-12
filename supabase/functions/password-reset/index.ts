@@ -13,6 +13,7 @@
 // /reset-password.
 // ============================================================
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { molduraCria, REMETENTE_CRIA } from "../_shared/email-moldura.ts";
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 const cors = {
@@ -48,21 +49,12 @@ async function ensureUnsubscribeToken(svc: SupabaseClient, email: string): Promi
 }
 
 function emailHtml(actionLink: string): string {
-  return `<!doctype html>
-<html><body style="margin:0;padding:0;background-color:#f4f4f5">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f5;padding:32px 16px"><tr><td align="center">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;background:#ffffff;border-radius:16px;padding:32px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif">
-      <tr><td>
-      <h1 style="margin:0 0 12px;font-size:20px;color:#111827">Trocar a sua senha</h1>
-      <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#4b5563">Você pediu pra trocar a senha da sua conta no cria. Clique no botão e defina a nova. Se não foi você, ignore este e-mail: nada muda.</p>
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px 0"><tr><td style="border-radius:12px;background:#EA4918">
-        <a href="${actionLink}" style="display:inline-block;padding:12px 24px;color:#fff;font-size:15px;font-weight:600;text-decoration:none;border-radius:12px">Definir nova senha</a>
-      </td></tr></table>
-      <p style="margin:0;font-size:13px;line-height:1.5;color:#9ca3af">Se o botão não funcionar, copie: <span style="word-break:break-all;color:#6b7280">${actionLink}</span></p>
-      </td></tr>
-    </table>
-  </td></tr></table>
-</body></html>`;
+  return molduraCria({
+    tag: "Senha", tema: "laranja", titulo: "Bora criar uma senha nova",
+    corpoHtml: "Recebemos um pedido pra trocar a senha da sua conta no Cria. Toque no botão e escolha a nova.",
+    botao: { texto: "Criar nova senha", url: actionLink }, linkReserva: true,
+    notaHtml: "Se não foi você que pediu, ignore este e-mail: sua senha atual continua a mesma.",
+  });
 }
 
 // Rate limit simples em memória por instância: segura rajada de robô sem
@@ -106,7 +98,7 @@ serve(async (req) => {
       payload: {
         to: email,
         subject: "Trocar a sua senha no cria",
-        from: "cria <noreply@criasocialclub.com.br>",
+        from: REMETENTE_CRIA,
         sender_domain: "notify.criasocialclub.com.br",
         purpose: "transactional",
         html: emailHtml(actionLink),

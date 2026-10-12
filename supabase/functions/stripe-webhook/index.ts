@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { molduraCria, REMETENTE_CRIA } from "../_shared/email-moldura.ts";
 import Stripe from "npm:stripe@14";
 import { enviarEmail } from "../_shared/enviar-email.ts";
 import { registrarErro, mensagemDe } from "../_shared/log.ts";
@@ -88,20 +89,21 @@ async function avisarPagamentoFalhou(email: string, nome: string | null, valorCe
     const valor = (valorCents / 100).toLocaleString("pt-BR", { style: "currency", currency: (moeda || "brl").toUpperCase() });
     const appUrl = Deno.env.get("APP_URL") ?? "https://app.criasocialclub.com.br";
     const link = `${appUrl}/app/assinar`;
-    const html = `<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#1a1a2e">
-      <p>Oi${nome ? `, ${nome}` : ""}.</p>
-      <p>Tentamos cobrar a sua assinatura do Cria (${valor}) e o pagamento não passou. Isso acontece por limite do cartão, cartão vencido ou bloqueio do banco.</p>
-      <p>O Stripe vai tentar de novo nos próximos dias. Se preferir resolver agora, atualize o cartão por aqui:</p>
-      <p><a href="${link}" style="display:inline-block;background:#EA4918;color:#fff;padding:12px 20px;border-radius:12px;text-decoration:none;font-weight:bold">Atualizar forma de pagamento</a></p>
-      <p style="color:#6b7280;font-size:13px">Enquanto isso, seu acesso continua. Se a cobrança não passar depois das tentativas, a assinatura é pausada.</p>
-    </div>`;
+    const html = molduraCria({
+      tag: "Pagamento", tema: "amarelo", titulo: "O pagamento não passou",
+      corpoHtml: `<p style="margin:0 0 14px;">Oi${nome ? `, ${nome.split(" ")[0]}` : ""}.</p>`
+        + `<p style="margin:0 0 14px;">Tentamos cobrar a sua assinatura do Cria (${valor}) e o pagamento não passou. Isso acontece por limite do cartão, cartão vencido ou bloqueio do banco.</p>`
+        + `<p style="margin:0;">O Stripe tenta de novo nos próximos dias. Se preferir resolver agora, atualize o cartão:</p>`,
+      botao: { texto: "Atualizar forma de pagamento", url: link },
+      notaHtml: "Enquanto isso, seu acesso continua. Se a cobrança não passar depois das tentativas, a assinatura é pausada.",
+    });
     const messageId = crypto.randomUUID();
     await supabase.rpc("enqueue_email", {
       queue_name: "transactional_emails",
       payload: {
         to: email,
         subject: "Não conseguimos cobrar sua assinatura do Cria",
-        from: "cria <noreply@criasocialclub.com.br>",
+        from: REMETENTE_CRIA,
         sender_domain: "notify.criasocialclub.com.br",
         purpose: "transactional",
         html,

@@ -15,6 +15,7 @@
 // O trigger trg_crm_clients_guard_cria_owner deixa passar porque aqui é
 // service_role (auth.uid() nulo).
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { molduraCria, REMETENTE_CRIA } from "../_shared/email-moldura.ts";
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
 const cors = {
@@ -68,25 +69,11 @@ function resolveAppUrl(req: Request): string {
 }
 
 function emailHtml(opts: { title: string; paragraph: string; actionLink: string }): string {
-  // Rodapé com o logo (e não com a palavra "cria" escrita).
-  // Cuidados de e-mail: Gmail e Outlook bloqueiam imagem por padrão, então a URL
-  // é absoluta e pública, width/height vão como ATRIBUTO (o Outlook ignora só o
-  // CSS) e o alt="cria" segura a assinatura quando a imagem não carrega. O
-  // endereço embaixo é texto de verdade, nunca some.
-  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f5f5f5;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#1f2937">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:32px 16px"><tr><td align="center">
-    <table role="presentation" width="480" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;width:100%;background:#ffffff;border-radius:16px;padding:40px 32px"><tr><td>
-      <h1 style="margin:0 0 16px 0;font-size:22px;font-weight:700;color:#111827;line-height:1.3">${opts.title}</h1>
-      <p style="margin:0 0 28px 0;font-size:15px;line-height:1.55;color:#4b5563">${opts.paragraph}</p>
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px 0"><tr><td style="border-radius:12px;background:#8B5CF6">
-        <a href="${opts.actionLink}" style="display:inline-block;padding:12px 24px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:12px">Acessar minha conta</a>
-      </td></tr></table>
-      <p style="margin:0;font-size:13px;line-height:1.5;color:#9ca3af">Se o botão não funcionar, copie e cole no navegador:<br/><span style="word-break:break-all;color:#6b7280">${opts.actionLink}</span></p>
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:24px auto 0"><tr><td align="center" style="font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif"><a href="https://criasocialclub.com.br" target="_blank" style="text-decoration:none"><img src="https://app.criasocialclub.com.br/logo-cria.png" width="104" height="57" alt="cria" style="display:block;border:0;outline:none;text-decoration:none;width:104px;height:57px;font-size:12px;color:#9ca3af" /></a><div style="margin:6px 0 0 0;font-size:12px;color:#9ca3af">criasocialclub.com.br</div></td></tr></table>
-    </td></tr></table>
-  </td></tr></table>
-</body></html>`;
+  return molduraCria({
+    tag: "Seu acesso", tema: "verde", titulo: opts.title,
+    corpoHtml: opts.paragraph,
+    botao: { texto: "Acessar minha conta", url: opts.actionLink }, linkReserva: true,
+  });
 }
 
 async function sendClientInvite(svc: SupabaseClient, email: string, agencyName: string, actionLink: string) {
@@ -97,7 +84,7 @@ async function sendClientInvite(svc: SupabaseClient, email: string, agencyName: 
   await svc.rpc("enqueue_email", {
     queue_name: "transactional_emails",
     payload: {
-      to: email, subject: "Seu acesso ao cria", from: "cria <noreply@criasocialclub.com.br>",
+      to: email, subject: "Seu acesso ao cria", from: REMETENTE_CRIA,
       sender_domain: "notify.criasocialclub.com.br", purpose: "transactional",
       html, text: `Sua conta no cria está pronta. Acesse: ${actionLink}`,
       label: "manager_add_client", idempotency_key: messageId, unsubscribe_token: unsubscribeToken,
