@@ -27,7 +27,7 @@ A exportação do banco pela Lovable sai **uma vez a cada 24h**. A de sábado é
 
 | # | Achado | O que fazer |
 |---|---|---|
-| 1 | A organização "Cria Social Club" **ainda não existe** na Supabase (o conector só enxerga a HUB Zephyr). | Criar antes do sábado, com o mesmo login. |
+| 1 | A organização "Cria Social Club" existe (projeto `ecbzfjzoqidowrsfsfih`, Free, pausado), mas o conector da Supabase só foi autorizado pra HUB Zephyr. | Restaurar o projeto, subir a organização pro Pro e reautorizar o conector incluindo a organização do Cria. |
 | 2 | `migrar-segredos` não copia `BUNNY_TUTORIAIS_API_KEY` e `BUNNY_TUTORIAIS_LIBRARY_ID` (nasceram em 01/10 com os tutoriais). | Adicionar os dois na lista e republicar a função na Lovable. |
 | 3 | **O cofre (Vault) não sobrevive à mudança.** Os segredos `internal_push_secret` e `email_queue_service_role_key` são criptografados com a chave do projeto velho. No projeto novo eles vêm ilegíveis, e push, robôs do Instagram, ingestão do Bunny e fila de e-mail param. | Função temporária no projeto novo que grava no cofre o `INTERNAL_PUSH_SECRET` e a service role nova, lidos dos segredos do próprio projeto. Ninguém vê o valor. Apagar depois. |
 | 4 | O app **não tem login com Google** (só senha e código por e-mail). O passo "Google provider" do mapa antigo sai. | O Google continua só no Drive. Conferir no Google Cloud se o endereço `.vercel.app` de teste está nas origens autorizadas. |
@@ -44,9 +44,21 @@ O resto do mapa de 01/10 continua valendo: 67 funções, todas com `verify_jwt` 
 
 ---
 
-## Fase 0 · Inventário (agora, sem tirar nada do ar)
+## Fase 0 · Inventário (feito em 12/10)
 
-Walter roda no SQL Editor da Lovable o bloco de inventário (só leitura, sem valor de segredo) e me manda o CSV. Com ele eu fecho: robôs reais, buckets com volume, extensões, filas, quem aponta pro endereço velho, contagem de linhas por tabela (que vira o gabarito da conferência no sábado).
+Rodado no SQL Editor da Lovable (só leitura). Resultado:
+
+- **Usuários:** 24, todos com senha, todos com login por e-mail. Nenhum Google.
+- **Banco:** 2,1 GB, mas as tabelas do app somam poucos milhares de linhas (maiores: `social_audience` 1.035, `posts` 978, `social_insights` 793, `notifications` 783). O volume está em tabela de sistema (histórico de robô, respostas do pg_net ou arquivo das filas). Investigar e limpar antes da exportação.
+- **Arquivos:** cerca de 1 GB em 1.955 arquivos. `media` 472 MB (975), `ig-thumbs` 200 MB (507), `relatorios` 197 MB (só 6), `bio-media` 64 MB, `saved-covers` 22 MB, `avatars` 18 MB, `crm` 18 MB, `files` 16 MB, `tutoriais` 15 MB (222), `feedback` vazio. Privados: `crm`, `files`, `relatorios`, `tutoriais`.
+- **Extensões:** pg_cron, pg_net, pg_stat_statements, pg_trgm, pgcrypto, pgmq, plpgsql, supabase_vault, uuid-ossp.
+- **Filas (pgmq):** `auth_emails`, `transactional_emails` e as duas de erro (`_dlq`).
+- **Cofre:** `internal_push_secret` e `email_queue_service_role_key` (confirma o achado 3).
+- **Robôs ativos (16):** `agency-inventory-cleanup`, `apify-scrapes-orfaos`, `cria-bunny-ingerir`, `cria-daily-health`, `cria-daily-notif`, `cria-ig-publicar-fila` (a cada minuto), `cria-ig-refresh`, `cria-ig-stories`, `cria-ig-sync`, `cria-lifecycle-emails`, `criapost-media-cleanup-daily`, `cron-historico-faxina`, `rl-buckets-cleanup`, `storage-cleanup-daily`, `story-notifications-15min`, `trash-purge-daily`. **12 deles chamam o endereço velho.** O `trend-bank-weekly` do repositório não existe em produção.
+- **Funções do banco com o endereço velho:** `email_queue_dispatch`, `email_queue_wake`, `notify_push_on_insert`.
+- **Contagem por tabela:** guardada no CSV de 12/10, é o gabarito da conferência no sábado (contar de novo na hora da exportação).
+
+**Projeto novo:** já existe o `ecbzfjzoqidowrsfsfih` (organização "Cria Social Club", plano Free, criado em 01/10 e pausado por inatividade). Walter está restaurando; depois sobe a organização pro Pro. Conferir a região (`sa-east-1`) quando voltar.
 
 ## Fase 1 · Preparação (até sexta)
 
