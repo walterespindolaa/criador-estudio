@@ -184,10 +184,14 @@ const Login = () => {
   const rotulo = cn(DISPLAY, "text-[15px] font-bold text-[#0A0A0A]");
 
   return (
-    <div className="relative min-h-[100dvh] overflow-x-hidden bg-[#FFCF03] lg:bg-[#F5F3E7] font-body text-[#0A0A0A] flex flex-col lg:block">
+    <div className="relative min-h-[100dvh] overflow-x-clip bg-[#FFCF03] lg:bg-[#F5F3E7] font-body text-[#0A0A0A] flex flex-col lg:block">
 
       {/* ── Cena do computador (só lg+) ── */}
-      <div aria-hidden className="hidden lg:block">
+      {/* As manchas grandes passam da borda da tela de propósito. Ficam numa
+          camada própria, do tamanho da tela e com corte: com overflow-x-hidden
+          no contêiner, o navegador ligava a rolagem vertical nele e aparecia
+          uma barra lateral (Walter, 12/10/2026, no PWA). */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 hidden overflow-hidden lg:block">
         <div className={cn("absolute -left-[140px] -bottom-[260px] h-[520px] w-[1120px] bg-[#0061EE]", BLOB_A)} />
         <div className={cn("absolute -right-[120px] -top-[130px] h-[420px] w-[470px] bg-[#FF77B9]", BLOB_B)} />
       </div>
