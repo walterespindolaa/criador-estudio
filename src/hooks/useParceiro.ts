@@ -1084,8 +1084,22 @@ export function usePedirAjuste() {
         post_id: v.postId, content: `Ajuste: ${motivo}`.slice(0, 4000), author_role: "social_media",
       });
       if (cErr) throw cErr;
+
+      /* AJUSTE DEPOIS DA APROVAÇÃO (Walter, 12/10/2026: "o cliente aprovou mas
+         pediu alteração no whats"). Se a peça já estava com o cliente
+         (pendente) ou aprovada, a aprovação antiga não vale pra arte nova:
+         reabre como ajuste_solicitado. Sem isso, a nova entrega do parceiro
+         não voltava pra "Pra você revisar" e a peça seguia "aprovada" com uma
+         arte que o cliente nunca viu. Postado fica como está. */
+      const { data: atual } = await sbFrom("posts").select("approval_status").eq("id", v.postId).maybeSingle();
+      const reabrir = ["pendente", "aprovado"].includes((atual as { approval_status?: string | null } | null)?.approval_status ?? "");
+      const patch: Record<string, unknown> = { producao_status: "ajuste" };
+      if (reabrir) {
+        patch.approval_status = "ajuste_solicitado";
+        patch.approval_updated_at = new Date().toISOString();
+      }
       const { data, error } = await sbFrom("posts")
-        .update({ producao_status: "ajuste" } as never)
+        .update(patch as never)
         .eq("id", v.postId).select("id").maybeSingle();
       if (error) throw error;
       if (!data) throw new Error("Não consegui pedir o ajuste. Recarregue e tente de novo.");
@@ -1093,6 +1107,7 @@ export function usePedirAjuste() {
     onSuccess: () => {
       invalidarQuadrosDePost(qc);
       void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
+      void qc.invalidateQueries({ queryKey: ["parceiro-card"] });
       toast.success("Ajuste pedido. O parceiro recebe o card de volta com o motivo.");
     },
     onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui pedir o ajuste.")),

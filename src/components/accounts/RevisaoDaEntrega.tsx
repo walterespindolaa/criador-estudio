@@ -24,6 +24,12 @@ import { brlReais } from "@/lib/money";
 
 export const JA_FOI_PRO_CLIENTE = ["pendente", "aprovado", "postado"];
 
+/** Já foi pro cliente (ou ele aprovou), mas o cliente pediu alteração por fora
+ *  do Cria (WhatsApp, ligação). Postado fica de fora. (Walter, 12/10/2026) */
+export function podeReabrirAposCliente(producaoStatus: string | null | undefined, aprovacao: string | null | undefined) {
+  return producaoStatus === "entregue" && ["pendente", "aprovado"].includes(aprovacao ?? "");
+}
+
 export function precisaRevisar(producaoStatus: string | null | undefined, aprovacao: string | null | undefined) {
   return producaoStatus === "entregue" && !JA_FOI_PRO_CLIENTE.includes(aprovacao ?? "");
 }
@@ -150,6 +156,10 @@ export function PainelDaAgenciaNoCard({ postId, producaoStatus, aprovacao, cache
         </div>
       )}
 
+      {podeReabrirAposCliente(producaoStatus, aprovacao) && (
+        <AjusteForaDoCria postId={postId} aprovacao={aprovacao} nomeParceiro={nomeParceiro} />
+      )}
+
       <div className={cn("rounded-2xl border p-3.5", semCache ? "border-amber-200 bg-amber-50/60" : "border-border bg-muted/30")}>
         <p className={cn("text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 mb-2",
           semCache ? "text-amber-800" : "text-muted-foreground")}>
@@ -170,6 +180,56 @@ export function PainelDaAgenciaNoCard({ postId, producaoStatus, aprovacao, cache
               ? "Já está no Caixa como despesa. Mudar aqui corrige o valor enquanto não estiver pago."
               : "Vira despesa no Caixa quando o parceiro entregar."}
         </p>
+      </div>
+    </div>
+  );
+}
+
+/** O cliente já aprovou (ou está com a peça) e pediu alteração pelo WhatsApp.
+ *  Devolve pro parceiro com o motivo e reabre a aprovação: a arte nova volta
+ *  pra "Pra você revisar" e depois vai de novo pro cliente. */
+function AjusteForaDoCria({ postId, aprovacao, nomeParceiro }: {
+  postId: string; aprovacao: string | null | undefined; nomeParceiro?: string | null;
+}) {
+  const ajuste = usePedirAjuste();
+  const [pedindo, setPedindo] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  useEffect(() => { setPedindo(false); setMotivo(""); }, [postId]);
+  const quem = nomeParceiro?.split(" ")[0] ?? "o parceiro";
+  const aprovado = aprovacao === "aprovado";
+
+  if (!pedindo) {
+    return (
+      <div className="rounded-2xl border border-border bg-muted/30 p-3.5 flex items-center gap-3 flex-wrap">
+        <p className="text-[12px] font-body text-muted-foreground leading-snug flex-1 min-w-[180px]">
+          {aprovado ? "O cliente aprovou" : "Está com o cliente"}, mas pediu alteração pelo WhatsApp?
+        </p>
+        <Button size="sm" variant="outline" className="rounded-xl h-8 border-violet-300 text-violet-700 hover:bg-violet-50"
+          onClick={() => setPedindo(true)}>
+          <RotateCcw className="h-3.5 w-3.5 mr-1" /> Pedir ajuste pro {quem}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border-2 border-violet-200 bg-violet-50/50 p-3.5 space-y-2">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-violet-800">Ajuste pedido fora do Cria</p>
+      <Textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3} autoFocus
+        placeholder={`O que o cliente pediu? Junte tudo num texto só pra ${quem}.`}
+        className="resize-none text-[13px] bg-card" />
+      <p className="text-[11px] font-body text-muted-foreground leading-snug">
+        {aprovado ? "A aprovação do cliente é desfeita" : "A peça sai de \"Aguardando cliente\""}: quando {quem} entregar de novo, volta pra você revisar e depois vai pro cliente.
+      </p>
+      <div className="flex items-center gap-2 justify-end">
+        <Button size="sm" variant="ghost" className="rounded-xl h-8" disabled={ajuste.isPending}
+          onClick={() => { setPedindo(false); setMotivo(""); }}>
+          Cancelar
+        </Button>
+        <Button size="sm" className="rounded-xl h-8 bg-violet-600 hover:bg-violet-700 text-white" disabled={ajuste.isPending || !motivo.trim()}
+          onClick={() => ajuste.mutate({ postId, motivo: `O cliente pediu (WhatsApp): ${motivo.trim()}` }, { onSuccess: () => { setPedindo(false); setMotivo(""); } })}>
+          {ajuste.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><RotateCcw className="h-3.5 w-3.5 mr-1" /> Mandar pro {quem}</>}
+        </Button>
       </div>
     </div>
   );
