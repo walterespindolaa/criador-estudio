@@ -2,33 +2,61 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Mail, Eye, EyeOff } from "lucide-react";
+import { AlertCircle, Check, Eye, EyeOff, Mail } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { track } from "@/lib/metaPixel";
 import { Logo } from "@/components/shared/Logo";
 import { useT } from "@/lib/i18n";
+import { useForceLightTheme } from "@/hooks/useForceLightTheme";
+import { cn } from "@/lib/utils";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CADASTRO NA LINGUAGEM DO LOGIN NOVO (Walter, 12/10/2026: "essa página de
+   cadastro também tá extensa no PC, com scroll")
+
+   O cartão era estreito e empilhava tudo numa coluna (logo, título, os 3
+   tipos de conta, 4 campos, termos, botão): passava da altura de um notebook.
+   Agora, no computador, o cartão é mais largo e em duas colunas (nome ao lado
+   do e-mail, senha ao lado da confirmação), a logo e a frase saem do cartão
+   pra cena, e tudo cabe numa tela. No celular segue uma coluna, numa folha
+   que sobe de baixo, igual ao login.
+   A lógica (compra paga na LP, aceite dos termos, parceiro com papel, destino
+   depois do cadastro) é a mesma de antes.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 type SignupFormData = { name: string; email: string; password: string; confirmPassword: string };
+type Tipo = "creator" | "manager" | "parceiro";
+
+const BLOB_A = "rounded-[38%_62%_55%_45%/48%_42%_58%_52%]";
+const BLOB_B = "rounded-[55%_45%_40%_60%/50%_60%_40%_50%]";
+const DISPLAY = "[font-family:'Baloo_2',sans-serif]";
+const SCRIPT = "[font-family:'Grand_Hotel',cursive]";
+const campo = "w-full h-[50px] rounded-2xl border-2 border-[#CFC8B6] bg-white px-4 text-[16px] text-[#0A0A0A] placeholder:text-[#8A8478] outline-none transition-[border-color,box-shadow] focus:border-[#0061EE] focus:shadow-[0_0_0_4px_rgba(0,97,238,.15)] aria-[invalid=true]:border-[#D9480F]";
+const rotulo = cn(DISPLAY, "text-[15px] font-bold text-[#0A0A0A]");
+const erroTxt = "text-[13px] text-[#B3330C]";
+
+const TIPOS: { k: Tipo; titulo: string; desc: string; cor: string }[] = [
+  { k: "creator", titulo: "Criador de conteúdo", desc: "Crio pro meu perfil", cor: "#FFCF03" },
+  { k: "manager", titulo: "Social mídia / agência", desc: "Cuido de clientes e equipe", cor: "#FF77B9" },
+  { k: "parceiro", titulo: "Designer / editor", desc: "Produzo pras agências", cor: "#9FB7FF" },
+];
 
 const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
+  useForceLightTheme();
   const navigate = useNavigate();
   const t = useT();
   const { signUp } = useAuth();
-  const [accountType, setAccountType] = useState<"creator" | "manager" | "parceiro">(defaultManager ? "manager" : "creator");
+  const [accountType, setAccountType] = useState<Tipo>(defaultManager ? "manager" : "creator");
   /* Papel do parceiro. Define o vocabulário do quadro dele já no primeiro
      acesso (Referências/Rascunho/Arte final pro designer, Decupagem/Corte/
      Finalização pro editor) sem depender de agência nenhuma. */
   const [parceiroRole, setParceiroRole] = useState<"designer" | "editor_video" | "copy" | "trafego" | "filmmaker">("designer");
   const [loading, setLoading] = useState(false);
-  /* ACEITE DOS TERMOS (pente fino 23/09/2026, LGPD). A edge `accept-terms`
-     existia e ninguém chamava: nenhum cadastro tinha aceite registrado. */
+  /* ACEITE DOS TERMOS (pente fino 23/09/2026, LGPD). */
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const [erroTermos, setErroTermos] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -46,13 +74,13 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
     path: ["confirmPassword"],
   });
 
-  const { register, handleSubmit, setError, setValue, formState: { errors } } = useForm<SignupFormData>({
+  const { register, handleSubmit, setError, formState: { errors } } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
   });
   const [formError, setFormError] = useState<string | null>(null);
 
-  // ── Veio do checkout da LP (Payment Link)? Guarda o session_id, pré-preenche
-  //    o e-mail do pagador e avisa que o plano está esperando a conta. ──
+  // ── Veio do checkout da LP (Payment Link)? Guarda o session_id e avisa que
+  //    o plano está esperando a conta. ──
   const [searchParams] = useSearchParams();
   const [compraPaga, setCompraPaga] = useState<{ email: string; plan: string } | null>(null);
   useEffect(() => {
@@ -63,9 +91,9 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
       .then(({ data }) => {
         const d = data as { found?: boolean; email?: string; plan?: string } | null;
         if (d?.found && d.email) {
-          /* O peek agora devolve o e-mail MASCARADO (w****@gmail.com): serve pra
-             pessoa reconhecer a compra, não pra preencher o campo. Ela digita o
-             e-mail completo, e o resgate só acontece se bater com o do pagamento. */
+          /* O peek devolve o e-mail MASCARADO: serve pra pessoa reconhecer a
+             compra. Ela digita o e-mail completo, e o resgate só acontece se
+             bater com o do pagamento. */
           setCompraPaga({ email: d.email, plan: d.plan ?? "" });
           setAccountType("creator");
         }
@@ -100,28 +128,22 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
       console.warn("[signup] error:", error.message);
       const mapped = mapSignupError(error.message);
       if (mapped.field) setError(mapped.field, { message: mapped.text });
-      setFormError(mapped.text);
-      toast.error(mapped.text);
+      else setFormError(mapped.text);
     } else {
       track("CompleteRegistration", { content_name: accountType === "manager" ? "signup_agency" : accountType === "parceiro" ? "signup_parceiro" : "signup_email" });
-      /* Registra o aceite com IP e user-agent do lado do servidor. Se a conta
-         ainda precisa confirmar o e-mail, não há sessão agora: a marca fica no
-         localStorage e o ProtectedRoute registra no primeiro acesso logado. */
+      /* Registra o aceite com IP e user-agent do lado do servidor. Sem sessão
+         ainda (falta confirmar o e-mail), a marca fica no localStorage e o
+         ProtectedRoute registra no primeiro acesso logado. */
       try { localStorage.setItem("cria.termos_pendentes", "1"); } catch { /* modo privado */ }
       if (!needsConfirmation) {
         void supabase.functions.invoke("accept-terms", { body: {} })
           .then(() => { try { localStorage.removeItem("cria.termos_pendentes"); } catch { /* ok */ } })
           .catch(() => { /* fica pendente, o ProtectedRoute tenta de novo */ });
       }
-      // Só mostra "confirme seu e-mail" quando o projeto REALMENTE exige confirmação.
-      // Com o auto-confirm ligado a sessão já veio: a pessoa entra direto e quem leva
-      // pro onboarding é o roteador, que reage à sessão nova.
       if (needsConfirmation) {
         setEmailSent(true);
       } else {
         toast.success("Conta criada! Bem-vinda ao CRIA.");
-        // Mesmo destino do emailRedirectTo: sem guarda de rota pública, sem esse
-        // navigate a pessoa ficava parada na tela de cadastro mesmo já logada.
         navigate(accountType === "manager" ? "/comecar-agencia"
           : accountType === "parceiro" ? "/socialmidia/demandas"
           : "/onboarding", { replace: true });
@@ -129,202 +151,222 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
     }
   };
 
+  const olho = (visivel: boolean, alternar: () => void) => (
+    <button type="button" onClick={alternar}
+      aria-label={visivel ? t("auth.hidePassword") : t("auth.showPassword")}
+      className="absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-xl text-[#3D3A33] hover:text-[#0A0A0A]">
+      {visivel ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+    </button>
+  );
+
   return (
-    <div className="min-h-screen bg-[#F5F3E7] flex">
-      {/* ===== Painel esquerdo: energia de "tô mudando de vida" ===== */}
-      <div className="hidden lg:flex lg:w-[44%] bg-[#EA4918] items-center justify-center p-12 relative overflow-hidden">
-        <div aria-hidden className="cria-blob pointer-events-none absolute -top-32 -right-24 w-96 h-96 bg-[#FFCF03] opacity-90 rounded-[38%_62%_55%_45%/48%_42%_58%_52%]" />
-        <div aria-hidden className="cria-blob cria-blob-slow pointer-events-none absolute -bottom-28 -left-20 w-72 h-72 bg-[#FF77B9] opacity-85 rounded-[55%_45%_40%_60%/50%_60%_40%_50%]" />
-        <div aria-hidden className="cria-blob cria-blob-fast pointer-events-none absolute top-[30%] right-[14%] w-16 h-16 bg-[#FDFBF5] opacity-90 rounded-full" />
-        <div aria-hidden className="cria-blob cria-blob-slow pointer-events-none absolute bottom-[24%] right-[38%] w-24 h-24 bg-[#0061EE] opacity-60 rounded-[45%_55%_60%_40%/55%_45%_55%_45%]" />
-        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="max-w-md relative z-10">
-          {/* A logo de verdade (versão clara), em vez de "CRIA." digitado. */}
-          <Logo variant="dark" className="h-9 w-auto" />
-          <h2 className="[font-family:'Baloo_2',sans-serif] font-extrabold text-white text-[2.6rem] leading-[1.08] tracking-tight mt-6 mb-2">
-            Hoje é o dia em que o caos acaba.
-          </h2>
-          <p className="[font-family:'Grand_Hotel',cursive] text-[#FFCF03] text-3xl -rotate-2 inline-block mb-6">bem-vindo(a) ao clube ✦</p>
-          <ul className="space-y-3 text-white/95 font-body text-[15px]">
-            <li className="flex items-start gap-3"><span className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#FFCF03] text-[#0A0A0A] text-[10px] font-black shrink-0">✓</span>Sua semana inteira planejada num lugar só</li>
-            <li className="flex items-start gap-3"><span className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#FFCF03] text-[#0A0A0A] text-[10px] font-black shrink-0">✓</span>IA que escreve no SEU tom de voz</li>
-            <li className="flex items-start gap-3"><span className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#FFCF03] text-[#0A0A0A] text-[10px] font-black shrink-0">✓</span>Insights reais do Instagram, sem achismo</li>
+    <div className="relative min-h-[100dvh] overflow-x-hidden bg-[#FFCF03] lg:bg-[#F5F3E7] font-body text-[#0A0A0A] flex flex-col lg:block">
+
+      {/* ── Cena do computador ── */}
+      <div aria-hidden className="hidden lg:block">
+        <div className={cn("absolute -left-[160px] -bottom-[300px] h-[560px] w-[1000px] bg-[#EA4918]", BLOB_A)} />
+        <div className={cn("absolute -right-[120px] -top-[140px] h-[420px] w-[470px] bg-[#FF77B9]", BLOB_B)} />
+      </div>
+      <div className="relative mx-auto hidden lg:block h-[100dvh] min-h-[700px] max-w-[1440px]">
+        <div aria-hidden className={cn("absolute left-[560px] top-[110px] h-[78px] w-[84px] bg-[#0061EE]", BLOB_B)} />
+        <a href="https://criasocialclub.com.br" aria-label="Cria, voltar pro site" className="absolute left-14 top-11">
+          <Logo variant="light" className="h-[50px] w-auto" />
+        </a>
+        <div className="absolute left-14 top-[150px] w-[560px] [@media(max-height:780px)]:top-[120px]">
+          <p className={cn(SCRIPT, "mb-1 origin-left -rotate-3 text-[40px] text-[#D9480F]")}>bem-vindo(a) ao clube</p>
+          <h1 className={cn(DISPLAY, "text-[58px] font-extrabold leading-[0.98] tracking-[-1px] [@media(max-height:780px)]:text-[48px]")}>
+            Hoje é o dia em que<br />
+            <span className="inline-block -rotate-2 rounded-[14px] bg-[#FFCF03] px-3">o caos acaba.</span>
+          </h1>
+          <ul className="mt-7 flex flex-col gap-3 text-[17px] text-[#3D3A33]">
+            {["Suas ideias, roteiros e calendário num lugar só", "IA que escreve no SEU tom de voz", "Insights reais do Instagram, sem achismo"].map((b) => (
+              <li key={b} className="flex items-center gap-3">
+                <span className={cn("grid h-7 w-7 shrink-0 place-items-center bg-[#01A652]", BLOB_A)}><Check className="h-4 w-4 text-white" strokeWidth={3} /></span>
+                {b}
+              </li>
+            ))}
           </ul>
-          <p className="mt-8 text-white/60 text-xs font-body">7 dias grátis · Cancela quando quiser</p>
-        </motion.div>
+        </div>
+        {/* Post-it e selo: a mesma mesa de criação do login, em versão curta. */}
+        <div aria-hidden className="pointer-events-none absolute bottom-16 left-16 [@media(max-height:820px)]:hidden">
+          <div className="h-[140px] w-[160px] -rotate-6 rounded-[4px_4px_22px_4px] bg-[#FFCF03] p-[13px_15px] shadow-[0_8px_18px_rgba(10,10,10,.22)]">
+            <p className="text-[11px] font-bold uppercase tracking-[.8px] text-[#6B4E00]">Ideia</p>
+            <p className={cn(SCRIPT, "mt-1 text-[24px] leading-[1.05]")}>primeiro post do meu novo ritmo</p>
+          </div>
+          <div className="absolute left-[190px] top-[40px] w-[170px] rotate-[5deg] rounded-[18px] bg-[#0A0A0A] p-[12px_14px] text-[#F5F3E7]">
+            <p className="text-[11px] font-bold tracking-[.6px] text-[#FFCF03]">7 DIAS GRÁTIS</p>
+            <p className={cn(DISPLAY, "mt-0.5 text-[15px] font-semibold leading-tight text-white")}>Cancela quando quiser, em 2 cliques.</p>
+          </div>
+        </div>
+        <img src="/stickers/selo-sem-formula.png" alt="" aria-hidden className="pointer-events-none absolute left-[440px] bottom-10 w-[120px] rotate-[10deg] [@media(max-height:820px)]:hidden" />
       </div>
 
-      {/* ===== Lado do formulário ===== */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-8 relative overflow-hidden">
-        <div aria-hidden className="cria-blob pointer-events-none absolute -top-24 -right-20 w-64 h-64 bg-[#FF77B9] opacity-70 rounded-[38%_62%_55%_45%/48%_42%_58%_52%] lg:opacity-40" />
-        <div aria-hidden className="cria-blob cria-blob-slow pointer-events-none absolute -bottom-20 -left-16 w-52 h-52 bg-[#FFCF03] opacity-70 rounded-[55%_45%_40%_60%/50%_60%_40%_50%] lg:opacity-40" />
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative z-10 w-full max-w-md bg-[#FDFBF5] border-2 border-[#0A0A0A] rounded-[28px] shadow-[0_10px_0_rgba(21,20,18,0.9)] p-7 sm:p-9"
-        >
-          <Link to="/" className="mb-5 flex justify-center">
-            <Logo className="h-12 w-auto" />
-          </Link>
+      {/* ── Topo do celular ── */}
+      <div className="relative lg:hidden shrink-0 overflow-hidden px-[22px] pb-5" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 20px)" }}>
+        <div aria-hidden className={cn("pointer-events-none absolute -right-[90px] -top-[70px] h-[200px] w-[230px] bg-[#FF77B9]", BLOB_B)} />
+        <a href="https://criasocialclub.com.br" aria-label="Cria, voltar pro site" className="relative inline-block">
+          <Logo variant="light" className="h-9 w-auto" />
+        </a>
+        <p className={cn(DISPLAY, "relative mt-3 text-[26px] font-extrabold leading-[1.05]")}>Hoje é o dia em que o caos acaba.</p>
+      </div>
 
-          {emailSent ? (
-            <div className="flex flex-col items-center text-center gap-4 py-6">
-              <div className="w-16 h-16 rounded-full bg-[#E5F2E9] border-2 border-[#01A652] flex items-center justify-center mb-1">
-                <Mail className="h-7 w-7 text-[#01A652]" />
-              </div>
-              <h2 className="text-2xl [font-family:'Baloo_2',sans-serif] font-extrabold text-[#0A0A0A]">
-                {t("signup.confirmTitle")}
-              </h2>
-              <p className="[font-family:'Grand_Hotel',cursive] text-2xl text-[#EA4918] -rotate-2 -mt-2">falta só um clique!</p>
-              <p className="text-[#0A0A0A]/60 font-body text-sm leading-relaxed">
-                {t("signup.confirmLead")}{" "}
-                <strong className="text-[#0A0A0A]">{emailValue}</strong>{t("signup.confirmTail")}
-              </p>
-              <p className="text-xs text-[#0A0A0A]/50 font-body">
-                {t("signup.notReceived")}{" "}
-                <button
-                  className="text-[#0061EE] underline underline-offset-2"
-                  onClick={() => setEmailSent(false)}
-                >
-                  {t("signup.tryAgain")}
-                </button>.
-              </p>
+      {/* ── O cartão: folha no celular, cartão largo em duas colunas no computador ── */}
+      <motion.main
+        /* Só opacidade: um `y` sobrescreveria o -translate-y-1/2 que centraliza o cartão. */
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.45 }}
+        className={cn(
+          "relative flex-1 bg-[#FDFBF5] border-t-2 border-[#0A0A0A] rounded-t-[32px] px-[22px] pt-6",
+          "lg:absolute lg:top-1/2 lg:-translate-y-1/2 lg:right-[max(40px,calc(50%-640px))] lg:w-[580px] lg:flex-none",
+          "lg:max-h-[calc(100dvh-32px)] lg:overflow-y-auto lg:rounded-[32px] lg:border-2 lg:shadow-[0_10px_0_#0A0A0A] lg:px-9 lg:pt-7 lg:pb-6",
+        )}
+        style={{ paddingBottom: "max(24px, env(safe-area-inset-bottom, 0px))" }}
+      >
+        {emailSent ? (
+          <div className="flex flex-col items-center gap-4 py-6 text-center">
+            <span className={cn("grid h-[76px] w-[76px] place-items-center bg-[#01A652] text-white", BLOB_A)}>
+              <Mail className="h-8 w-8" strokeWidth={2.4} />
+            </span>
+            <h2 className={cn(DISPLAY, "text-[28px] font-extrabold leading-[1.05]")}>{t("signup.confirmTitle")}</h2>
+            <p className={cn(SCRIPT, "-mt-2 -rotate-2 text-[26px] text-[#D9480F]")}>falta só um clique!</p>
+            <p className="text-[15px] leading-[1.5] text-[#5B574E]">
+              {t("signup.confirmLead")} <strong className="text-[#0A0A0A]">{emailValue}</strong>{t("signup.confirmTail")}
+            </p>
+            <p className="text-[13px] text-[#5B574E]">
+              {t("signup.notReceived")}{" "}
+              <button type="button" className="font-semibold text-[#0050C8] underline underline-offset-2" onClick={() => setEmailSent(false)}>
+                {t("signup.tryAgain")}
+              </button>.
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+            {/* Entrar / Criar conta: o mesmo seletor do login. */}
+            <div className="hidden lg:grid grid-cols-2 gap-1 rounded-full bg-[#EFEBDD] p-1">
+              <Link to="/login" className={cn(DISPLAY, "grid h-11 place-items-center rounded-full text-[16px] font-bold text-[#3D3A33] hover:text-[#0A0A0A]")}>{t("auth.signIn")}</Link>
+              <span className={cn(DISPLAY, "grid h-11 place-items-center rounded-full bg-[#0A0A0A] text-[16px] font-bold text-[#F5F3E7]")}>{t("signup.title")}</span>
             </div>
-          ) : (
-            <>
-              <h3 className="text-3xl text-center [font-family:'Baloo_2',sans-serif] font-extrabold text-[#0A0A0A] mb-1">{t("signup.title")}</h3>
-              <p className="text-center [font-family:'Grand_Hotel',cursive] text-2xl text-[#EA4918] -rotate-2 mb-5">sua nova fase começa agora!</p>
 
-              {compraPaga && (
-                <div className="mb-5 rounded-2xl border-2 border-[#01A652] bg-[#E5F2E9] px-4 py-3">
-                  <p className="text-sm [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">Pagamento confirmado! 🎉</p>
-                  <p className="text-[13px] font-body text-[#0A0A0A]/75 leading-snug mt-0.5">
-                    Seu plano <strong>CRIA {nomePlano}</strong> está reservado pra <strong>{compraPaga.email}</strong>. Crie a conta com esse e-mail e o acesso é liberado na hora.
-                  </p>
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className={cn(DISPLAY, "text-[28px] font-extrabold leading-[1.05] lg:text-[30px]")}>{t("signup.title")}</h2>
+              <p className={cn(SCRIPT, "shrink-0 -rotate-2 text-[22px] text-[#D9480F]")}>7 dias grátis</p>
+            </div>
+
+            {compraPaga && (
+              <div className="rounded-2xl border-2 border-[#01A652] bg-[#E5F2E9] px-4 py-3">
+                <p className={cn(DISPLAY, "text-[15px] font-bold")}>Pagamento confirmado!</p>
+                <p className="mt-0.5 text-[13px] leading-snug text-[#3D3A33]">
+                  Seu plano <strong>CRIA {nomePlano}</strong> está reservado pra <strong>{compraPaga.email}</strong>. Crie a conta com esse e-mail e o acesso é liberado na hora.
+                </p>
+              </div>
+            )}
+
+            {/* Tipo de conta: três opções lado a lado, baixinhas. */}
+            <fieldset>
+              <legend className={cn(rotulo, "mb-2")}>Você é</legend>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {TIPOS.map((tp) => {
+                  const ativo = accountType === tp.k;
+                  return (
+                    <button key={tp.k} type="button" onClick={() => setAccountType(tp.k)} aria-pressed={ativo}
+                      className={cn("flex items-center gap-2.5 rounded-2xl border-2 px-3 py-2.5 text-left transition-all sm:flex-col sm:items-start sm:gap-1.5",
+                        ativo ? "border-[#0A0A0A] bg-white shadow-[0_4px_0_#0A0A0A] -translate-y-0.5" : "border-[#CFC8B6] hover:border-[#0A0A0A]")}>
+                      <span className={cn("grid h-6 w-6 shrink-0 place-items-center", BLOB_A)} style={{ background: tp.cor }}>
+                        {ativo && <Check className="h-3.5 w-3.5 text-[#0A0A0A]" strokeWidth={3} />}
+                      </span>
+                      <span className="min-w-0">
+                        <span className={cn(DISPLAY, "block text-[14px] font-bold leading-tight")}>{tp.titulo}</span>
+                        <span className="block text-[12px] leading-snug text-[#5B574E]">{tp.desc}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {accountType === "parceiro" && (
+                <div className="mt-2.5">
+                  <div className="flex flex-wrap gap-1.5">
+                    {([["designer", "Design"], ["editor_video", "Edição de vídeo"], ["filmmaker", "Captação"], ["copy", "Copy"], ["trafego", "Tráfego"]] as const).map(([k, l]) => (
+                      <button key={k} type="button" onClick={() => setParceiroRole(k)} aria-pressed={parceiroRole === k}
+                        className={cn(DISPLAY, "h-9 rounded-full border-2 px-3.5 text-[13px] font-bold transition-colors",
+                          parceiroRole === k ? "border-[#0A0A0A] bg-[#0A0A0A] text-[#F5F3E7]" : "border-[#CFC8B6] text-[#3D3A33] hover:border-[#0A0A0A]")}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-[12px] leading-snug text-[#5B574E]">O trabalho que vem das agências é sempre grátis pra você.</p>
                 </div>
               )}
+            </fieldset>
 
-              {/* Tipo de conta */}
-              <div className="mb-6">
-                <p className="text-xs [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]/60 uppercase tracking-wider mb-2">Você é</p>
-                {/* TRÊS TIPOS desde 09/09/2026. O parceiro (designer, editor,
-                    copy, tráfego) só existia como consequência de convite da
-                    agência: quem descobria o CRIA sozinho não tinha porta. */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <button type="button" onClick={() => setAccountType("creator")}
-                    className={`rounded-2xl border-2 p-3 text-left transition-all duration-200 ${accountType === "creator" ? "border-[#EA4918] bg-[#FBE9E1] -translate-y-0.5 shadow-[0_4px_0_rgba(21,20,18,0.85)]" : "border-[#0A0A0A]/20 hover:border-[#0A0A0A]/50"}`}>
-                    <span className="block text-sm [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">Criador de conteúdo</span>
-                    <span className="block text-[11px] font-body text-[#0A0A0A]/60 leading-snug mt-0.5">Crio pro meu próprio perfil</span>
-                  </button>
-                  <button type="button" onClick={() => setAccountType("manager")}
-                    className={`rounded-2xl border-2 p-3 text-left transition-all duration-200 ${accountType === "manager" ? "border-[#EA4918] bg-[#FBE9E1] -translate-y-0.5 shadow-[0_4px_0_rgba(21,20,18,0.85)]" : "border-[#0A0A0A]/20 hover:border-[#0A0A0A]/50"}`}>
-                    <span className="block text-sm [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">Social mídia / agência</span>
-                    <span className="block text-[11px] font-body text-[#0A0A0A]/60 leading-snug mt-0.5">Gerencio clientes e equipe</span>
-                  </button>
-                  <button type="button" onClick={() => setAccountType("parceiro")}
-                    className={`rounded-2xl border-2 p-3 text-left transition-all duration-200 ${accountType === "parceiro" ? "border-[#EA4918] bg-[#FBE9E1] -translate-y-0.5 shadow-[0_4px_0_rgba(21,20,18,0.85)]" : "border-[#0A0A0A]/20 hover:border-[#0A0A0A]/50"}`}>
-                    <span className="block text-sm [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">Designer / editor</span>
-                    <span className="block text-[11px] font-body text-[#0A0A0A]/60 leading-snug mt-0.5">Produzo pras agências</span>
-                  </button>
-                </div>
-
-                {accountType === "parceiro" && (
-                  <div className="mt-3">
-                    <p className="text-xs [font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]/60 uppercase tracking-wider mb-2">O que você faz</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {([["designer", "Design"], ["editor_video", "Edição de vídeo"], ["filmmaker", "Captação / filmmaker"], ["copy", "Copy"], ["trafego", "Tráfego"]] as const).map(([k, l]) => (
-                        <button key={k} type="button" onClick={() => setParceiroRole(k)}
-                          className={`rounded-xl border-2 px-2.5 py-2 text-[12px] [font-family:'Baloo_2',sans-serif] font-bold transition-all ${parceiroRole === k ? "border-[#EA4918] bg-[#FBE9E1] text-[#0A0A0A]" : "border-[#0A0A0A]/20 text-[#0A0A0A]/70 hover:border-[#0A0A0A]/50"}`}>
-                          {l}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-[11px] font-body text-[#0A0A0A]/55 mt-2 leading-snug">
-                      O trabalho que vem das agências é sempre grátis pra você. Os módulos do Cria ficam disponíveis
-                      se um dia você quiser atender cliente direto.
-                    </p>
-                  </div>
-                )}
+            {/* Duas colunas no computador, uma no celular. */}
+            <div className="grid grid-cols-1 gap-x-3 gap-y-3.5 lg:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="name" className={rotulo}>{t("signup.name")}</label>
+                <input id="name" type="text" autoComplete="name" placeholder="Nome ou apelido"
+                  {...register("name")} aria-invalid={!!errors.name} className={campo} />
+                {errors.name && <p className={erroTxt}>{errors.name.message}</p>}
               </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="email" className={rotulo}>{t("auth.email")}</label>
+                <input id="email" type="email" autoComplete="email" inputMode="email" placeholder="seu@email.com"
+                  {...register("email")} aria-invalid={!!errors.email} className={campo} />
+                {errors.email && <p className={erroTxt}>{errors.email.message}</p>}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="password" className={rotulo}>{t("auth.password")}</label>
+                <div className="relative">
+                  <input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" placeholder={t("signup.passwordPlaceholder")}
+                    {...register("password")} aria-invalid={!!errors.password} className={cn(campo, "pr-12")} />
+                  {olho(showPassword, () => setShowPassword((v) => !v))}
+                </div>
+                {errors.password && <p className={erroTxt}>{errors.password.message}</p>}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="confirmPassword" className={rotulo}>{t("signup.confirmPassword")}</label>
+                <div className="relative">
+                  <input id="confirmPassword" type={showConfirm ? "text" : "password"} autoComplete="new-password" placeholder={t("signup.confirmPlaceholder")}
+                    {...register("confirmPassword")} aria-invalid={!!errors.confirmPassword} className={cn(campo, "pr-12")} />
+                  {olho(showConfirm, () => setShowConfirm((v) => !v))}
+                </div>
+                {errors.confirmPassword && <p className={erroTxt}>{errors.confirmPassword.message}</p>}
+              </div>
+            </div>
 
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="name" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">{t("signup.name")}</Label>
-                  <Input id="name" type="text" autoComplete="name" placeholder={t("signup.namePlaceholder")} {...register("name")} className="rounded-2xl h-12 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
-                  {errors.name && <p className="text-xs text-[#EA4918] mt-1">{errors.name.message}</p>}
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="email" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">{t("auth.email")}</Label>
-                  <Input id="email" type="email" autoComplete="email" inputMode="email" placeholder="seu@email.com" {...register("email")} className="rounded-2xl h-12 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
-                  {errors.email && <p className="text-xs text-[#EA4918] mt-1">{errors.email.message}</p>}
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="password" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">{t("auth.password")}</Label>
-                  <div className="relative">
-                    <Input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" placeholder={t("signup.passwordPlaceholder")} {...register("password")} className="rounded-2xl h-12 pr-10 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0A0A0A]/50 hover:text-[#0A0A0A] transition-colors"
-                      aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
-                      tabIndex={-1}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  {errors.password && <p className="text-xs text-[#EA4918] mt-1">{errors.password.message}</p>}
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="confirmPassword" className="[font-family:'Baloo_2',sans-serif] font-bold text-[#0A0A0A]">{t("signup.confirmPassword")}</Label>
-                  <div className="relative">
-                    <Input id="confirmPassword" type={showConfirm ? "text" : "password"} autoComplete="new-password" placeholder={t("signup.confirmPlaceholder")} {...register("confirmPassword")} className="rounded-2xl h-12 pr-10 bg-[#FDFBF5] border-2 border-[#0A0A0A]/25 focus-visible:border-[#0061EE] focus-visible:ring-0 text-[#0A0A0A]" />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirm((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0A0A0A]/50 hover:text-[#0A0A0A] transition-colors"
-                      aria-label={showConfirm ? t("auth.hidePassword") : t("auth.showPassword")}
-                      tabIndex={-1}
-                    >
-                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  {errors.confirmPassword && <p className="text-xs text-[#EA4918] mt-1">{errors.confirmPassword.message}</p>}
-                </div>
-                {formError && (
-                  <div className="rounded-2xl border-2 border-[#EA4918]/40 bg-[#FBE9E1] px-3 py-2.5 text-sm text-[#EA4918] font-body font-semibold">
-                    {formError}
-                  </div>
-                )}
-                <label className="flex items-start gap-3 cursor-pointer select-none">
-                  <input type="checkbox" checked={aceitouTermos}
-                    onChange={(e) => { setAceitouTermos(e.target.checked); if (e.target.checked) setErroTermos(false); }}
-                    className="mt-1 h-5 w-5 shrink-0 rounded border-2 border-[#0A0A0A]/30 accent-[#EA4918]" />
-                  <span className="text-[13px] text-[#0A0A0A]/70 font-body leading-snug">
-                    Li e aceito os{" "}
-                    <Link to="/termos" target="_blank" className="text-[#0061EE] underline underline-offset-2">Termos de Uso</Link>
-                    {" "}e a{" "}
-                    <Link to="/privacidade" target="_blank" className="text-[#0061EE] underline underline-offset-2">Política de Privacidade</Link>.
-                  </span>
-                </label>
-                {erroTermos && <p className="text-xs text-[#EA4918] -mt-2">Pra criar a conta, precisa aceitar os termos.</p>}
-                <Button
-                  type="submit"
-                  size="lg"
-                  disabled={loading}
-                  className="w-full h-[52px] rounded-full bg-[#EA4918] hover:bg-[#FF5A24] text-white text-base [font-family:'Baloo_2',sans-serif] font-bold shadow-[0_6px_0_rgba(21,20,18,0.9)] hover:-translate-y-0.5 hover:shadow-[0_8px_0_rgba(21,20,18,0.9)] active:translate-y-0.5 active:shadow-[0_3px_0_rgba(21,20,18,0.9)] transition-all"
-                >
-                  {loading ? t("signup.creating") : t("signup.createMyAccount")}
-                </Button>
-                <p className="text-center text-[11px] text-[#0A0A0A]/50 font-body -mt-1">7 dias grátis · Sem compromisso · Cancela em 2 cliques</p>
-              </form>
-              <p className="text-sm text-[#0A0A0A]/60 font-body mt-5 text-center">
-                {t("signup.haveAccount")}{" "}
-                <Link to="/login" className="text-[#0061EE] font-medium underline underline-offset-2 hover:opacity-80">{t("auth.signIn")}</Link>
+            {formError && (
+              <p role="alert" className="flex items-center gap-1.5 rounded-2xl border-2 border-[#F4B79C] bg-[#FFE3D6] px-3 py-2.5 text-[14px] font-semibold text-[#B3330C]">
+                <AlertCircle className="h-4 w-4 shrink-0" /> {formError}
               </p>
-            </>
-          )}
-        </motion.div>
-      </div>
+            )}
+
+            <div>
+              <label className="flex cursor-pointer select-none items-start gap-3">
+                <input type="checkbox" checked={aceitouTermos}
+                  onChange={(e) => { setAceitouTermos(e.target.checked); if (e.target.checked) setErroTermos(false); }}
+                  className="mt-0.5 h-5 w-5 shrink-0 rounded border-2 border-[#0A0A0A]/30 accent-[#EA4918]" />
+                <span className="text-[13.5px] leading-snug text-[#3D3A33]">
+                  Li e aceito os{" "}
+                  <Link to="/termos" target="_blank" className="font-semibold text-[#0050C8] underline underline-offset-2">Termos de Uso</Link>
+                  {" "}e a{" "}
+                  <Link to="/privacidade" target="_blank" className="font-semibold text-[#0050C8] underline underline-offset-2">Política de Privacidade</Link>.
+                </span>
+              </label>
+              {erroTermos && <p className={cn(erroTxt, "mt-1.5")}>Pra criar a conta, precisa aceitar os termos.</p>}
+            </div>
+
+            <button type="submit" disabled={loading}
+              className={cn(DISPLAY, "h-14 w-full rounded-full border-2 border-[#0A0A0A] bg-[#EA4918] text-[18px] font-extrabold text-white shadow-[0_5px_0_#0A0A0A] transition-all hover:-translate-y-0.5 hover:bg-[#FF5A24] active:translate-y-0.5 active:shadow-[0_2px_0_#0A0A0A] disabled:opacity-70 disabled:hover:translate-y-0")}>
+              {loading ? t("signup.creating") : t("signup.createMyAccount")}
+            </button>
+
+            <p className="text-center text-[14px] text-[#3D3A33] lg:hidden">
+              {t("signup.haveAccount")}{" "}
+              <Link to="/login" className="font-bold text-[#0050C8] underline underline-offset-[3px]">{t("auth.signIn")}</Link>
+            </p>
+            <p className="-mt-1 hidden text-center text-[12.5px] text-[#5B574E] lg:block">Sem compromisso. Cancela em 2 cliques.</p>
+          </form>
+        )}
+      </motion.main>
     </div>
   );
 };
