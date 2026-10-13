@@ -65,7 +65,8 @@ export default function Privacidade() {
               se você conectar sua conta profissional do Instagram, coletamos métricas
               (alcance, interações, salvos, visualizações), informações básicas do perfil
               (nome de usuário, número de seguidores) e dados das suas publicações (legenda,
-              tipo de mídia, miniatura, data). Acesso somente leitura, não publicamos nada por você.
+              tipo de mídia, miniatura, data). Se você ativar a publicação pelo Cria, também
+              enviamos ao Instagram a mídia e a legenda dos posts que você mandar publicar.
             </p>
           </div>
 
@@ -137,7 +138,7 @@ export default function Privacidade() {
               </li>
               <li>
                 <strong className="text-foreground">Meta (Facebook/Instagram):</strong>{" "}
-                conexão da sua conta do Instagram (só com a sua autorização) e,
+                conexão da sua conta do Instagram para métricas e publicação (só com a sua autorização) e,
                 se você aceitar no aviso de cookies, medição de anúncios via Pixel
                 e API de Conversões
               </li>
@@ -240,13 +241,20 @@ export default function Privacidade() {
                 ler as métricas (alcance, interações, salvos, visualizações) da sua conta e
                 das suas publicações, para mostrar sua análise de desempenho no painel.
               </li>
+              <li>
+                <strong className="text-foreground">instagram_business_content_publish:</strong>{" "}
+                publicar na sua conta as fotos, carrosséis, reels e stories que você (ou a
+                social mídia que você autorizou) preparou no Cria, na hora em que você clica
+                em Publicar ou no horário que você agendou.
+              </li>
             </ul>
             <p className="text-muted-foreground leading-relaxed mt-3">
-              O acesso é <strong className="text-foreground">somente leitura</strong>: o CRIA
-              não publica, edita nem exclui conteúdo no seu Instagram. Os dados do Instagram
-              não são usados para publicidade, não são vendidos a terceiros e não são usados
-              para treinar modelos de IA; o acesso se restringe às funcionalidades de análise
-              descritas acima.
+              O CRIA <strong className="text-foreground">só publica o que você mandou publicar</strong>,
+              com a mídia e a legenda que você revisou, e nunca edita nem exclui conteúdo que
+              já está no seu Instagram. Sem a permissão de publicação, o acesso é somente
+              leitura. Os dados do Instagram não são usados para publicidade, não são vendidos
+              a terceiros e não são usados para treinar modelos de IA; o acesso se restringe
+              às funcionalidades de análise e publicação descritas acima.
             </p>
           </div>
 

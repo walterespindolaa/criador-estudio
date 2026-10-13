@@ -20,7 +20,7 @@ export default function Termos() {
           Termos de Uso
         </h1>
         <p className="text-muted-foreground text-sm mb-12">
-          Última atualização: 23 de setembro de 2026 · Versão 1.1
+          Última atualização: 13 de outubro de 2026 · Versão 1.2
         </p>
 
         <section className="prose prose-sm max-w-none space-y-8 text-foreground">
@@ -114,6 +114,15 @@ export default function Termos() {
               Você concede ao cria apenas a licença técnica necessária para
               operar o serviço, armazenar, processar e exibir seu conteúdo
               para você mesmo, dentro da plataforma.
+            </p>
+            <p className="text-muted-foreground leading-relaxed mt-2">
+              <strong className="text-foreground">Publicação nas redes.</strong>{" "}
+              Se você conectar o Instagram e autorizar a publicação, o cria envia
+              à sua conta, em seu nome, só os posts que você (ou a social mídia
+              que você autorizou) mandou publicar ou agendou, com a mídia e a
+              legenda revisadas no app. Você continua responsável pelo conteúdo
+              publicado e pode desconectar a conta a qualquer momento em
+              Configurações → Integrações.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
               Você se compromete a não utilizar a plataforma para criar,
