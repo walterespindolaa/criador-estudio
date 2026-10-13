@@ -111,18 +111,36 @@ function renderMarkdown(text: string) {
     .replace(/\n/g, "<br />");
 }
 
-/** Separa o texto da resposta do bloco ```cria (ou ```json) com as ideias. */
+/** Separa o texto da resposta do bloco de ideias.
+ *  O bloco pode chegar de dois jeitos: entre crases (```cria ... ```), como foi
+ *  pedido, ou CRU, só o JSON solto no fim. O segundo é o que acontece hoje: a
+ *  edge passa a resposta pelo humanizar() (_shared/voz-cria.ts), que apaga as
+ *  crases de bloco de código (Walter, 12/10/2026: "tá zoado o texto ali", o
+ *  JSON aparecia na tela). Por isso, sem crases, procura o {"ideias" no texto. */
 export function separarResposta(raw: string): { texto: string; ideias: IdeiaCria[]; sugestoes: string[] } {
+  const limpar = (t: string) => t.replace(/```\w*\n?|\n?```/g, "").trim();
   const re = /```(?:cria|json)\s*([\s\S]*?)(?:```|$)/gi;
   let ultimo: RegExpExecArray | null = null;
   for (let m = re.exec(raw); m; m = re.exec(raw)) {
     ultimo = m;
     if (m[0].length === 0) break;
   }
-  if (!ultimo) return { texto: raw.replace(/```\w*\n?|\n?```/g, "").trim(), ideias: [], sugestoes: [] };
-  const texto = (raw.slice(0, ultimo.index) + raw.slice(ultimo.index + ultimo[0].length)).replace(/```\w*\n?|\n?```/g, "").trim();
+  let antes: string;
+  let bloco: string;
+  let depois = "";
+  if (ultimo) {
+    antes = raw.slice(0, ultimo.index);
+    bloco = ultimo[1];
+    depois = raw.slice(ultimo.index + ultimo[0].length);
+  } else {
+    const i = raw.search(/\{\s*"(?:ideias|sugestoes)"\s*:/);
+    if (i < 0) return { texto: limpar(raw), ideias: [], sugestoes: [] };
+    antes = raw.slice(0, i);
+    bloco = raw.slice(i);
+  }
+  const texto = limpar(antes + depois);
   try {
-    const bruto = ultimo[1].trim();
+    const bruto = bloco.trim();
     const obj = JSON.parse(bruto.slice(bruto.indexOf("{"), bruto.lastIndexOf("}") + 1)) as { ideias?: unknown; sugestoes?: unknown };
     const ideias = (Array.isArray(obj.ideias) ? obj.ideias : [])
       .filter((i): i is IdeiaCria => !!i && typeof i === "object" && typeof (i as IdeiaCria).titulo === "string" && !!(i as IdeiaCria).titulo.trim())
@@ -133,9 +151,16 @@ export function separarResposta(raw: string): { texto: string; ideias: IdeiaCria
     return { texto, ideias, sugestoes };
   } catch {
     // Bloco quebrado (resposta cortada): mostra o que deu de texto e avisa.
-    const base = texto || raw.replace(/```\w*\n?|\n?```/g, "").trim();
-    return { texto: `${base}\n\nA resposta veio cortada no meio. Pede de novo que eu refaço.`.trim(), ideias: [], sugestoes: [] };
+    return { texto: `${texto}\n\nA resposta veio cortada no meio. Pede de novo que eu refaço.`.trim(), ideias: [], sugestoes: [] };
   }
+}
+
+/** Conversa guardada antes desta correção: a resposta ficou com o JSON cru no
+ *  texto. Ao abrir do histórico, separa de novo. */
+function recuperarMensagem(m: MensagemCria): MensagemCria {
+  if (m.role !== "assistant" || m.ideias?.length || !/\{\s*"(?:ideias|sugestoes)"\s*:/.test(m.content)) return m;
+  const { texto, ideias, sugestoes } = separarResposta(m.content);
+  return { ...m, content: texto, ...(ideias.length ? { ideias } : {}), ...(sugestoes.length ? { sugestoes } : {}) };
 }
 
 /** O que a IA "lembra" de uma resposta com cartões: o texto mais as ideias. */
@@ -278,7 +303,7 @@ export function CriaAIPanel() {
   };
 
   const abrirConversa = (c: ConversaCria) => {
-    setMessages(Array.isArray(c.mensagens) ? c.mensagens : []);
+    setMessages(Array.isArray(c.mensagens) ? c.mensagens.map(recuperarMensagem) : []);
     setConversaId(c.id);
     setHistoricoAberto(false);
   };
