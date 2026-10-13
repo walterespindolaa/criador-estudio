@@ -128,8 +128,6 @@ project_id = "ecbzfjzoqidowrsfsfih"
   [functions.trash-purge]
     verify_jwt = false
 
-  [functions.exportar-storage]
-    verify_jwt = true
   [functions.tutorial-voz]
     verify_jwt = true
   [functions.tutorial-bunny]
@@ -152,7 +150,3 @@ project_id = "ecbzfjzoqidowrsfsfih"
     verify_jwt = true
   [functions.video-analyze]
     verify_jwt = true
-  [functions.migrar-segredos]
-    verify_jwt = true
-  [functions.importar-storage]
-    verify_jwt = false
