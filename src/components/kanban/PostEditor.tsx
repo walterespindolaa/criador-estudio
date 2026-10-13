@@ -1317,7 +1317,14 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   abaixo da data, porque "publicar sozinho na data e hora" é a
                   continuação natural dela. Só aparece pra conta que pode
                   publicar pelo Cria; pros outros a tela fica igual. */}
-              {post?.id && <PublicarNoInstagram postId={post.id} />}
+              {post?.id && (
+                <PublicarNoInstagram
+                  postId={post.id}
+                  // O banco já move o card (ig_agendar_publicacao); aqui só alinha o
+                  // status da tela pra o próximo salvar não desfazer.
+                  onAgendou={(ligado) => setStatus((s) => (ligado ? "agendado" : s === "agendado" ? "editando" : s))}
+                />
+              )}
 
               {/* MIDIA no INICIO do ponto 1 (Walter, 01/09): a coluna da
                   direita ficou SO com a previa, sempre visivel; a midia abre o

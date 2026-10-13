@@ -255,7 +255,9 @@ export function PublicarNoInstagramView({
   );
 }
 
-export function PublicarNoInstagram({ postId }: { postId: string | null | undefined }) {
+/* onAgendou: o editor do criador guarda o status em estado local; sem avisar,
+   o próximo salvar devolvia o card pra coluna antiga depois de agendar. */
+export function PublicarNoInstagram({ postId, onAgendou }: { postId: string | null | undefined; onAgendou?: (ligado: boolean) => void }) {
   const { data: est } = usePublicacaoDoPost(postId);
   const { data: cx } = useConexaoDoPost(postId);
   const publicar = usePublicarAgora(postId);
@@ -275,7 +277,7 @@ export function PublicarNoInstagram({ postId }: { postId: string | null | undefi
       checagem={checar.data ?? null}
       erroChecagem={checar.error ? (checar.error as Error).message : null}
       onPublicar={() => publicar.mutate()}
-      onAuto={(v) => agendar.mutate(v)}
+      onAuto={(v) => agendar.mutate(v, { onSuccess: () => onAgendou?.(v) })}
       onChecar={() => checar.mutate()}
     />
   );
