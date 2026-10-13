@@ -304,6 +304,18 @@ export default function Privacidade() {
               (Autoridade Nacional de Proteção de Dados) conforme exigido pela
               LGPD.
             </p>
+            <p className="text-muted-foreground leading-relaxed mt-2">
+              <strong>Pedidos de autoridades públicas.</strong> Só entregamos
+              dados pessoais a uma autoridade pública quando houver ordem
+              judicial ou obrigação legal válida. Todo pedido passa por análise
+              de legitimidade antes de qualquer resposta; pedidos que
+              considerarmos ilegais, excessivos ou sem base legal serão
+              contestados pelos meios cabíveis. Quando a entrega for obrigatória,
+              fornecemos apenas o mínimo necessário para cumprir o pedido. Cada
+              pedido fica registrado, com a resposta dada, a base legal e as
+              pessoas envolvidas na decisão. Sempre que a lei permitir,
+              avisamos o titular dos dados antes da entrega.
+            </p>
           </div>
 
           <div>
