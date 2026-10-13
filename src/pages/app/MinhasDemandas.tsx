@@ -2187,7 +2187,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                                 <button type="button" aria-label={`Remover ${m.nome ?? "arquivo"}`} title="Remover este arquivo"
                                   disabled={remover.isPending}
                                   onClick={() => {
-                                    if (window.confirm(`Remover "${m.nome ?? "este arquivo"}" do card?`)) remover.mutate(m.url as string);
+                                    if (window.confirm(`Remover "${m.nome ?? "este arquivo"}" da peça? Some pra social mídia também.`)) remover.mutate(m.url as string);
                                   }}
                                   className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/60 text-white shadow hover:bg-red-600 transition-colors disabled:opacity-50">
                                   {remover.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3.5 w-3.5" strokeWidth={2.5} />}
@@ -2255,7 +2255,9 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                       <Check className="h-3.5 w-3.5" /> Sua entrega
                     </p>
                     <p className="text-[12px] font-body text-green-900/70 mb-3 leading-snug">
-                      Suba a arte a qualquer momento pra social mídia ver. Marcar como entregue é o passo final.
+                      {(card.revisoes ?? 0) > 0
+                        ? "Na revisão, suba só o que mudou: arquivo com o mesmo nome substitui o anterior e o resto continua na peça."
+                        : "Suba a arte a qualquer momento pra social mídia ver. Marcar como entregue é o passo final."}
                     </p>
                     {/* TRÊS PASSOS GUIADOS (pente fino 24/09/2026). O parceiro novo
                         não sabia se "subir" já entregava. Agora ele vê onde está:
