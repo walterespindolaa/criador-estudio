@@ -91,7 +91,12 @@ export function usePosts(options?: { limit?: number; enabled?: boolean }) {
     onError: (_e, _v, ctx) => {
       if (ctx?.snapshot) for (const [key, data] of ctx.snapshot) queryClient.setQueryData(key, data);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["posts", userId] }),
+    onSettled: (_d, _e, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["posts", userId] });
+      // O painel "Publicar no Instagram" lê data e hora do banco: sem isto, salvar
+      // a data não liberava o "Publicar automaticamente" até recarregar a página.
+      if (vars?.id) queryClient.invalidateQueries({ queryKey: ["ig-publicacao", vars.id] });
+    },
   });
 
   const deletePost = useMutation({

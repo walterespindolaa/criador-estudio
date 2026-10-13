@@ -51,6 +51,9 @@ export function usePublicacaoDoPost(postId: string | null | undefined) {
   return useQuery<EstadoPublicacao | null>({
     queryKey: ["ig-publicacao", postId],
     enabled: !!postId,
+    // Sempre rebusca ao abrir o post (o padrão do app guarda 5 min e o painel
+    // mostrava a data antiga).
+    staleTime: 0,
     // Enquanto publica, atualiza sozinho pra a pessoa ver o resultado.
     refetchInterval: (q) => (q.state.data?.publish_status === "publicando" ? 4000 : false),
     queryFn: async () => {
