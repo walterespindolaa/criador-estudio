@@ -16,6 +16,22 @@
 
 export type TipoCampo = "texto" | "longo" | "email" | "tel" | "aniversario" | "dia" | "tags" | "escolha";
 
+/** Quem responde: uma pessoa que é a marca, ou uma empresa. Escolhido na hora
+ *  de gerar o link (pedido da Gabi, 13/10/2026). Muda a VOZ das perguntas, não
+ *  quem assina o contrato: especialista com CNPJ existe, por isso o PF/CNPJ do
+ *  contrato só vem pré-marcado e o cliente pode trocar. */
+export type PerfilIntake = "especialista" | "empresa";
+export const PERFIS_INTAKE: { valor: PerfilIntake; nome: string; explica: string }[] = [
+  { valor: "especialista", nome: "Especialista", explica: "Uma pessoa que é a marca: médica, advogada, nutri, consultora" },
+  { valor: "empresa", nome: "Empresa", explica: "Loja, clínica, restaurante, marca com equipe" },
+];
+/** O PF/CNPJ que já vem marcado no contrato pra cada perfil. */
+export const CONTRATO_DO_PERFIL: Record<PerfilIntake, string> = {
+  especialista: "Pessoa física",
+  empresa: "Empresa (CNPJ)",
+};
+const perfilOk = (p?: string | null): PerfilIntake => (p === "empresa" ? "empresa" : "especialista");
+
 export type CampoIntake = {
   /** A mesma chave que a ficha usa (coluna do cadastro ou campo do brandbook). */
   chave: string;
@@ -31,6 +47,11 @@ export type CampoIntake = {
   obrigatorio?: boolean;
   /** Ocupa a linha inteira no desktop. */
   largo?: boolean;
+  /** Texto da pergunta quando o link é de EMPRESA (sem isso, vale o label). */
+  labelEmpresa?: string;
+  ajudaEmpresa?: string;
+  /** Só aparece pra este perfil. */
+  soPerfil?: PerfilIntake;
 };
 
 export type EtapaIntake = { titulo: string; descricao: string; campos: CampoIntake[] };
@@ -44,17 +65,22 @@ export const ETAPAS_INTAKE: EtapaIntake[] = [
   /* COMEÇAR PELO PORQUÊ (pedido da Gabi, 08/09/2026). Antes o formulário
      abria com CNPJ e endereço: burocracia de cara, com o cliente ainda frio.
      Estas quatro perguntas são as que ele responde com vontade, e são as que
-     mais rendem conteúdo depois. A papelada vem quando ele já está embalado. */
+     mais rendem conteúdo depois. A papelada vem quando ele já está embalado.
+     ATUALIZAÇÃO 13/10/2026: a Gabi pediu o contrato de volta na frente. A
+     posição aqui no array NÃO muda (é o índice gravado nos links); quem manda
+     na ordem que o cliente vê é ORDEM_ETAPAS, mais abaixo. */
   {
     titulo: "Por que conteúdo",
     descricao: "Comece por aqui. É a parte que mais me ajuda a entender o que fazer com o seu perfil.",
     campos: [
       { chave: "whyContent", label: "Por que você quer começar ou fortalecer sua produção de conteúdo?",
+        labelEmpresa: "Por que a empresa quer começar ou fortalecer a produção de conteúdo?",
         tipo: "longo", obrigatorio: true, largo: true },
       { chave: "mainGoal", label: "O que você espera conquistar através do conteúdo?",
         ajuda: "Ex.: passar autoridade, transformar conhecimento em conteúdo, gerar mais oportunidades.",
         tipo: "longo", largo: true },
       { chave: "perception6m", label: "O que você gostaria que as pessoas pensassem sobre você depois de consumir seus conteúdos?",
+        labelEmpresa: "O que você gostaria que as pessoas pensassem sobre a marca depois de consumir os conteúdos?",
         tipo: "longo", largo: true },
       { chave: "blockedTopic", label: "Existe algum tema que você gostaria de começar a abordar, mas ainda não encontrou uma forma de fazer isso?",
         ajuda: "Pode ser um assunto que te trava, dá insegurança ou você não sabe por onde começar.",
@@ -81,11 +107,12 @@ export const ETAPAS_INTAKE: EtapaIntake[] = [
       // porque é o que alimenta a mensalidade no Caixa.
       { chave: "payment_day", label: "Que dia do mês fica melhor pro pagamento?",
         ajuda: "Escolha o dia que combina com o seu caixa.", tipo: "dia" },
-      { chave: "marketSince", label: "Há quanto tempo você atua nesse mercado?", ajuda: "Ex.: 8 anos, desde 2018." },
+      { chave: "marketSince", label: "Há quanto tempo você atua nesse mercado?", ajuda: "Ex.: 8 anos, desde 2018.",
+        labelEmpresa: "Há quanto tempo a empresa atua nesse mercado?" },
       { chave: "birthday", label: "Seu aniversário", ajuda: "Só o dia e o mês. A gente gosta de lembrar.",
-        tipo: "aniversario", soSe: { chave: "contract_type", valor: "Pessoa física" } },
+        tipo: "aniversario", soPerfil: "especialista" },
       { chave: "birthday", label: "Aniversário da empresa", ajuda: "O dia e o mês em que ela foi fundada. Vira conteúdo todo ano.",
-        tipo: "aniversario", soSe: { chave: "contract_type", valor: "Empresa (CNPJ)" } },
+        tipo: "aniversario", soPerfil: "empresa" },
     ],
   },
   {
@@ -105,8 +132,10 @@ export const ETAPAS_INTAKE: EtapaIntake[] = [
     campos: [
       { chave: "mainProducts", label: "Quais produtos ou serviços você oferece?", tipo: "longo", obrigatorio: true, largo: true },
       { chave: "offer", label: "O que cada um resolve pro cliente? Algum precisa de destaque?", tipo: "longo", largo: true },
-      { chave: "specialty", label: "No que você é realmente bom?", ajuda: "A especialidade técnica, o que você domina.", tipo: "longo", largo: true },
-      { chave: "valueProp", label: "Por que escolher você e não um concorrente?", tipo: "longo", largo: true },
+      { chave: "specialty", label: "No que você é realmente bom?", ajuda: "A especialidade técnica, o que você domina.", tipo: "longo", largo: true,
+        labelEmpresa: "No que a empresa é referência?", ajudaEmpresa: "O que ela faz melhor que os outros." },
+      { chave: "valueProp", label: "Por que escolher você e não um concorrente?", tipo: "longo", largo: true,
+        labelEmpresa: "Por que escolher a empresa e não um concorrente?" },
       { chave: "avoid", label: "O que você não quer transmitir na comunicação?",
         ajuda: "Vale citar tom, assunto ou qualquer coisa que não combina com a marca.",
         tipo: "longo", largo: true },
@@ -119,7 +148,8 @@ export const ETAPAS_INTAKE: EtapaIntake[] = [
     titulo: "A história e o propósito",
     descricao: "É daqui que sai o conteúdo que ninguém consegue copiar.",
     campos: [
-      { chave: "history", label: "Como e por que tudo isso começou?", tipo: "longo", largo: true },
+      { chave: "history", label: "Como e por que tudo isso começou?", tipo: "longo", largo: true,
+        labelEmpresa: "Como e por que a empresa nasceu?" },
       { chave: "brandValues", label: "De quais valores você não abre mão?", tipo: "longo", largo: true },
       { chave: "impact", label: "Que transformação você quer gerar na vida do cliente?", tipo: "longo", largo: true },
       { chave: "vision", label: "Onde você quer chegar nos próximos anos?", tipo: "longo", largo: true },
@@ -145,7 +175,8 @@ export const ETAPAS_INTAKE: EtapaIntake[] = [
     descricao: "Isso define o jeito de escrever de todo post daqui pra frente.",
     campos: [
       { chave: "toneOfVoice", label: "Que tom combina com a marca?", ajuda: "Pode marcar mais de um.", tipo: "tags", opcoes: TONS_INTAKE, largo: true },
-      { chave: "archetype", label: "Se a marca fosse uma pessoa, como ela seria?", tipo: "longo", largo: true },
+      { chave: "archetype", label: "Se a marca fosse uma pessoa, como ela seria?", tipo: "longo", largo: true,
+        soPerfil: "empresa" },
       { chave: "admiredBrands", label: "Que marcas você admira na comunicação? Por quê?", tipo: "longo", largo: true },
       { chave: "contentThemes", label: "Sobre o que você gostaria de falar nas redes?", tipo: "longo", largo: true },
       { chave: "colorPalette", label: "Você já tem cores e fontes definidas?", ajuda: "Se tiver os códigos das cores, cole aqui.", largo: true },
@@ -159,12 +190,23 @@ export const TODOS_CAMPOS_INTAKE = ETAPAS_INTAKE.flatMap((e) => e.campos);
    `steps` guarda os índices escolhidos na hora de gerar o link. Vazio ou null
    significa TODAS: é o que vale pros links criados antes disso existir, e é o
    padrão de quem não quiser escolher nada. */
-export function etapasDoEnvio(steps?: number[] | null): EtapaIntake[] {
-  if (!steps || steps.length === 0) return ETAPAS_INTAKE;
-  const escolhidas = steps
-    .filter((i) => i >= 0 && i < ETAPAS_INTAKE.length)
-    .sort((a, b) => a - b);
-  return escolhidas.length ? escolhidas.map((i) => ETAPAS_INTAKE[i]) : ETAPAS_INTAKE;
+export function etapasDoEnvio(steps?: number[] | null, perfil?: string | null): EtapaIntake[] {
+  const p = perfilOk(perfil);
+  const validos = (steps ?? []).filter((i) => i >= 0 && i < ETAPAS_INTAKE.length);
+  const usar = validos.length ? validos : TODAS_ETAPAS;
+  return ORDEM_ETAPAS.filter((i) => usar.includes(i)).map((i) => adaptarEtapa(ETAPAS_INTAKE[i], p));
+}
+
+/** A etapa com as perguntas na voz do perfil, sem as que não valem pra ele. */
+function adaptarEtapa(e: EtapaIntake, p: PerfilIntake): EtapaIntake {
+  return {
+    ...e,
+    campos: e.campos
+      .filter((c) => !c.soPerfil || c.soPerfil === p)
+      .map((c) => (p === "empresa"
+        ? { ...c, label: c.labelEmpresa ?? c.label, ajuda: c.ajudaEmpresa ?? c.ajuda }
+        : c)),
+  };
 }
 
 /** Presets pra não obrigar ninguém a marcar caixinha uma a uma. */
@@ -174,6 +216,22 @@ export const TODAS_ETAPAS = ETAPAS_INTAKE.map((_, i) => i);
    ou sair uma etapa (a de "Por que conteúdo" entrou em 08/09 e empurrou tudo). */
 const iDe = (titulo: string) => ETAPAS_INTAKE.findIndex((e) => e.titulo === titulo);
 const CADASTRO = [iDe("Dados pro contrato"), iDe("Contato")].filter((i) => i >= 0);
+
+/* ORDEM DE EXIBIÇÃO. O índice da etapa em ETAPAS_INTAKE é o que fica gravado
+   em `steps` nos links já enviados, então ele não pode mudar. A ordem em que o
+   cliente vê é esta aqui: o contrato abre o formulário (pedido da Gabi,
+   13/10/2026, desfazendo o "começar pelo porquê" de 08/09). */
+const PRIMEIRO = iDe("Dados pro contrato");
+export const ORDEM_ETAPAS: number[] = [
+  ...(PRIMEIRO >= 0 ? [PRIMEIRO] : []),
+  ...TODAS_ETAPAS.filter((i) => i !== PRIMEIRO),
+];
+
+/** As etapas na ordem de exibição, com o índice real (o que vai em `steps`). */
+export function etapasEmOrdem(perfil?: string | null): { i: number; etapa: EtapaIntake }[] {
+  const p = perfilOk(perfil);
+  return ORDEM_ETAPAS.map((i) => ({ i, etapa: adaptarEtapa(ETAPAS_INTAKE[i], p) }));
+}
 
 export const ATALHOS_ETAPAS: { nome: string; steps: number[]; explica: string }[] = [
   { nome: "Tudo", steps: TODAS_ETAPAS, explica: "cadastro completo e briefing de marca" },
@@ -199,26 +257,26 @@ export function campoVisivel(c: CampoIntake, respostas: Record<string, string>):
 /** Faltou algum obrigatório VISÍVEL? Campo escondido não pode travar o envio.
  *  Só cobra o que está NAS ETAPAS DESTE ENVIO: exigir resposta de uma etapa que
  *  a pessoa nem viu é o jeito mais rápido de deixar o formulário travado. */
-export function faltandoObrigatorios(respostas: Record<string, string>, steps?: number[] | null): string[] {
-  return etapasDoEnvio(steps).flatMap((e) => e.campos)
+export function faltandoObrigatorios(respostas: Record<string, string>, steps?: number[] | null, perfil?: string | null): string[] {
+  return etapasDoEnvio(steps, perfil).flatMap((e) => e.campos)
     .filter((c) => c.obrigatorio && campoVisivel(c, respostas) && !(respostas[c.chave] || "").trim())
     .map((c) => c.label);
 }
 
-function camposVistos(respostas: Record<string, string>, steps?: number[] | null): CampoIntake[] {
+function camposVistos(respostas: Record<string, string>, steps?: number[] | null, perfil?: string | null): CampoIntake[] {
   const vistas = new Set<string>();
-  return etapasDoEnvio(steps).flatMap((e) => e.campos).filter((c) => {
+  return etapasDoEnvio(steps, perfil).flatMap((e) => e.campos).filter((c) => {
     if (!campoVisivel(c, respostas) || vistas.has(c.chave)) return false;
     vistas.add(c.chave);
     return true;
   });
 }
 
-export function quantasRespondidas(respostas: Record<string, string>, steps?: number[] | null): number {
-  return camposVistos(respostas, steps).filter((c) => (respostas[c.chave] || "").trim()).length;
+export function quantasRespondidas(respostas: Record<string, string>, steps?: number[] | null, perfil?: string | null): number {
+  return camposVistos(respostas, steps, perfil).filter((c) => (respostas[c.chave] || "").trim()).length;
 }
 
 /** Quantos campos a pessoa vai ver de fato (PF e PJ não somam juntos). */
-export function totalVisivel(respostas: Record<string, string>, steps?: number[] | null): number {
-  return camposVistos(respostas, steps).length;
+export function totalVisivel(respostas: Record<string, string>, steps?: number[] | null, perfil?: string | null): number {
+  return camposVistos(respostas, steps, perfil).length;
 }

@@ -26,6 +26,8 @@ export type ClientIntake = {
   answers: Record<string, string> | null;
   /** Índices das etapas que este link leva (null = todas). */
   steps: number[] | null;
+  /** Especialista ou empresa (pedido da Gabi, 13/10/2026). Links antigos = especialista. */
+  perfil: "especialista" | "empresa" | null;
   created_at: string;
   submitted_at: string | null;
   applied_at: string | null;
@@ -62,9 +64,13 @@ export function useCreateClientIntake() {
   const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ crmClientId, steps }: { crmClientId: string; steps?: number[] }) => {
+    mutationFn: async ({ crmClientId, steps, perfil }: { crmClientId: string; steps?: number[]; perfil?: "especialista" | "empresa" }) => {
       const { data, error } = await sbFrom("client_intakes")
-        .insert({ manager_id: agencyOwnerId, crm_client_id: crmClientId, steps: steps?.length ? steps : null })
+        .insert({
+          manager_id: agencyOwnerId, crm_client_id: crmClientId,
+          steps: steps?.length ? steps : null,
+          perfil: perfil ?? "especialista",
+        })
         .select("*")
         .single();
       if (error) throw error;

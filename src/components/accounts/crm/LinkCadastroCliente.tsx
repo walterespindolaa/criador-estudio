@@ -10,7 +10,8 @@ import {
   type ClientIntake,
 } from "@/hooks/useClientIntakes";
 import {
-  ETAPAS_INTAKE, ATALHOS_ETAPAS, TODAS_ETAPAS, etapasDoEnvio, CAMPOS_CADASTRO, quantasRespondidas, totalVisivel,
+  ETAPAS_INTAKE, ATALHOS_ETAPAS, TODAS_ETAPAS, etapasDoEnvio, etapasEmOrdem, CAMPOS_CADASTRO, quantasRespondidas, totalVisivel,
+  PERFIS_INTAKE, type PerfilIntake,
 } from "@/lib/formularioCadastro";
 import { useCrmClient, type CrmClient } from "@/hooks/useCrm";
 
@@ -58,6 +59,9 @@ export function LinkCadastroCliente({ crmClientId, clienteNome, temCria = false 
   const [escolhendo, setEscolhendo] = useState(false);
   // Deriva da lista: quando entra etapa nova, ela já vem marcada por padrão.
   const [marcadas, setMarcadas] = useState<number[]>(TODAS_ETAPAS);
+  /* QUEM RESPONDE. Especialista ou empresa muda a voz das perguntas e já
+     pré-marca o PF/CNPJ do contrato (o cliente pode trocar). */
+  const [perfil, setPerfil] = useState<PerfilIntake>("especialista");
   const alternar = (i: number) =>
     setMarcadas((m) => (m.includes(i) ? m.filter((x) => x !== i) : [...m, i].sort((a, b) => a - b)));
 
@@ -72,7 +76,7 @@ export function LinkCadastroCliente({ crmClientId, clienteNome, temCria = false 
   const gerar = async () => {
     if (marcadas.length === 0) { toast.error("Escolha pelo menos uma etapa."); return; }
     try {
-      const i = await criar.mutateAsync({ crmClientId, steps: marcadas });
+      const i = await criar.mutateAsync({ crmClientId, steps: marcadas, perfil });
       setEscolhendo(false);
       await copiar(i.token);
     } catch { /* o hook já avisa */ }
@@ -111,7 +115,21 @@ export function LinkCadastroCliente({ crmClientId, clienteNome, temCria = false 
 
         {escolhendo && (
           <div className="mt-3 rounded-xl border border-border bg-card p-3.5">
-            <p className="text-[12.5px] font-body font-semibold text-foreground">O que este link vai pedir?</p>
+            <p className="text-[12.5px] font-body font-semibold text-foreground">Quem vai responder?</p>
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {PERFIS_INTAKE.map((p) => {
+                const on = perfil === p.valor;
+                return (
+                  <button key={p.valor} type="button" onClick={() => setPerfil(p.valor)} aria-pressed={on}
+                    className={cn("rounded-xl border-[1.5px] px-3 py-2.5 text-left transition-colors",
+                      on ? "border-primary bg-primary/[0.06]" : "border-border bg-card hover:bg-muted/40")}>
+                    <span className="block text-[13px] font-body font-bold text-foreground">{p.nome}</span>
+                    <span className="block text-[11px] font-body text-muted-foreground mt-0.5 leading-snug">{p.explica}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-3.5 text-[12.5px] font-body font-semibold text-foreground">O que este link vai pedir?</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {ATALHOS_ETAPAS.map((a) => {
                 const igual = a.steps.length === marcadas.length && a.steps.every((x) => marcadas.includes(x));
@@ -126,7 +144,7 @@ export function LinkCadastroCliente({ crmClientId, clienteNome, temCria = false 
               })}
             </div>
             <div className="mt-2.5 space-y-1">
-              {ETAPAS_INTAKE.map((e, i) => {
+              {etapasEmOrdem(perfil).map(({ i, etapa: e }, pos) => {
                 const on = marcadas.includes(i);
                 return (
                   <button key={e.titulo} type="button" onClick={() => alternar(i)}
@@ -137,7 +155,7 @@ export function LinkCadastroCliente({ crmClientId, clienteNome, temCria = false 
                       {on && <Check className="h-3 w-3" strokeWidth={3} />}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[12.5px] font-body font-semibold text-foreground">{i + 1}. {e.titulo}</span>
+                      <span className="block text-[12.5px] font-body font-semibold text-foreground">{pos + 1}. {e.titulo}</span>
                       <span className="block text-[11px] font-body text-muted-foreground">{e.campos.length} perguntas</span>
                     </span>
                   </button>
@@ -159,7 +177,7 @@ export function LinkCadastroCliente({ crmClientId, clienteNome, temCria = false 
             {envios.map((e) => {
               const chegou = e.status === "enviado";
               const feito = e.status === "aplicado";
-              const n = quantasRespondidas((e.answers ?? {}) as Record<string, string>, e.steps);
+              const n = quantasRespondidas((e.answers ?? {}) as Record<string, string>, e.steps, e.perfil);
               return (
                 <div key={e.id}
                   className={cn("flex items-center gap-2.5 rounded-xl border p-2.5 flex-wrap",
@@ -173,7 +191,8 @@ export function LinkCadastroCliente({ crmClientId, clienteNome, temCria = false 
                       {chegou ? "O cliente respondeu" : feito ? "Respostas aplicadas na ficha" : "Aguardando o cliente"}
                     </p>
                     <p className="text-[11px] font-body text-muted-foreground">
-                      {n} de {totalVisivel((e.answers ?? {}) as Record<string, string>, e.steps)} respostas
+                      {e.perfil === "empresa" ? "Empresa" : "Especialista"}
+                      {" · "}{n} de {totalVisivel((e.answers ?? {}) as Record<string, string>, e.steps, e.perfil)} respostas
                       {e.steps?.length && e.steps.length < ETAPAS_INTAKE.length
                         ? ` · ${e.steps.length} ${e.steps.length === 1 ? "etapa" : "etapas"}`
                         : ""}
@@ -226,7 +245,7 @@ export function LinkCadastroCliente({ crmClientId, clienteNome, temCria = false 
           </DialogHeader>
 
           <div className="space-y-3">
-            {etapasDoEnvio(vendo?.steps).map((et) => {
+            {etapasDoEnvio(vendo?.steps, vendo?.perfil).map((et) => {
               const respondidos = et.campos.filter((c) => ((vendo?.answers ?? {})[c.chave] || "").trim());
               if (respondidos.length === 0) return null;
               return (

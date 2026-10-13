@@ -7,7 +7,7 @@ import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { LogosCabecalho } from "@/components/publico/CabecalhoPublico";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import {
-  etapasDoEnvio, faltandoObrigatorios, quantasRespondidas, totalVisivel, campoVisivel,
+  etapasDoEnvio, faltandoObrigatorios, quantasRespondidas, totalVisivel, campoVisivel, CONTRATO_DO_PERFIL,
   type CampoIntake,
 } from "@/lib/formularioCadastro";
 
@@ -36,6 +36,8 @@ type Dados = {
   answers: Record<string, string> | null;
   /** Etapas escolhidas na hora de gerar o link (null = todas). */
   steps: number[] | null;
+  /** Especialista ou empresa: muda a voz das perguntas (null = especialista). */
+  perfil: string | null;
   client_label: string | null;
   accent: string | null; logo: string | null; by: string | null;
 };
@@ -163,7 +165,12 @@ export default function CadastroPublico() {
 
   useEffect(() => {
     if (!q.data || carregou) return;
-    setResp((q.data.answers ?? {}) as Record<string, string>);
+    const salvas = (q.data.answers ?? {}) as Record<string, string>;
+    /* O PF/CNPJ do contrato já vem marcado pelo tipo do link, mas só se o
+       cliente ainda não escolheu: especialista com CNPJ troca e a troca fica. */
+    const tipo = q.data.perfil === "empresa" ? "empresa" : "especialista";
+    const pedeContrato = etapasDoEnvio(q.data.steps, tipo).some((e) => e.campos.some((c) => c.chave === "contract_type"));
+    setResp(salvas.contract_type || !pedeContrato ? salvas : { ...salvas, contract_type: CONTRATO_DO_PERFIL[tipo] });
     if (q.data.status !== "aberto") setEnviado(true);
     setCarregou(true);
   }, [q.data, carregou]);
@@ -192,7 +199,7 @@ export default function CadastroPublico() {
   }, [resp, carregou, enviado]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const preenchidas = useMemo(
-    () => quantasRespondidas(resp, q.data?.steps), [resp, q.data?.steps]);
+    () => quantasRespondidas(resp, q.data?.steps, q.data?.perfil), [resp, q.data?.steps, q.data?.perfil]);
 
   if (q.isLoading) {
     return <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", color: "#857F9C", fontFamily: "system-ui" }}>Carregando…</div>;
@@ -213,7 +220,7 @@ export default function CadastroPublico() {
   const onAccent = isDark(accent) ? "#ffffff" : "#1A1626";
   const onAccentSoft = isDark(accent) ? "rgba(255,255,255,.82)" : "rgba(26,22,38,.7)";
   // Só as etapas que a social mídia escolheu mandar.
-  const etapas = etapasDoEnvio(d.steps);
+  const etapas = etapasDoEnvio(d.steps, d.perfil);
   const et = etapas[Math.min(etapa, etapas.length - 1)];
   const ultima = etapa >= etapas.length - 1;
 
@@ -226,7 +233,7 @@ export default function CadastroPublico() {
   const set = (k: string, v: string) => setResp((r) => ({ ...r, [k]: v }));
 
   const enviar = () => {
-    const faltou = faltandoObrigatorios(resp, d.steps);
+    const faltou = faltandoObrigatorios(resp, d.steps, d.perfil);
     if (faltou.length) {
       setErros(faltou);
       // Leva de volta pra primeira etapa que tem pendência.
@@ -391,7 +398,7 @@ export default function CadastroPublico() {
               ))}
             </div>
             <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 700, color: "#8B8272", letterSpacing: ".06em", textTransform: "uppercase" }}>
-              Etapa {etapa + 1} de {etapas.length} · {preenchidas} de {totalVisivel(resp, d.steps)} respondidas
+              Etapa {etapa + 1} de {etapas.length} · {preenchidas} de {totalVisivel(resp, d.steps, d.perfil)} respondidas
             </p>
             <h2 style={{
               margin: "0 0 4px", fontSize: 22, fontWeight: 800, color: "#2A2440",
