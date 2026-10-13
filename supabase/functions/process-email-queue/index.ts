@@ -1,7 +1,5 @@
-import { sendLovableEmail } from 'npm:@lovable.dev/email-js'
-
-/* ENTREGA PELO RESEND (01/10/2026): sai da Lovable na migração. A fila, o log e a DLQ
-   continuam iguais; só o envio troca de sendLovableEmail pra API do Resend. */
+/* ENTREGA PELO RESEND (01/10/2026). A fila, o log e a DLQ são os mesmos de
+   antes; o envio é sempre pela API do Resend (RESEND_API_KEY). */
 async function enviarPeloResend(apiKey: string, p: Record<string, any>) {
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -96,9 +94,8 @@ async function moveToDlq(
 }
 
 Deno.serve(async (req) => {
-  // Com RESEND_API_KEY (Supabase própria) vai pelo Resend; sem ela (ainda na Lovable), pela Lovable.
   const resendKey = Deno.env.get('RESEND_API_KEY')
-  const apiKey = resendKey ?? Deno.env.get('LOVABLE_API_KEY')
+  const apiKey = resendKey
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
@@ -268,19 +265,7 @@ Deno.serve(async (req) => {
       }
 
       try {
-        if (resendKey) {
-          await enviarPeloResend(resendKey, payload)
-        } else {
-          await sendLovableEmail(
-            {
-              run_id: payload.run_id, to: payload.to, from: payload.from, sender_domain: payload.sender_domain,
-              subject: payload.subject, html: payload.html, text: payload.text, purpose: payload.purpose,
-              label: payload.label, idempotency_key: payload.idempotency_key,
-              unsubscribe_token: payload.unsubscribe_token, message_id: payload.message_id,
-            },
-            { apiKey: apiKey!, sendUrl: Deno.env.get('LOVABLE_SEND_URL') }
-          )
-        }
+        await enviarPeloResend(resendKey!, payload)
 
         // Log success
         await supabase.from('email_send_log').insert({

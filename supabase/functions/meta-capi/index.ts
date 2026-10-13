@@ -6,7 +6,6 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 function isAllowedOrigin(origin: string): boolean {
   if (["https://app.criasocialclub.com.br", "https://criasocialclub.com.br", "https://www.criasocialclub.com.br"].includes(origin)) return true;
   if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
-  if (/^https:\/\/[a-z0-9-]+\.(lovableproject\.com|lovable\.app)$/.test(origin)) return true;
   return false;
 }
 function corsFor(req: Request) {

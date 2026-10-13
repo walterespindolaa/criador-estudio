@@ -2,7 +2,6 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
-import { componentTagger } from "lovable-tagger";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 
 // Source maps do Sentry: só ligam quando as envs SENTRY_AUTH_TOKEN + SENTRY_ORG
@@ -29,7 +28,7 @@ function swBuildId() {
 }
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(() => ({
   server: {
     host: "::",
     port: 8080,
@@ -40,7 +39,6 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     swBuildId(),
-    mode === "development" && componentTagger(),
     sentryUpload && sentryVitePlugin({
       org: process.env.SENTRY_ORG,
       project: process.env.SENTRY_PROJECT ?? "javascript-react",

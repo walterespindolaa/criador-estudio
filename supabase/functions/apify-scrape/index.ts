@@ -23,7 +23,7 @@
 //    o custo do mês. Agora tem crédito, debitado por tipo de análise.
 // ═══════════════════════════════════════════════════════════════════════════
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { iaFetch, chaveIA } from "../_shared/ia.ts";
+import { iaFetch, chaveIA, IA_URL } from "../_shared/ia.ts";
 import { VOZ_CRIA } from "../_shared/voz-cria.ts";
 import { registrarErro, mensagemDe } from "../_shared/log.ts";
 
@@ -388,7 +388,7 @@ async function enriquecerTranscricao(items: any[], token: string): Promise<any[]
 // item e o resumo em `summary` (o ator de transcrição não manda resumo nenhum,
 // apesar do enableSummary: verificado no dataset real).
 async function engenhariaReversa(
-  items: any[], lovableKey: string, client: Record<string, any> | null,
+  items: any[], chaveGemini: string, client: Record<string, any> | null,
 ): Promise<any[]> {
   const comTexto = items
     .map((x, i) => ({ i, t: String(x.transcript || x.transcriptText || x.transcription || x.captions || x.text || "").replace(/\s+/g, " ").trim() }))
@@ -414,8 +414,8 @@ IMPORTANTE: cada campo é uma STRING corrida (estrutura é lista de strings). NU
 Português BR, direto, sem markdown.`;
 
   try {
-    const air = await iaFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST", headers: { "Authorization": `Bearer ${lovableKey}`, "Content-Type": "application/json" },
+    const air = await iaFetch(IA_URL, {
+      method: "POST", headers: { "Authorization": `Bearer ${chaveGemini}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-lite",
         messages: [
@@ -463,7 +463,7 @@ Português BR, direto, sem markdown.`;
 // ── Geração das ideias ─────────────────────────────────────────────────────
 async function gerarIdeias(
   svc: SupabaseClient, type: string, inputHandle: string, top: any[],
-  client: Record<string, any> | null, lovableKey: string,
+  client: Record<string, any> | null, chaveGemini: string,
 ): Promise<Array<{ title: string; format: string; rationale: string }>> {
   const clientName = client?.name || "o cliente";
   let nicho = client?.segment || "geral";
@@ -547,8 +547,8 @@ Gere de 5 a 8 ideias PRO CLIENTE (${clientName}). Formato:
 REGRAS: 100% no nicho ${nicho}; se a fonte for de outro nicho, use SÓ a estrutura/gancho, nunca o tema; não repita o que o cliente já faz. Português BR, específico.`;
 
   try {
-    const air = await iaFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST", headers: { "Authorization": `Bearer ${lovableKey}`, "Content-Type": "application/json" },
+    const air = await iaFetch(IA_URL, {
+      method: "POST", headers: { "Authorization": `Bearer ${chaveGemini}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model: "google/gemini-2.5-flash-lite", messages: [{ role: "system", content: sys }, { role: "user", content: usr }], max_tokens: 2048, temperature: 0.4 }),
     });
     if (!air.ok) { console.error("[apify-scrape] ideas gateway error", air.status); return []; }
@@ -774,23 +774,23 @@ Deno.serve(async (req) => {
           .eq("id", job.crm_client_id).maybeSingle();
         client = (c as Record<string, any>) ?? null;
       }
-      const lovableKey = chaveIA();
+      const chaveGemini = chaveIA();
 
       // ── ENGENHARIA REVERSA de cada roteiro transcrito ──
       // O roteiro cru sozinho obriga a social mídia a fazer a análise de cabeça.
       // Aqui a IA decompõe cada um: gancho, estrutura em blocos, CTA, por que
       // segura retenção e como adaptar pro cliente. Best-effort: sem IA, a
       // entrega segue com o roteiro cru.
-      if (job.scrape_type === "transcription" && lovableKey) {
-        items = await engenhariaReversa(items, lovableKey, client);
+      if (job.scrape_type === "transcription" && chaveGemini) {
+        items = await engenhariaReversa(items, chaveGemini, client);
       }
 
       const { summary, top } = summarize(items, job.scrape_type);
 
       // Ideias (o perfil é só raio-x, não gera pauta).
       let ideas: Array<{ title: string; format: string; rationale: string }> = [];
-      if (lovableKey && job.scrape_type !== "profile" && top.length > 0) {
-        ideas = await gerarIdeias(svc, job.scrape_type, job.input_handle, top, client, lovableKey);
+      if (chaveGemini && job.scrape_type !== "profile" && top.length > 0) {
+        ideas = await gerarIdeias(svc, job.scrape_type, job.input_handle, top, client, chaveGemini);
       }
 
       if (ideas.length > 0) {

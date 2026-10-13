@@ -6,7 +6,7 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
   // CORS compartilhado: reflete a origem quando ela está na allowlist (inclui a PWA
-  // no domínio proprio e nos previews *.lovable.app). Antes usava uma origem unica
+  // no domínio proprio). Antes usava uma origem unica
   // fixa, o que bloqueava a conexao do Instagram quando a PWA rodava em outro dominio
   // (ex.: no PC), caindo em "Integracao ainda nao configurada".
   const corsHeaders = getCorsHeaders(req);

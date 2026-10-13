@@ -1,27 +1,23 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   IA FORA DA LOVABLE (01/10/2026)
+   IA DO CRIA: GEMINI DIRETO (01/10/2026, Lovable removida em 13/10/2026)
 
-   As funções chamavam o gateway de IA da Lovable (ai.gateway.lovable.dev) com
-   a LOVABLE_API_KEY, que só existe dentro da Lovable Cloud. Na Supabase própria
-   a IA passa a ir direto pro Gemini, pelo endpoint compatível com OpenAI do
-   Google (mesmo formato de pedido e de resposta, mesmo modelo de hoje).
-
-   Regra: com GEMINI_API_KEY configurado, tudo vai pro Google; sem ele, segue
-   pela Lovable como antes. Assim o mesmo código roda nos dois lados durante
-   a migração.
+   Toda chamada de chat da IA passa por iaFetch(IA_URL, ...). O pedido segue o
+   formato OpenAI (model, messages) e vai pro endpoint compatível do Google com
+   a GEMINI_API_KEY. IA_URL é só um endereço interno: quem chama não precisa
+   saber de qual provedor é a IA.
    ═══════════════════════════════════════════════════════════════════════════ */
-const LOVABLE_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+export const IA_URL = "cria://ia/chat";
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
-/** Chave de IA disponível (Gemini direto ou, na Lovable, a chave dela). */
+/** Chave de IA (Gemini). */
 export function chaveIA(): string | undefined {
-  return Deno.env.get("GEMINI_API_KEY") ?? Deno.env.get("LOVABLE_API_KEY") ?? undefined;
+  return Deno.env.get("GEMINI_API_KEY") ?? undefined;
 }
 
 /* MODELO NA CHAVE PRÓPRIA (12/10/2026). Testado na chave nova do AI Studio:
    "models/gemini-2.5-flash-lite is no longer available to new users. Please
-   update your code to use models/gemini-3.5-flash-lite". A Lovable ainda tinha
-   acesso ao 2.5; conta nova no Google, não. O código das funções continua
+   update your code to use models/gemini-3.5-flash-lite". Conta nova no Google
+   não tem o 2.5. O código das funções continua
    pedindo "google/gemini-2.5-flash(-lite)" e a troca acontece só aqui.
    Quando o Google aposentar de novo: trocar os segredos GEMINI_MODELO_FLASH /
    GEMINI_MODELO_LITE no painel, sem mexer em código. */
@@ -32,10 +28,11 @@ function modeloGemini(pedido: string): string {
   return nome;
 }
 
-/** fetch do chat da IA. Recebe a mesma chamada de antes e redireciona pro Gemini quando houver chave. */
+/** fetch do chat da IA: IA_URL vai pro Gemini; qualquer outro endereço é um fetch comum. */
 export async function iaFetch(url: string, init: RequestInit): Promise<Response> {
+  if (url !== IA_URL) return fetch(url, init);
   const gemini = Deno.env.get("GEMINI_API_KEY");
-  if (!gemini || url !== LOVABLE_URL) return fetch(url, init);
+  if (!gemini) throw new Error("GEMINI_API_KEY não configurada");
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${gemini}`);
   headers.set("Content-Type", "application/json");
@@ -43,7 +40,7 @@ export async function iaFetch(url: string, init: RequestInit): Promise<Response>
   if (typeof body === "string") {
     try {
       const j = JSON.parse(body);
-      // O gateway usava "google/gemini-2.5-flash"; o Google usa "gemini-...".
+      // As funções pedem "google/gemini-2.5-flash"; o Google usa "gemini-...".
       if (typeof j.model === "string") j.model = modeloGemini(j.model);
       body = JSON.stringify(j);
     } catch { /* corpo não é JSON: segue como veio */ }

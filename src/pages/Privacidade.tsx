@@ -20,7 +20,7 @@ export default function Privacidade() {
           Política de Privacidade
         </h1>
         <p className="text-muted-foreground text-sm mb-12">
-          Última atualização: 19 de junho de 2026 · Versão 1.1
+          Última atualização: 13 de outubro de 2026 · Versão 1.2
         </p>
 
         <section className="prose prose-sm max-w-none space-y-8 text-foreground">
@@ -115,15 +115,19 @@ export default function Privacidade() {
             </p>
             <ul className="text-muted-foreground leading-relaxed space-y-1 list-disc list-inside">
               <li>
-                <strong className="text-foreground">Supabase / Lovable Cloud:</strong>{" "}
-                infraestrutura de banco de dados e autenticação
+                <strong className="text-foreground">Supabase:</strong>{" "}
+                banco de dados, autenticação e armazenamento de arquivos
+              </li>
+              <li>
+                <strong className="text-foreground">Vercel:</strong> hospedagem
+                do aplicativo
               </li>
               <li>
                 <strong className="text-foreground">Stripe:</strong> processamento
                 de pagamentos (dados de cobrança)
               </li>
               <li>
-                <strong className="text-foreground">Google Gemini (via Lovable AI Gateway):</strong>{" "}
+                <strong className="text-foreground">Google Gemini:</strong>{" "}
                 processamento de requisições de IA (apenas o prompt enviado,
                 sem dados de cadastro)
               </li>
@@ -160,8 +164,8 @@ export default function Privacidade() {
                 erros técnicos do app (sem conteúdo dos seus posts)
               </li>
               <li>
-                <strong className="text-foreground">Lovable:</strong> envio de
-                e-mails transacionais e infraestrutura de IA
+                <strong className="text-foreground">Resend:</strong> envio dos
+                e-mails do sistema (acesso, senha, avisos)
               </li>
             </ul>
             <p className="text-muted-foreground leading-relaxed mt-3">

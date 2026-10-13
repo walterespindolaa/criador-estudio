@@ -454,10 +454,6 @@ button, a, [role="button"] {
   }
 }
 
-#lovable-badge {
-  display: none !important;
-}
-
 /* Canvas global brilho radial seguindo o accent do tema (--primary) */
 .app-canvas{
   /* Rebranding fase 3: brilho do accent bem mais discreto a tela de trabalho fica neutra */

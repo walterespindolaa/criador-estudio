@@ -1,17 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { iaFetch, chaveIA } from "../_shared/ia.ts";
+import { iaFetch, chaveIA, IA_URL } from "../_shared/ia.ts";
 import { createClient } from "npm:@supabase/supabase-js@2"
 import { VOZ_CRIA, humanizar, humanizarDeep } from "../_shared/voz-cria.ts"
 
 // Helpers embutidos (sem depender de _shared no bundle do deploy).
 const ALLOWED_ORIGINS = [
   "https://app.criasocialclub.com.br", "https://criasocialclub.com.br",
-  "https://criador-estudio.lovable.app", "http://localhost:5173", "http://localhost:8080",
+  "http://localhost:5173", "http://localhost:8080",
 ]
 function getCorsHeaders(req: Request) {
   const origin = req.headers.get("origin") ?? ""
-  const isLovable = /^https:\/\/[a-zA-Z0-9-]+\.lovable\.app$/.test(origin)
-  const allow = ALLOWED_ORIGINS.includes(origin) || isLovable ? origin : ALLOWED_ORIGINS[0]
+  const allow = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
   return {
     "Access-Control-Allow-Origin": allow,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-internal-secret",
@@ -23,8 +22,7 @@ class AiTimeoutError extends Error { constructor() { super("ai_timeout"); this.n
 async function aiFetch(url: string, init: RequestInit, timeoutMs = 30000): Promise<Response> {
   const ac = new AbortController()
   const t = setTimeout(() => ac.abort(), timeoutMs)
-  // Passa pelo iaFetch (12/10/2026): sem isto as 6 chamadas de IA desta função
-  // continuavam indo pro gateway da Lovable mesmo com GEMINI_API_KEY no projeto novo.
+  // Toda chamada de IA desta função passa pelo iaFetch (Gemini direto).
   try { return await iaFetch(url, { ...init, signal: ac.signal }) }
   catch (e) { if (e instanceof DOMException && e.name === "AbortError") throw new AiTimeoutError(); throw e }
   finally { clearTimeout(t) }
@@ -93,7 +91,7 @@ function parseAiJson(raw: string): any {
   }
 }
 
-async function runTrendRefresh(admin: any, lovableApiKey: string, corsHeaders: Record<string, string>, createdBy: string | null): Promise<Response> {
+async function runTrendRefresh(admin: any, chaveGemini: string, corsHeaders: Record<string, string>, createdBy: string | null): Promise<Response> {
   const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
 
   // 1) Pesquisa ao vivo na web (Perplexity Sonar). Se falhar/faltar chave, degrada.
@@ -129,9 +127,9 @@ async function runTrendRefresh(admin: any, lovableApiKey: string, corsHeaders: R
 {"trends":[{"kind":"formato|tema|gancho|data","title":"curto (max 8 palavras)","description":"1 frase prática de como usar","niche":"geral"}]}
 OBRIGATÓRIO variar os tipos, inclua PELO MENOS 2 de cada: "formato" (formatos de vídeo/post em alta), "tema" (assuntos quentes), "gancho" (aberturas que retêm), "data" (datas comemorativas/sazonais próximas no Brasil). Seja específico e brasileiro. Nada genérico.`
 
-  const tr = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const tr = await aiFetch(IA_URL, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': `Bearer ${chaveGemini}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'google/gemini-2.5-flash-lite',
       messages: [ { role: 'system', content: trendSys }, { role: 'user', content: trendUsr } ],
@@ -166,7 +164,7 @@ OBRIGATÓRIO variar os tipos, inclua PELO MENOS 2 de cada: "formato" (formatos d
 }
 
 // Banco de tendências de STORIES (compartilhado). Mesma ideia do runTrendRefresh.
-async function runStoryTrendRefresh(admin: any, lovableApiKey: string, corsHeaders: Record<string, string>, _createdBy: string | null): Promise<Response> {
+async function runStoryTrendRefresh(admin: any, chaveGemini: string, corsHeaders: Record<string, string>, _createdBy: string | null): Promise<Response> {
   const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
 
   let webResearch = ''
@@ -201,9 +199,9 @@ REGRAS OBRIGATÓRIAS:
 - PROIBIDO frases vagas tipo "utilize vídeos para demonstrações" ou "compartilhe bastidores". Sempre diga O QUÊ, COM QUE TEXTO e QUAL interação.
 - Português BR, informal.`
 
-  const tr = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+  const tr = await aiFetch(IA_URL, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+    headers: { 'Authorization': `Bearer ${chaveGemini}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'google/gemini-2.5-flash-lite',
       messages: [ { role: 'system', content: sys }, { role: 'user', content: usr } ],
@@ -270,13 +268,13 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '')
     const supabaseUrl = Deno.env.get("SUPABASE_URL")
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-    const lovableApiKey = chaveIA()
+    const chaveGemini = chaveIA()
 
     if (!supabaseUrl || !serviceRoleKey) {
       throw new Error("Missing Supabase credentials")
     }
-    if (!lovableApiKey) {
-      throw new Error("LOVABLE_API_KEY is not configured")
+    if (!chaveGemini) {
+      throw new Error("GEMINI_API_KEY não configurada")
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey)
@@ -383,9 +381,9 @@ serve(async (req) => {
       const usr = `Dados administrativos: ${JSON.stringify(data || {})}
 Gere um insight estratégico conciso em português BR no formato:
 {"titulo":"string","insight":"string","acoes":["a1","a2","a3"]}`
-      const r = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const r = await aiFetch(IA_URL, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${chaveGemini}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'google/gemini-2.5-flash-lite',
           messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }],
@@ -415,7 +413,7 @@ Gere um insight estratégico conciso em português BR no formato:
         })
       }
       try {
-        return await runTrendRefresh(supabase, lovableApiKey, corsHeaders, userId)
+        return await runTrendRefresh(supabase, chaveGemini, corsHeaders, userId)
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         console.error('[trend-bank-refresh] failed:', msg)
@@ -431,7 +429,7 @@ Gere um insight estratégico conciso em português BR no formato:
         })
       }
       try {
-        return await runStoryTrendRefresh(supabase, lovableApiKey, corsHeaders, userId)
+        return await runStoryTrendRefresh(supabase, chaveGemini, corsHeaders, userId)
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         console.error('[story-trend-refresh] failed:', msg)
@@ -575,9 +573,9 @@ RESPONDA APENAS JSON válido:
         ...imagens.map((url) => ({ type: 'image_url', image_url: { url } })),
       ]
 
-      const r = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const r = await aiFetch(IA_URL, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${chaveGemini}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'google/gemini-2.5-flash', // o -lite não enxerga bem; aqui a leitura É o produto
           messages: [{ role: 'system', content: sys }, { role: 'user', content: conteudo }],
@@ -675,9 +673,9 @@ RESPONDA APENAS JSON válido:
         ...imagens.map((url) => ({ type: 'image_url', image_url: { url } })),
       ]
 
-      const r = await aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const r = await aiFetch(IA_URL, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${lovableApiKey}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${chaveGemini}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'google/gemini-2.5-flash', // leitura de documento: precisa enxergar bem
           messages: [{ role: 'system', content: sys }, { role: 'user', content: conteudo }],
@@ -1533,10 +1531,10 @@ ${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de 
       : OPS_CRIATIVAS.has(operation) ? 0.6
       : 0.2
 
-    const pedirIA = () => aiFetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const pedirIA = () => aiFetch(IA_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
+        'Authorization': `Bearer ${chaveGemini}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
