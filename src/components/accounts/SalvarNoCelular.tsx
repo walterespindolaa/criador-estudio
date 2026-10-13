@@ -7,7 +7,7 @@
    tudo junto ("Salvar N itens" no iPhone). Detalhes do porquê em
    lib/salvarNoCelular.ts. Só aparece em celular/tablet; no computador fica o .zip.
    ═══════════════════════════════════════════════════════════════════════════ */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Check, Download, Loader2, Play, RotateCcw, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,12 @@ import { tokenDriveEmCache } from "@/hooks/useGoogleDrive";
 type Midia = MediaLike & { id: string; file_name: string };
 type Estado = { status: "baixando" | "pronto" | "erro"; file?: File };
 
-export function SalvarNoCelular({ midias, titulo }: { midias: Midia[]; titulo?: string }) {
+export function SalvarNoCelular({ midias, titulo, gatilho }: {
+  midias: Midia[];
+  titulo?: string;
+  /** Troca o botão laranja padrão por outro (ex.: o "Mídias" do topo do editor do criador). */
+  gatilho?: (abrir: () => void) => ReactNode;
+}) {
   const [suporta] = useState(podeSalvarNoCelular);
   const [aberto, setAberto] = useState(false);
   const [estados, setEstados] = useState<Record<string, Estado>>({});
@@ -102,10 +107,12 @@ export function SalvarNoCelular({ midias, titulo }: { midias: Midia[]; titulo?: 
 
   return (
     <>
-      <Button type="button" onClick={abrir} className="w-full h-12 rounded-full text-[15px] font-bold gap-2 bg-[#EA4918] hover:bg-[#D23F12] text-white">
-        <Smartphone className="h-5 w-5" />
-        {midias.length === 1 ? "Salvar no celular" : `Salvar todas no celular (${midias.length})`}
-      </Button>
+      {gatilho ? gatilho(abrir) : (
+        <Button type="button" onClick={abrir} className="w-full h-12 rounded-full text-[15px] font-bold gap-2 bg-[#EA4918] hover:bg-[#D23F12] text-white">
+          <Smartphone className="h-5 w-5" />
+          {midias.length === 1 ? "Salvar no celular" : `Salvar todas no celular (${midias.length})`}
+        </Button>
+      )}
 
       <Drawer open={aberto} onOpenChange={fechar}>
         <DrawerContent className="max-h-[88vh]">

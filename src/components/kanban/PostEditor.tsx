@@ -113,6 +113,7 @@ import { useReferenceLibrary, useUserLibrary } from "@/hooks/useLibrary";
 import { useBrandContext } from "@/hooks/useBrandContext";
 import { RoteiroPdfTemplate } from "@/components/pdf/RoteiroPdfTemplate";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import { BaixarMidiasDoPost } from "./BaixarMidiasDoPost";
 import { sanitizeText } from "@/lib/sanitize";
 import { confirmar } from "@/components/shared/Confirm";
 import { SeletorDeGanchos } from "@/components/shared/SeletorDeGanchos";
@@ -178,6 +179,9 @@ interface DriveRef {
   thumbnail_url: string | null;
   view_url: string | null;
   provider?: string | null;
+  // Pro "Baixar mídias": decide o que vai junto pro celular (vídeo do Bunny sem origem no Drive fica de fora).
+  download_url?: string | null;
+  bunny_video_id?: string | null;
 }
 
 const sanitizeStoragePath = (name: string): string => {
@@ -359,7 +363,40 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   );
   const { brandContext } = useBrandContext();
   const pdfRef = useRef<HTMLDivElement>(null);
-  const { exportPdf } = usePdfExport();
+  const { exportPdf, exportPdfBlob } = usePdfExport();
+  const [gerandoPdf, setGerandoPdf] = useState(false);
+  /* PDF DO ROTEIRO. No computador baixa direto. No celular, o download por link
+     não funciona no app instalado do iPhone (o toque "não faz nada"), então o
+     PDF vai pro menu de compartilhar. Gerar o PDF leva uns segundos e o iPhone
+     só abre esse menu logo depois de um toque; se o tempo passou, o aviso traz
+     um botão "Abrir" que usa um toque novo. */
+  const baixarRoteiroPdf = async () => {
+    const nome = `roteiro-${title.slice(0, 20).replace(/\s+/g, "-").toLowerCase() || "post"}`;
+    const toque = typeof window !== "undefined" && (window.matchMedia?.("(pointer: coarse)").matches ?? false);
+    if (!toque || typeof navigator.share !== "function" || typeof navigator.canShare !== "function") {
+      await exportPdf(pdfRef, nome);
+      return;
+    }
+    setGerandoPdf(true);
+    try {
+      const blob = await exportPdfBlob(pdfRef);
+      if (!blob) return;
+      const arquivo = new File([blob], `${nome}.pdf`, { type: "application/pdf" });
+      if (!navigator.canShare({ files: [arquivo] })) { await exportPdf(pdfRef, nome); return; }
+      const compartilhar = () => navigator.share({ files: [arquivo], title: nome }).catch((e: unknown) => {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        toast.error("Não consegui abrir o menu do celular.");
+      });
+      try {
+        await navigator.share({ files: [arquivo], title: nome });
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        toast.success("PDF do roteiro pronto", { action: { label: "Abrir", onClick: () => void compartilhar() }, duration: 15000 });
+      }
+    } finally {
+      setGerandoPdf(false);
+    }
+  };
 
   const [driveMedia, setDriveMedia] = useState<DriveRef[]>([]);
   const [pendingDriveFiles, setPendingDriveFiles] = useState<DriveRef[]>([]);
@@ -393,7 +430,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const fetchDriveMedia = useCallback(async (postId: string) => {
     const { data } = await supabase
       .from("external_media_refs")
-      .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url, provider")
+      .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url, provider, download_url, bunny_video_id")
       .eq("post_id", postId)
       // Ordem do carrossel: a `position` gravada no reorder manda; quem nunca
       // foi reordenado (position null) cai pro created_at, ordem de chegada.
@@ -1679,15 +1716,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     <span className="hidden sm:inline">Excluir</span>
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => exportPdf(pdfRef, `roteiro-${title.slice(0, 20).replace(/\s+/g, "-").toLowerCase() || "post"}`)}
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">PDF</span>
-                </Button>
+                {!isNew && post && (
+                  <BaixarMidiasDoPost postId={post.id} midias={driveMedia} titulo={title} />
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -2030,6 +2061,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                               </Label>
                               {field.key === "hook" && format !== "live" && (
                                 <SeletorDeGanchos valorAtual={hook} onPick={setHook} />
+                              )}
+                              {field.key === "script" && script.trim() && (
+                                <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 text-xs text-muted-foreground"
+                                  onClick={() => void baixarRoteiroPdf()} disabled={gerandoPdf}>
+                                  {gerandoPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                                  Roteiro em PDF
+                                </Button>
                               )}
                             </div>
                             <Textarea
