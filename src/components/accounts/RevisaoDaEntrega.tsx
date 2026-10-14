@@ -4,7 +4,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MoneyInput } from "@/components/shared/MoneyInput";
-import { useAprovarEntrega, useAtualizarCache, usePedidosDoCliente, usePedirAjuste, type PedidoDoCliente } from "@/hooks/useParceiro";
+import { useAprovarEntrega, useAtualizarCache, usePedidosDoCliente, usePedirAjuste, useProporPrazo, type PedidoDoCliente } from "@/hooks/useParceiro";
+import { hojeBR } from "@/lib/date-br";
 import { brlReais } from "@/lib/money";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -185,16 +186,33 @@ export function PainelDaAgenciaNoCard({ postId, producaoStatus, aprovacao, cache
   );
 }
 
-/** O cliente já aprovou (ou está com a peça) e pediu alteração pelo WhatsApp.
+/** O cliente já aprovou (ou está com a peça) e pediu alteração por fora do Cria.
  *  Devolve pro parceiro com o motivo e reabre a aprovação: a arte nova volta
  *  pra "Pra você revisar" e depois vai de novo pro cliente. */
 function AjusteForaDoCria({ postId, aprovacao, nomeParceiro }: {
   postId: string; aprovacao: string | null | undefined; nomeParceiro?: string | null;
 }) {
   const ajuste = usePedirAjuste();
+  const proporPrazo = useProporPrazo();
   const [pedindo, setPedindo] = useState(false);
   const [motivo, setMotivo] = useState("");
-  useEffect(() => { setPedindo(false); setMotivo(""); }, [postId]);
+  /* NOVA DATA JUNTO DO AJUSTE (Walter, 14/10/2026). Ajuste pedido depois do
+     prazo combinado quase sempre precisa de prazo novo, e antes ela tinha que
+     mandar o ajuste e depois abrir o "Entrega" no topo. Opcional: vazio, o
+     prazo fica como estava. Vai como proposta, o parceiro topa ou sugere outra. */
+  const [novaData, setNovaData] = useState("");
+  const limpar = () => { setPedindo(false); setMotivo(""); setNovaData(""); };
+  useEffect(() => { limpar(); }, [postId]);
+  const ocupado = ajuste.isPending || proporPrazo.isPending;
+  const mandar = () => {
+    const data = novaData;
+    ajuste.mutate({ postId, motivo: `O cliente pediu: ${motivo.trim()}` }, {
+      onSuccess: () => {
+        if (data) proporPrazo.mutate({ postId, data }, { onSettled: limpar });
+        else limpar();
+      },
+    });
+  };
   const quem = nomeParceiro?.split(" ")[0] ?? "o parceiro";
   const aprovado = aprovacao === "aprovado";
 
@@ -215,17 +233,28 @@ function AjusteForaDoCria({ postId, aprovacao, nomeParceiro }: {
       <Textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3} autoFocus
         placeholder={`O que o cliente pediu? Junte tudo num texto só pra ${quem}.`}
         className="resize-none text-[13px] bg-card" />
+      <div className="flex items-center gap-2 flex-wrap">
+        <label htmlFor={`nova-data-${postId}`} className="text-[12px] font-body font-semibold text-violet-900">
+          Nova data de entrega
+        </label>
+        <input id={`nova-data-${postId}`} type="date" value={novaData} min={hojeBR()}
+          onChange={(e) => setNovaData(e.target.value)}
+          className="h-8 rounded-lg border border-violet-200 bg-card px-2 text-[12.5px] font-body text-foreground" />
+        <span className="text-[11px] font-body text-muted-foreground">
+          {novaData ? `${quem} topa ou sugere outra.` : "Opcional. Vazio, o prazo fica como está."}
+        </span>
+      </div>
       <p className="text-[11px] font-body text-muted-foreground leading-snug">
         {aprovado ? "A aprovação do cliente é desfeita" : "A peça sai de \"Aguardando cliente\""}: quando {quem} entregar de novo, volta pra você revisar e depois vai pro cliente.
       </p>
       <div className="flex items-center gap-2 justify-end">
-        <Button size="sm" variant="ghost" className="rounded-xl h-8" disabled={ajuste.isPending}
-          onClick={() => { setPedindo(false); setMotivo(""); }}>
+        <Button size="sm" variant="ghost" className="rounded-xl h-8" disabled={ocupado}
+          onClick={limpar}>
           Cancelar
         </Button>
-        <Button size="sm" className="rounded-xl h-8 bg-violet-600 hover:bg-violet-700 text-white" disabled={ajuste.isPending || !motivo.trim()}
-          onClick={() => ajuste.mutate({ postId, motivo: `O cliente pediu (WhatsApp): ${motivo.trim()}` }, { onSuccess: () => { setPedindo(false); setMotivo(""); } })}>
-          {ajuste.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><RotateCcw className="h-3.5 w-3.5 mr-1" /> Mandar pro {quem}</>}
+        <Button size="sm" className="rounded-xl h-8 bg-violet-600 hover:bg-violet-700 text-white" disabled={ocupado || !motivo.trim()}
+          onClick={mandar}>
+          {ocupado ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><RotateCcw className="h-3.5 w-3.5 mr-1" /> Mandar pro {quem}</>}
         </Button>
       </div>
     </div>
