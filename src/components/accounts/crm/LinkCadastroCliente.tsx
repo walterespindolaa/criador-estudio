@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { cn } from "@/lib/utils";
 import { confirmar } from "@/components/shared/Confirm";
 import {
-  useClientIntakes, useCreateClientIntake, useApplyClientIntake, useDeleteClientIntake,
+  useClientIntakes, useCreateClientIntake, useApplyClientIntake, useDeleteClientIntake, useMudarPerfilIntake,
   type ClientIntake,
 } from "@/hooks/useClientIntakes";
 import {
@@ -53,6 +53,7 @@ export function LinkCadastroCliente({ crmClientId, clienteNome, temCria = false 
   const criar = useCreateClientIntake();
   const aplicar = useApplyClientIntake();
   const excluir = useDeleteClientIntake();
+  const mudarPerfil = useMudarPerfilIntake();
   const [vendo, setVendo] = useState<ClientIntake | null>(null);
   /* O QUE VAI NO LINK. Mandar as 30 perguntas pra um cliente que só precisa
      confirmar o CNPJ é o jeito mais rápido do formulário não voltar. */
@@ -191,7 +192,18 @@ export function LinkCadastroCliente({ crmClientId, clienteNome, temCria = false 
                       {chegou ? "O cliente respondeu" : feito ? "Respostas aplicadas na ficha" : "Aguardando o cliente"}
                     </p>
                     <p className="text-[11px] font-body text-muted-foreground">
-                      {e.perfil === "empresa" ? "Empresa" : "Especialista"}
+                      {/* Enquanto não foi aplicado, o perfil troca com um clique. */}
+                      {feito
+                        ? (e.perfil === "empresa" ? "Empresa" : "Especialista")
+                        : (
+                          <button type="button" disabled={mudarPerfil.isPending}
+                            title="Trocar entre especialista e empresa"
+                            onClick={() => mudarPerfil.mutate({ id: e.id, perfil: e.perfil === "empresa" ? "especialista" : "empresa" })}
+                            className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-1.5 py-px font-bold text-foreground hover:border-primary/50 hover:bg-primary/[0.06] disabled:opacity-50">
+                            {e.perfil === "empresa" ? "Empresa" : "Especialista"}
+                            <span className="font-normal text-muted-foreground">trocar</span>
+                          </button>
+                        )}
                       {" · "}{n} de {totalVisivel((e.answers ?? {}) as Record<string, string>, e.steps, e.perfil)} respostas
                       {e.steps?.length && e.steps.length < ETAPAS_INTAKE.length
                         ? ` · ${e.steps.length} ${e.steps.length === 1 ? "etapa" : "etapas"}`

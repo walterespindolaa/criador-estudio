@@ -103,6 +103,27 @@ export function useApplyClientIntake() {
   });
 }
 
+/* TROCAR O PERFIL DE UM LINK JÁ ENVIADO (Gabi, 14/10/2026: "não apareceu
+   pra selecionar se é pessoa ou empresa"). O seletor só existe na hora de
+   gerar o link, e os links de antes do dia 13 ficaram todos como
+   especialista. Trocar aqui não perde nada: as respostas são guardadas pela
+   chave da pergunta, e o cliente vê a voz nova quando abrir o link de novo. */
+export function useMudarPerfilIntake() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, perfil }: { id: string; perfil: "especialista" | "empresa" }) => {
+      const { error } = await sbFrom("client_intakes").update({ perfil }).eq("id", id);
+      if (error) throw error;
+      return perfil;
+    },
+    onSuccess: (perfil) => {
+      void qc.invalidateQueries({ queryKey: ["client-intakes"] });
+      toast.success(perfil === "empresa" ? "Link virou de empresa." : "Link virou de especialista.");
+    },
+    onError: () => toast.error("Não consegui trocar o perfil deste link."),
+  });
+}
+
 export function useDeleteClientIntake() {
   const qc = useQueryClient();
   return useMutation({
