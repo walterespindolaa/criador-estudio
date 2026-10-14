@@ -23,6 +23,9 @@ export const FUNCOES: { valor: FuncaoCriakut; nome: string }[] = [
   { valor: "copy", nome: "Copywriter" },
 ];
 export const nomeFuncao = (f?: string | null) => FUNCOES.find((x) => x.valor === f)?.nome ?? "";
+/** "Designer · Editor de vídeo": a principal primeiro, depois as outras. */
+export const nomesFuncoes = (f?: string | null, outras?: string[] | null) =>
+  [f, ...(outras ?? []).filter((x) => x !== f)].map(nomeFuncao).filter(Boolean).join(" · ");
 
 export const ESTILOS = ["Minimalista", "Editorial", "Colorido", "Divertido", "Luxo", "Orgânico", "Técnico", "Acolhedor"];
 export const NICHOS = ["Saúde", "Estética", "Nutrição", "Fisioterapia", "Psicologia", "Odontologia", "Gastronomia",
@@ -64,6 +67,8 @@ export type PerfilCriakut = {
   mostrar_instagram?: boolean;
   busco?: FuncaoCriakut[];
   busco_texto?: string | null;
+  /** Além da principal (até 3). Criadora não tem. */
+  outras_funcoes?: FuncaoCriakut[];
 };
 
 /** O que a função criakut_perfil devolve: o perfil + listas + números. */
@@ -205,7 +210,11 @@ export type PublicoComunidade = "todos" | "criadores" | "prestadores";
 export const PUBLICOS: { valor: PublicoComunidade; nome: string }[] = [
   { valor: "criadores", nome: "Criadores" }, { valor: "prestadores", nome: "Prestadores" }, { valor: "todos", nome: "Todos" },
 ];
-export type ComunidadeItem = ComunidadeMini & { id: string; descricao: string | null; publico: PublicoComunidade; membros: number; topicos: number; sou_membro: boolean; ativa: boolean };
+export type ComunidadeItem = ComunidadeMini & {
+  id: string; descricao: string | null; publico: PublicoComunidade; membros: number; topicos: number; sou_membro: boolean; ativa: boolean;
+  status: "pendente" | "aprovada" | "recusada"; motivo_recusa: string | null; minha_sugestao: boolean;
+};
+export type ComunidadeParecida = ComunidadeMini & { publico: PublicoComunidade; status: string };
 export type TopicoItem = { id: string; titulo: string; fixo: boolean; respostas: number; criado_em: string; ultima_em: string; oculto: boolean; autor: AutorMini };
 export type ComunidadeDados = ComunidadeMini & {
   id: string; descricao: string | null; ativa: boolean; ordem: number; sou_membro: boolean; membros: number;
@@ -232,6 +241,7 @@ export type PainelAdminCriakut = {
   aberto: boolean; destaque_ativo: boolean; convidados: number; paginas: number; paginas_total: number;
   propostas_mes: number; fechadas_mes: number; concluidas_mes: number; paradas: number; destaques: number;
   pontes: Record<string, number> | null; denuncias: DenunciaAdmin[];
+  comunidades_pendentes?: { id: string; nome: string; descricao: string | null; emoji: string; publico: PublicoComunidade; criado_em: string; autor: AutorMini }[];
 };
 export type FunilLinha = { nome: string; slug: string; propostas: number; fechadas: number; concluidas: number; pagas: number; avaliadas: number; paradas: number; avisos_contato: number };
 

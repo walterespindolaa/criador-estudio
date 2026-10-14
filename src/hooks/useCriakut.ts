@@ -2,9 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import type {
-  ComunidadeDados, ComunidadeItem, Conversa, FunilLinha, MeuDestaque, MinhasVisitas, PaginaCriakutDados, PainelAdminCriakut,
+  ComunidadeDados, ComunidadeItem, ComunidadeParecida, Conversa, FunilLinha, MeuDestaque, MinhasVisitas, PaginaCriakutDados, PainelAdminCriakut,
   PedidoMural, PerfilCriakut, RecadosDados, ResumoProposta, Servico, TopicoDados, Unidade,
 } from "@/lib/criakut";
 
@@ -405,7 +406,7 @@ export function useComunidades() {
   return useQuery({
     queryKey: ["criakut-comunidades", user?.id],
     enabled: !!user?.id,
-    queryFn: () => rpc<ComunidadeItem[]>("criakut_comunidades_ver").then((d) => d ?? []),
+    queryFn: () => rpc<ComunidadeItem[]>("criakut_comunidades_ver2").then((d) => d ?? []),
   });
 }
 
@@ -435,12 +436,14 @@ export function useAcaoComunidade() {
       | { tipo: "entrar"; comunidade: string; entrar: boolean }
       | { tipo: "topico"; comunidade: string; titulo: string; texto: string }
       | { tipo: "responder"; topico: string; texto: string }
-      | { tipo: "apagar"; alvo: "topico" | "resposta"; id: string }) => {
+      | { tipo: "apagar"; alvo: "topico" | "resposta"; id: string }
+      | { tipo: "sugerir"; nome: string; descricao: string; emoji: string; publico: string }) => {
       switch (a.tipo) {
         case "entrar": return rpc<unknown>("criakut_comunidade_entrar", { _comunidade: a.comunidade, _entrar: a.entrar });
         case "topico": return rpc<unknown>("criakut_topico_criar", { _comunidade: a.comunidade, _titulo: a.titulo, _texto: a.texto });
         case "responder": return rpc<unknown>("criakut_responder", { _topico: a.topico, _texto: a.texto });
         case "apagar": return rpc<unknown>("criakut_conteudo_apagar", { _tipo: a.alvo, _id: a.id });
+        case "sugerir": return rpc<unknown>("criakut_comunidade_sugerir", { _nome: a.nome, _descricao: a.descricao, _emoji: a.emoji, _publico: a.publico });
       }
     },
     onSuccess: () => invalidarFase3(qc),
@@ -518,16 +521,30 @@ export function useAcaoAdminCriakut() {
       | { tipo: "convidar"; email: string }
       | { tipo: "moderar"; alvo: string; qual: string; ocultar: boolean }
       | { tipo: "comunidade"; id: string | null; slug: string; nome: string; descricao: string; emoji: string; cor: string; ativa: boolean; ordem: number; publico: string }
-      | { tipo: "fixar"; topico: string; fixo: boolean }) => {
+      | { tipo: "fixar"; topico: string; fixo: boolean }
+      | { tipo: "decidir"; id: string; aprovar: boolean; motivo: string }) => {
       switch (a.tipo) {
         case "config": return rpc<unknown>("criakut_admin_config", { _chave: a.chave, _ligar: a.ligar });
         case "convidar": return rpc<string>("criakut_admin_convidar", { _email: a.email });
         case "moderar": return rpc<unknown>("criakut_admin_moderar", { _tipo: a.qual, _alvo: a.alvo, _ocultar: a.ocultar });
         case "comunidade": return rpc<unknown>("criakut_admin_comunidade_salvar", { _id: a.id, _slug: a.slug, _nome: a.nome, _descricao: a.descricao, _emoji: a.emoji, _cor: a.cor, _ativa: a.ativa, _ordem: a.ordem, _publico: a.publico });
         case "fixar": return rpc<unknown>("criakut_admin_fixar", { _topico: a.topico, _fixo: a.fixo });
+        case "decidir": return rpc<unknown>("criakut_admin_comunidade_decidir", { _id: a.id, _aprovar: a.aprovar, _motivo: a.motivo || null });
       }
     },
     onSuccess: () => { invalidarFase3(qc); void qc.invalidateQueries({ queryKey: ["criakut-acesso"] }); },
     onError: (e) => toast.error(msgErro(e, "Não deu certo.")),
+  });
+}
+
+/** Comunidades parecidas com o nome digitado (antes de sugerir uma nova). */
+export function useComunidadesParecidas(nome: string) {
+  const { user } = useAuth();
+  const [termo, setTermo] = useState(nome);
+  useEffect(() => { const t = setTimeout(() => setTermo(nome.trim()), 350); return () => clearTimeout(t); }, [nome]);
+  return useQuery({
+    queryKey: ["criakut-parecidas", user?.id, termo],
+    enabled: !!user?.id && termo.length >= 3,
+    queryFn: () => rpc<ComunidadeParecida[]>("criakut_comunidades_parecidas", { _nome: termo }).then((d) => d ?? []),
   });
 }

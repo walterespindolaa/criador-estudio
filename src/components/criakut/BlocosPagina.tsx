@@ -10,6 +10,7 @@ import {
 } from "@/hooks/useCriakut";
 import { PRECO_DESTAQUE, nomeFuncao, quandoFoi, type PaginaCriakutDados } from "@/lib/criakut";
 import { Avatar, DenunciarDialog, SeloDestaque } from "./Pecas";
+import { CapaComunidade } from "./CapaComunidade";
 
 /* BLOCOS DA PÁGINA (Fase 3, mockup aprovado em 14/10/2026):
    Recados (centro), Quem visitou, Comunidades e o cartão do Destaque
@@ -123,7 +124,7 @@ export function ComunidadesDaPagina({ dados }: { dados: PaginaCriakutDados }) {
         : <div className="flex flex-wrap gap-2">
             {lista.slice(0, 8).map((c) => (
               <button key={c.slug} type="button" title={c.nome} onClick={() => navigate(`${base}?aba=comunidades&c=${c.slug}`)} className="w-[50px] text-center text-[10px] font-semibold leading-tight">
-                <span className="mb-1 grid h-[50px] w-[50px] place-items-center rounded-xl text-xl" style={{ background: c.cor }}>{c.emoji}</span>
+                <CapaComunidade tema={c.emoji} forma="mini" className="mb-1 h-[50px] w-[50px] overflow-hidden rounded-xl" />
                 <span className="line-clamp-2">{c.nome}</span>
               </button>
             ))}

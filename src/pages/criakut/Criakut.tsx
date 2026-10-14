@@ -18,7 +18,8 @@ import { Mural } from "@/components/criakut/Mural";
 import { Propostas } from "@/components/criakut/Propostas";
 import { PaginaCriakut } from "@/components/criakut/PaginaCriakut";
 import { CapaCriakut } from "@/components/criakut/CapaCriakut";
-import { ESTILOS, FUNCOES, NICHOS, iniciais, limparInstagram, nomeFuncao, precoTexto, slugDe, urlConfiavel, type FuncaoCriakut } from "@/lib/criakut";
+import { EscolherFuncoes } from "@/components/criakut/EscolherFuncoes";
+import { ESTILOS, FUNCOES, NICHOS, iniciais, limparInstagram, nomesFuncoes, precoTexto, slugDe, urlConfiavel, type FuncaoCriakut } from "@/lib/criakut";
 import { cn } from "@/lib/utils";
 
 /* CRIAKUT (só convidados até abrir: o menu aparece pra quem tem acesso).
@@ -37,7 +38,7 @@ const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
 type Achado = {
   user_id: string; slug: string; nome: string; funcao: FuncaoCriakut; cidade: string | null; atende_remoto: boolean;
   foto_url: string | null; status_texto: string | null; estilos: string[]; nichos: string[];
-  preco_minimo_centavos: number | null; seguidores: number; nota: number | null; entregas: number;
+  preco_minimo_centavos: number | null; seguidores: number; nota: number | null; entregas: number; outras_funcoes?: FuncaoCriakut[];
 };
 
 /* ABAS DO CRIAKUT. No computador moram na faixa laranja do topo, com o nome
@@ -87,6 +88,7 @@ function CriarPagina() {
   /* Começa marcado pelo tipo de conta (teste de 14/10: criadora vinha como social mídia). */
   const base = useBaseCriakut();
   const [funcao, setFuncao] = useState<FuncaoCriakut>(base === "/app/criakut" ? "criadora" : profile?.account_type === "manager" ? "social_media" : "designer");
+  const [outras, setOutras] = useState<FuncaoCriakut[]>([]);
   useEffect(() => {
     if (base !== "/app/criakut" && profile?.account_type === "manager") setFuncao((f) => (f === "designer" ? "social_media" : f));
   }, [base, profile?.account_type]);
@@ -101,16 +103,9 @@ function CriarPagina() {
         <label className="mt-4 block text-[13px] font-semibold">Sua cidade <span className="font-normal text-muted-foreground">(pra te acharem por perto; dá pra esconder depois)</span></label>
         <CidadeInput className="mt-1" value={cidadeNova} onChange={setCidadeNova} placeholder="Digite e escolha (ex.: Itajaí)" />
         <p className="mt-4 text-[13px] font-semibold">O que você faz</p>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {FUNCOES.map((f) => (
-            <button key={f.valor} type="button" onClick={() => setFuncao(f.valor)}
-              className={cn("rounded-full border px-3 py-1 text-[12.5px] font-semibold", funcao === f.valor ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}>
-              {f.nome}
-            </button>
-          ))}
-        </div>
+        <div className="mt-1.5"><EscolherFuncoes principal={funcao} outras={outras} onChange={(p, o) => { setFuncao(p); setOutras(o); }} /></div>
         <Button className="mt-5 w-full rounded-xl h-11" disabled={nome.trim().length < 2 || salvar.isPending}
-          onClick={() => salvar.mutate({ nome: nome.trim(), funcao, cidade: cidadeNova, slug: `${slugDe(nome)}-${Math.random().toString(36).slice(2, 5)}`,
+          onClick={() => salvar.mutate({ nome: nome.trim(), funcao, outras_funcoes: funcao === "criadora" ? [] : outras, cidade: cidadeNova, slug: `${slugDe(nome)}-${Math.random().toString(36).slice(2, 5)}`,
             foto_url: urlConfiavel(profile?.avatar_url), instagram: limparInstagram(profile?.instagram_handle) })}>
           {salvar.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Criar minha página
         </Button>
@@ -208,7 +203,7 @@ function Buscar() {
                   <span className="min-w-0">
                     <b className="block font-display text-[17px]">{p.nome}{!p._dest && idsDestaque.has(p.user_id) && <SeloDestaque curto className="ml-1.5" />}
                       {p.user_id === user?.id && <span className="ml-1.5 rounded-md bg-muted px-1.5 py-0.5 align-middle font-body text-[10.5px] font-bold text-muted-foreground">você</span>}</b>
-                    <span className="block text-[12.5px] text-muted-foreground">{[nomeFuncao(p.funcao), p.cidade, p.atende_remoto ? "remoto" : null].filter(Boolean).join(" · ")}</span>
+                    <span className="block text-[12.5px] text-muted-foreground">{[nomesFuncoes(p.funcao, p.outras_funcoes), p.cidade, p.atende_remoto ? "remoto" : null].filter(Boolean).join(" · ")}</span>
                     <span className="mt-1.5 flex flex-wrap gap-1">{[...p.estilos, ...p.nichos].slice(0, 5).map((t) => <span key={t} className="rounded-md bg-muted px-2 py-0.5 text-[11px]">{t}</span>)}</span>
                   </span>
                   <span className="text-right max-sm:col-span-2 max-sm:text-left">

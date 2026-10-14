@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useProfile } from "@/hooks/useProfile";
-import { useAcaoAdminCriakut, useAcaoComunidade, useBaseCriakut, useComunidade, useComunidades, useMeuPerfilCriakut, useTopico } from "@/hooks/useCriakut";
+import { useAcaoAdminCriakut, useAcaoComunidade, useBaseCriakut, useComunidade, useComunidades, useComunidadesParecidas, useMeuPerfilCriakut, useTopico } from "@/hooks/useCriakut";
 import { PUBLICOS, nomeFuncao, quandoFoi, type AutorMini, type ComunidadeItem, type PublicoComunidade } from "@/lib/criakut";
 import { Avatar, DenunciarDialog, SeloDestaque } from "./Pecas";
+import { CapaComunidade, EscolherTemaComunidade, palpiteTema, temaComunidade } from "./CapaComunidade";
 import { cn } from "@/lib/utils";
 
-/* COMUNIDADES (Fase 3, versão simples aprovada em 14/10/2026). Só o admin
-   cria comunidade; quem tem página entra, abre tópico e responde. Telefone,
+/* COMUNIDADES (Fase 3, versão simples aprovada em 14/10/2026). O admin cria;
+   quem tem página sugere (o admin aprova), entra, abre tópico e responde. Telefone,
    e-mail e link viram "••••" no banco. 3 denúncias escondem até o admin olhar.
    Endereços: ?aba=comunidades · &c=slug (dentro) · &t=id (um tópico). */
 
@@ -39,6 +40,7 @@ function Lista({ onAbrir }: { onAbrir: (slug: string) => void }) {
   const { profile } = useProfile();
   const admin = profile?.role === "admin";
   const [editando, setEditando] = useState<ComunidadeItem | "nova" | null>(null);
+  const [sugerindo, setSugerindo] = useState(false);
   const minhas = (q.data ?? []).filter((x) => x.sou_membro).length;
   /* FILTRO (Walter, 14/10/2026): texto, público e "só as minhas". Cada pessoa
      já só recebe as comunidades do lado dela (criador ou prestador) e as de
@@ -56,7 +58,9 @@ function Lista({ onAbrir }: { onAbrir: (slug: string) => void }) {
         <h1 className="font-display text-[clamp(28px,4vw,44px)] font-extrabold leading-[1.05]">Comunidades</h1>
         <span className="flex items-center gap-2 text-[12.5px] text-muted-foreground">
           {minhas > 0 && `Você está em ${minhas}`}
-          {admin && <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEditando("nova")}><Plus className="mr-1 h-4 w-4" /> Nova comunidade</Button>}
+          {admin
+            ? <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEditando("nova")}><Plus className="mr-1 h-4 w-4" /> Nova comunidade</Button>
+            : <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setSugerindo(true)}><Plus className="mr-1 h-4 w-4" /> Sugerir comunidade</Button>}
         </span>
       </div>
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -75,14 +79,19 @@ function Lista({ onAbrir }: { onAbrir: (slug: string) => void }) {
         : lista.length === 0 ? <p className="py-14 text-center text-[14px] text-muted-foreground">Nenhuma comunidade com esse filtro.</p>
         : <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
             {lista.map((x) => (
-              <div key={x.id} className={cn("overflow-hidden rounded-[20px] border border-border bg-card text-left transition-colors hover:border-foreground/40", !x.ativa && "opacity-60")}>
-                <button type="button" className="block w-full text-left" onClick={() => onAbrir(x.slug)}>
-                  <div className="relative grid h-[86px] place-items-center text-[34px]" style={{ background: x.cor }}>{x.emoji}
+              <div key={x.id} className={cn("overflow-hidden rounded-[20px] border bg-card text-left transition-colors hover:border-foreground/40",
+                x.status !== "aprovada" ? "border-dashed border-amber-400" : "border-border", !x.ativa && "opacity-60")}>
+                <button type="button" className="block w-full text-left" disabled={x.status !== "aprovada" && !admin} onClick={() => onAbrir(x.slug)}>
+                  <div className="relative h-[96px]">
+                    <CapaComunidade tema={x.emoji} className="absolute inset-0 h-full w-full" />
                     {x.publico !== "todos" && <span className="absolute left-2.5 top-2.5 rounded-full bg-white/90 px-2 py-0.5 text-[10.5px] font-bold text-foreground">Pra {x.publico}</span>}
+                    {x.status === "pendente" && <span className="absolute right-2.5 top-2.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10.5px] font-bold text-amber-900">{x.minha_sugestao ? "Sua sugestão: em análise" : "Em análise"}</span>}
+                    {x.status === "recusada" && <span className="absolute right-2.5 top-2.5 rounded-full bg-muted px-2 py-0.5 text-[10.5px] font-bold text-muted-foreground">Não aprovada</span>}
                   </div>
                   <div className="p-3.5 pb-2">
                     <h3 className="font-display text-[17px] font-bold">{x.nome}{!x.ativa && <span className="ml-1 text-[11px] font-normal">(desativada)</span>}</h3>
                     {x.descricao && <p className="mt-1 text-[12.5px] leading-snug text-muted-foreground">{x.descricao}</p>}
+                    {x.status === "recusada" && x.motivo_recusa && <p className="mt-1 text-[12px] text-muted-foreground"><b>Motivo:</b> {x.motivo_recusa}</p>}
                   </div>
                 </button>
                 <div className="flex items-center justify-between px-3.5 pb-3.5 text-[12px] text-muted-foreground">
@@ -96,6 +105,7 @@ function Lista({ onAbrir }: { onAbrir: (slug: string) => void }) {
             ))}
           </div>}
       {admin && <EditarComunidade item={editando} onClose={() => setEditando(null)} />}
+      <SugerirComunidade open={sugerindo} onOpenChange={setSugerindo} onAbrir={(slug) => { setSugerindo(false); onAbrir(slug); }} />
     </div>
   );
 }
@@ -105,11 +115,11 @@ function EditarComunidade({ item, onClose }: { item: ComunidadeItem | "nova" | n
   const meu = useMeuPerfilCriakut();
   /* Público já vem marcado pelo lado de quem cria (criadora = criadores). */
   const ladoPadrao: PublicoComunidade = meu.data?.funcao === "criadora" ? "criadores" : meu.data ? "prestadores" : "todos";
-  const vazio = { slug: "", nome: "", descricao: "", emoji: "💬", cor: "#FFE6DC", ativa: true, ordem: 0, publico: ladoPadrao as PublicoComunidade };
+  const vazio = { slug: "", nome: "", descricao: "", emoji: "papo", cor: "#FFE6DC", ativa: true, ordem: 0, publico: ladoPadrao as PublicoComunidade };
   const [f, setF] = useState(vazio);
   useEffect(() => {
     if (item === "nova") setF({ ...vazio, publico: ladoPadrao });
-    else if (item) setF({ slug: item.slug, nome: item.nome, descricao: item.descricao ?? "", emoji: item.emoji, cor: item.cor, ativa: item.ativa, ordem: 0, publico: item.publico });
+    else if (item) setF({ slug: item.slug, nome: item.nome, descricao: item.descricao ?? "", emoji: temaComunidade(item.emoji).tema, cor: item.cor, ativa: item.ativa, ordem: 0, publico: item.publico });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item, ladoPadrao]);
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
@@ -120,10 +130,11 @@ function EditarComunidade({ item, onClose }: { item: ComunidadeItem | "nova" | n
   };
   return (
     <Dialog open={!!item} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-h-[92vh] max-w-lg overflow-y-auto">
         <DialogHeader><DialogTitle>{item === "nova" ? "Nova comunidade" : "Editar comunidade"}</DialogTitle><DialogDescription>Só admin vê isto.</DialogDescription></DialogHeader>
         <div className="grid gap-2.5">
-          <div className="grid grid-cols-[64px_1fr] gap-2"><Input value={f.emoji} maxLength={4} onChange={(e) => set("emoji", e.target.value)} /><Input value={f.nome} maxLength={60} placeholder="Nome" onChange={(e) => set("nome", e.target.value)} /></div>
+          <Input value={f.nome} maxLength={60} placeholder="Nome" onChange={(e) => set("nome", e.target.value)} />
+          <EscolherTemaComunidade valor={f.emoji} onChange={(v) => set("emoji", v)} />
           <Input value={f.slug} maxLength={40} placeholder="endereco-da-comunidade" onChange={(e) => set("slug", e.target.value.toLowerCase())} />
           <Textarea rows={2} maxLength={240} value={f.descricao} placeholder="Descrição curta" onChange={(e) => set("descricao", e.target.value)} />
           <div>
@@ -138,10 +149,78 @@ function EditarComunidade({ item, onClose }: { item: ComunidadeItem | "nova" | n
             </div>
             <p className="mt-1 text-[11px] text-muted-foreground">Criadores = quem cria conteúdo. Prestadores = social mídia, designer, editor, filmmaker e copy. Cada lado só vê as suas e as de todos.</p>
           </div>
-          <label className="flex items-center gap-2 text-[13px]">Cor <input type="color" value={f.cor} onChange={(e) => set("cor", e.target.value.toUpperCase())} />
-            <span className="ml-auto flex items-center gap-1.5"><input type="checkbox" checked={f.ativa} onChange={(e) => set("ativa", e.target.checked)} /> ativa</span></label>
+          <label className="flex items-center gap-1.5 text-[13px]"><input type="checkbox" checked={f.ativa} onChange={(e) => set("ativa", e.target.checked)} /> ativa</label>
           <Button className="rounded-xl" disabled={acao.isPending} onClick={salvar}>{acao.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Salvar</Button>
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* SUGERIR COMUNIDADE (Walter, 14/10/2026): qualquer pessoa com página sugere,
+   o admin aprova. Antes de mandar, mostra as parecidas que já existem pra
+   ninguém criar a quinta "Quanto cobrar". Público vem marcado pelo lado da
+   pessoa (criadora = criadores). */
+function SugerirComunidade({ open, onOpenChange, onAbrir }: { open: boolean; onOpenChange: (o: boolean) => void; onAbrir: (slug: string) => void }) {
+  const acao = useAcaoComunidade();
+  const meu = useMeuPerfilCriakut();
+  const lado: PublicoComunidade = meu.data?.funcao === "criadora" ? "criadores" : "prestadores";
+  const [nome, setNome] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [emoji, setEmoji] = useState("papo");
+  const [escolheuCapa, setEscolheuCapa] = useState(false);
+  const [publico, setPublico] = useState<PublicoComunidade>(lado);
+  const [mesmoAssim, setMesmoAssim] = useState(false);
+  useEffect(() => { if (open) { setNome(""); setDescricao(""); setEmoji("papo"); setEscolheuCapa(false); setPublico(lado); setMesmoAssim(false); } }, [open, lado]);
+  const parecidas = useComunidadesParecidas(nome);
+  const temParecida = (parecidas.data ?? []).length > 0;
+  const semPagina = !meu.isLoading && !meu.data;
+  const mandar = () => {
+    if (nome.trim().length < 3) { toast.error("Dê um nome com pelo menos 3 letras."); return; }
+    acao.mutate({ tipo: "sugerir", nome: nome.trim(), descricao: descricao.trim(), emoji, publico },
+      { onSuccess: () => { toast.success("Sugestão enviada! O Cria aprova e te avisa."); onOpenChange(false); } });
+  };
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[92vh] max-w-lg overflow-y-auto">
+        <DialogHeader><DialogTitle>Sugerir comunidade</DialogTitle><DialogDescription>O Cria olha antes de ir pro ar. Você entra nela automaticamente quando for aprovada.</DialogDescription></DialogHeader>
+        {semPagina ? <p className="rounded-xl bg-muted p-3 text-[13px]">Crie sua página no Criakut antes de sugerir uma comunidade.</p> : (
+          <div className="grid gap-2.5">
+            <Input value={nome} maxLength={60} placeholder="Nome (ex.: Reels de nutrição)"
+              onChange={(e) => { setNome(e.target.value); setMesmoAssim(false); if (!escolheuCapa) setEmoji(palpiteTema(e.target.value)); }} />
+            {temParecida && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 dark:bg-amber-950/30">
+                <p className="text-[12.5px] font-semibold text-amber-900 dark:text-amber-200">Já tem comunidade parecida. Não é uma dessas?</p>
+                <div className="mt-2 grid gap-1.5">
+                  {(parecidas.data ?? []).map((c) => (
+                    <div key={c.slug} className="flex items-center gap-2 rounded-lg bg-card px-2 py-1.5">
+                      <CapaComunidade tema={c.emoji} forma="mini" className="h-8 w-8 shrink-0 rounded-md" />
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{c.nome}{c.status === "pendente" && <span className="ml-1 text-[11px] font-normal text-muted-foreground">(em análise)</span>}</span>
+                      {c.status === "aprovada" && <Button size="sm" variant="outline" className="h-7 rounded-lg text-[12px]" onClick={() => onAbrir(c.slug)}>Ver</Button>}
+                    </div>
+                  ))}
+                </div>
+                <label className="mt-2 flex items-center gap-2 text-[12px]"><input type="checkbox" checked={mesmoAssim} onChange={(e) => setMesmoAssim(e.target.checked)} /> A minha é diferente, quero sugerir mesmo assim</label>
+              </div>
+            )}
+            <EscolherTemaComunidade valor={emoji} onChange={(v) => { setEmoji(v); setEscolheuCapa(true); }} />
+            <Textarea rows={2} maxLength={240} value={descricao} placeholder="Sobre o que é (uma frase)" onChange={(e) => setDescricao(e.target.value)} />
+            <div>
+              <p className="mb-1.5 text-[12.5px] font-semibold">Pra quem é</p>
+              <div className="flex gap-1.5">
+                {PUBLICOS.map((p) => (
+                  <button key={p.valor} type="button" onClick={() => setPublico(p.valor)}
+                    className={cn("flex-1 rounded-xl border px-2 py-2 text-[12.5px] font-semibold", publico === p.valor ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                    {p.nome}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Button className="rounded-xl" disabled={acao.isPending || nome.trim().length < 3 || (temParecida && !mesmoAssim)} onClick={mandar}>
+              {acao.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Mandar pra aprovação
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -177,7 +256,7 @@ function Dentro({ slug, onVoltar, onTopico }: { slug: string; onVoltar: () => vo
       <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
         <aside className="space-y-4">
           <div className={cn(card, "text-center")}>
-            <div className="grid h-[110px] place-items-center rounded-2xl text-5xl" style={{ background: c.cor }}>{c.emoji}</div>
+            <CapaComunidade tema={c.emoji} forma="bloco" className="h-[120px] w-full overflow-hidden rounded-2xl" />
             <h2 className="mt-2.5 font-display text-[20px] font-bold">{c.nome}</h2>
             {c.descricao && <p className="mt-1 text-[12.5px] text-muted-foreground">{c.descricao}</p>}
             <p className="mt-1 text-[12px] text-muted-foreground">{c.membros} {c.membros === 1 ? "membro" : "membros"} · {c.topicos.length} {c.topicos.length === 1 ? "tópico" : "tópicos"}</p>
@@ -266,7 +345,7 @@ function Topico({ id, onVoltar }: { id: string; onVoltar: () => void }) {
   };
   return (
     <div className="mx-auto max-w-3xl">
-      <button type="button" onClick={onVoltar} className="mb-3 inline-flex items-center gap-1 text-[13px] font-bold"><ArrowLeft className="h-4 w-4" /> {t.comunidade.emoji} {t.comunidade.nome}</button>
+      <button type="button" onClick={onVoltar} className="mb-3 inline-flex items-center gap-1 text-[13px] font-bold"><ArrowLeft className="h-4 w-4" /> <CapaComunidade tema={t.comunidade.emoji} forma="mini" className="h-6 w-6 rounded-md" /> {t.comunidade.nome}</button>
       <div className={card}>
         <h1 className="font-display text-[24px] font-bold leading-snug">{t.fixo && <Pin className="mr-1 inline h-4 w-4 text-violet-600" />}{t.titulo}</h1>
         <div className="mt-3 grid grid-cols-[auto_1fr] gap-2.5">

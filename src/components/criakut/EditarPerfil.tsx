@@ -9,9 +9,10 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useSalvarPerfilCriakut, useSalvarServicos } from "@/hooks/useCriakut";
 import { CidadeInput } from "./CidadeInput";
+import { EscolherFuncoes } from "./EscolherFuncoes";
 import {
-  ESTILOS, FUNCOES, NICHOS, PODE_BUSCAR, UNIDADES, ehContratante, limparInstagram, ofereceServico, slugValido,
-  type FuncaoCriakut, type PerfilCriakut, type Servico, type Unidade,
+  ESTILOS, NICHOS, PODE_BUSCAR, UNIDADES, ehContratante, limparInstagram, ofereceServico, slugValido,
+  type PerfilCriakut, type Servico, type Unidade,
 } from "@/lib/criakut";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +21,7 @@ import { cn } from "@/lib/utils";
    Foto e capa têm botões próprios em cima da página, que é onde se espera. */
 
 type Form = Pick<PerfilCriakut, "nome" | "slug" | "funcao" | "cidade" | "atende_remoto" | "sobre" | "status_texto" | "recado_do_dia" | "estilos" | "nichos" | "instagram" | "publicado"
-  | "mostrar_cidade" | "mostrar_instagram" | "busco" | "busco_texto">;
+  | "mostrar_cidade" | "mostrar_instagram" | "busco" | "busco_texto" | "outras_funcoes">;
 
 function Chips({ opcoes, valor, onChange }: { opcoes: string[]; valor: string[]; onChange: (v: string[]) => void }) {
   return (
@@ -59,7 +60,7 @@ export function EditarPerfil({ open, onOpenChange, perfil, servicos }: {
     const { nome, slug, funcao, cidade, atende_remoto, sobre, status_texto, recado_do_dia, estilos, nichos, instagram, publicado } = perfil;
     setF({ nome, slug, funcao, cidade, atende_remoto, sobre, status_texto, recado_do_dia, estilos, nichos, instagram, publicado,
       mostrar_cidade: perfil.mostrar_cidade ?? true, mostrar_instagram: perfil.mostrar_instagram ?? true,
-      busco: perfil.busco ?? [], busco_texto: perfil.busco_texto ?? null });
+      busco: perfil.busco ?? [], busco_texto: perfil.busco_texto ?? null, outras_funcoes: perfil.outras_funcoes ?? [] });
     setServ(servicos.map((s) => ({ ...s, precoTxt: reaisDe(s.preco_centavos) })));
   }, [open, perfil, servicos]);
 
@@ -77,7 +78,7 @@ export function EditarPerfil({ open, onOpenChange, perfil, servicos }: {
     const ig = limparInstagram(f.instagram);
     if (f.instagram?.trim() && !ig) { toast.error("Instagram: só o @ (letras, números, ponto e _)."); return; }
     try {
-      await salvar.mutateAsync({ ...f, nome: f.nome.trim(), busco_texto: f.busco_texto?.trim() || null, busco: busca ? f.busco : [], sobre: f.sobre?.trim() || null,
+      await salvar.mutateAsync({ ...f, outras_funcoes: f.funcao === "criadora" ? [] : (f.outras_funcoes ?? []).filter((x) => x !== f.funcao), nome: f.nome.trim(), busco_texto: f.busco_texto?.trim() || null, busco: busca ? f.busco : [], sobre: f.sobre?.trim() || null,
         status_texto: f.status_texto?.trim() || null, recado_do_dia: f.recado_do_dia?.trim() || null,
         cidade: f.cidade || null, instagram: ig });
       if (oferece) await salvarServ.mutateAsync(serv.map((s, i) => ({ ...s, preco_centavos: centavosDe(s.precoTxt), ordem: i })));
@@ -105,14 +106,8 @@ export function EditarPerfil({ open, onOpenChange, perfil, servicos }: {
           </div>
           <div className="grid gap-1.5">
             <Label>O que você faz</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {FUNCOES.map((x) => (
-                <button key={x.valor} type="button" onClick={() => set("funcao", x.valor as FuncaoCriakut)}
-                  className={cn("rounded-full border px-3 py-1 text-[12px] font-semibold", f.funcao === x.valor ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}>
-                  {x.nome}
-                </button>
-              ))}
-            </div>
+            <EscolherFuncoes tamanho="sm" principal={f.funcao} outras={f.outras_funcoes ?? []}
+              onChange={(p, o) => setF((x) => ({ ...x, funcao: p, outras_funcoes: o, busco: (x.busco ?? []).filter((b) => b !== p && !o.includes(b)) }))} />
           </div>
           <div className="grid grid-cols-[1fr_auto] items-end gap-3">
             <div className="grid gap-1.5"><Label>Cidade</Label><CidadeInput value={f.cidade ?? null} onChange={(v) => set("cidade", v)} placeholder="Digite e escolha" /></div>
@@ -128,7 +123,7 @@ export function EditarPerfil({ open, onOpenChange, perfil, servicos }: {
             <div className="grid gap-1.5 rounded-2xl border border-border p-3.5">
               <Label>O que você procura</Label>
               <div className="flex flex-wrap gap-1.5">
-                {PODE_BUSCAR.filter((x) => x.valor !== f.funcao).map((x) => {
+                {PODE_BUSCAR.filter((x) => x.valor !== f.funcao && !(f.outras_funcoes ?? []).includes(x.valor)).map((x) => {
                   const on = (f.busco ?? []).includes(x.valor);
                   return (
                     <button key={x.valor} type="button" onClick={() => set("busco", on ? (f.busco ?? []).filter((y) => y !== x.valor) : [...(f.busco ?? []), x.valor])}

@@ -11,7 +11,7 @@ import { compressImage } from "@/lib/image-compress";
 import {
   registrarVisitaCriakut, subirImagemCriakut, useAdicionarPortfolio, useBaseCriakut, useRecados, useRemoverPortfolio, useSalvarPerfilCriakut, useSeguir,
 } from "@/hooks/useCriakut";
-import { ehContratante, faixaTexto, iniciais, nomeFuncao, numeroCurto, precoTexto, type PaginaCriakutDados } from "@/lib/criakut";
+import { ehContratante, faixaTexto, iniciais, nomeFuncao, nomesFuncoes, numeroCurto, precoTexto, type PaginaCriakutDados } from "@/lib/criakut";
 import { CapaCriakut } from "./CapaCriakut";
 import { EscolherCapa } from "./EscolherCapa";
 import { EditarPerfil } from "./EditarPerfil";
@@ -212,7 +212,7 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
           <div className="min-w-0 max-md:flex-1">
           <h2 className="mt-2.5 font-display text-[19px] font-bold leading-tight max-md:mt-0">{dados.nome} {dados.destaque && <SeloDestaque className="ml-0.5" />}</h2>
           <p className="mt-0.5 text-[12px] text-muted-foreground">
-            {[nomeFuncao(dados.funcao), dados.cidade, !contratante && dados.atende_remoto ? "atende remoto" : null].filter(Boolean).join(" · ")}
+            {[nomesFuncoes(dados.funcao, dados.outras_funcoes), dados.cidade, !contratante && dados.atende_remoto ? "atende remoto" : null].filter(Boolean).join(" · ")}
           </p>
           {dados.status_texto && (
             <div className="mt-2 rounded-xl bg-emerald-50 px-2.5 py-1.5 text-[11.5px] font-semibold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">🟢 {dados.status_texto}</div>

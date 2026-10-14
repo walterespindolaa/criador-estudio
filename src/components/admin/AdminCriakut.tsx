@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useAcaoAdminCriakut, usePainelAdminCriakut } from "@/hooks/useCriakut";
 import { quandoFoi } from "@/lib/criakut";
+import { CapaComunidade } from "@/components/criakut/CapaComunidade";
 import { cn } from "@/lib/utils";
 
 /* CRIAKUT NO ADMIN (Walter, 14/10/2026, mockup Fase 3): números, chaves
@@ -67,6 +68,30 @@ export function AdminCriakut() {
         </div>
         {p.pontes && <span className="text-[12px] text-muted-foreground">Pontes: {Object.entries(p.pontes).map(([k, v]) => `${k} ${v}`).join(" · ")}</span>}
       </div>
+
+      {(p.comunidades_pendentes?.length ?? 0) > 0 && (
+        <div className="rounded-2xl border border-amber-300 bg-card p-4">
+          <p className="mb-2 font-display text-[16px] font-bold">Comunidades pra aprovar ({p.comunidades_pendentes!.length})</p>
+          <div className="divide-y divide-border">
+            {p.comunidades_pendentes!.map((c) => (
+              <div key={c.id} className="flex flex-wrap items-start gap-3 py-3 text-[13px]">
+                <CapaComunidade tema={c.emoji} forma="mini" className="h-10 w-10 shrink-0 rounded-lg" />
+                <div className="min-w-0 flex-1">
+                  <b>{c.nome}</b> <span className="text-[11.5px] text-muted-foreground">· pra {c.publico} · sugerida por {c.autor?.nome ?? "?"} {quandoFoi(c.criado_em)}</span>
+                  {c.descricao && <p className="mt-0.5 text-muted-foreground">{c.descricao}</p>}
+                </div>
+                <div className="flex gap-1.5">
+                  <Button size="sm" disabled={acao.isPending} onClick={() => acao.mutate({ tipo: "decidir", id: c.id, aprovar: true, motivo: "" }, { onSuccess: () => toast.success("Aprovada e no ar.") })}>Aprovar</Button>
+                  <Button size="sm" variant="outline" disabled={acao.isPending} onClick={() => {
+                    const motivo = window.prompt("Por que não? (a pessoa recebe esse motivo)", "Já existe uma comunidade parecida.") ?? null;
+                    if (motivo !== null) acao.mutate({ tipo: "decidir", id: c.id, aprovar: false, motivo });
+                  }}>Recusar</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="rounded-2xl border border-border bg-card p-4">
         <p className="mb-2 font-display text-[16px] font-bold">Denúncias abertas ({p.denuncias.length})</p>
