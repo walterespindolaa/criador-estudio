@@ -7,7 +7,7 @@ import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton, FeedbackDialog } from "@/components/FeedbackButton";
 import {
   Home, Boxes, Briefcase, Handshake, DollarSign, Users, Layers, ListChecks, Menu, ChevronRight, Gift, PackageCheck, CalendarCheck, FileText,
-  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Camera, Trash2, UserPlus, Search, MessageSquarePlus, BarChart3, PlayCircle, type LucideIcon,
+  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Camera, Trash2, UserPlus, Search, MessageSquarePlus, BarChart3, PlayCircle, type LucideIcon, UsersRound,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -27,6 +27,7 @@ import { SettingsManagerDrawer } from "@/components/accounts/SettingsManagerDraw
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { HeroBand } from "@/components/HeroBand";
 import { useFilaDoParceiro, useSouParceiro } from "@/hooks/useParceiro";
+import { useAcessoCriakut } from "@/hooks/useCriakut";
 import { useManagerApprovalOverview } from "@/hooks/useApprovals";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { GlobalSearch } from "@/components/shared/GlobalSearch";
@@ -241,6 +242,8 @@ export default function ManagerLayout() {
      No dia em que ela ativar qualquer módulo, o rail completo volta sozinho. */
   const temModuloAtivo = modules.some((m) => m.status === "active" || m.status === "past_due");
   const parceiroPuro = !!souParceiro && !temModuloAtivo && !hasManagedAccounts && !isCollaborator && !actingAsTeam;
+  /* CRIAKUT: a comunidade (achar e contratar gente). Só pra quem tem acesso. */
+  const { temAcesso: temCriakut } = useAcessoCriakut();
   const travados = overview.reduce((s, r) => s + (r.pendentes ?? 0), 0);
   // Bolinha com número no ícone do app (PWA instalado). A pessoa bate o olho na
   // tela do celular e vê "3 posts esperando o cliente", sem abrir nada.
@@ -398,6 +401,7 @@ export default function ManagerLayout() {
           {/* PARCERIA e LIXEIRA faltavam pro parceiro (Walter, 09/09/2026).
              Indicar o CRIA e ganhar comissão vale pra ele igual, e apagar sem
              ter como recuperar é o tipo de porta que não pode faltar. */}
+          {temCriakut && railNode(UsersRound, "Criakut", { active: isActive("/socialmidia/criakut"), onClick: () => navigate("/socialmidia/criakut") })}
           {parceiroPuro && railNode(Handshake, LABELS.indique, { active: isActive("/socialmidia/parceria"), onClick: () => navigate("/socialmidia/parceria") })}
           {BUSINESS_NAV.filter((n) => !parceiroPuro).map((n) => {
             const onClick = n.to === "/socialmidia/comissoes" ? onNavComissoes : () => navigate(n.to);
@@ -564,6 +568,10 @@ export default function ManagerLayout() {
               ...(hasHubCria ? [{ label: "Cria Radar", desc: "Espiar os concorrentes dos seus clientes", icon: Search as LucideIcon, ativo: true, onClick: () => navigate("/socialmidia/hubcria") }] : []),
             ],
           },
+          ...(temCriakut ? [{
+            title: "Comunidade",
+            items: [{ label: "Criakut", desc: "Ache e contrate social mídia, designer, editor e filmmaker", icon: UsersRound as LucideIcon, onClick: () => navigate("/socialmidia/criakut") }],
+          }] : []),
           {
             title: "Negócio",
             items: parceiroPuro

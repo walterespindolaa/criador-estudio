@@ -5,8 +5,9 @@ import {
   CalendarRange, Kanban, Target, FolderOpen, Palette, BookOpen, BookMarked,
   Link2, Sparkles, BadgeDollarSign, BarChart3, Archive, GraduationCap,
   PlayCircle, Settings, LogOut, Instagram, ShieldCheck, ChevronDown, ChevronsLeft,
-  ChevronsRight, Wand2, IdCard, TrendingUp, Clapperboard, Trash2, Gem, Video, Globe, type LucideIcon,
+  ChevronsRight, Wand2, IdCard, TrendingUp, Clapperboard, Trash2, Gem, Video, Globe, UsersRound, type LucideIcon,
 } from "lucide-react";
+import { useAcessoCriakut } from "@/hooks/useCriakut";
 import { cn } from "@/lib/utils";
 import { useCriaAI } from "@/contexts/CriaAIContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -94,6 +95,7 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
   const { openCria } = useCriaAI();
   const { profile } = useProfile();
   const isAdmin = profile?.role === "admin";
+  const { temAcesso: temCriakut } = useAcessoCriakut();
   const [hovered, setHovered] = useState(false);
   const expanded = pinned || hovered;
 
@@ -313,7 +315,11 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
           expanded ? "mr-1.5 pl-2.5 pr-1" : "px-0",
         )}
       >
-        <div className="flex w-full flex-col items-stretch gap-1">{TOP.map(renderNode)}</div>
+        <div className="flex w-full flex-col items-stretch gap-1">
+          {TOP.map(renderNode)}
+          {/* CRIAKUT: só aparece pra quem tem acesso (convidados até abrir). */}
+          {temCriakut && renderNode({ id: "criakut", label: "Criakut", icon: UsersRound, to: "/app/criakut" })}
+        </div>
         <div className="mx-auto my-2 h-px w-8 bg-border" />
         <div className="flex w-full flex-col items-stretch gap-1">
           {isAdmin && renderNode({ id: "admin", label: "Admin", icon: ShieldCheck, to: "/app/cf-admin-panel" })}

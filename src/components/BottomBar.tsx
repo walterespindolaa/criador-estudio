@@ -2,8 +2,9 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, Menu, ChevronRight, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard, Wand2, TrendingUp, IdCard, Trash2, Gem, Video, Globe, MessageSquarePlus
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, Menu, ChevronRight, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard, Wand2, TrendingUp, IdCard, Trash2, Gem, Video, Globe, MessageSquarePlus, UsersRound
 } from "lucide-react";
+import { useAcessoCriakut } from "@/hooks/useCriakut";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -84,10 +85,13 @@ export function BottomBar() {
   const { profile } = useProfile();
   const { tier } = useTier();
   const { temSocialMidia } = useTemSocialMidia();
+  const { temAcesso: temCriakut } = useAcessoCriakut();
   const base = MORE_SECTIONS.map((s) => ({
     ...s,
     items: s.items.filter((i) => !i.soComSocialMidia || temSocialMidia),
-  }));
+  })).map((s) => s.title === "Mais" && temCriakut
+    ? { ...s, items: [{ title: "Criakut", url: "/app/criakut", icon: UsersRound, desc: "Ache social mídia, designer, editor e filmmaker" }, ...s.items] }
+    : s);
   const sections = profile?.role === "admin"
     ? base.map((s) => s.title === "Mais"
         ? { ...s, items: [...s.items, { title: "Admin", url: "/app/cf-admin-panel", icon: ShieldCheck }] }

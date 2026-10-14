@@ -9,12 +9,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { compressImage } from "@/lib/image-compress";
 import {
-  subirImagemCriakut, useAdicionarPortfolio, useRemoverPortfolio, useSalvarPerfilCriakut, useSeguir,
+  subirImagemCriakut, useAdicionarPortfolio, useBaseCriakut, useRemoverPortfolio, useSalvarPerfilCriakut, useSeguir,
 } from "@/hooks/useCriakut";
 import { iniciais, nomeFuncao, precoTexto, type PaginaCriakutDados } from "@/lib/criakut";
 import { CapaCriakut } from "./CapaCriakut";
 import { EscolherCapa } from "./EscolherCapa";
 import { EditarPerfil } from "./EditarPerfil";
+import { PedirOrcamento } from "./PedirOrcamento";
 import { cn } from "@/lib/utils";
 
 /* A PÁGINA (mockup v3 aprovado em 14/10/2026): capa em cima, e as três
@@ -29,7 +30,9 @@ const titulo = "mb-3 flex items-center justify-between text-[11.5px] font-bold u
 
 export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
   const navigate = useNavigate();
+  const base = useBaseCriakut();
   const { user } = useAuth();
+  const [pedindo, setPedindo] = useState(false);
   const { updateProfile } = useProfile();
   const salvar = useSalvarPerfilCriakut();
   const seguir = useSeguir();
@@ -140,7 +143,7 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
                 <Button className="rounded-xl" onClick={() => setEditando(true)}><Pencil className="h-4 w-4 mr-1.5" /> Editar minha página</Button>
               ) : (
                 <>
-                  <Button className="rounded-xl" onClick={() => toast("Pedir orçamento chega no próximo passo da Fase 1.")}>
+                  <Button className="rounded-xl" disabled={dados.eh_meu} onClick={() => setPedindo(true)}>
                     <Send className="h-4 w-4 mr-1.5" /> Pedir orçamento
                   </Button>
                   {!dados.eh_meu && (
@@ -170,8 +173,9 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
               : <p className="mt-2.5 text-[14px] text-muted-foreground">{meu ? "Conte quem você é em \"Editar minha página\"." : "Ainda sem descrição."}</p>}
             <div className="mt-4 flex flex-wrap gap-y-3 border-t border-dashed border-border pt-3.5">
               {[
+                [dados.reputacao?.nota != null ? `★ ${String(dados.reputacao.nota).replace(".", ",")}` : "novo", dados.reputacao?.avaliacoes ? `nota (${dados.reputacao.avaliacoes} ${dados.reputacao.avaliacoes === 1 ? "avaliação" : "avaliações"})` : "sem avaliação ainda"],
+                [dados.entregas_no_cria ?? 0, "entregas no Cria"],
                 [dados.seguidores, "seguidores"],
-                [dados.servicos.length, "serviços"],
                 [dados.portfolio.length, "peças no portfólio"],
               ].map(([n, l]) => (
                 <div key={String(l)} className="min-w-[110px] flex-1 text-[11.5px] text-muted-foreground">
@@ -229,10 +233,34 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
                 </div>}
           </div>
 
-          <div className={card}>
-            <p className={titulo}>Depoimentos</p>
-            <p className="text-[13px] text-muted-foreground flex items-start gap-2"><Star className="h-4 w-4 shrink-0 mt-0.5" />
-              Depoimentos e notas aparecem quando os trabalhos começarem a rodar pelo Criakut. Só deixa depoimento quem recebeu uma entrega pelo Cria.</p>
+          <div className={card} id="depoimentos">
+            <p className={titulo}>Depoimentos {(dados.reputacao?.depoimentos.length ?? 0) > 0 && <span className="normal-case tracking-normal text-muted-foreground font-semibold">{dados.reputacao!.depoimentos.length}</span>}</p>
+            {dados.reputacao && dados.reputacao.nota != null && (
+              <div className="mb-3 flex flex-wrap gap-2 text-[12px]">
+                {([["no_prazo", "No prazo"], ["criatividade", "Criatividade"], ["comunicacao", "Comunicação"]] as const).map(([k, n]) => dados.reputacao![k] != null && (
+                  <span key={k} className="rounded-lg bg-muted px-2.5 py-1"><b>{n}</b> {Number(dados.reputacao![k]) >= 2.5 ? "ótimo" : Number(dados.reputacao![k]) >= 1.75 ? "ok" : "abaixo"}</span>
+                ))}
+              </div>
+            )}
+            {(dados.reputacao?.depoimentos.length ?? 0) === 0
+              ? <p className="text-[13px] text-muted-foreground flex items-start gap-2"><Star className="h-4 w-4 shrink-0 mt-0.5" />
+                  Ainda sem depoimentos. Só deixa depoimento quem fechou e concluiu um trabalho pelo Criakut, com entrega registrada.</p>
+              : <div className="grid gap-3">
+                  {dados.reputacao!.depoimentos.map((d, i) => (
+                    <div key={i} className="rounded-2xl bg-muted/60 p-3.5">
+                      <div className="flex items-center gap-2">
+                        {d.autor_foto ? <img src={d.autor_foto} alt="" className="h-8 w-8 rounded-full object-cover" />
+                          : <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-[11px] font-extrabold text-primary-foreground">{iniciais(d.autor_nome ?? "?")}</span>}
+                        <span className="min-w-0 text-[12px] leading-tight">
+                          {d.autor_slug ? <button type="button" className="font-bold hover:underline" onClick={() => navigate(`${base}/${d.autor_slug}`)}>{d.autor_nome}</button> : <b>{d.autor_nome ?? "Alguém"}</b>}
+                          <span className="block truncate text-muted-foreground">{d.papel === "contratado" ? "contratou" : "foi contratada(o)"} · {d.trabalho}</span>
+                        </span>
+                        <span className="ml-auto text-[13px] text-amber-500">{"★".repeat(d.nota)}<span className="text-muted-foreground/40">{"★".repeat(5 - d.nota)}</span></span>
+                      </div>
+                      <p className="mt-2 whitespace-pre-wrap text-[13.5px] leading-relaxed">{d.depoimento}</p>
+                    </div>
+                  ))}
+                </div>}
           </div>
         </div>
 
@@ -244,7 +272,7 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
               ? <p className="text-[12.5px] text-muted-foreground">Ninguém ainda.</p>
               : <div className="grid grid-cols-3 gap-2.5">
                   {dados.quem_segue.map((q) => (
-                    <button key={q.slug} type="button" onClick={() => navigate(`/socialmidia/criakut/${q.slug}`)} className="text-center text-[11.5px] font-semibold">
+                    <button key={q.slug} type="button" onClick={() => navigate(`${base}/${q.slug}`)} className="text-center text-[11.5px] font-semibold">
                       {q.foto_url
                         ? <img src={q.foto_url} alt="" className="mb-1 aspect-square w-full rounded-2xl object-cover" />
                         : <span className="mb-1 grid aspect-square w-full place-items-center rounded-2xl bg-primary font-display text-lg font-extrabold text-primary-foreground">{iniciais(q.nome)}</span>}
@@ -275,6 +303,9 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
         </aside>
       </div>
 
+      {!dados.eh_meu && (
+        <PedirOrcamento open={pedindo} onOpenChange={setPedindo} contratadoId={dados.user_id} nome={dados.nome} servicos={dados.servicos} />
+      )}
       {dados.eh_meu && (
         <>
           <EditarPerfil open={editando} onOpenChange={setEditando} perfil={dados} servicos={dados.servicos} />

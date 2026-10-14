@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useSalvarPerfilCriakut, useSalvarServicos } from "@/hooks/useCriakut";
 import {
-  ESTILOS, FUNCOES, NICHOS, UNIDADES, slugValido,
+  ESTILOS, FUNCOES, NICHOS, UNIDADES, limparInstagram, slugValido,
   type FuncaoCriakut, type PerfilCriakut, type Servico, type Unidade,
 } from "@/lib/criakut";
 import { cn } from "@/lib/utils";
@@ -65,10 +65,12 @@ export function EditarPerfil({ open, onOpenChange, perfil, servicos }: {
   const gravar = async () => {
     if (f.nome.trim().length < 2) { toast.error("Coloque seu nome."); return; }
     if (!slugValido(f.slug)) { toast.error("Endereço: só letras minúsculas, números e hífen (3 a 40)."); return; }
+    const ig = limparInstagram(f.instagram);
+    if (f.instagram?.trim() && !ig) { toast.error("Instagram: só o @ (letras, números, ponto e _)."); return; }
     try {
       await salvar.mutateAsync({ ...f, nome: f.nome.trim(), sobre: f.sobre?.trim() || null,
         status_texto: f.status_texto?.trim() || null, recado_do_dia: f.recado_do_dia?.trim() || null,
-        cidade: f.cidade?.trim() || null, instagram: f.instagram?.replace(/^@/, "").trim() || null });
+        cidade: f.cidade?.trim() || null, instagram: ig });
       await salvarServ.mutateAsync(serv.map((s, i) => ({ ...s, preco_centavos: centavosDe(s.precoTxt), ordem: i })));
       toast.success("Página atualizada!");
       onOpenChange(false);

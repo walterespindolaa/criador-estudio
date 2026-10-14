@@ -387,6 +387,9 @@ const App = () => (
                 <Route path="collabs" element={<ErrorBoundary><UpgradeGate feature="collabs"><Collabs /></UpgradeGate></ErrorBoundary>} />
                 <Route path="insights" element={<ErrorBoundary><UpgradeGate feature="insights"><Insights /></UpgradeGate></ErrorBoundary>} />
                 <Route path="configuracoes" element={<ErrorBoundary><Configuracoes /></ErrorBoundary>} />
+                {/* CRIAKUT da criadora (a mesma tela do /socialmidia/criakut). Só convidados até abrir. */}
+                <Route path="criakut" element={<ErrorBoundary><Criakut /></ErrorBoundary>} />
+                <Route path="criakut/:slug" element={<ErrorBoundary><Criakut /></ErrorBoundary>} />
               </Route>
               <Route path="/socialmidia" element={
                 <ProtectedRoute><ManagerLayout /></ProtectedRoute>
@@ -435,7 +438,7 @@ const App = () => (
                 <Route path="equipe" element={<SoOperacao><ErrorBoundary><Equipe /></ErrorBoundary></SoOperacao>} />
                 {/* Abas da Equipe (28/09/2026): produção, conversas e pessoas. */}
                 <Route path="equipe/:aba" element={<SoOperacao><ErrorBoundary><Equipe /></ErrorBoundary></SoOperacao>} />
-                {/* CRIAKUT (Fase 1, só convidados: fora do menu até abrir). Doc "Criakut: ecossistema, fluxo e plano". */}
+                {/* CRIAKUT (só convidados até abrir: o item do menu só aparece pra quem tem acesso). Doc "Criakut: ecossistema, fluxo e plano". */}
                 <Route path="criakut" element={<ErrorBoundary><Criakut /></ErrorBoundary>} />
                 <Route path="criakut/:slug" element={<ErrorBoundary><Criakut /></ErrorBoundary>} />
                 <Route path="lixeira" element={<ErrorBoundary><Lixeira /></ErrorBoundary>} />
