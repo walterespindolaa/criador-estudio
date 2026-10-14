@@ -23,6 +23,10 @@ export type TeamModuleCode = (typeof TEAM_MODULES)[number]["code"];
    agência e o "Enviar para" com os parceiros dela. Vem desligada e não entra
    no convite: quem decide é a dona, no cartão da pessoa (09/10/2026). */
 export const PERM_PARCEIROS = "parceiros_producao";
+/* Cofre de acessos (Walter, 14/10/2026): ver as senhas dos clientes. Também é
+   chave de confiança, não módulo: vem desligada e só a dona liga. O banco
+   confere (cofre_dono_se_pode), então desligar aqui fecha de verdade. */
+export const PERM_COFRE = "cofre_acessos";
 export const TEAM_MODULE_DEFAULT = TEAM_MODULES.filter((m) => m.code !== "cria_caixa").map((m) => m.code);
 
 export type MemberPermission = {

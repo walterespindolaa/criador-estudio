@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import {
   useTeamMembers, useCollabSeats, useInviteMember, useUpdateMemberStatus, useRemoveMember,
   useSetMemberModule, useBuySeats, TEAM_MODULES, TEAM_MODULE_DEFAULT, useVincularParceiroPorCodigo,
-  useMyTeamPermissions, PERM_PARCEIROS,
+  useMyTeamPermissions, PERM_PARCEIROS, PERM_COFRE,
 } from "@/hooks/useTeam";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { useCrmClients } from "@/hooks/useCrm";
@@ -406,6 +406,24 @@ function PessoasDaEquipe() {
                             Libere também o Cria Post pra ela: a peça enviada ao parceiro é um post.
                           </p>
                         )}
+                      </div>
+                    );
+                  })()}
+                  {(() => {
+                    const veCofre = enabled.has(PERM_COFRE);
+                    return (
+                      <div className="mt-3 pt-3 border-t border-border/60">
+                        <label className="flex items-center justify-between gap-4 min-h-[44px] cursor-pointer">
+                          <span className="min-w-0">
+                            <span className="block text-[13px] font-body font-semibold text-foreground">Ver o cofre de acessos</span>
+                            <span className="block text-[12px] font-body text-muted-foreground leading-relaxed">
+                              Vê e copia logins e senhas dos clientes na aba Acessos. Cada vez que ela abre uma senha fica no histórico.
+                            </span>
+                          </span>
+                          <input type="checkbox" checked={veCofre} disabled={setModule.isPending}
+                            onChange={() => setModule.mutate({ memberRowId: m.id, moduleCode: PERM_COFRE, enabled: !veCofre })}
+                            className="h-5 w-5 shrink-0 accent-[hsl(var(--primary))]" />
+                        </label>
                       </div>
                     );
                   })()}

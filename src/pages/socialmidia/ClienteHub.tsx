@@ -64,6 +64,7 @@ const TABS: TabDef[] = [
   { key: "visao-geral", label: "Visão geral" },
   { key: "brandbook", label: "Brandbook", modulo: "rosa", moduloNome: "Cria Gestão" },
   { key: "link-bio", label: "Link na bio", modulo: "rosa", moduloNome: "Cria Gestão" },
+  { key: "acessos", label: "Acessos", modulo: "rosa", moduloNome: "Cria Gestão" },
   // Ideias faz parte do fluxo do Cria Post (ideia → post), não do Radar.
   { key: "ideias", label: "Ideias", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "cronograma", label: "Cronograma", modulo: "laranja", moduloNome: "Cria Post" },
@@ -110,6 +111,8 @@ const SUB_META: Record<string, SubMeta> = {
   materiais: { label: "Materiais", desc: "Demandas de material fora dos posts. O cliente pede pelo portal, você gerencia no kanban.", icon: Package },
   brandbook: { label: "Brandbook", desc: "Paleta, tom de voz, personas e moodboard da marca.", icon: BookOpen },
   "link-bio": { label: "Link na bio", desc: "A página de links do cliente pra colocar na bio do Instagram, com captura de lead.", icon: Link2 },
+  // Cofre de acessos (Walter, 14/10/2026): logins e senhas do cliente, criptografados.
+  acessos: { label: "Acessos", desc: "Logins e senhas das contas do cliente, criptografados, com histórico de quem viu.", icon: Lock },
   ideias: { label: "Ideias", desc: "O banco de ideias do cliente pra virar post.", icon: Lightbulb },
   pesquisa: { label: "Pesquisa", desc: "Concorrência e tendências do nicho.", icon: Search },
   financeiro: { label: "Financeiro", desc: "Mensalidade, custo e rentabilidade só deste cliente.", icon: Wallet },
@@ -123,7 +126,7 @@ const GROUPS: Grp[] = [
   // Morava no Radar, mas a captura manual e a conversão em post são coração do
   // Cria Post; a URL /ideias continua a mesma, só mudou de grupo.
   { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "ideias", "cronograma", "kanban-cliente", "relatorio", "materiais", "portal"] },
-  { key: "cria-gestao", label: "Cria Gestão", modulo: "rosa", icon: BookOpen, landing: true, subs: ["brandbook", "link-bio"] },
+  { key: "cria-gestao", label: "Cria Gestão", modulo: "rosa", icon: BookOpen, landing: true, subs: ["brandbook", "link-bio", "acessos"] },
   { key: "cria-caixa", label: "Cria Caixa", modulo: "azul", icon: Wallet, subs: ["financeiro"] },
   // O Radar ficou só com a Pesquisa: 1 sub = vai direto (landing de 1 card seria bobo).
   { key: "cria-radar", label: "Cria Radar", modulo: "lilas", icon: Search, subs: ["pesquisa"] },
@@ -151,6 +154,7 @@ import { clienteInativo } from "@/lib/cliente-status";
 import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { LinkNaBioCliente } from "@/components/accounts/crm/LinkNaBioCliente";
 import { LinksUteis } from "@/components/accounts/LinksUteisEditor";
+import { ClienteAcessosTab } from "@/components/accounts/ClienteAcessos";
 // O MESMO editor da ficha do CRM: aqui a aba Brandbook deixa de ser vitrine e
 // vira lugar de trabalho (ver BrandbookEditor.tsx).
 import { BrandbookEditor, personasDaFicha, useFichaEditavel } from "@/components/accounts/crm/BrandbookEditor";
@@ -919,6 +923,9 @@ export default function ClienteHub() {
       {activeTab === "kanban-cliente" && client.cria_owner_id && (
         <ClienteKanbanCria criaOwnerId={client.cria_owner_id} clientName={displayName} />
       )}
+
+      {/* ACESSOS (cofre). O próprio componente checa módulo e permissão no banco. */}
+      {activeTab === "acessos" && <ClienteAcessosTab crmClientId={client.id} clientName={displayName} />}
 
       {/* LINKS ÚTEIS. Aba de topo: editor de rótulo+URL + as pastas do Drive de
           cada link salvo (paginadas 10 por página). */}
