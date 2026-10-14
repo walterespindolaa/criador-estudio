@@ -61,7 +61,7 @@ function Lista({ onAbrir }: { onAbrir: (slug: string) => void }) {
                   </div>
                 </button>
                 <div className="flex items-center justify-between px-3.5 pb-3.5 text-[12px] text-muted-foreground">
-                  <span>{x.membros} {x.membros === 1 ? "membro" : "membros"} · {x.topicos} tópicos</span>
+                  <span>{x.membros} {x.membros === 1 ? "membro" : "membros"} · {x.topicos} {x.topicos === 1 ? "tópico" : "tópicos"}</span>
                   <span className="flex items-center gap-2">
                     {admin && <button type="button" className="hover:text-foreground" onClick={() => setEditando(x)}>editar</button>}
                     {x.sou_membro && <span className="rounded-full bg-foreground px-2.5 py-0.5 text-[11px] font-semibold text-background">Você está</span>}
@@ -138,7 +138,7 @@ function Dentro({ slug, onVoltar, onTopico }: { slug: string; onVoltar: () => vo
             <div className="grid h-[110px] place-items-center rounded-2xl text-5xl" style={{ background: c.cor }}>{c.emoji}</div>
             <h2 className="mt-2.5 font-display text-[20px] font-bold">{c.nome}</h2>
             {c.descricao && <p className="mt-1 text-[12.5px] text-muted-foreground">{c.descricao}</p>}
-            <p className="mt-1 text-[12px] text-muted-foreground">{c.membros} membros · {c.topicos.length} tópicos</p>
+            <p className="mt-1 text-[12px] text-muted-foreground">{c.membros} {c.membros === 1 ? "membro" : "membros"} · {c.topicos.length} {c.topicos.length === 1 ? "tópico" : "tópicos"}</p>
             {semPagina
               ? <Button className="mt-3 w-full rounded-xl" onClick={() => navigate(base)}>Crie sua página pra entrar</Button>
               : <Button className="mt-3 w-full rounded-xl" variant={c.sou_membro ? "outline" : "default"} disabled={acao.isPending}

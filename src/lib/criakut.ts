@@ -58,6 +58,12 @@ export type PerfilCriakut = {
   instagram: string | null;
   publicado: boolean;
   mostrar_visitas?: boolean;
+  /* Perfil por função (Walter, 14/10/2026): criadora mostra Instagram e o que
+     procura; prestador mostra serviços e portfólio; social mídia, os dois. */
+  mostrar_cidade?: boolean;
+  mostrar_instagram?: boolean;
+  busco?: FuncaoCriakut[];
+  busco_texto?: string | null;
 };
 
 /** O que a função criakut_perfil devolve: o perfil + listas + números. */
@@ -74,6 +80,10 @@ export type PaginaCriakutDados = PerfilCriakut & {
   /* Fase 3 (mostrar_visitas só vem na minha página) */
   destaque?: boolean;
   comunidades?: ComunidadeMini[];
+  instagram_posts?: { thumb: string; link: string; tipo: string; em: string | null }[];
+  instagram_seguidores?: number | null;
+  contratacoes?: number;
+  pedidos_abertos?: { id: string; titulo: string; funcao: FuncaoCriakut; tipo: "recorrente" | "avulso"; valor_min_centavos: number | null; valor_max_centavos: number | null; unidade: Unidade }[];
 };
 
 /* ── FASE 2: orçamento, mural, propostas, conversa, avaliação ─────────────── */
@@ -228,4 +238,17 @@ export function quandoFoi(iso: string): string {
   if (min < 60 * 24) return `há ${Math.floor(min / 60)} h`;
   const d = Math.floor(min / 1440);
   return d === 1 ? "ontem" : `há ${d} dias`;
+}
+
+/** Quem só contrata (criadora) tem página de "quem eu sou e o que procuro";
+ *  quem presta serviço tem página de vitrine. Social mídia faz os dois. */
+export const ehContratante = (f?: string | null) => f === "criadora";
+export const ofereceServico = (f?: string | null) => f !== "criadora";
+export const PODE_BUSCAR = FUNCOES.filter((x) => x.valor !== "criadora");
+
+export function numeroCurto(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(".0", "").replace(".", ",") + " mi";
+  if (n >= 10_000) return Math.round(n / 1000) + " mil";
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(".0", "").replace(".", ",") + " mil";
+  return String(n);
 }

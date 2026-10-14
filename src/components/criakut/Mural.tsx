@@ -189,8 +189,8 @@ function PendurarTrabalho({ open, onOpenChange }: { open: boolean; onOpenChange:
               <div className="grid gap-1.5"><Label>Prazo</Label><Input value={f.prazo} maxLength={60} placeholder="Ex.: começar em novembro" onChange={(e) => set("prazo", e.target.value)} /></div>
               <div className="grid gap-1.5"><Label>Frequência</Label>
                 <div className="flex gap-1.5">
-                  <button type="button" className={chip(f.tipo === "avulso")} onClick={() => set("tipo", "avulso")}>Avulso</button>
-                  <button type="button" className={chip(f.tipo === "recorrente")} onClick={() => set("tipo", "recorrente")}>Todo mês</button>
+                  <button type="button" className={chip(f.tipo === "avulso")} onClick={() => setF((x) => ({ ...x, tipo: "avulso", unidade: x.unidade === "mes" ? "peca" : x.unidade }))}>Avulso</button>
+                  <button type="button" className={chip(f.tipo === "recorrente")} onClick={() => setF((x) => ({ ...x, tipo: "recorrente", unidade: "mes" }))}>Todo mês</button>
                 </div></div>
             </div>
             <label className="flex items-center gap-2 text-[13px]"><Switch checked={f.presencial} onCheckedChange={(v) => set("presencial", v)} /> Precisa ser presencial</label>

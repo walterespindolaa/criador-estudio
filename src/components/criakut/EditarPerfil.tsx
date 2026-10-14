@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useSalvarPerfilCriakut, useSalvarServicos } from "@/hooks/useCriakut";
 import {
-  ESTILOS, FUNCOES, NICHOS, UNIDADES, limparInstagram, slugValido,
+  ESTILOS, FUNCOES, NICHOS, PODE_BUSCAR, UNIDADES, ehContratante, limparInstagram, ofereceServico, slugValido,
   type FuncaoCriakut, type PerfilCriakut, type Servico, type Unidade,
 } from "@/lib/criakut";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,8 @@ import { cn } from "@/lib/utils";
    o que faço, estilos, nichos, serviços e se a página aparece na busca.
    Foto e capa têm botões próprios em cima da página, que é onde se espera. */
 
-type Form = Pick<PerfilCriakut, "nome" | "slug" | "funcao" | "cidade" | "atende_remoto" | "sobre" | "status_texto" | "recado_do_dia" | "estilos" | "nichos" | "instagram" | "publicado">;
+type Form = Pick<PerfilCriakut, "nome" | "slug" | "funcao" | "cidade" | "atende_remoto" | "sobre" | "status_texto" | "recado_do_dia" | "estilos" | "nichos" | "instagram" | "publicado"
+  | "mostrar_cidade" | "mostrar_instagram" | "busco" | "busco_texto">;
 
 function Chips({ opcoes, valor, onChange }: { opcoes: string[]; valor: string[]; onChange: (v: string[]) => void }) {
   return (
@@ -55,12 +56,19 @@ export function EditarPerfil({ open, onOpenChange, perfil, servicos }: {
     if (!open) return;
     // Só os campos editáveis: a página chega com listas e números junto, que não são colunas.
     const { nome, slug, funcao, cidade, atende_remoto, sobre, status_texto, recado_do_dia, estilos, nichos, instagram, publicado } = perfil;
-    setF({ nome, slug, funcao, cidade, atende_remoto, sobre, status_texto, recado_do_dia, estilos, nichos, instagram, publicado });
+    setF({ nome, slug, funcao, cidade, atende_remoto, sobre, status_texto, recado_do_dia, estilos, nichos, instagram, publicado,
+      mostrar_cidade: perfil.mostrar_cidade ?? true, mostrar_instagram: perfil.mostrar_instagram ?? true,
+      busco: perfil.busco ?? [], busco_texto: perfil.busco_texto ?? null });
     setServ(servicos.map((s) => ({ ...s, precoTxt: reaisDe(s.preco_centavos) })));
   }, [open, perfil, servicos]);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((x) => ({ ...x, [k]: v }));
   const ocupado = salvar.isPending || salvarServ.isPending;
+  /* Perfil por função (Walter, 14/10/2026): criadora não vende serviço, então
+     não vê tabela de preço; prestador não contrata, então não vê "o que busco". */
+  const contratante = ehContratante(f.funcao);
+  const oferece = ofereceServico(f.funcao);
+  const busca = f.funcao === "criadora" || f.funcao === "social_media";
 
   const gravar = async () => {
     if (f.nome.trim().length < 2) { toast.error("Coloque seu nome."); return; }
@@ -68,10 +76,10 @@ export function EditarPerfil({ open, onOpenChange, perfil, servicos }: {
     const ig = limparInstagram(f.instagram);
     if (f.instagram?.trim() && !ig) { toast.error("Instagram: só o @ (letras, números, ponto e _)."); return; }
     try {
-      await salvar.mutateAsync({ ...f, nome: f.nome.trim(), sobre: f.sobre?.trim() || null,
+      await salvar.mutateAsync({ ...f, nome: f.nome.trim(), busco_texto: f.busco_texto?.trim() || null, busco: busca ? f.busco : [], sobre: f.sobre?.trim() || null,
         status_texto: f.status_texto?.trim() || null, recado_do_dia: f.recado_do_dia?.trim() || null,
         cidade: f.cidade?.trim() || null, instagram: ig });
-      await salvarServ.mutateAsync(serv.map((s, i) => ({ ...s, preco_centavos: centavosDe(s.precoTxt), ordem: i })));
+      if (oferece) await salvarServ.mutateAsync(serv.map((s, i) => ({ ...s, preco_centavos: centavosDe(s.precoTxt), ordem: i })));
       toast.success("Página atualizada!");
       onOpenChange(false);
     } catch { /* os hooks já avisam */ }
@@ -106,21 +114,48 @@ export function EditarPerfil({ open, onOpenChange, perfil, servicos }: {
             </div>
           </div>
           <div className="grid grid-cols-[1fr_auto] items-end gap-3">
-            <div className="grid gap-1.5"><Label>Cidade</Label><Input value={f.cidade ?? ""} maxLength={80} placeholder="Itajaí" onChange={(e) => set("cidade", e.target.value)} /></div>
-            <label className="flex items-center gap-2 pb-2 text-[13px] font-semibold"><Switch checked={f.atende_remoto} onCheckedChange={(v) => set("atende_remoto", v)} />Atende remoto</label>
+            <div className="grid gap-1.5"><Label>Cidade</Label><Input value={f.cidade ?? ""} maxLength={80} placeholder="Ex.: Itajaí" className="placeholder:text-muted-foreground/50" onChange={(e) => set("cidade", e.target.value)} /></div>
+            {oferece
+              ? <label className="flex items-center gap-2 pb-2 text-[13px] font-semibold"><Switch checked={f.atende_remoto} onCheckedChange={(v) => set("atende_remoto", v)} />Atende remoto</label>
+              : <span />}
           </div>
+          <label className="-mt-2 flex items-start gap-2 text-[12px] text-muted-foreground">
+            <Switch checked={f.mostrar_cidade ?? true} onCheckedChange={(v) => set("mostrar_cidade", v)} className="mt-0.5" />
+            <span>Mostrar minha cidade na página e na busca "perto de mim". Desligado, ninguém te acha pela cidade.</span>
+          </label>
+          {busca && (
+            <div className="grid gap-1.5 rounded-2xl border border-border p-3.5">
+              <Label>O que você procura</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {PODE_BUSCAR.filter((x) => x.valor !== f.funcao).map((x) => {
+                  const on = (f.busco ?? []).includes(x.valor);
+                  return (
+                    <button key={x.valor} type="button" onClick={() => set("busco", on ? (f.busco ?? []).filter((y) => y !== x.valor) : [...(f.busco ?? []), x.valor])}
+                      className={cn("rounded-full border px-3 py-1 text-[12px] font-semibold", on ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground")}>
+                      {x.nome}
+                    </button>
+                  );
+                })}
+              </div>
+              <Textarea rows={2} maxLength={300} value={f.busco_texto ?? ""} placeholder="Ex.: Editor que entenda de Reels de clínica, 8 vídeos por mês" className="placeholder:text-muted-foreground/50" onChange={(e) => set("busco_texto", e.target.value)} />
+            </div>
+          )}
           <div className="grid gap-1.5">
             <Label>Sobre você ("Oi, eu sou a…")</Label>
-            <Textarea rows={4} maxLength={600} value={f.sobre ?? ""} placeholder="O que você faz, pra quem, e do que tem orgulho." onChange={(e) => set("sobre", e.target.value)} />
+            <Textarea rows={4} maxLength={600} value={f.sobre ?? ""} placeholder="O que você faz, pra quem, e do que tem orgulho." className="placeholder:text-muted-foreground/50" onChange={(e) => set("sobre", e.target.value)} />
             <span className="text-[11px] text-muted-foreground text-right">{(f.sobre ?? "").length}/600</span>
           </div>
-          <div className="grid gap-1.5"><Label>Status</Label><Input value={f.status_texto ?? ""} maxLength={120} placeholder="Agenda aberta pra 2 clientes em novembro" onChange={(e) => set("status_texto", e.target.value)} /></div>
-          <div className="grid gap-1.5"><Label>Recado do dia</Label><Input value={f.recado_do_dia ?? ""} maxLength={160} placeholder="Procurando editor de vídeo pra Reels de clínica" onChange={(e) => set("recado_do_dia", e.target.value)} /></div>
+          <div className="grid gap-1.5"><Label>Status</Label><Input value={f.status_texto ?? ""} maxLength={120} placeholder="Ex.: Agenda aberta pra 2 clientes em novembro" className="placeholder:text-muted-foreground/50" onChange={(e) => set("status_texto", e.target.value)} /></div>
+          <div className="grid gap-1.5"><Label>Recado do dia</Label><Input value={f.recado_do_dia ?? ""} maxLength={160} placeholder="Ex.: Procurando editor de vídeo pra Reels de clínica" className="placeholder:text-muted-foreground/50" onChange={(e) => set("recado_do_dia", e.target.value)} /></div>
           <div className="grid gap-1.5"><Label>Seu estilo</Label><Chips opcoes={ESTILOS} valor={f.estilos} onChange={(v) => set("estilos", v)} /></div>
-          <div className="grid gap-1.5"><Label>Nichos que atende</Label><Chips opcoes={NICHOS} valor={f.nichos} onChange={(v) => set("nichos", v)} /></div>
+          <div className="grid gap-1.5"><Label>{contratante ? "Seu nicho" : "Nichos que atende"}</Label><Chips opcoes={NICHOS} valor={f.nichos} onChange={(v) => set("nichos", v)} /></div>
           <div className="grid gap-1.5"><Label>Instagram</Label><Input value={f.instagram ?? ""} maxLength={40} placeholder="@seuperfil" onChange={(e) => set("instagram", e.target.value)} /></div>
+          <label className="-mt-2 flex items-start gap-2 text-[12px] text-muted-foreground">
+            <Switch checked={f.mostrar_instagram ?? true} onCheckedChange={(v) => set("mostrar_instagram", v)} className="mt-0.5" />
+            <span>Mostrar meus últimos posts e seguidores do Instagram (do Instagram conectado no Cria).</span>
+          </label>
 
-          <div className="rounded-2xl border border-border p-3.5">
+          {oferece && <div className="rounded-2xl border border-border p-3.5">
             <div className="flex items-center justify-between mb-2">
               <Label>Serviços e preços</Label>
               <Button type="button" size="sm" variant="ghost" className="h-7" onClick={() => setServ((s) => [...s, { titulo: "", detalhe: "", preco_centavos: null, precoTxt: "", unidade: "peca", ordem: s.length }])}>
@@ -132,10 +167,10 @@ export function EditarPerfil({ open, onOpenChange, perfil, servicos }: {
               {serv.map((s, i) => (
                 <div key={i} className="grid gap-1.5 rounded-xl bg-muted/40 p-2.5">
                   <div className="flex gap-2">
-                    <Input value={s.titulo} maxLength={80} placeholder="Carrossel até 7 slides" onChange={(e) => setServ((l) => l.map((x, j) => (j === i ? { ...x, titulo: e.target.value } : x)))} />
+                    <Input value={s.titulo} maxLength={80} placeholder="Ex.: Carrossel até 7 slides" className="placeholder:text-muted-foreground/50" onChange={(e) => setServ((l) => l.map((x, j) => (j === i ? { ...x, titulo: e.target.value } : x)))} />
                     <Button type="button" size="icon" variant="ghost" aria-label="Remover serviço" onClick={() => setServ((l) => l.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></Button>
                   </div>
-                  <Input value={s.detalhe ?? ""} maxLength={160} placeholder="2 ajustes inclusos (opcional)" onChange={(e) => setServ((l) => l.map((x, j) => (j === i ? { ...x, detalhe: e.target.value } : x)))} />
+                  <Input value={s.detalhe ?? ""} maxLength={160} placeholder="Ex.: 2 ajustes inclusos (opcional)" className="placeholder:text-muted-foreground/50" onChange={(e) => setServ((l) => l.map((x, j) => (j === i ? { ...x, detalhe: e.target.value } : x)))} />
                   <div className="flex gap-2 items-center">
                     <span className="text-[12px] text-muted-foreground">R$</span>
                     <Input inputMode="decimal" className="w-28" value={s.precoTxt} placeholder="90" onChange={(e) => setServ((l) => l.map((x, j) => (j === i ? { ...x, precoTxt: e.target.value } : x)))} />
@@ -148,7 +183,7 @@ export function EditarPerfil({ open, onOpenChange, perfil, servicos }: {
               ))}
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground">Preço em branco aparece como "a combinar".</p>
-          </div>
+          </div>}
 
           <label className="flex items-start gap-3 rounded-2xl border border-border p-3.5">
             <Switch checked={f.publicado} onCheckedChange={(v) => set("publicado", v)} className="mt-0.5" />

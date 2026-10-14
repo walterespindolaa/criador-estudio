@@ -76,12 +76,13 @@ function Desenho({ tipo }: { tipo: Exclude<CapaTipo, "propria"> }) {
   }
 }
 
-export function CapaCriakut({ tipo, url, className }: { tipo: CapaTipo; url?: string | null; className?: string }) {
+/** topo = em faixa baixa (página), mostra a parte de cima do desenho, onde ficam os selos. */
+export function CapaCriakut({ tipo, url, className, topo = false }: { tipo: CapaTipo; url?: string | null; className?: string; topo?: boolean }) {
   return (
     <div className={cn("relative w-full aspect-[4/1] overflow-hidden rounded-3xl bg-muted", className)}>
       {tipo === "propria" && url
-        ? <img src={url} alt="" className="absolute inset-0 h-full w-full object-cover" />
-        : <svg viewBox="0 0 1600 400" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" aria-hidden>
+        ? <img src={url} alt="" className={cn("absolute inset-0 h-full w-full object-cover", topo && "object-[center_30%]")} />
+        : <svg viewBox="0 0 1600 400" preserveAspectRatio={topo ? "xMidYMin slice" : "xMidYMid slice"} className="absolute inset-0 h-full w-full" aria-hidden>
             <Desenho tipo={tipo === "propria" ? "cria-1" : tipo} />
           </svg>}
     </div>

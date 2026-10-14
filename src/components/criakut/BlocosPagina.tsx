@@ -16,10 +16,11 @@ import { Avatar, DenunciarDialog, SeloDestaque } from "./Pecas";
    (direita). Recado é público como no Orkut, mas sem virar classificado:
    o banco troca telefone, e-mail e link por "••••". */
 
-const card = "rounded-[22px] border border-border bg-card p-[18px]";
-const titulo = "mb-3 flex items-center justify-between text-[11.5px] font-bold uppercase tracking-[0.08em] text-primary";
+const card = "rounded-[20px] border border-border bg-card p-4";
+const titulo = "mb-2.5 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.08em] text-primary";
 
-export function Recados({ dados, modoDono }: { dados: PaginaCriakutDados; modoDono: boolean }) {
+/** embutido = dentro da aba "Recados" da página (sem cartão e sem título próprios). */
+export function Recados({ dados, modoDono, embutido = false }: { dados: PaginaCriakutDados; modoDono: boolean; embutido?: boolean }) {
   const navigate = useNavigate();
   const base = useBaseCriakut();
   const [todos, setTodos] = useState(false);
@@ -37,8 +38,8 @@ export function Recados({ dados, modoDono }: { dados: PaginaCriakutDados; modoDo
   };
 
   return (
-    <div className={card} id="recados">
-      <p className={titulo}>Recados {total > 0 && <span className="normal-case tracking-normal font-semibold text-muted-foreground">{total}</span>}</p>
+    <div className={embutido ? undefined : card} id="recados">
+      {!embutido && <p className={titulo}>Recados {total > 0 && <span className="normal-case tracking-normal font-semibold text-muted-foreground">{total}</span>}</p>}
       {!dados.eh_meu && (
         <div className="mb-3 flex items-start gap-2">
           <Textarea rows={2} maxLength={500} value={texto} placeholder={`Deixe um recado pra ${primeiro} (aparece na página)`}
@@ -91,20 +92,19 @@ export function QuemVisitou({ dados }: { dados: PaginaCriakutDados }) {
     <div className={card}>
       <p className={titulo}>Quem visitou {v && <span className="normal-case tracking-normal font-semibold text-muted-foreground">{v.total_mes} no mês</span>}</p>
       {q.isLoading ? <Loader2 className="mx-auto my-3 h-4 w-4 animate-spin text-muted-foreground" />
-        : !mostrar ? <p className="text-[12.5px] text-muted-foreground">Desligado. Ligue pra ver quem passou por aqui (e aparecer na lista dos outros).</p>
-        : (v?.lista.length ?? 0) === 0 ? <p className="text-[12.5px] text-muted-foreground">Ninguém com página visível passou por aqui nos últimos 30 dias.</p>
-        : <div className="grid grid-cols-3 gap-2.5">
-            {v!.lista.slice(0, 9).map((p) => (
-              <button key={p.slug} type="button" onClick={() => navigate(`${base}/${p.slug}`)} className="text-center text-[11.5px] font-semibold">
-                <Avatar nome={p.nome} foto={p.foto_url} className="mb-1 aspect-square h-auto w-full rounded-2xl text-lg" />
-                <span className="block truncate">{p.nome.split(" ")[0]}</span>
-                <small className="block font-normal text-muted-foreground">{quandoFoi(p.ultima)}</small>
+        : !mostrar ? <p className="text-[12px] text-muted-foreground">Desligado.</p>
+        : (v?.lista.length ?? 0) === 0 ? <p className="text-[12px] text-muted-foreground">Ninguém nos últimos 30 dias.</p>
+        : <div className="flex flex-wrap gap-1.5">
+            {v!.lista.slice(0, 12).map((p) => (
+              <button key={p.slug} type="button" title={`${p.nome} · ${quandoFoi(p.ultima)}`} onClick={() => navigate(`${base}/${p.slug}`)}>
+                <Avatar nome={p.nome} foto={p.foto_url} className="h-9 w-9 rounded-xl text-[11px]" />
               </button>
             ))}
           </div>}
-      <label className="mt-3 flex items-start gap-2 text-[11.5px] text-muted-foreground">
-        <Switch checked={mostrar} disabled={salvar.isPending} onCheckedChange={(on) => salvar.mutate({ mostrar_visitas: on }, { onSuccess: () => void q.refetch() })} />
-        <span>Mostrar minhas visitas. Se desligar, você some da lista dos outros e também não vê a sua.</span>
+      <label className="mt-2.5 flex items-center gap-2 text-[11.5px] text-muted-foreground"
+        title="Se desligar, você some da lista dos outros e também não vê quem visitou a sua.">
+        <Switch checked={mostrar} disabled={salvar.isPending} className="scale-90" onCheckedChange={(on) => salvar.mutate({ mostrar_visitas: on }, { onSuccess: () => void q.refetch() })} />
+        <span>Mostrar visitas (vale nos dois sentidos)</span>
       </label>
     </div>
   );
@@ -119,12 +119,12 @@ export function ComunidadesDaPagina({ dados }: { dados: PaginaCriakutDados }) {
     <div className={card}>
       <p className={titulo}>Comunidades <span className="normal-case tracking-normal font-semibold text-muted-foreground">{lista.length}</span></p>
       {lista.length === 0
-        ? <button type="button" className="text-[12.5px] text-muted-foreground hover:text-foreground" onClick={() => navigate(`${base}?aba=comunidades`)}>Você ainda não entrou em nenhuma. Ver comunidades →</button>
-        : <div className="grid grid-cols-3 gap-2">
-            {lista.slice(0, 9).map((c) => (
-              <button key={c.slug} type="button" onClick={() => navigate(`${base}?aba=comunidades&c=${c.slug}`)} className="text-center text-[11px] font-semibold leading-tight">
-                <span className="mb-1 grid aspect-square place-items-center rounded-2xl text-2xl" style={{ background: c.cor }}>{c.emoji}</span>
-                {c.nome}
+        ? <button type="button" className="text-left text-[12px] text-muted-foreground hover:text-foreground" onClick={() => navigate(`${base}?aba=comunidades`)}>Ainda em nenhuma. <span className="font-semibold text-primary">Ver comunidades →</span></button>
+        : <div className="flex flex-wrap gap-2">
+            {lista.slice(0, 8).map((c) => (
+              <button key={c.slug} type="button" title={c.nome} onClick={() => navigate(`${base}?aba=comunidades&c=${c.slug}`)} className="w-[50px] text-center text-[10px] font-semibold leading-tight">
+                <span className="mb-1 grid h-[50px] w-[50px] place-items-center rounded-xl text-xl" style={{ background: c.cor }}>{c.emoji}</span>
+                <span className="line-clamp-2">{c.nome}</span>
               </button>
             ))}
           </div>}
