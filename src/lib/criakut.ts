@@ -201,7 +201,11 @@ export type RecadosDados = { total: number; itens: Recado[] };
 export type Visitante = { nome: string; slug: string; foto_url: string | null; funcao: FuncaoCriakut; ultima: string };
 export type MinhasVisitas = { mostrar: boolean; total_mes: number; lista: Visitante[] };
 
-export type ComunidadeItem = ComunidadeMini & { id: string; descricao: string | null; membros: number; topicos: number; sou_membro: boolean; ativa: boolean };
+export type PublicoComunidade = "todos" | "criadores" | "prestadores";
+export const PUBLICOS: { valor: PublicoComunidade; nome: string }[] = [
+  { valor: "criadores", nome: "Criadores" }, { valor: "prestadores", nome: "Prestadores" }, { valor: "todos", nome: "Todos" },
+];
+export type ComunidadeItem = ComunidadeMini & { id: string; descricao: string | null; publico: PublicoComunidade; membros: number; topicos: number; sou_membro: boolean; ativa: boolean };
 export type TopicoItem = { id: string; titulo: string; fixo: boolean; respostas: number; criado_em: string; ultima_em: string; oculto: boolean; autor: AutorMini };
 export type ComunidadeDados = ComunidadeMini & {
   id: string; descricao: string | null; ativa: boolean; ordem: number; sou_membro: boolean; membros: number;

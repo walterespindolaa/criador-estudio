@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Lock, MapPin, Search, Star } from "lucide-react";
+import { ArrowLeft, ChevronDown, Loader2, Lock, MapPin, Search, Star } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CidadeInput } from "@/components/criakut/CidadeInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,18 +40,33 @@ type Achado = {
   preco_minimo_centavos: number | null; seguidores: number; nota: number | null; entregas: number;
 };
 
-function Abas({ aba, onTroca }: { aba: string; onTroca: (a: string) => void }) {
+/* ABAS DO CRIAKUT. No computador moram na faixa laranja do topo, com o nome
+   "Criakut beta" no lugar de "CRIA" (Walter, 14/10/2026: "essas opções ficar
+   ali no menu superior"). No celular a faixa não existe, então ficam aqui. */
+const ITENS_ABAS: [string, string][] = [["minha", "Minha página"], ["buscar", "Encontrar gente"], ["mural", "Mural de trabalhos"], ["comunidades", "Comunidades"], ["propostas", "Propostas"]];
+
+function Abas({ aba, onTroca, naFaixa = false }: { aba: string; onTroca: (a: string) => void; naFaixa?: boolean }) {
   const propostas = useMinhasPropostas();
   const vez = (propostas.data ?? []).filter((p) => p.minha_vez || (p.status === "concluida" && !p.ja_avaliei)).length;
-  const itens = [["minha", "Minha página"], ["buscar", "Encontrar gente"], ["mural", "Mural de trabalhos"], ["comunidades", "Comunidades"], ["propostas", "Propostas"]];
+  if (naFaixa) {
+    return (
+      <nav className="mr-auto flex flex-wrap gap-1" aria-label="Criakut">
+        {ITENS_ABAS.map(([k, n]) => (
+          <button key={k} type="button" onClick={() => onTroca(k)}
+            className={cn("rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
+              aba === k ? "bg-white text-foreground shadow-sm" : "bg-white/15 text-white backdrop-blur hover:bg-white/25")}>
+            {n}{k === "propostas" && vez > 0 && <span className="ml-1.5 rounded-full bg-primary px-1.5 text-[10.5px] text-primary-foreground">{vez}</span>}
+          </button>
+        ))}
+      </nav>
+    );
+  }
   return (
-    <div className="mb-5 flex flex-wrap items-center gap-3">
+    <div className="mb-5 flex flex-wrap items-center gap-3 md:hidden">
       <span className="font-display text-[22px] font-extrabold">Cria<span className="text-primary">kut</span>
         <span className="ml-1.5 -rotate-6 inline-block rounded-md bg-foreground px-1.5 py-0.5 align-middle text-[10px] font-semibold text-background">beta</span></span>
-      {/* Quebram linha no celular e no iPad (Walter, teste de 14/10/2026): rolando
-          de lado aparecia a barra cinza e a aba ativa ficava cortada. */}
       <div className="flex max-w-full flex-wrap gap-1 rounded-[20px] border border-border bg-card p-1">
-        {itens.map(([k, n]) => (
+        {ITENS_ABAS.map(([k, n]) => (
           <button key={k} type="button" onClick={() => onTroca(k)}
             className={cn("rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-colors sm:px-3.5 sm:text-[13px]",
               aba === k ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
@@ -64,7 +82,7 @@ function CriarPagina() {
   const { profile } = useProfile();
   const salvar = useSalvarPerfilCriakut();
   const [nome, setNome] = useState(profile?.name ?? "");
-  const [cidadeNova, setCidadeNova] = useState("");
+  const [cidadeNova, setCidadeNova] = useState<string | null>(null);
   useEffect(() => { if (profile?.name) setNome((n) => n || profile.name || ""); }, [profile?.name]);
   /* Começa marcado pelo tipo de conta (teste de 14/10: criadora vinha como social mídia). */
   const base = useBaseCriakut();
@@ -81,7 +99,7 @@ function CriarPagina() {
         <label className="mt-4 block text-[13px] font-semibold">Seu nome</label>
         <Input className="mt-1" value={nome} maxLength={80} onChange={(e) => setNome(e.target.value)} />
         <label className="mt-4 block text-[13px] font-semibold">Sua cidade <span className="font-normal text-muted-foreground">(pra te acharem por perto; dá pra esconder depois)</span></label>
-        <Input className="mt-1 placeholder:text-muted-foreground/50" value={cidadeNova} maxLength={80} placeholder="Ex.: Itajaí" onChange={(e) => setCidadeNova(e.target.value)} />
+        <CidadeInput className="mt-1" value={cidadeNova} onChange={setCidadeNova} placeholder="Digite e escolha (ex.: Itajaí)" />
         <p className="mt-4 text-[13px] font-semibold">O que você faz</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {FUNCOES.map((f) => (
@@ -92,7 +110,7 @@ function CriarPagina() {
           ))}
         </div>
         <Button className="mt-5 w-full rounded-xl h-11" disabled={nome.trim().length < 2 || salvar.isPending}
-          onClick={() => salvar.mutate({ nome: nome.trim(), funcao, cidade: cidadeNova.trim() || null, slug: `${slugDe(nome)}-${Math.random().toString(36).slice(2, 5)}`,
+          onClick={() => salvar.mutate({ nome: nome.trim(), funcao, cidade: cidadeNova, slug: `${slugDe(nome)}-${Math.random().toString(36).slice(2, 5)}`,
             foto_url: urlConfiavel(profile?.avatar_url), instagram: limparInstagram(profile?.instagram_handle) })}>
           {salvar.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Criar minha página
         </Button>
@@ -108,12 +126,11 @@ function Buscar() {
   const [estilos, setEstilos] = useState<string[]>([]);
   const [nichos, setNichos] = useState<string[]>([]);
   const [texto, setTexto] = useState("");
-  const [cidade, setCidade] = useState("");
-  const [maisFiltros, setMaisFiltros] = useState(false);
+  const [cidade, setCidade] = useState<string | null>(null);
   const minhaPagina = useMeuPerfilCriakut();
   const minhaCidade = minhaPagina.data?.cidade?.trim() || null;
   const { user } = useAuth();
-  const args = useMemo(() => ({ _funcao: funcao, _estilos: estilos, _nichos: nichos, _texto: texto.trim() || null, _cidade: cidade.trim() || null }), [funcao, estilos, nichos, texto, cidade]);
+  const args = useMemo(() => ({ _funcao: funcao, _estilos: estilos, _nichos: nichos, _texto: texto.trim() || null, _cidade: cidade }), [funcao, estilos, nichos, texto, cidade]);
   const q = useQuery({
     queryKey: ["criakut-busca", args],
     queryFn: async (): Promise<Achado[]> => {
@@ -135,40 +152,44 @@ function Buscar() {
   const destaques = destaquesQ.data ?? [];
   const idsDestaque = useDestaquesIds();
   const resto = (q.data ?? []).filter((p) => !destaques.some((d) => d.user_id === p.user_id));
-  const alterna = (l: string[], v: string, set: (x: string[]) => void) => set(l.includes(v) ? l.filter((x) => x !== v) : [...l, v]);
   const chip = (on: boolean) => cn("rounded-full border px-3 py-1 text-[12.5px] font-semibold", on ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground hover:text-foreground");
 
   return (
     <div>
-      <h1 className="font-display text-[clamp(28px,4vw,44px)] font-extrabold leading-[1.05]">Encontre quem <span className="text-primary">faz junto</span> com você.</h1>
-      <div className="mt-4 flex max-w-2xl gap-2 rounded-2xl border-[1.5px] border-foreground bg-card p-1.5 shadow-[4px_4px_0_hsl(var(--foreground))]">
-        <Search className="ml-2 mt-2.5 h-4 w-4 text-muted-foreground" />
-        <input className="min-w-0 flex-1 bg-transparent px-1 text-[15px] outline-none" placeholder="Nome ou palavra (ex.: carrossel)" value={texto} onChange={(e) => setTexto(e.target.value)} />
-        <input className="w-20 border-l border-border bg-transparent px-2 text-[13px] outline-none sm:w-32" placeholder="Cidade" value={cidade} onChange={(e) => setCidade(e.target.value)} />
-      </div>
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        {/* Perto de mim (Walter, 14/10/2026): conecta gente da mesma cidade. Só acha
-            quem deixou a cidade visível. */}
-        {minhaCidade && (
-          <button type="button" className={cn(chip(cidade.trim().toLowerCase() === minhaCidade.toLowerCase()), "inline-flex items-center gap-1")}
-            onClick={() => setCidade(cidade.trim().toLowerCase() === minhaCidade.toLowerCase() ? "" : minhaCidade)}>
-            <MapPin className="h-3.5 w-3.5" /> Perto de mim ({minhaCidade})
+      <h1 className="font-display text-[clamp(24px,3vw,34px)] font-extrabold leading-[1.05]">Encontre quem <span className="text-primary">faz junto</span> com você.</h1>
+
+      {/* BUSCA REDESENHADA (Walter, 14/10/2026: "esses filtros estão estranhos").
+          Uma barra limpa (palavra + cidade da lista oficial), especialidade em
+          uma linha só, e estilo e nicho em menus, com contador. */}
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl border border-border bg-card px-3 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <input className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60" placeholder="Nome ou palavra (ex.: carrossel)" value={texto} onChange={(e) => setTexto(e.target.value)} />
+        </div>
+        <CidadeInput value={cidade} onChange={setCidade} placeholder="Cidade" className="sm:w-60" />
+        {minhaCidade && cidade !== minhaCidade && (
+          <button type="button" className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-dashed border-border px-3 text-[12.5px] font-semibold text-muted-foreground hover:border-primary hover:text-primary"
+            onClick={() => setCidade(minhaCidade)}>
+            <MapPin className="h-3.5 w-3.5" /> Perto de mim
           </button>
         )}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Quem</span>
         {FUNCOES.map((f) => <button key={f.valor} type="button" className={chip(funcao === f.valor)} onClick={() => setFuncao(funcao === f.valor ? null : f.valor)}>{f.nome}</button>)}
       </div>
-      {/* No celular, estilo e nicho ficam recolhidos (eram 4 linhas de chips antes
-          do primeiro resultado). No computador continuam à vista. */}
-      <button type="button" className="mt-2 text-[12.5px] font-semibold text-primary md:hidden" onClick={() => setMaisFiltros((v) => !v)}>
-        {maisFiltros ? "Esconder filtros" : `Estilo e nicho${estilos.length + nichos.length ? ` (${estilos.length + nichos.length})` : ""}`}
-      </button>
-      <div className={cn("mt-2 flex flex-wrap gap-1.5", !maisFiltros && "max-md:hidden")}>
-        {ESTILOS.map((e) => <button key={e} type="button" className={chip(estilos.includes(e))} onClick={() => alterna(estilos, e, setEstilos)}>{e}</button>)}
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <FiltroMenu nome="Estilo" opcoes={ESTILOS} valor={estilos} onChange={setEstilos} />
+        <FiltroMenu nome="Nicho" opcoes={NICHOS} valor={nichos} onChange={setNichos} />
+        {(funcao || estilos.length || nichos.length || cidade || texto) && (
+          <button type="button" className="ml-1 text-[12.5px] font-semibold text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            onClick={() => { setFuncao(null); setEstilos([]); setNichos([]); setCidade(null); setTexto(""); }}>
+            Limpar filtros
+          </button>
+        )}
       </div>
-      <div className={cn("mt-2 flex flex-wrap gap-1.5", !maisFiltros && "max-md:hidden")}>
-        {NICHOS.map((n) => <button key={n} type="button" className={chip(nichos.includes(n))} onClick={() => alterna(nichos, n, setNichos)}>{n}</button>)}
-      </div>
-      <div className="mt-3 border-b border-dashed border-border" />
+      <div className="mt-4 border-b border-dashed border-border" />
 
       {q.isLoading ? <div className="py-16 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" /></div>
         : (q.data ?? []).length === 0 && destaques.length === 0
@@ -205,6 +226,34 @@ function Buscar() {
   );
 }
 
+/** Estilo e nicho num menu (antes eram ~30 chips soltos na tela). */
+function FiltroMenu({ nome, opcoes, valor, onChange }: { nome: string; opcoes: string[]; valor: string[]; onChange: (v: string[]) => void }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" className={cn("inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[12.5px] font-semibold",
+          valor.length ? "border-foreground bg-foreground text-background" : "border-border bg-card text-muted-foreground hover:text-foreground")}>
+          {nome}{valor.length > 0 && ` (${valor.length})`} <ChevronDown className="h-3.5 w-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-72 p-3">
+        <div className="flex flex-wrap gap-1.5">
+          {opcoes.map((o) => {
+            const on = valor.includes(o);
+            return (
+              <button key={o} type="button" onClick={() => onChange(on ? valor.filter((x) => x !== o) : [...valor, o])}
+                className={cn("rounded-full border px-2.5 py-1 text-[12px] font-semibold", on ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground")}>
+                {o}
+              </button>
+            );
+          })}
+        </div>
+        {valor.length > 0 && <button type="button" className="mt-2.5 text-[12px] font-semibold text-muted-foreground hover:text-foreground" onClick={() => onChange([])}>Limpar {nome.toLowerCase()}</button>}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function Separador({ texto }: { texto: string }) {
   return (
     <div className="mt-2 flex items-center gap-2.5 text-[11.5px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
@@ -225,6 +274,9 @@ export default function Criakut() {
   const pagina = usePaginaCriakut(slug ?? (aba === "minha" ? meu.data?.slug : null));
 
   const trocar = (a: string) => navigate(a === "minha" ? base : `${base}?aba=${a}`);
+  /* Vaga na faixa laranja do topo (HeroBand), onde as abas moram no computador. */
+  const [vagaFaixa, setVagaFaixa] = useState<HTMLElement | null>(null);
+  useEffect(() => { setVagaFaixa(document.getElementById("cria-hero-slot")); }, []);
 
   /* Volta do Stripe (Destaque): avisa e confere de novo em alguns segundos,
      porque quem liga o Destaque é o webhook, que pode chegar depois. */
@@ -253,6 +305,7 @@ export default function Criakut() {
   return (
     <div className="mx-auto w-full max-w-[1200px] px-4 py-5 md:px-6">
       <Abas aba={aba === "outro" ? "" : aba} onTroca={trocar} />
+      {vagaFaixa && createPortal(<Abas aba={aba === "outro" ? "" : aba} onTroca={trocar} naFaixa />, vagaFaixa)}
       {aba === "buscar" && <Buscar />}
       {aba === "mural" && <Mural />}
       {aba === "propostas" && <Propostas />}

@@ -405,7 +405,7 @@ export function useComunidades() {
   return useQuery({
     queryKey: ["criakut-comunidades", user?.id],
     enabled: !!user?.id,
-    queryFn: () => rpc<ComunidadeItem[]>("criakut_comunidades_listar").then((d) => d ?? []),
+    queryFn: () => rpc<ComunidadeItem[]>("criakut_comunidades_ver").then((d) => d ?? []),
   });
 }
 
@@ -517,13 +517,13 @@ export function useAcaoAdminCriakut() {
       | { tipo: "config"; chave: "aberto" | "destaque_ativo"; ligar: boolean }
       | { tipo: "convidar"; email: string }
       | { tipo: "moderar"; alvo: string; qual: string; ocultar: boolean }
-      | { tipo: "comunidade"; id: string | null; slug: string; nome: string; descricao: string; emoji: string; cor: string; ativa: boolean; ordem: number }
+      | { tipo: "comunidade"; id: string | null; slug: string; nome: string; descricao: string; emoji: string; cor: string; ativa: boolean; ordem: number; publico: string }
       | { tipo: "fixar"; topico: string; fixo: boolean }) => {
       switch (a.tipo) {
         case "config": return rpc<unknown>("criakut_admin_config", { _chave: a.chave, _ligar: a.ligar });
         case "convidar": return rpc<string>("criakut_admin_convidar", { _email: a.email });
         case "moderar": return rpc<unknown>("criakut_admin_moderar", { _tipo: a.qual, _alvo: a.alvo, _ocultar: a.ocultar });
-        case "comunidade": return rpc<unknown>("criakut_admin_comunidade_salvar", { _id: a.id, _slug: a.slug, _nome: a.nome, _descricao: a.descricao, _emoji: a.emoji, _cor: a.cor, _ativa: a.ativa, _ordem: a.ordem });
+        case "comunidade": return rpc<unknown>("criakut_admin_comunidade_salvar", { _id: a.id, _slug: a.slug, _nome: a.nome, _descricao: a.descricao, _emoji: a.emoji, _cor: a.cor, _ativa: a.ativa, _ordem: a.ordem, _publico: a.publico });
         case "fixar": return rpc<unknown>("criakut_admin_fixar", { _topico: a.topico, _fixo: a.fixo });
       }
     },

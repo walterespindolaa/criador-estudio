@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useSalvarPerfilCriakut, useSalvarServicos } from "@/hooks/useCriakut";
+import { CidadeInput } from "./CidadeInput";
 import {
   ESTILOS, FUNCOES, NICHOS, PODE_BUSCAR, UNIDADES, ehContratante, limparInstagram, ofereceServico, slugValido,
   type FuncaoCriakut, type PerfilCriakut, type Servico, type Unidade,
@@ -78,7 +79,7 @@ export function EditarPerfil({ open, onOpenChange, perfil, servicos }: {
     try {
       await salvar.mutateAsync({ ...f, nome: f.nome.trim(), busco_texto: f.busco_texto?.trim() || null, busco: busca ? f.busco : [], sobre: f.sobre?.trim() || null,
         status_texto: f.status_texto?.trim() || null, recado_do_dia: f.recado_do_dia?.trim() || null,
-        cidade: f.cidade?.trim() || null, instagram: ig });
+        cidade: f.cidade || null, instagram: ig });
       if (oferece) await salvarServ.mutateAsync(serv.map((s, i) => ({ ...s, preco_centavos: centavosDe(s.precoTxt), ordem: i })));
       toast.success("Página atualizada!");
       onOpenChange(false);
@@ -114,7 +115,7 @@ export function EditarPerfil({ open, onOpenChange, perfil, servicos }: {
             </div>
           </div>
           <div className="grid grid-cols-[1fr_auto] items-end gap-3">
-            <div className="grid gap-1.5"><Label>Cidade</Label><Input value={f.cidade ?? ""} maxLength={80} placeholder="Ex.: Itajaí" className="placeholder:text-muted-foreground/50" onChange={(e) => set("cidade", e.target.value)} /></div>
+            <div className="grid gap-1.5"><Label>Cidade</Label><CidadeInput value={f.cidade ?? null} onChange={(v) => set("cidade", v)} placeholder="Digite e escolha" /></div>
             {oferece
               ? <label className="flex items-center gap-2 pb-2 text-[13px] font-semibold"><Switch checked={f.atende_remoto} onCheckedChange={(v) => set("atende_remoto", v)} />Atende remoto</label>
               : <span />}

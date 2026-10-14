@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, Eye, EyeOff, Instagram, Loader2, Palette, Pencil, Plus, Send, Star, UserCheck, UserPlus, X } from "lucide-react";
+import { Camera, Copy, Eye, EyeOff, Instagram, Loader2, Palette, Pencil, Play, Plus, Send, Star, UserCheck, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
@@ -302,7 +302,7 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
             <input ref={portInput} type="file" accept="image/*" multiple className="hidden"
               onChange={(e) => { void aoEscolherPortfolio(e.target.files); e.target.value = ""; }} />
             {/* Altura limitada no computador: a página cabe na tela e a aba rola por dentro. */}
-            <div className="p-4 lg:max-h-[264px] lg:overflow-y-auto">
+            <div className={cn("p-4", aba !== "instagram" && "lg:max-h-[264px] lg:overflow-y-auto")}>
               {aba === "servicos" && (
                 dados.servicos.length === 0
                   ? <p className="text-[13px] text-muted-foreground">{meu ? "Adicione o que você faz e quanto cobra." : "Sem serviços cadastrados."}</p>
@@ -339,14 +339,35 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
                   ? <p className="text-[13px] text-muted-foreground">{meu
                       ? (dados.mostrar_instagram === false ? "Você escondeu seus posts em Editar minha página." : "Conecte seu Instagram no Cria (Configurações) e seus últimos posts aparecem aqui sozinhos.")
                       : "Sem posts pra mostrar."}</p>
-                  : <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5 lg:grid-cols-6">
-                      {posts.map((p) => (
-                        <a key={p.link} href={p.link} target="_blank" rel="noopener noreferrer" className="relative block aspect-[4/5] overflow-hidden rounded-xl bg-muted">
-                          <img src={p.thumb} alt="" loading="lazy" className="h-full w-full object-cover transition-transform hover:scale-[1.03]" />
-                          {(p.tipo === "REELS" || p.tipo === "VIDEO") && <span className="absolute right-1.5 top-1.5 rounded bg-black/60 px-1 text-[10px] font-bold text-white">▶</span>}
-                          {p.tipo === "CAROUSEL_ALBUM" && <span className="absolute right-1.5 top-1.5 rounded bg-black/60 px-1 text-[10px] font-bold text-white">❐</span>}
-                        </a>
-                      ))}
+                  : <div>
+                      {/* Cara de perfil do Instagram (Walter, 14/10/2026): cabeçalho com o @ e
+                          os seguidores, grade colada de 3 por linha no celular e uma faixa de 6
+                          no computador (sem barra de rolagem dentro da aba). */}
+                      <div className="mb-3 flex items-center gap-2.5">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] p-[2px]">
+                          <span className="grid h-full w-full place-items-center rounded-full bg-card"><Instagram className="h-4 w-4" /></span>
+                        </span>
+                        <span className="min-w-0 flex-1 leading-tight">
+                          <b className="block truncate text-[13.5px]">{dados.instagram ? `@${dados.instagram}` : "Instagram"}</b>
+                          <span className="text-[11.5px] text-muted-foreground">
+                            {dados.instagram_seguidores != null ? `${numeroCurto(dados.instagram_seguidores)} seguidores · ` : ""}últimos posts
+                          </span>
+                        </span>
+                        {dados.instagram && (
+                          <a href={`https://instagram.com/${dados.instagram}`} target="_blank" rel="noopener noreferrer"
+                            className="shrink-0 rounded-full border border-border px-3 py-1 text-[12px] font-semibold hover:border-foreground/40">Ver perfil</a>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-[3px] overflow-hidden rounded-xl sm:grid-cols-6 sm:[&>*:nth-child(n+7)]:hidden">
+                        {posts.slice(0, 9).map((p) => (
+                          <a key={p.link} href={p.link} target="_blank" rel="noopener noreferrer" className="group relative block aspect-[4/5] overflow-hidden bg-muted">
+                            <img src={p.thumb} alt="" loading="lazy" className="h-full w-full object-cover" />
+                            <span className="absolute inset-0 grid place-items-center bg-black/0 text-[11px] font-bold text-white opacity-0 transition group-hover:bg-black/35 group-hover:opacity-100">Ver post</span>
+                            {(p.tipo === "REELS" || p.tipo === "VIDEO") && <Play className="absolute right-1.5 top-1.5 h-3.5 w-3.5 fill-white text-white drop-shadow" />}
+                            {p.tipo === "CAROUSEL_ALBUM" && <Copy className="absolute right-1.5 top-1.5 h-3.5 w-3.5 text-white drop-shadow" />}
+                          </a>
+                        ))}
+                      </div>
                     </div>
               )}
               {aba === "busco" && (

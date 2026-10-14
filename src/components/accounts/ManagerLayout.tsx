@@ -26,6 +26,7 @@ import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
 import { SettingsManagerDrawer } from "@/components/accounts/SettingsManagerDrawer";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { HeroBand } from "@/components/HeroBand";
+import { TituloCriakut } from "@/components/criakut/TituloCriakut";
 import { useFilaDoParceiro, useSouParceiro } from "@/hooks/useParceiro";
 import { useAcessoCriakut } from "@/hooks/useCriakut";
 import { useManagerApprovalOverview } from "@/hooks/useApprovals";
@@ -280,6 +281,7 @@ export default function ManagerLayout() {
 
   const heroTitle = isDash
     ? dataCap
+    : location.pathname.startsWith("/socialmidia/criakut") ? <TituloCriakut />
     : (Object.entries(HERO_TITLES).find(([k]) => location.pathname.startsWith(k))?.[1] ?? "Gestão");
 
   // A linha de cima (eyebrow): o alarme. Se não tem nada travado, fica quieta.

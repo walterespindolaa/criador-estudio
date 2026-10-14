@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Flag, Loader2, MessageSquare, Pin, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Flag, Loader2, MessageSquare, Pin, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useProfile } from "@/hooks/useProfile";
 import { useAcaoAdminCriakut, useAcaoComunidade, useBaseCriakut, useComunidade, useComunidades, useMeuPerfilCriakut, useTopico } from "@/hooks/useCriakut";
-import { nomeFuncao, quandoFoi, type AutorMini, type ComunidadeItem } from "@/lib/criakut";
+import { PUBLICOS, nomeFuncao, quandoFoi, type AutorMini, type ComunidadeItem, type PublicoComunidade } from "@/lib/criakut";
 import { Avatar, DenunciarDialog, SeloDestaque } from "./Pecas";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +40,16 @@ function Lista({ onAbrir }: { onAbrir: (slug: string) => void }) {
   const admin = profile?.role === "admin";
   const [editando, setEditando] = useState<ComunidadeItem | "nova" | null>(null);
   const minhas = (q.data ?? []).filter((x) => x.sou_membro).length;
+  /* FILTRO (Walter, 14/10/2026): texto, público e "só as minhas". Cada pessoa
+     já só recebe as comunidades do lado dela (criador ou prestador) e as de
+     todos; o admin vê tudo, por isso o filtro de público aparece pra ele. */
+  const [busca, setBusca] = useState("");
+  const [filtro, setFiltro] = useState<"todas" | "minhas" | PublicoComunidade>("todas");
+  const semAcento = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const lista = (q.data ?? []).filter((x) =>
+    (filtro === "todas" || (filtro === "minhas" ? x.sou_membro : x.publico === filtro))
+    && (!busca.trim() || semAcento(`${x.nome} ${x.descricao ?? ""}`).includes(semAcento(busca.trim()))));
+  const publicosVistos = new Set((q.data ?? []).map((x) => x.publico));
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -49,12 +59,27 @@ function Lista({ onAbrir }: { onAbrir: (slug: string) => void }) {
           {admin && <Button size="sm" variant="outline" className="rounded-xl" onClick={() => setEditando("nova")}><Plus className="mr-1 h-4 w-4" /> Nova comunidade</Button>}
         </span>
       </div>
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl border border-border bg-card px-3 focus-within:border-primary sm:max-w-sm">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <input className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60" placeholder="Buscar comunidade" value={busca} onChange={(e) => setBusca(e.target.value)} />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {([["todas", "Todas"], ["minhas", "Minhas"], ...PUBLICOS.filter((p) => p.valor !== "todos" && publicosVistos.has(p.valor)).map((p) => [p.valor, `Pra ${p.nome.toLowerCase()}`])] as [typeof filtro, string][]).map(([k, n]) => (
+            <button key={k} type="button" onClick={() => setFiltro(k)}
+              className={cn("rounded-full border px-3 py-1 text-[12.5px] font-semibold", filtro === k ? "border-foreground bg-foreground text-background" : "border-border bg-card text-muted-foreground hover:text-foreground")}>{n}</button>
+          ))}
+        </div>
+      </div>
       {q.isLoading ? <Loader2 className="mx-auto my-16 h-5 w-5 animate-spin text-muted-foreground" />
+        : lista.length === 0 ? <p className="py-14 text-center text-[14px] text-muted-foreground">Nenhuma comunidade com esse filtro.</p>
         : <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-            {(q.data ?? []).map((x) => (
+            {lista.map((x) => (
               <div key={x.id} className={cn("overflow-hidden rounded-[20px] border border-border bg-card text-left transition-colors hover:border-foreground/40", !x.ativa && "opacity-60")}>
                 <button type="button" className="block w-full text-left" onClick={() => onAbrir(x.slug)}>
-                  <div className="grid h-[86px] place-items-center text-[34px]" style={{ background: x.cor }}>{x.emoji}</div>
+                  <div className="relative grid h-[86px] place-items-center text-[34px]" style={{ background: x.cor }}>{x.emoji}
+                    {x.publico !== "todos" && <span className="absolute left-2.5 top-2.5 rounded-full bg-white/90 px-2 py-0.5 text-[10.5px] font-bold text-foreground">Pra {x.publico}</span>}
+                  </div>
                   <div className="p-3.5 pb-2">
                     <h3 className="font-display text-[17px] font-bold">{x.nome}{!x.ativa && <span className="ml-1 text-[11px] font-normal">(desativada)</span>}</h3>
                     {x.descricao && <p className="mt-1 text-[12.5px] leading-snug text-muted-foreground">{x.descricao}</p>}
@@ -77,11 +102,16 @@ function Lista({ onAbrir }: { onAbrir: (slug: string) => void }) {
 
 function EditarComunidade({ item, onClose }: { item: ComunidadeItem | "nova" | null; onClose: () => void }) {
   const acao = useAcaoAdminCriakut();
-  const [f, setF] = useState({ slug: "", nome: "", descricao: "", emoji: "💬", cor: "#FFE6DC", ativa: true, ordem: 0 });
+  const meu = useMeuPerfilCriakut();
+  /* Público já vem marcado pelo lado de quem cria (criadora = criadores). */
+  const ladoPadrao: PublicoComunidade = meu.data?.funcao === "criadora" ? "criadores" : meu.data ? "prestadores" : "todos";
+  const vazio = { slug: "", nome: "", descricao: "", emoji: "💬", cor: "#FFE6DC", ativa: true, ordem: 0, publico: ladoPadrao as PublicoComunidade };
+  const [f, setF] = useState(vazio);
   useEffect(() => {
-    if (item === "nova") setF({ slug: "", nome: "", descricao: "", emoji: "💬", cor: "#FFE6DC", ativa: true, ordem: 0 });
-    else if (item) setF({ slug: item.slug, nome: item.nome, descricao: item.descricao ?? "", emoji: item.emoji, cor: item.cor, ativa: item.ativa, ordem: 0 });
-  }, [item]);
+    if (item === "nova") setF({ ...vazio, publico: ladoPadrao });
+    else if (item) setF({ slug: item.slug, nome: item.nome, descricao: item.descricao ?? "", emoji: item.emoji, cor: item.cor, ativa: item.ativa, ordem: 0, publico: item.publico });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item, ladoPadrao]);
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
   const salvar = () => {
     if (!/^[a-z0-9][a-z0-9-]{2,39}$/.test(f.slug)) { toast.error("Endereço: letras minúsculas, números e hífen (3 a 40)."); return; }
@@ -96,6 +126,18 @@ function EditarComunidade({ item, onClose }: { item: ComunidadeItem | "nova" | n
           <div className="grid grid-cols-[64px_1fr] gap-2"><Input value={f.emoji} maxLength={4} onChange={(e) => set("emoji", e.target.value)} /><Input value={f.nome} maxLength={60} placeholder="Nome" onChange={(e) => set("nome", e.target.value)} /></div>
           <Input value={f.slug} maxLength={40} placeholder="endereco-da-comunidade" onChange={(e) => set("slug", e.target.value.toLowerCase())} />
           <Textarea rows={2} maxLength={240} value={f.descricao} placeholder="Descrição curta" onChange={(e) => set("descricao", e.target.value)} />
+          <div>
+            <p className="mb-1.5 text-[12.5px] font-semibold">Pra quem é</p>
+            <div className="flex gap-1.5">
+              {PUBLICOS.map((p) => (
+                <button key={p.valor} type="button" onClick={() => set("publico", p.valor)}
+                  className={cn("flex-1 rounded-xl border px-2 py-2 text-[12.5px] font-semibold", f.publico === p.valor ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                  {p.nome}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">Criadores = quem cria conteúdo. Prestadores = social mídia, designer, editor, filmmaker e copy. Cada lado só vê as suas e as de todos.</p>
+          </div>
           <label className="flex items-center gap-2 text-[13px]">Cor <input type="color" value={f.cor} onChange={(e) => set("cor", e.target.value.toUpperCase())} />
             <span className="ml-auto flex items-center gap-1.5"><input type="checkbox" checked={f.ativa} onChange={(e) => set("ativa", e.target.checked)} /> ativa</span></label>
           <Button className="rounded-xl" disabled={acao.isPending} onClick={salvar}>{acao.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Salvar</Button>

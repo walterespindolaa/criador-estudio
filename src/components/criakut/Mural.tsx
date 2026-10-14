@@ -12,6 +12,7 @@ import {
   useBaseCriakut, useCancelarPedido, useDestaquesIds, useMeuPerfilCriakut, useMural, usePropor, usePublicarPedido,
 } from "@/hooks/useCriakut";
 import { SeloDestaque } from "./Pecas";
+import { CidadeInput } from "./CidadeInput";
 import {
   ESTILOS, FUNCOES, NICHOS, UNIDADES, faixaTexto, iniciais, nomeFuncao, reaisParaCentavos,
   type FuncaoCriakut, type PedidoMural, type Unidade,
@@ -194,7 +195,7 @@ function PendurarTrabalho({ open, onOpenChange }: { open: boolean; onOpenChange:
                 </div></div>
             </div>
             <label className="flex items-center gap-2 text-[13px]"><Switch checked={f.presencial} onCheckedChange={(v) => set("presencial", v)} /> Precisa ser presencial</label>
-            {f.presencial && <Input value={f.cidade} maxLength={80} placeholder="Cidade" onChange={(e) => set("cidade", e.target.value)} />}
+            {f.presencial && <CidadeInput value={f.cidade || null} onChange={(v) => set("cidade", v ?? "")} placeholder="Cidade do trabalho" />}
             <Button className="h-11 rounded-xl" disabled={publicar.isPending} onClick={() => void gravar().catch(() => undefined)}>
               {publicar.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-1.5 h-4 w-4" />} Pendurar no mural
             </Button>

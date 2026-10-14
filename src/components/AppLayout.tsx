@@ -26,6 +26,7 @@ import ContaPausada from "@/pages/ContaPausada";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppRail } from "@/components/AppRail";
 import { HeroBand } from "@/components/HeroBand";
+import { TituloCriakut } from "@/components/criakut/TituloCriakut";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { CriaAIProvider } from "@/contexts/CriaAIContext";
@@ -228,6 +229,7 @@ const AppLayout = () => {
   const isDash = location.pathname === "/app";
   const heroTitle = isDash
     ? <span className="inline-flex items-center gap-2">{firstName} <GreetingEmoji /></span>
+    : location.pathname.startsWith("/app/criakut") ? <TituloCriakut />
     : (PAGE_TITLES[location.pathname] ?? "CRIA");
   const heroEyebrow = isDash ? `${greetWord},` : undefined;
   const avatarNode = isDash ? (
