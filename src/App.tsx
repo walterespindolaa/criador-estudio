@@ -74,6 +74,7 @@ const Tutoriais = lazy(() => import("./pages/app/Tutoriais"));
 const Brandbook = lazy(() => import("./pages/app/Brandbook"));
 const LinkInBio = lazy(() => import("./pages/app/LinkInBio"));
 const MinhasDemandas = lazy(() => import("./pages/app/MinhasDemandas"));
+const Criakut = lazy(() => import("./pages/criakut/Criakut"));
 const ParceiroEntregues = lazy(() => import("./pages/parceiro/Entregues"));
 const ParceiroMarcas = lazy(() => import("./pages/parceiro/Marcas"));
 const ParceiroCaches = lazy(() => import("./pages/parceiro/Caches"));
@@ -98,6 +99,7 @@ const CronogramaPublica = lazy(() => import("./pages/CronogramaPublica"));
 const RoteirosPublica = lazy(() => import("./pages/RoteirosPublica"));
 const ConectarInstagram = lazy(() => import("./pages/ConectarInstagram"));
 const CadastroPublico = lazy(() => import("./pages/CadastroPublico"));
+const EnviarAcessos = lazy(() => import("./pages/EnviarAcessos"));
 const ManagerLayout = lazy(() => import("./components/accounts/ManagerLayout"));
 /* Guard de PAPEL, não de módulo: quem só produz pras agências não entra nas
    telas de operação por URL. Import direto (não lazy) porque ele é só um
@@ -319,6 +321,8 @@ const App = () => (
               {/* Convite pra cliente liberar o Instagram (link do WhatsApp). */}
               <Route path="/conectar/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><ConectarInstagram /></ErrorBoundary>} />
               <Route path="/cadastro/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><CadastroPublico /></ErrorBoundary>} />
+              {/* Cofre de acessos: o cliente manda logins e senhas por link (Walter, 14/10/2026). */}
+              <Route path="/acessos/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><EnviarAcessos /></ErrorBoundary>} />
               <Route path="/ativar" element={<Ativar />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
@@ -431,6 +435,9 @@ const App = () => (
                 <Route path="equipe" element={<SoOperacao><ErrorBoundary><Equipe /></ErrorBoundary></SoOperacao>} />
                 {/* Abas da Equipe (28/09/2026): produção, conversas e pessoas. */}
                 <Route path="equipe/:aba" element={<SoOperacao><ErrorBoundary><Equipe /></ErrorBoundary></SoOperacao>} />
+                {/* CRIAKUT (Fase 1, só convidados: fora do menu até abrir). Doc "Criakut: ecossistema, fluxo e plano". */}
+                <Route path="criakut" element={<ErrorBoundary><Criakut /></ErrorBoundary>} />
+                <Route path="criakut/:slug" element={<ErrorBoundary><Criakut /></ErrorBoundary>} />
                 <Route path="lixeira" element={<ErrorBoundary><Lixeira /></ErrorBoundary>} />
                 {/* Tutoriais em vídeo: a mesma tela do /app, com a trilha da agência (ou do parceiro). */}
                 <Route path="tutoriais" element={<ErrorBoundary><Tutoriais /></ErrorBoundary>} />
