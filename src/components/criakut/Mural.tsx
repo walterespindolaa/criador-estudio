@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
-  useBaseCriakut, useCancelarPedido, useMeuPerfilCriakut, useMural, usePropor, usePublicarPedido,
+  useBaseCriakut, useCancelarPedido, useDestaquesIds, useMeuPerfilCriakut, useMural, usePropor, usePublicarPedido,
 } from "@/hooks/useCriakut";
+import { SeloDestaque } from "./Pecas";
 import {
   ESTILOS, FUNCOES, NICHOS, UNIDADES, faixaTexto, iniciais, nomeFuncao, reaisParaCentavos,
   type FuncaoCriakut, type PedidoMural, type Unidade,
@@ -79,6 +80,8 @@ function CartaoPedido({ p, onPropor }: { p: PedidoMural; onPropor: () => void })
   const navigate = useNavigate();
   const base = useBaseCriakut();
   const cancelar = useCancelarPedido();
+  /* No mural o Destaque só põe o selo: não fura fila (mockup Fase 3). */
+  const idsDestaque = useDestaquesIds();
   return (
     <div className={cn("relative rounded-[20px] border bg-card p-4", p.eh_meu ? "border-primary/40" : "border-border", p.status !== "aberto" && "opacity-70")}>
       <div className="flex flex-wrap items-center gap-1.5 text-[11.5px] font-bold">
@@ -98,7 +101,7 @@ function CartaoPedido({ p, onPropor }: { p: PedidoMural; onPropor: () => void })
         <button type="button" className="flex min-w-0 items-center gap-2 text-left" onClick={() => navigate(`${base}/${p.autor_slug}`)}>
           {p.autor_foto ? <img src={p.autor_foto} alt="" className="h-8 w-8 rounded-full object-cover" />
             : <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-[11px] font-extrabold text-primary-foreground">{iniciais(p.autor_nome)}</span>}
-          <span className="min-w-0 text-[12px] leading-tight"><b className="block truncate">{p.autor_nome}</b><span className="text-muted-foreground">{nomeFuncao(p.autor_funcao)}</span></span>
+          <span className="min-w-0 text-[12px] leading-tight"><b className="block truncate">{p.autor_nome}{idsDestaque.has(p.autor_id) && <SeloDestaque curto className="ml-1" />}</b><span className="text-muted-foreground">{nomeFuncao(p.autor_funcao)}</span></span>
         </button>
         <span className="ml-auto text-right">
           <b className="block font-display text-[15px] font-extrabold">{faixaTexto(p.valor_min_centavos, p.valor_max_centavos, p.unidade)}</b>

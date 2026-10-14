@@ -68,6 +68,7 @@ import { AdminLogs } from "@/components/admin/AdminLogs";
 import { AdminRecados } from "@/components/admin/AdminRecados";
 import { AdminFaturamento } from "@/components/admin/AdminFaturamento";
 import { AdminFeedback } from "@/components/admin/AdminFeedback";
+import { AdminCriakut } from "@/components/admin/AdminCriakut";
 import { AdminGrowth } from "@/components/admin/AdminGrowth";
 import { AdminHome } from "@/components/admin/AdminHome";
 import { AdminParceiras } from "@/components/admin/AdminParceiras";
@@ -611,11 +612,13 @@ const AdminInner = () => {
             <SubAbas atual={subRede} aoTrocar={setSubRede} itens={[
               { valor: "parceiros", rotulo: "Parceiros" },
               { valor: "recados", rotulo: "Recados" },
+              { valor: "criakut", rotulo: "Criakut" },
               { valor: "feedback", rotulo: "Feedback" },
               { valor: "bancos", rotulo: "Bancos de tendência" },
             ]} />
             {subRede === "recados" && <AdminRecados />}
             {subRede === "feedback" && <AdminFeedback />}
+            {subRede === "criakut" && <AdminCriakut />}
             {subRede === "parceiros" && <AdminPartners />}
             {/* Os dois bancos moravam no TOPO da página, acima das abas, então
                 apareciam em toda tela do painel mesmo sem ter nada a ver com

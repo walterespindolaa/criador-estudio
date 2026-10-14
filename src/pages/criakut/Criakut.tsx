@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { ArrowLeft, Loader2, Lock, Search, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
-import { useAcessoCriakut, useBaseCriakut, useMeuPerfilCriakut, useMinhasPropostas, usePaginaCriakut, useSalvarPerfilCriakut } from "@/hooks/useCriakut";
+import { useAcessoCriakut, useBaseCriakut, useDestaquesIds, useMeuPerfilCriakut, useMinhasPropostas, usePaginaCriakut, useSalvarPerfilCriakut } from "@/hooks/useCriakut";
+import { Comunidades } from "@/components/criakut/Comunidades";
+import { SeloDestaque } from "@/components/criakut/Pecas";
 import { Mural } from "@/components/criakut/Mural";
 import { Propostas } from "@/components/criakut/Propostas";
 import { PaginaCriakut } from "@/components/criakut/PaginaCriakut";
@@ -21,6 +24,7 @@ import { cn } from "@/lib/utils";
    {base}?aba=buscar         → Encontrar gente
    {base}?aba=mural          → Mural de trabalhos
    {base}?aba=propostas&p=ID → Propostas e a conversa de cada uma
+   {base}?aba=comunidades    → Comunidades (&c=slug dentro, &t=id um tópico)
    {base}/:slug              → a página de outra pessoa */
 
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
@@ -35,7 +39,7 @@ type Achado = {
 function Abas({ aba, onTroca }: { aba: string; onTroca: (a: string) => void }) {
   const propostas = useMinhasPropostas();
   const vez = (propostas.data ?? []).filter((p) => p.minha_vez || (p.status === "concluida" && !p.ja_avaliei)).length;
-  const itens = [["minha", "Minha página"], ["buscar", "Encontrar gente"], ["mural", "Mural de trabalhos"], ["propostas", "Propostas"]];
+  const itens = [["minha", "Minha página"], ["buscar", "Encontrar gente"], ["mural", "Mural de trabalhos"], ["comunidades", "Comunidades"], ["propostas", "Propostas"]];
   return (
     <div className="mb-5 flex flex-wrap items-center gap-3">
       <span className="font-display text-[22px] font-extrabold">Cria<span className="text-primary">kut</span>
@@ -103,6 +107,19 @@ function Buscar() {
       return (data ?? []) as Achado[];
     },
   });
+  /* DESTAQUE (Fase 3): até 3 no topo, só de quem combina com o filtro, em
+     ordem sorteada a cada busca. O resto da lista não muda de ordem. */
+  const destaquesQ = useQuery({
+    queryKey: ["criakut-busca-destaques", args],
+    queryFn: async (): Promise<Achado[]> => {
+      const { data, error } = await sbRpc("criakut_destaques_busca", { _funcao: args._funcao, _estilos: args._estilos, _nichos: args._nichos, _cidade: args._cidade, _texto: args._texto });
+      if (error) throw error;
+      return (data ?? []) as Achado[];
+    },
+  });
+  const destaques = destaquesQ.data ?? [];
+  const idsDestaque = useDestaquesIds();
+  const resto = (q.data ?? []).filter((p) => !destaques.some((d) => d.user_id === p.user_id));
   const alterna = (l: string[], v: string, set: (x: string[]) => void) => set(l.includes(v) ? l.filter((x) => x !== v) : [...l, v]);
   const chip = (on: boolean) => cn("rounded-full border px-3 py-1 text-[12.5px] font-semibold", on ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground hover:text-foreground");
 
@@ -125,16 +142,21 @@ function Buscar() {
       </div>
 
       {q.isLoading ? <div className="py-16 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" /></div>
-        : (q.data ?? []).length === 0
+        : (q.data ?? []).length === 0 && destaques.length === 0
           ? <p className="py-14 text-center text-[14px] text-muted-foreground">Ninguém com esse filtro ainda. Por enquanto só os convidados aparecem.</p>
           : <div className="mt-5 grid gap-3">
-              {(q.data ?? []).map((p) => (
-                <button key={p.user_id} type="button" onClick={() => navigate(`${base}/${p.slug}`)}
-                  className="grid grid-cols-[auto_1fr_auto] items-center gap-4 rounded-[20px] border border-border bg-card p-3.5 text-left hover:border-foreground/40 max-sm:grid-cols-[auto_1fr]">
+              {destaques.length > 0 && <Separador texto="Em destaque" />}
+              {[...destaques.map((p) => ({ ...p, _dest: true })), ...resto.map((p) => ({ ...p, _dest: false }))].map((p, i) => (
+                <div key={p.user_id + (p._dest ? "-d" : "")} className="contents">
+                {destaques.length > 0 && i === destaques.length && <Separador texto="Todos" />}
+                <button type="button" onClick={() => navigate(`${base}/${p.slug}`)}
+                  className={cn("relative grid grid-cols-[auto_1fr_auto] items-center gap-4 rounded-[20px] border bg-card p-3.5 text-left hover:border-foreground/40 max-sm:grid-cols-[auto_1fr]",
+                    p._dest ? "border-2 border-primary shadow-[0_8px_24px_rgba(234,73,24,0.12)]" : "border-border")}>
+                  {p._dest && <SeloDestaque className="absolute -top-2.5 left-4" />}
                   {p.foto_url ? <img src={p.foto_url} alt="" className="h-14 w-14 rounded-full object-cover" />
                     : <span className="grid h-14 w-14 place-items-center rounded-full bg-primary font-display text-lg font-extrabold text-primary-foreground">{iniciais(p.nome)}</span>}
                   <span className="min-w-0">
-                    <b className="block font-display text-[17px]">{p.nome}</b>
+                    <b className="block font-display text-[17px]">{p.nome}{!p._dest && idsDestaque.has(p.user_id) && <SeloDestaque curto className="ml-1.5" />}</b>
                     <span className="block text-[12.5px] text-muted-foreground">{[nomeFuncao(p.funcao), p.cidade, p.atende_remoto ? "remoto" : null].filter(Boolean).join(" · ")}</span>
                     <span className="mt-1.5 flex flex-wrap gap-1">{[...p.estilos, ...p.nichos].slice(0, 5).map((t) => <span key={t} className="rounded-md bg-muted px-2 py-0.5 text-[11px]">{t}</span>)}</span>
                   </span>
@@ -146,8 +168,17 @@ function Buscar() {
                     {p.preco_minimo_centavos != null && <span className="block font-display text-[16px] font-extrabold">a partir de {precoTexto(p.preco_minimo_centavos, "peca").replace("/peça", "")}</span>}
                   </span>
                 </button>
+                </div>
               ))}
             </div>}
+    </div>
+  );
+}
+
+function Separador({ texto }: { texto: string }) {
+  return (
+    <div className="mt-2 flex items-center gap-2.5 text-[11.5px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+      {texto}<span className="h-px flex-1 bg-border" />
     </div>
   );
 }
@@ -159,11 +190,24 @@ export default function Criakut() {
   const base = useBaseCriakut();
   const { temAcesso, carregando } = useAcessoCriakut();
   const pedida = params.get("aba");
-  const aba = slug ? "outro" : pedida === "buscar" || pedida === "mural" || pedida === "propostas" ? pedida : "minha";
+  const aba = slug ? "outro" : pedida === "buscar" || pedida === "mural" || pedida === "propostas" || pedida === "comunidades" ? pedida : "minha";
   const meu = useMeuPerfilCriakut();
   const pagina = usePaginaCriakut(slug ?? (aba === "minha" ? meu.data?.slug : null));
 
   const trocar = (a: string) => navigate(a === "minha" ? base : `${base}?aba=${a}`);
+
+  /* Volta do Stripe (Destaque): avisa e confere de novo em alguns segundos,
+     porque quem liga o Destaque é o webhook, que pode chegar depois. */
+  const qc = useQueryClient();
+  const voltaStripe = params.get("destaque");
+  useEffect(() => {
+    if (!voltaStripe) return;
+    if (voltaStripe === "ok") toast.success("Pagamento recebido! Seu Destaque liga em instantes.");
+    navigate(base, { replace: true });
+    /* Sem limpar o timer: o navigate acima tira o parâmetro e reexecuta o
+       efeito, e limpar aqui cancelaria a conferida. */
+    setTimeout(() => { void qc.invalidateQueries({ queryKey: ["criakut-meu-destaque"] }); void qc.invalidateQueries({ queryKey: ["criakut-pagina"] }); }, 4000);
+  }, [voltaStripe, base, navigate, qc]);
 
   if (carregando) return <div className="py-24 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" /></div>;
   if (!temAcesso) {
@@ -182,6 +226,7 @@ export default function Criakut() {
       {aba === "buscar" && <Buscar />}
       {aba === "mural" && <Mural />}
       {aba === "propostas" && <Propostas />}
+      {aba === "comunidades" && <Comunidades />}
       {aba === "outro" && (
         <>
           <button type="button" onClick={() => navigate(-1)} className="mb-3 inline-flex items-center gap-1 text-[13px] font-bold"><ArrowLeft className="h-4 w-4" /> voltar</button>

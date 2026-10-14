@@ -172,6 +172,19 @@ Deno.serve(async (req) => {
           console.log("[webhook] checkout ainda nao pago, aguardando:", s.id, s.payment_status);
           break;
         }
+        // ── DESTAQUE DO CRIAKUT (Walter, 14/10/2026): liga o selo e o topo da busca ──
+        if (s.metadata?.kind === "criakut_destaque") {
+          const uid = s.metadata?.destaque_user;
+          if (uid) {
+            must(await supabase.from("criakut_destaques").upsert({
+              user_id: uid, status: "active",
+              stripe_customer_id: s.customer as string,
+              stripe_subscription_id: s.subscription as string,
+              atualizado_em: new Date().toISOString(),
+            }, { onConflict: "user_id" }), "criakut_destaques activate");
+          }
+          break;
+        }
         // ── ASSENTOS DE COLABORADOR: provisiona paid_collab_seats ──
         if (s.metadata?.kind === "collab_seats") {
           const managerId = s.metadata?.manager_id;
@@ -333,6 +346,20 @@ Deno.serve(async (req) => {
 
       case "customer.subscription.updated": {
         const sub = event.data.object as Stripe.Subscription;
+        // ── DESTAQUE DO CRIAKUT: acompanha o status (past_due/unpaid tira o selo) ──
+        if (sub.metadata?.kind === "criakut_destaque") {
+          const uid = sub.metadata?.destaque_user;
+          if (uid) {
+            await supabase.from("criakut_destaques").upsert({
+              user_id: uid, status: sub.status,
+              stripe_customer_id: sub.customer as string,
+              stripe_subscription_id: sub.id,
+              ate: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+              atualizado_em: new Date().toISOString(),
+            }, { onConflict: "user_id" });
+          }
+          break;
+        }
         // ── ASSENTOS DE COLABORADOR: sincroniza a quantidade paga ──
         if (sub.metadata?.kind === "collab_seats") {
           const managerId = sub.metadata?.manager_id;
@@ -431,6 +458,13 @@ Deno.serve(async (req) => {
 
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
+        // ── DESTAQUE DO CRIAKUT: acabou a assinatura, sai o selo ──
+        if (sub.metadata?.kind === "criakut_destaque") {
+          await supabase.from("criakut_destaques")
+            .update({ status: "canceled", atualizado_em: new Date().toISOString() })
+            .eq("stripe_subscription_id", sub.id);
+          break;
+        }
         // ── ASSENTOS DE COLABORADOR: zera os assentos pagos ──
         if (sub.metadata?.kind === "collab_seats") {
           const managerId = sub.metadata?.manager_id;
@@ -521,8 +555,8 @@ Deno.serve(async (req) => {
         // metadata de atribuição vive na SUBSCRIPTION, não na invoice
         const sub = await stripe.subscriptions.retrieve(subId);
         const md = sub.metadata || {};
-        // módulo pago não gera comissão de parceira
-        if (md.kind === "module") break;
+        // módulo pago e Destaque do Criakut não geram comissão de parceira
+        if (md.kind === "module" || md.kind === "criakut_destaque") break;
         const partnerId = md.partner_id;
         const referredUserId = md.user_id;
         const selfSub = md.self_subscribe === "1";

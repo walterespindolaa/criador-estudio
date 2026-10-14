@@ -57,6 +57,7 @@ export type PerfilCriakut = {
   nichos: string[];
   instagram: string | null;
   publicado: boolean;
+  mostrar_visitas?: boolean;
 };
 
 /** O que a função criakut_perfil devolve: o perfil + listas + números. */
@@ -70,6 +71,9 @@ export type PaginaCriakutDados = PerfilCriakut & {
   entregas_no_cria?: number;
   trabalhos_concluidos?: number;
   reputacao?: Reputacao;
+  /* Fase 3 (mostrar_visitas só vem na minha página) */
+  destaque?: boolean;
+  comunidades?: ComunidadeMini[];
 };
 
 /* ── FASE 2: orçamento, mural, propostas, conversa, avaliação ─────────────── */
@@ -175,3 +179,53 @@ export function iniciais(nome: string): string {
 /** Mesmo filtro do banco (criakut_url_ok): só imagem de host conhecido. */
 export const urlConfiavel = (u?: string | null): string | null =>
   u && /^https:\/\/((ecbzfjzoqidowrsfsfih|exuxlwdnkgmhtnwoyvwo)\.supabase\.co\/storage\/v1\/object\/public\/|d8j0ntlcm91z4\.cloudfront\.net\/|[a-z0-9-]+\.googleusercontent\.com\/)/.test(u) ? u : null;
+
+/* ═══ FASE 3: recados, visitas, comunidades, Destaque, admin ═══════════════ */
+
+export type AutorMini = { nome: string; slug: string; foto_url: string | null; funcao: FuncaoCriakut; destaque: boolean } | null;
+export type ComunidadeMini = { slug: string; nome: string; emoji: string; cor: string };
+
+export type Recado = { id: string; texto: string; criado_em: string; autor: AutorMini; posso_apagar: boolean; meu: boolean };
+export type RecadosDados = { total: number; itens: Recado[] };
+
+export type Visitante = { nome: string; slug: string; foto_url: string | null; funcao: FuncaoCriakut; ultima: string };
+export type MinhasVisitas = { mostrar: boolean; total_mes: number; lista: Visitante[] };
+
+export type ComunidadeItem = ComunidadeMini & { id: string; descricao: string | null; membros: number; topicos: number; sou_membro: boolean; ativa: boolean };
+export type TopicoItem = { id: string; titulo: string; fixo: boolean; respostas: number; criado_em: string; ultima_em: string; oculto: boolean; autor: AutorMini };
+export type ComunidadeDados = ComunidadeMini & {
+  id: string; descricao: string | null; ativa: boolean; ordem: number; sou_membro: boolean; membros: number;
+  amostra: { nome: string; slug: string; foto_url: string | null }[];
+  topicos: TopicoItem[];
+};
+export type RespostaItem = { id: string; texto: string; criado_em: string; oculto: boolean; autor: AutorMini; meu: boolean };
+export type TopicoDados = {
+  id: string; titulo: string; texto: string | null; fixo: boolean; oculto: boolean; criado_em: string; autor: AutorMini; meu: boolean;
+  comunidade: ComunidadeMini & { id: string }; sou_membro: boolean; respostas: RespostaItem[];
+};
+
+export type MeuDestaque = {
+  ativo: boolean; status: string | null; ate: string | null; desde: string | null; a_venda: boolean; pode_comprar: boolean;
+  motivo: "desligado" | "sem_pagina" | "escondida" | "criadora" | null; visitas_30d: number; pedidos_30d: number;
+};
+export const PRECO_DESTAQUE = "R$ 14,90";
+
+export type DenunciaAdmin = {
+  tipo: "recado" | "topico" | "resposta" | "perfil"; alvo_id: string; quantas: number; ultima: string;
+  motivos: string[] | null; texto: string | null; oculto: boolean | null; autor: AutorMini;
+};
+export type PainelAdminCriakut = {
+  aberto: boolean; destaque_ativo: boolean; convidados: number; paginas: number; paginas_total: number;
+  propostas_mes: number; fechadas_mes: number; concluidas_mes: number; paradas: number; destaques: number;
+  pontes: Record<string, number> | null; denuncias: DenunciaAdmin[];
+};
+export type FunilLinha = { nome: string; slug: string; propostas: number; fechadas: number; concluidas: number; pagas: number; avaliadas: number; paradas: number; avisos_contato: number };
+
+export function quandoFoi(iso: string): string {
+  const min = (Date.now() - new Date(iso).getTime()) / 60000;
+  if (min < 2) return "agora";
+  if (min < 60) return `há ${Math.floor(min)} min`;
+  if (min < 60 * 24) return `há ${Math.floor(min / 60)} h`;
+  const d = Math.floor(min / 1440);
+  return d === 1 ? "ontem" : `há ${d} dias`;
+}

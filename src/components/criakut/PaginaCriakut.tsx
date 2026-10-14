@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, Eye, EyeOff, Instagram, Loader2, Palette, Pencil, Plus, Send, Star, UserCheck, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -9,13 +9,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { compressImage } from "@/lib/image-compress";
 import {
-  subirImagemCriakut, useAdicionarPortfolio, useBaseCriakut, useRemoverPortfolio, useSalvarPerfilCriakut, useSeguir,
+  registrarVisitaCriakut, subirImagemCriakut, useAdicionarPortfolio, useBaseCriakut, useRemoverPortfolio, useSalvarPerfilCriakut, useSeguir,
 } from "@/hooks/useCriakut";
 import { iniciais, nomeFuncao, precoTexto, type PaginaCriakutDados } from "@/lib/criakut";
 import { CapaCriakut } from "./CapaCriakut";
 import { EscolherCapa } from "./EscolherCapa";
 import { EditarPerfil } from "./EditarPerfil";
 import { PedirOrcamento } from "./PedirOrcamento";
+import { CartaoDestaque, ComunidadesDaPagina, QuemVisitou, Recados } from "./BlocosPagina";
+import { SeloDestaque } from "./Pecas";
 import { cn } from "@/lib/utils";
 
 /* A PÁGINA (mockup v3 aprovado em 14/10/2026): capa em cima, e as três
@@ -47,6 +49,12 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
   const fotoInput = useRef<HTMLInputElement>(null);
   const portInput = useRef<HTMLInputElement>(null);
   const primeiroNome = dados.nome.trim().split(/\s+/)[0];
+
+  /* Quem visitou (Fase 3): conta a visita uma vez por página aberta. O banco
+     ignora a própria página e limita por minuto. */
+  useEffect(() => {
+    if (!dados.eh_meu && dados.slug) void registrarVisitaCriakut(dados.slug).catch(() => undefined);
+  }, [dados.eh_meu, dados.slug]);
 
   /* A foto é a MESMA do perfil do Cria (uma fonte só): troca aqui, troca lá. */
   const aoRecortarFoto = async (blob: Blob) => {
@@ -131,7 +139,7 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
             </div>
             <input ref={fotoInput} type="file" accept="image/*" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) setFotoBruta(URL.createObjectURL(f)); e.target.value = ""; }} />
-            <h2 className="mt-3 font-display text-[21px] font-bold leading-tight">{dados.nome}</h2>
+            <h2 className="mt-3 font-display text-[21px] font-bold leading-tight">{dados.nome} {dados.destaque && <SeloDestaque className="ml-0.5" />}</h2>
             <p className="mt-0.5 text-[12.5px] text-muted-foreground">
               {[nomeFuncao(dados.funcao), dados.cidade, dados.atende_remoto ? "atende remoto" : null].filter(Boolean).join(" · ")}
             </p>
@@ -233,6 +241,8 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
                 </div>}
           </div>
 
+          <Recados dados={dados} modoDono={meu} />
+
           <div className={card} id="depoimentos">
             <p className={titulo}>Depoimentos {(dados.reputacao?.depoimentos.length ?? 0) > 0 && <span className="normal-case tracking-normal text-muted-foreground font-semibold">{dados.reputacao!.depoimentos.length}</span>}</p>
             {dados.reputacao && dados.reputacao.nota != null && (
@@ -266,6 +276,8 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
 
         {/* DIREITA */}
         <aside className="space-y-4">
+          {meu && <CartaoDestaque />}
+          {meu && <QuemVisitou dados={dados} />}
           <div className={card}>
             <p className={titulo}>Quem segue ({dados.seguidores})</p>
             {dados.quem_segue.length === 0
@@ -281,6 +293,8 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
                   ))}
                 </div>}
           </div>
+
+          <ComunidadesDaPagina dados={dados} />
 
           {(dados.estilos.length > 0 || dados.nichos.length > 0) && (
             <div className={card}>

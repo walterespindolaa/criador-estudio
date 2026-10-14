@@ -3,7 +3,10 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "react-router-dom";
-import type { Conversa, PaginaCriakutDados, PedidoMural, PerfilCriakut, ResumoProposta, Servico, Unidade } from "@/lib/criakut";
+import type {
+  ComunidadeDados, ComunidadeItem, Conversa, FunilLinha, MeuDestaque, MinhasVisitas, PaginaCriakutDados, PainelAdminCriakut,
+  PedidoMural, PerfilCriakut, RecadosDados, ResumoProposta, Servico, TopicoDados, Unidade,
+} from "@/lib/criakut";
 
 /* As tabelas criakut_* ainda não estão no types.ts (arquivo travado), então o
    acesso é pelo cliente sem tipo, como em useClientIntakes. */
@@ -330,5 +333,201 @@ export function useMandarMensagem() {
     },
     onSuccess: () => invalidarFase2(qc),
     onError: (e) => toast.error(msgErro(e, "Não consegui mandar.")),
+  });
+}
+
+/* ═══ FASE 3 ═════════════════════════════════════════════════════════════════
+   Recados, quem visitou, comunidades, Destaque e o painel do admin. Mesma
+   regra: tudo por função do banco, nenhuma tabela nova aceita acesso direto. */
+
+function invalidarFase3(qc: ReturnType<typeof useQueryClient>) {
+  void qc.invalidateQueries({ queryKey: ["criakut-recados"] });
+  void qc.invalidateQueries({ queryKey: ["criakut-comunidades"] });
+  void qc.invalidateQueries({ queryKey: ["criakut-comunidade"] });
+  void qc.invalidateQueries({ queryKey: ["criakut-topico"] });
+  void qc.invalidateQueries({ queryKey: ["criakut-pagina"] });
+  void qc.invalidateQueries({ queryKey: ["criakut-admin"] });
+}
+
+export function useRecados(slug: string | null | undefined, limite = 5) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["criakut-recados", user?.id, slug, limite],
+    enabled: !!user?.id && !!slug,
+    queryFn: () => rpc<RecadosDados | null>("criakut_recados", { _slug: slug, _limite: limite, _pular: 0 }),
+  });
+}
+
+export function useEscreverRecado() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (d: { dono: string; texto: string }) => rpc<string>("criakut_recado_escrever", { _dono: d.dono, _texto: d.texto }),
+    onSuccess: () => invalidarFase3(qc),
+    onError: (e) => toast.error(msgErro(e, "Não consegui deixar o recado.")),
+  });
+}
+
+export function useApagarRecado() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => rpc<void>("criakut_recado_apagar", { _id: id }),
+    onSuccess: () => invalidarFase3(qc),
+    onError: (e) => toast.error(msgErro(e, "Não consegui apagar.")),
+  });
+}
+
+export function useDenunciar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (d: { tipo: "recado" | "topico" | "resposta" | "perfil"; alvo: string; motivo: string }) =>
+      rpc<void>("criakut_denunciar", { _tipo: d.tipo, _alvo: d.alvo, _motivo: d.motivo }),
+    onSuccess: () => { toast.success("Denúncia enviada. A gente olha."); invalidarFase3(qc); },
+    onError: (e) => toast.error(msgErro(e, "Não consegui denunciar.")),
+  });
+}
+
+/** Marca a visita na página de outra pessoa (uma vez por abertura). */
+export async function registrarVisitaCriakut(slug: string) {
+  await sbRpc("criakut_registrar_visita", { _slug: slug });
+}
+
+export function useMinhasVisitas(ativo: boolean) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["criakut-visitas", user?.id],
+    enabled: !!user?.id && ativo,
+    queryFn: () => rpc<MinhasVisitas | null>("criakut_minhas_visitas"),
+  });
+}
+
+export function useComunidades() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["criakut-comunidades", user?.id],
+    enabled: !!user?.id,
+    queryFn: () => rpc<ComunidadeItem[]>("criakut_comunidades_listar").then((d) => d ?? []),
+  });
+}
+
+export function useComunidade(slug: string | null) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["criakut-comunidade", user?.id, slug],
+    enabled: !!user?.id && !!slug,
+    queryFn: () => rpc<ComunidadeDados | null>("criakut_comunidade", { _slug: slug }),
+  });
+}
+
+export function useTopico(id: string | null) {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["criakut-topico", user?.id, id],
+    enabled: !!user?.id && !!id,
+    refetchInterval: 30_000,
+    queryFn: () => rpc<TopicoDados | null>("criakut_topico", { _id: id }),
+  });
+}
+
+export function useAcaoComunidade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (a:
+      | { tipo: "entrar"; comunidade: string; entrar: boolean }
+      | { tipo: "topico"; comunidade: string; titulo: string; texto: string }
+      | { tipo: "responder"; topico: string; texto: string }
+      | { tipo: "apagar"; alvo: "topico" | "resposta"; id: string }) => {
+      switch (a.tipo) {
+        case "entrar": return rpc<unknown>("criakut_comunidade_entrar", { _comunidade: a.comunidade, _entrar: a.entrar });
+        case "topico": return rpc<unknown>("criakut_topico_criar", { _comunidade: a.comunidade, _titulo: a.titulo, _texto: a.texto });
+        case "responder": return rpc<unknown>("criakut_responder", { _topico: a.topico, _texto: a.texto });
+        case "apagar": return rpc<unknown>("criakut_conteudo_apagar", { _tipo: a.alvo, _id: a.id });
+      }
+    },
+    onSuccess: () => invalidarFase3(qc),
+    onError: (e) => toast.error(msgErro(e, "Não deu certo. Tente de novo.")),
+  });
+}
+
+/** Quem tem Destaque ativo (pra pôr o selo em qualquer lista que tenha o id). */
+export function useDestaquesIds() {
+  const { user } = useAuth();
+  const q = useQuery({
+    queryKey: ["criakut-destaques-ids", user?.id],
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
+    queryFn: () => rpc<string[] | { criakut_destaques_ids: string }[]>("criakut_destaques_ids").then((d) =>
+      new Set((d ?? []).map((x) => (typeof x === "string" ? x : x.criakut_destaques_ids)))),
+  });
+  return q.data ?? new Set<string>();
+}
+
+export function useMeuDestaque() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["criakut-meu-destaque", user?.id],
+    enabled: !!user?.id,
+    queryFn: () => rpc<MeuDestaque | null>("criakut_meu_destaque"),
+  });
+}
+
+/** Abre o Checkout (comprar) ou o portal do Stripe (gerenciar). */
+export function useDestaqueStripe() {
+  const base = useBaseCriakut();
+  return useMutation({
+    mutationFn: async (acao: "comprar" | "gerenciar") => {
+      const { data, error } = await supabase.functions.invoke("criakut-destaque-checkout", { body: { acao, volta: base } });
+      if (error) {
+        /* Resposta não-2xx: o motivo (ja_ativo, desligado...) vem no corpo, não na mensagem. */
+        const ctx = (error as { context?: Response }).context;
+        const corpo = ctx && typeof ctx.json === "function" ? await ctx.json().catch(() => null) : null;
+        throw new Error((corpo as { error?: string } | null)?.error ?? error.message);
+      }
+      const url = (data as { url?: string; error?: string })?.url;
+      if (!url) throw new Error((data as { error?: string })?.error ?? "sem_url");
+      window.location.href = url;
+    },
+    onError: (e) => {
+      const m = (e as { message?: string })?.message ?? "";
+      toast.error(/ja_ativo/.test(m) ? "Seu Destaque já está ativo." : /desligado/.test(m) ? "O Destaque ainda não está à venda."
+        : /pagina_escondida/.test(m) ? "Deixe sua página visível na busca antes." : "Não consegui abrir o pagamento. Tente de novo.");
+    },
+  });
+}
+
+/* ── ADMIN ──────────────────────────────────────────────────────────────── */
+export function usePainelAdminCriakut() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["criakut-admin", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const [painel, funil] = await Promise.all([
+        rpc<PainelAdminCriakut>("criakut_admin_painel"),
+        rpc<FunilLinha[]>("criakut_funil_admin"),
+      ]);
+      return { painel, funil: funil ?? [] };
+    },
+  });
+}
+
+export function useAcaoAdminCriakut() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (a:
+      | { tipo: "config"; chave: "aberto" | "destaque_ativo"; ligar: boolean }
+      | { tipo: "convidar"; email: string }
+      | { tipo: "moderar"; alvo: string; qual: string; ocultar: boolean }
+      | { tipo: "comunidade"; id: string | null; slug: string; nome: string; descricao: string; emoji: string; cor: string; ativa: boolean; ordem: number }
+      | { tipo: "fixar"; topico: string; fixo: boolean }) => {
+      switch (a.tipo) {
+        case "config": return rpc<unknown>("criakut_admin_config", { _chave: a.chave, _ligar: a.ligar });
+        case "convidar": return rpc<string>("criakut_admin_convidar", { _email: a.email });
+        case "moderar": return rpc<unknown>("criakut_admin_moderar", { _tipo: a.qual, _alvo: a.alvo, _ocultar: a.ocultar });
+        case "comunidade": return rpc<unknown>("criakut_admin_comunidade_salvar", { _id: a.id, _slug: a.slug, _nome: a.nome, _descricao: a.descricao, _emoji: a.emoji, _cor: a.cor, _ativa: a.ativa, _ordem: a.ordem });
+        case "fixar": return rpc<unknown>("criakut_admin_fixar", { _topico: a.topico, _fixo: a.fixo });
+      }
+    },
+    onSuccess: () => { invalidarFase3(qc); void qc.invalidateQueries({ queryKey: ["criakut-acesso"] }); },
+    onError: (e) => toast.error(msgErro(e, "Não deu certo.")),
   });
 }
