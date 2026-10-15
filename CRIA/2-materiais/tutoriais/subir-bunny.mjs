@@ -3,10 +3,10 @@
 // Sobe os vídeos tutoriais pro Bunny (library cria-tutoriais) e preenche o
 // catálogo public.tutoriais. Roda no seu computador, sem instalar nada (Node 18+).
 //
-//   node CRIA/tutoriais/subir-bunny.mjs                     sobe o que ainda não subiu
-//   node CRIA/tutoriais/subir-bunny.mjs --so=10-criador-06-prompter --substituir
+//   node CRIA/2-materiais/tutoriais/subir-bunny.mjs                     sobe o que ainda não subiu
+//   node CRIA/2-materiais/tutoriais/subir-bunny.mjs --so=10-criador-06-prompter --substituir
 //                                                           troca um vídeo (pente fino)
-//   node CRIA/tutoriais/subir-bunny.mjs --sincronizar       só confere o processamento
+//   node CRIA/2-materiais/tutoriais/subir-bunny.mjs --sincronizar       só confere o processamento
 //
 // Pede seu e-mail e senha de admin aqui no terminal (a senha não aparece) e usa
 // só pra pegar a sessão na Supabase. A chave do Bunny nunca passa por aqui:
@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 import readline from "node:readline";
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
-const REPO = resolve(AQUI, "../..");
+const REPO = resolve(AQUI, "../../..");
 const PASTA = join(AQUI, "videos");
 
 // .env do repo: URL e chave pública (a mesma que vai no site)

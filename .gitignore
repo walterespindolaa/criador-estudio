@@ -43,10 +43,12 @@ dist-ssr
 
 # Zips pesados da LP nao vao pro Git (o GitHub barra acima de 100MB).
 CRIA/lp-cria/*.zip
-CRIA/_to_delete/
+CRIA/_arquivo/
 
 # Lixo que o Vite deixa ao carregar o config (pente fino 23/09/2026)
 vite.config.ts.timestamp-*
 
 # Tutoriais: os mp4 vivem no Bunny, não no git
-CRIA/tutoriais/videos/*.mp4
+CRIA/2-materiais/tutoriais/videos/*.mp4
+# código-fonte do registro no INPI: nunca no git
+CRIA/1-marca/registro-inpi/

@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Manual do Parceiro · Cria Social Club</title>
+<style>
+@font-face{font-family:"Baloo 2";font-weight:600;src:url(baloo-2-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Baloo 2";font-weight:700;src:url(baloo-2-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Baloo 2";font-weight:800;src:url(baloo-2-latin-800-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:400;src:url(nunito-sans-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:400;font-style:italic;src:url(nunito-sans-latin-400-italic.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:600;src:url(nunito-sans-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:700;src:url(nunito-sans-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:800;src:url(nunito-sans-latin-800-normal.woff2) format("woff2")}
+
+:root{
+  --laranja:#EA4918; --verde:#01A652; --azul:#0061EE; --rosa:#FF77B9; --amarelo:#FFCF03; --lilas:#7C90F0;
+  --ink:#141311; --muted:#6B665C; --line:#E9E3D5; --paper:#FDFBF5; --surface:#FFFFFF;
+}
+@page{size:A4;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#d9d4c7}
+body{font-family:"Nunito Sans",sans-serif;color:var(--ink);font-size:10.4pt;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:210mm;height:297mm;background:var(--paper);position:relative;overflow:hidden;padding:17mm 16mm 20mm;page-break-after:always;break-after:page}
+.page:last-child{page-break-after:auto}
+h1,h2,h3,h4,.display{font-family:"Baloo 2",sans-serif;line-height:1.05;letter-spacing:-.01em}
+h2{font-size:25pt;font-weight:800}
+h3{font-size:14pt;font-weight:800;margin:0 0 2.5mm}
+h4{font-size:11.5pt;font-weight:800;margin:0 0 1.5mm}
+p{margin:0 0 2.6mm}
+b,strong{font-weight:800}
+.muted{color:var(--muted)}
+.small{font-size:8.8pt}
+
+/* rodapé */
+.rodape{position:absolute;left:16mm;right:16mm;bottom:9mm;display:flex;align-items:center;justify-content:space-between;font-size:8pt;color:var(--muted)}
+.rodape img{height:6.5mm}
+.rodape .num{font-family:"Baloo 2";font-weight:800;font-size:11pt;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:.6mm 3.2mm}
+
+/* abertura de seção */
+.abre{border-radius:9mm;padding:7.5mm 10mm 7mm;color:#fff;position:relative;overflow:hidden;margin-bottom:5.5mm}
+.abre .n{font-family:"Baloo 2";font-weight:800;font-size:11pt;opacity:.85;letter-spacing:.08em}
+.abre h2{color:#fff;margin:1mm 0 2mm;font-size:27pt}
+.abre p{color:rgba(255,255,255,.92);font-size:11pt;max-width:130mm;margin:0}
+.abre .bolha{position:absolute;border-radius:50%;background:rgba(255,255,255,.14)}
+.abre.amarelo{color:var(--ink)} .abre.amarelo h2{color:var(--ink)} .abre.amarelo p{color:rgba(20,19,17,.8)}
+.bg-laranja{background:var(--laranja)} .bg-verde{background:var(--verde)} .bg-azul{background:var(--azul)}
+.bg-rosa{background:#E9559A} .bg-amarelo{background:var(--amarelo)} .bg-lilas{background:#5F74E3}
+
+/* blocos */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:5.5mm;padding:5mm 5.5mm}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:4.5mm}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm}
+.stack>*+*{margin-top:4mm}
+.dica{border-radius:5mm;padding:4mm 5mm;background:#FFF6CC;border:1px solid #F4DC72;display:flex;gap:3mm;align-items:flex-start}
+.dica .ic{font-family:"Baloo 2";font-weight:800;background:var(--amarelo);border-radius:99px;min-width:7mm;height:7mm;display:grid;place-items:center;font-size:10pt}
+.alerta{border-radius:5mm;padding:4mm 5mm;background:#FFE6F1;border:1px solid #FBB6D5;display:flex;gap:3mm;align-items:flex-start}
+.alerta .ic{font-family:"Baloo 2";font-weight:800;background:#E9559A;color:#fff;border-radius:99px;min-width:7mm;height:7mm;display:grid;place-items:center;font-size:10pt}
+.dica p:last-child,.alerta p:last-child{margin:0}
+
+/* passos */
+.passos{counter-reset:p;display:flex;flex-direction:column;gap:3.2mm}
+.passo{display:flex;gap:3.5mm;align-items:flex-start}
+.passo .bola{counter-increment:p;min-width:8.5mm;height:8.5mm;border-radius:99px;background:var(--ink);color:#fff;font-family:"Baloo 2";font-weight:800;font-size:11.5pt;display:grid;place-items:center}
+.passo .bola::before{content:counter(p)}
+.passo.verde .bola{background:var(--verde)} .passo.laranja .bola{background:var(--laranja)} .passo.azul .bola{background:var(--azul)}
+.passo p{margin:.8mm 0 0}
+.fluxo-pg .passos{gap:1.8mm}.fluxo-pg .passo p{font-size:9.4pt;line-height:1.42}.fluxo-pg .fluxo{margin-bottom:4.5mm!important}
+
+/* elementos que imitam a tela */
+.btn{display:inline-flex;align-items:center;gap:1.5mm;border-radius:99px;padding:1.2mm 3.6mm;font-weight:800;font-size:8.8pt;white-space:nowrap;border:1px solid transparent;font-family:"Nunito Sans"}
+.btn.pri{background:linear-gradient(90deg,#E4406F,#EA4918);color:#fff}
+.btn.rosa{background:#E9559A;color:#fff}
+.btn.out{background:#fff;border-color:var(--line);color:var(--ink)}
+.btn.verde{background:var(--verde);color:#fff}
+.btn.ig{background:linear-gradient(90deg,#DD2A7B,#8134AF);color:#fff}
+.chip{display:inline-block;border-radius:99px;padding:.4mm 2.4mm;font-size:8pt;font-weight:800;border:1px solid var(--line);background:#fff;white-space:nowrap}
+.chip.novo{background:#EEF1FD;border-color:#CAD2F7;color:#3C4FB8}
+.chip.fazendo{background:#FFF1E9;border-color:#F8C9B0;color:#B8390F}
+.chip.ajuste{background:#FFE6F1;border-color:#FBB6D5;color:#B42A68}
+.chip.entregue{background:#E3F6EC;border-color:#A6DEBF;color:#017A3C}
+.chip.amar{background:#FFF6CC;border-color:#F4DC72;color:#7A5B00}
+.kbd{font-family:"Nunito Sans";font-weight:800;background:#F3EFE5;border:1px solid var(--line);border-radius:1.6mm;padding:0 1.4mm;font-size:8.6pt}
+.rot{font-weight:800}
+
+/* tabela */
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:9.4pt}
+th{font-family:"Baloo 2";font-weight:800;text-align:left;font-size:9.5pt;padding:2.2mm 3mm;background:#F3EFE5;border-bottom:1px solid var(--line)}
+th:first-child{border-top-left-radius:3.5mm} th:last-child{border-top-right-radius:3.5mm}
+td{padding:2.2mm 3mm;border-bottom:1px solid var(--line);vertical-align:top;background:#fff}
+tr:last-child td:first-child{border-bottom-left-radius:3.5mm} tr:last-child td:last-child{border-bottom-right-radius:3.5mm}
+.tabela{border:1px solid var(--line);border-radius:3.5mm;overflow:hidden}
+
+/* índice */
+.indice{display:grid;grid-template-columns:1fr 1fr;gap:3.5mm}
+.indice .it{display:flex;align-items:center;gap:3.5mm;background:#fff;border:1px solid var(--line);border-radius:5mm;padding:3.4mm 4mm}
+.indice .it .n{font-family:"Baloo 2";font-weight:800;font-size:15pt;width:11mm;height:11mm;border-radius:3.5mm;display:grid;place-items:center;color:#fff}
+.indice .it b{display:block;font-family:"Baloo 2";font-size:11.5pt;line-height:1.1}
+.indice .it span{font-size:8.6pt;color:var(--muted)}
+
+/* fluxo */
+.fluxo{display:flex;align-items:stretch;gap:0}
+.fluxo .et{flex:1;background:#fff;border:1px solid var(--line);border-radius:5mm;padding:3.2mm 3mm;text-align:center;position:relative}
+.fluxo .et .t{font-family:"Baloo 2";font-weight:800;font-size:10.5pt;line-height:1.1;margin:1.4mm 0 1mm}
+.fluxo .et .d{font-size:8pt;color:var(--muted);line-height:1.35}
+.fluxo .seta{width:6mm;display:grid;place-items:center;font-family:"Baloo 2";font-weight:800;color:var(--muted);font-size:13pt}
+
+/* anatomia do card */
+.anat{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:3mm;font-size:8.6pt}
+.zona{border-radius:4mm;padding:3mm;border:1.5px dashed}
+.zona .tag{display:inline-block;font-family:"Baloo 2";font-weight:800;font-size:8.8pt;border-radius:99px;padding:.2mm 2.6mm;color:#fff;margin-bottom:1.6mm}
+.zona ul{padding-left:3.8mm;margin:0} .zona li{margin:.6mm 0}
+
+/* capa */
+.capa{padding:0;background:var(--paper)}
+.capa .topo{height:178mm;background:var(--laranja);position:relative;overflow:hidden;border-bottom-left-radius:26mm;border-bottom-right-radius:26mm}
+.capa .topo .b1{position:absolute;width:120mm;height:120mm;border-radius:50%;background:#F26A3C;right:-30mm;top:-40mm}
+.capa .topo .b2{position:absolute;width:70mm;height:70mm;border-radius:50%;background:var(--rosa);left:-18mm;bottom:-22mm;opacity:.9}
+.capa .topo .b3{position:absolute;width:26mm;height:26mm;border-radius:50%;background:var(--amarelo);right:40mm;bottom:20mm}
+.capa .logo{position:absolute;left:18mm;top:20mm;width:62mm}
+.capa .criatura{position:absolute;right:14mm;top:52mm;width:74mm;transform:rotate(8deg)}
+.capa .titulo{position:absolute;left:18mm;bottom:22mm;color:#fff;max-width:120mm}
+.capa .titulo .sobre{font-family:"Baloo 2";font-weight:800;letter-spacing:.12em;font-size:10pt;opacity:.9}
+.capa .titulo h1{font-size:52pt;font-weight:800;line-height:.92;margin:2mm 0 3mm}
+.capa .titulo p{font-size:12.5pt;opacity:.95;margin:0}
+.capa .baixo{padding:14mm 18mm 0;display:flex;gap:8mm;align-items:flex-start}
+.capa .baixo .txt{flex:1}
+.capa .baixo .txt h3{font-size:15pt}
+.capa .selo{width:40mm;transform:rotate(-10deg)}
+.pilulas{display:flex;flex-wrap:wrap;gap:2mm;margin-top:3mm}
+.pilulas span{border-radius:99px;padding:1mm 3.4mm;font-weight:800;font-size:9pt;color:#fff}
+
+.mini-tela{background:#fff;border:1px solid var(--line);border-radius:5mm;padding:3.5mm;box-shadow:0 2mm 5mm rgba(20,19,17,.05)}
+.linha-fila{display:flex;align-items:center;gap:2.4mm;padding:2.2mm 2.6mm;border:1px solid var(--line);border-radius:3.5mm;background:#fff;font-size:8.6pt}
+.linha-fila + .linha-fila{margin-top:1.8mm}
+.linha-fila .tt{font-weight:800;flex:1}
+.cor{width:3mm;height:3mm;border-radius:99px;display:inline-block}
+.col-q{background:#F6F2E8;border-radius:4mm;padding:2.5mm}
+.col-q .h{font-family:"Baloo 2";font-weight:800;font-size:9.5pt;margin-bottom:1.6mm;display:flex;justify-content:space-between}
+.mini-card{background:#fff;border:1px solid var(--line);border-radius:3mm;padding:2mm 2.2mm;font-size:7.8pt;margin-bottom:1.6mm}
+.mini-card b{display:block;font-size:8.2pt}
+.check-lista{list-style:none;padding:0;margin:0}
+.check-lista li{display:flex;gap:2.6mm;align-items:flex-start;padding:1.8mm 0;border-bottom:1px dashed var(--line)}
+.check-lista li:last-child{border-bottom:0}
+.check-lista .cx{min-width:4.6mm;height:4.6mm;border:1.6px solid var(--ink);border-radius:1.2mm;margin-top:.6mm}
+.faq h4{margin-top:0}
+.faq .q{padding:3.2mm 0;border-bottom:1px solid var(--line)}
+.faq .q:last-child{border-bottom:0}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ CAPA ═══════════════ -->
+<section class="page capa">
+  <div class="topo">
+    <div class="b1"></div><div class="b2"></div><div class="b3"></div>
+    <img class="logo" src="logo-cria-white.png" alt="Cria">
+    <img class="criatura" src="criatura-lampada.png" alt="">
+    <div class="titulo">
+      <div class="sobre">CRIA SOCIAL CLUB · CRIA PARCEIROS</div>
+      <h1>Manual do Parceiro</h1>
+      <p>Tudo o que você precisa pra receber, produzir e entregar peças pras agências dentro do Cria. Sem WhatsApp perdido, sem arquivo sumido.</p>
+    </div>
+  </div>
+  <div class="baixo">
+    <div class="txt">
+      <h3>Feito pra quem produz</h3>
+      <p class="muted">Designers, editores de vídeo, filmmakers, copywriters e gestores de tráfego que trabalham com agências de social mídia.</p>
+      <div class="pilulas">
+        <span style="background:var(--laranja)">Design</span>
+        <span style="background:var(--azul)">Edição de vídeo</span>
+        <span style="background:var(--verde)">Captação / filmmaker</span>
+        <span style="background:#E9559A">Copy</span>
+        <span style="background:#5F74E3">Tráfego</span>
+      </div>
+      <p class="small muted" style="margin-top:6mm">Versão 1.0 · setembro de 2026 · app.criasocialclub.com.br</p>
+    </div>
+    <img class="selo" src="selo-social-club-verde.png" alt="">
+  </div>
+</section>
+
+<!-- ═══════════════ ÍNDICE + 3 COISAS ═══════════════ -->
+<section class="page">
+  <h2 style="margin-bottom:2mm">Oi! Bem-vindo(a) ao Cria.</h2>
+  <p class="muted" style="font-size:11pt;max-width:160mm">Este manual foi feito pra você pilotar o Cria sozinho(a), sem precisar perguntar nada. Leia uma vez de ponta a ponta (uns 15 minutos) e depois use como consulta.</p>
+
+  <div class="grid3" style="margin:6mm 0 7mm">
+    <div class="card" style="border-top:4px solid var(--laranja)">
+      <h4>1 · A agência delega</h4>
+      <p class="small">A social mídia te manda a peça pronta pra produzir: briefing, roteiro, referências, prazo e cachê. Tudo num card.</p>
+    </div>
+    <div class="card" style="border-top:4px solid var(--azul)">
+      <h4>2 · Você produz aqui</h4>
+      <p class="small">Confirma o prazo, conversa dentro do card, sobe a arte ou o vídeo e marca como entregue.</p>
+    </div>
+    <div class="card" style="border-top:4px solid var(--verde)">
+      <h4>3 · A agência revisa e paga</h4>
+      <p class="small">Ela revisa, manda pro cliente aprovar e o seu cachê entra no controle financeiro dela.</p>
+    </div>
+  </div>
+
+  <h3>O que tem neste manual</h3>
+  <div class="indice">
+    <div class="it"><div class="n bg-azul">01</div><div><b>Primeiro acesso</b><span>Convite, senha e app no celular</span></div></div>
+    <div class="it"><div class="n bg-verde">02</div><div><b>Conhecendo a tela</b><span>Menu, Início e onde fica cada coisa</span></div></div>
+    <div class="it"><div class="n bg-lilas">03</div><div><b>Minhas demandas</b><span>Sua fila em 5 visões e o quadro</span></div></div>
+    <div class="it"><div class="n bg-rosa">04</div><div><b>O card por dentro</b><span>Briefing, material e conversa</span></div></div>
+    <div class="it"><div class="n bg-laranja">05</div><div><b>Da chegada à entrega</b><span>O fluxo completo de uma peça</span></div></div>
+    <div class="it"><div class="n bg-azul">06</div><div><b>Para filmmakers</b><span>Gravações, material bruto e arquivos grandes</span></div></div>
+    <div class="it"><div class="n bg-verde">07</div><div><b>Seu dinheiro</b><span>Cachês, a receber e extrato</span></div></div>
+    <div class="it"><div class="n" style="background:#E8B800">08</div><div><b>Marcas e agenda</b><span>Fichas das marcas e seus compromissos</span></div></div>
+    <div class="it"><div class="n bg-lilas">09</div><div><b>Avisos, dicas e dúvidas</b><span>Notificações e perguntas frequentes</span></div></div>
+    <div class="it"><div class="n bg-rosa">10</div><div><b>Roteiro de teste</b><span>Missões pra testar tudo e dar feedback</span></div></div>
+  </div>
+
+  <div class="dica" style="margin-top:6mm">
+    <div class="ic">!</div>
+    <div><p><b>Pra você, o Cria é grátis.</b> Todo trabalho que chega das agências não custa nada. Os módulos pagos (que aparecem no menu com cadeado) só servem se um dia você quiser atender cliente direto, sem agência no meio.</p></div>
+  </div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Cria Social Club</span><span class="num">2</span></div>
+</section>
+
+<!-- ═══════════════ 01 PRIMEIRO ACESSO ═══════════════ -->
+<section class="page">
+  <div class="abre bg-azul">
+    <div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-18mm"></div>
+    <div class="bolha" style="width:24mm;height:24mm;right:48mm;bottom:-8mm"></div>
+    <div class="n">CAPÍTULO 01</div>
+    <h2>Primeiro acesso</h2>
+    <p>Do e-mail de convite até a sua fila de trabalho, em menos de 2 minutos.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="stack">
+      <h3>Caminho 1 · A agência te convidou</h3>
+      <div class="passos">
+        <div class="passo azul"><div class="bola"></div><div><b>Abra o e-mail "Você foi adicionado a uma equipe no cria"</b><p class="small muted">Chega no endereço que a agência cadastrou. Olhe também no spam e em Promoções.</p></div></div>
+        <div class="passo azul"><div class="bola"></div><div><b>Clique em <span class="btn pri" style="font-size:8pt">Acessar a equipe</span></b><p class="small muted">Aparece "Preparando seu acesso…". Se o link já tiver vencido, a tela deixa você pedir um novo: é só digitar seu e-mail e tocar em <span class="rot">Me manda um link novo</span>. Use sempre o e-mail mais recente.</p></div></div>
+        <div class="passo azul"><div class="bola"></div><div><b>Defina sua senha</b><p class="small muted">Tela "Defina sua senha": mínimo de 8 caracteres, digitada duas vezes. Toque em <span class="rot">Salvar senha</span>.</p></div></div>
+        <div class="passo azul"><div class="bola"></div><div><b>Pronto, você está no seu Início</b><p class="small muted">As peças que a agência mandar já aparecem ali e em <span class="rot">Minhas demandas</span>.</p></div></div>
+      </div>
+      <div class="card" style="margin-top:4mm">
+        <h4>Já tem conta no Cria?</h4>
+        <p class="small" style="margin:0">Entre com a sua senha de sempre. A área de parceiro aparece no seu menu automaticamente, com a seção <b>Parceiro</b>.</p>
+      </div>
+    </div>
+
+    <div class="stack">
+      <h3>Caminho 2 · Você se cadastrou sozinho(a)</h3>
+      <div class="passos">
+        <div class="passo"><div class="bola"></div><div><b>Crie a conta em app.criasocialclub.com.br</b><p class="small muted">Em "Você é", escolha <span class="rot">Designer / editor</span> ("Produzo pras agências") e depois o que você faz: Design, Edição de vídeo, Captação / filmmaker, Copy ou Tráfego.</p></div></div>
+        <div class="passo"><div class="bola"></div><div><b>Pegue o seu código de parceiro</b><p class="small muted">Com a fila vazia, aparece o card <span class="rot">Chame a sua agência</span> com um código de 6 letras e números (ex.: K7M2XP).</p></div></div>
+        <div class="passo"><div class="bola"></div><div><b>Mande pra agência</b><p class="small muted">Toque em <span class="rot">Copiar mensagem pro WhatsApp</span> e cole na conversa com ela. A agência cola o código em Equipe e você entra na equipe de produção na hora.</p></div></div>
+      </div>
+
+      <h3 style="margin-top:6mm">Instale o Cria no celular</h3>
+      <div class="card">
+        <p class="small"><b>iPhone:</b> abra no Safari, toque em Compartilhar e depois em <span class="rot">Adicionar à Tela de Início</span>. No iPhone, os avisos só funcionam com o app instalado assim.</p>
+        <p class="small"><b>Android:</b> no Chrome, toque em <span class="rot">Instalar app</span> quando o convite aparecer.</p>
+        <p class="small" style="margin:0"><b>Depois:</b> toque em <span class="btn out" style="font-size:7.8pt">Ativar</span> na faixa "Ative as notificações". É assim que você fica sabendo de peça nova, ajuste e prazo, sem precisar ficar abrindo o app.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="alerta" style="margin-top:6mm">
+    <div class="ic">?</div>
+    <div><p><b>Caiu em alguma tela pedindo assinatura ou plano?</b> Não precisa assinar nada. Volte pelo menu em <b>Minhas demandas</b>. As telas com cadeado são módulos opcionais pra quem atende cliente direto.</p></div>
+  </div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>01 · Primeiro acesso</span><span class="num">3</span></div>
+</section>
+
+<!-- ═══════════════ 02 CONHECENDO A TELA ═══════════════ -->
+<section class="page">
+  <div class="abre bg-verde">
+    <div class="bolha" style="width:56mm;height:56mm;right:-10mm;top:-20mm"></div>
+    <div class="n">CAPÍTULO 02</div>
+    <h2>Conhecendo a tela</h2>
+    <p>Seu menu é enxuto de propósito: só o que você usa pra produzir e receber.</p>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <h3>O menu (seção Parceiro)</h3>
+      <div class="tabela"><table>
+        <tr><th>Item</th><th>Pra que serve</th></tr>
+        <tr><td><b>Início</b></td><td>Resumo do dia: o que vence, o que voltou pra ajuste, quanto você tem a receber.</td></tr>
+        <tr><td><b>Minhas demandas</b></td><td>Sua fila de trabalho. É a tela principal. A bolinha vermelha mostra quantos cards estão com você.</td></tr>
+        <tr><td><b>Minha agenda</b></td><td>Entregas, gravações e seus compromissos no calendário.</td></tr>
+        <tr><td><b>Entregues</b></td><td>Histórico de tudo que você já entregou, com o status de aprovação.</td></tr>
+        <tr><td><b>Extrato do mês</b></td><td>Resumo do mês por agência e cliente, com PDF pra baixar.</td></tr>
+        <tr><td><b>Marcas que atendo</b></td><td>As fichas das marcas: cores, fontes, tom de voz, o que evitar.</td></tr>
+        <tr><td><b>Meus cachês</b></td><td>(seção Negócio) O que você tem a receber e o que já recebeu.</td></tr>
+      </table></div>
+      <p class="small muted" style="margin-top:3mm">No computador o menu fica na lateral e abre quando você passa o mouse. No rodapé do menu ficam Lixeira, Configurações e Sair.</p>
+    </div>
+    <div>
+      <h3>No celular</h3>
+      <div class="mini-tela" style="padding:3mm 3mm 2mm">
+        <div style="height:34mm;border-radius:3mm;background:#F6F2E8;display:grid;place-items:center" class="small muted">sua tela</div>
+        <div style="display:flex;justify-content:space-between;margin-top:2.5mm;font-size:7.6pt;font-weight:800;text-align:center">
+          <span>Início</span><span style="color:var(--laranja)">Demandas</span><span>Agenda</span><span>Entregues</span><span>Marcas</span><span>☰</span>
+        </div>
+      </div>
+      <p class="small" style="margin-top:3mm">A barra de baixo tem os atalhos do dia a dia. O <b>☰</b> abre o resto: Meus cachês, Indique e ganhe, Enviar feedback, Lixeira, Configurações e Sair.</p>
+      <p class="small">O <b>Extrato do mês</b> fica no computador (no menu lateral).</p>
+
+      <h3 style="margin-top:5mm">A tela de Início</h3>
+      <div class="card">
+        <p class="small"><b>A saudação já diz o que importa.</b> "Hoje pede atenção:" seguido de pílulas como <span class="chip ajuste">1 voltou pra ajuste</span> <span class="chip amar">2 prazos pra confirmar</span> <span class="chip fazendo">1 vence hoje</span>. Dia tranquilo? Ele avisa.</p>
+        <p class="small"><b>Três números:</b> peças na sua fila, quantas agências trabalham com você e quanto você tem a receber.</p>
+        <p class="small" style="margin:0"><b>Próximas entregas:</b> as 5 mais urgentes. Toque numa pra abrir o card ali mesmo, ou em <span class="rot">Ver a fila toda</span>.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="dica" style="margin-top:6mm">
+    <div class="ic">✓</div>
+    <div><p><b>Regra de ouro:</b> abra o Cria no começo do dia pelo <b>Início</b>. Ele te diz o que atacar primeiro. O resto do dia você vive em <b>Minhas demandas</b>.</p></div>
+  </div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>02 · Conhecendo a tela</span><span class="num">4</span></div>
+</section>
+
+<!-- ═══════════════ 03 MINHAS DEMANDAS ═══════════════ -->
+<section class="page">
+  <div class="abre bg-lilas">
+    <div class="bolha" style="width:58mm;height:58mm;right:-12mm;top:-22mm"></div>
+    <div class="n">CAPÍTULO 03</div>
+    <h2>Minhas demandas</h2>
+    <p>A sua fila de trabalho. Mesmo conteúdo, cinco jeitos de olhar.</p>
+  </div>
+
+  <div class="grid2" style="grid-template-columns:1.05fr 1fr">
+    <div>
+      <p><b>No topo, 4 números:</b> Vence hoje · Fazendo agora · Voltou pra ajuste · Entregues em 30 dias.</p>
+      <p><b>Mais de uma agência?</b> Aparece um botão por agência pra filtrar. Pra voltar: <span class="rot">mostrar todas as agências de novo</span>.</p>
+      <h3 style="margin-top:4mm">As 5 visões</h3>
+      <div class="tabela"><table>
+        <tr><th>Visão</th><th>Quando usar</th></tr>
+        <tr><td><b>Por prazo</b></td><td>O que fazer primeiro: Atrasado, Hoje, Amanhã, próximas datas, Sem prazo.</td></tr>
+        <tr><td><b>Quadro</b></td><td>Estilo Trello, pra acompanhar em que pé está cada peça.</td></tr>
+        <tr><td><b>Por cliente</b></td><td>Produzir em lote da mesma marca. O topo da coluna abre a ficha da marca.</td></tr>
+        <tr><td><b>Semana</b></td><td>Pra planejar a semana. Dia sem nada aparece como "livre".</td></tr>
+        <tr><td><b>Mês</b></td><td>O mês inteiro. No celular vira lista dos dias com entrega.</td></tr>
+      </table></div>
+    </div>
+    <div>
+      <h3>Como ler uma linha da fila</h3>
+      <div class="mini-tela">
+        <div class="small muted" style="font-weight:800;margin-bottom:1.5mm">HOJE · 2 entregas</div>
+        <div class="linha-fila"><span class="cor" style="background:#1F6B4F"></span><span class="tt">Carrossel 5 dicas de intestino</span><span class="chip">Carrossel</span><span style="color:var(--verde);font-weight:800">R$ 150</span><span class="chip fazendo">Fazendo</span></div>
+        <div class="linha-fila"><span class="cor" style="background:#1C2B4A"></span><span class="tt">Reels Semana do Investidor</span><span class="chip amar">prazo pra confirmar</span><span class="chip novo">Novo</span></div>
+      </div>
+      <p class="small muted" style="margin-top:2mm">Cada linha mostra título, cliente, "via Agência", formato, data em que o post vai ao ar, cachê e o estado.</p>
+
+      <h3 style="margin-top:4mm">O Quadro</h3>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2mm">
+        <div class="col-q"><div class="h">Novo <span class="muted">1</span></div><div class="mini-card"><b>Reels Zephyr</b>hoje</div></div>
+        <div class="col-q" style="background:#FFF1E9"><div class="h">Fazendo <span class="muted">2</span></div><div class="small" style="font-size:7pt;font-weight:800;color:#B8390F;margin-bottom:1mm">suas etapas</div><div class="mini-card"><b>Rascunho</b>Carrossel</div><div class="mini-card"><b>Arte final</b>Estático</div></div>
+        <div class="col-q" style="background:#FFE6F1"><div class="h">Ajuste <span class="muted">1</span></div><div class="mini-card"><b>Story Organnah</b>☑ 2/3</div></div>
+        <div class="col-q" style="background:#E3F6EC"><div class="h">Entregue <span class="muted">6</span></div><div class="mini-card"><b>Post Lorem</b>28/09</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:4mm">
+    <div class="card">
+      <h4>As suas etapas dentro de "Fazendo"</h4>
+      <p class="small">O "Fazendo" é dividido nas <b>suas</b> etapas, e você arrasta os cards entre elas. A agência vê só "Fazendo": o processo é seu. Pra mudar, toque em <span class="rot">Editar etapas</span>.</p>
+      <p class="small" style="margin:0"><b>Designer:</b> Referências, Rascunho, Arte final · <b>Editor:</b> Decupagem, Corte, Finalização · <b>Filmmaker:</b> Roteiro lido, Gravado, Material entregue · <b>Copy:</b> Pesquisa, Rascunho, Revisão · <b>Tráfego:</b> Briefing, Montagem, Otimização.</p>
+    </div>
+    <div class="alerta">
+      <div class="ic">!</div>
+      <div><p><b>Não dá pra arrastar entre Novo, Fazendo, Ajuste e Entregue.</b> Essas mudanças são feitas pelos botões de dentro do card (próximos capítulos). Assim a agência sempre sabe exatamente o que aconteceu.</p><p class="small muted">A fila se atualiza sozinha a cada 45 segundos e quando você volta pra aba.</p></div>
+    </div>
+  </div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>03 · Minhas demandas</span><span class="num">5</span></div>
+</section>
+
+<!-- ═══════════════ 04 O CARD POR DENTRO ═══════════════ -->
+<section class="page">
+  <div class="abre bg-rosa">
+    <div class="bolha" style="width:56mm;height:56mm;right:-12mm;top:-18mm"></div>
+    <div class="n">CAPÍTULO 04</div>
+    <h2>O card por dentro</h2>
+    <p>Tudo que você precisa pra produzir está num lugar só. Toque em qualquer peça pra abrir.</p>
+  </div>
+
+  <div class="card" style="padding:4mm;margin-bottom:5mm">
+    <div style="border-radius:4mm;background:linear-gradient(90deg,#1F6B4F,#2E8B66);color:#fff;padding:3.5mm 4mm;margin-bottom:3mm;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:8pt;opacity:.85">Organnah Produtos Naturais @organnahloja</div><div class="display" style="font-size:13pt;font-weight:800">Carrossel 5 dicas de intestino</div><div style="font-size:8pt;opacity:.85">delegado por Agência Gabi · publica em 03/10</div></div>
+      <div class="chip" style="background:rgba(255,255,255,.2);border-color:transparent;color:#fff">Topo da peça</div>
+    </div>
+    <div class="anat">
+      <div class="zona" style="border-color:#E9559A">
+        <span class="tag" style="background:#E9559A">Briefing (centro)</span>
+        <ul>
+          <li>Formato e medida certa (ex.: Carrossel 4:5 · 1080x1350)</li>
+          <li><b>Recado fixo</b> da social mídia pra aquele cliente (vale pra toda peça)</li>
+          <li><b>Material e referências</b> no topo: pasta da peça, referência, pasta geral do cliente, links úteis e a ficha da marca</li>
+          <li><b>Observações da social mídia</b>, <b>Gancho</b>, <b>Copy</b> e <b>As artes, na ordem</b>, com botão <span class="rot">copiar</span></li>
+          <li><b>Legenda aprovada</b> e <b>Direção de arte</b></li>
+          <li><b>Apontaram na arte</b> (alfinetes), <b>Meu checklist</b> e o bloco verde <b>Sua entrega</b></li>
+        </ul>
+      </div>
+      <div class="zona" style="border-color:var(--azul)">
+        <span class="tag" style="background:var(--azul)">Lateral</span>
+        <ul>
+          <li><b>Prazo</b>: proposto, em negociação ou combinado</li>
+          <li>Botões de <b>Reabrir</b> quando a peça já foi entregue</li>
+          <li>No computador, <span class="rot">recolher coluna</span> deixa o briefing mais largo (o prazo vira uma pílula no topo)</li>
+          <li>Com prazo pra responder, ela abre sozinha</li>
+        </ul>
+      </div>
+      <div class="zona" style="border-color:var(--verde)">
+        <span class="tag" style="background:var(--verde)">Conversa</span>
+        <ul>
+          <li>Chat com a social mídia, dentro do card</li>
+          <li><kbd class="kbd">Enter</kbd> envia; <kbd class="kbd">Shift</kbd>+<kbd class="kbd">Enter</kbd> pula linha</li>
+          <li>O clipe manda imagem (fica anexada ao card também)</li>
+          <li>Prazo, entrega e ajuste ficam registrados aqui automaticamente</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <h3>Medidas por formato</h3>
+      <div class="tabela"><table>
+        <tr><th>Formato</th><th>Medida que aparece no card</th></tr>
+        <tr><td><b>Reels</b></td><td>9:16 · 1080x1920 · até 90s</td></tr>
+        <tr><td><b>Carrossel</b></td><td>4:5 · 1080x1350 por arte</td></tr>
+        <tr><td><b>Estático</b></td><td>4:5 · 1080x1350</td></tr>
+        <tr><td><b>Story</b></td><td>9:16 · 1080x1920</td></tr>
+        <tr><td><b>Shorts</b></td><td>9:16 · 1080x1920 · até 60s</td></tr>
+        <tr><td><b>Vídeo</b></td><td>Confirmar a proporção na conversa</td></tr>
+        <tr><td><b>Live</b></td><td>16:9</td></tr>
+      </table></div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <h4>Status de aprovação (depois que você entrega)</h4>
+        <p class="small" style="margin:0"><span class="chip">Com a social mídia</span> <span class="chip amar">Aguardando o cliente aprovar</span> <span class="chip ajuste">Cliente pediu ajuste</span> <span class="chip entregue">Aprovado pelo cliente</span> <span class="chip entregue">Postado</span></p>
+      </div>
+      <div class="dica">
+        <div class="ic">✓</div>
+        <div><p><b>Antes de começar:</b> leia o recado fixo, o briefing e abra o material do topo. O que faltar, pergunte na conversa do card: fica registrado.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>04 · O card por dentro</span><span class="num">6</span></div>
+</section>
+
+<!-- ═══════════════ 05 FLUXO ═══════════════ -->
+<section class="page fluxo-pg">
+  <div class="abre bg-laranja">
+    <div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-20mm"></div>
+    <div class="n">CAPÍTULO 05</div>
+    <h2>Da chegada à entrega</h2>
+    <p>O caminho completo de uma peça. Se você só ler uma página deste manual, que seja esta.</p>
+  </div>
+
+  <div class="fluxo" style="margin-bottom:6mm">
+    <div class="et"><span class="chip novo">Novo</span><div class="t">Chegou</div><div class="d">Aviso "Nova demanda"</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip amar">Prazo</span><div class="t">Combinar data</div><div class="d">Topo ou sugere outra</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip fazendo">Fazendo</span><div class="t">Produzir</div><div class="d">Estou fazendo</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip entregue">Entregue</span><div class="t">Entregar</div><div class="d">Sobe e marca entregue</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip ajuste">Ajuste</span><div class="t">Se precisar</div><div class="d">Nova rodada</div></div>
+  </div>
+
+  <div class="passos">
+    <div class="passo laranja"><div class="bola"></div><div><b>A peça chega</b><p>Você recebe o aviso <b>"Nova demanda: título"</b> com a data pedida e o cachê. Toque no aviso e o card abre direto. Ele aparece em Minhas demandas como <span class="chip novo">Novo</span>.</p></div></div>
+    <div class="passo laranja"><div class="bola"></div><div><b>Combine o prazo</b><p>No bloco <b>Prazo proposto</b> da lateral: tocou em <span class="btn verde" style="font-size:8pt">Topo 03/10</span>, está combinado ("Prazo combinado!"). Não dá? Toque em <span class="btn out" style="font-size:8pt">Sugerir outra data</span>, escolha a data, escreva o motivo (ex.: semana cheia) e envie. A agência recebe na hora. <b>Negociar a data não trava o trabalho:</b> você já pode começar.</p></div></div>
+    <div class="passo laranja"><div class="bola"></div><div><b>Comece: "Estou fazendo"</b><p>No bloco verde <b>Sua entrega</b>, toque em <span class="btn out" style="font-size:8pt">Estou fazendo</span>. O card vai pra <span class="chip fazendo">Fazendo</span> e a agência sabe que está em produção. No Quadro, arraste entre as suas etapas conforme avança.</p></div></div>
+    <div class="passo laranja"><div class="bola"></div><div><b>Suba a arte ou o vídeo</b><p>Toque em <span class="btn out" style="font-size:8pt">Subir arte ou vídeo</span>. Imagem, vídeo ou PDF de <b>até 80 MB</b>. <b>Carrossel: uma arte de cada vez, na ordem.</b> Pode subir prévias antes de terminar. Passou de 80 MB? Cole o link da pasta em <span class="rot">Passou de 80 MB? Mande o link</span> e confira se o link está liberado.</p></div></div>
+    <div class="passo laranja"><div class="bola"></div><div><b>Marque como entregue</b><p>Toque em <span class="btn pri" style="font-size:8pt">Marcar como entregue</span>. O Cria pergunta "Qual é a versão final?": <span class="rot">Subir o arquivo e entregar</span>, <span class="rot">cole o link final</span> ou <span class="rot">Já subi o arquivo, pode entregar</span>. Pronto: "Entregue! A social mídia recebeu o aviso." O card sai da fila e vai pra Entregues.</p></div></div>
+    <div class="passo laranja"><div class="bola"></div><div><b>Se voltar pra ajuste</b><p>Chega o aviso <b>"Ajuste pedido"</b> com o motivo. O card volta como <span class="chip ajuste">Ajuste</span> e a conversa mostra "Ajuste: …" com tudo o que precisa mudar, num texto só. Faça as alterações, suba a <b>nova versão</b> e marque entregue de novo. A versão antiga fica guardada em <span class="rot">Ver versões anteriores</span>, e o cliente só vê a atual.</p></div></div>
+  </div>
+
+  <div class="grid2" style="margin-top:4mm">
+    <div class="dica"><div class="ic">✓</div><div><p><b>Precisa mexer depois de entregar?</b> Abra o card em Entregues e toque em <span class="rot">Reabrir (voltei a mexer)</span> ou <span class="rot">Nova versão</span>.</p></div></div>
+    <div class="alerta"><div class="ic">!</div><div><p><b>Quem pede ajuste é a agência.</b> Se o cliente pedir mudança no portal dele, você vê o selo "Cliente pediu ajuste", mas o card só volta pra você quando a social mídia devolver com o motivo.</p></div></div>
+  </div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>05 · Da chegada à entrega</span><span class="num">7</span></div>
+</section>
+
+<!-- ═══════════════ 06 FILMMAKERS ═══════════════ -->
+<section class="page">
+  <div class="abre bg-azul">
+    <div class="bolha" style="width:58mm;height:58mm;right:-12mm;top:-18mm"></div>
+    <div class="n">CAPÍTULO 06</div>
+    <h2>Para filmmakers e editores</h2>
+    <p>Gravação, material bruto e arquivo pesado: o jeito certo de fazer no Cria.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="stack">
+      <div class="card">
+        <h3>Dia de gravação na sua agenda</h3>
+        <p class="small">Quando a social mídia te escala pra uma captação, ela aparece em <b>Minha agenda</b> como <b>"Gravação, nome do cliente"</b> (ponto azul), com a agência, o local e quantos roteiros tem.</p>
+        <p class="small" style="margin:0">É uma informação de leitura: quem monta os roteiros e o dia é a social mídia. Chegou alguma dúvida sobre o dia? Pergunte pra ela.</p>
+      </div>
+      <div class="card">
+        <h3>Suas etapas como filmmaker</h3>
+        <p class="small" style="margin:0">No Quadro, o seu "Fazendo" vem com <b>Roteiro lido → Gravado → Material entregue</b>. Editor de vídeo: <b>Decupagem → Corte → Finalização</b>. Dá pra renomear em <span class="rot">Editar etapas</span>.</p>
+      </div>
+      <div class="card">
+        <h3>Onde está o roteiro</h3>
+        <p class="small" style="margin:0">No card, nos painéis <b>Gancho</b> e <b>Copy</b> (o roteiro), com botão <span class="rot">copiar</span>. Em <b>Direção de arte</b> ficam as cenas descritas. Referências de vídeo em <b>Referência desta peça</b>.</p>
+      </div>
+    </div>
+    <div class="stack">
+      <div class="card" style="border:2px solid var(--azul)">
+        <h3>Entregando vídeo pesado</h3>
+        <div class="passos">
+          <div class="passo azul"><div class="bola"></div><div><b>Até 80 MB:</b> suba direto em <span class="rot">Subir arte ou vídeo</span>. A social mídia assiste dentro do card.</div></div>
+          <div class="passo azul"><div class="bola"></div><div><b>Acima de 80 MB</b> (material bruto, vídeo longo): suba no seu Drive, WeTransfer ou Frame.io e cole o link em <span class="rot">Passou de 80 MB? Mande o link</span>.</div></div>
+          <div class="passo azul"><div class="bola"></div><div><b>Libere o link</b> pra "qualquer pessoa com o link". Link fechado é a causa nº 1 de retrabalho.</div></div>
+          <div class="passo azul"><div class="bola"></div><div>Na hora de entregar, escolha <span class="rot">cole o link final</span> e cole o link da versão final.</div></div>
+        </div>
+      </div>
+      <div class="dica"><div class="ic">✓</div><div><p><b>Comentário com minutagem:</b> quando a social mídia ou o cliente apontam algo no vídeo, o alfinete vem com o tempo (ex.: "no 0:12"). Use isso pra achar o trecho exato.</p></div></div>
+      <div class="dica"><div class="ic">✓</div><div><p><b>Exporte pensando no Instagram:</b> MP4 (H.264), 1080x1920, 30 fps. Confira a medida que aparece no card antes de exportar.</p></div></div>
+    </div>
+  </div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>06 · Para filmmakers e editores</span><span class="num">8</span></div>
+</section>
+
+<!-- ═══════════════ 07 DINHEIRO ═══════════════ -->
+<section class="page">
+  <div class="abre bg-verde">
+    <div class="bolha" style="width:58mm;height:58mm;right:-12mm;top:-20mm"></div>
+    <div class="n">CAPÍTULO 07</div>
+    <h2>Seu dinheiro</h2>
+    <p>Cada peça entregue vira um valor a receber, registrado no controle da agência. Sem planilha paralela.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="stack">
+      <h3>Como o cachê funciona</h3>
+      <div class="passos">
+        <div class="passo verde"><div class="bola"></div><div><b>A agência define o valor</b> quando te manda a peça. Ele aparece na linha da fila em verde (ex.: R$ 150). Vazio quer dizer "a combinar".</div></div>
+        <div class="passo verde"><div class="bola"></div><div><b>Você entrega</b> e o valor entra automaticamente como pendente no financeiro da agência.</div></div>
+        <div class="passo verde"><div class="bola"></div><div><b>A agência paga e marca como pago.</b> No seu lado ele passa de "em aberto" pra "pago". Quem marca o pagamento é sempre ela.</div></div>
+      </div>
+      <div class="alerta"><div class="ic">!</div><div><p><b>Entregou sem valor combinado?</b> A agência recebe um aviso. No seu lado, a peça aparece em "Você entregou, mas ninguém combinou o valor" e você pode <span class="rot">Anotar valor</span> pro seu controle. Divergiu? Combine com a agência pela conversa do card.</p></div></div>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <h3>Meus cachês</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3mm;margin-bottom:3mm">
+          <div style="background:#E3F6EC;border-radius:4mm;padding:3mm"><div class="small muted" style="font-weight:800">A receber</div><div class="display" style="font-size:18pt;font-weight:800;color:#017A3C">R$ 1.250</div></div>
+          <div style="background:#F3EFE5;border-radius:4mm;padding:3mm"><div class="small muted" style="font-weight:800">Já recebido</div><div class="display" style="font-size:18pt;font-weight:800">R$ 3.400</div></div>
+        </div>
+        <p class="small">Lista <b>De onde vem esse valor</b>, agrupada por agência, com filtros <b>Em aberto / Pagos / Tudo</b>. Toque numa linha pra abrir o card.</p>
+        <p class="small" style="margin:0"><span class="btn out" style="font-size:7.8pt">Adicionar cachê</span> é o seu caderninho pra trabalhos de fora (nenhuma agência vê).</p>
+      </div>
+      <div class="card">
+        <h3>Extrato do mês</h3>
+        <p class="small">No computador, em <b>Extrato do mês</b>: escolha o mês e veja peças entregues, contratantes, total, já recebido e a receber, agrupados por agência e cliente (com o número de revisões).</p>
+        <p class="small" style="margin:0"><span class="btn out" style="font-size:7.8pt">Baixar PDF</span> gera o extrato pronto pra mandar ou emitir nota. <span class="btn out" style="font-size:7.8pt">Esconder valores</span> pra mostrar a tela sem expor números.</p>
+      </div>
+    </div>
+  </div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>07 · Seu dinheiro</span><span class="num">9</span></div>
+</section>
+
+<!-- ═══════════════ 08 MARCAS E AGENDA ═══════════════ -->
+<section class="page">
+  <div class="abre bg-amarelo amarelo">
+    <div class="bolha" style="width:58mm;height:58mm;right:-12mm;top:-20mm;background:rgba(255,255,255,.35)"></div>
+    <div class="n">CAPÍTULO 08</div>
+    <h2>Marcas e agenda</h2>
+    <p>A identidade de cada cliente na mão e os seus compromissos organizados.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="stack">
+      <h3>Marcas que atendo</h3>
+      <p class="small">Cada marca que passa pela sua mão ganha uma ficha, mantida pela agência. Use antes de começar qualquer peça.</p>
+      <div class="card">
+        <div style="display:flex;gap:2mm;margin-bottom:3mm">
+          <span style="width:12mm;height:12mm;border-radius:3mm;background:#1F6B4F"></span>
+          <span style="width:12mm;height:12mm;border-radius:3mm;background:#E9C46A"></span>
+          <span style="width:12mm;height:12mm;border-radius:3mm;background:#F4EBDD;border:1px solid var(--line)"></span>
+          <span class="small muted" style="align-self:center">toque na cor pra copiar o código</span>
+        </div>
+        <p class="small" style="margin:0"><b>Na ficha:</b> paleta, fontes, logo, expressão visual, tom de voz, personalidade, público, o que a marca vende, ideia central, <b>o que evitar</b>, hashtags (com "copiar todas") e referências visuais.</p>
+      </div>
+      <div class="card">
+        <h4>Quem me acoplou</h4>
+        <p class="small" style="margin:0">Mostra cada agência, o seu papel e quantas peças você tem com ela. Em <b>Minha cor pra esta agência</b> você escolhe uma cor pra reconhecer a agência de relance nas suas telas. Só você vê.</p>
+      </div>
+    </div>
+    <div class="stack">
+      <h3>Minha agenda</h3>
+      <div class="card">
+        <p class="small">Calendário do mês com pontos coloridos:</p>
+        <p class="small"><span class="cor" style="background:var(--laranja)"></span> entrega &nbsp; <span class="cor" style="background:var(--azul)"></span> gravação &nbsp; <span class="cor" style="background:var(--verde)"></span> tarefa &nbsp; <span class="cor" style="background:var(--lilas)"></span> compromisso</p>
+        <p class="small" style="margin:0">Abaixo, a lista do dia e o bloco <b>Quando der</b>, com tarefas sem data.</p>
+      </div>
+      <div class="card">
+        <h4>Anotar na agenda</h4>
+        <p class="small">Toque em <span class="btn out" style="font-size:7.8pt">Anotar</span> e escolha:</p>
+        <p class="small"><b>Tarefa</b>: tem prazo, pode não ter dia (ex.: "renderizar teaser").<br><b>Compromisso</b>: tem dia e hora (ex.: reunião, gravação externa).</p>
+        <p class="small" style="margin:0">Dá pra definir prioridade (Urgente, Alta, Média, Quando der), local, ligar a uma peça e a uma agência. É o seu organizador: a agência não vê.</p>
+      </div>
+    </div>
+  </div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>08 · Marcas e agenda</span><span class="num">10</span></div>
+</section>
+
+<!-- ═══════════════ 09 AVISOS, DICAS E FAQ ═══════════════ -->
+<section class="page">
+  <div class="abre bg-lilas">
+    <div class="bolha" style="width:56mm;height:56mm;right:-12mm;top:-18mm"></div>
+    <div class="n">CAPÍTULO 09</div>
+    <h2>Avisos, dicas e dúvidas</h2>
+    <p>O que chega no seu sino e as respostas pras perguntas mais comuns.</p>
+  </div>
+
+  <div class="grid2" style="grid-template-columns:1fr 1.1fr">
+    <div class="stack">
+      <h3>Os avisos que você recebe</h3>
+      <div class="tabela"><table>
+        <tr><th>Aviso</th><th>Quando</th></tr>
+        <tr><td><b>Nova demanda</b></td><td>A agência te mandou uma peça (com data e cachê).</td></tr>
+        <tr><td><b>Ajuste pedido</b></td><td>A peça voltou, com o motivo.</td></tr>
+        <tr><td><b>Prazo confirmado</b></td><td>A agência aceitou a data que você sugeriu.</td></tr>
+        <tr><td><b>Comentário no card</b></td><td>A social mídia escreveu na conversa.</td></tr>
+        <tr><td><b>Entrega vence hoje / amanhã</b></td><td>Lembrete diário.</td></tr>
+      </table></div>
+      <p class="small muted">Tocar no aviso abre o card certo. Pra escolher o que chega como push, vá em Configurações. O sino continua guardando tudo.</p>
+      <h3>Boas práticas</h3>
+      <div class="card">
+        <p class="small">✔ Confirme o prazo no mesmo dia em que a peça chegar.</p>
+        <p class="small">✔ Tudo sobre a peça na conversa do card, nada no WhatsApp.</p>
+        <p class="small">✔ Suba prévias cedo: a social mídia ajusta o rumo antes.</p>
+        <p class="small">✔ No ajuste, resolva tudo de uma vez e suba uma versão só.</p>
+        <p class="small" style="margin:0">✔ Use o Meu checklist pra não esquecer detalhe (só você vê).</p>
+      </div>
+    </div>
+    <div class="faq">
+      <h3>Perguntas frequentes</h3>
+      <div class="q"><h4>Não recebo notificação no celular.</h4><p class="small" style="margin:0">No iPhone, o Cria precisa estar instalado na Tela de Início (capítulo 01). Depois toque em Ativar na faixa de notificações e aceite no aviso do sistema.</p></div>
+      <div class="q"><h4>O arquivo não sobe.</h4><p class="small" style="margin:0">Passou de 80 MB? Mande pelo link. Se aparecer "Sua sessão expirou", saia e entre de novo.</p></div>
+      <div class="q"><h4>Apareceu "Você não tem acesso a esta peça".</h4><p class="small" style="margin:0">A agência pode ter pausado o seu vínculo ou tirado a peça de você. Fale com ela.</p></div>
+      <div class="q"><h4>Entreguei a versão errada.</h4><p class="small" style="margin:0">Abra o card e use Nova versão ou Reabrir (voltei a mexer). A anterior fica no histórico.</p></div>
+      <div class="q"><h4>Quero mudar a data combinada.</h4><p class="small" style="margin:0">No bloco do prazo, toque em Propor outra data. A agência recebe e aceita ou responde.</p></div>
+      <div class="q"><h4>Posso trabalhar com mais de uma agência?</h4><p class="small" style="margin:0">Pode. Tudo fica na mesma fila, e dá pra filtrar por agência no topo de Minhas demandas.</p></div>
+      <div class="q"><h4>Apareceu uma tela pedindo plano.</h4><p class="small" style="margin:0">São módulos opcionais. Seu trabalho com agências é sempre grátis: volte por Minhas demandas.</p></div>
+      <div class="q"><h4>Excluí algo sem querer.</h4><p class="small" style="margin:0">Olhe na Lixeira (rodapé do menu). Os itens ficam lá por 30 dias.</p></div>
+    </div>
+  </div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>09 · Avisos, dicas e dúvidas</span><span class="num">11</span></div>
+</section>
+
+<!-- ═══════════════ 10 ROTEIRO DE TESTE ═══════════════ -->
+<section class="page">
+  <div class="abre bg-rosa">
+    <div class="bolha" style="width:56mm;height:56mm;right:-12mm;top:-18mm"></div>
+    <div class="n">CAPÍTULO 10</div>
+    <h2>Roteiro de teste</h2>
+    <p>Missões pra testar o Cria de ponta a ponta. Marque cada uma e anote o que achar estranho.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Missões</h3>
+      <ul class="check-lista small">
+        <li><span class="cx"></span><div><b>Entrar:</b> aceite o convite, defina a senha e chegue ao Início.</div></li>
+        <li><span class="cx"></span><div><b>Celular:</b> instale o Cria na tela de início e ative as notificações.</div></li>
+        <li><span class="cx"></span><div><b>Explorar:</b> passe pelas 5 visões de Minhas demandas.</div></li>
+        <li><span class="cx"></span><div><b>Prazo:</b> numa peça, sugira outra data com motivo. Em outra, toque em Topo.</div></li>
+        <li><span class="cx"></span><div><b>Conversa:</b> mande uma pergunta e uma imagem pela conversa do card.</div></li>
+        <li><span class="cx"></span><div><b>Produzir:</b> toque em Estou fazendo e mova o card entre as suas etapas.</div></li>
+        <li><span class="cx"></span><div><b>Entregar:</b> suba um arquivo e marque como entregue.</div></li>
+        <li><span class="cx"></span><div><b>Arquivo grande:</b> entregue uma peça pelo link (acima de 80 MB).</div></li>
+        <li><span class="cx"></span><div><b>Ajuste:</b> peça pra agência devolver uma peça e entregue a nova versão.</div></li>
+        <li><span class="cx"></span><div><b>Marca:</b> abra a ficha de uma marca e copie uma cor.</div></li>
+        <li><span class="cx"></span><div><b>Agenda:</b> anote uma tarefa e um compromisso.</div></li>
+        <li><span class="cx"></span><div><b>Dinheiro:</b> confira Meus cachês e baixe o PDF do Extrato do mês.</div></li>
+      </ul>
+    </div>
+    <div class="stack">
+      <div class="card" style="border:2px solid #E9559A">
+        <h3>Como mandar o seu feedback</h3>
+        <p class="small">No próprio Cria: toque no ícone de feedback no topo da tela (no celular, em ☰ e depois <b>Enviar feedback</b>). Escreva o que aconteceu e, se der, mande um print.</p>
+        <p class="small" style="margin:0">Pra cada problema, conte: <b>1.</b> em que tela estava, <b>2.</b> o que tocou, <b>3.</b> o que esperava e <b>4.</b> o que aconteceu. Celular ou computador?</p>
+      </div>
+      <div class="card">
+        <h4>Anotações</h4>
+        <div style="height:62mm;background:repeating-linear-gradient(transparent 0 7.4mm,#E9E3D5 7.4mm 7.6mm)"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:5mm;margin-top:2mm">
+        <img src="selo-da-ideia-ao-post-rosa.png" style="width:30mm;transform:rotate(-8deg)" alt="">
+        <p class="display" style="font-size:15pt;font-weight:800;line-height:1.1;margin:0">Obrigado por testar!<br><span style="color:var(--laranja)">Bora criar.</span></p>
+      </div>
+    </div>
+  </div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>10 · Roteiro de teste</span><span class="num">12</span></div>
+</section>
+
+</body>
+</html>

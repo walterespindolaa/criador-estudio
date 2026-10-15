@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup Criakut Fase 3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FAF6EF;--card:#fff;--line:#EDE5D8;--txt:#1A1626;--mut:#7C7468;--or:#EA4918;--or2:#FFE6DC;--li:#7B5CF0;--li2:#EEE9FF;--gr:#1F8A5B;--gr2:#E2F4EA;--am:#B7791F;--am2:#FFF3D6;--rd:#C0392B;--rd2:#FDE7E4}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Inter,system-ui,sans-serif;color:var(--txt);font-size:14px}
+h1,h2,h3,.disp{font-family:"Bricolage Grotesque",Inter,sans-serif;margin:0}
+.top{background:var(--txt);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+.logo{font-family:"Bricolage Grotesque";font-weight:800;font-size:20px}.logo b{color:var(--or)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}.tab{background:transparent;border:0;color:#cfc8de;font:600 13px Inter;padding:8px 12px;border-radius:999px;cursor:pointer}
+.tab.on{background:#fff;color:var(--txt)}.tab .n{background:var(--or);color:#fff;border-radius:999px;padding:0 6px;font-size:10.5px;margin-left:4px}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+.tela{display:none}.tela.on{display:block}
+.nota{background:var(--am2);color:#6b4a0f;border-radius:12px;padding:10px 14px;font-size:12.5px;margin-bottom:16px;line-height:1.5}
+.nota b{color:#4a3208}
+.novo{display:inline-block;font-size:9.5px;font-weight:700;background:#ffe9b3;color:#7a5600;border-radius:6px;padding:2px 6px;margin-left:6px;vertical-align:middle;letter-spacing:.04em}
+.box{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:14px}
+.box.marca{outline:2px dashed #e0a100;outline-offset:3px}
+.tit{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--or);margin:0 0 12px;display:flex;justify-content:space-between;align-items:center}
+.tit span{text-transform:none;letter-spacing:0;color:var(--mut);font-weight:600}
+.av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-family:"Bricolage Grotesque";font-weight:800;color:#fff;font-size:14px;flex-shrink:0}
+.btn{border:0;border-radius:12px;font:600 13px Inter;padding:9px 12px;cursor:pointer}
+.btn.pri{background:var(--or);color:#fff}.btn.sec{background:#fff;border:1px solid var(--line)}.btn.dark{background:var(--txt);color:#fff}
+.btn.sm{padding:6px 10px;font-size:12px;border-radius:10px}
+.mut{color:var(--mut)}
+.chip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:5px 10px;background:#fff;display:inline-block}
+.chip.on{background:var(--txt);color:#fff;border-color:var(--txt)}
+/* perfil */
+.capa{height:150px;border-radius:22px;background:linear-gradient(120deg,#EA4918,#F7B9A3 55%,#7B5CF0)}
+.perfil{display:grid;grid-template-columns:240px 1fr 270px;gap:16px;margin-top:-50px;position:relative}
+@media(max-width:980px){.perfil{grid-template-columns:1fr}}
+.foto{aspect-ratio:1;border-radius:16px;background:linear-gradient(135deg,#F7B9A3,#EA4918 60%,#7B5CF0);display:grid;place-items:center;color:#fff;font:800 56px "Bricolage Grotesque";border:4px solid #fff}
+.selo{display:inline-flex;align-items:center;gap:4px;background:var(--or);color:#fff;font-size:10.5px;font-weight:700;border-radius:999px;padding:3px 9px;letter-spacing:.04em}
+.oi{font-size:32px;line-height:1.05}
+.nums{display:flex;flex-wrap:wrap;gap:10px;border-top:1px dashed var(--line);padding-top:12px;margin-top:12px}
+.nums div{flex:1;min-width:100px;font-size:11.5px;color:var(--mut)}.nums b{display:block;font:800 22px "Bricolage Grotesque";color:var(--txt)}
+/* recados */
+.escrever{display:flex;gap:8px;align-items:flex-start;margin-bottom:12px}
+.escrever textarea{flex:1;border:1px solid var(--line);border-radius:12px;padding:9px 10px;font:13px Inter;resize:none;height:42px;background:#fbfaf8}
+.rec{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:10px 0;border-top:1px dashed var(--line)}
+.rec .cab{display:flex;gap:6px;align-items:baseline;font-size:12px}.rec .cab b{font-size:13px}
+.rec p{margin:3px 0 0;font-size:13.5px;line-height:1.45}
+.rec .acoes{display:flex;gap:10px;margin-top:4px;font-size:11.5px;color:var(--mut)}
+.trava{font-size:11.5px;background:#f4f1ea;border-radius:10px;padding:8px 10px;color:var(--mut);margin-top:8px}
+/* visitas */
+.vis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.vis div{text-align:center;font-size:11.5px;font-weight:600}.vis .av{width:100%;height:auto;aspect-ratio:1;border-radius:16px;font-size:18px;margin-bottom:4px}
+.vis small{display:block;color:var(--mut);font-weight:500}
+.toggle{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:10px;color:var(--mut)}
+.sw{width:32px;height:18px;border-radius:999px;background:var(--gr);position:relative;flex-shrink:0}.sw::after{content:"";position:absolute;right:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff}
+.com-mini{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.com-mini div{font-size:11px;font-weight:600;text-align:center}.com-mini i{display:block;aspect-ratio:1;border-radius:14px;margin-bottom:4px;font-style:normal;display:grid;place-items:center;font-size:22px;color:#fff}
+/* destaque card */
+.dest-card{background:linear-gradient(135deg,#1A1626,#3a2c63);color:#fff;border-radius:20px;padding:16px}
+.dest-card h3{font-size:19px;margin:4px 0 6px}.dest-card p{font-size:12.5px;color:#d8d0ec;margin:0 0 10px;line-height:1.45}
+.dest-card .preco{font:800 26px "Bricolage Grotesque"}.dest-card .preco small{font:500 13px Inter;color:#d8d0ec}
+.dest-card ul{margin:8px 0 12px;padding-left:18px;font-size:12.5px;color:#eee8fb;line-height:1.6}
+/* busca com destaque */
+.res{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:20px;padding:14px;margin-bottom:10px}
+.res.d{border:2px solid var(--or);box-shadow:0 8px 24px rgba(234,73,24,.12);position:relative}
+.res .av{width:54px;height:54px;font-size:18px}
+.res b{font:700 17px "Bricolage Grotesque"}.res small{display:block;color:var(--mut);font-size:12.5px}
+.tag{font-size:11px;background:var(--li2);color:#4b33b5;border-radius:6px;padding:3px 7px;margin-right:4px}
+.sep{display:flex;align-items:center;gap:10px;font-size:11.5px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 10px}
+.sep::after{content:"";flex:1;height:1px;background:var(--line)}
+/* comunidades */
+.grid-com{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.cc{background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.cc .ic{height:86px;display:grid;place-items:center;font-size:34px}
+.cc .bd{padding:14px}.cc h3{font-size:17px}.cc p{font-size:12.5px;color:var(--mut);margin:4px 0 10px;line-height:1.45}
+.cc .rod{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--mut)}
+.dentro{display:grid;grid-template-columns:260px 1fr;gap:16px}
+@media(max-width:860px){.dentro{grid-template-columns:1fr}}
+.topico{display:grid;grid-template-columns:1fr auto;gap:10px;padding:12px 0;border-top:1px dashed var(--line);align-items:center}
+.topico b{font-size:14.5px;display:block}.topico small{color:var(--mut);font-size:12px}
+.topico .n{text-align:right;font-size:12px;color:var(--mut)}.topico .n b{font:800 18px "Bricolage Grotesque";color:var(--txt)}
+.fixo{font-size:10px;font-weight:700;background:var(--li2);color:#4b33b5;border-radius:5px;padding:2px 6px;margin-right:6px}
+.resp{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:12px 0;border-top:1px dashed var(--line)}
+.resp p{margin:3px 0 0;font-size:13.5px;line-height:1.5}
+/* sheet */
+.sheet{max-width:440px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:20px;box-shadow:0 20px 50px rgba(26,22,38,.12)}
+.lin{display:flex;justify-content:space-between;padding:8px 0;border-top:1px dashed var(--line);font-size:13px}
+/* admin */
+table{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border-radius:16px;overflow:hidden}
+th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left}th{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;background:#fbf8f2}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.alerta{color:var(--rd);font-weight:700}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpis div{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px;font-size:12px;color:var(--mut)}.kpis b{display:block;font:800 26px "Bricolage Grotesque";color:var(--txt)}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:20px}@media(max-width:900px){.cols2{grid-template-columns:1fr}}
+</style></head><body>
+
+<div class="top">
+  <span class="logo">Cria<b>kut</b></span>
+  <div class="tabs">
+    <button class="tab on" data-t="pagina">Minha página</button>
+    <button class="tab" data-t="busca">Encontrar gente</button>
+    <button class="tab" data-t="mural">Mural</button>
+    <button class="tab" data-t="com">Comunidades</button>
+    <button class="tab" data-t="topico">↳ dentro de uma comunidade</button>
+    <button class="tab" data-t="prop">Propostas <span class="n">2</span></button>
+    <button class="tab" data-t="destaque">↳ comprar Destaque</button>
+    <button class="tab" data-t="admin">Admin: funil</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ═════════ MINHA PÁGINA ═════════ -->
+<section class="tela on" id="pagina">
+  <div class="nota"><b>O que muda na página:</b> entram 3 blocos novos (marcados em amarelo): <b>Recados</b> no centro, <b>Quem visitou</b> e <b>Comunidades</b> na direita. Só na minha página aparece o cartão do <b>Destaque</b>. Na página de outra pessoa, quem tem Destaque mostra o selo laranja do lado do nome. Dados fictícios.</div>
+  <div class="capa"></div>
+  <div class="perfil">
+    <aside>
+      <div class="box">
+        <div class="foto">LM</div>
+        <h2 style="font-size:21px;margin-top:10px">Luana Moraes <span class="selo">★ DESTAQUE</span></h2>
+        <p class="mut" style="margin:2px 0 10px;font-size:12.5px">Designer · Itajaí · atende remoto</p>
+        <button class="btn pri" style="width:100%">Editar minha página</button>
+      </div>
+    </aside>
+
+    <div>
+      <div class="box">
+        <h1 class="oi">Oi, eu sou Luana 👋</h1>
+        <p style="font-size:15px;line-height:1.55;margin:10px 0 0;color:#3a3446">Designer de social pra clínicas e consultórios. Carrossel que explica sem ficar com cara de bula.</p>
+        <div class="nums">
+          <div><b>★ 4,9</b>nota (12 avaliações)</div>
+          <div><b>38</b>entregas no Cria</div>
+          <div><b>54</b>seguidores</div>
+          <div><b>87</b>visitas no mês</div>
+        </div>
+      </div>
+
+      <div class="box marca">
+        <p class="tit">Recados <span>23</span><span class="novo">NOVO</span></p>
+        <div class="escrever"><textarea placeholder="Deixe um recado pra Luana (aparece na página dela)"></textarea><button class="btn dark sm">Mandar</button></div>
+        <div class="rec">
+          <span class="av" style="background:#7B5CF0">CB</span>
+          <div><div class="cab"><b>Camila Bastos</b><span class="mut">social mídia · há 2 h</span></div>
+            <p>Lu, o carrossel da clínica bombou! 3 agendamentos só no direct. Obrigada pela pressa 🧡</p>
+            <div class="acoes"><span>apagar</span><span>denunciar</span></div></div>
+        </div>
+        <div class="rec">
+          <span class="av" style="background:#1F8A5B">RP</span>
+          <div><div class="cab"><b>Rafa Pires</b><span class="mut">editor de vídeo · ontem</span></div>
+            <p>Bora fechar aquela parceria de reels + capa? Te mandei proposta.</p>
+            <div class="acoes"><span>apagar</span><span>denunciar</span></div></div>
+        </div>
+        <div class="rec">
+          <span class="av" style="background:#B7791F">JS</span>
+          <div><div class="cab"><b>Júlia Sato</b><span class="mut">criadora · 3 dias</span></div>
+            <p>Seu portfólio de nutrição é lindo demais. Seguindo!</p>
+            <div class="acoes"><span>apagar</span><span>denunciar</span></div></div>
+        </div>
+        <p style="text-align:center;font-size:12.5px;font-weight:600;margin:8px 0 0">ver todos os 23</p>
+        <div class="trava"><b>Regras:</b> só deixa recado quem tem página no Criakut. Até 10 recados por dia por pessoa. A dona da página apaga qualquer recado. Telefone, e-mail e link viram "••••" (pra recado não virar classificado). Quem for denunciado 3 vezes some até o admin olhar.</div>
+      </div>
+
+      <div class="box">
+        <p class="tit">Depoimentos <span>12</span></p>
+        <p class="mut" style="margin:0;font-size:13px">(igual à Fase 2)</p>
+      </div>
+    </div>
+
+    <aside>
+      <div class="dest-card marca" style="outline-offset:3px">
+        <span class="selo">★ DESTAQUE ATIVO</span>
+        <h3>Você aparece primeiro</h3>
+        <p>Topo da busca de Designer e na vitrine "Em destaque" da entrada do Criakut. Renova dia 14/11.</p>
+        <div style="display:flex;gap:10px;font-size:12px;color:#d8d0ec;margin-bottom:10px"><span><b style="color:#fff;font-size:16px">312</b><br>vezes vista</span><span><b style="color:#fff;font-size:16px">41</b><br>visitas</span><span><b style="color:#fff;font-size:16px">3</b><br>pedidos</span></div>
+        <button class="btn sec sm" style="width:100%">Gerenciar assinatura</button>
+      </div>
+      <div style="height:14px"></div>
+
+      <div class="box marca">
+        <p class="tit">Quem visitou <span>87 no mês</span><span class="novo">NOVO</span></p>
+        <div class="vis">
+          <div><span class="av" style="background:#7B5CF0">CB</span>Camila<small>hoje</small></div>
+          <div><span class="av" style="background:#EA4918">MT</span>Marina<small>hoje</small></div>
+          <div><span class="av" style="background:#1F8A5B">RP</span>Rafa<small>ontem</small></div>
+          <div><span class="av" style="background:#B7791F">JS</span>Júlia<small>2 dias</small></div>
+          <div><span class="av" style="background:#3a2c63">DV</span>Dani<small>3 dias</small></div>
+          <div><span class="av" style="background:#c46">+</span>+ 4<small>sem página</small></div>
+        </div>
+        <div class="toggle"><span class="sw"></span> Mostrar minhas visitas. Se desligar, você some da lista dos outros e também não vê a sua.</div>
+      </div>
+
+      <div class="box marca">
+        <p class="tit">Comunidades <span>4</span><span class="novo">NOVO</span></p>
+        <div class="com-mini">
+          <div><i style="background:#EA4918">🩺</i>Saúde e estética</div>
+          <div><i style="background:#7B5CF0">🎨</i>Designers do Cria</div>
+          <div><i style="background:#1F8A5B">🌊</i>Social mídias de SC</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ═════════ BUSCA COM DESTAQUE ═════════ -->
+<section class="tela" id="busca">
+  <div class="nota"><b>Como o Destaque aparece na busca:</b> no máximo 3 cartões em destaque no topo de cada busca, só de quem combina com o filtro (Destaque de designer não aparece quando a pessoa procura editor). Se tiver mais de 3, eles se revezam a cada busca. Depois vem a lista normal. O Destaque não mexe na nota nem nas entregas: só na posição.</div>
+  <h1 style="font-size:34px">Encontre quem <span style="color:var(--or)">faz junto</span> com você.</h1>
+  <div style="margin:12px 0"><span class="chip on">Designer</span> <span class="chip">Saúde</span> <span class="chip">Minimalista</span></div>
+  <div class="sep">Em destaque</div>
+  <div class="res d"><span class="selo" style="position:absolute;top:-10px;left:16px">★ DESTAQUE</span>
+    <span class="av" style="background:linear-gradient(135deg,#F7B9A3,#EA4918)">LM</span>
+    <div><b>Luana Moraes</b><small>Designer · Itajaí · remoto</small><div style="margin-top:6px"><span class="tag">Saúde</span><span class="tag">Minimalista</span></div></div>
+    <div style="text-align:right"><small>★ 4,9 · 38 entregas no Cria</small><b style="font-size:16px">a partir de R$ 45</b></div></div>
+  <div class="res d"><span class="selo" style="position:absolute;top:-10px;left:16px">★ DESTAQUE</span>
+    <span class="av" style="background:#3a2c63">DV</span>
+    <div><b>Dani Veiga</b><small>Designer · Balneário · remoto</small><div style="margin-top:6px"><span class="tag">Estética</span><span class="tag">Luxo</span></div></div>
+    <div style="text-align:right"><small>★ 4,7 · 21 entregas no Cria</small><b style="font-size:16px">a partir de R$ 60</b></div></div>
+  <div class="sep">Todos</div>
+  <div class="res"><span class="av" style="background:#B7791F">TA</span>
+    <div><b>Tati Almeida</b><small>Designer · Navegantes</small><div style="margin-top:6px"><span class="tag">Odontologia</span></div></div>
+    <div style="text-align:right"><small>novo · 2 entregas no Cria</small><b style="font-size:16px">a partir de R$ 35</b></div></div>
+  <div class="res"><span class="av" style="background:#1F8A5B">BK</span>
+    <div><b>Bia Kuster</b><small>Designer · Itajaí</small><div style="margin-top:6px"><span class="tag">Saúde</span><span class="tag">Acolhedor</span></div></div>
+    <div style="text-align:right"><small>★ 5,0 · 9 entregas no Cria</small><b style="font-size:16px">a partir de R$ 40</b></div></div>
+</section>
+
+<!-- ═════════ MURAL ═════════ -->
+<section class="tela" id="mural">
+  <div class="nota"><b>No mural nada muda.</b> O Destaque é da pessoa, não do trabalho pendurado: no mural, a proposta de quem tem Destaque só ganha o selo do lado do nome, sem furar fila. Assim quem paga não atropela quem pendurou o trabalho.</div>
+  <p class="mut">(mesma tela da Fase 2)</p>
+</section>
+
+<!-- ═════════ COMUNIDADES ═════════ -->
+<section class="tela" id="com">
+  <div class="nota"><b>Comunidades, versão simples:</b> só o admin do Cria cria comunidade (começamos com umas 6). Qualquer um com página entra, abre tópico e responde. Cada comunidade aparece no perfil de quem entrou, igual Orkut. Moderação: denunciar; com 3 denúncias o tópico ou resposta some até o admin decidir. Limite de 5 tópicos e 30 respostas por dia por pessoa.</div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+    <h1 style="font-size:34px">Comunidades</h1>
+    <span class="mut" style="font-size:12.5px">Você está em 4 · <b style="color:var(--txt)">Admin:</b> <button class="btn sec sm">+ Nova comunidade</button></span>
+  </div>
+  <div class="grid-com">
+    <div class="cc"><div class="ic" style="background:#FFE6DC">🩺</div><div class="bd"><h3>Saúde e estética</h3><p>Conteúdo pra clínica, consultório e estética sem cair em regra do CFM.</p><div class="rod"><span>212 membros · 48 tópicos</span><span class="chip on">Você está</span></div></div></div>
+    <div class="cc"><div class="ic" style="background:#EEE9FF">🎨</div><div class="bd"><h3>Designers do Cria</h3><p>Referência, preço, ferramenta, cliente difícil. Papo de quem desenha.</p><div class="rod"><span>96 membros · 31 tópicos</span><span class="chip on">Você está</span></div></div></div>
+    <div class="cc"><div class="ic" style="background:#E2F4EA">🌊</div><div class="bd"><h3>Social mídias de SC</h3><p>Quem atende no litoral e no Vale. Indicação, evento, parceria.</p><div class="rod"><span>143 membros · 22 tópicos</span><span class="chip on">Você está</span></div></div></div>
+    <div class="cc"><div class="ic" style="background:#FFF3D6">🎬</div><div class="bd"><h3>Reels que funcionam</h3><p>Gancho, edição, trend. Mande o seu e peça opinião.</p><div class="rod"><span>301 membros · 77 tópicos</span><span class="chip">Entrar</span></div></div></div>
+    <div class="cc"><div class="ic" style="background:#FDE7E4">💸</div><div class="bd"><h3>Quanto cobrar</h3><p>Tabela, pacote, reajuste. Sem vergonha de falar de dinheiro.</p><div class="rod"><span>188 membros · 39 tópicos</span><span class="chip">Entrar</span></div></div></div>
+    <div class="cc"><div class="ic" style="background:#EEE9FF">🤝</div><div class="bd"><h3>Primeiro cliente</h3><p>Pra quem está começando: proposta, contrato, briefing.</p><div class="rod"><span>120 membros · 18 tópicos</span><span class="chip">Entrar</span></div></div></div>
+  </div>
+</section>
+
+<!-- ═════════ DENTRO DA COMUNIDADE ═════════ -->
+<section class="tela" id="topico">
+  <div class="dentro">
+    <aside>
+      <div class="box" style="text-align:center">
+        <div style="height:110px;border-radius:16px;background:#FFE6DC;display:grid;place-items:center;font-size:48px">💸</div>
+        <h2 style="font-size:20px;margin-top:10px">Quanto cobrar</h2>
+        <p class="mut" style="font-size:12.5px;margin:4px 0 10px">188 membros · 39 tópicos</p>
+        <button class="btn sec" style="width:100%">Sair da comunidade</button>
+      </div>
+      <div class="box"><p class="tit">Membros</p>
+        <div class="vis"><div><span class="av" style="background:#7B5CF0">CB</span>Camila</div><div><span class="av" style="background:#EA4918">LM</span>Luana</div><div><span class="av" style="background:#1F8A5B">RP</span>Rafa</div></div>
+      </div>
+    </aside>
+    <div>
+      <div class="box">
+        <p class="tit">Tópicos <button class="btn pri sm">+ Novo tópico</button></p>
+        <div class="topico"><div><b><span class="fixo">FIXO</span>Regras da comunidade</b><small>Cria · fixado pelo admin</small></div><div class="n"><b>1</b> resposta</div></div>
+        <div class="topico"><div><b>Quanto vocês cobram por carrossel de 8 lâminas?</b><small>Tati Almeida · última resposta há 20 min</small></div><div class="n"><b>34</b> respostas</div></div>
+        <div class="topico"><div><b>Reajuste no fim do ano: avisar com quanta antecedência?</b><small>Camila Bastos · há 3 h</small></div><div class="n"><b>12</b> respostas</div></div>
+        <div class="topico"><div><b>Pacote mensal ou por peça pra clínica pequena?</b><small>Rafa Pires · ontem</small></div><div class="n"><b>8</b> respostas</div></div>
+      </div>
+      <div class="box">
+        <p class="tit">Quanto vocês cobram por carrossel de 8 lâminas? <span>34 respostas</span></p>
+        <div class="resp"><span class="av" style="background:#B7791F">TA</span><div><div class="cab" style="font-size:12px"><b style="font-size:13px">Tati Almeida</b> <span class="mut">· designer · há 2 dias</span></div><p>Tô cobrando R$ 35 a lâmina e sinto que tá baixo. Nicho odonto, Navegantes. Quanto vocês fazem?</p></div></div>
+        <div class="resp"><span class="av" style="background:linear-gradient(135deg,#F7B9A3,#EA4918)">LM</span><div><div class="cab" style="font-size:12px"><b style="font-size:13px">Luana Moraes</b> <span class="selo" style="font-size:9px;padding:2px 6px">★</span> <span class="mut">· designer · há 1 dia</span></div><p>Eu trabalho por pacote: 8 carrosséis por mês saem a R$ 1.200. Por peça avulsa, R$ 180 o carrossel inteiro.</p><div class="acoes" style="font-size:11.5px;color:var(--mut);margin-top:4px">responder · denunciar</div></div></div>
+        <div class="escrever" style="margin-top:10px"><textarea placeholder="Responder"></textarea><button class="btn dark sm">Responder</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ PROPOSTAS ═════════ -->
+<section class="tela" id="prop">
+  <div class="nota">Sem mudança (Fase 2). Só listo aqui pra você ver que o menu fica com 6 abas: Minha página, Encontrar gente, Mural, Comunidades, Propostas e, no celular, as abas rolam de lado.</div>
+</section>
+
+<!-- ═════════ COMPRAR DESTAQUE ═════════ -->
+<section class="tela" id="destaque">
+  <div class="nota"><b>Compra do Destaque:</b> R$ 14,90 por mês, assinatura no Stripe igual aos módulos (Checkout hospedado, só cartão, cancela quando quiser). Não gera comissão de parceira. <b>Nasce desligado:</b> o botão só aparece quando você ligar no banco (mesma ideia do "aberto" do Criakut). Só compra quem tem página publicada e é prestador ou social mídia (criadora que só contrata não precisa).</div>
+  <div class="cols2">
+    <div class="box">
+      <p class="tit">Na minha página, sem Destaque</p>
+      <div class="dest-card" style="background:linear-gradient(135deg,#EA4918,#c2390f)">
+        <span class="selo" style="background:#fff;color:var(--or)">★ DESTAQUE</span>
+        <h3>Apareça primeiro pra quem procura designer</h3>
+        <ul><li>Topo da busca da sua especialidade</li><li>Vitrine "Em destaque" na entrada do Criakut</li><li>Selo no seu nome em todo lugar</li><li>Quantas vezes você foi vista, todo mês</li></ul>
+        <div class="preco">R$ 14,90 <small>/mês</small></div>
+        <button class="btn" style="background:#fff;color:var(--or);width:100%;margin-top:10px">Quero destaque</button>
+      </div>
+    </div>
+    <div class="sheet">
+      <h2 style="font-size:20px">Confirmar Destaque</h2>
+      <p class="mut" style="font-size:13px;margin:6px 0 12px">Você vai pro pagamento seguro do Stripe.</p>
+      <div class="lin"><span>Destaque Criakut · Designer</span><b>R$ 14,90/mês</b></div>
+      <div class="lin"><span>Começa</span><b>assim que o pagamento cair</b></div>
+      <div class="lin"><span>Cancelar</span><b>quando quiser, vale até o fim do mês pago</b></div>
+      <button class="btn pri" style="width:100%;margin-top:14px">Ir pro pagamento</button>
+      <p class="mut" style="font-size:11.5px;margin:10px 0 0">Trocar de especialidade na página leva o Destaque junto.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ ADMIN ═════════ -->
+<section class="tela" id="admin">
+  <div class="nota"><b>Painel do funil (só admin), dentro do Admin que já existe.</b> Mostra o que o Criakut está gerando e quem conversa muito e nunca entrega. Também é onde você convida gente, abre o Criakut pra todos, liga o Destaque e cria comunidade, sem precisar de SQL.</div>
+  <div class="kpis">
+    <div><b>64</b>páginas publicadas</div><div><b>118</b>propostas no mês</div><div><b>41</b>fechadas (35%)</div><div><b>27</b>concluídas</div><div><b>9</b>destaques ativos · R$ 134</div><div><b class="alerta">3</b>paradas há 15 dias</div>
+  </div>
+  <div class="box" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <b style="font-size:13px">Chaves:</b>
+    <span class="chip on">Criakut: só convidados</span><span class="chip">abrir pra todos</span>
+    <span class="chip">Destaque: desligado</span>
+    <button class="btn sec sm">+ Convidar por e-mail</button>
+  </div>
+  <table>
+    <tr><th>Página</th><th>Função</th><th class="num">Propostas</th><th class="num">Fechadas</th><th class="num">Concluídas</th><th class="num">Pagas</th><th class="num">Avaliadas</th><th class="num">Paradas</th><th class="num">Avisos de contato</th><th class="num">Denúncias</th></tr>
+    <tr><td>Luana Moraes</td><td>Designer</td><td class="num">22</td><td class="num">14</td><td class="num">12</td><td class="num">11</td><td class="num">12</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+    <tr><td>Rafa Pires</td><td>Editor</td><td class="num">17</td><td class="num">6</td><td class="num">4</td><td class="num">4</td><td class="num">3</td><td class="num">1</td><td class="num">2</td><td class="num">0</td></tr>
+    <tr><td>Perfil X (fictício)</td><td>Designer</td><td class="num">19</td><td class="num">2</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num alerta">2</td><td class="num alerta">9</td><td class="num alerta">3</td></tr>
+  </table>
+  <p class="mut" style="font-size:12px;margin-top:8px">"Perfil X" é o padrão que acende alerta: muita conversa, muito aviso de contato, nenhuma entrega.</p>
+</section>
+
+</div>
+<script>
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  document.querySelectorAll('.tela').forEach(s=>s.classList.toggle('on',s.id===b.dataset.t));
+  window.scrollTo(0,0);
+});
+</script>
+</body></html>

@@ -1,0 +1,556 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Manual do Parceiro · Designer e Filmmaker · Cria</title><style>@font-face{font-family:"Baloo 2";font-weight:600;src:url(baloo-2-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Baloo 2";font-weight:700;src:url(baloo-2-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Baloo 2";font-weight:800;src:url(baloo-2-latin-800-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:400;src:url(nunito-sans-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:400;font-style:italic;src:url(nunito-sans-latin-400-italic.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:600;src:url(nunito-sans-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:700;src:url(nunito-sans-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Nunito Sans";font-weight:800;src:url(nunito-sans-latin-800-normal.woff2) format("woff2")}
+
+
+:root{
+  --laranja:#EA4918; --verde:#01A652; --azul:#0061EE; --rosa:#FF77B9; --amarelo:#FFCF03; --lilas:#7C90F0;
+  --ink:#141311; --muted:#6B665C; --line:#E9E3D5; --paper:#FDFBF5; --surface:#FFFFFF;
+}
+@page{size:A4;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#d9d4c7}
+body{font-family:"Nunito Sans",sans-serif;color:var(--ink);font-size:10.4pt;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:210mm;height:297mm;background:var(--paper);position:relative;overflow:hidden;padding:17mm 16mm 20mm;page-break-after:always;break-after:page}
+.page:last-child{page-break-after:auto}
+h1,h2,h3,h4,.display{font-family:"Baloo 2",sans-serif;line-height:1.05;letter-spacing:-.01em}
+h2{font-size:25pt;font-weight:800}
+h3{font-size:14pt;font-weight:800;margin:0 0 2.5mm}
+h4{font-size:11.5pt;font-weight:800;margin:0 0 1.5mm}
+p{margin:0 0 2.6mm}
+b,strong{font-weight:800}
+.muted{color:var(--muted)}
+.small{font-size:8.8pt}
+
+/* rodapé */
+.rodape{position:absolute;left:16mm;right:16mm;bottom:9mm;display:flex;align-items:center;justify-content:space-between;font-size:8pt;color:var(--muted)}
+.rodape img{height:6.5mm}
+.rodape .num{font-family:"Baloo 2";font-weight:800;font-size:11pt;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:.6mm 3.2mm}
+
+/* abertura de seção */
+.abre{border-radius:9mm;padding:7.5mm 10mm 7mm;color:#fff;position:relative;overflow:hidden;margin-bottom:5.5mm}
+.abre .n{font-family:"Baloo 2";font-weight:800;font-size:11pt;opacity:.85;letter-spacing:.08em}
+.abre h2{color:#fff;margin:1mm 0 2mm;font-size:27pt}
+.abre p{color:rgba(255,255,255,.92);font-size:11pt;max-width:130mm;margin:0}
+.abre .bolha{position:absolute;border-radius:50%;background:rgba(255,255,255,.14)}
+.abre.amarelo{color:var(--ink)} .abre.amarelo h2{color:var(--ink)} .abre.amarelo p{color:rgba(20,19,17,.8)}
+.bg-laranja{background:var(--laranja)} .bg-verde{background:var(--verde)} .bg-azul{background:var(--azul)}
+.bg-rosa{background:#E9559A} .bg-amarelo{background:var(--amarelo)} .bg-lilas{background:#5F74E3}
+
+/* blocos */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:5.5mm;padding:5mm 5.5mm}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:4.5mm}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4mm}
+.stack>*+*{margin-top:4mm}
+.dica{border-radius:5mm;padding:4mm 5mm;background:#FFF6CC;border:1px solid #F4DC72;display:flex;gap:3mm;align-items:flex-start}
+.dica .ic{font-family:"Baloo 2";font-weight:800;background:var(--amarelo);border-radius:99px;min-width:7mm;height:7mm;display:grid;place-items:center;font-size:10pt}
+.alerta{border-radius:5mm;padding:4mm 5mm;background:#FFE6F1;border:1px solid #FBB6D5;display:flex;gap:3mm;align-items:flex-start}
+.alerta .ic{font-family:"Baloo 2";font-weight:800;background:#E9559A;color:#fff;border-radius:99px;min-width:7mm;height:7mm;display:grid;place-items:center;font-size:10pt}
+.dica p:last-child,.alerta p:last-child{margin:0}
+
+/* passos */
+.passos{counter-reset:p;display:flex;flex-direction:column;gap:3.2mm}
+.passo{display:flex;gap:3.5mm;align-items:flex-start}
+.passo .bola{counter-increment:p;min-width:8.5mm;height:8.5mm;border-radius:99px;background:var(--ink);color:#fff;font-family:"Baloo 2";font-weight:800;font-size:11.5pt;display:grid;place-items:center}
+.passo .bola::before{content:counter(p)}
+.passo.verde .bola{background:var(--verde)} .passo.laranja .bola{background:var(--laranja)} .passo.azul .bola{background:var(--azul)}
+.passo p{margin:.8mm 0 0}
+.fluxo-pg .passos{gap:1.8mm}.fluxo-pg .passo p{font-size:9.4pt;line-height:1.42}.fluxo-pg .fluxo{margin-bottom:4.5mm!important}
+
+/* elementos que imitam a tela */
+.btn{display:inline-flex;align-items:center;gap:1.5mm;border-radius:99px;padding:1.2mm 3.6mm;font-weight:800;font-size:8.8pt;white-space:nowrap;border:1px solid transparent;font-family:"Nunito Sans"}
+.btn.pri{background:linear-gradient(90deg,#E4406F,#EA4918);color:#fff}
+.btn.rosa{background:#E9559A;color:#fff}
+.btn.out{background:#fff;border-color:var(--line);color:var(--ink)}
+.btn.verde{background:var(--verde);color:#fff}
+.btn.ig{background:linear-gradient(90deg,#DD2A7B,#8134AF);color:#fff}
+.chip{display:inline-block;border-radius:99px;padding:.4mm 2.4mm;font-size:8pt;font-weight:800;border:1px solid var(--line);background:#fff;white-space:nowrap}
+.chip.novo{background:#EEF1FD;border-color:#CAD2F7;color:#3C4FB8}
+.chip.fazendo{background:#FFF1E9;border-color:#F8C9B0;color:#B8390F}
+.chip.ajuste{background:#FFE6F1;border-color:#FBB6D5;color:#B42A68}
+.chip.entregue{background:#E3F6EC;border-color:#A6DEBF;color:#017A3C}
+.chip.amar{background:#FFF6CC;border-color:#F4DC72;color:#7A5B00}
+.kbd{font-family:"Nunito Sans";font-weight:800;background:#F3EFE5;border:1px solid var(--line);border-radius:1.6mm;padding:0 1.4mm;font-size:8.6pt}
+.rot{font-weight:800}
+
+/* tabela */
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:9.4pt}
+th{font-family:"Baloo 2";font-weight:800;text-align:left;font-size:9.5pt;padding:2.2mm 3mm;background:#F3EFE5;border-bottom:1px solid var(--line)}
+th:first-child{border-top-left-radius:3.5mm} th:last-child{border-top-right-radius:3.5mm}
+td{padding:2.2mm 3mm;border-bottom:1px solid var(--line);vertical-align:top;background:#fff}
+tr:last-child td:first-child{border-bottom-left-radius:3.5mm} tr:last-child td:last-child{border-bottom-right-radius:3.5mm}
+.tabela{border:1px solid var(--line);border-radius:3.5mm;overflow:hidden}
+
+/* índice */
+.indice{display:grid;grid-template-columns:1fr 1fr;gap:3.5mm}
+.indice .it{display:flex;align-items:center;gap:3.5mm;background:#fff;border:1px solid var(--line);border-radius:5mm;padding:3.4mm 4mm}
+.indice .it .n{font-family:"Baloo 2";font-weight:800;font-size:15pt;width:11mm;height:11mm;border-radius:3.5mm;display:grid;place-items:center;color:#fff}
+.indice .it b{display:block;font-family:"Baloo 2";font-size:11.5pt;line-height:1.1}
+.indice .it span{font-size:8.6pt;color:var(--muted)}
+
+/* fluxo */
+.fluxo{display:flex;align-items:stretch;gap:0}
+.fluxo .et{flex:1;background:#fff;border:1px solid var(--line);border-radius:5mm;padding:3.2mm 3mm;text-align:center;position:relative}
+.fluxo .et .t{font-family:"Baloo 2";font-weight:800;font-size:10.5pt;line-height:1.1;margin:1.4mm 0 1mm}
+.fluxo .et .d{font-size:8pt;color:var(--muted);line-height:1.35}
+.fluxo .seta{width:6mm;display:grid;place-items:center;font-family:"Baloo 2";font-weight:800;color:var(--muted);font-size:13pt}
+
+/* anatomia do card */
+.anat{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:3mm;font-size:8.6pt}
+.zona{border-radius:4mm;padding:3mm;border:1.5px dashed}
+.zona .tag{display:inline-block;font-family:"Baloo 2";font-weight:800;font-size:8.8pt;border-radius:99px;padding:.2mm 2.6mm;color:#fff;margin-bottom:1.6mm}
+.zona ul{padding-left:3.8mm;margin:0} .zona li{margin:.6mm 0}
+
+/* capa */
+.capa{padding:0;background:var(--paper)}
+.capa .topo{height:178mm;background:var(--laranja);position:relative;overflow:hidden;border-bottom-left-radius:26mm;border-bottom-right-radius:26mm}
+.capa .topo .b1{position:absolute;width:120mm;height:120mm;border-radius:50%;background:#F26A3C;right:-30mm;top:-40mm}
+.capa .topo .b2{position:absolute;width:70mm;height:70mm;border-radius:50%;background:var(--rosa);left:-18mm;bottom:-22mm;opacity:.9}
+.capa .topo .b3{position:absolute;width:26mm;height:26mm;border-radius:50%;background:var(--amarelo);right:40mm;bottom:20mm}
+.capa .logo{position:absolute;left:18mm;top:20mm;width:62mm}
+.capa .criatura{position:absolute;right:14mm;top:52mm;width:74mm;transform:rotate(8deg)}
+.capa .titulo{position:absolute;left:18mm;bottom:22mm;color:#fff;max-width:120mm}
+.capa .titulo .sobre{font-family:"Baloo 2";font-weight:800;letter-spacing:.12em;font-size:10pt;opacity:.9}
+.capa .titulo h1{font-size:52pt;font-weight:800;line-height:.92;margin:2mm 0 3mm}
+.capa .titulo p{font-size:12.5pt;opacity:.95;margin:0}
+.capa .baixo{padding:14mm 18mm 0;display:flex;gap:8mm;align-items:flex-start}
+.capa .baixo .txt{flex:1}
+.capa .baixo .txt h3{font-size:15pt}
+.capa .selo{width:40mm;transform:rotate(-10deg)}
+.pilulas{display:flex;flex-wrap:wrap;gap:2mm;margin-top:3mm}
+.pilulas span{border-radius:99px;padding:1mm 3.4mm;font-weight:800;font-size:9pt;color:#fff}
+
+.mini-tela{background:#fff;border:1px solid var(--line);border-radius:5mm;padding:3.5mm;box-shadow:0 2mm 5mm rgba(20,19,17,.05)}
+.linha-fila{display:flex;align-items:center;gap:2.4mm;padding:2.2mm 2.6mm;border:1px solid var(--line);border-radius:3.5mm;background:#fff;font-size:8.6pt}
+.linha-fila + .linha-fila{margin-top:1.8mm}
+.linha-fila .tt{font-weight:800;flex:1}
+.cor{width:3mm;height:3mm;border-radius:99px;display:inline-block}
+.col-q{background:#F6F2E8;border-radius:4mm;padding:2.5mm}
+.col-q .h{font-family:"Baloo 2";font-weight:800;font-size:9.5pt;margin-bottom:1.6mm;display:flex;justify-content:space-between}
+.mini-card{background:#fff;border:1px solid var(--line);border-radius:3mm;padding:2mm 2.2mm;font-size:7.8pt;margin-bottom:1.6mm}
+.mini-card b{display:block;font-size:8.2pt}
+.check-lista{list-style:none;padding:0;margin:0}
+.check-lista li{display:flex;gap:2.6mm;align-items:flex-start;padding:1.8mm 0;border-bottom:1px dashed var(--line)}
+.check-lista li:last-child{border-bottom:0}
+.check-lista .cx{min-width:4.6mm;height:4.6mm;border:1.6px solid var(--ink);border-radius:1.2mm;margin-top:.6mm}
+.faq h4{margin-top:0}
+.faq .q{padding:3.2mm 0;border-bottom:1px solid var(--line)}
+.faq .q:last-child{border-bottom:0}
+.print{position:relative;border-radius:4mm;overflow:hidden;border:1px solid var(--line);box-shadow:0 2mm 6mm rgba(20,19,17,.10);background:#fff;margin:0}
+.print img{width:100%;display:block}
+.pin{position:absolute;transform:translate(-50%,-50%);width:6.6mm;height:6.6mm;border-radius:99px;background:var(--laranja);color:#fff;font-family:"Baloo 2";font-weight:800;font-size:10.5pt;display:grid;place-items:center;border:.6mm solid #fff;box-shadow:0 .8mm 2.4mm rgba(0,0,0,.35);line-height:1;padding-top:.4mm}
+ol.leg{list-style:none;counter-reset:l;padding:0;margin:4mm 0 3mm;display:flex;flex-direction:column;gap:1.8mm}
+ol.leg li{counter-increment:l;display:block;position:relative;padding-left:8mm;font-size:9.3pt;line-height:1.4}
+ol.leg li::before{position:absolute;left:0;top:0;content:counter(l);min-width:5.6mm;height:5.6mm;border-radius:99px;background:var(--laranja);color:#fff;font-family:"Baloo 2";font-weight:800;font-size:9pt;display:grid;place-items:center;margin-top:.2mm;padding-top:.3mm}
+ol.leg.duas{display:grid;grid-template-columns:1fr 1fr;column-gap:6mm;row-gap:1.8mm}
+.lado{display:flex;gap:6mm;align-items:flex-start}
+.lado>div,.lado>ol{flex:1}
+.lado ol.leg{margin-top:0}
+.cel{display:flex;gap:8mm;justify-content:center}
+.cel .print{width:68mm}
+.abre{padding:6mm 10mm 6mm;margin-bottom:5mm}
+.abre h2{font-size:24pt}
+.abre p{font-size:10.5pt}
+</style></head><body><!-- CAPA -->
+<section class="page capa">
+  <div class="topo">
+    <div class="b1"></div><div class="b2"></div><div class="b3"></div>
+    <img class="logo" src="logo-cria-white.png" alt="Cria">
+    <img class="criatura" src="criatura-lampada.png" alt="">
+    <div class="titulo">
+      <div class="sobre">CRIA SOCIAL CLUB · MANUAL DO PARCEIRO</div>
+      <h1>Designer e Filmmaker</h1>
+      <p>Como receber, produzir e entregar peças pras agências dentro do Cria. Com as telas de verdade, passo a passo.</p>
+    </div>
+  </div>
+  <div class="baixo">
+    <div class="txt">
+      <h3>Pra quem produz pras agências</h3>
+      <p class="muted">Designers, editores de vídeo e filmmakers que recebem demandas de uma social mídia que usa o Cria. Você não paga nada pra usar: quem te chama é a agência.</p>
+      <div class="pilulas">
+        <span style="background:var(--laranja)">Design</span>
+        <span style="background:var(--azul)">Edição de vídeo</span>
+        <span style="background:var(--verde)">Captação</span>
+        <span style="background:#E9559A">Reels e carrossel</span>
+      </div>
+      <p class="small muted" style="margin-top:6mm">Versão 2.0 · 29 de setembro de 2026 · app.criasocialclub.com.br</p>
+    </div>
+    <img class="selo" src="selo-social-club-verde.png" alt="">
+  </div>
+</section>
+
+<!-- 2. COMECE AQUI -->
+<section class="page">
+  <div class="abre bg-laranja"><div class="bolha" style="width:60mm;height:60mm;right:-14mm;top:-22mm"></div>
+    <div class="n">COMECE AQUI</div><h2>O Cria em 1 minuto</h2>
+    <p>Tudo o que a agência precisa te passar mora dentro do card da peça. Você abre, faz, sobe e entrega. Sem caçar áudio no WhatsApp.</p></div>
+
+  <h3>O caminho de toda peça</h3>
+  <div class="fluxo" style="margin-bottom:6mm">
+    <div class="et"><span class="chip novo">Novo</span><div class="t">Chegou</div><div class="d">Você recebe o aviso e confirma o prazo</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip fazendo">Fazendo</span><div class="t">Produz</div><div class="d">Tudo que precisa está no card</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip amar">Subiu</span><div class="t">Sobe a arte</div><div class="d">Arquivo até 80 MB ou link</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip entregue">Entregue</span><div class="t">Entrega</div><div class="d">A social mídia revisa e manda pro cliente</div></div>
+    <div class="seta">›</div>
+    <div class="et"><span class="chip ajuste">Ajuste</span><div class="t">Se voltar</div><div class="d">Volta com o motivo escrito</div></div>
+  </div>
+
+  <h3>O que tem neste manual</h3>
+  <div class="indice">
+    <div class="it"><span class="n bg-laranja">1</span><div><b>Início</b><span>o que pede atenção hoje</span></div></div>
+    <div class="it"><span class="n bg-azul">2</span><div><b>Minhas demandas</b><span>5 jeitos de ver a sua fila</span></div></div>
+    <div class="it"><span class="n bg-verde">3</span><div><b>O card da peça</b><span>briefing, marca e conversa</span></div></div>
+    <div class="it"><span class="n bg-rosa">4</span><div><b>Prazo e entrega</b><span>aceitar, subir e entregar</span></div></div>
+    <div class="it"><span class="n bg-lilas">5</span><div><b>Ajustes</b><span>quando a peça volta</span></div></div>
+    <div class="it"><span class="n bg-laranja">6</span><div><b>Vídeo e Reels</b><span>pra filmmaker e editor</span></div></div>
+    <div class="it"><span class="n bg-azul">7</span><div><b>Agenda, entregues e cachês</b><span>seu histórico e seu dinheiro</span></div></div>
+    <div class="it"><span class="n bg-verde">8</span><div><b>Marcas e celular</b><span>ficha da marca e uso no mobile</span></div></div>
+  </div>
+
+  <div class="dica" style="margin-top:6mm"><span class="ic">!</span><div><p><b>Entrou pela primeira vez?</b> A agência te convida por e-mail. Você cria a senha, entra e cai direto em <b>Minhas demandas</b>. Se não recebeu o convite, peça pra social mídia reenviar em <b>Equipe</b>.</p></div></div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">2</span></div>
+</section>
+
+<!-- 3. INÍCIO -->
+<section class="page">
+  <div class="abre bg-azul"><div class="bolha" style="width:50mm;height:50mm;right:-10mm;top:-18mm"></div>
+    <div class="n">1 · INÍCIO</div><h2>Sua primeira tela do dia</h2>
+    <p>Abriu o Cria, já sabe o que está atrasado, o que vence e quanto tem a receber.</p></div>
+  <figure class="print" style="width:150mm;margin:0 auto">
+    <img src="e00-inicio.jpg" alt="">
+    <span class="pin" style="left:9%;top:18%">1</span>
+    <span class="pin" style="left:13%;top:31%">2</span>
+    <span class="pin" style="left:17%;top:37.5%">3</span>
+    <span class="pin" style="left:14%;top:71.8%">4</span>
+    <span class="pin" style="left:21%;top:82.6%">5</span>
+  </figure>
+  <ol class="leg">
+    <li><b>Hoje pede atenção.</b> Entrega atrasada ou vencendo aparece aqui em vermelho.</li>
+    <li><b>Seus números.</b> Peças na fila, agências que te chamaram e o total de cachês a receber. Clica e vai direto.</li>
+    <li><b>Próximas entregas.</b> Em ordem de prazo, com o cliente e o formato.</li>
+    <li><b>Suas marcas.</b> Os clientes que você atende. Abre a ficha com cores, fontes e o que evitar.</li>
+    <li><b>Tem cliente direto?</b> Opcional. Módulos pagos só pra quando o cliente é seu, não da agência.</li>
+  </ol>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">3</span></div>
+</section>
+
+<!-- 4. MINHAS DEMANDAS -->
+<section class="page">
+  <div class="abre bg-azul"><div class="n">2 · MINHAS DEMANDAS</div><h2>A sua fila, por prazo</h2>
+    <p>É a tela principal. Cada linha é uma peça. A mais urgente fica em cima.</p></div>
+  <figure class="print">
+    <img src="d01-porprazo.jpg" alt="">
+    <span class="pin" style="left:11%;top:17%">1</span>
+    <span class="pin" style="left:22.5%;top:26%">2</span>
+    <span class="pin" style="left:25%;top:32.6%">3</span>
+    <span class="pin" style="left:15.5%;top:36.7%">4</span>
+    <span class="pin" style="left:38.5%;top:42.6%">5</span>
+    <span class="pin" style="left:51%;top:64%">6</span>
+    <span class="pin" style="left:94.5%;top:63%">7</span>
+  </figure>
+  <ol class="leg duas">
+    <li><b>Contadores.</b> Vence hoje, fazendo agora, voltou pra ajuste e entregues em 30 dias.</li>
+    <li><b>Agência.</b> Quem te chamou e quantas peças estão com você.</li>
+    <li><b>5 visões.</b> Por prazo, Quadro, Por cliente, Semana e Mês. Mesma fila, jeitos diferentes.</li>
+    <li><b>Dia do prazo.</b> Atrasado fica em vermelho no topo.</li>
+    <li><b>Formato e cachê</b> combinado pra peça.</li>
+    <li><b>Prazo pra confirmar.</b> A agência propôs uma data. Abra o card e aceite ou sugira outra.</li>
+    <li><b>Status.</b> Novo, Fazendo, Ajuste ou Entregue. Clique na linha pra abrir o card.</li>
+  </ol>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">4</span></div>
+</section>
+
+<!-- 5. QUADRO -->
+<section class="page">
+  <div class="abre bg-azul"><div class="n">2 · MINHAS DEMANDAS</div><h2>Quadro: arraste pelas suas etapas</h2>
+    <p>Pra quem gosta de Trello. As colunas são Novo, Fazendo, Ajuste e Entregue.</p></div>
+  <figure class="print">
+    <img src="d02-quadro.jpg" alt="">
+    <span class="pin" style="left:37%;top:48%">1</span>
+    <span class="pin" style="left:58.6%;top:48%">2</span>
+    <span class="pin" style="left:31%;top:53.5%">3</span>
+  </figure>
+  <ol class="leg">
+    <li><b>Suas etapas.</b> Dentro de "Fazendo" você organiza do seu jeito: referências, rascunho, arte final.</li>
+    <li><b>Editar etapas.</b> Crie, renomeie ou apague as suas etapas. É só seu.</li>
+    <li><b>Arraste o card</b> entre as suas etapas. A agência continua vendo só "Fazendo": o processo é seu.</li>
+  </ol>
+  <div class="dica"><span class="ic">i</span><div><p>O quadro organiza o seu trabalho. <b>Entregar é sempre pelo botão do card</b>, porque ele pede a versão final e avisa a social mídia.</p></div></div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">5</span></div>
+</section>
+
+<!-- 6. POR CLIENTE + SEMANA -->
+<section class="page">
+  <div class="abre bg-azul"><div class="n">2 · MINHAS DEMANDAS</div><h2>Por cliente e por semana</h2>
+    <p>Quando você atende várias marcas, ver separado por cliente evita misturar identidade visual.</p></div>
+  <div class="lado">
+    <figure class="print" style="width:108mm">
+      <img src="d03-porcliente.jpg" alt="">
+      <span class="pin" style="left:16.7%;top:46%">1</span>
+    </figure>
+    <div>
+      <h4>Por cliente</h4>
+      <p>Uma coluna por marca, com todas as peças dela.</p>
+      <ol class="leg">
+        <li><b>Infos do cliente.</b> O cartão pontilhado no topo guarda os links de material e as regras da marca. Abre uma vez e serve pra todas as peças.</li>
+      </ol>
+      <h4 style="margin-top:4mm">Semana</h4>
+      <p>Os 7 dias com as entregas de cada um. Bom pra planejar a semana na segunda de manhã.</p>
+    </div>
+  </div>
+  <figure class="print" style="margin-top:5mm"><img src="d04-semana.jpg" alt=""></figure>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">6</span></div>
+</section>
+
+<!-- 7. MÊS -->
+<section class="page">
+  <div class="abre bg-azul"><div class="n">2 · MINHAS DEMANDAS</div><h2>Mês: o calendário das entregas</h2>
+    <p>Cada peça no dia do prazo. Use as setas pra ir pro mês seguinte.</p></div>
+  <figure class="print"><img src="d05-mes.jpg" alt=""></figure>
+  <div class="dica" style="margin-top:5mm"><span class="ic">i</span><div><p>O dia que aparece é o <b>prazo de entrega pra agência</b>, não o dia da publicação. A data de publicação fica dentro do card ("publica em 08/10").</p></div></div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">7</span></div>
+</section>
+
+<!-- 8. CARD -->
+<section class="page">
+  <div class="abre bg-verde"><div class="n">3 · O CARD DA PEÇA</div><h2>Tudo da peça num lugar só</h2>
+    <p>Clique numa peça e o card abre. Na esquerda, o que fazer. Na direita, a conversa com a social mídia.</p></div>
+  <figure class="print" style="width:160mm;margin:0 auto">
+    <img src="c01-card-novo.jpg" alt="">
+    <span class="pin" style="left:1.8%;top:4.5%">1</span>
+    <span class="pin" style="left:70%;top:3%">2</span>
+    <span class="pin" style="left:4%;top:15.6%">3</span>
+    <span class="pin" style="left:3%;top:28%">4</span>
+    <span class="pin" style="left:4%;top:32.2%">5</span>
+    <span class="pin" style="left:3%;top:70%">6</span>
+    <span class="pin" style="left:64.6%;top:78.5%">7</span>
+    <span class="pin" style="left:72%;top:9.8%">8</span>
+  </figure>
+  <ol class="leg duas">
+    <li><b>Cliente e peça.</b> Quem delegou e quando publica.</li>
+    <li><b>Prazo.</b> Clique pra aceitar ou sugerir outra data.</li>
+    <li><b>Recado fixo.</b> Regras que a social mídia quer que você veja em toda peça dessa marca.</li>
+    <li><b>Material e referências.</b> Pasta da peça, pasta geral do cliente e links úteis. Tudo clicável.</li>
+    <li><b>Marca deste cliente.</b> O que evitar, cores, fontes, tom, público e hashtags.</li>
+    <li><b>Observações da social mídia</b> específicas desta peça.</li>
+    <li><b>Gancho, copy e legenda</b> aprovados, com botão de copiar.</li>
+    <li><b>Conversa deste card.</b> Tudo combinado aqui fica registrado.</li>
+  </ol>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">8</span></div>
+</section>
+
+<!-- 9. PRAZO -->
+<section class="page">
+  <div class="abre bg-rosa"><div class="n">4 · PRAZO E ENTREGA</div><h2>Primeiro, combine o prazo</h2>
+    <p>Toda peça nova chega com uma data proposta pela agência. Você topa ou sugere outra.</p></div>
+  <div class="lado">
+    <figure class="print" style="width:96mm">
+      <img src="c02-prazo-popover.jpg" alt="">
+      <span class="pin" style="left:22%;top:18%">1</span>
+      <span class="pin" style="left:18%;top:67%">2</span>
+      <span class="pin" style="left:18%;top:80%">3</span>
+    </figure>
+    <ol class="leg">
+      <li><b>Prazo proposto</b> em amarelo: ainda não foi combinado.</li>
+      <li><b>Topo 03/10.</b> Aceita a data. O card vira "Entrega 03/10".</li>
+      <li><b>Sugerir outra data.</b> Escolha o dia; a social mídia aceita ou ajusta.</li>
+    </ol>
+  </div>
+  <h3 style="margin-top:5mm">Depois de aceitar</h3>
+  <p>O combinado entra sozinho na conversa. Use o chat pra alinhar a direção antes de fazer tudo.</p>
+  <figure class="print" style="width:126mm;margin:0 auto">
+    <img src="c03-card-aceito-conversa.jpg" alt="">
+    <span class="pin" style="left:84%;top:11.5%">1</span>
+    <span class="pin" style="left:84%;top:19%">2</span>
+  </figure>
+  <ol class="leg">
+    <li><b>Prazo combinado</b>, registrado com data e hora.</li>
+    <li><b>Sua mensagem.</b> A social mídia recebe na hora. <span class="kbd">Enter</span> envia.</li>
+  </ol>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">9</span></div>
+</section>
+
+<!-- 10. SUA ENTREGA -->
+<section class="page">
+  <div class="abre bg-rosa"><div class="n">4 · PRAZO E ENTREGA</div><h2>Sua entrega, em 3 passos</h2>
+    <p>No fim do card fica o bloco verde "Sua entrega". É por ele que a peça anda.</p></div>
+  <figure class="print">
+    <img src="c04-card-entrega.jpg" alt="">
+    <span class="pin" style="left:4%;top:32.5%">1</span>
+    <span class="pin" style="left:5.5%;top:48%">2</span>
+    <span class="pin" style="left:52%;top:48%">3</span>
+    <span class="pin" style="left:5.5%;top:66.6%">4</span>
+    <span class="pin" style="left:52%;top:66.6%">5</span>
+    <span class="pin" style="left:3.5%;top:85%">6</span>
+  </figure>
+  <ol class="leg duas">
+    <li><b>Os 3 passos</b> ficam verdes conforme você avança: Estou fazendo, Subir a arte, Marcar entregue.</li>
+    <li><b>Subir arte ou vídeo.</b> Imagem, vídeo ou PDF até 80 MB. Carrossel: uma arte de cada vez.</li>
+    <li><b>Mande o link</b> quando passar de 80 MB (Drive, Dropbox, WeTransfer). Confira se está liberado.</li>
+    <li><b>Marcar como entregue.</b> O passo final. A social mídia revisa e manda pro cliente.</li>
+    <li><b>Estou fazendo.</b> Avisa a agência que você começou.</li>
+    <li><b>Meu checklist.</b> Lembretes só seus (ex.: cortar takes). Ninguém mais vê.</li>
+  </ol>
+  <div class="alerta" style="margin-top:4mm"><span class="ic">!</span><div><p>Subir a arte <b>não</b> entrega a peça. Enquanto não clicar em <b>Marcar como entregue</b>, a social mídia vê a arte mas a peça continua com você.</p></div></div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">10</span></div>
+</section>
+
+<!-- 11. AJUSTE -->
+<section class="page">
+  <div class="abre bg-lilas"><div class="n">5 · AJUSTES</div><h2>Quando a peça volta</h2>
+    <p>O card volta pra sua fila com o selo "Ajuste" e o motivo escrito, tudo junto, num texto só.</p></div>
+  <figure class="print" style="width:150mm;margin:0 auto">
+    <img src="c05-card-ajuste.jpg" alt="">
+    <span class="pin" style="left:84%;top:20.6%">1</span>
+    <span class="pin" style="left:88.5%;top:3%">2</span>
+  </figure>
+  <ol class="leg">
+    <li><b>O motivo do ajuste</b>, consolidado pela social mídia. Nada de "aumenta a fonte" por áudio.</li>
+    <li><b>O prazo continua valendo.</b> Se o ajuste pedir mais tempo, combine pelo chat.</li>
+  </ol>
+  <div class="dica"><span class="ic">i</span><div><p>Cada volta conta como uma <b>revisão</b> (1ª rev., 2ª rev.). Isso aparece no seu extrato e ajuda a combinar limite de alterações com a agência.</p></div></div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">11</span></div>
+</section>
+
+<!-- 12. SUBIR VERSÃO NOVA -->
+<section class="page">
+  <div class="abre bg-lilas"><div class="n">5 · AJUSTES</div><h2>Subindo a versão nova</h2>
+    <p>Responda no chat o que mudou, suba a arte e entregue de novo.</p></div>
+  <div class="lado">
+    <figure class="print" style="width:112mm">
+      <img src="c06-card-subiu.jpg" alt="">
+      <span class="pin" style="left:10%;top:16%">1</span>
+      <span class="pin" style="left:87.7%;top:42%">2</span>
+      <span class="pin" style="left:13%;top:68%">3</span>
+    </figure>
+    <ol class="leg">
+      <li><b>A arte aparece no topo do card</b> assim que sobe. A social mídia já consegue ver.</li>
+      <li><b>O chat registra</b> a revisão e o nome do arquivo.</li>
+      <li><b>Passos 1 e 2 verdes.</b> Falta só entregar.</li>
+    </ol>
+  </div>
+  <h3 style="margin-top:5mm">"Qual é a versão final?"</h3>
+  <p>Ao clicar em Marcar como entregue, o Cria confirma qual arquivo vale. Se você já subiu, é só um clique.</p>
+  <figure class="print" style="width:140mm;margin:0 auto">
+    <img src="c07-versao-final.jpg" alt="">
+  </figure>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">12</span></div>
+</section>
+
+<!-- 13. VÍDEO -->
+<section class="page">
+  <div class="abre bg-laranja"><div class="n">6 · VÍDEO E REELS</div><h2>Pra filmmaker e editor</h2>
+    <p>O card de Reels traz o roteiro por cena, a pasta dos brutos e o formato certo.</p></div>
+  <figure class="print" style="width:150mm;margin:0 auto">
+    <img src="c10-reels-link-enviado.jpg" alt="">
+    <span class="pin" style="left:87.7%;top:18.5%">1</span>
+  </figure>
+  <ol class="leg">
+    <li><b>Vídeo grande vai por link.</b> Colou o link do Drive e clicou na seta: ele entra na conversa, clicável.</li>
+  </ol>
+  <div class="grid2" style="margin-top:3mm">
+    <div class="card"><h4>O que olhar antes de editar</h4><p class="small">O selo de formato (9:16 · 1080x1920 · até 90s), a <b>Pasta desta peça</b> com os brutos e as observações ("legenda queimada, cortes secos").</p></div>
+    <div class="card"><h4>A capa do Reels</h4><p class="small">A capa é escolhida pela social mídia na hora de publicar. Se quiser sugerir uma, suba como imagem junto do vídeo.</p></div>
+  </div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">13</span></div>
+</section>
+
+<!-- 14. ENTREGUES + AGENDA -->
+<section class="page">
+  <div class="abre bg-azul"><div class="n">7 · SEU HISTÓRICO</div><h2>Entregues e Minha agenda</h2>
+    <p>O que você já fez e o que vem pela frente.</p></div>
+  <h4>Entregues</h4>
+  <p class="small">Cada peça entregue, com a data e o status ("com a social mídia", "aprovado").</p>
+  <figure class="print"><img src="e01-entregues.jpg" alt=""></figure>
+  <h4 style="margin-top:5mm">Minha agenda</h4>
+  <p class="small">Entregas, gravações em que você foi escalado e suas tarefas, num mês só. O botão <b>Anotar</b> cria um lembrete seu.</p>
+  <figure class="print" style="width:128mm;margin:0 auto"><img src="e02-agenda.jpg" alt=""></figure>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">14</span></div>
+</section>
+
+<!-- 15. CACHÊS + EXTRATO -->
+<section class="page">
+  <div class="abre bg-verde"><div class="n">7 · SEU DINHEIRO</div><h2>Cachês e extrato do mês</h2>
+    <p>Quando você entrega, o cachê combinado entra no Caixa da agência como conta a pagar pra você.</p></div>
+  <h4>Meus cachês</h4>
+  <figure class="print"><img src="e03-caches.jpg" alt=""></figure>
+  <p class="small" style="margin-top:2mm">A receber e já recebido, peça por peça. Quem marca como pago é a agência. Divergiu, fale com ela.</p>
+  <h4 style="margin-top:4mm">Extrato do mês</h4>
+  <figure class="print" style="width:118mm;margin:0 auto"><img src="e04-extrato.jpg" alt=""></figure>
+  <p class="small" style="margin-top:2mm">Peças por contratante e por cliente, com revisões. <b>Baixar PDF</b> gera o extrato pra mandar junto da nota. <b>Esconder valores</b> tira os números do PDF.</p>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">15</span></div>
+</section>
+
+<!-- 16. MARCAS -->
+<section class="page">
+  <div class="abre bg-laranja"><div class="n">8 · MARCAS</div><h2>Marcas que atendo</h2>
+    <p>A ficha de cada marca: tudo que antes vinha repetido em cada card, num lugar só.</p></div>
+  <figure class="print"><img src="e05-marcas.jpg" alt=""></figure>
+  <div class="lado" style="margin-top:5mm">
+    <figure class="print" style="width:52mm">
+      <img src="e06-ficha-marca.jpg" alt="">
+      <span class="pin" style="left:12%;top:15.6%">1</span>
+      <span class="pin" style="left:26%;top:32%">2</span>
+      <span class="pin" style="left:19%;top:80%">3</span>
+      <span class="pin" style="left:42%;top:93.5%">4</span>
+    </figure>
+    <div>
+      <h4>A ficha da marca</h4>
+      <ol class="leg">
+        <li><b>Recado da social mídia</b> que vale pra todas as peças.</li>
+        <li><b>Material e links</b>: pasta geral e referências.</li>
+        <li><b>Paleta, fontes, tom, público e temas.</b> O vermelho do "O que evitar" é lei.</li>
+        <li><b>Hashtags</b> com copiar todas.</li>
+      </ol>
+      <p class="small muted">Quem mantém a ficha é a agência. Faltou alguma coisa, peça pra ela.</p>
+      <h4 style="margin-top:4mm">Cor por agência</h4>
+      <p class="small">Em "Quem me acoplou" você escolhe uma cor pra cada agência. Ela pinta as mensagens e o topo dos cards. Só você vê.</p>
+    </div>
+  </div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">16</span></div>
+</section>
+
+<!-- 17. CELULAR -->
+<section class="page">
+  <div class="abre bg-lilas"><div class="n">8 · NO CELULAR</div><h2>Funciona no bolso</h2>
+    <p>Mesmo app, sem instalar nada. Abra app.criasocialclub.com.br no celular e adicione à tela inicial.</p></div>
+  <div class="cel">
+    <figure class="print"><img src="m01-demandas.jpg" alt=""></figure>
+    <figure class="print"><img src="m02-card.jpg" alt=""></figure>
+  </div>
+  <div class="grid2" style="margin-top:5mm">
+    <div class="card"><p class="small"><b>Menu de baixo:</b> Início, Demandas, Agenda, Entregues e Marcas. O resto fica no botão de menu.</p></div>
+    <div class="card"><p class="small"><b>No card:</b> o botão Marcar como entregue fica sempre fixo embaixo. A conversa vem depois do briefing.</p></div>
+  </div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">17</span></div>
+</section>
+
+<!-- 18. REGRAS DE OURO -->
+<section class="page">
+  <div class="abre bg-amarelo amarelo"><div class="n">PRA FECHAR</div><h2>Regras de ouro</h2>
+    <p>O que faz uma agência querer trabalhar com você de novo.</p></div>
+  <ul class="check-lista">
+    <li><span class="cx"></span><div><b>Confirme o prazo no mesmo dia.</b> Prazo proposto parado trava o planejamento da social mídia.</div></li>
+    <li><span class="cx"></span><div><b>Leia o recado fixo e o "O que evitar" antes de começar.</b> É onde mora o erro que gera ajuste.</div></li>
+    <li><span class="cx"></span><div><b>Combine tudo no chat do card.</b> O que fica no WhatsApp some; no card fica registrado.</div></li>
+    <li><span class="cx"></span><div><b>Suba um rascunho cedo</b> quando a direção for nova. É mais barato ajustar a capa que o carrossel inteiro.</div></li>
+    <li><span class="cx"></span><div><b>Entregue pelo botão.</b> Subir a arte não entrega; o botão avisa a agência e libera o cachê.</div></li>
+    <li><span class="cx"></span><div><b>Arquivo grande, link liberado.</b> Teste o link numa aba anônima antes de mandar.</div></li>
+  </ul>
+  <h3 style="margin-top:7mm">Perguntas rápidas</h3>
+  <div class="faq card">
+    <div class="q"><h4>Não vejo a peça que a agência disse que mandou.</h4><p class="small">Confira se está na conta certa (a do e-mail do convite) e peça pra social mídia conferir se escolheu você em "Enviar para".</p></div>
+    <div class="q"><h4>Entreguei errado. E agora?</h4><p class="small">Avise no chat do card. A social mídia devolve com "Pedir ajuste" e você sobe a versão certa.</p></div>
+    <div class="q"><h4>O cachê não apareceu.</h4><p class="small">O cachê entra quando a peça é marcada como entregue. Se o valor estiver errado, só a agência corrige.</p></div>
+  </div>
+  <div class="rodape"><img src="logo-cria.png" alt=""><span>Manual do Parceiro · Designer e Filmmaker</span><span class="num">18</span></div>
+</section>
+</body></html>
