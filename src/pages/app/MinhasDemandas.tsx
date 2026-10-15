@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import {
   Briefcase, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
   Copy as CopyIcon, ExternalLink, Folder, ImagePlus, Link2, Loader2, MessageCircle, Palette,
-  History, MapPin, PauseCircle, Pencil, Play, Plus, RotateCcw, Send, Sparkles, X,
+  History, MapPin, PauseCircle, Pencil, Play, Plus, RotateCcw, Send, Sparkles, StickyNote, X,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { toast } from "sonner";
@@ -1886,6 +1886,20 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   })()}
                 </div>
 
+                {/* OBSERVAÇÕES DA SOCIAL MÍDIA LOGO ABAIXO DO FORMATO (Walter,
+                    14/10/2026: "colocar mais pra cima, logo após o tamanho, e
+                    deixar mais destacado, tá meio apagado"). Em 28/09 já tinham
+                    saído do fim do card; agora são a primeira coisa depois do
+                    formato, com caixa forte, ícone e texto maior. */}
+                {card.notas?.trim() && (
+                  <div className="mt-3.5 rounded-xl border-2 border-amber-300 bg-amber-50 px-3.5 py-3 shadow-[0_1px_0_rgba(180,83,9,0.08)]">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-amber-900 mb-1 flex items-center gap-1.5">
+                      <StickyNote className="h-3.5 w-3.5" /> Observações da social mídia
+                    </p>
+                    <p className="text-[15px] font-body font-medium text-foreground whitespace-pre-line leading-relaxed"><TextoComLinks texto={card.notas} /></p>
+                  </div>
+                )}
+
                 {/* Só a social mídia vê: revisar a entrega (Tá ok / Pedir
                     ajuste) e o cachê, sem sair do card (29/09/2026). */}
                 {agencia && (
@@ -2004,16 +2018,6 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                   aoEditar={(agencia?.crmClientId ?? card.crm_client_id)
                     ? () => navigate(`/socialmidia/equipe/canal?cliente=${agencia?.crmClientId ?? card.crm_client_id}`)
                     : undefined} />
-
-                {/* OBSERVAÇÕES DA SOCIAL MÍDIA SUBIRAM (28/09/2026): moravam no
-                    fim do card, depois da entrega e da direção de arte, e quase
-                    ninguém rolava até lá. É instrução de briefing, fica no topo. */}
-                {card.notas?.trim() && (
-                  <div className="mt-4">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Observações da social mídia</p>
-                    <p className="text-sm font-body whitespace-pre-line bg-amber-50/60 border border-amber-200 rounded-xl px-3 py-2.5 leading-relaxed"><TextoComLinks texto={card.notas} /></p>
-                  </div>
-                )}
 
                 {/* REFERÊNCIAS DESTA PEÇA (Gabriela, 29/09/2026): o campo "Ideia /
                     Referência (links)" do post. Um link por linha no banco; aqui

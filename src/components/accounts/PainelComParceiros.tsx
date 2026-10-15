@@ -277,12 +277,7 @@ function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
               <div key={col.id} style={tinta}
                 className={cn("w-[78vw] max-w-[260px] shrink-0 snap-start rounded-2xl border p-2.5", tinta ? "" : "bg-muted/40 border-border")}>
                 <div className="flex items-center gap-2 px-1 mb-2.5">
-                  {logo
-                    ? <img src={logo} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 bg-white ring-1 ring-black/5" />
-                    : <span className="w-6 h-6 rounded-full shrink-0 grid place-items-center text-[10px] font-bold text-white"
-                        style={{ backgroundColor: cor ?? "#9ca3af" }}>
-                        {(col.cliente?.name ?? "?").charAt(0).toUpperCase()}
-                      </span>}
+                  <LogoDoCliente key={logo ?? "sem-logo"} src={logo} nome={col.cliente?.name ?? "?"} cor={cor} />
                   <span className="font-display font-bold text-[13px] truncate flex-1">{col.cliente?.name ?? "Sem cliente"}</span>
                   <span className="text-[10.5px] font-bold tabular-nums rounded-full px-1.5 py-0.5 bg-card border border-border text-muted-foreground">{col.abertas.length}</span>
                   {col.atrasadas > 0 && <span className="w-2 h-2 rounded-full bg-red-600" title={`${col.atrasadas} atrasada(s)`} />}
@@ -914,5 +909,28 @@ export function PainelComParceiros({ clientes }: {
         </>
       )}
     </div>
+  );
+}
+
+/* LOGO DA COLUNA DO CLIENTE (Walter, 14/10/2026: "bugou ali a logo").
+   O campo logo da ficha nem sempre é endereço de imagem: fichas antigas
+   guardam o emoji 🏢 de marcador, e um <img src="🏢"> vira o ícone de imagem
+   quebrada. E um link que morre (arquivo apagado, link assinado vencido)
+   dava o mesmo ícone. Agora: só vira <img> o que é http(s), e se a imagem
+   falhar ao carregar, cai na bolinha com a inicial na cor do cliente. */
+function LogoDoCliente({ src, nome, cor }: { src: string | null; nome: string; cor: string | null }) {
+  const [falhou, setFalhou] = useState(false);
+  const url = src && /^https?:\/\//i.test(src.trim()) ? src.trim() : null;
+  if (url && !falhou) {
+    return (
+      <img src={url} alt="" onError={() => setFalhou(true)}
+        className="w-7 h-7 rounded-full object-cover shrink-0 bg-white ring-1 ring-black/5" />
+    );
+  }
+  return (
+    <span className="w-7 h-7 rounded-full shrink-0 grid place-items-center text-[11px] font-bold text-white"
+      style={{ backgroundColor: cor ?? "#9ca3af" }}>
+      {nome.trim().charAt(0).toUpperCase() || "?"}
+    </span>
   );
 }
