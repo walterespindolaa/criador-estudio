@@ -335,6 +335,166 @@ body.nav2-travado #sticky-cta{display:none!important}
 }
 @media(min-width:981px){.nav2-painel{display:none}}
 @media(max-width:360px){nav#navbar .nav-cta{padding:0 14px;font-size:.85rem}}
+
+/* ==================== UP OUT/2026 (Skillry adaptado) ==================== */
+.hero-tag.novo{display:inline-flex;align-items:center;gap:10px;padding:6px 16px 6px 6px;text-decoration:none;transition:transform .2s;background:var(--branco);color:var(--ink);border:1.5px solid rgba(21,20,18,.12);border-radius:999px;font-size:.85rem;font-weight:500;line-height:1.3}
+.hero-tag.novo:hover{transform:translateY(-2px)}
+.hero-tag.novo .pill{background:var(--amarelo);color:var(--ink);font-family:var(--font-display);font-weight:800;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+.hero-tag.novo b{font-weight:700}
+.hero-tag.novo .seta2{opacity:.6}
+@media(max-width:480px){h1{font-size:2.3rem;max-width:none}.hero-tag.novo{font-size:.78rem;max-width:100%}.hero-tag.novo .longo{display:none}}
+
+/* fileiras de adesivos do hero: duas esteiras em sentidos opostos */
+.tiles{position:relative;z-index:2;margin:34px 0 6px;display:flex;flex-direction:column;gap:12px;overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent)}
+.tiles-row{display:flex;gap:12px;width:max-content;animation:tiles 70s linear infinite;padding:6px 0}
+.tiles-row.rev{animation-direction:reverse;animation-duration:52s}
+.tiles:hover .tiles-row{animation-play-state:paused}
+@keyframes tiles{to{transform:translateX(-50%)}}
+.tile{width:104px;height:104px;border-radius:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:#fff;
+  box-shadow:0 4px 0 rgba(10,10,10,.22);border:2px solid rgba(255,255,255,.35);flex:none;transform:rotate(var(--r,0deg))}
+.tile .ic{width:34px;height:34px}
+.tile span{font-family:var(--font-display);font-weight:700;font-size:.8rem;line-height:1.05;text-align:center;padding:0 6px}
+.tile.esc{color:var(--ink)}
+@media(max-width:640px){.tile{width:84px;height:84px;border-radius:20px}.tile .ic{width:28px;height:28px}.tile span{font-size:.7rem}.tiles{gap:10px;margin-top:26px}.tiles-row{gap:10px}}
+@media(prefers-reduced-motion:reduce){.tiles-row{animation:none}}
+
+/* NOVIDADES: esteira de cards com selo, igual vitrine */
+#novidades{padding:74px 0 70px;background:var(--creme);position:relative}
+.nv-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px}
+.nv-head h2{font-size:clamp(1.9rem,4vw,3rem)}
+.nv-head p{opacity:.7;margin-top:6px;max-width:52ch}
+.nv-setas{display:flex;gap:8px}
+.nv-setas button{width:46px;height:46px;border-radius:50%;border:2px solid var(--ink);background:var(--branco);cursor:pointer;font-size:1.2rem;display:grid;place-items:center;transition:transform .2s}
+.nv-setas button:hover{transform:translateY(-2px)}
+.nv-trilho{display:grid;grid-auto-flow:column;grid-auto-columns:min(340px,82vw);gap:18px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 4vw 18px;margin:0 -4vw;scrollbar-width:none}
+.nv-trilho::-webkit-scrollbar{display:none}
+.nv-card{scroll-snap-align:start;background:var(--branco);border:2px solid var(--ink);border-radius:24px;overflow:hidden;display:flex;flex-direction:column;text-decoration:none;color:var(--ink);box-shadow:5px 5px 0 var(--ink);transition:transform .25s,box-shadow .25s}
+.nv-card:hover{transform:translate(-2px,-3px);box-shadow:7px 8px 0 var(--ink)}
+.nv-media{position:relative;aspect-ratio:16/10;overflow:hidden;border-bottom:2px solid var(--ink);background:var(--creme-2)}
+.nv-media img{width:100%;height:100%;object-fit:cover;object-position:left top}
+.nv-selo{position:absolute;top:12px;left:12px;font-family:var(--font-display);font-weight:800;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px;border:1.5px solid var(--ink)}
+.nv-selo.novo{background:var(--amarelo)}.nv-selo.beta{background:var(--rosa)}.nv-selo.breve{background:var(--ink);color:var(--branco)}
+.nv-corpo{padding:16px 18px 18px;display:flex;flex-direction:column;gap:6px;flex:1}
+.nv-corpo h3{font-size:1.25rem}
+.nv-corpo p{font-size:.9rem;opacity:.78;line-height:1.45}
+.nv-pe{margin-top:auto;padding-top:8px;display:flex;justify-content:space-between;align-items:center;font-size:.78rem;font-weight:700}
+.nv-pe .plano{background:var(--creme-2);border-radius:999px;padding:3px 10px}
+.nv-pe .ir{color:var(--laranja);font-family:var(--font-display)}
+@media(max-width:700px){.nv-setas{display:none}#novidades{padding:56px 0 50px}}
+
+/* mini maquetes dentro dos cards */
+.mq-perfil{position:absolute;inset:0;background:var(--creme)}
+.mq-perfil .capa{height:46%;background:#E3E8FC;position:relative;overflow:hidden}
+.mq-perfil .capa i{position:absolute;border-radius:38% 62% 55% 45%/48% 42% 58% 52%}
+.mq-perfil .ava{position:absolute;left:18px;top:32%;width:70px;height:70px;border-radius:20px;background:var(--laranja);border:4px solid var(--branco);display:grid;place-items:center;color:#fff;font-family:var(--font-display);font-weight:800;font-size:1.4rem}
+.mq-perfil .txt{position:absolute;left:100px;top:50%;right:14px}
+.mq-perfil .txt b{font-family:var(--font-display);font-size:1.05rem;display:block;line-height:1.1}
+.mq-perfil .txt small{font-size:.72rem;opacity:.7}
+.mq-perfil .chips{position:absolute;left:18px;bottom:14px;display:flex;gap:6px;flex-wrap:wrap}
+.mq-perfil .chips span{font-size:.66rem;font-weight:700;background:var(--branco);border:1.5px solid rgba(10,10,10,.15);border-radius:999px;padding:2px 9px}
+.mq-breve{position:absolute;inset:0;background:var(--rosa);display:grid;place-items:center}
+.mq-breve .cel{width:116px;height:150px;background:var(--branco);border:3px solid var(--ink);border-radius:20px;transform:rotate(-6deg);display:flex;flex-direction:column;gap:6px;padding:10px;box-shadow:5px 5px 0 var(--ink)}
+.mq-breve .cel i{display:block;border-radius:8px;background:var(--creme-2)}
+.mq-breve .cel .f{flex:1;background:linear-gradient(135deg,var(--amarelo),var(--laranja))}
+.mq-breve .btnpub{position:absolute;bottom:18%;right:16%;background:var(--ink);color:#fff;font-family:var(--font-display);font-weight:700;font-size:.78rem;padding:7px 14px;border-radius:999px;transform:rotate(5deg);display:flex;gap:6px;align-items:center}
+.mq-breve .btnpub .ic{width:14px;height:14px}
+
+/* CRIAKUT */
+#criakut{background:var(--amarelo);padding:84px 0 88px;position:relative;overflow:hidden}
+#criakut .ck-blob{position:absolute;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;z-index:0}
+.ck-grid{position:relative;z-index:1;display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center}
+.ck-titulo{font-size:clamp(2.2rem,5vw,3.8rem);line-height:1}
+.ck-titulo .beta{font-family:var(--font-body);font-weight:700;font-size:.9rem;background:var(--ink);color:var(--amarelo);border-radius:999px;padding:4px 12px;vertical-align:middle;margin-left:8px;letter-spacing:.04em}
+.ck-sub{font-size:1.1rem;margin:16px 0 24px;max-width:46ch}
+.ck-lista{display:grid;gap:12px;list-style:none}
+.ck-lista li{display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:start;background:rgba(253,251,245,.6);border:1.5px solid rgba(10,10,10,.1);border-radius:18px;padding:12px 14px}
+.ck-lista .ib{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;color:#fff}
+.ck-lista .ib .ic{width:22px;height:22px}
+.ck-lista b{font-family:var(--font-display);font-size:1.02rem;display:block;line-height:1.2}
+.ck-lista small{font-size:.86rem;opacity:.78;line-height:1.4;display:block}
+.ck-ctas{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:24px}
+.ck-ctas .micro{margin:0;opacity:.75}
+/* palco: página, busca e comunidades empilhadas */
+.ck-palco{position:relative;min-height:540px}
+.ck-pagina{position:absolute;top:0;right:0;width:88%;background:var(--branco);border:2.5px solid var(--ink);border-radius:26px;overflow:hidden;box-shadow:8px 8px 0 var(--ink);transform:rotate(1.5deg)}
+.ck-pagina .capa{height:96px;position:relative;overflow:hidden;background:#FDE6F1}
+.ck-pagina .capa svg{width:100%;height:100%}
+.ck-pagina .ck-topo{display:flex;gap:14px;padding:0 18px;margin-top:-34px;position:relative;align-items:flex-end}
+.ck-pagina .ava{width:78px;height:78px;border-radius:22px;background:var(--azul);border:4px solid var(--branco);color:#fff;display:grid;place-items:center;font-family:var(--font-display);font-weight:800;font-size:1.6rem;flex:none}
+.ck-pagina h4{font-family:var(--font-display);font-size:1.25rem;line-height:1.1}
+.ck-pagina .fn{font-size:.78rem;opacity:.7}
+.ck-pagina .oi{padding:12px 18px 4px;font-size:.88rem;line-height:1.45}
+.ck-pagina .oi b{font-family:var(--font-display);font-size:1.05rem;display:block}
+.ck-pagina .nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 18px 16px}
+.ck-pagina .nums div{background:var(--creme);border-radius:12px;padding:8px 10px;font-size:.7rem;opacity:.9}
+.ck-pagina .nums b{display:block;font-family:var(--font-display);font-size:1.1rem}
+.ck-pagina .serv{margin:0 18px 18px;border-top:1.5px dashed rgba(10,10,10,.18);padding-top:10px;display:grid;gap:6px;font-size:.82rem}
+.ck-pagina .serv div{display:flex;justify-content:space-between}
+.ck-pagina .serv b{font-family:var(--font-display)}
+.ck-busca{position:absolute;left:0;top:290px;width:66%;background:var(--branco);border:2.5px solid var(--ink);border-radius:22px;padding:14px;box-shadow:6px 6px 0 var(--ink);transform:rotate(-2.5deg)}
+.ck-busca .barra{display:flex;align-items:center;gap:8px;border:1.5px solid rgba(10,10,10,.15);border-radius:999px;padding:7px 12px;font-size:.8rem;opacity:.85}
+.ck-busca .barra .ic{width:15px;height:15px}
+.ck-busca .linha{display:flex;align-items:center;gap:10px;margin-top:10px}
+.ck-busca .linha i{width:34px;height:34px;border-radius:50%;flex:none}
+.ck-busca .linha b{font-family:var(--font-display);font-size:.9rem;display:block;line-height:1.1}
+.ck-busca .linha small{font-size:.7rem;opacity:.7}
+.ck-busca .linha em{margin-left:auto;font-style:normal;font-size:.72rem;font-weight:700;background:var(--creme-2);border-radius:999px;padding:2px 8px}
+.ck-coms{position:absolute;right:4%;bottom:0;display:flex;gap:10px;transform:rotate(2deg)}
+.ck-com{width:112px;background:var(--branco);border:2.5px solid var(--ink);border-radius:18px;overflow:hidden;box-shadow:4px 4px 0 var(--ink)}
+.ck-com svg{display:block;width:100%;height:62px}
+.ck-com span{display:block;font-family:var(--font-display);font-weight:700;font-size:.72rem;line-height:1.1;padding:6px 8px 8px}
+@media(max-width:980px){
+  .ck-grid{grid-template-columns:1fr;gap:34px}
+  .ck-palco{max-width:560px;margin:0 auto;width:100%;min-height:0;display:flex;flex-direction:column;align-items:center}
+  .ck-pagina,.ck-busca,.ck-coms{position:relative;top:auto;left:auto;right:auto;bottom:auto}
+  .ck-pagina{width:100%;transform:rotate(1deg)}
+  .ck-busca{width:88%;margin-top:-10px;align-self:flex-start}
+  .ck-coms{margin-top:16px;justify-content:center}
+}
+@media(min-width:600px) and (max-width:980px){.ck-lista{grid-template-columns:1fr 1fr}.ck-lista li:last-child{grid-column:1/-1}}
+@media(max-width:560px){#criakut{padding:60px 0 64px}#criakut .ck-blob:first-child{top:-260px;right:-220px}.ck-com{width:30%;min-width:0}.ck-com svg{height:52px}.ck-coms{width:100%;gap:8px}}
+@media(max-width:420px){#hero h1{font-size:2.05rem}}
+.dobra-btn .seta{display:inline-block;transition:transform .25s}
+section:not(.dobrado) .dobra-btn .seta{transform:rotate(180deg)}
+section.dobrado .dobra-btn .seta{transform:none}
+
+
+/* NÚMEROS DO INSTAGRAM */
+#numeros{background:var(--creme);padding:84px 0 80px;position:relative;overflow:hidden}
+.nu-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:44px;align-items:center}
+.nu-print{position:relative;padding-bottom:22%}
+.nu-print img{display:block;width:100%;height:auto;background:#fff}
+.nu-print .principal{border:2.5px solid var(--ink);border-radius:22px;box-shadow:8px 8px 0 var(--verde)}
+.nu-print .segunda{position:absolute;right:-4%;bottom:0;width:68%;border:2.5px solid var(--ink);border-radius:16px;box-shadow:6px 6px 0 var(--ink);transform:rotate(-2deg)}
+.nu-lista{display:grid;gap:14px;list-style:none;margin-top:22px}
+.nu-lista li{display:flex;gap:12px;align-items:flex-start;font-size:.98rem;line-height:1.45}
+.nu-lista .ic{width:22px;height:22px;flex:none;color:var(--verde);margin-top:2px}
+.nu-breve{margin-top:26px;border:2px dashed var(--ink);border-radius:22px;padding:18px 20px;display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;background:var(--branco)}
+.nu-breve .sel{font-family:var(--font-display);font-weight:800;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;background:var(--ink);color:var(--branco);padding:6px 12px;border-radius:999px;transform:rotate(-4deg);white-space:nowrap}
+.nu-breve b{font-family:var(--font-display);font-size:1.12rem;display:block;line-height:1.15}
+.nu-breve p{font-size:.88rem;opacity:.78;margin-top:3px}
+.nu-conecta{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;font-size:.8rem;font-weight:700}
+.nu-conecta span{display:inline-flex;align-items:center;gap:6px;background:var(--creme-2);border-radius:999px;padding:5px 12px}
+.nu-conecta .ic{width:15px;height:15px}
+@media(max-width:900px){.nu-grid{grid-template-columns:1fr;gap:34px}.nu-print .segunda{right:0;width:74%}#numeros{padding:60px 0 70px}}
+
+/* FAQ em duas colunas no computador (título fixo à esquerda) */
+@media(min-width:981px){
+  #faq .faq-duas{display:grid;grid-template-columns:.8fr 1.2fr;gap:56px;align-items:start}
+  #faq .faq-duas .ciclo-head{text-align:left;position:sticky;top:110px;margin:0}
+  #faq .faq-duas .faq-list{margin:0;max-width:none}
+}
+.faq-mais{margin-top:14px;font-size:.92rem;opacity:.8}
+.faq-mais a{text-decoration:underline;font-weight:700}
+
+/* RODAPÉ em colunas */
+.rod-grid{display:grid;grid-template-columns:1.3fr repeat(3,1fr);gap:28px;text-align:left;margin-bottom:28px}
+.rod-grid h5{font-family:var(--font-display);font-size:.95rem;color:var(--creme);margin-bottom:10px}
+.rod-grid a{display:block;padding:4px 0;font-size:.88rem;opacity:.85}
+.rod-grid a:hover{opacity:1;text-decoration:underline}
+.rod-marca p{font-size:.88rem;margin-top:10px;max-width:30ch}
+@media(max-width:760px){.rod-grid{grid-template-columns:1fr 1fr;gap:22px}.rod-marca{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -343,7 +503,7 @@ body.nav2-travado #sticky-cta{display:none!important}
 <nav id="navbar">
   <a class="logo" href="/"><img src="/logo-cria.webp" alt="Cria" style="height:30px;width:auto;display:block" decoding="async"></a>
   <div class="nav2-meio">
-    <div class="nav2-item tem-drop"><button class="nav2-link" aria-expanded="false">Produto <span class="seta"></span></button><div class="nav2-drop"><a href="#motor" style="--cor:var(--laranja)"><b>Como funciona</b><small>O ciclo da ideia até o post publicado</small></a><a href="#telas" style="--cor:var(--azul)"><b>O CRIA por dentro</b><small>As telas, uma por uma</small></a><a href="funcionalidades.html" style="--cor:var(--rosa)"><b>Funcionalidades</b><small>A lista completa do que tem lá</small></a><div class="sep"></div><a href="social-media.html" style="--cor:var(--verde)"><b>Pra quem atende clientes</b><small>O lado de quem vive de social media</small></a></div></div><div class="nav2-item"><a class="nav2-link" href="#planos">Planos</a></div><div class="nav2-item tem-drop"><button class="nav2-link" aria-expanded="false">Conteúdo <span class="seta"></span></button><div class="nav2-drop"><a href="/blog" style="--cor:var(--amarelo)"><b>Blog</b><small>Uma situação real por semana, e como sair dela</small></a><a href="#faq" style="--cor:var(--azul)"><b>Dúvidas frequentes</b><small>Preço, cancelamento, como começar</small></a></div></div>
+    <div class="nav2-item tem-drop"><button class="nav2-link" aria-expanded="false">Produto <span class="seta"></span></button><div class="nav2-drop"><a href="#motor" style="--cor:var(--laranja)"><b>Como funciona</b><small>O ciclo da ideia até o post publicado</small></a><a href="#telas" style="--cor:var(--azul)"><b>O CRIA por dentro</b><small>As telas, uma por uma</small></a><a href="#novidades" style="--cor:var(--amarelo)"><b>Novidades</b><small>O que saiu agora e o que vem aí</small></a><a href="#criakut" style="--cor:var(--laranja)"><b>Criakut (beta)</b><small>Ache designer, editor e social mídia</small></a><a href="funcionalidades.html" style="--cor:var(--rosa)"><b>Funcionalidades</b><small>A lista completa do que tem lá</small></a><div class="sep"></div><a href="social-media.html" style="--cor:var(--verde)"><b>Pra quem atende clientes</b><small>O lado de quem vive de social media</small></a></div></div><div class="nav2-item"><a class="nav2-link" href="#planos">Planos</a></div><div class="nav2-item tem-drop"><button class="nav2-link" aria-expanded="false">Conteúdo <span class="seta"></span></button><div class="nav2-drop"><a href="/blog" style="--cor:var(--amarelo)"><b>Blog</b><small>Uma situação real por semana, e como sair dela</small></a><a href="#faq" style="--cor:var(--azul)"><b>Dúvidas frequentes</b><small>Preço, cancelamento, como começar</small></a></div></div>
   </div>
   <div class="nav2-dir">
     <a class="nav2-troca" href="social-media.html">Sou social media →</a>
@@ -353,7 +513,7 @@ body.nav2-travado #sticky-cta{display:none!important}
   </div>
 </nav>
 <div class="nav2-painel" id="menu-mobile">
-  <details class="grupo"><summary class="grupo-h">Produto <span class="mais"></span></summary><div class="grupo-c"><a href="#motor" style="--cor:var(--laranja)">Como funciona</a><a href="#telas" style="--cor:var(--azul)">O CRIA por dentro</a><a href="funcionalidades.html" style="--cor:var(--rosa)">Funcionalidades</a><a href="social-media.html" style="--cor:var(--verde)">Pra quem atende clientes</a></div></details><a class="solo" href="#planos">Planos <span class="mais">›</span></a><details class="grupo"><summary class="grupo-h">Conteúdo <span class="mais"></span></summary><div class="grupo-c"><a href="/blog" style="--cor:var(--amarelo)">Blog</a><a href="#faq" style="--cor:var(--azul)">Dúvidas frequentes</a></div></details>
+  <details class="grupo"><summary class="grupo-h">Produto <span class="mais"></span></summary><div class="grupo-c"><a href="#motor" style="--cor:var(--laranja)">Como funciona</a><a href="#telas" style="--cor:var(--azul)">O CRIA por dentro</a><a href="#novidades" style="--cor:var(--amarelo)">Novidades</a><a href="#criakut" style="--cor:var(--laranja)">Criakut (beta)</a><a href="funcionalidades.html" style="--cor:var(--rosa)">Funcionalidades</a><a href="social-media.html" style="--cor:var(--verde)">Pra quem atende clientes</a></div></details><a class="solo" href="#planos">Planos <span class="mais">›</span></a><details class="grupo"><summary class="grupo-h">Conteúdo <span class="mais"></span></summary><div class="grupo-c"><a href="/blog" style="--cor:var(--amarelo)">Blog</a><a href="#faq" style="--cor:var(--azul)">Dúvidas frequentes</a></div></details>
   <div class="nav2-pe">
     <a class="pe-troca" href="social-media.html">Sou social media →</a>
     <div class="pe-linha">
@@ -376,7 +536,7 @@ body.nav2-travado #sticky-cta{display:none!important}
 <section id="hero">
 
   <div class="hero-inner container">
-    <div class="hero-tag"><span class="dot"></span> Feito pro criador brasileiro</div>
+    <a class="hero-tag novo" href="#criakut"><span class="pill">Novo</span> <span><b>Criakut beta</b><span class="longo">: ache designer, editor e social mídia</span></span> <span class="seta2">→</span></a>
     <h1>Seu conteúdo inteiro, organizado. <span class="hl">Numa aba só.</span>
       <span class="hero-script">ufa, agora faz sentido!</span>
     </h1>
@@ -385,8 +545,9 @@ body.nav2-travado #sticky-cta{display:none!important}
       <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Começar meus 7 dias grátis</a>
       <a href="#motor" class="btn btn-ghost">Ver como funciona ↓</a>
     </div>
-    <p class="micro">7 dias grátis · Cancela quando quiser · Funciona no celular e no computador</p>
+    <p class="micro">7 dias grátis · A partir de R$19,90/mês · Cancela quando quiser</p>
   </div>
+  <div class="tiles" aria-hidden="true"><div class="tiles-row"><div class="tile" style="background:#EA4918;--r:-3deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg><span>Banco de ideias</span></div><div class="tile" style="background:#0061EE;--r:2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg><span>Legenda no seu tom</span></div><div class="tile" style="background:#01A652;--r:-2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg><span>Calendário</span></div><div class="tile" style="background:#FF77B9;--r:3deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span>Insights do Insta</span></div><div class="tile esc" style="background:#FFCF03;--r:-2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg><span>Prompter</span></div><div class="tile" style="background:#EA4918;--r:2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Criakut</span></div><div class="tile" style="background:#0061EE;--r:-3deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Link na bio</span></div><div class="tile" style="background:#01A652;--r:2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg><span>Ideias com IA</span></div><div class="tile" style="background:#FF77B9;--r:-2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 5v11"/><path d="M12 5v6"/><path d="M18 5v14"/></svg><span>Quadro de posts</span></div><div class="tile esc" style="background:#FFCF03;--r:3deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>Metas</span></div><div class="tile" style="background:#0061EE;--r:-2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg><span>Roteiro de reels</span></div><div class="tile" style="background:#EA4918;--r:2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg><span>Media kit</span></div><div class="tile" style="background:#01A652;--r:-3deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></svg><span>Brandbook</span></div><div class="tile" style="background:#FF77B9;--r:2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></svg><span>Stories da semana</span></div><div class="tile esc" style="background:#FFCF03;--r:-2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.79 0l2.96 2.66"/><path d="m18 15-2-2"/><path d="m15 18-2-2"/></svg><span>Collabs</span></div><div class="tile" style="background:#0061EE;--r:3deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span>Lembretes</span></div><div class="tile" style="background:#EA4918;--r:-3deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg><span>Banco de ideias</span></div><div class="tile" style="background:#0061EE;--r:2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg><span>Legenda no seu tom</span></div><div class="tile" style="background:#01A652;--r:-2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg><span>Calendário</span></div><div class="tile" style="background:#FF77B9;--r:3deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span>Insights do Insta</span></div><div class="tile esc" style="background:#FFCF03;--r:-2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg><span>Prompter</span></div><div class="tile" style="background:#EA4918;--r:2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Criakut</span></div><div class="tile" style="background:#0061EE;--r:-3deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Link na bio</span></div><div class="tile" style="background:#01A652;--r:2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg><span>Ideias com IA</span></div><div class="tile" style="background:#FF77B9;--r:-2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 5v11"/><path d="M12 5v6"/><path d="M18 5v14"/></svg><span>Quadro de posts</span></div><div class="tile esc" style="background:#FFCF03;--r:3deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>Metas</span></div><div class="tile" style="background:#0061EE;--r:-2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg><span>Roteiro de reels</span></div><div class="tile" style="background:#EA4918;--r:2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg><span>Media kit</span></div><div class="tile" style="background:#01A652;--r:-3deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></svg><span>Brandbook</span></div><div class="tile" style="background:#FF77B9;--r:2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></svg><span>Stories da semana</span></div><div class="tile esc" style="background:#FFCF03;--r:-2deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.79 0l2.96 2.66"/><path d="m18 15-2-2"/><path d="m15 18-2-2"/></svg><span>Collabs</span></div><div class="tile" style="background:#0061EE;--r:3deg"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span>Lembretes</span></div></div></div>
 
 </section>
 
@@ -428,6 +589,7 @@ body.nav2-travado #sticky-cta{display:none!important}
       <li class="dor-item"><span class="dor-emoji" style="background:#FBE9E1;color:var(--ink)"><svg class="svgi" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg></span><p>Sentou pra criar e travou: sem banco de ideias, sem referência, começando do zero de novo.</p></li>
     </ul>
     <p class="dor-punch">Não é desorganização sua. É que ninguém fez uma ferramenta pro <em>seu</em> fluxo de trabalho. <em>Até agora.</em></p>
+    <div class="cta-meio"><a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Quero resolver isso: 7 dias grátis</a><small>A partir de R$19,90/mês · Cancela quando quiser</small></div>
   </div>
 </section>
 
@@ -465,7 +627,7 @@ body.nav2-travado #sticky-cta{display:none!important}
      Brandbook conduz, a ideia entra crua, vira pauta com insight, e o mês se
      monta. Por isso este bloco vem antes de qualquer lista de ferramenta e
      ocupa a tela inteira, com os prints em tamanho grande. -->
-<section id="motor" style="background:var(--azul);color:var(--creme);padding:74px 0 84px;position:relative;overflow:hidden">
+<section id="motor" data-dobra="Ver o passo a passo completo" style="--dobra-h:1150px;background:var(--azul);color:var(--creme);padding:74px 0 84px;position:relative;overflow:hidden">
   <div class="selo-marks" aria-hidden="true"><span class="fblob" style="top:8%;right:5%;animation-duration:15s"><img class="selo-w inv" src="cria-icone.webp" alt="" style="width:60px;transform:rotate(11deg)" loading="lazy" decoding="async"></span></div>
   <div class="container" style="position:relative;z-index:1">
     <div style="text-align:center;max-width:720px;margin:0 auto">
@@ -553,12 +715,218 @@ body.nav2-travado #sticky-cta{display:none!important}
   </div>
 </section>
 
-<!-- ==================== O RESTO DO ESTÚDIO ====================
-     Depois do motor (brandbook > ideia > pauta > mês), estas são as telas que
-     sustentam o dia a dia. Ritmo diferente de propósito: dois destaques
-     grandes e o resto numa faixa que arrasta, pra não virar catálogo de nove
-     blocos idênticos empilhados. -->
-<section id="telas" style="background:var(--creme);position:relative;overflow:hidden">
+<section id="novidades"><div class="container"><div class="nv-head reveal"><div><span class="kicker" style="background:var(--laranja)">Saiu do forno</span><h2>O que tem de <span class="script" style="color:var(--azul);font-size:1.12em">novo</span> no Cria</h2><p>A gente lança coisa nova todo mês. Olha o que acabou de sair e o que vem aí.</p></div><div class="nv-setas"><button type="button" aria-label="Voltar" data-nv="-1">‹</button><button type="button" aria-label="Avançar" data-nv="1">›</button></div></div><div class="nv-trilho" id="nvTrilho"><a class="nv-card" href="#criakut"><div class="nv-media"><div class="mq-perfil"><div class="capa"><i style="width:160px;height:140px;background:#2A4BDF;opacity:.8;right:-30px;top:-50px"></i><i style="width:90px;height:80px;background:#F2C21E;opacity:.7;left:30%;top:30%"></i></div><div class="ava">CM</div><div class="txt"><b>Carol Menezes</b><small>Designer · Editora de vídeo · Itajaí</small></div><div class="chips"><span>Saúde</span><span>Minimalista</span><span>★ 4,9</span></div></div><span class="nv-selo beta">Beta</span></div><div class="nv-corpo"><h3>Criakut</h3><p>Sua página pra ser achada: quem cria encontra designer, editor e social mídia por cidade, estilo e nicho.</p><div class="nv-pe"><span class="plano">Em toda conta</span><span class="ir">ver →</span></div></div></a><a class="nv-card" href="#numeros"><div class="nv-media"><img src="prints/card/insights.webp" alt="Tela de Insights do CRIA" loading="lazy" decoding="async"><span class="nv-selo novo">Novo</span></div><div class="nv-corpo"><h3>Insights do Instagram</h3><p>Alcance, salvos e compartilhamentos de cada post, e o que vale repetir.</p><div class="nv-pe"><span class="plano">Pro e Studio</span><span class="ir">ver →</span></div></div></a><a class="nv-card" href="#numeros"><div class="nv-media"><div class="mq-breve"><div class="cel"><i style="height:10px;width:60%"></i><i class="f"></i><i style="height:8px"></i><i style="height:8px;width:70%"></i></div><span class="btnpub"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg> Publicar</span></div><span class="nv-selo breve">Em breve</span></div><div class="nv-corpo"><h3>Postar direto pelo Cria</h3><p>Reels, carrossel e stories saindo do mesmo lugar onde você planejou.</p><div class="nv-pe"><span class="plano">Sem data ainda</span><span class="ir">ver →</span></div></div></a><a class="nv-card" href="funcionalidades.html"><div class="nv-media"><img src="prints/card/cria-prompter.webp" alt="Cria Prompter" loading="lazy" decoding="async"><span class="nv-selo novo">Novo</span></div><div class="nv-corpo"><h3>Cria Prompter</h3><p>Grave olhando pra câmera, com o roteiro rolando na tela do celular.</p><div class="nv-pe"><span class="plano">Studio</span><span class="ir">ver →</span></div></div></a><a class="nv-card" href="funcionalidades.html"><div class="nv-media"><img src="prints/card/cria-stories.webp" alt="Cria Stories" loading="lazy" decoding="async"><span class="nv-selo novo">Novo</span></div><div class="nv-corpo"><h3>Cria Stories</h3><p>A semana de stories planejada, com o roteiro de cada um.</p><div class="nv-pe"><span class="plano">Studio</span><span class="ir">ver →</span></div></div></a><a class="nv-card" href="funcionalidades.html"><div class="nv-media"><img src="prints/card/media-kit.webp" alt="Media kit do CRIA" loading="lazy" decoding="async"><span class="nv-selo novo">Novo</span></div><div class="nv-corpo"><h3>Media kit automático</h3><p>Seus números viram um media kit pronto pra mandar pra marca.</p><div class="nv-pe"><span class="plano">Pro e Studio</span><span class="ir">ver →</span></div></div></a></div></div></section>
+
+<section id="versus">
+  <!-- Blobs orgânicos + a marca do CRIA flutuando no fundo, estilo carimbo -->
+  <div class="vs-blobs" aria-hidden="true">
+    <span class="fblob" style="width:300px;height:290px;top:-100px;left:-90px;background:#fff;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.07;animation-duration:17s"></span>
+    <span class="fblob" style="width:210px;height:200px;bottom:-70px;right:-60px;background:var(--amarelo);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.12;animation-duration:13s"></span>
+    <span class="fblob" style="width:120px;height:115px;top:24%;right:10%;background:var(--rosa);border-radius:45% 55% 60% 40%/55% 45% 55% 45%;opacity:.14;animation-duration:15s"></span>
+    <span class="fblob" style="top:14%;left:7%;animation-duration:14s"><img class="vs-mark" src="cria-icone.webp" alt="" style="width:72px;transform:rotate(-11deg)" loading="lazy" decoding="async"></span>
+    <span class="fblob" style="bottom:14%;left:16%;animation-duration:11s"><img class="vs-mark" src="cria-icone.webp" alt="" style="width:44px;transform:rotate(9deg)" loading="lazy" decoding="async"></span>
+    <span class="fblob" style="top:48%;right:4%;animation-duration:18s"><img class="vs-mark" src="cria-icone.webp" alt="" style="width:56px;transform:rotate(14deg)" loading="lazy" decoding="async"></span>
+    <span class="fblob" style="bottom:8%;right:32%;animation-duration:16s"><img class="vs-mark" src="cria-icone.webp" alt="" style="width:36px;transform:rotate(-7deg)" loading="lazy" decoding="async"></span>
+  </div>
+  <div class="container" style="position:relative;z-index:1">
+    <h2 class="reveal">O que muda quando você usa <img class="h2-logo" src="logo-cria-white.webp" alt="o CRIA" decoding="async">? <span class="script">tudo, na real</span></h2>
+    <div class="versus-grid">
+      <div class="vs-card vs-sem reveal">
+        <h3><svg class="svgi svgi-inline" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg> Sem o <img class="h3-logo" src="logo-cria-white.webp" alt="CRIA" decoding="async"></h3>
+        <ul>
+          <li><b>✕</b> Ideias espalhadas em notas, prints e "salvos" do Instagram</li>
+          <li><b>✕</b> Posta quando dá, e "quando dá" é quase nunca</li>
+          <li><b>✕</b> Legenda escrita no desespero, na hora de postar</li>
+          <li><b>✕</b> Sem ideia do que funcionou; repete no achismo</li>
+          <li><b>✕</b> 3-4 assinaturas (~R$200/mês) que não conversam entre si</li>
+        </ul>
+      </div>
+      <div class="vs-card vs-com reveal">
+        <h3><svg class="svgi svgi-inline" style="color:var(--verde)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg> Com o <img class="h3-logo" src="logo-cria.webp" alt="CRIA" decoding="async"></h3>
+        <ul>
+          <li><b>✓</b> Banco de ideias + sugestões no seu tom</li>
+          <li><b>✓</b> Semana inteira planejada no kanban e calendário</li>
+          <li><b>✓</b> Legenda e roteiro prontos em minutos, com o seu brandbook</li>
+          <li><b>✓</b> Insights reais mostrando o que repetir</li>
+          <li><b>✓</b> Uma assinatura só, a partir de R$19,90</li>
+        </ul>
+      </div>
+    </div>
+    <div class="cta-meio reveal" style="margin-top:34px"><a href="https://app.criasocialclub.com.br/signup" class="btn btn-branco">Quero o lado "com o Cria"</a><small style="color:rgba(255,255,255,.85)">7 dias grátis · Sem compromisso</small></div>
+  </div>
+</section>
+
+<section id="stats">
+  <div class="container">
+    <div class="stats-strip reveal">
+      <!-- Os números finais ficam no HTML de propósito: se o GSAP não carregar
+           (adblock) ou a animação não disparar, o visitante vê "200+", nunca "0+".
+           O JS só zera e conta até o alvo QUANDO a animação de fato roda. -->
+      <div class="stat"><div class="n"><span class="counter" data-target="200">200</span>+</div><div class="l">reais/mês economizados vs. o combo de ferramentas*</div></div>
+      <div class="stat"><div class="n"><span class="counter" data-target="6">6</span> em 1</div><div class="l">ideias, plano, escrita, stories, publicação e insights</div></div>
+      <div class="stat"><div class="n"><span class="counter" data-target="7">7</span> dias</div><div class="l">grátis pra testar no seu fluxo real</div></div>
+    </div>
+    <p style="text-align:center;color:rgba(255,255,255,.55);font-size:.8rem;margin-top:18px">*Comparado a planner + organização + app de escrita + link in bio contratados separadamente.</p>
+  </div>
+</section>
+
+<section id="numeros">
+  <div class="container nu-grid">
+    <div class="nu-print reveal">
+      <img class="principal" src="prints/insights.webp" alt="Insights do CRIA: seguidores, alcance e interações dos últimos 30 dias" loading="lazy" decoding="async">
+      <img class="segunda" src="prints/insights-postar.webp" alt="O que postar mais: alcance por formato, dia e horário" loading="lazy" decoding="async">
+    </div>
+    <div class="reveal">
+      <span class="kicker" style="background:var(--verde)">Seus dados</span>
+      <h2 style="font-size:clamp(2rem,4.4vw,3.2rem)">Seus números do Instagram, <span class="script" style="color:var(--verde);font-size:1.1em;font-weight:400">lidos de verdade</span></h2>
+      <p style="margin-top:12px;opacity:.85">Conecte seu Instagram profissional e o Cria puxa os dados direto do Instagram. Nada de print, nada de planilha.</p>
+      <ul class="nu-lista"><li><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg><span>Alcance, salvamentos, compartilhamentos e comentários de cada post, num lugar só.</span></li><li><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Melhor dia e horário pra postar, tirados do seu histórico (não de regra genérica).</span></li><li><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg><span>O que mais te deu seguidor: formato, tema e post, pra você repetir o que funciona.</span></li><li><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg><span>Relatório de uma página e media kit montados sozinhos, prontos pra mandar pra marca.</span></li></ul>
+      <div class="nu-conecta"><span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg> Instagram profissional (criador ou empresa)</span><span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg> Você desconecta quando quiser</span></div>
+      <div class="nu-breve">
+        <span class="sel">Em breve</span>
+        <div><b>Postar direto pelo Cria</b><p>Reels, carrossel e stories saindo do mesmo lugar onde você planejou. Quando liberar, avisamos dentro do app.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="planos">
+  <div class="selo-marks" aria-hidden="true"><span class="fblob" style="top:6%;left:4%;animation-duration:16s"><img class="selo-w" src="cria-icone.webp" alt="" style="width:58px;transform:rotate(-10deg)" loading="lazy" decoding="async"></span><span class="fblob" style="bottom:6%;right:4%;animation-duration:12s"><img class="selo-w" src="cria-icone.webp" alt="" style="width:42px;transform:rotate(8deg)" loading="lazy" decoding="async"></span></div>
+  <div class="container">
+    <div class="ciclo-head reveal">
+      <span class="kicker" style="background:var(--laranja)">Planos</span>
+      <h2>Quanto custa ter <span class="script" style="color:var(--azul);font-size:1.15em">tudo num lugar?</span></h2>
+    </div>
+    <div class="stack-box reveal">
+      <h3>O que você paga hoje, separado:</h3>
+      <div class="stack-line"><span><span class="x">✕</span> Banco de ideias / segundo cérebro</span><span>~R$ 30/mês</span></div>
+      <div class="stack-line"><span><span class="x">✕</span> Organização (Notion + templates)</span><span>~R$ 50/mês</span></div>
+      <div class="stack-line"><span><span class="x">✕</span> app de escrita</span><span>~R$ 100/mês</span></div>
+      <div class="stack-line"><span><span class="x">✕</span> Link in bio pro</span><span>~R$ 25/mês</span></div>
+      <div class="stack-total"><span>Total do combo</span><span style="color:var(--laranja)">~R$ 205/mês</span></div>
+    </div>
+    <!-- ATENÇÃO: o que estava aqui prometia o que o produto não entrega.
+         O Studio listava "Cria Post", "CRM", "Cria Caixa" e "HUB CRIA" dentro dos
+         R$49,90 — mas esses são MÓDULOS vendidos à parte. E o Pro listava "Cria
+         Stories", que é do Studio. Agora espelha src/lib/plans.ts. -->
+    <div class="planos-grid">
+      <div class="plano plano-pro reveal">
+        <span class="verbo">Organizar</span>
+        <h3>CRIA Essencial</h3>
+        <p class="desc">Pra tirar suas ideias de 4 apps diferentes.</p>
+        <div class="preco">R$19,90<small>/mês</small></div>
+        <ul>
+          <li><b>✓</b> Banco de ideias ilimitado: captura em 5 segundos, nunca mais perde</li>
+          <li><b>✓</b> Kanban da produção: da ideia ao publicado, arrastando</li>
+          <li><b>✓</b> Calendário de conteúdo + tarefas e metas da semana</li>
+          <li><b>✓</b> Brandbook da marca: tom, pilares e persona num lugar só</li>
+          <li><b>✓</b> Link na bio em dois formatos: coluna de links ou mini site, com captura de contato</li>
+          <li><b>✓</b> Dashboard do dia + resumo diário por notificação</li>
+          <li><b>✓</b> Instala como app no celular</li>
+          <li><b>✓</b> 10 gerações de IA/mês pra experimentar</li>
+        </ul>
+        <a href="comprar/essencial.html" class="btn btn-ghost">Assinar o Essencial</a>
+        <a href="https://app.criasocialclub.com.br/signup" class="trial-link">ou teste grátis por 7 dias →</a>
+      </div>
+      <div class="plano plano-studio reveal">
+        <span class="badge">Mais escolhido</span>
+        <span class="verbo" style="color:var(--amarelo)">Criar melhor</span>
+        <h3>CRIA Pro</h3>
+        <p class="desc">Pra quem trava na hora de escrever.</p>
+        <div class="preco">R$32,90<small>/mês</small></div>
+        <ul>
+          <li><b>✓</b> Tudo do Essencial, e mais:</li>
+          <li><b>✓</b> 150 gerações de IA/mês: legenda, roteiro e gancho no SEU tom</li>
+          <li><b>✓</b> Avaliação de gancho: nota antes de postar</li>
+          <li><b>✓</b> Insights reais do Instagram, post a post</li>
+          <li><b>✓</b> Melhor dia e horário pelo SEU histórico</li>
+          <li><b>✓</b> Meu Feed: a prévia do feed antes de publicar</li>
+          <li><b>✓</b> Tendências do seu nicho, atualizadas</li>
+          <li><b>✓</b> Media Kit automático + relatórios dos seus números</li>
+        </ul>
+        <a href="comprar/pro.html" class="btn btn-laranja">Assinar o Pro</a>
+        <a href="https://app.criasocialclub.com.br/signup" class="trial-link" style="color:var(--creme)">ou teste grátis por 7 dias →</a>
+      </div>
+      <div class="plano plano-pro reveal">
+        <span class="verbo">O CRIA monta por você</span>
+        <h3>CRIA Studio</h3>
+        <p class="desc">Pra quem vive de conteúdo e não tem tempo.</p>
+        <div class="preco">R$49,90<small>/mês</small></div>
+        <ul>
+          <li><b>✓</b> Tudo do Pro, e mais:</li>
+          <li><b>✓</b> Cria Plano: o mês inteiro montado, post a post, com data e hora</li>
+          <li><b>✓</b> Cria Stories: a semana de stories planejada, com roteiro</li>
+          <li><b>✓</b> Cria Prompter: teleprompter pra gravar olhando pra câmera</li>
+          <li><b>✓</b> Collabs: funil de publis com proposta e cachê</li>
+          <li><b>✓</b> Estúdio: o prompt da arte de cada post</li>
+          <li><b>✓</b> 500 gerações de IA/mês</li>
+        </ul>
+        <a href="comprar/studio.html" class="btn btn-ghost">Assinar o Studio</a>
+        <a href="https://app.criasocialclub.com.br/signup" class="trial-link">ou teste grátis por 7 dias →</a>
+      </div>
+    </div>
+    <div class="garantia reveal">
+      <h3><svg class="svgi svgi-inline" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg> 7 dias grátis, risco zero</h3>
+      <p>Teste o CRIA no seu trabalho de verdade. Se não sentir o alívio de ter tudo num lugar só, cancele dentro do app: sem ligação, sem formulário, sem culpa.</p>
+    </div>
+  </div>
+</section>
+
+<section id="criakut">
+  <div class="ck-blob" style="width:420px;height:380px;background:var(--laranja);opacity:.9;right:-160px;top:-170px"></div>
+  <div class="ck-blob" style="width:260px;height:240px;background:var(--rosa);left:-110px;bottom:-90px"></div>
+  <div class="container ck-grid">
+    <div class="reveal">
+      <span class="kicker" style="background:var(--ink);color:var(--amarelo)">Novidade</span>
+      <h2 class="ck-titulo">Criakut<span class="beta">BETA</span><br><span class="script" style="color:var(--laranja);font-size:.62em;font-weight:400">onde quem cria encontra quem faz</span></h2>
+      <p class="ck-sub">Criadora precisa de editor. Designer precisa de cliente. Social mídia precisa dos dois. O Criakut junta essa gente dentro do Cria, com página, busca e proposta no mesmo lugar.</p>
+      <ul class="ck-lista"><li><span class="ib" style="background:#EA4918"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg></span><span><b>Sua página, do seu jeito</b><small>Capa do Cria ou a sua, foto, "Oi, eu sou a...", serviços com preço e portfólio. Criadora mostra o Instagram e o que procura.</small></span></li><li><span class="ib" style="background:#0061EE"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span><span><b>Ache gente boa perto de você</b><small>Busca por função, cidade, estilo e nicho. Dá pra marcar mais de uma função: designer e editora, por exemplo.</small></span></li><li><span class="ib" style="background:#01A652"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></span><span><b>Mural de trabalhos</b><small>Publique o que precisa (12 reels por mês, um carrossel avulso) e receba propostas de quem faz.</small></span></li><li><span class="ib" style="background:#FF77B9"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg></span><span><b>Proposta e conversa no Cria</b><small>Valor, prazo e entrega combinados num lugar só, sem expor seu WhatsApp. Depois, avaliação dos dois lados.</small></span></li><li><span class="ib" style="background:#FFCF03"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span><b>Comunidades por nicho</b><small>Quanto cobrar, reels que funcionam, publi e marcas. Tópicos pra trocar com quem vive o mesmo.</small></span></li></ul>
+      <div class="ck-ctas">
+        <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Criar minha página no Criakut</a>
+        <p class="micro">Vem junto com a sua conta do Cria durante o beta.</p>
+      </div>
+    </div>
+    <div class="ck-palco reveal" aria-hidden="true">
+      <div class="ck-pagina">
+        <div class="capa"><svg viewBox="0 0 480 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="480" height="200" fill="#FDE6F1"/><path d="M0.5 0C0.78 0 1 0.2 1 0.48C1 0.78 0.76 1 0.46 1C0.18 1 0 0.8 0 0.52C0 0.22 0.22 0 0.5 0Z" fill="#FF77B9" opacity=".8" transform="translate(-60 -40) rotate(10) scale(200 170)"/><path d="M0.5 0C0.78 0 1 0.2 1 0.48C1 0.78 0.76 1 0.46 1C0.18 1 0 0.8 0 0.52C0 0.22 0.22 0 0.5 0Z" fill="#FFCF03" opacity=".6" transform="translate(330 120) rotate(-14) scale(190 160)"/><g opacity="0" transform="rotate(5 240 100)"><rect x="192" y="56" width="104" height="96" rx="30" fill="#000" opacity=".13"/><rect x="186" y="48" width="108" height="104" rx="32" fill="#fff"/><rect x="194" y="56" width="92" height="88" rx="25" fill="#FF77B9"/><svg x="216" y="76" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg></g></svg></div>
+        <div class="ck-topo"><div class="ava">LM</div><div><h4>Luana Moraes</h4><div class="fn">Criadora de conteúdo · Balneário Camboriú</div></div></div>
+        <div class="oi"><b>Oi, eu sou a Luana</b>Falo de alimentação sem terrorismo. Procuro editor pra 12 reels por mês.</div>
+        <div class="nums"><div><b>18,4 mil</b>seguidores</div><div><b>3</b>contratações</div><div><b>4,9 ★</b>avaliação</div></div>
+        <div class="serv"><div><span>Procura: Editor de vídeo</span><b>R$ 1.000 a 1.500/mês</b></div><div><span>Procura: Designer</span><b>Avulso</b></div></div>
+      </div>
+      <div class="ck-busca">
+        <div class="barra"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> editor de vídeo · perto de mim</div>
+        <div class="linha"><i style="background:var(--laranja)"></i><span><b>Rafa Pires</b><small>Editor de vídeo · Itajaí</small></span><em>★ 5,0</em></div>
+        <div class="linha"><i style="background:var(--verde)"></i><span><b>Carol Menezes</b><small>Designer · Editora · Itajaí</small></span><em>★ 4,9</em></div>
+      </div>
+      <div class="ck-coms"><div class="ck-com"><svg viewBox="0 0 480 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="480" height="200" fill="#FFF3D6"/><path d="M0.5 0C0.78 0 1 0.2 1 0.48C1 0.78 0.76 1 0.46 1C0.18 1 0 0.8 0 0.52C0 0.22 0.22 0 0.5 0Z" fill="#EA4918" opacity=".8" transform="translate(-60 -40) rotate(10) scale(200 170)"/><path d="M0.5 0C0.78 0 1 0.2 1 0.48C1 0.78 0.76 1 0.46 1C0.18 1 0 0.8 0 0.52C0 0.22 0.22 0 0.5 0Z" fill="#0061EE" opacity=".6" transform="translate(330 120) rotate(-14) scale(190 160)"/><g transform="rotate(-6 240 100)"><rect x="192" y="56" width="104" height="96" rx="30" fill="#000" opacity=".13"/><rect x="186" y="48" width="108" height="104" rx="32" fill="#fff"/><rect x="194" y="56" width="92" height="88" rx="25" fill="#EA4918"/><svg x="216" y="76" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></g></svg><span>Reels que funcionam</span></div><div class="ck-com"><svg viewBox="0 0 480 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="480" height="200" fill="#E0F1E4"/><path d="M0.5 0C0.78 0 1 0.2 1 0.48C1 0.78 0.76 1 0.46 1C0.18 1 0 0.8 0 0.52C0 0.22 0.22 0 0.5 0Z" fill="#01A652" opacity=".8" transform="translate(-60 -40) rotate(10) scale(200 170)"/><path d="M0.5 0C0.78 0 1 0.2 1 0.48C1 0.78 0.76 1 0.46 1C0.18 1 0 0.8 0 0.52C0 0.22 0.22 0 0.5 0Z" fill="#FFCF03" opacity=".6" transform="translate(330 120) rotate(-14) scale(190 160)"/><g transform="rotate(-6 240 100)"><rect x="192" y="56" width="104" height="96" rx="30" fill="#000" opacity=".13"/><rect x="186" y="48" width="108" height="104" rx="32" fill="#fff"/><rect x="194" y="56" width="92" height="88" rx="25" fill="#01A652"/><svg x="216" y="76" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg></g></svg><span>Quanto cobrar</span></div><div class="ck-com"><svg viewBox="0 0 480 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="480" height="200" fill="#FFF3D6"/><path d="M0.5 0C0.78 0 1 0.2 1 0.48C1 0.78 0.76 1 0.46 1C0.18 1 0 0.8 0 0.52C0 0.22 0.22 0 0.5 0Z" fill="#0061EE" opacity=".8" transform="translate(-60 -40) rotate(10) scale(200 170)"/><path d="M0.5 0C0.78 0 1 0.2 1 0.48C1 0.78 0.76 1 0.46 1C0.18 1 0 0.8 0 0.52C0 0.22 0.22 0 0.5 0Z" fill="#FFCF03" opacity=".6" transform="translate(330 120) rotate(-14) scale(190 160)"/><g transform="rotate(-6 240 100)"><rect x="192" y="56" width="104" height="96" rx="30" fill="#000" opacity=".13"/><rect x="186" y="48" width="108" height="104" rx="32" fill="#fff"/><rect x="194" y="56" width="92" height="88" rx="25" fill="#0061EE"/><svg x="216" y="76" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></g></svg><span>Publi e marcas</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="gestor-teaser" style="background:var(--creme);padding:0 0 55px">
+  <div class="container">
+    <a href="social-media.html" class="gestor-banner reveal">
+      <div>
+        <span class="kicker" style="background:var(--amarelo);color:var(--ink)">Você gerencia clientes?</span>
+        <h2 style="color:#fff">Conheça o lado social media do CRIA</h2>
+        <p style="color:rgba(255,255,255,.85);max-width:52ch">Cria Post, Cria Gestão, Cria Caixa, Cria Captação, Cria Radar e o Modo Agência. A conta é grátis; você ativa só os módulos que usar, cada um com o seu preço. A operação inteira de quem vive de social media, numa página só.</p>
+      </div>
+      <span class="gestor-arrow">→</span>
+    </a>
+  </div>
+</section>
+
+<section id="explorar"><div class="container">
+  <div class="ex-caixa reveal">
+    <div><span class="kicker" style="background:var(--azul)">Pra quem gosta de ver tudo</span>
+    <h2>Quer conhecer o Cria <span class="script" style="color:var(--laranja);font-size:1.1em;font-weight:400">por dentro</span> antes de testar?</h2>
+    <p>Abre o que te interessa. Ou pula direto pros 7 dias grátis, que é onde dá pra sentir de verdade.</p></div>
+    <div class="ex-links"><a href="#telas">As telas, uma por uma</a><a href="#func">Tudo que dá pra fazer</a><a href="#tudo">O que vem em cada plano</a><a href="#dispositivos">Celular e computador</a><a href="funcionalidades.html">Página de funcionalidades</a></div>
+  </div>
+</div></section>
+
+<section id="telas" data-dobra="Ver as telas" style="--dobra-h:560px;--dobra-hm:260px;background:var(--creme);position:relative;overflow:hidden">
   <div class="container">
     <div class="ciclo-head reveal">
       <span class="kicker" style="background:var(--verde)">E tem mais</span>
@@ -616,24 +984,221 @@ body.nav2-travado #sticky-cta{display:none!important}
   </div>
 </section>
 
-<!-- Sem data-dobra: era só decoração + CTA, e o botão "Ver o universo do CRIA"
-     abria pra não mostrar nada de útil (feedback do Walter, 04/09). -->
-<section id="adesivos">
-  <img class="ade-sticker ade-s1" src="stickers/selo-da-ideia-ao-post-rosa.png" alt="" aria-hidden="true" loading="lazy" decoding="async">
-  <img class="ade-sticker ade-s2" src="stickers/criatura-lampada.png" alt="" aria-hidden="true" loading="lazy" decoding="async">
-  <img class="ade-sticker ade-s3" src="stickers/selo-social-club-azul.png" alt="" aria-hidden="true" loading="lazy" decoding="async">
-  <img class="ade-sticker ade-s4" src="stickers/selo-sem-formula.png" alt="" aria-hidden="true" loading="lazy" decoding="async">
-  <img class="ade-sticker ade-s5" src="stickers/selo-social-club-amarelo.png" alt="" aria-hidden="true" loading="lazy" decoding="async">
-  <img class="ade-sticker ade-s6" src="stickers/selo-da-ideia-ao-post-amarelo.png" alt="" aria-hidden="true" loading="lazy" decoding="async">
-  <img class="ade-sticker ade-s7" src="stickers/selo-social-club-verde.png" alt="" aria-hidden="true" loading="lazy" decoding="async">
-  <div class="ade-inner">
-    <h2>Do caos da sua cabeça <span class="hl">ao post publicado</span></h2>
-    <p>Ideias, planejamento, produção e constância no mesmo lugar, no celular e no computador. Feito pra quem cria de verdade.</p>
-    <div class="ade-cta">
-      <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Começar meus 7 dias grátis</a>
+<section id="func" data-dobra="Ver tudo que dá pra fazer" style="--dobra-h:520px;--dobra-hm:210px;position:relative;overflow:hidden">
+  <!-- Formas orgânicas do brandbook flutuando atrás dos pilares -->
+  <div class="func-blobs" aria-hidden="true">
+    <span class="fblob" style="width:340px;height:320px;top:-90px;left:-110px;background:var(--rosa);border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.16;animation-duration:16s"></span>
+    <span class="fblob" style="width:230px;height:220px;top:30%;right:-80px;background:var(--amarelo);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.2;animation-duration:13s"></span>
+    <span class="fblob" style="width:150px;height:145px;bottom:12%;left:5%;background:var(--azul);border-radius:45% 55% 60% 40%/55% 45% 55% 45%;opacity:.12;animation-duration:19s"></span>
+    <span class="fblob" style="width:95px;height:95px;bottom:-30px;right:22%;background:var(--verde);border-radius:50% 50% 45% 55%/60% 40% 60% 40%;opacity:.15;animation-duration:11s"></span>
+    <span class="fblob" style="width:60px;height:58px;top:14%;left:44%;background:var(--laranja);border-radius:60% 40% 55% 45%/45% 55% 45% 55%;opacity:.14;animation-duration:15s"></span>
+    <span class="fblob" style="top:8%;right:16%;animation-duration:16s"><img class="mark-ink" src="cria-icone.webp" alt="" style="width:64px;transform:rotate(10deg)" loading="lazy" decoding="async"></span>
+    <span class="fblob" style="bottom:6%;right:40%;animation-duration:12s"><img class="mark-ink" src="cria-icone.webp" alt="" style="width:42px;transform:rotate(-8deg)" loading="lazy" decoding="async"></span>
+  </div>
+  <div class="container" style="position:relative;z-index:1">
+    <div class="ciclo-head reveal">
+      <span class="kicker" style="background:var(--rosa)">Por dentro</span>
+      <h2>CRIA inteiro, aberto, <span class="script" style="color:var(--azul);font-size:1.15em">na sua mão</span></h2>
+    </div>
+    <!-- 15 cards iguais viravam paredão de informação. Agora são 3 pilares
+         (planejar → criar → crescer): cada um com UM destaque bem vendido e o
+         resto em chips escaneáveis. Blobs orgânicos animados no fundo, que são
+         o elemento de marca do brandbook. -->
+    <div class="pilares">
+      <article class="pilar reveal-scale" style="--pc:var(--azul);--tilt:-1.1deg">
+        <span class="pilar-word script">planejar</span>
+        <span class="pilar-badge"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>
+        <span class="pilar-tag">estrela do Studio</span>
+        <h3>Cria Plano: seu mês montado pra você</h3>
+        <p>Chega de domingo à noite olhando o calendário vazio. O método monta sua semana ou seu mês inteiro com os seus pilares, seu brandbook e o que já performou. Você edita e sai produzindo.</p>
+        <div class="pilar-mais">
+          <span class="pilar-chip"><i></i>Cria Stories: plano semanal</span>
+          <span class="pilar-chip"><i></i>Calendário arrasta e solta</span>
+          <span class="pilar-chip"><i></i>Kanban "Criando"</span>
+          <span class="pilar-chip"><i></i>Banco de ideias + Biblioteca</span>
+          <span class="pilar-chip"><i></i>Tendências do seu nicho</span>
+          <span class="pilar-chip"><i></i>Dashboard do dia</span>
+          <span class="pilar-chip"><i></i>Tarefas e metas</span>
+        </div>
+      </article>
+      <article class="pilar reveal-scale" style="--pc:var(--laranja);--tilt:.9deg">
+        <span class="pilar-word script">criar</span>
+        <span class="pilar-badge"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg></span>
+        <h3>Escrita guiada, no SEU tom</h3>
+        <p>Legendas, roteiros, ideias e nota de gancho, tudo nascendo do seu brandbook, da sua persona e do seu tom de voz. Estrutura pronta: você ajusta em minutos, em vez de começar do zero.</p>
+        <div class="pilar-mais">
+          <span class="pilar-chip"><i></i>Brandbook, moodboard e persona</span>
+          <span class="pilar-chip"><i></i>Avaliação de gancho</span>
+          <span class="pilar-chip"><i></i>Estúdio: o prompt da arte na sua marca</span>
+          <span class="pilar-chip"><i></i>Roteiros de Reels</span>
+          <span class="pilar-chip"><i></i>Cria Prompter: grave lendo o roteiro</span>
+        </div>
+      </article>
+      <article class="pilar reveal-scale" style="--pc:var(--verde);--tilt:-.7deg">
+        <span class="pilar-word script">crescer</span>
+        <span class="pilar-badge"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg></span>
+        <h3>Insights reais do Instagram</h3>
+        <p>Alcance, salvamentos e compartilhamentos post a post, com o melhor horário pra postar. Você para de adivinhar e passa a repetir o que funciona.</p>
+        <div class="pilar-mais">
+          <span class="pilar-chip"><i></i>Meu Feed: prévia da grade</span>
+          <span class="pilar-chip"><i></i>Media Kit automático</span>
+          <span class="pilar-chip"><i></i>Relatórios de uma página</span>
+          <span class="pilar-chip"><i></i>Collabs: publis e cachês</span>
+          <span class="pilar-chip"><i></i>Link in bio</span>
+          <span class="pilar-chip"><i></i>Histórico que recicla</span>
+          <span class="pilar-chip"><i></i>Melhor horário pra postar</span>
+        </div>
+      </article>
+    </div>
+    <p class="pilares-nota reveal"><span class="script" style="color:var(--laranja);font-size:1.3em">e ainda...</span> notificações com resumo diário, seus arquivos na nuvem e instala como app no celular.<br><a href="funcionalidades.html" style="display:inline-block;margin-top:10px;font-family:var(--font-display);font-weight:700;color:var(--azul);text-decoration:underline;text-underline-offset:3px">Ver cada ferramenta a fundo →</a></p>
+  </div>
+</section>
+
+<section id="tudo" data-dobra="Ver o que vem em cada plano" style="--dobra-h:520px;--dobra-hm:210px;background:var(--creme);padding:0 0 50px;position:relative;overflow:hidden">
+  <div class="func-blobs" aria-hidden="true">
+    <span class="fblob" style="width:260px;height:250px;top:8%;right:-90px;background:var(--verde);border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.13;animation-duration:17s"></span>
+    <span class="fblob" style="width:170px;height:165px;bottom:6%;left:-60px;background:var(--rosa);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.15;animation-duration:12s"></span>
+    <span class="fblob" style="width:80px;height:78px;top:20%;left:12%;background:var(--amarelo);border-radius:60% 40% 55% 45%/45% 55% 45% 55%;opacity:.2;animation-duration:14s"></span>
+    <span class="fblob" style="top:52%;left:47%;animation-duration:15s"><img class="mark-ink" src="cria-icone.webp" alt="" style="width:52px;transform:rotate(7deg)" loading="lazy" decoding="async"></span>
+  </div>
+  <div class="container" style="position:relative;z-index:1">
+    <div class="ciclo-head reveal">
+      <span class="kicker" style="background:var(--verde)">Sem letra miúda</span>
+      <h2>Tudo que vem dentro, <span class="script" style="color:var(--laranja);font-size:1.15em">sem esconder nada</span></h2>
+    </div>
+    <div class="tudo-grid">
+      <div class="tudo-col reveal" style="--tc:var(--azul);--tilt:-.6deg">
+        <!-- Cada item diz em que plano está: vender o que não entrega é reembolso. -->
+        <div class="tudo-head">
+          <h3>Pro criador</h3>
+          <span class="tudo-sub">o que entra em cada plano</span>
+        </div>
+        <div class="tudo-tier" style="--tt:var(--verde)">
+          <div class="tier-top"><span class="tier-nome script">Essencial</span><span class="tier-preco">R$19,90/mês</span></div>
+          <div class="chips">
+            <span class="chip"><i></i>Dashboard do dia</span>
+            <span class="chip"><i></i>Banco de ideias</span>
+            <span class="chip"><i></i>Kanban "Criando"</span>
+            <span class="chip"><i></i>Calendário de conteúdo</span>
+            <span class="chip"><i></i>Tarefas e metas</span>
+            <span class="chip"><i></i>Brandbook da marca</span>
+            <span class="chip"><i></i>Link in bio</span>
+            <span class="chip"><i></i>Notificações + resumo diário</span>
+            <span class="chip"><i></i>Instala como app no celular</span>
+          </div>
+        </div>
+        <div class="tudo-tier" style="--tt:var(--azul)">
+          <div class="tier-top"><span class="tier-nome script">Pro</span><span class="tier-preco">R$32,90/mês</span><span class="tier-extra">tudo do Essencial +</span></div>
+          <div class="chips">
+            <span class="chip"><i></i>Legendas e roteiros no seu tom</span>
+            <span class="chip"><i></i>Avaliação de gancho</span>
+            <span class="chip"><i></i>Sugestões de ideias</span>
+            <span class="chip"><i></i>Insights reais do Instagram</span>
+            <span class="chip"><i></i>Meu Feed (preview)</span>
+            <span class="chip"><i></i>Melhor horário pra postar</span>
+            <span class="chip"><i></i>Tendências do seu nicho</span>
+            <span class="chip"><i></i>Media Kit automático</span>
+            <span class="chip"><i></i>Relatórios</span>
+            <span class="chip"><i></i>Estúdio: prompt da arte</span>
+          </div>
+        </div>
+        <div class="tudo-tier" style="--tt:var(--laranja)">
+          <div class="tier-top"><span class="tier-nome script">Studio</span><span class="tier-preco">R$49,90/mês</span><span class="tier-extra">tudo do Pro +</span></div>
+          <div class="chips">
+            <span class="chip"><i></i>Cria Plano: seu mês montado</span>
+            <span class="chip"><i></i>Cria Stories: plano semanal</span>
+            <span class="chip"><i></i>Cria Prompter: teleprompter de gravação</span>
+            <span class="chip"><i></i>Collabs e publis</span>
+          </div>
+        </div>
+      </div>
+      <div class="tudo-col tudo-gestor reveal" style="--tc:var(--laranja);--tilt:.55deg">
+        <!-- O lado gestor NÃO vem no plano do criador: são módulos à parte. -->
+        <div class="tudo-head">
+          <h3>Pro social media</h3>
+          <span class="tudo-sub">a conta é grátis · cada módulo é à parte</span>
+        </div>
+        <div class="tudo-tier" style="--tt:var(--laranja)">
+          <div class="tier-top"><span class="tier-nome script">Cria Post</span><span class="tier-preco">R$19,90/mês</span></div>
+          <div class="chips">
+            <span class="chip"><i></i>Aprovação por link, sem cadastro</span>
+            <span class="chip"><i></i>Portal com a marca de cada cliente</span>
+            <span class="chip"><i></i>Calendário e relatório pro cliente</span>
+            <span class="chip"><i></i>Você vê quando o cliente visualizou</span>
+            <span class="chip"><i></i>Importa posts do CRIA do cliente</span>
+            <span class="chip"><i></i>Relatório em 1 clique + WhatsApp</span>
+          </div>
+        </div>
+        <div class="tudo-tier" style="--tt:var(--rosa)">
+          <div class="tier-top"><span class="tier-nome script">Cria Gestão</span><span class="tier-preco">R$29,90/mês</span></div>
+          <div class="chips">
+            <span class="chip"><i></i>Ficha completa do cliente</span>
+            <span class="chip"><i></i>Pipeline de vendas</span>
+            <span class="chip"><i></i>Contratos e propostas</span>
+            <span class="chip"><i></i>Tarefas e calendário por cliente</span>
+          </div>
+        </div>
+        <div class="tudo-tier" style="--tt:var(--verde)">
+          <div class="tier-top"><span class="tier-nome script">Cria Caixa</span><span class="tier-preco">R$24,90/mês</span></div>
+          <div class="chips">
+            <span class="chip"><i></i>Margem de lucro por cliente</span>
+            <span class="chip"><i></i>Imposto pelo seu regime</span>
+            <span class="chip"><i></i>Recebimentos, custos e MRR</span>
+            <span class="chip"><i></i>Previsão do mês + vencimentos</span>
+          </div>
+        </div>
+        <div class="tudo-tier" style="--tt:var(--amarelo)">
+          <div class="tier-top"><span class="tier-nome script">Cria Radar</span><span class="tier-preco">R$49,90/mês</span></div>
+          <div class="chips">
+            <span class="chip"><i></i>O que os concorrentes do seu cliente postam</span>
+            <span class="chip"><i></i>Vira ideia de post pronta pra reunião</span>
+          </div>
+        </div>
+        <a href="social-media.html" class="tudo-link">ver o lado social media em detalhe →</a>
+      </div>
     </div>
   </div>
 </section>
+
+<section id="dispositivos">
+  <div class="container">
+    <div class="ciclo-head reveal">
+      <span class="kicker" style="background:var(--azul);color:var(--creme)">No bolso e na mesa</span>
+      <h2>Funciona no celular <span class="script" style="color:var(--laranja);font-size:1.15em">e no computador</span></h2>
+      <p style="margin-top:12px;opacity:.8">Abre direto no navegador, sem baixar nada de loja. E no celular vira aplicativo de verdade, com ícone e notificações.</p>
+    </div>
+    <div class="disp-grid">
+      <div class="disp-card disp-azul reveal">
+        <span class="icon"><svg class="svgi" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg></span>
+        <h3>No celular, vira app</h3>
+        <p>Abre o CRIA no navegador, toca em "Adicionar à tela de início" e pronto: ícone no celular, tela cheia, do jeito de aplicativo. Ideia que chega na rua entra na hora.</p>
+      </div>
+      <div class="disp-card disp-amarelo reveal">
+        <span class="icon"><svg class="svgi" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
+        <h3>Notificações que te puxam de volta</h3>
+        <p>Post do dia, prazo chegando, aprovação que caiu: o CRIA te avisa no celular. Constância deixa de depender só da sua memória.</p>
+      </div>
+      <div class="disp-card disp-verde reveal">
+        <span class="icon"><svg class="svgi" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg></span>
+        <h3>No computador, tela cheia</h3>
+        <p>Mesma conta, sem sincronizar nada: quadro, calendário e relatórios com espaço de sobra pra sentar e planejar a semana.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+<!-- ==================== O RESTO DO ESTÚDIO ====================
+     Depois do motor (brandbook > ideia > pauta > mês), estas são as telas que
+     sustentam o dia a dia. Ritmo diferente de propósito: dois destaques
+     grandes e o resto numa faixa que arrasta, pra não virar catálogo de nove
+     blocos idênticos empilhados. -->
+
+
+<!-- Sem data-dobra: era só decoração + CTA, e o botão "Ver o universo do CRIA"
+     abria pra não mostrar nada de útil (feedback do Walter, 04/09). -->
+
 
 <style>
 /* ---------- ciclo CRIA (pinned) ---------- */
@@ -912,75 +1477,11 @@ html,body{overflow-x:clip}
      e não entregava produto. A mesma história é contada melhor pelo #motor
      (brandbook > ideia > pauta > mês montado), com os prints reais. -->
 
-<section id="func" data-dobra="Ver tudo que dá pra fazer" style="position:relative;overflow:hidden">
-  <!-- Formas orgânicas do brandbook flutuando atrás dos pilares -->
-  <div class="func-blobs" aria-hidden="true">
-    <span class="fblob" style="width:340px;height:320px;top:-90px;left:-110px;background:var(--rosa);border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.16;animation-duration:16s"></span>
-    <span class="fblob" style="width:230px;height:220px;top:30%;right:-80px;background:var(--amarelo);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.2;animation-duration:13s"></span>
-    <span class="fblob" style="width:150px;height:145px;bottom:12%;left:5%;background:var(--azul);border-radius:45% 55% 60% 40%/55% 45% 55% 45%;opacity:.12;animation-duration:19s"></span>
-    <span class="fblob" style="width:95px;height:95px;bottom:-30px;right:22%;background:var(--verde);border-radius:50% 50% 45% 55%/60% 40% 60% 40%;opacity:.15;animation-duration:11s"></span>
-    <span class="fblob" style="width:60px;height:58px;top:14%;left:44%;background:var(--laranja);border-radius:60% 40% 55% 45%/45% 55% 45% 55%;opacity:.14;animation-duration:15s"></span>
-    <span class="fblob" style="top:8%;right:16%;animation-duration:16s"><img class="mark-ink" src="cria-icone.webp" alt="" style="width:64px;transform:rotate(10deg)" loading="lazy" decoding="async"></span>
-    <span class="fblob" style="bottom:6%;right:40%;animation-duration:12s"><img class="mark-ink" src="cria-icone.webp" alt="" style="width:42px;transform:rotate(-8deg)" loading="lazy" decoding="async"></span>
-  </div>
-  <div class="container" style="position:relative;z-index:1">
-    <div class="ciclo-head reveal">
-      <span class="kicker" style="background:var(--rosa)">Por dentro</span>
-      <h2>CRIA inteiro, aberto, <span class="script" style="color:var(--azul);font-size:1.15em">na sua mão</span></h2>
-    </div>
-    <!-- 15 cards iguais viravam paredão de informação. Agora são 3 pilares
-         (planejar → criar → crescer): cada um com UM destaque bem vendido e o
-         resto em chips escaneáveis. Blobs orgânicos animados no fundo, que são
-         o elemento de marca do brandbook. -->
-    <div class="pilares">
-      <article class="pilar reveal-scale" style="--pc:var(--azul);--tilt:-1.1deg">
-        <span class="pilar-word script">planejar</span>
-        <span class="pilar-badge"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>
-        <span class="pilar-tag">estrela do Studio</span>
-        <h3>Cria Plano: seu mês montado pra você</h3>
-        <p>Chega de domingo à noite olhando o calendário vazio. O método monta sua semana ou seu mês inteiro com os seus pilares, seu brandbook e o que já performou. Você edita e sai produzindo.</p>
-        <div class="pilar-mais">
-          <span class="pilar-chip"><i></i>Cria Stories: plano semanal</span>
-          <span class="pilar-chip"><i></i>Calendário arrasta e solta</span>
-          <span class="pilar-chip"><i></i>Kanban "Criando"</span>
-          <span class="pilar-chip"><i></i>Banco de ideias + Biblioteca</span>
-          <span class="pilar-chip"><i></i>Tendências do seu nicho</span>
-          <span class="pilar-chip"><i></i>Dashboard do dia</span>
-          <span class="pilar-chip"><i></i>Tarefas e metas</span>
-        </div>
-      </article>
-      <article class="pilar reveal-scale" style="--pc:var(--laranja);--tilt:.9deg">
-        <span class="pilar-word script">criar</span>
-        <span class="pilar-badge"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg></span>
-        <h3>Escrita guiada, no SEU tom</h3>
-        <p>Legendas, roteiros, ideias e nota de gancho, tudo nascendo do seu brandbook, da sua persona e do seu tom de voz. Estrutura pronta: você ajusta em minutos, em vez de começar do zero.</p>
-        <div class="pilar-mais">
-          <span class="pilar-chip"><i></i>Brandbook, moodboard e persona</span>
-          <span class="pilar-chip"><i></i>Avaliação de gancho</span>
-          <span class="pilar-chip"><i></i>Estúdio: o prompt da arte na sua marca</span>
-          <span class="pilar-chip"><i></i>Roteiros de Reels</span>
-          <span class="pilar-chip"><i></i>Cria Prompter: grave lendo o roteiro</span>
-        </div>
-      </article>
-      <article class="pilar reveal-scale" style="--pc:var(--verde);--tilt:-.7deg">
-        <span class="pilar-word script">crescer</span>
-        <span class="pilar-badge"><svg class="svgi svgi-md" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg></span>
-        <h3>Insights reais do Instagram</h3>
-        <p>Alcance, salvamentos e compartilhamentos post a post, com o melhor horário pra postar. Você para de adivinhar e passa a repetir o que funciona.</p>
-        <div class="pilar-mais">
-          <span class="pilar-chip"><i></i>Meu Feed: prévia da grade</span>
-          <span class="pilar-chip"><i></i>Media Kit automático</span>
-          <span class="pilar-chip"><i></i>Relatórios de uma página</span>
-          <span class="pilar-chip"><i></i>Collabs: publis e cachês</span>
-          <span class="pilar-chip"><i></i>Link in bio</span>
-          <span class="pilar-chip"><i></i>Histórico que recicla</span>
-          <span class="pilar-chip"><i></i>Melhor horário pra postar</span>
-        </div>
-      </article>
-    </div>
-    <p class="pilares-nota reveal"><span class="script" style="color:var(--laranja);font-size:1.3em">e ainda...</span> notificações com resumo diário, seus arquivos na nuvem e instala como app no celular.<br><a href="funcionalidades.html" style="display:inline-block;margin-top:10px;font-family:var(--font-display);font-weight:700;color:var(--azul);text-decoration:underline;text-underline-offset:3px">Ver cada ferramenta a fundo →</a></p>
-  </div>
-</section>
+
+
+
+
+
 <style>
 /* ===== Pilares (planejar / criar / crescer) ===== */
 .pilares{display:grid;grid-template-columns:repeat(3,1fr);gap:30px;margin-top:40px}
@@ -1004,111 +1505,7 @@ html,body{overflow-x:clip}
 </style>
 
 <!-- ==================== TUDO QUE VEM DENTRO ==================== -->
-<section id="tudo" data-dobra="Ver a tabela completa" style="background:var(--creme);padding:0 0 50px;position:relative;overflow:hidden">
-  <div class="func-blobs" aria-hidden="true">
-    <span class="fblob" style="width:260px;height:250px;top:8%;right:-90px;background:var(--verde);border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.13;animation-duration:17s"></span>
-    <span class="fblob" style="width:170px;height:165px;bottom:6%;left:-60px;background:var(--rosa);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.15;animation-duration:12s"></span>
-    <span class="fblob" style="width:80px;height:78px;top:20%;left:12%;background:var(--amarelo);border-radius:60% 40% 55% 45%/45% 55% 45% 55%;opacity:.2;animation-duration:14s"></span>
-    <span class="fblob" style="top:52%;left:47%;animation-duration:15s"><img class="mark-ink" src="cria-icone.webp" alt="" style="width:52px;transform:rotate(7deg)" loading="lazy" decoding="async"></span>
-  </div>
-  <div class="container" style="position:relative;z-index:1">
-    <div class="ciclo-head reveal">
-      <span class="kicker" style="background:var(--verde)">Sem letra miúda</span>
-      <h2>Tudo que vem dentro, <span class="script" style="color:var(--laranja);font-size:1.15em">sem esconder nada</span></h2>
-    </div>
-    <div class="tudo-grid">
-      <div class="tudo-col reveal" style="--tc:var(--azul);--tilt:-.6deg">
-        <!-- Cada item diz em que plano está: vender o que não entrega é reembolso. -->
-        <div class="tudo-head">
-          <h3>Pro criador</h3>
-          <span class="tudo-sub">o que entra em cada plano</span>
-        </div>
-        <div class="tudo-tier" style="--tt:var(--verde)">
-          <div class="tier-top"><span class="tier-nome script">Essencial</span><span class="tier-preco">R$19,90/mês</span></div>
-          <div class="chips">
-            <span class="chip"><i></i>Dashboard do dia</span>
-            <span class="chip"><i></i>Banco de ideias</span>
-            <span class="chip"><i></i>Kanban "Criando"</span>
-            <span class="chip"><i></i>Calendário de conteúdo</span>
-            <span class="chip"><i></i>Tarefas e metas</span>
-            <span class="chip"><i></i>Brandbook da marca</span>
-            <span class="chip"><i></i>Link in bio</span>
-            <span class="chip"><i></i>Notificações + resumo diário</span>
-            <span class="chip"><i></i>Instala como app no celular</span>
-          </div>
-        </div>
-        <div class="tudo-tier" style="--tt:var(--azul)">
-          <div class="tier-top"><span class="tier-nome script">Pro</span><span class="tier-preco">R$32,90/mês</span><span class="tier-extra">tudo do Essencial +</span></div>
-          <div class="chips">
-            <span class="chip"><i></i>Legendas e roteiros no seu tom</span>
-            <span class="chip"><i></i>Avaliação de gancho</span>
-            <span class="chip"><i></i>Sugestões de ideias</span>
-            <span class="chip"><i></i>Insights reais do Instagram</span>
-            <span class="chip"><i></i>Meu Feed (preview)</span>
-            <span class="chip"><i></i>Melhor horário pra postar</span>
-            <span class="chip"><i></i>Tendências do seu nicho</span>
-            <span class="chip"><i></i>Media Kit automático</span>
-            <span class="chip"><i></i>Relatórios</span>
-            <span class="chip"><i></i>Estúdio: prompt da arte</span>
-          </div>
-        </div>
-        <div class="tudo-tier" style="--tt:var(--laranja)">
-          <div class="tier-top"><span class="tier-nome script">Studio</span><span class="tier-preco">R$49,90/mês</span><span class="tier-extra">tudo do Pro +</span></div>
-          <div class="chips">
-            <span class="chip"><i></i>Cria Plano: seu mês montado</span>
-            <span class="chip"><i></i>Cria Stories: plano semanal</span>
-            <span class="chip"><i></i>Cria Prompter: teleprompter de gravação</span>
-            <span class="chip"><i></i>Collabs e publis</span>
-          </div>
-        </div>
-      </div>
-      <div class="tudo-col tudo-gestor reveal" style="--tc:var(--laranja);--tilt:.55deg">
-        <!-- O lado gestor NÃO vem no plano do criador: são módulos à parte. -->
-        <div class="tudo-head">
-          <h3>Pro social media</h3>
-          <span class="tudo-sub">a conta é grátis · cada módulo é à parte</span>
-        </div>
-        <div class="tudo-tier" style="--tt:var(--laranja)">
-          <div class="tier-top"><span class="tier-nome script">Cria Post</span><span class="tier-preco">R$19,90/mês</span></div>
-          <div class="chips">
-            <span class="chip"><i></i>Aprovação por link, sem cadastro</span>
-            <span class="chip"><i></i>Portal com a marca de cada cliente</span>
-            <span class="chip"><i></i>Calendário e relatório pro cliente</span>
-            <span class="chip"><i></i>Você vê quando o cliente visualizou</span>
-            <span class="chip"><i></i>Importa posts do CRIA do cliente</span>
-            <span class="chip"><i></i>Relatório em 1 clique + WhatsApp</span>
-          </div>
-        </div>
-        <div class="tudo-tier" style="--tt:var(--rosa)">
-          <div class="tier-top"><span class="tier-nome script">Cria Gestão</span><span class="tier-preco">R$29,90/mês</span></div>
-          <div class="chips">
-            <span class="chip"><i></i>Ficha completa do cliente</span>
-            <span class="chip"><i></i>Pipeline de vendas</span>
-            <span class="chip"><i></i>Contratos e propostas</span>
-            <span class="chip"><i></i>Tarefas e calendário por cliente</span>
-          </div>
-        </div>
-        <div class="tudo-tier" style="--tt:var(--verde)">
-          <div class="tier-top"><span class="tier-nome script">Cria Caixa</span><span class="tier-preco">R$24,90/mês</span></div>
-          <div class="chips">
-            <span class="chip"><i></i>Margem de lucro por cliente</span>
-            <span class="chip"><i></i>Imposto pelo seu regime</span>
-            <span class="chip"><i></i>Recebimentos, custos e MRR</span>
-            <span class="chip"><i></i>Previsão do mês + vencimentos</span>
-          </div>
-        </div>
-        <div class="tudo-tier" style="--tt:var(--amarelo)">
-          <div class="tier-top"><span class="tier-nome script">Cria Radar</span><span class="tier-preco">R$49,90/mês</span></div>
-          <div class="chips">
-            <span class="chip"><i></i>O que os concorrentes do seu cliente postam</span>
-            <span class="chip"><i></i>Vira ideia de post pronta pra reunião</span>
-          </div>
-        </div>
-        <a href="social-media.html" class="tudo-link">ver o lado social media em detalhe →</a>
-      </div>
-    </div>
-  </div>
-</section>
+
 <style>
 /* Duas colunas monolíticas de chips viravam parede. Agora cada plano/módulo é
    um mini-card com nome manuscrito na cor dele e preço num selinho torto, na
@@ -1239,18 +1636,7 @@ html,body{overflow-x:clip}
 
 </style>
 
-<section id="gestor-teaser" style="background:var(--creme);padding:0 0 55px">
-  <div class="container">
-    <a href="social-media.html" class="gestor-banner reveal">
-      <div>
-        <span class="kicker" style="background:var(--amarelo);color:var(--ink)">Você gerencia clientes?</span>
-        <h2 style="color:#fff">Conheça o lado social media do CRIA</h2>
-        <p style="color:rgba(255,255,255,.85);max-width:52ch">Cria Post, Cria Gestão, Cria Caixa, Cria Captação, Cria Radar e o Modo Agência. A conta é grátis; você ativa só os módulos que usar, cada um com o seu preço. A operação inteira de quem vive de social media, numa página só.</p>
-      </div>
-      <span class="gestor-arrow">→</span>
-    </a>
-  </div>
-</section>
+
 <style>
 .gestor-banner{display:flex;align-items:center;justify-content:space-between;gap:24px;background:var(--azul);border-radius:var(--radius-lg);padding:44px 48px;transition:transform .3s cubic-bezier(.34,1.56,.64,1),box-shadow .3s;box-shadow:0 8px 0 var(--laranja)}
 .gestor-banner:hover{transform:translateY(-6px);box-shadow:0 14px 0 var(--laranja)}
@@ -1261,58 +1647,10 @@ html,body{overflow-x:clip}
 </style>
 
 <!-- ==================== VERSUS ==================== -->
-<section id="versus" data-dobra="Ver o antes e depois">
-  <!-- Blobs orgânicos + a marca do CRIA flutuando no fundo, estilo carimbo -->
-  <div class="vs-blobs" aria-hidden="true">
-    <span class="fblob" style="width:300px;height:290px;top:-100px;left:-90px;background:#fff;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;opacity:.07;animation-duration:17s"></span>
-    <span class="fblob" style="width:210px;height:200px;bottom:-70px;right:-60px;background:var(--amarelo);border-radius:55% 45% 40% 60%/50% 60% 40% 50%;opacity:.12;animation-duration:13s"></span>
-    <span class="fblob" style="width:120px;height:115px;top:24%;right:10%;background:var(--rosa);border-radius:45% 55% 60% 40%/55% 45% 55% 45%;opacity:.14;animation-duration:15s"></span>
-    <span class="fblob" style="top:14%;left:7%;animation-duration:14s"><img class="vs-mark" src="cria-icone.webp" alt="" style="width:72px;transform:rotate(-11deg)" loading="lazy" decoding="async"></span>
-    <span class="fblob" style="bottom:14%;left:16%;animation-duration:11s"><img class="vs-mark" src="cria-icone.webp" alt="" style="width:44px;transform:rotate(9deg)" loading="lazy" decoding="async"></span>
-    <span class="fblob" style="top:48%;right:4%;animation-duration:18s"><img class="vs-mark" src="cria-icone.webp" alt="" style="width:56px;transform:rotate(14deg)" loading="lazy" decoding="async"></span>
-    <span class="fblob" style="bottom:8%;right:32%;animation-duration:16s"><img class="vs-mark" src="cria-icone.webp" alt="" style="width:36px;transform:rotate(-7deg)" loading="lazy" decoding="async"></span>
-  </div>
-  <div class="container" style="position:relative;z-index:1">
-    <h2 class="reveal">O que muda quando você usa <img class="h2-logo" src="logo-cria-white.webp" alt="o CRIA" decoding="async">? <span class="script">tudo, na real</span></h2>
-    <div class="versus-grid">
-      <div class="vs-card vs-sem reveal">
-        <h3><svg class="svgi svgi-inline" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg> Sem o <img class="h3-logo" src="logo-cria-white.webp" alt="CRIA" decoding="async"></h3>
-        <ul>
-          <li><b>✕</b> Ideias espalhadas em notas, prints e "salvos" do Instagram</li>
-          <li><b>✕</b> Posta quando dá, e "quando dá" é quase nunca</li>
-          <li><b>✕</b> Legenda escrita no desespero, na hora de postar</li>
-          <li><b>✕</b> Sem ideia do que funcionou; repete no achismo</li>
-          <li><b>✕</b> 3-4 assinaturas (~R$200/mês) que não conversam entre si</li>
-        </ul>
-      </div>
-      <div class="vs-card vs-com reveal">
-        <h3><svg class="svgi svgi-inline" style="color:var(--verde)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg> Com o <img class="h3-logo" src="logo-cria.webp" alt="CRIA" decoding="async"></h3>
-        <ul>
-          <li><b>✓</b> Banco de ideias + sugestões no seu tom</li>
-          <li><b>✓</b> Semana inteira planejada no kanban e calendário</li>
-          <li><b>✓</b> Legenda e roteiro prontos em minutos, com o seu brandbook</li>
-          <li><b>✓</b> Insights reais mostrando o que repetir</li>
-          <li><b>✓</b> Uma assinatura só, a partir de R$19,90</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
+
 
 <!-- ==================== STATS ==================== -->
-<section id="stats">
-  <div class="container">
-    <div class="stats-strip reveal">
-      <!-- Os números finais ficam no HTML de propósito: se o GSAP não carregar
-           (adblock) ou a animação não disparar, o visitante vê "200+", nunca "0+".
-           O JS só zera e conta até o alvo QUANDO a animação de fato roda. -->
-      <div class="stat"><div class="n"><span class="counter" data-target="200">200</span>+</div><div class="l">reais/mês economizados vs. o combo de ferramentas*</div></div>
-      <div class="stat"><div class="n"><span class="counter" data-target="6">6</span> em 1</div><div class="l">ideias, plano, escrita, stories, publicação e insights</div></div>
-      <div class="stat"><div class="n"><span class="counter" data-target="7">7</span> dias</div><div class="l">grátis pra testar no seu fluxo real</div></div>
-    </div>
-    <p style="text-align:center;color:rgba(255,255,255,.55);font-size:.8rem;margin-top:18px">*Comparado a planner + organização + app de escrita + link in bio contratados separadamente.</p>
-  </div>
-</section>
+
 
 <!-- Seção de depoimentos removida em 30/07/2026: o conteúdo era ilustrativo, com
      nomes e fotos de banco de imagens. Só volta com depoimento real e autorizado.
@@ -1342,128 +1680,24 @@ html,body{overflow-x:clip}
 .disp-verde .icon{background:rgba(244,239,227,.18);color:var(--creme)}
 @media(max-width:820px){.disp-grid{grid-template-columns:1fr;gap:14px}#dispositivos{padding:52px 0 56px}}
 </style>
-<section id="dispositivos">
-  <div class="container">
-    <div class="ciclo-head reveal">
-      <span class="kicker" style="background:var(--azul);color:var(--creme)">No bolso e na mesa</span>
-      <h2>Funciona no celular <span class="script" style="color:var(--laranja);font-size:1.15em">e no computador</span></h2>
-      <p style="margin-top:12px;opacity:.8">Abre direto no navegador, sem baixar nada de loja. E no celular vira aplicativo de verdade, com ícone e notificações.</p>
-    </div>
-    <div class="disp-grid">
-      <div class="disp-card disp-azul reveal">
-        <span class="icon"><svg class="svgi" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg></span>
-        <h3>No celular, vira app</h3>
-        <p>Abre o CRIA no navegador, toca em "Adicionar à tela de início" e pronto: ícone no celular, tela cheia, do jeito de aplicativo. Ideia que chega na rua entra na hora.</p>
-      </div>
-      <div class="disp-card disp-amarelo reveal">
-        <span class="icon"><svg class="svgi" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
-        <h3>Notificações que te puxam de volta</h3>
-        <p>Post do dia, prazo chegando, aprovação que caiu: o CRIA te avisa no celular. Constância deixa de depender só da sua memória.</p>
-      </div>
-      <div class="disp-card disp-verde reveal">
-        <span class="icon"><svg class="svgi" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg></span>
-        <h3>No computador, tela cheia</h3>
-        <p>Mesma conta, sem sincronizar nada: quadro, calendário e relatórios com espaço de sobra pra sentar e planejar a semana.</p>
-      </div>
-    </div>
-  </div>
-</section>
+
 
 <!-- ==================== PLANOS ==================== -->
-<section id="planos">
-  <div class="selo-marks" aria-hidden="true"><span class="fblob" style="top:6%;left:4%;animation-duration:16s"><img class="selo-w" src="cria-icone.webp" alt="" style="width:58px;transform:rotate(-10deg)" loading="lazy" decoding="async"></span><span class="fblob" style="bottom:6%;right:4%;animation-duration:12s"><img class="selo-w" src="cria-icone.webp" alt="" style="width:42px;transform:rotate(8deg)" loading="lazy" decoding="async"></span></div>
-  <div class="container">
-    <div class="ciclo-head reveal">
-      <span class="kicker" style="background:var(--laranja)">Planos</span>
-      <h2>Quanto custa ter <span class="script" style="color:var(--azul);font-size:1.15em">tudo num lugar?</span></h2>
-    </div>
-    <div class="stack-box reveal">
-      <h3>O que você paga hoje, separado:</h3>
-      <div class="stack-line"><span><span class="x">✕</span> Banco de ideias / segundo cérebro</span><span>~R$ 30/mês</span></div>
-      <div class="stack-line"><span><span class="x">✕</span> Organização (Notion + templates)</span><span>~R$ 50/mês</span></div>
-      <div class="stack-line"><span><span class="x">✕</span> app de escrita</span><span>~R$ 100/mês</span></div>
-      <div class="stack-line"><span><span class="x">✕</span> Link in bio pro</span><span>~R$ 25/mês</span></div>
-      <div class="stack-total"><span>Total do combo</span><span style="color:var(--laranja)">~R$ 205/mês</span></div>
-    </div>
-    <!-- ATENÇÃO: o que estava aqui prometia o que o produto não entrega.
-         O Studio listava "Cria Post", "CRM", "Cria Caixa" e "HUB CRIA" dentro dos
-         R$49,90 — mas esses são MÓDULOS vendidos à parte. E o Pro listava "Cria
-         Stories", que é do Studio. Agora espelha src/lib/plans.ts. -->
-    <div class="planos-grid">
-      <div class="plano plano-pro reveal">
-        <span class="verbo">Organizar</span>
-        <h3>CRIA Essencial</h3>
-        <p class="desc">Pra tirar suas ideias de 4 apps diferentes.</p>
-        <div class="preco">R$19,90<small>/mês</small></div>
-        <ul>
-          <li><b>✓</b> Banco de ideias ilimitado: captura em 5 segundos, nunca mais perde</li>
-          <li><b>✓</b> Kanban da produção: da ideia ao publicado, arrastando</li>
-          <li><b>✓</b> Calendário de conteúdo + tarefas e metas da semana</li>
-          <li><b>✓</b> Brandbook da marca: tom, pilares e persona num lugar só</li>
-          <li><b>✓</b> Link na bio em dois formatos: coluna de links ou mini site, com captura de contato</li>
-          <li><b>✓</b> Dashboard do dia + resumo diário por notificação</li>
-          <li><b>✓</b> Instala como app no celular</li>
-          <li><b>✓</b> 10 gerações de IA/mês pra experimentar</li>
-        </ul>
-        <a href="comprar/essencial.html" class="btn btn-ghost">Assinar o Essencial</a>
-        <a href="https://app.criasocialclub.com.br/signup" class="trial-link">ou teste grátis por 7 dias →</a>
-      </div>
-      <div class="plano plano-studio reveal">
-        <span class="badge">Mais escolhido</span>
-        <span class="verbo" style="color:var(--amarelo)">Criar melhor</span>
-        <h3>CRIA Pro</h3>
-        <p class="desc">Pra quem trava na hora de escrever.</p>
-        <div class="preco">R$32,90<small>/mês</small></div>
-        <ul>
-          <li><b>✓</b> Tudo do Essencial, e mais:</li>
-          <li><b>✓</b> 150 gerações de IA/mês: legenda, roteiro e gancho no SEU tom</li>
-          <li><b>✓</b> Avaliação de gancho: nota antes de postar</li>
-          <li><b>✓</b> Insights reais do Instagram, post a post</li>
-          <li><b>✓</b> Melhor dia e horário pelo SEU histórico</li>
-          <li><b>✓</b> Meu Feed: a prévia do feed antes de publicar</li>
-          <li><b>✓</b> Tendências do seu nicho, atualizadas</li>
-          <li><b>✓</b> Media Kit automático + relatórios dos seus números</li>
-        </ul>
-        <a href="comprar/pro.html" class="btn btn-laranja">Assinar o Pro</a>
-        <a href="https://app.criasocialclub.com.br/signup" class="trial-link" style="color:var(--creme)">ou teste grátis por 7 dias →</a>
-      </div>
-      <div class="plano plano-pro reveal">
-        <span class="verbo">O CRIA monta por você</span>
-        <h3>CRIA Studio</h3>
-        <p class="desc">Pra quem vive de conteúdo e não tem tempo.</p>
-        <div class="preco">R$49,90<small>/mês</small></div>
-        <ul>
-          <li><b>✓</b> Tudo do Pro, e mais:</li>
-          <li><b>✓</b> Cria Plano: o mês inteiro montado, post a post, com data e hora</li>
-          <li><b>✓</b> Cria Stories: a semana de stories planejada, com roteiro</li>
-          <li><b>✓</b> Cria Prompter: teleprompter pra gravar olhando pra câmera</li>
-          <li><b>✓</b> Collabs: funil de publis com proposta e cachê</li>
-          <li><b>✓</b> Estúdio: o prompt da arte de cada post</li>
-          <li><b>✓</b> 500 gerações de IA/mês</li>
-        </ul>
-        <a href="comprar/studio.html" class="btn btn-ghost">Assinar o Studio</a>
-        <a href="https://app.criasocialclub.com.br/signup" class="trial-link">ou teste grátis por 7 dias →</a>
-      </div>
-    </div>
-    <div class="garantia reveal">
-      <h3><svg class="svgi svgi-inline" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg> 7 dias grátis, risco zero</h3>
-      <p>Teste o CRIA no seu trabalho de verdade. Se não sentir o alívio de ter tudo num lugar só, cancele dentro do app: sem ligação, sem formulário, sem culpa.</p>
-    </div>
-  </div>
-</section>
+
 
 <!-- ==================== FAQ ==================== -->
 <section id="faq">
-  <div class="container">
+  <div class="container faq-duas">
     <div class="ciclo-head reveal">
       <span class="kicker" style="background:var(--azul)">Dúvidas</span>
       <h2>Ainda com dúvida? <span class="script" style="color:var(--laranja);font-size:1.15em">a gente responde</span></h2>
+      <p class="faq-mais">Não achou? Escreve pra <a href="mailto:contato@criasocialclub.com.br">contato@criasocialclub.com.br</a>.</p>
     </div>
     <div class="faq-list reveal">
       <div class="faq-item"><button class="faq-q">Preciso de cartão pra testar?<span class="plus">+</span></button><div class="faq-a"><p>Você tem 7 dias grátis com acesso completo. Cancele antes do fim do trial e não paga nada.</p></div></div>
       <div class="faq-item"><button class="faq-q">Serve pra quem tá começando?<span class="plus">+</span></button><div class="faq-a"><p>Sim. O plano Pro foi feito pro criador solo: você não precisa ter clientes pra ter processo. Quando os clientes chegarem, o CRIA cresce com você.</p></div></div>
       <div class="faq-item"><button class="faq-q">Sou social media e atendo clientes. O CRIA serve pra mim?<span class="plus">+</span></button><div class="faq-a"><p>Serve, e tem uma área inteira só sua. A <b>conta de social media é gratuita</b>: você ativa só os módulos que for usar (Cria Post R$19,90, Cria Gestão R$29,90, Cria Caixa R$24,90). Nada disso vem no plano de criador: são coisas separadas, de propósito, pra você não pagar pelo que não usa. <a href="social-media.html" style="text-decoration:underline;font-weight:700">Conheça o lado social media →</a></p></div></div>
-      <div class="faq-item"><button class="faq-q">O CRIA publica automaticamente?<span class="plus">+</span></button><div class="faq-a"><p>Hoje o CRIA planeja, organiza a aprovação e analisa os insights reais do Instagram. A publicação automática está no roadmap.</p></div></div>
+      <div class="faq-item"><button class="faq-q">O CRIA publica automaticamente?<span class="plus">+</span></button><div class="faq-a"><p>Ainda não. Hoje o Cria planeja, organiza a aprovação e lê os números reais do seu Instagram. Postar direto pelo app está chegando: quando liberar, avisamos dentro do Cria.</p></div></div><div class="faq-item"><button class="faq-q">O que é o Criakut?<span class="plus">+</span></button><div class="faq-a"><p>É a vitrine de gente que trabalha com conteúdo, dentro do Cria. Criadora acha designer, editor, filmmaker e social mídia por cidade e nicho; quem presta serviço mostra preço e portfólio e recebe propostas. Está em beta e vem junto com a sua conta do Cria.</p></div></div>
       <div class="faq-item"><button class="faq-q">O CRIA escreve em português?<span class="plus">+</span></button><div class="faq-a"><p>100%. O CRIA é brasileiro, feito pro mercado BR, e escreve no tom da sua marca usando o brandbook.</p></div></div>
       <div class="faq-item"><button class="faq-q">Quanto tempo pra migrar minha operação?<span class="plus">+</span></button><div class="faq-a"><p>A maioria organiza o primeiro cliente em menos de 1 hora. Sem importação complexa: é colar suas ideias e seguir.</p></div></div>
       <div class="faq-item"><button class="faq-q">Como eu cancelo?<span class="plus">+</span></button><div class="faq-a"><p>Dentro do app, em 2 cliques. Sem retenção forçada, sem ligação.</p></div></div>
@@ -1495,8 +1729,8 @@ html,body{overflow-x:clip}
 
 <!-- ==================== STICKY CTA (mobile) ==================== -->
 <div id="sticky-cta">
-  <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Começar meus 7 dias grátis</a>
-  <small>Sem compromisso · Cancela em 2 cliques</small>
+  <a href="https://app.criasocialclub.com.br/signup" class="btn btn-laranja">Testar 7 dias grátis</a>
+  <small>A partir de R$19,90/mês · Cancela em 2 cliques</small>
 </div>
 
 <!-- ==================== RODAPÉ ==================== -->
@@ -1589,12 +1823,64 @@ html,body{overflow-x:clip}
   :not(.dobrado)>.dobra-btn .seta{transform:rotate(180deg)}
 }
 @media(min-width:821px){.dobra-btn{display:none}}
+
+/* UP OUT/2026: página direto ao ponto. As seções de apoio nascem dobradas
+   também no computador (antes era só no celular). Altura de cada uma em
+   --dobra-h (computador) e --dobra-hm (celular). */
+@media(min-width:821px){
+  .dobrado .dobra-corpo{max-height:var(--dobra-h,440px);overflow:hidden}
+  .dobrado .dobra-corpo::after{content:"";position:absolute;left:0;right:0;bottom:0;height:160px;background:linear-gradient(transparent,var(--dobra-fim,var(--creme)));pointer-events:none}
+  .dobra-btn{display:flex!important;align-items:center;justify-content:center;gap:8px;width:min(380px,100%);min-height:52px;margin:18px auto 0;border:2px solid currentColor;background:transparent;border-radius:999px;font-family:var(--font-display);font-weight:700;font-size:1rem;color:inherit;cursor:pointer;opacity:.85;transition:opacity .2s,transform .2s}
+  .dobra-btn:hover{opacity:1;transform:translateY(-2px)}
+  .dobra-btn .seta{transition:transform .25s}
+  :not(.dobrado)>.dobra-btn .seta{transform:rotate(180deg)}
+}
+@media(max-width:820px){.dobrado .dobra-corpo{max-height:var(--dobra-hm,210px)}}
+#motor{--dobra-fim:var(--azul)}
+#telas,#dispositivos{--dobra-fim:var(--creme)}
+#explorar{padding:30px 0 10px;background:var(--creme)}
+.ex-caixa{border:2px dashed var(--ink);border-radius:28px;padding:30px 32px;display:grid;grid-template-columns:1.2fr 1fr;gap:28px;align-items:center;background:var(--branco)}
+.ex-caixa h2{font-size:clamp(1.7rem,3.4vw,2.5rem)}
+.ex-caixa p{opacity:.8;margin-top:8px}
+.ex-links{display:flex;flex-wrap:wrap;gap:8px}
+.ex-links a{border:1.5px solid var(--ink);border-radius:999px;padding:8px 14px;font-weight:700;font-size:.88rem;background:var(--creme);transition:background .2s}
+.ex-links a:hover{background:var(--amarelo)}
+@media(max-width:820px){.ex-caixa{grid-template-columns:1fr;padding:24px 20px}}
+
+/* UP OUT/2026: mobile primeiro. Menos texto, botão de comprar sempre perto. */
+.cta-meio{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:26px;text-align:center}
+.cta-meio small{font-size:.82rem;opacity:.75}
+.cta-meio .btn-branco{background:var(--branco);color:var(--ink);box-shadow:0 6px 0 rgba(21,20,18,.6)}
+.dobra-btn .seta{display:inline-block;transition:transform .25s}
+section:not(.dobrado) .dobra-btn .seta{transform:rotate(180deg)}
+section.dobrado .dobra-btn .seta{transform:none}
+#motor{--dobra-hm:720px}
+@media(max-width:820px){
+  .hero-ctas .btn-ghost{display:none}
+  nav#navbar .nav-cta{display:none}
+  .dor-list .dor-item:nth-child(n+4){display:none}
+  .vs-card li:nth-child(n+4){display:none}
+  .vs-card{padding:26px 22px}
+  .nu-lista li:nth-child(n+3),.nu-conecta{display:none}
+  .ck-lista small{display:none}
+  .ck-lista li{align-items:center;padding:10px 12px}
+  .planos-grid>.plano:nth-child(2){order:-1}
+  .cta-meio .btn{width:100%;justify-content:center}
+  #sticky-cta{padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+  #sticky-cta .btn{padding:13px 18px}
+  #sticky-cta small{margin-top:4px}
+}
 </style>
 </main>
 
 <footer>
   <div class="container">
-    <span class="logo"><img src="/logo-cria-white.webp" alt="Cria" style="height:30px;width:auto;display:block;margin:0 auto 10px" loading="lazy" decoding="async"></span>
+    <div class="rod-grid">
+      <div class="rod-marca"><img src="/logo-cria-white.webp" alt="Cria" style="height:32px;width:auto" loading="lazy"><p>Seu estúdio criativo: da ideia ao post, numa aba só. Feito no Brasil.</p></div>
+      <div><h5>Produto</h5><a href="#motor">Como funciona</a><a href="#novidades">Novidades</a><a href="#criakut">Criakut</a><a href="funcionalidades.html">Funcionalidades</a><a href="#planos">Planos</a></div>
+      <div><h5>Pra quem</h5><a href="/">Criador de conteúdo</a><a href="social-media.html">Social media</a><a href="#criakut">Designer, editor e filmmaker</a></div>
+      <div><h5>Conteúdo</h5><a href="/blog">Blog</a><a href="#faq">Dúvidas</a><a href="https://app.criasocialclub.com.br/login">Entrar no Cria</a></div>
+    </div>
     <p>© 2026 CRIA Social Club · Feito no Brasil</p>
     <nav class="footer-links" aria-label="Links institucionais e legais">
       <a href="funcionalidades.html">Funcionalidades</a>
@@ -1633,7 +1919,6 @@ html,body{overflow-x:clip}
    sobrava um vão bege gigante depois do rodapé. Como este script fica no fim
    do body, o DOM já está inteiro aqui. */
 (function () {
-  if (!window.matchMedia('(max-width:820px)').matches) return;
   document.querySelectorAll('[data-dobra]').forEach(function (sec) {
     var alvo = sec.querySelector('.container') || sec;
     var corpo = document.createElement('div');
@@ -1912,6 +2197,13 @@ ScrollTrigger.create({start:80,onUpdate:self=>{
     document.addEventListener('keydown', function(e){ if(e.key === 'Escape') alterna(false); });
   }
 })();
+</script>
+
+<script>/* UP OUT/2026: link pra uma seção dobrada abre a dobra antes de rolar */
+document.addEventListener('click',function(e){var a=e.target.closest('a[href^="#"]');if(!a)return;var s=document.querySelector(a.getAttribute('href'));if(!s||!s.classList.contains('dobrado'))return;var b=s.querySelector('.dobra-btn');if(b){e.preventDefault();b.click();setTimeout(function(){s.scrollIntoView({behavior:'smooth',block:'start'})},60)}});
+</script>
+<script>/* UP OUT/2026: setas das novidades */
+(function(){var t=document.getElementById('nvTrilho');if(!t)return;document.querySelectorAll('[data-nv]').forEach(function(b){b.addEventListener('click',function(){t.scrollBy({left:(+b.dataset.nv)*(t.clientWidth*.8),behavior:'smooth'})})})})();
 </script>
 </body>
 </html>
