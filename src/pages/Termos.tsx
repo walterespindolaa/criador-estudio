@@ -200,6 +200,37 @@ export default function Termos() {
 
           <div>
             <h2 className="text-xl font-display font-semibold mb-3">
+              6.2. Criakut: o cria aproxima, quem contrata e quem presta combinam entre si
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">
+              O Criakut é um espaço dentro do cria onde criadores, social mídias e
+              prestadores de serviço (designers, editores, filmmakers, copywriters e
+              outros) criam uma página, se encontram, trocam recados, participam de
+              comunidades e enviam propostas. O cria apenas oferece a ferramenta: não
+              é parte, intermediário, agente, empregador nem garantidor de nenhum
+              acordo feito entre usuários.
+            </p>
+            <p className="text-muted-foreground leading-relaxed mt-2">
+              Preço, prazo, escopo, entrega, pagamento, nota fiscal, direitos sobre o
+              material e qualquer outra condição são combinados diretamente entre
+              as partes, que respondem sozinhas por eles. O cria não recebe nem
+              repassa valores entre usuários, não confere a qualidade dos serviços
+              e não responde por atraso, não entrega, inadimplência ou prejuízo
+              causado por outro usuário. Avaliações, depoimentos, números e
+              informações das páginas são de responsabilidade de quem publicou.
+            </p>
+            <p className="text-muted-foreground leading-relaxed mt-2">
+              É proibido usar o Criakut para spam, golpe, assédio, discriminação,
+              conteúdo ilegal ou para tirar a conversa do cria com o objetivo de
+              enganar a outra parte. Podemos ocultar conteúdo denunciado, suspender
+              páginas e encerrar contas que descumpram estas regras. O selo de
+              Destaque, quando contratado, só aumenta a visibilidade da página: não
+              é recomendação nem garantia do cria sobre quem o contratou.
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-xl font-display font-semibold mb-3">
               7. Limitação de responsabilidade
             </h2>
             <p className="text-muted-foreground leading-relaxed">
