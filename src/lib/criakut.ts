@@ -10,18 +10,24 @@
    Parceiros e com a carteira acontecem DENTRO de criakut_aceitar, no banco.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-export type FuncaoCriakut = "social_media" | "criadora" | "designer" | "editor_video" | "filmmaker" | "copy";
+export type FuncaoCriakut = "social_media" | "agencia" | "criadora" | "designer" | "editor_video" | "filmmaker" | "copy";
 export type CapaTipo = "cria-1" | "cria-2" | "cria-3" | "cria-4" | "cria-5" | "propria";
 export type Unidade = "peca" | "mes" | "pacote" | "diaria" | "hora";
 
+/* Agência (Walter, 15/10/2026: "a conta da social mídia já é agência"): funciona
+   igual social mídia em tudo (busca, mural, "o que procuro", carteira quando uma
+   criadora contrata). Criadora vai por último: ela é marcada sozinha. */
 export const FUNCOES: { valor: FuncaoCriakut; nome: string }[] = [
   { valor: "social_media", nome: "Social mídia" },
-  { valor: "criadora", nome: "Criadora de conteúdo" },
+  { valor: "agencia", nome: "Agência" },
   { valor: "designer", nome: "Designer" },
   { valor: "editor_video", nome: "Editor de vídeo" },
   { valor: "filmmaker", nome: "Filmmaker" },
   { valor: "copy", nome: "Copywriter" },
+  { valor: "criadora", nome: "Criadora de conteúdo" },
 ];
+/** Quem gerencia clientes (social mídia ou agência): procura parceiros e recebe criadoras na carteira. */
+export const ehGestao = (f?: string | null) => f === "social_media" || f === "agencia";
 export const nomeFuncao = (f?: string | null) => FUNCOES.find((x) => x.valor === f)?.nome ?? "";
 /** "Designer · Editor de vídeo": a principal primeiro, depois as outras. */
 export const nomesFuncoes = (f?: string | null, outras?: string[] | null) =>
