@@ -543,7 +543,7 @@ function ManagerHomeSocialMidia() {
         </button>
       )}
 
-      {/* Convite do Plano de Agência NO LAYOUT DO CRIA: card claro com acentos,
+      {/* Convite do Cria pro Cliente (ex-Plano de Agência) NO LAYOUT DO CRIA: card claro com acentos,
           não um bloco rosa chapado (a cor fica no ícone, nos títulos e no CTA). */}
       {!hasAgency && (
         <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card p-5 sm:p-6 mt-8">
@@ -551,10 +551,10 @@ function ManagerHomeSocialMidia() {
           <div className="relative">
             <div className="flex items-center gap-2.5 mb-2">
               <span className="w-9 h-9 rounded-xl bg-primary text-primary-foreground grid place-items-center shadow-sm"><Users className="h-4 w-4" /></span>
-              <h3 className="font-display font-extrabold text-lg text-foreground">Vire uma agência no CRIA</h3>
+              <h3 className="font-display font-extrabold text-lg text-foreground">Dê o Cria pro seu cliente</h3>
             </div>
             <p className="text-sm font-body text-muted-foreground max-w-2xl leading-relaxed">
-              Você gerencia todos os clientes num painel só e cobra quanto quiser deles. Paga só pelos assentos (a partir de <strong className="text-foreground">R$ 36,90</strong> vs R$ 49,90 avulso), e cada cliente entra com a conta <strong className="text-foreground">Studio completa</strong>, sem custo pra ele.
+              Cada cliente seu ganha a conta <strong className="text-foreground">Cria Studio completa</strong>, conectada à sua e sem custo pra ele. Você paga por cliente (<strong className="text-foreground">R$ 36,90</strong> vs R$ 49,90 avulso) e entrega uma plataforma junto do serviço.
             </p>
 
             <div className="grid sm:grid-cols-2 gap-x-8 gap-y-4 mt-5">
@@ -562,9 +562,9 @@ function ManagerHomeSocialMidia() {
                 <p className="text-[11px] font-bold uppercase tracking-wider text-primary mb-2">O que muda pra você</p>
                 <div className="space-y-1.5">
                   {[
-                    "Todos os clientes num painel só",
-                    "Posts, cronograma e aprovação de cada um",
-                    "Relatórios e acesso com a sua cara (white-label)",
+                    "Cada cliente com login próprio no Cria",
+                    "Os posts prontos dele entram na sua produção sem re-upload",
+                    "Você entra na conta do cliente em 1 clique pra ajudar",
                     "Cliente cancelou? Pausa no inventário e libera o assento",
                     "Adiciona cliente na hora, sem depender de ninguém",
                   ].map((b) => (
@@ -589,7 +589,7 @@ function ManagerHomeSocialMidia() {
             </div>
 
             <button onClick={() => navigate("/socialmidia/contas")} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:opacity-90 transition">
-              <Sparkles className="h-4 w-4" /> Conhecer o Plano de Agência
+              <Sparkles className="h-4 w-4" /> Conhecer o Cria pro Cliente
             </button>
           </div>
         </div>

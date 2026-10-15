@@ -11,7 +11,7 @@ import { useCrmClients, type CrmClient } from "@/hooks/useCrm";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ADICIONAR CLIENTE (ASSENTO DA AGÊNCIA)
+   ADICIONAR CLIENTE (ASSENTO DO CRIA PRO CLIENTE)
 
    O problema que este diálogo resolve: a gestora já tinha o cliente cadastrado
    na carteira, cadastrava de novo aqui pra dar o acesso, e ficava com dois
@@ -37,7 +37,7 @@ const nomeDe = (c: CrmClient) => (c.display_name || c.name || "Sem nome").trim()
 function mensagemDeErro(code: string | undefined): string {
   switch (code) {
     case "seats_full": return "Seus assentos acabaram. Expanda o plano pra adicionar mais.";
-    case "no_seats": return "Você ainda não tem um plano de agência ativo.";
+    case "no_seats": return "Você ainda não tem o Cria pro Cliente ativo.";
     case "use_different_email": return "Use um e-mail diferente do seu de gestora.";
     case "rate_limited": return "Muitas tentativas. Aguarde um minuto.";
     case "email_already_registered": return "Esse e-mail já tem conta no Cria. Peça pra pessoa aceitar o vínculo.";
@@ -125,7 +125,7 @@ export function AdicionarClienteDialog({
               ? "Clientes seus que ainda não têm conta do Cria."
               : passo === "revisar"
                 ? "É com esses dados que o cliente vai entrar. Dá pra ajustar antes de enviar."
-                : "Cria o acesso de criadora coberto pelo seu plano de agência. O cliente não paga nada."}
+                : "Cria o acesso de criadora coberto pelo seu Cria pro Cliente. O cliente não paga nada."}
           </DialogDescription>
         </DialogHeader>
 

@@ -50,7 +50,12 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
   const navigate = useNavigate();
   const t = useT();
   const { signUp } = useAuth();
-  const [accountType, setAccountType] = useState<Tipo>(defaultManager ? "manager" : "creator");
+  /* ?tipo=parceiro ou ?tipo=manager já abre no tipo certo (LP, seção "Produz pra
+     social mídia? sua conta é de graça", 15/10/2026). */
+  const [accountType, setAccountType] = useState<Tipo>(() => {
+    const t = new URLSearchParams(window.location.search).get("tipo");
+    return t === "parceiro" || t === "manager" ? t : defaultManager ? "manager" : "creator";
+  });
   /* Papel do parceiro. Define o vocabulário do quadro dele já no primeiro
      acesso (Referências/Rascunho/Arte final pro designer, Decupagem/Corte/
      Finalização pro editor) sem depender de agência nenhuma. */

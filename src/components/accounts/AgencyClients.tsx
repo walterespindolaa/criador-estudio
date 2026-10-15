@@ -81,7 +81,7 @@ export function AgencyClients({ seatsFree }: { seatsFree: number }) {
 
   return (
     <div className="mt-6">
-      <h3 className="text-sm font-display font-semibold text-foreground mb-3">Clientes da agência</h3>
+      <h3 className="text-sm font-display font-semibold text-foreground mb-3">Clientes com o Cria deles</h3>
       <div className="space-y-2">
         {clients.map((c) => {
           const parked = !!c.parked_until;

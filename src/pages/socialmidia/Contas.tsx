@@ -108,7 +108,7 @@ export default function Contas() {
 
   return (
     <div>
-      {/* Plano de agência / assentos */}
+      {/* Cria pro Cliente (ex-"Plano de Agência", renomeado em 15/10/2026: a social mídia já é a agência) / assentos */}
       <div data-tour="contas-assentos" className="rounded-2xl border border-border bg-card p-5 mb-6">
         {seatLimit > 0 ? (
           <>
@@ -116,7 +116,7 @@ export default function Contas() {
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Users className="h-5 w-5 text-primary" /></div>
                 <div>
-                  <p className="text-sm font-display font-semibold text-foreground">Plano de Agência</p>
+                  <p className="text-sm font-display font-semibold text-foreground">Cria pro Cliente</p>
                   <p className="text-xs font-body text-muted-foreground">{seatsUsed} de {seatLimit} assentos usados · {seatsFree} {seatsFree === 1 ? "livre" : "livres"}</p>
                 </div>
               </div>
@@ -136,11 +136,11 @@ export default function Contas() {
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Users className="h-5 w-5 text-primary" /></div>
               <div>
-                <p className="text-sm font-display font-semibold text-foreground">Plano de Agência</p>
-                <p className="text-xs font-body text-muted-foreground">Assine assentos e gerencie vários clientes, eles entram sem pagar nada, por sua conta.</p>
+                <p className="text-sm font-display font-semibold text-foreground">Cria pro Cliente</p>
+                <p className="text-xs font-body text-muted-foreground">Cada cliente seu ganha o Cria Studio completo, conectado à sua conta, sem pagar nada. Você paga por cliente.</p>
               </div>
             </div>
-            <Button size="sm" onClick={() => setExpandOpen(true)}>Assinar assentos</Button>
+            <Button size="sm" onClick={() => setExpandOpen(true)}>Assinar</Button>
           </div>
         )}
       </div>
@@ -167,8 +167,8 @@ export default function Contas() {
       <Dialog open={expandOpen} onOpenChange={(o) => !expanding && setExpandOpen(o)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display">{seatLimit > 0 ? "Expandir assentos" : "Assinar plano de Agência"}</DialogTitle>
-            <DialogDescription className="font-body text-sm">Escolha quantos assentos de cliente você quer (mínimo 3). Você é cobrada por assento, mensalmente.</DialogDescription>
+            <DialogTitle className="font-display">{seatLimit > 0 ? "Expandir assentos" : "Assinar o Cria pro Cliente"}</DialogTitle>
+            <DialogDescription className="font-body text-sm">Escolha pra quantos clientes (mínimo 3). Cada assento é um cliente com o Cria Studio dele, cobrado por mês.</DialogDescription>
           </DialogHeader>
           <div className="rounded-xl bg-primary/5 border border-primary/15 px-3 py-2 mt-1 text-sm font-body">
             <span className="text-muted-foreground line-through mr-2">R$ 49,90</span>
