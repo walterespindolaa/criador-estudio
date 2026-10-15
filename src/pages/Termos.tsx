@@ -20,7 +20,7 @@ export default function Termos() {
           Termos de Uso
         </h1>
         <p className="text-muted-foreground text-sm mb-12">
-          Última atualização: 13 de outubro de 2026 · Versão 1.2
+          Última atualização: 14 de outubro de 2026 · Versão 1.3
         </p>
 
         <section className="prose prose-sm max-w-none space-y-8 text-foreground">
@@ -161,6 +161,40 @@ export default function Termos() {
               arrependimento em até 7 dias da contratação, com reembolso
               integral. Após esse prazo, não realizamos reembolsos proporcionais
              , o cancelamento simplesmente impede a próxima cobrança.
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-xl font-display font-semibold mb-3">
+              6.1. Propriedade do cria e usos proibidos
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">
+              O software, o código, o banco de dados, os textos, os prompts, os
+              modelos, o método, o layout, os fluxos, as marcas e a identidade
+              visual do cria pertencem à WG Business &amp; Branding e são
+              protegidos pela Lei de Software (Lei nº 9.609/1998), pela Lei de
+              Direitos Autorais (Lei nº 9.610/1998) e pela Lei de Propriedade
+              Industrial (Lei nº 9.279/1996). A assinatura dá a você uma licença
+              de uso pessoal, não exclusiva e intransferível, enquanto ela estiver
+              ativa. Nada destes Termos transfere a você qualquer direito sobre o
+              cria além desse uso.
+            </p>
+            <p className="text-muted-foreground leading-relaxed mt-2">
+              É proibido, sem autorização por escrito: (a) copiar, reproduzir,
+              descompilar, desmontar ou fazer engenharia reversa do cria ou de
+              qualquer parte dele, inclusive com ferramentas automatizadas ou de
+              inteligência artificial; (b) usar o cria, suas telas, seus dados ou
+              seus textos para criar, treinar ou alimentar produto ou serviço
+              concorrente; (c) extrair dados em massa por robôs, scrapers ou
+              chamadas automatizadas fora do uso normal do app; (d) tentar acessar
+              dados de outros usuários, burlar limites, cotas, pagamentos ou
+              medidas de segurança; (e) revender, sublicenciar ou compartilhar o
+              acesso da sua conta.
+            </p>
+            <p className="text-muted-foreground leading-relaxed mt-2">
+              O descumprimento permite a suspensão imediata da conta, sem
+              reembolso, além das medidas judiciais cabíveis, inclusive indenização
+              pelos prejuízos causados.
             </p>
           </div>
 
