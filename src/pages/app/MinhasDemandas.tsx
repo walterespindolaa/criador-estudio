@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import {
   Briefcase, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
   Copy as CopyIcon, ExternalLink, Folder, ImagePlus, Link2, Loader2, MessageCircle, Palette,
-  History, MapPin, PauseCircle, Pencil, Play, Plus, RotateCcw, Send, Sparkles, StickyNote, X,
+  History, MapPin, PauseCircle, Pencil, Play, Plus, RotateCcw, Send, Sparkles, StickyNote, X, AlertCircle,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { toast } from "sonner";
@@ -30,7 +30,7 @@ import { CamadaDeAlfinetes, segundoBonito } from "@/components/shared/CamadaDeAl
 import { GaleriaDePecas } from "@/components/shared/GaleriaDePecas";
 import {
   ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useConversaDoCard, useCoresDasAgencias, useEntreguesDoParceiro,
-  useFilaDoParceiro, useMarcarConversaLida, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useProporPrazo, useResolverPrazoSugerido, useVersoesDaPeca, useEntregasRemoviveis,
+  useFilaDoParceiro, useMarcarConversaLida, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useProporPrazo, useResolverPrazoSugerido, useVersoesDaPeca, useEntregasRemoviveis, useMarcarUrgente,
   type CardAberto, type CardDaFila, type EntregueDoParceiro, type MarcaDoParceiro, type MarcaLiberada, type VersaoDaPeca,
 } from "@/hooks/useParceiro";
 import {
@@ -62,18 +62,24 @@ const dataBR = (iso: string | null) => {
 /** Agrupa por dia de entrega, com os sem prazo no fim ("Combinar prazo"). */
 function porDia(cards: CardDaFila[]) {
   const mapa = new Map<string, CardDaFila[]>();
+  /* URGENTE PRIMEIRO (15/10/2026): o que a social mídia marcou como prioridade
+     vira um grupo próprio no topo, mesmo com prazo mais longo. */
+  const urgentes = cards.filter((c) => c.urgente);
   for (const c of cards) {
+    if (c.urgente) continue;
     const chave = c.prazo_producao ?? "sem-prazo";
     mapa.set(chave, [...(mapa.get(chave) ?? []), c]);
   }
-  return [...mapa.entries()].sort(([a], [b]) => {
+  const dias = [...mapa.entries()].sort(([a], [b]) => {
     if (a === "sem-prazo") return 1;
     if (b === "sem-prazo") return -1;
     return a.localeCompare(b);
   });
+  return urgentes.length ? [["urgente", urgentes] as [string, CardDaFila[]], ...dias] : dias;
 }
 
 function rotuloDoDia(chave: string, hoje: string): { titulo: string; tom: "hoje" | "perto" | "folga" | "atrasado" } {
+  if (chave === "urgente") return { titulo: "Urgente", tom: "atrasado" };
   if (chave === "sem-prazo") return { titulo: "Sem prazo combinado", tom: "folga" };
   const [a, m, d] = chave.split("-").map(Number);
   const rot = `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${a}`;
@@ -82,6 +88,13 @@ function rotuloDoDia(chave: string, hoje: string): { titulo: string; tom: "hoje"
   const amanha = new Date(a, m - 1, d - 1).toISOString().slice(0, 10) === hoje;
   return amanha ? { titulo: "Amanhã", tom: "perto" } : { titulo: rot, tom: "folga" };
 }
+
+/** Selo vermelho de prioridade (15/10/2026). */
+const SeloUrgente = () => (
+  <span className="inline-flex items-center gap-1 rounded-full bg-red-600 text-white text-[11px] font-extrabold pl-1 pr-2 py-0.5">
+    <AlertCircle className="h-3 w-3" strokeWidth={3} /> Urgente
+  </span>
+);
 
 const EstadoPill = ({ s }: { s: CardDaFila["producao_status"] }) => (
   <span className={cn("shrink-0 text-[12px] font-bold px-3 py-1.5 rounded-full",
@@ -270,7 +283,8 @@ export default function MinhasDemandas() {
                 <Card className="rounded-2xl border-border overflow-hidden divide-y divide-border">
                   {cards.map((c) => (
                     <button key={c.post_id} onClick={() => setAberto(c.post_id)}
-                      className="w-full flex items-center gap-3.5 px-4 py-3.5 text-left hover:bg-muted/40 transition-colors">
+                      className={cn("w-full flex items-center gap-3.5 px-4 py-3.5 text-left transition-colors",
+                        c.urgente ? "bg-red-50 hover:bg-red-100/70" : "hover:bg-muted/40")}>
                       <span className="w-11 h-11 rounded-xl grid place-items-center text-white font-display font-bold shrink-0 overflow-hidden"
                         style={{ background: c.cliente_cor || "#7C90F0" }}>
                         {c.cliente_logo
@@ -280,6 +294,7 @@ export default function MinhasDemandas() {
                       <span className="min-w-0 flex-1">
                         <span className="block font-display font-bold text-[14.5px] text-foreground leading-tight truncate">{c.titulo || "Sem título"}</span>
                         <span className="flex items-center gap-2 mt-1 flex-wrap">
+                          {c.urgente && <SeloUrgente />}
                           <span className="text-xs font-body font-semibold text-foreground/85 truncate">{c.cliente_nome}</span>
                           <span className="text-[12px] font-body text-muted-foreground">via {c.agencia_nome}</span>
                           {c.formato && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[c.formato] ?? c.formato}</span>}
@@ -349,9 +364,11 @@ function SemanaDoParceiro({ fila, hoje, aoAbrir }: {
               ) : doDia.map((c) => (
                 <button key={c.post_id} onClick={() => aoAbrir(c.post_id)}
                   className={cn("w-full text-left rounded-lg px-2 py-1.5 mb-1.5 border-l-[3px] text-[12px] leading-tight transition-transform hover:translate-x-0.5",
-                    c.producao_status === "ajuste" ? "bg-violet-50 border-violet-500"
+                    c.urgente ? "bg-red-50 border-red-600 ring-1 ring-red-300"
+                    : c.producao_status === "ajuste" ? "bg-violet-50 border-violet-500"
                     : c.producao_status === "em_producao" ? "bg-blue-50 border-blue-500"
                     : "bg-orange-50 border-orange-500")}>
+                  {c.urgente && <span className="block text-[10px] font-extrabold uppercase tracking-wide text-red-700">Urgente</span>}
                   <span className="block font-bold truncate">{c.titulo || "Sem título"}</span>
                   <span className="block text-[11px] text-muted-foreground truncate mt-0.5">{c.cliente_nome}</span>
                 </button>
@@ -719,7 +736,8 @@ function CartaoQuadro({ c, hoje, meta, onOpen }: {
   return (
     <div role="button" tabIndex={0} onClick={onOpen}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
-      className="w-full text-left rounded-xl border border-border bg-card mb-2 shadow-sm hover:shadow transition-shadow cursor-pointer overflow-hidden">
+      className={cn("w-full text-left rounded-xl bg-card mb-2 shadow-sm hover:shadow transition-shadow cursor-pointer overflow-hidden",
+        c.urgente ? "border-2 border-red-600 shadow-[0_8px_20px_-14px_rgba(220,38,38,.9)]" : "border border-border")}>
       {/* A CAPA DA PEÇA (Walter, 09/09/2026): quando o card já tem mídia, ela
           vira a capa do cartão, como no Trello. `draggable={false}` porque
           senão o navegador arrasta a IMAGEM em vez do cartão. */}
@@ -737,6 +755,7 @@ function CartaoQuadro({ c, hoje, meta, onOpen }: {
         </span>
         <span className="text-[11px] font-body font-semibold text-muted-foreground truncate">{c.cliente_nome}</span>
       </span>
+      {c.urgente && <span className="block mb-1.5"><SeloUrgente /></span>}
       <span className="block font-display font-bold text-[13px] leading-tight">{c.titulo || "Sem título"}</span>
       <span className="flex items-center gap-1.5 mt-1.5 flex-wrap">
         {c.formato && <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[c.formato] ?? c.formato}</span>}
@@ -849,7 +868,8 @@ function PorClienteDoParceiro({ fila, hoje, aoAbrir }: {
           const marca = marcas.find((m) => m.external_client_id === chave);
           const atrasados = g.cards.filter((c) => c.prazo_producao && c.prazo_producao < hoje).length;
           const ordenados = [...g.cards].sort((a, b) =>
-            (a.prazo_producao ?? "9999").localeCompare(b.prazo_producao ?? "9999"));
+            Number(!!b.urgente) - Number(!!a.urgente)
+            || (a.prazo_producao ?? "9999").localeCompare(b.prazo_producao ?? "9999"));
           return (
             <section key={chave} className="w-[270px] sm:w-[292px] shrink-0 snap-start rounded-2xl border border-border overflow-hidden bg-card">
               {/* CABEÇALHO NA COR DA MARCA: é o que dá identidade à coluna e
@@ -1504,6 +1524,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
   const qc = useQueryClient();
   const { data: card, isLoading } = useCardDoParceiro(postId);
   const { marcar, comentar, responderPrazo, anexar, remover } = useAcoesDoParceiro(postId);
+  const marcarUrgente = useMarcarUrgente();
   /* O que o parceiro ainda pode tirar do card (a entrega DELE nesta rodada,
      antes de marcar entregue). No modo agência não se aplica. */
   const { data: removiveis = [] } = useEntregasRemoviveis(postId, !agencia);
@@ -1682,6 +1703,23 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
           <div className="grid place-items-center py-20"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : (
           <>
+            {/* URGENTE (15/10/2026, mockup aprovado): faixa vermelha acima da
+                capa, nos dois lados. A social mídia tira daqui mesmo. */}
+            {card.urgente && (
+              <div className="shrink-0 bg-red-600 text-white px-5 py-2 flex items-center gap-2 text-[13px] font-body font-bold">
+                <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={2.6} />
+                <span className="flex-1 min-w-0">
+                  {agencia ? "Urgente: você marcou como prioridade" : "Urgente: a social mídia marcou como prioridade"}
+                </span>
+                {agencia && (
+                  <button type="button" disabled={marcarUrgente.isPending}
+                    onClick={() => marcarUrgente.mutate({ postId: card.id, urgente: false })}
+                    className="shrink-0 rounded-full bg-white/20 hover:bg-white/30 px-3 py-1 text-[12px] font-bold transition-colors disabled:opacity-60">
+                    Tirar urgência
+                  </button>
+                )}
+              </div>
+            )}
             {/* A CAPA DA MARCA. Era uma faixa chapada na cor do cliente, e
                 ficava apagada (Walter, 09/09/2026). Agora ela usa o LOGO do
                 cliente de duas formas: borrado e ampliado no fundo, dando

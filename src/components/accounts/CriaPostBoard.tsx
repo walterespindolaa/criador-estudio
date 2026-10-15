@@ -553,7 +553,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       if (envioPendente) {
         const v = envioPendente;
         setEnvioPendente(null);
-        await delegarPost.mutateAsync({ postId: draftId, assigneeId: v.assigneeId, prazo: v.prazo, nomeParceiro: v.nome, cache: v.cache })
+        await delegarPost.mutateAsync({ postId: draftId, assigneeId: v.assigneeId, prazo: v.prazo, nomeParceiro: v.nome, cache: v.cache, urgente: v.urgente })
           .catch(() => { /* o hook já mostra o erro */ });
       }
     } else if (editing) {
@@ -1013,7 +1013,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               {editing && !draftId && (
                 <EnviarParaParceiro key={editing.id} postId={editing.id} assigneeId={editing.assignee_id}
                   producaoStatus={editing.producao_status} prazo={editing.prazo_producao}
-                  cache={editing.cache_parceiro ?? null} />
+                  cache={editing.cache_parceiro ?? null}
+                  urgente={!!(editing as unknown as { urgente?: boolean }).urgente} />
               )}
               {draftId && (
                 <EnviarParaParceiro key={`novo-${draftId}`} postId={draftId} assigneeId={null}

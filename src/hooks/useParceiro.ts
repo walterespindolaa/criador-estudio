@@ -106,6 +106,8 @@ export type CardDaFila = {
    *  cliente: arte pronta aparecendo é o que faz o quadro ficar bonito de
    *  olhar, como no Trello (Walter, 09/09/2026). */
   capa: string | null;
+  /** A social mídia marcou como prioridade (15/10/2026). Vem primeiro na fila. */
+  urgente?: boolean;
 };
 
 /** Uma peça já entregue, do jeito que `parceiro_entregues()` devolve. */
@@ -184,6 +186,8 @@ export type CardAberto = {
   };
   /** A conversa do card. Desde 15/09/2026 cada linha pode trazer um ALFINETE:
    *  o ponto exato da arte sobre o qual o recado foi escrito. */
+  /** Prioridade marcada pela social mídia: faixa vermelha no topo do card. */
+  urgente?: boolean;
   comentarios: {
     id: string; texto: string; papel: string; em: string;
     midia_indice?: number | null; ancora_x?: number | null;
@@ -990,6 +994,8 @@ export type PecaExterna = {
    *  flyer...) e não um post. O painel de Produção mostra os dois juntos
    *  (Walter, 12/10/2026), mas abre cada um no card certo. */
   material?: { tipo: string | null } | null;
+  /** Prioridade marcada no "Enviar pra produção" (15/10/2026). */
+  urgente?: boolean | null;
 };
 
 /** Tudo que está na mão de parceiros: a matéria-prima do painel "Com
@@ -1008,14 +1014,19 @@ export function usePecasComParceiros(temParceiros: boolean) {
     ...SINCRONIA,
     enabled: !!user && !!agencyOwnerId && temParceiros,
     queryFn: async () => {
-      const { data, error } = await sbFrom("posts")
-        .select("id, title, format, producao_status, prazo_producao, prazo_status, prazo_sugerido, approval_status, scheduled_date, assignee_id, external_client_id, updated_at, cache_parceiro, entregue_em, revisoes")
+      const COLUNAS = "id, title, format, producao_status, prazo_producao, prazo_status, prazo_sugerido, approval_status, scheduled_date, assignee_id, external_client_id, updated_at, cache_parceiro, entregue_em, revisoes";
+      const buscar = (colunas: string) => sbFrom("posts")
+        .select(colunas)
         .eq("user_id", agencyOwnerId!)
         .not("assignee_id", "is", null)
         // Post na lixeira não é produção em andamento (revisão 28/09).
         .is("deleted_at", null)
         .order("prazo_producao", { ascending: true, nullsFirst: false })
         .limit(300);
+      // `urgente` (15/10/2026): se a coluna ainda não existir, busca sem ela
+      // em vez de esvaziar o painel inteiro.
+      let { data, error } = await buscar(`${COLUNAS}, urgente`);
+      if (error && /urgente/i.test(error.message ?? "")) ({ data, error } = await buscar(COLUNAS));
       if (error) {
         if (aindaNaoExisteNoBanco(error.message)) return [];
         throw error;
@@ -1275,7 +1286,7 @@ export function useMarcaDosClientes(crmIds: string[]) {
 export function useDelegarPost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (v: { postId: string; assigneeId: string | null; prazo: string | null; nomeParceiro?: string; cache?: number | null }) => {
+    mutationFn: async (v: { postId: string; assigneeId: string | null; prazo: string | null; nomeParceiro?: string; cache?: number | null; urgente?: boolean }) => {
       // Lê o estado atual em vez de confiar no que a tela achava que era: o
       // popover pode estar aberto desde antes do parceiro entregar.
       const { data: atual, error: lerErro } = await sbFrom("posts")
@@ -1313,17 +1324,61 @@ export function useDelegarPost() {
       // Bloqueio de RLS devolve zero linhas sem erro; sem isto a tela diria
       // "enviado" sem ter enviado.
       if (!data) throw new Error("Não consegui delegar. Recarregue e tente de novo.");
+      /* URGENTE (15/10/2026) vai num update à parte: se a coluna ainda não
+         existir no banco, a delegação não pode falhar por causa dela. Tirar o
+         parceiro também tira a urgência. */
+      if (v.urgente !== undefined || !v.assigneeId) {
+        const { error: eUrg } = await sbFrom("posts")
+          .update({ urgente: v.assigneeId ? !!v.urgente : false } as never).eq("id", v.postId);
+        if (eUrg && !aindaNaoExisteNoBanco(eUrg.message)) throw eUrg;
+      }
       return { ...v, mesmoParceiro };
     },
     onSuccess: (v) => {
       invalidarQuadrosDePost(qc);
       void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
+      void qc.invalidateQueries({ queryKey: ["post-urgente", v.postId] });
       if (!v.assigneeId) { toast.success("Delegação removida."); return; }
       toast.success(v.mesmoParceiro
         ? "Combinado atualizado. A entrega e o histórico continuam como estavam."
         : `Enviado pra ${v.nomeParceiro ?? "o parceiro"}. Ele recebe o aviso na hora.`);
     },
     onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui delegar.")),
+  });
+}
+
+/** Lê a urgência de um post. À parte do quadro de posts de propósito: se a
+ *  coluna ainda não existir no banco, só isto fica falso, o quadro segue. */
+export function useUrgenteDoPost(postId: string | null) {
+  return useQuery<boolean>({
+    queryKey: ["post-urgente", postId],
+    enabled: !!postId,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("posts").select("urgente").eq("id", postId!).maybeSingle();
+      if (error) return false;
+      return !!(data as { urgente?: boolean } | null)?.urgente;
+    },
+  });
+}
+
+/** Liga/desliga a urgência sem mexer no resto do combinado (botão "tirar
+ *  urgência" na faixa do card, lado da social mídia). */
+export function useMarcarUrgente() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { postId: string; urgente: boolean }) => {
+      const { error } = await sbFrom("posts").update({ urgente: v.urgente } as never).eq("id", v.postId);
+      if (error) throw error;
+      return v;
+    },
+    onSuccess: (v) => {
+      invalidarQuadrosDePost(qc);
+      void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
+      void qc.invalidateQueries({ queryKey: ["parceiro-card", v.postId] });
+      void qc.invalidateQueries({ queryKey: ["post-urgente", v.postId] });
+      toast.success(v.urgente ? "Marcada como urgente." : "Urgência tirada.");
+    },
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui mudar a urgência.")),
   });
 }
 

@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { Check, Loader2, MessageCircle, RotateCcw, Send, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertCircle, Check, Loader2, MessageCircle, RotateCcw, Send, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { ROTULO_PAPEL, useConversaDoCard, useDelegarPost, useMeusParceiros, usePedirAjuste } from "@/hooks/useParceiro";
+import { ROTULO_PAPEL, useConversaDoCard, useDelegarPost, useMeusParceiros, usePedirAjuste, useUrgenteDoPost } from "@/hooks/useParceiro";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ENVIAR PARA (Cria Parceiros)
@@ -22,15 +22,17 @@ import { ROTULO_PAPEL, useConversaDoCard, useDelegarPost, useMeusParceiros, useP
 
 /** Escolha feita num post que AINDA NÃO FOI SALVO: guarda aqui e o editor
  *  delega de verdade depois do Salvar (ver CriaPostBoard.submit). */
-export type EnvioPendente = { assigneeId: string; prazo: string | null; cache: number | null; nome?: string };
+export type EnvioPendente = { assigneeId: string; prazo: string | null; cache: number | null; nome?: string; urgente?: boolean };
 
-export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, cache, adiado, pendente, onAdiar }: {
+export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, cache, urgente, adiado, pendente, onAdiar }: {
   postId: string;
   assigneeId: string | null;
   producaoStatus: string | null;
   prazo: string | null;
   /** Cachê combinado (R$). Vira despesa no Caixa quando o parceiro entregar. */
   cache?: number | null;
+  /** Prioridade marcada pra este card (15/10/2026). */
+  urgente?: boolean;
   /* POST NOVO (Gabriela, 29/09/2026): "só aparece depois que eu crio o post,
      salvo, e tenho que voltar nele pra adicionar a pessoa". Agora aparece desde
      o "+". Num rascunho a escolha fica guardada e só vira delegação quando ela
@@ -47,6 +49,11 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, 
   const [dataEntrega, setDataEntrega] = useState((adiado ? pendente?.prazo : prazo) ?? "");
   const [valorCache, setValorCache] = useState(
     adiado ? (pendente?.cache != null ? String(pendente.cache) : "") : (cache != null ? String(cache) : ""));
+  const [ehUrgente, setEhUrgente] = useState(!!(adiado ? pendente?.urgente : urgente));
+  /* O quadro de posts não traz a coluna (se ela faltar no banco o quadro
+     inteiro cairia), então o valor salvo vem desta leitura à parte. */
+  const { data: urgenteSalvo } = useUrgenteDoPost(adiado ? null : postId);
+  useEffect(() => { if (!adiado && urgenteSalvo !== undefined) setEhUrgente(urgenteSalvo); }, [adiado, urgenteSalvo]);
   const [pedindoAjuste, setPedindoAjuste] = useState(false);
   const [motivoAjuste, setMotivoAjuste] = useState("");
   const [mensagem, setMensagem] = useState("");
@@ -68,14 +75,14 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, 
     const cacheNum = valorCache.trim() ? Number(valorCache.replace(",", ".")) : null;
     if (adiado) {
       onAdiar?.({
-        assigneeId: escolhido, prazo: dataEntrega || null, nome,
+        assigneeId: escolhido, prazo: dataEntrega || null, nome, urgente: ehUrgente,
         cache: cacheNum != null && !Number.isNaN(cacheNum) && cacheNum > 0 ? cacheNum : null,
       });
       setAberto(false);
       return;
     }
     await delegar.mutateAsync({
-      postId, assigneeId: escolhido, prazo: dataEntrega || null, nomeParceiro: nome,
+      postId, assigneeId: escolhido, prazo: dataEntrega || null, nomeParceiro: nome, urgente: ehUrgente,
       cache: cacheNum != null && !Number.isNaN(cacheNum) && cacheNum > 0 ? cacheNum : null,
     });
     setAberto(false);
@@ -89,8 +96,11 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, 
   return (
     <Popover open={aberto} onOpenChange={setAberto}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className={cn((atual || escolhaGuardada) && "border-violet-300 bg-violet-50 text-violet-800 hover:bg-violet-100")}>
-          <Send className="h-3.5 w-3.5 mr-1.5" />
+        <Button variant="outline" size="sm" className={cn((atual || escolhaGuardada) && "border-violet-300 bg-violet-50 text-violet-800 hover:bg-violet-100",
+          (atual || escolhaGuardada) && ehUrgente && "border-red-400 bg-red-50 text-red-800 hover:bg-red-100")}>
+          {(atual || escolhaGuardada) && ehUrgente
+            ? <AlertCircle className="h-3.5 w-3.5 mr-1.5 text-red-600" />
+            : <Send className="h-3.5 w-3.5 mr-1.5" />}
           {atual
             ? `Com ${atual.nome.split(" ")[0]}${producaoStatus === "entregue" ? " · entregue" : ""}`
             : escolhaGuardada ? `Pra ${escolhaGuardada.nome.split(" ")[0]} ao salvar`
@@ -126,7 +136,28 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, 
             <Input inputMode="decimal" placeholder="Ex.: 150" value={valorCache} onChange={(e) => setValorCache(e.target.value)} className="rounded-xl h-10 mt-1" />
           </div>
         </div>
-        <p className="text-[11px] font-body text-muted-foreground mt-1 leading-relaxed">
+        {/* URGENTE (Walter, 14/10/2026; mockup aprovado em 15/10). O parceiro vê
+            o card em vermelho e ele sobe pro topo da fila dele. Vale ao salvar
+            o combinado, junto com a data e o cachê. */}
+        <button type="button" aria-pressed={ehUrgente} onClick={() => setEhUrgente((v) => !v)}
+          className={cn("mt-2.5 w-full flex items-center gap-2.5 rounded-xl border-2 px-3 py-2 text-left transition-colors",
+            ehUrgente ? "border-red-500 bg-red-50" : "border-border hover:border-red-200")}>
+          <span className={cn("w-7 h-7 rounded-full grid place-items-center shrink-0",
+            ehUrgente ? "bg-red-600 text-white" : "bg-muted text-muted-foreground")}>
+            <AlertCircle className="h-4 w-4" strokeWidth={2.6} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className={cn("block text-[13px] font-body font-bold", ehUrgente ? "text-red-800" : "text-foreground")}>Urgente</span>
+            <span className={cn("block text-[11px] font-body leading-snug", ehUrgente ? "text-red-900/80" : "text-muted-foreground")}>
+              Vai em vermelho e pro topo da fila do parceiro
+            </span>
+          </span>
+          <span className={cn("relative w-9 h-5 rounded-full shrink-0 transition-colors", ehUrgente ? "bg-red-600" : "bg-muted-foreground/30")}>
+            <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all", ehUrgente ? "right-0.5" : "left-0.5")} />
+          </span>
+        </button>
+
+        <p className="text-[11px] font-body text-muted-foreground mt-1.5 leading-relaxed">
           {entregueSemCache
             ? "Corrigir aqui não desfaz a entrega: só o valor e a data mudam, e o Caixa acompanha."
             : "Data e valor combinados. O cachê vira despesa no Caixa quando a entrega for marcada. Vazio = a combinar."}

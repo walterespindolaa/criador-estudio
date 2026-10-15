@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { AlertTriangle, CalendarDays, Check, CheckCircle2, Clock, KanbanSquare, List, Loader2, MessageCircle, Send, Users, Wallet } from "lucide-react";
+import { AlertCircle, AlertTriangle, CalendarDays, Check, CheckCircle2, Clock, KanbanSquare, List, Loader2, MessageCircle, Send, Users, Wallet } from "lucide-react";
 import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
 import { ManagerCalendar } from "@/components/accounts/ManagerCalendar";
 import { cn } from "@/lib/utils";
@@ -195,9 +195,14 @@ function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
       <button key={p.id} type="button" onClick={() => abrirPeca(p)}
         className={cn(
           "w-full text-left rounded-xl border bg-card p-3 shadow-sm hover:shadow-md hover:-translate-y-px transition-all",
-          apagado ? "opacity-60 border-border" : d !== null && d < 0 ? "border-red-300" : "border-border",
+          apagado ? "opacity-60 border-border" : p.urgente ? "border-2 border-red-600" : d !== null && d < 0 ? "border-red-300" : "border-border",
         )}>
         <span className="flex items-center gap-1.5 flex-wrap mb-1.5">
+          {p.urgente && !apagado && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-red-600 text-white">
+              <AlertCircle className="h-3 w-3" strokeWidth={3} /> Urgente
+            </span>
+          )}
           {p.producao_status && ETAPA[p.producao_status] && (
             <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", ETAPA[p.producao_status].cls)}>
               {ETAPA[p.producao_status].txt}
@@ -377,7 +382,7 @@ function QuadroDeProducao({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
     return (
       <button key={p.id} type="button" onClick={() => abrirPeca(p)}
         className={cn("w-full text-left rounded-xl border bg-card shadow-sm hover:shadow-md hover:-translate-y-px transition-all overflow-hidden",
-          !entregue && d !== null && d < 0 ? "border-red-300" : "border-border", entregue && "opacity-75")}>
+          !entregue && p.urgente ? "border-2 border-red-600" : !entregue && d !== null && d < 0 ? "border-red-300" : "border-border", entregue && "opacity-75")}>
         <span className="block h-1" style={{ backgroundColor: cor }} />
         <span className="block p-2.5">
           <span className="flex items-center gap-1.5 mb-1">
@@ -388,6 +393,11 @@ function QuadroDeProducao({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
               </span>
             )}
           </span>
+          {p.urgente && !entregue && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-red-600 text-white mb-1">
+              <AlertCircle className="h-3 w-3" strokeWidth={3} /> Urgente
+            </span>
+          )}
           <span className="block font-display font-bold text-[13px] leading-snug line-clamp-3">{p.title || "Sem título"}</span>
           <span className="flex items-center gap-1.5 flex-wrap mt-2">
             <span className="w-5 h-5 rounded-full bg-gradient-to-br from-violet-400 to-violet-700 text-white grid place-items-center text-[9px] font-bold shrink-0"
@@ -631,6 +641,11 @@ export function PainelComParceiros({ clientes }: {
             <span className="text-[11.5px] font-body font-semibold text-foreground/85">{clientes[p.external_client_id]}</span>
           )}
           <ChipTipo p={p} />
+          {p.urgente && p.producao_status !== "entregue" && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-red-600 text-white">
+              <AlertCircle className="h-3 w-3" strokeWidth={3} /> Urgente
+            </span>
+          )}
           {p.producao_status && ETAPA[p.producao_status] && (
             <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", ETAPA[p.producao_status].cls)}>
               {ETAPA[p.producao_status].txt}
