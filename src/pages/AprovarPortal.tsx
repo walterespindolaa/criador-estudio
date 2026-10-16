@@ -39,6 +39,12 @@ export type PortalPost = {
   // Link da pasta do Drive com os materiais do post (atalho pro cliente).
   drive_folder_url?: string | null;
 };
+/* COR DO PORTAL (Gabriela, 16/10/2026: "em cada navegador está indo uma cor diferente").
+   A cor vem do cadastro do cliente. Sem cor cadastrada, o portal caía no
+   --primary do tema salvo no NAVEGADOR de quem abriu (localStorage), por isso
+   cada aparelho mostrava uma cor. Agora, sem cor do cliente, usa sempre a
+   mesma cor fixa do Cria. */
+const COR_PADRAO_PORTAL = "#EA4918";
 type ClientHeader = { client_name: string; client_logo: string | null; manager_name: string | null; brand_color?: string | null; instagram_handle?: string | null };
 // Histórico da conversa de ajuste de UM post, como a RPC pública devolve:
 // só o lado ('cliente' = ele mesmo, 'equipe' = quem cuida do conteúdo), o
@@ -77,7 +83,7 @@ function CardIG({ client, post, alfinetes, modoApontar, aoFixar, aoAbrirAlfinete
   const handle = client.instagram_handle ? client.instagram_handle.replace(/^@/, "") : "perfil";
   const aspect = postAspect(post.platform, post.format);
   const vertical = aspect === "9 / 16";
-  const brand = client.brand_color ?? null;
+  const brand = client.brand_color || COR_PADRAO_PORTAL;
   // SÓ a legenda de verdade. O roteiro/copy (script) é material INTERNO de
   // produção e aparece no fluxo do CRONOGRAMA; na aprovação do post pronto ele
   // vazava inteiro ("SLIDE 1 - CAPA...") quando a legenda estava vazia.
@@ -722,7 +728,7 @@ export default function AprovarPortal() {
   const aprovados = posts.filter((p) => p.approval_status === "aprovado");
   const fila = [...pendentes, ...emAjuste];
   const total = posts.length;
-  const brand = c.brand_color ?? null;
+  const brand = c.brand_color || COR_PADRAO_PORTAL;
   // Cor da marca do cliente vira o accent local da página (CSS vars no wrapper).
   const brandVars = (brand
     ? { "--primary": hexToHsl(brand), "--ring": hexToHsl(brand), "--primary-foreground": readableFg(brand) }
