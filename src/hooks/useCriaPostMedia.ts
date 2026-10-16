@@ -111,6 +111,10 @@ export function useCriaPostMedia(postId: string | null) {
       const { data, error } = await sbFrom("external_media_refs")
         .select("id, provider, external_file_id, file_name, file_type, view_url, thumbnail_url, bunny_video_id, position, download_url")
         .eq("post_id", postId)
+        // Versão antiga de uma entrega (revisão do parceiro) fica só no histórico.
+        // Sem isto, depois de uma revisão o editor mostrava 06.jpg e 07.jpg duas
+        // vezes (a velha e a nova). Gabriela, 16/10/2026.
+        .eq("substituida", false)
         .order("position", { ascending: true, nullsFirst: true })
         .order("created_at", { ascending: true });
       if (error) throw error;

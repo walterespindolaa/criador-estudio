@@ -107,6 +107,8 @@ Deno.serve(async (req) => {
     const { data: refs } = await svc.from("external_media_refs")
       .select("provider, external_file_id, file_name, file_type, view_url, download_url, bunny_video_id, position")
       .eq("post_id", post_id)
+      // Só a versão atual: arquivo substituído numa revisão não entra no zip.
+      .eq("substituida", false)
       .order("position", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: true });
 

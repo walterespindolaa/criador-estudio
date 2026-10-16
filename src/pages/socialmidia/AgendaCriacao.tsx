@@ -190,8 +190,9 @@ function buildDayItems(caps: Capture[], tasks: CrmTask[], cris: Creation[], post
     });
     return items;
   }
-  // "" (sem hora) ordena antes de qualquer "HH:MM"; timed em ordem crescente.
-  items.sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
+  // Sem ordem manual: posts por status (Aprovado → Aguardando → Ajuste → Produção →
+  // Postado, ver rankStatus) e o horário desempata; "" (sem hora) antes de "HH:MM".
+  items.sort((a, b) => rankStatus(a) - rankStatus(b) || (a.time ?? "").localeCompare(b.time ?? ""));
   return items;
 }
 
@@ -207,9 +208,21 @@ function splitFaixas(items: DayItem[], periods: ItemPeriods, ordemManual: boolea
   const out: Record<Faixa, DayItem[]> = { sem: [], manha: [], tarde: [], noite: [] };
   for (const it of items) out[faixaDoItem(periods[dayItemKey(it)], it.time)].push(it);
   if (!ordemManual) {
-    for (const f of FAIXAS) out[f].sort((a, b) => (a.time ?? "99:99").localeCompare(b.time ?? "99:99"));
+    for (const f of FAIXAS) out[f].sort((a, b) =>
+      rankStatus(a) - rankStatus(b) || (a.time ?? "99:99").localeCompare(b.time ?? "99:99"));
   }
   return out;
+}
+
+// ORDEM PADRÃO POR STATUS (Gabriela, 16/10/2026): dentro da faixa, os posts vêm
+// Aprovado → Aguardando aprovação → Ajuste → Produção → Postado; o horário só
+// desempata. Captação, tarefa, criação e material entram depois dos posts, na
+// ordem de horário. Se a pessoa arrastar, a ordem manual do dia passa a mandar
+// (ordemManual = true) e isto aqui não é aplicado.
+const RANK_STATUS_POST: Record<string, number> = { aprovado: 0, pendente: 1, ajuste_solicitado: 2, em_producao: 3, postado: 4 };
+function rankStatus(item: DayItem): number {
+  if (item.kind !== "post") return 9;
+  return RANK_STATUS_POST[item.post.approval_status ?? "em_producao"] ?? 5;
 }
 
 // droppableId da grade: "YYYY-MM-DD|faixa" na semana (um Droppable por faixa),

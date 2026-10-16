@@ -569,6 +569,7 @@ export function useExternalPostCovers(postIds: string[]) {
       const { data, error } = await sbFrom("external_media_refs")
         .select("post_id, provider, external_file_id, file_type, file_name, view_url, thumbnail_url, bunny_video_id, position")
         .in("post_id", idsKey)
+        .eq("substituida", false) // capa nunca é a arte de uma versão substituída
         .order("position", { ascending: true, nullsFirst: true })
         .order("created_at", { ascending: true });
       if (error) throw error;

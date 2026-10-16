@@ -432,6 +432,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
       .from("external_media_refs")
       .select("id, external_file_id, file_name, file_type, thumbnail_url, view_url, provider, download_url, bunny_video_id")
       .eq("post_id", postId)
+      .eq("substituida", false) // versão antiga de entrega fica só no histórico
       // Ordem do carrossel: a `position` gravada no reorder manda; quem nunca
       // foi reordenado (position null) cai pro created_at, ordem de chegada.
       .order("position", { ascending: true, nullsFirst: true })
