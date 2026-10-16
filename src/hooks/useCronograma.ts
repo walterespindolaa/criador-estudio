@@ -29,6 +29,13 @@ export type Cronograma = {
   descricao: string | null;
   token: string;
   created_at: string;
+  /** Envio e visita do cliente (16/10/2026). Nulos nos cronogramas anteriores. */
+  primeiro_envio_em?: string | null;
+  enviado_em?: string | null;
+  envios?: number;
+  visto_em?: string | null;
+  ultimo_visto_em?: string | null;
+  visualizacoes?: number;
 };
 
 export type CronogramaData = {
@@ -55,6 +62,8 @@ export type CronogramaItem = {
   converted_post_id: string | null;
   /** Linha editorial do cliente (editorial_lines.id); aparece no link público. */
   editorial_line_id: string | null;
+  /** Quando o cliente respondeu (aprovou, pediu ajuste ou recusou). Desde 16/10/2026. */
+  respondido_em?: string | null;
 };
 
 export function useCronogramas() {

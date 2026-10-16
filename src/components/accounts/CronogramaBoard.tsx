@@ -27,6 +27,7 @@ import { confirmar } from "@/components/shared/Confirm";
 import { MultiLinkInput } from "@/components/shared/MultiLinkInput";
 import { parseRefLinks, serializeRefLinks, refLinkHref, refLinkLabel, isRefLink } from "@/lib/refLinks";
 import { ROTULO_CRONOGRAMA } from "@/lib/labels";
+import { ResumoCronograma } from "@/components/accounts/ResumoCronograma";
 
 const TYPE_COLOR: Record<string, string> = {
   "Reels": "bg-red-600", "Carrossel": "bg-green-700", "Feed": "bg-blue-700",
@@ -334,6 +335,7 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
   onDelete: (id: string) => void;
 }) {
   const { items, addItem, updateItem, deleteItem, reorder } = useCronogramaItems(c.id);
+  const { datas: datasResumo } = useCronogramaDatas(c.id);
   const [mes, setMes] = useState("all"); // "all" | "YYYY-MM" filtra por período antes de enviar
   const mesesDisp = Array.from(new Set(items.map((it) => it.date?.slice(0, 7)).filter(Boolean) as string[])).sort();
   const visible = mes === "all" ? items : items.filter((it) => (it.date ?? "").slice(0, 7) === mes);
@@ -485,7 +487,8 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
 
   const link = `${window.location.origin}/cronograma/${c.token}`;
   const sendForApproval = () => {
-    onUpdate({ id: c.id, status: "enviado" });
+    // enviado_em: o banco carimba a hora certa e conta os reenvios (resumo do cronograma).
+    onUpdate({ id: c.id, status: "enviado", enviado_em: new Date().toISOString() });
     navigator.clipboard?.writeText(link).then(() => toast.success("Link de aprovação copiado!")).catch(() => toast.success("Enviado pra aprovação."));
   };
 
@@ -520,6 +523,8 @@ function CronogramaDetail({ c, onBack, onUpdate, onDelete }: {
           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if (await confirmar({ titulo: "Excluir este cronograma?", descricao: "O link público dele para de funcionar na hora." })) onDelete(c.id); }}><Trash2 className="h-4 w-4" /></Button>
         </div>
       </div>
+
+      <ResumoCronograma c={c} items={items} datas={datasResumo} link={link} />
 
       <DatasComemorativasSection cronogramaId={c.id} clientSegment={clientSegment} />
 
