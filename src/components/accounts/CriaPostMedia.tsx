@@ -17,7 +17,7 @@ import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, isDr
 import { parseRefLinks, refLinkHref } from "@/lib/refLinks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ImagePlus, Video, FileImage, Link2, Loader2, Heart, MessageCircle, Send, Bookmark, GripVertical, X, Play, Download, ExternalLink, Paperclip, ChevronDown, Trash2 } from "lucide-react";
+import { ImagePlus, Video, FileImage, Link2, Loader2, Heart, MessageCircle, Send, Bookmark, GripVertical, X, Play, Download, ExternalLink, Paperclip, ChevronDown, Trash2, Undo2, History, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { confirmar } from "@/components/shared/Confirm";
 import { supabase, SUPABASE_FUNCTIONS_URL, SUPABASE_ANON_KEY } from "@/integrations/supabase/client";
@@ -81,11 +81,19 @@ function MediaGrip({ handleProps }: { handleProps?: DraggableProvidedDragHandleP
   );
 }
 
-export function CriaPostMedia({ postId, platform, format, caption, handle, approved, title, referenceUrl }: {
+export function CriaPostMedia({ postId, platform, format, caption, handle, approved, title, referenceUrl, paraSair, onParaSairChange }: {
   postId: string; platform: string; format: string; caption?: string; handle?: string; approved?: boolean;
   title?: string; referenceUrl?: string | null;
+  /** REMOÇÃO SÓ NO SALVAR (Gabriela, 16/10/2026: "eu exclui uma midia, apertei
+   *  em cancelar mas já tinha apagado"). Quando o editor passa isto, o X só
+   *  MARCA a mídia; quem apaga de verdade é o Salvar do post (removeMany) e o
+   *  Cancelar só limpa a lista. Sem estas props, o X apaga na hora como antes. */
+  paraSair?: string[]; onParaSairChange?: (ids: string[]) => void;
 }) {
-  const { list, uploadImage, uploadVideo, addDriveLink, remove, removeAll, reorder } = useCriaPostMedia(postId);
+  const { list, antigas, uploadImage, uploadVideo, addDriveLink, remove, removeAll, reorder } = useCriaPostMedia(postId);
+  const adiado = !!onParaSairChange;
+  const sai = new Set(adiado ? (paraSair ?? []) : []);
+  const [velhasOpen, setVelhasOpen] = useState(false);
   const qc = useQueryClient();
   const { pickAndSave, picking, pickerSupported } = useGoogleDrive();
   const imgRef = useRef<HTMLInputElement>(null);
@@ -217,14 +225,24 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
     catch (err) { toast.error(err instanceof Error ? err.message : "Falha ao adicionar"); }
   };
 
-  // Remoção INDIVIDUAL otimista (o item some na hora; o delete real roda atrás).
+  // No editor do post: só marca (ver paraSair). Fora dele: remoção otimista na hora.
   const onRemoveMedia = (id: string) => {
+    if (adiado) { if (!sai.has(id)) onParaSairChange!([...sai, id]); return; }
     remove.mutate(id, { onError: (err) => toast.error(err instanceof Error ? err.message : "Falha ao remover") });
   };
 
   // Exclui TODAS as mídias do post de uma vez (com confirmação), também otimista.
   const onRemoveAll = async () => {
     if (!media.length) return;
+    if (adiado) {
+      const ok = await confirmar({
+        titulo: "Tirar todas as mídias?",
+        descricao: "Elas ficam marcadas e só são apagadas quando você clicar em Salvar. Se cancelar, voltam todas.",
+        acao: "Tirar todas",
+      });
+      if (ok) onParaSairChange!(media.map((m) => m.id));
+      return;
+    }
     const ok = await confirmar({
       titulo: "Excluir todas as mídias?",
       descricao: "Isso apaga todas as mídias anexadas a este post. Não dá pra desfazer.",
@@ -318,6 +336,9 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
     } finally { setZipping(false); }
   };
 
+  // O que continua no post (sem o que está marcado pra sair): é isto que a prévia,
+  // o publicar e o "salvar no celular" usam.
+  const visiveis = sai.size ? ordered.filter((m) => !sai.has(m.id)) : ordered;
   const aspect = postAspect(platform, format);
   const vertical = aspect === "9 / 16";
   const isStory = (format || "").toLowerCase() === "story";
@@ -339,14 +360,14 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
         <div className="rounded-2xl border border-green-200 bg-green-50 p-3 space-y-2">
           <p className="text-xs font-body font-bold text-green-800">Aprovado pelo cliente, pronto pra publicar.</p>
           <div className="flex items-center gap-2 flex-wrap">
-            <CriaPostPublishButton caption={caption ?? ""} media={ordered} />
+            <CriaPostPublishButton caption={caption ?? ""} media={visiveis} />
             <Button type="button" size="sm" variant="outline" disabled={zipping || count === 0} onClick={onDownloadZip}>{zipping ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />} Baixar tudo (.zip)</Button>
           </div>
         </div>
       )}
 
       {/* Celular: todas as mídias pra Galeria de uma vez (no computador não aparece). */}
-      <SalvarNoCelular midias={ordered} titulo={title} />
+      <SalvarNoCelular midias={visiveis} titulo={title} />
 
       <div className="flex items-center gap-2 flex-wrap">
         <input ref={imgRef} type="file" accept="image/*,.heic,.heif" multiple hidden onChange={(e) => onPick(e, "image")} />
@@ -405,10 +426,12 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
                               // então ele pode rolar a tira no mouse (veja useDragScroll).
                               <div ref={dragP.innerRef} {...dragP.draggableProps} data-drag-scroll-through=""
                                 style={{ ...dragP.draggableProps.style, ...dragThumbStyle }}
-                                className={`relative shrink-0 w-16 h-16 mr-2 rounded-xl overflow-hidden border border-border bg-muted select-none ${dragS.isDragging ? "ring-2 ring-primary/50 shadow-lg" : ""}`}>
+                                className={`relative shrink-0 w-16 h-16 mr-2 rounded-xl overflow-hidden border bg-muted select-none ${sai.has(m.id) ? "border-2 border-dashed border-destructive opacity-40" : "border-border"} ${dragS.isDragging ? "ring-2 ring-primary/50 shadow-lg" : ""}`}>
                                 <Thumb m={m} />
                                 <span className="absolute top-0.5 left-0.5 z-10 bg-black/65 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{i + 1}</span>
-                                <button type="button" onClick={() => onRemoveMedia(m.id)} aria-label="Remover mídia" className="absolute top-0.5 right-0.5 z-20 bg-black/65 text-white rounded-full p-0.5"><X className="h-3 w-3" /></button>
+                                {sai.has(m.id)
+                                  ? <button type="button" onClick={() => onParaSairChange!([...sai].filter((x) => x !== m.id))} aria-label="Desfazer" title="Desfazer" className="absolute top-0.5 right-0.5 z-20 bg-white text-destructive border border-destructive/40 rounded-full p-0.5"><Undo2 className="h-3 w-3" /></button>
+                                  : <button type="button" onClick={() => onRemoveMedia(m.id)} aria-label="Remover mídia" className="absolute top-0.5 right-0.5 z-20 bg-black/65 text-white rounded-full p-0.5"><X className="h-3 w-3" /></button>}
                                 <MediaGrip handleProps={dragP.dragHandleProps ?? undefined} />
                               </div>
                             );
@@ -432,6 +455,14 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
         </div>
       )}
 
+      {sai.size > 0 && (
+        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[12.5px] font-body text-red-800">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{sai.size === 1 ? "1 mídia vai sair" : `${sai.size} mídias vão sair`} quando você clicar em <strong>Salvar</strong>.</span>
+          <button type="button" onClick={() => onParaSairChange!([])} className="ml-auto font-bold underline">Desfazer</button>
+        </div>
+      )}
+
       {/* Anexos e links: COLAPSÁVEL e compacto (estilo Trello). Um cabeçalho com
           contador expande a lista de anexos (mídia + Drive) e do reference_url.
           Cada anexo é clicável (abre/prevê) + download; Drive abre direto no /view.
@@ -441,18 +472,26 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
           <button type="button" onClick={toggleAtt} aria-expanded={attOpen}
             className="w-full flex items-center gap-1.5 px-3 py-2 text-left hover:bg-muted/50 transition-colors">
             <Paperclip className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">Anexos e links ({attCount})</span>
+            <span className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground whitespace-nowrap">Anexos e links ({attCount})</span>
             <ChevronDown className={`h-4 w-4 text-muted-foreground ml-auto transition-transform ${attOpen ? "rotate-180" : ""}`} />
           </button>
 
           {attOpen && (
             <div className="px-3 pb-3 space-y-2 border-t border-border">
-              {ordered.length > 1 && (
-                <div className="flex justify-end pt-2 -mb-0.5">
+              {/* BAIXAR TODAS (Gabriela, 16/10/2026): sempre à mão, não só depois da
+                  aprovação. O arquivo vem da designer e ela precisa dele antes. */}
+              {ordered.length > 0 && (
+                <div className="flex justify-end gap-1 pt-2 -mb-0.5 flex-wrap">
+                  <Button type="button" size="sm" variant="ghost" disabled={zipping}
+                    className="h-8 text-primary hover:text-primary hover:bg-primary/10" onClick={onDownloadZip}>
+                    {zipping ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1.5" />} Baixar todas (.zip)
+                  </Button>
+                  {ordered.length > 1 && (
                   <Button type="button" size="sm" variant="ghost" disabled={removeAll.isPending}
                     className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={onRemoveAll}>
                     {removeAll.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />} Excluir todas
                   </Button>
+                  )}
                 </div>
               )}
 
@@ -465,14 +504,15 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
                 const tipo = drive
                   ? (video ? "Drive · vídeo" : m.file_type ? "Drive · imagem" : "Drive")
                   : video ? "Vídeo" : "Imagem";
+                const marcada = sai.has(m.id);
                 return (
-                  <div key={m.id} className="flex items-center gap-2.5">
+                  <div key={m.id} className={`flex items-center gap-2.5 ${marcada ? "rounded-lg bg-red-50 -mx-1.5 px-1.5 py-1" : ""}`}>
                     {/* Linha clicável: abre/prevê o arquivo (imagem cheia/Drive/vídeo). */}
                     <button type="button" onClick={() => openMedia(m)} title="Abrir / visualizar" className="flex items-center gap-2.5 min-w-0 flex-1 text-left group">
                       <span className="relative shrink-0 w-10 h-10 rounded-lg overflow-hidden border border-border bg-muted"><Thumb m={m} /></span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-xs font-body text-foreground truncate group-hover:text-primary group-hover:underline">{m.file_name || `Mídia ${i + 1}`}</span>
-                        <span className="block text-[10px] font-body text-muted-foreground">{tipo}</span>
+                        <span className={`block text-xs font-body truncate ${marcada ? "line-through text-red-800" : "text-foreground group-hover:text-primary group-hover:underline"}`}>{m.file_name || `Mídia ${i + 1}`}</span>
+                        <span className={`block text-[10px] font-body ${marcada ? "text-red-700" : "text-muted-foreground"}`}>{marcada ? "sai quando você salvar" : tipo}</span>
                       </span>
                     </button>
                     {drive && (
@@ -486,10 +526,17 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
                       className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground hover:text-primary hover:border-primary/40 disabled:opacity-50 transition-colors">
                       {dlId === m.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                     </button>
+                    {marcada ? (
+                      <button type="button" onClick={() => onParaSairChange!([...sai].filter((x) => x !== m.id))} title="Desfazer"
+                        className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-red-200 bg-white text-red-700 hover:border-red-400 transition-colors">
+                        <Undo2 className="h-4 w-4" />
+                      </button>
+                    ) : (
                     <button type="button" onClick={() => onRemoveMedia(m.id)} title="Remover"
                       className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors">
                       <X className="h-4 w-4" />
                     </button>
+                    )}
                   </div>
                 );
               })}
@@ -511,9 +558,47 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
         </div>
       )}
 
+      {/* VERSÕES ANTERIORES (Gabriela, 16/10/2026): o que a designer trocou numa
+          revisão sai da lista acima e fica aqui, fechado, só pra consulta. */}
+      {(antigas.data?.length ?? 0) > 0 && (
+        <div className="rounded-xl border border-border bg-muted/30 overflow-hidden">
+          <button type="button" onClick={() => setVelhasOpen((o) => !o)} aria-expanded={velhasOpen}
+            className="w-full flex items-center gap-1.5 px-3 py-2 text-left hover:bg-muted/50 transition-colors">
+            <History className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground whitespace-nowrap">Versões anteriores ({antigas.data!.length})</span>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground ml-auto transition-transform ${velhasOpen ? "rotate-180" : ""}`} />
+          </button>
+          {velhasOpen && (
+            <div className="px-3 pb-3 pt-2 space-y-2 border-t border-border">
+              <p className="text-[11px] font-body text-muted-foreground">Só consulta: não entra na prévia, no link do cliente nem no zip.</p>
+              {antigas.data!.map((m, i) => (
+                <div key={m.id} className="flex items-center gap-2.5">
+                  <button type="button" onClick={() => openMedia(m)} title="Abrir / visualizar" className="flex items-center gap-2.5 min-w-0 flex-1 text-left group">
+                    <span className="relative shrink-0 w-10 h-10 rounded-lg overflow-hidden border border-border bg-muted grayscale-[.5] opacity-80"><Thumb m={m} /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xs font-body text-foreground truncate group-hover:text-primary group-hover:underline">
+                        {m.file_name || `Mídia ${i + 1}`}
+                        <span className="ml-1.5 rounded px-1 py-px text-[10px] font-bold text-violet-700 bg-violet-100">v{(m.rodada ?? 0) + 1}</span>
+                      </span>
+                      <span className="block text-[10px] font-body text-muted-foreground">
+                        trocada numa revisão{m.created_at ? ` · enviada em ${new Date(m.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" })}` : ""}
+                      </span>
+                    </span>
+                  </button>
+                  <button type="button" onClick={() => onDownloadOne(m, i)} disabled={dlId === m.id} title="Baixar este arquivo"
+                    className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border text-muted-foreground hover:text-primary hover:border-primary/40 disabled:opacity-50 transition-colors">
+                    {dlId === m.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {isStory ? (
         <div className="mx-auto w-full max-w-[300px]">
-          <StoryPreview media={ordered} handle={handle} onRemove={onRemoveMedia} />
+          <StoryPreview media={visiveis} handle={handle} onRemove={onRemoveMedia} />
         </div>
       ) : (
       <div className={`bg-white border border-border rounded-2xl overflow-hidden mx-auto ${vertical ? "max-w-[360px]" : "max-w-[440px]"}`}>
@@ -521,8 +606,8 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
           <div className="relative">
             {/* Com capa, a prévia abre NA CAPA, como o Reels aparece no feed;
                 tocar mostra o vídeo. */}
-            <CapaSobreVideo capa={comCapa && ordered.length <= 1 ? capa : null}>
-              <PostMediaCarousel media={ordered} aspect={aspect} onRemove={onRemoveMedia} onVideoReady={onReady} />
+            <CapaSobreVideo capa={comCapa && visiveis.length <= 1 ? capa : null}>
+              <PostMediaCarousel media={visiveis} aspect={aspect} onRemove={onRemoveMedia} onVideoReady={onReady} />
             </CapaSobreVideo>
             <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/65 to-transparent pointer-events-none" />
             <div className="absolute right-3 bottom-14 z-10 flex flex-col items-center gap-3.5 text-white pointer-events-none [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.6))]">
@@ -536,8 +621,8 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
           </div>
         ) : (
           <>
-            <CapaSobreVideo capa={comCapa && ordered.length <= 1 ? capa : null}>
-              <PostMediaCarousel media={ordered} aspect={aspect} onRemove={onRemoveMedia} onVideoReady={onReady} />
+            <CapaSobreVideo capa={comCapa && visiveis.length <= 1 ? capa : null}>
+              <PostMediaCarousel media={visiveis} aspect={aspect} onRemove={onRemoveMedia} onVideoReady={onReady} />
             </CapaSobreVideo>
             <div className="flex items-center gap-4 px-3.5 pt-3 pb-1.5 text-foreground/80">
               <Heart className="h-5 w-5" /><MessageCircle className="h-5 w-5" /><Send className="h-5 w-5" /><Bookmark className="h-5 w-5 ml-auto" />

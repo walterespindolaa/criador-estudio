@@ -97,6 +97,18 @@ async function fetchDriveMeta(fileIdOrUrl: string): Promise<DriveMeta> {
 // motivo o UPDATE não pegar, a gente não fica tentando de novo pra sempre.
 const driveMetaTried = new Set<string>();
 
+/* REMOVE ALGUMAS (Gabriela, 16/10/2026): o X do editor do post não apaga mais na
+   hora, só marca. Quem confirma é o Salvar, que chama isto com os ids marcados.
+   Função solta (não hook) pra o editor não montar um segundo useCriaPostMedia. */
+export async function removerMidiasDoPost(ids: string[]): Promise<void> {
+  const results = await Promise.allSettled(ids.map((id) =>
+    invokeComSessao("criapost-media-delete", { media_id: id })));
+  const anyFail = results.some((r) =>
+    r.status === "rejected" ||
+    (r.status === "fulfilled" && (!!r.value.error || !!((r.value.data as { error?: string })?.error))));
+  if (anyFail) throw new Error("Não consegui remover algumas mídias. Tente salvar de novo.");
+}
+
 export function useCriaPostMedia(postId: string | null) {
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -354,6 +366,22 @@ export function useCriaPostMedia(postId: string | null) {
     onSettled: invalidate,
   });
 
+  /* VERSÕES ANTERIORES: arquivos de entrega trocados numa revisão. Ficam só pra
+     consulta e download, fora da prévia, do link do cliente e do zip. */
+  const antigas = useQuery({
+    queryKey: ["criapost-media-antigas", postId],
+    enabled: !!postId,
+    queryFn: async (): Promise<(CriaMedia & { rodada: number | null; created_at: string | null })[]> => {
+      const { data, error } = await sbFrom("external_media_refs")
+        .select("id, provider, external_file_id, file_name, file_type, view_url, thumbnail_url, bunny_video_id, position, download_url, rodada, created_at")
+        .eq("post_id", postId)
+        .eq("substituida", true)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as (CriaMedia & { rodada: number | null; created_at: string | null })[];
+    },
+  });
+
   const reorder = useMutation({
     mutationFn: async (ids: string[]) => {
       const { error } = await sbRpc("criapost_reorder_media", { p_post_id: postId, p_ids: ids });
@@ -362,5 +390,5 @@ export function useCriaPostMedia(postId: string | null) {
     onSuccess: invalidate,
   });
 
-  return { list, uploadImage, uploadVideo, addDriveLink, remove, removeAll, reorder };
+  return { list, antigas, uploadImage, uploadVideo, addDriveLink, remove, removeAll, reorder };
 }

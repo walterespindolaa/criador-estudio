@@ -25,6 +25,7 @@ import { usePostApprovalComments } from "@/hooks/useApprovals";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { Calendar } from "@/components/ui/calendar";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
+import { removerMidiasDoPost } from "@/hooks/useCriaPostMedia";
 import { ImportKanbanDialog } from "@/components/accounts/ImportKanbanDialog";
 import { ClientReportDialogLazy as ClientReportDialog } from "@/components/accounts/ClientReportDialogLazy";
 import { NotasRelatorioSalvas } from "@/components/accounts/NotasRelatorioSalvas";
@@ -452,6 +453,9 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   // "Enviar para" escolhido num post que ainda não foi salvo (ver EnviarParaParceiro).
   const [envioPendente, setEnvioPendente] = useState<EnvioPendente | null>(null);
   const delegarPost = useDelegarPost();
+  // Mídias marcadas com X no editor. Só são apagadas no Salvar; Cancelar/fechar
+  // descarta a marcação (Gabriela, 16/10/2026). Ver CriaPostMedia.paraSair.
+  const [midiasParaSair, setMidiasParaSair] = useState<string[]>([]);
 
   // Novo post: cria um RASCUNHO na hora. Assim o post.id já existe e a mídia pode ser
   // anexada de cara (o storage precisa do id). O rascunho não aparece pro cliente.
@@ -460,6 +464,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     setRefLinks([]);
     setInternalTags([]);
     setEnvioPendente(null);
+    setMidiasParaSair([]);
     setFormOpen(true);
     try {
       const draft = await createDraft.mutateAsync({ scheduled_date: day ?? null });
@@ -467,7 +472,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       setEditing(draft);
     } catch { setFormOpen(false); }
   };
-  const openEdit = (p: ExternalPost) => { setDraftId(null); setEditing(p); setRefLinks(parseRefLinks(p.reference_url)); setInternalTags(tagsByPost[p.id] ?? []); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", notes: (p as { notes?: string | null }).notes ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null, reference_url: p.reference_url ?? null, drive_folder_url: (p as { drive_folder_url?: string | null }).drive_folder_url ?? null, editorial_line_id: p.editorial_line_id ?? null }); setFormOpen(true); };
+  const openEdit = (p: ExternalPost) => { setDraftId(null); setMidiasParaSair([]); setEditing(p); setRefLinks(parseRefLinks(p.reference_url)); setInternalTags(tagsByPost[p.id] ?? []); setF({ title: p.title, platform: p.platform, format: p.format, caption: p.caption ?? "", hook: p.hook ?? "", approval_mode: (p.approval_mode as "fast"|"flow"|"both") ?? "fast", script: p.script ?? "", notes: (p as { notes?: string | null }).notes ?? "", scheduled_date: p.scheduled_date ?? null, scheduled_time: (p as { scheduled_time?: string | null }).scheduled_time ?? null, reference_url: p.reference_url ?? null, drive_folder_url: (p as { drive_folder_url?: string | null }).drive_folder_url ?? null, editorial_line_id: p.editorial_line_id ?? null }); setFormOpen(true); };
 
   /* LINK DIRETO PRA UMA PEÇA (Walter, 14/09/2026).
      `?post=<id>` abre o editor daquele post assim que a lista carrega. É o que
@@ -494,6 +499,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const closeForm = async () => {
     setFormOpen(false);
     setEnvioPendente(null);
+    setMidiasParaSair([]);
     if (draftId) { await remove.mutateAsync(draftId).catch(() => { /* silencioso */ }); setDraftId(null); }
     setEditing(null);
   };
@@ -538,6 +544,19 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     if ((f.drive_folder_url ?? "").trim() && !/^https?:\/\//i.test((f.drive_folder_url ?? "").trim())) {
       toast.error("A pasta do Drive precisa ser um link começando com http.");
       return;
+    }
+    // Mídias marcadas com X: agora sim saem de verdade (antes de gravar o post,
+    // pra a capa/prévia já sair sem elas). Se falhar, avisa e não fecha.
+    if (midiasParaSair.length) {
+      const alvo = editing?.id ?? draftId;
+      try { await removerMidiasDoPost(midiasParaSair); setMidiasParaSair([]); }
+      catch (err) { toast.error(err instanceof Error ? err.message : "Não consegui remover as mídias marcadas."); return; }
+      finally {
+        if (alvo) {
+          qc.invalidateQueries({ queryKey: ["criapost-media", alvo] });
+          qc.invalidateQueries({ queryKey: ["external-post-covers"] });
+        }
+      }
     }
     // A coluna reference_url continua a mesma: um link por linha.
     const payload: ExternalPostInput = { ...f, reference_url: serializeRefLinks(refLinks) };
@@ -1268,7 +1287,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                 <CriaPostMedia postId={editing.id} platform={f.platform} format={f.format}
                   caption={f.caption ?? undefined} handle={client.instagram_handle || undefined}
                   approved={editing.approval_status === "aprovado"}
-                  title={f.title || undefined} referenceUrl={serializeRefLinks(refLinks)} />
+                  title={f.title || undefined} referenceUrl={serializeRefLinks(refLinks)}
+                  paraSair={midiasParaSair} onParaSairChange={setMidiasParaSair} />
               ) : (
                 <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Preparando o post pra você anexar a mídia…</p>
               )}

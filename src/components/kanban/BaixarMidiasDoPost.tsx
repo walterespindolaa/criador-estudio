@@ -20,19 +20,28 @@ import type { MediaLike } from "@/lib/driveMedia";
 
 type Midia = MediaLike & { id: string; file_name: string };
 
-export function BaixarMidiasDoPost({ postId, midias, titulo }: { postId: string; midias: Midia[]; titulo?: string }) {
+/** `link`: versão compacta (texto roxo), usada no cabeçalho "Arquivos desta peça"
+ *  do card da designer (Gabriela, 16/10/2026). */
+export function BaixarMidiasDoPost({ postId, midias, titulo, rotulo: rotuloFixo, link }: {
+  postId: string; midias: Midia[]; titulo?: string; rotulo?: string; link?: boolean;
+}) {
   const [celular] = useState(podeSalvarNoCelular);
   const [zipando, setZipando] = useState(false);
   if (midias.length === 0) return null;
 
-  const rotulo = midias.length === 1 ? "Baixar mídia" : `Baixar mídias (${midias.length})`;
+  const rotulo = rotuloFixo ?? (midias.length === 1 ? "Baixar mídia" : `Baixar mídias (${midias.length})`);
+  const linkCls = "inline-flex items-center gap-1 text-[12px] font-body font-bold text-violet-700 hover:underline disabled:opacity-60";
 
   if (celular) {
     return (
       <SalvarNoCelular
         midias={midias}
         titulo={titulo}
-        gatilho={(abrir) => (
+        gatilho={(abrir) => link ? (
+          <button type="button" className={linkCls} onClick={abrir}>
+            <Download className="h-3.5 w-3.5" /> {rotuloFixo ?? "Baixar todas"}
+          </button>
+        ) : (
           <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={abrir}>
             <Download className="h-3.5 w-3.5" /> Mídias
           </Button>
@@ -75,6 +84,15 @@ export function BaixarMidiasDoPost({ postId, midias, titulo }: { postId: string;
       setZipando(false);
     }
   };
+
+  if (link) {
+    return (
+      <button type="button" className={linkCls} onClick={() => void baixarZip()} disabled={zipando}>
+        {zipando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+        {rotulo}
+      </button>
+    );
+  }
 
   return (
     <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => void baixarZip()} disabled={zipando}>

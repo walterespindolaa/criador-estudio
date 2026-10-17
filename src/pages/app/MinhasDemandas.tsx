@@ -28,6 +28,7 @@ import { FichaDaMarca } from "@/pages/parceiro/Marcas";
 import { ErroAoCarregar } from "@/components/shared/ErroAoCarregar";
 import { CamadaDeAlfinetes, segundoBonito } from "@/components/shared/CamadaDeAlfinetes";
 import { GaleriaDePecas } from "@/components/shared/GaleriaDePecas";
+import { BaixarMidiasDoPost } from "@/components/kanban/BaixarMidiasDoPost";
 import {
   ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useConversaDoCard, useCoresDasAgencias, useEntreguesDoParceiro,
   useFilaDoParceiro, useMarcarConversaLida, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useProporPrazo, useResolverPrazoSugerido, useVersoesDaPeca, useEntregasRemoviveis, useMarcarUrgente,
@@ -2192,12 +2193,24 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                             As versões antigas existem, mas quem está trabalhando
                             precisa olhar pra UMA arte. O histórico fica a um
                             clique, e só aparece quando há o que mostrar. */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                        {/* BAIXAR TODAS (Gabriela, 16/10/2026): .zip só com a versão
+                            atual (no celular abre o "Salvar no celular"). Serve pra
+                            social mídia e pra designer (a edge aceita os dois). */}
+                        {postId && (
+                          <BaixarMidiasDoPost link rotulo="Baixar todas" postId={postId} titulo={card.titulo ?? undefined}
+                            midias={midias.map((m, i) => ({
+                              id: `${i}-${m.url ?? m.thumb}`, file_name: m.nome ?? `arquivo-${i + 1}`, file_type: m.tipo,
+                              provider: "storage", view_url: m.url ?? m.thumb, download_url: m.url ?? m.thumb, thumbnail_url: m.thumb ?? m.url,
+                            }))} />
+                        )}
                         {(card.versoes_antigas ?? 0) > 0 && (
                           <button type="button" onClick={() => setVendoHistorico(true)}
                             className="inline-flex items-center gap-1 text-[12px] font-body font-bold text-violet-700 hover:underline">
                             <History className="h-3.5 w-3.5" /> Ver versões anteriores ({card.versoes_antigas})
                           </button>
                         )}
+                        </div>
                       </div>
                       <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
                         {midias.map((m, i) => {

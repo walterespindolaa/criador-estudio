@@ -102,7 +102,13 @@ Deno.serve(async (req) => {
     const { data: post } = await svc.from("posts")
       .select("user_id, title, caption").eq("id", post_id).maybeSingle();
     if (!post) return json({ error: "Post não encontrado" }, 404);
-    if (post.user_id !== userId) return json({ error: "Sem permissão" }, 403);
+    // Dono do post OU parceiro com o card (Gabriela, 16/10/2026: a designer e a
+    // social mídia baixam tudo pelo card). parceiro_tem_o_card roda como o
+    // usuário logado (auth.uid()), por isso vai pelo userClient.
+    if (post.user_id !== userId) {
+      const { data: temCard } = await userClient.rpc("parceiro_tem_o_card", { _post_id: post_id });
+      if (temCard !== true) return json({ error: "Sem permissão" }, 403);
+    }
 
     const { data: refs } = await svc.from("external_media_refs")
       .select("provider, external_file_id, file_name, file_type, view_url, download_url, bunny_video_id, position")
