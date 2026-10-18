@@ -1,18 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 
 export function useAiUsage() {
   const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
+  // Cota da CONTA ABERTA: é ela que o servidor cobra (ai-context-builder).
+  const conta = activeAccountId ?? user?.id ?? null;
 
   const query = useQuery({
-    queryKey: ["ai-usage"],
-    enabled: !!user,
+    queryKey: ["ai-usage", conta],
+    enabled: !!user && !!conta,
     staleTime: 1000 * 60,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("ai_usage_this_month");
+      const { data, error } = await (supabase.rpc as unknown as (
+        fn: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: unknown }>)("ai_usage_da_conta", { _owner: conta });
       if (error) throw error;
-      const row = Array.isArray(data) ? data[0] : data;
+      const row = (Array.isArray(data) ? data[0] : data) as { used?: number; quota?: number } | null;
       return {
         used: Number(row?.used ?? 0),
         quota: Number(row?.quota ?? 0),

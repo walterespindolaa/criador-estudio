@@ -294,11 +294,37 @@ serve(async (req) => {
       })
     }
 
+    const _body = await req.json()
+    const { operation, data } = _body
+
+    /* ── CONTA ATIVA (decisão 18/10/2026) ─────────────────────────────
+       Quando a social media abre o Cria de uma cliente (ou o "Meu perfil"),
+       a IA trabalha PRA ESSA CONTA: plano, cota e brandbook são dela, porque
+       quem paga é a dona da conta. O front manda `accountId`; aqui a gente
+       confere no banco se a sessão pode agir por ela (membro ativo, Meu
+       perfil ou time do gestor). Sem `accountId`, é a própria sessão.
+       O rate-limit de rajada continua por PESSOA (user.id), acima. */
+    let contaId: string = user.id
+    const _pedida = typeof _body?.accountId === 'string' ? _body.accountId : null
+    if (_pedida && _pedida !== user.id) {
+      const { data: _pode, error: _podeErr } = await supabase.rpc('conta_acessivel', { _actor: user.id, _owner: _pedida })
+      if (_podeErr || _pode !== true) {
+        return new Response(JSON.stringify({ error: 'forbidden_account', message: 'Você não tem acesso a esta conta.' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      contaId = _pedida
+    }
+    const _outraConta = contaId !== user.id
+
     // ── Access gate: trial ativo, subscription ativa, ou admin ─────
+    // Admin é da SESSÃO. Plano, trial e módulos são da CONTA ATIVA.
+    const { data: sessaoRow } = await supabase
+      .from("profiles").select("role").eq("id", user.id).single();
     const { data: accessRow, error: accessErr } = await supabase
       .from("profiles")
       .select("role, plan, subscription_status, trial_ends_at")
-      .eq("id", user.id)
+      .eq("id", contaId)
       .single();
 
     if (accessErr || !accessRow) {
@@ -308,7 +334,7 @@ serve(async (req) => {
       );
     }
 
-    const _isAdmin = accessRow.role === "admin";
+    const _isAdmin = sessaoRow?.role === "admin" || accessRow.role === "admin";
     /* `past_due` conta como ativo aqui (pente fino 23/09/2026, B3). O front
        (useTier) já tratava assim; a edge não, e a pessoa em atraso de
        pagamento perdia a IA sem aviso enquanto o resto do app funcionava.
@@ -327,7 +353,7 @@ serve(async (req) => {
       const { data: ent } = await supabase
         .from("module_entitlements")
         .select("module_code")
-        .eq("manager_id", user.id)
+        .eq("manager_id", contaId)
         .eq("status", "active")
         .limit(1);
       _temModuloPago = !!(ent && ent.length > 0);
@@ -335,14 +361,16 @@ serve(async (req) => {
 
     if (!_isAdmin && !_isActive && !_trialOk && !_temModuloPago) {
       return new Response(
-        JSON.stringify({ error: "subscription_required", message: "Seu período de teste encerrou. Assine para continuar usando a IA." }),
+        JSON.stringify({ error: "subscription_required", message: _outraConta
+          ? "A conta aberta não tem plano ativo, então a IA fica fechada aqui. Quem libera é a dona da conta."
+          : "Seu período de teste encerrou. Assine para continuar usando a IA." }),
         { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     // ── fim access gate ───────────────────────────────────────────
 
-    const { operation, data } = await req.json()
-    const userId = user.id // use this, ignore userId from body
+    // Contexto (brandbook) e cota são da conta ativa. `userId` do body é ignorado.
+    const userId = contaId
 
     // ── Recursos pagos por TIER (F19) ──────────────────────────────
     // A trava do frontend (roteador React / UpgradeGate) é UX. Ela não é
@@ -364,7 +392,9 @@ serve(async (req) => {
       if ((TIER_RANK[_callerTier] ?? 0) < TIER_RANK[_minTier]) {
         const _label = _minTier === 'studio' ? 'Studio' : 'Pro'
         return new Response(
-          JSON.stringify({ error: 'upgrade_required', message: `Este recurso está no plano ${_label}.` }),
+          JSON.stringify({ error: 'upgrade_required', message: _outraConta
+            ? `Este recurso está no plano ${_label}, e a conta aberta não tem esse plano.`
+            : `Este recurso está no plano ${_label}.` }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -413,7 +443,7 @@ Gere um insight estratégico conciso em português BR no formato:
         })
       }
       try {
-        return await runTrendRefresh(supabase, chaveGemini, corsHeaders, userId)
+        return await runTrendRefresh(supabase, chaveGemini, corsHeaders, user.id)
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         console.error('[trend-bank-refresh] failed:', msg)
@@ -429,7 +459,7 @@ Gere um insight estratégico conciso em português BR no formato:
         })
       }
       try {
-        return await runStoryTrendRefresh(supabase, chaveGemini, corsHeaders, userId)
+        return await runStoryTrendRefresh(supabase, chaveGemini, corsHeaders, user.id)
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         console.error('[story-trend-refresh] failed:', msg)
@@ -478,7 +508,9 @@ Gere um insight estratégico conciso em português BR no formato:
         return new Response(
           JSON.stringify({
             error: "quota_exceeded",
-            message: "Você atingiu o limite de gerações de IA deste mês. Faça upgrade para continuar.",
+            message: _outraConta
+              ? "A conta aberta atingiu o limite de gerações de IA deste mês."
+              : "Você atingiu o limite de gerações de IA deste mês. Faça upgrade para continuar.",
           }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );

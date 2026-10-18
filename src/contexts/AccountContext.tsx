@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, ReactNode } fr
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { definirContaAtiva } from "@/lib/conta-ativa";
 
 export type ManagedAccount = {
   owner_id: string; name: string; avatar_url: string | null;
@@ -89,6 +90,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   };
 
   const effectiveId = activeAccountId ?? user?.id ?? null;
+  // Espelha a conta aberta pra quem chama o servidor fora do React (IA).
+  // Atribuição direta no render: precisa valer já na primeira chamada.
+  definirContaAtiva(effectiveId);
   const actingAsTeam = !!activeAccountId && teamAccounts.some((m) => m.owner_id === activeAccountId);
   const value = useMemo<Ctx>(() => ({
     activeAccountId: effectiveId,
