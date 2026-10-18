@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 
 // types.ts é travado, cast padrão (igual useSocialInsights/useModules).
@@ -61,15 +62,22 @@ export const MEDIA_KIT_DEFAULTS: MediaKitProfile = {
 export const KIT_ACCENTS = ["#0F6E56", "#7A1F3D", "#0061EE", "#EA4918", "#7C3AED", "#DB2777", "#B45309", "#1F2937"] as const;
 
 // Configuração editável do media kit (audiência, serviços/valores, contato…).
-export function useMediaKitProfile() {
+/* Dono = conta aberta, não quem está logado (18/10/2026, "Meu perfil"). */
+function useDonoDoKit() {
   const { user } = useAuth();
+  const { activeAccountId } = useActiveAccount();
+  return activeAccountId ?? user?.id ?? null;
+}
+
+export function useMediaKitProfile() {
+  const dono = useDonoDoKit();
   return useQuery<MediaKitProfile>({
-    queryKey: ["media-kit-profile", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["media-kit-profile", dono],
+    enabled: !!dono,
     queryFn: async () => {
       const { data, error } = await sbFrom("media_kit_profiles")
         .select("headline,bio,niche,contact,cities,gender,audience,services,accent,link,display_name,avatar_url,show_top_posts,featured_post_ids")
-        .eq("user_id", user!.id)
+        .eq("user_id", dono!)
         .maybeSingle();
       if (error) throw error;
       const row = data as unknown as MediaKitProfile | null;
@@ -79,17 +87,17 @@ export function useMediaKitProfile() {
 }
 
 export function useSaveMediaKitProfile() {
-  const { user } = useAuth();
+  const dono = useDonoDoKit();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (patch: Partial<MediaKitProfile>) => {
-      if (!user?.id) throw new Error("Sem sessão");
+      if (!dono) throw new Error("Sem sessão");
       const { error } = await sbFrom("media_kit_profiles")
-        .upsert({ user_id: user.id, ...patch, updated_at: new Date().toISOString() } as never, { onConflict: "user_id" });
+        .upsert({ user_id: dono, ...patch, updated_at: new Date().toISOString() } as never, { onConflict: "user_id" });
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["media-kit-profile", user?.id] });
+      qc.invalidateQueries({ queryKey: ["media-kit-profile", dono] });
     },
     onError: () => toast.error("Não consegui salvar o media kit."),
   });
@@ -102,16 +110,17 @@ export type CustomKitFile = { id: string; name: string; storage_path: string; cr
 // PDF personalizado (o que a pessoa editou no Canva e subiu). Guardamos em files com category 'media_kit'.
 export function useCustomMediaKit() {
   const { user } = useAuth();
+  const dono = useDonoDoKit();
   const qc = useQueryClient();
 
   const query = useQuery<CustomKitFile | null>({
-    queryKey: ["media-kit-file", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["media-kit-file", dono],
+    enabled: !!dono,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("files")
         .select("id,name,storage_path,created_at")
-        .eq("user_id", user!.id)
+        .eq("user_id", dono!)
         .eq("category", "media_kit")
         .order("created_at", { ascending: false })
         .limit(1)
@@ -139,7 +148,7 @@ export function useCustomMediaKit() {
       if (upErr) throw upErr;
 
       const { error: insErr } = await supabase.from("files").insert({
-        user_id: user.id,
+        user_id: dono ?? user.id,
         name: file.name,
         storage_path: path,
         file_type: "application/pdf",
@@ -153,7 +162,7 @@ export function useCustomMediaKit() {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["media-kit-file", user?.id] });
+      qc.invalidateQueries({ queryKey: ["media-kit-file", dono] });
       toast.success("Media kit enviado!");
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao enviar."),
@@ -167,7 +176,7 @@ export function useCustomMediaKit() {
       await supabase.from("files").delete().eq("id", cur.id);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["media-kit-file", user?.id] });
+      qc.invalidateQueries({ queryKey: ["media-kit-file", dono] });
       toast.success("Media kit removido.");
     },
     onError: () => toast.error("Erro ao remover."),

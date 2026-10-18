@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 
 export type CollabStatus = "lead" | "negociando" | "fechado" | "entregue" | "pago";
@@ -83,16 +84,22 @@ const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 
 export function useCollabs() {
   const { user } = useAuth();
+  /* DONO DA COLLAB = A CONTA ABERTA (18/10/2026, "Meu perfil"). Era sempre quem
+     estava logado: a social mídia abrindo o próprio perfil (ou uma cliente) via
+     as collabs DELA, e o que criava ia pra conta errada. Agora é a conta ativa;
+     o banco só deixa a dona do perfil próprio mexer (policy perfil_proprio_tudo). */
+  const { activeAccountId } = useActiveAccount();
+  const dono = activeAccountId ?? user?.id ?? null;
   const qc = useQueryClient();
   const invalidate = () => qc.invalidateQueries({ queryKey: ["collabs"] });
 
   const query = useQuery({
-    queryKey: ["collabs", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["collabs", dono],
+    enabled: !!dono,
     queryFn: async (): Promise<CollabWithDeliverables[]> => {
       const [c, d] = await Promise.all([
-        sbFrom("collabs").select("*").eq("user_id", user!.id).order("created_at", { ascending: false }),
-        sbFrom("collab_deliverables").select("*").eq("user_id", user!.id).order("sort_order", { ascending: true }),
+        sbFrom("collabs").select("*").eq("user_id", dono!).order("created_at", { ascending: false }),
+        sbFrom("collab_deliverables").select("*").eq("user_id", dono!).order("sort_order", { ascending: true }),
       ]);
       if (c.error) throw c.error;
       if (d.error) throw d.error;
@@ -109,7 +116,7 @@ export function useCollabs() {
     mutationFn: async (input: CollabInput) => {
       if (!user) throw new Error("no user");
       const { data, error } = await sbFrom("collabs")
-        .insert({ ...input, user_id: user.id } as never)
+        .insert({ ...input, user_id: dono ?? user.id } as never)
         .select().single();
       if (error) throw error;
       return data as Collab;
@@ -141,7 +148,7 @@ export function useCollabs() {
   const createDeliverable = useMutation({
     mutationFn: async (input: DeliverableInput) => {
       if (!user) throw new Error("no user");
-      const { error } = await sbFrom("collab_deliverables").insert({ ...input, user_id: user.id } as never);
+      const { error } = await sbFrom("collab_deliverables").insert({ ...input, user_id: dono ?? user.id } as never);
       if (error) throw error;
     },
     onSuccess: () => invalidate(),
