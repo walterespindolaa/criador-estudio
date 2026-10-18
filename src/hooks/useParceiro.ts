@@ -493,6 +493,9 @@ export function useMeusCaches() {
 export type CacheDoParceiro = {
   id: string; assignee_id: string; amount: number; status: string; date: string; description: string; post_id: string | null;
   material_id?: string | null;
+  pago_em?: string | null;
+  recebido_em?: string | null;
+  recebido_contestado_em?: string | null;
 };
 
 /** Lado social mídia: cachês lançados (despesas do Caixa ligadas a parceiro). */
@@ -502,7 +505,7 @@ export function useCachesDosParceiros(managerId: string | null) {
     enabled: !!managerId,
     queryFn: async () => {
       const { data, error } = await sbFrom("fin_records")
-        .select("id, assignee_id, amount, status, date, description, post_id, material_id")
+        .select("id, assignee_id, amount, status, date, description, post_id, material_id, pago_em, recebido_em, recebido_contestado_em")
         .eq("manager_id", managerId)
         .not("assignee_id", "is", null)
         .order("date", { ascending: false })
@@ -1446,4 +1449,49 @@ export function useSouParceiro() {
 export function usePausadoEmTudo() {
   const { data } = useVinculosDeParceiro();
   return !!data && data.ativos === 0 && data.pausados > 0;
+}
+
+/* ═══ O OK DO PARCEIRO NO PAGAMENTO (Walter, 18/10/2026) ═══
+   "dar um check que ja paguei ... e ela dar um OK la tbm". Quem marca pago
+   continua sendo só o dono (Caixa ou popup do fechamento). Aqui o parceiro vê
+   cada pagamento (tudo que a agência pagou no mesmo dia) e confirma que recebeu,
+   ou avisa que não recebeu. Tudo pela RPC, que só mexe no que é dele e já está
+   pago (migration 20261018000001). */
+export type PagamentoRecebido = {
+  manager_id: string; agencia: string; pago_em: string; total: number; qtd: number;
+  de: string; ate: string; recebido_em: string | null; contestado_em: string | null;
+};
+
+export function useMeusPagamentos() {
+  const { user } = useAuth();
+  return useQuery<PagamentoRecebido[]>({
+    queryKey: ["parceiro-pagamentos", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("parceiro_meus_pagamentos");
+      if (error) {
+        if (aindaNaoExisteNoBanco(error.message)) return [];
+        throw error;
+      }
+      return ((data ?? []) as PagamentoRecebido[]).map((p) => ({ ...p, total: Number(p.total) }));
+    },
+  });
+}
+
+export function useConfirmarPagamento() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ manager_id, pago_em, recebi }: { manager_id: string; pago_em: string; recebi: boolean }) => {
+      const { data, error } = await sbRpc("parceiro_confirmar_pagamento", { _manager: manager_id, _pago_em: pago_em, _recebi: recebi });
+      if (error) throw error;
+      return { n: Number(data ?? 0), recebi };
+    },
+    onSuccess: ({ n, recebi }) => {
+      qc.invalidateQueries({ queryKey: ["parceiro-pagamentos", user?.id] });
+      if (n === 0) toast.error("Esse pagamento mudou. Atualize a página.");
+      else toast.success(recebi ? "Confirmado. A agência foi avisada." : "Avisamos a agência que você não recebeu.");
+    },
+    onError: (e: unknown) => toast.error((e as Error)?.message ?? "Não consegui registrar."),
+  });
 }

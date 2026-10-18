@@ -7,7 +7,8 @@
 // Cada valor é uma despesa do Caixa ligada ao cliente, então já entra na margem
 // dele em "Clientes".
 import { useMemo, useState } from "react";
-import { Plus, Copy, Wallet, Pencil, Archive, FileText } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Plus, Copy, Wallet, Pencil, Archive, FileText, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import { RelatorioTerceirosDialog } from "@/components/accounts/RelatorioTerceirosDialog";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -220,6 +221,22 @@ function Ficha({ t, linhas, nomeCliente, clientes, ehDono, hoje }: {
   const pendentes = doPeriodo.filter(aPagar);
   const totPend = pendentes.reduce((s, l) => s + l.amount, 0);
   const tot = doPeriodo.reduce((s, l) => s + l.amount, 0);
+  /* O OK DO PARCEIRO (18/10/2026): cada pagamento do período (tudo pago no mesmo
+     dia) com o status do lado dele. Recebido só quando TODAS as linhas daquele
+     pagamento foram confirmadas; contestado se ele avisou que não recebeu. */
+  const pagamentos = useMemo(() => {
+    const m = new Map<string, { pago_em: string; total: number; qtd: number; todasOk: boolean; recebido: string | null; contestado: string | null }>();
+    for (const l of doPeriodo) {
+      if (l.status !== "pago" || !l.pago_em) continue;
+      const g = m.get(l.pago_em) ?? { pago_em: l.pago_em, total: 0, qtd: 0, todasOk: true, recebido: null, contestado: null };
+      g.total += l.amount; g.qtd++;
+      if (!l.recebido_em) g.todasOk = false;
+      else if (!g.recebido || l.recebido_em > g.recebido) g.recebido = l.recebido_em;
+      if (l.recebido_contestado_em && (!g.contestado || l.recebido_contestado_em > g.contestado)) g.contestado = l.recebido_contestado_em;
+      m.set(l.pago_em, g);
+    }
+    return [...m.values()].map((g) => ({ ...g, recebido: g.todasOk ? g.recebido : null })).sort((a, b) => b.pago_em.localeCompare(a.pago_em));
+  }, [doPeriodo]);
 
   const [avulsoAberto, setAvulsoAberto] = useState(false);
   const [pagarAberto, setPagarAberto] = useState(false);
@@ -403,6 +420,22 @@ function Ficha({ t, linhas, nomeCliente, clientes, ehDono, hoje }: {
             </div>
           </>
         )}
+        {t.no_cria && pagamentos.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {pagamentos.map((pg) => (
+              <div key={pg.pago_em} className="rounded-2xl border border-border bg-background/60 px-3.5 py-2.5">
+                <p className="text-[12.5px] font-body font-bold">Pago em {dm(pg.pago_em)} · {brl(pg.total)} <span className="font-normal text-muted-foreground">· {pg.qtd} {pg.qtd === 1 ? "item" : "itens"}</span></p>
+                {pg.contestado ? (
+                  <p className="mt-1 flex items-center gap-1.5 text-[12px] font-body text-red-700"><AlertTriangle className="h-3.5 w-3.5" /> {t.nome} avisou que não recebeu ({dm(pg.contestado.slice(0, 10))}). Confira o pagamento com ela.</p>
+                ) : pg.recebido ? (
+                  <p className="mt-1 flex items-center gap-1.5 text-[12px] font-body text-green-800"><CheckCircle2 className="h-3.5 w-3.5" /> {t.nome} confirmou o recebimento em {dm(pg.recebido.slice(0, 10))}</p>
+                ) : (
+                  <p className="mt-1 flex items-center gap-1.5 text-[12px] font-body text-muted-foreground"><Clock className="h-3.5 w-3.5" /> Esperando o OK de {t.nome}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
         <p className="text-[11px] font-body text-muted-foreground mt-3 leading-relaxed">
           Cada linha é uma despesa no Caixa ligada ao cliente, então já entra na margem dele em "Clientes".
           {t.no_cria ? " Os cachês nascem sozinhos quando a peça é entregue com valor." : ' Pra quem não tem conta, os valores entram pelo "Lançar avulso".'}
@@ -546,6 +579,47 @@ function NovoTerceiro({ aberto, aoFechar, aoCriar }: { aberto: boolean; aoFechar
           <Button variant="ghost" onClick={aoFechar}>Cancelar</Button>
           <Button onClick={enviar} disabled={!nome.trim() || salvar.isPending}>{salvar.isPending ? "Salvando..." : "Salvar"}</Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ═══ FECHAMENTO DO PARCEIRO EM POPUP (Walter, 18/10/2026) ═══
+   Na Equipe > Produção, "Cachês dos parceiros": tocar no parceiro jogava pro
+   Caixa inteiro. Agora abre a MESMA ficha do Caixa > Terceiros (combinado,
+   período, lista, copiar, pagar e o OK dele) sem sair da tela. É o mesmo
+   componente, então Caixa e popup nunca mostram coisas diferentes. */
+export function FechamentoDoParceiroDialog({ memberId, nomeReserva, aoFechar }: {
+  memberId: string | null; nomeReserva: string | null; aoFechar: () => void;
+}) {
+  const { actingAsTeam } = useActiveAccount();
+  const navigate = useNavigate();
+  const hoje = hojeBR();
+  const { data: terceiros = [], isLoading } = useTerceiros();
+  const { data: linhas = [] } = useLinhasTerceiros();
+  const { data: clientes = [] } = useCrmClients();
+  const nomeCliente = useMemo(() => new Map(clientes.map((c) => [c.id, c.name])), [clientes]);
+  const t = memberId ? terceiros.find((x) => x.member_id === memberId) ?? null : null;
+  return (
+    <Dialog open={!!memberId} onOpenChange={(v) => { if (!v) aoFechar(); }}>
+      <DialogContent className="max-w-3xl p-0 overflow-hidden">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Fechamento {t?.nome ?? nomeReserva ?? "do parceiro"}</DialogTitle>
+          <DialogDescription>Combinado, peças do período e pagamento.</DialogDescription>
+        </DialogHeader>
+        <div className="max-h-[85vh] overflow-y-auto p-2 md:p-3">
+          {isLoading ? (
+            <div className="h-40 rounded-2xl bg-muted/40 animate-pulse" />
+          ) : t ? (
+            <Ficha key={chaveTerceiro(t)} t={t} linhas={doTerceiro(t, linhas)} nomeCliente={nomeCliente} clientes={clientes} ehDono={!actingAsTeam} hoje={hoje} />
+          ) : (
+            <div className="p-6 text-center space-y-3">
+              <p className="font-display font-bold text-lg">{nomeReserva ?? "Este parceiro"} saiu da equipe</p>
+              <p className="text-sm font-body text-muted-foreground">Os valores dele continuam no Caixa, em Empresa › Terceiros. Lá dá pra conferir e marcar como pago.</p>
+              <Button onClick={() => { aoFechar(); navigate("/socialmidia/criacaixa/empresa"); }}>Abrir o Caixa</Button>
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -12,7 +12,7 @@ import { useModules } from "@/hooks/useModules";
 import { hojeBR } from "@/lib/date-br";
 import { cn } from "@/lib/utils";
 import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
-import { useAcoesLancamento, useEntreguesDoParceiro, useMeusCaches, useMeusCachesDetalhe, useMeusLancamentos, useMinhasAgencias, useMinhasMarcas, type LancamentoDoParceiro } from "@/hooks/useParceiro";
+import { useAcoesLancamento, useConfirmarPagamento, useMeusPagamentos, useEntreguesDoParceiro, useMeusCaches, useMeusCachesDetalhe, useMeusLancamentos, useMinhasAgencias, useMinhasMarcas, type LancamentoDoParceiro } from "@/hooks/useParceiro";
 import { brlReais } from "@/lib/money";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -45,6 +45,8 @@ export default function Caches() {
   const { data: marcas = [] } = useMinhasMarcas();
   const { data: agencias = [] } = useMinhasAgencias();
   const { salvar, excluir } = useAcoesLancamento();
+  const { data: pagamentos = [] } = useMeusPagamentos();
+  const confirmarPg = useConfirmarPagamento();
   const { openModule } = useManagerOutlet();
   const { modules } = useModules();
   const [abrirCard, setAbrirCard] = useState<string | null>(null);
@@ -137,6 +139,47 @@ export default function Caches() {
           </p>
         </Card>
       </div>
+
+      {/* PAGAMENTOS PRA CONFIRMAR (Walter, 18/10/2026: "ela dar um OK la tbm").
+          Cada pagamento que a agência marcou (tudo pago no mesmo dia) aparece
+          aqui até ela confirmar. "Não recebi" avisa a agência na hora. Os já
+          confirmados ficam embaixo, discretos, como recibo. */}
+      {pagamentos.length > 0 && (
+        <section className="space-y-2">
+          {pagamentos.filter((p) => !p.recebido_em).map((p) => (
+            <Card key={`${p.manager_id}-${p.pago_em}`} className={cn("rounded-2xl p-4 border-2", p.contestado_em ? "border-red-300 bg-red-50/40" : "border-green-500 bg-green-50/50")}>
+              <p className="font-display font-bold text-[15px]">{p.agencia} marcou como pago</p>
+              <p className="font-display font-extrabold text-2xl leading-tight mt-0.5">{brl(p.total)}</p>
+              <p className="text-[12px] font-body text-muted-foreground mt-0.5">
+                Entregas de {dataBR(p.de)} a {dataBR(p.ate)} · {p.qtd} {p.qtd === 1 ? "item" : "itens"} · pago em {dataBR(p.pago_em)}
+              </p>
+              {p.contestado_em ? (
+                <p className="text-[12px] font-body text-red-700 mt-2 flex items-center gap-1.5">
+                  <AlertCircle className="h-3.5 w-3.5" /> Você avisou que não recebeu. Se já caiu, confirme abaixo.
+                </p>
+              ) : null}
+              <div className="flex gap-2 flex-wrap mt-3">
+                <Button size="sm" className="bg-green-600 hover:bg-green-700" disabled={confirmarPg.isPending}
+                  onClick={() => confirmarPg.mutate({ manager_id: p.manager_id, pago_em: p.pago_em, recebi: true })}>
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Recebi
+                </Button>
+                {!p.contestado_em && (
+                  <Button size="sm" variant="outline" disabled={confirmarPg.isPending}
+                    onClick={() => confirmarPg.mutate({ manager_id: p.manager_id, pago_em: p.pago_em, recebi: false })}>
+                    Não recebi
+                  </Button>
+                )}
+              </div>
+            </Card>
+          ))}
+          {pagamentos.filter((p) => p.recebido_em).slice(0, 3).map((p) => (
+            <p key={`${p.manager_id}-${p.pago_em}`} className="text-[12px] font-body text-muted-foreground flex items-center gap-1.5 px-1">
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-700" />
+              {p.agencia}: {brl(p.total)} pago em {dataBR(p.pago_em)}, você confirmou em {dataBR((p.recebido_em ?? "").slice(0, 10))}
+            </p>
+          ))}
+        </section>
+      )}
 
       {/* AS ENTREGAS, uma a uma. É o que ele manda quando cobra. */}
       <section>

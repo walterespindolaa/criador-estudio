@@ -56,6 +56,9 @@ export type LinhaTerceiro = {
   post_id: string | null;
   assignee_id: string | null;
   terceiro_id: string | null;
+  /** OK do parceiro (só parceiro com conta; manual nunca tem) */
+  recebido_em?: string | null;
+  recebido_contestado_em?: string | null;
 };
 
 export const ROTULO_PAPEL_TERCEIRO: Record<string, string> = {
@@ -102,7 +105,7 @@ export function useLinhasTerceiros() {
     enabled: !!agencyOwnerId,
     queryFn: async () => {
       const { data, error } = await sbFrom("fin_records")
-        .select("id, date, pago_em, description, amount, status, crm_client_id, post_id, assignee_id, terceiro_id")
+        .select("id, date, pago_em, description, amount, status, crm_client_id, post_id, assignee_id, terceiro_id, recebido_em, recebido_contestado_em")
         .eq("manager_id", agencyOwnerId)
         .eq("type", "despesa")
         .or("assignee_id.not.is.null,terceiro_id.not.is.null")

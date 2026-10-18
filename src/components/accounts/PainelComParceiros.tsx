@@ -18,6 +18,7 @@ import { FORMAT_CHIP_SOLID_CLASS, formatColorVars } from "@/lib/format-colors";
 import { useMarcaDosClientes, usePedidosDoCliente } from "@/hooks/useParceiro";
 import { AcoesDeRevisao } from "@/components/accounts/RevisaoDaEntrega";
 import { MaterialAbertoDialog } from "@/components/parceiro/MaterialAbertoDialog";
+import { FechamentoDoParceiroDialog } from "@/components/accounts/CaixaTerceiros";
 import { TIPO_MATERIAL, useMateriaisComParceiros } from "@/hooks/useMaterialParceiro";
 
 const brl = brlReais;
@@ -134,9 +135,24 @@ const ETAPA: Record<string, { txt: string; cls: string }> = {
    Entregues aparecem embaixo, apagadas, só as dos últimos 30 dias: é o
    "Aprovado" do Trello dela, o que já saiu mas ainda é do mês.
    ═══════════════════════════════════════════════════════════════════════════ */
+/* O PAINEL RENOVA A CADA FECHAMENTO (Walter, 18/10/2026: "dar um check que ja
+   paguei esses quadros ... e renovar esse quadro, sem sair o historico").
+   Peça entregue com cachê fica no painel até o cachê ser PAGO; pago, sai daqui
+   e mora no histórico (Caixa > Terceiros e o popup do parceiro). Peça entregue
+   sem cachê não tem pagamento pra esperar: segue a regra antiga dos 30 dias.
+   A fonte é a despesa no Caixa, a mesma que o Caixa e o parceiro leem. */
+export type CacheDaPeca = { status: string; pago_em: string | null };
+const ehPagoCache = (st?: string) => (st ?? "").trim().toLowerCase() === "pago";
+function entregueFicaNoPainel(p: PecaExterna, cachePorPeca: Map<string, CacheDaPeca>, limite30: string) {
+  const c = cachePorPeca.get(p.id);
+  if (c) return !ehPagoCache(c.status);
+  return (p.entregue_em ?? p.updated_at ?? "") >= limite30;
+}
+
 const ORDEM_ETAPA: Record<string, number> = { ajuste: 0, aguardando: 1, em_producao: 2, entregue: 3 };
 
-function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeParceiro }: {
+function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeParceiro, cachePorPeca }: {
+  cachePorPeca: Map<string, CacheDaPeca>;
   parceiros: { member_id: string; nome: string; role: string }[];
   pecas: PecaExterna[];
   extClients: ExternalClient[];
@@ -157,12 +173,18 @@ function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
   const { data: marcas } = useMarcaDosClientes(extClients.map((c) => c.crm_client_id ?? "").filter(Boolean));
 
   const colunas = useMemo(() => {
-    const mapa = new Map<string, { abertas: PecaExterna[]; entregues: PecaExterna[] }>();
+    const mapa = new Map<string, { abertas: PecaExterna[]; entregues: PecaExterna[]; pagas: number; pagoEm: string | null }>();
     for (const p of minhas) {
       const k = p.external_client_id ?? "sem-cliente";
-      const c = mapa.get(k) ?? { abertas: [], entregues: [] };
+      const c = mapa.get(k) ?? { abertas: [], entregues: [], pagas: 0, pagoEm: null };
       if (p.producao_status === "entregue") {
-        if ((p.entregue_em ?? p.updated_at ?? "") >= limite30) c.entregues.push(p);
+        if (entregueFicaNoPainel(p, cachePorPeca, limite30)) c.entregues.push(p);
+        else {
+          // Último pagamento deste cliente: vira a faixa "pago em dd/mm" no topo da coluna.
+          const pg = cachePorPeca.get(p.id)?.pago_em ?? null;
+          if (pg && (!c.pagoEm || pg > c.pagoEm)) { c.pagoEm = pg; c.pagas = 0; }
+          if (pg && pg === c.pagoEm) c.pagas++;
+        }
       } else c.abertas.push(p);
       mapa.set(k, c);
     }
@@ -172,17 +194,19 @@ function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
       return (a.prazo_producao ?? "9999").localeCompare(b.prazo_producao ?? "9999");
     };
     return [...mapa.entries()]
-      .filter(([, c]) => c.abertas.length + c.entregues.length > 0)
+      .filter(([, c]) => c.abertas.length + c.entregues.length + c.pagas > 0)
       .map(([id, c]) => ({
         id,
         cliente: extClients.find((e) => e.id === id) ?? null,
         abertas: c.abertas.sort(ordenar),
         entregues: c.entregues,
+        pagas: c.pagas,
+        pagoEm: c.pagoEm,
         atrasadas: c.abertas.filter((p) => p.prazo_producao && diasAte(p.prazo_producao, hoje) < 0).length,
       }))
       // Quem tem mais coisa aberta vem primeiro; atrasada desempata.
       .sort((a, b) => (b.atrasadas - a.atrasadas) || (b.abertas.length - a.abertas.length));
-  }, [minhas, extClients, limite30, hoje]);
+  }, [minhas, extClients, limite30, hoje, cachePorPeca]);
 
   const cargaDe = (id: string) => {
     const lista = pecas.filter((p) => p.assignee_id === id && p.producao_status !== "entregue");
@@ -288,10 +312,16 @@ function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
                   {col.atrasadas > 0 && <span className="w-2 h-2 rounded-full bg-red-600" title={`${col.atrasadas} atrasada(s)`} />}
                 </div>
                 <div className="space-y-2">
+                  {col.pagoEm && (
+                    <p className="flex items-center gap-1.5 rounded-xl border border-dashed border-green-300 bg-card/80 px-2.5 py-1.5 text-[11px] font-body text-green-800">
+                      <Check className="h-3 w-3 shrink-0" />
+                      <span>Pago em {col.pagoEm.slice(8, 10)}/{col.pagoEm.slice(5, 7)} · {col.pagas} peça{col.pagas === 1 ? "" : "s"} no histórico</span>
+                    </p>
+                  )}
                   {col.abertas.map((p) => cartao(p))}
                   {col.entregues.length > 0 && (
                     <>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1 pt-1">Entregues · 30 dias</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1 pt-1">Entregues · a pagar</p>
                       {col.entregues.map((p) => cartao(p, true))}
                     </>
                   )}
@@ -325,10 +355,11 @@ const COLUNAS_ETAPA: { etapa: string; titulo: string; fundo: string; ponto: stri
   { etapa: "aguardando", titulo: "Novo", fundo: "bg-orange-50/60", ponto: "bg-orange-500" },
   { etapa: "em_producao", titulo: "Fazendo", fundo: "bg-blue-50/60", ponto: "bg-blue-500" },
   { etapa: "ajuste", titulo: "Ajuste", fundo: "bg-violet-50/60", ponto: "bg-violet-500" },
-  { etapa: "entregue", titulo: "Entregue · 30 dias", fundo: "bg-green-50/60", ponto: "bg-green-600" },
+  { etapa: "entregue", titulo: "Entregue · a pagar", fundo: "bg-green-50/60", ponto: "bg-green-600" },
 ];
 
-function QuadroDeProducao({ parceiros, pecas, extClients, hoje, abrirPeca, nomeParceiro, naoLidas }: {
+function QuadroDeProducao({ parceiros, pecas, extClients, hoje, abrirPeca, nomeParceiro, naoLidas, cachePorPeca }: {
+  cachePorPeca: Map<string, CacheDaPeca>;
   parceiros: { member_id: string; nome: string; role: string }[];
   pecas: PecaExterna[];
   extClients: ExternalClient[];
@@ -351,8 +382,8 @@ function QuadroDeProducao({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
   const visiveis = useMemo(() => pecas.filter((p) =>
     (quem === "todos" || p.assignee_id === quem)
     && (cliente === "todos" || p.external_client_id === cliente)
-    && (p.producao_status !== "entregue" || (p.entregue_em ?? p.updated_at ?? "") >= limite30)),
-  [pecas, quem, cliente, limite30]);
+    && (p.producao_status !== "entregue" || entregueFicaNoPainel(p, cachePorPeca, limite30))),
+  [pecas, quem, cliente, limite30, cachePorPeca]);
 
   const porEtapa = useMemo(() => {
     const m = new Map<string, PecaExterna[]>();
@@ -584,6 +615,26 @@ export function PainelComParceiros({ clientes }: {
     }
     return m;
   }, [caches, pecas]);
+  const cachePorPeca = useMemo(() => {
+    const m = new Map<string, CacheDaPeca>();
+    for (const c of caches) {
+      const id = c.post_id ?? c.material_id;
+      if (id) m.set(id, { status: c.status, pago_em: c.pago_em ?? null });
+    }
+    return m;
+  }, [caches]);
+  /* PARCEIRO QUE SAIU DA EQUIPE CONTINUA COM NOME (18/10/2026). O cachê a pagar
+     dele segue aparecendo (a dívida não some com o vínculo), mas aparecia como
+     "Parceiro". O nome vem da descrição que o gatilho grava: "Cachê Fulana: peça". */
+  const nomePelaDescricao = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of caches) {
+      const r = /^Cachê ([^:]+):/.exec(c.description ?? "");
+      if (r && !m.has(c.assignee_id)) m.set(c.assignee_id, r[1].trim());
+    }
+    return m;
+  }, [caches]);
+  const [fechamentoDe, setFechamentoDe] = useState<string | null>(null);
   const totalCachePendente = [...cachesPorParceiro.values()].reduce((s, a) => s + a.pendente, 0);
   const totalCacheProducao = [...cachesPorParceiro.values()].reduce((s, a) => s + a.emProducao, 0);
 
@@ -799,6 +850,7 @@ export function PainelComParceiros({ clientes }: {
                     abrirPeca={abrirPeca}
                     nomeParceiro={nomeParceiro}
                     naoLidas={naoLidas}
+                    cachePorPeca={cachePorPeca}
                   />
                 ) : (
                   <QuadroDoParceiro
@@ -808,6 +860,7 @@ export function PainelComParceiros({ clientes }: {
                     hoje={hoje}
                     abrirPeca={abrirPeca}
                     nomeParceiro={nomeParceiro}
+                    cachePorPeca={cachePorPeca}
                   />
                 )}
               </div>
@@ -866,9 +919,9 @@ export function PainelComParceiros({ clientes }: {
               </p>
               <Card className="rounded-2xl border-border overflow-hidden divide-y divide-border">
                 {[...cachesPorParceiro.entries()].map(([id, a]) => {
-                  const quem = nomeParceiro.get(id);
+                  const quem = nomeParceiro.get(id) ?? (nomePelaDescricao.has(id) ? { nome: nomePelaDescricao.get(id)!, role: "" } : undefined);
                   return (
-                    <button key={id} type="button" onClick={() => navigate("/socialmidia/criacaixa/empresa")}
+                    <button key={id} type="button" onClick={() => setFechamentoDe(id)}
                       className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/40 transition-colors">
                       <span className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-400 to-violet-700 text-white grid place-items-center text-[10px] font-bold shrink-0">
                         {(quem?.nome ?? "P").charAt(0).toUpperCase()}
@@ -898,8 +951,13 @@ export function PainelComParceiros({ clientes }: {
                 })}
               </Card>
               <p className="text-[11px] font-body text-muted-foreground px-0.5 mt-1.5">
-                Cada cachê é uma despesa no Caixa (categoria pelo papel do parceiro, ligada ao cliente). Marque como pago lá, e o parceiro vê na área dele.
+                Toque no parceiro pra ver o fechamento dele, baixar a lista e marcar como pago. Cada cachê é uma despesa no Caixa, e o parceiro confirma o recebimento na área dele.
               </p>
+              <FechamentoDoParceiroDialog
+                memberId={fechamentoDe}
+                nomeReserva={fechamentoDe ? (nomeParceiro.get(fechamentoDe)?.nome ?? nomePelaDescricao.get(fechamentoDe) ?? null) : null}
+                aoFechar={() => setFechamentoDe(null)}
+              />
             </section>
           )}
 
