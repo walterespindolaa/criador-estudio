@@ -4,7 +4,7 @@ import { AlertTriangle, CalendarDays, PartyPopper, Target, BarChart3, Lightbulb,
 import { usePosts } from "./usePosts";
 import { useIdeas } from "./useIdeas";
 import { usePillars } from "./usePillars";
-import { useProfile } from "./useProfile";
+import { useActiveProfile } from "./useActiveProfile";
 
 export type SmartNotification = {
   id: string;
@@ -32,7 +32,7 @@ export function useSmartNotifications() {
   const { posts } = usePosts();
   const { ideas } = useIdeas();
   const { pillars } = usePillars();
-  const { profile } = useProfile();
+  const { profile } = useActiveProfile();
 
   const notifications = useMemo<SmartNotification[]>(() => {
     const notifs: SmartNotification[] = [];

@@ -22,7 +22,10 @@ returns jsonb language sql stable security definer set search_path to 'public' a
   from public.profiles p
   where p.id = _owner
     and auth.uid() is not null
-    and (p.id = auth.uid() or public.is_account_member(p.id) or public.is_perfil_proprio(p.id));
+    and (p.id = auth.uid() or public.is_account_member(p.id) or public.is_perfil_proprio(p.id)
+         -- colaboradora de time (manager_members, sem parceiro) lê o gestor;
+         -- só leitura: atualizar_perfil_ativo não aceita time.
+         or public.is_team_member(p.id));
 $f$;
 revoke all on function public.get_perfil_ativo(uuid) from public, anon;
 grant execute on function public.get_perfil_ativo(uuid) to authenticated;

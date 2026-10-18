@@ -143,7 +143,10 @@ export function useCustomMediaKit() {
         await supabase.from("files").delete().eq("id", prev.id);
       }
 
-      const path = `${user.id}/media-kit-${Date.now()}.pdf`;
+      // Pasta da DONA da conta: a policy "Managers manage files" deixa a social
+      // media gravar ali, e a própria dona consegue abrir depois. Na pasta da
+      // sessão, a cliente não lia o próprio media kit.
+      const path = `${dono ?? user.id}/media-kit-${Date.now()}.pdf`;
       const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file);
       if (upErr) throw upErr;
 

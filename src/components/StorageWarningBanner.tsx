@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { HardDrive, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { cn } from "@/lib/utils";
 import { storageBytesForPlan } from "@/lib/plans";
 
 export function StorageWarningBanner() {
-  const { profile } = useProfile();
+  // Conta ATIVA: os uploads vão pra cota de quem é a conta aberta.
+  const { profile } = useActiveProfile();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState(false);
 

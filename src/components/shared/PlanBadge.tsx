@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Sparkles, Crown, AlertCircle, Shield, Layers } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    A PÍLULA DO PLANO
@@ -63,10 +64,14 @@ function deriveState(profile: Perfil): BadgeState | null {
 
 export function PlanBadge({ light = false, onlyUrgent = false, compact = false }: { light?: boolean; onlyUrgent?: boolean; compact?: boolean }) {
   const { profile } = useProfile();
+  const { profile: ativo, isOutraConta } = useActiveProfile();
   const navigate = useNavigate();
-  const state = deriveState(profile);
+  // Dentro da conta de uma cliente, a pílula mostra o plano DELA (é ele que
+  // libera as ferramentas) e não leva pro checkout de quem está logado.
+  const state = deriveState(isOutraConta ? ativo : profile);
 
   if (!state) return null;
+  if (isOutraConta && onlyUrgent) return null;
 
   // No header do celular não cabe tudo. Ali a pílula só aparece quando ela PEDE
   // uma ação: o teste está acabando, ou a pessoa está sem plano. "Studio" e
@@ -128,6 +133,20 @@ export function PlanBadge({ light = false, onlyUrgent = false, compact = false }
   // No mobile (compact), o texto vira só "337d" pros estados de teste, que são os
   // únicos que aparecem lá (onlyUrgent). Desktop mantém o rótulo completo.
   const label = compact && "daysLeft" in state ? `${state.daysLeft}d` : variant.label;
+
+  if (isOutraConta) {
+    const primeiro = (ativo?.name ?? "").split(" ")[0] || "da conta";
+    return (
+      <span
+        className={`${base.replace("cursor-pointer", "cursor-default").replace("hover:-translate-y-px", "")} ${variant.className}`}
+        title={`Plano da conta de ${primeiro}. É ele que libera as ferramentas aqui.`}
+        aria-label={`Plano da conta de ${primeiro}: ${variant.label}`}
+      >
+        {variant.icon}
+        <span>{label}</span>
+      </span>
+    );
+  }
 
   return (
     <button

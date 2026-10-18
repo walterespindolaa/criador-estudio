@@ -5,6 +5,7 @@ import {
   useCollabs, COLLAB_STATUSES, COLLAB_STATUS_LABEL, PROPOSAL_LABEL, type CollabStatus,
 } from "@/hooks/useCollabs";
 import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useCreateFinRecord } from "@/hooks/useFinance";
 import { useModules } from "@/hooks/useModules";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -24,7 +25,10 @@ export function CollabDialog({ open, onOpenChange, collabId }: {
   const { modules } = useModules();
   const createFin = useCreateFinRecord();
   const hasCaixa = modules.some((m) => m.code === "financeiro" && m.status === "active");
-  const pixKey = (profile as { pix_key?: string | null } | null)?.pix_key ?? null;
+  // A proposta pública mostra o Pix da DONA da collab (get_proposal_by_token).
+  // Dentro da conta de uma cliente, o Pix da sessão não é o que a marca vê.
+  const { isOutraConta } = useActiveProfile();
+  const pixKey = isOutraConta ? null : ((profile as { pix_key?: string | null } | null)?.pix_key ?? null);
 
   const [brand, setBrand] = useState("");
   const [contact, setContact] = useState("");
@@ -206,7 +210,9 @@ export function CollabDialog({ open, onOpenChange, collabId }: {
               {editing?.proposal_status === "aceita" && (
                 <div className="border-t border-border pt-3 space-y-2.5">
                   <Label className="text-xs font-bold text-foreground flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" /> Pagamento</Label>
-                  {pixKey ? (
+                  {isOutraConta ? (
+                    <p className="text-xs text-muted-foreground bg-muted/40 rounded-xl px-3 py-2">A marca vê a chave Pix cadastrada no perfil da dona desta conta.</p>
+                  ) : pixKey ? (
                     <div className="flex items-center gap-2 bg-muted/40 rounded-xl px-3 py-2 text-xs text-muted-foreground">
                       <span className="flex-1 truncate">Chave Pix exibida à marca: <b className="text-foreground">{pixKey}</b></span>
                     </div>
