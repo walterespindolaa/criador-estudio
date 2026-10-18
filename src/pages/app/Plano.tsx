@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
-import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePosts, type Post } from "@/hooks/usePosts";
 import { usePillars } from "@/hooks/usePillars";
 import { useHabits } from "@/hooks/useHabits";
@@ -75,7 +75,7 @@ type ReflectionFormState = {
 const Plano = () => {
   const { user } = useAuth();
   const { activeAccountId } = useActiveAccount();
-  const { profile } = useProfile();
+  const { profile } = useActiveProfile();
   const { posts, updatePost } = usePosts();
   const { pillars } = usePillars();
 

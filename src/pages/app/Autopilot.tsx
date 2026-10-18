@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePillars } from "@/hooks/usePillars";
 import { usePosts } from "@/hooks/usePosts";
 import { useBrandContext } from "@/hooks/useBrandContext";
@@ -44,7 +44,7 @@ function deriveUserSlots(list: { scheduled_time?: string | null }[]): string[] |
 
 export default function Autopilot() {
   const { user } = useAuth();
-  const { profile } = useProfile();
+  const { profile } = useActiveProfile();
   const { pillars } = usePillars();
   const { posts, createPost } = usePosts();
   const { brandContext, hasBrandContext } = useBrandContext();

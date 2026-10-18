@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile, useAtualizarPerfilAtivo } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -11,10 +11,11 @@ const CANVA_URL = "https://canva.link/4107g68sk2cn10g";
 
 export function MediaKitDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { user } = useAuth();
-  const { profile, updateProfile } = useProfile();
+  const { profile } = useActiveProfile();
+  const updateProfile = useAtualizarPerfilAtivo();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const currentUrl = (profile as { media_kit_url?: string | null } | null)?.media_kit_url ?? null;
+  const currentUrl = profile?.media_kit_url ?? null;
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -24,12 +25,13 @@ export function MediaKitDialog({ open, onOpenChange }: { open: boolean; onOpenCh
     if (file.size > 10 * 1024 * 1024) { toast.error("O PDF deve ter no máximo 10 MB."); return; }
     setUploading(true);
     try {
-      const path = `${user.id}/media-kit.pdf`;
+      // bio-media aceita escrita da social media na pasta da DONA da conta.
+      const path = `${profile?.id ?? user.id}/media-kit.pdf`;
       const up = await supabase.storage.from("bio-media").upload(path, file, { upsert: true, contentType: "application/pdf" });
       if (up.error) throw up.error;
       const { data } = supabase.storage.from("bio-media").getPublicUrl(path);
       const url = `${data.publicUrl}?v=${Date.now()}`;
-      await updateProfile.mutateAsync({ media_kit_url: url } as never);
+      await updateProfile.mutateAsync({ media_kit_url: url });
       toast.success("Mídia kit salvo!");
     } catch {
       toast.error("Erro ao subir o PDF.");
@@ -41,8 +43,8 @@ export function MediaKitDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   async function remove() {
     if (!user) return;
     try {
-      await supabase.storage.from("bio-media").remove([`${user.id}/media-kit.pdf`]);
-      await updateProfile.mutateAsync({ media_kit_url: null } as never);
+      await supabase.storage.from("bio-media").remove([`${profile?.id ?? user.id}/media-kit.pdf`]);
+      await updateProfile.mutateAsync({ media_kit_url: null });
       toast.success("Mídia kit removido.");
     } catch {
       toast.error("Erro ao remover.");

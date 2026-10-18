@@ -126,7 +126,7 @@ function DCard({ children, className, onClick, ...rest }: { children: React.Reac
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { profile, isLoading: profileLoading } = useProfile();
+  const { isLoading: profileLoading } = useProfile();
   // Saudação/avatar do header refletem a CONTA ATIVA (não a manager).
   const { profile: activeProfile } = useActiveProfile();
   const navigate = useNavigate();
@@ -179,13 +179,13 @@ const Dashboard = () => {
     const topPillar = Object.entries(pillarCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
     getDailyInsight({
       postsThisWeek: weekPosts.length,
-      weeklyGoal: profile?.weekly_goal || 3,
+      weeklyGoal: activeProfile?.weekly_goal || 3,
       topPillar,
       lastPublished: publishedPosts[publishedPosts.length - 1]?.published_at || "",
     }, user?.id)
       .then(insight => { if (insight) { setAiInsight(insight); localStorage.setItem(cacheKey, insight); } })
       .catch(() => { /* noop */ });
-  }, [posts, user, profile, today, weekDays]);
+  }, [posts, user, activeProfile, today, weekDays]);
 
   const handleQuickCapture = async () => {
     const sanitized = sanitizeText(quickIdea);
@@ -423,7 +423,7 @@ const Dashboard = () => {
               {pillars.length > 0 ? (
                 <div className="grid grid-cols-7 gap-1.5">
                   {editorialDays.map((day, index) => {
-                    const pilarId = profile?.editorial_line?.[day];
+                    const pilarId = activeProfile?.editorial_line?.[day];
                     const pilar = pilarId ? pillars.find(p => p.id === pilarId) : undefined;
                     const isToday = index === todayIndex;
                     return (

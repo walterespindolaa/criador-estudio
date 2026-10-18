@@ -20,7 +20,7 @@ import { FEATURES, PLANS, tierAtLeast, type FeatureKey } from "@/lib/plans";
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export function UpgradeGate({ feature, children }: { feature: FeatureKey; children: ReactNode }) {
-  const { tier, isAdmin, isLoading } = useTier();
+  const { tier, isAdmin, isLoading, isOutraConta, nomeDaConta } = useTier();
   const navigate = useNavigate();
   const def = FEATURES[feature];
 
@@ -44,6 +44,28 @@ export function UpgradeGate({ feature, children }: { feature: FeatureKey; childr
   if (tierAtLeast(tier, def.minimo)) return <>{children}</>;
 
   const plano = PLANS.find((p) => p.id === def.minimo);
+
+  // Conta de cliente (ou Meu perfil): quem paga é a dona da conta. Não manda a
+  // social media pro checkout dela mesma, que não liberaria nada aqui.
+  if (isOutraConta) {
+    const primeiro = (nomeDaConta ?? "").split(" ")[0] || "esta conta";
+    return (
+      <div className="flex flex-col items-center justify-center text-center py-20 px-6">
+        <span className="grid h-14 w-14 place-items-center rounded-2xl bg-muted text-muted-foreground mb-4">
+          <Sparkles className="h-6 w-6" />
+        </span>
+        <h3 className="font-display text-xl font-extrabold text-foreground mb-1.5">{def.titulo}</h3>
+        <p className="text-sm font-body text-muted-foreground max-w-sm">
+          {plano
+            ? `Essa ferramenta está no ${plano.name}. A conta de ${primeiro} não tem esse plano, então ela fica fechada aqui também.`
+            : `A conta de ${primeiro} não tem acesso a essa ferramenta.`}
+        </p>
+        <p className="mt-2 text-[12px] font-body text-muted-foreground max-w-sm">
+          Quem libera é a dona da conta, assinando pelo Cria dela.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 sm:p-10 my-4">

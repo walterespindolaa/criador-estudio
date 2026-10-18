@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { callAIContextBuilder } from "@/lib/ai/claude";
 import { useBrandItems } from "@/hooks/useBrandItems";
-import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    O PROMPT DA ARTE
@@ -97,7 +97,7 @@ const HEX = /#?[0-9a-f]{6}\b/i;
 
 export function useArtPrompt() {
   const { brandItems: items } = useBrandItems();
-  const { profile } = useProfile();
+  const { profile } = useActiveProfile();
 
   // As cores e as fontes moram no Brandbook (brand_items). Se estiverem
   // vazias, o prompt sai genérico e é por isso que a tela avisa a pessoa

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useTier } from "@/hooks/useTier";
 import { useCriaAI } from "@/contexts/CriaAIContext";
 import { useStoryTrends, storyTrendsToContext, type StoryTrend } from "@/hooks/useStoryTrends";
@@ -60,7 +61,8 @@ type EditorState =
   | { mode: "create"; date: string };
 
 export default function CriaStories() {
-  const { profile } = useProfile();
+  const { profile } = useProfile(); // sessão: só pro isAdmin
+  const { profile: contaAtiva } = useActiveProfile();
   const { isStudio, isLoading: tierLoading } = useTier();
   const { openCria } = useCriaAI();
   const navigate = useNavigate();
@@ -93,7 +95,7 @@ export default function CriaStories() {
 
   const gerarPlano = () => {
     gen.mutate(
-      { perDia, dias, startDate, nicho: profile?.niche ?? undefined, tendencias: storyTrendsToContext(trends), replaceRange: true },
+      { perDia, dias, startDate, nicho: contaAtiva?.niche ?? undefined, tendencias: storyTrendsToContext(trends), replaceRange: true },
       { onSuccess: () => { setWeekStart(sundayOf(new Date(startDate + "T00:00:00"))); goTab("semana"); } },
     );
   };

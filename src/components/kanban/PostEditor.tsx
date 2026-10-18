@@ -100,7 +100,7 @@ import { BestTimesHint } from "@/components/shared/BestTimesHint";
 import { PostPreviewModal, PostPreviewContent } from "./PostPreviewModal";
 import { PublicarNoInstagram } from "@/components/shared/PublicarNoInstagram";
 import { PublishButton } from "./PublishButton";
-import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePostPreviewIdentity } from "@/hooks/usePostPreviewIdentity";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { useUploadProgress } from "@/contexts/UploadProgressContext";
@@ -333,7 +333,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLoadCompleteRef = useRef(false);
 
-  const { profile } = useProfile();
+  const { profile } = useActiveProfile();
   // Mapa invertido pilarId -> dias da semana, a partir da linha editorial das
   // Configuracoes (profile.editorial_line: CHAVE = dia "SEG"/"TER"..., VALOR = pilar.id).
   // Serve so de enfeite visual: ao lado de cada pilar mostramos o(s) dia(s) sugerido(s).
@@ -359,7 +359,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   // dele ainda serve de fallback quando não há handle do Instagram.
   const previewIdentity = usePostPreviewIdentity(
     post?.external_client_id ?? null,
-    profile?.id === userId ? profile?.tiktok_handle : null,
+    profile?.tiktok_handle ?? null,
   );
   const { brandContext } = useBrandContext();
   const pdfRef = useRef<HTMLDivElement>(null);

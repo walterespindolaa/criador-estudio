@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { usePillars, type Pillar } from "@/hooks/usePillars";
-import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile, useAtualizarPerfilAtivo } from "@/hooks/useActiveProfile";
 import { sanitizeText } from "@/lib/sanitize";
 import { confirmar } from "@/components/shared/Confirm";
 import { toast } from "sonner";
@@ -53,7 +53,8 @@ const DIAS = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"] as const;
 
 export function PilaresSection() {
   const { pillars, createPillar, updatePillar, deletePillar } = usePillars();
-  const { profile, updateProfile } = useProfile();
+  const { profile } = useActiveProfile();
+  const updateProfile = useAtualizarPerfilAtivo();
 
   const [novoNome, setNovoNome] = useState("");
   const [novaCor, setNovaCor] = useState(PILLAR_COLORS[0]);
@@ -63,15 +64,16 @@ export function PilaresSection() {
 
   const [linha, setLinha] = useState<Record<string, string>>({});
   const [salvandoLinha, setSalvandoLinha] = useState(false);
-  const hidratou = useRef(false);
+  const hidratou = useRef<string | null>(null);
 
   /* A linha editorial vem do perfil. `hidratou` existe pra ela não voltar pro
      valor do banco enquanto a pessoa mexe nos seletores. */
   useEffect(() => {
-    if (hidratou.current || !profile) return;
+    // Hidrata uma vez POR CONTA: trocar de cliente recarrega a linha certa.
+    if (!profile || hidratou.current === profile.id) return;
     const bruto = profile.editorial_line;
-    if (bruto && typeof bruto === "object") setLinha(bruto as Record<string, string>);
-    hidratou.current = true;
+    setLinha(bruto && typeof bruto === "object" ? (bruto as Record<string, string>) : {});
+    hidratou.current = profile.id;
   }, [profile]);
 
   const adicionar = async () => {

@@ -2,7 +2,7 @@ import { useMemo, useRef, useState, useEffect, type ReactNode, type ChangeEvent 
 import { motion } from "framer-motion";
 import { IdCard, Download, Pencil, Instagram, Upload, FileText, Trash2, ExternalLink, Loader2, Plus, X, RefreshCw, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useSocialConnection, useDailyMetrics, useMediaInsights, useSyncInstagram, useSocialAccountOwner, connectInstagram, totaisConta30d } from "@/hooks/useSocialInsights";
 import { useMediaKitProfile, useSaveMediaKitProfile, useCustomMediaKit, KIT_ACCENTS, type MediaKitProfile, type KitService } from "@/hooks/useMediaKit";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { confirmar } from "@/components/shared/Confirm";
 
 export default function MediaKit() {
-  const { profile } = useProfile();
+  const { profile } = useActiveProfile();
   const { user } = useAuth();
   const { data: conn } = useSocialConnection();
   const { data: daily = [] } = useDailyMetrics(30);

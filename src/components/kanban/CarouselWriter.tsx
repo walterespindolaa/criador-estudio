@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { callAIContextBuilder } from "@/lib/ai/claude";
 import { confirmar } from "@/components/shared/Confirm";
-import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import type { Noticia } from "@/hooks/useArtPrompt";
 import { emptySection, type Section } from "./drawer/ScriptEditor";
 
@@ -48,7 +48,7 @@ type Props = {
 export function CarouselWriter({
   titulo, formato, pilar, sections, onChange, hook, onHook, cta, onCta, unify,
 }: Props) {
-  const { profile } = useProfile();
+  const { profile } = useActiveProfile();
   // Recolhido por padrao: fechado ocupa so uma linha (cabecalho clicavel). A
   // pessoa abre quando quiser que a IA escreva. Assim o bloco nao rouba espaco
   // de quem prefere escrever a mao.

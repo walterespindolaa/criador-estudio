@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { callAIContextBuilder } from "@/lib/ai/claude";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePosts } from "@/hooks/usePosts";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { FORMAT_LABELS } from "@/lib/constants";
@@ -76,7 +76,7 @@ function parseRepurpose(raw: unknown): RepurposeResult | null {
 
 export function RepurposeSheet({ open, onOpenChange, originalPost, mode = "repurpose" }: Props) {
   const { user } = useAuth();
-  const { profile } = useProfile();
+  const { profile } = useActiveProfile();
   const { createPost } = usePosts();
   const navigate = useNavigate();
   const isRecycle = mode === "recycle";

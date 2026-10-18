@@ -4,7 +4,7 @@ import { Camera, Loader2, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile, useAtualizarPerfilAtivo, caminhoAvatar } from "@/hooks/useActiveProfile";
 import { validateUpload } from "@/lib/upload-validation";
 import { sanitizeText } from "@/lib/sanitize";
 import {
@@ -27,11 +27,12 @@ type Props = {
 
 // Editor enxuto da "vitrine" do feed: mexe so nos campos que aparecem no
 // cabecalho (foto, nome, nicho, bio). Ajustes completos ficam em Configuracoes.
-// Salva via useProfile.updateProfile, que compartilha a mesma query key do Feed,
-// entao o cabecalho reflete a mudanca na hora.
+// Salva na CONTA ATIVA (a cliente que a social media opera, ou a propria
+// conta), e invalida a query do cabecalho do Feed pra refletir na hora.
 export function FeedEditProfileDialog({ open, onOpenChange }: Props) {
   const { user } = useAuth();
-  const { profile, updateProfile } = useProfile();
+  const { profile } = useActiveProfile();
+  const updateProfile = useAtualizarPerfilAtivo();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState("");
@@ -77,7 +78,7 @@ export function FeedEditProfileDialog({ open, onOpenChange }: Props) {
 
     try {
       setUploadingAvatar(true);
-      const path = `${user.id}/avatar.jpg`;
+      const path = caminhoAvatar(user.id, profile?.id ?? user.id);
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(path, file, { upsert: true, contentType: file.type });

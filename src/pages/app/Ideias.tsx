@@ -33,7 +33,7 @@ import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { SharedIntake } from "@/components/pwa/SharedIntake";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { usePillars } from "@/hooks/usePillars";
-import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useBrandContext } from "@/hooks/useBrandContext";
 import { useResumoDesempenho } from "@/hooks/useResumoDesempenho";
 import { usePosts, type Post } from "@/hooks/usePosts";
@@ -132,7 +132,7 @@ const Ideias = () => {
   const { activeAccountId } = useActiveAccount();
   const { ideas, createIdea, updateIdea, deleteIdea, promoteToPost, isLoading: ideasLoading } = useIdeas();
   const { pillars } = usePillars();
-  const { profile } = useProfile();
+  const { profile } = useActiveProfile();
   const { brandContext, hasBrandContext } = useBrandContext();
   const desempenho = useResumoDesempenho();
   const { createPost } = usePosts();

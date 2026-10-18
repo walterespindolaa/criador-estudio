@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { tierAtLeast, type Tier } from "@/lib/plans";
 
 export type { Tier };
@@ -31,16 +32,30 @@ export function deriveTier(
   return "none";
 }
 
+/**
+ * Tier das ferramentas pagas = plano da CONTA ATIVA (decisão 18/10/2026):
+ * quando a social media abre o Cria de uma cliente, vale o plano da cliente;
+ * no "Meu perfil", vale o plano do perfil. Admin da SESSÃO continua liberado.
+ * Acesso ao app em si (pagou ou não) é useSubscription, da sessão.
+ */
 export function useTier() {
-  const { profile, isLoading } = useProfile();
+  const { profile: sessao, isLoading: sessaoLoading } = useProfile();
+  const { profile: ativo, isLoading: ativoLoading, isOutraConta } = useActiveProfile();
 
-  const tier = useMemo<Tier>(() => deriveTier(profile), [profile]);
-  const isAdmin = profile?.role === "admin";
+  const isAdmin = sessao?.role === "admin";
+  const tier = useMemo<Tier>(
+    () => (isAdmin ? "studio" : deriveTier(ativo)),
+    [isAdmin, ativo],
+  );
+  const isLoading = sessaoLoading || ativoLoading;
 
   return {
     tier,
     isAdmin,
     isLoading,
+    /** true quando o tier vem de outra conta (cliente ou Meu perfil). */
+    isOutraConta,
+    nomeDaConta: ativo?.name ?? null,
     isStudio: tier === "studio",
     isPro: tier === "pro",
     isEssencial: tier === "essencial",

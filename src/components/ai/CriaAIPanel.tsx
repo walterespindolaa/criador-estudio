@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { callAIContextBuilder } from "@/lib/ai/claude";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePosts } from "@/hooks/usePosts";
 import { useIdeas } from "@/hooks/useIdeas";
 import { useCriaAI } from "@/contexts/CriaAIContext";
@@ -189,7 +189,7 @@ export function CriaAIPanel() {
   const { open, closeCria, consumeInitialPrompt } = useCriaAI();
   const isMobile = useIsMobile();
   const { user } = useAuth();
-  const { profile } = useProfile();
+  const { profile } = useActiveProfile();
   // Só busca posts e ideias com o painel aberto (pente fino 23/09).
   const { posts } = usePosts({ enabled: open });
   const { ideas, createIdea } = useIdeas({ enabled: open });
