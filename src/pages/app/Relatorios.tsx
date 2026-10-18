@@ -167,7 +167,7 @@ const Relatorios = () => {
   const { data: conn, isLoading: connLoading } = useSocialConnection();
   const { data: media = [] } = useMediaInsights();
   // Conectar o Instagram é ação do DONO da conta ativa (gestora conectaria o dela).
-  const { isOwnAccount } = useSocialAccountOwner();
+  const { isOwnAccount, contaParaConectar } = useSocialAccountOwner();
   const navigate = useNavigate();
 
   const [period, setPeriod] = useState<PeriodKey>("30");
@@ -808,7 +808,7 @@ const Relatorios = () => {
                 </div>
                 {isOwnAccount && (
                   <Button
-                    onClick={() => connectInstagram()}
+                    onClick={() => connectInstagram(null, null, contaParaConectar)}
                     className="gap-2 shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90 w-full sm:w-auto"
                   >
                     <Instagram className="h-4 w-4" /> Conectar Instagram

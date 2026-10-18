@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { toast } from "sonner";
 
 // types.ts é travado, essas tabelas ainda não estão tipadas. Padrão de cast (igual useModules/useFinance).
@@ -129,11 +130,26 @@ export type StoryInsight = {
 // pedia pra "conectar" um Instagram que o dono já tinha conectado.
 // isOwnAccount gateia as ações que só o dono pode fazer (conectar, desconectar,
 // atualizar via edge function, que roda com o JWT de quem clica).
+//
+// Meu perfil (18/10/2026): o perfil próprio (perfil_de = sessão) conta como
+// DONO, porque é a mesma pessoa. Conectar/desconectar valem pra ele também.
+// Atualizar (sync) vale pra qualquer conta aberta: usa o token já salvo nela
+// e o servidor confere o acesso.
 export function useSocialAccountOwner() {
   const { user } = useAuth();
   const { activeAccountId } = useActiveAccount();
+  const { profile: ativo } = useActiveProfile();
   const ownerId = activeAccountId ?? user?.id ?? null;
-  return { ownerId, isOwnAccount: !!ownerId && ownerId === user?.id };
+  const ehPropria = !!ownerId && ownerId === user?.id;
+  const ehMeuPerfil = !ehPropria && !!user?.id && ativo?.id === ownerId && ativo?.perfil_de === user.id;
+  return {
+    ownerId,
+    isOwnAccount: ehPropria || ehMeuPerfil,
+    ehMeuPerfil,
+    /** Conta a mandar pro OAuth: só no Meu perfil (na própria, a sessão já basta). */
+    contaParaConectar: ehMeuPerfil ? ownerId : null,
+    podeAtualizar: !!ownerId,
+  };
 }
 
 // Conexão Instagram da conta ativa (uma por provider). Não selecionamos access_token
@@ -277,18 +293,18 @@ export function useLinkMediaToPost() {
 
 export function useDisconnectInstagram() {
   const { user } = useAuth();
-  const { isOwnAccount } = useSocialAccountOwner();
+  const { isOwnAccount, ownerId } = useSocialAccountOwner();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      if (!user?.id) throw new Error("Sem sessão");
+      if (!user?.id || !ownerId) throw new Error("Sem sessão");
       // Só o DONO desconecta. Gerenciando a conta de outra pessoa, o delete abaixo
       // (por user_id do logado) apagaria a conexão da conta ERRADA (a da gestora).
       // A UI esconde o botão; isto é o cinto de segurança.
       if (!isOwnAccount) throw new Error("Só o dono da conta pode desconectar o Instagram.");
       const { error } = await sbFrom("social_connections")
         .delete()
-        .eq("user_id", user.id)
+        .eq("user_id", ownerId)
         .eq("provider", "instagram")
         .is("crm_client_id", null);
       if (error) throw error;
@@ -303,15 +319,15 @@ export function useDisconnectInstagram() {
 
 // Dispara o refresh server-side (edge function) e recarrega os dados locais.
 export function useSyncInstagram() {
-  const { isOwnAccount } = useSocialAccountOwner();
+  const { user } = useAuth();
+  const { ownerId } = useSocialAccountOwner();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      // A edge roda com o JWT de quem clica e sincroniza as conexões DELE. Uma
-      // gestora na conta de um criador sincronizaria a conta errada (ou daria
-      // not_connected). A UI esconde o botão; isto é o cinto de segurança.
-      if (!isOwnAccount) throw new Error("Só o dono da conta pode atualizar os insights.");
-      const { data, error } = await supabase.functions.invoke("instagram-sync");
+      // Conta aberta diferente da sessão (cliente ou Meu perfil): a edge
+      // sincroniza o Instagram DAQUELA conta, depois de conferir o acesso.
+      const outra = !!ownerId && ownerId !== user?.id;
+      const { data, error } = await supabase.functions.invoke("instagram-sync", outra ? { body: { account_id: ownerId } } : undefined);
       if (error) throw error;
       return data as { demographics_rows?: number; demographics_error?: string | null; reconnect?: boolean } | null;
     },
@@ -361,7 +377,8 @@ export function useClientSocialConnection(crmClientId: string | null | undefined
 
 // Inicia o OAuth do Instagram: pega o App ID público via edge function e redireciona pro consentimento.
 // clientId (crm_client_id) opcional: conecta a conta NO contexto de um cliente gerenciado.
-export async function connectInstagram(clientId?: string | null, returnTo?: string | null) {
+// accountId: só no Meu perfil (a conexão fica no perfil, não na sessão).
+export async function connectInstagram(clientId?: string | null, returnTo?: string | null, accountId?: string | null) {
   try {
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
@@ -369,7 +386,7 @@ export async function connectInstagram(clientId?: string | null, returnTo?: stri
     // A função autentica pelo header e devolve um "ticket" (state) de uso único
     // o JWT NÃO vai mais na URL do OAuth.
     const { data, error } = await supabase.functions.invoke("get-instagram-config", {
-      body: { crm_client_id: clientId ?? null, return_to: returnTo ?? null },
+      body: { crm_client_id: clientId ?? null, return_to: returnTo ?? null, ...(accountId && !clientId ? { account_id: accountId } : {}) },
     });
     if (error || !(data as { client_id?: string })?.client_id || !(data as { state?: string })?.state) {
       toast.error("Integração ainda não configurada. Tente novamente em breve.");

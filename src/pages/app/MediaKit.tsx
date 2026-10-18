@@ -27,7 +27,7 @@ export default function MediaKit() {
   const sync = useSyncInstagram();
   // Conectar/atualizar são ações do DONO da conta ativa (a edge de sync roda com
   // o JWT de quem clica; gestora conectaria/atualizaria a conta errada).
-  const { isOwnAccount } = useSocialAccountOwner();
+  const { isOwnAccount, contaParaConectar, podeAtualizar } = useSocialAccountOwner();
   const { exportPdf } = usePdfExport();
   const { isPaidOrTrial, isLoading: tierLoading } = useTier();
   const printRef = useRef<HTMLDivElement>(null);
@@ -194,7 +194,7 @@ export default function MediaKit() {
           <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Media kit automático</h2>
           {conn && (
             <div className="flex gap-2 flex-wrap">
-              {isOwnAccount && (
+              {podeAtualizar && (
                 <Button variant="outline" size="sm" onClick={() => sync.mutate()} disabled={sync.isPending} className="gap-1.5"><RefreshCw className={`h-3.5 w-3.5 ${sync.isPending ? "animate-spin" : ""}`} /> Atualizar</Button>
               )}
               <Button variant="outline" size="sm" onClick={() => setEditing((v) => !v)} className="gap-1.5"><Pencil className="h-3.5 w-3.5" /> Editar dados</Button>
@@ -213,7 +213,7 @@ export default function MediaKit() {
                 : "Peça pro dono da conta conectar o Instagram dele em Insights pra gerar o media kit com os números reais."}
             </p>
             {isOwnAccount && (
-              <Button onClick={() => connectInstagram()} className="gap-2"><Instagram className="h-4 w-4" /> Conectar Instagram</Button>
+              <Button onClick={() => connectInstagram(null, null, contaParaConectar)} className="gap-2"><Instagram className="h-4 w-4" /> Conectar Instagram</Button>
             )}
           </div>
         ) : (

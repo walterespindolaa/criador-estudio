@@ -32,9 +32,11 @@ Deno.serve(async (req) => {
   // crm_client_id opcional (conectar a conta no contexto de um cliente gerenciado).
   let crmClientId: string | null = null;
   let returnTo: string | null = null;
+  let contaPedida: string | null = null;
   try {
     const b = await req.json();
     if (b?.crm_client_id) crmClientId = String(b.crm_client_id);
+    if (typeof b?.account_id === 'string') contaPedida = b.account_id;
     /* VOLTAR PRA ONDE ESTAVA (onboarding, 23/09/2026). Só caminho interno,
        começando com "/" e sem "//": nada de open redirect pra fora do app. */
     if (typeof b?.return_to === 'string' && /^\/(?!\/)[^\s]{0,300}$/.test(b.return_to)) returnTo = b.return_to;
@@ -54,10 +56,23 @@ Deno.serve(async (req) => {
     }
   }
 
+  /* CONTA DONA DA CONEXÃO (Meu perfil, 18/10/2026). Por padrão é a sessão.
+     Só o "Meu perfil" (profiles.perfil_de = sessão) pode receber conexão por
+     aqui: Instagram de CLIENTE continua entrando pelo convite (quem autoriza
+     é a própria cliente), nunca pelo login da social media. */
+  let donoConexao = userId;
+  if (contaPedida && contaPedida !== userId) {
+    if (crmClientId) return json({ error: 'forbidden' }, 403);
+    const { data: perfil } = await admin.from('profiles')
+      .select('id').eq('id', contaPedida).eq('perfil_de', userId).maybeSingle();
+    if (!perfil) return json({ error: 'forbidden' }, 403);
+    donoConexao = contaPedida;
+  }
+
   // Ticket aleatório de uso único (~2 UUIDs de entropia).
   const state = `${crypto.randomUUID()}${crypto.randomUUID().replace(/-/g, '')}`;
   const { error: insErr } = await admin.from('oauth_states')
-    .insert({ state, user_id: userId, crm_client_id: crmClientId, provider: 'instagram', return_to: returnTo });
+    .insert({ state, user_id: donoConexao, crm_client_id: crmClientId, provider: 'instagram', return_to: returnTo });
   if (insErr) return json({ error: 'state_create_failed' }, 500);
 
   /* PERMISSÃO DE PUBLICAR (ciclo 2 do plano de publicar, 28/09/2026).

@@ -504,14 +504,29 @@ Deno.serve(async (req) => {
 
     const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
     if (userErr || !userData?.user) return json({ error: 'unauthorized' }, 401);
-    const userId = userData.user.id;
+    const sessaoId = userData.user.id;
+
+    /* CONTA ATIVA (18/10/2026). Com `account_id` (cliente que a social media
+       opera, ou o Meu perfil), sincroniza o Instagram PRÓPRIO daquela conta,
+       com o token que já está salvo nela. O banco confere o acesso. Sem
+       `account_id`, segue como antes: todas as conexões da sessão. */
+    const corpo = await req.json().catch(() => ({}));
+    const pedida = typeof corpo?.account_id === 'string' ? corpo.account_id : null;
+    const outraConta = !!pedida && pedida !== sessaoId;
+    if (outraConta) {
+      const { data: pode, error: podeErr } = await admin.rpc('conta_acessivel', { _actor: sessaoId, _owner: pedida });
+      if (podeErr || pode !== true) return json({ error: 'forbidden_account' }, 403);
+    }
+    const userId = outraConta ? (pedida as string) : sessaoId;
 
     // TODAS as conexões do usuário (própria + por cliente). Corrige o "caminho morto"
     // do filtro `.is('crm_client_id', null)`, que impedia o sync das conexões que o
-    // gestor conecta no contexto de um cliente.
-    const { data: conns } = await admin.from('social_connections')
+    // gestor conecta no contexto de um cliente. Em outra conta, só a própria dela.
+    let consulta = admin.from('social_connections')
       .select('id,access_token,external_account_id,crm_client_id')
       .eq('user_id', userId).eq('provider', 'instagram');
+    if (outraConta) consulta = consulta.is('crm_client_id', null);
+    const { data: conns } = await consulta;
     const list = (conns ?? []) as unknown as Conn[];
     if (!list.length) return json({ error: 'not_connected' }, 400);
 

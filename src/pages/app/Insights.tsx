@@ -57,7 +57,7 @@ export default function Insights() {
   // Conectar/atualizar/desconectar são ações do DONO da conta ativa. Uma gestora
   // dentro da conta de um criador só visualiza (e vincula posts): se ela clicasse
   // em "Conectar", o OAuth gravaria o Instagram DELA nesta tela.
-  const { isOwnAccount, ownerId } = useSocialAccountOwner();
+  const { isOwnAccount, ownerId, contaParaConectar, podeAtualizar } = useSocialAccountOwner();
   const [linkFor, setLinkFor] = useState<MediaInsight | null>(null);
   const [aiRead, setAiRead] = useState<InsightsReading | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -209,7 +209,7 @@ export default function Insights() {
             </p>
           </div>
           {isOwnAccount && (
-            <Button onClick={() => connectInstagram()} className="gap-2 shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
+            <Button onClick={() => connectInstagram(null, null, contaParaConectar)} className="gap-2 shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
               <Instagram className="h-4 w-4" /> {t("insights.connectCta")}
             </Button>
           )}
@@ -260,15 +260,15 @@ export default function Insights() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <span className="text-xs text-muted-foreground hidden sm:inline">{t("insights.lastUpdate", { when: lastSync })}</span>
-          {/* Atualizar/Desconectar mexem na conexão: só o dono. A edge de sync roda
-              com o JWT de quem clica (sincronizaria a conta da gestora, não a do
-              dono) e desconectar apagaria a conexão errada. A gestora vê os dados
-              coletados; quem atualiza a coleta é o dono. */}
+          {/* Atualizar vale pra conta aberta (a edge confere o acesso e usa o token
+              salvo NELA). Desconectar é só do dono (ou do Meu perfil). */}
+          {podeAtualizar && (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => sync.mutate()} disabled={sync.isPending}>
+              <RefreshCw className={`h-3.5 w-3.5 ${sync.isPending ? "animate-spin" : ""}`} /> {t("insights.refresh")}
+            </Button>
+          )}
           {isOwnAccount && (
             <>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => sync.mutate()} disabled={sync.isPending}>
-                <RefreshCw className={`h-3.5 w-3.5 ${sync.isPending ? "animate-spin" : ""}`} /> {t("insights.refresh")}
-              </Button>
               <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => disconnect.mutate()}>
                 <Unplug className="h-3.5 w-3.5" /> {t("insights.disconnect")}
               </Button>
@@ -293,7 +293,7 @@ export default function Insights() {
             </p>
           </div>
           {isOwnAccount && (
-            <Button size="sm" onClick={() => connectInstagram()} className="w-full sm:w-auto h-11 sm:h-9 rounded-xl shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
+            <Button size="sm" onClick={() => connectInstagram(null, null, contaParaConectar)} className="w-full sm:w-auto h-11 sm:h-9 rounded-xl shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
               Reconectar
             </Button>
           )}

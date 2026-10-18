@@ -73,7 +73,7 @@ export function InstagramPulse() {
   const { data: conn, isLoading } = useSocialConnection();
   // Conectar é ação do DONO da conta ativa: gestora clicando aqui gravaria o
   // Instagram DELA na tela do criador. Pra ela, mostramos um aviso no lugar.
-  const { isOwnAccount } = useSocialAccountOwner();
+  const { isOwnAccount, contaParaConectar } = useSocialAccountOwner();
   const { data: daily = [] } = useDailyMetrics(30);
   const { data: media = [] } = useMediaInsights();
 
@@ -135,7 +135,7 @@ export function InstagramPulse() {
         </div>
         {isOwnAccount && (
           <Button
-            onClick={() => connectInstagram()}
+            onClick={() => connectInstagram(null, null, contaParaConectar)}
             className="gap-2 shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90 w-full sm:w-auto"
           >
             <Instagram className="h-4 w-4" /> Conectar Instagram
