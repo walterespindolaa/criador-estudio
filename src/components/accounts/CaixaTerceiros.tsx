@@ -267,6 +267,56 @@ function Ficha({ t, linhas, nomeCliente, clientes, ehDono, hoje }: {
     }
   };
 
+  /* RELATÓRIO DO FECHAMENTO EM PDF (Walter, 18/10/2026: "podia ser um relatório
+     simples, mas fica melhor que copiar o texto"). Mesma lista da tela, agrupada
+     por cliente, com total, pago e a pagar. Abre a impressão do navegador
+     ("Salvar como PDF"), igual ao resumo do cronograma. */
+  const baixarPdf = () => {
+    const esc = (x: string) => x.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch] as string));
+    const reais = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const grupos = new Map<string, LinhaTerceiro[]>();
+    for (const l of doPeriodo) {
+      const k = l.crm_client_id ? nomeCliente.get(l.crm_client_id) ?? "Cliente" : "Agência";
+      grupos.set(k, [...(grupos.get(k) ?? []), l]);
+    }
+    const blocos = [...grupos.entries()].sort((x, y) => x[0].localeCompare(y[0], "pt-BR")).map(([cli, ls]) => {
+      const sub = ls.reduce((s2, l) => s2 + l.amount, 0);
+      return `<h2>${esc(cli)} <small>${ls.length} ${ls.length === 1 ? "item" : "itens"} · ${reais(sub)}</small></h2><table>${ls.map((l) =>
+        `<tr><td class="d">${dm(l.date)}</td><td>${esc(nomeDaPeca(l, t.nome))}${!l.post_id ? ' <span class="av">avulso</span>' : ""}</td><td class="st ${l.status === "pago" ? "ok" : "pend"}">${l.status === "pago" ? `pago${l.pago_em ? " " + dm(l.pago_em) : ""}` : "a pagar"}</td><td class="v">${reais(l.amount)}</td></tr>`).join("")}</table>`;
+    }).join("");
+    const pagosTxt = pagamentos.map((pg) => `<li>Pago em ${dm(pg.pago_em)} · ${reais(pg.total)} · ${pg.contestado ? "avisou que não recebeu" : pg.recebido ? `${esc(t.nome)} confirmou em ${dm(pg.recebido.slice(0, 10))}` : `esperando o OK de ${esc(t.nome)}`}</li>`).join("");
+    const origem = window.location.origin;
+    const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Fechamento · ${esc(t.nome)} · ${rotuloPeriodo(periodo)}</title>
+<style>
+@page{size:A4;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#1b1a17;font-size:12px}.pg{padding:12mm 14mm 14mm}
+.cab{display:flex;align-items:center;gap:12px;background:#F5F3E7;border-radius:14px;padding:12px 16px;margin-bottom:16px}
+.cab img{height:26px}.cab .sp{flex:1}.cab .dir{text-align:right;font-size:10.5px;color:#77736a}.cab .dir b{display:block;color:#1b1a17;font-size:12px}
+h1{font-size:22px;margin:0}.sub{color:#77736a;margin:2px 0 14px}
+.tot{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px}
+.tot div{border:1px solid #e4dfd0;border-top:4px solid #EA4918;border-radius:10px;padding:8px 10px}
+.tot small{display:block;font-size:9.5px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:#77736a}.tot b{font-size:16px}
+h2{font-size:13px;margin:16px 0 4px}h2 small{font-size:10.5px;color:#77736a;font-weight:normal}
+table{width:100%;border-collapse:collapse}td{padding:5px 4px;border-top:1px dashed #e4dfd0;vertical-align:top}
+td.d{width:44px;color:#77736a}td.v{width:90px;text-align:right;font-weight:bold}td.st{width:90px;text-align:right;font-size:10.5px}
+td.ok{color:#15803d}td.pend{color:#b45309}.av{font-size:9.5px;background:#dbeafe;color:#1d4ed8;border-radius:99px;padding:1px 6px}
+ul{margin:4px 0 0;padding-left:16px}.nota{color:#77736a;font-size:10.5px;margin-top:4px}
+.rod{margin-top:22px;padding-top:8px;border-top:1px solid #e4dfd0;display:flex;align-items:center;gap:6px;color:#77736a;font-size:10px}.rod img{height:11px}
+</style></head><body><div class="pg">
+<div class="cab"><img src="${origem}/logo-cria.png" alt="Cria"><span class="sp"></span><div class="dir"><b>Fechamento de terceiro</b>gerado em ${dm(hojeBR())}</div></div>
+<h1>${esc(t.nome)}</h1><p class="sub">${esc(ROTULO_PAPEL_TERCEIRO[t.papel] ?? t.papel)} · período ${rotuloPeriodo(periodo)} · combinado: ${esc(ROTULO_FECHAMENTO[t.fechamento])}${t.pagamento ? ` · ${esc(t.pagamento)}` : ""}</p>
+<div class="tot"><div><small>Total do período</small><b>${reais(tot)}</b></div><div><small>Já pago</small><b>${reais(tot - totPend)}</b></div><div><small>A pagar</small><b>${reais(totPend)}</b></div></div>
+<p class="nota">${doPeriodo.length} ${doPeriodo.length === 1 ? "item" : "itens"}, contados pela data da entrega da peça.</p>
+${pagosTxt ? `<h2>Pagamentos</h2><ul>${pagosTxt}</ul>` : ""}
+${blocos}
+<div class="rod"><img src="${origem}/logo-cria.png" alt=""> Feito com o Cria Social Club · criasocialclub.com.br</div>
+</div><script>window.onload=function(){setTimeout(function(){window.print()},150)}</script></body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { toast.error("O navegador bloqueou a janela. Libere pop-up pro Cria e tente de novo."); return; }
+    w.document.write(html);
+    w.document.close();
+  };
+
   const confirmarPagamento = async () => {
     await pagar.mutateAsync({ ids: pendentes.map((l) => l.id), pago_em: dataPgto });
     setPagarAberto(false);
@@ -406,8 +456,11 @@ function Ficha({ t, linhas, nomeCliente, clientes, ehDono, hoje }: {
                 <p className="font-display font-bold text-base leading-tight">{brl(tot)}</p>
               </div>
               <div className="flex gap-2 flex-wrap items-center w-full md:w-auto md:ml-auto">
+                <Button variant="outline" size="sm" className="flex-1 md:flex-none" onClick={baixarPdf}>
+                  <FileText className="h-3.5 w-3.5 mr-1" /> Baixar relatório (PDF)
+                </Button>
                 <Button variant="outline" size="sm" className="flex-1 md:flex-none" onClick={copiarLista}>
-                  <Copy className="h-3.5 w-3.5 mr-1" /> Copiar lista pra conferir
+                  <Copy className="h-3.5 w-3.5 mr-1" /> Copiar lista
                 </Button>
                 {ehDono ? (
                   <Button size="sm" className="flex-1 md:flex-none" disabled={pendentes.length === 0} onClick={() => { setDataPgto(hojeBR()); setPagarAberto(true); }}>
