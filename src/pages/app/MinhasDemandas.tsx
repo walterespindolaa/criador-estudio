@@ -6,7 +6,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useMeuCodigoParceiro } from "@/hooks/useTeam";
 import { motion } from "framer-motion";
 import {
-  Briefcase, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock,
+  AlarmClock, Briefcase, CalendarClock, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, PenLine,
   Copy as CopyIcon, ExternalLink, Folder, ImagePlus, Link2, Loader2, MessageCircle, Palette,
   History, MapPin, PauseCircle, Pencil, Play, Plus, RotateCcw, Send, Sparkles, StickyNote, X, AlertCircle,
 } from "lucide-react";
@@ -31,7 +31,7 @@ import { GaleriaDePecas } from "@/components/shared/GaleriaDePecas";
 import { BaixarMidiasDoPost } from "@/components/kanban/BaixarMidiasDoPost";
 import {
   ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useConversaDoCard, useCoresDasAgencias, useEntreguesDoParceiro,
-  useFilaDoParceiro, useMarcarConversaLida, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useProporPrazo, useResolverPrazoSugerido, useVersoesDaPeca, useEntregasRemoviveis, useMarcarUrgente,
+  useFilaDoParceiro, useMarcarConversaLida, useMeusCaches, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useProporPrazo, useResolverPrazoSugerido, useVersoesDaPeca, useEntregasRemoviveis, useMarcarUrgente,
   type CardAberto, type CardDaFila, type EntregueDoParceiro, type MarcaDoParceiro, type MarcaLiberada, type VersaoDaPeca,
 } from "@/hooks/useParceiro";
 import {
@@ -107,9 +107,124 @@ const EstadoPill = ({ s }: { s: CardDaFila["producao_status"] }) => (
   </span>
 );
 
+/* ═══ A FAIXA DO DIA (Walter, 18/10/2026, mockup aprovado) ═══════════════
+   Os quatro cartões de antes eram sem vida e ENGANAVAM: com uma peça atrasada
+   na fila, os quatro mostravam zero, porque "atrasada" não tinha contador.
+   Agora: uma frase que diz o que fazer primeiro, o anel "em dia" (peças no
+   prazo sobre peças na fila) e os números em blocos com ícone. O que pede
+   atenção pulsa; zero fica apagado, sem gritar. "Voltou pra ajuste" só ocupa
+   lugar quando existe ajuste. */
+type BlocoDoDia = { v: number; l: string; Icon: typeof AlarmClock; fundo: string; cor: string; alerta?: boolean };
+
+function FaixaDoDia({ nome, total, atrasadas, venceHoje, fazendo, emAjuste, entregues30, prazosPraConfirmar }: {
+  nome: string | null; total: number; atrasadas: number; venceHoje: number; fazendo: number;
+  emAjuste: number; entregues30: number; prazosPraConfirmar: number;
+}) {
+  const hora = new Date().getHours();
+  const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
+  const primeiro = (nome ?? "").trim().split(/\s+/)[0];
+  const plural = (n: number, um: string, varios: string) => (n === 1 ? um : varios);
+  const depois = prazosPraConfirmar > 0
+    ? ` ${plural(prazosPraConfirmar, "1 prazo espera", `${prazosPraConfirmar} prazos esperam`)} o seu ok.`
+    : "";
+  let titulo: string;
+  let sub: string;
+  if (atrasadas > 0) {
+    titulo = `Tem ${atrasadas} ${plural(atrasadas, "peça atrasada", "peças atrasadas")}.`;
+    sub = `Comece ${plural(atrasadas, "por ela", "por elas")}.${depois ? ` Depois,${depois}` : ""}`;
+  } else if (venceHoje > 0) {
+    titulo = `${venceHoje} ${plural(venceHoje, "peça vence", "peças vencem")} hoje.`;
+    sub = `O resto está no prazo.${depois}`;
+  } else if (total > 0) {
+    titulo = "Tudo em dia.";
+    sub = `${total} ${plural(total, "peça na fila", "peças na fila")}, nenhuma atrasada.${depois}`;
+  } else {
+    titulo = "Fila livre por agora.";
+    sub = "Quando uma agência te mandar peça, ela aparece aqui.";
+  }
+  const emDia = Math.max(0, total - atrasadas);
+  const pct = total > 0 ? emDia / total : 1;
+  const R = 34;
+  const C = 2 * Math.PI * R;
+
+  const blocos: BlocoDoDia[] = [
+    { v: atrasadas, l: plural(atrasadas, "Atrasada", "Atrasadas"), Icon: AlarmClock, fundo: "bg-red-100 dark:bg-red-500/15", cor: "text-red-600", alerta: atrasadas > 0 },
+    emAjuste > 0
+      ? { v: emAjuste, l: "Voltou pra ajuste", Icon: RotateCcw, fundo: "bg-violet-100 dark:bg-violet-500/15", cor: "text-violet-600", alerta: true }
+      : { v: venceHoje, l: "Vence hoje", Icon: CalendarClock, fundo: "bg-amber-100 dark:bg-amber-500/15", cor: "text-amber-600" },
+    { v: fazendo, l: "Fazendo agora", Icon: PenLine, fundo: "bg-blue-100 dark:bg-blue-500/15", cor: "text-blue-600" },
+    { v: entregues30, l: "Entregues em 30 dias", Icon: CheckCircle2, fundo: "bg-emerald-100 dark:bg-emerald-500/15", cor: "text-emerald-600" },
+  ];
+
+  return (
+    <div className="relative overflow-hidden rounded-[26px] border border-orange-200/60 dark:border-white/10 bg-gradient-to-br from-orange-50 via-pink-50 to-violet-50 dark:from-orange-500/10 dark:via-pink-500/10 dark:to-violet-500/10 p-4 sm:p-6 mb-5">
+      <span aria-hidden className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-orange-200/50 blur-[2px] dark:bg-orange-400/10" />
+      <span aria-hidden className="pointer-events-none absolute right-36 -bottom-20 h-32 w-32 rounded-full bg-violet-200/50 blur-[2px] dark:bg-violet-400/10" />
+      <div className="relative flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[11px] font-body font-extrabold uppercase tracking-[0.09em] text-orange-800/80 dark:text-orange-300">
+            Sua bancada · {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit" })}
+          </p>
+          <h2 className="font-display font-extrabold text-[21px] sm:text-[26px] leading-tight text-foreground mt-1">
+            <span className="hidden sm:inline">{saudacao}{primeiro ? `, ${primeiro}` : ""}. </span>{titulo}
+          </h2>
+          <p className="text-[13px] sm:text-sm font-body text-muted-foreground mt-1">{sub}</p>
+        </div>
+        <div className="relative h-[66px] w-[66px] sm:h-[84px] sm:w-[84px] shrink-0" title={`${emDia} de ${total} no prazo`}>
+          <svg viewBox="0 0 84 84" className="h-full w-full -rotate-90">
+            <defs>
+              <linearGradient id="anel-em-dia" x1="0" x2="1">
+                <stop offset="0" stopColor="#EA4918" />
+                <stop offset="1" stopColor="#e2407c" />
+              </linearGradient>
+            </defs>
+            <circle cx="42" cy="42" r={R} strokeWidth="9" fill="none" className="stroke-orange-100 dark:stroke-white/10" />
+            <circle cx="42" cy="42" r={R} strokeWidth="9" fill="none" stroke="url(#anel-em-dia)" strokeLinecap="round"
+              strokeDasharray={C} strokeDashoffset={C * (1 - pct)} className="transition-[stroke-dashoffset] duration-700" />
+          </svg>
+          <span className="absolute inset-0 grid place-items-center text-center leading-none">
+            <span>
+              <span className="block font-display font-extrabold text-base sm:text-xl text-foreground">{emDia}/{total}</span>
+              <span className="block text-[9.5px] sm:text-[10px] font-body font-bold text-muted-foreground mt-0.5">em dia</span>
+            </span>
+          </span>
+        </div>
+      </div>
+      <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5 mt-4 sm:mt-5">
+        {blocos.map((b) => (
+          <div key={b.l}
+            className={cn("rounded-[18px] p-2.5 sm:p-3 flex items-center gap-2.5 sm:gap-3 transition-all",
+              b.alerta && b.v > 0
+                ? "bg-card border-[1.5px] border-red-300/80 dark:border-red-500/40 shadow-[0_6px_18px_-10px_rgba(234,73,24,0.55)]"
+                : "bg-white/75 dark:bg-white/5 border border-white/90 dark:border-white/10 backdrop-blur-sm",
+              b.v === 0 && "opacity-60")}>
+            <span className={cn("h-9 w-9 sm:h-10 sm:w-10 rounded-[13px] grid place-items-center shrink-0", b.fundo)}>
+              <b.Icon className={cn("h-[18px] w-[18px]", b.cor)} strokeWidth={2.2} />
+            </span>
+            <span className="min-w-0">
+              <span className={cn("flex items-center gap-1.5 font-display font-extrabold text-[22px] sm:text-2xl leading-none",
+                b.alerta && b.v > 0 ? b.cor : "text-foreground")}>
+                {b.v}
+                {b.alerta && b.v > 0 && (
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+                  </span>
+                )}
+              </span>
+              <span className="block text-[11.5px] sm:text-[12px] font-body font-semibold text-muted-foreground mt-1 leading-tight">{b.l}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function MinhasDemandas() {
   const { data: todas = [], isLoading, isError, isFetching, refetch } = useFilaDoParceiro();
   const { data: agencias = [] } = useMinhasAgencias();
+  const { data: cachesPorAgencia = [] } = useMeusCaches();
   const pausado = usePausadoEmTudo();
   const [aberto, setAberto] = useState<string | null>(null);
   const [visao, setVisao] = useState<"prazo" | "quadro" | "cliente" | "semana" | "mes">("prazo");
@@ -148,6 +263,13 @@ export default function MinhasDemandas() {
   const venceHoje = fila.filter((c) => c.prazo_producao === hoje).length;
   const fazendo = fila.filter((c) => c.producao_status === "em_producao").length;
   const emAjuste = fila.filter((c) => c.producao_status === "ajuste").length;
+  const abertas = fila.filter((c) => c.producao_status !== "entregue");
+  const atrasadas = abertas.filter((c) => !!c.prazo_producao && c.prazo_producao < hoje).length;
+  const prazosPraConfirmar = abertas.filter((c) => c.prazo_status === "proposto" || c.prazo_status === "negociando").length;
+  const maiorCarga = Math.max(1, ...agencias.map((a) => a.abertos));
+  const aReceber = (agenciaId: string) =>
+    cachesPorAgencia.find((c) => c.manager_id === agenciaId)?.pendente ?? 0;
+  const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
   const entregues30 = agencias
     .filter((a) => !soAgencia || a.agencia_id === soAgencia)
     .reduce((t, a) => t + a.entregues_30d, 0);
@@ -159,22 +281,9 @@ export default function MinhasDemandas() {
             no resumo, como os módulos da social mídia fazem. */}
         {/* O RESUMO DO DIA: os quatro números que respondem "como estou?". O
             último (entregues em 30 dias) é a semente da cobrança por entrega. */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-          {[
-            { v: venceHoje, l: "Vence hoje", cor: "bg-red-500" },
-            { v: fazendo, l: "Fazendo agora", cor: "bg-blue-500" },
-            { v: emAjuste, l: "Voltou pra ajuste", cor: "bg-violet-500" },
-            { v: entregues30, l: "Entregues em 30 dias", cor: "bg-green-600" },
-          ].map((k) => (
-            <Card key={k.l} className="rounded-2xl border-border p-3.5 flex items-center gap-3">
-              <span className={cn("w-2 h-9 rounded-full shrink-0", k.cor)} />
-              <span>
-                <span className="block font-display font-extrabold text-xl leading-none">{k.v}</span>
-                <span className="block text-[12px] font-body font-semibold text-muted-foreground mt-1">{k.l}</span>
-              </span>
-            </Card>
-          ))}
-        </div>
+        <FaixaDoDia nome={profile?.name ?? null} total={abertas.length} atrasadas={atrasadas}
+          venceHoje={venceHoje} fazendo={fazendo} emAjuste={emAjuste} entregues30={entregues30}
+          prazosPraConfirmar={prazosPraConfirmar} />
 
         {/* QUEM ME ACOPLOU: as agências, com a carga em cada uma. É o "não
             mostra quem tá vinculado a ele" resolvido, e a base da conversa de
@@ -187,23 +296,40 @@ export default function MinhasDemandas() {
             <div className="flex gap-2.5 overflow-x-auto pb-1">
               {agencias.map((a) => {
                 const ativa = soAgencia === a.agencia_id;
+                const receber = aReceber(a.agencia_id);
                 return (
                   <button key={a.agencia_id} type="button"
                     onClick={() => { setSoAgencia(ativa ? null : a.agencia_id); if (!ativa) setVisao("cliente"); }}
-                    className={cn("rounded-2xl border bg-card px-3.5 py-2.5 flex items-center gap-3 shrink-0 text-left transition-all",
-                      ativa ? "border-primary ring-2 ring-primary/25 shadow-sm" : "border-border hover:border-primary/40")}>
-                    <span className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 text-white grid place-items-center text-xs font-bold shrink-0">
+                    className={cn("relative overflow-hidden rounded-[20px] border bg-card pl-4 pr-3.5 py-3 flex items-center gap-3 shrink-0 text-left transition-all hover:-translate-y-0.5",
+                      ativa ? "border-primary ring-2 ring-primary/25 shadow-sm" : "border-border hover:border-primary/40 hover:shadow-sm")}>
+                    {/* Fita de cor à esquerda: dá identidade sem pesar. */}
+                    <span aria-hidden className="absolute inset-y-0 left-0 w-[5px] bg-gradient-to-b from-primary to-pink-500" />
+                    <span className="w-11 h-11 rounded-full bg-gradient-to-br from-primary via-pink-500 to-violet-500 text-white grid place-items-center font-display font-extrabold text-base shrink-0 shadow-sm">
                       {a.agencia_nome.charAt(0).toUpperCase()}
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-[13px] font-body font-bold text-foreground truncate max-w-[160px]">{a.agencia_nome}</span>
+                      <span className="block text-[14px] font-body font-bold text-foreground truncate max-w-[170px]">{a.agencia_nome}</span>
                       <span className="block text-[12px] font-body text-muted-foreground">
                         {ROTULO_PAPEL[a.meu_papel] ?? a.meu_papel} · {a.abertos} na mão · {a.entregues_30d} entregues/30d
                       </span>
+                      {/* Carga relativa: quanto desta agência está na sua mão,
+                          comparado com a agência que mais te ocupa. */}
+                      <span className="mt-2 block h-1.5 w-[150px] overflow-hidden rounded-full bg-muted">
+                        <span className="block h-full rounded-full bg-gradient-to-r from-amber-400 to-primary transition-[width] duration-500"
+                          style={{ width: `${Math.round((a.abertos / maiorCarga) * 100)}%` }} />
+                      </span>
                     </span>
-                    <span className={cn("text-[11px] font-body font-bold shrink-0 ml-1",
-                      ativa ? "text-primary" : "text-muted-foreground/70")}>
-                      {ativa ? "vendo só esta" : "ver clientes"}
+                    <span className="ml-2 shrink-0 text-right whitespace-nowrap">
+                      {receber > 0 ? (
+                        <>
+                          <span className="block font-display font-extrabold text-[17px] leading-none text-emerald-600">{brl(receber)}</span>
+                          <span className="block text-[11px] font-body text-muted-foreground mt-1">a receber</span>
+                        </>
+                      ) : null}
+                      <span className={cn("block text-[11px] font-body font-bold", receber > 0 && "mt-0.5",
+                        ativa ? "text-primary" : "text-muted-foreground/70")}>
+                        {ativa ? "vendo só esta" : "ver clientes"}
+                      </span>
                     </span>
                   </button>
                 );
