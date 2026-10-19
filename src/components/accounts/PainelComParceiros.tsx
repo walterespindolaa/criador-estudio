@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useExternalClients, type ExternalClient } from "@/hooks/useCriaPost";
+import { useCrmClients } from "@/hooks/useCrm";
 import {
   ROTULO_PAPEL, useCachesDosParceiros, useConversasComParceiros, useMeusParceiros, usePecasComParceiros, useResolverPrazoSugerido,
   type PecaExterna,
@@ -516,7 +517,10 @@ export function PainelComParceiros({ clientes }: {
 }) {
   const navigate = useNavigate();
   // Só pra traduzir external_client_id -> crm_client_id na hora de abrir a peça.
-  const { clients: extClients } = useExternalClients();
+  const { clients: extReais } = useExternalClients();
+  // Fichas do CRM: dão nome à coluna do material cujo cliente não tem portal
+  // (ex.: cliente que usa o Cria). Colaboradora sem Gestão não lê: fica [].
+  const { data: crmClients = [] } = useCrmClients();
   const { data: parceiros = [] } = useMeusParceiros();
   const { data: pecasDePost = [], isLoading } = usePecasComParceiros(parceiros.length > 0);
   /* POSTS + MATERIAIS NO MESMO QUADRO (Walter, 12/10/2026). O material vira
@@ -540,14 +544,29 @@ export function PainelComParceiros({ clientes }: {
       scheduled_date: null,
       assignee_id: m.assignee_id,
       external_client_id: m.external_client_id
-        ?? (m.crm_client_id ? (extClients.find((c) => c.crm_client_id === m.crm_client_id)?.id ?? null) : null),
+        ?? (m.crm_client_id ? (extReais.find((c) => c.crm_client_id === m.crm_client_id)?.id ?? `crm:${m.crm_client_id}`) : null),
       updated_at: m.updated_at,
       cache_parceiro: m.cache_parceiro,
       entregue_em: m.entregue_em,
       revisoes: m.revisoes,
       material: { tipo: m.kind },
     })),
-  ], [pecasDePost, materiais, extClients]);
+  ], [pecasDePost, materiais, extReais]);
+  /* MATERIAL DE CLIENTE SEM PORTAL (Walter, 19/10/2026). Material ligado só à
+     ficha do CRM, sem portal do Cria Post (o caso de quem usa o Cria, que
+     aprova por dentro), caía na coluna "Sem cliente". Agora vira uma coluna
+     com o nome da ficha, chave `crm:<id>`, e logo/cor vêm da ficha. */
+  const extClients = useMemo<ExternalClient[]>(() => {
+    const faltam = new Set(materiais
+      .filter((m) => !m.external_client_id && m.crm_client_id && !extReais.some((c) => c.crm_client_id === m.crm_client_id))
+      .map((m) => m.crm_client_id as string));
+    const daFicha = crmClients.filter((c) => faltam.has(c.id)).map((c): ExternalClient => ({
+      id: `crm:${c.id}`, manager_id: c.manager_id, name: c.name, logo_url: null,
+      instagram_handle: null, notes: null, active: true, created_at: "",
+      color: (c as { color?: string | null }).color ?? null, crm_client_id: c.id, brand_color: null, portal_settings: null,
+    }));
+    return [...(extReais as ExternalClient[]), ...daFicha];
+  }, [extReais, materiais, crmClients]);
   const [materialAberto, setMaterialAberto] = useState<string | null>(null);
   const resolver = useResolverPrazoSugerido();
   // Mensagens novas por peça: o quadro mostra a bolinha em cima do card.

@@ -165,7 +165,7 @@ export function NovoClienteDialog({ open, onOpenChange }: { open: boolean; onOpe
       color: cor,
       logo: l || null,
       // O Drive entra nos links úteis com rótulo "Drive" (a aba Drive funciona de cara).
-      useful_links: d ? [{ label: "Drive", url: d }] : null,
+      useful_links: d ? [{ label: "Drive", url: d }] : [], // coluna NOT NULL (default [])
       segment: segmento.trim() || null,
       whatsapp: whats.trim() || null,
       monthly_value: valorEmReais(mensal),
