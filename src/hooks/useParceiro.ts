@@ -541,6 +541,25 @@ async function inserirNaConversaDoParceiro(linha: Record<string, unknown>) {
   return { error };
 }
 
+/** OBSERVAÇÃO PRO PARCEIRO NO "ENVIAR PARA" (Walter, 19/10/2026). É o mesmo
+ *  campo `notes` que o board da social mídia chama de "Observações" e que o
+ *  card do parceiro já mostra. Assim não existem dois recados diferentes. */
+export function useObsDoPost(postId: string | null) {
+  return useQuery({
+    queryKey: ["obs-do-post", postId],
+    enabled: !!postId,
+    queryFn: async () => {
+      const { data } = await sbFrom("posts").select("notes").eq("id", postId).maybeSingle();
+      return ((data as { notes?: string | null } | null)?.notes ?? "") as string;
+    },
+  });
+}
+
+export async function salvarObsDoPost(postId: string, notes: string) {
+  const { error } = await sbFrom("posts").update({ notes: notes.trim() || null }).eq("id", postId);
+  if (error) toast.error("O card foi enviado, mas a observação não salvou. Tenta de novo em Enviar para.");
+}
+
 /** Faz parte da conversa com o parceiro? Com a coluna, decide o canal; sem
  *  ela (banco antigo), vale o papel como antes. */
 function daConversaDoParceiro(c: { author_role: string; canal?: string | null }) {

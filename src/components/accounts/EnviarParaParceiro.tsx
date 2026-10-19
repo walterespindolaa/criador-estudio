@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { ROTULO_PAPEL, useConversaDoCard, useDelegarPost, useMeusParceiros, useParceirosAptos, usePedirAjuste, useUrgenteDoPost } from "@/hooks/useParceiro";
+import { ROTULO_PAPEL, useConversaDoCard, useDelegarPost, useMeusParceiros, useParceirosAptos, usePedirAjuste, useUrgenteDoPost, useObsDoPost, salvarObsDoPost } from "@/hooks/useParceiro";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ENVIAR PARA (Cria Parceiros)
@@ -69,6 +69,12 @@ export function EnviarParaParceiro({ postId, assigneeId: assigneeIdProp, produca
   const [pedindoAjuste, setPedindoAjuste] = useState(false);
   const [motivoAjuste, setMotivoAjuste] = useState("");
   const [mensagem, setMensagem] = useState("");
+  // Observação = posts.notes (o que o card do parceiro mostra). Só aparece com
+  // alguém escolhido; no post novo do board ela já tem o campo Observações.
+  const { data: obsSalva } = useObsDoPost(adiado ? null : postId);
+  const [obs, setObs] = useState("");
+  useEffect(() => { if (obsSalva !== undefined) setObs(obsSalva); }, [obsSalva]);
+  const mostraObs = !adiado && !!escolhido;
   const pedirAjuste = usePedirAjuste();
   const conversa = useConversaDoCard(assigneeId ? postId : null);
 
@@ -98,6 +104,7 @@ export function EnviarParaParceiro({ postId, assigneeId: assigneeIdProp, produca
       cache: cacheNum != null && !Number.isNaN(cacheNum) && cacheNum > 0 ? cacheNum : null,
       ...(agenciaId ? { agenciaId } : {}),
     });
+    if (obs.trim() !== (obsSalva ?? "").trim()) await salvarObsDoPost(postId, obs);
     setAssigneeId(escolhido);
     setAberto(false);
   };
@@ -144,6 +151,16 @@ export function EnviarParaParceiro({ postId, assigneeId: assigneeIdProp, produca
           <p className="mt-2 text-[11px] font-body text-muted-foreground leading-relaxed">
             Só aparece quem atende este cliente. Pra liberar outra pessoa: Equipe &gt; Pessoas &gt; Editar.
           </p>
+        )}
+
+        {mostraObs && (
+          <div className="mt-3">
+            <Label className="text-xs">Observação pro parceiro <span className="font-normal text-muted-foreground">(opcional)</span></Label>
+            <Textarea value={obs} onChange={(e) => setObs(e.target.value)} rows={3} maxLength={1000}
+              placeholder="Ex.: usar a foto 2 na capa, fonte do brandbook, sem preço na arte"
+              className="rounded-xl mt-1 text-[13px] resize-none" />
+            <p className="text-[10.5px] font-body text-muted-foreground mt-1">Aparece no card dele. O cliente não vê.</p>
+          </div>
         )}
 
         <div className="mt-3 grid grid-cols-2 gap-2">

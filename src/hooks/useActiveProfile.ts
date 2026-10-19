@@ -57,6 +57,8 @@ export type ActiveProfile = Pick<
   theme_bg?: string | null;
   /** Faixa do topo: null = segue o destaque. */
   theme_hero?: string | null;
+  /** Bio do Perfil: 'instagram' (usa a da conta conectada) ou 'manual'. */
+  bio_origem?: string | null;
 };
 
 /** Campos que dá pra gravar na conta ativa (espelha a lista do RPC). */
@@ -86,6 +88,7 @@ export type PerfilAtivoPatch = Partial<{
   theme_font: string | null;
   theme_bg: string | null;
   theme_hero: string | null;
+  bio_origem: string | null;
 }>;
 
 export type UseActiveProfileResult = {

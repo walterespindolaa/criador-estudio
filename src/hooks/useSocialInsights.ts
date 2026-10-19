@@ -30,6 +30,9 @@ export type SocialConnection = {
   // deu de verdade e marca de token morto (a renovação diária não conseguiu).
   scopes?: string | null;
   needs_reconnect?: boolean | null;
+  // Bio da conta (SQL 20261019000011), pro Perfil usar a do Instagram.
+  biography?: string | null;
+  biography_em?: string | null;
 };
 
 /* Estado da conexão pra tela. "reconectar": token vencido ou morto, os dados
@@ -170,7 +173,7 @@ export function useSocialConnection() {
       const { data, error } = await sbFrom("social_connections")
         // Lista explicita (o "*" tropeçaria no access_token, que tem grant de
         // coluna negado). Os 3 contadores exigem o SQL de 04/09 rodado antes.
-        .select("id,user_id,provider,external_account_id,username,account_type,profile_picture_url,token_expires_at,connected_at,updated_at,followers_count,follows_count,media_count,scopes,needs_reconnect")
+        .select("id,user_id,provider,external_account_id,username,account_type,profile_picture_url,token_expires_at,connected_at,updated_at,followers_count,follows_count,media_count,scopes,needs_reconnect,biography,biography_em")
         .eq("user_id", ownerId!)
         .eq("provider", "instagram")
         .is("crm_client_id", null)

@@ -121,6 +121,19 @@ async function syncStories(admin: ReturnType<typeof createClient>, userId: strin
   return storiesSynced;
 }
 
+// BIO DA CONTA (Walter, 19/10/2026): o Perfil do CRIA pode usar a bio do
+// Instagram. Chamada separada e best-effort: se a Meta não devolver o campo
+// (permissão, conta pessoal), a sync segue igual e a bio fica como estava.
+async function atualizaBio(admin: ReturnType<typeof createClient>, conn: Conn): Promise<string | null> {
+  const r = await fetchGraph(`${GRAPH}/me?fields=biography&access_token=${conn.access_token}`);
+  if (!r.ok) return null;
+  const bio = typeof r.body.biography === 'string' ? (r.body.biography as string) : '';
+  const { error } = await admin.from('social_connections')
+    .update({ biography: bio, biography_em: new Date().toISOString() } as never).eq('id', conn.id);
+  if (error) console.warn('[instagram-sync] bio nao gravada (rodar SQL 20261019000011):', error.message);
+  return bio;
+}
+
 type Opcoes = { maxMedia?: number };
 
 async function syncConnection(
@@ -249,6 +262,7 @@ async function syncConnection(
   } as never).eq('id', conn.id).then(({ error }) => {
     if (error) console.warn('[instagram-sync] contadores nao gravados (rodar SQL das colunas):', error.message);
   });
+  await atualizaBio(admin, conn).catch(() => null);
 
   // 1b) DEMOGRAFIA DE AUDIÊNCIA (follower_demographics / engaged_audience_demographics).
   // A API exige period=lifetime + timeframe + 1 chamada por breakdown. Cada chamada
@@ -529,6 +543,15 @@ Deno.serve(async (req) => {
     const { data: conns } = await consulta;
     const list = (conns ?? []) as unknown as Conn[];
     if (!list.length) return json({ error: 'not_connected' }, 400);
+
+    // "Atualizar agora" da bio no Perfil: só a bio da conta própria, sem a
+    // sync inteira (que leva até 1 min).
+    if (corpo?.modo === 'bio') {
+      const propria = list.find((c) => (c.crm_client_id ?? null) === null && c.access_token);
+      if (!propria) return json({ error: 'not_connected' }, 400);
+      const bio = await atualizaBio(admin, propria);
+      return json({ ok: bio !== null, biography: bio });
+    }
 
     // Sincroniza cada conexão isoladamente; falha de uma não derruba as outras.
     const results: Array<Record<string, unknown>> = [];

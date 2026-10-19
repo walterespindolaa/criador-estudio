@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Trash2, Camera, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, Users, LayoutGrid, Plug, Settings, Pencil, CreditCard, Instagram, Bell } from "lucide-react";
+import { Plus, Trash2, Camera, Eye, EyeOff, RefreshCw, Check, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, Users, LayoutGrid, Plug, Settings, Pencil, CreditCard, Instagram, Bell } from "lucide-react";
 import { NotificationToggle } from "@/components/NotificationToggle";
 import { useSocialConnection, connectInstagram, useDisconnectInstagram, estadoConexaoIg } from "@/hooks/useSocialInsights";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
@@ -48,6 +49,7 @@ const profileSchema = z.object({
   tiktok_handle: z.string().max(100).optional().or(z.literal("")),
   youtube_handle: z.string().max(100).optional().or(z.literal("")),
   avatar_url: z.string().optional().or(z.literal("")),
+  bio_origem: z.enum(["instagram", "manual"]),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -62,8 +64,26 @@ const TAB_PILL = [
   "md:w-full md:justify-start md:rounded-xl md:border-0 md:bg-transparent md:px-3 md:py-2.5 md:min-h-[42px] md:text-sm md:font-medium md:text-foreground/80",
   "md:data-[state=active]:bg-primary/10 md:data-[state=active]:text-primary md:data-[state=active]:font-bold md:hover:bg-muted",
 ].join(" ");
-const ICONE_ABA = "hidden h-4 w-4 shrink-0 md:inline";
+const ICONE_ABA = "h-4 w-4 shrink-0";
 const SEPARADOR_ABA = "hidden md:block my-1.5 mx-2 h-px bg-border";
+
+/** "há 2 dias" a partir de uma data ISO. */
+function haQuanto(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (min < 1) return "agora";
+  if (min < 60) return `há ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `há ${h} h`;
+  const d = Math.round(h / 24);
+  return d === 1 ? "há 1 dia" : `há ${d} dias`;
+}
+
+/** Pix escondido: só os 2 últimos caracteres aparecem. */
+function mascararPix(v: string): string {
+  if (!v) return "";
+  return v.length <= 2 ? "••" : `${"•".repeat(Math.min(v.length - 2, 12))}${v.slice(-2)}`;
+}
 
 const SectionHeader = ({ title, desc }: { title: string; desc: string }) => (
   <div className="mb-5">
@@ -105,7 +125,7 @@ const Configuracoes = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { register, handleSubmit, setValue, watch, formState: { errors }, reset } = useForm<ProfileFormData>({
+  const { register, handleSubmit, setValue, watch, formState: { errors, isDirty }, reset } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
   });
 
@@ -113,6 +133,10 @@ const Configuracoes = () => {
   const bio = watch("bio") || "";
   const platforms = watch("platforms") || [];
   const weeklyGoal = watch("weekly_goal");
+  const bioOrigem = watch("bio_origem") ?? "manual";
+  const pixKey = watch("pix_key") ?? "";
+  // Decide máscara x campo pelo valor SALVO: senão, ao digitar a 1ª letra, o campo virava máscara.
+  const pixSalvo = (profile as { pix_key?: string | null } | null)?.pix_key ?? "";
 
   // Paleta grande demais na cara assustava ("20 cores", Walter 31/08): mostra
   // as 7 primeiras e o resto abre sob demanda.
@@ -162,6 +186,27 @@ const Configuracoes = () => {
   const { data: igConnection } = useSocialConnection();
   const igDisconnect = useDisconnectInstagram();
 
+  /* PERFIL NOVO (Walter, 19/10/2026; mockup aprovado). Bio pode vir do
+     Instagram conectado; Pix fica mascarado até a pessoa pedir pra ver. */
+  const qcPerfil = useQueryClient();
+  const [pixAberto, setPixAberto] = useState(false);
+  const [pixVisivel, setPixVisivel] = useState(false);
+  const [atualizandoBio, setAtualizandoBio] = useState(false);
+  const atualizarBioIg = async () => {
+    setAtualizandoBio(true);
+    try {
+      const outra = !!activeAccountId && activeAccountId !== user?.id;
+      const { data, error } = await supabase.functions.invoke("instagram-sync", {
+        body: outra ? { modo: "bio", account_id: activeAccountId } : { modo: "bio" },
+      });
+      if (error || !(data as { ok?: boolean } | null)?.ok) throw error ?? new Error("sem bio");
+      await qcPerfil.invalidateQueries({ queryKey: ["social-connection"] });
+      toast.success("Bio atualizada do Instagram.");
+    } catch {
+      toast.error("Não consegui puxar a bio agora. Tenta de novo em um minuto.");
+    } finally { setAtualizandoBio(false); }
+  };
+
   useEffect(() => {
     if (profile) {
       reset({
@@ -175,6 +220,7 @@ const Configuracoes = () => {
         tiktok_handle: profile.tiktok_handle || "",
         youtube_handle: profile.youtube_handle || "",
         avatar_url: profile.avatar_url || "",
+        bio_origem: (profile as { bio_origem?: string | null }).bio_origem === "instagram" ? "instagram" : "manual",
       });
       const list = (profile.niche || "")
         .split(",")
@@ -222,9 +268,16 @@ const Configuracoes = () => {
   const onSubmit = async (data: ProfileFormData) => {
     try {
       const nicheString = selectedNiches.map((n) => n.trim()).filter(Boolean).join(", ");
+      // Bio do Instagram: grava a bio da conta em profiles.bio, que é o que o
+      // resto do sistema lê (feed, propostas, IA).
+      const usaIg = data.bio_origem === "instagram" && !!igConnection;
+      // Bio do IG ainda não puxada: mantém a bio escrita, nunca apaga.
+      const bioIg = (igConnection?.biography ?? "").trim();
+      const bioFinal = usaIg && bioIg ? bioIg.slice(0, 160) : (data.bio ?? "");
       await updateProfile.mutateAsync({
         name: sanitizeText(data.name),
-        bio: data.bio ? sanitizeText(data.bio) : null,
+        bio: bioFinal ? sanitizeText(bioFinal) : null,
+        bio_origem: usaIg ? "instagram" : "manual",
         niche: nicheString ? sanitizeText(nicheString) : null,
         weekly_goal: data.weekly_goal,
         platforms: data.platforms,
@@ -233,8 +286,10 @@ const Configuracoes = () => {
         tiktok_handle: data.tiktok_handle ? sanitizeText(data.tiktok_handle) : null,
         youtube_handle: data.youtube_handle ? sanitizeText(data.youtube_handle) : null,
         avatar_url: data.avatar_url ? sanitizeUrl(data.avatar_url) : null,
-      });
+      } as Parameters<typeof updateProfile.mutateAsync>[0]);
       toast.success("Perfil atualizado!");
+      reset({ ...data, bio: bioFinal });
+      setPixAberto(false); setPixVisivel(false);
     } catch {
       toast.error("Erro ao atualizar perfil.");
     }
@@ -288,7 +343,7 @@ const Configuracoes = () => {
 
   const togglePlatform = (p: string) => {
     const current = watch("platforms") || [];
-    setValue("platforms", current.includes(p) ? current.filter(x => x !== p) : [...current, p]);
+    setValue("platforms", current.includes(p) ? current.filter(x => x !== p) : [...current, p], { shouldDirty: true });
   };
 
   const addHabit = async (habitName?: string) => {
@@ -442,80 +497,119 @@ const Configuracoes = () => {
             <TabsContent value="perfil">
               {/* Mobile: uma coluna, mesma ordem de sempre. Desktop (lg): duas colunas
                   equilibradas pra aproveitar a largura em vez de um corredor estreito. */}
-              <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl lg:max-w-5xl space-y-6">
-                <SectionHeader title="Perfil" desc="Sua identidade no CRIA: foto, bio, nicho, plataformas e handles." />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                {/* Coluna esquerda: identidade (foto, nome, bio) */}
-                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
-                  <h3 className="font-display font-semibold text-foreground">Meu Perfil</h3>
+              <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl lg:max-w-5xl pb-24">
+                <SectionHeader title="Perfil" desc="Como você aparece no CRIA, nas propostas e pra IA que escreve com você." />
+                <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-4 items-start">
+                {/* Coluna esquerda: foto, nome e bio; Pix embaixo */}
+                <div className="space-y-4">
+                <div className="bg-card rounded-2xl p-5 border border-border space-y-4">
                   <div className="flex items-center gap-4">
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="relative w-20 h-20 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-border hover:border-primary transition-colors group">
-                      {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <Camera className="h-6 w-6 text-muted-foreground group-hover:text-primary" />}
-                      <div className="absolute inset-0 bg-foreground/20 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center justify-center"><Camera className="h-5 w-5 text-primary-foreground" /></div>
+                    <button type="button" onClick={() => fileInputRef.current?.click()} aria-label="Trocar foto"
+                      className="relative h-[72px] w-[72px] sm:h-[84px] sm:w-[84px] shrink-0 rounded-full bg-muted border-[3px] border-card shadow-md">
+                      <span className="block h-full w-full overflow-hidden rounded-full">
+                        {avatarUrl ? <img src={avatarUrl} alt="Foto de perfil" className="h-full w-full object-cover" /> : <span className="grid h-full w-full place-items-center"><Camera className="h-6 w-6 text-muted-foreground" /></span>}
+                      </span>
+                      <span className="absolute -bottom-0.5 -right-0.5 grid h-7 w-7 place-items-center rounded-full border-2 border-card bg-foreground text-background">
+                        {uploadingAvatar ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                      </span>
                     </button>
                     <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarSelect} />
-                    <div>
-                      <p className="font-body text-sm font-medium text-foreground">Foto de perfil</p>
-                      <p className="font-body text-xs text-muted-foreground">
-                        {uploadingAvatar ? "Enviando..." : "Clique para alterar"}
-                      </p>
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <Label className="font-body text-xs text-muted-foreground">Nome</Label>
+                      <Input {...register("name")} className="rounded-xl" />
+                      {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
                     </div>
                   </div>
+
+                  {/* BIO: a do Instagram conectado ou uma escrita aqui. */}
                   <div className="space-y-2">
-                    <Label className="font-body text-sm">Nome</Label>
-                    <Input {...register("name")} className="rounded-xl" />
-                    {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
-                  </div>
-                  {/* BIO. min-h de 60px cortava a bio no meio: a pessoa digitava 3 linhas
-                      e via 1 e meia. Agora nasce com altura de leitura e cresce se precisar. */}
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Bio <span className="text-muted-foreground">({bio.length}/160)</span></Label>
-                    <Textarea
-                      {...register("bio")}
-                      rows={4}
-                      maxLength={160}
-                      placeholder="Conte um pouco sobre você..."
-                      className="rounded-xl min-h-[112px] leading-relaxed resize-y"
-                    />
-                    {errors.bio && <p className="text-xs text-destructive mt-1">{errors.bio.message}</p>}
+                    <Label className="font-body text-xs text-muted-foreground">Bio</Label>
+                    <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1">
+                      {([["instagram", "Usar a do Instagram"], ["manual", "Escrever outra"]] as const).map(([v, l]) => (
+                        <button key={v} type="button" onClick={() => setValue("bio_origem", v, { shouldDirty: true })}
+                          className={cn("rounded-lg px-2 py-2 text-[12.5px] font-body font-bold transition-colors",
+                            bioOrigem === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                          {v === "instagram" ? <><span className="sm:hidden">Do Instagram</span><span className="hidden sm:inline">{l}</span></> : l}
+                        </button>
+                      ))}
+                    </div>
+                    {bioOrigem === "instagram" ? (
+                      igConnection ? (
+                        <div>
+                          <div className="min-h-[72px] whitespace-pre-line rounded-xl border border-border bg-muted/40 px-3 py-2.5 text-sm font-body leading-relaxed text-foreground">
+                            {igConnection.biography?.trim()
+                              ? igConnection.biography
+                              : <span className="text-muted-foreground">{igConnection.biography_em ? "Sua bio do Instagram está vazia." : "Ainda não puxamos a bio. Toque em Atualizar agora."}</span>}
+                          </div>
+                          <div className="mt-1.5 flex items-center justify-between gap-3 text-[11.5px] font-body text-muted-foreground">
+                            <span className="truncate">
+                              {igConnection.biography_em ? `Puxada do @${igConnection.username ?? "instagram"} ${haQuanto(igConnection.biography_em)}` : `Conta @${igConnection.username ?? "instagram"}`}
+                            </span>
+                            <button type="button" onClick={() => void atualizarBioIg()} disabled={atualizandoBio}
+                              className="inline-flex shrink-0 items-center gap-1 font-bold text-primary hover:underline disabled:opacity-60">
+                              <RefreshCw className={cn("h-3 w-3", atualizandoBio && "animate-spin")} /> Atualizar agora
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-border px-3 py-3 text-center">
+                          <p className="text-[12.5px] font-body text-muted-foreground mb-2">Conecte o Instagram pra usar a bio de lá.</p>
+                          <Button type="button" variant="hero" size="sm" onClick={() => connectInstagram()}><Instagram className="h-4 w-4 mr-1.5" /> Conectar Instagram</Button>
+                        </div>
+                      )
+                    ) : (
+                      <div>
+                        <Textarea {...register("bio")} rows={4} maxLength={160} placeholder="Conte em poucas linhas quem você é e o que posta."
+                          className="rounded-xl min-h-[104px] leading-relaxed resize-y" />
+                        <p className="mt-1 text-right text-[11.5px] font-body text-muted-foreground">{bio.length}/160</p>
+                        {errors.bio && <p className="text-xs text-destructive">{errors.bio.message}</p>}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Coluna direita: nicho, plataformas e meta num card; handles e chave Pix noutro */}
-                <div className="space-y-6">
-                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
-
-                  {/* NICHO. Antes o formulário despejava TODAS as opções na tela, inclusive
-                      as 10 que não são suas. Virava um muro de chips. Agora a tela mostra só
-                      o SEU nicho; escolher é um clique que abre a lista. */}
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Nicho</Label>
-                    {selectedNiches.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {selectedNiches.map((n) => (
-                          <button
-                            key={n}
-                            type="button"
-                            onClick={() => toggleNiche(n)}
-                            title="Remover"
-                            className="px-3 py-1.5 rounded-full text-sm font-body bg-primary text-primary-foreground hover:opacity-90"
-                          >
-                            {n}
-                            <span className="ml-1.5 opacity-70">×</span>
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-[13px] text-muted-foreground font-body">Nenhum nicho escolhido ainda.</p>
-                    )}
-                    <Button type="button" variant="outline" className="rounded-xl w-full sm:w-auto" onClick={() => setNichoOpen(true)}>
-                      <Plus className="h-4 w-4 mr-1.5" />
-                      {selectedNiches.length > 0 ? "Editar nichos" : "Escolher nicho"}
-                    </Button>
-                    {errors.niche && <p className="text-xs text-destructive mt-1">{errors.niche.message}</p>}
+                {/* PIX mascarado: aparece só com "Mostrar"; "Trocar" abre o campo. */}
+                <div className="bg-card rounded-2xl p-5 border border-border space-y-2.5">
+                  <div>
+                    <p className="font-body text-sm font-bold text-foreground">Chave Pix <span className="font-normal text-muted-foreground">(opcional)</span></p>
+                    <p className="text-[12px] font-body text-muted-foreground leading-relaxed">Pra você <strong className="text-foreground">receber</strong>: entra nas propostas de collab e publi, pra marca te pagar direto. O CRIA nunca cobra nada por Pix.</p>
                   </div>
+                  {pixAberto || !pixSalvo ? (
+                    <Input placeholder="CPF, e-mail, telefone ou chave aleatória" {...register("pix_key")} className="rounded-xl" autoComplete="off" />
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1 truncate rounded-xl border border-border bg-background px-3 py-2 text-sm font-body tracking-wider">
+                        {pixVisivel ? pixKey : mascararPix(pixKey)}
+                      </div>
+                      <Button type="button" variant="outline" size="sm" className="rounded-xl shrink-0" onClick={() => setPixVisivel((v) => !v)}>
+                        {pixVisivel ? <EyeOff className="h-4 w-4 sm:mr-1" /> : <Eye className="h-4 w-4 sm:mr-1" />}<span className="hidden sm:inline">{pixVisivel ? "Esconder" : "Mostrar"}</span>
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" className="rounded-xl shrink-0" onClick={() => setPixAberto(true)}>Trocar</Button>
+                    </div>
+                  )}
+                  {errors.pix_key && <p className="text-xs text-destructive">{errors.pix_key.message}</p>}
+                </div>
+                </div>
 
-                  {/* Fechar por fora (X ou clique no fundo) também salva: senão
+                {/* Coluna direita: nicho, redes com o @, meta semanal */}
+                <div className="space-y-4">
+                <div className="bg-card rounded-2xl p-5 border border-border space-y-3">
+                  <div>
+                    <p className="font-body text-sm font-bold text-foreground">Nicho</p>
+                    <p className="text-[12px] font-body text-muted-foreground">A IA usa isso pra sugerir pauta e horário.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedNiches.map((n) => (
+                      <span key={n} className="rounded-full bg-primary/10 px-3 py-1 text-[12.5px] font-body font-bold text-primary">{n}</span>
+                    ))}
+                    <button type="button" onClick={() => setNichoOpen(true)}
+                      className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1 text-[12.5px] font-body font-bold text-muted-foreground hover:text-foreground">
+                      <Plus className="h-3.5 w-3.5" /> {selectedNiches.length > 0 ? "Editar" : "Escolher nicho"}
+                    </button>
+                  </div>
+                  {errors.niche && <p className="text-xs text-destructive">{errors.niche.message}</p>}
+                </div>
+                {/* Fechar por fora (X ou clique no fundo) também salva: senão
                       a pessoa escolhe os nichos, fecha, e a escolha evapora. */}
                   <Dialog open={nichoOpen} onOpenChange={(aberto) => { if (aberto) setNichoOpen(true); else void confirmarNichos(); }}>
                     <DialogContent>
@@ -574,56 +668,61 @@ const Configuracoes = () => {
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Plataformas</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {(["instagram", "tiktok", "youtube"] as const).map(p => (
-                        <button key={p} type="button" onClick={() => togglePlatform(p)} className={`shrink-0 px-3 sm:px-4 py-2 rounded-xl border text-sm font-body transition-colors flex items-center gap-2 ${platforms.includes(p) ? "bg-primary/10 border-primary" : "bg-background border-border"}`}>
-                          <PlatformIcon platform={p} size="sm" />
-                          {p === "instagram" ? "Instagram" : p === "tiktok" ? "TikTok" : "YouTube"}
-                        </button>
-                      ))}
-                    </div>
+
+                <div className="bg-card rounded-2xl p-5 border border-border space-y-3">
+                  <div>
+                    <p className="font-body text-sm font-bold text-foreground">Onde você publica</p>
+                    <p className="text-[12px] font-body text-muted-foreground">Marque a rede e coloque o @ dela.</p>
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-body text-sm">Meta semanal: {weeklyGoal} posts <InfoTooltip text="Quantos posts você quer publicar por semana." /></Label>
-                    <input type="range" min={1} max={7} value={weeklyGoal} onChange={(e) => setValue("weekly_goal", parseInt(e.target.value))} className="w-full accent-[hsl(var(--primary))]" />
+                    {(["instagram", "tiktok", "youtube"] as const).map((p) => {
+                      const on = platforms.includes(p);
+                      const campo = p === "instagram" ? "instagram_handle" : p === "tiktok" ? "tiktok_handle" : "youtube_handle";
+                      const nomeRede = p === "instagram" ? "Instagram" : p === "tiktok" ? "TikTok" : "YouTube";
+                      const conectado = p === "instagram" && !!igConnection;
+                      return (
+                        <div key={p} className="grid grid-cols-1 gap-2 sm:grid-cols-[132px_minmax(0,1fr)] sm:items-center">
+                          <button type="button" aria-pressed={on} onClick={() => togglePlatform(p)}
+                            className={cn("flex min-h-[42px] items-center gap-2 rounded-xl border px-3 text-[13px] font-body font-bold transition-colors",
+                              on ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-foreground")}>
+                            <span className={cn("grid h-4 w-4 shrink-0 place-items-center rounded border", on ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40")}>
+                              {on && <Check className="h-3 w-3" />}
+                            </span>
+                            <PlatformIcon platform={p} size="sm" />
+                            {nomeRede}
+                            {conectado && <span className="ml-auto rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-700 sm:hidden">conectado</span>}
+                          </button>
+                          {on ? (
+                            <div className="relative">
+                              <Input {...register(campo)} placeholder="@" className="rounded-xl pr-24" />
+                              {conectado && <span className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10.5px] font-body font-bold text-emerald-700 sm:inline">conectado</span>}
+                            </div>
+                          ) : (
+                            <div className="hidden min-h-[40px] items-center rounded-xl bg-muted/60 px-3 text-sm font-body text-muted-foreground sm:flex">não uso</div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-5">
-                  <div className="space-y-3">
-                    <Label className="font-body text-sm">Handles</Label>
-                    <div className="flex items-center gap-2">
-                      <PlatformIcon platform="instagram" size="sm" />
-                      <Input placeholder="@seuinstagram" {...register("instagram_handle")} className="rounded-xl" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <PlatformIcon platform="tiktok" size="sm" />
-                      <Input placeholder="@seutiktok" {...register("tiktok_handle")} className="rounded-xl" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <PlatformIcon platform="youtube" size="sm" />
-                      <Input placeholder="@seuyoutube" {...register("youtube_handle")} className="rounded-xl" />
-                    </div>
-                  </div>
-                  {/* PIX. Pedir a chave Pix do nada assusta e parece cobrança. O disclaimer
-                      explica ANTES do campo pra que serve: é você RECEBENDO de publi. */}
-                  <div className="space-y-2">
-                    <Label className="font-body text-sm">Chave Pix <span className="text-muted-foreground font-normal">(opcional)</span></Label>
-                    <div className="rounded-xl border border-primary/25 bg-primary/5 px-3 py-2.5">
-                      <p className="text-[12px] font-body text-foreground leading-relaxed">
-                        Isto é pra você <strong>RECEBER</strong>, não pra pagar nada. A chave entra nas propostas de collab e publi, pra marca te pagar direto, sem ficar pedindo seus dados no direct. O CRIA nunca cobra nada por Pix.
-                      </p>
-                    </div>
-                    <Input placeholder="CPF, e-mail, telefone ou chave aleatória" {...register("pix_key")} className="rounded-xl" />
-                    {errors.pix_key && <p className="text-xs text-destructive mt-1">{errors.pix_key.message}</p>}
+                <div className="bg-card rounded-2xl p-5 border border-border space-y-2">
+                  <p className="font-body text-sm font-bold text-foreground flex items-center gap-1.5">Meta semanal: {weeklyGoal} posts <InfoTooltip text="Quantos posts você quer publicar por semana." /></p>
+                  <p className="text-[12px] font-body text-muted-foreground">Quanto você quer postar por semana.</p>
+                  <input type="range" min={1} max={7} value={weeklyGoal} onChange={(e) => setValue("weekly_goal", parseInt(e.target.value), { shouldDirty: true })} className="w-full accent-[hsl(var(--primary))]" />
+                </div>
+                </div>
+                </div>
+
+                {/* Salvar fixo embaixo (no celular, acima do dock). */}
+                <div className="fixed inset-x-0 bottom-[calc(88px+env(safe-area-inset-bottom,0px))] z-30 border-y border-border bg-card/95 backdrop-blur md:sticky md:inset-x-auto md:bottom-4 md:mt-4 md:rounded-2xl md:border">
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <span className="flex-1 text-[12px] font-body text-muted-foreground">{isDirty ? "Mudanças não salvas" : "Tudo salvo"}</span>
+                    <Button type="submit" variant="hero" disabled={updateProfile.isPending}>Salvar perfil</Button>
                   </div>
                 </div>
-                </div>
-                </div>
-                <Button type="submit" variant="hero">Salvar perfil</Button>
               </form>
+
             </TabsContent>
             )}
 

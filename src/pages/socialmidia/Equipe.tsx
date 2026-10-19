@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, UserPlus, Users, Plus, Trash2, Pause, Play, Check, CreditCard, Info, AlertTriangle, Pencil } from "lucide-react";
+import { Loader2, UserPlus, Users, Plus, Trash2, Pause, Play, Check, CreditCard, Info, AlertTriangle, Pencil, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -245,13 +245,26 @@ function PessoasDaEquipe({ managerId = null, comoGerente = false }: { managerId?
 
   return (
     <div className="space-y-5">
-      {/* Explicação (só com time montado; sem time, o bloco de venda explica) */}
+      {/* COLABORADOR x PARCEIRO (Walter, 19/10/2026): a Gabriela não sabia
+          a diferença nem onde ficavam os acessos de cada um. */}
       {members.length > 0 && (
-      <div className="flex items-start gap-2 rounded-xl bg-primary/[0.04] border border-primary/15 px-4 py-3">
-        <Info className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-        <p className="text-[13px] font-body text-foreground/80 leading-relaxed">
-          Convide colaboradores pra trabalhar <strong>dentro da sua conta</strong>, você escolhe, no convite, <strong>quais módulos e clientes</strong> cada um acessa. O <strong>1º colaborador é grátis</strong>; a partir do 2º, R$ 29,90/mês por pessoa.
-        </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="rounded-xl bg-primary/[0.04] border border-primary/15 px-4 py-3">
+          <p className="text-[13px] font-body font-bold text-foreground flex items-center gap-1.5">
+            <Users className="h-3.5 w-3.5 text-primary" /> Colaborador
+          </p>
+          <p className="text-[12.5px] font-body text-foreground/80 leading-relaxed mt-1">
+            Trabalha <strong>dentro da sua conta</strong>, como você. No Editar você escolhe os <strong>módulos</strong>, os <strong>clientes</strong> e as chaves de confiança. Usa assento: o 1º é grátis, depois R$ 29,90/mês por pessoa.
+          </p>
+        </div>
+        <div className="rounded-xl bg-violet-500/[0.05] border border-violet-300/40 px-4 py-3">
+          <p className="text-[13px] font-body font-bold text-foreground flex items-center gap-1.5">
+            <Palette className="h-3.5 w-3.5 text-violet-600" /> Parceiro
+          </p>
+          <p className="text-[12.5px] font-body text-foreground/80 leading-relaxed mt-1">
+            Designer, editor, filmmaker: <strong>não entra na sua conta</strong>. Só recebe os posts que você manda pelo <strong>"Enviar para"</strong>. No Editar você escolhe os <strong>clientes que ele atende</strong> e o pagamento. Não usa assento.
+          </p>
+        </div>
       </div>
       )}
 
