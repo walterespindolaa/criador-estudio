@@ -7,7 +7,7 @@ import {
   Plus, X, CheckCircle2, Clock, Pencil, CalendarRange, MapPinned, Camera,
   Play, FileText, Download, Repeat, ListChecks, Square, CheckSquare, ChevronDown,
   Sparkles, Route, Send, Settings, Clapperboard,
-  ArrowLeft, UserPlus, Trash2, Film, CalendarPlus, GripVertical, Link2, FileDown,
+  ArrowLeft, UserPlus, Trash2, Film, CalendarPlus, GripVertical, Link2, FileDown, CalendarClock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +56,8 @@ import { clienteInativo } from "@/lib/cliente-status";
 import { PrompterPlayer } from "@/components/prompter/PrompterPlayer";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
+import { AgendaCaptacao } from "@/components/captacao/AgendaCaptacao";
+import { usePedidosCaptacao, copiarLinkDoCliente } from "@/hooks/useAgendaCaptacao";
 
 // Paleta de cores do app pro gráfico por cidade (as mesmas cores dos chips da
 // agenda). Cicla quando há mais cidades que cores.
@@ -244,6 +246,15 @@ function CriaCaptacaoInner({ fixo }: { fixo?: string } = {}) {
     return a === "novo-roteiro" || a === "marcar" ? a : null;
   });
   const [novoAvulsoOpen, setNovoAvulsoOpen] = useState(false);
+  /* AGENDA DE CAPTAÇÃO (19/10/2026): horários liberados + link de cada
+     cliente + pedidos. `?agenda=pedidos` vem da notificação do pedido. */
+  const [agenda, setAgenda] = useState<null | "calendario" | "pedidos" | "links">(() => {
+    if (fixo) return null;
+    const a = new URLSearchParams(window.location.search).get("agenda");
+    return a === "pedidos" || a === "links" || a === "calendario" ? a : null;
+  });
+  const { data: pedidosAgenda = [] } = usePedidosCaptacao();
+  const pedidosPendentes = pedidosAgenda.filter((p) => p.status === "pendente").length;
 
   const { data: captures = [], isLoading } = useCaptures();
   const { data: clients = [] } = useCrmClients();
@@ -838,6 +849,10 @@ function CriaCaptacaoInner({ fixo }: { fixo?: string } = {}) {
     });
   };
 
+  if (agenda && !fixo) {
+    return <AgendaCaptacao abaInicial={agenda} onVoltar={() => setAgenda(null)} />;
+  }
+
   return (
     <div className="space-y-5">
       {/* Cabeçalho: navegação de mês + botão Cidades */}
@@ -856,9 +871,20 @@ function CriaCaptacaoInner({ fixo }: { fixo?: string } = {}) {
             <Button variant="ghost" size="sm" onClick={goHoje} className="h-9 rounded-xl text-xs">Hoje</Button>
           )}
         </div>
-        <Button data-tour="cap-cidades" variant="outline" size="sm" onClick={() => setConfigOpen(true)} className="rounded-xl">
-          <Settings className="h-4 w-4 mr-1.5" /> Configurações
-        </Button>
+        <div className="flex items-center gap-2">
+          {!fixo && (
+            <Button variant="outline" size="sm" onClick={() => setAgenda(pedidosPendentes ? "pedidos" : "calendario")}
+              className="rounded-xl relative border-blue-200 text-blue-700 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-500/10">
+              <CalendarClock className="h-4 w-4 mr-1.5" /> Agenda de captação
+              {pedidosPendentes > 0 && (
+                <span className="ml-1.5 grid min-w-5 h-5 place-items-center rounded-full bg-amber-500 px-1 text-[11px] font-bold text-white">{pedidosPendentes}</span>
+              )}
+            </Button>
+          )}
+          <Button data-tour="cap-cidades" variant="outline" size="sm" onClick={() => setConfigOpen(true)} className="rounded-xl">
+            <Settings className="h-4 w-4 mr-1.5" /> Configurações
+          </Button>
+        </div>
       </div>
 
       {/* PASTA ABERTA: a tela vira o dossiê do cliente (roteiros, captações,
@@ -1870,6 +1896,12 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
           <Button size="sm" variant="outline" onClick={() => setMarcarOpen(true)} className="rounded-xl h-9">
             <CalendarPlus className="h-3.5 w-3.5 mr-1.5" /> Marcar captação
           </Button>
+          {pasta.crmId && (
+            <Button size="sm" variant="outline" onClick={() => void copiarLinkDoCliente(pasta.crmId!, pasta.nome)} className="rounded-xl h-9"
+              title="Copia o link em que o cliente escolhe o dia da captação, entre os horários que você liberou.">
+              <CalendarClock className="h-3.5 w-3.5 mr-1.5" /> Link de agendamento
+            </Button>
+          )}
           {/* O GUIA: é o documento que ela leva pro dia da gravação e manda pro
               cliente. Sem ele, o módulo só guardava texto. */}
           <Button size="sm" variant="outline" onClick={() => void baixarGuia()} disabled={gerandoGuia || roteirosDoGuia.length === 0}

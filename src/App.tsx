@@ -97,6 +97,7 @@ const MateriaisPortal = lazy(() => import("./pages/MateriaisPortal"));
 const PropostaPublica = lazy(() => import("./pages/PropostaPublica"));
 const CronogramaPublica = lazy(() => import("./pages/CronogramaPublica"));
 const RoteirosPublica = lazy(() => import("./pages/RoteirosPublica"));
+const AgendarPublica = lazy(() => import("./pages/AgendarPublica"));
 const ConectarInstagram = lazy(() => import("./pages/ConectarInstagram"));
 const CadastroPublico = lazy(() => import("./pages/CadastroPublico"));
 const EnviarAcessos = lazy(() => import("./pages/EnviarAcessos"));
@@ -318,6 +319,7 @@ const App = () => (
               <Route path="/proposta/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><PropostaPublica /></ErrorBoundary>} />
               <Route path="/cronograma/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><CronogramaPublica /></ErrorBoundary>} />
               <Route path="/roteiros/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><RoteirosPublica /></ErrorBoundary>} />
+              <Route path="/agendar/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><AgendarPublica /></ErrorBoundary>} />
               {/* Convite pra cliente liberar o Instagram (link do WhatsApp). */}
               <Route path="/conectar/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><ConectarInstagram /></ErrorBoundary>} />
               <Route path="/cadastro/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><CadastroPublico /></ErrorBoundary>} />

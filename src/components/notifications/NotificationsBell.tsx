@@ -49,6 +49,8 @@ const TYPE_ICONS: Record<string, { icon: typeof Bell; color: string }> = {
   demanda_atrasada: { icon: Clock, color: "text-destructive" },
   cache_aviso: { icon: Wallet, color: "text-amber-600" },
   cache_pago: { icon: Wallet, color: "text-green-600" },
+  // Cliente pediu um horário de captação pelo link (19/10/2026).
+  captacao_pedido: { icon: CalendarDays, color: "text-blue-600" },
 };
 
 // Cada tipo cai numa categoria; a ordem define como aparecem no painel.
@@ -94,6 +96,7 @@ const CATEGORY: Record<string, string> = {
   demanda_comentario: "Produção",
   cache_aviso: "Produção",
   cache_pago: "Cachês",
+  captacao_pedido: "Cliente / Cria Post",
 };
 const CATEGORY_ORDER = [
   "Leads", "Produção", "Cliente / Cria Post", "Lembretes", "Ganchos & dicas", "Conquistas", "Ideias", "Avisos", "Outras",

@@ -15,6 +15,8 @@ const TOKEN_ROUTES: { prefix: string; hasParam: boolean }[] = [
      roteiros do cliente, cadastro/briefing, materiais, e o obrigado do checkout
      (carrega o session_id do Stripe na query, que o claim-purchase aceita). */
   { prefix: "/roteiros", hasParam: true },
+  // Link do cliente pra agendar captação (19/10/2026).
+  { prefix: "/agendar", hasParam: true },
   { prefix: "/cadastro", hasParam: true },
   { prefix: "/materiais", hasParam: true },
   // Convite pra cliente liberar o Instagram: o token dá acesso à conexão.
