@@ -246,10 +246,19 @@ const AppLayout = () => {
     : location.pathname.startsWith("/app/criakut") ? <TituloCriakut />
     : (PAGE_TITLES[location.pathname] ?? "CRIA");
   const heroEyebrow = isDash ? `${greetWord},` : undefined;
+  // Topo do dashboard (mockup aprovado 19/10/2026): @ e nicho principal embaixo do nome.
+  const displayHandle = (managedAccount ? managedAccount.instagram_handle : profile?.instagram_handle)?.replace(/^@/, "").trim();
+  const displayNiche = ((managedAccount ? managedAccount.niche : profile?.niche) ?? "").split(",")[0]?.trim();
+  const heroMeta = isDash && (displayHandle || displayNiche) ? (
+    <>
+      {displayHandle && <span>@{displayHandle}</span>}
+      {displayNiche && <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold">{displayNiche}</span>}
+    </>
+  ) : undefined;
   const avatarNode = isDash ? (
-    <Avatar className="h-11 w-11 shrink-0 border-2 border-white/40 shadow-sm">
+    <Avatar className="h-[88px] w-[88px] shrink-0 border-4 border-white/90 shadow-[0_6px_20px_rgba(0,0,0,0.18)]">
       <AvatarImage src={displayAvatarUrl ?? undefined} alt={firstName} />
-      <AvatarFallback className="bg-white/20 font-display font-bold text-white">
+      <AvatarFallback className="bg-white/20 font-display text-3xl font-bold text-white">
         {firstName.charAt(0).toUpperCase()}
       </AvatarFallback>
     </Avatar>
@@ -258,11 +267,11 @@ const AppLayout = () => {
   const quickActions = isDash ? (
     <>
       <button onClick={() => navigate("/app/ideias")}
-        className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-foreground shadow-sm transition hover:opacity-90">
+        className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-[13px] font-bold text-foreground shadow-sm transition hover:opacity-90">
         <Lightbulb className="h-4 w-4" /> Nova ideia
       </button>
       <button onClick={() => navigate("/app/criando")}
-        className="inline-flex items-center gap-1.5 rounded-xl bg-white/15 px-3 py-2 text-xs font-bold text-white ring-1 ring-white/30 transition hover:bg-white/25">
+        className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-2 text-[13px] font-bold text-white ring-1 ring-white/35 transition hover:bg-white/25">
         <Plus className="h-4 w-4" /> Novo post
       </button>
     </>
@@ -375,7 +384,7 @@ const AppLayout = () => {
                 railPinned ? "md:-ml-[288px] md:w-[calc(100%+288px)]" : "md:-ml-[104px] md:w-[calc(100%+104px)]",
               )}
             >
-              <HeroBand wideInset={railPinned} eyebrow={heroEyebrow} title={heroTitle} avatar={avatarNode} actions={quickActions}>
+              <HeroBand wideInset={railPinned} eyebrow={heroEyebrow} title={heroTitle} avatar={avatarNode} actions={quickActions} meta={heroMeta} destaque={isDash}>
                 <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
                   <GlobalSearch />
                   <PlanBadge light />

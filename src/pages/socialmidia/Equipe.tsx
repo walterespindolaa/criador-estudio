@@ -1,17 +1,22 @@
 import { useEffect, useState } from "react";
-import { Loader2, UserPlus, Users, Plus, Trash2, Pause, Play, Check, CreditCard, Info, AlertTriangle } from "lucide-react";
+import { Loader2, UserPlus, Users, Plus, Trash2, Pause, Play, Check, CreditCard, Info, AlertTriangle, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
   useTeamMembers, useCollabSeats, useInviteMember, useUpdateMemberStatus, useRemoveMember,
   useSetMemberModule, useBuySeats, TEAM_MODULES, TEAM_MODULE_DEFAULT, useVincularParceiroPorCodigo,
-  useMyTeamPermissions, PERM_PARCEIROS, PERM_COFRE, PERM_EQUIPE,
+  useMyTeamPermissions, PERM_PARCEIROS, PERM_COFRE, PERM_EQUIPE, useSetMemberScope, useSetParceiroClientes,
+  type TeamMember,
 } from "@/hooks/useTeam";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTerceiros, useSalvarFicha, type Terceiro } from "@/hooks/useTerceiros";
+import { ROTULO_FECHAMENTO, type Fechamento } from "@/lib/fechamento";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
-import { useCrmClients } from "@/hooks/useCrm";
+import { useCrmClients, type CrmClient } from "@/hooks/useCrm";
 import { confirmar } from "@/components/shared/Confirm";
 import { useNavigate, useParams } from "react-router-dom";
 import { ModuleHero, type SubTab } from "@/components/brand/ModuleHero";
@@ -163,6 +168,11 @@ function SemParceiroAinda({ aoConvidar }: { aoConvidar: (() => void) | null }) {
   );
 }
 
+const ROTULO_PARC: Record<string, string> = { designer: "Designer", editor_video: "Editor de vídeo", copy: "Copy", trafego: "Tráfego", filmmaker: "Captação / filmmaker" };
+const CURTO_MODULO: Record<string, string> = { cria_gestao: "Cria Gestão", cria_post: "Cria Post", hub_cria: "HUB", agenda: "Agenda", cria_caixa: "Caixa", cria_captacao: "Captação" };
+const RESUMO_FECHAMENTO: Record<Fechamento, string> = { servico: "paga por serviço", dia15: "fecha dia 15", quinzenal: "fecha quinzenal", mensal: "fecha no fim do mês" };
+const FECHAMENTOS = Object.keys(ROTULO_FECHAMENTO) as Fechamento[];
+
 function PessoasDaEquipe({ managerId = null, comoGerente = false }: { managerId?: string | null; comoGerente?: boolean }) {
   /* comoGerente: colaboradora com "Pode gerenciar a equipe" mexendo na equipe
      da conta em que está. Convida, pausa, remove e muda acessos; não compra
@@ -171,10 +181,15 @@ function PessoasDaEquipe({ managerId = null, comoGerente = false }: { managerId?
   const { data: seats } = useCollabSeats(managerId);
   const { data: clients = [] } = useCrmClients();
   const invite = useInviteMember();
-  const setStatus = useUpdateMemberStatus();
-  const removeMember = useRemoveMember();
-  const setModule = useSetMemberModule();
   const buySeats = useBuySeats();
+  const { user } = useAuth();
+  /* Fechamento e pagamento do parceiro: a mesma ficha do Caixa > Terceiros.
+     Financeiro é da dona: quem só gerencia a equipe não vê nem mexe. */
+  const { data: terceiros = [] } = useTerceiros();
+  const fichaPorMembro = new Map<string, Terceiro>();
+  for (const t of terceiros) if (t.member_id) fichaPorMembro.set(t.member_id, t);
+  const [editId, setEditId] = useState<string | null>(null);
+  const editando = members.find((m) => m.id === editId) ?? null;
   // Portal do Stripe: é onde a pessoa vê TODAS as assinaturas dela (inclusive
   // uma órfã de antes da correção dos assentos) e cancela sozinha, sem suporte.
   const { openPortal, isLoading: portalLoading } = useManageSubscription();
@@ -342,140 +357,63 @@ function PessoasDaEquipe({ managerId = null, comoGerente = false }: { managerId?
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
+          {/* LISTA ENXUTA (Gabriela, 19/10/2026; mockup aprovado): nome, papel,
+              uma linha de resumo e a bolinha de ativo/pausado. Módulos, chaves,
+              clientes e pagamento moram no Editar. */}
           {members.map((m) => {
-            const enabled = new Set(m.permissions.map((p) => p.module_code));
-            const scopedPerm = m.permissions.find((p) => !p.all_clients && p.client_ids?.length);
             const paused = m.status === "pausado";
-            const ROTULO: Record<string, string> = { designer: "Designer", editor_video: "Editor de vídeo", copy: "Copy", trafego: "Tráfego", filmmaker: "Captação / filmmaker" };
-            const papelParc = ROTULO[m.role ?? ""];
+            const papelParc = ROTULO_PARC[m.role ?? ""];
+            const souEu = m.member_id === user?.id;
+            let resumo: string;
+            if (papelParc) {
+              const n = m.clientes_atendidos?.length ?? 0;
+              const ficha = fichaPorMembro.get(m.member_id);
+              resumo = [papelParc, n > 0 ? `${n} cliente${n === 1 ? "" : "s"}` : "todos os clientes",
+                ficha && !comoGerente ? RESUMO_FECHAMENTO[ficha.fechamento] : null].filter(Boolean).join(" · ");
+            } else {
+              const mods = TEAM_MODULES.filter((mod) => m.permissions.some((p) => p.module_code === mod.code)).map((mod) => CURTO_MODULO[mod.code] ?? mod.label);
+              const escopo = m.permissions.find((p) => !p.all_clients && p.client_ids?.length);
+              resumo = [mods.length ? mods.join(", ") : "Nenhum módulo",
+                escopo ? `${escopo.client_ids.length} cliente${escopo.client_ids.length === 1 ? "" : "s"}` : "todos os clientes"].join(" · ");
+            }
             return (
-              <div key={m.id} className={cn("bg-card border border-border rounded-2xl p-4", paused && "opacity-70")}>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-primary font-display font-bold">
-                    {(m.name || m.email || "?").charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-body font-semibold text-foreground truncate">{m.name || "(sem nome)"}</p>
-                    <p className="text-[12px] font-body text-muted-foreground truncate">{m.email}</p>
-                  </div>
-                  {/* O papel na cara: sem isto a Gabriela olhava a lista e não
-                      sabia quem era colaborador e quem era a designer. */}
-                  <span className={cn("text-[10px] font-body font-bold px-2.5 py-1 rounded-full",
-                    papelParc ? "bg-violet-100 text-violet-700" : "bg-primary/10 text-primary")}>
-                    {papelParc ? `Parceiro · ${papelParc}` : "Colaborador"}
-                  </span>
-                  <span className={cn("text-[10px] font-body px-2 py-0.5 rounded-full", paused ? "bg-muted text-muted-foreground" : "bg-emerald-500/12 text-emerald-600")}>
-                    {paused ? "Pausado" : "Ativo"}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => setStatus.mutate({ id: m.id, status: paused ? "ativo" : "pausado" })}
-                      className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title={paused ? "Reativar" : "Pausar"}>
-                      {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-                    </button>
-                    <button onClick={async () => { if (await confirmar({ titulo: "Remover este colaborador?", descricao: "Ele perde o acesso à sua conta na hora. O assento volta pra você.", acao: "Remover" })) removeMember.mutate(m.id); }}
-                      className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" title="Remover">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+              <div key={m.id} className={cn("bg-card border border-border rounded-2xl px-3.5 py-3 flex items-center gap-3", paused && "opacity-70")}>
+                <div className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-full font-display font-bold",
+                  papelParc ? "bg-violet-100 text-violet-700" : "bg-primary/10 text-primary")}>
+                  {(m.name || m.email || "?").charAt(0).toUpperCase()}
                 </div>
-                {papelParc ? (
-                  <div className="mt-3 pt-3 border-t border-border/60">
-                    <p className="text-[12px] font-body text-muted-foreground leading-relaxed">
-                      Recebe só os posts que você mandar pelo <strong className="text-foreground">"Enviar para"</strong> dentro
-                      do post, com prazo e a identidade do cliente. Não vê CRM, financeiro nem a carteira.
-                    </p>
-                  </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-body font-semibold text-foreground truncate">{m.name || m.email || "(sem nome)"}</p>
+                  <p className="text-[12px] font-body text-muted-foreground truncate">{resumo}</p>
+                </div>
+                <span className={cn("hidden sm:inline text-[10px] font-body font-bold px-2.5 py-1 rounded-full shrink-0",
+                  papelParc ? "bg-violet-100 text-violet-700" : "bg-primary/10 text-primary")}>
+                  {papelParc ? "Parceiro" : "Colaborador"}
+                </span>
+                <span title={paused ? "Pausado" : "Ativo"} aria-label={paused ? "Pausado" : "Ativo"}
+                  className={cn("h-2 w-2 rounded-full shrink-0", paused ? "bg-muted-foreground/40" : "bg-emerald-500")} />
+                {souEu ? (
+                  <span className="text-[12px] font-body text-muted-foreground shrink-0 px-2">Você</span>
                 ) : (
-                <div className="mt-3 pt-3 border-t border-border/60">
-                  <p className="text-[10px] font-body font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                    Módulos liberados{scopedPerm ? ` · ${scopedPerm.client_ids.length} cliente(s) específico(s)` : " · todos os clientes"}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {TEAM_MODULES.map((mod) => {
-                      const on = enabled.has(mod.code);
-                      return (
-                        <button key={mod.code}
-                          onClick={() => setModule.mutate({ memberRowId: m.id, moduleCode: mod.code, enabled: !on })}
-                          className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[12px] font-body border transition-colors",
-                            on ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
-                          {on && <Check className="h-3 w-3" />} {mod.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {/* Chave separada dos módulos: não é produto, é confiança.
-                      Vem desligada; quem liga é a dona (Gabriela/Walter, 09/10/2026). */}
-                  {(() => {
-                    const gere = enabled.has(PERM_PARCEIROS);
-                    return (
-                      <div className="mt-3 pt-3 border-t border-border/60">
-                        <label className="flex items-center justify-between gap-4 min-h-[44px] cursor-pointer">
-                          <span className="min-w-0">
-                            <span className="block text-[13px] font-body font-semibold text-foreground">Gerenciar produção com parceiros</span>
-                            <span className="block text-[12px] font-body text-muted-foreground leading-relaxed">
-                              Envia peças pros parceiros desta conta, acompanha prazos e entregas e conversa no card.
-                              Pessoas e marcar pagamento continuam só com você.
-                            </span>
-                          </span>
-                          <input type="checkbox" checked={gere} disabled={setModule.isPending}
-                            onChange={() => setModule.mutate({ memberRowId: m.id, moduleCode: PERM_PARCEIROS, enabled: !gere })}
-                            className="h-5 w-5 shrink-0 accent-[hsl(var(--primary))]" />
-                        </label>
-                        {gere && !enabled.has("cria_post") && (
-                          <p className="mt-1 text-[12px] font-body text-amber-700 dark:text-amber-400">
-                            Libere também o Cria Post pra ela: a peça enviada ao parceiro é um post.
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })()}
-                  {(() => {
-                    /* PODE GERENCIAR A EQUIPE (19/10/2026): chave de confiança
-                       como as outras. Vem desligada; quem liga é a dona. */
-                    const gereEq = enabled.has(PERM_EQUIPE);
-                    return (
-                      <div className="mt-3 pt-3 border-t border-border/60">
-                        <label className="flex items-center justify-between gap-4 min-h-[44px] cursor-pointer">
-                          <span className="min-w-0">
-                            <span className="block text-[13px] font-body font-semibold text-foreground">Pode gerenciar a equipe</span>
-                            <span className="block text-[12px] font-body text-muted-foreground leading-relaxed">
-                              Vê a aba Pessoas desta conta: convida, pausa, remove e muda os acessos de quem trabalha aqui.
-                              Não mexe no próprio acesso nem compra assento.
-                            </span>
-                          </span>
-                          <input type="checkbox" checked={gereEq} disabled={setModule.isPending}
-                            onChange={() => setModule.mutate({ memberRowId: m.id, moduleCode: PERM_EQUIPE, enabled: !gereEq })}
-                            className="h-5 w-5 shrink-0 accent-[hsl(var(--primary))]" />
-                        </label>
-                      </div>
-                    );
-                  })()}
-                  {(() => {
-                    const veCofre = enabled.has(PERM_COFRE);
-                    return (
-                      <div className="mt-3 pt-3 border-t border-border/60">
-                        <label className="flex items-center justify-between gap-4 min-h-[44px] cursor-pointer">
-                          <span className="min-w-0">
-                            <span className="block text-[13px] font-body font-semibold text-foreground">Ver o cofre de acessos</span>
-                            <span className="block text-[12px] font-body text-muted-foreground leading-relaxed">
-                              Vê e copia logins e senhas dos clientes na aba Acessos. Cada vez que ela abre uma senha fica no histórico.
-                            </span>
-                          </span>
-                          <input type="checkbox" checked={veCofre} disabled={setModule.isPending}
-                            onChange={() => setModule.mutate({ memberRowId: m.id, moduleCode: PERM_COFRE, enabled: !veCofre })}
-                            className="h-5 w-5 shrink-0 accent-[hsl(var(--primary))]" />
-                        </label>
-                      </div>
-                    );
-                  })()}
-                </div>
+                  <Button variant="outline" size="sm" className="shrink-0 h-9 rounded-xl" onClick={() => setEditId(m.id)}>
+                    <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
+                  </Button>
                 )}
               </div>
             );
           })}
         </div>
       )}
+
+      <Sheet open={!!editando} onOpenChange={(v) => { if (!v) setEditId(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+          {editando && (
+            <EditarPessoa key={editando.id} m={editando} clients={clients} comoGerente={comoGerente}
+              ficha={fichaPorMembro.get(editando.member_id) ?? null} aoFechar={() => setEditId(null)} />
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Popup de convite: módulos + clientes ANTES de convidar */}
       <Dialog open={open} onOpenChange={setOpen}>
@@ -623,6 +561,267 @@ function PessoasDaEquipe({ managerId = null, comoGerente = false }: { managerId?
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   EDITAR PESSOA (Gabriela, 19/10/2026; mockup aprovado)
+
+   Tudo o que antes ficava aberto no cartão mora aqui. Cada mudança grava na
+   hora (como era no cartão), menos o pagamento, que tem Salvar próprio.
+   Parceiro: clientes que atende (nenhum = todos) e a ficha do Caixa >
+   Terceiros. Colaborador: módulos, quais clientes e as chaves de confiança.
+   ═══════════════════════════════════════════════════════════════════════════ */
+function EditarPessoa({ m, clients, comoGerente, ficha, aoFechar }: {
+  m: TeamMember;
+  clients: CrmClient[];
+  comoGerente: boolean;
+  ficha: Terceiro | null;
+  aoFechar: () => void;
+}) {
+  const setStatus = useUpdateMemberStatus();
+  const removeMember = useRemoveMember();
+  const setModule = useSetMemberModule();
+  const setScope = useSetMemberScope();
+  const setParcClientes = useSetParceiroClientes();
+  const salvarFicha = useSalvarFicha();
+
+  const papelParc = ROTULO_PARC[m.role ?? ""];
+  const paused = m.status === "pausado";
+  const enabled = new Set(m.permissions.map((p) => p.module_code));
+  const escopoAtual = m.permissions.find((p) => !p.all_clients && p.client_ids?.length);
+  // Cliente inativo some da escolha, a não ser que já esteja marcado.
+  const jaMarcados = new Set([...(m.clientes_atendidos ?? []), ...(escopoAtual?.client_ids ?? [])]);
+  const ativos = clients.filter((c) => c.status !== "inativo" || jaMarcados.has(c.id));
+
+  // Colaborador: escopo de clientes (mesmo mecanismo do convite).
+  const [modoClientes, setModoClientes] = useState<"all" | "some">(escopoAtual ? "some" : "all");
+  const [cliSel, setCliSel] = useState<Set<string>>(new Set(escopoAtual?.client_ids ?? []));
+  const gravarEscopo = (modo: "all" | "some", sel: Set<string>) => {
+    if (modo === "some" && sel.size === 0) return; // espera escolher ao menos um
+    setScope.mutate({ memberRowId: m.id, allClients: modo === "all", clientIds: [...sel] });
+  };
+
+  // Parceiro: clientes que atende (vazio = todos).
+  const [parcSel, setParcSel] = useState<Set<string>>(new Set(m.clientes_atendidos ?? []));
+  const toggleParc = (id: string) => {
+    const n = new Set(parcSel);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    setParcSel(n);
+    setParcClientes.mutate({ id: m.id, clientes: [...n] });
+  };
+
+  // Pagamento: a ficha do Caixa > Terceiros.
+  const [fechamento, setFechamento] = useState<Fechamento>(ficha?.fechamento ?? "mensal");
+  const [pagamento, setPagamento] = useState(ficha?.pagamento ?? "");
+  const mudouFicha = !!ficha && (fechamento !== ficha.fechamento || pagamento !== (ficha.pagamento ?? ""));
+
+  const chave = (code: string, titulo: string, desc: string, aviso?: string | null) => {
+    const on = enabled.has(code);
+    return (
+      <div key={code} className="py-2">
+        <label className="flex items-center justify-between gap-4 min-h-[44px] cursor-pointer">
+          <span className="min-w-0">
+            <span className="block text-[13px] font-body font-semibold text-foreground">{titulo}</span>
+            <span className="block text-[12px] font-body text-muted-foreground leading-relaxed">{desc}</span>
+          </span>
+          <input type="checkbox" checked={on} disabled={setModule.isPending}
+            onChange={() => setModule.mutate({ memberRowId: m.id, moduleCode: code, enabled: !on })}
+            className="h-5 w-5 shrink-0 accent-[hsl(var(--primary))]" />
+        </label>
+        {on && aviso && <p className="mt-1 text-[12px] font-body text-amber-700 dark:text-amber-400">{aviso}</p>}
+      </div>
+    );
+  };
+
+  const secao = "py-4 border-b border-border/60 last:border-b-0";
+  const titSecao = "text-[10.5px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-2";
+
+  return (
+    <div className="pb-4">
+      <SheetHeader className="text-left pb-4 border-b border-border/60">
+        <div className="flex items-center gap-3">
+          <div className={cn("grid h-11 w-11 shrink-0 place-items-center rounded-full font-display font-bold",
+            papelParc ? "bg-violet-100 text-violet-700" : "bg-primary/10 text-primary")}>
+            {(m.name || m.email || "?").charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <SheetTitle className="text-base truncate">{m.name || m.email || "(sem nome)"}</SheetTitle>
+            <SheetDescription className="text-[12px] truncate">{[m.email, papelParc].filter(Boolean).join(" · ")}</SheetDescription>
+          </div>
+          <span className={cn("text-[10px] font-body font-bold px-2.5 py-1 rounded-full shrink-0",
+            papelParc ? "bg-violet-100 text-violet-700" : "bg-primary/10 text-primary")}>
+            {papelParc ? "Parceiro" : "Colaborador"}
+          </span>
+        </div>
+      </SheetHeader>
+
+      {papelParc ? (
+        <>
+          <div className={secao}>
+            <p className={titSecao}>Clientes que atende</p>
+            {ativos.length === 0 ? (
+              <p className="text-[12px] font-body text-muted-foreground">Você ainda não tem clientes cadastrados.</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {ativos.map((c) => {
+                  const on = parcSel.has(c.id);
+                  return (
+                    <button key={c.id} type="button" onClick={() => toggleParc(c.id)} aria-pressed={on}
+                      className={cn("flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-body font-semibold transition-colors min-h-[34px]",
+                        on ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-foreground hover:border-primary/40")}>
+                      <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: c.color || "#9CA3AF" }} />
+                      {c.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <p className="mt-2 text-[12px] font-body text-muted-foreground leading-relaxed">
+              {parcSel.size === 0
+                ? <><strong className="text-foreground">Nenhum marcado: atende todos os clientes.</strong> Marque os clientes pra limitar.</>
+                : <>No <strong className="text-foreground">Enviar para</strong> de um post, só aparece nos {parcSel.size} cliente{parcSel.size === 1 ? "" : "s"} marcado{parcSel.size === 1 ? "" : "s"}.</>}
+            </p>
+          </div>
+
+          {!comoGerente && (
+            <div className={secao}>
+              <p className={titSecao}>Pagamento</p>
+              {ficha ? (
+                <>
+                  <div className="grid sm:grid-cols-2 gap-2.5">
+                    <label className="block">
+                      <span className="text-[11px] font-body text-muted-foreground">Fechamento</span>
+                      <select value={fechamento} onChange={(e) => setFechamento(e.target.value as Fechamento)}
+                        className="mt-1 w-full h-10 rounded-xl border border-input bg-card px-3 text-sm">
+                        {FECHAMENTOS.map((f) => <option key={f} value={f}>{ROTULO_FECHAMENTO[f]}</option>)}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="text-[11px] font-body text-muted-foreground">Forma de pagamento</span>
+                      <Input value={pagamento} onChange={(e) => setPagamento(e.target.value)} placeholder="Ex.: Pix no celular" className="mt-1 h-10 rounded-xl bg-card" />
+                    </label>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <p className="text-[11.5px] font-body text-muted-foreground">É a mesma ficha do Caixa &gt; Terceiros. Mudou aqui, muda lá.</p>
+                    {mudouFicha && (
+                      <Button size="sm" className="rounded-xl shrink-0" disabled={salvarFicha.isPending}
+                        onClick={() => salvarFicha.mutate({ terceiro_id: ficha.terceiro_id, member_id: m.member_id, fechamento, pagamento: pagamento.trim() },
+                          { onSuccess: () => toast.success("Pagamento salvo.") })}>
+                        {salvarFicha.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+                      </Button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-[12px] font-body text-muted-foreground">O combinado de pagamento fica no Cria Caixa &gt; Terceiros.</p>
+              )}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div className={secao}>
+            <p className={titSecao}>Módulos liberados</p>
+            <div className="flex flex-wrap gap-2">
+              {TEAM_MODULES.map((mod) => {
+                const on = enabled.has(mod.code);
+                return (
+                  <button key={mod.code} type="button" disabled={setModule.isPending}
+                    onClick={() => setModule.mutate({ memberRowId: m.id, moduleCode: mod.code, enabled: !on,
+                      allClients: modoClientes === "all" || cliSel.size === 0, clientIds: [...cliSel] })}
+                    className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[12px] font-body border transition-colors",
+                      on ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
+                    {on && <Check className="h-3 w-3" />} {mod.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className={secao}>
+            <p className={titSecao}>Quais clientes</p>
+            <div className="flex gap-2 mb-2">
+              <button type="button" onClick={() => { setModoClientes("all"); gravarEscopo("all", cliSel); }}
+                className={cn("px-3 py-1.5 rounded-lg text-[12px] font-body border transition-colors", modoClientes === "all" ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-muted-foreground")}>
+                Todos os clientes
+              </button>
+              <button type="button" onClick={() => { setModoClientes("some"); gravarEscopo("some", cliSel); }}
+                className={cn("px-3 py-1.5 rounded-lg text-[12px] font-body border transition-colors", modoClientes === "some" ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-muted-foreground")}>
+                Escolher clientes
+              </button>
+            </div>
+            {modoClientes === "some" && (
+              ativos.length === 0 ? (
+                <p className="text-[12px] font-body text-muted-foreground">Você ainda não tem clientes cadastrados.</p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ativos.map((c) => {
+                      const on = cliSel.has(c.id);
+                      return (
+                        <button key={c.id} type="button" aria-pressed={on}
+                          onClick={() => { const n = new Set(cliSel); if (n.has(c.id)) n.delete(c.id); else n.add(c.id); setCliSel(n); gravarEscopo("some", n); }}
+                          className={cn("flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-body font-semibold transition-colors min-h-[34px]",
+                            on ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-foreground hover:border-primary/40")}>
+                          <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: c.color || "#9CA3AF" }} />
+                          {c.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {cliSel.size === 0 && (
+                    <p className="mt-2 text-[12px] font-body text-amber-700 dark:text-amber-400">Marque ao menos um cliente. Até lá, ela continua vendo todos.</p>
+                  )}
+                </>
+              )
+            )}
+          </div>
+
+          <div className={secao}>
+            <p className={titSecao}>Chaves de confiança</p>
+            {chave(PERM_EQUIPE, "Pode gerenciar a equipe",
+              "Vê a aba Pessoas desta conta: convida, pausa, remove e muda os acessos de quem trabalha aqui. Não mexe no próprio acesso nem compra assento.")}
+            {chave(PERM_PARCEIROS, "Gerenciar produção com parceiros",
+              "Envia peças pros parceiros desta conta, acompanha prazos e entregas e conversa no card. Marcar pagamento continua só com a dona.",
+              !enabled.has("cria_post") ? "Libere também o Cria Post pra ela: a peça enviada ao parceiro é um post." : null)}
+            {chave(PERM_COFRE, "Ver o cofre de acessos",
+              "Vê e copia logins e senhas dos clientes na aba Acessos. Cada vez que ela abre uma senha fica no histórico.")}
+          </div>
+        </>
+      )}
+
+      <div className={secao}>
+        <p className={titSecao}>Acesso</p>
+        <div className="flex gap-2">
+          <button type="button" disabled={setStatus.isPending} onClick={() => paused && setStatus.mutate({ id: m.id, status: "ativo" })}
+            className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-body font-semibold border transition-colors min-h-[34px]",
+              !paused ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-foreground")}>
+            <Play className="h-3.5 w-3.5" /> Ativo
+          </button>
+          <button type="button" disabled={setStatus.isPending} onClick={() => !paused && setStatus.mutate({ id: m.id, status: "pausado" })}
+            className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-body font-semibold border transition-colors min-h-[34px]",
+              paused ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-foreground")}>
+            <Pause className="h-3.5 w-3.5" /> Pausado
+          </button>
+        </div>
+        <p className="mt-2 text-[12px] font-body text-muted-foreground">
+          {papelParc ? "Pausado, não recebe card novo." : "Pausado, perde o acesso à conta e o assento fica livre."}
+        </p>
+      </div>
+
+      <div className="pt-4 flex items-center justify-between gap-2">
+        <Button variant="outline" className="rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10" disabled={removeMember.isPending}
+          onClick={async () => {
+            if (await confirmar({ titulo: `Remover ${m.name || "esta pessoa"} da equipe?`, descricao: papelParc ? "Ele para de receber cards desta conta na hora." : "Ela perde o acesso à sua conta na hora. O assento volta pra você.", acao: "Remover" })) {
+              removeMember.mutate(m.id, { onSuccess: aoFechar });
+            }
+          }}>
+          <Trash2 className="h-4 w-4 mr-1.5" /> Remover da equipe
+        </Button>
+        <Button variant="ghost" className="rounded-xl" onClick={aoFechar}>Fechar</Button>
+      </div>
     </div>
   );
 }

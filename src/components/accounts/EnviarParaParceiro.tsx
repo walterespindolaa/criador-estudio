@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { ROTULO_PAPEL, useConversaDoCard, useDelegarPost, useMeusParceiros, usePedirAjuste, useUrgenteDoPost } from "@/hooks/useParceiro";
+import { ROTULO_PAPEL, useConversaDoCard, useDelegarPost, useMeusParceiros, useParceirosAptos, usePedirAjuste, useUrgenteDoPost } from "@/hooks/useParceiro";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ENVIAR PARA (Cria Parceiros)
@@ -47,6 +47,10 @@ export function EnviarParaParceiro({ postId, assigneeId: assigneeIdProp, produca
   agenciaId?: string | null;
 }) {
   const { data: parceiros = [] } = useMeusParceiros();
+  /* PARCEIRO POR CLIENTE (Gabriela, 19/10/2026): na lista só entra quem atende
+     o cliente deste post (Equipe > Pessoas > Editar). Quem já está no card
+     continua aparecendo, pra dar pra ver e tirar. */
+  const { data: aptos } = useParceirosAptos(postId);
   /* O editor do Kanban do cliente segura o post de quando abriu; sem este
      espelho o botão continuava "Enviar para" depois de enviar. */
   const [assigneeId, setAssigneeId] = useState<string | null>(assigneeIdProp);
@@ -121,7 +125,7 @@ export function EnviarParaParceiro({ postId, assigneeId: assigneeIdProp, produca
       <PopoverContent align="end" className="w-80 p-3 rounded-2xl">
         <p className="font-display font-bold text-sm mb-2.5">Enviar pra produção</p>
         <div className="space-y-1.5 max-h-56 overflow-y-auto">
-          {parceiros.map((p) => (
+          {parceiros.filter((p) => !aptos || aptos.has(p.member_id) || p.member_id === assigneeId).map((p) => (
             <button key={p.member_id} type="button" onClick={() => setEscolhido(p.member_id)}
               className={cn("w-full flex items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition-colors",
                 escolhido === p.member_id ? "border-violet-400 bg-violet-50" : "border-border hover:border-violet-200")}>
@@ -136,6 +140,11 @@ export function EnviarParaParceiro({ postId, assigneeId: assigneeIdProp, produca
             </button>
           ))}
         </div>
+        {aptos && parceiros.some((p) => !aptos.has(p.member_id) && p.member_id !== assigneeId) && (
+          <p className="mt-2 text-[11px] font-body text-muted-foreground leading-relaxed">
+            Só aparece quem atende este cliente. Pra liberar outra pessoa: Equipe &gt; Pessoas &gt; Editar.
+          </p>
+        )}
 
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div>

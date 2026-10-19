@@ -42,6 +42,8 @@ export type TeamMember = {
   status: "ativo" | "pausado"; created_at: string;
   /** social_media = colaborador pleno; designer/editor_video/copy/trafego = parceiro. */
   role: string;
+  /** Parceiro: ids de crm_clients que ele atende. Null ou vazio = todos (19/10/2026). */
+  clientes_atendidos?: string[] | null;
   permissions: MemberPermission[];
 };
 
@@ -148,14 +150,17 @@ export function useRemoveMember() {
   });
 }
 
-// Liga/desliga um módulo para um membro (all_clients por padrão nesta fase).
+// Liga/desliga um módulo para um membro. O escopo de clientes segue o que o
+// membro já tem (allClients/clientIds); sem eles, todos os clientes.
 export function useSetMemberModule() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ memberRowId, moduleCode, enabled }: { memberRowId: string; moduleCode: string; enabled: boolean }) => {
+    mutationFn: async ({ memberRowId, moduleCode, enabled, allClients = true, clientIds = [] }: {
+      memberRowId: string; moduleCode: string; enabled: boolean; allClients?: boolean; clientIds?: string[];
+    }) => {
       if (enabled) {
         const { error } = await sbFrom("manager_member_permissions").upsert(
-          { member_row_id: memberRowId, module_code: moduleCode, all_clients: true, client_ids: [] } as never,
+          { member_row_id: memberRowId, module_code: moduleCode, all_clients: allClients, client_ids: allClients ? [] : clientIds } as never,
           { onConflict: "member_row_id,module_code" } as never,
         );
         if (error) throw error;
@@ -167,6 +172,41 @@ export function useSetMemberModule() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["team-members"] }),
     onError: () => toast.error("Erro ao salvar permissão."),
+  });
+}
+
+/** Colaborador: quais clientes ele vê, em todos os módulos dele de uma vez
+ *  (mesmo mecanismo all_clients/client_ids do convite). */
+export function useSetMemberScope() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ memberRowId, allClients, clientIds }: { memberRowId: string; allClients: boolean; clientIds: string[] }) => {
+      const { error } = await sbFrom("manager_member_permissions")
+        .update({ all_clients: allClients, client_ids: allClients ? [] : clientIds } as never)
+        .eq("member_row_id", memberRowId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["team-members"] }),
+    onError: () => toast.error("Erro ao salvar os clientes."),
+  });
+}
+
+/** Parceiro: quais clientes ele atende. Vazio = todos. O "Enviar para" e o
+ *  gatilho do post (posts_guard_parceiro) respeitam isso. */
+export function useSetParceiroClientes() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, clientes }: { id: string; clientes: string[] }) => {
+      const { error } = await sbFrom("manager_members")
+        .update({ clientes_atendidos: clientes.length ? clientes : null } as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["team-members"] });
+      qc.invalidateQueries({ queryKey: ["parceiros-aptos"] });
+    },
+    onError: () => toast.error("Erro ao salvar os clientes do parceiro."),
   });
 }
 

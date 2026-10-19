@@ -969,6 +969,21 @@ export function useMeusParceiros() {
   });
 }
 
+/** Parceiros que atendem o cliente deste post (Equipe > Pessoas > Editar,
+ *  19/10/2026). Null enquanto carrega ou se o RPC falhar: aí ninguém some. */
+export function useParceirosAptos(postId: string | null) {
+  return useQuery<Set<string> | null>({
+    queryKey: ["parceiros-aptos", postId],
+    enabled: !!postId,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("parceiros_aptos_post", { _post: postId });
+      if (error) return null;
+      const ids = (data ?? []) as unknown[];
+      return new Set(ids.map((r) => (typeof r === "string" ? r : String((r as Record<string, unknown>).parceiros_aptos_post ?? ""))));
+    },
+  });
+}
+
 /* ── PRODUÇÃO EXTERNA (lado da social mídia) ────────────────────────────── */
 
 export type PecaExterna = {

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BarChart3, TrendingUp, TrendingDown, Minus, Users2, Wallet, Kanban } from "lucide-react";
+import { BarChart3, TrendingUp, TrendingDown, Minus, Users2, Wallet, Kanban, Briefcase } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
 import { useProdutividadePeriodo, computeProdStats } from "@/hooks/useProdutividade";
 import { useFinRecords } from "@/hooks/useFinance";
@@ -9,6 +9,7 @@ import { formatBRL } from "@/lib/money";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { OperacaoGerencial } from "@/components/accounts/OperacaoGerencial";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    RELATÓRIO GERENCIAL DA OPERAÇÃO (31/08) · pedido do Walter (#284)
@@ -203,6 +204,12 @@ export default function RelatorioGerencial() {
           {carregando && " · carregando..."}
         </p>
       </div>
+
+      {/* ── VISÃO GERENCIAL (19/10/2026): parceiros, ajustes dos clientes e
+          posts por cliente, no topo. Carteira, produção e financeiro seguem embaixo. */}
+      <Secao icone={Briefcase} titulo="Operação da agência">
+        <OperacaoGerencial from={from} to={to} pFrom={pFrom} pTo={pTo} />
+      </Secao>
 
       {/* ── CARTEIRA ── */}
       <Secao icone={Users2} titulo="Carteira de clientes">
