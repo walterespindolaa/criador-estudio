@@ -113,10 +113,12 @@ const Onboarding = () => {
      primeira vez que abre, passa por ESTE onboarding. Tudo que ela responde
      vai pro perfil (dono = ownerId), nunca pra conta de social mídia dela.
      Fora do Meu perfil, dono = a própria sessão, como sempre foi. */
-  const { ehMeuPerfil } = useActiveAccount();
+  const { ehMeuPerfil, meuPerfil } = useActiveAccount();
   const { ownerId } = useContaAtivaId();
   const atualizarPerfilAtivo = useAtualizarPerfilAtivo();
   const donoId = ehMeuPerfil ? ownerId : (user?.id ?? "");
+  // Rascunho separado: o do Meu perfil não pode herdar o da conta da sessão.
+  const chaveRascunho = ehMeuPerfil ? `cria.onb.${donoId}` : "cria.onb";
 
   /* "SOU DESIGNER, EDITOR OU FILMMAKER" (24/09/2026). O link levava pra fila
      de demandas com a conta ainda de criador, e o app devolvia pro onboarding.
@@ -143,7 +145,7 @@ const Onboarding = () => {
      digitou antes se perdia e ela recomeçava do zero. O rascunho fica no
      sessionStorage (só esta aba) e é apagado no fim. */
   const rascunho = (() => {
-    try { return JSON.parse(sessionStorage.getItem("cria.onb") ?? "null") as Record<string, unknown> | null; } catch { return null; }
+    try { return JSON.parse(sessionStorage.getItem(chaveRascunho) ?? "null") as Record<string, unknown> | null; } catch { return null; }
   })();
   const [searchParams] = useSearchParams();
   const stepDaUrl = Number(searchParams.get("step") ?? 0);
@@ -170,10 +172,14 @@ const Onboarding = () => {
   // Nome já veio do cadastro: não pedir de novo (a pessoa via o campo vazio).
   useEffect(() => {
     if (name.trim()) return;
-    const doCadastro = (user?.user_metadata?.name as string | undefined)?.trim();
+    // No Meu perfil o nome é o do PERFIL (a edge grava o nome da dona), não o
+    // do cadastro da sessão (vinha "WG Walter" no teste de 18/10).
+    const doCadastro = ehMeuPerfil
+      ? meuPerfil?.name?.trim()
+      : (user?.user_metadata?.name as string | undefined)?.trim();
     if (doCadastro) setName(doCadastro);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user?.id, ehMeuPerfil, meuPerfil?.name]);
 
   useEffect(() => {
     if (voltouDoInstagram) toast.success("Instagram conectado. Bora continuar.");
@@ -184,9 +190,9 @@ const Onboarding = () => {
   // Guarda o rascunho a cada mudança (barato: um objeto pequeno).
   useEffect(() => {
     try {
-      sessionStorage.setItem("cria.onb", JSON.stringify({ name, handle, niches, platforms, objetivo, publico, tom, weeklyGoal }));
+      sessionStorage.setItem(chaveRascunho, JSON.stringify({ name, handle, niches, platforms, objetivo, publico, tom, weeklyGoal }));
     } catch { /* modo privado */ }
-  }, [name, handle, niches, platforms, objetivo, publico, tom, weeklyGoal]);
+  }, [chaveRascunho, name, handle, niches, platforms, objetivo, publico, tom, weeklyGoal]);
 
   const conectarInstagramAgora = () => {
     // Volta pra este mesmo passo, com o rascunho preservado.
@@ -421,6 +427,10 @@ const Onboarding = () => {
         if (ideasErr) console.warn("[onboarding] ideas batch insert failed:", ideasErr);
       }
 
+      // Tudo acima foi gravado direto no banco, por fora do react-query. O
+      // cache (persistido no aparelho) ainda tinha as telas vazias de antes:
+      // as ideias recém-criadas não apareciam ao entrar (teste de 18/10).
+      await qc.invalidateQueries();
       setSetupDone(true);
       fireConfetti();
     } catch (e) {
@@ -430,7 +440,7 @@ const Onboarding = () => {
     } finally {
       setSetupLoading(false);
     }
-  }, [user, name, handle, niches, platforms, weeklyGoal, objetivo, publico, tom, uploadAvatar, updateProfile, ehMeuPerfil, donoId, atualizarPerfilAtivo]);
+  }, [user, name, handle, niches, platforms, weeklyGoal, objetivo, publico, tom, uploadAvatar, updateProfile, ehMeuPerfil, donoId, atualizarPerfilAtivo, qc]);
 
   useEffect(() => {
     if (step === 6 && !setupStartedRef.current && !setupDone) {
@@ -441,7 +451,7 @@ const Onboarding = () => {
   const enterApp = () => {
     // Meu perfil não é conversão de anúncio: não conta como StartTrial.
     if (!ehMeuPerfil) track("StartTrial", { content_name: "onboarding_complete" });
-    try { sessionStorage.removeItem("cria.onb"); } catch { /* ok */ }
+    try { sessionStorage.removeItem(chaveRascunho); } catch { /* ok */ }
     /* TERMINA NUM ARTEFATO, NÃO NUM PAINEL (onboarding v2). As 5 ideias que a
        IA gerou já estão salvas; a pessoa cai nelas com o botão "Criar post com
        essa ideia" na mão. O tour do dashboard não abre nesta sessão. */

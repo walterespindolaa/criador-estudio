@@ -84,7 +84,7 @@ const AppLayout = () => {
   const { data: souParceiro, isLoading: carregandoPapelParceiro } = useSouParceiro();
   const { isManaging, activeAccountId, managedAccounts, teamAccounts, meuPerfil, ehMeuPerfil } = useActiveAccount();
   // Meu perfil: o onboarding que vale é o do PERFIL aberto, não o da sessão.
-  const { profile: perfilAtivo } = useActiveProfile();
+  const { profile: perfilAtivo, isLoading: perfilAtivoCarregando } = useActiveProfile();
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -196,6 +196,9 @@ const AppLayout = () => {
      a dona abre o perfil, ela passa pelo onboarding de criadora, e tudo grava
      no perfil (Onboarding.tsx usa a conta ativa). Conta de cliente nunca cai
      aqui: o desvio é só pro Meu perfil. */
+  // Espera o perfil chegar: sem isto o Dashboard montava antes do desvio e
+  // guardava no cache as telas VAZIAS do perfil (ideias sumidas no teste de 18/10).
+  if (ehMeuPerfil && perfilAtivoCarregando) return <LoadingScreen />;
   if (ehMeuPerfil && perfilAtivo?.onboarding_completed === false && location.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" replace />;
   }
