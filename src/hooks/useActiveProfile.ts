@@ -74,7 +74,8 @@ export type UseActiveProfileResult = {
 };
 
 type RpcSolto = (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
-const rpc = supabase.rpc as unknown as RpcSolto;
+// bind: sem ele o rpc perde o `this` do client e quebra antes de ir pra rede.
+const rpc = supabase.rpc.bind(supabase) as unknown as RpcSolto;
 
 export function useContaAtivaId() {
   const { user } = useAuth();
