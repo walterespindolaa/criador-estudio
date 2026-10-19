@@ -26,7 +26,7 @@ import { applyThemeFont } from "@/components/settings/SettingsVisual";
 import ContaPausada from "@/pages/ContaPausada";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppRail } from "@/components/AppRail";
-import { HeroBand } from "@/components/HeroBand";
+import { HeroBand, HeroCardMobile } from "@/components/HeroBand";
 import { TituloCriakut } from "@/components/criakut/TituloCriakut";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -380,14 +380,37 @@ const AppLayout = () => {
         {/* 26/09/2026 (Walter): as telas já têm título próprio no celular (ícone
             colorido + nome grande), e a faixa repetia o nome logo em cima. A
             faixa agora só aparece no Início, onde ela é a saudação. */}
-        {isDash && (
-          <div className="md:hidden px-4 py-2.5 bg-background border-b border-border">
-            <h1 className="font-display font-extrabold text-[17px] text-foreground leading-tight truncate">
-              {heroTitle}
-            </h1>
-          </div>
-        )}
             </div>
+        {/* 19/10/2026 (Walter, mockup aprovado): no Início do celular a saudação
+            vira o cartão-faixa (fora do topo grudado, rola junto com a página), com foto, @, nicho, ações e o período. */}
+        {isDash && (
+          <HeroCardMobile
+            avatar={
+              <Avatar className="h-16 w-16 shrink-0 border-[3px] border-white/90 shadow-md">
+                <AvatarImage src={displayAvatarUrl ?? undefined} alt={firstName} />
+                <AvatarFallback className="bg-white/20 font-display text-2xl font-bold text-white">
+                  {firstName.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            }
+            eyebrow={`${greetWord},`}
+            title={heroTitle}
+            meta={heroMeta}
+            actions={
+              <>
+                <button onClick={() => navigate("/app/ideias")}
+                  className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-full bg-white px-3 text-[13px] font-bold text-foreground shadow-sm">
+                  <Lightbulb className="h-4 w-4" /> Nova ideia
+                </button>
+                <button onClick={() => navigate("/app/criando")}
+                  className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-full bg-white/15 px-3 text-[13px] font-bold text-white ring-1 ring-white/35">
+                  <Plus className="h-4 w-4" /> Novo post
+                </button>
+              </>
+            }
+            slotId="cria-hero-slot-mobile"
+          />
+        )}
 
             <TrialBanner />
             <StorageWarningBanner />

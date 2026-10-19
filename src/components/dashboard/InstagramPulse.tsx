@@ -75,9 +75,18 @@ function tituloDoPost(mi: MediaInsight) {
   return t || "Post sem legenda";
 }
 
+/* SEM NÚMERO AINDA (Walter, 19/10/2026). O Instagram entrega as métricas com
+   atraso, e às vezes devolve tudo 0 (o Reels do dia 18 seguia zerado 24h
+   depois). Zero em tudo não é desempenho: não mostra "0 alcance", não julga e
+   não entra na média dos outros. */
+const SEM_NUMERO = ["reach", "views", "likes", "saved", "saves", "shares", "comments"];
+const semNumeros = (mi: MediaInsight) => SEM_NUMERO.every((k) => !Number(mi.metrics?.[k] ?? 0));
+const recente = (mi: MediaInsight) => !!mi.posted_at && Date.now() - new Date(mi.posted_at).getTime() < 48 * 3600_000;
+
 function UltimoPost({ post, base }: { post: MediaInsight; base: MediaInsight[] }) {
   const video = grupoTipo(post.media_type) === "video";
-  const v = veredito(post, base);
+  const vazio = semNumeros(post);
+  const v = vazio ? null : veredito(post, base);
   const nums: { n: string; l: string }[] = [];
   if (post.metrics?.reach != null) nums.push({ n: fmtNum(m(post, "reach")), l: "alcance" });
   if (post.metrics?.likes != null && !video) nums.push({ n: fmtNum(m(post, "likes")), l: "curtidas" });
@@ -100,18 +109,28 @@ function UltimoPost({ post, base }: { post: MediaInsight; base: MediaInsight[] }
       </div>
       <div className="min-w-0">
         <p className="line-clamp-2 text-[13px] font-body font-bold leading-snug text-foreground">{tituloDoPost(post)}</p>
+        {vazio ? (
+          <p className="mt-2 inline-block rounded-lg bg-amber-100 px-2 py-1 text-[11.5px] font-body leading-snug text-amber-900">
+            {recente(post)
+              ? "Métricas chegando: o Instagram leva algumas horas"
+              : "O Instagram ainda não devolveu números deste post"}
+          </p>
+        ) : (
+        <>
         <p className="mt-0.5 mb-2 text-[11.5px] font-body text-muted-foreground">
           vs. a média dos seus últimos {Math.min(base.length, 10)} {rotuloBase(post.media_type)}
         </p>
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs font-body text-muted-foreground">
           {nums.map((x) => <span key={x.l}><b className="text-[13px] text-foreground">{x.n}</b> {x.l}</span>)}
         </div>
-        <div className="mt-2 grid gap-1 text-xs font-body leading-snug text-foreground">
+        </>
+        )}
+        {!vazio && <div className="mt-2 grid gap-1 text-xs font-body leading-snug text-foreground">
           {!v && <p className="text-muted-foreground">Poucos posts pra comparar ainda.</p>}
           {v?.melhor && <p className="flex gap-1.5"><span className="mt-[5px] h-[7px] w-[7px] shrink-0 rounded-full bg-emerald-600" />{v.melhor}</p>}
           {v?.pior && <p className="flex gap-1.5"><span className="mt-[5px] h-[7px] w-[7px] shrink-0 rounded-full bg-red-600" />{v.pior}</p>}
           {v && !v.melhor && !v.pior && <p className="text-muted-foreground">Dentro da sua média em tudo.</p>}
-        </div>
+        </div>}
       </div>
     </>
   );
@@ -187,7 +206,7 @@ export function InstagramPulse() {
     const ord = media.filter((mi) => mi.posted_at && mi.metrics);
     return ord.slice(0, 2).map((post, i) => ({
       post,
-      base: ord.slice(i + 1).filter((o) => grupoTipo(o.media_type) === grupoTipo(post.media_type)).slice(0, 10),
+      base: ord.slice(i + 1).filter((o) => grupoTipo(o.media_type) === grupoTipo(post.media_type) && !semNumeros(o)).slice(0, 10),
     }));
   }, [media]);
 

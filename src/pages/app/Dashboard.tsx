@@ -283,6 +283,9 @@ const Dashboard = () => {
 
   const [heroSlot, setHeroSlot] = useState<HTMLElement | null>(null);
   useEffect(() => { setHeroSlot(document.getElementById("cria-hero-slot")); }, []);
+  // Celular: o período mora dentro do cartão-faixa do topo (AppLayout).
+  const [heroSlotMobile, setHeroSlotMobile] = useState<HTMLElement | null>(null);
+  useEffect(() => { setHeroSlotMobile(document.getElementById("cria-hero-slot-mobile")); }, []);
 
   const renderPeriodFilter = (onBand: boolean) =>
     PERIOD_OPTIONS.map((opt) => {
@@ -323,12 +326,15 @@ const Dashboard = () => {
     <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
 
-        <div className="flex sm:justify-end gap-3 mb-6 md:hidden">
-          <div className="flex items-center gap-0.5 bg-muted/50 rounded-full p-1 flex-wrap">
-            {renderPeriodFilter(false)}
+        {!heroSlotMobile && (
+          <div className="flex sm:justify-end gap-3 mb-6 md:hidden">
+            <div className="flex items-center gap-0.5 bg-muted/50 rounded-full p-1 flex-wrap">
+              {renderPeriodFilter(false)}
+            </div>
           </div>
-        </div>
+        )}
         {heroSlot && createPortal(renderPeriodFilter(true), heroSlot)}
+        {heroSlotMobile && createPortal(renderPeriodFilter(true), heroSlotMobile)}
 
         {/* O data-tour do checklist mora DENTRO do FirstStepsPanel: este painel some
             quando está completo ou dispensado, e o wrapper que existia aqui virava uma

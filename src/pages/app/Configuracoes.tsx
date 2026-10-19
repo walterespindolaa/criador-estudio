@@ -341,6 +341,25 @@ const Configuracoes = () => {
     }
   };
 
+  /* FOTO DO INSTAGRAM (Walter, 19/10/2026). A sync já guarda a foto do perfil
+     no nosso Storage (o link da Meta expira); aqui ela é copiada pro avatar,
+     pelo mesmo caminho do recorte, então não depende do Instagram depois. */
+  const fotoIg = (igConnection as { profile_picture_url?: string | null } | null | undefined)?.profile_picture_url ?? null;
+  const usarFotoDoInstagram = async () => {
+    if (!fotoIg) return;
+    try {
+      setUploadingAvatar(true);
+      const r = await fetch(fotoIg);
+      if (!r.ok) throw new Error(String(r.status));
+      const blob = await r.blob();
+      if (!blob.type.startsWith("image/")) throw new Error("tipo");
+      await handleAvatarCropped(blob);
+    } catch {
+      setUploadingAvatar(false);
+      toast.error("Não consegui puxar a foto do Instagram. Sincroniza o Instagram e tenta de novo.");
+    }
+  };
+
   const togglePlatform = (p: string) => {
     const current = watch("platforms") || [];
     setValue("platforms", current.includes(p) ? current.filter(x => x !== p) : [...current, p], { shouldDirty: true });
@@ -518,6 +537,12 @@ const Configuracoes = () => {
                       <Label className="font-body text-xs text-muted-foreground">Nome</Label>
                       <Input {...register("name")} className="rounded-xl" />
                       {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+                      {fotoIg && (
+                        <button type="button" onClick={() => void usarFotoDoInstagram()} disabled={uploadingAvatar}
+                          className="inline-flex items-center gap-1.5 text-[12px] font-body font-bold text-primary hover:underline disabled:opacity-50">
+                          <Instagram className="h-3.5 w-3.5" /> Usar a foto do Instagram
+                        </button>
+                      )}
                     </div>
                   </div>
 

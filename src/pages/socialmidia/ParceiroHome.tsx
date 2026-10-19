@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Boxes, Briefcase, Clock, Layers, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { useProfile } from "@/hooks/useProfile";
 import { MODULE_ICON, useManagerOutlet } from "@/components/accounts/managerOutlet";
@@ -81,10 +82,29 @@ export default function ParceiroHome() {
       <section className="relative overflow-hidden rounded-3xl border border-border bg-card p-5 sm:p-7 mb-5">
         <OrganicBlobs color="lilas" />
         <div className="relative">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{papel}</p>
-          <h1 className="font-display font-extrabold text-2xl sm:text-[28px] leading-tight mt-1">
-            {saudacao()}{primeiroNome ? `, ${primeiroNome}` : ""}.
-          </h1>
+          {/* IDENTIDADE NO TOPO (Walter, 19/10/2026): foto, papel e a agência
+              ficavam de fora; a abertura era só texto. */}
+          <div className="flex items-center gap-3">
+            <Avatar className="h-16 w-16 shrink-0 border-[3px] border-background shadow-md">
+              <AvatarImage src={profile?.avatar_url ?? undefined} alt={primeiroNome} />
+              <AvatarFallback className="bg-violet-100 font-display text-2xl font-bold text-violet-700">
+                {(primeiroNome || "P").charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{papel}</span>
+                {agencias.length > 0 && (
+                  <span className="truncate rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-bold text-violet-800 max-w-[180px]">
+                    {agencias.length === 1 ? agencias[0].agencia_nome : `${agencias.length} agências`}
+                  </span>
+                )}
+              </div>
+              <h1 className="font-display font-extrabold text-2xl sm:text-[28px] leading-tight mt-0.5">
+                {saudacao()}{primeiroNome ? `, ${primeiroNome}` : ""}.
+              </h1>
+            </div>
+          </div>
           <p className="text-sm font-body text-muted-foreground mt-1.5 max-w-lg">
             {fila.length === 0
               ? "Sua fila está vazia. Quando uma agência te mandar uma peça, ela aparece aqui com prazo, material e legenda."

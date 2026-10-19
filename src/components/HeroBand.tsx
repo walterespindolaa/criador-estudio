@@ -74,4 +74,47 @@ export function HeroBand({
   );
 }
 
+/** CARTÃO-FAIXA DO CELULAR (Walter, 19/10/2026, mockup aprovado). A HeroBand
+ *  é só do computador; no celular a página inicial de cada papel ganha esta
+ *  versão em cartão, com a mesma cor (--hero-bg) e as mesmas bolhas. Quem usa
+ *  passa a foto, a saudação, o nome, a linha de baixo, as ações e um id de
+ *  vaga pra a página pendurar o período (createPortal). */
+export function HeroCardMobile({
+  avatar, eyebrow, title, meta, actions, slotId, children,
+}: {
+  avatar?: ReactNode;
+  eyebrow?: ReactNode;
+  title: ReactNode;
+  meta?: ReactNode;
+  actions?: ReactNode;
+  /** id do elemento vazio onde a página pode renderizar filtros (período). */
+  slotId?: string;
+  children?: ReactNode;
+}) {
+  const ramp = statusRamp();
+  const grad = `linear-gradient(115deg, ${ramp["publicado"].from} 0%, ${ramp["gravando"].from} 100%)`;
+  return (
+    <section
+      className="cria-hero relative mx-3 mt-3 overflow-hidden rounded-3xl p-4 text-white shadow-[0_14px_40px_-22px_rgba(35,25,70,0.55)] md:hidden"
+      style={{ background: `var(--hero-bg, ${grad})` }}
+    >
+      <div aria-hidden className="cria-blob pointer-events-none absolute -top-14 -right-10 h-36 w-36 rounded-[38%_62%_55%_45%/48%_42%_58%_52%] bg-[#FFCF03] opacity-70" />
+      <div aria-hidden className="cria-blob cria-blob-slow pointer-events-none absolute -bottom-16 right-[22%] h-28 w-28 rounded-[55%_45%_40%_60%/50%_60%_40%_50%] bg-[#FF77B9] opacity-55" />
+      <div className="relative flex items-center gap-3">
+        {avatar}
+        <div className="min-w-0">
+          {eyebrow && <p className="text-[12.5px] font-body text-white/80">{eyebrow}</p>}
+          <h1 className="truncate font-display text-[26px] font-extrabold leading-none tracking-tight">{title}</h1>
+          {meta && <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[12px] font-body text-white/90">{meta}</div>}
+        </div>
+      </div>
+      {actions && <div className="relative mt-3.5 grid grid-cols-2 gap-2">{actions}</div>}
+      {children}
+      {slotId && (
+        <div id={slotId} className="relative mt-3 flex w-max max-w-full flex-wrap gap-1 rounded-full bg-black/15 p-1 empty:hidden" />
+      )}
+    </section>
+  );
+}
+
 export default HeroBand;
