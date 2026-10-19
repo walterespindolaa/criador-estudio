@@ -12,6 +12,35 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/* CUPOM DE CAMPANHA: período grátis + desconto que começa DEPOIS dele.
+   O cupom "repeating" do Stripe conta os meses a partir de quando é aplicado
+   (no checkout, ou seja, no começo do grátis). Por isso a duração do cupom é
+   meses grátis + meses de desconto, e o fim do grátis cai num dia entre 1 e 28
+   com folga de 36 h: assim a fatura 1 a N do desconto ficam dentro do cupom e a
+   N+1 fica fora, em qualquer dia do mês que a pessoa assinar. */
+function somaMesesUTC(d: Date, meses: number): Date {
+  const r = new Date(d.getTime());
+  const dia = r.getUTCDate();
+  r.setUTCDate(1);
+  r.setUTCMonth(r.getUTCMonth() + meses);
+  const ultimo = new Date(Date.UTC(r.getUTCFullYear(), r.getUTCMonth() + 1, 0)).getUTCDate();
+  r.setUTCDate(Math.min(dia, ultimo));
+  return r;
+}
+function fimDoGratis(agora: Date, meses: number): number {
+  const t = new Date(somaMesesUTC(agora, meses).getTime() + 36 * 3600 * 1000);
+  if (t.getUTCDate() > 28) { t.setUTCDate(1); t.setUTCMonth(t.getUTCMonth() + 1); }
+  return Math.floor(t.getTime() / 1000);
+}
+const MOTIVO_CUPOM: Record<string, string> = {
+  inativo: "Esse cupom não está mais ativo.",
+  expirado: "Esse cupom expirou.",
+  esgotado: "Esse cupom já atingiu o limite de usos.",
+  plano: "Esse cupom não vale pra esse plano.",
+  primeira_assinatura: "Esse cupom só vale pra primeira assinatura.",
+};
+type Campanha = { codigo: string; dias_gratis: number; desconto_pct: number; desconto_meses: number; motivo: string | null };
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -100,6 +129,36 @@ serve(async (req) => {
       .eq("id", contaId)
       .single();
 
+    /* CUPOM DE CAMPANHA (Walter, 19/10/2026). O campo do cupom é o mesmo do
+       código de parceira. Se o código não é de parceira, procura nas campanhas.
+       Fica ANTES da troca de plano: quem já assina não pode usar cupom de
+       primeira assinatura (senão o código só trocaria o plano). */
+    const rawCode = (typeof body?.partner_code === "string" ? body.partner_code : "").trim();
+    let campanha: Campanha | null = null;
+    if (rawCode) {
+      const codigoEscapado = rawCode.replace(/([\\%_])/g, "\\$1");
+      const { data: ehParceira } = await svc.from("partners").select("id")
+        .ilike("coupon_code", codigoEscapado).eq("status", "approved").maybeSingle();
+      if (!ehParceira) {
+        const { data: linhas } = await svc.rpc("cupom_campanha_checar", { _code: rawCode, _plan: plan });
+        const c = Array.isArray(linhas) && linhas.length ? (linhas[0] as Campanha) : null;
+        if (c) {
+          const recusa = (motivo: string) => new Response(
+            JSON.stringify({ error: `cupom_${motivo}`, message: MOTIVO_CUPOM[motivo] ?? "Cupom inválido." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+          if (c.motivo) return recusa(c.motivo);
+          let jaAssinou = !!profile?.stripe_subscription_id;
+          if (!jaAssinou && profile?.stripe_customer_id) {
+            const anteriores = await stripe.subscriptions.list({ customer: profile.stripe_customer_id, status: "all", limit: 1 });
+            jaAssinou = anteriores.data.length > 0;
+          }
+          if (jaAssinou) return recusa("primeira_assinatura");
+          campanha = c;
+        }
+      }
+    }
+
     /* TROCA DE PLANO NÃO ABRE OUTRO CHECKOUT (pente fino 23/09/2026, B1).
        Quem já assina e clica em outro plano ganhava uma SEGUNDA assinatura, e a
        primeira continuava cobrando. Agora, se existe assinatura de criador viva
@@ -168,8 +227,7 @@ serve(async (req) => {
     // ── Partner code (opcional) ─────────────────────────────────
     let partnerMeta: Record<string, string> = {};
     let appliedPromotionCodeId: string | null = null;
-    const rawCode = (typeof body?.partner_code === "string" ? body.partner_code : "").trim();
-    if (rawCode) {
+    if (rawCode && !campanha) {
       // Escapa curingas do ILIKE (% e _). Sem isto, partner_code = "%" casaria com
       // QUALQUER parceiro aprovado e aplicaria um cupom que não é do usuário.
       const escapedCode = rawCode.replace(/([\\%_])/g, "\\$1");
@@ -209,18 +267,56 @@ serve(async (req) => {
     const successUrl = isAgency ? `${origin}/socialmidia/contas?checkout=success` : `${origin}/app/obrigado?checkout=success&sid={CHECKOUT_SESSION_ID}`;
     const cancelUrl = isAgency ? `${origin}/socialmidia/contas?checkout=cancel` : `${origin}/app/assinar?checkout=cancel`;
 
+    const campanhaMeta: Record<string, string> = campanha ? { campanha: campanha.codigo } : {};
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       customer: customerId,
       line_items: [{ price: priceId, quantity: seats }],
-      metadata: { app: "cria", user_id: contaId, plan, ...agencyMeta, ...partnerMeta, ...selfSubMark, ...metaPerfil },
+      metadata: { app: "cria", user_id: contaId, plan, ...agencyMeta, ...partnerMeta, ...selfSubMark, ...metaPerfil, ...campanhaMeta },
       subscription_data: {
-        metadata: { app: "cria", user_id: contaId, plan, ...agencyMeta, ...partnerMeta, ...selfSubMark, ...metaPerfil },
+        metadata: { app: "cria", user_id: contaId, plan, ...agencyMeta, ...partnerMeta, ...selfSubMark, ...metaPerfil, ...campanhaMeta },
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
     };
-    if (appliedPromotionCodeId) {
+    if (campanha) {
+      // Cartão na hora: no fim do grátis o Stripe cobra sozinho.
+      sessionParams.payment_method_collection = "always";
+      // Checkout de campanha expira em 1 h: o fim do grátis é calculado agora e
+      // o cupom começa a contar quando a pessoa conclui. Com até 1 h entre os
+      // dois, o desconto cobre exatamente as N faturas (simulado em 2 anos de datas).
+      sessionParams.expires_at = Math.floor(Date.now() / 1000) + 60 * 60;
+      const mesesGratis = campanha.dias_gratis > 0 ? Math.max(1, Math.round(campanha.dias_gratis / 30)) : 0;
+      if (mesesGratis > 0) sessionParams.subscription_data!.trial_end = fimDoGratis(new Date(), mesesGratis);
+      const pct = Number(campanha.desconto_pct);
+      if (pct > 0 && campanha.desconto_meses > 0) {
+        const duracao = campanha.desconto_meses + mesesGratis;
+        const base = `camp_${campanha.codigo.toLowerCase().replace(/[^a-z0-9_-]/g, "")}`;
+        const nome = `${campanha.codigo} ${pct}% por ${campanha.desconto_meses} meses`.slice(0, 40);
+        const confere = (cp: Stripe.Coupon) => cp.valid && cp.percent_off === pct
+          && cp.duration === "repeating" && cp.duration_in_months === duracao;
+        // Idempotente: mesmo id sempre. Se alguém mudou a regra da campanha, o
+        // cupom antigo não serve e nasce um com a regra no id.
+        let couponId: string | null = null;
+        for (const id of [base, `${base}_${pct}p_${duracao}m`]) {
+          try {
+            const cp = await stripe.coupons.retrieve(id);
+            if (confere(cp)) { couponId = cp.id; break; }
+          } catch (e) {
+            if ((e as { code?: string })?.code !== "resource_missing") throw e;
+            const cp = await stripe.coupons.create({
+              id, name: nome, percent_off: pct, duration: "repeating", duration_in_months: duracao,
+              metadata: { app: "cria", campanha: campanha.codigo },
+            });
+            couponId = cp.id;
+            break;
+          }
+        }
+        if (!couponId) throw new Error(`cupom de campanha sem cupom Stripe valido: ${base}`);
+        await svc.from("cupons_campanha").update({ stripe_coupon_id: couponId }).eq("codigo", campanha.codigo);
+        sessionParams.discounts = [{ coupon: couponId }];
+      }
+    } else if (appliedPromotionCodeId) {
       sessionParams.discounts = [{ promotion_code: appliedPromotionCodeId }];
     } else {
       sessionParams.allow_promotion_codes = true;

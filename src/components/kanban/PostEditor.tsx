@@ -119,7 +119,6 @@ import { BaixarMidiasDoPost } from "./BaixarMidiasDoPost";
 import { sanitizeText } from "@/lib/sanitize";
 import { confirmar } from "@/components/shared/Confirm";
 import { SeletorDeGanchos } from "@/components/shared/SeletorDeGanchos";
-import { SlidesEditor } from "@/components/kanban/SlidesEditor";
 
 
 interface Post {
@@ -2004,7 +2003,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       logo abaixo do cabeçalho). Aqui ficou o que é organização
                       interna: semana, link de referência e os melhores horários. */}
                   <div className="space-y-2">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {/* Semana e link na mesma linha (Walter, 19/10/2026: sobrava
+                        espaço vazio à direita dos dois). */}
+                    <div className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-2.5">
                       <div className="space-y-1.5">
                         <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
                           Semana
@@ -2028,17 +2029,17 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75 flex items-center gap-1.5">
-                        <LinkIcon className="h-3 w-3" /> Link de referência
-                      </Label>
-                      <Input
-                        placeholder="Cole um link de vídeo de referência..."
-                        value={referenceLink}
-                        onChange={(e) => setReferenceLink(e.target.value)}
-                        className="rounded-xl h-9 text-sm bg-card"
-                      />
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75 flex items-center gap-1.5">
+                          <LinkIcon className="h-3 w-3" /> Link de referência
+                        </Label>
+                        <Input
+                          placeholder="Cole um link de vídeo de referência..."
+                          value={referenceLink}
+                          onChange={(e) => setReferenceLink(e.target.value)}
+                          className="rounded-xl h-9 text-sm bg-card"
+                        />
+                      </div>
                     </div>
                     <div>
                       <button
@@ -2070,15 +2071,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     <div className="space-y-4">
                       {formatStructure.fields.map((field) => {
                         if (field.key === "caption") return null; // legenda vive no passo 2
-                        /* CARROSSEL: capa + conteúdo viram uma lista de slides
-                           (SlidesEditor). Mesmos campos hook e cta no banco. */
-                        if (formatStructure.devField && field.key === "cta") return null;
-                        if (formatStructure.devField && field.key === "hook") {
-                          return (
-                            <SlidesEditor key="slides" capa={hook} onChangeCapa={setHook} slides={cta} onChangeSlides={setCta}
-                              acaoCapa={<SeletorDeGanchos valorAtual={hook} onPick={setHook} />} />
-                          );
-                        }
                         const IconComponent = iconMap[field.icon] || PenLine;
                         const value = field.key === "hook" ? hook
                           : field.key === "script" ? script

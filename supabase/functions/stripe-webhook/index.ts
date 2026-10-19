@@ -320,6 +320,15 @@ Deno.serve(async (req) => {
           storage_quota_bytes: STORAGE_BY_PLAN[plan] ?? 524288000,
         }).eq("id", userId), "profiles activate");
 
+        // Cupom de campanha (CRIA3MESES etc.): conta o uso uma vez por checkout
+        // concluído. Fica DEPOIS da ativação: se a ativação falhar, o evento é
+        // desfeito e reentregue, e o uso não conta duas vezes. Reentrega do
+        // mesmo evento já sai como duplicata em billing_events.
+        if (s.metadata?.campanha) {
+          const { error: usoErr } = await supabase.rpc("cupom_campanha_registrar_uso", { _codigo: s.metadata.campanha });
+          if (usoErr) console.error("[webhook] cupom_campanha uso", usoErr);
+        }
+
         // Purchase server-side no Meta (fonte da verdade da compra confirmada).
         await sendMetaPurchase(s);
 

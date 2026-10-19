@@ -32,6 +32,10 @@ export default function Assinar() {
   const [partnerCode, setPartnerCode] = useState("");
   const [partnerInfo, setPartnerInfo] = useState<{ name: string; discountPct: number | null; durationMonths: number | null } | null>(null);
   const [codeError, setCodeError] = useState(false);
+  /* CUPOM DE CAMPANHA (19/10/2026): o mesmo campo aceita cupom de campanha
+     (ex.: CRIA3MESES). A checagem é só pra mostrar a oferta; quem decide é o
+     create-checkout, que também confere se é a primeira assinatura. */
+  const [campanhaInfo, setCampanhaInfo] = useState<{ mesesGratis: number; pct: number; mesesDesconto: number; motivo: string | null } | null>(null);
 
   /* MEU PERFIL ASSINA AQUI (passo 6, 18/10/2026). Dentro do Meu perfil esta
      página mostra e vende o plano DO PERFIL: o checkout vai com account_id e
@@ -112,6 +116,7 @@ export default function Assinar() {
   const validateCode = async () => {
     const code = partnerCode.trim();
     setPartnerInfo(null);
+    setCampanhaInfo(null);
     setCodeError(false);
     if (!code) return;
     const { data } = await (supabase.rpc as unknown as (fn: string, args: unknown) => Promise<{ data: unknown }>)(
@@ -121,10 +126,26 @@ export default function Assinar() {
     const row = Array.isArray(data) && data.length
       ? (data[0] as { partner_name: string; discount_pct: number | null; duration_months: number | null })
       : null;
-    if (row) setPartnerInfo({
-      name: row.partner_name,
-      discountPct: row.discount_pct != null ? Number(row.discount_pct) : null,
-      durationMonths: row.duration_months ?? null,
+    if (row) {
+      setPartnerInfo({
+        name: row.partner_name,
+        discountPct: row.discount_pct != null ? Number(row.discount_pct) : null,
+        durationMonths: row.duration_months ?? null,
+      });
+      return;
+    }
+    const { data: camp } = await (supabase.rpc as unknown as (fn: string, args: unknown) => Promise<{ data: unknown }>)(
+      "cupom_campanha_checar",
+      { _code: code },
+    );
+    const c = Array.isArray(camp) && camp.length
+      ? (camp[0] as { dias_gratis: number; desconto_pct: number; desconto_meses: number; motivo: string | null })
+      : null;
+    if (c) setCampanhaInfo({
+      mesesGratis: c.dias_gratis > 0 ? Math.max(1, Math.round(c.dias_gratis / 30)) : 0,
+      pct: Number(c.desconto_pct) || 0,
+      mesesDesconto: c.desconto_meses ?? 0,
+      motivo: c.motivo,
     });
     else setCodeError(true);
   };
@@ -179,6 +200,8 @@ export default function Assinar() {
         const ctx = (e as { context?: Response })?.context;
         if (ctx && typeof ctx.json === "function") {
           const body = await ctx.json();
+          // Recusa de cupom vem com a frase pronta (ex.: "só vale pra primeira assinatura").
+          if (body?.message) { toast.error(String(body.message)); setLoadingPlan(null); return; }
           if (body?.error) detail = String(body.error);
         }
       } catch { /* ignore */ }
@@ -405,7 +428,7 @@ export default function Assinar() {
 
       <div className="w-full max-w-sm mt-8 rounded-2xl border border-border bg-card px-4 py-3">
         <label htmlFor="partner-code" className="block text-xs font-body text-muted-foreground mb-1.5">
-          Tem um código de parceira? (opcional)
+          Tem um cupom ou código de parceira? (opcional)
         </label>
         <input
           id="partner-code"
@@ -413,9 +436,10 @@ export default function Assinar() {
           value={partnerCode}
           onChange={(e) => {
             setPartnerCode(e.target.value.toUpperCase());
-            if (codeError || partnerInfo) {
+            if (codeError || partnerInfo || campanhaInfo) {
               setCodeError(false);
               setPartnerInfo(null);
+              setCampanhaInfo(null);
             }
           }}
           onBlur={validateCode}
@@ -434,6 +458,28 @@ export default function Assinar() {
                     : "na 1ª fatura"
                 }`
               : ""}
+          </p>
+        )}
+        {campanhaInfo && !campanhaInfo.motivo && (
+          <p className="text-xs font-body text-primary mt-2">
+            Cupom aplicado:{" "}
+            {[
+              campanhaInfo.mesesGratis > 0 ? `${campanhaInfo.mesesGratis} ${campanhaInfo.mesesGratis === 1 ? "mês grátis" : "meses grátis"}` : null,
+              campanhaInfo.pct > 0 && campanhaInfo.mesesDesconto > 0
+                ? `${campanhaInfo.mesesGratis > 0 ? "depois " : ""}${campanhaInfo.pct}% off por ${campanhaInfo.mesesDesconto} ${campanhaInfo.mesesDesconto === 1 ? "mês" : "meses"}`
+                : null,
+            ].filter(Boolean).join(", ")}
+            . O cartão é pedido agora e a primeira cobrança só vem quando o grátis acabar. Cancela quando quiser.
+          </p>
+        )}
+        {campanhaInfo?.motivo && (
+          <p className="text-xs font-body text-red-500 mt-2">
+            {{
+              inativo: "Esse cupom não está mais ativo.",
+              expirado: "Esse cupom expirou.",
+              esgotado: "Esse cupom já atingiu o limite de usos.",
+              plano: "Esse cupom não vale pra esse plano.",
+            }[campanhaInfo.motivo] ?? "Esse cupom não vale agora."}
           </p>
         )}
         {codeError && (
