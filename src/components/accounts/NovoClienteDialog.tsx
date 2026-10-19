@@ -1,12 +1,14 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  AtSign, Camera, Check, ChevronDown, Copy, FileText, FolderOpen, ImagePlus, Link2, Loader2, MessageCircle, X,
+  AtSign, Camera, Check, ChevronDown, Copy, FileText, FolderOpen, ImagePlus, Link2, Loader2, Lock, MessageCircle, X,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateCrmClient, useUpdateCrmClient, useUploadCrmAsset } from "@/hooks/useCrm";
 import { useCreateClientIntake } from "@/hooks/useClientIntakes";
+import { useHasModule } from "@/hooks/useModules";
+import { useAbrirModulo } from "@/hooks/useAbrirModulo";
 import { BRAND_COLOR_FAMILIES } from "@/lib/brand-palette";
 import { BrandbookImport } from "@/components/brandbook/BrandbookImport";
 import { Button } from "@/components/ui/button";
@@ -49,14 +51,22 @@ function valorEmReais(txt: string): number | null {
 
 type Atalho = "brandbook" | "link" | "drive" | "logo";
 
-function CartaoAtalho({ ligado, onClick, Icon, fundo, cor, titulo, texto }: {
+function CartaoAtalho({ ligado, onClick, Icon, fundo, cor, titulo, texto, travadoEm }: {
   ligado: boolean; onClick: () => void; Icon: LucideIcon; fundo: string; cor: string; titulo: string; texto: string;
+  /** Nome do módulo que libera o atalho, quando ela não tem (mostra o cadeado). */
+  travadoEm?: string | null;
 }) {
   return (
     <button type="button" onClick={onClick} aria-pressed={ligado}
       className={cn("relative flex items-start gap-2.5 rounded-2xl border-[1.5px] p-3 text-left transition-all",
-        ligado ? "border-primary/50 bg-primary/[0.06] shadow-[0_0_0_4px_hsl(var(--primary)/0.07)]" : "border-border bg-card hover:border-primary/30")}>
-      {ligado && (
+        travadoEm ? "border-dashed border-border bg-card/50"
+          : ligado ? "border-primary/50 bg-primary/[0.06] shadow-[0_0_0_4px_hsl(var(--primary)/0.07)]" : "border-border bg-card hover:border-primary/30")}>
+      {travadoEm && (
+        <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-pink-100 px-1.5 py-0.5 text-[9.5px] font-body font-extrabold text-pink-700 dark:bg-pink-500/15 dark:text-pink-300">
+          <Lock className="h-2.5 w-2.5" strokeWidth={3} />{travadoEm}
+        </span>
+      )}
+      {ligado && !travadoEm && (
         <span className="absolute right-2 top-2 grid h-[18px] w-[18px] place-items-center rounded-full bg-primary text-primary-foreground">
           <Check className="h-3 w-3" strokeWidth={3} />
         </span>
@@ -78,6 +88,11 @@ export function NovoClienteDialog({ open, onOpenChange }: { open: boolean; onOpe
   const updateClient = useUpdateCrmClient();
   const uploadAsset = useUploadCrmAsset();
   const criarLink = useCreateClientIntake();
+  /* Brandbook e link de cadastro alimentam a aba Brandbook, que é do Cria
+     Gestão: sem o módulo, os dois atalhos mostram o cadeado e abrem a vitrine
+     (Walter, 19/10/2026: "só libera o cadeado se a pessoa tiver o plano"). */
+  const { allowed: temGestao } = useHasModule("crm");
+  const abrirModulo = useAbrirModulo();
 
   const [nome, setNome] = useState("");
   const [ig, setIg] = useState("");
@@ -322,9 +337,11 @@ export function NovoClienteDialog({ open, onOpenChange }: { open: boolean; onOpe
               {/* ── JÁ TEM MATERIAL DELE? ── */}
               <label className="mt-5 mb-2 flex justify-between text-[12.5px] font-body font-extrabold">Já tem material dele? <small className="font-semibold text-muted-foreground">pula a digitação</small></label>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <CartaoAtalho ligado={atalhos.has("brandbook")} onClick={() => alternar("brandbook")} Icon={FileText}
+                <CartaoAtalho ligado={atalhos.has("brandbook")} travadoEm={temGestao ? null : "Cria Gestão"}
+                  onClick={() => (temGestao ? alternar("brandbook") : abrirModulo("crm"))} Icon={FileText}
                   fundo="bg-orange-100 dark:bg-orange-500/15" cor="text-orange-600" titulo="Tenho o brandbook" texto="Envie o PDF. A IA lê e você confere antes de salvar." />
-                <CartaoAtalho ligado={atalhos.has("link")} onClick={() => alternar("link")} Icon={Link2}
+                <CartaoAtalho ligado={atalhos.has("link")} travadoEm={temGestao ? null : "Cria Gestão"}
+                  onClick={() => (temGestao ? alternar("link") : abrirModulo("crm"))} Icon={Link2}
                   fundo="bg-emerald-100 dark:bg-emerald-500/15" cor="text-emerald-600" titulo="Cliente preenche" texto="Gera o link de cadastro: dados, marca e acessos." />
                 <CartaoAtalho ligado={atalhos.has("drive")} onClick={() => alternar("drive")} Icon={FolderOpen}
                   fundo="bg-blue-100 dark:bg-blue-500/15" cor="text-blue-600" titulo="Pasta do Drive" texto="Cola o link e a aba Drive já liga." />

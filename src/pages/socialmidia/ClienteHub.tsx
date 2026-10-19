@@ -30,6 +30,7 @@ import { useHasModule } from "@/hooks/useModules";
 import { ClientDetail } from "@/components/accounts/CriaPostBoard";
 import { MateriaisBoard } from "@/components/accounts/MateriaisBoard";
 import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog";
+import { JornadaCliente } from "@/components/accounts/JornadaCliente";
 import { saveLastClient } from "@/components/accounts/ClientSwitcher";
 import { CriativoTab } from "@/components/hubcria/CriativoTab";
 import { useHasHubCria } from "@/hooks/useHubCria";
@@ -715,11 +716,15 @@ export default function ClienteHub() {
       {/* Conteúdo */}
       {activeTab === "visao-geral" && (
         <div className="space-y-4">
+          {/* PRIMEIROS PASSOS (19/10/2026): só cliente novo, some sozinho ou no X. */}
+          <JornadaCliente client={client} extClientId={extClient?.id ?? null} displayName={displayName}
+            hasGestao={hasCrm} hasPost={hasPost} goTab={goTab}
+            onEditarCadastro={() => (extClient ? setEditOpen(true) : goTab("links-uteis"))} />
           {/* Os cards eram só LEITURA e mostravam "-". A pessoa abria o cliente,
               via quatro traços e não tinha como preencher nada dali: tinha que
               descobrir sozinha que precisava ir na "ficha completa" do CRM.
               Agora cada card é editável no lugar: toca, digita, salva sozinho. */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div id="campos-do-cliente" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <CampoCliente clientId={client.id} label="Segmento" tipo="texto"
               valor={client.segment} placeholder="Ex.: Nutrição, Odonto…"
               campo="segment" />
