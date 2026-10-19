@@ -85,7 +85,14 @@ Deno.serve(async (req) => {
     const description = partes.join(" ").slice(0, 400);
 
     // 4) Admins que recebem o resumo.
-    const { data: admins } = await svc.from("profiles").select("id, email, name").eq("role", "admin");
+    // profiles não tem coluna email (conserto 18/10/2026): pedir "email" aqui
+    // fazia a consulta falhar e o robô achava que não existia admin, então
+    // nem o push nem o e-mail de saúde saíam. O e-mail vem do emails_para.
+    const { data: adminsSem, error: admErr } = await svc.from("profiles").select("id, name").eq("role", "admin");
+    if (admErr) { await heartbeat(false, "admins: " + admErr.message); return json({ error: "admins_failed" }, 500); }
+    const { data: mails } = await svc.rpc("emails_para", { _ids: ((adminsSem ?? []) as { id: string }[]).map((a) => a.id) });
+    const mailDe = new Map(((mails ?? []) as { id: string; email: string | null }[]).map((m) => [m.id, m.email]));
+    const admins = ((adminsSem ?? []) as { id: string; name: string | null }[]).map((a) => ({ ...a, email: mailDe.get(a.id) ?? null }));
     const adminIds = ((admins ?? []) as { id: string }[]).map((a) => a.id);
     if (adminIds.length === 0) { await heartbeat(true, "sem admin p/ notificar"); return json({ ok: true, notified: 0, saudavel, nErro, problemas }); }
 

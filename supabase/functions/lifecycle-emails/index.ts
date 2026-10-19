@@ -14,8 +14,14 @@ import { registrarErro, mensagemDe } from "../_shared/log.ts";
      trial_d0           trial acabou ontem/hoje e não tem assinatura ativa
      aprovacao_parada   social mídia com posts aguardando o cliente há 3+ dias
 
-   Falha em um e-mail não para os outros. Sem `profiles.email` a pessoa é
-   pulada (o cadastro antigo pode não ter espelhado o e-mail no perfil).
+   Falha em um e-mail não para os outros.
+
+   E-MAIL VEM DO auth.users (conserto de 18/10/2026). profiles NÃO tem coluna
+   email: o robô pedia profiles.email, a consulta voltava erro, o erro era
+   ignorado e NENHUM e-mail saía desde o começo (emails_ciclo vazio, todos os
+   contadores zerados). Agora o e-mail vem do RPC emails_para (só service
+   role), e erro de consulta derruba a rodada e aparece no cron_runs.
+   Meu perfil (perfil_de) não tem e-mail próprio: o aviso vai pra dona.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const cors = {
@@ -46,17 +52,34 @@ Deno.serve(async (req) => {
     // Já mandados: um Set "user:tipo:ref" pra não repetir.
     const { data: jaRows } = await svc.from("emails_ciclo").select("user_id, tipo, ref").gte("sent_at", iso(now - 40 * dayMs));
     const ja = new Set(((jaRows ?? []) as { user_id: string; tipo: string; ref: string | null }[]).map((r) => `${r.user_id}:${r.tipo}:${r.ref ?? ""}`));
+    // E-mail de cada conta (auth.users). Meu perfil cai no e-mail da dona.
+    const emailsDe = async (ids: string[]) => {
+      const m = new Map<string, { email: string | null; meuPerfil: boolean }>();
+      if (!ids.length) return m;
+      const { data, error } = await svc.rpc("emails_para", { _ids: ids });
+      if (error) throw new Error("emails_para: " + error.message);
+      for (const r of (data ?? []) as { id: string; email: string | null; eh_meu_perfil: boolean }[]) {
+        m.set(r.id, { email: r.email, meuPerfil: r.eh_meu_perfil });
+      }
+      return m;
+    };
+    const comEmail = async <T extends { id: string }>(linhas: T[]) => {
+      const m = await emailsDe(linhas.map((l) => l.id));
+      return linhas.map((l) => ({ ...l, email: m.get(l.id)?.email ?? null, meuPerfil: m.get(l.id)?.meuPerfil ?? false }));
+    };
     const marcar = async (user_id: string, tipo: string, ref: string | null) => {
       ja.add(`${user_id}:${tipo}:${ref ?? ""}`);
       await svc.from("emails_ciclo").insert({ user_id, tipo, ref });
     };
 
     // ── 1. Boas-vindas por persona (conta criada nas últimas 72 h) ──
-    const { data: novos } = await svc.from("profiles")
-      .select("id, email, name, account_type, plan, subscription_status, trial_ends_at, created_at")
+    const { data: novos, error: novosErr } = await svc.from("profiles")
+      .select("id, name, account_type, plan, subscription_status, trial_ends_at, created_at")
       .gte("created_at", iso(now - 3 * dayMs));
-    for (const p of (novos ?? []) as Perfil[]) {
-      if (!p.email || ja.has(`${p.id}:boas_vindas:`)) continue;
+    if (novosErr) throw new Error("novos: " + novosErr.message);
+    for (const p of await comEmail((novos ?? []) as Omit<Perfil, "email">[])) {
+      // Meu perfil não ganha boas-vindas: a dona já é cliente do Cria.
+      if (!p.email || p.meuPerfil || ja.has(`${p.id}:boas_vindas:`)) continue;
       const persona = p.account_type === "manager" ? "agencia" : p.account_type === "parceiro" ? "parceiro" : "criador";
       const conteudo = persona === "agencia"
         ? {
@@ -89,12 +112,13 @@ Deno.serve(async (req) => {
     }
 
     // ── 2 e 3. Trial acabando / acabou (só quem não assinou) ──
-    const { data: trials } = await svc.from("profiles")
-      .select("id, email, name, account_type, plan, subscription_status, trial_ends_at, created_at")
+    const { data: trials, error: trialsErr } = await svc.from("profiles")
+      .select("id, name, account_type, plan, subscription_status, trial_ends_at, created_at")
       .not("trial_ends_at", "is", null)
       .gte("trial_ends_at", iso(now - 1 * dayMs))
       .lte("trial_ends_at", iso(now + 2 * dayMs));
-    for (const p of (trials ?? []) as Perfil[]) {
+    if (trialsErr) throw new Error("trials: " + trialsErr.message);
+    for (const p of await comEmail((trials ?? []) as Omit<Perfil, "email">[])) {
       if (!p.email || p.subscription_status === "active") continue; // já assinou: não tem trial pra lembrar
       if (p.account_type === "parceiro") continue;
       const fim = new Date(p.trial_ends_at!).getTime();
@@ -102,7 +126,7 @@ Deno.serve(async (req) => {
       if (fim > now && !ja.has(`${p.id}:trial_d2:${ref}`)) {
         const ok = await enviarEmail(svc, {
           para: p.email, nome: p.name, etiqueta: "trial_d2",
-          assunto: "Seu teste do Cria termina em 2 dias",
+          assunto: p.meuPerfil ? "O teste do seu perfil de criadora termina em 2 dias" : "Seu teste do Cria termina em 2 dias",
           paragrafos: [
             "Faltam dois dias de teste. Tudo o que você criou (ideias, posts, brandbook, clientes) fica guardado; o que muda é o acesso às ferramentas.",
             "Se o Cria já virou parte da sua rotina, escolha um plano e segue sem interrupção. Se ainda está em dúvida, responde este e-mail e conta o que faltou.",
@@ -113,7 +137,7 @@ Deno.serve(async (req) => {
       } else if (fim <= now && !ja.has(`${p.id}:trial_d0:${ref}`)) {
         const ok = await enviarEmail(svc, {
           para: p.email, nome: p.name, etiqueta: "trial_d0",
-          assunto: "Seu teste do Cria terminou (seus dados estão guardados)",
+          assunto: p.meuPerfil ? "O teste do seu perfil de criadora terminou (está tudo guardado)" : "Seu teste do Cria terminou (seus dados estão guardados)",
           paragrafos: [
             "O período de teste acabou. Nada foi apagado: ideias, posts, brandbook e clientes continuam na sua conta esperando você voltar.",
             "Pra retomar de onde parou, é só escolher um plano. Cancela quando quiser, direto no app.",
@@ -125,11 +149,12 @@ Deno.serve(async (req) => {
     }
 
     // ── 4. Aprovação parada: posts esperando o cliente há 3+ dias ──
-    const { data: parados } = await svc.from("posts")
+    const { data: parados, error: paradosErr } = await svc.from("posts")
       .select("user_id, title, updated_at")
       .eq("approval_status", "pendente").is("deleted_at", null)
       .not("external_client_id", "is", null)
       .lte("updated_at", iso(now - 3 * dayMs));
+    if (paradosErr) throw new Error("parados: " + paradosErr.message);
     const porGestora = new Map<string, string[]>();
     for (const r of (parados ?? []) as { user_id: string; title: string | null }[]) {
       const arr = porGestora.get(r.user_id) ?? [];
@@ -137,7 +162,9 @@ Deno.serve(async (req) => {
     }
     if (porGestora.size > 0) {
       const ids = [...porGestora.keys()];
-      const { data: gestoras } = await svc.from("profiles").select("id, email, name").in("id", ids);
+      const { data: gestorasSem, error: gErr } = await svc.from("profiles").select("id, name").in("id", ids);
+      if (gErr) throw new Error("gestoras: " + gErr.message);
+      const gestoras = await comEmail((gestorasSem ?? []) as { id: string; name: string | null }[]);
       const semana = new Date(now).toISOString().slice(0, 10).slice(0, 7) + "-w" + Math.ceil(new Date(now).getDate() / 7);
       for (const g of (gestoras ?? []) as { id: string; email: string | null; name: string | null }[]) {
         if (!g.email || ja.has(`${g.id}:aprovacao_parada:${semana}`)) continue;
@@ -171,7 +198,9 @@ Deno.serve(async (req) => {
     }
     let inventario = 0;
     if (porAgencia.size > 0) {
-      const { data: donos } = await svc.from("profiles").select("id, email, name").in("id", [...porAgencia.keys()]);
+      const { data: donosSem, error: dErr } = await svc.from("profiles").select("id, name").in("id", [...porAgencia.keys()]);
+      if (dErr) throw new Error("donos: " + dErr.message);
+      const donos = await comEmail((donosSem ?? []) as { id: string; name: string | null }[]);
       const refSemana = new Date(now).toISOString().slice(0, 10);
       for (const d of (donos ?? []) as { id: string; email: string | null; name: string | null }[]) {
         if (!d.email || ja.has(`${d.id}:inventario_vencendo:${refSemana}`)) continue;
