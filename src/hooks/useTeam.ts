@@ -36,6 +36,8 @@ export const TEAM_MODULE_DEFAULT = TEAM_MODULES.filter((m) => m.code !== "cria_c
 
 export type MemberPermission = {
   id: string; member_row_id: string; module_code: string; all_clients: boolean; client_ids: string[];
+  /** Nível no módulo (19/10/2026). Sem a linha = sem acesso. */
+  nivel?: "ver" | "editar" | "total" | null;
 };
 export type TeamMember = {
   id: string; manager_id: string; member_id: string; name: string | null; email: string | null;
@@ -155,12 +157,14 @@ export function useRemoveMember() {
 export function useSetMemberModule() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ memberRowId, moduleCode, enabled, allClients = true, clientIds = [] }: {
+    mutationFn: async ({ memberRowId, moduleCode, enabled, allClients = true, clientIds = [], nivel }: {
       memberRowId: string; moduleCode: string; enabled: boolean; allClients?: boolean; clientIds?: string[];
+      /** Nível no módulo; sem informar, mantém o que já estava (ou 'total' num módulo novo). */
+      nivel?: "ver" | "editar" | "total";
     }) => {
       if (enabled) {
         const { error } = await sbFrom("manager_member_permissions").upsert(
-          { member_row_id: memberRowId, module_code: moduleCode, all_clients: allClients, client_ids: allClients ? [] : clientIds } as never,
+          { member_row_id: memberRowId, module_code: moduleCode, all_clients: allClients, client_ids: allClients ? [] : clientIds, ...(nivel ? { nivel } : {}) } as never,
           { onConflict: "member_row_id,module_code" } as never,
         );
         if (error) throw error;

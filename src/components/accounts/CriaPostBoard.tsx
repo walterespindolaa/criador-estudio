@@ -18,6 +18,7 @@ import { ClientContentWriter } from "./ClientContentWriter";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CronogramaBoard } from "@/components/accounts/CronogramaBoard";
+import { usePermissaoModulo } from "@/hooks/usePermissaoModulo";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { useEditorialLines } from "@/hooks/useEditorialLines";
@@ -385,6 +386,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     try { localStorage.setItem("criapost_view", v); } catch { /* segue */ }
   };
   const { copyLink, resolverLink } = useExternalClients();
+  // Nível da colaboradora no Cria Post (19/10/2026). Dona e fora do modo equipe = total.
+  const permPost = usePermissaoModulo("cria_post");
   const { profile } = useProfile();
   const { data: portalViewedAt } = usePortalActivity(client.id);
   const [confirmMove, setConfirmMove] = useState<{ id: string; status: ApprovalKey } | null>(null);
@@ -668,14 +671,15 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
             <div className="flex gap-2 flex-wrap">
               {embedded && (
                 <>
-                  <Button variant="outline" onClick={() => setLinkOpen(true)} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Link de aprovação</span></>}</Button>
+                  {permPost.podeTotal && <Button variant="outline" onClick={() => setLinkOpen(true)} disabled={copying}>{copying ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Link2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Link de aprovação</span></>}</Button>}
                   {/* Só na visão SOLTA do Cria Post. Dentro da ficha do cliente
                       existe a aba Portal, que faz o mesmo com mais espaço. */}
                   {!embedded && <Button variant="outline" onClick={() => setEditOpen(true)}><Settings2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Personalizar</span></Button>}
                 </>
               )}
-              <Button variant="outline" onClick={() => setImportOpen(true)}><KanbanSquare className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Importar do kanban</span></Button>
-              <Button onClick={() => openNew()}><Plus className="h-4 w-4 mr-1.5" /> Novo post</Button>
+              {permPost.podeEditar && <Button variant="outline" onClick={() => setImportOpen(true)}><KanbanSquare className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Importar do kanban</span></Button>}
+              {permPost.podeEditar && <Button onClick={() => openNew()}><Plus className="h-4 w-4 mr-1.5" /> Novo post</Button>}
+              {!permPost.podeEditar && !permPost.carregando && <span className="self-center text-[11.5px] font-body text-muted-foreground">Seu acesso aqui é só pra ver.</span>}
             </div>
           </div>
       {/* Filtro de data: só Tudo (ver todos / limpar) + período específico (popover).
@@ -759,8 +763,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         </div>
       )}
       {view === "calendario" ? (
-        <PostsCalendar posts={viewPosts} onOpen={openEdit} onNewAt={(d) => openNew(d)} parceiroDe={nomeParceiro}
-          onMove={(id, d) => setDate.mutate({ id, scheduled_date: d })}
+        <PostsCalendar posts={viewPosts} onOpen={openEdit} onNewAt={permPost.podeEditar ? (d) => openNew(d) : undefined} parceiroDe={nomeParceiro}
+          onMove={permPost.podeEditar ? (id, d) => setDate.mutate({ id, scheduled_date: d }) : undefined}
           tagsByPost={tagsByPost} tagCatalog={tagCatalog} />
       ) : isLoading ? (
         <div className="space-y-3">{[0, 1].map((i) => <div key={i} className="h-20 rounded-2xl bg-muted animate-pulse" />)}</div>
@@ -789,7 +793,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   <div ref={dropP.innerRef} {...dropP.droppableProps}
                     className={`min-h-[260px] rounded-xl p-2 space-y-2 transition-colors ${dropS.isDraggingOver ? "bg-primary/5 ring-2 ring-primary/30" : "bg-muted/30"}`}>
                     {colPosts.map((p, idx) => (
-                      <Draggable key={p.id} draggableId={p.id} index={idx}>
+                      <Draggable key={p.id} draggableId={p.id} index={idx} isDragDisabled={!permPost.podeEditar}>
                       {(dragP, dragS) => (
                       <div ref={dragP.innerRef} {...dragP.draggableProps} {...dragP.dragHandleProps} style={dragP.draggableProps.style}
                         // O card INTEIRO abre o post (era só o lápis, e a pessoa
@@ -891,7 +895,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                           </div>
                           <div className="flex flex-col gap-1.5 md:gap-1 shrink-0">
                             <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0" onClick={(e) => { e.stopPropagation(); openEdit(p); }} aria-label="Editar"><Pencil className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>
-                            <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0 text-destructive" onClick={(e) => { e.stopPropagation(); setConfirmDelete(p.id); }} aria-label="Excluir"><Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>
+                            {permPost.podeTotal && <Button variant="ghost" size="sm" className="h-9 w-9 md:h-7 md:w-7 p-0 text-destructive" onClick={(e) => { e.stopPropagation(); setConfirmDelete(p.id); }} aria-label="Excluir"><Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" /></Button>}
                           </div>
                         </div>
                       </div>
@@ -1059,7 +1063,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   achar o card de novo no meio da coluna e só então apagar.
                   Fecha o editor antes de perguntar: dois diálogos empilhados
                   é a forma mais rápida de alguém confirmar sem ler. */}
-              {editing && !draftId && (
+              {editing && !draftId && permPost.podeTotal && (
                 <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"
                   aria-label="Excluir este post"
                   onClick={() => { const id = editing.id; setFormOpen(false); setEditing(null); setConfirmDelete(id); }}>
@@ -1067,7 +1071,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                 </Button>
               )}
               <Button variant="outline" size="sm" onClick={() => void requestCloseForm()}>Cancelar</Button>
-              <Button size="sm" onClick={submit} disabled={create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : draftId ? "Criar post" : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar post"}</Button>
+              <Button size="sm" onClick={submit} disabled={!permPost.podeEditar || create.isPending || update.isPending || !f.title.trim()}>{(create.isPending || update.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : draftId ? "Criar post" : editing ? (editing.approval_status === "ajuste_solicitado" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Salvar e reenviar</> : "Salvar") : "Criar post"}</Button>
             </div>
           </DialogHeader>
           {/* Duas colunas INDEPENDENTES (flex): a mídia não estica mais os campos
@@ -1338,8 +1342,9 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog,
    *  alguém da equipe, dá pra ficar uma tag ao lado do status?"). */
   parceiroDe?: (id: string | null | undefined) => { nome: string; role: string } | null;
   onOpen: (p: ExternalPost) => void;
-  onNewAt: (day: string) => void;
-  onMove: (id: string, day: string) => void;
+  onNewAt?: (day: string) => void;
+  /** Sem onMove (acesso só de ver): não arrasta. */
+  onMove?: (id: string, day: string) => void;
   // Etiquetas internas: entram como bolinha compacta, nunca como bloco novo.
   tagsByPost: Record<string, string[]>;
   tagCatalog: PostTag[];
@@ -1367,7 +1372,7 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog,
   }
 
   const today = calYmd(new Date());
-  const dropOn = (day: string) => { if (dragId) onMove(dragId, day); setDragId(null); setOverDay(null); };
+  const dropOn = (day: string) => { if (dragId && onMove) onMove(dragId, day); setDragId(null); setOverDay(null); };
   // No toque não existe arraste: alça no card + toque no dia (ver MoverPorToque).
   const mover = useMoverPorToque(onMove);
 
@@ -1410,7 +1415,7 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog,
                   {/* No celular o cabeçalho de dias da semana some: o dia vai junto do número. */}
                   <span className="lg:hidden ml-1 text-[10px] font-body font-semibold uppercase text-muted-foreground">{CAL_WD[d.getDay()]}</span>
                 </span>
-                <button onClick={(e) => { e.stopPropagation(); onNewAt(iso); }} className="grid place-items-center h-7 w-7 -mr-1 text-muted-foreground hover:text-primary" aria-label="Novo post neste dia"><Plus className="h-3.5 w-3.5" /></button>
+                {onNewAt && <button onClick={(e) => { e.stopPropagation(); onNewAt(iso); }} className="grid place-items-center h-7 w-7 -mr-1 text-muted-foreground hover:text-primary" aria-label="Novo post neste dia"><Plus className="h-3.5 w-3.5" /></button>}
               </div>
               {list.map((p) => {
                 const st = STATUS[(p.approval_status ?? "pendente") as ApprovalKey];
@@ -1421,7 +1426,7 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog,
                      vizinhos. Assim ele volta a ocupar só a célula e o título corta. */
                   <div key={p.id} className="relative min-w-0 w-full">
                   <AlcaMover mover={mover} id={p.id} className="absolute -top-1.5 -right-1.5 z-10" />
-                  <button draggable
+                  <button draggable={!!onMove}
                     onDragStart={() => setDragId(p.id)} onDragEnd={() => { setDragId(null); setOverDay(null); }}
                     type="button" onClick={(e) => { if (mover.movendo) { e.stopPropagation(); mover.soltarEm(iso); return; } e.stopPropagation(); onOpen(p); }}
                     style={{ ...formatColorVars(p.format), borderLeftWidth: 3 }}
@@ -1468,7 +1473,7 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog,
             {semData.map((p) => (
               <div key={p.id} className="relative">
               <AlcaMover mover={mover} id={p.id} className="absolute -top-1.5 -right-1.5 z-10" />
-              <button draggable
+              <button draggable={!!onMove}
                 onDragStart={() => setDragId(p.id)} onDragEnd={() => { setDragId(null); setOverDay(null); }}
                 type="button" onClick={() => { if (mover.movendo) return; onOpen(p); }}
                 style={{ ...formatColorVars(p.format), borderLeftWidth: 3 }}

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, Layers, Plus, X } from "lucide-react";
+import { ArrowDown, ArrowUp, GripVertical, Layers, Plus, X } from "lucide-react";
+import { DragDropContext, Draggable, Droppable, type DraggableProvidedDragHandleProps, type DropResult } from "@hello-pangea/dnd";
 import { cn } from "@/lib/utils";
 import { LIMITE_SLIDES, joinSlides, parseSlides } from "@/lib/slides-carrossel";
 
@@ -126,7 +127,64 @@ export function SlidesEditor({ capa, onChangeCapa, slides, onChangeSlides, acaoC
     setFoco({ i: i + 1, pos: "inicio" });
   };
 
+  /* ARRASTAR (Walter, 19/10/2026): slides 2..N reordenam pela alça; a capa
+     fica fixa. Subir/descer continuam no celular como alternativa de toque. */
+  const aoSoltar = (r: DropResult) => {
+    if (!r.destination || r.destination.index === r.source.index) return;
+    const nova = [...lista];
+    const [item] = nova.splice(r.source.index, 1);
+    nova.splice(r.destination.index, 0, item);
+    gravar(nova);
+  };
+
   const qtd = (capa.trim() ? 1 : 0) + lista.filter((s) => s.trim()).length;
+
+  const linha = (i: number, alca?: DraggableProvidedDragHandleProps | null, arrastando = false) => {
+    const ehCapa = i === 0;
+    const ultimo = i === total - 1;
+    return (
+      <div className={cn("group grid grid-cols-[44px_1fr] border-b border-border/60 bg-background",
+        arrastando && "shadow-lg ring-1 ring-primary/30 rounded-lg")}>
+        <div className={cn(
+          "flex flex-col items-center justify-start pt-2.5 border-r border-border/60 select-none",
+          ehCapa ? "bg-primary/10 text-primary" : "bg-muted/30 text-muted-foreground",
+        )}>
+          <span className="font-display font-bold text-[13px] leading-none">{i + 1}</span>
+          {ehCapa && <span className="text-[9px] font-body font-bold uppercase tracking-wide mt-1">capa</span>}
+          {!ehCapa && alca && (
+            <span {...alca} aria-label={`Arrastar o slide ${i + 1}`} title="Arrastar pra reordenar"
+              className="mt-1.5 p-1 rounded cursor-grab active:cursor-grabbing text-muted-foreground/70 hover:text-foreground touch-none">
+              <GripVertical className="h-3.5 w-3.5" />
+            </span>
+          )}
+        </div>
+        <div className="relative flex items-start gap-1 min-w-0">
+          <LinhaAuto
+            refCb={(el) => { refs.current[i] = el; }}
+            value={valorDe(i)}
+            onChange={(v) => mudar(i, v)}
+            onKeyDown={teclas(i)}
+            placeholder={ehCapa ? "O que vai aparecer na capa para parar o scroll?"
+              : ultimo && total > 2 ? "CTA do último slide"
+              : ultimo ? "Slide 2 (o último slide costuma ser o CTA)"
+              : `Slide ${i + 1}`}
+            ariaLabel={ehCapa ? "Capa (slide 1)" : `Slide ${i + 1}`}
+          />
+          {ehCapa ? (
+            acaoCapa && <div className="shrink-0 pt-1 pr-1">{acaoCapa}</div>
+          ) : (
+            <div className="shrink-0 flex items-center gap-0.5 pt-1.5 pr-1.5 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
+              <span className="contents sm:hidden">
+                <BotaoIcone titulo="Subir" onClick={() => mover(i, -1)} disabled={i <= 1}><ArrowUp className="h-3.5 w-3.5" /></BotaoIcone>
+                <BotaoIcone titulo="Descer" onClick={() => mover(i, 1)} disabled={i >= total - 1}><ArrowDown className="h-3.5 w-3.5" /></BotaoIcone>
+              </span>
+              <BotaoIcone titulo="Remover slide" onClick={() => remover(i, false)} perigo><X className="h-3.5 w-3.5" /></BotaoIcone>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className={cn("space-y-1.5", className)}>
@@ -139,50 +197,32 @@ export function SlidesEditor({ capa, onChangeCapa, slides, onChangeSlides, acaoC
       </div>
 
       <div className="rounded-xl border border-border bg-background overflow-hidden">
-        {Array.from({ length: total }, (_, i) => {
-          const ehCapa = i === 0;
-          const ultimo = i === total - 1;
-          return (
-            <div key={i} className="group grid grid-cols-[44px_1fr] border-b border-border/60 last:border-b-0">
-              <div className={cn(
-                "flex flex-col items-center justify-start pt-2.5 border-r border-border/60 select-none",
-                ehCapa ? "bg-primary/10 text-primary" : "bg-muted/30 text-muted-foreground",
-              )}>
-                <span className="font-display font-bold text-[13px] leading-none">{i + 1}</span>
-                {ehCapa && <span className="text-[9px] font-body font-bold uppercase tracking-wide mt-1">capa</span>}
+        {linha(0)}
+        <DragDropContext onDragEnd={aoSoltar}>
+          <Droppable droppableId="slides-carrossel">
+            {(prov) => (
+              <div ref={prov.innerRef} {...prov.droppableProps}>
+                {lista.map((_, k) => (
+                  <Draggable key={`slide-${k}`} draggableId={`slide-${k}`} index={k}>
+                    {(d, snap) => (
+                      <div ref={d.innerRef} {...d.draggableProps}>
+                        {linha(k + 1, d.dragHandleProps, snap.isDragging)}
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {prov.placeholder}
               </div>
-              <div className="relative flex items-start gap-1 min-w-0">
-                <LinhaAuto
-                  refCb={(el) => { refs.current[i] = el; }}
-                  value={valorDe(i)}
-                  onChange={(v) => mudar(i, v)}
-                  onKeyDown={teclas(i)}
-                  placeholder={ehCapa ? "O que vai aparecer na capa para parar o scroll?"
-                    : ultimo && total > 2 ? "CTA do último slide"
-                    : ultimo ? "Slide 2 (o último slide costuma ser o CTA)"
-                    : `Slide ${i + 1}`}
-                  ariaLabel={ehCapa ? "Capa (slide 1)" : `Slide ${i + 1}`}
-                />
-                {ehCapa ? (
-                  acaoCapa && <div className="shrink-0 pt-1 pr-1">{acaoCapa}</div>
-                ) : (
-                  <div className="shrink-0 flex items-center gap-0.5 pt-1.5 pr-1.5 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
-                    <BotaoIcone titulo="Subir" onClick={() => mover(i, -1)} disabled={i <= 1}><ArrowUp className="h-3.5 w-3.5" /></BotaoIcone>
-                    <BotaoIcone titulo="Descer" onClick={() => mover(i, 1)} disabled={i >= total - 1}><ArrowDown className="h-3.5 w-3.5" /></BotaoIcone>
-                    <BotaoIcone titulo="Remover slide" onClick={() => remover(i, false)} perigo><X className="h-3.5 w-3.5" /></BotaoIcone>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+            )}
+          </Droppable>
+        </DragDropContext>
         <div className="flex items-center gap-3 border-t border-dashed border-border px-3 py-2 bg-card">
           <button type="button" onClick={() => inserirDepois(total - 1)}
             className="inline-flex items-center gap-1 text-[12.5px] font-body font-bold text-primary hover:underline min-h-[32px]">
             <Plus className="h-3.5 w-3.5" /> slide
           </button>
           <span className="ml-auto text-[11px] font-body text-muted-foreground hidden sm:inline">
-            Enter cria o próximo · Shift+Enter quebra a linha
+            Enter cria o próximo · Shift+Enter quebra a linha · arraste pela alça
           </span>
         </div>
       </div>

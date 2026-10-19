@@ -6,7 +6,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { sanitizeTrackingUrl, isSensitiveTokenRoute } from "@/lib/trackingUrl";
 import { podeRastrear, aoDecidirConsentimento } from "@/lib/consent";
 
-const PIXEL_ID = import.meta.env.VITE_META_PIXEL_ID as string | undefined;
+/* SÓ OS DOMÍNIOS DE VERDADE (Walter, 19/10/2026). Nos últimos 28 dias o
+   pixel recebeu ~290 eventos de prévias do Lovable e da Vercel, sujando
+   público e otimização. Fora desta lista, tudo vira no-op. */
+const HOSTS_PERMITIDOS = ["app.criasocialclub.com.br", "criasocialclub.com.br", "www.criasocialclub.com.br", "criaclub.bio", "www.criaclub.bio"];
+const hostPermitido = typeof window !== "undefined" && HOSTS_PERMITIDOS.includes(window.location.hostname);
+const PIXEL_ID = hostPermitido ? (import.meta.env.VITE_META_PIXEL_ID as string | undefined) : undefined;
 
 function getCookie(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;

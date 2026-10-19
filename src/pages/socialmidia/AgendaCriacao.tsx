@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { AvisoSoVer } from "@/components/accounts/ModuleGate";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
@@ -1019,6 +1020,7 @@ export default function AgendaCriacao() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">
+      <AvisoSoVer code="agenda" />
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-pink-400 grid place-items-center shadow-sm shrink-0">
           <CalendarDays className="h-5 w-5 text-white" strokeWidth={1.75} />

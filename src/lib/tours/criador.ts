@@ -54,9 +54,9 @@ export const TOURS_CRIADOR: TourConfig[] = [
       },
       {
         target: '[data-tour="dash-captura"]',
-        title: "Captura Rápida",
-        body: "Ideia boa não espera. Digitou, capturou: ela vai direto pro seu banco de ideias, e você organiza depois.",
-        placement: "top",
+        title: "Nova ideia",
+        body: "Ideia boa não espera. Toque em Nova ideia, digite e capture: ela vai direto pro seu banco de ideias, e você organiza depois.",
+        placement: "bottom",
         aiPrompt:
           "Me sugira 5 ideias de post no tom da minha marca, usando meu brandbook como referência.",
       },

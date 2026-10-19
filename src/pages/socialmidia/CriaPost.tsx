@@ -37,7 +37,7 @@ export default function CriaPost() {
   ];
 
   return (
-    <ModuleGate code="aprovapost_externo">
+    <ModuleGate code="aprovapost_externo" nivelCode="cria_post">
       <ModuleHero
         title="Cria Post"
         subtitle="As aprovações por link de todos os clientes. Pra criar e editar posts, abra o cliente."

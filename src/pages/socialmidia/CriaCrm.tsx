@@ -40,7 +40,7 @@ const STATUS_FILTER_KEY = "criacrm:clientes:statusFilter";
 const STATUS_FILTER_OPTS: [StatusFilter, string][] = [["ativos", "Ativos"], ["todos", "Todos"], ["inativos", "Inativos"]];
 
 export default function CriaCrm() {
-  return <ModuleGate code="crm"><CrmInner /></ModuleGate>;
+  return <ModuleGate code="crm" nivelCode="cria_gestao"><CrmInner /></ModuleGate>;
 }
 
 const CRM_TABS = ["clientes", "tarefas", "calendario", "pipeline", "metas", "contratos", "linkbio"] as const;
@@ -203,7 +203,7 @@ function ClientsTab() {
               // o valor solto em outra. No mobile virava um bloco alto e sem hierarquia.
               // Agora o valor sobe pra linha do nome (é a informação que decide), e o
               // status/etiquetas ficam numa tira só, embaixo.
-              <div key={c.id} className="group rounded-2xl border border-border bg-card p-4 flex flex-col gap-3 hover:shadow-md hover:border-primary/40 transition-all cursor-pointer" onClick={() => navigate(`/socialmidia/criacrm/${c.id}`)}>
+              <div key={c.id} className="group rounded-2xl border border-border bg-card p-4 flex flex-col gap-3 hover:shadow-md hover:border-primary/40 transition-all cursor-pointer" onClick={() => navigate(`/socialmidia/clientes/${c.id}/cadastro`)}>
                 <div className="flex items-start gap-3">
                   <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary via-purple-600 to-pink-500 p-[2px] shrink-0 overflow-hidden">
                     <div className="w-full h-full rounded-2xl bg-card flex items-center justify-center overflow-hidden">
@@ -257,7 +257,7 @@ function ClientsTab() {
       <CreateClientDialog
         open={creating}
         onOpenChange={setCreating}
-        onCreate={async (input) => { const c = await createClient.mutateAsync(input); setCreating(false); navigate(`/socialmidia/criacrm/${c.id}`); }}
+        onCreate={async (input) => { const c = await createClient.mutateAsync(input); setCreating(false); navigate(`/socialmidia/clientes/${c.id}/cadastro`); }}
         saving={createClient.isPending}
       />
     </div>

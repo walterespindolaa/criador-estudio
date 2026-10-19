@@ -789,7 +789,7 @@ function CaixaInner() {
                     <Receipt className="h-4 w-4" />
                   </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary"
-                    title="Abrir no Cria Gestão" onClick={() => navigate(`/socialmidia/criacrm/${c.id}`)}>
+                    title="Abrir no Cria Gestão" onClick={() => navigate(`/socialmidia/clientes/${c.id}/cadastro`)}>
                     <ExternalLink className="h-4 w-4" />
                   </Button>
                 </div>

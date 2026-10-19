@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ChevronLeft, ChevronRight, Copy, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock, FolderOpen, Package, File as FileIcon, RefreshCw, Kanban, StickyNote, ListTodo } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Copy, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock, FolderOpen, Package, File as FileIcon, RefreshCw, Kanban, StickyNote, ListTodo, IdCard, Activity, Target } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset, useClientNotes, CLIENT_STATUSES, CLIENT_STATUS_META, type ClientStatus } from "@/hooks/useCrm";
@@ -38,6 +38,7 @@ import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
 import { useDriveFolder, type DriveItem } from "@/hooks/useDriveFolder";
 import { ClienteInstagramCria } from "@/components/accounts/ClienteInstagramCria";
 import { BrandbookDoCliente } from "@/components/accounts/crm/BrandbookDoCliente";
+import { FichaCadastroCliente, DiagnosticoCliente, ConcorrenciaCliente } from "@/components/accounts/crm/FichaCrmCliente";
 import { ClienteKanbanCria } from "@/components/accounts/ClienteKanbanCria";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -115,6 +116,10 @@ const SUB_META: Record<string, SubMeta> = {
   // Cofre de acessos (Walter, 14/10/2026): logins e senhas do cliente, criptografados.
   // Tarefas deste cliente (Walter, 19/10/2026: "ter tudo dele ali dentro").
   tarefas: { label: "Tarefas", desc: "As tarefas deste cliente, no mesmo quadro do Cria Gestão.", icon: ListTodo },
+  // A ficha do CRM mora aqui agora (Walter, 19/10/2026): uma tela só por cliente.
+  cadastro: { label: "Cadastro", desc: "Empresa, CNPJ, endereço, contato, contrato, pagamento e etiquetas.", icon: IdCard },
+  diagnostico: { label: "Diagnóstico", desc: "Checklist do perfil, primeiros ajustes e a nota de cada ponto.", icon: Activity },
+  concorrencia: { label: "Concorrência", desc: "Concorrentes acompanhados e as análises do Cria Radar.", icon: Target },
   acessos: { label: "Acessos", desc: "Logins e senhas das contas do cliente, criptografados, com histórico de quem viu.", icon: Lock },
   ideias: { label: "Ideias", desc: "O banco de ideias do cliente pra virar post.", icon: Lightbulb },
   pesquisa: { label: "Pesquisa", desc: "Concorrência e tendências do nicho.", icon: Search },
@@ -129,7 +134,7 @@ const GROUPS: Grp[] = [
   // Morava no Radar, mas a captura manual e a conversão em post são coração do
   // Cria Post; a URL /ideias continua a mesma, só mudou de grupo.
   { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "ideias", "cronograma", "kanban-cliente", "relatorio", "materiais", "portal"] },
-  { key: "cria-gestao", label: "Cria Gestão", modulo: "rosa", icon: BookOpen, landing: true, subs: ["tarefas", "brandbook", "link-bio", "acessos"] },
+  { key: "cria-gestao", label: "Cria Gestão", modulo: "rosa", icon: BookOpen, landing: true, subs: ["cadastro", "tarefas", "brandbook", "diagnostico", "concorrencia", "link-bio", "acessos"] },
   { key: "cria-caixa", label: "Cria Caixa", modulo: "azul", icon: Wallet, subs: ["financeiro"] },
   // O Radar ficou só com a Pesquisa: 1 sub = vai direto (landing de 1 card seria bobo).
   { key: "cria-radar", label: "Cria Radar", modulo: "lilas", icon: Search, subs: ["pesquisa"] },
@@ -818,7 +823,7 @@ export default function ClienteHub() {
           />
 
           <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" asChild><Link to={`/socialmidia/criacrm/${id}`}><ExternalLink className="h-4 w-4 mr-1.5" /> Ficha completa (CRM)</Link></Button>
+            <Button variant="outline" onClick={() => goTab("cadastro")}><IdCard className="h-4 w-4 mr-1.5" /> Cadastro completo</Button>
           </div>
         </div>
       )}
@@ -931,6 +936,18 @@ export default function ClienteHub() {
         hasCrm
           ? <TasksTab clienteFixo={client.id} />
           : <ModuleUpsell code="crm" clientName={displayName} />
+      )}
+
+      {/* CADASTRO, DIAGNÓSTICO E CONCORRÊNCIA: o que só existia na ficha do CRM
+          (criacrm/:id), agora aqui, com o mesmo gate do Cria Gestão. */}
+      {activeTab === "cadastro" && (
+        hasCrm ? <FichaCadastroCliente crmClientId={client.id} /> : <ModuleUpsell code="crm" clientName={displayName} />
+      )}
+      {activeTab === "diagnostico" && (
+        hasCrm ? <DiagnosticoCliente crmClientId={client.id} /> : <ModuleUpsell code="crm" clientName={displayName} />
+      )}
+      {activeTab === "concorrencia" && (
+        hasCrm ? <ConcorrenciaCliente crmClientId={client.id} onNovaAnalise={() => goTab("pesquisa")} /> : <ModuleUpsell code="crm" clientName={displayName} />
       )}
 
       {/* ACESSOS (cofre). O próprio componente checa módulo e permissão no banco. */}

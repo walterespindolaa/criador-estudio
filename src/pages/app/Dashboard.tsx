@@ -13,7 +13,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { getDailyInsight } from "@/lib/ai/claude";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, isWithinInterval, parseISO } from "date-fns";
 import { hojeBR, toISODateBR } from "@/lib/date-br";
@@ -134,7 +134,7 @@ const Dashboard = () => {
   const today = useMemo(() => hojeBR(), []);
   const weekDays = useMemo(() => getDaysOfWeek(), []);
 
-  const { ideas, createIdea } = useIdeas({ limit: 20 });
+  const { ideas } = useIdeas({ limit: 20 });
   const { posts } = usePosts({ limit: 20 });
   const {
     habits,
@@ -159,7 +159,6 @@ const Dashboard = () => {
 
   const dateRange = useMemo(() => getDateRange(period, customRange), [period, customRange]);
 
-  const [quickIdea, setQuickIdea] = useState("");
   const [, setAiInsight] = useState<string | null>(null);
   const [copiedHook, setCopiedHook] = useState(false);
   const [newHabitName, setNewHabitName] = useState("");
@@ -186,18 +185,6 @@ const Dashboard = () => {
       .then(insight => { if (insight) { setAiInsight(insight); localStorage.setItem(cacheKey, insight); } })
       .catch(() => { /* noop */ });
   }, [posts, user, activeProfile, today, weekDays]);
-
-  const handleQuickCapture = async () => {
-    const sanitized = sanitizeText(quickIdea);
-    if (!sanitized || !user) return;
-    try {
-      await createIdea.mutateAsync({ title: sanitized });
-      toast.success("Ideia capturada!");
-      setQuickIdea("");
-    } catch {
-      toast.error("Erro ao salvar ideia.");
-    }
-  };
 
   const handleToggleHabit = async (habitId: string) => {
     try {
@@ -345,33 +332,9 @@ const Dashboard = () => {
           <NextBestAction />
         </div>
 
-        {/* CAPTURA RÁPIDA NO TOPO.
-            A ideia chega quando chega, e ela é o começo de TODO o fluxo do CRIA.
-            Estava enterrada no fim da coluna: a pessoa tinha que rolar a tela pra
-            anotar um pensamento, e ideia que espera scroll é ideia perdida. */}
-        <DCard data-tour="dash-captura" className="relative overflow-hidden bg-card border-border group mb-6">
-          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-            <Sparkles className="h-24 w-24 text-primary" />
-          </div>
-          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-            <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
-              <Lightbulb className="h-4 w-4 text-primary" /> Captura Rápida
-            </h3>
-            <Link to="/app/ideias" className="text-xs font-body font-bold text-primary hover:underline shrink-0">
-              Ver minhas ideias ({ideas.length})
-            </Link>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Input
-              placeholder="O que você está pensando?"
-              className="rounded-xl border-border bg-background/50 h-11"
-              value={quickIdea}
-              onChange={(e) => setQuickIdea(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleQuickCapture()}
-            />
-            <Button onClick={handleQuickCapture} variant="hero" size="lg" className="w-full sm:w-auto">Capturar</Button>
-          </div>
-        </DCard>
+        {/* A Captura Rápida saiu daqui (Walter, 19/10/2026): repetia o botão
+            "Nova ideia" do topo, que agora abre a mesma captura numa janela
+            (CapturaRapidaDialog, no AppLayout). */}
 
         {/* NOVO: Seu conteúdo no Instagram (largura cheia, em destaque).
             Reaproveita os hooks de insights; o "melhor dia" da faixa verde substitui

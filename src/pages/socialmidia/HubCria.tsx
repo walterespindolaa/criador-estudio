@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AvisoSoVer } from "@/components/accounts/ModuleGate";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
@@ -103,6 +104,7 @@ export default function HubCria() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0 space-y-6">
+      <AvisoSoVer code="hub_cria" />
 
       {/* HERO */}
       <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-5 sm:p-7">

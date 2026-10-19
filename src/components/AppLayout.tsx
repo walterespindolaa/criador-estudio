@@ -27,6 +27,7 @@ import ContaPausada from "@/pages/ContaPausada";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppRail } from "@/components/AppRail";
 import { HeroBand, HeroCardMobile } from "@/components/HeroBand";
+import { CapturaRapidaDialog } from "@/components/dashboard/CapturaRapidaDialog";
 import { TituloCriakut } from "@/components/criakut/TituloCriakut";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -101,6 +102,8 @@ const AppLayout = () => {
   };
 
   useLastSeen();
+  // Janela de captura do botão "Nova ideia" (topo do dashboard).
+  const [capturaAberta, setCapturaAberta] = useState(false);
 
   // ── Compra direta pela LP (Payment Link): quem pagou ANTES de criar a conta
   //    tem a assinatura esperando em pending_purchases. No primeiro load logado
@@ -279,7 +282,7 @@ const AppLayout = () => {
 
   const quickActions = isDash ? (
     <>
-      <button onClick={() => navigate("/app/ideias")}
+      <button onClick={() => setCapturaAberta(true)} data-tour="dash-captura"
         className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-[13px] font-bold text-foreground shadow-sm transition hover:opacity-90">
         <Lightbulb className="h-4 w-4" /> Nova ideia
       </button>
@@ -398,7 +401,7 @@ const AppLayout = () => {
             meta={heroMeta}
             actions={
               <>
-                <button onClick={() => navigate("/app/ideias")}
+                <button onClick={() => setCapturaAberta(true)}
                   className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-full bg-white px-3 text-[13px] font-bold text-foreground shadow-sm">
                   <Lightbulb className="h-4 w-4" /> Nova ideia
                 </button>
@@ -452,6 +455,7 @@ const AppLayout = () => {
           </div>
         </div>
       </div>
+      {isDash && <CapturaRapidaDialog open={capturaAberta} onOpenChange={setCapturaAberta} />}
     </SidebarProvider>
     </UploadProgressProvider>
     </VideoPublicConfirmProvider>

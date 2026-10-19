@@ -737,21 +737,42 @@ function EditarPessoa({ m, clients, comoGerente, ficha, aoFechar }: {
       ) : (
         <>
           <div className={secao}>
-            <p className={titSecao}>Módulos liberados</p>
-            <div className="flex flex-wrap gap-2">
+            <p className={titSecao}>O que ela pode fazer em cada módulo</p>
+            {/* NÍVEIS (Walter, 19/10/2026; mockup aprovado). Sem acesso apaga a
+                permissão; os outros gravam o nível. O banco confere de novo. */}
+            <div className="space-y-2">
               {TEAM_MODULES.map((mod) => {
-                const on = enabled.has(mod.code);
+                const perm = m.permissions.find((p) => p.module_code === mod.code);
+                const atual: "nenhum" | "ver" | "editar" | "total" = perm ? (perm.nivel ?? "total") : "nenhum";
+                const escolher = (v: "nenhum" | "ver" | "editar" | "total") => {
+                  if (v === atual) return;
+                  if (v === "nenhum") { setModule.mutate({ memberRowId: m.id, moduleCode: mod.code, enabled: false }); return; }
+                  setModule.mutate({ memberRowId: m.id, moduleCode: mod.code, enabled: true, nivel: v,
+                    allClients: perm ? perm.all_clients : (modoClientes === "all" || cliSel.size === 0),
+                    clientIds: perm ? perm.client_ids : [...cliSel] });
+                };
                 return (
-                  <button key={mod.code} type="button" disabled={setModule.isPending}
-                    onClick={() => setModule.mutate({ memberRowId: m.id, moduleCode: mod.code, enabled: !on,
-                      allClients: modoClientes === "all" || cliSel.size === 0, clientIds: [...cliSel] })}
-                    className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[12px] font-body border transition-colors",
-                      on ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
-                    {on && <Check className="h-3 w-3" />} {mod.label}
-                  </button>
+                  <div key={mod.code} className="grid grid-cols-1 sm:grid-cols-[150px_1fr] items-center gap-1.5 sm:gap-3">
+                    <span className="text-[12.5px] font-body font-semibold text-foreground">{mod.label}</span>
+                    <div className="grid grid-cols-4 gap-1 rounded-xl bg-muted p-1">
+                      {([["nenhum", "Sem acesso"], ["ver", "Ver"], ["editar", "Editar"], ["total", "Total"]] as const).map(([v, l]) => (
+                        <button key={v} type="button" disabled={setModule.isPending} onClick={() => escolher(v)}
+                          aria-pressed={atual === v}
+                          className={cn("rounded-lg py-1.5 text-[11.5px] font-body font-bold transition-colors",
+                            atual === v
+                              ? v === "total" ? "bg-primary text-primary-foreground" : v === "nenhum" ? "bg-card text-muted-foreground shadow-sm" : "bg-card text-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground")}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 );
               })}
             </div>
+            <p className="mt-2 text-[11.5px] font-body text-muted-foreground leading-relaxed">
+              <strong className="text-foreground">Ver</strong>: só olha. <strong className="text-foreground">Editar</strong>: cria, edita, sobe mídia, comenta e muda de coluna. <strong className="text-foreground">Total</strong>: tudo do Editar e mais apagar, mandar pro cliente aprovar e gerar o link de aprovação.
+            </p>
           </div>
 
           <div className={secao}>
