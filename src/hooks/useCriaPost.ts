@@ -265,7 +265,7 @@ export function useExternalClients() {
 }
 
 export function useExternalPosts(clientId: string | null) {
-  const { agencyOwnerId } = useActiveAccount();
+  const { agencyOwnerId, actingAsTeam } = useActiveAccount();
   const qc = useQueryClient();
   const key = ["cria-posts", clientId];
 
@@ -321,9 +321,15 @@ export function useExternalPosts(clientId: string | null) {
     mutationFn: async (input: Partial<ExternalPostInput> & { scheduled_date?: string | null }): Promise<ExternalPost> => {
       // external_client_id fica NULL no rascunho: assim ele não aparece no kanban nem
       // no portal do cliente. O vínculo só acontece quando o post é publicado.
+      // COLABORADORA (Kollab, 19/10/2026): a permissão dela no banco só aceita
+      // post JÁ ligado a um cliente, então o rascunho sem cliente era recusado e
+      // aparecia "Não consegui abrir o post." Pra ela o rascunho nasce com o
+      // cliente e "em_producao" (o portal só lista pendente/ajuste/aprovado e o
+      // kanban filtra is_draft), então continua invisível até publicar.
+      const comCliente = actingAsTeam && !!clientId;
       const { data, error } = await sbFrom("posts").insert({
-        user_id: agencyOwnerId!, external_client_id: null, status: "editando",
-        approval_status: "pendente", approval_mode: "fast", is_draft: true,
+        user_id: agencyOwnerId!, external_client_id: comCliente ? clientId : null, status: "editando",
+        approval_status: comCliente ? "em_producao" : "pendente", approval_mode: "fast", is_draft: true,
         title: "", platform: "instagram", format: "reels",
         scheduled_date: input.scheduled_date ?? null,
       }).select().single();
