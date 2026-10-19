@@ -21,6 +21,7 @@ import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useActiveAccount } from "@/contexts/AccountContext";
+import { useSouParceiro } from "@/hooks/useParceiro";
 import { useContaAtivaId, useAtualizarPerfilAtivo, caminhoDaConta, type PerfilAtivoPatch } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -107,7 +108,8 @@ type AISetupResult = {
 const Onboarding = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { updateProfile } = useProfile();
+  const { profile: perfilDaSessao, updateProfile } = useProfile();
+  const { data: jaEhParceiro } = useSouParceiro();
   const qc = useQueryClient();
   /* MEU PERFIL (Walter, 18/10/2026). A social mídia cria o Meu perfil e, na
      primeira vez que abre, passa por ESTE onboarding. Tudo que ela responde
@@ -174,12 +176,14 @@ const Onboarding = () => {
     if (name.trim()) return;
     // No Meu perfil o nome é o do PERFIL (a edge grava o nome da dona), não o
     // do cadastro da sessão (vinha "WG Walter" no teste de 18/10).
+    // Fora do Meu perfil: o nome do perfil vence o do cadastro (a Bia de teste
+    // aparecia como "teste testado", que era o nome do login).
     const doCadastro = ehMeuPerfil
       ? meuPerfil?.name?.trim()
-      : (user?.user_metadata?.name as string | undefined)?.trim();
+      : (perfilDaSessao?.name?.trim() || (user?.user_metadata?.name as string | undefined)?.trim());
     if (doCadastro) setName(doCadastro);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, ehMeuPerfil, meuPerfil?.name]);
+  }, [user?.id, ehMeuPerfil, meuPerfil?.name, perfilDaSessao?.name]);
 
   useEffect(() => {
     if (voltouDoInstagram) toast.success("Instagram conectado. Bora continuar.");
@@ -605,12 +609,14 @@ const Onboarding = () => {
                   pré-marcado; quem errava passava por seis passos sobre nicho e
                   não achava saída. */}
               {/* No Meu perfil ela já é social mídia: trocar de papel aqui não faz sentido. */}
-              {!ehMeuPerfil && <p className="text-xs text-muted-foreground font-body">
+              {/* Quem já é parceiro não troca de papel aqui: o link virava a
+                  conta de parceiro de novo no meio do onboarding de criadora. */}
+              {!ehMeuPerfil && !jaEhParceiro && <p className="text-xs text-muted-foreground font-body">
                 Não é você? <Link to="/comecar-agencia" className="text-primary underline underline-offset-2">Sou social mídia ou agência</Link>
                 {" · "}
                 <button type="button" onClick={() => setPapeisAbertos((v) => !v)} className="text-primary underline underline-offset-2">Sou designer, editor ou filmmaker</button>
               </p>}
-              {!ehMeuPerfil && papeisAbertos && (
+              {!ehMeuPerfil && !jaEhParceiro && papeisAbertos && (
                 <div className="rounded-2xl border border-border bg-card p-3 space-y-2">
                   <p className="text-xs font-body text-muted-foreground">O que você faz pras agências? Sua conta vira de parceiro de produção (sem mensalidade).</p>
                   <div className="flex flex-wrap gap-2">

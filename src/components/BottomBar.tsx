@@ -2,9 +2,11 @@ import { useState } from "react";
 import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, Menu, ChevronRight, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard, Wand2, TrendingUp, IdCard, Trash2, Gem, Video, Globe, MessageSquarePlus, UsersRound
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, Menu, ChevronRight, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard, Wand2, TrendingUp, IdCard, Trash2, Gem, Video, Globe, MessageSquarePlus, UsersRound, Briefcase
 } from "lucide-react";
 import { useAcessoCriakut } from "@/hooks/useCriakut";
+import { useSouParceiro } from "@/hooks/useParceiro";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -86,7 +88,13 @@ export function BottomBar() {
   const { tier } = useTier();
   const { temSocialMidia } = useTemSocialMidia();
   const { temAcesso: temCriakut } = useAcessoCriakut();
-  const base = MORE_SECTIONS.map((s) => ({
+  // Parceiro na própria conta de criadora: porta de volta pra bancada (igual ao AppRail).
+  const { data: souParceiro } = useSouParceiro();
+  const { isManaging } = useActiveAccount();
+  const portaDaBancada = souParceiro && !isManaging
+    ? [{ title: "Parceiro", items: [{ title: "Clientes e demandas", url: "/socialmidia/dashboard", icon: Briefcase, desc: "Sua carteira e a fila das agências" }] as MoreItem[] }]
+    : [];
+  const base = [...portaDaBancada, ...MORE_SECTIONS].map((s) => ({
     ...s,
     items: s.items.filter((i) => !i.soComSocialMidia || temSocialMidia),
   })).map((s) => s.title === "Mais" && temCriakut

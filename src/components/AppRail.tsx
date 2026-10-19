@@ -5,9 +5,11 @@ import {
   CalendarRange, Kanban, Target, FolderOpen, Palette, BookOpen, BookMarked,
   Link2, Sparkles, BadgeDollarSign, BarChart3, Archive, GraduationCap,
   PlayCircle, Settings, LogOut, Instagram, ShieldCheck, ChevronDown, ChevronsLeft,
-  ChevronsRight, Wand2, IdCard, TrendingUp, Clapperboard, Trash2, Gem, Video, Globe, UsersRound, type LucideIcon,
+  ChevronsRight, Wand2, IdCard, TrendingUp, Clapperboard, Trash2, Gem, Video, Globe, UsersRound, Briefcase, type LucideIcon,
 } from "lucide-react";
 import { useAcessoCriakut } from "@/hooks/useCriakut";
+import { useSouParceiro } from "@/hooks/useParceiro";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { cn } from "@/lib/utils";
 import { useCriaAI } from "@/contexts/CriaAIContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -96,6 +98,12 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
   const { profile } = useProfile();
   const isAdmin = profile?.role === "admin";
   const { temAcesso: temCriakut } = useAcessoCriakut();
+  /* PORTA DE VOLTA DO PARCEIRO (teste de 18/10/2026). A designer que também é
+     criadora entrava no Cria dela e não tinha como voltar pros clientes e pras
+     demandas sem digitar o endereço. No Meu perfil e no Cria de cliente quem
+     leva de volta é a faixa do topo, então aqui é só na conta da própria. */
+  const { data: souParceiro } = useSouParceiro();
+  const { isManaging } = useActiveAccount();
   const [hovered, setHovered] = useState(false);
   const expanded = pinned || hovered;
 
@@ -316,6 +324,7 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
         )}
       >
         <div className="flex w-full flex-col items-stretch gap-1">
+          {souParceiro && !isManaging && renderNode({ id: "bancada", label: "Clientes e demandas", icon: Briefcase, to: "/socialmidia/dashboard" })}
           {TOP.map(renderNode)}
           {/* CRIAKUT: só aparece pra quem tem acesso (convidados até abrir). */}
           {temCriakut && renderNode({ id: "criakut", label: "Criakut", icon: UsersRound, to: "/app/criakut" })}
