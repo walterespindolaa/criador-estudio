@@ -88,6 +88,20 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // A pessoa tem espaço próprio de verdade (gestora com plano)? Então o login
+  // abre nele, e a conta de equipe é só uma troca no menu. Colaborador sem
+  // plano próprio continua caindo na conta do gestor.
+  const { data: temContaPropria = false, isLoading: propriaLoading } = useQuery<boolean>({
+    queryKey: ["conta-propria", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles")
+        .select("account_type, subscription_status").eq("id", user!.id).maybeSingle();
+      const p = data as { account_type?: string | null; subscription_status?: string | null } | null;
+      return !!p && p.account_type === "manager" && ["active", "trialing"].includes(p.subscription_status ?? "");
+    },
+  });
+
   const selectable = useMemo(
     () => [...managedAccounts, ...teamAccounts, ...(meuPerfil ? [meuPerfil] : [])],
     [managedAccounts, teamAccounts, meuPerfil],
@@ -109,10 +123,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     // Seleção salva que é de CLIENTE (não é conta de equipe): ignora e limpa, pra
     // não reabrir num cliente no próximo login.
     if (saved && !teamAccounts.some((m) => m.owner_id === saved)) { localStorage.removeItem(LS_KEY); }
-    if (!saved && managedAccounts.length === 0 && teamAccounts.length > 0) {
-      setActive(teamAccounts[0].owner_id); // colaborador cai na conta do gestor ao logar
+    if (!saved && propriaLoading) return;
+    if (!saved && !temContaPropria && managedAccounts.length === 0 && teamAccounts.length > 0) {
+      setActive(teamAccounts[0].owner_id); // colaborador sem plano próprio cai na conta do gestor
     }
-  }, [user?.id, selectable, managedAccounts.length, teamAccounts, meuPerfil, meuPerfilLoading]);
+  }, [user?.id, selectable, managedAccounts.length, teamAccounts, meuPerfil, meuPerfilLoading, temContaPropria, propriaLoading]);
 
   const setActiveAccount = (ownerId: string | null) => {
     // O Meu perfil recém-criado ainda não está no `selectable` desta renderização:

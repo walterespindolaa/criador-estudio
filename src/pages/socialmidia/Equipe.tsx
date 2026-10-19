@@ -26,6 +26,7 @@ import { ConversasComParceiros } from "@/components/accounts/ConversasComParceir
 import { CanalDaMarca } from "@/components/accounts/CanalDaMarca";
 import { useHasModule } from "@/hooks/useModules";
 import { useActiveAccount } from "@/contexts/AccountContext";
+import { clienteInativo } from "@/lib/cliente-status";
 import { useExternalClients } from "@/hooks/useCriaPost";
 import { useConversasComParceiros, useMeusParceiros } from "@/hooks/useParceiro";
 
@@ -529,7 +530,7 @@ function PessoasDaEquipe({ managerId = null, comoGerente = false }: { managerId?
                   <p className="text-[11px] font-body text-muted-foreground">Você ainda não tem clientes cadastrados.</p>
                 ) : (
                   <div className="max-h-44 overflow-y-auto rounded-xl border border-border divide-y divide-border/60">
-                    {clients.map((c) => {
+                    {clients.filter((c) => !clienteInativo(c) || cliIds.has(c.id)).map((c) => {
                       const on = cliIds.has(c.id);
                       return (
                         <button key={c.id} type="button" onClick={() => toggleCli(c.id)}
@@ -593,7 +594,7 @@ function EditarPessoa({ m, clients, comoGerente, ficha, aoFechar }: {
   const escopoAtual = m.permissions.find((p) => !p.all_clients && p.client_ids?.length);
   // Cliente inativo some da escolha, a não ser que já esteja marcado.
   const jaMarcados = new Set([...(m.clientes_atendidos ?? []), ...(escopoAtual?.client_ids ?? [])]);
-  const ativos = clients.filter((c) => c.status !== "inativo" || jaMarcados.has(c.id));
+  const ativos = clients.filter((c) => !clienteInativo(c) || jaMarcados.has(c.id));
 
   // Colaborador: escopo de clientes (mesmo mecanismo do convite).
   const [modoClientes, setModoClientes] = useState<"all" | "some">(escopoAtual ? "some" : "all");

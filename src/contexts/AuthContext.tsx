@@ -76,11 +76,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    /* LOGIN SEMPRE ABRE NA PRÓPRIA CONTA (Gabriela, 19/10/2026). A conta de
+       equipe escolhida antes ficava salva e voltava no login seguinte. Recarregar
+       a página continua mantendo a escolha; só o login novo zera. */
+    if (!error) { try { localStorage.removeItem("cf_active_account"); } catch { /* ignore */ } }
     return { error };
   }, []);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
+    try { localStorage.removeItem("cf_active_account"); } catch { /* ignore */ }
     queryClient.clear();
   }, [queryClient]);
 
