@@ -57,7 +57,8 @@ import { PrompterPlayer } from "@/components/prompter/PrompterPlayer";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { AgendaCaptacao } from "@/components/captacao/AgendaCaptacao";
-import { usePedidosCaptacao, copiarLinkDoCliente } from "@/hooks/useAgendaCaptacao";
+import { usePedidosCaptacao, copiarLinkDoCliente, linkDoCliente } from "@/hooks/useAgendaCaptacao";
+import { PreviaWhatsApp } from "@/components/shared/PreviaWhatsApp";
 
 // Paleta de cores do app pro gráfico por cidade (as mesmas cores dos chips da
 // agenda). Cicla quando há mais cidades que cores.
@@ -850,7 +851,8 @@ function CriaCaptacaoInner({ fixo }: { fixo?: string } = {}) {
   };
 
   if (agenda && !fixo) {
-    return <AgendaCaptacao abaInicial={agenda} onVoltar={() => setAgenda(null)} />;
+    return <AgendaCaptacao abaInicial={agenda} onVoltar={() => setAgenda(null)}
+      onAbrirPasta={(crmId) => { setAgenda(null); setPasta(`crm:${crmId}`); }} />;
   }
 
   return (
@@ -1902,6 +1904,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
               <CalendarClock className="h-3.5 w-3.5 mr-1.5" /> Link de agendamento
             </Button>
           )}
+          {pasta.crmId && <PreviaWhatsApp obterUrl={() => linkDoCliente(pasta.crmId!)} />}
           {/* O GUIA: é o documento que ela leva pro dia da gravação e manda pro
               cliente. Sem ele, o módulo só guardava texto. */}
           <Button size="sm" variant="outline" onClick={() => void baixarGuia()} disabled={gerandoGuia || roteirosDoGuia.length === 0}

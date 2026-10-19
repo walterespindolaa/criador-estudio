@@ -18,17 +18,34 @@ const sbFrom = (t: string) => (supabase as any).from(t);
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message?: string } | null }>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
 
+export type PedidoDoSlot = {
+  id: string; crm_client_id: string; ideias: string | null; recado: string | null;
+  status: "pendente" | "confirmado" | "recusado"; created_at: string; capture_id: string | null;
+};
 export type SlotCaptacao = {
   id: string; manager_id: string; dia: string; hora: string; duracao: number; local: string | null;
   para_todos: boolean; clientes: string[]; status: "livre" | "pedido" | "confirmado"; criado_por: string | null;
+  /** Pedidos do horário (o calendário mostra QUEM marcou). */
+  pedidos?: PedidoDoSlot[];
 };
+
+/** O pedido que ocupa o horário agora (esperando ou confirmado). */
+export function pedidoAtivo(s: SlotCaptacao): PedidoDoSlot | null {
+  return (s.pedidos ?? []).find((p) => p.status === "pendente" || p.status === "confirmado") ?? null;
+}
 export type PedidoCaptacao = {
   id: string; slot_id: string; crm_client_id: string; ideias: string | null; recado: string | null;
   status: "pendente" | "confirmado" | "recusado"; capture_id: string | null; created_at: string; decidido_em: string | null;
   slot: { dia: string; hora: string; duracao: number; local: string | null } | null;
 };
 export type DiaSemanaPadrao = { dow: number; horas: string[] };
-export type ConfigAgenda = { semana: DiaSemanaPadrao[]; duracao: number; local: string | null; modelo_msg: string | null };
+export type OpcoesMsg = { ideias: boolean; roteiros: boolean; checklist: boolean; link_roteiros: boolean; assinatura: boolean };
+export const OPCOES_PADRAO: OpcoesMsg = { ideias: true, roteiros: true, checklist: true, link_roteiros: false, assinatura: true };
+export const CHECKLIST_PADRAO = ["Ambiente arrumado e iluminado", "Uniforme da equipe", "Produto que vai aparecer separado"];
+export type ConfigAgenda = {
+  semana: DiaSemanaPadrao[]; duracao: number; local: string | null; modelo_msg: string | null;
+  msg_opcoes: Partial<OpcoesMsg>; checklist: string[];
+};
 
 export const MODELO_PADRAO = `Captação confirmada
 {data}, às {hora} ({duracao})
@@ -37,6 +54,60 @@ Ideias do cliente: {ideias}
 Qualquer mudança, avisa aqui.`;
 
 const WD_LONGO = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+const MESES_LONGOS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+/** "Quarta, 04 de novembro" */
+export function dataPorExtenso(dia: string): string {
+  const [y, m, d] = dia.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  return `${WD_LONGO[dt.getDay()]}, ${String(d).padStart(2, "0")} de ${MESES_LONGOS[m - 1]}`;
+}
+
+export function horaCurta(h: string): string {
+  return h.endsWith(":00") ? `${h.slice(0, 2)}h` : h.slice(0, 5).replace(":", "h");
+}
+
+/** "14h às 16h" (início + duração). */
+export function faixaDeHorario(hora: string, duracao: number): string {
+  const [h, m] = hora.split(":").map(Number);
+  const fimMin = h * 60 + (m || 0) + Math.round(duracao * 60);
+  const fh = Math.floor(fimMin / 60) % 24, fm = fimMin % 60;
+  const fim = `${String(fh).padStart(2, "0")}:${String(fm).padStart(2, "0")}`;
+  return `${horaCurta(hora)} às ${horaCurta(fim)}`;
+}
+
+/** Quebra as ideias do cliente em itens curtos (linha, ponto e vírgula ou vírgula). */
+export function itensDasIdeias(ideias: string | null | undefined): string[] {
+  const t = (ideias ?? "").trim();
+  if (!t) return [];
+  const partes = t.split(/\n|;|,(?!\d)/).map((x) => x.replace(/^[\s\-·*]+/, "").trim()).filter(Boolean);
+  return partes.map((x) => x.charAt(0).toUpperCase() + x.slice(1).replace(/\.$/, ""));
+}
+
+/** Mensagem pro grupo (Walter, 19/10/2026: "achei muito simples"). Parte vazia some. */
+export function montarMensagemGrupo(v: {
+  cliente: string; dia: string; hora: string; duracao: number; local?: string | null; ideias?: string | null;
+  roteiros?: string[]; linkRoteiros?: string | null; checklist?: string[]; opcoes?: Partial<OpcoesMsg>; assinatura?: string | null;
+}): string {
+  const o = { ...OPCOES_PADRAO, ...(v.opcoes ?? {}) };
+  const blocos: string[][] = [];
+  blocos.push(["Captação confirmada", v.cliente ? `${v.cliente}, tá marcado!` : "Tá marcado!"]);
+  const quando = [dataPorExtenso(v.dia), faixaDeHorario(v.hora, v.duracao)];
+  if ((v.local ?? "").trim()) quando.push(`Local: ${(v.local ?? "").trim()}`);
+  blocos.push(quando);
+  const gravar = [
+    ...(o.ideias ? itensDasIdeias(v.ideias) : []),
+    ...(o.roteiros ? (v.roteiros ?? []).map((r) => r.trim()).filter(Boolean) : []),
+  ].filter((x, i, a) => a.findIndex((y) => y.toLowerCase() === x.toLowerCase()) === i);
+  if (gravar.length) blocos.push(["O que vamos gravar", ...gravar.map((x) => `· ${x}`)]);
+  if (o.link_roteiros && v.linkRoteiros) blocos.push([`Roteiros: ${v.linkRoteiros}`]);
+  const check = (v.checklist ?? []).map((x) => x.trim()).filter(Boolean);
+  if (o.checklist && check.length) blocos.push(["Pra deixar pronto", ...check.map((x) => `· ${x}`)]);
+  const fim = ["Qualquer mudança, avisa aqui no grupo."];
+  if (o.assinatura && (v.assinatura ?? "").trim()) fim.push((v.assinatura ?? "").trim());
+  blocos.push(fim);
+  return blocos.map((b) => b.join("\n")).join("\n\n");
+}
 
 export function dataLonga(dia: string): string {
   const [y, m, d] = dia.split("-").map(Number);
@@ -79,7 +150,8 @@ export function useSlotsDoMes(ym: string) {
     enabled: !!mgr,
     queryFn: async () => {
       const { de, ate } = intervaloDoMes(ym);
-      const { data, error } = await sbFrom("captacao_slots").select("*")
+      const { data, error } = await sbFrom("captacao_slots")
+        .select("*, pedidos:captacao_pedidos(id, crm_client_id, ideias, recado, status, created_at, capture_id)")
         .eq("manager_id", mgr).gte("dia", de).lte("dia", ate).order("dia").order("hora");
       if (error) throw error;
       return (data ?? []) as SlotCaptacao[];
@@ -94,14 +166,17 @@ export function useConfigAgenda() {
     queryKey: ["captacao-config", mgr],
     enabled: !!mgr,
     queryFn: async () => {
-      const { data } = await sbFrom("captacao_agenda_config").select("semana, duracao, local, modelo_msg").eq("manager_id", mgr).maybeSingle();
+      const { data } = await sbFrom("captacao_agenda_config").select("semana, duracao, local, modelo_msg, msg_opcoes, checklist").eq("manager_id", mgr).maybeSingle();
       const c = data as Partial<ConfigAgenda> | null;
-      return { semana: (c?.semana as DiaSemanaPadrao[]) ?? [], duracao: c?.duracao ?? 2, local: c?.local ?? null, modelo_msg: c?.modelo_msg ?? null };
+      return {
+        semana: (c?.semana as DiaSemanaPadrao[]) ?? [], duracao: c?.duracao ?? 2, local: c?.local ?? null, modelo_msg: c?.modelo_msg ?? null,
+        msg_opcoes: (c?.msg_opcoes as Partial<OpcoesMsg>) ?? {}, checklist: Array.isArray(c?.checklist) ? (c?.checklist as string[]) : [],
+      };
     },
   });
   const salvar = useMutation({
     mutationFn: async (patch: Partial<ConfigAgenda>) => {
-      const atual = q.data ?? { semana: [], duracao: 2, local: null, modelo_msg: null };
+      const atual = q.data ?? { semana: [], duracao: 2, local: null, modelo_msg: null, msg_opcoes: {}, checklist: [] };
       const { error } = await sbFrom("captacao_agenda_config").upsert({ manager_id: mgr, ...atual, ...patch, updated_at: new Date().toISOString() });
       if (error) throw error;
     },

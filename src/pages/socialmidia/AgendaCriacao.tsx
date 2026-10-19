@@ -437,8 +437,15 @@ export default function AgendaCriacao() {
      passadas"). Data anual que só acontece daqui a onze meses não é próxima
      coisa nenhuma: ela ocupa o topo da agenda o ano inteiro. A lista mostra a
      janela dos próximos 90 dias, e o resto fica a um clique. */
-  const JANELA_DIAS = 90;
-  const datasNaJanela = useMemo(() => datasProximas.filter((x) => x.dias <= JANELA_DIAS), [datasProximas]);
+  /* 30 DIAS (Walter, 19/10/2026: "ficou enorme todas as datas"). A janela era
+     de 90 dias e com a carga de datas prontas a lista tomava a página. Sem
+     nenhuma nos próximos 30, aparece só a próxima, com quantos dias faltam. */
+  const JANELA_DIAS = 30;
+  const datasNaJanela = useMemo(() => {
+    const dentro = datasProximas.filter((x) => x.dias <= JANELA_DIAS);
+    return dentro.length > 0 ? dentro : datasProximas.slice(0, 1);
+  }, [datasProximas]);
+  const soAProxima = datasNaJanela.length === 1 && datasNaJanela[0].dias > JANELA_DIAS;
   const [verTodasAsDatas, setVerTodasAsDatas] = useState(false);
   const datasNaTela = verTodasAsDatas ? datasProximas : datasNaJanela;
   const { data: crmTasks = [] } = useCrmTasks();
@@ -1737,6 +1744,49 @@ export default function AgendaCriacao() {
           </div>
         )}
 
+        {/* Próximas tarefas */}
+        <div className="flex items-center gap-1.5 mt-5 mb-2">
+          <ListChecks className="h-3.5 w-3.5 text-sky-600" />
+          <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">Próximas tarefas</p>
+          {upcomingTasks.length > 0 && <span className="text-[10px] font-body font-semibold text-muted-foreground">{upcomingTasks.length}</span>}
+        </div>
+        {upcomingTasks.length === 0 ? (
+          <p className="text-[12px] font-body text-muted-foreground py-3 text-center rounded-xl border border-dashed border-border">Nenhuma tarefa pendente. Clique em "Nova tarefa".</p>
+        ) : (
+          <div className="space-y-2">
+            {upcomingTasks.map((t) => {
+              const d = parseDateOnly(t.due_date!);
+              const isLead = !!t.crm_lead_id;
+              const clientColor = corDaTarefa(t);
+              const who = isLead ? (leadName(t.crm_lead_id) ?? "Lead") : nameOf(t.crm_client_id, null);
+              // Atrasada: venceu antes de hoje e não está concluída. Destaque vermelho.
+              const overdue = t.due_date! < today;
+              return (
+                <div key={t.id} className={cn("flex items-center gap-3 rounded-xl border p-3 flex-wrap", overdue ? "border-red-300 bg-red-50/50 dark:bg-red-500/5" : "border-border")}>
+                  <div className="text-center shrink-0 w-11">
+                    <p className={cn("text-lg font-display font-extrabold leading-none", overdue ? "text-red-600" : "text-foreground")}>{d.getDate()}</p>
+                    <p className="text-[10px] font-body uppercase text-muted-foreground">{d.toLocaleDateString("pt-BR", { month: "short" })}</p>
+                  </div>
+                  <span className="grid h-9 w-9 place-items-center rounded-full shrink-0" style={{ background: `${clientColor}1f`, color: clientColor }}><ListChecks className="h-4 w-4" /></span>
+                  <button type="button" onClick={() => setEditTask(t)} className="min-w-0 flex-1 text-left">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {overdue && <span className="text-[10px] font-body font-bold rounded-full px-2 py-0.5 bg-red-100 text-red-700 shrink-0">Atrasada</span>}
+                      <p className="text-sm font-body font-semibold text-foreground truncate">{t.title}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap text-[11px] font-body text-muted-foreground">
+                      <span className="truncate">{isLead ? `Lead · ${who}` : who}</span>
+                      {t.due_time && <span className="inline-flex items-center gap-0.5"><Clock className="h-3 w-3" />{t.due_time.slice(0, 5)}</span>}
+                    </div>
+                  </button>
+                  <span className="text-[11px] font-body font-semibold rounded-full px-2 py-1 shrink-0" style={{ background: `${clientColor}1f`, color: clientColor }}>{CRM_TASK_PRIORITY_LABELS[t.priority]}</span>
+                  <span role="button" tabIndex={0} aria-label="Concluir tarefa"
+                    onClick={() => updTask.mutate({ id: t.id, status: "concluida" })}
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border cursor-pointer hover:border-emerald-500 hover:text-emerald-600 transition-colors md:h-8 md:w-8"><Check className="h-4 w-4" /></span>
+                </div>
+              );
+            })}
+          </div>
+        )}
         {/* DATAS COMEMORATIVAS cadastradas aqui na agenda.
             Mora nesta seção porque é daqui que ela cadastra: a lista é o lugar de
             conferir se a data já existe e de reabrir pra corrigir, sem precisar
@@ -1748,18 +1798,18 @@ export default function AgendaCriacao() {
           {/* O que ficou de fora da janela continua alcançável, e o botão diz
               quantas são: esconder sem contar é o que faz a pessoa achar que
               o cadastro sumiu. */}
-          {datasProximas.length > datasNaJanela.length && (
-            <button type="button" onClick={() => setVerTodasAsDatas((v) => !v)}
-              className="ml-auto text-[10.5px] font-body font-bold text-primary hover:underline">
-              {verTodasAsDatas ? "ver só as próximas" : `ver todas (${datasProximas.length})`}
-            </button>
-          )}
+          <span className="ml-auto text-[10.5px] font-body text-muted-foreground">{verTodasAsDatas ? "todas as próximas" : soAProxima ? "" : "próximos 30 dias"}</span>
         </div>
+        {soAProxima && !verTodasAsDatas && (
+          <p className="text-[11.5px] font-body text-muted-foreground mb-2">
+            Nada nos próximos 30 dias. Próxima data: <span className="font-semibold text-foreground">{datasNaJanela[0].d.label}</span> em {datasNaJanela[0].dias} dias.
+          </p>
+        )}
         {datasNaTela.length === 0 ? (
           <p className="text-[12px] font-body text-muted-foreground py-3 text-center rounded-xl border border-dashed border-border">
             {datasProximas.length === 0
               ? 'Nenhuma data cadastrada. Clique em "Nova data" pra criar a primeira e marcar de quais clientes ela é assunto.'
-              : "Nenhuma data nos próximos três meses. As que você cadastrou voltam quando o mês delas chegar."}
+              : "Nenhuma data nos próximos 30 dias. As que você cadastrou voltam quando o mês delas chegar."}
           </p>
         ) : (
           <div className="space-y-2">
@@ -1802,48 +1852,12 @@ export default function AgendaCriacao() {
             })}
           </div>
         )}
-
-        {/* Próximas tarefas */}
-        <div className="flex items-center gap-1.5 mt-5 mb-2">
-          <ListChecks className="h-3.5 w-3.5 text-sky-600" />
-          <p className="text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">Próximas tarefas</p>
-          {upcomingTasks.length > 0 && <span className="text-[10px] font-body font-semibold text-muted-foreground">{upcomingTasks.length}</span>}
-        </div>
-        {upcomingTasks.length === 0 ? (
-          <p className="text-[12px] font-body text-muted-foreground py-3 text-center rounded-xl border border-dashed border-border">Nenhuma tarefa pendente. Clique em "Nova tarefa".</p>
-        ) : (
-          <div className="space-y-2">
-            {upcomingTasks.map((t) => {
-              const d = parseDateOnly(t.due_date!);
-              const isLead = !!t.crm_lead_id;
-              const clientColor = corDaTarefa(t);
-              const who = isLead ? (leadName(t.crm_lead_id) ?? "Lead") : nameOf(t.crm_client_id, null);
-              // Atrasada: venceu antes de hoje e não está concluída. Destaque vermelho.
-              const overdue = t.due_date! < today;
-              return (
-                <div key={t.id} className={cn("flex items-center gap-3 rounded-xl border p-3 flex-wrap", overdue ? "border-red-300 bg-red-50/50 dark:bg-red-500/5" : "border-border")}>
-                  <div className="text-center shrink-0 w-11">
-                    <p className={cn("text-lg font-display font-extrabold leading-none", overdue ? "text-red-600" : "text-foreground")}>{d.getDate()}</p>
-                    <p className="text-[10px] font-body uppercase text-muted-foreground">{d.toLocaleDateString("pt-BR", { month: "short" })}</p>
-                  </div>
-                  <span className="grid h-9 w-9 place-items-center rounded-full shrink-0" style={{ background: `${clientColor}1f`, color: clientColor }}><ListChecks className="h-4 w-4" /></span>
-                  <button type="button" onClick={() => setEditTask(t)} className="min-w-0 flex-1 text-left">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {overdue && <span className="text-[10px] font-body font-bold rounded-full px-2 py-0.5 bg-red-100 text-red-700 shrink-0">Atrasada</span>}
-                      <p className="text-sm font-body font-semibold text-foreground truncate">{t.title}</p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap text-[11px] font-body text-muted-foreground">
-                      <span className="truncate">{isLead ? `Lead · ${who}` : who}</span>
-                      {t.due_time && <span className="inline-flex items-center gap-0.5"><Clock className="h-3 w-3" />{t.due_time.slice(0, 5)}</span>}
-                    </div>
-                  </button>
-                  <span className="text-[11px] font-body font-semibold rounded-full px-2 py-1 shrink-0" style={{ background: `${clientColor}1f`, color: clientColor }}>{CRM_TASK_PRIORITY_LABELS[t.priority]}</span>
-                  <span role="button" tabIndex={0} aria-label="Concluir tarefa"
-                    onClick={() => updTask.mutate({ id: t.id, status: "concluida" })}
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border cursor-pointer hover:border-emerald-500 hover:text-emerald-600 transition-colors md:h-8 md:w-8"><Check className="h-4 w-4" /></span>
-                </div>
-              );
-            })}
+        {datasProximas.length > datasNaJanela.length && (
+          <div className="mt-2 text-center">
+            <button type="button" onClick={() => setVerTodasAsDatas((v) => !v)}
+              className="text-[11.5px] font-body font-bold text-primary hover:underline">
+              {verTodasAsDatas ? "Mostrar menos" : `Ver mais datas (${datasProximas.length - datasNaJanela.length})`}
+            </button>
           </div>
         )}
       </div>
