@@ -49,6 +49,12 @@ export type ActiveProfile = Pick<
   tem_assinatura_stripe?: boolean | null;
   /** Só vem preenchida pra dona (ela mesma ou o Meu perfil dela). */
   pix_key?: string | null;
+  theme_preset?: string | null;
+  theme_accent?: string | null;
+  theme_mode?: string | null;
+  theme_sidebar?: string | null;
+  theme_font?: string | null;
+  theme_bg?: string | null;
 };
 
 /** Campos que dá pra gravar na conta ativa (espelha a lista do RPC). */
@@ -70,6 +76,13 @@ export type PerfilAtivoPatch = Partial<{
   pix_key: string | null;
   /** Só a dona (fim do onboarding do Meu perfil). */
   onboarding_completed: boolean;
+  /** Tema: só a dona (ela mesma ou o Meu perfil). */
+  theme_preset: string | null;
+  theme_accent: string | null;
+  theme_mode: string | null;
+  theme_sidebar: string | null;
+  theme_font: string | null;
+  theme_bg: string | null;
 }>;
 
 export type UseActiveProfileResult = {

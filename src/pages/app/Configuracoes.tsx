@@ -400,7 +400,7 @@ const Configuracoes = () => {
             <TabsList data-tour="config-abas" className="inline-flex h-auto bg-card border border-border rounded-2xl p-1.5 gap-1 min-w-max">
               {verPerfil && <TabsTrigger value="perfil" className={TAB_PILL}><User className="h-3.5 w-3.5 shrink-0" /><span>Perfil</span></TabsTrigger>}
               <TabsTrigger value="pilares" className={TAB_PILL}><LayoutGrid className="h-3.5 w-3.5 shrink-0" /><span>Hábitos</span></TabsTrigger>
-              {!isManaging && <TabsTrigger value="visual" data-tour="config-tab-visual" className={TAB_PILL}><Paintbrush className="h-3.5 w-3.5 shrink-0" /><span>Marca & Visual</span></TabsTrigger>}
+              {(!isManaging || ehMeuPerfil) && <TabsTrigger value="visual" data-tour="config-tab-visual" className={TAB_PILL}><Paintbrush className="h-3.5 w-3.5 shrink-0" /><span>Marca & Visual</span></TabsTrigger>}
               {(!isManaging || ehMeuPerfil) && <TabsTrigger value="assinatura" data-tour="config-tab-assinatura" className={TAB_PILL}><CreditCard className="h-3.5 w-3.5 shrink-0" /><span>Assinatura</span></TabsTrigger>}
               {!isManaging && <TabsTrigger value="conexoes" className={TAB_PILL}><Plug className="h-3.5 w-3.5 shrink-0" /><span>Conexões</span></TabsTrigger>}
               {!isManaging && <TabsTrigger value="notificacoes" className={TAB_PILL}><Bell className="h-3.5 w-3.5 shrink-0" /><span>Notificações</span></TabsTrigger>}
@@ -637,10 +637,13 @@ const Configuracoes = () => {
               </div>
             </TabsContent>
 
-            {!isManaging && (
+            {(!isManaging || ehMeuPerfil) && (
             <TabsContent value="visual">
               <SectionHeader title="Marca & Visual" desc="Deixe o CRIA com a sua cara: tema, cores, fundo e tipografia." />
-              <SettingsVisual />
+              {/* Meu perfil: o tema é do perfil, não da sessão da agência. */}
+              {ehMeuPerfil
+                ? <SettingsVisual perfil={perfilAtivo ?? null} gravar={(patch) => atualizarAtivo.mutateAsync(patch)} />
+                : <SettingsVisual />}
             </TabsContent>
             )}
 

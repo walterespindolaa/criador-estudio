@@ -164,7 +164,14 @@ const Onboarding = () => {
   const [niches, setNiches] = useState<string[]>((rascunho?.niches as string[]) ?? []);
   const [customNiche, setCustomNiche] = useState("");
   const [platforms, setPlatforms] = useState<string[]>((rascunho?.platforms as string[]) ?? ["instagram"]);
-  const [objetivo, setObjetivo] = useState<string>((rascunho?.objetivo as string) ?? "");
+  // Mais de um objetivo (Walter, 19/10/2026). Rascunho antigo guardava string.
+  const [objetivos, setObjetivos] = useState<string[]>(() => {
+    const r = rascunho?.objetivos ?? rascunho?.objetivo;
+    if (Array.isArray(r)) return r as string[];
+    return typeof r === "string" && r ? [r] : [];
+  });
+  const toggleObjetivo = (o: string) =>
+    setObjetivos((prev) => (prev.includes(o) ? prev.filter((x) => x !== o) : [...prev, o]));
   const [publico, setPublico] = useState<string>((rascunho?.publico as string) ?? "");
   const [tom, setTom] = useState<string>((rascunho?.tom as string) ?? "");
   const [weeklyGoal, setWeeklyGoal] = useState<number>((rascunho?.weeklyGoal as number) ?? 3);
@@ -194,9 +201,9 @@ const Onboarding = () => {
   // Guarda o rascunho a cada mudança (barato: um objeto pequeno).
   useEffect(() => {
     try {
-      sessionStorage.setItem(chaveRascunho, JSON.stringify({ name, handle, niches, platforms, objetivo, publico, tom, weeklyGoal }));
+      sessionStorage.setItem(chaveRascunho, JSON.stringify({ name, handle, niches, platforms, objetivos, publico, tom, weeklyGoal }));
     } catch { /* modo privado */ }
-  }, [chaveRascunho, name, handle, niches, platforms, objetivo, publico, tom, weeklyGoal]);
+  }, [chaveRascunho, name, handle, niches, platforms, objetivos, publico, tom, weeklyGoal]);
 
   const conectarInstagramAgora = () => {
     // Volta pra este mesmo passo, com o rascunho preservado.
@@ -311,7 +318,7 @@ const Onboarding = () => {
             nichos: niches,
             plataformas: platforms,
             meta_semanal: weeklyGoal,
-            objetivo: objetivo || undefined,
+            objetivo: objetivos.length ? objetivos.join(", ") : undefined,
             publico: publico.trim() || undefined,
             tom: tom || undefined,
           },
@@ -398,7 +405,7 @@ const Onboarding = () => {
          persona, os mesmos lugares que o Brandbook lê. */
       const marcaItens: { user_id: string; type: string; name: string }[] = [];
       if (tom) marcaItens.push({ user_id: donoId, type: "tom", name: tom });
-      if (objetivo) marcaItens.push({ user_id: donoId, type: "objetivo", name: objetivo });
+      for (const o of objetivos) marcaItens.push({ user_id: donoId, type: "objetivo", name: o });
       if (marcaItens.length > 0) {
         const { error: eMarca } = await supabase.from("brand_items").insert(marcaItens as never);
         if (eMarca) console.warn("[onboarding] brand_items insert failed:", eMarca);
@@ -444,7 +451,7 @@ const Onboarding = () => {
     } finally {
       setSetupLoading(false);
     }
-  }, [user, name, handle, niches, platforms, weeklyGoal, objetivo, publico, tom, uploadAvatar, updateProfile, ehMeuPerfil, donoId, atualizarPerfilAtivo, qc]);
+  }, [user, name, handle, niches, platforms, weeklyGoal, objetivos, publico, tom, uploadAvatar, updateProfile, ehMeuPerfil, donoId, atualizarPerfilAtivo, qc]);
 
   useEffect(() => {
     if (step === 6 && !setupStartedRef.current && !setupDone) {
@@ -788,16 +795,17 @@ const Onboarding = () => {
               </header>
 
               <div className="space-y-2">
-                <Label className="font-body text-sm">Qual seu principal objetivo?</Label>
+                <Label className="font-body text-sm">Quais seus objetivos? <span className="text-muted-foreground font-normal">Pode marcar mais de um.</span></Label>
                 <div className="flex flex-wrap gap-2">
                   {OBJETIVO_OPTIONS.map((o) => (
                     <button
                       key={o}
                       type="button"
-                      onClick={() => setObjetivo(o)}
+                      aria-pressed={objetivos.includes(o)}
+                      onClick={() => toggleObjetivo(o)}
                       className={cn(
                         "rounded-full border px-4 py-2 text-sm font-body transition-all",
-                        objetivo === o ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-foreground hover:border-primary/30"
+                        objetivos.includes(o) ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-foreground hover:border-primary/30"
                       )}
                     >
                       {o}

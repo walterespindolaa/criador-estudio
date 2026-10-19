@@ -50,8 +50,20 @@ export function applyThemeFont(fontKey: string) {
   document.documentElement.style.setProperty("--active-font-body", opt.body);
 }
 
-export function SettingsVisual() {
-  const { profile, updateProfile } = useProfile();
+/** Tema que a tela edita. Sem props: o da sessão (como sempre). No Meu perfil
+ *  a Configurações passa o perfil ativo e o gravador dele (Walter, 19/10/2026:
+ *  a cor do Meu Cria não tinha onde mudar). */
+type TemaDoPerfil = {
+  theme_preset?: string | null; theme_accent?: string | null; theme_sidebar?: string | null;
+  theme_font?: string | null; theme_bg?: string | null;
+};
+
+export function SettingsVisual({ perfil, gravar }: {
+  perfil?: TemaDoPerfil | null;
+  gravar?: (patch: Record<string, string | null>) => Promise<unknown>;
+} = {}) {
+  const sessao = useProfile();
+  const profile = (perfil !== undefined ? perfil : sessao.profile) as TemaDoPerfil | null | undefined;
   const { lang, setLang, t } = useI18n();
 
   const [selectedTheme, setSelectedTheme] = useState(profile?.theme_preset || "cria");
@@ -67,7 +79,7 @@ export function SettingsVisual() {
       setSelectedAccent(profile.theme_accent || "#EA4918");
       setSidebarColor(profile.theme_sidebar || "");
       setSelectedFont(profile.theme_font || "moderno");
-      setSelectedBg((profile as { theme_bg?: string | null }).theme_bg || "nenhum");
+      setSelectedBg(profile.theme_bg || "nenhum");
     }
   }, [profile]);
 
@@ -95,16 +107,23 @@ export function SettingsVisual() {
   const handleSave = async () => {
     setSaving(true);
     const preset = THEME_PRESETS.find(t => t.id === selectedTheme);
-    await updateProfile.mutateAsync({
+    const patch = {
       theme_preset: selectedTheme,
       theme_accent: selectedAccent,
       theme_mode: preset?.mode || "light",
       theme_sidebar: sidebarColor || null,
       theme_font: selectedFont,
       theme_bg: selectedBg === "nenhum" ? null : selectedBg,
-    } as never);
-    toast.success("Visual salvo!");
-    setSaving(false);
+    };
+    try {
+      if (gravar) await gravar(patch);
+      else await sessao.updateProfile.mutateAsync(patch as never);
+      toast.success("Visual salvo!");
+    } catch {
+      toast.error("Não consegui salvar o visual. Tenta de novo.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const previewTheme = THEME_PRESETS.find(t => t.id === selectedTheme);

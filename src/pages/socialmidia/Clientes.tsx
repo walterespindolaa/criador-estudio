@@ -172,7 +172,11 @@ export default function Clientes() {
             const extc = extByCrm[c.id] ?? null;
             const inactive = isInactive(c);
             const cor = clientColor(c);                       // cor escolhida na ficha
-            const accent = cor ?? "#0F6E56";                  // fallback: verde padrão de hoje
+            /* SEM COR = NEUTRO (Walter, 19/10/2026). O cartão caía num verde padrão
+               e parecia cor escolhida; a agenda, pro mesmo cliente sem cor, usava o
+               vermelho de "Post", e o seletor de cor aparecia vazio. Agora sem cor é
+               cinza e ponto: dá pra ver na lista quem ainda não tem cor. */
+            const accent = cor ?? "#9CA3AF";
             return (
               <div key={c.id} role="button" tabIndex={0} onClick={() => open(c.id)}
                 onKeyDown={(e) => { if (e.key === "Enter") open(c.id); }}
@@ -181,7 +185,7 @@ export default function Clientes() {
                 <span aria-hidden className="absolute top-0 inset-x-0 h-1.5" style={{ background: accent }} />
                 <span aria-hidden className="absolute -top-10 -right-10 w-28 h-28 rounded-full blur-xl opacity-10 pointer-events-none" style={{ background: accent }} />
                 <span className="relative w-16 h-16 rounded-full grid place-items-center text-xl font-display font-bold overflow-hidden mb-3 ring-2 ring-white shadow-md transition-all"
-                  style={{ background: cor ? accent : "linear-gradient(135deg,#0F6E56,#1d9e75)", color: cor ? textOn(accent) : "#fff" }}>
+                  style={{ background: cor ? accent : "linear-gradient(135deg,#9CA3AF,#6B7280)", color: cor ? textOn(accent) : "#fff" }}>
                   {initial(nameOf(c))}
                   {avatarOf(c) && <img src={avatarOf(c)!} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 w-full h-full object-cover" />}
                 </span>
