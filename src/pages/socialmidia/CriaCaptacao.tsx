@@ -1874,153 +1874,154 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
         clientName={pasta.nome}
         aoAbrirDia={aoAbrirDia}
         maxHistorico={6}
+        historicoForaDoMes={month}
       />
 
       {/* Revisões do cliente: link aberto, o que voltou e o botão de confirmar. */}
       <PainelAprovacoes month={month} crmClientId={pasta.crmId} clientName={pasta.nome} />
 
-      {/* Roteiros do mês: a biblioteca (quantos quiser) + os roteiros escritos
-          DENTRO das captações do mês, tudo na MESMA grade. Antes o roteiro da
-          captação ficava escondido na captação e a grade parecia vazia. */}
+      {/* ROTEIROS E GRAVAÇÕES NUMA LISTA SÓ, POR DIA (Walter, 19/10/2026;
+          mockup aprovado). Antes eram duas seções: "Roteiros de outubro" só
+          com os roteiros sem dia e "Captações de outubro" com os roteiros de
+          cada dia escondidos dentro da captação fechada. A tela dizia "Nenhum
+          roteiro" em cima de uma gravação com roteiros. Agora cada roteiro
+          mora num dia ou em "Sem dia ainda", e cada bloco abre e fecha. */}
       {(() => {
-        // Os roteiros JÁ ligados a um dia moram dentro da captação: aqui em cima
-        // ficam só os soltos (pauta pronta, dia ainda não marcado).
         const soltos = ordenados.filter((s) => !s.capture_id);
-        const totalRoteiros = soltos.length;
-        const noDia = scripts.filter((s) => !!s.capture_id).length;
+        const hojeIso = hojeBR();
+        const mostrarSemDia = soltos.length > 0 || caps.length === 0;
+        const Selo = ({ topo, base, neutro }: { topo: string; base: string; neutro?: boolean }) => (
+          <span className={cn("grid w-11 shrink-0 place-items-center rounded-xl py-1 leading-none",
+            neutro ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary")}>
+            <span className="text-[17px] font-display font-extrabold">{topo}</span>
+            <span className="text-[9.5px] font-body font-bold uppercase">{base}</span>
+          </span>
+        );
+        const Alternar = ({ n }: { n: number }) => (
+          <span className="shrink-0 inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[11.5px] font-body font-bold text-muted-foreground">
+            {n} {n === 1 ? "roteiro" : "roteiros"}
+            <span className="group-open/bloco:hidden">· ver</span>
+            <span className="hidden group-open/bloco:inline">· fechar</span>
+            <ChevronDown className="h-3.5 w-3.5 transition-transform group-open/bloco:rotate-180" />
+          </span>
+        );
         return (
       <div>
-        <h3 className="flex items-center gap-1.5 text-sm font-display font-bold text-foreground mb-2">
-          <FileText className="h-4 w-4 text-primary" /> Roteiros de {monthLabel(month).toLowerCase()}
+        <h3 className="flex flex-wrap items-baseline gap-x-2 text-sm font-display font-bold text-foreground mb-2">
+          <span className="inline-flex items-center gap-1.5"><Video className="h-4 w-4 text-primary" /> {monthLabel(month)}: roteiros e gravações</span>
           {scripts.length > 0 && (
             <span className="text-[12px] font-body font-semibold text-muted-foreground">({gravados}/{scripts.length} gravados)</span>
           )}
         </h3>
-        {totalRoteiros === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border p-6 text-center">
-            {/* Dizer "nenhum roteiro" com roteiros dentro das captações é
-                mentira e assusta: aqui em cima só moram os que não têm dia. */}
-            {noDia > 0 ? (
-              <>
-                <p className="text-sm font-body text-foreground font-medium">
-                  {noDia === 1 ? "O roteiro deste mês está" : `Os ${noDia} roteiros deste mês estão`} dentro das captações
-                </p>
-                <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">
-                  Abra o dia de gravação aqui embaixo pra ver, reordenar e editar. Esta lista mostra só os roteiros que ainda não têm dia marcado.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-sm font-body text-foreground font-medium">Nenhum roteiro neste mês</p>
-                <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">
-                  Adicione quantos quiser no Novo roteiro{ext ? " ou puxe os reels do cronograma" : ""}. As setas do mês lá em cima mostram os meses anteriores e os próximos.
-                </p>
-              </>
-            )}
-          </div>
-        ) : (
-          /* LISTA NA ORDEM DE GRAVAÇÃO. A grade de cards não dizia o que gravar
-             primeiro nem deixava reordenar: virava um monte de quadradinho
-             igual. Aqui cada linha é um vídeo, numerado, arrastável, mostrando
-             data, formato, quantas cenas tem e se já tem referência. */
-          <div className="space-y-2">
-            {/* onBeforeCapture (e não onDragStart): os alvos dos dias precisam estar
-                na tela ANTES da biblioteca medir as áreas de soltar. */}
-            <DndRoteiros onBeforeCapture={() => flushSync(() => setArrastandoRoteiro(true))} onDragEnd={aoArrastarRoteiro}>
-              <DropRoteiros droppableId="roteiros">
-                {(drop) => (
-                  <div ref={drop.innerRef} {...drop.droppableProps} className="space-y-2">
-                    {soltos.map((s, i) => (
-                      <DragRoteiro key={s.id} draggableId={s.id} index={i}>
-                        {(drag, snap) => (
-                          <div ref={drag.innerRef} {...drag.draggableProps}
-                            className={cn("rounded-2xl border border-border bg-card", snap.isDragging && "shadow-lg ring-2 ring-primary/40")}>
-                            <RoteiroLinha script={s} indice={i} onOpen={() => setVerId(s.id)}
-                              onExcluir={() => delScript.mutate(s.id, { onSuccess: () => toast.success("Roteiro excluído.") })}
-                              handleProps={drag.dragHandleProps ?? undefined} />
-                          </div>
-                        )}
-                      </DragRoteiro>
-                    ))}
-                    {drop.placeholder}
-                  </div>
+        <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
+          {mostrarSemDia && (
+            <details open className="group/bloco">
+              <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:bg-muted/30 transition-colors">
+                <Selo topo="?" base="sem dia" neutro />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-body font-bold text-foreground">Sem dia ainda</span>
+                  <span className="block text-[12px] font-body text-muted-foreground">
+                    {soltos.length > 0
+                      ? (caps.length > 0 ? "Roteiros prontos esperando data. Arraste pra um dia de gravação." : "Roteiros prontos esperando data. Marque a captação pra ligar a um dia.")
+                      : `Nenhum roteiro nem gravação em ${monthLabel(month).toLowerCase()}. Escreva um roteiro${ext ? ", puxe os reels do cronograma" : ""} ou marque a captação.`}
+                  </span>
+                </span>
+                <Alternar n={soltos.length} />
+              </summary>
+              <div className="px-4 pb-3 sm:pl-[72px]">
+                {soltos.length > 0 && (
+                  <DndRoteiros onBeforeCapture={() => flushSync(() => setArrastandoRoteiro(true))} onDragEnd={aoArrastarRoteiro}>
+                    <DropRoteiros droppableId="roteiros">
+                      {(drop) => (
+                        <div ref={drop.innerRef} {...drop.droppableProps} className="space-y-2">
+                          {soltos.map((s, i) => (
+                            <DragRoteiro key={s.id} draggableId={s.id} index={i}>
+                              {(drag, snap) => (
+                                <div ref={drag.innerRef} {...drag.draggableProps}
+                                  className={cn("rounded-2xl border border-border bg-card", snap.isDragging && "shadow-lg ring-2 ring-primary/40")}>
+                                  <RoteiroLinha script={s} indice={i} onOpen={() => setVerId(s.id)}
+                                    onExcluir={() => delScript.mutate(s.id, { onSuccess: () => toast.success("Roteiro excluído.") })}
+                                    handleProps={drag.dragHandleProps ?? undefined} />
+                                </div>
+                              )}
+                            </DragRoteiro>
+                          ))}
+                          {drop.placeholder}
+                        </div>
+                      )}
+                    </DropRoteiros>
+                    {/* Alvos pra soltar: aparecem só enquanto arrasta, um por dia de gravação. */}
+                    {caps.length > 0 && (
+                      <div className={cn("transition-all mt-2", arrastandoRoteiro ? "opacity-100" : "hidden")}>
+                        <p className="text-[11px] font-body font-semibold text-muted-foreground mb-1.5">Solte num dia de gravação:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {caps.filter((c) => c.status !== "cancelada").map((c) => (
+                            <DropRoteiros key={c.id} droppableId={"cap:" + c.id}>
+                              {(dz, st) => (
+                                <div ref={dz.innerRef} {...dz.droppableProps}
+                                  className={cn("min-w-[130px] rounded-xl border-2 border-dashed px-3 py-2.5 text-center text-[13px] font-display font-bold transition-colors",
+                                    st.isDraggingOver ? "border-primary bg-primary/10 text-primary" : "border-border bg-muted/30 text-foreground")}>
+                                  <Video className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+                                  {diaMes(c.capture_date)}{c.capture_time ? " · " + c.capture_time.slice(0, 5) : ""}
+                                  <div className="hidden">{dz.placeholder}</div>
+                                </div>
+                              )}
+                            </DropRoteiros>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </DndRoteiros>
                 )}
-              </DropRoteiros>
-              {/* Alvos pra soltar: aparecem só enquanto arrasta, um por dia de gravação. */}
-              {caps.length > 0 && (
-                <div className={cn("transition-all", arrastandoRoteiro ? "opacity-100" : "hidden")}>
-                  <p className="text-[11px] font-body font-semibold text-muted-foreground mb-1.5">Solte num dia de gravação:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {caps.filter((c) => c.status !== "cancelada").map((c) => (
-                      <DropRoteiros key={c.id} droppableId={"cap:" + c.id}>
-                        {(dz, st) => (
-                          <div ref={dz.innerRef} {...dz.droppableProps}
-                            className={cn("min-w-[130px] rounded-xl border-2 border-dashed px-3 py-2.5 text-center text-[13px] font-display font-bold transition-colors",
-                              st.isDraggingOver ? "border-primary bg-primary/10 text-primary" : "border-border bg-muted/30 text-foreground")}>
-                            <Video className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
-                            {diaMes(c.capture_date)}{c.capture_time ? " · " + c.capture_time.slice(0, 5) : ""}
-                            <div className="hidden">{dz.placeholder}</div>
-                          </div>
-                        )}
-                      </DropRoteiros>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </DndRoteiros>
-          </div>
-        )}
+                <button type="button" onClick={() => { setEditando(null); setCapturaAlvo(null); setEditorOpen(true); }}
+                  className="mt-2 inline-flex items-center gap-1.5 text-[12.5px] font-body font-bold text-primary hover:underline">
+                  <Plus className="h-3.5 w-3.5" /> roteiro sem dia
+                </button>
+              </div>
+            </details>
+          )}
+
+          {caps.map((c) => {
+            /* PRONTIDÃO NO LUGAR DE "PENDENTE" (Captação v4, ciclo 1): a linha
+               diz o degrau e o que falta, sem precisar abrir. Dia que ainda vai
+               acontecer nasce aberto; dia gravado nasce fechado. */
+            const p = prontidaoDa(c, scripts, envios);
+            const doDia = scripts.filter((s) => s.capture_id === c.id);
+            const aberta = c.status !== "concluida" && c.status !== "cancelada" && c.capture_date >= hojeIso;
+            const [, mm, dd] = c.capture_date.split("-");
+            const mesCurto = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][Number(mm) - 1] ?? "";
+            return (
+              <details key={c.id} open={aberta} className="group/bloco">
+                <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:bg-muted/30 transition-colors">
+                  <Selo topo={dd} base={mesCurto} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-body font-bold text-foreground truncate">
+                      {[c.capture_time ? c.capture_time.slice(0, 5) : null, c.location].filter(Boolean).join(" · ") || "Dia de gravação"}
+                    </span>
+                    <LinhaProntidao p={p} className="block" />
+                  </span>
+                  <SeloProntidao p={p} className="hidden sm:inline-flex shrink-0" />
+                  <Alternar n={doDia.length} />
+                </summary>
+                <div className="border-t border-border/60">{renderCapture(c, {
+                  roteiros: doDia,
+                  acoes: {
+                    adicionar: () => { setEditando(null); setCapturaAlvo(c); setEditorOpen(true); },
+                    editar: (s) => { setEditando(s); setCapturaAlvo(c); setEditorOpen(true); },
+                    excluir: (s) => delScript.mutate(s.id, { onSuccess: () => toast.success("Roteiro excluído.") }),
+                    toggleGravado: (s) => updScript.mutate({ id: s.id, patch: { done: !s.done } }),
+                    reordenar: (ids) => reorderScripts.mutate(ids),
+                    teleprompter: (s) => onPrompter(s.title?.trim() || pasta.nome, cenasDe(s).length > 0 ? cenasParaTexto(cenasDe(s)) : (s.content || "")),
+                    salvando: addScript.isPending,
+                  },
+                })}</div>
+              </details>
+            );
+          })}
+        </div>
       </div>
         );
       })()}
-
-      {/* Captações do cliente no mês (mesma linha da Agenda do mês). */}
-      <div>
-        <h3 className="flex items-center gap-1.5 text-sm font-display font-bold text-foreground mb-2">
-          <Video className="h-4 w-4 text-primary" /> Captações de {monthLabel(month).toLowerCase()}
-        </h3>
-        {caps.length === 0 ? (
-          <p className="text-xs font-body text-muted-foreground rounded-2xl border border-dashed border-border p-4">
-            Nenhuma captação marcada neste mês. Use o Marcar captação aqui em cima.
-          </p>
-        ) : (
-          /* Compacto por padrão: uma linha por captação (dia, hora, status);
-             expandir mostra o card completo (roteiro, tomadas, virar post). */
-          <div className="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
-            {caps.map((c) => {
-              /* PRONTIDÃO NO LUGAR DE "PENDENTE" (Captação v4, ciclo 1).
-                 A linha dizia "roteiro pronto · Pendente" pra uma gravação que
-                 o cliente nunca revisou e pra uma que ele já devolveu: a mesma
-                 coisa pra estados diferentes. Agora a linha diz o degrau e o
-                 que falta, sem precisar abrir o card. */
-              const p = prontidaoDa(c, scripts, envios);
-              return (
-                <details key={c.id} className="group/cap">
-                  <summary className="flex items-center gap-2.5 px-4 py-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden hover:bg-muted/30 transition-colors">
-                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 transition-transform group-open/cap:rotate-90" />
-                    <span className="text-sm font-display font-bold text-foreground tabular-nums shrink-0">{diaMes(c.capture_date)}</span>
-                    {c.capture_time && <span className="text-[12px] font-body text-muted-foreground shrink-0">{c.capture_time.slice(0, 5)}</span>}
-                    <LinhaProntidao p={p} className="flex-1" />
-                    <SeloProntidao p={p} className="shrink-0" />
-                  </summary>
-                  <div className="border-t border-border/60">{renderCapture(c, {
-                    roteiros: scripts.filter((s) => s.capture_id === c.id),
-                    acoes: {
-                      adicionar: () => { setEditando(null); setCapturaAlvo(c); setEditorOpen(true); },
-                      editar: (s) => { setEditando(s); setCapturaAlvo(c); setEditorOpen(true); },
-                      excluir: (s) => delScript.mutate(s.id, { onSuccess: () => toast.success("Roteiro excluído.") }),
-                      toggleGravado: (s) => updScript.mutate({ id: s.id, patch: { done: !s.done } }),
-                      reordenar: (ids) => reorderScripts.mutate(ids),
-                      teleprompter: (s) => onPrompter(s.title?.trim() || pasta.nome, cenasDe(s).length > 0 ? cenasParaTexto(cenasDe(s)) : (s.content || "")),
-                      salvando: addScript.isPending,
-                    },
-                  })}</div>
-                </details>
-              );
-            })}
-          </div>
-        )}
-      </div>
 
       {/* Tomadas padrão DESTE cliente (só cliente do CRM). */}
       {onSaveClientShots && (
