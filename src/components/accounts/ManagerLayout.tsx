@@ -324,19 +324,46 @@ export default function ManagerLayout() {
             aqui dentro pra marca de "ativo" (-left-2) não ser cortada. */}
         <div className="cria-rail-scroll flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden px-2">
         <div className="flex w-full flex-col items-stretch gap-1">
-          {railHovered && <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{parceiroPuro ? "Parceiro" : "Dia a dia"}</p>}
+          {railHovered && <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Dia a dia</p>}
           {railNode(Home, "Início", { active: isActive("/socialmidia/dashboard"), onClick: () => navigate("/socialmidia/dashboard") })}
-          {/* Parceiro puro não gerencia clientes nem aprova post: essas portas
-             só confundem (era o "menu infinito" do print do Walter). */}
-          {!parceiroPuro && canClients && railNode(Contact, "Clientes", { active: isActive("/socialmidia/clientes"), onClick: () => navigate("/socialmidia/clientes") })}
-          {!parceiroPuro && canAgenda && railNode(CalendarDays, "Agenda", { active: isActive("/socialmidia/agenda"), onClick: () => navigate("/socialmidia/agenda") })}
+          {/* VISÃO AMPLA DO PARCEIRO (Walter, 18/10/2026, mockup aprovado). Antes
+             o parceiro puro não via Clientes, Agenda nem Aprovações (31/08: "menu
+             infinito"). Agora a designer também atende cliente próprio e tem o
+             Meu perfil: uma conta, dois papéis. A bancada dela vira a seção
+             "Parceiro" logo abaixo. A home continua a dela (ParceiroHome). */}
+          {canClients && railNode(Contact, "Clientes", { active: isActive("/socialmidia/clientes"), onClick: () => navigate("/socialmidia/clientes") })}
+          {canAgenda && railNode(CalendarDays, "Agenda", { active: isActive("/socialmidia/agenda"), onClick: () => navigate("/socialmidia/agenda") })}
           {/* Cria Captação NÃO é mais item fixo: virou módulo pago e entra na
               seção "Módulos" abaixo (pelo loop de `modules`), com cadeado/preço
               pra quem não tem e ponto verde pra quem ativou. */}
-          {!parceiroPuro && railNode(ListChecks, "Aprovações", { active: isActive("/socialmidia/aprovacoes"), onClick: () => navigate("/socialmidia/aprovacoes") })}
+          {railNode(ListChecks, "Aprovações", { active: isActive("/socialmidia/aprovacoes"), onClick: () => navigate("/socialmidia/aprovacoes") })}
+          {/* CRIAKUT MAIS VISÍVEL (Walter, 18/10/2026). Morava no meio de
+             "Negócio". Subiu pra cá. Pro parceiro, que é quem mais ganha sendo
+             achado, vira um cartão em destaque com o menu aberto (e bolinha com
+             o menu fechado). Pra social mídia, item normal: "não precisa dar
+             tanta ênfase". Continua valendo só pra quem tem acesso. */}
+          {temCriakut && (souParceiro && railHovered ? (
+            <button
+              key="criakut-destaque"
+              type="button"
+              onClick={() => navigate("/socialmidia/criakut")}
+              className={cn(
+                "my-1 w-full rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/10 to-pink-500/10 p-3 text-left transition-colors hover:from-primary/15 hover:to-pink-500/15",
+                isActive("/socialmidia/criakut") && "ring-2 ring-primary/40",
+              )}
+            >
+              <span className="block font-display text-[15px] font-bold leading-tight text-foreground">Criakut</span>
+              <span className="mt-0.5 block font-body text-[11.5px] leading-snug text-muted-foreground">Ache social mídia, designer, editor e filmmaker. E seja achado.</span>
+              <span className="mt-2 inline-flex rounded-full bg-primary px-2.5 py-0.5 font-body text-[11px] font-bold text-primary-foreground">Abrir comunidade</span>
+            </button>
+          ) : railNode(UsersRound, "Criakut", {
+            active: isActive("/socialmidia/criakut"),
+            onClick: () => navigate("/socialmidia/criakut"),
+            corner: souParceiro ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-pink-500 ring-2 ring-[hsl(var(--sidebar-background))]" /> : undefined,
+          }))}
           {/* ── PARCEIRO: quem produz pras agências tem a fila AQUI dentro,
               na mesma casca da própria operação. Uma conta, dois papéis. ── */}
-          {souParceiro && !parceiroPuro && railHovered && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Parceiro</p>}
+          {souParceiro && railHovered && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Parceiro</p>}
           {souParceiro && railNode(Briefcase, "Minhas demandas", {
             active: isActive("/socialmidia/demandas"), onClick: () => navigate("/socialmidia/demandas"),
             corner: filaParceiro.length > 0 ? <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-[hsl(var(--sidebar-background))]" /> : undefined,
@@ -346,6 +373,12 @@ export default function ManagerLayout() {
           {souParceiro && railNode(PackageCheck, "Entregues", { active: isActive("/socialmidia/entregues"), onClick: () => navigate("/socialmidia/entregues") })}
           {souParceiro && railNode(FileText, "Extrato do mês", { active: isActive("/socialmidia/extrato"), onClick: () => navigate("/socialmidia/extrato") })}
           {souParceiro && railNode(Layers, "Marcas que atendo", { active: isActive("/socialmidia/marcas"), onClick: () => navigate("/socialmidia/marcas") })}
+          {/* Meus cachês mora na bancada (antes ficava em "Negócio"): é o
+             dinheiro do trabalho de parceiro, junto do extrato. */}
+          {souParceiro && railNode(DollarSign, "Meus cachês", {
+            active: isActive("/socialmidia/caches"),
+            onClick: () => navigate("/socialmidia/caches"),
+          })}
           {railHovered && (modules.length > 0 || hasHubCria) && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Módulos</p>}
           {/* O PARCEIRO VÊ CADA MÓDULO NO MENU (Walter, 09/09/2026). Antes ele
              tinha UMA porta ("Módulos do Cria") que levava pra vitrine na home,
@@ -396,16 +429,10 @@ export default function ManagerLayout() {
              do dinheiro dele é de QUEM É PARCEIRO, não de quem não comprou
              nada. Agora acompanha `souParceiro`, igual aos outros três itens da
              seção (demandas, entregues, marcas). */}
-          {souParceiro && railNode(DollarSign, "Meus cachês", {
-            active: isActive("/socialmidia/caches"),
-            onClick: () => navigate("/socialmidia/caches"),
-          })}
           {/* PARCERIA e LIXEIRA faltavam pro parceiro (Walter, 09/09/2026).
              Indicar o CRIA e ganhar comissão vale pra ele igual, e apagar sem
              ter como recuperar é o tipo de porta que não pode faltar. */}
-          {temCriakut && railNode(UsersRound, "Criakut", { active: isActive("/socialmidia/criakut"), onClick: () => navigate("/socialmidia/criakut") })}
-          {parceiroPuro && railNode(Handshake, LABELS.indique, { active: isActive("/socialmidia/parceria"), onClick: () => navigate("/socialmidia/parceria") })}
-          {BUSINESS_NAV.filter((n) => !parceiroPuro).map((n) => {
+          {BUSINESS_NAV.map((n) => {
             const onClick = n.to === "/socialmidia/comissoes" ? onNavComissoes : () => navigate(n.to);
             return railNode(n.icon as LucideIcon, n.label, { active: isActive(n.to), onClick });
           })}
@@ -543,6 +570,23 @@ export default function ManagerLayout() {
         // quadradinho, descrição do que aquilo faz e chevron. A grade de ícones
         // secos que existia aqui não dizia o que cada coisa era.
         const moreSections: { title: string; items: { label: string; desc?: string; icon: LucideIcon; onClick: () => void; ativo?: boolean }[] }[] = [
+          // Criakut subiu pro topo (18/10/2026): mais visível, igual ao rail.
+          ...(temCriakut ? [{
+            title: "Comunidade",
+            items: [{ label: "Criakut", desc: "Ache e contrate social mídia, designer, editor e filmmaker", icon: UsersRound as LucideIcon, onClick: () => navigate("/socialmidia/criakut") }],
+          }] : []),
+          // Bancada do parceiro no celular: o dock só leva Demandas.
+          ...(souParceiro ? [{
+            title: "Parceiro",
+            items: [
+              { label: "Minhas demandas", desc: "O que as agências te pediram", icon: Briefcase as LucideIcon, onClick: () => navigate("/socialmidia/demandas") },
+              { label: "Minha agenda", desc: "Prazos de entrega no calendário", icon: CalendarCheck as LucideIcon, onClick: () => navigate("/socialmidia/minha-agenda") },
+              { label: "Entregues", desc: "O que você já entregou", icon: PackageCheck as LucideIcon, onClick: () => navigate("/socialmidia/entregues") },
+              { label: "Extrato do mês", desc: "Peças e valores do período", icon: FileText as LucideIcon, onClick: () => navigate("/socialmidia/extrato") },
+              { label: "Marcas que atendo", desc: "As marcas de cada agência", icon: Layers as LucideIcon, onClick: () => navigate("/socialmidia/marcas") },
+              { label: "Meus cachês", desc: "O que você tem a receber, entrega por entrega", icon: DollarSign as LucideIcon, onClick: () => navigate("/socialmidia/caches") },
+            ],
+          }] : []),
           // Cria Captação saiu do "Dia a dia": agora é módulo pago e aparece na
           // seção "Módulos" (pelo loop de `modules`), igual aos outros.
           {
@@ -570,25 +614,14 @@ export default function ManagerLayout() {
               ...(hasHubCria ? [{ label: "Cria Radar", desc: "Espiar os concorrentes dos seus clientes", icon: Search as LucideIcon, ativo: true, onClick: () => navigate("/socialmidia/hubcria") }] : []),
             ],
           },
-          ...(temCriakut ? [{
-            title: "Comunidade",
-            items: [{ label: "Criakut", desc: "Ache e contrate social mídia, designer, editor e filmmaker", icon: UsersRound as LucideIcon, onClick: () => navigate("/socialmidia/criakut") }],
-          }] : []),
           {
             title: "Negócio",
-            items: parceiroPuro
-              // Parceiro puro: só as Comissões fazem sentido pra ele aqui.
-              // Walter pediu (09/09) que o parceiro também indique o Cria. O que
-              // confundia era o NOME: "Parceria" lido por um parceiro de produção
-              // parecia o papel dele. Virou "Indique e ganhe" (pente fino 23/09).
-              ? [
-                { label: "Meus cachês", desc: "O que você tem a receber, entrega por entrega", icon: DollarSign as LucideIcon, onClick: () => navigate("/socialmidia/caches") },
-                { label: LABELS.indique, desc: "Indique o Cria e ganhe comissão", icon: Handshake as LucideIcon, onClick: () => navigate("/socialmidia/parceria") },
-              ]
-              : [
-              ...(veEquipe ? [{ label: "Equipe", desc: actingAsTeam ? "Produção e conversas com parceiros" : "Produção, conversas e pessoas", icon: UserPlus as LucideIcon, onClick: () => navigate("/socialmidia/equipe") }] : []),
+            // Visão ampla (18/10/2026): parceiro vê o Negócio inteiro. Os cachês
+            // foram pra seção Parceiro. Equipe continua só pra quem opera agência.
+            items: [
+              ...(veEquipe && !parceiroPuro ? [{ label: "Equipe", desc: actingAsTeam ? "Produção e conversas com parceiros" : "Produção, conversas e pessoas", icon: UserPlus as LucideIcon, onClick: () => navigate("/socialmidia/equipe") }] : []),
               { label: "Relatório da operação", desc: "Produção, financeiro e carteira no período", icon: BarChart3 as LucideIcon, onClick: () => navigate("/socialmidia/relatorio") },
-              { label: "Parceria", desc: "Indique o CRIA e ganhe comissão", icon: Handshake as LucideIcon, onClick: () => navigate("/socialmidia/parceria") },
+              { label: souParceiro ? LABELS.indique : "Parceria", desc: "Indique o CRIA e ganhe comissão", icon: Handshake as LucideIcon, onClick: () => navigate("/socialmidia/parceria") },
               { label: "Comissões", desc: "O que você já ganhou", icon: DollarSign as LucideIcon, onClick: onNavComissoes },
               { label: "Suas contas", desc: "Assentos e clientes do plano", icon: Users as LucideIcon, onClick: () => navigate("/socialmidia/contas") },
             ],
@@ -657,16 +690,14 @@ export default function ManagerLayout() {
               <div className="flex items-center justify-center gap-2.5 px-3 pointer-events-auto">
                 <div className="dock-pill flex items-center gap-0.5 rounded-[30px] p-1.5">
                   {dockItem(isActive("/socialmidia/dashboard"), Home, "Início", () => navigate("/socialmidia/dashboard"))}
-                  {/* Dock do parceiro puro: a bancada dele (fila, entregues,
-                     marcas) em vez das telas de gestão que ele não usa. */}
-                  {parceiroPuro ? (
+                  {/* Dock do parceiro (visão ampla, 18/10/2026): clientes dela,
+                     a fila de demandas (o que mais usa no celular) e aprovações.
+                     O resto da bancada está no menu "Mais", seção Parceiro. */}
+                  {souParceiro ? (
                     <>
+                      {canClients && dockItem(isActive("/socialmidia/clientes"), Contact, "Clientes", () => navigate("/socialmidia/clientes"))}
                       {dockItem(isActive("/socialmidia/demandas"), Briefcase, "Demandas", () => navigate("/socialmidia/demandas"))}
-                      {/* A agenda entra no dock (circuito 11): é tela de uso
-                          diário, e é no celular que ela olha o dia. */}
-                      {dockItem(isActive("/socialmidia/minha-agenda"), CalendarCheck, "Agenda", () => navigate("/socialmidia/minha-agenda"))}
-                      {dockItem(isActive("/socialmidia/entregues"), PackageCheck, "Entregues", () => navigate("/socialmidia/entregues"))}
-                      {dockItem(isActive("/socialmidia/marcas"), Layers, "Marcas", () => navigate("/socialmidia/marcas"))}
+                      {dockItem(isActive("/socialmidia/aprovacoes"), ListChecks, "Aprov.", () => navigate("/socialmidia/aprovacoes"))}
                     </>
                   ) : (
                     <>

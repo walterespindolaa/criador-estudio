@@ -13,6 +13,10 @@ import { useManagerOutlet } from "@/components/accounts/managerOutlet";
  * que é onde ele queria estar. Cara feia de "acesso negado" é pra invasor, e
  * ele não é invasor, é parceiro.
  *
+ * VISÃO AMPLA (Walter, 18/10/2026): o parceiro agora atende cliente próprio,
+ * então Clientes, Aprovações, Agenda, Relatório e Contas saíram deste guard.
+ * Ficou só a Equipe, que é de quem opera uma agência com time.
+ *
  * ATENÇÃO, e é de propósito: as rotas de MÓDULO (Cria Post, Gestão, Caixa,
  * Radar, Captação) NÃO usam este guard. Lá o parceiro tem que cair na vitrine
  * do módulo, porque ele é cliente em potencial. Porta na cara em quem está

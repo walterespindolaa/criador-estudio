@@ -412,14 +412,14 @@ const App = () => (
                     Catch-all: o próprio componente lê o contexto e a seção do path. */}
                 <Route path="criacaixa/*" element={<ErrorBoundary><CriaCaixa /></ErrorBoundary>} />
                 <Route path="parceria" element={<ErrorBoundary><Parceria /></ErrorBoundary>} />
-                <Route path="relatorio" element={<SoOperacao><ErrorBoundary><RelatorioGerencial /></ErrorBoundary></SoOperacao>} />
+                <Route path="relatorio" element={<ErrorBoundary><RelatorioGerencial /></ErrorBoundary>} />
                 <Route path="comissoes" element={<ErrorBoundary><Comissoes /></ErrorBoundary>} />
-                <Route path="contas" element={<SoOperacao><ErrorBoundary><Contas /></ErrorBoundary></SoOperacao>} />
+                <Route path="contas" element={<ErrorBoundary><Contas /></ErrorBoundary>} />
                 <Route path="hubcria" element={<ErrorBoundary><HubCria /></ErrorBoundary>} />
-                <Route path="clientes" element={<SoOperacao><ErrorBoundary><Clientes /></ErrorBoundary></SoOperacao>} />
-                <Route path="clientes/:id" element={<SoOperacao><ErrorBoundary><ClienteHub /></ErrorBoundary></SoOperacao>} />
-                <Route path="clientes/:id/:tab" element={<SoOperacao><ErrorBoundary><ClienteHub /></ErrorBoundary></SoOperacao>} />
-                <Route path="aprovacoes" element={<SoOperacao><ErrorBoundary><Aprovacoes /></ErrorBoundary></SoOperacao>} />
+                <Route path="clientes" element={<ErrorBoundary><Clientes /></ErrorBoundary>} />
+                <Route path="clientes/:id" element={<ErrorBoundary><ClienteHub /></ErrorBoundary>} />
+                <Route path="clientes/:id/:tab" element={<ErrorBoundary><ClienteHub /></ErrorBoundary>} />
+                <Route path="aprovacoes" element={<ErrorBoundary><Aprovacoes /></ErrorBoundary>} />
                 {/* PARCEIRO: a fila de quem produz pras agências mora na MESMA
                     casca da gestão. Uma conta, dois papéis (Walter, 31/08). */}
                 <Route path="demandas" element={<ErrorBoundary><MinhasDemandas /></ErrorBoundary>} />
@@ -433,7 +433,7 @@ const App = () => (
                 <Route path="marcas" element={<ErrorBoundary><ParceiroMarcas /></ErrorBoundary>} />
                 {/* Cachê saiu de dentro de "Marcas que atendo": dinheiro tem tela própria. */}
                 <Route path="caches" element={<ErrorBoundary><ParceiroCaches /></ErrorBoundary>} />
-                <Route path="agenda" element={<SoOperacao><ErrorBoundary><AgendaCriacao /></ErrorBoundary></SoOperacao>} />
+                <Route path="agenda" element={<ErrorBoundary><AgendaCriacao /></ErrorBoundary>} />
                 <Route path="captacao" element={<ErrorBoundary><CriaCaptacao /></ErrorBoundary>} />
                 <Route path="equipe" element={<SoOperacao><ErrorBoundary><Equipe /></ErrorBoundary></SoOperacao>} />
                 {/* Abas da Equipe (28/09/2026): produção, conversas e pessoas. */}

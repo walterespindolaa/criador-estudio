@@ -43,6 +43,8 @@ export type ActiveProfile = Pick<
   account_type?: string | null;
   media_kit_url?: string | null;
   perfil_de?: string | null;
+  /** Meu perfil nasce sem onboarding: a dona passa pelo de criadora na 1ª vez. */
+  onboarding_completed?: boolean | null;
   /** Só vem preenchida pra dona (ela mesma ou o Meu perfil dela). */
   pix_key?: string | null;
 };
@@ -64,6 +66,8 @@ export type PerfilAtivoPatch = Partial<{
   storage_retention_days: number | null;
   /** O servidor só aceita da dona (ela mesma ou o Meu perfil). */
   pix_key: string | null;
+  /** Só a dona (fim do onboarding do Meu perfil). */
+  onboarding_completed: boolean;
 }>;
 
 export type UseActiveProfileResult = {

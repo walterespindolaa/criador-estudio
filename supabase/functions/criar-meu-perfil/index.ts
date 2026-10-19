@@ -63,10 +63,12 @@ Deno.serve(async (req) => {
     const perfilId = criado.user.id;
 
     // O gatilho do cadastro já criou o profile com 7 dias de teste. Aqui ele
-    // vira "Meu perfil" da dona. Se falhar (ex.: corrida com outro clique),
+    // vira "Meu perfil" da dona. Nasce SEM onboarding (Walter, 18/10/2026): na
+    // primeira vez que ela abre, passa pelo onboarding de criadora, que grava
+    // nome, @, nicho, pilares e metas no próprio perfil. Se falhar (ex.: corrida com outro clique),
     // apaga o usuário técnico pra não sobrar conta solta.
     const { error: upErr } = await admin.from("profiles")
-      .update({ perfil_de: donaId, name: nome, account_type: null, onboarding_completed: true } as never)
+      .update({ perfil_de: donaId, name: nome, account_type: null, onboarding_completed: false } as never)
       .eq("id", perfilId);
     if (upErr) {
       console.error("[criar-meu-perfil] vincular", upErr.message);

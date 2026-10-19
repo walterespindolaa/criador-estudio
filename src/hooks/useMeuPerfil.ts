@@ -55,7 +55,7 @@ export function useCriarMeuPerfil() {
       await qc.refetchQueries({ queryKey: ["meu-perfil", user?.id] });
       setActiveAccount(id);
       navigate("/app");
-      toast.success("Seu perfil está pronto. 7 dias grátis pra testar tudo.");
+      toast.success("Seu perfil está pronto. Agora conta pra gente sobre o seu conteúdo.");
     },
     onError: () => toast.error("Não consegui criar seu perfil agora. Tente de novo em instantes."),
   });

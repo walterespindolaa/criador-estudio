@@ -16,6 +16,7 @@ import { Settings, Lightbulb, Plus } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { useSouParceiro } from "@/hooks/useParceiro";
 import { deriveTier } from "@/hooks/useTier";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { applyTheme } from "@/lib/applyTheme";
 import { BgShapes } from "@/components/BgShapes";
 import { TourProvider } from "@/components/tour/TourProvider";
@@ -81,7 +82,9 @@ function GreetingEmoji() {
 const AppLayout = () => {
   const { profile, isLoading } = useProfile();
   const { data: souParceiro, isLoading: carregandoPapelParceiro } = useSouParceiro();
-  const { isManaging, activeAccountId, managedAccounts, teamAccounts, meuPerfil } = useActiveAccount();
+  const { isManaging, activeAccountId, managedAccounts, teamAccounts, meuPerfil, ehMeuPerfil } = useActiveAccount();
+  // Meu perfil: o onboarding que vale é o do PERFIL aberto, não o da sessão.
+  const { profile: perfilAtivo } = useActiveProfile();
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -187,6 +190,14 @@ const AppLayout = () => {
   // Social media (manager) sem cliente ativo: vai pra área dedicada /socialmidia
   if (!isLoading && profile?.account_type === "manager" && !isManaging) {
     return <Navigate to="/socialmidia/dashboard" replace />;
+  }
+
+  /* MEU PERFIL NASCE SEM ONBOARDING (Walter, 18/10/2026). Na primeira vez que
+     a dona abre o perfil, ela passa pelo onboarding de criadora, e tudo grava
+     no perfil (Onboarding.tsx usa a conta ativa). Conta de cliente nunca cai
+     aqui: o desvio é só pro Meu perfil. */
+  if (ehMeuPerfil && perfilAtivo?.onboarding_completed === false && location.pathname !== "/onboarding") {
+    return <Navigate to="/onboarding" replace />;
   }
 
   if (!isLoading && profile && profile.onboarding_completed === false && profile.account_type !== "manager") {

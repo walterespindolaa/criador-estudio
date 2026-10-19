@@ -20,6 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
+import { useActiveAccount } from "@/contexts/AccountContext";
+import { useContaAtivaId, useAtualizarPerfilAtivo, caminhoDaConta, type PerfilAtivoPatch } from "@/hooks/useActiveProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { validateUpload } from "@/lib/upload-validation";
@@ -107,6 +109,14 @@ const Onboarding = () => {
   const { user } = useAuth();
   const { updateProfile } = useProfile();
   const qc = useQueryClient();
+  /* MEU PERFIL (Walter, 18/10/2026). A social mídia cria o Meu perfil e, na
+     primeira vez que abre, passa por ESTE onboarding. Tudo que ela responde
+     vai pro perfil (dono = ownerId), nunca pra conta de social mídia dela.
+     Fora do Meu perfil, dono = a própria sessão, como sempre foi. */
+  const { ehMeuPerfil } = useActiveAccount();
+  const { ownerId } = useContaAtivaId();
+  const atualizarPerfilAtivo = useAtualizarPerfilAtivo();
+  const donoId = ehMeuPerfil ? ownerId : (user?.id ?? "");
 
   /* "SOU DESIGNER, EDITOR OU FILMMAKER" (24/09/2026). O link levava pra fila
      de demandas com a conta ainda de criador, e o app devolvia pro onboarding.
@@ -180,7 +190,7 @@ const Onboarding = () => {
 
   const conectarInstagramAgora = () => {
     // Volta pra este mesmo passo, com o rascunho preservado.
-    void connectInstagram(null, `/onboarding?step=${step}`);
+    void connectInstagram(null, `/onboarding?step=${step}`, ehMeuPerfil ? donoId : null);
   };
 
   const [setupLoading, setSetupLoading] = useState(false);
@@ -261,7 +271,7 @@ const Onboarding = () => {
   const uploadAvatar = useCallback(async (): Promise<string | null> => {
     if (!avatarFile || !user) return null;
     const ext = (avatarFile.name.split(".").pop() ?? "png").toLowerCase();
-    const path = `${user.id}/avatar.${ext}`;
+    const path = ehMeuPerfil ? caminhoDaConta(user.id, donoId, `avatar.${ext}`) : `${user.id}/avatar.${ext}`;
     const { error } = await supabase.storage.from("avatars").upload(path, avatarFile, { upsert: true });
     if (error) {
       console.error("Avatar upload failed", error);
@@ -269,7 +279,7 @@ const Onboarding = () => {
     }
     const { data } = supabase.storage.from("avatars").getPublicUrl(path);
     return `${data.publicUrl}?t=${Date.now()}`;
-  }, [avatarFile, user]);
+  }, [avatarFile, user, ehMeuPerfil, donoId]);
 
   const runSetup = useCallback(async () => {
     if (!user || setupStartedRef.current) return;
@@ -346,12 +356,13 @@ const Onboarding = () => {
       if (niches.length > 0) profileUpdates.niche = niches.map((n) => n.trim()).filter(Boolean).join(", ");
       if (platforms.length > 0) profileUpdates.platforms = platforms;
 
-      await updateProfile.mutateAsync(profileUpdates);
+      if (ehMeuPerfil) await atualizarPerfilAtivo.mutateAsync(profileUpdates as PerfilAtivoPatch);
+      else await updateProfile.mutateAsync(profileUpdates);
 
       if (finalPillars.length > 0) {
         const { data: pilaresCriados, error: pillarsErr } = await supabase.from("pillars").insert(
           finalPillars.map((p, i) => ({
-            user_id: user.id,
+            user_id: donoId,
             name: p.name,
             color: p.color,
             position: i,
@@ -366,7 +377,8 @@ const Onboarding = () => {
           const dias = ["SEG", "TER", "QUA", "QUI", "SEX"];
           const linha: Record<string, string> = {};
           dias.forEach((d, i) => { linha[d] = ids[i % ids.length]; });
-          await supabase.from("profiles").update({ editorial_line: linha } as never).eq("id", user.id);
+          if (ehMeuPerfil) await atualizarPerfilAtivo.mutateAsync({ editorial_line: linha });
+          else await supabase.from("profiles").update({ editorial_line: linha } as never).eq("id", user.id);
         }
       }
 
@@ -375,15 +387,15 @@ const Onboarding = () => {
          de novo. Agora tom vira item do brandbook e público vira a primeira
          persona, os mesmos lugares que o Brandbook lê. */
       const marcaItens: { user_id: string; type: string; name: string }[] = [];
-      if (tom) marcaItens.push({ user_id: user.id, type: "tom", name: tom });
-      if (objetivo) marcaItens.push({ user_id: user.id, type: "objetivo", name: objetivo });
+      if (tom) marcaItens.push({ user_id: donoId, type: "tom", name: tom });
+      if (objetivo) marcaItens.push({ user_id: donoId, type: "objetivo", name: objetivo });
       if (marcaItens.length > 0) {
         const { error: eMarca } = await supabase.from("brand_items").insert(marcaItens as never);
         if (eMarca) console.warn("[onboarding] brand_items insert failed:", eMarca);
       }
       if (publico.trim()) {
         const { error: ePersona } = await supabase.from("personas").insert({
-          user_id: user.id, name: "Meu público", notes: sanitizeText(publico.trim()),
+          user_id: donoId, name: "Meu público", notes: sanitizeText(publico.trim()),
         } as never);
         if (ePersona) console.warn("[onboarding] persona insert failed:", ePersona);
       }
@@ -391,7 +403,7 @@ const Onboarding = () => {
       if (habitsToCreate.length > 0) {
         const { error: habitsErr } = await supabase.from("habits").insert(
           habitsToCreate.map((name, i) => ({
-            user_id: user.id,
+            user_id: donoId,
             name,
             position: i,
           }))
@@ -402,7 +414,7 @@ const Onboarding = () => {
       if (ideasToCreate.length > 0) {
         const { error: ideasErr } = await supabase.from("ideas").insert(
           ideasToCreate.map((idea) => ({
-            user_id: user.id,
+            user_id: donoId,
             title: idea.title,
           }))
         );
@@ -418,7 +430,7 @@ const Onboarding = () => {
     } finally {
       setSetupLoading(false);
     }
-  }, [user, name, handle, niches, platforms, weeklyGoal, objetivo, publico, tom, uploadAvatar, updateProfile]);
+  }, [user, name, handle, niches, platforms, weeklyGoal, objetivo, publico, tom, uploadAvatar, updateProfile, ehMeuPerfil, donoId, atualizarPerfilAtivo]);
 
   useEffect(() => {
     if (step === 6 && !setupStartedRef.current && !setupDone) {
@@ -427,7 +439,8 @@ const Onboarding = () => {
   }, [step, setupDone, runSetup]);
 
   const enterApp = () => {
-    track("StartTrial", { content_name: "onboarding_complete" });
+    // Meu perfil não é conversão de anúncio: não conta como StartTrial.
+    if (!ehMeuPerfil) track("StartTrial", { content_name: "onboarding_complete" });
     try { sessionStorage.removeItem("cria.onb"); } catch { /* ok */ }
     /* TERMINA NUM ARTEFATO, NÃO NUM PAINEL (onboarding v2). As 5 ideias que a
        IA gerou já estão salvas; a pessoa cai nelas com o botão "Criar post com
@@ -581,12 +594,13 @@ const Onboarding = () => {
               {/* PERSONA ERRADA TEM VOLTA (v2). O cadastro vinha com "criador"
                   pré-marcado; quem errava passava por seis passos sobre nicho e
                   não achava saída. */}
-              <p className="text-xs text-muted-foreground font-body">
+              {/* No Meu perfil ela já é social mídia: trocar de papel aqui não faz sentido. */}
+              {!ehMeuPerfil && <p className="text-xs text-muted-foreground font-body">
                 Não é você? <Link to="/comecar-agencia" className="text-primary underline underline-offset-2">Sou social mídia ou agência</Link>
                 {" · "}
                 <button type="button" onClick={() => setPapeisAbertos((v) => !v)} className="text-primary underline underline-offset-2">Sou designer, editor ou filmmaker</button>
-              </p>
-              {papeisAbertos && (
+              </p>}
+              {!ehMeuPerfil && papeisAbertos && (
                 <div className="rounded-2xl border border-border bg-card p-3 space-y-2">
                   <p className="text-xs font-body text-muted-foreground">O que você faz pras agências? Sua conta vira de parceiro de produção (sem mensalidade).</p>
                   <div className="flex flex-wrap gap-2">
