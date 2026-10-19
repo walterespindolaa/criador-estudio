@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { connectInstagram } from "@/hooks/useSocialInsights";
+import { PreviaWhatsApp } from "@/components/shared/PreviaWhatsApp";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CONECTAR O INSTAGRAM DA CLIENTE (28/09/2026)
@@ -119,6 +120,7 @@ export function ConviteInstagramCliente({ crmClientId, nomeCliente }: { crmClien
               {copiado ? <><Check className="h-4 w-4 mr-1.5" /> Copiado</> : <><Copy className="h-4 w-4 mr-1.5" /> Copiar</>}
             </Button>
           </div>
+          <PreviaWhatsApp url={linkDo(pendente.token)} rotulo="Ver como chega no WhatsApp" className="bg-white" />
           <p className="text-xs font-body text-muted-foreground flex items-center gap-1.5">
             <Loader2 className="h-3 w-3 animate-spin" /> Esperando {nome || "a cliente"} aceitar. Você recebe um aviso no sino.
           </p>

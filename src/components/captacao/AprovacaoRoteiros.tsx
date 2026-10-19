@@ -10,6 +10,7 @@ import {
   useScriptApprovals, useCreateScriptApproval, useApplyScriptApproval, useDeleteScriptApproval,
   mudancasDoItem, itemFoiTocado, type ScriptApproval, type ScriptApprovalItem,
 } from "@/hooks/useScriptApprovals";
+import { PreviaWhatsApp } from "@/components/shared/PreviaWhatsApp";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ENVIAR OS ROTEIROS PRO CLIENTE E RECEBER DE VOLTA
@@ -277,6 +278,7 @@ export function PainelAprovacoes({
                       <Link2 className="h-3.5 w-3.5 mr-1" /> Link
                     </Button>
                   )}
+                  {!feito && <PreviaWhatsApp url={`${window.location.origin}/roteiros/${a.token}`} />}
                   <button type="button" aria-label="Excluir este envio" title="Excluir este envio"
                     onClick={async () => {
                       const ok = await confirmar({

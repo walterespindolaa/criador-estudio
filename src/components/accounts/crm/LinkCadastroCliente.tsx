@@ -14,6 +14,7 @@ import {
   PERFIS_INTAKE, type PerfilIntake,
 } from "@/lib/formularioCadastro";
 import { useCrmClient, type CrmClient } from "@/hooks/useCrm";
+import { PreviaWhatsApp } from "@/components/shared/PreviaWhatsApp";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PEDIR OS DADOS PRO CLIENTE
@@ -103,9 +104,12 @@ export function LinkCadastroCliente({ crmClientId, clienteNome, temCria = false 
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             {aberto ? (
-              <Button size="sm" variant="outline" onClick={() => void copiar(aberto.token)} className="rounded-xl h-9">
-                <Link2 className="h-3.5 w-3.5 mr-1.5" /> Copiar o link
-              </Button>
+              <>
+                <Button size="sm" variant="outline" onClick={() => void copiar(aberto.token)} className="rounded-xl h-9">
+                  <Link2 className="h-3.5 w-3.5 mr-1.5" /> Copiar o link
+                </Button>
+                <PreviaWhatsApp url={linkDe(aberto.token)} className="h-9" />
+              </>
             ) : (
               <Button size="sm" onClick={() => setEscolhendo((v) => !v)} className="rounded-xl h-9">
                 <Send className="h-3.5 w-3.5 mr-1.5" /> Gerar o link

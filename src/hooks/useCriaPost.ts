@@ -232,7 +232,8 @@ export function useExternalClients() {
   // Retorna a URL pra quem quiser abrir o portal em nova aba além de copiar.
   /* `destino`: "aprovar" e o portal completo; "materiais" e a pagina so de
      pedidos de material (mesmo token, rota diferente). */
-  const copyLink = async (clientId: string, period?: { start: string; end: string } | null, destino: "aprovar" | "materiais" = "aprovar"): Promise<string | undefined> => {
+  /* Gera ou reaproveita o link SEM copiar (o "Ver prévia" do WhatsApp usa isto). */
+  const resolverLink = async (clientId: string, period?: { start: string; end: string } | null, destino: "aprovar" | "materiais" = "aprovar"): Promise<string | undefined> => {
     let token: string | undefined;
     if (period?.start && period?.end) {
       const { data: created, error } = await sbFrom("approval_tokens")
@@ -252,7 +253,12 @@ export function useExternalClients() {
         token = (created as { token: string }).token;
       }
     }
-    const url = `${PORTAL_ORIGIN}/${destino}/${token}`;
+    return `${PORTAL_ORIGIN}/${destino}/${token}`;
+  };
+
+  const copyLink = async (clientId: string, period?: { start: string; end: string } | null, destino: "aprovar" | "materiais" = "aprovar"): Promise<string | undefined> => {
+    const url = await resolverLink(clientId, period, destino);
+    if (!url) return;
     try {
       await navigator.clipboard.writeText(url);
       toast.success(destino === "materiais" ? "Link de pedidos copiado!" : period ? "Link do período copiado!" : "Link de aprovação copiado!");
@@ -261,7 +267,7 @@ export function useExternalClients() {
     return url;
   };
 
-  return { clients: clientsQ.data ?? [], isLoading: clientsQ.isLoading, pending: pendingQ.data ?? {}, create, update, setActive, removeFromPost, copyLink };
+  return { clients: clientsQ.data ?? [], isLoading: clientsQ.isLoading, pending: pendingQ.data ?? {}, create, update, setActive, removeFromPost, copyLink, resolverLink };
 }
 
 export function useExternalPosts(clientId: string | null) {

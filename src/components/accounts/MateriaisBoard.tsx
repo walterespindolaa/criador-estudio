@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { OrdemDataToggle } from "@/components/shared/OrdemDataToggle";
 import { useOrdemPorData } from "@/hooks/useOrdemPorData";
 import { useExternalClients } from "@/hooks/useCriaPost";
+import { PreviaWhatsApp } from "@/components/shared/PreviaWhatsApp";
 import { ordenarPorData } from "@/lib/ordenar-por-data";
 import { useSearchParams } from "react-router-dom";
 import { MoneyInput } from "@/components/shared/MoneyInput";
@@ -97,7 +98,7 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
      Subiu pra ANTES do useClientMaterials porque agora o quadro também procura
      os materiais pelo id do portal, não só pelo da ficha: ver o comentário em
      useClientMaterials. */
-  const { clients: extClients, copyLink } = useExternalClients();
+  const { clients: extClients, copyLink, resolverLink } = useExternalClients();
   const extDoCliente = (extClients as { id: string; crm_client_id: string | null }[]).find((c) => c.crm_client_id === clientId) ?? null;
   const { materials, isLoading, isError, createMaterial, updateMaterial, deleteMaterial, uploadAttachment } = useClientMaterials(clientId, extDoCliente?.id ?? null);
   const [copiando, setCopiando] = useState(false);
@@ -254,6 +255,7 @@ export function MateriaisBoard({ clientId, clientName }: { clientId: string; cli
             {copiando ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Link2 className="h-4 w-4 mr-1.5" />}
             <span className="hidden sm:inline">Link de pedidos</span><span className="sm:hidden">Link</span>
           </Button>
+          {extDoCliente && <PreviaWhatsApp obterUrl={() => resolverLink(extDoCliente.id, null, "materiais")} className="h-10" />}
           <Button onClick={openNew} className="rounded-xl h-10">
             <Plus className="h-4 w-4 mr-1.5" /> Novo material
           </Button>

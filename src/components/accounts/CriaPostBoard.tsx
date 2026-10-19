@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useExternalClients, useExternalPosts, usePortalActivity, type ExternalClient, type ExternalPost, type ExternalPostInput } from "@/hooks/useCriaPost";
+import { PreviaWhatsApp } from "@/components/shared/PreviaWhatsApp";
 import { toast } from "sonner";
 import { confirmar } from "@/components/shared/Confirm";
 import { EnviarParaParceiro, type EnvioPendente } from "@/components/accounts/EnviarParaParceiro";
@@ -383,7 +384,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     setView(v);
     try { localStorage.setItem("criapost_view", v); } catch { /* segue */ }
   };
-  const { copyLink } = useExternalClients();
+  const { copyLink, resolverLink } = useExternalClients();
   const { profile } = useProfile();
   const { data: portalViewedAt } = usePortalActivity(client.id);
   const [confirmMove, setConfirmMove] = useState<{ id: string; status: ApprovalKey } | null>(null);
@@ -599,12 +600,15 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const [linkOpen, setLinkOpen] = useState(false);
   const [pStart, setPStart] = useState("");
   const [pEnd, setPEnd] = useState("");
+  const [linkPeriodo, setLinkPeriodo] = useState<string | null>(null);
   const doCopyPeriod = async () => {
     if (!pStart || !pEnd) { toast.error("Escolha o início e o fim do período."); return; }
     if (pEnd < pStart) { toast.error("O fim tem que ser depois do início."); return; }
     setCopying(true);
-    await copyLink(client.id, { start: pStart, end: pEnd });
-    setCopying(false); setLinkOpen(false);
+    const u = await copyLink(client.id, { start: pStart, end: pEnd });
+    setCopying(false);
+    // Fica aberto pra conferir a prévia do link novo antes de mandar.
+    if (u) setLinkPeriodo(u); else setLinkOpen(false);
   };
   const onChangePlatform = (pl: string) => {
     setF((prev) => {
@@ -983,16 +987,19 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
       </AlertDialog>
 
       {/* Link de aprovação: tudo OU um período específico */}
-      <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
+      <Dialog open={linkOpen} onOpenChange={(v) => { setLinkOpen(v); if (!v) setLinkPeriodo(null); }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader><DialogTitle className="font-display">Link de aprovação</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="rounded-xl border border-border p-3">
               <p className="text-sm font-body font-semibold text-foreground">Todos os posts</p>
               <p className="text-[12px] font-body text-muted-foreground mb-2">O cliente vê tudo que está na fila de aprovação.</p>
-              <Button variant="outline" size="sm" onClick={async () => { await doCopy(); setLinkOpen(false); }} disabled={copying}>
-                <Link2 className="h-3.5 w-3.5 mr-1.5" /> Copiar link completo
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={async () => { await doCopy(); setLinkOpen(false); }} disabled={copying}>
+                  <Link2 className="h-3.5 w-3.5 mr-1.5" /> Copiar link completo
+                </Button>
+                <PreviaWhatsApp obterUrl={() => resolverLink(client.id)} className="h-9" />
+              </div>
             </div>
             <div className="rounded-xl border border-primary/30 bg-primary/[0.04] p-3">
               <p className="text-sm font-body font-semibold text-foreground">Só um período</p>
@@ -1010,6 +1017,12 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               <Button size="sm" onClick={doCopyPeriod} disabled={copying}>
                 {copying ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5 mr-1.5" />} Copiar link do período
               </Button>
+              {linkPeriodo && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="text-[12px] font-body text-emerald-700">Link do período copiado.</span>
+                  <PreviaWhatsApp url={linkPeriodo} />
+                </div>
+              )}
             </div>
           </div>
         </DialogContent>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, Image as ImageIcon, Loader2, Link2, ExternalLink, Check, CalendarDays, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { useExternalClients, type ExternalClient, type ExternalClientInput, type PortalSettings } from "@/hooks/useCriaPost";
+import { PreviaWhatsApp } from "@/components/shared/PreviaWhatsApp";
 import { useCrmClients } from "@/hooks/useCrm";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,7 +33,7 @@ export function ClientePortalTab({ client, onCopyLink, onOpenPortal, copying }: 
   onOpenPortal: () => void;
   copying: boolean;
 }) {
-  const { update, setActive, removeFromPost } = useExternalClients();
+  const { update, setActive, removeFromPost, resolverLink } = useExternalClients();
   const { data: crmClients = [] } = useCrmClients();
   const { user } = useAuth();
   const logoRef = useRef<HTMLInputElement>(null);
@@ -134,6 +135,7 @@ export function ClientePortalTab({ client, onCopyLink, onOpenPortal, copying }: 
         <Button variant="outline" size="sm" onClick={onCopyLink} disabled={copying}>
           {copying ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5 mr-1.5" />} Copiar link
         </Button>
+        <PreviaWhatsApp obterUrl={() => resolverLink(client.id)} className="h-9" />
         <Button variant="outline" size="sm" onClick={onOpenPortal}><ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Abrir</Button>
       </div>
 

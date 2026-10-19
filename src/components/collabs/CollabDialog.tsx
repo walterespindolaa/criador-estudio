@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { PreviaWhatsApp } from "@/components/shared/PreviaWhatsApp";
 
 export function CollabDialog({ open, onOpenChange, collabId }: {
   open: boolean; onOpenChange: (o: boolean) => void; collabId: string | null;
@@ -189,6 +190,7 @@ export function CollabDialog({ open, onOpenChange, collabId }: {
                     <span className="text-xs text-muted-foreground truncate flex-1">{proposalUrl}</span>
                     <button type="button" onClick={copyLink} className="text-muted-foreground hover:text-primary flex-shrink-0"><Copy className="h-3.5 w-3.5" /></button>
                   </div>
+                  <PreviaWhatsApp url={proposalUrl} />
                   {editing.proposal_status === "ajuste" && editing.proposal_client_comment && (
                     <div className="text-xs text-orange-700 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2">A marca pediu: "{editing.proposal_client_comment}"</div>
                   )}

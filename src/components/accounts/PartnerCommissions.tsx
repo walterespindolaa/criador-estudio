@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { PreviaWhatsApp } from "@/components/shared/PreviaWhatsApp";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    O PAINEL DA PARCEIRA  (Walter, 22/09/2026)
@@ -140,6 +141,7 @@ export function PartnerCommissions() {
               {copiado ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
               {copiado ? "Copiado" : "Copiar"}
             </button>
+            <PreviaWhatsApp url={link} className="h-10" />
           </div>
           <p className="text-[11px] font-body text-muted-foreground mt-2">
             Quem abrir este link já entra com o seu código aplicado, mesmo que assine dias depois.

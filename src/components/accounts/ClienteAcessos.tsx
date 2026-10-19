@@ -10,6 +10,7 @@ import {
   useCofreStatus, useCofreAcessos, useCofreHistorico, useCofreQuemVe, useCofreSalvar, useCofreApagar, useCofreCriarLink,
   cofreRevelar, cofreErro, diasDesde, COFRE_PLATAFORMAS, COFRE_CODIGO_VIA, type CofreAcesso, type CofreLog,
 } from "@/hooks/useCofre";
+import { PreviaWhatsApp } from "@/components/shared/PreviaWhatsApp";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ABA "ACESSOS" DA FICHA DO CLIENTE (Walter, 14/10/2026)
@@ -193,6 +194,7 @@ export function ClienteAcessosTab({ crmClientId, clientName }: { crmClientId: st
           <Button size="sm" className="min-h-[40px] rounded-xl" onClick={async () => { if (await copiarTexto(link)) { marcarCopiado("link"); toast.success("Link copiado."); } }}>
             {copiado === "link" ? <Check className="h-4 w-4 mr-1.5" /> : <Copy className="h-4 w-4 mr-1.5" />} Copiar link
           </Button>
+          <PreviaWhatsApp url={link} className="min-h-[40px]" />
         </div>
       )}
 

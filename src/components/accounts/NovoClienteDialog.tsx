@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { PreviaWhatsApp } from "@/components/shared/PreviaWhatsApp";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    NOVO CLIENTE (Walter, 19/10/2026, mockup aprovado)
@@ -246,6 +247,7 @@ export function NovoClienteDialog({ open, onOpenChange }: { open: boolean; onOpe
                       onClick={() => { void navigator.clipboard.writeText(criado.link!).then(() => toast.success("Link copiado!")).catch(() => toast.error("Não consegui copiar.")); }}>
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
+                    <PreviaWhatsApp url={criado.link} rotulo="Prévia" className="h-8" />
                     <Button size="sm" className="h-8 rounded-xl px-2.5 gap-1" asChild>
                       <a href={linkWhats(criado.link)} target="_blank" rel="noreferrer"><MessageCircle className="h-3.5 w-3.5" /> WhatsApp</a>
                     </Button>
