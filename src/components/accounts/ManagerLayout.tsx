@@ -70,7 +70,8 @@ const BUSINESS_NAV = [
   // num período com comparativo. É visão de dona de negócio, então mora aqui.
   { to: "/socialmidia/relatorio", label: "Relatório", icon: BarChart3 },
   { to: "/socialmidia/parceria", label: LABELS.indique, icon: Handshake },
-  { to: "/socialmidia/comissoes", label: "Comissões", icon: DollarSign },
+  // Comissões saiu do menu (Walter, 19/10/2026): o extrato inteiro já mora
+  // dentro do Indique e ganhe. A rota /socialmidia/comissoes continua viva.
   { to: "/socialmidia/contas", label: "Suas contas", icon: Users },
 ] as const;
 
@@ -176,7 +177,8 @@ export default function ManagerLayout() {
   };
 
   const handleSignOut = async () => { await signOut(); navigate("/"); };
-  const onNavComissoes = () => navigate(isPartner ? "/socialmidia/comissoes" : "/socialmidia/parceria");
+  // O Indique e ganhe já mostra as comissões de quem é parceira aprovada.
+  const onNavComissoes = () => navigate("/socialmidia/parceria");
 
   // Item do rail flutuante. Expande com o nome quando o rail está em hover.
   const railNode = (
@@ -465,7 +467,7 @@ export default function ManagerLayout() {
              Indicar o CRIA e ganhar comissão vale pra ele igual, e apagar sem
              ter como recuperar é o tipo de porta que não pode faltar. */}
           {BUSINESS_NAV.map((n) => {
-            const onClick = n.to === "/socialmidia/comissoes" ? onNavComissoes : () => navigate(n.to);
+            const onClick = () => navigate(n.to);
             return railNode(n.icon as LucideIcon, n.label, { active: isActive(n.to), onClick });
           })}
         </div>
@@ -659,7 +661,6 @@ export default function ManagerLayout() {
               ...(veEquipe && !parceiroPuro ? [{ label: "Equipe", desc: actingAsTeam ? "Produção e conversas com parceiros" : "Produção, conversas e pessoas", icon: UserPlus as LucideIcon, onClick: () => navigate("/socialmidia/equipe") }] : []),
               { label: "Relatório da operação", desc: "Produção, financeiro e carteira no período", icon: BarChart3 as LucideIcon, onClick: () => navigate("/socialmidia/relatorio") },
               { label: souParceiro ? LABELS.indique : "Parceria", desc: "Indique o CRIA e ganhe comissão", icon: Handshake as LucideIcon, onClick: () => navigate("/socialmidia/parceria") },
-              { label: "Comissões", desc: "O que você já ganhou", icon: DollarSign as LucideIcon, onClick: onNavComissoes },
               { label: "Suas contas", desc: "Assentos e clientes do plano", icon: Users as LucideIcon, onClick: () => navigate("/socialmidia/contas") },
             ],
           },

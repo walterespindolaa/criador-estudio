@@ -67,14 +67,25 @@ type Props = {
   /** Barra fina em vez do bloco grande, pra telas que já têm outro caminho de
    *  subir arquivo e ficariam com dois convites iguais um embaixo do outro. */
   compacto?: boolean;
+  /** Arquivo(s) já escolhidos em outra tela (ex.: o Novo cliente): a leitura
+   *  começa sozinha ao montar, sem pedir o arquivo de novo. */
+  arquivosIniciais?: File[];
 };
 
-export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar, titulo, descricao, compacto }: Props) {
+export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar, titulo, descricao, compacto, arquivosIniciais }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [arrastando, setArrastando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [rascunho, setRascunho] = useState<Record<string, string>>({});
   const { etapa, progresso, leitura, arquivos, importar, cancelar } = useBrandbookImport(alvo);
+  // Começa a leitura uma vez só quando o arquivo veio pronto de outra tela.
+  const iniciouRef = useRef(false);
+  useEffect(() => {
+    if (iniciouRef.current || !arquivosIniciais?.length) return;
+    iniciouRef.current = true;
+    void importar(arquivosIniciais.slice(0, 2));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Quando a leitura chega, ela vira um RASCUNHO editável. A pessoa mexe à
   // vontade antes de salvar o que a IA devolveu é sugestão, não decisão.
