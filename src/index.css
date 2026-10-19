@@ -488,3 +488,13 @@ html[data-bar="glass"] .cria-rail-capsule {
     scroll-behavior: auto !important;
   }
 }
+
+/* Faixa do topo clara (ex: Areia clara): texto branco some no fundo claro.
+   O applyHero marca o html e aqui o texto da faixa vira escuro. */
+html[data-hero-claro] .cria-hero,
+html[data-hero-claro] .cria-hero [class*="text-white"] {
+  color: #2B2420 !important;
+}
+html[data-hero-claro] .cria-hero [class*="border-white"] {
+  border-color: rgba(43, 36, 32, .25) !important;
+}

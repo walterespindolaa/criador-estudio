@@ -305,7 +305,7 @@ export function SettingsManagerDrawer({ open, onOpenChange }: Props) {
                   <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoSelect} />
                 </div>
               </section>
-              <SettingsVisual />
+              <SettingsVisual embutido />
             </TabsContent>
 
             <TabsContent value="integracoes" className="space-y-6 mt-5">

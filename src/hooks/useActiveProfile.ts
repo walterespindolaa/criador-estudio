@@ -55,6 +55,8 @@ export type ActiveProfile = Pick<
   theme_sidebar?: string | null;
   theme_font?: string | null;
   theme_bg?: string | null;
+  /** Faixa do topo: null = segue o destaque. */
+  theme_hero?: string | null;
 };
 
 /** Campos que dá pra gravar na conta ativa (espelha a lista do RPC). */
@@ -83,6 +85,7 @@ export type PerfilAtivoPatch = Partial<{
   theme_sidebar: string | null;
   theme_font: string | null;
   theme_bg: string | null;
+  theme_hero: string | null;
 }>;
 
 export type UseActiveProfileResult = {

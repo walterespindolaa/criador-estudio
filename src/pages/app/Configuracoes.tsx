@@ -54,7 +54,16 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 
 /* Pílulas de navegação: rótulo sempre visível (ícone sozinho não orienta ninguém)
    e alvo de toque confortável no celular (min-h 44px). */
-const TAB_PILL = "flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 min-h-[44px] text-sm font-body data-[state=active]:bg-primary/10 data-[state=active]:text-primary whitespace-nowrap";
+// Celular: pílula com borda, a ativa escura. Computador: item do menu à esquerda,
+// o ativo com fundo da cor de destaque bem clarinho.
+const TAB_PILL = [
+  "flex items-center gap-2 whitespace-nowrap rounded-full border border-border bg-card px-3.5 py-2 min-h-[40px] text-[13px] font-body font-bold text-muted-foreground shadow-none",
+  "data-[state=active]:border-foreground data-[state=active]:bg-foreground data-[state=active]:text-background data-[state=active]:shadow-none",
+  "md:w-full md:justify-start md:rounded-xl md:border-0 md:bg-transparent md:px-3 md:py-2.5 md:min-h-[42px] md:text-sm md:font-medium md:text-foreground/80",
+  "md:data-[state=active]:bg-primary/10 md:data-[state=active]:text-primary md:data-[state=active]:font-bold md:hover:bg-muted",
+].join(" ");
+const ICONE_ABA = "hidden h-4 w-4 shrink-0 md:inline";
+const SEPARADOR_ABA = "hidden md:block my-1.5 mx-2 h-px bg-border";
 
 const SectionHeader = ({ title, desc }: { title: string; desc: string }) => (
   <div className="mb-5">
@@ -78,6 +87,20 @@ const Configuracoes = () => {
   const profile = (ehMeuPerfil ? perfilAtivo : perfilSessao) as typeof perfilSessao;
   const updateProfile = (ehMeuPerfil ? atualizarAtivo : updateSessao) as typeof updateSessao;
   const verPerfil = !isManaging || ehMeuPerfil;
+  const [aba, setAba] = useState<string>(verPerfil ? "perfil" : "pilares");
+  // Celular: a pílula ativa sempre à vista (rola a fileira até ela).
+  useEffect(() => {
+    if (typeof window === "undefined" || window.innerWidth >= 768) return;
+    document.querySelector(`[data-aba="${aba}"]`)?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [aba]);
+  // Aba que sumiu (ex: trocou pra conta de cliente com a Marca e visual aberta): volta pra uma que existe.
+  useEffect(() => {
+    const existe: Record<string, boolean> = {
+      perfil: verPerfil, pilares: true, visual: !isManaging || ehMeuPerfil, assinatura: !isManaging || ehMeuPerfil,
+      conexoes: !isManaging, notificacoes: !isManaging, equipe: !isManaging, conta: !isManaging,
+    };
+    if (!existe[aba]) setAba(verPerfil ? "perfil" : "pilares");
+  }, [aba, verPerfil, isManaging, ehMeuPerfil]);
   const { habits, createHabit, deleteHabit: deleteHabitMutation } = useHabits();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -393,19 +416,24 @@ const Configuracoes = () => {
           </div>
         )}
 
-        <Tabs defaultValue={verPerfil ? "perfil" : "pilares"} className="w-full">
-          {/* Sem justify-center aqui: com overflow, centralizar cortava o início
-              das pílulas sem como rolar até elas. Scroll horizontal com snap. */}
-          <div className="overflow-x-auto mb-6 -mx-4 px-4 scrollbar-none scroll-snap-x">
-            <TabsList data-tour="config-abas" className="inline-flex h-auto bg-card border border-border rounded-2xl p-1.5 gap-1 min-w-max">
-              {verPerfil && <TabsTrigger value="perfil" className={TAB_PILL}><User className="h-3.5 w-3.5 shrink-0" /><span>Perfil</span></TabsTrigger>}
-              <TabsTrigger value="pilares" className={TAB_PILL}><LayoutGrid className="h-3.5 w-3.5 shrink-0" /><span>Hábitos</span></TabsTrigger>
-              {(!isManaging || ehMeuPerfil) && <TabsTrigger value="visual" data-tour="config-tab-visual" className={TAB_PILL}><Paintbrush className="h-3.5 w-3.5 shrink-0" /><span>Marca & Visual</span></TabsTrigger>}
-              {(!isManaging || ehMeuPerfil) && <TabsTrigger value="assinatura" data-tour="config-tab-assinatura" className={TAB_PILL}><CreditCard className="h-3.5 w-3.5 shrink-0" /><span>Assinatura</span></TabsTrigger>}
-              {!isManaging && <TabsTrigger value="conexoes" className={TAB_PILL}><Plug className="h-3.5 w-3.5 shrink-0" /><span>Conexões</span></TabsTrigger>}
-              {!isManaging && <TabsTrigger value="notificacoes" className={TAB_PILL}><Bell className="h-3.5 w-3.5 shrink-0" /><span>Notificações</span></TabsTrigger>}
-              {!isManaging && <TabsTrigger value="equipe" className={TAB_PILL}><Users className="h-3.5 w-3.5 shrink-0" /><span>Equipe</span></TabsTrigger>}
-              {!isManaging && <TabsTrigger value="conta" data-tour="config-tab-conta" className={TAB_PILL}><Shield className="h-3.5 w-3.5 shrink-0" /><span>Conta</span></TabsTrigger>}
+        {/* CONFIGURAÇÕES NOVAS (Walter, 19/10/2026, mockup aprovado). Computador:
+            menu à esquerda, agrupado, e o conteúdo alinhado ao lado. Celular:
+            pílulas que rolam de lado, a ativa escura e sempre à vista. */}
+        <Tabs value={aba} onValueChange={setAba} orientation="vertical"
+          className="w-full md:grid md:grid-cols-[200px_minmax(0,1fr)] md:items-start md:gap-6">
+          <div className="-mx-4 mb-5 overflow-x-auto px-4 scrollbar-none md:sticky md:top-24 md:mx-0 md:mb-0 md:overflow-visible md:px-0">
+            <TabsList data-tour="config-abas"
+              className="inline-flex h-auto min-w-max gap-1.5 bg-transparent p-0 md:flex md:w-full md:min-w-0 md:flex-col md:items-stretch md:gap-0.5 md:rounded-2xl md:border md:border-border md:bg-card md:p-2">
+              {verPerfil && <TabsTrigger value="perfil" data-aba="perfil" className={TAB_PILL}><User className={ICONE_ABA} /><span>Perfil</span></TabsTrigger>}
+              <TabsTrigger value="pilares" data-aba="pilares" className={TAB_PILL}><LayoutGrid className={ICONE_ABA} /><span>Hábitos</span></TabsTrigger>
+              {(!isManaging || ehMeuPerfil) && <TabsTrigger value="visual" data-aba="visual" data-tour="config-tab-visual" className={TAB_PILL}><Paintbrush className={ICONE_ABA} /><span>Marca e visual</span></TabsTrigger>}
+              {(!isManaging || ehMeuPerfil) && <span aria-hidden className={SEPARADOR_ABA} />}
+              {(!isManaging || ehMeuPerfil) && <TabsTrigger value="assinatura" data-aba="assinatura" data-tour="config-tab-assinatura" className={TAB_PILL}><CreditCard className={ICONE_ABA} /><span>Assinatura</span></TabsTrigger>}
+              {!isManaging && <TabsTrigger value="conexoes" data-aba="conexoes" className={TAB_PILL}><Plug className={ICONE_ABA} /><span>Conexões</span></TabsTrigger>}
+              {!isManaging && <TabsTrigger value="notificacoes" data-aba="notificacoes" className={TAB_PILL}><Bell className={ICONE_ABA} /><span>Notificações</span></TabsTrigger>}
+              {!isManaging && <TabsTrigger value="equipe" data-aba="equipe" className={TAB_PILL}><Users className={ICONE_ABA} /><span>Equipe</span></TabsTrigger>}
+              {!isManaging && <span aria-hidden className={SEPARADOR_ABA} />}
+              {!isManaging && <TabsTrigger value="conta" data-aba="conta" data-tour="config-tab-conta" className={TAB_PILL}><Shield className={ICONE_ABA} /><span>Conta</span></TabsTrigger>}
             </TabsList>
           </div>
 
@@ -639,7 +667,7 @@ const Configuracoes = () => {
 
             {(!isManaging || ehMeuPerfil) && (
             <TabsContent value="visual">
-              <SectionHeader title="Marca & Visual" desc="Deixe o CRIA com a sua cara: tema, cores, fundo e tipografia." />
+              <SectionHeader title="Marca e visual" desc="Deixe o CRIA com a sua cara. Você vê o efeito na hora." />
               {/* Meu perfil: o tema é do perfil, não da sessão da agência. */}
               {ehMeuPerfil
                 ? <SettingsVisual perfil={perfilAtivo ?? null} gravar={(patch) => atualizarAtivo.mutateAsync(patch)} />

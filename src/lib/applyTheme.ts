@@ -95,3 +95,45 @@ export function applyAccent(hex: string) {
   root.style.setProperty('--primary-foreground', '40 33% 97%');
   root.style.setProperty('--sidebar-primary-foreground', '40 33% 97%');
 }
+
+/* FAIXA DO TOPO (Walter, 19/10/2026). A faixa colorida do alto das telas seguia
+   sozinha o destaque. Agora pode ter cor própria: null = segue o destaque (o
+   HeroBand cai no gradiente de sempre). Faixa clara troca o texto pra escuro. */
+function clamp01(n: number) { return Math.min(1, Math.max(0, n)); }
+
+function misturar(hex: string, alvo: number, t: number): string {
+  const n = (i: number) => parseInt(hex.slice(i, i + 2), 16);
+  const c = [n(1), n(3), n(5)].map((v) => Math.round(v + (alvo - v) * t));
+  return `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** Luminância relativa (0 a 1) de um #rrggbb. */
+export function luminancia(hex: string): number {
+  const ch = [1, 3, 5].map((i) => {
+    const v = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+}
+
+/** Gradiente da faixa a partir de uma cor: um pouco mais escura até um pouco mais clara. */
+export function gradienteDaFaixa(hex: string): string {
+  return `linear-gradient(115deg, ${misturar(hex, 0, 0.18)} 0%, ${misturar(hex, 255, 0.22)} 100%)`;
+}
+
+export function faixaEhClara(hex: string): boolean {
+  return clamp01(luminancia(hex)) > 0.55;
+}
+
+export function applyHero(hex: string | null | undefined) {
+  const root = document.documentElement;
+  const ok = !!hex && /^#[0-9a-fA-F]{6}$/.test(hex);
+  if (!ok) {
+    root.style.removeProperty("--hero-bg");
+    root.removeAttribute("data-hero-claro");
+    return;
+  }
+  root.style.setProperty("--hero-bg", gradienteDaFaixa(hex as string));
+  if (faixaEhClara(hex as string)) root.setAttribute("data-hero-claro", "1");
+  else root.removeAttribute("data-hero-claro");
+}

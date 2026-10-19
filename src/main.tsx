@@ -4,7 +4,7 @@ import { I18nProvider } from "./lib/i18n";
 import App from "./App.tsx";
 import "./index.css";
 import { installGlobalErrorLogging } from "./lib/logError";
-import { applyTheme, applyAccent } from "./lib/applyTheme";
+import { applyTheme, applyAccent, applyHero } from "./lib/applyTheme";
 import { applySidebarColor } from "./lib/sidebarTheme";
 import { estaInstalado } from "./lib/pwa";
 
@@ -39,6 +39,7 @@ try {
   else if (savedAccent) applyAccent(savedAccent);
   const savedSidebar = localStorage.getItem("theme_sidebar");
   if (savedSidebar) applySidebarColor(savedSidebar);
+  applyHero(localStorage.getItem("theme_hero"));
 } catch { /* localStorage indisponível: segue com o padrão */ }
 
 // Apply saved font immediately to avoid flash of unstyled text.

@@ -33,7 +33,7 @@ import { useAcessoCriakut } from "@/hooks/useCriakut";
 import { useManagerApprovalOverview } from "@/hooks/useApprovals";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { GlobalSearch } from "@/components/shared/GlobalSearch";
-import { applyTheme } from "@/lib/applyTheme";
+import { applyTheme, applyHero } from "@/lib/applyTheme";
 import { BgShapes } from "@/components/BgShapes";
 import { TourProvider } from "@/components/tour/TourProvider";
 import { VideoPublicConfirmProvider } from "@/contexts/VideoPublicConfirmContext";
@@ -155,6 +155,7 @@ export default function ManagerLayout() {
       applyTheme(profile.theme_preset, profile.theme_accent || "#EA4918");
     }
     applySidebarColor(profile?.theme_sidebar || null);
+    applyHero((profile as { theme_hero?: string | null } | null | undefined)?.theme_hero ?? null);
     if (profile?.theme_font) applyThemeFont(profile.theme_font);
   }, [profile]);
 

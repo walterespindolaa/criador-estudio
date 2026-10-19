@@ -33,10 +33,11 @@ export function HeroBand({
   return (
     <header
       className={cn(
-        "relative overflow-hidden rounded-b-[26px] px-5 pt-3 pb-4 text-white shadow-[0_18px_50px_-24px_rgba(35,25,70,0.5)] md:px-8 md:transition-[padding-left] md:duration-200",
+        "cria-hero relative overflow-hidden rounded-b-[26px] px-5 pt-3 pb-4 text-white shadow-[0_18px_50px_-24px_rgba(35,25,70,0.5)] md:px-8 md:transition-[padding-left] md:duration-200",
         wideInset ? "md:pl-[288px]" : "md:pl-[104px]",
       )}
-      style={{ background: grad }}
+      // --hero-bg: cor própria da faixa (Configurações > Marca e visual). Sem ela, o de sempre.
+      style={{ background: `var(--hero-bg, ${grad})` }}
     >
       <div
         className="pointer-events-none absolute inset-0"

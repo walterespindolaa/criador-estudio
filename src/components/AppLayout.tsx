@@ -17,7 +17,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useSouParceiro } from "@/hooks/useParceiro";
 import { deriveTier } from "@/hooks/useTier";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { applyTheme } from "@/lib/applyTheme";
+import { applyTheme, applyHero } from "@/lib/applyTheme";
 import { BgShapes } from "@/components/BgShapes";
 import { TourProvider } from "@/components/tour/TourProvider";
 import { HelpButton } from "@/components/tour/HelpButton";
@@ -144,6 +144,8 @@ const AppLayout = () => {
     }
     // Apply sidebar color override AFTER theme (so it wins)
     applySidebarColor(profile?.theme_sidebar || null);
+    const heroDaSessao = (profile as { theme_hero?: string | null } | null | undefined)?.theme_hero ?? null;
+    applyHero(heroDaSessao);
     if (profile?.theme_font) applyThemeFont(profile.theme_font);
     // Cacheia o tema pro próximo boot aplicar na hora (sem flash do padrão).
     try {
@@ -152,6 +154,8 @@ const AppLayout = () => {
       if (profile?.theme_sidebar) localStorage.setItem("theme_sidebar", profile.theme_sidebar);
       else localStorage.removeItem("theme_sidebar");
       if (profile?.theme_font) localStorage.setItem("theme_font", profile.theme_font);
+      if (heroDaSessao) localStorage.setItem("theme_hero", heroDaSessao);
+      else localStorage.removeItem("theme_hero");
     } catch { /* ignore */ }
   }, [profile]);
 
@@ -174,6 +178,15 @@ const AppLayout = () => {
         if (t.theme_preset) applyTheme(t.theme_preset, t.theme_accent || "#EA4918");
         applySidebarColor(t.theme_sidebar || null);
         if (t.theme_font) applyThemeFont(t.theme_font);
+      });
+    // Faixa do topo da conta ativa (get_managed_profile não tem essa coluna).
+    void (supabase.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown }>)("tema_hero_da_conta", { _owner: activeAccountId })
+      .then(({ data }) => {
+        if (!alive) return;
+        applyHero(typeof data === "string" ? data : null);
       });
     return () => { alive = false; };
   }, [isManaging, activeAccountId]);
