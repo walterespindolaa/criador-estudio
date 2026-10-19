@@ -312,18 +312,20 @@ function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
                   {col.atrasadas > 0 && <span className="w-2 h-2 rounded-full bg-red-600" title={`${col.atrasadas} atrasada(s)`} />}
                 </div>
                 <div className="space-y-2">
-                  {col.pagoEm && (
-                    <p className="flex items-center gap-1.5 rounded-xl border border-dashed border-green-300 bg-card/80 px-2.5 py-1.5 text-[11px] font-body text-green-800">
-                      <Check className="h-3 w-3 shrink-0" />
-                      <span>Pago em {col.pagoEm.slice(8, 10)}/{col.pagoEm.slice(5, 7)} · {col.pagas} peça{col.pagas === 1 ? "" : "s"} no histórico</span>
-                    </p>
-                  )}
                   {col.abertas.map((p) => cartao(p))}
                   {col.entregues.length > 0 && (
                     <>
                       <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1 pt-1">Entregues · a pagar</p>
                       {col.entregues.map((p) => cartao(p, true))}
                     </>
+                  )}
+                  {/* O histórico de pagamento fecha o card, depois das peças
+                      (Walter, 19/10/2026): o que está em produção vem primeiro. */}
+                  {col.pagoEm && (
+                    <p className="flex items-center gap-1.5 rounded-xl border border-dashed border-green-300 bg-card/80 px-2.5 py-1.5 text-[11px] font-body text-green-800">
+                      <Check className="h-3 w-3 shrink-0" />
+                      <span>Pago em {col.pagoEm.slice(8, 10)}/{col.pagoEm.slice(5, 7)} · {col.pagas} peça{col.pagas === 1 ? "" : "s"} no histórico</span>
+                    </p>
                   )}
                 </div>
               </div>
