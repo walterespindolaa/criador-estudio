@@ -519,12 +519,17 @@ Deno.serve(async (req) => {
         }
         // Confirmação de cancelamento (pente fino 23/09/2026): a pessoa
         // cancelava e não recebia nada; dias depois perguntava se "deu certo".
+        /* O E-MAIL NUNCA SAÍA (18/10/2026): lia `profiles.email`, coluna que
+           não existe, e o if engolia o erro. O e-mail vem do auth pela RPC
+           `emails_para` (service_role), que no Meu perfil devolve o da dona. */
         if (canceladoId) {
-          const { data: pc } = await supabase.from("profiles").select("email, name").eq("id", canceladoId).maybeSingle();
-          if (pc?.email) {
+          const { data: pc } = await supabase.from("profiles").select("name").eq("id", canceladoId).maybeSingle();
+          const { data: em } = await supabase.rpc("emails_para", { _ids: [canceladoId] });
+          const destino = ((em ?? []) as { email: string | null; eh_meu_perfil: boolean | null }[])[0];
+          if (destino?.email) {
             await enviarEmail(supabase, {
-              para: pc.email, nome: pc.name, etiqueta: "assinatura_cancelada",
-              assunto: "Sua assinatura do Cria foi cancelada",
+              para: destino.email, nome: (pc as { name: string | null } | null)?.name ?? null, etiqueta: "assinatura_cancelada",
+              assunto: destino.eh_meu_perfil ? "A assinatura do seu Meu perfil no Cria foi cancelada" : "Sua assinatura do Cria foi cancelada",
               paragrafos: [
                 "Confirmado: a assinatura foi cancelada e não vai ter nova cobrança.",
                 "Seus dados (ideias, posts, brandbook, clientes) ficam guardados por 60 dias. Se quiser voltar nesse prazo, é só assinar de novo e está tudo lá.",

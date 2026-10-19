@@ -40,6 +40,7 @@ import { HelpButton } from "@/components/tour/HelpButton";
 import { applySidebarColor } from "@/lib/sidebarTheme";
 import { applyThemeFont } from "@/components/settings/SettingsVisual";
 import { LABELS } from "@/lib/labels";
+import { useAtalhoMeuCria } from "@/hooks/useMeuPerfil";
 import { brlCentavos } from "@/lib/money";
 
 const brl = brlCentavos;
@@ -219,6 +220,7 @@ export default function ManagerLayout() {
   // modo gestão, só que para parceiros"). Fila alimenta o badge vermelho.
   const { data: souParceiro } = useSouParceiro();
   const { data: filaParceiro = [] } = useFilaDoParceiro();
+  const atalhoMeuCria = useAtalhoMeuCria();
   // VOLTA DO STRIPE (auditoria 07/09): a compra de módulo devolvia pra
   // /app/modulos, uma tela da área de criador. O parceiro puro nem chega lá
   // (é redirecionado) e perdia o "contratado!". Agora o Stripe volta pra cá,
@@ -326,6 +328,36 @@ export default function ManagerLayout() {
         <div className="flex w-full flex-col items-stretch gap-1">
           {railHovered && <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Dia a dia</p>}
           {railNode(Home, "Início", { active: isActive("/socialmidia/dashboard"), onClick: () => navigate("/socialmidia/dashboard") })}
+          {/* MEU CRIA (18/10/2026): atalho pro lado criador, só com plano ou teste valendo. */}
+          {atalhoMeuCria && (
+            <button
+              key="meu-cria"
+              type="button"
+              onClick={atalhoMeuCria.abrir}
+              aria-label="Meu Cria"
+              title={!railHovered ? "Meu Cria" : undefined}
+              className={cn(
+                "relative flex h-10 w-full items-center rounded-2xl bg-gradient-to-r from-primary/10 to-pink-500/10 text-[hsl(var(--sidebar-foreground))] transition-colors hover:from-primary/15 hover:to-pink-500/15",
+                railHovered ? "gap-3 px-2.5 justify-start" : "justify-center",
+              )}
+            >
+              <span className="relative grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-primary via-pink-500 to-violet-500 font-display text-[11px] font-extrabold text-white">
+                {(atalhoMeuCria.nome.trim().charAt(0) || "C").toUpperCase()}
+                {atalhoMeuCria.avatar && (
+                  <img src={atalhoMeuCria.avatar} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="absolute inset-0 h-full w-full object-cover" />
+                )}
+              </span>
+              {railHovered && (
+                <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden whitespace-nowrap text-sm font-body font-medium">
+                  <span className="truncate">Meu Cria</span>
+                  <span className={cn("ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-extrabold",
+                    atalhoMeuCria.pilula.pago ? "bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white" : "bg-primary/12 text-primary")}>
+                    {atalhoMeuCria.pilula.texto}
+                  </span>
+                </span>
+              )}
+            </button>
+          )}
           {/* VISÃO AMPLA DO PARCEIRO (Walter, 18/10/2026, mockup aprovado). Antes
              o parceiro puro não via Clientes, Agenda nem Aprovações (31/08: "menu
              infinito"). Agora a designer também atende cliente próprio e tem o
@@ -570,6 +602,11 @@ export default function ManagerLayout() {
         // quadradinho, descrição do que aquilo faz e chevron. A grade de ícones
         // secos que existia aqui não dizia o que cada coisa era.
         const moreSections: { title: string; items: { label: string; desc?: string; icon: LucideIcon; onClick: () => void; ativo?: boolean }[] }[] = [
+          // Meu Cria em primeiro no celular (mesma regra do rail: só com plano ou teste).
+          ...(atalhoMeuCria ? [{
+            title: "Meu Cria",
+            items: [{ label: "Abrir meu Cria", desc: `O seu lado criador · ${atalhoMeuCria.pilula.texto}`, icon: Sparkles as LucideIcon, onClick: atalhoMeuCria.abrir }],
+          }] : []),
           // Criakut subiu pro topo (18/10/2026): mais visível, igual ao rail.
           ...(temCriakut ? [{
             title: "Comunidade",

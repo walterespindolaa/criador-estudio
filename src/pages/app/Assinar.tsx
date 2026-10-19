@@ -7,6 +7,9 @@ import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { useSouParceiro } from "@/hooks/useParceiro";
+import { useActiveAccount } from "@/contexts/AccountContext";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { deriveTier } from "@/hooks/useTier";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -30,14 +33,22 @@ export default function Assinar() {
   const [partnerInfo, setPartnerInfo] = useState<{ name: string; discountPct: number | null; durationMonths: number | null } | null>(null);
   const [codeError, setCodeError] = useState(false);
 
-  const isExpired = status === "trial_expired" || status === "blocked";
+  /* MEU PERFIL ASSINA AQUI (passo 6, 18/10/2026). Dentro do Meu perfil esta
+     página mostra e vende o plano DO PERFIL: o checkout vai com account_id e
+     o servidor confere que o perfil é da sessão. */
+  const { ehMeuPerfil, meuPerfil } = useActiveAccount();
+  const { profile: perfilAtivo } = useActiveProfile();
+  const isExpired = ehMeuPerfil
+    ? !!perfilAtivo && deriveTier(perfilAtivo) === "none"
+    : status === "trial_expired" || status === "blocked";
 
   // ONDE A PESSOA ESTÁ HOJE. Sem isto a página é um cardápio pra estranho: ela
   // mostrava "Assinar cria Pro" pra quem JÁ É Pro. Uma página de upgrade que não
   // sabe o seu plano não consegue te convidar pra lugar nenhum.
+  const basePlano = ehMeuPerfil ? perfilAtivo : profile;
   const planoAtual: Tier | null =
-    profile?.subscription_status === "active" && profile?.plan
-      ? (profile.plan as Tier)
+    basePlano?.subscription_status === "active" && basePlano?.plan
+      ? (basePlano.plan as Tier)
       : null;
 
   // Self-subscribe: conta PF criada por uma gestora via fluxo "Assinar pra mim".
@@ -46,7 +57,7 @@ export default function Assinar() {
   const meta = (user?.user_metadata ?? {}) as { self_subscribe_plan?: string; self_subscribe_partner_code?: string };
   const selfSubscribePlan = meta.self_subscribe_plan;
   const selfSubscribeCode = meta.self_subscribe_partner_code;
-  const isSelfSubscribeFlow = !!selfSubscribePlan && (selfSubscribePlan === "pro" || selfSubscribePlan === "studio");
+  const isSelfSubscribeFlow = !ehMeuPerfil && !!selfSubscribePlan && (selfSubscribePlan === "pro" || selfSubscribePlan === "studio");
   const prefilledRef = useRef(false);
 
   /* De onde vem o código, em ordem de prioridade:
@@ -140,6 +151,7 @@ export default function Assinar() {
           plan: planId,
           partner_code: partnerCode.trim() || undefined,
           self_subscribe: isSelfSubscribeFlow || undefined,
+          account_id: ehMeuPerfil ? meuPerfil?.owner_id : undefined,
         },
       });
       if (error) throw error;
@@ -225,6 +237,22 @@ export default function Assinar() {
           </p>
         </div>
       </div>
+
+      {ehMeuPerfil && (
+        <div className="w-full max-w-4xl mb-6 rounded-2xl border border-primary/30 bg-primary/5 px-5 py-4 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+            <UserCircle className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-display font-semibold text-foreground">
+              Plano do seu Meu perfil{meuPerfil?.name ? ` (${meuPerfil.name})` : ""}
+            </p>
+            <p className="text-xs text-muted-foreground font-body mt-0.5">
+              É a assinatura do seu lado criador, separada dos módulos da sua gestão. A cobrança vai pro seu e-mail.
+            </p>
+          </div>
+        </div>
+      )}
 
       {isExpired && (
         <div className="mb-8 text-center">

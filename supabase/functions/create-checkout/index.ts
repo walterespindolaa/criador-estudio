@@ -69,10 +69,35 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    /* MEU PERFIL ASSINA (passo 6, 18/10/2026). A social mídia que tem o Meu
+       perfil assina o plano DELE, logada na conta dela. O front manda
+       account_id = id do perfil; aqui só passa se o perfil é dela mesma
+       (profiles.perfil_de = sessão). Conta de cliente nunca: quem paga o plano
+       da cliente é a própria cliente, no Cria dela. A assinatura, o plano e o
+       cliente Stripe ficam no PERFIL; o e-mail de cobrança é o da dona. */
+    const pedidoConta = typeof body?.account_id === "string" && body.account_id && body.account_id !== user.id
+      ? String(body.account_id) : null;
+    if (pedidoConta) {
+      if (isAgency) {
+        return new Response(JSON.stringify({ error: "invalid_plan" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: alvo } = await svc.from("profiles").select("perfil_de").eq("id", pedidoConta).maybeSingle();
+      if (!alvo || (alvo as { perfil_de: string | null }).perfil_de !== user.id) {
+        return new Response(JSON.stringify({ error: "so_meu_perfil" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+    const contaId = pedidoConta ?? user.id;
+    const metaPerfil: Record<string, string> = pedidoConta ? { meu_perfil_de: user.id } : {};
+
     const { data: profile } = await svc
       .from("profiles")
       .select("stripe_customer_id, name, stripe_subscription_id, subscription_status")
-      .eq("id", user.id)
+      .eq("id", contaId)
       .single();
 
     /* TROCA DE PLANO NÃO ABRE OUTRO CHECKOUT (pente fino 23/09/2026, B1).
@@ -95,7 +120,7 @@ serve(async (req) => {
           await stripe.subscriptions.update(atual.id, {
             items: [{ id: item.id, price: priceId }],
             proration_behavior: "create_prorations",
-            metadata: { ...(atual.metadata ?? {}), app: "cria", user_id: user.id, plan },
+            metadata: { ...(atual.metadata ?? {}), app: "cria", user_id: contaId, plan, ...metaPerfil },
           });
           return new Response(JSON.stringify({ changed: true, plan }), {
             status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -110,20 +135,22 @@ serve(async (req) => {
     // Reusa customer existente ou cria
     let customerId = profile?.stripe_customer_id ?? undefined;
     if (!customerId) {
+      // Meu perfil tem cliente Stripe PRÓPRIO (com o e-mail da dona): o portal
+      // dele mostra só o plano do perfil, sem misturar com os módulos da gestão.
       const customer = await stripe.customers.create({
         email: user.email,
-        name: profile?.name ?? undefined,
-        metadata: { app: "cria", user_id: user.id },
+        name: pedidoConta ? `${profile?.name ?? "Meu perfil"} (Meu perfil)` : (profile?.name ?? undefined),
+        metadata: { app: "cria", user_id: contaId, ...metaPerfil },
       });
       customerId = customer.id;
-      await svc.from("profiles").update({ stripe_customer_id: customerId }).eq("id", user.id);
+      await svc.from("profiles").update({ stripe_customer_id: customerId }).eq("id", contaId);
     }
 
     // ── Self-subscribe (manager assinando pra conta PF dela) ────
     // O front passa self_subscribe:true quando o user logado tem
     // user_metadata.self_subscribe_plan. Validamos via account_members:
     // owner_id=user.id (PF) + pending_self_subscribe=true.
-    const selfSubRequest = body?.self_subscribe === true;
+    const selfSubRequest = body?.self_subscribe === true && !pedidoConta;
     let selfSubValidated = false;
     let selfSubManagerId: string | null = null;
     if (selfSubRequest) {
@@ -186,9 +213,9 @@ serve(async (req) => {
       mode: "subscription",
       customer: customerId,
       line_items: [{ price: priceId, quantity: seats }],
-      metadata: { app: "cria", user_id: user.id, plan, ...agencyMeta, ...partnerMeta, ...selfSubMark },
+      metadata: { app: "cria", user_id: contaId, plan, ...agencyMeta, ...partnerMeta, ...selfSubMark, ...metaPerfil },
       subscription_data: {
-        metadata: { app: "cria", user_id: user.id, plan, ...agencyMeta, ...partnerMeta, ...selfSubMark },
+        metadata: { app: "cria", user_id: contaId, plan, ...agencyMeta, ...partnerMeta, ...selfSubMark, ...metaPerfil },
       },
       success_url: successUrl,
       cancel_url: cancelUrl,

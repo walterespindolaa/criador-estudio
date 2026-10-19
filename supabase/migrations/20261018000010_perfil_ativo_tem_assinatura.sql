@@ -1,0 +1,5 @@
+-- Passo 6 do Meu perfil (18/10/2026): get_perfil_ativo devolve um sim/não
+-- 'tem_assinatura_stripe' (só pra dona), pra aba Assinatura mostrar
+-- "Gerenciar assinatura" no Meu perfil. O id do cliente Stripe não sai do banco.
+-- Já aplicado em produção pelo conector Supabase; arquivo de registro.
+-- (mesma função de 20261018000009 + a chave nova)

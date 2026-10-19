@@ -4,11 +4,16 @@ import { X, Zap, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useProfile } from "@/hooks/useProfile";
+import { useActiveAccount } from "@/contexts/AccountContext";
+import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { cn } from "@/lib/utils";
 
 export function TrialBanner() {
   const { status, daysLeftInTrial } = useSubscription();
   const { profile } = useProfile();
+  // Meu perfil (passo 6): o aviso é do teste do PERFIL, não da conta da sessão.
+  const { ehMeuPerfil } = useActiveAccount();
+  const { profile: perfilAtivo } = useActiveProfile();
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState(false);
 
@@ -23,23 +28,38 @@ export function TrialBanner() {
     setDismissed(true);
   };
 
-  if (profile?.account_type === "manager") return null;
-
-  if (dismissed || (status !== "trial_expiring" && status !== "trial_active")) {
-    return null;
+  let dias: number;
+  let doPerfil = false;
+  if (ehMeuPerfil) {
+    if (dismissed || !perfilAtivo) return null;
+    const pago = ["active", "trialing", "past_due", "unpaid"].includes(perfilAtivo.subscription_status ?? "");
+    const fim = perfilAtivo.trial_ends_at ? new Date(perfilAtivo.trial_ends_at).getTime() : 0;
+    if (pago || !fim) return null;
+    const restante = Math.ceil((fim - Date.now()) / 86_400_000);
+    // Teste acabado: quem avisa é o cadeado de cada ferramenta (com "Ver planos").
+    if (restante < 0) return null;
+    dias = restante;
+    doPerfil = true;
+  } else {
+    if (profile?.account_type === "manager") return null;
+    if (dismissed || (status !== "trial_expiring" && status !== "trial_active")) {
+      return null;
+    }
+    dias = daysLeftInTrial;
   }
 
   // Só mostrar quando faltam 4 dias ou menos
-  if (daysLeftInTrial > 4) return null;
+  if (dias > 4) return null;
 
-  const isUrgent = daysLeftInTrial <= 1;
-  const isCritical = daysLeftInTrial === 0;
+  const isUrgent = dias <= 1;
+  const isCritical = dias === 0;
+  const doQue = doPerfil ? "do teste do seu Meu perfil" : "do seu período de teste";
 
   const message = isCritical
-    ? "Seu período de teste termina hoje!"
-    : daysLeftInTrial === 1
-    ? "Último dia do seu período de teste."
-    : `Faltam ${daysLeftInTrial} dias no seu período de teste.`;
+    ? (doPerfil ? "O teste do seu Meu perfil termina hoje!" : "Seu período de teste termina hoje!")
+    : dias === 1
+    ? `Último dia ${doQue}.`
+    : `Faltam ${dias} dias ${doPerfil ? "no teste do seu Meu perfil" : "no seu período de teste"}.`;
 
   return (
     <div

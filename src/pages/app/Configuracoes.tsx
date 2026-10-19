@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { validateUpload } from "@/lib/upload-validation";
 import { storageBytesForPlan, formatStorage } from "@/lib/plans";
 import { useNavigate } from "react-router-dom";
+import { rotuloPlanoMeuPerfil } from "@/hooks/useMeuPerfil";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
@@ -400,7 +401,7 @@ const Configuracoes = () => {
               {verPerfil && <TabsTrigger value="perfil" className={TAB_PILL}><User className="h-3.5 w-3.5 shrink-0" /><span>Perfil</span></TabsTrigger>}
               <TabsTrigger value="pilares" className={TAB_PILL}><LayoutGrid className="h-3.5 w-3.5 shrink-0" /><span>Hábitos</span></TabsTrigger>
               {!isManaging && <TabsTrigger value="visual" data-tour="config-tab-visual" className={TAB_PILL}><Paintbrush className="h-3.5 w-3.5 shrink-0" /><span>Marca & Visual</span></TabsTrigger>}
-              {!isManaging && <TabsTrigger value="assinatura" data-tour="config-tab-assinatura" className={TAB_PILL}><CreditCard className="h-3.5 w-3.5 shrink-0" /><span>Assinatura</span></TabsTrigger>}
+              {(!isManaging || ehMeuPerfil) && <TabsTrigger value="assinatura" data-tour="config-tab-assinatura" className={TAB_PILL}><CreditCard className="h-3.5 w-3.5 shrink-0" /><span>Assinatura</span></TabsTrigger>}
               {!isManaging && <TabsTrigger value="conexoes" className={TAB_PILL}><Plug className="h-3.5 w-3.5 shrink-0" /><span>Conexões</span></TabsTrigger>}
               {!isManaging && <TabsTrigger value="notificacoes" className={TAB_PILL}><Bell className="h-3.5 w-3.5 shrink-0" /><span>Notificações</span></TabsTrigger>}
               {!isManaging && <TabsTrigger value="equipe" className={TAB_PILL}><Users className="h-3.5 w-3.5 shrink-0" /><span>Equipe</span></TabsTrigger>}
@@ -708,7 +709,19 @@ const Configuracoes = () => {
             <TabsContent value="assinatura">
               <div className="max-w-2xl space-y-6">
                 <SectionHeader title="Assinatura e armazenamento" desc="Seu plano, uso de IA e espaço de arquivos, tudo num lugar só." />
-                {profile?.stripe_customer_id && (
+                {/* MEU PERFIL (passo 6): plano do perfil e caminho pra assinar. */}
+                {ehMeuPerfil && (
+                  <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-3">
+                    <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
+                      <CreditCard className="h-5 w-5" /> Plano do seu Meu perfil
+                    </h3>
+                    <p className="text-sm text-muted-foreground font-body">
+                      {rotuloPlanoMeuPerfil(perfilAtivo ?? null) || "sem plano"}. É separado dos módulos da sua gestão.
+                    </p>
+                    <Button onClick={() => navigate("/app/assinar")} className="w-full sm:w-auto">Ver planos</Button>
+                  </div>
+                )}
+                {(profile?.stripe_customer_id || (ehMeuPerfil && perfilAtivo?.tem_assinatura_stripe)) && (
                   <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                     <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
                       <CreditCard className="h-5 w-5" /> Assinatura

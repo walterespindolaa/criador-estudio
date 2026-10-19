@@ -41,10 +41,23 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+    /* MEU PERFIL (passo 6, 18/10/2026): o portal do perfil abre o cliente
+       Stripe DO PERFIL. Só a dona (profiles.perfil_de = sessão) pede. */
+    const body = await req.json().catch(() => ({}));
+    const pedidoConta = typeof body?.account_id === "string" && body.account_id && body.account_id !== user.id
+      ? String(body.account_id) : null;
+    if (pedidoConta) {
+      const { data: alvo } = await svc.from("profiles").select("perfil_de").eq("id", pedidoConta).maybeSingle();
+      if (!alvo || (alvo as { perfil_de: string | null }).perfil_de !== user.id) {
+        return new Response(JSON.stringify({ error: "so_meu_perfil" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
     const { data: profile } = await svc
       .from("profiles")
       .select("stripe_customer_id")
-      .eq("id", user.id)
+      .eq("id", pedidoConta ?? user.id)
       .single();
 
     if (!profile?.stripe_customer_id) {

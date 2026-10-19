@@ -62,6 +62,10 @@ export function UpgradeGate({ feature, children }: { feature: FeatureKey; childr
             ? `Essa ferramenta está no ${plano.name}, e o seu perfil não tem esse plano.`
             : "O seu perfil não tem acesso a essa ferramenta."}
         </p>
+        {/* Passo 6: o Meu perfil assina pela página de planos (vai com account_id). */}
+        <Button className="mt-5 rounded-xl" onClick={() => navigate("/app/assinar")}>
+          Ver planos do meu perfil
+        </Button>
       </div>
     );
   }

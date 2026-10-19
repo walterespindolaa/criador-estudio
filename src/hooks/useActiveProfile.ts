@@ -45,6 +45,8 @@ export type ActiveProfile = Pick<
   perfil_de?: string | null;
   /** Meu perfil nasce sem onboarding: a dona passa pelo de criadora na 1ª vez. */
   onboarding_completed?: boolean | null;
+  /** Só pra dona: o perfil já tem cliente Stripe (mostra "Gerenciar assinatura"). */
+  tem_assinatura_stripe?: boolean | null;
   /** Só vem preenchida pra dona (ela mesma ou o Meu perfil dela). */
   pix_key?: string | null;
 };
