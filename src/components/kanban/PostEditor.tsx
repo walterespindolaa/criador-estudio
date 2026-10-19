@@ -119,6 +119,7 @@ import { BaixarMidiasDoPost } from "./BaixarMidiasDoPost";
 import { sanitizeText } from "@/lib/sanitize";
 import { confirmar } from "@/components/shared/Confirm";
 import { SeletorDeGanchos } from "@/components/shared/SeletorDeGanchos";
+import { SlidesEditor } from "@/components/kanban/SlidesEditor";
 
 
 interface Post {
@@ -2069,6 +2070,15 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     <div className="space-y-4">
                       {formatStructure.fields.map((field) => {
                         if (field.key === "caption") return null; // legenda vive no passo 2
+                        /* CARROSSEL: capa + conteúdo viram uma lista de slides
+                           (SlidesEditor). Mesmos campos hook e cta no banco. */
+                        if (formatStructure.devField && field.key === "cta") return null;
+                        if (formatStructure.devField && field.key === "hook") {
+                          return (
+                            <SlidesEditor key="slides" capa={hook} onChangeCapa={setHook} slides={cta} onChangeSlides={setCta}
+                              acaoCapa={<SeletorDeGanchos valorAtual={hook} onPick={setHook} />} />
+                          );
+                        }
                         const IconComponent = iconMap[field.icon] || PenLine;
                         const value = field.key === "hook" ? hook
                           : field.key === "script" ? script
