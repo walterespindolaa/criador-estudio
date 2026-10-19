@@ -24,10 +24,10 @@ import { ClientTasks } from "@/components/accounts/crm/ClientTasks";
 // O formulário de Brandbook e Persona virou componente compartilhado: a mesma
 // implementação atende esta ficha e o cockpit do cliente (ClienteHub).
 import {
-  BrandbookEditor, PersonaEditor, useFichaEditavel, payloadOf,
+  useFichaEditavel,
   Card, CF, F, MicTextarea,
 } from "@/components/accounts/crm/BrandbookEditor";
-import { BotaoBrandbookPdf } from "@/components/pdf/BrandbookClientePdf";
+import { BrandbookDoCliente } from "@/components/accounts/crm/BrandbookDoCliente";
 import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +57,9 @@ function ClientWorkspace() {
   const navigate = useNavigate();
   const { setActiveAccount, managedAccounts } = useActiveAccount();
   // Estado da ficha + autosave: mesma implementação usada no cockpit do cliente.
-  const { client, form, setForm, saveState, setSaveState, isLoading } = useFichaEditavel(id);
+  // Brandbook e persona têm editor próprio, o mesmo da ficha do cliente
+  // (BrandbookDoCliente), com autosave próprio: esta tela não grava esses dois.
+  const { client, form, setForm, saveState, setSaveState, isLoading, gravarAgora } = useFichaEditavel(id, { excluir: ["brand_core", "persona"] });
   const { allowed: hasHubCria } = useHasHubCria();
   const { data: hubScrapes = [] } = useScrapes(id);
   const hubDone = hubScrapes.filter((s) => s.status === "done" && s.result_summary);
@@ -112,11 +114,8 @@ function ClientWorkspace() {
   };
 
   // Salvamento manual (o autosave já cobre; o botão só força na hora).
-  const save = async () => {
-    await update.mutateAsync({ id: form.id, ...payloadOf(form) });
-    setSaveState("saved");
-    setTimeout(() => setSaveState("idle"), 1600);
-  };
+  // gravarAgora respeita o `excluir` (não pisa no brandbook do editor ao lado).
+  const save = async () => { gravarAgora(form); };
 
   const onPickAvatar = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = "";
@@ -249,7 +248,7 @@ function ClientWorkspace() {
       {/* TABS */}
       <Tabs defaultValue="resumo" className="w-full">
         <TabsList data-tour="crm-cli-abas" className="bg-card border border-border rounded-2xl p-1.5 mb-6 flex-wrap h-auto shadow-sm">
-          {[["resumo", "Resumo"], ["tarefas", "Tarefas"], ["brand", "Brandbook"], ["persona", "Persona"], ["diag", "Diagnóstico"], ["conc", "Concorrência"]].map(([v, l]) => (
+          {[["resumo", "Resumo"], ["tarefas", "Tarefas"], ["brand", "Brandbook"], ["diag", "Diagnóstico"], ["conc", "Concorrência"]].map(([v, l]) => (
             <TabsTrigger key={v} value={v} data-tour={`crm-cli-tab-${v}`} className="rounded-xl px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none font-display">{l}</TabsTrigger>
           ))}
         </TabsList>
@@ -367,32 +366,11 @@ function ClientWorkspace() {
             cockpit do cliente usa igual. Aqui a ficha só entrega o estado e o
             botão de sincronizar, que depende do id da rota. */}
         <TabsContent value="brand" data-tour="crm-cli-brand" className="mt-0 space-y-4">
-          {/* O mesmo botão do cockpit do cliente. Quem trabalha aqui e quem
-              trabalha lá precisa conseguir mandar o brandbook pro cliente sem
-              descobrir que só uma das duas telas exporta. A persona entra no
-              PDF mesmo estando na aba do lado: o documento é um só. */}
-          <div className="rounded-2xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-display font-semibold text-foreground">Brandbook em PDF</p>
-              <p className="text-xs font-body text-muted-foreground mt-0.5">
-                Gera o documento com tudo que está preenchido aqui e na Persona, no padrão do Cria, pra mandar pro cliente ou arquivar.
-              </p>
-            </div>
-            <BotaoBrandbookPdf form={form} nome={form.name ?? undefined} className="shrink-0 rounded-xl" />
-          </div>
-          <BrandbookEditor
-            form={form}
-            setForm={setForm}
-            isCria={isCria}
-            aoSincronizar={() => { if (id) sync.mutate(id, { onSuccess: () => toast.success("Sincronizado do Cria!") }); }}
-            sincronizando={sync.isPending}
-          />
+          {/* UMA TELA SÓ (Gabriela, 19/10/2026): o mesmo brandbook da ficha do
+              cliente, com Peça os dados, Copiar tudo, PDF e a Persona dentro. */}
+          <BrandbookDoCliente crmClientId={form.id} criaOwnerId={form.cria_owner_id ?? null} nomeCliente={form.name ?? ""} />
         </TabsContent>
 
-        {/* PERSONA */}
-        <TabsContent value="persona" className="mt-0">
-          <PersonaEditor form={form} setForm={setForm} isCria={isCria} />
-        </TabsContent>
 
         {/* DIAGNÓSTICO */}
         <TabsContent value="diag" className="mt-0 space-y-4">

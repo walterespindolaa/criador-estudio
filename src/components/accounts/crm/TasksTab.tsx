@@ -162,8 +162,16 @@ function periodoLabel(f: PeriodoFilter): string {
   return "Período";
 }
 
-export function TasksTab() {
-  const { data: tasks = [], isLoading } = useCrmTasks();
+/* clienteFixo (Walter, 19/10/2026: "eu estar no cliente MARHABAN e ter tudo
+   dele ali dentro"): a mesma tela de tarefas, dentro da ficha, só com as
+   tarefas DESTE cliente. Some o seletor de cliente e a tarefa nova já nasce
+   ligada a ele. */
+export function TasksTab({ clienteFixo }: { clienteFixo?: string } = {}) {
+  const { data: todasTarefas = [], isLoading } = useCrmTasks();
+  const tasks = useMemo(
+    () => (clienteFixo ? todasTarefas.filter((t) => t.crm_client_id === clienteFixo) : todasTarefas),
+    [todasTarefas, clienteFixo],
+  );
   const { data: clients = [] } = useCrmClients();
   const { data: leads = [] } = useCrmLeads();
   const updateTask = useUpdateCrmTask();
@@ -175,7 +183,7 @@ export function TasksTab() {
   // Prazo já preenchido quando a tarefa nasce do "+" de um dia do calendário.
   const [novaDue, setNovaDue] = useState<string>("");
   const [view, setView] = useState<ViewFilter>("todas");
-  const [clientFilter, setClientFilter] = useState<string>("all");
+  const [clientFilter, setClientFilter] = useState<string>(clienteFixo ?? "all");
   const [periodo, setPeriodo] = useState<PeriodoFilter>(() => loadPeriodo());
   const [dragId, setDragId] = useState<string | null>(null);
   // Kanban (padrão) ou Calendário, igual ao Cria Post. Preferência salva por dispositivo.
@@ -278,10 +286,12 @@ export function TasksTab() {
             </button>
           ))}
         </div>
+        {!clienteFixo && (
         <select value={clientFilter} onChange={(e) => setClientFilter(e.target.value)} className="h-8 rounded-full border border-input bg-card px-3 text-xs">
           <option value="all">Todos os clientes</option>
           {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        )}
 
         {/* Filtro por período do prazo (due_date). Fica num popover pra não estourar
             a linha no mobile: presets "próximos N dias" + intervalo específico.
@@ -401,6 +411,7 @@ export function TasksTab() {
           key={editing?.id ?? `new:${novaDue}`}
           task={editing}
           defaultDue={novaDue}
+          defaultClient={clienteFixo}
           clients={clients}
           saving={createTask.isPending || updateTask.isPending}
           onClose={() => { setDialogOpen(false); setEditing(null); }}
@@ -413,8 +424,10 @@ export function TasksTab() {
   );
 }
 
-function TaskDialog({ task, defaultDue, clients, saving, onClose, onCreate, onUpdate, onDelete }: {
+function TaskDialog({ task, defaultDue, defaultClient, clients, saving, onClose, onCreate, onUpdate, onDelete }: {
   task: CrmTask | null;
+  /** Cliente já escolhido quando a tarefa nasce dentro da ficha dele. */
+  defaultClient?: string;
   // Prazo já preenchido quando a tarefa nasce do "+" de um dia do calendário.
   defaultDue?: string;
   clients: { id: string; name: string }[];
@@ -425,7 +438,7 @@ function TaskDialog({ task, defaultDue, clients, saving, onClose, onCreate, onUp
   onDelete: (id: string) => void;
 }) {
   const [title, setTitle] = useState(task?.title ?? "");
-  const [clientId, setClientId] = useState(task?.crm_client_id ?? "");
+  const [clientId, setClientId] = useState(task?.crm_client_id ?? defaultClient ?? "");
   const [priority, setPriority] = useState<CrmTaskPriority>(task?.priority ?? "media");
   const [status, setStatus] = useState<CrmTaskStatus>(task?.status ?? "pendente");
   const [due, setDue] = useState(task?.due_date ?? defaultDue ?? "");

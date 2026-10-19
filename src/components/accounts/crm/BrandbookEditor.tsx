@@ -112,6 +112,10 @@ export function useFichaEditavel(id: string | undefined, opcoes?: {
      corriam devolvia `status: "ativo"` por cima, e isso mexe em Caixa, Home e
      mensalidade. Limitando o payload, os dois convivem sem se atropelar. */
   campos?: (keyof CrmClient)[];
+  /* O contrário de `campos`: grava tudo MENOS estes. A ficha do Cria Gestão
+     usa pra deixar brandbook e persona com o editor compartilhado
+     (BrandbookDoCliente), que tem autosave próprio (19/10/2026). */
+  excluir?: (keyof CrmClient)[];
 }) {
   const { data: client, isLoading } = useCrmClient(id);
   const update = useUpdateCrmClient();
@@ -133,13 +137,19 @@ export function useFichaEditavel(id: string | undefined, opcoes?: {
   }, [client]);
 
   const campos = opcoes?.campos;
+  const excluirKey = (opcoes?.excluir ?? []).join(",");
   const recorta = useCallback((f: CrmClient) => {
     const cheio = payloadOf(f) as Record<string, unknown>;
-    if (!campos) return cheio;
+    if (!campos) {
+      if (!excluirKey) return cheio;
+      const resto = { ...cheio };
+      for (const k of excluirKey.split(",")) delete resto[k];
+      return resto;
+    }
     const so: Record<string, unknown> = {};
     for (const k of campos) so[k as string] = cheio[k as string];
     return so;
-  }, [campos]);
+  }, [campos, excluirKey]);
 
   /* Grava agora, sem esperar o debounce. Usado no desmonte: sair da aba não
      pode jogar fora os últimos 800ms de digitação, que é justamente o texto que

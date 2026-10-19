@@ -201,7 +201,20 @@ export default function CriaCaptacao() {
   );
 }
 
-function CriaCaptacaoInner() {
+/* A CAPTAÇÃO DENTRO DA FICHA DO CLIENTE (Walter, 19/10/2026: "precisa
+   espelhar aqui na tela do cliente a captação dele, pra aparecer essa mesma
+   tela"). Não é uma cópia: é a MESMA tela do módulo, presa na pasta deste
+   cliente. Mês, roteiros por dia, marcar, guia em PDF, enviar pro cliente,
+   tudo igual, e o que muda num lugar muda no outro. */
+export function CaptacaoDoCliente({ crmClientId }: { crmClientId: string }) {
+  return (
+    <ModuleGate code="cria_captacao" teamCode="cria_captacao">
+      <CriaCaptacaoInner fixo={crmClientId} />
+    </ModuleGate>
+  );
+}
+
+function CriaCaptacaoInner({ fixo }: { fixo?: string } = {}) {
   const navigate = useNavigate();
   const [month, setMonth] = useState(() => hojeBR().slice(0, 7));
   // Dialog de Configurações da captação (Cidades + Tomadas padrão).
@@ -218,6 +231,7 @@ function CriaCaptacaoInner() {
      Só o valor INICIAL: depois disso quem manda é o clique, e trocar de pasta
      não precisa mexer na URL. */
   const [pasta, setPasta] = useState<string | null>(() => {
+    if (fixo) return `crm:${fixo}`;
     const crmId = new URLSearchParams(window.location.search).get("cliente");
     return crmId ? `crm:${crmId}` : null;
   });
@@ -225,6 +239,7 @@ function CriaCaptacaoInner() {
      `?acao=marcar` abre o Marcar captação, já dentro da pasta certa. A ficha
      não duplica o editor: ela manda a pessoa pra cá com a intenção pronta. */
   const [acaoPedida, setAcaoPedida] = useState<"novo-roteiro" | "marcar" | null>(() => {
+    if (fixo) return null;
     const a = new URLSearchParams(window.location.search).get("acao");
     return a === "novo-roteiro" || a === "marcar" ? a : null;
   });
@@ -867,7 +882,7 @@ function CriaCaptacaoInner() {
             ? (list) => setClientShots.mutateAsync({ crmClientId: pastaAberta.crmId!, shots: list })
             : null}
           ext={pastaAberta.crmId ? extByCrmId.get(pastaAberta.crmId) ?? null : null}
-          onBack={() => setPasta(null)}
+          onBack={() => (fixo ? navigate("/socialmidia/captacao") : setPasta(null))}
           onDeleteExtra={pastaAberta.extraId ? () => { delExtra.mutate(pastaAberta.extraId!); setPasta(null); } : undefined}
           onPrompter={(title, text) => setPrompter({ title, text })}
           renderCapture={renderCaptureRow}
@@ -883,11 +898,19 @@ function CriaCaptacaoInner() {
           todosScripts={scripts.filter((sc) => pastaAberta.crmId
             ? sc.crm_client_id === pastaAberta.crmId
             : !sc.crm_client_id && (sc.client_name ?? "").trim().toLowerCase() === nomeKeyAberta)}
-          aoAbrirDia={(d) => { setPasta(null); setDiaAberto(d); }}
+          aoAbrirDia={(d) => { if (!fixo) setPasta(null); setDiaAberto(d); }}
         />
       )}
 
-      {!pastaAberta && (<>
+      {/* Na ficha, a pasta do cliente sumiu (inativo ou pausado sem movimento no mês). */}
+      {fixo && !pastaAberta && (
+        <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
+          <p className="text-sm font-body font-semibold text-foreground">Nada de captação deste cliente em {monthLabel(month).toLowerCase()}</p>
+          <p className="text-xs font-body text-muted-foreground mt-1">Cliente pausado ou inativo só aparece no mês em que tem gravação ou roteiro. Use as setas do mês pra ver os outros.</p>
+        </div>
+      )}
+
+      {!fixo && !pastaAberta && (<>
       {/* O PAINEL DE VOO (v4, ciclo 2): o que vem, o que falta, quem não foi
           marcado. Substitui o hero de placar + pílulas, que dizia QUANTOS
           faltavam sem dizer QUAIS nem o que fazer. */}
