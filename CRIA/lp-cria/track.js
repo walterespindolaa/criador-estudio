@@ -272,10 +272,83 @@ var CRIA_TRACK = {
     else setTimeout(fn, 1200);
   }
 
+  /* ── CONSENTIMENTO (Walter, 19/10/2026, opção A) ─────────────────────────
+     Um aviso só pra LP e app. Antes a LP disparava o pixel pra todo mundo e o
+     app só depois do aceite; quem aceitava aqui chegava no cadastro do app com
+     o aviso de novo e, sem clicar, o cadastro sumia da Meta. Agora a escolha
+     fica num cookie do domínio .criasocialclub.com.br, lido pelos dois lados.
+     Sem "aceito", nenhum script de terceiro (Meta, OpenAI) entra na página.
+     Guardar a origem e colar UTM nos links não depende disto: é dado nosso,
+     não sai pra ninguém. */
+  var COOKIE = "cria_consent";
+  var CHAVE_LS = "cria.consentimento";
+  var DOMINIO = "criasocialclub.com.br";
+
+  function noDominio() {
+    var h = location.hostname;
+    return h === DOMINIO || h.slice(-(DOMINIO.length + 1)) === "." + DOMINIO;
+  }
+
+  function lerConsent() {
+    var m = document.cookie.match(new RegExp("(?:^|; )" + COOKIE + "=([^;]*)"));
+    var v = m ? decodeURIComponent(m[1]) : null;
+    if (v !== "aceito" && v !== "recusado") {
+      try { v = localStorage.getItem(CHAVE_LS); } catch (e) { v = null; }
+    }
+    return v === "aceito" || v === "recusado" ? v : null;
+  }
+
+  function gravarConsent(v) {
+    var c = COOKIE + "=" + v + "; path=/; max-age=31536000; SameSite=Lax";
+    if (noDominio()) c += "; domain=." + DOMINIO + "; Secure";
+    else if (location.protocol === "https:") c += "; Secure";
+    document.cookie = c;
+    try { localStorage.setItem(CHAVE_LS, v); } catch (e) {}
+  }
+
+  function mostrarAviso(aoAceitar) {
+    if (document.getElementById("cria-consent")) return;
+    var css = document.createElement("style");
+    css.textContent =
+      "#cria-consent{position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;max-width:420px;margin-left:auto;" +
+      "background:#fffdf8;color:#1b1a18;border:1px solid #e8e1d4;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.12);" +
+      "padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom));font-family:inherit;font-size:14px;line-height:1.5}" +
+      "#cria-consent p{margin:0}#cria-consent a{color:inherit;text-decoration:underline;text-underline-offset:2px}" +
+      "#cria-consent .acoes{display:flex;gap:8px;margin-top:12px}" +
+      "#cria-consent button{flex:1;height:44px;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}" +
+      "#cria-consent .sim{background:#1b1a18;color:#fff;border:0}" +
+      "#cria-consent .nao{background:transparent;color:#1b1a18;border:1px solid #e8e1d4}";
+    document.head.appendChild(css);
+    var box = document.createElement("div");
+    box.id = "cria-consent";
+    box.setAttribute("role", "dialog");
+    box.setAttribute("aria-label", "Aviso de cookies");
+    box.innerHTML =
+      '<p>Usamos cookies essenciais pra você entrar e usar o Cria. Se você permitir, também usamos o pixel da Meta pra medir ' +
+      'nossos anúncios. Nada de venda de dados. <a href="https://app.criasocialclub.com.br/privacidade" target="_blank" rel="noopener">Como cuidamos dos seus dados</a></p>' +
+      '<div class="acoes"><button type="button" class="sim">Aceitar</button><button type="button" class="nao">Só o essencial</button></div>';
+    document.body.appendChild(box);
+    box.querySelector(".sim").addEventListener("click", function () {
+      gravarConsent("aceito"); box.remove(); aoAceitar();
+    });
+    box.querySelector(".nao").addEventListener("click", function () {
+      gravarConsent("recusado"); box.remove();
+    });
+  }
+
   function iniciar() {
     agora();
-    if (document.readyState === "complete") quandoSobrar(depois);
-    else window.addEventListener("load", function () { quandoSobrar(depois); }, { once: true });
+    var c = lerConsent();
+    // Escolha feita no app (localStorage antigo) ou aqui: espalha pro cookie.
+    if (c && noDominio() && document.cookie.indexOf(COOKIE + "=") === -1) gravarConsent(c);
+    if (c === "recusado") { log("rastreamento recusado"); return; }
+    if (c === "aceito") {
+      if (document.readyState === "complete") quandoSobrar(depois);
+      else window.addEventListener("load", function () { quandoSobrar(depois); }, { once: true });
+      return;
+    }
+    // Sem decisão: um respiro antes do aviso, como no app.
+    setTimeout(function () { mostrarAviso(depois); }, 900);
   }
 
   if (document.readyState === "loading") {
@@ -285,5 +358,5 @@ var CRIA_TRACK = {
   }
 
   // Exposto pra quem quiser disparar algo pontual de dentro da página.
-  window.criaTrack = { evento: evento, comOrigem: comOrigem, lerOrigem: lerOrigem };
+  window.criaTrack = { evento: evento, comOrigem: comOrigem, lerOrigem: lerOrigem, consentimento: lerConsent };
 })();

@@ -336,6 +336,39 @@ const Dashboard = () => {
             "Nova ideia" do topo, que agora abre a mesma captura numa janela
             (CapturaRapidaDialog, no AppLayout). */}
 
+        {/* MEU CONTEÚDO ACIMA DO INSTAGRAM (Walter, 19/10/2026): o que a pessoa
+            tem pra fazer vem antes dos números. */}
+        <div className="mb-6 space-y-3">
+        <h2 className="text-xs font-body font-bold uppercase tracking-wider text-muted-foreground">Meu conteúdo</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4" data-tour="dash-tiles">
+          {stats.map((s, i) => (
+            <motion.button
+              key={i}
+              onClick={() => navigate(s.link)}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className={cn(
+                "relative overflow-hidden px-3 py-2.5 sm:px-4 sm:py-3 rounded-2xl border border-border bg-card",
+                "hover:shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
+                "text-left w-full group cursor-pointer"
+              )}
+            >
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-5">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm shrink-0" style={{ backgroundColor: s.accent.line }}>
+                  <s.icon className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-white" strokeWidth={1.75} />
+                </div>
+                <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
+                  <p className="text-xl sm:text-2xl font-display font-extrabold text-foreground tracking-tight leading-none">{s.value}</p>
+                  <p className="text-[10px] sm:text-[11px] uppercase tracking-wider font-body font-semibold text-muted-foreground truncate">{s.label}</p>
+                </div>
+              </div>
+              <ArrowRight className="absolute top-1/2 -translate-y-1/2 right-3 h-4 w-4 text-muted-foreground/30 group-hover:text-foreground/50 group-hover:translate-x-0.5 transition-all" />
+            </motion.button>
+          ))}
+        </div>
+        </div>
+
         {/* NOVO: Seu conteúdo no Instagram (largura cheia, em destaque).
             Reaproveita os hooks de insights; o "melhor dia" da faixa verde substitui
             o antigo bloco BestTimeToPost (agora dobrado aqui dentro). */}
@@ -346,35 +379,6 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[1.55fr_1fr] gap-6">
 
           <div className="space-y-6">
-            <h2 className="text-xs font-body font-bold uppercase tracking-wider text-muted-foreground">Meu conteúdo</h2>
-            <div className="grid grid-cols-2 gap-3 sm:gap-4" data-tour="dash-tiles">
-              {stats.map((s, i) => (
-                <motion.button
-                  key={i}
-                  onClick={() => navigate(s.link)}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className={cn(
-                    "relative overflow-hidden px-3 py-2.5 sm:px-4 sm:py-3 rounded-2xl border border-border bg-card",
-                    "hover:shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
-                    "text-left w-full group cursor-pointer"
-                  )}
-                >
-                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-5">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm shrink-0" style={{ backgroundColor: s.accent.line }}>
-                      <s.icon className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-white" strokeWidth={1.75} />
-                    </div>
-                    <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
-                      <p className="text-xl sm:text-2xl font-display font-extrabold text-foreground tracking-tight leading-none">{s.value}</p>
-                      <p className="text-[10px] sm:text-[11px] uppercase tracking-wider font-body font-semibold text-muted-foreground truncate">{s.label}</p>
-                    </div>
-                  </div>
-                  <ArrowRight className="absolute top-1/2 -translate-y-1/2 right-3 h-4 w-4 text-muted-foreground/30 group-hover:text-foreground/50 group-hover:translate-x-0.5 transition-all" />
-                </motion.button>
-              ))}
-            </div>
-
             <div className="mt-4" data-tour="dash-posts">
               <UpcomingPosts />
             </div>
