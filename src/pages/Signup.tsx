@@ -259,7 +259,11 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
 
             <div className="flex items-baseline justify-between gap-3">
               <h2 className={cn(DISPLAY, "text-[28px] font-extrabold leading-[1.05] lg:text-[30px]")}>{t("signup.title")}</h2>
-              <p className={cn(SCRIPT, "shrink-0 -rotate-2 text-[22px] text-[#D9480F]")}>7 dias grátis</p>
+              {/* Parceiro não tem teste nem plano: o trabalho das agências é grátis
+                  pra ele (Walter, 19/10/2026). "7 dias grátis" ali confundia. */}
+              {accountType === "parceiro"
+                ? <span className="shrink-0 rounded-full bg-[#7C5CFF] px-3 py-1 text-[13px] font-bold text-white">Grátis pra você</span>
+                : <p className={cn(SCRIPT, "shrink-0 -rotate-2 text-[22px] text-[#D9480F]")}>7 dias grátis</p>}
             </div>
 
             {compraPaga && (
@@ -372,7 +376,9 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
               {t("signup.haveAccount")}{" "}
               <Link to="/login" className="font-bold text-[#0050C8] underline underline-offset-[3px]">{t("auth.signIn")}</Link>
             </p>
-            <p className="-mt-1 hidden text-center text-[12.5px] text-[#5B574E] lg:block">Sem compromisso. Cancela em 2 cliques.</p>
+            <p className="-mt-1 hidden text-center text-[12.5px] text-[#5B574E] lg:block">
+              {accountType === "parceiro" ? "Sem cartão. Quem paga o Cria é a agência." : "Sem compromisso. Cancela em 2 cliques."}
+            </p>
           </form>
         )}
       </motion.main>

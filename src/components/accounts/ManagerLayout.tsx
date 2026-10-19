@@ -28,6 +28,7 @@ import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { HeroBand } from "@/components/HeroBand";
 import { TituloCriakut } from "@/components/criakut/TituloCriakut";
 import { useFilaDoParceiro, useSouParceiro } from "@/hooks/useParceiro";
+import { hojeBR } from "@/lib/date-br";
 import { useAcessoCriakut } from "@/hooks/useCriakut";
 import { useManagerApprovalOverview } from "@/hooks/useApprovals";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
@@ -222,6 +223,10 @@ export default function ManagerLayout() {
   // modo gestão, só que para parceiros"). Fila alimenta o badge vermelho.
   const { data: souParceiro } = useSouParceiro();
   const { data: filaParceiro = [] } = useFilaDoParceiro();
+  /* DEMANDAS À VISTA (Walter, 19/10/2026: "precisa ficar mais visível").
+     Atrasada = prazo antes de hoje (fuso BR). Vermelho = atrasadas, roxo = abertas. */
+  const hojeDemandas = hojeBR();
+  const atrasadasParceiro = filaParceiro.filter((c) => !!c.prazo_producao && c.prazo_producao < hojeDemandas).length;
   const atalhoMeuCria = useAtalhoMeuCria();
   // VOLTA DO STRIPE (auditoria 07/09): a compra de módulo devolvia pra
   // /app/modulos, uma tela da área de criador. O parceiro puro nem chega lá
@@ -330,6 +335,41 @@ export default function ManagerLayout() {
         <div className="flex w-full flex-col items-stretch gap-1">
           {railHovered && <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Dia a dia</p>}
           {railNode(Home, "Início", { active: isActive("/socialmidia/dashboard"), onClick: () => navigate("/socialmidia/dashboard") })}
+          {/* MINHAS DEMANDAS no topo (19/10/2026, mockup aprovado). Antes ficava
+              no bloco "Parceiro" lá embaixo e só se lia passando o mouse. */}
+          {souParceiro && (
+            <button
+              key="minhas-demandas"
+              type="button"
+              onClick={() => navigate("/socialmidia/demandas")}
+              aria-label={`Minhas demandas${atrasadasParceiro ? `, ${atrasadasParceiro} atrasada(s)` : ""}`}
+              title={!railHovered ? "Minhas demandas" : undefined}
+              className={cn(
+                "relative flex min-h-10 w-full items-center rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-pink-50 text-foreground transition-colors hover:from-violet-100 hover:to-pink-100",
+                railHovered ? "gap-3 px-2.5 py-1.5 justify-start" : "justify-center py-2",
+                isActive("/socialmidia/demandas") && "ring-2 ring-violet-300",
+              )}
+            >
+              <span className="relative grid h-6 w-6 shrink-0 place-items-center text-violet-600">
+                <Briefcase className="h-[18px] w-[18px]" />
+                {!railHovered && filaParceiro.length > 0 && (
+                  <span className={cn("absolute -right-2.5 -top-2 grid h-[18px] min-w-[18px] place-items-center rounded-full px-1 text-[10px] font-bold text-white ring-2 ring-[hsl(var(--sidebar-background))]",
+                    atrasadasParceiro > 0 ? "bg-red-600" : "bg-violet-600")}>
+                    {atrasadasParceiro > 0 ? atrasadasParceiro : filaParceiro.length}
+                  </span>
+                )}
+              </span>
+              {railHovered && (
+                <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                  <span className="truncate text-sm font-body font-bold">Minhas demandas</span>
+                  <span className="ml-auto flex shrink-0 gap-1">
+                    {atrasadasParceiro > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-red-600 px-1.5 text-[10.5px] font-bold text-white" title="atrasadas">{atrasadasParceiro}</span>}
+                    {filaParceiro.length > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-violet-600 px-1.5 text-[10.5px] font-bold text-white" title="abertas">{filaParceiro.length}</span>}
+                  </span>
+                </span>
+              )}
+            </button>
+          )}
           {/* MEU CRIA (18/10/2026): atalho pro lado criador, só com plano ou teste valendo. */}
           {atalhoMeuCria && (
             <button
@@ -398,11 +438,6 @@ export default function ManagerLayout() {
           {/* ── PARCEIRO: quem produz pras agências tem a fila AQUI dentro,
               na mesma casca da própria operação. Uma conta, dois papéis. ── */}
           {souParceiro && railHovered && <p className="px-2 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Parceiro</p>}
-          {souParceiro && railNode(Briefcase, "Minhas demandas", {
-            active: isActive("/socialmidia/demandas"), onClick: () => navigate("/socialmidia/demandas"),
-            corner: filaParceiro.length > 0 ? <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-[hsl(var(--sidebar-background))]" /> : undefined,
-            tipBadge: filaParceiro.length > 0 ? <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold grid place-items-center">{filaParceiro.length}</span> : undefined,
-          })}
           {souParceiro && railNode(CalendarCheck, "Minha agenda", { active: isActive("/socialmidia/minha-agenda"), onClick: () => navigate("/socialmidia/minha-agenda") })}
           {souParceiro && railNode(PackageCheck, "Entregues", { active: isActive("/socialmidia/entregues"), onClick: () => navigate("/socialmidia/entregues") })}
           {souParceiro && railNode(FileText, "Extrato do mês", { active: isActive("/socialmidia/extrato"), onClick: () => navigate("/socialmidia/extrato") })}
@@ -592,10 +627,13 @@ export default function ManagerLayout() {
 
       {/* Dock flutuante mobile, estilo pessoa física */}
       {(() => {
-        const dockItem = (active: boolean, Icon: typeof Home, label: string, onClick: () => void) => (
+        const dockItem = (active: boolean, Icon: typeof Home, label: string, onClick: () => void, badge?: { n: number; vermelho: boolean }) => (
           <button key={label} type="button" onClick={onClick}
-            className="flex flex-col items-center justify-center gap-1 px-2 py-1.5 rounded-2xl">
+            className="relative flex flex-col items-center justify-center gap-1 px-2 py-1.5 rounded-2xl">
             <Icon className={cn("h-5 w-5", active ? "text-primary" : "text-muted-foreground")} strokeWidth={active ? 2 : 1.6} />
+            {badge && badge.n > 0 && (
+              <span className={cn("absolute right-0 top-0 grid h-[17px] min-w-[17px] place-items-center rounded-full px-1 text-[9.5px] font-bold text-white", badge.vermelho ? "bg-red-600" : "bg-violet-600")}>{badge.n}</span>
+            )}
             <span className={cn("text-[10px] font-body", active ? "text-primary font-semibold" : "text-muted-foreground font-medium")}>{label}</span>
           </button>
         );
@@ -734,7 +772,8 @@ export default function ManagerLayout() {
                   {souParceiro ? (
                     <>
                       {canClients && dockItem(isActive("/socialmidia/clientes"), Contact, "Clientes", () => navigate("/socialmidia/clientes"))}
-                      {dockItem(isActive("/socialmidia/demandas"), Briefcase, "Demandas", () => navigate("/socialmidia/demandas"))}
+                      {dockItem(isActive("/socialmidia/demandas"), Briefcase, "Demandas", () => navigate("/socialmidia/demandas"),
+                        { n: atrasadasParceiro > 0 ? atrasadasParceiro : filaParceiro.length, vermelho: atrasadasParceiro > 0 })}
                       {dockItem(isActive("/socialmidia/aprovacoes"), ListChecks, "Aprov.", () => navigate("/socialmidia/aprovacoes"))}
                     </>
                   ) : (

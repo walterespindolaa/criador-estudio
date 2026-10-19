@@ -26,6 +26,7 @@ import { useMonthMoneyPJ } from "@/hooks/useFinance";
 import { useAllExternalPosts, useExternalClients } from "@/hooks/useCriaPost";
 import { MonthOverviewPanel } from "@/components/accounts/MonthOverviewPanel";
 import ParceiroHome from "@/pages/socialmidia/ParceiroHome";
+import { BlocoMinhasDemandas } from "@/components/accounts/BlocoMinhasDemandas";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useMyTeamPermissions } from "@/hooks/useTeam";
 
@@ -332,6 +333,9 @@ function ManagerHomeSocialMidia() {
           </div>
         </div>
       </section>
+
+      {/* Demandas de quem também é parceira (19/10/2026): logo abaixo da saudação. */}
+      <BlocoMinhasDemandas />
 
       {/* ═══ SEUS MÓDULOS ═══ (1ª seção: quem só quer trabalhar entra direto) */}
       <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus módulos</h2>
