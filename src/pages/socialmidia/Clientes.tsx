@@ -10,6 +10,7 @@ import { useExternalClients, type ExternalClient } from "@/hooks/useCriaPost";
 import { useCriaClientProfiles } from "@/hooks/useManagerClientCria";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { ClientColorPicker } from "@/components/shared/ClientColorPicker";
+import { MeuPerfilCard } from "@/components/accounts/MeuPerfilCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -127,6 +128,9 @@ export default function Clientes() {
     }
     return true;
   }), [clients, filter, statusF, onlyPend, q, pendingByCrm, criaProfiles]);
+  // O card "Meu perfil" fica no começo da carteira, mas some quando a pessoa
+  // está filtrando (busca, só link, inativos, pendências): ali ele não é resposta.
+  const mostraMeuPerfil = !q.trim() && filter !== "link" && statusF !== "inativos" && !onlyPend;
 
   const open = (id: string) => navigate(`/socialmidia/clientes/${id}/visao-geral`);
 
@@ -196,14 +200,18 @@ export default function Clientes() {
       {isLoading ? (
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">{[0, 1, 2, 3].map((i) => <div key={i} className="h-48 rounded-3xl bg-muted animate-pulse" />)}</div>
       ) : shown.length === 0 ? (
+        <>
+        {mostraMeuPerfil && <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-3"><MeuPerfilCard /></div>}
         <div className="rounded-3xl border border-dashed border-border bg-card/60 p-12 text-center">
           <div className="w-16 h-16 rounded-full bg-primary/10 grid place-items-center mx-auto mb-4"><Users className="h-7 w-7 text-primary" /></div>
           <p className="text-base font-display font-bold text-foreground">Sua vitrine de clientes começa aqui</p>
           <p className="text-sm text-muted-foreground font-body mt-1.5 max-w-sm mx-auto">Crie o primeiro cliente e organize posts, aprovações, cronograma e relatório num lugar só.</p>
           <Button onClick={() => setNewOpen(true)} className="mt-5"><Plus className="h-4 w-4 mr-1.5" /> Criar primeiro cliente</Button>
         </div>
+        </>
       ) : (
         <div data-tour="cli-grid" className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {mostraMeuPerfil && <MeuPerfilCard />}
           {shown.map((c) => {
             const aguardando = pendingByCrm[c.id] ?? 0;
             const extc = extByCrm[c.id] ?? null;

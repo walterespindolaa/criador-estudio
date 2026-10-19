@@ -4,6 +4,7 @@ import { Sparkles, Check, Clock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { useTier } from "@/hooks/useTier";
+import { useActiveAccount } from "@/contexts/AccountContext";
 import { FEATURES, PLANS, tierAtLeast, type FeatureKey } from "@/lib/plans";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -21,6 +22,7 @@ import { FEATURES, PLANS, tierAtLeast, type FeatureKey } from "@/lib/plans";
 
 export function UpgradeGate({ feature, children }: { feature: FeatureKey; children: ReactNode }) {
   const { tier, isAdmin, isLoading, isOutraConta, nomeDaConta } = useTier();
+  const { ehMeuPerfil } = useActiveAccount();
   const navigate = useNavigate();
   const def = FEATURES[feature];
 
@@ -47,6 +49,23 @@ export function UpgradeGate({ feature, children }: { feature: FeatureKey; childr
 
   // Conta de cliente (ou Meu perfil): quem paga é a dona da conta. Não manda a
   // social media pro checkout dela mesma, que não liberaria nada aqui.
+  // Meu perfil: o plano é do perfil, e quem assina é a própria pessoa.
+  if (isOutraConta && ehMeuPerfil) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center py-20 px-6">
+        <span className="grid h-14 w-14 place-items-center rounded-2xl bg-muted text-muted-foreground mb-4">
+          <Sparkles className="h-6 w-6" />
+        </span>
+        <h3 className="font-display text-xl font-extrabold text-foreground mb-1.5">{def.titulo}</h3>
+        <p className="text-sm font-body text-muted-foreground max-w-sm">
+          {plano
+            ? `Essa ferramenta está no ${plano.name}, e o seu perfil não tem esse plano.`
+            : "O seu perfil não tem acesso a essa ferramenta."}
+        </p>
+      </div>
+    );
+  }
+
   if (isOutraConta) {
     const primeiro = (nomeDaConta ?? "").split(" ")[0] || "esta conta";
     return (

@@ -55,17 +55,11 @@ Deno.serve(async (req) => {
       : Deno.env.get("BUNNY_STREAM_LIBRARY_ID");
     if (!apiKey || !libraryId) return json({ error: "Bunny secrets não configurados" }, 500);
 
-    // Permissão: dono OU gerente ativo da conta
-    // account_members: owner_id = conta gerenciada, member_id = o gerente, status = 'active'
+    // Permissão: dono, gerente ativo da conta (account_members) ou dona do
+    // "Meu perfil" (profiles.perfil_de). is_account_member cobre os dois casos.
     if (owner !== userId) {
-      const { data: membership } = await supabase
-        .from("account_members")
-        .select("id")
-        .eq("owner_id", owner)
-        .eq("member_id", userId)
-        .eq("status", "active")
-        .maybeSingle();
-      if (!membership) return json({ error: "Sem permissão para essa conta" }, 403);
+      const { data: membro } = await supabase.rpc("is_account_member", { _owner: owner });
+      if (membro !== true) return json({ error: "Sem permissão para essa conta" }, 403);
     }
 
     // 1) cria o vídeo na library

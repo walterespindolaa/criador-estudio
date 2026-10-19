@@ -23,6 +23,17 @@ type Ctx = {
   actingAsTeam: boolean;            // a conta ativa é uma conta de time (gestor)
   // Dono do tenant da AGÊNCIA para as queries: o próprio user, ou o gestor quando é colaborador atuando no time.
   agencyOwnerId: string | null;
+  /** "Meu perfil": o Cria de criadora da própria sessão (profiles.perfil_de). Não é cliente. */
+  meuPerfil: MeuPerfil | null;
+  meuPerfilLoading: boolean;
+  /** A conta aberta agora é o Meu perfil. */
+  ehMeuPerfil: boolean;
+};
+
+export type MeuPerfil = ManagedAccount & {
+  plan: string | null;
+  subscription_status: string | null;
+  trial_ends_at: string | null;
 };
 
 const AccountContext = createContext<Ctx | undefined>(undefined);
@@ -63,7 +74,24 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const selectable = useMemo(() => [...managedAccounts, ...teamAccounts], [managedAccounts, teamAccounts]);
+  // Meu perfil (decisão 18/10/2026): ligado por profiles.perfil_de, SEM linha em
+  // account_members. Por isso não aparece em my_managed_accounts (não é cliente
+  // da carteira) e vem por um RPC próprio.
+  const { data: meuPerfil = null, isLoading: meuPerfilLoading } = useQuery<MeuPerfil | null>({
+    queryKey: ["meu-perfil", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as unknown as (fn: string) => Promise<{ data: unknown; error: unknown }>)("meu_perfil");
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      return (row as MeuPerfil | undefined) ?? null;
+    },
+  });
+
+  const selectable = useMemo(
+    () => [...managedAccounts, ...teamAccounts, ...(meuPerfil ? [meuPerfil] : [])],
+    [managedAccounts, teamAccounts, meuPerfil],
+  );
 
   // Ao logar, o padrão é a PRÓPRIA conta. Entrar no "Cria dele" de um cliente
   // (managedAccounts) é temporário e NÃO deve sobreviver ao logout: senão o gestor
@@ -74,16 +102,23 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     if (!user?.id) { setActive(null); return; }
     const saved = localStorage.getItem(LS_KEY);
     if (saved && teamAccounts.some((m) => m.owner_id === saved)) { setActive(saved); return; }
+    // O Meu perfil sobrevive ao recarregar (é da própria pessoa, como a conta de
+    // equipe). Espera o RPC responder antes de decidir, senão a escolha some.
+    if (saved && meuPerfilLoading) return;
+    if (saved && meuPerfil?.owner_id === saved) { setActive(saved); return; }
     // Seleção salva que é de CLIENTE (não é conta de equipe): ignora e limpa, pra
     // não reabrir num cliente no próximo login.
     if (saved && !teamAccounts.some((m) => m.owner_id === saved)) { localStorage.removeItem(LS_KEY); }
     if (!saved && managedAccounts.length === 0 && teamAccounts.length > 0) {
       setActive(teamAccounts[0].owner_id); // colaborador cai na conta do gestor ao logar
     }
-  }, [user?.id, selectable, managedAccounts.length, teamAccounts]);
+  }, [user?.id, selectable, managedAccounts.length, teamAccounts, meuPerfil, meuPerfilLoading]);
 
   const setActiveAccount = (ownerId: string | null) => {
-    const next = ownerId && selectable.some((m) => m.owner_id === ownerId) ? ownerId : null;
+    // O Meu perfil recém-criado ainda não está no `selectable` desta renderização:
+    // confere também o cache do RPC (useCriarMeuPerfil busca antes de abrir).
+    const perfilNoCache = queryClient.getQueryData<MeuPerfil | null>(["meu-perfil", user?.id]);
+    const next = ownerId && (selectable.some((m) => m.owner_id === ownerId) || perfilNoCache?.owner_id === ownerId) ? ownerId : null;
     if (next) localStorage.setItem(LS_KEY, next); else localStorage.removeItem(LS_KEY);
     setActive(next);
     queryClient.clear(); // evita vazamento de dados entre contas
@@ -107,7 +142,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     actingAsTeam,
     // Na agência: se atuo como time, o dono é o gestor (activeAccountId); senão, sou eu.
     agencyOwnerId: actingAsTeam ? activeAccountId : (user?.id ?? null),
-  }), [effectiveId, activeAccountId, user?.id, managedAccounts, accountsLoading, teamLoading, teamAccounts, actingAsTeam]);
+    meuPerfil,
+    meuPerfilLoading,
+    ehMeuPerfil: !!activeAccountId && !!meuPerfil && activeAccountId === meuPerfil.owner_id,
+  }), [effectiveId, activeAccountId, user?.id, managedAccounts, accountsLoading, teamLoading, teamAccounts, actingAsTeam, meuPerfil, meuPerfilLoading]);
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }

@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
+import { useActiveProfile, useAtualizarPerfilAtivo, caminhoAvatar } from "@/hooks/useActiveProfile";
 import { useHabits } from "@/hooks/useHabits";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -63,10 +64,19 @@ const SectionHeader = ({ title, desc }: { title: string; desc: string }) => (
 
 const Configuracoes = () => {
   const { user, signOut } = useAuth();
-  const { profile, updateProfile } = useProfile();
+  const { profile: perfilSessao, updateProfile: updateSessao } = useProfile();
   const { openPortal, isLoading: portalLoading } = useManageSubscription();
-  const { isManaging, managedAccounts, activeAccountId, setActiveAccount } = useActiveAccount();
-  const managedName = managedAccounts.find((m) => m.owner_id === activeAccountId)?.name;
+  const { isManaging, managedAccounts, activeAccountId, setActiveAccount, ehMeuPerfil, meuPerfil } = useActiveAccount();
+  const managedName = managedAccounts.find((m) => m.owner_id === activeAccountId)?.name ?? (ehMeuPerfil ? meuPerfil?.name : undefined);
+  // MEU PERFIL (18/10/2026): a aba Perfil aparece e grava no perfil, não na
+  // sessão. Em conta de cliente continua escondida (o perfil é da cliente).
+  // Fora do Meu perfil, `profile`/`updateProfile` seguem sendo os da sessão,
+  // como sempre (assinatura, armazenamento, conta).
+  const { profile: perfilAtivo } = useActiveProfile();
+  const atualizarAtivo = useAtualizarPerfilAtivo();
+  const profile = (ehMeuPerfil ? perfilAtivo : perfilSessao) as typeof perfilSessao;
+  const updateProfile = (ehMeuPerfil ? atualizarAtivo : updateSessao) as typeof updateSessao;
+  const verPerfil = !isManaging || ehMeuPerfil;
   const { habits, createHabit, deleteHabit: deleteHabitMutation } = useHabits();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -231,7 +241,7 @@ const Configuracoes = () => {
     if (!user) return;
     try {
       setUploadingAvatar(true);
-      const path = `${user.id}/avatar.jpg`;
+      const path = caminhoAvatar(user.id, profile?.id ?? user.id);
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(path, croppedBlob, { upsert: true, contentType: "image/jpeg" });
@@ -371,7 +381,7 @@ const Configuracoes = () => {
           </div>
         </div>
 
-        {isManaging && (
+        {isManaging && !ehMeuPerfil && (
           <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-center justify-between gap-3">
             <p className="text-sm font-body text-foreground">
               Editando o conteúdo da conta de <b>{managedName}</b>. Suas configurações pessoais (perfil, Drive, segurança) ficam em <b>Minha conta</b>.
@@ -382,12 +392,12 @@ const Configuracoes = () => {
           </div>
         )}
 
-        <Tabs defaultValue={isManaging ? "pilares" : "perfil"} className="w-full">
+        <Tabs defaultValue={verPerfil ? "perfil" : "pilares"} className="w-full">
           {/* Sem justify-center aqui: com overflow, centralizar cortava o início
               das pílulas sem como rolar até elas. Scroll horizontal com snap. */}
           <div className="overflow-x-auto mb-6 -mx-4 px-4 scrollbar-none scroll-snap-x">
             <TabsList data-tour="config-abas" className="inline-flex h-auto bg-card border border-border rounded-2xl p-1.5 gap-1 min-w-max">
-              {!isManaging && <TabsTrigger value="perfil" className={TAB_PILL}><User className="h-3.5 w-3.5 shrink-0" /><span>Perfil</span></TabsTrigger>}
+              {verPerfil && <TabsTrigger value="perfil" className={TAB_PILL}><User className="h-3.5 w-3.5 shrink-0" /><span>Perfil</span></TabsTrigger>}
               <TabsTrigger value="pilares" className={TAB_PILL}><LayoutGrid className="h-3.5 w-3.5 shrink-0" /><span>Hábitos</span></TabsTrigger>
               {!isManaging && <TabsTrigger value="visual" data-tour="config-tab-visual" className={TAB_PILL}><Paintbrush className="h-3.5 w-3.5 shrink-0" /><span>Marca & Visual</span></TabsTrigger>}
               {!isManaging && <TabsTrigger value="assinatura" data-tour="config-tab-assinatura" className={TAB_PILL}><CreditCard className="h-3.5 w-3.5 shrink-0" /><span>Assinatura</span></TabsTrigger>}
@@ -399,7 +409,7 @@ const Configuracoes = () => {
           </div>
 
           <div className="w-full">
-            {!isManaging && (
+            {verPerfil && (
             <TabsContent value="perfil">
               {/* Mobile: uma coluna, mesma ordem de sempre. Desktop (lg): duas colunas
                   equilibradas pra aproveitar a largura em vez de um corredor estreito. */}

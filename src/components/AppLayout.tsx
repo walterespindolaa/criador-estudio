@@ -81,7 +81,7 @@ function GreetingEmoji() {
 const AppLayout = () => {
   const { profile, isLoading } = useProfile();
   const { data: souParceiro, isLoading: carregandoPapelParceiro } = useSouParceiro();
-  const { isManaging, activeAccountId, managedAccounts, teamAccounts } = useActiveAccount();
+  const { isManaging, activeAccountId, managedAccounts, teamAccounts, meuPerfil } = useActiveAccount();
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -214,7 +214,7 @@ const AppLayout = () => {
   const greetWord = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
   // Gerenciando a conta de um cliente: a saudação e o avatar são do CLIENTE, não do gestor logado.
   const managedAccount = isManaging
-    ? [...managedAccounts, ...teamAccounts].find((a) => a.owner_id === activeAccountId) ?? null
+    ? [...managedAccounts, ...teamAccounts, ...(meuPerfil ? [meuPerfil] : [])].find((a) => a.owner_id === activeAccountId) ?? null
     : null;
   const displayName = managedAccount?.name ?? profile?.name ?? "";
   const displayAvatarUrl = managedAccount ? managedAccount.avatar_url : profile?.avatar_url;

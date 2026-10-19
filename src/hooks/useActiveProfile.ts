@@ -43,6 +43,8 @@ export type ActiveProfile = Pick<
   account_type?: string | null;
   media_kit_url?: string | null;
   perfil_de?: string | null;
+  /** Só vem preenchida pra dona (ela mesma ou o Meu perfil dela). */
+  pix_key?: string | null;
 };
 
 /** Campos que dá pra gravar na conta ativa (espelha a lista do RPC). */
@@ -60,6 +62,8 @@ export type PerfilAtivoPatch = Partial<{
   brand_logo_url: string | null;
   media_kit_url: string | null;
   storage_retention_days: number | null;
+  /** O servidor só aceita da dona (ela mesma ou o Meu perfil). */
+  pix_key: string | null;
 }>;
 
 export type UseActiveProfileResult = {
