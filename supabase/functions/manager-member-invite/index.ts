@@ -103,10 +103,22 @@ serve(async (req) => {
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const body = await req.json().catch(() => ({}));
-    const { email, name, modules, all_clients, client_ids, role } = body as {
+    const { email, name, modules, all_clients, client_ids, role, manager_id } = body as {
       email?: string; name?: string; modules?: string[]; all_clients?: boolean; client_ids?: string[]; role?: string;
+      manager_id?: string;
     };
     if (!email) return json({ error: "missing_email" }, 400);
+
+    /* QUEM GERENCIA A EQUIPE (19/10/2026): a colaboradora com a chave
+       "Pode gerenciar a equipe" convida em nome da conta (manager_id). O
+       banco confere com a sessão dela (pode_gerir_equipe); sem a chave, 403.
+       Sem manager_id, é a própria dona convidando, como sempre foi. */
+    let managerId = user.id;
+    if (typeof manager_id === "string" && manager_id && manager_id !== user.id) {
+      const { data: pode, error: podeErr } = await userClient.rpc("pode_gerir_equipe", { _manager: manager_id });
+      if (podeErr || pode !== true) return json({ error: "forbidden" }, 403);
+      managerId = manager_id;
+    }
 
     // Papel do vínculo. Lista fechada: qualquer coisa fora dela vira o
     // colaborador padrão, nunca um papel inventado pelo chamador.
@@ -118,7 +130,7 @@ serve(async (req) => {
     if (normEmail === user.email.toLowerCase()) return json({ error: "cannot_invite_self" }, 400);
 
     // ── Checa assento: 1 grátis + paid_collab_seats. Conta membros ATIVOS atuais. ──
-    const { data: prof } = await svc.from("profiles").select("name, paid_collab_seats").eq("id", user.id).maybeSingle();
+    const { data: prof } = await svc.from("profiles").select("name, paid_collab_seats").eq("id", managerId).maybeSingle();
     const paidSeats = Math.max(0, Number((prof as { paid_collab_seats?: number } | null)?.paid_collab_seats) || 0);
     const allowed = 1 + paidSeats;
     // Parceiro (designer, editor, copy, tráfego) NÃO consome assento: ele entra
@@ -127,7 +139,7 @@ serve(async (req) => {
     // São públicos diferentes, não dois preços pro mesmo acesso.
     const { count: activeCount } = await svc.from("manager_members")
       .select("id", { count: "exact", head: true })
-      .eq("manager_id", user.id).eq("status", "ativo")
+      .eq("manager_id", managerId).eq("status", "ativo")
       .not("role", "in", "(designer,editor_video,copy,trafego,filmmaker)");
     if (!ehParceiro && (activeCount ?? 0) >= allowed) {
       return json({ error: "no_seats", allowed, used: activeCount ?? 0 }, 402);
@@ -136,6 +148,8 @@ serve(async (req) => {
     // ── Já existe conta com esse email? magic link : convite ──
     const { data: list } = await svc.auth.admin.listUsers();
     const existing = list?.users?.find((u) => u.email?.toLowerCase() === normEmail);
+    // A dona da conta não entra como membro da própria conta.
+    if (existing && existing.id === managerId) return json({ error: "cannot_invite_self" }, 400);
 
     const origin = resolveAppUrl(req); // F13: origin validado, não o header cru
     // O destino depende do papel: parceiro cai direto na fila dele, não no
@@ -157,7 +171,7 @@ serve(async (req) => {
 
     // ── Vínculo + permissões default (todos os clientes nos módulos escolhidos) ──
     const { data: memberRow, error: mErr } = await svc.from("manager_members").upsert({
-      manager_id: user.id, member_id: memberId, name: name ?? null, email: normEmail, status: "ativo",
+      manager_id: managerId, member_id: memberId, name: name ?? null, email: normEmail, status: "ativo",
       role: papel,
     }, { onConflict: "manager_id,member_id" }).select("id").single();
     if (mErr || !memberRow) {

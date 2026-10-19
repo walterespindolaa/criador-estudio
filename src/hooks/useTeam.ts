@@ -27,6 +27,11 @@ export const PERM_PARCEIROS = "parceiros_producao";
    chave de confiança, não módulo: vem desligada e só a dona liga. O banco
    confere (cofre_dono_se_pode), então desligar aqui fecha de verdade. */
 export const PERM_COFRE = "cofre_acessos";
+/* Gerenciar a equipe (Walter, 19/10/2026): a colaboradora de confiança vê a
+   aba Pessoas DESTA conta e convida, pausa, remove e muda acessos dos outros.
+   O banco confere (pode_gerir_equipe). Não mexe no próprio vínculo nem compra
+   assento. Caso de origem: a Gabi, que criou a Kollab com outro e-mail. */
+export const PERM_EQUIPE = "gerenciar_equipe";
 export const TEAM_MODULE_DEFAULT = TEAM_MODULES.filter((m) => m.code !== "cria_caixa").map((m) => m.code);
 
 export type MemberPermission = {
@@ -41,13 +46,21 @@ export type TeamMember = {
 };
 
 // Assentos: 1 grátis + paid_collab_seats.
-export function useCollabSeats() {
+export function useCollabSeats(managerId?: string | null) {
   const { user } = useAuth();
+  const alvo = managerId ?? user?.id;
   return useQuery({
-    queryKey: ["collab-seats", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["collab-seats", alvo],
+    enabled: !!alvo,
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("paid_collab_seats").eq("id", user!.id).maybeSingle();
+      // Quem gerencia a equipe de outra conta não lê o perfil da dona: RPC.
+      if (alvo !== user?.id) {
+        const { data } = await (supabase.rpc as unknown as (fn: string, a: Record<string, unknown>) => Promise<{ data: unknown }>)(
+          "equipe_assentos", { _manager: alvo });
+        const paid = Math.max(0, Number(data) || 0);
+        return { paid, total: 1 + paid };
+      }
+      const { data } = await supabase.from("profiles").select("paid_collab_seats").eq("id", alvo!).maybeSingle();
       const paid = Math.max(0, Number((data as { paid_collab_seats?: number } | null)?.paid_collab_seats) || 0);
       return { paid, total: 1 + paid };
     },
@@ -71,14 +84,15 @@ export function useMyTeamPermissions(managerId: string | null | undefined) {
   });
 }
 
-export function useTeamMembers() {
+export function useTeamMembers(managerId?: string | null) {
   const { user } = useAuth();
+  const alvo = managerId ?? user?.id;
   return useQuery<TeamMember[]>({
-    queryKey: ["team-members", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["team-members", alvo],
+    enabled: !!alvo,
     queryFn: async () => {
       const { data: members, error } = await sbFrom("manager_members")
-        .select("*").eq("manager_id", user!.id).order("created_at", { ascending: true });
+        .select("*").eq("manager_id", alvo!).order("created_at", { ascending: true });
       if (error) throw error;
       const rows = (members ?? []) as unknown as TeamMember[];
       if (rows.length === 0) return [];
@@ -96,11 +110,12 @@ export function useTeamMembers() {
 export function useInviteMember() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { email: string; name?: string; modules?: string[]; all_clients?: boolean; client_ids?: string[]; role?: string }) => {
+    mutationFn: async (input: { email: string; name?: string; modules?: string[]; all_clients?: boolean; client_ids?: string[]; role?: string; manager_id?: string }) => {
       const { data, error } = await supabase.functions.invoke("manager-member-invite", { body: input });
       if (error) throw new Error(error.message);
       const err = (data as { error?: string })?.error;
       if (err === "no_seats") throw new Error("Você atingiu o limite de assentos. Adicione um assento pra convidar mais colaboradores.");
+      if (err === "forbidden") throw new Error("Você não tem permissão pra convidar nesta conta.");
       if (err) throw new Error(err);
       return data as { ok: boolean; member_id: string; existed: boolean };
     },

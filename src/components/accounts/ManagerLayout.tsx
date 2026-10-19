@@ -134,7 +134,8 @@ export default function ManagerLayout() {
   /* Equipe dentro da conta da agência: só pra colaboradora que a dona liberou
      em "Gerenciar produção com parceiros" (e com Cria Post). Na própria conta,
      sempre (09/10/2026). */
-  const veEquipe = !actingAsTeam || (canTeam("cria_post") && canTeam("parceiros_producao"));
+  // "Pode gerenciar a equipe" (19/10/2026) também abre a Equipe, na aba Pessoas.
+  const veEquipe = !actingAsTeam || (canTeam("cria_post") && canTeam("parceiros_producao")) || canTeam("gerenciar_equipe");
   const modules = actingAsTeam
     ? allModules.filter((m) => MODULE_TEAM_CODE[m.code] && canTeam(MODULE_TEAM_CODE[m.code]))
     : allModules;

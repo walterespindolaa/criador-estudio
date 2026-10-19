@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import {
   useTeamMembers, useCollabSeats, useInviteMember, useUpdateMemberStatus, useRemoveMember,
   useSetMemberModule, useBuySeats, TEAM_MODULES, TEAM_MODULE_DEFAULT, useVincularParceiroPorCodigo,
-  useMyTeamPermissions, PERM_PARCEIROS, PERM_COFRE,
+  useMyTeamPermissions, PERM_PARCEIROS, PERM_COFRE, PERM_EQUIPE,
 } from "@/hooks/useTeam";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { useCrmClients } from "@/hooks/useCrm";
@@ -62,10 +62,13 @@ export default function Equipe() {
   const { data: permsEquipe, isLoading: carregandoPerms } = useMyTeamPermissions(actingAsTeam ? agencyOwnerId : null);
   const geridaPorMim = !actingAsTeam
     || (!!permsEquipe?.has(PERM_PARCEIROS) && !!permsEquipe?.has("cria_post"));
+  /* Quem tem "Pode gerenciar a equipe" (19/10/2026) vê Pessoas DESTA conta. */
+  const gereEquipe = actingAsTeam && !!permsEquipe?.has(PERM_EQUIPE);
+  const vePessoas = !actingAsTeam || gereEquipe;
   const producaoLiberada = temCriaPost && geridaPorMim;
   const carregando = carregandoModulo || carregandoParceiros || (actingAsTeam && carregandoPerms);
   const padrao: Aba = actingAsTeam || (producaoLiberada && parceiros.length > 0) ? "producao" : "pessoas";
-  const abaValida = aba === "producao" || aba === "conversas" || aba === "canal" || (aba === "pessoas" && !actingAsTeam);
+  const abaValida = aba === "producao" || aba === "conversas" || aba === "canal" || (aba === "pessoas" && vePessoas);
   const ativa: Aba = !producaoLiberada ? "pessoas" : abaValida ? (aba as Aba) : padrao;
 
   // /equipe sem aba (ou aba que não existe) cai na certa, sem deixar a URL mentindo.
@@ -85,8 +88,8 @@ export default function Equipe() {
         { to: "/socialmidia/equipe/producao", label: "Produção" },
         { to: "/socialmidia/equipe/conversas", label: naoLidas > 0 ? `Conversas (${naoLidas})` : "Conversas" },
         { to: "/socialmidia/equipe/canal", label: "Canal da marca" },
-        // Pessoas (convites, assentos, permissões) é só da dona da conta.
-        ...(actingAsTeam ? [] : [{ to: "/socialmidia/equipe/pessoas", label: "Pessoas" }]),
+        // Pessoas: a dona, ou quem ela liberou pra gerenciar a equipe.
+        ...(vePessoas ? [{ to: "/socialmidia/equipe/pessoas", label: "Pessoas" }] : []),
       ]
     : undefined;
 
@@ -117,8 +120,16 @@ export default function Equipe() {
         <ConversasComParceiros />
       ) : ativa === "canal" ? (
         <CanalDaMarca />
+      ) : vePessoas ? (
+        <PessoasDaEquipe managerId={actingAsTeam ? agencyOwnerId : null} comoGerente={gereEquipe} />
       ) : (
-        <PessoasDaEquipe />
+        <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
+          <Users className="h-7 w-7 mx-auto text-muted-foreground mb-2.5" />
+          <p className="text-sm font-body font-semibold text-foreground">As pessoas desta equipe ficam com a dona da conta</p>
+          <p className="text-xs font-body text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
+            Pra convidar e mudar acessos aqui, a dona liga "Pode gerenciar a equipe" no seu cartão, em Equipe &gt; Pessoas.
+          </p>
+        </div>
       )}
     </>
   );
@@ -152,9 +163,12 @@ function SemParceiroAinda({ aoConvidar }: { aoConvidar: (() => void) | null }) {
   );
 }
 
-function PessoasDaEquipe() {
-  const { data: members = [], isLoading } = useTeamMembers();
-  const { data: seats } = useCollabSeats();
+function PessoasDaEquipe({ managerId = null, comoGerente = false }: { managerId?: string | null; comoGerente?: boolean }) {
+  /* comoGerente: colaboradora com "Pode gerenciar a equipe" mexendo na equipe
+     da conta em que está. Convida, pausa, remove e muda acessos; não compra
+     assento nem abre a cobrança (isso é da dona). */
+  const { data: members = [], isLoading } = useTeamMembers(managerId);
+  const { data: seats } = useCollabSeats(managerId);
   const { data: clients = [] } = useCrmClients();
   const invite = useInviteMember();
   const setStatus = useUpdateMemberStatus();
@@ -204,10 +218,11 @@ function PessoasDaEquipe() {
       if (mods.size === 0) { toast.error("Marque ao menos um módulo."); return; }
       if (scope === "some" && cliIds.size === 0) { toast.error("Escolha ao menos um cliente ou marque 'Todos'."); return; }
     }
+    const emNomeDe = comoGerente && managerId ? { manager_id: managerId } : {};
     invite.mutate(
       tipoAcesso === "parceiro"
-        ? { email: e, name: name.trim() || undefined, role: papelParceiro }
-        : { email: e, name: name.trim() || undefined, modules: [...mods], all_clients: scope === "all", client_ids: scope === "some" ? [...cliIds] : [] },
+        ? { email: e, name: name.trim() || undefined, role: papelParceiro, ...emNomeDe }
+        : { email: e, name: name.trim() || undefined, modules: [...mods], all_clients: scope === "all", client_ids: scope === "some" ? [...cliIds] : [], ...emNomeDe },
       { onSuccess: () => { setOpen(false); resetForm(); } },
     );
   };
@@ -234,6 +249,9 @@ function PessoasDaEquipe() {
         {/* COBRANÇA COM CONFIRMAÇÃO (pente fino 23/09/2026, UX 1). Com assinatura
             ativa, um clique aqui alterava o Stripe na hora, com pró-rata, sem
             perguntar. Agora diz o valor e o novo total antes. */}
+        {comoGerente ? (
+          <p className="text-[12px] font-body text-muted-foreground">Assento novo quem compra é a dona da conta.</p>
+        ) : (
         <Button variant="outline" size="sm" disabled={buySeats.isPending}
           onClick={async () => {
             const novos = (seats?.paid ?? 0) + 1;
@@ -247,7 +265,8 @@ function PessoasDaEquipe() {
           {buySeats.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <CreditCard className="h-4 w-4 mr-1.5" />}
           Adicionar assento (R$ 29,90/mês)
         </Button>
-        {(seats?.paid ?? 0) > 0 && (
+        )}
+        {!comoGerente && (seats?.paid ?? 0) > 0 && (
           <Button variant="ghost" size="sm" onClick={() => void openPortal()} disabled={portalLoading}
             className="text-muted-foreground hover:text-foreground">
             {portalLoading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
@@ -260,6 +279,7 @@ function PessoasDaEquipe() {
         <Button data-tour="eq-convidar" onClick={openInvite} className="min-h-[44px]"><UserPlus className="h-4 w-4 mr-2" /> Convidar colaborador</Button>
         {/* Parceiro que já tem conta no Cria manda o código dele pelo WhatsApp;
             a social mídia cola aqui e pronto, sem e-mail de convite. */}
+        {!comoGerente && (
         <form className="flex items-center gap-2" onSubmit={(e) => { e.preventDefault(); if (codigoParceiro.trim()) vincular.mutate(codigoParceiro, { onSuccess: () => setCodigoParceiro("") }); }}>
           <Input value={codigoParceiro} onChange={(e) => setCodigoParceiro(e.target.value.toUpperCase())} placeholder="Código do parceiro (ex.: K7M2XP)"
             maxLength={8} className="h-11 w-full sm:w-64 rounded-xl uppercase tracking-widest font-mono" aria-label="Código do parceiro" />
@@ -267,6 +287,7 @@ function PessoasDaEquipe() {
             {vincular.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Adicionar"}
           </Button>
         </form>
+        )}
       </div>
 
       {/* Lista */}
@@ -406,6 +427,27 @@ function PessoasDaEquipe() {
                             Libere também o Cria Post pra ela: a peça enviada ao parceiro é um post.
                           </p>
                         )}
+                      </div>
+                    );
+                  })()}
+                  {(() => {
+                    /* PODE GERENCIAR A EQUIPE (19/10/2026): chave de confiança
+                       como as outras. Vem desligada; quem liga é a dona. */
+                    const gereEq = enabled.has(PERM_EQUIPE);
+                    return (
+                      <div className="mt-3 pt-3 border-t border-border/60">
+                        <label className="flex items-center justify-between gap-4 min-h-[44px] cursor-pointer">
+                          <span className="min-w-0">
+                            <span className="block text-[13px] font-body font-semibold text-foreground">Pode gerenciar a equipe</span>
+                            <span className="block text-[12px] font-body text-muted-foreground leading-relaxed">
+                              Vê a aba Pessoas desta conta: convida, pausa, remove e muda os acessos de quem trabalha aqui.
+                              Não mexe no próprio acesso nem compra assento.
+                            </span>
+                          </span>
+                          <input type="checkbox" checked={gereEq} disabled={setModule.isPending}
+                            onChange={() => setModule.mutate({ memberRowId: m.id, moduleCode: PERM_EQUIPE, enabled: !gereEq })}
+                            className="h-5 w-5 shrink-0 accent-[hsl(var(--primary))]" />
+                        </label>
                       </div>
                     );
                   })()}
