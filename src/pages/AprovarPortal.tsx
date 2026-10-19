@@ -13,7 +13,7 @@ import { type Alfinete } from "@/components/shared/CamadaDeAlfinetes";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { postAspect } from "@/lib/post-aspect";
 import { EtapasChecklist, type Stage } from "@/components/aprovar/EtapasChecklist";
-import { PortalFeed, PortalMes } from "@/components/aprovar/PortalVisoes";
+import { PortalFeed, PortalMes, type DiaEmProducao } from "@/components/aprovar/PortalVisoes";
 import { CapaSobreVideo } from "@/components/accounts/CapaDoReels";
 import { PortalRelatorio } from "@/components/aprovar/PortalRelatorio";
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
@@ -613,6 +613,21 @@ export default function AprovarPortal() {
     },
   });
 
+  /* Dias com post EM PRODUÇÃO (19/10/2026): só data e formato, pra prévia do
+     mês no calendário. Sem a função no banco, segue sem a prévia. */
+  const producaoQ = useQuery({
+    queryKey: ["portal-producao", token, periodQ.data?.period_start, periodQ.data?.period_end],
+    enabled: !!token && !!clientQ.data && !periodQ.isLoading,
+    queryFn: async (): Promise<DiaEmProducao[]> => {
+      const { data, error } = await sbRpc("agenda_producao_by_token", { _token: token });
+      if (error) return [];
+      const all = (data as DiaEmProducao[]) ?? [];
+      const ps = periodQ.data?.period_start; const pe = periodQ.data?.period_end;
+      if (!ps || !pe) return all;
+      return all.filter((x) => x.dia >= ps && x.dia <= pe);
+    },
+  });
+
   // Capas dos Reels (28/09/2026). RPC à parte: se a migration não rodou, o
   // portal segue sem capa, como antes.
   const capasQ = useQuery({
@@ -757,7 +772,8 @@ export default function AprovarPortal() {
     if (alvo?.approval_status === "aprovado") setShowApproved(true);
     window.setTimeout(() => document.getElementById(`post-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 280);
   };
-  const temData = posts.some((p) => !!p.scheduled_date);
+  const producao = producaoQ.data ?? [];
+  const temData = posts.some((p) => !!p.scheduled_date) || producao.length > 0;
 
   const renderPost = (p: PortalPost, i: number) => (
     <div key={p.post_id} id={`post-${p.post_id}`} className="scroll-mt-24">
@@ -853,7 +869,7 @@ export default function AprovarPortal() {
         <AnimatePresence mode="wait">
           <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2, ease: "easeOut" }}>
             {activeTab === "calendario" ? (
-              <PortalMes posts={posts} capas={capas} brand={brand} aoAbrir={abrirNaLista} />
+              <PortalMes posts={posts} capas={capas} brand={brand} aoAbrir={abrirNaLista} producao={producao} />
             ) : activeTab === "relatorio" ? (
               <PortalRelatorio posts={posts} client={{ name: c.client_name, logo: c.client_logo, manager: c.manager_name }} brand={brand}
                 periodStart={periodQ.data?.period_start ?? null} periodEnd={periodQ.data?.period_end ?? null} />
@@ -862,7 +878,7 @@ export default function AprovarPortal() {
                 <div className="text-center mb-6 lg:mb-10">
                   <h1 className="font-display font-extrabold text-foreground text-xl lg:text-2xl">Aprove seus posts</h1>
                   <p className="text-sm text-muted-foreground font-body mt-1">Revise o conteúdo e aprove ou peça ajustes.</p>
-                  {total > 0 && (
+                  {(total > 0 || producao.length > 0) && (
                     <div role="tablist" aria-label="Como ver os posts" className="inline-flex mt-4 bg-white border border-border rounded-2xl p-1 shadow-[0_4px_20px_rgba(27,26,24,0.05)]">
                       {([
                         ["lista", List, "Lista"],
@@ -891,8 +907,8 @@ export default function AprovarPortal() {
                   </div>
                 ) : total > 0 && visao === "feed" ? (
                   <PortalFeed posts={posts} capas={capas} brand={brand} aoAbrir={abrirNaLista} />
-                ) : total > 0 && visao === "calendario" ? (
-                  <PortalMes posts={posts} capas={capas} brand={brand} aoAbrir={abrirNaLista} />
+                ) : (total > 0 || producao.length > 0) && visao === "calendario" ? (
+                  <PortalMes posts={posts} capas={capas} brand={brand} aoAbrir={abrirNaLista} producao={producao} />
                 ) : total === 0 ? (
                   <div className="text-center py-16 text-muted-foreground font-body"><Check className="h-10 w-10 mx-auto mb-3 opacity-40" /><p className="font-medium text-foreground">Tudo em dia!</p><p className="text-sm mt-1">Nenhum post aguardando sua revisão agora.</p></div>
                 ) : (

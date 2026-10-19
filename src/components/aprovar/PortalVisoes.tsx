@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Clapperboard, Layers, ImageOff } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clapperboard, Layers, ImageOff, PenLine } from "lucide-react";
 import { getDisplayImageUrl, isVideoMedia } from "@/lib/driveMedia";
 import type { PortalPost } from "@/pages/AprovarPortal";
 
@@ -135,30 +135,50 @@ export function PortalFeed({ posts, capas, brand, aoAbrir }: {
 /* ── CALENDÁRIO DO MÊS ────────────────────────────────────────────────────── */
 const SEMANA = ["D", "S", "T", "Q", "Q", "S", "S"];
 
-export function PortalMes({ posts, capas, brand, aoAbrir }: {
+/** Dia com post EM PRODUÇÃO (19/10/2026): só data e formato, nada do conteúdo. */
+export type DiaEmProducao = { dia: string; formato: string | null };
+
+const NOME_FORMATO: Record<string, string> = {
+  reels: "Reels", reel: "Reels", story: "Story", stories: "Story",
+  carrossel: "Carrossel", carousel: "Carrossel", estatico: "Post", static: "Post", post: "Post", video: "Vídeo",
+};
+const nomeFormato = (f: string | null) => (f ? NOME_FORMATO[f.toLowerCase()] ?? f : "Post");
+
+export function PortalMes({ posts, capas, brand, aoAbrir, producao = [] }: {
   posts: PortalPost[]; capas: Capas; brand: string | null; aoAbrir?: (id: string) => void;
+  /* PRÉVIA DO MÊS (Walter, 19/10/2026; mockup aprovado): "a pessoa tem prévia
+     dos dias que vai sair algo". Dia com post ainda em produção aparece
+     tracejado na cor da marca, só com o formato. */
+  producao?: DiaEmProducao[];
 }) {
   const comData = useMemo(() => posts.filter((p) => !!p.scheduled_date)
     .sort((a, b) => (a.scheduled_date ?? "").localeCompare(b.scheduled_date ?? "")), [posts]);
   const semData = posts.length - comData.length;
+  const prodPorDia = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const x of producao) m.set(x.dia, [...(m.get(x.dia) ?? []), nomeFormato(x.formato)]);
+    return m;
+  }, [producao]);
 
-  // Abre no mês do primeiro post pendente; senão no do primeiro com data.
+  // Abre no mês do primeiro post pendente; senão no do primeiro com data;
+  // sem post nenhum ainda, no do primeiro dia em produção.
   const inicial = useMemo(() => {
     const alvo = comData.find((p) => p.approval_status !== "aprovado") ?? comData[0];
-    const iso = alvo?.scheduled_date ?? hojeLocal();
+    const iso = alvo?.scheduled_date ?? producao[0]?.dia ?? hojeLocal();
     return { ano: Number(iso.slice(0, 4)), mes: Number(iso.slice(5, 7)) - 1 };
-  }, [comData]);
+  }, [comData, producao]);
   const [ref, setRef] = useState(inicial);
   /* Se a aba abriu antes dos posts chegarem, o mês inicial era o de hoje e
      ficava. Na primeira vez que chegam posts com data, pula pro mês certo. */
-  const sincronizou = useRef(comData.length > 0);
+  const temAlgo = comData.length + producao.length;
+  const sincronizou = useRef(temAlgo > 0);
   useEffect(() => {
-    if (!sincronizou.current && comData.length > 0) { sincronizou.current = true; setRef(inicial); }
-  }, [comData.length, inicial]);
+    if (!sincronizou.current && temAlgo > 0) { sincronizou.current = true; setRef(inicial); }
+  }, [temAlgo, inicial]);
   const [dia, setDia] = useState<string | null>(null);
   const accent = brand ?? "hsl(var(--primary))";
 
-  if (comData.length === 0) {
+  if (comData.length === 0 && producao.length === 0) {
     return (
       <div className="rounded-2xl border border-border bg-card p-8 text-center">
         <CalendarDays className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
@@ -199,6 +219,23 @@ export function PortalMes({ posts, capas, brand, aoAbrir }: {
           const lista = porDia.get(k) ?? [];
           const p0 = lista[0];
           const ativo = dia === k;
+          const emProducao = prodPorDia.get(k) ?? [];
+          if (!p0 && emProducao.length > 0) {
+            return (
+              <button key={k} type="button" onClick={() => setDia(ativo ? null : k)}
+                className="relative aspect-square rounded-lg overflow-hidden border-[1.5px] border-dashed text-left"
+                style={{ borderColor: `color-mix(in srgb, ${accent} 55%, white)`, backgroundColor: `color-mix(in srgb, ${accent} 9%, white)`,
+                  ...(ativo ? { boxShadow: `0 0 0 2px ${accent}` } : {}) }}
+                aria-label={`${d}, ${emProducao.length > 1 ? `${emProducao.length} posts` : emProducao[0]} em produção`}>
+                <span className="absolute left-1 top-0.5 text-[11px] font-display font-extrabold" style={{ color: accent }}>{d}</span>
+                <span className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 pt-2.5 text-center" style={{ color: accent }}>
+                  <PenLine className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:block text-[9.5px] font-body font-bold leading-none">Em produção</span>
+                  <span className="text-[9px] font-body leading-none opacity-80">{emProducao.length > 1 ? `${emProducao.length} posts` : emProducao[0]}</span>
+                </span>
+              </button>
+            );
+          }
           return (
             <button key={k} type="button" disabled={lista.length === 0} onClick={() => setDia(ativo ? null : k)}
               className={`relative aspect-square rounded-lg overflow-hidden border text-left transition-shadow ${lista.length ? "border-transparent hover:shadow-md" : "border-border/60 bg-card"} ${ativo ? "ring-2 ring-offset-1" : ""}`}
@@ -219,12 +256,31 @@ export function PortalMes({ posts, capas, brand, aoAbrir }: {
         })}
       </div>
 
+      {producao.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11.5px] font-body text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: STATUS_COR.aprovado.cor }} />Aprovado</span>
+          <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: STATUS_COR.pendente.cor }} />Esperando você</span>
+          <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded border-[1.5px] border-dashed" style={{ borderColor: `color-mix(in srgb, ${accent} 55%, white)`, backgroundColor: `color-mix(in srgb, ${accent} 9%, white)` }} />Em produção</span>
+        </div>
+      )}
+
       {/* O dia escolhido: a lista dele, e cada post leva pra aprovação. */}
       {dia && (
         <div className="mt-4 rounded-2xl border border-border bg-card p-3 space-y-2">
           <p className="text-[12px] font-body font-bold text-muted-foreground capitalize">
             {new Date(dia + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
           </p>
+          {(prodPorDia.get(dia) ?? []).map((f, i) => (
+            <div key={`prod-${i}`} className="flex items-center gap-3 rounded-xl border border-border px-2.5 py-2.5">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ color: accent, backgroundColor: `color-mix(in srgb, ${accent} 12%, white)` }}>
+                <PenLine className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13.5px] font-body font-bold text-foreground">{f} em produção</span>
+                <span className="block text-[12px] font-body text-muted-foreground">Sua social mídia está preparando este conteúdo. Ele aparece aqui pra você aprovar assim que ficar pronto.</span>
+              </span>
+            </div>
+          ))}
           {doDia.map((p) => (
             <button key={p.post_id} type="button" onClick={() => aoAbrir?.(p.post_id)} disabled={!aoAbrir}
               className="w-full flex items-center gap-3 rounded-xl border border-border px-2.5 py-2 text-left hover:bg-muted/40 transition-colors">
