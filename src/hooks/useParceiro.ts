@@ -999,6 +999,8 @@ export type PecaExterna = {
   material?: { tipo: string | null } | null;
   /** Prioridade marcada no "Enviar pra produção" (15/10/2026). */
   urgente?: boolean | null;
+  /** Dono do post. Diferente da agência = post da conta Cria do cliente. */
+  user_id?: string | null;
 };
 
 /** Tudo que está na mão de parceiros: a matéria-prima do painel "Com
@@ -1017,10 +1019,13 @@ export function usePecasComParceiros(temParceiros: boolean) {
     ...SINCRONIA,
     enabled: !!user && !!agencyOwnerId && temParceiros,
     queryFn: async () => {
-      const COLUNAS = "id, title, format, producao_status, prazo_producao, prazo_status, prazo_sugerido, approval_status, scheduled_date, assignee_id, external_client_id, updated_at, cache_parceiro, entregue_em, revisoes";
+      const COLUNAS = "id, title, format, producao_status, prazo_producao, prazo_status, prazo_sugerido, approval_status, scheduled_date, assignee_id, external_client_id, updated_at, cache_parceiro, entregue_em, revisoes, user_id";
+      /* Também os posts da conta Cria de clientes que ESTA agência delegou
+         (agencia_id, 19/10/2026). O RLS deixa ler porque ela é membro da
+         conta do cliente. */
       const buscar = (colunas: string) => sbFrom("posts")
         .select(colunas)
-        .eq("user_id", agencyOwnerId!)
+        .or(`user_id.eq.${agencyOwnerId},agencia_id.eq.${agencyOwnerId}`)
         .not("assignee_id", "is", null)
         // Post na lixeira não é produção em andamento (revisão 28/09).
         .is("deleted_at", null)
@@ -1289,7 +1294,7 @@ export function useMarcaDosClientes(crmIds: string[]) {
 export function useDelegarPost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (v: { postId: string; assigneeId: string | null; prazo: string | null; nomeParceiro?: string; cache?: number | null; urgente?: boolean }) => {
+    mutationFn: async (v: { postId: string; assigneeId: string | null; prazo: string | null; nomeParceiro?: string; cache?: number | null; urgente?: boolean; agenciaId?: string }) => {
       // Lê o estado atual em vez de confiar no que a tela achava que era: o
       // popover pode estar aberto desde antes do parceiro entregar.
       const { data: atual, error: lerErro } = await sbFrom("posts")
@@ -1308,6 +1313,10 @@ export function useDelegarPost() {
         prazo_producao: v.assigneeId ? v.prazo : null,
         prazo_sugerido: null,
       };
+      /* Post da conta do cliente (19/10/2026): carimba quem delegou. O banco
+         confere que o cliente é da carteira dessa agência e limpa sozinho
+         quando o parceiro sai. */
+      if (v.agenciaId) patch.agencia_id = v.assigneeId ? v.agenciaId : null;
 
       if (mesmoParceiro) {
         // Data nova pede aceite novo. Data igual não mexe em nada do prazo.
@@ -1341,6 +1350,8 @@ export function useDelegarPost() {
       invalidarQuadrosDePost(qc);
       void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
       void qc.invalidateQueries({ queryKey: ["post-urgente", v.postId] });
+      // Kanban do cliente (posts da conta dele).
+      if (v.agenciaId) void qc.invalidateQueries({ queryKey: ["posts"] });
       if (!v.assigneeId) { toast.success("Delegação removida."); return; }
       toast.success(v.mesmoParceiro
         ? "Combinado atualizado. A entrega e o histórico continuam como estavam."

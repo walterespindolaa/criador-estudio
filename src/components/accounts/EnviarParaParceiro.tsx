@@ -24,7 +24,7 @@ import { ROTULO_PAPEL, useConversaDoCard, useDelegarPost, useMeusParceiros, useP
  *  delega de verdade depois do Salvar (ver CriaPostBoard.submit). */
 export type EnvioPendente = { assigneeId: string; prazo: string | null; cache: number | null; nome?: string; urgente?: boolean };
 
-export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, cache, urgente, adiado, pendente, onAdiar }: {
+export function EnviarParaParceiro({ postId, assigneeId: assigneeIdProp, producaoStatus, prazo, cache, urgente, adiado, pendente, onAdiar, agenciaId }: {
   postId: string;
   assigneeId: string | null;
   producaoStatus: string | null;
@@ -41,8 +41,16 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, 
   adiado?: boolean;
   pendente?: EnvioPendente | null;
   onAdiar?: (v: EnvioPendente | null) => void;
+  /* POST DA CONTA DO CLIENTE (Walter, 19/10/2026). No Kanban do cliente que
+     usa o Cria o post é DELE; a agência que delega vai em posts.agencia_id e
+     o parceiro passa a enxergar o card. Nulo = post da própria agência. */
+  agenciaId?: string | null;
 }) {
   const { data: parceiros = [] } = useMeusParceiros();
+  /* O editor do Kanban do cliente segura o post de quando abriu; sem este
+     espelho o botão continuava "Enviar para" depois de enviar. */
+  const [assigneeId, setAssigneeId] = useState<string | null>(assigneeIdProp);
+  useEffect(() => { setAssigneeId(assigneeIdProp); }, [assigneeIdProp]);
   const delegar = useDelegarPost();
   const [aberto, setAberto] = useState(false);
   const [escolhido, setEscolhido] = useState<string | null>(adiado ? (pendente?.assigneeId ?? null) : assigneeId);
@@ -84,12 +92,15 @@ export function EnviarParaParceiro({ postId, assigneeId, producaoStatus, prazo, 
     await delegar.mutateAsync({
       postId, assigneeId: escolhido, prazo: dataEntrega || null, nomeParceiro: nome, urgente: ehUrgente,
       cache: cacheNum != null && !Number.isNaN(cacheNum) && cacheNum > 0 ? cacheNum : null,
+      ...(agenciaId ? { agenciaId } : {}),
     });
+    setAssigneeId(escolhido);
     setAberto(false);
   };
 
   const remover = async () => {
-    await delegar.mutateAsync({ postId, assigneeId: null, prazo: null });
+    await delegar.mutateAsync({ postId, assigneeId: null, prazo: null, ...(agenciaId ? { agenciaId } : {}) });
+    setAssigneeId(null);
     setAberto(false);
   };
 

@@ -530,8 +530,15 @@ export function PainelComParceiros({ clientes }: {
      Cliente: o material pode ter só a ficha do CRM; aí acha o cliente do
      portal ligado a ela, pra cair na coluna certa. */
   const { data: materiais = [] } = useMateriaisComParceiros(parceiros.length > 0);
+  const { agencyOwnerId: agenciaAtual } = useActiveAccount();
   const pecas = useMemo<PecaExterna[]>(() => [
-    ...pecasDePost,
+    /* Post da conta Cria do cliente (19/10/2026): não tem portal, então a
+       coluna é a ficha do CRM ligada àquela conta (`crm:<id>`). */
+    ...pecasDePost.map((p): PecaExterna => {
+      if (p.external_client_id || !p.user_id || p.user_id === agenciaAtual) return p;
+      const ficha = crmClients.find((c) => c.cria_owner_id === p.user_id);
+      return { ...p, external_client_id: ficha ? `crm:${ficha.id}` : null };
+    }),
     ...materiais.map((m): PecaExterna => ({
       id: m.id,
       title: m.title,
@@ -551,22 +558,23 @@ export function PainelComParceiros({ clientes }: {
       revisoes: m.revisoes,
       material: { tipo: m.kind },
     })),
-  ], [pecasDePost, materiais, extReais]);
+  ], [pecasDePost, materiais, extReais, crmClients, agenciaAtual]);
   /* MATERIAL DE CLIENTE SEM PORTAL (Walter, 19/10/2026). Material ligado só à
      ficha do CRM, sem portal do Cria Post (o caso de quem usa o Cria, que
      aprova por dentro), caía na coluna "Sem cliente". Agora vira uma coluna
      com o nome da ficha, chave `crm:<id>`, e logo/cor vêm da ficha. */
   const extClients = useMemo<ExternalClient[]>(() => {
-    const faltam = new Set(materiais
-      .filter((m) => !m.external_client_id && m.crm_client_id && !extReais.some((c) => c.crm_client_id === m.crm_client_id))
-      .map((m) => m.crm_client_id as string));
+    const faltam = new Set(pecas
+      .map((p) => p.external_client_id)
+      .filter((id): id is string => !!id && id.startsWith("crm:"))
+      .map((id) => id.slice(4)));
     const daFicha = crmClients.filter((c) => faltam.has(c.id)).map((c): ExternalClient => ({
       id: `crm:${c.id}`, manager_id: c.manager_id, name: c.name, logo_url: null,
       instagram_handle: null, notes: null, active: true, created_at: "",
       color: (c as { color?: string | null }).color ?? null, crm_client_id: c.id, brand_color: null, portal_settings: null,
     }));
     return [...(extReais as ExternalClient[]), ...daFicha];
-  }, [extReais, materiais, crmClients]);
+  }, [extReais, pecas, crmClients]);
   const [materialAberto, setMaterialAberto] = useState<string | null>(null);
   const resolver = useResolverPrazoSugerido();
   // Mensagens novas por peça: o quadro mostra a bolinha em cima do card.
@@ -698,7 +706,9 @@ export function PainelComParceiros({ clientes }: {
      dezenas de cards pra achar o título de novo na mão. */
   const irAoPost = (p: PecaExterna) => {
     const ec = p.external_client_id ? extClients.find((c) => c.id === p.external_client_id) : null;
-    if (ec?.crm_client_id) navigate(`/socialmidia/clientes/${ec.crm_client_id}/posts?post=${p.id}`);
+    // Post da conta do cliente mora no Kanban do cliente, não no Cria Post.
+    if (ec?.crm_client_id && ec.id.startsWith("crm:")) navigate(`/socialmidia/clientes/${ec.crm_client_id}/kanban-cliente`);
+    else if (ec?.crm_client_id) navigate(`/socialmidia/clientes/${ec.crm_client_id}/posts?post=${p.id}`);
     else navigate("/socialmidia/criapost"); // sem cliente no CRM: o quadro geral, nunca clique morto
   };
   const abrirPeca = (p: PecaExterna) => (p.material ? setMaterialAberto(p.id) : setCardAberto(p));

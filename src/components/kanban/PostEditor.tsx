@@ -25,6 +25,8 @@ import { cn } from "@/lib/utils";
 import { validateUpload } from "@/lib/upload-validation";
 import { getFormatStructure } from "@/lib/format-structures";
 import { PostTasks } from "./PostTasks";
+import { useActiveAccount } from "@/contexts/AccountContext";
+import { EnviarParaParceiro } from "@/components/accounts/EnviarParaParceiro";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -241,6 +243,20 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   }, []);
   const { startTour } = useTour();
   const isNew = !post;
+  /* ENVIAR PRA PARCEIRO NO POST DO CLIENTE (Walter, 19/10/2026). Quando a
+     agência está dentro do Cria de um cliente (Kanban do cliente ou a conta
+     dele aberta), o post é do cliente e o parceiro é da agência: o botão
+     carimba a agência que delegou (posts.agencia_id). No Cria do próprio
+     criador e no Meu perfil não aparece. Sem parceiro na agência, o botão
+     some sozinho. */
+  const { isManaging, activeAccountId, agencyOwnerId, ehMeuPerfil } = useActiveAccount();
+  const agenciaDoPost = isManaging && !ehMeuPerfil && agencyOwnerId && activeAccountId && activeAccountId !== agencyOwnerId
+    && post && post.user_id !== agencyOwnerId ? agencyOwnerId : null;
+  // O tipo Post do editor não declara as colunas de produção (vêm no select *).
+  const producaoDoPost = post as unknown as {
+    assignee_id?: string | null; producao_status?: string | null; prazo_producao?: string | null;
+    cache_parceiro?: number | null; urgente?: boolean | null;
+  } | null;
   const [title, setTitle] = useState("");
   const [platform, setPlatform] = useState("instagram");
   const [format, setFormat] = useState("reels");
@@ -1719,6 +1735,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 )}
                 {!isNew && post && (
                   <BaixarMidiasDoPost postId={post.id} midias={driveMedia} titulo={title} />
+                )}
+                {!isNew && post && agenciaDoPost && (
+                  <EnviarParaParceiro key={post.id} postId={post.id} agenciaId={agenciaDoPost}
+                    assigneeId={producaoDoPost?.assignee_id ?? null} producaoStatus={producaoDoPost?.producao_status ?? null}
+                    prazo={producaoDoPost?.prazo_producao ?? null} cache={producaoDoPost?.cache_parceiro ?? null}
+                    urgente={!!producaoDoPost?.urgente} />
                 )}
                 <Button
                   variant="outline"
