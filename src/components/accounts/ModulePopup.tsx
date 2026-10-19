@@ -92,6 +92,8 @@ const BENEFITS: Record<string, string[]> = {
     "Cronograma e calendário com data e hora de cada peça",
     "Materiais no Drive vinculados ao post (carrossel importa a pasta inteira)",
     "Relatório de entregas em PDF estilo apresentação, com a sua logo",
+    "Produção com parceiros: manda a peça pra designer ou editor, acompanha prazo e entrega",
+    "Calendário com as datas comemorativas do segmento de cada cliente",
     "Clientes externos ilimitados",
   ],
   crm: [
@@ -100,6 +102,9 @@ const BENEFITS: Record<string, string[]> = {
     "Contratos com data de renovação pra ninguém te pegar de surpresa",
     "Tarefas e lembretes de follow-up por cliente",
     "Brandbook, persona e histórico completo na ficha de cada cliente",
+    "Brandbook do cliente: sobe o PDF e a IA preenche paleta, fontes e tom de voz pra você conferir",
+    "Cofre de acessos: o cliente manda as senhas por um link seguro e a equipe vê só o que precisa",
+    "Link de cadastro e Link na bio do cliente, com captura de lead",
     "Custo por cliente (design, copy, tráfego) pra enxergar o seu lucro",
   ],
   financeiro: [
@@ -108,6 +113,7 @@ const BENEFITS: Record<string, string[]> = {
     "Contas a receber com status: pago, pendente, atrasado",
     "Calendário financeiro com projeção dos próximos meses",
     "Impostos pelo seu regime e rentabilidade por cliente",
+    "Terceiros: fechamento dos parceiros por período, cachê lançado sozinho na entrega e relatório em PDF",
     "Caixa pessoal separado: orçamento, contas fixas e metas",
   ],
   hub_cria: [
@@ -130,6 +136,7 @@ const BENEFITS: Record<string, string[]> = {
     "Checklist de tomadas pra nada ficar sem gravar",
     "Captação recorrente e lembrete automático na véspera",
     "Sugestão por cidade pra aproveitar a mesma viagem",
+    "Pasta por cliente e biblioteca de roteiros pra reaproveitar",
   ],
 };
 

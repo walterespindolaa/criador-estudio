@@ -61,11 +61,6 @@ function CartaoAtalho({ ligado, onClick, Icon, fundo, cor, titulo, texto, travad
       className={cn("relative flex items-start gap-2.5 rounded-2xl border-[1.5px] p-3 text-left transition-all",
         travadoEm ? "border-dashed border-border bg-card/50"
           : ligado ? "border-primary/50 bg-primary/[0.06] shadow-[0_0_0_4px_hsl(var(--primary)/0.07)]" : "border-border bg-card hover:border-primary/30")}>
-      {travadoEm && (
-        <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-pink-100 px-1.5 py-0.5 text-[9.5px] font-body font-extrabold text-pink-700 dark:bg-pink-500/15 dark:text-pink-300">
-          <Lock className="h-2.5 w-2.5" strokeWidth={3} />{travadoEm}
-        </span>
-      )}
       {ligado && !travadoEm && (
         <span className="absolute right-2 top-2 grid h-[18px] w-[18px] place-items-center rounded-full bg-primary text-primary-foreground">
           <Check className="h-3 w-3" strokeWidth={3} />
@@ -77,6 +72,12 @@ function CartaoAtalho({ ligado, onClick, Icon, fundo, cor, titulo, texto, travad
       <span className="min-w-0 pr-4">
         <span className="block text-[13px] font-body font-bold leading-tight text-foreground">{titulo}</span>
         <span className="mt-0.5 block text-[11.5px] font-body leading-snug text-muted-foreground">{texto}</span>
+        {/* Selo do módulo embaixo do texto: no canto ele cobria o título. */}
+        {travadoEm && (
+          <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-pink-100 px-1.5 py-0.5 text-[10px] font-body font-extrabold text-pink-700 dark:bg-pink-500/15 dark:text-pink-300">
+            <Lock className="h-2.5 w-2.5" strokeWidth={3} />{travadoEm}
+          </span>
+        )}
       </span>
     </button>
   );
@@ -203,7 +204,7 @@ export function NovoClienteDialog({ open, onOpenChange }: { open: boolean; onOpe
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (ocupado) return; if (!o) fechar(); else onOpenChange(o); }}>
-      <DialogContent className="sm:max-w-[480px] max-h-[92vh] overflow-hidden rounded-[28px] p-0 gap-0 flex flex-col [&>button]:hidden">
+      <DialogContent className="sm:max-w-[480px] max-h-[92vh] overflow-hidden rounded-[28px] p-0 sm:p-0 gap-0 flex flex-col [&>button]:hidden">
         <input ref={fotoRef} type="file" accept="image/*" className="hidden" onChange={onFoto} />
         <input ref={pdfRef} type="file" accept="application/pdf,image/*" className="hidden" onChange={onPdf} />
 
@@ -311,14 +312,14 @@ export function NovoClienteDialog({ open, onOpenChange }: { open: boolean; onOpe
                   {cor && <button type="button" onClick={() => { setCor(null); setFamilia(null); }} className="ml-2 underline underline-offset-2">tirar</button>}
                 </small>
               </label>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-[7px]">
                 {BRAND_COLOR_FAMILIES.map((f, i) => {
                   const base = f.tons[2] ?? f.tons[0];
                   const ativa = familia === i;
                   return (
                     <button key={f.nome} type="button" aria-label={`Família ${f.nome}`} aria-pressed={ativa}
                       onClick={() => { setFamilia(i); if (!cor || !f.tons.includes(cor)) setCor(base); }}
-                      className={cn("h-7 w-7 rounded-full transition-transform", ativa ? "ring-2 ring-foreground ring-offset-2 ring-offset-background" : "hover:scale-105")}
+                      className={cn("h-[26px] w-[26px] rounded-full transition-transform", ativa ? "ring-2 ring-foreground ring-offset-2 ring-offset-background" : "hover:scale-105")}
                       style={{ backgroundColor: base }} />
                   );
                 })}
