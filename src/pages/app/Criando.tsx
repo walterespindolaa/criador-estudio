@@ -42,6 +42,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, parseISO, isWithinInterval } from "date-fns";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { usePosts, type Post } from "@/hooks/usePosts";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useMeusParceiros } from "@/hooks/useParceiro";
 // Ordem manual (arrastada) x ordem por data de publicação. Só exibição.
 import { OrdemDataToggle } from "@/components/shared/OrdemDataToggle";
 import { useOrdemPorData } from "@/hooks/useOrdemPorData";
@@ -102,6 +104,24 @@ const COLUMN_TOOLTIPS: Record<string, string> = {
 // calendário contar a mesma história (era só cor de fundo, e ninguém decora cor).
 const CAL_ETAPA: Record<string, string> = ROTULO_ETAPA;
 
+/* COM A DESIGNER (Gabriela, 19/10/2026: "aqui não aparece o que tá com a
+   designer, no de SM aparece"). O post delegado pelo "Enviar para" carrega
+   assignee_id e producao_status; o quadro da social mídia já mostrava, este
+   (que também é o Kanban do cliente) não. Selo roxo com o nome e a etapa. */
+const ETAPA_DO_PARCEIRO: Record<string, string> = {
+  aguardando: "Novo", em_producao: "Fazendo", ajuste: "Em ajuste", entregue: "Entregue",
+};
+const delegacaoDe = (p: Post) => p as unknown as { assignee_id?: string | null; producao_status?: string | null };
+function SeloParceiro({ nome, etapa, mini }: { nome: string; etapa?: string | null; mini?: boolean }) {
+  return (
+    <span className={cn("inline-flex items-center gap-1 max-w-full rounded-full bg-violet-100 text-violet-800 font-body font-bold",
+      mini ? "px-1.5 py-px text-[8.5px] leading-tight" : "px-2 py-0.5 text-[10px]")}>
+      <span className="truncate">Com {nome}</span>
+      {etapa && ETAPA_DO_PARCEIRO[etapa] && <span className="shrink-0 font-semibold text-violet-600">· {ETAPA_DO_PARCEIRO[etapa]}</span>}
+    </span>
+  );
+}
+
 const Criando = () => {
   const { user } = useAuth();
   const { activeAccountId } = useActiveAccount();
@@ -138,6 +158,24 @@ const Criando = () => {
   }, [drawerOpen, startTourOnce]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  /* VÁRIOS DE UMA VEZ (Walter, 19/10/2026: "nessa lista poderia ter uma opção
+     pra selecionar vários de uma vez só e apagar"). Só na Tabela, que é onde
+     se faz faxina. Vai tudo pra Lixeira, igual ao excluir de um em um. */
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [confirmandoLote, setConfirmandoLote] = useState(false);
+  const [excluindoLote, setExcluindoLote] = useState(false);
+  const alternarSelecao = (id: string) => setSelecionados((atual) => {
+    const novo = new Set(atual);
+    if (novo.has(id)) novo.delete(id); else novo.add(id);
+    return novo;
+  });
+  const { data: parceiros = [] } = useMeusParceiros();
+  const comQuem = (p: Post): { nome: string; etapa: string | null } | null => {
+    const d = delegacaoDe(p);
+    if (!d.assignee_id) return null;
+    const pc = parceiros.find((x) => x.member_id === d.assignee_id);
+    return { nome: pc ? pc.nome.split(" ")[0] : "o parceiro", etapa: d.producao_status ?? null };
+  };
 
 
   const { byStatus, saveCover, resetCover, isSaving } = useStatusCovers();
@@ -884,6 +922,7 @@ const Criando = () => {
                           )}
                           {isPublished && <span className="px-1.5 py-0.5 rounded text-xs font-body bg-secondary text-secondary-foreground">Publicado</span>}
                         </div>
+                        {(() => { const q = comQuem(post); return q ? <div className="mt-1.5"><SeloParceiro nome={q.nome} etapa={q.etapa} /></div> : null; })()}
                         {post.scheduled_date && <p className="text-xs text-muted-foreground font-body mt-2 flex items-center gap-1"><Calendar className="h-3 w-3" /> {dataHoraCurta(post.scheduled_date, post.scheduled_time)}</p>}
                         {tc && tc.count > 0 && (
                           <span className={`inline-flex items-center gap-1 mt-1.5 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded ${allDone ? "bg-secondary/20 text-secondary" : "bg-muted text-muted-foreground"}`}>
@@ -924,10 +963,31 @@ const Criando = () => {
                 <p className="font-body text-sm text-muted-foreground">Nenhum post nos filtros atuais.</p>
               </div>
             ) : (
+              <>
+              {(() => {
+                const visiveis = new Set(filteredPosts.map((p) => p.id));
+                const n = [...selecionados].filter((id) => visiveis.has(id)).length;
+                if (n === 0) return null;
+                return (
+                  <div className="mb-3 flex items-center gap-2 flex-wrap rounded-2xl border border-primary/30 bg-primary/5 px-4 py-2.5">
+                    <span className="text-sm font-body font-bold text-foreground">{n} selecionado{n === 1 ? "" : "s"}</span>
+                    <Button size="sm" variant="destructive" className="rounded-xl h-8 ml-auto" onClick={() => setConfirmandoLote(true)} disabled={excluindoLote}>
+                      <X className="h-3.5 w-3.5 mr-1" /> Excluir selecionados
+                    </Button>
+                    <Button size="sm" variant="ghost" className="rounded-xl h-8" onClick={() => setSelecionados(new Set())}>Limpar seleção</Button>
+                  </div>
+                );
+              })()}
               <div className="rounded-2xl border border-border overflow-hidden bg-card">
                 <table className="w-full text-sm font-body">
                   <thead>
                     <tr className="border-b border-border bg-muted/40 text-left text-xs text-muted-foreground">
+                      <th className="pl-3 md:pl-4 pr-1 py-2.5 w-8">
+                        <Checkbox aria-label="Selecionar todos"
+                          checked={filteredPosts.length > 0 && filteredPosts.every((p) => selecionados.has(p.id))
+                            ? true : filteredPosts.some((p) => selecionados.has(p.id)) ? "indeterminate" : false}
+                          onCheckedChange={(v) => setSelecionados(v === true ? new Set(filteredPosts.map((p) => p.id)) : new Set())} />
+                      </th>
                       <th className="px-3 md:px-4 py-2.5 font-medium">Título</th>
                       <th className="px-3 md:px-4 py-2.5 font-medium">Status</th>
                       {/* AS COLUNAS QUE SOMEM NO CELULAR (circuito 10, 15/09/2026).
@@ -966,9 +1026,15 @@ const Criando = () => {
                         const pil = getPillar(post.pillar_id);
                         return (
                           <tr key={post.id} onClick={() => openEdit(post)}
-                            className="border-b border-border last:border-0 hover:bg-muted/40 cursor-pointer transition-colors">
+                            className={cn("border-b border-border last:border-0 hover:bg-muted/40 cursor-pointer transition-colors",
+                              selecionados.has(post.id) && "bg-primary/5")}>
+                            <td className="pl-3 md:pl-4 pr-1 py-2.5 w-8" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox aria-label={`Selecionar ${post.title}`} checked={selecionados.has(post.id)}
+                                onCheckedChange={() => alternarSelecao(post.id)} />
+                            </td>
                             <td className="px-3 md:px-4 py-2.5 max-w-[340px]">
                               <span className="font-medium text-foreground line-clamp-1">{post.title}</span>
+                              {(() => { const q = comQuem(post); return q ? <span className="block mt-0.5"><SeloParceiro nome={q.nome} etapa={q.etapa} /></span> : null; })()}
                             </td>
                             <td className="px-3 md:px-4 py-2.5">
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium"
@@ -993,6 +1059,7 @@ const Criando = () => {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </div>
         )}
@@ -1134,6 +1201,7 @@ const Criando = () => {
                                 {FORMAT_LABELS[post.format] ?? post.format}
                                 {post.scheduled_time ? <span className="text-muted-foreground font-medium normal-case"> · {post.scheduled_time.slice(0, 5)}</span> : null}
                               </span>
+                              {(() => { const q = comQuem(post); return q ? <span className="block mt-0.5"><SeloParceiro mini nome={q.nome} etapa={q.etapa} /></span> : null; })()}
                             </button>
                           ))}
                           {dayPosts.length > 3 && (
@@ -1174,6 +1242,7 @@ const Criando = () => {
                             <span className={cn("block text-[9px] font-body font-bold uppercase tracking-wide truncate", FORMAT_TEXT_CLASS)}>
                               {FORMAT_LABELS[post.format] ?? post.format}
                             </span>
+                            {(() => { const q = comQuem(post); return q ? <span className="block mt-0.5"><SeloParceiro mini nome={q.nome} etapa={q.etapa} /></span> : null; })()}
                           </button>
                         ))}
                       </div>
@@ -1543,7 +1612,7 @@ const Criando = () => {
           <AlertDialogHeader>
             <AlertDialogTitle className="font-display">Excluir post?</AlertDialogTitle>
             <AlertDialogDescription className="font-body">
-              {deleteTarget ? `"${deleteTarget.title}" será removido permanentemente. Essa ação não pode ser desfeita.` : ""}
+              {deleteTarget ? `"${deleteTarget.title}" vai pra Lixeira e pode ser restaurado por 30 dias.` : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1557,6 +1626,42 @@ const Criando = () => {
                   onError: () => toast.error("Erro ao excluir post."),
                 });
                 setDeleteTarget(null);
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmandoLote} onOpenChange={(open) => !open && setConfirmandoLote(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-display">
+              Excluir {[...selecionados].filter((id) => filteredPosts.some((p) => p.id === id)).length} posts?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-body">
+              Eles vão pra Lixeira e podem ser restaurados por 30 dias.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-body">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 font-body"
+              onClick={async () => {
+                // Só o que está visível nos filtros: o que foi marcado e depois
+                // sumiu do filtro não é apagado sem a pessoa ver.
+                const ids = [...selecionados].filter((id) => filteredPosts.some((p) => p.id === id));
+                setConfirmandoLote(false);
+                if (ids.length === 0) return;
+                setExcluindoLote(true);
+                const res = await Promise.allSettled(ids.map((id) => deletePost.mutateAsync(id)));
+                setExcluindoLote(false);
+                const falhas = res.filter((r) => r.status === "rejected").length;
+                const ok = ids.length - falhas;
+                setSelecionados(new Set());
+                if (falhas === 0) toast.success(`${ok} post${ok === 1 ? "" : "s"} na Lixeira`);
+                else toast.error(`${ok} excluído${ok === 1 ? "" : "s"}, ${falhas} não deu. Tente de novo.`);
               }}
             >
               Excluir
