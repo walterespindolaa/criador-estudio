@@ -1902,7 +1902,7 @@ export default function AgendaCriacao() {
         onDelete={() => {
           if (!editCap) return;
           delCapture.mutate(editCap.id, {
-            onSuccess: () => toast.success("Captação excluída."),
+            onSuccess: (excluiu) => { if (excluiu) toast.success("Captação excluída."); },
             onError: () => toast.error("Não consegui excluir."),
           });
           setCapOpen(false); setEditCap(null);

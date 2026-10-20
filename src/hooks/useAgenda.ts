@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
 import { isPeriodo, type Periodo } from "@/lib/periodos-agenda";
+import { confirmar } from "@/components/shared/Confirm";
 import { vazioOuErro } from "@/lib/erro-esquema";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
@@ -406,12 +407,31 @@ export function useEnsureRecurringCaptures() {
   });
 }
 
+/* EXCLUIR CAPTAÇÃO PERGUNTA ANTES (Gabriela, 20/10/2026). O X excluía com um
+   clique e o banco solta os roteiros daquele dia (ficam "sem dia"): a
+   captação de 14/10 sumiu, a de 20/10 abriu com 0 roteiros e o teleprompter
+   ficou vazio no dia da gravação. Agora avisa quantos roteiros vão ficar sem
+   dia e lembra que mudar a data é editar, não excluir. Devolve false se a
+   pessoa desistir. */
 export function useDeleteCapture() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id: string): Promise<boolean> => {
+      const { count } = await sbFrom("capture_scripts")
+        .select("id", { count: "exact", head: true }).eq("capture_id", id);
+      const n = count ?? 0;
+      const ok = await confirmar({
+        titulo: "Excluir esta captação?",
+        descricao: n > 0
+          ? `${n} ${n === 1 ? "roteiro está" : "roteiros estão"} neste dia e ${n === 1 ? "vai ficar" : "vão ficar"} sem dia (não somem, mas saem da gravação e do teleprompter). Se a gravação só mudou de data, cancele e edite a captação.`
+          : "Se a gravação só mudou de data, cancele e edite a captação.",
+        acao: "Excluir",
+        destrutivo: true,
+      });
+      if (!ok) return false;
       const { error } = await sbFrom("agenda_captures").delete().eq("id", id);
       if (error) throw error;
+      return true;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["agenda-captures"] }),
     onError: () => toast.error("Não consegui excluir."),
