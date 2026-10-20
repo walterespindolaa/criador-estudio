@@ -36,6 +36,9 @@ interface PostPreviewContentProps {
   /** Painel do editor (19/10/2026): a plataforma já foi escolhida no
    *  formulário; sem as abas IG/TK/YT a prévia ganha 44px de altura. */
   semAbasPlataforma?: boolean;
+  /** Capa do Reels (posts.cover_url). Aparece por cima do vídeo até o play,
+   *  como no Instagram antes de tocar (20/10/2026). */
+  capa?: string | null;
 }
 
 interface PostPreviewProps extends PostPreviewContentProps {
@@ -45,8 +48,23 @@ interface PostPreviewProps extends PostPreviewContentProps {
 
 // Conteudo puro da previa (sem Dialog), reutilizavel: vive no modal fullscreen do
 // mobile E na coluna direita fixa do desktop dentro do PostEditor.
-export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections, carouselMedia, folgaParaFechar, semAbasPlataforma }: PostPreviewContentProps) {
+export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections, carouselMedia, folgaParaFechar, semAbasPlataforma, capa }: PostPreviewContentProps) {
   const initials = (userName || "C")[0].toUpperCase();
+  // Trocou a capa, ela volta pra frente mesmo depois de um play.
+  const [capaVista, setCapaVista] = useState<string | null>(null);
+  const mostraCapa = !!capa && mediaType === "video" && capaVista !== capa;
+  const capaPorCima = mostraCapa ? (
+    <button type="button" onClick={() => setCapaVista(capa ?? null)} aria-label="Ver o vídeo"
+      className="absolute inset-0 z-[3] block w-full h-full overflow-hidden bg-neutral-900">
+      <img src={capa!} alt="Capa do Reels" className="absolute inset-0 w-full h-full object-cover" />
+      <span className="absolute inset-0 grid place-items-center">
+        <span className="grid h-12 w-12 place-items-center rounded-full bg-black/45 text-white backdrop-blur-sm">
+          <Play className="h-5 w-5 translate-x-0.5" fill="currentColor" />
+        </span>
+      </span>
+      <span className="absolute left-2.5 bottom-2.5 rounded-full bg-black/55 px-2 py-0.5 text-[10.5px] font-body font-bold text-white">capa</span>
+    </button>
+  ) : null;
   const [igTab, setIgTab] = useState<"feed" | "reels">("feed");
   const [ytTab, setYtTab] = useState<"thumbnail" | "shorts">("thumbnail");
   const [carouselIdx, setCarouselIdx] = useState(0);
@@ -166,6 +184,7 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
 
     return (
       <div className="relative w-full aspect-[4/5] overflow-hidden">
+        {capaPorCima}
         {activeMediaUrl ? (
           isBunnyVideo ? (
             <VideoEmbed viewUrl={activeMediaUrl!} className="w-full h-full border-0" />
@@ -199,6 +218,7 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
       <div className="flex justify-center py-4 px-4">
         <div className="relative overflow-hidden w-full max-w-[260px]"
           style={{ aspectRatio: "9/16", borderRadius: 28, boxShadow: "0 20px 60px rgba(0,0,0,0.35)" }}>
+          {capaPorCima}
           {/* Background media or gradient */}
           {activeMediaUrl ? (
             isBunnyVideo ? (

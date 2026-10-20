@@ -118,44 +118,53 @@ export function PublicarNoInstagramView({
 
       <div className={cn(compacto ? "px-3 py-2 space-y-2" : "p-3 space-y-3")}>
         {compacto ? (
-          <div className="flex items-center gap-2">
-            <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] grid place-items-center shrink-0">
-              <Instagram className="h-3.5 w-3.5 text-white" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-1.5 min-w-0">
-                <span className="text-xs font-display font-bold text-foreground">Instagram</span>
-                <span className={cn("shrink-0 rounded-full px-1.5 py-px text-[10px] font-body font-bold leading-4", selo.cls)}>{selo.txt}</span>
+          /* DUAS LINHAS (Walter, 20/10/2026: "ali na parte do instagram ta
+             bugado"). Numa linha só, com a janela do editor mais estreita, o
+             cartão ficava com ~300px: o selo encavalava no "Auto" e o @ virava
+             "em ...". Em cima: quem é, o estado e o botão principal. Embaixo:
+             a conta, o automático e o checar. */
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] grid place-items-center shrink-0">
+                <Instagram className="h-3.5 w-3.5 text-white" />
+              </span>
+              <p className="min-w-0 flex-1 flex items-center gap-1.5">
+                <span className="text-xs font-display font-bold text-foreground shrink-0">Instagram</span>
+                <span className={cn("min-w-0 truncate rounded-full px-1.5 py-px text-[10px] font-body font-bold leading-4", selo.cls)}>{selo.txt}</span>
               </p>
-              <p className="text-[11px] font-body text-muted-foreground truncate" title={bloqueio ?? undefined}>
-                {estado !== "publicado" && bloqueio ? bloqueio
-                  : cx?.username ? `${estado === "publicado" ? "saiu em" : "em"} @${cx.username}` : ""}
-              </p>
-            </div>
-            {estado !== "publicado" && (
-              <>
-                <label className={cn("flex items-center gap-1.5 text-[11px] font-body text-muted-foreground shrink-0", podeAgir && "cursor-pointer")}
-                  title={quandoPost ? `Publicar sozinho na data e hora do post: ${quandoPost}` : "Defina a data do post e salve pra ligar."}>
-                  Auto
-                  <Switch
-                    checked={estado === "agendado"}
-                    disabled={!podeAgir || alternando || !est.scheduled_date}
-                    onCheckedChange={(v) => onAuto(v)}
-                    aria-label="Publicar automaticamente na data e hora do post"
-                  />
-                </label>
-                <Button type="button" variant="outline" onClick={onChecar} disabled={checando}
-                  title="Checar mídia" aria-label="Checar mídia" className="h-8 w-8 p-0 rounded-lg shrink-0">
-                  {checando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                </Button>
+              {estado !== "publicado" && (
                 <Button type="button" onClick={() => setConfirmar(true)} disabled={!podeAgir}
                   className="h-8 px-3 rounded-lg shrink-0 text-xs bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
                   {estado === "publicando" ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     : estado === "erro" ? <><RotateCcw className="h-3.5 w-3.5 mr-1" /> De novo</>
                     : <><Send className="h-3.5 w-3.5 mr-1" /> Publicar</>}
                 </Button>
-              </>
-            )}
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <p className="min-w-0 flex-1 text-[11px] font-body text-muted-foreground truncate" title={bloqueio ?? (cx?.username ? `@${cx.username}` : undefined)}>
+                {estado !== "publicado" && bloqueio ? bloqueio
+                  : cx?.username ? `${estado === "publicado" ? "saiu em" : "em"} @${cx.username}` : ""}
+              </p>
+              {estado !== "publicado" && (
+                <>
+                  <label className={cn("flex items-center gap-1.5 text-[11px] font-body text-muted-foreground shrink-0", podeAgir && "cursor-pointer")}
+                    title={quandoPost ? `Publicar sozinho na data e hora do post: ${quandoPost}` : "Defina a data do post e salve pra ligar."}>
+                    Auto
+                    <Switch
+                      checked={estado === "agendado"}
+                      disabled={!podeAgir || alternando || !est.scheduled_date}
+                      onCheckedChange={(v) => onAuto(v)}
+                      aria-label="Publicar automaticamente na data e hora do post"
+                    />
+                  </label>
+                  <Button type="button" variant="outline" onClick={onChecar} disabled={checando}
+                    title="Checar mídia" aria-label="Checar mídia" className="h-7 w-7 p-0 rounded-lg shrink-0">
+                    {checando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         ) : (<>
         {/* Cabeçalho: o que é, em que pé está e por onde sai. O selo fica

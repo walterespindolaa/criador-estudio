@@ -94,6 +94,7 @@ import {
   type CaptionScore,
 } from "@/lib/ai/claude";
 import { ScriptEditor, emptySection, type Section } from "./drawer/ScriptEditor";
+import { EditorDeCapa, temCapa, useCapaDoPost } from "@/components/accounts/CapaDoReels";
 import { ArtStudio } from "./ArtStudio";
 import { CarouselWriter } from "./CarouselWriter";
 import { EmojiPicker } from "@/components/shared/EmojiPicker";
@@ -1414,6 +1415,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
      Data + Mídia + Prévia caberem numa tela. No celular é a aba "Mídia".
      Deixou de recolher: agora tem lugar próprio nos dois. */
   const temMidiaPorCena = !!formatStructure.hasDynamicSections && !formatStructure.devField;
+  /* CAPA DO REELS NO EDITOR DO CRIADOR (Walter, 20/10/2026: "não achei
+     nenhum lugar pra colocar a capa do vídeo pra subir junto no Instagram").
+     Ela já existia no Cria Post da social mídia (posts.cover_url) e a
+     publicação já manda a capa junto; faltava o lugar de escolher aqui. */
+  const comCapa = temCapa(format) && !!post?.id;
+  const { capa: capaDoPost } = useCapaDoPost(comCapa ? post!.id : null);
+
   const blocoMidia = (
     <>
               <div className={cn("space-y-2.5", !telaLarga && "rounded-2xl border border-border/70 bg-muted/20 p-3")}>
@@ -1708,6 +1716,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
                 </>
 
+                {comCapa && <EditorDeCapa postId={post!.id} />}
+
                 {/* Gerador de prompt do Estudio (arte a partir do conteudo real).
                     RECOLHIDO atras de um botao (Walter, 01/09): os avisos e o
                     botao de gerar pesavam a tela pra quem ja tem a arte pronta.
@@ -1761,6 +1771,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     mediaType={previewMediaType}
                     sections={sections}
                     carouselMedia={previewCarouselMedia}
+                    capa={comCapa ? capaDoPost : null}
                   />
   );
 
@@ -3037,6 +3048,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
         mediaType={previewMediaType}
         sections={sections}
         carouselMedia={previewCarouselMedia}
+        capa={comCapa ? capaDoPost : null}
       />
       <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }}>
         <RoteiroPdfTemplate
