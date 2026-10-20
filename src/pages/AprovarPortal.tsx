@@ -15,6 +15,7 @@ import { postAspect } from "@/lib/post-aspect";
 import { EtapasChecklist, type Stage } from "@/components/aprovar/EtapasChecklist";
 import { PortalFeed, PortalMes, type DiaEmProducao } from "@/components/aprovar/PortalVisoes";
 import { CapaSobreVideo } from "@/components/accounts/CapaDoReels";
+import { getDisplayImageUrl, isVideoMedia } from "@/lib/driveMedia";
 import { PortalRelatorio } from "@/components/aprovar/PortalRelatorio";
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { LogoMarca } from "@/components/publico/CabecalhoPublico";
@@ -83,6 +84,18 @@ function CardIG({ client, post, alfinetes, modoApontar, aoFixar, aoAbrirAlfinete
   const handle = client.instagram_handle ? client.instagram_handle.replace(/^@/, "") : "perfil";
   const aspect = postAspect(post.platform, post.format);
   const vertical = aspect === "9 / 16";
+  /* REELS COM CAPA SUBIDA JUNTO DO VÍDEO (Gabriela, 20/10/2026: "ele tá dando
+     a capa como um slide, se a pessoa clicar não vai começar o vídeo"). A social
+     mídia sobe a imagem da capa + o vídeo e o cliente via um carrossel 1/2 com a
+     capa parada. Agora, em vídeo vertical com UM vídeo e imagem(ns) junto, a
+     primeira imagem vira a capa por cima do vídeo (com o play) e o carrossel
+     fica só com o vídeo. Marcando ponto na arte, volta o carrossel completo. */
+  const videosDaMidia = media.filter((m) => isVideoMedia(m));
+  const capaDaMidia = vertical && videosDaMidia.length === 1 && media.length > 1
+    ? (() => { const img = media.find((m) => !isVideoMedia(m)); return img ? (getDisplayImageUrl(img, 1080) || img.thumbnail_url || img.view_url || null) : null; })()
+    : null;
+  const comAlfinetes = !!modoApontar || Object.keys(alfinetes ?? {}).length > 0;
+  const midiaDoReels = capaDaMidia && !comAlfinetes ? videosDaMidia : media;
   const brand = client.brand_color || COR_PADRAO_PORTAL;
   // SÓ a legenda de verdade. O roteiro/copy (script) é material INTERNO de
   // produção e aparece no fluxo do CRONOGRAMA; na aprovação do post pronto ele
@@ -122,8 +135,8 @@ function CardIG({ client, post, alfinetes, modoApontar, aoFixar, aoAbrirAlfinete
         <div className="relative">
           {/* O cliente vê o Reels como vai aparecer no feed: na capa. Tocar
               mostra o vídeo. Marcando ponto na arte, a capa sai da frente. */}
-          <CapaSobreVideo capa={modoApontar || media.length > 1 || Object.keys(alfinetes ?? {}).length > 0 ? null : capa}>
-            <PostMediaCarousel media={media} aspect={aspect} alfinetes={alfinetes} modoApontar={modoApontar} aoFixar={aoFixar} aoAbrirAlfinete={aoAbrirAlfinete} alfineteSelecionado={alfineteSelecionado} onPlaying={() => setTocando(true)} />
+          <CapaSobreVideo capa={comAlfinetes ? null : capaDaMidia ? (capa ?? capaDaMidia) : (media.length > 1 ? null : capa)}>
+            <PostMediaCarousel media={midiaDoReels} aspect={aspect} alfinetes={alfinetes} modoApontar={modoApontar} aoFixar={aoFixar} aoAbrirAlfinete={aoAbrirAlfinete} alfineteSelecionado={alfineteSelecionado} onPlaying={() => setTocando(true)} />
           </CapaSobreVideo>
           {/* Véu de rodapé CURTO. Antes eram 2/5 da altura em black/70: aquilo existia
               pra dar contraste na legenda sobreposta, que foi removida daqui (ver o
