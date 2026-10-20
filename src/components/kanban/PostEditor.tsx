@@ -311,6 +311,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   // Link do conteúdo final (arte no Canva, arquivo no Drive, etc.). Reaproveita
   // a coluna drive_folder_url da tabela posts, já usada pelos posts externos.
   const [contentLink, setContentLink] = useState("");
+  // Computador: o campo de link do arquivo final só aparece se pedir ou se já tiver link.
+  const [linkAberto, setLinkAberto] = useState(false);
 
   // AI / generation state (inlined from AIAssistantSection so we can render
   // the controls as pills in the new layout).
@@ -1431,6 +1433,19 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 h-7 text-[11px] font-body text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-50">
                         <ImageIcon className="h-3.5 w-3.5" /> {uploadingLocal ? "Enviando..." : "Galeria / PC"}
                       </button>
+                      <button type="button" onClick={() => setLinkAberto((v) => !v)}
+                        title="Link do arquivo final (Drive/Canva)" aria-label="Link do arquivo final"
+                        className={cn("grid place-items-center rounded-full border h-7 w-7 hover:border-primary/40",
+                          contentLink.trim() ? "border-primary/40 text-primary bg-primary/5" : "border-border bg-card text-muted-foreground")}>
+                        <LinkIcon className="h-3.5 w-3.5" />
+                      </button>
+                      {!ajudaArteAberta && (
+                        <button type="button" data-tour="editor-ajuda-arte" onClick={() => setAjudaArteAberta(true)}
+                          title="Preciso de ajuda com a imagem" aria-label="Preciso de ajuda com a imagem"
+                          className="grid place-items-center rounded-full border border-border bg-card h-7 w-7 text-primary hover:border-primary/40">
+                          <Sparkles className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1658,6 +1673,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 )}
 
                 {/* Link do conteudo final (Drive/Canva/arquivo pronto). */}
+                {(!telaLarga || linkAberto || !!contentLink.trim()) && (
                 <div className={cn(telaLarga ? "flex items-center gap-2" : "space-y-1")}>
                   <Input
                     placeholder={telaLarga ? "Link do arquivo final (Drive/Canva)" : "Link do arquivo final OU da pasta (Drive/Canva)"}
@@ -1684,13 +1700,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     </Button>
                     )
                   )}
-                  {telaLarga && !ajudaArteAberta && (
-                    <button type="button" data-tour="editor-ajuda-arte" onClick={() => setAjudaArteAberta(true)}
-                      className="shrink-0 inline-flex items-center gap-1 text-[11px] font-body font-semibold text-primary hover:underline">
-                      <Sparkles className="h-3.5 w-3.5" /> Preciso de ajuda
-                    </button>
-                  )}
                 </div>
+                )}
 
                 </>
 
@@ -1731,8 +1742,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
     </>
   );
 
-  const previaConteudo = (
+  const previaConteudo = (semAbasPlataforma = false) => (
                   <PostPreviewContent
+                    semAbasPlataforma={semAbasPlataforma}
                     key={platform}
                     title={title}
                     hook={hook}
@@ -1787,7 +1799,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
           // No mobile o editor era um retângulo reto colado nas bordas: cara de
           // página quebrada, não de app. Agora ele desce um pouco do topo e ganha
           // canto arredondado em cima e embaixo, como uma folha sobre a tela.
-          className="[&>button:last-child]:hidden top-2 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 max-w-none w-[calc(100vw-0.75rem)] h-[calc(100dvh-1rem)] sm:w-[96vw] sm:h-[94vh] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-3xl sm:rounded-2xl"
+          className="[&>button:last-child]:hidden top-2 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 max-w-none w-[calc(100vw-0.75rem)] h-[calc(100dvh-1rem)] sm:w-[96vw] sm:h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-1rem)] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-3xl sm:rounded-2xl"
         >
           {/* CABEÇALHO
               No mobile o título disputava espaço com 6 botões e virava "O gargalo qu…".
@@ -2941,7 +2953,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               )}
               {!telaLarga && abaMobile === "previa" && (
                 <div className="mx-auto w-full max-w-[360px] rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
-                  {previaConteudo}
+                  {previaConteudo()}
                 </div>
               )}
 
@@ -2957,7 +2969,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 {/* Prévia: ocupa o que sobra do painel e encolhe pela altura
                     (PreviaQueCabe). No celular ela é a aba "Prévia". */}
                 <div className="flex flex-col flex-1 min-h-[220px] w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
-                  <PreviaQueCabe>{previaConteudo}</PreviaQueCabe>
+                  <PreviaQueCabe>{previaConteudo(true)}</PreviaQueCabe>
                 </div>
               </aside>
               )}

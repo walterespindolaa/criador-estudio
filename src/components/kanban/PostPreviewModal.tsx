@@ -33,6 +33,9 @@ interface PostPreviewContentProps {
   carouselMedia?: string[];
   // No modal, a fila de abas deixa um vao a direita pro X redondo nao cobrir o YT.
   folgaParaFechar?: boolean;
+  /** Painel do editor (19/10/2026): a plataforma já foi escolhida no
+   *  formulário; sem as abas IG/TK/YT a prévia ganha 44px de altura. */
+  semAbasPlataforma?: boolean;
 }
 
 interface PostPreviewProps extends PostPreviewContentProps {
@@ -42,7 +45,7 @@ interface PostPreviewProps extends PostPreviewContentProps {
 
 // Conteudo puro da previa (sem Dialog), reutilizavel: vive no modal fullscreen do
 // mobile E na coluna direita fixa do desktop dentro do PostEditor.
-export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections, carouselMedia, folgaParaFechar }: PostPreviewContentProps) {
+export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections, carouselMedia, folgaParaFechar, semAbasPlataforma }: PostPreviewContentProps) {
   const initials = (userName || "C")[0].toUpperCase();
   const [igTab, setIgTab] = useState<"feed" | "reels">("feed");
   const [ytTab, setYtTab] = useState<"thumbnail" | "shorts">("thumbnail");
@@ -281,7 +284,7 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
     <Tabs defaultValue={platform || "instagram"} className="w-full">
           {/* Seletor em pílulas (Walter, 01/09: as abas antigas estavam "muito
               feias perto do sistema"): trilho arredondado, sem linhas duras. */}
-          <TabsList className={`ml-2 mt-2 mb-1 grid grid-cols-3 h-8 rounded-xl bg-muted/60 p-0.5 gap-0.5 ${folgaParaFechar ? "mr-12" : "mr-2"}`}>
+          <TabsList className={`${semAbasPlataforma ? "hidden" : "grid"} ml-2 mt-2 mb-1 grid-cols-3 h-8 rounded-xl bg-muted/60 p-0.5 gap-0.5 ${folgaParaFechar ? "mr-12" : "mr-2"}`}>
             {["instagram", "tiktok", "youtube"].map(p => (
               <TabsTrigger key={p} value={p} className="font-body text-[11px] gap-1 rounded-[10px] data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm">
                 <PlatformIcon platform={p} size="sm" />
