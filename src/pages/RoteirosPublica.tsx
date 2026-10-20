@@ -8,6 +8,7 @@ import { LogosCabecalho } from "@/components/publico/CabecalhoPublico";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import { parseRefLinks, isRefLink } from "@/lib/refLinks";
 import { previaDeLink, type PreviaLink } from "@/lib/refPreview";
+import { cenasParaTexto } from "@/hooks/useCaptureScripts";
 
 type AnyRpc = (fn: string, args?: Record<string, unknown>) => ReturnType<typeof supabase.rpc>;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
@@ -121,7 +122,14 @@ export default function RoteirosPublica() {
   const salvar = useMutation({
     mutationFn: async (it: Item) => {
       const { error } = await sbRpc("save_script_approval_item_by_token", {
-        _token: token, _item_id: it.id, _title: it.title, _content: it.content,
+        // 20/10/2026: o cliente edita as CENAS. O texto corrido ia o antigo e,
+        // ao aplicar, a lista de roteiros mostrava a versão de antes. Com
+        // cenas, o texto é refeito delas (igual ao editor da agência).
+        _token: token, _item_id: it.id, _title: it.title,
+        _content: it.scenes.some((c) => (c.fala ?? "").trim() || (c.direcao ?? "").trim())
+          ? cenasParaTexto(it.scenes.map((c) => ({ fala: c.fala ?? "", direcao: c.direcao ?? "" }))
+              .filter((c) => c.fala.trim() || c.direcao.trim()))
+          : it.content,
         _scenes: it.scenes, _comment: it.comment, _removed: it.removed,
       });
       if (error) throw error;
