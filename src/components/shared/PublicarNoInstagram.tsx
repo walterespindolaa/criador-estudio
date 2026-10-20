@@ -70,10 +70,14 @@ export type PublicarNoInstagramViewProps = {
   onPublicar: () => void;
   onAuto: (ligar: boolean) => void;
   onChecar: () => void;
+  /* Compacto (editor no computador, Walter 19/10/2026): uma linha só com selo,
+     automático, checar e publicar. O cartão cheio comia 1/3 do painel e
+     empurrava a prévia pra fora da tela. Avisos de estado continuam aparecendo. */
+  compacto?: boolean;
 };
 
 export function PublicarNoInstagramView({
-  est, cx, publicando, alternando, checando, checagem, erroChecagem, onPublicar, onAuto, onChecar,
+  est, cx, publicando, alternando, checando, checagem, erroChecagem, onPublicar, onAuto, onChecar, compacto,
 }: PublicarNoInstagramViewProps) {
   const [confirmar, setConfirmar] = useState(false);
 
@@ -112,7 +116,48 @@ export function PublicarNoInstagramView({
       {/* Faixa de identidade: fina, pra não brigar com a data logo acima. */}
       <div className="h-1 bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#515BD4]" />
 
-      <div className="p-3 space-y-3">
+      <div className={cn(compacto ? "px-3 py-2 space-y-2" : "p-3 space-y-3")}>
+        {compacto ? (
+          <div className="flex items-center gap-2">
+            <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] grid place-items-center shrink-0">
+              <Instagram className="h-3.5 w-3.5 text-white" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-1.5 min-w-0">
+                <span className="text-xs font-display font-bold text-foreground">Instagram</span>
+                <span className={cn("shrink-0 rounded-full px-1.5 py-px text-[10px] font-body font-bold leading-4", selo.cls)}>{selo.txt}</span>
+              </p>
+              <p className="text-[11px] font-body text-muted-foreground truncate" title={bloqueio ?? undefined}>
+                {estado !== "publicado" && bloqueio ? bloqueio
+                  : cx?.username ? `${estado === "publicado" ? "saiu em" : "em"} @${cx.username}` : ""}
+              </p>
+            </div>
+            {estado !== "publicado" && (
+              <>
+                <label className={cn("flex items-center gap-1.5 text-[11px] font-body text-muted-foreground shrink-0", podeAgir && "cursor-pointer")}
+                  title={quandoPost ? `Publicar sozinho na data e hora do post: ${quandoPost}` : "Defina a data do post e salve pra ligar."}>
+                  Auto
+                  <Switch
+                    checked={estado === "agendado"}
+                    disabled={!podeAgir || alternando || !est.scheduled_date}
+                    onCheckedChange={(v) => onAuto(v)}
+                    aria-label="Publicar automaticamente na data e hora do post"
+                  />
+                </label>
+                <Button type="button" variant="outline" onClick={onChecar} disabled={checando}
+                  title="Checar mídia" aria-label="Checar mídia" className="h-8 w-8 p-0 rounded-lg shrink-0">
+                  {checando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                </Button>
+                <Button type="button" onClick={() => setConfirmar(true)} disabled={!podeAgir}
+                  className="h-8 px-3 rounded-lg shrink-0 text-xs bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
+                  {estado === "publicando" ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : estado === "erro" ? <><RotateCcw className="h-3.5 w-3.5 mr-1" /> De novo</>
+                    : <><Send className="h-3.5 w-3.5 mr-1" /> Publicar</>}
+                </Button>
+              </>
+            )}
+          </div>
+        ) : (<>
         {/* Cabeçalho: o que é, em que pé está e por onde sai. O selo fica
             na segunda linha (não ao lado do título): em tela de 320px o
             título quebrava em três linhas brigando com o selo. */}
@@ -130,6 +175,7 @@ export function PublicarNoInstagramView({
             </div>
           </div>
         </div>
+        </>)}
 
         {/* Painel do estado */}
         {estado === "publicado" && (
@@ -178,10 +224,11 @@ export function PublicarNoInstagramView({
 
         {estado !== "publicado" && (
           <>
-            {bloqueio && (
+            {bloqueio && !compacto && (
               <p className="text-xs font-body text-muted-foreground rounded-xl bg-muted/60 px-3 py-2">{bloqueio}</p>
             )}
 
+            {!compacto && (<>
             {/* Automático: a linha inteira é tocável (não só o botãozinho). */}
             <label className={cn(
               "flex items-center gap-3 rounded-xl border px-3 py-2.5 min-h-[52px]",
@@ -214,6 +261,7 @@ export function PublicarNoInstagramView({
                 {checando ? <Loader2 className="h-4 w-4 animate-spin" /> : <><RefreshCw className="h-4 w-4 mr-1.5" /> Checar mídia</>}
               </Button>
             </div>
+            </>)}
 
             {/* Resultado da checagem: diz o que falta antes da hora chegar. */}
             {checagem && (
@@ -257,7 +305,7 @@ export function PublicarNoInstagramView({
 
 /* onAgendou: o editor do criador guarda o status em estado local; sem avisar,
    o próximo salvar devolvia o card pra coluna antiga depois de agendar. */
-export function PublicarNoInstagram({ postId, onAgendou }: { postId: string | null | undefined; onAgendou?: (ligado: boolean) => void }) {
+export function PublicarNoInstagram({ postId, onAgendou, compacto }: { postId: string | null | undefined; onAgendou?: (ligado: boolean) => void; compacto?: boolean }) {
   const { data: est } = usePublicacaoDoPost(postId);
   const { data: cx } = useConexaoDoPost(postId);
   const publicar = usePublicarAgora(postId);
@@ -279,6 +327,7 @@ export function PublicarNoInstagram({ postId, onAgendou }: { postId: string | nu
       onPublicar={() => publicar.mutate()}
       onAuto={(v) => agendar.mutate(v, { onSuccess: () => onAgendou?.(v) })}
       onChecar={() => checar.mutate()}
+      compacto={compacto}
     />
   );
 }

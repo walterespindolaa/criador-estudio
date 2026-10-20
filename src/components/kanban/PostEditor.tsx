@@ -1392,6 +1392,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   // O banco já move o card (ig_agendar_publicacao); aqui só alinha o
                   // status da tela pra o próximo salvar não desfazer.
                   onAgendou={(ligado) => setStatus((s) => (ligado ? "agendado" : s === "agendado" ? "editando" : s))}
+                  compacto={telaLarga}
                 />
               )}
 
@@ -1402,6 +1403,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
      prévia, compacta: faixa de miniaturas e botões pequenos no cabeçalho, pra
      Data + Mídia + Prévia caberem numa tela. No celular é a aba "Mídia".
      Deixou de recolher: agora tem lugar próprio nos dois. */
+  const temMidiaPorCena = !!formatStructure.hasDynamicSections && !formatStructure.devField;
   const blocoMidia = (
     <>
               <div className={cn("space-y-2.5", !telaLarga && "rounded-2xl border border-border/70 bg-muted/20 p-3")}>
@@ -1411,7 +1413,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   <span className="text-[11px] font-body text-muted-foreground truncate">
                     {mediaList.length > 0
                       ? `· ${mediaList.length} ${mediaList.length === 1 ? "arquivo" : "arquivos"}${format === "carrossel" && mediaList.length > 1 ? " · arraste pra ordenar" : ""}`
-                      : "· adicionar imagem ou vídeo"}
+                      : temMidiaPorCena ? "· vídeo final (cada cena tem a sua)" : "· adicionar imagem ou vídeo"}
                   </span>
                   {telaLarga && (
                     <div className="ml-auto flex items-center gap-1.5 shrink-0">
@@ -1462,11 +1464,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         </button>
                       )}
                     </div>
-                  ) : (
-                    <p className="text-[11px] font-body text-muted-foreground/70 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-2 text-center">
-                      Nenhuma mídia ainda. Suba pelo Drive (melhor) ou pela galeria.
-                    </p>
-                  )
+                  ) : null
                 ) : format !== "carrossel" ? (
                   <div className="space-y-2">
                     <div className="rounded-2xl border border-border/60 overflow-hidden bg-muted/10">
@@ -1646,7 +1644,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         onRemove={removeDriveRef}
                         removingIds={removingIds}
                       />
-                    ) : (
+                    ) : telaLarga ? null : (
                       <p className="text-[11px] font-body text-muted-foreground/70 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-1.5 text-center">
                         Nenhuma imagem ainda. Suba pelo Drive ou pela galeria.
                       </p>
@@ -1655,14 +1653,21 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 )}
 
                 {/* Link do conteudo final (Drive/Canva/arquivo pronto). */}
-                <div className="space-y-1">
+                <div className={cn(telaLarga ? "flex items-center gap-2" : "space-y-1")}>
                   <Input
-                    placeholder="Link do arquivo final OU da pasta (Drive/Canva)"
+                    placeholder={telaLarga ? "Link do arquivo final (Drive/Canva)" : "Link do arquivo final OU da pasta (Drive/Canva)"}
                     value={contentLink}
                     onChange={(e) => setContentLink(e.target.value)}
-                    className="rounded-xl h-9 text-xs bg-card"
+                    className={cn("rounded-xl h-9 text-xs bg-card", telaLarga && "h-8 flex-1 min-w-0")}
                   />
                   {contentLink.trim() && /^https?:\/\//i.test(contentLink.trim()) && (
+                    telaLarga ? (
+                      <Button type="button" variant="outline" title="Abrir conteúdo" aria-label="Abrir conteúdo"
+                        className="h-8 w-8 p-0 rounded-lg shrink-0"
+                        onClick={() => window.open(contentLink.trim(), "_blank", "noopener,noreferrer")}>
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : (
                     <Button
                       type="button"
                       variant="outline"
@@ -1672,6 +1677,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     >
                       <ExternalLink className="h-3.5 w-3.5" /> Abrir conteúdo
                     </Button>
+                    )
+                  )}
+                  {telaLarga && !ajudaArteAberta && (
+                    <button type="button" data-tour="editor-ajuda-arte" onClick={() => setAjudaArteAberta(true)}
+                      className="shrink-0 inline-flex items-center gap-1 text-[11px] font-body font-semibold text-primary hover:underline">
+                      <Sparkles className="h-3.5 w-3.5" /> Preciso de ajuda
+                    </button>
                   )}
                 </div>
 
@@ -1681,6 +1693,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     RECOLHIDO atras de um botao (Walter, 01/09): os avisos e o
                     botao de gerar pesavam a tela pra quem ja tem a arte pronta.
                     Quem precisa de ajuda toca e o estudio abre. */}
+                {(!telaLarga || ajudaArteAberta) && (
                 <div className={cn(!telaLarga && "pt-1 border-t border-border/50")}>
                   {!ajudaArteAberta ? (
                     <button
@@ -1708,6 +1721,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   />
                   )}
                 </div>
+                )}
               </div>
     </>
   );
@@ -1729,10 +1743,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     carouselMedia={previewCarouselMedia}
                   />
   );
-  // Largura da prévia calculada pela ALTURA que sobra no painel (unidade cqh do
-  // container): ela encolhe pra caber inteira em vez de ser cortada.
-  const previaVertical = ["reels", "story", "shorts", "video", "live"].includes(format) || platform === "tiktok";
-  const larguraPrevia = `min(290px, max(190px, calc((100cqh - ${previaVertical ? 120 : 150}px) * ${previaVertical ? 0.5625 : 0.8})))`;
 
   return (
     <>
@@ -2932,10 +2942,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               <aside style={alturaPainel ? { height: alturaPainel } : undefined}
                 className="flex flex-col gap-2.5 sticky top-4 self-start w-full min-h-0 overflow-y-auto">
                 <div className="shrink-0 space-y-2">{blocoAgenda}</div>
-                <div className="shrink-0 rounded-3xl border border-border bg-card p-3">{blocoMidia}</div>
+                <div className="shrink-0 rounded-2xl border border-border bg-card px-3 py-2.5">{blocoMidia}</div>
                 {/* Prévia: ocupa o que sobra do painel e encolhe pela altura
                     (larguraPrevia). No celular ela é a aba "Prévia". */}
-                <div className="flex flex-col flex-1 min-h-[300px] w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
+                <div className="flex flex-col flex-1 min-h-[220px] w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
                   <div className="px-3 py-2 border-b border-border bg-card/50 flex items-center gap-2">
                     <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-xs font-display font-semibold text-foreground">Prévia do post</span>
@@ -2944,11 +2954,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       horrível assim"): a prévia é estreita e centrada, no
                       tamanho natural de um post, com respiro em volta. Se
                       passar da altura, rola por dentro sem cortar. */}
-                  <div className="flex-1 min-h-0 overflow-y-auto p-3 bg-muted/20 [container-type:size]">
-                  <div className="mx-auto rounded-2xl border border-border bg-card overflow-hidden shadow-sm" style={{ width: larguraPrevia }}>
-                  {previaConteudo}
-                  </div>
-                  </div>
+                  <PreviaQueCabe>{previaConteudo}</PreviaQueCabe>
                 </div>
               </aside>
               )}
@@ -3177,6 +3183,43 @@ function CarouselMediaStrip({
 }
 
 // ─── Bloco numerado do fluxo vertical: badge com o número + título + orientação.
+/* PRÉVIA QUE CABE (Walter, 19/10/2026). A prévia tem abas, cabeçalho, mídia e
+   legenda; a altura muda com formato e plataforma. Em vez de estimar, mede a
+   altura real e reduz a escala até caber inteira no espaço que sobra. Os
+   cliques continuam funcionando (transform não muda o alvo). */
+function PreviaQueCabe({ children, largura = 290 }: { children: React.ReactNode; largura?: number }) {
+  const caixaRef = useRef<HTMLDivElement>(null);
+  const conteudoRef = useRef<HTMLDivElement>(null);
+  const [escala, setEscala] = useState(1);
+  const [alturaNatural, setAlturaNatural] = useState(0);
+  useEffect(() => {
+    const caixa = caixaRef.current;
+    const conteudo = conteudoRef.current;
+    if (!caixa || !conteudo) return;
+    const medir = () => {
+      const h = conteudo.offsetHeight; // offsetHeight ignora o transform
+      const disponivel = caixa.clientHeight - 24; // p-3 em cima e embaixo
+      setAlturaNatural(h);
+      setEscala(h > 0 && disponivel > 0 ? Math.max(0.4, Math.min(1, disponivel / h)) : 1);
+    };
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(caixa);
+    ro.observe(conteudo);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div ref={caixaRef} className="flex-1 min-h-0 overflow-hidden p-3 bg-muted/20 flex justify-center">
+      <div style={{ width: largura * escala, height: alturaNatural ? alturaNatural * escala : undefined }} className="shrink-0">
+        <div ref={conteudoRef} style={{ width: largura, transform: `scale(${escala})`, transformOrigin: "top left" }}
+          className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BlocoCabecalho({ numero, titulo, subtitulo, extra }: { numero: number; titulo: string; subtitulo: string; extra?: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3">
