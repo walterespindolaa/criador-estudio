@@ -290,8 +290,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   /* MÍDIA RETRÁTIL (Walter, 01/09): aberta enquanto não tem arquivo (convida a
      subir); assim que a primeira mídia chega, recolhe sozinha e vira uma linha
      de resumo, devolvendo a tela pra prévia. Reabre no toque pra trocar/somar. */
-  const [midiaAberta, setMidiaAberta] = useState(true);
-  const midiaCountRef = useRef(0);
+  // Celular: o editor virou 3 abas (Texto, Mídia, Prévia). Walter, 19/10/2026:
+  // "não fica tudo numa tela só, muita coisa espalhada".
+  const [abaMobile, setAbaMobile] = useState<"texto" | "midia" | "previa">("texto");
+  // Computador: altura do painel da direita = altura visível do corpo, pra
+  // Data + Mídia + Prévia caberem inteiras e a prévia nunca sair da tela.
+  const [alturaPainel, setAlturaPainel] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [weekNumber, setWeekNumber] = useState<number | null>(null);
   
@@ -330,6 +334,22 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   // Refs de rolagem: mainRef é o container do fluxo vertical; conteudoRef é o
   // passo 1 (o Estúdio manda a pessoa de volta pro conteúdo com scroll suave).
   const mainRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (open) setAbaMobile("texto"); }, [open]);
+  useEffect(() => {
+    if (!telaLarga || !open) return;
+    const el = mainRef.current;
+    if (!el) return;
+    // 32 = respiro de cima e de baixo (py-4 do corpo).
+    const medir = () => setAlturaPainel(Math.max(420, el.clientHeight - 32));
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [telaLarga, open]);
+  const irPraAba = (aba: "texto" | "midia" | "previa") => {
+    setAbaMobile(aba);
+    mainRef.current?.scrollTo({ top: 0 });
+  };
   const conteudoRef = useRef<HTMLDivElement>(null);
 
   // References panel
@@ -1227,11 +1247,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   };
 
   const mediaList: DriveRef[] = isNew ? pendingDriveFiles : driveMedia;
-  // Recolhe a Midia quando o primeiro arquivo chega (definido depois de mediaList existir).
-  useEffect(() => {
-    if (midiaCountRef.current === 0 && mediaList.length > 0) setMidiaAberta(false);
-    midiaCountRef.current = mediaList.length;
-  }, [mediaList.length]);
   const activeUpload = uploads.find((u) => u.status === "uploading") ?? null;
 
   // Mídia da PRÉVIA (mockup do feed/Instagram). Derivada da mídia primária do post,
@@ -1334,7 +1349,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
      JSX nos dois lugares, mas só UM é montado por vez (telaLarga), porque ele
      tem input de arquivo com ref: montado duas vezes, o ref apontaria pro
      errado. */
-  const blocoAgendaMidia = (
+  const blocoAgenda = (
     <>
               {/* QUANDO VAI AO AR, ANTES DE TUDO (Walter, 09/09/2026): a data
                   morava lá embaixo, depois de mídia, plataforma, formato e
@@ -1380,25 +1395,79 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 />
               )}
 
-              {/* MIDIA no INICIO do ponto 1 (Walter, 01/09): a coluna da
-                  direita ficou SO com a previa, sempre visivel; a midia abre o
-                  fluxo de criacao e continua retratil (recolhe sozinha quando
-                  o primeiro arquivo chega). */}
-              <div className="rounded-2xl border border-border/70 bg-muted/20 p-3 space-y-2.5">
-                <button type="button" data-tour="editor-midia" onClick={() => setMidiaAberta((v) => !v)}
-                  className="w-full flex items-center gap-2 text-left">
+    </>
+  );
+
+  /* MÍDIA (Walter, 19/10/2026). No computador fica na direita, em cima da
+     prévia, compacta: faixa de miniaturas e botões pequenos no cabeçalho, pra
+     Data + Mídia + Prévia caberem numa tela. No celular é a aba "Mídia".
+     Deixou de recolher: agora tem lugar próprio nos dois. */
+  const blocoMidia = (
+    <>
+              <div className={cn("space-y-2.5", !telaLarga && "rounded-2xl border border-border/70 bg-muted/20 p-3")}>
+                <div data-tour="editor-midia" className="w-full flex items-center gap-2">
                   <ImageIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   <span className="text-xs font-display font-semibold text-foreground">Mídia</span>
                   <span className="text-[11px] font-body text-muted-foreground truncate">
                     {mediaList.length > 0
-                      ? `· ${mediaList.length} ${mediaList.length === 1 ? "arquivo" : "arquivos"}`
+                      ? `· ${mediaList.length} ${mediaList.length === 1 ? "arquivo" : "arquivos"}${format === "carrossel" && mediaList.length > 1 ? " · arraste pra ordenar" : ""}`
                       : "· adicionar imagem ou vídeo"}
                   </span>
-                  <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground ml-auto shrink-0 transition-transform", midiaAberta && "rotate-180")} />
-                </button>
-                {midiaAberta && (<>
+                  {telaLarga && (
+                    <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                      {(uploadingLocal || activeUpload) && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+                      <button type="button" onClick={handleDrivePick} disabled={picking}
+                        className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 h-7 text-[11px] font-body text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-50">
+                        <Cloud className="h-3.5 w-3.5" /> {picking ? "Abrindo..." : "Drive"}
+                      </button>
+                      <button type="button" onClick={openLocalFilePicker} disabled={uploadingLocal}
+                        className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 h-7 text-[11px] font-body text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-50">
+                        <ImageIcon className="h-3.5 w-3.5" /> {uploadingLocal ? "Enviando..." : "Galeria / PC"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <>
 
-                {format !== "carrossel" ? (
+                {telaLarga && format !== "carrossel" ? (
+                  /* No computador a prévia logo abaixo já mostra a mídia grande;
+                     aqui fica só a miniatura, pra caber tudo na tela. */
+                  mediaList.length > 0 || activeUpload ? (
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-14 h-14 rounded-xl overflow-hidden border border-border bg-muted shrink-0 grid place-items-center">
+                        {activeUpload ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        ) : mediaList[0].file_type?.startsWith("video/") ? (
+                          <Play className="h-4 w-4 text-muted-foreground" fill="currentColor" />
+                        ) : (
+                          <img
+                            src={mediaList[0].thumbnail_url || mediaList[0].view_url || `https://lh3.googleusercontent.com/d/${encodeURIComponent(mediaList[0].external_file_id || mediaList[0].id)}=w200`}
+                            alt={mediaList[0].file_name}
+                            loading="lazy"
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-body font-medium text-foreground truncate">
+                          {activeUpload ? `Enviando... ${activeUpload.pct}%` : mediaList[0].file_name}
+                        </p>
+                        <p className="text-[11px] font-body text-muted-foreground">A prévia logo abaixo mostra como fica.</p>
+                      </div>
+                      {!activeUpload && (
+                        <button type="button" onClick={() => handleRemoveAllMedia()} disabled={removingIds.size > 0}
+                          aria-label="Remover mídia"
+                          className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 disabled:opacity-50">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] font-body text-muted-foreground/70 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-2 text-center">
+                      Nenhuma mídia ainda. Suba pelo Drive (melhor) ou pela galeria.
+                    </p>
+                  )
+                ) : format !== "carrossel" ? (
                   <div className="space-y-2">
                     <div className="rounded-2xl border border-border/60 overflow-hidden bg-muted/10">
                       {activeUpload ? (
@@ -1537,6 +1606,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                      uma vez e reordena arrastando pela barrinha. A ordem da tira é
                      a ordem dos slides. Nada de mídia por lâmina no carrossel. */
                   <div className="space-y-2">
+                    {!telaLarga && (<>
                     <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
                       Imagens do carrossel
                     </Label>
@@ -1568,6 +1638,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         </span>
                       )}
                     </div>
+                    </>)}
                     {mediaList.length > 0 ? (
                       <CarouselMediaStrip
                         media={mediaList}
@@ -1577,7 +1648,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       />
                     ) : (
                       <p className="text-[11px] font-body text-muted-foreground/70 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-1.5 text-center">
-                        Nenhuma imagem ainda. Suba pelos botões acima.
+                        Nenhuma imagem ainda. Suba pelo Drive ou pela galeria.
                       </p>
                     )}
                   </div>
@@ -1604,19 +1675,24 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   )}
                 </div>
 
-                </>)}
+                </>
 
                 {/* Gerador de prompt do Estudio (arte a partir do conteudo real).
                     RECOLHIDO atras de um botao (Walter, 01/09): os avisos e o
                     botao de gerar pesavam a tela pra quem ja tem a arte pronta.
                     Quem precisa de ajuda toca e o estudio abre. */}
-                <div className="pt-1 border-t border-border/50">
+                <div className={cn(!telaLarga && "pt-1 border-t border-border/50")}>
                   {!ajudaArteAberta ? (
                     <button
                       type="button"
                       data-tour="editor-ajuda-arte"
                       onClick={() => setAjudaArteAberta(true)}
-                      className="w-full h-9 rounded-xl border border-dashed border-primary/40 text-primary text-xs font-body font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-primary/5 transition-colors"
+                      className={cn(
+                        "text-primary text-xs font-body font-semibold inline-flex items-center gap-1.5 transition-colors",
+                        telaLarga
+                          ? "hover:underline"
+                          : "w-full h-9 rounded-xl border border-dashed border-primary/40 justify-center hover:bg-primary/5",
+                      )}
                     >
                       <Sparkles className="h-4 w-4" /> Preciso de ajuda com a imagem
                     </button>
@@ -1628,13 +1704,35 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     postId={post?.id ?? null}
                     roteiro={[hook, script, cta].filter(Boolean).join("\n\n")}
                     onSalvar={(texto) => setNotes((n) => (n ? `${n}\n\n${texto}` : texto))}
-                    onIrParaRoteiro={() => conteudoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    onIrParaRoteiro={() => { setAbaMobile("texto"); setTimeout(() => conteudoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0); }}
                   />
                   )}
                 </div>
               </div>
     </>
   );
+
+  const previaConteudo = (
+                  <PostPreviewContent
+                    key={platform}
+                    title={title}
+                    hook={hook}
+                    caption={caption}
+                    platform={platform}
+                    format={format}
+                    userName={previewIdentity.name}
+                    userHandle={previewIdentity.handle}
+                    avatarUrl={previewIdentity.avatarUrl}
+                    mediaUrl={previewMediaUrl}
+                    mediaType={previewMediaType}
+                    sections={sections}
+                    carouselMedia={previewCarouselMedia}
+                  />
+  );
+  // Largura da prévia calculada pela ALTURA que sobra no painel (unidade cqh do
+  // container): ela encolhe pra caber inteira em vez de ser cortada.
+  const previaVertical = ["reels", "story", "shorts", "video", "live"].includes(format) || platform === "tiktok";
+  const larguraPrevia = `min(290px, max(190px, calc((100cqh - ${previaVertical ? 120 : 150}px) * ${previaVertical ? 0.5625 : 0.8})))`;
 
   return (
     <>
@@ -1854,10 +1952,36 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                vazias dos dois lados (pedido do Walter, 31/08: menos margem). */}
             <div className="mx-auto w-full max-w-3xl lg:max-w-none px-2.5 sm:px-4 py-3 sm:py-4 pb-[calc(3rem+env(safe-area-inset-bottom))] lg:grid lg:grid-cols-[minmax(0,1fr)_460px] lg:gap-5 lg:items-start">
 
-              {/* COLUNA ESQUERDA: o fluxo numerado (no mobile, a coluna única). */}
-              <div className="space-y-4 min-w-0">
-            {/* PILAR abaixo da borda do cabeçalho (Walter, 01/09): dentro do
-                 corpo, como primeira coisa do fluxo, não espremido no header. */}
+              {/* ABAS DO CELULAR (Walter, 19/10/2026): Texto, Mídia e Prévia
+                  fixas no topo, em vez de rolar procurando. */}
+              {!telaLarga && (
+                <div className="sticky top-0 z-20 -mx-2.5 sm:-mx-4 -mt-3 sm:-mt-4 mb-3 px-2.5 sm:px-4 pt-2.5 pb-2 bg-background/95 backdrop-blur border-b border-border/60">
+                  <div className="flex gap-1 rounded-full bg-muted p-1">
+                    {([
+                      { k: "texto", label: "Texto" },
+                      { k: "midia", label: "Mídia", n: mediaList.length },
+                      { k: "previa", label: "Prévia" },
+                    ] as const).map((t) => (
+                      <button key={t.k} type="button" onClick={() => irPraAba(t.k)}
+                        className={cn(
+                          "flex-1 rounded-full py-1.5 text-xs font-body font-semibold transition-colors",
+                          abaMobile === t.k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
+                        )}>
+                        {t.label}
+                        {"n" in t && t.n > 0 && <span className="ml-1 font-normal text-muted-foreground">{t.n}</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* COLUNA ESQUERDA: o fluxo numerado (no mobile, a aba Texto). */}
+              <div className={cn("space-y-4 min-w-0", !telaLarga && abaMobile !== "texto" && "hidden")}>
+              {/* 2. O CONTEUDO DO POST */}
+              <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
+                {/* Pilar no cabeçalho do bloco (Walter, 19/10/2026): antes ficava
+                    numa linha solta em cima e desalinhava o começo das colunas. */}
+                <BlocoCabecalho numero={1} titulo="O conteúdo do post" subtitulo="Escolha o formato e escreva a estrutura." extra={<>
             {pillars.length > 0 && (
               <div className="flex items-center gap-1.5 flex-wrap">
                 <Popover>
@@ -1913,18 +2037,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 </Popover>
               </div>
             )}
+                </>} />
 
+              {/* Data: no celular fica aqui, no começo do bloco 1 (a mídia tem
+                  aba própria). Na tela larga sobe pro painel da direita. */}
+              {!telaLarga && blocoAgenda}
 
-              {/* 2. O CONTEUDO DO POST */}
-              <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
-                <BlocoCabecalho numero={1} titulo="O conteúdo do post" subtitulo="Escolha o formato e escreva a estrutura." />
-
-              {/* Data + mídia: no celular ficam aqui, no começo do bloco 1. Na
-                  tela larga sobem pra coluna da direita, em cima da prévia
-                  (27/09/2026), igual ao editor da social mídia. */}
-              {!telaLarga && blocoAgendaMidia}
-
-                <div data-tour="editor-plataforma" className="grid grid-cols-2 gap-3">
+                <div data-tour="editor-plataforma" className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_170px] gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
                       Plataforma
@@ -1956,6 +2075,29 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       <SelectContent>
                         {FORMATS.map((f) => (
                           <SelectItem key={f} value={f}>{FORMAT_LABELS[f] || f}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
+                      Semana
+                    </Label>
+                    <Select
+                      value={weekNumber === null ? "none" : String(weekNumber)}
+                      onValueChange={(val) => setWeekNumber(val === "none" ? null : Number(val))}
+                    >
+                      <SelectTrigger className="rounded-xl h-10 text-sm bg-card">
+                        <SelectValue placeholder="Sem semana" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground">Sem semana</span>
+                        </SelectItem>
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            Semana {n}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -2003,32 +2145,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       logo abaixo do cabeçalho). Aqui ficou o que é organização
                       interna: semana, link de referência e os melhores horários. */}
                   <div className="space-y-2">
-                    {/* Semana e link na mesma linha (Walter, 19/10/2026: sobrava
-                        espaço vazio à direita dos dois). */}
-                    <div className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-2.5">
-                      <div className="space-y-1.5">
-                        <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
-                          Semana
-                        </Label>
-                        <Select
-                          value={weekNumber === null ? "none" : String(weekNumber)}
-                          onValueChange={(val) => setWeekNumber(val === "none" ? null : Number(val))}
-                        >
-                          <SelectTrigger className="rounded-xl h-9 text-sm bg-card">
-                            <SelectValue placeholder="Sem semana" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">
-                              <span className="text-muted-foreground">Sem semana</span>
-                            </SelectItem>
-                            {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                              <SelectItem key={n} value={String(n)}>
-                                Semana {n}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    {/* Semana subiu pra linha de plataforma e formato (Walter,
+                        19/10/2026: menos coisa espalhada). Aqui fica o link. */}
+                    <div>
                       <div className="space-y-1.5">
                         <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75 flex items-center gap-1.5">
                           <LinkIcon className="h-3 w-3" /> Link de referência
@@ -2793,19 +2912,30 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               </div>
               {/* FIM da coluna esquerda */}
 
+              {/* Celular: abas Mídia e Prévia. A mídia fica montada (só escondida)
+                  pra não perder o input de arquivo no meio de um envio. */}
+              {!telaLarga && (
+                <div className={cn(abaMobile !== "midia" && "hidden")}>{blocoMidia}</div>
+              )}
+              {!telaLarga && abaMobile === "previa" && (
+                <div className="mx-auto w-full max-w-[360px] rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+                  {previaConteudo}
+                </div>
+              )}
+
               {/* COLUNA DIREITA (só desktop): a PRÉVIA do post, fixa enquanto rola.
                   No mobile ela não aparece aqui: fica no botão "Prévia" do topo. */}
-              <aside className="hidden lg:flex lg:flex-col lg:gap-3 lg:sticky lg:top-3 self-start w-full lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto">
-                {telaLarga && (
-                  <div className="shrink-0 rounded-3xl border border-border bg-card p-4 space-y-3">
-                    {blocoAgendaMidia}
-                  </div>
-                )}
-                {/* A previa continua so no desktop; no celular ela mora no botao "Prévia".
-                    flex-1 + rolagem interna: a previa fica SEMPRE na tela (Walter,
-                    01/09: "so vejo o preview rolando ate o final"), e e o miolo
-                    dela que rola quando o post e comprido. */}
-                <div className="flex flex-col flex-1 min-h-0 lg:min-h-[480px] shrink-0 w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
+              {/* PAINEL DA DIREITA PARADO (Walter, 19/10/2026): Data, Mídia
+                  compacta e Prévia cabem na altura da tela; só a esquerda rola.
+                  Antes a Mídia aberta empurrava a prévia pra fora da tela. */}
+              {telaLarga && (
+              <aside style={alturaPainel ? { height: alturaPainel } : undefined}
+                className="flex flex-col gap-2.5 sticky top-4 self-start w-full min-h-0 overflow-y-auto">
+                <div className="shrink-0 space-y-2">{blocoAgenda}</div>
+                <div className="shrink-0 rounded-3xl border border-border bg-card p-3">{blocoMidia}</div>
+                {/* Prévia: ocupa o que sobra do painel e encolhe pela altura
+                    (larguraPrevia). No celular ela é a aba "Prévia". */}
+                <div className="flex flex-col flex-1 min-h-[300px] w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
                   <div className="px-3 py-2 border-b border-border bg-card/50 flex items-center gap-2">
                     <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-xs font-display font-semibold text-foreground">Prévia do post</span>
@@ -2814,27 +2944,14 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       horrível assim"): a prévia é estreita e centrada, no
                       tamanho natural de um post, com respiro em volta. Se
                       passar da altura, rola por dentro sem cortar. */}
-                  <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto p-3 bg-muted/20">
-                  <div className="mx-auto w-full max-w-[290px] rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
-                  <PostPreviewContent
-                    key={platform}
-                    title={title}
-                    hook={hook}
-                    caption={caption}
-                    platform={platform}
-                    format={format}
-                    userName={previewIdentity.name}
-                    userHandle={previewIdentity.handle}
-                    avatarUrl={previewIdentity.avatarUrl}
-                    mediaUrl={previewMediaUrl}
-                    mediaType={previewMediaType}
-                    sections={sections}
-                    carouselMedia={previewCarouselMedia}
-                  />
+                  <div className="flex-1 min-h-0 overflow-y-auto p-3 bg-muted/20 [container-type:size]">
+                  <div className="mx-auto rounded-2xl border border-border bg-card overflow-hidden shadow-sm" style={{ width: larguraPrevia }}>
+                  {previaConteudo}
                   </div>
                   </div>
                 </div>
               </aside>
+              )}
             </div>
           </div>
           {/* RODAPÉ FIXO NO CELULAR (pente fino 23/09/2026): o Salvar morava só
@@ -2842,8 +2959,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               de volta pra cima pra salvar. No desktop o cabeçalho basta. */}
           <div className="sm:hidden shrink-0 z-20 px-3 py-2.5 border-t border-border bg-background/95 backdrop-blur flex items-center gap-2"
             style={{ paddingBottom: "max(0.625rem, env(safe-area-inset-bottom))" }}>
-            <Button variant="outline" size="sm" className="min-h-[44px] flex-1" onClick={() => setPreviewOpen(true)}>
-              <Eye className="h-4 w-4 mr-1.5" /> Prévia
+            <Button variant="outline" size="sm" className="min-h-[44px] flex-1" onClick={() => irPraAba(abaMobile === "previa" ? "texto" : "previa")}>
+              <Eye className="h-4 w-4 mr-1.5" /> {abaMobile === "previa" ? "Voltar ao texto" : "Prévia"}
             </Button>
             <Button variant="hero" size="sm" className="min-h-[44px] flex-[2]" onClick={handleSave} disabled={!title.trim() || saving}>
               {saving ? "Salvando…" : isNew ? "Criar post" : "Salvar"}
@@ -3060,7 +3177,7 @@ function CarouselMediaStrip({
 }
 
 // ─── Bloco numerado do fluxo vertical: badge com o número + título + orientação.
-function BlocoCabecalho({ numero, titulo, subtitulo }: { numero: number; titulo: string; subtitulo: string }) {
+function BlocoCabecalho({ numero, titulo, subtitulo, extra }: { numero: number; titulo: string; subtitulo: string; extra?: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3">
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-display font-extrabold text-sm shadow-sm">
@@ -3070,6 +3187,7 @@ function BlocoCabecalho({ numero, titulo, subtitulo }: { numero: number; titulo:
         <h3 className="font-display font-bold text-[15px] sm:text-base text-foreground leading-tight">{titulo}</h3>
         <p className="text-xs font-body text-muted-foreground mt-0.5 leading-snug">{subtitulo}</p>
       </div>
+      {extra && <div className="ml-auto shrink-0 pt-0.5">{extra}</div>}
     </div>
   );
 }
