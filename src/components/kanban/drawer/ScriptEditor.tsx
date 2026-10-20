@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Cloud, Image as ImageIcon, Minus, PenLine, Plus, X } from "lucide-react";
+import { ChevronDown, Cloud, Image as ImageIcon, Minus, PenLine, Plus, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -53,6 +53,15 @@ export function ScriptEditor({
   sections.forEach((s, i) => { if (usada(s)) ultimaUsada = i; });
   const visiveis = Math.min(sections.length, Math.max(minimo, ultimaUsada + 1));
   const rotulo = sectionLabel.toLowerCase();
+  /* Recolhida por padrão, igual a legenda (Walter, 20/10/2026: "essa parte das
+     cenas ser retrátil igual é a parte das legendas"). Fechada, mostra quantas
+     cenas têm texto e o começo da primeira. */
+  const [aberto, setAberto] = useState(false);
+  const comTexto = sections.filter((s) => s.text?.trim()).length;
+  const primeira = sections.find((s) => s.text?.trim())?.text.trim() ?? "";
+  const resumo = comTexto === 0
+    ? `Nenhuma ${rotulo} escrita ainda. Toque pra abrir.`
+    : `${comTexto} ${comTexto === 1 ? rotulo : `${rotulo}s`} · ${primeira.slice(0, 70)}${primeira.length > 70 ? "…" : ""}`;
 
   const adicionar = () => {
     if (visiveis >= sections.length) onChange(prev => [...prev, emptySection()]);
@@ -70,9 +79,16 @@ export function ScriptEditor({
 
   return (
     <div className="space-y-3">
-      <Label className="font-body text-sm flex items-center gap-2">
-        <PenLine className="h-4 w-4" /> {sectionLabel}s
-      </Label>
+      <button type="button" onClick={() => setAberto((a) => !a)} aria-expanded={aberto}
+        className="w-full flex items-start gap-2 text-left">
+        <PenLine className="h-4 w-4 mt-0.5 shrink-0" />
+        <span className="min-w-0 flex-1">
+          <Label className="font-body text-sm cursor-pointer">{sectionLabel}s</Label>
+          {!aberto && <span className="block text-xs font-body text-muted-foreground truncate mt-0.5">{resumo}</span>}
+        </span>
+        <ChevronDown className={`h-4 w-4 mt-0.5 shrink-0 text-muted-foreground transition-transform ${aberto ? "rotate-180" : ""}`} />
+      </button>
+      {aberto && (<>
       {sections.slice(0, visiveis).map((sec, i) => (
         <div
           key={i}
@@ -188,6 +204,7 @@ export function ScriptEditor({
           </button>
         )}
       </div>
+      </>)}
     </div>
   );
 }
