@@ -13,7 +13,7 @@ import { useDragScroll } from "@/hooks/useDragScroll";
 import { FormatPicker } from "@/components/kanban/FormatPicker";
 import { useTour } from "@/components/tour/TourProvider";
 import { statusRamp } from "@/lib/statusRamp";
-import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, X, Kanban, Pencil, Table, Search, SlidersHorizontal, ArrowLeftRight, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, X, Kanban, Pencil, Table, Search, SlidersHorizontal, ArrowLeftRight, ArrowUp, ArrowDown, ArrowUpDown, Users } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -112,7 +112,21 @@ const ETAPA_DO_PARCEIRO: Record<string, string> = {
   aguardando: "Novo", em_producao: "Fazendo", ajuste: "Em ajuste", entregue: "Entregue",
 };
 const delegacaoDe = (p: Post) => p as unknown as { assignee_id?: string | null; producao_status?: string | null };
-function SeloParceiro({ nome, etapa, mini }: { nome: string; etapa?: string | null; mini?: boolean }) {
+function SeloParceiro({ nome, etapa, mini, pilula }: { nome: string; etapa?: string | null; mini?: boolean; pilula?: boolean }) {
+  /* Pílula do calendário (Gabriela, 19/10/2026: "deveria ficar como no Cria
+     Post"): na mesma linha da etapa, só ícone + primeiro nome, roxa; verde
+     quando entregue. A etapa do parceiro vai no title. */
+  if (pilula) {
+    const entregue = etapa === "entregue";
+    return (
+      <span title={`Com ${nome}${etapa && ETAPA_DO_PARCEIRO[etapa] ? ` · ${ETAPA_DO_PARCEIRO[etapa]}` : ""}`}
+        className={cn("min-w-0 inline-flex items-center gap-0.5 rounded-full px-1.5 py-px text-[8.5px] font-body font-bold leading-tight text-white",
+          entregue ? "bg-green-600" : "bg-violet-600")}>
+        <Users className="h-2.5 w-2.5 shrink-0" />
+        <span className="truncate">{nome}</span>
+      </span>
+    );
+  }
   return (
     <span className={cn("inline-flex items-center gap-1 max-w-full rounded-full bg-violet-100 text-violet-800 font-body font-bold",
       mini ? "px-1.5 py-px text-[8.5px] leading-tight" : "px-2 py-0.5 text-[10px]")}>
@@ -1190,9 +1204,10 @@ const Criando = () => {
                                   palavra e trabalhos diferentes. O dado já vinha no
                                   post, só não aparecia aqui. */}
                               <span className="flex items-center gap-1 mb-0.5">
-                                <span className={cn("inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight", getStatusClasses(post.status))}>
+                                <span className={cn("shrink-0 inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight", getStatusClasses(post.status))}>
                                   {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
                                 </span>
+                                {(() => { const q = comQuem(post); return q ? <SeloParceiro pilula nome={q.nome} etapa={q.etapa} /> : null; })()}
                                 <PlatformIcon platform={post.platform} size="sm"
                                   className="h-3 w-3 ml-auto shrink-0 text-muted-foreground" />
                               </span>
@@ -1201,7 +1216,6 @@ const Criando = () => {
                                 {FORMAT_LABELS[post.format] ?? post.format}
                                 {post.scheduled_time ? <span className="text-muted-foreground font-medium normal-case"> · {post.scheduled_time.slice(0, 5)}</span> : null}
                               </span>
-                              {(() => { const q = comQuem(post); return q ? <span className="block mt-0.5"><SeloParceiro mini nome={q.nome} etapa={q.etapa} /></span> : null; })()}
                             </button>
                           ))}
                           {dayPosts.length > 3 && (
@@ -1232,9 +1246,10 @@ const Criando = () => {
                             {/* Etapa TAMBÉM no sem-data (pedido do Walter, 31/08):
                                sem ela não dava pra saber o que já está pronto. */}
                             <span className="flex items-center gap-1 mb-0.5">
-                              <span className={cn("inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight", getStatusClasses(post.status))}>
+                              <span className={cn("shrink-0 inline-block rounded-full border px-1.5 py-px text-[8.5px] font-body font-bold leading-tight", getStatusClasses(post.status))}>
                                 {CAL_ETAPA[post.status ?? ""] ?? post.status ?? "Post"}
                               </span>
+                              {(() => { const q = comQuem(post); return q ? <SeloParceiro pilula nome={q.nome} etapa={q.etapa} /> : null; })()}
                               <PlatformIcon platform={post.platform} size="sm"
                                 className="h-3 w-3 ml-auto shrink-0 text-muted-foreground" />
                             </span>
@@ -1242,7 +1257,6 @@ const Criando = () => {
                             <span className={cn("block text-[9px] font-body font-bold uppercase tracking-wide truncate", FORMAT_TEXT_CLASS)}>
                               {FORMAT_LABELS[post.format] ?? post.format}
                             </span>
-                            {(() => { const q = comQuem(post); return q ? <span className="block mt-0.5"><SeloParceiro mini nome={q.nome} etapa={q.etapa} /></span> : null; })()}
                           </button>
                         ))}
                       </div>

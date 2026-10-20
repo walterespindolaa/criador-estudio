@@ -682,7 +682,7 @@ Deno.serve(async (req) => {
 
         const runT = await fetch(`https://api.apify.com/v2/acts/linen_snack~instagram-reel-transcript-ai-extractor/runs?token=${apifyToken}`, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reelUrls: urls, language: "pt", enableSummary: true }),
+          body: JSON.stringify({ reelUrls: urls, language: "auto", enableSummary: true }),
         });
         if (!runT.ok) {
           await svc.from("competitor_scrapes").update({
@@ -883,7 +883,10 @@ Deno.serve(async (req) => {
             .filter((u) => /instagram\.com/i.test(u))
             .map((u) => u.split("?")[0].replace(/\/+$/, "") + "/")
             .slice(0, 15);
-          input = { reelUrls: urls, language: "pt", enableSummary: true };
+          // IDIOMA "auto" (19/10/2026): com "pt" fixo, reel em inglês voltava
+          // vazio e virava "sem fala". Provado no mesmo reel: pt = 0 caracteres,
+          // auto = 960 caracteres (detectou "en").
+          input = { reelUrls: urls, language: "auto", enableSummary: true };
         } else {
           // DOIS ESTÁGIOS (08/09/2026). O modo "usernames" do ator de
           // transcrição está quebrado: devolve zero itens em 2 segundos, sem
