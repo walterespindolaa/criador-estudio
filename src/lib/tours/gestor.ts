@@ -238,6 +238,24 @@ export const TOURS_GESTOR: TourConfig[] = [
         placement: "bottom",
       },
       {
+        // A ficha do CRM virou o grupo Cria Gestão do cockpit (19/10/2026). O
+        // openFirst clica na aba rosa e a landing mostra os cards das seções.
+        target: '[data-tour="cli-sub-cadastro"]',
+        openFirst: '[data-tour="cli-nav-gestao"]',
+        title: "A ficha completa mora no Cria Gestão",
+        body: "A aba rosa é o dossiê da marca: Cadastro (empresa, contato, contrato e valor), Tarefas, Brandbook, Diagnóstico (a nota do perfil hoje, pra mostrar evolução depois), Concorrência, Link na bio e Acessos. Não tem botão de salvar: tudo salva sozinho pouco depois que você para de digitar.",
+        mobileBody: "A aba rosa é o dossiê da marca: Cadastro, Tarefas, Brandbook, Diagnóstico, Concorrência, Link na bio e Acessos. Tudo salva sozinho.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="cli-sub-brandbook"]',
+        openFirst: '[data-tour="cli-nav-gestao"]',
+        title: "O brandbook é o que faz a IA acertar",
+        body: "Ideia, legenda, roteiro e prompt de arte desse cliente nascem daqui. Se você já tem o moodboard dele em PDF, não digite nada: sobe o arquivo, o Cria lê cores, fontes, tom de voz e direção de arte, e você só confere. Se o cliente usa o Cria, o brandbook vem sincronizado da conta dele.",
+        mobileBody: "Ideia, legenda, roteiro e arte desse cliente nascem do brandbook. Tem o moodboard em PDF? Sobe que o Cria lê sozinho.",
+        placement: "bottom",
+      },
+      {
         target: '[data-tour="cli-links"]',
         title: "Links úteis e as pastas do Drive",
         body: "Este botão abre os links salvos do cliente de qualquer aba: Drive, captação, materiais. Na aba Links úteis lá em cima você cadastra rótulo e URL, e o conteúdo de cada pasta do Google Drive aparece listado logo abaixo. Pra listar, a pasta precisa estar compartilhada como “qualquer pessoa com o link pode ver”.",
@@ -334,23 +352,12 @@ export const TOURS_GESTOR: TourConfig[] = [
         placement: "bottom",
       },
       {
-        target: '[data-tour="cap-resumo"]',
-        title: "Quanto falta gravar",
-        body: "O placar do mês num olhar: quantas captações no total, quantas já foram gravadas e quantas ainda faltam. É o termômetro pra saber se a semana de gravação está em dia.",
-        placement: "bottom",
-      },
-      {
-        // Só aparece quando há algo pra fazer (próxima gravação, roteiro faltando).
-        skipIfMissing: true,
+        // O cartão de cima do Painel de Voo (23/09/2026): a próxima gravação ou o
+        // aviso de que nada está marcado. Sempre existe depois de carregar.
         target: '[data-tour="cap-direcao"]',
-        title: "Por onde começar",
-        body: "A recepção do módulo: a próxima gravação, as captações que ainda estão sem roteiro e os roteiros que faltam gravar. Toque numa linha e o Cria te leva direto pro lugar certo.",
-        placement: "bottom",
-      },
-      {
-        target: '[data-tour="cap-abas"]',
-        title: "Pastas ou agenda",
-        body: "Dois jeitos de ver o mês: em Clientes, cada um vira uma pasta com os roteiros e captações dele, mês a mês. Em Agenda do mês, tudo agrupado por dia e local, com a folha do dia pra levar pra rua.",
+        title: "A próxima gravação",
+        body: "O primeiro cartão responde \"o que vem?\": a próxima gravação marcada, com dia, hora, local e a escada de prontidão (roteiro escrito, aprovado, tomadas). Abrir o dia leva pra folha da gravação; Pasta abre tudo daquele cliente.",
+        mobileBody: "O primeiro cartão mostra a próxima gravação, com dia, hora, local e o que falta pra ficar pronta. Abrir o dia leva pra folha da gravação.",
         placement: "bottom",
       },
       {
@@ -358,6 +365,14 @@ export const TOURS_GESTOR: TourConfig[] = [
         target: '[data-tour="cap-pastas"]',
         title: "A pasta de cada cliente",
         body: "Um card por cliente, já na ordem do que vence antes. Cada card diz a data da gravação, o que falta pra ficar pronta e tem o botão da próxima ação (abrir o dia ou marcar). Toque no resto do card pra abrir a pasta com os roteiros, as captações e as tomadas dele.",
+        placement: "top",
+      },
+      {
+        // O calendário do mês fica logo abaixo dos clientes (24/09/2026).
+        target: '[data-tour="cap-calendario"]',
+        title: "O mês no calendário",
+        body: "A semana inteira num olhar: os dias cheios, os vazios e onde cabe mais uma gravação. Toque num dia pra abrir o Dia de Gravação, com os roteiros, as tomadas e a folha pra levar pra rua.",
+        mobileBody: "Os dias cheios e os vazios do mês. Toque num dia pra abrir o Dia de Gravação, com roteiros, tomadas e a folha da rua.",
         placement: "top",
       },
       {
@@ -535,56 +550,6 @@ export const TOURS_GESTOR: TourConfig[] = [
         title: "Tudo pendura na ficha do cliente",
         body: "Tarefa, proposta, contrato, brandbook e financeiro nascem colados no cliente. Por isso vale cadastrar direito uma vez: depois é só ir pendurando, e a ficha vira o histórico inteiro da relação.",
         placement: "bottom",
-      },
-    ],
-  },
-  {
-    // FICHA DO CLIENTE NO CRM (/socialmidia/criacrm/:id).
-    // Tela DIFERENTE do cockpit (/clientes/:id): aqui mora o dossiê comercial e
-    // estratégico da marca. Ela continua em uso: o card da carteira, o Cria Caixa
-    // e o próprio cockpit ("Ficha completa (CRM)") mandam pra cá.
-    // Usa `routePattern` porque a rota tem :id. O curinga do registry só aceita
-    // segmento que pareça id, então /criacrm/tarefas e /criacrm/pipeline continuam
-    // caindo no tour do módulo, e não neste.
-    id: "gestor-crm-cliente",
-    route: "/socialmidia/criacrm/:id",
-    routePattern: true,
-    title: "A ficha do cliente",
-    valueProp:
-      "O dossiê da marca: contrato, contato, brandbook, persona, diagnóstico e concorrência. É daqui que sai o contexto pra IA escrever no tom desse cliente e pra sua equipe não inventar.",
-    benefits: [
-      "Contrato, valores e contato num lugar só",
-      "Brandbook e persona alimentam a IA do cliente",
-      "Salva sozinho, você só digita",
-    ],
-    steps: [
-      {
-        target: '[data-tour="crm-cli-hero"]',
-        title: "Quem é e quanto vale",
-        body: "Foto, nome, @ e a régua de baixo com o valor mensal, desde quando ele é cliente, a renovação e a nota do diagnóstico. Não existe botão obrigatório de salvar: tudo aqui salva sozinho pouco depois que você para de digitar, e o aviso do topo mostra Salvando e Salvo. Se esse cliente também usa o Cria, o botão Abrir no cria entra na conta dele sem passar pelo seletor de contas.",
-        mobileBody: "Foto, nome, @ e a régua com valor mensal, início, renovação e nota do diagnóstico. Não tem botão de salvar: tudo salva sozinho, e o aviso do topo mostra Salvando e Salvo.",
-        placement: "bottom",
-      },
-      {
-        target: '[data-tour="crm-cli-status"]',
-        title: "Ativo, pausado ou inativo",
-        body: "Ao marcar Inativo, o sistema pede a DATA do encerramento. Não é burocracia: a mensalidade dele conta no Cria Caixa até o mês dessa data e para de contar dali pra frente. É o que evita cliente que já saiu continuar inflando o seu faturamento.",
-        placement: "bottom",
-      },
-      {
-        target: '[data-tour="crm-cli-abas"]',
-        title: "As seis seções da ficha",
-        body: "Resumo tem empresa, contato e comercial. Tarefas é o que fazer por esse cliente. Brandbook é a marca dele. Persona é pra quem ele fala (até 3). Diagnóstico é a nota do perfil hoje, pra você mostrar evolução depois. Concorrência guarda quem você acompanha e as análises que o Cria Radar já rodou.",
-        mobileBody: "Arraste a tira pro lado pra ver todas. Resumo tem empresa, contato e comercial. Tarefas é o que fazer por ele. Brandbook é a marca. Persona é pra quem ele fala. Diagnóstico é a nota do perfil hoje.",
-        placement: "bottom",
-      },
-      {
-        target: '[data-tour="crm-cli-brand"]',
-        openFirst: '[data-tour="crm-cli-tab-brand"]',
-        title: "O brandbook é o que faz a IA acertar",
-        body: "Esta é a aba que mais muda o resultado: ideia, legenda, roteiro e prompt de arte desse cliente nascem daqui. Se você já tem o moodboard dele em PDF, não digite nada: sobe o arquivo, o Cria lê cores, fontes, tom de voz e direção de arte, e você só confere antes de salvar. Se o cliente usa o Cria, o brandbook vem sincronizado da conta dele. E nos campos de texto o ícone de microfone existe pra você ditar em vez de escrever.",
-        mobileBody: "É a aba que mais muda o resultado: ideia, legenda, roteiro e arte desse cliente nascem daqui. Tem o moodboard em PDF? Sobe que o Cria lê sozinho. Nos campos de texto dá pra ditar pelo microfone.",
-        placement: "top",
       },
     ],
   },

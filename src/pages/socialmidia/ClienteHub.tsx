@@ -640,7 +640,7 @@ export default function ClienteHub() {
               // Âncoras do tutorial: o tour precisa CLICAR nestas abas pra levar
               // a pessoa até a Visão geral, a landing do Cria Post (onde mora o
               // banco de ideias com a captura rápida) e o Radar (Pesquisa).
-              data-tour={g.key === "visao-geral" ? "cli-nav-visao" : g.key === "cria-post" ? "cli-nav-post" : g.key === "cria-radar" ? "cli-nav-radar" : undefined}
+              data-tour={g.key === "visao-geral" ? "cli-nav-visao" : g.key === "cria-post" ? "cli-nav-post" : g.key === "cria-radar" ? "cli-nav-radar" : g.key === "cria-gestao" ? "cli-nav-gestao" : undefined}
               title={locked ? `${g.label} · não está no seu plano` : g.label}
               className={`group flex items-center gap-2 rounded-xl px-3.5 py-2 text-[13px] font-body font-semibold whitespace-nowrap transition-colors ${
                 on ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"

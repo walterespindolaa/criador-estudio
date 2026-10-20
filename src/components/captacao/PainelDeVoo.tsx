@@ -196,7 +196,7 @@ export function PainelDeVoo({
   return (
     <div className="space-y-3">
       {/* ── O QUE VEM ── */}
-      <div className="rounded-3xl border border-border bg-card p-4 sm:p-5">
+      <div data-tour="cap-direcao" className="rounded-3xl border border-border bg-card p-4 sm:p-5">
         {proxima && pProxima ? (
           <div className="flex flex-col sm:flex-row sm:items-start gap-4">
             <div className="flex items-start gap-3 min-w-0 flex-1">

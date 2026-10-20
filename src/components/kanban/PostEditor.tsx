@@ -297,6 +297,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   // Data + Mídia + Prévia caberem inteiras e a prévia nunca sair da tela.
   const [alturaPainel, setAlturaPainel] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
+  // Walter (20/10/2026): legenda, tarefas, notas e referências chegam recolhidas.
+  const [legendaAberta, setLegendaAberta] = useState(false);
+  useEffect(() => { setLegendaAberta(false); }, [post?.id, open]);
   const [weekNumber, setWeekNumber] = useState<number | null>(null);
   
   const [views, setViews] = useState("");
@@ -1799,7 +1802,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
           // No mobile o editor era um retângulo reto colado nas bordas: cara de
           // página quebrada, não de app. Agora ele desce um pouco do topo e ganha
           // canto arredondado em cima e embaixo, como uma folha sobre a tela.
-          className="[&>button:last-child]:hidden top-2 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 max-w-none w-[calc(100vw-0.75rem)] h-[calc(100dvh-1rem)] sm:w-[96vw] sm:h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-1rem)] sm:max-w-[1400px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-3xl sm:rounded-2xl"
+          className="[&>button:last-child]:hidden top-2 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 max-w-none w-[calc(100vw-0.75rem)] h-[calc(100dvh-1rem)] sm:w-[92vw] sm:h-[90vh] sm:max-h-[90vh] sm:max-w-[1240px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-3xl sm:rounded-2xl"
         >
           {/* CABEÇALHO
               No mobile o título disputava espaço com 6 botões e virava "O gargalo qu…".
@@ -2462,7 +2465,25 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
               {/* 3. A LEGENDA */}
               <section className="rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
-                <BlocoCabecalho numero={2} titulo="A legenda" subtitulo="Escreva aqui. A IA te ajuda a gerar, encurtar e melhorar. É o único lugar da legenda." />
+                <button
+                  type="button"
+                  data-tour="editor-legenda-abrir"
+                  onClick={() => setLegendaAberta((a) => !a)}
+                  className="w-full text-left"
+                  aria-expanded={legendaAberta}
+                >
+                  <BlocoCabecalho
+                    numero={2}
+                    titulo="A legenda"
+                    subtitulo={legendaAberta
+                      ? "Escreva aqui. A IA te ajuda a gerar, encurtar e melhorar. É o único lugar da legenda."
+                      : caption.trim()
+                        ? `${caption.trim().split("\n")[0].slice(0, 90)}${caption.trim().length > 90 ? "…" : ""} · ${caption.length} caracteres`
+                        : "Ainda sem legenda. Toque pra escrever ou gerar com IA."}
+                    extra={<ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", legendaAberta && "rotate-180")} />}
+                  />
+                </button>
+                {legendaAberta && (<>
 
                 {/* O textarea vem primeiro e grande: e a resposta pra "onde escrevo?". */}
                 <div className="relative rounded-2xl border border-border bg-muted/10 p-3">
@@ -2747,6 +2768,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     )}
                   </div>
                 )}
+                </>)}
               </section>
 
               {/* O antigo passo 4 "Quando publicar" saiu daqui: data e hora agora
@@ -2768,9 +2790,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   </div>
                 </Recolhivel>
 
-                {/* Aberta por padrão (Walter, 19/10/2026: "aba notas pode ficar aberta"):
-                    é onde mora o briefing do post. */}
-                <Recolhivel icon={StickyNote} titulo="Notas" defaultOpen>
+                {/* Recolhida (Walter, 20/10/2026: "vir tudo minimizado"). O título
+                    avisa quando tem anotação, pra o briefing não passar batido. */}
+                <Recolhivel icon={StickyNote} titulo={notes.trim() ? "Notas (tem anotação)" : "Notas"}>
                   <div className="relative pt-1">
                     <textarea
                       placeholder="Anote ideias soltas, links de inspiração, lembretes para esse conteúdo..."

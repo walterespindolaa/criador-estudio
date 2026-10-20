@@ -108,7 +108,7 @@ export function RoteirosDoDia({
                               <ListaReferencias valor={s.reference_url} className="mt-2" />
 
                               <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                                <Button size="sm" onClick={() => onTeleprompter(s)} className="rounded-lg h-8"
+                                <Button size="sm" data-tour="cap-teleprompter" onClick={() => onTeleprompter(s)} className="rounded-lg h-8"
                                   title="Abre este roteiro no teleprompter">
                                   <Play className="h-3 w-3 mr-1" /> Teleprompter
                                 </Button>

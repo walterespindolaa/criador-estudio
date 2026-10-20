@@ -80,7 +80,10 @@ const PAGE_SIZE = 20;
 
 const PLAN_BADGE: Record<string, string> = {
   free: "bg-muted text-muted-foreground border-border",
+  trial: "bg-sky-50 text-sky-700 border-sky-200",
+  essencial: "bg-emerald-50 text-emerald-700 border-emerald-200",
   pro: "bg-primary/10 text-primary border-primary/20",
+  agency: "bg-violet-50 text-violet-700 border-violet-200",
   studio: "bg-amber-50 text-amber-700 border-amber-200",
 };
 
@@ -96,10 +99,16 @@ const ROLE_OPTIONS = [
   { value: "moderator", label: "Moderator" },
 ];
 
+// Os planos que existem de verdade no banco (20/10/2026). Antes a lista só
+// tinha Free, Pro e Studio: quem estava em teste, no Essencial ou na Agência
+// aparecia com o seletor em branco e não dava pra filtrar.
 const PLAN_OPTIONS = [
   { value: "free", label: "Free" },
+  { value: "trial", label: "Teste" },
+  { value: "essencial", label: "Essencial" },
   { value: "pro", label: "Pro" },
   { value: "studio", label: "Studio" },
+  { value: "agency", label: "Agência" },
 ];
 
 // Códigos de erro das edges de criação traduzidos pro admin. Qualquer outro

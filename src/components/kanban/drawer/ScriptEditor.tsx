@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Cloud, Image as ImageIcon, Minus, PenLine, Plus, X } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,6 +43,27 @@ export function ScriptEditor({
   onUploadLocalForSection,
   onRemoveSectionMedia,
 }: Props) {
+  /* Walter (20/10/2026): "deixar só a cena 1 e 2 e um botão de adicionar cena
+     mais visível". O post continua guardando as cenas como sempre (posts antigos
+     têm 5 vazias); aqui só mostra até a última que tem algo, no mínimo 2. As
+     vazias escondidas são reaproveitadas pelo "Adicionar" antes de criar outra. */
+  const [minimo, setMinimo] = useState(2);
+  const usada = (s: Section) => !!(s.text?.trim() || s.captacao?.trim() || s.driveFileId);
+  let ultimaUsada = -1;
+  sections.forEach((s, i) => { if (usada(s)) ultimaUsada = i; });
+  const visiveis = Math.min(sections.length, Math.max(minimo, ultimaUsada + 1));
+  const rotulo = sectionLabel.toLowerCase();
+
+  const adicionar = () => {
+    if (visiveis >= sections.length) onChange(prev => [...prev, emptySection()]);
+    setMinimo(visiveis + 1);
+  };
+  const removerUltima = () => {
+    const alvo = visiveis - 1;
+    onChange(prev => prev.slice(0, alvo));
+    setMinimo(Math.max(1, alvo));
+  };
+
   const updateAt = (index: number, patch: Partial<Section>) => {
     onChange(prev => prev.map((s, j) => (j === index ? { ...s, ...patch } : s)));
   };
@@ -51,7 +73,7 @@ export function ScriptEditor({
       <Label className="font-body text-sm flex items-center gap-2">
         <PenLine className="h-4 w-4" /> {sectionLabel}s
       </Label>
-      {sections.map((sec, i) => (
+      {sections.slice(0, visiveis).map((sec, i) => (
         <div
           key={i}
           className="rounded-2xl border border-border/60 overflow-hidden bg-card/50 hover:border-border transition-colors"
@@ -148,21 +170,21 @@ export function ScriptEditor({
         </div>
       ))}
 
-      <div className="flex gap-3 pt-1">
+      <div className="flex items-center gap-3 pt-1">
         <button
           type="button"
-          onClick={() => onChange(prev => [...prev, emptySection()])}
-          className="text-xs font-body text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+          onClick={adicionar}
+          className="flex-1 rounded-2xl border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary/60 text-primary font-body text-sm font-semibold py-3 flex items-center justify-center gap-2 transition-colors"
         >
-          <Plus className="h-3 w-3" /> Adicionar {sectionLabel.toLowerCase()}
+          <Plus className="h-4 w-4" /> Adicionar {rotulo} {visiveis + 1}
         </button>
-        {sections.length > 1 && (
+        {visiveis > 1 && (
           <button
             type="button"
-            onClick={() => onChange(prev => prev.slice(0, -1))}
-            className="text-xs font-body text-muted-foreground/50 hover:text-destructive flex items-center gap-1 transition-colors"
+            onClick={removerUltima}
+            className="text-xs font-body text-muted-foreground/60 hover:text-destructive flex items-center gap-1 transition-colors shrink-0"
           >
-            <Minus className="h-3 w-3" /> Remover última
+            <Minus className="h-3 w-3" /> Remover {rotulo} {visiveis}
           </button>
         )}
       </div>

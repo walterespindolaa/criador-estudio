@@ -992,7 +992,12 @@ function PorClienteDoParceiro({ fila, hoje, aoAbrir }: {
         {colunas.map(([chave, g]) => {
           const primeiro = g.cards[0];
           const cor = primeiro?.cliente_cor || "#4B3FA8";
-          const marca = marcas.find((m) => m.external_client_id === chave);
+          /* Cliente com conta no Cria não tem external_client: a marca dele vem
+             com a chave da ficha do CRM, então casa pelo nome dentro da mesma agência. */
+          const marca = marcas.find((m) => m.external_client_id === chave)
+            ?? (primeiro && !primeiro.external_client_id
+              ? marcas.find((m) => m.agencia_id === primeiro.agencia_id && m.nome === primeiro.cliente_nome)
+              : undefined);
           const atrasados = g.cards.filter((c) => c.prazo_producao && c.prazo_producao < hoje).length;
           const ordenados = [...g.cards].sort((a, b) =>
             Number(!!b.urgente) - Number(!!a.urgente)
@@ -1686,8 +1691,10 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
   /* A ficha da marca DESTE cliente, pra mostrar os links dele no próprio card
      e abrir a ficha por cima, sem mandar a pessoa pra outra tela. */
   const { data: minhasMarcas = [] } = useMinhasMarcas();
-  const marcaDoCard = card?.external_client_id
-    ? minhasMarcas.find((m) => m.external_client_id === card.external_client_id) ?? null
+  // Cliente com conta no Cria: a marca vem com a chave da ficha do CRM (crm_client_id).
+  const chaveDaMarca = card?.external_client_id ?? card?.crm_client_id ?? null;
+  const marcaDoCard = chaveDaMarca
+    ? minhasMarcas.find((m) => m.external_client_id === chaveDaMarca) ?? null
     : null;
   const [fichaAberta, setFichaAberta] = useState<MarcaDoParceiro | null>(null);
   /* O PRAZO NA FAIXA DE CIMA (28/09/2026). O bloco inteiro (topar, sugerir,

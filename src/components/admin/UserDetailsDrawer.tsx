@@ -537,6 +537,7 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                               <SelectContent>
                                 <SelectItem value="free">Free</SelectItem>
                                 <SelectItem value="trial">Teste</SelectItem>
+                                <SelectItem value="essencial">Essencial</SelectItem>
                                 <SelectItem value="pro">Pro</SelectItem>
                                 <SelectItem value="studio">Studio</SelectItem>
                                 <SelectItem value="agency">Agência</SelectItem>

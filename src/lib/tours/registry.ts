@@ -157,10 +157,11 @@ export const TRAINING_SEQUENCES: Record<"criador" | "gestor", string[]> = {
     "configuracoes",
   ],
   // FICAM FORA DA SEQUÊNCIA DE PROPÓSITO:
-  // - "gestor-cliente-hub" e "gestor-crm-cliente": o modo treinamento navega pra
-  //   `tour.route`, e essas rotas são padrões com :id, não caminhos navegáveis.
-  //   Sem um id de cliente real cairiam em tela vazia e travariam a fila. Os dois
-  //   abrem pelo "?" dentro da ficha de um cliente.
+  // - "gestor-cliente-hub": o modo treinamento navega pra `tour.route`, e essa
+  //   rota é padrão com :id, não caminho navegável. Sem um id de cliente real
+  //   cairia em tela vazia e travaria a fila. Abre pelo "?" dentro do cliente.
+  //   (O "gestor-crm-cliente" saiu em 20/10/2026: /criacrm/:id só redireciona
+  //   pro cockpit, e os passos dele viraram o fim do "gestor-cliente-hub".)
   // - "gestor-contas": back-office de assentos, abre pelo "?" na própria tela.
   // Os tours de MÓDULO PAGO entram na fila, mas o TourProvider filtra pelos
   // módulos ATIVOS da conta (TOUR_MODULE_GATE): ninguém faz tour de tela trancada.

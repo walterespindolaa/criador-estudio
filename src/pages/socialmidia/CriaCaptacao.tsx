@@ -978,7 +978,9 @@ function CriaCaptacaoInner({ fixo }: { fixo?: string } = {}) {
       {/* Toque no dia abre o Dia de Gravação direto (24/09/2026). Antes abria
           um painel "dia escolhido" no fim da página, que repetia o Dia de
           Gravação pior e ficava perdido lá embaixo. */}
-      <CalendarioCaptacoes month={month} caps={doMes} clientById={clientById} aoAbrirDia={setDiaAberto} />
+      <div data-tour="cap-calendario">
+        <CalendarioCaptacoes month={month} caps={doMes} clientById={clientById} aoAbrirDia={setDiaAberto} />
+      </div>
 
       {/* Gráfico por cidade */}
       {porCidade.length > 0 && (

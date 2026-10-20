@@ -238,6 +238,8 @@ export const TOURS_CRIADOR: TourConfig[] = [
       },
       {
         target: '[data-tour="editor-ia"]',
+        openFirst: '[data-tour="editor-legenda-abrir"]',
+        mobileOpenFirst: '[data-tour="editor-legenda-abrir"]',
         title: "Content Assistant",
         body: "Escolha o tom (descontraído, profissional, provocativo...) e a IA escreve legenda e roteiro no estilo da sua marca, ou avalia o gancho que você escreveu. É o seu copywriter de plantão. E o botão ? no canto direito do topo reabre este tutorial quando quiser.",
         mobileBody: "No Content Assistant, escolha o tom (descontraído, profissional, provocativo...) e a IA escreve legenda e roteiro no estilo da sua marca, ou avalia seu gancho. O botão ? no topo reabre este tutorial.",

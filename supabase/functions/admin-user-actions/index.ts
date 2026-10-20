@@ -127,7 +127,7 @@ serve(async (req) => {
       const days = VALIDITY_DAYS[key];
       const access_expires_at = days === null ? null : new Date(Date.now() + days * 86400000).toISOString();
       const patch: Record<string, unknown> = { access_expires_at };
-      if (["pro", "studio"].includes(target.plan ?? "") && target.subscription_status !== "active") {
+      if (["essencial", "pro", "studio"].includes(target.plan ?? "") && target.subscription_status !== "active") {
         patch.subscription_status = "active";
       }
       console.log("[admin-user-actions] set_validity patch:", JSON.stringify(patch));
@@ -201,9 +201,10 @@ serve(async (req) => {
     // Muda o plano do usuário (upgrade PF) e ativa se for plano pago.
     if (action === "set_plan") {
       const plan = String((body as { plan?: string }).plan ?? "");
-      if (!["free", "trial", "pro", "studio", "agency"].includes(plan)) return json({ error: "invalid_plan" }, 400);
+      if (!["free", "trial", "essencial", "pro", "studio", "agency"].includes(plan)) return json({ error: "invalid_plan" }, 400);
       const patch: Record<string, unknown> = { plan };
-      if (["pro", "studio", "agency"].includes(plan)) patch.subscription_status = "active";
+      // Essencial entrou em 20/10/2026: sem ele aqui o admin não tinha como dar o plano de entrada.
+      if (["essencial", "pro", "studio", "agency"].includes(plan)) patch.subscription_status = "active";
       const { error } = await svc.from("profiles").update(patch).eq("id", user_id);
       if (error) { console.error("[admin-user-actions] set_plan failed:", error); return json({ error: "update_failed" }, 500); }
       return json({ ok: true, plan });
