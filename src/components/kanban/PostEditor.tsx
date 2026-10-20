@@ -1419,8 +1419,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   <span className="text-xs font-display font-semibold text-foreground">Mídia</span>
                   <span className="text-[11px] font-body text-muted-foreground truncate">
                     {mediaList.length > 0
-                      ? `· ${mediaList.length} ${mediaList.length === 1 ? "arquivo" : "arquivos"}${format === "carrossel" && mediaList.length > 1 ? " · arraste pra ordenar" : ""}`
-                      : temMidiaPorCena ? "· vídeo final (cada cena tem a sua)" : "· adicionar imagem ou vídeo"}
+                      ? `· ${mediaList.length} ${mediaList.length === 1 ? "arquivo" : "arquivos"}${!telaLarga && format === "carrossel" && mediaList.length > 1 ? " · arraste pra ordenar" : ""}`
+                      : temMidiaPorCena ? "· vídeo final" : telaLarga ? "· imagem ou vídeo" : "· adicionar imagem ou vídeo"}
                   </span>
                   {telaLarga && (
                     <div className="ml-auto flex items-center gap-1.5 shrink-0">
@@ -2768,7 +2768,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   </div>
                 </Recolhivel>
 
-                <Recolhivel icon={StickyNote} titulo="Notas">
+                {/* Aberta por padrão (Walter, 19/10/2026: "aba notas pode ficar aberta"):
+                    é onde mora o briefing do post. */}
+                <Recolhivel icon={StickyNote} titulo="Notas" defaultOpen>
                   <div className="relative pt-1">
                     <textarea
                       placeholder="Anote ideias soltas, links de inspiração, lembretes para esse conteúdo..."
@@ -3213,9 +3215,15 @@ function PreviaQueCabe({ children, largura = 290 }: { children: React.ReactNode;
     if (!caixa || !conteudo) return;
     const medir = () => {
       const h = conteudo.offsetHeight; // offsetHeight ignora o transform
-      const disponivel = caixa.clientHeight - 24; // p-3 em cima e embaixo
+      const alturaLivre = caixa.clientHeight - 24; // p-3 em cima e embaixo
+      const larguraLivre = caixa.clientWidth - 24;
       setAlturaNatural(h);
-      setEscala(h > 0 && disponivel > 0 ? Math.max(0.4, Math.min(1, disponivel / h)) : 1);
+      // Cresce E encolhe (Walter, 19/10/2026: em tela alta sobrava um vão
+      // embaixo com a prévia pequena). Limite: a altura que sobra e a largura
+      // do painel, o que bater primeiro.
+      setEscala(h > 0 && alturaLivre > 0
+        ? Math.max(0.4, Math.min(alturaLivre / h, larguraLivre / largura))
+        : 1);
     };
     medir();
     const ro = new ResizeObserver(medir);

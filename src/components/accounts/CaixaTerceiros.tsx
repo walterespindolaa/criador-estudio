@@ -282,7 +282,7 @@ function Ficha({ t, linhas, nomeCliente, clientes, ehDono, hoje }: {
     const blocos = [...grupos.entries()].sort((x, y) => x[0].localeCompare(y[0], "pt-BR")).map(([cli, ls]) => {
       const sub = ls.reduce((s2, l) => s2 + l.amount, 0);
       return `<h2>${esc(cli)} <small>${ls.length} ${ls.length === 1 ? "item" : "itens"} · ${reais(sub)}</small></h2><table>${ls.map((l) =>
-        `<tr><td class="d">${dm(l.date)}</td><td>${esc(nomeDaPeca(l, t.nome))}${!l.post_id ? ' <span class="av">avulso</span>' : ""}</td><td class="st ${l.status === "pago" ? "ok" : "pend"}">${l.status === "pago" ? `pago${l.pago_em ? " " + dm(l.pago_em) : ""}` : "a pagar"}</td><td class="v">${reais(l.amount)}</td></tr>`).join("")}</table>`;
+        `<tr><td class="d">${dm(l.date)}</td><td>${esc(nomeDaPeca(l, t.nome))}${!l.post_id ? ' <span class="av">materiais</span>' : ""}</td><td class="st ${l.status === "pago" ? "ok" : "pend"}">${l.status === "pago" ? `pago${l.pago_em ? " " + dm(l.pago_em) : ""}` : "a pagar"}</td><td class="v">${reais(l.amount)}</td></tr>`).join("")}</table>`;
     }).join("");
     const pagosTxt = pagamentos.map((pg) => `<li>Pago em ${dm(pg.pago_em)} · ${reais(pg.total)} · ${pg.contestado ? "avisou que não recebeu" : pg.recebido ? `${esc(t.nome)} confirmou em ${dm(pg.recebido.slice(0, 10))}` : `esperando o OK de ${esc(t.nome)}`}</li>`).join("");
     const origem = window.location.origin;
@@ -437,7 +437,7 @@ ${blocos}
                   <div key={l.id} className={cn("grid grid-cols-[44px_1fr_auto_auto] md:grid-cols-[52px_160px_1fr_auto_auto] items-center gap-2 md:gap-3 py-2.5 text-[12.5px] font-body", pago && "text-muted-foreground")}>
                     <span>{dm(l.date)}</span>
                     <span className="truncate">{l.crm_client_id ? nomeCliente.get(l.crm_client_id) ?? "Cliente" : "Agência"}</span>
-                    <span className="hidden md:block truncate">{nomeDaPeca(l, t.nome)}{!l.post_id && <span className="ml-1.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-700 px-2 py-0.5">avulso</span>}</span>
+                    <span className="hidden md:block truncate">{nomeDaPeca(l, t.nome)}{!l.post_id && <span className="ml-1.5 text-[10px] font-bold rounded-full bg-blue-100 text-blue-700 px-2 py-0.5">materiais</span>}</span>
                     <span className={cn("text-[10px] font-bold rounded-full px-2 py-0.5 whitespace-nowrap", pago ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800")}>
                       {pago ? "pago" : "a pagar"}
                     </span>
