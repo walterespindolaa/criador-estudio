@@ -164,7 +164,10 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
   // Reset ao trocar de usuário (evita vazar seleção de um pro outro).
   useEffect(() => { setPlan(""); setPrazo("manter"); setSeats(null); setPacks(null); setAba("plano"); }, [userId]);
 
-  const rpc = supabase.rpc as unknown as (fn: string, args: unknown) => Promise<{ data: unknown; error: { message?: string } | null }>;
+  // Chamar SEMPRE como supabase.rpc(...): guardar o método numa variável solta
+  // perde o "this" do cliente e a chamada quebra antes de sair (bug de 20/10).
+  type Rpc = (fn: string, args: unknown) => Promise<{ data: unknown; error: { message?: string } | null }>;
+  const rpc = (fn: string, args: unknown) => (supabase.rpc as unknown as Rpc).call(supabase, fn, args);
 
   const { data, isLoading, error } = useQuery<UserDetails | null>({
     queryKey: ["admin-user-details", userId],
