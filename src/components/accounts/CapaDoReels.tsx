@@ -114,7 +114,7 @@ export function useCapaDoPost(postId: string | null) {
 }
 
 /** O bloco do editor: miniatura 9:16 + escolher, trocar, remover. */
-export function EditorDeCapa({ postId }: { postId: string }) {
+export function EditorDeCapa({ postId, compacto }: { postId: string; compacto?: boolean }) {
   const { capa, subir, salvar } = useCapaDoPost(postId);
   const input = useRef<HTMLInputElement | null>(null);
   /* DO DRIVE TAMBÉM (Gabriela, 30/09/2026: "preciso que dê pra eu selecionar
@@ -125,6 +125,44 @@ export function EditorDeCapa({ postId }: { postId: string }) {
   const { pickOneImage, picking } = useGoogleDrive();
   const doDrive = async () => { const f = await pickOneImage(); if (f) subir.mutate(f); };
   const ocupado = subir.isPending || salvar.isPending || picking;
+  const remover = async () => { if (await confirmar({ titulo: "Remover a capa?", descricao: "A prévia volta a mostrar o primeiro frame do vídeo.", acao: "Remover" })) salvar.mutate(null); };
+
+  /* COMPACTO (editor do criador no computador, 20/10/2026): a versão cheia
+     comia ~120px do painel da direita e a prévia encolhia pra caber. Aqui é
+     uma linha da altura da linha do vídeo, com botões só de ícone. */
+  if (compacto) {
+    return (
+      <div className="flex items-center gap-2.5">
+        <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) subir.mutate(f); e.target.value = ""; }} />
+        <button type="button" onClick={() => input.current?.click()} disabled={ocupado}
+          aria-label={capa ? "Trocar a capa" : "Escolher a capa"}
+          className="relative w-6 shrink-0 aspect-[9/16] rounded overflow-hidden border border-border bg-muted grid place-items-center hover:border-primary/50 transition-colors">
+          {ocupado ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+            : capa ? <img src={capa} alt="Capa do Reels" className="absolute inset-0 w-full h-full object-cover" />
+            : <ImagePlus className="h-3.5 w-3.5 text-muted-foreground" />}
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-body font-medium text-foreground">Capa do Reels</p>
+          <p className="text-[11px] font-body text-muted-foreground truncate">{capa ? "Vai junto na publicação." : "Opcional. Sem capa, vale o primeiro frame."}</p>
+        </div>
+        <button type="button" onClick={() => input.current?.click()} disabled={ocupado}
+          className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 h-7 text-[11px] font-body text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-50 shrink-0">
+          <ImagePlus className="h-3.5 w-3.5" /> {capa ? "Trocar" : "Escolher"}
+        </button>
+        <button type="button" onClick={doDrive} disabled={ocupado} title="Escolher a capa no Google Drive" aria-label="Capa do Google Drive"
+          className="grid place-items-center rounded-full border border-border bg-card h-7 w-7 text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-50 shrink-0">
+          {picking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <HardDrive className="h-3.5 w-3.5" />}
+        </button>
+        {capa && (
+          <button type="button" onClick={remover} disabled={ocupado} aria-label="Remover capa"
+            className="grid place-items-center rounded-full h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-2.5">
@@ -154,7 +192,7 @@ export function EditorDeCapa({ postId }: { postId: string }) {
         </Button>
         {capa && (
           <button type="button" aria-label="Remover capa" disabled={ocupado}
-            onClick={async () => { if (await confirmar({ titulo: "Remover a capa?", descricao: "A prévia volta a mostrar o primeiro frame do vídeo.", acao: "Remover" })) salvar.mutate(null); }}
+            onClick={remover}
             className="h-8 w-8 grid place-items-center rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive/40">
             <Trash2 className="h-3.5 w-3.5" />
           </button>

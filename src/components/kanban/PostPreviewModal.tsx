@@ -53,6 +53,8 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
   // Trocou a capa, ela volta pra frente mesmo depois de um play.
   const [capaVista, setCapaVista] = useState<string | null>(null);
   const mostraCapa = !!capa && mediaType === "video" && capaVista !== capa;
+  // Com capa, o player só nasce no clique (e aí já toca): nada roda escondido atrás da capa.
+  const pediuPlay = !!capa && capaVista === capa;
   const capaPorCima = mostraCapa ? (
     <button type="button" onClick={() => setCapaVista(capa ?? null)} aria-label="Ver o vídeo"
       className="absolute inset-0 z-[3] block w-full h-full overflow-hidden bg-neutral-900">
@@ -187,13 +189,12 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
         {capaPorCima}
         {activeMediaUrl ? (
           isBunnyVideo ? (
-            <VideoEmbed viewUrl={activeMediaUrl!} className="w-full h-full border-0" />
+            mostraCapa ? null : <VideoEmbed viewUrl={activeMediaUrl!} autoplay={pediuPlay} className="w-full h-full border-0" />
           ) : isPlayableVideo ? (
-            <video
+            mostraCapa ? null : <video
               src={activeMediaUrl}
-              autoPlay
-              muted
-              loop
+              autoPlay={pediuPlay}
+              controls
               playsInline
               className="w-full h-full object-cover"
             />
@@ -222,13 +223,12 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
           {/* Background media or gradient */}
           {activeMediaUrl ? (
             isBunnyVideo ? (
-              <VideoEmbed viewUrl={activeMediaUrl!} className="absolute inset-0 w-full h-full border-0" />
+              mostraCapa ? null : <VideoEmbed viewUrl={activeMediaUrl!} autoplay={pediuPlay} className="absolute inset-0 w-full h-full border-0" />
             ) : isPlayableVideo ? (
-              <video
+              mostraCapa ? null : <video
                 src={activeMediaUrl}
-                autoPlay
-                muted
-                loop
+                autoPlay={pediuPlay}
+                controls
                 playsInline
                 className="absolute inset-0 w-full h-full object-cover"
               />
@@ -403,9 +403,7 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
                     ) : isPlayableVideo ? (
                       <video
                         src={activeMediaUrl}
-                        autoPlay
-                        muted
-                        loop
+                        controls
                         playsInline
                         className="w-full h-full object-cover"
                       />

@@ -1424,7 +1424,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
   const blocoMidia = (
     <>
-              <div className={cn("space-y-2.5", !telaLarga && "rounded-2xl border border-border/70 bg-muted/20 p-3")}>
+              <div className={cn(telaLarga ? "space-y-2" : "space-y-2.5", !telaLarga && "rounded-2xl border border-border/70 bg-muted/20 p-3")}>
                 <div data-tour="editor-midia" className="w-full flex items-center gap-2">
                   <ImageIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   <span className="text-xs font-display font-semibold text-foreground">Mídia</span>
@@ -1467,7 +1467,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                      aqui fica só a miniatura, pra caber tudo na tela. */
                   mediaList.length > 0 || activeUpload ? (
                     <div className="flex items-center gap-2.5">
-                      <div className="w-14 h-14 rounded-xl overflow-hidden border border-border bg-muted shrink-0 grid place-items-center">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden border border-border bg-muted shrink-0 grid place-items-center">
                         {activeUpload ? (
                           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                         ) : mediaList[0].file_type?.startsWith("video/") ? (
@@ -1716,7 +1716,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
                 </>
 
-                {comCapa && <EditorDeCapa postId={post!.id} />}
+                {comCapa && <EditorDeCapa postId={post!.id} compacto={telaLarga} />}
 
                 {/* Gerador de prompt do Estudio (arte a partir do conteudo real).
                     RECOLHIDO atras de um botao (Walter, 01/09): os avisos e o
@@ -1813,7 +1813,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
           // No mobile o editor era um retângulo reto colado nas bordas: cara de
           // página quebrada, não de app. Agora ele desce um pouco do topo e ganha
           // canto arredondado em cima e embaixo, como uma folha sobre a tela.
-          className="[&>button:last-child]:hidden top-2 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 max-w-none w-[calc(100vw-0.75rem)] h-[calc(100dvh-1rem)] sm:w-[92vw] sm:h-[90vh] sm:max-h-[90vh] sm:max-w-[1240px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-3xl sm:rounded-2xl"
+          className="[&>button:last-child]:hidden top-2 translate-y-0 sm:top-1/2 sm:-translate-y-1/2 max-w-none w-[calc(100vw-0.75rem)] h-[calc(100dvh-1rem)] sm:w-[92vw] sm:h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-1.5rem)] sm:max-w-[1240px] p-0 overflow-hidden overflow-x-hidden flex flex-col bg-background rounded-3xl sm:rounded-2xl"
         >
           {/* CABEÇALHO
               No mobile o título disputava espaço com 6 botões e virava "O gargalo qu…".
@@ -2023,7 +2023,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   tela de notebook ela virava um selo. A direita ficou só com
                   Mídia + Prévia. */}
               {telaLarga && (
-                <div className="grid grid-cols-[330px_minmax(0,1fr)] gap-3 items-stretch [&>*]:min-w-0">{blocoAgenda}</div>
+                <div className="grid grid-cols-[330px_minmax(0,1fr)] gap-3 items-start [&>*]:min-w-0">{blocoAgenda}</div>
               )}
               {/* 2. O CONTEUDO DO POST */}
               <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">

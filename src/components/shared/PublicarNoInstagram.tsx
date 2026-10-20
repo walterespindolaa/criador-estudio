@@ -144,6 +144,7 @@ export function PublicarNoInstagramView({
             <div className="flex items-center gap-2">
               <p className="min-w-0 flex-1 text-[11px] font-body text-muted-foreground truncate" title={bloqueio ?? (cx?.username ? `@${cx.username}` : undefined)}>
                 {estado !== "publicado" && bloqueio ? bloqueio
+                  : estado === "agendado" && est.publicar_em ? `Sai sozinho ${dataHoraBr(est.publicar_em)}${cx?.username ? ` · @${cx.username}` : ""}`
                   : cx?.username ? `${estado === "publicado" ? "saiu em" : "em"} @${cx.username}` : ""}
               </p>
               {estado !== "publicado" && (
@@ -212,7 +213,9 @@ export function PublicarNoInstagramView({
           </div>
         )}
 
-        {estado === "agendado" && (
+        {/* No compacto o "sai sozinho" já está na linha da conta; a caixa só
+            aparece se a tentativa automática falhou. */}
+        {estado === "agendado" && (!compacto || !!est.publish_error) && (
           <div className="rounded-xl bg-sky-50 border border-sky-200 p-3 space-y-1">
             <p className="text-[13px] font-body text-sky-900 flex items-start gap-2">
               <CalendarClock className="h-4 w-4 text-sky-600 shrink-0 mt-0.5" />
