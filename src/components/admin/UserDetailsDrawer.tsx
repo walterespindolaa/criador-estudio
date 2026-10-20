@@ -23,12 +23,23 @@ import { CopyButton } from "@/components/shared/CopyButton";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
+import { format, formatDistanceToNow, differenceInCalendarDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { confirmar } from "@/components/shared/Confirm";
-import { Mail, ShieldOff, ShieldCheck, Trash2, Loader2, Eraser } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Mail, ShieldOff, ShieldCheck, Trash2, Loader2, Eraser, MessageCircle, Instagram, X,
+  Check, Plus, Users, UserRound,
+} from "lucide-react";
+
+/* DETALHES DO USUÁRIO v2 (Walter, 20/10/2026, mockup aprovado). Janela larga
+   em duas colunas: à esquerda quem é a pessoa (contato e acesso), à direita
+   duas abas: "Plano e uso" (prazo do plano, estender teste, upgrade, o que ela
+   cria e as telas que mais abre) e "Módulos e limites" (tipo de conta,
+   módulos de social mídia, carteira e assentos). A "validade" deixou de ser um
+   campo solto: virou o prazo do plano. */
 
 interface UserDetailsDrawerProps {
   open: boolean;
@@ -44,76 +55,124 @@ type UserDetails = {
   role: string | null;
   subscription_status: string | null;
   access_expires_at: string | null;
+  trial_started_at: string | null;
   trial_ends_at: string | null;
   niche: string | null;
   created_at: string | null;
+  phone: string | null;
+  cidade: string | null;
+  instagram_handle: string | null;
+  avatar_url: string | null;
+  last_seen_at: string | null;
+  last_sign_in_at: string | null;
+  onboarding_completed: boolean | null;
+  terms_accepted_at: string | null;
+  terms_version: string | null;
+  stripe_subscription_id: string | null;
+  storage_used_bytes: number | null;
+  storage_quota_bytes: number | null;
+  ai_ideas_used_month: number | null;
+  uso?: { posts: number; clientes: number; captacoes: number; roteiros: number };
+  dias_ativos_14?: number;
+  telas_30?: { modulo: string; n: number }[];
 };
 
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "-";
-  try {
-    return format(new Date(value), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-  } catch {
-    return "-";
-  }
-}
+const NOME_PLANO: Record<string, string> = {
+  free: "Free", trial: "Teste", essencial: "Essencial", pro: "Pro", studio: "Studio", agency: "Agência",
+};
 
-function formatValidity(accessExpiresAt: string | null | undefined): string {
-  if (!accessExpiresAt) return "Vitalício / sem prazo";
-  try {
-    const date = new Date(accessExpiresAt);
-    const now = new Date();
-    const diff = date.getTime() - now.getTime();
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    const formatted = format(date, "dd/MM/yyyy", { locale: ptBR });
-    if (diff <= 0) return `${formatted} (expirado)`;
-    return `${formatted} (${days} dia${days === 1 ? "" : "s"})`;
-  } catch {
-    return "-";
-  }
-}
+// Segmento da rota (/app/<x> ou /socialmidia/<x>) -> nome que a gente fala.
+const NOME_TELA: Record<string, string> = {
+  dashboard: "Início", criando: "Criando (posts)", criapost: "Cria Post", captacao: "Captação",
+  criacrm: "CRM", clientes: "Clientes", agenda: "Agenda", "minha-agenda": "Minha agenda",
+  aprovacoes: "Aprovações", aprovacao: "Aprovação", hubcria: "Radar", ideias: "Ideias",
+  tendencias: "Tendências", stories: "Stories", prompter: "Prompter", criacaixa: "Caixa",
+  equipe: "Equipe", configuracoes: "Configurações", insights: "Insights", relatorio: "Relatório",
+  relatorios: "Relatórios", linkinbio: "Link na bio", brandbook: "Brandbook", biblioteca: "Biblioteca",
+  demandas: "Demandas", entregues: "Entregues", marcas: "Marcas", tarefas: "Tarefas", metas: "Metas",
+  "media-kit": "Media kit", aprender: "Aprender", tutoriais: "Tutoriais", plano: "Plano", assinar: "Assinar",
+  "cf-admin-panel": "Admin", criakut: "Criakut", historico: "Histórico", contas: "Contas",
+};
+const nomeTela = (m: string) => NOME_TELA[m] ?? m;
 
-function FieldBox({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function dataCurta(v: string | null | undefined): string {
+  if (!v) return "-";
+  try { return format(new Date(v), "dd/MM/yyyy", { locale: ptBR }); } catch { return "-"; }
+}
+function haQuanto(v: string | null | undefined): string {
+  if (!v) return "nunca";
+  try { return formatDistanceToNow(new Date(v), { locale: ptBR, addSuffix: true }); } catch { return "-"; }
+}
+function quandoComHora(v: string | null | undefined): string {
+  if (!v) return "-";
+  try {
+    const d = new Date(v);
+    const dias = differenceInCalendarDays(new Date(), d);
+    const hora = format(d, "HH:mm");
+    if (dias === 0) return `hoje, ${hora}`;
+    if (dias === 1) return `ontem, ${hora}`;
+    return `${format(d, "dd/MM")}, ${hora}`;
+  } catch { return "-"; }
+}
+function mb(bytes: number | null | undefined): string {
+  if (!bytes) return "0 MB";
+  const v = bytes / (1024 * 1024);
+  return v >= 1024 ? `${(v / 1024).toFixed(1)} GB` : `${Math.round(v)} MB`;
+}
+function soDigitos(t: string | null | undefined) { return (t ?? "").replace(/\D/g, ""); }
+
+function Linha({ k, children, acao }: { k: string; children: React.ReactNode; acao?: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border bg-muted/30 px-3 py-2 min-w-0">
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">{label}</p>
-      {children}
+    <div className="flex items-center gap-3 py-2 border-b border-dashed border-border/70 last:border-b-0 min-w-0">
+      <span className="w-24 shrink-0 text-[12px] font-body text-muted-foreground">{k}</span>
+      <span className="flex-1 min-w-0 truncate text-[13.5px] font-body text-foreground">{children}</span>
+      {acao}
     </div>
   );
 }
+const Vazio = ({ t = "não informou" }: { t?: string }) => <span className="italic text-muted-foreground/70">{t}</span>;
+
+function Chip({ children, tom = "neutro" }: { children: React.ReactNode; tom?: "neutro" | "verde" | "ambar" | "vermelho" | "roxo" }) {
+  const cls = {
+    neutro: "bg-muted text-muted-foreground",
+    verde: "bg-emerald-100 text-emerald-800",
+    ambar: "bg-amber-100 text-amber-800",
+    vermelho: "bg-red-100 text-red-700",
+    roxo: "bg-violet-100 text-violet-800",
+  }[tom];
+  return <span className={cn("rounded-full px-2.5 py-0.5 text-[11.5px] font-body font-semibold whitespace-nowrap", cls)}>{children}</span>;
+}
+
+const Titulo = ({ children }: { children: React.ReactNode }) => (
+  <h3 className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground mb-2">{children}</h3>
+);
+const Cartao = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  <div className={cn("rounded-2xl border border-border bg-card px-4 py-3.5", className)}>{children}</div>
+);
 
 export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDrawerProps) {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
-  const [validity, setValidity] = useState<string>("lifetime");
+  const [aba, setAba] = useState<"plano" | "modulos">("plano");
   const [plan, setPlan] = useState<string>("");
+  const [prazo, setPrazo] = useState<string>("manter");
   const [seats, setSeats] = useState<number | null>(null);
   const [packs, setPacks] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmWipe, setConfirmWipe] = useState(false);
 
-  // Reset do estado local ao trocar de usuário (evita vazar seleção de um pro outro).
-  useEffect(() => { setPlan(""); setValidity("lifetime"); setSeats(null); setPacks(null); }, [userId]);
+  // Reset ao trocar de usuário (evita vazar seleção de um pro outro).
+  useEffect(() => { setPlan(""); setPrazo("manter"); setSeats(null); setPacks(null); setAba("plano"); }, [userId]);
+
+  const rpc = supabase.rpc as unknown as (fn: string, args: unknown) => Promise<{ data: unknown; error: { message?: string } | null }>;
 
   const { data, isLoading, error } = useQuery<UserDetails | null>({
     queryKey: ["admin-user-details", userId],
     enabled: open && !!userId,
     queryFn: async () => {
-      const { data, error } = await (supabase.rpc as unknown as (
-        fn: string,
-        args: unknown,
-      ) => Promise<{ data: UserDetails | null; error: unknown }>)(
-        "get_user_details",
-        { _user_id: userId },
-      );
+      const { data, error } = await rpc("get_user_details", { _user_id: userId });
       if (error) throw error;
-      return data;
+      return data as UserDetails | null;
     },
   });
 
@@ -127,10 +186,14 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
     }
     return data;
   };
+  const recarregar = () => {
+    queryClient.invalidateQueries({ queryKey: ["admin-user-details", userId] });
+    queryClient.invalidateQueries({ queryKey: ["admin-user-modules", userId] });
+    queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+  };
 
-  // Reenvio de acesso: alem do e-mail, guarda o link novo pra mostrar na tela
-  // com a mensagem pronta pro WhatsApp. O link vence em ~1h e funciona uma vez,
-  // entao entregar ele na mao do admin importa mais que o e-mail chegar.
+  // Reenvio de acesso: além do e-mail, guarda o link novo pra mostrar na tela
+  // com a mensagem pronta pro WhatsApp (o link vence em ~1h e funciona uma vez).
   const [resent, setResent] = useState<{ email: string; link: string } | null>(null);
   const resendMutation = useMutation({
     mutationFn: () => invokeAction({ user_id: userId, action: "resend_access" }),
@@ -138,31 +201,44 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
       const r = d as { email?: string; actionLink?: string };
       if (r?.actionLink && r?.email) {
         setResent({ email: r.email, link: r.actionLink });
-        toast.success("Link novo gerado. Copie a mensagem abaixo do botão.");
+        toast.success("Link novo gerado. A mensagem pronta está logo abaixo.");
       } else {
-        // Edge antiga (sem o link na resposta): pelo menos o e-mail foi.
         toast.success("E-mail de redefinição enviado.");
       }
     },
     onError: (e: Error) => toast.error(`Falha ao enviar: ${e.message}`),
   });
 
-  const setValidityMutation = useMutation({
-    mutationFn: () => invokeAction({ user_id: userId, action: "set_validity", validity }),
-    onSuccess: () => {
-      toast.success("Validade atualizada.");
-      queryClient.invalidateQueries({ queryKey: ["admin-user-details", userId] });
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+  // Plano + prazo num botão só: troca o plano e, se escolheu prazo, grava a validade.
+  const salvarPlano = useMutation({
+    mutationFn: async () => {
+      const novo = plan || data?.plan || "free";
+      if (novo !== data?.plan) await invokeAction({ user_id: userId, action: "set_plan", plan: novo });
+      if (prazo !== "manter") await invokeAction({ user_id: userId, action: "set_validity", validity: prazo });
     },
+    onSuccess: () => { toast.success("Plano atualizado."); setPrazo("manter"); setPlan(""); recarregar(); },
     onError: (e: Error) => toast.error(`Falha: ${e.message}`),
   });
 
-  const setPlanMutation = useMutation({
-    mutationFn: () => invokeAction({ user_id: userId, action: "set_plan", plan: plan || data?.plan }),
-    onSuccess: () => {
-      toast.success("Plano atualizado.");
-      queryClient.invalidateQueries({ queryKey: ["admin-user-details", userId] });
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+  const estenderTeste = useMutation({
+    mutationFn: async (dias: number) => {
+      const { data: fim, error } = await rpc("admin_estender_teste", { _user_id: userId, _dias: dias });
+      if (error) throw new Error(error.message ?? "falhou");
+      return fim as string;
+    },
+    onSuccess: (fim) => { toast.success(`Teste vai até ${dataCurta(fim)}.`); recarregar(); },
+    onError: (e: Error) => toast.error(`Falha: ${e.message}`),
+  });
+
+  const trocarTipo = useMutation({
+    mutationFn: async (tipo: "manager" | "creator") => {
+      const { error } = await rpc("admin_definir_tipo_conta", { _user_id: userId, _tipo: tipo });
+      if (error) throw new Error(error.message ?? "falhou");
+      return tipo;
+    },
+    onSuccess: (tipo) => {
+      toast.success(tipo === "manager" ? "Agora é conta de social mídia." : "Agora é conta de criador.");
+      recarregar();
     },
     onError: (e: Error) => toast.error(`Falha: ${e.message}`),
   });
@@ -176,25 +252,19 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
 
   const setModuleMutation = useMutation({
     mutationFn: (v: { code: string; enabled: boolean }) => invokeAction({ user_id: userId, action: "set_module", module_code: v.code, enabled: v.enabled }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-user-modules", userId] });
-      toast.success("Módulo atualizado.");
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-user-modules", userId] }); toast.success("Módulo atualizado."); },
     onError: (e: Error) => toast.error(`Falha: ${e.message}`),
   });
 
   const seatsValue = seats ?? modulesData?.seat_limit ?? 0;
   const setSeatsMutation = useMutation({
     mutationFn: () => invokeAction({ user_id: userId, action: "set_seats", seats: seatsValue }),
-    onSuccess: () => {
-      toast.success("Assentos atualizados.");
-      queryClient.invalidateQueries({ queryKey: ["admin-user-modules", userId] });
-    },
+    onSuccess: () => { toast.success("Assentos atualizados."); queryClient.invalidateQueries({ queryKey: ["admin-user-modules", userId] }); },
     onError: (e: Error) => toast.error(`Falha: ${e.message}`),
   });
 
-  /* Pacotes de cortesia da carteira do CRM (ver o comentário na edge). Cada
-     pacote vale 10 clientes; o teto final é 3 + (cortesia + pago) x 10. */
+  /* Pacotes de cortesia da carteira do CRM. Cada pacote vale 10 clientes; o
+     teto final é 3 + (cortesia + pago) x 10. */
   const packsValue = packs ?? modulesData?.client_packs ?? 0;
   const setPacksMutation = useMutation({
     mutationFn: () => invokeAction({ user_id: userId, action: "set_client_packs", packs: packsValue }),
@@ -208,11 +278,7 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
 
   const toggleSuspendMutation = useMutation({
     mutationFn: () => invokeAction({ user_id: userId, action: isSuspended ? "reactivate" : "suspend" }),
-    onSuccess: () => {
-      toast.success(isSuspended ? "Acesso reativado." : "Acesso suspenso.");
-      queryClient.invalidateQueries({ queryKey: ["admin-user-details", userId] });
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-    },
+    onSuccess: () => { toast.success(isSuspended ? "Acesso reativado." : "Acesso suspenso."); recarregar(); },
     onError: (e: Error) => toast.error(`Falha: ${e.message}`),
   });
 
@@ -221,8 +287,7 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
     onSuccess: () => {
       toast.success("Conta limpa. Conteúdo apagado, acesso mantido.");
       setConfirmWipe(false);
-      queryClient.invalidateQueries({ queryKey: ["admin-user-details", userId] });
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      recarregar();
       queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
     },
     onError: (e: Error) => toast.error(`Falha ao limpar: ${e.message}`),
@@ -240,314 +305,420 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
     onError: (e: Error) => toast.error(`Falha ao excluir: ${e.message}`),
   });
 
+  // ── Leitura do plano: em teste, cortesia com prazo, assinatura ou sem prazo ──
+  const agora = Date.now();
+  const fimTeste = data?.trial_ends_at ? new Date(data.trial_ends_at).getTime() : null;
+  const inicioTeste = data?.trial_started_at ? new Date(data.trial_started_at).getTime() : null;
+  const temStripe = !!data?.stripe_subscription_id;
+  const emTeste = !temStripe && !!fimTeste && fimTeste > agora && (data?.plan === "trial" || !data?.access_expires_at);
+  const diasRestantes = fimTeste ? Math.max(0, Math.ceil((fimTeste - agora) / 86400000)) : 0;
+  const diasTotais = fimTeste && inicioTeste ? Math.max(1, Math.round((fimTeste - inicioTeste) / 86400000)) : 7;
+  const pctTeste = fimTeste && inicioTeste ? Math.min(100, Math.max(0, ((agora - inicioTeste) / (fimTeste - inicioTeste)) * 100)) : 0;
+  const expira = data?.access_expires_at ? new Date(data.access_expires_at).getTime() : null;
+  const isManager = !!modulesData?.is_manager;
+
+  const chipPlano = !data ? null
+    : isSuspended ? <Chip tom="vermelho">Suspensa</Chip>
+    : temStripe ? <Chip tom="verde">Assinante {NOME_PLANO[data.plan ?? ""] ?? data.plan}</Chip>
+    : emTeste ? <Chip tom="ambar">Em teste · {diasRestantes === 0 ? "acaba hoje" : `faltam ${diasRestantes} ${diasRestantes === 1 ? "dia" : "dias"}`}</Chip>
+    : expira && expira < agora ? <Chip tom="vermelho">Acesso vencido</Chip>
+    : <Chip>{NOME_PLANO[data.plan ?? ""] ?? data.plan ?? "sem plano"}{expira ? ` até ${dataCurta(data.access_expires_at)}` : ""}</Chip>;
+
+  const telas = data?.telas_30 ?? [];
+  const maxTela = Math.max(1, ...telas.map((t) => t.n));
+  const zap = soDigitos(data?.phone);
+  const zapLink = zap ? `https://wa.me/${zap.length <= 11 ? `55${zap}` : zap}` : null;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="sm:max-w-lg max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-2xl"
+          className="sm:max-w-[1040px] w-[calc(100vw-1rem)] max-h-[92vh] sm:max-h-[92vh] overflow-y-auto overflow-x-hidden rounded-3xl p-0 sm:p-0 gap-0 [&>button:last-child]:hidden"
         >
-          <DialogHeader>
-            <DialogTitle className="font-display">Detalhes do usuário</DialogTitle>
-            <DialogDescription className="font-body text-sm truncate">
-              {data?.name || (isLoading ? "Carregando…" : userId?.slice(0, 8) || "")}
-            </DialogDescription>
+          <DialogHeader className="sr-only">
+            <DialogTitle>Detalhes do usuário</DialogTitle>
+            <DialogDescription>{data?.name ?? ""}</DialogDescription>
           </DialogHeader>
 
           {isLoading ? (
-            <div className="space-y-2 mt-4">
-              {Array.from({ length: 7 }).map((_, i) => (
-                <Skeleton key={i} className="h-14 w-full rounded-xl" />
-              ))}
+            <div className="space-y-2 p-6">
+              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
             </div>
           ) : error ? (
-            <p className="text-sm text-destructive font-body mt-4">Não foi possível carregar os detalhes.</p>
+            <p className="text-sm text-destructive font-body p-6">Não foi possível carregar os detalhes.</p>
           ) : data ? (
-            <div className="space-y-6 mt-4 min-w-0">
-              <section className="space-y-2 min-w-0">
-                <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Conta</h3>
-                <div className="space-y-2 min-w-0">
-                  <FieldBox label="Nome">
-                    <p className="text-sm font-body text-foreground break-words">{data.name || "-"}</p>
-                  </FieldBox>
-                  <FieldBox label="E-mail">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="flex-1 min-w-0 truncate text-sm font-body text-foreground">{data.email || "-"}</span>
-                      {data.email && <CopyButton text={data.email} />}
-                    </div>
-                  </FieldBox>
-                  <FieldBox label="Tipo de conta">
-                    <p className="text-sm font-body text-foreground truncate">
-                      {modulesData ? (modulesData.is_manager ? "🧑‍💼 Social mídia (gestor)" : "👤 Pessoa física (criador)") : "…"}
-                    </p>
-                  </FieldBox>
-                  {modulesData?.agency_owner_name && (
-                    <FieldBox label="Coberta pela agência">
-                      <p className="text-sm font-body text-foreground truncate">🏢 {modulesData.agency_owner_name}</p>
-                    </FieldBox>
-                  )}
-                  <FieldBox label="Plano">
-                    <p className="text-sm font-body text-foreground truncate">{data.plan ?? "-"}</p>
-                  </FieldBox>
-                  <FieldBox label="Role">
-                    <p className="text-sm font-body text-foreground truncate">{data.role ?? "-"}</p>
-                  </FieldBox>
-                  <FieldBox label="Status de acesso">
-                    <p className="text-sm font-body text-foreground truncate">{data.subscription_status ?? "-"}</p>
-                  </FieldBox>
-                  <FieldBox label="Validade do acesso">
-                    <p className="text-sm font-body text-foreground break-words">{formatValidity(data.access_expires_at)}</p>
-                  </FieldBox>
-                </div>
-              </section>
-
-              <section className="space-y-2 min-w-0">
-                <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Perfil</h3>
-                <div className="space-y-2 min-w-0">
-                  <FieldBox label="Nicho">
-                    <p className="text-sm font-body text-foreground break-words">{data.niche || "-"}</p>
-                  </FieldBox>
-                  <FieldBox label="Cadastro">
-                    <p className="text-sm font-body text-foreground truncate">{formatDate(data.created_at)}</p>
-                  </FieldBox>
-                </div>
-              </section>
-
-              <section className="space-y-3 min-w-0">
-                <h3 className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Ações</h3>
-
-                <FieldBox label="Mudar validade">
-                  <div className="flex flex-wrap items-center gap-2 mt-1 min-w-0">
-                    <Select value={validity} onValueChange={setValidity}>
-                      <SelectTrigger className="rounded-lg h-9 flex-1 min-w-[120px] text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="15d">15 dias</SelectItem>
-                        <SelectItem value="1m">1 mês</SelectItem>
-                        <SelectItem value="3m">3 meses</SelectItem>
-                        <SelectItem value="6m">6 meses</SelectItem>
-                        <SelectItem value="1y">1 ano</SelectItem>
-                        <SelectItem value="lifetime">Vitalício</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      size="sm"
-                      onClick={() => setValidityMutation.mutate()}
-                      disabled={setValidityMutation.isPending}
-                    >
-                      {setValidityMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-                      Salvar
-                    </Button>
+            <>
+              {/* Cabeçalho */}
+              <div className="flex items-center gap-4 px-5 sm:px-6 py-5 border-b border-border bg-gradient-to-r from-muted/50 to-card">
+                {data.avatar_url
+                  ? <img src={data.avatar_url} alt="" className="h-14 w-14 sm:h-16 sm:w-16 rounded-full object-cover shrink-0" />
+                  : <span className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-primary/80 text-primary-foreground grid place-items-center font-display font-extrabold text-2xl shrink-0">
+                      {(data.name ?? "?").trim().charAt(0).toUpperCase()}
+                    </span>}
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-display font-extrabold text-xl sm:text-2xl leading-tight truncate">{data.name || "-"}</h2>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    <Chip tom={isManager ? "roxo" : "neutro"}>{modulesData ? (isManager ? "Social mídia (gestora)" : "Criador (PF)") : "…"}</Chip>
+                    {chipPlano}
+                    <Chip tom="verde">Visto {haQuanto(data.last_seen_at)}</Chip>
+                    <Chip>Cadastro {dataCurta(data.created_at)}</Chip>
                   </div>
-                </FieldBox>
+                </div>
+                <button type="button" onClick={() => onOpenChange(false)} aria-label="Fechar"
+                  className="self-start rounded-full p-2 text-muted-foreground hover:bg-muted"><X className="h-5 w-5" /></button>
+              </div>
 
-                <FieldBox label="Plano">
-                  <div className="flex flex-wrap items-center gap-2 mt-1 min-w-0">
-                    <Select value={plan || data.plan || "free"} onValueChange={setPlan}>
-                      <SelectTrigger className="rounded-lg h-9 flex-1 min-w-[120px] text-sm"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="free">Free</SelectItem>
-                        <SelectItem value="trial">Trial</SelectItem>
-                        <SelectItem value="pro">Pro</SelectItem>
-                        <SelectItem value="studio">Studio</SelectItem>
-                        <SelectItem value="agency">Agência</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button size="sm" disabled={setPlanMutation.isPending}
-                      onClick={async () => {
-                        const ok = await confirmar({ titulo: "Trocar o plano desta conta?", descricao: "Muda o que a pessoa acessa imediatamente e fica registrado na trilha do admin.", acao: "Trocar plano" });
-                        if (ok) setPlanMutation.mutate();
-                      }}>
-                      {setPlanMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-                      Salvar
-                    </Button>
-                  </div>
-                </FieldBox>
+              <div className="grid md:grid-cols-[330px_minmax(0,1fr)]">
+                {/* ESQUERDA: quem é */}
+                <div className="px-5 sm:px-6 py-5 space-y-5 min-w-0">
+                  <section>
+                    <Titulo>Contato</Titulo>
+                    <Linha k="E-mail" acao={data.email ? <CopyButton text={data.email} /> : undefined}>{data.email || <Vazio />}</Linha>
+                    <Linha k="WhatsApp" acao={zapLink ? (
+                      <a href={zapLink} target="_blank" rel="noopener noreferrer"
+                        className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#25D366] text-white px-2.5 py-1 text-[11px] font-body font-bold">
+                        <MessageCircle className="h-3 w-3" /> Chamar
+                      </a>) : undefined}>
+                      {data.phone || <Vazio />}
+                    </Linha>
+                    <Linha k="Instagram" acao={data.instagram_handle ? (
+                      <a href={`https://instagram.com/${data.instagram_handle.replace(/^@/, "")}`} target="_blank" rel="noopener noreferrer"
+                        className="shrink-0 inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-body font-semibold">
+                        <Instagram className="h-3 w-3" /> Abrir
+                      </a>) : undefined}>
+                      {data.instagram_handle ? `@${data.instagram_handle.replace(/^@/, "")}` : <Vazio />}
+                    </Linha>
+                    <Linha k="Nicho">{data.niche || <Vazio />}</Linha>
+                    <Linha k="Cidade">{data.cidade || <Vazio />}</Linha>
+                  </section>
 
-                {(data.plan === "agency" || modulesData?.is_manager) && (
-                  <>
-                    {/* CARTEIRA DO CRM: é este o "9 de 13" que ela vê na tela de
-                        Clientes. Vem em primeiro porque é o que a gente mexe
-                        toda hora; os assentos de conta Cria quase nunca mudam. */}
-                    <FieldBox label="Carteira de clientes (CRM)">
-                      <div className="flex flex-wrap items-center gap-2 mt-1 min-w-0">
-                        <Input
-                          type="number" inputMode="numeric" min={0} max={100}
-                          value={packsValue}
-                          onChange={(e) => setPacks(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
-                          className="h-9 w-24"
-                        />
-                        <span className="text-[11px] font-body text-muted-foreground">pacotes de cortesia</span>
-                        <Button size="sm" onClick={() => setPacksMutation.mutate()} disabled={setPacksMutation.isPending}>
-                          {setPacksMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-                          Salvar
-                        </Button>
+                  <section>
+                    <Titulo>Acesso</Titulo>
+                    <Linha k="Último acesso">{quandoComHora(data.last_seen_at)}</Linha>
+                    <Linha k="Último login">{quandoComHora(data.last_sign_in_at)}</Linha>
+                    <Linha k="Dias ativos">{(data.dias_ativos_14 ?? 0) > 0 ? `${data.dias_ativos_14} dos últimos 14` : <Vazio t="contando desde 20/10" />}</Linha>
+                    <Linha k="Onboarding">{data.onboarding_completed ? "completo" : "não terminou"}</Linha>
+                    <Linha k="Termos">{data.terms_accepted_at ? `aceitou ${data.terms_version ?? ""} em ${dataCurta(data.terms_accepted_at)}` : <Vazio t="não aceitou" />}</Linha>
+                  </section>
+
+                  {/* Link novo em mãos, com a mensagem pronta pro WhatsApp. */}
+                  {resent && (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2.5 min-w-0 space-y-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="text-[10px] uppercase tracking-wider text-emerald-700 font-semibold flex-1">Link novo (vale 1 hora, uso único)</p>
+                        <CopyButton text={resent.link} />
                       </div>
-                      {modulesData && (
-                        <p className="text-[11px] font-body text-foreground mt-2">
-                          Teto hoje: <b>{modulesData.crm_limit ?? 3}</b> clientes
-                          <span className="text-muted-foreground"> ({modulesData.crm_used ?? 0} em uso)</span>
-                          <span className="text-muted-foreground">
-                            {" · "}3 da base + {modulesData.client_packs ?? 0} cortesia
-                            {(modulesData.paid_client_packs ?? 0) > 0 ? ` + ${modulesData.paid_client_packs} pago` : ""}
-                            {" × 10"}
-                          </span>
-                        </p>
-                      )}
-                      <p className="text-[10px] font-body text-muted-foreground mt-1.5">
-                        Cada pacote vale 10 clientes. Aqui só a cortesia: o que ela comprar no Stripe entra sozinho e não é sobrescrito.
-                      </p>
-                    </FieldBox>
-
-                    {/* Rótulo reescrito: dizia "(clientes)" e falava em "nº de
-                        clientes que a agência pode cobrir", o que fazia qualquer
-                        um confundir com a carteira do CRM acima. São coisas
-                        diferentes e agora o texto diz qual é qual. */}
-                    <FieldBox label="Contas Cria pra clientes (assentos)">
-                      <div className="flex flex-wrap items-center gap-2 mt-1 min-w-0">
-                        <Input
-                          type="number" inputMode="numeric" min={0} max={200}
-                          value={seatsValue}
-                          onChange={(e) => setSeats(Math.max(0, Math.min(200, Number(e.target.value) || 0)))}
-                          className="h-9 w-24"
-                        />
-                        <Button size="sm" onClick={() => setSeatsMutation.mutate()} disabled={setSeatsMutation.isPending}>
-                          {setSeatsMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
-                          Salvar
-                        </Button>
-                        {modulesData && (
-                          <span className="text-[11px] font-body text-muted-foreground">{modulesData.seats_used ?? 0} usados de {modulesData.seat_limit ?? 0}</span>
-                        )}
-                      </div>
-                      <p className="text-[10px] font-body text-muted-foreground mt-1.5">
-                        Quantas CONTAS do Cria ela pode abrir pros clientes dela (login próprio, em "Suas contas"). Não é a carteira do CRM acima. Precisa ser &gt; 0 pra ela sair do banner de agência.
-                      </p>
-                    </FieldBox>
-                  </>
-                )}
-
-                {modulesData && (
-                  <FieldBox label="Módulos (add-ons de social mídia)">
-                    {modulesData.is_manager ? (
-                      <>
-                        <div className="flex flex-wrap gap-1.5 mt-1">
-                          {modulesData.modules.map((m) => {
-                            const on = modulesData.active.includes(m.code);
-                            return (
-                              <button
-                                key={m.code}
-                                onClick={() => setModuleMutation.mutate({ code: m.code, enabled: !on })}
-                                disabled={setModuleMutation.isPending}
-                                className={`px-2.5 py-1 rounded-full text-xs font-body border transition-colors ${on ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}
-                              >
-                                {on ? "✓ " : "+ "}{m.name}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <p className="text-[10px] font-body text-muted-foreground mt-1.5">Clique pra ligar/desligar cada módulo pra esta conta de gestor.</p>
-                      </>
-                    ) : (
-                      <p className="text-[11px] font-body text-muted-foreground mt-1">Esta é uma conta <strong>pessoa física</strong> (criador). Os add-ons são só pra contas de social mídia, aqui, pra liberar recursos, use o <strong>Plano</strong> (ex.: Studio) acima.</p>
-                    )}
-                  </FieldBox>
-                )}
-
-                {/* Link novo em maos: aparece logo apos reenviar, com a mensagem
-                    pronta pro WhatsApp (o e-mail tambem foi, mas o link na mao
-                    nao depende de caixa de entrada). */}
-                {resent && (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2.5 min-w-0 space-y-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <p className="text-[10px] uppercase tracking-wider text-emerald-700 font-semibold flex-1">Link novo (vale 1 hora, uso único)</p>
-                      <CopyButton text={resent.link} />
-                    </div>
-                    <code className="block truncate text-xs font-mono bg-white/70 rounded-lg px-2 py-1.5">{resent.link}</code>
-                    {(() => {
-                      const msg = `Oi! Gerei um link novo de acesso ao CRIA pra você. 🎉\n\nE-mail: ${resent.email}\nAcesso: ${resent.link}\n\nImportante: o link vale por 1 hora e funciona uma vez só. Se abrir pelo WhatsApp, toque nos 3 pontinhos e escolha "Abrir no navegador". Qualquer dúvida, me chama!`;
-                      return (
-                        <div className="min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Mensagem pronta pro WhatsApp</p>
-                            <CopyButton text={msg} />
+                      <code className="block truncate text-xs font-mono bg-white/70 rounded-lg px-2 py-1.5">{resent.link}</code>
+                      {(() => {
+                        const msg = `Oi! Gerei um link novo de acesso ao CRIA pra você.\n\nE-mail: ${resent.email}\nAcesso: ${resent.link}\n\nImportante: o link vale por 1 hora e funciona uma vez só. Se abrir pelo WhatsApp, toque nos 3 pontinhos e escolha "Abrir no navegador". Qualquer dúvida, me chama!`;
+                        return (
+                          <div className="min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Mensagem pronta pro WhatsApp</p>
+                              <CopyButton text={msg} />
+                            </div>
+                            <pre className="text-xs font-body text-foreground whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere] max-h-40 overflow-y-auto">{msg}</pre>
                           </div>
-                          <pre className="text-xs font-body text-foreground whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere] max-h-40 overflow-y-auto">{msg}</pre>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
+                        );
+                      })()}
+                    </div>
+                  )}
 
-                <div className="flex flex-wrap gap-2 min-w-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => resendMutation.mutate()}
-                    disabled={resendMutation.isPending || !data.email}
-                  >
-                    {resendMutation.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Mail className="h-3 w-3 mr-1" />}
-                    Reenviar acesso
-                  </Button>
-
-                  {!isSelf && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        // Suspender fecha o app da pessoa na hora (ProtectedRoute): pede confirmação.
-                        const ok = await confirmar({
-                          titulo: isSuspended ? "Reativar esta conta?" : "Suspender esta conta?",
-                          descricao: isSuspended ? "A pessoa volta a entrar normalmente." : "A pessoa é barrada na entrada do app até você reativar. Os dados ficam guardados.",
-                          acao: isSuspended ? "Reativar" : "Suspender",
-                          destrutivo: !isSuspended,
-                        });
-                        if (ok) toggleSuspendMutation.mutate();
-                      }}
-                      disabled={toggleSuspendMutation.isPending}
-                    >
-                      {toggleSuspendMutation.isPending ? (
-                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                      ) : isSuspended ? (
-                        <ShieldCheck className="h-3 w-3 mr-1" />
-                      ) : (
-                        <ShieldOff className="h-3 w-3 mr-1" />
+                  <section>
+                    <Titulo>Ações da conta</Titulo>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" onClick={() => resendMutation.mutate()} disabled={resendMutation.isPending || !data.email}>
+                        {resendMutation.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Mail className="h-3 w-3 mr-1" />}
+                        Reenviar acesso
+                      </Button>
+                      {!isSelf && (
+                        <Button variant="outline" size="sm" disabled={toggleSuspendMutation.isPending}
+                          onClick={async () => {
+                            const ok = await confirmar({
+                              titulo: isSuspended ? "Reativar esta conta?" : "Suspender esta conta?",
+                              descricao: isSuspended ? "A pessoa volta a entrar normalmente." : "A pessoa é barrada na entrada do app até você reativar. Os dados ficam guardados.",
+                              acao: isSuspended ? "Reativar" : "Suspender",
+                              destrutivo: !isSuspended,
+                            });
+                            if (ok) toggleSuspendMutation.mutate();
+                          }}>
+                          {toggleSuspendMutation.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            : isSuspended ? <ShieldCheck className="h-3 w-3 mr-1" /> : <ShieldOff className="h-3 w-3 mr-1" />}
+                          {isSuspended ? "Reativar" : "Suspender"}
+                        </Button>
                       )}
-                      {isSuspended ? "Reativar" : "Suspender"}
-                    </Button>
-                  )}
+                      {!isSelf && (
+                        <Button variant="outline" size="sm" className="border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+                          onClick={() => setConfirmWipe(true)} disabled={wipeMutation.isPending}>
+                          {wipeMutation.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Eraser className="h-3 w-3 mr-1" />}
+                          Limpar dados
+                        </Button>
+                      )}
+                      {!isSelf && (
+                        <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)} disabled={deleteMutation.isPending}>
+                          <Trash2 className="h-3 w-3 mr-1" /> Excluir
+                        </Button>
+                      )}
+                    </div>
+                  </section>
+                </div>
 
-                  {!isSelf && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
-                      onClick={() => setConfirmWipe(true)}
-                      disabled={wipeMutation.isPending}
-                    >
-                      {wipeMutation.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Eraser className="h-3 w-3 mr-1" />}
-                      Limpar dados
-                    </Button>
-                  )}
+                {/* DIREITA: abas */}
+                <div className="border-t md:border-t-0 md:border-l border-border bg-muted/20 px-5 sm:px-6 py-5 min-w-0">
+                  <div className="flex gap-1 rounded-full bg-muted p-1 mb-4 w-full sm:w-max">
+                    {([["plano", "Plano e uso"], ["modulos", "Módulos e limites"]] as const).map(([k, t]) => (
+                      <button key={k} type="button" onClick={() => setAba(k)}
+                        className={cn("flex-1 sm:flex-none rounded-full px-4 py-1.5 text-xs font-body font-semibold transition-colors",
+                          aba === k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
 
-                  {!isSelf && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setConfirmDelete(true)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" /> Excluir
-                    </Button>
+                  {aba === "plano" ? (
+                    <div className="space-y-4">
+                      <Cartao>
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          <div className="min-w-0">
+                            <p className="font-display font-extrabold text-2xl leading-none">
+                              {emTeste ? "Teste grátis" : (NOME_PLANO[data.plan ?? ""] ?? data.plan ?? "Sem plano")}
+                            </p>
+                            {emTeste ? (
+                              <>
+                                <p className="text-xs font-body text-muted-foreground mt-1.5">
+                                  começou {dataCurta(data.trial_started_at)} · termina <b className="text-foreground">{dataCurta(data.trial_ends_at)}</b>
+                                </p>
+                                <div className="h-2 rounded-full bg-muted overflow-hidden mt-2"><div className="h-full bg-amber-500 rounded-full" style={{ width: `${pctTeste}%` }} /></div>
+                                <p className="text-[11px] font-body text-muted-foreground mt-1">
+                                  {Math.max(0, diasTotais - diasRestantes)} de {diasTotais} dias usados
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-xs font-body text-muted-foreground mt-1.5">
+                                {temStripe ? "Cobrança pelo Stripe"
+                                  : expira ? (expira < agora ? `Venceu em ${dataCurta(data.access_expires_at)}` : `Liberado até ${dataCurta(data.access_expires_at)}`)
+                                  : fimTeste && fimTeste < agora && data.plan === "trial" ? `Teste acabou em ${dataCurta(data.trial_ends_at)}`
+                                  : "Sem prazo (cortesia)"}
+                              </p>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-body text-muted-foreground">Pagamento</p>
+                            <p className="text-[13.5px] font-body mt-0.5">{temStripe ? "Assinatura ativa no Stripe" : "Sem cartão"}</p>
+                            <p className="text-[11px] font-body text-muted-foreground">Status: {data.subscription_status ?? "-"}</p>
+                          </div>
+                        </div>
+
+                        {!temStripe && (
+                          <div className="flex flex-wrap gap-1.5 mt-3">
+                            {[7, 30].map((d) => (
+                              <Button key={d} type="button" variant="outline" size="sm" className="rounded-full h-8"
+                                disabled={estenderTeste.isPending}
+                                onClick={async () => {
+                                  const ok = await confirmar({ titulo: `Dar mais ${d} dias de teste?`, descricao: "Conta a partir do fim atual do teste (ou de hoje, se já acabou).", acao: `+${d} dias` });
+                                  if (ok) estenderTeste.mutate(d);
+                                }}>
+                                {estenderTeste.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
+                                {d} dias de teste
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="mt-3 pt-3 border-t border-border">
+                          <p className="text-[11px] font-body font-semibold text-muted-foreground mb-1.5">Mudar plano ou dar cortesia</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Select value={plan || data.plan || "free"} onValueChange={setPlan}>
+                              <SelectTrigger className="rounded-xl h-9 flex-1 min-w-[140px] text-sm"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="free">Free</SelectItem>
+                                <SelectItem value="trial">Teste</SelectItem>
+                                <SelectItem value="pro">Pro</SelectItem>
+                                <SelectItem value="studio">Studio</SelectItem>
+                                <SelectItem value="agency">Agência</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Select value={prazo} onValueChange={setPrazo}>
+                              <SelectTrigger className="rounded-xl h-9 flex-1 min-w-[140px] text-sm"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="manter">Prazo: manter</SelectItem>
+                                <SelectItem value="15d">Até daqui 15 dias</SelectItem>
+                                <SelectItem value="1m">Até daqui 1 mês</SelectItem>
+                                <SelectItem value="3m">Até daqui 3 meses</SelectItem>
+                                <SelectItem value="6m">Até daqui 6 meses</SelectItem>
+                                <SelectItem value="1y">Até daqui 1 ano</SelectItem>
+                                <SelectItem value="lifetime">Sem prazo</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button size="sm" className="rounded-xl h-9"
+                              disabled={salvarPlano.isPending || ((plan || data.plan) === data.plan && prazo === "manter")}
+                              onClick={async () => {
+                                const ok = await confirmar({ titulo: "Salvar plano desta conta?", descricao: "Muda o que a pessoa acessa na hora e fica registrado na trilha do admin.", acao: "Salvar" });
+                                if (ok) salvarPlano.mutate();
+                              }}>
+                              {salvarPlano.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                              Salvar
+                            </Button>
+                          </div>
+                          {temStripe && <p className="text-[11px] font-body text-amber-700 mt-1.5">Ela paga pelo Stripe: mudar aqui não muda a cobrança.</p>}
+                        </div>
+                      </Cartao>
+
+                      <section>
+                        <Titulo>O que {isManager ? "ela" : "a pessoa"} usa</Titulo>
+                        <Cartao>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {[
+                              { n: data.uso?.posts ?? 0, t: "posts criados" },
+                              { n: data.uso?.clientes ?? 0, t: "clientes no CRM" },
+                              { n: data.uso?.captacoes ?? 0, t: "captações" },
+                              { n: data.ai_ideas_used_month ?? 0, t: "usos de IA no mês" },
+                            ].map((x) => (
+                              <div key={x.t} className="rounded-xl border border-border bg-background px-3 py-2.5">
+                                <p className="font-display font-extrabold text-xl leading-none">{x.n}</p>
+                                <p className="text-[11px] font-body text-muted-foreground mt-1">{x.t}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-xs font-body text-muted-foreground mt-3 mb-1.5">Telas mais abertas (últimos 30 dias)</p>
+                          {telas.length === 0 ? (
+                            <p className="text-[12px] font-body italic text-muted-foreground/80">Nada ainda: começou a contar em 20/10/2026.</p>
+                          ) : telas.map((t) => (
+                            <div key={t.modulo} className="grid grid-cols-[110px_1fr_40px] gap-2 items-center py-1">
+                              <span className="text-[12.5px] font-body truncate">{nomeTela(t.modulo)}</span>
+                              <span className="h-2.5 rounded-full bg-muted overflow-hidden"><span className="block h-full rounded-full bg-primary" style={{ width: `${(t.n / maxTela) * 100}%` }} /></span>
+                              <span className="text-[11.5px] font-body text-muted-foreground text-right">{t.n}x</span>
+                            </div>
+                          ))}
+                          <p className="text-[11px] font-body text-muted-foreground mt-3">
+                            Armazenamento: {mb(data.storage_used_bytes)} de {mb(data.storage_quota_bytes)}
+                          </p>
+                        </Cartao>
+                      </section>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <Cartao>
+                        <div className="flex items-center gap-3">
+                          <span className={cn("h-9 w-9 rounded-xl grid place-items-center shrink-0", isManager ? "bg-violet-100 text-violet-700" : "bg-muted text-muted-foreground")}>
+                            {isManager ? <Users className="h-4 w-4" /> : <UserRound className="h-4 w-4" />}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-body font-bold">{modulesData ? (isManager ? "Conta de social mídia (gestora)" : "Conta de criador (pessoa física)") : "…"}</p>
+                            <p className="text-[11.5px] font-body text-muted-foreground">
+                              {isManager ? "Abre no painel de social mídia, com clientes, captação e equipe." : "Abre no painel de criador, com o próprio conteúdo."}
+                            </p>
+                          </div>
+                          {modulesData && !isSelf && (
+                            <Button size="sm" variant="outline" className="rounded-xl shrink-0" disabled={trocarTipo.isPending}
+                              onClick={async () => {
+                                const pra = isManager ? "creator" : "manager";
+                                const ok = await confirmar({
+                                  titulo: pra === "manager" ? "Transformar em social mídia?" : "Voltar pra conta de criador?",
+                                  descricao: pra === "manager"
+                                    ? "No próximo acesso ela cai no painel de social mídia. O que já criou continua na conta; plano e teste não mudam."
+                                    : "No próximo acesso ela cai no painel de criador. Clientes e equipe continuam guardados.",
+                                  acao: pra === "manager" ? "Transformar" : "Voltar pra criador",
+                                });
+                                if (ok) trocarTipo.mutate(pra);
+                              }}>
+                              {trocarTipo.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                              {isManager ? "Voltar pra criador" : "Transformar em social mídia"}
+                            </Button>
+                          )}
+                        </div>
+                        {modulesData?.agency_owner_name && (
+                          <p className="text-[11.5px] font-body text-muted-foreground mt-2">Coberta pela agência <b className="text-foreground">{modulesData.agency_owner_name}</b>.</p>
+                        )}
+                      </Cartao>
+
+                      <section>
+                        <Titulo>Módulos</Titulo>
+                        <Cartao>
+                          {!modulesData ? <Skeleton className="h-8 w-full rounded-lg" />
+                            : isManager ? (
+                              <>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {modulesData.modules.map((m) => {
+                                    const on = modulesData.active.includes(m.code);
+                                    return (
+                                      <button key={m.code} type="button"
+                                        onClick={() => setModuleMutation.mutate({ code: m.code, enabled: !on })}
+                                        disabled={setModuleMutation.isPending}
+                                        className={cn("inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-body font-semibold border transition-colors",
+                                          on ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
+                                        {on ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}{m.name}
+                                        {m.coming_soon && <span className="text-[9px] font-normal opacity-70">(em breve)</span>}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                <p className="text-[11px] font-body text-muted-foreground mt-2">Toque pra ligar ou desligar cada módulo nesta conta. Vale na hora.</p>
+                              </>
+                            ) : (
+                              <p className="text-[12.5px] font-body text-muted-foreground">
+                                Módulos são da conta de social mídia. Pra criador, o que libera recurso é o <b className="text-foreground">plano</b> (aba Plano e uso).
+                                Se ela é social mídia, use "Transformar em social mídia" acima.
+                              </p>
+                            )}
+                        </Cartao>
+                      </section>
+
+                      {(data.plan === "agency" || isManager) && (
+                        <section>
+                          <Titulo>Limites</Titulo>
+                          <div className="grid sm:grid-cols-2 gap-3">
+                            <Cartao className="min-w-0">
+                              <p className="text-[13px] font-body font-bold">Carteira do CRM</p>
+                              <p className="text-[11.5px] font-body text-muted-foreground">
+                                {modulesData ? `${modulesData.crm_used ?? 0} de ${modulesData.crm_limit ?? 3} clientes em uso` : "…"}
+                              </p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Input type="number" inputMode="numeric" min={0} max={100} value={packsValue}
+                                  onChange={(e) => setPacks(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+                                  className="h-9 w-20" />
+                                <span className="text-[11px] font-body text-muted-foreground flex-1 min-w-0">pacotes de cortesia (10 cada)</span>
+                                <Button size="sm" onClick={() => setPacksMutation.mutate()} disabled={setPacksMutation.isPending}>
+                                  {setPacksMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}Salvar
+                                </Button>
+                              </div>
+                              {(modulesData?.paid_client_packs ?? 0) > 0 && (
+                                <p className="text-[10.5px] font-body text-muted-foreground mt-1.5">+ {modulesData?.paid_client_packs} pacote(s) pago(s) no Stripe, que entram sozinhos.</p>
+                              )}
+                            </Cartao>
+                            <Cartao className="min-w-0">
+                              <p className="text-[13px] font-body font-bold">Contas Cria pra clientes</p>
+                              <p className="text-[11.5px] font-body text-muted-foreground">
+                                {modulesData ? `${modulesData.seats_used ?? 0} de ${modulesData.seat_limit ?? 0} em uso` : "…"}
+                              </p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Input type="number" inputMode="numeric" min={0} max={200} value={seatsValue}
+                                  onChange={(e) => setSeats(Math.max(0, Math.min(200, Number(e.target.value) || 0)))}
+                                  className="h-9 w-20" />
+                                <span className="text-[11px] font-body text-muted-foreground flex-1 min-w-0">assentos</span>
+                                <Button size="sm" onClick={() => setSeatsMutation.mutate()} disabled={setSeatsMutation.isPending}>
+                                  {setSeatsMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}Salvar
+                                </Button>
+                              </div>
+                              <p className="text-[10.5px] font-body text-muted-foreground mt-1.5">Login próprio pro cliente dela, em "Suas contas". Não é a carteira do CRM.</p>
+                            </Cartao>
+                          </div>
+                        </section>
+                      )}
+                    </div>
                   )}
                 </div>
-              </section>
-            </div>
-          ) : null}
+              </div>
 
-          <div className="flex flex-wrap justify-end gap-2 mt-6">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
-          </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 sm:px-6 py-3 border-t border-border bg-muted/30 text-[11px] font-body text-muted-foreground">
+                <span>Técnico: role <b className="text-foreground">{data.role ?? "-"}</b></span>
+                <span>status <b className="text-foreground">{data.subscription_status ?? "-"}</b></span>
+                <span>id {data.id.slice(0, 8)}…</span>
+                <span className="ml-auto"><Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Fechar</Button></span>
+              </div>
+            </>
+          ) : null}
         </DialogContent>
       </Dialog>
 
@@ -565,11 +736,8 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={wipeMutation.isPending}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-amber-600 text-white hover:bg-amber-700"
-              onClick={(e) => { e.preventDefault(); wipeMutation.mutate(); }}
-              disabled={wipeMutation.isPending}
-            >
+            <AlertDialogAction className="bg-amber-600 text-white hover:bg-amber-700"
+              onClick={(e) => { e.preventDefault(); wipeMutation.mutate(); }} disabled={wipeMutation.isPending}>
               {wipeMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
               Limpar tudo
             </AlertDialogAction>
@@ -588,11 +756,8 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteMutation.isPending}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(e) => { e.preventDefault(); deleteMutation.mutate(); }}
-              disabled={deleteMutation.isPending}
-            >
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); deleteMutation.mutate(); }} disabled={deleteMutation.isPending}>
               {deleteMutation.isPending && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
               Excluir definitivamente
             </AlertDialogAction>
