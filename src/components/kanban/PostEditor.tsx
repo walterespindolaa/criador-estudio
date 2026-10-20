@@ -334,10 +334,15 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   // Refs de rolagem: mainRef é o container do fluxo vertical; conteudoRef é o
   // passo 1 (o Estúdio manda a pessoa de volta pro conteúdo com scroll suave).
   const mainRef = useRef<HTMLDivElement>(null);
+  // O corpo do diálogo monta depois do primeiro efeito (portal do Radix): com
+  // useRef o efeito via null e nunca media (bug de 19/10/2026). O elemento em
+  // estado faz o efeito rodar quando ele aparece.
+  const [mainEl, setMainEl] = useState<HTMLDivElement | null>(null);
+  const ligarMain = useCallback((el: HTMLDivElement | null) => { mainRef.current = el; setMainEl(el); }, []);
   useEffect(() => { if (open) setAbaMobile("texto"); }, [open]);
   useEffect(() => {
     if (!telaLarga || !open) return;
-    const el = mainRef.current;
+    const el = mainEl;
     if (!el) return;
     // 32 = respiro de cima e de baixo (py-4 do corpo).
     const medir = () => setAlturaPainel(Math.max(420, el.clientHeight - 32));
@@ -345,7 +350,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
     const ro = new ResizeObserver(medir);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [telaLarga, open]);
+  }, [telaLarga, open, mainEl]);
   const irPraAba = (aba: "texto" | "midia" | "previa") => {
     setAbaMobile(aba);
     mainRef.current?.scrollTo({ top: 0 });
@@ -1956,7 +1961,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               No desktop (lg pra cima): duas colunas. À esquerda (~60%) o fluxo
               numerado rolável; à direita (~40%) a prévia do post fixa (sticky),
               sempre visível enquanto a pessoa escreve. */}
-          <div ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/20">
+          <div ref={ligarMain} className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/20">
             {/* Coluna da direita agora tem largura FIXA (a da prévia): antes era
                2fr e a prévia de 380px boiava no meio dela, deixando faixas
                vazias dos dois lados (pedido do Walter, 31/08: menos margem). */}
@@ -1987,6 +1992,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
               {/* COLUNA ESQUERDA: o fluxo numerado (no mobile, a aba Texto). */}
               <div className={cn("space-y-4 min-w-0", !telaLarga && abaMobile !== "texto" && "hidden")}>
+              {/* Data, hora e Instagram numa faixa no topo da esquerda (Walter,
+                  19/10/2026): na direita eles tiravam 150px da prévia e numa
+                  tela de notebook ela virava um selo. A direita ficou só com
+                  Mídia + Prévia. */}
+              {telaLarga && (
+                <div className="grid grid-cols-[330px_minmax(0,1fr)] gap-3 items-stretch [&>*]:min-w-0">{blocoAgenda}</div>
+              )}
               {/* 2. O CONTEUDO DO POST */}
               <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
                 {/* Pilar no cabeçalho do bloco (Walter, 19/10/2026): antes ficava
@@ -2935,25 +2947,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
               {/* COLUNA DIREITA (só desktop): a PRÉVIA do post, fixa enquanto rola.
                   No mobile ela não aparece aqui: fica no botão "Prévia" do topo. */}
-              {/* PAINEL DA DIREITA PARADO (Walter, 19/10/2026): Data, Mídia
+              {/* PAINEL DA DIREITA PARADO (Walter, 19/10/2026): Mídia
                   compacta e Prévia cabem na altura da tela; só a esquerda rola.
                   Antes a Mídia aberta empurrava a prévia pra fora da tela. */}
               {telaLarga && (
               <aside style={alturaPainel ? { height: alturaPainel } : undefined}
                 className="flex flex-col gap-2.5 sticky top-4 self-start w-full min-h-0 overflow-y-auto">
-                <div className="shrink-0 space-y-2">{blocoAgenda}</div>
                 <div className="shrink-0 rounded-2xl border border-border bg-card px-3 py-2.5">{blocoMidia}</div>
                 {/* Prévia: ocupa o que sobra do painel e encolhe pela altura
-                    (larguraPrevia). No celular ela é a aba "Prévia". */}
+                    (PreviaQueCabe). No celular ela é a aba "Prévia". */}
                 <div className="flex flex-col flex-1 min-h-[220px] w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
-                  <div className="px-3 py-2 border-b border-border bg-card/50 flex items-center gap-2">
-                    <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-xs font-display font-semibold text-foreground">Prévia do post</span>
-                  </div>
-                  {/* CELULARZINHO, não retângulo gigante (Walter, 01/09: "tá
-                      horrível assim"): a prévia é estreita e centrada, no
-                      tamanho natural de um post, com respiro em volta. Se
-                      passar da altura, rola por dentro sem cortar. */}
                   <PreviaQueCabe>{previaConteudo}</PreviaQueCabe>
                 </div>
               </aside>
