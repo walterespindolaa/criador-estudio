@@ -159,6 +159,10 @@ const Onboarding = () => {
 
   const [name, setName] = useState((rascunho?.name as string) ?? "");
   const [handle, setHandle] = useState((rascunho?.handle as string) ?? "");
+  // WhatsApp e cidade (Walter, 20/10/2026): opcionais, só pro admin conseguir
+  // falar com quem entra. Ficam no perfil de quem está logado.
+  const [telefone, setTelefone] = useState((rascunho?.telefone as string) ?? "");
+  const [cidade, setCidade] = useState((rascunho?.cidade as string) ?? "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [niches, setNiches] = useState<string[]>((rascunho?.niches as string[]) ?? []);
@@ -201,9 +205,9 @@ const Onboarding = () => {
   // Guarda o rascunho a cada mudança (barato: um objeto pequeno).
   useEffect(() => {
     try {
-      sessionStorage.setItem(chaveRascunho, JSON.stringify({ name, handle, niches, platforms, objetivos, publico, tom, weeklyGoal }));
+      sessionStorage.setItem(chaveRascunho, JSON.stringify({ name, handle, telefone, cidade, niches, platforms, objetivos, publico, tom, weeklyGoal }));
     } catch { /* modo privado */ }
-  }, [chaveRascunho, name, handle, niches, platforms, objetivos, publico, tom, weeklyGoal]);
+  }, [chaveRascunho, name, handle, telefone, cidade, niches, platforms, objetivos, publico, tom, weeklyGoal]);
 
   const conectarInstagramAgora = () => {
     // Volta pra este mesmo passo, com o rascunho preservado.
@@ -376,6 +380,17 @@ const Onboarding = () => {
       if (ehMeuPerfil) await atualizarPerfilAtivo.mutateAsync(profileUpdates as PerfilAtivoPatch);
       else await updateProfile.mutateAsync(profileUpdates);
 
+      // Contato de quem está logado (best-effort: não trava o onboarding).
+      const tel = telefone.replace(/[^\d+]/g, "");
+      const cid = sanitizeText(cidade.trim()).slice(0, 80);
+      if (tel.length >= 10 || cid) {
+        const contato: Record<string, string> = {};
+        if (tel.length >= 10) contato.phone = tel;
+        if (cid) contato.cidade = cid;
+        const { error: contatoErr } = await supabase.from("profiles").update(contato as never).eq("id", user.id);
+        if (contatoErr) console.warn("[onboarding] contato não salvou", contatoErr.message);
+      }
+
       if (finalPillars.length > 0) {
         const { data: pilaresCriados, error: pillarsErr } = await supabase.from("pillars").insert(
           finalPillars.map((p, i) => ({
@@ -451,7 +466,7 @@ const Onboarding = () => {
     } finally {
       setSetupLoading(false);
     }
-  }, [user, name, handle, niches, platforms, weeklyGoal, objetivos, publico, tom, uploadAvatar, updateProfile, ehMeuPerfil, donoId, atualizarPerfilAtivo, qc]);
+  }, [user, name, handle, telefone, cidade, niches, platforms, weeklyGoal, objetivos, publico, tom, uploadAvatar, updateProfile, ehMeuPerfil, donoId, atualizarPerfilAtivo, qc]);
 
   useEffect(() => {
     if (step === 6 && !setupStartedRef.current && !setupDone) {
@@ -610,6 +625,19 @@ const Onboarding = () => {
                     </div>
                   </div>
                 )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs text-muted-foreground">WhatsApp (opcional)</Label>
+                  <Input value={telefone} onChange={(e) => setTelefone(e.target.value)} inputMode="tel"
+                    placeholder="(47) 99999-0000" className="rounded-xl h-11" maxLength={20} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="font-body text-xs text-muted-foreground">Cidade (opcional)</Label>
+                  <Input value={cidade} onChange={(e) => setCidade(e.target.value)}
+                    placeholder="Itajaí, SC" className="rounded-xl h-11" maxLength={80} />
+                </div>
               </div>
 
               {/* PERSONA ERRADA TEM VOLTA (v2). O cadastro vinha com "criador"

@@ -5,6 +5,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { RastroDeTelas } from "@/components/RastroDeTelas";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AccountProvider } from "@/contexts/AccountContext";
 import { AuthOnlyRoute, ProtectedRoute } from "@/components/ProtectedRoute";
@@ -292,6 +293,7 @@ const App = () => (
         <BrowserRouter>
           <ScrollRestore />
           <MetaPixelTracker />
+          <RastroDeTelas />
           <ConsentBanner />
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
