@@ -13,7 +13,7 @@ import { refLinkHref, refLinkLabel } from "@/lib/refLinks";
    eles saem sem thumb e quem exibe cai no ícone até a capa chegar.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-export type Plataforma = "instagram" | "tiktok" | "youtube" | "drive" | "web";
+export type Plataforma = "instagram" | "tiktok" | "youtube" | "pinterest" | "drive" | "web";
 
 export type PreviaLink = {
   url: string;        // href seguro (com https://)
@@ -24,7 +24,7 @@ export type PreviaLink = {
 };
 
 const NOMES: Record<Plataforma, string> = {
-  instagram: "Instagram", tiktok: "TikTok", youtube: "YouTube", drive: "Google Drive", web: "Link",
+  instagram: "Instagram", tiktok: "TikTok", youtube: "YouTube", pinterest: "Pinterest", drive: "Google Drive", web: "Link",
 };
 
 function idDoYoutube(u: URL): string | null {
@@ -63,6 +63,9 @@ export function previaDeLink(link: string): PreviaLink {
       // Sem capa por URL: o endpoint público /p/CODIGO/media/ foi desligado e o
       // CDN bloqueia hotlink. A capa do Instagram vem do cache (useLinkPreviews),
       // que busca uma vez pela edge e guarda a imagem num bucket nosso.
+    } else if (/(^|\.)pinterest\.[a-z.]+$/.test(host) || host === "pin.it") {
+      // Capa pelo oEmbed do Pinterest (edge saved-fetch, de graça), guardada no cache.
+      plataforma = "pinterest";
     } else if (host.endsWith("tiktok.com")) {
       plataforma = "tiktok";
     } else if (host.endsWith("youtube.com") || host.endsWith("youtu.be")) {

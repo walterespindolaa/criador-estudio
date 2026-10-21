@@ -27,6 +27,7 @@ async function rateOk(svc: SupabaseClient, userId: string): Promise<boolean> {
 }
 
 function platformOf(url: string): string {
+  if (/pinterest\.[a-z.]+\//i.test(url) || /\/\/pin\.it\//i.test(url)) return "pinterest";
   if (/tiktok\.com/i.test(url)) return "tiktok";
   if (/instagram\.com/i.test(url)) return "instagram";
   return "outro";
@@ -85,7 +86,32 @@ Deno.serve(async (req) => {
     if (!url) return json({ error: "missing_url" }, 400);
     const platform = platformOf(url);
 
-    // Só Instagram tem preview automático na v1.
+    /* PINTEREST (Gabriela, 20/10/2026: "no Instagram ele puxa a prévia como
+       capa, tem como fazer com Pinterest também?"). O Pinterest tem oEmbed
+       público e gratuito (sem Apify): devolve a capa do pin e o autor. O link
+       curto pin.it é seguido até o pin de verdade antes. A capa vem em 236px;
+       trocamos pra 736px, que é a versão grande do mesmo arquivo. */
+    if (platform === "pinterest") {
+      try {
+        let alvo = url;
+        if (/\/\/pin\.it\//i.test(url)) {
+          const red = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(10000) });
+          alvo = red.url.split("?")[0] || url;
+          await red.body?.cancel();
+        }
+        const o = await fetch(`https://www.pinterest.com/oembed.json?url=${encodeURIComponent(alvo)}`, { signal: AbortSignal.timeout(10000) });
+        if (!o.ok) return json({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null, note: `oembed ${o.status}` });
+        const d = await o.json() as { thumbnail_url?: string; title?: string; author_name?: string };
+        const grande = d.thumbnail_url ? d.thumbnail_url.replace(/\/\d+x\//, "/736x/") : null;
+        const thumbnail = await persistCover(svc, user.id, grande) ?? await persistCover(svc, user.id, d.thumbnail_url ?? null);
+        return json({ ok: true, platform, thumbnail, caption: d.title ? String(d.title).slice(0, 800) : null, author: d.author_name ?? null, media_type: null });
+      } catch (e) {
+        console.error("[saved-fetch] pinterest", e instanceof Error ? e.message : String(e));
+        return json({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null });
+      }
+    }
+
+    // Instagram via Apify; o resto sai sem preview.
     if (platform !== "instagram") {
       return json({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null });
     }

@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { blindarTextoPdf } from "@/lib/pdfTexto";
 import { parseRefLinks, isRefLink } from "@/lib/refLinks";
 import { previaDeLink } from "@/lib/refPreview";
 import { cenasDe, type CaptureScene, type CaptureScript } from "@/hooks/useCaptureScripts";
@@ -123,7 +124,7 @@ function linksDoRoteiro(r: CaptureScript): string[] {
 }
 
 export async function gerarGuiaGravacao(d: DadosGuia): Promise<jsPDF> {
-  const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
+  const pdf = blindarTextoPdf(new jsPDF({ unit: "mm", format: "a4", compress: true }));
 
   /* O LINK QUE NAO CLICAVA (Walter, 20/09/2026). O jsPDF grava o retangulo da
      anotacao com y1 > y2 (ele converte "topo" e "base" pro sistema do PDF, que

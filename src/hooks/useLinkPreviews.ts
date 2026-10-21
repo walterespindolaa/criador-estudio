@@ -30,7 +30,7 @@ export function chaveDoLink(link: string): string {
 
 /** Precisa ir na internet pra ter capa? (YouTube resolve sozinho.) */
 function precisaBuscar(p: PreviaLink): boolean {
-  return (p.plataforma === "instagram" || p.plataforma === "tiktok") && !p.thumb;
+  return (p.plataforma === "instagram" || p.plataforma === "tiktok" || p.plataforma === "pinterest") && !p.thumb;
 }
 
 /**
