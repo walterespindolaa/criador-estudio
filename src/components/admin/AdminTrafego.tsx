@@ -5,11 +5,12 @@ import {
 } from "recharts";
 import {
   RefreshCw, Megaphone, Link2, Instagram, Sparkles, AlertTriangle, Lightbulb, ArrowDown, Globe,
-  LayoutDashboard, MousePointerClick,
+  LayoutDashboard, MousePointerClick, CalendarClock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { AdminLpComportamento, KpiCard } from "./AdminLpComportamento";
+import { AdminTrafegoHorarios } from "./AdminTrafegoHorarios";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ABA TRÁFEGO DO ADMIN: O MOTOR DE ANÁLISE (21/10/2026)
@@ -74,6 +75,7 @@ const ABAS = [
   { id: "geral", txt: "Visão geral", icone: LayoutDashboard },
   { id: "anuncios", txt: "Anúncios", icone: Megaphone },
   { id: "pagina", txt: "Na página", icone: MousePointerClick },
+  { id: "horarios", txt: "Dias e horários", icone: CalendarClock },
   { id: "bio", txt: "Bio e Instagram", icone: Instagram },
 ] as const;
 type Aba = (typeof ABAS)[number]["id"];
@@ -254,6 +256,8 @@ export function AdminTrafego() {
 
       {aba === "pagina" ? (
         <AdminLpComportamento dias={dias} />
+      ) : aba === "horarios" ? (
+        <AdminTrafegoHorarios />
       ) : isLoading ? (
         <p className="text-sm text-muted-foreground font-body py-10 text-center">Carregando…</p>
       ) : error || !data ? (
