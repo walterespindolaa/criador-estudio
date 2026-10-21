@@ -11,6 +11,10 @@ import { sentryVitePlugin } from "@sentry/vite-plugin";
 // mostra a linha real do código, não a minificada.
 const sentryUpload = !!process.env.SENTRY_AUTH_TOKEN && !!process.env.SENTRY_ORG;
 
+// Um id por build. Vai pro sw.js (cache de arquivos) e pro app como
+// __APP_BUILD__ (cache de dados persistido no IndexedDB, ver lib/queryPersist).
+const BUILD_ID = Date.now().toString(36);
+
 // Carimba o service worker com o id do build (ver public/sw.js). Roda depois
 // que o dist está pronto; o sw.js é copiado do public/ como está, então a
 // troca é feita no arquivo final.
@@ -21,14 +25,16 @@ function swBuildId() {
     closeBundle() {
       const alvo = path.resolve(__dirname, "dist/sw.js");
       if (!fs.existsSync(alvo)) return;
-      const id = Date.now().toString(36);
-      fs.writeFileSync(alvo, fs.readFileSync(alvo, "utf8").replace(/__BUILD_ID__/g, id));
+      fs.writeFileSync(alvo, fs.readFileSync(alvo, "utf8").replace(/__BUILD_ID__/g, BUILD_ID));
     },
   };
 }
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
+  define: {
+    __APP_BUILD__: JSON.stringify(BUILD_ID),
+  },
   server: {
     host: "::",
     port: 8080,

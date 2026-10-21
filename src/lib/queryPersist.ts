@@ -23,10 +23,20 @@ const KEY = "dehydrated";
 
 /** Sobe a versão pra invalidar o cache antigo depois de um deploy que muda o formato. */
 const SCHEMA = 1;
+/**
+ * Cache gravado por OUTRO build é jogado fora (21/10/2026). Quando um deploy
+ * muda o formato que uma função do banco devolve, o cache velho reidratado na
+ * abertura chega na tela nova sem os campos novos e a página quebra antes do
+ * refetch terminar. Foi o que derrubou a aba Dias e horários: dado das 12h20,
+ * sem impressoes_meta, lido pelo código das 14h55. O SCHEMA manual dependia de
+ * lembrar de subir o número; o id do build sobe sozinho a cada deploy.
+ * Custo: a primeira abertura depois de um deploy carrega do zero.
+ */
+const BUILD = typeof __APP_BUILD__ !== "undefined" ? __APP_BUILD__ : "dev";
 /** Cache mais velho que isso não vale mais a pena reidratar. */
 const MAX_IDADE = 1000 * 60 * 60 * 24 * 3; // 3 dias
 
-type Envelope = { schema: number; em: number; usuario: string | null; estado: unknown };
+type Envelope = { schema: number; build?: string; em: number; usuario: string | null; estado: unknown };
 
 function abrir(): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
@@ -91,7 +101,7 @@ export async function restaurarCache(client: QueryClient, usuarioId: string | nu
   // pessoa (trocou de conta / logou outro usuário no mesmo celular). O terceiro
   // é o mais importante: vazar dado entre contas seria grave.
   const invalido =
-    env.schema !== SCHEMA || Date.now() - env.em > MAX_IDADE || env.usuario !== usuarioId;
+    env.schema !== SCHEMA || env.build !== BUILD || Date.now() - env.em > MAX_IDADE || env.usuario !== usuarioId;
 
   if (invalido) {
     await limparCachePersistido();
@@ -119,7 +129,7 @@ export function iniciarPersistencia(client: QueryClient, usuarioId: string | nul
       // da sessão passada.
       shouldDehydrateQuery: (q) => q.state.status === "success",
     });
-    void gravar({ schema: SCHEMA, em: Date.now(), usuario: usuarioId, estado });
+    void gravar({ schema: SCHEMA, build: BUILD, em: Date.now(), usuario: usuarioId, estado });
   };
 
   const agendar = () => {

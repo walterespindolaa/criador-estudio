@@ -57,7 +57,7 @@ const FAIXAS = [
 ];
 const MIN_AMOSTRA = 20;
 
-const n = (v: number) => v.toLocaleString("pt-BR");
+const n = (v: number | null | undefined) => (v ?? 0).toLocaleString("pt-BR");
 const pc = (a: number, b: number) => (b > 0 ? `${((100 * a) / b).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%` : "—");
 
 function Chip({ ativo, onClick, children }: { ativo: boolean; onClick: () => void; children: React.ReactNode }) {
