@@ -31,6 +31,7 @@ export type EstadoPublicacao = {
   scheduled_date: string | null;
   scheduled_time: string | null;
   published_at: string | null;
+  format: string | null;
 };
 
 export type ConexaoDoPost = {
@@ -58,7 +59,7 @@ export function usePublicacaoDoPost(postId: string | null | undefined) {
     refetchInterval: (q) => (q.state.data?.publish_status === "publicando" ? 4000 : false),
     queryFn: async () => {
       const { data, error } = await sbFrom("posts")
-        .select("id,auto_publish,publish_status,publish_error,publicar_em,ig_permalink,external_client_id,approval_status,scheduled_date,scheduled_time,published_at")
+        .select("id,auto_publish,publish_status,publish_error,publicar_em,ig_permalink,external_client_id,approval_status,scheduled_date,scheduled_time,published_at,format")
         .eq("id", postId!)
         .maybeSingle();
       if (error) throw error;
@@ -136,4 +137,11 @@ export function useChecarMidia(postId: string | null | undefined) {
       return data as ResultadoChecagem;
     },
   });
+}
+
+/** Card de stories ("story" no banco; "stories" por garantia). Stories ainda
+ *  não publicam pelo Cria (Walter, 21/10/2026): o motor só monta feed e Reels. */
+export function ehStory(formato: string | null | undefined): boolean {
+  const f = (formato ?? "").trim().toLowerCase();
+  return f === "story" || f === "stories";
 }

@@ -21,9 +21,11 @@ import type { MediaLike } from "@/lib/driveMedia";
 type Midia = MediaLike & { id: string; file_name: string };
 
 /** `link`: versão compacta (texto roxo), usada no cabeçalho "Arquivos desta peça"
- *  do card da designer (Gabriela, 16/10/2026). */
-export function BaixarMidiasDoPost({ postId, midias, titulo, rotulo: rotuloFixo, link }: {
-  postId: string; midias: Midia[]; titulo?: string; rotulo?: string; link?: boolean;
+ *  do card da designer (Gabriela, 16/10/2026).
+ *  `chip`: pílula na cor da conta, na linha "Mídia" do editor (Walter, 21/10/2026:
+ *  o botão do topo ficava longe da mídia). */
+export function BaixarMidiasDoPost({ postId, midias, titulo, rotulo: rotuloFixo, link, chip }: {
+  postId: string; midias: Midia[]; titulo?: string; rotulo?: string; link?: boolean; chip?: boolean;
 }) {
   const [celular] = useState(podeSalvarNoCelular);
   const [zipando, setZipando] = useState(false);
@@ -31,13 +33,19 @@ export function BaixarMidiasDoPost({ postId, midias, titulo, rotulo: rotuloFixo,
 
   const rotulo = rotuloFixo ?? (midias.length === 1 ? "Baixar mídia" : `Baixar mídias (${midias.length})`);
   const linkCls = "inline-flex items-center gap-1 text-[12px] font-body font-bold text-violet-700 hover:underline disabled:opacity-60";
+  const chipCls = "inline-flex items-center gap-1 h-7 rounded-full bg-primary/10 px-2.5 text-[11px] font-body font-bold text-primary hover:bg-primary/15 transition-colors disabled:opacity-60 shrink-0";
+  const rotuloChip = `Baixar (${midias.length})`;
 
   if (celular) {
     return (
       <SalvarNoCelular
         midias={midias}
         titulo={titulo}
-        gatilho={(abrir) => link ? (
+        gatilho={(abrir) => chip ? (
+          <button type="button" className={chipCls} onClick={abrir}>
+            <Download className="h-3.5 w-3.5" /> {rotuloChip}
+          </button>
+        ) : link ? (
           <button type="button" className={linkCls} onClick={abrir}>
             <Download className="h-3.5 w-3.5" /> {rotuloFixo ?? "Baixar todas"}
           </button>
@@ -84,6 +92,15 @@ export function BaixarMidiasDoPost({ postId, midias, titulo, rotulo: rotuloFixo,
       setZipando(false);
     }
   };
+
+  if (chip) {
+    return (
+      <button type="button" className={chipCls} onClick={() => void baixarZip()} disabled={zipando} title="Baixar as mídias (.zip com a legenda)">
+        {zipando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+        {rotuloChip}
+      </button>
+    );
+  }
 
   if (link) {
     return (

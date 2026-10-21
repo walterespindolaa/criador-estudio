@@ -10,7 +10,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  useAgendarPublicacao, useChecarMidia, useConexaoDoPost, usePublicacaoDoPost, usePublicarAgora,
+  ehStory, useAgendarPublicacao, useChecarMidia, useConexaoDoPost, usePublicacaoDoPost, usePublicarAgora,
   type ConexaoDoPost, type EstadoPublicacao, type ResultadoChecagem,
 } from "@/hooks/usePublicarInstagram";
 
@@ -74,10 +74,12 @@ export type PublicarNoInstagramViewProps = {
      automático, checar e publicar. O cartão cheio comia 1/3 do painel e
      empurrava a prévia pra fora da tela. Avisos de estado continuam aparecendo. */
   compacto?: boolean;
+  /** Formato que está na tela agora (o editor pode ter trocado sem salvar). */
+  formato?: string | null;
 };
 
 export function PublicarNoInstagramView({
-  est, cx, publicando, alternando, checando, checagem, erroChecagem, onPublicar, onAuto, onChecar, compacto,
+  est, cx, publicando, alternando, checando, checagem, erroChecagem, onPublicar, onAuto, onChecar, compacto, formato,
 }: PublicarNoInstagramViewProps) {
   const [confirmar, setConfirmar] = useState(false);
 
@@ -98,12 +100,18 @@ export function PublicarNoInstagramView({
     : est.approval_status === "postado" ? "postado"
     : !aprovado ? "aguardando"
     : "pronto";
-  const podeAgir = aprovado && !!cx?.pode_publicar && estado !== "publicando";
+  /* STORIES TRAVADO (Walter, 21/10/2026): o motor só sabe feed e Reels; um
+     card de stories sairia no feed ou como Reels. O servidor também recusa. */
+  const story = ehStory(formato ?? est.format);
+  const podeAgir = !story && aprovado && !!cx?.pode_publicar && estado !== "publicando";
+  // Desligar o automático sempre pode (ex.: card virou stories depois de agendado).
+  const podeDesligar = estado === "agendado" && !alternando;
   const quandoPost = dataHoraDoPost(est.scheduled_date, est.scheduled_time);
 
   // O que impede, em uma frase (mostra só o primeiro motivo).
   const bloqueio =
-    est.approval_status === "postado" ? "Este post já foi marcado como postado."
+    story ? "Stories ainda não saem pelo Cria. Poste pelo app do Instagram."
+    : est.approval_status === "postado" ? "Este post já foi marcado como postado."
     : !aprovado ? "Libera depois que o cliente aprovar o post."
     : cx && !cx.pode_publicar ? (cx.motivo ?? "Esta conta não pode publicar pelo Cria.")
     : null;
@@ -154,7 +162,7 @@ export function PublicarNoInstagramView({
                     Auto
                     <Switch
                       checked={estado === "agendado"}
-                      disabled={!podeAgir || alternando || !est.scheduled_date}
+                      disabled={!(podeDesligar || (podeAgir && !alternando && !!est.scheduled_date))}
                       onCheckedChange={(v) => onAuto(v)}
                       aria-label="Publicar automaticamente na data e hora do post"
                     />
@@ -254,7 +262,7 @@ export function PublicarNoInstagramView({
               </span>
               <Switch
                 checked={estado === "agendado"}
-                disabled={!podeAgir || alternando || !est.scheduled_date}
+                disabled={!(podeDesligar || (podeAgir && !alternando && !!est.scheduled_date))}
                 onCheckedChange={(v) => onAuto(v)}
                 aria-label="Publicar automaticamente na data e hora do post"
               />
@@ -317,7 +325,7 @@ export function PublicarNoInstagramView({
 
 /* onAgendou: o editor do criador guarda o status em estado local; sem avisar,
    o próximo salvar devolvia o card pra coluna antiga depois de agendar. */
-export function PublicarNoInstagram({ postId, onAgendou, compacto }: { postId: string | null | undefined; onAgendou?: (ligado: boolean) => void; compacto?: boolean }) {
+export function PublicarNoInstagram({ postId, onAgendou, compacto, formato }: { postId: string | null | undefined; onAgendou?: (ligado: boolean) => void; compacto?: boolean; formato?: string | null }) {
   const { data: est } = usePublicacaoDoPost(postId);
   const { data: cx } = useConexaoDoPost(postId);
   const publicar = usePublicarAgora(postId);
@@ -340,6 +348,7 @@ export function PublicarNoInstagram({ postId, onAgendou, compacto }: { postId: s
       onAuto={(v) => agendar.mutate(v, { onSuccess: () => onAgendou?.(v) })}
       onChecar={() => checar.mutate()}
       compacto={compacto}
+      formato={formato}
     />
   );
 }

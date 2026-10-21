@@ -123,10 +123,31 @@ Criado em 28/09/2026. Cada ciclo só começa quando o anterior passar no **port�
 ### Ciclo 8 · Liberação
 - Aprovado pela Meta: aviso pra todos reconectarem, texto de ajuda, acompanhamento dos primeiros dias pelo relatório de saúde.
 
+### Ciclo 9 · Stories (aberto em 21/10/2026)
+
+**Por que agora:** o Walter quer que criador e social mídia deixem os stories programados no kanban, igual ao feed. Hoje o card de stories não publica: o servidor já recusava (ig-midia: "Stories ficam pra uma próxima versão") e, desde 21/10, o botão e o automático ficam travados na tela com o aviso "Stories ainda não saem pelo Cria".
+
+**O que a API permite (Instagram API with Instagram Login, mesma permissão `instagram_business_content_publish` que está em análise; conferir na doc da Meta ao implementar):**
+- Contêiner com `media_type=STORIES` e `image_url` (JPEG) ou `video_url` (MP4/MOV), depois `media_publish`. Mesmo caminho do feed.
+- Sem legenda, sem música, sem sticker interativo (enquete, caixinha, link, menção, contagem). O texto tem que estar dentro da arte.
+- Story some em 24 h: o link (permalink) só vale nesse período.
+- Conta profissional; conta no limite de 100 publicações pela API em 24 h (stories contam).
+
+**O que fazer (em ordem):**
+1. **Motor:** formato `story` vira contêiner STORIES, sem caption. Card com várias mídias publica um story por mídia, na ordem da tira, e marca publicado quando o último sair (se um falhar, avisa qual parou).
+2. **Mídia:** aceitar foto em qualquer proporção, mas avisar quando não for 9:16 (o Instagram corta). Vídeo de 3 a 60 s. Reaproveita a preparação do ciclo 3 (Drive, Bunny, JPEG).
+3. **Sticker na mão:** no card de stories, um campo "Tem sticker?" (enquete, caixinha, link, menção). Com sticker marcado, o Cria NÃO publica sozinho: na hora marcada manda aviso no sino e push "Hora do story", com botão de baixar a mídia e o lembrete de qual sticker colar.
+4. **Telas:** tirar a trava de 21/10, explicar no card o que vai e o que não vai pela API, selo "Story · some em 24 h" depois de publicado.
+5. **Cria Stories:** a semana gerada vira cards de stories no calendário com data e hora (hoje fica só no planejamento).
+6. **Cria Post (social mídia):** decidir se o cliente aprova stories no portal. Hoje o portal esconde os stories (PortalVisoes filtra `story`).
+7. **Teste:** numa conta testadora, publicar foto, vídeo e card com 3 mídias; testar falha de mídia e o lembrete de sticker. Portão: Walter vê os 3 stories no ar.
+
+**Decisões pendentes (Walter):** cliente aprova stories no Cria Post? Card com várias mídias publica em sequência ou cada mídia vira um card?
+
 ---
 
 ## Limites que valem pra sempre
 - Até 100 publicações pela API a cada 24 h por conta.
-- Sem música da biblioteca do Instagram e sem figurinhas interativas pela API.
+- Sem música da biblioteca do Instagram e sem figurinhas interativas pela API (vale pra stories também: enquete, caixinha e link só na mão).
 - Só contas profissionais (empresa ou criador).
 - Enquanto a Meta não aprovar, só publica nas contas cadastradas como testadoras.

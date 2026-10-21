@@ -1404,6 +1404,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   // status da tela pra o próximo salvar não desfazer.
                   onAgendou={(ligado) => setStatus((s) => (ligado ? "agendado" : s === "agendado" ? "editando" : s))}
                   compacto={telaLarga}
+                  formato={format}
                 />
               )}
 
@@ -1424,17 +1425,25 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
   const blocoMidia = (
     <>
-              <div className={cn(telaLarga ? "space-y-2" : "space-y-2.5", !telaLarga && "rounded-2xl border border-border/70 bg-muted/20 p-3")}>
+              <div className={cn(telaLarga ? "space-y-2" : "space-y-2.5", !telaLarga && "rounded-2xl border border-border/70 bg-card p-3 shadow-sm")}>
                 <div data-tour="editor-midia" className="w-full flex items-center gap-2">
-                  <ImageIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="w-7 h-7 rounded-lg bg-primary/10 grid place-items-center shrink-0">
+                    <ImageIcon className="h-3.5 w-3.5 text-primary" />
+                  </span>
                   <span className="text-xs font-display font-semibold text-foreground">Mídia</span>
                   <span className="text-[11px] font-body text-muted-foreground truncate">
                     {mediaList.length > 0
-                      ? `· ${mediaList.length} ${mediaList.length === 1 ? "arquivo" : "arquivos"}${!telaLarga && format === "carrossel" && mediaList.length > 1 ? " · arraste pra ordenar" : ""}`
+                      ? `· ${mediaList.length} ${mediaList.length === 1 ? "arquivo" : "arquivos"}`
                       : temMidiaPorCena ? "· vídeo final" : telaLarga ? "· imagem ou vídeo" : "· adicionar imagem ou vídeo"}
                   </span>
+                  {/* BAIXAR NA LINHA DA MÍDIA (Walter, 21/10/2026): antes ficava no
+                      topo do editor, longe das mídias. */}
+                  {!telaLarga && post?.id && driveMedia.length > 0 && (
+                    <span className="ml-auto"><BaixarMidiasDoPost chip postId={post.id} midias={driveMedia} titulo={title} /></span>
+                  )}
                   {telaLarga && (
                     <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                      {post?.id && driveMedia.length > 0 && <BaixarMidiasDoPost chip postId={post.id} midias={driveMedia} titulo={title} />}
                       {(uploadingLocal || activeUpload) && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
                       <button type="button" onClick={handleDrivePick} disabled={picking}
                         className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 h-7 text-[11px] font-body text-muted-foreground hover:text-foreground hover:border-primary/40 disabled:opacity-50">
@@ -1637,25 +1646,25 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   <div className="space-y-2">
                     {!telaLarga && (<>
                     <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
-                      Imagens do carrossel
+                      Imagens do carrossel{mediaList.length > 1 && <span className="normal-case tracking-normal font-body font-semibold"> · arraste pra ordenar</span>}
                     </Label>
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
                         type="button"
                         onClick={handleDrivePick}
                         disabled={picking}
-                        className="flex items-center gap-1.5 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all px-3 py-2 text-xs font-body text-muted-foreground disabled:opacity-50"
+                        className="flex items-center gap-1.5 rounded-xl border border-border bg-background hover:border-primary/40 hover:bg-muted/40 transition-all px-3 py-2 text-xs font-body font-semibold text-foreground disabled:opacity-50"
                       >
-                        <Cloud className="h-4 w-4" />
+                        <Cloud className="h-4 w-4 text-[#2A4BDF]" />
                         {picking ? "Abrindo..." : "Google Drive"}
                       </button>
                       <button
                         type="button"
                         onClick={openLocalFilePicker}
                         disabled={uploadingLocal}
-                        className="flex items-center gap-1.5 rounded-xl border-2 border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-muted/40 transition-all px-3 py-2 text-xs font-body text-muted-foreground disabled:opacity-50"
+                        className="flex items-center gap-1.5 rounded-xl border border-border bg-background hover:border-primary/40 hover:bg-muted/40 transition-all px-3 py-2 text-xs font-body font-semibold text-foreground disabled:opacity-50"
                       >
-                        <ImageIcon className="h-4 w-4" />
+                        <ImageIcon className="h-4 w-4 text-primary" />
                         {uploadingLocal ? "Enviando..." : "Galeria / PC"}
                       </button>
                       {(uploadingLocal || activeUpload) && (
@@ -1676,7 +1685,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         removingIds={removingIds}
                       />
                     ) : telaLarga ? null : (
-                      <p className="text-[11px] font-body text-muted-foreground/70 rounded-xl border border-dashed border-border bg-muted/20 px-3 py-1.5 text-center">
+                      <p className="text-[11px] font-body text-muted-foreground/70 rounded-xl border border-dashed border-border bg-background px-3 py-1.5 text-center">
                         Nenhuma imagem ainda. Suba pelo Drive ou pela galeria.
                       </p>
                     )}
@@ -1872,9 +1881,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     <span className="hidden sm:inline">Excluir</span>
                   </Button>
                 )}
-                {!isNew && post && (
-                  <BaixarMidiasDoPost postId={post.id} midias={driveMedia} titulo={title} />
-                )}
                 {!isNew && post && agenciaDoPost && (
                   <EnviarParaParceiro key={post.id} postId={post.id} agenciaId={agenciaDoPost}
                     assigneeId={producaoDoPost?.assignee_id ?? null} producaoStatus={producaoDoPost?.producao_status ?? null}
@@ -1966,7 +1972,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={isNew ? "Sobre o que é esse post?" : "Sem título"}
-                className="w-full bg-muted/40 rounded-2xl px-3.5 py-2.5 border border-border outline-none focus:border-primary/50 focus:ring-0 font-display text-lg font-extrabold text-foreground placeholder:text-muted-foreground/40 placeholder:font-body placeholder:font-normal"
+                className="w-full bg-card shadow-sm rounded-2xl px-3.5 py-2.5 border border-border outline-none focus:border-primary/50 focus:ring-0 font-display text-lg font-extrabold text-foreground placeholder:text-muted-foreground/40 placeholder:font-body placeholder:font-normal"
               />
               {autoSaveStatus && (
                 <p className={cn(
@@ -1987,7 +1993,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               No desktop (lg pra cima): duas colunas. À esquerda (~60%) o fluxo
               numerado rolável; à direita (~40%) a prévia do post fixa (sticky),
               sempre visível enquanto a pessoa escreve. */}
-          <div ref={ligarMain} className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/20">
+          <div ref={ligarMain} className="flex-1 overflow-y-auto overflow-x-hidden bg-background">
             {/* Coluna da direita agora tem largura FIXA (a da prévia): antes era
                2fr e a prévia de 380px boiava no meio dela, deixando faixas
                vazias dos dois lados (pedido do Walter, 31/08: menos margem). */}
@@ -2006,10 +2012,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       <button key={t.k} type="button" onClick={() => irPraAba(t.k)}
                         className={cn(
                           "flex-1 rounded-full py-1.5 text-xs font-body font-semibold transition-colors",
-                          abaMobile === t.k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
+                          abaMobile === t.k ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground",
                         )}>
                         {t.label}
-                        {"n" in t && t.n > 0 && <span className="ml-1 font-normal text-muted-foreground">{t.n}</span>}
+                        {"n" in t && t.n > 0 && <span className={cn("ml-1 font-normal", abaMobile === t.k ? "text-primary-foreground/80" : "text-muted-foreground")}>{t.n}</span>}
                       </button>
                     ))}
                   </div>
@@ -2026,7 +2032,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 <div className="grid grid-cols-[330px_minmax(0,1fr)] gap-3 items-start [&>*]:min-w-0">{blocoAgenda}</div>
               )}
               {/* 2. O CONTEUDO DO POST */}
-              <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
+              <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card shadow-sm p-4 sm:p-5 space-y-4">
                 {/* Pilar no cabeçalho do bloco (Walter, 19/10/2026): antes ficava
                     numa linha solta em cima e desalinhava o começo das colunas. */}
                 <BlocoCabecalho numero={1} titulo="O conteúdo do post" subtitulo="Escolha o formato e escreva a estrutura." extra={<>
@@ -2475,7 +2481,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               </section>
 
               {/* 3. A LEGENDA */}
-              <section className="rounded-3xl border border-border bg-card p-4 sm:p-5 space-y-4">
+              <section className="rounded-3xl border border-border bg-card shadow-sm p-4 sm:p-5 space-y-4">
                 <button
                   type="button"
                   data-tour="editor-legenda-abrir"
@@ -3316,7 +3322,7 @@ function Recolhivel({
     });
   };
   return (
-    <div className="rounded-2xl border border-border bg-muted/20 overflow-hidden">
+    <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
       <button
         type="button"
         onClick={alternar}

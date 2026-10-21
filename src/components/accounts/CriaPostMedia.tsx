@@ -355,7 +355,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
     <div className="space-y-3">
       {/* Publicar direto pelo Cria (ciclo 5). Só aparece pra conta que pode;
           antes da aprovação do cliente mostra que libera depois. */}
-      <PublicarNoInstagram postId={postId} />
+      <PublicarNoInstagram postId={postId} formato={format} />
       {approved && (
         <div className="rounded-2xl border border-green-200 bg-green-50 p-3 space-y-2">
           <p className="text-xs font-body font-bold text-green-800">Aprovado pelo cliente, pronto pra publicar.</p>
