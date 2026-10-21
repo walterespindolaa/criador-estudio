@@ -20,9 +20,17 @@ import { cn } from "@/lib/utils";
    a Meta entregou, não só quando o público está on-line. Pra decidir horário,
    o que vale é a TAXA de conversão por faixa, com amostra mínima. Por isso as
    leituras abaixo só apontam faixa com 20 visitas ou mais.
+
+   + Meta por hora (21/10/2026): gasto, impressões e cliques por hora, gravados
+   pela rodada das 8h e 20h (trafego_meta_horario). Dá pra ver lado a lado
+   QUANDO a Meta gasta e QUANDO as visitas e os cadastros acontecem.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-type Celula = { dow: number; hora: number; visitas: number; converteram: number; cadastros: number; tempo_mediano: number | null };
+type Celula = {
+  dow: number; hora: number; visitas: number; converteram: number; cadastros: number; tempo_mediano: number | null;
+  // Meta por hora (trafego_meta_horario, gravado pela rodada das 8h e 20h).
+  impressoes_meta: number; gasto_meta: number; cliques_meta: number;
+};
 type Horarios = {
   periodo: { ini: string; fim: string; dias: number };
   origem: string;
@@ -30,7 +38,7 @@ type Horarios = {
   ocorrencias: Record<string, number>;
   bio_por_dia: Record<string, number>;
 };
-type Metrica = "visitas" | "converteram" | "cadastros" | "taxa";
+type Metrica = "visitas" | "converteram" | "cadastros" | "taxa" | "impressoes_meta" | "gasto_meta" | "cliques_meta";
 
 const sbRpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
 
@@ -64,7 +72,7 @@ function Chip({ ativo, onClick, children }: { ativo: boolean; onClick: () => voi
 
 function valorCelula(c: Celula, m: Metrica) {
   if (m === "taxa") return c.visitas >= 3 ? c.converteram / c.visitas : null;
-  return c[m];
+  return Number(c[m] ?? 0);
 }
 
 export function AdminTrafegoHorarios() {
@@ -102,15 +110,18 @@ export function AdminTrafegoHorarios() {
     });
     const porHora = Array.from({ length: 24 }, (_, h) => {
       const col = g.filter((c) => c.hora === h);
-      return { hora: `${h}h`, h, visitas: col.reduce((s, c) => s + c.visitas, 0), converteram: col.reduce((s, c) => s + c.converteram, 0), cadastros: col.reduce((s, c) => s + c.cadastros, 0) };
+      return { hora: `${h}h`, h, visitas: col.reduce((s, c) => s + c.visitas, 0), converteram: col.reduce((s, c) => s + c.converteram, 0), cadastros: col.reduce((s, c) => s + c.cadastros, 0),
+        gasto_meta: +col.reduce((s, c) => s + Number(c.gasto_meta || 0), 0).toFixed(2), cliques_meta: col.reduce((s, c) => s + c.cliques_meta, 0) };
     });
+    const gastoTotal = porHora.reduce((s, x) => s + x.gasto_meta, 0);
     const porFaixa = FAIXAS.map((f) => {
       const col = porHora.filter((x) => x.h >= f.ini && x.h < f.fim);
-      return { ...f, visitas: col.reduce((s, c) => s + c.visitas, 0), converteram: col.reduce((s, c) => s + c.converteram, 0), cadastros: col.reduce((s, c) => s + c.cadastros, 0) };
+      return { ...f, visitas: col.reduce((s, c) => s + c.visitas, 0), converteram: col.reduce((s, c) => s + c.converteram, 0), cadastros: col.reduce((s, c) => s + c.cadastros, 0),
+        gasto_meta: col.reduce((s, c) => s + Number(c.gasto_meta || 0), 0) };
     });
     const vals = g.map((c) => valorCelula(c, metrica)).filter((v): v is number => v != null);
     const max = Math.max(0.0001, ...vals);
-    return { cel, tot, porDia, porHora, porFaixa, max };
+    return { cel, tot, porDia, porHora, porFaixa, max, gastoTotal };
   }, [data, metrica]);
 
   const leituras = useMemo(() => {
@@ -130,6 +141,11 @@ export function AdminTrafegoHorarios() {
       out.push(`Quem chega de ${m.nome.split(" (")[0]} converte ${pc(m.converteram, m.visitas)}; de ${p.nome.split(" (")[0]}, ${pc(p.converteram, p.visitas)}. Essa diferença é a que importa pra decidir horário.`);
     } else {
       out.push(`Ainda sem faixa com ${MIN_AMOSTRA} visitas ou mais: dá pra ver onde tem volume, mas não qual horário converte melhor.`);
+    }
+    // Cruzamento com a Meta: onde o dinheiro vai x onde as visitas acontecem.
+    if (calc.gastoTotal > 0) {
+      const topGasto = [...porFaixa].sort((a, b) => b.gasto_meta - a.gasto_meta)[0];
+      out.push(`A Meta gastou mais na faixa ${topGasto.nome}: ${pc(topGasto.gasto_meta, calc.gastoTotal)} da verba, contra ${pc(topGasto.visitas, tot.visitas)} das visitas e ${pc(topGasto.converteram, tot.converteram)} dos cliques em testar.`);
     }
     const topCad = [...porFaixa].sort((a, b) => b.cadastros - a.cadastros)[0];
     if (topCad.cadastros >= 3) out.push(`Cadastros acontecem mais na faixa ${topCad.nome} (${n(topCad.cadastros)} de ${n(tot.cadastros)}).`);
@@ -163,6 +179,9 @@ export function AdminTrafegoHorarios() {
                 <Chip ativo={metrica === "converteram"} onClick={() => setMetrica("converteram")}>Clicaram em testar</Chip>
                 <Chip ativo={metrica === "cadastros"} onClick={() => setMetrica("cadastros")}>Cadastros</Chip>
                 <Chip ativo={metrica === "taxa"} onClick={() => setMetrica("taxa")}>Taxa de conversão</Chip>
+                <Chip ativo={metrica === "gasto_meta"} onClick={() => setMetrica("gasto_meta")}>Gasto Meta</Chip>
+                <Chip ativo={metrica === "impressoes_meta"} onClick={() => setMetrica("impressoes_meta")}>Impressões Meta</Chip>
+                <Chip ativo={metrica === "cliques_meta"} onClick={() => setMetrica("cliques_meta")}>Cliques Meta</Chip>
               </div>
             </div>
             <p className="text-xs font-body text-muted-foreground mt-1">
@@ -186,7 +205,7 @@ export function AdminTrafegoHorarios() {
                         const i = v == null ? 0 : v / calc.max;
                         return (
                           <div key={h}
-                            title={`${d.nome}, ${h}h às ${h + 1}h: ${n(c.visitas)} visitas, ${n(c.converteram)} clicaram em testar (${pc(c.converteram, c.visitas)}), ${n(c.cadastros)} cadastros`}
+                            title={`${d.nome}, ${h}h às ${h + 1}h: ${n(c.visitas)} visitas, ${n(c.converteram)} clicaram em testar (${pc(c.converteram, c.visitas)}), ${n(c.cadastros)} cadastros · Meta: ${n(c.impressoes_meta)} impressões, R$ ${Number(c.gasto_meta || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}, ${n(c.cliques_meta)} cliques`}
                             className="aspect-square rounded-[4px]"
                             style={{ background: v == null || v === 0 ? "hsl(var(--muted))" : `rgba(206, 74, 29, ${0.15 + 0.85 * i})` }} />
                         );
@@ -237,6 +256,7 @@ export function AdminTrafegoHorarios() {
                     <Tooltip />
                     <Bar dataKey="visitas" name="Visitas" fill="#CE4A1D" radius={[3, 3, 0, 0]} />
                     <Bar dataKey="converteram" name="Clicaram em testar" fill="#3E9152" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="cliques_meta" name="Cliques no anúncio" fill="#2A4BDF" radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

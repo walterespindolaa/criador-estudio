@@ -30,6 +30,15 @@ function cors(req: Request) {
 const EVENTOS = new Set(["view", "cta", "leu", "ficou30", "preco", "clique", "leitura"]);
 const ID = /^[a-z0-9_-]{1,40}$/i;
 const inteiro = (v: unknown, max: number) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
+// Robôs não contam (21/10/2026). As 5 primeiras "visitas" depois do deploy
+// eram robô: pares com 6 ms de diferença e sessões diferentes (checagem do
+// deploy) e uma "Meta / pago" às 12h21 com o anúncio ainda em zero impressão
+// (o robô da Meta conferindo o link). Nenhuma rolou a página. Navegador de
+// verdade sempre manda user-agent de navegador.
+// Só nomes de robô: app de rede social (Instagram, Pinterest, LinkedIn) abre a
+// página no navegador interno com user-agent de gente e TEM que contar.
+const ROBO = /bot[\/;-]|\bbot\b|crawl|spider|slurp|facebookexternalhit|facebookcatalog|meta-externalagent|meta-externalfetcher|headless|lighthouse|pagespeed|vercel|embedly|curl|wget|python|node-fetch|undici|axios|go-http|java\/|okhttp|postman|insomnia/i;
+const ehRobo = (ua: string) => !ua || !/mozilla|opera/i.test(ua) || ROBO.test(ua);
 const corta = (v: unknown, n: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null);
 
 function publico(pagina: string, campanha: string | null): "criador" | "social" | "outro" {
@@ -46,6 +55,7 @@ Deno.serve(async (req) => {
   const ok = () => new Response('{"ok":true}', { headers: { ...h, "Content-Type": "application/json" } });
   if (req.method === "OPTIONS") return new Response("ok", { headers: h });
   if (req.method !== "POST") return ok();
+  if (ehRobo(req.headers.get("user-agent") ?? "")) return ok();
   try {
     // sendBeacon manda text/plain: lê como texto e faz o parse aqui.
     const b = JSON.parse(await req.text() || "{}");
