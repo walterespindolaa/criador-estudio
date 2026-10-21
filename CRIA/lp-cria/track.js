@@ -100,19 +100,28 @@ var CRIA_TRACK = {
     } catch (e) { return null; }
   }
   var jaContou = {};
-  function contar(evento, alvo) {
-    if (evento !== "cta" && jaContou[evento]) return;
-    jaContou[evento] = true;
+  function basePayload(evento) {
     var o = lerOrigem();
     var q = new URLSearchParams(location.search);
     var utm = {};
     ["utm_source","utm_medium","utm_campaign","utm_content"].forEach(function (k) { utm[k] = o[k] || q.get(k) || undefined; });
     utm.fbclid = o.fbclid || q.get("fbclid") ? 1 : 0;
-    var corpo = JSON.stringify({
+    return {
       evento: evento, pagina: location.pathname.replace(/\.html$/, "") || "/", sessao: sessao(), utm: utm,
-      ref: o._referrer || document.referrer || "", alvo: alvo || null,
+      ref: o._referrer || document.referrer || "",
       disp: window.matchMedia && window.matchMedia("(max-width: 820px)").matches ? "mobile" : "desktop",
-    });
+    };
+  }
+  function contar(evento, alvo, extra) {
+    if (evento !== "cta" && evento !== "clique" && jaContou[evento]) return;
+    jaContou[evento] = true;
+    var dados = basePayload(evento);
+    dados.alvo = alvo || null;
+    if (extra) for (var k in extra) dados[k] = extra[k];
+    enviar(dados);
+  }
+  function enviar(dados) {
+    var corpo = JSON.stringify(dados);
     try {
       if (navigator.sendBeacon) navigator.sendBeacon(SITE_TRACK, new Blob([corpo], { type: "text/plain" }));
       else fetch(SITE_TRACK, { method: "POST", body: corpo, keepalive: true, headers: { "Content-Type": "text/plain" } });
@@ -126,6 +135,91 @@ var CRIA_TRACK = {
     window.addEventListener("scroll", noScroll, { passive: true });
     var t = setTimeout(function () { contar("ficou30"); }, 30000);
     window.addEventListener("pagehide", function () { clearTimeout(t); }, { once: true });
+  }
+
+  /* ── 1b. COMPORTAMENTO NA PÁGINA (21/10/2026) ───────────────────────────────
+     Walter: "entender até onde a pessoa normalmente acessa, onde ela clica, o
+     que faz, quanto tempo fica na tela". Tudo somado aqui no navegador e
+     mandado como UM acumulado por carregamento de página (edge site-track,
+     evento "leitura" -> site_leituras), quando a aba some e a cada 15s:
+       · tempo ATIVO: aba visível e alguém mexeu nos últimos 30s (aba
+         esquecida aberta não infla a média);
+       · rolagem máxima, em % da página que já passou pela tela;
+       · segundos em cada <section id>: a seção que está no meio da tela leva
+         o segundo; seção que entrou na tela conta como vista (0s), assim
+         "chegou até aqui" não depende de parar nela;
+       · seção em que estava quando saiu, quantos cliques, se converteu.
+     E cada clique em link, botão ou imagem vai na hora (evento "clique"),
+     com a seção e a altura da página. Clique em imagem que não é link é o
+     "clique morto": a pessoa achou que ali abria alguma coisa.
+     Mesmo princípio do resto: sem cookie, sem IP, sem texto digitado. */
+  var VISITA = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  var converteu = false;
+  function comportamento() {
+    var secs = [].slice.call(document.querySelectorAll("section[id], footer"));
+    if (!secs.length) return;
+    var mapa = secs.map(function (el) { return el.id || "rodape"; });
+    var tempo = {}, ativo = 0, scrollMax = 0, atual = null, nCliques = 0, enviado = "", ultimoGesto = Date.now();
+    function mexeu() { ultimoGesto = Date.now(); }
+    ["scroll", "pointerdown", "keydown", "mousemove", "touchstart", "wheel"].forEach(function (ev) {
+      window.addEventListener(ev, mexeu, { passive: true });
+    });
+    function olhar() {
+      var vh = window.innerHeight, meio = vh * 0.45;
+      for (var i = 0; i < secs.length; i++) {
+        var r = secs[i].getBoundingClientRect();
+        if (r.height === 0) continue;
+        if (r.top < vh * 0.85 && !(mapa[i] in tempo)) tempo[mapa[i]] = 0;
+        if (r.top <= meio && r.bottom > meio) atual = mapa[i];
+      }
+      var h = document.documentElement.scrollHeight;
+      if (h > 0) {
+        var p = Math.min(100, Math.round(100 * (window.scrollY + vh) / h));
+        if (p > scrollMax) scrollMax = p;
+      }
+    }
+    function mandar() {
+      // Só reenvia se algo mudou (o clique em "testar" muda converteu mesmo
+      // sem segundo novo, e é justo o envio que mais importa).
+      var assinatura = [ativo, scrollMax, nCliques, converteu, atual].join("|");
+      if (assinatura === enviado) return;
+      enviado = assinatura;
+      var dados = basePayload("leitura");
+      dados.visita = VISITA; dados.tempo = ativo; dados.scroll = scrollMax; dados.secoes = tempo;
+      dados.mapa = mapa; dados.saida = atual; dados.cliques = nCliques; dados.converteu = converteu;
+      enviar(dados);
+    }
+    olhar();
+    window.addEventListener("scroll", olhar, { passive: true });
+    setInterval(function () {
+      if (document.visibilityState !== "visible" || Date.now() - ultimoGesto > 30000) return;
+      ativo++;
+      olhar();
+      if (atual) tempo[atual] = (tempo[atual] || 0) + 1;
+      if (ativo % 15 === 0) mandar();
+    }, 1000);
+    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") mandar(); });
+    window.addEventListener("pagehide", mandar);
+
+    document.addEventListener("click", function (e) {
+      var t = e.target && e.target.closest ? e.target : null;
+      if (!t) return;
+      var alvo = t.closest("a[href], button, summary, [role=button], label, input[type=submit]");
+      var morto = false;
+      if (!alvo) { alvo = t.closest("img, picture, video, figure"); morto = !!alvo; }
+      if (!alvo || nCliques >= 60) return;
+      nCliques++;
+      var img = alvo.querySelector ? alvo.querySelector("img") : null;
+      // Texto primeiro, igual ao contador de "testar", pra o mesmo botão ter
+      // o mesmo nome nos dois lugares.
+      var rotulo = (alvo.textContent || "").replace(/\s+/g, " ").trim() || alvo.getAttribute("aria-label") ||
+        alvo.getAttribute("data-track") || alvo.getAttribute("alt") || (img && img.getAttribute("alt")) || alvo.tagName.toLowerCase();
+      if (morto) rotulo = "imagem: " + rotulo;
+      var sec = alvo.closest("section[id], footer");
+      var h = document.documentElement.scrollHeight || 1;
+      var y = alvo.getBoundingClientRect().top + window.scrollY;
+      contar("clique", rotulo.slice(0, 60), { secao: sec ? (sec.id || "rodape") : null, pos_y: Math.round(100 * y / h) });
+    }, true);
   }
 
   /* ── 2. META PIXEL ────────────────────────────────────────────────────────
@@ -260,6 +354,7 @@ var CRIA_TRACK = {
       if (novo !== a.href) a.href = novo;
 
       var rotulo = (a.textContent || "").replace(/\s+/g, " ").trim().slice(0, 60);
+      if (href.indexOf("/signup") !== -1 || vaiProCheckout) converteu = true;
       if (href.indexOf("/signup") !== -1) {
         contar("cta", rotulo);
         // A conversão que o algoritmo vai otimizar acontece no app
@@ -303,6 +398,7 @@ var CRIA_TRACK = {
     cliques();
     contar("view");
     contagemDeLeitura();
+    comportamento();
   }
 
   function depois() {

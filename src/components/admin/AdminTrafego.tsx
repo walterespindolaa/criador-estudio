@@ -5,9 +5,11 @@ import {
 } from "recharts";
 import {
   RefreshCw, Megaphone, Link2, Instagram, Sparkles, AlertTriangle, Lightbulb, ArrowDown, Globe,
+  LayoutDashboard, MousePointerClick,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { AdminLpComportamento, KpiCard } from "./AdminLpComportamento";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ABA TRÁFEGO DO ADMIN: O MOTOR DE ANÁLISE (21/10/2026)
@@ -26,6 +28,12 @@ import { cn } from "@/lib/utils";
 
    O funil é lido de cima pra baixo, por público, porque é a pergunta que
    decide verba: "o dinheiro do criador está virando cadastro de criador?".
+
+   21/10/2026, segunda volta (Walter: "falta mais dados ali, dashboards ...
+   até onde a pessoa acessa, onde clica, quanto tempo fica"): quatro abas
+   (Visão geral, Anúncios, Na página, Bio e Instagram), cartões de número com
+   o período anterior do mesmo tamanho (admin_trafego_kpis) e a aba "Na
+   página" com o comportamento dentro da LP (AdminLpComportamento).
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type Funil = {
@@ -59,6 +67,16 @@ type Painel = {
   ig_conectado: boolean;
   analises: Analise[];
 };
+
+type Kpis = { atual: Record<string, number | null>; anterior: Record<string, number | null>; periodo: { ini: string; fim: string; dias: number } };
+
+const ABAS = [
+  { id: "geral", txt: "Visão geral", icone: LayoutDashboard },
+  { id: "anuncios", txt: "Anúncios", icone: Megaphone },
+  { id: "pagina", txt: "Na página", icone: MousePointerClick },
+  { id: "bio", txt: "Bio e Instagram", icone: Instagram },
+] as const;
+type Aba = (typeof ABAS)[number]["id"];
 
 const sbRpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
 
@@ -146,8 +164,51 @@ function FunilPublico({ f }: { f: Funil }) {
   );
 }
 
+const segs = (v: number | null | undefined) => {
+  if (v == null) return "—";
+  const s = Math.round(v);
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}min ${s % 60}s`;
+};
+
+/* Os números do topo, cada um com o período anterior do mesmo tamanho. */
+function PainelKpis({ dias }: { dias: number }) {
+  const { data } = useQuery<Kpis>({
+    queryKey: ["admin-trafego-kpis", dias],
+    queryFn: async () => {
+      const { data, error } = await sbRpc("admin_trafego_kpis", { _dias: dias });
+      if (error) throw new Error(error.message);
+      return data as Kpis;
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+  if (!data) return null;
+  const a = data.atual, b = data.anterior;
+  const cards: { r: string; v: string; k: string; menor?: boolean; dica?: string }[] = [
+    { r: "Investido na Meta", v: brl(a.gasto), k: "gasto" },
+    { r: "Impressões", v: n(a.impressoes), k: "impressoes" },
+    { r: "CTR do link", v: a.ctr != null ? `${a.ctr}%` : "—", k: "ctr", dica: "Cliques no link / impressões" },
+    { r: "Visitas no site", v: n(a.visitas), k: "visitas", dica: "Sessões na LP, todas as origens" },
+    { r: "Visitas vindas da Meta", v: n(a.visitas_meta), k: "visitas_meta" },
+    { r: "Custo por visita", v: brl(a.custo_visita), k: "custo_visita", menor: true, dica: "Gasto / visitas que chegaram da Meta (contagem nossa)" },
+    { r: "Clicaram em testar", v: n(a.clicaram_testar), k: "clicaram_testar" },
+    { r: "Cadastros", v: n(a.cadastros), k: "cadastros", dica: "Todas as origens" },
+    { r: "Cadastros da Meta", v: n(a.cadastros_meta), k: "cadastros_meta" },
+    { r: "Custo por cadastro", v: brl(a.custo_cadastro), k: "custo_cadastro", menor: true },
+    { r: "Visitas na bio", v: n(a.bio_views), k: "bio_views" },
+    { r: "Tempo na página (mediana)", v: segs(a.tempo_mediano), k: "tempo_mediano" },
+  ];
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+      {cards.map((c) => (
+        <KpiCard key={c.k} rotulo={c.r} valor={c.v} atual={a[c.k]} anterior={b[c.k]} menorMelhor={c.menor} dica={c.dica} />
+      ))}
+    </div>
+  );
+}
+
 export function AdminTrafego() {
   const [dias, setDias] = useState(14);
+  const [aba, setAba] = useState<Aba>("geral");
   const { data, isLoading, error, refetch, isFetching } = useQuery<Painel>({
     queryKey: ["admin-trafego", dias],
     queryFn: async () => {
@@ -181,7 +242,19 @@ export function AdminTrafego() {
         </div>
       </div>
 
-      {isLoading ? (
+      <div className="flex gap-1 overflow-x-auto rounded-xl bg-muted/60 p-1">
+        {ABAS.map((x) => (
+          <button key={x.id} onClick={() => setAba(x.id)}
+            className={cn("flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] font-body font-semibold transition-colors",
+              aba === x.id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+            <x.icone className="h-3.5 w-3.5" />{x.txt}
+          </button>
+        ))}
+      </div>
+
+      {aba === "pagina" ? (
+        <AdminLpComportamento dias={dias} />
+      ) : isLoading ? (
         <p className="text-sm text-muted-foreground font-body py-10 text-center">Carregando…</p>
       ) : error || !data ? (
         <div className="rounded-2xl border border-dashed border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive font-body">
@@ -189,6 +262,9 @@ export function AdminTrafego() {
         </div>
       ) : (
         <>
+          {aba === "geral" && <>
+          <PainelKpis dias={dias} />
+
           {/* LEITURA DO AGENDAMENTO */}
           <Card titulo="Leitura do Claude" icone={Sparkles}
             acao={ultima && <span className="text-xs font-body text-muted-foreground">{new Date(ultima.criado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>}>
@@ -252,8 +328,10 @@ export function AdminTrafego() {
             </div>
           </Card>
 
+          </>}
+
           {/* ANÚNCIOS */}
-          <Card titulo="Cada anúncio" icone={Megaphone}>
+          {aba === "anuncios" && <Card titulo="Cada anúncio" icone={Megaphone}>
             {data.anuncios.length === 0 ? (
               <p className="text-sm font-body text-muted-foreground">Sem números da Meta no período ainda.</p>
             ) : (
@@ -292,8 +370,9 @@ export function AdminTrafego() {
                 </table>
               </div>
             )}
-          </Card>
+          </Card>}
 
+          {aba === "bio" && <>
           <div className="grid lg:grid-cols-2 gap-4">
             {/* LINK NA BIO */}
             <Card titulo="Link na bio · criaclub.bio/criasocialclub" icone={Link2}>
@@ -371,7 +450,9 @@ export function AdminTrafego() {
             )}
           </Card>
 
-          {data.analises.length > 1 && (
+          </>}
+
+          {aba === "geral" && data.analises.length > 1 && (
             <Card titulo="Leituras anteriores" icone={Sparkles}>
               <div className="space-y-2">
                 {data.analises.slice(1).map((a) => (
