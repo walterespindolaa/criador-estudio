@@ -259,6 +259,32 @@ export function mediaDownloadName(title: string | undefined, index: number, m: M
   return `${base}-${index + 1}.${ext}`;
 }
 
+// O guid do vídeo no Bunny: coluna própria, id externo ou o fim do link do player.
+function guidDoVideo(m: MediaLike): string | null {
+  const ok = (v?: string | null) => (v && /^[0-9a-f-]{36}$/i.test(v) ? v : null);
+  return ok(m.bunny_video_id) ?? ok(m.external_file_id)
+    ?? ok((m.view_url ?? "").match(/mediadelivery\.net\/(?:embed|play)\/\d+\/([0-9a-f-]{36})/i)?.[1] ?? null);
+}
+
+// Procura o MP4 do vídeo nas duas bibliotecas (o Cria já criou vídeo nas duas):
+// primeiro o original, depois a maior versão do MP4 fallback.
+async function mp4DoVideo(m: MediaLike): Promise<string | null> {
+  const guid = guidDoVideo(m);
+  if (!guid) return null;
+  const hosts = ["vz-86788381-03e.b-cdn.net", "vz-4f7de422-7aa.b-cdn.net"];
+  const arquivos = ["original", "play_1080p.mp4", "play_720p.mp4", "play_480p.mp4"];
+  for (const h of hosts) {
+    for (const a of arquivos) {
+      const url = `https://${h}/${guid}/${a}`;
+      try {
+        const r = await fetch(url, { method: "HEAD" });
+        if (r.ok) return url;
+      } catch { /* próximo */ }
+    }
+  }
+  return null;
+}
+
 // Dispara o download de um blob com nome coerente. O blob: é same-origin, então o
 // atributo download é respeitado (inclusive no iOS Safari: cai em Arquivos).
 function triggerBlobDownload(blob: Blob, fileName: string) {
@@ -312,6 +338,21 @@ function openForSave(url: string, fileName: string) {
 // Extraído do CriaPostMedia pra ser reaproveitado no popup da agenda.
 export async function downloadMediaFile(m: MediaLike, fileName: string): Promise<"file" | "video" | "opened"> {
   if (isVideoMedia(m)) {
+    /* VÍDEO BAIXA O ARQUIVO, NÃO O PLAYER (Walter, 20/10/2026: "coloco pra
+       baixar e abre assim e não consigo salvar"). Antes abria o embed do Bunny,
+       que é um player sem botão de salvar. Agora acha o MP4 no CDN (o original
+       em qualidade cheia, ou a maior versão gerada) e baixa como arquivo. O CDN
+       manda CORS liberado, então o fetch funciona no navegador. */
+    const mp4 = await mp4DoVideo(m);
+    if (mp4) {
+      const nome = fileName.replace(/\.[a-z0-9]{2,5}$/i, "") + ".mp4";
+      try {
+        const res = await fetch(mp4);
+        if (res.ok) { triggerBlobDownload(await res.blob(), nome); return "file"; }
+      } catch { /* cai pro abrir o MP4 */ }
+      openForSave(mp4, nome);
+      return "opened";
+    }
     const embed = m.view_url;
     if (!embed) throw new Error("Vídeo indisponível.");
     window.open(embed, "_blank", "noopener");

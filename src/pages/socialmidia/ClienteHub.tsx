@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, ChevronLeft, ChevronRight, Copy, ExternalLink, Link2, Loader2, Plus, Settings2, Trash2, Wallet, Send, Check, Pencil, LogIn, Home, Layers, CalendarDays, BarChart3, BookOpen, Lightbulb, Search, Compass, Instagram, ArrowRight, Lock, FolderOpen, Package, File as FileIcon, RefreshCw, Kanban, StickyNote, ListTodo, IdCard, Activity, Target } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
-import { useCrmClient, useUpdateCrmClient, useUploadCrmAsset, useClientNotes, CLIENT_STATUSES, CLIENT_STATUS_META, type ClientStatus } from "@/hooks/useCrm";
+import { useCrmClient, useCrmClients, useUpdateCrmClient, useUploadCrmAsset, useClientNotes, CLIENT_STATUSES, CLIENT_STATUS_META, type ClientStatus } from "@/hooks/useCrm";
 import { useCaptureCities } from "@/hooks/useCaptureCities";
 import { ClientNotesDrawer, notePreview } from "@/components/accounts/ClientNotesDrawer";
 import { ClientHashtags } from "@/components/accounts/crm/ClientHashtags";
@@ -1407,6 +1407,22 @@ function CampoCliente({ clientId, label, valor, campo, tipo, placeholder, rodape
 }) {
   const update = useUpdateCrmClient();
   const [editando, setEditando] = useState(false);
+  /* DIAS EM QUE ELA COSTUMA RECEBER (Walter, 20/10/2026: "a social mídia
+     escolher as datas que ela normalmente recebe, pra ajustar o fluxo").
+     Os dias de pagamento que ela já usa na carteira viram atalhos, do mais
+     usado pro menos; com pouca coisa cadastrada, entram 5, 10, 15, 20 e 25. */
+  const { data: carteira = [] } = useCrmClients();
+  const diasDoFluxo = useMemo(() => {
+    if (tipo !== "dia") return [] as number[];
+    const cont = new Map<number, number>();
+    for (const c of carteira) {
+      const d = Number((c as { payment_day?: number | null }).payment_day);
+      if (d >= 1 && d <= 31) cont.set(d, (cont.get(d) ?? 0) + 1);
+    }
+    const usados = [...cont.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([d]) => d).slice(0, 6);
+    const base = usados.length >= 3 ? usados : [...new Set([...usados, 5, 10, 15, 20, 25])].slice(0, 6);
+    return base.sort((a, b) => a - b);
+  }, [carteira, tipo]);
   const [rascunho, setRascunho] = useState<string | number | null>(valor ?? null);
   // id único do datalist (só quando há sugestões e é campo de texto).
   const listId = sugestoes && sugestoes.length && tipo === "texto" ? `dl-${campo}-${clientId}` : undefined;
@@ -1444,14 +1460,25 @@ function CampoCliente({ clientId, label, valor, campo, tipo, placeholder, rodape
             />
           ) : (
             <>
+              {tipo === "dia" && diasDoFluxo.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-1.5">
+                  {diasDoFluxo.map((d) => (
+                    <button key={d} type="button" onClick={() => void salvar(d)}
+                      className={cn("rounded-full border px-2.5 py-1 text-[12px] font-body font-bold transition-colors",
+                        rascunho === d ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-foreground hover:border-primary/50")}>
+                      dia {d}
+                    </button>
+                  ))}
+                </div>
+              )}
               <Input
-                autoFocus
+                autoFocus={tipo !== "dia"}
                 type={tipo === "data" ? "date" : tipo === "dia" ? "number" : "text"}
                 min={tipo === "dia" ? 1 : undefined}
                 max={tipo === "dia" ? 31 : undefined}
                 list={listId}
                 value={rascunho === null || rascunho === undefined ? "" : String(rascunho)}
-                placeholder={placeholder}
+                placeholder={tipo === "dia" ? "outro dia (1 a 31)" : placeholder}
                 onChange={(e) => {
                   const v = e.target.value;
                   setRascunho(tipo === "dia" ? (v === "" ? null : Math.max(1, Math.min(31, Number(v)))) : (v || null));

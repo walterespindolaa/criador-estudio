@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useExternalClients, useExternalPosts, usePortalActivity, type ExternalClient, type ExternalPost, type ExternalPostInput } from "@/hooks/useCriaPost";
 import { PreviaWhatsApp } from "@/components/shared/PreviaWhatsApp";
 import { toast } from "sonner";
@@ -22,7 +23,7 @@ import { usePermissaoModulo } from "@/hooks/usePermissaoModulo";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { useEditorialLines } from "@/hooks/useEditorialLines";
-import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X, ChevronDown, History, Hash, Check, Users } from "lucide-react";
+import { Plus, Link2, Pencil, Loader2, ArrowLeft, Trash2, RotateCcw, FileText, Instagram, KanbanSquare, Eye, Clock, Settings2, Palette, Copy, CalendarDays, X, ChevronDown, History, Hash, Check, Users, Camera } from "lucide-react";
 import { usePostApprovalComments } from "@/hooks/useApprovals";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { Calendar } from "@/components/ui/calendar";
@@ -437,6 +438,21 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const criaOwnerId = crmClients.find((c) => c.id === client.crm_client_id)?.cria_owner_id ?? null;
   const hasCriaAccount = !!criaOwnerId;
   const { data: igConn } = useClientSocialConnection(client.crm_client_id);
+  /* CAPTAÇÃO NO CALENDÁRIO DO CLIENTE (Walter, 20/10/2026: "tem como aparecer
+     o dia que tem captação? só uma barrinha pequena"). Só leitura: as
+     gravações marcadas pra este cliente viram uma faixa verde no dia. */
+  const { data: captacoesCliente = [] } = useQuery<{ capture_date: string; capture_time: string | null; status: string | null }[]>({
+    queryKey: ["captacoes-do-cliente", client.crm_client_id],
+    enabled: !!client.crm_client_id,
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any).from("agenda_captures")
+        .select("capture_date, capture_time, status").eq("crm_client_id", client.crm_client_id)
+        .order("capture_date");
+      if (error) return [];
+      return data ?? [];
+    },
+  });
   const [formOpen, setFormOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -763,7 +779,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         </div>
       )}
       {view === "calendario" ? (
-        <PostsCalendar posts={viewPosts} onOpen={openEdit} onNewAt={permPost.podeEditar ? (d) => openNew(d) : undefined} parceiroDe={nomeParceiro}
+        <PostsCalendar posts={viewPosts} captacoes={captacoesCliente} onOpen={openEdit} onNewAt={permPost.podeEditar ? (d) => openNew(d) : undefined} parceiroDe={nomeParceiro}
           onMove={permPost.podeEditar ? (id, d) => setDate.mutate({ id, scheduled_date: d }) : undefined}
           tagsByPost={tagsByPost} tagCatalog={tagCatalog} />
       ) : isLoading ? (
@@ -1336,8 +1352,10 @@ function calYmd(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1)
 // Semana começa no DOMINGO (padrão do iPhone/calendários BR).
 function calWeekStart(d: Date) { const x = new Date(d); x.setDate(x.getDate() - x.getDay()); x.setHours(0, 0, 0, 0); return x; }
 
-function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog, parceiroDe }: {
+function PostsCalendar({ posts, captacoes = [], onOpen, onNewAt, onMove, tagsByPost, tagCatalog, parceiroDe }: {
   posts: ExternalPost[];
+  /** Gravações do cliente: faixinha verde no dia. */
+  captacoes?: { capture_date: string; capture_time: string | null; status: string | null }[];
   /** Quem da equipe está com a peça (Walter, 29/09/2026: "quando está com
    *  alguém da equipe, dá pra ficar uma tag ao lado do status?"). */
   parceiroDe?: (id: string | null | undefined) => { nome: string; role: string } | null;
@@ -1370,6 +1388,9 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog,
     const arr = byDay.get(p.scheduled_date) ?? [];
     arr.push(p); byDay.set(p.scheduled_date, arr);
   }
+
+  const capPorDia = new Map<string, { capture_time: string | null; status: string | null }[]>();
+  for (const c of captacoes) capPorDia.set(c.capture_date, [...(capPorDia.get(c.capture_date) ?? []), c]);
 
   const today = calYmd(new Date());
   const dropOn = (day: string) => { if (dragId && onMove) onMove(dragId, day); setDragId(null); setOverDay(null); };
@@ -1417,6 +1438,16 @@ function PostsCalendar({ posts, onOpen, onNewAt, onMove, tagsByPost, tagCatalog,
                 </span>
                 {onNewAt && <button onClick={(e) => { e.stopPropagation(); onNewAt(iso); }} className="grid place-items-center h-7 w-7 -mr-1 text-muted-foreground hover:text-primary" aria-label="Novo post neste dia"><Plus className="h-3.5 w-3.5" /></button>}
               </div>
+              {(capPorDia.get(iso) ?? []).map((c, i) => {
+                const feita = c.status === "concluida";
+                return (
+                  <span key={i} title={`Captação${c.capture_time ? ` às ${c.capture_time.slice(0, 5)}` : ""}${feita ? " (gravada)" : ""}`}
+                    className={`flex items-center gap-1 rounded-md px-1.5 py-[1px] text-[9.5px] font-body font-bold leading-4 truncate ${feita ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" : "bg-emerald-600 text-white"}`}>
+                    <Camera className="h-2.5 w-2.5 shrink-0" />
+                    <span className="truncate">Captação{c.capture_time ? ` ${c.capture_time.slice(0, 5).replace(":00", "h")}` : ""}</span>
+                  </span>
+                );
+              })}
               {list.map((p) => {
                 const st = STATUS[(p.approval_status ?? "pendente") as ApprovalKey];
                 return (

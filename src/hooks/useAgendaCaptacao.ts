@@ -148,6 +148,9 @@ export function useSlotsDoMes(ym: string) {
   return useQuery<SlotCaptacao[]>({
     queryKey: ["captacao-slots", mgr, ym],
     enabled: !!mgr,
+    // O calendário também: o horário que o cliente pegou vira "pedido esperando você".
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { de, ate } = intervaloDoMes(ym);
       const { data, error } = await sbFrom("captacao_slots")
@@ -217,6 +220,18 @@ export function useSlotsMutations() {
     onSuccess: recarregar,
     onError: () => toast.error("Não consegui tirar esse horário."),
   });
+  /* Tirar vários de uma vez (Walter, 20/10/2026: "não consigo selecionar e
+     excluir a data"). Mesma regra do remover: só sai o que está LIVRE. */
+  const removerVarios = useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (!ids.length) return 0;
+      const { error } = await sbFrom("captacao_slots").delete().in("id", ids).eq("status", "livre");
+      if (error) throw error;
+      return ids.length;
+    },
+    onSuccess: recarregar,
+    onError: () => toast.error("Não consegui tirar esses horários."),
+  });
   const editar = useMutation({
     mutationFn: async (v: { id: string; para_todos: boolean; clientes: string[] }) => {
       const { error } = await sbFrom("captacao_slots").update({ para_todos: v.para_todos, clientes: v.clientes }).eq("id", v.id);
@@ -224,7 +239,7 @@ export function useSlotsMutations() {
     },
     onSuccess: recarregar,
   });
-  return { adicionar, remover, editar };
+  return { adicionar, remover, removerVarios, editar };
 }
 
 export function usePedidosCaptacao() {
@@ -232,7 +247,11 @@ export function usePedidosCaptacao() {
   return useQuery<PedidoCaptacao[]>({
     queryKey: ["captacao-pedidos", mgr],
     enabled: !!mgr,
-    refetchInterval: 60_000,
+    /* 15s (era 60s). Gabriela, 20/10/2026: o cliente marcou e a aba Pedidos
+       continuou vazia; o pedido estava no banco, a tela só ia buscar de novo
+       depois de 1 minuto. */
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const desde = new Date(Date.now() - 30 * 86400000).toISOString();
       const { data, error } = await sbFrom("captacao_pedidos")

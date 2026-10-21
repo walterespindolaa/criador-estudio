@@ -2987,8 +2987,8 @@ function PostEditDialog({ post, clientName, onClose, onSave, onOpenClient, savin
     setDlId(m.id);
     try {
       const kind = await downloadMediaFile(m, mediaDownloadName(post?.title ?? undefined, index, m));
-      if (kind === "video") toast.info("Vídeo aberto em nova aba pra você salvar de lá.");
-      else if (kind === "opened") toast.info("Abri a imagem, é só segurar pra salvar.");
+      if (kind === "video") toast.info("Não achei o arquivo do vídeo: abri o player numa aba nova.");
+      else if (kind === "opened") toast.info(m.file_type?.startsWith("video") || m.provider === "bunny" ? "Abri o vídeo numa aba nova: é só salvar de lá." : "Abri a imagem, é só segurar pra salvar.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não consegui baixar.");
     } finally {

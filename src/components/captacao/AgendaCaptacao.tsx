@@ -18,6 +18,7 @@ import { useActiveAccount } from "@/contexts/AccountContext";
 import { clientesParaEscolher } from "@/lib/cliente-status";
 import { hojeBR } from "@/lib/date-br";
 import { PreviaWhatsApp } from "@/components/shared/PreviaWhatsApp";
+import { confirmar } from "@/components/shared/Confirm";
 import {
   CHECKLIST_PADRAO, OPCOES_PADRAO, copiarLinkDoCliente, dataLonga, dataPorExtenso, faixaDeHorario, horaCurta, linkDoCliente,
   livresDoCliente, montarMensagemGrupo, pedidoAtivo,
@@ -253,7 +254,14 @@ function AbaCalendario({ ym, setYm, hoje, onAbrirPasta, onMensagem }: {
                     dia === hoje && !sel && "ring-1 ring-blue-400")}>
                   <div className="flex items-center justify-between px-0.5">
                     <span className="text-[11px] sm:text-[12px] font-body font-bold text-foreground/80">{d}</span>
-                    {sel && <span className="grid h-4 w-4 place-items-center rounded-[5px] bg-blue-600"><Check className="h-3 w-3 text-white" /></span>}
+                    {/* Quadradinho sempre visível nos dias que dá pra marcar: dia cheio
+                        de horários não tinha onde tocar pra selecionar (20/10/2026). */}
+                    {!passado && (
+                      <span className={cn("grid h-4 w-4 place-items-center rounded-[5px] border",
+                        sel ? "bg-blue-600 border-blue-600" : "border-muted-foreground/35 bg-background")}>
+                        {sel && <Check className="h-3 w-3 text-white" />}
+                      </span>
+                    )}
                   </div>
                   <div className="mt-0.5 space-y-0.5">
                     {doDia.slice(0, 3).map((s) => {
@@ -345,7 +353,23 @@ function PainelLiberar({ dias, porDia, slots, semana, duracaoPadrao, local, clie
   semana: { dow: number; horas: string[] }[]; duracaoPadrao: number; local: string | null; clients: Cliente[];
   onLiberado: () => void; onSalvarSemana: (dows: number[], horas: string[], dur: number) => Promise<void>; temSemana: boolean;
 }) {
-  const { adicionar } = useSlotsMutations();
+  const { adicionar, removerVarios } = useSlotsMutations();
+  const livresDosDias = dias.flatMap((d) => (porDia.get(d) ?? []).filter((s) => s.status === "livre"));
+  const ocupadosDosDias = dias.flatMap((d) => (porDia.get(d) ?? []).filter((s) => s.status !== "livre"));
+  const tirarLivres = async () => {
+    if (!livresDosDias.length) return;
+    const ok = await confirmar({
+      titulo: `Tirar ${livresDosDias.length} ${livresDosDias.length === 1 ? "horário livre" : "horários livres"}?`,
+      descricao: ocupadosDosDias.length
+        ? `Os ${ocupadosDosDias.length} com pedido ou confirmados ficam: trate eles tocando no horário.`
+        : "Eles somem do link dos clientes.",
+      acao: "Tirar",
+    });
+    if (!ok) return;
+    const n = await removerVarios.mutateAsync(livresDosDias.map((s) => s.id));
+    toast.success(`${n} ${n === 1 ? "horário tirado" : "horários tirados"}`);
+    onLiberado();
+  };
   // Sugestões: os horários mais usados (atalho semanal + este mês) e 09h/14h de base.
   const sugeridas = useMemo(() => {
     const cont = new Map<string, number>();
@@ -474,6 +498,13 @@ function PainelLiberar({ dias, porDia, slots, semana, duracaoPadrao, local, clie
         {adicionar.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
         {horas.size ? `Liberar ${plano.novos.length} ${plano.novos.length === 1 ? "horário" : "horários"}` : "Escolha os horários"}
       </Button>
+      {livresDosDias.length > 0 && (
+        <Button variant="outline" onClick={() => void tirarLivres()} disabled={removerVarios.isPending}
+          className="mt-2 w-full rounded-xl h-10 border-destructive/40 text-destructive hover:bg-destructive/5 hover:text-destructive">
+          {removerVarios.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1.5" />}
+          Tirar {livresDosDias.length} {livresDosDias.length === 1 ? "horário livre" : "horários livres"} {dias.length === 1 ? "deste dia" : "destes dias"}
+        </Button>
+      )}
       {plano.pulados.length > 0 && (
         <p className="mt-2 text-[11.5px] font-body text-muted-foreground leading-relaxed">
           Já existem e ficam como estão: {juntarE(plano.pulados)}. Pra tirar um horário, toque nele no calendário.
