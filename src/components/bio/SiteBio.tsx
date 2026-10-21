@@ -6,6 +6,7 @@ import {
 } from "@/lib/bioBlocks";
 import { TextoRico } from "@/lib/textoRico";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
+import { BarraAcaoFixa, SecaoApresentacao, SecaoNumeros } from "@/components/bio/SiteEspecialista";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -527,6 +528,8 @@ export function SiteBio({
        terminava no rodapé preto e colava o selo branco embaixo dele. */
     for (let i = blocos.length - 1; i >= 0; i--) {
       const b = blocos[i];
+      // O botão fixo não ocupa lugar na página: não é ele que fecha o fim.
+      if (b.kind === "acao_fixa") continue;
       if (b.kind === "contato") return true;
       if (!faltaNoBloco({ kind: b.kind, data: b.data })) return false;
     }
@@ -548,11 +551,21 @@ export function SiteBio({
      a partir daqui, "grande" e "pequeno" passam a ser sobre a largura DESTA
      caixa, não sobre a largura do monitor. É por isso que a prévia de 300px
      no editor mostra a mesma página que o celular de verdade mostra. */
+  /* Página de especialista: quando a primeira coisa é a capa com vídeo e
+     assinatura, ela ocupa a tela desde o topo. O menu branco em cima cortaria
+     a pessoa no meio da testa e repetiria o nome que a assinatura já mostra. */
+  const capaImersiva = blocos[0]?.kind === "apresentacao";
+  // Um botão fixo só. Dois presos no pé da tela, um em cima do outro, é ruído.
+  const acaoFixa = blocos.find((b) => b.kind === "acao_fixa");
+
   return (
     <div className={cn("bg-white [container-type:inline-size]", alturaCheia !== false && "min-h-[100dvh]")}>
-      <Topo marca={marca} secoes={secoes} aoIr={irPara} />
+      {!capaImersiva && <Topo marca={marca} secoes={secoes} aoIr={irPara} />}
       {blocos.map((b) => {
         switch (b.kind) {
+          case "apresentacao": return <SecaoApresentacao key={b.id} d={b.data} nomePadrao={marca.nome} />;
+          case "numeros": return <SecaoNumeros key={b.id} d={b.data} />;
+          case "acao_fixa": return null;
           case "capa": return <SecaoCapa key={b.id} d={b.data} marca={marca} visual={visual} aoClicar={() => onClique?.(b.id)} />;
           case "sobre": return <SecaoSobre key={b.id} d={b.data} marca={marca} />;
           case "produtos": return <SecaoProdutos key={b.id} d={b.data} marca={marca} visual={visual} itens={produtos} aoAbrir={aoAbrirProduto} aoClicar={() => onClique?.(b.id)} />;
@@ -579,6 +592,9 @@ export function SiteBio({
         }
       })}
       {!terminaNoRodape && <SeloCria />}
+      {acaoFixa && (
+        <BarraAcaoFixa d={acaoFixa.data} cor={marca.cor} corTexto={marca.corTexto} aoClicar={() => onClique?.(acaoFixa.id)} />
+      )}
     </div>
   );
 }

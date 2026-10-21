@@ -23,6 +23,11 @@ import { cn } from "@/lib/utils";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { FORMAS_DA_FOTO, formaValida, type FormaDaFoto } from "@/lib/bioFoto";
 import { EditorItens } from "@/components/bio/EditorItens";
+import { EditorAssinatura } from "@/components/bio/EditorAssinatura";
+import { uploadFileToBunnyStream } from "@/lib/bunny-upload";
+import {
+  NICHOS, VIDEO_MAX_MB, VIDEO_MAX_SEGUNDOS, fonteAssinatura, guidValido, lerAssinatura, nichoPorId, videoDaCapa,
+} from "@/lib/bioEspecialista";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MONTAR A PÁGINA POR BLOCOS
@@ -246,6 +251,142 @@ function SeletorIcone({ valor, onTroca }: { valor: string; onTroca: (v: string) 
 }
 
 /* ── O FORMULÁRIO DE CADA TIPO ── */
+/* ── O VÍDEO DA CAPA (21/10/2026) ──
+   Sobe pro Bunny na biblioteca que tem MP4 (ver lib/bioEspecialista). Antes de
+   subir, confere a duração: cada visita baixa o vídeo inteiro e o Bunny cobra
+   por GB entregue, então vídeo longo na capa é custo sem ganho. */
+function duracaoDoVideo(file: File): Promise<number> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(v.duration); };
+    v.onerror = () => { URL.revokeObjectURL(url); resolve(NaN); };
+    v.src = url;
+  });
+}
+
+function BotaoVideoCapa({ guid, aoTrocar }: { guid: string; aoTrocar: (guid: string) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [subindo, setSubindo] = useState(false);
+  const [semMiniatura, setSemMiniatura] = useState(false);
+  const video = videoDaCapa(guid);
+  useEffect(() => { setSemMiniatura(false); }, [guid]);
+  const escolher = async (f: File) => {
+    if (!f.type.startsWith("video/")) { toast.error("Escolha um arquivo de vídeo."); return; }
+    if (f.size > VIDEO_MAX_MB * 1024 * 1024) { toast.error(`Vídeo grande demais. Até ${VIDEO_MAX_MB} MB.`); return; }
+    const s = await duracaoDoVideo(f);
+    // Meio segundo de folga: celular grava 8,2s quando a pessoa para no 8.
+    if (Number.isFinite(s) && s > VIDEO_MAX_SEGUNDOS + 0.5) {
+      toast.error(`O vídeo tem ${Math.round(s)}s. Pra capa, corte em até ${VIDEO_MAX_SEGUNDOS} segundos.`);
+      return;
+    }
+    setSubindo(true);
+    try {
+      const r = await uploadFileToBunnyStream(f);
+      aoTrocar(r.videoGuid);
+      toast.success("Vídeo enviado. Ele leva alguns minutos pra ficar pronto; até lá a capa mostra a foto.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não consegui enviar o vídeo.");
+    } finally { setSubindo(false); }
+  };
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="w-16 h-16 rounded-xl bg-muted overflow-hidden shrink-0 grid place-items-center border border-border">
+        {video && !semMiniatura
+          ? <img src={video.poster} alt="" className="w-full h-full object-cover" onError={() => setSemMiniatura(true)} />
+          : video ? <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" aria-label="Processando o vídeo" />
+          : <ImagePlus className="h-4 w-4 text-muted-foreground" />}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        <input ref={ref} type="file" accept="video/*" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void escolher(f); }} />
+        <Button type="button" size="sm" variant="outline" disabled={subindo} onClick={() => ref.current?.click()}>
+          {subindo && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}{subindo ? "Enviando…" : video ? "Trocar vídeo" : "Enviar vídeo"}
+        </Button>
+        {video && !subindo && <Button type="button" size="sm" variant="ghost" onClick={() => aoTrocar("")}>Remover</Button>}
+      </div>
+    </div>
+  );
+}
+
+function EscolherTema({ valor, onTroca }: { valor: string; onTroca: (v: string) => void }) {
+  return (
+    <LinhaCampo label="Fundo">
+      <div className="flex gap-1.5">
+        {[{ v: "escuro", r: "Escuro" }, { v: "claro", r: "Claro" }].map((o) => (
+          <button key={o.v} type="button" onClick={() => onTroca(o.v)}
+            className={cn("rounded-lg border px-3 py-1.5 text-xs font-body font-semibold min-h-[32px]",
+              (valor || "escuro") === o.v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground")}>
+            {o.r}
+          </button>
+        ))}
+      </div>
+    </LinhaCampo>
+  );
+}
+
+/** Lista de nichos que preenche o bloco com o ponto de partida daquele ramo. */
+function SugerirPorNicho({ aoEscolher }: { aoEscolher: (id: string) => void }) {
+  return (
+    <LinhaCampo label="Começar pelo nicho" ajuda="Preenche com o que costuma funcionar no ramo. Troque o que está entre colchetes.">
+      <select defaultValue="" aria-label="Começar pelo nicho"
+        onChange={(e) => { if (e.target.value) aoEscolher(e.target.value); e.target.value = ""; }}
+        className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm font-body">
+        <option value="">Escolher nicho…</option>
+        {NICHOS.map((n) => <option key={n.id} value={n.id}>{n.nome}</option>)}
+      </select>
+    </LinhaCampo>
+  );
+}
+
+function FormApresentacao({ d, p }: { d: DadosBloco; p: (patch: DadosBloco) => void }) {
+  const [assinando, setAssinando] = useState(false);
+  const midia = txt(d, "midia", "video");
+  const a = lerAssinatura(d.assinatura);
+  const resumoAss = a.modo === "nenhuma" ? "Sem assinatura"
+    : a.modo === "desenho" ? "Desenhada à mão" : `Letra cursiva, ${fonteAssinatura(a.fonte).nome.toLowerCase()}`;
+  return (
+    <div className="space-y-3.5">
+      <LinhaCampo label="O que aparece na capa">
+        <div className="flex gap-1.5">
+          {[{ v: "video", r: "Vídeo em loop" }, { v: "imagem", r: "Foto fixa" }].map((o) => (
+            <button key={o.v} type="button" onClick={() => p({ midia: o.v })}
+              className={cn("rounded-lg border px-3 py-1.5 text-xs font-body font-semibold min-h-[32px]",
+                midia === o.v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground")}>
+              {o.r}
+            </button>
+          ))}
+        </div>
+      </LinhaCampo>
+      {midia === "video" && (
+        <LinhaCampo label="Vídeo" ajuda={`Até ${VIDEO_MAX_SEGUNDOS} segundos, em pé, sem precisar de som: ele toca mudo e em loop.`}>
+          <BotaoVideoCapa guid={guidValido(txt(d, "video_guid"))} aoTrocar={(g) => p({ video_guid: g })} />
+        </LinhaCampo>
+      )}
+      <LinhaCampo label={midia === "video" ? "Foto de reserva" : "Foto"}
+        ajuda={midia === "video" ? "Aparece enquanto o vídeo carrega e pra quem está com internet fraca. Sem ela, usamos um quadro do vídeo." : undefined}>
+        <BotaoImagem valor={txt(d, "imagem")} onTroca={(u) => p({ imagem: u })} rotulo="Enviar foto" />
+      </LinhaCampo>
+      <LinhaCampo label="Nome" ajuda="Vazio usa o nome da página.">
+        <Input value={txt(d, "nome")} onChange={(e) => p({ nome: e.target.value })} className="rounded-xl" />
+      </LinhaCampo>
+      <LinhaCampo label="Profissão ou especialidade">
+        <Input value={txt(d, "profissao")} onChange={(e) => p({ profissao: e.target.value })} placeholder="Nutrição esportiva" className="rounded-xl" />
+      </LinhaCampo>
+      <LinhaCampo label="Assinatura">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/30 px-3 py-2.5">
+          <span className="text-sm font-body text-foreground">{resumoAss}</span>
+          <Button type="button" size="sm" variant="outline" onClick={() => setAssinando(true)}>Editar assinatura</Button>
+        </div>
+      </LinhaCampo>
+      <EscolherTema valor={txt(d, "tema")} onTroca={(v) => p({ tema: v })} />
+      <EditorAssinatura aberto={assinando} aoFechar={() => setAssinando(false)} dados={d}
+        nomePadrao={txt(d, "nome")} aoSalvar={(ass, nome) => p({ assinatura: ass, nome })} />
+    </div>
+  );
+}
+
 function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioBloco; salvar: (d: DadosBloco) => void; slugPublico?: string | null; telefonePadrao?: string | null }) {
   /* RASCUNHO LOCAL + DEBOUNCE (bug da Gabi, 31/08): antes cada TECLA virava um
      UPDATE no banco + reescrita do cache + re-render, e o re-render no meio da
@@ -517,6 +658,94 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioB
       );
 
     /* ── SEÇÕES DO MODO SITE ── */
+    case "apresentacao":
+      return <FormApresentacao d={d} p={p} />;
+
+    case "numeros": {
+      const itens = lista<{ valor?: string; rotulo?: string }>(d, "itens");
+      const trocar = (i: number, patch: { valor?: string; rotulo?: string }) =>
+        p({ itens: itens.map((x, n) => (n === i ? { ...x, ...patch } : x)) });
+      const nicho = nichoPorId(txt(d, "nicho"));
+      return (
+        <div className="space-y-3.5">
+          <SugerirPorNicho aoEscolher={(id) => {
+            const n = nichoPorId(id);
+            if (n) p({ nicho: n.id, itens: n.numeros.map((x) => ({ ...x })), local: n.local, registro: n.registro });
+          }} />
+          {nicho?.aviso && (
+            <p className="rounded-xl border border-amber-300/60 bg-amber-50 px-3 py-2 text-[11.5px] font-body text-amber-900 leading-snug">{nicho.aviso}</p>
+          )}
+          {itens.map((it, i) => (
+            <div key={i} className="grid grid-cols-[96px_1fr_auto] gap-2 items-center">
+              <Input value={it.valor ?? ""} onChange={(e) => trocar(i, { valor: e.target.value })} placeholder="12" className="rounded-xl" aria-label={`Número ${i + 1}`} />
+              <Input value={it.rotulo ?? ""} onChange={(e) => trocar(i, { rotulo: e.target.value })} placeholder="anos de consultório" className="rounded-xl" aria-label={`O que o número ${i + 1} quer dizer`} />
+              <Button type="button" size="icon" variant="ghost" aria-label={`Tirar o número ${i + 1}`} onClick={() => p({ itens: itens.filter((_, n) => n !== i) })}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))}
+          {itens.length < 4 && (
+            <Button type="button" size="sm" variant="outline" onClick={() => p({ itens: [...itens, { valor: "", rotulo: "" }] })}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar número
+            </Button>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <LinhaCampo label="Onde atende">
+              <Input value={txt(d, "local")} onChange={(e) => p({ local: e.target.value })} placeholder="Clínica X, Centro" className="rounded-xl" />
+            </LinhaCampo>
+            <LinhaCampo label="Registro ou horário">
+              <Input value={txt(d, "registro")} onChange={(e) => p({ registro: e.target.value })} placeholder="CRN 0000" className="rounded-xl" />
+            </LinhaCampo>
+          </div>
+          <EscolherTema valor={txt(d, "tema")} onTroca={(v) => p({ tema: v })} />
+        </div>
+      );
+    }
+
+    case "acao_fixa": {
+      const destino = txt(d, "destino", "whatsapp");
+      return (
+        <div className="space-y-3.5">
+          <LinhaCampo label="Texto do botão" ajuda="Um verbo e o que a pessoa ganha. Ele fica preso no pé da tela o tempo todo.">
+            <Input value={txt(d, "texto")} onChange={(e) => p({ texto: e.target.value })} placeholder="Agendar consulta" className="rounded-xl" />
+          </LinhaCampo>
+          <div className="flex flex-wrap gap-1.5">
+            {Array.from(new Set(NICHOS.map((n) => n.cta))).map((c) => (
+              <button key={c} type="button" onClick={() => p({ texto: c })}
+                className="rounded-full border border-border px-2.5 py-1 text-[11px] font-body text-muted-foreground hover:text-foreground hover:border-primary/40 min-h-[28px]">{c}</button>
+            ))}
+          </div>
+          <LinhaCampo label="Leva para">
+            <div className="flex gap-1.5">
+              {[{ v: "whatsapp", r: "WhatsApp" }, { v: "link", r: "Outro endereço" }].map((o) => (
+                <button key={o.v} type="button" onClick={() => p({ destino: o.v })}
+                  className={cn("rounded-lg border px-3 py-1.5 text-xs font-body font-semibold min-h-[32px]",
+                    destino === o.v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground")}>
+                  {o.r}
+                </button>
+              ))}
+            </div>
+          </LinhaCampo>
+          {destino === "whatsapp" ? (
+            <>
+              <LinhaCampo label="Telefone">
+                <Input value={txt(d, "telefone")} placeholder={telefonePadrao || "(00) 00000-0000"}
+                  onChange={(e) => p({ telefone: mascaraTelefone(e.target.value) })} inputMode="tel" className="rounded-xl" />
+              </LinhaCampo>
+              <LinhaCampo label="Mensagem que já vai escrita">
+                <Textarea rows={2} value={txt(d, "mensagem")} onChange={(e) => p({ mensagem: e.target.value })} className="rounded-xl resize-none" />
+              </LinhaCampo>
+            </>
+          ) : (
+            <LinhaCampo label="Endereço" ajuda="Agenda online, loja, formulário.">
+              <Input value={txt(d, "url")} onChange={(e) => p({ url: e.target.value })} placeholder="https://" inputMode="url" className="rounded-xl" />
+            </LinhaCampo>
+          )}
+          <p className="text-[11px] font-body text-muted-foreground">A cor do botão é a cor da marca, a mesma dos outros botões da página.</p>
+        </div>
+      );
+    }
+
     case "capa":
       return (
         <div className="space-y-3.5">

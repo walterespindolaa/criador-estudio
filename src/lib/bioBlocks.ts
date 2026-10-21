@@ -13,7 +13,7 @@
 import {
   AlignLeft, CalendarClock, Contact, HelpCircle, Image as ImageIcon, Images,
   Layers, Link2, MapPin, MessageCircle, PenLine, PlayCircle, Quote, Send,
-  ShoppingBag, Type, UserRound, type LucideIcon,
+  ShoppingBag, Type, UserRound, Clapperboard, BadgeCheck, MousePointerClick, type LucideIcon,
 } from "lucide-react";
 
 export type EstiloBio = "classico" | "site";
@@ -22,7 +22,9 @@ export type TipoBloco =
   | "link" | "titulo" | "texto" | "video" | "galeria"
   | "faq" | "contagem" | "whatsapp" | "mapa" | "captura" | "spotify"
   // Só no modo Site: são SEÇÕES de largura cheia, não botões numa coluna.
-  | "capa" | "sobre" | "produtos" | "blog" | "depoimentos" | "contato";
+  | "capa" | "sobre" | "produtos" | "blog" | "depoimentos" | "contato"
+  // Página de especialista (21/10/2026), ver lib/bioEspecialista.
+  | "apresentacao" | "numeros" | "acao_fixa";
 
 export type CamposCaptura = "email" | "telefone" | "ambos";
 
@@ -132,6 +134,22 @@ export const BLOCOS: MetaBloco[] = [
    grade de produtos em 390px e ficaria ilegível. */
 export const BLOCOS_SITE: MetaBloco[] = [
   {
+    tipo: "apresentacao", nome: "Capa com vídeo e assinatura", Icone: Clapperboard, estilos: ["site"],
+    explica: "A pessoa em tela cheia, em vídeo curto ou foto, com o nome em assinatura.",
+    padrao: { midia: "video", imagem: "", video_guid: "", nome: "", profissao: "", tema: "escuro",
+      assinatura: { modo: "fonte", fonte: "delafield", d: "", x: 6, y: 62, escala: 70 } },
+  },
+  {
+    tipo: "numeros", nome: "Números de prova", Icone: BadgeCheck, estilos: ["site"],
+    explica: "Anos, clientes, cidade. O que faz a pessoa confiar antes de chamar.",
+    padrao: { itens: [{ valor: "", rotulo: "" }, { valor: "", rotulo: "" }, { valor: "", rotulo: "" }], local: "", registro: "", tema: "escuro" },
+  },
+  {
+    tipo: "acao_fixa", nome: "Botão fixo", Icone: MousePointerClick, estilos: ["site"], clicavel: true,
+    explica: "Agendar, encomendar ou chamar: fica preso no pé da tela enquanto a pessoa rola.",
+    padrao: { texto: "Agendar consulta", destino: "whatsapp", telefone: "", mensagem: "Oi! Vim pelo seu link.", url: "" },
+  },
+  {
     tipo: "capa", nome: "Capa", Icone: ImageIcon, estilos: ["site"],
     explica: "O topo do site: título, uma frase e dois botões.",
     padrao: { titulo: "", frase: "", imagem: "", botao1: "Fale comigo", url1: "", botao2: "", url2: "" },
@@ -239,6 +257,9 @@ export function resumoDoBloco(b: { kind: string; data: DadosBloco }): string {
     case "blog": return "puxa os posts publicados";
     case "depoimentos": return `${lista(d, "itens").length} depoimento(s)`;
     case "contato": return txt(d, "telefone") || txt(d, "email") || "sem contato ainda";
+    case "apresentacao": return txt(d, "midia") === "imagem" ? "foto fixa" : (txt(d, "video_guid") ? "vídeo em loop" : "sem vídeo ainda");
+    case "numeros": return lista<{ valor?: string }>(d, "itens").map((i) => i?.valor ?? "").filter(Boolean).join(" · ") || "sem números ainda";
+    case "acao_fixa": return txt(d, "texto") || "sem texto ainda";
     default: return "";
   }
 }
@@ -258,6 +279,17 @@ export function faltaNoBloco(b: { kind: string; data: DadosBloco }): string | nu
     case "faq": return lista<{ p?: string }>(d, "itens").some((i) => (i?.p ?? "").trim()) ? null : "nenhuma pergunta";
     case "capa": return txt(d, "titulo").trim() ? null : "falta o título";
     case "sobre": return txt(d, "texto").trim() ? null : "falta o texto";
+    case "apresentacao": {
+      const midia = txt(d, "midia", "video");
+      if (midia === "imagem") return txt(d, "imagem").trim() ? null : "falta a foto";
+      return txt(d, "video_guid").trim() || txt(d, "imagem").trim() ? null : "falta o vídeo";
+    }
+    case "numeros": return lista<{ valor?: string }>(d, "itens").some((i) => (i?.valor ?? "").trim()) ? null : "nenhum número";
+    case "acao_fixa": {
+      if (!txt(d, "texto").trim()) return "falta o texto do botão";
+      if (txt(d, "destino", "whatsapp") === "whatsapp") return txt(d, "telefone").replace(/\D/g, "").length >= 10 ? null : "falta o telefone";
+      return linkSeguro(txt(d, "url")) ? null : "falta o endereço";
+    }
     default: return null;
   }
 }

@@ -1,4 +1,5 @@
 import {
+  Clapperboard,
   Briefcase, Camera, GraduationCap, Newspaper, Store, UtensilsCrossed, type LucideIcon,
 } from "lucide-react";
 import type { DadosBloco, EstiloBio, TipoBloco } from "@/lib/bioBlocks";
@@ -250,6 +251,44 @@ export const MODELOS: ModeloBio[] = [
         campos: "email", botao: "Quero receber", consentimento: CONSENT, paraPipeline: false, fundo: "escuro",
       } },
       { kind: "contato", data: { titulo: "", telefone: "", email: "", endereco: "", instagram: "", assinatura: "" } },
+    ],
+  },
+  {
+    /* Página de especialista (21/10/2026): a pessoa em vídeo ou foto de tela
+       cheia, o nome em assinatura, os números logo abaixo e o botão de agendar
+       preso no pé. Serve pra quem É a marca, de qualquer nicho: os números e o
+       botão se ajustam pelo "Começar pelo nicho" dentro de cada bloco. */
+    id: "site-especialista",
+    nome: "Especialista com vídeo e assinatura",
+    paraQuem: "Quem é a própria marca: saúde, estética, advocacia, personal, beleza, corretor, mentor.",
+    Icone: Clapperboard,
+    estilo: "site",
+    aparencia: {
+      bgType: "color", bgColor: "#111312", bgGradient: null,
+      // Cor do botão fixo e dos botões da página: forte o bastante pra ler em
+      // cima da capa escura E das seções claras. Creme sumia nas claras.
+      buttonColor: "#B4532A", buttonTextColor: "#FFFFFF", buttonStyle: "rounded",
+      cardColor: "#FFFFFF", cardTextColor: "#111312", fontFamily: "Sora",
+    },
+    blocos: [
+      { kind: "apresentacao", data: {
+        midia: "video", imagem: "", video_guid: "", nome: "", profissao: "Sua especialidade", tema: "escuro",
+        assinatura: { modo: "fonte", fonte: "delafield", d: "", x: 6, y: 62, escala: 70 },
+      } },
+      { kind: "numeros", data: {
+        itens: [{ valor: "[anos]", rotulo: "anos de experiência" }, { valor: "[clientes]", rotulo: "clientes atendidos" }, { valor: "[cidade]", rotulo: "e online" }],
+        local: "[Onde atende]", registro: "[Registro profissional]", tema: "escuro",
+      } },
+      { kind: "sobre", data: {
+        rotulo: "Quem sou", titulo: "O que todo cliente quer saber antes de marcar",
+        texto: "Quem você é, pra quem é o seu trabalho, como é o primeiro atendimento e o que muda depois.", imagem: "", fundo: "escuro",
+      } },
+      { kind: "depoimentos", data: {
+        rotulo: "Quem já passou por aqui", titulo: "Depoimentos", fundo: "creme",
+        itens: [{ texto: "", autor: "" }, { texto: "", autor: "" }],
+      } },
+      { kind: "contato", data: { titulo: "", telefone: "", email: "", endereco: "", instagram: "", assinatura: "", mostrarMapa: true } },
+      { kind: "acao_fixa", data: { texto: "Agendar consulta", destino: "whatsapp", telefone: "", mensagem: "Oi! Vim pelo seu link.", url: "" } },
     ],
   },
 ];
