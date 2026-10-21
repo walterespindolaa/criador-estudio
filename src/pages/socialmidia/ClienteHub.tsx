@@ -836,6 +836,7 @@ export default function ClienteHub() {
         <ClienteInstagramCria
           criaOwnerId={client.cria_owner_id ?? null}
           crmClientId={client.cria_owner_id ? null : id ?? null}
+          fichaId={id ?? null}
           clientName={displayName}
           extClientId={extClient?.id ?? null}
         />

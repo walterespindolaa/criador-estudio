@@ -28,6 +28,7 @@ import {
   Loader2,
   Clapperboard,
   LayoutDashboard,
+  Megaphone,
 } from "lucide-react";
 import { useTrends, useRefreshTrends } from "@/hooks/useTrends";
 import { useStoryTrends, useRefreshStoryTrends } from "@/hooks/useStoryTrends";
@@ -72,6 +73,7 @@ import { AdminCriakut } from "@/components/admin/AdminCriakut";
 import { AdminGrowth } from "@/components/admin/AdminGrowth";
 import { AdminHome } from "@/components/admin/AdminHome";
 import { AdminParceiras } from "@/components/admin/AdminParceiras";
+import { AdminTrafego } from "@/components/admin/AdminTrafego";
 import { UserDetailsDrawer } from "@/components/admin/UserDetailsDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { confirmar } from "@/components/shared/Confirm";
@@ -400,6 +402,7 @@ const AdminInner = () => {
             {[
               { value: "inicio", icon: LayoutDashboard, title: "Início" },
               { value: "contas", icon: Users, title: "Contas", hint: `${stats.totalUsers}` },
+              { value: "trafego", icon: Megaphone, title: "Tráfego" },
               { value: "dinheiro", icon: DollarSign, title: "Dinheiro" },
               { value: "uso", icon: Gauge, title: "Uso e custo" },
               { value: "rede", icon: Handshake, title: "Rede e conteúdo" },
@@ -596,6 +599,10 @@ const AdminInner = () => {
         </div>
           </>
           )}
+          </TabsContent>
+
+          <TabsContent value="trafego">
+            <AdminTrafego />
           </TabsContent>
 
           <TabsContent value="dinheiro">

@@ -34,7 +34,7 @@ const dataBR = (s: string | null) => (s ? new Date(s).toLocaleDateString("pt-BR"
 // - criaOwnerId: cliente que USA o Cria (dados sincronizados por ele, via RPC);
 // - crmClientId: cliente SEM Cria cuja conta a social mídia conectou aqui
 //   (social_connections com crm_client_id; ela mesma sincroniza e vincula).
-export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, extClientId }: { criaOwnerId?: string | null; crmClientId?: string | null; clientName?: string; extClientId?: string | null }) {
+export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, extClientId, fichaId }: { criaOwnerId?: string | null; crmClientId?: string | null; clientName?: string; extClientId?: string | null; /** Ficha do CRM, também quando o cliente usa o Cria: é ela que gera o convite. */ fichaId?: string | null }) {
   const gerenciado = !criaOwnerId && !!crmClientId;
   const criaQ = useCriaClientInstagram(criaOwnerId ?? null);
   const managedQ = useManagedClientInstagram(gerenciado ? crmClientId : null);
@@ -193,7 +193,12 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
             {crmClientId && <ConviteInstagramCliente crmClientId={crmClientId} nomeCliente={clientName} />}
           </>
         ) : (
-          <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">Peça pro cliente conectar o Instagram no CRIA dele (menu Insights). Assim que ele conectar, os números aparecem aqui automaticamente.</p>
+          <>
+            {/* Cliente que usa o Cria também recebe o link (Walter, 21/10/2026).
+                A conexão cai no Cria dele, igual a conectar pelo menu Insights. */}
+            <p className="text-xs text-muted-foreground font-body mt-1 mb-4 max-w-sm mx-auto">Mande um link pro cliente liberar o Instagram pelo celular (sem passar senha). A conta fica conectada no Cria dele e os números aparecem aqui sozinhos. Ele também pode conectar pelo menu Insights do Cria.</p>
+            {fichaId && <ConviteInstagramCliente crmClientId={fichaId} nomeCliente={clientName} />}
+          </>
         )}
       </div>
     );

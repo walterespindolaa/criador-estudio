@@ -85,6 +85,49 @@ var CRIA_TRACK = {
     } catch (e) { return url; }
   }
 
+  /* ── 1b. CONTAGEM NOSSA (motor de tráfego, 21/10/2026) ───────────────────
+     O pixel só mede quem aceitou cookie e o número fica dentro da Meta. Isto
+     conta visita, leitura e clique em "testar" no NOSSO banco (edge
+     site-track), com a UTM que trouxe a pessoa. Sem cookie, sem IP, sem
+     e-mail: só uma sessão aleatória da aba. É o que alimenta a aba Tráfego do
+     admin (criador x social mídia, anúncio x link da bio). */
+  var SITE_TRACK = "https://ecbzfjzoqidowrsfsfih.supabase.co/functions/v1/site-track";
+  function sessao() {
+    try {
+      var s = sessionStorage.getItem("cria_sessao");
+      if (!s) { s = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem("cria_sessao", s); }
+      return s;
+    } catch (e) { return null; }
+  }
+  var jaContou = {};
+  function contar(evento, alvo) {
+    if (evento !== "cta" && jaContou[evento]) return;
+    jaContou[evento] = true;
+    var o = lerOrigem();
+    var q = new URLSearchParams(location.search);
+    var utm = {};
+    ["utm_source","utm_medium","utm_campaign","utm_content"].forEach(function (k) { utm[k] = o[k] || q.get(k) || undefined; });
+    utm.fbclid = o.fbclid || q.get("fbclid") ? 1 : 0;
+    var corpo = JSON.stringify({
+      evento: evento, pagina: location.pathname.replace(/\.html$/, "") || "/", sessao: sessao(), utm: utm,
+      ref: o._referrer || document.referrer || "", alvo: alvo || null,
+      disp: window.matchMedia && window.matchMedia("(max-width: 820px)").matches ? "mobile" : "desktop",
+    });
+    try {
+      if (navigator.sendBeacon) navigator.sendBeacon(SITE_TRACK, new Blob([corpo], { type: "text/plain" }));
+      else fetch(SITE_TRACK, { method: "POST", body: corpo, keepalive: true, headers: { "Content-Type": "text/plain" } });
+    } catch (e) {}
+  }
+  function contagemDeLeitura() {
+    function noScroll() {
+      var altura = document.documentElement.scrollHeight - window.innerHeight;
+      if (altura > 0 && window.scrollY / altura >= 0.5) { contar("leu"); window.removeEventListener("scroll", noScroll); }
+    }
+    window.addEventListener("scroll", noScroll, { passive: true });
+    var t = setTimeout(function () { contar("ficou30"); }, 30000);
+    window.addEventListener("pagehide", function () { clearTimeout(t); }, { once: true });
+  }
+
   /* ── 2. META PIXEL ────────────────────────────────────────────────────────
      Só carrega o script da Meta se houver ID. Sem isso a página baixava (ou
      baixaria) um script de terceiro pra não fazer nada. */
@@ -218,6 +261,7 @@ var CRIA_TRACK = {
 
       var rotulo = (a.textContent || "").replace(/\s+/g, " ").trim().slice(0, 60);
       if (href.indexOf("/signup") !== -1) {
+        contar("cta", rotulo);
         // A conversão que o algoritmo vai otimizar acontece no app
         // (CompleteRegistration). Aqui marcamos a intenção, que é o que permite
         // criar público de remarketing de "clicou e não terminou".
@@ -257,6 +301,8 @@ var CRIA_TRACK = {
   function agora() {
     guardarOrigem();
     cliques();
+    contar("view");
+    contagemDeLeitura();
   }
 
   function depois() {

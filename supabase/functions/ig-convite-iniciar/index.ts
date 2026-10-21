@@ -33,11 +33,18 @@ Deno.serve(async (req) => {
     if (c.cancelado_em) return json({ error: 'convite_cancelado' }, 410);
     if (new Date(c.expira_em).getTime() < Date.now()) return json({ error: 'convite_vencido' }, 410);
 
+    // Cliente que USA o Cria (Walter, 21/10/2026: "se a pessoa tem Cria a social
+    // mídia não consegue enviar o link?"): a conexão cai no Cria DELA, como se
+    // ela tivesse conectado pelo menu Insights. Assim os números aparecem no
+    // Cria dela e chegam na social mídia pelo mesmo caminho de sempre.
+    const { data: ficha } = await admin.from('crm_clients').select('cria_owner_id').eq('id', c.crm_client_id).maybeSingle();
+    const dono = (ficha as { cria_owner_id?: string | null } | null)?.cria_owner_id ?? null;
+
     // Ticket de uso único do OAuth (mesmo mecanismo do botão Conectar),
     // agora com o convite junto. 30 min: a cliente pode demorar pra achar a senha.
     const state = `${crypto.randomUUID()}${crypto.randomUUID().replace(/-/g, '')}`;
     const { error: insErr } = await admin.from('oauth_states').insert({
-      state, user_id: c.criado_por, crm_client_id: c.crm_client_id, provider: 'instagram',
+      state, user_id: dono ?? c.criado_por, crm_client_id: dono ? null : c.crm_client_id, provider: 'instagram',
       convite_id: c.id, expires_at: new Date(Date.now() + 30 * 60_000).toISOString(),
     } as never);
     if (insErr) return json({ error: 'state_create_failed' }, 500);

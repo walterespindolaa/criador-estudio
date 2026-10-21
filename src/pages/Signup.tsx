@@ -124,9 +124,24 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
     setEmailValue(data.email);
     setFormError(null);
     setLoading(true);
-    const meta = accountType === "manager" ? { account_intent: "manager" }
+    const intencao = accountType === "manager" ? { account_intent: "manager" }
       : accountType === "parceiro" ? { account_intent: "parceiro", parceiro_role: parceiroRole }
-      : undefined;
+      : {};
+    /* ORIGEM DO CADASTRO (motor de tráfego, 21/10/2026). A LP cola a UTM no
+       link de "testar" (track.js). Aqui ela vai junto pros metadados da conta,
+       e o admin consegue dizer quantos cadastros cada campanha e o link da bio
+       trouxeram. Só a origem: nada pessoal entra aqui. */
+    const origem: Record<string, string> = {};
+    try {
+      const q = new URLSearchParams(window.location.search);
+      ["utm_source", "utm_medium", "utm_campaign", "utm_content"].forEach((k) => {
+        const v = q.get(k);
+        if (v) origem[k] = v.slice(0, 120);
+      });
+      if (q.get("fbclid")) origem.veio_de_anuncio = "meta";
+    } catch { /* sem URL legível, segue sem origem */ }
+    const juntos = { ...intencao, ...origem };
+    const meta = Object.keys(juntos).length ? juntos : undefined;
     const { error, needsConfirmation } = await signUp(data.email, data.password, data.name, meta);
     setLoading(false);
     if (error) {

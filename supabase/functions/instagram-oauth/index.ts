@@ -67,9 +67,17 @@ Deno.serve(async (req) => {
     }
     const conviteId = (st as { convite_id?: string | null }).convite_id ?? null;
     let conviteToken: string | null = null;
+    // Quem convidou e de qual ficha. Quando a cliente USA o Cria, a conexão vai
+    // pro Cria dela (user_id dela, sem ficha), mas o aviso e o link de volta
+    // continuam sendo da social mídia que mandou o convite.
+    let conviteCriador: string | null = null;
+    let conviteFicha: string | null = null;
     if (conviteId) {
-      const { data: cv } = await admin.from('ig_convites').select('token').eq('id', conviteId).maybeSingle();
-      conviteToken = (cv as { token?: string } | null)?.token ?? null;
+      const { data: cv } = await admin.from('ig_convites').select('token, criado_por, crm_client_id').eq('id', conviteId).maybeSingle();
+      const cvx = cv as { token?: string; criado_por?: string; crm_client_id?: string } | null;
+      conviteToken = cvx?.token ?? null;
+      conviteCriador = cvx?.criado_por ?? null;
+      conviteFicha = cvx?.crm_client_id ?? null;
     }
     // Veio de convite: erro e sucesso voltam pra página pública, não pro app.
     const falha = (motivo: string) => conviteToken ? voltaConvite(conviteToken, 'erro', motivo) : null;
@@ -166,12 +174,13 @@ Deno.serve(async (req) => {
       // convidou, com o @ que foi conectado (se for a conta errada, ela vê na hora).
       const usuario = (me.username as string | undefined) ?? null;
       await admin.from('ig_convites').update({ usado_em: new Date().toISOString(), username_conectado: usuario } as never).eq('id', conviteId);
-      const { data: cli } = await admin.from('crm_clients').select('name').eq('id', crmClientId).maybeSingle();
+      const fichaAviso = conviteFicha ?? crmClientId;
+      const { data: cli } = await admin.from('crm_clients').select('name').eq('id', fichaAviso).maybeSingle();
       await admin.from('notifications').insert({
-        user_id: criaUserId, type: 'cria_post',
+        user_id: conviteCriador ?? criaUserId, type: 'cria_post',
         title: 'Instagram da cliente conectado',
         description: `${(cli as { name?: string } | null)?.name ?? 'A cliente'} liberou o acesso${usuario ? `: @${usuario}` : ''}. Os números já começam a aparecer.`,
-        link: crmClientId ? `/socialmidia/clientes/${crmClientId}/instagram` : '/socialmidia',
+        link: fichaAviso ? `/socialmidia/clientes/${fichaAviso}/instagram` : '/socialmidia',
         read: false,
       } as never);
       return voltaConvite(conviteToken, 'ok', undefined, usuario);
