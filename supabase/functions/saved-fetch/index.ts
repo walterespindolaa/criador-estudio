@@ -86,6 +86,27 @@ Deno.serve(async (req) => {
     if (!url) return json({ error: "missing_url" }, 400);
     const platform = platformOf(url);
 
+    /* CACHE DE CAPA (segurança, 21/10/2026). A tabela link_previews vale pra
+       todo mundo e antes era gravada pelo NAVEGADOR: qualquer usuário logado
+       podia escrever título e imagem falsos pra um link que outra pessoa vê.
+       Agora quem grava é só esta função, com o que veio da fonte de verdade.
+       Resultado vazio não apaga capa boa que já estava lá. */
+    const chaveCache = body?.cache === true ? url.replace(/\/$/, "") : null;
+    const responder = async (o: Record<string, unknown>, s = 200) => {
+      if (chaveCache) {
+        try {
+          const thumb = (o.thumbnail as string | null | undefined) ?? null;
+          await svc.from("link_previews").upsert({
+            url: chaveCache, platform: (o.platform as string | undefined) ?? platform,
+            thumb_url: thumb, caption: (o.caption as string | null | undefined) ?? null,
+            author: (o.author as string | null | undefined) ?? null,
+            fetched_at: new Date().toISOString(),
+          }, { onConflict: "url", ignoreDuplicates: !thumb });
+        } catch (e) { console.error("[saved-fetch] cache", e instanceof Error ? e.message : String(e)); }
+      }
+      return json(o, s);
+    };
+
     /* PINTEREST (Gabriela, 20/10/2026: "no Instagram ele puxa a prévia como
        capa, tem como fazer com Pinterest também?"). O Pinterest tem oEmbed
        público e gratuito (sem Apify): devolve a capa do pin e o autor. O link
@@ -100,24 +121,24 @@ Deno.serve(async (req) => {
           await red.body?.cancel();
         }
         const o = await fetch(`https://www.pinterest.com/oembed.json?url=${encodeURIComponent(alvo)}`, { signal: AbortSignal.timeout(10000) });
-        if (!o.ok) return json({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null, note: `oembed ${o.status}` });
+        if (!o.ok) return responder({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null, note: `oembed ${o.status}` });
         const d = await o.json() as { thumbnail_url?: string; title?: string; author_name?: string };
         const grande = d.thumbnail_url ? d.thumbnail_url.replace(/\/\d+x\//, "/736x/") : null;
         const thumbnail = await persistCover(svc, user.id, grande) ?? await persistCover(svc, user.id, d.thumbnail_url ?? null);
-        return json({ ok: true, platform, thumbnail, caption: d.title ? String(d.title).slice(0, 800) : null, author: d.author_name ?? null, media_type: null });
+        return responder({ ok: true, platform, thumbnail, caption: d.title ? String(d.title).slice(0, 800) : null, author: d.author_name ?? null, media_type: null });
       } catch (e) {
         console.error("[saved-fetch] pinterest", e instanceof Error ? e.message : String(e));
-        return json({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null });
+        return responder({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null });
       }
     }
 
     // Instagram via Apify; o resto sai sem preview.
     if (platform !== "instagram") {
-      return json({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null });
+      return responder({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null });
     }
 
     const token = Deno.env.get("APIFY_TOKEN");
-    if (!token) return json({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null, note: "sem apify token" });
+    if (!token) return responder({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null, note: "sem apify token" });
 
     const apifyUrl = `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${token}&maxItems=1`;
     // Timeout de 90s: o run-sync do Apify pode levar 60s+, mas se travar não deixamos
@@ -132,24 +153,24 @@ Deno.serve(async (req) => {
     } catch (e) {
       if (e instanceof DOMException && e.name === "TimeoutError") {
         console.error("[saved-fetch] apify timeout 90s");
-        return json({ error: "timeout", message: "A busca demorou demais, tente de novo." }, 504);
+        return responder({ error: "timeout", message: "A busca demorou demais, tente de novo." }, 504);
       }
       throw e; // outros erros: caem no catch geral (internal_error)
     }
     if (!r.ok) {
       console.error("[saved-fetch] apify", r.status);
-      return json({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null, note: `apify ${r.status}` });
+      return responder({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null, note: `apify ${r.status}` });
     }
     const items = await r.json() as any[];
     const it = Array.isArray(items) && items[0] ? items[0] : null;
-    if (!it) return json({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null });
+    if (!it) return responder({ ok: true, platform, thumbnail: null, caption: null, author: null, media_type: null });
 
     const type = String(it.type || "").toLowerCase();
     const media_type = type.includes("video") ? "video" : type.includes("sidecar") ? "carousel" : "image";
     // URL efêmera do CDN -> persiste numa storage nossa pra capa não morrer.
     const cdnThumb = it.displayUrl || it.thumbnailUrl || (it.images?.[0] ?? null) || null;
     const thumbnail = await persistCover(svc, user.id, cdnThumb);
-    return json({
+    return responder({
       ok: true,
       platform,
       thumbnail,

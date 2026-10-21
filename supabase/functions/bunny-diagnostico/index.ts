@@ -31,7 +31,7 @@ const LEITURA: Record<number, string> = {
 
 Deno.serve(async (req) => {
   try {
-    if (req.headers.get("x-cleanup-secret") !== Deno.env.get("CRIAPOST_CLEANUP_SECRET")) {
+    if (!Deno.env.get("INTERNAL_PUSH_SECRET") || req.headers.get("x-internal-secret") !== Deno.env.get("INTERNAL_PUSH_SECRET")) {
       return json({ error: "unauthorized" }, 401);
     }
     /* DUAS LIBRARIES (14/09/2026). A peça do Cria Post passa a viver na

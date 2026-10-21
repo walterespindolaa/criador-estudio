@@ -7,11 +7,12 @@ const supabase = createClient(
 );
 
 serve(async (req) => {
-  // Aceita chamada manual (POST) ou de cron (GET)
-  const authHeader = req.headers.get("Authorization");
-  const cronSecret = Deno.env.get("CRON_SECRET");
   // Falha FECHADO: sem segredo configurado, ninguém chama esta função destrutiva.
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  // 21/10/2026: mesmo segredo dos outros robôs (INTERNAL_PUSH_SECRET), que o
+  // cron lê do Vault. O antigo CRON_SECRET estava escrito no comando do cron
+  // e aparecia no log do banco a cada rodada.
+  const segredo = Deno.env.get("INTERNAL_PUSH_SECRET");
+  if (!segredo || req.headers.get("x-internal-secret") !== segredo) {
     return new Response("Unauthorized", { status: 401 });
   }
 

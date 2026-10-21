@@ -57,15 +57,22 @@ function emailHtml(actionLink: string): string {
   });
 }
 
-// Rate limit simples em memória por instância: segura rajada de robô sem
-// depender de tabela. 5 pedidos por e-mail a cada 15 min.
-const pedidos = new Map<string, number[]>();
-function estourou(email: string): boolean {
-  const agora = Date.now();
-  const lista = (pedidos.get(email) ?? []).filter((t) => agora - t < 15 * 60 * 1000);
-  lista.push(agora);
-  pedidos.set(email, lista);
-  return lista.length > 5;
+// Freio no banco (21/10/2026). Antes era um contador em memória, que zera a
+// cada instância nova da função: na prática quase não freava. Agora vale pra
+// todas as instâncias: 3 pedidos por e-mail por hora e 10 por IP por hora.
+// Erro no freio = deixa passar (melhor mandar o e-mail do que trancar alguém
+// fora da conta por problema nosso).
+async function estourou(svc: SupabaseClient, email: string, ip: string): Promise<boolean> {
+  try {
+    const [porEmail, porIp] = await Promise.all([
+      svc.rpc("rate_touch_janela", { _key: `reset:email:${email}`, _limit: 3, _segundos: 3600 }),
+      svc.rpc("rate_touch_janela", { _key: `reset:ip:${ip}`, _limit: 10, _segundos: 3600 }),
+    ]);
+    return porEmail.data === false || porIp.data === false;
+  } catch (e) {
+    console.error("[password-reset] freio falhou, deixando passar:", e);
+    return false;
+  }
 }
 
 serve(async (req) => {
@@ -75,9 +82,11 @@ serve(async (req) => {
     const email = String((body as { email?: string }).email ?? "").trim().toLowerCase();
     // Resposta SEMPRE ok pra quem chama: dizer "este e-mail não existe" é
     // entregar a lista de clientes pra quem estiver sondando.
-    if (!email || !email.includes("@") || estourou(email)) return json({ ok: true });
+    if (!email || !email.includes("@") || email.length > 254) return json({ ok: true });
 
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "sem-ip";
+    if (await estourou(svc, email, ip)) return json({ ok: true });
 
     const origin = resolveAppUrl(req);
     const { data: linkData, error: linkErr } = await svc.auth.admin.generateLink({

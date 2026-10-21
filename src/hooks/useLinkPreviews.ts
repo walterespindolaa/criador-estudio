@@ -15,8 +15,8 @@ const sbFrom = (table: string) => (supabase as any).from(table);
    Apify e já guarda a imagem num bucket nosso, porque a URL do CDN expira.
 
    Como scrape custa, aqui tem duas regras:
-   · UM link, UMA busca: o resultado vai pra tabela link_previews e vale pra
-     conta inteira, pra sempre;
+   · UM link, UMA busca: o resultado vai pra tabela link_previews (gravada só
+     pela edge) e vale pra conta inteira, pra sempre;
    · YouTube não passa por aqui: a capa dele sai de graça pela própria URL.
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -71,23 +71,14 @@ export function useLinkPreviews(links: string[]) {
     (async () => {
       for (const url of faltando.slice(0, TETO)) {
         if (cancelado) return;
-        // A falha também é gravada (thumb nula + fetched_at): antes, link que
-        // não tinha capa era buscado DE NOVO toda vez que a tela abria, pagando
-        // o scrape a cada tentativa. Com a linha no cache, ele sai de "faltando".
-        const gravar = (r?: { thumbnail?: string | null; caption?: string | null; author?: string | null; platform?: string | null }) =>
-          sbFrom("link_previews").upsert({
-            url,
-            platform: r?.platform ?? previaDeLink(url).plataforma,
-            thumb_url: r?.thumbnail ?? null,
-            caption: r?.caption ?? null,
-            author: r?.author ?? null,
-            fetched_at: new Date().toISOString(),
-          }, { onConflict: "url" });
+        // Quem grava o cache é a edge (cache: true), com o que veio da fonte.
+        // O navegador não escreve mais em link_previews (segurança, 21/10/2026):
+        // antes qualquer conta podia gravar capa falsa pra um link que outra
+        // conta vê. A falha também fica gravada lá (capa nula), então o link
+        // sem capa não é buscado de novo a cada abertura de tela.
         try {
-          const { data, error } = await supabase.functions.invoke("saved-fetch", { body: { url } });
-          if (error) { await gravar(); continue; }
-          await gravar(data as { thumbnail?: string | null; caption?: string | null; author?: string | null; platform?: string | null });
-        } catch { try { await gravar(); } catch { /* link problemático não pode travar a tela */ } }
+          await supabase.functions.invoke("saved-fetch", { body: { url, cache: true } });
+        } catch { /* link problemático não pode travar a tela */ }
       }
       if (!cancelado) void qc.invalidateQueries({ queryKey: ["link-previews", chave] });
     })();

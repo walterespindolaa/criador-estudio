@@ -12,8 +12,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
    em lugar nenhum, e apagar seria perder a peça. Depois de apagar, a mídia
    VOLTA a ser do Drive (`bunny_soltar_midia`), então o card continua tocando.
 
-   Chamada por cron, protegida por segredo no cabeçalho (mesmo padrão do
-   criapost-media-cleanup).
+   Chamada por cron, protegida por segredo no cabeçalho x-internal-secret (INTERNAL_PUSH_SECRET,
+   lido do Vault pelo cron; 21/10/2026, antes era um segredo escrito no cron).
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const json = (b: unknown, s = 200) =>
@@ -21,7 +21,7 @@ const json = (b: unknown, s = 200) =>
 
 Deno.serve(async (req) => {
   try {
-    if (req.headers.get("x-cleanup-secret") !== Deno.env.get("CRIAPOST_CLEANUP_SECRET")) {
+    if (!Deno.env.get("INTERNAL_PUSH_SECRET") || req.headers.get("x-internal-secret") !== Deno.env.get("INTERNAL_PUSH_SECRET")) {
       return json({ error: "unauthorized" }, 401);
     }
     const apiKey = Deno.env.get("BUNNY_STREAM_API_KEY");
