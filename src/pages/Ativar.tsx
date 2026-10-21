@@ -28,7 +28,10 @@ export default function Ativar() {
   // StrictMode ou identidade de params mudando não podem consumir o token 2x).
   const ran = useRef(false);
 
-  const to = params.get("to") || "/app";
+  // Só caminho interno: "/algo". "//site.com" e "/\\site.com" viram endereço
+  // de outro site no navegador (open redirect), então caem no /app.
+  const toBruto = params.get("to") || "/app";
+  const to = /^\/(?![\/\\])/.test(toBruto) ? toBruto : "/app";
 
   useEffect(() => {
     if (ran.current) return;
