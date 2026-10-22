@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Instagram, Mail, MapPin, Menu, Phone, Quote, X } from "lucide-react";
 import { BlocoPublico, type VisualBio } from "@/components/bio/BlocoPublico";
 import {
-  bool, faltaNoBloco, linkSeguro, lista, linkWhatsapp, precoVisivel, txt, type DadosBloco,
+  alvoDoLink, bool, faltaNoBloco, linkDoBotao, linkSeguro, lista, linkWhatsapp, precoVisivel, txt, type DadosBloco,
 } from "@/lib/bioBlocks";
 import { TextoRico } from "@/lib/textoRico";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import { BarraAcaoFixa, SecaoApresentacao, SecaoAtendimento, SecaoNumeros } from "@/components/bio/SiteEspecialista";
+import { CapaVitrine, FaixaVantagens, SecaoCardapio, SecaoDestaque, SecaoHorarios, useStatusDaLoja } from "@/components/bio/SiteLoja";
+import type { LinhaPedido } from "@/lib/bioLoja";
 import { lerAtendimento, resumoAtendimento } from "@/lib/bioEspecialista";
 import { cn } from "@/lib/utils";
 
@@ -187,8 +189,8 @@ function SecaoCapa({ d, marca, visual, aoClicar }: { d: DadosBloco; marca: Marca
   const img = txt(d, "imagem");
   // Botão só existe se o endereço passar na checagem: um "javascript:" salvo
   // aqui rodaria no navegador de todo seguidor que clicasse.
-  const b1 = txt(d, "botao1"), u1 = linkSeguro(txt(d, "url1"));
-  const b2 = txt(d, "botao2"), u2 = linkSeguro(txt(d, "url2"));
+  const b1 = txt(d, "botao1"), u1 = linkDoBotao(txt(d, "url1"));
+  const b2 = txt(d, "botao2"), u2 = linkDoBotao(txt(d, "url2"));
   return (
     <section id="topo" className="px-5 pt-11 pb-12 cq-md:py-24 scroll-mt-[52px]" style={{ background: `linear-gradient(160deg, ${marca.cor}14, transparent)` }}>
       {/* Uma coluna no celular, duas só a partir de 768px. A imagem vem DEPOIS
@@ -206,14 +208,14 @@ function SecaoCapa({ d, marca, visual, aoClicar }: { d: DadosBloco; marca: Marca
           {(b1 || b2) && (
             <div className="flex flex-col cq-sm:flex-row gap-2.5 mt-6">
               {b1 && u1 && (
-                <a href={u1} target="_blank" rel="noopener noreferrer" onClick={aoClicar}
+                <a href={u1} {...alvoDoLink(u1)} onClick={aoClicar}
                   className={cn("px-6 h-12 inline-flex items-center justify-center font-display font-bold text-[14.5px] shadow-sm transition active:scale-[.98]", visual.radius)}
                   style={visual.isOutline
                     ? { border: `2px solid ${marca.cor}`, color: marca.cor, background: "transparent" }
                     : { backgroundColor: marca.cor, color: marca.corTexto }}>{b1}</a>
               )}
               {b2 && u2 && (
-                <a href={u2} target="_blank" rel="noopener noreferrer" onClick={aoClicar}
+                <a href={u2} {...alvoDoLink(u2)} onClick={aoClicar}
                   className={cn("px-6 h-12 inline-flex items-center justify-center font-display font-bold text-[14.5px] border border-gray-900/25 text-gray-900 transition active:scale-[.98] hover:border-gray-900/50", visual.radius)}>{b2}</a>
               )}
             </div>
@@ -491,8 +493,10 @@ function SeloCria({ escuro }: { escuro?: boolean }) {
 /* ── A HOME DO SITE ── */
 export function SiteBio({
   blocos, marca, produtos, posts, visual, aoAbrirProduto, aoAbrirPost, onClique, capturaDoBloco,
-  alturaCheia,
+  alturaCheia, aoPedir,
 }: {
+  /** Pedido da sacola: a página registra o "pedido iniciado" pro dono. */
+  aoPedir?: (blocoId: string, linhas: LinhaPedido[]) => void;
   blocos: BlocoLite[];
   marca: MarcaSite;
   produtos: ItemLite[];
@@ -512,6 +516,8 @@ export function SiteBio({
     const m: { id: string; nome: string }[] = [];
     for (const b of blocos) {
       if (b.kind === "sobre") m.push({ id: "sobre", nome: "Sobre" });
+      if (b.kind === "cardapio") m.push({ id: "cardapio", nome: txt(b.data, "titulo") || "Cardápio" });
+      if (b.kind === "horarios") m.push({ id: "horarios", nome: "Horários" });
       if (b.kind === "produtos" && produtos.length > 0) m.push({ id: "servicos", nome: txt(b.data, "titulo") || "Serviços" });
       if (b.kind === "blog" && posts.length > 0) m.push({ id: "blog", nome: "Blog" });
       if (b.kind === "depoimentos") m.push({ id: "depoimentos", nome: "Depoimentos" });
@@ -562,6 +568,16 @@ export function SiteBio({
   // A linha "onde atende" embaixo dos números sai do bloco Onde atende.
   const blocoAtendimento = blocos.find((b) => b.kind === "atendimento");
   const resumoOnde = blocoAtendimento ? resumoAtendimento(lerAtendimento(blocoAtendimento.data)) : "";
+  // Loja: o selo "Aberto agora" da capa sai do bloco de horários, e o
+  // WhatsApp do pedido vem do primeiro lugar da página que tiver um.
+  const statusLoja = useStatusDaLoja(blocos.find((b) => b.kind === "horarios")?.data);
+  const telefonePagina = (() => {
+    for (const k of ["contato", "acao_fixa", "whatsapp"]) {
+      const t = txt(blocos.find((b) => b.kind === k)?.data ?? {}, "telefone");
+      if (t.replace(/\D/g, "").length >= 10) return t;
+    }
+    return "";
+  })();
 
   return (
     <div className={cn("bg-white [container-type:inline-size]", alturaCheia !== false && "min-h-[100dvh]")}>
@@ -572,7 +588,14 @@ export function SiteBio({
           case "numeros": return <SecaoNumeros key={b.id} d={b.data} localAuto={resumoOnde} />;
           case "atendimento": return <SecaoAtendimento key={b.id} d={b.data} aoClicar={() => onClique?.(b.id)} />;
           case "acao_fixa": return null;
-          case "capa": return <SecaoCapa key={b.id} d={b.data} marca={marca} visual={visual} aoClicar={() => onClique?.(b.id)} />;
+          case "capa": return txt(b.data, "layout") === "foto_cheia"
+            ? <CapaVitrine key={b.id} d={b.data} marca={marca} status={statusLoja} aoClicar={() => onClique?.(b.id)} />
+            : <SecaoCapa key={b.id} d={b.data} marca={marca} visual={visual} aoClicar={() => onClique?.(b.id)} />;
+          case "vantagens": return <FaixaVantagens key={b.id} d={b.data} />;
+          case "cardapio": return <SecaoCardapio key={b.id} d={b.data} marca={marca} telefonePadrao={telefonePagina}
+            aoPedir={(l) => { onClique?.(b.id); aoPedir?.(b.id, l); }} />;
+          case "destaque": return <SecaoDestaque key={b.id} d={b.data} telefonePadrao={telefonePagina} aoClicar={() => onClique?.(b.id)} />;
+          case "horarios": return <SecaoHorarios key={b.id} d={b.data} />;
           case "sobre": return <SecaoSobre key={b.id} d={b.data} marca={marca} />;
           case "produtos": return <SecaoProdutos key={b.id} d={b.data} marca={marca} visual={visual} itens={produtos} aoAbrir={aoAbrirProduto} aoClicar={() => onClique?.(b.id)} />;
           case "blog": return <SecaoBlog key={b.id} d={b.data} marca={marca} visual={visual} itens={posts} aoAbrir={aoAbrirPost} aoClicar={() => onClique?.(b.id)} />;

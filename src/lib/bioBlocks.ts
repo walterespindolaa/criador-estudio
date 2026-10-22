@@ -13,7 +13,7 @@
 import {
   AlignLeft, CalendarClock, Contact, HelpCircle, Image as ImageIcon, Images,
   Layers, Link2, MapPin, MessageCircle, PenLine, PlayCircle, Quote, Send,
-  ShoppingBag, Type, UserRound, Clapperboard, BadgeCheck, MousePointerClick, MapPinned, Handshake, type LucideIcon,
+  ShoppingBag, Type, UserRound, Clapperboard, BadgeCheck, MousePointerClick, MapPinned, Handshake, UtensilsCrossed, Clock, Sparkles, Rows3, type LucideIcon,
 } from "lucide-react";
 import { lerAtendimento, resumoAtendimento, temAlgumAtendimento } from "@/lib/bioEspecialista";
 
@@ -27,7 +27,9 @@ export type TipoBloco =
   // Página de especialista (21/10/2026), ver lib/bioEspecialista.
   | "apresentacao" | "numeros" | "acao_fixa" | "atendimento"
   // Contatos (22/10/2026): proposta de parceria que cai no funil.
-  | "parceria";
+  | "parceria"
+  // Modelo Loja (22/10/2026), ver lib/bioLoja.
+  | "cardapio" | "horarios" | "destaque" | "vantagens";
 
 export type CamposCaptura = "email" | "telefone" | "ambos";
 
@@ -173,7 +175,32 @@ export const BLOCOS_SITE: MetaBloco[] = [
   {
     tipo: "capa", nome: "Capa", Icone: ImageIcon, estilos: ["site"],
     explica: "O topo do site: título, uma frase e dois botões.",
-    padrao: { titulo: "", frase: "", imagem: "", botao1: "Fale comigo", url1: "", botao2: "", url2: "" },
+    padrao: { titulo: "", frase: "", imagem: "", botao1: "Fale comigo", url1: "", botao2: "", url2: "", layout: "padrao" },
+  },
+  {
+    tipo: "cardapio", nome: "Cardápio ou catálogo", Icone: UtensilsCrossed, estilos: ["site"],
+    explica: "Itens com foto, preço e categoria. Com WhatsApp, vira sacola que manda o pedido pronto.",
+    padrao: { titulo: "Cardápio", categorias: [], itens: [], pedidos: true, telefone: "" },
+  },
+  {
+    tipo: "horarios", nome: "Horários", Icone: Clock, estilos: ["site"],
+    explica: "A semana com o dia de hoje marcado. Põe o \"Aberto agora\" na capa sozinho.",
+    padrao: { titulo: "Horários", dias: [
+      { aberto: false, abre: "08:00", fecha: "18:00" },
+      { aberto: true, abre: "08:00", fecha: "18:00" }, { aberto: true, abre: "08:00", fecha: "18:00" },
+      { aberto: true, abre: "08:00", fecha: "18:00" }, { aberto: true, abre: "08:00", fecha: "18:00" },
+      { aberto: true, abre: "08:00", fecha: "18:00" }, { aberto: true, abre: "08:00", fecha: "13:00" },
+    ], observacao: "" },
+  },
+  {
+    tipo: "destaque", nome: "Destaque da semana", Icone: Sparkles, estilos: ["site"],
+    explica: "Uma novidade ou promoção com foto e botão de reservar.",
+    padrao: { etiqueta: "Só essa semana", titulo: "", texto: "", imagem: "", botao: "Reservar o meu", destino: "whatsapp", telefone: "", mensagem: "", url: "" },
+  },
+  {
+    tipo: "vantagens", nome: "Faixa de vantagens", Icone: Rows3, estilos: ["site"],
+    explica: "Três motivos curtos logo abaixo da capa: entrega, encomenda, pagamento.",
+    padrao: { itens: [{ titulo: "", sub: "" }, { titulo: "", sub: "" }, { titulo: "", sub: "" }] },
   },
   {
     tipo: "sobre", nome: "Sobre", Icone: UserRound, estilos: ["site"],
@@ -273,6 +300,13 @@ export function resumoDoBloco(b: { kind: string; data: DadosBloco }): string {
     case "mapa": return txt(d, "endereco") || "sem endereço ainda";
     case "captura": return bool(d, "paraPipeline") ? "vai pro pipeline" : "só na lista de leads";
     case "parceria": return bool(d, "paraPipeline") ? "vai pro funil e por e-mail" : "chega por e-mail";
+    case "cardapio": {
+      const n = lista<{ nome?: string }>(d, "itens").filter((i) => (i?.nome ?? "").trim()).length;
+      return `${n} ${n === 1 ? "item" : "itens"}` + (bool(d, "pedidos", true) ? " · pedido pelo WhatsApp" : " · só vitrine");
+    }
+    case "horarios": return `${lista<{ aberto?: boolean }>(d, "dias").filter((x) => x?.aberto).length} dias abertos`;
+    case "destaque": return txt(d, "titulo") || "sem título ainda";
+    case "vantagens": return lista<{ titulo?: string }>(d, "itens").map((i) => i?.titulo ?? "").filter(Boolean).join(" · ") || "sem itens ainda";
     case "capa": return txt(d, "frase").slice(0, 60) || "sem frase ainda";
     case "sobre": return txt(d, "texto").slice(0, 60) || "sem texto ainda";
     case "produtos": return "puxa os produtos cadastrados";
@@ -308,6 +342,10 @@ export function faltaNoBloco(b: { kind: string; data: DadosBloco }): string | nu
       return txt(d, "video_guid").trim() || txt(d, "imagem").trim() ? null : "falta o vídeo";
     }
     case "numeros": return lista<{ valor?: string }>(d, "itens").some((i) => (i?.valor ?? "").trim()) ? null : "nenhum número";
+    case "cardapio": return lista<{ nome?: string }>(d, "itens").some((i) => (i?.nome ?? "").trim()) ? null : "nenhum item";
+    case "horarios": return lista<{ aberto?: boolean }>(d, "dias").some((x) => x?.aberto) ? null : "nenhum dia aberto";
+    case "destaque": return txt(d, "titulo").trim() ? null : "falta o título";
+    case "vantagens": return lista<{ titulo?: string }>(d, "itens").some((i) => (i?.titulo ?? "").trim()) ? null : "nenhum item";
     case "atendimento": {
       const a = lerAtendimento(d);
       if (!temAlgumAtendimento(a)) return "marque como atende";
@@ -461,6 +499,16 @@ export const corDeDestaque = (hex: string) => (corLegivelSobreBranco(hex) ? hex 
    Devolve string vazia quando não presta, pra quem chama poder simplesmente não
    desenhar o botão em vez de desenhar um botão que não leva a lugar nenhum.
    ═══════════════════════════════════════════════════════════════════════════ */
+/** Botão de seção do site: além do que o linkSeguro aceita, aceita âncora da
+ *  própria página (#cardapio, #atendimento). Só letra, número, - e _: nada
+ *  que feche o atributo ou vire script. Sem isto o "#servicos" dos modelos
+ *  era descartado e o botão sumia da capa. */
+export function linkDoBotao(url: unknown): string {
+  const u = typeof url === "string" ? url.trim() : "";
+  if (/^#[a-z0-9_-]{1,40}$/i.test(u)) return u;
+  return linkSeguro(u);
+}
+
 export function linkSeguro(url: unknown): string {
   const u = typeof url === "string" ? url.trim() : "";
   if (!u) return "";
@@ -481,3 +529,7 @@ export function linkSeguro(url: unknown): string {
   if (!u.includes(" ") && /^[\w.-]+\.[a-z]{2,}(\/|$|\?)/i.test(u)) return testa(`https://${u}`);
   return "";
 }
+
+/** Âncora rola na mesma aba; endereço de fora abre em outra. */
+export const alvoDoLink = (href: string) =>
+  href.startsWith("#") ? {} : { target: "_blank", rel: "noopener noreferrer" };

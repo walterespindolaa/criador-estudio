@@ -60,6 +60,7 @@ import { PainelDesempenho } from "@/components/bio/PainelDesempenho";
 import { useBioTotais } from "@/hooks/useBioStats";
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
 import { FormularioDePrevia } from "@/components/bio/FormParceria";
+import { EmPreviaContext } from "@/components/bio/SiteLoja";
 import { corDeDestaque, corSobre, nomeDaMarcaSite } from "@/lib/bioBlocks";
 import type { BioBloco, EstiloBio } from "@/lib/bioBlocks";
 import { supabase } from "@/integrations/supabase/client";
@@ -2513,6 +2514,7 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
               </p>
             </div>
           ) : (
+            <EmPreviaContext.Provider value={true}>
             <SiteBio
               blocos={blocos.filter((b) => b.is_active).map((b) => ({ id: b.id, kind: b.kind, data: b.data ?? {}, position: b.position }))}
               marca={{
@@ -2531,6 +2533,7 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
                 <FormularioDePrevia kind={b.kind} d={b.data} buttonColor={settings.buttonColor}
                   buttonTextColor={settings.buttonTextColor} radius={radiusFor(settings.buttonStyle)} />
               )} />
+            </EmPreviaContext.Provider>
           )}
         </div>
       </div>

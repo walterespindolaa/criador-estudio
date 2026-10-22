@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { SiteBio, type ItemLite } from "@/components/bio/SiteBio";
+import { EmPreviaContext } from "@/components/bio/SiteLoja";
 import { corDeDestaque } from "@/lib/bioBlocks";
 import type { AparenciaModelo, BlocoDoModelo } from "@/lib/bioTemplates";
 
@@ -72,6 +73,7 @@ export function PreviaModelo({ blocos, aparencia, escala = 1, altura, foto = FOT
         // inert: é desenho. Nada dentro dele recebe clique ou foco.
         {...{ inert: "" }}
         style={{ width: LARGURA, transform: escala === 1 ? undefined : `scale(${escala})`, transformOrigin: "top left" }}>
+        <EmPreviaContext.Provider value={true}>
         <SiteBio
           blocos={lite}
           marca={{ nome: "Seu nome", logo: null, cor: corDeDestaque(aparencia.buttonColor), corTexto: aparencia.buttonTextColor }}
@@ -82,6 +84,7 @@ export function PreviaModelo({ blocos, aparencia, escala = 1, altura, foto = FOT
             radius: RAIO[aparencia.buttonStyle] ?? "rounded-xl", isOutline: aparencia.buttonStyle === "outline",
           }}
           aoAbrirProduto={() => {}} aoAbrirPost={() => {}} alturaCheia={false} />
+        </EmPreviaContext.Provider>
       </div>
     </div>
   );

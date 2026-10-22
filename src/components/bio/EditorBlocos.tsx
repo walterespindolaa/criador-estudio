@@ -27,6 +27,7 @@ import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { FORMAS_DA_FOTO, formaValida, type FormaDaFoto } from "@/lib/bioFoto";
 import { EditorItens } from "@/components/bio/EditorItens";
 import { EditorAssinatura } from "@/components/bio/EditorAssinatura";
+import { DIAS, LIMITE_DO_CARDAPIO, foneWhats, lerHorarios, lerListaColada } from "@/lib/bioLoja";
 import { uploadFileToBunnyStream } from "@/lib/bunny-upload";
 import {
   NICHOS, VIDEO_MAX_MB, VIDEO_MAX_SEGUNDOS, blocosDoNicho, fonteAssinatura, guidValido, lerAssinatura, lerAtendimento,
@@ -889,9 +890,22 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioB
       );
     }
 
-    case "capa":
+    case "capa": {
+      const layout = txt(d, "layout", "padrao");
       return (
         <div className="space-y-3.5">
+          <LinhaCampo label="Formato da capa">
+            <div className="grid grid-cols-2 gap-1.5">
+              {[{ v: "padrao", r: "Texto e foto", e: "Foto ao lado do título" }, { v: "foto_cheia", r: "Foto cheia", e: "Vitrine, com \"Aberto agora\"" }].map((o) => (
+                <button key={o.v} type="button" onClick={() => p({ layout: o.v })}
+                  className={cn("rounded-xl border px-3 py-2 text-left min-h-[44px]",
+                    layout === o.v ? "border-primary bg-primary/10" : "border-border hover:border-primary/40")}>
+                  <span className={cn("block text-xs font-body font-semibold", layout === o.v ? "text-primary" : "text-foreground")}>{o.r}</span>
+                  <span className="block text-[10.5px] font-body text-muted-foreground leading-snug">{o.e}</span>
+                </button>
+              ))}
+            </div>
+          </LinhaCampo>
           <LinhaCampo label="Título grande" ajuda="A promessa em uma linha. É a primeira coisa que a pessoa lê.">
             <Textarea rows={2} value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })}
               placeholder="Sua operação servindo melhor e lucrando mais" className="rounded-xl resize-none" />
@@ -921,8 +935,23 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioB
                 placeholder="#servicos" className="rounded-xl" />
             </LinhaCampo>
           </div>
+          {layout === "foto_cheia" && (
+            <p className="text-[11px] font-body text-muted-foreground leading-snug">
+              Na foto cheia o selo "Aberto agora" sai do bloco Horários. Use uma foto horizontal e clara: o texto fica por cima dela.
+            </p>
+          )}
         </div>
       );
+    }
+
+    case "cardapio":
+      return <FormCardapio d={d} p={p} telefonePadrao={telefonePadrao} />;
+    case "horarios":
+      return <FormHorarios d={d} p={p} />;
+    case "destaque":
+      return <FormDestaque d={d} p={p} telefonePadrao={telefonePadrao} />;
+    case "vantagens":
+      return <FormVantagens d={d} p={p} />;
 
     case "sobre":
       return (
@@ -1067,6 +1096,322 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioB
     default:
       return null;
   }
+}
+
+/* ═══ FORMULÁRIOS DO MODELO LOJA (22/10/2026) ═══ */
+
+const novoId = () =>
+  (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `i${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`);
+
+type ItemCru = { id?: string; nome?: string; desc?: string; detalhe?: string; preco?: string | number | null; cat?: string; foto?: string; ativo?: boolean };
+
+function FormCardapio({ d, p, telefonePadrao }: { d: DadosBloco; p: (patch: DadosBloco) => void; telefonePadrao?: string | null }) {
+  const itens = lista<ItemCru>(d, "itens");
+  const cats = Array.from(new Set(lista<unknown>(d, "categorias").map((c) => String(c ?? "").trim()).filter(Boolean)));
+  const [novaCat, setNovaCat] = useState("");
+  const [aberto, setAberto] = useState<string | null>(null);
+  const [colando, setColando] = useState(false);
+  const [colado, setColado] = useState("");
+  const pedidos = bool(d, "pedidos", true);
+  const semWhats = pedidos && !foneWhats(txt(d, "telefone") || telefonePadrao || "");
+  const lidos = useMemo(() => lerListaColada(colado), [colado]);
+  const cabe = LIMITE_DO_CARDAPIO - itens.length;
+
+  const trocar = (i: number, patch: ItemCru) => p({ itens: itens.map((x, n) => (n === i ? { ...x, ...patch } : x)) });
+  const mover = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= itens.length) return;
+    const nova = [...itens];
+    [nova[i], nova[j]] = [nova[j], nova[i]];
+    p({ itens: nova });
+  };
+  const adicionarCat = () => {
+    const c = novaCat.trim().slice(0, 40);
+    if (!c || cats.includes(c)) { setNovaCat(""); return; }
+    p({ categorias: [...cats, c] });
+    setNovaCat("");
+  };
+  // Tirar a categoria solta os itens dela (ficam em "Todos"), sem apagar nenhum.
+  const tirarCat = (c: string) => p({
+    categorias: cats.filter((x) => x !== c),
+    itens: itens.map((x) => (x.cat === c ? { ...x, cat: "" } : x)),
+  });
+  const adicionarItem = () => {
+    if (cabe <= 0) return;
+    const id = novoId();
+    p({ itens: [...itens, { id, nome: "", desc: "", detalhe: "", preco: "", cat: "", foto: "", ativo: true }] });
+    setAberto(id);
+  };
+  const aplicarColado = () => {
+    const entram = lidos.slice(0, Math.max(0, cabe));
+    if (!entram.length) return;
+    const catsNovas = Array.from(new Set([...cats, ...entram.map((x) => x.cat).filter(Boolean)]));
+    p({
+      categorias: catsNovas,
+      itens: [...itens, ...entram.map((x) => ({
+        id: novoId(), nome: x.nome, desc: "", detalhe: "", preco: x.preco === null ? "" : x.preco, cat: x.cat, foto: "", ativo: true,
+      }))],
+    });
+    toast.success(`${entram.length} ${entram.length === 1 ? "item adicionado" : "itens adicionados"}. Falta só a foto.`);
+    setColado(""); setColando(false);
+  };
+
+  return (
+    <div className="space-y-3.5">
+      <LinhaCampo label="Título da seção">
+        <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })} placeholder="Cardápio" className="rounded-xl" />
+      </LinhaCampo>
+
+      <label className="flex items-start gap-2.5 rounded-xl border border-border bg-muted/30 px-3 py-2.5 cursor-pointer">
+        <Switch checked={pedidos} onCheckedChange={(v) => p({ pedidos: v })} className="mt-0.5 shrink-0" aria-label="Receber pedidos pelo WhatsApp" />
+        <span className="min-w-0">
+          <span className="block text-xs font-body font-semibold text-foreground">Receber pedidos pelo WhatsApp</span>
+          <span className="block text-[11px] font-body text-muted-foreground leading-snug">
+            Ligado, cada item ganha um "+" e a pessoa monta a sacola. O pedido chega pronto no seu WhatsApp. Desligado, o cardápio vira vitrine.
+          </span>
+        </span>
+      </label>
+      {pedidos && (
+        <LinhaCampo label="WhatsApp que recebe os pedidos" ajuda="Vazio usa o telefone do bloco Contato.">
+          <Input value={txt(d, "telefone")} onChange={(e) => p({ telefone: mascaraTelefone(e.target.value) })}
+            placeholder={telefonePadrao || "(00) 00000-0000"} inputMode="tel" className="rounded-xl" />
+        </LinhaCampo>
+      )}
+      {semWhats && (
+        <p className="rounded-xl border border-amber-300/60 bg-amber-50 px-3 py-2 text-[11.5px] font-body text-amber-900 leading-snug">
+          Sem um WhatsApp válido o cardápio aparece só como vitrine, sem o "+". Coloque o número aqui ou no bloco Contato.
+        </p>
+      )}
+
+      <LinhaCampo label="Categorias" ajuda="Viram os botões de filtro em cima dos itens. Opcional.">
+        <div className="flex flex-wrap gap-1.5">
+          {cats.map((c) => (
+            <span key={c} className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 pl-2.5 pr-1 py-0.5 text-[11.5px] font-body">
+              {c}
+              <button type="button" onClick={() => tirarCat(c)} aria-label={`Tirar a categoria ${c}`}
+                className="grid place-items-center h-6 w-6 rounded-full hover:bg-muted text-muted-foreground"><X className="h-3 w-3" /></button>
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-2 mt-2">
+          <Input value={novaCat} onChange={(e) => setNovaCat(e.target.value)} placeholder="Ex.: Pães"
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); adicionarCat(); } }} className="rounded-xl" maxLength={40} />
+          <Button type="button" size="sm" variant="outline" onClick={adicionarCat} className="shrink-0">Adicionar</Button>
+        </div>
+      </LinhaCampo>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-body font-semibold text-foreground">Itens ({itens.length}/{LIMITE_DO_CARDAPIO})</span>
+          <button type="button" onClick={() => setColando((v) => !v)} className="text-[11.5px] font-body font-semibold text-primary min-h-[32px]">
+            {colando ? "Fechar" : "Colar uma lista"}
+          </button>
+        </div>
+
+        {colando && (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2">
+            <p className="text-[11.5px] font-body text-muted-foreground leading-snug">
+              Uma linha por item: <span className="font-semibold text-foreground">Nome - preço - categoria</span>. Preço e categoria são opcionais.
+            </p>
+            <Textarea rows={5} value={colado} onChange={(e) => setColado(e.target.value)}
+              placeholder={"Pão de fermentação natural - 24 - Pães\nCroissant de manteiga - 12,50 - Doces\nCafé coado"} className="rounded-xl resize-none text-xs" />
+            {lidos.length > 0 && (
+              <Button type="button" size="sm" onClick={aplicarColado} disabled={cabe <= 0}>
+                Adicionar {Math.min(lidos.length, Math.max(0, cabe))} {Math.min(lidos.length, cabe) === 1 ? "item" : "itens"}
+              </Button>
+            )}
+            {lidos.length > cabe && <p className="text-[11px] font-body text-amber-800">Cabem mais {Math.max(0, cabe)}. O resto fica de fora.</p>}
+          </div>
+        )}
+
+        {itens.map((it, i) => {
+          const id = it.id || `item-${i}`;
+          const abertoAqui = aberto === id;
+          const ativo = it.ativo !== false;
+          return (
+            <div key={id} className={cn("rounded-xl border bg-muted/30", abertoAqui ? "border-primary/40" : "border-border", !ativo && "opacity-60")}>
+              <div className="flex items-center gap-2 p-2">
+                <button type="button" onClick={() => setAberto(abertoAqui ? null : id)} className="flex items-center gap-2.5 min-w-0 flex-1 text-left min-h-[44px]">
+                  <span className="w-10 h-10 rounded-lg bg-muted overflow-hidden shrink-0 grid place-items-center border border-border">
+                    {it.foto ? <img src={it.foto} alt="" className="w-full h-full object-cover" /> : <ImagePlus className="h-3.5 w-3.5 text-muted-foreground" />}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-xs font-body font-semibold text-foreground truncate">{it.nome?.trim() || "Item sem nome"}</span>
+                    <span className="block text-[11px] font-body text-muted-foreground truncate">
+                      {[it.preco !== "" && it.preco !== null && it.preco !== undefined ? `R$ ${String(it.preco).replace(".", ",")}` : "", it.cat].filter(Boolean).join(" · ") || "sem preço"}
+                    </span>
+                  </span>
+                </button>
+                <Switch checked={ativo} onCheckedChange={(v) => trocar(i, { ativo: v })} aria-label={ativo ? "No ar. Tocar pra esconder" : "Escondido. Tocar pra mostrar"} />
+                <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform shrink-0", abertoAqui && "rotate-180")} />
+              </div>
+              {abertoAqui && (
+                <div className="px-3 pb-3 space-y-2.5 border-t border-border/60 pt-3">
+                  <BotaoImagem valor={it.foto ?? ""} onTroca={(u) => trocar(i, { foto: u })} rotulo="Enviar foto" />
+                  <Input value={it.nome ?? ""} onChange={(e) => trocar(i, { nome: e.target.value })} placeholder="Nome do item" maxLength={80} className="rounded-xl" aria-label="Nome do item" />
+                  <Input value={it.desc ?? ""} onChange={(e) => trocar(i, { desc: e.target.value })} placeholder="Descrição curta (aparece no cartão)" maxLength={120} className="rounded-xl" aria-label="Descrição curta" />
+                  <Textarea rows={2} value={it.detalhe ?? ""} onChange={(e) => trocar(i, { detalhe: e.target.value })}
+                    placeholder="Detalhes (aparecem quando a pessoa abre a foto): ingredientes, tamanho, prazo" maxLength={600} className="rounded-xl resize-none" aria-label="Detalhes" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input value={it.preco === null || it.preco === undefined ? "" : String(it.preco)} onChange={(e) => trocar(i, { preco: e.target.value.replace(/[^\d,.]/g, "").slice(0, 10) })}
+                      placeholder="Preço (ex.: 24,90)" inputMode="decimal" className="rounded-xl" aria-label="Preço" />
+                    <select value={it.cat ?? ""} onChange={(e) => trocar(i, { cat: e.target.value })} aria-label="Categoria"
+                      className="h-10 rounded-xl border border-input bg-background px-2 text-sm font-body">
+                      <option value="">Sem categoria</option>
+                      {cats.map((c) => <option key={c} value={c}>{c}</option>)}
+                      {it.cat && !cats.includes(it.cat) && <option value={it.cat}>{it.cat}</option>}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <Button type="button" size="sm" variant="outline" disabled={i === 0} onClick={() => mover(i, -1)}>Subir</Button>
+                    <Button type="button" size="sm" variant="outline" disabled={i === itens.length - 1} onClick={() => mover(i, 1)}>Descer</Button>
+                    <Button type="button" size="sm" variant="ghost" className="ml-auto text-destructive"
+                      onClick={async () => {
+                        if (await confirmar({ titulo: "Tirar este item?", descricao: `"${it.nome?.trim() || "Item sem nome"}" sai do cardápio.`, acao: "Tirar", destrutivo: true })) {
+                          p({ itens: itens.filter((_, n) => n !== i) });
+                          setAberto(null);
+                        }
+                      }}>
+                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Tirar
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {cabe > 0 && (
+          <Button type="button" size="sm" variant="outline" onClick={adicionarItem}>
+            <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar item
+          </Button>
+        )}
+        <p className="text-[11px] font-body text-muted-foreground leading-snug">
+          Item desligado some do site sem perder o cadastro. Bom pra o que acabou hoje.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Segunda primeiro: é como a pessoa pensa a semana da loja. */
+const ORDEM_DA_SEMANA = [1, 2, 3, 4, 5, 6, 0];
+
+function FormHorarios({ d, p }: { d: DadosBloco; p: (patch: DadosBloco) => void }) {
+  const h = lerHorarios(d);
+  const trocar = (dia: number, patch: Partial<{ aberto: boolean; abre: string; fecha: string }>) =>
+    p({ dias: h.dias.map((x, n) => (n === dia ? { ...x, ...patch } : x)) });
+  const copiarSegunda = () => p({ dias: h.dias.map((x, n) => (n >= 2 && n <= 5 ? { ...h.dias[1] } : x)) });
+  return (
+    <div className="space-y-3.5">
+      <LinhaCampo label="Título da seção">
+        <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })} placeholder="Horários" className="rounded-xl" />
+      </LinhaCampo>
+      <div className="space-y-1.5">
+        {ORDEM_DA_SEMANA.map((n) => {
+          const x = h.dias[n];
+          const viraNoite = x.aberto && x.fecha < x.abre;
+          return (
+            <div key={n} className="grid grid-cols-[92px_1fr] items-center gap-2 rounded-xl border border-border bg-muted/30 px-2.5 py-1.5">
+              <label className="flex items-center gap-2 cursor-pointer min-h-[36px]">
+                <input type="checkbox" className="h-4 w-4 accent-primary" checked={x.aberto} onChange={(e) => trocar(n, { aberto: e.target.checked })} />
+                <span className="text-xs font-body font-semibold">{DIAS[n]}</span>
+              </label>
+              {x.aberto ? (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Input type="time" value={x.abre} onChange={(e) => e.target.value && trocar(n, { abre: e.target.value })} className="rounded-lg h-9 px-2 text-xs" aria-label={`${DIAS[n]}: abre`} />
+                  <span className="text-[11px] text-muted-foreground">às</span>
+                  <Input type="time" value={x.fecha} onChange={(e) => e.target.value && trocar(n, { fecha: e.target.value })} className="rounded-lg h-9 px-2 text-xs" aria-label={`${DIAS[n]}: fecha`} />
+                  {viraNoite && <span className="text-[10px] text-muted-foreground shrink-0">+1 dia</span>}
+                </div>
+              ) : (
+                <span className="text-[11.5px] font-body text-muted-foreground">Fechado</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <Button type="button" size="sm" variant="outline" onClick={copiarSegunda}>Copiar segunda para terça a sexta</Button>
+      <LinhaCampo label="Observação (opcional)" ajuda="Feriado, horário de entrega, encomenda com antecedência.">
+        <Input value={h.observacao} onChange={(e) => p({ observacao: e.target.value })} placeholder="Encomendas com 2 dias de antecedência" className="rounded-xl" />
+      </LinhaCampo>
+      <p className="text-[11px] font-body text-muted-foreground leading-snug">
+        O selo "Aberto agora" na capa usa estes horários, no fuso de Brasília. Fechar depois da meia-noite funciona: 18h às 2h conta como aberto na madrugada.
+      </p>
+    </div>
+  );
+}
+
+function FormDestaque({ d, p, telefonePadrao }: { d: DadosBloco; p: (patch: DadosBloco) => void; telefonePadrao?: string | null }) {
+  const destino = txt(d, "destino", "whatsapp");
+  return (
+    <div className="space-y-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <LinhaCampo label="Etiqueta">
+          <Input value={txt(d, "etiqueta")} onChange={(e) => p({ etiqueta: e.target.value })} placeholder="Só essa semana" className="rounded-xl" />
+        </LinhaCampo>
+        <LinhaCampo label="Título">
+          <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })} placeholder="Panetone artesanal" className="rounded-xl" />
+        </LinhaCampo>
+      </div>
+      <LinhaCampo label="Texto curto">
+        <Textarea rows={2} value={txt(d, "texto")} onChange={(e) => p({ texto: e.target.value })}
+          placeholder="Fornada limitada, reserve até quinta." className="rounded-xl resize-none" />
+      </LinhaCampo>
+      <LinhaCampo label="Foto">
+        <BotaoImagem valor={txt(d, "imagem")} onTroca={(u) => p({ imagem: u })} rotulo="Enviar foto" />
+      </LinhaCampo>
+      <LinhaCampo label="Texto do botão">
+        <Input value={txt(d, "botao")} onChange={(e) => p({ botao: e.target.value })} placeholder="Reservar o meu" className="rounded-xl" />
+      </LinhaCampo>
+      <LinhaCampo label="Leva para">
+        <div className="flex gap-1.5">
+          {[{ v: "whatsapp", r: "WhatsApp" }, { v: "link", r: "Outro endereço" }].map((o) => (
+            <button key={o.v} type="button" onClick={() => p({ destino: o.v })}
+              className={cn("rounded-lg border px-3 py-1.5 text-xs font-body font-semibold min-h-[32px]",
+                destino === o.v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground")}>
+              {o.r}
+            </button>
+          ))}
+        </div>
+      </LinhaCampo>
+      {destino === "whatsapp" ? (
+        <>
+          <LinhaCampo label="Telefone" ajuda="Vazio usa o telefone do bloco Contato.">
+            <Input value={txt(d, "telefone")} placeholder={telefonePadrao || "(00) 00000-0000"}
+              onChange={(e) => p({ telefone: mascaraTelefone(e.target.value) })} inputMode="tel" className="rounded-xl" />
+          </LinhaCampo>
+          <LinhaCampo label="Mensagem que já vai escrita" ajuda={`Vazio manda "Olá! Quero reservar: ${txt(d, "titulo") || "título"}".`}>
+            <Textarea rows={2} value={txt(d, "mensagem")} onChange={(e) => p({ mensagem: e.target.value })} className="rounded-xl resize-none" />
+          </LinhaCampo>
+        </>
+      ) : (
+        <LinhaCampo label="Endereço">
+          <Input value={txt(d, "url")} onChange={(e) => p({ url: e.target.value })} placeholder="https://" inputMode="url" className="rounded-xl" />
+        </LinhaCampo>
+      )}
+    </div>
+  );
+}
+
+function FormVantagens({ d, p }: { d: DadosBloco; p: (patch: DadosBloco) => void }) {
+  const crus = lista<{ titulo?: string; sub?: string }>(d, "itens");
+  const itens = [0, 1, 2].map((i) => crus[i] ?? { titulo: "", sub: "" });
+  const trocar = (i: number, patch: { titulo?: string; sub?: string }) =>
+    p({ itens: itens.map((x, n) => (n === i ? { ...x, ...patch } : x)) });
+  return (
+    <div className="space-y-2.5">
+      <p className="text-[11.5px] font-body text-muted-foreground leading-snug">Três motivos curtos. Item sem título não aparece.</p>
+      {itens.map((it, i) => (
+        <div key={i} className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-xl border border-border bg-muted/30 p-2.5">
+          <Input value={it.titulo ?? ""} onChange={(e) => trocar(i, { titulo: e.target.value })} maxLength={40}
+            placeholder={["Entrega no bairro", "Encomendas", "Pix e cartão"][i]} className="rounded-xl" aria-label={`Vantagem ${i + 1}`} />
+          <Input value={it.sub ?? ""} onChange={(e) => trocar(i, { sub: e.target.value })} maxLength={60}
+            placeholder={["Até 3 km", "Com 2 dias", "Na entrega"][i]} className="rounded-xl" aria-label={`Detalhe da vantagem ${i + 1}`} />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 /* ── UM BLOCO NA LISTA ── */
@@ -1288,7 +1633,7 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
                     /* O site de verdade, em miniatura: com as barrinhas de antes
                        os quatro modelos pareciam o mesmo. */
                     <span className="w-[90px] h-[150px] rounded-lg shrink-0 border border-border overflow-hidden bg-white">
-                      <PreviaModelo blocos={m.blocos} aparencia={m.aparencia} escala={0.3} altura={150} />
+                      <PreviaModelo blocos={m.blocos} aparencia={m.aparencia} escala={0.3} altura={150} foto={m.fotoExemplo} />
                     </span>
                   ) : (
                     /* Clássico: miniatura com as cores e o formato de botão. */
@@ -1356,7 +1701,7 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
         const nicho = especialista ? (nichoPorId(nichoVer) ?? NICHOS[0]) : null;
         const alvo = nicho
           ? { nome: `${m.nome} (${nicho.nome})`, blocos: blocosDoNicho(nicho) as BlocoDoModelo[], aparencia: aparenciaDoNicho(nicho) }
-          : { nome: m.nome, blocos: m.blocos, aparencia: m.aparencia };
+          : { nome: m.nome, blocos: m.blocos, aparencia: m.aparencia, foto: m.fotoExemplo };
         const nomes = Array.from(new Set(alvo.blocos.map((b) => metaDoBloco(b.kind).nome)));
         return (
           <Dialog open onOpenChange={(v) => { if (!v) setVerModelo(null); }}>
@@ -1364,7 +1709,7 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
               <div className="bg-muted/60 shrink-0 flex justify-center px-3 pt-4 pb-3 sm:p-5 sm:border-r border-border">
                 <div className="rounded-[30px] border-[7px] border-gray-800 bg-white overflow-hidden shadow-xl">
                   <div className="h-[42dvh] sm:h-[min(640px,78dvh)] overflow-y-auto overflow-x-hidden" key={alvo.nome}>
-                    <PreviaModelo blocos={alvo.blocos} aparencia={alvo.aparencia} foto={nicho?.id === "saude" ? FOTO_EXEMPLO_SAUDE : FOTO_EXEMPLO} />
+                    <PreviaModelo blocos={alvo.blocos} aparencia={alvo.aparencia} foto={nicho?.id === "saude" ? FOTO_EXEMPLO_SAUDE : ("foto" in alvo && alvo.foto) || FOTO_EXEMPLO} />
                   </div>
                 </div>
               </div>

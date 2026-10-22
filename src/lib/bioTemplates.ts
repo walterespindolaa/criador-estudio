@@ -47,7 +47,11 @@ export type ModeloBio = {
   estilo: EstiloBio;
   aparencia: AparenciaModelo;
   blocos: BlocoDoModelo[];
+  /** Foto da capa só na prévia do modelo. Nunca vai pra página de ninguém. */
+  fotoExemplo?: string;
 };
+
+export const FOTO_EXEMPLO_LOJA = "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=900&q=70";
 
 const CONSENT = "Ao enviar, você autoriza o uso dos seus dados para contato e para fins de marketing.";
 
@@ -200,27 +204,60 @@ export const MODELOS: ModeloBio[] = [
   {
     id: "site-loja",
     nome: "Loja e negócio local",
-    paraQuem: "Quem tem ponto físico e produtos: precisa mostrar o que vende e onde fica.",
+    paraQuem: "Padaria, doceria, restaurante, loja de bairro: mostra o que vende, recebe pedido no WhatsApp e diz se está aberto agora.",
     Icone: UtensilsCrossed,
     estilo: "site",
+    fotoExemplo: FOTO_EXEMPLO_LOJA,
     aparencia: {
-      bgType: "color", bgColor: "#FFFFFF", bgGradient: null,
+      bgType: "color", bgColor: "#FBF6EE", bgGradient: null,
       buttonColor: "#B45309", buttonTextColor: "#FFFFFF", buttonStyle: "rounded",
       cardColor: "#FFFFFF", cardTextColor: "#1C1917", fontFamily: "Nunito",
     },
+    /* Loja (22/10/2026): capa de foto cheia com o "Aberto agora", três
+       vantagens, o cardápio com sacola, o destaque da semana, horários,
+       avaliações, onde fica e contato. O pedido vai pro WhatsApp do bloco
+       Contato; sem número, o cardápio fica de vitrine. */
     blocos: [
       { kind: "capa", data: {
-        titulo: "O que o negócio faz, sem enrolar",
-        frase: "A frase que faz a pessoa querer conhecer.",
-        imagem: "", botao1: "Chamar no WhatsApp", url1: "", botao2: "Ver produtos", url2: "#servicos",
+        layout: "foto_cheia",
+        titulo: "O nome da loja e o que ela faz de melhor",
+        frase: "Uma frase que dá vontade de passar aí hoje.",
+        imagem: "", botao1: "Ver o cardápio", url1: "#cardapio", botao2: "Como chegar", url2: "#atendimento",
       } },
-      { kind: "produtos", data: { rotulo: "O que temos", titulo: "Produtos", subtitulo: "", fundo: "creme" } },
-      { kind: "sobre", data: {
-        rotulo: "Nossa história", titulo: "Como tudo começou",
-        texto: "A origem do negócio, o que move ele hoje e o que ele faz diferente.", imagem: "", fundo: "claro",
+      { kind: "vantagens", data: { itens: [
+        { titulo: "Entrega no bairro", sub: "Até 3 km" },
+        { titulo: "Encomendas", sub: "Com 2 dias" },
+        { titulo: "Pix e cartão", sub: "Na entrega ou retirada" },
+      ] } },
+      { kind: "cardapio", data: {
+        titulo: "Cardápio", pedidos: true, telefone: "",
+        categorias: ["Mais pedidos", "Doces", "Bebidas"],
+        itens: [
+          { id: "exemplo-1", nome: "Seu produto mais vendido", desc: "Uma linha que dá água na boca", detalhe: "", preco: 24, cat: "Mais pedidos", foto: "", ativo: true },
+          { id: "exemplo-2", nome: "Segundo produto", desc: "Tamanho, sabor ou rendimento", detalhe: "", preco: 12.5, cat: "Mais pedidos", foto: "", ativo: true },
+          { id: "exemplo-3", nome: "Um doce da casa", desc: "O que ele tem de especial", detalhe: "", preco: 9, cat: "Doces", foto: "", ativo: true },
+          { id: "exemplo-4", nome: "Uma bebida", desc: "", detalhe: "", preco: 7, cat: "Bebidas", foto: "", ativo: true },
+        ],
       } },
-      { kind: "mapa", data: { titulo: "Onde estamos", endereco: "", horario: "Seg a sáb, 10h às 19h", mostrarMapa: true, fundo: "creme" } },
-      { kind: "depoimentos", data: { rotulo: "O que falam", titulo: "Depoimentos", fundo: "claro", itens: [{ texto: "", autor: "" }] } },
+      { kind: "destaque", data: {
+        etiqueta: "Só essa semana", titulo: "A novidade ou promoção da semana",
+        texto: "Quantas unidades, até quando, como reservar.", imagem: "",
+        botao: "Reservar o meu", destino: "whatsapp", telefone: "", mensagem: "", url: "",
+      } },
+      { kind: "horarios", data: { titulo: "Horários", observacao: "", dias: [
+        { aberto: false, abre: "08:00", fecha: "18:00" },
+        { aberto: true, abre: "07:00", fecha: "19:00" }, { aberto: true, abre: "07:00", fecha: "19:00" },
+        { aberto: true, abre: "07:00", fecha: "19:00" }, { aberto: true, abre: "07:00", fecha: "19:00" },
+        { aberto: true, abre: "07:00", fecha: "19:00" }, { aberto: true, abre: "07:30", fecha: "13:00" },
+      ] } },
+      { kind: "depoimentos", data: { rotulo: "Quem já provou", titulo: "Avaliações", fundo: "claro", itens: [
+        { texto: "Cole aqui uma avaliação de verdade, do Google ou do Instagram.", autor: "Nome do cliente" },
+        { texto: "Uma segunda avaliação, de preferência falando de um produto.", autor: "Nome do cliente" },
+      ] } },
+      { kind: "atendimento", data: {
+        titulo: "Onde fica", formas: { presencial: true, entrega: true },
+        locais: [{ nome: "", endereco: "", cidade: "", horario: "" }], regiao: "", entrega_texto: "", retirada: "",
+      } },
       { kind: "contato", data: { titulo: "", telefone: "", email: "", endereco: "", instagram: "", assinatura: "" } },
     ],
   },

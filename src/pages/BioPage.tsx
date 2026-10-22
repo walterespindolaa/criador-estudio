@@ -803,7 +803,14 @@ const ConteudoDaBio = () => {
               aoAbrirProduto={(sl) => navegar(`/bio/${slug}/p/${sl}`)}
               aoAbrirPost={(sl) => navegar(`/bio/${slug}/blog/${sl}`)}
               onClique={(id) => trackClick(id)}
-              capturaDoBloco={capturaDoBloco} />
+              capturaDoBloco={capturaDoBloco}
+              aoPedir={(blocoId, linhas) => {
+                // Só avisa o dono. Se falhar, o WhatsApp abre do mesmo jeito.
+                void supabase.functions.invoke("bio-track", {
+                  body: { type: "contato", tipo: "pedido", slug, blockId: blocoId,
+                    itens: linhas.map((l) => ({ nome: l.nome, qtd: l.qtd, preco: l.preco })) },
+                }).catch(() => {});
+              }} />
           </div>
         </>
       );
