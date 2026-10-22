@@ -14,6 +14,11 @@ export const UPLOAD_LIMITS = {
     allowedMimes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
     label: "imagem da bio",
   },
+  bioPdf: {
+    maxBytes: 15 * 1024 * 1024, // 15 MB
+    allowedMimes: ["application/pdf"],
+    label: "PDF do mídia kit",
+  },
   postMedia: {
     maxBytes: 50 * 1024 * 1024, // 50 MB (vídeos curtos)
     allowedMimes: [

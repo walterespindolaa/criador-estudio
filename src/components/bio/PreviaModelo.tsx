@@ -2,7 +2,7 @@ import { useId } from "react";
 import { SiteBio, type ItemLite } from "@/components/bio/SiteBio";
 import { EmPreviaContext } from "@/components/bio/SiteLoja";
 import { corDeDestaque } from "@/lib/bioBlocks";
-import type { AparenciaModelo, BlocoDoModelo } from "@/lib/bioTemplates";
+import type { AparenciaModelo, BlocoDoModelo, PreviaDoModelo } from "@/lib/bioTemplates";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PRÉVIA DE UM MODELO (21/10/2026)
@@ -44,8 +44,11 @@ const RAIO: Record<AparenciaModelo["buttonStyle"], string> = {
 const pilha = (fonte: string) =>
   /serif|display/i.test(fonte) && !/sans/i.test(fonte) ? `'${fonte}', Georgia, serif` : `'${fonte}', system-ui, sans-serif`;
 
-export function PreviaModelo({ blocos, aparencia, escala = 1, altura, foto = FOTO_EXEMPLO }: {
+export function PreviaModelo({ blocos, aparencia, escala = 1, altura, foto = FOTO_EXEMPLO, previa }: {
   blocos: BlocoDoModelo[];
+  /** Dados de exemplo SÓ desta prévia (números, preços, Instagram de mentira).
+   *  Nunca entram na página de ninguém: o modelo aplicado leva só `blocos`. */
+  previa?: PreviaDoModelo;
   foto?: string;
   aparencia: AparenciaModelo;
   /** 1 = tamanho de celular. A miniatura usa uns 0.32. */
@@ -57,7 +60,7 @@ export function PreviaModelo({ blocos, aparencia, escala = 1, altura, foto = FOT
   // card nem pro editor em volta.
   const escopo = `pm-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   const lite = blocos.map((b, i) => {
-    const data = { ...(b.data ?? {}) };
+    const data = { ...(b.data ?? {}), ...(previa?.blocos?.[i] ?? {}) };
     if ((b.kind === "capa" || b.kind === "apresentacao") && !data.imagem) {
       data.imagem = foto;
       if (b.kind === "apresentacao") data.midia = "imagem";
@@ -77,7 +80,7 @@ export function PreviaModelo({ blocos, aparencia, escala = 1, altura, foto = FOT
         <SiteBio
           blocos={lite}
           marca={{ nome: "Seu nome", logo: null, cor: corDeDestaque(aparencia.buttonColor), corTexto: aparencia.buttonTextColor }}
-          produtos={PRODUTOS} posts={POSTS}
+          produtos={PRODUTOS} posts={POSTS} social={previa?.social ?? null}
           visual={{
             buttonColor: aparencia.buttonColor, buttonTextColor: aparencia.buttonTextColor,
             cardColor: aparencia.cardColor, cardTextColor: aparencia.cardTextColor,

@@ -61,6 +61,7 @@ import { useBioTotais } from "@/hooks/useBioStats";
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
 import { FormularioDePrevia } from "@/components/bio/FormParceria";
 import { EmPreviaContext } from "@/components/bio/SiteLoja";
+import { lerSocial, type SocialPublico } from "@/lib/bioCriadora";
 import { corDeDestaque, corSobre, nomeDaMarcaSite } from "@/lib/bioBlocks";
 import type { BioBloco, EstiloBio } from "@/lib/bioBlocks";
 import { supabase } from "@/integrations/supabase/client";
@@ -948,6 +949,23 @@ const LinkInBio = () => {
   });
 
   const profile = (daFicha ? fichaBio : (isOwnAccount ? selfProfile : managedProfile)) as Profile | null;
+  /* Instagram na prévia: a mesma RPC da página pública. Como quem pede é o
+     dono, o banco devolve mesmo com o bloco ainda desligado. A chave muda
+     quando a pessoa liga ou desliga o "puxar do Instagram", e só aí busca. */
+  const chaveSocial = useMemo(() => JSON.stringify(blocosSite
+    .filter((b) => b.kind === "perfil_criadora" || b.kind === "videos" || b.kind === "midiakit")
+    .map((b) => [b.kind, b.kind === "videos" ? b.data?.fonte : b.kind === "midiakit" ? b.data?.auto : b.data?.redes])), [blocosSite]);
+  const slugDaPrevia = profile?.bio_slug ?? "";
+  const { data: socialDaPrevia } = useQuery({
+    queryKey: ["bio-social-previa", slugDaPrevia, chaveSocial],
+    enabled: !!slugDaPrevia && chaveSocial !== "[]",
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase as unknown as { rpc: (f: string, a: Record<string, unknown>) => Promise<{ data: unknown }> })
+        .rpc("get_public_bio_social", { _slug: slugDaPrevia });
+      return lerSocial(data);
+    },
+  });
   const profileLoading = daFicha ? fichaLoading : (isOwnAccount ? selfProfileLoading : managedLoading);
   const [savingAppearance, setSavingAppearance] = useState(false);
   const isSavingAppearance = isOwnAccount ? updateProfile.isPending : savingAppearance;
@@ -2176,7 +2194,7 @@ const LinkInBio = () => {
               </p>
               <BioPreview profile={profile} links={activeLinks}
                 blocos={settings.layout === "vitrine" ? blocosSite : blocosClassico}
-                produtos={produtosDoSite} posts={postsDoSite} settings={settings} />
+                produtos={produtosDoSite} posts={postsDoSite} settings={settings} social={socialDaPrevia ?? null} />
             </Card>
            </div>
           </div>
@@ -2198,7 +2216,7 @@ const LinkInBio = () => {
             <div className="flex-1 overflow-y-auto px-4 pb-8">
               <BioPreview profile={profile} links={activeLinks}
                 blocos={settings.layout === "vitrine" ? blocosSite : blocosClassico}
-                produtos={produtosDoSite} posts={postsDoSite} settings={settings} />
+                produtos={produtosDoSite} posts={postsDoSite} settings={settings} social={socialDaPrevia ?? null} />
             </div>
           </SheetContent>
         </Sheet>
@@ -2484,9 +2502,10 @@ type PreviewProps = {
   produtos?: ItemLite[];
   posts?: ItemLite[];
   settings: BioSettings;
+  social?: SocialPublico | null;
 };
 
-const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produtos = [], posts = [], settings }: PreviewProps) {
+const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produtos = [], posts = [], settings, social = null }: PreviewProps) {
   const radius = radiusFor(settings.buttonStyle);
   const isOutline = settings.buttonStyle === "outline";
   const hasSocials = SOCIAL_FIELDS.some((f) => settings.socialLinks[f.key].trim());
@@ -2516,6 +2535,7 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
           ) : (
             <EmPreviaContext.Provider value={true}>
             <SiteBio
+              social={social}
               blocos={blocos.filter((b) => b.is_active).map((b) => ({ id: b.id, kind: b.kind, data: b.data ?? {}, position: b.position }))}
               marca={{
                 nome: nomeDaMarcaSite(blocos, settings.header?.name, profile?.name),

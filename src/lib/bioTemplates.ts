@@ -1,9 +1,10 @@
 import {
   Clapperboard,
-  Briefcase, Camera, GraduationCap, Newspaper, Store, UtensilsCrossed, type LucideIcon,
+  Briefcase, Camera, GraduationCap, Store, UtensilsCrossed, type LucideIcon,
 } from "lucide-react";
 import type { DadosBloco, EstiloBio, TipoBloco } from "@/lib/bioBlocks";
 import { blocosDoNicho, nichoPorId, type Nicho } from "@/lib/bioEspecialista";
+import type { SocialPublico } from "@/lib/bioCriadora";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MODELOS PRONTOS
@@ -49,7 +50,14 @@ export type ModeloBio = {
   blocos: BlocoDoModelo[];
   /** Foto da capa só na prévia do modelo. Nunca vai pra página de ninguém. */
   fotoExemplo?: string;
+  /** Exemplo preenchido SÓ pra prévia (números, preços, Instagram de mentira).
+   *  Aplicar o modelo leva `blocos`; isto aqui nunca sai do desenho. */
+  previa?: PreviaDoModelo;
 };
+
+export type PreviaDoModelo = { blocos?: Record<number, DadosBloco>; social?: SocialPublico };
+
+export const FOTO_EXEMPLO_CRIADORA = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=900&q=70";
 
 export const FOTO_EXEMPLO_LOJA = "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=900&q=70";
 
@@ -168,38 +176,74 @@ export const MODELOS: ModeloBio[] = [
 
   /* ── SITE ── */
   {
+    /* Consultoria (22/10/2026): capa editorial com dois números, "é pra você
+       se", serviços com o que inclui, como funciona, um depoimento grande,
+       perguntas e a chamada final, com o botão fixo levando até ela. */
     id: "site-consultoria",
     nome: "Consultoria e serviços",
-    paraQuem: "Quem vende serviço com preço e precisa explicar cada um com calma.",
+    paraQuem: "Quem vende serviço e precisa explicar cada um com calma: consultoria, mentoria, agência, escritório.",
     Icone: Briefcase,
     estilo: "site",
     aparencia: {
-      bgType: "color", bgColor: "#FFFFFF", bgGradient: null,
-      buttonColor: "#14532D", buttonTextColor: "#FFFFFF", buttonStyle: "pill",
-      cardColor: "#FFFFFF", cardTextColor: "#0F172A", fontFamily: "DM Serif Display",
+      bgType: "color", bgColor: "#F6F3EE", bgGradient: null,
+      buttonColor: "#1F4D3A", buttonTextColor: "#FFFFFF", buttonStyle: "pill",
+      cardColor: "#FFFFFF", cardTextColor: "#1E2A24", fontFamily: "DM Serif Display",
     },
     blocos: [
       { kind: "capa", data: {
-        titulo: "A promessa da marca em uma linha",
-        frase: "Pra quem é, o que resolve e onde atende.",
-        imagem: "", botao1: "Quero uma conversa", url1: "", botao2: "Ver serviços", url2: "#servicos",
+        layout: "editorial", fundo: "creme",
+        etiqueta: "O que você faz · pra quem",
+        titulo: "A promessa do seu trabalho em uma linha", destaque: "",
+        frase: "Pra quem é, o que resolve e onde atende. Duas linhas no máximo.",
+        imagem: "", botao1: "Agendar conversa", url1: "#agendar", botao2: "Ver serviços", url2: "#servicos",
+        numeros: [{ valor: "", rotulo: "clientes atendidos" }, { valor: "", rotulo: "anos de experiência" }], selo: "",
       } },
-      { kind: "sobre", data: {
-        rotulo: "Quem sou", titulo: "A frase que estabelece autoridade",
-        texto: "Conte a história em dois ou três parágrafos.\n\nComece pelo começo: como entrou nessa, o que aprendeu no caminho, e o que você enxerga que os outros não enxergam.\n\nTermine dizendo onde atende.",
-        imagem: "", fundo: "claro",
+      { kind: "praquem", data: { titulo: "É pra você se...", fundo: "creme", itens: [
+        "Primeira situação em que seu cliente se reconhece",
+        "Segunda situação, do jeito que ele fala",
+        "Terceira situação: o que ele quer e ainda não tem",
+      ] } },
+      { kind: "servicos", data: {
+        rotulo: "Serviços", titulo: "Jeitos de trabalhar comigo", botao: "Quero esse", telefone: "", fundo: "creme",
+        itens: [
+          { id: "exemplo-1", nome: "Diagnóstico", duracao: "", resumo: "O que a pessoa ganha com esse serviço, em uma frase.", inclui: "Primeira entrega\nSegunda entrega\nTerceira entrega", preco: "", destaque: false },
+          { id: "exemplo-2", nome: "Acompanhamento", duracao: "", resumo: "O serviço completo, do começo ao fim.", inclui: "Tudo do Diagnóstico\nEncontros semanais\nMaterial no fim", preco: "", destaque: true },
+          { id: "exemplo-3", nome: "Sessão avulsa", duracao: "", resumo: "Pra destravar um problema específico.", inclui: "Conversa por vídeo\nResumo com próximos passos", preco: "", destaque: false },
+        ],
       } },
-      { kind: "produtos", data: { rotulo: "O que eu faço", titulo: "Serviços", subtitulo: "", fundo: "creme" } },
-      { kind: "depoimentos", data: {
-        rotulo: "Quem já passou por aqui", titulo: "Depoimentos", fundo: "claro",
-        itens: [{ texto: "", autor: "" }, { texto: "", autor: "" }],
-      } },
-      { kind: "captura", data: {
-        titulo: "Me conta do seu negócio", subtitulo: "Respondo pessoalmente.",
-        campos: "ambos", botao: "Enviar", consentimento: CONSENT, paraPipeline: true, fundo: "claro",
+      { kind: "etapas", data: { rotulo: "Como funciona", titulo: "", fundo: "creme", itens: [
+        { titulo: "Conversa inicial", texto: "A pessoa conta o momento dela e você diz se consegue ajudar." },
+        { titulo: "Proposta sob medida", texto: "Escopo, prazo e valor por escrito." },
+        { titulo: "Mão na massa", texto: "Começa pelo que mais trava, com entregas toda semana." },
+      ] } },
+      { kind: "depoimentos", data: { layout: "destaque", rotulo: "", titulo: "Depoimentos", itens: [{ texto: "", autor: "" }] } },
+      { kind: "faq", data: { titulo: "Antes de marcar", fundo: "creme", itens: [
+        { p: "Quanto tempo leva?", r: "" },
+        { p: "Atende online?", r: "" },
+        { p: "Como funciona o pagamento?", r: "" },
+      ] } },
+      { kind: "chamada", data: {
+        titulo: "Vamos conversar sobre o seu momento?", texto: "Uma conversa curta pra entender o que você precisa e ver se faz sentido trabalharmos juntos.",
+        botao: "Escolher um horário", destino: "whatsapp", telefone: "", mensagem: "Olá! Quero agendar uma conversa.", url: "", secao: "", nota: "", fundo: "creme",
       } },
       { kind: "contato", data: { titulo: "", telefone: "", email: "", endereco: "", instagram: "", assinatura: "" } },
+      { kind: "acao_fixa", data: { texto: "Agendar conversa", icone: "lucide:agenda", destino: "secao", secao: "agendar", telefone: "", mensagem: "", url: "" } },
     ],
+    previa: {
+      blocos: {
+        0: { numeros: [{ valor: "+120", rotulo: "clientes atendidos" }, { valor: "12 anos", rotulo: "de experiência" }], selo: "Online e presencial",
+          titulo: "Sua empresa rodando sem depender de você em tudo.", destaque: "você", etiqueta: "Consultoria de processos · pequenas empresas" },
+        2: { itens: [
+          { id: "p1", nome: "Diagnóstico", duracao: "2 semanas", resumo: "Raio-x de como a empresa funciona hoje e o plano do que mudar primeiro.", inclui: "Entrevista com a equipe\nMapa dos processos\nPlano de 90 dias", preco: "1.800", destaque: false },
+          { id: "p2", nome: "Acompanhamento", duracao: "3 meses", resumo: "A gente implanta junto, toda semana, até a rotina rodar sem você.", inclui: "Diagnóstico incluso\nEncontro semanal de 1h\nManual da operação", preco: "6.900", destaque: true },
+        ] },
+        4: { itens: [{ texto: "Em três meses eu tirei a primeira semana de férias em seis anos. A empresa nem percebeu.", autor: "Cliente de exemplo, Itajaí" }] },
+        5: { itens: [
+          { p: "Quanto tempo leva?", r: "O diagnóstico leva duas semanas; o acompanhamento, três meses." },
+          { p: "Atende online?", r: "Sim, pra qualquer cidade. Presencial na região." },
+        ] },
+      },
+    },
   },
   {
     id: "site-loja",
@@ -262,34 +306,71 @@ export const MODELOS: ModeloBio[] = [
     ],
   },
   {
-    id: "site-autoridade",
-    nome: "Autoridade e conteúdo",
-    paraQuem: "Quem quer ser achado no Google pelo assunto, e não só pelo nome.",
-    Icone: Newspaper,
+    /* Criadora (22/10/2026, no lugar de "Autoridade e conteúdo"): bio e
+       mídia kit na mesma página. Seguidores, vídeos e público podem vir do
+       Instagram conectado. O botão fixo leva até a proposta de parceria. */
+    id: "site-criadora",
+    nome: "Criadora de conteúdo",
+    paraQuem: "Influenciadora e criadora: links, cupons e últimos vídeos pro seguidor, mídia kit e proposta pra marca.",
+    Icone: Camera,
     estilo: "site",
     aparencia: {
-      bgType: "color", bgColor: "#FFFFFF", bgGradient: null,
-      buttonColor: "#1E293B", buttonTextColor: "#FFFFFF", buttonStyle: "square",
-      cardColor: "#FFFFFF", cardTextColor: "#0F172A", fontFamily: "Sora",
+      bgType: "color", bgColor: "#FFF4EF", bgGradient: null,
+      buttonColor: "#E2471F", buttonTextColor: "#FFFFFF", buttonStyle: "rounded",
+      cardColor: "#FFFFFF", cardTextColor: "#1A1A1A", fontFamily: "Bricolage Grotesque",
     },
     blocos: [
-      { kind: "capa", data: {
-        titulo: "A tese que você defende",
-        frase: "Uma frase que já divide opinião e faz querer ler mais.",
-        imagem: "", botao1: "Ler os textos", url1: "#blog", botao2: "Falar comigo", url2: "",
+      { kind: "perfil_criadora", data: {
+        foto: "", nome: "", frase: "Sobre o que você fala e pra quem, numa frase.", cidade: "", selo: "Aceito parcerias",
+        redes: [{ rede: "instagram", numero: "", url: "", auto: true }, { rede: "tiktok", numero: "", url: "", auto: false }],
       } },
-      { kind: "blog", data: { rotulo: "Escrevo por aqui", titulo: "Blog", quantos: 6, fundo: "claro" } },
-      { kind: "sobre", data: {
-        rotulo: "Quem escreve", titulo: "Sobre mim",
-        texto: "Quem é você, por que fala disso, e o que te dá autoridade no assunto.", imagem: "", fundo: "creme",
+      { kind: "botoes", data: { itens: [
+        { titulo: "Meus achadinhos", sub: "Tudo que eu uso, com link", url: "", cor: "marca", icone: "" },
+        { titulo: "Material grátis", sub: "E-book, planilha ou guia", url: "", cor: "lilas", icone: "" },
+      ] } },
+      { kind: "videos", data: { titulo: "Últimos vídeos", fonte: "instagram", quantos: 6, itens: [], perfil: "" } },
+      { kind: "cupons", data: { titulo: "Meus cupons", itens: [{ marca: "", desconto: "", codigo: "", url: "" }] } },
+      { kind: "midiakit", data: {
+        rotulo: "Pra marcas", titulo: "Quem me assiste", auto: true, publico: [], engajamento: "", alcance: "",
+        formatos: [
+          { nome: "Reels", inclui: "1 Reels no meu perfil\nRoteiro aprovado por você antes\nRelatório de resultado", preco: "" },
+          { nome: "Stories", inclui: "Sequência de 3 a 5 stories\nLink ou cupom no sticker\nPrint das métricas", preco: "" },
+          { nome: "Combo", inclui: "1 Reels + stories\nUso do vídeo nos seus anúncios\nRelatório completo", preco: "" },
+        ],
+        marcas: [], pdf: "", botaoPdf: "Baixar mídia kit em PDF",
       } },
-      { kind: "produtos", data: { rotulo: "Trabalhe comigo", titulo: "Serviços", subtitulo: "", fundo: "claro" } },
-      { kind: "captura", data: {
-        titulo: "Receba os textos novos", subtitulo: "Sem spam, só quando sai coisa boa.",
-        campos: "email", botao: "Quero receber", consentimento: CONSENT, paraPipeline: false, fundo: "escuro",
+      { kind: "parceria", data: {
+        titulo: "Vamos criar juntos?", subtitulo: "Conta da sua marca e do que você tem em mente. Respondo em até 2 dias úteis.",
+        pedirEmpresa: true, botao: "Enviar proposta",
+        consentimento: "Ao enviar, você autoriza o uso dos seus dados para eu responder sua proposta.", paraPipeline: true, fundo: "claro",
       } },
       { kind: "contato", data: { titulo: "", telefone: "", email: "", endereco: "", instagram: "", assinatura: "" } },
+      { kind: "acao_fixa", data: { texto: "Fechar uma parceria", icone: "lucide:email", destino: "secao", secao: "parceria", telefone: "", mensagem: "", url: "" } },
     ],
+    previa: {
+      blocos: {
+        0: { foto: FOTO_EXEMPLO_CRIADORA, nome: "Bia Lemos", frase: "Rotina, café e receitas fáceis pra quem mora sozinha.", cidade: "Itajaí · SC",
+          redes: [{ rede: "instagram", numero: "", auto: true }, { rede: "tiktok", numero: "9,1 mil" }, { rede: "youtube", numero: "2,4 mil" }] },
+        1: { itens: [
+          { titulo: "Meus achadinhos", sub: "Tudo que eu uso, com link", url: "https://exemplo.com", cor: "marca" },
+          { titulo: "Receitas do mês", sub: "E-book grátis em PDF", url: "https://exemplo.com", cor: "lilas" },
+        ] },
+        3: { itens: [{ marca: "Marca de café", desconto: "10% off", codigo: "BIA10" }, { marca: "Loja de casa", desconto: "frete grátis", codigo: "BIAFRETE" }] },
+        4: { formatos: [
+          { nome: "Reels", inclui: "1 Reels de até 60s\nRoteiro aprovado antes\nRelatório em 7 dias", preco: "1.200" },
+          { nome: "Stories", inclui: "3 a 5 stories\nCupom no sticker", preco: "600" },
+        ], marcas: [{ nome: "Café Bom" }, { nome: "Casa+" }, { nome: "Feira Viva" }] },
+      },
+      social: {
+        conectado: true, usuario: null, atualizado_em: null, seguidores: 18432,
+        videos: [
+          "photo-1495474472287-4d71bcdd2085", "photo-1555507036-ab1f4038808a", "photo-1504754524776-8f4f37790ca0",
+          "photo-1517433670267-08bbd4be890f", "photo-1509440159596-0249088772ff", "photo-1484723091739-30a097e8f929",
+        ].map((id, i) => ({ foto: `https://images.unsplash.com/${id}?w=360&q=60`, link: "https://www.instagram.com/", video: true, views: [12400, 8100, 31000, 5600, 9900, 14200][i] })),
+        publico: [{ rotulo: "Mulheres", pct: 78 }, { rotulo: "25 a 34 anos", pct: 52 }, { rotulo: "Santa Catarina", pct: 40 }, { rotulo: "Itajaí", pct: 24 }],
+        engajamento: 4.2, alcance_30d: 86000,
+      },
+    },
   },
   {
     /* Página de especialista (21/10/2026): a pessoa em vídeo ou foto de tela

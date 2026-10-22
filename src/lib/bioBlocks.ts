@@ -13,7 +13,8 @@
 import {
   AlignLeft, CalendarClock, Contact, HelpCircle, Image as ImageIcon, Images,
   Layers, Link2, MapPin, MessageCircle, PenLine, PlayCircle, Quote, Send,
-  ShoppingBag, Type, UserRound, Clapperboard, BadgeCheck, MousePointerClick, MapPinned, Handshake, UtensilsCrossed, Clock, Sparkles, Rows3, type LucideIcon,
+  ShoppingBag, Type, UserRound, Clapperboard, BadgeCheck, MousePointerClick, MapPinned, Handshake, UtensilsCrossed, Clock, Sparkles, Rows3, ListChecks, BriefcaseBusiness, ListOrdered, Megaphone,
+  CircleUserRound, LayoutList, Film, TicketPercent, Presentation, type LucideIcon,
 } from "lucide-react";
 import { lerAtendimento, resumoAtendimento, temAlgumAtendimento } from "@/lib/bioEspecialista";
 
@@ -29,7 +30,11 @@ export type TipoBloco =
   // Contatos (22/10/2026): proposta de parceria que cai no funil.
   | "parceria"
   // Modelo Loja (22/10/2026), ver lib/bioLoja.
-  | "cardapio" | "horarios" | "destaque" | "vantagens";
+  | "cardapio" | "horarios" | "destaque" | "vantagens"
+  // Modelo Consultoria (22/10/2026), ver lib/bioConsultoria.
+  | "praquem" | "servicos" | "etapas" | "chamada"
+  // Modelo Criadora (22/10/2026), ver lib/bioCriadora.
+  | "perfil_criadora" | "botoes" | "videos" | "cupons" | "midiakit";
 
 export type CamposCaptura = "email" | "telefone" | "ambos";
 
@@ -222,6 +227,55 @@ export const BLOCOS_SITE: MetaBloco[] = [
     explica: "O que os clientes falam. Prova social sem precisar de print.",
     padrao: { rotulo: "Quem já passou por aqui", titulo: "Depoimentos", itens: [{ texto: "", autor: "" }] },
   },
+  /* ── Consultoria ── */
+  {
+    tipo: "praquem", nome: "É pra você se", Icone: ListChecks, estilos: ["site"],
+    explica: "Três ou quatro situações em que a pessoa se reconhece. Filtra quem é cliente.",
+    padrao: { titulo: "É pra você se...", itens: ["", "", ""], fundo: "claro" },
+  },
+  {
+    tipo: "servicos", nome: "Serviços com o que inclui", Icone: BriefcaseBusiness, estilos: ["site"],
+    explica: "Cartões com duração, o que está incluso e o preço. O botão já abre a conversa sobre aquele serviço.",
+    padrao: { rotulo: "Serviços", titulo: "Como posso te ajudar", botao: "Quero esse", telefone: "", itens: [], fundo: "creme" },
+  },
+  {
+    tipo: "etapas", nome: "Como funciona", Icone: ListOrdered, estilos: ["site"],
+    explica: "Os passos do primeiro contato até a entrega, numerados.",
+    padrao: { rotulo: "Como funciona", titulo: "", itens: [{ titulo: "", texto: "" }, { titulo: "", texto: "" }, { titulo: "", texto: "" }], fundo: "creme" },
+  },
+  {
+    tipo: "chamada", nome: "Chamada final", Icone: Megaphone, estilos: ["site"], clicavel: true,
+    explica: "Um convite claro antes do rodapé, com um botão só.",
+    padrao: { titulo: "Vamos conversar?", texto: "", botao: "Chamar no WhatsApp", destino: "whatsapp", telefone: "", mensagem: "", url: "", secao: "", nota: "", fundo: "creme" },
+  },
+  /* ── Criadora ── */
+  {
+    tipo: "perfil_criadora", nome: "Capa de criadora", Icone: CircleUserRound, estilos: ["site"],
+    explica: "Sua foto grande, uma frase e os números de até 3 redes. O Instagram pode vir conectado.",
+    padrao: { foto: "", nome: "", frase: "", cidade: "", selo: "Aceito parcerias",
+      redes: [{ rede: "instagram", numero: "", url: "", auto: true }] },
+  },
+  {
+    tipo: "botoes", nome: "Botões em destaque", Icone: LayoutList, estilos: ["site"], clicavel: true,
+    explica: "Os links que o seguidor procura, grandes e coloridos: achadinhos, e-book, vídeo novo.",
+    padrao: { itens: [{ titulo: "", sub: "", url: "", cor: "marca", icone: "" }] },
+  },
+  {
+    tipo: "videos", nome: "Últimos vídeos", Icone: Film, estilos: ["site"], clicavel: true,
+    explica: "Grade com os vídeos mais recentes. Vem do Instagram conectado ou você escolhe.",
+    padrao: { titulo: "Últimos vídeos", fonte: "instagram", quantos: 6, itens: [], perfil: "" },
+  },
+  {
+    tipo: "cupons", nome: "Cupons", Icone: TicketPercent, estilos: ["site"], clicavel: true,
+    explica: "Código de desconto com botão de copiar. O seguidor não precisa digitar.",
+    padrao: { titulo: "Meus cupons", itens: [{ marca: "", desconto: "", codigo: "", url: "" }] },
+  },
+  {
+    tipo: "midiakit", nome: "Mídia kit pra marcas", Icone: Presentation, estilos: ["site"],
+    explica: "Quem te assiste, formatos com preço, marcas que já fecharam e o PDF pra baixar.",
+    padrao: { rotulo: "Pra marcas", titulo: "Quem me assiste", auto: true, publico: [], engajamento: "", alcance: "",
+      formatos: [], marcas: [], pdf: "", botaoPdf: "Baixar mídia kit em PDF" },
+  },
   {
     tipo: "contato", nome: "Contato e rodapé", Icone: Contact, estilos: ["site"],
     explica: "Fecha o site com telefone, e-mail, endereço e redes.",
@@ -317,6 +371,18 @@ export function resumoDoBloco(b: { kind: string; data: DadosBloco }): string {
     case "numeros": return lista<{ valor?: string }>(d, "itens").map((i) => i?.valor ?? "").filter(Boolean).join(" · ") || "sem números ainda";
     case "acao_fixa": return txt(d, "texto") || "sem texto ainda";
     case "atendimento": return resumoAtendimento(lerAtendimento(d)) || "nenhuma forma marcada";
+    case "praquem": return `${lista<string>(d, "itens").filter((i) => typeof i === "string" && i.trim()).length} situação(ões)`;
+    case "servicos": {
+      const n = lista<{ nome?: string }>(d, "itens").filter((i) => (i?.nome ?? "").trim()).length;
+      return `${n} ${n === 1 ? "serviço" : "serviços"}`;
+    }
+    case "etapas": return `${lista<{ titulo?: string }>(d, "itens").filter((i) => (i?.titulo ?? "").trim()).length} etapa(s)`;
+    case "chamada": return txt(d, "botao") || "sem botão ainda";
+    case "perfil_criadora": return lista<{ rede?: string }>(d, "redes").map((r) => r?.rede ?? "").filter(Boolean).join(" · ") || "sem redes ainda";
+    case "botoes": return lista<{ titulo?: string }>(d, "itens").map((i) => i?.titulo ?? "").filter(Boolean).join(" · ") || "sem botões ainda";
+    case "videos": return txt(d, "fonte") === "instagram" ? "do Instagram conectado" : `${lista(d, "itens").length} vídeo(s) escolhido(s)`;
+    case "cupons": return lista<{ codigo?: string }>(d, "itens").map((i) => i?.codigo ?? "").filter(Boolean).join(" · ") || "sem cupons ainda";
+    case "midiakit": return d.auto === true ? "números do Instagram" : "números digitados";
     default: return "";
   }
 }
@@ -352,11 +418,23 @@ export function faltaNoBloco(b: { kind: string; data: DadosBloco }): string | nu
       if (a.presencial && !a.locais.some((l) => l.endereco.trim() || l.cidade.trim())) return "falta o endereço";
       return null;
     }
-    case "acao_fixa": {
-      if (!txt(d, "texto").trim()) return "falta o texto do botão";
-      if (txt(d, "destino", "whatsapp") === "whatsapp") return txt(d, "telefone").replace(/\D/g, "").length >= 10 ? null : "falta o telefone";
-      return linkSeguro(txt(d, "url")) ? null : "falta o endereço";
+    case "acao_fixa":
+    case "chamada": {
+      const rotulo = b.kind === "acao_fixa" ? "texto" : "botao";
+      if (!txt(d, rotulo).trim()) return "falta o texto do botão";
+      const destino = txt(d, "destino", "whatsapp");
+      if (destino === "secao") return /^#?[a-z0-9_-]{1,40}$/i.test(txt(d, "secao")) ? null : "escolha a parte da página";
+      // WhatsApp sem número usa o do Contato, que este bloco não enxerga daqui.
+      if (destino === "whatsapp") return null;
+      return linkDoBotao(txt(d, "url")) ? null : "falta o endereço";
     }
+    case "praquem": return lista<string>(d, "itens").some((i) => typeof i === "string" && i.trim()) ? null : "nenhuma situação";
+    case "servicos": return lista<{ nome?: string }>(d, "itens").some((i) => (i?.nome ?? "").trim()) ? null : "nenhum serviço";
+    case "etapas": return lista<{ titulo?: string }>(d, "itens").some((i) => (i?.titulo ?? "").trim()) ? null : "nenhuma etapa";
+    case "botoes": return lista<{ titulo?: string; url?: string }>(d, "itens").some((i) => (i?.titulo ?? "").trim() && linkSeguro(i?.url)) ? null : "nenhum botão com link";
+    case "cupons": return lista<{ codigo?: string }>(d, "itens").some((i) => (i?.codigo ?? "").trim()) ? null : "nenhum cupom";
+    case "videos": return txt(d, "fonte") === "instagram" || lista<{ url?: string }>(d, "itens").some((i) => linkSeguro(i?.url)) ? null : "nenhum vídeo";
+    case "perfil_criadora": return txt(d, "foto").trim() ? null : "falta a foto";
     default: return null;
   }
 }

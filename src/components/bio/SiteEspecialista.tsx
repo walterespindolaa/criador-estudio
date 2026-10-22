@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, Home, MapPin, Navigation, Truck, Video } from "lucide-react";
-import { linkGoogleMaps, linkSeguro, linkWaze, linkWhatsapp, lista, txt, type DadosBloco } from "@/lib/bioBlocks";
+import { alvoDoLink, linkGoogleMaps, linkSeguro, linkWaze, linkWhatsapp, lista, txt, type DadosBloco } from "@/lib/bioBlocks";
+import { destinoDoBotao } from "@/lib/bioConsultoria";
+import { iconeLucide } from "@/lib/bioIcones";
+import { Contador } from "@/components/bio/Movimento";
 import {
   QUADRO_H, QUADRO_W, fonteAssinatura, lerAssinatura, lerAtendimento, podeTocarVideoDeFundo, urlFonteGoogle,
   urlMapaEmbutido, videoDaCapa, type Assinatura,
@@ -133,7 +136,7 @@ export function SecaoNumeros({ d, localAuto }: {
         <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${itens.length}, minmax(0, 1fr))` }}>
           {itens.map((i, n) => (
             <div key={n} className="min-w-0">
-              <p className="font-display font-bold text-[1.45rem] cq-md:text-[1.9rem] leading-tight break-words" style={{ color: tema.forte }}>{i.valor}</p>
+              <p className="font-display font-bold text-[1.45rem] cq-md:text-[1.9rem] leading-tight break-words" style={{ color: tema.forte }}><Contador texto={i.valor} /></p>
               {i.rotulo && <p className="text-[12px] leading-snug mt-0.5" style={{ color: tema.suave }}>{i.rotulo}</p>}
             </div>
           ))}
@@ -151,29 +154,34 @@ export function SecaoNumeros({ d, localAuto }: {
 }
 
 /** Endereço do botão fixo, ou vazio se não presta. */
-export function destinoDaAcao(d: DadosBloco): string {
-  if (txt(d, "destino", "whatsapp") === "whatsapp") {
-    return txt(d, "telefone").replace(/\D/g, "").length >= 10 ? linkWhatsapp(txt(d, "telefone"), txt(d, "mensagem")) : "";
-  }
-  return linkSeguro(txt(d, "url"));
+export function destinoDaAcao(d: DadosBloco, telefonePadrao = ""): string {
+  // WhatsApp sem número usa o da página (Contato); "parte da página" rola até
+  // a seção (#parceria, #agendar); link de fora passa pela checagem de sempre.
+  return destinoDoBotao(d, telefonePadrao);
 }
 
 /* ── O BOTÃO FIXO ──
    `sticky bottom-0` como ÚLTIMO elemento da página, e não `fixed`: assim ele
    fica preso no pé tanto no celular quanto dentro da moldura da prévia, que
    tem rolagem própria. `fixed` escaparia da moldura e cobriria o editor. */
-export function BarraAcaoFixa({ d, cor, corTexto, aoClicar }: { d: DadosBloco; cor: string; corTexto: string; aoClicar?: () => void }) {
-  const href = destinoDaAcao(d);
+export function BarraAcaoFixa({ d, cor, corTexto, aoClicar, telefonePadrao }: {
+  d: DadosBloco; cor: string; corTexto: string; aoClicar?: () => void; telefonePadrao?: string;
+}) {
+  const href = destinoDaAcao(d, telefonePadrao);
   const texto = txt(d, "texto").trim();
+  // Ícone escolhido vai antes do texto; sem ícone, a seta de sempre no fim.
+  const Icone = iconeLucide(txt(d, "icone"));
   if (!href || !texto) return null;
   return (
     <div className="sticky bottom-0 z-30 px-4 pt-3 pb-[max(14px,env(safe-area-inset-bottom))] pointer-events-none"
       style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.12) 100%)" }}>
-      <a href={href} target="_blank" rel="noopener noreferrer" onClick={aoClicar}
+      <a href={href} {...alvoDoLink(href)} onClick={aoClicar}
         className={cn("pointer-events-auto mx-auto max-w-[520px] h-14 rounded-2xl flex items-center justify-center gap-2",
           "font-display font-bold text-[15.5px] shadow-lg transition active:scale-[.99]")}
         style={{ backgroundColor: cor, color: corTexto }}>
-        {texto} <ArrowRight className="h-4 w-4" aria-hidden />
+        {Icone && <Icone className="h-[18px] w-[18px]" aria-hidden />}
+        {texto}
+        {!Icone && <ArrowRight className="h-4 w-4" aria-hidden />}
       </a>
     </div>
   );

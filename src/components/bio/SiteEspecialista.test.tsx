@@ -36,7 +36,7 @@ describe("página de especialista", () => {
     expect(screen.getByText("12")).toBeTruthy();
     expect(screen.queryByText("vazio")).toBeNull();
     const botao = screen.getByRole("link", { name: /Agendar consulta/ });
-    expect(botao.getAttribute("href")).toContain("phone=5547999990000");
+    expect(botao.getAttribute("href")).toMatch(/wa\.me\/5547999990000/);
     expect(document.getElementById("fonte-ass-allura")).toBeTruthy();
   });
 

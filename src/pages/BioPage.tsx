@@ -12,6 +12,7 @@ import { corDeDestaque, corSobre, faltaNoBloco, nomeDaMarcaSite } from "@/lib/bi
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
 import { FormParceria } from "@/components/bio/FormParceria";
 import { SiteBio, PaginaItem, type MarcaSite, type ItemLite } from "@/components/bio/SiteBio";
+import { lerSocial, type SocialPublico } from "@/lib/bioCriadora";
 
 type BgType = "color" | "gradient" | "image";
 type BgImageSize = "cover" | "contain";
@@ -489,6 +490,7 @@ const ConteudoDaBio = () => {
   const [ehDaAgencia, setDaAgencia] = useState(false);
   const [links, setLinks] = useState<BioLinkLite[]>([]);
   const [blocos, setBlocos] = useState<BlocoLite[]>([]);
+  const [social, setSocial] = useState<SocialPublico | null>(null);
   const [produtos, setProdutos] = useState<ItemLite[]>([]);
   const [posts, setPosts] = useState<ItemLite[]>([]);
   const [item, setItem] = useState<ItemPublico | null>(null);
@@ -547,7 +549,7 @@ const ConteudoDaBio = () => {
 
            No modo Site nem se pede a lista de links do formato antigo: ela não
            é usada lá, era uma ida ao banco jogada fora em toda visita. */
-        const [linkRes, blocoRes, produtoRes, postRes] = await Promise.all([
+        const [linkRes, blocoRes, produtoRes, postRes, socialRes] = await Promise.all([
           ehSite
             ? Promise.resolve({ data: [] as unknown })
             : (daAgencia
@@ -560,12 +562,18 @@ const ConteudoDaBio = () => {
           sbRpc("get_public_bio_blocks", { _slug: slug, _estilo: ehSite ? "site" : "classico" }),
           ehSite ? sbRpc("get_public_bio_items", { _slug: slug, _tipo: "produto" }) : Promise.resolve({ data: [] }),
           ehSite ? sbRpc("get_public_bio_items", { _slug: slug, _tipo: "post" }) : Promise.resolve({ data: [] }),
+          // Números e vídeos do Instagram. O banco só devolve se a página tiver
+          // um bloco no ar pedindo; senão volta vazio, sem custo de tela.
+          ehSite
+            ? Promise.resolve(sbRpc("get_public_bio_social", { _slug: slug })).catch(() => ({ data: null }))
+            : Promise.resolve({ data: null }),
         ]);
 
         if (cancelled) return;
         setProdutos(Array.isArray(produtoRes.data) ? (produtoRes.data as ItemLite[]) : []);
         setPosts(Array.isArray(postRes.data) ? (postRes.data as ItemLite[]) : []);
         setBlocos(Array.isArray(blocoRes.data) ? (blocoRes.data as BlocoLite[]) : []);
+        setSocial(lerSocial((socialRes as { data?: unknown })?.data));
         setDaAgencia(daAgencia);
         setProfile(profileData as ProfileLite);
         // Array.isArray e não `?? []`: um objeto vindo daqui fazia links.map
@@ -804,6 +812,7 @@ const ConteudoDaBio = () => {
               aoAbrirPost={(sl) => navegar(`/bio/${slug}/blog/${sl}`)}
               onClique={(id) => trackClick(id)}
               capturaDoBloco={capturaDoBloco}
+              social={social}
               aoPedir={(blocoId, linhas) => {
                 // Só avisa o dono. Se falhar, o WhatsApp abre do mesmo jeito.
                 void supabase.functions.invoke("bio-track", {

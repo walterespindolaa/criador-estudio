@@ -5,10 +5,16 @@ import {
   alvoDoLink, bool, faltaNoBloco, linkDoBotao, linkSeguro, lista, linkWhatsapp, precoVisivel, txt, type DadosBloco,
 } from "@/lib/bioBlocks";
 import { TextoRico } from "@/lib/textoRico";
+import { Rotulo, Secao, type MarcaSite } from "@/components/bio/SecaoSite";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import { BarraAcaoFixa, SecaoApresentacao, SecaoAtendimento, SecaoNumeros } from "@/components/bio/SiteEspecialista";
 import { CapaVitrine, FaixaVantagens, SecaoCardapio, SecaoDestaque, SecaoHorarios, useStatusDaLoja } from "@/components/bio/SiteLoja";
 import type { LinhaPedido } from "@/lib/bioLoja";
+import {
+  CapaEditorial, DepoimentoGrande, SecaoChamada, SecaoEtapas, SecaoPerguntas, SecaoPraQuem, SecaoServicos,
+} from "@/components/bio/SiteConsultoria";
+import { CapaCriadora, SecaoBotoes, SecaoCupons, SecaoMidiaKit, SecaoVideos } from "@/components/bio/SiteCriadora";
+import type { SocialPublico } from "@/lib/bioCriadora";
 import { lerAtendimento, resumoAtendimento } from "@/lib/bioEspecialista";
 import { cn } from "@/lib/utils";
 
@@ -40,13 +46,7 @@ export type ItemLite = {
 
 export type BlocoLite = { id: string; kind: string; data: DadosBloco; position: number };
 
-export type MarcaSite = {
-  nome: string;
-  logo?: string | null;
-  /** Cor de destaque da marca. Vem do brandbook do cliente. */
-  cor: string;
-  corTexto: string;
-};
+export type { MarcaSite } from "@/components/bio/SecaoSite";
 
 /** Data que não dá pra ler vira nada. `toLocaleDateString` de uma data inválida
  *  não lança: imprime "Invalid Date" em inglês no card que o cliente vai ver. */
@@ -134,53 +134,6 @@ function Topo({ marca, secoes, aoIr }: { marca: MarcaSite; secoes: { id: string;
         </nav>
       )}
     </header>
-  );
-}
-
-function Rotulo({ children, cor, herda }: { children: React.ReactNode; cor: string; herda?: boolean }) {
-  if (!children) return null;
-  // Em fundo escuro ou da marca, a cor de destaque some. Aí o rótulo usa a
-  // própria cor do texto da seção, só um pouco mais apagada.
-  return (
-    <p className={cn("text-[10.5px] font-bold uppercase tracking-[0.16em] mb-1.5", herda && "opacity-70")}
-      style={herda ? undefined : { color: cor }}>{children}</p>
-  );
-}
-
-/* ── O FUNDO DE CADA SEÇÃO ──
-   Uma página inteira branca cansa e some: tudo vira a mesma coisa e ninguém
-   percebe onde um assunto acaba e o outro começa. Aqui cada seção escolhe o
-   seu fundo, e a alternância é o que dá ritmo à rolagem.
-
-   Fundo escuro troca a cor do texto junto, senão a seção some. */
-export type FundoSecao = "claro" | "creme" | "escuro" | "marca";
-
-function estiloDoFundo(fundo: string, marca: MarcaSite): { classe: string; estilo?: React.CSSProperties; escuro: boolean } {
-  switch (fundo) {
-    case "creme": return { classe: "bg-[#F7F5EF] text-gray-900", escuro: false };
-    case "escuro": return { classe: "bg-[#101014] text-[#F5F3E7]", escuro: true };
-    case "marca": return {
-      classe: "",
-      estilo: { backgroundColor: marca.cor, color: marca.corTexto },
-      escuro: marca.corTexto.toLowerCase() !== "#1a1626",
-    };
-    default: return { classe: "bg-white text-gray-900", escuro: false };
-  }
-}
-
-function Secao({ id, fundo, marca, className, children }: {
-  id?: string; fundo?: string; marca: MarcaSite; className?: string; children: React.ReactNode;
-}) {
-  // Filho nulo não vira faixa vazia. Sem isso, um bloco que decide não se
-  // desenhar (contagem vencida, FAQ sem pergunta) deixava 150px de branco no
-  // meio da página, que parece defeito de montagem.
-  if (children === null || children === undefined || children === false) return null;
-  const f = estiloDoFundo(fundo ?? "claro", marca);
-  return (
-    <section id={id} style={f.estilo}
-      className={cn("px-5 py-9 cq-md:py-16 scroll-mt-[52px]", f.classe, className)}>
-      <div className="mx-auto max-w-5xl">{children}</div>
-    </section>
   );
 }
 
@@ -493,10 +446,12 @@ function SeloCria({ escuro }: { escuro?: boolean }) {
 /* ── A HOME DO SITE ── */
 export function SiteBio({
   blocos, marca, produtos, posts, visual, aoAbrirProduto, aoAbrirPost, onClique, capturaDoBloco,
-  alturaCheia, aoPedir,
+  alturaCheia, aoPedir, social,
 }: {
   /** Pedido da sacola: a página registra o "pedido iniciado" pro dono. */
   aoPedir?: (blocoId: string, linhas: LinhaPedido[]) => void;
+  /** Números e vídeos do Instagram conectado, já conferidos (lerSocial). */
+  social?: SocialPublico | null;
   blocos: BlocoLite[];
   marca: MarcaSite;
   produtos: ItemLite[];
@@ -522,6 +477,11 @@ export function SiteBio({
       if (b.kind === "blog" && posts.length > 0) m.push({ id: "blog", nome: "Blog" });
       if (b.kind === "depoimentos") m.push({ id: "depoimentos", nome: "Depoimentos" });
       if (b.kind === "atendimento") m.push({ id: "atendimento", nome: "Onde atendo" });
+      if (b.kind === "servicos") m.push({ id: "servicos", nome: txt(b.data, "rotulo") || "Serviços" });
+      if (b.kind === "faq") m.push({ id: "perguntas", nome: "Perguntas" });
+      if (b.kind === "videos") m.push({ id: "conteudo", nome: "Vídeos" });
+      if (b.kind === "midiakit") m.push({ id: "midiakit", nome: "Pra marcas" });
+      if (b.kind === "parceria") m.push({ id: "parceria", nome: "Parceria" });
       if (b.kind === "contato") m.push({ id: "contato", nome: "Contato" });
     }
     return m;
@@ -562,7 +522,9 @@ export function SiteBio({
   /* Página de especialista: quando a primeira coisa é a capa com vídeo e
      assinatura, ela ocupa a tela desde o topo. O menu branco em cima cortaria
      a pessoa no meio da testa e repetiria o nome que a assinatura já mostra. */
-  const capaImersiva = blocos[0]?.kind === "apresentacao";
+  const capaImersiva = blocos[0]?.kind === "apresentacao" || blocos[0]?.kind === "perfil_criadora";
+  const temChamada = blocos.some((b) => b.kind === "chamada");
+  const sf = social ?? null;
   // Um botão fixo só. Dois presos no pé da tela, um em cima do outro, é ruído.
   const acaoFixa = blocos.find((b) => b.kind === "acao_fixa");
   // A linha "onde atende" embaixo dos números sai do bloco Onde atende.
@@ -588,9 +550,22 @@ export function SiteBio({
           case "numeros": return <SecaoNumeros key={b.id} d={b.data} localAuto={resumoOnde} />;
           case "atendimento": return <SecaoAtendimento key={b.id} d={b.data} aoClicar={() => onClique?.(b.id)} />;
           case "acao_fixa": return null;
-          case "capa": return txt(b.data, "layout") === "foto_cheia"
-            ? <CapaVitrine key={b.id} d={b.data} marca={marca} status={statusLoja} aoClicar={() => onClique?.(b.id)} />
-            : <SecaoCapa key={b.id} d={b.data} marca={marca} visual={visual} aoClicar={() => onClique?.(b.id)} />;
+          case "capa": {
+            const layout = txt(b.data, "layout");
+            if (layout === "foto_cheia") return <CapaVitrine key={b.id} d={b.data} marca={marca} status={statusLoja} aoClicar={() => onClique?.(b.id)} />;
+            if (layout === "editorial") return <CapaEditorial key={b.id} d={b.data} marca={marca} aoClicar={() => onClique?.(b.id)} />;
+            return <SecaoCapa key={b.id} d={b.data} marca={marca} visual={visual} aoClicar={() => onClique?.(b.id)} />;
+          }
+          case "praquem": return <SecaoPraQuem key={b.id} d={b.data} marca={marca} />;
+          case "servicos": return <SecaoServicos key={b.id} d={b.data} marca={marca} telefonePadrao={telefonePagina} temChamada={temChamada} aoClicar={() => onClique?.(b.id)} />;
+          case "etapas": return <SecaoEtapas key={b.id} d={b.data} marca={marca} />;
+          case "chamada": return <SecaoChamada key={b.id} d={b.data} marca={marca} telefonePadrao={telefonePagina} aoClicar={() => onClique?.(b.id)} />;
+          case "faq": return <SecaoPerguntas key={b.id} d={b.data} marca={marca} />;
+          case "perfil_criadora": return <CapaCriadora key={b.id} d={b.data} marca={marca} social={sf} aoClicar={() => onClique?.(b.id)} />;
+          case "botoes": return <SecaoBotoes key={b.id} d={b.data} marca={marca} aoClicar={() => onClique?.(b.id)} />;
+          case "videos": return <SecaoVideos key={b.id} d={b.data} social={sf} aoClicar={() => onClique?.(b.id)} />;
+          case "cupons": return <SecaoCupons key={b.id} d={b.data} aoClicar={() => onClique?.(b.id)} />;
+          case "midiakit": return <SecaoMidiaKit key={b.id} d={b.data} marca={marca} social={sf} aoClicar={() => onClique?.(b.id)} />;
           case "vantagens": return <FaixaVantagens key={b.id} d={b.data} />;
           case "cardapio": return <SecaoCardapio key={b.id} d={b.data} marca={marca} telefonePadrao={telefonePagina}
             aoPedir={(l) => { onClique?.(b.id); aoPedir?.(b.id, l); }} />;
@@ -599,7 +574,9 @@ export function SiteBio({
           case "sobre": return <SecaoSobre key={b.id} d={b.data} marca={marca} />;
           case "produtos": return <SecaoProdutos key={b.id} d={b.data} marca={marca} visual={visual} itens={produtos} aoAbrir={aoAbrirProduto} aoClicar={() => onClique?.(b.id)} />;
           case "blog": return <SecaoBlog key={b.id} d={b.data} marca={marca} visual={visual} itens={posts} aoAbrir={aoAbrirPost} aoClicar={() => onClique?.(b.id)} />;
-          case "depoimentos": return <SecaoDepoimentos key={b.id} d={b.data} marca={marca} visual={visual} />;
+          case "depoimentos": return txt(b.data, "layout") === "destaque"
+            ? <DepoimentoGrande key={b.id} d={b.data} marca={marca} />
+            : <SecaoDepoimentos key={b.id} d={b.data} marca={marca} visual={visual} />;
           case "contato": return <Rodape key={b.id} d={b.data} marca={marca} aoClicar={() => onClique?.(b.id)} comSelo={terminaNoRodape} />;
           default: {
             // Bloco pela metade não vira seção. Antes, um bloco de texto ainda
@@ -610,7 +587,7 @@ export function SiteBio({
             // Os blocos comuns (vídeo, FAQ, mapa, captura) também servem no
             // Site: entram centralizados numa coluna de leitura confortável.
             return (
-              <Secao key={b.id} marca={marca} fundo={txt(b.data, "fundo", "claro")}>
+              <Secao key={b.id} id={b.kind === "parceria" ? "parceria" : undefined} marca={marca} fundo={txt(b.data, "fundo", "claro")}>
                 <div className="mx-auto max-w-[620px]">
                   <BlocoPublico kind={b.kind} data={b.data} visual={visual}
                     onClique={() => onClique?.(b.id)} captura={capturaDoBloco?.(b)} />
@@ -622,7 +599,7 @@ export function SiteBio({
       })}
       {!terminaNoRodape && <SeloCria />}
       {acaoFixa && (
-        <BarraAcaoFixa d={acaoFixa.data} cor={marca.cor} corTexto={marca.corTexto} aoClicar={() => onClique?.(acaoFixa.id)} />
+        <BarraAcaoFixa d={acaoFixa.data} cor={marca.cor} corTexto={marca.corTexto} telefonePadrao={telefonePagina} aoClicar={() => onClique?.(acaoFixa.id)} />
       )}
     </div>
   );

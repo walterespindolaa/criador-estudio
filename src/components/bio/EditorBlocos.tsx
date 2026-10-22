@@ -3,13 +3,11 @@ import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-p
 import { Calendar, ChevronDown, Copy, GripVertical, ImagePlus, LayoutTemplate, Loader2, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { validateUpload } from "@/lib/upload-validation";
 import { useBioBlocks } from "@/hooks/useBioBlocks";
 import {
   blocosDoEstilo, faltaNoBloco, lista, mascaraTelefone, metaDoBloco, resumoDoBloco, txt, bool,
@@ -23,10 +21,14 @@ import { cn } from "@/lib/utils";
 import { confirmar } from "@/components/shared/Confirm";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FOTO_EXEMPLO, FOTO_EXEMPLO_SAUDE, PreviaModelo } from "@/components/bio/PreviaModelo";
-import { ImageCropModal } from "@/components/shared/ImageCropModal";
-import { FORMAS_DA_FOTO, formaValida, type FormaDaFoto } from "@/lib/bioFoto";
 import { EditorItens } from "@/components/bio/EditorItens";
 import { EditorAssinatura } from "@/components/bio/EditorAssinatura";
+import { BotaoImagem, EscolherFundo, LinhaCampo, SeletorIcone } from "@/components/bio/EditorCampos";
+import {
+  CampoLeva, EscolherDestino, FormBotoes, FormChamada, FormCupons, FormEtapas, FormMidiaKit, FormPerfilCriadora,
+  FormPraQuem, FormServicos, FormVideos,
+} from "@/components/bio/FormsSite";
+import { ancorasDaPagina } from "@/lib/bioConsultoria";
 import { DIAS, LIMITE_DO_CARDAPIO, foneWhats, lerHorarios, lerListaColada } from "@/lib/bioLoja";
 import { uploadFileToBunnyStream } from "@/lib/bunny-upload";
 import {
@@ -46,214 +48,6 @@ import {
 const semSegundos = (iso: string | null) => (iso ? iso.slice(0, 16) : "");
 const paraIso = (v: string) => (v ? new Date(v).toISOString() : null);
 
-function LinhaCampo({ label, ajuda, children }: { label: string; ajuda?: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="font-body text-xs">{label}</Label>
-      {children}
-      {ajuda && <p className="text-[11px] font-body text-muted-foreground">{ajuda}</p>}
-    </div>
-  );
-}
-
-/** Sobe imagem pro bucket público. A pasta é a de quem está logado porque a
- *  policy do bucket compara com auth.uid(). */
-function useUploadBio() {
-  const { user } = useAuth();
-  const [subindo, setSubindo] = useState(false);
-  const enviar = async (file: File, prefixo: string): Promise<string | null> => {
-    const v = validateUpload(file, "bioMedia");
-    if (!v.ok) { toast.error(v.reason); return null; }
-    setSubindo(true);
-    try {
-      const caminho = `${user?.id}/${prefixo}-${Date.now()}.${file.name.split(".").pop() ?? "jpg"}`;
-      const { error } = await supabase.storage.from("bio-media")
-        .upload(caminho, file, { upsert: true, contentType: file.type || "image/jpeg" });
-      if (error) { toast.error("Não consegui enviar a imagem."); return null; }
-      return supabase.storage.from("bio-media").getPublicUrl(caminho).data.publicUrl;
-    } finally { setSubindo(false); }
-  };
-  return { enviar, subindo };
-}
-
-/* ── A FORMA DA FOTO (Walter, 20/09/2026) ──────────────────────────────────
-   "não faz sentido eu não conseguir colocar uma imagem horizontal num lugar
-   que é pra imagem ficar horizontal".
-
-   Ele estava certo, e o problema era pior do que faltar a opção: o recorte
-   aqui era fixo em 3:4 (em pé) e a página pública desenhava o mesmo bloco em
-   16:9 (deitado). A foto era cortada duas vezes, em direções opostas: primeiro
-   viravam as laterais em pé, depois o miolo dessa tira era esticado deitado.
-   Daí a sensação de "fica tudo zoado", que não era sensação.
-
-   Agora a forma é UMA decisão, tomada aqui, e a página obedece. A escolha fica
-   guardada no bloco, junto da foto, porque é dela: dois blocos de texto podem
-   querer formas diferentes na mesma página. */
-
-function BotaoImagem({ valor, onTroca, rotulo, forma, onForma }: {
-  valor: string;
-  onTroca: (url: string) => void;
-  rotulo: string;
-  /** Vazio = bloco antigo, que nasceu antes desta escolha existir. */
-  forma?: string;
-  onForma?: (f: FormaDaFoto) => void;
-}) {
-  const ref = useRef<HTMLInputElement>(null);
-  const { enviar, subindo } = useUploadBio();
-  /* ENQUADRAR ANTES DE SUBIR. A foto sai do celular em qualquer proporção e o
-     `object-cover` cortava por conta própria, quase sempre pela cabeça. Aqui a
-     pessoa escolhe o pedaço que importa, com zoom, e o que sobe já é o
-     recorte: a página nunca mais decide isso sozinha. */
-  const [paraCortar, setParaCortar] = useState<string | null>(null);
-  const [formaAtual, setFormaAtual] = useState<FormaDaFoto>(formaValida(forma ?? ""));
-
-  const subirRecorte = async (blob: Blob) => {
-    const arquivo = new File([blob], "imagem.jpg", { type: blob.type || "image/jpeg" });
-    const url = await enviar(arquivo, "bloco");
-    if (url) { onTroca(url); onForma?.(formaAtual); }
-    setParaCortar(null);
-  };
-
-  /* Trocar a forma com foto no ar reabre o recorte na hora: o arquivo tem que
-     nascer na proporção nova, senão a página mostra a antiga esticada. */
-  const escolherForma = (f: FormaDaFoto) => {
-    setFormaAtual(f);
-    if (valor) setParaCortar(valor);
-    else onForma?.(f);
-  };
-
-  return (
-    <div className="space-y-2">
-      {onForma && (
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[11px] font-body text-muted-foreground">Formato:</span>
-          {(Object.keys(FORMAS_DA_FOTO) as FormaDaFoto[]).map((f) => (
-            <button key={f} type="button" onClick={() => escolherForma(f)}
-              className={cn("rounded-lg border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors min-h-[28px]",
-                formaAtual === f ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground")}>
-              {FORMAS_DA_FOTO[f].rotulo}
-            </button>
-          ))}
-        </div>
-      )}
-    <div className="flex items-center gap-2.5">
-      <div className="w-16 h-16 rounded-xl bg-muted overflow-hidden shrink-0 grid place-items-center border border-border">
-        {valor ? <img src={valor} alt="" className="w-full h-full object-cover" />
-          : <ImagePlus className="h-4 w-4 text-muted-foreground" />}
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        <input ref={ref} type="file" accept="image/*" className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0]; e.target.value = "";
-            if (!f) return;
-            setParaCortar(URL.createObjectURL(f));
-          }} />
-        <Button type="button" size="sm" variant="outline" disabled={subindo} onClick={() => ref.current?.click()}>
-          {subindo && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}{valor ? "Trocar" : rotulo}
-        </Button>
-        {valor && (
-          <Button type="button" size="sm" variant="ghost" onClick={() => setParaCortar(valor)}>Enquadrar</Button>
-        )}
-        {valor && <Button type="button" size="sm" variant="ghost" onClick={() => onTroca("")}>Remover</Button>}
-      </div>
-
-      {paraCortar && (
-        <ImageCropModal
-          open
-          onOpenChange={(v) => { if (!v) setParaCortar(null); }}
-          imageSrc={paraCortar}
-          cropShape="rect"
-          aspectRatio={FORMAS_DA_FOTO[formaAtual].ratio}
-          onCropComplete={(blob) => void subirRecorte(blob)} />
-      )}
-    </div>
-    </div>
-  );
-}
-
-/** Fundo da seção. Página inteira branca cansa e some: a alternância é o que
- *  dá ritmo à rolagem. */
-function EscolherFundo({ valor, onTroca }: { valor: string; onTroca: (v: string) => void }) {
-  const opcoes: { v: string; r: string; amostra: string }[] = [
-    { v: "claro", r: "Branco", amostra: "#FFFFFF" },
-    { v: "creme", r: "Creme", amostra: "#F7F5EF" },
-    { v: "escuro", r: "Escuro", amostra: "#101014" },
-    { v: "marca", r: "Cor da marca", amostra: "" },
-  ];
-  return (
-    <LinhaCampo label="Fundo da seção" ajuda="Alterne entre as seções pra a página não virar uma parede só.">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {opcoes.map((o) => (
-          <button key={o.v} type="button" onClick={() => onTroca(o.v)}
-            className={cn("rounded-xl border-2 px-2.5 py-2 flex items-center gap-2 text-left transition-all",
-              valor === o.v ? "border-primary bg-primary/5" : "border-border hover:border-primary/30")}>
-            <span className="w-5 h-5 rounded-md border border-border shrink-0"
-              style={o.amostra ? { backgroundColor: o.amostra } : { background: "linear-gradient(135deg,hsl(var(--primary)),hsl(var(--primary)/.6))" }} />
-            <span className="text-[12px] font-body font-medium truncate">{o.r}</span>
-          </button>
-        ))}
-      </div>
-    </LinhaCampo>
-  );
-}
-
-/* ── ESCOLHA DO ÍCONE DO BOTÃO ──
-   Grade fechada de ícones (pedido do Walter, 01/09): o campo de emoji livre
-   deixava cada botão de um jeito. Tocar escolhe, tocar de novo tira, e o
-   "Sem ícone" também tira. Emoji antigo continua valendo até a pessoa trocar. */
-function SeletorIcone({ valor, onTroca }: { valor: string; onTroca: (v: string) => void }) {
-  /* Fechado por padrão (pedido do Walter, 01/09): 26 ícones abertos ocupavam
-     duas linhas do formulário por uma escolha que se faz uma vez. Agora é um
-     campo só que mostra o escolhido; a grade abre por cima quando quer trocar. */
-  const [aberto, setAberto] = useState(false);
-  const IconeAtual = iconeLucide(valor);
-  const nomeAtual = valor.startsWith("lucide:")
-    ? ICONES_BLOCO.find((i) => `lucide:${i.id}` === valor)?.nome ?? "Ícone"
-    : "";
-  const ehEmojiAntigo = !!valor && !valor.startsWith("lucide:");
-  const escolher = (v: string) => { onTroca(v); setAberto(false); };
-  return (
-    <Popover open={aberto} onOpenChange={setAberto}>
-      <PopoverTrigger asChild>
-        <button type="button"
-          className="w-full sm:w-64 h-10 flex items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 text-left text-sm hover:border-primary/40 transition-colors">
-          <span className="flex items-center gap-2 min-w-0 text-foreground">
-            {IconeAtual && <IconeAtual className="h-4 w-4 shrink-0 text-primary" />}
-            {ehEmojiAntigo && <span aria-hidden className="text-base leading-none">{valor}</span>}
-            <span className={cn("truncate", !valor && "text-muted-foreground")}>
-              {IconeAtual ? nomeAtual : ehEmojiAntigo ? "Emoji atual" : "Sem ícone"}
-            </span>
-          </span>
-          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-[min(320px,calc(100vw-2rem))] p-2 rounded-2xl">
-        <button type="button" onClick={() => escolher("")}
-          className={cn(
-            "w-full h-9 mb-1.5 rounded-lg border text-[12px] font-body font-semibold transition-colors",
-            !valor ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:text-foreground",
-          )}>
-          Sem ícone
-        </button>
-        <div className="grid grid-cols-7 gap-1.5">
-          {ICONES_BLOCO.map((i) => {
-            const ativo = valor === `lucide:${i.id}`;
-            return (
-              <button key={i.id} type="button" title={i.nome} aria-label={i.nome}
-                onClick={() => escolher(ativo ? "" : `lucide:${i.id}`)}
-                className={cn(
-                  "w-9 h-9 grid place-items-center rounded-lg border transition-colors",
-                  ativo ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/40",
-                )}>
-                <i.Icone className="h-4 w-4" />
-              </button>
-            );
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
 
 /* ── O FORMULÁRIO DE CADA TIPO ── */
 /* ── O VÍDEO DA CAPA (21/10/2026) ──
@@ -392,7 +186,11 @@ function FormApresentacao({ d, p }: { d: DadosBloco; p: (patch: DadosBloco) => v
   );
 }
 
-function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioBloco; salvar: (d: DadosBloco) => void; slugPublico?: string | null; telefonePadrao?: string | null }) {
+function FormBloco({ bloco, salvar, slugPublico, telefonePadrao, secoes = [] }: {
+  bloco: BioBloco; salvar: (d: DadosBloco) => void; slugPublico?: string | null; telefonePadrao?: string | null;
+  /** Partes desta página que um botão pode alcançar (#servicos, #parceria). */
+  secoes?: { id: string; nome: string }[];
+}) {
   /* RASCUNHO LOCAL + DEBOUNCE (bug da Gabi, 31/08): antes cada TECLA virava um
      UPDATE no banco + reescrita do cache + re-render, e o re-render no meio da
      composição do teclado comia o acento ("ó" virava "oo") e brigava com o
@@ -846,57 +644,37 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioB
       );
     }
 
-    case "acao_fixa": {
-      const destino = txt(d, "destino", "whatsapp");
+    case "acao_fixa":
       return (
         <div className="space-y-3.5">
           <LinhaCampo label="Texto do botão" ajuda="Um verbo e o que a pessoa ganha. Ele fica preso no pé da tela o tempo todo.">
-            <Input value={txt(d, "texto")} onChange={(e) => p({ texto: e.target.value })} placeholder="Agendar consulta" className="rounded-xl" />
+            <Input value={txt(d, "texto")} onChange={(e) => p({ texto: e.target.value })} placeholder="Agendar consulta" maxLength={40} className="rounded-xl" />
           </LinhaCampo>
           <div className="flex flex-wrap gap-1.5">
-            {Array.from(new Set(NICHOS.map((n) => n.cta))).map((c) => (
+            {Array.from(new Set([...NICHOS.map((n) => n.cta), "Fazer pedido", "Fechar uma parceria"])).map((c) => (
               <button key={c} type="button" onClick={() => p({ texto: c })}
                 className="rounded-full border border-border px-2.5 py-1 text-[11px] font-body text-muted-foreground hover:text-foreground hover:border-primary/40 min-h-[28px]">{c}</button>
             ))}
           </div>
-          <LinhaCampo label="Leva para">
-            <div className="flex gap-1.5">
-              {[{ v: "whatsapp", r: "WhatsApp" }, { v: "link", r: "Outro endereço" }].map((o) => (
-                <button key={o.v} type="button" onClick={() => p({ destino: o.v })}
-                  className={cn("rounded-lg border px-3 py-1.5 text-xs font-body font-semibold min-h-[32px]",
-                    destino === o.v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground")}>
-                  {o.r}
-                </button>
-              ))}
-            </div>
+          <LinhaCampo label="Ícone" ajuda="Vai antes do texto. Sem ícone, o botão leva uma seta no fim.">
+            <SeletorIcone valor={txt(d, "icone")} onTroca={(v) => p({ icone: v })} />
           </LinhaCampo>
-          {destino === "whatsapp" ? (
-            <>
-              <LinhaCampo label="Telefone">
-                <Input value={txt(d, "telefone")} placeholder={telefonePadrao || "(00) 00000-0000"}
-                  onChange={(e) => p({ telefone: mascaraTelefone(e.target.value) })} inputMode="tel" className="rounded-xl" />
-              </LinhaCampo>
-              <LinhaCampo label="Mensagem que já vai escrita">
-                <Textarea rows={2} value={txt(d, "mensagem")} onChange={(e) => p({ mensagem: e.target.value })} className="rounded-xl resize-none" />
-              </LinhaCampo>
-            </>
-          ) : (
-            <LinhaCampo label="Endereço" ajuda="Agenda online, loja, formulário.">
-              <Input value={txt(d, "url")} onChange={(e) => p({ url: e.target.value })} placeholder="https://" inputMode="url" className="rounded-xl" />
-            </LinhaCampo>
-          )}
+          <EscolherDestino d={d} p={p} telefonePadrao={telefonePadrao} secoes={secoes} />
           <p className="text-[11px] font-body text-muted-foreground">A cor do botão é a cor da marca, a mesma dos outros botões da página.</p>
         </div>
       );
-    }
 
     case "capa": {
       const layout = txt(d, "layout", "padrao");
       return (
         <div className="space-y-3.5">
           <LinhaCampo label="Formato da capa">
-            <div className="grid grid-cols-2 gap-1.5">
-              {[{ v: "padrao", r: "Texto e foto", e: "Foto ao lado do título" }, { v: "foto_cheia", r: "Foto cheia", e: "Vitrine, com \"Aberto agora\"" }].map((o) => (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+              {[
+                { v: "padrao", r: "Texto e foto", e: "Foto ao lado do título" },
+                { v: "editorial", r: "Editorial", e: "Título grande, foto recortada e 2 números" },
+                { v: "foto_cheia", r: "Foto cheia", e: "Vitrine, com \"Aberto agora\"" },
+              ].map((o) => (
                 <button key={o.v} type="button" onClick={() => p({ layout: o.v })}
                   className={cn("rounded-xl border px-3 py-2 text-left min-h-[44px]",
                     layout === o.v ? "border-primary bg-primary/10" : "border-border hover:border-primary/40")}>
@@ -906,10 +684,21 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioB
               ))}
             </div>
           </LinhaCampo>
+          {layout === "editorial" && (
+            <LinhaCampo label="Linha pequena em cima" ajuda="O que você faz e pra quem, em poucas palavras.">
+              <Input value={txt(d, "etiqueta")} onChange={(e) => p({ etiqueta: e.target.value })} maxLength={60}
+                placeholder="Consultoria de processos · pequenas empresas" className="rounded-xl" />
+            </LinhaCampo>
+          )}
           <LinhaCampo label="Título grande" ajuda="A promessa em uma linha. É a primeira coisa que a pessoa lê.">
             <Textarea rows={2} value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })}
               placeholder="Sua operação servindo melhor e lucrando mais" className="rounded-xl resize-none" />
           </LinhaCampo>
+          {layout === "editorial" && (
+            <LinhaCampo label="Palavra em destaque (opcional)" ajuda="Uma palavra do título que fica em itálico, na cor da marca.">
+              <Input value={txt(d, "destaque")} onChange={(e) => p({ destaque: e.target.value })} maxLength={30} placeholder="você" className="rounded-xl" />
+            </LinhaCampo>
+          )}
           <LinhaCampo label="Frase de apoio">
             <Textarea rows={3} value={txt(d, "frase")} onChange={(e) => p({ frase: e.target.value })}
               placeholder="Pra quem é, o que resolve e onde atende." className="rounded-xl resize-none" />
@@ -923,18 +712,38 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioB
                 placeholder="Quero uma conversa" className="rounded-xl" />
             </LinhaCampo>
             <LinhaCampo label="Leva para">
-              <Input value={txt(d, "url1")} onChange={(e) => p({ url1: e.target.value })}
-                placeholder="https://" inputMode="url" className="rounded-xl" />
+              <CampoLeva valor={txt(d, "url1")} onTroca={(v) => p({ url1: v })} secoes={secoes} />
             </LinhaCampo>
             <LinhaCampo label="Botão secundário (opcional)">
               <Input value={txt(d, "botao2")} onChange={(e) => p({ botao2: e.target.value })}
                 placeholder="Ver serviços" className="rounded-xl" />
             </LinhaCampo>
             <LinhaCampo label="Leva para">
-              <Input value={txt(d, "url2")} onChange={(e) => p({ url2: e.target.value })}
-                placeholder="#servicos" className="rounded-xl" />
+              <CampoLeva valor={txt(d, "url2")} onTroca={(v) => p({ url2: v })} secoes={secoes} />
             </LinhaCampo>
           </div>
+          {layout === "editorial" && (() => {
+            const nums = [0, 1].map((n) => lista<{ valor?: string; rotulo?: string }>(d, "numeros")[n] ?? { valor: "", rotulo: "" });
+            const trocarNum = (n: number, patch: { valor?: string; rotulo?: string }) =>
+              p({ numeros: nums.map((x, k) => (k === n ? { ...x, ...patch } : x)) });
+            return (
+              <>
+                <LinhaCampo label="Dois números ao lado da foto" ajuda="Número vazio não aparece. Ele sobe de 0 até o valor quando a página abre.">
+                  <div className="space-y-2">
+                    {nums.map((x, n) => (
+                      <div key={n} className="grid grid-cols-[96px_1fr] gap-2">
+                        <Input value={x.valor ?? ""} onChange={(e) => trocarNum(n, { valor: e.target.value })} placeholder={["+120", "12 anos"][n]} maxLength={16} className="rounded-xl" aria-label={`Número ${n + 1}`} />
+                        <Input value={x.rotulo ?? ""} onChange={(e) => trocarNum(n, { rotulo: e.target.value })} placeholder={["empresas organizadas", "de gestão"][n]} maxLength={40} className="rounded-xl" aria-label={`O que o número ${n + 1} quer dizer`} />
+                      </div>
+                    ))}
+                  </div>
+                </LinhaCampo>
+                <LinhaCampo label="Selo (opcional)">
+                  <Input value={txt(d, "selo")} onChange={(e) => p({ selo: e.target.value })} maxLength={40} placeholder="Online e em Itajaí" className="rounded-xl" />
+                </LinhaCampo>
+              </>
+            );
+          })()}
           {layout === "foto_cheia" && (
             <p className="text-[11px] font-body text-muted-foreground leading-snug">
               Na foto cheia o selo "Aberto agora" sai do bloco Horários. Use uma foto horizontal e clara: o texto fica por cima dela.
@@ -946,6 +755,15 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioB
 
     case "cardapio":
       return <FormCardapio d={d} p={p} telefonePadrao={telefonePadrao} />;
+    case "praquem": return <FormPraQuem d={d} p={p} />;
+    case "servicos": return <FormServicos d={d} p={p} telefonePadrao={telefonePadrao} />;
+    case "etapas": return <FormEtapas d={d} p={p} />;
+    case "chamada": return <FormChamada d={d} p={p} telefonePadrao={telefonePadrao} secoes={secoes} />;
+    case "perfil_criadora": return <FormPerfilCriadora d={d} p={p} />;
+    case "botoes": return <FormBotoes d={d} p={p} />;
+    case "videos": return <FormVideos d={d} p={p} />;
+    case "cupons": return <FormCupons d={d} p={p} />;
+    case "midiakit": return <FormMidiaKit d={d} p={p} />;
     case "horarios":
       return <FormHorarios d={d} p={p} />;
     case "destaque":
@@ -1023,6 +841,17 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioB
           </LinhaCampo>
           <LinhaCampo label="Título da seção">
             <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })} className="rounded-xl" />
+          </LinhaCampo>
+          <LinhaCampo label="Jeito de mostrar">
+            <div className="flex gap-1.5">
+              {[{ v: "grade", r: "Cartões lado a lado" }, { v: "destaque", r: "Um grande, na cor da marca" }].map((o) => (
+                <button key={o.v} type="button" onClick={() => p({ layout: o.v })}
+                  className={cn("rounded-lg border px-3 py-1.5 text-xs font-body font-semibold min-h-[32px]",
+                    txt(d, "layout", "grade") === o.v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground")}>
+                  {o.r}
+                </button>
+              ))}
+            </div>
           </LinhaCampo>
           {deps.map((it, i) => (
             <div key={i} className="rounded-xl border border-border p-3 space-y-2 bg-muted/30">
@@ -1416,10 +1245,11 @@ function FormVantagens({ d, p }: { d: DadosBloco; p: (patch: DadosBloco) => void
 
 /* ── UM BLOCO NA LISTA ── */
 function CartaoBloco({
-  bloco, aberto, onAbrir, atualizar, excluir, duplicar, arrasteProps, arrasteRef, arrastando, slugPublico, telefonePadrao,
+  bloco, aberto, onAbrir, atualizar, excluir, duplicar, arrasteProps, arrasteRef, arrastando, slugPublico, telefonePadrao, secoes,
 }: {
   slugPublico?: string | null;
   telefonePadrao?: string | null;
+  secoes?: { id: string; nome: string }[];
   bloco: BioBloco;
   aberto: boolean;
   onAbrir: () => void;
@@ -1475,7 +1305,7 @@ function CartaoBloco({
 
       {aberto && (
         <div className="px-3 pb-3.5 pt-1 space-y-3.5 border-t border-border/60 mt-0.5">
-          <div className="pt-3.5"><FormBloco bloco={bloco} salvar={(data) => atualizar({ data })} slugPublico={slugPublico} telefonePadrao={telefonePadrao} /></div>
+          <div className="pt-3.5"><FormBloco bloco={bloco} salvar={(data) => atualizar({ data })} slugPublico={slugPublico} telefonePadrao={telefonePadrao} secoes={secoes} /></div>
 
           <button type="button" onClick={() => setAgendaAberta((v) => !v)}
             className="flex items-center gap-1.5 text-[12px] font-body font-semibold text-muted-foreground hover:text-foreground">
@@ -1527,6 +1357,7 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
   /* O telefone mora no bloco "Contato e rodapé" e é reaproveitado pelos itens
      pra montar o link do WhatsApp: um telefone só, num lugar só. */
   const telefoneDoContato = txt(blocos.find((b) => b.kind === "contato")?.data ?? {}, "telefone") || null;
+  const secoesDaPagina = useMemo(() => ancorasDaPagina(blocos.map((b) => b.kind)), [blocos]);
   const [aberto, setAberto] = useState<string | null>(null);
   const [paletaAberta, setPaletaAberta] = useState(false);
   const [modelosAbertos, setModelosAbertos] = useState(false);
@@ -1633,7 +1464,7 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
                     /* O site de verdade, em miniatura: com as barrinhas de antes
                        os quatro modelos pareciam o mesmo. */
                     <span className="w-[90px] h-[150px] rounded-lg shrink-0 border border-border overflow-hidden bg-white">
-                      <PreviaModelo blocos={m.blocos} aparencia={m.aparencia} escala={0.3} altura={150} foto={m.fotoExemplo} />
+                      <PreviaModelo blocos={m.blocos} aparencia={m.aparencia} escala={0.3} altura={150} foto={m.fotoExemplo} previa={m.previa} />
                     </span>
                   ) : (
                     /* Clássico: miniatura com as cores e o formato de botão. */
@@ -1701,7 +1532,7 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
         const nicho = especialista ? (nichoPorId(nichoVer) ?? NICHOS[0]) : null;
         const alvo = nicho
           ? { nome: `${m.nome} (${nicho.nome})`, blocos: blocosDoNicho(nicho) as BlocoDoModelo[], aparencia: aparenciaDoNicho(nicho) }
-          : { nome: m.nome, blocos: m.blocos, aparencia: m.aparencia, foto: m.fotoExemplo };
+          : { nome: m.nome, blocos: m.blocos, aparencia: m.aparencia, foto: m.fotoExemplo, previa: m.previa };
         const nomes = Array.from(new Set(alvo.blocos.map((b) => metaDoBloco(b.kind).nome)));
         return (
           <Dialog open onOpenChange={(v) => { if (!v) setVerModelo(null); }}>
@@ -1709,7 +1540,8 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
               <div className="bg-muted/60 shrink-0 flex justify-center px-3 pt-4 pb-3 sm:p-5 sm:border-r border-border">
                 <div className="rounded-[30px] border-[7px] border-gray-800 bg-white overflow-hidden shadow-xl">
                   <div className="h-[42dvh] sm:h-[min(640px,78dvh)] overflow-y-auto overflow-x-hidden" key={alvo.nome}>
-                    <PreviaModelo blocos={alvo.blocos} aparencia={alvo.aparencia} foto={nicho?.id === "saude" ? FOTO_EXEMPLO_SAUDE : ("foto" in alvo && alvo.foto) || FOTO_EXEMPLO} />
+                    <PreviaModelo blocos={alvo.blocos} aparencia={alvo.aparencia} foto={nicho?.id === "saude" ? FOTO_EXEMPLO_SAUDE : ("foto" in alvo && alvo.foto) || FOTO_EXEMPLO}
+                      previa={"previa" in alvo ? alvo.previa : undefined} />
                   </div>
                 </div>
               </div>
@@ -1835,6 +1667,7 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
                         duplicar={() => duplicar.mutate(b.id)}
                         slugPublico={slugPublico}
                         telefonePadrao={telefoneDoContato}
+                        secoes={secoesDaPagina}
                         arrasteProps={dd.dragHandleProps}
                         arrastando={snap.isDragging}
                       />
