@@ -145,24 +145,42 @@ export function useBioBlocks(estilo: EstiloBio) {
     onError: () => toast.error("Não consegui duplicar."),
   });
 
-  /** Cria vários blocos de uma vez, no fim da página e DESLIGADOS. Desligados
-   *  porque modelo vem com texto de exemplo, e ninguém quer "Escreva aqui
-   *  sobre você" no ar enquanto ainda está preenchendo. */
+  /** Aplica um modelo. Dois jeitos:
+   *  - "trocar": os blocos do modelo entram LIGADOS no topo e os que já
+   *    existiam saem do ar e descem pro fim. Nada é apagado: quem quiser volta
+   *    um bloco antigo pelo interruptor. Ligado porque modelo desligado deixa a
+   *    prévia em branco e a pessoa não vê o que escolheu (21/10/2026).
+   *  - "juntar": entram no fim e DESLIGADOS, pra quem já tem página no ar e
+   *    não quer texto de exemplo aparecendo enquanto preenche. */
   const aplicarModelo = useMutation({
-    mutationFn: async (novos: { kind: TipoBloco; data: DadosBloco }[]) => {
+    mutationFn: async ({ novos, modo }: { novos: { kind: TipoBloco; data: DadosBloco }[]; modo: "trocar" | "juntar" }) => {
       if (!userId) throw new Error("Sem sessão");
+      const trocar = modo === "trocar";
       const linhas = novos.map((b, i) => ({
         user_id: userId, page_id: pageId, estilo,
         kind: b.kind, data: b.data,
-        position: blocos.length + i,
-        is_active: false,
+        position: trocar ? i : blocos.length + i,
+        is_active: trocar,
       }));
+      if (trocar && blocos.length) {
+        // Primeiro tira os antigos do ar e abre espaço no topo; se o insert
+        // falhar depois, a página fica sem nada no ar mas nada se perde.
+        const r = await Promise.all(blocos.map((b, i) => {
+          const s = sbFrom("bio_blocks").update({ is_active: false, position: novos.length + i }).eq("id", b.id);
+          return pageId ? s.eq("page_id", pageId) : s.eq("user_id", userId);
+        }));
+        const falhou = r.find((x: { error?: unknown }) => x?.error);
+        if (falhou) throw (falhou as { error: Error }).error;
+      }
       const { error } = await sbFrom("bio_blocks").insert(linhas);
       if (error) throw error;
+      return modo;
     },
-    onSuccess: () => {
+    onSuccess: (modo) => {
       void qc.invalidateQueries({ queryKey: ["bio-blocks"] });
-      toast.success("Modelo aplicado. Os blocos entraram desligados: preencha e ligue um por um.");
+      toast.success(modo === "trocar"
+        ? "Modelo aplicado e já aparece na prévia. Troque os textos de exemplo antes de divulgar o link."
+        : "Modelo adicionado no fim, desligado. Preencha e ligue um por um.");
     },
     onError: (e: Error) => toast.error(tabelaFaltando(e.message) ? AVISO_MIGRATION : "Não consegui aplicar o modelo."),
   });

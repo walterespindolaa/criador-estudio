@@ -31,7 +31,9 @@ import {
   Check,
   X,
   Crop,
+  Eye,
 } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { sanitizeUrl } from "@/lib/sanitize";
 import { RichTextInput } from "@/lib/richText";
@@ -869,6 +871,7 @@ function useLeadsNovos(leads: { id: string; created_at: string }[], aba: AbaBio)
 const LinkInBio = () => {
   const [aba, setAba] = useState<AbaBio>("conteudo");
   const { trilho: trilhoDaPrevia, painel: painelDaPrevia } = usePainelGrudado();
+  const [previaCelular, setPreviaCelular] = useState(false);
   const { user } = useAuth();
   const alvo = useBioAlvo();
   const { activeAccountId } = useActiveAccount();
@@ -2150,7 +2153,7 @@ const LinkInBio = () => {
           {/* Quem faz esta coluna acompanhar a rolagem é o usePainelGrudado lá
               em cima, por medição. A explicação de por que não é `sticky` está
               no comentário do gancho. */}
-          <div className="min-w-0">
+          <div className="min-w-0 hidden lg:block">
            <div ref={painelDaPrevia}
              className="lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:overflow-x-clip lg:pb-2 lg:will-change-transform">
             <Card className="p-4 rounded-2xl border-border">
@@ -2164,6 +2167,27 @@ const LinkInBio = () => {
            </div>
           </div>
         </div>
+
+        {/* ── Prévia no celular ──
+            No celular a coluna da prévia ficava no fim de tudo: a pessoa
+            mexia num bloco e tinha que rolar a página inteira pra ver o
+            resultado. Aqui ela abre por cima, de qualquer ponto (21/10/2026). */}
+        <button type="button" onClick={() => setPreviaCelular(true)}
+          className="lg:hidden fixed bottom-24 right-4 z-40 flex items-center gap-1.5 rounded-full bg-foreground text-background pl-3.5 pr-4 py-2.5 shadow-lg text-[13px] font-body font-semibold">
+          <Eye className="h-4 w-4" /> Ver prévia
+        </button>
+        <Sheet open={previaCelular} onOpenChange={setPreviaCelular}>
+          <SheetContent side="bottom" className="lg:hidden h-[92dvh] rounded-t-3xl p-0 flex flex-col">
+            <SheetHeader className="px-4 pt-4 pb-2 shrink-0">
+              <SheetTitle className="text-sm font-display">Pré-visualização</SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto px-4 pb-8">
+              <BioPreview profile={profile} links={activeLinks}
+                blocos={settings.layout === "vitrine" ? blocosSite : blocosClassico}
+                produtos={produtosDoSite} posts={postsDoSite} settings={settings} />
+            </div>
+          </SheetContent>
+        </Sheet>
       </motion.div>
     </div>
   );

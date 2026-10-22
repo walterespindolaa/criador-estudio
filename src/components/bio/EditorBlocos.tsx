@@ -1148,6 +1148,23 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
   const [modelosAbertos, setModelosAbertos] = useState(false);
   // O modelo de especialista pergunta o ramo antes de montar a página.
   const [nichoAberto, setNichoAberto] = useState(false);
+  /* Página que já tem bloco no ar: antes de trocar, pergunta. Trocar sem
+     perguntar tiraria do ar o que a pessoa já divulgou. */
+  const [pendente, setPendente] = useState<{ nome: string; blocos: BlocoDoModelo[]; aparencia: AparenciaModelo } | null>(null);
+  const temNoAr = blocos.some((b) => b.is_active);
+  const aplicar = async (m: { blocos: BlocoDoModelo[]; aparencia: AparenciaModelo }, modo: "trocar" | "juntar") => {
+    // O erro já vira aviso no próprio gancho; aqui só não segue adiante.
+    try { await aplicarModelo.mutateAsync({ novos: m.blocos, modo }); } catch { return; }
+    aoAplicarAparencia?.(m.aparencia);
+    setPendente(null);
+    setNichoAberto(false);
+    setModelosAbertos(false);
+    setAberto(null);
+  };
+  const escolher = (m: { nome: string; blocos: BlocoDoModelo[]; aparencia: AparenciaModelo }) => {
+    if (temNoAr) { setPendente(m); return; }
+    void aplicar(m, "trocar");
+  };
   const disponiveis = useMemo(() => blocosDoEstilo(estilo), [estilo]);
   const modelos = useMemo(() => modelosDoEstilo(estilo), [estilo]);
 
@@ -1180,7 +1197,7 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
             <p className="text-xs font-body text-muted-foreground">Arraste pra ordenar. O interruptor tira do ar sem apagar.</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto [&>button]:flex-1 sm:[&>button]:flex-none">
           <Button size="sm" variant="outline" onClick={() => { setModelosAbertos((v) => !v); setPaletaAberta(false); }}>
             <LayoutTemplate className="h-3.5 w-3.5 mr-1" /> Modelos
           </Button>
@@ -1199,17 +1216,15 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
         <div className="rounded-2xl border border-border bg-muted/30 p-3">
           <p className="text-xs font-body text-muted-foreground mb-2.5">
             Escolha o que mais parece com o negócio. Vem tudo junto: as seções na ordem que costuma funcionar, o
-            texto de exemplo, e a cor, a fonte e o formato de botão. Os blocos entram desligados e nada do que já
-            existe é apagado. A aparência, essa sim, é substituída.
+            texto de exemplo, a cor, a fonte e o formato de botão. Entra ligado, pra você ver na prévia, e o que já
+            existia sai do ar sem ser apagado.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {modelos.map((m) => (
               <button key={m.id} type="button" disabled={aplicarModelo.isPending}
-                onClick={async () => {
-                  if (m.id === "site-especialista") { setNichoAberto(true); return; }
-                  await aplicarModelo.mutateAsync(m.blocos);
-                  aoAplicarAparencia?.(m.aparencia);
-                  setModelosAbertos(false);
+                onClick={() => {
+                  if (m.id === "site-especialista") { setNichoAberto(true); setPendente(null); return; }
+                  escolher({ nome: m.nome, blocos: m.blocos, aparencia: m.aparencia });
                 }}
                 className="text-left rounded-xl border border-border bg-card p-3 hover:border-primary/50 transition-all disabled:opacity-60">
                 <span className="flex items-start gap-2.5">
@@ -1252,12 +1267,7 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                 {NICHOS.map((n) => (
                   <button key={n.id} type="button" disabled={aplicarModelo.isPending}
-                    onClick={async () => {
-                      await aplicarModelo.mutateAsync(blocosDoNicho(n) as BlocoDoModelo[]);
-                      aoAplicarAparencia?.(aparenciaDoNicho(n));
-                      setNichoAberto(false);
-                      setModelosAbertos(false);
-                    }}
+                    onClick={() => escolher({ nome: `Especialista: ${n.nome}`, blocos: blocosDoNicho(n) as BlocoDoModelo[], aparencia: aparenciaDoNicho(n) })}
                     className="flex items-center gap-2 text-left rounded-lg border border-border px-3 py-2 min-h-[44px] hover:border-primary/50 disabled:opacity-60">
                     <span aria-hidden className="w-3.5 h-3.5 rounded-full shrink-0" style={{ backgroundColor: n.cor }} />
                     <span className="text-[13px] font-body font-semibold">{n.nome}</span>
@@ -1265,6 +1275,27 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
                 ))}
               </div>
               <Button type="button" size="sm" variant="ghost" className="mt-2" onClick={() => setNichoAberto(false)}>Voltar</Button>
+            </div>
+          )}
+          {pendente && (
+            <div className="mt-3 rounded-xl border border-primary/40 bg-card p-3" role="group" aria-label="Como aplicar o modelo">
+              <p className="text-xs font-body font-semibold text-foreground">Sua página já tem blocos no ar</p>
+              <p className="text-[11.5px] font-body text-muted-foreground mb-2.5">
+                {pendente.nome}: quer trocar a página inteira ou só juntar as seções no fim, desligadas, pra preencher com calma?
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                <button type="button" disabled={aplicarModelo.isPending} onClick={() => void aplicar(pendente, "trocar")}
+                  className="text-left rounded-lg border border-primary bg-primary/5 px-3 py-2.5 min-h-[44px] disabled:opacity-60">
+                  <span className="block text-[13px] font-body font-semibold">Trocar a página</span>
+                  <span className="block text-[11px] font-body text-muted-foreground leading-snug">O modelo entra no ar. O que existe desliga e vai pro fim, sem apagar.</span>
+                </button>
+                <button type="button" disabled={aplicarModelo.isPending} onClick={() => void aplicar(pendente, "juntar")}
+                  className="text-left rounded-lg border border-border px-3 py-2.5 min-h-[44px] hover:border-primary/50 disabled:opacity-60">
+                  <span className="block text-[13px] font-body font-semibold">Juntar no fim</span>
+                  <span className="block text-[11px] font-body text-muted-foreground leading-snug">A página no ar não muda. As seções novas entram desligadas.</span>
+                </button>
+              </div>
+              <Button type="button" size="sm" variant="ghost" className="mt-2" onClick={() => setPendente(null)}>Cancelar</Button>
             </div>
           )}
         </div>
