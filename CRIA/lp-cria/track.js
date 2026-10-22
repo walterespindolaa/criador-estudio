@@ -454,10 +454,10 @@ var CRIA_TRACK = {
     css.textContent =
       "#cria-consent{position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;max-width:420px;margin-left:auto;" +
       "background:#fffdf8;color:#1b1a18;border:1px solid #e8e1d4;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.12);" +
-      "padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom));font-family:inherit;font-size:14px;line-height:1.5}" +
+      "padding:10px 12px;padding-bottom:max(10px,env(safe-area-inset-bottom));font-family:inherit;font-size:12.5px;line-height:1.4}" +
       "#cria-consent p{margin:0}#cria-consent a{color:inherit;text-decoration:underline;text-underline-offset:2px}" +
-      "#cria-consent .acoes{display:flex;gap:8px;margin-top:12px}" +
-      "#cria-consent button{flex:1;height:44px;border-radius:12px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}" +
+      "#cria-consent .acoes{display:flex;gap:8px;margin-top:8px}" +
+      "#cria-consent button{flex:1;height:36px;border-radius:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}" +
       "#cria-consent .sim{background:#1b1a18;color:#fff;border:0}" +
       "#cria-consent .nao{background:transparent;color:#1b1a18;border:1px solid #e8e1d4}";
     document.head.appendChild(css);
@@ -466,8 +466,10 @@ var CRIA_TRACK = {
     box.setAttribute("role", "dialog");
     box.setAttribute("aria-label", "Aviso de cookies");
     box.innerHTML =
-      '<p>Usamos cookies essenciais pra você entrar e usar o Cria. Se você permitir, também usamos o pixel da Meta pra medir ' +
-      'nossos anúncios. Nada de venda de dados. <a href="https://app.criasocialclub.com.br/privacidade" target="_blank" rel="noopener">Como cuidamos dos seus dados</a></p>' +
+      // Aviso enxuto (22/10/2026): o antigo cobria ~20% da primeira tela no
+      // celular, bem onde a visita do anúncio decide se fica.
+      '<p>Cookies essenciais pra usar o Cria e, se você permitir, o pixel da Meta pra medir anúncios. Nada de venda de dados. ' +
+      '<a href="https://app.criasocialclub.com.br/privacidade" target="_blank" rel="noopener">Saiba mais</a></p>' +
       '<div class="acoes"><button type="button" class="sim">Aceitar</button><button type="button" class="nao">Só o essencial</button></div>';
     document.body.appendChild(box);
     box.querySelector(".sim").addEventListener("click", function () {

@@ -770,16 +770,17 @@ section.dobrado .dobra-btn .seta{transform:none}
   <div class="hero-blob hb-3"></div>
   <div class="container">
     <span class="kicker" style="background:var(--laranja)">Pra quem gerencia clientes</span>
-    <h1>Seu cliente paga R$1.500/mês. <span class="hl">E aprova post por print no WhatsApp?</span>
-      <span class="hero-script">isso tá te custando caro</span>
+    <!-- Título repete a promessa dos anúncios ("numa aba só", "grátis pra
+         sempre"). A provocação do R$1.500 desceu pro texto de apoio (22/10/2026). -->
+    <h1>Seus clientes numa aba só. <span class="hl">Grátis pra sempre.</span>
+      <span class="hero-script">não é teste de 7 dias</span>
     </h1>
-    <p class="hero-sub">O CRIA transforma o seu serviço numa experiência de agência grande: portal de aprovação com a marca de cada cliente, relatório em 1 clique, CRM e financeiro no mesmo lugar. A conta é grátis. Você ativa só o que usar.</p>
+    <p class="hero-sub">Seu cliente paga R$1.500/mês e aprova post por print no WhatsApp? No CRIA ele aprova num portal com a marca dele, e agenda, relatório, CRM e financeiro ficam no mesmo lugar. A base é grátis. Você ativa só o que usar.</p>
     <div class="hero-ctas">
       <a href="https://app.criasocialclub.com.br/signup?tipo=manager" class="btn btn-laranja">Começar grátis</a>
       <a href="#modulos" class="btn btn-ghost">Ver os módulos ↓</a>
     </div>
-    <p style="margin-top:18px"><a class="hero-tag novo" href="#criakut" style="margin:0"><span class="pill">Novo</span> <span><b>Criakut beta</b><span class="longo">: criadoras te acham por aqui</span></span> <span class="seta2">→</span></a></p>
-    <p class="micro" style="color:rgba(244,239,227,.7)">Conta de social media gratuita · Você ativa só os módulos que precisar · Funciona no celular e no computador</p>
+    <p class="micro" style="color:rgba(244,239,227,.7)">Sem cartão · Você ativa só os módulos que precisar · Funciona no celular e no computador</p>
   </div>
 </section>
 
@@ -1610,8 +1611,8 @@ if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') {
   window.addEventListener('scroll',()=>{ sc.classList.toggle('show', window.scrollY>320); },{passive:true});
 } else {
   gsap.registerPlugin(ScrollTrigger);
-  gsap.from('#navbar',{y:-60,opacity:0,duration:.7,ease:'power3.out'});
-  gsap.from('#hero .container > *:not(.hero-shot)',{y:34,opacity:0,duration:.7,stagger:.1,ease:'power3.out'});
+  // Menu, título e botão do topo aparecem JÁ, sem entrada animada: a visita
+  // vinda de anúncio decide em ~1s se fica (22/10/2026).
   gsap.from('.hero-blob',{scale:0,opacity:0,duration:1,stagger:.12,ease:'back.out(1.6)'});
   gsap.utils.toArray('.hero-blob').forEach((b,i)=>{
     gsap.to(b,{y:'random(-24,24)',x:'random(-16,16)',rotation:'random(-10,10)',duration:'random(4,7)',repeat:-1,yoyo:true,ease:'sine.inOut',delay:i*.4});
