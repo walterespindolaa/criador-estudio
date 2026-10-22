@@ -4,6 +4,8 @@ import {
   bool, embedDeSpotify, embedDeVideo, faltaAte, linkAppleMaps, linkGoogleMaps,
   linkSeguro, linkWaze, linkWhatsapp, lista, txt, type DadosBloco,
 } from "@/lib/bioBlocks";
+import { urlMapaEmbutido } from "@/lib/bioEspecialista";
+import { MapaEmbutido } from "@/components/bio/SiteEspecialista";
 import { iconeLucide } from "@/lib/bioIcones";
 import { TextoRico } from "@/lib/textoRico";
 import { classeDaForma } from "@/lib/bioFoto";
@@ -194,7 +196,9 @@ function Mapa({ data, visual, onClique }: { data: DadosBloco; visual: VisualBio;
      o alfinete na cor do botão. Nunca quebra, e parece feito de propósito. */
   return (
     <CartaoBase visual={visual} className="overflow-hidden">
-      {bool(data, "mostrarMapa", true) && (
+      {bool(data, "mostrarMapa", true) && urlMapaEmbutido(endereco) ? (
+        <MapaEmbutido endereco={endereco} className="h-[160px]" />
+      ) : bool(data, "mostrarMapa", true) && (
         <a href={linkGoogleMaps(endereco)} target="_blank" rel="noopener noreferrer" onClick={onClique}
           aria-label="Ver no mapa" className="block relative h-[88px] overflow-hidden bg-black/[.05]">
           {/* Ruas estilizadas: decoração, não dado. aria-hidden pra leitor de tela. */}

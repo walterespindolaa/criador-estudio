@@ -13,8 +13,9 @@
 import {
   AlignLeft, CalendarClock, Contact, HelpCircle, Image as ImageIcon, Images,
   Layers, Link2, MapPin, MessageCircle, PenLine, PlayCircle, Quote, Send,
-  ShoppingBag, Type, UserRound, Clapperboard, BadgeCheck, MousePointerClick, type LucideIcon,
+  ShoppingBag, Type, UserRound, Clapperboard, BadgeCheck, MousePointerClick, MapPinned, type LucideIcon,
 } from "lucide-react";
+import { lerAtendimento, resumoAtendimento, temAlgumAtendimento } from "@/lib/bioEspecialista";
 
 export type EstiloBio = "classico" | "site";
 
@@ -24,7 +25,7 @@ export type TipoBloco =
   // Só no modo Site: são SEÇÕES de largura cheia, não botões numa coluna.
   | "capa" | "sobre" | "produtos" | "blog" | "depoimentos" | "contato"
   // Página de especialista (21/10/2026), ver lib/bioEspecialista.
-  | "apresentacao" | "numeros" | "acao_fixa";
+  | "apresentacao" | "numeros" | "acao_fixa" | "atendimento";
 
 export type CamposCaptura = "email" | "telefone" | "ambos";
 
@@ -145,6 +146,12 @@ export const BLOCOS_SITE: MetaBloco[] = [
     padrao: { itens: [{ valor: "", rotulo: "" }, { valor: "", rotulo: "" }, { valor: "", rotulo: "" }], local: "", registro: "", tema: "escuro" },
   },
   {
+    tipo: "atendimento", nome: "Onde atende", Icone: MapPinned, estilos: ["site"],
+    explica: "Endereço, vários locais, online, em casa ou entrega. Pode marcar mais de um.",
+    padrao: { titulo: "Onde atendo", formas: { presencial: true, online: false, domicilio: false, entrega: false },
+      locais: [{ nome: "", endereco: "", cidade: "", horario: "" }], online_texto: "", regiao: "", entrega_texto: "", retirada: "", tema: "escuro" },
+  },
+  {
     tipo: "acao_fixa", nome: "Botão fixo", Icone: MousePointerClick, estilos: ["site"], clicavel: true,
     explica: "Agendar, encomendar ou chamar: fica preso no pé da tela enquanto a pessoa rola.",
     padrao: { texto: "Agendar consulta", destino: "whatsapp", telefone: "", mensagem: "Oi! Vim pelo seu link.", url: "" },
@@ -260,6 +267,7 @@ export function resumoDoBloco(b: { kind: string; data: DadosBloco }): string {
     case "apresentacao": return txt(d, "midia") === "imagem" ? "foto fixa" : (txt(d, "video_guid") ? "vídeo em loop" : "sem vídeo ainda");
     case "numeros": return lista<{ valor?: string }>(d, "itens").map((i) => i?.valor ?? "").filter(Boolean).join(" · ") || "sem números ainda";
     case "acao_fixa": return txt(d, "texto") || "sem texto ainda";
+    case "atendimento": return resumoAtendimento(lerAtendimento(d)) || "nenhuma forma marcada";
     default: return "";
   }
 }
@@ -285,6 +293,12 @@ export function faltaNoBloco(b: { kind: string; data: DadosBloco }): string | nu
       return txt(d, "video_guid").trim() || txt(d, "imagem").trim() ? null : "falta o vídeo";
     }
     case "numeros": return lista<{ valor?: string }>(d, "itens").some((i) => (i?.valor ?? "").trim()) ? null : "nenhum número";
+    case "atendimento": {
+      const a = lerAtendimento(d);
+      if (!temAlgumAtendimento(a)) return "marque como atende";
+      if (a.presencial && !a.locais.some((l) => l.endereco.trim() || l.cidade.trim())) return "falta o endereço";
+      return null;
+    }
     case "acao_fixa": {
       if (!txt(d, "texto").trim()) return "falta o texto do botão";
       if (txt(d, "destino", "whatsapp") === "whatsapp") return txt(d, "telefone").replace(/\D/g, "").length >= 10 ? null : "falta o telefone";

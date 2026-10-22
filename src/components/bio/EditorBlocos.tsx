@@ -18,7 +18,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ICONES_BLOCO, iconeLucide } from "@/lib/bioIcones";
 import { CampoTextoRico } from "@/lib/textoRico";
-import { modelosDoEstilo, type AparenciaModelo } from "@/lib/bioTemplates";
+import { aparenciaDoNicho, modelosDoEstilo, type AparenciaModelo, type BlocoDoModelo } from "@/lib/bioTemplates";
 import { cn } from "@/lib/utils";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { FORMAS_DA_FOTO, formaValida, type FormaDaFoto } from "@/lib/bioFoto";
@@ -26,7 +26,8 @@ import { EditorItens } from "@/components/bio/EditorItens";
 import { EditorAssinatura } from "@/components/bio/EditorAssinatura";
 import { uploadFileToBunnyStream } from "@/lib/bunny-upload";
 import {
-  NICHOS, VIDEO_MAX_MB, VIDEO_MAX_SEGUNDOS, fonteAssinatura, guidValido, lerAssinatura, nichoPorId, videoDaCapa,
+  NICHOS, VIDEO_MAX_MB, VIDEO_MAX_SEGUNDOS, blocosDoNicho, fonteAssinatura, guidValido, lerAssinatura, lerAtendimento,
+  nichoPorId, resumoAtendimento, urlMapaEmbutido, videoDaCapa,
 } from "@/lib/bioEspecialista";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -690,13 +691,116 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioB
             </Button>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <LinhaCampo label="Onde atende">
-              <Input value={txt(d, "local")} onChange={(e) => p({ local: e.target.value })} placeholder="Clínica X, Centro" className="rounded-xl" />
+            <LinhaCampo label="Onde atende" ajuda="Vazio usa o resumo do bloco Onde atende.">
+              <Input value={txt(d, "local")} onChange={(e) => p({ local: e.target.value })} placeholder="Itajaí e online" className="rounded-xl" />
             </LinhaCampo>
             <LinhaCampo label="Registro ou horário">
               <Input value={txt(d, "registro")} onChange={(e) => p({ registro: e.target.value })} placeholder="CRN 0000" className="rounded-xl" />
             </LinhaCampo>
           </div>
+          <EscolherTema valor={txt(d, "tema")} onTroca={(v) => p({ tema: v })} />
+        </div>
+      );
+    }
+
+    case "atendimento": {
+      const a = lerAtendimento(d);
+      const formas = (d.formas && typeof d.formas === "object" ? d.formas : {}) as Record<string, boolean>;
+      const marcar = (k: string, v: boolean) => {
+        const patch: DadosBloco = { formas: { ...formas, [k]: v } };
+        // Marcou presencial sem nenhum local: já abre o primeiro pra preencher.
+        if (k === "presencial" && v && !a.locais.length) patch.locais = [{ nome: "", endereco: "", cidade: "", horario: "" }];
+        p(patch);
+      };
+      const trocarLocal = (i: number, patch: Partial<{ nome: string; endereco: string; cidade: string; horario: string }>) =>
+        p({ locais: a.locais.map((l, n) => (n === i ? { ...l, ...patch } : l)) });
+      const OPCOES = [
+        { k: "presencial", r: "Endereço físico", e: "Consultório, loja, salão, escritório" },
+        { k: "online", r: "Online", e: "Vídeo, WhatsApp, curso" },
+        { k: "domicilio", r: "Vai até o cliente", e: "Em casa, na empresa, no imóvel" },
+        { k: "entrega", r: "Entrega ou retirada", e: "Comida, produto, encomenda" },
+      ];
+      const resumo = resumoAtendimento(a);
+      return (
+        <div className="space-y-3.5">
+          <LinhaCampo label="Título da seção">
+            <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })} placeholder="Onde atendo" className="rounded-xl" />
+          </LinhaCampo>
+          <LinhaCampo label="Como atende" ajuda="Pode marcar mais de um.">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {OPCOES.map((o) => (
+                <label key={o.k} className={cn("flex items-start gap-2.5 rounded-xl border px-3 py-2.5 cursor-pointer",
+                  formas[o.k] ? "border-primary bg-primary/5" : "border-border")}>
+                  <input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary shrink-0" checked={!!formas[o.k]}
+                    onChange={(e) => marcar(o.k, e.target.checked)} />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-body font-semibold text-foreground">{o.r}</span>
+                    <span className="block text-[11px] font-body text-muted-foreground leading-snug">{o.e}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </LinhaCampo>
+
+          {a.presencial && (
+            <div className="space-y-2.5">
+              {a.locais.map((l, i) => (
+                <div key={i} className="rounded-xl border border-border p-3 space-y-2 bg-muted/30">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-body font-semibold text-muted-foreground">Local {i + 1}</span>
+                    {a.locais.length > 1 && (
+                      <Button type="button" size="sm" variant="ghost" aria-label={`Tirar o local ${i + 1}`}
+                        onClick={() => p({ locais: a.locais.filter((_, n) => n !== i) })}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                  <Input value={l.nome} onChange={(e) => trocarLocal(i, { nome: e.target.value })} placeholder="Nome do lugar (Clínica Movimento)" className="rounded-xl" aria-label="Nome do lugar" />
+                  <Input value={l.endereco} onChange={(e) => trocarLocal(i, { endereco: e.target.value })} placeholder="Rua, número, bairro" className="rounded-xl" aria-label="Endereço" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <Input value={l.cidade} onChange={(e) => trocarLocal(i, { cidade: e.target.value })} placeholder="Cidade" className="rounded-xl" aria-label="Cidade" />
+                    <Input value={l.horario} onChange={(e) => trocarLocal(i, { horario: e.target.value })} placeholder="Seg a sex, 8h às 18h" className="rounded-xl" aria-label="Horário" />
+                  </div>
+                </div>
+              ))}
+              {a.locais.length < 4 && (
+                <Button type="button" size="sm" variant="outline"
+                  onClick={() => p({ locais: [...a.locais, { nome: "", endereco: "", cidade: "", horario: "" }] })}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Outro endereço
+                </Button>
+              )}
+            </div>
+          )}
+
+          {(a.domicilio || a.entrega) && (
+            <LinhaCampo label={a.entrega && !a.domicilio ? "Onde entrega" : "Região que atende"} ajuda="Bairros ou cidades. Aparece no lugar do endereço.">
+              <Input value={a.regiao} onChange={(e) => p({ regiao: e.target.value })} placeholder="Itajaí, Navegantes e Balneário Camboriú" className="rounded-xl" />
+            </LinhaCampo>
+          )}
+          {a.entrega && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <LinhaCampo label="Prazo e taxa">
+                <Input value={a.entrega_texto} onChange={(e) => p({ entrega_texto: e.target.value })} placeholder="2 dias de antecedência, taxa por bairro" className="rounded-xl" />
+              </LinhaCampo>
+              <LinhaCampo label="Retirada (opcional)">
+                <Input value={a.retirada} onChange={(e) => p({ retirada: e.target.value })} placeholder="No ateliê, Centro" className="rounded-xl" />
+              </LinhaCampo>
+            </div>
+          )}
+          {a.online && (
+            <LinhaCampo label="Como é o online">
+              <Textarea rows={2} value={a.online_texto} onChange={(e) => p({ online_texto: e.target.value })}
+                placeholder="Consulta por vídeo, com o mesmo acompanhamento do presencial." className="rounded-xl resize-none" />
+            </LinhaCampo>
+          )}
+          {resumo && (
+            <p className="text-[11.5px] font-body text-muted-foreground">
+              Embaixo dos números aparece: <span className="font-semibold text-foreground">{resumo}</span>
+            </p>
+          )}
+          {!urlMapaEmbutido("x") && a.presencial && (
+            <p className="text-[11px] font-body text-muted-foreground">O endereço abre rota no Google Maps e no Waze. O mapa dentro da página entra quando a chave do Google estiver ligada.</p>
+          )}
           <EscolherTema valor={txt(d, "tema")} onTroca={(v) => p({ tema: v })} />
         </div>
       );
@@ -1042,6 +1146,8 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
   const [aberto, setAberto] = useState<string | null>(null);
   const [paletaAberta, setPaletaAberta] = useState(false);
   const [modelosAbertos, setModelosAbertos] = useState(false);
+  // O modelo de especialista pergunta o ramo antes de montar a página.
+  const [nichoAberto, setNichoAberto] = useState(false);
   const disponiveis = useMemo(() => blocosDoEstilo(estilo), [estilo]);
   const modelos = useMemo(() => modelosDoEstilo(estilo), [estilo]);
 
@@ -1100,6 +1206,7 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
             {modelos.map((m) => (
               <button key={m.id} type="button" disabled={aplicarModelo.isPending}
                 onClick={async () => {
+                  if (m.id === "site-especialista") { setNichoAberto(true); return; }
                   await aplicarModelo.mutateAsync(m.blocos);
                   aoAplicarAparencia?.(m.aparencia);
                   setModelosAbertos(false);
@@ -1135,6 +1242,31 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
               </button>
             ))}
           </div>
+          {nichoAberto && (
+            <div className="mt-3 rounded-xl border border-primary/40 bg-card p-3">
+              <p className="text-xs font-body font-semibold text-foreground">Qual é o ramo?</p>
+              <p className="text-[11.5px] font-body text-muted-foreground mb-2.5">
+                Preenche a página inteira pro ramo: profissão, números, registro, como atende, o texto do botão, as cores e a
+                pergunta que o cliente faz antes de marcar. Depois é só trocar o que está entre colchetes.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {NICHOS.map((n) => (
+                  <button key={n.id} type="button" disabled={aplicarModelo.isPending}
+                    onClick={async () => {
+                      await aplicarModelo.mutateAsync(blocosDoNicho(n) as BlocoDoModelo[]);
+                      aoAplicarAparencia?.(aparenciaDoNicho(n));
+                      setNichoAberto(false);
+                      setModelosAbertos(false);
+                    }}
+                    className="flex items-center gap-2 text-left rounded-lg border border-border px-3 py-2 min-h-[44px] hover:border-primary/50 disabled:opacity-60">
+                    <span aria-hidden className="w-3.5 h-3.5 rounded-full shrink-0" style={{ backgroundColor: n.cor }} />
+                    <span className="text-[13px] font-body font-semibold">{n.nome}</span>
+                  </button>
+                ))}
+              </div>
+              <Button type="button" size="sm" variant="ghost" className="mt-2" onClick={() => setNichoAberto(false)}>Voltar</Button>
+            </div>
+          )}
         </div>
       )}
 

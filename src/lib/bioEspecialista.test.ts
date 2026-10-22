@@ -67,3 +67,42 @@ describe("blocos novos", () => {
     expect(adv.numeros.map((x) => x.rotulo).join(" ")).not.toMatch(/caus|caso/);
   });
 });
+
+import { blocosDoNicho, lerAtendimento, resumoAtendimento, urlMapaEmbutido, atendimentoDoNicho } from "@/lib/bioEspecialista";
+
+describe("onde atende", () => {
+  const at = (x: Record<string, unknown>) => lerAtendimento(x);
+  it("monta a linha curta pra cada combinação", () => {
+    expect(resumoAtendimento(at({ formas: { presencial: true, online: true }, locais: [{ cidade: "Itajaí" }] }))).toBe("Itajaí e online");
+    expect(resumoAtendimento(at({ formas: { presencial: true }, locais: [{ cidade: "Itajaí" }, { cidade: "Balneário Camboriú" }, { cidade: "Itajaí" }] })))
+      .toBe("Itajaí e Balneário Camboriú");
+    expect(resumoAtendimento(at({ formas: { domicilio: true }, regiao: "Itajaí e BC" }))).toBe("Em casa em Itajaí e BC");
+    expect(resumoAtendimento(at({ formas: { entrega: true }, regiao: "Navegantes" }))).toBe("Entrega em Navegantes");
+    expect(resumoAtendimento(at({ formas: { online: true } }))).toBe("Online");
+    expect(resumoAtendimento(at({}))).toBe("");
+  });
+
+  it("diz o que falta", () => {
+    expect(faltaNoBloco({ kind: "atendimento", data: {} })).toBe("marque como atende");
+    expect(faltaNoBloco({ kind: "atendimento", data: { formas: { presencial: true }, locais: [{}] } })).toBe("falta o endereço");
+    expect(faltaNoBloco({ kind: "atendimento", data: { formas: { online: true } } })).toBeNull();
+  });
+
+  it("mapa de verdade só com chave", () => {
+    expect(urlMapaEmbutido("Rua A, Itajaí", "")).toBe("");
+    expect(urlMapaEmbutido("Rua A, Itajaí", "CHAVE")).toBe("https://www.google.com/maps/embed/v1/place?key=CHAVE&q=Rua%20A%2C%20Itaja%C3%AD&language=pt-BR");
+  });
+});
+
+describe("modelo por nicho", () => {
+  it("cada nicho monta a página inteira com blocos que existem", () => {
+    for (const n of NICHOS) {
+      const bs = blocosDoNicho(n);
+      expect(bs.map((b) => b.kind)).toEqual(["apresentacao", "numeros", "sobre", "atendimento", "depoimentos", "contato", "acao_fixa"]);
+      for (const b of bs) expect(metaDoBloco(b.kind).tipo).toBe(b.kind);
+      expect(bs[6].data.texto).toBe(n.cta);
+      expect(bs[0].data.profissao).toBe(n.profissao);
+      expect(resumoAtendimento(lerAtendimento(atendimentoDoNicho(n)))).not.toBe("");
+    }
+  });
+});

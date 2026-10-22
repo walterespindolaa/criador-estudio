@@ -3,6 +3,7 @@ import {
   Briefcase, Camera, GraduationCap, Newspaper, Store, UtensilsCrossed, type LucideIcon,
 } from "lucide-react";
 import type { DadosBloco, EstiloBio, TipoBloco } from "@/lib/bioBlocks";
+import { blocosDoNicho, nichoPorId, type Nicho } from "@/lib/bioEspecialista";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MODELOS PRONTOS
@@ -270,27 +271,19 @@ export const MODELOS: ModeloBio[] = [
       buttonColor: "#B4532A", buttonTextColor: "#FFFFFF", buttonStyle: "rounded",
       cardColor: "#FFFFFF", cardTextColor: "#111312", fontFamily: "Sora",
     },
-    blocos: [
-      { kind: "apresentacao", data: {
-        midia: "video", imagem: "", video_guid: "", nome: "", profissao: "Sua especialidade", tema: "escuro",
-        assinatura: { modo: "fonte", fonte: "delafield", d: "", x: 6, y: 62, escala: 70 },
-      } },
-      { kind: "numeros", data: {
-        itens: [{ valor: "[anos]", rotulo: "anos de experiência" }, { valor: "[clientes]", rotulo: "clientes atendidos" }, { valor: "[cidade]", rotulo: "e online" }],
-        local: "[Onde atende]", registro: "[Registro profissional]", tema: "escuro",
-      } },
-      { kind: "sobre", data: {
-        rotulo: "Quem sou", titulo: "O que todo cliente quer saber antes de marcar",
-        texto: "Quem você é, pra quem é o seu trabalho, como é o primeiro atendimento e o que muda depois.", imagem: "", fundo: "escuro",
-      } },
-      { kind: "depoimentos", data: {
-        rotulo: "Quem já passou por aqui", titulo: "Depoimentos", fundo: "creme",
-        itens: [{ texto: "", autor: "" }, { texto: "", autor: "" }],
-      } },
-      { kind: "contato", data: { titulo: "", telefone: "", email: "", endereco: "", instagram: "", assinatura: "", mostrarMapa: true } },
-      { kind: "acao_fixa", data: { texto: "Agendar consulta", destino: "whatsapp", telefone: "", mensagem: "Oi! Vim pelo seu link.", url: "" } },
-    ],
+    // O nicho é escolhido na hora de aplicar (EditorBlocos); saúde é só o padrão.
+    blocos: blocosDoNicho(nichoPorId("saude")!) as BlocoDoModelo[],
   },
 ];
+
+/** Aparência do modelo de especialista no nicho escolhido: a cor do botão é a
+ *  do ramo (verde na saúde, vinho na beleza) e o fundo acompanha o tema. */
+export function aparenciaDoNicho(n: Nicho): AparenciaModelo {
+  return {
+    bgType: "color", bgColor: n.tema === "claro" ? "#F7F3EE" : "#111312", bgGradient: null,
+    buttonColor: n.cor, buttonTextColor: n.corTexto, buttonStyle: "rounded",
+    cardColor: "#FFFFFF", cardTextColor: "#111312", fontFamily: "Sora",
+  };
+}
 
 export const modelosDoEstilo = (e: EstiloBio) => MODELOS.filter((m) => m.estilo === e);

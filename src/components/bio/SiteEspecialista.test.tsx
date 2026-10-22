@@ -96,3 +96,26 @@ describe("editor de assinatura", () => {
     expect(salvar.mock.calls[0][0]).toMatchObject({ modo: "fonte", fonte: "great-vibes" });
   });
 });
+
+describe("onde atende na página", () => {
+  it("cartões por forma, rota no Maps e Waze, e o resumo vai pra linha dos números", () => {
+    montar([
+      { kind: "numeros", data: { itens: [{ valor: "12", rotulo: "anos" }] } },
+      { kind: "atendimento", data: { titulo: "Onde atendo", formas: { presencial: true, online: true, domicilio: false },
+        locais: [{ nome: "Clínica Movimento", endereco: "Rua A, 10", cidade: "Itajaí", horario: "Seg a sex" }], online_texto: "Por vídeo" } },
+    ]);
+    expect(screen.getByText("Itajaí e online")).toBeTruthy();
+    expect(screen.getByText("Clínica Movimento")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Waze/ }).getAttribute("href")).toContain("waze.com");
+    expect(screen.getByText("Por vídeo")).toBeTruthy();
+    // Sem chave do Google no ambiente, nada de iframe quebrado.
+    expect(document.querySelector("iframe")).toBeNull();
+    expect(screen.getByRole("button", { name: "Onde atendo" })).toBeTruthy();
+  });
+
+  it("só online não mostra endereço nem rota", () => {
+    montar([{ kind: "atendimento", data: { formas: { online: true } } }]);
+    expect(screen.queryByRole("link", { name: /Waze/ })).toBeNull();
+    expect(screen.getByText(/Atendimento online/)).toBeTruthy();
+  });
+});

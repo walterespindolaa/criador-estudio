@@ -6,7 +6,8 @@ import {
 } from "@/lib/bioBlocks";
 import { TextoRico } from "@/lib/textoRico";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
-import { BarraAcaoFixa, SecaoApresentacao, SecaoNumeros } from "@/components/bio/SiteEspecialista";
+import { BarraAcaoFixa, SecaoApresentacao, SecaoAtendimento, SecaoNumeros } from "@/components/bio/SiteEspecialista";
+import { lerAtendimento, resumoAtendimento } from "@/lib/bioEspecialista";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -514,6 +515,7 @@ export function SiteBio({
       if (b.kind === "produtos" && produtos.length > 0) m.push({ id: "servicos", nome: txt(b.data, "titulo") || "Serviços" });
       if (b.kind === "blog" && posts.length > 0) m.push({ id: "blog", nome: "Blog" });
       if (b.kind === "depoimentos") m.push({ id: "depoimentos", nome: "Depoimentos" });
+      if (b.kind === "atendimento") m.push({ id: "atendimento", nome: "Onde atendo" });
       if (b.kind === "contato") m.push({ id: "contato", nome: "Contato" });
     }
     return m;
@@ -557,6 +559,9 @@ export function SiteBio({
   const capaImersiva = blocos[0]?.kind === "apresentacao";
   // Um botão fixo só. Dois presos no pé da tela, um em cima do outro, é ruído.
   const acaoFixa = blocos.find((b) => b.kind === "acao_fixa");
+  // A linha "onde atende" embaixo dos números sai do bloco Onde atende.
+  const blocoAtendimento = blocos.find((b) => b.kind === "atendimento");
+  const resumoOnde = blocoAtendimento ? resumoAtendimento(lerAtendimento(blocoAtendimento.data)) : "";
 
   return (
     <div className={cn("bg-white [container-type:inline-size]", alturaCheia !== false && "min-h-[100dvh]")}>
@@ -564,7 +569,8 @@ export function SiteBio({
       {blocos.map((b) => {
         switch (b.kind) {
           case "apresentacao": return <SecaoApresentacao key={b.id} d={b.data} nomePadrao={marca.nome} />;
-          case "numeros": return <SecaoNumeros key={b.id} d={b.data} />;
+          case "numeros": return <SecaoNumeros key={b.id} d={b.data} localAuto={resumoOnde} />;
+          case "atendimento": return <SecaoAtendimento key={b.id} d={b.data} aoClicar={() => onClique?.(b.id)} />;
           case "acao_fixa": return null;
           case "capa": return <SecaoCapa key={b.id} d={b.data} marca={marca} visual={visual} aoClicar={() => onClique?.(b.id)} />;
           case "sobre": return <SecaoSobre key={b.id} d={b.data} marca={marca} />;

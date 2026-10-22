@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { ArrowRight } from "lucide-react";
-import { linkSeguro, linkWhatsapp, lista, txt, type DadosBloco } from "@/lib/bioBlocks";
+import { ArrowRight, Home, MapPin, Navigation, Truck, Video } from "lucide-react";
+import { linkGoogleMaps, linkSeguro, linkWaze, linkWhatsapp, lista, txt, type DadosBloco } from "@/lib/bioBlocks";
 import {
-  QUADRO_H, QUADRO_W, fonteAssinatura, lerAssinatura, podeTocarVideoDeFundo, urlFonteGoogle, videoDaCapa,
-  type Assinatura,
+  QUADRO_H, QUADRO_W, fonteAssinatura, lerAssinatura, lerAtendimento, podeTocarVideoDeFundo, urlFonteGoogle,
+  urlMapaEmbutido, videoDaCapa, type Assinatura,
 } from "@/lib/bioEspecialista";
 import { cn } from "@/lib/utils";
 
@@ -116,11 +116,15 @@ export function SecaoApresentacao({ d, nomePadrao, editavel }: {
 }
 
 /* ── OS NÚMEROS ── */
-export function SecaoNumeros({ d }: { d: DadosBloco }) {
+export function SecaoNumeros({ d, localAuto }: {
+  d: DadosBloco;
+  /** Resumo do bloco Onde atende, usado quando "onde atende" ficou vazio aqui. */
+  localAuto?: string;
+}) {
   const tema = temaDe(txt(d, "tema"));
   const itens = lista<{ valor?: string; rotulo?: string }>(d, "itens").filter((i) => (i.valor ?? "").trim()).slice(0, 4);
   if (!itens.length) return null;
-  const local = txt(d, "local").trim(), registro = txt(d, "registro").trim();
+  const local = txt(d, "local").trim() || (localAuto ?? "").trim(), registro = txt(d, "registro").trim();
   return (
     <section className="px-6 pt-6 pb-8 cq-md:py-12" style={{ backgroundColor: tema.fundo, color: tema.texto }}>
       <div className="mx-auto max-w-[560px]">
@@ -170,5 +174,92 @@ export function BarraAcaoFixa({ d, cor, corTexto, aoClicar }: { d: DadosBloco; c
         {texto} <ArrowRight className="h-4 w-4" aria-hidden />
       </a>
     </div>
+  );
+}
+
+/** Mapa do Google dentro da página. Só existe com a chave da Maps Embed API
+ *  no ambiente; sem ela devolve nada e a página fica com os botões de rota. */
+export function MapaEmbutido({ endereco, className }: { endereco: string; className?: string }) {
+  const src = urlMapaEmbutido(endereco);
+  if (!src) return null;
+  return (
+    <iframe src={src} title={`Mapa: ${endereco}`} loading="lazy" referrerPolicy="no-referrer-when-downgrade"
+      className={cn("block w-full border-0", className)} allowFullScreen />
+  );
+}
+
+/* ── ONDE ATENDE ──
+   Um cartão por forma de atender. Presencial ganha um cartão por local, com
+   rota no Google Maps e no Waze (e o mapa de verdade quando há chave).
+   Quem só atende online ou em casa não mostra endereço nenhum. */
+export function SecaoAtendimento({ d, aoClicar }: { d: DadosBloco; aoClicar?: () => void }) {
+  const tema = temaDe(txt(d, "tema"));
+  const a = lerAtendimento(d);
+  const locais = a.presencial ? a.locais.filter((l) => l.endereco.trim() || l.cidade.trim()) : [];
+  const cartoes: React.ReactNode[] = [];
+  const cartao = "rounded-2xl p-4 cq-md:p-5 flex flex-col gap-1.5";
+  const fundoCartao = { backgroundColor: tema === temaDe("claro") ? "#FFFFFF" : "rgba(255,255,255,0.05)", border: `1px solid ${tema.linha}` };
+  const rotulo = (Icone: typeof MapPin, t: string) => (
+    <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: tema.suave }}>
+      <Icone className="h-3.5 w-3.5" aria-hidden /> {t}
+    </p>
+  );
+  const botao = "inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-[13px] font-semibold transition active:scale-[.98]";
+
+  for (const [i, l] of locais.entries()) {
+    const busca = [l.endereco, l.cidade].filter((x) => x.trim()).join(", ");
+    cartoes.push(
+      <div key={`l${i}`} className={cn(cartao, "overflow-hidden")} style={fundoCartao}>
+        {rotulo(MapPin, locais.length > 1 ? (l.cidade || `Local ${i + 1}`) : "Presencial")}
+        {l.nome && <p className="font-display font-bold text-[16px]" style={{ color: tema.forte }}>{l.nome}</p>}
+        {busca && <p className="text-[14px] leading-snug whitespace-pre-line">{busca}</p>}
+        {l.horario && <p className="text-[13px]" style={{ color: tema.suave }}>{l.horario}</p>}
+        {busca && <MapaEmbutido endereco={busca} className="h-[170px] rounded-xl mt-2" />}
+        {busca && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            <a href={linkGoogleMaps(busca)} target="_blank" rel="noopener noreferrer" onClick={aoClicar}
+              className={botao} style={{ border: `1px solid ${tema.linha}`, color: tema.forte }}>
+              <Navigation className="h-3.5 w-3.5" aria-hidden /> Google Maps
+            </a>
+            <a href={linkWaze(busca)} target="_blank" rel="noopener noreferrer" onClick={aoClicar}
+              className={botao} style={{ border: `1px solid ${tema.linha}`, color: tema.forte }}>
+              <Navigation className="h-3.5 w-3.5" aria-hidden /> Waze
+            </a>
+          </div>
+        )}
+      </div>,
+    );
+  }
+  if (a.domicilio) cartoes.push(
+    <div key="dom" className={cartao} style={fundoCartao}>
+      {rotulo(Home, "Vou até você")}
+      <p className="text-[14px] leading-snug">{a.regiao.trim() ? `Atendo em casa em ${a.regiao.trim()}.` : "Atendo na sua casa."}</p>
+    </div>,
+  );
+  if (a.entrega) cartoes.push(
+    <div key="ent" className={cartao} style={fundoCartao}>
+      {rotulo(Truck, "Entrega")}
+      {a.regiao.trim() && <p className="text-[14px] leading-snug">Entrego em {a.regiao.trim()}.</p>}
+      {a.entrega_texto.trim() && <p className="text-[13px] whitespace-pre-line" style={{ color: tema.suave }}>{a.entrega_texto}</p>}
+      {a.retirada.trim() && <p className="text-[13px]" style={{ color: tema.suave }}>Retirada: {a.retirada}</p>}
+    </div>,
+  );
+  if (a.online) cartoes.push(
+    <div key="onl" className={cartao} style={fundoCartao}>
+      {rotulo(Video, "Online")}
+      <p className="text-[14px] leading-snug whitespace-pre-line">{a.online_texto.trim() || "Atendimento online, de onde você estiver."}</p>
+    </div>,
+  );
+  if (!cartoes.length) return null;
+
+  return (
+    <section id="atendimento" className="px-5 py-9 cq-md:py-14 scroll-mt-[52px]" style={{ backgroundColor: tema.fundo, color: tema.texto }}>
+      <div className="mx-auto max-w-[760px]">
+        {txt(d, "titulo") && (
+          <h2 className="font-display font-extrabold text-[1.28rem] cq-md:text-[1.7rem] leading-tight mb-4" style={{ color: tema.forte }}>{txt(d, "titulo")}</h2>
+        )}
+        <div className={cn("grid gap-3", cartoes.length > 1 && "cq-md:grid-cols-2")}>{cartoes}</div>
+      </div>
+    </section>
   );
 }
