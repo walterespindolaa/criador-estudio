@@ -6,7 +6,7 @@ import { ImageResponse } from "@vercel/og";
 import { montarPrevia, previaGenerica, type TipoLink, type DadosPrevia } from "../src/lib/previa-link";
 import { arteDaPrevia, LARGURA, ALTURA } from "../src/lib/previa-arte";
 import { SUPABASE_URL_PUBLICA, SUPABASE_ANON_PUBLICA } from "../src/lib/supabase-publico";
-import { lerRotaBio, montarPreviaBio, arteDaBio, type DadosBio } from "../src/lib/previa-bio";
+import { lerRotaBio, montarPreviaBio, arteDaBio, fontesDaArte, previaNeutra, type DadosBio, type PreviaBio } from "../src/lib/previa-bio";
 
 export const config = { runtime: "edge" };
 
@@ -32,14 +32,13 @@ async function buscarBio(slug: string): Promise<DadosBio> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 3000);
   try {
-    const r = await fetch(`${SUPABASE_URL_PUBLICA}/rest/v1/rpc/get_public_profile_by_slug`, {
+    const r = await fetch(`${SUPABASE_URL_PUBLICA}/rest/v1/rpc/get_bio_previa`, {
       method: "POST", signal: ctrl.signal,
       headers: { apikey: SUPABASE_ANON_PUBLICA, Authorization: `Bearer ${SUPABASE_ANON_PUBLICA}`, "Content-Type": "application/json" },
       body: JSON.stringify({ _slug: slug }),
     });
     if (!r.ok) return null;
-    const linhas = (await r.json()) as DadosBio[];
-    return Array.isArray(linhas) && linhas[0] ? linhas[0] : null;
+    return (await r.json()) as DadosBio;
   } catch { return null; } finally { clearTimeout(t); }
 }
 
@@ -61,18 +60,29 @@ export default async function handler(req: Request): Promise<Response> {
   ];
   const headers = { "Cache-Control": "public, max-age=300, s-maxage=600, stale-while-revalidate=86400" };
 
-  /* Link na bio: banner, foto e nome da página. Banner ou foto quebrados:
-     desenha sem as imagens; bio que não existe: cai na arte genérica. */
+  /* Link na bio: a arte do modelo da página (Especialista, Consultoria, Loja,
+     Criadora), a neutra quando falta o essencial, ou a do Clássico. Só o slug
+     sai da URL; o resto vem do banco, de novo, aqui. Foto que não carrega:
+     a mesma arte sem foto; ainda falhou: a neutra; ainda: a genérica. */
   if (tipoCru === "bio") {
     const slug = lerRotaBio(`/bio/${url.searchParams.get("k") ?? ""}`);
     const pb = slug ? montarPreviaBio(await buscarBio(slug), slug) : null;
     if (pb) {
-      const desenharBio = async (semImagens: boolean) => {
-        const resp = new ImageResponse(arteDaBio(pb, { semImagens }) as never, { width: LARGURA, height: ALTURA, fonts, headers });
+      const carregar = async (p: PreviaBio) => Promise.all(fontesDaArte(p).map(async (f) => ({
+        name: f.nome, data: await fetch(new URL(`/fonts/${f.arquivo}`, url.origin)).then((r) => {
+          if (!r.ok) throw new Error(`fonte ${f.arquivo}`);
+          return r.arrayBuffer();
+        }),
+        weight: f.peso, style: f.italico ? ("italic" as const) : ("normal" as const),
+      })));
+      const desenharBio = async (p: PreviaBio, semImagens: boolean) => {
+        const resp = new ImageResponse(arteDaBio(p, { semImagens }) as never, { width: LARGURA, height: ALTURA, fonts: await carregar(p), headers });
         const buf = await resp.arrayBuffer();
         return new Response(buf, { status: 200, headers: { "Content-Type": "image/png", ...headers } });
       };
-      try { return await desenharBio(false); } catch { try { return await desenharBio(true); } catch { /* genérica abaixo */ } }
+      for (const [p, sem] of [[pb, false], [pb, true], [previaNeutra(pb), true]] as const) {
+        try { return await desenharBio(p, sem); } catch { /* tenta a próxima */ }
+      }
     }
   }
 

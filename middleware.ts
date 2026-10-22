@@ -53,14 +53,15 @@ async function buscarBio(slug: string): Promise<DadosBio> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 2500);
   try {
-    const r = await fetch(`${SUPABASE_URL_PUBLICA}/rest/v1/rpc/get_public_profile_by_slug`, {
+    // Uma chamada só: dono, nome, cores e as seções no ar (get_bio_previa).
+    // Vale pra conta de criador e pra página que a agência monta.
+    const r = await fetch(`${SUPABASE_URL_PUBLICA}/rest/v1/rpc/get_bio_previa`, {
       method: "POST", signal: ctrl.signal,
       headers: { apikey: SUPABASE_ANON_PUBLICA, Authorization: `Bearer ${SUPABASE_ANON_PUBLICA}`, "Content-Type": "application/json" },
       body: JSON.stringify({ _slug: slug }),
     });
     if (!r.ok) return null;
-    const linhas = (await r.json()) as DadosBio[];
-    return Array.isArray(linhas) && linhas[0] ? linhas[0] : null;
+    return (await r.json()) as DadosBio;
   } catch { return null; } finally { clearTimeout(t); }
 }
 
@@ -76,7 +77,7 @@ async function previaDaBio(url: URL, slug: string): Promise<Response | undefined
   const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <title>${e(p.titulo)}</title>
 <meta name="description" content="${e(p.descricao)}">
-<meta property="og:type" content="profile">
+<meta property="og:type" content="${p.modelo === "classica" ? "profile" : "website"}">
 <meta property="og:site_name" content="${e(p.endereco)}">
 <meta property="og:locale" content="pt_BR">
 <meta property="og:url" content="${e(pagina)}">
