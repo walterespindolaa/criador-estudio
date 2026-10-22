@@ -63,6 +63,7 @@ import { BlocoPublico } from "@/components/bio/BlocoPublico";
 import { FormularioDePrevia } from "@/components/bio/FormParceria";
 import { EmPreviaContext } from "@/components/bio/SiteLoja";
 import { lerSocial, type SocialPublico } from "@/lib/bioCriadora";
+import { RESERVADOS } from "@/lib/previa-bio";
 import { corDeDestaque, corSobre, nomeDaMarcaSite } from "@/lib/bioBlocks";
 import type { BioBloco, EstiloBio } from "@/lib/bioBlocks";
 import { supabase } from "@/integrations/supabase/client";
@@ -838,6 +839,23 @@ function usePainelGrudado(topo = 16) {
 
 type AbaBio = "negocio" | "conteudo" | "visual" | "publicar" | "resultados";
 
+/** A arte do WhatsApp, pedida ao mesmo endereço que o WhatsApp usa. O carimbo
+ *  de 5 minutos casa com o cache do servidor: abrir a aba de novo depois de
+ *  salvar já traz a versão nova. Sem servidor (rodando local), some calada. */
+function ArteDoWhatsApp({ slug }: { slug: string }) {
+  const [falhou, setFalhou] = useState(false);
+  const [carregou, setCarregou] = useState(false);
+  const carimbo = Math.floor(Date.now() / 300_000).toString(36);
+  if (falhou) return <p className="mt-2 text-[12px] font-body text-muted-foreground">A prévia aparece aqui depois que a página estiver publicada.</p>;
+  return (
+    <div className="mt-2 rounded-xl overflow-hidden border border-border bg-muted/40 aspect-[1200/630] relative">
+      {!carregou && <span className="absolute inset-0 grid place-items-center text-[12px] font-body text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /></span>}
+      <img src={`/api/og?t=bio&k=${encodeURIComponent(slug)}&v=p${carimbo}`} alt="Prévia do link no WhatsApp"
+        className="w-full h-full object-cover" loading="lazy" onLoad={() => setCarregou(true)} onError={() => setFalhou(true)} />
+    </div>
+  );
+}
+
 /* A ordem é a do trabalho: monta, deixa com a cara da marca, publica, e só
    então acompanha. Quem entra pela segunda vez em diante costuma ir direto na
    primeira ou na última. */
@@ -983,6 +1001,8 @@ const LinkInBio = () => {
   const chaveSocial = useMemo(() => JSON.stringify(blocosSite
     .filter((b) => b.kind === "perfil_criadora" || b.kind === "videos" || b.kind === "midiakit")
     .map((b) => [b.kind, b.kind === "videos" ? b.data?.fonte : b.kind === "midiakit" ? b.data?.auto : b.data?.redes])), [blocosSite]);
+  // Trocou de página (outro cliente, outra conta): a seção aberta era da outra.
+  useEffect(() => { setBlocoAberto(null); }, [profile?.id]);
   const slugDaPrevia = profile?.bio_slug ?? "";
   const { data: socialDaPrevia } = useQuery({
     queryKey: ["bio-social-previa", slugDaPrevia, chaveSocial],
@@ -999,7 +1019,7 @@ const LinkInBio = () => {
   const isSavingAppearance = isOwnAccount ? updateProfile.isPending : savingAppearance;
 
   const [slug, setSlug] = useState("");
-  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "reservado">("idle");
   const [settings, setSettings] = useState<BioSettings>(DEFAULT_SETTINGS);
   // "Seu negócio" só existe no Site: trocou pro Clássico parado nele, volta pro Conteúdo.
   useEffect(() => { if (settings.layout !== "vitrine" && aba === "negocio") setAba("conteudo"); }, [settings.layout, aba]);
@@ -1049,6 +1069,9 @@ const LinkInBio = () => {
   useEffect(() => {
     const clean = normalizeSlug(slug);
     if (!clean) { setSlugStatus("idle"); return; }
+    // Nome de rota do app (login, app, signup...): o banco recusa, e avisar
+    // aqui poupa a pessoa de descobrir só na hora de salvar.
+    if (RESERVADOS.has(clean)) { setSlugStatus("reservado"); return; }
     const current = normalizeSlug(profile?.bio_slug ?? "");
     if (clean === current) { setSlugStatus("available"); return; }
     setSlugStatus("checking");
@@ -1233,6 +1256,10 @@ const LinkInBio = () => {
     }
     if (slugStatus === "taken") {
       toast.error("Esse nome de link já está em uso. Escolha outro.");
+      return;
+    }
+    if (slugStatus === "reservado" || RESERVADOS.has(cleanSlug)) {
+      toast.error("Esse nome é de uma página do sistema. Escolha outro.");
       return;
     }
     try {
@@ -1476,6 +1503,18 @@ const LinkInBio = () => {
                   </div>
                 )}
               </div>
+
+              {/* O ESTILO QUE ESTÁ NO AR. Clássico e Site guardam montagens
+                  separadas, e qual delas o link mostra é decidido pelo estilo
+                  SALVO. Trocar aqui sem salvar deixava a pessoa montando o Site
+                  com o link ainda no Clássico, sem entender por que nada mudava. */}
+              {profile && parseSettings(profile.bio_settings).layout !== settings.layout && (
+                <div role="status" className="mt-3 rounded-xl border border-amber-300/70 bg-amber-50 px-3 py-2 text-[12px] font-body text-amber-900 leading-snug">
+                  Você está editando o <b>{settings.layout === "vitrine" ? "Site" : "Clássico"}</b>, mas o link ainda mostra
+                  o <b>{settings.layout === "vitrine" ? "Clássico" : "Site"}</b>. Clique em <b>Salvar</b> pra trocar o que está no ar.
+                  Nada se perde: cada estilo guarda a sua montagem.
+                </div>
+              )}
 
               {/* AS ABAS. Rolam na horizontal no celular em vez de quebrar em
                   duas linhas e comer a altura da barra fixa. */}
@@ -2156,9 +2195,29 @@ const LinkInBio = () => {
                     {slugStatus === "taken" && (
                       <span className="text-destructive flex items-center gap-1"><X className="h-3 w-3" /> já está em uso, escolha outro</span>
                     )}
+                    {slugStatus === "reservado" && (
+                      <span className="text-destructive flex items-center gap-1"><X className="h-3 w-3" /> esse nome é de uma página do sistema, escolha outro</span>
+                    )}
                   </p>
                 )}
               </Card>
+              {/* COMO O LINK APARECE NO WHATSAPP. É a mesma imagem que o
+                  WhatsApp recebe, desenhada pelo servidor a partir do que está
+                  SALVO e no ar. Por isso só aparece com o endereço salvo e sem
+                  alteração pendente: mostrar a arte de antes seria mentir. */}
+              {profile?.bio_slug && !appearanceDirty && (
+                <Card className="p-4 md:p-5 rounded-2xl border-border">
+                  <Label className="text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground/80">
+                    Como o link aparece no WhatsApp
+                  </Label>
+                  <ArteDoWhatsApp slug={profile.bio_slug} />
+                  <p className="mt-2 text-[11px] font-body text-muted-foreground leading-snug">
+                    Muda sozinha quando você troca a página. Foto, título e números saem das seções no ar; enquanto faltar o essencial,
+                    aparece a versão neutra, com seu nome e a cor da marca. Quem já recebeu o link antes pode continuar vendo a anterior
+                    por um tempo: o WhatsApp guarda a prévia.
+                  </p>
+                </Card>
+              )}
             </Aba>
             )}
 

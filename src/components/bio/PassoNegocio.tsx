@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 export function PassoNegocio({ slugPublico, aoIrSecoes }: { slugPublico?: string | null; aoIrSecoes: () => void }) {
   const { blocos, isLoading, criar, atualizar } = useBioBlocks("site");
   const contato = blocos.find((b) => b.kind === "contato" && b.is_active) ?? blocos.find((b) => b.kind === "contato") ?? null;
-  const tel = telefoneDaPagina(blocos);
+  const tel = telefoneDaPagina(blocos.filter((b) => b.is_active));
   const usa = [
     { kind: "cardapio", nome: "Pedidos do cardápio" },
     { kind: "acao_fixa", nome: "Botão fixo" },
@@ -55,7 +55,7 @@ export function PassoNegocio({ slugPublico, aoIrSecoes }: { slugPublico?: string
         <label className="flex items-center justify-between gap-3 pt-4 mt-4 border-t border-border/60 cursor-pointer">
           <span className="text-[12.5px] font-body">
             <b className="block font-semibold">Mostrar o rodapé com esses dados</b>
-            <span className="text-muted-foreground">Desligado, os dados continuam valendo pros botões.</span>
+            <span className="text-muted-foreground">Desligado, o rodapé some e os botões deixam de usar este WhatsApp: a página pública só enxerga o que está no ar.</span>
           </span>
           <Switch checked={contato.is_active} onCheckedChange={(v) => atualizar.mutate({ id: contato.id, patch: { is_active: v } })} />
         </label>

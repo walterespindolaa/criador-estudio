@@ -33,6 +33,9 @@ export type DadosPreviaBio = {
   slug?: string | null;
   origem?: string | null;
   dono?: string | null;
+  /** Pastas de quem pode editar a página e que já aparecem nas fotos dela
+   *  (a gestora que montou a página do cliente sobe na pasta dela). */
+  pastas?: unknown;
   nome?: string | null;
   bio?: string | null;
   avatar?: string | null;
@@ -65,13 +68,15 @@ export type PreviaBio =
 
 /* ── ROTA ── */
 
-/** Primeiro trecho do caminho que nunca é bio (rotas do app e arquivos). */
-const RESERVADOS = new Set([
+/** Primeiro trecho do caminho que nunca é bio (rotas do app e arquivos).
+ *  A mesma lista está no banco (bio_slug_reservado), que recusa esses nomes
+ *  como endereço de bio: sem isso, criaclub.bio/login abriria o login. */
+export const RESERVADOS = new Set([
   "app", "api", "auth", "login", "signup", "cadastrar", "entrar", "onboarding", "obrigado", "termos",
   "privacidade", "excluir-dados", "reset-password", "socialmidia", "parceiro", "parceiros", "admin",
   "aprovar", "materiais", "roteiros", "cronograma", "proposta", "agendar", "cadastro", "acessos",
   "conectar", "p", "assets", "fonts", "icons", "favicon.ico", "manifest.webmanifest", "sw.js",
-  "robots.txt", "sitemap.xml",
+  "robots.txt", "sitemap.xml", "bio", "ativar", "comecar-agencia",
 ]);
 
 const SLUG = /^[a-z0-9][a-z0-9._-]{1,59}$/i;
@@ -106,16 +111,18 @@ export const STORAGE_PUBLICO = "https://ecbzfjzoqidowrsfsfih.supabase.co/storage
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const BUNNY_CAPA = "vz-86788381-03e.b-cdn.net";
 
-/** Foto que pode ir pra arte: do nosso storage, na pasta do DONO da página.
- *  Qualquer outra (de fora, de outra pasta, link assinado) volta null. */
-export function imagemDoDono(u: unknown, dono: string): string | null {
-  if (typeof u !== "string" || !UUID.test(dono)) return null;
+/** Foto que pode ir pra arte: do nosso storage, na pasta do dono da página
+ *  ou de quem pode editá-la (lista que vem do banco). Qualquer outra (de
+ *  fora, de outra pasta, link assinado) volta null. */
+export function imagemDoDono(u: unknown, donos: string | string[]): string | null {
+  const lista = (Array.isArray(donos) ? donos : [donos]).filter((x) => typeof x === "string" && UUID.test(x)).map((x) => x.toLowerCase());
+  if (typeof u !== "string" || !lista.length) return null;
   const t = u.trim();
   if (t.length > 500 || /[\s"'<>\\]/.test(t) || t.includes("..") || t.includes("?") || t.includes("#")) return null;
   if (!t.startsWith(STORAGE_PUBLICO)) return null;
   const resto = t.slice(STORAGE_PUBLICO.length).split("/");
   if (resto.length < 3 || !["bio-media", "avatars"].includes(resto[0])) return null;
-  if (resto[1].toLowerCase() !== dono.toLowerCase()) return null;
+  if (!lista.includes(resto[1].toLowerCase())) return null;
   return resto.slice(2).every((p) => /^[A-Za-z0-9._-]+$/.test(p)) ? t : null;
 }
 
@@ -185,7 +192,8 @@ export function montarPreviaBio(d: DadosPreviaBio, slug: string): PreviaBio | nu
   const topo = obj(aj.header);
   const blocos = arr(d.blocos).map(obj).map((b) => ({ kind: String(b.kind ?? ""), data: obj(b.data) }));
   const achar = (k: string) => blocos.find((b) => b.kind === k)?.data;
-  const foto = (u: unknown) => imagemDoDono(u, dono);
+  const pastas = [dono, ...arr(d.pastas).filter((x): x is string => typeof x === "string" && UUID.test(x))];
+  const foto = (u: unknown) => imagemDoDono(u, pastas);
 
   const corMarca = cor(aj.buttonColor, "#17140F");
   const corTexto = cor(aj.buttonTextColor, "#FFF6EA");
@@ -211,11 +219,13 @@ export function montarPreviaBio(d: DadosPreviaBio, slug: string): PreviaBio | nu
     ...base, modelo: "neutra", descricao: frase ?? `O site de ${nome}.`, frase,
     foto: foto(topo.avatar) ?? foto(d.avatar) ?? foto(capa?.imagem) ?? foto(achar("perfil_criadora")?.foto),
   });
-  const primeiro = blocos[0]?.kind;
+  // O botão fixo não ocupa lugar na página: não é ele que define o topo.
+  const topoDaPagina = blocos.find((b) => b.kind !== "acao_fixa");
+  const primeiro = topoDaPagina?.kind;
 
   /* Especialista: capa com vídeo ou foto e o nome em assinatura. */
-  if (primeiro === "apresentacao") {
-    const a = blocos[0].data;
+  if (primeiro === "apresentacao" && topoDaPagina) {
+    const a = topoDaPagina.data;
     const imagem = (a.midia === "imagem" ? foto(a.imagem) : null) ?? posterDoVideo(a.video_guid) ?? foto(a.imagem);
     const nomeAss = texto(a.nome, 30) ?? nome;
     const profissao = texto(a.profissao, 40);
@@ -235,8 +245,8 @@ export function montarPreviaBio(d: DadosPreviaBio, slug: string): PreviaBio | nu
   }
 
   /* Criadora: foto grande, frase e o número das redes. */
-  if (primeiro === "perfil_criadora") {
-    const c = blocos[0].data;
+  if (primeiro === "perfil_criadora" && topoDaPagina) {
+    const c = topoDaPagina.data;
     const imagem = foto(c.foto);
     const nomeC = texto(c.nome, 30) ?? nome;
     const frase = texto(c.frase, 90);

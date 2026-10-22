@@ -19,6 +19,22 @@ const sbFrom = (table: string) => (supabase as any).from(table);
 const tabelaFaltando = (msg: string) => /does not exist|schema cache|could not find/i.test(msg ?? "");
 const AVISO_MIGRATION = "Rode a migration dos blocos (20260825000004) no Supabase pra liberar isso.";
 
+/** O que um modelo insere, sem perder o "Seu negócio": o Contato novo herda
+ *  o que o atual já tem preenchido, e "juntar" não cria um segundo Contato.
+ *  Pura, pra teste. */
+export function blocosDoModelo(
+  novos: { kind: TipoBloco; data: DadosBloco }[],
+  atuais: { kind: string; data: DadosBloco | null; is_active: boolean }[],
+  modo: "trocar" | "juntar",
+): { kind: TipoBloco; data: DadosBloco }[] {
+  const contatoAtual = atuais.find((b) => b.kind === "contato" && b.is_active) ?? atuais.find((b) => b.kind === "contato");
+  const preenchido = Object.fromEntries(Object.entries(contatoAtual?.data ?? {})
+    .filter(([, v]) => (typeof v === "string" ? v.trim() !== "" : v !== null && v !== undefined)));
+  return novos
+    .filter((b) => modo === "trocar" || b.kind !== "contato" || !contatoAtual)
+    .map((b) => (b.kind === "contato" ? { ...b, data: { ...b.data, ...preenchido } } : b));
+}
+
 export function useBioBlocks(estilo: EstiloBio) {
   const alvo = useBioAlvo();
   const { activeAccountId } = useActiveAccount();
@@ -183,7 +199,13 @@ export function useBioBlocks(estilo: EstiloBio) {
     mutationFn: async ({ novos, modo }: { novos: { kind: TipoBloco; data: DadosBloco }[]; modo: "trocar" | "juntar" }) => {
       if (!userId) throw new Error("Sem sessão");
       const trocar = modo === "trocar";
-      const linhas = novos.map((b, i) => ({
+      /* SEU NEGÓCIO NÃO SE PERDE AO TROCAR DE MODELO. O Contato guarda nome,
+         WhatsApp, e-mail e endereço, que as outras seções usam. Antes, trocar
+         de modelo desligava o Contato preenchido e punha um VAZIO no ar: a
+         página perdia o WhatsApp sem ninguém perceber. Agora o modelo novo
+         herda o que já estava preenchido; e "juntar" não cria um segundo. */
+      const daqui = blocosDoModelo(novos, blocos, modo);
+      const linhas = daqui.map((b, i) => ({
         user_id: userId, page_id: pageId, estilo,
         kind: b.kind, data: b.data,
         position: trocar ? i : blocos.length + i,
@@ -193,7 +215,7 @@ export function useBioBlocks(estilo: EstiloBio) {
         // Primeiro tira os antigos do ar e abre espaço no topo; se o insert
         // falhar depois, a página fica sem nada no ar mas nada se perde.
         const r = await Promise.all(blocos.map((b, i) => {
-          const s = sbFrom("bio_blocks").update({ is_active: false, position: novos.length + i }).eq("id", b.id);
+          const s = sbFrom("bio_blocks").update({ is_active: false, position: daqui.length + i }).eq("id", b.id);
           return pageId ? s.eq("page_id", pageId) : s.eq("user_id", userId);
         }));
         const falhou = r.find((x: { error?: unknown }) => x?.error);

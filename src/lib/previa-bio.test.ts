@@ -166,3 +166,23 @@ describe("formato Clássico", () => {
     expect(p.descricao.length).toBeLessThanOrEqual(110);
   });
 });
+
+describe("revisão de ponta a ponta", () => {
+  it("foto de quem edita a página (gestora, time) entra; de estranho não", () => {
+    const GESTORA = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+    const d = site([{ kind: "capa", data: { layout: "foto_cheia", titulo: "Loja", imagem: foto(GESTORA) } }], { pastas: [GESTORA] });
+    expect(montarPreviaBio(d, "nome")!.modelo).toBe("loja");
+    const sem = site([{ kind: "capa", data: { layout: "foto_cheia", titulo: "Loja", imagem: foto(GESTORA) } }], { pastas: ["lixo", 3] });
+    expect(montarPreviaBio(sem, "nome")!.modelo).toBe("neutra");
+  });
+  it("botão fixo em primeiro não muda o tipo da página", () => {
+    const p = montarPreviaBio(site([
+      { kind: "acao_fixa", data: { texto: "Agendar" } },
+      { kind: "perfil_criadora", data: { foto: foto(DONO), nome: "Bia" } },
+    ]), "nome")!;
+    expect(p.modelo).toBe("criadora");
+  });
+  it("nomes de rota do app não são endereço de bio", () => {
+    for (const r of ["/bio", "/ativar", "/comecar-agencia", "/login", "/signup"]) expect(lerRotaBio(r), r).toBeNull();
+  });
+});

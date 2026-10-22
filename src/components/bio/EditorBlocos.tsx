@@ -1472,13 +1472,14 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero, 
   const { blocos, isLoading, criar, atualizar, excluir, excluirTodos, duplicar, reordenar, aplicarModelo } = useBioBlocks(estilo);
   /* O telefone mora no bloco "Contato e rodapé" e é reaproveitado pelos itens
      pra montar o link do WhatsApp: um telefone só, num lugar só. */
-  const telefoneDoContato = txt(blocos.find((b) => b.kind === "contato")?.data ?? {}, "telefone") || null;
+  const telefoneDoContato = txt((blocos.find((b) => b.kind === "contato" && b.is_active) ?? blocos.find((b) => b.kind === "contato"))?.data ?? {}, "telefone") || null;
   const secoesDaPagina = useMemo(() => ancorasDaPagina(blocos.map((b) => b.kind)), [blocos]);
   const [abertoLocal, setAbertoLocal] = useState<string | null>(null);
   const aberto = abertoId !== undefined ? abertoId : abertoLocal;
   const setAberto = (id: string | null) => { if (aoAbrirBloco) aoAbrirBloco(id); else setAbertoLocal(id); };
   const ehSite = estilo === "site";
-  const telefoneDaPag = useMemo(() => telefoneDaPagina(blocos), [blocos]);
+  // Só o que está no ar conta: a página pública não enxerga bloco desligado.
+  const telefoneDaPag = useMemo(() => telefoneDaPagina(blocos.filter((b) => b.is_active)), [blocos]);
   const status = useMemo(() => {
     const m = new Map<string, StatusSecao>();
     if (ehSite) for (const b of blocos) m.set(b.id, statusDaSecao(b, telefoneDaPag));

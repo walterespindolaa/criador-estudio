@@ -526,7 +526,10 @@ export function SiteBio({
   /* Página de especialista: quando a primeira coisa é a capa com vídeo e
      assinatura, ela ocupa a tela desde o topo. O menu branco em cima cortaria
      a pessoa no meio da testa e repetiria o nome que a assinatura já mostra. */
-  const capaImersiva = blocos[0]?.kind === "apresentacao" || blocos[0]?.kind === "perfil_criadora";
+  // O botão fixo não ocupa lugar: se ele estiver em primeiro na lista, quem
+  // define o topo é a seção logo depois dele.
+  const topoKind = blocos.find((b) => b.kind !== "acao_fixa")?.kind;
+  const capaImersiva = topoKind === "apresentacao" || topoKind === "perfil_criadora";
   const temChamada = blocos.some((b) => b.kind === "chamada");
   const sf = social ?? null;
   // Um botão fixo só. Dois presos no pé da tela, um em cima do outro, é ruído.
