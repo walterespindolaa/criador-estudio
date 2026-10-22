@@ -331,6 +331,9 @@ export function nomeDaMarcaSite(
 ): string {
   const digitado = (nomeDoCampo ?? "").trim();
   if (digitado) return digitado;
+  // "Nome do negócio" do passo Seu negócio mora no bloco Contato.
+  const doNegocio = txt(blocos.find((b) => b.kind === "contato")?.data ?? {}, "titulo").trim();
+  if (doNegocio) return doNegocio;
   const capa = blocos.find((b) => b.kind === "capa");
   const tituloDaCapa = txt(capa?.data ?? {}, "titulo").trim();
   // Título comprido é manchete, não marca: no menu ele viraria uma linha só de

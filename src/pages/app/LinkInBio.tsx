@@ -53,6 +53,7 @@ import { useBioLinks, type BioLink } from "@/hooks/useBioLinks";
 import { useBioAlvo } from "@/contexts/BioAlvoContext";
 import { useBioBlocks } from "@/hooks/useBioBlocks";
 import { EditorBlocos } from "@/components/bio/EditorBlocos";
+import { PassoNegocio } from "@/components/bio/PassoNegocio";
 import { SiteBio, type ItemLite } from "@/components/bio/SiteBio";
 import { useBioItems } from "@/hooks/useBioItems";
 import type { AparenciaModelo } from "@/lib/bioTemplates";
@@ -102,9 +103,13 @@ function clamp01(n: number, max: number): number {
 
 // Estilo <style> escopado: só afeta elementos dentro de .bio-font-scope.
 // stack vem de whitelist, então é seguro.
-function BioFontStyle({ stack }: { stack: string | null }) {
-  if (!stack) return null;
-  return <style>{`.bio-font-scope,.bio-font-scope *:not(.bio-fonte-livre){font-family:${stack} !important}`}</style>;
+function BioFontStyle({ stack, titulos }: { stack: string | null; titulos?: string | null }) {
+  if (!stack && !titulos) return null;
+  // Títulos com fonte própria: a regra é mais específica que a do texto, então
+  // vence. As duas pilhas saem da lista fechada, nada digitado entra aqui.
+  const css = (stack ? `.bio-font-scope,.bio-font-scope *:not(.bio-fonte-livre){font-family:${stack} !important}` : "")
+    + (titulos ? `.bio-font-scope .font-display:not(.bio-fonte-livre),.bio-font-scope h1:not(.bio-fonte-livre),.bio-font-scope h2:not(.bio-fonte-livre),.bio-font-scope h3:not(.bio-fonte-livre){font-family:${titulos} !important}` : "");
+  return <style>{css}</style>;
 }
 
 // Sobreposição escura opcional pra legibilidade sobre imagem/gradiente.
@@ -225,6 +230,8 @@ export type BioSettings = {
   bgImagePosition: BgImagePosition;
   bgOverlay: number;
   fontFamily: string;
+  /** Fonte só dos títulos (Modo Site). Vazio = a mesma do texto. */
+  fontTitulos: string;
   buttonStyle: ButtonStyle;
   buttonColor: string;
   buttonTextColor: string;
@@ -265,6 +272,7 @@ const DEFAULT_SETTINGS: BioSettings = {
   bgImagePosition: "center",
   bgOverlay: 0,
   fontFamily: "",
+  fontTitulos: "",
   buttonStyle: "rounded",
   buttonColor: "#FFFFFF",
   buttonTextColor: "#1F2937",
@@ -436,6 +444,7 @@ function parseSettings(raw: unknown): BioSettings {
     bgImagePosition,
     bgOverlay,
     fontFamily,
+    fontTitulos: typeof t.fontTitulos === "string" && fontStackFor(t.fontTitulos) ? t.fontTitulos : "",
     buttonStyle,
     buttonColor: typeof t.buttonColor === "string" ? t.buttonColor : DEFAULT_SETTINGS.buttonColor,
     buttonTextColor:
@@ -827,7 +836,7 @@ function usePainelGrudado(topo = 16) {
   return { trilho, painel };
 }
 
-type AbaBio = "conteudo" | "visual" | "publicar" | "resultados";
+type AbaBio = "negocio" | "conteudo" | "visual" | "publicar" | "resultados";
 
 /* A ordem é a do trabalho: monta, deixa com a cara da marca, publica, e só
    então acompanha. Quem entra pela segunda vez em diante costuma ir direto na
@@ -836,6 +845,17 @@ const ABAS_BIO: { id: AbaBio; nome: string }[] = [
   { id: "conteudo", nome: "Conteúdo" },
   { id: "visual", nome: "Visual" },
   { id: "publicar", nome: "Publicar" },
+  { id: "resultados", nome: "Resultados" },
+];
+
+/* Modo Site (22/10/2026, editor aprovado no mockup): quatro passos numerados,
+   na ordem em que a página fica pronta. "Seu negócio" vem primeiro porque é
+   dele que as seções pegam o WhatsApp. Resultados fica no fim, fora da conta. */
+const ABAS_SITE: { id: AbaBio; nome: string; n?: string }[] = [
+  { id: "negocio", nome: "Seu negócio", n: "1" },
+  { id: "conteudo", nome: "Seções", n: "2" },
+  { id: "visual", nome: "Aparência", n: "3" },
+  { id: "publicar", nome: "Publicar", n: "4" },
   { id: "resultados", nome: "Resultados" },
 ];
 
@@ -875,6 +895,14 @@ const LinkInBio = () => {
   const [aba, setAba] = useState<AbaBio>("conteudo");
   const { trilho: trilhoDaPrevia, painel: painelDaPrevia } = usePainelGrudado();
   const [previaCelular, setPreviaCelular] = useState(false);
+  /* Seção aberta no editor do Site. Mora aqui porque a prévia também abre:
+     tocar numa parte da prévia leva pro formulário dela. */
+  const [blocoAberto, setBlocoAberto] = useState<string | null>(null);
+  const editarPelaPrevia = (id: string) => {
+    setBlocoAberto(id);
+    setAba("conteudo");
+    setPreviaCelular(false);
+  };
   const { user } = useAuth();
   const alvo = useBioAlvo();
   const { activeAccountId } = useActiveAccount();
@@ -973,6 +1001,8 @@ const LinkInBio = () => {
   const [slug, setSlug] = useState("");
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const [settings, setSettings] = useState<BioSettings>(DEFAULT_SETTINGS);
+  // "Seu negócio" só existe no Site: trocou pro Clássico parado nele, volta pro Conteúdo.
+  useEffect(() => { if (settings.layout !== "vitrine" && aba === "negocio") setAba("conteudo"); }, [settings.layout, aba]);
   const { leads, isLoading: leadsLoading, deleteLead } = useBioLeads();
   const leadsNovos = useLeadsNovos(leads, aba);
   const exportLeadsCsv = () => {
@@ -1268,6 +1298,7 @@ const LinkInBio = () => {
       buttonStyle: a.buttonStyle,
       cardColor: a.cardColor, cardTextColor: a.cardTextColor,
       fontFamily: a.fontFamily,
+      fontTitulos: a.fontTitulos ?? "",
     }));
     setAppearanceDirty(true);
     toast.success("Modelo aplicado. Confira a prévia e clique em Salvar aparência.");
@@ -1452,7 +1483,7 @@ const LinkInBio = () => {
                   solto no creme e a barra inteira sumia. Agora se lê como um
                   seletor mesmo antes de alguém clicar. */}
               <div className="mt-3 -mx-1 px-1 flex gap-1.5 overflow-x-auto pb-0.5">
-                {ABAS_BIO.map((t) => {
+                {(settings.layout === "vitrine" ? ABAS_SITE : ABAS_BIO).map((t: { id: AbaBio; nome: string; n?: string }) => {
                   const ativa = aba === t.id;
                   const alerta = t.id === "resultados" && leadsNovos > 0;
                   return (
@@ -1467,6 +1498,8 @@ const LinkInBio = () => {
                           ? "bg-primary text-primary-foreground border-primary shadow-sm"
                           : "border-border bg-background text-muted-foreground hover:text-primary hover:border-primary/40 hover:bg-primary/[0.06]",
                       )}>
+                      {t.n && <span aria-hidden className={cn("mr-1.5 inline-grid place-items-center w-[18px] h-[18px] rounded-full text-[10.5px] font-bold align-[1px]",
+                        ativa ? "bg-primary-foreground/25" : "bg-primary/10 text-primary")}>{t.n}</span>}
                       {t.nome}
                       {alerta && (
                         <span
@@ -1481,13 +1514,22 @@ const LinkInBio = () => {
               </div>
             </div>
 
+            {aba === "negocio" && settings.layout === "vitrine" && (
+            <Aba marca="bio-negocio" explica="Os dados que valem pra página inteira. As seções pegam daqui o WhatsApp e o nome.">
+              <PassoNegocio slugPublico={slug || profile?.bio_slug} aoIrSecoes={() => setAba("conteudo")} />
+            </Aba>
+            )}
+
             {aba === "conteudo" && (
             <Aba marca="bio-conteudo"
-              explica="Cada pedaço da página é um bloco: link, texto, vídeo, formulário, endereço com mapa. Adicione, arraste pra ordenar e ligue quando estiver pronto.">
+              explica={settings.layout === "vitrine"
+                ? "As seções na ordem da página. Cada uma diz se está pronta, se ainda tem texto de exemplo ou o que falta. Toque numa parte da prévia pra editar."
+                : "Cada pedaço da página é um bloco: link, texto, vídeo, formulário, endereço com mapa. Adicione, arraste pra ordenar e ligue quando estiver pronto."}>
               {/* O CAMINHO EM 3 PASSOS (pedido do Walter, 01/09: o fluxo estava
                   "mal redigido e difícil de compreender"). Um parágrafo denso
                   virou três passos curtos e numerados: escolher o estilo,
                   montar os blocos, ajustar e publicar. É o mapa da tela. */}
+              {settings.layout === "classic" && (
               <div className="rounded-2xl border border-primary/15 bg-primary/[0.04] px-4 py-3 space-y-2">
                 {[
                   <>Escolha o estilo lá em cima: <strong className="font-semibold text-foreground/85">Clássico</strong> é
@@ -1507,6 +1549,7 @@ const LinkInBio = () => {
                   </p>
                 ))}
               </div>
+              )}
               {/* ── 1 · O TOPO DA PÁGINA (só no Clássico) ──
                   A aba agora segue a ordem da própria página: primeiro o que o
                   visitante vê ao abrir (banner, foto, nome, bio e redes),
@@ -1621,17 +1664,14 @@ const LinkInBio = () => {
               </Card>
               )}
 
-              {/* No Site o topo é a Capa: o nome e a foto do menu saem dela. */}
-              {settings.layout === "vitrine" && (
-                <p className="text-[11.5px] font-body text-muted-foreground leading-snug px-0.5">
-                  O nome e a foto que aparecem no menu do site saem do <strong className="text-foreground/80">título
-                  da Capa</strong> e da foto do seu perfil. É a primeira seção aqui embaixo.
-                </p>
-              )}
+
 
               <Card className="p-4 md:p-5 rounded-2xl border-border">
                 <EditorBlocos key={estiloBlocos} estilo={estiloBlocos} aoAplicarAparencia={aplicarAparenciaDoModelo}
-                  slugPublico={slug || profile?.bio_slug} numero={settings.layout === "classic" ? "2" : "1"} />
+                  slugPublico={slug || profile?.bio_slug} numero={settings.layout === "classic" ? "2" : undefined}
+                  abertoId={settings.layout === "vitrine" ? blocoAberto : undefined}
+                  aoAbrirBloco={settings.layout === "vitrine" ? setBlocoAberto : undefined}
+                  aoIrNegocio={() => setAba("negocio")} />
               </Card>
 
               {settings.layout === "classic" && blocosClassico.length === 0 && sortedLinks.length > 0 && (
@@ -1742,6 +1782,29 @@ const LinkInBio = () => {
                   </div>
                     </PopoverContent>
                   </Popover>
+                  {/* Site: título e texto podem ter letras diferentes. Serifa no
+                      título e texto sem serifa é o que faz a página editorial
+                      ficar elegante sem cansar na leitura. */}
+                  {settings.layout === "vitrine" && (
+                    <div className="space-y-1.5 pt-2">
+                      <Label className="text-[13px] font-display font-semibold">Fonte dos títulos</Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button type="button" onClick={() => patchSettings({ fontTitulos: "" })}
+                          className={cn("rounded-xl border px-3 py-1.5 text-[12.5px] min-h-[36px]",
+                            settings.fontTitulos === "" ? "border-primary bg-primary/10" : "border-border hover:border-primary/30")}>
+                          Igual ao texto
+                        </button>
+                        {BIO_FONTS.filter((f) => f.value !== "Grand Hotel").map((f) => (
+                          <button key={f.value} type="button" onClick={() => patchSettings({ fontTitulos: f.value })}
+                            className={cn("rounded-xl border px-3 py-1.5 text-[13px] min-h-[36px]",
+                              settings.fontTitulos === f.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30")}
+                            style={{ fontFamily: f.stack }}>
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Themes (presets) */}
@@ -2194,7 +2257,8 @@ const LinkInBio = () => {
               </p>
               <BioPreview profile={profile} links={activeLinks}
                 blocos={settings.layout === "vitrine" ? blocosSite : blocosClassico}
-                produtos={produtosDoSite} posts={postsDoSite} settings={settings} social={socialDaPrevia ?? null} />
+                produtos={produtosDoSite} posts={postsDoSite} settings={settings} social={socialDaPrevia ?? null}
+                aoEditar={editarPelaPrevia} destacado={aba === "conteudo" ? blocoAberto : null} />
             </Card>
            </div>
           </div>
@@ -2216,7 +2280,8 @@ const LinkInBio = () => {
             <div className="flex-1 overflow-y-auto px-4 pb-8">
               <BioPreview profile={profile} links={activeLinks}
                 blocos={settings.layout === "vitrine" ? blocosSite : blocosClassico}
-                produtos={produtosDoSite} posts={postsDoSite} settings={settings} social={socialDaPrevia ?? null} />
+                produtos={produtosDoSite} posts={postsDoSite} settings={settings} social={socialDaPrevia ?? null}
+                aoEditar={editarPelaPrevia} destacado={aba === "conteudo" ? blocoAberto : null} />
             </div>
           </SheetContent>
         </Sheet>
@@ -2503,9 +2568,22 @@ type PreviewProps = {
   posts?: ItemLite[];
   settings: BioSettings;
   social?: SocialPublico | null;
+  aoEditar?: (id: string) => void;
+  destacado?: string | null;
 };
 
-const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produtos = [], posts = [], settings, social = null }: PreviewProps) {
+const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produtos = [], posts = [], settings, social = null, aoEditar, destacado = null }: PreviewProps) {
+  /* A seção aberta no editor rola pra vista dentro do celular da prévia. Só
+     a caixa da prévia rola: scrollIntoView arrastaria a página toda junto. */
+  const caixaPrevia = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const caixa = caixaPrevia.current;
+    if (!caixa || !destacado) return;
+    const alvo = caixa.querySelector<HTMLElement>(`[data-bloco="${destacado}"]`);
+    if (!alvo) return;
+    const seco = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    caixa.scrollTo({ top: Math.max(0, alvo.offsetTop - 12), behavior: seco ? "auto" : "smooth" });
+  }, [destacado]);
   const radius = radiusFor(settings.buttonStyle);
   const isOutline = settings.buttonStyle === "outline";
   const hasSocials = SOCIAL_FIELDS.some((f) => settings.socialLinks[f.key].trim());
@@ -2524,8 +2602,8 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
     const corDestaque = corDeDestaque(settings.buttonColor);
     return (
       <div className="w-[300px] mx-auto bg-white rounded-[40px] border-[8px] border-gray-800 p-2 shadow-2xl">
-        <BioFontStyle stack={fontStack} />
-        <div className="bio-font-scope w-full h-[560px] rounded-[32px] overflow-y-auto overflow-x-hidden bg-white">
+        <BioFontStyle stack={fontStack} titulos={fontStackFor(settings.fontTitulos)} />
+        <div ref={caixaPrevia} className="bio-font-scope relative w-full h-[560px] rounded-[32px] overflow-y-auto overflow-x-hidden bg-white">
           {blocos.length === 0 ? (
             <div className="h-full grid place-items-center px-6 text-center">
               <p className="text-xs font-body text-gray-500">
@@ -2535,7 +2613,7 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
           ) : (
             <EmPreviaContext.Provider value={true}>
             <SiteBio
-              social={social}
+              social={social} aoEditar={aoEditar} destacado={destacado}
               blocos={blocos.filter((b) => b.is_active).map((b) => ({ id: b.id, kind: b.kind, data: b.data ?? {}, position: b.position }))}
               marca={{
                 nome: nomeDaMarcaSite(blocos, settings.header?.name, profile?.name),
@@ -2562,7 +2640,7 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
 
   return (
     <div className="w-[300px] mx-auto bg-white rounded-[40px] border-[8px] border-gray-800 p-2 shadow-2xl">
-      <BioFontStyle stack={fontStack} />
+      <BioFontStyle stack={fontStack} titulos={fontStackFor(settings.fontTitulos)} />
       <div
         className="bio-font-scope relative w-full h-[560px] rounded-[32px] overflow-y-auto"
         style={backgroundStyle(settings)}

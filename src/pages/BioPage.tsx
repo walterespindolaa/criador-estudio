@@ -45,9 +45,13 @@ function clamp01(n: number, max: number): number {
 
 // Estilo <style> escopado: só afeta elementos dentro de .bio-font-scope,
 // sem tocar no resto do app. stack vem de whitelist, então é seguro.
-function BioFontStyle({ stack }: { stack: string | null }) {
-  if (!stack) return null;
-  return <style>{`.bio-font-scope,.bio-font-scope *:not(.bio-fonte-livre){font-family:${stack} !important}`}</style>;
+function BioFontStyle({ stack, titulos }: { stack: string | null; titulos?: string | null }) {
+  if (!stack && !titulos) return null;
+  // Títulos com fonte própria: a regra é mais específica que a do texto, então
+  // vence. As duas pilhas saem da lista fechada, nada digitado entra aqui.
+  const css = (stack ? `.bio-font-scope,.bio-font-scope *:not(.bio-fonte-livre){font-family:${stack} !important}` : "")
+    + (titulos ? `.bio-font-scope .font-display:not(.bio-fonte-livre),.bio-font-scope h1:not(.bio-fonte-livre),.bio-font-scope h2:not(.bio-fonte-livre),.bio-font-scope h3:not(.bio-fonte-livre){font-family:${titulos} !important}` : "");
+  return <style>{css}</style>;
 }
 
 // Sobreposição escura opcional pra dar legibilidade sobre imagem/gradiente.
@@ -167,6 +171,8 @@ type BioSettings = {
   bgImagePosition: BgImagePosition;
   bgOverlay: number;
   fontFamily: string;
+  /** Fonte só dos títulos (Modo Site). Vazio = a mesma do texto. */
+  fontTitulos: string;
   buttonStyle: ButtonStyle;
   buttonColor: string;
   buttonTextColor: string;
@@ -197,6 +203,7 @@ const DEFAULT_SETTINGS: BioSettings = {
   bgImagePosition: "center",
   bgOverlay: 0,
   fontFamily: "",
+  fontTitulos: "",
   buttonStyle: "rounded",
   buttonColor: "#FFFFFF",
   buttonTextColor: "#1F2937",
@@ -325,6 +332,7 @@ function parseSettings(raw: unknown): BioSettings {
     bgImagePosition,
     bgOverlay,
     fontFamily,
+    fontTitulos: typeof t.fontTitulos === "string" && fontStackFor(t.fontTitulos) ? t.fontTitulos : "",
     buttonStyle,
     buttonColor: typeof t.buttonColor === "string" ? t.buttonColor : DEFAULT_SETTINGS.buttonColor,
     buttonTextColor:
@@ -785,7 +793,7 @@ const ConteudoDaBio = () => {
     }
     return (
       <>
-        <BioFontStyle stack={fontStack} />
+        <BioFontStyle stack={fontStack} titulos={fontStackFor(settings.fontTitulos)} />
         <div className="bio-font-scope">
           <PaginaItem
             item={item} marca={marcaSite}
@@ -803,7 +811,7 @@ const ConteudoDaBio = () => {
     if (blocos.length > 0) {
       return (
         <>
-          <BioFontStyle stack={fontStack} />
+          <BioFontStyle stack={fontStack} titulos={fontStackFor(settings.fontTitulos)} />
           <div className="bio-font-scope">
             <SiteBio
               blocos={blocos} marca={marcaSite} produtos={produtos} posts={posts}
@@ -832,7 +840,7 @@ const ConteudoDaBio = () => {
       className="bio-font-scope relative min-h-[100dvh] w-full px-5 py-10 md:py-16 flex flex-col items-center"
       style={backgroundStyle(settings)}
     >
-      <BioFontStyle stack={fontStack} />
+      <BioFontStyle stack={fontStack} titulos={fontStackFor(settings.fontTitulos)} />
       <BgOverlay amount={settings.bgOverlay} />
       {/* my-auto (e não justify-center): página com poucos links deixava um
           vazio enorme embaixo, e justify-center num flex que estoura a tela
@@ -1190,7 +1198,7 @@ function VitrineView({
 
   return (
     <div className="bio-font-scope relative min-h-screen w-full flex flex-col items-center" style={vitrineBg}>
-      <BioFontStyle stack={fontStack} />
+      <BioFontStyle stack={fontStack} titulos={fontStackFor(settings.fontTitulos)} />
       <BgOverlay amount={settings.bgOverlay} />
       <div className="relative z-10 w-full max-w-[520px] pb-10 md:pt-6">
         {/* Capa */}

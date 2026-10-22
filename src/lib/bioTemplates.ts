@@ -37,6 +37,8 @@ export type AparenciaModelo = {
   cardColor: string;
   cardTextColor: string;
   fontFamily: string;
+  /** Fonte só dos títulos. Sem ela, a mesma do texto. */
+  fontTitulos?: string;
 };
 
 export type ModeloBio = {
@@ -187,7 +189,7 @@ export const MODELOS: ModeloBio[] = [
     aparencia: {
       bgType: "color", bgColor: "#F6F3EE", bgGradient: null,
       buttonColor: "#1F4D3A", buttonTextColor: "#FFFFFF", buttonStyle: "pill",
-      cardColor: "#FFFFFF", cardTextColor: "#1E2A24", fontFamily: "DM Serif Display",
+      cardColor: "#FFFFFF", cardTextColor: "#1E2A24", fontFamily: "Outfit", fontTitulos: "DM Serif Display",
     },
     blocos: [
       { kind: "capa", data: {
@@ -317,7 +319,7 @@ export const MODELOS: ModeloBio[] = [
     aparencia: {
       bgType: "color", bgColor: "#FFF4EF", bgGradient: null,
       buttonColor: "#E2471F", buttonTextColor: "#FFFFFF", buttonStyle: "rounded",
-      cardColor: "#FFFFFF", cardTextColor: "#1A1A1A", fontFamily: "Bricolage Grotesque",
+      cardColor: "#FFFFFF", cardTextColor: "#1A1A1A", fontFamily: "Outfit", fontTitulos: "Bricolage Grotesque",
     },
     blocos: [
       { kind: "perfil_criadora", data: {

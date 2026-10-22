@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Instagram, Mail, MapPin, Menu, Phone, Quote, X } from "lucide-react";
 import { BlocoPublico, type VisualBio } from "@/components/bio/BlocoPublico";
 import {
-  alvoDoLink, bool, faltaNoBloco, linkDoBotao, linkSeguro, lista, linkWhatsapp, precoVisivel, txt, type DadosBloco,
+  alvoDoLink, bool, faltaNoBloco, metaDoBloco, linkDoBotao, linkSeguro, lista, linkWhatsapp, precoVisivel, txt, type DadosBloco,
 } from "@/lib/bioBlocks";
 import { TextoRico } from "@/lib/textoRico";
 import { Rotulo, Secao, type MarcaSite } from "@/components/bio/SecaoSite";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import { BarraAcaoFixa, SecaoApresentacao, SecaoAtendimento, SecaoNumeros } from "@/components/bio/SiteEspecialista";
 import { CapaVitrine, FaixaVantagens, SecaoCardapio, SecaoDestaque, SecaoHorarios, useStatusDaLoja } from "@/components/bio/SiteLoja";
-import type { LinhaPedido } from "@/lib/bioLoja";
+import { telefoneDaPagina, type LinhaPedido } from "@/lib/bioLoja";
 import {
   CapaEditorial, DepoimentoGrande, SecaoChamada, SecaoEtapas, SecaoPerguntas, SecaoPraQuem, SecaoServicos,
 } from "@/components/bio/SiteConsultoria";
@@ -446,12 +446,16 @@ function SeloCria({ escuro }: { escuro?: boolean }) {
 /* ── A HOME DO SITE ── */
 export function SiteBio({
   blocos, marca, produtos, posts, visual, aoAbrirProduto, aoAbrirPost, onClique, capturaDoBloco,
-  alturaCheia, aoPedir, social,
+  alturaCheia, aoPedir, social, aoEditar, destacado,
 }: {
   /** Pedido da sacola: a página registra o "pedido iniciado" pro dono. */
   aoPedir?: (blocoId: string, linhas: LinhaPedido[]) => void;
   /** Números e vídeos do Instagram conectado, já conferidos (lerSocial). */
   social?: SocialPublico | null;
+  /** Só no editor: tocar numa seção da prévia abre o formulário dela. */
+  aoEditar?: (blocoId: string) => void;
+  /** Só no editor: a seção aberta fica marcada na prévia. */
+  destacado?: string | null;
   blocos: BlocoLite[];
   marca: MarcaSite;
   produtos: ItemLite[];
@@ -533,18 +537,13 @@ export function SiteBio({
   // Loja: o selo "Aberto agora" da capa sai do bloco de horários, e o
   // WhatsApp do pedido vem do primeiro lugar da página que tiver um.
   const statusLoja = useStatusDaLoja(blocos.find((b) => b.kind === "horarios")?.data);
-  const telefonePagina = (() => {
-    for (const k of ["contato", "acao_fixa", "whatsapp"]) {
-      const t = txt(blocos.find((b) => b.kind === k)?.data ?? {}, "telefone");
-      if (t.replace(/\D/g, "").length >= 10) return t;
-    }
-    return "";
-  })();
+  const telefonePagina = telefoneDaPagina(blocos);
 
   return (
     <div className={cn("bg-white [container-type:inline-size]", alturaCheia !== false && "min-h-[100dvh]")}>
       {!capaImersiva && <Topo marca={marca} secoes={secoes} aoIr={irPara} />}
       {blocos.map((b) => {
+        const el = (() => {
         switch (b.kind) {
           case "apresentacao": return <SecaoApresentacao key={b.id} d={b.data} nomePadrao={marca.nome} />;
           case "numeros": return <SecaoNumeros key={b.id} d={b.data} localAuto={resumoOnde} />;
@@ -596,10 +595,30 @@ export function SiteBio({
             );
           }
         }
+        })();
+        if (!aoEditar || !el) return el;
+        // Prévia do editor: tocar numa seção abre o formulário dela. O clique
+        // é engolido aqui pra nada dentro (link, botão) disparar na prévia.
+        const ativa = destacado === b.id;
+        return (
+          <div key={b.id} data-bloco={b.id} role="button" tabIndex={0}
+            aria-label={`Editar ${metaDoBloco(b.kind).nome}`}
+            onClickCapture={(e) => { e.preventDefault(); e.stopPropagation(); aoEditar(b.id); }}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); aoEditar(b.id); } }}
+            className="group relative cursor-pointer">
+            {el}
+            {/* A marca vai por cima: a sombra no próprio invólucro ficaria
+                escondida atrás do fundo da seção. */}
+            <span aria-hidden className={cn("pointer-events-none absolute inset-0 z-[5] transition-opacity",
+              ativa ? "shadow-[inset_0_0_0_3px_#DB4E8F]" : "opacity-0 group-hover:opacity-100 shadow-[inset_0_0_0_2px_rgba(219,78,143,.6)]")} />
+          </div>
+        );
       })}
       {!terminaNoRodape && <SeloCria />}
       {acaoFixa && (
-        <BarraAcaoFixa d={acaoFixa.data} cor={marca.cor} corTexto={marca.corTexto} telefonePadrao={telefonePagina} aoClicar={() => onClique?.(acaoFixa.id)} />
+        <BarraAcaoFixa d={acaoFixa.data} cor={marca.cor} corTexto={marca.corTexto} telefonePadrao={telefonePagina}
+          aoClicar={() => onClique?.(acaoFixa.id)}
+          aoEditar={aoEditar ? () => aoEditar(acaoFixa.id) : undefined} destacado={destacado === acaoFixa.id} />
       )}
     </div>
   );

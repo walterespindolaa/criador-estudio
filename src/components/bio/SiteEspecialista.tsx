@@ -164,8 +164,10 @@ export function destinoDaAcao(d: DadosBloco, telefonePadrao = ""): string {
    `sticky bottom-0` como ÚLTIMO elemento da página, e não `fixed`: assim ele
    fica preso no pé tanto no celular quanto dentro da moldura da prévia, que
    tem rolagem própria. `fixed` escaparia da moldura e cobriria o editor. */
-export function BarraAcaoFixa({ d, cor, corTexto, aoClicar, telefonePadrao }: {
+export function BarraAcaoFixa({ d, cor, corTexto, aoClicar, telefonePadrao, aoEditar, destacado }: {
   d: DadosBloco; cor: string; corTexto: string; aoClicar?: () => void; telefonePadrao?: string;
+  /** Prévia do editor: tocar no botão abre o formulário dele. */
+  aoEditar?: () => void; destacado?: boolean;
 }) {
   const href = destinoDaAcao(d, telefonePadrao);
   const texto = txt(d, "texto").trim();
@@ -175,10 +177,11 @@ export function BarraAcaoFixa({ d, cor, corTexto, aoClicar, telefonePadrao }: {
   return (
     <div className="sticky bottom-0 z-30 px-4 pt-3 pb-[max(14px,env(safe-area-inset-bottom))] pointer-events-none"
       style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.12) 100%)" }}>
-      <a href={href} {...alvoDoLink(href)} onClick={aoClicar}
+      <a href={href} {...alvoDoLink(href)}
+        onClick={aoEditar ? (e) => { e.preventDefault(); aoEditar(); } : aoClicar}
         className={cn("pointer-events-auto mx-auto max-w-[520px] h-14 rounded-2xl flex items-center justify-center gap-2",
           "font-display font-bold text-[15.5px] shadow-lg transition active:scale-[.99]")}
-        style={{ backgroundColor: cor, color: corTexto }}>
+        style={{ backgroundColor: cor, color: corTexto, boxShadow: destacado ? "0 0 0 3px #fff, 0 0 0 6px #DB4E8F" : undefined }}>
         {Icone && <Icone className="h-[18px] w-[18px]" aria-hidden />}
         {texto}
         {!Icone && <ArrowRight className="h-4 w-4" aria-hidden />}

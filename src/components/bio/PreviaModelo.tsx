@@ -71,7 +71,8 @@ export function PreviaModelo({ blocos, aparencia, escala = 1, altura, foto = FOT
   return (
     <div aria-hidden className="overflow-hidden relative"
       style={{ width: LARGURA * escala, height: altura }}>
-      <style>{`.${escopo},.${escopo} *:not(.bio-fonte-livre){font-family:${pilha(aparencia.fontFamily)} !important}`}</style>
+      <style>{`.${escopo},.${escopo} *:not(.bio-fonte-livre){font-family:${pilha(aparencia.fontFamily)} !important}`
+        + (aparencia.fontTitulos ? `.${escopo} .font-display:not(.bio-fonte-livre),.${escopo} h1:not(.bio-fonte-livre),.${escopo} h2:not(.bio-fonte-livre),.${escopo} h3:not(.bio-fonte-livre){font-family:${pilha(aparencia.fontTitulos)} !important}` : "")}</style>
       <div className={escopo}
         // inert: é desenho. Nada dentro dele recebe clique ou foco.
         {...{ inert: "" }}

@@ -198,3 +198,14 @@ export function lerListaColada(texto: string): ItemColado[] {
 }
 
 export const LIMITE_DO_CARDAPIO = LIMITE_ITENS;
+
+/** O WhatsApp da página: o primeiro número válido entre Contato, botão fixo e
+ *  bloco de WhatsApp. É o que pedido, serviço e chamada usam quando o bloco
+ *  não tem número próprio. */
+export function telefoneDaPagina(blocos: { kind: string; data?: DadosBloco | null }[]): string {
+  for (const k of ["contato", "acao_fixa", "whatsapp"]) {
+    const t = txt(blocos.find((b) => b.kind === k)?.data ?? {}, "telefone");
+    if (t.replace(/\D/g, "").length >= 10) return t;
+  }
+  return "";
+}

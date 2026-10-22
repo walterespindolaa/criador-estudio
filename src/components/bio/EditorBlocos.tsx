@@ -29,7 +29,8 @@ import {
   FormPraQuem, FormServicos, FormVideos,
 } from "@/components/bio/FormsSite";
 import { ancorasDaPagina } from "@/lib/bioConsultoria";
-import { DIAS, LIMITE_DO_CARDAPIO, foneWhats, lerHorarios, lerListaColada } from "@/lib/bioLoja";
+import { exemploNoBloco, progressoDaPagina, statusDaSecao, type StatusSecao } from "@/lib/bioStatus";
+import { DIAS, LIMITE_DO_CARDAPIO, foneWhats, lerHorarios, lerListaColada, telefoneDaPagina } from "@/lib/bioLoja";
 import { uploadFileToBunnyStream } from "@/lib/bunny-upload";
 import {
   NICHOS, VIDEO_MAX_MB, VIDEO_MAX_SEGUNDOS, blocosDoNicho, fonteAssinatura, guidValido, lerAssinatura, lerAtendimento,
@@ -186,7 +187,7 @@ function FormApresentacao({ d, p }: { d: DadosBloco; p: (patch: DadosBloco) => v
   );
 }
 
-function FormBloco({ bloco, salvar, slugPublico, telefonePadrao, secoes = [] }: {
+export function FormBloco({ bloco, salvar, slugPublico, telefonePadrao, secoes = [] }: {
   bloco: BioBloco; salvar: (d: DadosBloco) => void; slugPublico?: string | null; telefonePadrao?: string | null;
   /** Partes desta página que um botão pode alcançar (#servicos, #parceria). */
   secoes?: { id: string; nome: string }[];
@@ -878,11 +879,11 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao, secoes = [] }: 
     case "contato":
       return (
         <div className="space-y-3.5">
-          <LinhaCampo label="Nome no rodapé" ajuda="Vazio usa o nome da página.">
+          <LinhaCampo label="Nome do negócio" ajuda="Aparece no menu e no rodapé. Vazio usa o nome da página.">
             <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })} className="rounded-xl" />
           </LinhaCampo>
-          <LinhaCampo label="Telefone"
-            ajuda="Também é o que abre a conversa nos botões das páginas de serviço.">
+          <LinhaCampo label="WhatsApp com DDD"
+            ajuda="Pedido, botão fixo, serviços e chamada final usam este número quando não têm um próprio.">
             <Input value={txt(d, "telefone")} onChange={(e) => p({ telefone: mascaraTelefone(e.target.value) })}
               placeholder="(00) 00000-0000" inputMode="tel" className="rounded-xl" />
           </LinhaCampo>
@@ -1243,10 +1244,113 @@ function FormVantagens({ d, p }: { d: DadosBloco; p: (patch: DadosBloco) => void
   );
 }
 
+/* ── O ESTADO DE CADA SEÇÃO, em cor ── */
+const COR_STATUS: Record<StatusSecao["tipo"], { texto: string; bola: string }> = {
+  pronta: { texto: "text-emerald-700", bola: "bg-emerald-600" },
+  exemplo: { texto: "text-amber-700", bola: "bg-amber-500" },
+  falta: { texto: "text-red-700", bola: "bg-red-600" },
+  escondida: { texto: "text-muted-foreground", bola: "bg-muted-foreground/50" },
+};
+
+/** Aviso no topo do formulário quando ainda há texto do modelo. */
+function AvisoExemplo({ bloco }: { bloco: BioBloco }) {
+  const t = exemploNoBloco(bloco.data ?? {});
+  if (!t) return null;
+  return (
+    <p className="mt-3 rounded-xl border border-amber-300/70 bg-amber-50 px-3 py-2 text-[11.5px] font-body text-amber-900 leading-snug">
+      Ainda é o texto de exemplo do modelo: <span className="italic">"{t.length > 70 ? `${t.slice(0, 70)}…` : t}"</span>. Troque antes de divulgar.
+    </p>
+  );
+}
+
+/** A barra de "quanto falta" com o próximo passo clicável. */
+function CartaoProgresso({ pct, proximo, aoIr }: { pct: number; proximo: { texto: string } | null; aoIr: () => void }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card px-4 py-3 space-y-2">
+      <p className="font-display font-semibold text-sm">
+        {pct >= 100 ? "Sua página está pronta pra divulgar" : `Sua página está ${pct}% pronta`}
+      </p>
+      <div className="h-2 rounded-full bg-primary/10 overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+        <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${pct}%` }} />
+      </div>
+      {proximo && (
+        <button type="button" onClick={aoIr} className="text-[12.5px] font-body font-semibold text-primary min-h-[32px] text-left">
+          Próximo: {proximo.texto} →
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ── O FORMULÁRIO AO LADO DA LISTA (tela larga) ── */
+function PainelDoBloco({ bloco, status, atualizar, excluir, duplicar, slugPublico, telefonePadrao, secoes }: {
+  bloco: BioBloco | null; status?: StatusSecao;
+  atualizar: (patch: Partial<Pick<BioBloco, "data" | "is_active" | "starts_at" | "ends_at">>) => void;
+  excluir: () => void; duplicar: () => void;
+  slugPublico?: string | null; telefonePadrao?: string | null; secoes: { id: string; nome: string }[];
+}) {
+  const [agendaAberta, setAgendaAberta] = useState(false);
+  if (!bloco) {
+    return (
+      <div className="rounded-2xl border border-dashed border-border p-8 text-center sticky top-4">
+        <p className="text-sm font-body font-medium">Escolha uma seção</p>
+        <p className="text-xs font-body text-muted-foreground mt-1">Na lista ao lado ou tocando direto na prévia.</p>
+      </div>
+    );
+  }
+  const meta = metaDoBloco(bloco.kind);
+  return (
+    <div className="rounded-2xl border border-primary/30 bg-card p-4 sticky top-4 max-h-[calc(100dvh-2rem)] overflow-y-auto space-y-3.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10.5px] font-body font-semibold uppercase tracking-wider text-muted-foreground">Editando</p>
+          <h3 className="font-display font-semibold text-lg leading-tight truncate">{meta.nome}</h3>
+          {status && (
+            <span className={cn("inline-flex items-center gap-1 text-[11.5px] font-body font-semibold mt-0.5", COR_STATUS[status.tipo].texto)}>
+              <span aria-hidden className={cn("w-1.5 h-1.5 rounded-full", COR_STATUS[status.tipo].bola)} />{status.texto}
+            </span>
+          )}
+        </div>
+        <label className="flex items-center gap-2 text-[12px] font-body text-muted-foreground shrink-0 cursor-pointer">
+          Mostrar na página
+          <Switch checked={bloco.is_active} onCheckedChange={(v) => atualizar({ is_active: v })} />
+        </label>
+      </div>
+      {status?.tipo === "exemplo" && <AvisoExemplo bloco={bloco} />}
+      <FormBloco key={bloco.id} bloco={bloco} salvar={(data) => atualizar({ data })} slugPublico={slugPublico} telefonePadrao={telefonePadrao} secoes={secoes} />
+      <button type="button" onClick={() => setAgendaAberta((v) => !v)}
+        className="flex items-center gap-1.5 text-[12px] font-body font-semibold text-muted-foreground hover:text-foreground">
+        <Calendar className="h-3.5 w-3.5" /> {agendaAberta ? "Esconder agendamento" : "Agendar entrada e saída"}
+      </button>
+      {agendaAberta && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl bg-muted/40 p-3">
+          <LinhaCampo label="Aparece a partir de">
+            <Input type="datetime-local" value={semSegundos(bloco.starts_at)} onChange={(e) => atualizar({ starts_at: paraIso(e.target.value) })} className="rounded-xl" />
+          </LinhaCampo>
+          <LinhaCampo label="Some depois de">
+            <Input type="datetime-local" value={semSegundos(bloco.ends_at)} onChange={(e) => atualizar({ ends_at: paraIso(e.target.value) })} className="rounded-xl" />
+          </LinhaCampo>
+        </div>
+      )}
+      <div className="flex justify-between gap-2 pt-1 border-t border-border/60">
+        <Button type="button" size="sm" variant="ghost" onClick={duplicar}><Copy className="h-3.5 w-3.5 mr-1" /> Duplicar</Button>
+        <Button type="button" size="sm" variant="ghost" onClick={excluir} className="text-destructive hover:text-destructive">
+          <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /* ── UM BLOCO NA LISTA ── */
 function CartaoBloco({
   bloco, aberto, onAbrir, atualizar, excluir, duplicar, arrasteProps, arrasteRef, arrastando, slugPublico, telefonePadrao, secoes,
+  status, soLista,
 }: {
+  /** Modo Site: Pronta, Texto de exemplo, Falta X ou Escondida. */
+  status?: StatusSecao;
+  /** Tela larga: o cartão é só a linha da lista; o formulário abre ao lado. */
+  soLista?: boolean;
   slugPublico?: string | null;
   telefonePadrao?: string | null;
   secoes?: { id: string; nome: string }[];
@@ -1276,20 +1380,26 @@ function CartaoBloco({
         <span className="text-muted-foreground/50 cursor-grab pt-1.5 touch-none" aria-hidden><GripVertical className="h-4 w-4" /></span>
 
         <button type="button" onClick={onAbrir} className="flex items-start gap-2.5 flex-1 min-w-0 text-left">
-          <span className="w-11 h-11 rounded-xl bg-muted border border-border grid place-items-center shrink-0 overflow-hidden text-muted-foreground">
+          <span className={cn("rounded-xl bg-muted border border-border grid place-items-center shrink-0 overflow-hidden text-muted-foreground", soLista ? "w-8 h-8" : "w-11 h-11")}>
             {capa ? <img src={capa} alt="" className="w-full h-full object-cover" /> : <meta.Icone className="h-4 w-4" />}
           </span>
           <span className="min-w-0 flex-1">
             <span className="block font-display font-semibold text-sm truncate">
-              {txt(bloco.data ?? {}, "titulo") || meta.nome}
+              {/* No Site o nome da seção diz mais que o título digitado: é o
+                  mesmo nome que aparece na prévia e no "Próximo:". */}
+              {status ? meta.nome : (txt(bloco.data ?? {}, "titulo") || meta.nome)}
             </span>
             {/* min-w-0 aqui e no resumo: sem isso o `truncate` não trunca
                 nada. Um link sem espaço não tem onde quebrar, vira a largura
                 mínima da linha e empurra a tela toda pra fora. */}
             <span className="flex flex-wrap items-center gap-1.5 mt-0.5 min-w-0">
-              <span className="text-[10px] font-body font-semibold uppercase tracking-wider text-muted-foreground">{meta.nome}</span>
-              {falta && <span className="text-[10px] font-body font-semibold text-amber-600">{falta}</span>}
-              {!falta && <span className="text-[11px] font-body text-muted-foreground truncate min-w-0 max-w-full">{resumoDoBloco(bloco)}</span>}
+              {!status && <span className="text-[10px] font-body font-semibold uppercase tracking-wider text-muted-foreground">{meta.nome}</span>}
+              {status ? (
+                <span className={cn("inline-flex items-center gap-1 text-[11px] font-body font-semibold", COR_STATUS[status.tipo].texto)}>
+                  <span aria-hidden className={cn("w-1.5 h-1.5 rounded-full", COR_STATUS[status.tipo].bola)} />{status.texto}
+                </span>
+              ) : falta ? <span className="text-[10px] font-body font-semibold text-amber-600">{falta}</span> : null}
+              {!falta && !soLista && <span className="text-[11px] font-body text-muted-foreground truncate min-w-0 max-w-full">{resumoDoBloco(bloco)}</span>}
               {(bloco.starts_at || bloco.ends_at) && (
                 <span className="text-[10px] font-body font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700">agendado</span>
               )}
@@ -1298,13 +1408,14 @@ function CartaoBloco({
         </button>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-[11px] font-body tabular-nums text-muted-foreground hidden sm:block">{bloco.clicks}</span>
+          {!soLista && <span className="text-[11px] font-body tabular-nums text-muted-foreground hidden sm:block">{bloco.clicks}</span>}
           <Switch checked={bloco.is_active} onCheckedChange={(v) => atualizar({ is_active: v })} aria-label="Mostrar na página" />
         </div>
       </div>
 
-      {aberto && (
+      {aberto && !soLista && (
         <div className="px-3 pb-3.5 pt-1 space-y-3.5 border-t border-border/60 mt-0.5">
+          {status?.tipo === "exemplo" && <AvisoExemplo bloco={bloco} />}
           <div className="pt-3.5"><FormBloco bloco={bloco} salvar={(data) => atualizar({ data })} slugPublico={slugPublico} telefonePadrao={telefonePadrao} secoes={secoes} /></div>
 
           <button type="button" onClick={() => setAgendaAberta((v) => !v)}
@@ -1343,7 +1454,12 @@ function CartaoBloco({
 }
 
 /* ── A TELA ── */
-export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }: {
+export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero, abertoId, aoAbrirBloco, aoIrNegocio }: {
+  /** Seção aberta controlada de fora: a prévia ao lado abre a mesma seção. */
+  abertoId?: string | null;
+  aoAbrirBloco?: (id: string | null) => void;
+  /** "Próximo passo" que mora no passo Seu negócio (o WhatsApp). */
+  aoIrNegocio?: () => void;
   estilo: EstiloBio;
   /** Modelo não é só estrutura: leva cor, fonte e formato de botão junto. Quem
    *  guarda a aparência é a tela de cima, então ela recebe por aqui. */
@@ -1358,7 +1474,36 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
      pra montar o link do WhatsApp: um telefone só, num lugar só. */
   const telefoneDoContato = txt(blocos.find((b) => b.kind === "contato")?.data ?? {}, "telefone") || null;
   const secoesDaPagina = useMemo(() => ancorasDaPagina(blocos.map((b) => b.kind)), [blocos]);
-  const [aberto, setAberto] = useState<string | null>(null);
+  const [abertoLocal, setAbertoLocal] = useState<string | null>(null);
+  const aberto = abertoId !== undefined ? abertoId : abertoLocal;
+  const setAberto = (id: string | null) => { if (aoAbrirBloco) aoAbrirBloco(id); else setAbertoLocal(id); };
+  const ehSite = estilo === "site";
+  const telefoneDaPag = useMemo(() => telefoneDaPagina(blocos), [blocos]);
+  const status = useMemo(() => {
+    const m = new Map<string, StatusSecao>();
+    if (ehSite) for (const b of blocos) m.set(b.id, statusDaSecao(b, telefoneDaPag));
+    return m;
+  }, [blocos, ehSite, telefoneDaPag]);
+  const progresso = useMemo(() => (ehSite ? progressoDaPagina(blocos, telefoneDaPag) : null), [blocos, ehSite, telefoneDaPag]);
+  /* Tela larga: lista de um lado, formulário do outro (mockup aprovado). Mede
+     a própria caixa, não o monitor: a coluna do editor varia com a prévia. */
+  const caixaRef = useRef<HTMLDivElement>(null);
+  const [largo, setLargo] = useState(false);
+  useEffect(() => {
+    const el = caixaRef.current;
+    if (!el || !ehSite || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(([e]) => setLargo(e.contentRect.width >= 720));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ehSite]);
+  /* Aberto de fora (tocou na prévia): no modo sanfona, traz o cartão pra vista. */
+  useEffect(() => {
+    if (!aberto || largo) return;
+    const t = setTimeout(() => {
+      document.querySelector(`[data-cartao-bloco="${aberto}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 60);
+    return () => clearTimeout(t);
+  }, [aberto, largo]);
   const [paletaAberta, setPaletaAberta] = useState(false);
   const [modelosAbertos, setModelosAbertos] = useState(false);
   /* Modo Site: clicar num modelo abre a prévia dele montada de verdade, e só
@@ -1414,8 +1559,32 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
     reordenar.mutate(ids);
   };
 
+  const blocoAberto = blocos.find((b) => b.id === aberto) ?? null;
+  /* Excluir pergunta antes. Desligar no interruptor é o jeito de tirar do ar
+     sem perder; excluir apaga o que foi escrito. */
+  const pedirExcluir = async (b: BioBloco) => {
+    const ok = await confirmar({
+      titulo: `Excluir ${metaDoBloco(b.kind).nome}?`,
+      descricao: "O que foi escrito nesta seção se perde. Pra só tirar do ar, use o interruptor.",
+      acao: "Excluir", destrutivo: true,
+    });
+    if (!ok) return;
+    if (aberto === b.id) setAberto(null);
+    excluir.mutate(b.id);
+  };
+  const irProximo = () => {
+    const p = progresso?.proximo;
+    if (!p) return;
+    if (p.id === "negocio") aoIrNegocio?.();
+    else if (p.id === "modelos") setModelosAbertos(true);
+    else setAberto(p.id);
+  };
+
   return (
-    <div className="space-y-3">
+    <div ref={caixaRef} className="space-y-3">
+      {ehSite && progresso && blocos.length > 0 && (
+        <CartaoProgresso pct={progresso.pct} proximo={progresso.proximo} aoIr={irProximo} />
+      )}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2.5">
           {/* O número faz parte do caminho 1-2 desenhado na aba Conteúdo. */}
@@ -1434,7 +1603,7 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
             <LayoutTemplate className="h-3.5 w-3.5 mr-1" /> Modelos
           </Button>
           <Button size="sm" onClick={() => { setPaletaAberta((v) => !v); setModelosAbertos(false); }} data-tour="bio-add-bloco">
-            <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar bloco
+            <Plus className="h-3.5 w-3.5 mr-1" /> {ehSite ? "Adicionar seção" : "Adicionar bloco"}
           </Button>
         </div>
       </div>
@@ -1650,6 +1819,7 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
         </div>
       )}
 
+      <div className={cn(largo && blocos.length > 0 && "grid grid-cols-[260px_minmax(0,1fr)] gap-4 items-start")}>
       <DragDropContext onDragEnd={aoSoltar}>
         <Droppable droppableId="blocos">
           {(dp) => (
@@ -1657,13 +1827,15 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
               {blocos.map((b, i) => (
                 <Draggable key={b.id} draggableId={b.id} index={i}>
                   {(dd, snap) => (
-                    <div ref={dd.innerRef} {...dd.draggableProps}>
+                    <div ref={dd.innerRef} {...dd.draggableProps} data-cartao-bloco={b.id} className="scroll-mt-24">
                       <CartaoBloco
                         bloco={b}
+                        status={status.get(b.id)}
+                        soLista={largo}
                         aberto={aberto === b.id}
-                        onAbrir={() => setAberto(aberto === b.id ? null : b.id)}
+                        onAbrir={() => setAberto(aberto === b.id && !largo ? null : b.id)}
                         atualizar={(patch) => atualizar.mutate({ id: b.id, patch })}
-                        excluir={() => excluir.mutate(b.id)}
+                        excluir={() => void pedirExcluir(b)}
                         duplicar={() => duplicar.mutate(b.id)}
                         slugPublico={slugPublico}
                         telefonePadrao={telefoneDoContato}
@@ -1680,6 +1852,14 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
           )}
         </Droppable>
       </DragDropContext>
+      {largo && blocos.length > 0 && (
+        <PainelDoBloco bloco={blocoAberto} status={blocoAberto ? status.get(blocoAberto.id) : undefined}
+          atualizar={(patch) => blocoAberto && atualizar.mutate({ id: blocoAberto.id, patch })}
+          excluir={() => { if (blocoAberto) void pedirExcluir(blocoAberto); }}
+          duplicar={() => blocoAberto && duplicar.mutate(blocoAberto.id)}
+          slugPublico={slugPublico} telefonePadrao={telefoneDoContato} secoes={secoesDaPagina} />
+      )}
+      </div>
 
       {/* Fica no pé da lista, longe dos botões de criar: apagar tudo é raro e
           não pode ser o clique errado de quem queria "Adicionar bloco". */}
