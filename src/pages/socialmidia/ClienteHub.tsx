@@ -267,6 +267,7 @@ export default function ClienteHub() {
   const [copying, setCopying] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [colorOpen, setColorOpen] = useState(false);
+  const [cadastroOpen, setCadastroOpen] = useState(false);
   // APELIDO editável no cabeçalho: o nome que SÓ o gestor vê (crm_clients.display_name).
   // Vazio = volta a mostrar o nome ao vivo do Cria. Não muda a conta do cliente.
   const [editingName, setEditingName] = useState(false);
@@ -727,7 +728,42 @@ export default function ClienteHub() {
           {/* PRIMEIROS PASSOS (19/10/2026): só cliente novo, some sozinho ou no X. */}
           <JornadaCliente client={client} extClientId={extClient?.id ?? null} displayName={displayName}
             hasGestao={hasCrm} hasPost={hasPost} goTab={goTab}
-            onEditarCadastro={() => (extClient ? setEditOpen(true) : goTab("links-uteis"))} />
+            temLogo={!!avatarUrl}
+            onEditarCadastro={() => setCadastroOpen(true)} />
+          {/* CADASTRO DA MARCA (22/10/2026). O passo "Completar" mandava pra aba
+              de links (cliente sem Cria Post) ou pro cadastro do Cria Post, que
+              não grava logo, @ e cor da ficha: o passo nunca ficava feito.
+              Agora abre aqui, com os mesmos três campos que o passo confere. */}
+          <Dialog open={cadastroOpen} onOpenChange={setCadastroOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader><DialogTitle>Cadastro da marca</DialogTitle></DialogHeader>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="relative grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full text-white font-display font-bold" style={{ background: "linear-gradient(135deg,#0F6E56,#1d9e75)" }}>
+                    {initial(displayName)}
+                    {avatarUrl && <img src={avatarUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-body font-semibold">Logo</p>
+                    <Button size="sm" variant="outline" className="mt-1" onClick={() => avatarInputRef.current?.click()}>
+                      {avatarUrl ? "Trocar logo" : "Subir logo"}
+                    </Button>
+                  </div>
+                </div>
+                <CampoCliente clientId={client.id} label="Instagram" tipo="texto"
+                  valor={client.instagram} placeholder="@perfil" campo="instagram" />
+                <div>
+                  <p className="text-sm font-body font-semibold mb-2">Cor</p>
+                  <ClientColorPicker
+                    value={(client as { color?: string | null }).color ?? null}
+                    onChange={(hex) => void setColor(hex)}
+                    onClear={() => void setColor(null)}
+                  />
+                </div>
+              </div>
+              <DialogFooter><Button onClick={() => setCadastroOpen(false)}>Pronto</Button></DialogFooter>
+            </DialogContent>
+          </Dialog>
           {/* Os cards eram só LEITURA e mostravam "-". A pessoa abria o cliente,
               via quatro traços e não tinha como preencher nada dali: tinha que
               descobrir sozinha que precisava ir na "ficha completa" do CRM.

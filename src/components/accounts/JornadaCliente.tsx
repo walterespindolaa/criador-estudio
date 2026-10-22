@@ -21,10 +21,15 @@ import { cn } from "@/lib/utils";
    - O X pergunta antes e esconde só pra aquele cliente (crm_clients.jornada_oculta).
    - Com tudo que está ao alcance feito, some sozinho.
    - Cliente que já existia antes desta tela não ganha a jornada.
+   - Só nos 5 primeiros dias do cliente (Gabriela, 22/10/2026): é onboarding,
+     não um lembrete eterno. Depois disso some, feito ou não.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /** Só clientes criados a partir do lançamento da jornada. */
 const JORNADA_DESDE = "2026-10-19";
+/** Quantos dias depois de cadastrar o cliente os primeiros passos ficam na tela. */
+const DIAS_DE_JORNADA = 5;
+const DIA_MS = 86_400_000;
 
 type sbFn = (t: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as sbFn;
@@ -35,7 +40,7 @@ type Passo = {
   modulo?: { codigo: string; nome: string; tem: boolean };
 };
 
-export function JornadaCliente({ client, extClientId, displayName, hasGestao, hasPost, goTab, onEditarCadastro }: {
+export function JornadaCliente({ client, extClientId, displayName, hasGestao, hasPost, goTab, onEditarCadastro, temLogo }: {
   client: CrmClient;
   extClientId: string | null;
   displayName: string;
@@ -43,9 +48,13 @@ export function JornadaCliente({ client, extClientId, displayName, hasGestao, ha
   hasPost: boolean;
   goTab: (t: string) => void;
   onEditarCadastro: () => void;
+  /** Logo que aparece no cabeçalho (a do Cria do cliente conta, não só a subida na ficha). */
+  temLogo?: boolean;
 }) {
   const c = client as CrmClient & { jornada_oculta?: boolean | null; created_at?: string | null };
-  const ativa = !c.jornada_oculta && (c.created_at ?? "").slice(0, 10) >= JORNADA_DESDE;
+  const criadoEm = c.created_at ? new Date(c.created_at).getTime() : NaN;
+  const diasRestantes = Number.isFinite(criadoEm) ? Math.ceil((criadoEm + DIAS_DE_JORNADA * DIA_MS - Date.now()) / DIA_MS) : 0;
+  const ativa = !c.jornada_oculta && (c.created_at ?? "").slice(0, 10) >= JORNADA_DESDE && diasRestantes > 0;
   const update = useUpdateCrmClient();
   const abrirModulo = useAbrirModulo();
 
@@ -89,7 +98,7 @@ export function JornadaCliente({ client, extClientId, displayName, hasGestao, ha
     const post = { codigo: "aprovapost_externo", nome: "Cria Post", tem: hasPost };
     return [
       { chave: "cadastro", titulo: "Cadastro da marca", texto: "Nome, @, logo e cor.", Icon: Store, fundo: "bg-orange-100 dark:bg-orange-500/15", cor: "text-orange-600",
-        feito: !!client.logo && !!client.instagram && !!client.color, acao: "Completar", onAcao: onEditarCadastro },
+        feito: (temLogo ?? !!client.logo) && !!client.instagram && !!client.color, acao: "Completar", onAcao: onEditarCadastro },
       { chave: "brandbook", titulo: "Brandbook", texto: "Paleta, fontes, tom de voz. Sobe o PDF e confere.", Icon: FileText, fundo: "bg-rose-100 dark:bg-rose-500/15", cor: "text-rose-600",
         feito: temBrandbook, acao: "Subir o PDF", onAcao: () => goTab("brandbook"), modulo: gestao },
       { chave: "acessos", titulo: "Acessos e senhas", texto: "Instagram, Meta, Canva… guardados no cofre.", Icon: Lock, fundo: "bg-violet-100 dark:bg-violet-500/15", cor: "text-violet-600",
@@ -105,7 +114,7 @@ export function JornadaCliente({ client, extClientId, displayName, hasGestao, ha
       { chave: "post", titulo: "Primeiro post na aprovação", texto: "O cliente aprova pelo link, sem baixar nada.", Icon: Send, fundo: "bg-sky-100 dark:bg-sky-500/15", cor: "text-sky-600",
         feito: temPost, acao: "Criar post", onAcao: () => goTab("posts"), modulo: post },
     ];
-  }, [client, hasGestao, hasPost, acessos.length, igConectado, temPost, goTab, onEditarCadastro]);
+  }, [client, hasGestao, hasPost, acessos.length, igConectado, temPost, goTab, onEditarCadastro, temLogo]);
 
   if (!ativa) return null;
 
@@ -148,12 +157,13 @@ export function JornadaCliente({ client, extClientId, displayName, hasGestao, ha
           <span className="absolute inset-0 grid place-items-center font-display text-base font-extrabold">{feitos}/{total}</span>
         </div>
         <div className="min-w-0">
-          <p className="text-[11px] font-body font-extrabold uppercase tracking-[0.09em] text-emerald-800 dark:text-emerald-300 truncate">
+          <p className="text-[11px] font-body font-extrabold uppercase tracking-[0.09em] text-emerald-800 dark:text-emerald-300">Onboarding</p>
+          <h3 className="mt-0.5 font-display text-lg sm:text-[22px] font-extrabold leading-tight">
             Primeiros passos{primeiro ? ` com ${primeiro}` : ""}
-          </p>
-          <h3 className="mt-0.5 font-display text-lg sm:text-[22px] font-extrabold leading-tight">Reúna o essencial e o resto do mês anda sozinho.</h3>
+          </h3>
           <p className="mt-0.5 text-[13px] font-body text-muted-foreground">
             {proximo ? `Próximo: ${proximo.titulo.toLowerCase()}.` : ""}
+            {` Some sozinho ${diasRestantes <= 1 ? "amanhã" : `em ${diasRestantes} dias`}.`}
             {nomesTravados.length > 0 && ` ${travados.length} ${travados.length === 1 ? "passo depende" : "passos dependem"} do ${nomesTravados.join(" e do ")} e ${travados.length === 1 ? "fica" : "ficam"} fora da conta.`}
           </p>
         </div>
