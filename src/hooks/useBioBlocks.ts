@@ -121,6 +121,33 @@ export function useBioBlocks(estilo: EstiloBio) {
     onSettled: () => { void qc.invalidateQueries({ queryKey: chave }); },
   });
 
+  /** Apaga de uma vez os blocos deste estilo (o outro estilo não é tocado).
+   *  Vai pela lista de ids que a tela está mostrando, não por filtro aberto:
+   *  assim nunca apaga um bloco que a pessoa não viu. Quem confirma é a tela. */
+  const excluirTodos = useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (!ids.length) return;
+      let s = sbFrom("bio_blocks").delete().in("id", ids).eq("estilo", estilo);
+      s = pageId ? s.eq("page_id", pageId) : s.eq("user_id", userId!);
+      const { error } = await s;
+      if (error) throw error;
+    },
+    onMutate: async (ids: string[]) => {
+      await qc.cancelQueries({ queryKey: chave });
+      const antes = qc.getQueryData<BioBloco[]>(chave) ?? [];
+      const fora = new Set(ids);
+      qc.setQueryData<BioBloco[]>(chave, antes.filter((b) => !fora.has(b.id)));
+      return { antes };
+    },
+    onError: (_e, _v, ctx) => {
+      const c = ctx as { antes?: BioBloco[] } | undefined;
+      if (c?.antes) qc.setQueryData(chave, c.antes);
+      toast.error("Não consegui apagar os blocos.");
+    },
+    onSuccess: () => toast.success("Página limpa. Comece por um modelo ou monte do zero."),
+    onSettled: () => { void qc.invalidateQueries({ queryKey: chave }); },
+  });
+
   const duplicar = useMutation({
     mutationFn: async (id: string) => {
       const b = blocos.find((x) => x.id === id);
@@ -209,5 +236,5 @@ export function useBioBlocks(estilo: EstiloBio) {
     onSettled: () => { void qc.invalidateQueries({ queryKey: chave, refetchType: "none" }); },
   });
 
-  return { blocos, isLoading: q.isLoading, criar, atualizar, excluir, duplicar, reordenar, aplicarModelo };
+  return { blocos, isLoading: q.isLoading, criar, atualizar, excluir, excluirTodos, duplicar, reordenar, aplicarModelo };
 }

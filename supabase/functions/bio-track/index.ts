@@ -5,7 +5,10 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 // Allowlist (+ localhost), bloqueia origens aleatórias sem quebrar dev.
 function isAllowedOrigin(origin: string): boolean {
-  if (["https://app.criasocialclub.com.br", "https://criasocialclub.com.br", "https://www.criasocialclub.com.br"].includes(origin)) return true;
+  // criaclub.bio é o domínio curto das bios: sem ele aqui, o formulário de
+  // quem abria a bio por esse endereço era barrado pelo navegador.
+  if (["https://app.criasocialclub.com.br", "https://criasocialclub.com.br", "https://www.criasocialclub.com.br",
+       "https://criaclub.bio", "https://www.criaclub.bio"].includes(origin)) return true;
   if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
   return false;
 }
@@ -35,7 +38,7 @@ serve(async (req) => {
     // 40 e não 20 porque host de verdade não cabe em 20 (business.facebook.com
     // tem 21) e era cortado no meio, virando lixo no relatório.
     const origem = body?.origem ? String(body.origem).slice(0, 40) : "direto";
-    if (type !== "view" && type !== "click" && type !== "lead") return ok({ ok: false });
+    if (type !== "view" && type !== "click" && type !== "lead" && type !== "contato") return ok({ ok: false });
 
     const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -86,6 +89,51 @@ serve(async (req) => {
       return ok({ ok: true });
     }
 
+
+    /* ── CONTATO (22/10/2026): proposta de parceria e pedido da sacola ──
+       Mesmo freio por IP do lead. A RPC confere que o bloco é desta página,
+       do tipo certo e está no ar; aqui só se corta tamanho e se monta a
+       mensagem. Nada do que chega aqui escolhe o dono: o dono sai do slug. */
+    if (type === "contato") {
+      if (!slug) return ok({ ok: false, erro: "slug" });
+      const tipo = String(body?.tipo ?? "");
+      if (tipo !== "parceria" && tipo !== "pedido") return ok({ ok: false, erro: "tipo" });
+      const { data: pode, error: rlErr2 } = await svc.rpc("rate_touch", { _key: `bio_contato_ip:${ip}`, _limit: 3 });
+      if (rlErr2 || pode === false) return ok({ ok: false, erro: "muitas_tentativas" });
+
+      const blocoId = body?.blockId ? String(body.blockId).slice(0, 40) : null;
+      if (!blocoId) return ok({ ok: false, erro: "bloco" });
+      const nome = body?.name ? String(body.name).slice(0, 120).trim() : "";
+      const email = body?.email ? String(body.email).slice(0, 160).trim() : "";
+      const fone = body?.phone ? String(body.phone).slice(0, 40).trim() : "";
+      const empresa = body?.empresa ? String(body.empresa).slice(0, 120).trim() : "";
+      const texto = body?.mensagem ? String(body.mensagem).slice(0, 1200).trim() : "";
+      const mensagem = tipo === "parceria"
+        ? ([empresa ? `Marca ou empresa: ${empresa}` : "", texto].filter(Boolean).join("\n\n") || null)
+        : null;
+
+      // Pedido: lista fechada de itens, cada um só com nome, quantidade e preço.
+      let detalhes: unknown = null;
+      if (tipo === "pedido") {
+        const itens = Array.isArray(body?.itens) ? body.itens.slice(0, 40) : [];
+        detalhes = itens.map((i: Record<string, unknown>) => ({
+          nome: String(i?.nome ?? "").slice(0, 80),
+          qtd: Math.max(1, Math.min(99, Math.floor(Number(i?.qtd) || 1))),
+          preco: Number.isFinite(Number(i?.preco)) ? Math.max(0, Math.min(100000, Number(i?.preco))) : null,
+        })).filter((i: { nome: string }) => i.nome);
+        if (!(detalhes as unknown[]).length) return ok({ ok: false, erro: "vazio" });
+      }
+
+      const { error: erroContato } = await svc.rpc("submit_bio_contato", {
+        _slug: slug, _tipo: tipo, _nome: nome || null, _email: email || null, _telefone: fone || null,
+        _mensagem: mensagem, _detalhes: detalhes, _block_id: blocoId,
+      });
+      if (erroContato) {
+        console.error("[bio-track] contato falhou:", erroContato.message);
+        return ok({ ok: false, erro: /muitas tentativas/.test(erroContato.message ?? "") ? "muitas_tentativas" : "falhou" });
+      }
+      return ok({ ok: true });
+    }
 
     // 30 eventos/min por IP+alvo. Se estourar, ignora silenciosamente (não conta).
     // Fail-CLOSED: este endpoint é público e anônimo (verify_jwt = false), então

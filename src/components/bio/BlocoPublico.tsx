@@ -382,6 +382,8 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
     case "contagem": return <Contagem data={data} visual={visual} />;
     case "mapa": return <Mapa data={data} visual={visual} onClique={onClique} />;
     case "captura": return <>{captura}</>;
+    // A proposta de parceria também tem estado próprio: a página manda pronta.
+    case "parceria": return <>{captura}</>;
     default: return null;
   }
 }

@@ -53,7 +53,9 @@ export function DesenhoAssinatura({ a, nome, cor }: { a: Assinatura; nome: strin
        capa, igual ao traço desenhado. 0,28 deixa "Nome Sobrenome" com a
        largura pedida em `escala` na fonte padrão. */
     return (
-      <span className="block whitespace-nowrap leading-[1.05] select-none"
+      /* bio-fonte-livre: a fonte escolhida pro site é aplicada com !important
+         em tudo dentro da página; sem essa marca a assinatura saía em Sora. */
+      <span className="bio-fonte-livre block whitespace-nowrap leading-[1.05] select-none"
         style={{ fontFamily: `'${f.familia}', cursive`, fontSize: `${a.escala * 0.28 * f.ajuste}cqw`, color: cor }}>
         {nome}
       </span>

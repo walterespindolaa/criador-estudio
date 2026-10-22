@@ -59,6 +59,7 @@ import type { AparenciaModelo } from "@/lib/bioTemplates";
 import { PainelDesempenho } from "@/components/bio/PainelDesempenho";
 import { useBioTotais } from "@/hooks/useBioStats";
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
+import { FormularioDePrevia } from "@/components/bio/FormParceria";
 import { corDeDestaque, corSobre, nomeDaMarcaSite } from "@/lib/bioBlocks";
 import type { BioBloco, EstiloBio } from "@/lib/bioBlocks";
 import { supabase } from "@/integrations/supabase/client";
@@ -101,7 +102,7 @@ function clamp01(n: number, max: number): number {
 // stack vem de whitelist, então é seguro.
 function BioFontStyle({ stack }: { stack: string | null }) {
   if (!stack) return null;
-  return <style>{`.bio-font-scope,.bio-font-scope *{font-family:${stack} !important}`}</style>;
+  return <style>{`.bio-font-scope,.bio-font-scope *:not(.bio-fonte-livre){font-family:${stack} !important}`}</style>;
 }
 
 // Sobreposição escura opcional pra legibilidade sobre imagem/gradiente.
@@ -2132,9 +2133,21 @@ const LinkInBio = () => {
                     {leads.map((ld) => (
                       <div key={ld.id} className="flex items-start justify-between gap-3 rounded-xl border border-border bg-background px-3 py-2">
                         <div className="min-w-0">
+                          {ld.tipo && ld.tipo !== "contato" && (
+                            <span className={cn("inline-block mb-1 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded",
+                              ld.tipo === "parceria" ? "bg-violet-100 text-violet-700" : "bg-emerald-100 text-emerald-700")}>
+                              {ld.tipo === "parceria" ? "Parceria" : "Pedido no WhatsApp"}
+                            </span>
+                          )}
                           {ld.name && <p className="text-sm font-medium text-foreground truncate">{ld.name}</p>}
                           {ld.email && <p className="text-xs text-muted-foreground truncate">{ld.email}</p>}
                           {ld.phone && <p className="text-xs text-muted-foreground truncate">{ld.phone}</p>}
+                          {ld.mensagem && <p className="text-xs text-foreground/80 mt-1 whitespace-pre-line line-clamp-4">{ld.mensagem}</p>}
+                          {Array.isArray(ld.detalhes) && ld.detalhes.length > 0 && (
+                            <p className="text-xs text-foreground/80 mt-1">
+                              {ld.detalhes.map((i) => `${i.qtd}x ${i.nome}`).join(", ")}
+                            </p>
+                          )}
                           <p className="text-[11px] text-muted-foreground/70 mt-0.5">{new Date(ld.created_at).toLocaleDateString("pt-BR")}</p>
                         </div>
                         <button type="button" aria-label="Remover" onClick={async () => { if (await confirmar({ titulo: "Remover este lead?", descricao: "O contato captado some da sua lista.", acao: "Remover", destrutivo: true })) deleteLead.mutate(ld.id); }} className="text-muted-foreground hover:text-destructive shrink-0">
@@ -2513,7 +2526,11 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
                 cardColor: settings.cardColor, cardTextColor: settings.cardTextColor,
                 radius: radiusFor(settings.buttonStyle), isOutline: settings.buttonStyle === "outline",
               }}
-              aoAbrirProduto={() => {}} aoAbrirPost={() => {}} alturaCheia={false} />
+              aoAbrirProduto={() => {}} aoAbrirPost={() => {}} alturaCheia={false}
+              capturaDoBloco={(b) => (
+                <FormularioDePrevia kind={b.kind} d={b.data} buttonColor={settings.buttonColor}
+                  buttonTextColor={settings.buttonTextColor} radius={radiusFor(settings.buttonStyle)} />
+              )} />
           )}
         </div>
       </div>

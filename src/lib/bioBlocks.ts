@@ -13,7 +13,7 @@
 import {
   AlignLeft, CalendarClock, Contact, HelpCircle, Image as ImageIcon, Images,
   Layers, Link2, MapPin, MessageCircle, PenLine, PlayCircle, Quote, Send,
-  ShoppingBag, Type, UserRound, Clapperboard, BadgeCheck, MousePointerClick, MapPinned, type LucideIcon,
+  ShoppingBag, Type, UserRound, Clapperboard, BadgeCheck, MousePointerClick, MapPinned, Handshake, type LucideIcon,
 } from "lucide-react";
 import { lerAtendimento, resumoAtendimento, temAlgumAtendimento } from "@/lib/bioEspecialista";
 
@@ -25,7 +25,9 @@ export type TipoBloco =
   // Só no modo Site: são SEÇÕES de largura cheia, não botões numa coluna.
   | "capa" | "sobre" | "produtos" | "blog" | "depoimentos" | "contato"
   // Página de especialista (21/10/2026), ver lib/bioEspecialista.
-  | "apresentacao" | "numeros" | "acao_fixa" | "atendimento";
+  | "apresentacao" | "numeros" | "acao_fixa" | "atendimento"
+  // Contatos (22/10/2026): proposta de parceria que cai no funil.
+  | "parceria";
 
 export type CamposCaptura = "email" | "telefone" | "ambos";
 
@@ -125,6 +127,18 @@ export const BLOCOS: MetaBloco[] = [
       botao: "Enviar",
       consentimento: "Ao enviar, você autoriza o uso dos seus dados para contato e para fins de marketing.",
       paraPipeline: false,
+    },
+  },
+  {
+    tipo: "parceria", nome: "Proposta de parceria", Icone: Handshake,
+    explica: "Formulário pra marca ou cliente pedir orçamento. Cai no seu funil e chega por e-mail.",
+    padrao: {
+      titulo: "Vamos trabalhar juntos?",
+      subtitulo: "Conta o que você tem em mente. Respondo em até 2 dias úteis.",
+      pedirEmpresa: true,
+      botao: "Enviar proposta",
+      consentimento: "Ao enviar, você autoriza o uso dos seus dados para eu responder sua proposta.",
+      paraPipeline: true,
     },
   },
 ];
@@ -258,6 +272,7 @@ export function resumoDoBloco(b: { kind: string; data: DadosBloco }): string {
     case "contagem": return txt(d, "ate") ? `até ${txt(d, "ate").slice(0, 10).split("-").reverse().join("/")}` : "sem data ainda";
     case "mapa": return txt(d, "endereco") || "sem endereço ainda";
     case "captura": return bool(d, "paraPipeline") ? "vai pro pipeline" : "só na lista de leads";
+    case "parceria": return bool(d, "paraPipeline") ? "vai pro funil e por e-mail" : "chega por e-mail";
     case "capa": return txt(d, "frase").slice(0, 60) || "sem frase ainda";
     case "sobre": return txt(d, "texto").slice(0, 60) || "sem texto ainda";
     case "produtos": return "puxa os produtos cadastrados";

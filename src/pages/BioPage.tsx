@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
 import { corDeDestaque, corSobre, faltaNoBloco, nomeDaMarcaSite } from "@/lib/bioBlocks";
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
+import { FormParceria } from "@/components/bio/FormParceria";
 import { SiteBio, PaginaItem, type MarcaSite, type ItemLite } from "@/components/bio/SiteBio";
 
 type BgType = "color" | "gradient" | "image";
@@ -45,7 +46,7 @@ function clamp01(n: number, max: number): number {
 // sem tocar no resto do app. stack vem de whitelist, então é seguro.
 function BioFontStyle({ stack }: { stack: string | null }) {
   if (!stack) return null;
-  return <style>{`.bio-font-scope,.bio-font-scope *{font-family:${stack} !important}`}</style>;
+  return <style>{`.bio-font-scope,.bio-font-scope *:not(.bio-fonte-livre){font-family:${stack} !important}`}</style>;
 }
 
 // Sobreposição escura opcional pra dar legibilidade sobre imagem/gradiente.
@@ -739,7 +740,11 @@ const ConteudoDaBio = () => {
     corTexto: corSobre(corDestaque),
   };
   const voltarPraCasa = () => navegar(`/bio/${slug}`);
-  const capturaDoBloco = (b: BlocoLite) => (
+  const capturaDoBloco = (b: BlocoLite) => b.kind === "parceria" ? (
+    <FormParceria slug={slug ?? ""} daAgencia={ehDaAgencia} blocoId={b.id} d={b.data ?? {}}
+      buttonColor={settings.buttonColor} buttonTextColor={settings.buttonTextColor} radius={radius}
+      cardColor={settings.cardColor} cardTextColor={settings.cardTextColor} />
+  ) : (
     <LeadForm
       slug={slug ?? ""} daAgencia={ehDaAgencia} blocoId={b.id}
       config={{
@@ -997,7 +1002,11 @@ const ConteudoDaBio = () => {
                       data={b.data ?? {}}
                       visual={visualDosBlocos}
                       onClique={() => trackClick(b.id)}
-                      captura={
+                      captura={b.kind === "parceria" ? (
+                        <FormParceria slug={slug ?? ""} daAgencia={ehDaAgencia} blocoId={b.id} d={b.data ?? {}}
+                          buttonColor={settings.buttonColor} buttonTextColor={settings.buttonTextColor} radius={radius}
+                          cardColor={settings.cardColor} cardTextColor={settings.cardTextColor} />
+                      ) : (
                         <LeadForm
                           slug={slug ?? ""} daAgencia={ehDaAgencia} blocoId={b.id}
                           config={{
@@ -1011,7 +1020,7 @@ const ConteudoDaBio = () => {
                           buttonColor={settings.buttonColor} buttonTextColor={settings.buttonTextColor} radius={radius}
                           cardColor={settings.cardColor} cardTextColor={settings.cardTextColor}
                         />
-                      }
+                      )}
                     />
                   </motion.div>
                 ))}

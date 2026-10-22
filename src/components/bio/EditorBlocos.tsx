@@ -20,6 +20,9 @@ import { ICONES_BLOCO, iconeLucide } from "@/lib/bioIcones";
 import { CampoTextoRico } from "@/lib/textoRico";
 import { aparenciaDoNicho, modelosDoEstilo, type AparenciaModelo, type BlocoDoModelo } from "@/lib/bioTemplates";
 import { cn } from "@/lib/utils";
+import { confirmar } from "@/components/shared/Confirm";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FOTO_EXEMPLO, FOTO_EXEMPLO_SAUDE, PreviaModelo } from "@/components/bio/PreviaModelo";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { FORMAS_DA_FOTO, formaValida, type FormaDaFoto } from "@/lib/bioFoto";
 import { EditorItens } from "@/components/bio/EditorItens";
@@ -616,6 +619,42 @@ function FormBloco({ bloco, salvar, slugPublico, telefonePadrao }: { bloco: BioB
         </div>
       );
 
+    case "parceria":
+      return (
+        <div className="space-y-3.5">
+          <LinhaCampo label="Título">
+            <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })} className="rounded-xl" />
+          </LinhaCampo>
+          <LinhaCampo label="Frase de apoio">
+            <Input value={txt(d, "subtitulo")} onChange={(e) => p({ subtitulo: e.target.value })} className="rounded-xl" />
+          </LinhaCampo>
+          <label className="flex items-start gap-2.5 rounded-xl border border-border px-3 py-2.5 cursor-pointer">
+            <input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary shrink-0" checked={bool(d, "pedirEmpresa")}
+              onChange={(e) => p({ pedirEmpresa: e.target.checked })} />
+            <span>
+              <span className="block text-sm font-body font-medium">Perguntar a marca ou empresa</span>
+              <span className="block text-[11px] font-body text-muted-foreground">Pra criadora: você sabe de cara quem está chamando.</span>
+            </span>
+          </label>
+          <LinhaCampo label="Texto do botão">
+            <Input value={txt(d, "botao")} onChange={(e) => p({ botao: e.target.value })} className="rounded-xl" />
+          </LinhaCampo>
+          <LinhaCampo label="Aviso de consentimento" ajuda="Fica ao lado da caixinha que a pessoa marca antes de enviar.">
+            <Textarea rows={2} value={txt(d, "consentimento")} onChange={(e) => p({ consentimento: e.target.value })}
+              className="rounded-xl resize-none" />
+          </LinhaCampo>
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/[0.04] px-3 py-2.5">
+            <div>
+              <p className="text-sm font-body font-medium">Mandar pro funil</p>
+              <p className="text-[11px] font-body text-muted-foreground">
+                Cada proposta vira um card na coluna Novo do CRM. Ligado ou não, você recebe por e-mail e no sino.
+              </p>
+            </div>
+            <Switch checked={bool(d, "paraPipeline")} onCheckedChange={(v) => p({ paraPipeline: v })} />
+          </div>
+        </div>
+      );
+
     case "captura":
       return (
         <div className="space-y-3.5">
@@ -1139,15 +1178,17 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
   /** Numeração do caminho da aba Conteúdo ("2" no Clássico, "1" no Site). */
   numero?: string;
 }) {
-  const { blocos, isLoading, criar, atualizar, excluir, duplicar, reordenar, aplicarModelo } = useBioBlocks(estilo);
+  const { blocos, isLoading, criar, atualizar, excluir, excluirTodos, duplicar, reordenar, aplicarModelo } = useBioBlocks(estilo);
   /* O telefone mora no bloco "Contato e rodapé" e é reaproveitado pelos itens
      pra montar o link do WhatsApp: um telefone só, num lugar só. */
   const telefoneDoContato = txt(blocos.find((b) => b.kind === "contato")?.data ?? {}, "telefone") || null;
   const [aberto, setAberto] = useState<string | null>(null);
   const [paletaAberta, setPaletaAberta] = useState(false);
   const [modelosAbertos, setModelosAbertos] = useState(false);
-  // O modelo de especialista pergunta o ramo antes de montar a página.
-  const [nichoAberto, setNichoAberto] = useState(false);
+  /* Modo Site: clicar num modelo abre a prévia dele montada de verdade, e só
+     de lá se aplica. O de especialista troca de ramo dentro da própria prévia. */
+  const [verModelo, setVerModelo] = useState<string | null>(null);
+  const [nichoVer, setNichoVer] = useState("saude");
   /* Página que já tem bloco no ar: antes de trocar, pergunta. Trocar sem
      perguntar tiraria do ar o que a pessoa já divulgou. */
   const [pendente, setPendente] = useState<{ nome: string; blocos: BlocoDoModelo[]; aparencia: AparenciaModelo } | null>(null);
@@ -1157,9 +1198,24 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
     try { await aplicarModelo.mutateAsync({ novos: m.blocos, modo }); } catch { return; }
     aoAplicarAparencia?.(m.aparencia);
     setPendente(null);
-    setNichoAberto(false);
+    setVerModelo(null);
     setModelosAbertos(false);
     setAberto(null);
+  };
+  const apagarTodos = async () => {
+    const n = blocos.length;
+    const noAr = blocos.filter((b) => b.is_active).length;
+    const ok = await confirmar({
+      titulo: `Apagar ${n === 1 ? "o bloco" : `os ${n} blocos`} ${estilo === "site" ? "do site" : "da página"}?`,
+      descricao: `${noAr ? `${noAr} ${noAr === 1 ? "está" : "estão"} no ar e ${noAr === 1 ? "some" : "somem"} da página na hora. ` : ""}`
+        + "O que foi escrito e colocado neles se perde e não dá pra desfazer. "
+        + (estilo === "site" ? "A página no estilo Clássico não muda." : "A página no estilo Site não muda."),
+      acao: "Apagar tudo",
+      destrutivo: true,
+    });
+    if (!ok) return;
+    setAberto(null);
+    excluirTodos.mutate(blocos.map((b) => b.id));
   };
   const escolher = (m: { nome: string; blocos: BlocoDoModelo[]; aparencia: AparenciaModelo }) => {
     if (temNoAr) { setPendente(m); return; }
@@ -1223,26 +1279,32 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
             {modelos.map((m) => (
               <button key={m.id} type="button" disabled={aplicarModelo.isPending}
                 onClick={() => {
-                  if (m.id === "site-especialista") { setNichoAberto(true); setPendente(null); return; }
+                  if (estilo === "site") { setVerModelo(m.id); setPendente(null); return; }
                   escolher({ nome: m.nome, blocos: m.blocos, aparencia: m.aparencia });
                 }}
                 className="text-left rounded-xl border border-border bg-card p-3 hover:border-primary/50 transition-all disabled:opacity-60">
                 <span className="flex items-start gap-2.5">
-                  {/* Miniatura com as cores e o formato de botão do modelo.
-                      Ver como fica é o que faz escolher; nome e ícone sozinhos
-                      não dizem se a página vai ficar escura ou clara. */}
-                  <span aria-hidden className="w-14 h-[74px] rounded-lg shrink-0 border border-border overflow-hidden p-1.5 flex flex-col gap-1"
-                    style={m.aparencia.bgType === "gradient" && m.aparencia.bgGradient
-                      ? { background: m.aparencia.bgGradient }
-                      : { backgroundColor: m.aparencia.bgColor }}>
-                    <span className="w-4 h-4 rounded-full mx-auto shrink-0" style={{ backgroundColor: m.aparencia.buttonColor, opacity: .5 }} />
-                    {[0, 1, 2].map((i) => (
-                      <span key={i} className={cn("block h-2.5 w-full shrink-0",
-                        m.aparencia.buttonStyle === "pill" ? "rounded-full"
-                          : m.aparencia.buttonStyle === "square" ? "rounded-none" : "rounded-[3px]")}
-                        style={{ backgroundColor: m.aparencia.buttonColor }} />
-                    ))}
-                  </span>
+                  {estilo === "site" ? (
+                    /* O site de verdade, em miniatura: com as barrinhas de antes
+                       os quatro modelos pareciam o mesmo. */
+                    <span className="w-[90px] h-[150px] rounded-lg shrink-0 border border-border overflow-hidden bg-white">
+                      <PreviaModelo blocos={m.blocos} aparencia={m.aparencia} escala={0.3} altura={150} />
+                    </span>
+                  ) : (
+                    /* Clássico: miniatura com as cores e o formato de botão. */
+                    <span aria-hidden className="w-14 h-[74px] rounded-lg shrink-0 border border-border overflow-hidden p-1.5 flex flex-col gap-1"
+                      style={m.aparencia.bgType === "gradient" && m.aparencia.bgGradient
+                        ? { background: m.aparencia.bgGradient }
+                        : { backgroundColor: m.aparencia.bgColor }}>
+                      <span className="w-4 h-4 rounded-full mx-auto shrink-0" style={{ backgroundColor: m.aparencia.buttonColor, opacity: .5 }} />
+                      {[0, 1, 2].map((i) => (
+                        <span key={i} className={cn("block h-2.5 w-full shrink-0",
+                          m.aparencia.buttonStyle === "pill" ? "rounded-full"
+                            : m.aparencia.buttonStyle === "square" ? "rounded-none" : "rounded-[3px]")}
+                          style={{ backgroundColor: m.aparencia.buttonColor }} />
+                      ))}
+                    </span>
+                  )}
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5">
                       <m.Icone className="h-3.5 w-3.5 text-primary shrink-0" />
@@ -1250,33 +1312,16 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
                     </span>
                     <span className="block text-[11.5px] font-body text-muted-foreground leading-snug mt-0.5">{m.paraQuem}</span>
                     <span className="block text-[10px] font-body text-muted-foreground mt-1">
-                      {m.blocos.length} blocos · fonte {m.aparencia.fontFamily}
+                      {m.blocos.length} seções · fonte {m.aparencia.fontFamily}
                     </span>
+                    {estilo === "site" && (
+                      <span className="inline-block mt-2 text-[11.5px] font-body font-semibold text-primary">Ver como fica →</span>
+                    )}
                   </span>
                 </span>
               </button>
             ))}
           </div>
-          {nichoAberto && (
-            <div className="mt-3 rounded-xl border border-primary/40 bg-card p-3">
-              <p className="text-xs font-body font-semibold text-foreground">Qual é o ramo?</p>
-              <p className="text-[11.5px] font-body text-muted-foreground mb-2.5">
-                Preenche a página inteira pro ramo: profissão, números, registro, como atende, o texto do botão, as cores e a
-                pergunta que o cliente faz antes de marcar. Depois é só trocar o que está entre colchetes.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                {NICHOS.map((n) => (
-                  <button key={n.id} type="button" disabled={aplicarModelo.isPending}
-                    onClick={() => escolher({ nome: `Especialista: ${n.nome}`, blocos: blocosDoNicho(n) as BlocoDoModelo[], aparencia: aparenciaDoNicho(n) })}
-                    className="flex items-center gap-2 text-left rounded-lg border border-border px-3 py-2 min-h-[44px] hover:border-primary/50 disabled:opacity-60">
-                    <span aria-hidden className="w-3.5 h-3.5 rounded-full shrink-0" style={{ backgroundColor: n.cor }} />
-                    <span className="text-[13px] font-body font-semibold">{n.nome}</span>
-                  </button>
-                ))}
-              </div>
-              <Button type="button" size="sm" variant="ghost" className="mt-2" onClick={() => setNichoAberto(false)}>Voltar</Button>
-            </div>
-          )}
           {pendente && (
             <div className="mt-3 rounded-xl border border-primary/40 bg-card p-3" role="group" aria-label="Como aplicar o modelo">
               <p className="text-xs font-body font-semibold text-foreground">Sua página já tem blocos no ar</p>
@@ -1300,6 +1345,98 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
           )}
         </div>
       )}
+
+      {/* ── A PRÉVIA DO MODELO ──
+          Escolher sem ver era escolher no escuro. A janela mostra o site
+          montado com o texto de exemplo, lista o que vem e só aplica no botão. */}
+      {(() => {
+        const m = modelos.find((x) => x.id === verModelo);
+        if (!m) return null;
+        const especialista = m.id === "site-especialista";
+        const nicho = especialista ? (nichoPorId(nichoVer) ?? NICHOS[0]) : null;
+        const alvo = nicho
+          ? { nome: `${m.nome} (${nicho.nome})`, blocos: blocosDoNicho(nicho) as BlocoDoModelo[], aparencia: aparenciaDoNicho(nicho) }
+          : { nome: m.nome, blocos: m.blocos, aparencia: m.aparencia };
+        const nomes = Array.from(new Set(alvo.blocos.map((b) => metaDoBloco(b.kind).nome)));
+        return (
+          <Dialog open onOpenChange={(v) => { if (!v) setVerModelo(null); }}>
+            <DialogContent className="w-[calc(100vw-1rem)] max-w-[820px] p-0 gap-0 overflow-hidden max-h-[94dvh] flex flex-col sm:flex-row">
+              <div className="bg-muted/60 shrink-0 flex justify-center px-3 pt-4 pb-3 sm:p-5 sm:border-r border-border">
+                <div className="rounded-[30px] border-[7px] border-gray-800 bg-white overflow-hidden shadow-xl">
+                  <div className="h-[42dvh] sm:h-[min(640px,78dvh)] overflow-y-auto overflow-x-hidden" key={alvo.nome}>
+                    <PreviaModelo blocos={alvo.blocos} aparencia={alvo.aparencia} foto={nicho?.id === "saude" ? FOTO_EXEMPLO_SAUDE : FOTO_EXEMPLO} />
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 min-w-0 overflow-y-auto p-4 sm:p-5 flex flex-col gap-3.5">
+                <DialogHeader className="text-left space-y-1">
+                  <DialogTitle className="font-display text-lg leading-tight">{m.nome}</DialogTitle>
+                  <DialogDescription className="text-[13px]">{m.paraQuem}</DialogDescription>
+                </DialogHeader>
+
+                {nicho && (
+                  <div>
+                    <p className="text-[11px] font-body font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Seu ramo</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {NICHOS.map((n) => (
+                        <button key={n.id} type="button" onClick={() => setNichoVer(n.id)}
+                          aria-pressed={n.id === nicho.id}
+                          className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-1 min-h-[32px] text-[12px] font-body font-semibold",
+                            n.id === nicho.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground")}>
+                          <span aria-hidden className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: n.cor }} />
+                          {n.nome}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[11.5px] font-body text-muted-foreground mt-1.5 leading-snug">
+                      Muda os números, o texto, o botão e as cores pro ramo. A prévia ao lado já mostra.
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-[11px] font-body font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">O que vem</p>
+                  <ul className="flex flex-wrap gap-1.5">
+                    {nomes.map((n) => (
+                      <li key={n} className="rounded-md bg-muted px-2 py-0.5 text-[12px] font-body">{n}</li>
+                    ))}
+                  </ul>
+                  <p className="text-[11.5px] font-body text-muted-foreground mt-1.5 leading-snug">
+                    Fonte {alvo.aparencia.fontFamily}. Os textos são exemplo: você troca depois de aplicar, e serviços e posts
+                    mostram o que você cadastrar.
+                  </p>
+                </div>
+
+                <div className="mt-auto pt-1 space-y-2">
+                  {temNoAr ? (
+                    <>
+                      <p className="text-[12px] font-body text-foreground">Sua página já tem blocos no ar. Como aplicar?</p>
+                      <div className="grid grid-cols-1 gap-1.5">
+                        <button type="button" disabled={aplicarModelo.isPending} onClick={() => void aplicar(alvo, "trocar")}
+                          className="text-left rounded-lg border border-primary bg-primary/5 px-3 py-2.5 min-h-[44px] disabled:opacity-60">
+                          <span className="block text-[13px] font-body font-semibold">Trocar a página</span>
+                          <span className="block text-[11px] font-body text-muted-foreground leading-snug">O modelo entra no ar. O que existe desliga e vai pro fim, sem apagar.</span>
+                        </button>
+                        <button type="button" disabled={aplicarModelo.isPending} onClick={() => void aplicar(alvo, "juntar")}
+                          className="text-left rounded-lg border border-border px-3 py-2.5 min-h-[44px] hover:border-primary/50 disabled:opacity-60">
+                          <span className="block text-[13px] font-body font-semibold">Juntar no fim</span>
+                          <span className="block text-[11px] font-body text-muted-foreground leading-snug">A página no ar não muda. As seções novas entram desligadas.</span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <Button type="button" className="w-full" disabled={aplicarModelo.isPending} onClick={() => void aplicar(alvo, "trocar")}>
+                      {aplicarModelo.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+                      Usar este modelo
+                    </Button>
+                  )}
+                  <Button type="button" variant="ghost" className="w-full" onClick={() => setVerModelo(null)}>Ver os outros</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
 
       {paletaAberta && (
         <div className="rounded-2xl border border-border bg-muted/30 p-3">
@@ -1365,6 +1502,18 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero }
           )}
         </Droppable>
       </DragDropContext>
+
+      {/* Fica no pé da lista, longe dos botões de criar: apagar tudo é raro e
+          não pode ser o clique errado de quem queria "Adicionar bloco". */}
+      {blocos.length > 1 && (
+        <div className="flex justify-end pt-1">
+          <Button type="button" size="sm" variant="ghost" disabled={excluirTodos.isPending}
+            onClick={() => void apagarTodos()}
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+            <Trash2 className="h-3.5 w-3.5 mr-1" /> Apagar todos os blocos
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

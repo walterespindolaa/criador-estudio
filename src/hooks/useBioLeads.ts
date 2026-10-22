@@ -13,6 +13,10 @@ export type BioLead = {
   phone: string | null;
   source: string;
   created_at: string;
+  /** contato (formulário de captura), parceria ou pedido (sacola da loja). */
+  tipo?: "contato" | "parceria" | "pedido" | null;
+  mensagem?: string | null;
+  detalhes?: { nome: string; qtd: number; preco: number | null }[] | null;
 };
 
 // types.ts não tem bio_leads, cast (padrão usePartner/useModules).
