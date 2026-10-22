@@ -203,7 +203,9 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
             <span className="inline-block -rotate-2 rounded-[14px] bg-[#FFCF03] px-3">o caos acaba.</span>
           </h1>
           <ul className="mt-7 flex flex-col gap-3 text-[17px] text-[#3D3A33]">
-            {["Suas ideias, roteiros e calendário num lugar só", "IA que escreve no SEU tom de voz", "Insights reais do Instagram, sem achismo"].map((b) => (
+            {(accountType === "manager"
+              ? ["Seus clientes, agenda e aprovações num lugar só", "Portal de aprovação com a marca de cada cliente", "A base é grátis pra sempre. Módulo, só se usar"]
+              : ["Suas ideias, roteiros e calendário num lugar só", "IA que escreve no SEU tom de voz", "Insights reais do Instagram, sem achismo"]).map((b) => (
               <li key={b} className="flex items-center gap-3">
                 <span className={cn("grid h-7 w-7 shrink-0 place-items-center bg-[#01A652]", BLOB_A)}><Check className="h-4 w-4 text-white" strokeWidth={3} /></span>
                 {b}
@@ -218,8 +220,11 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
             <p className={cn(SCRIPT, "mt-1 text-[24px] leading-[1.05]")}>primeiro post do meu novo ritmo</p>
           </div>
           <div className="absolute left-[190px] top-[40px] w-[170px] rotate-[5deg] rounded-[18px] bg-[#0A0A0A] p-[12px_14px] text-[#F5F3E7]">
-            <p className="text-[11px] font-bold tracking-[.6px] text-[#FFCF03]">7 DIAS GRÁTIS</p>
-            <p className={cn(DISPLAY, "mt-0.5 text-[15px] font-semibold leading-tight text-white")}>Cancela quando quiser, em 2 cliques.</p>
+            {/* Conta de social mídia não tem teste: a base é grátis pra sempre e
+                o anúncio promete isso. "7 dias grátis" aqui parecia pegadinha
+                pra quem chegou da LP de social mídia (22/10/2026). */}
+            <p className="text-[11px] font-bold tracking-[.6px] text-[#FFCF03]">{accountType === "manager" ? "CONTA GRÁTIS" : "7 DIAS GRÁTIS"}</p>
+            <p className={cn(DISPLAY, "mt-0.5 text-[15px] font-semibold leading-tight text-white")}>{accountType === "manager" ? "Grátis pra sempre. Sem cartão." : "Cancela quando quiser, em 2 cliques."}</p>
           </div>
         </div>
         <img src="/stickers/selo-sem-formula.png" alt="" aria-hidden className="pointer-events-none absolute left-[440px] bottom-10 w-[120px] rotate-[10deg] [@media(max-height:820px)]:hidden" />
@@ -278,6 +283,8 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
                   pra ele (Walter, 19/10/2026). "7 dias grátis" ali confundia. */}
               {accountType === "parceiro"
                 ? <span className="shrink-0 rounded-full bg-[#7C5CFF] px-3 py-1 text-[13px] font-bold text-white">Grátis pra você</span>
+                : accountType === "manager"
+                ? <p className={cn(SCRIPT, "shrink-0 -rotate-2 text-[22px] text-[#D9480F]")}>grátis pra sempre</p>
                 : <p className={cn(SCRIPT, "shrink-0 -rotate-2 text-[22px] text-[#D9480F]")}>7 dias grátis</p>}
             </div>
 
@@ -392,7 +399,9 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
               <Link to="/login" className="font-bold text-[#0050C8] underline underline-offset-[3px]">{t("auth.signIn")}</Link>
             </p>
             <p className="-mt-1 hidden text-center text-[12.5px] text-[#5B574E] lg:block">
-              {accountType === "parceiro" ? "Sem cartão. Quem paga o Cria é a agência." : "Sem compromisso. Cancela em 2 cliques."}
+              {accountType === "parceiro" ? "Sem cartão. Quem paga o Cria é a agência."
+                : accountType === "manager" ? "Sem cartão. Você só paga os módulos que ligar."
+                : "Sem compromisso. Cancela em 2 cliques."}
             </p>
           </form>
         )}
