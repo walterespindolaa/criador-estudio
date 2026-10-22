@@ -74,6 +74,8 @@ project_id = "ecbzfjzoqidowrsfsfih"
     verify_jwt = true
   [functions.meta-capi]
     verify_jwt = false
+  [functions.bio-logo-crm]
+    verify_jwt = false
   [functions.bio-track]
     verify_jwt = false
   [functions.saved-fetch]
