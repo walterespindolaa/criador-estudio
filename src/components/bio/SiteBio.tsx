@@ -15,7 +15,7 @@ import {
 } from "@/components/bio/SiteConsultoria";
 import { CapaCriadora, SecaoBotoes, SecaoCupons, SecaoMidiaKit, SecaoVideos } from "@/components/bio/SiteCriadora";
 import type { SocialPublico } from "@/lib/bioCriadora";
-import { lerAtendimento, resumoAtendimento } from "@/lib/bioEspecialista";
+import { atendimentoPublico, resumoAtendimento } from "@/lib/bioEspecialista";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -536,7 +536,7 @@ export function SiteBio({
   const acaoFixa = blocos.find((b) => b.kind === "acao_fixa");
   // A linha "onde atende" embaixo dos números sai do bloco Onde atende.
   const blocoAtendimento = blocos.find((b) => b.kind === "atendimento");
-  const resumoOnde = blocoAtendimento ? resumoAtendimento(lerAtendimento(blocoAtendimento.data)) : "";
+  const resumoOnde = blocoAtendimento ? resumoAtendimento(atendimentoPublico(blocoAtendimento.data)) : "";
   // Loja: o selo "Aberto agora" da capa sai do bloco de horários, e o
   // WhatsApp do pedido vem do primeiro lugar da página que tiver um.
   const statusLoja = useStatusDaLoja(blocos.find((b) => b.kind === "horarios")?.data);

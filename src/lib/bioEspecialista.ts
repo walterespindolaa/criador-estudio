@@ -15,6 +15,7 @@
    as sugestões por nicho, o endereço do vídeo no Bunny e o traço desenhado.
    ═══════════════════════════════════════════════════════════════════════════ */
 
+import { ehMarcador } from "@/lib/bioMovimento";
 import { BUNNY_CRIAPOST_CDN_HOSTNAME } from "@/lib/constants";
 
 /* ── AS FONTES DA ASSINATURA ──
@@ -183,6 +184,20 @@ export function lerAtendimento(d: Record<string, unknown> | null | undefined): A
     regiao: s_(x.regiao),
     entrega_texto: s_(x.entrega_texto),
     retirada: s_(x.retirada),
+  };
+}
+
+/** O mesmo Atendimento, sem o que ainda é marcador ("[cidade]", "[Nome do
+ *  local]"). É o que a página PÚBLICA desenha: o modelo aplicado vem com
+ *  marcadores pra a pessoa saber o que trocar, e esquecido um, o visitante
+ *  não pode ver colchete. O editor continua lendo o original. */
+export function atendimentoPublico(d: Record<string, unknown> | null | undefined): Atendimento {
+  const a = lerAtendimento(d);
+  const l = (t: string) => (ehMarcador(t) ? "" : t);
+  return {
+    ...a,
+    locais: a.locais.map((x) => ({ nome: l(x.nome), endereco: l(x.endereco), cidade: l(x.cidade), horario: l(x.horario) })),
+    online_texto: l(a.online_texto), regiao: l(a.regiao), entrega_texto: l(a.entrega_texto), retirada: l(a.retirada),
   };
 }
 

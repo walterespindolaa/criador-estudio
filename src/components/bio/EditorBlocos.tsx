@@ -20,7 +20,7 @@ import { aparenciaDoNicho, modelosDoEstilo, type AparenciaModelo, type BlocoDoMo
 import { cn } from "@/lib/utils";
 import { confirmar } from "@/components/shared/Confirm";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FOTO_EXEMPLO, FOTO_EXEMPLO_SAUDE, PreviaModelo } from "@/components/bio/PreviaModelo";
+import { FOTO_EXEMPLO, PreviaModelo, PreviaRolando, fotoDoRamo, nomeDoRamo, previaDoNicho } from "@/components/bio/PreviaModelo";
 import { EditorItens } from "@/components/bio/EditorItens";
 import { EditorAssinatura } from "@/components/bio/EditorAssinatura";
 import { BotaoImagem, EscolherFundo, LinhaCampo, SeletorIcone } from "@/components/bio/EditorCampos";
@@ -1634,7 +1634,9 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero, 
                     /* O site de verdade, em miniatura: com as barrinhas de antes
                        os quatro modelos pareciam o mesmo. */
                     <span className="w-[90px] h-[150px] rounded-lg shrink-0 border border-border overflow-hidden bg-white">
-                      <PreviaModelo blocos={m.blocos} aparencia={m.aparencia} escala={0.3} altura={150} foto={m.fotoExemplo} previa={m.previa} />
+                      <PreviaModelo blocos={m.blocos} aparencia={m.aparencia} escala={0.3} altura={150} nome={m.nomeExemplo}
+                        previa={m.id === "site-especialista" ? previaDoNicho(m.blocos) : m.previa}
+                        foto={m.id === "site-especialista" ? fotoDoRamo("saude") : m.fotoExemplo} />
                     </span>
                   ) : (
                     /* Clássico: miniatura com as cores e o formato de botão. */
@@ -1704,44 +1706,55 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero, 
           ? { nome: `${m.nome} (${nicho.nome})`, blocos: blocosDoNicho(nicho) as BlocoDoModelo[], aparencia: aparenciaDoNicho(nicho) }
           : { nome: m.nome, blocos: m.blocos, aparencia: m.aparencia, foto: m.fotoExemplo, previa: m.previa };
         const nomes = Array.from(new Set(alvo.blocos.map((b) => metaDoBloco(b.kind).nome)));
+        const fotoDaPrevia = nicho ? fotoDoRamo(nicho.id) : ("foto" in alvo && alvo.foto) || FOTO_EXEMPLO;
+        // Ramo do especialista: os marcadores ("[anos]", "CRN [número]") viram
+        // exemplo de verdade só aqui. A página aplicada continua com eles, pra
+        // a pessoa ver o que falta preencher, e a pública nunca mostra.
+        const semMarcador = previaDoNicho(alvo.blocos);
+        const doModelo = "previa" in alvo ? alvo.previa : undefined;
+        const previaDoAlvo = doModelo ? { ...doModelo, blocos: { ...semMarcador.blocos, ...doModelo.blocos } } : semMarcador;
         return (
           <Dialog open onOpenChange={(v) => { if (!v) setVerModelo(null); }}>
-            <DialogContent className="w-[calc(100vw-1rem)] max-w-[820px] p-0 gap-0 overflow-hidden max-h-[94dvh] flex flex-col sm:flex-row">
-              <div className="bg-muted/60 shrink-0 flex justify-center px-3 pt-4 pb-3 sm:p-5 sm:border-r border-border">
-                <div className="rounded-[30px] border-[7px] border-gray-800 bg-white overflow-hidden shadow-xl">
-                  <div className="h-[42dvh] sm:h-[min(640px,78dvh)] overflow-y-auto overflow-x-hidden" key={alvo.nome}>
-                    <PreviaModelo blocos={alvo.blocos} aparencia={alvo.aparencia} foto={nicho?.id === "saude" ? FOTO_EXEMPLO_SAUDE : ("foto" in alvo && alvo.foto) || FOTO_EXEMPLO}
-                      previa={"previa" in alvo ? alvo.previa : undefined} />
-                  </div>
+            {/* No celular a janela ocupa a tela e a PRÉVIA é a protagonista:
+                antes ela tinha 42% da altura e mostrava só o título. */}
+            <DialogContent className="w-[calc(100vw-1rem)] max-w-[880px] p-0 gap-0 overflow-hidden h-[94dvh] sm:h-auto sm:max-h-[94dvh] flex flex-col sm:flex-row">
+              <div className="bg-muted/60 flex-1 min-h-0 sm:flex-none flex justify-center px-3 pt-4 pb-2 sm:p-5 sm:border-r border-border">
+                <div className="h-full sm:h-[min(660px,80dvh)] w-[min(320px,100%)] sm:w-[404px] rounded-[30px] border-[7px] border-gray-800 bg-white overflow-hidden shadow-xl">
+                  <PreviaRolando chave={alvo.nome} className="h-full overflow-y-auto overflow-x-hidden overscroll-contain">
+                    <PreviaModelo blocos={alvo.blocos} aparencia={alvo.aparencia} foto={fotoDaPrevia} encaixar
+                      previa={previaDoAlvo} nome={nicho ? nomeDoRamo(nicho.id) : m.nomeExemplo} />
+                  </PreviaRolando>
                 </div>
               </div>
-              <div className="flex-1 min-w-0 overflow-y-auto p-4 sm:p-5 flex flex-col gap-3.5">
-                <DialogHeader className="text-left space-y-1">
-                  <DialogTitle className="font-display text-lg leading-tight">{m.nome}</DialogTitle>
-                  <DialogDescription className="text-[13px]">{m.paraQuem}</DialogDescription>
+              <div className="shrink-0 sm:flex-1 min-w-0 sm:overflow-y-auto px-4 pt-3 pb-4 sm:p-5 flex flex-col gap-2.5 sm:gap-3.5 border-t sm:border-t-0 border-border">
+                <DialogHeader className="text-left space-y-0.5">
+                  <DialogTitle className="font-display text-base sm:text-lg leading-tight">{m.nome}</DialogTitle>
+                  <DialogDescription className="text-[12.5px] sm:text-[13px] leading-snug">{m.paraQuem}</DialogDescription>
                 </DialogHeader>
 
                 {nicho && (
                   <div>
-                    <p className="text-[11px] font-body font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Seu ramo</p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <p className="hidden sm:block text-[11px] font-body font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Seu ramo</p>
+                    {/* Uma linha que rola de lado no celular: oito botões
+                        quebrando em quatro linhas empurravam a prévia pra fora. */}
+                    <div className="flex gap-1.5 overflow-x-auto -mx-4 px-4 pb-0.5 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible">
                       {NICHOS.map((n) => (
                         <button key={n.id} type="button" onClick={() => setNichoVer(n.id)}
                           aria-pressed={n.id === nicho.id}
-                          className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-1 min-h-[32px] text-[12px] font-body font-semibold",
+                          className={cn("shrink-0 flex items-center gap-1.5 rounded-full border px-2.5 py-1 min-h-[34px] text-[12px] font-body font-semibold whitespace-nowrap",
                             n.id === nicho.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground")}>
                           <span aria-hidden className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: n.cor }} />
                           {n.nome}
                         </button>
                       ))}
                     </div>
-                    <p className="text-[11.5px] font-body text-muted-foreground mt-1.5 leading-snug">
-                      Muda os números, o texto, o botão e as cores pro ramo. A prévia ao lado já mostra.
+                    <p className="hidden sm:block text-[11.5px] font-body text-muted-foreground mt-1.5 leading-snug">
+                      Muda a foto de exemplo, os números, o texto, o botão e as cores pro ramo.
                     </p>
                   </div>
                 )}
 
-                <div>
+                <div className="hidden sm:block">
                   <p className="text-[11px] font-body font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">O que vem</p>
                   <ul className="flex flex-wrap gap-1.5">
                     {nomes.map((n) => (
@@ -1749,35 +1762,34 @@ export function EditorBlocos({ estilo, aoAplicarAparencia, slugPublico, numero, 
                     ))}
                   </ul>
                   <p className="text-[11.5px] font-body text-muted-foreground mt-1.5 leading-snug">
-                    Fonte {alvo.aparencia.fontFamily}. Os textos são exemplo: você troca depois de aplicar, e serviços e posts
-                    mostram o que você cadastrar.
+                    Fotos, nomes e números da prévia são só exemplo e não vão pra sua página. Os textos entram como exemplo pra você trocar.
                   </p>
                 </div>
+                <p className="sm:hidden text-[11.5px] font-body text-muted-foreground leading-snug">
+                  {nomes.length} seções. Fotos e números são só exemplo e não vão pra sua página.
+                </p>
 
-                <div className="mt-auto pt-1 space-y-2">
+                <div className="sm:mt-auto sm:pt-1 space-y-1.5 sm:space-y-2">
                   {temNoAr ? (
-                    <>
-                      <p className="text-[12px] font-body text-foreground">Sua página já tem blocos no ar. Como aplicar?</p>
-                      <div className="grid grid-cols-1 gap-1.5">
-                        <button type="button" disabled={aplicarModelo.isPending} onClick={() => void aplicar(alvo, "trocar")}
-                          className="text-left rounded-lg border border-primary bg-primary/5 px-3 py-2.5 min-h-[44px] disabled:opacity-60">
-                          <span className="block text-[13px] font-body font-semibold">Trocar a página</span>
-                          <span className="block text-[11px] font-body text-muted-foreground leading-snug">O modelo entra no ar. O que existe desliga e vai pro fim, sem apagar.</span>
-                        </button>
-                        <button type="button" disabled={aplicarModelo.isPending} onClick={() => void aplicar(alvo, "juntar")}
-                          className="text-left rounded-lg border border-border px-3 py-2.5 min-h-[44px] hover:border-primary/50 disabled:opacity-60">
-                          <span className="block text-[13px] font-body font-semibold">Juntar no fim</span>
-                          <span className="block text-[11px] font-body text-muted-foreground leading-snug">A página no ar não muda. As seções novas entram desligadas.</span>
-                        </button>
-                      </div>
-                    </>
+                    <div className="grid grid-cols-2 sm:grid-cols-1 gap-1.5">
+                      <button type="button" disabled={aplicarModelo.isPending} onClick={() => void aplicar(alvo, "trocar")}
+                        className="text-left rounded-lg border border-primary bg-primary/5 px-3 py-2 min-h-[44px] disabled:opacity-60">
+                        <span className="block text-[13px] font-body font-semibold">Trocar a página</span>
+                        <span className="block text-[11px] font-body text-muted-foreground leading-snug">Entra no ar. O atual desliga, sem apagar.</span>
+                      </button>
+                      <button type="button" disabled={aplicarModelo.isPending} onClick={() => void aplicar(alvo, "juntar")}
+                        className="text-left rounded-lg border border-border px-3 py-2 min-h-[44px] hover:border-primary/50 disabled:opacity-60">
+                        <span className="block text-[13px] font-body font-semibold">Juntar no fim</span>
+                        <span className="block text-[11px] font-body text-muted-foreground leading-snug">O que está no ar não muda.</span>
+                      </button>
+                    </div>
                   ) : (
                     <Button type="button" className="w-full" disabled={aplicarModelo.isPending} onClick={() => void aplicar(alvo, "trocar")}>
                       {aplicarModelo.isPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
                       Usar este modelo
                     </Button>
                   )}
-                  <Button type="button" variant="ghost" className="w-full" onClick={() => setVerModelo(null)}>Ver os outros</Button>
+                  <Button type="button" variant="ghost" className="w-full h-9" onClick={() => setVerModelo(null)}>Ver os outros</Button>
                 </div>
               </div>
             </DialogContent>

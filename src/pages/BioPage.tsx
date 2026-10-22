@@ -50,7 +50,7 @@ function BioFontStyle({ stack, titulos }: { stack: string | null; titulos?: stri
   // Títulos com fonte própria: a regra é mais específica que a do texto, então
   // vence. As duas pilhas saem da lista fechada, nada digitado entra aqui.
   const css = (stack ? `.bio-font-scope,.bio-font-scope *:not(.bio-fonte-livre){font-family:${stack} !important}` : "")
-    + (titulos ? `.bio-font-scope .font-display:not(.bio-fonte-livre),.bio-font-scope h1:not(.bio-fonte-livre),.bio-font-scope h2:not(.bio-fonte-livre),.bio-font-scope h3:not(.bio-fonte-livre){font-family:${titulos} !important}` : "");
+    + (titulos ? `.bio-font-scope :is(.font-display,h1,h2,h3):not(.bio-fonte-livre),.bio-font-scope :is(.font-display,h1,h2,h3) *:not(.bio-fonte-livre){font-family:${titulos} !important}` : "");
   return <style>{css}</style>;
 }
 

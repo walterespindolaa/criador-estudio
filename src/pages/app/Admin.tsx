@@ -367,11 +367,14 @@ const AdminInner = () => {
     <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
+        {/* No celular os dois botões (shrink-0) ocupavam a linha inteira e o
+            título ficava com largura zero: "Painel Admin" saía uma letra por
+            linha. Agora a linha quebra: título em cima, botões embaixo. */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-sm shrink-0">
             <Shield className="h-5 w-5 text-white" strokeWidth={1.75} />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 basis-[200px]">
             <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">
               Painel Admin
             </h1>
@@ -379,12 +382,12 @@ const AdminInner = () => {
               Gerencie usuários e acompanhe o crescimento.
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 w-full sm:w-auto sm:shrink-0 [&>button]:flex-1 sm:[&>button]:flex-none">
             <Button variant="outline" onClick={() => setOpenCreateMgr(true)}>
-              <Briefcase className="h-4 w-4 mr-1.5" /> Criar social mídia
+              <Briefcase className="h-4 w-4 mr-1.5" /><span className="sm:hidden">Social mídia</span><span className="hidden sm:inline">Criar social mídia</span>
             </Button>
             <Button onClick={() => setOpenCreate(true)}>
-              <Plus className="h-4 w-4 mr-1.5" /> Adicionar usuário
+              <Plus className="h-4 w-4 mr-1.5" /><span className="sm:hidden">Usuário</span><span className="hidden sm:inline">Adicionar usuário</span>
             </Button>
           </div>
         </div>
@@ -398,7 +401,7 @@ const AdminInner = () => {
               pílulas compactas, com um segundo nível dentro de cada um. Nada
               foi removido: cada tela antiga continua existindo, só mudou de
               endereço. */}
-          <TabsList className="flex flex-wrap gap-1.5 mb-5 bg-transparent h-auto p-0 justify-start">
+          <TabsList className="flex flex-wrap gap-1.5 mb-5 bg-transparent h-auto p-0 justify-start border-0 rounded-none">
             {[
               { value: "inicio", icon: LayoutDashboard, title: "Início" },
               { value: "contas", icon: Users, title: "Contas", hint: `${stats.totalUsers}` },

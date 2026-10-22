@@ -119,3 +119,20 @@ describe("onde atende na página", () => {
     expect(screen.getByText(/Atendimento online/)).toBeTruthy();
   });
 });
+
+describe("marcador esquecido nunca vai pro ar", () => {
+  it("o ramo aplicado sem preencher não mostra colchete na página pública", async () => {
+    const { NICHOS, blocosDoNicho } = await import("@/lib/bioEspecialista");
+    for (const n of NICHOS) {
+      const { container, unmount } = montar(blocosDoNicho(n).map((b) => ({ kind: b.kind, data: b.data as Record<string, unknown> })));
+      expect(container.textContent ?? "", n.id).not.toMatch(/\[[^\]]*\]/);
+      unmount();
+    }
+  });
+  it("número preenchido fica, marcador sai", () => {
+    montar([{ kind: "numeros", data: { itens: [{ valor: "12", rotulo: "anos" }, { valor: "[pacientes]", rotulo: "pacientes" }], registro: "CRN [número]" } }]);
+    expect(screen.queryByText("pacientes")).toBeNull();
+    expect(screen.queryByText(/CRN/)).toBeNull();
+    expect(screen.getByText("anos")).toBeTruthy();
+  });
+});

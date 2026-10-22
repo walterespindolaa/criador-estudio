@@ -4,8 +4,9 @@ import { alvoDoLink, linkGoogleMaps, linkSeguro, linkWaze, linkWhatsapp, lista, 
 import { destinoDoBotao } from "@/lib/bioConsultoria";
 import { iconeLucide } from "@/lib/bioIcones";
 import { Contador } from "@/components/bio/Movimento";
+import { ehMarcador } from "@/lib/bioMovimento";
 import {
-  QUADRO_H, QUADRO_W, fonteAssinatura, lerAssinatura, lerAtendimento, podeTocarVideoDeFundo, urlFonteGoogle,
+  QUADRO_H, QUADRO_W, fonteAssinatura, lerAssinatura, atendimentoPublico, podeTocarVideoDeFundo, urlFonteGoogle,
   urlMapaEmbutido, videoDaCapa, type Assinatura,
 } from "@/lib/bioEspecialista";
 import { cn } from "@/lib/utils";
@@ -127,9 +128,14 @@ export function SecaoNumeros({ d, localAuto }: {
   localAuto?: string;
 }) {
   const tema = temaDe(txt(d, "tema"));
-  const itens = lista<{ valor?: string; rotulo?: string }>(d, "itens").filter((i) => (i.valor ?? "").trim()).slice(0, 4);
+  // Marcador esquecido ("[anos]", "CRN [número]") some da página pública: o
+  // número inteiro sai, e não um "[anos]" na cara do visitante.
+  const limpo = (t: string | undefined) => { const v = (t ?? "").trim(); return ehMarcador(v) ? "" : v; };
+  const itens = lista<{ valor?: string; rotulo?: string }>(d, "itens")
+    .map((i) => ({ valor: limpo(i.valor), rotulo: limpo(i.rotulo) }))
+    .filter((i) => i.valor).slice(0, 4);
   if (!itens.length) return null;
-  const local = txt(d, "local").trim() || (localAuto ?? "").trim(), registro = txt(d, "registro").trim();
+  const local = limpo(txt(d, "local")) || limpo(localAuto), registro = limpo(txt(d, "registro"));
   return (
     <section className="px-6 pt-6 pb-8 cq-md:py-12" style={{ backgroundColor: tema.fundo, color: tema.texto }}>
       <div className="mx-auto max-w-[560px]">
@@ -207,7 +213,7 @@ export function MapaEmbutido({ endereco, className }: { endereco: string; classN
    Quem só atende online ou em casa não mostra endereço nenhum. */
 export function SecaoAtendimento({ d, aoClicar }: { d: DadosBloco; aoClicar?: () => void }) {
   const tema = temaDe(txt(d, "tema"));
-  const a = lerAtendimento(d);
+  const a = atendimentoPublico(d);
   const locais = a.presencial ? a.locais.filter((l) => l.endereco.trim() || l.cidade.trim()) : [];
   const cartoes: React.ReactNode[] = [];
   const cartao = "rounded-2xl p-4 cq-md:p-5 flex flex-col gap-1.5";

@@ -55,6 +55,8 @@ export type ModeloBio = {
   /** Exemplo preenchido SÓ pra prévia (números, preços, Instagram de mentira).
    *  Aplicar o modelo leva `blocos`; isto aqui nunca sai do desenho. */
   previa?: PreviaDoModelo;
+  /** Nome de exemplo na prévia (menu, assinatura). Só desenho. */
+  nomeExemplo?: string;
 };
 
 export type PreviaDoModelo = { blocos?: Record<number, DadosBloco>; social?: SocialPublico };
@@ -182,6 +184,7 @@ export const MODELOS: ModeloBio[] = [
        se", serviços com o que inclui, como funciona, um depoimento grande,
        perguntas e a chamada final, com o botão fixo levando até ela. */
     id: "site-consultoria",
+    nomeExemplo: "Marina Alves",
     nome: "Consultoria e serviços",
     paraQuem: "Quem vende serviço e precisa explicar cada um com calma: consultoria, mentoria, agência, escritório.",
     Icone: Briefcase,
@@ -234,7 +237,8 @@ export const MODELOS: ModeloBio[] = [
     previa: {
       blocos: {
         0: { numeros: [{ valor: "+120", rotulo: "clientes atendidos" }, { valor: "12 anos", rotulo: "de experiência" }], selo: "Online e presencial",
-          titulo: "Sua empresa rodando sem depender de você em tudo.", destaque: "você", etiqueta: "Consultoria de processos · pequenas empresas" },
+          titulo: "Sua empresa rodando sem depender de você em tudo.", destaque: "você", etiqueta: "Consultoria de processos · pequenas empresas",
+          frase: "Organizo processos, rotina e equipe de negócios com 2 a 15 pessoas, pra você parar de apagar incêndio." },
         2: { itens: [
           { id: "p1", nome: "Diagnóstico", duracao: "2 semanas", resumo: "Raio-x de como a empresa funciona hoje e o plano do que mudar primeiro.", inclui: "Entrevista com a equipe\nMapa dos processos\nPlano de 90 dias", preco: "1.800", destaque: false },
           { id: "p2", nome: "Acompanhamento", duracao: "3 meses", resumo: "A gente implanta junto, toda semana, até a rotina rodar sem você.", inclui: "Diagnóstico incluso\nEncontro semanal de 1h\nManual da operação", preco: "6.900", destaque: true },
@@ -249,6 +253,7 @@ export const MODELOS: ModeloBio[] = [
   },
   {
     id: "site-loja",
+    nomeExemplo: "Forno da Vila",
     nome: "Loja e negócio local",
     paraQuem: "Padaria, doceria, restaurante, loja de bairro: mostra o que vende, recebe pedido no WhatsApp e diz se está aberto agora.",
     Icone: UtensilsCrossed,
@@ -263,6 +268,19 @@ export const MODELOS: ModeloBio[] = [
        vantagens, o cardápio com sacola, o destaque da semana, horários,
        avaliações, onde fica e contato. O pedido vai pro WhatsApp do bloco
        Contato; sem número, o cardápio fica de vitrine. */
+    previa: {
+      blocos: {
+        0: { titulo: "Forno da Vila", frase: "Pão de fermentação natural, saindo do forno às 6h. Centro de Itajaí." },
+        2: { itens: [
+          { id: "p1", nome: "Pão de fermentação", desc: "800g, casca crocante", preco: 24, cat: "Mais pedidos", foto: "https://images.unsplash.com/photo-1549931319-a545dcf3bc73?w=500&q=60", ativo: true },
+          { id: "p2", nome: "Croissant", desc: "Manteiga francesa", preco: 12.5, cat: "Mais pedidos", foto: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500&q=60", ativo: true },
+          { id: "p3", nome: "Bolo de cenoura", desc: "Com calda de chocolate", preco: 9, cat: "Doces", foto: "https://images.unsplash.com/photo-1517433670267-08bbd4be890f?w=500&q=60", ativo: true },
+          { id: "p4", nome: "Café coado", desc: "Grão da fazenda", preco: 8, cat: "Bebidas", foto: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=500&q=60", ativo: true },
+        ] },
+        3: { titulo: "Panetone de fermentação natural", texto: "Fornada limitada. Reserve até quinta.", imagem: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&q=60" },
+        5: { itens: [{ texto: "O melhor pão da cidade, e o atendimento é um carinho.", autor: "Cliente de exemplo" }] },
+      },
+    },
     blocos: [
       { kind: "capa", data: {
         layout: "foto_cheia",
@@ -312,6 +330,7 @@ export const MODELOS: ModeloBio[] = [
        mídia kit na mesma página. Seguidores, vídeos e público podem vir do
        Instagram conectado. O botão fixo leva até a proposta de parceria. */
     id: "site-criadora",
+    nomeExemplo: "Bia Lemos",
     nome: "Criadora de conteúdo",
     paraQuem: "Influenciadora e criadora: links, cupons e últimos vídeos pro seguidor, mídia kit e proposta pra marca.",
     Icone: Camera,
@@ -380,6 +399,7 @@ export const MODELOS: ModeloBio[] = [
        preso no pé. Serve pra quem É a marca, de qualquer nicho: os números e o
        botão se ajustam pelo "Começar pelo nicho" dentro de cada bloco. */
     id: "site-especialista",
+    nomeExemplo: "Lívia Moraes",
     nome: "Especialista com vídeo e assinatura",
     paraQuem: "Quem é a própria marca: saúde, estética, advocacia, personal, beleza, corretor, mentor.",
     Icone: Clapperboard,
