@@ -780,6 +780,36 @@ function CriaCaptacaoInner({ fixo }: { fixo?: string } = {}) {
     }
   };
 
+  /* MOVER ROTEIRO PRA OUTRA GRAVAÇÃO (22/10/2026). O dia não rendeu tudo e o
+     roteiro precisa ir pro próximo dia do MESMO cliente. Destinos: gravações
+     agendadas de hoje em diante, menos a própria. Mover troca o dia do roteiro
+     (capture_id, data e mês) e põe no fim da lista de lá; cenas, referência e
+     aprovação vão junto, porque é o mesmo roteiro. */
+  const destinosDe = (c: Capture) => {
+    const hoje = hojeBR();
+    const mesmoCliente = (o: Capture) => c.crm_client_id
+      ? o.crm_client_id === c.crm_client_id
+      : !o.crm_client_id && (o.client_name ?? "").trim().toLowerCase() === (c.client_name ?? "").trim().toLowerCase();
+    return captures
+      .filter((o) => o.id !== c.id && o.status === "agendada" && o.capture_date >= hoje && mesmoCliente(o))
+      .sort((a, b) => `${a.capture_date} ${a.capture_time ?? ""}`.localeCompare(`${b.capture_date} ${b.capture_time ?? ""}`))
+      .slice(0, 6)
+      .map((o) => ({ id: o.id, rotulo: `${diaMes(o.capture_date)}${o.capture_time ? ` às ${o.capture_time.slice(0, 5)}` : ""}` }));
+  };
+  const moverRoteiros = async (ids: string[], destinoId: string) => {
+    const destino = capturesById.get(destinoId);
+    if (!destino || ids.length === 0) return;
+    const jaLa = scripts.filter((x) => x.capture_id === destinoId).length;
+    try {
+      for (const [i, id] of ids.entries()) {
+        await updScriptPg.mutateAsync({ id, patch: {
+          capture_id: destinoId, record_date: destino.capture_date, month: destino.capture_date.slice(0, 7), position: jaLa + i,
+        } });
+      }
+      toast.success(`${ids.length === 1 ? "Roteiro levado" : `${ids.length} roteiros levados`} pra gravação de ${diaMes(destino.capture_date)}.`);
+    } catch { /* o hook já avisa */ }
+  };
+
   // Uma linha de captação, usada na Agenda do mês E dentro da pasta do cliente.
   const renderCaptureRow = (c: Capture, doDia?: {
     roteiros: CaptureScript[];
@@ -828,7 +858,9 @@ function CriaCaptacaoInner({ fixo }: { fixo?: string } = {}) {
         onVerPost={() => navigate(`/socialmidia/clientes/${c.crm_client_id}/posts`)}
         converting={captureToPost.isPending || virandoLote}
         roteirosDoDia={roteirosDaLinha}
-        acoesRoteiro={acoesDaLinha} />
+        acoesRoteiro={acoesDaLinha}
+        destinosMover={destinosDe(c)}
+        onMoverRoteiros={(ids, destinoId) => void moverRoteiros(ids, destinoId)} />
     );
   };
 
@@ -1291,8 +1323,10 @@ function SugestoesViagem({ trips, onAdd, onDismiss }: {
 }
 
 // ── Uma captação (cliente + cidade + status + roteiro + copiar) ────────────────
-function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, defaultShots, clientShots, recurring, recurrenceDay, onSetRecurring, convertedPostId, onVirarPost, onVerPost, converting, roteirosDoDia, acoesRoteiro }: {
+function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, defaultShots, clientShots, recurring, recurrenceDay, onSetRecurring, convertedPostId, onVirarPost, onVerPost, converting, roteirosDoDia, acoesRoteiro, destinosMover, onMoverRoteiros }: {
   cap: Capture; nome: string; cidade: string;
+  destinosMover?: { id: string; rotulo: string }[];
+  onMoverRoteiros?: (ids: string[], destinoId: string) => void;
   onToggle: () => void;
   // VÁRIOS roteiros por dia (um por vídeo), a única forma desde o circuito 7.
   roteirosDoDia: CaptureScript[];
@@ -1417,6 +1451,8 @@ function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, def
         onReordenar={acoesRoteiro.reordenar}
         onTeleprompter={acoesRoteiro.teleprompter}
         salvando={acoesRoteiro.salvando}
+        destinos={destinosMover}
+        onMover={onMoverRoteiros}
         /* MANDAR SÓ ESTA GRAVAÇÃO PRO CLIENTE (Gabriela, 23/09/2026).
            O envio só existia na pasta, e de lá vai o mês inteiro. Quem grava
            amanhã precisa mandar os roteiros DE AMANHÃ. Fica no cabeçalho da

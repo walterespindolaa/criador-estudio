@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-import { GripVertical, Plus, Trash2, Play, Copy, Pencil, FileText, Check, Loader2 } from "lucide-react";
+import { GripVertical, Plus, Trash2, Play, Copy, Pencil, FileText, Check, Loader2, CalendarArrowUp } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,7 @@ import { ListaReferencias } from "@/components/captacao/Referencias";
 
 export function RoteirosDoDia({
   roteiros, onAdicionar, onEditar, onExcluir, onToggleGravado, onReordenar, onTeleprompter, salvando, acaoExtra,
+  destinos, onMover,
 }: {
   roteiros: CaptureScript[];
   onAdicionar: () => void;
@@ -37,6 +39,11 @@ export function RoteirosDoDia({
      tinha nascido solto no rodapé, depois do último card e antes das Tomadas,
      como se fosse de outra seção. As ações desta lista moram no topo dela. */
   acaoExtra?: ReactNode;
+  /* MOVER PRA OUTRA GRAVAÇÃO (Walter, 22/10/2026: "não consegui gravar e
+     queria jogar pra próxima captação"). As próximas gravações AGENDADAS do
+     mesmo cliente, da mais perto pra mais longe. Vazio = não aparece. */
+  destinos?: { id: string; rotulo: string }[];
+  onMover?: (ids: string[], destinoId: string) => void;
 }) {
   const arrastou = (r: DropResult) => {
     if (!r.destination || r.destination.index === r.source.index) return;
@@ -47,6 +54,9 @@ export function RoteirosDoDia({
   };
 
   const gravados = roteiros.filter((s) => s.done).length;
+  const pendentes = roteiros.filter((s) => !s.done);
+  const podeMover = !!onMover && (destinos?.length ?? 0) > 0;
+  const proxima = destinos?.[0];
 
   return (
     <div data-tour="cap-roteiro" className="mt-3 rounded-xl border border-border bg-muted/20 p-3">
@@ -55,7 +65,21 @@ export function RoteirosDoDia({
         <span className="text-xs font-body font-semibold text-foreground">
           Roteiros desta gravação {roteiros.length > 0 && <span className="text-muted-foreground">({gravados}/{roteiros.length} gravados)</span>}
         </span>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
+          {podeMover && pendentes.length > 0 && proxima && (
+            <Button size="sm" variant="outline" className="rounded-xl h-8"
+              title="Leva os roteiros que ainda não foram gravados pra próxima gravação deste cliente"
+              onClick={async () => {
+                const ok = await confirmar({
+                  titulo: `Levar ${pendentes.length === 1 ? "o roteiro não gravado" : `os ${pendentes.length} roteiros não gravados`} pra ${proxima.rotulo}?`,
+                  descricao: "Eles saem deste dia e entram no fim da lista da próxima gravação, com cenas, referência e aprovação do cliente. Os já gravados ficam aqui.",
+                  acao: "Levar",
+                });
+                if (ok) onMover!(pendentes.map((x) => x.id), proxima.id);
+              }}>
+              <CalendarArrowUp className="h-3.5 w-3.5 mr-1" /> Levar não gravados pra {proxima.rotulo}
+            </Button>
+          )}
           {acaoExtra}
           <Button size="sm" variant="outline" onClick={onAdicionar} disabled={salvando}
             className="rounded-xl h-8" title="Adiciona mais um vídeo pra gravar neste dia">
@@ -119,6 +143,21 @@ export function RoteirosDoDia({
                                 <Button size="sm" variant="ghost" className="rounded-lg h-8" onClick={() => onEditar(s)}>
                                   <Pencil className="h-3 w-3 mr-1" /> Editar
                                 </Button>
+                                {podeMover && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button size="sm" variant="ghost" className="rounded-lg h-8" title="Mover este roteiro pra outra gravação">
+                                        <CalendarArrowUp className="h-3 w-3 mr-1" /> Mover
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start">
+                                      <DropdownMenuLabel className="text-xs">Mover pra gravação de</DropdownMenuLabel>
+                                      {destinos!.map((d) => (
+                                        <DropdownMenuItem key={d.id} onClick={() => onMover!([s.id], d.id)}>{d.rotulo}</DropdownMenuItem>
+                                      ))}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
                               </div>
                             </div>
 
