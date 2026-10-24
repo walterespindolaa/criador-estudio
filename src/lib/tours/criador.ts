@@ -19,12 +19,12 @@ export const TOURS_CRIADOR: TourConfig[] = [
     ],
     steps: [
       {
-        // O checklist SOME quando você conclui os 6 itens ou dispensa. Sem isto o
+        // O checklist SOME quando você conclui os 7 itens ou dispensa. Sem isto o
         // passo continuava no tour falando de algo que não está mais na tela.
         skipIfMissing: true,
         target: '[data-tour="dash-primeiros-passos"]',
         title: "Primeiros passos",
-        body: "Esse checklist te guia pela configuração inicial. Cada item concluído destrava mais valor do CRIA, e publicar o 1º post e montar o link na bio rendem os selos 002 e 003 da sua coleção.",
+        body: "Esse checklist te guia pela configuração inicial. O selo 001 você já ganhou com a primeira ideia; publicar o 1º post e montar o link na bio rendem o 002 e o 003. Completar o Brandbook faz a Cria IA escrever com a sua cara.",
         placement: "bottom",
       },
       {

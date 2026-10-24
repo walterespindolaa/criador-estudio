@@ -23,6 +23,9 @@ type Props = {
   onAnswerChange: (questionKey: string, value: string) => void;
   /** Chamado quando a pessoa sai do campo. É o gatilho do salvar sozinho. */
   onBlur: (questionKey: string) => void;
+  /** Texto que chegou pelo microfone. Precisa salvar sozinho: tocar no
+   *  microfone já tirou o foco do campo, então o onBlur não vem depois. */
+  onDitado?: (questionKey: string, value: string) => void;
   chatPrompt?: string | null;
   /** Ícone e cor do grupo. A cor vem da aba: cada aba tem a sua, e o card
    *  herda, pra pessoa saber onde está sem ler o nome. */
@@ -67,6 +70,7 @@ export function GuidedSection({
   answers,
   onAnswerChange,
   onBlur,
+  onDitado,
   chatPrompt,
   icone: Icone,
   cor,
@@ -125,7 +129,7 @@ export function GuidedSection({
                   )}
                 />
                 <VoiceInput
-                  onTranscript={(txt) => onAnswerChange(q.key, (valor.trim() ? valor + " " : "") + txt)}
+                  onTranscript={(txt) => (onDitado ?? onAnswerChange)(q.key, (valor.trim() ? valor + " " : "") + txt)}
                   className="absolute bottom-2 right-2"
                 />
               </div>

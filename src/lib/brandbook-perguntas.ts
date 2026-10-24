@@ -146,3 +146,12 @@ export const LABEL_DA_PERGUNTA: Record<string, string> = Object.fromEntries(
 /** O id do campo de uma pergunta na tela, pra "Continuar de onde parou"
  *  conseguir rolar e focar de fora do componente. */
 export const idDaPergunta = (section: string, key: string) => `pergunta-${section}-${key}`;
+
+/** Todas as perguntas numa lista só, com id "secao/chave". É o que o
+ *  brandbook falado do onboarding manda pra IA distribuir a fala. */
+export const PERGUNTAS_PLANAS: { id: string; section: string; key: string; label: string }[] =
+  Object.entries(QUESTION_SECTIONS).flatMap(([section, sec]) =>
+    sec.questions.map((q) => ({ id: `${section}/${q.key}`, section, key: q.key, label: q.label })),
+  );
+
+export const TOTAL_PERGUNTAS = PERGUNTAS_PLANAS.length;

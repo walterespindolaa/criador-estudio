@@ -33,21 +33,29 @@ export const FORMAS = [
   "55% 45% 60% 40% / 45% 60% 40% 55%",
 ] as const;
 
-/** Casca de toda tela: creme de ponta a ponta, coluna de celular no centro. */
+/** Casca de toda tela: creme de ponta a ponta, coluna de celular no centro.
+ *
+ *  RODAPÉ NO FLUXO, NÃO POR CIMA (teste de 24/10/2026). Antes o botão era
+ *  `fixed` e o fim do conteúdo ficava escondido atrás dele em celular baixo
+ *  (o "Outro?" dos nichos, WhatsApp e cidade, as setas do parceiro). Agora ele
+ *  é `sticky` dentro da coluna: continua grudado embaixo enquanto a pessoa
+ *  rola, mas ocupa o próprio espaço, então nada fica embaixo dele. */
 export function TelaOnb({ children, rodape, className }: { children: ReactNode; rodape?: ReactNode; className?: string }) {
   return (
     <div className="min-h-[100dvh] w-full font-body" style={{ background: COR.creme, color: COR.tinta }}>
-      <div className={cn("relative mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col overflow-hidden px-5 pt-4", rodape ? "pb-40" : "pb-8", className)}>
-        {children}
-      </div>
-      {rodape && (
-        <div className="fixed inset-x-0 bottom-0 z-30" style={{ background: `linear-gradient(to top, ${COR.creme} 70%, transparent)` }}>
-          <div className="mx-auto flex w-full max-w-[440px] flex-col items-center gap-2.5 px-5 pt-6"
-            style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}>
-            {rodape}
-          </div>
+      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[440px] flex-col">
+        <div className={cn("relative flex flex-1 flex-col overflow-x-hidden px-5 pt-4", rodape ? "pb-3" : "pb-8", className)}>
+          {children}
         </div>
-      )}
+        {rodape && (
+          <div className="sticky bottom-0 z-30" style={{ background: `linear-gradient(to top, ${COR.creme} 82%, rgba(245,243,231,0))` }}>
+            <div className="flex w-full flex-col items-center gap-2.5 px-5 pt-5"
+              style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}>
+              {rodape}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

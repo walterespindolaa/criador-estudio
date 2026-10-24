@@ -252,6 +252,18 @@ const Brandbook = () => {
     }
   }, [answers, saveAnswer]);
 
+  /* DITADO SALVA SOZINHO (24/10/2026). O texto do microfone só entrava na
+     tela: tocar no microfone tira o foco do campo antes do texto chegar, então
+     o "salvar ao sair do campo" nunca disparava e um F5 perdia a resposta.
+     Marca a pergunta e salva no render seguinte, quando answers já tem o texto. */
+  const [ditadoASalvar, setDitadoASalvar] = useState<string | null>(null);
+  useEffect(() => {
+    if (!ditadoASalvar) return;
+    const [secao, chave] = ditadoASalvar.split("/");
+    setDitadoASalvar(null);
+    void salvarPergunta(secao, chave);
+  }, [ditadoASalvar, salvarPergunta]);
+
   /* ═════════════════════════════════════════════════════════════════════════
      IMPORTAR O BRANDBOOK DE UM (OU DOIS) PDF/IMAGEM E DISTRIBUIR NAS SEÇÕES
 
@@ -582,6 +594,7 @@ const Brandbook = () => {
         answers={answers[sectionKey] ?? {}}
         onAnswerChange={(key, value) => handleChange(sectionKey, key, value)}
         onBlur={(key) => void salvarPergunta(sectionKey, key)}
+        onDitado={(key, value) => { handleChange(sectionKey, key, value); setDitadoASalvar(`${sectionKey}/${key}`); }}
         chatPrompt={showChatPrompt && "chatPrompt" in config ? buildPrompt(sectionKey) : null}
       />
     );

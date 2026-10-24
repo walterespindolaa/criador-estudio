@@ -235,26 +235,29 @@ export default function OnboardingAgencia() {
 
         {/* ─── 1. Boas-vindas ─── */}
         {step === 1 && (
-          <motion.div key="a1" {...anim} className="relative flex min-h-[calc(100dvh-170px)] flex-col">
-            <span aria-hidden="true" className="absolute left-1/2 top-[30%] h-[290px] w-[310px] -translate-x-1/2" style={{ background: "#BCD3F7", borderRadius: "58% 42% 37% 63% / 40% 55% 45% 60%" }} />
-            {[
-              { n: "Padaria Trigo Fino", c: COR.amarelo, cls: "-left-1.5 top-24 -rotate-6" },
-              { n: "Studio Luma", c: COR.rosa, cls: "-right-3 top-[170px] rotate-[5deg]" },
-              { n: "Verde Vivo Pet", c: COR.verde, cls: "left-3 top-[66%] rotate-[4deg]" },
-            ].map((x) => (
-              <div key={x.n} className={`absolute flex items-center gap-2.5 rounded-[18px] py-2.5 pl-2.5 pr-3.5 font-display text-sm font-bold shadow-[0_6px_14px_rgba(10,10,10,0.12)] ${x.cls}`} style={{ background: COR.papel }}>
-                <span className="grid h-[34px] w-[34px] place-items-center rounded-full font-display text-[15px] font-extrabold" style={{ background: x.c }}>{x.n.charAt(0)}</span>
-                {x.n}
-              </div>
-            ))}
-            <div className="absolute -right-1.5 top-[58%] w-[120px] -rotate-[7deg] p-3 shadow-[0_6px_14px_rgba(10,10,10,0.12)]" style={{ background: COR.amarelo, fontFamily: "'Grand Hotel', cursive", fontSize: 20, lineHeight: 1.05 }}>
-              <span aria-hidden="true" className="absolute -top-1.5 left-[52px] h-3.5 w-3.5 rounded-full" style={{ background: COR.laranja }} />
-              Captação quinta, 9h
-            </div>
-            <img src="/stickers/selo-social-club-verde.png" alt="" className="absolute right-6 top-1 w-[72px] -rotate-[10deg]" />
-
+          <motion.div key="a1" {...anim} className="relative flex flex-1 flex-col">
+            {/* Colagem numa área com altura própria (mesmo conserto da tela 1
+                do criador): em celular baixo o título subia por cima dela. */}
+            <img src="/stickers/selo-social-club-verde.png" alt="" className="absolute right-3 top-0 z-10 w-[70px] -rotate-[10deg]" />
             <div className="relative font-display text-[34px] font-extrabold tracking-[-1px]">cria<span style={{ color: COR.laranja }}>.</span></div>
-            <div className="relative mt-auto flex flex-col items-center gap-3 pb-2 text-center">
+            <div aria-hidden="true" className="relative mt-1 h-[clamp(240px,44dvh,370px)] w-full">
+              <span className="absolute left-1/2 top-1/2 h-[80%] w-[300px] -translate-x-1/2 -translate-y-1/2" style={{ background: "#BCD3F7", borderRadius: "58% 42% 37% 63% / 40% 55% 45% 60%" }} />
+              {[
+                { n: "Padaria Trigo Fino", c: COR.amarelo, cls: "-left-1.5 top-[6%] -rotate-6" },
+                { n: "Studio Luma", c: COR.rosa, cls: "-right-3 top-[34%] rotate-[5deg]" },
+                { n: "Verde Vivo Pet", c: COR.verde, cls: "left-2 bottom-[8%] rotate-[4deg]" },
+              ].map((x) => (
+                <div key={x.n} className={`absolute flex items-center gap-2.5 rounded-[18px] py-2.5 pl-2.5 pr-3.5 font-display text-sm font-bold shadow-[0_6px_14px_rgba(10,10,10,0.12)] ${x.cls}`} style={{ background: COR.papel }}>
+                  <span className="grid h-[34px] w-[34px] place-items-center rounded-full font-display text-[15px] font-extrabold" style={{ background: x.c }}>{x.n.charAt(0)}</span>
+                  {x.n}
+                </div>
+              ))}
+              <div className="absolute -right-1.5 bottom-[22%] w-[120px] -rotate-[7deg] p-3 shadow-[0_6px_14px_rgba(10,10,10,0.12)]" style={{ background: COR.amarelo, fontFamily: "'Grand Hotel', cursive", fontSize: 20, lineHeight: 1.05 }}>
+                <span className="absolute -top-1.5 left-[52px] h-3.5 w-3.5 rounded-full" style={{ background: COR.laranja }} />
+                Captação quinta, 9h
+              </div>
+            </div>
+            <div className="relative mt-auto flex flex-col items-center gap-3 pb-2 pt-4 text-center">
               <span className="-rotate-3 rounded-full px-3 py-1 text-xs font-bold tracking-[1px]" style={{ background: COR.verde }}>GRÁTIS PRA SEMPRE</span>
               <h1 className="m-0 font-display text-[34px] font-extrabold leading-[1.02] tracking-[-0.5px]">Seus clientes numa <span style={{ color: COR.laranja }}>aba só.</span></h1>
             </div>

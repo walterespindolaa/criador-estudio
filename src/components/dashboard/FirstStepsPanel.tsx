@@ -13,6 +13,8 @@ import { useMoodboard } from "@/hooks/useMoodboard";
 import { useSocialConnection } from "@/hooks/useSocialInsights";
 import { useBioLinks } from "@/hooks/useBioLinks";
 import { useGoals } from "@/hooks/useGoals";
+import { useIdeas } from "@/hooks/useIdeas";
+import { TOTAL_PERGUNTAS } from "@/lib/brandbook-perguntas";
 
 type Step = {
   id: string;
@@ -37,6 +39,7 @@ export function FirstStepsPanel() {
   const { data: conexaoInstagram } = useSocialConnection();
   const { links: bioLinks } = useBioLinks();
   const { structuredGoals } = useGoals();
+  const { ideas: ideias } = useIdeas({ limit: 1 });
 
   const dismissKey = user ? `cria-firststeps-dismissed-${user.id}` : "cria-firststeps-dismissed";
 
@@ -50,10 +53,20 @@ export function FirstStepsPanel() {
      semana" nascia concluído (o onboarding cria as ideias) e link na bio e
      metas contavam como feitos só por clicar. Cada item agora mede um dado
      real: tem post criado? tem botão na bio? tem meta cadastrada? */
+  /* BRANDBOOK COMEÇADO, NÃO "FEITO" (24/10/2026). O onboarding agora já
+     preenche parte do brandbook (a fala da pessoa, tom, objetivos e temas).
+     Se bastasse uma resposta, o item nasceria riscado. Conta como feito com
+     3/4 das perguntas; até lá mostra quanto falta. */
+  const respondidas = (entries ?? []).filter((e) => (e.answer ?? "").trim().length > 0).length;
+  const brandbookFeito = respondidas >= Math.ceil(TOTAL_PERGUNTAS * 0.75);
+
   const steps: Step[] = [
+    /* SELO 001 (onboarding v3): a tela final do onboarding entrega o 001 pela
+       primeira ideia. Ele aparece aqui já ganho, pra lista começar andando. */
+    { id: "ideia", label: "Guardar minha 1ª ideia", icon: Lightbulb, to: "/app/ideias", done: ideias.length > 0, selo: "001" },
     { id: "instagram", label: "Conectar meu Instagram", note: "conta profissional, pra ver seus números", icon: Instagram, to: "/app/insights", done: !!conexaoInstagram },
     { id: "post", label: "Criar meu 1º post", note: "a partir de uma das suas ideias", icon: Lightbulb, to: "/app/ideias", done: posts.length > 0 },
-    { id: "moodboard", label: "Preencher meu moodboard", note: "a Cria IA aprende seu estilo", icon: Palette, to: "/app/brandbook", done: (entries?.length ?? 0) > 0 },
+    { id: "moodboard", label: "Completar meu Brandbook", note: `${respondidas} de ${TOTAL_PERGUNTAS} respondidas · a Cria IA escreve com a sua cara`, icon: Palette, to: "/app/brandbook", done: brandbookFeito },
     { id: "publicado", label: "Publicar meu 1º post", icon: Send, to: "/app/criando", done: hasPublished, selo: "002" },
     { id: "bio", label: "Montar meu link na bio", icon: LinkIcon, to: "/app/linkinbio", done: bioLinks.length > 0, selo: "003" },
     { id: "metas", label: "Definir metas de crescimento", note: "seguidores, alcance, vendas (a de posts você já tem)", icon: Target, to: "/app/metas", done: structuredGoals.length > 0 },

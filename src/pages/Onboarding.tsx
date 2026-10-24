@@ -18,6 +18,8 @@ import { PILLAR_COLORS } from "@/lib/constants";
 import { fireConfetti } from "@/lib/confetti";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { VoiceInput } from "@/components/shared/VoiceInput";
+import { GravadorFala } from "@/components/onboarding/GravadorFala";
+import { PERGUNTAS_PLANAS, TOTAL_PERGUNTAS } from "@/lib/brandbook-perguntas";
 import { connectInstagram, useSocialConnection } from "@/hooks/useSocialInsights";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -28,25 +30,47 @@ import {
 /* ═══════════════════════════════════════════════════════════════════════════
    ONBOARDING DO CRIADOR v3 (24/10/2026, mockup aprovado pelo Walter)
 
-   Uma pergunta por tela, no visual da LP. Oito telas:
+   Uma pergunta por tela, no visual da LP. Nove telas:
      1. Boas-vindas (colagem de post-its; saída pra agência e pra parceiro)
      2. Quem é você      → profiles: name, avatar_url, instagram_handle, phone, cidade
      3. Nicho (até 3)    → profiles.niche
      4. Objetivo (até 3) → brand_items type "objetivo" (Brandbook, aba Quem você é)
-     5. Parceiro de escrita = tom de voz → brand_items type "tom" (Brandbook, aba Tom de voz)
+                           e a pergunta sobre-voce/meta, se a fala não respondeu
+     5. Parceiro de escrita = tom de voz → brand_items type "tom" (value = nome
+                           do parceiro) e a pergunta tom-de-voz/estilo
      6. Ritmo            → profiles.weekly_goal, profiles.platforms,
                            profiles.notification_prefs.meta_semana (lembrete da meta)
-     7. Primeira ideia   → ideas (e, ao entrar nesta tela, a IA monta pilares,
-                           hábitos, linha editorial e ideias em segundo plano)
-     8. Primeiro selo + a semana montada → entra em /app/ideias
+     7. Me conta de você (opcional, 24/10/2026) → a pessoa fala uma vez, o
+                           navegador transcreve e a IA distribui nas perguntas do
+                           brandbook (moodboard_entries). Também vai pra IA que
+                           monta pilares e ideias.
+     8. Primeira ideia   → ideas (e, ao entrar nesta tela, a IA monta pilares,
+                           hábitos, linha editorial, ideias e o brandbook falado
+                           em segundo plano)
+     9. Primeiro selo + a semana montada → entra no Início (/app), onde estão
+                           os Primeiros passos com os próximos selos
 
    O público ("pra quem você cria") saiu daqui: era o único campo de texto
    livre e mora na aba Persona do Brandbook.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const TOTAL_TELAS = 8;
-/** Telas com pergunta (2 a 7) contam nas bolinhas do topo. */
-const PERGUNTAS = 6;
+const TOTAL_TELAS = 9;
+/** Telas com pergunta (2 a 8) contam nas bolinhas do topo. */
+const PERGUNTAS = 7;
+const TELA_FALA = 7;
+const TELA_IDEIA = 8;
+const TELA_FIM = 9;
+/** Fala com menos que isso não tem o que distribuir no brandbook. */
+const MIN_FALA = 40;
+
+/** (47) 99999-0000 enquanto digita. Grava só os dígitos. */
+const mascararTelefone = (v: string) => {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 2) return d ? `(${d}` : "";
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+};
 
 /* Os valores gravados são os mesmos de antes (o brandbook, a IA e os dados de
    quem já passou pelo onboarding usam estas frases). Só a tela mudou. */
@@ -82,11 +106,11 @@ const PLATAFORMAS = [
   { id: "youtube", rotulo: "YouTube" },
 ];
 
-const METAS = [1, 2, 3, 5, 7] as const;
+const METAS = [1, 2, 3, 4, 5, 7] as const;
 const META_ROTULO: Record<number, string> = {
-  1: "Tranquilo e consistente", 2: "Bom ritmo", 3: "Constante e sustentável", 5: "Dedicação total", 7: "Todo dia, no talo",
+  1: "Tranquilo e consistente", 2: "Bom ritmo", 3: "Constante e sustentável", 4: "Ritmo firme", 5: "Dedicação total", 7: "Todo dia, no talo",
 };
-const META_COR: Record<number, string> = { 1: COR.verde, 2: COR.verde, 3: COR.azul, 5: COR.laranja, 7: COR.rosa };
+const META_COR: Record<number, string> = { 1: COR.verde, 2: COR.verde, 3: COR.azul, 4: COR.azul, 5: COR.laranja, 7: COR.rosa };
 
 const DEFAULT_HABITS = ["Postei conteúdo hoje?", "Respondi comentários?", "Gravei algo novo?"];
 const MAX_ESCOLHAS = 3;
@@ -111,7 +135,11 @@ const Onboarding = () => {
   const { ownerId } = useContaAtivaId();
   const atualizarPerfilAtivo = useAtualizarPerfilAtivo();
   const donoId = ehMeuPerfil ? ownerId : (user?.id ?? "");
-  const chaveRascunho = ehMeuPerfil ? `cria.onb.${donoId}` : "cria.onb";
+  /* RASCUNHO NO APARELHO, POR CONTA (24/10/2026). Era sessionStorage: fechar a
+     aba no meio jogava tudo fora e a pessoa recomeçava do zero. Agora fica no
+     localStorage com o id da conta (duas contas no mesmo navegador não se
+     misturam) e guarda também a tela em que ela parou. */
+  const chaveRascunho = `cria.onb.${donoId || "anon"}`;
 
   /* "SOU DESIGNER, EDITOR OU FILMMAKER" (24/09/2026): a RPC troca a conta pra
      parceiro de produção (account_type só muda pelo servidor). */
@@ -126,22 +154,27 @@ const Onboarding = () => {
       setVirandoParceiro(false);
       return;
     }
-    try { sessionStorage.removeItem("cria.onb"); } catch { /* segue */ }
+    try { localStorage.removeItem(chaveRascunho); } catch { /* segue */ }
     await qc.invalidateQueries({ queryKey: ["profile"] });
     navigate("/socialmidia/demandas", { replace: true });
   };
 
-  /* RASCUNHO QUE SOBREVIVE À IDA AO INSTAGRAM (v2, 23/09/2026). Conectar o
-     Instagram sai do app e volta; o rascunho fica no sessionStorage. */
-  const rascunho = (() => {
-    try { return JSON.parse(sessionStorage.getItem(chaveRascunho) ?? "null") as Record<string, unknown> | null; } catch { return null; }
-  })();
+  /* RASCUNHO QUE SOBREVIVE À IDA AO INSTAGRAM (v2, 23/09/2026) e a fechar o
+     app no meio (v3). */
+  const [rascunho] = useState<Record<string, unknown> | null>(() => {
+    try { return JSON.parse(localStorage.getItem(chaveRascunho) ?? "null") as Record<string, unknown> | null; } catch { return null; }
+  });
   const [searchParams] = useSearchParams();
   const stepDaUrl = Number(searchParams.get("step") ?? 0);
   const voltouDoInstagram = searchParams.get("ig") === "connected";
   const erroDoInstagram = searchParams.get("ig") === "error";
+  /* Volta na tela em que parou, até a fala. Da primeira ideia em diante a IA
+     já trabalhou; recomeçar ali duplicaria pilares e ideias. */
+  const stepGuardado = Number(rascunho?.step ?? 0);
+  const stepInicial = stepDaUrl >= 1 && stepDaUrl <= TELA_FALA ? stepDaUrl
+    : stepGuardado >= 1 && stepGuardado <= TELA_FALA ? stepGuardado : 1;
 
-  const [step, setStep] = useState(stepDaUrl >= 1 && stepDaUrl <= 6 ? stepDaUrl : 1);
+  const [step, setStep] = useState(stepInicial);
   const [direction, setDirection] = useState<1 | -1>(1);
 
   const [name, setName] = useState((rascunho?.name as string) ?? "");
@@ -149,6 +182,10 @@ const Onboarding = () => {
   const [telefone, setTelefone] = useState((rascunho?.telefone as string) ?? "");
   const [cidade, setCidade] = useState((rascunho?.cidade as string) ?? "");
   const [maisAberto, setMaisAberto] = useState(false);
+  const maisRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (maisAberto) requestAnimationFrame(() => maisRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  }, [maisAberto]);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [niches, setNiches] = useState<string[]>((rascunho?.niches as string[]) ?? []);
@@ -166,6 +203,8 @@ const Onboarding = () => {
   const tom = PARCEIROS[parceiro].tom;
   const [weeklyGoal, setWeeklyGoal] = useState<number>((rascunho?.weeklyGoal as number) ?? 3);
   const [lembrete, setLembrete] = useState<boolean>((rascunho?.lembrete as boolean) ?? true);
+  const [sobre, setSobre] = useState<string>((rascunho?.sobre as string) ?? "");
+  const [respostasBrandbook, setRespostasBrandbook] = useState(0);
   const [primeiraIdeia, setPrimeiraIdeia] = useState("");
   const [ideiaSugerida, setIdeiaSugerida] = useState(0);
   const [guardandoIdeia, setGuardandoIdeia] = useState(false);
@@ -189,10 +228,11 @@ const Onboarding = () => {
   }, []);
 
   useEffect(() => {
+    if (!donoId || step > TELA_FALA) return;
     try {
-      sessionStorage.setItem(chaveRascunho, JSON.stringify({ name, handle, telefone, cidade, niches, platforms, objetivos, tom, weeklyGoal, lembrete }));
+      localStorage.setItem(chaveRascunho, JSON.stringify({ step, name, handle, telefone, cidade, niches, platforms, objetivos, tom, weeklyGoal, lembrete, sobre }));
     } catch { /* modo privado */ }
-  }, [chaveRascunho, name, handle, telefone, cidade, niches, platforms, objetivos, tom, weeklyGoal, lembrete]);
+  }, [donoId, chaveRascunho, step, name, handle, telefone, cidade, niches, platforms, objetivos, tom, weeklyGoal, lembrete, sobre]);
 
   const conectarInstagramAgora = () => {
     void connectInstagram(null, `/onboarding?step=${step}`, ehMeuPerfil ? donoId : null);
@@ -299,6 +339,7 @@ const Onboarding = () => {
             meta_semanal: weeklyGoal,
             objetivo: objetivos.length ? objetivos.join(", ") : undefined,
             tom: tom || undefined,
+            sobre: sobre.trim().length >= MIN_FALA ? sobre.trim().slice(0, 1500) : undefined,
           },
         });
         if (typeof raw === "string") {
@@ -376,13 +417,57 @@ const Onboarding = () => {
       }
 
       /* Tom e objetivos viram itens do brandbook, os mesmos lugares que o
-         Brandbook mostra e que a IA lê (useBrandContext). */
-      const marcaItens: { user_id: string; type: string; name: string }[] = [];
-      if (tom) marcaItens.push({ user_id: donoId, type: "tom", name: tom });
-      for (const o of objetivos) marcaItens.push({ user_id: donoId, type: "objetivo", name: o });
+         Brandbook mostra e que a IA lê (useBrandContext). O value do tom é o
+         nome do parceiro: no Brandbook aparece "Profissional (Prumo)", e a
+         pessoa reconhece o bicho que escolheu. */
+      const parceiroEscolhido = PARCEIROS[parceiro];
+      const marcaItens: { user_id: string; type: string; name: string; value?: string; position?: number }[] = [];
+      if (tom) marcaItens.push({ user_id: donoId, type: "tom", name: tom, value: parceiroEscolhido.nome, position: 0 });
+      objetivos.forEach((o, i) => marcaItens.push({ user_id: donoId, type: "objetivo", name: o, position: i }));
       if (marcaItens.length > 0) {
         const { error: eMarca } = await supabase.from("brand_items").insert(marcaItens as never);
         if (eMarca) console.warn("[onboarding] brand_items insert failed:", eMarca);
+      }
+
+      /* BRANDBOOK QUE JÁ NASCE COMEÇADO (24/10/2026). Antes o Brandbook abria
+         em "0/33 respondidas" logo depois de a pessoa ter respondido tom,
+         objetivos e nicho: parecia que o onboarding não tinha servido pra nada.
+         1º a fala dela, distribuída pela IA nas perguntas (o que ela disse vale
+         mais). 2º, só onde ainda ficou vazio, o que o onboarding já sabe. Nada
+         sobrescreve resposta que já existe (Meu perfil pode ter brandbook). */
+      const respostas: { user_id: string; section: string; question_key: string; answer: string }[] = [];
+      const falaLimpa = sanitizeText(sobre.trim());
+      if (falaLimpa.length >= MIN_FALA) {
+        try {
+          const { data: falaResp, error: falaErr } = await supabase.functions.invoke("brandbook-fala", {
+            body: {
+              texto: falaLimpa,
+              perguntas: PERGUNTAS_PLANAS.map((q) => ({ id: q.id, label: q.label })),
+              accountId: ehMeuPerfil ? donoId : undefined,
+            },
+          });
+          if (falaErr) throw falaErr;
+          const lido = (falaResp as { result?: { respostas?: Record<string, string> } } | null)?.result ?? null;
+          for (const q of PERGUNTAS_PLANAS) {
+            const r = lido?.respostas?.[q.id];
+            if (typeof r === "string" && r.trim()) respostas.push({ user_id: donoId, section: q.section, question_key: q.key, answer: sanitizeText(r.trim()) });
+          }
+        } catch (e) {
+          console.warn("[onboarding] brandbook-fala falhou; segue sem", e);
+        }
+      }
+      const jaTem = new Set(respostas.map((r) => `${r.section}/${r.question_key}`));
+      const doOnboarding = (section: string, key: string, answer: string) => {
+        if (answer.trim() && !jaTem.has(`${section}/${key}`)) respostas.push({ user_id: donoId, section, question_key: key, answer });
+      };
+      doOnboarding("tom-de-voz", "estilo", `${tom}. ${parceiroEscolhido.desc}`);
+      doOnboarding("sobre-voce", "meta", objetivos.map((o) => OBJETIVOS.find((x) => x.valor === o)?.titulo ?? o).join("; "));
+      doOnboarding("linha-editorial", "temas", finalPillars.map((x) => x.name).join(", "));
+      if (respostas.length > 0) {
+        const { error: eResp } = await supabase.from("moodboard_entries")
+          .upsert(respostas as never, { onConflict: "user_id,section,question_key", ignoreDuplicates: true });
+        if (eResp) console.warn("[onboarding] moodboard_entries:", eResp);
+        else setRespostasBrandbook(respostas.length);
       }
 
       if (habitsToCreate.length > 0) {
@@ -408,14 +493,14 @@ const Onboarding = () => {
     } finally {
       setSetupLoading(false);
     }
-  }, [user, name, handle, telefone, cidade, niches, platforms, weeklyGoal, objetivos, tom, lembrete, uploadAvatar, updateProfile, perfilDaSessao, ehMeuPerfil, donoId, atualizarPerfilAtivo, qc]);
+  }, [user, name, handle, telefone, cidade, niches, platforms, weeklyGoal, objetivos, tom, parceiro, sobre, lembrete, uploadAvatar, updateProfile, perfilDaSessao, ehMeuPerfil, donoId, atualizarPerfilAtivo, qc]);
 
   useEffect(() => {
-    if (step === 7 && !setupStartedRef.current && !setupDone) void runSetup();
+    if (step === TELA_IDEIA && !setupStartedRef.current && !setupDone) void runSetup();
   }, [step, setupDone, runSetup]);
 
   useEffect(() => {
-    if (step === 8 && setupDone) fireConfetti();
+    if (step === TELA_FIM && setupDone) fireConfetti();
   }, [step, setupDone]);
 
   const nichoBase = (niches[0] ?? "").toLowerCase();
@@ -443,10 +528,12 @@ const Onboarding = () => {
 
   const enterApp = () => {
     if (!ehMeuPerfil) track("StartTrial", { content_name: "onboarding_complete" });
-    try { sessionStorage.removeItem(chaveRascunho); } catch { /* ok */ }
-    /* TERMINA NUM ARTEFATO (v2): cai nas ideias, sem tour nesta sessão. */
+    try { localStorage.removeItem(chaveRascunho); } catch { /* ok */ }
+    /* CAI NO INÍCIO (24/10/2026). Antes caía em Ideias e a pessoa não via os
+       Primeiros passos nem os selos 002 e 003 que a tela final acabou de
+       prometer. O tour fica pra depois nesta sessão: o painel já guia. */
     try { sessionStorage.setItem("cria.tour-adiado", "1"); } catch { /* ok */ }
-    navigate("/app/ideias");
+    navigate("/app");
   };
 
   const slideVariants = {
@@ -457,10 +544,12 @@ const Onboarding = () => {
   const anim = { custom: direction, variants: slideVariants, initial: "enter", animate: "center", exit: "exit", transition: { duration: 0.22 } } as const;
 
   const p = PARCEIROS[parceiro];
-  const ideiasFinais = [
+  const todasIdeias = [
     ...(primeiraIdeia.trim() ? [primeiraIdeia.trim()] : []),
     ...generatedIdeas.map((i) => i.title),
-  ].slice(0, 3);
+  ];
+  /* A lista mostra 3, mas o título conta todas (antes dizia "3 ideias" com 4). */
+  const ideiasFinais = todasIdeias.slice(0, 3);
   const mostrarSaidas = !ehMeuPerfil && !jaEhParceiro;
 
   /* ───────────────────────── rodapé de cada tela ───────────────────────── */
@@ -478,10 +567,16 @@ const Onboarding = () => {
       );
       case 2: return (<><BotaoOnb onClick={goNext} disabled={!name.trim()}>Continuar</BotaoOnb><MicroOnb>Leva um minuto. Dá pra mudar tudo depois.</MicroOnb></>);
       case 3: return (<><BotaoOnb onClick={goNext} disabled={niches.length === 0}>Continuar</BotaoOnb><MicroOnb>{niches.length} de 3 escolhidos · Dá pra mudar depois.</MicroOnb></>);
-      case 4: return (<><BotaoOnb onClick={goNext}>Continuar</BotaoOnb><MicroOnb>Escolha até três. Dá pra mudar depois.</MicroOnb></>);
+      case 4: return (<><BotaoOnb onClick={goNext}>{objetivos.length ? "Continuar" : "Pular por agora"}</BotaoOnb><MicroOnb>Escolha até três. Dá pra mudar depois.</MicroOnb></>);
       case 5: return (<><BotaoOnb onClick={goNext}>Quero o {p.nome}</BotaoOnb><MicroOnb>Dá pra trocar quando quiser, no Brandbook.</MicroOnb></>);
       case 6: return (<><BotaoOnb onClick={goNext} disabled={platforms.length === 0}>Fechar meu ritmo</BotaoOnb><MicroOnb>Melhor 2 que você cumpre do que 7 que você abandona.</MicroOnb></>);
-      case 7: return (
+      case TELA_FALA: return (
+        <>
+          <BotaoOnb onClick={goNext}>{sobre.trim().length >= MIN_FALA ? "Pronto, é isso" : "Pular por agora"}</BotaoOnb>
+          <MicroOnb>{sobre.trim().length >= MIN_FALA ? "Eu organizo isso no seu Brandbook." : "Dá pra fazer depois, no Brandbook."}</MicroOnb>
+        </>
+      );
+      case TELA_IDEIA: return (
         <>
           <BotaoOnb onClick={() => void guardarIdeia()} disabled={guardandoIdeia}>
             {guardandoIdeia ? <Loader2 className="h-5 w-5 animate-spin" /> : primeiraIdeia.trim() ? "Guardar minha ideia" : "Pular por agora"}
@@ -489,7 +584,7 @@ const Onboarding = () => {
           <MicroOnb>Ela vai direto pro seu banco de ideias.</MicroOnb>
         </>
       );
-      case 8: return (
+      case TELA_FIM: return (
         <>
           <BotaoOnb onClick={enterApp} disabled={!setupDone}>
             {setupDone ? "Abrir meu estúdio" : <><Loader2 className="h-5 w-5 animate-spin" /> Terminando de montar...</>}
@@ -501,11 +596,13 @@ const Onboarding = () => {
     }
   })();
 
-  const topo = step >= 2 && step <= 7 ? (
+  const topo = step >= 2 && step <= TELA_IDEIA ? (
     <TopoOnb passo={step - 1} total={PERGUNTAS}
-      onVoltar={step === 7 && setupStartedRef.current ? undefined : goBack}
-      onPular={step === 4 ? goNext : undefined} />
+      onVoltar={step === TELA_IDEIA && setupStartedRef.current ? undefined : goBack} />
   ) : null;
+
+  const proximoParceiro = () => setParceiro((i) => (i + 1) % PARCEIROS.length);
+  const parceiroAnterior = () => setParceiro((i) => (i + PARCEIROS.length - 1) % PARCEIROS.length);
 
   return (
     <TelaOnb rodape={rodape}>
@@ -514,32 +611,34 @@ const Onboarding = () => {
 
         {/* ─── 1. Boas-vindas ─── */}
         {step === 1 && (
-          <motion.div key="t1" {...anim} className="relative flex min-h-[calc(100dvh-180px)] flex-col">
-            <span aria-hidden="true" className="absolute left-1/2 top-[30%] h-[280px] w-[300px] -translate-x-1/2" style={{ background: "#FBE39A", borderRadius: FORMAS[0] }} />
-            <div className="absolute -left-2 top-16 w-[132px] -rotate-[8deg] p-3.5 shadow-[0_6px_14px_rgba(10,10,10,0.12)]" style={{ background: COR.amarelo, fontFamily: "'Grand Hotel', cursive", fontSize: 21, lineHeight: 1.05 }}>
-              <span aria-hidden="true" className="absolute -top-1.5 left-[58px] h-3.5 w-3.5 rounded-full" style={{ background: COR.laranja }} />
-              Gravar o reels de terça
-            </div>
-            <div className="absolute -right-3 top-[150px] w-[130px] rotate-[7deg] p-3.5 shadow-[0_6px_14px_rgba(10,10,10,0.12)]" style={{ background: COR.rosa, fontFamily: "'Grand Hotel', cursive", fontSize: 21, lineHeight: 1.05 }}>
-              3 ideias pro Dia das Mães
-            </div>
-            <div className="absolute -right-1.5 top-[62%] flex -rotate-[5deg] items-center gap-2 rounded-2xl px-3.5 py-2.5 text-[13px] font-semibold shadow-[0_6px_14px_rgba(10,10,10,0.12)]" style={{ background: COR.papel }}>
-              <span className="grid h-[22px] w-[22px] place-items-center rounded-full" style={{ background: COR.verde }}><Check className="h-3 w-3 text-white" strokeWidth={4} /></span>
-              Post aprovado
-            </div>
-            <img src="/stickers/selo-social-club-azul.png" alt="" className="absolute right-5 top-2 w-[74px] rotate-12" />
-            <img src="/stickers/selo-sem-formula.png" alt="" className="absolute -left-4 top-[56%] w-[112px] -rotate-12" />
-
+          <motion.div key="t1" {...anim} className="relative flex flex-1 flex-col">
+            {/* COLAGEM NUMA ÁREA PRÓPRIA (24/10/2026). As figuras eram
+                posicionadas em % da tela inteira; em celular baixo o título
+                subia e ficava por cima do selo e do "Post aprovado". Agora elas
+                vivem numa caixa com altura própria e o título vem embaixo. */}
+            <img src="/stickers/selo-social-club-azul.png" alt="" className="absolute right-1 top-0 z-10 w-[70px] rotate-12" />
             <div className="relative font-display text-[34px] font-extrabold tracking-[-1px]">cria<span style={{ color: COR.laranja }}>.</span></div>
-            <div className="relative mt-auto flex flex-col items-center pb-2 text-center">
-              <h1 className="m-0 font-display text-[32px] font-extrabold leading-[1.02] tracking-[-0.5px]">
+            <div aria-hidden="true" className="relative mt-1 h-[clamp(240px,44dvh,370px)] w-full">
+              <span className="absolute left-1/2 top-1/2 h-[80%] w-[290px] -translate-x-1/2 -translate-y-1/2" style={{ background: "#FBE39A", borderRadius: FORMAS[0] }} />
+              <div className="absolute -left-2 top-[4%] w-[128px] -rotate-[8deg] p-3 shadow-[0_6px_14px_rgba(10,10,10,0.12)]" style={{ background: COR.amarelo, fontFamily: "'Grand Hotel', cursive", fontSize: 20, lineHeight: 1.05 }}>
+                <span className="absolute -top-1.5 left-[56px] h-3.5 w-3.5 rounded-full" style={{ background: COR.laranja }} />
+                Gravar o reels de terça
+              </div>
+              <div className="absolute -right-2 top-[30%] w-[126px] rotate-[7deg] p-3 shadow-[0_6px_14px_rgba(10,10,10,0.12)]" style={{ background: COR.rosa, fontFamily: "'Grand Hotel', cursive", fontSize: 20, lineHeight: 1.05 }}>
+                3 ideias pro Dia das Mães
+              </div>
+              <div className="absolute bottom-[6%] right-0 flex -rotate-[5deg] items-center gap-2 rounded-2xl px-3.5 py-2.5 text-[13px] font-semibold shadow-[0_6px_14px_rgba(10,10,10,0.12)]" style={{ background: COR.papel }}>
+                <span className="grid h-[22px] w-[22px] place-items-center rounded-full" style={{ background: COR.verde }}><Check className="h-3 w-3 text-white" strokeWidth={4} /></span>
+                Post aprovado
+              </div>
+              <img src="/stickers/selo-sem-formula.png" alt="" className="absolute -left-3 bottom-[2%] w-[104px] -rotate-12" />
+            </div>
+            <div className="relative mt-auto flex flex-col items-center pt-4 text-center">
+              <h1 className="m-0 font-display text-[30px] font-extrabold leading-[1.02] tracking-[-0.5px]">
                 {ehMeuPerfil
                   ? <>Seu lado criadora <span style={{ color: COR.laranja }}>começa aqui.</span></>
                   : <>Suas ideias, roteiros e posts. Tudo começa <span style={{ color: COR.laranja }}>aqui.</span></>}
               </h1>
-              <svg aria-hidden="true" width="80" height="90" viewBox="0 0 90 110" fill="none" stroke={COR.tinta} strokeWidth="2.2" strokeLinecap="round" className="mt-1">
-                <path d="M44 4c-2 18 8 22 20 18 12-5 8-20-6-16-16 5-18 34-16 78" /><path d="M32 88l10 14 12-13" />
-              </svg>
               {mostrarSaidas && (
                 <div className="w-full">
                   <button type="button" onClick={() => setPapeisAbertos((v) => !v)} className="min-h-11 text-[13px] font-semibold underline underline-offset-2">Sou designer, editor ou filmmaker</button>
@@ -605,13 +704,14 @@ const Onboarding = () => {
                 </div>
               )}
 
-              <button type="button" onClick={() => setMaisAberto((v) => !v)} className="flex min-h-11 items-center gap-1.5 text-left text-[13.5px] font-semibold" style={{ color: "#4A463D" }}>
+              <button type="button" onClick={() => setMaisAberto((v) => !v)} aria-expanded={maisAberto} className="flex min-h-11 items-center gap-1.5 text-left text-[13.5px] font-semibold" style={{ color: "#4A463D" }}>
                 <ChevronDown className={`h-4 w-4 transition-transform ${maisAberto ? "rotate-180" : ""}`} strokeWidth={2.6} />
                 WhatsApp e cidade (opcional)
               </button>
               {maisAberto && (
-                <div className="flex gap-2.5">
-                  <input className={campoOnb} style={{ flex: 1.2 }} value={telefone} onChange={(e) => setTelefone(e.target.value)} inputMode="tel" placeholder="(47) 99999-0000" aria-label="WhatsApp" maxLength={20} />
+                /* Abre já à vista: antes os campos nasciam escondidos atrás do botão. */
+                <div className="flex gap-2.5" ref={maisRef}>
+                  <input className={campoOnb} style={{ flex: 1.2 }} value={telefone} onChange={(e) => setTelefone(mascararTelefone(e.target.value))} inputMode="tel" placeholder="(47) 99999-0000" aria-label="WhatsApp" maxLength={16} />
                   <input className={campoOnb} style={{ flex: 1 }} value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Itajaí, SC" aria-label="Cidade" maxLength={80} />
                 </div>
               )}
@@ -674,15 +774,24 @@ const Onboarding = () => {
         {step === 5 && (
           <motion.div key="t5" {...anim}>
             <TituloOnb antes="Quem escreve" destaque="com você?" sub="É o jeito que a Cria IA vai falar nas suas legendas e roteiros." />
-            <div className="relative -mx-5 mt-5 h-[430px]">
-              <span aria-hidden="true" className="absolute -left-[200px] top-8 h-[370px] w-[230px] rounded-[32px] opacity-45" style={{ background: PARCEIROS[(parceiro + PARCEIROS.length - 1) % PARCEIROS.length].fundo }} />
-              <span aria-hidden="true" className="absolute -right-[200px] top-8 h-[370px] w-[230px] rounded-[32px] opacity-45" style={{ background: PARCEIROS[(parceiro + 1) % PARCEIROS.length].fundo }} />
+            {/* ARRASTA PRO LADO (pedido do Walter, 24/10/2026): no celular o
+                gesto natural de carrossel é arrastar. Setas e bolinhas
+                continuam pra quem está no computador, e os cartões das pontas
+                também trocam ao tocar. */}
+            <div className="relative -mx-5 mt-4 h-[380px]">
+              <button type="button" onClick={parceiroAnterior} aria-label="Parceiro anterior" className="absolute -left-[200px] top-6 h-[330px] w-[230px] rounded-[32px] opacity-45" style={{ background: PARCEIROS[(parceiro + PARCEIROS.length - 1) % PARCEIROS.length].fundo }} />
+              <button type="button" onClick={proximoParceiro} aria-label="Próximo parceiro" className="absolute -right-[200px] top-6 h-[330px] w-[230px] rounded-[32px] opacity-45" style={{ background: PARCEIROS[(parceiro + 1) % PARCEIROS.length].fundo }} />
               <AnimatePresence mode="wait">
-                <motion.div key={p.nome} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.18 }}
-                  className="absolute inset-x-[50px] top-0 flex h-[430px] flex-col items-center rounded-[32px] px-5 pb-5 pt-6"
+                <motion.div key={p.nome} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1, x: 0 }} exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.18 }}
+                  drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.55} dragSnapToOrigin
+                  onDragEnd={(_, info) => {
+                    if (info.offset.x < -60 || info.velocity.x < -450) proximoParceiro();
+                    else if (info.offset.x > 60 || info.velocity.x > 450) parceiroAnterior();
+                  }}
+                  className="absolute inset-x-[50px] top-0 flex h-[380px] cursor-grab touch-pan-y select-none flex-col items-center rounded-[32px] px-5 pb-5 pt-5 active:cursor-grabbing"
                   style={{ background: p.fundo }}>
                   <span className="relative">
-                    <Bicho cor={p.cor} forma={p.forma} giro={p.giro} tamanho={150} boca={p.boca} />
+                    <Bicho cor={p.cor} forma={p.forma} giro={p.giro} tamanho={132} boca={p.boca} />
                     <span aria-hidden="true" className="absolute -right-6 -top-2 rotate-12 text-2xl" style={{ fontFamily: "'Grand Hotel', cursive" }}>{p.ono}</span>
                   </span>
                   <span className="mt-5 rounded-full px-3 py-1 text-[11.5px] font-bold tracking-[1.4px]" style={{ background: COR.papel }}>{p.rotulo}</span>
@@ -693,7 +802,7 @@ const Onboarding = () => {
               </AnimatePresence>
             </div>
             <div className="mt-4 flex items-center justify-center gap-4">
-              <button type="button" onClick={() => setParceiro((i) => (i + PARCEIROS.length - 1) % PARCEIROS.length)} aria-label="Parceiro anterior"
+              <button type="button" onClick={parceiroAnterior} aria-label="Parceiro anterior"
                 className="grid h-11 w-11 place-items-center rounded-full border-2" style={{ borderColor: COR.tinta, background: COR.papel }}>
                 <ChevronLeft className="h-[18px] w-[18px]" strokeWidth={2.6} />
               </button>
@@ -704,7 +813,7 @@ const Onboarding = () => {
                   </button>
                 ))}
               </div>
-              <button type="button" onClick={() => setParceiro((i) => (i + 1) % PARCEIROS.length)} aria-label="Próximo parceiro"
+              <button type="button" onClick={proximoParceiro} aria-label="Próximo parceiro"
                 className="grid h-11 w-11 place-items-center rounded-full border-2" style={{ borderColor: COR.tinta, background: COR.papel }}>
                 <ChevronRight className="h-[18px] w-[18px]" strokeWidth={2.6} />
               </button>
@@ -731,7 +840,7 @@ const Onboarding = () => {
             <div role="group" aria-label="Posts por semana" className="mt-3 flex justify-center gap-2">
               {METAS.map((v) => (
                 <button key={v} type="button" onClick={() => setWeeklyGoal(v)} aria-pressed={v === weeklyGoal}
-                  className="h-12 w-[52px] rounded-2xl border-2 font-display text-xl font-extrabold" style={estiloMarcado(v === weeklyGoal)}>{v}</button>
+                  className="h-12 w-[48px] rounded-2xl border-2 font-display text-xl font-extrabold" style={estiloMarcado(v === weeklyGoal)}>{v}</button>
               ))}
             </div>
 
@@ -763,8 +872,24 @@ const Onboarding = () => {
           </motion.div>
         )}
 
-        {/* ─── 7. Primeira ideia (a IA trabalha em paralelo) ─── */}
-        {step === 7 && (
+        {/* ─── 7. Me conta de você (brandbook falado) ─── */}
+        {step === TELA_FALA && (
+          <motion.div key="t-fala" {...anim}>
+            <TituloOnb antes="Agora me conta" destaque="de você." sub="Uma fala só, do seu jeito. Eu organizo no seu Brandbook e a IA passa a escrever com a sua cara." />
+            <div className="mt-4 rounded-[30px] px-4 pb-4 pt-[18px]" style={{ background: p.fundo }}>
+              <div className="mb-3 flex items-end gap-2.5">
+                <Bicho cor={p.cor} forma={p.forma} giro={p.giro} tamanho={64} boca={p.boca} />
+                <div className="rounded-[18px_18px_18px_4px] px-3.5 py-2.5 text-[13px] leading-snug" style={{ background: COR.papel }}>
+                  <b className="font-display">Fala sobre:</b> quem você é, o que você faz, pra quem você fala, por que começou e onde quer chegar.
+                </div>
+              </div>
+              <GravadorFala valor={sobre} onChange={setSobre} cor={p.cor} />
+            </div>
+          </motion.div>
+        )}
+
+        {/* ─── 8. Primeira ideia (a IA trabalha em paralelo) ─── */}
+        {step === TELA_IDEIA && (
           <motion.div key="t7" {...anim}>
             <TituloOnb antes="Começa por" destaque="uma ideia." sub="Não precisa estar pronta. Ideia boa nasce rascunho." />
             <div className="mt-5 rounded-[30px] px-4 pb-4 pt-[18px]" style={{ background: p.fundo }}>
@@ -799,7 +924,7 @@ const Onboarding = () => {
                 </div>
               ) : (
                 <div className="flex flex-col gap-1.5">
-                  {["Seus pilares de conteúdo", "Seus hábitos da semana", "Suas primeiras ideias"].map((t) => (
+                  {["Seus pilares de conteúdo", "Seus hábitos da semana", "Suas primeiras ideias", ...(sobre.trim().length >= MIN_FALA ? ["Seu Brandbook, com o que você contou"] : [])].map((t) => (
                     <div key={t} className="flex items-center gap-2 text-[13px]" style={{ color: setupDone ? COR.tinta : COR.apagado }}>
                       {setupDone
                         ? <span className="grid h-[18px] w-[18px] place-items-center rounded-full" style={{ background: COR.verde }}><Check className="h-2.5 w-2.5 text-white" strokeWidth={4} /></span>
@@ -813,8 +938,8 @@ const Onboarding = () => {
           </motion.div>
         )}
 
-        {/* ─── 8. Primeiro selo + semana montada ─── */}
-        {step === 8 && (
+        {/* ─── 9. Primeiro selo + semana montada ─── */}
+        {step === TELA_FIM && (
           <motion.div key="t8" {...anim} className="flex flex-col">
             <TituloOnb antes={primeiroNome ? "Bom começo," : "Bom começo."} destaque={primeiroNome ? `${primeiroNome}.` : undefined} sub="Você transformou uma ideia no primeiro passo." className="mt-4" />
 
@@ -838,7 +963,7 @@ const Onboarding = () => {
             <div className="mt-3.5 rounded-[20px] border-2 px-3.5 py-3" style={{ background: COR.papel, borderColor: COR.borda }}>
               {setupDone ? (
                 <>
-                  <p className="m-0 mb-2 font-display text-sm font-bold">{ideiasFinais.length ? `Sua semana já tem ${ideiasFinais.length === 1 ? "1 ideia" : `${ideiasFinais.length} ideias`}` : "Seu estúdio está montado"}</p>
+                  <p className="m-0 mb-2 font-display text-sm font-bold">{todasIdeias.length ? `Sua semana já tem ${todasIdeias.length === 1 ? "1 ideia" : `${todasIdeias.length} ideias`}` : "Seu estúdio está montado"}</p>
                   {ideiasFinais.length > 0 ? (
                     <div className="flex flex-col gap-1.5 text-[13px]">
                       {ideiasFinais.map((t, i) => (
@@ -863,6 +988,20 @@ const Onboarding = () => {
                 </p>
               )}
             </div>
+
+            {/* O brandbook já começou: mostra quanto, e que o resto fica nos
+                Primeiros passos (é lá que a pessoa vai terminar). */}
+            {setupDone && respostasBrandbook > 0 && (
+              <div className="mt-2.5 flex items-center gap-3 rounded-[20px] border-2 px-3.5 py-3" style={{ background: COR.papel, borderColor: COR.borda }}>
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[14px] font-display text-[13px] font-extrabold" style={{ background: COR.amarelo }}>
+                  {respostasBrandbook}
+                </span>
+                <p className="m-0 text-[13px] leading-snug">
+                  <b className="font-display">Seu Brandbook já começou:</b> {respostasBrandbook} de {TOTAL_PERGUNTAS} respostas.
+                  <span style={{ color: COR.apagado }}> O resto você completa quando quiser.</span>
+                </p>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
