@@ -459,6 +459,53 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── META DA SEMANA FICANDO PRA TRÁS (onboarding v3, 24/10/2026). O
+    //    onboarding pergunta quantos posts por semana cabem na vida da pessoa e
+    //    oferece "um empurrãozinho". Quinta e sábado de manhã, quem publicou
+    //    menos que a meta recebe quantos faltam. Desliga em
+    //    notification_prefs.meta_semana = false (onboarding ou Configurações).
+    //    Só criador (não gestora, não Meu perfil) e só quem abriu o app nos
+    //    últimos 14 dias: cobrar meta de quem sumiu é spam. ──
+    if (diaSemanaBR === "Thu" || diaSemanaBR === "Sat") {
+      const { data: criadores } = await svc.from("profiles")
+        .select("id, weekly_goal, notification_prefs, account_type")
+        .eq("onboarding_completed", true).is("perfil_de", null)
+        .gte("last_seen_at", iso(now - 14 * dayMs)).gt("weekly_goal", 0);
+      type Cr = { id: string; weekly_goal: number; notification_prefs: Record<string, unknown> | null; account_type: string | null };
+      const alvo = ((criadores ?? []) as Cr[])
+        .filter((c) => c.account_type !== "manager" && c.notification_prefs?.meta_semana !== false);
+      if (alvo.length) {
+        const ids = alvo.map((c) => c.id);
+        // Segunda-feira 00:00 no fuso BR, em UTC (+3h).
+        const dow = (new Date(now - 3 * 60 * 60 * 1000).getUTCDay() + 6) % 7; // 0 = segunda
+        const segundaBR = fmtBR.format(new Date(now - dow * dayMs));
+        const [pubs, jaMeta] = await Promise.all([
+          svc.from("posts").select("user_id").eq("status", "publicado").is("deleted_at", null)
+            .in("user_id", ids).gte("published_at", `${segundaBR}T03:00:00Z`),
+          svc.from("notifications").select("user_id").eq("type", "meta_semana")
+            .in("user_id", ids).gte("created_at", iso(now - 20 * 60 * 60 * 1000)),
+        ]);
+        const publicados = new Map<string, number>();
+        for (const r of (pubs.data ?? []) as { user_id: string }[]) publicados.set(r.user_id, (publicados.get(r.user_id) ?? 0) + 1);
+        const jaTem = new Set((jaMeta.data ?? []).map((r: { user_id: string }) => r.user_id));
+        for (const c of alvo) {
+          if (jaTem.has(c.id)) continue;
+          const feitos = publicados.get(c.id) ?? 0;
+          const faltam = c.weekly_goal - feitos;
+          if (faltam <= 0) continue;
+          const sabado = diaSemanaBR === "Sat";
+          rows.push({
+            user_id: c.id, type: "meta_semana",
+            title: sabado
+              ? `Último gás: falta${faltam > 1 ? "m" : ""} ${faltam} post${faltam > 1 ? "s" : ""} pra sua meta`
+              : `Falta${faltam > 1 ? "m" : ""} ${faltam} post${faltam > 1 ? "s" : ""} pra sua meta da semana`,
+            description: `Você combinou ${c.weekly_goal} por semana e publicou ${feitos}. Uma ideia do banco já resolve.`,
+            link: "/app/criando",
+          });
+        }
+      }
+    }
+
     // Insert em lote (1 chamada), o trigger de push dispara por linha.
     // Checa o erro: sem isso, uma falha no insert passava batido e o cron
     // reportava "created:N" sem ter criado nada (e o heartbeat dizia ok:true).

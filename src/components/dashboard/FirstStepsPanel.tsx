@@ -21,6 +21,8 @@ type Step = {
   icon: LucideIcon;
   to: string;
   done: boolean;
+  /** Selo da coleção que o onboarding v3 promete (002 e 003). */
+  selo?: string;
   /** quando não há dado pra derivar, marca como concluído ao clicar */
 };
 
@@ -52,9 +54,9 @@ export function FirstStepsPanel() {
     { id: "instagram", label: "Conectar meu Instagram", note: "conta profissional, pra ver seus números", icon: Instagram, to: "/app/insights", done: !!conexaoInstagram },
     { id: "post", label: "Criar meu 1º post", note: "a partir de uma das suas ideias", icon: Lightbulb, to: "/app/ideias", done: posts.length > 0 },
     { id: "moodboard", label: "Preencher meu moodboard", note: "a Cria IA aprende seu estilo", icon: Palette, to: "/app/brandbook", done: (entries?.length ?? 0) > 0 },
-    { id: "publicado", label: "Publicar meu 1º post", icon: Send, to: "/app/criando", done: hasPublished },
-    { id: "bio", label: "Montar meu link na bio", icon: LinkIcon, to: "/app/linkinbio", done: bioLinks.length > 0 },
-    { id: "metas", label: "Definir minhas metas", icon: Target, to: "/app/metas", done: structuredGoals.length > 0 },
+    { id: "publicado", label: "Publicar meu 1º post", icon: Send, to: "/app/criando", done: hasPublished, selo: "002" },
+    { id: "bio", label: "Montar meu link na bio", icon: LinkIcon, to: "/app/linkinbio", done: bioLinks.length > 0, selo: "003" },
+    { id: "metas", label: "Definir metas de crescimento", note: "seguidores, alcance, vendas (a de posts você já tem)", icon: Target, to: "/app/metas", done: structuredGoals.length > 0 },
   ];
 
   const total = steps.length;
@@ -134,6 +136,16 @@ export function FirstStepsPanel() {
                   <span className="text-[11px] text-muted-foreground/80 font-body">{s.note}</span>
                 )}
               </span>
+              {/* SELOS (onboarding v3): o fim do onboarding mostra o 001 e
+                  diz que o 002 e o 003 estão aqui. */}
+              {s.selo && (
+                <span className={cn(
+                  "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-display font-bold tracking-wide",
+                  s.done ? "bg-[#EA4918] text-[#0A0A0A]" : "border border-dashed border-muted-foreground/40 text-muted-foreground",
+                )}>
+                  {s.done ? `selo ${s.selo}` : `vale selo ${s.selo}`}
+                </span>
+              )}
               {!s.done && (
                 <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-foreground/60 group-hover:translate-x-0.5 transition-all shrink-0" />
               )}

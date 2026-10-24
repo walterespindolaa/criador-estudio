@@ -1,4 +1,4 @@
-import { Ban, Languages, MessageSquare, MessageSquareText, Paintbrush, Plus, Trash2 } from "lucide-react";
+import { Ban, Languages, MessageSquare, MessageSquareText, Paintbrush, Plus, Target, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { BrandItem } from "@/hooks/useBrandItems";
@@ -8,6 +8,7 @@ const BRAND_ITEM_SECTIONS = [
   { type: "fonte", label: "Fontes", ajuda: "As famílias que você usa nas artes.", icon: Languages, placeholder: "Ex: Playfair Display" },
   { type: "tom", label: "Tom de voz em poucas palavras", ajuda: "Etiquetas curtas. A IA lê estas antes das respostas longas.", icon: MessageSquareText, placeholder: "Ex: Acolhedor e direto" },
   { type: "expressao", label: "Expressões que uso", ajuda: "Gírias, bordões, jeitos de falar que são seus.", icon: MessageSquare, placeholder: "Ex: Bora!" },
+  { type: "objetivo", label: "Objetivos com o conteúdo", ajuda: "O que você quer que o conteúdo traga. Vem do onboarding e a IA usa pra montar pautas.", icon: Target, placeholder: "Ex: Vender meu produto/serviço" },
   { type: "evitar", label: "Palavras que evito", ajuda: "O que não pode aparecer numa legenda sua.", icon: Ban, placeholder: "Ex: Não use gírias" },
 ] as const;
 

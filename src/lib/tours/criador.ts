@@ -24,7 +24,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
         skipIfMissing: true,
         target: '[data-tour="dash-primeiros-passos"]',
         title: "Primeiros passos",
-        body: "Esse checklist te guia pela configuração inicial. Cada item concluído destrava mais valor do CRIA. Vale completar os 6!",
+        body: "Esse checklist te guia pela configuração inicial. Cada item concluído destrava mais valor do CRIA, e publicar o 1º post e montar o link na bio rendem os selos 002 e 003 da sua coleção.",
         placement: "bottom",
       },
       {

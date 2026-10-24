@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Trophy, Lightbulb, CheckCircle2, Flame, UserPlus, Clock, Trash2, Package, Clapperboard, Handshake, CalendarDays, FileText, Video, Cake, MessageCircle, Sun, ShieldAlert, Wallet } from "lucide-react";
+import { Bell, Trophy, Lightbulb, CheckCircle2, Flame, UserPlus, Clock, Trash2, Package, Clapperboard, Handshake, CalendarDays, FileText, Video, Cake, MessageCircle, Sun, ShieldAlert, Wallet, Target } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ const TYPE_ICONS: Record<string, { icon: typeof Bell; color: string }> = {
   dica_dia: { icon: Lightbulb, color: "text-primary" },
   posts_pendentes: { icon: Bell, color: "text-primary" },
   lembrete_postar: { icon: Bell, color: "text-primary" },
+  meta_semana: { icon: Target, color: "text-orange-500" },
   volte: { icon: Flame, color: "text-orange-500" },
   acesso_vencendo: { icon: Clock, color: "text-destructive" },
   // Tipos que já eram gerados mas caíam no ícone genérico (pente fino 04/09).
@@ -60,6 +61,7 @@ const CATEGORY: Record<string, string> = {
   material: "Cliente / Cria Post",
   posts_pendentes: "Lembretes",
   lembrete_postar: "Lembretes",
+  meta_semana: "Lembretes",
   dica_dia: "Ganchos & dicas",
   meta_batida: "Conquistas",
   habito_semana: "Conquistas",

@@ -794,6 +794,23 @@ const Brandbook = () => {
 
                 {aba.secoes.map((s) => renderGuidedSection(s, aba.cor, s === "linha-editorial" || s === "persona-brand" || s === "tom-de-voz"))}
 
+                {/* Objetivos vêm do onboarding v3 (brand_items type "objetivo").
+                    Antes iam pra IA e não apareciam em lugar nenhum pra editar. */}
+                {aba.valor === "essencia" && (
+                  <BrandValuesSection
+                    brandItems={brandItems}
+                    tipos={["objetivo"]}
+                    activeSection={activeSection}
+                    newItemName={newItemName}
+                    newItemValue={newItemValue}
+                    onActiveSectionChange={setActiveSection}
+                    onNewItemNameChange={setNewItemName}
+                    onNewItemValueChange={setNewItemValue}
+                    onAddBrandItem={addBrandItem}
+                    onDeleteBrandItem={handleDeleteBrandItem}
+                  />
+                )}
+
                 {aba.valor === "identidade" && (
                   <BrandValuesSection
                     brandItems={brandItems}

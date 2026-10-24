@@ -185,6 +185,9 @@ export function NotificationToggle() {
    ═══════════════════════════════════════════════════════════════════════════ */
 const CATEGORIAS: { chave: string; titulo: string; desc: string }[] = [
   { chave: "lembretes", titulo: "Lembretes do dia", desc: "Resumo da manhã, post agendado, tarefa vencendo, stories, captação de amanhã, aniversário de cliente." },
+  /* Meta da semana (onboarding v3): diferente das outras, desligar aqui
+     faz o robô nem criar o aviso (some do sino também). */
+  { chave: "meta_semana", titulo: "Meta da semana", desc: "Quinta e sábado de manhã, se faltar post pra bater sua meta. Desligado, não aparece nem no sino." },
   { chave: "clientes", titulo: "Clientes e aprovações", desc: "Aprovou, pediu ajuste, comentou, roteiro revisado, pagamento atrasado, renovação chegando." },
   /* Produção saiu de dentro de "clientes" em 14/09/2026: quem trabalha com
      designer e filmmaker recebe os dois fluxos o dia inteiro, e querer o aviso

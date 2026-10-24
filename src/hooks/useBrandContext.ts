@@ -12,6 +12,7 @@ const ITEM_TYPE_LABELS: Record<string, string> = {
   tom: "Tom de voz",
   expressao: "Expressões que uso",
   evitar: "Palavras que evito",
+  objetivo: "Objetivos com o conteúdo",
   value: "Valores",
 };
 
