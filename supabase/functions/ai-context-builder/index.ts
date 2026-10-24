@@ -1053,7 +1053,7 @@ Plataformas: ${Array.isArray(data.plataformas) ? data.plataformas.join(', ') : d
 Objetivo principal: ${data.objetivo || 'crescer audiência'}
 Público-alvo: ${data.publico || 'não informado'}
 Tom de voz: ${data.tom || 'autêntico'}
-${typeof data.sobre === 'string' && data.sobre.trim() ? `O que ela contou sobre ela, com as palavras dela (transcrição de voz, pode ter palavra trocada): """${data.sobre.trim().slice(0, 1500)}"""\n` : ''}Use o objetivo, o público, o tom${typeof data.sobre === 'string' && data.sobre.trim() ? ' e principalmente o que ela contou' : ''} pra deixar os pilares e as ideias bem específicos e relevantes pra essa pessoa.`
+Use o objetivo, o público e o tom pra deixar os pilares e as ideias bem específicos e relevantes pra essa pessoa.`
         maxTokens = 600
         break
       case 'cria-chat':

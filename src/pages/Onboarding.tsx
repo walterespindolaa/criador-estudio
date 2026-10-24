@@ -327,6 +327,33 @@ const Onboarding = () => {
       const sanitizedHandle = sanitizeText(handle.replace(/^@/, ""));
       const avatarUrl = await uploadAvatar();
 
+      /* A FALA VEM PRIMEIRO (24/10/2026). Ela é distribuída no brandbook e o
+         que ela revela (quem é o público, quem é a pessoa) segue pra IA que
+         monta pilares e ideias, pelos campos que o onboarding-setup já lê
+         (público e objetivo). Assim não precisa publicar o ai-context-builder. */
+      const respostas: { user_id: string; section: string; question_key: string; answer: string }[] = [];
+      let resumoFala = "";
+      const falaLimpa = sanitizeText(sobre.trim());
+      if (falaLimpa.length >= MIN_FALA) {
+        try {
+          const { data: falaResp, error: falaErr } = await supabase.functions.invoke("brandbook-fala", {
+            body: {
+              texto: falaLimpa,
+              perguntas: PERGUNTAS_PLANAS.map((q) => ({ id: q.id, label: q.label })),
+              accountId: ehMeuPerfil ? donoId : undefined,
+            },
+          });
+          if (falaErr) throw falaErr;
+          const lido = (falaResp as { result?: { respostas?: Record<string, string>; resumo?: string | null } } | null)?.result ?? null;
+          resumoFala = typeof lido?.resumo === "string" ? sanitizeText(lido.resumo).slice(0, 300) : "";
+          for (const q of PERGUNTAS_PLANAS) {
+            const r = lido?.respostas?.[q.id];
+            if (typeof r === "string" && r.trim()) respostas.push({ user_id: donoId, section: q.section, question_key: q.key, answer: sanitizeText(r.trim()) });
+          }
+        } catch (e) {
+          console.warn("[onboarding] brandbook-fala falhou; segue sem", e);
+        }
+      }
       let result: AISetupResult | null = null;
       try {
         const raw = await callAIContextBuilder({
@@ -337,9 +364,9 @@ const Onboarding = () => {
             nichos: niches,
             plataformas: platforms,
             meta_semanal: weeklyGoal,
-            objetivo: objetivos.length ? objetivos.join(", ") : undefined,
+            objetivo: [objetivos.join(", "), resumoFala ? `Sobre ela, nas palavras dela: ${resumoFala}` : ""].filter(Boolean).join(". ") || undefined,
+            publico: respostas.find((r) => r.section === "persona-brand" && r.question_key === "quem-e")?.answer.slice(0, 400),
             tom: tom || undefined,
-            sobre: sobre.trim().length >= MIN_FALA ? sobre.trim().slice(0, 1500) : undefined,
           },
         });
         if (typeof raw === "string") {
@@ -435,27 +462,6 @@ const Onboarding = () => {
          1º a fala dela, distribuída pela IA nas perguntas (o que ela disse vale
          mais). 2º, só onde ainda ficou vazio, o que o onboarding já sabe. Nada
          sobrescreve resposta que já existe (Meu perfil pode ter brandbook). */
-      const respostas: { user_id: string; section: string; question_key: string; answer: string }[] = [];
-      const falaLimpa = sanitizeText(sobre.trim());
-      if (falaLimpa.length >= MIN_FALA) {
-        try {
-          const { data: falaResp, error: falaErr } = await supabase.functions.invoke("brandbook-fala", {
-            body: {
-              texto: falaLimpa,
-              perguntas: PERGUNTAS_PLANAS.map((q) => ({ id: q.id, label: q.label })),
-              accountId: ehMeuPerfil ? donoId : undefined,
-            },
-          });
-          if (falaErr) throw falaErr;
-          const lido = (falaResp as { result?: { respostas?: Record<string, string> } } | null)?.result ?? null;
-          for (const q of PERGUNTAS_PLANAS) {
-            const r = lido?.respostas?.[q.id];
-            if (typeof r === "string" && r.trim()) respostas.push({ user_id: donoId, section: q.section, question_key: q.key, answer: sanitizeText(r.trim()) });
-          }
-        } catch (e) {
-          console.warn("[onboarding] brandbook-fala falhou; segue sem", e);
-        }
-      }
       const jaTem = new Set(respostas.map((r) => `${r.section}/${r.question_key}`));
       const doOnboarding = (section: string, key: string, answer: string) => {
         if (answer.trim() && !jaTem.has(`${section}/${key}`)) respostas.push({ user_id: donoId, section, question_key: key, answer });
