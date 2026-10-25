@@ -64,6 +64,8 @@ project_id = "ecbzfjzoqidowrsfsfih"
     verify_jwt = false
   [functions.brandbook-fala]
     verify_jwt = false
+  [functions.prompter-voz]
+    verify_jwt = false
   [functions.create-checkout]
     verify_jwt = false
   [functions.stripe-webhook]

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { memo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { SeguidorNuvem } from "./vozNuvem";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CRIA PROMPTER PLAYER (teleprompter com voice-following pt-BR)
@@ -33,6 +34,9 @@ type Props = {
   title: string;
   text: string;
   onExit: () => void;
+  /** token temporário da transcrição na nuvem (edge prompter-voz). null =
+   *  indisponível: o modo Por voz segue só pelo volume. */
+  obterTokenVoz?: () => Promise<string | null>;
 };
 
 const SETTINGS_KEY = "cria_prompter_settings_v1";
@@ -119,7 +123,7 @@ const CSS = `
 .cpr #recTimer{color:#FDFBF5;font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;font-family:var(--fontDisplay);background:var(--accent);border:none;border-radius:999px;padding:7px 12px;display:none;animation:cprPulse 1.3s infinite;box-shadow:0 0 0 4px rgba(234,73,24,.25);}
 .cpr #countdown{position:absolute;inset:0;z-index:20;display:none;align-items:center;justify-content:center;font-size:120px;font-weight:700;font-family:var(--fontDisplay);color:var(--accent);background:rgba(0,0,0,.6);}
 /* Ajustes = bottom sheet CLARO com identidade CRIA (creme + cards brancos) */
-.cpr #settingsPanel{position:absolute;left:0;right:0;bottom:0;top:auto;width:auto;max-width:520px;margin:0 auto;max-height:82vh;background:var(--cream);color:var(--ink);border:none;border-radius:28px 28px 0 0;z-index:30;transform:translateY(105%);transition:transform .32s cubic-bezier(.32,.72,.25,1);overflow-y:auto;padding:8px 14px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -14px 44px rgba(10,10,10,.45);}
+.cpr #settingsPanel{position:absolute;left:0;right:0;bottom:0;top:auto;width:auto;max-width:520px;margin:0 auto;max-height:66vh;background:var(--cream);color:var(--ink);border:none;border-radius:28px 28px 0 0;z-index:30;transform:translateY(105%);transition:transform .32s cubic-bezier(.32,.72,.25,1);overflow-y:auto;padding:8px 14px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -14px 44px rgba(10,10,10,.45);}
 .cpr #settingsPanel.open{transform:none;}
 .cpr .shandle{width:44px;height:5px;border-radius:99px;background:rgba(10,10,10,.18);margin:4px auto 12px;}
 .cpr #settingsPanel h2{font-size:21px;font-weight:700;margin:0 4px;color:var(--ink);font-family:var(--fontDisplay);letter-spacing:-.01em;}
@@ -150,7 +154,7 @@ const CSS = `
 .cpr .sw i:before{content:"";position:absolute;width:24px;height:24px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 4px rgba(10,10,10,.25);}
 .cpr .sw input:checked+i{background:var(--accent);}
 .cpr .sw input:checked+i:before{transform:translateX(20px);}
-.cpr #overlay{position:absolute;inset:0;background:rgba(10,10,10,.45);z-index:25;display:none;}
+.cpr #overlay{position:absolute;inset:0;background:rgba(10,10,10,.25);z-index:25;display:none;}
 .cpr #overlay.show{display:block;}
 .cpr #cprToast{position:absolute;bottom:calc(110px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:rgba(10,10,10,.88);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--glassBrd);color:var(--cream);border-radius:16px;padding:12px 18px;font-size:14px;z-index:50;display:none;max-width:86vw;text-align:center;}
 .cpr .cSheet{position:absolute;inset:0;z-index:45;display:none;align-items:flex-end;justify-content:center;background:rgba(10,10,10,.6);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);}
@@ -194,6 +198,47 @@ const CSS = `
 .cpr.light #quickBar .pbtn,.cpr.light #topBar>div:last-child .pbtn{color:#0A0A0A;background:transparent;border:none;}
 .cpr.light #prExit{color:#0A0A0A;border-color:rgba(10,10,10,.35);background:transparent;}
 .cpr.light #bottomBar{background:linear-gradient(transparent,rgba(245,243,231,.96));}
+/* ── PLAYER REPAGINADO (25/10/2026, mockup aprovado) ─────────────────────── */
+.cpr #topMid{flex:1;min-width:0;text-align:center;display:flex;flex-direction:column;align-items:center;line-height:1.15;}
+.cpr #topTitle{font-family:var(--fontDisplay);font-weight:700;font-size:14px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cpr #voiceStatus{display:none!important;}
+.cpr #topMid #remain{font-size:11.5px;font-weight:600;opacity:.7;padding:0;}
+.cpr #settingsBtn{background:transparent;border:none;flex-direction:column;gap:2px;padding:4px 8px;}
+.cpr #settingsBtn small{font-size:10px;font-weight:600;}
+.cpr.light #settingsBtn{color:#0A0A0A;}
+.cpr #modeChip{position:absolute;top:calc(68px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:10;display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:rgba(10,10,10,.55);border:1px solid var(--glassBrd);font-size:12px;font-weight:600;color:var(--cream);white-space:nowrap;transition:opacity .3s;pointer-events:none;}
+.cpr #modeChip i{width:8px;height:8px;border-radius:50%;background:var(--dim);}
+.cpr #modeChip.voz i{background:var(--ok);} .cpr #modeChip.vol i{background:#9BB8F0;} .cpr #modeChip.rol i{background:var(--yellow);} .cpr #modeChip.man i{background:var(--dim);}
+.cpr.barsHidden #modeChip{opacity:0;}
+.cpr.light #modeChip{background:rgba(253,251,245,.92);color:#0A0A0A;border-color:rgba(10,10,10,.12);}
+.cpr #bottomBar{justify-content:center;gap:clamp(10px,5vw,40px);padding-left:16px;padding-right:16px;}
+.cpr .sgTop{display:flex;align-items:center;justify-content:space-between;padding:0 4px;}
+.cpr .sgDone{min-height:44px;padding:0 18px;border:0;border-radius:999px;background:var(--ink);color:var(--paper);font:700 14px var(--fontDisplay);cursor:pointer;}
+.cpr .sgSec{font-family:var(--fontDisplay);font-weight:800;font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:rgba(10,10,10,.55);margin:18px 4px 0;}
+.cpr .presets{display:flex;flex-direction:column;gap:8px;margin-top:10px;}
+.cpr .preset{display:flex;align-items:center;gap:12px;width:100%;min-height:64px;padding:10px 14px;border-radius:18px;cursor:pointer;background:var(--paper);border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(10,10,10,.08);text-align:left;color:var(--ink);}
+.cpr .preset.on{border-color:var(--accent);box-shadow:none;}
+.cpr .preset .pIco{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:#ECE8DA;flex-shrink:0;}
+.cpr .preset.on .pIco{background:#FDE7DF;color:#9A2E0E;}
+.cpr .preset .pTxt{display:flex;flex-direction:column;gap:2px;}
+.cpr .preset .pTxt b{font-size:14.5px;font-weight:700;}
+.cpr .preset .pTxt small{font-size:12.5px;line-height:1.35;color:rgba(10,10,10,.6);font-family:inherit;}
+.cpr .sgRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid rgba(10,10,10,.07);}
+.cpr .sgBlock{padding:12px 0;border-bottom:1px solid rgba(10,10,10,.07);}
+.cpr .sgCard>.sgBlock:last-child{border-bottom:none;}
+.cpr .sgLbl{display:block;font-size:14.5px;font-weight:500;color:var(--ink);margin-bottom:8px;}
+.cpr .sgRow .sgLbl{margin:0;}
+.cpr .sgHint{margin:8px 2px 0;font-size:12.5px;line-height:1.4;color:rgba(10,10,10,.58);}
+.cpr .seg{display:flex;background:#ECE8DA;border-radius:14px;padding:3px;gap:3px;}
+.cpr .seg button{flex:1;min-height:40px;border:0;border-radius:11px;background:transparent;font-size:13.5px;font-weight:600;color:rgba(10,10,10,.7);cursor:pointer;font-family:inherit;}
+.cpr .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12);}
+.cpr .step{display:flex;align-items:center;gap:6px;}
+.cpr .step button{width:44px;height:44px;border-radius:50%;border:0;background:#ECE8DA;font-weight:700;font-size:15px;color:var(--ink);cursor:pointer;font-family:var(--fontDisplay);}
+.cpr .step b{min-width:36px;text-align:center;font-family:var(--fontDisplay);font-size:16px;color:var(--ink);}
+.cpr .maisBtn{margin-top:16px;width:100%;min-height:48px;border:1.5px dashed rgba(10,10,10,.25);border-radius:16px;background:transparent;font-weight:700;font-size:14px;color:var(--ink);cursor:pointer;font-family:var(--fontDisplay);}
+.cpr .sgPb{flex:1;background:#ECE8DA!important;color:var(--ink)!important;border:1px solid rgba(10,10,10,.08)!important;backdrop-filter:none;-webkit-backdrop-filter:none;border-radius:14px;}
+.cpr .sgPb small{font-weight:600;}
+
 .cpr.light:not(.camOn) .pbtn{background:rgba(253,251,245,.92);color:#0A0A0A;border-color:rgba(10,10,10,.16);}
 .cpr.light:not(.camOn) .pbtn.on{background:var(--accent);color:var(--accentFg);border-color:var(--accent);}
 .cpr.light:not(.camOn) #prExit{border-color:rgba(10,10,10,.35);}
@@ -256,6 +301,7 @@ const ICONS: Record<string, string> = {
   type: '<polyline points="4 7 4 4 20 4 20 7" /> <line x1="9" x2="15" y1="20" y2="20" /> <line x1="12" x2="12" y1="4" y2="20" />',
   gauge: '<path d="m12 14 4-4" /> <path d="M3.34 19a10 10 0 1 1 17.32 0" />',
   monitor: '<rect width="20" height="14" x="2" y="3" rx="2" /> <line x1="8" x2="16" y1="21" y2="21" /> <line x1="12" x2="12" y1="17" y2="21" />',
+  "sliders-horizontal": '<line x1="21" x2="14" y1="4" y2="4" /> <line x1="10" x2="3" y1="4" y2="4" /> <line x1="21" x2="12" y1="12" y2="12" /> <line x1="8" x2="3" y1="12" y2="12" /> <line x1="21" x2="16" y1="20" y2="20" /> <line x1="12" x2="3" y1="20" y2="20" /> <line x1="14" x2="14" y1="2" y2="6" /> <line x1="8" x2="8" y1="10" y2="14" /> <line x1="16" x2="16" y1="18" y2="22" />',
   crop: '<path d="M6 2v14a2 2 0 0 0 2 2h14" /> <path d="M18 22V8a2 2 0 0 0-2-2H2" />',
 };
 
@@ -279,10 +325,12 @@ const DEF = {
   readOnly: false,
 };
 
-function PrompterPlayerInner({ title, text, onExit }: Props) {
+function PrompterPlayerInner({ title, text, onExit, obterTokenVoz }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const exitRef = useRef(onExit);
   exitRef.current = onExit;
+  const tokenVozRef = useRef(obterTokenVoz);
+  tokenVozRef.current = obterTokenVoz;
 
   useEffect(() => {
     const root = rootRef.current!;
@@ -330,6 +378,10 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
        ============================================================ */
     let words: string[] = [], wordEls: HTMLElement[] = [], pos = 0, mode = S.mode || "voice";
     let subPx = 0; /* fração de pixel da rolagem (ver andar) */
+    /* SEGUE A FALA PELA NUVEM (25/10/2026, ver vozNuvem.ts). Com a conexão
+       aberta, o texto vai até a palavra que a pessoa disse (alvoY); sem ela,
+       o modo Por voz anda pelo volume, como antes. */
+    let nuvem: SeguidorNuvem | null = null, nuvemAtiva = false, alvoY: number | null = null, nuvemAvisou = false;
     let playing = false, rafId: number | null = null, lastT = 0, pxPerSec = 60;
     let wakeLock: any = null;
     let disposed = false;
@@ -390,7 +442,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     }
     function resetProgress() {
       pos = 0; wordEls.forEach((e) => e.classList.remove("done", "cur"));
-      vp.scrollTop = 0; subPx = 0; cancelCountdown(); stopPlay();
+      vp.scrollTop = 0; subPx = 0; alvoY = null; nuvem?.limparMemoria(); cancelCountdown(); stopPlay();
       progT = 0; updateProgress();
     }
     function requestWake() {
@@ -479,7 +531,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       $("#sFixMirror").checked = S.fixMirror; $("#sCardOn").checked = S.cardOn; $("#sCardPos").value = S.cardPos;
       $("#sCardH").value = S.cardH; $("#sCardW").value = S.cardW; $("#sCardColor").value = S.cardColor;
       const bind = (id: string, key: string, parse?: (v: string) => any) => {
-        $(id).addEventListener("input", (e: any) => { S[key] = parse ? parse(e.target.value) : e.target.value; save(); applySettings(); });
+        $(id).addEventListener("input", (e: any) => { S[key] = parse ? parse(e.target.value) : e.target.value; save(); applySettings(); syncQuick(); });
       };
       bind("#sFont", "font", Number); bind("#sMargin", "margin", Number); bind("#sLine", "line", Number);
       bind("#sFontFam", "fontFam"); bind("#sWeight", "weight", Number); bind("#sAlign", "align"); bind("#sWpm", "wpm", Number); bind("#sCount", "count", Number);
@@ -528,13 +580,14 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       stopPlay();
       $("#voiceStatus").style.display = m === "voice" ? "inline" : "none";
       $("#playBtn").style.display = m === "manual" ? "none" : "inline-flex";
-      $("#speedPill").style.display = m === "manual" ? "none" : "flex";
+      $("#speedPill").style.display = m === "auto" ? "flex" : "none"; /* mockup 25/10: velocidade só na Rolagem */
       refreshIcons($("#modeBtn"));
       if (S.readOnly && m === "manual") readHideBars(); else showBars();
+      chipModo(); syncQuick();
     }
     $("#modeBtn").onclick = (e: Event) => { e.stopPropagation(); $("#modeMenu").classList.toggle("show"); };
     const MODE_HINT: Record<string, string> = {
-      voice: "Por voz: o texto anda enquanto você fala e para quando você para.",
+      voice: "Por voz: o texto segue as suas palavras.",
       auto: "Rolagem: o texto anda sozinho na velocidade do − / +.",
       manual: "Manual: você rola o texto com o dedo.",
     };
@@ -542,13 +595,69 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     const onDocClick = (e: Event) => { if (!(e.target as Element).closest("#modeMenu,#modeBtn")) $("#modeMenu")?.classList.remove("show"); };
     document.addEventListener("click", onDocClick);
 
-    /* ---------- quick actions ---------- */
-    function syncQuick() {
-      $("#qCard").classList.toggle("on", S.cardOn);
-      $("#qReels").classList.toggle("on", S.reels);
-      $("#qMir").classList.toggle("on", S.mirX);
-      $("#qRead").classList.toggle("on", S.readOnly === true);
+    /* ---------- ajustes rápidos (repaginado 25/10/2026) ----------
+       Os atalhos do topo viraram: 3 jeitos de gravar (preset), botões de
+       segmento e A−/A+. Os controles finos continuam em "Mais opções" com os
+       mesmos ids, então o resto da engine não mudou. */
+    function presetAtual() { return S.readOnly ? (S.mirX ? "vidro" : "tela") : "aqui"; }
+    const perto = (lista: number[], v: number) => lista.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a));
+    function marcarSeg(id: string, v: string) {
+      $$(id + " button").forEach((b: any) => b.classList.toggle("on", b.dataset.v === v));
     }
+    const MODO_DESC: Record<string, string> = {
+      voice: "O texto segue as suas palavras. Pulou ou repetiu um trecho, ele acha. Sem internet, anda enquanto você fala.",
+      auto: "Anda sozinho na velocidade que você escolher no − / + da lateral.",
+      manual: "Você passa: toque embaixo avança, em cima volta. Bom com controle Bluetooth.",
+    };
+    function syncQuick() {
+      $$(".preset").forEach((b: any) => b.classList.toggle("on", b.dataset.preset === presetAtual()));
+      marcarSeg("#segLine", String(perto([1.15, 1.3, 1.5], Number(S.line))));
+      marcarSeg("#segRead", String(perto([26, 36, 46], Number(S.readPos))));
+      marcarSeg("#segCount", String(perto([0, 3, 5], Number(S.count))));
+      marcarSeg("#segMode", mode);
+      const d = $("#modeDesc"); if (d) d.textContent = MODO_DESC[mode] || "";
+      const vf = $("#vFontStep"); if (vf) vf.textContent = String(S.font);
+      const sync: [string, any][] = [["#sFont", S.font], ["#sLine", S.line], ["#sRead", S.readPos], ["#sCount", S.count]];
+      sync.forEach(([id, v]) => { const el = $(id); if (el) el.value = v; });
+      const chk: [string, boolean][] = [["#sReadOnly", !!S.readOnly], ["#sMirX", !!S.mirX], ["#sMirY", !!S.mirY], ["#sTheme", S.theme === "light"], ["#sCardOn", !!S.cardOn], ["#sReels", !!S.reels]];
+      chk.forEach(([id, v]) => { const el = $(id); if (el) el.checked = v; });
+    }
+    /* o aviso embaixo do topo: a pessoa sabe se o texto está seguindo a fala */
+    function chipModo() {
+      const c = $("#modeChip"); if (!c) return;
+      let cls = "man", txt = "Manual: toque pra passar";
+      if (mode === "voice") {
+        cls = nuvemAtiva || !playing ? "voz" : "vol";
+        txt = nuvemAtiva ? "Seguindo a sua fala" : playing ? "Por voz: anda enquanto você fala" : "Por voz: dê play e comece a falar";
+      }
+      else if (mode === "auto") { cls = "rol"; txt = "Rolagem a " + S.wpm + " pal/min"; }
+      c.className = cls; $("#modeChipTxt").textContent = txt;
+    }
+    $$(".preset").forEach((b: any) => (b.onclick = () => {
+      const p = b.dataset.preset;
+      if (p === "aqui") {
+        S.mirX = false; S.mirY = false; S.font = 34; S.readPos = 26; save();
+        if (S.readOnly) setReadOnly(false); else applySettings();
+      } else {
+        S.mirX = p === "vidro"; S.mirY = false; S.font = 56; S.readPos = 36; save();
+        if (!S.readOnly) setReadOnly(true); else applySettings();
+      }
+      syncQuick();
+    }));
+    const passoFonte = (d: number) => { S.font = Math.max(20, Math.min(90, S.font + d)); save(); applySettings(); syncQuick(); };
+    $("#fontDown").onclick = () => passoFonte(-2);
+    $("#fontUp").onclick = () => passoFonte(2);
+    const bindSeg = (id: string, fn: (v: string) => void) => $$(id + " button").forEach((b: any) => (b.onclick = () => { fn(b.dataset.v); syncQuick(); }));
+    bindSeg("#segLine", (v) => { S.line = Number(v); save(); applySettings(); });
+    bindSeg("#segRead", (v) => { S.readPos = Number(v); save(); applySettings(); });
+    bindSeg("#segCount", (v) => { S.count = Number(v); save(); applySettings(); });
+    bindSeg("#segMode", (v) => setMode(v));
+    $("#sTheme").addEventListener("change", (e: any) => { S.theme = e.target.checked ? "light" : "dark"; save(); applyTheme(); });
+    $("#maisBtn").onclick = () => {
+      const m = $("#maisOpc"), abre = m.style.display === "none";
+      m.style.display = abre ? "block" : "none";
+      $("#maisBtn").textContent = abre ? "Menos opções" : "Mais opções (câmera, microfone, card, letra)";
+    };
     /* Liga/desliga o modo Só leitura. Gravando não deixa trocar (a câmera
        sumiria no meio da tomada). Ao ligar, desliga a câmera do aparelho. */
     function setReadOnly(on: boolean) {
@@ -566,16 +675,6 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         readHideBars();
       } else showBars();
     }
-    $("#qFlip").onclick = () => {
-      S.camFace = S.camFace === "user" ? "environment" : "user"; $("#sCamFace").value = S.camFace; save();
-      if (camStream) startCamera(true); else toast(S.camFace === "user" ? "Câmera frontal selecionada" : "Câmera traseira selecionada");
-    };
-    $("#qCard").onclick = () => { S.cardOn = !S.cardOn; $("#sCardOn").checked = S.cardOn; save(); applySettings(); syncQuick(); };
-    $("#qReels").onclick = () => { S.reels = !S.reels; $("#sReels").checked = S.reels; save(); applySettings(); syncQuick(); };
-    $("#qRead").onclick = () => setReadOnly(!S.readOnly);
-    $("#qMir").onclick = () => { S.mirX = !S.mirX; $("#sMirX").checked = S.mirX; save(); applySettings(); syncQuick(); };
-    $("#qTheme").onclick = () => { S.theme = S.theme === "light" ? "dark" : "light"; save(); applyTheme(); };
-
     /* ---------- play / pause ---------- */
     function setPlayIcon() {
       $("#playBtn").innerHTML = '<i data-lucide="' + (playing ? "pause" : "play") + '"></i><small>' + (playing ? "Pausar" : "Play") + "</small>";
@@ -604,7 +703,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     function noInicio() { return vp.scrollTop < 8; }
     function startPlay(onReady?: () => void) {
       const go = () => {
-        playing = true; setPlayIcon();
+        playing = true; setPlayIcon(); chipModo();
         computeSpeed();
         if (mode === "auto") { lastT = performance.now(); rafId = requestAnimationFrame(tick); }
         else if (mode === "voice") startVoice();
@@ -654,7 +753,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       const sl = $("#sWpm"); if (sl) sl.value = S.wpm;
       $("#vWpm").textContent = S.wpm + " palavras/min";
       $("#spVal").textContent = String(S.wpm);
-      computeSpeed(); updateProgress();
+      computeSpeed(); updateProgress(); chipModo();
     }
     $("#spUp").onclick = (e: Event) => { e.stopPropagation(); mudarVelocidade(10); };
     $("#spDown").onclick = (e: Event) => { e.stopPropagation(); mudarVelocidade(-10); };
@@ -695,7 +794,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       const faltam = Math.max(0, words.length - currentWordAtLine());
       const seg = Math.round((faltam / Math.max(1, S.wpm)) * 60);
       const r = $("#remain");
-      if (r) r.textContent = mode === "manual" || !words.length ? "" : (Math.floor(seg / 60) + ":" + String(seg % 60).padStart(2, "0"));
+      if (r) r.textContent = mode === "manual" || !words.length ? "" : ("faltam " + Math.floor(seg / 60) + ":" + String(seg % 60).padStart(2, "0"));
     }
     vp.addEventListener("scroll", () => updateProgress(), { passive: true });
 
@@ -846,6 +945,14 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         const c = S.count; S.count = 0; startPlay(); S.count = c; /* sem nova contagem */
         return;
       }
+      if (nuvemAtiva) {
+        /* vai até a palavra ouvida, desacelerando no fim (sem tranco) */
+        if (alvoY !== null && !userScrolling && !touchDown) {
+          const falta = alvoY - vp.scrollTop;
+          if (Math.abs(falta) > 0.5) andar(falta * (1 - Math.exp(-dt / 0.35)));
+        }
+        return;
+      }
       const lvl = readVoiceLevel();
       if (lvl < 0) return; /* analyser ainda não pronto: segura o texto */
       /* PISO DE RUÍDO adaptativo, robusto contra "falar já no começo": desce rápido
@@ -886,6 +993,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           if (disposed) return;
           if (micLive()) { buildAnalyser(); watchMicTrack(); startVu(); $("#voiceDot")?.classList.add("live"); }
           else $("#voiceDot")?.classList.remove("live");
+          await ligarNuvem();
         })();
       } else {
         $("#voiceDot")?.classList.remove("live");
@@ -896,6 +1004,40 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     }
     function stopVoice() {
       $("#voiceDot")?.classList.remove("live");
+      desligarNuvem();
+    }
+    async function ligarNuvem() {
+      const obterTokenVoz = tokenVozRef.current;
+      if (!obterTokenVoz || nuvem || !audioCtx || !micSource || !micLive()) return;
+      let token: string | null = null;
+      try { token = await obterTokenVoz(); } catch { token = null; }
+      /* a pessoa pode ter pausado ou trocado de modo enquanto o token vinha */
+      if (!token || disposed || !playing || mode !== "voice" || nuvem || !audioCtx || !micSource) return;
+      const s = new SeguidorNuvem({
+        ctx: audioCtx, fonte: micSource, token,
+        aoOuvir: (cauda) => {
+          if (nuvem !== s) return;
+          const t = cauda.map(normWord).filter(Boolean);
+          if (t.length) matchAdvance(t);
+        },
+        aoFalhar: () => {
+          if (nuvem !== s) return;
+          nuvem = null; nuvemAtiva = false; alvoY = null; chipModo();
+          if (playing && mode === "voice") toast("A conexão caiu. Sigo pelo volume da sua voz.", 3500);
+        },
+      });
+      nuvem = s;
+      try { await s.iniciar(); } catch { if (nuvem === s) { nuvem = null; } return; }
+      if (nuvem !== s) return;
+      nuvemAtiva = true; chipModo();
+      /* começa de onde a linha de leitura está */
+      hardSetPos(currentWordAtLine());
+      if (!nuvemAvisou) { nuvemAvisou = true; toast("Seguindo a sua fala, palavra por palavra.", 2200); }
+    }
+    function desligarNuvem() {
+      const s = nuvem; nuvem = null; nuvemAtiva = false; alvoY = null;
+      if (s) s.parar();
+      chipModo();
     }
     function matchAdvance(tail: string[]) {
       if (!words.length) return;
@@ -917,6 +1059,21 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           if (wordsEq(tail[tail.length - 1], words[j])) { bestJ = j; break; }
         }
       }
+      /* PULO LONGE (25/10/2026): pulou um parágrafo ou voltou pra repetir.
+         Só com 4 palavras seguidas iguais, pra não pular por engano. */
+      if (bestJ < 0 && tail.length >= 4) {
+        const t4 = tail.slice(-4);
+        const casa = (j: number) => wordsEq(t4[0], words[j - 3]) && wordsEq(t4[1], words[j - 2]) && wordsEq(t4[2], words[j - 1]) && wordsEq(t4[3], words[j]);
+        let melhor = -1, dist = Infinity;
+        for (let j = 3; j < words.length; j++) {
+          if (j >= pos - 2 && j <= pos + LOOKAHEAD) continue;
+          if (casa(j) && Math.abs(j - pos) < dist) { melhor = j; dist = Math.abs(j - pos); }
+        }
+        if (melhor >= 0) {
+          if (melhor < pos) hardSetPos(melhor + 1); else bestJ = melhor;
+          if (melhor < pos) { scrollToWord(Math.min(melhor + 1, words.length - 1)); return; }
+        }
+      }
       if (bestJ >= 0) setPos(bestJ + 1);
     }
     function setPos(p: number) {
@@ -931,6 +1088,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     function scrollToWord(i: number) {
       const el = wordEls[i]; if (!el) return;
       const target = Math.max(0, el.offsetTop - vp.clientHeight * (S.readPos / 100));
+      if (nuvemAtiva) { alvoY = target; return; } /* o tick leva até lá, suave */
       if (Math.abs(target - vp.scrollTop) < 2) return;
       autoScrollUntil = Date.now() + 900; /* rolagem programática */
       vp.scrollTo({ top: target, behavior: "smooth" });
@@ -938,7 +1096,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
 
     /* ---------- rolagem manual com re-sincronização ---------- */
     let autoScrollUntil = 0, userScrolling = false, touchDown = false, resyncT: any = null;
-    function markUserScroll() { userScrolling = true; autoScrollUntil = 0; clearTimeout(resyncT); }
+    function markUserScroll() { userScrolling = true; autoScrollUntil = 0; alvoY = null; clearTimeout(resyncT); }
     function scheduleResync() {
       clearTimeout(resyncT);
       resyncT = setTimeout(() => { userScrolling = false; resyncFromScroll(); }, 260);
@@ -1558,6 +1716,8 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       else if (de.webkitRequestFullscreen) de.webkitRequestFullscreen();
     } catch { /* ok */ }
     progT = 0; updateProgress();
+    /* o layout só assenta depois do 1º quadro: sem isso o "faltam" nascia vazio */
+    setTimeout(() => { if (!disposed) { progT = 0; updateProgress(); } }, 350);
     try {
       if (!localStorage.getItem("cria_prompter_hint_v2")) {
         localStorage.setItem("cria_prompter_hint_v2", "1");
@@ -1595,24 +1755,19 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
         <button id="spDown" aria-label="Mais devagar">−</button>
       </div>
 
+      {/* PLAYER REPAGINADO (mockup aprovado, 25/10/2026): topo só com Sair,
+          título + tempo e Ajustes. Os 6 atalhos pequenos foram pros Ajustes. */}
       <div id="topBar">
         <button className="pbtn" id="prExit"><i data-lucide="chevron-left" />Sair</button>
-        <div id="quickBar">
-          <button className="pbtn" id="qFlip" title="Trocar câmera"><i data-lucide="switch-camera" /><small>Trocar</small></button>
-          <button className="pbtn" id="qCard" title="Modo card"><i data-lucide="gallery-thumbnails" /><small>Card</small></button>
-          <button className="pbtn" id="qReels" title="Reels 9:16"><i data-lucide="smartphone" /><small>9:16</small></button>
-          <button className="pbtn" id="qRead" title="Só leitura (aparelho vira só a tela do texto)"><i data-lucide="monitor" /><small>Leitura</small></button>
-          <button className="pbtn" id="qMir" title="Espelhar"><i data-lucide="flip-horizontal-2" /><small>Espelho</small></button>
-          <button className="pbtn" id="qTheme" title="Tema claro/escuro"><i data-lucide="sun-moon" /><small>Tema</small></button>
-        </div>
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <span id="recTimer">00:00</span>
+        <div id="topMid">
+          <b id="topTitle">{title}</b>
           <span id="remain" title="Tempo que falta na velocidade atual" />
-          <span id="voiceStatus" style={{ display: "none", color: "#fff", fontSize: 13 }}><span id="voiceDot" /></span>
-          <button className="pbtn" id="restartBtn" title="Recomeçar do início"><i data-lucide="rotate-ccw" /></button>
-          <button className="pbtn" id="settingsBtn"><i data-lucide="settings" /></button>
         </div>
+        <span id="recTimer">00:00</span>
+        <button className="pbtn" id="settingsBtn" aria-label="Ajustes"><i data-lucide="sliders-horizontal" /><small>Ajustes</small></button>
+        <span id="voiceStatus" style={{ display: "none" }}><span id="voiceDot" /></span>
       </div>
+      <div id="modeChip"><i id="modeChipDot" /><span id="modeChipTxt" /></div>
 
       <div id="bottomBar">
         <button className="pbtn" id="modeBtn"><i data-lucide="mic" /><small>Por voz</small></button>
@@ -1621,8 +1776,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           <button id="shutter" className="camoff" title="Gravar"><em /></button>
           <small id="shutterLbl">Ligar câmera</small>
         </div>
-        <button className="pbtn" id="micBtn"><i data-lucide="mic" /><small>Mic</small></button>
-        <button className="pbtn" id="camBtn" title="Câmera"><i data-lucide="camera" /><small>Câmera</small></button>
+        <button className="pbtn" id="restartBtn" title="Recomeçar do início"><i data-lucide="rotate-ccw" /><small>Do começo</small></button>
       </div>
       <div id="modeMenu">
         <button data-mode="voice"><i data-lucide="mic" />Por voz</button>
@@ -1633,15 +1787,101 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       <div id="overlay" />
       <div id="settingsPanel">
         <div className="shandle" />
-        <h2>Ajustes do prompter</h2>
-        <p className="sgSub">Tudo é salvo na hora, neste aparelho.</p>
+        <div className="sgTop">
+          <h2>Ajustes</h2>
+          <button type="button" className="sgDone" id="closeSettings">Pronto</button>
+        </div>
+        <p className="sgSub">Muda na hora, dá pra ver no texto atrás. Fica salvo neste aparelho.</p>
+
+        <p className="sgSec">Onde você vai gravar?</p>
+        <div className="presets">
+          <button type="button" className="preset" data-preset="aqui"><span className="pIco"><i data-lucide="smartphone" /></span><span className="pTxt"><b>Gravo aqui no celular</b><small>Câmera da frente, texto perto da lente, áudio do aparelho.</small></span></button>
+          <button type="button" className="preset" data-preset="tela"><span className="pIco"><i data-lucide="monitor" /></span><span className="pTxt"><b>Celular ou iPad só como tela</b><small>Outra câmera grava (Osmo, câmera). Aqui fica só o texto, grande.</small></span></button>
+          <button type="button" className="preset" data-preset="vidro"><span className="pIco"><i data-lucide="flip-horizontal-2" /></span><span className="pTxt"><b>Teleprompter de vidro</b><small>Texto espelhado pra ler no vidro na frente da lente.</small></span></button>
+        </div>
+
+        <p className="sgSec">Texto</p>
+        <div className="sgCard">
+          <div className="sgRow">
+            <span className="sgLbl">Tamanho da letra</span>
+            <span className="step"><button type="button" id="fontDown" aria-label="Letra menor">A−</button><b id="vFontStep" /><button type="button" id="fontUp" aria-label="Letra maior">A+</button></span>
+          </div>
+          <div className="sgBlock"><span className="sgLbl">Espaço entre linhas</span><div className="seg" id="segLine"><button type="button" data-v="1.15">Juntas</button><button type="button" data-v="1.3">Normal</button><button type="button" data-v="1.5">Soltas</button></div></div>
+          <div className="sgBlock"><span className="sgLbl">Onde você lê</span><div className="seg" id="segRead"><button type="button" data-v="26">No alto</button><button type="button" data-v="36">Meio</button><button type="button" data-v="46">Mais baixo</button></div><p className="sgHint">Mais alto = olhar mais perto da lente.</p></div>
+        </div>
+
+        <p className="sgSec">Como o texto anda</p>
+        <div className="sgCard">
+          <div className="sgBlock" style={{ borderBottom: "1px solid rgba(10,10,10,.07)" }}><div className="seg" id="segMode"><button type="button" data-v="voice">Por voz</button><button type="button" data-v="auto">Rolagem</button><button type="button" data-v="manual">Manual</button></div><p className="sgHint" id="modeDesc" /></div>
+          <div className="sgBlock"><span className="sgLbl">Contagem antes de começar</span><div className="seg" id="segCount"><button type="button" data-v="0">Sem</button><button type="button" data-v="3">3 s</button><button type="button" data-v="5">5 s</button></div></div>
+        </div>
+
+        <button type="button" className="maisBtn" id="maisBtn">Mais opções (câmera, microfone, card, letra)</button>
+        <div id="maisOpc" style={{ display: "none" }}>
+        <div className="sgCard">
+          <div className="sgHead"><span className="sgChip cGreen"><i data-lucide="camera" /></span><p className="sgTitle">Câmera e microfone</p></div>
+          <div className="sgRow" style={{ gap: 8 }}>
+            <button className="pbtn sgPb" id="camBtn" title="Câmera"><i data-lucide="camera" /><small>Câmera</small></button>
+            <button className="pbtn sgPb" id="micBtn"><i data-lucide="mic" /><small>Mic</small></button>
+          </div>
+          <div className="set"><label>Qual câmera</label>
+            <select id="sCamFace" defaultValue="user">
+              <option value="user">Frontal</option>
+              <option value="environment">Traseira</option>
+            </select>
+          </div>
+          <div className="set"><label>Qualidade</label>
+            <select id="sCamRes" defaultValue="1920x1080">
+              <option value="max">Máxima do aparelho</option>
+              <option value="1280x720">HD 720p</option>
+              <option value="1920x1080">Full HD 1080p</option>
+              <option value="3840x2160">4K</option>
+            </select>
+          </div>
+          <div className="set"><label>Quadros por segundo</label>
+            <select id="sFps" defaultValue="30">
+              <option value="30">30 fps</option>
+              <option value="60">60 fps (se suportado)</option>
+            </select>
+          </div>
+          <div className="switchrow">Gravar como no espelho (frontal)<label className="sw"><input type="checkbox" id="sFixMirror" defaultChecked /><i /></label></div>
+          <div className="set"><label>Microfone</label>
+            <select id="sMicDevice" defaultValue="">
+              <option value="">Padrão do aparelho</option>
+            </select>
+          </div>
+          <p className="sgSub" style={{ margin: "2px 4px 8px" }}>No iPhone o sistema escolhe a entrada sozinho: conecte por USB-C ou Bluetooth e ele assume. USB-C tem a melhor qualidade.</p>
+        </div>
 
         <div className="sgCard">
-          <div className="sgHead"><span className="sgChip"><i data-lucide="type" /></span><p className="sgTitle">Texto</p></div>
-          <div className="set"><label>Tamanho da fonte <b id="vFont" /></label><input type="range" id="sFont" min={20} max={90} step={1} /></div>
-          <div className="set"><label>Margens laterais <b id="vMargin" /></label><input type="range" id="sMargin" min={0} max={30} step={1} /></div>
+          <div className="sgHead"><span className="sgChip cPink"><i data-lucide="gallery-thumbnails" /></span><p className="sgTitle">Card no topo (estilo CapCut)</p></div>
+          <div className="switchrow">Texto num quadro perto da lente<label className="sw"><input type="checkbox" id="sCardOn" /><i /></label></div>
+          <div className="set"><label>Posição do card</label>
+            <select id="sCardPos" defaultValue="top"><option value="top">Em cima</option><option value="center">Centro</option><option value="bottom">Embaixo</option></select>
+          </div>
+          <div className="set"><label>Altura do card <b id="vCardH" /></label><input type="range" id="sCardH" min={15} max={70} step={1} /></div>
+          <div className="set"><label>Largura do card <b id="vCardW" /></label><input type="range" id="sCardW" min={50} max={100} step={1} /></div>
+          <div className="set"><label>Cor do texto no card</label>
+            <select id="sCardColor" defaultValue="preto"><option value="preto">Preto</option><option value="branco">Branco</option></select>
+          </div>
+        </div>
+
+        <div className="sgCard">
+          <div className="sgHead"><span className="sgChip"><i data-lucide="type" /></span><p className="sgTitle">Letra e tela</p></div>
+          <div className="set"><label>Tamanho da letra <b id="vFont" /></label><input type="range" id="sFont" min={20} max={90} step={1} /></div>
           <div className="set"><label>Espaço entre linhas <b id="vLine" /></label><input type="range" id="sLine" min={0.9} max={2.2} step={0.05} /></div>
-          <div className="set"><label>Espessura da letra</label>
+          <div className="set"><label>Altura da leitura <b id="vRead" /></label><input type="range" id="sRead" min={12} max={50} step={1} /></div>
+          <div className="set"><label>Margens laterais <b id="vMargin" /></label><input type="range" id="sMargin" min={0} max={30} step={1} /></div>
+          <div className="set"><label>Letra</label>
+            <select id="sFontFam" defaultValue={DEF.fontFam}>
+              <option value="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">Padrão (Sans)</option>
+              <option value="Georgia,'Times New Roman',serif">Serif</option>
+              <option value="'Courier New',monospace">Monoespaçada</option>
+              <option value="'Arial Black',Arial,sans-serif">Arial Black</option>
+              <option value="Verdana,sans-serif">Verdana</option>
+            </select>
+          </div>
+          <div className="set"><label>Espessura</label>
             <select id="sWeight" defaultValue="400">
               <option value="300">Fina</option>
               <option value="400">Normal</option>
@@ -1656,26 +1896,21 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
               <option value="center">Centralizado</option>
             </select>
           </div>
-          <div className="set"><label>Posição de leitura (altura) <b id="vRead" /></label><input type="range" id="sRead" min={12} max={50} step={1} /></div>
-          <div className="switchrow">Só leitura (sem câmera, tela só do texto)<label className="sw"><input type="checkbox" id="sReadOnly" /><i /></label></div>
-          <div className="switchrow">Esmaecer o que já foi lido<label className="sw"><input type="checkbox" id="sDimRead" /><i /></label></div>
-          <div className="set"><label>Fonte</label>
-            <select id="sFontFam" defaultValue={DEF.fontFam}>
-              <option value="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">Padrão (Sans)</option>
-              <option value="Georgia,'Times New Roman',serif">Serif</option>
-              <option value="'Courier New',monospace">Monoespaçada</option>
-              <option value="'Arial Black',Arial,sans-serif">Arial Black</option>
-              <option value="Verdana,sans-serif">Verdana</option>
-            </select>
-          </div>
+          <div className="switchrow">Apagar o que já li<label className="sw"><input type="checkbox" id="sDimRead" /><i /></label></div>
+          <div className="switchrow">Só a tela do texto (sem câmera)<label className="sw"><input type="checkbox" id="sReadOnly" /><i /></label></div>
+          <div className="switchrow">Fundo claro<label className="sw"><input type="checkbox" id="sTheme" /><i /></label></div>
+          <div className="switchrow">Guia 9:16 (Reels)<label className="sw"><input type="checkbox" id="sReels" /><i /></label></div>
+          <div className="switchrow">Espelhar na horizontal (vidro)<label className="sw"><input type="checkbox" id="sMirX" /><i /></label></div>
+          <div className="switchrow">Espelhar na vertical<label className="sw"><input type="checkbox" id="sMirY" /><i /></label></div>
+          <div className="switchrow">Seta na linha de leitura<label className="sw"><input type="checkbox" id="sGuide" defaultChecked /><i /></label></div>
         </div>
 
         <div className="sgCard">
           <div className="sgHead"><span className="sgChip cYellow"><i data-lucide="gauge" /></span><p className="sgTitle">Ritmo</p></div>
-          <div className="set"><label>Velocidade <b id="vWpm" /></label><input type="range" id="sWpm" min={60} max={300} step={5} /></div>
+          <div className="set"><label>Velocidade da Rolagem <b id="vWpm" /></label><input type="range" id="sWpm" min={60} max={300} step={5} /></div>
           <p className="sgSub" style={{ margin: "-4px 0 8px" }}>Fala calma fica perto de 120; ritmo de Reels, 150 a 170. Dá pra mudar lendo, no − / + da lateral.</p>
-          <div className="set"><label>Contagem antes de começar <b id="vCount" /></label><input type="range" id="sCount" min={0} max={10} step={1} /></div>
-          <div className="set"><label>Sensibilidade do modo Por voz</label>
+          <div className="set"><label>Contagem <b id="vCount" /></label><input type="range" id="sCount" min={0} max={10} step={1} /></div>
+          <div className="set"><label>Sensibilidade do Por voz sem internet</label>
             <select id="sVadSens" defaultValue="media">
               <option value="alta">Alta (fala baixinho, lugar silencioso)</option>
               <option value="media">Normal</option>
@@ -1683,67 +1918,11 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
             </select>
           </div>
         </div>
-
-        <div className="sgCard">
-          <div className="sgHead"><span className="sgChip cBlue"><i data-lucide="crop" /></span><p className="sgTitle">Enquadramento</p></div>
-          <div className="switchrow">Modo Reels/Shorts 9:16<label className="sw"><input type="checkbox" id="sReels" /><i /></label></div>
-          <div className="switchrow">Espelhar horizontal (vidro)<label className="sw"><input type="checkbox" id="sMirX" /><i /></label></div>
-          <div className="switchrow">Espelhar vertical<label className="sw"><input type="checkbox" id="sMirY" /><i /></label></div>
-          <div className="switchrow">Seta guia<label className="sw"><input type="checkbox" id="sGuide" defaultChecked /><i /></label></div>
-        </div>
-
-        <div className="sgCard">
-          <div className="sgHead"><span className="sgChip cPink"><i data-lucide="gallery-thumbnails" /></span><p className="sgTitle">Modo card (estilo CapCut)</p></div>
-          <div className="switchrow">Ativar modo card<label className="sw"><input type="checkbox" id="sCardOn" /><i /></label></div>
-          <div className="set"><label>Posição do card</label>
-            <select id="sCardPos" defaultValue="top"><option value="top">Em cima</option><option value="center">Centro</option><option value="bottom">Embaixo</option></select>
-          </div>
-          <div className="set"><label>Altura do card <b id="vCardH" /></label><input type="range" id="sCardH" min={15} max={70} step={1} /></div>
-          <div className="set"><label>Largura do card <b id="vCardW" /></label><input type="range" id="sCardW" min={50} max={100} step={1} /></div>
-          <div className="set"><label>Cor do texto no card</label>
-            <select id="sCardColor" defaultValue="preto"><option value="preto">Preto</option><option value="branco">Branco</option></select>
-          </div>
-        </div>
-
-        <div className="sgCard">
-          <div className="sgHead"><span className="sgChip cGreen"><i data-lucide="camera" /></span><p className="sgTitle">Câmera</p></div>
-          <div className="set"><label>Qual câmera</label>
-            <select id="sCamFace" defaultValue="user">
-              <option value="user">Frontal</option>
-              <option value="environment">Traseira</option>
-            </select>
-          </div>
-          <div className="set"><label>Qualidade</label>
-            <select id="sCamRes" defaultValue="1920x1080">
-              <option value="max">⚡ Máxima do aparelho</option>
-              <option value="1280x720">HD 720p</option>
-              <option value="1920x1080">Full HD 1080p</option>
-              <option value="3840x2160">4K</option>
-            </select>
-          </div>
-          <div className="set"><label>Quadros por segundo</label>
-            <select id="sFps" defaultValue="30">
-              <option value="30">30 fps</option>
-              <option value="60">60 fps (se suportado)</option>
-            </select>
-          </div>
-          <div className="switchrow">Gravar como no espelho (frontal)<label className="sw"><input type="checkbox" id="sFixMirror" defaultChecked /><i /></label></div>
-        </div>
-
-        <div className="sgCard">
-          <div className="sgHead"><span className="sgChip"><i data-lucide="mic" /></span><p className="sgTitle">Áudio</p></div>
-          <div className="set"><label>Microfone</label>
-            <select id="sMicDevice" defaultValue="">
-              <option value="">Padrão do sistema</option>
-            </select>
-          </div>
-          <p className="sgSub" style={{ margin: "2px 4px 8px" }}>No iPhone o sistema escolhe a entrada sozinho: conecte por USB-C ou Bluetooth e ele assume. USB-C tem a melhor qualidade.</p>
         </div>
 
         <p className="sgSub" style={{ margin: "14px 4px 0" }}>
-          Com teclado ou controle Bluetooth: espaço pausa e continua, ↑ ↓ mudam a velocidade, ← → pulam de cena, R volta pro começo.
+          Teclado ou controle Bluetooth: espaço pausa, ↑ ↓ velocidade, ← → cena, R do começo.
         </p>
-        <button className="iconbtn" id="closeSettings" style={{ width: "100%", marginTop: 16 }}>Fechar</button>
       </div>
 
       {/* Vídeo pronto */}

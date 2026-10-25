@@ -16,6 +16,10 @@ export type PrompterScript = {
   source: "manual" | "criando" | "stories" | "ia";
   source_id: string | null;
   folder: string | null;
+  /* fila "Pra gravar" (25/10/2026): roteiro novo nasce na fila; "Já gravei"
+     marca gravado_em e ele vai pra "Já gravados". */
+  na_fila?: boolean;
+  gravado_em?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -192,5 +196,24 @@ export function useDeletePrompterScript() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["prompter-scripts"] }),
     onError: (e: Error) => toast.error("Não consegui excluir: " + e.message),
+  });
+}
+
+/* Fila do Prompter: mandar pra gravar, marcar como gravado, desfazer. */
+export function useFilaPrompterScript() {
+  const { activeAccountId } = useActiveAccount();
+  const userId = activeAccountId;
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; na_fila: boolean; gravado_em: string | null }) => {
+      if (!userId) throw new Error("Not authenticated");
+      const { error } = await sbFrom("prompter_scripts")
+        .update({ na_fila: input.na_fila, gravado_em: input.gravado_em } as never)
+        .eq("id", input.id)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["prompter-scripts"] }),
+    onError: (e: Error) => toast.error("Não consegui atualizar o roteiro: " + e.message),
   });
 }

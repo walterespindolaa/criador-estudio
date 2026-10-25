@@ -4,6 +4,8 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePrompterScript } from "@/hooks/usePrompterScripts";
 import { PrompterPlayer } from "@/components/prompter/PrompterPlayer";
+import { supabase } from "@/integrations/supabase/client";
+import { useActiveAccount } from "@/contexts/AccountContext";
 
 /* Tela de gravação: carrega o roteiro e entrega pro player fullscreen.
    O player cobre o app inteiro (position:fixed, z-60), então o layout
@@ -13,6 +15,17 @@ export default function PrompterGravar() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: script, isLoading } = usePrompterScript(id);
+  const { activeAccountId } = useActiveAccount();
+
+  /* Token da transcrição na nuvem (edge prompter-voz). Qualquer falha = null:
+     o player segue pelo volume da voz, sem travar a gravação. */
+  const obterTokenVoz = useCallback(async (): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase.functions.invoke("prompter-voz", { body: { accountId: activeAccountId } });
+      if (error || !data?.token) return null;
+      return String(data.token);
+    } catch { return null; }
+  }, [activeAccountId]);
 
   const exit = useCallback(() => {
     /* Volta pra onde a pessoa estava (Criando, Stories, biblioteca).
@@ -42,5 +55,5 @@ export default function PrompterGravar() {
     );
   }
 
-  return <PrompterPlayer title={script.title} text={script.script} onExit={exit} />;
+  return <PrompterPlayer title={script.title} text={script.script} onExit={exit} obterTokenVoz={obterTokenVoz} />;
 }

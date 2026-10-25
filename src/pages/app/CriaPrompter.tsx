@@ -26,7 +26,7 @@ import { usePosts, type Post } from "@/hooks/usePosts";
 import {
   usePrompterScripts, useSavePrompterScript, useDeletePrompterScript,
   useRenamePrompterFolder, useDeletePrompterFolder, useSendPostToPrompter,
-  type PrompterScript,
+  useFilaPrompterScript, type PrompterScript,
 } from "@/hooks/usePrompterScripts";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -63,6 +63,7 @@ export default function CriaPrompter() {
   const renameFolderMut = useRenamePrompterFolder();
   const delFolderMut = useDeletePrompterFolder();
   const sendPost = useSendPostToPrompter();
+  const filaMut = useFilaPrompterScript();
 
   const [curFolder, setCurFolder] = useState<string>("all");
   const [editor, setEditor] = useState<EditorState>({ open: false });
@@ -102,7 +103,14 @@ export default function CriaPrompter() {
         script: editor.script,
         folder: editor.folder.trim() || null,
       },
-      { onSuccess: () => setEditor({ open: false }) },
+      {
+        onSuccess: () => {
+          const novo = !editor.id;
+          setEditor({ open: false });
+          /* roteiro novo nasce na fila: leva a pessoa pra onde ele está */
+          if (novo) { setAba("gravar"); toast.success("Roteiro salvo. Ele está em Pra gravar."); }
+        },
+      },
     );
   };
 
@@ -153,6 +161,23 @@ export default function CriaPrompter() {
     [roteirosAvulsos],
   );
   const roteirosVisiveis = curFolder === "all" ? roteirosAvulsos : roteirosAvulsos.filter((s) => s.folder === curFolder);
+  /* FILA DE ROTEIROS AVULSOS (25/10/2026). Antes "Pra gravar" só mostrava
+     posts do Criando e o roteiro subido aqui ficava só na biblioteca. Agora
+     roteiro novo nasce na fila (na_fila) e sai dela no "Já gravei". */
+  const filaRoteiros = useMemo(
+    () => roteirosAvulsos.filter((s) => s.na_fila && !s.gravado_em).sort((a, b) => b.created_at.localeCompare(a.created_at)),
+    [roteirosAvulsos],
+  );
+  const roteirosGravados = useMemo(
+    () => roteirosAvulsos.filter((s) => !!s.gravado_em).sort((a, b) => (b.gravado_em ?? "").localeCompare(a.gravado_em ?? "")),
+    [roteirosAvulsos],
+  );
+  const roteiroJaGravei = (s: PrompterScript) =>
+    filaMut.mutate({ id: s.id, na_fila: false, gravado_em: new Date().toISOString() }, { onSuccess: () => toast.success("Marcado como gravado.") });
+  const roteiroPraFila = (s: PrompterScript) =>
+    filaMut.mutate({ id: s.id, na_fila: true, gravado_em: null }, { onSuccess: () => toast.success("Foi pra Pra gravar.") });
+  const roteiroTirarDaFila = (s: PrompterScript) =>
+    filaMut.mutate({ id: s.id, na_fila: false, gravado_em: s.gravado_em ?? null }, { onSuccess: () => toast.success("Saiu da fila. Continua em Meus roteiros.") });
 
   const jaGravei = (p: Post) => {
     updatePost.mutate({ id: p.id, updates: { status: "editando" } }, {
@@ -251,10 +276,91 @@ export default function CriaPrompter() {
     );
   };
 
+  /* Card do roteiro avulso. "fila" = Pra gravar, "gravado" = Já gravados,
+     "biblioteca" = Meus roteiros (mostra onde ele está). */
+  const cardDoRoteiro = (s: PrompterScript, ctx: "fila" | "gravado" | "biblioteca") => {
+    const words = wordCount(s.script);
+    const srcLabel = SOURCE_LABEL[s.source];
+    const naFila = !!s.na_fila && !s.gravado_em;
+    const abrirEditor = () => setEditor({ open: true, id: s.id, title: s.title, script: s.script, folder: s.folder ?? "" });
+    return (
+      <div key={s.id} className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10.5px] font-body font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">{srcLabel ?? "Roteiro"}</span>
+          {s.folder && <span className="text-[11.5px] font-body font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground inline-flex items-center gap-1"><FolderOpen className="h-3 w-3" /> {s.folder}</span>}
+          {ctx === "biblioteca" && naFila && <span className="text-[11.5px] font-body font-semibold px-2 py-0.5 rounded-full bg-[#FDE7DF] text-[#9A2E0E]">pra gravar</span>}
+          {ctx === "biblioteca" && s.gravado_em && <span className="text-[11.5px] font-body font-semibold px-2 py-0.5 rounded-full bg-[#E3F4EA] text-[#13663A]">gravado {criadoEm(s.gravado_em)}</span>}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="ml-auto grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Mais ações">
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={abrirEditor}>
+                <Pencil className="h-3.5 w-3.5 mr-2" /> Editar roteiro
+              </DropdownMenuItem>
+              {!naFila && (
+                <DropdownMenuItem onClick={() => roteiroPraFila(s)}>
+                  <Kanban className="h-3.5 w-3.5 mr-2" /> {s.gravado_em ? "Gravar de novo (volta pra fila)" : "Mandar pra gravar"}
+                </DropdownMenuItem>
+              )}
+              {naFila && (
+                <DropdownMenuItem onClick={() => roteiroTirarDaFila(s)}>
+                  <Undo2 className="h-3.5 w-3.5 mr-2" /> Tirar de Pra gravar
+                </DropdownMenuItem>
+              )}
+              {!s.gravado_em && ctx !== "fila" && (
+                <DropdownMenuItem onClick={() => roteiroJaGravei(s)}>
+                  <Check className="h-3.5 w-3.5 mr-2" /> Já gravei
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setConfirmDel(s)}>
+                <Trash2 className="h-3.5 w-3.5 mr-2" /> Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <p className="text-[15px] font-body font-semibold text-foreground leading-snug">{s.title}</p>
+        <p className="text-[13px] font-body text-muted-foreground leading-relaxed line-clamp-2">
+          {s.script.slice(0, 200) || "Roteiro vazio"}
+        </p>
+        <p className="text-[11.5px] font-body text-muted-foreground">
+          Criado em {criadoEm(s.created_at)} · {words} palavras · ~{minutos(words)} min
+        </p>
+        <div className="mt-auto pt-2.5 border-t border-border/60 flex items-center gap-2 flex-wrap">
+          {ctx === "gravado" ? (
+            <>
+              <span className="text-[12.5px] font-body font-semibold text-primary inline-flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5" /> Gravado em {criadoEm(s.gravado_em ?? s.updated_at)}
+              </span>
+              <Button size="sm" variant="outline" className="ml-auto h-9" disabled={filaMut.isPending} onClick={() => roteiroPraFila(s)}>Desfazer</Button>
+            </>
+          ) : (
+            <>
+              <Button size="sm" className="h-9" onClick={() => gravar(s.id)}>
+                <Play className="h-3.5 w-3.5 mr-1.5" /> Gravar
+              </Button>
+              {ctx === "fila" ? (
+                <Button size="sm" variant="outline" className="h-9" disabled={filaMut.isPending} onClick={() => roteiroJaGravei(s)}>
+                  <Check className="h-3.5 w-3.5 mr-1.5" /> Já gravei
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" className="h-9" onClick={abrirEditor}>
+                  <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const ABAS = [
-    { k: "gravar" as const, nome: "Pra gravar", n: producing.length, dica: "Os posts da fase Produzindo do Criando aparecem aqui sozinhos." },
+    { k: "gravar" as const, nome: "Pra gravar", n: producing.length + filaRoteiros.length, dica: "Roteiro novo e post na fase Produzindo do Criando entram aqui sozinhos." },
     { k: "roteiros" as const, nome: "Meus roteiros", n: roteirosAvulsos.length, dica: "Roteiros avulsos, separados por pasta." },
-    { k: "gravados" as const, nome: "Já gravados", n: gravados.length, dica: "Desfazer devolve o post pra Produzindo." },
+    { k: "gravados" as const, nome: "Já gravados", n: gravados.length + roteirosGravados.length, dica: "Desfazer devolve pra Pra gravar." },
   ];
 
   return (
@@ -272,7 +378,7 @@ export default function CriaPrompter() {
             </p>
           </div>
         </div>
-        <Button data-tour="prompter-novo" onClick={() => { setAba("roteiros"); setEditor({ open: true, title: "", script: "", folder: curFolder === "all" ? "" : curFolder }); }}>
+        <Button data-tour="prompter-novo" onClick={() => { setEditor({ open: true, title: "", script: "", folder: curFolder === "all" ? "" : curFolder }); }}>
           <Plus className="h-4 w-4 mr-1.5" /> Novo roteiro
         </Button>
       </div>
@@ -294,14 +400,17 @@ export default function CriaPrompter() {
 
       {/* Pra gravar */}
       {aba === "gravar" && (
-        producing.length === 0 ? (
+        producing.length === 0 && filaRoteiros.length === 0 ? (
           <div className="mt-6 border border-dashed border-border rounded-2xl py-12 px-6 text-center">
             <Clapperboard className="h-8 w-8 text-muted-foreground/60 mx-auto mb-3" />
-            <p className="text-sm font-body text-foreground font-medium">Nada na fase Produzindo</p>
+            <p className="text-sm font-body text-foreground font-medium">Nada pra gravar agora</p>
             <p className="text-xs font-body text-muted-foreground mt-1 max-w-sm mx-auto leading-relaxed">
-              Quando um post do Criando chegar em Produzindo, ele aparece aqui pronto pra gravar.
+              Roteiro novo que você cria aqui e post do Criando que chega em Produzindo aparecem nesta aba.
             </p>
-            <Button variant="outline" className="mt-4" onClick={() => navigate("/app/criando")}>Abrir o Criando</Button>
+            <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
+              <Button onClick={() => setEditor({ open: true, title: "", script: "", folder: "" })}><Plus className="h-4 w-4 mr-1.5" /> Novo roteiro</Button>
+              <Button variant="outline" onClick={() => navigate("/app/criando")}>Abrir o Criando</Button>
+            </div>
           </div>
         ) : (
           <div data-tour="prompter-lista" className="mt-5 space-y-6">
@@ -321,23 +430,32 @@ export default function CriaPrompter() {
                 </div>
               </section>
             )}
+            {filaRoteiros.length > 0 && (
+              <section>
+                <h2 className="text-sm font-display font-bold text-foreground mb-2.5">Roteiros avulsos <span className="text-xs font-body font-normal text-muted-foreground">· mais novos primeiro</span></h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {filaRoteiros.map((r) => cardDoRoteiro(r, "fila"))}
+                </div>
+              </section>
+            )}
           </div>
         )
       )}
 
       {/* Já gravados */}
       {aba === "gravados" && (
-        gravados.length === 0 ? (
+        gravados.length === 0 && roteirosGravados.length === 0 ? (
           <div className="mt-6 border border-dashed border-border rounded-2xl py-12 px-6 text-center">
             <Check className="h-8 w-8 text-muted-foreground/60 mx-auto mb-3" />
-            <p className="text-sm font-body text-foreground font-medium">Nenhum post marcado como gravado ainda</p>
+            <p className="text-sm font-body text-foreground font-medium">Nada marcado como gravado ainda</p>
             <p className="text-xs font-body text-muted-foreground mt-1 max-w-sm mx-auto leading-relaxed">
-              Depois de gravar, toca em "Já gravei" no card: o post anda pra Pronto no Criando e fica listado aqui.
+              Depois de gravar, toca em "Já gravei" no card. Post do Criando anda pra Pronto; roteiro avulso fica listado aqui.
             </p>
           </div>
         ) : (
           <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {gravados.map((p) => cardDoPost(p, true))}
+            {roteirosGravados.map((r) => cardDoRoteiro(r, "gravado"))}
           </div>
         )
       )}
@@ -405,48 +523,7 @@ export default function CriaPrompter() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {roteirosVisiveis.map((s) => {
-              const words = wordCount(s.script);
-              const srcLabel = SOURCE_LABEL[s.source];
-              return (
-                <div key={s.id} className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-2">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10.5px] font-body font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">{srcLabel ?? "Roteiro"}</span>
-                    {s.folder && <span className="text-[11.5px] font-body font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground inline-flex items-center gap-1"><FolderOpen className="h-3 w-3" /> {s.folder}</span>}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="ml-auto grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Mais ações">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setEditor({ open: true, id: s.id, title: s.title, script: s.script, folder: s.folder ?? "" })}>
-                          <Pencil className="h-3.5 w-3.5 mr-2" /> Editar roteiro
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setConfirmDel(s)}>
-                          <Trash2 className="h-3.5 w-3.5 mr-2" /> Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <p className="text-[15px] font-body font-semibold text-foreground leading-snug">{s.title}</p>
-                  <p className="text-[13px] font-body text-muted-foreground leading-relaxed line-clamp-2">
-                    {s.script.slice(0, 200) || "Roteiro vazio"}
-                  </p>
-                  <p className="text-[11.5px] font-body text-muted-foreground">
-                    Criado em {criadoEm(s.created_at)} · {words} palavras · ~{minutos(words)} min
-                  </p>
-                  <div className="mt-auto pt-2.5 border-t border-border/60 flex items-center gap-2">
-                    <Button size="sm" className="h-9" onClick={() => gravar(s.id)}>
-                      <Play className="h-3.5 w-3.5 mr-1.5" /> Gravar
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-9" onClick={() => setEditor({ open: true, id: s.id, title: s.title, script: s.script, folder: s.folder ?? "" })}>
-                      <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+            {roteirosVisiveis.map((s) => cardDoRoteiro(s, "biblioteca"))}
           </div>
         )}
       </div>
@@ -458,11 +535,11 @@ export default function CriaPrompter() {
           <Mic className="h-4 w-4 text-primary" />
           <h2 className="text-sm font-display font-bold text-foreground">Como usar na gravação</h2>
         </div>
-        {/* Texto revisto em 25/09/2026: o modo por voz não segue palavra por
-            palavra (isso exigia reconhecimento de fala, que trava o microfone
-            no iPhone). Ele rola enquanto você fala e para no silêncio. */}
+        {/* 25/10/2026: o modo por voz voltou a seguir palavra por palavra, pela
+            transcrição na nuvem (edge prompter-voz + vozNuvem.ts), que usa o
+            mesmo microfone da gravação. Sem conexão, cai no modo por volume. */}
         <ul className="text-[13px] font-body text-muted-foreground leading-relaxed space-y-1.5">
-          <li><span className="font-semibold text-foreground">Por voz:</span> o texto anda enquanto você fala e para quando você para. Funciona no iPhone, no Android e no computador.</li>
+          <li><span className="font-semibold text-foreground">Por voz:</span> o texto segue as suas palavras, inclusive gravando no iPhone. Pulou um trecho ou voltou pra repetir, ele acha. Sem internet, anda enquanto você fala e para quando você para.</li>
           <li><span className="font-semibold text-foreground">Rolagem:</span> anda sozinho na velocidade que você escolhe no − / + da lateral (em palavras por minuto).</li>
           <li><span className="font-semibold text-foreground">Toque no texto</span> pra pausar e continuar. As setas ← → pulam de cena num teclado ou controle Bluetooth.</li>
           <li>

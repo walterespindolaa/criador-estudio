@@ -43,11 +43,25 @@ describe("teleprompter (montagem e controles)", () => {
     render(<PrompterPlayer title="t" text="Olá pessoal tudo bem" onExit={() => {}} />);
     const root = document.querySelectorAll(".cpr")[document.querySelectorAll(".cpr").length - 1];
     expect(root.classList.contains("readOnly")).toBe(false);
-    fireEvent.click(root.querySelector("#qRead")!);
+    // 25/10/2026: os atalhos do topo viraram os 3 jeitos de gravar, nos Ajustes
+    fireEvent.click(root.querySelector('.preset[data-preset="tela"]')!);
     expect(root.classList.contains("readOnly")).toBe(true);
     expect((root.querySelector("#sReadOnly") as HTMLInputElement).checked).toBe(true);
-    expect(JSON.parse(localStorage.getItem("cria_prompter_settings_v1")!).readOnly).toBe(true);
-    fireEvent.click(root.querySelector("#qRead")!);
+    expect(root.querySelector('.preset[data-preset="tela"]')!.classList.contains("on")).toBe(true);
+    const salvo = JSON.parse(localStorage.getItem("cria_prompter_settings_v1")!);
+    expect(salvo.readOnly).toBe(true);
+    expect(salvo.font).toBe(56);
+    fireEvent.click(root.querySelector('.preset[data-preset="vidro"]')!);
+    expect(root.classList.contains("mirrorX")).toBe(true);
+    fireEvent.click(root.querySelector('.preset[data-preset="aqui"]')!);
     expect(root.classList.contains("readOnly")).toBe(false);
+    expect(root.classList.contains("mirrorX")).toBe(false);
+    // segmento e A−/A+
+    fireEvent.click(root.querySelector('#segLine button[data-v="1.5"]')!);
+    expect(JSON.parse(localStorage.getItem("cria_prompter_settings_v1")!).line).toBe(1.5);
+    fireEvent.click(root.querySelector("#fontUp")!);
+    expect(root.querySelector("#vFontStep")!.textContent).toBe("36");
+    fireEvent.click(root.querySelector('#segMode button[data-v="auto"]')!);
+    expect(root.querySelector("#modeChipTxt")!.textContent).toContain("Rolagem");
   });
 });

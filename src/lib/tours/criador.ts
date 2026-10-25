@@ -764,7 +764,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
       {
         target: '[data-tour="prompter-abas"]',
         title: "Três abas",
-        body: "Pra gravar traz os posts da fase Produzindo, o mais urgente primeiro. Gravou? Toque em Já gravei e o post anda pra Pronto. Meus roteiros guarda os avulsos, por pasta. Já gravados mostra o que você marcou, com Desfazer.",
+        body: "Pra gravar junta o roteiro novo que você cria aqui e os posts da fase Produzindo, o mais urgente primeiro. Gravou? Toque em Já gravei: o post anda pra Pronto e o roteiro vai pra Já gravados. Meus roteiros é a biblioteca inteira, por pasta.",
         placement: "bottom",
       },
     ],

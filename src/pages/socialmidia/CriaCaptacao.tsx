@@ -196,6 +196,15 @@ type PastaInfo = {
 // precisa do módulo liberado (teamCode). Acessar /socialmidia/captacao direto
 // pela URL cai no mesmo paywall, não numa tela quebrada. Marcar captação na
 // Agenda NÃO passa por aqui: aquilo é grátis (gate 'agenda').
+/* Prompter que segue a fala (edge prompter-voz). Na captação vale o plano de
+   quem está gravando (a social mídia). Falha = null: segue pelo volume. */
+async function tokenVozCaptacao(): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke("prompter-voz", { body: {} });
+    return !error && data?.token ? String(data.token) : null;
+  } catch { return null; }
+}
+
 export default function CriaCaptacao() {
   return (
     <ModuleGate code="cria_captacao" teamCode="cria_captacao">
@@ -1128,7 +1137,7 @@ function CriaCaptacaoInner({ fixo }: { fixo?: string } = {}) {
           sem passar pela rota gated). A social mídia grava com a câmera pro e entrega o
           celular pro cliente ler o roteiro aqui. */}
       {prompter && (
-        <PrompterPlayer title={prompter.title} text={prompter.text} onExit={() => setPrompter(null)} />
+        <PrompterPlayer title={prompter.title} text={prompter.text} onExit={() => setPrompter(null)} obterTokenVoz={tokenVozCaptacao} />
       )}
     </div>
   );
