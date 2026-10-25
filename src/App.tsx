@@ -25,6 +25,7 @@ const Signup = lazy(() => import("./pages/Signup"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const OnboardingAgencia = lazy(() => import("./pages/OnboardingAgencia"));
+const OnboardingParceiro = lazy(() => import("./pages/OnboardingParceiro"));
 const Obrigado = lazy(() => import("./pages/Obrigado"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -341,6 +342,10 @@ const App = () => (
               } />
               <Route path="/comecar-agencia" element={
                 <AuthOnlyRoute><OnboardingAgencia /></AuthOnlyRoute>
+              } />
+              {/* Prestador (designer, editor, filmmaker, copy, tráfego): 25/10/2026. */}
+              <Route path="/comecar-parceiro" element={
+                <AuthOnlyRoute><OnboardingParceiro /></AuthOnlyRoute>
               } />
               <Route path="/app/obrigado" element={
                 <AuthOnlyRoute><Obrigado /></AuthOnlyRoute>

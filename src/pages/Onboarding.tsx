@@ -141,22 +141,12 @@ const Onboarding = () => {
      misturam) e guarda também a tela em que ela parou. */
   const chaveRascunho = `cria.onb.${donoId || "anon"}`;
 
-  /* "SOU DESIGNER, EDITOR OU FILMMAKER" (24/09/2026): a RPC troca a conta pra
-     parceiro de produção (account_type só muda pelo servidor). */
-  const [papeisAbertos, setPapeisAbertos] = useState(false);
-  const [virandoParceiro, setVirandoParceiro] = useState(false);
-  const virarParceiro = async (papel: string) => {
-    setVirandoParceiro(true);
-    const { error } = await (supabase.rpc as unknown as (fn: string, a: Record<string, unknown>) => Promise<{ error: unknown }>)("tornar_conta_parceiro", { _papel: papel });
-    if (error) {
-      console.error("[onboarding] tornar_conta_parceiro:", error);
-      toast.error("Não consegui trocar sua conta agora. Tenta de novo em instantes.");
-      setVirandoParceiro(false);
-      return;
-    }
+  /* "SOU DESIGNER, EDITOR OU FILMMAKER" (24/09/2026). Desde 25/10/2026 leva
+     pro onboarding do prestador, que escolhe a função e troca a conta pra
+     parceiro de produção pelo servidor (tornar_conta_parceiro). */
+  const souPrestador = () => {
     try { localStorage.removeItem(chaveRascunho); } catch { /* segue */ }
-    await qc.invalidateQueries({ queryKey: ["profile"] });
-    navigate("/socialmidia/demandas", { replace: true });
+    navigate("/comecar-parceiro");
   };
 
   /* RASCUNHO QUE SOBREVIVE À IDA AO INSTAGRAM (v2, 23/09/2026) e a fechar o
@@ -647,18 +637,7 @@ const Onboarding = () => {
               </h1>
               {mostrarSaidas && (
                 <div className="w-full">
-                  <button type="button" onClick={() => setPapeisAbertos((v) => !v)} className="min-h-11 text-[13px] font-semibold underline underline-offset-2">Sou designer, editor ou filmmaker</button>
-                  {papeisAbertos && (
-                    <div className="mt-1 rounded-2xl border-2 p-3 text-left" style={{ background: COR.papel, borderColor: COR.borda }}>
-                      <p className="m-0 text-xs" style={{ color: COR.apagado }}>O que você faz pras agências? Sua conta vira de parceiro de produção (sem mensalidade).</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {([["designer", "Design"], ["editor_video", "Edição de vídeo"], ["filmmaker", "Captação / filmmaker"], ["copy", "Copy"], ["trafego", "Tráfego"]] as const).map(([k, l]) => (
-                          <button key={k} type="button" disabled={virandoParceiro} onClick={() => void virarParceiro(k)}
-                            className="min-h-10 rounded-full border-2 px-3.5 text-sm font-semibold disabled:opacity-50" style={estiloMarcado(false)}>{l}</button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <button type="button" onClick={souPrestador} className="min-h-11 text-[13px] font-semibold underline underline-offset-2">Sou designer, editor ou filmmaker</button>
                 </div>
               )}
             </div>

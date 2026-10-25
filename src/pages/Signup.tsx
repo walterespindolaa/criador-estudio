@@ -165,7 +165,7 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
       } else {
         toast.success("Conta criada! Bem-vinda ao CRIA.");
         navigate(accountType === "manager" ? "/comecar-agencia"
-          : accountType === "parceiro" ? "/socialmidia/demandas"
+          : accountType === "parceiro" ? "/comecar-parceiro"
           : "/onboarding", { replace: true });
       }
     }
