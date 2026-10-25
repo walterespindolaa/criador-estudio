@@ -2,8 +2,11 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
-  ChevronDown, Clapperboard, FolderOpen, Kanban, Loader2, Mic, Pencil, Play, Plus, Sparkles, Trash2, Video,
+  Check, ChevronDown, Clapperboard, FolderOpen, Kanban, Loader2, Mic, MoreHorizontal, Pencil, Play, Plus, Sparkles, Trash2, Undo2, Video,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { confirmar } from "@/components/shared/Confirm";
+import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +56,8 @@ type EditorState = { open: false } | { open: true; id?: string; title: string; s
 export default function CriaPrompter() {
   const navigate = useNavigate();
   const { data: scripts = [], isLoading } = usePrompterScripts();
-  const { posts } = usePosts();
+  const { posts, updatePost, deletePost } = usePosts();
+  const { user } = useAuth();
   const saveMut = useSavePrompterScript();
   const delMut = useDeletePrompterScript();
   const renameFolderMut = useRenamePrompterFolder();
@@ -103,6 +107,155 @@ export default function CriaPrompter() {
   };
 
   const wordCount = (s: string) => (s.trim().match(/\S+/g) || []).length;
+  const minutos = (w: number) => Math.max(1, Math.ceil(w / 140));
+
+  /* ═══ PROMPTER REPAGINADO (mockup aprovado pelo Walter, 25/10/2026) ═══
+     Antes era uma parede de cards iguais: sem data, sem como tirar um card
+     dali e com o selo do formato quase invisível. Agora são três abas:
+       Pra gravar     os posts da fase Produzindo do Criando, o mais urgente
+                      (data de postar mais perto) primeiro
+       Meus roteiros  os roteiros avulsos, por pasta
+       Já gravados    o que foi marcado "Já gravei" AQUI e foi pra Pronto
+     "Já gravei" anda o post pra Pronto (status editando) e guarda a marca no
+     aparelho só pra lista de gravados; "Desfazer" devolve pra Produzindo. */
+  const [aba, setAba] = useState<"gravar" | "roteiros" | "gravados">("gravar");
+  const chaveGravados = `cria.prompter.gravados.${user?.id ?? "anon"}`;
+  const [gravadosAqui, setGravadosAqui] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem(chaveGravados) ?? "{}") as Record<string, string>; } catch { return {}; }
+  });
+  const salvarGravados = (m: Record<string, string>) => {
+    setGravadosAqui(m);
+    try { localStorage.setItem(chaveGravados, JSON.stringify(m)); } catch { /* modo privado */ }
+  };
+
+  const hoje = parseDateOnly(hojeBR());
+  const diasAte = (iso: string | null | undefined) =>
+    iso ? Math.round((parseDateOnly(iso.slice(0, 10)).getTime() - hoje.getTime()) / 86400000) : null;
+  const dataCurta = (iso: string) => {
+    const d = parseDateOnly(iso.slice(0, 10));
+    return d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" }).replace(".", "");
+  };
+  const criadoEm = (iso: string) => new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" });
+
+  const producingOrdenados = useMemo(() => {
+    const com = producing.filter((p) => p.scheduled_date).sort((a, b) => (a.scheduled_date ?? "").localeCompare(b.scheduled_date ?? ""));
+    const sem = producing.filter((p) => !p.scheduled_date).sort((a, b) => b.created_at.localeCompare(a.created_at));
+    return { com, sem };
+  }, [producing]);
+  const gravados = useMemo(
+    () => posts.filter((p) => gravadosAqui[p.id] && p.status !== "gravando").sort((a, b) => (gravadosAqui[b.id] ?? "").localeCompare(gravadosAqui[a.id] ?? "")),
+    [posts, gravadosAqui],
+  );
+  // Roteiro que nasceu de um post do Criando já aparece como card do post.
+  const roteirosAvulsos = useMemo(() => scripts.filter((s) => s.source !== "criando"), [scripts]);
+  const foldersAvulsos = useMemo(
+    () => Array.from(new Set(roteirosAvulsos.map((s) => s.folder).filter(Boolean))).sort() as string[],
+    [roteirosAvulsos],
+  );
+  const roteirosVisiveis = curFolder === "all" ? roteirosAvulsos : roteirosAvulsos.filter((s) => s.folder === curFolder);
+
+  const jaGravei = (p: Post) => {
+    updatePost.mutate({ id: p.id, updates: { status: "editando" } }, {
+      onSuccess: () => {
+        salvarGravados({ ...gravadosAqui, [p.id]: new Date().toISOString() });
+        toast.success("Gravado. O post foi pra Pronto no Criando.");
+      },
+    });
+  };
+  const desfazerGravado = (p: Post) => {
+    updatePost.mutate({ id: p.id, updates: { status: "gravando" } }, {
+      onSuccess: () => {
+        const m = { ...gravadosAqui }; delete m[p.id]; salvarGravados(m);
+      },
+    });
+  };
+  const voltarPraRoteiro = (p: Post) => {
+    updatePost.mutate({ id: p.id, updates: { status: "roteiro" } }, {
+      onSuccess: () => toast.success("Voltou pra fase Roteiro no Criando."),
+    });
+  };
+  const mandarPraLixeira = async (p: Post) => {
+    if (!(await confirmar({ titulo: `Mandar "${p.title}" pra lixeira?`, descricao: "O post sai do Criando e do Prompter. Dá pra recuperar na Lixeira.", acao: "Mandar pra lixeira", destrutivo: true }))) return;
+    deletePost.mutate(p.id, { onSuccess: () => toast.success("Foi pra Lixeira.") });
+  };
+
+  const seloPrazo = (iso: string | null) => {
+    const d = diasAte(iso);
+    if (d === null) return <span className="text-[11.5px] font-body font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">sem data pra postar</span>;
+    const texto = d < 0 ? `era pra ${dataCurta(iso!)}` : d === 0 ? "posta hoje" : d === 1 ? "posta amanhã" : `posta ${dataCurta(iso!)}`;
+    return (
+      <span className={cn("text-[11.5px] font-body font-semibold px-2 py-0.5 rounded-full",
+        d <= 2 ? "bg-[#FDE7DF] text-[#9A2E0E]" : "bg-[#E6EEFA] text-[#1F4E9A]")}>{texto}</span>
+    );
+  };
+
+  const cardDoPost = (p: Post, gravado = false) => {
+    const spoken = postToSpokenScript(p);
+    const words = wordCount(spoken);
+    return (
+      <div key={p.id} className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {p.format && (
+            <span className="text-[10.5px] font-body font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">{p.format}</span>
+          )}
+          {seloPrazo(p.scheduled_date)}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="ml-auto grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Mais ações">
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => navigate(`/app/criando?post=${p.id}`)}>
+                <Pencil className="h-3.5 w-3.5 mr-2" /> Editar roteiro no Criando
+              </DropdownMenuItem>
+              {!gravado && (
+                <DropdownMenuItem onClick={() => voltarPraRoteiro(p)}>
+                  <Undo2 className="h-3.5 w-3.5 mr-2" /> Voltar pra Roteiro
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => void mandarPraLixeira(p)}>
+                <Trash2 className="h-3.5 w-3.5 mr-2" /> Mandar pra lixeira
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <p className="text-[15px] font-body font-semibold text-foreground leading-snug">{p.title}</p>
+        <p className="text-[13px] font-body text-muted-foreground leading-relaxed line-clamp-2">
+          {spoken ? spoken.replace(/\*\*/g, "") : "Sem roteiro ainda: preencha gancho e roteiro no post."}
+        </p>
+        <p className="text-[11.5px] font-body text-muted-foreground">
+          Criado em {criadoEm(p.created_at)}{spoken ? ` · ${words} palavras · ~${minutos(words)} min` : " · roteiro vazio"}
+        </p>
+        <div className="mt-auto pt-2.5 border-t border-border/60 flex items-center gap-2 flex-wrap">
+          {gravado ? (
+            <>
+              <span className="text-[12.5px] font-body font-semibold text-primary inline-flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5" /> Gravado em {criadoEm(gravadosAqui[p.id] ?? p.updated_at)} · está em Pronto
+              </span>
+              <Button size="sm" variant="outline" className="ml-auto h-9" onClick={() => desfazerGravado(p)}>Desfazer</Button>
+            </>
+          ) : (
+            <>
+              <Button size="sm" className="h-9" disabled={sendingId === p.id} onClick={() => gravarPost(p)}>
+                {sendingId === p.id ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Play className="h-3.5 w-3.5 mr-1.5" />}
+                Gravar
+              </Button>
+              <Button size="sm" variant="outline" className="h-9" disabled={updatePost.isPending} onClick={() => jaGravei(p)}>
+                <Check className="h-3.5 w-3.5 mr-1.5" /> Já gravei
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const ABAS = [
+    { k: "gravar" as const, nome: "Pra gravar", n: producing.length, dica: "Os posts da fase Produzindo do Criando aparecem aqui sozinhos." },
+    { k: "roteiros" as const, nome: "Meus roteiros", n: roteirosAvulsos.length, dica: "Roteiros avulsos, separados por pasta." },
+    { k: "gravados" as const, nome: "Já gravados", n: gravados.length, dica: "Desfazer devolve o post pra Produzindo." },
+  ];
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">
@@ -119,52 +272,79 @@ export default function CriaPrompter() {
             </p>
           </div>
         </div>
-        <Button data-tour="prompter-novo" onClick={() => setEditor({ open: true, title: "", script: "", folder: curFolder === "all" ? "" : curFolder })}>
+        <Button data-tour="prompter-novo" onClick={() => { setAba("roteiros"); setEditor({ open: true, title: "", script: "", folder: curFolder === "all" ? "" : curFolder }); }}>
           <Plus className="h-4 w-4 mr-1.5" /> Novo roteiro
         </Button>
       </div>
 
-      {/* Na fase Produzindo (espelho do Criando) */}
-      {producing.length > 0 && (
-        <div className="mt-6">
-          <div className="flex items-center gap-2 mb-3">
-            <Kanban className="h-4 w-4 text-primary" />
-            <h2 className="text-sm font-display font-bold text-foreground">Na fase Produzindo</h2>
-            <span className="text-xs font-body text-muted-foreground">seus posts prontos pra gravar, direto do Criando</span>
+      {/* Abas */}
+      <div data-tour="prompter-abas" role="tablist" aria-label="Seções do Prompter" className="mt-6 flex items-center gap-2 flex-wrap border-b border-border pb-3">
+        {ABAS.map((a) => (
+          <button key={a.k} role="tab" aria-selected={aba === a.k} onClick={() => setAba(a.k)}
+            className={cn("h-10 px-3.5 rounded-full border text-[13.5px] font-body font-semibold inline-flex items-center gap-2 transition-colors",
+              aba === a.k ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-foreground/80 hover:text-foreground")}>
+            {a.k === "gravar" ? <Kanban className="h-4 w-4" /> : a.k === "roteiros" ? <FolderOpen className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+            {a.nome}
+            <span className={cn("min-w-[22px] h-[22px] px-1.5 rounded-full grid place-items-center text-[11.5px]",
+              aba === a.k ? "bg-white/20" : "bg-muted")}>{a.n}</span>
+          </button>
+        ))}
+        <span className="ml-auto text-[12.5px] font-body text-muted-foreground hidden md:inline">{ABAS.find((a) => a.k === aba)?.dica}</span>
+      </div>
+
+      {/* Pra gravar */}
+      {aba === "gravar" && (
+        producing.length === 0 ? (
+          <div className="mt-6 border border-dashed border-border rounded-2xl py-12 px-6 text-center">
+            <Clapperboard className="h-8 w-8 text-muted-foreground/60 mx-auto mb-3" />
+            <p className="text-sm font-body text-foreground font-medium">Nada na fase Produzindo</p>
+            <p className="text-xs font-body text-muted-foreground mt-1 max-w-sm mx-auto leading-relaxed">
+              Quando um post do Criando chegar em Produzindo, ele aparece aqui pronto pra gravar.
+            </p>
+            <Button variant="outline" className="mt-4" onClick={() => navigate("/app/criando")}>Abrir o Criando</Button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {producing.map((p) => {
-              const spoken = postToSpokenScript(p);
-              const words = wordCount(spoken);
-              return (
-                <div key={p.id} className="bg-card border border-border rounded-xl p-4 flex flex-col">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-[15px] font-body font-semibold text-foreground leading-snug">{p.title}</p>
-                    <span className="text-[10px] font-body font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-secondary/15 text-secondary-foreground shrink-0 capitalize">
-                      {p.format}
-                    </span>
-                  </div>
-                  <p className="text-[13px] font-body text-muted-foreground mt-1.5 leading-relaxed line-clamp-2 flex-1">
-                    {spoken ? spoken.replace(/\*\*/g, "") : "Sem roteiro ainda: preencha gancho e roteiro no post."}
-                  </p>
-                  <div className="mt-3 pt-2.5 border-t border-border/60 flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-body text-muted-foreground">
-                      {spoken ? `${words} palavras · ~${Math.max(1, Math.ceil(words / 140))} min` : "roteiro vazio"}
-                    </span>
-                    <Button size="sm" className="h-8" disabled={sendingId === p.id} onClick={() => gravarPost(p)}>
-                      {sendingId === p.id ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Play className="h-3.5 w-3.5 mr-1.5" />}
-                      Gravar
-                    </Button>
-                  </div>
+        ) : (
+          <div data-tour="prompter-lista" className="mt-5 space-y-6">
+            {producingOrdenados.com.length > 0 && (
+              <section>
+                <h2 className="text-sm font-display font-bold text-foreground mb-2.5">Com data pra postar <span className="text-xs font-body font-normal text-muted-foreground">· o mais urgente primeiro</span></h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {producingOrdenados.com.map((p) => cardDoPost(p))}
                 </div>
-              );
-            })}
+              </section>
+            )}
+            {producingOrdenados.sem.length > 0 && (
+              <section>
+                <h2 className="text-sm font-display font-bold text-foreground mb-2.5">Sem data marcada <span className="text-xs font-body font-normal text-muted-foreground">· mais novos primeiro</span></h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {producingOrdenados.sem.map((p) => cardDoPost(p))}
+                </div>
+              </section>
+            )}
           </div>
-        </div>
+        )
       )}
 
-      {/* Pastas */}
-      <div data-tour="prompter-pastas" className="mt-6 flex items-center gap-2 flex-wrap">
+      {/* Já gravados */}
+      {aba === "gravados" && (
+        gravados.length === 0 ? (
+          <div className="mt-6 border border-dashed border-border rounded-2xl py-12 px-6 text-center">
+            <Check className="h-8 w-8 text-muted-foreground/60 mx-auto mb-3" />
+            <p className="text-sm font-body text-foreground font-medium">Nenhum post marcado como gravado ainda</p>
+            <p className="text-xs font-body text-muted-foreground mt-1 max-w-sm mx-auto leading-relaxed">
+              Depois de gravar, toca em "Já gravei" no card: o post anda pra Pronto no Criando e fica listado aqui.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {gravados.map((p) => cardDoPost(p, true))}
+          </div>
+        )
+      )}
+
+      {/* Meus roteiros */}
+      {aba === "roteiros" && (<>
+      <div data-tour="prompter-pastas" className="mt-5 flex items-center gap-2 flex-wrap">
         <button
           onClick={() => setCurFolder("all")}
           className={cn(
@@ -174,7 +354,7 @@ export default function CriaPrompter() {
         >
           Todos
         </button>
-        {folders.map((f) => (
+        {foldersAvulsos.map((f) => (
           <div
             key={f}
             className={cn(
@@ -207,11 +387,10 @@ export default function CriaPrompter() {
         </span>
       </div>
 
-      {/* Lista */}
-      <div data-tour="prompter-lista" className="mt-4">
+      <div className="mt-4">
         {isLoading ? (
           <div className="py-12 text-center"><Loader2 className="h-5 w-5 text-primary mx-auto animate-spin" /></div>
-        ) : visible.length === 0 ? (
+        ) : roteirosVisiveis.length === 0 ? (
           <div className="border border-dashed border-border rounded-2xl py-12 px-6 text-center">
             <Clapperboard className="h-8 w-8 text-muted-foreground/60 mx-auto mb-3" />
             <p className="text-sm font-body text-foreground font-medium">
@@ -226,35 +405,43 @@ export default function CriaPrompter() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {visible.map((s) => {
+            {roteirosVisiveis.map((s) => {
               const words = wordCount(s.script);
               const srcLabel = SOURCE_LABEL[s.source];
               return (
-                <div key={s.id} className="bg-card border border-border rounded-xl p-4 flex flex-col">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-[15px] font-body font-semibold text-foreground leading-snug">{s.title}</p>
-                    {srcLabel && (
-                      <span className="text-[10px] font-body font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary shrink-0">
-                        {srcLabel}
-                      </span>
-                    )}
+                <div key={s.id} className="bg-card border border-border rounded-2xl p-4 flex flex-col gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10.5px] font-body font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">{srcLabel ?? "Roteiro"}</span>
+                    {s.folder && <span className="text-[11.5px] font-body font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground inline-flex items-center gap-1"><FolderOpen className="h-3 w-3" /> {s.folder}</span>}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="ml-auto grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Mais ações">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setEditor({ open: true, id: s.id, title: s.title, script: s.script, folder: s.folder ?? "" })}>
+                          <Pencil className="h-3.5 w-3.5 mr-2" /> Editar roteiro
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setConfirmDel(s)}>
+                          <Trash2 className="h-3.5 w-3.5 mr-2" /> Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                  <p className="text-[13px] font-body text-muted-foreground mt-1.5 leading-relaxed line-clamp-3 flex-1">
+                  <p className="text-[15px] font-body font-semibold text-foreground leading-snug">{s.title}</p>
+                  <p className="text-[13px] font-body text-muted-foreground leading-relaxed line-clamp-2">
                     {s.script.slice(0, 200) || "Roteiro vazio"}
                   </p>
-                  <p className="text-[11px] font-body text-muted-foreground mt-2">
-                    {words} palavras · ~{Math.max(1, Math.ceil(words / 140))} min a 140 wpm
-                    {s.folder ? <> · <FolderOpen className="h-3 w-3 inline -mt-0.5" /> {s.folder}</> : null}
+                  <p className="text-[11.5px] font-body text-muted-foreground">
+                    Criado em {criadoEm(s.created_at)} · {words} palavras · ~{minutos(words)} min
                   </p>
-                  <div className="mt-3 pt-2.5 border-t border-border/60 flex items-center gap-2">
-                    <Button size="sm" className="h-8" onClick={() => gravar(s.id)}>
+                  <div className="mt-auto pt-2.5 border-t border-border/60 flex items-center gap-2">
+                    <Button size="sm" className="h-9" onClick={() => gravar(s.id)}>
                       <Play className="h-3.5 w-3.5 mr-1.5" /> Gravar
                     </Button>
-                    <Button size="sm" variant="outline" className="h-8 px-2.5" onClick={() => setEditor({ open: true, id: s.id, title: s.title, script: s.script, folder: s.folder ?? "" })}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-8 px-2.5 text-destructive hover:text-destructive" onClick={() => setConfirmDel(s)}>
-                      <Trash2 className="h-3.5 w-3.5" />
+                    <Button size="sm" variant="outline" className="h-9" onClick={() => setEditor({ open: true, id: s.id, title: s.title, script: s.script, folder: s.folder ?? "" })}>
+                      <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
                     </Button>
                   </div>
                 </div>
@@ -263,6 +450,7 @@ export default function CriaPrompter() {
           </div>
         )}
       </div>
+      </>)}
 
       {/* Como funciona */}
       <div data-tour="prompter-voz" className="mt-8 bg-card border border-border rounded-2xl p-4">

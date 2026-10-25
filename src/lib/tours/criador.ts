@@ -749,6 +749,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
         placement: "bottom",
       },
       {
+        skipIfMissing: true,
         target: '[data-tour="prompter-lista"]',
         title: "Toque em Gravar",
         body: "Cada roteiro abre o player de gravação em tela cheia. Lá você escolhe o modo: por voz, em que o texto segue a sua fala, ou rolagem automática com velocidade ajustável. Gravou? O vídeo sai na sua galeria.",
@@ -761,9 +762,9 @@ export const TOURS_CRIADOR: TourConfig[] = [
         placement: "top",
       },
       {
-        target: '[data-tour="prompter-pastas"]',
-        title: "Organize em pastas",
-        body: "A pasta se define ao salvar o roteiro, e aqui você filtra por ela. Bom pra separar por série, campanha ou cliente.",
+        target: '[data-tour="prompter-abas"]',
+        title: "Três abas",
+        body: "Pra gravar traz os posts da fase Produzindo, o mais urgente primeiro. Gravou? Toque em Já gravei e o post anda pra Pronto. Meus roteiros guarda os avulsos, por pasta. Já gravados mostra o que você marcou, com Desfazer.",
         placement: "bottom",
       },
     ],
