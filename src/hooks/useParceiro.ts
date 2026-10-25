@@ -988,6 +988,40 @@ export function useMeusParceiros() {
   });
 }
 
+/* ── CARTÃO DO PARCEIRO NA EQUIPE (25/10/2026) ─────────────────────────────
+   Foto, WhatsApp, cidade e portfólio que o prestador preenche no onboarding
+   dele. Só os parceiros da PRÓPRIA agência (RPC parceiros_contato, migration
+   20261025000002). Colaboradora agindo pela agência não carrega: a lista de
+   Pessoas é da dona. */
+export type ContatoParceiro = {
+  member_id: string; avatar_url: string | null; phone: string | null; cidade: string | null;
+  instagram_handle: string | null; portfolio_url: string | null;
+};
+
+export function useContatosParceiros(ativo = true) {
+  const { user } = useAuth();
+  return useQuery<Map<string, ContatoParceiro>>({
+    queryKey: ["parceiros-contato", user?.id],
+    enabled: !!user && ativo,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("parceiros_contato");
+      if (error) {
+        if (aindaNaoExisteNoBanco(error.message)) return new Map();
+        throw error;
+      }
+      return new Map(((data ?? []) as ContatoParceiro[]).map((c) => [c.member_id, c]));
+    },
+  });
+}
+
+/** Link do WhatsApp a partir dos dígitos gravados (DDD + número, sem 55). */
+export function linkWhatsApp(phone: string | null | undefined): string | null {
+  const d = (phone ?? "").replace(/\D/g, "");
+  if (d.length < 10) return null;
+  return `https://wa.me/${d.length <= 11 ? `55${d}` : d}`;
+}
+
 /** Parceiros que atendem o cliente deste post (Equipe > Pessoas > Editar,
  *  19/10/2026). Null enquanto carrega ou se o RPC falhar: aí ninguém some. */
 export function useParceirosAptos(postId: string | null) {

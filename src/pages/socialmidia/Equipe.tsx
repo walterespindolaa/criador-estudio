@@ -28,7 +28,7 @@ import { useHasModule } from "@/hooks/useModules";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { clienteInativo } from "@/lib/cliente-status";
 import { useExternalClients } from "@/hooks/useCriaPost";
-import { useConversasComParceiros, useMeusParceiros } from "@/hooks/useParceiro";
+import { useConversasComParceiros, useMeusParceiros, useContatosParceiros, linkWhatsApp } from "@/hooks/useParceiro";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    EQUIPE, A CENTRAL DE PRODUÇÃO (Walter, 28/09/2026)
@@ -189,6 +189,9 @@ function PessoasDaEquipe({ managerId = null, comoGerente = false }: { managerId?
   const { data: terceiros = [] } = useTerceiros();
   const fichaPorMembro = new Map<string, Terceiro>();
   for (const t of terceiros) if (t.member_id) fichaPorMembro.set(t.member_id, t);
+  /* Cartão de visita do parceiro (onboarding do prestador, 25/10/2026): foto,
+     WhatsApp, cidade e portfólio. Só na própria conta: a RPC filtra pela dona. */
+  const { data: contatos } = useContatosParceiros(!managerId && !comoGerente);
   const [editId, setEditId] = useState<string | null>(null);
   const editando = members.find((m) => m.id === editId) ?? null;
   // Portal do Stripe: é onde a pessoa vê TODAS as assinaturas dela (inclusive
@@ -379,6 +382,10 @@ function PessoasDaEquipe({ managerId = null, comoGerente = false }: { managerId?
             const paused = m.status === "pausado";
             const papelParc = ROTULO_PARC[m.role ?? ""];
             const souEu = m.member_id === user?.id;
+            const contato = papelParc ? contatos?.get(m.member_id) : undefined;
+            const zap = linkWhatsApp(contato?.phone);
+            const portfolio = contato?.portfolio_url && /^https?:\/\//i.test(contato.portfolio_url) ? contato.portfolio_url : null;
+            const insta = contato?.instagram_handle?.replace(/^@/, "") || null;
             let resumo: string;
             if (papelParc) {
               const n = m.clientes_atendidos?.length ?? 0;
@@ -393,13 +400,24 @@ function PessoasDaEquipe({ managerId = null, comoGerente = false }: { managerId?
             }
             return (
               <div key={m.id} className={cn("bg-card border border-border rounded-2xl px-3.5 py-3 flex items-center gap-3", paused && "opacity-70")}>
-                <div className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-full font-display font-bold",
-                  papelParc ? "bg-violet-100 text-violet-700" : "bg-primary/10 text-primary")}>
-                  {(m.name || m.email || "?").charAt(0).toUpperCase()}
-                </div>
+                {contato?.avatar_url ? (
+                  <img src={contato.avatar_url} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+                ) : (
+                  <div className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-full font-display font-bold",
+                    papelParc ? "bg-violet-100 text-violet-700" : "bg-primary/10 text-primary")}>
+                    {(m.name || m.email || "?").charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-body font-semibold text-foreground truncate">{m.name || m.email || "(sem nome)"}</p>
-                  <p className="text-[12px] font-body text-muted-foreground truncate">{resumo}</p>
+                  <p className="text-[12px] font-body text-muted-foreground truncate">{resumo}{contato?.cidade ? ` · ${contato.cidade}` : ""}</p>
+                  {papelParc && (zap || portfolio || insta) && (
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[12px] font-body">
+                      {zap && <a href={zap} target="_blank" rel="noopener noreferrer" className="font-semibold text-[hsl(var(--cria-verde))] hover:underline">WhatsApp</a>}
+                      {portfolio && <a href={portfolio} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline">Portfólio</a>}
+                      {insta && <a href={`https://instagram.com/${insta}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline">@{insta}</a>}
+                    </div>
+                  )}
                 </div>
                 <span className={cn("hidden sm:inline text-[10px] font-body font-bold px-2.5 py-1 rounded-full shrink-0",
                   papelParc ? "bg-violet-100 text-violet-700" : "bg-primary/10 text-primary")}>

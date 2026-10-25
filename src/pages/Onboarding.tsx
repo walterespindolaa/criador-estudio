@@ -357,6 +357,10 @@ const Onboarding = () => {
             objetivo: [objetivos.join(", "), resumoFala ? `Sobre ela, nas palavras dela: ${resumoFala}` : ""].filter(Boolean).join(". ") || undefined,
             publico: respostas.find((r) => r.section === "persona-brand" && r.question_key === "quem-e")?.answer.slice(0, 400),
             tom: tom || undefined,
+            /* A fala inteira: o ai-context-builder publicado depois de 25/10/2026
+               usa no prompt; a versão antiga ignora o campo (o resumo acima
+               cobre). */
+            sobre: falaLimpa.length >= MIN_FALA ? falaLimpa.slice(0, 1500) : undefined,
           },
         });
         if (typeof raw === "string") {
