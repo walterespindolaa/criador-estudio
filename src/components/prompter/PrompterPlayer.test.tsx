@@ -27,6 +27,16 @@ describe("teleprompter (montagem e controles)", () => {
     expect(onExit).toHaveBeenCalled();
     vi.useRealTimers();
   });
+  /* Walter, 25/10/2026: "FORMATO:" e "CÂMERA:" rolavam como fala */
+  it("linha que abre com RÓTULO: em maiúsculas vira direção, não fala", () => {
+    const txt = "FORMATO: Série, parte 2. Sentado à mesa.\nCÂMERA: celular na altura dos olhos.\n\nComenta CENÁRIO que eu te mando.\nAtenção: isso é fala.";
+    render(<PrompterPlayer title="t" text={txt} onExit={() => {}} />);
+    const roots = document.querySelectorAll(".cpr");
+    const root = roots[roots.length - 1];
+    const dirs = [...root.querySelectorAll(".dir")].map((d) => d.textContent);
+    expect(dirs).toEqual(["FORMATO: Série, parte 2. Sentado à mesa.", "CÂMERA: celular na altura dos olhos."]);
+    expect(root.querySelectorAll("#prompterText .w").length).toBe(10);
+  });
   /* Walter, 01/10/2026: modo Só leitura (iPad como tela na frente da Osmo) */
   it("liga o modo Só leitura e esconde a parte de gravação", () => {
     localStorage.removeItem("cria_prompter_settings_v1");

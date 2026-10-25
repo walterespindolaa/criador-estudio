@@ -329,6 +329,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
        PROMPTER núcleo
        ============================================================ */
     let words: string[] = [], wordEls: HTMLElement[] = [], pos = 0, mode = S.mode || "voice";
+    let subPx = 0; /* fração de pixel da rolagem (ver andar) */
     let playing = false, rafId: number | null = null, lastT = 0, pxPerSec = 60;
     let wakeLock: any = null;
     let disposed = false;
@@ -362,6 +363,15 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
           const d = document.createElement("div"); d.className = "dir"; d.textContent = dir[1].trim();
           pt.appendChild(d); return;
         }
+        /* Linha que abre com RÓTULO EM MAIÚSCULAS e dois pontos ("FORMATO: ...",
+           "CÂMERA: ...", "CENÁRIO: ...") também é direção pra quem grava, não
+           fala. Antes rolava como texto e o ritmo começava errado. */
+        const meta = p.match(/^\s*([A-ZÀ-Ý][A-ZÀ-Ý0-9\- ]{1,24}):\s*(.*)$/);
+        if (meta && meta[1] === meta[1].toUpperCase() && /[A-ZÀ-Ý]{3}/.test(meta[1])) {
+          const d = document.createElement("div"); d.className = "dir";
+          d.textContent = meta[1].trim() + ": " + meta[2].trim();
+          pt.appendChild(d); return;
+        }
         const div = document.createElement("div"); div.style.marginBottom = "0.8em";
         let em = false;
         p.split(/(\*\*)/).forEach((seg) => {
@@ -380,7 +390,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     }
     function resetProgress() {
       pos = 0; wordEls.forEach((e) => e.classList.remove("done", "cur"));
-      vp.scrollTop = 0; cancelCountdown(); stopPlay();
+      vp.scrollTop = 0; subPx = 0; cancelCountdown(); stopPlay();
       progT = 0; updateProgress();
     }
     function requestWake() {
@@ -649,13 +659,23 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
     $("#spUp").onclick = (e: Event) => { e.stopPropagation(); mudarVelocidade(10); };
     $("#spDown").onclick = (e: Event) => { e.stopPropagation(); mudarVelocidade(-10); };
 
+    /* ROLAGEM COM SUBPIXEL (25/10/2026). O navegador arredonda scrollTop: somar
+       0,45 px por quadro dava ZERO (texto parado) e 0,51 virava 1 px (o dobro).
+       A 160 pal/min o celular pede ~0,9 px/quadro a 60 Hz e ~0,45 a 120 Hz;
+       no computador ~0,2. Por isso "vai, mas torto". Agora a fração acumula
+       aqui e só o pixel inteiro vai pro scrollTop. */
+    function andar(dy: number) {
+      subPx += dy;
+      const inteiro = Math.trunc(subPx);
+      if (inteiro !== 0) { vp.scrollTop += inteiro; subPx -= inteiro; }
+    }
     let hlT = 0;
     function tick(t: number) {
       if (!playing || disposed) return;
       const dt = Math.min(0.1, (t - lastT) / 1000); lastT = t; /* clamp: 1o frame ou aba dormida não dá pulo */
       if (mode === "voice") tickVoice(t, dt);
       else if (!userScrolling && !touchDown) {
-        vp.scrollTop += pxPerSec * dt; /* dedo no texto = rolagem livre */
+        andar(pxPerSec * dt); /* dedo no texto = rolagem livre */
         /* na Rolagem também marca o que já foi lido (antes só no modo voz) */
         if (t - hlT > 180) { hlT = t; const i = currentWordAtLine(); if (i !== pos) hardSetPos(i); }
       }
@@ -847,7 +867,7 @@ function PrompterPlayerInner({ title, text, onExit }: Props) {
       const speaking = (t - vadLastLoud) < VOICE_HOLD_MS;
       if (speaking && !userScrolling && !touchDown) {
         const over = Math.min(1, (vadEnv - thr) / 0.06);
-        vp.scrollTop += pxPerSec * dt * (0.7 + over * 0.45); /* 0.7x..1.15x pela energia */
+        andar(pxPerSec * dt * (0.7 + over * 0.45)); /* 0.7x..1.15x pela energia */
       }
     }
     let voiceStartT = 0, voiceOkSeen = false, micPedindo = false;
