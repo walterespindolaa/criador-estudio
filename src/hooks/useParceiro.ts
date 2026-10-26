@@ -135,6 +135,9 @@ export type CardAberto = {
   plataforma: string | null;
   gancho: string | null;
   roteiro: string | null;
+  /** Coluna cta do post. No CARROSSEL é o "Conteúdo dos slides" (slide 2 em
+   *  diante + o CTA do último): sem ela o parceiro só via a capa. */
+  cta?: string | null;
   legenda: string | null;
   arte: unknown;
   blocos: unknown;

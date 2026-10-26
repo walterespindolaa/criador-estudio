@@ -1450,7 +1450,10 @@ export function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, 
    painel com cabeçalho (título + copiar) e corpo de leitura: fonte maior,
    parágrafos separados e "SLIDE 1 / CENA 2" virando divisória, que é como o
    texto chega da social mídia. */
-const EH_MARCADOR = /^\s*(slide|cena|card|arte|parte|bloco)\s*\d+\s*[:.)-]?\s*$/i;
+/* "SLIDE 1", "Cena 2:" e também "TELA 2 · BANCO DE IDEIAS" (o jeito que a
+   copy do carrossel chega) viram divisória; "---" sozinho vira só respiro. */
+const EH_MARCADOR = /^\s*(slide|cena|card|arte|parte|bloco|tela|l[aâ]mina)\s*\d+\s*([:.)·\-–]\s*.{0,50})?\s*$/i;
+const EH_SEPARADOR = /^\s*[-–—_*]{3,}\s*$/;
 
 function PainelTexto({ titulo, texto, aoCopiar, cor }: {
   titulo: string; texto: string; aoCopiar: (t: string, msg: string) => void;
@@ -1474,7 +1477,7 @@ function PainelTexto({ titulo, texto, aoCopiar, cor }: {
       </div>
       <div className="px-3.5 py-3 bg-card">
         {linhas.map((linha, i) => {
-          if (!linha.trim()) return <div key={i} className="h-2" />;
+          if (!linha.trim() || EH_SEPARADOR.test(linha)) return <div key={i} className="h-2" />;
           if (EH_MARCADOR.test(linha)) {
             return (
               <p key={i} className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mt-3 first:mt-0 pb-1 border-b border-border/70">
@@ -2396,11 +2399,21 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     LER. Agora é painel com cabeçalho próprio, o botão de copiar
                     na mesma linha do título, e o texto solto num corpo maior,
                     com espaço entre parágrafos e o SLIDE 1 destacado. */}
+                {/* 26/10/2026 (Walter: "só tá pegando o quadro do gancho"): no
+                    carrossel o post guarda a capa no gancho e os slides 2 em
+                    diante + o CTA final na coluna cta ("Conteúdo dos slides" no
+                    Criando). O card não lia a cta, então o designer via só a capa. */}
                 {card.gancho?.trim() && (
-                  <PainelTexto titulo="Gancho" texto={card.gancho} aoCopiar={copiar} cor={card.marca.cor} />
+                  <PainelTexto titulo={card.formato === "carrossel" ? "Capa (slide 1)" : "Gancho"} texto={card.gancho} aoCopiar={copiar} cor={card.marca.cor} />
+                )}
+                {card.formato === "carrossel" && card.cta?.trim() && (
+                  <PainelTexto titulo="Conteúdo dos slides" texto={card.cta} aoCopiar={copiar} cor={card.marca.cor} />
                 )}
                 {card.roteiro?.trim() && (
                   <PainelTexto titulo="Copy" texto={card.roteiro} aoCopiar={copiar} cor={card.marca.cor} />
+                )}
+                {card.formato !== "carrossel" && card.cta?.trim() && (
+                  <PainelTexto titulo="CTA" texto={card.cta} aoCopiar={copiar} cor={card.marca.cor} />
                 )}
 
                 {/* AS ARTES DO CARROSSEL, uma a uma. Antes o card só dizia
