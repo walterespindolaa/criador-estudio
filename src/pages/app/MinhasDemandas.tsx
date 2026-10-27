@@ -31,7 +31,7 @@ import { GaleriaDePecas } from "@/components/shared/GaleriaDePecas";
 import { BaixarMidiasDoPost } from "@/components/kanban/BaixarMidiasDoPost";
 import {
   ROTULO_PAPEL, useAcoesDoParceiro, useCardDoParceiro, useConversaDoCard, useCoresDasAgencias, useEntreguesDoParceiro,
-  useFilaDoParceiro, useMarcarConversaLida, useMeusCaches, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useProporPrazo, useResolverPrazoSugerido, useVersoesDaPeca, useEntregasRemoviveis, useMarcarUrgente,
+  useFilaDoParceiro, useMarcarConversaLida, useMeusCaches, useMinhasAgencias, useMinhasMarcas, usePausadoEmTudo, useProporPrazo, useResolverPrazoSugerido, useVersoesDaPeca, useEntregasRemoviveis, useMarcarUrgente, useEditarAjuste,
   type CardAberto, type CardDaFila, type EntregueDoParceiro, type MarcaDoParceiro, type MarcaLiberada, type VersaoDaPeca,
 } from "@/hooks/useParceiro";
 import {
@@ -1444,6 +1444,55 @@ export function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, 
   );
 }
 
+/* ── O QUE AJUSTAR NESTA RODADA ──────────────────────────────────────────
+   "Ajuste:" é o pedido; "Ajuste (atualizado):" é a social mídia corrigindo o
+   próprio pedido (26/10/2026). Vale sempre o mais recente. Só ela edita. */
+const RE_AJUSTE = /^ajuste(\s*\(atualizado\))?:\s*/i;
+
+function AjusteDaRodada({ postId, texto, em, podeEditar }: { postId: string; texto: string; em: string; podeEditar: boolean }) {
+  const editar = useEditarAjuste();
+  const [editando, setEditando] = useState(false);
+  const [rascunho, setRascunho] = useState(texto);
+  useEffect(() => { if (!editando) setRascunho(texto); }, [texto, editando]);
+  return (
+    <div className="mt-4 rounded-xl border-2 border-violet-300 bg-violet-50 px-3.5 py-3">
+      <div className="flex items-center gap-2 mb-1">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-violet-900 flex items-center gap-1.5 flex-1">
+          <RotateCcw className="h-3.5 w-3.5" /> O que ajustar nesta rodada
+        </p>
+        {podeEditar && !editando && (
+          <button type="button" onClick={() => setEditando(true)}
+            className="inline-flex items-center gap-1 rounded-full border border-violet-300 bg-white/80 px-2.5 py-0.5 text-[12px] font-body font-bold text-violet-800 hover:bg-white">
+            <Pencil className="h-3 w-3" /> Editar
+          </button>
+        )}
+      </div>
+      {editando ? (
+        <div className="space-y-2">
+          <Textarea value={rascunho} onChange={(e) => setRascunho(e.target.value)} rows={4} autoFocus
+            className="resize-none text-[13.5px] bg-white" />
+          <div className="flex items-center gap-2 justify-end">
+            <Button size="sm" variant="ghost" className="rounded-xl h-8" disabled={editar.isPending}
+              onClick={() => { setEditando(false); setRascunho(texto); }}>Cancelar</Button>
+            <Button size="sm" className="rounded-xl h-8 bg-violet-600 hover:bg-violet-700 text-white"
+              disabled={editar.isPending || !rascunho.trim() || rascunho.trim() === texto.trim()}
+              onClick={() => editar.mutate({ postId, texto: rascunho }, { onSuccess: () => setEditando(false) })}>
+              {editar.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Salvar e avisar"}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <p className="text-[13.5px] font-body text-violet-950 whitespace-pre-line leading-relaxed"><TextoComLinks texto={texto} /></p>
+          <p className="text-[11px] font-body text-violet-900/70 mt-1.5">
+            pedido em {new Date(em).toLocaleDateString("pt-BR")}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ── PAINEL DE TEXTO DO BRIEFING ──────────────────────────────────────────
    Copy, gancho e legenda são o que a pessoa mais LÊ no card, e estavam num
    cartãozinho com fio colorido e rótulo miúdo em caixa alta. Aqui viram um
@@ -1653,7 +1702,9 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
   postId: string | null;
   aoFechar: () => void;
   /** Presente = a social midia esta olhando, nao o parceiro. */
-  agencia?: { irAoPost: () => void; nomeDoParceiro?: string | null; crmClientId?: string | null };
+  agencia?: { irAoPost: () => void; nomeDoParceiro?: string | null; crmClientId?: string | null;
+    /** "Eu resolvo": tira da revisão sem sair da tela (27/10/2026). Sem ele, cai no irAoPost. */
+    euResolvo?: () => void };
 }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -2079,7 +2130,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     ajuste) e o cachê, sem sair do card (29/09/2026). */}
                 {agencia && (
                   <PainelDaAgenciaNoCard postId={card.id} producaoStatus={card.producao_status}
-                    aprovacao={card.aprovacao} cache={card.cache} nomeParceiro={agencia.nomeDoParceiro} onEuResolvo={agencia.irAoPost} />
+                    aprovacao={card.aprovacao} cache={card.cache} nomeParceiro={agencia.nomeDoParceiro} onEuResolvo={agencia.euResolvo ?? agencia.irAoPost} />
                 )}
 
                 {/* ═══ O RECADO FIXO DA SOCIAL MÍDIA (Canal da marca, 28/09/2026) ═══
@@ -2091,21 +2142,9 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     Ajuste, ele fica em destaque antes de tudo. */}
                 {card.producao_status === "ajuste" && (() => {
                   const ultimo = [...(card.comentarios ?? [])].reverse()
-                    .find((c) => c.papel === "social_media" && /^ajuste:/i.test(c.texto ?? ""));
+                    .find((c) => c.papel === "social_media" && RE_AJUSTE.test(c.texto ?? ""));
                   if (!ultimo) return null;
-                  return (
-                    <div className="mt-4 rounded-xl border-2 border-violet-300 bg-violet-50 px-3.5 py-3">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-violet-900 mb-1 flex items-center gap-1.5">
-                        <RotateCcw className="h-3.5 w-3.5" /> O que ajustar nesta rodada
-                      </p>
-                      <p className="text-[13.5px] font-body text-violet-950 whitespace-pre-line leading-relaxed">
-                        {ultimo.texto.replace(/^ajuste:\s*/i, "")}
-                      </p>
-                      <p className="text-[11px] font-body text-violet-900/70 mt-1.5">
-                        pedido em {new Date(ultimo.em).toLocaleDateString("pt-BR")}
-                      </p>
-                    </div>
-                  );
+                  return <AjusteDaRodada postId={card.id} texto={ultimo.texto.replace(RE_AJUSTE, "")} em={ultimo.em} podeEditar={!!agencia} />;
                 })()}
 
                 {card.canal_recado && (
@@ -2336,7 +2375,9 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                         {postId && (
                           <BaixarMidiasDoPost link rotulo="Baixar todas" postId={postId} titulo={card.titulo ?? undefined}
                             midias={midias.map((m, i) => ({
-                              id: `${i}-${m.url ?? m.thumb}`, file_name: m.nome ?? `arquivo-${i + 1}`, file_type: m.tipo,
+                              /* id REAL da mídia (27/10/2026): o "Salvar no celular" baixa pelo
+                                 id na criapost-download-file; o id inventado dava 404 em todas. */
+                              id: m.id ?? `${i}-${m.url ?? m.thumb}`, file_name: m.nome ?? `arquivo-${i + 1}`, file_type: m.tipo,
                               provider: "storage", view_url: m.url ?? m.thumb, download_url: m.url ?? m.thumb, thumbnail_url: m.thumb ?? m.url,
                             }))} />
                         )}

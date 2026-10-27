@@ -349,8 +349,17 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   // Só as etiquetas que estão REALMENTE em uso viram filtro (o catálogo inteiro
   // encheria a tela de chip que não filtra nada).
   const tagsEmUso = tagCatalog.filter((t) => posts.some((p) => (tagsByPost[p.id] ?? []).includes(t.id)));
+  /* VÁRIOS FORMATOS DE UMA VEZ (Walter, 26/10/2026: "quero selecionar Reels e
+     Carrossel"). fmt continua string pra não mexer no que está salvo no
+     aparelho: "all" ou os formatos separados por vírgula ("reels,carrossel"). */
+  const fmtsMarcados = new Set(filter.fmt === "all" ? [] : filter.fmt.split(",").filter(Boolean));
+  const alternarFormato = (fmt: string) => setFilter((prev) => {
+    const atual = new Set(prev.fmt === "all" ? [] : prev.fmt.split(",").filter(Boolean));
+    if (atual.has(fmt)) atual.delete(fmt); else atual.add(fmt);
+    return { ...prev, fmt: atual.size === 0 ? "all" : Array.from(atual).join(",") };
+  });
   const viewPosts = posts.filter((p) => {
-    if (filter.fmt !== "all" && normalizarFormato(p.format) !== filter.fmt) return false;
+    if (fmtsMarcados.size > 0 && !fmtsMarcados.has(normalizarFormato(p.format))) return false;
     if (filter.tag !== "all" && !(tagsByPost[p.id] ?? []).includes(filter.tag)) return false;
     // Post sem data (tipicamente "Em produção") SEMPRE aparece: só o formato o filtra.
     if (!p.scheduled_date) return true;
@@ -749,9 +758,9 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
           {/* Cada formato carrega a própria cor (bolinha + rótulo) pra o filtro
               falar a mesma língua do card do kanban e do calendário. */}
           {formatosPost.map((fmt) => {
-            const ativo = filter.fmt === fmt;
+            const ativo = fmtsMarcados.has(fmt);
             return (
-              <button key={fmt} onClick={() => setFilter((prev) => ({ ...prev, fmt }))} style={formatColorVars(fmt)}
+              <button key={fmt} aria-pressed={ativo} onClick={() => alternarFormato(fmt)} style={formatColorVars(fmt)}
                 className={`inline-flex items-center gap-1.5 text-xs font-body font-semibold px-3 py-1.5 rounded-full border transition-colors ${ativo ? "bg-primary text-primary-foreground border-primary" : `border-border hover:bg-muted/40 ${FORMAT_TEXT_CLASS}`}`}>
                 <span aria-hidden className={`h-1.5 w-1.5 rounded-full shrink-0 ${ativo ? "bg-primary-foreground" : FORMAT_DOT_CLASS}`} />
                 {FORMAT_LABELS[fmt] ?? fmt}
@@ -1130,6 +1139,24 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                 <Input value={f.title} onChange={(e) => setF((p) => ({ ...p, title: e.target.value }))} className="rounded-xl" />
               </div>
 
+              {/* Cronograma: data + hora. Subiu pra logo depois do título (Walter,
+                  27/10/2026: "tem como subir o campo dessa data?"): é o que mais
+                  se mexe ao montar a semana, e ficava abaixo da dobra. */}
+              <div>
+                <label className="text-xs font-semibold mb-1.5 block">Cronograma</label>
+                {/* Data/Horário: lado a lado; abaixo de ~390px empilham pra o valor nunca espremer. */}
+                <div className="grid grid-cols-2 gap-2 max-[390px]:grid-cols-1">
+                  <div className="min-w-0">
+                    <Label className="text-[11px] font-body text-muted-foreground">Data de publicação</Label>
+                    <Input type="date" value={f.scheduled_date ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_date: e.target.value || null }))} className="w-full h-10 rounded-xl" />
+                  </div>
+                  <div className="min-w-0">
+                    <Label className="text-[11px] font-body text-muted-foreground">Horário</Label>
+                    <Input type="time" value={f.scheduled_time ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_time: e.target.value || null }))} className="w-full h-10 rounded-xl" />
+                  </div>
+                </div>
+              </div>
+
               {/* Plataforma + Formato */}
               <div className="space-y-3">
                 <div>
@@ -1214,22 +1241,6 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   ))}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-2">Simplificada = 1 clique · Detalhada = 4 etapas · Ambas = o cliente escolhe.</p>
-              </div>
-
-              {/* Cronograma: data + hora */}
-              <div>
-                <label className="text-xs font-semibold mb-1.5 block">Cronograma</label>
-                {/* Data/Horário: lado a lado; abaixo de ~390px empilham pra o valor nunca espremer. */}
-                <div className="grid grid-cols-2 gap-2 max-[390px]:grid-cols-1">
-                  <div className="min-w-0">
-                    <Label className="text-[11px] font-body text-muted-foreground">Data de publicação</Label>
-                    <Input type="date" value={f.scheduled_date ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_date: e.target.value || null }))} className="w-full h-10 rounded-xl" />
-                  </div>
-                  <div className="min-w-0">
-                    <Label className="text-[11px] font-body text-muted-foreground">Horário</Label>
-                    <Input type="time" value={f.scheduled_time ?? ""} onChange={(e) => setF((p) => ({ ...p, scheduled_time: e.target.value || null }))} className="w-full h-10 rounded-xl" />
-                  </div>
-                </div>
               </div>
 
               {/* Ideia / Referência: cola um ou VÁRIOS links (Drive, post, Pinterest...)

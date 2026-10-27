@@ -4,6 +4,7 @@ import { AlertCircle, AlertTriangle, CalendarDays, Check, CheckCircle2, Clock, K
 import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
 import { ManagerCalendar } from "@/components/accounts/ManagerCalendar";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { hojeBR } from "@/lib/date-br";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,7 +17,7 @@ import {
 } from "@/hooks/useParceiro";
 import { brlReais } from "@/lib/money";
 import { FORMAT_CHIP_SOLID_CLASS, formatColorVars } from "@/lib/format-colors";
-import { useMarcaDosClientes, usePedidosDoCliente } from "@/hooks/useParceiro";
+import { useAssumirRevisao, useMarcaDosClientes, usePedidosDoCliente } from "@/hooks/useParceiro";
 import { AcoesDeRevisao } from "@/components/accounts/RevisaoDaEntrega";
 import { MaterialAbertoDialog } from "@/components/parceiro/MaterialAbertoDialog";
 import { FechamentoDoParceiroDialog } from "@/components/accounts/CaixaTerceiros";
@@ -677,11 +678,28 @@ export function PainelComParceiros({ clientes }: {
   // Entregue e ainda não foi pro cliente. Inclui o caso "cliente pediu ajuste,
   // parceiro entregou de novo": approval_status fica ajuste_solicitado e antes
   // a peça sumia desta lista (auditoria 07/09).
-  const praRevisar = pecas.filter((p) => p.producao_status === "entregue" && !["pendente", "aprovado", "postado"].includes(p.approval_status ?? ""));
+  const paraRevisarBruto = pecas.filter((p) => p.producao_status === "entregue" && !["pendente", "aprovado", "postado"].includes(p.approval_status ?? ""));
   // Pedido do cliente final ainda não tratado (02/10/2026): a linha mostra o
   // texto e troca os botões por "Mandar pro parceiro" / "Eu resolvo".
   const { data: pedidos = {} } = usePedidosDoCliente(
-    praRevisar.filter((p) => p.approval_status === "ajuste_solicitado").map((p) => p.id));
+    paraRevisarBruto.filter((p) => p.approval_status === "ajuste_solicitado").map((p) => p.id));
+  /* "EU RESOLVO" TIRA DA FILA (27/10/2026). A peça que ela assumiu some daqui;
+     volta se o parceiro entregar de novo ou o cliente pedir outro ajuste
+     depois de ela assumir. */
+  const praRevisar = paraRevisarBruto.filter((p) => {
+    const a = p.revisao_assumida_em;
+    if (!a) return true;
+    if (p.entregue_em && p.entregue_em > a) return true;
+    const ped = pedidos[p.id];
+    return !!ped && ped.em > a;
+  });
+  const assumir = useAssumirRevisao();
+  const euResolvo = (p: PecaExterna) => assumir.mutate(p.id, {
+    onSuccess: () => toast.success("Ficou com você. A peça saiu da revisão e segue na coluna Ajuste do cliente.", {
+      action: { label: "Abrir o post", onClick: () => irAoPost(p) },
+      duration: 7000,
+    }),
+  });
   const prazosPraResponder = pecas.filter((p) => p.prazo_status === "negociando" && p.prazo_sugerido);
   const abertas = pecas.filter((p) => p.producao_status !== "entregue");
   /* ENTREGUE SEM CACHÊ (Walter, 14/09/2026): o parceiro fez o trabalho e a peça
@@ -784,7 +802,7 @@ export function PainelComParceiros({ clientes }: {
                     {/* Material revisa dentro do card dele (Tá ok / Pedir ajuste). */}
                     {!p.material && <div className="px-4 pb-3 -mt-1">
                       <AcoesDeRevisao postId={p.id} nomeParceiro={nomeParceiro.get(p.assignee_id)?.nome} compacto
-                        pedidoCliente={pedidos[p.id] ?? null} onEuResolvo={() => irAoPost(p)} />
+                        pedidoCliente={pedidos[p.id] ?? null} onEuResolvo={() => euResolvo(p)} />
                     </div>}
                   </div>
                 ))}
@@ -1008,6 +1026,7 @@ export function PainelComParceiros({ clientes }: {
                 ? (extClients.find((c) => c.id === cardAberto.external_client_id)?.crm_client_id ?? null)
                 : null,
               irAoPost: () => { const p = cardAberto; setCardAberto(null); irAoPost(p); },
+              euResolvo: () => { const p = cardAberto; setCardAberto(null); euResolvo(p); },
             } : undefined}
           />
         </>

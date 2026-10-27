@@ -93,6 +93,23 @@ Deno.serve(async (req) => {
       const { data: daEquipe } = await userClient.rpc("is_team_member", { target: donoDaConta });
       owns = daEquipe === true;
     }
+    /* CARD DO PARCEIRO (27/10/2026: "não consigo salvar do celular pela aba
+       de parceiros"). Quem abre o card de produção (a designer com a peça, ou
+       a social mídia que atende o cliente) já baixa o .zip pelo computador
+       (criapost-download-zip libera parceiro_tem_o_card). Aqui no celular a
+       mesma pessoa levava 403. Mesma regra do parceiro_abrir_card: parceiro
+       com o card, ou quem age pela agência dona do post. */
+    if (!owns && ref.post_id) {
+      const { data: temCard } = await userClient.rpc("parceiro_tem_o_card", { _post_id: ref.post_id });
+      owns = temCard === true;
+      if (!owns) {
+        const { data: p2 } = await svc.from("posts").select("agencia_id").eq("id", ref.post_id).maybeSingle();
+        if (p2?.agencia_id) {
+          const { data: atua } = await userClient.rpc("acts_for", { target: p2.agencia_id });
+          owns = atua === true;
+        }
+      }
+    }
     if (!owns) return json({ error: "Sem permissão" }, 403);
 
     /* VÍDEO QUE VEIO DO DRIVE (Walter, 03/10/2026). O vídeo colado do Drive é

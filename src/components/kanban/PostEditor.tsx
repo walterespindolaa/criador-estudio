@@ -248,10 +248,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
      agência está dentro do Cria de um cliente (Kanban do cliente ou a conta
      dele aberta), o post é do cliente e o parceiro é da agência: o botão
      carimba a agência que delegou (posts.agencia_id). No Cria do próprio
-     criador e no Meu perfil não aparece. Sem parceiro na agência, o botão
-     some sozinho. */
-  const { isManaging, activeAccountId, agencyOwnerId, ehMeuPerfil } = useActiveAccount();
-  const agenciaDoPost = isManaging && !ehMeuPerfil && agencyOwnerId && activeAccountId && activeAccountId !== agencyOwnerId
+     criador não aparece. Sem parceiro na agência, o botão some sozinho.
+     MEU PERFIL TAMBÉM (Walter, 27/10/2026: "coloquei posts no Kollab mas não
+     consigo mandar pra design, não tenho a ficha do cliente"). O Meu perfil é
+     uma conta separada que a própria agência gerencia, igual à de um cliente
+     com Cria: o mesmo carimbo de agencia_id serve. */
+  const { isManaging, activeAccountId, agencyOwnerId } = useActiveAccount();
+  const agenciaDoPost = isManaging && agencyOwnerId && activeAccountId && activeAccountId !== agencyOwnerId
     && post && post.user_id !== agencyOwnerId ? agencyOwnerId : null;
   // O tipo Post do editor não declara as colunas de produção (vêm no select *).
   const producaoDoPost = post as unknown as {

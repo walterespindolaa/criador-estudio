@@ -161,7 +161,7 @@ export type CardAberto = {
   agencia_id?: string | null;
   /** O que já está anexado nesta peça (referência da agência ou arquivo que o
    *  próprio parceiro subiu). Ele mandava e nunca mais via. */
-  midias?: { url: string | null; thumb: string | null; nome: string | null; tipo: string | null }[];
+  midias?: { id?: string; url: string | null; thumb: string | null; nome: string | null; tipo: string | null }[];
   /** Quantas vezes a peça voltou pra ajuste. Aparece no card dos dois lados:
    *  é o número que separa "cliente exigente" de "briefing ruim". */
   revisoes?: number;
@@ -1072,6 +1072,10 @@ export type PecaExterna = {
   urgente?: boolean | null;
   /** Dono do post. Diferente da agência = post da conta Cria do cliente. */
   user_id?: string | null;
+  /** Quando a social mídia tocou "Eu resolvo" (27/10/2026): ela assumiu o
+   *  ajuste e a peça sai de "Pra você revisar" até o parceiro entregar de novo
+   *  ou o cliente pedir outro ajuste. */
+  revisao_assumida_em?: string | null;
 };
 
 /** Tudo que está na mão de parceiros: a matéria-prima do painel "Com
@@ -1104,8 +1108,8 @@ export function usePecasComParceiros(temParceiros: boolean) {
         .limit(300);
       // `urgente` (15/10/2026): se a coluna ainda não existir, busca sem ela
       // em vez de esvaziar o painel inteiro.
-      let { data, error } = await buscar(`${COLUNAS}, urgente`);
-      if (error && /urgente/i.test(error.message ?? "")) ({ data, error } = await buscar(COLUNAS));
+      let { data, error } = await buscar(`${COLUNAS}, urgente, revisao_assumida_em`);
+      if (error && /urgente|revisao_assumida_em/i.test(error.message ?? "")) ({ data, error } = await buscar(COLUNAS));
       if (error) {
         if (aindaNaoExisteNoBanco(error.message)) return [];
         throw error;
@@ -1257,6 +1261,49 @@ export function usePedidosDoCliente(postIds: string[]) {
       }
       return out;
     },
+  });
+}
+
+/** EDITAR O PEDIDO DE AJUSTE (Walter, 26/10/2026: "um botão que eu edito a
+ *  solicitação de ajuste pra designer"). Não reescreve o comentário antigo:
+ *  grava a versão nova na conversa ("Ajuste (atualizado): ..."). O card mostra
+ *  sempre o pedido mais recente, o parceiro é avisado como em qualquer recado,
+ *  e o histórico do que mudou fica na conversa. */
+export function useEditarAjuste() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (v: { postId: string; texto: string }) => {
+      const texto = v.texto.trim();
+      if (!texto) throw new Error("Escreva o que precisa mudar.");
+      const { error } = await inserirNaConversaDoParceiro({
+        post_id: v.postId, content: `Ajuste (atualizado): ${texto}`.slice(0, 4000), author_role: "social_media",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["parceiro-card"] });
+      toast.success("Pedido atualizado. O parceiro recebe a versão nova.");
+    },
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui atualizar o pedido.")),
+  });
+}
+
+/** "EU RESOLVO" (27/10/2026). Antes o botão só levava ao post e a peça ficava
+ *  em "Pra você revisar" pra sempre. Agora ele carimba que a social mídia
+ *  assumiu o ajuste: a peça sai da fila e continua na coluna Ajuste do quadro
+ *  do cliente, onde ela resolve e reenvia. */
+export function useAssumirRevisao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      const { data, error } = await sbFrom("posts")
+        .update({ revisao_assumida_em: new Date().toISOString() } as never)
+        .eq("id", postId).select("id").maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Não consegui marcar. Recarregue e tente de novo.");
+    },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] }); },
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui marcar que você resolve.")),
   });
 }
 
