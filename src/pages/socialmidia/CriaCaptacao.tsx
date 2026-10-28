@@ -819,6 +819,27 @@ function CriaCaptacaoInner({ fixo }: { fixo?: string } = {}) {
     } catch { /* o hook já avisa */ }
   };
 
+  /* Outra data sem gravação marcada (28/10/2026): nasce uma gravação do mesmo
+     cliente nesse dia (mesmo local) e os roteiros vão pra ela. */
+  const moverParaNovaData = async (c: Capture, ids: string[], data: string, hora: string | null) => {
+    if (ids.length === 0) return;
+    const scriptsMovidos = ids.length;
+    let novoId: string | null = null;
+    try {
+      novoId = await addCapture.mutateAsync({
+        capture_date: data, capture_time: hora, location: c.location,
+        crm_client_id: c.crm_client_id, client_name: c.crm_client_id ? null : c.client_name,
+      });
+    } catch { return; }
+    if (!novoId) { toast.error("A gravação nova não voltou. Recarregue e mova de novo."); return; }
+    try {
+      for (const [i, id] of ids.entries()) {
+        await updScriptPg.mutateAsync({ id, patch: { capture_id: novoId, record_date: data, month: data.slice(0, 7), position: i } });
+      }
+      toast.success(`${scriptsMovidos === 1 ? "Roteiro levado" : `${scriptsMovidos} roteiros levados`} pra nova gravação de ${diaMes(data)}.`);
+    } catch { /* o hook já avisa */ }
+  };
+
   // Uma linha de captação, usada na Agenda do mês E dentro da pasta do cliente.
   const renderCaptureRow = (c: Capture, doDia?: {
     roteiros: CaptureScript[];
@@ -869,7 +890,8 @@ function CriaCaptacaoInner({ fixo }: { fixo?: string } = {}) {
         roteirosDoDia={roteirosDaLinha}
         acoesRoteiro={acoesDaLinha}
         destinosMover={destinosDe(c)}
-        onMoverRoteiros={(ids, destinoId) => void moverRoteiros(ids, destinoId)} />
+        onMoverRoteiros={(ids, destinoId) => void moverRoteiros(ids, destinoId)}
+        onMoverParaNovaData={(ids, data, hora) => moverParaNovaData(c, ids, data, hora)} />
     );
   };
 
@@ -1332,10 +1354,11 @@ function SugestoesViagem({ trips, onAdd, onDismiss }: {
 }
 
 // ── Uma captação (cliente + cidade + status + roteiro + copiar) ────────────────
-function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, defaultShots, clientShots, recurring, recurrenceDay, onSetRecurring, convertedPostId, onVirarPost, onVerPost, converting, roteirosDoDia, acoesRoteiro, destinosMover, onMoverRoteiros }: {
+function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, defaultShots, clientShots, recurring, recurrenceDay, onSetRecurring, convertedPostId, onVirarPost, onVerPost, converting, roteirosDoDia, acoesRoteiro, destinosMover, onMoverRoteiros, onMoverParaNovaData }: {
   cap: Capture; nome: string; cidade: string;
   destinosMover?: { id: string; rotulo: string }[];
   onMoverRoteiros?: (ids: string[], destinoId: string) => void;
+  onMoverParaNovaData?: (ids: string[], data: string, hora: string | null) => Promise<void>;
   onToggle: () => void;
   // VÁRIOS roteiros por dia (um por vídeo), a única forma desde o circuito 7.
   roteirosDoDia: CaptureScript[];
@@ -1462,6 +1485,7 @@ function CaptureRow({ cap, nome, cidade, onToggle, shotList, onSaveShotList, def
         salvando={acoesRoteiro.salvando}
         destinos={destinosMover}
         onMover={onMoverRoteiros}
+        onMoverParaNovaData={onMoverParaNovaData}
         /* MANDAR SÓ ESTA GRAVAÇÃO PRO CLIENTE (Gabriela, 23/09/2026).
            O envio só existia na pasta, e de lá vai o mês inteiro. Quem grava
            amanhã precisa mandar os roteiros DE AMANHÃ. Fica no cabeçalho da

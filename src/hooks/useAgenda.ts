@@ -309,12 +309,14 @@ export function useAddCapture() {
       // Só manda a coluna quando há valor: sem ela, funciona mesmo antes das
       // migrations do duration_hours e do parceiro_id rodarem.
       const { duration_hours, parceiro_id, ...resto } = input;
-      const { error } = await sbFrom("agenda_captures").insert({
+      const { data, error } = await sbFrom("agenda_captures").insert({
         manager_id: agencyOwnerId, status: "agendada", ...resto,
         ...(duration_hours ? { duration_hours } : {}),
         ...(parceiro_id ? { parceiro_id } : {}),
-      } as never);
+      } as never).select("id").single();
       if (error) throw error;
+      // Devolve o id: "Mover pra outra data" cria a gravação e já leva os roteiros pra ela.
+      return (data as unknown as { id: string } | null)?.id ?? null;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["agenda-captures"] }); toast.success("Captação agendada."); },
     onError: () => toast.error("Não consegui agendar."),

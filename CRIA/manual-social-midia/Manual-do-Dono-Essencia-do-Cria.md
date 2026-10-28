@@ -1,8 +1,8 @@
 ---
 titulo: Manual do Dono · A essência do Cria
 marca: Cria Social Club (apelido: Cria)
-versao: 2.0 (ampliada)
-data: 2026-09-30
+versao: 2.1 (publicação no Instagram)
+data: 2026-10-28
 uso: documento-fonte para pessoas e IAs que criam conteúdo, anúncios, roteiros, respostas e materiais sobre o Cria sem acesso ao código
 idioma: português do Brasil
 ---
@@ -149,7 +149,7 @@ O coração do método é o **Ciclo CRIA**: as fases do trabalho de quem cria co
 | Ideia | Guardar a ideia no momento em que ela aparece, antes que suma | Captura rápida, banco de Ideias, Tendências, sugestões da IA |
 | Planejamento | Decidir o que sai, quando e por quê; escrever gancho, conteúdo e legenda | Criando (quadro, tabela, calendário), Cria Plano, Meu Feed, Cria Stories |
 | Produção | Gravar ou criar a arte | Editor do post com IA, Prompter, Brandbook |
-| Publicação | Dar data e hora e marcar como publicado | Status Pronto, Agendado e Publicado; calendário |
+| Publicação | Publicar no Instagram pelo Cria, na hora ou no dia e horário marcados | Publicar no Instagram (no post), status Agendado e Publicado; calendário |
 | Análise | Ver o que funcionou e repetir | Métricas do Instagram, Metas, Reflexão do mês |
 
 No quadro do Criando, essas fases viram seis colunas: **Ideia, Planejamento, Produzindo, Pronto, Agendado, Publicado.**
@@ -166,7 +166,7 @@ Para quem atende clientes, o ciclo ganha duas fases que fazem toda a diferença:
 | Planejar | O mês de cada cliente | Cria Post (quadro e calendário), Agenda |
 | Produzir | Arte, vídeo, legenda e gravação, com ou sem parceiros | Cria Post, Cria Captação, Equipe |
 | Aprovar | Cliente aprova por link, sem print e sem áudio | Link de aprovação do Cria Post |
-| Publicar | Post vai ao ar e é marcado como postado | Cria Post |
+| Publicar | Depois do cliente aprovar, o post sai pelo Cria na hora ou no horário marcado | Cria Post (Publicar no Instagram) |
 | Analisar | Resultado do mês, com a marca da agência | Relatório do cliente |
 | Cobrar | Mensalidade, margem, cachês e imposto | Cria Caixa |
 
@@ -182,7 +182,7 @@ Para quem atende clientes, o ciclo ganha duas fases que fazem toda a diferença:
 6. **Produção:** as pautas boas viram posts no Cria Post. A arte vai para o designer parceiro com o briefing montado.
 7. **Gravação:** roteiros na Captação, aprovados pelo cliente antes; dia de gravação com rota, ordem e teleprompter.
 8. **Aprovação:** o cliente aprova pelo link fixado no grupo e aponta ajustes direto na arte.
-9. **Publicação:** o post vai ao ar e é marcado como postado.
+9. **Publicação:** com o Instagram do cliente conectado por convite, o post aprovado sai pelo Cria, na hora ou sozinho no dia e horário marcados. O Cria liga a publicação ao post e começa a acompanhar os números.
 10. **Relatório:** no fim do mês, apresentação em PDF com a marca da agência, entregas, captações e métricas.
 11. **Cobrança:** a mensalidade nasce no Cria Caixa no dia de pagamento da ficha; a social mídia marca como recebida. O Cria mostra a margem de cada cliente, já descontando cachês e imposto.
 12. **Renovação:** o Cria avisa 15, 7 e 1 dia antes do contrato vencer, com a frase certa para cada momento.
@@ -980,7 +980,7 @@ Esta é a parte que diferencia o Cria de um monte de ferramentas soltas. Use est
 
 ## 11. O que o Cria não faz (não prometer)
 
-- **Não publica nem agenda posts automaticamente no Instagram, TikTok ou YouTube.** A conexão com o Instagram **só lê os números** (insights). "Agendado" no Cria é uma etapa de organização. Nunca escrever "agende seus posts no Cria" como se fosse publicação automática.
+- **Publica no Instagram, mas não no TikTok nem no YouTube.** No Instagram, publica reels, carrossel e foto, na hora ou sozinho no dia e horário marcados, com a conta profissional conectada (a do cliente, por convite). **Stories ainda saem pelo celular.** Música da biblioteca do Instagram não entra pela publicação do Cria. Post de cliente só sai depois de aprovado.
 - **Não sincroniza com o Google Agenda** no momento.
 - **Não é escola nem curso.** Os concorrentes são ferramentas de conteúdo e gestão, não escolas.
 - **Não é "IA que faz tudo em 1 minuto".** A IA ajuda; quem cria é a pessoa.
@@ -1013,7 +1013,7 @@ Esta é a parte que diferencia o Cria de um monte de ferramentas soltas. Use est
 - "Hub" para se referir ao Cria. O Cria é studio. (O nome "HUB" só aparece dentro do produto, como a origem das pautas do Radar.)
 - "Premium" para planos.
 - "Em breve" para os parceiros.
-- Promessa de publicação automática.
+- Promessa de publicar stories, TikTok ou YouTube pelo Cria (ainda não existe).
 - "Caos" e "acabou o WhatsApp" como gancho principal: são as palavras que todos os concorrentes já usam. Dá para falar da dor sem cair no clichê.
 - Depoimentos, números de usuários ou resultados que não sejam reais.
 - Jargão de mercado sem explicação ("MRR", "churn", "pipeline" em anúncio para iniciante).
@@ -1151,7 +1151,7 @@ Quem pode aparecer nos criativos: o Walter (fundador), uma social mídia real, t
 ### 14.7 Checklist antes de publicar
 
 - [ ] A função mostrada existe e funciona como descrito neste documento?
-- [ ] Nenhuma promessa de publicação ou agendamento automático?
+- [ ] Publicação prometida só pro Instagram (reels, carrossel e foto), sem stories, TikTok ou YouTube?
 - [ ] Preço conferido com o Walter?
 - [ ] Nenhum dado de cliente real no print ou no texto?
 - [ ] Sem travessão, sem frase de IA, sem emoji em série?
@@ -1166,7 +1166,7 @@ Quem pode aparecer nos criativos: o Walter (fundador), uma social mídia real, t
 ## 15. Perguntas frequentes
 
 **O Cria publica no Instagram?**
-Não. O Cria organiza, aprova e analisa. A conexão com o Instagram lê os números da conta.
+Sim. Com a conta profissional conectada, publica reels, carrossel e foto na hora ou sozinho no dia e horário marcados. Na social mídia, o cliente conecta o Instagram por um convite e o post só sai depois que ele aprova. Stories ainda saem pelo celular. Depois de publicado, o Cria acompanha os números de cada post.
 
 **Meu cliente precisa ter conta no Cria para aprovar?**
 Não. Ele recebe um link e aprova por lá, pelo celular.

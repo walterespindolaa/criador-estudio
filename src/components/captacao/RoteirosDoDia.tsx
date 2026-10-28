@@ -1,7 +1,10 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { GripVertical, Plus, Trash2, Play, Copy, Pencil, FileText, Check, Loader2, CalendarArrowUp } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { hojeBR } from "@/lib/date-br";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -24,7 +27,7 @@ import { ListaReferencias } from "@/components/captacao/Referencias";
 
 export function RoteirosDoDia({
   roteiros, onAdicionar, onEditar, onExcluir, onToggleGravado, onReordenar, onTeleprompter, salvando, acaoExtra,
-  destinos, onMover,
+  destinos, onMover, onMoverParaNovaData,
 }: {
   roteiros: CaptureScript[];
   onAdicionar: () => void;
@@ -44,7 +47,15 @@ export function RoteirosDoDia({
      mesmo cliente, da mais perto pra mais longe. Vazio = não aparece. */
   destinos?: { id: string; rotulo: string }[];
   onMover?: (ids: string[], destinoId: string) => void;
+  /* OUTRA DATA (Walter, 28/10/2026: "não consigo mover esses roteiros pra
+     outra data"). O Mover só aparecia quando já existia OUTRA gravação
+     agendada do mesmo cliente; sem ela, o botão sumia. Agora sempre dá pra
+     escolher um dia novo: nasce uma gravação desse cliente nesse dia e os
+     roteiros vão pra ela. */
+  onMoverParaNovaData?: (ids: string[], data: string, hora: string | null) => Promise<void> | void;
 }) {
+  const [novaData, setNovaData] = useState<{ ids: string[]; data: string; hora: string } | null>(null);
+  const [movendo, setMovendo] = useState(false);
   const arrastou = (r: DropResult) => {
     if (!r.destination || r.destination.index === r.source.index) return;
     const ids = roteiros.map((s) => s.id);
@@ -55,7 +66,8 @@ export function RoteirosDoDia({
 
   const gravados = roteiros.filter((s) => s.done).length;
   const pendentes = roteiros.filter((s) => !s.done);
-  const podeMover = !!onMover && (destinos?.length ?? 0) > 0;
+  const temDestinos = !!onMover && (destinos?.length ?? 0) > 0;
+  const podeMover = temDestinos || !!onMoverParaNovaData;
   const proxima = destinos?.[0];
 
   return (
@@ -66,7 +78,7 @@ export function RoteirosDoDia({
           Roteiros desta gravação {roteiros.length > 0 && <span className="text-muted-foreground">({gravados}/{roteiros.length} gravados)</span>}
         </span>
         <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
-          {podeMover && pendentes.length > 0 && proxima && (
+          {temDestinos && pendentes.length > 0 && proxima && (
             <Button size="sm" variant="outline" className="rounded-xl h-8"
               title="Leva os roteiros que ainda não foram gravados pra próxima gravação deste cliente"
               onClick={async () => {
@@ -151,10 +163,22 @@ export function RoteirosDoDia({
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start">
-                                      <DropdownMenuLabel className="text-xs">Mover pra gravação de</DropdownMenuLabel>
-                                      {destinos!.map((d) => (
-                                        <DropdownMenuItem key={d.id} onClick={() => onMover!([s.id], d.id)}>{d.rotulo}</DropdownMenuItem>
-                                      ))}
+                                      {temDestinos && (
+                                        <>
+                                          <DropdownMenuLabel className="text-xs">Mover pra gravação de</DropdownMenuLabel>
+                                          {destinos!.map((d) => (
+                                            <DropdownMenuItem key={d.id} onClick={() => onMover!([s.id], d.id)}>{d.rotulo}</DropdownMenuItem>
+                                          ))}
+                                        </>
+                                      )}
+                                      {onMoverParaNovaData && (
+                                        <>
+                                          {temDestinos && <DropdownMenuSeparator />}
+                                          <DropdownMenuItem onClick={() => setNovaData({ ids: [s.id], data: "", hora: "" })}>
+                                            Outra data...
+                                          </DropdownMenuItem>
+                                        </>
+                                      )}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 )}
@@ -196,6 +220,38 @@ export function RoteirosDoDia({
           </Droppable>
         </DragDropContext>
       )}
+
+      <Dialog open={!!novaData} onOpenChange={(o) => { if (!o && !movendo) setNovaData(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display">Mover pra outra data</DialogTitle>
+            <DialogDescription className="font-body text-[13px]">
+              Cria uma gravação deste cliente no dia escolhido e leva o roteiro pra ela, com cenas, referência e aprovação.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-[12px] font-body text-muted-foreground">Dia
+              <Input type="date" min={hojeBR()} value={novaData?.data ?? ""} className="mt-1 h-10 rounded-xl"
+                onChange={(e) => setNovaData((v) => (v ? { ...v, data: e.target.value } : v))} />
+            </label>
+            <label className="text-[12px] font-body text-muted-foreground">Horário (opcional)
+              <Input type="time" value={novaData?.hora ?? ""} className="mt-1 h-10 rounded-xl"
+                onChange={(e) => setNovaData((v) => (v ? { ...v, hora: e.target.value } : v))} />
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" disabled={movendo} onClick={() => setNovaData(null)}>Cancelar</Button>
+            <Button disabled={movendo || !novaData?.data} onClick={async () => {
+              if (!novaData?.data || !onMoverParaNovaData) return;
+              setMovendo(true);
+              try { await onMoverParaNovaData(novaData.ids, novaData.data, novaData.hora || null); setNovaData(null); }
+              finally { setMovendo(false); }
+            }}>
+              {movendo ? <Loader2 className="h-4 w-4 animate-spin" /> : "Mover"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
