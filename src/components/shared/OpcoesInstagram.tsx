@@ -49,6 +49,7 @@ export function OpcoesInstagram({
   const [trial, setTrial] = useState<OpcoesIg["trial"] | null>(null);
   const [feed, setFeed] = useState(true);
   const [musica, setMusica] = useState(false);
+  const [figurinha, setFigurinha] = useState(false);
   const [novoCollab, setNovoCollab] = useState("");
   const [novaTag, setNovaTag] = useState("");
 
@@ -61,6 +62,7 @@ export function OpcoesInstagram({
     setTrial(o.trial ?? null);
     setFeed(o.share_to_feed !== false);
     setMusica(!!o.musica_celular);
+    setFigurinha(!!o.pelo_celular);
     setNovoCollab(""); setNovaTag("");
   }, [open, inicial]);
 
@@ -85,6 +87,7 @@ export function OpcoesInstagram({
     if (reels && trial) o.trial = trial;
     if (reels) o.share_to_feed = feed;
     if (reels || story) o.musica_celular = musica;
+    if (story) o.pelo_celular = figurinha;
     salvar.mutate(o, { onSuccess: () => onOpenChange(false) });
   };
 
@@ -176,6 +179,20 @@ export function OpcoesInstagram({
                 <span className="text-[13px]">Também mostrar na grade do perfil</span>
                 <Switch checked={feed} onCheckedChange={setFeed} aria-label="Mostrar na grade do perfil" />
               </label>
+            </section>
+          )}
+
+          {story && (
+            <section>
+              <div className="flex items-center justify-between gap-3">
+                <div><p className="text-sm font-bold">Vai ter figurinha?</p><p className="text-xs text-muted-foreground">Enquete, caixinha, quiz, link ou contagem não saem pela API.</p></div>
+                <Switch checked={figurinha} onCheckedChange={setFigurinha} aria-label="Story com figurinha" />
+              </div>
+              {figurinha && (
+                <p className="mt-2 text-xs rounded-xl bg-sky-50 border border-sky-200 text-sky-900 px-3 py-2">
+                  Então este story sai pelo celular: baixe a mídia no post, publique pelo app do Instagram e coloque a figurinha lá. No Cria Stories, marque "Já postei".
+                </p>
+              )}
             </section>
           )}
 

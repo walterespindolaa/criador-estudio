@@ -6,6 +6,7 @@ import { usePrompterScript } from "@/hooks/usePrompterScripts";
 import { PrompterPlayer } from "@/components/prompter/PrompterPlayer";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
+import { uploadVideoFileToBunny } from "@/lib/bunny-upload";
 
 /* Tela de gravação: carrega o roteiro e entrega pro player fullscreen.
    O player cobre o app inteiro (position:fixed, z-60), então o layout
@@ -55,5 +56,15 @@ export default function PrompterGravar() {
     );
   }
 
-  return <PrompterPlayer title={script.title} text={script.script} onExit={exit} obterTokenVoz={obterTokenVoz} />;
+  /* Roteiro que veio de um post (Criando ou story do Cria Stories): o vídeo
+     gravado sobe direto pro post e ele vai pra Pronto (28/10/2026). */
+  const postId = script.source === "criando" || script.source === "stories" ? script.source_id : null;
+  const anexar = postId ? async (file: File) => {
+    await uploadVideoFileToBunny(file, postId);
+    const upd = supabase.from("posts").update({ status: "editando" } as never).eq("id", postId);
+    await upd;
+  } : undefined;
+
+  return <PrompterPlayer title={script.title} text={script.script} onExit={exit} obterTokenVoz={obterTokenVoz}
+    onAnexar={anexar} rotuloAnexar="Mandar o vídeo pro post" />;
 }

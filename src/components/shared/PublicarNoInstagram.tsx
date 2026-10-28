@@ -98,7 +98,8 @@ export function PublicarNoInstagramView({
   // (Walter, 28/10/2026). "postado" = já publicaram na mão; de novo duplicaria.
   const ehCliente = !!est.external_client_id;
   const aprovado = !ehCliente || est.approval_status === "aprovado" || !!est.publish_sem_aprovacao_motivo;
-  const musicaCelular = !!est.ig_opcoes?.musica_celular;
+  const musicaCelular = !!est.ig_opcoes?.musica_celular || !!est.ig_opcoes?.pelo_celular;
+  const ehStoryFmt = /^stor(y|ies)$/i.test(String(formato ?? est.format ?? ""));
   // Selo honesto: "Pronto pra sair" só quando dá pra sair mesmo.
   const estado: Estado = estadoBase !== "pronto" ? estadoBase
     : est.approval_status === "postado" ? "postado"
@@ -116,7 +117,7 @@ export function PublicarNoInstagramView({
   // O que impede, em uma frase (mostra só o primeiro motivo).
   const bloqueio =
     est.approval_status === "postado" ? "Este post já foi marcado como postado."
-    : musicaCelular ? "Marcado pra postar pelo celular (música do Instagram)."
+    : musicaCelular ? (est.ig_opcoes?.pelo_celular ? "Marcado pra postar pelo celular (story com figurinha)." : "Marcado pra postar pelo celular (música do Instagram).")
     : cx && !cx.pode_publicar ? (cx.motivo ?? "Esta conta não pode publicar pelo Cria.")
     : !aprovado ? "O cliente ainda não aprovou. Dá pra publicar mesmo assim, com motivo."
     : null;
@@ -297,6 +298,14 @@ export function PublicarNoInstagramView({
               </Button>
             </div>
             </>)}
+
+            {/* O que não sai pela API no story (Walter, 28/10/2026). */}
+            {ehStoryFmt && !compacto && (
+              <p className="text-[11.5px] font-body text-muted-foreground rounded-xl bg-muted/50 px-3 py-2 leading-relaxed">
+                Pelo Cria o story sai só com a foto ou o vídeo. Figurinha (enquete, caixinha, quiz, link), música, filtro e efeito não passam pela API do Instagram:
+                pra usar, baixe a mídia aqui no post e publique pelo app.
+              </p>
+            )}
 
             {/* Collab, marcação, texto alternativo, Reels de teste e música. */}
             <div className="flex flex-wrap gap-2">

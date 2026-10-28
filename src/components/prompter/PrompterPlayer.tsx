@@ -37,6 +37,10 @@ type Props = {
   /** token temporário da transcrição na nuvem (edge prompter-voz). null =
    *  indisponível: o modo Por voz segue só pelo volume. */
   obterTokenVoz?: () => Promise<string | null>;
+  /** Roteiro que veio de um post (Criando ou Cria Stories): o vídeo gravado
+   *  pode ir direto pro post (28/10/2026). Devolve quando terminou de subir. */
+  onAnexar?: (file: File) => Promise<void>;
+  rotuloAnexar?: string;
 };
 
 const SETTINGS_KEY = "cria_prompter_settings_v1";
@@ -325,12 +329,14 @@ const DEF = {
   readOnly: false,
 };
 
-function PrompterPlayerInner({ title, text, onExit, obterTokenVoz }: Props) {
+function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rotuloAnexar }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const exitRef = useRef(onExit);
   exitRef.current = onExit;
   const tokenVozRef = useRef(obterTokenVoz);
   tokenVozRef.current = obterTokenVoz;
+  const anexarRef = useRef(onAnexar);
+  anexarRef.current = onAnexar;
 
   useEffect(() => {
     const root = rootRef.current!;
@@ -1615,6 +1621,8 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz }: Props) {
          que o share não exista, aí é o único caminho). */
       $("#ssDownload").style.display = isIOS && canShare ? "none" : "flex";
       $("#ssHint").style.display = isIOS && canShare ? "block" : "none";
+      const btAnexar = $("#ssAnexar") as HTMLButtonElement | null;
+      if (btAnexar) { btAnexar.style.display = anexarRef.current ? "flex" : "none"; btAnexar.disabled = false; }
       $("#saveSheet").classList.add("show");
     }
     function closeSaveSheet() {
@@ -1633,6 +1641,25 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz }: Props) {
       toast("Baixando " + pendingName);
     }
     $("#ssClose").onclick = () => closeSaveSheet();
+    /* Mandar o vídeo pro post (Criando / Cria Stories): sobe e fica na mídia
+       do post, pronto pra conferir e publicar. Salvar no celular continua. */
+    const btAnexar = $("#ssAnexar") as HTMLButtonElement | null;
+    if (btAnexar) btAnexar.onclick = async () => {
+      const anexar = anexarRef.current;
+      if (!pendingBlob || !anexar) return;
+      const cleanType = (pendingType.split(";")[0] || "video/mp4").trim();
+      const file = new File([pendingBlob], pendingName, { type: cleanType });
+      const rotulo = btAnexar.textContent;
+      btAnexar.disabled = true; btAnexar.textContent = "Enviando o vídeo...";
+      try {
+        await anexar(file);
+        btAnexar.textContent = "Vídeo no post";
+        toast("Vídeo enviado pro post. Pode conferir e publicar.", 4000);
+      } catch (e: any) {
+        btAnexar.disabled = false; btAnexar.textContent = rotulo;
+        toast("Não deu pra enviar: " + (e?.message || "tente de novo"), 5000);
+      }
+    };
     $("#ssDownload").onclick = () => downloadPending();
     $("#ssShare").onclick = async () => {
       if (!pendingBlob) return;
@@ -1933,6 +1960,7 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz }: Props) {
           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video id="ssVideo" controls playsInline preload="metadata" />
           <p className="ssHint" id="ssHint">Toca em <b>Salvar no celular</b> e escolhe <b>"Salvar Vídeo"</b> no menu que abrir: vai direto pra sua galeria.</p>
+          <button className="ssBtn primary" id="ssAnexar" style={{ display: "none" }}>{rotuloAnexar || "Mandar pro post"}</button>
           <button className="ssBtn primary" id="ssShare">Salvar no celular</button>
           <button className="ssBtn" id="ssDownload">Baixar arquivo</button>
           <button className="ssBtn ghost" id="ssClose">Fechar e continuar gravando</button>

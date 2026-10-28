@@ -22,7 +22,67 @@ export type StorySlot = {
   notify_body?: string | null;
   notified_at?: string | null;
   created_at: string;
+  /** Post de formato Story ligado (28/10/2026): é ele que anda pelo Criando,
+   *  Prompter e publicação. */
+  post_id?: string | null;
 };
+
+/* ── O post por trás de cada story (28/10/2026) ──────────────────────────────
+   Estado de produção e publicação, quantas mídias tem e, depois de publicado,
+   os números do story (social_stories, pela id da mídia no Instagram). */
+export type StoryPost = {
+  id: string; status: string | null; publish_status: string | null; publish_error: string | null;
+  auto_publish: boolean | null; publicar_em: string | null; ig_media_id: string | null; ig_permalink: string | null;
+  ig_opcoes: Record<string, unknown> | null; deleted_at: string | null; title: string | null; script: string | null;
+  midias: number; numeros: Record<string, number> | null;
+};
+
+export function useStoryPosts(postIds: string[]) {
+  const chave = [...postIds].sort().join(",");
+  return useQuery<Record<string, StoryPost>>({
+    queryKey: ["story-posts", chave],
+    enabled: postIds.length > 0,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const { data: ps, error } = await sbFrom("posts")
+        .select("id,status,publish_status,publish_error,auto_publish,publicar_em,ig_media_id,ig_permalink,ig_opcoes,deleted_at,title,script")
+        .in("id", postIds);
+      if (error) throw error;
+      const lista = (ps as unknown as Omit<StoryPost, "midias" | "numeros">[]) ?? [];
+      const { data: ms } = await sbFrom("external_media_refs").select("post_id")
+        .in("post_id", postIds).or("substituida.is.null,substituida.eq.false");
+      const conta: Record<string, number> = {};
+      for (const m of (ms as unknown as Array<{ post_id: string }>) ?? []) conta[m.post_id] = (conta[m.post_id] ?? 0) + 1;
+      const igIds = lista.map((p) => p.ig_media_id).filter(Boolean) as string[];
+      const nums: Record<string, Record<string, number>> = {};
+      if (igIds.length) {
+        const { data: ss } = await sbFrom("social_stories").select("external_story_id,metrics").in("external_story_id", igIds);
+        for (const r of (ss as unknown as Array<{ external_story_id: string; metrics: Record<string, number> | null }>) ?? []) {
+          if (r.metrics) nums[r.external_story_id] = r.metrics;
+        }
+      }
+      const out: Record<string, StoryPost> = {};
+      for (const p of lista) out[p.id] = { ...p, midias: conta[p.id] ?? 0, numeros: p.ig_media_id ? nums[p.ig_media_id] ?? null : null };
+      return out;
+    },
+  });
+}
+
+/** "Já postei pelo celular": o story fica feito (o post vai pra Publicado). */
+export function useMarcarStoryPostado() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      const { error } = await sbFrom("posts").update({ status: "publicado", published_at: new Date().toISOString() } as never).eq("id", postId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      for (const k of ["story-posts", "story-slots", "posts"]) qc.invalidateQueries({ queryKey: [k] });
+      toast.success("Marcado como postado.");
+    },
+    onError: () => toast.error("Não consegui marcar."),
+  });
+}
 
 export type ScheduledPostLite = {
   id: string;

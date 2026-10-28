@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Check, Pencil, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -40,11 +40,13 @@ type Props = {
   onToggleDone: (slot: StorySlot) => void;
   onDeleteSlot: (id: string) => void;
   onAddDay: (dateIso: string) => void;
+  /** Andamento do story (Plano, Gravar, Mídia, Publicar) e o próximo passo. */
+  andamento?: (slot: StorySlot) => ReactNode;
 };
 
 export function StoryWeekView({
   weekStart, slots, posts = [], today,
-  onShiftWeek, onToday, onReschedule, onSlotClick, onToggleDone, onDeleteSlot, onAddDay,
+  onShiftWeek, onToday, onReschedule, onSlotClick, onToggleDone, onDeleteSlot, onAddDay, andamento,
 }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overKey, setOverKey] = useState<string | null>(null);
@@ -130,6 +132,7 @@ export function StoryWeekView({
                           {s.format && <span className="text-[9px] font-body px-1 py-0.5 rounded-full capitalize" style={{ background: st.bg, color: st.fg }}>{s.format}</span>}
                         </div>
                         <p className={cn("text-[11px] font-body font-medium leading-snug mt-0.5 line-clamp-2", done ? "line-through text-muted-foreground" : "text-foreground")}>{s.title}</p>
+                        {andamento?.(s)}
                       </div>
                       <div className="flex-col gap-0.5 shrink-0 hidden group-hover:flex">
                         <button onClick={() => onSlotClick(s)} className="text-muted-foreground hover:text-primary" aria-label="Editar"><Pencil className="h-3 w-3" /></button>

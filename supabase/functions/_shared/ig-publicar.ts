@@ -83,6 +83,7 @@ type Opcoes = {
   trial: 'MANUAL' | 'SS_PERFORMANCE' | null;
   share_to_feed: boolean | null;
   musica_celular: boolean;
+  pelo_celular: boolean;
 };
 
 export function lerOpcoes(bruto: unknown): Opcoes {
@@ -101,6 +102,7 @@ export function lerOpcoes(bruto: unknown): Opcoes {
     trial,
     share_to_feed: typeof o.share_to_feed === 'boolean' ? o.share_to_feed : null,
     musica_celular: o.musica_celular === true,
+    pelo_celular: o.pelo_celular === true,
   };
 }
 
@@ -212,6 +214,10 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
     // Música da biblioteca do Instagram não sai pela API: este post é pelo celular.
     if (op.musica_celular) {
       return await falhar(new ErroIg('Este post vai usar música do Instagram, que não sai pela API. Publique pelo celular.', false, true), false);
+    }
+    // Story com figurinha (enquete, caixinha, link...): a API não publica figurinha.
+    if (op.pelo_celular) {
+      return await falhar(new ErroIg('Este story tem figurinha, que não sai pela API do Instagram. Publique pelo celular.', false, true), false);
     }
 
     // Conexão e token (o token nunca sai do servidor).

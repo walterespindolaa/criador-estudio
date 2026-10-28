@@ -48,6 +48,8 @@ export type OpcoesIg = {
   trial?: "MANUAL" | "SS_PERFORMANCE";
   share_to_feed?: boolean;
   musica_celular?: boolean;
+  /** Story com figurinha (enquete, caixinha, link...): sai pelo app. */
+  pelo_celular?: boolean;
 };
 
 export type ConexaoDoPost = {

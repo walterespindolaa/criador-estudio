@@ -22,6 +22,14 @@ import {
   useUpdateStorySlot, useDeleteStorySlot, useAddStorySlot, type StorySlot,
 } from "@/hooks/useStoryPlan";
 import { StoryWeekView } from "@/components/stories/StoryWeekView";
+import { StoryAndamento, estadoDoStory, type AcaoStory } from "@/components/stories/StoryAndamento";
+import { useStoryPosts, useMarcarStoryPostado } from "@/hooks/useStoryPlan";
+import { useSendPostToPrompter } from "@/hooks/usePrompterScripts";
+import { ConferenciaPublicacao } from "@/components/shared/ConferenciaPublicacao";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { AlertTriangle } from "lucide-react";
 
 const PERIODS = [
   { label: "1 dia", days: 1 },
@@ -85,6 +93,57 @@ export default function CriaStories() {
   const { data: trends = [], isLoading: trendsLoading } = useStoryTrends();
   const { data: slots = [] } = useStorySlots(weekFrom, weekTo);
   const { data: posts = [] } = useScheduledPostsInRange(weekFrom, weekTo);
+
+  /* STORIES LIGADOS AO CRIANDO, PROMPTER E PUBLICAR (28/10/2026, mockup
+     aprovado): cada story do plano tem um post de formato Story por trás. */
+  const postIds = useMemo(() => slots.map((s) => s.post_id).filter(Boolean) as string[], [slots]);
+  const { data: storyPosts = {} } = useStoryPosts(postIds);
+  const { data: podePublicar = {} } = useQuery<Record<string, boolean>>({
+    queryKey: ["story-pode-publicar", [...postIds].sort().join(",")],
+    enabled: postIds.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, a: Record<string, unknown>) => Promise<{ data: unknown }>;
+      const { data } = await rpc("ig_status_publicacoes", { _post_ids: postIds });
+      const m: Record<string, boolean> = {};
+      for (const r of (data as Array<{ post_id: string; pode_publicar: boolean }> | null) ?? []) m[r.post_id] = r.pode_publicar;
+      return m;
+    },
+  });
+  const qc = useQueryClient();
+  const sendPrompter = useSendPostToPrompter();
+  const marcarPostado = useMarcarStoryPostado();
+  const desfazerConf = useMutation({
+    mutationFn: async (postId: string) => {
+      const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, a: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+      const { error } = await rpc("ig_desfazer_conferencia", { _post_id: postId });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["story-posts"] }); toast.success("Conferência desfeita."); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const [conf, setConf] = useState<{ postId: string; agora: boolean } | null>(null);
+  const [ocupado, setOcupado] = useState<string | null>(null);
+
+  const agir = (slot: StorySlot, a: AcaoStory) => {
+    const postId = slot.post_id;
+    if (!postId) return;
+    const post = storyPosts[postId];
+    if (a === "midia") { navigate(`/app/criando?post=${postId}`); return; }
+    if (a === "conferir") { setConf({ postId, agora: false }); return; }
+    if (a === "tentar") { setConf({ postId, agora: true }); return; }
+    if (a === "postei") { marcarPostado.mutate(postId); return; }
+    if (a === "desfazer") { desfazerConf.mutate(postId); return; }
+    if (a === "gravar") {
+      const roteiro = (post?.script ?? slot.script ?? "").trim();
+      if (!roteiro) { toast.error("Esse story ainda não tem roteiro. Abra ele e escreva o que falar."); return; }
+      setOcupado(slot.id);
+      sendPrompter.mutate({ postId, title: slot.title, script: roteiro }, {
+        onSuccess: (id) => navigate(`/app/prompter/gravar/${id}`),
+        onSettled: () => setOcupado(null),
+      });
+    }
+  };
 
   const gen = useGenerateStoryPlan();
   const upd = useUpdateStorySlot();
@@ -209,6 +268,15 @@ export default function CriaStories() {
           </div>
         </>
       ) : (
+        <>
+        {/* O que o Instagram não deixa publicar pelo sistema (Walter, 28/10/2026). */}
+        <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 flex gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="text-[13px] font-body text-amber-950 leading-relaxed">
+            <p className="font-bold">O que o Cria não consegue publicar no story</p>
+            <p>A API do Instagram não aceita figurinha (enquete, caixinha de perguntas, quiz, link, contagem, menção em figurinha), música, filtros e efeitos. Esses stories ficam "Pelo celular": baixe a mídia no post (ou salve o vídeo do Prompter no celular) e publique pelo app do Instagram, onde dá pra colocar tudo isso. O lembrete chega no horário.</p>
+          </div>
+        </div>
         <StoryWeekView
           weekStart={weekStart}
           slots={slots}
@@ -221,7 +289,16 @@ export default function CriaStories() {
           onToggleDone={(slot) => upd.mutate({ id: slot.id, patch: { status: slot.status === "feito" ? "pendente" : "feito" } })}
           onDeleteSlot={(id) => del.mutate(id)}
           onAddDay={(dateIso) => setEditor({ mode: "create", date: dateIso })}
+          andamento={(slot) => {
+            const est = estadoDoStory(slot, slot.post_id ? storyPosts[slot.post_id] : undefined, slot.post_id ? podePublicar[slot.post_id] : undefined);
+            return est ? <StoryAndamento estado={est} ocupado={ocupado === slot.id} onAcao={(a) => agir(slot, a)} /> : null;
+          }}
         />
+        {conf && (
+          <ConferenciaPublicacao postId={conf.postId} open onOpenChange={(v) => { if (!v) setConf(null); }} agora={conf.agora}
+            onConcluido={() => qc.invalidateQueries({ queryKey: ["story-posts"] })} />
+        )}
+        </>
       )}
 
       <StorySlotDialog

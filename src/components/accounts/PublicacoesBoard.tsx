@@ -169,7 +169,7 @@ export function PublicacoesBoard() {
     if (p.publish_status === "publicando") return "publicando";
     if (p.publish_status === "erro") return "erro";
     if (p.publish_status === "na_fila" && p.auto_publish) return "conferido";
-    if (p.ig_opcoes?.musica_celular) return "celular";
+    if (p.ig_opcoes?.musica_celular || p.ig_opcoes?.pelo_celular) return "celular";
     const st = statusDe.get(p.id);
     if (st && !st.pode_publicar) return "sem_conexao";
     if (p.approval_status === "aprovado") return "conferir";
@@ -429,7 +429,7 @@ function CardPublicacao({ p, s, cli, st, numeros, onConferir, onAbrir, onConvite
           </div>
         )}
         {s === "publicando" && <p className="text-[11.5px] text-violet-800 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Publicando agora.</p>}
-        {s === "celular" && <p className="text-[11.5px] text-muted-foreground flex items-center gap-1"><Smartphone className="h-3 w-3" /> Vai com música do Instagram: publique pelo app.</p>}
+        {s === "celular" && <p className="text-[11.5px] text-muted-foreground flex items-center gap-1"><Smartphone className="h-3 w-3" /> {p.ig_opcoes?.pelo_celular ? "Tem figurinha" : "Vai com música do Instagram"}: baixe a mídia e publique pelo app.</p>}
         {s === "sem_conexao" && (
           <>
             <p className="text-[11.5px] text-red-800">{st?.motivo ?? "O Instagram deste cliente não está conectado."}</p>
