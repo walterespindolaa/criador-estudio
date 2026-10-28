@@ -154,26 +154,30 @@ export function useSendPostToPrompter() {
   const userId = activeAccountId;
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { postId: string; title: string; script: string }) => {
+    mutationFn: async (input: { postId: string; title: string; script: string; source?: "criando" | "stories" }) => {
       if (!userId) throw new Error("Not authenticated");
-      const { data: existing, error: findErr } = await sbFrom("prompter_scripts")
+      /* Story do Cria Stories entra como "stories": o player abre no modo
+         story (só a fala rola, câmera ligada). Antes tudo entrava "criando". */
+      const source = input.source ?? "criando";
+      const { data: achados, error: findErr } = await sbFrom("prompter_scripts")
         .select("id")
         .eq("user_id", userId)
-        .eq("source", "criando")
+        .in("source", ["criando", "stories"])
         .eq("source_id", input.postId)
-        .maybeSingle();
+        .limit(1);
       if (findErr) throw findErr;
+      const existing = (achados as unknown as Array<{ id: string }> | null)?.[0];
       if (existing) {
-        const id = (existing as unknown as { id: string }).id;
+        const id = existing.id;
         const { error } = await sbFrom("prompter_scripts")
-          .update({ title: input.title, script: input.script, updated_at: new Date().toISOString() } as never)
+          .update({ title: input.title, script: input.script, source, updated_at: new Date().toISOString() } as never)
           .eq("id", id)
           .eq("user_id", userId);
         if (error) throw error;
         return id;
       }
       const { data, error } = await sbFrom("prompter_scripts")
-        .insert({ user_id: userId, title: input.title, script: input.script, source: "criando", source_id: input.postId } as never)
+        .insert({ user_id: userId, title: input.title, script: input.script, source, source_id: input.postId } as never)
         .select("id")
         .single();
       if (error) throw error;

@@ -3,6 +3,43 @@ import { iaFetch, chaveIA, IA_URL } from "../_shared/ia.ts";
 import { createClient } from "npm:@supabase/supabase-js@2"
 import { VOZ_CRIA, humanizar, humanizarDeep } from "../_shared/voz-cria.ts"
 
+/* Story em partes (28/10/2026): o Prompter só rola a FALA; o resto vira
+   etiqueta. p1/p2/p3 mudam de sentido pelo tipo, igual aos rótulos do app
+   (src/lib/storyRoteiro.ts). */
+const STORY_PARTES = `TIPOS DE STORY E AS PARTES DE CADA UM:
+- "falado": a pessoa na câmera. p1 = o que FALAR, em primeira pessoa, como se fala (até 40 palavras, cabe em 15 segundos). p2 = o texto curto que aparece na tela (até 8 palavras). p3 = a frase de fechamento FALADA pedindo uma ação. "mostrar" = o que aparece no vídeo enquanto fala (curto). "formato": bastidor|tutorial|rotina|pov|depoimento|falado.
+- "figurinha": enquete, caixinha, quiz ou contagem (sai pelo app do Instagram). p1 = a pergunta da figurinha. p2 = as opções ou a resposta esperada. p3 = o que fazer com as respostas. "formato": enquete|caixinha|quiz|contagem.
+- "midia": foto ou vídeo que a pessoa já tem. p1 = qual mídia usar. p2 = o texto por cima. p3 = fechamento curto. "formato": foto|antes-depois|bastidor-foto.
+- "texto": só texto na tela. p1 = a frase principal (até 3 linhas). p2 = complemento. p3 = fechamento. "formato": texto.
+- Nada de instrução dentro da fala ("grave você dizendo..."): a fala é exatamente o que a pessoa diz.
+- Português BR informal, como amigo falando.`
+
+/* p1/p2/p3 → fala/tela/fechamento + "roteiro" com rótulo. O "roteiro" mantém
+   o app antigo funcionando enquanto a versão nova não sobe (lê só ele). */
+const CHAVES_STORY: Record<string, [string, string, string]> = {
+  falado: ['Fala', 'Na tela', 'Fechamento'],
+  figurinha: ['Figurinha', 'Opções', 'Depois'],
+  midia: ['Mídia', 'Texto por cima', 'Fechamento'],
+  texto: ['Frase', 'Complemento', 'Fechamento'],
+}
+function umStoryEmPartes(st: any) {
+  if (!st || typeof st !== 'object') return st
+  const tipo = CHAVES_STORY[String(st.tipo)] ? String(st.tipo) : 'falado'
+  const [k1, k2, k3] = CHAVES_STORY[tipo]
+  const limpa = (v: unknown) => (typeof v === 'string' ? v.replace(/\s*\n\s*/g, ' ').trim() : '')
+  const fala = limpa(st.p1 ?? st.fala), tela = limpa(st.p2 ?? st.tela), fech = limpa(st.p3 ?? st.fechamento), mostrar = limpa(st.mostrar)
+  const linhas: string[] = []
+  if (mostrar) linhas.push(`Mostrar: ${mostrar}`)
+  if (fala) linhas.push(`${k1}: ${fala}`)
+  if (tela) linhas.push(`${k2}: ${tela}`)
+  if (fech) linhas.push(`${k3}: ${fech}`)
+  return { ...st, tipo, fala, tela, fechamento: fech, mostrar, roteiro: linhas.join('\n') || limpa(st.roteiro) }
+}
+function storiesEmPartes(parsed: any) {
+  if (parsed && Array.isArray(parsed.stories)) return { ...parsed, stories: parsed.stories.map(umStoryEmPartes) }
+  return umStoryEmPartes(parsed)
+}
+
 // Helpers embutidos (sem depender de _shared no bundle do deploy).
 const ALLOWED_ORIGINS = [
   "https://app.criasocialclub.com.br", "https://criasocialclub.com.br",
@@ -385,6 +422,8 @@ serve(async (req) => {
       'art-prompt': 'pro',              // Cria Estúdio  (FEATURES.estudio.minimo = pro)
       'autopilot-cronograma': 'studio', // Cria Plano    (FEATURES["cria-plano"].minimo = studio)
       'story-plan-generate': 'studio',  // Cria Stories  (FEATURES.stories.minimo = studio)
+      'story-escrever': 'studio',       // Cria Stories: um story pela CrIA
+      'autopilot-conceitos': 'studio',  // Cria Plano: conceitos do plano
     }
     const _minTier = OP_MIN_TIER[operation]
     if (_minTier && !_isAdmin) {
@@ -1323,9 +1362,17 @@ REGRAS:
 - Considere o FOCO informado.
 - NÃO repita títulos/temas dos posts recentes listados.
 
+- Se vierem CONCEITOS escolhidos, o plano inteiro segue esses conceitos (é o fio do plano). Com dois conceitos, alterne e conte uma história ao longo das semanas. Cada post diz de qual conceito é.
+- "gancho": a primeira frase que a pessoa vai falar ou escrever, pronta, curta.
+- "semana": em qual semana do período o post entra (1 = primeira). Distribua igual entre as semanas.
+- "resumo.titulo": uma frase que resume o plano (ex.: "12 posts em 4 semanas, com a Black Friday no meio"). "resumo.fio": uma frase com a lógica da ordem.
+
 RESPONDA APENAS com JSON válido, sem texto antes ou depois:
-{"posts":[{"titulo":"gancho/título","formato":"reels|carrossel|foto","plataforma":"instagram","pilar":"nome do pilar","legenda":"legenda pronta curta","porque":"motivo curto"}]}`
+{"resumo":{"titulo":"frase","fio":"frase"},"posts":[{"titulo":"gancho/título","gancho":"primeira frase","formato":"reels|carrossel|foto","plataforma":"instagram","pilar":"nome do pilar","conceito":"nome do conceito ou vazio","semana":1,"legenda":"legenda pronta curta","porque":"motivo curto"}]}`
         userPrompt = `Nicho: ${data.nicho || 'lifestyle'}
+${data.conceitos ? `CONCEITOS ESCOLHIDOS (o fio do plano): ${data.conceitos}` : ''}
+${data.semanas ? `Semanas no período: ${data.semanas}` : ''}
+${data.trocar ? `SUBSTITUIR UM POST: gere 1 post só, no formato "${data.trocar.formato || ''}" e conceito "${data.trocar.conceito || ''}", diferente de "${data.trocar.titulo || ''}" e dos outros do plano: ${data.trocar.outros || '-'}` : ''}
 Plataformas: ${data.plataformas || 'instagram'}
 Pilares disponíveis: ${data.pilares || '-'}
 Foco: ${data.foco || 'crescimento'}
@@ -1345,23 +1392,72 @@ ${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
 
 OBJETIVO: ${perDia} stories por dia, por ${dias} dias. Cada story é acionável, específico ao nicho e à marca, nada genérico.
 
-REGRAS:
-- Varie os formatos ao longo do dia e da semana: enquete, caixinha de perguntas, bastidor, tutorial rápido, antes/depois, dica rápida, contagem regressiva, quiz, "assista até o fim".
-- "roteiro": 1 a 3 frases dizendo EXATAMENTE o que gravar/mostrar e o texto que vai na tela.
-- "horario": distribua ao longo do dia (manhã, almoço, noite) conforme o melhor engajamento.
-- Use as tendências de stories informadas quando encaixarem no nicho.
-- Português BR informal, como amigo falando.
+${STORY_PARTES}
+
+REGRAS DO PLANO:
+- Misture os tipos no dia: mais ou menos 4 falados, 3 com figurinha, 2 de foto/vídeo pronto e 1 de texto a cada 10. Nunca o dia inteiro do mesmo tipo.
+- "horario": distribua ao longo do dia (manhã, almoço, noite).
+- Use as tendências informadas quando encaixarem. Se vierem tendências ESCOLHIDAS, elas são a base da semana.
+- Siga o OBJETIVO DA SEMANA informado.
 
 RESPONDA APENAS com JSON válido, sem texto antes ou depois:
-{"stories":[{"dia":0,"horario":"09:00","titulo":"curto","roteiro":"o que gravar + texto da tela","formato":"enquete|caixinha|bastidor|tutorial|antes-depois|dica-rapida|contagem|quiz|trend"}]}
+{"stories":[{"dia":0,"horario":"09:00","titulo":"curto","tipo":"falado|figurinha|midia|texto","formato":"ver acima","mostrar":"","p1":"","p2":"","p3":""}]}
 - "dia" é o índice do dia (0 = primeiro dia), de 0 a ${dias - 1}.
 - Gere EXATAMENTE ${perDia} stories por dia (total ${perDia * dias}).`
         userPrompt = `Nicho: ${data.nicho || 'lifestyle'}
 Stories por dia: ${perDia}
-Dias: ${dias}
+Dias: ${dias}${data.diasNomes ? ` (${data.diasNomes})` : ''}
+Objetivo da semana: ${data.objetivo || 'aproximar do público'}
+${data.escolhidas ? `Tendências ESCOLHIDAS (base da semana): ${data.escolhidas}` : ''}
 Tendências de stories em alta: ${data.tendencias || '-'}
 ${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
         maxTokens = 8192
+        break
+      }
+      // Um story só, pelo botão "Escrever com a CrIA" do Novo story.
+      case 'story-escrever': {
+        const tipo = ['falado', 'figurinha', 'midia', 'texto'].includes(String(data.tipo)) ? String(data.tipo) : 'falado'
+        operationPrompt = `Você é um estrategista de STORIES do Instagram no Brasil. Escreva UM story do tipo "${tipo}", pronto pra gravar, no tom da marca do criador.
+
+${STORY_PARTES}
+
+- Se vier uma ideia ou rascunho, parta dele e melhore. Se vierem tendências escolhidas, o story usa elas como base.
+
+RESPONDA APENAS com JSON válido, sem texto antes ou depois:
+{"titulo":"curto","tipo":"${tipo}","formato":"ver acima","mostrar":"","p1":"","p2":"","p3":""}`
+        userPrompt = `Nicho: ${data.nicho || 'lifestyle'}
+Tipo: ${tipo}
+${data.ideia ? `Ideia ou rascunho: ${data.ideia}` : ''}
+${data.escolhidas ? `Tendências escolhidas (base): ${data.escolhidas}` : ''}
+${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
+        maxTokens = 1200
+        break
+      }
+      // Cria Plano: 4 conceitos (o fio do plano) a partir das tendências e da marca.
+      case 'autopilot-conceitos': {
+        operationPrompt = `Você é um estrategista de conteúdo brasileiro. Proponha 4 CONCEITOS de plano de conteúdo de feed pro criador, cada um um fio que segura várias semanas de posts.
+
+REGRAS:
+- Cada conceito nasce das tendências informadas (as ESCOLHIDAS primeiro) cruzadas com a marca e o nicho. Nada genérico: o nome tem que dar vontade de usar.
+- Os 4 são diferentes entre si: um de conexão/bastidor, um de autoridade/educação, um ligado à próxima data comercial (se houver), um de série ou formato repetível.
+- "agora": 1 frase dizendo por que esse conceito faz sentido AGORA, citando a tendência, a data ou o que performou. Não invente número que não veio nos dados.
+- "usa": títulos exatos das tendências informadas que o conceito usa (1 ou 2).
+- "mix": formatos por semana, curto (ex.: "Por semana: 2 Reels · 1 carrossel").
+- "exemplos": 2 títulos de post prontos.
+- Não sugira stories: só posts de feed (reels, carrossel, foto).
+
+RESPONDA APENAS com JSON válido, sem texto antes ou depois:
+{"conceitos":[{"nome":"curto","lead":"1 frase","agora":"1 frase","usa":["título da tendência"],"mix":"Por semana: ...","exemplos":["",""]}]}`
+        userPrompt = `Nicho: ${data.nicho || 'lifestyle'}
+Pilares: ${data.pilares || '-'}
+Tendências ESCOLHIDAS: ${data.escolhidas || '-'}
+Outras tendências do momento: ${data.tendencias || '-'}
+Próximas datas: ${data.datas || '-'}
+O que mais performou: ${data.performou || '-'}
+Posts recentes (não repetir): ${data.recentes || '-'}
+${data.evitar ? `Conceitos já mostrados (proponha outros): ${data.evitar}` : ''}
+${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
+        maxTokens = 2500
         break
       }
       // ═══════════════════════════════════════════════════════════════════
@@ -1557,7 +1653,7 @@ ${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de 
 
     // Temperatura 0.2 em tudo era parte do "robotizado": o modelo escolhe
     // sempre a frase mais provável, que é a mais genérica. Criação sobe.
-    const OPS_CRIATIVAS = new Set(['generate-caption', 'refine-caption', 'repurpose-content', 'carousel-script', 'capture-scenes', 'story-plan-generate', 'autopilot-cronograma', 'cria-chat', 'onboarding-setup', 'art-brief'])
+    const OPS_CRIATIVAS = new Set(['generate-caption', 'refine-caption', 'repurpose-content', 'carousel-script', 'capture-scenes', 'story-plan-generate', 'story-escrever', 'autopilot-conceitos', 'autopilot-cronograma', 'cria-chat', 'onboarding-setup', 'art-brief'])
     const temperatura = operation === 'daily-insight' ? 0.7
       : operation === 'idea-suggestions' ? 0.85
       : OPS_CRIATIVAS.has(operation) ? 0.6
@@ -1608,7 +1704,7 @@ ${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de 
     const result = await response.json()
     let content = result.choices?.[0]?.message?.content || ''
 
-    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate' || operation === 'art-prompt' || operation === 'art-brief' || operation === 'carousel-script' || operation === 'capture-scenes') {
+    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate' || operation === 'story-escrever' || operation === 'autopilot-conceitos' || operation === 'art-prompt' || operation === 'art-brief' || operation === 'carousel-script' || operation === 'capture-scenes') {
       const extrair = (txt: string) => {
         const cleaned = String(txt).replace(/```json/gi, '').replace(/```/g, '').trim()
         const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
@@ -1638,6 +1734,7 @@ ${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de 
 
       try {
         if (parsed === undefined) throw new Error('parse')
+        if (operation === 'story-plan-generate' || operation === 'story-escrever') parsed = storiesEmPartes(parsed)
         // humanizarDeep: markdown, travessão e emoji de enfeite fora, em
         // cada string do JSON (legenda do cronograma, roteiro do story...).
         return new Response(JSON.stringify({ result: humanizarDeep(parsed) }), {

@@ -1,4 +1,6 @@
 import { useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { falaDoStory } from "@/lib/storyRoteiro";
 import { useNavigate, useParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,7 +38,22 @@ export default function PrompterGravar() {
     else navigate("/app/prompter", { replace: true });
   }, [navigate]);
 
-  if (isLoading) {
+  /* STORY (28/10/2026, mockup aba 5): o roteiro que veio do Cria Stories abre
+     no modo story do player. "Mostrar" e "Na tela" saem do post e viram
+     etiquetas; a fala já foi gravada no roteiro do Prompter. */
+  const ehStory = script?.source === "stories" && !!script.source_id;
+  const { data: partes, isLoading: carregandoPost } = useQuery({
+    queryKey: ["prompter-story-partes", script?.source_id],
+    enabled: ehStory,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await supabase.from("posts").select("script").eq("id", script!.source_id!).maybeSingle();
+      const p = falaDoStory((data as { script?: string | null } | null)?.script ?? null);
+      return { mostrar: p.mostrar || null, tela: p.tela || null };
+    },
+  });
+
+  if (isLoading || (ehStory && carregandoPost)) {
     return (
       <div className="fixed inset-0 z-[60] grid place-items-center bg-black">
         <Loader2 className="h-6 w-6 animate-spin text-white/70" />
@@ -66,5 +83,6 @@ export default function PrompterGravar() {
   } : undefined;
 
   return <PrompterPlayer title={script.title} text={script.script} onExit={exit} obterTokenVoz={obterTokenVoz}
-    onAnexar={anexar} rotuloAnexar="Mandar o vídeo pro post" />;
+    onAnexar={anexar} rotuloAnexar={ehStory ? "Mandar pro story" : "Mandar o vídeo pro post"}
+    story={ehStory ? (partes ?? { mostrar: null, tela: null }) : null} />;
 }

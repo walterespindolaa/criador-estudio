@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { AtalhosInicio } from "@/components/dashboard/AtalhosInicio";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import {
@@ -326,6 +327,10 @@ const Dashboard = () => {
         {/* O data-tour do checklist mora DENTRO do FirstStepsPanel: este painel some
             quando está completo ou dispensado, e o wrapper que existia aqui virava uma
             caixa de altura zero, que o tour recortava como uma faixa fina sobre nada. */}
+        {/* Atalhos (Walter, 28/10/2026, foco no celular): gravar story e postar,
+            logo abaixo da saudação. */}
+        <AtalhosInicio />
+
         <FirstStepsPanel />
 
         <div className="mb-4" data-tour="dash-acao">

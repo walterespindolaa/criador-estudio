@@ -308,20 +308,20 @@ export const TOURS_CRIADOR: TourConfig[] = [
     steps: [
       {
         target: '[data-tour="stories-abas"]',
-        title: "Criar e Semana",
-        body: "Criar é onde o plano nasce. Semana é o calendário dos seus stories, dia a dia: toque num story pra editar, marque como feito e arraste pra outro dia se mudar de ideia.",
+        title: "A semana é a tela",
+        body: "Em cima, o resumo da semana: quantos stories faltam gravar, quais saem pelo celular, quais esperam mídia e quais já saíram. Troque a semana nas setas.",
         placement: "bottom",
       },
       {
         target: '[data-tour="stories-config"]',
-        title: "Gere a semana de uma vez",
-        body: "Escolha quantos stories por dia, o período e a data de início, e toque em Gerar plano. A IA monta a pauta inteira no seu nicho e joga tudo na aba Semana.",
+        title: "Montar a semana com a CrIA",
+        body: "Escolha os dias, quantos stories por dia, o objetivo e as tendências que servem de base. A Cria IA escreve tudo e mostra a prévia antes de entrar no plano.",
         placement: "bottom",
       },
       {
         target: '[data-tour="stories-tendencias"]',
-        title: "Stories em alta",
-        body: "Formatos de story que estão funcionando agora, com exemplo pronto. Puxe os que combinam com você pra sua semana, ou peça pra Cria IA adaptar pro seu tom.",
+        title: "Cada story diz o próximo passo",
+        body: "Falado vai pro Prompter, com figurinha sai pelo celular com lembrete, foto ou texto pede a mídia. Toque no título pra editar, arraste pra outro dia, ou use + Novo story.",
         placement: "top",
         aiPrompt: "Me sugira 5 ideias de stories pra esta semana no meu nicho, misturando conexão, autoridade e venda.",
       },
@@ -342,14 +342,14 @@ export const TOURS_CRIADOR: TourConfig[] = [
       {
         target: '[data-tour="tend-lista"]',
         title: "O que está em alta agora",
-        body: "Formatos, temas quentes, ganchos e datas, atualizados pela curadoria do CRIA. Em cada card, o botão Gerar ideia pede pra Cria IA adaptar a tendência pro seu tom e nicho.",
+        body: "Formatos, temas, ganchos, datas e formatos de story, atualizados pela curadoria do CRIA. Marque as que servem pra você: a barra de baixo leva de uma vez pra Cria IA, pros stories ou pro Cria Plano.",
         placement: "bottom",
         aiPrompt: "Me dê 3 ideias de post baseadas nas tendências atuais do meu nicho, no tom da minha marca.",
       },
       {
         target: '[data-tour="tend-plano"]',
-        title: "Tendência vira cronograma",
-        body: "O Cria Plano usa esse banco como contexto quando monta sua semana ou seu mês. Você surfa a onda sem esforço extra.",
+        title: "Filtre pro que importa",
+        body: "Filtre por tipo, só pro seu nicho ou só stories. Em cima ficam a mais usada no Cria, a próxima data comercial e o gancho em alta.",
         placement: "top",
       },
     ],
@@ -702,7 +702,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
     route: "/app/autopilot",
     title: "Cria Plano",
     valueProp:
-      "A IA monta sua semana ou seu mês de conteúdo de uma vez, usando seu brandbook, seus pilares e o que já performou. Você revisa, ajusta e manda tudo pro kanban.",
+      "A Cria IA propõe conceitos a partir das tendências e da sua marca, e monta o mês em cima do conceito que você escolher. Você revisa post por post e manda pro Criando.",
     benefits: [
       "Semana ou mês de pauta em um clique",
       "Posts já com data, hora e legenda",
@@ -711,21 +711,20 @@ export const TOURS_CRIADOR: TourConfig[] = [
     steps: [
       {
         target: '[data-tour="plano-config"]',
-        title: "Configure o plano",
-        body: "Período, quantidade de posts, plataforma e horários (dos seus dados ou recomendados pro nicho). Dá pra somar um foco, tipo vender ou engajar, e um contexto, tipo um lançamento.",
-        placement: "right",
-        mobileBody: "Período, quantidade de posts, plataforma e horários (dos seus dados ou recomendados pro nicho). Some um foco, tipo vender ou engajar, e um contexto, tipo um lançamento.",
+        title: "Escolha o conceito",
+        body: "A Cria IA leu as tendências marcadas e a sua marca e propôs 4 conceitos, cada um com o porquê de agora e exemplos de post. Escolha um, misture dois ou escreva o seu.",
+        placement: "bottom",
       },
       {
         target: '[data-tour="plano-gerar"]',
-        title: "Gerar cronograma",
-        body: "Um clique e a IA monta a pauta inteira no seu tom. Preencheu o Brandbook? O resultado sobe de nível.",
+        title: "Ritmo e montar",
+        body: "Período, posts por semana, onde e horário. Toque em Montar o plano: a Cria IA escreve a pauta inteira no seu tom. Preencheu o Brandbook? O resultado sobe de nível.",
         placement: "bottom",
       },
       {
         target: '[data-tour="plano-resultado"]',
         title: "Revise e envie",
-        body: "Cada card é um post sugerido: edite título, legenda, data e hora ali mesmo. Desmarque o que não quiser e toque em Enviar. Tudo cai no seu kanban Criando, pronto pra produzir.",
+        body: "Semana a semana, cada post vem com gancho e porquê. Trocar ideia refaz um post sem mexer no resto, Editar ajusta texto e data, e o quadrado tira do plano. O botão de baixo manda pro Criando.",
         placement: "top",
       },
     ],

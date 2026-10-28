@@ -12,14 +12,9 @@ import type { StoryPost, StorySlot } from "@/hooks/useStoryPlan";
 
 export type AcaoStory = "gravar" | "midia" | "conferir" | "postei" | "tentar" | "desfazer";
 
-export function storyFalado(formato: string | null | undefined): boolean {
-  const f = (formato ?? "").toLowerCase();
-  if (storyComFigurinha(f)) return false;
-  return /(talking|bastidor|tutorial|pov|video|sequencia|depoimento|vlog|rotina)/.test(f);
-}
-export function storyComFigurinha(formato: string | null | undefined): boolean {
-  return /(enquete|caixinha|quiz|contagem|sticker|figurinha|link|dm|pergunta|teste|votac)/.test((formato ?? "").toLowerCase());
-}
+/* Tipo do story: regra única em src/lib/storyRoteiro.ts (28/10/2026). */
+import { storyFalado, storyComFigurinha } from "@/lib/storyRoteiro";
+export { storyFalado, storyComFigurinha };
 
 type Estado = {
   selo: string; seloCls: string;

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { callAIContextBuilder } from "@/lib/ai/claude";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
+import { storyDaIA, type StoryIA, type TipoStory } from "@/lib/storyRoteiro";
 
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
@@ -163,7 +164,7 @@ export function useGenerateStoryPlan() {
         data: { perDia: params.perDia, dias: params.dias, nicho: params.nicho, tendencias: params.tendencias },
       });
       const stories: Array<Record<string, unknown>> = Array.isArray(res?.stories) ? res.stories : [];
-      if (stories.length === 0) throw new Error("A IA não retornou stories. Tente de novo.");
+      if (stories.length === 0) throw new Error("A Cria IA não devolveu stories. Tente de novo.");
 
       const rows = stories.map((s, i) => {
         const dayOffset = Math.max(0, Math.min(params.dias - 1, Number(s.dia) || 0));
@@ -256,7 +257,7 @@ export function useAddStorySlot() {
       weekdays?: number[];   // 0=Dom .. 6=Sáb, quando recorrente
       weeks?: number;        // repetir por N semanas
       source?: string;
-    }): Promise<number> => {
+    }): Promise<{ n: number; primeiro: { id: string; post_id: string | null } | null }> => {
       if (!userId) throw new Error("Not authenticated");
 
       // Datas: recorrência (dias da semana × N semanas) ou dia único.
@@ -291,14 +292,80 @@ export function useAddStorySlot() {
         source: input.source ?? (input.weekdays?.length ? "manual-recorrente" : "manual"),
         sort_order: 99 + i,
       }));
+      const { data: criados, error } = await sbFrom("story_slots").insert(rows as never).select("id");
+      if (error) throw error;
+      /* O post do story nasce num gatilho DEPOIS do insert (story_slot_cria_post):
+         relê o primeiro pra devolver o post_id, que o "Salvar e gravar" usa. */
+      const idPrimeiro = (criados as unknown as Array<{ id: string }> | null)?.[0]?.id;
+      let primeiro: { id: string; post_id: string | null } | null = null;
+      if (idPrimeiro) {
+        const { data: lido } = await sbFrom("story_slots").select("id,post_id").eq("id", idPrimeiro).maybeSingle();
+        primeiro = (lido as unknown as { id: string; post_id: string | null } | null) ?? { id: idPrimeiro, post_id: null };
+      }
+      return { n: rows.length, primeiro };
+    },
+    onSuccess: ({ n }) => {
+      qc.invalidateQueries({ queryKey: ["story-slots"] });
+      qc.invalidateQueries({ queryKey: ["story-posts"] });
+      toast.success(n > 1 ? `${n} stories adicionados.` : "Story adicionado.");
+    },
+    onError: () => toast.error("Não consegui adicionar."),
+  });
+}
+
+/* ── MONTAR A SEMANA COM A CRIA IA (28/10/2026, mockup aba 2) ─────────────────
+   Gera primeiro uma PRÉVIA (nada é gravado): a pessoa vê como vai ficar e só
+   depois coloca na semana. Não apaga o que já existe nos dias escolhidos. */
+export type StoryPrevia = { date: string; slot_time: string | null; title: string; script: string; format: string; tipo: TipoStory };
+
+export function useGerarStoriesPrevia() {
+  return useMutation({
+    mutationFn: async (params: {
+      datas: string[]; perDia: number; nicho?: string; objetivo?: string; escolhidas?: string; tendencias?: string;
+    }): Promise<StoryPrevia[]> => {
+      const nomes = params.datas.map((iso) => new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit" })).join(", ");
+      const res = await callAIContextBuilder({
+        operation: "story-plan-generate",
+        data: {
+          perDia: params.perDia, dias: params.datas.length, diasNomes: nomes, nicho: params.nicho,
+          objetivo: params.objetivo, escolhidas: params.escolhidas, tendencias: params.tendencias,
+        },
+      });
+      const stories: StoryIA[] = Array.isArray(res?.stories) ? res.stories : [];
+      if (stories.length === 0) throw new Error("A Cria IA não devolveu stories. Tente de novo.");
+      return stories.map((st) => {
+        const i = Math.max(0, Math.min(params.datas.length - 1, Number(st.dia) || 0));
+        const horario = typeof st.horario === "string" && /^\d{1,2}:\d{2}/.test(st.horario) ? st.horario.slice(0, 5) : null;
+        const x = storyDaIA(st);
+        return { date: params.datas[i], slot_time: horario, title: x.title, script: x.script, format: x.format, tipo: x.tipo };
+      }).sort((a, b) => (a.date + (a.slot_time ?? "")).localeCompare(b.date + (b.slot_time ?? "")));
+    },
+    onError: (e) => {
+      const m = e instanceof Error ? e.message : "";
+      toast.error(/upgrade/i.test(m) ? "Montar a semana com a Cria IA é do plano Studio." : m && !/non-2xx/i.test(m) ? m : "Não consegui montar agora. Tente de novo.");
+    },
+  });
+}
+
+export function useSalvarStoriesPrevia() {
+  const { activeAccountId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (lista: StoryPrevia[]): Promise<number> => {
+      if (!activeAccountId) throw new Error("Not authenticated");
+      const rows = lista.map((p, i) => ({
+        user_id: activeAccountId, slot_date: p.date, slot_time: p.slot_time, title: p.title, script: p.script || null,
+        format: p.format, status: "pendente", sort_order: i, source: "ia",
+      }));
       const { error } = await sbFrom("story_slots").insert(rows as never);
       if (error) throw error;
       return rows.length;
     },
     onSuccess: (n) => {
       qc.invalidateQueries({ queryKey: ["story-slots"] });
-      toast.success(n > 1 ? `${n} stories adicionados.` : "Story adicionado.");
+      qc.invalidateQueries({ queryKey: ["story-posts"] });
+      toast.success(`${n} stories na semana.`);
     },
-    onError: () => toast.error("Não consegui adicionar."),
+    onError: () => toast.error("Não consegui colocar na semana."),
   });
 }

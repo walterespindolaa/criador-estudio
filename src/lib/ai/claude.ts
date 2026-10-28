@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { contaAtivaAtual } from "@/lib/conta-ativa";
 
-export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption' | 'score-caption' | 'client-report-insight' | 'insights-reading' | 'autopilot-cronograma' | 'trend-bank-refresh' | 'admin-system-insight' | 'story-trend-refresh' | 'story-plan-generate' | 'art-prompt' | 'art-brief' | 'brandbook-read' | 'relatorio-read' | 'hot-news' | 'carousel-script' | 'capture-scenes';
+export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption' | 'score-caption' | 'client-report-insight' | 'insights-reading' | 'autopilot-cronograma' | 'trend-bank-refresh' | 'admin-system-insight' | 'story-trend-refresh' | 'story-plan-generate' | 'art-prompt' | 'art-brief' | 'brandbook-read' | 'relatorio-read' | 'hot-news' | 'carousel-script' | 'capture-scenes' | 'story-escrever' | 'autopilot-conceitos';
 
 export interface AutopilotPost {
   titulo: string;
@@ -10,6 +10,20 @@ export interface AutopilotPost {
   pilar: string;
   legenda: string;
   porque: string;
+  /** Cria Plano v2 (28/10/2026): primeira frase pronta, conceito e semana. */
+  gancho?: string;
+  conceito?: string;
+  semana?: number;
+}
+
+/** Conceito do Cria Plano: o fio do plano, a partir das tendências e da marca. */
+export interface ConceitoPlano {
+  nome: string;
+  lead: string;
+  agora: string;
+  usa: string[];
+  mix: string;
+  exemplos: string[];
 }
 
 export const generateAutopilot = async (
@@ -17,9 +31,11 @@ export const generateAutopilot = async (
     nicho?: string; plataformas?: string; pilares?: string; foco?: string;
     qtd?: number; periodo?: string; performou?: string; recentes?: string;
     tendencias?: string; brandContext?: string; contexto?: string; publico?: string;
+    conceitos?: string; semanas?: number;
+    trocar?: { formato?: string; conceito?: string; titulo?: string; outros?: string };
   },
   userId?: string
-): Promise<{ posts: AutopilotPost[] }> => {
+): Promise<{ posts: AutopilotPost[]; resumo?: { titulo?: string; fio?: string } }> => {
   return callAIContextBuilder({ userId, operation: 'autopilot-cronograma', data: params });
 };
 

@@ -41,9 +41,21 @@ type Props = {
    *  pode ir direto pro post (28/10/2026). Devolve quando terminou de subir. */
   onAnexar?: (file: File) => Promise<void>;
   rotuloAnexar?: string;
+  /** MODO STORY (28/10/2026, mockup aba 5): roteiro do Cria Stories. Abre com
+   *  a câmera ligada, texto num card perto da lente, botão de esconder o texto,
+   *  velocidade em "x" e as etiquetas "Mostrar" / "Na tela" fora da rolagem.
+   *  Ajustes salvos à parte: os do Prompter de Reels não mudam. */
+  story?: { mostrar?: string | null; tela?: string | null } | null;
 };
 
 const SETTINGS_KEY = "cria_prompter_settings_v1";
+const SETTINGS_KEY_STORY = "cria_prompter_story_v1";
+/* Padrão do modo story: card escuro no topo (perto da lente), 3 linhas de
+   letra grande, sem linha-guia, por voz. A pessoa ajusta e fica salvo. */
+const DEF_STORY = {
+  font: 30, line: 1.22, weight: 600, cardOn: true, cardPos: "top", cardH: 24, cardW: 94, cardColor: "branco",
+  readPos: 30, guide: false, mode: "voice", dimRead: false, readOnly: false, textoOff: false,
+};
 
 /* Cache de SESSÃO do microfone (escopo de módulo: sobrevive a entrar/sair do
    player). No iOS a permissão vale pela sessão da página se a gente solta a
@@ -94,6 +106,17 @@ const CSS = `
 .cpr.cardMode.cardWhite #prompterText .w.em{color:var(--accent);}
 .cpr.cardMode #camDim{display:none!important;}
 .cpr.cardMode #prompterText{max-width:none;}
+.cpr.story #speedPill{top:calc(env(safe-area-inset-top) + 66px);transform:none;flex-direction:row;padding:3px 5px;gap:4px;border-radius:999px;}
+.cpr.story #speedPill button{width:34px;height:34px;font-size:18px;}
+.cpr.story #speedPill b{font-size:13px;min-width:36px;text-align:center;}
+.cpr.story #speedPill small{display:none;}
+.cpr #storyCtl{position:absolute;top:calc(env(safe-area-inset-top) + 66px);left:calc(10px + env(safe-area-inset-left));z-index:11;display:flex;gap:6px;}
+.cpr #storyCtl button{height:40px;padding:0 13px;border-radius:999px;border:1px solid var(--glassBrd);background:rgba(10,10,10,.55);color:var(--cream);font:700 12px var(--fontBody,inherit);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);cursor:pointer;}
+.cpr #storyCtl button[aria-pressed="false"]{background:rgba(245,243,231,.2);}
+.cpr.semTexto #prompterViewport,.cpr.semTexto #guide{visibility:hidden;}
+.cpr #storyChips{position:absolute;left:calc(12px + env(safe-area-inset-left));right:12px;bottom:calc(env(safe-area-inset-bottom) + 118px);z-index:9;display:flex;flex-direction:column;align-items:flex-start;gap:6px;pointer-events:none;}
+.cpr #storyChips span{background:rgba(10,10,10,.6);border-radius:999px;padding:7px 12px;font-size:12.5px;font-weight:600;color:var(--cream);max-width:100%;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+.cpr #storyChips b{color:#FFB39A;margin-right:6px;}
 .cpr #topBar,.cpr #bottomBar{position:absolute;left:0;right:0;z-index:10;display:flex;align-items:center;transition:opacity .3s;}
 .cpr #topBar{top:calc(6px + env(safe-area-inset-top));left:8px;right:8px;gap:6px;padding:7px 9px;background:rgba(10,10,10,.6);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glassBrd);border-radius:26px;justify-content:space-between;}
 .cpr #quickBar .pbtn{background:transparent;border:none;}
@@ -329,7 +352,7 @@ const DEF = {
   readOnly: false,
 };
 
-function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rotuloAnexar }: Props) {
+function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rotuloAnexar, story }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const exitRef = useRef(onExit);
   exitRef.current = onExit;
@@ -337,6 +360,7 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
   tokenVozRef.current = obterTokenVoz;
   const anexarRef = useRef(onAnexar);
   anexarRef.current = onAnexar;
+  const ehStory = !!story;
 
   useEffect(() => {
     const root = rootRef.current!;
@@ -344,18 +368,21 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
     const $$ = (s: string) => root.querySelectorAll(s) as NodeListOf<any>;
 
     /* ---------- settings (localStorage; roteiros ficam no Supabase) ---------- */
-    let S: any = { ...DEF };
+    const KEY = ehStory ? SETTINGS_KEY_STORY : SETTINGS_KEY;
+    const BASE = ehStory ? { ...DEF, ...DEF_STORY, layoutV: LAYOUT_V } : DEF;
+    let S: any = { ...BASE };
     try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
-      if (raw) S = Object.assign({}, DEF, JSON.parse(raw));
+      const raw = localStorage.getItem(KEY);
+      if (raw) S = Object.assign({}, BASE, JSON.parse(raw));
     } catch { /* primeiro uso */ }
+    root.classList.toggle("story", ehStory);
     /* Quem já usava salvou line 1.5 sem saber (o save grava tudo). Na troca
        de layout aplica o novo padrão uma vez; depois vale o que a pessoa ajustar. */
     if (S.layoutV !== LAYOUT_V) {
       S.line = DEF.line; S.weight = DEF.weight; S.align = DEF.align; S.layoutV = LAYOUT_V;
-      try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(S)); } catch { /* quota */ }
+      try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { /* quota */ }
     }
-    const save = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(S)); } catch { /* quota */ } };
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { /* quota */ } };
 
     /* ---------- ícones ---------- */
     function refreshIcons(scope?: Element) {
@@ -468,6 +495,8 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
     document.addEventListener("visibilitychange", onVis);
 
     /* ---------- settings apply ---------- */
+    /* Velocidade: em palavras/min no Prompter; no story, em "x" (140 = 1,0x). */
+    const velTxt = () => (ehStory ? (S.wpm / 140).toFixed(1).replace(".", ",") + "x" : String(S.wpm));
     function applySettings() {
       pt.style.fontSize = S.font + "px";
       pt.style.lineHeight = String(S.line);
@@ -488,7 +517,7 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
         vp.style.width = S.cardW + "%";
         vp.style.left = (100 - S.cardW) / 2 + "%";
         vp.style.right = "auto";
-        if (S.cardPos === "top") { vp.style.top = "calc(env(safe-area-inset-top) + 62px)"; vp.style.bottom = "auto"; }
+        if (S.cardPos === "top") { vp.style.top = `calc(env(safe-area-inset-top) + ${ehStory ? 112 : 62}px)`; vp.style.bottom = "auto"; }
         else if (S.cardPos === "bottom") { vp.style.top = "auto"; vp.style.bottom = "calc(env(safe-area-inset-bottom) + 92px)"; }
         else { vp.style.top = (100 - S.cardH) / 2 + "%"; vp.style.bottom = "auto"; }
       } else {
@@ -510,7 +539,7 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
       $("#vFont").textContent = S.font + "px"; $("#vMargin").textContent = S.margin + "%";
       $("#vLine").textContent = Number(S.line).toFixed(2).replace(".", ",") + "x";
       $("#vWpm").textContent = S.wpm + " palavras/min"; $("#vCount").textContent = S.count ? S.count + "s" : "sem";
-      $("#spVal").textContent = String(S.wpm);
+      $("#spVal").textContent = velTxt();
       /* fonte/margem mudam quantos pixels tem cada palavra: recalcula a
          velocidade pra manter as MESMAS palavras por minuto. */
       requestAnimationFrame(() => { if (!disposed) { computeSpeed(); updateProgress(); } });
@@ -586,7 +615,9 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
       stopPlay();
       $("#voiceStatus").style.display = m === "voice" ? "inline" : "none";
       $("#playBtn").style.display = m === "manual" ? "none" : "inline-flex";
-      $("#speedPill").style.display = m === "auto" ? "flex" : "none"; /* mockup 25/10: velocidade só na Rolagem */
+      /* mockup 25/10: velocidade só na Rolagem. No story também no Por voz:
+         ali ela é o quanto o texto anda enquanto a pessoa fala (28/10). */
+      $("#speedPill").style.display = m === "auto" || (ehStory && m === "voice") ? "flex" : "none";
       refreshIcons($("#modeBtn"));
       if (S.readOnly && m === "manual") readHideBars(); else showBars();
       chipModo(); syncQuick();
@@ -758,11 +789,11 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
       S.wpm = Math.max(60, Math.min(300, (S.wpm || 140) + delta)); save();
       const sl = $("#sWpm"); if (sl) sl.value = S.wpm;
       $("#vWpm").textContent = S.wpm + " palavras/min";
-      $("#spVal").textContent = String(S.wpm);
+      $("#spVal").textContent = velTxt();
       computeSpeed(); updateProgress(); chipModo();
     }
-    $("#spUp").onclick = (e: Event) => { e.stopPropagation(); mudarVelocidade(10); };
-    $("#spDown").onclick = (e: Event) => { e.stopPropagation(); mudarVelocidade(-10); };
+    $("#spUp").onclick = (e: Event) => { e.stopPropagation(); mudarVelocidade(ehStory ? 14 : 10); };
+    $("#spDown").onclick = (e: Event) => { e.stopPropagation(); mudarVelocidade(ehStory ? -14 : -10); };
 
     /* ROLAGEM COM SUBPIXEL (25/10/2026). O navegador arredonda scrollTop: somar
        0,45 px por quadro dava ZERO (texto parado) e 0,51 virava 1 px (o dobro).
@@ -1722,6 +1753,23 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
     }
     $("#prExit").onclick = () => sair();
 
+    /* ---------- modo story: texto ligado/desligado, virar câmera ---------- */
+    function aplicarTexto() {
+      root.classList.toggle("semTexto", !!S.textoOff);
+      const b = $("#textoBtn");
+      if (b) { b.textContent = S.textoOff ? "Texto: desligado" : "Texto: ligado"; b.setAttribute("aria-pressed", String(!S.textoOff)); }
+    }
+    if (ehStory) {
+      $("#textoBtn").onclick = (e: Event) => { e.stopPropagation(); S.textoOff = !S.textoOff; save(); aplicarTexto(); };
+      $("#virarBtn").onclick = (e: Event) => {
+        e.stopPropagation();
+        S.camFace = S.camFace === "user" ? "environment" : "user"; save();
+        const sel = $("#sCamFace"); if (sel) sel.value = S.camFace;
+        if (camStream) startCamera(true);
+      };
+      aplicarTexto();
+    }
+
     /* ---------- boot ---------- */
     buildText();
     initSettingsUI();
@@ -1743,6 +1791,8 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
       else if (de.webkitRequestFullscreen) de.webkitRequestFullscreen();
     } catch { /* ok */ }
     progT = 0; updateProgress();
+    /* story abre com a câmera ligada (o aviso de permissão aparece na 1ª vez) */
+    if (ehStory) setTimeout(() => { if (!disposed && !camStream) void camFlow(); }, 250);
     /* o layout só assenta depois do 1º quadro: sem isso o "faltam" nascia vazio */
     setTimeout(() => { if (!disposed) { progT = 0; updateProgress(); } }, 350);
     try {
@@ -1778,7 +1828,7 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
       <div id="speedPill" aria-label="Velocidade">
         <button id="spUp" aria-label="Mais rápido">+</button>
         <b id="spVal">140</b>
-        <small>pal/min</small>
+        <small>{ehStory ? "ritmo" : "pal/min"}</small>
         <button id="spDown" aria-label="Mais devagar">−</button>
       </div>
 
@@ -1795,6 +1845,18 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
         <span id="voiceStatus" style={{ display: "none" }}><span id="voiceDot" /></span>
       </div>
       <div id="modeChip"><i id="modeChipDot" /><span id="modeChipTxt" /></div>
+      {ehStory && (
+        <div id="storyCtl">
+          <button type="button" id="textoBtn" aria-pressed="true">Texto: ligado</button>
+          <button type="button" id="virarBtn">Virar câmera</button>
+        </div>
+      )}
+      {ehStory && (story?.mostrar || story?.tela) && (
+        <div id="storyChips">
+          {story?.mostrar && <span><b>Mostrar</b>{story.mostrar}</span>}
+          {story?.tela && <span><b>Na tela</b>{story.tela} · coloque no app</span>}
+        </div>
+      )}
 
       <div id="bottomBar">
         <button className="pbtn" id="modeBtn"><i data-lucide="mic" /><small>Por voz</small></button>

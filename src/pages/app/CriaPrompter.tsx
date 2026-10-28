@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { falaDoStory } from "@/lib/storyRoteiro";
 import { useNavigate } from "react-router-dom";
 import {
   Check, ChevronDown, Clapperboard, FolderOpen, Kanban, Loader2, Mic, MoreHorizontal, Pencil, Play, Plus, Sparkles, Trash2, Undo2, Video,
@@ -44,12 +45,16 @@ const SOURCE_LABEL: Record<PrompterScript["source"], string | null> = {
 /* O que se FALA no vídeo: hook (destacado no prompter) + roteiro + CTA.
    Legenda fica de fora é texto escrito, não falado. */
 function postToSpokenScript(p: Post): string {
+  /* Story (28/10/2026): o roteiro vem em partes; só a fala é lida. */
+  if (ehStory(p)) return falaDoStory(p.script).fala;
   const parts: string[] = [];
   if (p.hook?.trim()) parts.push("**" + p.hook.trim() + "**");
   if (p.script?.trim()) parts.push(p.script.trim());
   if (p.cta?.trim()) parts.push(p.cta.trim());
   return parts.join("\n\n");
 }
+
+const ehStory = (p: Post) => ["story", "stories"].includes((p.format ?? "").toLowerCase());
 
 type EditorState = { open: false } | { open: true; id?: string; title: string; script: string; folder: string };
 
@@ -89,7 +94,7 @@ export default function CriaPrompter() {
     }
     setSendingId(p.id);
     sendPost.mutate(
-      { postId: p.id, title: p.title, script: spoken },
+      { postId: p.id, title: p.title, script: spoken, source: ehStory(p) ? "stories" : "criando" },
       { onSuccess: (id) => gravar(id), onSettled: () => setSendingId(null) },
     );
   };
