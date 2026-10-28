@@ -6,7 +6,7 @@
 //                  os posts com publicação automática cujo horário chegou.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
-import { publicarPost } from '../_shared/ig-publicar.ts';
+import { lerCota, publicarPost } from '../_shared/ig-publicar.ts';
 
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req);
@@ -42,6 +42,20 @@ Deno.serve(async (req) => {
         { onConflict: 'job' } as never,
       );
       return json({ ok: true, feitos });
+    }
+
+    // ── Cota de 24 h da conta do post (painel de publicar) ──
+    if (typeof body?.cota_post_id === 'string') {
+      const jwtC = (req.headers.get('Authorization') || '').replace('Bearer ', '');
+      const { data: uc } = await admin.auth.getUser(jwtC);
+      if (!uc?.user?.id) return json({ error: 'unauthorized' }, 401);
+      const { data: cx, error: cxErr } = await admin.rpc('ig_conexao_do_post', { _post_id: body.cota_post_id, _actor: uc.user.id });
+      if (cxErr) return json({ error: cxErr.message }, 403);
+      const conn = (cx as Array<{ connection_id: string | null; ig_user_id: string | null; pode_publicar: boolean }> | null)?.[0];
+      if (!conn?.connection_id || !conn.ig_user_id) return json({ cota: null });
+      const { data: tk } = await admin.from('social_connections').select('access_token').eq('id', conn.connection_id).maybeSingle();
+      const token = (tk as { access_token?: string } | null)?.access_token;
+      return json({ cota: token ? await lerCota(conn.ig_user_id, token) : null });
     }
 
     // ── Publicar agora (clique) ──

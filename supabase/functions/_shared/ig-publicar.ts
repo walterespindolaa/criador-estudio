@@ -10,7 +10,7 @@
 // tempo da função, a próxima tentativa continua dele em vez de recomeçar.
 // ═══════════════════════════════════════════════════════════════════════════
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
-import { prepararMidiaDoPost } from './ig-midia.ts';
+import { normalizarFormato, prepararMidiaDoPost } from './ig-midia.ts';
 
 const API = 'https://graph.instagram.com/v23.0';
 const MAX_TENTATIVAS_ROBO = 3;
@@ -75,6 +75,80 @@ function validarLegenda(caption: string): string | null {
   return null;
 }
 
+// ── Opções do Instagram (ig_opcoes, gravadas por ig_salvar_opcoes) ─────────
+type Opcoes = {
+  collaborators: string[];
+  user_tags: Array<{ username: string; x: number; y: number }>;
+  alt_text: string | null;
+  trial: 'MANUAL' | 'SS_PERFORMANCE' | null;
+  share_to_feed: boolean | null;
+  musica_celular: boolean;
+};
+
+export function lerOpcoes(bruto: unknown): Opcoes {
+  const o = (bruto && typeof bruto === 'object' ? bruto : {}) as Record<string, unknown>;
+  const nomes = (v: unknown) => (Array.isArray(v) ? v : []).map((x) => String(x).replace(/^@/, '').trim()).filter((x) => /^[A-Za-z0-9._]{1,30}$/.test(x));
+  const tags = (Array.isArray(o.user_tags) ? o.user_tags : []).map((t) => {
+    const r = (t ?? {}) as Record<string, unknown>;
+    const n = (v: unknown) => Math.min(1, Math.max(0, Number(v ?? 0.5) || 0));
+    return { username: String(r.username ?? '').replace(/^@/, '').trim(), x: n(r.x), y: n(r.y) };
+  }).filter((t) => /^[A-Za-z0-9._]{1,30}$/.test(t.username));
+  const trial = o.trial === 'MANUAL' || o.trial === 'SS_PERFORMANCE' ? o.trial : null;
+  return {
+    collaborators: nomes(o.collaborators).slice(0, 3),
+    user_tags: tags.slice(0, 20),
+    alt_text: typeof o.alt_text === 'string' && o.alt_text.trim() ? o.alt_text.trim().slice(0, 1000) : null,
+    trial,
+    share_to_feed: typeof o.share_to_feed === 'boolean' ? o.share_to_feed : null,
+    musica_celular: o.musica_celular === true,
+  };
+}
+
+// O que cada formato aceita (documentação da Meta, IG User Media, 10/2026):
+// collab só em foto, Reels e carrossel (não em story); marcação com x/y em
+// imagem, sem posição em vídeo/Reels, opcional em story.
+export function extrasDe(op: Opcoes, formato: 'foto' | 'reels' | 'carrossel' | 'story'): Record<string, string> {
+  const e: Record<string, string> = {};
+  if (formato !== 'story' && op.collaborators.length) e.collaborators = JSON.stringify(op.collaborators);
+  if (op.user_tags.length) {
+    const tags = formato === 'reels'
+      ? op.user_tags.map((t) => ({ username: t.username }))
+      : op.user_tags;
+    e.user_tags = JSON.stringify(tags);
+  }
+  return e;
+}
+
+// Cria o contêiner com collab/marcação; se a Meta recusar SÓ por causa deles
+// (perfil que não existe, privado...), publica sem e avisa. Erro de conta,
+// permissão ou limite não é engolido.
+async function criarComExtras(igUser: string, token: string, corpo: Record<string, string>,
+  extras: Record<string, string | undefined>, contexto: string, avisos: string[]) {
+  const limpos = Object.fromEntries(Object.entries(extras).filter(([, v]) => !!v)) as Record<string, string>;
+  if (!Object.keys(limpos).length) return await chamar('POST', `${igUser}/media`, corpo, token, contexto);
+  try {
+    return await chamar('POST', `${igUser}/media`, { ...corpo, ...limpos }, token, contexto);
+  } catch (e) {
+    if (e instanceof ErroIg && (e.tokenMorto || /Limite do Instagram/.test(e.message))) throw e;
+    const c = await chamar('POST', `${igUser}/media`, corpo, token, contexto);
+    const quais = [limpos.collaborators ? 'o convite de collab' : '', limpos.user_tags ? 'as marcações' : ''].filter(Boolean).join(' e ');
+    avisos.push(`Saiu sem ${quais}: o Instagram recusou (${e instanceof Error ? e.message.slice(0, 120) : 'erro'}).`);
+    return c;
+  }
+}
+
+// Cota de publicações pela API nas últimas 24 h. Falhou a leitura: segue.
+export async function lerCota(igUser: string, token: string): Promise<{ usado: number; total: number } | null> {
+  try {
+    const qs = new URLSearchParams({ fields: 'quota_usage,config', access_token: token });
+    const r = await fetch(`${API}/${igUser}/content_publishing_limit?${qs}`);
+    const j = await r.json().catch(() => ({}));
+    const d = (j?.data ?? [])[0];
+    if (!r.ok || !d) return null;
+    return { usado: Number(d.quota_usage ?? 0), total: Number(d.config?.quota_total ?? 0) };
+  } catch { return null; }
+}
+
 async function avisar(admin: SupabaseClient, userIds: string[], titulo: string, descricao: string, link: string) {
   const unicos = [...new Set(userIds.filter(Boolean))];
   if (!unicos.length) return;
@@ -98,10 +172,10 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
   }
 
   const { data: post } = await admin.from('posts')
-    .select('id, user_id, title, caption, format, external_client_id, approval_status, auto_publish, publish_attempts, ig_container_id, publish_by')
+    .select('id, user_id, title, caption, format, external_client_id, approval_status, auto_publish, publish_attempts, ig_container_id, publish_by, publish_sem_aprovacao_motivo, ig_opcoes')
     .eq('id', postId).maybeSingle();
   const p = post as Record<string, unknown> | null;
-  const linkPost = p?.external_client_id ? '/socialmidia/cria-post' : '/app/criando';
+  const linkPost = p?.external_client_id ? '/socialmidia/criapost/publicacoes' : '/app/criando';
   const avisados = [String(p?.user_id ?? ''), actor];
 
   // Resultado que devolve o post pra fila (tentar depois) ou marca erro.
@@ -129,9 +203,15 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
   try {
     if (!p) throw new ErroIg('Post não encontrado.', false, true);
 
-    // Regra do ciclo 0: Cria Post só sai depois de aprovado pelo cliente.
-    if (p.external_client_id && p.approval_status !== 'aprovado') {
+    // Cria Post sai depois de aprovado pelo cliente OU liberado na conferência
+    // com motivo ("publicar sem aprovação", Walter 28/10/2026).
+    if (p.external_client_id && p.approval_status !== 'aprovado' && !p.publish_sem_aprovacao_motivo) {
       return await falhar(new ErroIg('O cliente ainda não aprovou este post.', false, true), false);
+    }
+    const op = lerOpcoes(p.ig_opcoes);
+    // Música da biblioteca do Instagram não sai pela API: este post é pelo celular.
+    if (op.musica_celular) {
+      return await falhar(new ErroIg('Este post vai usar música do Instagram, que não sai pela API. Publique pelo celular.', false, true), false);
     }
 
     // Conexão e token (o token nunca sai do servidor).
@@ -149,6 +229,14 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
     const caption = String(p.caption ?? '').trim();
     const erroLegenda = validarLegenda(caption);
     if (erroLegenda) throw new ErroIg(erroLegenda, false, true);
+
+    // Cota de 24 h da conta (a Meta recusa no media_publish; melhor saber antes).
+    const cota = await lerCota(igUser, token);
+    if (cota && cota.total > 0 && cota.usado >= cota.total) {
+      throw new ErroIg(`Esta conta já publicou ${cota.usado} de ${cota.total} posts pela API nas últimas 24 horas. O Cria tenta de novo mais tarde.`);
+    }
+    // O que a Meta deixou de fora ao criar (collab ou marcação recusados).
+    const avisos: string[] = [];
 
     // Contêiner de uma tentativa anterior (vídeo que demorou): continua dele.
     let containerId = (p.ig_container_id as string | null) ?? null;
@@ -181,10 +269,19 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
         return { ...r, erros: prep.erros };
       }
 
-      const formato = prep.formato === 'video' ? 'reels' : prep.formato;
+      const formato = normalizarFormato(prep.formato);
       const itens = prep.itens;
       if (formato === 'foto') {
-        const c = await chamar('POST', `${igUser}/media`, { image_url: itens[0].url!, caption }, token, 'Criando a publicação');
+        const corpo: Record<string, string> = { image_url: itens[0].url!, caption };
+        if (op.alt_text) corpo.alt_text = op.alt_text;
+        const c = await criarComExtras(igUser, token, corpo, extrasDe(op, 'foto'), 'Criando a publicação', avisos);
+        containerId = String(c.id);
+      } else if (formato === 'story') {
+        const it = itens[0];
+        const corpo: Record<string, string> = it.tipo === 'VIDEO'
+          ? { media_type: 'STORIES', video_url: it.url! }
+          : { media_type: 'STORIES', image_url: it.url! };
+        const c = await criarComExtras(igUser, token, corpo, extrasDe(op, 'story'), 'Criando o story', avisos);
         containerId = String(c.id);
       } else if (formato === 'reels') {
         /* CAPA DO REELS (28/09/2026): a que a social mídia escolheu no Cria
@@ -195,32 +292,44 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
           const { data: cv, error: cvErr } = await admin.from('posts').select('cover_url').eq('id', postId).maybeSingle();
           if (!cvErr) capa = String((cv as { cover_url?: string | null } | null)?.cover_url ?? '').trim() || null;
         }
-        const corpo: Record<string, string> = { media_type: 'REELS', video_url: itens[0].url!, caption, share_to_feed: 'true' };
+        const corpo: Record<string, string> = { media_type: 'REELS', video_url: itens[0].url!, caption,
+          share_to_feed: op.share_to_feed === false ? 'false' : 'true' };
         if (capa && /^https:\/\//i.test(capa)) corpo.cover_url = capa;
+        // Reels de teste: mostra primeiro pra quem não segue (Walter, 28/10/2026).
+        if (op.trial) corpo.trial_params = JSON.stringify({ graduation_strategy: op.trial });
         let c: Record<string, unknown>;
         try {
-          c = await chamar('POST', `${igUser}/media`, corpo, token, 'Criando o Reels');
+          c = await criarComExtras(igUser, token, corpo, extrasDe(op, 'reels'), 'Criando o Reels', avisos);
         } catch (e) {
           // Capa recusada não pode derrubar a publicação: tenta de novo sem ela.
           if (!corpo.cover_url) throw e;
           delete corpo.cover_url;
-          c = await chamar('POST', `${igUser}/media`, corpo, token, 'Criando o Reels');
+          c = await criarComExtras(igUser, token, corpo, extrasDe(op, 'reels'), 'Criando o Reels', avisos);
         }
         containerId = String(c.id);
       } else {
         // Carrossel: um contêiner por mídia, na ordem da tira, depois o pai.
         const filhos: string[] = [];
-        for (const it of itens) {
+        // Texto alternativo e marcação vão na PRIMEIRA imagem (é o que a social
+        // mídia vê na tela de opções); collab vai no carrossel inteiro.
+        const primeiraImagem = itens.findIndex((i) => i.tipo !== 'VIDEO');
+        for (let k = 0; k < itens.length; k++) {
+          const it = itens[k];
           const params: Record<string, string> = it.tipo === 'VIDEO'
             ? { media_type: 'VIDEO', video_url: it.url!, is_carousel_item: 'true' }
             : { image_url: it.url!, is_carousel_item: 'true' };
-          const c = await chamar('POST', `${igUser}/media`, params, token, `Criando a mídia ${it.posicao + 1} do carrossel`);
+          const ehPrimeira = k === primeiraImagem;
+          if (ehPrimeira && op.alt_text) params.alt_text = op.alt_text;
+          const c = await criarComExtras(igUser, token, params,
+            ehPrimeira ? { user_tags: extrasDe(op, 'foto').user_tags } : {},
+            `Criando a mídia ${it.posicao + 1} do carrossel`, avisos);
           filhos.push(String(c.id));
         }
         for (const f of filhos) {
           if (!(await esperarContainer(f, token, limite))) throw new ErroIg('O Instagram demorou demais processando o carrossel. Tente de novo.');
         }
-        const pai = await chamar('POST', `${igUser}/media`, { media_type: 'CAROUSEL', children: filhos.join(','), caption }, token, 'Montando o carrossel');
+        const pai = await criarComExtras(igUser, token, { media_type: 'CAROUSEL', children: filhos.join(','), caption },
+          { collaborators: extrasDe(op, 'carrossel').collaborators }, 'Montando o carrossel', avisos);
         containerId = String(pai.id);
       }
       await admin.from('posts').update({ ig_container_id: containerId } as never).eq('id', postId);
@@ -237,6 +346,11 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
     // Publica.
     const pub = await chamar('POST', `${igUser}/media_publish`, { creation_id: containerId! }, token, 'Publicando');
     const mediaId = String(pub.id);
+    // Saiu, mas a Meta deixou algo de fora (config_issue): vira aviso no card.
+    const ci = String(pub.config_issue ?? '');
+    if (ci === 'CAPTION_NOT_ATTACHED') avisos.push('A legenda não entrou. Abra o post no Instagram e cole a legenda pela edição.');
+    else if (ci === 'USER_TAGGING_FAILURE') avisos.push('As marcações de pessoas não entraram. Marque pelo app do Instagram.');
+    else if (ci) avisos.push(`O Instagram publicou com um aviso (${ci.slice(0, 60)}).`);
     let permalink: string | null = null;
     try {
       const info = await chamar('GET', mediaId, { fields: 'permalink' }, token, 'Buscando o link');
@@ -247,12 +361,14 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
     const agora = new Date().toISOString();
     await admin.from('posts').update({
       publish_status: 'publicado', publish_error: null, ig_media_id: mediaId, ig_permalink: permalink,
+      publish_aviso: avisos.length ? avisos.join(' ') : null,
       ig_container_id: null, published_at: agora, status: 'publicado',
       ...(p.external_client_id ? { approval_status: 'postado' } : {}),
     } as never).eq('id', postId);
 
-    await avisar(admin, avisados, 'Publicado no Instagram',
-      `"${String(p.title ?? 'Post').slice(0, 60)}" saiu no Instagram.`, permalink ?? linkPost);
+    await avisar(admin, avisados, avisos.length ? 'Publicado, mas com aviso' : 'Publicado no Instagram',
+      `"${String(p.title ?? 'Post').slice(0, 60)}" saiu no Instagram.${avisos.length ? ' ' + avisos.join(' ') : ''}`,
+      avisos.length ? linkPost : (permalink ?? linkPost));
 
     // Vídeo do Drive copiado pro Bunny só pra publicar: apaga a cópia.
     await limparCopiasBunny(admin, postId);

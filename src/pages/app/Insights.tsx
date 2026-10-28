@@ -21,7 +21,10 @@ import { useActiveAccount } from "@/contexts/AccountContext";
 import { usePillars } from "@/hooks/usePillars";
 import { AudienceBreakdown } from "@/components/insights/AudienceBreakdown";
 import { StoriesSummary } from "@/components/insights/StoriesSummary";
-import { ReelsRanking } from "@/components/insights/ReelsRanking";
+import { RankingGanchos } from "@/components/insights/RankingGanchos";
+import { SeguidoresPorPost } from "@/components/insights/SeguidoresPorPost";
+import { TabelaPosts } from "@/components/insights/TabelaPosts";
+import type { MidiaIg } from "@/components/insights/ganchos";
 import { ContentCrossAnalysis } from "@/components/insights/ContentCrossAnalysis";
 import { SugestoesVinculo } from "@/components/insights/SugestoesVinculo";
 import { computeFollowersDelta, formatMediaLabel, interacoesDe, type CrossItem } from "@/components/insights/insightsUtils";
@@ -382,9 +385,14 @@ export default function Insights() {
       <SugestoesVinculo conta={ownerId} />
       <ContentCrossAnalysis items={crossItems} dicaLigar />
 
-      {/* REELS por retenção (tempo médio assistido) */}
-      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">Reels · retenção</h2>
-      <ReelsRanking media={media} />
+      {/* GANCHOS (28/10/2026): quem segurou nos 3 primeiros segundos e por
+          quanto tempo, na mesma idade (24 h ou 7 dias); e o que trouxe seguidor. */}
+      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">Ganchos e seguidores</h2>
+      <div className="space-y-3">
+        <RankingGanchos media={media as unknown as MidiaIg[]}
+          ganchoDe={(x) => (x as unknown as { posts?: { hook?: string | null } | null }).posts?.hook ?? null} />
+        <SeguidoresPorPost media={media as unknown as MidiaIg[]} diario={daily} />
+      </div>
 
       {/* PERFIL DE AUDIÊNCIA */}
       <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">Quem te acompanha</h2>
@@ -393,6 +401,10 @@ export default function Insights() {
       {/* STORIES */}
       <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">Stories</h2>
       <StoriesSummary stories={stories} />
+
+      {/* TODOS OS POSTS (28/10/2026): tabela ordenável com reposts e ações no perfil */}
+      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">Números de cada post</h2>
+      <TabelaPosts media={media as unknown as MidiaIg[]} />
 
       {/* posts + vínculo manual */}
       <div className="flex items-center justify-between gap-3 flex-wrap mt-7 mb-3">

@@ -254,10 +254,18 @@ async function copiarDriveParaBunny(fileId: string, titulo: string): Promise<str
   return v.guid as string;
 }
 
+// "Carrossel", "Reels", "video", "stories" (o banco tem de tudo) → nome único.
+export function normalizarFormato(formato: string | null | undefined): string {
+  const f = String(formato ?? '').trim().toLowerCase();
+  if (f === 'video') return 'reels';
+  if (f === 'stories') return 'story';
+  return f;
+}
+
 // ── Regras do Instagram por formato ──
 function validar(formato: string, itens: ItemPreparado[]): string[] {
   const erros: string[] = [];
-  const f = formato === 'video' ? 'reels' : formato;
+  const f = normalizarFormato(formato);
   const prontos = itens.filter((i) => i.estado === 'pronto');
   const proporcaoRuim = (i: ItemPreparado) => {
     if (i.tipo !== 'IMAGE' || !i.largura || !i.altura) return false;
@@ -265,8 +273,7 @@ function validar(formato: string, itens: ItemPreparado[]): string[] {
     return r < 0.79 || r > 1.92; // 4:5 até 1.91:1 (com folga de arredondamento)
   };
 
-  if (f === 'story') erros.push('Stories ficam pra uma próxima versão. Por enquanto: foto, carrossel e Reels.');
-  else if (!['foto', 'carrossel', 'reels'].includes(f)) erros.push(`O formato "${formato}" não é publicado no Instagram pelo Cria.`);
+  if (!['foto', 'carrossel', 'reels', 'story'].includes(f)) erros.push(`O formato "${formato}" não é publicado no Instagram pelo Cria.`);
   if (itens.length === 0) erros.push('O post não tem mídia.');
 
   if (f === 'foto') {
@@ -279,9 +286,16 @@ function validar(formato: string, itens: ItemPreparado[]): string[] {
     if (v && v.tipo !== 'VIDEO') erros.push('Reels precisa ser um vídeo.');
     if (v?.duracao && (v.duracao < 3 || v.duracao > 900)) erros.push('Reels precisa ter entre 3 segundos e 15 minutos.');
   }
+  if (f === 'story') {
+    // Story pela API (Meta, 10/2026): 1 imagem ou 1 vídeo de 3 a 60 s, sem
+    // figurinha, enquete, link nem música.
+    if (itens.length !== 1) erros.push('Story pelo Cria sai com 1 mídia por vez (1 imagem ou 1 vídeo).');
+    const v = prontos[0];
+    if (v?.tipo === 'VIDEO' && v.duracao && (v.duracao < 3 || v.duracao > 60)) erros.push('Vídeo de story precisa ter entre 3 e 60 segundos. Corte ou publique como Reels.');
+  }
   if (f === 'carrossel') {
     if (itens.length < 2) erros.push('Carrossel precisa de pelo menos 2 mídias.');
-    if (itens.length > 10) erros.push(`Carrossel aceita até 10 mídias (este tem ${itens.length}).`);
+    if (itens.length > 20) erros.push(`Carrossel aceita até 20 mídias (este tem ${itens.length}).`);
     prontos.forEach((i) => {
       if (i.tipo === 'VIDEO' && i.duracao && i.duracao > 60) erros.push(`O vídeo da posição ${i.posicao + 1} passa de 60 segundos (limite no carrossel).`);
     });

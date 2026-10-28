@@ -5,6 +5,7 @@ import { ModuleGate } from "@/components/accounts/ModuleGate";
 import { ModuleHero, type SubTab } from "@/components/brand/ModuleHero";
 import { ExternalApprovalsPanel } from "@/components/accounts/ExternalApprovalsPanel";
 import { ManagerCalendar } from "@/components/accounts/ManagerCalendar";
+import { PublicacoesBoard } from "@/components/accounts/PublicacoesBoard";
 import { QuickReportCard } from "@/components/accounts/QuickReportCard";
 import { Button } from "@/components/ui/button";
 import { useMeusParceiros } from "@/hooks/useParceiro";
@@ -22,7 +23,7 @@ export default function CriaPost() {
   const navigate = useNavigate();
   const { search } = useLocation();
   const { data: parceiros = [] } = useMeusParceiros();
-  const ativa = tab === "calendario" ? "calendario" : "aprovacoes";
+  const ativa = tab === "calendario" ? "calendario" : tab === "publicacoes" ? "publicacoes" : "aprovacoes";
 
   // /criapost sem aba → cai na de aprovações (senão nenhuma aba fica marcada).
   useEffect(() => {
@@ -34,6 +35,9 @@ export default function CriaPost() {
   const tabs: SubTab[] = [
     { to: "/socialmidia/criapost/aprovacoes", label: "Aprovações" },
     { to: "/socialmidia/criapost/calendario", label: "Calendário geral" },
+    // Publicações (Walter, 28/10/2026): o que sai hoje, o que sai sozinho, o
+    // que precisa de conferência e o que já saiu, de todos os clientes.
+    { to: "/socialmidia/criapost/publicacoes", label: "Publicações" },
   ];
 
   return (
@@ -64,6 +68,8 @@ export default function CriaPost() {
           <QuickReportCard />
           <ExternalApprovalsPanel />
         </>
+      ) : ativa === "publicacoes" ? (
+        <PublicacoesBoard />
       ) : (
         <ManagerCalendar />
       )}

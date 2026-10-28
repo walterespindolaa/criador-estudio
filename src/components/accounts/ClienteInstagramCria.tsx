@@ -10,7 +10,10 @@ import { useExternalPosts } from "@/hooks/useCriaPost";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AudienceBreakdown } from "@/components/insights/AudienceBreakdown";
 import { StoriesSummary } from "@/components/insights/StoriesSummary";
-import { ReelsRanking } from "@/components/insights/ReelsRanking";
+import { RankingGanchos } from "@/components/insights/RankingGanchos";
+import { SeguidoresPorPost } from "@/components/insights/SeguidoresPorPost";
+import { TabelaPosts } from "@/components/insights/TabelaPosts";
+import type { MidiaIg } from "@/components/insights/ganchos";
 import { ContentCrossAnalysis } from "@/components/insights/ContentCrossAnalysis";
 import { SugestoesVinculo } from "@/components/insights/SugestoesVinculo";
 import { ConviteInstagramCliente } from "@/components/accounts/ConviteInstagramCliente";
@@ -324,9 +327,13 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
             </div>
           )}
 
-          {/* Reels por retenção */}
-          {media.some((mi) => mi.media_type === "REELS" || mi.media_type === "VIDEO") && (
-            <ReelsRanking media={media} />
+          {/* Ganchos e seguidores (28/10/2026, mockup aprovado) */}
+          {media.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-sm font-display font-bold text-foreground">Ganchos e seguidores</p>
+              <RankingGanchos media={media as MidiaIg[]} ganchoDe={(x) => (x.post_id ? postById[x.post_id]?.hook ?? null : null)} />
+              <SeguidoresPorPost media={media as MidiaIg[]} diario={data?.daily ?? []} />
+            </div>
           )}
 
           {/* Perfil de audiência do cliente */}
@@ -340,6 +347,9 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
             <p className="text-sm font-display font-bold text-foreground">Stories</p>
             <StoriesSummary stories={storiesPeriodo} />
           </div>
+
+          {/* Números de cada post (reposts e ações no perfil inclusos) */}
+          {media.length > 0 && <TabelaPosts media={media as MidiaIg[]} />}
 
           {/* Análise por post */}
           {media.length > 0 && (
