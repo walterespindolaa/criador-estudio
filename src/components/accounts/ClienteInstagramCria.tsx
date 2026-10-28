@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { Instagram, Heart, MessageCircle, Eye, Bookmark, Users, Play, Image as ImageIcon, Images, ExternalLink, RefreshCw, Zap, Link2, Layers, TrendingUp, X, Check, Loader2, CalendarDays } from "lucide-react";
+import { Instagram, Heart, MessageCircle, Eye, Bookmark, Users, Play, Image as ImageIcon, Images, ExternalLink, RefreshCw, Zap, Link2, Layers, TrendingUp, X, Check, Loader2, CalendarDays, Unplug } from "lucide-react";
 import { toast } from "sonner";
 import {
   useCriaClientInstagram, useLinkClientMedia, type CriaClientIgMedia, type CriaClientIgDaily,
-  useManagedClientInstagram, useLinkManagedMedia, useSyncManagedInstagram,
+  useManagedClientInstagram, useLinkManagedMedia, useSyncManagedInstagram, useDesconectarInstagramCliente,
 } from "@/hooks/useManagerClientCria";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { connectInstagram } from "@/hooks/useSocialInsights";
 import { useExternalPosts } from "@/hooks/useCriaPost";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -48,6 +49,17 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
   const link = gerenciado ? linkManaged : linkCria;
   const syncManaged = useSyncManagedInstagram(gerenciado ? crmClientId : null);
   const [linkingMedia, setLinkingMedia] = useState<CriaClientIgMedia | null>(null);
+  // Desconectar (28/10/2026): só a conexão que a agência fez pelo link. O
+  // Instagram do Cria próprio do cliente continua sendo só dele.
+  const desconectar = useDesconectarInstagramCliente(gerenciado ? crmClientId : null);
+  const [confirmDesconectar, setConfirmDesconectar] = useState(false);
+  const desconectarAgora = async () => {
+    try {
+      await desconectar.mutateAsync();
+      toast.success("Instagram do cliente desconectado.");
+      setConfirmDesconectar(false);
+    } catch (e) { toast.error((e as Error)?.message ?? "Não foi possível desconectar."); }
+  };
 
   const atualizarAgora = async () => {
     try {
@@ -231,7 +243,31 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
             {syncManaged.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Atualizar
           </button>
         )}
+        {gerenciado && (
+          <button onClick={() => setConfirmDesconectar(true)} disabled={desconectar.isPending}
+            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-display font-bold text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50 shrink-0">
+            <Unplug className="h-3.5 w-3.5" /> Desconectar
+          </button>
+        )}
       </div>
+
+      <AlertDialog open={confirmDesconectar} onOpenChange={(o) => { if (!desconectar.isPending) setConfirmDesconectar(o); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desconectar o Instagram de {clientName ?? "este cliente"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Os números já puxados ficam salvos e voltam quando a conta for conectada de novo. Enquanto estiver desconectado, os posts agendados deste cliente não saem pelo Cria. Pra reconectar, é só mandar o link de novo pro cliente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={desconectar.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction disabled={desconectar.isPending} onClick={(e) => { e.preventDefault(); void desconectarAgora(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {desconectar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Desconectar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Filtro de período: recorta KPIs, formatos, destaques, stories e a
           análise por post. */}

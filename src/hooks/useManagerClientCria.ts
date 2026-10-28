@@ -174,6 +174,30 @@ export function useSyncManagedInstagram(crmClientId: string | null | undefined) 
   });
 }
 
+// Social mídia desconecta o Instagram do cliente que foi conectado pela agência
+// (link de convite). Vai por RPC porque a conexão fica em nome de quem clicou
+// (dono ou membro da equipe) e a RLS só deixa cada um apagar a própria linha.
+// Os números já puxados ficam salvos e voltam quando o cliente conectar de novo.
+export function useDesconectarInstagramCliente(crmClientId: string | null | undefined) {
+  const { agencyOwnerId } = useActiveAccount();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!crmClientId) throw new Error("Cliente não encontrado.");
+      const { error } = await (supabase.rpc as unknown as (fn: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: { message?: string } | null }>)(
+        "ig_desconectar_cliente",
+        { _crm_client_id: crmClientId },
+      );
+      if (error) throw new Error(error.message ?? "Não foi possível desconectar.");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["managed-client-instagram", agencyOwnerId, crmClientId] });
+      qc.invalidateQueries({ queryKey: ["social-connection-client", crmClientId] });
+      qc.invalidateQueries({ queryKey: ["ig-conexao-post"] });
+    },
+  });
+}
+
 // Gestor vincula (ou desvincula, postId null) uma mídia do IG do cliente a um
 // post que ele fez no Cria Post. O resultado real volta pro post no banco.
 export function useLinkClientMedia(criaOwnerId: string | null | undefined) {
