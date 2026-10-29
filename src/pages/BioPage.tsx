@@ -13,6 +13,10 @@ import { BlocoPublico } from "@/components/bio/BlocoPublico";
 import { FormParceria } from "@/components/bio/FormParceria";
 import { SiteBio, PaginaItem, type MarcaSite, type ItemLite } from "@/components/bio/SiteBio";
 import { lerSocial, type SocialPublico } from "@/lib/bioCriadora";
+import { carregarFontes, TODAS_AS_FONTES_EXTRAS } from "@/lib/fontesSobDemanda";
+
+// Fontes da bio / media kit: carregam só quando esta tela abre.
+carregarFontes(TODAS_AS_FONTES_EXTRAS);
 
 type BgType = "color" | "gradient" | "image";
 type BgImageSize = "cover" | "contain";

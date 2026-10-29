@@ -68,7 +68,7 @@ export function SettingsEquipe() {
   const flyerItems: { icon: typeof Send; color: string; bg: string; title: string; desc: string }[] = [
     { icon: Send, color: "#EA4918", bg: "rgba(234,73,24,.12)", title: "Posts prontos, você só aprova", desc: "Ela monta cada post e te manda aprovar por link. Chega de ida e volta no WhatsApp." },
     { icon: CalendarRange, color: "#0061EE", bg: "rgba(0,97,238,.12)", title: "Cronograma do mês", desc: "Um calendário público com tudo que vai sair, e as datas comemorativas do seu nicho." },
-    { icon: PenLine, color: "#01A652", bg: "rgba(1,166,82,.12)", title: "Legendas e roteiros com IA", desc: "Textos no seu tom de voz, reescritos, encurtados ou expandidos em um clique." },
+    { icon: PenLine, color: "#01A652", bg: "rgba(1,166,82,.12)", title: "Legendas e roteiros com a Cria IA", desc: "Textos no seu tom de voz, reescritos, encurtados ou expandidos em um clique." },
     { icon: TrendingUp, color: "#7C90F0", bg: "rgba(124,144,240,.14)", title: "Tendências e concorrentes", desc: "Ela acompanha o que está bombando e o que os concorrentes fazem pra te dar ideias." },
     { icon: BarChart3, color: "#FF77B9", bg: "rgba(255,119,185,.14)", title: "Relatório do resultado", desc: "No fim do mês, um relatório bonito do que foi publicado e do que performou." },
     { icon: Sparkles, color: "#FFCF03", bg: "rgba(255,207,3,.18)", title: "Tudo num lugar só", desc: "Ela trabalha dentro do seu Cria. Você acompanha sem perder o controle da sua conta." },

@@ -342,7 +342,7 @@ export function NovoClienteDialog({ open, onOpenChange }: { open: boolean; onOpe
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <CartaoAtalho ligado={atalhos.has("brandbook")} travadoEm={temGestao ? null : "Cria Gestão"}
                   onClick={() => (temGestao ? alternar("brandbook") : abrirModulo("crm"))} Icon={FileText}
-                  fundo="bg-orange-100 dark:bg-orange-500/15" cor="text-orange-600" titulo="Tenho o brandbook" texto="Envie o PDF. A IA lê e você confere antes de salvar." />
+                  fundo="bg-orange-100 dark:bg-orange-500/15" cor="text-orange-600" titulo="Tenho o brandbook" texto="Envie o PDF. A Cria IA lê e você confere antes de salvar." />
                 <CartaoAtalho ligado={atalhos.has("link")} travadoEm={temGestao ? null : "Cria Gestão"}
                   onClick={() => (temGestao ? alternar("link") : abrirModulo("crm"))} Icon={Link2}
                   fundo="bg-emerald-100 dark:bg-emerald-500/15" cor="text-emerald-600" titulo="Cliente preenche" texto="Gera o link de cadastro: dados, marca e acessos." />

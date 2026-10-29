@@ -114,7 +114,7 @@ export function RelatorioImport({ onSalvar }: { onSalvar: (r: RelatorioSalvar) =
       setEtapa("parado");
       const msg = e instanceof Error ? e.message : String(e);
       toast.error(/quota_exceeded/i.test(msg)
-        ? "Você usou todas as gerações de IA deste mês."
+        ? "Você usou todas as gerações da Cria IA deste mês."
         : msg && !/non-2xx/i.test(msg) ? msg : "Não consegui ler o relatório. Tente de novo.");
     }
   };

@@ -103,7 +103,7 @@ export function BrandbookDoCrmEditavel({ clientId, nomeCliente }: { clientId: st
               precisa saber é o que ISSO faz por ela. */}
           <p className="text-sm font-display font-semibold text-foreground">A direção da marca deste cliente</p>
           <p className="text-xs font-body text-muted-foreground mt-0.5 leading-relaxed">
-            É daqui que sai o tom, os pilares e a persona de tudo que você escreve pra ele, e é isto que a IA lê
+            É daqui que sai o tom, os pilares e a persona de tudo que você escreve pra ele, e é isto que a Cria IA lê
             quando gera ideia, legenda e prompt de arte. Quanto mais completo, menos genérico sai. Edite direto nos
             campos: salva sozinho.
           </p>

@@ -205,7 +205,7 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
           <ul className="mt-7 flex flex-col gap-3 text-[17px] text-[#3D3A33]">
             {(accountType === "manager"
               ? ["Seus clientes, agenda e aprovações num lugar só", "Portal de aprovação com a marca de cada cliente", "A base é grátis pra sempre. Módulo, só se usar"]
-              : ["Suas ideias, roteiros e calendário num lugar só", "IA que escreve no SEU tom de voz", "Insights reais do Instagram, sem achismo"]).map((b) => (
+              : ["Suas ideias, roteiros e calendário num lugar só", "Cria IA que escreve no SEU tom de voz", "Insights reais do Instagram, sem achismo"]).map((b) => (
               <li key={b} className="flex items-center gap-3">
                 <span className={cn("grid h-7 w-7 shrink-0 place-items-center bg-[#01A652]", BLOB_A)}><Check className="h-4 w-4 text-white" strokeWidth={3} /></span>
                 {b}

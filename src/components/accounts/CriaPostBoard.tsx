@@ -948,7 +948,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
           {/* data-tour="rel-card": alvo do passo do relatório no tour do cockpit. */}
           <div data-tour="rel-card" className="rounded-2xl border border-border bg-card p-6 text-center">
             <p className="text-sm font-body text-foreground font-medium mb-1">Relatório mensal do cliente</p>
-            <p className="text-xs text-muted-foreground font-body mb-4">Produção, desempenho do Instagram e análise da IA, pronto pra enviar em PDF.</p>
+            <p className="text-xs text-muted-foreground font-body mb-4">Produção, desempenho do Instagram e análise da Cria IA, pronto pra enviar em PDF.</p>
             <Button onClick={() => setReportOpen(true)}><FileText className="h-4 w-4 mr-1.5" /> Abrir relatório</Button>
           </div>
           {/* As notas que a social mídia escreveu em cada período, acessíveis sem gerar o PDF. */}

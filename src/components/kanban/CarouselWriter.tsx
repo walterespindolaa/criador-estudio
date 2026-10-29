@@ -101,13 +101,13 @@ export function CarouselWriter({
 
   const gerar = async () => {
     if (!titulo.trim()) {
-      toast.error("Escreva o título do post primeiro, é dele que a IA parte.");
+      toast.error("Escreva o título do post primeiro, é dele que a Cria IA parte.");
       return;
     }
     if (temTexto) {
       const ok = await confirmar({
         titulo: `Reescrever as ${palavra}?`,
-        descricao: "Você já escreveu texto aqui. A IA vai substituir tudo, e isso consome 1 geração da sua cota.",
+        descricao: "Você já escreveu texto aqui. A Cria IA vai substituir tudo, e isso consome 1 geração da sua cota.",
         acao: "Reescrever",
       });
       if (!ok) return;
@@ -129,7 +129,7 @@ export function CarouselWriter({
       })) as { hook?: string; cta?: string; laminas?: { n: number; texto: string }[] };
 
       const laminas = r?.laminas ?? [];
-      if (laminas.length === 0) throw new Error("A IA não devolveu nada. Tente de novo.");
+      if (laminas.length === 0) throw new Error("A Cria IA não devolveu nada. Tente de novo.");
 
       if (unify) {
         // Carrossel: sem separar slide a slide. Junta as páginas e cola o CTA
@@ -163,7 +163,7 @@ export function CarouselWriter({
       const msg = e instanceof Error ? e.message : String(e);
       toast.error(
         /quota_exceeded/i.test(msg)
-          ? "Você usou todas as gerações de IA deste mês."
+          ? "Você usou todas as gerações da Cria IA deste mês."
           : msg && !/non-2xx/i.test(msg) ? msg : "Não consegui escrever agora. Tente de novo.",
       );
     } finally {
@@ -186,11 +186,11 @@ export function CarouselWriter({
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-display text-[13.5px] font-bold text-foreground leading-tight">
-            Não sabe o que escrever? A IA escreve as {palavra} pra você
+            Não sabe o que escrever? A Cria IA escreve as {palavra} pra você
           </p>
           {aberto && (
             <p className="text-[12px] font-body text-muted-foreground leading-snug">
-              A IA escreve as {palavra}, o gancho e o CTA, no tom da sua marca. Você edita depois.
+              A Cria IA escreve as {palavra}, o gancho e o CTA, no tom da sua marca. Você edita depois.
             </p>
           )}
         </div>

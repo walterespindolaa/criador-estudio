@@ -45,13 +45,13 @@ export function ClientContentWriter({ crmClientId, clienteNome, titulo, formato,
 
   const gerar = async () => {
     if (!titulo.trim()) {
-      toast.error("Escreva o título do post primeiro, é dele que a IA parte.");
+      toast.error("Escreva o título do post primeiro, é dele que a Cria IA parte.");
       return;
     }
     if (valor.trim()) {
       const ok = await confirmar({
         titulo: "Reescrever o conteúdo?",
-        descricao: "Já existe texto aqui. A IA vai substituir, e isso consome 1 geração da cota da sua conta.",
+        descricao: "Já existe texto aqui. A Cria IA vai substituir, e isso consome 1 geração da cota da sua conta.",
         acao: "Reescrever",
       });
       if (!ok) return;
@@ -73,7 +73,7 @@ export function ClientContentWriter({ crmClientId, clienteNome, titulo, formato,
       })) as { laminas?: { n: number; texto: string }[] };
 
       const laminas = r?.laminas ?? [];
-      if (laminas.length === 0) throw new Error("A IA não devolveu nada. Tente de novo.");
+      if (laminas.length === 0) throw new Error("A Cria IA não devolveu nada. Tente de novo.");
 
       // O post do cliente não tem lâminas separadas (é um campo só). Então elas
       // entram numeradas que é exatamente como o cliente lê na aprovação.
@@ -82,8 +82,8 @@ export function ClientContentWriter({ crmClientId, clienteNome, titulo, formato,
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       toast.error(
-        /quota_exceeded/i.test(msg) ? "A cota de IA da sua conta acabou este mês."
-        : /no_access/i.test(msg) ? "Sua conta não tem cota de IA. Ative um módulo."
+        /quota_exceeded/i.test(msg) ? "A cota da Cria IA da sua conta acabou este mês."
+        : /no_access/i.test(msg) ? "Sua conta não tem cota da Cria IA. Ative um módulo."
         : msg && !/non-2xx/i.test(msg) ? msg
         : "Não consegui escrever agora. Tente de novo.",
       );
@@ -100,7 +100,7 @@ export function ClientContentWriter({ crmClientId, clienteNome, titulo, formato,
         </span>
         <p className="text-[12.5px] font-body text-foreground leading-snug">
           {temMarca ? (
-            <>A IA escreve as {palavra} <b className="font-display">no tom de {clienteNome}</b>, a partir do título.</>
+            <>A Cria IA escreve as {palavra} <b className="font-display">no tom de {clienteNome}</b>, a partir do título.</>
           ) : (
             <>
               <b className="font-display">{clienteNome} ainda não tem brandbook.</b>{" "}

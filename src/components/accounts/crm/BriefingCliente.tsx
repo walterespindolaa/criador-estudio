@@ -282,7 +282,7 @@ export function BriefingCliente({
 
           <div className="rounded-xl border border-border bg-card p-3.5">
             <p className="flex items-center gap-1.5 text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-              <Sparkles className="h-3 w-3" /> Pra IA organizar
+              <Sparkles className="h-3 w-3" /> Pra CrIA organizar
             </p>
             <p className="text-[11.5px] font-body text-muted-foreground leading-relaxed">
               Copie o texto pro ChatGPT ou pro Claude, cole junto a transcrição da reunião e traga as respostas de volta

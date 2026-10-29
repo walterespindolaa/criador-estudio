@@ -11,7 +11,7 @@ export function AiUsageBadge({ compact = false }: { compact?: boolean }) {
     return (
       <div
         className="flex items-center gap-1 text-xs text-muted-foreground"
-        title={`${used}/${quota} gerações de IA este mês`}
+        title={`${used}/${quota} gerações da Cria IA este mês`}
       >
         <Sparkles className="w-3 h-3" />
         {used}/{quota}
@@ -23,7 +23,7 @@ export function AiUsageBadge({ compact = false }: { compact?: boolean }) {
     <div className="px-3 py-2">
       <div className="flex items-center justify-between text-xs font-body mb-1.5">
         <span className="flex items-center gap-1 text-muted-foreground">
-          <Sparkles className="w-3 h-3" /> IA este mês
+          <Sparkles className="w-3 h-3" /> Cria IA este mês
         </span>
         <span className={nearLimit ? "text-red-500 font-medium" : "text-muted-foreground"}>
           {used}/{quota}

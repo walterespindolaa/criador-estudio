@@ -1403,7 +1403,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
       if (canPersistNotes) void saveNotes();
       editorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       toast.message(
-        msg && !/non-2xx/i.test(msg) ? `IA indisponível (${msg}). Gerei um resumo automático, você pode editar.` : "IA indisponível agora. Gerei um resumo automático, você pode editar.",
+        msg && !/non-2xx/i.test(msg) ? `Cria IA indisponível (${msg}). Gerei um resumo automático, você pode editar.` : "Cria IA indisponível agora. Gerei um resumo automático, você pode editar.",
       );
     } finally {
       setAiLoading(false);
@@ -1968,7 +1968,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
         onMouseUp={updateActive}
         onFocus={() => { setAnaliseFocada(true); updateActive(); }}
         onBlur={() => setAnaliseFocada(false)}
-        data-placeholder="Escreva a análise ou clique em “Gerar análise (IA)”. Este texto é editável: clique nele e digite."
+        data-placeholder="Escreva a análise ou clique em “Gerar análise (Cria IA)”. Este texto é editável: clique nele e digite."
         className="report-editor"
         style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.6, outline: "none", minHeight: 64, cursor: "text" }}
       />
@@ -2558,7 +2558,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
 
         <p className="mt-2 text-[11px] font-body text-muted-foreground">
           {linked
-            ? "✨ A análise da IA vai usar a persona e o segmento do cadastro central deste cliente."
+            ? "✨ A análise da Cria IA vai usar a persona e o segmento do cadastro central deste cliente."
             : "Dica: vincule este cliente ao cadastro central (no cadastro do Cria Post) pra uma análise mais rica."}
         </p>
 
@@ -2687,7 +2687,7 @@ export function ClientReportDialog({ open, onOpenChange, client, posts, managerN
             perto das métricas (era duplicado no rodapé e confundia). */}
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={genAI} disabled={aiLoading}>
-            {aiLoading ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Analisando…</> : <><Sparkles className="h-4 w-4 mr-1.5" /> Gerar análise (IA)</>}
+            {aiLoading ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Analisando…</> : <><Sparkles className="h-4 w-4 mr-1.5" /> Gerar análise (Cria IA)</>}
           </Button>
           <span className="text-[11px] font-body text-muted-foreground">Entra na seção “Análise do período” da prévia (e dá pra editar por lá).</span>
         </div>

@@ -9,6 +9,7 @@ import { applyTheme, applyAccent, applyHero, gradienteDaFaixa, faixaEhClara, lum
 import { applySidebarColor } from "@/lib/sidebarTheme";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { carregarFontes, carregarFontesDoTema, TODAS_AS_FONTES_EXTRAS } from "@/lib/fontesSobDemanda";
 
 const FONT_OPTIONS = [
   { key: "cria", label: "CRIA", desc: "Baloo 2 + Roboto", preview: "A cara da marca", displayFont: "'Baloo 2', sans-serif", bodyFont: "'Roboto', sans-serif" },
@@ -37,6 +38,7 @@ const SIDEBAR_COLORS = [
 
 export function applyThemeFont(fontKey: string) {
   localStorage.setItem("theme_font", fontKey);
+  carregarFontesDoTema(fontKey);
   const fonts: Record<string, { display: string; body: string }> = {
     cria: { display: "'Baloo 2', sans-serif", body: "'Roboto', sans-serif" },
     moderno: { display: "'Plus Jakarta Sans', sans-serif", body: "'Nunito Sans', sans-serif" },
@@ -92,6 +94,8 @@ export function SettingsVisual({ perfil, gravar, embutido = false }: {
   /** Dentro de um painel estreito (drawer da agência): uma coluna e salvar no rodapé do painel. */
   embutido?: boolean;
 } = {}) {
+  // As prévias dos temas mostram as fontes de todos eles.
+  useEffect(() => { carregarFontes(TODAS_AS_FONTES_EXTRAS); }, []);
   const sessao = useProfile();
   const profile = (perfil !== undefined ? perfil : sessao.profile) as TemaDoPerfil | null | undefined;
 

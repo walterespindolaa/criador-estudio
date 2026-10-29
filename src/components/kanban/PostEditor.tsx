@@ -2496,10 +2496,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     numero={2}
                     titulo="A legenda"
                     subtitulo={legendaAberta
-                      ? "Escreva aqui. A IA te ajuda a gerar, encurtar e melhorar. É o único lugar da legenda."
+                      ? "Escreva aqui. A Cria IA te ajuda a gerar, encurtar e melhorar. É o único lugar da legenda."
                       : caption.trim()
                         ? `${caption.trim().split("\n")[0].slice(0, 90)}${caption.trim().length > 90 ? "…" : ""} · ${caption.length} caracteres`
-                        : "Ainda sem legenda. Toque pra escrever ou gerar com IA."}
+                        : "Ainda sem legenda. Toque pra escrever ou gerar com a Cria IA."}
                     extra={<ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", legendaAberta && "rotate-180")} />}
                   />
                 </button>
@@ -2513,7 +2513,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   </div>
                   <textarea
                     ref={captionRef}
-                    placeholder="Escreva sua legenda aqui ou gere com IA..."
+                    placeholder="Escreva sua legenda aqui ou gere com a Cria IA..."
                     value={caption}
                     onChange={(e) => setCaption(e.target.value)}
                     className="w-full min-h-[220px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-body text-base text-foreground placeholder:text-muted-foreground/40 resize-none leading-relaxed pr-10"
@@ -2563,7 +2563,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     Abre no clique com o mesmo padrao dos blocos Tarefas/Notas/Refs.
                     Fechada ocupa uma linha; o gerar/hashtags continua funcionando aberto. */}
                 <div data-tour="editor-ia">
-                  <Recolhivel icon={Sparkles} titulo="Ajuda da IA: gerar legenda, escolher tom, hashtags">
+                  <Recolhivel icon={Sparkles} titulo="Ajuda da Cria IA: gerar legenda, escolher tom, hashtags">
                     <div className="space-y-3 pt-1">
                       <div className="space-y-1.5">
                         <Label className="text-[11px] text-muted-foreground">Tom</Label>
@@ -2716,7 +2716,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 space-y-3">
                     <div className="flex items-center gap-2 mb-1">
                       <Sparkles className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-xs font-display font-semibold text-primary">Sugestão da IA</span>
+                      <span className="text-xs font-display font-semibold text-primary">Sugestão da Cria IA</span>
                     </div>
                     <div className="bg-destructive/5 rounded-lg p-2.5">
                       <p className="text-xs font-body text-muted-foreground line-through whitespace-pre-line">
@@ -2847,7 +2847,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         )}
                         {aiHookCategories.length > 0 && (
                           <div className="mb-4">
-                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Sugestões da IA</p>
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Sugestões da Cria IA</p>
                             <div className="flex flex-wrap gap-2">
                               {aiHookCategories.map((cat) => (
                                 <span key={cat} className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/20 text-primary border border-primary/20">

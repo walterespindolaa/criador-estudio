@@ -22,7 +22,7 @@ export function AiUsageCard({ className = "" }: { className?: string }) {
           <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-pink-400 grid place-items-center">
             <Sparkles className="h-4 w-4 text-white" />
           </span>
-          Uso da IA este mês
+          Uso da Cria IA este mês
         </h3>
         <span className={`text-sm font-body font-semibold ${nearLimit ? "text-red-500" : "text-foreground"}`}>
           {used}<span className="text-muted-foreground font-normal">/{quota}</span>

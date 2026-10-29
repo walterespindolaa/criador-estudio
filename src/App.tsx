@@ -165,7 +165,7 @@ let lastQueryErrorToast = 0;
 const traduzErro = (e: unknown): string => {
   const m = e instanceof Error ? e.message : String(e ?? "");
   if (/Failed to fetch|NetworkError|network/i.test(m)) return "Sem conexão. Sua alteração não foi salva.";
-  if (/quota_exceeded/i.test(m)) return "Você atingiu o limite de IA deste mês.";
+  if (/quota_exceeded/i.test(m)) return "Você atingiu o limite da Cria IA deste mês.";
   if (/no_access|forbidden|permission|row-level/i.test(m)) return "Você não tem acesso a isso.";
   if (/duplicate|unique/i.test(m)) return "Isso já existe.";
   return m.length > 3 && m.length < 140 ? m : "Não consegui salvar. Tente de novo.";

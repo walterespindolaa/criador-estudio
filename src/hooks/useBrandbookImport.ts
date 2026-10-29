@@ -100,7 +100,7 @@ export function useBrandbookImport(alvo: "cliente" | "criador") {
       const msg = e instanceof Error ? e.message : String(e);
       toast.error(
         /quota_exceeded/i.test(msg)
-          ? "Você usou todas as gerações de IA deste mês."
+          ? "Você usou todas as gerações da Cria IA deste mês."
           : msg && !/non-2xx/i.test(msg)
             ? msg
             : "Não consegui ler o arquivo. Tente um PDF com as páginas de paleta e tipografia.",

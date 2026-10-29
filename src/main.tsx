@@ -7,6 +7,7 @@ import { installGlobalErrorLogging } from "./lib/logError";
 import { applyTheme, applyAccent, applyHero } from "./lib/applyTheme";
 import { applySidebarColor } from "./lib/sidebarTheme";
 import { estaInstalado } from "./lib/pwa";
+import { carregarFontesDoTema } from "./lib/fontesSobDemanda";
 
 /* App instalado (tela de início): liga a faixa laranja da barra de status e o
    recuo do topo. No navegador a classe não existe e nada muda. */
@@ -51,6 +52,7 @@ try {
 try {
   const savedFont = localStorage.getItem("theme_font");
   if (savedFont) {
+    carregarFontesDoTema(savedFont);
     const FONT_MAP: Record<string, { display: string; body: string }> = {
       moderno: { display: "'Plus Jakarta Sans', sans-serif", body: "'Nunito Sans', sans-serif" },
       elegante: { display: "'DM Serif Display', serif", body: "'DM Sans', sans-serif" },

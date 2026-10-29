@@ -40,7 +40,7 @@ const LINHAS: Linha[] = [
   { label: "Tendências do seu nicho", minimo: "pro" },
   { label: "Media Kit automático", minimo: "pro" },
   { label: "Relatórios, Biblioteca e Histórico", minimo: "pro" },
-  { label: "Cria Plano: a IA monta o seu mês", minimo: "studio" },
+  { label: "Cria Plano: a Cria IA monta o seu mês", minimo: "studio" },
   { label: "Cria Stories: o plano semanal de stories", minimo: "studio" },
   { label: "Collabs: parcerias, propostas e cachê", minimo: "studio" },
 ];

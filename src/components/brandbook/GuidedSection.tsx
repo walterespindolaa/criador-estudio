@@ -158,7 +158,7 @@ export function GuidedSection({
                 <pre className="text-xs font-body text-foreground whitespace-pre-wrap">{chatPrompt}</pre>
               </div>
               <p className="text-[11.5px] font-body text-muted-foreground leading-relaxed">
-                O guia é ponto de partida, não roteiro fechado. A sua essência e a sua experiência são o que a IA não tem.
+                O guia é ponto de partida, não roteiro fechado. A sua essência e a sua experiência são o que a Cria IA não tem.
               </p>
               <CopyButton text={chatPrompt} />
             </div>

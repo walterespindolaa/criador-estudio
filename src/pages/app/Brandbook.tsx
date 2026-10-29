@@ -88,7 +88,7 @@ type Aba = {
 const ABAS: readonly Aba[] = [
   {
     valor: "essencia", rotulo: "Quem você é", icone: UserRound,
-    intro: "Sua história, seu porquê e o que você acredita. É daqui que a IA tira a voz de quem fala, não só o assunto.",
+    intro: "Sua história, seu porquê e o que você acredita. É daqui que a Cria IA tira a voz de quem fala, não só o assunto.",
     secoes: ["sobre-voce", "moodboard-contexto", "visao-de-mundo"],
     cor: { ativa: "data-[state=active]:bg-amber-600 data-[state=active]:border-amber-600", badge: "bg-amber-100 text-amber-700", feito: "bg-amber-100 text-amber-800", faixa: "bg-amber-50 border-amber-100 text-amber-950/80" },
   },
@@ -106,7 +106,7 @@ const ABAS: readonly Aba[] = [
   },
   {
     valor: "persona", rotulo: "Persona", icone: Users,
-    intro: "Pra quem você fala. Cadastre a pessoa e responda o que sabe dela; o resto a IA ajuda a montar.",
+    intro: "Pra quem você fala. Cadastre a pessoa e responda o que sabe dela; o resto a Cria IA ajuda a montar.",
     secoes: ["persona-brand"],
     cor: { ativa: "data-[state=active]:bg-emerald-600 data-[state=active]:border-emerald-600", badge: "bg-emerald-100 text-emerald-700", feito: "bg-emerald-100 text-emerald-800", faixa: "bg-emerald-50 border-emerald-100 text-emerald-950/80" },
   },
@@ -620,7 +620,7 @@ const Brandbook = () => {
             </div>
             <div className="min-w-0">
               <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight whitespace-nowrap">
-                Brandbook <InfoTooltip text="O Brandbook define a identidade da sua marca. As respostas aqui personalizam todas as sugestões da IA para o seu estilo e público." side="bottom" />
+                Brandbook <InfoTooltip text="O Brandbook define a identidade da sua marca. As respostas aqui personalizam todas as sugestões da Cria IA para o seu estilo e público." side="bottom" />
               </h1>
             </div>
           </div>
@@ -657,7 +657,7 @@ const Brandbook = () => {
             atual={identidadeAtual}
             compacto
             titulo="Tem manual de marca ou moodboard em PDF? O Cria lê e preenche."
-            descricao="Até 2 arquivos, PDF ou imagem. Você revisa antes de salvar. Consome 1 geração da cota de IA."
+            descricao="Até 2 arquivos, PDF ou imagem. Você revisa antes de salvar. Consome 1 geração da cota da Cria IA."
             onSalvar={distribuirDoPdf}
           />
         </div>
@@ -866,7 +866,7 @@ const Brandbook = () => {
               {editingPersona?.id ? "Editar persona" : "Nova persona"}
             </DialogTitle>
             <DialogDescription>
-              Detalhe quem é essa pessoa. Quanto mais específico, melhor a IA personaliza as sugestões.
+              Detalhe quem é essa pessoa. Quanto mais específico, melhor a Cria IA personaliza as sugestões.
             </DialogDescription>
           </DialogHeader>
 

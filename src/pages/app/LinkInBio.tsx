@@ -72,6 +72,10 @@ import { validateUpload } from "@/lib/upload-validation";
 import { useBioLeads } from "@/hooks/useBioLeads";
 import { confirmar } from "@/components/shared/Confirm";
 import { escapeCsvCell } from "@/lib/csv";
+import { carregarFontes, TODAS_AS_FONTES_EXTRAS } from "@/lib/fontesSobDemanda";
+
+// Fontes da bio / media kit: carregam só quando esta tela abre.
+carregarFontes(TODAS_AS_FONTES_EXTRAS);
 
 type BgType = "color" | "gradient" | "image";
 type BgImageSize = "cover" | "contain";

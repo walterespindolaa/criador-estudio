@@ -91,7 +91,7 @@ const FLOW_STEPS: FlowStep[] = [
   { key: "relatorio", n: 4, label: "Resultado" },
 ];
 const FLOW_EXPLAIN: Record<string, string> = {
-  ideias: "O banco de ideias deste cliente: o que ele mesmo anotou, o que ele salvou, o que a IA tirou dos concorrentes e o que você guardou. Marque as boas como “Usar” e clique em “Criar posts”.",
+  ideias: "O banco de ideias deste cliente: o que ele mesmo anotou, o que ele salvou, o que a Cria IA tirou dos concorrentes e o que você guardou. Marque as boas como “Usar” e clique em “Criar posts”.",
   posts: "De onde vem: as ideias que você aprovou (ou posts criados na mão). Aqui você monta cada post e manda o cliente aprovar por link: Aguardando cliente → Ajuste solicitado → Aprovado.",
   cronograma: "É o calendário do mês pro cliente: datas comemorativas + link público com a visão geral do que vai sair. A aprovação post a post acontece na aba Posts.",
   relatorio: "O relatório white-label com o resultado do que foi publicado no mês.",
@@ -929,7 +929,7 @@ export default function ClienteHub() {
             <div className="w-12 h-12 rounded-2xl bg-primary/10 grid place-items-center mx-auto mb-3"><Search className="h-5 w-5 text-primary" /></div>
             <p className="text-sm font-body text-foreground font-medium">Pesquisa de concorrentes é do Cria Radar</p>
             <p className="text-xs text-muted-foreground font-body mt-1 mb-4 max-w-sm mx-auto">
-              Analise os concorrentes de {displayName || "cada cliente"} e receba ideias da IA baseadas no que funciona no nicho dele.
+              Analise os concorrentes de {displayName || "cada cliente"} e receba ideias da Cria IA baseadas no que funciona no nicho dele.
             </p>
             <Button variant="outline" asChild><Link to="/socialmidia/hubcria">Conhecer o Cria Radar</Link></Button>
           </div>

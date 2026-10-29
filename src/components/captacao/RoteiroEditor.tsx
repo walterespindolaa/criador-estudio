@@ -239,7 +239,7 @@ export function RoteiroEditor({ open, onOpenChange, inicial, salvando, onSalvar,
                   <Button type="button" size="sm" variant="outline" className="rounded-xl h-9"
                     disabled={gerando || !(v.title.trim() || v.about.trim())} onClick={() => void gerarComIA()}>
                     {gerando ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
-                    Sugerir cenas com IA
+                    Sugerir cenas com a Cria IA
                   </Button>
                 )}
               </div>

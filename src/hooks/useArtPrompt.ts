@@ -141,7 +141,7 @@ export function useArtPrompt() {
         pt: String(p.pt ?? ""),
         en: String(p.en ?? ""),
       }));
-      if (paginas.length === 0) throw new Error("A IA não devolveu nenhum prompt. Tente de novo.");
+      if (paginas.length === 0) throw new Error("A Cria IA não devolveu nenhum prompt. Tente de novo.");
 
       return {
         estilo: { descricao: String(r.estilo?.descricao ?? ""), en: String(r.estilo?.en ?? "") },
@@ -158,7 +158,7 @@ export function useArtPrompt() {
         return;
       }
       if (/quota_exceeded/i.test(msg)) {
-        toast.error("Você usou todas as gerações de IA deste mês.");
+        toast.error("Você usou todas as gerações da Cria IA deste mês.");
         return;
       }
       toast.error(msg && !/non-2xx/i.test(msg) ? msg : "Não consegui gerar agora. Tente de novo em instantes.");

@@ -585,7 +585,7 @@ export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincroni
         {arquivoAberto && (
         <div className="px-4 pb-4">
         <p className="text-[11.5px] font-body text-muted-foreground mb-3">
-          Ninguém preenche trinta campos na mão, e por isso o brandbook do cliente vive vazio e toda ideia que a IA
+          Ninguém preenche trinta campos na mão, e por isso o brandbook do cliente vive vazio e toda ideia que a Cria IA
           gera sai genérica. Se você já tem o conteúdo num PDF, mande o arquivo e confira o que a gente entendeu.
         </p>
         <div className="flex gap-1.5 flex-wrap mb-3.5">
@@ -732,7 +732,7 @@ export function BrandbookEditor({ form, setForm, isCria, aoSincronizar, sincroni
         <TabsContent value="mensagem" className="mt-4 space-y-4">
         {/* Mensagem & estratégia, é isso que alimenta as ideias de post da IA */}
         <Card icon={<Brain />} title="Mensagem & estratégia (alimenta as ideias de post)">
-          <p className="text-[11px] font-body text-muted-foreground mb-3 -mt-1">Quanto mais completo, melhores as ideias que a IA gera pra este cliente. Use o botão do microfone pra ditar por voz.</p>
+          <p className="text-[11px] font-body text-muted-foreground mb-3 -mt-1">Quanto mais completo, melhores as ideias que a Cria IA gera pra este cliente. Use o botão do microfone pra ditar por voz.</p>
           <F label="O que a marca vende (produto/serviço)"><MicTextarea value={bc.offer ?? ""} onChange={(v) => setBc("offer", v)} placeholder="Ex.: consultoria financeira pra casais; app de organização..." /></F>
           <F label="Proposta de valor / diferencial" className="mt-3"><MicTextarea value={bc.valueProp ?? ""} onChange={(v) => setBc("valueProp", v)} placeholder="Por que escolher essa marca e não outra?" /></F>
           <F label="Público-alvo" className="mt-3"><MicTextarea value={bc.audience ?? ""} onChange={(v) => setBc("audience", v)} placeholder="Pra quem é? Dores, desejos, momento de vida..." /></F>

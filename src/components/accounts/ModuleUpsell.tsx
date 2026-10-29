@@ -93,7 +93,7 @@ export const UPSELL: Record<string, UpsellDef> = {
     linha: (n) =>
       `Roteiro no bloco de notas, lista de tomadas na cabeça e ${n ? `${n} perguntando` : "o cliente perguntando"} o que vestir. A captação vira um plano: data, local, roteiro por cena e um guia em PDF pra mandar antes.`,
     ganhos: [
-      { icon: FileText, t: "Roteiro por cena", d: "Fala e direção lado a lado, na voz do cliente. A IA escreve a partir do brandbook dele, você ajusta." },
+      { icon: FileText, t: "Roteiro por cena", d: "Fala e direção lado a lado, na voz do cliente. A Cria IA escreve a partir do brandbook dele, você ajusta." },
       { icon: Clapperboard, t: "Guia de gravação em PDF", d: "Com a sua marca, pra mandar pro cliente antes do dia. Ele chega sabendo o que vai acontecer." },
       { icon: MapPin, t: "Rota do dia", d: "Quem mais gravar na mesma cidade aparece junto, pra você aproveitar a ida em vez de voltar semana que vem." },
       { icon: CalendarClock, t: "O ritmo de cada cliente", d: "O sistema aprende que ela costuma gravar dia 10 às 10h e sugere sozinho na hora de marcar." },

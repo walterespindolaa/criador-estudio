@@ -355,7 +355,7 @@ export default function OnboardingAgencia() {
         {/* ─── 4. Instagram do cliente ─── */}
         {step === 4 && (
           <motion.div key="a4" {...anim}>
-            <TituloOnb antes="Traz os números" destaque="dele pra cá." sub="Conectado, o Instagram do cliente alimenta o relatório e a IA aprende o que já funciona no perfil." />
+            <TituloOnb antes="Traz os números" destaque="dele pra cá." sub="Conectado, o Instagram do cliente alimenta o relatório e a Cria IA aprende o que já funciona no perfil." />
             <div aria-hidden="true" className="relative mt-4 h-[140px]">
               <span className="absolute left-10 top-6">
                 <Bicho cor={cor.hex} forma={FORMAS[0]} giro={-8} tamanho={92} />

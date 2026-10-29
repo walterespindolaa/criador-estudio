@@ -37,7 +37,7 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
   ]},
   // Mundo CRIA acima de Planejar (Walter, 04/09), igual ao menu do desktop.
   { title: "Mundo CRIA", items: [
-    { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, hot: true, desc: "Cronograma do mês com IA" },
+    { title: "Cria Plano", url: "/app/autopilot", icon: Wand2, hot: true, desc: "Cronograma do mês com a Cria IA" },
     { title: "Cria Stories", url: "/app/stories", icon: Clapperboard, desc: "Plano de stories da semana" },
     { title: "Tendências", url: "/app/tendencias", icon: TrendingUp, hot: true, desc: "O que tá bombando no nicho" },
     { title: "Cria Prompter", url: "/app/prompter", icon: Video, hot: true, desc: "Teleprompter com comando de voz" },

@@ -531,14 +531,18 @@ export function PainelComParceiros({ clientes }: {
      Cliente: o material pode ter só a ficha do CRM; aí acha o cliente do
      portal ligado a ela, pra cair na coluna certa. */
   const { data: materiais = [] } = useMateriaisComParceiros(parceiros.length > 0);
-  const { agencyOwnerId: agenciaAtual } = useActiveAccount();
+  const { agencyOwnerId: agenciaAtual, meuPerfil, setActiveAccount } = useActiveAccount();
   const pecas = useMemo<PecaExterna[]>(() => [
     /* Post da conta Cria do cliente (19/10/2026): não tem portal, então a
        coluna é a ficha do CRM ligada àquela conta (`crm:<id>`). */
     ...pecasDePost.map((p): PecaExterna => {
       if (p.external_client_id || !p.user_id || p.user_id === agenciaAtual) return p;
       const ficha = crmClients.find((c) => c.cria_owner_id === p.user_id);
-      return { ...p, external_client_id: ficha ? `crm:${ficha.id}` : null };
+      if (ficha) return { ...p, external_client_id: `crm:${ficha.id}` };
+      /* MEU PERFIL (Walter, 29/10/2026): post do perfil da própria agência
+         caía em "Sem cliente". Vira uma coluna com o nome do perfil. */
+      if (meuPerfil?.owner_id === p.user_id) return { ...p, external_client_id: `perfil:${p.user_id}` };
+      return { ...p, external_client_id: null };
     }),
     ...materiais.map((m): PecaExterna => ({
       id: m.id,
@@ -559,7 +563,7 @@ export function PainelComParceiros({ clientes }: {
       revisoes: m.revisoes,
       material: { tipo: m.kind },
     })),
-  ], [pecasDePost, materiais, extReais, crmClients, agenciaAtual]);
+  ], [pecasDePost, materiais, extReais, crmClients, agenciaAtual, meuPerfil]);
   /* MATERIAL DE CLIENTE SEM PORTAL (Walter, 19/10/2026). Material ligado só à
      ficha do CRM, sem portal do Cria Post (o caso de quem usa o Cria, que
      aprova por dentro), caía na coluna "Sem cliente". Agora vira uma coluna
@@ -574,8 +578,15 @@ export function PainelComParceiros({ clientes }: {
       instagram_handle: null, notes: null, active: true, created_at: "",
       color: (c as { color?: string | null }).color ?? null, crm_client_id: c.id, brand_color: null, portal_settings: null,
     }));
-    return [...(extReais as ExternalClient[]), ...daFicha];
-  }, [extReais, pecas, crmClients]);
+    const perfil: ExternalClient[] = meuPerfil && pecas.some((p) => p.external_client_id === `perfil:${meuPerfil.owner_id}`)
+      ? [{
+          id: `perfil:${meuPerfil.owner_id}`, manager_id: agenciaAtual ?? "", name: meuPerfil.name, logo_url: meuPerfil.avatar_url,
+          instagram_handle: meuPerfil.instagram_handle, notes: null, active: true, created_at: "",
+          color: null, crm_client_id: null, brand_color: null, portal_settings: null,
+        } as ExternalClient]
+      : [];
+    return [...(extReais as ExternalClient[]), ...daFicha, ...perfil];
+  }, [extReais, pecas, crmClients, meuPerfil, agenciaAtual]);
   const [materialAberto, setMaterialAberto] = useState<string | null>(null);
   const resolver = useResolverPrazoSugerido();
   // Mensagens novas por peça: o quadro mostra a bolinha em cima do card.
@@ -724,6 +735,8 @@ export function PainelComParceiros({ clientes }: {
      dezenas de cards pra achar o título de novo na mão. */
   const irAoPost = (p: PecaExterna) => {
     const ec = p.external_client_id ? extClients.find((c) => c.id === p.external_client_id) : null;
+    // Post do Meu perfil mora no Criando do perfil.
+    if (ec?.id.startsWith("perfil:")) { setActiveAccount(ec.id.slice(7)); navigate("/app/criando"); return; }
     // Post da conta do cliente mora no Kanban do cliente, não no Cria Post.
     if (ec?.crm_client_id && ec.id.startsWith("crm:")) navigate(`/socialmidia/clientes/${ec.crm_client_id}/kanban-cliente`);
     else if (ec?.crm_client_id) navigate(`/socialmidia/clientes/${ec.crm_client_id}/posts?post=${p.id}`);

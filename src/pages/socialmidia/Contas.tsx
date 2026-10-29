@@ -155,7 +155,7 @@ export default function Contas() {
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Sparkles className="h-4 w-4 text-primary" /></div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-display font-semibold text-foreground">Quer usar o cria pro seu conteúdo também?</p>
-          <p className="text-xs text-muted-foreground font-body mt-0.5">Crie uma conta de criadora pra você (com e-mail PF) e ganhe ideias, calendário e IA.</p>
+          <p className="text-xs text-muted-foreground font-body mt-0.5">Crie uma conta de criadora pra você (com e-mail PF) e ganhe ideias, calendário e a Cria IA.</p>
         </div>
         <Button size="sm" onClick={() => setSelfSubOpen(true)} className="shrink-0">Assinar pra mim</Button>
       </div>

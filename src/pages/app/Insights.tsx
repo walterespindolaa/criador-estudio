@@ -366,7 +366,7 @@ export default function Insights() {
       {media.length > 0 && (
         <>
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3 flex items-center gap-2">
-            O que mais gerou crescimento <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-full">IA</span>
+            O que mais gerou crescimento <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Cria IA</span>
           </h2>
           <div className="grid sm:grid-cols-3 gap-3">
             <Driver icon={Eye} t={t("insights.topReach")} big={byReach[0]?.caption?.slice(0, 40) ?? "-"} s={`${fmt(m(byReach[0], "reach"))} de alcance`} permalink={byReach[0]?.permalink} />

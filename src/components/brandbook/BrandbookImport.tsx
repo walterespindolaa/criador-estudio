@@ -154,7 +154,7 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
               {titulo ?? "Tem o brandbook em PDF? A gente lê."}
             </p>
             <p className="text-[11.5px] font-body text-muted-foreground">
-              {descricao ?? "PDF ou imagem, até 2 arquivos. Consome 1 geração da cota de IA."}
+              {descricao ?? "PDF ou imagem, até 2 arquivos. Consome 1 geração da cota da Cria IA."}
             </p>
           </div>
           {entrada}
@@ -191,7 +191,7 @@ export function BrandbookImport({ alvo, campos = CAMPOS_CLIENTE, atual, onSalvar
         </Button>
 
         <p className="text-[11.5px] font-body text-muted-foreground mt-3">
-          PDF ou imagem · até 2 arquivos · até 10 MB cada · consome 1 geração da cota de IA
+          PDF ou imagem · até 2 arquivos · até 10 MB cada · consome 1 geração da cota da Cria IA
         </p>
       </div>
       )}

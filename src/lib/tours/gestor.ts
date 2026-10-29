@@ -65,7 +65,7 @@ export const TOURS_GESTOR: TourConfig[] = [
       "Cada cliente tem seu hub: brandbook, conteúdo, aprovações, contratos e financeiro. Troque de contexto em 1 clique sem se perder.",
     benefits: [
       "Tudo de cada cliente num lugar só",
-      "Brandbook por cliente = IA no tom certo",
+      "Brandbook por cliente = Cria IA no tom certo",
       "Histórico completo da relação",
     ],
     steps: [
@@ -203,7 +203,7 @@ export const TOURS_GESTOR: TourConfig[] = [
         target: '[data-tour="rel-card"]',
         openFirst: '[data-tour="cli-sub-relatorio"]',
         title: "O relatório que fecha o mês",
-        body: "Daqui sai o relatório do cliente: o funil completo da produção com os Publicados como número principal, a comparação contra o período anterior e o destaque do período. Vira um PDF com análise da IA, pronto pra enviar e provar o seu trabalho.",
+        body: "Daqui sai o relatório do cliente: o funil completo da produção com os Publicados como número principal, a comparação contra o período anterior e o destaque do período. Vira um PDF com análise da Cria IA, pronto pra enviar e provar o seu trabalho.",
         mobileBody: "Daqui sai o relatório do cliente: o funil da produção com os Publicados como número principal, comparação contra o período anterior e o destaque do período. Vira um PDF pronto pra enviar.",
         placement: "bottom",
       },
@@ -222,7 +222,7 @@ export const TOURS_GESTOR: TourConfig[] = [
         target: '[data-tour="cli-sub-ideias"]',
         openFirst: '[data-tour="cli-nav-post"]',
         title: "O banco de ideias dele",
-        body: "Toda produção começa aqui: o que você anota, o que o cliente escreveu na conta dele, o que ele salvou e o que a IA tirou dos concorrentes. É o primeiro passo do Cria Post, porque ideia boa vira post.",
+        body: "Toda produção começa aqui: o que você anota, o que o cliente escreveu na conta dele, o que ele salvou e o que a Cria IA tirou dos concorrentes. É o primeiro passo do Cria Post, porque ideia boa vira post.",
         placement: "bottom",
       },
       {
@@ -250,7 +250,7 @@ export const TOURS_GESTOR: TourConfig[] = [
       {
         target: '[data-tour="cli-sub-brandbook"]',
         openFirst: '[data-tour="cli-nav-gestao"]',
-        title: "O brandbook é o que faz a IA acertar",
+        title: "O brandbook é o que faz a Cria IA acertar",
         body: "Ideia, legenda, roteiro e prompt de arte desse cliente nascem daqui. Se você já tem o moodboard dele em PDF, não digite nada: sobe o arquivo, o Cria lê cores, fontes, tom de voz e direção de arte, e você só confere. Se o cliente usa o Cria, o brandbook vem sincronizado da conta dele.",
         mobileBody: "Ideia, legenda, roteiro e arte desse cliente nascem do brandbook. Tem o moodboard em PDF? Sobe que o Cria lê sozinho.",
         placement: "bottom",

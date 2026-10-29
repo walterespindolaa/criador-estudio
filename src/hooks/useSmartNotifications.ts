@@ -167,7 +167,7 @@ export function useSmartNotifications() {
         type: "tip",
         icon: User,
         title: "Perfil incompleto",
-        message: "Complete seu perfil pra IA gerar sugestões mais personalizadas.",
+        message: "Complete seu perfil pra Cria IA gerar sugestões mais personalizadas.",
         action: { label: "Configurações", url: "/app/configuracoes" },
         priority: 1,
       });

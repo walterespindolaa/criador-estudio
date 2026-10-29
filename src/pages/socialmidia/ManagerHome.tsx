@@ -580,7 +580,7 @@ function ManagerHomeSocialMidia() {
                 <p className="text-[11px] font-bold uppercase tracking-wider text-primary mb-2">O que cada cliente recebe</p>
                 <div className="space-y-1.5">
                   {[
-                    "Cria Plano: a IA monta o mês de conteúdo",
+                    "Cria Plano: a Cria IA monta o mês de conteúdo",
                     "Cria IA: ideias, legendas e score de post",
                     "Media Kit automático pra fechar publi",
                     "Calendário + melhor horário pra postar",

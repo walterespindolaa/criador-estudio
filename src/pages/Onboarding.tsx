@@ -711,7 +711,7 @@ const Onboarding = () => {
         {/* ─── 3. Nicho ─── */}
         {step === 3 && (
           <motion.div key="t3" {...anim}>
-            <TituloOnb antes="Sobre o que você" destaque="cria?" sub="Escolha até três. A IA usa isso pra pensar ideias do seu nicho." />
+            <TituloOnb antes="Sobre o que você" destaque="cria?" sub="Escolha até três. A Cria IA usa isso pra pensar ideias do seu nicho." />
             <div className="mt-6 flex flex-wrap justify-center gap-2.5">
               {[...NICHOS, ...niches.filter((n) => !NICHOS.some((x) => x.valor === n)).map((v) => ({ valor: v, cor: COR.laranja }))].map((n, i) => {
                 const on = niches.includes(n.valor);
@@ -864,7 +864,7 @@ const Onboarding = () => {
         {/* ─── 7. Me conta de você (brandbook falado) ─── */}
         {step === TELA_FALA && (
           <motion.div key="t-fala" {...anim}>
-            <TituloOnb antes="Agora me conta" destaque="de você." sub="Uma fala só, do seu jeito. Eu organizo no seu Brandbook e a IA passa a escrever com a sua cara." />
+            <TituloOnb antes="Agora me conta" destaque="de você." sub="Uma fala só, do seu jeito. Eu organizo no seu Brandbook e a Cria IA passa a escrever com a sua cara." />
             <div className="mt-4 rounded-[30px] px-4 pb-4 pt-[18px]" style={{ background: p.fundo }}>
               <div className="mb-3 flex items-end gap-2.5">
                 <Bicho cor={p.cor} forma={p.forma} giro={p.giro} tamanho={64} boca={p.boca} />

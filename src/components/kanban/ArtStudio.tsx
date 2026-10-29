@@ -112,7 +112,7 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
   const regerar = async () => {
     const ok = await confirmar({
       titulo: "Gerar de novo?",
-      descricao: "Isto consome mais 1 geração da sua cota de IA e substitui os prompts que já estão aqui.",
+      descricao: "Isto consome mais 1 geração da sua cota da Cria IA e substitui os prompts que já estão aqui.",
       acao: "Gerar de novo",
     });
     if (!ok) return;
@@ -215,7 +215,7 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
             >
               Preencher agora
             </button>{" "}
-            leva 2 minutos e melhora tudo que a IA escreve por você daqui pra frente.
+            leva 2 minutos e melhora tudo que a Cria IA escreve por você daqui pra frente.
           </div>
         </div>
       )}
@@ -250,7 +250,7 @@ export function ArtStudio({ titulo, formato, sections, roteiro, postId, onVoltar
         <p className="text-center text-[11px] font-body text-muted-foreground md:text-left">
           {resultado
             ? "os prompts ficam guardados neste post, reabrir não custa nada"
-            : "consome 1 geração da sua cota de IA"}
+            : "consome 1 geração da sua cota da Cria IA"}
         </p>
       </div>
 

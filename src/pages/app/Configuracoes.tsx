@@ -517,7 +517,7 @@ const Configuracoes = () => {
               {/* Mobile: uma coluna, mesma ordem de sempre. Desktop (lg): duas colunas
                   equilibradas pra aproveitar a largura em vez de um corredor estreito. */}
               <form onSubmit={handleSubmit(onSubmit)} className="max-w-2xl lg:max-w-5xl pb-24">
-                <SectionHeader title="Perfil" desc="Como você aparece no CRIA, nas propostas e pra IA que escreve com você." />
+                <SectionHeader title="Perfil" desc="Como você aparece no CRIA, nas propostas e pra Cria IA que escreve com você." />
                 <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-4 items-start">
                 {/* Coluna esquerda: foto, nome e bio; Pix embaixo */}
                 <div className="space-y-4">
@@ -621,7 +621,7 @@ const Configuracoes = () => {
                 <div className="bg-card rounded-2xl p-5 border border-border space-y-3">
                   <div>
                     <p className="font-body text-sm font-bold text-foreground">Nicho</p>
-                    <p className="text-[12px] font-body text-muted-foreground">A IA usa isso pra sugerir pauta e horário.</p>
+                    <p className="text-[12px] font-body text-muted-foreground">A Cria IA usa isso pra sugerir pauta e horário.</p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {selectedNiches.map((n) => (
@@ -641,7 +641,7 @@ const Configuracoes = () => {
                       <DialogHeader>
                         <DialogTitle className="font-display">Seu nicho</DialogTitle>
                         <DialogDescription className="font-body text-sm">
-                          Escolha um ou mais. É o que faz a IA falar do assunto certo e sugerir os melhores horários pro seu público.
+                          Escolha um ou mais. É o que faz a Cria IA falar do assunto certo e sugerir os melhores horários pro seu público.
                         </DialogDescription>
                       </DialogHeader>
 
@@ -863,7 +863,7 @@ const Configuracoes = () => {
             {!isManaging && (
             <TabsContent value="assinatura">
               <div className="max-w-2xl space-y-6">
-                <SectionHeader title="Assinatura e armazenamento" desc="Seu plano, uso de IA e espaço de arquivos, tudo num lugar só." />
+                <SectionHeader title="Assinatura e armazenamento" desc="Seu plano, uso da Cria IA e espaço de arquivos, tudo num lugar só." />
                 {/* MEU PERFIL (passo 6): plano do perfil e caminho pra assinar. */}
                 {ehMeuPerfil && (
                   <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-3">

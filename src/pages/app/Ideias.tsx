@@ -342,7 +342,7 @@ const Ideias = () => {
         parsed = parseSuggestions(retry);
       }
       if (parsed.length === 0) {
-        toast.error("A IA respondeu fora do formato duas vezes. Tenta de novo em instantes.");
+        toast.error("A Cria IA respondeu fora do formato duas vezes. Tenta de novo em instantes.");
         return;
       }
       setAiSuggestions(parsed);
@@ -352,9 +352,9 @@ const Ideias = () => {
          o limite mensal de gerações, e a pessoa achava que estava quebrado. */
       const msg = e instanceof Error ? e.message : "";
       if (/limit|quota|cota|429/i.test(msg)) {
-        toast.error("Você atingiu o limite de gerações de IA deste mês.");
+        toast.error("Você atingiu o limite de gerações da Cria IA deste mês.");
       } else {
-        toast.error(msg ? `A IA falhou: ${msg}` : "Erro ao gerar sugestões. Tenta de novo.");
+        toast.error(msg ? `A Cria IA falhou: ${msg}` : "Erro ao gerar sugestões. Tenta de novo.");
       }
     } finally {
       setAiLoading(false);
@@ -407,7 +407,7 @@ const Ideias = () => {
       <div className={caixa}>
         <div className="flex items-center gap-2">
           <Sparkles className="h-3.5 w-3.5 text-primary" />
-          <span className="text-xs font-body font-semibold text-primary">Sugestões de IA</span>
+          <span className="text-xs font-body font-semibold text-primary">Sugestões da Cria IA</span>
         </div>
 
         <div>
@@ -832,7 +832,7 @@ const Ideias = () => {
                           ? "bg-primary text-primary-foreground"
                           : "bg-card border border-border text-primary/70 hover:text-primary hover:border-primary/50"
                       )}
-                      aria-label="Sugestões de IA"
+                      aria-label="Sugestões da Cria IA"
                     >
                       <Sparkles className="h-3.5 w-3.5" />
                     </button>
@@ -954,7 +954,7 @@ const Ideias = () => {
                     <button type="button" onClick={(e) => { e.stopPropagation(); toggleAiPanel(idea.id); }}
                       className={cn("flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-body transition-colors",
                         isExpanded ? "bg-primary/15 text-primary" : "hover:bg-accent text-primary/80 hover:text-primary")}>
-                      <Sparkles className="h-3.5 w-3.5" /> IA
+                      <Sparkles className="h-3.5 w-3.5" /> CrIA
                     </button>
                     <button type="button" onClick={(e) => { e.stopPropagation(); handlePromoteToPost(idea); }}
                       disabled={!!idea.promoted_to_post_id || promoteToPost.isPending}

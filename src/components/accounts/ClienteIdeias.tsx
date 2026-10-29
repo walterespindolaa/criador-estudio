@@ -37,7 +37,7 @@ const ABAS: { key: Fonte; label: string; icon: typeof Lightbulb; hint: string }[
   { key: "minhas", label: "Suas ideias", icon: PenLine, hint: "Anote a ideia na hora que ela vier. Depois, daqui mesmo, ela vira post ou entra no cronograma do cliente." },
   { key: "cliente", label: "Do cliente", icon: Lightbulb, hint: "Ideias que o próprio cliente escreveu na conta CRIA dele. Ele pensa, você executa." },
   { key: "salvos-cliente", label: "Salvos dele", icon: Bookmark, hint: "Posts que o cliente guardou como referência. É o gosto dele, em imagem." },
-  { key: "hub", label: "Do HUB", icon: Sparkles, hint: "Ideias que a IA gerou a partir da análise dos concorrentes dele." },
+  { key: "hub", label: "Do HUB", icon: Sparkles, hint: "Ideias que a Cria IA gerou a partir da análise dos concorrentes dele." },
   { key: "meus", label: "Seus salvos", icon: Instagram, hint: "Links que você guarda pra este cliente. Só você vê, nem ele, nem a equipe do lado dele." },
 ];
 
@@ -126,7 +126,7 @@ export function ClienteIdeias({ clientId, criaOwnerId, extClient = null }: {
       <div className="rounded-2xl border border-primary/15 bg-primary/[0.04] px-4 py-3">
         <p className="text-[13px] font-body text-foreground/85 leading-relaxed">
           Tudo que inspira este cliente, num lugar só. O que <strong>ele</strong> pensou, o que <strong>ele</strong> salvou,
-          o que a <strong>IA</strong> tirou dos concorrentes e o que <strong>você</strong> guardou.
+          o que a <strong>Cria IA</strong> tirou dos concorrentes e o que <strong>você</strong> guardou.
         </p>
       </div>
 

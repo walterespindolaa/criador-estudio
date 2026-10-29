@@ -361,7 +361,7 @@ export function ManagerHome({ embedded = false }: { embedded?: boolean }) {
                 Quer usar o cria pro seu conteúdo também?
               </p>
               <p className="text-xs text-muted-foreground font-body mt-0.5">
-                Crie uma conta de criadora pra você (com e-mail PF) e ganhe ideias, calendário e IA, sem sair daqui.
+                Crie uma conta de criadora pra você (com e-mail PF) e ganhe ideias, calendário e a Cria IA, sem sair daqui.
               </p>
             </div>
             <Button

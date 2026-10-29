@@ -78,7 +78,7 @@ export function ArtBriefDialog({
       });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      toast.error(/quota_exceeded/i.test(msg) ? "Cota de IA esgotada este mês." : "Não consegui gerar o briefing agora.");
+      toast.error(/quota_exceeded/i.test(msg) ? "Cota da Cria IA esgotada este mês." : "Não consegui gerar o briefing agora.");
     } finally {
       setGerando(false);
     }

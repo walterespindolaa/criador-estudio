@@ -1,6 +1,10 @@
 import { forwardRef, type ReactNode, type SyntheticEvent } from "react";
 import type { MediaKitProfile } from "@/hooks/useMediaKit";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
+import { carregarFontes } from "@/lib/fontesSobDemanda";
+
+// Fontes da bio / media kit: carregam só quando esta tela abre.
+carregarFontes(["Sora", "Inter"]);
 
 export type KitStats = {
   followers: number;

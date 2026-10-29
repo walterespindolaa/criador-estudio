@@ -96,7 +96,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
       },
       {
         target: '[data-tour="ideias-nova"]',
-        title: "O atalho da IA",
+        title: "O atalho da Cria IA",
         body: "Em cada card de ideia existe um botão de faísca (✦): a Cria IA desdobra a ideia em ganchos, ângulos e formatos usando o seu brandbook. E quando a ideia estiver madura, o botão de promover manda ela direto pro kanban Criando.",
         placement: "bottom",
         aiPrompt: "Me sugira 5 ideias de post novas no tom da minha marca, baseadas nos meus pilares de conteúdo.",
@@ -152,7 +152,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
     route: "/app/criando#editor",
     title: "Anatomia de um post",
     valueProp:
-      "Este é o editor onde o post nasce. Tudo que um conteúdo precisa mora aqui dentro: legenda, roteiro, mídia, tarefas, agendamento e a IA do seu lado o tempo todo.",
+      "Este é o editor onde o post nasce. Tudo que um conteúdo precisa mora aqui dentro: legenda, roteiro, mídia, tarefas, agendamento e a Cria IA do seu lado o tempo todo.",
     benefits: [
       "Estrutura guiada: é só preencher os campos",
       "Melhor horário de postagem sugerido pra você",
@@ -198,8 +198,8 @@ export const TOURS_CRIADOR: TourConfig[] = [
         // Post de foto/estático não tem escritor de roteiro: o passo é pulado em
         // vez de segurar a tela com o destaque do passo anterior (Walter, 04/09).
         skipIfMissing: true,
-        title: "Roteiro com IA (e o que está quente)",
-        body: "Na aba Roteiro, a IA escreve as páginas ou cenas do post no tom da sua marca. E o botão de amarrar com o que está quente puxa o assunto do momento pro texto: o post fica atual, mas envelhece em algumas semanas. Sem ele, sai atemporal, que serve o ano inteiro.",
+        title: "Roteiro com a Cria IA (e o que está quente)",
+        body: "Na aba Roteiro, a Cria IA escreve as páginas ou cenas do post no tom da sua marca. E o botão de amarrar com o que está quente puxa o assunto do momento pro texto: o post fica atual, mas envelhece em algumas semanas. Sem ele, sai atemporal, que serve o ano inteiro.",
         placement: "bottom",
       },
       // ── CRIA ESTÚDIO ───────────────────────────────────────────────────
@@ -221,7 +221,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
       {
         target: '[data-tour="estudio-gerar"]',
         title: "Um prompt por página, todos no mesmo estilo",
-        body: "Num carrossel, cada página vira um prompt, mas todos carregam o MESMO bloco de estilo, senão você recebe 5 imagens de 5 mundos diferentes. Sai em português pra você conferir, e o botão copia em inglês, que é o que os geradores entendem melhor. Custa 1 geração da sua cota de IA.",
+        body: "Num carrossel, cada página vira um prompt, mas todos carregam o MESMO bloco de estilo, senão você recebe 5 imagens de 5 mundos diferentes. Sai em português pra você conferir, e o botão copia em inglês, que é o que os geradores entendem melhor. Custa 1 geração da sua cota da Cria IA.",
         placement: "top",
       },
       // A procedência só existe DEPOIS de gerar (é parte do resultado). Se o tour
@@ -241,8 +241,8 @@ export const TOURS_CRIADOR: TourConfig[] = [
         openFirst: '[data-tour="editor-legenda-abrir"]',
         mobileOpenFirst: '[data-tour="editor-legenda-abrir"]',
         title: "Content Assistant",
-        body: "Escolha o tom (descontraído, profissional, provocativo...) e a IA escreve legenda e roteiro no estilo da sua marca, ou avalia o gancho que você escreveu. É o seu copywriter de plantão. E o botão ? no canto direito do topo reabre este tutorial quando quiser.",
-        mobileBody: "No Content Assistant, escolha o tom (descontraído, profissional, provocativo...) e a IA escreve legenda e roteiro no estilo da sua marca, ou avalia seu gancho. O botão ? no topo reabre este tutorial.",
+        body: "Escolha o tom (descontraído, profissional, provocativo...) e a Cria IA escreve legenda e roteiro no estilo da sua marca, ou avalia o gancho que você escreveu. É o seu copywriter de plantão. E o botão ? no canto direito do topo reabre este tutorial quando quiser.",
+        mobileBody: "No Content Assistant, escolha o tom (descontraído, profissional, provocativo...) e a Cria IA escreve legenda e roteiro no estilo da sua marca, ou avalia seu gancho. O botão ? no topo reabre este tutorial.",
         placement: "right",
         aiPrompt: "Escreva uma legenda pra este post no tom da minha marca, com gancho forte e CTA.",
       },
@@ -416,7 +416,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
     valueProp:
       "Aqui mora a alma da sua marca: nicho, tom de voz, público e o moodboard com as imagens que definem sua estética. É daqui que a Cria IA aprende a escrever COMO VOCÊ. Preencheu bem, toda legenda e roteiro saem com a sua cara.",
     benefits: [
-      "A IA escreve no seu tom, não no tom de robô",
+      "A Cria IA escreve no seu tom, não no tom de robô",
       "Moodboard: sua estética visual num mural de referências",
       "Base pra tudo: legendas, roteiros, stories e ideias",
       "Decisões de conteúdo mais rápidas e coerentes",
@@ -425,8 +425,8 @@ export const TOURS_CRIADOR: TourConfig[] = [
       {
         target: '[data-tour="brandbook-importar"]',
         title: "Não digite, sobe o PDF",
-        body: "Preencher vinte campos na mão é o motivo de o brandbook viver vazio, e brandbook vazio faz TODA a IA do CRIA sair genérica. Se você já tem manual de marca, moodboard ou até um print da sua paleta, sobe aqui: o CRIA lê e espalha cada pedaço na seção certa, cores e fontes na Identidade, tom na aba Tom de Voz, temas na Linha Editorial e o público virando uma persona. Nada é salvo sem você olhar: a tela de revisão mostra o antes e o depois onde já havia texto seu, pra você não apagar sem querer o que ajustou na mão. Custa 1 geração da sua cota de IA.",
-        mobileBody: "Já tem manual de marca, moodboard ou um print da sua paleta? Sobe aqui: o CRIA lê e espalha cores, fontes, tom e público nas seções certas. Você revisa antes de salvar. Custa 1 geração de IA.",
+        body: "Preencher vinte campos na mão é o motivo de o brandbook viver vazio, e brandbook vazio faz TODA a Cria IA sair genérica. Se você já tem manual de marca, moodboard ou até um print da sua paleta, sobe aqui: o CRIA lê e espalha cada pedaço na seção certa, cores e fontes na Identidade, tom na aba Tom de Voz, temas na Linha Editorial e o público virando uma persona. Nada é salvo sem você olhar: a tela de revisão mostra o antes e o depois onde já havia texto seu, pra você não apagar sem querer o que ajustou na mão. Custa 1 geração da sua cota da Cria IA.",
+        mobileBody: "Já tem manual de marca, moodboard ou um print da sua paleta? Sobe aqui: o CRIA lê e espalha cores, fontes, tom e público nas seções certas. Você revisa antes de salvar. Custa 1 geração da Cria IA.",
         placement: "bottom",
       },
       {
@@ -438,8 +438,8 @@ export const TOURS_CRIADOR: TourConfig[] = [
       {
         target: '[data-tour="brandbook-abas"]',
         title: "As áreas da sua marca",
-        body: "Cinco abas, na ordem em que uma marca se constrói: quem você é, identidade, linha editorial, persona e tom de voz. O número ao lado de cada uma diz quantas perguntas faltam ali. Reserve 15 minutos pra isso: é o investimento com maior retorno do CRIA, porque TUDO que a IA gerar daqui pra frente usa essas respostas.",
-        mobileBody: "Cinco abas: quem você é, identidade, linha editorial, persona e tom de voz. O número ao lado diz o que falta em cada uma. São 15 minutos que mudam TUDO que a IA gerar daqui pra frente.",
+        body: "Cinco abas, na ordem em que uma marca se constrói: quem você é, identidade, linha editorial, persona e tom de voz. O número ao lado de cada uma diz quantas perguntas faltam ali. Reserve 15 minutos pra isso: é o investimento com maior retorno do CRIA, porque TUDO que a Cria IA gerar daqui pra frente usa essas respostas.",
+        mobileBody: "Cinco abas: quem você é, identidade, linha editorial, persona e tom de voz. O número ao lado diz o que falta em cada uma. São 15 minutos que mudam TUDO que a Cria IA gerar daqui pra frente.",
         placement: "bottom",
         aiPrompt: "Me ajude a definir meu tom de voz e público ideal com base no meu nicho.",
       },
@@ -651,7 +651,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
       {
         target: '[data-tour="config-tab-assinatura"]',
         title: "Assinatura",
-        body: "Seu plano atual, o uso de IA do mês e o portal pra trocar de plano ou atualizar o cartão. Tudo de cobrança mora nessa pílula.",
+        body: "Seu plano atual, o uso da Cria IA do mês e o portal pra trocar de plano ou atualizar o cartão. Tudo de cobrança mora nessa pílula.",
         placement: "bottom",
       },
       {
@@ -673,7 +673,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
     route: "/app#cria-ia",
     title: "Cria IA",
     valueProp:
-      "A IA que já conhece a sua marca. Ela lê o seu brandbook antes de responder, então legenda, ideia e roteiro saem no SEU tom, não no tom de robô genérico.",
+      "A Cria IA que já conhece a sua marca. Ela lê o seu brandbook antes de responder, então legenda, ideia e roteiro saem no SEU tom, não no tom de robô genérico.",
     benefits: [
       "Responde usando o tom do seu brandbook",
       "Atalhos prontos pro que você mais pede",
@@ -690,8 +690,8 @@ export const TOURS_CRIADOR: TourConfig[] = [
       {
         target: '[data-tour="cria-ia-input"]',
         title: "A cota, sem susto",
-        body: "Escreva à vontade aqui: Enter envia, Shift e Enter pulam linha. Cada resposta consome 1 geração da sua cota do mês, que é a MESMA cota do Cria Plano, dos prompts de arte e da leitura do brandbook em PDF. Quanto ainda resta aparece na barrinha de uso da IA, no menu lateral e no Dashboard, e a cota zera no dia 1º. É assinatura, não cartão aberto: quando acaba, acaba, e você decide entre subir de plano ou esperar virar o mês.",
-        mobileBody: "Escreva à vontade aqui. Cada resposta gasta 1 geração da sua cota do mês, a mesma do Cria Plano e dos prompts de arte. O saldo aparece na barrinha de uso da IA e zera no dia 1º.",
+        body: "Escreva à vontade aqui: Enter envia, Shift e Enter pulam linha. Cada resposta consome 1 geração da sua cota do mês, que é a MESMA cota do Cria Plano, dos prompts de arte e da leitura do brandbook em PDF. Quanto ainda resta aparece na barrinha de uso da Cria IA, no menu lateral e no Dashboard, e a cota zera no dia 1º. É assinatura, não cartão aberto: quando acaba, acaba, e você decide entre subir de plano ou esperar virar o mês.",
+        mobileBody: "Escreva à vontade aqui. Cada resposta gasta 1 geração da sua cota do mês, a mesma do Cria Plano e dos prompts de arte. O saldo aparece na barrinha de uso da Cria IA e zera no dia 1º.",
         placement: "top",
       },
     ],

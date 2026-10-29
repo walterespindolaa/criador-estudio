@@ -74,7 +74,7 @@ export function AIAssistantSection({
         <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-pink-400 flex items-center justify-center">
           <Sparkles className="h-3.5 w-3.5 text-white" />
         </div>
-        <span className="text-sm font-display font-semibold text-foreground">Assistente IA</span>
+        <span className="text-sm font-display font-semibold text-foreground">Cria IA</span>
       </div>
 
       <div className="grid grid-cols-2 gap-2 mb-3">
