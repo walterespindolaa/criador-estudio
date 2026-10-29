@@ -32,6 +32,8 @@ export type ExternalPost = {
   approval_status: "em_producao" | "pendente" | "ajuste_solicitado" | "aprovado" | "postado" | null;
   // Publicação pelo Cria no Instagram (ciclo 5 do plano de publicar).
   publish_status?: string | null; auto_publish?: boolean | null;
+  /** Opções do Instagram (figurinhas do story, pelo celular...). */
+  ig_opcoes?: import("@/hooks/usePublicarInstagram").OpcoesIg | null;
   scheduled_date: string | null; created_at: string;
   approval_mode: string; script: string | null;
   approval_updated_at: string | null;
@@ -66,7 +68,7 @@ export type ExternalPostInput = { title: string; platform: string; format: strin
 // demanda. Mantém board_order (ordenação), scheduled_time e external_client_id (usados
 // via cast pelas telas que consomem estas queries).
 const POST_BOARD_COLUMNS =
-  "id, title, platform, format, caption, hook, approval_status, scheduled_date, scheduled_time, created_at, approval_mode, script, notes, approval_updated_at, reference_url, drive_folder_url, board_order, external_client_id, assignee_id, producao_status, prazo_producao, prazo_status, prazo_sugerido, cache_parceiro, editorial_line_id, publish_status, auto_publish";
+  "id, title, platform, format, caption, hook, approval_status, scheduled_date, scheduled_time, created_at, approval_mode, script, notes, approval_updated_at, reference_url, drive_folder_url, board_order, external_client_id, assignee_id, producao_status, prazo_producao, prazo_status, prazo_sugerido, cache_parceiro, editorial_line_id, publish_status, auto_publish, ig_opcoes";
 
 // Invalida TODAS as queries que renderizam um mesmo post externo em telas diferentes.
 // O mesmo post aparece no kanban do cliente (cria-posts), na Agenda + painel de

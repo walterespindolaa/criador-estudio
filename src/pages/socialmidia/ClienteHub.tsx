@@ -11,7 +11,7 @@ import { ClientNotesDrawer, notePreview } from "@/components/accounts/ClientNote
 import { ClientHashtags } from "@/components/accounts/crm/ClientHashtags";
 import { mensalidadeAtivaNoMes } from "@/lib/finance";
 import { InactivateClientDialog } from "@/components/accounts/crm/InactivateClientDialog";
-import { Camera } from "lucide-react";
+import { Camera, Smartphone } from "lucide-react";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { ClientColorPicker } from "@/components/shared/ClientColorPicker";
 import { useActiveAccount } from "@/contexts/AccountContext";
@@ -71,6 +71,7 @@ const TABS: TabDef[] = [
   { key: "ideias", label: "Ideias", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "cronograma", label: "Cronograma", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "posts", label: "Posts", modulo: "laranja", moduloNome: "Cria Post" },
+  { key: "stories", label: "Stories", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "relatorio", label: "Relatório", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "materiais", label: "Materiais", modulo: "laranja", moduloNome: "Cria Post" },
   { key: "instagram", label: "Instagram" },
@@ -79,7 +80,7 @@ const TABS: TabDef[] = [
   { key: "captacao", label: "Captação", modulo: "verde", moduloNome: "Cria Captação" },
   { key: "portal", label: "Portal", modulo: "laranja", moduloNome: "Cria Post" },
 ];
-const OPERACIONAIS = new Set(["posts", "cronograma", "relatorio", "instagram"]);
+const OPERACIONAIS = new Set(["posts", "stories", "cronograma", "relatorio", "instagram"]);
 const WORKFLOW = new Set(["ideias", "posts", "cronograma", "relatorio"]);
 type FlowStep = { key: string; n: number; label: string; gated?: boolean };
 // O fluxo numerado do Cria Post: Ideias → Posts → Cronograma → Relatório
@@ -106,6 +107,7 @@ const initial = (n?: string | null) => (n ? n.trim().charAt(0).toUpperCase() : "
 type SubMeta = { label: string; desc: string; icon: LucideIcon };
 const SUB_META: Record<string, SubMeta> = {
   posts: { label: "Produção", desc: "Monte cada post e mande aprovar por link: aguardando cliente, ajuste, aprovado.", icon: Layers },
+  stories: { label: "Stories", desc: "A semana de stories do cliente: monta, manda aprovar de uma vez e sai sozinho no horário (ou vira lembrete, se tiver figurinha).", icon: Smartphone },
   cronograma: { label: "Cronograma", desc: "O calendário do mês do cliente, com as datas e o link público.", icon: CalendarDays },
   "kanban-cliente": { label: "Kanban do cliente", desc: "O quadro real do Cria do cliente. Edite e arraste os posts dele direto daqui, sincronizado ao vivo.", icon: Kanban },
   relatorio: { label: "Relatório", desc: "O resultado white-label do mês pra enviar pro cliente.", icon: BarChart3 },
@@ -133,7 +135,7 @@ const GROUPS: Grp[] = [
   // Ideias abre o fluxo do Cria Post (ideia → post → cronograma → relatório).
   // Morava no Radar, mas a captura manual e a conversão em post são coração do
   // Cria Post; a URL /ideias continua a mesma, só mudou de grupo.
-  { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "ideias", "cronograma", "kanban-cliente", "relatorio", "materiais", "portal"] },
+  { key: "cria-post", label: "Cria Post", modulo: "laranja", icon: Layers, landing: true, subs: ["posts", "stories", "ideias", "cronograma", "kanban-cliente", "relatorio", "materiais", "portal"] },
   { key: "cria-gestao", label: "Cria Gestão", modulo: "rosa", icon: BookOpen, landing: true, subs: ["cadastro", "tarefas", "brandbook", "diagnostico", "concorrencia", "link-bio", "acessos"] },
   { key: "cria-caixa", label: "Cria Caixa", modulo: "azul", icon: Wallet, subs: ["financeiro"] },
   // O Radar ficou só com a Pesquisa: 1 sub = vai direto (landing de 1 card seria bobo).

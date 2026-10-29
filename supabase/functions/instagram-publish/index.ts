@@ -58,6 +58,60 @@ Deno.serve(async (req) => {
       return json({ cota: token ? await lerCota(conn.ig_user_id, token) : null });
     }
 
+    // ── Publicar de novo: apagaram no Instagram (Walter, 29/10/2026) ──
+    // O post "Publicado" não tinha volta: se apagaram no Instagram (ex.: saiu
+    // na hora errada), o Cria não deixava agendar de novo. Aqui confere no
+    // próprio Instagram se o post ainda existe. Existe: recusa (duplicaria).
+    // Não existe: devolve o post pra "Pronto pra sair", guardando o histórico.
+    // Sem como conferir (token, rede): só segue com confirmação explícita.
+    if (typeof body?.republicar_post_id === 'string') {
+      const pid = body.republicar_post_id as string;
+      const jwtR = (req.headers.get('Authorization') || '').replace('Bearer ', '');
+      const { data: ur } = await admin.auth.getUser(jwtR);
+      const ator = ur?.user?.id;
+      if (!ator) return json({ error: 'unauthorized' }, 401);
+      const { data: cxr, error: cxrErr } = await admin.rpc('ig_conexao_do_post', { _post_id: pid, _actor: ator });
+      if (cxrErr) return json({ error: cxrErr.message }, 403);
+      const conn = (cxr as Array<{ connection_id: string | null }> | null)?.[0];
+      const { data: pr } = await admin.from('posts')
+        .select('id, publish_status, ig_media_id, ig_permalink, published_at').eq('id', pid).maybeSingle();
+      const post = pr as { publish_status: string | null; ig_media_id: string | null; ig_permalink: string | null; published_at: string | null } | null;
+      if (!post) return json({ error: 'Post não encontrado.' }, 404);
+      if (post.publish_status !== 'publicado') return json({ ok: false, motivo: 'nao_publicado' });
+
+      let situacao: 'apagado' | 'no_ar' | 'sem_conferir' = 'sem_conferir';
+      if (post.ig_media_id && conn?.connection_id) {
+        const { data: tk } = await admin.from('social_connections').select('access_token').eq('id', conn.connection_id).maybeSingle();
+        const token = (tk as { access_token?: string } | null)?.access_token;
+        if (token) {
+          try {
+            const r = await fetch(`https://graph.instagram.com/v23.0/${encodeURIComponent(post.ig_media_id)}?fields=id&access_token=${encodeURIComponent(token)}`);
+            if (r.ok) situacao = 'no_ar';
+            else {
+              const b = await r.json().catch(() => ({}));
+              // 100 = objeto não existe (apagado). Outro código: não dá pra afirmar.
+              if (b?.error?.code === 100) situacao = 'apagado';
+            }
+          } catch { /* fica sem_conferir */ }
+        }
+      }
+      if (situacao === 'no_ar') return json({ ok: false, motivo: 'no_ar' });
+      if (situacao === 'sem_conferir' && body?.forcar !== true) return json({ ok: false, motivo: 'sem_conferir' });
+
+      const quando = post.published_at
+        ? new Date(post.published_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+        : 'antes';
+      const { error: upErr } = await admin.from('posts').update({
+        publish_status: null, auto_publish: false, publicar_em: null, published_at: null,
+        ig_media_id: null, ig_permalink: null, ig_container_id: null,
+        publish_error: null, publish_attempts: 0, publish_started_at: null,
+        publish_conferido_por: null, publish_conferido_em: null,
+        publish_aviso: `Já tinha saído em ${quando} e foi apagado no Instagram${post.ig_permalink ? ` (${post.ig_permalink})` : ''}.`,
+      } as never).eq('id', pid).eq('publish_status', 'publicado');
+      if (upErr) return json({ error: upErr.message }, 500);
+      return json({ ok: true, situacao });
+    }
+
     // ── Publicar agora (clique) ──
     const postId = typeof body?.post_id === 'string' ? body.post_id : null;
     if (!postId) return json({ error: 'post_id obrigatório' }, 400);

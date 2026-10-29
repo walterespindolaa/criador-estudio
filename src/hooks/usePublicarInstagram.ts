@@ -50,7 +50,23 @@ export type OpcoesIg = {
   musica_celular?: boolean;
   /** Story com figurinha (enquete, caixinha, link...): sai pelo app. */
   pelo_celular?: boolean;
+  /** O que vai na figurinha do story (29/10/2026). Qualquer uma liga pelo_celular. */
+  figurinhas?: FigurinhasStory;
 };
+
+export type FigurinhasStory = {
+  link?: { url: string; texto?: string };
+  enquete?: { pergunta: string; opcoes?: string[] };
+  caixinha?: { pergunta: string };
+  musica?: { nome: string };
+  local?: { nome: string };
+};
+
+/** Resumo curto ("link · enquete") pra cards e avisos. */
+export function resumoFigurinhas(f: FigurinhasStory | null | undefined): string {
+  if (!f) return "";
+  return [f.link && "link", f.enquete && "enquete", f.caixinha && "caixinha", f.musica && "música", f.local && "local"].filter(Boolean).join(" · ");
+}
 
 export type ConexaoDoPost = {
   connection_id: string | null;
@@ -232,4 +248,19 @@ export function useCotaIg(postId: string | null | undefined, ligado = true) {
 export function ehStory(formato: string | null | undefined): boolean {
   const f = (formato ?? "").trim().toLowerCase();
   return f === "story" || f === "stories";
+}
+
+/* PUBLICAR DE NOVO (Walter, 29/10/2026): o post saiu e foi apagado no
+   Instagram. A edge confere no Instagram antes de liberar (não duplica). */
+export type ResultadoRepublicar = { ok: boolean; motivo?: "no_ar" | "sem_conferir" | "nao_publicado"; situacao?: string };
+export function useRepublicar(postId: string | null | undefined) {
+  const invalidar = useInvalidarPublicacao(postId);
+  return useMutation({
+    mutationFn: async (forcar: boolean): Promise<ResultadoRepublicar> => {
+      const { data, error } = await supabase.functions.invoke("instagram-publish", { body: { republicar_post_id: postId, forcar } });
+      if (error) throw new Error("Não consegui liberar agora. Tente de novo.");
+      return (data ?? { ok: false }) as ResultadoRepublicar;
+    },
+    onSuccess: (r) => { if (r.ok) { invalidar(); toast.success("Pronto: o post voltou pra \"Pronto pra sair\". Agende ou publique de novo."); } },
+  });
 }

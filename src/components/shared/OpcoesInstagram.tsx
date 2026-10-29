@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ehStory, useCotaIg, useSalvarOpcoesIg, type OpcoesIg } from "@/hooks/usePublicarInstagram";
+import { ehStory, useCotaIg, useSalvarOpcoesIg, type FigurinhasStory, type OpcoesIg } from "@/hooks/usePublicarInstagram";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    OPÇÕES DO INSTAGRAM DO POST (Walter, 28/10/2026)
@@ -50,6 +50,11 @@ export function OpcoesInstagram({
   const [feed, setFeed] = useState(true);
   const [musica, setMusica] = useState(false);
   const [figurinha, setFigurinha] = useState(false);
+  /* FIGURINHAS DO STORY (Walter, 29/10/2026): o que vai junto, pra o cliente
+     aprovar o texto e pra a social mídia ter pronto pra copiar na hora. */
+  const [fig, setFig] = useState<{ link: boolean; url: string; texto: string; enquete: boolean; pergunta: string; op1: string; op2: string;
+    caixinha: boolean; cxPergunta: string; local: boolean; localNome: string; musicaNome: string }>({
+    link: false, url: "", texto: "", enquete: false, pergunta: "", op1: "", op2: "", caixinha: false, cxPergunta: "", local: false, localNome: "", musicaNome: "" });
   const [novoCollab, setNovoCollab] = useState("");
   const [novaTag, setNovaTag] = useState("");
 
@@ -63,6 +68,13 @@ export function OpcoesInstagram({
     setFeed(o.share_to_feed !== false);
     setMusica(!!o.musica_celular);
     setFigurinha(!!o.pelo_celular);
+    const fi = o.figurinhas ?? {};
+    setFig({
+      link: !!fi.link, url: fi.link?.url ?? "", texto: fi.link?.texto ?? "",
+      enquete: !!fi.enquete, pergunta: fi.enquete?.pergunta ?? "", op1: fi.enquete?.opcoes?.[0] ?? "", op2: fi.enquete?.opcoes?.[1] ?? "",
+      caixinha: !!fi.caixinha, cxPergunta: fi.caixinha?.pergunta ?? "",
+      local: !!fi.local, localNome: fi.local?.nome ?? "", musicaNome: fi.musica?.nome ?? "",
+    });
     setNovoCollab(""); setNovaTag("");
   }, [open, inicial]);
 
@@ -87,7 +99,17 @@ export function OpcoesInstagram({
     if (reels && trial) o.trial = trial;
     if (reels) o.share_to_feed = feed;
     if (reels || story) o.musica_celular = musica;
-    if (story) o.pelo_celular = figurinha;
+    if (story) {
+      const fi: FigurinhasStory = {};
+      if (fig.link && fig.url.trim()) fi.link = { url: fig.url.trim(), texto: fig.texto.trim() };
+      if (fig.enquete && fig.pergunta.trim()) fi.enquete = { pergunta: fig.pergunta.trim(), opcoes: [fig.op1.trim() || "Sim", fig.op2.trim() || "Não"] };
+      if (fig.caixinha && fig.cxPergunta.trim()) fi.caixinha = { pergunta: fig.cxPergunta.trim() };
+      if (fig.local && fig.localNome.trim()) fi.local = { nome: fig.localNome.trim() };
+      if (musica && fig.musicaNome.trim()) fi.musica = { nome: fig.musicaNome.trim() };
+      o.figurinhas = fi;
+      // Quiz, contagem e outras sem campo próprio: o interruptor continua valendo.
+      o.pelo_celular = figurinha || Object.keys(fi).length > 0;
+    }
     salvar.mutate(o, { onSuccess: () => onOpenChange(false) });
   };
 
@@ -183,16 +205,42 @@ export function OpcoesInstagram({
           )}
 
           {story && (
-            <section>
-              <div className="flex items-center justify-between gap-3">
-                <div><p className="text-sm font-bold">Vai ter figurinha?</p><p className="text-xs text-muted-foreground">Enquete, caixinha, quiz, link ou contagem não saem pela API.</p></div>
-                <Switch checked={figurinha} onCheckedChange={setFigurinha} aria-label="Story com figurinha" />
-              </div>
-              {figurinha && (
-                <p className="mt-2 text-xs rounded-xl bg-sky-50 border border-sky-200 text-sky-900 px-3 py-2">
-                  Então este story sai pelo celular: baixe a mídia no post, publique pelo app do Instagram e coloque a figurinha lá. No Cria Stories, marque "Já postei".
-                </p>
-              )}
+            <section className="space-y-2.5">
+              <div><p className="text-sm font-bold">O que vai junto no story</p>
+                <p className="text-xs text-muted-foreground">O Instagram não deixa publicar figurinha pela API (só a marcação de @ acima sai sozinha). Com qualquer uma marcada, o story vira "pelo celular": no horário chega o aviso com a mídia e o conteúdo pronto pra copiar.</p></div>
+              {([["link", "🔗 Link"], ["enquete", "📊 Enquete"], ["caixinha", "❓ Caixinha de pergunta"], ["local", "📍 Local"]] as const).map(([k, nome]) => (
+                <div key={k} className={cn("rounded-xl border px-3 py-2", fig[k] ? "border-foreground/40 bg-muted/30" : "border-border")}>
+                  <label className="flex items-center justify-between gap-3 cursor-pointer">
+                    <span className="text-[13px] font-semibold">{nome}</span>
+                    <Switch checked={fig[k]} onCheckedChange={(v) => setFig((x) => ({ ...x, [k]: v }))} aria-label={nome} />
+                  </label>
+                  {k === "link" && fig.link && (
+                    <div className="mt-2 grid grid-cols-[1fr_120px] gap-2">
+                      <Input value={fig.url} onChange={(e) => setFig((x) => ({ ...x, url: e.target.value }))} placeholder="wa.me/5547... ou site" className="h-10 rounded-xl" aria-label="Endereço do link" />
+                      <Input value={fig.texto} onChange={(e) => setFig((x) => ({ ...x, texto: e.target.value }))} maxLength={40} placeholder="Texto: Reservar" className="h-10 rounded-xl" aria-label="Texto do botão" />
+                    </div>
+                  )}
+                  {k === "enquete" && fig.enquete && (
+                    <div className="mt-2 space-y-2">
+                      <Input value={fig.pergunta} onChange={(e) => setFig((x) => ({ ...x, pergunta: e.target.value }))} maxLength={120} placeholder="Pergunta: Qual o prato de sábado?" className="h-10 rounded-xl" aria-label="Pergunta da enquete" />
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input value={fig.op1} onChange={(e) => setFig((x) => ({ ...x, op1: e.target.value }))} maxLength={40} placeholder="Opção 1 (Sim)" className="h-10 rounded-xl" aria-label="Opção 1" />
+                        <Input value={fig.op2} onChange={(e) => setFig((x) => ({ ...x, op2: e.target.value }))} maxLength={40} placeholder="Opção 2 (Não)" className="h-10 rounded-xl" aria-label="Opção 2" />
+                      </div>
+                    </div>
+                  )}
+                  {k === "caixinha" && fig.caixinha && (
+                    <Input value={fig.cxPergunta} onChange={(e) => setFig((x) => ({ ...x, cxPergunta: e.target.value }))} maxLength={120} placeholder="Ex.: Qual prato você quer ver aqui?" className="mt-2 h-10 rounded-xl" aria-label="Pergunta da caixinha" />
+                  )}
+                  {k === "local" && fig.local && (
+                    <Input value={fig.localNome} onChange={(e) => setFig((x) => ({ ...x, localNome: e.target.value }))} maxLength={120} placeholder="Ex.: Restaurante Jan Levi, Itajaí" className="mt-2 h-10 rounded-xl" aria-label="Local" />
+                  )}
+                </div>
+              ))}
+              <label className="flex items-center justify-between gap-3 cursor-pointer rounded-xl border border-border px-3 py-2">
+                <span className="text-[13px]">Outra figurinha (quiz, contagem, GIF...)</span>
+                <Switch checked={figurinha} onCheckedChange={setFigurinha} aria-label="Outra figurinha" />
+              </label>
             </section>
           )}
 
@@ -205,6 +253,10 @@ export function OpcoesInstagram({
                 </div>
                 <Switch checked={musica} onCheckedChange={setMusica} aria-label="Vai usar música do Instagram" />
               </div>
+              {musica && story && (
+                <Input value={fig.musicaNome} onChange={(e) => setFig((x) => ({ ...x, musicaNome: e.target.value }))} maxLength={120}
+                  placeholder="Qual música? (ex.: Garota de Ipanema)" className="mt-2 h-10 rounded-xl" aria-label="Nome da música" />
+              )}
               {musica && (
                 <p className="mt-2 text-xs rounded-xl bg-sky-50 border border-sky-200 text-sky-900 px-3 py-2">
                   Então este post sai pelo celular: o Cria não publica sozinho. Baixe a mídia e a legenda no post e publique pelo app com a música.

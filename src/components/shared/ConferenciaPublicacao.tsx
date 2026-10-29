@@ -163,6 +163,15 @@ export function ConferenciaPublicacao({
                 <span>O @ cadastrado deste cliente é <b>@{handleCadastro}</b>, mas o Instagram conectado é <b>@{handleConectado}</b>. Confira antes de liberar.</span>
               </p>
             )}
+            {/* AGORA x DATA DO POST (Walter, 29/10/2026): um post marcado pra 03/11
+                saiu no dia 29 porque "Publicar" era publicar na hora. Aqui fica
+                impossível não ver. */}
+            {agora && d.scheduled_date && (
+              <p className="text-[13px] rounded-xl bg-red-50 border border-red-200 text-red-900 px-3 py-2 flex gap-2" role="alert">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-red-600" />
+                <span>Vai sair <b>AGORA</b>, não na data do post ({quandoTxt(d.scheduled_date, d.scheduled_time).replace(" (Brasília)", "")}). Pra sair na data, feche e use <b>Agendar</b>.</span>
+              </p>
+            )}
             {cx && !cx.pode_publicar && (
               <p className="text-xs rounded-xl bg-amber-50 border border-amber-200 text-amber-900 px-3 py-2">{cx.motivo ?? "Este Instagram não pode publicar pelo Cria."}</p>
             )}
@@ -187,7 +196,7 @@ export function ConferenciaPublicacao({
 
             <dl className="grid grid-cols-[100px_1fr] gap-x-3 gap-y-1.5 text-[13px] border-t pt-3">
               <dt className="text-muted-foreground">Quando</dt>
-              <dd className="font-semibold">{agora ? "Agora" : quandoTxt(d.scheduled_date, d.scheduled_time)}</dd>
+              <dd className={cn("font-semibold", agora && "text-red-700")}>{agora ? "Agora, na hora" : quandoTxt(d.scheduled_date, d.scheduled_time)}</dd>
               <dt className="text-muted-foreground">Formato</dt>
               <dd className="font-semibold">{nomeFormato(d.format)}{d.nMidias > 1 ? ` · ${d.nMidias} mídias` : ""}</dd>
               <dt className="text-muted-foreground">Extras</dt>

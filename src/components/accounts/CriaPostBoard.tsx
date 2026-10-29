@@ -39,6 +39,7 @@ import { useClientSocialConnection, connectInstagram } from "@/hooks/useSocialIn
 import { ClienteInstagramCria } from "@/components/accounts/ClienteInstagramCria";
 import { FORMATS_BY_PLATFORM, FORMAT_LABELS, normalizarFormato } from "@/lib/constants";
 import { SeloPublicacaoIg } from "@/components/shared/PublicarNoInstagram";
+import { StoriesDoCliente } from "@/components/accounts/StoriesDoCliente";
 import { ConviteInstagramCliente } from "@/components/accounts/ConviteInstagramCliente";
 // Cor por formato (fonte única): a pessoa bate o olho e sabe o que é.
 import { formatColorVars, FORMAT_TEXT_CLASS, FORMAT_BORDER_CLASS, FORMAT_DOT_CLASS } from "@/lib/format-colors";
@@ -488,8 +489,8 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
 
   // Novo post: cria um RASCUNHO na hora. Assim o post.id já existe e a mídia pode ser
   // anexada de cara (o storage precisa do id). O rascunho não aparece pro cliente.
-  const openNew = async (day?: string) => {
-    setF({ title: "", platform: "instagram", format: "reels", caption: "", hook: "", approval_mode: "fast", script: "", notes: "", scheduled_date: day ?? null, scheduled_time: null, reference_url: null, drive_folder_url: null, editorial_line_id: null });
+  const openNew = async (day?: string, formato?: string) => {
+    setF({ title: "", platform: "instagram", format: formato ?? "reels", caption: "", hook: "", approval_mode: "fast", script: "", notes: "", scheduled_date: day ?? null, scheduled_time: null, reference_url: null, drive_folder_url: null, editorial_line_id: null });
     setRefLinks([]);
     setInternalTags([]);
     setEnvioPendente(null);
@@ -938,6 +939,24 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
           </div>
         </DragDropContext>
       )}
+        </TabsContent>
+
+        {/* STORIES DO CLIENTE (29/10/2026, mockup aprovado): a semana só dos
+            stories, com o mesmo editor e os mesmos cards do Cria Post. */}
+        <TabsContent value="stories">
+          <StoriesDoCliente
+            posts={posts}
+            podeEditar={permPost.podeEditar}
+            onNovo={(dia) => void openNew(dia, "story")}
+            onAbrir={openEdit}
+            onEnviarSemana={async (ids) => {
+              try {
+                for (const id of ids) await moveStatus.mutateAsync({ id, approval_status: "pendente" });
+                toast.success(`${ids.length} ${ids.length === 1 ? "story foi" : "stories foram"} pro cliente aprovar. Mande o link.`);
+                if (permPost.podeTotal) setLinkOpen(true);
+              } catch { toast.error("Não consegui enviar todos. Tente de novo."); }
+            }}
+          />
         </TabsContent>
 
         <TabsContent value="cronograma">

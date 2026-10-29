@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type CSSProperties } from "react";
+import type { FigurinhasStory } from "@/hooks/usePublicarInstagram";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -68,6 +69,10 @@ const STATUS: Record<string, { label: string; cls: string }> = {
   aprovado: { label: "Aprovado", cls: "bg-green-100 text-green-700" },
 };
 
+/* Figurinhas planejadas dos stories (29/10/2026), por post. Contexto pra não
+   atravessar 3 componentes com uma prop que só o story usa. */
+const FigurinhasCtx = createContext<Record<string, FigurinhasStory>>({});
+
 function CardIG({ client, post, alfinetes, modoApontar, aoFixar, aoAbrirAlfinete, alfineteSelecionado, capa }: {
   client: ClientHeader; post: PortalPost;
   /** Capa do Reels escolhida pela social mídia (28/09/2026). */
@@ -103,11 +108,12 @@ function CardIG({ client, post, alfinetes, modoApontar, aoFixar, aoAbrirAlfinete
   // produção e aparece no fluxo do CRONOGRAMA; na aprovação do post pronto ele
   // vazava inteiro ("SLIDE 1 - CAPA...") quando a legenda estava vazia.
   const legenda = post.caption || null;
+  const figurinhasDoPost = useContext(FigurinhasCtx)[post.post_id] ?? null;
   // Story tem preview próprio: tela cheia 9:16, sem legenda e sem ações de feed.
   if ((post.format || "").toLowerCase() === "story") {
     return (
       <article className="rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(27,26,24,0.07)]">
-        <StoryPreview media={media} handle={handle} avatarUrl={client.client_logo} />
+        <StoryPreview media={media} handle={handle} avatarUrl={client.client_logo} figurinhas={figurinhasDoPost} />
       </article>
     );
   }
@@ -659,6 +665,17 @@ export default function AprovarPortal() {
   // Histórico de ajustes POR post (pedido do cliente + resposta da equipe).
   // Se a RPC ainda não existir no banco, o portal segue sem o bloco
   // (retrocompatível, mesmo padrão do get_portal_settings).
+  // Figurinhas dos stories (link, enquete...). Sem a função no banco, segue sem.
+  const figurinhasQ = useQuery({
+    queryKey: ["portal-figurinhas", token], enabled: !!token && !!clientQ.data,
+    queryFn: async (): Promise<Record<string, FigurinhasStory>> => {
+      const { data, error } = await sbRpc("story_figurinhas_by_token", { _token: token });
+      if (error) return {};
+      const map: Record<string, FigurinhasStory> = {};
+      for (const r of (data as { post_id: string; figurinhas: FigurinhasStory | null }[]) ?? []) if (r.figurinhas) map[r.post_id] = r.figurinhas;
+      return map;
+    },
+  });
   const commentsQ = useQuery({
     queryKey: ["portal-comments", token], enabled: !!token && !!clientQ.data,
     queryFn: async (): Promise<Record<string, PortalComment[]>> => {
@@ -726,6 +743,7 @@ export default function AprovarPortal() {
   }
 
   const [showApproved, setShowApproved] = useState(false);
+  const [aprovandoTodos, setAprovandoTodos] = useState(false);
   const [tab, setTab] = useState<PortalTab>("aprovacoes");
   /* LISTA, FEED OU CALENDÁRIO (Walter, 28/09/2026): o cliente enxerga o mês,
      não só a fila. Aprovar continua na lista; as outras duas levam até ela. */
@@ -754,6 +772,7 @@ export default function AprovarPortal() {
   const posts = postsQ.data ?? [];
   // Ordem do feed: pendentes primeiro, depois em ajuste; aprovados ficam num grupo colapsado.
   const pendentes = posts.filter((p) => p.approval_status === "pendente");
+  const storiesPendentes = pendentes.filter((p) => (p.format || "").toLowerCase() === "story");
   const emAjuste = posts.filter((p) => p.approval_status === "ajuste_solicitado");
   const aprovados = posts.filter((p) => p.approval_status === "aprovado");
   const fila = [...pendentes, ...emAjuste];
@@ -935,7 +954,29 @@ export default function AprovarPortal() {
                         <p className="text-[13px] font-body text-green-700 mt-1">Nenhum post esperando sua revisão agora.</p>
                       </div>
                     ) : (
-                      fila.map(renderPost)
+                      <FigurinhasCtx.Provider value={figurinhasQ.data ?? {}}>
+                        {/* APROVAR TODOS OS STORIES (29/10/2026): a semana de stories
+                            costuma vir com 8, 10 peças. Um por um cansa; aqui é um toque.
+                            Cada um continua aberto embaixo pra quem quiser comentar. */}
+                        {storiesPendentes.length >= 2 && (
+                          <div className="mb-6 rounded-3xl border border-border bg-card px-4 py-3.5 flex items-center gap-3 flex-wrap shadow-[0_8px_30px_rgba(27,26,24,0.05)]">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-display font-extrabold text-[15px] text-foreground">{storiesPendentes.length} stories pra aprovar</p>
+                              <p className="text-[12px] font-body text-muted-foreground">Viu todos e está tudo certo? Aprove de uma vez. Pra pedir ajuste num deles, use o botão do próprio story.</p>
+                            </div>
+                            <button type="button" disabled={aprovandoTodos}
+                              onClick={async () => {
+                                setAprovandoTodos(true);
+                                try { for (const st of storiesPendentes) await approveFast.mutateAsync({ id: st.post_id }); }
+                                finally { setAprovandoTodos(false); }
+                              }}
+                              className="h-11 px-5 rounded-full bg-green-600 text-white font-body font-bold text-[14px] disabled:opacity-60">
+                              {aprovandoTodos ? "Aprovando…" : "Aprovar todos"}
+                            </button>
+                          </div>
+                        )}
+                        {fila.map(renderPost)}
+                      </FigurinhasCtx.Provider>
                     )}
 
                     {aprovados.length > 0 && (

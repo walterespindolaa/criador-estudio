@@ -25,6 +25,7 @@ import {
   useDayOrders, useSaveDayOrder, useItemPeriods, useSaveItemPeriod,
   type Capture, type Creation, type ItemPeriods,
 } from "@/hooks/useAgenda";
+import { SeloPublicacaoIg } from "@/components/shared/PublicarNoInstagram";
 import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient, type ExternalClient } from "@/hooks/useCriaPost";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
 import { useClientCriaAgendaPosts, useCriaClientProfiles, useManagerPublishClientPost, useManagerRescheduleClientPost, type ClientCriaAgendaPost, type ClientCriaLink } from "@/hooks/useManagerClientCria";
@@ -1442,6 +1443,9 @@ export default function AgendaCriacao() {
                           </span>
                         </div>
                         <p className={cn("text-[12px] font-body font-semibold leading-tight truncate", posted ? "line-through text-muted-foreground" : "text-foreground")}>{p.title || "Post"}</p>
+                        {/* Já programado no Instagram (Walter, 29/10/2026): agendado,
+                            publicado ou não saiu, à vista na agenda. */}
+                        {p.publish_status && <SeloPublicacaoIg status={p.publish_status} autoPublish={p.auto_publish} className="mt-1" />}
                       </button>
                       );
                     }}
@@ -2149,7 +2153,7 @@ export default function AgendaCriacao() {
           if (item.kind === "task") { const t = item.task; const dotColor = corDaTarefa(t); return <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
           if (item.kind === "mat") { const mt = item.mat; const done = mt.status === "finalizado"; return <button key={`m${mt.id}`} onClick={() => { setDayModal(null); openMaterial(mt); }} className={rowCls}>{dot(corDoMaterial(mt))}<span className={cn("text-[13px] font-body font-semibold truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{mt.title}</span><span className="ml-auto text-[10px] text-muted-foreground shrink-0">Material</span></button>; }
           if (item.kind === "cap") { const c = item.cap; return <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{item.time ? ` · ${item.time}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>; }
-          const p = item.post; const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot(corDoPost(p))}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}</button>;
+          const p = item.post; const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot(corDoPost(p))}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}{p.publish_status && <SeloPublicacaoIg status={p.publish_status} autoPublish={p.auto_publish} className="shrink-0" />}</button>;
         };
         // Linhas só leitura (Cria do cliente e aniversário), usadas nos dois modos do modal.
         const linhaCria = (p: ClientCriaAgendaPost) => (

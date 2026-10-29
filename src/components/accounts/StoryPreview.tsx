@@ -6,13 +6,16 @@ import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
 import { VideoPoster, useDriveVideoRatio } from "@/components/shared/VideoPoster";
 import { coverIframeStyle } from "@/lib/poster-letterbox";
 import { useMidiaComTipoDrive } from "@/hooks/useMidiaComTipoDrive";
+import type { FigurinhasStory } from "@/hooks/usePublicarInstagram";
 
 /**
  * Preview de Story (9:16, tela cheia): sem legenda e sem barra de ações de feed.
  * Usado no composer do Cria Post e no portal público de aprovação.
  */
-export function StoryPreview({ media: midiaCrua, handle, avatarUrl, onRemove }: {
+export function StoryPreview({ media: midiaCrua, handle, avatarUrl, onRemove, figurinhas }: {
   media: CarouselMedia[]; handle?: string; avatarUrl?: string | null; onRemove?: (id: string) => void;
+  /** Figurinhas planejadas (link, enquete...): desenhadas por cima pro cliente aprovar o texto. */
+  figurinhas?: FigurinhasStory | null;
 }) {
   // Drive sem tipo (link colado ainda "Restrito"): pergunta de novo e ganha play.
   const media = useMidiaComTipoDrive(midiaCrua);
@@ -113,6 +116,38 @@ export function StoryPreview({ media: midiaCrua, handle, avatarUrl, onRemove }: 
       {/* Gradientes pra leitura dos elementos */}
       <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/55 to-transparent pointer-events-none" />
       <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/55 to-transparent pointer-events-none" />
+
+      {/* FIGURINHAS PLANEJADAS (29/10/2026): desenho aproximado do que vai ser
+          colado pelo app, só pra aprovar o conteúdo. Some quando o vídeo toca. */}
+      {figurinhas && !playing && (figurinhas.enquete || figurinhas.caixinha || figurinhas.link || figurinhas.local || figurinhas.musica) && (
+        <div className="absolute inset-x-6 bottom-[14%] z-10 flex flex-col items-center gap-2 pointer-events-none">
+          {figurinhas.musica && (
+            <span className="rounded-lg bg-white/95 px-2.5 py-1 text-[11px] font-bold text-foreground shadow">🎵 {figurinhas.musica.nome}</span>
+          )}
+          {figurinhas.enquete && (
+            <div className="w-full max-w-[220px] rounded-2xl bg-white/95 p-2.5 text-center shadow">
+              <p className="text-[12px] font-bold text-foreground leading-tight">{figurinhas.enquete.pergunta}</p>
+              <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                {(figurinhas.enquete.opcoes?.length ? figurinhas.enquete.opcoes : ["Sim", "Não"]).slice(0, 2).map((o) => (
+                  <span key={o} className="rounded-lg bg-muted px-1.5 py-1 text-[11px] font-bold text-foreground truncate">{o}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {figurinhas.caixinha && (
+            <div className="w-full max-w-[220px] rounded-2xl bg-white/95 p-2.5 text-center shadow">
+              <p className="text-[12px] font-bold text-foreground leading-tight">{figurinhas.caixinha.pergunta}</p>
+              <p className="mt-1.5 rounded-lg bg-muted px-2 py-1 text-[10px] text-muted-foreground">Responda aqui</p>
+            </div>
+          )}
+          {figurinhas.local && (
+            <span className="rounded-lg bg-white/95 px-2.5 py-1 text-[11px] font-bold text-violet-700 shadow">📍 {figurinhas.local.nome}</span>
+          )}
+          {figurinhas.link && (
+            <span className="rounded-full bg-white/95 px-3 py-1 text-[11px] font-extrabold text-sky-700 shadow">🔗 {figurinhas.link.texto || figurinhas.link.url}</span>
+          )}
+        </div>
+      )}
 
       {/* Barrinhas de progresso (1 segmento por mídia) */}
       <div className="absolute top-2 left-2 right-2 z-20 flex gap-1 pointer-events-none">

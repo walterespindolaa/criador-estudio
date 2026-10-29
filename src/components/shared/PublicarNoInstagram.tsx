@@ -6,11 +6,12 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
-  useChecarMidia, useConexaoDoPost, useDesfazerConferencia, usePublicacaoDoPost,
+  useChecarMidia, useConexaoDoPost, useDesfazerConferencia, usePublicacaoDoPost, useRepublicar,
   type ConexaoDoPost, type EstadoPublicacao, type ResultadoChecagem,
 } from "@/hooks/usePublicarInstagram";
 import { ConferenciaPublicacao } from "@/components/shared/ConferenciaPublicacao";
 import { OpcoesInstagram } from "@/components/shared/OpcoesInstagram";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PUBLICAR NO INSTAGRAM (ciclo 5 do plano de publicar, 28/09/2026)
@@ -74,6 +75,8 @@ export type PublicarNoInstagramViewProps = {
   onSemAprovacao?: () => void;
   /** Abre as opções do Instagram (collab, marcação, alt, teste, música). */
   onOpcoes?: () => void;
+  /** Post publicado e apagado no Instagram: volta pra "Pronto pra sair". */
+  onRepublicar?: () => void;
   /* Compacto (editor no computador, Walter 19/10/2026): uma linha só com selo,
      automático, checar e publicar. O cartão cheio comia 1/3 do painel e
      empurrava a prévia pra fora da tela. Avisos de estado continuam aparecendo. */
@@ -83,7 +86,7 @@ export type PublicarNoInstagramViewProps = {
 };
 
 export function PublicarNoInstagramView({
-  est, cx, publicando, alternando, checando, checagem, erroChecagem, onPublicar, onAuto, onChecar, onSemAprovacao, onOpcoes, compacto, formato,
+  est, cx, publicando, alternando, checando, checagem, erroChecagem, onPublicar, onAuto, onChecar, onSemAprovacao, onOpcoes, onRepublicar, compacto, formato,
 }: PublicarNoInstagramViewProps) {
 
   const status = est.publish_status;
@@ -125,6 +128,34 @@ export function PublicarNoInstagramView({
     + (est.ig_opcoes?.alt_text ? 1 : 0) + (est.ig_opcoes?.trial ? 1 : 0) + (musicaCelular ? 1 : 0);
 
   const selo = SELO[estado];
+
+  /* AGENDAR É O PRINCIPAL, PUBLICAR AGORA É O SECUNDÁRIO (Walter, 29/10/2026).
+     Antes o botão grande "Publicar" publicava NA HORA e o agendamento era um
+     interruptor "Auto" do lado: um post marcado pra 03/11 saiu no dia 29.
+     Agora a ação principal diz a data em que sai, e "Publicar agora" é um
+     botão de contorno que ainda passa pela conferência com aviso vermelho. */
+  const podeAgendar = podeAgir && !alternando && !!est.scheduled_date;
+  const acoes = (
+    <div className="flex flex-wrap gap-2">
+      {estado === "agendado" ? (
+        <Button type="button" variant="outline" onClick={() => onAuto(false)} disabled={!podeDesligar}
+          className={cn("flex-1 min-w-[140px] rounded-xl text-xs font-bold", compacto ? "h-8" : "h-11 sm:h-9")}>
+          {alternando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Cancelar agendamento"}
+        </Button>
+      ) : (
+        <Button type="button" onClick={() => onAuto(true)} disabled={!podeAgendar}
+          title={quandoPost ? `Sai sozinho ${quandoPost}` : "Defina a data do post e salve pra agendar."}
+          className={cn("flex-1 min-w-[160px] rounded-xl text-xs font-bold bg-sky-700 text-white hover:bg-sky-800", compacto ? "h-8" : "h-11 sm:h-9")}>
+          <CalendarClock className="h-3.5 w-3.5 mr-1.5" />
+          {quandoPost ? `Agendar pra ${quandoPost.replace(" às ", " ")}` : "Agendar (defina a data)"}
+        </Button>
+      )}
+      <Button type="button" variant="outline" onClick={onPublicar} disabled={!podeAgir}
+        className={cn("rounded-xl text-xs font-bold", compacto ? "h-8 px-3" : "h-11 sm:h-9 px-4")}>
+        {estado === "erro" ? <><RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Tentar agora</> : <><Send className="h-3.5 w-3.5 mr-1.5" /> Publicar agora</>}
+      </Button>
+    </div>
+  );
   const tocar = "h-11 sm:h-9"; // 44px no celular, compacto no computador
 
   return (
@@ -149,39 +180,18 @@ export function PublicarNoInstagramView({
                 <span className={cn("min-w-0 truncate rounded-full px-1.5 py-px text-[10px] font-body font-bold leading-4", selo.cls)}>{selo.txt}</span>
               </p>
               {estado !== "publicado" && (
-                <Button type="button" onClick={onPublicar} disabled={!podeAgir}
-                  className="h-8 px-3 rounded-lg shrink-0 text-xs bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
-                  {estado === "publicando" ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    : estado === "erro" ? <><RotateCcw className="h-3.5 w-3.5 mr-1" /> De novo</>
-                    : <><Send className="h-3.5 w-3.5 mr-1" /> Publicar</>}
+                <Button type="button" variant="outline" onClick={onChecar} disabled={checando}
+                  title="Checar mídia" aria-label="Checar mídia" className="h-7 w-7 p-0 rounded-lg shrink-0">
+                  {checando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                 </Button>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <p className="min-w-0 flex-1 text-[11px] font-body text-muted-foreground truncate" title={bloqueio ?? (cx?.username ? `@${cx.username}` : undefined)}>
-                {estado !== "publicado" && bloqueio ? bloqueio
-                  : estado === "agendado" && est.publicar_em ? `Conferido · sai ${dataHoraBr(est.publicar_em)}${cx?.username ? ` · @${cx.username}` : ""}`
-                  : cx?.username ? `${estado === "publicado" ? "saiu em" : "em"} @${cx.username}` : ""}
-              </p>
-              {estado !== "publicado" && (
-                <>
-                  <label className={cn("flex items-center gap-1.5 text-[11px] font-body text-muted-foreground shrink-0", podeAgir && "cursor-pointer")}
-                    title={quandoPost ? `Publicar sozinho na data e hora do post: ${quandoPost}` : "Defina a data do post e salve pra ligar."}>
-                    Auto
-                    <Switch
-                      checked={estado === "agendado"}
-                      disabled={!(podeDesligar || (podeAgir && !alternando && !!est.scheduled_date))}
-                      onCheckedChange={(v) => onAuto(v)}
-                      aria-label="Publicar automaticamente na data e hora do post"
-                    />
-                  </label>
-                  <Button type="button" variant="outline" onClick={onChecar} disabled={checando}
-                    title="Checar mídia" aria-label="Checar mídia" className="h-7 w-7 p-0 rounded-lg shrink-0">
-                    {checando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                  </Button>
-                </>
-              )}
-            </div>
+            <p className="text-[11px] font-body text-muted-foreground truncate" title={bloqueio ?? (cx?.username ? `@${cx.username}` : undefined)}>
+              {estado !== "publicado" && bloqueio ? bloqueio
+                : estado === "agendado" && est.publicar_em ? `Sai sozinho ${dataHoraBr(est.publicar_em)}${cx?.username ? ` · @${cx.username}` : ""}`
+                : cx?.username ? `${estado === "publicado" ? "saiu em" : "em"} @${cx.username}` : ""}
+            </p>
+            {estado !== "publicado" && estado !== "publicando" && acoes}
           </div>
         ) : (<>
         {/* Cabeçalho: o que é, em que pé está e por onde sai. O selo fica
@@ -221,6 +231,12 @@ export function PublicarNoInstagramView({
                   Ver no Instagram <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
                 </a>
               </Button>
+            )}
+            {onRepublicar && (
+              <button type="button" onClick={onRepublicar}
+                className="block text-xs font-body font-bold text-sky-800 underline underline-offset-2 hover:text-sky-950">
+                Apagou no Instagram? Publicar ou agendar de novo
+              </button>
             )}
           </div>
         )}
@@ -264,40 +280,12 @@ export function PublicarNoInstagramView({
               <p className="text-xs font-body text-muted-foreground rounded-xl bg-muted/60 px-3 py-2">{bloqueio}</p>
             )}
 
-            {!compacto && (<>
-            {/* Automático: a linha inteira é tocável (não só o botãozinho). */}
-            <label className={cn(
-              "flex items-center gap-3 rounded-xl border px-3 py-2.5 min-h-[52px]",
-              podeAgir ? "cursor-pointer border-border hover:bg-muted/40" : "border-border/60 opacity-70",
-            )}>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[13px] font-body font-bold text-foreground">Publicar automaticamente</span>
-                <span className="block text-xs font-body text-muted-foreground">
-                  {quandoPost ? `Na data e hora do post: ${quandoPost}. Ligar abre a conferência final.` : "Defina a data do post e salve pra ligar."}
-                </span>
-              </span>
-              <Switch
-                checked={estado === "agendado"}
-                disabled={!(podeDesligar || (podeAgir && !alternando && !!est.scheduled_date))}
-                onCheckedChange={(v) => onAuto(v)}
-                aria-label="Publicar automaticamente na data e hora do post"
-              />
-            </label>
-
-            {/* Lado a lado quando cabe; em tela estreita um embaixo do outro
-                (min-w evita o texto do botão cortado). */}
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={onPublicar} disabled={!podeAgir}
-                className={cn("flex-1 min-w-[150px] rounded-xl bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90", tocar)}>
-                {estado === "publicando" ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : estado === "erro" ? <><RotateCcw className="h-4 w-4 mr-1.5" /> Tentar de novo</>
-                  : <><Send className="h-4 w-4 mr-1.5" /> Publicar agora</>}
+            {!compacto && estado !== "publicando" && (<>
+              {acoes}
+              <Button type="button" variant="ghost" onClick={onChecar} disabled={checando} className="h-9 px-2.5 rounded-xl text-xs font-body text-muted-foreground hover:text-foreground">
+                {checando ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />} Checar mídia
               </Button>
-              <Button type="button" variant="outline" onClick={onChecar} disabled={checando} className={cn("flex-1 min-w-[150px] rounded-xl", tocar)}>
-                {checando ? <Loader2 className="h-4 w-4 animate-spin" /> : <><RefreshCw className="h-4 w-4 mr-1.5" /> Checar mídia</>}
-              </Button>
-            </div>
-            </>)}
+                        </>)}
 
             {/* O que não sai pela API no story (Walter, 28/10/2026). */}
             {ehStoryFmt && !compacto && (
@@ -356,6 +344,8 @@ export function PublicarNoInstagram({ postId, onAgendou, compacto, formato }: { 
   // Conferência final (Walter, 28/10/2026): agendar e publicar agora passam por ela.
   const [conf, setConf] = useState<{ agora: boolean; semAprovacao: boolean } | null>(null);
   const [opcoes, setOpcoes] = useState(false);
+  const republicar = useRepublicar(postId);
+  const [rep, setRep] = useState<null | "perguntar" | "no_ar" | "sem_conferir">(null);
 
   if (!postId || !est) return null;
   if (!cx?.pode_publicar && !est.publish_status) return null;
@@ -379,6 +369,7 @@ export function PublicarNoInstagram({ postId, onAgendou, compacto, formato }: { 
         }}
         onSemAprovacao={() => setConf({ agora: false, semAprovacao: true })}
         onOpcoes={() => setOpcoes(true)}
+        onRepublicar={() => setRep("perguntar")}
         onChecar={() => checar.mutate()}
         compacto={compacto}
         formato={formato}
@@ -391,6 +382,37 @@ export function PublicarNoInstagram({ postId, onAgendou, compacto, formato }: { 
         semAprovacao={conf?.semAprovacao}
         onConcluido={() => { if (conf && !conf.agora) onAgendou?.(true); }}
       />
+      <Dialog open={!!rep} onOpenChange={(v) => { if (!v) setRep(null); }}>
+        <DialogContent className="max-w-md w-[calc(100vw-1.5rem)] rounded-3xl">
+          <DialogHeader className="text-left">
+            <DialogTitle className="font-display text-xl">Publicar de novo?</DialogTitle>
+            <DialogDescription className="text-[13px]">
+              O Cria confere no Instagram se o post ainda está lá. Se já foi apagado, ele volta pra "Pronto pra sair", com a mesma mídia e legenda, e você escolhe agendar ou publicar agora.
+            </DialogDescription>
+          </DialogHeader>
+          {rep === "no_ar" && (
+            <p className="text-[13px] rounded-xl bg-amber-50 border border-amber-200 text-amber-900 px-3 py-2 flex gap-2" role="alert">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" /> Ele ainda está no ar no Instagram. Publicar de novo deixaria duplicado: apague lá primeiro e volte aqui.
+            </p>
+          )}
+          {rep === "sem_conferir" && (
+            <p className="text-[13px] rounded-xl bg-amber-50 border border-amber-200 text-amber-900 px-3 py-2 flex gap-2" role="alert">
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" /> Não consegui conferir no Instagram agora. Só continue se você tem certeza de que o post foi apagado.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2 justify-end">
+            <Button type="button" variant="outline" className="rounded-xl" onClick={() => setRep(null)}>Cancelar</Button>
+            {rep !== "no_ar" && (
+              <Button type="button" className="rounded-xl bg-sky-700 text-white hover:bg-sky-800" disabled={republicar.isPending}
+                onClick={() => republicar.mutate(rep === "sem_conferir", {
+                  onSuccess: (r) => { if (r.ok) setRep(null); else if (r.motivo === "no_ar" || r.motivo === "sem_conferir") setRep(r.motivo); else setRep(null); },
+                })}>
+                {republicar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : rep === "sem_conferir" ? "Tenho certeza, liberar" : "Conferir e liberar"}
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
       <OpcoesInstagram postId={postId} formato={formato ?? est.format} inicial={est.ig_opcoes} open={opcoes} onOpenChange={setOpcoes} />
     </>
   );
