@@ -5,6 +5,7 @@ import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
 import { VideoPoster, useDriveVideoRatio } from "@/components/shared/VideoPoster";
 import { coverIframeStyle, letterboxStyle, probeLetterbox, type LetterboxBox } from "@/lib/poster-letterbox";
 import { CamadaDeAlfinetes, type Alfinete } from "@/components/shared/CamadaDeAlfinetes";
+import { useMidiaComTipoDrive } from "@/hooks/useMidiaComTipoDrive";
 
 export type CarouselMedia = {
   id?: string; provider?: string | null; external_file_id?: string | null; view_url?: string | null;
@@ -272,7 +273,7 @@ function Slide({ item, onReady, eager, onPlaying }: { item: CarouselMedia; onRea
 }
 
 export function PostMediaCarousel({
-  media, aspect = "4 / 5", onRemove, onVideoReady, onPlaying,
+  media: midiaCrua, aspect = "4 / 5", onRemove, onVideoReady, onPlaying,
   alfinetes, modoApontar, aoFixar, aoAbrirAlfinete, alfineteSelecionado,
 }: {
   media: CarouselMedia[]; aspect?: string; onRemove?: (id: string) => void; onVideoReady?: () => void;
@@ -289,6 +290,8 @@ export function PostMediaCarousel({
   aoAbrirAlfinete?: (id: string) => void;
   alfineteSelecionado?: string | null;
 }) {
+  // Drive sem tipo (link colado ainda "Restrito"): pergunta de novo e ganha play.
+  const media = useMidiaComTipoDrive(midiaCrua);
   const scroller = useRef<HTMLDivElement>(null);
   const [idx, setIdx] = useState(0);
   const n = media.length;

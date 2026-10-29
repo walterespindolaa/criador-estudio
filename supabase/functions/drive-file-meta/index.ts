@@ -53,6 +53,40 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const body = await req.json().catch(() => ({}));
+
+    /* CORRIGE O TIPO DEPOIS QUE O ARQUIVO VIRA PÚBLICO (Walter, 29/10/2026).
+       Caso real: a social mídia colou 5 vídeos ainda "Restrito" no Drive. O tipo
+       ficou vazio no banco e, mesmo depois de liberar o compartilhamento, o link
+       do cliente seguia sem play, porque só o lado da social mídia perguntava de
+       novo. Agora qualquer tela que mostra a mídia (inclusive o portal do
+       cliente, que não tem login) pode pedir a correção.
+       Seguro sem login: quem chama só manda o file id. O tipo gravado é o que o
+       PRÓPRIO Google responde, só entra imagem ou vídeo, e só mexe em linha do
+       Drive que ainda está sem tipo. Ninguém consegue gravar um valor escolhido. */
+    if (body?.corrigir_tipo === true) {
+      const fid = extractFileId(String(body?.file_id ?? ""));
+      if (!fid) return json({ ok: false, reason: "invalid_url" });
+      const key = Deno.env.get("GOOGLE_API_KEY");
+      if (!key) return json({ ok: false, reason: "missing_key" });
+      const qs = new URLSearchParams({ key, fields: "id,name,mimeType", supportsAllDrives: "true" });
+      const r = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fid)}?${qs.toString()}`);
+      if (!r.ok) return json({ ok: false, file_id: fid, reason: r.status === 403 || r.status === 404 ? "not_public" : "drive_error" });
+      const d = await r.json();
+      const mime: string = d?.mimeType ?? "";
+      if (!/^(image|video)\//.test(mime)) return json({ ok: false, file_id: fid, reason: "not_media" });
+      const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+      const { error: e1 } = await svc.from("external_media_refs").update({ file_type: mime })
+        .eq("provider", "gdrive").eq("external_file_id", fid).is("file_type", null);
+      // O link colado gravava o nome literal "Google Drive": troca pelo nome real.
+      if (!e1 && d?.name) {
+        await svc.from("external_media_refs").update({ file_name: d.name })
+          .eq("provider", "gdrive").eq("external_file_id", fid).eq("file_name", "Google Drive");
+      }
+      if (e1) console.error("[drive-file-meta] corrigir_tipo update:", e1.message);
+      return json({ ok: true, file_id: fid, mime_type: mime, name: d?.name ?? null });
+    }
+
     // Auth do usuário (mesmo padrão do drive-list, verify_jwt = true).
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return json({ error: "Missing auth" }, 401);
@@ -62,7 +96,6 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authError || !user) return json({ error: "Unauthorized" }, 401);
 
-    const body = await req.json().catch(() => ({}));
     const raw: string = body?.file_url ?? body?.file_id ?? "";
     const fileId = extractFileId(raw);
     if (!fileId) {

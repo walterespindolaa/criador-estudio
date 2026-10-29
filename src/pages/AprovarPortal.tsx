@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Check, RotateCcw, Loader2, ImageOff, Heart, MessageCircle, Send, Bookmark, Zap, ListChecks, ChevronDown, Clapperboard, CalendarDays, BarChart3, CheckSquare, AlertTriangle, Package, Plus, FolderOpen, History, MapPin, LayoutGrid, List } from "lucide-react";
 import { hexToHsl } from "@/lib/applyTheme";
 import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
+import { useMidiaComTipoDrive } from "@/hooks/useMidiaComTipoDrive";
 import { type Alfinete } from "@/components/shared/CamadaDeAlfinetes";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { postAspect } from "@/lib/post-aspect";
@@ -75,7 +76,8 @@ function CardIG({ client, post, alfinetes, modoApontar, aoFixar, aoAbrirAlfinete
   aoFixar?: (indice: number, x: number, y: number) => void;
   aoAbrirAlfinete?: (id: string) => void; alfineteSelecionado?: string | null;
 }) {
-  const media = Array.isArray(post.media) ? post.media : [];
+  // Drive sem tipo (link colado ainda "Restrito"): pergunta de novo e ganha play.
+  const media = useMidiaComTipoDrive(Array.isArray(post.media) ? post.media : []);
   // Vídeo tocando: some o enfeite de Instagram (véu e ícones) que ficava por
   // cima dos controles do player.
   const [tocando, setTocando] = useState(false);

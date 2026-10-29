@@ -5,14 +5,17 @@ import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, getT
 import { ProgressiveImage } from "@/components/shared/ProgressiveImage";
 import { VideoPoster, useDriveVideoRatio } from "@/components/shared/VideoPoster";
 import { coverIframeStyle } from "@/lib/poster-letterbox";
+import { useMidiaComTipoDrive } from "@/hooks/useMidiaComTipoDrive";
 
 /**
  * Preview de Story (9:16, tela cheia): sem legenda e sem barra de ações de feed.
  * Usado no composer do Cria Post e no portal público de aprovação.
  */
-export function StoryPreview({ media, handle, avatarUrl, onRemove }: {
+export function StoryPreview({ media: midiaCrua, handle, avatarUrl, onRemove }: {
   media: CarouselMedia[]; handle?: string; avatarUrl?: string | null; onRemove?: (id: string) => void;
 }) {
+  // Drive sem tipo (link colado ainda "Restrito"): pergunta de novo e ganha play.
+  const media = useMidiaComTipoDrive(midiaCrua);
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const n = media.length;

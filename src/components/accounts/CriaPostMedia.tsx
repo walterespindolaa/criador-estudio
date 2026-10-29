@@ -220,7 +220,12 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
       // Quando não deu pra descobrir se é imagem ou vídeo, avisa o motivo real em vez
       // de deixar a prévia mostrar um play em cima de uma arte estática.
       if (r?.resolved) toast.success("Link adicionado");
-      else toast.warning("Link adicionado, mas não consegui identificar o arquivo. Deixe como \"Qualquer pessoa com o link\" no Drive pra prévia ficar certinha.");
+      /* Aviso FIXO (29/10/2026): o amarelo que sumia sozinho passou batido e o
+         cliente recebeu 5 vídeos sem play. Agora fica até a pessoa fechar. */
+      else toast.warning("Esse arquivo está Restrito no Drive: o cliente não vai conseguir ver nem dar play.", {
+        description: "No Drive: Compartilhar → Acesso geral → \"Qualquer pessoa com o link\". Depois de liberar, a prévia se corrige sozinha.",
+        duration: Infinity, closeButton: true,
+      });
     }
     catch (err) { toast.error(err instanceof Error ? err.message : "Falha ao adicionar"); }
   };
