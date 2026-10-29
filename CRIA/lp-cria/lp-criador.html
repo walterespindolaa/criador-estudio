@@ -214,14 +214,13 @@ details.fx .corpo li::before{content:"✓ ";color:var(--verde);font-weight:900}
 .ck button.ok{background:var(--ink);color:#fff}
 @media(min-width:860px){.ck{right:auto;width:460px}}
 
-/* lightbox */
-#lb{position:fixed;inset:0;z-index:60;background:rgba(10,10,10,.88);display:none;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
+/* lightbox: a tela inteira cabendo, e zoom com os dedos */
+#lb{position:fixed;inset:0;z-index:60;background:rgba(10,10,10,.92);display:none;align-items:center;justify-content:center;overflow:hidden;touch-action:none}
 #lb.on{display:flex}
-#lb .cx{max-width:min(1400px,100%);max-height:100%;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:14px}
-#lb img{max-width:none;width:100%;min-width:min(100%,1400px);border-radius:14px;background:#fff}
-#lb .f{position:absolute;top:12px;right:12px;width:44px;height:44px;border-radius:50%;background:#fff;border:0;font-size:24px;font-weight:900;cursor:pointer}
-#lb .dica{position:absolute;bottom:14px;left:0;right:0;text-align:center;color:#fff;font-size:12.5px;opacity:.8}
-@media(max-width:700px){#lb img.larga{width:1100px;min-width:0}}
+#lb img{max-width:94vw;max-height:84vh;width:auto;height:auto;object-fit:contain;border-radius:12px;background:#fff;transform-origin:0 0;will-change:transform;user-select:none;-webkit-user-drag:none;cursor:zoom-in}
+#lb.zoom img{cursor:grab}
+#lb .f{position:absolute;top:14px;right:14px;width:44px;height:44px;border-radius:50%;background:#fff;border:0;font-size:24px;font-weight:900;cursor:pointer;z-index:2}
+#lb .dica{position:absolute;bottom:16px;left:0;right:0;text-align:center;color:#fff;font-size:12.5px;opacity:.8;pointer-events:none}
 .v{display:none}.v.on{display:block}
 .vs{text-align:left}
 </style></head><body>
@@ -305,17 +304,30 @@ details.fx .corpo li::before{content:"✓ ";color:var(--verde);font-weight:900}
   <div style="margin-top:14px;opacity:.7">© 2026 Cria Social Club · contato@criasocialclub.com.br</div></div></footer>
 
 <div class="fixa" id="fixa"><span><b>7 dias grátis</b>sem cartão</span><a href="https://app.criasocialclub.com.br/signup">Criar conta grátis</a></div>
-<div id="lb" aria-hidden="true"><button class="f" aria-label="Fechar">×</button><div class="cx"><img alt=""></div><div class="dica">Arrasta pra ver a tela inteira · toca fora pra fechar</div></div>
+<div id="lb" aria-hidden="true"><button class="f" aria-label="Fechar">×</button><img alt=""><div class="dica">Junta ou afasta os dedos pra dar zoom · dois toques aproxima</div></div>
 <script>
 function variante(v){document.querySelectorAll('[data-h]').forEach(function(e){e.classList.toggle('on',e.dataset.h===v)})}
 document.querySelectorAll('.mk button').forEach(function(b){b.onclick=function(){document.querySelectorAll('.mk button').forEach(function(x){x.classList.toggle('on',x===b)});variante(b.dataset.v)}});
 (function(){var c='';try{c=(new URLSearchParams(location.search).get('utm_content')||JSON.parse(sessionStorage.getItem('cria_origem')||'{}').utm_content||'').toLowerCase()}catch(e){}
 var R=[["ganchos","ganchos"],["seguidores","seguidores"],["fala","fala"]];for(var i=0;i<R.length;i++)if(c.indexOf(R[i][0])!==-1){variante(R[i][1]);break}})();
 document.querySelectorAll('details.fx').forEach(function(d){d.addEventListener('toggle',function(){if(d.open)document.querySelectorAll('details.fx').forEach(function(o){if(o!==d)o.open=false})})});
-var lb=document.getElementById('lb'),li=lb.querySelector('img');
-document.addEventListener('click',function(e){var a=e.target.closest('[data-zoom]');if(!a)return;e.preventDefault();var cel=a.classList.contains('cel');li.src=a.getAttribute('href');li.className=cel?'':'larga';li.style.maxWidth=cel?'420px':'';lb.classList.add('on');lb.querySelector('.cx').scrollLeft=0});
-lb.addEventListener('click',function(e){if(e.target===li&&window.innerWidth<700)return;lb.classList.remove('on')});
-document.addEventListener('keydown',function(e){if(e.key==='Escape')lb.classList.remove('on')});
+var lb=document.getElementById('lb'),li=lb.querySelector('img'),Z={s:1,x:0,y:0},T={};
+function aplica(){li.style.transform='translate('+Z.x+'px,'+Z.y+'px) scale('+Z.s+')';lb.classList.toggle('zoom',Z.s>1.01)}
+function zera(){Z.s=1;Z.x=0;Z.y=0;aplica()}
+function limita(){var w=li.offsetWidth,h=li.offsetHeight;Z.s=Math.min(5,Math.max(1,Z.s));if(Z.s===1){Z.x=0;Z.y=0;return}Z.x=Math.min(0,Math.max(w-w*Z.s,Z.x));Z.y=Math.min(0,Math.max(h-h*Z.s,Z.y))}
+function zoomEm(px,py,ns){var r=li.getBoundingClientRect(),lx=(px-r.left)/Z.s,ly=(py-r.top)/Z.s;Z.x=Z.x+(Z.s-ns)*lx;Z.y=Z.y+(Z.s-ns)*ly;Z.s=ns;limita();aplica()}
+function abre(src){li.src=src;zera();lb.classList.add('on');document.body.style.overflow='hidden'}
+function fecha(){lb.classList.remove('on');document.body.style.overflow=''}
+document.addEventListener('click',function(e){var a=e.target.closest('[data-zoom]');if(!a)return;e.preventDefault();abre(a.getAttribute('href'))});
+lb.querySelector('.f').addEventListener('click',fecha);
+lb.addEventListener('click',function(e){if(e.target===lb&&Z.s<=1.01)fecha()});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')fecha()});
+li.addEventListener('dblclick',function(e){zoomEm(e.clientX,e.clientY,Z.s>1.01?1:2.5)});
+li.addEventListener('wheel',function(e){e.preventDefault();zoomEm(e.clientX,e.clientY,Z.s*(e.deltaY<0?1.15:0.87))},{passive:false});
+var ultimoToque=0;
+li.addEventListener('touchstart',function(e){if(e.touches.length===2){var a=e.touches[0],b=e.touches[1];T.d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);T.s=Z.s;T.cx=(a.clientX+b.clientX)/2;T.cy=(a.clientY+b.clientY)/2}else if(e.touches.length===1){var t=e.touches[0],ag=Date.now();if(ag-ultimoToque<300){zoomEm(t.clientX,t.clientY,Z.s>1.01?1:2.5);ultimoToque=0;return}ultimoToque=ag;T.px=t.clientX;T.py=t.clientY;T.ox=Z.x;T.oy=Z.y}},{passive:true});
+li.addEventListener('touchmove',function(e){e.preventDefault();if(e.touches.length===2&&T.d){var a=e.touches[0],b=e.touches[1],d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);zoomEm(T.cx,T.cy,T.s*d/T.d)}else if(e.touches.length===1&&Z.s>1.01){var t=e.touches[0];Z.x=T.ox+(t.clientX-T.px);Z.y=T.oy+(t.clientY-T.py);limita();aplica()}},{passive:false});
+li.addEventListener('touchend',function(e){if(e.touches.length<2)T.d=0;if(e.touches.length===1){var t=e.touches[0];T.px=t.clientX;T.py=t.clientY;T.ox=Z.x;T.oy=Z.y}});
 var hero=document.querySelector('.hero .btn');
 addEventListener('scroll',function(){var r=hero.getBoundingClientRect();document.getElementById('fixa').classList.toggle('on',r.bottom<0&&!document.getElementById('ck')&&!document.getElementById('cria-consent'))},{passive:true});
 </script>
