@@ -18,7 +18,7 @@ const ORIGENS_OK = ["https://criasocialclub.com.br", "https://www.criasocialclub
 
 function cors(req: Request) {
   const o = req.headers.get("origin") ?? "";
-  const permitido = ORIGENS_OK.includes(o) || /^https:\/\/cria-[a-z0-9-]+\.vercel\.app$/.test(o) || /^https?:\/\/localhost(:\d+)?$/.test(o);
+  const permitido = ORIGENS_OK.includes(o) || /^https:\/\/(criador|socialmedia)\.criasocialclub\.com\.br$/.test(o) || /^https:\/\/cria-[a-z0-9-]+\.vercel\.app$/.test(o) || /^https?:\/\/localhost(:\d+)?$/.test(o);
   return {
     "Access-Control-Allow-Origin": permitido ? o : ORIGENS_OK[0],
     "Access-Control-Allow-Headers": "content-type",
@@ -45,7 +45,8 @@ function publico(pagina: string, campanha: string | null): "criador" | "social" 
   const c = (campanha ?? "").toLowerCase();
   if (c.includes("social")) return "social";
   if (c.includes("criador")) return "criador";
-  if (pagina.startsWith("/social-media")) return "social";
+  if (pagina.startsWith("/social-media") || pagina.startsWith("/lp/social")) return "social";
+  if (pagina.startsWith("/lp/criador")) return "criador";
   if (["/", "/index", "/index.html", "/funcionalidades", "/funcionalidades.html"].includes(pagina)) return "criador";
   return "outro";
 }

@@ -107,7 +107,7 @@ var CRIA_TRACK = {
     ["utm_source","utm_medium","utm_campaign","utm_content"].forEach(function (k) { utm[k] = o[k] || q.get(k) || undefined; });
     utm.fbclid = o.fbclid || q.get("fbclid") ? 1 : 0;
     return {
-      evento: evento, pagina: location.pathname.replace(/\.html$/, "") || "/", sessao: sessao(), utm: utm,
+      evento: evento, pagina: window.CRIA_PAGINA || location.pathname.replace(/\.html$/, "") || "/", sessao: sessao(), utm: utm,
       ref: o._referrer || document.referrer || "",
       disp: window.matchMedia && window.matchMedia("(max-width: 820px)").matches ? "mobile" : "desktop",
     };

@@ -47,5 +47,27 @@
       "destination": "https://app.criasocialclub.com.br/p/:codigo",
       "permanent": false
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "criador.criasocialclub.com.br"
+        }
+      ],
+      "destination": "/lp-criador.html"
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "socialmedia.criasocialclub.com.br"
+        }
+      ],
+      "destination": "/lp-socialmidia.html"
+    }
   ]
 }
