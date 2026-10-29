@@ -66,6 +66,7 @@ import { AdminBenchmarks } from "@/components/admin/AdminBenchmarks";
 import { AdminPartners } from "@/components/admin/AdminPartners";
 import { AdminReferrals } from "@/components/admin/AdminReferrals";
 import { AdminLogs } from "@/components/admin/AdminLogs";
+import { AdminRobos } from "@/components/admin/AdminRobos";
 import { AdminRecados } from "@/components/admin/AdminRecados";
 import { AdminFaturamento } from "@/components/admin/AdminFaturamento";
 import { AdminFeedback } from "@/components/admin/AdminFeedback";
@@ -430,8 +431,9 @@ const AdminInner = () => {
             <SubAbas atual={subContas} aoTrocar={setSubContas} itens={[
               { valor: "lista", rotulo: "Usuários" },
               { valor: "logs", rotulo: "Erros do app" },
+              { valor: "robos", rotulo: "Robôs" },
             ]} />
-            {subContas === "logs" ? <AdminLogs /> : (
+            {subContas === "robos" ? <AdminRobos /> : subContas === "logs" ? <AdminLogs /> : (
           <>
         {/* Metric cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">

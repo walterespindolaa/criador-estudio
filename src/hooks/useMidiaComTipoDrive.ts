@@ -14,6 +14,12 @@ import { getDriveFileId, isUnknownDriveMedia, type MediaLike } from "@/lib/drive
 
 const descoberto = new Map<string, string>();
 const tentado = new Map<string, Promise<string | null>>();
+const respondido = new Set<string>();
+
+/** O Drive já respondeu sobre este arquivo nesta página (público ou não)? */
+export function driveJaRespondeu(fileId: string | null | undefined): boolean {
+  return !!fileId && respondido.has(fileId);
+}
 
 function perguntar(fileId: string): Promise<string | null> {
   const ja = tentado.get(fileId);
@@ -24,9 +30,10 @@ function perguntar(fileId: string): Promise<string | null> {
       const d = data as { ok?: boolean; mime_type?: string | null } | null;
       const mime = d?.ok ? d.mime_type ?? null : null;
       if (mime) descoberto.set(fileId, mime);
+      respondido.add(fileId);
       return mime;
     })
-    .catch(() => null);
+    .catch(() => { respondido.add(fileId); return null; });
   tentado.set(fileId, p);
   return p;
 }
@@ -49,9 +56,8 @@ export function useMidiaComTipoDrive<T extends MediaLike>(media: T[]): T[] {
       .map((m) => getDriveFileId(m))
       .filter((id): id is string => !!id && !descoberto.has(id));
     if (!ids.length) return;
-    Promise.all(ids.map(perguntar)).then((r) => {
-      if (vivo && r.some(Boolean)) setVersao((v) => v + 1);
-    });
+    // Atualiza a tela também quando continua privado: é o que acende o selo.
+    Promise.all(ids.map(perguntar)).then(() => { if (vivo) setVersao((v) => v + 1); });
     return () => { vivo = false; };
   }, [chave]); // eslint-disable-line react-hooks/exhaustive-deps
 

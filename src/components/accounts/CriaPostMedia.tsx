@@ -13,7 +13,8 @@ import { SalvarNoCelular } from "@/components/accounts/SalvarNoCelular";
 import { PublicarNoInstagram } from "@/components/shared/PublicarNoInstagram";
 import { CapaSobreVideo, EditorDeCapa, temCapa, useCapaDoPost } from "@/components/accounts/CapaDoReels";
 import { postAspect } from "@/lib/post-aspect";
-import { getDisplayImageUrl, getDriveImageFallbackUrl, getDriveViewPageUrl, isDriveMedia, isVideoMedia, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
+import { getDisplayImageUrl, getDriveFileId, getDriveImageFallbackUrl, getDriveViewPageUrl, isDriveMedia, isUnknownDriveMedia, isVideoMedia, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
+import { driveJaRespondeu, useMidiaComTipoDrive } from "@/hooks/useMidiaComTipoDrive";
 import { parseRefLinks, refLinkHref } from "@/lib/refLinks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +31,7 @@ const ACCEPTED_MSG = "Formato não aceito. Use imagens (JPG, PNG, WebP, GIF, HEI
 const isImg = (f: File) => f.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name);
 const isVid = (f: File) => f.type.startsWith("video/") || /\.(mp4|mov|webm|m4v)$/i.test(f.name);
 
-function Thumb({ m }: { m: CriaMedia }) {
+function Thumb({ m, privado }: { m: CriaMedia; privado?: boolean }) {
   const video = isVideoMedia(m);
   // Drive: view_url é página, não imagem. O helper monta o thumbnail exibível.
   const src = (isDriveMedia(m) ? getDisplayImageUrl(m, 400) : m.thumbnail_url || m.view_url) || "";
@@ -50,6 +51,14 @@ function Thumb({ m }: { m: CriaMedia }) {
       {src ? <img src={src} alt="" draggable={false} loading="lazy" className="w-full h-full object-cover select-none" onError={onImgError} />
         : <div className="w-full h-full flex items-center justify-center text-muted-foreground"><FileImage className="h-5 w-5" /></div>}
       {video && <span className="absolute inset-0 flex items-center justify-center pointer-events-none"><Play className="h-5 w-5 text-white [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.7))]" /></span>}
+      {/* SELO "PRIVADO NO DRIVE" (mockup aprovado 29/10/2026): o Drive não
+          deixou ninguém de fora ver o arquivo. Some sozinho quando ele vira
+          público. Só aparece pra quem edita: o link do cliente não usa isto. */}
+      {privado && (
+        <span title="Restrito no Drive: o cliente não consegue ver" className="absolute bottom-5 inset-x-0.5 z-10 flex items-center justify-center gap-1 rounded-full bg-white/95 px-1 py-px text-[9px] font-bold text-red-700 shadow">
+          <span className="h-1.5 w-1.5 rounded-full bg-red-600" />Privado
+        </span>
+      )}
     </div>
   );
 }
@@ -344,6 +353,13 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
   // O que continua no post (sem o que está marcado pra sair): é isto que a prévia,
   // o publicar e o "salvar no celular" usam.
   const visiveis = sai.size ? ordered.filter((m) => !sai.has(m.id)) : ordered;
+  // Drive que continua sem tipo DEPOIS de perguntar de novo = arquivo Restrito.
+  const comTipoDrive = useMidiaComTipoDrive(ordered);
+  const privados = new Set(comTipoDrive
+    .filter((m) => isUnknownDriveMedia(m) && driveJaRespondeu(getDriveFileId(m)))
+    .map((m) => m.id));
+  const primeiroPrivado = ordered.find((m) => privados.has(m.id) && !sai.has(m.id));
+  const nPrivados = ordered.filter((m) => privados.has(m.id) && !sai.has(m.id)).length;
   const aspect = postAspect(platform, format);
   const vertical = aspect === "9 / 16";
   const isStory = (format || "").toLowerCase() === "story";
@@ -432,7 +448,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
                               <div ref={dragP.innerRef} {...dragP.draggableProps} data-drag-scroll-through=""
                                 style={{ ...dragP.draggableProps.style, ...dragThumbStyle }}
                                 className={`relative shrink-0 w-16 h-16 mr-2 rounded-xl overflow-hidden border bg-muted select-none ${sai.has(m.id) ? "border-2 border-dashed border-destructive opacity-40" : "border-border"} ${dragS.isDragging ? "ring-2 ring-primary/50 shadow-lg" : ""}`}>
-                                <Thumb m={m} />
+                                <Thumb m={m} privado={privados.has(m.id)} />
                                 <span className="absolute top-0.5 left-0.5 z-10 bg-black/65 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{i + 1}</span>
                                 {sai.has(m.id)
                                   ? <button type="button" onClick={() => onParaSairChange!([...sai].filter((x) => x !== m.id))} aria-label="Desfazer" title="Desfazer" className="absolute top-0.5 right-0.5 z-20 bg-white text-destructive border border-destructive/40 rounded-full p-0.5"><Undo2 className="h-3 w-3" /></button>
@@ -507,7 +523,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
                 // "Drive · imagem" / "Drive · vídeo". Só fica "Drive" quando o arquivo
                 // não é público e o tipo continua desconhecido.
                 const tipo = drive
-                  ? (video ? "Drive · vídeo" : m.file_type ? "Drive · imagem" : "Drive")
+                  ? (video ? "Drive · vídeo" : m.file_type ? "Drive · imagem" : privados.has(m.id) ? "Drive · restrito, o cliente não vê" : "Drive")
                   : video ? "Vídeo" : "Imagem";
                 const marcada = sai.has(m.id);
                 return (
@@ -598,6 +614,22 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {primeiroPrivado && (
+        <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-3.5 py-3">
+          <AlertCircle className="h-5 w-5 shrink-0 text-red-600 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-body font-bold text-red-900">
+              {nPrivados === 1 ? "1 arquivo está Restrito no Drive" : `${nPrivados} arquivos estão Restritos no Drive`}
+            </p>
+            <p className="text-[12px] font-body text-red-900/80 mt-0.5">O cliente não vai conseguir ver nem dar play. No Drive: Compartilhar → Acesso geral → "Qualquer pessoa com o link".</p>
+          </div>
+          <Button type="button" size="sm" className="shrink-0 rounded-full bg-foreground text-background hover:bg-foreground/90"
+            onClick={() => { const u = getDriveViewPageUrl(primeiroPrivado); if (u) window.open(u, "_blank", "noopener,noreferrer"); }}>
+            Abrir no Drive
+          </Button>
         </div>
       )}
 

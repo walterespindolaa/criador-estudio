@@ -7,6 +7,20 @@
 // repassa ao ai-context-builder com o TREND_CRON_SECRET que já está nos segredos.
 // Só dispara os dois refresh; nada mais.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+/* PAINEL DOS ROBÔS (29/10/2026): cada refresh grava o resultado em cron_runs
+   (job = nome da operação). O cron só diz que o pedido saiu; isto diz se o
+   ai-context-builder respondeu certo, e é o que o Admin → Robôs mostra. */
+async function registrar(op: string, ok: boolean, detalhe: string) {
+  try {
+    const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    await svc.from("cron_runs").upsert(
+      { job: op, last_run_at: new Date().toISOString(), ok, detail: detalhe.slice(0, 300) },
+      { onConflict: "job" },
+    );
+  } catch (e) { console.error(`[bancos-cron] não registrou ${op}`, e); }
+}
 
 const OPS = ["trend-bank-refresh", "story-trend-refresh"] as const;
 
@@ -24,8 +38,10 @@ async function rodar(op: string, url: string, anon: string, trendSecret: string)
     });
     const txt = await r.text();
     console.log(`[bancos-cron] ${op} status=${r.status} ms=${Date.now() - t0} ${txt.slice(0, 200)}`);
+    await registrar(op, r.ok, r.ok ? txt : `HTTP ${r.status}: ${txt}`);
   } catch (e) {
     console.error(`[bancos-cron] ${op} falhou`, e);
+    await registrar(op, false, String(e));
   }
 }
 
