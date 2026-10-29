@@ -2,348 +2,303 @@
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cria · Pra social mídia</title><meta name="description" content="Seus clientes, aprovações e financeiro numa aba só. Conta grátis pra sempre."><meta name="robots" content="noindex,follow"><meta property="og:title" content="Cria · Pra social mídia"><meta property="og:description" content="Seus clientes, aprovações e financeiro numa aba só. Conta grátis pra sempre."><meta property="og:image" content="https://criasocialclub.com.br/og.png"><link rel="icon" href="/favicon-32.png"><script>window.CRIA_PAGINA="/lp/socialmedia"</script><script defer src="/track.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-<style>:root{--creme:#F5F3E7;--creme2:#ECE8D5;--ink:#0A0A0A;--laranja:#EA4918;--azul:#0061EE;--rosa:#FF77B9;--amarelo:#FFCF03;--verde:#01A652;--branco:#FDFBF5;--mut:#5d584f;--ac:var(--laranja)}
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Roboto:wght@400;500;700&family=Grand+Hotel&display=swap" rel="stylesheet">
+<style>:root{--creme:#F5F3E7;--creme2:#ECE8D5;--ink:#0A0A0A;--laranja:#EA4918;--azul:#0061EE;--rosa:#FF77B9;--amarelo:#FFCF03;--verde:#01A652;--lilas:#7C90F0;--branco:#FDFBF5;--mut:#5d584f}
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;overflow-anchor:none}
 body{font-family:'Roboto',system-ui,sans-serif;background:var(--creme);color:var(--ink);line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;line-height:1.02;letter-spacing:-.01em}
+.sc{font-family:'Grand Hotel',cursive;font-weight:400;letter-spacing:0}
 img{max-width:100%;display:block}
 a{color:inherit;text-decoration:none}
-.wrap{width:min(1080px,100%);margin:0 auto;padding:0 18px}
+.wrap{width:min(1080px,100%);margin:0 auto;padding:0 18px;position:relative}
+.blob{position:absolute;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;pointer-events:none}
+.pill{display:inline-block;font-family:'Baloo 2';font-weight:800;font-size:12.5px;letter-spacing:.07em;text-transform:uppercase;padding:5px 13px;border-radius:99px;color:#fff;transform:rotate(-2deg);margin-bottom:12px}
+section{position:relative;overflow:hidden}
+.s{padding:56px 0}
+.s h2{font-size:clamp(31px,8vw,46px);margin-bottom:10px}
+.s .lead{color:var(--mut);font-size:16.5px;max-width:52ch;margin-bottom:24px}
+.c{text-align:center}.c .lead{margin-left:auto;margin-right:auto}
 
 /* faixa do mockup */
-.mk{background:#17140F;color:#F5F3E7;font-size:12.5px;padding:8px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;position:relative;z-index:30}
+.mk{background:#17140F;color:#F5F3E7;font-size:12.5px;padding:8px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;position:relative;z-index:40}
 .mk b{color:var(--amarelo);margin-right:4px}
 .mk button{font:inherit;font-weight:700;border:1px solid #4a443b;background:transparent;color:#F5F3E7;border-radius:99px;padding:4px 10px;cursor:pointer}
 .mk button.on{background:var(--amarelo);color:#17140F;border-color:var(--amarelo)}
 .mk .nota{flex-basis:100%;opacity:.7;font-size:11.5px}
 
-/* topo */
-.top{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;max-width:1080px;margin:0 auto}
-.top img{height:30px;width:auto}
-.top a{font-size:14px;font-weight:700;color:var(--mut)}
-
-/* hero */
-.hero{position:relative;padding:8px 0 34px;overflow:hidden}
-.hero .wrap{display:grid;gap:22px;align-items:center}
-.kick{display:inline-flex;align-items:center;gap:8px;background:#fff;border-radius:99px;padding:6px 12px 6px 8px;font-size:13px;font-weight:700;box-shadow:0 2px 0 rgba(10,10,10,.08)}
-.kick i{width:9px;height:9px;border-radius:50%;background:var(--ac);display:inline-block}
-.hero h1{font-size:clamp(38px,10.5vw,64px);margin:14px 0 12px}
-.hero h1 em{font-style:normal;color:var(--ac)}
-.hero p.sub{font-size:17px;color:#2b2823;max-width:34ch}
-.cta{display:flex;flex-direction:column;gap:9px;margin-top:20px;align-items:flex-start}
-.btn{display:inline-flex;justify-content:center;align-items:center;gap:10px;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:19px;padding:15px 30px;border-radius:999px;background:var(--ac);color:#fff;box-shadow:0 6px 0 rgba(21,20,18,.92);transition:transform .2s,box-shadow .2s;width:100%;max-width:380px}
+/* botões */
+.btn{display:inline-flex;justify-content:center;align-items:center;gap:10px;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:19px;padding:15px 30px;border-radius:999px;background:var(--laranja);color:#fff;box-shadow:0 6px 0 rgba(21,20,18,.92);transition:transform .2s,box-shadow .2s;width:100%;max-width:400px}
 .btn:hover{transform:translateY(-3px);box-shadow:0 9px 0 rgba(21,20,18,.92)}
-.micro{font-size:13px;color:var(--mut)}
-.micro b{color:var(--ink)}
-.shot{position:relative}
-.shot .frame{background:#fff;border-radius:22px;padding:8px;box-shadow:0 18px 40px rgba(40,30,10,.16);transform:rotate(-1deg)}
-.shot .frame img{border-radius:15px;width:100%}
-.shot .phone{max-width:250px;margin:0 auto;border-radius:34px;padding:9px;background:#17140F}
-.shot .phone img{border-radius:26px}
-.shot .tag{position:absolute;font-family:'Baloo 2';font-weight:800;font-size:14px;padding:6px 12px;border-radius:12px;background:var(--amarelo);transform:rotate(-6deg);left:-6px;top:-14px;box-shadow:0 3px 0 rgba(10,10,10,.85);z-index:2}
-.sticker{position:absolute;width:92px;z-index:2}
-.blob{position:absolute;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;z-index:-1;opacity:.95}
-@media(min-width:860px){.hero .wrap{grid-template-columns:1.05fr 1fr;gap:40px}.hero{padding:30px 0 60px}.hero p.sub{font-size:19px}}
+.btn.br{background:#fff;color:var(--ink)}
+.btn.sm{font-size:16px;padding:12px 20px}
+.micro{font-size:13px;opacity:.85}
 
-/* faixa de confiança */
-.trust{display:flex;gap:8px 18px;flex-wrap:wrap;justify-content:center;padding:14px 18px;background:#fff;border-top:1.5px solid var(--creme2);border-bottom:1.5px solid var(--creme2);font-size:13.5px;font-weight:600}
-.trust span::before{content:"✓ ";color:var(--verde);font-weight:900}
+/* topo + hero */
+.hero{background:var(--azul);color:var(--creme);padding:0 0 34px}
+.top{display:flex;justify-content:space-between;align-items:center;padding:14px 0;position:relative;z-index:3}
+.top img{height:30px;width:auto}
+.top nav{display:flex;gap:6px}
+.top nav a{font-size:13.5px;font-weight:700;padding:7px 12px;border-radius:99px;background:rgba(255,255,255,.14)}
+.top nav a.en{background:var(--creme);color:var(--ink)}
+.hero .grid{display:grid;gap:26px;align-items:center;position:relative;z-index:2;padding-top:10px}
+.kick{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);border-radius:99px;padding:6px 13px 6px 9px;font-size:13px;font-weight:700}
+.kick i{width:9px;height:9px;border-radius:50%;background:var(--amarelo);display:inline-block}
+.hero h1{font-size:clamp(40px,11vw,68px);margin:14px 0 2px;color:#fff}
+.hero h1 em{font-style:normal;color:var(--amarelo)}
+.hero .sc.lema{font-size:clamp(30px,8vw,42px);color:var(--rosa);display:block;transform:rotate(-3deg);margin:2px 0 12px}
+.hero p.sub{font-size:17px;opacity:.92;max-width:36ch}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.chips span{font-size:13px;font-weight:700;background:rgba(255,255,255,.14);border-radius:99px;padding:5px 11px}
+.chips span::before{content:"✓ ";color:var(--amarelo);font-weight:900}
+.cta{display:flex;flex-direction:column;gap:9px;margin-top:20px;align-items:flex-start}
+.shot{position:relative;padding:8px 6px 20px}
+.quadro{background:#fff;border:3px solid var(--ink);border-radius:22px;padding:6px;box-shadow:8px 8px 0 var(--ink);transform:rotate(-1.5deg);cursor:zoom-in}
+.quadro img{border-radius:15px;width:100%}
+.quadro.cel{max-width:250px;margin:0 auto;border-radius:32px;background:#17140F;padding:8px}
+.quadro.cel img{border-radius:24px}
+.etq{position:absolute;font-family:'Baloo 2';font-weight:800;font-size:14px;padding:6px 12px;border-radius:12px;background:var(--amarelo);color:var(--ink);transform:rotate(-6deg);left:-2px;top:-8px;box-shadow:0 3px 0 rgba(10,10,10,.85);z-index:2}
+.sticker{position:absolute;width:96px;z-index:3}
+@media(min-width:860px){.hero .grid{grid-template-columns:1.05fr 1fr;gap:44px;padding:30px 0 30px}.hero p.sub{font-size:19px}}
 
-/* seções */
-section.s{padding:52px 0}
-.s h2{font-size:clamp(30px,7.5vw,44px);margin-bottom:8px}
-.s h2 em{font-style:normal;color:var(--ac)}
-.s .lead{color:var(--mut);font-size:16px;max-width:52ch;margin-bottom:24px}
-.cards{display:grid;gap:14px}
-@media(min-width:860px){.cards{grid-template-columns:repeat(3,1fr)}}
-.card{background:#fff;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:10px}
-.card .n{font-family:'Baloo 2';font-weight:800;font-size:13px;color:#fff;background:var(--ink);border-radius:99px;padding:2px 10px;align-self:flex-start}
-.card h3{font-size:23px}
-.card p{font-size:15px;color:#3b372f}
-.card img{border-radius:14px;border:1.5px solid var(--creme2);margin-top:auto}
+/* ícones correndo + faixa */
+.apps{background:var(--azul);padding:4px 0 26px;overflow:hidden}
+.trilho{display:flex;gap:12px;width:max-content;animation:corre 32s linear infinite}
+.app{width:96px;height:96px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#fff;font-size:11.5px;font-weight:700;text-align:center;line-height:1.1;box-shadow:0 5px 0 rgba(10,10,10,.85);border:2.5px solid var(--ink)}
+.app svg{width:30px;height:30px}
+.app.cl{color:var(--ink)}
+@keyframes corre{to{transform:translateX(-50%)}}
+.faixa{background:var(--laranja);color:#fff;padding:12px 0;overflow:hidden;transform:rotate(-1.2deg);margin:-6px -10px 0;position:relative;z-index:3;border-top:3px solid var(--ink);border-bottom:3px solid var(--ink)}
+.faixa .trilho{animation-duration:26s;gap:22px}
+.faixa span{font-family:'Baloo 2';font-weight:800;font-size:17px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.faixa span.x{color:var(--amarelo)}
 
-.passos{display:grid;gap:10px;counter-reset:p}
+/* dor */
+.cartao{background:#fff;border:3px solid var(--ink);border-radius:26px;box-shadow:8px 8px 0 var(--ink);padding:20px}
+.dor{display:grid;gap:4px}
+.dor .it{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;padding:12px 0;border-bottom:1.5px dashed var(--creme2);font-size:15.5px}
+.dor .it:last-child{border:0}
+.dor .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center}
+.dor .ic svg{width:20px;height:20px}
+.dor b{font-weight:700}
+@media(min-width:860px){.dor{grid-template-columns:1fr 1fr;column-gap:26px}}
+
+/* azul: como o Cria organiza */
+.azul{background:var(--azul);color:var(--creme)}
+.azul h2{color:#fff}.azul .lead{color:var(--creme);opacity:.85}
+.azul .sc{color:var(--amarelo)}
+.fluxo{display:grid;gap:10px}
+@media(min-width:860px){.fluxo{grid-template-columns:repeat(5,1fr)}}
+.et{background:#fff;color:var(--ink);border:3px solid var(--ink);border-radius:22px;padding:14px;box-shadow:5px 5px 0 var(--ink);display:grid;grid-template-columns:46px 1fr;gap:12px;align-items:center;position:relative}
+.et .n{position:absolute;top:-11px;right:12px;background:var(--amarelo);border:2px solid var(--ink);border-radius:99px;font-family:'Baloo 2';font-weight:800;font-size:12px;padding:0 9px}
+.et .bol{width:46px;height:46px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;display:grid;place-items:center;color:#fff}
+.et .bol svg{width:22px;height:22px}
+.et b{font-family:'Baloo 2';font-size:19px;line-height:1.05;display:block}
+.et span{font-size:13.5px;color:#4a463e}
+@media(min-width:860px){.et{grid-template-columns:1fr;text-align:center;justify-items:center}}
+.fecho{margin-top:20px;font-size:16px;background:var(--amarelo);color:var(--ink);border:3px solid var(--ink);border-radius:18px;padding:13px 15px;font-weight:600;transform:rotate(-.8deg);box-shadow:5px 5px 0 var(--ink)}
+
+/* números */
+.nums{background:var(--amarelo);border:3px solid var(--ink);border-radius:28px;box-shadow:8px 8px 0 var(--ink);padding:24px 18px;display:grid;gap:18px;text-align:center}
+@media(min-width:860px){.nums{grid-template-columns:repeat(3,1fr)}}
+.nums b{font-family:'Baloo 2';font-weight:800;font-size:48px;line-height:1;display:block}
+.nums span{font-size:14px}
+.nota-p{font-size:12px;color:var(--mut);text-align:center;margin-top:10px}
+
+/* sem x com */
+.vs{display:grid;gap:14px;margin-top:26px}
+@media(min-width:860px){.vs{grid-template-columns:1fr 1fr}}
+.vs>div{border:3px solid var(--ink);border-radius:26px;padding:20px;box-shadow:6px 6px 0 var(--ink)}
+.vs .sem{background:#123FA8;color:var(--creme)}
+.vs .com{background:#fff}
+.vs h3{font-size:24px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.vs h3 img{height:22px}
+.vs ul{list-style:none;display:grid;gap:9px;font-size:15px}
+.vs .sem li::before{content:"✕  ";color:var(--rosa);font-weight:900}
+.vs .com li::before{content:"✓  ";color:var(--verde);font-weight:900}
+.vs .tot{display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:2px dashed currentColor;font-family:'Baloo 2';font-weight:800;font-size:21px}
+.vs .sem .tot span:last-child{color:var(--rosa);text-decoration:line-through}
+.vs .com .tot span:last-child{color:var(--laranja)}
+
+/* funções retráteis */
+.grupo{margin:26px 0 10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.grupo .pill{margin:0}
+.grupo small{color:var(--mut);font-size:13.5px}
+details.fx{background:#fff;border:2.5px solid var(--ink);border-radius:22px;margin-bottom:10px;box-shadow:4px 4px 0 var(--ink);transition:box-shadow .2s,transform .2s}
+details.fx[open]{box-shadow:7px 7px 0 var(--ink);transform:translate(-2px,-2px)}
+details.fx summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 14px}
+details.fx summary::-webkit-details-marker{display:none}
+details.fx .ic{flex:0 0 auto;width:44px;height:44px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;display:grid;place-items:center;color:#fff}
+details.fx .ic svg{width:21px;height:21px}
+details.fx .tt{flex:1;min-width:0}
+details.fx .tt b{display:block;font-family:'Baloo 2';font-size:19px;line-height:1.1}
+details.fx .tt span{display:block;font-size:13.5px;color:#4a463e;line-height:1.3;margin-top:2px}
+details.fx .bd{font-size:11px;font-weight:800;border-radius:99px;padding:3px 9px;background:var(--creme);white-space:nowrap;border:1.5px solid var(--ink)}
+details.fx .bd.dk{background:var(--ink);color:#fff}
+details.fx .bd.ps{background:var(--rosa)}
+details.fx .bd.vd{background:var(--verde);color:#fff}
+details.fx .mais{flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:var(--creme);border:2px solid var(--ink);display:grid;place-items:center;font-weight:900;transition:transform .25s}
+details.fx[open] .mais{transform:rotate(45deg);background:var(--amarelo)}
+details.fx .corpo{padding:0 14px 16px;display:grid;gap:14px;animation:abre .3s ease}
+@keyframes abre{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+details.fx .corpo p{font-size:15.5px;color:#2b2823}
+details.fx .corpo ul{list-style:none;display:grid;gap:6px;font-size:14.5px;margin-top:10px}
+details.fx .corpo li::before{content:"✓ ";color:var(--verde);font-weight:900}
+.zoom{position:relative;display:block;cursor:zoom-in;border:2px solid var(--ink);border-radius:16px;overflow:hidden;background:#fff}
+.zoom img{width:100%;height:auto}
+.zoom.cel{max-width:230px;margin:0 auto;border-radius:26px;border:6px solid #17140F}
+.zoom::after{content:"⤢ ampliar";position:absolute;right:8px;bottom:8px;background:var(--ink);color:#fff;font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:99px}
+@media(min-width:860px){details.fx .corpo{grid-template-columns:1fr 1.35fr;align-items:start}}
+
+/* passos */
+.passos{display:grid;gap:12px;counter-reset:p}
 @media(min-width:860px){.passos{grid-template-columns:repeat(3,1fr)}}
-.passo{background:var(--branco);border:1.5px dashed #cfc8b3;border-radius:20px;padding:16px 16px 16px 60px;position:relative;font-size:15px}
-.passo::before{counter-increment:p;content:counter(p);position:absolute;left:14px;top:14px;width:34px;height:34px;border-radius:50%;background:var(--ac);color:#fff;font-family:'Baloo 2';font-weight:800;display:grid;place-items:center;font-size:18px}
-.passo b{display:block;font-family:'Baloo 2';font-size:19px;line-height:1.1;margin-bottom:2px}
+.passo{background:#fff;border:2.5px solid var(--ink);border-radius:22px;padding:16px 16px 16px 66px;position:relative;font-size:15px;box-shadow:4px 4px 0 var(--ink)}
+.passo::before{counter-increment:p;content:counter(p);position:absolute;left:14px;top:14px;width:38px;height:38px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;background:var(--laranja);color:#fff;font-family:'Baloo 2';font-weight:800;display:grid;place-items:center;font-size:20px}
+.passo b{display:block;font-family:'Baloo 2';font-size:20px;line-height:1.1;margin-bottom:2px}
 
-/* preço */
-.preco{background:var(--ink);color:var(--creme);border-radius:28px;padding:24px 20px;position:relative;overflow:hidden}
-.preco .tit{font-family:'Baloo 2';font-weight:800;font-size:15px;color:var(--amarelo);text-transform:uppercase;letter-spacing:.06em}
-.preco .val{font-family:'Baloo 2';font-weight:800;font-size:54px;line-height:1;margin:6px 0}
-.preco .val small{font-size:18px;opacity:.7}
-.preco ul{list-style:none;display:grid;gap:7px;margin:14px 0 20px;font-size:15px}
-.preco li::before{content:"✓ ";color:var(--amarelo);font-weight:900}
-.preco .btn{box-shadow:0 6px 0 rgba(255,255,255,.25)}
-.preco .alt{font-size:13px;opacity:.75;margin-top:14px}
-.duo{display:grid;gap:16px}
-@media(min-width:860px){.duo{grid-template-columns:1fr 1fr;align-items:center}}
+/* planos */
+.planos{display:grid;gap:16px}
+@media(min-width:860px){.planos{grid-template-columns:repeat(3,1fr);align-items:start}}
+.plano{background:#fff;border:3px solid var(--ink);border-radius:26px;padding:20px;box-shadow:6px 6px 0 var(--ink);position:relative}
+.plano.pro{background:var(--azul);color:#fff}
+.plano .rot{font-family:'Baloo 2';font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--laranja)}
+.plano.pro .rot{color:var(--amarelo)}
+.plano h3{font-size:28px}
+.plano .pr{font-family:'Baloo 2';font-weight:800;font-size:40px;line-height:1;margin:8px 0 2px}
+.plano .pr small{font-size:15px;opacity:.7}
+.plano .pq{font-size:13.5px;opacity:.8;margin-bottom:12px}
+.plano ul{list-style:none;display:grid;gap:6px;font-size:14px;margin-bottom:16px}
+.plano li::before{content:"✓ ";color:var(--verde);font-weight:900}
+.plano.pro li::before{color:var(--amarelo)}
+.plano .btn{font-size:17px;padding:12px 20px;max-width:none}
+.plano:not(.pro) .btn{background:#fff;color:var(--ink);border:2.5px solid var(--ink);box-shadow:0 4px 0 var(--ink)}
+.plano .flag{position:absolute;top:-14px;right:16px;background:var(--laranja);color:#fff;font-family:'Baloo 2';font-weight:800;font-size:13px;padding:3px 12px;border-radius:99px;transform:rotate(4deg);border:2px solid var(--ink)}
+
+/* conhecer o site */
+.site{border:3px dashed var(--ink);border-radius:28px;padding:22px 18px;background:var(--branco)}
+.site h2{font-size:clamp(28px,7vw,40px)}
+.site .lks{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.site .lks a{border:2.5px solid var(--ink);border-radius:99px;padding:9px 15px;font-weight:700;font-size:14.5px;background:#fff;box-shadow:0 3px 0 var(--ink)}
+.site .lks a:hover{background:var(--amarelo)}
 
 /* faq */
-.faq details{background:#fff;border-radius:18px;padding:14px 16px;margin-bottom:8px}
+.faq details{background:#fff;border:2.5px solid var(--ink);border-radius:18px;padding:14px 16px;margin-bottom:8px}
 .faq summary{font-family:'Baloo 2';font-weight:800;font-size:18px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:10px}
-.faq summary::after{content:"+";color:var(--ac);font-size:22px;line-height:1}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";color:var(--laranja);font-size:22px;line-height:1}
 .faq details[open] summary::after{content:"–"}
 .faq p{font-size:15px;color:#3b372f;margin-top:8px}
 
-.final{text-align:center;padding:56px 0 120px;position:relative;overflow:hidden}
-.final h2{font-size:clamp(34px,9vw,54px);margin-bottom:10px}
+/* final + rodapé */
+.final{background:var(--laranja);color:#fff;text-align:center;padding:64px 0 70px}
+.final h2{font-size:clamp(36px,9.5vw,58px);color:#fff}
+.final .sc{color:var(--amarelo);font-size:clamp(30px,8vw,44px);display:block;transform:rotate(-3deg);margin:4px 0 18px}
 .final .cta{align-items:center}
-.rod{font-size:12px;color:var(--mut);text-align:center;padding:0 18px 110px}
-.rod a{text-decoration:underline}
+.final .btn{background:#fff;color:var(--ink)}
+.rod{background:var(--azul);color:var(--creme);padding:34px 0 120px;font-size:13.5px}
+.rod img{height:28px;margin-bottom:8px}
+.rod .cols{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px}
+.rod a{opacity:.85;text-decoration:underline;text-underline-offset:3px}
 
-/* barra fixa no celular */
+/* barra fixa */
 .fixa{position:fixed;left:10px;right:10px;bottom:10px;z-index:20;display:flex;gap:10px;align-items:center;background:#17140F;color:#F5F3E7;border-radius:999px;padding:7px 7px 7px 18px;box-shadow:0 10px 30px rgba(0,0,0,.25);transform:translateY(140%);opacity:0;pointer-events:none;transition:transform .3s,opacity .3s}
 .fixa.on{transform:none;opacity:1;pointer-events:auto}
 .fixa span{font-size:13px;line-height:1.2;flex:1}
 .fixa span b{display:block;font-family:'Baloo 2';font-size:16px}
-.fixa a{background:var(--ac);color:#fff;font-family:'Baloo 2';font-weight:800;border-radius:999px;padding:11px 18px;white-space:nowrap}
+.fixa a{background:var(--laranja);color:#fff;font-family:'Baloo 2';font-weight:800;border-radius:999px;padding:11px 18px;white-space:nowrap}
 @media(min-width:860px){.fixa{left:auto;right:20px;width:420px}}
-
-/* cookies: faixa fina, não cobre o botão */
 .ck{position:fixed;left:10px;right:10px;bottom:10px;z-index:25;background:#fff;border-radius:16px;padding:9px 10px 9px 14px;display:flex;gap:8px;align-items:center;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,.14)}
 .ck span{flex:1;line-height:1.3}
 .ck button{font:inherit;font-weight:700;border-radius:99px;padding:7px 11px;border:1.5px solid var(--ink);background:#fff;cursor:pointer}
 .ck button.ok{background:var(--ink);color:#fff}
 @media(min-width:860px){.ck{right:auto;width:460px}}
+
+/* lightbox */
+#lb{position:fixed;inset:0;z-index:60;background:rgba(10,10,10,.88);display:none;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
+#lb.on{display:flex}
+#lb .cx{max-width:min(1400px,100%);max-height:100%;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:14px}
+#lb img{max-width:none;width:100%;min-width:min(100%,1400px);border-radius:14px;background:#fff}
+#lb .f{position:absolute;top:12px;right:12px;width:44px;height:44px;border-radius:50%;background:#fff;border:0;font-size:24px;font-weight:900;cursor:pointer}
+#lb .dica{position:absolute;bottom:14px;left:0;right:0;text-align:center;color:#fff;font-size:12.5px;opacity:.8}
+@media(max-width:700px){#lb img.larga{width:1100px;min-width:0}}
 .v{display:none}.v.on{display:block}
-
-/* v2: vantagens em destaque */
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
-.chips span{font-size:13px;font-weight:700;background:#fff;border-radius:99px;padding:5px 11px;border:1.5px solid var(--creme2)}
-.chips span::before{content:"✓ ";color:var(--ac);font-weight:900}
-.feat{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media(min-width:860px){.feat{grid-template-columns:repeat(4,1fr)}}
-.tile{background:#fff;border-radius:20px;padding:14px;position:relative;display:flex;flex-direction:column;gap:6px}
-.tile .ic{width:40px;height:40px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;display:grid;place-items:center;color:#fff}
-.tile .ic svg{width:21px;height:21px}
-.tile b{font-family:'Baloo 2';font-size:17px;line-height:1.1}
-.tile span.d{font-size:13px;color:#4a463e;line-height:1.35}
-.tile .bd{position:absolute;top:10px;right:10px;font-size:10.5px;font-weight:800;border-radius:99px;padding:2px 8px;background:var(--ink);color:#fff}
-.tile .bd.st{background:var(--rosa);color:var(--ink)}
-.tile.big{grid-column:span 2;background:var(--ac);color:#fff}
-.tile.big span.d{color:#fff;opacity:.92;font-size:14px}
-.tile.big b{font-size:22px}
-.vs{display:grid;gap:10px}
-@media(min-width:860px){.vs{grid-template-columns:1fr 1fr}}
-.vs>div{border-radius:24px;padding:18px}
-.vs .sem{background:#fff;border:2px dashed #d6cfba}
-.vs .com{background:var(--ink);color:var(--creme)}
-.vs h3{font-size:22px;margin-bottom:10px}
-.vs ul{list-style:none;display:grid;gap:8px;font-size:15px}
-.vs .sem li::before{content:"✕ ";color:var(--laranja);font-weight:900}
-.vs .com li::before{content:"✓ ";color:var(--amarelo);font-weight:900}
-.vs .tot{display:flex;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1.5px solid currentColor;font-family:'Baloo 2';font-weight:800;font-size:20px}
-.vs .sem .tot{border-color:#d6cfba}.vs .sem .tot span:last-child{color:var(--laranja);text-decoration:line-through}
-.vs .com .tot span:last-child{color:var(--amarelo)}
-.planos{display:grid;gap:12px}
-@media(min-width:860px){.planos{grid-template-columns:repeat(3,1fr);align-items:start}}
-.plano{background:#fff;border-radius:24px;padding:18px;border:2px solid transparent}
-.plano.pro{background:var(--ink);color:var(--creme);border-color:var(--ac);position:relative}
-.plano .rot{font-family:'Baloo 2';font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--ac)}
-.plano.pro .rot{color:var(--amarelo)}
-.plano h3{font-size:26px}
-.plano .pr{font-family:'Baloo 2';font-weight:800;font-size:36px;line-height:1;margin:6px 0 2px}
-.plano .pr small{font-size:15px;opacity:.65}
-.plano .pq{font-size:13.5px;opacity:.75;margin-bottom:10px}
-.plano ul{list-style:none;display:grid;gap:6px;font-size:14px;margin-bottom:14px}
-.plano li::before{content:"✓ ";color:var(--ac);font-weight:900}
-.plano.pro li::before{color:var(--amarelo)}
-.plano .btn{font-size:17px;padding:12px 20px;max-width:none}
-.plano:not(.pro) .btn{background:#fff;color:var(--ink);border:2px solid var(--ink);box-shadow:0 4px 0 var(--ink)}
-.plano .flag{position:absolute;top:-12px;right:16px;background:var(--amarelo);color:var(--ink);font-family:'Baloo 2';font-weight:800;font-size:13px;padding:3px 12px;border-radius:99px;transform:rotate(3deg)}
-.modx{background:#fff;border-radius:22px;padding:16px;display:grid;gap:10px}
-.modx .hd{display:flex;align-items:center;gap:10px}
-.modx .hd b{font-family:'Baloo 2';font-size:21px;line-height:1.05;flex:1}
-.modx .hd .p{font-family:'Baloo 2';font-weight:800;font-size:16px;background:var(--creme);border-radius:99px;padding:3px 10px;white-space:nowrap}
-.modx .ic{flex:0 0 auto;width:42px;height:42px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;display:grid;place-items:center;color:#fff}
-.modx .ic svg{width:21px;height:21px}
-.modx .fr{font-size:14.5px;color:#3b372f}
-.modx ul{list-style:none;display:grid;gap:5px;font-size:14px}
-.modx li::before{content:"✓ ";color:var(--verde);font-weight:900}
-.modx img{border-radius:14px;border:1.5px solid var(--creme2)}
-.mgrid{display:grid;gap:12px}
-@media(min-width:860px){.mgrid{grid-template-columns:repeat(2,1fr)}}
-
-/* funções retráteis */
-.grupo{margin:22px 0 8px;display:flex;align-items:center;gap:8px}
-.grupo span{font-family:'Baloo 2';font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:.06em;padding:4px 12px;border-radius:99px;color:#fff;transform:rotate(-2deg)}
-.grupo small{color:var(--mut);font-size:13.5px}
-details.fx{background:#fff;border-radius:20px;margin-bottom:8px;overflow:hidden;border:2px solid transparent;transition:border-color .2s}
-details.fx[open]{border-color:var(--ac)}
-details.fx summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 14px}
-details.fx summary::-webkit-details-marker{display:none}
-details.fx .ic{flex:0 0 auto;width:42px;height:42px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;display:grid;place-items:center;color:#fff}
-details.fx .ic svg{width:21px;height:21px}
-details.fx .tt{flex:1;min-width:0}
-details.fx .tt b{display:block;font-family:'Baloo 2';font-size:18px;line-height:1.1}
-details.fx .tt span{display:block;font-size:13.5px;color:#4a463e;line-height:1.3;margin-top:2px}
-details.fx .bd{font-size:11px;font-weight:800;border-radius:99px;padding:3px 9px;background:var(--creme);white-space:nowrap}
-details.fx .bd.dk{background:var(--ink);color:#fff}
-details.fx .bd.ps{background:var(--rosa)}
-details.fx .mais{flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:var(--creme);display:grid;place-items:center;font-weight:900;color:var(--ac);transition:transform .25s}
-details.fx[open] .mais{transform:rotate(45deg);background:var(--ac);color:#fff}
-details.fx .corpo{padding:2px 14px 16px;display:grid;gap:12px;animation:abre .3s ease}
-@keyframes abre{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-details.fx .corpo p{font-size:15px;color:#2b2823}
-details.fx .corpo ul{list-style:none;display:grid;gap:6px;font-size:14.5px}
-details.fx .corpo li::before{content:"✓ ";color:var(--verde);font-weight:900}
-details.fx .corpo img{border-radius:14px;border:1.5px solid var(--creme2);width:100%}
-details.fx .corpo img.cel{max-width:220px;margin:0 auto;border:6px solid #17140F;border-radius:26px}
-@media(min-width:860px){details.fx .corpo{grid-template-columns:1fr 1.2fr;align-items:start}}
-.hl{display:grid;gap:10px}
-@media(min-width:860px){.hl{grid-template-columns:repeat(3,1fr)}}
-.hl>div{border-radius:24px;padding:18px;color:#fff;position:relative;overflow:hidden}
-.hl b{display:block;font-family:'Baloo 2';font-weight:800;font-size:25px;line-height:1.05;margin-bottom:6px}
-.hl p{font-size:14.5px;opacity:.95}
-.hl .num{font-family:'Baloo 2';font-weight:800;font-size:46px;line-height:1;opacity:.95}
-
-/* dor + como o Cria organiza */
-.dor{display:grid;gap:8px;margin-bottom:22px}
-@media(min-width:860px){.dor{grid-template-columns:repeat(2,1fr)}}
-.dor div{background:#fff;border-radius:18px;padding:13px 14px 13px 46px;position:relative;font-size:15.5px;font-weight:500}
-.dor div::before{content:"✕";position:absolute;left:14px;top:12px;width:22px;height:22px;border-radius:50%;background:#FDE3DA;color:var(--laranja);font-weight:900;font-size:12px;display:grid;place-items:center}
-.virada{font-family:'Baloo 2';font-weight:800;font-size:22px;line-height:1.15;margin:4px 0 14px}
-.virada em{font-style:normal;color:var(--ac)}
-.fluxo{display:grid;gap:0;background:#fff;border-radius:24px;padding:8px 16px}
-.fluxo .et{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:center;padding:10px 0;position:relative}
-.fluxo .et:not(:last-child)::after{content:"";position:absolute;left:21px;top:52px;bottom:-10px;width:2px;background:repeating-linear-gradient(var(--creme2) 0 5px,transparent 5px 9px)}
-.fluxo .bol{width:44px;height:44px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;display:grid;place-items:center;color:#fff;position:relative;z-index:1}
-.fluxo .bol svg{width:21px;height:21px}
-.fluxo b{font-family:'Baloo 2';font-size:18px;line-height:1.1;display:block}
-.fluxo span{font-size:14px;color:#4a463e}
-@media(min-width:860px){.fluxo{grid-template-columns:repeat(5,1fr);padding:18px}.fluxo .et{grid-template-columns:1fr;text-align:center;justify-items:center;padding:0 8px}.fluxo .et:not(:last-child)::after{left:auto;right:-14px;top:20px;bottom:auto;width:28px;height:2px;background:repeating-linear-gradient(90deg,var(--creme2) 0 5px,transparent 5px 9px)}}
-.fecho{margin-top:14px;font-size:15.5px;background:var(--amarelo);border-radius:16px;padding:12px 14px;font-weight:600;transform:rotate(-.6deg)}
-
-:root{--ac:var(--azul)}
-.mods{display:grid;gap:10px}
-@media(min-width:860px){.mods{grid-template-columns:repeat(2,1fr)}}
-.mod{background:#fff;border-radius:20px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start}
-.mod .ic{flex:0 0 auto;width:42px;height:42px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;display:grid;place-items:center;font-family:'Baloo 2';font-weight:800;color:#fff;font-size:15px}
-.mod b{font-family:'Baloo 2';font-size:19px;line-height:1.1;display:flex;justify-content:space-between;gap:8px}
-.mod b span{font-size:14px;color:var(--mut);white-space:nowrap}
-.mod p{font-size:14.5px;color:#3b372f;margin-top:2px}
-.gratis{display:grid;gap:18px}
-@media(min-width:860px){.gratis{grid-template-columns:1fr 1.1fr;align-items:center}}
-.lista{list-style:none;display:grid;gap:9px;font-size:16px}
-.lista li{background:#fff;border-radius:14px;padding:10px 14px}
-.lista li::before{content:"✓ ";color:var(--verde);font-weight:900}
+.vs{text-align:left}
 </style></head><body>
 
-
-<header class="top"><img src="/lp/img/logo-cria.webp" alt="Cria"><a href="https://app.criasocialclub.com.br/login">Já tenho conta</a></header>
-
 <section class="hero">
-  <div class="blob" style="width:340px;height:300px;background:var(--azul);opacity:.18;right:-120px;top:-60px"></div>
-  <div class="blob" style="width:220px;height:200px;background:var(--amarelo);left:-110px;bottom:10px"></div>
+  <div class="blob" style="width:360px;height:320px;background:var(--rosa);right:-150px;top:-80px"></div>
+  <div class="blob" style="width:240px;height:220px;background:var(--amarelo);left:-130px;bottom:30px"></div>
   <div class="wrap">
-    <div>
-      <span class="kick"><i></i>Pra quem cuida de clientes</span>
-      <div class="v on" data-h="gratis">
-        <h1>Seus clientes numa aba só. <em>Grátis pra sempre.</em></h1>
-        <p class="sub">Não é teste de 7 dias. Carteira com até 3 clientes, agenda, central de aprovações e um Início que diz o que fazer primeiro no dia.</p>
+    <header class="top"><img src="/lp/img/logo-cria-white.webp" alt="Cria"><nav><a href="https://criasocialclub.com.br/social-media">Ver o site</a><a class="en" href="https://app.criasocialclub.com.br/login">Entrar</a></nav></header>
+    <div class="grid">
+      <div>
+        <span class="kick"><i></i>Pra quem cuida de clientes</span>
+        <div class="v on" data-h="gratis"><h1>Seus clientes numa aba só. <em>Grátis pra sempre.</em></h1></div><div class="v" data-h="post"><h1>Do ajuste ao feed, <em>sem sair do Cria.</em></h1></div><div class="v" data-h="recibo"><h1>Quanto sobra <em>de cada cliente?</em></h1></div><div class="v" data-h="gravacao"><h1>Tarde de gravação, <em>nenhum take esquecido.</em></h1></div>
+        <span class="sc lema">finalmente, tudo no lugar!</span>
+        <div class="v on" data-h="gratis"><p class="sub">Não é teste de 7 dias. Carteira com até 3 clientes, agenda, central de aprovações e um Início que diz o que fazer primeiro no dia.</p></div><div class="v" data-h="post"><p class="sub">O cliente abre o link, toca no ponto exato da arte e escreve o que quer. Você ajusta, ele aprova e o post sai no Instagram na data e hora marcadas.</p></div><div class="v" data-h="recibo"><p class="sub">O cliente paga R$1.200. Depois da designer, do editor e do imposto, sobram R$540. O Cria Caixa faz essa conta pra cada cliente e mostra qual está dando pouca margem.</p></div><div class="v" data-h="gravacao"><p class="sub">O cliente pede o horário pelo link e o roteiro já chega aprovado. Você sai com a tarde montada: rota, ordem das cenas e teleprompter no celular.</p></div>
+        <div class="chips"><span>Carteira de clientes</span><span>Aprovação por link</span><span>Agenda da semana</span><span>Financeiro por cliente</span></div>
+        <div class="cta"><a class="btn" href="https://app.criasocialclub.com.br/signup?tipo=manager">Criar conta grátis</a><span class="micro"><b>Grátis pra sempre, sem cartão.</b> Módulos a partir de R$19,90, só se precisar.</span></div>
       </div>
-      <div class="v" data-h="post">
-        <h1>Do ajuste ao feed, <em>sem sair do Cria.</em></h1>
-        <p class="sub">O cliente abre o link, toca no ponto exato da arte e escreve o que quer. Você ajusta, ele aprova e o post sai no Instagram na data e hora marcadas.</p>
-      </div>
-      <div class="v" data-h="recibo">
-        <h1>Quanto sobra <em>de cada cliente?</em></h1>
-        <p class="sub">O cliente paga R$1.200. Depois da designer, do editor e do imposto, sobram R$540. O Cria Caixa faz essa conta pra cada cliente e mostra qual está dando pouca margem.</p>
-      </div>
-      <div class="v" data-h="gravacao">
-        <h1>Tarde de gravação, <em>nenhum take esquecido.</em></h1>
-        <p class="sub">O cliente pede o horário pelo link e o roteiro já chega aprovado. Você sai com a tarde montada: rota, ordem das cenas e teleprompter no celular.</p>
-      </div>
-      <div class="chips"><span>Carteira de clientes</span><span>Aprovação por link</span><span>Agenda da semana</span><span>Financeiro por cliente</span></div>
-      <div class="cta">
-        <a class="btn" href="https://app.criasocialclub.com.br/signup?tipo=manager">Criar conta grátis</a>
-        <span class="micro"><b>Grátis pra sempre, sem cartão.</b> <span class="v on" data-h="gratis" style="display:inline">Módulos a partir de R$19,90, só se precisar.</span><span class="v" data-h="post">Cria Post: R$19,90/mês, quando quiser ativar.</span><span class="v" data-h="recibo">Cria Caixa: R$24,90/mês, quando quiser ativar.</span><span class="v" data-h="gravacao">Cria Captação: R$19,90/mês, quando quiser ativar.</span></span>
-      </div>
-    </div>
-    <div class="shot">
-      <img class="sticker" src="/lp/img/selo-social-club-verde.webp" alt="" style="right:-6px;bottom:-24px;transform:rotate(12deg)">
-      <div class="v on" data-h="gratis"><span class="tag">O Início da conta grátis</span><div class="frame"><img src="/lp/img/home-copiloto.webp" alt="Início da social mídia no Cria"></div></div>
-      <div class="v" data-h="post"><span class="tag">O link que o cliente abre</span><div class="phone"><img src="/lp/img/portal-mobile.webp" alt="Portal de aprovação"></div></div>
-      <div class="v" data-h="recibo"><span class="tag">Cria Caixa</span><div class="frame"><img src="/lp/img/caixa-visao.webp" alt="Cria Caixa"></div></div>
-      <div class="v" data-h="gravacao"><span class="tag">Cria Captação</span><div class="frame"><img src="/lp/img/captacao.webp" alt="Cria Captação"></div></div>
+      <div class="shot"><img class="sticker" src="/lp/img/selo-social-club-verde.webp" alt="" style="right:-4px;bottom:-6px;transform:rotate(12deg)"><div class="v on" data-h="gratis"><span class="etq">O Início da conta grátis</span><a class="quadro" href="/lp/img/home-copiloto.webp" data-zoom><img src="/lp/img/home-copiloto.webp" alt=""></a></div><div class="v" data-h="post"><span class="etq">O link que o cliente abre</span><a class="quadro cel" href="/lp/img/portal-mobile.webp" data-zoom><img src="/lp/img/portal-mobile.webp" alt=""></a></div><div class="v" data-h="recibo"><span class="etq">Cria Caixa</span><a class="quadro" href="/lp/img/caixa-visao.webp" data-zoom><img src="/lp/img/caixa-visao.webp" alt=""></a></div><div class="v" data-h="gravacao"><span class="etq">Cria Captação</span><a class="quadro" href="/lp/img/captacao.webp" data-zoom><img src="/lp/img/captacao.webp" alt=""></a></div></div>
     </div>
   </div>
 </section>
-
-
-<div class="trust"><span>Conta grátis pra sempre</span><span>Cliente aprova sem criar conta</span><span>Funciona no celular</span></div>
-<section class="s"><div class="wrap"><h2>Se perde entre clientes, <em>prazos e aprovações?</em></h2><p class="lead">Se alguma dessas é você, a culpa não é sua. É falta de um lugar pra tudo.</p><div class="dor"><div>Cada cliente num grupo de WhatsApp diferente</div><div>Aprovação por print, áudio e “muda aquela coisa lá”</div><div>Só descobre o atraso quando o cliente cobra</div><div>No fim do mês não sabe quanto sobrou de cada um</div></div><p class="virada">No Cria, cada cliente tem <em>a sua fila, do pedido ao relatório.</em></p><div class="fluxo"><div class="et"><span class="bol" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/></svg></span><div><b>Cliente</b><span>Ficha, cor e Instagram num painel</span></div></div><div class="et"><span class="bol" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><div><b>Pauta</b><span>A semana de cada um na agenda</span></div></div><div class="et"><span class="bol" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l2-3h6l2 3h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></svg></span><div><b>Produção</b><span>Gravação e equipe no mesmo fluxo</span></div></div><div class="et"><span class="bol" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></span><div><b>Aprovação</b><span>O cliente aprova pelo link</span></div></div><div class="et"><span class="bol" style="background:var(--ink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></span><div><b>Relatório</b><span>O mês fechado pra mostrar</span></div></div></div><p class="fecho">O Início mostra quem precisa de você hoje, de todos os clientes. Você para de apagar incêndio.</p></div></section>
-
-<section class="s" style="padding-top:0"><div class="wrap">
-  <h2>Por que <em>o Cria</em></h2>
-  <p class="lead">O que muda na sua operação já no primeiro cliente.</p>
-  <div class="hl"><div style="background:var(--verde)"><b>R$0 pra começar</b><p>Grátis pra sempre, sem prazo de teste e sem cartão. Até 3 clientes já na conta grátis.</p></div><div style="background:var(--azul)"><b>Cliente aprova pelo link</b><p>Com a marca dele, pelo celular, sem criar conta. Acabou aprovação por print no WhatsApp.</p></div><div style="background:var(--laranja)"><b>Você vê quanto sobra</b><p>Quem pagou, quem atrasou e a margem de cada cliente depois da equipe e do imposto.</p></div></div>
-</div></section>
-
-<section class="s" style="padding-top:0"><div class="wrap">
-  <h2>Tudo que o Cria faz. <em>Toca pra ver.</em></h2>
-  <p class="lead" style="margin-bottom:6px">Abre cada função e vê como ela funciona por dentro.</p>
-  <div class="grupo"><span style="background:var(--verde)">Grátis pra sempre</span><small>já vem na conta</small></div>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22v-8h6v8"/></svg></span><span class="tt"><b>Início do dia</b><span>Quem precisa de você hoje, em ordem</span></span><span class="bd ">Grátis</span><span class="mais">+</span></summary><div class="corpo"><div><p>Abriu o Cria, já sabe por onde começar: o que está atrasado, o que espera o cliente e o que vence hoje, de todos os clientes.</p><ul style="margin-top:10px"><li>Prioridades do dia</li><li>Previsão do mês</li><li>Posts esperando o cliente</li></ul></div><img class="" loading="lazy" src="/lp/img/home-copiloto.webp" alt=""></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/></svg></span><span class="tt"><b>Carteira de clientes</b><span>Até 3 clientes num painel, com status</span></span><span class="bd ">Grátis</span><span class="mais">+</span></summary><div class="corpo"><div><p>Cada cliente com cor, Instagram e ficha. Você vê de longe quem está em dia e quem precisa de atenção.</p><ul style="margin-top:10px"><li>Até 3 clientes de graça</li><li>+10 clientes por R$19,90/mês</li><li>Ficha e histórico de cada um</li></ul></div></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></span><span class="tt"><b>Central de aprovações</b><span>Tudo que está esperando o cliente</span></span><span class="bd ">Grátis</span><span class="mais">+</span></summary><div class="corpo"><div><p>Um lugar só com o que foi enviado, o que voltou com ajuste e o que já foi aprovado, de todos os clientes.</p><ul style="margin-top:10px"><li>Status de cada post</li><li>Ajustes num lugar só</li><li>Histórico do que foi aprovado</li></ul></div></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="tt"><b>Agenda da semana</b><span>Gravação, post e reunião de todo mundo</span></span><span class="bd ">Grátis</span><span class="mais">+</span></summary><div class="corpo"><div><p>A semana inteira numa tela: posts agendados, gravações marcadas e entregas de todos os clientes.</p></div></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M12 9v-1M7 20v2M17 20v2"/></svg></span><span class="tt"><b>Equipe e cofre de acessos</b><span>1º colaborador grátis, cada um vê só o que é dele</span></span><span class="bd ">Grátis</span><span class="mais">+</span></summary><div class="corpo"><div><p>Senhas dos clientes guardadas num cofre e equipe com acesso separado por cliente.</p><ul style="margin-top:10px"><li>1º colaborador de graça</li><li>Extras por R$29,90/mês</li><li>Cada um vê só o que é dele</li></ul></div></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/></svg></span><span class="tt"><b>Parceiros de produção</b><span>Designer, editor e filmmaker no mesmo fluxo</span></span><span class="bd ">Grátis</span><span class="mais">+</span></summary><div class="corpo"><div><p>Chame quem produz com você. Eles recebem a demanda pelo Cria, com briefing, prazo e entrega no mesmo lugar.</p></div></div></details>
-  <div class="grupo"><span style="background:var(--azul)">Módulos</span><small>ativa só o que precisar</small></div>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></span><span class="tt"><b>Cria Post</b><span>Aprovação por link e post no Instagram</span></span><span class="bd dk">R$19,90</span><span class="mais">+</span></summary><div class="corpo"><div><p>O cliente abre um link com a marca dele, toca no ponto exato da arte e escreve o ajuste. Aprovou, o post sai no Instagram na data e hora marcadas.</p><ul style="margin-top:10px"><li>Portal com a marca do cliente</li><li>Ajuste apontado na arte</li><li>Post agendado no Instagram</li><li>Relatório do mês pro cliente</li></ul></div><img class="cel" loading="lazy" src="/lp/img/portal-mobile.webp" alt=""></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l2-3h6l2 3h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></svg></span><span class="tt"><b>Cria Captação</b><span>Dia de gravação sem take esquecido</span></span><span class="bd dk">R$19,90</span><span class="mais">+</span></summary><div class="corpo"><div><p>O cliente pede o horário pelo link e o roteiro chega aprovado. Você sai com a tarde montada: rota, ordem das cenas e teleprompter no celular.</p><ul style="margin-top:10px"><li>Agendamento pelo cliente</li><li>Roteiro aprovado antes</li><li>Teleprompter e lista de tomadas</li></ul></div><img class="" loading="lazy" src="/lp/img/captacao.webp" alt=""></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="3"/><path d="M16 13h2M2 10h20M6 6l10-3"/></svg></span><span class="tt"><b>Cria Caixa</b><span>Quanto sobra de cada cliente</span></span><span class="bd dk">R$24,90</span><span class="mais">+</span></summary><div class="corpo"><div><p>Quem pagou, quem atrasou, o imposto calculado e a margem de cada cliente depois de designer e editor.</p><ul style="margin-top:10px"><li>Mensalidades e atrasos</li><li>Imposto calculado</li><li>Margem por cliente</li></ul></div><img class="" loading="lazy" src="/lp/img/caixa-visao.webp" alt=""></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span><span class="tt"><b>Cria Gestão</b><span>Proposta, contrato e ficha do cliente</span></span><span class="bd dk">R$29,90</span><span class="mais">+</span></summary><div class="corpo"><div><p>Do primeiro contato ao contrato assinado: prospecção, proposta enviada pelo Cria e a ficha completa de cada cliente.</p><ul style="margin-top:10px"><li>Funil de prospecção</li><li>Proposta e contrato</li><li>Ficha completa do cliente</li></ul></div></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 12l6-6"/></svg></span><span class="tt"><b>Cria Radar</b><span>O que o concorrente do cliente posta</span></span><span class="bd dk">R$49,90</span><span class="mais">+</span></summary><div class="corpo"><div><p>O Cria lê os concorrentes do seu cliente e devolve o que engajou, virando pauta pronta pra reunião.</p><ul style="margin-top:10px"><li>Posts e reels que bombaram</li><li>Anúncios ativos do concorrente</li><li>Pauta pronta pro cliente</li></ul></div><img class="" loading="lazy" src="/lp/img/radar.webp" alt=""></div></details>
-</div></section>
-
-<section class="s" style="padding-top:0"><div class="wrap">
-  <h2>Sua operação hoje <em>vs. no Cria</em></h2>
-  <p class="lead">O problema não é você. É o trabalho picado em lugares que não se falam.</p>
-  <div class="vs"><div class="sem"><h3>Hoje, espalhado</h3><ul><li>Planejamento no Notion</li><li>Aprovação por print no WhatsApp</li><li>Financeiro na planilha</li><li>Arquivos no Drive</li><li>Contrato no Word</li></ul><div class="tot"><span>Lugares</span><span>5</span></div></div><div class="com"><h3>No Cria</h3><ul><li>Clientes e agenda num painel</li><li>Aprovação por link com a marca dele</li><li>Caixa com a margem de cada cliente</li><li>Gravação e equipe no mesmo fluxo</li><li>Você paga só o módulo que usar</li></ul><div class="tot"><span>A partir de</span><span>R$0</span></div></div></div>
-</div></section>
-
-<section class="s" style="padding-top:0"><div class="wrap">
-  <h2>Começa <em>hoje</em>, em 3 passos</h2>
-  <p class="lead">Leva uns 5 minutos.</p>
+<div class="apps"><div class="trilho"><div class="app" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/></svg><span>Clientes</span></div><div class="app" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg><span>Aprovações</span></div><div class="app cl" style="background:var(--amarelo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Agenda</span></div><div class="app" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg><span>Cria Post</span></div><div class="app" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l2-3h6l2 3h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></svg><span>Captação</span></div><div class="app" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="3"/><path d="M16 13h2M2 10h20M6 6l10-3"/></svg><span>Cria Caixa</span></div><div class="app" style="background:var(--lilas)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg><span>Cria Gestão</span></div><div class="app" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 12l6-6"/></svg><span>Cria Radar</span></div><div class="app cl" style="background:var(--amarelo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22v-8h6v8"/></svg><span>Início do dia</span></div><div class="app" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M12 9v-1M7 20v2M17 20v2"/></svg><span>Cofre de acessos</span></div><div class="app" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/></svg><span>Clientes</span></div><div class="app" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg><span>Aprovações</span></div><div class="app cl" style="background:var(--amarelo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Agenda</span></div><div class="app" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg><span>Cria Post</span></div><div class="app" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l2-3h6l2 3h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></svg><span>Captação</span></div><div class="app" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="3"/><path d="M16 13h2M2 10h20M6 6l10-3"/></svg><span>Cria Caixa</span></div><div class="app" style="background:var(--lilas)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg><span>Cria Gestão</span></div><div class="app" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 12l6-6"/></svg><span>Cria Radar</span></div><div class="app cl" style="background:var(--amarelo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22v-8h6v8"/></svg><span>Início do dia</span></div><div class="app" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M12 9v-1M7 20v2M17 20v2"/></svg><span>Cofre de acessos</span></div></div></div>
+<div class="faixa"><div class="trilho"><span>Adeus aprovação por print</span><span class="x">✕</span><span>Adeus cliente cobrando no WhatsApp</span><span class="x">✕</span><span>Adeus planilha de pagamento</span><span class="x">✕</span><span>Adeus take esquecido</span><span class="x">✕</span><span>Adeus aprovação por print</span><span class="x">✕</span><span>Adeus cliente cobrando no WhatsApp</span><span class="x">✕</span><span>Adeus planilha de pagamento</span><span class="x">✕</span><span>Adeus take esquecido</span><span class="x">✕</span></div></div>
+<section class="s"><div class="wrap"><span class="pill" style="background:var(--laranja)">A gente sabe como é</span><h2>Essa semana já aconteceu <span class="sc" style="color:var(--laranja)">pelo menos um</span> desses?</h2><p class="lead">Se marcou pelo menos um, a culpa não é sua. É falta de um lugar pra tudo.</p><div class="cartao"><div class="dor"><div class="it"><span class="ic" style="background:#D6F3E2;color:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H5l-1 4z"/></svg></span><div>Cada cliente num <b>grupo de WhatsApp</b> diferente, e a aprovação perdida no meio do áudio.</div></div><div class="it"><span class="ic" style="background:#FDE3DA;color:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></span><div>Ajuste por print: <b>“muda aquela coisa lá em cima”</b>, e você adivinhando qual coisa.</div></div><div class="it"><span class="ic" style="background:#DCE8FD;color:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div>Só descobriu o atraso <b>quando o cliente cobrou</b>.</div></div><div class="it"><span class="ic" style="background:#FFF2B8;color:#8a6a00"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="3"/><path d="M16 13h2M2 10h20M6 6l10-3"/></svg></span><div>Fechou o mês <b>sem saber quanto sobrou</b> de cada cliente.</div></div></div></div></div></section><section class="s azul"><div class="blob" style="width:300px;height:280px;background:var(--rosa);opacity:.9;right:-150px;top:-90px"></div><div class="blob" style="width:240px;height:220px;background:var(--amarelo);left:-140px;bottom:-60px"></div><div class="wrap"><span class="pill" style="background:var(--amarelo);color:var(--ink)">O jeito Cria</span><h2>No Cria, cada cliente tem <span class="sc">a sua fila, do pedido ao relatório</span></h2><p class="lead">Comercial, produção, aprovação e financeiro falando entre si. Você entrega como agência sem contratar ninguém pra isso.</p><div class="fluxo"><div class="et"><span class="n">1</span><span class="bol" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/></svg></span><div><b>Cliente</b><span>Ficha, cor e Instagram num painel</span></div></div><div class="et"><span class="n">2</span><span class="bol" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><div><b>Pauta</b><span>A semana de cada um na agenda</span></div></div><div class="et"><span class="n">3</span><span class="bol" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l2-3h6l2 3h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></svg></span><div><b>Produção</b><span>Gravação e equipe no mesmo fluxo</span></div></div><div class="et"><span class="n">4</span><span class="bol" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></span><div><b>Aprovação</b><span>O cliente aprova pelo link</span></div></div><div class="et"><span class="n">5</span><span class="bol" style="background:var(--ink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></span><div><b>Relatório</b><span>O mês fechado pra mostrar</span></div></div></div><p class="fecho">O Início mostra quem precisa de você hoje, de todos os clientes. Você para de apagar incêndio.</p></div></section><section class="s"><div class="wrap c"><span class="pill" style="background:var(--rosa);color:var(--ink)">Na ponta do lápis</span><h2>Quanto custa <span class="sc" style="color:var(--azul)">começar?</span></h2>
+    <p class="lead">A base é grátis. Você ativa só o módulo que resolve o gargalo de hoje.</p>
+    <div class="nums"><div><b>R$0</b><span>pra sempre, sem prazo de teste e sem cartão</span></div><div><b>3</b><span>clientes já na conta grátis, com agenda e aprovações</span></div><div><b>5</b><span>módulos pra ativar quando quiser, a partir de R$19,90</span></div></div><p class="nota-p">Mais clientes: +10 por R$19,90/mês. Colaborador extra: R$29,90/mês.</p>
+    <div class="vs"><div class="sem"><h3>Hoje, espalhado</h3><ul><li>Planejamento no Notion</li><li>Aprovação por print no WhatsApp</li><li>Financeiro na planilha</li><li>Arquivos no Drive</li><li>Contrato no Word</li></ul><div class="tot"><span>Lugares</span><span>5</span></div></div><div class="com"><h3>No Cria</h3><ul><li>Clientes e agenda num painel</li><li>Aprovação por link com a marca dele</li><li>Margem de cada cliente</li><li>Gravação e equipe no mesmo fluxo</li><li>Paga só o módulo que usar</li></ul><div class="tot"><span>A partir de</span><span>R$0</span></div></div></div>
+    </div></section><section class="s" style="padding-top:0"><div class="wrap">
+  <span class="pill" style="background:var(--azul)">Toca pra ver</span>
+  <h2>Tudo que o Cria faz, <span class="sc" style="color:var(--laranja)">por dentro</span></h2>
+  <p class="lead" style="margin-bottom:4px">Abre cada função pra ver a tela de verdade. Toca na imagem pra ampliar.</p>
+  <div class="grupo"><span class="pill" style="background:var(--verde)">Grátis pra sempre</span><small>já vem na conta</small></div>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22v-8h6v8"/></svg></span><span class="tt"><b>Início do dia</b><span>Quem precisa de você hoje, em ordem</span></span><span class="bd vd">Grátis</span><span class="mais">+</span></summary><div class="corpo"><div><p>Abriu o Cria, já sabe por onde começar: o que está atrasado, o que espera o cliente e o que vence hoje, de todos os clientes.</p><ul><li>Prioridades do dia</li><li>Previsão do mês</li><li>Posts esperando o cliente</li></ul></div><a class="zoom" href="/lp/img/home-copiloto.webp" data-zoom><img loading="lazy" src="/lp/img/home-copiloto.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 4a4 4 0 0 1 0 8M22 21a7 7 0 0 0-4-6.3"/></svg></span><span class="tt"><b>Carteira de clientes</b><span>Até 3 clientes num painel, com status</span></span><span class="bd vd">Grátis</span><span class="mais">+</span></summary><div class="corpo"><div><p>Cada cliente com cor, Instagram e ficha. Você vê de longe quem está em dia e quem precisa de atenção.</p><ul><li>Até 3 clientes de graça</li><li>+10 clientes por R$19,90/mês</li><li>Ficha e histórico de cada um</li></ul></div></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></span><span class="tt"><b>Central de aprovações</b><span>Tudo que está esperando o cliente</span></span><span class="bd vd">Grátis</span><span class="mais">+</span></summary><div class="corpo"><div><p>Um lugar só com o que foi enviado, o que voltou com ajuste e o que já foi aprovado, de todos os clientes.</p><ul><li>Status de cada post</li><li>Ajustes num lugar só</li><li>Histórico do que foi aprovado</li></ul></div></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="tt"><b>Agenda da semana</b><span>Gravação, post e reunião de todo mundo</span></span><span class="bd vd">Grátis</span><span class="mais">+</span></summary><div class="corpo"><div><p>A semana inteira numa tela: posts agendados, gravações marcadas e entregas de todos os clientes.</p></div></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M12 9v-1M7 20v2M17 20v2"/></svg></span><span class="tt"><b>Equipe e cofre de acessos</b><span>1º colaborador grátis, cada um vê só o que é dele</span></span><span class="bd vd">Grátis</span><span class="mais">+</span></summary><div class="corpo"><div><p>Senhas dos clientes guardadas num cofre e equipe com acesso separado por cliente.</p><ul><li>1º colaborador de graça</li><li>Extras por R$29,90/mês</li><li>Cada um vê só o que é dele</li></ul></div></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/></svg></span><span class="tt"><b>Parceiros de produção</b><span>Designer, editor e filmmaker no mesmo fluxo</span></span><span class="bd vd">Grátis</span><span class="mais">+</span></summary><div class="corpo"><div><p>Chame quem produz com você. Eles recebem a demanda pelo Cria, com briefing, prazo e entrega no mesmo lugar.</p></div></div></details>
+  <div class="grupo"><span class="pill" style="background:var(--azul)">Módulos</span><small>ativa só o que precisar</small></div>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></span><span class="tt"><b>Cria Post</b><span>Aprovação por link e post no Instagram</span></span><span class="bd dk">R$19,90</span><span class="mais">+</span></summary><div class="corpo"><div><p>O cliente abre um link com a marca dele, toca no ponto exato da arte e escreve o ajuste. Aprovou, o post sai no Instagram na data e hora marcadas.</p><ul><li>Portal com a marca do cliente</li><li>Ajuste apontado na arte</li><li>Post agendado no Instagram</li></ul></div><a class="zoom cel" href="/lp/img/portal-mobile.webp" data-zoom><img loading="lazy" src="/lp/img/portal-mobile.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span><span class="tt"><b>Relatório do mês</b><span>Os números do cliente prontos pra mostrar</span></span><span class="bd dk">Cria Post</span><span class="mais">+</span></summary><div class="corpo"><div><p>Alcance, interações e o ranking dos posts do mês num relatório com a marca do cliente, pronto pra baixar em PDF.</p><ul><li>Números do Instagram do cliente</li><li>Ranking dos posts</li><li>PDF com a marca dele</li></ul></div><a class="zoom" href="/lp/img/relatorio-modal.webp" data-zoom><img loading="lazy" src="/lp/img/relatorio-modal.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l2-3h6l2 3h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></svg></span><span class="tt"><b>Cria Captação</b><span>Dia de gravação sem take esquecido</span></span><span class="bd dk">R$19,90</span><span class="mais">+</span></summary><div class="corpo"><div><p>O cliente pede o horário pelo link e o roteiro chega aprovado. Você sai com a tarde montada: rota, ordem das cenas e teleprompter no celular.</p><ul><li>Agendamento pelo cliente</li><li>Roteiro aprovado antes</li><li>Teleprompter e lista de tomadas</li></ul></div><a class="zoom" href="/lp/img/captacao.webp" data-zoom><img loading="lazy" src="/lp/img/captacao.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="3"/><path d="M16 13h2M2 10h20M6 6l10-3"/></svg></span><span class="tt"><b>Cria Caixa</b><span>Quanto sobra de cada cliente</span></span><span class="bd dk">R$24,90</span><span class="mais">+</span></summary><div class="corpo"><div><p>Quem pagou, quem atrasou, o imposto calculado e a margem de cada cliente depois de designer e editor.</p><ul><li>Mensalidades e atrasos</li><li>Imposto calculado</li><li>Margem por cliente</li></ul></div><a class="zoom" href="/lp/img/caixa-visao.webp" data-zoom><img loading="lazy" src="/lp/img/caixa-visao.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 7v7M12 7v4M16 7v9"/></svg></span><span class="tt"><b>Cria Gestão</b><span>Proposta, contrato e ficha do cliente</span></span><span class="bd dk">R$29,90</span><span class="mais">+</span></summary><div class="corpo"><div><p>Do primeiro contato ao contrato assinado: prospecção, proposta enviada pelo Cria e a ficha completa de cada cliente.</p><ul><li>Funil de prospecção</li><li>Proposta e contrato</li><li>Ficha completa do cliente</li></ul></div></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 12l6-6"/></svg></span><span class="tt"><b>Cria Radar</b><span>O que o concorrente do cliente posta</span></span><span class="bd dk">R$49,90</span><span class="mais">+</span></summary><div class="corpo"><div><p>O Cria lê os concorrentes do seu cliente e devolve o que engajou, virando pauta pronta pra reunião.</p><ul><li>Posts e reels que bombaram</li><li>Anúncios ativos do concorrente</li><li>Pauta pronta pro cliente</li></ul></div><a class="zoom" href="/lp/img/radar.webp" data-zoom><img loading="lazy" src="/lp/img/radar.webp" alt=""></a></div></details>
+</div></section><section class="s" style="padding-top:0"><div class="wrap">
+  <span class="pill" style="background:var(--laranja)">Começa hoje</span><h2>Em 3 passos, <span class="sc" style="color:var(--azul)">uns 5 minutos</span></h2><p class="lead"></p>
   <div class="passos">
     <div class="passo"><b>Cria a conta de gestor</b>Leva 1 minuto e não pede cartão.</div>
     <div class="passo"><b>Coloca o primeiro cliente</b>Nome, cor e o Instagram dele. Ele já aparece no painel.</div>
     <div class="passo"><b>Manda o primeiro link</b>O cliente aprova pelo celular, sem criar conta.</div>
   </div>
-</div></section>
-
-<section class="s faq" style="padding-top:0"><div class="wrap">
-  <h2>Dúvidas <em>rápidas</em></h2>
-  <details open><summary>É grátis mesmo?</summary><p>Sim. A conta de social mídia não tem prazo e não pede cartão. Você só paga se ativar um módulo.</p></details>
-  <details><summary>E se eu tiver mais de 3 clientes?</summary><p>Você libera mais 10 clientes por R$19,90/mês, quando precisar.</p></details>
-  <details><summary>Meu cliente precisa criar conta?</summary><p>Não. Ele recebe um link com a marca dele e aprova pelo celular.</p></details>
-  <details><summary>Posso cancelar um módulo?</summary><p>Sim, dentro do app, quando quiser. O resto da conta continua funcionando.</p></details>
-</div></section>
-
+</div></section><section class="s" style="padding-top:0"><div class="wrap"><div class="site"><span class="pill" style="background:var(--azul)">Pra quem gosta de ver tudo</span><h2>Quer conhecer o Cria <span class="sc" style="color:var(--laranja)">com calma</span> antes de começar?</h2><p class="lead" style="margin-bottom:0">A página completa de social mídia tem cada módulo em detalhe, os preços e o que já vem na conta grátis.</p><div class="lks"><a href="https://criasocialclub.com.br/social-media">Página da social mídia →</a><a href="https://criasocialclub.com.br/social-media#modulos">Os módulos →</a><a href="https://criasocialclub.com.br/social-media#precos">Preços →</a><a href="https://criasocialclub.com.br/social-media#parceiros">Pra designer, editor e filmmaker →</a><a href="https://criasocialclub.com.br/blog">Blog →</a></div></div></div></section><section class="s faq" style="padding-top:0"><div class="wrap"><span class="pill" style="background:var(--verde)">Dúvidas</span><h2>Ainda com dúvida? <span class="sc" style="color:var(--laranja)">a gente responde</span></h2><details open><summary>É grátis mesmo?</summary><p>Sim. A conta de social mídia não tem prazo e não pede cartão. Você só paga se ativar um módulo.</p></details><details><summary>E se eu tiver mais de 3 clientes?</summary><p>Você libera mais 10 clientes por R$19,90/mês, quando precisar.</p></details><details><summary>Meu cliente precisa criar conta?</summary><p>Não. Ele recebe um link com a marca dele e aprova pelo celular.</p></details><details><summary>Posso cancelar um módulo?</summary><p>Sim, dentro do app, quando quiser. O resto da conta continua funcionando.</p></details></div></section>
 <section class="final">
-  <div class="blob" style="width:300px;height:260px;background:var(--amarelo);left:-120px;top:10px"></div>
-  <div class="blob" style="width:260px;height:240px;background:var(--azul);opacity:.2;right:-110px;bottom:40px"></div>
-  <div class="wrap">
-    <h2>Sua operação inteira,<br>numa aba só.</h2>
-    <div class="cta"><a class="btn" href="https://app.criasocialclub.com.br/signup?tipo=manager">Criar conta grátis</a><span class="micro">Grátis pra sempre · sem cartão</span></div>
-  </div>
+  <div class="blob" style="width:300px;height:260px;background:var(--amarelo);left:-140px;top:-40px"></div>
+  <div class="blob" style="width:260px;height:240px;background:var(--rosa);right:-120px;bottom:-60px"></div>
+  <div class="wrap"><h2>Sua operação inteira,<br>numa aba só.</h2><span class="sc">e o cliente aprovando pelo link</span>
+    <div class="cta"><a class="btn" href="https://app.criasocialclub.com.br/signup?tipo=manager">Criar conta grátis</a><span class="micro">Grátis pra sempre · sem cartão</span></div></div>
 </section>
-<p class="rod">Cria Social Club · <a href="https://app.criasocialclub.com.br/termos">Termos</a> · <a href="https://app.criasocialclub.com.br/privacidade">Privacidade</a></p>
+<footer class="rod"><div class="wrap"><img src="/lp/img/logo-cria-white.webp" alt="Cria"><div>Seu estúdio criativo: da ideia ao post, numa aba só. Feito no Brasil.</div>
+  <div class="cols"><a href="https://criasocialclub.com.br/">Site completo</a><a href="https://criasocialclub.com.br/funcionalidades">Funcionalidades</a><a href="https://criasocialclub.com.br/social-media">Pra social mídia</a><a href="https://criasocialclub.com.br/blog">Blog</a><a href="https://app.criasocialclub.com.br/termos">Termos</a><a href="https://app.criasocialclub.com.br/privacidade">Privacidade</a></div>
+  <div style="margin-top:14px;opacity:.7">© 2026 Cria Social Club · contato@criasocialclub.com.br</div></div></footer>
 
 <div class="fixa" id="fixa"><span><b>Grátis pra sempre</b>sem cartão</span><a href="https://app.criasocialclub.com.br/signup?tipo=manager">Criar conta grátis</a></div>
-
+<div id="lb" aria-hidden="true"><button class="f" aria-label="Fechar">×</button><div class="cx"><img alt=""></div><div class="dica">Arrasta pra ver a tela inteira · toca fora pra fechar</div></div>
 <script>
+function variante(v){document.querySelectorAll('[data-h]').forEach(function(e){e.classList.toggle('on',e.dataset.h===v)})}
+document.querySelectorAll('.mk button').forEach(function(b){b.onclick=function(){document.querySelectorAll('.mk button').forEach(function(x){x.classList.toggle('on',x===b)});variante(b.dataset.v)}});
 (function(){var c='';try{c=(new URLSearchParams(location.search).get('utm_content')||JSON.parse(sessionStorage.getItem('cria_origem')||'{}').utm_content||'').toLowerCase()}catch(e){}
-var R=[["criapost","post"],["cria-post","post"],["recibo","recibo"],["gravacao","gravacao"],["gratis","gratis"]],v=null;for(var i=0;i<R.length;i++)if(c.indexOf(R[i][0])!==-1){v=R[i][1];break}
-if(v)document.querySelectorAll('[data-h]').forEach(function(e){var on=e.dataset.h===v;e.classList.toggle('on',on);if(e.tagName==='SPAN'&&e.closest('.micro'))e.style.display=on?'inline':'none'});})();
-const hero=document.querySelector('.hero .btn');
-addEventListener('scroll',()=>{const r=hero.getBoundingClientRect();document.getElementById('fixa').classList.toggle('on',r.bottom<0&&!document.getElementById('cria-consent'))},{passive:true});
-document.querySelectorAll('details.fx').forEach(d=>d.addEventListener('toggle',()=>{if(d.open)document.querySelectorAll('details.fx').forEach(o=>{if(o!==d)o.open=false})}));
+var R=[["criapost","post"],["cria-post","post"],["recibo","recibo"],["gravacao","gravacao"],["gratis","gratis"]];for(var i=0;i<R.length;i++)if(c.indexOf(R[i][0])!==-1){variante(R[i][1]);break}})();
+document.querySelectorAll('details.fx').forEach(function(d){d.addEventListener('toggle',function(){if(d.open)document.querySelectorAll('details.fx').forEach(function(o){if(o!==d)o.open=false})})});
+var lb=document.getElementById('lb'),li=lb.querySelector('img');
+document.addEventListener('click',function(e){var a=e.target.closest('[data-zoom]');if(!a)return;e.preventDefault();var cel=a.classList.contains('cel');li.src=a.getAttribute('href');li.className=cel?'':'larga';li.style.maxWidth=cel?'420px':'';lb.classList.add('on');lb.querySelector('.cx').scrollLeft=0});
+lb.addEventListener('click',function(e){if(e.target===li&&window.innerWidth<700)return;lb.classList.remove('on')});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')lb.classList.remove('on')});
+var hero=document.querySelector('.hero .btn');
+addEventListener('scroll',function(){var r=hero.getBoundingClientRect();document.getElementById('fixa').classList.toggle('on',r.bottom<0&&!document.getElementById('ck')&&!document.getElementById('cria-consent'))},{passive:true});
 </script>
 </body></html>

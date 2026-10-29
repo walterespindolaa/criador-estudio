@@ -2,348 +2,321 @@
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cria · O studio de quem cria conteúdo</title><meta name="description" content="Ideia, roteiro, calendário e seus números do Instagram num lugar só. 7 dias grátis, sem cartão."><meta name="robots" content="noindex,follow"><meta property="og:title" content="Cria · O studio de quem cria conteúdo"><meta property="og:description" content="Ideia, roteiro, calendário e seus números do Instagram num lugar só. 7 dias grátis, sem cartão."><meta property="og:image" content="https://criasocialclub.com.br/og.png"><link rel="icon" href="/favicon-32.png"><script>window.CRIA_PAGINA="/lp/criador"</script><script defer src="/track.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-<style>:root{--creme:#F5F3E7;--creme2:#ECE8D5;--ink:#0A0A0A;--laranja:#EA4918;--azul:#0061EE;--rosa:#FF77B9;--amarelo:#FFCF03;--verde:#01A652;--branco:#FDFBF5;--mut:#5d584f;--ac:var(--laranja)}
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Roboto:wght@400;500;700&family=Grand+Hotel&display=swap" rel="stylesheet">
+<style>:root{--creme:#F5F3E7;--creme2:#ECE8D5;--ink:#0A0A0A;--laranja:#EA4918;--azul:#0061EE;--rosa:#FF77B9;--amarelo:#FFCF03;--verde:#01A652;--lilas:#7C90F0;--branco:#FDFBF5;--mut:#5d584f}
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;overflow-anchor:none}
 body{font-family:'Roboto',system-ui,sans-serif;background:var(--creme);color:var(--ink);line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;line-height:1.02;letter-spacing:-.01em}
+.sc{font-family:'Grand Hotel',cursive;font-weight:400;letter-spacing:0}
 img{max-width:100%;display:block}
 a{color:inherit;text-decoration:none}
-.wrap{width:min(1080px,100%);margin:0 auto;padding:0 18px}
+.wrap{width:min(1080px,100%);margin:0 auto;padding:0 18px;position:relative}
+.blob{position:absolute;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;pointer-events:none}
+.pill{display:inline-block;font-family:'Baloo 2';font-weight:800;font-size:12.5px;letter-spacing:.07em;text-transform:uppercase;padding:5px 13px;border-radius:99px;color:#fff;transform:rotate(-2deg);margin-bottom:12px}
+section{position:relative;overflow:hidden}
+.s{padding:56px 0}
+.s h2{font-size:clamp(31px,8vw,46px);margin-bottom:10px}
+.s .lead{color:var(--mut);font-size:16.5px;max-width:52ch;margin-bottom:24px}
+.c{text-align:center}.c .lead{margin-left:auto;margin-right:auto}
 
 /* faixa do mockup */
-.mk{background:#17140F;color:#F5F3E7;font-size:12.5px;padding:8px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;position:relative;z-index:30}
+.mk{background:#17140F;color:#F5F3E7;font-size:12.5px;padding:8px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;position:relative;z-index:40}
 .mk b{color:var(--amarelo);margin-right:4px}
 .mk button{font:inherit;font-weight:700;border:1px solid #4a443b;background:transparent;color:#F5F3E7;border-radius:99px;padding:4px 10px;cursor:pointer}
 .mk button.on{background:var(--amarelo);color:#17140F;border-color:var(--amarelo)}
 .mk .nota{flex-basis:100%;opacity:.7;font-size:11.5px}
 
-/* topo */
-.top{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;max-width:1080px;margin:0 auto}
-.top img{height:30px;width:auto}
-.top a{font-size:14px;font-weight:700;color:var(--mut)}
-
-/* hero */
-.hero{position:relative;padding:8px 0 34px;overflow:hidden}
-.hero .wrap{display:grid;gap:22px;align-items:center}
-.kick{display:inline-flex;align-items:center;gap:8px;background:#fff;border-radius:99px;padding:6px 12px 6px 8px;font-size:13px;font-weight:700;box-shadow:0 2px 0 rgba(10,10,10,.08)}
-.kick i{width:9px;height:9px;border-radius:50%;background:var(--ac);display:inline-block}
-.hero h1{font-size:clamp(38px,10.5vw,64px);margin:14px 0 12px}
-.hero h1 em{font-style:normal;color:var(--ac)}
-.hero p.sub{font-size:17px;color:#2b2823;max-width:34ch}
-.cta{display:flex;flex-direction:column;gap:9px;margin-top:20px;align-items:flex-start}
-.btn{display:inline-flex;justify-content:center;align-items:center;gap:10px;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:19px;padding:15px 30px;border-radius:999px;background:var(--ac);color:#fff;box-shadow:0 6px 0 rgba(21,20,18,.92);transition:transform .2s,box-shadow .2s;width:100%;max-width:380px}
+/* botões */
+.btn{display:inline-flex;justify-content:center;align-items:center;gap:10px;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:19px;padding:15px 30px;border-radius:999px;background:var(--laranja);color:#fff;box-shadow:0 6px 0 rgba(21,20,18,.92);transition:transform .2s,box-shadow .2s;width:100%;max-width:400px}
 .btn:hover{transform:translateY(-3px);box-shadow:0 9px 0 rgba(21,20,18,.92)}
-.micro{font-size:13px;color:var(--mut)}
-.micro b{color:var(--ink)}
-.shot{position:relative}
-.shot .frame{background:#fff;border-radius:22px;padding:8px;box-shadow:0 18px 40px rgba(40,30,10,.16);transform:rotate(-1deg)}
-.shot .frame img{border-radius:15px;width:100%}
-.shot .phone{max-width:250px;margin:0 auto;border-radius:34px;padding:9px;background:#17140F}
-.shot .phone img{border-radius:26px}
-.shot .tag{position:absolute;font-family:'Baloo 2';font-weight:800;font-size:14px;padding:6px 12px;border-radius:12px;background:var(--amarelo);transform:rotate(-6deg);left:-6px;top:-14px;box-shadow:0 3px 0 rgba(10,10,10,.85);z-index:2}
-.sticker{position:absolute;width:92px;z-index:2}
-.blob{position:absolute;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;z-index:-1;opacity:.95}
-@media(min-width:860px){.hero .wrap{grid-template-columns:1.05fr 1fr;gap:40px}.hero{padding:30px 0 60px}.hero p.sub{font-size:19px}}
+.btn.br{background:#fff;color:var(--ink)}
+.btn.sm{font-size:16px;padding:12px 20px}
+.micro{font-size:13px;opacity:.85}
 
-/* faixa de confiança */
-.trust{display:flex;gap:8px 18px;flex-wrap:wrap;justify-content:center;padding:14px 18px;background:#fff;border-top:1.5px solid var(--creme2);border-bottom:1.5px solid var(--creme2);font-size:13.5px;font-weight:600}
-.trust span::before{content:"✓ ";color:var(--verde);font-weight:900}
+/* topo + hero */
+.hero{background:var(--azul);color:var(--creme);padding:0 0 34px}
+.top{display:flex;justify-content:space-between;align-items:center;padding:14px 0;position:relative;z-index:3}
+.top img{height:30px;width:auto}
+.top nav{display:flex;gap:6px}
+.top nav a{font-size:13.5px;font-weight:700;padding:7px 12px;border-radius:99px;background:rgba(255,255,255,.14)}
+.top nav a.en{background:var(--creme);color:var(--ink)}
+.hero .grid{display:grid;gap:26px;align-items:center;position:relative;z-index:2;padding-top:10px}
+.kick{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);border-radius:99px;padding:6px 13px 6px 9px;font-size:13px;font-weight:700}
+.kick i{width:9px;height:9px;border-radius:50%;background:var(--amarelo);display:inline-block}
+.hero h1{font-size:clamp(40px,11vw,68px);margin:14px 0 2px;color:#fff}
+.hero h1 em{font-style:normal;color:var(--amarelo)}
+.hero .sc.lema{font-size:clamp(30px,8vw,42px);color:var(--rosa);display:block;transform:rotate(-3deg);margin:2px 0 12px}
+.hero p.sub{font-size:17px;opacity:.92;max-width:36ch}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.chips span{font-size:13px;font-weight:700;background:rgba(255,255,255,.14);border-radius:99px;padding:5px 11px}
+.chips span::before{content:"✓ ";color:var(--amarelo);font-weight:900}
+.cta{display:flex;flex-direction:column;gap:9px;margin-top:20px;align-items:flex-start}
+.shot{position:relative;padding:8px 6px 20px}
+.quadro{background:#fff;border:3px solid var(--ink);border-radius:22px;padding:6px;box-shadow:8px 8px 0 var(--ink);transform:rotate(-1.5deg);cursor:zoom-in}
+.quadro img{border-radius:15px;width:100%}
+.quadro.cel{max-width:250px;margin:0 auto;border-radius:32px;background:#17140F;padding:8px}
+.quadro.cel img{border-radius:24px}
+.etq{position:absolute;font-family:'Baloo 2';font-weight:800;font-size:14px;padding:6px 12px;border-radius:12px;background:var(--amarelo);color:var(--ink);transform:rotate(-6deg);left:-2px;top:-8px;box-shadow:0 3px 0 rgba(10,10,10,.85);z-index:2}
+.sticker{position:absolute;width:96px;z-index:3}
+@media(min-width:860px){.hero .grid{grid-template-columns:1.05fr 1fr;gap:44px;padding:30px 0 30px}.hero p.sub{font-size:19px}}
 
-/* seções */
-section.s{padding:52px 0}
-.s h2{font-size:clamp(30px,7.5vw,44px);margin-bottom:8px}
-.s h2 em{font-style:normal;color:var(--ac)}
-.s .lead{color:var(--mut);font-size:16px;max-width:52ch;margin-bottom:24px}
-.cards{display:grid;gap:14px}
-@media(min-width:860px){.cards{grid-template-columns:repeat(3,1fr)}}
-.card{background:#fff;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:10px}
-.card .n{font-family:'Baloo 2';font-weight:800;font-size:13px;color:#fff;background:var(--ink);border-radius:99px;padding:2px 10px;align-self:flex-start}
-.card h3{font-size:23px}
-.card p{font-size:15px;color:#3b372f}
-.card img{border-radius:14px;border:1.5px solid var(--creme2);margin-top:auto}
+/* ícones correndo + faixa */
+.apps{background:var(--azul);padding:4px 0 26px;overflow:hidden}
+.trilho{display:flex;gap:12px;width:max-content;animation:corre 32s linear infinite}
+.app{width:96px;height:96px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#fff;font-size:11.5px;font-weight:700;text-align:center;line-height:1.1;box-shadow:0 5px 0 rgba(10,10,10,.85);border:2.5px solid var(--ink)}
+.app svg{width:30px;height:30px}
+.app.cl{color:var(--ink)}
+@keyframes corre{to{transform:translateX(-50%)}}
+.faixa{background:var(--laranja);color:#fff;padding:12px 0;overflow:hidden;transform:rotate(-1.2deg);margin:-6px -10px 0;position:relative;z-index:3;border-top:3px solid var(--ink);border-bottom:3px solid var(--ink)}
+.faixa .trilho{animation-duration:26s;gap:22px}
+.faixa span{font-family:'Baloo 2';font-weight:800;font-size:17px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.faixa span.x{color:var(--amarelo)}
 
-.passos{display:grid;gap:10px;counter-reset:p}
+/* dor */
+.cartao{background:#fff;border:3px solid var(--ink);border-radius:26px;box-shadow:8px 8px 0 var(--ink);padding:20px}
+.dor{display:grid;gap:4px}
+.dor .it{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;padding:12px 0;border-bottom:1.5px dashed var(--creme2);font-size:15.5px}
+.dor .it:last-child{border:0}
+.dor .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center}
+.dor .ic svg{width:20px;height:20px}
+.dor b{font-weight:700}
+@media(min-width:860px){.dor{grid-template-columns:1fr 1fr;column-gap:26px}}
+
+/* azul: como o Cria organiza */
+.azul{background:var(--azul);color:var(--creme)}
+.azul h2{color:#fff}.azul .lead{color:var(--creme);opacity:.85}
+.azul .sc{color:var(--amarelo)}
+.fluxo{display:grid;gap:10px}
+@media(min-width:860px){.fluxo{grid-template-columns:repeat(5,1fr)}}
+.et{background:#fff;color:var(--ink);border:3px solid var(--ink);border-radius:22px;padding:14px;box-shadow:5px 5px 0 var(--ink);display:grid;grid-template-columns:46px 1fr;gap:12px;align-items:center;position:relative}
+.et .n{position:absolute;top:-11px;right:12px;background:var(--amarelo);border:2px solid var(--ink);border-radius:99px;font-family:'Baloo 2';font-weight:800;font-size:12px;padding:0 9px}
+.et .bol{width:46px;height:46px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;display:grid;place-items:center;color:#fff}
+.et .bol svg{width:22px;height:22px}
+.et b{font-family:'Baloo 2';font-size:19px;line-height:1.05;display:block}
+.et span{font-size:13.5px;color:#4a463e}
+@media(min-width:860px){.et{grid-template-columns:1fr;text-align:center;justify-items:center}}
+.fecho{margin-top:20px;font-size:16px;background:var(--amarelo);color:var(--ink);border:3px solid var(--ink);border-radius:18px;padding:13px 15px;font-weight:600;transform:rotate(-.8deg);box-shadow:5px 5px 0 var(--ink)}
+
+/* números */
+.nums{background:var(--amarelo);border:3px solid var(--ink);border-radius:28px;box-shadow:8px 8px 0 var(--ink);padding:24px 18px;display:grid;gap:18px;text-align:center}
+@media(min-width:860px){.nums{grid-template-columns:repeat(3,1fr)}}
+.nums b{font-family:'Baloo 2';font-weight:800;font-size:48px;line-height:1;display:block}
+.nums span{font-size:14px}
+.nota-p{font-size:12px;color:var(--mut);text-align:center;margin-top:10px}
+
+/* sem x com */
+.vs{display:grid;gap:14px;margin-top:26px}
+@media(min-width:860px){.vs{grid-template-columns:1fr 1fr}}
+.vs>div{border:3px solid var(--ink);border-radius:26px;padding:20px;box-shadow:6px 6px 0 var(--ink)}
+.vs .sem{background:#123FA8;color:var(--creme)}
+.vs .com{background:#fff}
+.vs h3{font-size:24px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.vs h3 img{height:22px}
+.vs ul{list-style:none;display:grid;gap:9px;font-size:15px}
+.vs .sem li::before{content:"✕  ";color:var(--rosa);font-weight:900}
+.vs .com li::before{content:"✓  ";color:var(--verde);font-weight:900}
+.vs .tot{display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:2px dashed currentColor;font-family:'Baloo 2';font-weight:800;font-size:21px}
+.vs .sem .tot span:last-child{color:var(--rosa);text-decoration:line-through}
+.vs .com .tot span:last-child{color:var(--laranja)}
+
+/* funções retráteis */
+.grupo{margin:26px 0 10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.grupo .pill{margin:0}
+.grupo small{color:var(--mut);font-size:13.5px}
+details.fx{background:#fff;border:2.5px solid var(--ink);border-radius:22px;margin-bottom:10px;box-shadow:4px 4px 0 var(--ink);transition:box-shadow .2s,transform .2s}
+details.fx[open]{box-shadow:7px 7px 0 var(--ink);transform:translate(-2px,-2px)}
+details.fx summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 14px}
+details.fx summary::-webkit-details-marker{display:none}
+details.fx .ic{flex:0 0 auto;width:44px;height:44px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;display:grid;place-items:center;color:#fff}
+details.fx .ic svg{width:21px;height:21px}
+details.fx .tt{flex:1;min-width:0}
+details.fx .tt b{display:block;font-family:'Baloo 2';font-size:19px;line-height:1.1}
+details.fx .tt span{display:block;font-size:13.5px;color:#4a463e;line-height:1.3;margin-top:2px}
+details.fx .bd{font-size:11px;font-weight:800;border-radius:99px;padding:3px 9px;background:var(--creme);white-space:nowrap;border:1.5px solid var(--ink)}
+details.fx .bd.dk{background:var(--ink);color:#fff}
+details.fx .bd.ps{background:var(--rosa)}
+details.fx .bd.vd{background:var(--verde);color:#fff}
+details.fx .mais{flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:var(--creme);border:2px solid var(--ink);display:grid;place-items:center;font-weight:900;transition:transform .25s}
+details.fx[open] .mais{transform:rotate(45deg);background:var(--amarelo)}
+details.fx .corpo{padding:0 14px 16px;display:grid;gap:14px;animation:abre .3s ease}
+@keyframes abre{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+details.fx .corpo p{font-size:15.5px;color:#2b2823}
+details.fx .corpo ul{list-style:none;display:grid;gap:6px;font-size:14.5px;margin-top:10px}
+details.fx .corpo li::before{content:"✓ ";color:var(--verde);font-weight:900}
+.zoom{position:relative;display:block;cursor:zoom-in;border:2px solid var(--ink);border-radius:16px;overflow:hidden;background:#fff}
+.zoom img{width:100%;height:auto}
+.zoom.cel{max-width:230px;margin:0 auto;border-radius:26px;border:6px solid #17140F}
+.zoom::after{content:"⤢ ampliar";position:absolute;right:8px;bottom:8px;background:var(--ink);color:#fff;font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:99px}
+@media(min-width:860px){details.fx .corpo{grid-template-columns:1fr 1.35fr;align-items:start}}
+
+/* passos */
+.passos{display:grid;gap:12px;counter-reset:p}
 @media(min-width:860px){.passos{grid-template-columns:repeat(3,1fr)}}
-.passo{background:var(--branco);border:1.5px dashed #cfc8b3;border-radius:20px;padding:16px 16px 16px 60px;position:relative;font-size:15px}
-.passo::before{counter-increment:p;content:counter(p);position:absolute;left:14px;top:14px;width:34px;height:34px;border-radius:50%;background:var(--ac);color:#fff;font-family:'Baloo 2';font-weight:800;display:grid;place-items:center;font-size:18px}
-.passo b{display:block;font-family:'Baloo 2';font-size:19px;line-height:1.1;margin-bottom:2px}
+.passo{background:#fff;border:2.5px solid var(--ink);border-radius:22px;padding:16px 16px 16px 66px;position:relative;font-size:15px;box-shadow:4px 4px 0 var(--ink)}
+.passo::before{counter-increment:p;content:counter(p);position:absolute;left:14px;top:14px;width:38px;height:38px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;background:var(--laranja);color:#fff;font-family:'Baloo 2';font-weight:800;display:grid;place-items:center;font-size:20px}
+.passo b{display:block;font-family:'Baloo 2';font-size:20px;line-height:1.1;margin-bottom:2px}
 
-/* preço */
-.preco{background:var(--ink);color:var(--creme);border-radius:28px;padding:24px 20px;position:relative;overflow:hidden}
-.preco .tit{font-family:'Baloo 2';font-weight:800;font-size:15px;color:var(--amarelo);text-transform:uppercase;letter-spacing:.06em}
-.preco .val{font-family:'Baloo 2';font-weight:800;font-size:54px;line-height:1;margin:6px 0}
-.preco .val small{font-size:18px;opacity:.7}
-.preco ul{list-style:none;display:grid;gap:7px;margin:14px 0 20px;font-size:15px}
-.preco li::before{content:"✓ ";color:var(--amarelo);font-weight:900}
-.preco .btn{box-shadow:0 6px 0 rgba(255,255,255,.25)}
-.preco .alt{font-size:13px;opacity:.75;margin-top:14px}
-.duo{display:grid;gap:16px}
-@media(min-width:860px){.duo{grid-template-columns:1fr 1fr;align-items:center}}
+/* planos */
+.planos{display:grid;gap:16px}
+@media(min-width:860px){.planos{grid-template-columns:repeat(3,1fr);align-items:start}}
+.plano{background:#fff;border:3px solid var(--ink);border-radius:26px;padding:20px;box-shadow:6px 6px 0 var(--ink);position:relative}
+.plano.pro{background:var(--azul);color:#fff}
+.plano .rot{font-family:'Baloo 2';font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--laranja)}
+.plano.pro .rot{color:var(--amarelo)}
+.plano h3{font-size:28px}
+.plano .pr{font-family:'Baloo 2';font-weight:800;font-size:40px;line-height:1;margin:8px 0 2px}
+.plano .pr small{font-size:15px;opacity:.7}
+.plano .pq{font-size:13.5px;opacity:.8;margin-bottom:12px}
+.plano ul{list-style:none;display:grid;gap:6px;font-size:14px;margin-bottom:16px}
+.plano li::before{content:"✓ ";color:var(--verde);font-weight:900}
+.plano.pro li::before{color:var(--amarelo)}
+.plano .btn{font-size:17px;padding:12px 20px;max-width:none}
+.plano:not(.pro) .btn{background:#fff;color:var(--ink);border:2.5px solid var(--ink);box-shadow:0 4px 0 var(--ink)}
+.plano .flag{position:absolute;top:-14px;right:16px;background:var(--laranja);color:#fff;font-family:'Baloo 2';font-weight:800;font-size:13px;padding:3px 12px;border-radius:99px;transform:rotate(4deg);border:2px solid var(--ink)}
+
+/* conhecer o site */
+.site{border:3px dashed var(--ink);border-radius:28px;padding:22px 18px;background:var(--branco)}
+.site h2{font-size:clamp(28px,7vw,40px)}
+.site .lks{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.site .lks a{border:2.5px solid var(--ink);border-radius:99px;padding:9px 15px;font-weight:700;font-size:14.5px;background:#fff;box-shadow:0 3px 0 var(--ink)}
+.site .lks a:hover{background:var(--amarelo)}
 
 /* faq */
-.faq details{background:#fff;border-radius:18px;padding:14px 16px;margin-bottom:8px}
+.faq details{background:#fff;border:2.5px solid var(--ink);border-radius:18px;padding:14px 16px;margin-bottom:8px}
 .faq summary{font-family:'Baloo 2';font-weight:800;font-size:18px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:10px}
-.faq summary::after{content:"+";color:var(--ac);font-size:22px;line-height:1}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";color:var(--laranja);font-size:22px;line-height:1}
 .faq details[open] summary::after{content:"–"}
 .faq p{font-size:15px;color:#3b372f;margin-top:8px}
 
-.final{text-align:center;padding:56px 0 120px;position:relative;overflow:hidden}
-.final h2{font-size:clamp(34px,9vw,54px);margin-bottom:10px}
+/* final + rodapé */
+.final{background:var(--laranja);color:#fff;text-align:center;padding:64px 0 70px}
+.final h2{font-size:clamp(36px,9.5vw,58px);color:#fff}
+.final .sc{color:var(--amarelo);font-size:clamp(30px,8vw,44px);display:block;transform:rotate(-3deg);margin:4px 0 18px}
 .final .cta{align-items:center}
-.rod{font-size:12px;color:var(--mut);text-align:center;padding:0 18px 110px}
-.rod a{text-decoration:underline}
+.final .btn{background:#fff;color:var(--ink)}
+.rod{background:var(--azul);color:var(--creme);padding:34px 0 120px;font-size:13.5px}
+.rod img{height:28px;margin-bottom:8px}
+.rod .cols{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px}
+.rod a{opacity:.85;text-decoration:underline;text-underline-offset:3px}
 
-/* barra fixa no celular */
+/* barra fixa */
 .fixa{position:fixed;left:10px;right:10px;bottom:10px;z-index:20;display:flex;gap:10px;align-items:center;background:#17140F;color:#F5F3E7;border-radius:999px;padding:7px 7px 7px 18px;box-shadow:0 10px 30px rgba(0,0,0,.25);transform:translateY(140%);opacity:0;pointer-events:none;transition:transform .3s,opacity .3s}
 .fixa.on{transform:none;opacity:1;pointer-events:auto}
 .fixa span{font-size:13px;line-height:1.2;flex:1}
 .fixa span b{display:block;font-family:'Baloo 2';font-size:16px}
-.fixa a{background:var(--ac);color:#fff;font-family:'Baloo 2';font-weight:800;border-radius:999px;padding:11px 18px;white-space:nowrap}
+.fixa a{background:var(--laranja);color:#fff;font-family:'Baloo 2';font-weight:800;border-radius:999px;padding:11px 18px;white-space:nowrap}
 @media(min-width:860px){.fixa{left:auto;right:20px;width:420px}}
-
-/* cookies: faixa fina, não cobre o botão */
 .ck{position:fixed;left:10px;right:10px;bottom:10px;z-index:25;background:#fff;border-radius:16px;padding:9px 10px 9px 14px;display:flex;gap:8px;align-items:center;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,.14)}
 .ck span{flex:1;line-height:1.3}
 .ck button{font:inherit;font-weight:700;border-radius:99px;padding:7px 11px;border:1.5px solid var(--ink);background:#fff;cursor:pointer}
 .ck button.ok{background:var(--ink);color:#fff}
 @media(min-width:860px){.ck{right:auto;width:460px}}
+
+/* lightbox */
+#lb{position:fixed;inset:0;z-index:60;background:rgba(10,10,10,.88);display:none;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
+#lb.on{display:flex}
+#lb .cx{max-width:min(1400px,100%);max-height:100%;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:14px}
+#lb img{max-width:none;width:100%;min-width:min(100%,1400px);border-radius:14px;background:#fff}
+#lb .f{position:absolute;top:12px;right:12px;width:44px;height:44px;border-radius:50%;background:#fff;border:0;font-size:24px;font-weight:900;cursor:pointer}
+#lb .dica{position:absolute;bottom:14px;left:0;right:0;text-align:center;color:#fff;font-size:12.5px;opacity:.8}
+@media(max-width:700px){#lb img.larga{width:1100px;min-width:0}}
 .v{display:none}.v.on{display:block}
-
-/* v2: vantagens em destaque */
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
-.chips span{font-size:13px;font-weight:700;background:#fff;border-radius:99px;padding:5px 11px;border:1.5px solid var(--creme2)}
-.chips span::before{content:"✓ ";color:var(--ac);font-weight:900}
-.feat{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media(min-width:860px){.feat{grid-template-columns:repeat(4,1fr)}}
-.tile{background:#fff;border-radius:20px;padding:14px;position:relative;display:flex;flex-direction:column;gap:6px}
-.tile .ic{width:40px;height:40px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;display:grid;place-items:center;color:#fff}
-.tile .ic svg{width:21px;height:21px}
-.tile b{font-family:'Baloo 2';font-size:17px;line-height:1.1}
-.tile span.d{font-size:13px;color:#4a463e;line-height:1.35}
-.tile .bd{position:absolute;top:10px;right:10px;font-size:10.5px;font-weight:800;border-radius:99px;padding:2px 8px;background:var(--ink);color:#fff}
-.tile .bd.st{background:var(--rosa);color:var(--ink)}
-.tile.big{grid-column:span 2;background:var(--ac);color:#fff}
-.tile.big span.d{color:#fff;opacity:.92;font-size:14px}
-.tile.big b{font-size:22px}
-.vs{display:grid;gap:10px}
-@media(min-width:860px){.vs{grid-template-columns:1fr 1fr}}
-.vs>div{border-radius:24px;padding:18px}
-.vs .sem{background:#fff;border:2px dashed #d6cfba}
-.vs .com{background:var(--ink);color:var(--creme)}
-.vs h3{font-size:22px;margin-bottom:10px}
-.vs ul{list-style:none;display:grid;gap:8px;font-size:15px}
-.vs .sem li::before{content:"✕ ";color:var(--laranja);font-weight:900}
-.vs .com li::before{content:"✓ ";color:var(--amarelo);font-weight:900}
-.vs .tot{display:flex;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1.5px solid currentColor;font-family:'Baloo 2';font-weight:800;font-size:20px}
-.vs .sem .tot{border-color:#d6cfba}.vs .sem .tot span:last-child{color:var(--laranja);text-decoration:line-through}
-.vs .com .tot span:last-child{color:var(--amarelo)}
-.planos{display:grid;gap:12px}
-@media(min-width:860px){.planos{grid-template-columns:repeat(3,1fr);align-items:start}}
-.plano{background:#fff;border-radius:24px;padding:18px;border:2px solid transparent}
-.plano.pro{background:var(--ink);color:var(--creme);border-color:var(--ac);position:relative}
-.plano .rot{font-family:'Baloo 2';font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--ac)}
-.plano.pro .rot{color:var(--amarelo)}
-.plano h3{font-size:26px}
-.plano .pr{font-family:'Baloo 2';font-weight:800;font-size:36px;line-height:1;margin:6px 0 2px}
-.plano .pr small{font-size:15px;opacity:.65}
-.plano .pq{font-size:13.5px;opacity:.75;margin-bottom:10px}
-.plano ul{list-style:none;display:grid;gap:6px;font-size:14px;margin-bottom:14px}
-.plano li::before{content:"✓ ";color:var(--ac);font-weight:900}
-.plano.pro li::before{color:var(--amarelo)}
-.plano .btn{font-size:17px;padding:12px 20px;max-width:none}
-.plano:not(.pro) .btn{background:#fff;color:var(--ink);border:2px solid var(--ink);box-shadow:0 4px 0 var(--ink)}
-.plano .flag{position:absolute;top:-12px;right:16px;background:var(--amarelo);color:var(--ink);font-family:'Baloo 2';font-weight:800;font-size:13px;padding:3px 12px;border-radius:99px;transform:rotate(3deg)}
-.modx{background:#fff;border-radius:22px;padding:16px;display:grid;gap:10px}
-.modx .hd{display:flex;align-items:center;gap:10px}
-.modx .hd b{font-family:'Baloo 2';font-size:21px;line-height:1.05;flex:1}
-.modx .hd .p{font-family:'Baloo 2';font-weight:800;font-size:16px;background:var(--creme);border-radius:99px;padding:3px 10px;white-space:nowrap}
-.modx .ic{flex:0 0 auto;width:42px;height:42px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;display:grid;place-items:center;color:#fff}
-.modx .ic svg{width:21px;height:21px}
-.modx .fr{font-size:14.5px;color:#3b372f}
-.modx ul{list-style:none;display:grid;gap:5px;font-size:14px}
-.modx li::before{content:"✓ ";color:var(--verde);font-weight:900}
-.modx img{border-radius:14px;border:1.5px solid var(--creme2)}
-.mgrid{display:grid;gap:12px}
-@media(min-width:860px){.mgrid{grid-template-columns:repeat(2,1fr)}}
-
-/* funções retráteis */
-.grupo{margin:22px 0 8px;display:flex;align-items:center;gap:8px}
-.grupo span{font-family:'Baloo 2';font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:.06em;padding:4px 12px;border-radius:99px;color:#fff;transform:rotate(-2deg)}
-.grupo small{color:var(--mut);font-size:13.5px}
-details.fx{background:#fff;border-radius:20px;margin-bottom:8px;overflow:hidden;border:2px solid transparent;transition:border-color .2s}
-details.fx[open]{border-color:var(--ac)}
-details.fx summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 14px}
-details.fx summary::-webkit-details-marker{display:none}
-details.fx .ic{flex:0 0 auto;width:42px;height:42px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;display:grid;place-items:center;color:#fff}
-details.fx .ic svg{width:21px;height:21px}
-details.fx .tt{flex:1;min-width:0}
-details.fx .tt b{display:block;font-family:'Baloo 2';font-size:18px;line-height:1.1}
-details.fx .tt span{display:block;font-size:13.5px;color:#4a463e;line-height:1.3;margin-top:2px}
-details.fx .bd{font-size:11px;font-weight:800;border-radius:99px;padding:3px 9px;background:var(--creme);white-space:nowrap}
-details.fx .bd.dk{background:var(--ink);color:#fff}
-details.fx .bd.ps{background:var(--rosa)}
-details.fx .mais{flex:0 0 auto;width:28px;height:28px;border-radius:50%;background:var(--creme);display:grid;place-items:center;font-weight:900;color:var(--ac);transition:transform .25s}
-details.fx[open] .mais{transform:rotate(45deg);background:var(--ac);color:#fff}
-details.fx .corpo{padding:2px 14px 16px;display:grid;gap:12px;animation:abre .3s ease}
-@keyframes abre{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-details.fx .corpo p{font-size:15px;color:#2b2823}
-details.fx .corpo ul{list-style:none;display:grid;gap:6px;font-size:14.5px}
-details.fx .corpo li::before{content:"✓ ";color:var(--verde);font-weight:900}
-details.fx .corpo img{border-radius:14px;border:1.5px solid var(--creme2);width:100%}
-details.fx .corpo img.cel{max-width:220px;margin:0 auto;border:6px solid #17140F;border-radius:26px}
-@media(min-width:860px){details.fx .corpo{grid-template-columns:1fr 1.2fr;align-items:start}}
-.hl{display:grid;gap:10px}
-@media(min-width:860px){.hl{grid-template-columns:repeat(3,1fr)}}
-.hl>div{border-radius:24px;padding:18px;color:#fff;position:relative;overflow:hidden}
-.hl b{display:block;font-family:'Baloo 2';font-weight:800;font-size:25px;line-height:1.05;margin-bottom:6px}
-.hl p{font-size:14.5px;opacity:.95}
-.hl .num{font-family:'Baloo 2';font-weight:800;font-size:46px;line-height:1;opacity:.95}
-
-/* dor + como o Cria organiza */
-.dor{display:grid;gap:8px;margin-bottom:22px}
-@media(min-width:860px){.dor{grid-template-columns:repeat(2,1fr)}}
-.dor div{background:#fff;border-radius:18px;padding:13px 14px 13px 46px;position:relative;font-size:15.5px;font-weight:500}
-.dor div::before{content:"✕";position:absolute;left:14px;top:12px;width:22px;height:22px;border-radius:50%;background:#FDE3DA;color:var(--laranja);font-weight:900;font-size:12px;display:grid;place-items:center}
-.virada{font-family:'Baloo 2';font-weight:800;font-size:22px;line-height:1.15;margin:4px 0 14px}
-.virada em{font-style:normal;color:var(--ac)}
-.fluxo{display:grid;gap:0;background:#fff;border-radius:24px;padding:8px 16px}
-.fluxo .et{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:center;padding:10px 0;position:relative}
-.fluxo .et:not(:last-child)::after{content:"";position:absolute;left:21px;top:52px;bottom:-10px;width:2px;background:repeating-linear-gradient(var(--creme2) 0 5px,transparent 5px 9px)}
-.fluxo .bol{width:44px;height:44px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;display:grid;place-items:center;color:#fff;position:relative;z-index:1}
-.fluxo .bol svg{width:21px;height:21px}
-.fluxo b{font-family:'Baloo 2';font-size:18px;line-height:1.1;display:block}
-.fluxo span{font-size:14px;color:#4a463e}
-@media(min-width:860px){.fluxo{grid-template-columns:repeat(5,1fr);padding:18px}.fluxo .et{grid-template-columns:1fr;text-align:center;justify-items:center;padding:0 8px}.fluxo .et:not(:last-child)::after{left:auto;right:-14px;top:20px;bottom:auto;width:28px;height:2px;background:repeating-linear-gradient(90deg,var(--creme2) 0 5px,transparent 5px 9px)}}
-.fecho{margin-top:14px;font-size:15.5px;background:var(--amarelo);border-radius:16px;padding:12px 14px;font-weight:600;transform:rotate(-.6deg)}
-
-:root{--ac:var(--laranja)}
+.vs{text-align:left}
 </style></head><body>
 
-
-<header class="top"><img src="/lp/img/logo-cria.webp" alt="Cria"><a href="https://app.criasocialclub.com.br/login">Já tenho conta</a></header>
-
 <section class="hero">
-  <div class="blob" style="width:340px;height:300px;background:var(--rosa);right:-120px;top:-60px"></div>
-  <div class="blob" style="width:220px;height:200px;background:var(--amarelo);left:-110px;bottom:10px"></div>
+  <div class="blob" style="width:360px;height:320px;background:var(--rosa);right:-150px;top:-80px"></div>
+  <div class="blob" style="width:240px;height:220px;background:var(--amarelo);left:-130px;bottom:30px"></div>
   <div class="wrap">
-    <div>
-      <span class="kick"><i></i>O studio de quem cria conteúdo</span>
-      <div class="v on" data-h="fala">
-        <h1>Fala de você.<br><em>O Cria monta o resto.</em></h1>
-        <p class="sub">Aperta o botão e conta o que você faz e pra quem fala. O Cria transforma isso no seu brandbook, nos seus pilares e nas primeiras ideias de post.</p>
+    <header class="top"><img src="/lp/img/logo-cria-white.webp" alt="Cria"><nav><a href="https://criasocialclub.com.br/">Ver o site</a><a class="en" href="https://app.criasocialclub.com.br/login">Entrar</a></nav></header>
+    <div class="grid">
+      <div>
+        <span class="kick"><i></i>O studio de quem cria conteúdo</span>
+        <div class="v on" data-h="fala"><h1>Fala de você.<br><em>O Cria monta o resto.</em></h1></div><div class="v" data-h="ganchos"><h1>Qual começo <em>prende</em> no seu perfil?</h1></div><div class="v" data-h="seguidores"><h1>Seu post mais curtido <em>não trouxe seguidor.</em></h1></div>
+        <span class="sc lema">ufa, agora faz sentido!</span>
+        <div class="v on" data-h="fala"><p class="sub">Aperta o botão e conta o que você faz e pra quem fala. O Cria transforma isso no seu brandbook, nos seus pilares e nas primeiras ideias de post.</p></div><div class="v" data-h="ganchos"><p class="sub">Mesmo assunto, dois começos: um segura 7 de cada 10 pessoas, o outro segura 2. O Cria mostra qual abertura funciona no SEU perfil, Reels por Reels.</p></div><div class="v" data-h="seguidores"><p class="sub">O Cria mostra quantos seguidores cada foto e cada carrossel trouxe. Você para de chutar e repete o que funciona.</p></div>
+        <div class="chips"><span>Banco de ideias</span><span>Texto no seu tom</span><span>Números do Instagram</span><span>Link na bio</span></div>
+        <div class="cta"><a class="btn" href="https://app.criasocialclub.com.br/signup">Criar conta grátis</a><span class="micro"><b>7 dias grátis, sem cartão.</b> Depois, a partir de R$19,90/mês. Cancela no app.</span></div>
       </div>
-      <div class="v" data-h="ganchos">
-        <h1>Qual começo <em>prende</em> no seu perfil?</h1>
-        <p class="sub">Mesmo assunto, dois começos: um segura 7 de cada 10 pessoas, o outro segura 2. O Cria mostra qual abertura funciona no SEU perfil, Reels por Reels.</p>
-      </div>
-      <div class="v" data-h="seguidores">
-        <h1>Seu post mais curtido <em>não trouxe seguidor.</em></h1>
-        <p class="sub">O Cria mostra quantos seguidores cada foto e cada carrossel trouxe. Você para de chutar e repete o que funciona.</p>
-      </div>
-      <div class="chips"><span>Banco de ideias</span><span>Texto no seu tom</span><span>Números do Instagram</span><span>Link na bio</span></div>
-      <div class="cta">
-        <a class="btn" href="https://app.criasocialclub.com.br/signup">Criar conta grátis</a>
-        <span class="micro"><b>7 dias grátis, sem cartão.</b> Depois, a partir de R$19,90/mês. Cancela no app.</span>
-      </div>
-    </div>
-    <div class="shot">
-      <img class="sticker" src="/lp/img/selo-sem-formula.webp" alt="" style="right:-8px;bottom:-26px;transform:rotate(10deg)">
-      <div class="v on" data-h="fala"><span class="tag">Brandbook pronto em minutos</span><div class="frame"><img src="/lp/img/brandbook.webp" alt="Brandbook do Cria"></div></div>
-      <div class="v" data-h="ganchos"><span class="tag">Insights do seu Instagram</span><div class="frame"><img src="/lp/img/insights.webp" alt="Insights do Cria"></div></div>
-      <div class="v" data-h="seguidores"><span class="tag">Seguidores por post</span><div class="frame"><img src="/lp/img/insights.webp" alt="Insights do Cria"></div></div>
+      <div class="shot"><img class="sticker" src="/lp/img/selo-sem-formula.webp" alt="" style="right:-4px;bottom:-6px;transform:rotate(12deg)"><div class="v on" data-h="fala"><span class="etq">Brandbook pronto em minutos</span><a class="quadro" href="/lp/img/brandbook.webp" data-zoom><img src="/lp/img/brandbook.webp" alt=""></a></div><div class="v" data-h="ganchos"><span class="etq">Insights do seu Instagram</span><a class="quadro" href="/lp/img/insights.webp" data-zoom><img src="/lp/img/insights.webp" alt=""></a></div><div class="v" data-h="seguidores"><span class="etq">O que postar mais</span><a class="quadro" href="/lp/img/insights-postar.webp" data-zoom><img src="/lp/img/insights-postar.webp" alt=""></a></div></div>
     </div>
   </div>
 </section>
-
-
-<div class="trust"><span>Funciona no celular, instala como app</span><span>Ideia, roteiro, calendário e números num lugar só</span><span>Feito no Brasil</span></div>
-<section class="s"><div class="wrap"><h2>Se perde no meio <em>do seu conteúdo?</em></h2><p class="lead">Se alguma dessas é você, a culpa não é sua. É falta de um lugar pra tudo.</p><div class="dor"><div>Ideia no print, no bloco de notas e no áudio do WhatsApp</div><div>Senta pra postar e não sabe por onde começar</div><div>Posta um dia e some três</div><div>Não sabe o que deu certo, então repete no chute</div></div><p class="virada">No Cria, cada post tem <em>um lugar e um próximo passo.</em></p><div class="fluxo"><div class="et"><span class="bol" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg></span><div><b>Ideia</b><span>Anotou, ficou guardada no pilar certo</span></div></div><div class="et"><span class="bol" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><div><b>Planejado</b><span>Ganhou data, hora e formato</span></div></div><div class="et"><span class="bol" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><div><b>Produzindo</b><span>Roteiro e legenda no seu tom</span></div></div><div class="et"><span class="bol" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></span><div><b>Publicado</b><span>Saiu no dia marcado</span></div></div><div class="et"><span class="bol" style="background:var(--ink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></span><div><b>Medido</b><span>Você vê o que trouxe seguidor</span></div></div></div><p class="fecho">Você abre o Cria e já sabe o que fazer hoje. Sem caça ao tesouro em 4 apps.</p></div></section>
-
-<section class="s" style="padding-top:0"><div class="wrap">
-  <h2>Por que <em>o Cria</em></h2>
-  <p class="lead">Três coisas que mudam já na primeira semana.</p>
-  <div class="hl"><div style="background:var(--laranja)"><b>1 app no lugar de 4</b><p>Ideias, roteiro, calendário, link na bio e seus números, tudo conversando entre si.</p></div><div style="background:var(--azul)"><b>Escreve com a sua voz</b><p>A IA aprende seu tom no brandbook. Legenda e roteiro saem com cara de você, não de robô.</p></div><div style="background:var(--verde)"><b>Mostra o que dá resultado</b><p>Seguidores, alcance e melhor horário, post a post, direto do seu Instagram.</p></div></div>
-</div></section>
-
-<section class="s" style="padding-top:0"><div class="wrap">
-  <h2>Tudo que o Cria faz. <em>Toca pra ver.</em></h2>
-  <p class="lead" style="margin-bottom:6px">Abre cada função e vê como ela funciona por dentro.</p>
-  <div class="grupo"><span style="background:var(--laranja)">Organizar</span><small>desde o Essencial</small></div>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg></span><span class="tt"><b>Banco de ideias</b><span>Anota em 5 segundos e nunca mais perde</span></span><span class="bd ">Essencial</span><span class="mais">+</span></summary><div class="corpo"><div><p>Viu algo no feed ou teve uma ideia no banho? Joga no Cria pelo celular. Ela fica separada por pilar e vira post quando você quiser.</p><ul style="margin-top:10px"><li>Captura rápida pelo celular</li><li>Separada por pilar e pasta</li><li>Ideia vira post com um toque</li></ul></div><img class="" loading="lazy" src="/lp/img/banco-ideias.webp" alt=""></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 7v7M12 7v4M16 7v9"/></svg></span><span class="tt"><b>Kanban e calendário</b><span>Da ideia ao publicado, arrastando</span></span><span class="bd ">Essencial</span><span class="mais">+</span></summary><div class="corpo"><div><p>Cada post anda por Ideia, Planejamento, Produzindo, Pronto e Agendado. O calendário mostra a semana inteira de uma vez.</p><ul style="margin-top:10px"><li>Board, tabela e calendário</li><li>Data e hora de cada post</li><li>Metas e tarefas da semana</li></ul></div><img class="" loading="lazy" src="/lp/img/kanban.webp" alt=""></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span><span class="tt"><b>Brandbook</b><span>Seu tom, pilares e persona num lugar só</span></span><span class="bd ">Essencial</span><span class="mais">+</span></summary><div class="corpo"><div><p>Você fala ou escreve quem é, pra quem fala e por que começou. O Cria organiza isso, e toda a IA passa a escrever no seu tom.</p><ul style="margin-top:10px"><li>Responde falando, sem formulário</li><li>Lê seu manual de marca em PDF, se tiver</li><li>Base de tudo que a IA escreve</li></ul></div><img class="" loading="lazy" src="/lp/img/brandbook.webp" alt=""></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></span><span class="tt"><b>Link na bio</b><span>Coluna de links ou mini site</span></span><span class="bd ">Essencial</span><span class="mais">+</span></summary><div class="corpo"><div><p>Sua página de links com a sua cara, contando visitas e cliques e capturando contato de quem se interessa.</p><ul style="margin-top:10px"><li>Dois formatos pra escolher</li><li>Visitas e cliques de cada link</li><li>Captura de contato</li></ul></div><img class="" loading="lazy" src="/lp/img/link-in-bio.webp" alt=""></div></details>
-  <div class="grupo"><span style="background:var(--azul)">Criar</span><small>a partir do Pro</small></div>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><span class="tt"><b>Escrita no seu tom</b><span>Legenda, roteiro e carrossel com a sua voz</span></span><span class="bd dk">Pro</span><span class="mais">+</span></summary><div class="corpo"><div><p>Você escolhe o formato e o assunto. O Cria escreve no seu tom e você ajusta. São 150 textos por mês no Pro.</p><ul style="margin-top:10px"><li>Legenda, roteiro e carrossel</li><li>Prévia de como fica no feed</li><li>No seu tom, não genérico</li></ul></div><img class="" loading="lazy" src="/lp/img/escrita-guiada.webp" alt=""></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span><span class="tt"><b>Nota do gancho</b><span>Saiba se o começo prende antes de postar</span></span><span class="bd dk">Pro</span><span class="mais">+</span></summary><div class="corpo"><div><p>Cola o começo do vídeo ou da legenda e recebe uma nota antes de publicar, pra não queimar um post bom com uma abertura fraca.</p><ul style="margin-top:10px"><li>Nota antes de publicar</li><li>Mostra o que está fraco</li></ul></div></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg></span><span class="tt"><b>Tendências do seu nicho</b><span>Formatos, temas e ganchos em alta</span></span><span class="bd dk">Pro</span><span class="mais">+</span></summary><div class="corpo"><div><p>A curadoria do Cria traz o que está funcionando no seu nicho toda semana. Toca numa tendência e ela vira ideia de post.</p><ul style="margin-top:10px"><li>Atualizada toda semana</li><li>Filtra pelo seu nicho</li><li>Vira ideia com um toque</li></ul></div><img class="" loading="lazy" src="/lp/img/tendencias.webp" alt=""></div></details>
-  <div class="grupo"><span style="background:var(--verde)">Crescer</span><small>a partir do Pro</small></div>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></span><span class="tt"><b>Insights do Instagram</b><span>Seus números, post a post</span></span><span class="bd dk">Pro</span><span class="mais">+</span></summary><div class="corpo"><div><p>Seguidores, alcance e interações de cada post. E o que pouca ferramenta mostra: qual foto e qual carrossel trouxe seguidor.</p><ul style="margin-top:10px"><li>Qual post trouxe seguidor</li><li>Qual começo segurou mais gente</li><li>Alcance dos últimos 30 dias</li></ul></div><img class="" loading="lazy" src="/lp/img/insights-full.webp" alt=""></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="tt"><b>Melhor dia e horário</b><span>Pelo SEU histórico, não por regra pronta</span></span><span class="bd dk">Pro</span><span class="mais">+</span></summary><div class="corpo"><div><p>O Cria olha quando o seu público mais responde e mostra o melhor dia e horário pra você postar.</p></div></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><circle cx="8" cy="12" r="2"/><path d="M14 10h4M14 14h4"/></svg></span><span class="tt"><b>Media Kit</b><span>Seu portfólio pra fechar publi, automático</span></span><span class="bd dk">Pro</span><span class="mais">+</span></summary><div class="corpo"><div><p>Seus números viram uma página bonita e um PDF pronto pra mandar pra marca, sempre atualizado.</p><ul style="margin-top:10px"><li>Seguidores, alcance e engajamento</li><li>Perfil da audiência</li><li>PDF pra mandar na proposta</li></ul></div></div></details>
-  <div class="grupo"><span style="background:var(--rosa)">O Cria monta por você</span><small>no Studio</small></div>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="tt"><b>Cria Plano</b><span>O mês inteiro montado, post a post</span></span><span class="bd ps">Studio</span><span class="mais">+</span></summary><div class="corpo"><div><p>Você escolhe um conceito e o ritmo. O Cria monta o mês com data, hora, formato e roteiro de cada post, usando seu brandbook e as tendências.</p><ul style="margin-top:10px"><li>Mês, quinzena ou semana</li><li>Usa o que já performou</li><li>Você ajusta post por post</li></ul></div><img class="" loading="lazy" src="/lp/img/cria-plano.webp" alt=""></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/></svg></span><span class="tt"><b>Cria Stories</b><span>A semana de stories com roteiro</span></span><span class="bd ps">Studio</span><span class="mais">+</span></summary><div class="corpo"><div><p>Sete dias de stories com gancho, interação e horário. Os falados vão direto pro Prompter.</p><ul style="margin-top:10px"><li>Enquete, caixinha e quiz com lembrete</li><li>Roteiro do que falar</li><li>Baseado no que está em alta</li></ul></div><img class="" loading="lazy" src="/lp/img/cria-stories.webp" alt=""></div></details>
-  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></svg></span><span class="tt"><b>Cria Prompter</b><span>Teleprompter que acompanha a sua voz</span></span><span class="bd ps">Studio</span><span class="mais">+</span></summary><div class="corpo"><div><p>O texto rola na tela no ritmo da sua fala, e o vídeo cai direto no post. Sem decorar e sem regravar dez vezes.</p><ul style="margin-top:10px"><li>Segue a sua voz</li><li>Velocidade ajustável</li><li>Vídeo já entra no post</li></ul></div><img class="" loading="lazy" src="/lp/img/cria-prompter.webp" alt=""></div></details>
-</div></section>
-
-<section class="s" style="padding-top:0"><div class="wrap">
-  <h2>Quanto custa <em>fazer sem o Cria</em></h2>
-  <p class="lead">O que a maioria junta pra dar conta, e o que vem numa assinatura só.</p>
-  <div class="vs"><div class="sem"><h3>Hoje, avulso</h3><ul><li>Banco de ideias · ~R$30</li><li>Notion com templates · ~R$50</li><li>App de escrita com IA · ~R$100</li><li>Link na bio pro · ~R$25</li><li>E nada disso conversa</li></ul><div class="tot"><span>Por mês</span><span>~R$205</span></div></div><div class="com"><h3>Com o Cria Pro</h3><ul><li>Banco de ideias e kanban</li><li>Calendário e brandbook</li><li>150 textos no seu tom</li><li>Link na bio e Insights do Instagram</li><li>Tudo no mesmo lugar</li></ul><div class="tot"><span>Por mês</span><span>R$32,90</span></div></div></div>
-</div></section>
-
-<section class="s" style="padding-top:0"><div class="wrap">
-  <h2>Começa <em>hoje</em>, em 3 passos</h2>
-  <p class="lead">Leva uns 5 minutos.</p>
+<div class="apps"><div class="trilho"><div class="app" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg><span>Ideias</span></div><div class="app" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Calendário</span></div><div class="app" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg><span>Insights do Insta</span></div><div class="app cl" style="background:var(--amarelo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></svg><span>Prompter</span></div><div class="app" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/></svg><span>Stories da semana</span></div><div class="app" style="background:var(--lilas)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg><span>Brandbook</span></div><div class="app" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span>Link na bio</span></div><div class="app" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Escrita no seu tom</span></div><div class="app" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg><span>Tendências</span></div><div class="app cl" style="background:var(--amarelo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 7v7M12 7v4M16 7v9"/></svg><span>Kanban</span></div><div class="app" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg><span>Ideias</span></div><div class="app" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Calendário</span></div><div class="app" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg><span>Insights do Insta</span></div><div class="app cl" style="background:var(--amarelo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></svg><span>Prompter</span></div><div class="app" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/></svg><span>Stories da semana</span></div><div class="app" style="background:var(--lilas)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg><span>Brandbook</span></div><div class="app" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg><span>Link na bio</span></div><div class="app" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Escrita no seu tom</span></div><div class="app" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg><span>Tendências</span></div><div class="app cl" style="background:var(--amarelo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 7v7M12 7v4M16 7v9"/></svg><span>Kanban</span></div></div></div>
+<div class="faixa"><div class="trilho"><span>Adeus bloqueio criativo</span><span class="x">✕</span><span>Adeus feed abandonado</span><span class="x">✕</span><span>Adeus ideia perdida no print</span><span class="x">✕</span><span>Adeus legenda no desespero</span><span class="x">✕</span><span>Adeus bloqueio criativo</span><span class="x">✕</span><span>Adeus feed abandonado</span><span class="x">✕</span><span>Adeus ideia perdida no print</span><span class="x">✕</span><span>Adeus legenda no desespero</span><span class="x">✕</span></div></div>
+<section class="s"><div class="wrap"><span class="pill" style="background:var(--laranja)">A gente sabe como é</span><h2>Essa semana já aconteceu <span class="sc" style="color:var(--laranja)">pelo menos um</span> desses?</h2><p class="lead">Se marcou pelo menos um, a culpa não é sua. É falta de um lugar pra tudo.</p><div class="cartao"><div class="dor"><div class="it"><span class="ic" style="background:#FDE3DA;color:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></span><div>Uma ideia boa <b>morreu num print</b> perdido na galeria ou numa nota que você nunca mais abriu.</div></div><div class="it"><span class="ic" style="background:#DCE8FD;color:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><div>Foi postar e <b>travou na legenda</b>: 40 minutos pro primeiro parágrafo, com o post pronto do lado.</div></div><div class="it"><span class="ic" style="background:#FFF2B8;color:#8a6a00"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></span><div>Domingo à noite, 23h, <b>montando post em cima da hora</b> porque a semana não foi planejada.</div></div><div class="it"><span class="ic" style="background:#D6F3E2;color:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></span><div>Postou e <b>não sabe o que deu certo</b>, então repete no chute.</div></div></div></div></div></section><section class="s azul"><div class="blob" style="width:300px;height:280px;background:var(--rosa);opacity:.9;right:-150px;top:-90px"></div><div class="blob" style="width:240px;height:220px;background:var(--amarelo);left:-140px;bottom:-60px"></div><div class="wrap"><span class="pill" style="background:var(--amarelo);color:var(--ink)">O jeito Cria</span><h2>No Cria, cada post tem <span class="sc">um lugar e um próximo passo</span></h2><p class="lead">Não é mais uma ferramenta. É uma coisa puxando a outra, do jeito que o conteúdo anda de verdade.</p><div class="fluxo"><div class="et"><span class="n">1</span><span class="bol" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg></span><div><b>Ideia</b><span>Anotou, ficou no pilar certo</span></div></div><div class="et"><span class="n">2</span><span class="bol" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><div><b>Planejado</b><span>Ganhou data, hora e formato</span></div></div><div class="et"><span class="n">3</span><span class="bol" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><div><b>Produzindo</b><span>Roteiro e legenda no seu tom</span></div></div><div class="et"><span class="n">4</span><span class="bol" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></span><div><b>Publicado</b><span>Saiu no dia marcado</span></div></div><div class="et"><span class="n">5</span><span class="bol" style="background:var(--ink)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></span><div><b>Medido</b><span>Você vê o que trouxe seguidor</span></div></div></div><p class="fecho">Você abre o Cria e já sabe o que fazer hoje. Sem caça ao tesouro em 4 apps.</p></div></section><section class="s"><div class="wrap c"><span class="pill" style="background:var(--rosa);color:var(--ink)">Na ponta do lápis</span><h2>Quanto custa ter <span class="sc" style="color:var(--azul)">tudo num lugar?</span></h2>
+    <p class="lead">O que a maioria junta pra dar conta, e o que vem numa assinatura só.</p>
+    <div class="nums"><div><b>R$170+</b><span>a menos por mês, comparando o Pro com o combo de apps avulsos*</span></div><div><b>4 em 1</b><span>ideias, organização, escrita no seu tom e link na bio</span></div><div><b>7 dias</b><span>grátis pra testar no seu fluxo de verdade</span></div></div><p class="nota-p">*Banco de ideias, Notion com templates, app de escrita com IA e link na bio pro, contratados separados.</p>
+    <div class="vs"><div class="sem"><h3>Sem o Cria</h3><ul><li>Ideias espalhadas em notas, prints e salvos</li><li>Posta quando dá, e “quando dá” é quase nunca</li><li>Legenda escrita no desespero</li><li>Não sabe o que trouxe seguidor</li></ul><div class="tot"><span>Combo de apps</span><span>~R$205</span></div></div><div class="com"><h3>Com o Cria</h3><ul><li>Banco de ideias e kanban</li><li>Semana planejada no calendário</li><li>Legenda e roteiro no seu tom</li><li>Seus números, post a post</li></ul><div class="tot"><span>Plano Pro</span><span>R$32,90</span></div></div></div>
+    </div></section><section class="s" style="padding-top:0"><div class="wrap">
+  <span class="pill" style="background:var(--azul)">Toca pra ver</span>
+  <h2>Tudo que o Cria faz, <span class="sc" style="color:var(--laranja)">por dentro</span></h2>
+  <p class="lead" style="margin-bottom:4px">Abre cada função pra ver a tela de verdade. Toca na imagem pra ampliar.</p>
+  <div class="grupo"><span class="pill" style="background:var(--laranja)">Organizar</span><small>desde o Essencial</small></div>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></svg></span><span class="tt"><b>Banco de ideias</b><span>Anota em 5 segundos e nunca mais perde</span></span><span class="bd ">Essencial</span><span class="mais">+</span></summary><div class="corpo"><div><p>Viu algo no feed ou teve uma ideia no banho? Joga no Cria pelo celular. Ela fica separada por pasta e vira post quando você quiser.</p><ul><li>Captura rápida pelo celular</li><li>Separada por pasta e pilar</li><li>Ideia vira post com um toque</li></ul></div><a class="zoom" href="/lp/img/banco-ideias.webp" data-zoom><img loading="lazy" src="/lp/img/banco-ideias.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 7v7M12 7v4M16 7v9"/></svg></span><span class="tt"><b>Kanban e calendário</b><span>Da ideia ao publicado, arrastando</span></span><span class="bd ">Essencial</span><span class="mais">+</span></summary><div class="corpo"><div><p>Cada post anda por Ideia, Planejamento, Produzindo, Pronto e Agendado. O calendário mostra a semana inteira de uma vez.</p><ul><li>Board, tabela e calendário</li><li>Data e hora de cada post</li><li>Metas e tarefas da semana</li></ul></div><a class="zoom" href="/lp/img/kanban.webp" data-zoom><img loading="lazy" src="/lp/img/kanban.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span><span class="tt"><b>Brandbook</b><span>Seu tom, pilares e persona num lugar só</span></span><span class="bd ">Essencial</span><span class="mais">+</span></summary><div class="corpo"><div><p>Você fala ou escreve quem é, pra quem fala e por que começou. O Cria organiza isso, e toda a IA passa a escrever no seu tom.</p><ul><li>Responde falando, sem formulário</li><li>Lê seu manual de marca em PDF, se tiver</li><li>Base de tudo que a IA escreve</li></ul></div><a class="zoom" href="/lp/img/brandbook.webp" data-zoom><img loading="lazy" src="/lp/img/brandbook.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--laranja)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></span><span class="tt"><b>Link na bio</b><span>Coluna de links ou mini site</span></span><span class="bd ">Essencial</span><span class="mais">+</span></summary><div class="corpo"><div><p>Sua página de links com a sua cara, contando visitas e cliques e capturando o contato de quem se interessa.</p><ul><li>Dois formatos pra escolher</li><li>Visitas e cliques de cada link</li><li>Captura de contato</li></ul></div><a class="zoom" href="/lp/img/link-in-bio.webp" data-zoom><img loading="lazy" src="/lp/img/link-in-bio.webp" alt=""></a></div></details>
+  <div class="grupo"><span class="pill" style="background:var(--azul)">Criar</span><small>a partir do Pro</small></div>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span><span class="tt"><b>Escrita no seu tom</b><span>Legenda, roteiro e carrossel com a sua voz</span></span><span class="bd dk">Pro</span><span class="mais">+</span></summary><div class="corpo"><div><p>Você escolhe o formato e o assunto. O Cria escreve no seu tom e você ajusta. São 150 textos por mês no Pro.</p><ul><li>Legenda, roteiro e carrossel</li><li>Prévia de como fica no feed</li><li>No seu tom, não genérico</li></ul></div><a class="zoom" href="/lp/img/escrita-guiada.webp" data-zoom><img loading="lazy" src="/lp/img/escrita-guiada.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span class="tt"><b>Meu Feed</b><span>A prévia do feed antes de publicar</span></span><span class="bd dk">Pro</span><span class="mais">+</span></summary><div class="corpo"><div><p>Veja como o perfil fica com os próximos posts antes de publicar. Dá pra trocar a ordem até a grade ficar do jeito que você quer.</p><ul><li>Grade igual à do Instagram</li><li>Posts agendados e prontos</li><li>Troca a ordem antes de postar</li></ul></div><a class="zoom" href="/lp/img/meu-feed.webp" data-zoom><img loading="lazy" src="/lp/img/meu-feed.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="10" r="1.3"/><circle cx="12" cy="7.5" r="1.3"/><circle cx="16" cy="10" r="1.3"/><path d="M12 21a2.5 2.5 0 0 1 0-5h2"/></svg></span><span class="tt"><b>Estúdio</b><span>O prompt da arte de cada post, na sua marca</span></span><span class="bd dk">Pro</span><span class="mais">+</span></summary><div class="corpo"><div><p>O Cria monta o prompt da capa e de cada slide com as cores e o estilo da sua marca, pronto pra usar na ferramenta de imagem que você preferir.</p><ul><li>Prompt por slide</li><li>Com as cores da sua marca</li><li>Fica salvo no post</li></ul></div><a class="zoom" href="/lp/img/estudio.webp" data-zoom><img loading="lazy" src="/lp/img/estudio.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg></span><span class="tt"><b>Tendências do seu nicho</b><span>Formatos, temas e ganchos em alta</span></span><span class="bd dk">Pro</span><span class="mais">+</span></summary><div class="corpo"><div><p>A curadoria do Cria traz o que está funcionando no seu nicho toda semana. Toca numa tendência e ela vira ideia de post.</p><ul><li>Atualizada toda semana</li><li>Filtra pelo seu nicho</li><li>Vira ideia com um toque</li></ul></div><a class="zoom" href="/lp/img/tendencias.webp" data-zoom><img loading="lazy" src="/lp/img/tendencias.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--azul)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span><span class="tt"><b>Nota do gancho</b><span>Saiba se o começo prende antes de postar</span></span><span class="bd dk">Pro</span><span class="mais">+</span></summary><div class="corpo"><div><p>Cola o começo do vídeo ou da legenda e recebe uma nota antes de publicar, pra não queimar um post bom com uma abertura fraca.</p><ul><li>Nota antes de publicar</li><li>Mostra o que está fraco</li></ul></div></div></details>
+  <div class="grupo"><span class="pill" style="background:var(--verde)">Crescer</span><small>a partir do Pro</small></div>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></span><span class="tt"><b>Insights do Instagram</b><span>Seus números, post a post</span></span><span class="bd dk">Pro</span><span class="mais">+</span></summary><div class="corpo"><div><p>Seguidores, alcance e interações de cada post. E o que pouca ferramenta mostra: qual foto e qual carrossel trouxe seguidor.</p><ul><li>Qual post trouxe seguidor</li><li>Qual começo segurou mais gente</li><li>Alcance dos últimos 30 dias</li></ul></div><a class="zoom" href="/lp/img/insights.webp" data-zoom><img loading="lazy" src="/lp/img/insights.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="tt"><b>O que postar mais</b><span>Melhor formato, dia e horário pelo SEU histórico</span></span><span class="bd dk">Pro</span><span class="mais">+</span></summary><div class="corpo"><div><p>O Cria cruza os seus posts e mostra qual formato rende mais alcance, o melhor dia da semana e o melhor horário pra você postar.</p><ul><li>Formato que mais alcança</li><li>Melhor dia da semana</li><li>Melhor horário</li></ul></div><a class="zoom" href="/lp/img/insights-postar.webp" data-zoom><img loading="lazy" src="/lp/img/insights-postar.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--verde)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><circle cx="8" cy="12" r="2"/><path d="M14 10h4M14 14h4"/></svg></span><span class="tt"><b>Media Kit</b><span>Seu portfólio pra fechar publi, automático</span></span><span class="bd dk">Pro</span><span class="mais">+</span></summary><div class="corpo"><div><p>Seus números viram uma página bonita e um PDF pronto pra mandar pra marca, sempre atualizado.</p><ul><li>Seguidores, alcance e engajamento</li><li>Perfil da audiência</li><li>PDF pra mandar na proposta</li></ul></div></div></details>
+  <div class="grupo"><span class="pill" style="background:var(--rosa)">O Cria monta por você</span><small>no Studio</small></div>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="tt"><b>Cria Plano</b><span>O mês inteiro montado, post a post</span></span><span class="bd ps">Studio</span><span class="mais">+</span></summary><div class="corpo"><div><p>Você escolhe um conceito e o ritmo. O Cria monta o mês com data, hora, formato e roteiro de cada post, usando seu brandbook e as tendências.</p><ul><li>Mês, quinzena ou semana</li><li>Usa o que já performou</li><li>Você ajusta post por post</li></ul></div><a class="zoom" href="/lp/img/cria-plano.webp" data-zoom><img loading="lazy" src="/lp/img/cria-plano.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M10 9l5 3-5 3z"/></svg></span><span class="tt"><b>Cria Stories</b><span>A semana de stories com roteiro</span></span><span class="bd ps">Studio</span><span class="mais">+</span></summary><div class="corpo"><div><p>Sete dias de stories com gancho, interação e horário. Os falados vão direto pro Prompter.</p><ul><li>Enquete, caixinha e quiz com lembrete</li><li>Roteiro do que falar</li><li>Baseado no que está em alta</li></ul></div><a class="zoom" href="/lp/img/cria-stories.webp" data-zoom><img loading="lazy" src="/lp/img/cria-stories.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/></svg></span><span class="tt"><b>Cria Prompter</b><span>Teleprompter que acompanha a sua voz</span></span><span class="bd ps">Studio</span><span class="mais">+</span></summary><div class="corpo"><div><p>O texto rola na tela no ritmo da sua fala, e o vídeo cai direto no post. Sem decorar e sem regravar dez vezes.</p><ul><li>Segue a sua voz</li><li>Velocidade ajustável</li><li>Vídeo já entra no post</li></ul></div><a class="zoom" href="/lp/img/cria-prompter.webp" data-zoom><img loading="lazy" src="/lp/img/cria-prompter.webp" alt=""></a></div></details>
+  <details class="fx" name="fx"><summary><span class="ic" style="background:var(--rosa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5 2 7.5-6.5-4.5L5.5 21l2-7.5L2 9h7z"/></svg></span><span class="tt"><b>Collabs</b><span>Funil de publis, da proposta ao pagamento</span></span><span class="bd ps">Studio</span><span class="mais">+</span></summary><div class="corpo"><div><p>Cada publi num funil: proposta, negociação, entrega e pagamento. Você vê quanto tem a receber e o que falta entregar.</p><ul><li>Proposta e cachê</li><li>Entregas pendentes</li><li>Quanto falta receber</li></ul></div><a class="zoom" href="/lp/img/collabs.webp" data-zoom><img loading="lazy" src="/lp/img/collabs.webp" alt=""></a></div></details>
+</div></section><section class="s" style="padding-top:0"><div class="wrap">
+  <span class="pill" style="background:var(--laranja)">Começa hoje</span><h2>Em 3 passos, <span class="sc" style="color:var(--azul)">uns 5 minutos</span></h2><p class="lead"></p>
   <div class="passos">
     <div class="passo"><b>Cria a conta</b>Leva 1 minuto e não pede cartão.</div>
     <div class="passo"><b>Fala de você</b>Aperta o microfone e conta o que faz. O Cria monta seu brandbook e seus pilares.</div>
     <div class="passo"><b>Recebe as primeiras ideias</b>Já sai com posts sugeridos no seu nicho, prontos pra ajustar.</div>
   </div>
 </div></section>
-
-<section class="s" style="padding-top:0" id="planos"><div class="wrap">
-  <h2>Escolhe <em>depois do teste</em></h2>
+<section class="s" style="padding-top:0"><div class="wrap">
+  <span class="pill" style="background:var(--rosa);color:var(--ink)">Planos</span><h2>Escolhe <span class="sc" style="color:var(--laranja)">depois do teste</span></h2>
   <p class="lead">7 dias grátis, sem cartão. Cancela no app quando quiser.</p>
   <div class="planos">
     <div class="plano"><span class="rot">Organizar</span><h3>Essencial</h3><div class="pr">R$19,90<small>/mês</small></div><p class="pq">Pra tirar suas ideias de 4 apps diferentes.</p>
       <ul><li>Banco de ideias ilimitado</li><li>Kanban e calendário</li><li>Brandbook</li><li>Link na bio</li><li>10 textos com IA por mês</li></ul><a class="btn" href="https://app.criasocialclub.com.br/signup">Testar grátis</a></div>
     <div class="plano pro"><span class="flag">Mais escolhido</span><span class="rot">Criar melhor</span><h3>Pro</h3><div class="pr">R$32,90<small>/mês</small></div><p class="pq">Pra quem trava na hora de escrever.</p>
-      <ul><li>Tudo do Essencial</li><li>150 textos no seu tom por mês</li><li>Nota do gancho</li><li>Insights do Instagram</li><li>Melhor dia e horário</li><li>Tendências e Media Kit</li></ul><a class="btn" href="https://app.criasocialclub.com.br/signup">Testar 7 dias grátis</a></div>
+      <ul><li>Tudo do Essencial</li><li>150 textos no seu tom por mês</li><li>Nota do gancho</li><li>Insights do Instagram</li><li>O que postar mais</li><li>Tendências, Meu Feed e Media Kit</li></ul><a class="btn" href="https://app.criasocialclub.com.br/signup">Testar 7 dias grátis</a></div>
     <div class="plano"><span class="rot">O Cria monta por você</span><h3>Studio</h3><div class="pr">R$49,90<small>/mês</small></div><p class="pq">Pra quem vive de conteúdo e não tem tempo.</p>
       <ul><li>Tudo do Pro</li><li>Cria Plano: o mês montado</li><li>Cria Stories e Cria Prompter</li><li>Collabs: funil de publis</li><li>500 textos por mês</li></ul><a class="btn" href="https://app.criasocialclub.com.br/signup">Testar grátis</a></div>
   </div>
-</div></section>
-
-<section class="s faq" style="padding-top:0"><div class="wrap">
-  <h2>Dúvidas <em>rápidas</em></h2>
-  <details open><summary>Precisa de cartão pra testar?</summary><p>Não. São 7 dias grátis sem cartão. Se gostar, escolhe o plano dentro do app.</p></details>
-  <details><summary>Funciona no celular?</summary><p>Sim. Abre no navegador e instala como app na tela inicial, no iPhone e no Android.</p></details>
-  <details><summary>Preciso conectar o Instagram?</summary><p>Só pra ver os seus números. Ideias, roteiros e calendário funcionam sem conectar.</p></details>
-  <details><summary>Como cancelo?</summary><p>Dentro do app, em dois toques. Sem ligação e sem formulário.</p></details>
-</div></section>
-
+</div></section><section class="s" style="padding-top:0"><div class="wrap"><div class="site"><span class="pill" style="background:var(--azul)">Pra quem gosta de ver tudo</span><h2>Quer conhecer o Cria <span class="sc" style="color:var(--laranja)">com calma</span> antes de testar?</h2><p class="lead" style="margin-bottom:0">O site completo tem o passo a passo, cada tela uma por uma e o blog com uma situação real por semana.</p><div class="lks"><a href="https://criasocialclub.com.br/#motor">Como funciona →</a><a href="https://criasocialclub.com.br/funcionalidades">Todas as funcionalidades →</a><a href="https://criasocialclub.com.br/#planos">Planos em detalhe →</a><a href="https://criasocialclub.com.br/blog">Blog →</a><a href="https://criasocialclub.com.br/">Site completo →</a></div></div></div></section><section class="s faq" style="padding-top:0"><div class="wrap"><span class="pill" style="background:var(--verde)">Dúvidas</span><h2>Ainda com dúvida? <span class="sc" style="color:var(--laranja)">a gente responde</span></h2><details open><summary>Precisa de cartão pra testar?</summary><p>Não. São 7 dias grátis sem cartão. Se gostar, escolhe o plano dentro do app.</p></details><details><summary>Funciona no celular?</summary><p>Sim. Abre no navegador e instala como app na tela inicial, no iPhone e no Android. No computador, tela cheia.</p></details><details><summary>Preciso conectar o Instagram?</summary><p>Só pra ver os seus números. Ideias, roteiros e calendário funcionam sem conectar.</p></details><details><summary>Como cancelo?</summary><p>Dentro do app, em dois toques. Sem ligação e sem formulário.</p></details></div></section>
 <section class="final">
-  <div class="blob" style="width:300px;height:260px;background:var(--amarelo);left:-120px;top:10px"></div>
-  <div class="blob" style="width:260px;height:240px;background:var(--rosa);right:-110px;bottom:40px"></div>
-  <div class="wrap">
-    <h2>Seu conteúdo inteiro,<br>numa aba só.</h2>
-    <div class="cta"><a class="btn" href="https://app.criasocialclub.com.br/signup">Criar conta grátis</a><span class="micro">7 dias grátis · sem cartão · cancela no app</span></div>
-  </div>
+  <div class="blob" style="width:300px;height:260px;background:var(--amarelo);left:-140px;top:-40px"></div>
+  <div class="blob" style="width:260px;height:240px;background:var(--rosa);right:-120px;bottom:-60px"></div>
+  <div class="wrap"><h2>Seu conteúdo inteiro,<br>numa aba só.</h2><span class="sc">da ideia ao post</span>
+    <div class="cta"><a class="btn" href="https://app.criasocialclub.com.br/signup">Criar conta grátis</a><span class="micro">7 dias grátis · sem cartão · cancela no app</span></div></div>
 </section>
-<p class="rod">Cria Social Club · <a href="https://app.criasocialclub.com.br/termos">Termos</a> · <a href="https://app.criasocialclub.com.br/privacidade">Privacidade</a></p>
+<footer class="rod"><div class="wrap"><img src="/lp/img/logo-cria-white.webp" alt="Cria"><div>Seu estúdio criativo: da ideia ao post, numa aba só. Feito no Brasil.</div>
+  <div class="cols"><a href="https://criasocialclub.com.br/">Site completo</a><a href="https://criasocialclub.com.br/funcionalidades">Funcionalidades</a><a href="https://criasocialclub.com.br/social-media">Pra social mídia</a><a href="https://criasocialclub.com.br/blog">Blog</a><a href="https://app.criasocialclub.com.br/termos">Termos</a><a href="https://app.criasocialclub.com.br/privacidade">Privacidade</a></div>
+  <div style="margin-top:14px;opacity:.7">© 2026 Cria Social Club · contato@criasocialclub.com.br</div></div></footer>
 
 <div class="fixa" id="fixa"><span><b>7 dias grátis</b>sem cartão</span><a href="https://app.criasocialclub.com.br/signup">Criar conta grátis</a></div>
-
+<div id="lb" aria-hidden="true"><button class="f" aria-label="Fechar">×</button><div class="cx"><img alt=""></div><div class="dica">Arrasta pra ver a tela inteira · toca fora pra fechar</div></div>
 <script>
+function variante(v){document.querySelectorAll('[data-h]').forEach(function(e){e.classList.toggle('on',e.dataset.h===v)})}
+document.querySelectorAll('.mk button').forEach(function(b){b.onclick=function(){document.querySelectorAll('.mk button').forEach(function(x){x.classList.toggle('on',x===b)});variante(b.dataset.v)}});
 (function(){var c='';try{c=(new URLSearchParams(location.search).get('utm_content')||JSON.parse(sessionStorage.getItem('cria_origem')||'{}').utm_content||'').toLowerCase()}catch(e){}
-var R=[["ganchos","ganchos"],["seguidores","seguidores"],["fala","fala"]],v=null;for(var i=0;i<R.length;i++)if(c.indexOf(R[i][0])!==-1){v=R[i][1];break}
-if(v)document.querySelectorAll('[data-h]').forEach(function(e){var on=e.dataset.h===v;e.classList.toggle('on',on);if(e.tagName==='SPAN'&&e.closest('.micro'))e.style.display=on?'inline':'none'});})();
-const hero=document.querySelector('.hero .btn');
-addEventListener('scroll',()=>{const r=hero.getBoundingClientRect();document.getElementById('fixa').classList.toggle('on',r.bottom<0&&!document.getElementById('cria-consent'))},{passive:true});
-document.querySelectorAll('details.fx').forEach(d=>d.addEventListener('toggle',()=>{if(d.open)document.querySelectorAll('details.fx').forEach(o=>{if(o!==d)o.open=false})}));
+var R=[["ganchos","ganchos"],["seguidores","seguidores"],["fala","fala"]];for(var i=0;i<R.length;i++)if(c.indexOf(R[i][0])!==-1){variante(R[i][1]);break}})();
+document.querySelectorAll('details.fx').forEach(function(d){d.addEventListener('toggle',function(){if(d.open)document.querySelectorAll('details.fx').forEach(function(o){if(o!==d)o.open=false})})});
+var lb=document.getElementById('lb'),li=lb.querySelector('img');
+document.addEventListener('click',function(e){var a=e.target.closest('[data-zoom]');if(!a)return;e.preventDefault();var cel=a.classList.contains('cel');li.src=a.getAttribute('href');li.className=cel?'':'larga';li.style.maxWidth=cel?'420px':'';lb.classList.add('on');lb.querySelector('.cx').scrollLeft=0});
+lb.addEventListener('click',function(e){if(e.target===li&&window.innerWidth<700)return;lb.classList.remove('on')});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')lb.classList.remove('on')});
+var hero=document.querySelector('.hero .btn');
+addEventListener('scroll',function(){var r=hero.getBoundingClientRect();document.getElementById('fixa').classList.toggle('on',r.bottom<0&&!document.getElementById('ck')&&!document.getElementById('cria-consent'))},{passive:true});
 </script>
 </body></html>
