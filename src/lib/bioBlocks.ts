@@ -102,7 +102,7 @@ export const BLOCOS: MetaBloco[] = [
   {
     tipo: "galeria", nome: "Galeria", Icone: Images,
     explica: "Fotos do trabalho, em grade.",
-    padrao: { titulo: "", imagens: [] },
+    padrao: { titulo: "", imagens: [], formato: "quadrada" },
   },
   {
     tipo: "spotify", nome: "Spotify", Icone: PlayCircle,

@@ -329,11 +329,24 @@ export function FormBloco({ bloco, salvar, slugPublico, telefonePadrao, secoes =
           <LinhaCampo label="Título (opcional)">
             <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })} className="rounded-xl" />
           </LinhaCampo>
+          <LinhaCampo label="Formato das fotos">
+            <div className="inline-flex rounded-full bg-muted p-1 gap-1" role="radiogroup" aria-label="Formato das fotos">
+              {([["quadrada", "Quadrada", "w-3 h-3"], ["retangular", "Retangular (em pé)", "w-[11px] h-3.5"]] as const).map(([v, rot, ico]) => {
+                const on = (txt(d, "formato") || "quadrada") === v;
+                return (
+                  <button key={v} type="button" role="radio" aria-checked={on} onClick={() => p({ formato: v })}
+                    className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] font-body font-bold transition-colors ${on ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                    <i className={`inline-block rounded-[3px] border-2 border-current ${ico}`} />{rot}
+                  </button>
+                );
+              })}
+            </div>
+          </LinhaCampo>
           <div className="space-y-2">
             <Label className="font-body text-xs">Fotos</Label>
             <div className="grid grid-cols-3 gap-2">
               {fotos.map((f, i) => (
-                <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-border">
+                <div key={i} className={`relative rounded-lg overflow-hidden border border-border ${txt(d, "formato") === "retangular" ? "aspect-[4/5]" : "aspect-square"}`}>
                   <img src={f} alt="" className="w-full h-full object-cover" />
                   <button type="button" aria-label="Remover foto"
                     onClick={() => p({ imagens: fotos.filter((_, n) => n !== i) })}

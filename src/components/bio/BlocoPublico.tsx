@@ -368,10 +368,14 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
         <CartaoBase visual={visual} className="p-3">
           <TituloCartao>{txt(data, "titulo")}</TituloCartao>
           {/* Duas colunas no celular e três a partir do tablet: três quadradinhos
-              numa tela de 390px viram miniaturas ilegíveis. */}
-          <div className="grid grid-cols-2 cq-sm:grid-cols-3 gap-1.5">
+              numa tela de 390px viram miniaturas ilegíveis.
+              FORMATO (mockup aprovado 29/10/2026): quadrada (padrão) ou
+              retangular em pé (4:5). Uma foto sozinha ocupa a largura toda,
+              em vez de ficar pequena em meia coluna. */}
+          <div className={fotos.length === 1 ? "grid grid-cols-1" : "grid grid-cols-2 cq-sm:grid-cols-3 gap-1.5"}>
             {fotos.map((src, i) => (
-              <img key={i} src={src} alt="" loading="lazy" className="w-full aspect-square object-cover rounded-lg" />
+              <img key={i} src={src} alt="" loading="lazy"
+                className={`w-full object-cover rounded-lg ${txt(data, "formato") === "retangular" ? "aspect-[4/5]" : "aspect-square"}`} />
             ))}
           </div>
         </CartaoBase>
