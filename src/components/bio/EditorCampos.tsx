@@ -60,8 +60,10 @@ export function useUploadBio() {
    guardada no bloco, junto da foto, porque é dela: dois blocos de texto podem
    querer formas diferentes na mesma página. */
 
-export function BotaoImagem({ valor, onTroca, rotulo, forma, onForma }: {
+export function BotaoImagem({ valor, onTroca, rotulo, forma, onForma, aspecto }: {
   valor: string;
+  /** Proporção do recorte quando o bloco tem formato próprio (ex.: galeria). */
+  aspecto?: number;
   onTroca: (url: string) => void;
   rotulo: string;
   /** Vazio = bloco antigo, que nasceu antes desta escolha existir. */
@@ -133,7 +135,7 @@ export function BotaoImagem({ valor, onTroca, rotulo, forma, onForma }: {
           onOpenChange={(v) => { if (!v) setParaCortar(null); }}
           imageSrc={paraCortar}
           cropShape="rect"
-          aspectRatio={FORMAS_DA_FOTO[formaAtual].ratio}
+          aspectRatio={aspecto ?? FORMAS_DA_FOTO[formaAtual].ratio}
           onCropComplete={(blob) => void subirRecorte(blob)} />
       )}
     </div>

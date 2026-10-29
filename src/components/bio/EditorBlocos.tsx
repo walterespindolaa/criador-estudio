@@ -356,7 +356,8 @@ export function FormBloco({ bloco, salvar, slugPublico, telefonePadrao, secoes =
                 </div>
               ))}
             </div>
-            <BotaoImagem valor="" rotulo="Adicionar foto" onTroca={(u) => { if (u) p({ imagens: [...fotos, u] }); }} />
+            <BotaoImagem valor="" rotulo="Adicionar foto" aspecto={txt(d, "formato") === "retangular" ? 4 / 5 : 1}
+              onTroca={(u) => { if (u) p({ imagens: [...fotos, u] }); }} />
           </div>
         </div>
       );
