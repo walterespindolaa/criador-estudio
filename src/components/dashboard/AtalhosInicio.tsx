@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useTier } from "@/hooks/useTier";
@@ -17,8 +17,8 @@ import { cn } from "@/lib/utils";
 /* ═══════════════════════════════════════════════════════════════════════════
    ATALHOS DA PÁGINA INICIAL (28/10/2026, mockup aba 6, foco no celular)
 
-   Dois cartões grandes logo abaixo da saudação: "Gravar story" e "Postar
-   conteúdo". Com Studio, "Gravar story" abre o story falado de hoje direto no
+   v2 (28/10, opção B do mockup): uma faixa só, "Gravar story", logo abaixo
+   da saudação (o "+ Novo post" já está no cartão verde). Com Studio, "Gravar story" abre o story falado de hoje direto no
    Prompter (ou o Novo story, se não tiver). Sem Studio, abre a vitrine do
    Studio subindo de baixo, com 3 exemplos reais da curadoria de stories.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -71,23 +71,18 @@ export function AtalhosInicio() {
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-2 mb-5" data-tour="dash-atalhos">
-        <button type="button" onClick={gravarStory} disabled={enviar.isPending}
-          className="relative text-left rounded-[20px] bg-[#1F1A17] text-white px-3.5 py-3.5 min-h-[108px] flex flex-col gap-1 shadow-[0_8px_24px_rgba(40,20,10,0.16)] active:scale-[0.98] transition-transform">
-          <span className="h-8 w-8 rounded-[10px] bg-[#E5333F] grid place-items-center mb-1">
-            {enviar.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="h-3 w-3 rounded-full bg-white" />}
-          </span>
-          <b className="font-display font-extrabold text-[15px] leading-tight">Gravar story</b>
-          <small className="text-[11.5px] font-body text-white/75 line-clamp-2">{sub}</small>
-          {!isStudio && <span className="absolute top-2.5 right-2.5 text-[10px] font-body font-extrabold rounded-full px-2 py-0.5 bg-[#FFCF03] text-[#1F1A17]">Studio</span>}
-        </button>
-        <button type="button" onClick={() => navigate("/app/criando")}
-          className="text-left rounded-[20px] bg-card border border-border px-3.5 py-3.5 min-h-[108px] flex flex-col gap-1 shadow-[0_8px_24px_rgba(40,20,10,0.10)] active:scale-[0.98] transition-transform">
-          <span className="h-8 w-8 rounded-[10px] bg-primary text-primary-foreground grid place-items-center mb-1"><Plus className="h-5 w-5" /></span>
-          <b className="font-display font-extrabold text-[15px] leading-tight text-foreground">Postar conteúdo</b>
-          <small className="text-[11.5px] font-body text-muted-foreground">Novo post no Criando</small>
-        </button>
-      </div>
+      <button type="button" onClick={gravarStory} disabled={enviar.isPending} data-tour="dash-atalhos"
+        className="w-full mb-5 text-left rounded-[18px] bg-[#1F1A17] text-white px-3.5 py-3 flex items-center gap-3 shadow-[0_6px_18px_rgba(40,20,10,0.14)] active:scale-[0.99] transition-transform disabled:opacity-80">
+        <span className="h-10 w-10 shrink-0 rounded-full bg-white/[0.12] grid place-items-center">
+          {enviar.isPending ? <Loader2 className="h-4 w-4 animate-spin" />
+            : <span className="h-[18px] w-[18px] rounded-full border-[2.5px] border-[#FF6B6B] grid place-items-center"><span className="h-2 w-2 rounded-full bg-[#FF6B6B]" /></span>}
+        </span>
+        <span className="min-w-0 flex-1">
+          <b className="block font-display font-extrabold text-[15px] leading-tight">Gravar story</b>
+          <small className="block text-[12px] font-body text-white/75 truncate">{sub}</small>
+        </span>
+        <span className="shrink-0 rounded-full px-3 py-1.5 text-[12.5px] font-body font-extrabold bg-[#FF6B6B] text-white">{isStudio ? "Gravar" : "Studio"}</span>
+      </button>
       <VitrineStudio open={vitrine} onOpenChange={setVitrine} />
     </>
   );

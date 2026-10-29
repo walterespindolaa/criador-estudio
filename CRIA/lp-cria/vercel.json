@@ -46,9 +46,7 @@
       "source": "/p/:codigo",
       "destination": "https://app.criasocialclub.com.br/p/:codigo",
       "permanent": false
-    }
-  ],
-  "rewrites": [
+    },
     {
       "source": "/",
       "has": [
@@ -57,7 +55,8 @@
           "value": "criador.criasocialclub.com.br"
         }
       ],
-      "destination": "/lp-criador.html"
+      "destination": "/comecar",
+      "permanent": false
     },
     {
       "source": "/",
@@ -67,7 +66,30 @@
           "value": "socialmedia.criasocialclub.com.br"
         }
       ],
-      "destination": "/lp-socialmidia.html"
+      "destination": "/comecar",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/comecar",
+      "has": [
+        {
+          "type": "host",
+          "value": "criador.criasocialclub.com.br"
+        }
+      ],
+      "destination": "/lp-criador"
+    },
+    {
+      "source": "/comecar",
+      "has": [
+        {
+          "type": "host",
+          "value": "socialmedia.criasocialclub.com.br"
+        }
+      ],
+      "destination": "/lp-socialmidia"
     }
   ]
 }
