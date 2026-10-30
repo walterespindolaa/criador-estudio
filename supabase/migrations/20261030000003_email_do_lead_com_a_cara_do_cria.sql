@@ -102,7 +102,7 @@ begin
           perform public.enqueue_email('transactional_emails', jsonb_build_object(
             'to', _email,
             'subject', _assunto,
-            'from', 'Cria <noreply@criasocialclub.com.br>',
+            'from', 'Cria Social Club <noreply@criasocialclub.com.br>',
             'sender_domain', 'notify.criasocialclub.com.br',
             'purpose', 'transactional',
             'html', public.email_moldura_cria(_tag, public.html_seguro(_titulo), '#3E9152', '#FFFFFF',
