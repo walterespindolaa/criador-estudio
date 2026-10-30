@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   useApagarRecado, useBaseCriakut, useDestaqueStripe, useEscreverRecado, useMeuDestaque, useMinhasVisitas, useRecados, useSalvarPerfilCriakut,
 } from "@/hooks/useCriakut";
-import { PRECO_DESTAQUE, nomeFuncao, quandoFoi, type PaginaCriakutDados } from "@/lib/criakut";
+import { PRECO_DESTAQUE, PRECO_DESTAQUE_PIX, nomeFuncao, quandoFoi, type PaginaCriakutDados } from "@/lib/criakut";
 import { Avatar, DenunciarDialog, SeloDestaque } from "./Pecas";
 import { CapaComunidade } from "./CapaComunidade";
 
@@ -139,18 +139,26 @@ export function CartaoDestaque() {
   const d = q.data;
   if (!d) return null;
   if (d.ativo) {
+    const pix = d.via === "pix";
     return (
       <div className="rounded-[22px] bg-gradient-to-br from-foreground to-[#3a2c63] p-[18px] text-background">
         <SeloDestaque className="bg-primary" />
         <h3 className="mt-2 font-display text-[19px] font-bold">Você aparece primeiro</h3>
-        <p className="mt-1 text-[12.5px] opacity-80">Topo da busca da sua especialidade e selo no nome em todo o Criakut.{d.ate ? ` Renova em ${new Date(d.ate).toLocaleDateString("pt-BR")}.` : ""}</p>
+        <p className="mt-1 text-[12.5px] opacity-80">Topo da busca da sua especialidade e selo no nome em todo o Criakut.{d.ate ? ` ${pix ? "Vale até" : "Renova em"} ${new Date(d.ate).toLocaleDateString("pt-BR")}.` : ""}</p>
         <div className="my-3 flex gap-5 text-[12px] opacity-90">
           <span><b className="block font-display text-[18px]">{d.visitas_30d}</b>visitas em 30 dias</span>
           <span><b className="block font-display text-[18px]">{d.pedidos_30d}</b>pedidos em 30 dias</span>
         </div>
-        <Button size="sm" variant="secondary" className="w-full rounded-xl" disabled={stripe.isPending} onClick={() => stripe.mutate("gerenciar")}>
-          {stripe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Gerenciar assinatura
-        </Button>
+        {pix ? (
+          /* Pix não renova sozinho: dá pra somar mais 3 meses antes de acabar. */
+          <Button size="sm" variant="secondary" className="w-full rounded-xl" disabled={stripe.isPending} onClick={() => stripe.mutate("pix")}>
+            {stripe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Somar mais 3 meses no Pix ({PRECO_DESTAQUE_PIX})
+          </Button>
+        ) : (
+          <Button size="sm" variant="secondary" className="w-full rounded-xl" disabled={stripe.isPending} onClick={() => stripe.mutate("gerenciar")}>
+            {stripe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Gerenciar assinatura
+          </Button>
+        )}
       </div>
     );
   }
@@ -168,9 +176,14 @@ export function CartaoDestaque() {
       {d.motivo === "escondida" && <p className="mt-1 text-[11.5px] opacity-90">Deixe sua página visível na busca pra poder ativar.</p>}
       <Button size="sm" className="mt-2.5 w-full rounded-xl bg-white text-primary hover:bg-white/90" disabled={!d.pode_comprar || stripe.isPending}
         onClick={() => stripe.mutate("comprar")}>
-        {stripe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Quero destaque
+        {stripe.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Quero destaque no cartão
       </Button>
-      <p className="mt-1.5 text-[10.5px] opacity-80">Pagamento seguro no Stripe, só cartão. Cancela quando quiser.</p>
+      {/* PIX (Walter, 30/10/2026): 3 meses à vista, não renova sozinho. */}
+      <Button size="sm" variant="outline" className="mt-2 w-full rounded-xl border-white/60 bg-transparent text-white hover:bg-white/10 hover:text-white" disabled={!d.pode_comprar || stripe.isPending}
+        onClick={() => stripe.mutate("pix")}>
+        Ou 3 meses no Pix por {PRECO_DESTAQUE_PIX}
+      </Button>
+      <p className="mt-1.5 text-[10.5px] opacity-80">Pagamento seguro no Stripe. Cartão renova todo mês e cancela quando quiser; Pix vale 3 meses e avisa antes de acabar.</p>
     </div>
   );
 }

@@ -172,6 +172,27 @@ Deno.serve(async (req) => {
           console.log("[webhook] checkout ainda nao pago, aguardando:", s.id, s.payment_status);
           break;
         }
+        // ── DESTAQUE NO PIX (Walter, 30/10/2026): 3 meses à vista. Soma 90 dias a
+        //    partir de hoje ou do fim do Pix anterior. Só chega aqui pago (o Pix
+        //    confirma no async_payment_succeeded). Webhook repetido não soma 2x.
+        if (s.metadata?.kind === "criakut_destaque_pix") {
+          const uid = s.metadata?.destaque_user;
+          if (uid) {
+            const { data: atual } = await supabase.from("criakut_destaques")
+              .select("pix_ate, pix_ultima_sessao").eq("user_id", uid).maybeSingle();
+            const a = atual as { pix_ate: string | null; pix_ultima_sessao: string | null } | null;
+            if (a?.pix_ultima_sessao !== s.id) {
+              const base = a?.pix_ate && new Date(a.pix_ate) > new Date() ? new Date(a.pix_ate) : new Date();
+              base.setDate(base.getDate() + 90);
+              must(await supabase.from("criakut_destaques").upsert({
+                user_id: uid, pix_ate: base.toISOString(), pix_ultima_sessao: s.id,
+                stripe_customer_id: s.customer as string,
+                atualizado_em: new Date().toISOString(),
+              }, { onConflict: "user_id" }), "criakut_destaques pix");
+            }
+          }
+          break;
+        }
         // ── DESTAQUE DO CRIAKUT (Walter, 14/10/2026): liga o selo e o topo da busca ──
         if (s.metadata?.kind === "criakut_destaque") {
           const uid = s.metadata?.destaque_user;
@@ -730,6 +751,20 @@ Deno.serve(async (req) => {
       case "charge.refunded": {
         // estorno total → anula comissão pending OU payable. Não toca em 'paid' (já transferimos).
         const charge = event.data.object as Stripe.Charge;
+        // Pix do Destaque estornado inteiro: tira os 90 dias que ele somou.
+        if (charge.metadata?.kind === "criakut_destaque_pix" && charge.metadata?.destaque_user
+            && (charge.refunded === true || charge.amount_refunded >= charge.amount)) {
+          const uid = charge.metadata.destaque_user;
+          const { data: atual } = await supabase.from("criakut_destaques").select("pix_ate").eq("user_id", uid).maybeSingle();
+          const ate = (atual as { pix_ate: string | null } | null)?.pix_ate;
+          if (ate) {
+            const novo = new Date(ate); novo.setDate(novo.getDate() - 90);
+            await supabase.from("criakut_destaques")
+              .update({ pix_ate: novo > new Date() ? novo.toISOString() : null, atualizado_em: new Date().toISOString() })
+              .eq("user_id", uid);
+          }
+          break;
+        }
         const invId = charge.invoice as string | null;
         if (!invId) break;
         const inv = await stripe.invoices.retrieve(invId);

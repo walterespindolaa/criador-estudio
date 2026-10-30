@@ -36,7 +36,7 @@ serve(async (req) => {
     if (!user) return json({ error: "unauthorized" }, 401);
 
     const body = await req.json().catch(() => ({}));
-    const acao = body?.acao === "gerenciar" ? "gerenciar" : "comprar";
+    const acao = body?.acao === "gerenciar" ? "gerenciar" : body?.acao === "pix" ? "pix" : "comprar";
     // Volta só pra dentro do Criakut (nada de URL de fora vinda do navegador).
     const volta = typeof body?.volta === "string" && /^\/(app|socialmidia)\/criakut$/.test(body.volta) ? body.volta : "/app/criakut";
     const origin = req.headers.get("origin") ?? "https://app.criasocialclub.com.br";
@@ -60,6 +60,8 @@ serve(async (req) => {
     if (p.funcao === "criadora") return json({ error: "criadora" }, 403);
     const { data: dest } = await svc.from("criakut_destaques").select("status").eq("user_id", user.id).maybeSingle();
     const st = (dest as { status: string } | null)?.status;
+    // Quem já paga no cartão não compra Pix nem outro cartão. Pix por cima de
+    // Pix pode: soma mais 90 dias ao que já tem (renovação antecipada).
     if (st === "active" || st === "trialing" || st === "past_due") return json({ error: "ja_ativo" }, 409);
 
     if (!customerId) {
@@ -69,6 +71,24 @@ serve(async (req) => {
       });
       customerId = customer.id;
       await svc.from("profiles").update({ stripe_customer_id: customerId }).eq("id", user.id);
+    }
+
+    /* PIX, 3 MESES À VISTA (Walter, 30/10/2026): R$ 39,90. Conta Stripe
+       brasileira não faz Pix recorrente, então é pagamento avulso; o webhook
+       soma 90 dias quando o Pix confirma. */
+    if (acao === "pix") {
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        customer: customerId,
+        payment_method_types: ["pix"],
+        line_items: [{ quantity: 1, price_data: { currency: "brl", unit_amount: 3990,
+          product_data: { name: "Destaque no Criakut · 3 meses (Pix)" } } }],
+        metadata: { app: "cria", kind: "criakut_destaque_pix", destaque_user: user.id },
+        payment_intent_data: { metadata: { app: "cria", kind: "criakut_destaque_pix", destaque_user: user.id } },
+        success_url: `${origin}${volta}?destaque=pix`,
+        cancel_url: `${origin}${volta}?destaque=cancelado`,
+      });
+      return json({ url: session.url });
     }
 
     // Sem user_id na metadata de propósito: o webhook trata user_id como plano-base.

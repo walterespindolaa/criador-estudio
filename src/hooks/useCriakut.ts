@@ -477,7 +477,7 @@ export function useMeuDestaque() {
 export function useDestaqueStripe() {
   const base = useBaseCriakut();
   return useMutation({
-    mutationFn: async (acao: "comprar" | "gerenciar") => {
+    mutationFn: async (acao: "comprar" | "gerenciar" | "pix") => {
       const { data, error } = await supabase.functions.invoke("criakut-destaque-checkout", { body: { acao, volta: base } });
       if (error) {
         /* Resposta não-2xx: o motivo (ja_ativo, desligado...) vem no corpo, não na mensagem. */

@@ -235,9 +235,12 @@ export type TopicoDados = {
 
 export type MeuDestaque = {
   ativo: boolean; status: string | null; ate: string | null; desde: string | null; a_venda: boolean; pode_comprar: boolean;
+  /** Pix (30/10/2026): 3 meses à vista. `via` diz por onde está pago. */
+  via?: "cartao" | "pix" | null; pix_ate?: string | null;
   motivo: "desligado" | "sem_pagina" | "escondida" | "criadora" | null; visitas_30d: number; pedidos_30d: number;
 };
 export const PRECO_DESTAQUE = "R$ 14,90";
+export const PRECO_DESTAQUE_PIX = "R$ 39,90";
 
 export type DenunciaAdmin = {
   tipo: "recado" | "topico" | "resposta" | "perfil"; alvo_id: string; quantas: number; ultima: string;

@@ -280,6 +280,7 @@ export default function Criakut() {
   useEffect(() => {
     if (!voltaStripe) return;
     if (voltaStripe === "ok") toast.success("Pagamento recebido! Seu Destaque liga em instantes.");
+    if (voltaStripe === "pix") toast.success("Assim que o Pix cair, seu Destaque liga sozinho. Costuma ser em segundos.");
     navigate(base, { replace: true });
     /* Sem limpar o timer: o navigate acima tira o parâmetro e reexecuta o
        efeito, e limpar aqui cancelaria a conferida. */
