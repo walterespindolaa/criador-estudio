@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AlertCircle, Check, Loader2, MessageCircle, RotateCcw, Send, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PedidoPortfolioDoCard } from "./PedidoPortfolioDoCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -116,6 +117,9 @@ export function EnviarParaParceiro({ postId, assigneeId: assigneeIdProp, produca
   };
 
   return (
+    <>
+    {/* Pedido do parceiro pra mostrar a peça no portfólio (30/10/2026). */}
+    {!adiado && <PedidoPortfolioDoCard postId={postId} />}
     <Popover open={aberto} onOpenChange={setAberto}>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className={cn((atual || escolhaGuardada) && "border-violet-300 bg-violet-50 text-violet-800 hover:bg-violet-100",
@@ -304,5 +308,6 @@ export function EnviarParaParceiro({ postId, assigneeId: assigneeIdProp, produca
         )}
       </PopoverContent>
     </Popover>
+    </>
   );
 }

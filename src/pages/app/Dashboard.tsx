@@ -4,8 +4,9 @@ import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import {
   Lightbulb, FileText, CheckCircle2, Sparkles, Copy, Check,
-  ListChecks, Pencil, Trash2, Clock, Flame, ArrowRight
+  ListChecks, Pencil, Trash2, Clock, Flame, ArrowRight, CheckSquare
 } from "lucide-react";
+import { useBrandItems } from "@/hooks/useBrandItems";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,7 +25,7 @@ import { usePosts } from "@/hooks/usePosts";
 import { useHabits } from "@/hooks/useHabits";
 import { useTasks } from "@/hooks/useTasks";
 import { usePillars } from "@/hooks/usePillars";
-import { SmartNotificationsCard } from "@/components/notifications/SmartNotificationsCard";
+import { ConviteCriakut } from "@/components/criakut/ConviteCriakut";
 import { NextBestAction } from "@/components/dashboard/NextBestAction";
 import { InstagramPulse } from "@/components/dashboard/InstagramPulse";
 import { FirstStepsPanel } from "@/components/dashboard/FirstStepsPanel";
@@ -131,6 +132,8 @@ const Dashboard = () => {
   // Saudação/avatar do header refletem a CONTA ATIVA (não a manager).
   const { profile: activeProfile } = useActiveProfile();
   const navigate = useNavigate();
+  const { brandItems } = useBrandItems();
+  const temTom = brandItems.some((i) => i.type === "tom");
 
   const today = useMemo(() => hojeBR(), []);
   const weekDays = useMemo(() => getDaysOfWeek(), []);
@@ -334,7 +337,7 @@ const Dashboard = () => {
         <FirstStepsPanel />
 
         <div className="mb-4" data-tour="dash-acao">
-          <NextBestAction />
+          <NextBestAction comAvisos />
         </div>
 
         {/* A Captura Rápida saiu daqui (Walter, 19/10/2026): repetia o botão
@@ -452,31 +455,21 @@ const Dashboard = () => {
               )}
             </section>
 
-            <DCard className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/50 dark:from-amber-500/10 dark:to-orange-500/5 dark:border-amber-500/20">
-              <h3 className="text-sm font-display font-bold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">
-                <div className="w-6 h-6 rounded-lg bg-amber-500 flex items-center justify-center">
-                  <Sparkles className="h-3.5 w-3.5 text-white" />
-                </div>
-                Gancho do Dia
-              </h3>
-              <p className="text-sm font-body text-foreground italic mb-4 leading-relaxed">
-                "{dailyHook.text}"
-              </p>
-              <Button variant="outline" size="sm" onClick={handleCopyHook} className="w-full bg-white/60 dark:bg-background/40 border-amber-300/40 hover:bg-white text-amber-700 dark:text-amber-300">
-                {copiedHook ? <><Check className="h-3.5 w-3.5 mr-2" /> Copiado</> : <><Copy className="h-3.5 w-3.5 mr-2" /> Copiar hook</>}
-              </Button>
-            </DCard>
+
           </div>
 
           <div className="space-y-6">
-            <WhoYouAre />
-            <AiUsageCard />
-            <SmartNotificationsCard />
-            <UpcomingTasks />
-             <DCard className="border-border/20">
-              <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Flame className="h-4 w-4 text-primary" /> Hábitos de Criação
+            {/* HOJE (Walter, 30/10/2026, mockup aprovado): tarefas e hábitos
+                num bloco só. Quem é você desceu pra faixa larga e as
+                notificações entraram na próxima ação, lá em cima. */}
+            <DCard className="border-border/20">
+              <h3 className="font-display font-semibold text-foreground mb-3 flex items-center gap-2">
+                <CheckSquare className="h-4 w-4 text-primary" /> Hoje
               </h3>
+              <UpcomingTasks embutido />
+              <p className="mt-4 mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                <Flame className="h-3.5 w-3.5 text-primary" /> Hábitos de criação · {habits.filter(h => habitLogs.some(l => l.habit_id === h.id && l.done)).length}/{habits.length}
+              </p>
               <div className="space-y-3">
                 {habits.map(h => {
                   const done = habitLogs.some(l => l.habit_id === h.id && l.done);
@@ -515,8 +508,34 @@ const Dashboard = () => {
                 </div>
               </div>
             </DCard>
+            <DCard className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/50 dark:from-amber-500/10 dark:to-orange-500/5 dark:border-amber-500/20">
+              <h3 className="text-sm font-display font-bold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">
+                <div className="w-6 h-6 rounded-lg bg-amber-500 flex items-center justify-center">
+                  <Sparkles className="h-3.5 w-3.5 text-white" />
+                </div>
+                Gancho do Dia
+              </h3>
+              <p className="text-sm font-body text-foreground italic mb-4 leading-relaxed">
+                "{dailyHook.text}"
+              </p>
+              <Button variant="outline" size="sm" onClick={handleCopyHook} className="w-full bg-white/60 dark:bg-background/40 border-amber-300/40 hover:bg-white text-amber-700 dark:text-amber-300">
+                {copiedHook ? <><Check className="h-3.5 w-3.5 mr-2" /> Copiado</> : <><Copy className="h-3.5 w-3.5 mr-2" /> Copiar hook</>}
+              </Button>
+            </DCard>
+            <AiUsageCard />
           </div>
 
+        </div>
+
+        <div className="mt-6 space-y-6">
+          <WhoYouAre largo />
+          {/* Convite do Criakut no fim da home (Walter, 30/10/2026). Só pra
+              conta da própria pessoa: no "Meu perfil" aberto pela social
+              mídia a página do Criakut seria a dela, não a do perfil. */}
+          {activeProfile?.id === user?.id && (
+            <ConviteCriakut variante="criador" nicho={activeProfile?.niche ?? null} temTom={temTom}
+              nomeFallback={activeProfile?.name ?? null} fotoFallback={activeProfile?.avatar_url ?? null} />
+          )}
         </div>
       </motion.div>
     </div>

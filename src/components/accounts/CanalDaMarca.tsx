@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Check, ExternalLink, Eye, Folder, Loader2, Megaphone, Search, Sparkles } from "lucide-react";
+import { Check, ExternalLink, Eye, Folder, Image as ImageIcon, Loader2, Megaphone, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,7 @@ type CrmComCanal = {
   brand_core?: Record<string, unknown> | null;
   hashtags?: string[] | null;
   compartilhar_parceiros?: Record<string, boolean> | null;
+  portfolio_regra?: "nunca" | "sem_marca" | "com_marca" | null;
 };
 
 /* O QUE O PARCEIRO VÊ, POR CLIENTE (Walter, 28/09/2026). Cada chave liga ou
@@ -231,6 +232,44 @@ function EditorDoCanal({ clienteId, pecasAbertas }: { clienteId: string; pecasAb
         </div>
         <p className="text-[11px] font-body text-muted-foreground mt-3 flex items-center gap-1">
           <Sparkles className="h-3 w-3" /> Nome, logo, cor e o recado fixo sempre vão. As anotações internas do cliente nunca vão.
+        </p>
+      </Card>
+
+      {/* 5. PORTFÓLIO DOS PARCEIROS (Walter, 30/10/2026, mockup aprovado).
+          O parceiro pode pedir pra mostrar no Criakut uma peça que entregou.
+          Sem regra aqui, cada pedido passa por você e pelo cliente. */}
+      <Card className="rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-1">
+          <ImageIcon className="h-4 w-4 text-muted-foreground" />
+          <p className="text-[13px] font-display font-bold flex-1">Portfólio dos parceiros</p>
+          <Salvo campo="portfolio_regra" />
+        </div>
+        <p className="text-[12px] font-body text-muted-foreground mb-3 leading-snug">
+          Quando um parceiro pedir pra mostrar no portfólio dele uma peça deste cliente, o que acontece?
+        </p>
+        <div className="grid sm:grid-cols-2 gap-2">
+          {([
+            [null, "Perguntar a cada pedido", "você decide no card ou manda pro cliente"],
+            ["nunca", "Nunca mostrar", "recusa sozinho, ninguém é incomodado"],
+            ["sem_marca", "Pode mostrar sem a marca", "aparece como o segmento do cliente"],
+            ["com_marca", "Pode mostrar com a marca", "aparece com o nome do cliente"],
+          ] as const).map(([valor, rot, ajuda]) => {
+            const on = (c.portfolio_regra ?? null) === valor;
+            return (
+              <button key={String(valor)} type="button" disabled={update.isPending}
+                onClick={() => update.mutate({ id: clienteId, portfolio_regra: valor } as never, {
+                  onSuccess: () => { setSalvo("portfolio_regra"); window.setTimeout(() => setSalvo(null), 1800); },
+                })}
+                className={cn("text-left rounded-xl border px-3 py-2.5 transition-colors",
+                  on ? "border-primary/40 bg-primary/[0.04]" : "border-border bg-card hover:bg-muted/40")}>
+                <span className="block text-[13px] font-body font-bold text-foreground">{rot}</span>
+                <span className="block text-[11.5px] font-body text-muted-foreground leading-snug">{ajuda}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[11px] font-body text-muted-foreground mt-3">
+          "Sem a marca" mostra a peça como ela é. Se o logo está dentro da arte, prefira "nunca mostrar".
         </p>
       </Card>
     </div>

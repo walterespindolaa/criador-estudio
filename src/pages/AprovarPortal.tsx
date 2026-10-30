@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { FigurinhasStory } from "@/hooks/usePublicarInstagram";
 import { useParams } from "react-router-dom";
+import { PedidosPortfolio } from "@/components/portal/PedidosPortfolio";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -995,6 +996,7 @@ export default function AprovarPortal() {
                   </>
                 )}
 
+                <PedidosPortfolio token={token} />
                 <SolicitarMaterial token={token} />
               </>
             )}

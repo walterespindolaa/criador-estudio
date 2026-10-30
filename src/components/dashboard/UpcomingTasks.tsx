@@ -18,7 +18,8 @@ function dateLabel(iso: string) {
   return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 
-export function UpcomingTasks() {
+/** embutido: sem moldura própria, pra morar dentro do bloco \"Hoje\" da home (30/10/2026). */
+export function UpcomingTasks({ embutido = false }: { embutido?: boolean } = {}) {
   const navigate = useNavigate();
   const { tasks } = useTasks({ limit: 50 });
   const today = hojeBR();
@@ -31,13 +32,17 @@ export function UpcomingTasks() {
   }, [tasks]);
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-warm)]">
-      <h3 className="mb-1 flex items-center gap-2 font-display text-[15px] font-bold">
-        <CheckSquare className="h-4 w-4 text-primary" /> Próximas tarefas
-      </h3>
-      <p className="mb-3 text-xs text-muted-foreground">Por vencimento</p>
+    <div className={embutido ? "" : "rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-warm)]"}>
+      {embutido
+        ? <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Próximas tarefas</p>
+        : <>
+            <h3 className="mb-1 flex items-center gap-2 font-display text-[15px] font-bold">
+              <CheckSquare className="h-4 w-4 text-primary" /> Próximas tarefas
+            </h3>
+            <p className="mb-3 text-xs text-muted-foreground">Por vencimento</p>
+          </>}
       {upcoming.length === 0 ? (
-        <p className="py-4 text-sm text-muted-foreground">Nenhuma tarefa com prazo. <button onClick={() => navigate("/app/tarefas")} className="font-semibold text-primary">Criar tarefa →</button></p>
+        <p className={embutido ? "py-1 text-sm text-muted-foreground" : "py-4 text-sm text-muted-foreground"}>Nenhuma tarefa com prazo. <button onClick={() => navigate("/app/tarefas")} className="font-semibold text-primary">Criar tarefa →</button></p>
       ) : (
         <ul className="divide-y divide-border">
           {upcoming.map((t) => {

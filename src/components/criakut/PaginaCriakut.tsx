@@ -18,6 +18,8 @@ import { EditarPerfil } from "./EditarPerfil";
 import { PedirOrcamento } from "./PedirOrcamento";
 import { CartaoDestaque, ComunidadesDaPagina, QuemVisitou, Recados } from "./BlocosPagina";
 import { Avatar, SeloDestaque } from "./Pecas";
+import { PecasDoCriaDialog } from "./PecasDoCriaDialog";
+import { usePortfolioPublico } from "@/hooks/usePortfolioCria";
 import { cn } from "@/lib/utils";
 
 /* A PÁGINA (mockup v3 aprovado em 14/10/2026; reenquadrada no mesmo dia a
@@ -51,6 +53,10 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
   const [subindo, setSubindo] = useState(false);
   const fotoInput = useRef<HTMLInputElement>(null);
   const portInput = useRef<HTMLInputElement>(null);
+  /* Peças entregues pelo Cria e liberadas pelo dono da marca (30/10/2026). */
+  const pecasCria = usePortfolioPublico(dados.slug).data ?? [];
+  const [escolhendoCria, setEscolhendoCria] = useState(false);
+  const totalPortfolio = dados.portfolio.length + pecasCria.length;
   const primeiroNome = dados.nome.trim().split(/\s+/)[0];
   const recadosQ = useRecados(dados.slug, 5);
   const totalRecados = recadosQ.data?.total ?? 0;
@@ -69,8 +75,8 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
   const abaInicial: Aba = contratante
     ? (dados.eh_meu ? (busco.length === 0 ? "busco" : posts.length ? "instagram" : "recados") : (temBusca ? "busco" : posts.length ? "instagram" : "recados"))
     : dados.eh_meu
-      ? (dados.servicos.length === 0 ? "servicos" : dados.portfolio.length < 3 ? "portfolio" : "recados")
-      : (dados.servicos.length ? "servicos" : dados.portfolio.length ? "portfolio" : "recados");
+      ? (dados.servicos.length === 0 ? "servicos" : totalPortfolio < 3 ? "portfolio" : "recados")
+      : (dados.servicos.length ? "servicos" : totalPortfolio ? "portfolio" : "recados");
   const [aba, setAba] = useState<Aba>(abaInicial);
   const [sobreAberto, setSobreAberto] = useState(false);
 
@@ -122,7 +128,7 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
     { ok: !!dados.foto_url, txt: "Foto" },
     { ok: (dados.sobre ?? "").length >= 40, txt: "Sobre você" },
     { ok: dados.servicos.length > 0, txt: "Serviços e preços" },
-    { ok: dados.portfolio.length >= 3, txt: "3 peças no portfólio" },
+    { ok: totalPortfolio >= 3, txt: "3 peças no portfólio" },
     { ok: dados.capa_tipo !== "cria-1", txt: "Escolher a sua capa" },
     { ok: dados.publicado, txt: "Mostrar na busca" },
   ];
@@ -145,7 +151,7 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
     { k: "depoimentos", nome: "Depoimentos", n: totalDep },
   ] : [
     { k: "servicos", nome: "Serviços", n: dados.servicos.length },
-    { k: "portfolio", nome: "Portfólio", n: dados.portfolio.length },
+    { k: "portfolio", nome: "Portfólio", n: totalPortfolio },
     ...(temBusca ? [{ k: "busco" as Aba, nome: "O que procuro", n: pedidosAbertos.length }] : []),
     ...(posts.length ? [{ k: "instagram" as Aba, nome: "Instagram", n: posts.length }] : []),
     { k: "recados", nome: "Recados", n: totalRecados },
@@ -160,7 +166,7 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
     [dados.reputacao?.nota != null ? `★ ${String(dados.reputacao.nota).replace(".", ",")}` : "novo", dados.reputacao?.avaliacoes ? `${dados.reputacao.avaliacoes} ${dados.reputacao.avaliacoes === 1 ? "avaliação" : "avaliações"}` : "sem nota ainda"],
     [dados.entregas_no_cria ?? 0, "entregas no Cria"],
     [dados.seguidores, "seguidores"],
-    [dados.portfolio.length, "no portfólio"],
+    [totalPortfolio, "no portfólio"],
   ];
 
   return (
@@ -292,13 +298,20 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
                   {a.nome}{a.n > 0 && <span className="ml-1 text-[11px] text-muted-foreground">{a.n}</span>}
                 </button>
               ))}
+              {meu && aba === "portfolio" && (
+                <button type="button" className="ml-auto inline-flex shrink-0 items-center gap-1 pb-2 pr-1.5 text-[12px] font-semibold text-primary hover:underline"
+                  onClick={() => setEscolhendoCria(true)}>
+                  <Star className="h-3 w-3" /> peças do Cria
+                </button>
+              )}
               {meu && (aba === "servicos" || aba === "portfolio") && (
-                <button type="button" className="ml-auto inline-flex shrink-0 items-center gap-1 pb-2 pr-1.5 text-[12px] font-semibold text-muted-foreground hover:text-foreground"
+                <button type="button" className={cn("inline-flex shrink-0 items-center gap-1 pb-2 pr-1.5 text-[12px] font-semibold text-muted-foreground hover:text-foreground", aba !== "portfolio" && "ml-auto")}
                   disabled={subindo} onClick={() => (aba === "servicos" ? setEditando(true) : portInput.current?.click())}>
                   {aba === "servicos" ? <><Pencil className="h-3 w-3" /> editar</> : subindo ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Plus className="h-3 w-3" /> adicionar</>}
                 </button>
               )}
             </div>
+            <PecasDoCriaDialog aberto={escolhendoCria} onClose={() => setEscolhendoCria(false)} />
             <input ref={portInput} type="file" accept="image/*" multiple className="hidden"
               onChange={(e) => { void aoEscolherPortfolio(e.target.files); e.target.value = ""; }} />
             {/* Altura limitada no computador: a página cabe na tela e a aba rola por dentro. */}
@@ -318,9 +331,15 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
                     </table>
               )}
               {aba === "portfolio" && (
-                dados.portfolio.length === 0
-                  ? <p className="text-[13px] text-muted-foreground">{meu ? "Suba as peças que mais representam seu trabalho (até 12 por vez)." : "Sem peças ainda."}</p>
+                totalPortfolio === 0
+                  ? <p className="text-[13px] text-muted-foreground">{meu ? "Suba as peças que mais representam seu trabalho (até 12 por vez), ou escolha em \"peças do Cria\" as que você entregou por aqui." : "Sem peças ainda."}</p>
                   : <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-5 lg:grid-cols-6">
+                      {pecasCria.map((p) => (
+                        <div key={p.post_id} className="relative aspect-[4/5] overflow-hidden rounded-xl bg-muted" title={p.rotulo}>
+                          <img src={p.capa} alt={p.rotulo} loading="lazy" className="h-full w-full object-cover" />
+                          <span className="absolute inset-x-1 bottom-1 truncate rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">Feita no Cria · {p.rotulo}</span>
+                        </div>
+                      ))}
                       {dados.portfolio.map((p) => (
                         <div key={p.id} className="group relative aspect-[4/5] overflow-hidden rounded-xl bg-muted">
                           <img src={p.media_url} alt={p.legenda ?? ""} loading="lazy" className="h-full w-full object-cover" />

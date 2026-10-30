@@ -12,6 +12,7 @@ import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
 import { hojeBR } from "@/lib/date-br";
 import { cn } from "@/lib/utils";
 import { brlReais } from "@/lib/money";
+import { ConviteCriakut } from "@/components/criakut/ConviteCriakut";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    A HOME DO PARCEIRO PURO (designer, editor, copy, tráfego)
@@ -127,6 +128,11 @@ export default function ParceiroHome() {
           )}
         </div>
       </section>
+
+      {/* ── CRIAKUT (Walter, 30/10/2026, mockup aprovado): convite já
+          preenchido com o que ele faz no Cria; publicada, vira resultados. ── */}
+      <ConviteCriakut variante="prestador" className="mb-5"
+        nomeFallback={profile?.name ?? null} fotoFallback={profile?.avatar_url ?? null} />
 
       {/* ── OS TRÊS NÚMEROS: fila, agências, a receber ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">

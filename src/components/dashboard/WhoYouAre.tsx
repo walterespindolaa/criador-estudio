@@ -17,14 +17,18 @@ const chave = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
     .replace(/\s*\/\s*/g, " e ").replace(/\s+/g, " ").trim();
 
-const Linha = ({ rotulo, children }: { rotulo: string; children: React.ReactNode }) => (
-  <div className="grid grid-cols-[64px_1fr] items-start gap-3">
-    <span className="pt-1 text-xs text-muted-foreground">{rotulo}</span>
-    <div className="min-w-0">{children}</div>
-  </div>
+/* LARGO (Walter, 30/10/2026, mockup aprovado): na home o card virou uma faixa
+   de largura cheia embaixo, com as quatro partes lado a lado. */
+const Linha = ({ rotulo, children, largo }: { rotulo: string; children: React.ReactNode; largo?: boolean }) => (
+  largo
+    ? <div className="min-w-0"><span className="mb-1 block text-xs text-muted-foreground">{rotulo}</span>{children}</div>
+    : <div className="grid grid-cols-[64px_1fr] items-start gap-3">
+        <span className="pt-1 text-xs text-muted-foreground">{rotulo}</span>
+        <div className="min-w-0">{children}</div>
+      </div>
 );
 
-export function WhoYouAre() {
+export function WhoYouAre({ largo = false }: { largo?: boolean } = {}) {
   const navigate = useNavigate();
   const { profile } = useActiveProfile();
   const { brandItems } = useBrandItems();
@@ -53,16 +57,16 @@ export function WhoYouAre() {
       {empty ? (
         <p className="py-2 text-sm text-muted-foreground">Monte seu Brandbook pra ver seu resumo aqui. <button onClick={() => navigate("/app/brandbook")} className="font-semibold text-primary">Começar</button></p>
       ) : (
-        <div className="space-y-2.5 text-sm">
+        <div className={largo ? "grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4" : "space-y-2.5 text-sm"}>
           {nichos.length > 0 && (
-            <Linha rotulo="Nicho">
+            <Linha largo={largo} rotulo="Nicho">
               <div className="flex flex-wrap gap-1.5">
                 {nichos.map((n) => <span key={n} className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-foreground/80">{n}</span>)}
               </div>
             </Linha>
           )}
           {tom.length > 0 && (
-            <Linha rotulo="Tom">
+            <Linha largo={largo} rotulo="Tom">
               {/* Pílula só pra item CURTO: tom escrito como frase longa virava um balão gigante (31/08). */}
               <div className="flex flex-wrap gap-1.5">{tom.map((t) => (
                 t.length <= 40
@@ -72,7 +76,7 @@ export function WhoYouAre() {
             </Linha>
           )}
           {pilaresUnicos.length > 0 && (
-            <Linha rotulo="Pilares">
+            <Linha largo={largo} rotulo="Pilares">
               <div className="flex flex-wrap gap-1.5">{pilaresUnicos.slice(0, 5).map((p) => (
                 <span key={p.id} className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-foreground/80">
                   <span className="h-1.5 w-1.5 rounded-full" style={{ background: p.color ?? "var(--primary)" }} />{p.name}
@@ -82,7 +86,7 @@ export function WhoYouAre() {
           )}
           {personas.length > 0 && (
             // TODAS as personas (a Gabriela tem duas e o card mostrava uma), só o nome.
-            <Linha rotulo="Pra quem">
+            <Linha largo={largo} rotulo="Pra quem">
               <div className="flex flex-wrap gap-1.5">
                 {personas.map((p) => (
                   <span key={p.id ?? p.name} className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-semibold text-foreground">{p.name}</span>
