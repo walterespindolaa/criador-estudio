@@ -159,6 +159,7 @@ var CRIA_TRACK = {
     var secs = [].slice.call(document.querySelectorAll("section[id], footer"));
     if (!secs.length) return;
     var mapa = secs.map(function (el) { return el.id || "rodape"; });
+    var novidade = false, pronto = false;
     var tempo = {}, ativo = 0, scrollMax = 0, atual = null, nCliques = 0, enviado = "", ultimoGesto = Date.now();
     function mexeu() { ultimoGesto = Date.now(); }
     ["scroll", "pointerdown", "keydown", "mousemove", "touchstart", "wheel"].forEach(function (ev) {
@@ -169,14 +170,24 @@ var CRIA_TRACK = {
       for (var i = 0; i < secs.length; i++) {
         var r = secs[i].getBoundingClientRect();
         if (r.height === 0) continue;
-        if (r.top < vh * 0.85 && !(mapa[i] in tempo)) tempo[mapa[i]] = 0;
+        if (r.top < vh * 0.85 && !(mapa[i] in tempo)) { tempo[mapa[i]] = 0; novidade = true; }
         if (r.top <= meio && r.bottom > meio) atual = mapa[i];
       }
       var h = document.documentElement.scrollHeight;
       if (h > 0) {
         var p = Math.min(100, Math.round(100 * (window.scrollY + vh) / h));
-        if (p > scrollMax) scrollMax = p;
+        if (p > scrollMax) {
+          if (Math.floor(p / 25) > Math.floor(scrollMax / 25)) novidade = true;
+          scrollMax = p;
+        }
       }
+      // ENVIO NA HORA (30/10/2026). Antes o acumulado só saía a cada 15s de
+      // tempo ativo ou quando a aba sumia. O navegador do Instagram costuma
+      // fechar a página sem avisar, então a maioria das visitas do anúncio
+      // ficava gravada com o retrato do carregamento (tempo 0, rolagem da
+      // primeira tela). Agora sai na hora em que a pessoa entra numa seção
+      // nova ou passa de 25%, 50%, 75% e 100% da página.
+      if (novidade && pronto) { novidade = false; mandar(); }
     }
     function mandar() {
       // Só reenvia se algo mudou (o clique em "testar" muda converteu mesmo
@@ -190,13 +201,20 @@ var CRIA_TRACK = {
       enviar(dados);
     }
     olhar();
+    novidade = false;
+    pronto = true;
     window.addEventListener("scroll", olhar, { passive: true });
     setInterval(function () {
-      if (document.visibilityState !== "visible" || Date.now() - ultimoGesto > 30000) return;
+      // Conta o segundo se a aba não está escondida, OU se alguém tocou/rolou
+      // nos últimos 5s (gesto prova que tem gente olhando, mesmo que o
+      // navegador embutido informe a visibilidade errado).
+      var gesto = Date.now() - ultimoGesto;
+      var visivel = document.visibilityState !== "hidden";
+      if (!(visivel && gesto <= 30000) && gesto > 5000) return;
       ativo++;
       olhar();
       if (atual) tempo[atual] = (tempo[atual] || 0) + 1;
-      if (ativo % 15 === 0) mandar();
+      if (ativo === 3 || ativo === 10 || ativo % 15 === 0) mandar();
     }, 1000);
     document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") mandar(); });
     window.addEventListener("pagehide", mandar);
