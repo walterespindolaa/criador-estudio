@@ -315,6 +315,11 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
         containerId = String(c.id);
       } else {
         // Carrossel: um contêiner por mídia, na ordem da tira, depois o pai.
+        // Limite oficial do Instagram (Content Publishing API): 20 itens.
+        // Avisa em português antes de criar 20 contêineres à toa (30/10/2026).
+        if (itens.length > 20) {
+          throw new ErroIg(`O carrossel tem ${itens.length} mídias e o Instagram aceita até 20. Tire ${itens.length - 20} e publique de novo.`);
+        }
         const filhos: string[] = [];
         // Texto alternativo e marcação vão na PRIMEIRA imagem (é o que a social
         // mídia vê na tela de opções); collab vai no carrossel inteiro.

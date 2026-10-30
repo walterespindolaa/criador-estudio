@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   areaForPath,
   findTourByRoute,
+  resolverTour,
   findTourById,
   TRAINING_SEQUENCES,
   TOUR_MODULE_GATE,
@@ -125,7 +126,9 @@ export function TourProvider({ children }: { children: ReactNode }) {
     try { adiado = sessionStorage.getItem("cria.tour-adiado") === "1"; } catch { adiado = false; }
     if (adiado) return;
     const tour = findTourByRoute(location.pathname);
-    if (tour && !seenRef.current.has(tour.id) && !tourBloqueado(tour.id)) {
+    // Com versão alternativa (home do prestador), quem decide se já viu é o
+    // tour que vai rodar de fato, e isso só se sabe com a tela montada.
+    if (tour && (tour.alternativa || (!seenRef.current.has(tour.id) && !tourBloqueado(tour.id)))) {
       const id = window.setTimeout(() => {
         /* TELA SEM CONTEÚDO PRA MOSTRAR (pente fino 23/09/2026). A tela pode
            pedir pra adiar o tour com um marcador [data-tour-adiar] no DOM: a
@@ -133,7 +136,9 @@ export function TourProvider({ children }: { children: ReactNode }) {
            pra clientes e aprovações que ainda não existiam. Não marca como
            visto: na próxima visita com conteúdo, o tour roda normalmente. */
         if (document.querySelector("[data-tour-adiar]")) return;
-        begin(tour);
+        const real = resolverTour(tour);
+        if (seenRef.current.has(real.id) || tourBloqueado(real.id)) return;
+        begin(real);
       }, 400); // deixa a tela montar
       return () => window.clearTimeout(id);
     }
@@ -175,7 +180,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
       const tour =
         (routeOrId && (findTourById(routeOrId) || findTourByRoute(routeOrId))) ||
         findTourByRoute(location.pathname);
-      if (tour) begin(tour);
+      if (tour) begin(resolverTour(tour));
     },
     [location.pathname, begin],
   );

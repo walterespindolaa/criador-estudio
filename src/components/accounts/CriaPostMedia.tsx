@@ -449,7 +449,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
                                 style={{ ...dragP.draggableProps.style, ...dragThumbStyle }}
                                 className={`relative shrink-0 w-16 h-16 mr-2 rounded-xl overflow-hidden border bg-muted select-none ${sai.has(m.id) ? "border-2 border-dashed border-destructive opacity-40" : "border-border"} ${dragS.isDragging ? "ring-2 ring-primary/50 shadow-lg" : ""}`}>
                                 <Thumb m={m} privado={privados.has(m.id)} />
-                                <span className="absolute top-0.5 left-0.5 z-10 bg-black/65 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{i + 1}</span>
+                                <span className="absolute top-0.5 left-0.5 z-10 bg-black/65 text-white text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center tabular-nums">{i + 1}</span>
                                 {sai.has(m.id)
                                   ? <button type="button" onClick={() => onParaSairChange!([...sai].filter((x) => x !== m.id))} aria-label="Desfazer" title="Desfazer" className="absolute top-0.5 right-0.5 z-20 bg-white text-destructive border border-destructive/40 rounded-full p-0.5"><Undo2 className="h-3 w-3" /></button>
                                   : <button type="button" onClick={() => onRemoveMedia(m.id)} aria-label="Remover mídia" className="absolute top-0.5 right-0.5 z-20 bg-black/65 text-white rounded-full p-0.5"><X className="h-3 w-3" /></button>}

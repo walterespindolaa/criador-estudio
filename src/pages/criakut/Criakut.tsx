@@ -51,7 +51,7 @@ function Abas({ aba, onTroca, naFaixa = false }: { aba: string; onTroca: (a: str
   const vez = (propostas.data ?? []).filter((p) => p.minha_vez || (p.status === "concluida" && !p.ja_avaliei)).length;
   if (naFaixa) {
     return (
-      <nav className="mr-auto flex flex-wrap gap-1" aria-label="Criakut">
+      <nav data-tour="kut-abas" className="mr-auto flex flex-wrap gap-1" aria-label="Criakut">
         {ITENS_ABAS.map(([k, n]) => (
           <button key={k} type="button" onClick={() => onTroca(k)}
             className={cn("rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
@@ -63,7 +63,7 @@ function Abas({ aba, onTroca, naFaixa = false }: { aba: string; onTroca: (a: str
     );
   }
   return (
-    <div className="mb-5 flex flex-wrap items-center gap-3 md:hidden">
+    <div data-tour="kut-abas-m" className="mb-5 flex flex-wrap items-center gap-3 md:hidden">
       <span className="font-display text-[22px] font-extrabold">Cria<span className="text-primary">kut</span>
         <span className="ml-1.5 -rotate-6 inline-block rounded-md bg-foreground px-1.5 py-0.5 align-middle text-[10px] font-semibold text-background">beta</span></span>
       <div className="flex max-w-full flex-wrap gap-1 rounded-[20px] border border-border bg-card p-1">

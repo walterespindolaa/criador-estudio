@@ -61,6 +61,12 @@ export type TourConfig = {
    * de propósito segmentos que parecem id). Ver `casaPadrao`.
    */
   routePattern?: boolean;
+  /**
+   * OUTRA VERSÃO DA MESMA ROTA (30/10/2026). O /socialmidia/dashboard é a home
+   * da social mídia OU a do prestador (parceiro puro), telas diferentes na
+   * mesma rota. Se o seletor existir na tela, vale o tour `tourId`.
+   */
+  alternativa?: { seletor: string; tourId: string };
   title: string;
   /** Por que a tela existe / que problema resolve, mostrado no card de abertura. */
   valueProp: string;
@@ -127,6 +133,14 @@ export function findTourByRoute(pathname: string): TourConfig | undefined {
 
 export function findTourById(id: string): TourConfig | undefined {
   return TOURS.find(t => t.id === id);
+}
+
+/** Troca pela versão alternativa quando a tela é a outra (ver `alternativa`). */
+export function resolverTour(t: TourConfig): TourConfig {
+  if (t.alternativa && typeof document !== "undefined" && document.querySelector(t.alternativa.seletor)) {
+    return findTourById(t.alternativa.tourId) ?? t;
+  }
+  return t;
 }
 
 /** Sequência do "tour completo" (modo treinamento) por área. */

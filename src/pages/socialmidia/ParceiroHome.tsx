@@ -78,9 +78,9 @@ export default function ParceiroHome() {
     m.code !== "hub_extra" && !m.code.endsWith("_extra"));
 
   return (
-    <div className="pb-20 md:pb-0">
+    <div className="pb-20 md:pb-0" data-parceiro-home="">
       {/* ── ABERTURA: saudação + as pendências de hoje ── */}
-      <section className="relative overflow-hidden rounded-3xl border border-border bg-card p-5 sm:p-7 mb-5">
+      <section data-tour="ph-abertura" className="relative overflow-hidden rounded-3xl border border-border bg-card p-5 sm:p-7 mb-5">
         <OrganicBlobs color="lilas" />
         <div className="relative">
           {/* IDENTIDADE NO TOPO (Walter, 19/10/2026): foto, papel e a agência
@@ -131,11 +131,11 @@ export default function ParceiroHome() {
 
       {/* ── CRIAKUT (Walter, 30/10/2026, mockup aprovado): convite já
           preenchido com o que ele faz no Cria; publicada, vira resultados. ── */}
-      <ConviteCriakut variante="prestador" className="mb-5"
-        nomeFallback={profile?.name ?? null} fotoFallback={profile?.avatar_url ?? null} />
+      <div data-tour="ph-criakut"><ConviteCriakut variante="prestador" className="mb-5"
+        nomeFallback={profile?.name ?? null} fotoFallback={profile?.avatar_url ?? null} /></div>
 
       {/* ── OS TRÊS NÚMEROS: fila, agências, a receber ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+      <div data-tour="ph-numeros" className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         {[
           { v: String(fila.length), l: "na sua fila", Icone: Briefcase, cor: "bg-violet-100 text-violet-700", to: "/socialmidia/demandas" },
           { v: String(agencias.length), l: agencias.length === 1 ? "agência te acoplou" : "agências te acoplaram", Icone: Layers, cor: "bg-pink-100 text-pink-700", to: "/socialmidia/marcas" },
@@ -155,7 +155,7 @@ export default function ParceiroHome() {
 
       {/* ── A FILA DE HOJE (as 5 mais urgentes) ── */}
       {fila.length > 0 && (
-        <Card className="rounded-2xl border-border overflow-hidden mb-5">
+        <Card data-tour="ph-fila" className="rounded-2xl border-border overflow-hidden mb-5">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <p className="font-display font-bold text-[15px] flex items-center gap-2"><Clock className="h-4 w-4 text-violet-600" /> Próximas entregas</p>
             <button type="button" onClick={() => navigate("/socialmidia/demandas")} className="text-[12px] font-bold text-primary">Ver a fila toda</button>
@@ -230,7 +230,7 @@ export default function ParceiroHome() {
            Antes essa informação vinha repetida dentro de cada card de peça e a
            home não dizia nem quais marcas ele atende. */}
       {marcas.length > 0 && (
-        <section className="mb-5">
+        <section data-tour="ph-marcas" className="mb-5">
           <div className="flex items-center justify-between gap-2 mb-2 px-0.5">
             <p className="font-display font-bold text-[15px] flex items-center gap-2">
               <Layers className="h-4 w-4 text-primary" /> Suas marcas

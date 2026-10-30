@@ -8,11 +8,14 @@
  * cada um ancorado num data-tour que existe no DOM.
  */
 import type { TourConfig } from "./registry";
+import { TOUR_CRIAKUT } from "./criakut";
 
 export const TOURS_GESTOR: TourConfig[] = [
   {
     id: "gestor-dashboard",
     route: "/socialmidia/dashboard",
+    // Prestador puro cai na MESMA rota, mas a home é outra (ParceiroHome).
+    alternativa: { seletor: "[data-parceiro-home]", tourId: "parceiro-home" },
     title: "O QG da sua operação",
     valueProp:
       "Aqui você enxerga a operação inteira: clientes, aprovações pendentes, o que está travado e o dinheiro entrando. É a visão de dono, não de operador.",
@@ -728,4 +731,57 @@ export const TOURS_GESTOR: TourConfig[] = [
       },
     ],
   },
+  // ── HOME DO PRESTADOR (30/10/2026). Mesma rota da home da social mídia; o
+  // gestor-dashboard troca pra este quando a tela é a do prestador. A rota
+  // abaixo é só marcador: quem acha este tour é o `alternativa`.
+  {
+    id: "parceiro-home",
+    route: "/socialmidia/dashboard#prestador",
+    title: "Seu lado do Cria",
+    valueProp:
+      "A home de quem produz pras agências: o que vence hoje, com quem você trabalha, quanto tem a receber e a sua vitrine pra conseguir novos clientes.",
+    benefits: [
+      "As entregas mais urgentes primeiro",
+      "Cachês a receber sem planilha",
+      "Sua página no Criakut pronta com o que você já entregou",
+    ],
+    steps: [
+      {
+        target: '[data-tour="ph-abertura"]',
+        title: "O que pede atenção hoje",
+        body: "Seu papel, as agências que te acoplaram e as pendências do dia: peça vencendo, ajuste pedido, prazo pra responder. Toque numa pendência e você cai direto na fila.",
+        placement: "bottom",
+      },
+      {
+        skipIfMissing: true,
+        target: '[data-tour="ph-criakut"]',
+        title: "Sua vitrine no Criakut",
+        body: "Social mídias e criadoras procuram prestador no Criakut. Sua página já sai com o seu papel e as peças entregues pelo Cria, número que ninguém de fora consegue mostrar. Dá pra pôr no portfólio as peças que você entregou, e cada uma só aparece quando o dono da marca deixar. Publicada, este cartão vira o resumo de visitas e pedidos.",
+        mobileBody: "Social mídias e criadoras procuram prestador no Criakut. Sua página já sai com seu papel e as peças entregues pelo Cria. Publicada, este cartão mostra visitas e pedidos.",
+        placement: "bottom",
+      },
+      {
+        target: '[data-tour="ph-numeros"]',
+        title: "Fila, agências e cachês",
+        body: "Quantas peças estão na sua mão, quantas agências trabalham com você e quanto você tem a receber de cachê. Cada número leva pra tela dele.",
+        placement: "bottom",
+      },
+      {
+        skipIfMissing: true,
+        target: '[data-tour="ph-fila"]',
+        title: "Próximas entregas",
+        body: "As peças mais urgentes, com prazo e agência. Abra o card pra ver material, legenda, conversa com a social mídia e anexar a entrega.",
+        placement: "top",
+      },
+      {
+        skipIfMissing: true,
+        target: '[data-tour="ph-marcas"]',
+        title: "As marcas que você atende",
+        body: "A ficha de cada marca: cores, fontes, o que evitar e o recado fixo da agência. Antes de começar uma peça, é aqui que você confere.",
+        placement: "top",
+      },
+    ],
+  },
+  // ── CRIAKUT da social mídia e do prestador (30/10/2026).
+  { ...TOUR_CRIAKUT("gestor-criakut", "/socialmidia/criakut") },
 ];

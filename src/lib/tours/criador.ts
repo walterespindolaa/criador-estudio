@@ -4,6 +4,7 @@
  * Texto em PT-BR centralizado aqui (i18n-ready: basta trocar por chaves depois).
  */
 import type { TourConfig } from "./registry";
+import { TOUR_CRIAKUT } from "./criakut";
 
 export const TOURS_CRIADOR: TourConfig[] = [
   {
@@ -882,4 +883,6 @@ export const TOURS_CRIADOR: TourConfig[] = [
       },
     ],
   },
+  // ── CRIAKUT da criadora (30/10/2026).
+  { ...TOUR_CRIAKUT("criakut", "/app/criakut") },
 ];

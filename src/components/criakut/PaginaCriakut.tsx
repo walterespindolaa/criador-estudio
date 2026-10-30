@@ -170,7 +170,7 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
   ];
 
   return (
-    <div className="pb-10">
+    <div className="pb-10" data-tour="kut-pagina">
       {/* CAPA: faixa baixa (o desenho 4 por 1 é cortado mostrando a parte de cima),
           com status e botões por cima, pra não gastar uma linha só com eles. */}
       <div className="relative">
@@ -290,7 +290,7 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
           </div>
 
           <div className={cn(card, "p-0")}>
-            <div className="flex gap-1 overflow-x-auto border-b border-border px-2.5 pt-2.5 [scrollbar-width:none]">
+            <div data-tour="kut-pagina-abas" className="flex gap-1 overflow-x-auto border-b border-border px-2.5 pt-2.5 [scrollbar-width:none]">
               {abas.map((a) => (
                 <button key={a.k} type="button" onClick={() => setAba(a.k)}
                   className={cn("-mb-px shrink-0 border-b-2 px-2.5 pb-2 pt-1 text-[13px] font-semibold transition-colors",
@@ -450,7 +450,7 @@ export function PaginaCriakut({ dados }: { dados: PaginaCriakutDados }) {
         </div>
 
         {/* DIREITA: blocos compactos (no iPad desce pra baixo da coluna da foto) */}
-        <aside className="space-y-3.5 md:col-start-1 md:row-start-2 lg:col-start-3 lg:row-start-1">
+        <aside data-tour="kut-lateral" className="space-y-3.5 md:col-start-1 md:row-start-2 lg:col-start-3 lg:row-start-1">
           {meu && <CartaoDestaque />}
           {meu && pendentes.length > 0 && (
             <div className={card}>
