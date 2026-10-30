@@ -37,13 +37,33 @@ export async function iaFetch(url: string, init: RequestInit): Promise<Response>
   headers.set("Authorization", `Bearer ${gemini}`);
   headers.set("Content-Type", "application/json");
   let body = init.body;
+  let pedido: Record<string, unknown> | null = null;
   if (typeof body === "string") {
     try {
       const j = JSON.parse(body);
       // As funções pedem "google/gemini-2.5-flash"; o Google usa "gemini-...".
       if (typeof j.model === "string") j.model = modeloGemini(j.model);
+      pedido = j;
       body = JSON.stringify(j);
     } catch { /* corpo não é JSON: segue como veio */ }
   }
-  return fetch(GEMINI_URL, { ...init, headers, body });
+
+  /* GOOGLE SOBRECARREGADO (30/10/2026). O Gemini devolveu 503 "This model is
+     currently experiencing high demand" duas vezes seguidas e a pessoa via
+     erro ao gerar sugestões de ideia. É passageiro, então: tenta de novo
+     depois de 1,5s; se o modelo cheio continuar sobrecarregado, responde com
+     o -lite (outro pool de capacidade no Google) em vez de devolver erro. */
+  const passageiro = (st: number) => st === 503 || st === 500 || st === 502 || st === 504;
+  let r = await fetch(GEMINI_URL, { ...init, headers, body });
+  if (!passageiro(r.status) || init.signal?.aborted) return r;
+  console.warn("[ia] gemini", r.status, "em", pedido?.model, "- tentando de novo");
+  await r.body?.cancel();
+  await new Promise((ok) => setTimeout(ok, 1500));
+  r = await fetch(GEMINI_URL, { ...init, headers, body });
+  if (!passageiro(r.status) || !pedido || init.signal?.aborted) return r;
+  const lite = Deno.env.get("GEMINI_MODELO_LITE") ?? "gemini-3.5-flash-lite";
+  if (pedido.model === lite) return r;
+  console.warn("[ia] gemini", r.status, "de novo - caindo pro", lite);
+  await r.body?.cancel();
+  return fetch(GEMINI_URL, { ...init, headers, body: JSON.stringify({ ...pedido, model: lite }) });
 }
