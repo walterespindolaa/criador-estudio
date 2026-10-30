@@ -159,7 +159,7 @@ export function PublicarNoInstagramView({
   const tocar = "h-11 sm:h-9"; // 44px no celular, compacto no computador
 
   return (
-    <section aria-label="Publicar no Instagram" className="rounded-2xl border border-border bg-card overflow-hidden">
+    <section aria-label="Publicar no Instagram" data-tour="editor-instagram" className="rounded-2xl border border-border bg-card overflow-hidden">
       {/* Faixa de identidade: fina, pra não brigar com a data logo acima. */}
       <div className="h-1 bg-gradient-to-r from-[#F58529] via-[#DD2A7B] to-[#515BD4]" />
 

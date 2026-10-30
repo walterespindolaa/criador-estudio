@@ -14,7 +14,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
       "O Dashboard é o seu quartel-general: em 10 segundos você sabe o que tem pra hoje, o que tá travado e qual o próximo passo. Sem abrir 6 abas.",
     benefits: [
       "Veja tudo que importa do seu conteúdo num lugar só",
-      "Saiba sempre qual é a próxima melhor ação",
+      "Saiba sempre qual é a próxima melhor ação, com os outros avisos logo embaixo",
       "Capture ideias em 2 segundos antes que elas fujam",
     ],
     steps: [
@@ -30,7 +30,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
       {
         target: '[data-tour="dash-acao"]',
         title: "Sua próxima melhor ação",
-        body: "O CRIA analisa seu fluxo e te diz o que fazer AGORA pra manter a constância. Bateu dúvida do que fazer? Olha aqui primeiro.",
+        body: "O CRIA analisa seu fluxo e te diz o que fazer AGORA pra manter a constância. Logo embaixo vêm os outros avisos da semana (meta, pilar esquecido, posts parados), cada um com o atalho pra resolver. Bateu dúvida do que fazer? Olha aqui primeiro.",
         placement: "bottom",
       },
       {
@@ -50,6 +50,27 @@ export const TOURS_CRIADOR: TourConfig[] = [
         target: '[data-tour="dash-posts"]',
         title: "Próximos posts",
         body: "O que vem pela frente, em ordem. Post atrasado ou sem data aparece aqui antes de virar problema.",
+        placement: "top",
+      },
+      {
+        target: '[data-tour="dash-hoje"]',
+        title: "Hoje: tarefas e hábitos",
+        body: "As próximas tarefas com prazo e os seus hábitos de criação do dia, num bloco só. Marque o hábito quando fizer e crie um novo direto no campo de baixo. Ao lado ficam o gancho do dia, pra copiar, e quanto da Cria IA você já usou no mês.",
+        mobileBody: "As próximas tarefas com prazo e os hábitos de criação do dia, num bloco só. Marque o hábito quando fizer e crie um novo no campo de baixo.",
+        placement: "top",
+      },
+      {
+        target: '[data-tour="dash-quem"]',
+        title: "Quem é você, num relance",
+        body: "O resumo do seu Brandbook: nicho, tom, pilares e pra quem você fala. É o que a Cria IA lê antes de escrever qualquer coisa. Achou algo errado aqui? Toque em Editar: todo texto da IA melhora junto.",
+        placement: "top",
+      },
+      {
+        // Some quando a pessoa dispensa ("Agora não") ou não tem acesso ao Criakut.
+        skipIfMissing: true,
+        target: '[data-tour="dash-criakut"]',
+        title: "Sua página no Criakut",
+        body: "O Criakut é onde social mídia, designer e editor se encontram com quem cria. Sua página sai pronta em 2 minutos com o que o Cria já sabe de você: nicho, tom e números do Instagram. Depois de publicada, este cartão mostra quem visitou e os pedidos de orçamento.",
         placement: "top",
       },
       {
@@ -179,6 +200,15 @@ export const TOURS_CRIADOR: TourConfig[] = [
         body: "Defina data e hora, e repare na sugestão de melhores horários: ela é baseada no seu nicho e na plataforma (e fica mais precisa com o Instagram conectado). Post com data aparece no calendário e no Dashboard.",
         mobileBody: "Em Agendamento (aba Config), defina data e hora e repare na sugestão de melhores horários: é baseada no seu nicho e na plataforma, e fica mais precisa com o Instagram conectado. Post com data aparece no calendário e no Dashboard.",
         placement: "right",
+      },
+      {
+        // Só existe com o Instagram conectado e formato que o Instagram aceita.
+        skipIfMissing: true,
+        target: '[data-tour="editor-instagram"]',
+        title: "Agendar ou publicar no Instagram",
+        body: "O botão principal AGENDA o post pra data e hora dele: sai sozinho, na hora certa. Publicar agora é o secundário e pede confirmação, porque sai na hora, não na data do post. Agendado, o card ganha o selo azul no Kanban e na agenda. Apagou no Instagram depois de publicar? Use \"Apagou no Instagram? Publicar ou agendar de novo\": o Cria confere se saiu mesmo e devolve o post pra Pronto pra sair, com a mesma mídia e legenda.",
+        mobileBody: "O botão principal AGENDA pra data e hora do post. Publicar agora sai na hora e pede confirmação. Apagou no Instagram? \"Publicar ou agendar de novo\" devolve o post pra Pronto pra sair.",
+        placement: "top",
       },
       {
         target: '[data-tour="editor-midia"]',
@@ -466,7 +496,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
       {
         target: '[data-tour="bio-conteudo"]',
         title: "Passo 2: o conteúdo",
-        body: "Cada pedaço da página é um bloco: link, texto, vídeo, mapa, formulário de contato. Escolha um modelo pronto pra começar, ou vá adicionando bloco a bloco e arrastando pra ordenar.",
+        body: "Cada pedaço da página é um bloco: link, texto, vídeo, galeria, mapa, formulário de contato. A galeria escolhe o formato das fotos (quadrada ou retangular em pé), e uma foto sozinha ocupa a largura toda. Escolha um modelo pronto pra começar, ou vá adicionando bloco a bloco e arrastando pra ordenar.",
         placement: "top",
       },
       {

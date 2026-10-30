@@ -462,7 +462,7 @@ const Dashboard = () => {
             {/* HOJE (Walter, 30/10/2026, mockup aprovado): tarefas e hábitos
                 num bloco só. Quem é você desceu pra faixa larga e as
                 notificações entraram na próxima ação, lá em cima. */}
-            <DCard className="border-border/20">
+            <DCard className="border-border/20" data-tour="dash-hoje">
               <h3 className="font-display font-semibold text-foreground mb-3 flex items-center gap-2">
                 <CheckSquare className="h-4 w-4 text-primary" /> Hoje
               </h3>
@@ -528,13 +528,13 @@ const Dashboard = () => {
         </div>
 
         <div className="mt-6 space-y-6">
-          <WhoYouAre largo />
+          <div data-tour="dash-quem"><WhoYouAre largo /></div>
           {/* Convite do Criakut no fim da home (Walter, 30/10/2026). Só pra
               conta da própria pessoa: no "Meu perfil" aberto pela social
               mídia a página do Criakut seria a dela, não a do perfil. */}
           {activeProfile?.id === user?.id && (
-            <ConviteCriakut variante="criador" nicho={activeProfile?.niche ?? null} temTom={temTom}
-              nomeFallback={activeProfile?.name ?? null} fotoFallback={activeProfile?.avatar_url ?? null} />
+            <div data-tour="dash-criakut"><ConviteCriakut variante="criador" nicho={activeProfile?.niche ?? null} temTom={temTom}
+              nomeFallback={activeProfile?.name ?? null} fotoFallback={activeProfile?.avatar_url ?? null} /></div>
           )}
         </div>
       </motion.div>

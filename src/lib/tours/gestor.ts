@@ -146,7 +146,7 @@ export const TOURS_GESTOR: TourConfig[] = [
         target: '[data-tour="cli-subnav"]',
         openFirst: '[data-tour="cli-nav-post"]',
         title: "A ordem do trabalho",
-        body: "Dentro de cada Cria abrem as sub-páginas. No Cria Post o caminho é sempre o mesmo: as Ideias viram o Cronograma do mês, o Cronograma vira Posts prontos pro cliente aprovar por link, e o Relatório mostra o resultado do que foi publicado. Materiais é a demanda que não é post, e Portal é o que o cliente enxerga no link.",
+        body: "Dentro de cada Cria abrem as sub-páginas. No Cria Post o caminho é sempre o mesmo: as Ideias viram o Cronograma do mês, o Cronograma vira Posts prontos pro cliente aprovar por link, e o Relatório mostra o resultado do que foi publicado. Stories é a semana de stories do cliente, separada do feed: monte, envie pro cliente aprovar tudo de uma vez e poste pelo celular os que levam figurinha. Materiais é a demanda que não é post, e Portal é o que o cliente enxerga no link.",
         mobileBody: "Dentro de cada Cria abrem as sub-páginas. No Cria Post o caminho é sempre o mesmo: Ideias viram Cronograma, o Cronograma vira Posts pro cliente aprovar, e o Relatório mostra o resultado.",
         placement: "bottom",
       },
@@ -279,8 +279,8 @@ export const TOURS_GESTOR: TourConfig[] = [
       {
         target: '[data-tour="ag-quadro"]',
         title: "A semana inteira, todos os clientes",
-        body: "Cada coluna é um dia. Os posts de todos os clientes aparecem juntos, com a cor do cliente. Pra mover, pegue o card pelo ⠿ (o punho no canto esquerdo) e solte no outro dia: a data muda de verdade, no post. Clicar no card abre, arrastar é só pelo ⠿. E clicar num espaço vazio e puxar pro lado rola a semana inteira.",
-        mobileBody: "Cada coluna é um dia e você arrasta a tira pro lado pra ver a semana. Os posts de todos os clientes aparecem juntos, com a cor de cada um. Pra mover, segure o ⠿ do card (não o card inteiro) e solte no outro dia: a data muda de verdade.",
+        body: "Cada coluna é um dia. Os posts de todos os clientes aparecem juntos, com a cor do cliente. Pra mover, pegue o card pelo ⠿ (o punho no canto esquerdo) e solte no outro dia: a data muda de verdade, no post. Clicar no card abre, arrastar é só pelo ⠿. E clicar num espaço vazio e puxar pro lado rola a semana inteira. O selo ao lado da aprovação diz o que já foi programado no Instagram: Agendado (azul, sai sozinho), Publicado (verde) e Não saiu (amarelo, abre o motivo). Sem selo, ninguém programou ainda.",
+        mobileBody: "Cada coluna é um dia e você arrasta a tira pro lado pra ver a semana. Os posts de todos os clientes aparecem juntos, com a cor de cada um. Pra mover, segure o ⠿ do card (não o card inteiro) e solte no outro dia: a data muda de verdade. O selo azul Agendado mostra o que já sai sozinho no Instagram.",
         placement: "bottom",
       },
       {
