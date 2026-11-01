@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { molduraCria, REMETENTE_CRIA } from "../_shared/email-moldura.ts";
 import Stripe from "npm:stripe@14";
-import { enviarEmail } from "../_shared/enviar-email.ts";
+import { enviarEmail, REMETENTE_PESSOAL, RESPOSTAS_PARA } from "../_shared/enviar-email.ts";
 import { registrarErro, mensagemDe } from "../_shared/log.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
@@ -557,14 +557,37 @@ Deno.serve(async (req) => {
           const { data: em } = await supabase.rpc("emails_para", { _ids: [canceladoId] });
           const destino = ((em ?? []) as { email: string | null; eh_meu_perfil: boolean | null }[])[0];
           if (destino?.email) {
+            /* POR QUE SAIU (30/10/2026, e-mails pra quem parou): a confirmação
+               ganha os motivos em links de um clique (email-link grava em
+               motivos_saida) e sai assinada por Gabi e Walter, com resposta
+               indo pra caixa do Admin. A marca 'cancelou' em emails_ciclo é o
+               relógio do e-mail de 30 dias com o cupom de volta. */
+            let links: { texto: string; url: string }[] = [];
+            if (!destino.eh_meu_perfil) {
+              const { data: tk } = await supabase.from("email_links")
+                .insert({ user_id: canceladoId, tipo: "motivo_saida" }).select("token").single();
+              const t = (tk as { token: string } | null)?.token;
+              if (t) {
+                const base = `${Deno.env.get("SUPABASE_URL")}/functions/v1/email-link?a=m&t=${t}&m=`;
+                links = [
+                  ["Ficou caro", "caro"], ["Não tive tempo de usar", "sem_tempo"], ["Faltou uma função", "faltou_funcao"],
+                  ["Fui pra outra ferramenta", "outra_ferramenta"], ["Outro motivo", "outro"],
+                ].map(([texto, m]) => ({ texto, url: base + m }));
+              }
+              await supabase.from("emails_ciclo").insert({ user_id: canceladoId, tipo: "cancelou", ref: new Date().toISOString().slice(0, 10) });
+            }
             await enviarEmail(supabase, {
               para: destino.email, nome: (pc as { name: string | null } | null)?.name ?? null, etiqueta: "assinatura_cancelada",
               assunto: destino.eh_meu_perfil ? "A assinatura do seu Meu perfil no Cria foi cancelada" : "Sua assinatura do Cria foi cancelada",
+              titulo: "Cancelamento confirmado", tag: "Até logo", tema: "amarelo",
+              de: REMETENTE_PESSOAL(), responderPara: RESPOSTAS_PARA(),
               paragrafos: [
                 "Confirmado: a assinatura foi cancelada e não vai ter nova cobrança.",
                 "Seus dados (ideias, posts, brandbook, clientes) ficam guardados por 60 dias. Se quiser voltar nesse prazo, é só assinar de novo e está tudo lá.",
-                "Se cancelou por algum problema, responde este e-mail: a gente lê tudo.",
+                ...(links.length ? ["Um toque abaixo ajuda a gente a entender por que você saiu:"] : []),
               ],
+              links,
+              assinatura: "Se quiser contar mais, é só responder este e-mail. A gente lê tudo.\nGabi e Walter, do Cria",
               botao: { texto: "Voltar quando quiser", url: `${Deno.env.get("APP_URL") ?? "https://app.criasocialclub.com.br"}/app/assinar` },
             });
           }

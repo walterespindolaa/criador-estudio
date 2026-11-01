@@ -6,6 +6,8 @@ async function enviarPeloResend(apiKey: string, p: Record<string, any>) {
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json',
       ...(p.idempotency_key ? { 'Idempotency-Key': String(p.idempotency_key) } : {}) },
     body: JSON.stringify({ from: p.from, to: [p.to], subject: p.subject, html: p.html, text: p.text,
+      ...(p.reply_to ? { reply_to: String(p.reply_to) } : {}),
+      ...(p.headers && typeof p.headers === 'object' ? { headers: p.headers } : {}),
       tags: p.label ? [{ name: 'label', value: String(p.label).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 256) }] : undefined }),
   })
   if (!r.ok) {

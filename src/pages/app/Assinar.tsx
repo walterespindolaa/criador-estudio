@@ -72,6 +72,28 @@ export default function Assinar() {
   useEffect(() => {
     if (prefilledRef.current) return;
     if (!isSelfSubscribeFlow) {
+      /* 0. Cupom que veio no link do e-mail (?cupom=VOLTA50, 30/10/2026): só
+         preenche e mostra a oferta. Quem decide se vale é o create-checkout. */
+      const doEmail = (searchParams.get("cupom") ?? "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 30);
+      if (doEmail) {
+        prefilledRef.current = true;
+        setPartnerCode(doEmail);
+        void (async () => {
+          const { data: camp } = await (supabase.rpc as unknown as (fn: string, args: unknown) => Promise<{ data: unknown }>)(
+            "cupom_campanha_checar", { _code: doEmail },
+          );
+          const c = Array.isArray(camp) && camp.length
+            ? (camp[0] as { dias_gratis: number; desconto_pct: number; desconto_meses: number; motivo: string | null })
+            : null;
+          if (c) setCampanhaInfo({
+            mesesGratis: c.dias_gratis > 0 ? Math.max(1, Math.round(c.dias_gratis / 30)) : 0,
+            pct: Number(c.desconto_pct) || 0,
+            mesesDesconto: c.desconto_meses ?? 0,
+            motivo: c.motivo,
+          });
+        })();
+        return;
+      }
       const doLink = lerIndicacao();
       if (doLink) {
         prefilledRef.current = true;
@@ -111,7 +133,7 @@ export default function Assinar() {
         });
       })();
     }
-  }, [isSelfSubscribeFlow, selfSubscribeCode]);
+  }, [isSelfSubscribeFlow, selfSubscribeCode, searchParams]);
 
   const validateCode = async () => {
     const code = partnerCode.trim();

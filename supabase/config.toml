@@ -156,3 +156,11 @@ project_id = "ecbzfjzoqidowrsfsfih"
     verify_jwt = true
   [functions.video-analyze]
     verify_jwt = true
+  [functions.email-link]
+    verify_jwt = false
+  [functions.email-entrada]
+    verify_jwt = false
+  [functions.email-responder]
+    verify_jwt = true
+  [functions.transcrever-fala]
+    verify_jwt = true

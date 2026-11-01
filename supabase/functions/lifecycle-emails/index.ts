@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { enviarEmail } from "../_shared/enviar-email.ts";
+import { enviarEmail, REMETENTE_PESSOAL, RESPOSTAS_PARA } from "../_shared/enviar-email.ts";
 import { registrarErro, mensagemDe } from "../_shared/log.ts";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -13,6 +13,7 @@ import { registrarErro, mensagemDe } from "../_shared/log.ts";
      trial_d2           trial acaba em ~2 dias e não tem assinatura ativa
      trial_d0           trial acabou ontem/hoje e não tem assinatura ativa
      aprovacao_parada   social mídia com posts aguardando o cliente há 3+ dias
+     re_*               e-mails pra quem parou (30/10/2026), bloco 6 abaixo
 
    Falha em um e-mail não para os outros.
 
@@ -218,8 +219,208 @@ Deno.serve(async (req) => {
       }
     }
 
-    await svc.from("cron_runs").upsert({ job: "lifecycle-emails", last_run_at: new Date().toISOString(), ok: true, detail: JSON.stringify({ ...enviados, inventario_vencendo: inventario }) }, { onConflict: "job" });
-    return json({ ok: true, enviados });
+    // ── 6. E-MAILS PRA QUEM PAROU (30/10/2026, mockup aprovado) ──
+    /* Assinados por Gabi e Walter, em primeira pessoa, com a resposta indo
+       pra caixa do Admin (email-entrada). Regras:
+         - no máximo UM re_* por pessoa a cada 7 dias (a confirmação de e-mail
+           não conta: sem ela a pessoa nem entra);
+         - quem assina sai da base (reengajamento_base só traz quem não está
+           ativo) e quem volta a usar sai dos grupos de "sumiu"/"não usou";
+         - "Descadastre aqui" desliga só estes e-mails (prefs.reengajamento).
+       Cada pessoa cai em no máximo um grupo por rodada, na ordem abaixo. */
+    const re = { re_confirmar: 0, re_comeco: 0, re_nao_usou: 0, re_trial: 0, re_sumiu: 0, re_volta_cancelou: 0 };
+    {
+      const SUPA = Deno.env.get("SUPABASE_URL")!;
+      const { data: base, error: bErr } = await svc.rpc("reengajamento_base");
+      if (bErr) throw new Error("reengajamento_base: " + bErr.message);
+      type Base = {
+        id: string; name: string | null; account_type: string | null; parceiro_role: string | null;
+        created_at: string; last_seen_at: string | null; onboarding_completed: boolean;
+        subscription_status: string | null; trial_ends_at: string | null; plan: string | null; access_expires_at: string | null;
+        email: string | null; email_confirmado: boolean; n_ideias: number; n_posts: number; n_clientes: number; quer_receber: boolean;
+      };
+      // Último re_* de cada pessoa (trava de 7 dias) e quando cancelou.
+      const { data: recentes } = await svc.from("emails_ciclo").select("user_id, tipo, sent_at")
+        .or("tipo.like.re_%,tipo.eq.cancelou").gte("sent_at", iso(now - 60 * dayMs));
+      const ultimoRe = new Map<string, number>();
+      const cancelouEm = new Map<string, number>();
+      for (const r of (recentes ?? []) as { user_id: string; tipo: string; sent_at: string }[]) {
+        const t = Date.parse(r.sent_at);
+        if (r.tipo === "cancelou") cancelouEm.set(r.user_id, Math.max(cancelouEm.get(r.user_id) ?? 0, t));
+        else if (r.tipo !== "re_confirmar") ultimoRe.set(r.user_id, Math.max(ultimoRe.get(r.user_id) ?? 0, t));
+      }
+      const { data: jaRe } = await svc.from("emails_ciclo").select("user_id, tipo, ref").like("tipo", "re_%");
+      const enviadoRe = new Set(((jaRe ?? []) as { user_id: string; tipo: string; ref: string | null }[]).map((r) => `${r.user_id}:${r.tipo}:${r.ref ?? ""}`));
+      const dias = (s: string) => (now - Date.parse(s)) / dayMs;
+      const link = async (user_id: string, tipo: "sair_da_lista" | "confirmar") => {
+        const { data } = await svc.from("email_links").insert({ user_id, tipo }).select("token").single();
+        const t = (data as { token: string } | null)?.token;
+        return t ? `${SUPA}/functions/v1/email-link?a=${tipo === "confirmar" ? "c" : "s"}&t=${t}` : null;
+      };
+      const ASSINA = "Um abraço,\nGabi e Walter, do Cria";
+      const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
+
+      for (const b of (base ?? []) as Base[]) {
+        if (!b.email) continue;
+        const persona: "criador" | "sm" | "parceiro" =
+          b.account_type === "manager" ? "sm" : b.account_type === "parceiro" ? "parceiro" : "criador";
+        const dCriada = dias(b.created_at);
+        const dVisto = b.last_seen_at ? dias(b.last_seen_at) : dCriada;
+        const usou = persona === "sm" ? b.n_clientes > 0 || b.n_posts > 0 : b.n_ideias > 1 || b.n_posts > 0;
+        const fimTeste = b.trial_ends_at ? Date.parse(b.trial_ends_at) : null;
+        const planoLiberado = !!b.plan && !["free", "trial"].includes(b.plan)
+          && (!b.access_expires_at || Date.parse(b.access_expires_at) > now);
+        const temAcesso = persona !== "criador" || planoLiberado || (fimTeste !== null && fimTeste > now);
+
+        // Escolhe UM grupo.
+        let tipo: string | null = null, ref: string | null = null;
+        if (!b.email_confirmado) {
+          if (dCriada >= 1 && dCriada < 3) { tipo = "re_confirmar"; ref = "d1"; }
+          else if (dCriada >= 3 && dCriada < 6) { tipo = "re_confirmar"; ref = "d3"; }
+        } else if (b.quer_receber && now - (ultimoRe.get(b.id) ?? 0) >= 7 * dayMs) {
+          const cancelou = cancelouEm.get(b.id);
+          if (b.subscription_status === "canceled") {
+            if (cancelou && dias(new Date(cancelou).toISOString()) >= 30 && dias(new Date(cancelou).toISOString()) < 45) {
+              tipo = "re_volta_cancelou"; ref = new Date(cancelou).toISOString().slice(0, 10);
+            }
+          } else if (persona !== "parceiro" && !usou && !b.onboarding_completed && dCriada >= 1 && dCriada < 4) {
+            tipo = "re_comeco";
+          } else if (persona !== "parceiro" && !usou && temAcesso && dCriada < 45 && dVisto >= 7 && enviadoRe.has(`${b.id}:re_nao_usou:d3`)) {
+            tipo = "re_nao_usou"; ref = "d7";
+          } else if (persona !== "parceiro" && !usou && temAcesso && dCriada < 30 && dVisto >= 3) {
+            tipo = "re_nao_usou"; ref = "d3";
+          } else if (persona === "criador" && !planoLiberado && fimTeste !== null && fimTeste <= now) {
+            const dFim = (now - fimTeste) / dayMs;
+            if (dFim >= 21 && dFim < 40) { tipo = "re_trial"; ref = "d21:" + b.trial_ends_at!.slice(0, 10); }
+            else if (dFim >= 7 && dFim < 20) { tipo = "re_trial"; ref = "d7:" + b.trial_ends_at!.slice(0, 10); }
+          } else if (persona !== "parceiro" && usou && temAcesso && b.last_seen_at) {
+            const visto = b.last_seen_at.slice(0, 10);
+            if (dVisto >= 30 && dVisto < 60) { tipo = "re_sumiu"; ref = "30:" + visto; }
+            else if (dVisto >= 14 && dVisto < 30) { tipo = "re_sumiu"; ref = "14:" + visto; }
+          }
+        }
+        if (!tipo || enviadoRe.has(`${b.id}:${tipo}:${ref ?? ""}`)) continue;
+
+        const sm = persona === "sm";
+        const casa = sm ? `${APP}/socialmidia/dashboard` : `${APP}/app`;
+        const sair = tipo === "re_confirmar" ? null : await link(b.id, "sair_da_lista");
+        const pessoal = { de: REMETENTE_PESSOAL(), responderPara: RESPOSTAS_PARA(), assinatura: ASSINA, sairUrl: sair };
+        let ok = false;
+
+        if (tipo === "re_confirmar") {
+          const url = await link(b.id, "confirmar");
+          if (!url) continue;
+          ok = await enviarEmail(svc, {
+            para: b.email, nome: b.name, etiqueta: "re_confirmar_" + ref,
+            assunto: "Falta um clique pra sua conta abrir", titulo: "Sua conta ainda está fechada", tag: "Quase lá", tema: "amarelo",
+            paragrafos: [
+              "Você criou sua conta no Cria, mas o e-mail de confirmação ficou parado. Sem ele, a gente não consegue abrir seus 7 dias grátis.",
+              "É só tocar no botão: ele confirma o seu e-mail e já entra na sua conta.",
+            ],
+            botao: { texto: "Abrir minha conta", url },
+            rodape: "Não foi você que criou a conta? Ignore este e-mail.",
+          });
+        } else if (tipo === "re_comeco") {
+          ok = await enviarEmail(svc, {
+            para: b.email, nome: b.name, etiqueta: "re_comeco_" + persona, ...pessoal,
+            assunto: "Seu Cria ficou pela metade", titulo: "Faltam só as telas do começo", tag: "Começo", tema: "azul",
+            paragrafos: sm
+              ? ["Você entrou no Cria, mas as telas do começo ficaram pela metade. São elas que montam a sua área de clientes do jeito que você trabalha.",
+                "Leva uns 3 minutos. A conta de social mídia é grátis até 3 clientes."]
+              : ["Você entrou no Cria, mas as telas do começo ficaram pela metade. São elas que contam pra Cria IA o seu nicho e o seu jeito de falar, e é isso que faz as ideias saírem com a sua cara.",
+                "Leva uns 3 minutos, e seus 7 dias grátis continuam correndo."],
+            botao: { texto: "Terminar meu começo", url: casa },
+          });
+        } else if (tipo === "re_nao_usou") {
+          const d7 = ref === "d7";
+          const c = sm
+            ? d7
+              ? { assunto: "O link de aprovação que acaba com o print no WhatsApp", titulo: "Testa com um post só",
+                paragrafos: ["Faz uma semana que sua área de social mídia está vazia. Um jeito rápido de ver se o Cria serve pra você: cadastra um cliente, sobe um post e manda o link de aprovação.",
+                  "O cliente abre no celular, aprova ou marca o ajuste em cima da imagem, e você vê tudo num lugar só. A conta é grátis até 3 clientes.",
+                  "Se alguma coisa travou, responde este e-mail e conta pra gente."],
+                botao: { texto: "Cadastrar meu primeiro cliente", url: `${APP}/socialmidia/clientes` } }
+              : { assunto: "Seu primeiro cliente no Cria, em 5 minutos", titulo: "Comece por um cliente só",
+                paragrafos: ["Não precisa migrar a carteira inteira. Põe um cliente, sobe 3 posts e manda o link pra ele aprovar pelo celular. É aí que o Cria mostra o que faz: acabou o \"aprovou no áudio\".",
+                  "A conta de social mídia é grátis até 3 clientes."],
+                botao: { texto: "Cadastrar meu primeiro cliente", url: `${APP}/socialmidia/clientes` } }
+            : d7
+              ? { assunto: "Ainda dá tempo de testar o Cria de verdade", titulo: "Uma ideia vira post em 10 minutos",
+                paragrafos: ["Faz uma semana que você criou sua conta e ela ainda está vazia. Sem pressão: a gente sabe que começar ferramenta nova cansa.",
+                  "Um teste que vale: escolhe um assunto que você já domina, pede 5 ideias pra Cria IA e leva a melhor pro quadro. Em 10 minutos você tem gancho, roteiro e legenda.",
+                  "Se travou em alguma coisa, responde este e-mail e conta. A gente lê e responde."],
+                botao: { texto: "Pedir minhas 5 ideias", url: `${APP}/app/ideias` } }
+              : { assunto: "Sua primeira ideia leva 2 minutos", titulo: "Bora tirar uma ideia da cabeça?",
+                paragrafos: ["O jeito mais rápido de sentir o Cria é guardar uma ideia que está rondando sua cabeça. Escreve do jeito que vier: a Cria IA transforma em gancho, roteiro e legenda no seu tom.",
+                  "São 2 minutos, e seus 7 dias grátis continuam correndo."],
+                botao: { texto: "Guardar minha primeira ideia", url: `${APP}/app/ideias` } };
+          ok = await enviarEmail(svc, { para: b.email, nome: b.name, etiqueta: `re_nao_usou_${ref}_${persona}`, tag: "Começo", tema: "azul", ...pessoal, ...c });
+        } else if (tipo === "re_trial") {
+          if (ref!.startsWith("d21")) {
+            ok = await enviarEmail(svc, {
+              para: b.email, nome: b.name, etiqueta: "re_trial_d21", ...pessoal,
+              assunto: "50% no primeiro mês, se quiser voltar", titulo: "A porta continua aberta", tag: "Volta", tema: "laranja",
+              paragrafos: [
+                "Passaram três semanas desde o fim do seu teste. Se o Cria ainda faz sentido pra sua rotina, deixamos um cupom: VOLTA50 dá 50% de desconto no primeiro mês de qualquer plano.",
+                "O cupom já vai preenchido no botão. Depois do primeiro mês o plano segue no preço normal, e dá pra cancelar quando quiser, direto no app.",
+                "E se não faz mais sentido, tudo bem. Se puder contar o porquê, responde este e-mail: ajuda muito a gente.",
+              ],
+              botao: { texto: "Usar meu cupom", url: `${APP}/app/assinar?cupom=VOLTA50` },
+            });
+          } else {
+            const guardado = usou
+              ? `Seu teste acabou, mas tudo ficou guardado: ${plural(b.n_ideias, "ideia", "ideias")}, ${plural(b.n_posts, "post", "posts")} e o seu Brandbook. É só assinar pra continuar de onde parou.`
+              : "Seu teste acabou antes de dar tempo de usar, né? Acontece, a rotina engole. Sua conta continua aqui, do jeito que você deixou.";
+            ok = await enviarEmail(svc, {
+              para: b.email, nome: b.name, etiqueta: "re_trial_d7", ...pessoal,
+              assunto: usou ? "Suas ideias continuam aqui" : "O que faltou pra você testar o Cria?",
+              titulo: "Nada do que você criou sumiu", tag: "Seu Cria", tema: "verde",
+              paragrafos: [guardado, "Uma pergunta rápida: o que faltou pra você ficar? Responde este e-mail com uma frase. A gente lê tudo."],
+              botao: { texto: "Voltar pro meu Cria", url: `${APP}/app/assinar` },
+            });
+          }
+        } else if (tipo === "re_sumiu") {
+          const trinta = ref!.startsWith("30");
+          ok = await enviarEmail(svc, {
+            para: b.email, nome: b.name, etiqueta: `re_sumiu_${trinta ? 30 : 14}_${persona}`, ...pessoal,
+            tag: "Saudade", tema: "rosa",
+            ...(trinta
+              ? { assunto: "Faz um mês. Tá tudo bem por aí?", titulo: "Seu Cria está guardado",
+                paragrafos: ["Faz um mês que você não aparece no Cria. Tudo o que você montou continua lá, do jeito que deixou.",
+                  "Se o Cria deixou de servir, conta pra gente o motivo respondendo este e-mail. É a resposta que mais nos ajuda a melhorar.",
+                  sm ? "Se só faltou tempo, começa pelo cliente que mais te cobra: um post na aprovação já põe a semana pra andar."
+                     : "Se só faltou tempo, um post por semana já mantém o perfil vivo. Começa pelo mais fácil."] }
+              : { assunto: sm ? "Sua semana de clientes está parada no Cria" : "Sua semana de conteúdo está em branco", titulo: "Volta com uma coisa só",
+                paragrafos: sm
+                  ? ["Faz duas semanas que você não passa no Cria. Se a carteira voltou toda pro WhatsApp, a gente entende: rotina de social mídia engole.",
+                    "Pra voltar sem peso: abre a agenda da semana e manda um post pra aprovação. O resto vem atrás."]
+                  : ["Faz duas semanas que você não passa no Cria. Acontece, a rotina engole.",
+                    "Pra voltar sem peso: abre o banco de ideias, escolhe a que mais te anima e manda pra Cria IA montar o post."] }),
+            botao: { texto: sm ? "Abrir minha agenda" : "Ver minhas ideias", url: sm ? casa : `${APP}/app/ideias` },
+          });
+        } else if (tipo === "re_volta_cancelou") {
+          ok = await enviarEmail(svc, {
+            para: b.email, nome: b.name, etiqueta: "re_volta_cancelou", ...pessoal,
+            assunto: "Um mês depois: 50% pra você voltar", titulo: "Seus dados ainda estão aqui", tag: "Volta", tema: "laranja",
+            paragrafos: [
+              "Faz um mês que você cancelou. Seus dados continuam guardados por mais um mês e, se quiser voltar, deixamos um cupom: VOLTA50 dá 50% de desconto no primeiro mês.",
+              "O cupom já vai preenchido no botão, e dá pra cancelar quando quiser, direto no app.",
+              "Se você saiu por alguma coisa que a gente pode resolver, responde este e-mail e conta.",
+            ],
+            botao: { texto: "Voltar com 50%", url: `${APP}/app/assinar?cupom=VOLTA50` },
+          });
+        }
+        if (ok) {
+          re[tipo as keyof typeof re] += 1;
+          enviadoRe.add(`${b.id}:${tipo}:${ref ?? ""}`);
+          if (tipo !== "re_confirmar") ultimoRe.set(b.id, now);
+          await svc.from("emails_ciclo").insert({ user_id: b.id, tipo, ref });
+        }
+      }
+    }
+
+    await svc.from("cron_runs").upsert({ job: "lifecycle-emails", last_run_at: new Date().toISOString(), ok: true, detail: JSON.stringify({ ...enviados, inventario_vencendo: inventario, ...re }) }, { onConflict: "job" });
+    return json({ ok: true, enviados, re });
   } catch (e) {
     const svcLog = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     await registrarErro(svcLog, "lifecycle-emails", mensagemDe(e));

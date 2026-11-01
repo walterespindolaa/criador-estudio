@@ -148,8 +148,13 @@ serve(async (req) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
           );
           if (c.motivo) return recusa(c.motivo);
-          let jaAssinou = !!profile?.stripe_subscription_id;
-          if (!jaAssinou && profile?.stripe_customer_id) {
+          /* CUPOM DE VOLTA (30/10/2026): VOLTA50 vai no e-mail de quem cancelou
+             ou deixou o teste passar. Esse tipo aceita quem já assinou antes. */
+          const { data: regra } = await svc.from("cupons_campanha")
+            .select("aceita_quem_ja_assinou").eq("codigo", c.codigo).maybeSingle();
+          const aceitaRetorno = !!(regra as { aceita_quem_ja_assinou?: boolean } | null)?.aceita_quem_ja_assinou;
+          let jaAssinou = !aceitaRetorno && !!profile?.stripe_subscription_id;
+          if (!aceitaRetorno && !jaAssinou && profile?.stripe_customer_id) {
             const anteriores = await stripe.subscriptions.list({ customer: profile.stripe_customer_id, status: "all", limit: 1 });
             jaAssinou = anteriores.data.length > 0;
           }

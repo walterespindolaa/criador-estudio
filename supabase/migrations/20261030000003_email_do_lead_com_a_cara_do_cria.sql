@@ -35,7 +35,7 @@ create or replace function public.notify_new_bio_lead()
 as $function$
 declare
   _cliente uuid; _nome text; _quem text; _titulo text; _link text; _email text; _quer text;
-  _ultimos int; _mid text; _resumo text; _assunto text;
+  _ultimos int; _mid text; _resumo text; _assunto text; _pnome text;
   _fone text; _wa text; _linha text; _corpo text; _tag text;
 begin
   if new.page_id is not null then
@@ -78,7 +78,15 @@ begin
       if _email is not null and _ultimos <= 10 then
         begin
           _mid := gen_random_uuid()::text;
-          _assunto := regexp_replace(left(_titulo, 120), '[\r\n]+', ' ', 'g');
+          -- Assunto com quem chegou: primeiro nome, ou "Um novo contato" (nunca telefone ou e-mail no assunto).
+          _pnome := coalesce(nullif(split_part(btrim(coalesce(new.name, '')), ' ', 1), ''), 'Um novo contato');
+          _assunto := case
+            when new.tipo = 'parceria' and _cliente is null then _pnome || ' quer propor uma parceria pra você'
+            when new.tipo = 'parceria' then _pnome || ' quer propor uma parceria pra ' || coalesce(_nome, 'seu cliente')
+            when _cliente is null then _pnome || ' deixou contato no seu link na bio'
+            else _pnome || ' quer falar com ' || coalesce(_nome, 'seu cliente') || ' pelo link na bio'
+          end;
+          _assunto := regexp_replace(left(_assunto, 120), '[\r\n]+', ' ', 'g');
           _tag := case when new.tipo = 'parceria' then 'Parceria' else 'Novo lead' end;
 
           -- WhatsApp direto: só dígitos; número brasileiro sem DDI ganha o 55.

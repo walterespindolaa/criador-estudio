@@ -32,7 +32,23 @@ export type EmailCria = {
   titulo?: string;
   tag?: string;
   tema?: TemaCria;
+  /** E-MAILS PRA QUEM PAROU (30/10/2026). Remetente em primeira pessoa
+   *  ("Gabi e Walter, do Cria <...>") e endereço que recebe a resposta. */
+  de?: string;
+  responderPara?: string | null;
+  /** Links de um clique, em pílulas (ex.: os motivos de saída). */
+  links?: { texto: string; url: string }[];
+  /** Fecho em primeira pessoa, depois dos parágrafos. */
+  assinatura?: string;
+  /** Link de "não quero mais receber" no rodapé. */
+  sairUrl?: string | null;
 };
+
+/** Remetente dos e-mails assinados por gente (reengajamento). */
+export const REMETENTE_PESSOAL = () =>
+  Deno.env.get("EMAIL_REMETENTE_PESSOAL") ?? "Gabi e Walter, do Cria <oi@criasocialclub.com.br>";
+/** Endereço que recebe as respostas (domínio com recebimento no Resend). */
+export const RESPOSTAS_PARA = () => Deno.env.get("EMAIL_RESPOSTAS_PARA") ?? null;
 
 const APP_URL = () => Deno.env.get("APP_URL") ?? "https://app.criasocialclub.com.br";
 
@@ -43,20 +59,30 @@ function esc(s: string) {
 export function montarHtml(e: EmailCria): string {
   const oi = `<p style="margin:0 0 14px;">Oi${e.nome ? `, ${esc(e.nome.split(" ")[0])}` : ""}.</p>`;
   const ps = e.paragrafos.map((p) => `<p style="margin:0 0 14px;">${esc(p)}</p>`).join("");
+  const links = e.links?.length
+    ? `<p style="margin:4px 0 14px;line-height:2.6;">${e.links.map((l) =>
+      `<a href="${l.url}" style="display:inline-block;margin:0 6px 0 0;padding:8px 14px;border:1px solid #E2D8CB;border-radius:999px;background:#F7F3EE;color:#1E1A17;font-weight:bold;text-decoration:none;font-size:14px;line-height:1.2;">${esc(l.texto)}</a>`).join("")}</p>`
+    : "";
+  const fecho = e.assinatura ? `<p style="margin:18px 0 0;">${esc(e.assinatura).replace(/\n/g, "<br>")}</p>` : "";
+  const sair = e.sairUrl ? ` <a href="${e.sairUrl}" style="color:#8A7F76;">Não quer mais receber? Descadastre aqui.</a>` : "";
+  const nota = (e.rodape ? esc(e.rodape) : "") + sair;
   return molduraCria({
     tag: e.tag ?? "Recado do Cria",
     tema: e.tema ?? "azul",
     titulo: esc(e.titulo ?? e.assunto),
-    corpoHtml: oi + ps,
+    corpoHtml: oi + ps + links + fecho,
     botao: e.botao ? { texto: esc(e.botao.texto), url: e.botao.url } : null,
-    notaHtml: e.rodape ? esc(e.rodape) : null,
+    notaHtml: nota.trim() || null,
   });
 }
 
 export function montarTexto(e: EmailCria): string {
   const linhas = [`Oi${e.nome ? `, ${e.nome.split(" ")[0]}` : ""}.`, "", ...e.paragrafos];
+  if (e.links?.length) linhas.push("", ...e.links.map((l) => `${l.texto}: ${l.url}`));
+  if (e.assinatura) linhas.push("", e.assinatura);
   if (e.botao) linhas.push("", `${e.botao.texto}: ${e.botao.url}`);
   if (e.rodape) linhas.push("", e.rodape);
+  if (e.sairUrl) linhas.push(`Não quer mais receber? ${e.sairUrl}`);
   return linhas.join("\n");
 }
 
@@ -70,7 +96,8 @@ export async function enviarEmail(svc: Svc, e: EmailCria): Promise<boolean> {
       payload: {
         to: e.para,
         subject: e.assunto,
-        from: REMETENTE_CRIA,
+        from: e.de ?? REMETENTE_CRIA,
+        ...(e.responderPara ? { reply_to: e.responderPara } : {}),
         sender_domain: "notify.criasocialclub.com.br",
         purpose: "transactional",
         html: montarHtml(e),
