@@ -43,6 +43,7 @@ if (typeof window !== "undefined"
 const Termos = lazy(() => import("./pages/Termos"));
 // Link de indicação da parceira: /p/CODIGO guarda o cupom e segue pra home.
 const IndicacaoParceira = lazy(() => import("./pages/IndicacaoParceira"));
+const EmailPronto = lazy(() => import("./pages/EmailPronto"));
 const Privacidade = lazy(() => import("./pages/Privacidade"));
 const ExcluirDados = lazy(() => import("./pages/ExcluirDados"));
 import { UpdatePrompt } from "@/components/UpdatePrompt";
@@ -334,6 +335,7 @@ const App = () => (
               <Route path="/cadastro/agencia" element={<Signup defaultManager />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/p/:codigo" element={<IndicacaoParceira />} />
+              <Route path="/email/pronto" element={<EmailPronto />} />
               <Route path="/termos" element={<Termos />} />
               <Route path="/privacidade" element={<Privacidade />} />
               <Route path="/excluir-dados" element={<ExcluirDados />} />

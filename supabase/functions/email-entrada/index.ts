@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { iaFetch, IA_URL } from "../_shared/ia.ts";
+import { lerResposta, type Conta } from "../_shared/resposta-ia.ts";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CAIXA DE RESPOSTAS (30/10/2026)
@@ -58,7 +58,6 @@ function textoDoHtml(h: string): string {
     .replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
 }
 
-const CATEGORIAS = ["motivo_saida", "quer_voltar", "duvida", "problema", "pedido_funcao", "elogio", "outro"];
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "method" }, 405);
@@ -93,38 +92,12 @@ Deno.serve(async (req) => {
 
   // Liga à conta pelo e-mail (só service role).
   const { data: conta } = await svc.rpc("conta_por_email", { _email: email });
-  const c = (Array.isArray(conta) ? conta[0] : conta) as
-    { id: string; name: string | null; account_type: string | null; subscription_status: string | null; n_posts: number; n_ideias: number } | undefined;
+  const c = (Array.isArray(conta) ? conta[0] : conta) as Conta | undefined;
 
   // IA: categoria, resumo de uma linha e rascunho em primeira pessoa.
   let categoria = "outro", resumo: string | null = null, sugestao: string | null = null;
   try {
-    const contexto = c
-      ? `Conta no Cria: tipo ${c.account_type ?? "criador"}, assinatura ${c.subscription_status ?? "nenhuma"}, ${c.n_ideias} ideias, ${c.n_posts} posts.`
-      : "Remetente sem conta encontrada no Cria.";
-    const r = await iaFetch(IA_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content:
-            "Você lê respostas de e-mail que clientes mandam pro Cria Social Club (app de produção de conteúdo pra criadores e social mídias). " +
-            "Os e-mails foram assinados por Gabi e Walter, os fundadores. Responda só JSON: " +
-            `{"categoria": um de ${JSON.stringify(CATEGORIAS)}, "resumo": uma frase curta do que a pessoa disse, ` +
-            `"sugestao": rascunho de resposta em português do Brasil, primeira pessoa do plural, assinado "Gabi e Walter", ` +
-            "tom próximo e direto, no máximo 5 frases, sem travessão, sem prometer prazo nem desconto que a pessoa não pediu}." },
-          { role: "user", content: `${contexto}\nAssunto: ${assunto ?? ""}\nNome: ${nome ?? c?.name ?? ""}\n\nMensagem:\n${resposta.slice(0, 3000)}` },
-        ],
-      }),
-    });
-    if (r.ok) {
-      const j = await r.json();
-      const o = JSON.parse(j.choices?.[0]?.message?.content ?? "{}");
-      if (CATEGORIAS.includes(o.categoria)) categoria = o.categoria;
-      resumo = typeof o.resumo === "string" ? o.resumo.slice(0, 300) : null;
-      sugestao = typeof o.sugestao === "string" ? o.sugestao.slice(0, 2000) : null;
-    } else console.error("[email-entrada] ia", r.status);
+    ({ categoria, resumo, sugestao } = await lerResposta({ assunto, nome, texto: resposta, conta: c ?? null }));
   } catch (e) { console.error("[email-entrada] ia", e); }
 
   const { error } = await svc.from("email_respostas").insert({

@@ -75,6 +75,7 @@ import { AdminGrowth } from "@/components/admin/AdminGrowth";
 import { AdminHome } from "@/components/admin/AdminHome";
 import { AdminParceiras } from "@/components/admin/AdminParceiras";
 import { AdminTrafego } from "@/components/admin/AdminTrafego";
+import { AdminRespostas, useRespostasNovas } from "@/components/admin/AdminRespostas";
 import { UserDetailsDrawer } from "@/components/admin/UserDetailsDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { confirmar } from "@/components/shared/Confirm";
@@ -191,7 +192,11 @@ const AdminInner = () => {
   const [roleFilter, setRoleFilter] = useState("todos");
   const [page, setPage] = useState(0);
   // Abre no Início: é a tela que responde "e aí, como estamos?".
-  const [tab, setTab] = useState("inicio");
+  // ?aba=respostas: o aviso do sino de resposta de e-mail abre direto na caixa.
+  const [tab, setTab] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get("aba") === "respostas" ? "respostas" : "inicio"; } catch { return "inicio"; }
+  });
+  const { data: respostasNovas = 0 } = useRespostasNovas();
   // Segundo nível de cada grupo. Estado separado por grupo de propósito: voltar
   // pra uma aba tem que devolver a pessoa onde ela estava, não ao começo.
   const [subContas, setSubContas] = useState("lista");
@@ -410,6 +415,7 @@ const AdminInner = () => {
               { value: "dinheiro", icon: DollarSign, title: "Dinheiro" },
               { value: "uso", icon: Gauge, title: "Uso e custo" },
               { value: "rede", icon: Handshake, title: "Rede e conteúdo" },
+              { value: "respostas", icon: Inbox, title: "Respostas", hint: respostasNovas ? `${respostasNovas}` : undefined },
             ].map((c) => (
               <TabsTrigger
                 key={c.value}
@@ -604,6 +610,10 @@ const AdminInner = () => {
         </div>
           </>
           )}
+          </TabsContent>
+
+          <TabsContent value="respostas">
+            <AdminRespostas aoAbrirConta={setSelectedUserId} />
           </TabsContent>
 
           <TabsContent value="trafego">

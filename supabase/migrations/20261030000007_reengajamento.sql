@@ -147,3 +147,26 @@ as $$
 $$;
 revoke execute on function public.conta_por_email(text) from public, anon, authenticated;
 grant execute on function public.conta_por_email(text) to service_role;
+
+-- 7. Resumo pra faixa "Por que as pessoas saem" da caixa de respostas (só admin).
+create or replace function public.admin_reengajamento_resumo()
+returns jsonb
+language plpgsql stable security definer set search_path to 'public'
+as $$
+begin
+  if not public.is_admin() then raise exception 'forbidden'; end if;
+  return jsonb_build_object(
+    'motivos', coalesce((select jsonb_object_agg(motivo, n) from (
+        select motivo, count(*) n from public.motivos_saida where criado_em > now() - interval '90 days' group by motivo) m), '{}'::jsonb),
+    'categorias', coalesce((select jsonb_object_agg(categoria, n) from (
+        select coalesce(categoria, 'outro') categoria, count(*) n from public.email_respostas where recebido_em > now() - interval '90 days' group by 1) c), '{}'::jsonb),
+    'enviados_30d', (select count(*) from public.emails_ciclo where tipo like 're\_%' and sent_at > now() - interval '30 days'),
+    'responderam_30d', (select count(distinct de_email) from public.email_respostas where recebido_em > now() - interval '30 days'),
+    'voltaram_30d', (select count(distinct e.user_id) from public.emails_ciclo e
+                       join public.profiles p on p.id = e.user_id
+                      where e.tipo like 're\_%' and e.sent_at > now() - interval '30 days' and p.subscription_status = 'active')
+  );
+end;
+$$;
+revoke execute on function public.admin_reengajamento_resumo() from public, anon;
+grant execute on function public.admin_reengajamento_resumo() to authenticated;

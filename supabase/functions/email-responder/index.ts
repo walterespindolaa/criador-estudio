@@ -1,9 +1,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { REMETENTE_PESSOAL, RESPOSTAS_PARA } from "../_shared/enviar-email.ts";
+import { lerResposta, type Conta } from "../_shared/resposta-ia.ts";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    RESPONDER PELA CAIXA DO ADMIN (30/10/2026)
 
+   POST { id, refazer: true, pedido? } refaz o rascunho da IA (não manda nada).
    POST { id, texto }. Só admin. Manda o texto como e-mail simples (sem a
    moldura: resposta de gente parece e-mail de gente), de "Gabi e Walter, do
    Cria", com reply-to na mesma caixa, então a conversa continua. Marca a
@@ -31,6 +33,18 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const id = typeof body?.id === "string" ? body.id : "";
+
+    if (body?.refazer === true && id) {
+      const { data: m } = await svc.from("email_respostas").select("assunto, de_nome, de_email, texto").eq("id", id).single();
+      const msg = m as { assunto: string | null; de_nome: string | null; de_email: string; texto: string | null } | null;
+      if (!msg) return json({ error: "nao_encontrada" }, 404);
+      const { data: conta } = await svc.rpc("conta_por_email", { _email: msg.de_email });
+      const c = (Array.isArray(conta) ? conta[0] : conta) as Conta | undefined;
+      const pedido = typeof body?.pedido === "string" ? body.pedido.slice(0, 300) : null;
+      const lido = await lerResposta({ assunto: msg.assunto, nome: msg.de_nome, texto: msg.texto ?? "", conta: c ?? null, pedido });
+      await svc.from("email_respostas").update({ sugestao: lido.sugestao }).eq("id", id);
+      return json({ ok: true, sugestao: lido.sugestao });
+    }
     const texto = typeof body?.texto === "string" ? body.texto.trim().slice(0, 5000) : "";
     if (!id || texto.length < 2) return json({ error: "dados" }, 400);
 
