@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic } from "lucide-react";
+import { Loader2, Mic } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  ditadoNativoConfiavel, erroDeServico, gravacaoDisponivel, passarPraNuvem, relogio, useGravadorNuvem,
+} from "@/lib/falaNaNuvem";
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -10,7 +14,7 @@ type SpeechRecognitionLike = {
   stop: () => void;
   onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
   onend: (() => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((e: { error?: string }) => void) | null;
 };
 
 type SRWindow = Window & {
@@ -19,8 +23,9 @@ type SRWindow = Window & {
 };
 
 /**
- * Botão de ditar por voz (transcrição local do navegador, custo zero).
- * Usa a Web Speech API. Se o navegador não suportar, o botão não aparece.
+ * Botão de ditar por voz. No Chrome/Edge de computador usa o reconhecimento
+ * do navegador; no celular e nos outros navegadores grava o áudio e transcreve
+ * pela nuvem (src/lib/falaNaNuvem.ts). Erro agora aparece em vez de sumir.
  */
 export function VoiceInput({
   onTranscript,
@@ -34,16 +39,18 @@ export function VoiceInput({
   title?: string;
 }) {
   const [listening, setListening] = useState(false);
-  const [supported, setSupported] = useState(false);
+  const [nativo, setNativo] = useState(false);
+  const [disponivel, setDisponivel] = useState(false);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
+  const nuvem = useGravadorNuvem({ onTexto: onTranscript, onErro: (m) => toast.error(m) });
 
   useEffect(() => {
-    const w = window as SRWindow;
-    setSupported(!!(w.SpeechRecognition || w.webkitSpeechRecognition));
+    setNativo(ditadoNativoConfiavel());
+    setDisponivel(ditadoNativoConfiavel() || gravacaoDisponivel());
     return () => { try { recRef.current?.stop(); } catch { /* noop */ } };
   }, []);
 
-  const toggle = () => {
+  const toggleNativo = () => {
     const w = window as SRWindow;
     const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
     if (!SR) return;
@@ -55,37 +62,46 @@ export function VoiceInput({
     rec.continuous = false;
     rec.onresult = (e) => {
       let text = "";
-      for (let i = 0; i < e.results.length; i++) {
-        text += e.results[i][0].transcript;
-      }
+      for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript;
       const trimmed = text.trim();
       if (trimmed) onTranscript(trimmed);
     };
     rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
+    rec.onerror = (e) => {
+      setListening(false);
+      if (e?.error === "not-allowed") toast.error("O microfone está bloqueado. Libera nas permissões do navegador.");
+      else if (erroDeServico(e?.error)) {
+        passarPraNuvem(); setNativo(false);
+        toast("O ditado deste navegador falhou. Toca de novo: agora vai gravar e transcrever pela nuvem.");
+      }
+    };
     recRef.current = rec;
     setListening(true);
     try { rec.start(); } catch { setListening(false); }
   };
 
-  if (!supported) return null;
+  if (!disponivel) return null;
+
+  const ativo = nativo ? listening : nuvem.gravando;
+  const rotulo = nuvem.transcrevendo ? "Transcrevendo..." : ativo ? `Parar (${relogio(nuvem.segundos)})` : title;
 
   return (
     <button
       type="button"
-      onClick={toggle}
-      title={title}
-      aria-label={title}
-      aria-pressed={listening}
+      onClick={nativo ? toggleNativo : nuvem.gravando ? nuvem.parar : nuvem.iniciar}
+      disabled={nuvem.transcrevendo}
+      title={rotulo}
+      aria-label={rotulo}
+      aria-pressed={ativo}
       className={cn(
         "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors",
-        listening
+        ativo
           ? "border-red-300 bg-red-50 text-red-600 animate-pulse"
           : "border-border bg-card text-muted-foreground hover:text-primary hover:border-primary/40",
         className,
       )}
     >
-      <Mic className="h-4 w-4" strokeWidth={1.75} />
+      {nuvem.transcrevendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" strokeWidth={1.75} />}
     </button>
   );
 }

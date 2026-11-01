@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Activity, Brain, Building2, ChevronDown, Download, FileText, FileUp, Heart, HeartCrack, HelpCircle,
-  Image as ImageIcon, ImagePlus, Instagram, Lightbulb, Loader2, Maximize2, MessageSquare, Mic, Minimize2,
+  Image as ImageIcon, ImagePlus, Instagram, Lightbulb, Loader2, Maximize2, MessageSquare, Minimize2,
   Palette, Pencil, Plus, Save, ShieldAlert, Sparkles, Tags, Target, Trash2, Type, Upload, UserRound, X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { VoiceInput } from "@/components/shared/VoiceInput";
 import {
   useAddCrmRef, useCrmClient, useCrmClientRefs, useDeleteCrmRef, useUpdateCrmClient,
   useUploadCrmAsset, type CrmClient,
@@ -194,47 +195,12 @@ export function useFichaEditavel(id: string | undefined, opcoes?: {
 
 /* ─── PEÇAS DE FORMULÁRIO ────────────────────────────────────────────────── */
 
-/* A Web Speech API não existe no lib.dom padrão (é prefixada no Chrome), então
-   descrevemos aqui só o pedaço que a gente usa, em vez de espalhar `any`. */
-type FalaEvento = { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }>> };
-type Reconhecedor = {
-  lang: string; continuous: boolean; interimResults: boolean;
-  onresult: ((e: FalaEvento) => void) | null;
-  onend: (() => void) | null;
-  onerror: (() => void) | null;
-  start: () => void; stop: () => void;
-};
-type JanelaComVoz = Window & {
-  SpeechRecognition?: new () => Reconhecedor;
-  webkitSpeechRecognition?: new () => Reconhecedor;
-};
-
-// Ditado por voz (Web Speech API, Chrome). Anexa o texto reconhecido ao campo.
+/* DITADO (01/11/2026): o botão é o VoiceInput compartilhado, que usa o
+   reconhecimento do navegador no Chrome/Edge de computador e grava + transcreve
+   pela nuvem no celular e nos outros navegadores. Antes era só Web Speech e,
+   no celular, não acontecia nada. */
 export function MicButton({ onText }: { onText: (t: string) => void }) {
-  const recRef = useRef<Reconhecedor | null>(null);
-  const [on, setOn] = useState(false);
-  const start = () => {
-    const janela = window as JanelaComVoz;
-    const SR = janela.SpeechRecognition || janela.webkitSpeechRecognition;
-    if (!SR) { toast.error("Ditado por voz não suportado neste navegador (use o Chrome)."); return; }
-    const r = new SR();
-    r.lang = "pt-BR"; r.continuous = true; r.interimResults = false;
-    r.onresult = (e) => {
-      let t = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript;
-      if (t.trim()) onText(t.trim());
-    };
-    r.onend = () => setOn(false);
-    r.onerror = () => setOn(false);
-    r.start(); recRef.current = r; setOn(true);
-  };
-  const stop = () => { try { recRef.current?.stop(); } catch { /* ignore */ } setOn(false); };
-  return (
-    <button type="button" onClick={() => (on ? stop() : start())} title={on ? "Parar" : "Ditar por voz"}
-      className={cn("shrink-0 h-8 w-8 grid place-items-center rounded-lg border transition-colors", on ? "bg-red-500 text-white border-red-500 animate-pulse" : "border-border text-muted-foreground hover:text-primary hover:border-primary/40")}>
-      <Mic className="h-4 w-4" />
-    </button>
-  );
+  return <VoiceInput onTranscript={onText} title="Ditar por voz" />;
 }
 
 export function MicTextarea({ value, onChange, rows = 2, placeholder }: { value: string; onChange: (v: string) => void; rows?: number; placeholder?: string }) {
