@@ -307,6 +307,15 @@ const Onboarding = () => {
 
   /* A IA trabalha ENQUANTO a pessoa escreve a primeira ideia (tela 7). Antes
      era uma tela inteira de "Preparando seu espaço..." parada. */
+  /* PRAZO NA IA (01/11/2026). A tela final só libera "Abrir meu estúdio"
+     quando o setup termina, e as duas chamadas de IA não tinham prazo: se o
+     Gemini engasgasse, a pessoa ficava em "Terminando de montar..." até o
+     limite do servidor (minutos). Agora cada chamada tem prazo; estourou,
+     segue com o padrão (pilares pelos nichos, hábitos padrão), como já fazia
+     quando a IA dava erro. */
+  const comPrazo = <T,>(p: Promise<T>, ms: number): Promise<T> =>
+    Promise.race([p, new Promise<T>((_, rej) => setTimeout(() => rej(new Error(`prazo de ${ms / 1000}s`)), ms))]);
+
   const runSetup = useCallback(async () => {
     if (!user || setupStartedRef.current) return;
     setupStartedRef.current = true;
@@ -326,13 +335,13 @@ const Onboarding = () => {
       const falaLimpa = sanitizeText(sobre.trim());
       if (falaLimpa.length >= MIN_FALA) {
         try {
-          const { data: falaResp, error: falaErr } = await supabase.functions.invoke("brandbook-fala", {
+          const { data: falaResp, error: falaErr } = await comPrazo(supabase.functions.invoke("brandbook-fala", {
             body: {
               texto: falaLimpa,
               perguntas: PERGUNTAS_PLANAS.map((q) => ({ id: q.id, label: q.label })),
               accountId: ehMeuPerfil ? donoId : undefined,
             },
-          });
+          }), 25000);
           if (falaErr) throw falaErr;
           const lido = (falaResp as { result?: { respostas?: Record<string, string>; resumo?: string | null } } | null)?.result ?? null;
           resumoFala = typeof lido?.resumo === "string" ? sanitizeText(lido.resumo).slice(0, 300) : "";
@@ -346,7 +355,7 @@ const Onboarding = () => {
       }
       let result: AISetupResult | null = null;
       try {
-        const raw = await callAIContextBuilder({
+        const raw = await comPrazo(callAIContextBuilder({
           userId: user.id,
           operation: "onboarding-setup",
           data: {
@@ -362,7 +371,7 @@ const Onboarding = () => {
                cobre). */
             sobre: falaLimpa.length >= MIN_FALA ? falaLimpa.slice(0, 1500) : undefined,
           },
-        });
+        }), 30000);
         if (typeof raw === "string") {
           const cleaned = raw.replace(/```json?\n?|\n?```/g, "").trim();
           try { result = JSON.parse(cleaned) as AISetupResult; } catch { result = null; }
