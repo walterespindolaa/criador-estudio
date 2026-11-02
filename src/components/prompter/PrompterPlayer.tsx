@@ -1467,7 +1467,7 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
     }
     /* espelho na gravação via canvas com requestVideoFrameCallback (sem frame duplicado) */
     let mirCanvas: HTMLCanvasElement | null = null, mirCtx: CanvasRenderingContext2D | null = null,
-      mirStream: MediaStream | null = null, mirTrack: MediaStreamTrack | null = null, mirDrawing = false;
+      mirStream: MediaStream | null = null, mirTrack: MediaStreamTrack | null = null, mirDrawing = false, mirWatch: any = null;
     function mirroredVideoTrack() {
       const st = camStream!.getVideoTracks()[0].getSettings();
       const w = st.width || 1280, h = st.height || 720;
@@ -1483,16 +1483,45 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
         mirStream = (mirCanvas as any).captureStream(st.frameRate || S.fps || 30);
         mirTrack = mirStream!.getVideoTracks()[0];
       }
-      const pump = () => {
-        if (!mirDrawing) return;
+      /* VÍDEO CONGELAVA E O ÁUDIO SEGUIA (iPhone, câmera frontal, 02/11/2026).
+         Na frontal com "corrigir espelho" a imagem gravada sai deste canvas, e
+         o áudio vem por outro caminho. O desenho dependia de uma corrente de
+         requestVideoFrameCallback: cada frame agendava o próximo. Se o iOS
+         pausava o <video> da câmera por um instante (ou pulava um callback), a
+         corrente morria e o canvas ficava parado no último quadro até o fim,
+         com o áudio rodando normal. Agora há um vigia: a cada 200 ms, se o
+         <video> pausou, dá play; se passou mais de 150 ms sem quadro novo,
+         desenha na mão e reabre a corrente. */
+      let lastDraw = 0, armed = false, gen = 0;
+      const draw = () => {
         try {
           mirCtx!.drawImage(camVideo, 0, 0, w, h);
           if (manual) (mirTrack as any).requestFrame();
+          lastDraw = performance.now();
         } catch { /* frame perdido */ }
-        if ((camVideo as any).requestVideoFrameCallback) (camVideo as any).requestVideoFrameCallback(() => pump());
-        else requestAnimationFrame(pump);
       };
-      pump();
+      /* gen: um callback antigo que acorde depois do vigia não abre 2ª corrente */
+      const pump = (g: number) => {
+        if (g !== gen) return;
+        armed = false;
+        if (!mirDrawing) return;
+        draw();
+        arm();
+      };
+      const arm = () => {
+        if (armed || !mirDrawing) return;
+        armed = true;
+        const g = ++gen;
+        if ((camVideo as any).requestVideoFrameCallback) (camVideo as any).requestVideoFrameCallback(() => pump(g));
+        else requestAnimationFrame(() => pump(g));
+      };
+      if (mirWatch) clearInterval(mirWatch);
+      mirWatch = setInterval(() => {
+        if (!mirDrawing) { clearInterval(mirWatch); mirWatch = null; return; }
+        if (camVideo.paused) camVideo.play().catch(() => {});
+        if (performance.now() - lastDraw > 150) { draw(); armed = false; arm(); }
+      }, 200);
+      draw(); arm();
       return mirTrack!;
     }
     function makeRecordingStream(rawForce: boolean) {
@@ -1503,6 +1532,7 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
     }
     function stopMirrorPipe() {
       mirDrawing = false;
+      if (mirWatch) { clearInterval(mirWatch); mirWatch = null; }
       if (mirStream) { mirStream.getTracks().forEach((t) => t.stop()); mirStream = null; }
       mirCanvas = null; mirCtx = null; mirTrack = null;
     }
