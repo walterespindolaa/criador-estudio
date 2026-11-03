@@ -102,7 +102,6 @@ import { RepurposeSheet } from "./RepurposeSheet";
 import { BestTimesHint } from "@/components/shared/BestTimesHint";
 import { PostPreviewModal, PostPreviewContent } from "./PostPreviewModal";
 import { PublicarNoInstagram } from "@/components/shared/PublicarNoInstagram";
-import { RedesSoMaster } from "@/components/shared/RedesSoMaster";
 import { PublishButton } from "./PublishButton";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePostPreviewIdentity } from "@/hooks/usePostPreviewIdentity";
@@ -1411,8 +1410,6 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   formato={format}
                 />
               )}
-              {/* Recurso interno: só o master carrega. */}
-              {post?.id && <RedesSoMaster postId={post.id} legenda={caption} titulo={title} plataforma={platform} />}
 
     </>
   );
