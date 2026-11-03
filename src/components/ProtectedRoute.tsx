@@ -53,7 +53,10 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     // Trancar a porta de quem está tentando te pagar é o pior loop possível.
     const ehPlanos = pathname === "/app/assinar";
     if (souParceiro && !pathname.startsWith("/socialmidia")) return <Navigate to="/socialmidia/demandas" replace />;
-    if (!isManager && !hasManagedAccounts && !ehPlanos && !souParceiro) return <Navigate to="/app/assinar" replace />;
+    // Plano que a pessoa clicou na LP (03/11/2026) chega destacado na tela de planos.
+    const planoLp = (user.user_metadata as { plano_escolhido?: string } | undefined)?.plano_escolhido;
+    const destino = planoLp && ["essencial", "pro", "studio"].includes(planoLp) ? `/app/assinar?plano=${planoLp}` : "/app/assinar";
+    if (!isManager && !hasManagedAccounts && !ehPlanos && !souParceiro) return <Navigate to={destino} replace />;
   }
 
   return <>{children}</>;

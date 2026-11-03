@@ -142,7 +142,16 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
       });
       if (q.get("fbclid")) origem.veio_de_anuncio = "meta";
     } catch { /* sem URL legível, segue sem origem */ }
-    const juntos = { ...intencao, ...origem };
+    /* PLANO ESCOLHIDO NA LP (03/11/2026): o botão de cada plano manda
+       ?plano=essencial|pro|studio. Vai nos metadados da conta (a confirmação
+       de e-mail pode abrir em outro aparelho) e a tela de planos abre com ele
+       destacado. Só pro criador. */
+    const planoLp = (() => {
+      try { return new URLSearchParams(window.location.search).get("plano"); } catch { return null; }
+    })();
+    const escolha = accountType === "creator" && planoLp && ["essencial", "pro", "studio"].includes(planoLp)
+      ? { plano_escolhido: planoLp } : {};
+    const juntos = { ...intencao, ...origem, ...escolha };
     const meta = Object.keys(juntos).length ? juntos : undefined;
     const { error, needsConfirmation } = await signUp(data.email, data.password, data.name, meta);
     setLoading(false);
