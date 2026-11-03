@@ -11,6 +11,7 @@ import { StoryPreview } from "@/components/accounts/StoryPreview";
 import { CriaPostPublishButton } from "@/components/accounts/CriaPostPublishButton";
 import { SalvarNoCelular } from "@/components/accounts/SalvarNoCelular";
 import { PublicarNoInstagram } from "@/components/shared/PublicarNoInstagram";
+import { PublicarNasRedes } from "@/components/shared/PublicarNasRedes";
 import { CapaSobreVideo, EditorDeCapa, temCapa, useCapaDoPost } from "@/components/accounts/CapaDoReels";
 import { postAspect } from "@/lib/post-aspect";
 import { getDisplayImageUrl, getDriveFileId, getDriveImageFallbackUrl, getDriveViewPageUrl, isDriveMedia, isUnknownDriveMedia, isVideoMedia, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
@@ -377,6 +378,8 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
       {/* Publicar direto pelo Cria (ciclo 5). Só aparece pra conta que pode;
           antes da aprovação do cliente mostra que libera depois. */}
       <PublicarNoInstagram postId={postId} formato={format} />
+      {/* TikTok e YouTube: só aparece pro master enquanto é teste. */}
+      <PublicarNasRedes postId={postId} legenda={caption} titulo={title} />
       {approved && (
         <div className="rounded-2xl border border-green-200 bg-green-50 p-3 space-y-2">
           <p className="text-xs font-body font-bold text-green-800">Aprovado pelo cliente, pronto pra publicar.</p>

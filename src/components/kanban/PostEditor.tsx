@@ -102,6 +102,7 @@ import { RepurposeSheet } from "./RepurposeSheet";
 import { BestTimesHint } from "@/components/shared/BestTimesHint";
 import { PostPreviewModal, PostPreviewContent } from "./PostPreviewModal";
 import { PublicarNoInstagram } from "@/components/shared/PublicarNoInstagram";
+import { PublicarNasRedes } from "@/components/shared/PublicarNasRedes";
 import { PublishButton } from "./PublishButton";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePostPreviewIdentity } from "@/hooks/usePostPreviewIdentity";
@@ -1410,6 +1411,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   formato={format}
                 />
               )}
+              {/* TikTok e YouTube: só aparece pro master enquanto é teste. */}
+              {post?.id && <PublicarNasRedes postId={post.id} legenda={caption} titulo={title} />}
 
     </>
   );

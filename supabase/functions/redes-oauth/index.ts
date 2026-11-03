@@ -11,7 +11,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { ErroRede } from '../_shared/redes.ts';
-import { PUBLICADORES } from '../_shared/redes-publicar.ts';
+import { ehMaster, PUBLICADORES } from '../_shared/redes-publicar.ts';
 
 const APP_URL = Deno.env.get('APP_URL') || 'https://app.criasocialclub.com.br';
 type RedeNova = 'tiktok' | 'youtube';
@@ -43,6 +43,7 @@ Deno.serve(async (req) => {
     const { data: u } = await admin.auth.getUser(jwt);
     const userId = u?.user?.id;
     if (!userId) return json({ error: 'unauthorized' }, 401);
+    if (!(await ehMaster(admin, userId))) return json({ error: 'Conectar TikTok e YouTube ainda está em teste.' }, 403);
     const b = await req.json().catch(() => ({})) as Record<string, unknown>;
     if (!ehRede(b.rede)) return json({ error: 'rede inválida' }, 400);
     const crmClientId = typeof b.crm_client_id === 'string' ? b.crm_client_id : null;

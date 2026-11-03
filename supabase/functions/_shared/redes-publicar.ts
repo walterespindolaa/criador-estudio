@@ -29,6 +29,12 @@ async function avisar(admin: SupabaseClient, ids: string[], titulo: string, desc
   await admin.from('notifications').insert(unicos.map((user_id) => ({ user_id, type: 'cria_post', title: titulo, description: descricao, link, read: false })) as never);
 }
 
+/** TikTok e YouTube só pro master enquanto o fluxo é testado (Walter, 03/11/2026). */
+export async function ehMaster(admin: SupabaseClient, userId: string): Promise<boolean> {
+  const { data } = await admin.from('profiles').select('role').eq('id', userId).maybeSingle();
+  return (data as { role?: string | null } | null)?.role === 'admin';
+}
+
 /** Conexão do post naquela rede + access token válido (renova se precisar). */
 export async function conexaoComToken(admin: SupabaseClient, postId: string, rede: RedeNova, actor: string) {
   const { data, error } = await admin.rpc('conexao_do_post', { _post_id: postId, _rede: rede, _actor: actor });

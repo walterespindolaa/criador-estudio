@@ -10,7 +10,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { ErroRede } from '../_shared/redes.ts';
-import { conexaoComToken, conferirProcessando, publicarLinha } from '../_shared/redes-publicar.ts';
+import { conexaoComToken, conferirProcessando, ehMaster, publicarLinha } from '../_shared/redes-publicar.ts';
 import { tiktok } from '../_shared/rede-tiktok.ts';
 
 Deno.serve(async (req) => {
@@ -53,6 +53,7 @@ Deno.serve(async (req) => {
     const { data: u } = await admin.auth.getUser(jwt);
     const actor = u?.user?.id;
     if (!actor) return json({ error: 'unauthorized' }, 401);
+    if (!(await ehMaster(admin, actor))) return json({ error: 'Publicação no TikTok e no YouTube ainda está em teste.' }, 403);
 
     if (body.acao === 'criador') {
       const postId = String(body.post_id ?? '');
