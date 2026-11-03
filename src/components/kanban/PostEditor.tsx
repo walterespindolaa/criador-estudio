@@ -1412,7 +1412,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 />
               )}
               {/* Recurso interno: só o master carrega. */}
-              {post?.id && <RedesSoMaster postId={post.id} legenda={caption} titulo={title} />}
+              {post?.id && <RedesSoMaster postId={post.id} legenda={caption} titulo={title} plataforma={platform} />}
 
     </>
   );

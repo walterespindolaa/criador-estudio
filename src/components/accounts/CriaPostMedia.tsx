@@ -379,7 +379,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
           antes da aprovação do cliente mostra que libera depois. */}
       <PublicarNoInstagram postId={postId} formato={format} />
       {/* Recurso interno: só o master carrega. */}
-      <RedesSoMaster postId={postId} legenda={caption} titulo={title} />
+      <RedesSoMaster postId={postId} legenda={caption} titulo={title} plataforma={platform} />
       {approved && (
         <div className="rounded-2xl border border-green-200 bg-green-50 p-3 space-y-2">
           <p className="text-xs font-body font-bold text-green-800">Aprovado pelo cliente, pronto pra publicar.</p>

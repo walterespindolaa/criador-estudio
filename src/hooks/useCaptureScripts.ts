@@ -282,7 +282,7 @@ export function useScriptToPost() {
   const { agencyOwnerId } = useActiveAccount();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { scriptId: string; externalClientId: string; title: string; script: string }): Promise<string> => {
+    mutationFn: async (input: { scriptId: string; externalClientId: string; title: string; script: string; referenceUrl?: string | null }): Promise<string> => {
       if (!agencyOwnerId) throw new Error("Sem sessão");
       const { data, error } = await sbFrom("posts").insert({
         user_id: agencyOwnerId,
@@ -295,6 +295,8 @@ export function useScriptToPost() {
         title: input.title.slice(0, 200),
         caption: null,
         script: input.script,
+        // A referência do roteiro vai junto pro post (antes ficava pra trás, 03/11/2026).
+        reference_link: input.referenceUrl?.trim() || null,
       }).select("id").single();
       if (error) throw new Error(error.message);
       const postId = (data as { id: string }).id;

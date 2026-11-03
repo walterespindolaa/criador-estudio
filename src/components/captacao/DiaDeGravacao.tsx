@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cenasDe, cenasParaTexto, type CaptureScript } from "@/hooks/useCaptureScripts";
+import { ListaReferencias } from "@/components/captacao/Referencias";
 import { normalizeShotList, type Capture, type ShotItem } from "@/hooks/useAgenda";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -343,6 +344,11 @@ export function DiaDeGravacao({
                                   <span className="inline-block mt-1 text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">
                                     {s.format}
                                   </span>
+                                )}
+                                {/* Referência do roteiro (03/11/2026): antes não aparecia no dia da
+                                    gravação, e é justamente quando ela precisa ver o reel de base. */}
+                                {s.reference_url?.trim() && (
+                                  <ListaReferencias valor={s.reference_url} className="mt-2 max-w-sm" />
                                 )}
                               </div>
                               {texto && (

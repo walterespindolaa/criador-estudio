@@ -776,6 +776,7 @@ function CriaCaptacaoInner({ fixo }: { fixo?: string } = {}) {
           // Sem o nome do cliente na frente: ver o comentário em tituloDoPost.
           title: tituloDoPost(r),
           script: texto,
+          referenceUrl: r.reference_url ?? null,
         });
         feitos++; ultimoCrm = crmId;
       }
@@ -1920,7 +1921,7 @@ function PastaCliente({ pasta, month, scripts, caps, habit, clientShots, savingC
       /* Título do roteiro puro, sem "<cliente> · " na frente: o card já nasce
          dentro do quadro desse cliente, e o prefixo comia a única linha que o
          card mostra (ver o comentário em tituloDoPost). */
-      await toPost.mutateAsync({ scriptId: s.id, externalClientId: ext.id, title: s.title.trim() || "Roteiro de gravação", script: s.content });
+      await toPost.mutateAsync({ scriptId: s.id, externalClientId: ext.id, title: s.title.trim() || "Roteiro de gravação", script: s.content, referenceUrl: s.reference_url ?? null });
       if (pasta.crmId) navigate(`/socialmidia/clientes/${pasta.crmId}/posts`);
     } catch { /* o hook já avisa */ }
   };

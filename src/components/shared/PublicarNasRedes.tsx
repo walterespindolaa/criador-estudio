@@ -63,10 +63,15 @@ function Marca({ marcado, desligado, onClick, children, nota }: { marcado: boole
   );
 }
 
-export function PublicarNasRedes({ postId, legenda, titulo }: { postId: string; legenda?: string | null; titulo?: string | null }) {
+export function PublicarNasRedes({ postId, legenda, titulo, plataforma }: { postId: string; legenda?: string | null; titulo?: string | null; plataforma?: string | null }) {
   const { profile } = useProfile();
   const master = profile?.role === "admin";
-  const [rede, setRede] = useState<RedeNova>("tiktok");
+  /* Post de TikTok ou YouTube: a caixa já abre na rede dele. Post de Instagram:
+     fica fechada numa linha (é opcional, não pode pesar no editor). */
+  const daRede = plataforma === "tiktok" || plataforma === "youtube" ? (plataforma as RedeNova) : null;
+  const [rede, setRede] = useState<RedeNova>(daRede ?? "tiktok");
+  const [aberto, setAberto] = useState(!!daRede);
+  useEffect(() => { if (daRede) { setRede(daRede); setAberto(true); } }, [daRede]);
 
   // Volta do login da rede: avisa e limpa a URL.
   useEffect(() => {
@@ -80,11 +85,21 @@ export function PublicarNasRedes({ postId, legenda, titulo }: { postId: string; 
   }, []);
 
   if (!master) return null;
+  if (!aberto) {
+    return (
+      <button type="button" onClick={() => setAberto(true)}
+        className="w-full flex items-center gap-2 rounded-2xl border border-dashed border-border bg-card px-3.5 py-2.5 text-left hover:bg-muted/40">
+        <span className="text-[12.5px] font-body font-semibold text-muted-foreground">Publicar também no TikTok ou YouTube</span>
+        <span className="ml-auto text-[10.5px] font-body font-bold rounded-full px-2 py-0.5 bg-amber-100 text-amber-900">só master</span>
+      </button>
+    );
+  }
   return (
     <div className="rounded-2xl border border-border bg-card p-3.5 space-y-3">
       <div className="flex items-center gap-2">
         <p className="text-[13px] font-body font-bold text-foreground">Publicar também em</p>
         <span className="text-[10.5px] font-body font-bold rounded-full px-2 py-0.5 bg-amber-100 text-amber-900">teste · só master</span>
+        {!daRede && <button type="button" onClick={() => setAberto(false)} className="ml-auto text-[12px] font-body text-muted-foreground hover:text-foreground">fechar</button>}
       </div>
       <div className="flex gap-1.5">
         {(["tiktok", "youtube"] as RedeNova[]).map((r) => (
