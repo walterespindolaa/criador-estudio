@@ -125,7 +125,7 @@ No CRIA o **mídia kit** é uma página sua, num link que você manda pra marca 
 
 Ele fica junto do seu **link na bio**, então quem descobre você pelo perfil chega no seu material profissional sem precisar pedir por direct. Os **insights do Instagram** ficam no mesmo painel, o que ajuda na hora de decidir quais números vale a pena mostrar.
 
-Planos do criador a partir de **R$ 19,90 por mês**, com 7 dias grátis e sem cartão.
+Planos do criador a partir de **R$ 19,90 por mês**, com 7 dias grátis.
 :::
 
 :::checklist Checklist do mídia kit

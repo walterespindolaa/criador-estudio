@@ -119,7 +119,7 @@ No CRIA, a **escrita guiada** parte do que já está no seu banco de ideias e te
 
 Na hora de gravar, o **Cria Prompter** mostra esse roteiro em teleprompter com controle por voz, então você lê o gancho olhando direto pra câmera em vez de decorar ou improvisar. E os **insights do Instagram** ficam no mesmo painel, o que facilita voltar depois pra ver o que aconteceu com os vídeos em que você mudou a abertura.
 
-Planos do criador a partir de **R$ 19,90 por mês**, com 7 dias grátis e sem cartão.
+Planos do criador a partir de **R$ 19,90 por mês**, com 7 dias grátis.
 :::
 
 :::checklist Checklist dos primeiros segundos

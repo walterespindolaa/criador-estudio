@@ -135,7 +135,7 @@ Dois hábitos ajudam muito aqui. Primeiro: guarde print dos melhores resultados 
 E se o cliente nunca comenta o relatório, pergunte se o formato ajuda. Muita gente prefere uma página e um áudio de três minutos, e isso é informação valiosa sobre onde investir seu tempo.
 
 :::cria Como isso funciona no CRIA
-O **relatório white-label** do CRIA monta o documento com a sua marca, puxando os **insights do Instagram** da conta conectada. Você entra para escrever a leitura e a recomendação, que é a parte que só você consegue fazer, em vez de gastar a noite copiando número na mão. Isso está nos planos do criador, a partir de **R$ 19,90 por mês**, com 7 dias grátis sem cartão.
+O **relatório white-label** do CRIA monta o documento com a sua marca, puxando os **insights do Instagram** da conta conectada. Você entra para escrever a leitura e a recomendação, que é a parte que só você consegue fazer, em vez de gastar a noite copiando número na mão. Isso está nos planos do criador, a partir de **R$ 19,90 por mês**, com 7 dias grátis.
 
 O **Cria Radar** acrescenta o pedaço que quase nenhum relatório tem: a comparação com os concorrentes que o cliente acompanha, e o relatório de análise em cima disso. Custa **R$ 49,90 por mês**.
 

@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { molduraCria, REMETENTE_CRIA } from "../_shared/email-moldura.ts";
 import Stripe from "npm:stripe@14";
 import { enviarEmail, REMETENTE_PESSOAL, RESPOSTAS_PARA } from "../_shared/enviar-email.ts";
+import { emailBoasVindasAssinatura } from "../_shared/emails-assinatura.ts";
 import { registrarErro, mensagemDe } from "../_shared/log.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, {
@@ -341,6 +342,19 @@ Deno.serve(async (req) => {
           storage_quota_bytes: STORAGE_BY_PLAN[plan] ?? 524288000,
         }).eq("id", userId), "profiles activate");
 
+        /* TESTE COM CARTÃO (03/11/2026): guarda até quando vai o teste (e-mails do
+           5º e 6º dia) e que a pessoa já usou o teste (não ganha outro). Vale
+           também pro grátis de cupom de campanha. */
+        if (s.subscription) {
+          const subNova = await stripe.subscriptions.retrieve(s.subscription as string);
+          if (subNova.status === "trialing" && subNova.trial_end) {
+            must(await supabase.from("profiles").update({
+              assinatura_teste_ate: new Date(subNova.trial_end * 1000).toISOString(),
+              teste_cartao_inicio: new Date().toISOString(),
+            }).eq("id", userId), "profiles teste cartao");
+          }
+        }
+
         // Cupom de campanha (CRIA3MESES etc.): conta o uso uma vez por checkout
         // concluído. Fica DEPOIS da ativação: se a ativação falhar, o evento é
         // desfeito e reentregue, e o uso não conta duas vezes. Reentrega do
@@ -450,8 +464,15 @@ Deno.serve(async (req) => {
            pra assinatura de agência, que não tem price de plano. */
         const plan = planFromPrice(sub.items?.data?.[0]?.price?.id ?? "") ?? sub.metadata?.plan;
 
+        /* Teste da assinatura (trialing) grava "active" no perfil (03/11/2026):
+           has_access(), user_tier() e as políticas do banco só conhecem
+           "active", e o checkout já gravava "active". Antes, a primeira
+           atualização da assinatura em teste gravava "trialing" e o banco
+           tratava a pessoa como sem acesso. O fim do teste fica em
+           assinatura_teste_ate. */
         const status =
           sub.status === "active" ? "active" :
+          sub.status === "trialing" ? "active" :
           sub.status === "past_due" ? "past_due" :
           sub.status === "canceled" ? "canceled" :
           sub.status === "unpaid" ? "past_due" :
@@ -472,7 +493,9 @@ Deno.serve(async (req) => {
         }
 
         if (userId) {
-          const update: Record<string, string | number> = { subscription_status: status };
+          const update: Record<string, string | number | null> = { subscription_status: status };
+          update.assinatura_teste_ate = sub.status === "trialing" && sub.trial_end
+            ? new Date(sub.trial_end * 1000).toISOString() : null;
           if (plan) update.plan = plan;
           if (plan && status === "active") update.storage_quota_bytes = STORAGE_BY_PLAN[plan] ?? 524288000;
           must(await supabase.from("profiles").update(update).eq("id", userId), "profiles status update");
@@ -613,6 +636,46 @@ Deno.serve(async (req) => {
         // metadata de atribuição vive na SUBSCRIPTION, não na invoice
         const sub = await stripe.subscriptions.retrieve(subId);
         const md = sub.metadata || {};
+        /* PRIMEIRA COBRANÇA DEPOIS DO TESTE (03/11/2026, mockup aprovado): o
+           e-mail de boas-vindas com recibo e o guia do primeiro mês. Só na
+           primeira (marca boas_vindas_assinatura_em antes de enviar; o update
+           condicional impede dois envios), só pra assinatura de criador que
+           teve teste, e nunca derruba o webhook. */
+        if (!md.kind && md.user_id && md.plan && md.plan !== "agency" && sub.trial_end
+            && inv.billing_reason === "subscription_cycle" && (inv.amount_paid ?? 0) > 0) {
+          try {
+            const { data: marcou } = await supabase.from("profiles")
+              .update({ boas_vindas_assinatura_em: new Date().toISOString(), assinatura_teste_ate: null })
+              .eq("id", md.user_id).is("boas_vindas_assinatura_em", null)
+              .select("id, name, perfil_de").maybeSingle();
+            const perfil = marcou as { id: string; name: string | null; perfil_de: string | null } | null;
+            if (perfil) {
+              const { data: em } = await supabase.rpc("emails_para", { _ids: [perfil.id] });
+              const email = ((em ?? []) as { email: string | null }[])[0]?.email ?? null;
+              let cartao: string | null = null;
+              const pmId = typeof sub.default_payment_method === "string" ? sub.default_payment_method : sub.default_payment_method?.id;
+              if (pmId) {
+                try { cartao = (await stripe.paymentMethods.retrieve(pmId)).card?.last4 ?? null; } catch { /* sem cartão no e-mail */ }
+              }
+              const plano = planFromPrice(sub.items?.data?.[0]?.price?.id ?? "") ?? md.plan;
+              if (email && !perfil.perfil_de) {
+                const APP = Deno.env.get("APP_URL") ?? "https://app.criasocialclub.com.br";
+                await enviarEmail(supabase, {
+                  para: email, etiqueta: "assinatura_boas_vindas",
+                  de: REMETENTE_PESSOAL(), responderPara: RESPOSTAS_PARA(),
+                  ...emailBoasVindasAssinatura(perfil.name, {
+                    plano, pagoCentavos: inv.amount_paid ?? 0, cartaoFinal: cartao,
+                    proxima: sub.current_period_end ? new Date(sub.current_period_end * 1000) : null,
+                    reciboUrl: inv.hosted_invoice_url ?? null,
+                  }, APP),
+                });
+              }
+            }
+          } catch (e) {
+            console.error("[webhook] boas-vindas da assinatura", e);
+          }
+        }
+
         // módulo pago e Destaque do Criakut não geram comissão de parceira
         if (md.kind === "module" || md.kind === "criakut_destaque") break;
         const partnerId = md.partner_id;

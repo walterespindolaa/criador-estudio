@@ -125,7 +125,7 @@ serve(async (req) => {
 
     const { data: profile } = await svc
       .from("profiles")
-      .select("stripe_customer_id, name, stripe_subscription_id, subscription_status")
+      .select("stripe_customer_id, name, stripe_subscription_id, subscription_status, account_type, trial_ends_at, teste_cartao_inicio")
       .eq("id", contaId)
       .single();
 
@@ -272,18 +272,39 @@ serve(async (req) => {
     const successUrl = isAgency ? `${origin}/socialmidia/contas?checkout=success` : `${origin}/app/obrigado?checkout=success&sid={CHECKOUT_SESSION_ID}`;
     const cancelUrl = isAgency ? `${origin}/socialmidia/contas?checkout=cancel` : `${origin}/app/assinar?checkout=cancel`;
 
+    /* TESTE DE 7 DIAS COM CARTÃO (Walter, 03/11/2026, mockup aprovado). Só pro
+       criador que nunca testou nem assinou: escolhe o plano, põe o cartão (ou
+       Apple Pay / Google Pay) e só paga no 8º dia. Fica de fora: social mídia,
+       Meu perfil, a gestora assinando pela cliente, cupom de campanha (que já
+       tem o grátis dele) e quem já teve o teste antigo sem cartão. A tela de
+       planos usa a mesma regra pra mostrar "Começar 7 dias grátis". */
+    const p = profile as { account_type?: string | null; trial_ends_at?: string | null; teste_cartao_inicio?: string | null } | null;
+    let testeCartao = !isAgency && !pedidoConta && !campanha && !selfSubValidated
+      && p?.account_type !== "manager" && !p?.trial_ends_at && !p?.teste_cartao_inicio
+      && !profile?.stripe_subscription_id;
+    if (testeCartao && profile?.stripe_customer_id) {
+      const anteriores = await stripe.subscriptions.list({ customer: profile.stripe_customer_id, status: "all", limit: 1 });
+      if (anteriores.data.length > 0) testeCartao = false;
+    }
+    const testeMeta: Record<string, string> = testeCartao ? { teste_cartao: "1" } : {};
+
     const campanhaMeta: Record<string, string> = campanha ? { campanha: campanha.codigo } : {};
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       customer: customerId,
       line_items: [{ price: priceId, quantity: seats }],
-      metadata: { app: "cria", user_id: contaId, plan, ...agencyMeta, ...partnerMeta, ...selfSubMark, ...metaPerfil, ...campanhaMeta },
+      metadata: { app: "cria", user_id: contaId, plan, ...agencyMeta, ...partnerMeta, ...selfSubMark, ...metaPerfil, ...campanhaMeta, ...testeMeta },
       subscription_data: {
-        metadata: { app: "cria", user_id: contaId, plan, ...agencyMeta, ...partnerMeta, ...selfSubMark, ...metaPerfil, ...campanhaMeta },
+        metadata: { app: "cria", user_id: contaId, plan, ...agencyMeta, ...partnerMeta, ...selfSubMark, ...metaPerfil, ...campanhaMeta, ...testeMeta },
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
     };
+    if (testeCartao) {
+      // Cartão na hora, R$ 0 hoje; no 8º dia o Stripe cobra sozinho.
+      sessionParams.payment_method_collection = "always";
+      sessionParams.subscription_data!.trial_period_days = 7;
+    }
     if (campanha) {
       // Cartão na hora: no fim do grátis o Stripe cobra sozinho.
       sessionParams.payment_method_collection = "always";

@@ -1,6 +1,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { enviarEmail, REMETENTE_PESSOAL, RESPOSTAS_PARA } from "../_shared/enviar-email.ts";
 import { registrarErro, mensagemDe } from "../_shared/log.ts";
+import Stripe from "npm:stripe@14";
+import { emailTesteD5, emailTesteD6, PRECO_TABELA } from "../_shared/emails-assinatura.ts";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    E-MAILS DO CICLO DE VIDA (pente fino 23/09/2026)
@@ -48,7 +50,7 @@ Deno.serve(async (req) => {
     const dayMs = 86400000;
     const now = Date.now();
     const iso = (ms: number) => new Date(ms).toISOString();
-    const enviados = { boas_vindas: 0, trial_d2: 0, trial_d0: 0, aprovacao_parada: 0 };
+    const enviados = { boas_vindas: 0, trial_d2: 0, trial_d0: 0, teste_d5: 0, teste_d6: 0, aprovacao_parada: 0 };
 
     // Já mandados: um Set "user:tipo:ref" pra não repetir.
     const { data: jaRows } = await svc.from("emails_ciclo").select("user_id, tipo, ref").gte("sent_at", iso(now - 40 * dayMs));
@@ -100,6 +102,17 @@ Deno.serve(async (req) => {
             ],
             botao: { texto: "Ver minha fila", url: `${APP}/socialmidia/demandas` },
           }
+          : !p.trial_ends_at && p.subscription_status !== "active"
+          /* Criador do cadastro novo (03/11/2026): ainda não escolheu o plano,
+             então o app abre na tela de planos. O e-mail leva direto pra lá. */
+          ? {
+            assunto: "Seu Cria está quase pronto: falta escolher o plano",
+            paragrafos: [
+              "Sua conta está criada. Pra abrir o Cria, escolha o plano e comece os 7 dias grátis: você só paga no 8º dia, e a gente avisa por e-mail 2 dias antes e na véspera.",
+              "Dá pra pagar com cartão, Apple Pay ou Google Pay, e cancelar quando quiser, em 2 cliques.",
+            ],
+            botao: { texto: "Começar meus 7 dias grátis", url: `${APP}/app/assinar` },
+          }
           : {
             assunto: "Bem-vindo ao Cria: comece pelas ideias",
             paragrafos: [
@@ -146,6 +159,62 @@ Deno.serve(async (req) => {
           botao: { texto: "Retomar meu Cria", url: `${APP}/app/assinar` },
         });
         if (ok) { enviados.trial_d0 += 1; await marcar(p.id, "trial_d0", ref); }
+      }
+    }
+
+    // ── 3b. TESTE COM CARTÃO: 5º dia (faltam 2) e véspera (03/11/2026) ──
+    /* Quem está no teste da assinatura tem assinatura_teste_ate (gravado pelo
+       stripe-webhook). Dias que faltam contados por calendário de Brasília:
+       2 = 5º dia, 1 = véspera. Rodar duas vezes no dia não repete (emails_ciclo).
+       Valor e cartão vêm do Stripe; se ele não responder, vai o preço de tabela
+       e o e-mail sai sem a linha do cartão. */
+    {
+      const { data: emTeste, error: tErr } = await svc.from("profiles")
+        .select("id, name, plan, stripe_subscription_id, assinatura_teste_ate, perfil_de")
+        .not("assinatura_teste_ate", "is", null)
+        .gt("assinatura_teste_ate", iso(now))
+        .lte("assinatura_teste_ate", iso(now + 3 * dayMs));
+      if (tErr) throw new Error("teste_cartao: " + tErr.message);
+      const diaBR = (ms: number) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date(ms));
+      const hojeBR = Date.parse(diaBR(now));
+      const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+      const stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2024-06-20", httpClient: Stripe.createFetchHttpClient() }) : null;
+      type Teste = { id: string; name: string | null; plan: string | null; stripe_subscription_id: string | null; assinatura_teste_ate: string; perfil_de: string | null };
+      for (const t of await comEmail((emTeste ?? []) as Teste[])) {
+        if (!t.email || t.perfil_de) continue;
+        const fimMs = new Date(t.assinatura_teste_ate).getTime();
+        const faltam = Math.round((Date.parse(diaBR(fimMs)) - hojeBR) / dayMs);
+        const tipo = faltam === 2 ? "teste_d5" : faltam === 1 ? "teste_d6" : null;
+        const ref = t.assinatura_teste_ate.slice(0, 10);
+        if (!tipo || ja.has(`${t.id}:${tipo}:${ref}`)) continue;
+        // Valor da próxima cobrança (com desconto, se tiver) e final do cartão.
+        const plano = t.plan ?? "pro";
+        let valor = PRECO_TABELA[plano] ?? PRECO_TABELA.pro;
+        let cartao: string | null = null;
+        if (stripe && t.stripe_subscription_id) {
+          try {
+            const prox = await stripe.invoices.retrieveUpcoming({ subscription: t.stripe_subscription_id });
+            if (typeof prox.amount_due === "number") valor = prox.amount_due;
+            const sub = await stripe.subscriptions.retrieve(t.stripe_subscription_id, { expand: ["default_payment_method"] });
+            const pm = sub.default_payment_method as { card?: { last4?: string } } | null;
+            cartao = pm?.card?.last4 ?? null;
+          } catch (e) { console.warn("[lifecycle] stripe teste", t.id, mensagemDe(e)); }
+        }
+        const cobranca = { plano, valorCentavos: valor, cartaoFinal: cartao, cobrancaEm: new Date(fimMs) };
+        let conteudo;
+        if (tipo === "teste_d5") {
+          const desde = iso(now - 8 * dayMs);
+          const [ideias, cal, rot] = await Promise.all([
+            svc.from("ideas").select("id", { count: "exact", head: true }).eq("user_id", t.id).gte("created_at", desde),
+            svc.from("posts").select("id", { count: "exact", head: true }).eq("user_id", t.id).is("deleted_at", null).not("scheduled_date", "is", null),
+            svc.from("posts").select("id", { count: "exact", head: true }).eq("user_id", t.id).is("deleted_at", null).not("script", "is", null).neq("script", ""),
+          ]);
+          conteudo = emailTesteD5(t.name, cobranca, { ideias: ideias.count ?? 0, postsCalendario: cal.count ?? 0, roteiros: rot.count ?? 0 }, APP);
+        } else {
+          conteudo = emailTesteD6(t.name, cobranca, APP);
+        }
+        const ok = await enviarEmail(svc, { para: t.email, etiqueta: tipo, de: REMETENTE_PESSOAL(), responderPara: RESPOSTAS_PARA(), ...conteudo });
+        if (ok) { enviados[tipo] += 1; await marcar(t.id, tipo, ref); }
       }
     }
 

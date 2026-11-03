@@ -121,7 +121,7 @@ Guarde a comparação mensal pro relatório e pra tendência longa. A decisão d
 E se o cliente cobra número toda semana, o combinado precisa estar claro desde o começo, junto com o fluxo de [aprovação de post com o cliente](/blog/aprovacao-de-post-com-cliente). Relatório é ritual de mês. Ajuste é conversa de semana.
 
 :::cria Como isso funciona no CRIA
-Dentro do CRIA você conecta o Instagram e vê os **insights** ao lado do conteúdo que gerou cada número, então na leitura semanal você não fica pulando entre o painel e a grade tentando lembrar qual post era qual. Está nos planos do criador, a partir de **R$ 19,90 por mês**, com 7 dias grátis e sem cartão.
+Dentro do CRIA você conecta o Instagram e vê os **insights** ao lado do conteúdo que gerou cada número, então na leitura semanal você não fica pulando entre o painel e a grade tentando lembrar qual post era qual. Está nos planos do criador, a partir de **R$ 19,90 por mês**, com 7 dias grátis.
 
 Pra quem atende cliente, o **relatório white-label** monta o fechamento com a sua marca, sem você montar slide do zero todo mês.
 

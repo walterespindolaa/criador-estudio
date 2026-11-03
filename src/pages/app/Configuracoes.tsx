@@ -107,7 +107,11 @@ const Configuracoes = () => {
   const profile = (ehMeuPerfil ? perfilAtivo : perfilSessao) as typeof perfilSessao;
   const updateProfile = (ehMeuPerfil ? atualizarAtivo : updateSessao) as typeof updateSessao;
   const verPerfil = !isManaging || ehMeuPerfil;
-  const [aba, setAba] = useState<string>(verPerfil ? "perfil" : "pilares");
+  // ?aba=assinatura abre direto na aba (link dos e-mails do teste, 03/11/2026).
+  const [aba, setAba] = useState<string>(() => {
+    const pedida = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("aba") : null;
+    return pedida || (verPerfil ? "perfil" : "pilares");
+  });
   // Celular: a pílula ativa sempre à vista (rola a fileira até ela).
   useEffect(() => {
     if (typeof window === "undefined" || window.innerWidth >= 768) return;
@@ -884,6 +888,16 @@ const Configuracoes = () => {
                     <p className="text-sm text-muted-foreground font-body">
                       Gerencie seu método de pagamento, baixe recibos, troque de plano ou cancele a qualquer momento no portal do Stripe.
                     </p>
+                    {(() => {
+                      const ate = (profile as { assinatura_teste_ate?: string | null } | null)?.assinatura_teste_ate;
+                      if (!ate || new Date(ate).getTime() <= Date.now()) return null;
+                      const dia = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(new Date(ate));
+                      return (
+                        <p className="text-sm font-body text-foreground rounded-lg bg-primary/10 px-3 py-2">
+                          Você está no teste grátis. A primeira cobrança é em <b>{dia}</b>; cancelando antes, não cobramos nada.
+                        </p>
+                      );
+                    })()}
                     <Button
                       variant="outline"
                       onClick={openPortal}

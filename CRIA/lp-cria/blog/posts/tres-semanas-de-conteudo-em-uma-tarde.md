@@ -9,7 +9,7 @@ publico: "criador de conteúdo"
 keyword: "como manter constância postando, produzir conteúdo em lote, planejamento de conteúdo"
 destaque: false
 cta_titulo: "Chega na tarde de gravação com a lista pronta"
-cta_texto: "Banco de ideias, calendário e plano semanal nos planos do criador, a partir de R$ 19,90 por mês. Sete dias grátis, sem cartão."
+cta_texto: "Banco de ideias, calendário e plano semanal nos planos do criador, a partir de R$ 19,90 por mês. Sete dias grátis pra testar."
 cta_botao: "Testar 7 dias grátis"
 cta_link: "https://app.criasocialclub.com.br/signup"
 faq:
@@ -119,7 +119,7 @@ No CRIA a parte de decidir mora no **banco de ideias**: você joga a ideia lá q
 
 O **calendário** e o plano semanal mostram os espaços vazios, então você vê quantas peças o lote precisa cobrir e onde sobra espaço pro conteúdo de momento. Na hora de gravar, o **Cria Prompter** segura o texto na tela pra você não perder a abertura.
 
-Os planos do criador começam em **R$ 19,90 por mês** (Essencial), com Pro a R$ 32,90 e Studio a R$ 49,90. Dá pra testar **7 dias grátis, sem cartão**.
+Os planos do criador começam em **R$ 19,90 por mês** (Essencial), com Pro a R$ 32,90 e Studio a R$ 49,90. Dá pra testar **7 dias grátis**.
 :::
 
 :::checklist Checklist da tarde de lote

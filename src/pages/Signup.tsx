@@ -126,7 +126,9 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
     setLoading(true);
     const intencao = accountType === "manager" ? { account_intent: "manager" }
       : accountType === "parceiro" ? { account_intent: "parceiro", parceiro_role: parceiroRole }
-      : {};
+      /* Criador testa 7 dias COM CARTÃO (03/11/2026): sem esta marca o banco dá
+         o teste antigo, sem cartão (que continua valendo pros outros tipos). */
+      : { teste_com_cartao: "1" };
     /* ORIGEM DO CADASTRO (motor de tráfego, 21/10/2026). A LP cola a UTM no
        link de "testar" (track.js). Aqui ela vai junto pros metadados da conta,
        e o admin consegue dizer quantos cadastros cada campanha e o link da bio
@@ -401,7 +403,7 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
             <p className="-mt-1 hidden text-center text-[12.5px] text-[#5B574E] lg:block">
               {accountType === "parceiro" ? "Sem cartão. Quem paga o Cria é a agência."
                 : accountType === "manager" ? "Sem cartão. Você só paga os módulos que ligar."
-                : "Sem compromisso. Cancela em 2 cliques."}
+                : "Você só paga no 8º dia. Cancela em 2 cliques."}
             </p>
           </form>
         )}

@@ -8,7 +8,7 @@ trilha: oficio-criador
 publico: "criador de conteúdo"
 keyword: "roteiro para reels, como gravar sem decorar, teleprompter para reels"
 cta_titulo: "Grave lendo, sem parecer que está lendo"
-cta_texto: "No CRIA, o roteiro que você escreveu vira teleprompter na hora de gravar, com controle por voz. Planos do criador a partir de R$ 19,90 por mês, com 7 dias grátis e sem cartão."
+cta_texto: "No CRIA, o roteiro que você escreveu vira teleprompter na hora de gravar, com controle por voz. Planos do criador a partir de R$ 19,90 por mês, com 7 dias grátis."
 cta_botao: "Testar o CRIA por 7 dias"
 cta_link: "https://app.criasocialclub.com.br/signup"
 faq:
@@ -115,7 +115,7 @@ No CRIA, o roteiro que você escreveu não fica num aplicativo e o teleprompter 
 
 Antes disso, a **escrita guiada** ajuda a montar o roteiro em blocos (gancho, contexto, conteúdo e fechamento) partindo das ideias que já estão no seu banco, em vez de uma folha em branco.
 
-Está nos planos do criador, a partir de **R$ 19,90 por mês**, com 7 dias grátis e sem cartão.
+Está nos planos do criador, a partir de **R$ 19,90 por mês**, com 7 dias grátis.
 :::
 
 :::checklist Checklist antes de apertar o rec

@@ -8,7 +8,7 @@ trilha: situacao-ferramenta
 publico: "criador de conteúdo"
 keyword: "banco de ideias de conteúdo, não sei o que postar, ideias de conteúdo instagram"
 cta_titulo: "Guarda a próxima ideia num lugar que você acha depois"
-cta_texto: "No CRIA, cada ideia entra no banco com tema, formato e gancho, e vira roteiro e post sem trocar de aplicativo. Sete dias grátis, sem cartão."
+cta_texto: "No CRIA, cada ideia entra no banco com tema, formato e gancho, e vira roteiro e post sem trocar de aplicativo. Sete dias grátis pra testar."
 cta_botao: "Testar o CRIA por 7 dias"
 faq:
   - "Quantas ideias eu preciso ter guardadas?||Trabalhe com quatro semanas de folga. Se você posta três vezes por semana, isso é doze ideias em pé no banco. Abaixo disso você grava sob pressão, e conteúdo gravado sob pressão sai genérico."
@@ -101,7 +101,7 @@ No CRIA a ideia entra no **banco de ideias** com tema, formato e gancho, e conti
 
 Na hora de gravar, o **Cria Prompter** mostra o roteiro em teleprompter, com controle por voz, então você lê olhando pra câmera em vez de decorar. E quando a inspiração falta, a **escrita guiada** parte do que já está no seu banco, não de uma folha em branco.
 
-Planos do criador a partir de **R$ 19,90 por mês**, com 7 dias grátis e sem cartão.
+Planos do criador a partir de **R$ 19,90 por mês**, com 7 dias grátis.
 :::
 
 :::checklist Checklist do banco saudável

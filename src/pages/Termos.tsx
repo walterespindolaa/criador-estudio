@@ -138,9 +138,12 @@ export default function Termos() {
               6. Planos, pagamento e cancelamento
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              O cria oferece um período de teste gratuito de 7 dias, durante o
-              qual você tem acesso a todas as funcionalidades. Após o período de
-              teste, o uso continuado exige assinatura paga.
+              O cria oferece ao criador de conteúdo um período de teste gratuito
+              de 7 dias no plano escolhido. O meio de pagamento é informado no
+              início do teste e a primeira cobrança acontece ao fim dele, salvo
+              cancelamento antes disso; avisamos por e-mail dois dias antes e na
+              véspera. Após o período de teste, o uso continuado exige assinatura
+              paga.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
               Atualmente oferecemos dois planos mensais (cria Pro e cria Studio),

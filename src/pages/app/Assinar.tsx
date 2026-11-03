@@ -64,6 +64,17 @@ export default function Assinar() {
   const isSelfSubscribeFlow = !ehMeuPerfil && !!selfSubscribePlan && (selfSubscribePlan === "pro" || selfSubscribePlan === "studio");
   const prefilledRef = useRef(false);
 
+  /* TESTE DE 7 DIAS COM CARTÃO (03/11/2026, mockup aprovado). Mesma regra do
+     create-checkout: criador que nunca testou nem assinou. Quem já usou o teste
+     (antigo, sem cartão, ou o novo) vê "Assinar", sem a faixa. Cupom de
+     campanha válido tem o grátis dele e passa na frente. */
+  const pf = profile as (typeof profile & { teste_cartao_inicio?: string | null }) | null;
+  const podeTestar = !ehMeuPerfil && !isSelfSubscribeFlow && !souParceiro && !!pf
+    && pf.account_type !== "manager" && !pf.trial_ends_at && !pf.teste_cartao_inicio
+    && !pf.stripe_subscription_id && !(campanhaInfo && !campanhaInfo.motivo);
+  const dataCobranca = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" })
+    .format(new Date(Date.now() + 7 * 86400000));
+
   /* De onde vem o código, em ordem de prioridade:
        1. o fluxo self-subscribe (a gestora assinando pelo cliente);
        2. o link /p/CODIGO que a parceira compartilhou, guardado no navegador.
@@ -299,7 +310,17 @@ export default function Assinar() {
         </div>
       )}
 
-      {isExpired && (
+      {podeTestar && (
+        <div className="w-full max-w-6xl mb-2 rounded-2xl border border-primary/30 bg-primary/10 px-5 py-4 flex flex-wrap items-center gap-x-5 gap-y-1 text-left">
+          <p className="font-display text-2xl font-extrabold text-primary">7 dias grátis</p>
+          <p className="text-sm font-body text-foreground flex-1 min-w-[240px] leading-relaxed">
+            <b>Hoje você não paga nada.</b> A primeira cobrança é em <b>{dataCobranca}</b>. A gente avisa por
+            e-mail 2 dias antes e na véspera, e você cancela quando quiser, em 2 cliques.
+          </p>
+        </div>
+      )}
+
+      {isExpired && !podeTestar && (
         <div className="mb-8 text-center">
           <div className="inline-flex items-center gap-2 bg-red-500/10 text-red-500 border border-red-500/20 rounded-full px-4 py-1.5 text-sm font-body font-medium mb-3">
             <Shield className="h-4 w-4" />
@@ -390,6 +411,9 @@ export default function Assinar() {
                   </span>
                   <span className="text-muted-foreground font-body mb-1">/mês</span>
                 </div>
+                {podeTestar && (
+                  <p className="text-xs text-muted-foreground font-body mt-1">a partir de {dataCobranca}</p>
+                )}
               </div>
 
               <ul className="space-y-3 mb-8 flex-1">
@@ -425,7 +449,9 @@ export default function Assinar() {
                       ? `Subir pro ${plan.name.replace("cria ", "")}`
                       : abaixo
                         ? `Voltar pro ${plan.name.replace("cria ", "")}`
-                        : `Assinar ${plan.name}`}
+                        : podeTestar
+                          ? "Começar 7 dias grátis"
+                          : `Assinar ${plan.name}`}
               </Button>
             </div>
           );
@@ -531,7 +557,7 @@ export default function Assinar() {
           <span className="font-display font-bold"> O cria existe pra isso não acontecer de novo.</span>
         </p>
         <p className="text-xs text-muted-foreground font-body mt-4">
-          Pagamento seguro via Stripe · Troca de plano na hora · Sem fidelidade
+          Pagamento seguro via Stripe{podeTestar ? " · Cartão, Apple Pay ou Google Pay" : ""} · Troca de plano na hora · Sem fidelidade
         </p>
       </div>
       </div>
