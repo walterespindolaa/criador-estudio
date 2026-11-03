@@ -225,23 +225,40 @@ details.fx .corpo li::before{content:"✓ ";color:var(--verde);font-weight:900}
 .vs{text-align:left}
 
 .faixa-wrap{overflow:hidden;padding:8px 0;margin:-8px 0}
+
+/* topo novo no celular (03/11/2026) */
+.so-desk{display:none!important}
+@media(min-width:860px){.so-desk{display:inline-flex!important}img.so-desk{display:block!important}.so-desk-b{display:block}}
+@media(max-width:859px){
+.so-desk-b{display:none!important}
+.hero h1{font-size:clamp(33px,9.4vw,44px);margin:10px 0 0;line-height:1.03}
+.hero p.sub{font-size:15.5px;margin-top:10px}
+.hero .cta{margin-top:14px}
+.hero .grid{gap:18px;padding-top:0}
+.hero .shot{padding:4px 2px 6px}
+.hero .quadro{transform:none;box-shadow:5px 5px 0 var(--ink)}
+.hero .chips{margin-top:20px}
+}
 </style></head><body>
 
+<!-- TOPO NO CELULAR (03/11/2026, mockup aprovado, gancho A): botão e print na
+     primeira tela; frase manuscrita e chips saem do topo no celular. -->
 <section id="topo" class="hero">
   <div class="blob" style="width:360px;height:320px;background:var(--rosa);right:-150px;top:-80px"></div>
   <div class="blob" style="width:240px;height:220px;background:var(--amarelo);left:-130px;bottom:30px"></div>
   <div class="wrap">
-    <header class="top"><img src="/lp/img/logo-cria-white.webp" alt="Cria"><nav><a href="https://criasocialclub.com.br/social-media">Ver o site</a><a class="en" href="https://app.criasocialclub.com.br/login">Entrar</a></nav></header>
+    <header class="top"><img src="/lp/img/logo-cria-white.webp" alt="Cria"><nav><a class="so-desk" href="https://criasocialclub.com.br/social-media">Ver o site</a><a class="en" href="https://app.criasocialclub.com.br/login">Entrar</a></nav></header>
     <div class="grid">
       <div>
         <span class="kick"><i></i>Pra quem cuida de clientes</span>
         <div class="v on" data-h="gratis"><h1>Seus clientes numa aba só. <em>Grátis pra sempre.</em></h1></div><div class="v" data-h="post"><h1>Do ajuste ao feed, <em>sem sair do Cria.</em></h1></div><div class="v" data-h="recibo"><h1>Quanto sobra <em>de cada cliente?</em></h1></div><div class="v" data-h="gravacao"><h1>Tarde de gravação, <em>nenhum take esquecido.</em></h1></div>
-        <span class="sc lema">finalmente, tudo no lugar!</span>
-        <div class="v on" data-h="gratis"><p class="sub">Não é teste de 7 dias. Carteira com até 3 clientes, agenda, central de aprovações e um Início que diz o que fazer primeiro no dia.</p></div><div class="v" data-h="post"><p class="sub">O cliente abre o link, toca no ponto exato da arte e escreve o que quer. Você ajusta, ele aprova e o post sai no Instagram na data e hora marcadas.</p></div><div class="v" data-h="recibo"><p class="sub">O cliente paga R$1.200. Depois da designer, do editor e do imposto, sobram R$540. O Cria Caixa faz essa conta pra cada cliente e mostra qual está dando pouca margem.</p></div><div class="v" data-h="gravacao"><p class="sub">O cliente pede o horário pelo link e o roteiro já chega aprovado. Você sai com a tarde montada: rota, ordem das cenas e teleprompter no celular.</p></div>
-        <div class="chips"><span>Carteira de clientes</span><span>Aprovação por link</span><span>Agenda da semana</span><span>Financeiro por cliente</span></div>
-        <div class="cta"><a class="btn" href="https://app.criasocialclub.com.br/signup?tipo=manager">Criar conta grátis</a><span class="micro"><b>Grátis pra sempre, sem cartão.</b> Módulos a partir de R$19,90, só se precisar.</span></div>
+        <span class="sc lema so-desk-b">finalmente, tudo no lugar!</span>
+        <div class="v on" data-h="gratis"><p class="sub">Agenda, aprovação por link e um Início que diz o que fazer primeiro no dia. Não é teste de 7 dias.</p></div><div class="v" data-h="post"><p class="sub">O cliente abre o link, toca no ponto exato da arte e escreve o que quer. Você ajusta, ele aprova e o post sai no Instagram na data e hora marcadas.</p></div><div class="v" data-h="recibo"><p class="sub">O cliente paga R$1.200. Depois da designer, do editor e do imposto, sobram R$540. O Cria Caixa faz essa conta pra cada cliente e mostra qual está dando pouca margem.</p></div><div class="v" data-h="gravacao"><p class="sub">O cliente pede o horário pelo link e o roteiro já chega aprovado. Você sai com a tarde montada: rota, ordem das cenas e teleprompter no celular.</p></div>
+                <div class="cta"><a class="btn" href="https://app.criasocialclub.com.br/signup?tipo=manager">Criar conta grátis</a><span class="micro"><b>Grátis pra sempre</b> · sem cartão · até 3 clientes</span></div>
       </div>
-      <div class="shot"><img class="sticker" src="/lp/img/selo-social-club-verde.webp" alt="" style="right:-4px;bottom:-6px;transform:rotate(12deg)"><div class="v on" data-h="gratis"><span class="etq">O Início da conta grátis</span><a class="quadro" href="/lp/img/home-copiloto.webp" data-zoom><img src="/lp/img/home-copiloto.webp" alt=""></a></div><div class="v" data-h="post"><span class="etq">O link que o cliente abre</span><a class="quadro cel" href="/lp/img/portal-mobile.webp" data-zoom><img src="/lp/img/portal-mobile.webp" alt=""></a></div><div class="v" data-h="recibo"><span class="etq">Cria Caixa</span><a class="quadro" href="/lp/img/caixa-visao.webp" data-zoom><img src="/lp/img/caixa-visao.webp" alt=""></a></div><div class="v" data-h="gravacao"><span class="etq">Cria Captação</span><a class="quadro" href="/lp/img/captacao.webp" data-zoom><img src="/lp/img/captacao.webp" alt=""></a></div></div>
+      <div class="shot"><img class="sticker so-desk" src="/lp/img/selo-social-club-verde.webp" alt="" style="right:-4px;bottom:-6px;transform:rotate(12deg)"><div class="v on" data-h="gratis"><span class="etq">O Início da conta grátis</span><a class="quadro" href="/lp/img/home-copiloto.webp" data-zoom><img src="/lp/img/home-copiloto.webp" alt=""></a></div><div class="v" data-h="post"><span class="etq">O link que o cliente abre</span><a class="quadro cel" href="/lp/img/portal-mobile.webp" data-zoom><img src="/lp/img/portal-mobile.webp" alt=""></a></div><div class="v" data-h="recibo"><span class="etq">Cria Caixa</span><a class="quadro" href="/lp/img/caixa-visao.webp" data-zoom><img src="/lp/img/caixa-visao.webp" alt=""></a></div><div class="v" data-h="gravacao"><span class="etq">Cria Captação</span><a class="quadro" href="/lp/img/captacao.webp" data-zoom><img src="/lp/img/captacao.webp" alt=""></a></div>
+        <div class="chips"><span>Carteira de clientes</span><span>Aprovação por link</span><span>Agenda da semana</span><span>Financeiro por cliente</span></div>
+      </div>
     </div>
   </div>
 </section>
