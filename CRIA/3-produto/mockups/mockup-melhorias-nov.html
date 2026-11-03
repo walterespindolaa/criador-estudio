@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup · Melhorias de novembro</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--lar:#EA4918;--lar2:#FDE7DC;--verde:#01A652;--verde2:#E3F6EA;--ama:#FFCF03;--ama2:#FFF4D6;--azul:#0061EE;--azul2:#EAF0FE;--rosa:#FF77B9;--bg:#FDFBF5;--ink:#0A0A0A;--mut:#6B675F;--borda:#E9E4D8;--areia:#F6F3EC}
+*{box-sizing:border-box;margin:0}
+body{font-family:Roboto,sans-serif;background:var(--bg);color:var(--ink);padding:24px 16px 80px}
+.wrap{max-width:1120px;margin:0 auto}
+h1{font-family:'Baloo 2';font-size:32px;line-height:1}
+h2{font-family:'Baloo 2';font-size:23px;margin:40px 0 4px;display:flex;gap:10px;align-items:center}
+h2 .n{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--lar);color:#fff;font-size:15px}
+.nota{color:var(--mut);font-size:14px;margin:6px 0 14px;max-width:86ch;line-height:1.5}
+.lado{display:grid;grid-template-columns:330px 1fr;gap:18px;align-items:start}
+.cel{width:330px;border-radius:36px;background:#fff;border:8px solid #1b1b1b;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.12)}
+.cel .sb{height:28px;display:flex;justify-content:space-between;align-items:center;padding:0 22px;font:600 12px Roboto;background:var(--bg)}
+.cel .in{padding:12px 14px 18px;background:var(--bg);min-height:560px}
+.card{background:#fff;border:1px solid var(--borda);border-radius:18px;padding:12px 14px;box-shadow:0 8px 30px rgba(27,26,24,.05)}
+.t{font-family:'Baloo 2';font-weight:700;font-size:16px;line-height:1.15}
+.mini{font-size:12px;color:var(--mut);line-height:1.4}
+.tag{display:inline-flex;gap:4px;align-items:center;border-radius:99px;padding:2px 9px;font:700 10.5px Roboto}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:14px;padding:9px 14px;font:700 13px Roboto;border:1px solid var(--borda);background:#fff;color:var(--ink)}
+.p{background:var(--lar);color:#fff;border-color:var(--lar)}
+.v{background:var(--verde);color:#fff;border-color:var(--verde)}
+.campo{border:1px solid var(--borda);border-radius:14px;padding:10px 12px;font-size:13.5px;line-height:1.45;background:#fff}
+.lbl{font:700 11px Roboto;color:var(--mut);letter-spacing:.04em;text-transform:uppercase;margin:12px 0 5px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.bar{height:8px;border-radius:99px;background:var(--areia);overflow:hidden;margin-top:8px}.bar i{display:block;height:100%}
+.onda{display:flex;align-items:center;gap:2px;height:26px}.onda i{display:block;width:3px;border-radius:2px;background:var(--lar)}
+.opt{display:flex;align-items:center;gap:8px;border:1px solid var(--borda);border-radius:12px;padding:8px 10px;font-size:13px;background:#fff;margin-top:6px}
+.chk{width:16px;height:16px;border-radius:5px;border:1.5px solid #b9b2a5;display:inline-block;flex:none}
+.chk.on{background:var(--lar);border-color:var(--lar)}
+.sw{width:34px;height:20px;border-radius:99px;background:#d9d3c8;position:relative;flex:none}.sw::after{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff}
+.sw.on{background:var(--lar)}.sw.on::after{left:17px}
+@media(max-width:900px){.lado,.g3,.g2{grid-template-columns:1fr}.cel{width:100%}}
+</style></head><body><div class="wrap">
+<h1>Melhorias de novembro</h1>
+<p class="nota">Mockup pra aprovar antes do código. Dados fictícios. São cinco telas: ajuste por áudio no portal, aviso de aprovação parada, ajuste que vira tarefa, painel de créditos das IAs e a publicação no TikTok e no YouTube.</p>
+
+<!-- 1. AJUSTE POR ÁUDIO -->
+<h2><span class="n">1</span>Ajuste por áudio no portal do cliente</h2>
+<p class="nota">No "Ajuste", entra um botão de microfone ao lado do campo de texto. O cliente fala, o texto aparece no campo pra ele conferir e editar, e o áudio vai junto pra social mídia ouvir se quiser. Usa a mesma transcrição do onboarding (Deepgram), com limite por link pra ninguém abusar.</p>
+<div class="lado">
+  <div class="cel"><div class="sb"><span>9:41</span><span>▂▄▆ ▮</span></div><div class="in">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="height:170px;background:linear-gradient(150deg,#F3D9B8,#E9B98A);position:relative">
+        <div style="position:absolute;left:14px;top:14px;font:800 24px/0.95 'Baloo 2';color:#4A2A16">Coado<br>em 3 passos ☕</div>
+        <div style="position:absolute;left:70px;top:132px;width:24px;height:24px;border-radius:50%;background:var(--lar);color:#fff;display:grid;place-items:center;font:800 11px 'Baloo 2';box-shadow:0 0 0 2px #fff">1</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:10px">
+      <div style="display:flex;justify-content:space-between;gap:8px"><div><div style="font:700 13px Roboto">Prefere apontar?</div><div class="mini">Marque na arte exatamente o que mudar.</div></div><span class="btn" style="padding:6px 10px;font-size:11.5px">📍 Apontar na arte</span></div>
+    </div>
+    <div class="lbl">O que você quer ajustar?</div>
+    <div class="campo" style="min-height:92px">Troca o preço pra doze reais e deixa o nome do café maior, tá pequeno no celular<span style="display:inline-block;width:1.5px;height:14px;background:var(--ink);vertical-align:-2px"></span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+      <div style="width:44px;height:44px;border-radius:50%;background:var(--lar);color:#fff;display:grid;place-items:center;font-size:18px;box-shadow:0 0 0 6px rgba(234,73,24,.15)">■</div>
+      <div><div class="onda"><i style="height:8px"></i><i style="height:18px"></i><i style="height:12px"></i><i style="height:24px"></i><i style="height:10px"></i><i style="height:20px"></i><i style="height:14px"></i><i style="height:22px"></i><i style="height:9px"></i><i style="height:16px"></i><i style="height:6px"></i></div><div class="mini">Gravando 0:07 · toque pra parar</div></div>
+    </div>
+    <div class="card" style="margin-top:10px;display:flex;align-items:center;gap:8px;padding:8px 12px"><span style="color:var(--lar)">▶</span><span class="mini" style="flex:1">Seu áudio · 0:07 vai junto</span><span class="mini">apagar</span></div>
+    <div style="display:flex;gap:8px;margin-top:12px"><span class="btn p" style="flex:1;height:46px">Enviar ajuste</span><span class="btn" style="height:46px">Cancelar</span></div>
+  </div></div>
+  <div>
+    <div class="card"><div class="t">Como chega pra social mídia</div>
+      <p class="mini" style="margin-top:6px">No card do post, o ajuste aparece com o texto e o player do áudio. O texto é o que vira tarefa (tela 3).</p>
+      <div class="campo" style="margin-top:10px"><b>Café Aurora</b> pediu ajuste em "Coado em 3 passos"<br><span class="mini">📍 1 ponto na arte · 🎙 áudio de 0:07</span><br>"Troca o preço pra doze reais e deixa o nome do café maior, tá pequeno no celular"</div>
+    </div>
+    <div class="card" style="margin-top:12px"><div class="t">Regras</div>
+      <p class="mini" style="margin-top:6px">Até 2 minutos por áudio. Até 10 áudios por link por dia. Sem internet boa, o áudio sobe depois e o texto fica em branco pra ela digitar. A transcrição nunca envia sozinha: ela confere e toca em Enviar.</p></div>
+  </div>
+</div>
+
+<!-- 2. APROVAÇÃO PARADA -->
+<h2><span class="n">2</span>Aviso de aprovação parada</h2>
+<p class="nota">Depois de 2 dias com post esperando o cliente, a social mídia recebe um aviso no sino e um card na Home com a mensagem de WhatsApp pronta e o link do portal. Ela só toca em "Abrir WhatsApp". O cliente não recebe nada automático por enquanto (isso é a tela do WhatsApp oficial, item 8).</p>
+<div class="g2">
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:8px"><span class="tag" style="background:var(--ama2);color:#8a5a0c">● parado há 2 dias</span><span class="mini" style="margin-left:auto">Home · Hoje</span></div>
+    <div class="t" style="margin-top:8px">Café Aurora tem 3 posts esperando aprovação</div>
+    <p class="mini">O primeiro sai sexta, 7 de novembro.</p>
+    <div class="lbl">Mensagem pronta</div>
+    <div class="campo">Oi, Ana! Tudo bem? Os posts da semana estão te esperando aqui, leva 2 minutinhos: app.criasocialclub.com.br/aprovar/k3f9… O primeiro sai sexta. Qualquer ajuste, pode marcar direto na arte ou mandar áudio por lá 😊</div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><span class="btn v">Abrir WhatsApp</span><span class="btn">Copiar</span><span class="btn" style="margin-left:auto">Lembrar amanhã</span></div>
+  </div>
+  <div class="card">
+    <div class="t">No sino</div>
+    <div class="campo" style="margin-top:10px;display:flex;gap:10px"><span>🔔</span><div><b>3 posts parados no Café Aurora</b><div class="mini">Esperando aprovação há 2 dias. Toque pra mandar o lembrete.</div></div></div>
+    <p class="mini" style="margin-top:10px">Configurável em Ajustes: 1, 2 ou 3 dias. Um aviso por cliente por dia, nunca um por post.</p>
+  </div>
+</div>
+
+<!-- 3. AJUSTE VIRA TAREFA -->
+<h2><span class="n">3</span>Ajuste do cliente vira tarefa</h2>
+<p class="nota">Quando o cliente envia um ajuste, nasce uma tarefa pra quem é responsável pelo post (ou pro designer, se o post está com um parceiro), com prazo de 1 dia útil, o texto, os pontos da arte e o áudio. Fechar a tarefa não aprova nada: o post volta pro cliente quando ela reenviar.</p>
+<div class="card" style="max-width:560px">
+  <div style="display:flex;gap:8px;align-items:center"><span class="tag" style="background:var(--lar2);color:#B4441A">↺ Ajuste do cliente</span><span class="mini" style="margin-left:auto">prazo: amanhã</span></div>
+  <div class="t" style="margin-top:8px">Ajustar "Coado em 3 passos" · Café Aurora</div>
+  <ol class="mini" style="margin:8px 0 0 18px;color:var(--ink);font-size:13px;line-height:1.6"><li>📍 Ponto 1: troca o preço pra R$ 12</li><li>🎙 "deixa o nome do café maior, tá pequeno no celular"</li></ol>
+  <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><div style="width:26px;height:26px;border-radius:50%;background:#7C90F0;color:#fff;display:grid;place-items:center;font:700 11px Roboto">AG</div><span class="mini">Agatha (designer) · Cria Parceiros</span><span class="btn" style="margin-left:auto;padding:6px 10px">Abrir o post</span></div>
+</div>
+
+<!-- 4. CRÉDITOS DAS IAs -->
+<h2><span class="n">4</span>Painel de créditos das IAs (Admin)</h2>
+<p class="nota">Nova aba "Créditos" no Admin. Onde o fornecedor tem saldo na API, o Cria lê o saldo de verdade 1 vez por dia. Onde não tem, o Cria soma o que gastou e compara com o limite que você digita. Abaixo de 20%, chega aviso no sino e por e-mail; abaixo de 10%, a linha fica vermelha. Valores ilustrativos.</p>
+<div class="g3">
+  <div class="card"><div style="display:flex;justify-content:space-between"><div class="t">Deepgram</div><span class="tag" style="background:var(--verde2);color:#0B7A3E">saldo real</span></div><p class="mini">Transcrição de voz</p><div style="font:800 24px 'Baloo 2';margin-top:6px">US$ 162 <span class="mini">de 200</span></div><div class="bar"><i style="width:81%;background:var(--verde)"></i></div></div>
+  <div class="card"><div style="display:flex;justify-content:space-between"><div class="t">ElevenLabs</div><span class="tag" style="background:var(--verde2);color:#0B7A3E">saldo real</span></div><p class="mini">Voz dos vídeos</p><div style="font:800 24px 'Baloo 2';margin-top:6px">18 mil <span class="mini">de 100 mil caracteres</span></div><div class="bar"><i style="width:18%;background:var(--ama)"></i></div><p class="mini" style="color:#8a5a0c;margin-top:6px">Abaixo de 20%: aviso enviado hoje.</p></div>
+  <div class="card"><div style="display:flex;justify-content:space-between"><div class="t">Apify</div><span class="tag" style="background:var(--verde2);color:#0B7A3E">saldo real</span></div><p class="mini">Radar de concorrentes</p><div style="font:800 24px 'Baloo 2';margin-top:6px">US$ 4 <span class="mini">de 49</span></div><div class="bar"><i style="width:8%;background:var(--lar)"></i></div><p class="mini" style="color:#B4441A;margin-top:6px">Abaixo de 10%. <u>Recarregar</u></p></div>
+  <div class="card"><div style="display:flex;justify-content:space-between"><div class="t">Gemini</div><span class="tag" style="background:var(--areia);color:var(--mut)">gasto do Cria</span></div><p class="mini">Texto, roteiro, legenda</p><div style="font:800 24px 'Baloo 2';margin-top:6px">US$ 31 <span class="mini">de limite US$ 80/mês</span></div><div class="bar"><i style="width:61%;background:var(--verde)"></i></div></div>
+  <div class="card"><div style="display:flex;justify-content:space-between"><div class="t">Perplexity</div><span class="tag" style="background:var(--areia);color:var(--mut)">gasto do Cria</span></div><p class="mini">Cria Stories e Tendências</p><div style="font:800 24px 'Baloo 2';margin-top:6px">US$ 9 <span class="mini">de limite US$ 20</span></div><div class="bar"><i style="width:55%;background:var(--verde)"></i></div></div>
+  <div class="card"><div style="display:flex;justify-content:space-between"><div class="t">Higgsfield · TwelveLabs</div><span class="tag" style="background:var(--areia);color:var(--mut)">a confirmar</span></div><p class="mini">Imagem e análise de vídeo</p><p class="mini" style="margin-top:8px">Confiro se têm saldo na API. Se não tiverem, entram como "gasto do Cria".</p></div>
+</div>
+
+<!-- 5. TIKTOK E YOUTUBE -->
+<h2><span class="n">5</span>Publicar no TikTok e no YouTube</h2>
+<p class="nota">No painel de publicar do post, as redes viram abas. O TikTok tem regras fixas de tela (sem privacidade marcada, interações desmarcadas, conteúdo comercial, aviso de consentimento): sem isso a auditoria deles reprova. No YouTube a pessoa escolhe Short ou vídeo normal, e o Cria avisa se o vídeo não bate (horizontal não vira Short).</p>
+<div class="g2">
+  <div class="card">
+    <div style="display:flex;gap:6px;margin-bottom:12px"><span class="tag" style="background:var(--areia);color:var(--mut);padding:6px 12px">Instagram</span><span class="tag" style="background:var(--ink);color:#fff;padding:6px 12px">TikTok</span><span class="tag" style="background:var(--areia);color:var(--mut);padding:6px 12px">YouTube</span></div>
+    <div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;border-radius:50%;background:#4A2A16;color:#F3D9B8;display:grid;place-items:center;font:800 12px 'Baloo 2'">CA</div><div><b style="font-size:13.5px">Café Aurora</b><div class="mini">Vai sair nesta conta do TikTok</div></div></div>
+    <div class="lbl">Texto do post</div><div class="campo">Três passos e seu coado fica de cafeteria ☕ #cafe #coado</div>
+    <div class="lbl">Quem pode ver</div><div class="campo" style="color:var(--mut)">Escolha… ▾ <span class="mini">(Todo mundo · Amigos · Só eu)</span></div>
+    <div class="lbl">Permitir</div>
+    <div class="opt"><span class="chk"></span>Comentários</div><div class="opt"><span class="chk"></span>Dueto</div><div class="opt" style="opacity:.5"><span class="chk"></span>Costura <span class="mini" style="margin-left:auto">desligado no app da conta</span></div>
+    <div class="opt" style="margin-top:12px"><span class="sw"></span>Divulgar conteúdo comercial</div>
+    <p class="mini" style="margin-top:12px">Ao publicar, você concorda com a Confirmação de Uso de Música do TikTok. O TikTok leva alguns minutos pra processar o vídeo.</p>
+    <div style="display:flex;gap:8px;margin-top:12px"><span class="btn p" style="flex:1;opacity:.5">Agendar pra sex, 7/11 · 10:00</span><span class="btn">Publicar agora</span></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;gap:6px;margin-bottom:12px"><span class="tag" style="background:var(--areia);color:var(--mut);padding:6px 12px">Instagram</span><span class="tag" style="background:var(--areia);color:var(--mut);padding:6px 12px">TikTok</span><span class="tag" style="background:var(--ink);color:#fff;padding:6px 12px">YouTube</span></div>
+    <div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;border-radius:50%;background:#c00;color:#fff;display:grid;place-items:center;font:800 12px Roboto">▶</div><div><b style="font-size:13.5px">Café Aurora · canal</b><div class="mini">Vídeo vertical de 0:42</div></div></div>
+    <div class="lbl">Tipo</div>
+    <div style="display:flex;gap:8px"><span class="btn" style="flex:1;border-color:var(--lar);background:var(--lar2);color:#B4441A">Short</span><span class="btn" style="flex:1">Vídeo normal</span></div>
+    <p class="mini" style="margin-top:6px">✓ Vertical e com menos de 3 minutos: sai como Short.</p>
+    <div class="lbl">Título (até 100)</div><div class="campo">Coado em 3 passos: o café de cafeteria em casa</div>
+    <div class="lbl">Descrição</div><div class="campo" style="min-height:52px">Três passos e seu coado fica de cafeteria…</div>
+    <div class="lbl">Visibilidade</div>
+    <div style="display:flex;gap:6px"><span class="btn" style="flex:1;border-color:var(--lar);background:var(--lar2);color:#B4441A">Público</span><span class="btn" style="flex:1">Não listado</span><span class="btn" style="flex:1">Privado</span></div>
+    <div class="lbl">É conteúdo feito para crianças?</div>
+    <div style="display:flex;gap:6px"><span class="btn" style="flex:1">Sim</span><span class="btn" style="flex:1;border-color:var(--lar);background:var(--lar2);color:#B4441A">Não</span></div>
+    <div class="opt" style="margin-top:10px"><span class="chk"></span>Tem cena feita com IA que parece real</div>
+    <div style="display:flex;gap:8px;margin-top:12px"><span class="btn p" style="flex:1">Agendar pra sex, 7/11 · 10:00</span><span class="btn">Publicar agora</span></div>
+  </div>
+</div>
+<div class="card" style="margin-top:12px">
+  <div class="t">Conectar (no cliente, aba Redes)</div>
+  <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+    <div class="campo" style="flex:1;min-width:220px;display:flex;align-items:center;gap:10px"><b>Instagram</b><span class="tag" style="background:var(--verde2);color:#0B7A3E;margin-left:auto">@cafeaurora</span></div>
+    <div class="campo" style="flex:1;min-width:220px;display:flex;align-items:center;gap:10px"><b>TikTok</b><span class="btn p" style="margin-left:auto;padding:6px 12px">Conectar</span></div>
+    <div class="campo" style="flex:1;min-width:220px;display:flex;align-items:center;gap:10px"><b>YouTube</b><span class="btn p" style="margin-left:auto;padding:6px 12px">Conectar</span></div>
+  </div>
+  <p class="mini" style="margin-top:8px">Enquanto o TikTok não aprovar a auditoria do Cria, os posts de lá saem como "só eu" e a conta precisa estar privada. O painel avisa isso com um selo "em análise no TikTok".</p>
+</div>
+</div></body></html>

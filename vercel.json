@@ -5,6 +5,10 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api/redes-oauth",
+      "destination": "https://ecbzfjzoqidowrsfsfih.supabase.co/functions/v1/redes-oauth"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

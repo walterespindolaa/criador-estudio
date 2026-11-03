@@ -164,3 +164,8 @@ project_id = "ecbzfjzoqidowrsfsfih"
     verify_jwt = true
   [functions.transcrever-fala]
     verify_jwt = true
+
+  [functions.redes-oauth]
+    verify_jwt = false
+  [functions.redes-publicar]
+    verify_jwt = false
