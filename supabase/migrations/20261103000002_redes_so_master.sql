@@ -15,7 +15,7 @@ declare
   _p record;
 begin
   if auth.uid() is null then raise exception 'sem sessão'; end if;
-  if not public.is_admin() then raise exception 'Publicação no TikTok e no YouTube ainda está em teste.'; end if;
+  if not public.is_admin() then raise exception 'sem permissão'; end if;
   if _rede not in ('tiktok', 'youtube') then raise exception 'rede inválida'; end if;
   select * into _c from public.conexao_do_post(_post_id, _rede) limit 1;
   select id, title, external_client_id, approval_status, publish_sem_aprovacao_motivo
@@ -66,7 +66,7 @@ declare
   _id uuid;
 begin
   if auth.uid() is null then raise exception 'sem sessão'; end if;
-  if not public.is_admin() then raise exception 'Publicação no TikTok e no YouTube ainda está em teste.'; end if;
+  if not public.is_admin() then raise exception 'sem permissão'; end if;
 
   if not _ligar then
     perform public.conexao_do_post(_post_id, _rede);

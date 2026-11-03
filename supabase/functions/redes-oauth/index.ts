@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
     const { data: u } = await admin.auth.getUser(jwt);
     const userId = u?.user?.id;
     if (!userId) return json({ error: 'unauthorized' }, 401);
-    if (!(await ehMaster(admin, userId))) return json({ error: 'Conectar TikTok e YouTube ainda está em teste.' }, 403);
+    if (!(await ehMaster(admin, userId))) return json({ error: 'sem permissão' }, 403);
     const b = await req.json().catch(() => ({})) as Record<string, unknown>;
     if (!ehRede(b.rede)) return json({ error: 'rede inválida' }, 400);
     const crmClientId = typeof b.crm_client_id === 'string' ? b.crm_client_id : null;

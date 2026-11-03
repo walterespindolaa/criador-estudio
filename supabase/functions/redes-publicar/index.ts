@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     const { data: u } = await admin.auth.getUser(jwt);
     const actor = u?.user?.id;
     if (!actor) return json({ error: 'unauthorized' }, 401);
-    if (!(await ehMaster(admin, actor))) return json({ error: 'Publicação no TikTok e no YouTube ainda está em teste.' }, 403);
+    if (!(await ehMaster(admin, actor))) return json({ error: 'sem permissão' }, 403);
 
     if (body.acao === 'criador') {
       const postId = String(body.post_id ?? '');
