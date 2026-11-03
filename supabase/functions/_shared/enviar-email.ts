@@ -73,7 +73,7 @@ export function montarHtml(e: EmailCria): string {
   const depois = (e.paragrafosDepois ?? []).map((p) => `<p style="margin:0 0 14px;">${esc(p)}</p>`).join("");
   const fecho = e.assinatura ? `<p style="margin:18px 0 0;">${esc(e.assinatura).replace(/\n/g, "<br>")}</p>` : "";
   const sair = e.sairUrl ? ` <a href="${e.sairUrl}" style="color:#8A7F76;">Não quer mais receber? Descadastre aqui.</a>` : "";
-  const nota = (e.rodape ? esc(e.rodape) : "") + sair;
+  const nota = (e.rodape ? esc(e.rodape).replace(/\n/g, "<br>") : "") + sair;
   return molduraCria({
     tag: e.tag ?? "Recado do Cria",
     tema: e.tema ?? "azul",

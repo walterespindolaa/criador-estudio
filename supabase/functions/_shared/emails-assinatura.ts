@@ -114,8 +114,7 @@ export function emailTesteD5(nome: string | null, c: DadosCobranca, uso: UsoDoTe
       `No dia ${data} o teste vira assinatura: plano ${nomePlano}, ${reais(c.valorCentavos)} por mês${c.cartaoFinal ? `, no cartão final ${c.cartaoFinal}` : ""}.`,
     ],
     botao: { texto: sugestao.botao, url: sugestao.url },
-    rodape: `Se quiser trocar de plano ou cancelar, é em Configurações > Assinatura, em 2 cliques. Cancelando até ${vespera}, não cobramos nada.`,
-    assinatura: ASSINATURA,
+    rodape: `Se quiser trocar de plano ou cancelar, é em Configurações > Assinatura, em 2 cliques. Cancelando até ${vespera}, não cobramos nada.\n\n${ASSINATURA}`,
   };
 }
 
@@ -140,7 +139,7 @@ export function emailTesteD6(nome: string | null, c: DadosCobranca, app: string)
       "Mudou de ideia? Cancela hoje e não cobramos nada.",
     ],
     botao: { texto: "Ver minha assinatura", url: `${app}/app/configuracoes?aba=assinatura` },
-    assinatura: ASSINATURA,
+    rodape: ASSINATURA,
   };
 }
 
@@ -194,7 +193,6 @@ export function emailBoasVindasAssinatura(nome: string | null, r: Recibo, app: s
       r.plano === "studio" ? `4. Grave com o Cria Prompter: ${app}/app/prompter` : `4. Produza no Criando: ${app}/app/criando`,
     ],
     botao: { texto: "Abrir o Cria", url: `${app}/app` },
-    rodape: "Tem vídeo curto de cada tela em Tutoriais, dentro do app. Recibos ficam em Configurações > Assinatura.",
-    assinatura: ASSINATURA,
+    rodape: `Tem vídeo curto de cada tela em Tutoriais, dentro do app. Recibos ficam em Configurações > Assinatura.\n\n${ASSINATURA}`,
   };
 }
