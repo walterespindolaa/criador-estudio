@@ -495,6 +495,15 @@ export default function AgendaCriacao() {
     });
     return m;
   }, [extClients, crmById]);
+  // Chips do "Filtrar por cliente": sem cliente que saiu (inativo ou apagado do
+  // CRM). Quem já está selecionado continua, senão o filtro some sem aviso.
+  // (Gabi, 02/11/2026: "aqui ainda aparece cliente q já saiu/inativou")
+  const extClientsAtivos = useMemo(() => extClients.filter((e) => {
+    if (postClients.has(e.id)) return true;
+    if (!e.crm_client_id) return true;
+    const crm = crmById.get(e.crm_client_id);
+    return !!crm && !clienteInativo(crm);
+  }), [extClients, crmById, postClients]);
   const extLiveName = (e: ExternalClient) => {
     const crm = e.crm_client_id ? crmById.get(e.crm_client_id) : null;
     const live = crm?.cria_owner_id ? criaProfiles?.[crm.cria_owner_id]?.name?.trim() : null;
@@ -1099,7 +1108,7 @@ export default function AgendaCriacao() {
             <button type="button" onClick={togglePostChips} className="flex items-center gap-2 w-full text-left">
               <span className="inline-flex items-center gap-1 text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground"><Users className="h-3.5 w-3.5" /> Filtrar por cliente</span>
               <span className="text-[10px] font-body font-semibold text-muted-foreground">
-                {postClients.size === 0 ? `Todos (${extClients.length})` : `${postClients.size} selecionado(s)`}
+                {postClients.size === 0 ? `Todos (${extClientsAtivos.length})` : `${postClients.size} selecionado(s)`}
               </span>
               <span className={cn("ml-auto text-muted-foreground transition-transform", postChipsOpen && "rotate-180")}>▾</span>
             </button>
@@ -1108,7 +1117,7 @@ export default function AgendaCriacao() {
                 <button type="button" onClick={() => togglePostClient(null)} className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors", postClients.size === 0 ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
                   <span className={cn("grid h-3.5 w-3.5 place-items-center rounded-full", postClients.size === 0 ? "bg-background/25" : "bg-muted")}><Users className="h-2.5 w-2.5" /></span>Todos
                 </button>
-                {extClients.map((e) => {
+                {extClientsAtivos.map((e) => {
                   const nm = extLiveName(e);
                   return (
                   <button key={e.id} type="button" onClick={() => togglePostClient(e.id)} className={cn("flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors", postClients.has(e.id) ? "border-foreground text-foreground bg-muted/40" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
