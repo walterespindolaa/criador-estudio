@@ -225,23 +225,40 @@ details.fx .corpo li::before{content:"✓ ";color:var(--verde);font-weight:900}
 .vs{text-align:left}
 
 .faixa-wrap{overflow:hidden;padding:8px 0;margin:-8px 0}
+
+/* topo novo no celular (03/11/2026): botão e print na primeira tela */
+.so-desk{display:none!important}
+@media(min-width:860px){.so-desk{display:inline-flex!important}img.so-desk{display:block!important}}
+@media(max-width:859px){
+.hero h1{font-size:clamp(33px,9.4vw,44px);margin:10px 0 0;line-height:1.03}
+.hero p.sub{font-size:15.5px;margin-top:10px}
+.hero .cta{margin-top:14px}
+.hero .grid{gap:18px;padding-top:0}
+.hero .shot{padding:4px 2px 6px}
+.hero .quadro{transform:none;box-shadow:5px 5px 0 var(--ink)}
+.hero .chips{margin-top:20px}
+}
 </style></head><body>
 
 <section id="topo" class="hero">
   <div class="blob" style="width:360px;height:320px;background:var(--rosa);right:-150px;top:-80px"></div>
   <div class="blob" style="width:240px;height:220px;background:var(--amarelo);left:-130px;bottom:30px"></div>
   <div class="wrap">
-    <header class="top"><img src="/lp/img/logo-cria-white.webp" alt="Cria"><nav><a href="https://criasocialclub.com.br/">Ver o site</a><a class="en" href="https://app.criasocialclub.com.br/login">Entrar</a></nav></header>
+    <header class="top"><img src="/lp/img/logo-cria-white.webp" alt="Cria"><nav><a class="so-desk" href="https://criasocialclub.com.br/">Ver o site</a><a class="en" href="https://app.criasocialclub.com.br/login">Entrar</a></nav></header>
+    <!-- TOPO NOVO (03/11/2026, mockup aprovado): A e B rodam 50/50. Frase que
+         se entende em 2 s, botão inteiro na primeira tela do celular e o print
+         logo abaixo. O id da seção vira topo-abas / topo-hoje pra medição
+         separar as duas no admin. -->
     <div class="grid">
       <div>
         <span class="kick"><i></i>O studio de quem cria conteúdo</span>
-        <div class="v on" data-h="fala"><h1>Fala de você.<br><em>O Cria monta o resto.</em></h1></div><div class="v" data-h="ganchos"><h1>Qual começo <em>prende</em> no seu perfil?</h1></div><div class="v" data-h="seguidores"><h1>Seu post mais curtido <em>não trouxe seguidor.</em></h1></div>
-        <span class="sc lema">ufa, agora faz sentido!</span>
-        <div class="v on" data-h="fala"><p class="sub">Aperta o botão e conta o que você faz e pra quem fala. O Cria transforma isso no seu brandbook, nos seus pilares e nas primeiras ideias de post.</p></div><div class="v" data-h="ganchos"><p class="sub">Mesmo assunto, dois começos: um segura 7 de cada 10 pessoas, o outro segura 2. O Cria mostra qual abertura funciona no SEU perfil, Reels por Reels.</p></div><div class="v" data-h="seguidores"><p class="sub">O Cria mostra quantos seguidores cada foto e cada carrossel trouxe. Você para de chutar e repete o que funciona.</p></div>
-        <div class="chips"><span>Banco de ideias</span><span>Texto no seu tom</span><span>Números do Instagram</span><span>Link na bio</span></div>
-        <div class="cta"><a class="btn" href="#planos">Começar meus 7 dias grátis</a><span class="micro"><b>7 dias grátis.</b> Você só paga no 8º dia, a partir de R$19,90/mês. Cancela no app.</span></div>
+        <div class="v" data-h="abas"><h1>Quantas abas pra postar um Reels?<br><em>Aqui é uma.</em></h1><p class="sub">Ideia, roteiro, legenda e calendário no mesmo lugar. Você abre e sabe o que postar hoje.</p></div>
+        <div class="v on" data-h="hoje"><h1>Abre o app e já sabe<br><em>o que postar hoje.</em></h1><p class="sub">Suas ideias viram posts e os posts caem no calendário. Sem caderno, sem print perdido.</p></div>
+        <div class="cta"><a class="btn" href="#planos">Começar meus 7 dias grátis</a><span class="micro">Você só paga no 8º dia · cancela em 2 cliques</span></div>
       </div>
-      <div class="shot"><img class="sticker" src="/lp/img/selo-sem-formula.webp" alt="" style="right:-4px;bottom:-6px;transform:rotate(12deg)"><div class="v on" data-h="fala"><span class="etq">Brandbook pronto em minutos</span><a class="quadro" href="/lp/img/brandbook.webp" data-zoom><img src="/lp/img/brandbook.webp" alt=""></a></div><div class="v" data-h="ganchos"><span class="etq">Insights do seu Instagram</span><a class="quadro" href="/lp/img/insights.webp" data-zoom><img src="/lp/img/insights.webp" alt=""></a></div><div class="v" data-h="seguidores"><span class="etq">O que postar mais</span><a class="quadro" href="/lp/img/insights-postar.webp" data-zoom><img src="/lp/img/insights-postar.webp" alt=""></a></div></div>
+      <div class="shot"><img class="sticker so-desk" src="/lp/img/selo-sem-formula.webp" alt="" style="right:-4px;bottom:-6px;transform:rotate(12deg)"><div class="v" data-h="abas"><span class="etq">Da ideia ao post, arrastando</span><a class="quadro" href="/lp/img/kanban.webp" data-zoom><img src="/lp/img/kanban.webp" alt="Quadro de produção do Cria"></a></div><div class="v on" data-h="hoje"><span class="etq">Suas ideias num lugar só</span><a class="quadro" href="/lp/img/banco-ideias.webp" data-zoom><img src="/lp/img/banco-ideias.webp" alt="Banco de ideias do Cria"></a></div>
+        <div class="chips"><span>Banco de ideias</span><span>Texto no seu tom</span><span>Números do Instagram</span><span>Link na bio</span></div>
+      </div>
     </div>
   </div>
 </section>
@@ -310,8 +327,12 @@ details.fx .corpo li::before{content:"✓ ";color:var(--verde);font-weight:900}
 <script>
 function variante(v){document.querySelectorAll('[data-h]').forEach(function(e){e.classList.toggle('on',e.dataset.h===v)})}
 document.querySelectorAll('.mk button').forEach(function(b){b.onclick=function(){document.querySelectorAll('.mk button').forEach(function(x){x.classList.toggle('on',x===b)});variante(b.dataset.v)}});
-(function(){var c='';try{c=(new URLSearchParams(location.search).get('utm_content')||JSON.parse(sessionStorage.getItem('cria_origem')||'{}').utm_content||'').toLowerCase()}catch(e){}
-var R=[["ganchos","ganchos"],["seguidores","seguidores"],["fala","fala"]];for(var i=0;i<R.length;i++)if(c.indexOf(R[i][0])!==-1){variante(R[i][1]);break}})();
+(function(){var c='',v=null;try{c=(new URLSearchParams(location.search).get('utm_content')||JSON.parse(sessionStorage.getItem('cria_origem')||'{}').utm_content||'').toLowerCase()}catch(e){}
+if(c.indexOf('abas')!==-1)v='abas';else if(c.indexOf('hoje')!==-1)v='hoje';
+if(!v){try{v=sessionStorage.getItem('cria_hero')}catch(e){}}
+if(v!=='abas'&&v!=='hoje')v=Math.random()<.5?'abas':'hoje';
+try{sessionStorage.setItem('cria_hero',v)}catch(e){}
+variante(v);var t=document.getElementById('topo');if(t)t.id='topo-'+v;})();
 document.querySelectorAll('details.fx').forEach(function(d){d.addEventListener('toggle',function(){if(d.open)document.querySelectorAll('details.fx').forEach(function(o){if(o!==d)o.open=false})})});
 var lb=document.getElementById('lb'),li=lb.querySelector('img'),Z={s:1,x:0,y:0},T={};
 function aplica(){li.style.transform='translate('+Z.x+'px,'+Z.y+'px) scale('+Z.s+')';lb.classList.toggle('zoom',Z.s>1.01)}

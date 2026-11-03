@@ -469,26 +469,27 @@ var CRIA_TRACK = {
   function mostrarAviso(aoAceitar) {
     if (document.getElementById("cria-consent")) return;
     var css = document.createElement("style");
+    /* Faixa de uma linha (03/11/2026, mockup aprovado): a caixa anterior cobria
+       o botão laranja da primeira tela no celular, onde 9 de 10 visitas do
+       anúncio decidem se ficam. Continua pedindo licença antes do pixel. */
     css.textContent =
-      "#cria-consent{position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;max-width:420px;margin-left:auto;" +
-      "background:#fffdf8;color:#1b1a18;border:1px solid #e8e1d4;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.12);" +
-      "padding:10px 12px;padding-bottom:max(10px,env(safe-area-inset-bottom));font-family:inherit;font-size:12.5px;line-height:1.4}" +
-      "#cria-consent p{margin:0}#cria-consent a{color:inherit;text-decoration:underline;text-underline-offset:2px}" +
-      "#cria-consent .acoes{display:flex;gap:8px;margin-top:8px}" +
-      "#cria-consent button{flex:1;height:36px;border-radius:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}" +
+      "#cria-consent{position:fixed;left:10px;right:10px;bottom:10px;z-index:9999;max-width:460px;margin-left:auto;" +
+      "display:flex;align-items:center;gap:6px;background:#fffdf8;color:#1b1a18;border-radius:14px;" +
+      "box-shadow:0 6px 18px rgba(0,0,0,.18);padding:7px 7px 7px 12px;margin-bottom:env(safe-area-inset-bottom);" +
+      "font-family:inherit;font-size:12px;line-height:1.25}" +
+      "#cria-consent p{margin:0;flex:1}#cria-consent a{color:inherit;text-decoration:underline;text-underline-offset:2px}" +
+      "#cria-consent button{flex:none;height:32px;padding:0 12px;border-radius:9px;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer}" +
       "#cria-consent .sim{background:#1b1a18;color:#fff;border:0}" +
-      "#cria-consent .nao{background:transparent;color:#1b1a18;border:1px solid #e8e1d4}";
+      "#cria-consent .nao{background:transparent;color:#1b1a18;border:1px solid #e3dccf}";
     document.head.appendChild(css);
     var box = document.createElement("div");
     box.id = "cria-consent";
     box.setAttribute("role", "dialog");
     box.setAttribute("aria-label", "Aviso de cookies");
     box.innerHTML =
-      // Aviso enxuto (22/10/2026): o antigo cobria ~20% da primeira tela no
-      // celular, bem onde a visita do anúncio decide se fica.
-      '<p>Cookies essenciais pra usar o Cria e, se você permitir, o pixel da Meta pra medir anúncios. Nada de venda de dados. ' +
+      '<p>Cookies pra medir anúncios. ' +
       '<a href="https://app.criasocialclub.com.br/privacidade" target="_blank" rel="noopener">Saiba mais</a></p>' +
-      '<div class="acoes"><button type="button" class="sim">Aceitar</button><button type="button" class="nao">Só o essencial</button></div>';
+      '<button type="button" class="sim">Ok</button><button type="button" class="nao">Não</button>';
     document.body.appendChild(box);
     box.querySelector(".sim").addEventListener("click", function () {
       gravarConsent("aceito"); box.remove(); aoAceitar();
