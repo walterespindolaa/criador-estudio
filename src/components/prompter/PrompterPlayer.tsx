@@ -498,6 +498,12 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
     /* Velocidade: em palavras/min no Prompter; no story, em "x" (140 = 1,0x). */
     const velTxt = () => (ehStory ? (S.wpm / 140).toFixed(1).replace(".", ",") + "x" : String(S.wpm));
     function applySettings() {
+      /* CARTÃO SÓ COM CÂMERA (Gabi no iPad, 03/11/2026): o cartão existe pra
+         deixar o texto perto da lente enquanto a câmera mostra a pessoa. Sem
+         câmera (desligada, negada ou modo Só leitura) ele encolhia o texto num
+         quarto da tela e o resto ficava preto. Agora, sem câmera, o texto
+         ocupa a tela inteira; a preferência do cartão fica salva. */
+      const card = S.cardOn && root.classList.contains("camOn") && S.readOnly !== true;
       pt.style.fontSize = S.font + "px";
       pt.style.lineHeight = String(S.line);
       pt.style.fontWeight = String(S.weight || 400);
@@ -508,11 +514,11 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
       root.classList.toggle("mirrorY", S.mirY);
       root.classList.toggle("reels", S.reels);
       root.style.setProperty("--readpos", S.readPos + "%");
-      root.classList.toggle("cardMode", S.cardOn);
-      root.classList.toggle("cardWhite", S.cardOn && S.cardColor === "branco");
+      root.classList.toggle("cardMode", card);
+      root.classList.toggle("cardWhite", card && S.cardColor === "branco");
       root.classList.toggle("dimRead", S.dimRead === true);
       root.classList.toggle("readOnly", S.readOnly === true);
-      if (S.cardOn) {
+      if (card) {
         vp.style.height = S.cardH + "%";
         vp.style.width = S.cardW + "%";
         vp.style.left = (100 - S.cardW) / 2 + "%";
@@ -525,14 +531,14 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
       }
       requestAnimationFrame(() => {
         if (disposed) return;
-        if (S.cardOn) {
+        if (card) {
           pt.style.paddingTop = Math.round(vp.clientHeight * S.readPos / 100) + "px";
           pt.style.paddingBottom = Math.round(vp.clientHeight * 0.9) + "px";
         } else { pt.style.paddingTop = "45vh"; pt.style.paddingBottom = "60vh"; }
         const r = vp.getBoundingClientRect(), g = $("#guide");
         if (g) {
           g.style.top = Math.round(r.top + (r.height * S.readPos) / 100) + "px";
-          g.style.left = S.cardOn ? Math.max(0, Math.round(r.left - 2)) + "px" : "0px";
+          g.style.left = card ? Math.max(0, Math.round(r.left - 2)) + "px" : "0px";
         }
       });
       $("#guide").style.display = S.guide ? "block" : "none";
@@ -1440,6 +1446,7 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
       camVideo.style.transform = S.camFace === "user" ? "scaleX(-1)" : "none";
       try { await camVideo.play(); } catch { /* autoplay */ }
       root.classList.add("camOn");
+      applySettings(); // o cartão só aparece com a câmera na tela
       setCamIcon();
       /* ligar a câmera às vezes derruba/silencia o mic no iOS: confere e,
          se preciso, recaptura (sem novo prompt dentro da mesma sessão) */
@@ -1456,6 +1463,7 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
       if (camStream) { camStream.getTracks().forEach((t) => t.stop()); camStream = null; }
       camVideo.style.display = "none"; camVideo.srcObject = null;
       root.classList.remove("camOn");
+      applySettings(); // sem câmera, texto em tela cheia
       setCamIcon();
       if (!silent) toast("Câmera desligada");
     }
