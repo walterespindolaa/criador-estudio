@@ -27,6 +27,7 @@ import { getFormatStructure } from "@/lib/format-structures";
 import { PostTasks } from "./PostTasks";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { EnviarParaParceiro } from "@/components/accounts/EnviarParaParceiro";
+import { CampoReferencias } from "@/components/captacao/Referencias";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -1888,7 +1889,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   <EnviarParaParceiro key={post.id} postId={post.id} agenciaId={agenciaDoPost}
                     assigneeId={producaoDoPost?.assignee_id ?? null} producaoStatus={producaoDoPost?.producao_status ?? null}
                     prazo={producaoDoPost?.prazo_producao ?? null} cache={producaoDoPost?.cache_parceiro ?? null}
-                    urgente={!!producaoDoPost?.urgente} />
+                    urgente={!!producaoDoPost?.urgente} onObsSalva={(t) => setNotes(t)} />
                 )}
                 <Button
                   variant="outline"
@@ -2209,12 +2210,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75 flex items-center gap-1.5">
                           <LinkIcon className="h-3 w-3" /> Link de referência
                         </Label>
-                        <Input
-                          placeholder="Cole um link de vídeo de referência..."
-                          value={referenceLink}
-                          onChange={(e) => setReferenceLink(e.target.value)}
-                          className="rounded-xl h-9 text-sm bg-card"
-                        />
+                        {/* VÁRIAS REFERÊNCIAS (Gabriela, 04/11/2026): o campo de uma
+                            linha só guardava um link, e colar outro apagava o
+                            anterior. Agora é a mesma lista do roteiro (um link
+                            por linha na mesma coluna), com prévia de cada um. */}
+                        <CampoReferencias key={post?.id ?? "novo"} valor={referenceLink} onChange={setReferenceLink} />
                       </div>
                     </div>
                     <div>

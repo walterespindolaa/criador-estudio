@@ -167,7 +167,7 @@ export const RoteiroPdfTemplate = forwardRef<HTMLDivElement, RoteiroPdfProps>(
             {referenceLink ? (
               <div>
                 <p style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: 2, color: "#bbb", margin: "0 0 2px 0" }}>Referência</p>
-                <p style={{ fontSize: 10, color: "#3B82F6", margin: 0, wordBreak: "break-all" }}>{referenceLink}</p>
+                <p style={{ fontSize: 10, color: "#3B82F6", margin: 0, wordBreak: "break-all", whiteSpace: "pre-line" }}>{referenceLink}</p>
               </div>
             ) : <div />}
             {/* Assinatura com o logo, não com a palavra escrita: é um arquivo

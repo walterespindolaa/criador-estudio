@@ -25,8 +25,12 @@ import { ROTULO_PAPEL, useConversaDoCard, useDelegarPost, useMeusParceiros, useP
  *  delega de verdade depois do Salvar (ver CriaPostBoard.submit). */
 export type EnvioPendente = { assigneeId: string; prazo: string | null; cache: number | null; nome?: string; urgente?: boolean };
 
-export function EnviarParaParceiro({ postId, assigneeId: assigneeIdProp, producaoStatus, prazo, cache, urgente, adiado, pendente, onAdiar, agenciaId }: {
+export function EnviarParaParceiro({ postId, assigneeId: assigneeIdProp, producaoStatus, prazo, cache, urgente, adiado, pendente, onAdiar, agenciaId, onObsSalva }: {
   postId: string;
+  /** A observação mora em posts.notes, o mesmo campo do editor do post.
+   *  Avisa o editor do texto salvo, senão o Salvar dele grava o valor antigo
+   *  por cima (Gabriela, 04/11/2026: "salvo e a observação some"). */
+  onObsSalva?: (texto: string) => void;
   assigneeId: string | null;
   producaoStatus: string | null;
   prazo: string | null;
@@ -105,7 +109,7 @@ export function EnviarParaParceiro({ postId, assigneeId: assigneeIdProp, produca
       cache: cacheNum != null && !Number.isNaN(cacheNum) && cacheNum > 0 ? cacheNum : null,
       ...(agenciaId ? { agenciaId } : {}),
     });
-    if (obs.trim() !== (obsSalva ?? "").trim()) await salvarObsDoPost(postId, obs);
+    if (obs.trim() !== (obsSalva ?? "").trim()) { await salvarObsDoPost(postId, obs); onObsSalva?.(obs.trim()); }
     setAssigneeId(escolhido);
     setAberto(false);
   };
