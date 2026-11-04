@@ -108,7 +108,7 @@ import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePostPreviewIdentity } from "@/hooks/usePostPreviewIdentity";
 import { useGoogleDrive } from "@/hooks/useGoogleDrive";
 import { useUploadProgress } from "@/contexts/UploadProgressContext";
-import { compressImage } from "@/lib/image-compress";
+import { capFullImage } from "@/lib/image-compress";
 import { resolveShareableUrl, cacheShareFile } from "@/lib/social-share";
 import { VideoMediaSlot, MediaPreparingPlaceholder } from "./VideoMediaSlot";
 import { rememberLocalVideo } from "@/lib/media-cache";
@@ -932,7 +932,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
           toast.error(validation.reason);
           continue;
         }
-        const file = await compressImage(raw);
+        // Qualidade cheia (04/11/2026): antes re-encodava em JPEG 82% e 1920px, e o Instagram
+        // ainda comprime de novo. Agora sobe o original (só reduz acima de 4096px).
+        const file = await capFullImage(raw);
         const safeName = sanitizeStoragePath(file.name);
         const path = `${userId}/${Date.now()}-${safeName}`;
 
@@ -2340,7 +2342,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                                 }
                                 try {
                                   setUploadingLocal(true);
-                                  const file = await compressImage(raw);
+                                  const file = await capFullImage(raw);
                                   const safeName = sanitizeStoragePath(file.name);
                                   const path = `${userId}/${Date.now()}-${safeName}`;
                                   const { error: upErr } = await supabase.storage

@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
-import { compressImage } from "@/lib/image-compress";
+import { capFullImage } from "@/lib/image-compress";
 import { uploadVideoFileToBunny } from "@/lib/bunny-upload";
 import { levarVideoDoDriveProBunny } from "@/lib/bunny-ingestao";
 
@@ -390,7 +390,8 @@ export function useGoogleDrive() {
           // FOTO: baixa do Drive → comprime → upload pro bucket media → ref como 'device'
           const driveBlob = await downloadDriveFileToBlob(f.id, accessToken);
           const sourceFile = new File([driveBlob], f.name, { type: f.mimeType || driveBlob.type });
-          const compressed = await compressImage(sourceFile);
+          // Qualidade cheia (04/11/2026): foto de post não é mais re-encodada em JPEG 82%.
+          const compressed = await capFullImage(sourceFile);
           const safeName = sanitizeStoragePath(compressed.name);
           const path = `${ownerId}/${Date.now()}-${safeName}`;
           const { error: upErr } = await supabase.storage.from("media").upload(path, compressed, {
