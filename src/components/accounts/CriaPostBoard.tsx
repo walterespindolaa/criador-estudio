@@ -1515,6 +1515,9 @@ function PostsCalendar({ posts, captacoes = [], onOpen, onNewAt, onMove, tagsByP
                       <span className={`text-[9px] font-body font-bold uppercase truncate ${FORMAT_TEXT_CLASS}`}>{FORMAT_LABELS[normalizarFormato(p.format)] ?? cap(p.format)}</span>
                       <TagDots ids={tagsByPost[p.id]} catalog={tagCatalog} />
                     </span>
+                    {/* Mesmo selo do quadro (Walter, 04/11/2026: "no quadro aparece
+                        IG agendado e no calendário só Aprovado"). */}
+                    {p.publish_status && <SeloPublicacaoIg status={p.publish_status} autoPublish={p.auto_publish} className="mt-0.5" />}
                   </button>
                   </div>
                 );
