@@ -100,14 +100,32 @@ Deno.serve(async (req) => {
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const { data: post } = await svc.from("posts")
-      .select("user_id, title, caption").eq("id", post_id).maybeSingle();
+      .select("user_id, agencia_id, title, caption").eq("id", post_id).maybeSingle();
     if (!post) return json({ error: "Post não encontrado" }, 404);
     // Dono do post OU parceiro com o card (Gabriela, 16/10/2026: a designer e a
     // social mídia baixam tudo pelo card). parceiro_tem_o_card roda como o
     // usuário logado (auth.uid()), por isso vai pelo userClient.
+    /* EQUIPE DA CONTA E AGÊNCIA TAMBÉM BAIXAM (Walter, 04/11/2026: "erro pra
+       baixar" no carrossel do @criasocialclub pela conta da social mídia). Ela
+       é gerente da conta em account_members e é a agência do post: a RLS deixa
+       ver e editar, só o zip recusava. Mesmas regras do criapost-download-file. */
     if (post.user_id !== userId) {
-      const { data: temCard } = await userClient.rpc("parceiro_tem_o_card", { _post_id: post_id });
-      if (temCard !== true) return json({ error: "Sem permissão" }, 403);
+      let pode = false;
+      const { data: membro } = await userClient.rpc("is_account_member", { _owner: post.user_id });
+      pode = membro === true;
+      if (!pode) {
+        const { data: equipe } = await userClient.rpc("is_team_member", { target: post.user_id });
+        pode = equipe === true;
+      }
+      if (!pode && post.agencia_id) {
+        const { data: atua } = await userClient.rpc("acts_for", { target: post.agencia_id });
+        pode = atua === true;
+      }
+      if (!pode) {
+        const { data: temCard } = await userClient.rpc("parceiro_tem_o_card", { _post_id: post_id });
+        pode = temCard === true;
+      }
+      if (!pode) return json({ error: "Sem permissão" }, 403);
     }
 
     const { data: refs } = await svc.from("external_media_refs")

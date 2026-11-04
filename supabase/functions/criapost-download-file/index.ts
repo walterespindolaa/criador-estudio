@@ -93,6 +93,11 @@ Deno.serve(async (req) => {
       const { data: daEquipe } = await userClient.rpc("is_team_member", { target: donoDaConta });
       owns = daEquipe === true;
     }
+    // Gerente da conta (account_members), como a social mídia na conta da Cria (04/11/2026).
+    if (!owns && donoDaConta) {
+      const { data: membro } = await userClient.rpc("is_account_member", { _owner: donoDaConta });
+      owns = membro === true;
+    }
     /* CARD DO PARCEIRO (27/10/2026: "não consigo salvar do celular pela aba
        de parceiros"). Quem abre o card de produção (a designer com a peça, ou
        a social mídia que atende o cliente) já baixa o .zip pelo computador
