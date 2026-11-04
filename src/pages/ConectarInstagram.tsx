@@ -168,7 +168,9 @@ export default function ConectarInstagram() {
 
       {resultado === "erro" && (
         <p className="mt-4 rounded-2xl bg-red-50 border border-red-200 p-3.5 text-[14px] font-body text-red-800" role="alert">
-          {MOTIVO[motivo.split(":")[0]] ?? "Não deu certo desta vez. Tente de novo."}
+          {motivo === "conta_de_outro_cliente"
+            ? `O Instagram ${usuario ? `@${usuario}` : "que entrou"} não é a conta deste link: ele já está conectado a outro perfil no Cria. Saia dele no Instagram (ou troque de conta), entre com a conta certa e toque no botão de novo.`
+            : MOTIVO[motivo.split(":")[0]] ?? "Não deu certo desta vez. Tente de novo."}
         </p>
       )}
       {erroInicio && (

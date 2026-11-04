@@ -97,6 +97,9 @@ export default function Insights() {
         msg = "A tentativa de conexão expirou. Volte aqui e clique em Conectar Instagram de novo.";
       } else if (motivo === "missing_code" || motivo === "access_denied") {
         msg = "A autorização foi cancelada no Instagram. Clique em Conectar Instagram e conclua os passos até o fim.";
+      } else if (motivo.startsWith("conta_de_outro_cliente")) {
+        const quem = motivo.split(":")[1]?.trim() || "Esse Instagram";
+        msg = `${quem} já está conectado a um cliente seu no Cria, então não liguei no seu perfil. Entre no Instagram com a sua conta e conecte de novo.`;
       } else if (motivo === "save_failed") {
         msg = "Autorizei no Instagram, mas falhei ao salvar a conexão. Tente de novo em instantes.";
       } else if (motivo) {

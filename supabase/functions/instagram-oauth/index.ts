@@ -140,6 +140,24 @@ Deno.serve(async (req) => {
     const igId = String(me.user_id ?? me.id ?? '');
     if (!igId) return falha('account_fetch') ?? redirect('error', 'account_fetch', crmClientId, returnTo);
 
+    /* 3b) CONTA ERRADA (04/11/2026). O link do Marhaban foi aceito primeiro com
+       o Instagram da Dra. Priscila (o celular estava logado nela) e por 4 min
+       o Marhaban ficou com a conta de outro cliente. Agora: se esta conta do
+       Instagram já está ligada a OUTRO cliente (ou ao perfil próprio) da mesma
+       pessoa no Cria, não grava e pede pra entrar com a conta certa. Não diz
+       qual é o outro cliente: quem abriu o link pode ser o cliente. */
+    const { data: jaLigadas } = await admin.from('social_connections').select('id, crm_client_id')
+      .eq('user_id', criaUserId).eq('provider', 'instagram').eq('external_account_id', igId);
+    const conflito = ((jaLigadas ?? []) as { id: string; crm_client_id: string | null }[])
+      .find((c) => (c.crm_client_id ?? null) !== crmClientId);
+    if (conflito) {
+      const quem = me.username ? `@${me.username}` : 'esta conta';
+      console.warn('[instagram-oauth] conta já ligada a outro cliente', igId);
+      return conviteToken
+        ? voltaConvite(conviteToken, 'erro', 'conta_de_outro_cliente', me.username ?? null)
+        : redirect('error', `conta_de_outro_cliente: ${quem}`, crmClientId, returnTo);
+    }
+
     // 4) grava a conexão (manual: índices parciais não funcionam bem com upsert onConflict).
     const payload = {
       user_id: criaUserId,

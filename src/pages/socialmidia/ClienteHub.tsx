@@ -359,7 +359,12 @@ export default function ClienteHub() {
       toast.success("Instagram do cliente conectado! Os insights começam a puxar na próxima sincronização.");
       qc.invalidateQueries({ queryKey: ["social-connection-client", id] });
     } else {
-      toast.error(`Não consegui conectar o Instagram${motivo ? `: ${motivo}` : "."}`, { duration: 12000 });
+      if (motivo.startsWith("conta_de_outro_cliente")) {
+        const quem = motivo.split(":")[1]?.trim() || "Esse Instagram";
+        toast.error(`${quem} já está conectado a outro cliente seu no Cria, então não liguei aqui. Entre no Instagram com a conta deste cliente e conecte de novo.`, { duration: 14000 });
+      } else {
+        toast.error(`Não consegui conectar o Instagram${motivo ? `: ${motivo}` : "."}`, { duration: 12000 });
+      }
     }
     sp.delete("ig"); sp.delete("m");
     navigate({ search: sp.toString() ? `?${sp.toString()}` : "" }, { replace: true });
