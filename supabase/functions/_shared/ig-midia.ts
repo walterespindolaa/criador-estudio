@@ -73,6 +73,50 @@ async function infoBunny(guid: string): Promise<InfoBunny | null> {
   return null;
 }
 
+// QUALIDADE DO VÍDEO NO INSTAGRAM (04/11/2026, Walter: "os vídeos estão indo
+// com qualidade muito ruim"). Causa medida, não chutada: o Cria mandava pro
+// Instagram o play_1080p.mp4 do Bunny, que é uma RECOMPRESSÃO pensada pra
+// streaming (~3 a 6 Mbps). Exemplos reais: original de 55,6 Mbps saiu a 5,7;
+// original de 9,3 Mbps (que o Instagram aceitaria inteiro) saiu a 4,7. Aí o
+// Instagram comprime de novo: duas gerações de perda. Agora, se o ORIGINAL
+// cabe na regra do Reels (MP4/MOV, até 300 MB, até 25 Mbps, até 1920 px de
+// largura), vai o original. Só quando não cabe é que cai no MP4 do Bunny.
+// Fonte: developers.facebook.com, IG User Media, "Reel Specifications".
+const IG_MAX_BYTES = 300 * 1024 * 1024;
+const IG_MAX_BPS = 24_000_000; // 25 Mbps é o teto; folga pra pico de VBR
+const IG_MAX_LARGURA = 1920;
+
+async function originalDoBunny(guid: string, cdn: string, duracao: number, largura: number): Promise<string | null> {
+  if (!duracao || duracao <= 0 || largura > IG_MAX_LARGURA) return null;
+  const url = `https://${cdn}/${guid}/original`;
+  const r = await fetch(url, { method: 'HEAD' }).catch(() => null);
+  if (!r?.ok) return null;
+  const tipo = (r.headers.get('content-type') ?? '').toLowerCase();
+  if (!/video\/(mp4|quicktime)/.test(tipo)) return null;
+  const bytes = Number(r.headers.get('content-length') ?? 0);
+  if (!bytes || bytes > IG_MAX_BYTES) return null;
+  if ((bytes * 8) / duracao > IG_MAX_BPS) return null;
+  // Só H.264 vai direto. Vídeo de iPhone costuma vir em HEVC/HDR (Dolby
+  // Vision), que a API até aceita mas pode lavar a cor ou recusar; esses
+  // seguem pelo MP4 do Bunny, que é H.264 SDR. O codec fica no átomo "moov",
+  // que pode estar no começo ou no fim do arquivo: lê 512 KB de cada ponta.
+  const codec = await codecDoMp4(url, bytes);
+  return codec === 'avc1' ? url : null;
+}
+
+async function codecDoMp4(url: string, bytes: number): Promise<string | null> {
+  const PEDACO = 512 * 1024;
+  const faixas = [`bytes=0-${PEDACO - 1}`, `bytes=${Math.max(0, bytes - PEDACO)}-${bytes - 1}`];
+  for (const range of faixas) {
+    const r = await fetch(url, { headers: { Range: range } }).catch(() => null);
+    if (!r?.ok) continue;
+    const txt = new TextDecoder('latin1').decode(new Uint8Array(await r.arrayBuffer()));
+    if (/hvc1|hev1|dvh1|dvhe/.test(txt)) return 'hevc';
+    if (txt.includes('avc1')) return 'avc1';
+  }
+  return null;
+}
+
 // MP4 direto do vídeo (o "MP4 fallback" da biblioteca). Tenta do maior pro menor.
 async function mp4DoBunny(guid: string, cdn: string): Promise<string | null> {
   for (const res of ['1080p', '720p', '480p', '360p']) {
@@ -81,6 +125,22 @@ async function mp4DoBunny(guid: string, cdn: string): Promise<string | null> {
     if (r?.ok) return url;
   }
   return null;
+}
+
+// O Instagram recusou o original (codec ou detalhe que o HEAD não mostra):
+// troca pelo MP4 do Bunny, que é H.264 padrão, pra próxima tentativa sair.
+export async function trocarOriginalPorBunny(admin: SupabaseClient, postId: string): Promise<boolean> {
+  const { data } = await admin.from('external_media_refs').select('id, ig_url').eq('post_id', postId).like('ig_url', '%/original');
+  let trocou = false;
+  for (const r of (data ?? []) as Array<{ id: string; ig_url: string }>) {
+    const m = r.ig_url.match(/^https:\/\/([^/]+)\/([^/]+)\/original$/);
+    if (!m) continue;
+    const mp4 = await mp4DoBunny(m[2], m[1]);
+    if (!mp4) continue;
+    await gravar(admin, r.id, { ig_url: mp4, ig_preparado_em: new Date().toISOString(), ig_erro: null });
+    trocou = true;
+  }
+  return trocou;
 }
 
 // ── Drive: download público (só funciona com "Qualquer pessoa com o link") ──
@@ -159,8 +219,13 @@ async function prepararUma(admin: SupabaseClient, dono: string, postId: string, 
   const mime = (ref.file_type ?? '').toLowerCase();
   const ehVideo = BUNNY.has(prov) || mime.startsWith('video/') || !!ref.bunny_video_id;
 
-  // Já preparada antes e sem erro: reaproveita.
-  if (ref.ig_url && ref.ig_preparado_em && !ref.ig_erro) {
+  // Já preparada antes e sem erro: reaproveita. Exceto vídeo preparado no
+  // jeito antigo (play_XXXp.mp4 do Bunny, preparado antes desta versão): esse
+  // refaz, pra tentar o original. Depois do corte, play_ é escolha consciente
+  // (original fora da regra ou recusado pelo Instagram) e fica.
+  const preparoAntigo = /\/play_\d+p\.mp4$/.test(ref.ig_url ?? '')
+    && Date.parse(ref.ig_preparado_em ?? '') < Date.parse('2026-11-04T21:40:00Z');
+  if (ref.ig_url && ref.ig_preparado_em && !ref.ig_erro && !preparoAntigo) {
     return { ...base, tipo: ref.ig_tipo as 'IMAGE' | 'VIDEO', url: ref.ig_url, largura: ref.ig_largura,
       altura: ref.ig_altura, duracao: ref.ig_duracao, estado: 'pronto' };
   }
@@ -185,7 +250,7 @@ async function prepararUma(admin: SupabaseClient, dono: string, postId: string, 
       if (info.status === 5 || info.status === 6) throw new Error('O Bunny não conseguiu processar este vídeo. Suba de novo (MP4 ou MOV).');
       if (info.status !== 4) return { ...base, tipo: 'VIDEO', estado: 'processando', erro: 'Vídeo ainda processando. Tente de novo em alguns minutos.' };
 
-      const mp4 = await mp4DoBunny(guid, info.lib.cdn);
+      const mp4 = (await originalDoBunny(guid, info.lib.cdn, info.length, info.width)) ?? (await mp4DoBunny(guid, info.lib.cdn));
       if (!mp4) throw new Error('O vídeo está no Bunny mas sem o MP4 direto. Na biblioteca do Bunny, ative "MP4 Fallback" e reprocesse o vídeo.');
       const campos = { ig_url: mp4, ig_tipo: 'VIDEO', ig_largura: info.width || null, ig_altura: info.height || null,
         ig_duracao: info.length || null, ig_preparado_em: new Date().toISOString(), ig_erro: null };

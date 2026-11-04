@@ -10,7 +10,7 @@
 // tempo da função, a próxima tentativa continua dele em vez de recomeçar.
 // ═══════════════════════════════════════════════════════════════════════════
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
-import { normalizarFormato, prepararMidiaDoPost } from './ig-midia.ts';
+import { normalizarFormato, prepararMidiaDoPost, trocarOriginalPorBunny } from './ig-midia.ts';
 
 const API = 'https://graph.instagram.com/v23.0';
 const MAX_TENTATIVAS_ROBO = 3;
@@ -386,7 +386,16 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
 
     return { estado: 'publicado', mensagem: 'Publicado no Instagram.', permalink };
   } catch (e) {
-    const err = e instanceof ErroIg ? e : new ErroIg(e instanceof Error ? e.message : String(e));
+    let err = e instanceof ErroIg ? e : new ErroIg(e instanceof Error ? e.message : String(e));
+    // Vídeo original recusado (04/11/2026): troca pela versão do Bunny e
+    // deixa tentar de novo, em vez de travar o post num erro definitivo.
+    if (/recusou a mídia ao processar|formato do vídeo não foi aceito/.test(err.message)) {
+      const trocou = await trocarOriginalPorBunny(admin, postId).catch(() => false);
+      if (trocou) {
+        await admin.from('posts').update({ ig_container_id: null } as never).eq('id', postId);
+        err = new ErroIg('O Instagram recusou o arquivo original do vídeo. O Cria trocou pela versão compatível: tente publicar de novo.');
+      }
+    }
     return await falhar(err, true);
   }
 }
