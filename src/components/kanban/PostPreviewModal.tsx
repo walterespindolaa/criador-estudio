@@ -109,7 +109,10 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
   const isCarousel = format === "carrossel" && ((sections?.length ?? 0) > 0 || nMidias > 0);
   const nLaminas = nMidias > 0 ? nMidias : Math.max(1, secoesUsadas);
   const carouselSlides: Partial<SectionData>[] = isCarousel
-    ? Array.from({ length: Math.min(10, nLaminas) }, (_, i) => sections?.[i] ?? {})
+    /* Até 20 lâminas (04/11/2026): o Instagram aceita 20 no carrossel desde
+       2024 e a publicação (ig-midia) já valida até 20. O teto antigo de 10
+       cortava a prévia e parecia que o Cria não aceitava mais imagens. */
+    ? Array.from({ length: Math.min(20, nLaminas) }, (_, i) => sections?.[i] ?? {})
     : [];
   // Se a tira encolheu (tirou imagem), a lâmina aberta não pode passar do fim.
   const slideIdx = Math.min(carouselIdx, Math.max(0, carouselSlides.length - 1));
