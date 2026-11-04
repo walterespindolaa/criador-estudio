@@ -397,7 +397,9 @@ export async function connectInstagram(clientId?: string | null, returnTo?: stri
     }
     const cfg = data as { client_id: string; redirect_uri: string; scope?: string; state: string };
     const scope = cfg.scope ?? "instagram_business_basic,instagram_business_manage_insights";
-    const url = `https://www.instagram.com/oauth/authorize?client_id=${encodeURIComponent(cfg.client_id)}&redirect_uri=${encodeURIComponent(cfg.redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(cfg.state)}`;
+    // Barra no fim + #weblink: no iPhone, sem isso o link abria o app do
+    // Instagram e dava "Ocorreu um erro" (ver ig-convite-iniciar, 04/11/2026).
+    const url = `https://www.instagram.com/oauth/authorize/?client_id=${encodeURIComponent(cfg.client_id)}&redirect_uri=${encodeURIComponent(cfg.redirect_uri)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(cfg.state)}#weblink`;
     window.location.href = url;
   } catch {
     toast.error("Integração ainda não configurada.");

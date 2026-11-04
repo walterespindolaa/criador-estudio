@@ -54,9 +54,15 @@ Deno.serve(async (req) => {
     const escopos = ['instagram_business_basic', 'instagram_business_manage_insights'];
     if (Deno.env.get('INSTAGRAM_PUBLISH_ALL')?.trim() === 'true') escopos.push('instagram_business_content_publish');
 
-    const url = `https://www.instagram.com/oauth/authorize?client_id=${encodeURIComponent(clientId)}`
+    /* BARRA NO FIM + #weblink (04/11/2026). No iPhone com o app do Instagram,
+       "instagram.com/oauth/authorize" (sem barra) abria o APP, que não sabe
+       autorizar e mostra "Ocorreu um erro". O arquivo de links do Instagram
+       (instagram.com/.well-known/apple-app-site-association) só deixa no
+       navegador "/oauth/authorize/*" (com barra) e qualquer link com
+       "#weblink". O servidor do Instagram aceita os dois formatos. */
+    const url = `https://www.instagram.com/oauth/authorize/?client_id=${encodeURIComponent(clientId)}`
       + `&redirect_uri=${encodeURIComponent(`${supabaseUrl}/functions/v1/instagram-oauth`)}`
-      + `&response_type=code&scope=${encodeURIComponent(escopos.join(','))}&state=${encodeURIComponent(state)}`;
+      + `&response_type=code&scope=${encodeURIComponent(escopos.join(','))}&state=${encodeURIComponent(state)}#weblink`;
     return json({ url });
   } catch (e) {
     console.error('[ig-convite-iniciar]', String(e));
