@@ -67,7 +67,14 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
       <span className="absolute left-2.5 bottom-2.5 rounded-full bg-black/55 px-2 py-0.5 text-[10.5px] font-body font-bold text-white">capa</span>
     </button>
   ) : null;
-  const [igTab, setIgTab] = useState<"feed" | "reels">("feed");
+  const [igTabEscolhida, setIgTab] = useState<"feed" | "reels">("feed");
+  /* UMA PRÉVIA SÓ (Walter, 04/11/2026: "aqui tá Reels, mas ele puxa o formato
+     de feed; deveria aparecer um ou outro, igual no de social mídia"). Quando o
+     formato do post já diz qual é, a prévia segue ele e as abas somem. As abas
+     só ficam pra formato que não define (ex.: sem formato escolhido). */
+  const fmtIg: "feed" | "reels" | null = /reel|stor|v[ií]deo|video/i.test(format ?? "") ? "reels"
+    : /carross|foto|post|est[aá]tic|imagem|feed/i.test(format ?? "") ? "feed" : null;
+  const igTab = fmtIg ?? igTabEscolhida;
   const [ytTab, setYtTab] = useState<"thumbnail" | "shorts">("thumbnail");
   const [carouselIdx, setCarouselIdx] = useState(0);
 
@@ -318,7 +325,7 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
 
           {/* INSTAGRAM */}
           <TabsContent value="instagram" className="m-0">
-            <div className="mx-2 mb-1.5 grid grid-cols-2 gap-0.5 rounded-xl bg-muted/40 p-0.5">
+            <div className={`mx-2 mb-1.5 grid-cols-2 gap-0.5 rounded-xl bg-muted/40 p-0.5 ${fmtIg ? "hidden" : "grid"}`}>
               {(["feed", "reels"] as const).map(t => (
                 <button key={t} onClick={() => setIgTab(t)}
                   className={`h-7 rounded-[10px] text-[10.5px] font-body font-semibold transition-colors ${igTab === t ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>

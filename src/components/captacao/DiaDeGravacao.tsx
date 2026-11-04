@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Camera, Check, Clock, Copy, FileText, Loader2, MapPin, Play, Send, X, MessageCircle } from "lucide-react";
+import { Camera, Check, ChevronDown, Clock, Copy, FileText, Loader2, MapPin, Play, Send, X, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,12 @@ export function DiaDeGravacao({
 }: DiaDeGravacaoProps) {
   const { dia, semana } = dataPorExtenso(data);
   const [copiado, setCopiado] = useState(false);
+  /* ROTEIRO ABERTO (04/11/2026, Walter: "não consigo clicar no roteiro
+     específico e ver só daquele"). Antes a linha só tinha o título e o
+     teleprompter, e o único jeito de ler o texto era a Folha do dia, que
+     despeja o dia inteiro numa caixa só. Agora tocar no título abre aquele
+     roteiro ali mesmo: cenas, direção e referências. */
+  const [aberto, setAberto] = useState<string | null>(null);
 
   // Os roteiros do dia, agrupados pelo dia de gravação a que pertencem.
   const porCaptura = useMemo(() => {
@@ -319,7 +325,9 @@ export function DiaDeGravacao({
                     ) : (
                       <ul className="divide-y divide-border">
                         {lista.map((s, i) => {
-                          const texto = cenasDe(s).length > 0 ? cenasParaTexto(cenasDe(s)) : (s.content ?? "").trim();
+                          const cenas = cenasDe(s);
+                          const texto = cenas.length > 0 ? cenasParaTexto(cenas) : (s.content ?? "").trim();
+                          const estaAberto = aberto === s.id;
                           return (
                             <li key={s.id} className="flex items-start gap-2.5 px-3.5 py-3">
                               {/* Um toque marca gravado. É o gesto mais repetido
@@ -333,12 +341,17 @@ export function DiaDeGravacao({
                                 {s.done ? <Check className="h-4 w-4" /> : <span className="text-[12px] font-display font-bold">{i + 1}</span>}
                               </button>
                               <div className="min-w-0 flex-1">
-                                <p className={cn("text-[13.5px] font-body font-semibold text-foreground",
-                                  s.done && "line-through text-muted-foreground")}>
-                                  {(s.title ?? "").trim() || `Roteiro ${i + 1}`}
-                                </p>
+                                <button type="button" onClick={() => setAberto(estaAberto ? null : s.id)}
+                                  aria-expanded={estaAberto}
+                                  className="group flex w-full items-start gap-1.5 text-left">
+                                  <span className={cn("min-w-0 flex-1 text-[13.5px] font-body font-semibold text-foreground group-hover:text-primary",
+                                    s.done && "line-through text-muted-foreground")}>
+                                    {(s.title ?? "").trim() || `Roteiro ${i + 1}`}
+                                  </span>
+                                  <ChevronDown className={cn("mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform", estaAberto && "rotate-180")} />
+                                </button>
                                 {s.about?.trim() && (
-                                  <p className="text-[12px] font-body text-muted-foreground mt-0.5 line-clamp-2">{s.about}</p>
+                                  <p className={cn("text-[12px] font-body text-muted-foreground mt-0.5", !estaAberto && "line-clamp-2")}>{s.about}</p>
                                 )}
                                 {s.format?.trim() && (
                                   <span className="inline-block mt-1 text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">
@@ -349,6 +362,34 @@ export function DiaDeGravacao({
                                     gravação, e é justamente quando ela precisa ver o reel de base. */}
                                 {s.reference_url?.trim() && (
                                   <ListaReferencias valor={s.reference_url} className="mt-2 max-w-sm" />
+                                )}
+                                {estaAberto && (
+                                  <div className="mt-2.5 rounded-xl border border-border bg-background p-3 space-y-3">
+                                    {cenas.length > 0 ? cenas.map((cena, ci) => (
+                                      <div key={ci}>
+                                        <p className="text-[11px] font-body font-bold uppercase tracking-wide text-primary">Cena {ci + 1}</p>
+                                        {cena.fala.trim() && (
+                                          <p className="text-[13px] font-body text-foreground whitespace-pre-wrap leading-relaxed">{cena.fala.trim()}</p>
+                                        )}
+                                        {cena.direcao.trim() && (
+                                          <p className="mt-1 text-[12px] font-body italic text-muted-foreground whitespace-pre-wrap">{cena.direcao.trim()}</p>
+                                        )}
+                                      </div>
+                                    )) : texto ? (
+                                      <p className="text-[13px] font-body text-foreground whitespace-pre-wrap leading-relaxed">{texto}</p>
+                                    ) : (
+                                      <p className="text-[12.5px] font-body text-muted-foreground">Este roteiro ainda não tem texto escrito.</p>
+                                    )}
+                                    {texto && (
+                                      <Button size="sm" variant="ghost" className="rounded-xl h-8 px-2 text-[12px]"
+                                        onClick={async () => {
+                                          try { await navigator.clipboard.writeText(`${(s.title ?? "").trim() || "Roteiro"}\n${texto}`); toast.success("Roteiro copiado."); }
+                                          catch { toast.error("Não consegui copiar. Selecione o texto e copie na mão."); }
+                                        }}>
+                                        <Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar este roteiro
+                                      </Button>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                               {texto && (
