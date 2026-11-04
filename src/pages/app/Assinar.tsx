@@ -183,6 +183,16 @@ export default function Assinar() {
     else setCodeError(true);
   };
 
+  /* JORNADA (04/11/2026): grava a primeira vez que a pessoa vê os planos e o
+     aparelho, pro admin saber onde ela parou. Falha não atrapalha a tela. */
+  useEffect(() => {
+    if (ehMeuPerfil) return;
+    const w = typeof window !== "undefined" ? window.innerWidth : 1200;
+    const aparelho = w < 768 ? "celular" : w < 1100 ? "tablet" : "computador";
+    void (supabase.rpc as unknown as (fn: string, args: unknown) => Promise<unknown>)("jornada_marcar", { _passo: "planos", _aparelho: aparelho })
+      .catch(() => { /* métrica perdida não é problema */ });
+  }, [ehMeuPerfil]);
+
   useEffect(() => {
     if (searchParams.get("checkout") === "cancel") {
       toast("Checkout cancelado. Você pode tentar de novo quando quiser.");

@@ -29,6 +29,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { confirmar } from "@/components/shared/Confirm";
 import { cn } from "@/lib/utils";
+import { AbaJornada, ChipJornada, useJornada } from "@/components/admin/JornadaUsuario";
 import {
   Mail, ShieldOff, ShieldCheck, Trash2, Loader2, Eraser, MessageCircle, Instagram, X,
   Check, Plus, Users, UserRound,
@@ -153,7 +154,7 @@ const Cartao = ({ children, className }: { children: React.ReactNode; className?
 export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDrawerProps) {
   const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
-  const [aba, setAba] = useState<"plano" | "modulos">("plano");
+  const [aba, setAba] = useState<"plano" | "jornada" | "modulos">("plano");
   const [plan, setPlan] = useState<string>("");
   const [prazo, setPrazo] = useState<string>("manter");
   const [seats, setSeats] = useState<number | null>(null);
@@ -320,11 +321,15 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
   const expira = data?.access_expires_at ? new Date(data.access_expires_at).getTime() : null;
   const isManager = !!modulesData?.is_manager;
 
+  // Jornada (04/11/2026): quem não tem assinatura nem teste ganha o "onde parou"
+  // no lugar do rótulo "Free", que fazia parecer cortesia.
+  const { data: jornada } = useJornada(userId);
   const chipPlano = !data ? null
     : isSuspended ? <Chip tom="vermelho">Suspensa</Chip>
     : temStripe ? <Chip tom="verde">Assinante {NOME_PLANO[data.plan ?? ""] ?? data.plan}</Chip>
     : emTeste ? <Chip tom="ambar">Em teste · {diasRestantes === 0 ? "acaba hoje" : `faltam ${diasRestantes} ${diasRestantes === 1 ? "dia" : "dias"}`}</Chip>
     : expira && expira < agora ? <Chip tom="vermelho">Acesso vencido</Chip>
+    : jornada && !expira ? <ChipJornada onde={jornada.onde} tom={jornada.tom} />
     : <Chip>{NOME_PLANO[data.plan ?? ""] ?? data.plan ?? "sem plano"}{expira ? ` até ${dataCurta(data.access_expires_at)}` : ""}</Chip>;
 
   const telas = data?.telas_30 ?? [];
@@ -470,7 +475,7 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                 {/* DIREITA: abas */}
                 <div className="border-t md:border-t-0 md:border-l border-border bg-muted/20 px-5 sm:px-6 py-5 min-w-0">
                   <div className="flex gap-1 rounded-full bg-muted p-1 mb-4 w-full sm:w-max">
-                    {([["plano", "Plano e uso"], ["modulos", "Módulos e limites"]] as const).map(([k, t]) => (
+                    {([["plano", "Plano e uso"], ["jornada", "Jornada"], ["modulos", "Módulos e limites"]] as const).map(([k, t]) => (
                       <button key={k} type="button" onClick={() => setAba(k)}
                         className={cn("flex-1 sm:flex-none rounded-full px-4 py-1.5 text-xs font-body font-semibold transition-colors",
                           aba === k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}>
@@ -601,6 +606,8 @@ export function UserDetailsDrawer({ open, onOpenChange, userId }: UserDetailsDra
                         </Cartao>
                       </section>
                     </div>
+                  ) : aba === "jornada" ? (
+                    <AbaJornada userId={userId} />
                   ) : (
                     <div className="space-y-4">
                       <Cartao>

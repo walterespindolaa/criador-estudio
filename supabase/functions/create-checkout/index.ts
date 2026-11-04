@@ -348,6 +348,11 @@ serve(async (req) => {
       sessionParams.allow_promotion_codes = true;
     }
     const session = await stripe.checkout.sessions.create(sessionParams);
+    // Jornada (04/11/2026): "abriu o pagamento", com o plano. Nunca derruba o checkout.
+    if (!isAgency) {
+      const { error: jErr } = await svc.rpc("jornada_checkout", { _user: contaId, _plano: plan });
+      if (jErr) console.warn("[create-checkout] jornada", jErr.message);
+    }
 
     return new Response(JSON.stringify({ url: session.url }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },

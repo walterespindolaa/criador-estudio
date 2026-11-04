@@ -77,6 +77,8 @@ import { AdminParceiras } from "@/components/admin/AdminParceiras";
 import { AdminTrafego } from "@/components/admin/AdminTrafego";
 import { AdminRespostas, useRespostasNovas } from "@/components/admin/AdminRespostas";
 import { UserDetailsDrawer } from "@/components/admin/UserDetailsDrawer";
+import { AdminFunil } from "@/components/admin/AdminFunil";
+import { ChipJornada, useOndeParou, type OndeParou } from "@/components/admin/JornadaUsuario";
 import { supabase } from "@/integrations/supabase/client";
 import { confirmar } from "@/components/shared/Confirm";
 
@@ -322,6 +324,8 @@ const AdminInner = () => {
     roleFilter,
   });
 
+  // "Onde parou" de cada conta da página (Jornada, 04/11/2026).
+  const { data: ondeParou } = useOndeParou(users.map((u) => u.id));
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
 
@@ -436,10 +440,11 @@ const AdminInner = () => {
           <TabsContent value="contas" className="space-y-0">
             <SubAbas atual={subContas} aoTrocar={setSubContas} itens={[
               { valor: "lista", rotulo: "Usuários" },
+              { valor: "novos", rotulo: "Novos acessos" },
               { valor: "logs", rotulo: "Erros do app" },
               { valor: "robos", rotulo: "Robôs" },
             ]} />
-            {subContas === "robos" ? <AdminRobos /> : subContas === "logs" ? <AdminLogs /> : (
+            {subContas === "robos" ? <AdminRobos /> : subContas === "logs" ? <AdminLogs /> : subContas === "novos" ? <AdminFunil aoAbrirConta={setSelectedUserId} /> : (
           <>
         {/* Metric cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
@@ -536,7 +541,10 @@ const AdminInner = () => {
                   <th className="px-4 py-3 font-display font-semibold text-xs uppercase tracking-wider text-muted-foreground">
                     Usuário
                   </th>
-                  <th className="px-4 py-3 font-display font-semibold text-xs uppercase tracking-wider text-muted-foreground hidden md:table-cell">
+                  <th className="px-4 py-3 font-display font-semibold text-xs uppercase tracking-wider text-muted-foreground">
+                    Onde parou
+                  </th>
+                  <th className="px-4 py-3 font-display font-semibold text-xs uppercase tracking-wider text-muted-foreground hidden xl:table-cell">
                     Nicho
                   </th>
                   <th className="px-4 py-3 font-display font-semibold text-xs uppercase tracking-wider text-muted-foreground">
@@ -556,7 +564,7 @@ const AdminInner = () => {
               <tbody>
                 {users.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center">
+                    <td colSpan={7} className="px-4 py-10 text-center">
                       <p className="text-sm text-muted-foreground font-body">
                         Nenhum usuário encontrado com esses filtros.
                       </p>
@@ -567,6 +575,7 @@ const AdminInner = () => {
                     key={u.id}
                     user={u}
                     email={emails[u.id]}
+                    onde={ondeParou?.[u.id]}
                     onRoleChange={handleRoleChange}
                     onPlanChange={handlePlanChange}
                     onAction={handleAction}
@@ -991,9 +1000,10 @@ type AdminUserRowProps = {
   onAction: (userId: string, action: string) => void;
   onSelect: (userId: string) => void;
   email?: string;
+  onde?: OndeParou;
 };
 
-function AdminUserRow({ user, email, onRoleChange, onPlanChange, onAction, onSelect }: AdminUserRowProps) {
+function AdminUserRow({ user, email, onde, onRoleChange, onPlanChange, onAction, onSelect }: AdminUserRowProps) {
   const planKey = user.plan ?? "free";
   const roleKey = user.role ?? "user";
   const created = user.created_at ? new Date(user.created_at) : null;
@@ -1028,7 +1038,10 @@ function AdminUserRow({ user, email, onRoleChange, onPlanChange, onAction, onSel
           </div>
         </div>
       </td>
-      <td className="px-4 py-3 hidden md:table-cell">
+      <td className="px-4 py-3">
+        {onde ? <ChipJornada onde={onde.onde} tom={onde.tom} /> : <span className="text-xs text-muted-foreground">-</span>}
+      </td>
+      <td className="px-4 py-3 hidden xl:table-cell">
         <span className="text-xs font-body text-muted-foreground">{user.niche ?? "-"}</span>
       </td>
       <td className="px-4 py-3">
