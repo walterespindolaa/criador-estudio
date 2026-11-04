@@ -132,11 +132,59 @@ async function criarComExtras(igUser: string, token: string, corpo: Record<strin
     return await chamar('POST', `${igUser}/media`, { ...corpo, ...limpos }, token, contexto);
   } catch (e) {
     if (e instanceof ErroIg && (e.tokenMorto || /Limite do Instagram/.test(e.message))) throw e;
+    /* SÓ QUEM FOI RECUSADO SAI (Walter, 04/11/2026, "Mais da Obra"): a Meta
+       recusou um dos dois collabs ("não podem ser acessados: vbrancoo") e o
+       Cria publicou sem NENHUM, derrubando o perfil que estava certo junto.
+       Agora tira só os nomes que a própria mensagem da Meta cita e tenta de
+       novo com o resto. Só cai pro "sem nada" se nem assim passar. */
+    const recusados = nomesRecusados(e instanceof Error ? e.message : '', limpos);
+    if (recusados.length) {
+      const resto = semRecusados(limpos, recusados);
+      if (Object.keys(resto).length) {
+        try {
+          const c = await chamar('POST', `${igUser}/media`, { ...corpo, ...resto }, token, contexto);
+          avisos.push(`Saiu sem ${recusados.map((n) => '@' + n).join(', ')}: o Instagram recusou esse perfil (conta privada, nome errado ou perfil que não aceita convite). Os outros entraram.`);
+          return c;
+        } catch (e2) {
+          if (e2 instanceof ErroIg && (e2.tokenMorto || /Limite do Instagram/.test(e2.message))) throw e2;
+        }
+      }
+    }
     const c = await chamar('POST', `${igUser}/media`, corpo, token, contexto);
     const quais = [limpos.collaborators ? 'o convite de collab' : '', limpos.user_tags ? 'as marcações' : ''].filter(Boolean).join(' e ');
     avisos.push(`Saiu sem ${quais}: o Instagram recusou (${e instanceof Error ? e.message.slice(0, 120) : 'erro'}).`);
     return c;
   }
+}
+
+// Nomes pedidos (collab/marcação) que aparecem na mensagem de erro da Meta.
+// Cruza com o que foi pedido: nunca tira alguém que a Meta não citou.
+function nomesPedidos(extras: Record<string, string>): string[] {
+  const nomes: string[] = [];
+  try { if (extras.collaborators) nomes.push(...(JSON.parse(extras.collaborators) as string[])); } catch { /* ignora */ }
+  try { if (extras.user_tags) nomes.push(...(JSON.parse(extras.user_tags) as Array<{ username: string }>).map((t) => t.username)); } catch { /* ignora */ }
+  return [...new Set(nomes.map((n) => n.toLowerCase()))];
+}
+function nomesRecusados(msg: string, extras: Record<string, string>): string[] {
+  const palavras = new Set(msg.toLowerCase().split(/[^a-z0-9._]+/).map((w) => w.replace(/\.+$/, '')));
+  return nomesPedidos(extras).filter((n) => palavras.has(n) || palavras.has(n.replace(/\.+$/, '')));
+}
+function semRecusados(extras: Record<string, string>, recusados: string[]): Record<string, string> {
+  const fora = (n: string) => recusados.includes(n.toLowerCase());
+  const r: Record<string, string> = {};
+  try {
+    if (extras.collaborators) {
+      const v = (JSON.parse(extras.collaborators) as string[]).filter((n) => !fora(n));
+      if (v.length) r.collaborators = JSON.stringify(v);
+    }
+  } catch { /* ignora */ }
+  try {
+    if (extras.user_tags) {
+      const v = (JSON.parse(extras.user_tags) as Array<{ username: string }>).filter((t) => !fora(t.username));
+      if (v.length) r.user_tags = JSON.stringify(v);
+    }
+  } catch { /* ignora */ }
+  return r;
 }
 
 // Cota de publicações pela API nas últimas 24 h. Falhou a leitura: segue.
