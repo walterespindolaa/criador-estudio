@@ -690,6 +690,17 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   }, [title, platform, format, pillarId, status, hook, script, caption, cta,
        scheduledDate, scheduledTime, notes, weekNumber, referenceLink, contentLink, sections, open, post?.id]);
 
+  /* Grava já o que o auto-save ainda ia gravar (Publicar no Instagram chama
+     antes de abrir a conferência, pra data e hora nunca saírem velhas). */
+  const gravarPendente = useCallback(async () => {
+    if (!post?.id || !autoSaveTimerRef.current) return;
+    clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = null;
+    await updatePost.mutateAsync({ id: post.id, updates: buildSavePayload() });
+    setAutoSaveStatus("saved");
+    setTimeout(() => setAutoSaveStatus(null), 1500);
+  }, [post?.id, updatePost, buildSavePayload]);
+
   const handleAiReferences = async () => {
     if (aiHookCategories.length > 0 || isRefAiLoading) return;
     setIsRefAiLoading(true);
@@ -1409,6 +1420,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   onAgendou={(ligado) => setStatus((s) => (ligado ? "agendado" : s === "agendado" ? "editando" : s))}
                   compacto={telaLarga}
                   formato={format}
+                  aoVivo={{ data: scheduledDate || null, hora: scheduledTime || null }}
+                  antesDeAgir={gravarPendente}
                 />
               )}
 

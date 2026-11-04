@@ -239,7 +239,12 @@ export function ConferenciaPublicacao({
               <span className={cn("mt-0.5 w-5 h-5 rounded-md grid place-items-center shrink-0 border-2", conferi ? "bg-foreground border-foreground" : "border-muted-foreground/50")}>
                 {conferi && <Check className="h-3.5 w-3.5 text-background" strokeWidth={3} />}
               </span>
-              <span className="text-[13px] leading-snug">Conferi: o perfil é o do cliente certo, a mídia e a legenda são as {semAprovacao ? "certas" : "aprovadas"} e a data está certa.</span>
+              <span className="text-[13px] leading-snug">
+                {/* Walter (04/11/2026): no perfil do próprio criador não existe "cliente" nem aprovação. */}
+                {d?.cliente
+                  ? <>Conferi: o perfil é o do cliente certo, a mídia e a legenda são as {semAprovacao ? "certas" : "aprovadas"} e a data está certa.</>
+                  : <>Conferi: é o meu perfil, a mídia e a legenda estão certas e a data também.</>}
+              </span>
             </button>
 
             <div className="flex gap-2 pt-1">

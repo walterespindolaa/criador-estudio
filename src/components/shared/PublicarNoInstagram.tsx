@@ -336,8 +336,15 @@ export function PublicarNoInstagramView({
 
 /* onAgendou: o editor do criador guarda o status em estado local; sem avisar,
    o próximo salvar devolvia o card pra coluna antiga depois de agendar. */
-export function PublicarNoInstagram({ postId, onAgendou, compacto, formato }: { postId: string | null | undefined; onAgendou?: (ligado: boolean) => void; compacto?: boolean; formato?: string | null }) {
-  const { data: est } = usePublicacaoDoPost(postId);
+/* DATA AO VIVO (Walter, 04/11/2026: "quando altera o horário, precisa salvar
+   pra mudar ali o agendar publicação; tinha que ser automático"). O painel lia
+   data e hora só do banco, que o auto-save grava 1,5 s depois. Agora o editor
+   manda a data e a hora da tela (aoVivo) e, antes de agendar ou publicar, grava
+   o que estiver pendente (antesDeAgir), pra conferência nunca usar hora velha. */
+export function PublicarNoInstagram({ postId, onAgendou, compacto, formato, aoVivo, antesDeAgir }: { postId: string | null | undefined; onAgendou?: (ligado: boolean) => void; compacto?: boolean; formato?: string | null; aoVivo?: { data: string | null; hora: string | null }; antesDeAgir?: () => Promise<void> }) {
+  const { data: estBanco } = usePublicacaoDoPost(postId);
+  const est = estBanco && aoVivo ? { ...estBanco, scheduled_date: aoVivo.data, scheduled_time: aoVivo.hora } : estBanco;
+  const agir = async (f: () => void) => { try { await antesDeAgir?.(); } catch { /* o auto-save já avisa o erro */ } f(); };
   const { data: cx } = useConexaoDoPost(postId);
   const desfazer = useDesfazerConferencia(postId);
   const checar = useChecarMidia(postId);
@@ -362,12 +369,12 @@ export function PublicarNoInstagram({ postId, onAgendou, compacto, formato }: { 
         checando={checar.isPending}
         checagem={checar.data ?? null}
         erroChecagem={checar.error ? (checar.error as Error).message : null}
-        onPublicar={() => setConf({ agora: true, semAprovacao: naoAprovado })}
+        onPublicar={() => agir(() => setConf({ agora: true, semAprovacao: naoAprovado }))}
         onAuto={(v) => {
-          if (v) setConf({ agora: false, semAprovacao: naoAprovado });
+          if (v) agir(() => setConf({ agora: false, semAprovacao: naoAprovado }));
           else desfazer.mutate(undefined, { onSuccess: () => onAgendou?.(false) });
         }}
-        onSemAprovacao={() => setConf({ agora: false, semAprovacao: true })}
+        onSemAprovacao={() => agir(() => setConf({ agora: false, semAprovacao: true }))}
         onOpcoes={() => setOpcoes(true)}
         onRepublicar={() => setRep("perguntar")}
         onChecar={() => checar.mutate()}
