@@ -26,6 +26,7 @@ import { useHabits } from "@/hooks/useHabits";
 import { useTasks } from "@/hooks/useTasks";
 import { usePillars } from "@/hooks/usePillars";
 import { ConviteCriakut } from "@/components/criakut/ConviteCriakut";
+import { useAcessoCriakut } from "@/hooks/useCriakut";
 import { NextBestAction } from "@/components/dashboard/NextBestAction";
 import { InstagramPulse } from "@/components/dashboard/InstagramPulse";
 import { FirstStepsPanel } from "@/components/dashboard/FirstStepsPanel";
@@ -128,6 +129,8 @@ function DCard({ children, className, onClick, ...rest }: { children: React.Reac
 
 const Dashboard = () => {
   const { user } = useAuth();
+  // Criakut pausado até o relançamento (04/11/2026): sem acesso, o bloco nem entra na home.
+  const { temAcesso: temCriakut } = useAcessoCriakut();
   const { isLoading: profileLoading } = useProfile();
   // Saudação/avatar do header refletem a CONTA ATIVA (não a manager).
   const { profile: activeProfile } = useActiveProfile();
@@ -532,7 +535,7 @@ const Dashboard = () => {
           {/* Convite do Criakut no fim da home (Walter, 30/10/2026). Só pra
               conta da própria pessoa: no "Meu perfil" aberto pela social
               mídia a página do Criakut seria a dela, não a do perfil. */}
-          {activeProfile?.id === user?.id && (
+          {temCriakut && activeProfile?.id === user?.id && (
             <div data-tour="dash-criakut"><ConviteCriakut variante="criador" nicho={activeProfile?.niche ?? null} temTom={temTom}
               nomeFallback={activeProfile?.name ?? null} fotoFallback={activeProfile?.avatar_url ?? null} /></div>
           )}

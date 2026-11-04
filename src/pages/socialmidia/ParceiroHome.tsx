@@ -13,6 +13,7 @@ import { hojeBR } from "@/lib/date-br";
 import { cn } from "@/lib/utils";
 import { brlReais } from "@/lib/money";
 import { ConviteCriakut } from "@/components/criakut/ConviteCriakut";
+import { useAcessoCriakut } from "@/hooks/useCriakut";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    A HOME DO PARCEIRO PURO (designer, editor, copy, tráfego)
@@ -44,6 +45,8 @@ function saudacao() {
 
 export default function ParceiroHome() {
   const navigate = useNavigate();
+  // Criakut pausado até o relançamento (04/11/2026): sem acesso, o bloco nem entra na home.
+  const { temAcesso: temCriakut } = useAcessoCriakut();
   const { profile } = useProfile();
   const { openModule } = useManagerOutlet();
   const { modules } = useModules();
@@ -131,8 +134,8 @@ export default function ParceiroHome() {
 
       {/* ── CRIAKUT (Walter, 30/10/2026, mockup aprovado): convite já
           preenchido com o que ele faz no Cria; publicada, vira resultados. ── */}
-      <div data-tour="ph-criakut"><ConviteCriakut variante="prestador" className="mb-5"
-        nomeFallback={profile?.name ?? null} fotoFallback={profile?.avatar_url ?? null} /></div>
+      {temCriakut && <div data-tour="ph-criakut"><ConviteCriakut variante="prestador" className="mb-5"
+        nomeFallback={profile?.name ?? null} fotoFallback={profile?.avatar_url ?? null} /></div>}
 
       {/* ── OS TRÊS NÚMEROS: fila, agências, a receber ── */}
       <div data-tour="ph-numeros" className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">

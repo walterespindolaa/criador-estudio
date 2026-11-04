@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Check, Eye, Inbox, Hourglass } from "lucide-react";
 import { useConviteCriakut } from "@/hooks/usePortfolioCria";
+import { useAcessoCriakut } from "@/hooks/useCriakut";
 import { ROTULO_PAPEL } from "@/hooks/useParceiro";
 import { iniciais } from "@/lib/criakut";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,10 @@ export function ConviteCriakut({ variante, nicho, temTom, nomeFallback, fotoFall
   const navigate = useNavigate();
   const { data: c } = useConviteCriakut();
   const [fechado, setFechado] = useState(escondido);
+  /* CRIAKUT PAUSADO (Walter, 04/11/2026): fica fora do ar até o relançamento.
+     Sem acesso, o convite some da home em vez de levar pra uma página fechada. */
+  const { temAcesso, carregando } = useAcessoCriakut();
+  if (carregando || !temAcesso) return null;
   if (!c) return null;
 
   const nome = c.nome || nomeFallback || "Você";
