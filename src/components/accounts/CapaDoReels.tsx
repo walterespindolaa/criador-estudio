@@ -58,6 +58,25 @@ async function paraJpeg(arquivo: File): Promise<Blob> {
   }
 }
 
+/** Sobe a imagem da capa (vira JPEG) no bucket `media` e devolve a URL pública. */
+export async function subirImagemDeCapa(arquivo: File, prefixo: string): Promise<string> {
+  if (!/^image\//.test(arquivo.type) && !/\.(jpe?g|png|webp)$/i.test(arquivo.name)) {
+    throw new Error("A capa precisa ser uma imagem (JPG, PNG ou WebP).");
+  }
+  if (arquivo.size > MAX_BYTES) throw new Error("Imagem acima de 8 MB. Exporte menor (1080x1920 basta).");
+  const { data: sess } = await supabase.auth.getUser();
+  const uid = sess.user?.id;
+  if (!uid) throw new Error("Faça login de novo.");
+  // Sempre JPEG: é o que o Instagram aceita como capa na publicação.
+  const jpeg = await paraJpeg(arquivo);
+  const caminho = `${uid}/capas/${prefixo}-${Date.now()}.jpg`;
+  const { error: upErr } = await supabase.storage.from("media")
+    .upload(caminho, jpeg, { contentType: "image/jpeg", upsert: false, cacheControl: "31536000" });
+  if (upErr) throw new Error(upErr.message);
+  const { data: pub } = supabase.storage.from("media").getPublicUrl(caminho);
+  return pub.publicUrl;
+}
+
 export function useCapaDoPost(postId: string | null) {
   const qc = useQueryClient();
   const chave = ["capa-do-post", postId];
@@ -90,21 +109,7 @@ export function useCapaDoPost(postId: string | null) {
   const subir = useMutation({
     mutationFn: async (arquivo: File) => {
       if (!postId) throw new Error("Salve o post antes de escolher a capa.");
-      if (!/^image\//.test(arquivo.type) && !/\.(jpe?g|png|webp)$/i.test(arquivo.name)) {
-        throw new Error("A capa precisa ser uma imagem (JPG, PNG ou WebP).");
-      }
-      if (arquivo.size > MAX_BYTES) throw new Error("Imagem acima de 8 MB. Exporte menor (1080x1920 basta).");
-      const { data: sess } = await supabase.auth.getUser();
-      const uid = sess.user?.id;
-      if (!uid) throw new Error("Faça login de novo.");
-      // Sempre JPEG: é o que o Instagram aceita como capa na publicação.
-      const jpeg = await paraJpeg(arquivo);
-      const caminho = `${uid}/capas/${postId}-${Date.now()}.jpg`;
-      const { error: upErr } = await supabase.storage.from("media")
-        .upload(caminho, jpeg, { contentType: "image/jpeg", upsert: false, cacheControl: "31536000" });
-      if (upErr) throw new Error(upErr.message);
-      const { data: pub } = supabase.storage.from("media").getPublicUrl(caminho);
-      return pub.publicUrl;
+      return subirImagemDeCapa(arquivo, postId);
     },
     onSuccess: (url) => salvar.mutate(url),
     onError: (e: Error) => toast.error(e.message || "Não consegui subir a capa."),
@@ -114,8 +119,38 @@ export function useCapaDoPost(postId: string | null) {
 }
 
 /** O bloco do editor: miniatura 9:16 + escolher, trocar, remover. */
-export function EditorDeCapa({ postId, compacto }: { postId: string; compacto?: boolean }) {
-  const { capa, subir, salvar } = useCapaDoPost(postId);
+/* POST NOVO TAMBÉM (Walter, 05/11/2026: "apareceu só depois de salvar pra
+   colocar a capa"). Sem post salvo ainda, a capa sobe pro bucket do mesmo
+   jeito e fica guardada em `pendente`; quem chama grava em posts.cover_url
+   assim que o post é criado. */
+export function EditorDeCapa({ postId, compacto, pendente }: {
+  postId: string | null;
+  compacto?: boolean;
+  pendente?: { url: string | null; set: (url: string | null) => void };
+}) {
+  const doPost = useCapaDoPost(pendente ? null : postId);
+  const [subindoNova, setSubindoNova] = useState(false);
+  const subirNova = async (arquivo: File) => {
+    if (!pendente) return;
+    setSubindoNova(true);
+    try {
+      pendente.set(await subirImagemDeCapa(arquivo, "novo"));
+      toast.success("Capa escolhida. Ela é salva junto com o post.");
+    } catch (e) {
+      toast.error((e as Error).message || "Não consegui subir a capa.");
+    } finally {
+      setSubindoNova(false);
+    }
+  };
+  const capa = pendente ? pendente.url : doPost.capa;
+  const subir = {
+    mutate: (f: File) => (pendente ? void subirNova(f) : doPost.subir.mutate(f)),
+    isPending: pendente ? subindoNova : doPost.subir.isPending,
+  };
+  const salvar = {
+    mutate: (u: string | null) => (pendente ? pendente.set(u) : doPost.salvar.mutate(u)),
+    isPending: pendente ? false : doPost.salvar.isPending,
+  };
   const input = useRef<HTMLInputElement | null>(null);
   /* DO DRIVE TAMBÉM (Gabriela, 30/09/2026: "preciso que dê pra eu selecionar
      do drive a capa do reels"). As artes do cliente moram no Drive; baixar

@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Heart, MessageCircle, Send, Bookmark, Play, Music2, Share2, ChevronLeft, ChevronRight, Image, X } from "lucide-react";
-import { VideoEmbed } from "./VideoEmbed";
+import { VideoMediaSlot } from "./VideoMediaSlot";
 
 interface SectionData {
   text: string;
@@ -39,6 +39,8 @@ interface PostPreviewContentProps {
   /** Capa do Reels (posts.cover_url). Aparece por cima do vídeo até o play,
    *  como no Instagram antes de tocar (20/10/2026). */
   capa?: string | null;
+  /** Progresso do envio do vídeo (0-100) enquanto ele ainda sobe. */
+  envioPct?: number | null;
 }
 
 interface PostPreviewProps extends PostPreviewContentProps {
@@ -48,7 +50,7 @@ interface PostPreviewProps extends PostPreviewContentProps {
 
 // Conteudo puro da previa (sem Dialog), reutilizavel: vive no modal fullscreen do
 // mobile E na coluna direita fixa do desktop dentro do PostEditor.
-export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections, carouselMedia, folgaParaFechar, semAbasPlataforma, capa }: PostPreviewContentProps) {
+export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections, carouselMedia, folgaParaFechar, semAbasPlataforma, capa, envioPct }: PostPreviewContentProps) {
   const initials = (userName || "C")[0].toUpperCase();
   // Trocou a capa, ela volta pra frente mesmo depois de um play.
   const [capaVista, setCapaVista] = useState<string | null>(null);
@@ -199,7 +201,7 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
         {capaPorCima}
         {activeMediaUrl ? (
           isBunnyVideo ? (
-            mostraCapa ? null : <VideoEmbed viewUrl={activeMediaUrl!} autoplay={pediuPlay} className="w-full h-full border-0" />
+            mostraCapa ? null : <VideoMediaSlot viewUrl={activeMediaUrl!} autoplay={pediuPlay} envioPct={envioPct} className="w-full h-full border-0" />
           ) : isPlayableVideo ? (
             mostraCapa ? null : <video
               src={activeMediaUrl}
@@ -233,7 +235,7 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
           {/* Background media or gradient */}
           {activeMediaUrl ? (
             isBunnyVideo ? (
-              mostraCapa ? null : <VideoEmbed viewUrl={activeMediaUrl!} autoplay={pediuPlay} className="absolute inset-0 w-full h-full border-0" />
+              mostraCapa ? null : <div className="absolute inset-0"><VideoMediaSlot viewUrl={activeMediaUrl!} autoplay={pediuPlay} envioPct={envioPct} className="w-full h-full border-0" /></div>
             ) : isPlayableVideo ? (
               mostraCapa ? null : <video
                 src={activeMediaUrl}
@@ -409,7 +411,7 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
                 <div className="relative overflow-hidden aspect-video">
                   {activeMediaUrl ? (
                     isBunnyVideo ? (
-                      <VideoEmbed viewUrl={activeMediaUrl!} className="w-full h-full border-0" />
+                      <VideoMediaSlot viewUrl={activeMediaUrl!} envioPct={envioPct} className="w-full h-full border-0" />
                     ) : isPlayableVideo ? (
                       <video
                         src={activeMediaUrl}

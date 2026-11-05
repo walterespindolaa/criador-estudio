@@ -186,6 +186,8 @@ interface DriveRef {
   // Pro "Baixar mídias": decide o que vai junto pro celular (vídeo do Bunny sem origem no Drive fica de fora).
   download_url?: string | null;
   bunny_video_id?: string | null;
+  // Só nos refs temporários (post novo): vai pro insert quando o post é criado.
+  file_size?: number | null;
 }
 
 const sanitizeStoragePath = (name: string): string => {
@@ -451,6 +453,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
   const [driveMedia, setDriveMedia] = useState<DriveRef[]>([]);
   const [pendingDriveFiles, setPendingDriveFiles] = useState<DriveRef[]>([]);
+  // Capa do Reels escolhida antes do post existir (gravada no cover_url ao criar).
+  const [capaNova, setCapaNova] = useState<string | null>(null);
   // Ref ids de mídia de slide (carrossel) inserida com post_id=null
   // que precisa de backfill no save. Não vai em pendingDriveFiles
   // porque mediaList usa essa lista pra renderizar a mídia primária do post.
@@ -837,6 +841,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 view_url: viewUrl,
                 external_file_id: videoGuid,
                 provider: "bunny",
+                bunny_video_id: videoGuid,
+                file_size: raw.size,
               };
               setPendingDriveFiles((prev) => [...prev, tempRef]);
               createdRefId = tempId;
@@ -980,6 +986,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
             thumbnail_url: publicUrl,
             view_url: publicUrl,
             external_file_id: path,
+            provider: "device",
+            file_size: file.size,
           };
           setPendingDriveFiles((prev) => [...prev, tempRef]);
         }
@@ -1090,7 +1098,49 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
     }
 
     if (isNew && newPostId) {
-      const driveIds = pendingDriveFiles.map((f) => f.id);
+      /* MÍDIA SUBIDA ANTES DO PRIMEIRO SALVAR (Walter, 05/11/2026: salvou o
+         Reels novo e o vídeo sumiu). Vídeo e foto subidos do computador num
+         post que ainda não existia ficavam só na memória, com id "temp-", e
+         aqui o update por id não achava nada no banco: o post nascia sem
+         mídia (e agendado sem vídeo). Agora os temporários viram linha de
+         verdade com o post recém-criado, na mesma ordem da tira. */
+      const temporarios = pendingDriveFiles.filter((f) => f.id.startsWith("temp-"));
+      const trocaId = new Map<string, string>();
+      if (temporarios.length > 0) {
+        const expira = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        const { data: criados, error: refErr } = await supabase
+          .from("external_media_refs")
+          .insert(temporarios.map((f) => ({
+            user_id: userId,
+            post_id: newPostId,
+            provider: f.provider ?? "device",
+            bunny_video_id: f.provider === "bunny" ? (f.bunny_video_id ?? f.external_file_id ?? null) : null,
+            external_file_id: f.external_file_id ?? null,
+            file_name: f.file_name,
+            file_type: f.file_type,
+            file_size: f.file_size ?? null,
+            thumbnail_url: f.thumbnail_url,
+            view_url: f.view_url,
+            expires_at: expira,
+          })) as never)
+          .select("id");
+        if (refErr || !criados) {
+          console.error("[save] insert dos refs temporários falhou", refErr);
+          toast.error("O post foi criado, mas a mídia não ficou salva. Abra o post e suba o arquivo de novo.");
+        } else {
+          (criados as { id: string }[]).forEach((c, i) => trocaId.set(temporarios[i].id, c.id));
+        }
+      }
+      if (capaNova && temCapa(format)) {
+        const { error: capaErr } = await (supabase as unknown as {
+          from: (t: string) => { update: (v: unknown) => { eq: (c: string, v: string) => Promise<{ error: unknown }> } };
+        }).from("posts").update({ cover_url: capaNova }).eq("id", newPostId);
+        if (capaErr) {
+          console.error("[save] capa do post novo", capaErr);
+          toast.error("O post foi criado, mas a capa não ficou salva. Abra o post e escolha de novo.");
+        }
+      }
+      const driveIds = pendingDriveFiles.map((f) => trocaId.get(f.id) ?? f.id);
       const allPendingIds = [...driveIds, ...pendingSectionRefIds];
       if (allPendingIds.length > 0) {
         await supabase
@@ -1439,8 +1489,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
      nenhum lugar pra colocar a capa do vídeo pra subir junto no Instagram").
      Ela já existia no Cria Post da social mídia (posts.cover_url) e a
      publicação já manda a capa junto; faltava o lugar de escolher aqui. */
-  const comCapa = temCapa(format) && !!post?.id;
-  const { capa: capaDoPost } = useCapaDoPost(comCapa ? post!.id : null);
+  /* Post novo (05/11/2026): a capa já aparece antes do primeiro salvar e fica
+     em `capaNova` até o post ser criado (ver handleSave). */
+  const comCapa = temCapa(format);
+  const { capa: capaSalva } = useCapaDoPost(comCapa && post?.id ? post.id : null);
+  const capaDoPost = post?.id ? capaSalva : capaNova;
 
   const blocoMidia = (
     <>
@@ -1744,7 +1797,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
                 </>
 
-                {comCapa && <EditorDeCapa postId={post!.id} compacto={telaLarga} />}
+                {comCapa && (
+                  <EditorDeCapa
+                    postId={post?.id ?? null}
+                    compacto={telaLarga}
+                    pendente={post?.id ? undefined : { url: capaNova, set: setCapaNova }}
+                  />
+                )}
 
                 {/* Gerador de prompt do Estudio (arte a partir do conteudo real).
                     RECOLHIDO atras de um botao (Walter, 01/09): os avisos e o
@@ -1800,6 +1859,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     sections={sections}
                     carouselMedia={previewCarouselMedia}
                     capa={comCapa ? capaDoPost : null}
+                    envioPct={activeUpload?.pct ?? null}
                   />
   );
 
@@ -3073,6 +3133,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
         sections={sections}
         carouselMedia={previewCarouselMedia}
         capa={comCapa ? capaDoPost : null}
+        envioPct={activeUpload?.pct ?? null}
       />
       <div style={{ position: "fixed", left: "-9999px", top: 0, zIndex: -1 }}>
         <RoteiroPdfTemplate
