@@ -344,12 +344,18 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
          MP4, com o player do navegador. Só baixa quando a pessoa aperta play. */
       const arquivo = videoDaCapa(data.video_guid);
       if (arquivo) {
+        /* 480p no celular, 720p no computador (Walter, 05/11/2026: o Bunny
+           cobra por MB entregue). Na tela do celular a diferença não aparece
+           e o arquivo cai pela metade. As outras ficam de reserva. */
+        const celular = typeof window !== "undefined" && window.matchMedia?.("(max-width: 768px)").matches;
+        const [f720, f480, f360] = arquivo.fontes;
+        const fontes = celular ? [f480, f720, f360] : [f720, f480, f360];
         return (
           <CartaoBase visual={visual} className="p-3">
             <TituloCartao>{txt(data, "titulo")}</TituloCartao>
             <video controls playsInline preload="none" poster={arquivo.poster}
               className="w-full max-h-[80vh] rounded-xl bg-black object-contain">
-              {arquivo.fontes.map((src) => <source key={src} src={src} type="video/mp4" />)}
+              {fontes.map((src) => <source key={src} src={src} type="video/mp4" />)}
             </video>
           </CartaoBase>
         );

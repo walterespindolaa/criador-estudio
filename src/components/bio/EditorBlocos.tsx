@@ -114,6 +114,9 @@ function BotaoVideoCapa({ guid, aoTrocar }: { guid: string; aoTrocar: (guid: str
    Mesmo caminho do vídeo da capa (Bunny, biblioteca com MP4), sem o limite de
    8 segundos: aqui a pessoa aperta o play, então só baixa quem quer ver. */
 const VIDEO_BLOCO_MAX_MB = 300;
+/* Até 90 s (Walter, 05/11/2026): o Bunny cobra por MB entregue, e vídeo longo
+   no site é custo que quase ninguém assiste até o fim. */
+const VIDEO_BLOCO_MAX_SEGUNDOS = 90;
 function BotaoVideoBloco({ guid, aoTrocar }: { guid: string; aoTrocar: (guid: string) => void }) {
   const ref = useRef<HTMLInputElement>(null);
   const [subindo, setSubindo] = useState(false);
@@ -130,6 +133,11 @@ function BotaoVideoBloco({ guid, aoTrocar }: { guid: string; aoTrocar: (guid: st
   const escolher = async (f: File) => {
     if (!f.type.startsWith("video/") && !/\.(mp4|mov|m4v|webm)$/i.test(f.name)) { toast.error("Escolha um arquivo de vídeo."); return; }
     if (f.size > VIDEO_BLOCO_MAX_MB * 1024 * 1024) { toast.error(`Vídeo grande demais. Até ${VIDEO_BLOCO_MAX_MB} MB.`); return; }
+    const s = await duracaoDoVideo(f);
+    if (Number.isFinite(s) && s > VIDEO_BLOCO_MAX_SEGUNDOS + 0.5) {
+      toast.error(`O vídeo tem ${Math.round(s)}s. Pro site, corte em até ${VIDEO_BLOCO_MAX_SEGUNDOS} segundos.`);
+      return;
+    }
     setSubindo(true);
     try {
       const r = await uploadFileToBunnyStream(f);
@@ -358,7 +366,7 @@ export function FormBloco({ bloco, salvar, slugPublico, telefonePadrao, secoes =
             <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })} className="rounded-xl" />
           </LinhaCampo>
           <LinhaCampo label="Enviar o vídeo"
-            ajuda={`Do celular ou do computador, até ${VIDEO_BLOCO_MAX_MB} MB. Ele leva alguns minutos pra ficar pronto.`}>
+            ajuda={`Do celular ou do computador, até ${VIDEO_BLOCO_MAX_SEGUNDOS} segundos. Ele leva alguns minutos pra ficar pronto.`}>
             <BotaoVideoBloco guid={txt(d, "video_guid")} aoTrocar={(g) => p({ video_guid: g })} />
           </LinhaCampo>
           {!enviado && (
