@@ -4,7 +4,7 @@ import {
   bool, embedDeSpotify, embedDeVideo, faltaAte, linkAppleMaps, linkGoogleMaps,
   linkSeguro, linkWaze, linkWhatsapp, lista, txt, type DadosBloco,
 } from "@/lib/bioBlocks";
-import { urlMapaEmbutido } from "@/lib/bioEspecialista";
+import { urlMapaEmbutido, videoDaCapa } from "@/lib/bioEspecialista";
 import { MapaEmbutido } from "@/components/bio/SiteEspecialista";
 import { iconeLucide } from "@/lib/bioIcones";
 import { TextoRico } from "@/lib/textoRico";
@@ -340,6 +340,20 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
     }
 
     case "video": {
+      /* Vídeo enviado (05/11/2026) vem antes do link: toca direto do Bunny em
+         MP4, com o player do navegador. Só baixa quando a pessoa aperta play. */
+      const arquivo = videoDaCapa(data.video_guid);
+      if (arquivo) {
+        return (
+          <CartaoBase visual={visual} className="p-3">
+            <TituloCartao>{txt(data, "titulo")}</TituloCartao>
+            <video controls playsInline preload="none" poster={arquivo.poster}
+              className="w-full max-h-[80vh] rounded-xl bg-black object-contain">
+              {arquivo.fontes.map((src) => <source key={src} src={src} type="video/mp4" />)}
+            </video>
+          </CartaoBase>
+        );
+      }
       const e = embedDeVideo(txt(data, "url"));
       if (!e) return null;
       return (

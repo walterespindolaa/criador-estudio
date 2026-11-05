@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useBioBlocks } from "@/hooks/useBioBlocks";
 import {
-  blocosDoEstilo, faltaNoBloco, lista, mascaraTelefone, metaDoBloco, resumoDoBloco, txt, bool,
+  avisoDoLinkDeVideo, blocosDoEstilo, faltaNoBloco, lista, mascaraTelefone, metaDoBloco, resumoDoBloco, txt, bool,
   type BioBloco, type DadosBloco, type EstiloBio, type TipoBloco,
 } from "@/lib/bioBlocks";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -105,6 +105,58 @@ function BotaoVideoCapa({ guid, aoTrocar }: { guid: string; aoTrocar: (guid: str
           {subindo && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}{subindo ? "Enviando…" : video ? "Trocar vídeo" : "Enviar vídeo"}
         </Button>
         {video && !subindo && <Button type="button" size="sm" variant="ghost" onClick={() => aoTrocar("")}>Remover</Button>}
+      </div>
+    </div>
+  );
+}
+
+/* ── O VÍDEO DO BLOCO "VÍDEO" (05/11/2026) ──
+   Mesmo caminho do vídeo da capa (Bunny, biblioteca com MP4), sem o limite de
+   8 segundos: aqui a pessoa aperta o play, então só baixa quem quer ver. */
+const VIDEO_BLOCO_MAX_MB = 300;
+function BotaoVideoBloco({ guid, aoTrocar }: { guid: string; aoTrocar: (guid: string) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [subindo, setSubindo] = useState(false);
+  const [semMiniatura, setSemMiniatura] = useState(false);
+  const video = videoDaCapa(guid);
+  useEffect(() => { setSemMiniatura(false); }, [guid]);
+  // A miniatura só existe depois que o Bunny processa: tenta de novo a cada 15 s.
+  const [tentativa, setTentativa] = useState(0);
+  useEffect(() => {
+    if (!video || !semMiniatura) return;
+    const t = window.setTimeout(() => { setSemMiniatura(false); setTentativa((n) => n + 1); }, 15000);
+    return () => clearTimeout(t);
+  }, [video, semMiniatura]);
+  const escolher = async (f: File) => {
+    if (!f.type.startsWith("video/") && !/\.(mp4|mov|m4v|webm)$/i.test(f.name)) { toast.error("Escolha um arquivo de vídeo."); return; }
+    if (f.size > VIDEO_BLOCO_MAX_MB * 1024 * 1024) { toast.error(`Vídeo grande demais. Até ${VIDEO_BLOCO_MAX_MB} MB.`); return; }
+    setSubindo(true);
+    try {
+      const r = await uploadFileToBunnyStream(f);
+      aoTrocar(r.videoGuid);
+      toast.success("Vídeo enviado. Em alguns minutos ele aparece na página.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não consegui enviar o vídeo.");
+    } finally { setSubindo(false); }
+  };
+  return (
+    <div className="flex items-center gap-2.5">
+      <div className="w-14 aspect-[9/16] rounded-lg bg-muted overflow-hidden shrink-0 grid place-items-center border border-border">
+        {video && !semMiniatura
+          ? <img key={tentativa} src={`${video.poster}?t=${tentativa}`} alt="" className="w-full h-full object-cover" onError={() => setSemMiniatura(true)} />
+          : video || subindo ? <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" aria-label="Processando o vídeo" />
+          : <ImagePlus className="h-4 w-4 text-muted-foreground" />}
+      </div>
+      <div className="min-w-0 space-y-1.5">
+        <div className="flex flex-wrap gap-1.5">
+          <input ref={ref} type="file" accept="video/*" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void escolher(f); }} />
+          <Button type="button" size="sm" variant="outline" disabled={subindo} onClick={() => ref.current?.click()}>
+            {subindo && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}{subindo ? "Enviando…" : video ? "Trocar vídeo" : "Enviar vídeo"}
+          </Button>
+          {video && !subindo && <Button type="button" size="sm" variant="ghost" onClick={() => aoTrocar("")}>Remover</Button>}
+        </div>
+        {video && semMiniatura && <p className="text-[11px] font-body text-muted-foreground">Preparando o vídeo…</p>}
       </div>
     </div>
   );
@@ -294,19 +346,32 @@ export function FormBloco({ bloco, salvar, slugPublico, telefonePadrao, secoes =
         </div>
       );
 
-    case "video":
+    case "video": {
+      /* SUBIR O ARQUIVO (Gabriela, 05/11/2026: "não tem como subir igual foto?").
+         O arquivo enviado vale mais que o link: toca direto na página, sem
+         depender do Instagram deixar. */
+      const enviado = guidValido(d.video_guid);
+      const aviso = enviado ? null : avisoDoLinkDeVideo(txt(d, "url"));
       return (
         <div className="space-y-3.5">
           <LinhaCampo label="Título (opcional)">
             <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })} className="rounded-xl" />
           </LinhaCampo>
-          <LinhaCampo label="Link do vídeo"
-            ajuda="Cole o endereço do YouTube, do Reels, do TikTok ou do Vimeo. O vídeo toca dentro da página.">
-            <Input value={txt(d, "url")} onChange={(e) => p({ url: e.target.value })}
-              placeholder="https://www.instagram.com/reel/..." inputMode="url" className="rounded-xl" />
+          <LinhaCampo label="Enviar o vídeo"
+            ajuda={`Do celular ou do computador, até ${VIDEO_BLOCO_MAX_MB} MB. Ele leva alguns minutos pra ficar pronto.`}>
+            <BotaoVideoBloco guid={txt(d, "video_guid")} aoTrocar={(g) => p({ video_guid: g })} />
           </LinhaCampo>
+          {!enviado && (
+            <LinhaCampo label="Ou cole o link"
+              ajuda="YouTube, Reels, TikTok ou Vimeo. Link de destaque ou story do Instagram não toca fora do app.">
+              <Input value={txt(d, "url")} onChange={(e) => p({ url: e.target.value })}
+                placeholder="https://www.instagram.com/reel/..." inputMode="url" className="rounded-xl" />
+              {aviso && <p className="mt-1.5 text-[12px] font-body leading-snug text-destructive">{aviso}</p>}
+            </LinhaCampo>
+          )}
         </div>
       );
+    }
 
     case "spotify":
       return (

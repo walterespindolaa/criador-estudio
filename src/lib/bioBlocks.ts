@@ -16,7 +16,7 @@ import {
   ShoppingBag, Type, UserRound, Clapperboard, BadgeCheck, MousePointerClick, MapPinned, Handshake, UtensilsCrossed, Clock, Sparkles, Rows3, ListChecks, BriefcaseBusiness, ListOrdered, Megaphone,
   CircleUserRound, LayoutList, Film, TicketPercent, Presentation, type LucideIcon,
 } from "lucide-react";
-import { lerAtendimento, resumoAtendimento, temAlgumAtendimento } from "@/lib/bioEspecialista";
+import { guidValido, lerAtendimento, resumoAtendimento, temAlgumAtendimento } from "@/lib/bioEspecialista";
 
 export type EstiloBio = "classico" | "site";
 
@@ -349,7 +349,7 @@ export function resumoDoBloco(b: { kind: string; data: DadosBloco }): string {
     case "link": return txt(d, "url") || "sem endereço ainda";
     case "whatsapp": return txt(d, "telefone") || "sem telefone ainda";
     case "texto": return txt(d, "texto").slice(0, 60) || (txt(d, "imagem") ? "só a foto" : "sem texto ainda");
-    case "video": return txt(d, "url") || "sem vídeo ainda";
+    case "video": return guidValido(d.video_guid) ? "vídeo enviado" : txt(d, "url") || "sem vídeo ainda";
     case "spotify": return txt(d, "url") || "sem link ainda";
     case "galeria": return `${lista(d, "imagens").length} foto(s)`;
     case "faq": return `${lista(d, "itens").length} pergunta(s)`;
@@ -396,7 +396,10 @@ export function faltaNoBloco(b: { kind: string; data: DadosBloco }): string | nu
   switch (b.kind) {
     case "link": return txt(d, "url").trim() ? null : "falta o endereço";
     case "whatsapp": return txt(d, "telefone").replace(/\D/g, "").length >= 10 ? null : "falta o telefone";
-    case "video": return txt(d, "url").trim() ? null : "falta o link do vídeo";
+    case "video":
+      if (guidValido(d.video_guid)) return null;
+      if (!txt(d, "url").trim()) return "falta o vídeo";
+      return embedDeVideo(txt(d, "url")) ? null : "esse link não toca na página";
     case "spotify": return txt(d, "url").trim() ? null : "falta o link do Spotify";
     case "galeria": return lista(d, "imagens").length ? null : "nenhuma foto";
     case "contagem": return txt(d, "ate").trim() ? null : "falta a data";
@@ -445,6 +448,18 @@ export function faltaNoBloco(b: { kind: string; data: DadosBloco }): string | nu
 /* ── VÍDEO ──
    Aceita o link que a pessoa copia da barra do navegador ou do botão de
    compartilhar, sem pedir "cole o código do embed" (ninguém sabe o que é). */
+/** Por que um link não vira player. Destaque e perfil do Instagram não têm
+ *  embed (Gabriela, 05/11/2026, colou um link de destaque e o bloco sumia). */
+export function avisoDoLinkDeVideo(url: string): string | null {
+  const u = (url || "").trim();
+  if (!u || embedDeVideo(u)) return null;
+  if (/instagram\.com\/(?:s|stories)\//.test(u)) {
+    return "Esse é um link de destaque ou story, e o Instagram não deixa tocar fora do app. Use o link de um Reels ou envie o arquivo do vídeo.";
+  }
+  if (/instagram\.com\//.test(u)) return "Esse link do Instagram não é de um Reels ou post. Use o link do Reels ou envie o arquivo do vídeo.";
+  return "Esse link não toca na página. Use YouTube, Reels, TikTok ou Vimeo, ou envie o arquivo do vídeo.";
+}
+
 export function embedDeVideo(url: string): { src: string; alto: boolean } | null {
   const u = (url || "").trim();
   if (!u) return null;
