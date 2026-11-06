@@ -29,7 +29,8 @@ import { hojeBR, parseDateOnly } from "@/lib/date-br";
 import { Calendar } from "@/components/ui/calendar";
 import { CriaPostMedia } from "@/components/accounts/CriaPostMedia";
 import { removerMidiasDoPost } from "@/hooks/useCriaPostMedia";
-import { ImportKanbanDialog } from "@/components/accounts/ImportKanbanDialog";
+import { ImportKanbanDialog, contarPraPuxar } from "@/components/accounts/ImportKanbanDialog";
+import { useKanbanImport } from "@/hooks/useKanbanImport";
 import { ClientReportDialogLazy as ClientReportDialog } from "@/components/accounts/ClientReportDialogLazy";
 import { NotasRelatorioSalvas } from "@/components/accounts/NotasRelatorioSalvas";
 import { ExternalClientDialog } from "@/components/accounts/ExternalClientDialog";
@@ -446,6 +447,9 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   // com um clique. Cliente sem vínculo no CRM não dispara query nenhuma.
   const { data: hashtagsCliente = [] } = useClientHashtags(client.crm_client_id);
   const criaOwnerId = crmClients.find((c) => c.id === client.crm_client_id)?.cria_owner_id ?? null;
+  // Quantos posts que a agência criou no kanban do cliente (30 dias) ainda não foram puxados.
+  const { kanban: kanbanCliente } = useKanbanImport(criaOwnerId, client.id);
+  const praPuxar = useMemo(() => contarPraPuxar(kanbanCliente, client.id), [kanbanCliente, client.id]);
   const hasCriaAccount = !!criaOwnerId;
   const { data: igConn } = useClientSocialConnection(client.crm_client_id);
   /* CAPTAÇÃO NO CALENDÁRIO DO CLIENTE (Walter, 20/10/2026: "tem como aparecer
@@ -676,7 +680,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         customUntil={reportPeriodo?.until}
       />
       <ExternalClientDialog open={editOpen} onOpenChange={setEditOpen} client={client} />
-      <ImportKanbanDialog open={importOpen} onOpenChange={setImportOpen} externalClientId={client.id} criaOwnerId={criaOwnerId} existingTitles={new Set(posts.map((p) => p.title))} />
+      <ImportKanbanDialog open={importOpen} onOpenChange={setImportOpen} externalClientId={client.id} criaOwnerId={criaOwnerId} nomeCliente={client.name} />
 
       <Tabs value={embedded ? activeTab : undefined} defaultValue={embedded ? undefined : "posts"} onValueChange={embedded ? onTabChange : undefined} className="w-full">
         {!embedded && (
@@ -703,7 +707,13 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   {!embedded && <Button variant="outline" onClick={() => setEditOpen(true)}><Settings2 className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Personalizar</span></Button>}
                 </>
               )}
-              {permPost.podeEditar && <Button variant="outline" onClick={() => setImportOpen(true)}><KanbanSquare className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">Importar do kanban</span></Button>}
+              {/* PUXAR DO KANBAN (06/11/2026): com nome também no celular e o número do que espera. */}
+              {permPost.podeEditar && criaOwnerId && (
+                <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5">
+                  <KanbanSquare className="h-4 w-4" /> Puxar do kanban
+                  {praPuxar > 0 && <span className="rounded-full bg-primary text-primary-foreground text-[11px] font-bold px-1.5 min-w-[20px] text-center">{praPuxar}</span>}
+                </Button>
+              )}
               {permPost.podeEditar && <Button onClick={() => openNew()}><Plus className="h-4 w-4 mr-1.5" /> Novo post</Button>}
               {!permPost.podeEditar && !permPost.carregando && <span className="self-center text-[11.5px] font-body text-muted-foreground">Seu acesso aqui é só pra ver.</span>}
             </div>

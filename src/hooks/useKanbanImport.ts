@@ -39,8 +39,18 @@ export type KanbanPost = {
   scheduled_date: string | null;
   scheduled_time: string | null;
   created_at: string | null;
+  /** Quem criou (null em post antigo, de antes de 06/11/2026). */
+  created_by?: string | null;
+  /** Criado por alguém da agência (social mídia ou equipe), não pelo cliente. */
+  criado_pela_agencia?: boolean;
+  criado_por_nome?: string | null;
+  /** Já existe um post do Cria Post puxado deste. */
+  ja_importado?: boolean;
   media: KanbanMedia[];
 };
+
+/** "producao": entra em Em produção. "aprovacao": vai direto pro link do cliente. */
+export type DestinoImport = "producao" | "aprovacao";
 
 // O kanban guarda o roteiro por blocos em `sections` (JSON de { text, captacao }).
 // Quando o campo `script` está vazio, montamos um texto único a partir dos blocos.
@@ -79,7 +89,7 @@ export function useKanbanImport(criaOwnerId: string | null, externalClientId: st
   });
 
   const importPosts = useMutation({
-    mutationFn: async (selected: KanbanPost[]) => {
+    mutationFn: async ({ posts: selected, destino }: { posts: KanbanPost[]; destino: DestinoImport }) => {
       let mediaFails = 0;
       for (const kp of selected) {
         // Garante formato compatível com a plataforma no Cria Post.
@@ -90,7 +100,8 @@ export function useKanbanImport(criaOwnerId: string | null, externalClientId: st
           user_id: agencyOwnerId!,
           external_client_id: externalClientId,
           status: "editando",
-          approval_status: "pendente",
+          approval_status: destino === "aprovacao" ? "pendente" : "em_producao",
+          importado_de: kp.id,
           approval_mode: "fast",
           title: kp.title,
           platform: kp.platform,
@@ -121,10 +132,12 @@ export function useKanbanImport(criaOwnerId: string | null, externalClientId: st
           if (mErr) mediaFails++;
         }
       }
-      return { count: selected.length, mediaFails };
+      return { count: selected.length, mediaFails, destino };
     },
-    onSuccess: ({ count, mediaFails }) => {
-      toast.success(count === 1 ? "1 post importado, já está na fila de aprovação!" : `${count} posts importados, já estão na fila de aprovação!`);
+    onSuccess: ({ count, mediaFails, destino }) => {
+      const qtd = count === 1 ? "1 post" : `${count} posts`;
+      toast.success(destino === "aprovacao" ? `${qtd} no link de aprovação do cliente.` : `${qtd} em "Em produção".`);
+      qc.invalidateQueries({ queryKey: ["kanban-import", criaOwnerId] });
       if (mediaFails > 0) toast.warning(`${mediaFails} mídia(s) não puderam ser copiadas, confira nos posts.`);
       invalidatePostsEverywhere(qc, agencyOwnerId, externalClientId);
     },

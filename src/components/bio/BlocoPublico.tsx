@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Check, Copy, MapPin, MessageCircle, Navigation } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Copy, MapPin, MessageCircle, Navigation, Play } from "lucide-react";
 import {
   bool, embedDeSpotify, embedDeVideo, faltaAte, linkAppleMaps, linkGoogleMaps,
   linkSeguro, linkWaze, linkWhatsapp, lista, txt, type DadosBloco,
@@ -353,10 +353,7 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
         return (
           <CartaoBase visual={visual} className="p-3">
             <TituloCartao>{txt(data, "titulo")}</TituloCartao>
-            <video controls playsInline preload="none" poster={arquivo.poster}
-              className="w-full max-h-[80vh] rounded-xl bg-black object-contain">
-              {fontes.map((src) => <source key={src} src={src} type="video/mp4" />)}
-            </video>
+            <VideoDoBloco poster={arquivo.poster} fontes={fontes} />
           </CartaoBase>
         );
       }
@@ -410,4 +407,40 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
     case "parceria": return <>{captura}</>;
     default: return null;
   }
+}
+
+/* VÍDEO ENVIADO NO BLOCO (Walter, 06/11/2026: "dá pra ficar bem enquadrado sem
+   essa borda preta, com um play mais centralizado e bonito?"). O quadro pega a
+   proporção real do vídeo (em pé, deitado ou quadrado) assim que o navegador
+   lê o cabeçalho, então não sobra faixa preta. Antes do play: a capa inteira e
+   um botão redondo no meio. Os controles do navegador só aparecem depois. */
+function VideoDoBloco({ poster, fontes }: { poster: string; fontes: string[] }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [proporcao, setProporcao] = useState<number>(9 / 16);
+  const [tocando, setTocando] = useState(false);
+  // A capa (thumbnail do Bunny) já diz a proporção antes de baixar qualquer vídeo.
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => { if (img.naturalWidth && img.naturalHeight) setProporcao(img.naturalWidth / img.naturalHeight); };
+    img.src = poster;
+  }, [poster]);
+  const play = () => { setTocando(true); void ref.current?.play().catch(() => { /* o usuário toca de novo */ }); };
+  return (
+    <div className="relative w-full overflow-hidden rounded-xl bg-black mx-auto" style={{ aspectRatio: String(proporcao), maxHeight: "80vh" }}>
+      <video ref={ref} playsInline preload="none" poster={poster} controls={tocando}
+        onLoadedMetadata={(e) => { const v = e.currentTarget; if (v.videoWidth && v.videoHeight) setProporcao(v.videoWidth / v.videoHeight); }}
+        onPause={(e) => { if (e.currentTarget.currentTime === 0) setTocando(false); }}
+        className="absolute inset-0 h-full w-full object-cover">
+        {fontes.map((src) => <source key={src} src={src} type="video/mp4" />)}
+      </video>
+      {!tocando && (
+        <button type="button" onClick={play} aria-label="Tocar o vídeo"
+          className="absolute inset-0 grid place-items-center bg-black/10 transition-colors hover:bg-black/20">
+          <span className="grid place-items-center h-16 w-16 rounded-full bg-white/90 shadow-lg backdrop-blur-sm transition-transform hover:scale-105">
+            <Play className="h-7 w-7 translate-x-0.5 text-neutral-900" fill="currentColor" />
+          </span>
+        </button>
+      )}
+    </div>
+  );
 }
