@@ -318,6 +318,20 @@ serve(async (req) => {
         },
       };
     }
+    /* ASSINANDO NO MEIO DO TESTE SEM CARTÃO (06/11/2026). Quem ainda tem dias de
+       teste e decide assinar não perde esses dias: a 1ª cobrança vai pro fim do
+       teste. O Stripe exige trial_end com pelo menos 48 h de folga; com menos,
+       cobra na hora, como antes. */
+    const fimTeste = p?.trial_ends_at ? new Date(p.trial_ends_at).getTime() : 0;
+    if (!testeCartao && !campanha && !isAgency && !pedidoConta && !selfSubValidated
+        && !profile?.stripe_subscription_id && fimTeste - Date.now() > 50 * 3600 * 1000) {
+      sessionParams.subscription_data!.trial_end = Math.floor(fimTeste / 1000);
+      sessionParams.payment_method_collection = "always";
+      const dataFim = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }).format(new Date(fimTeste));
+      sessionParams.custom_text = {
+        submit: { message: `Hoje não é cobrado nada: você continua no teste até ${dataFim} e a primeira cobrança é nesse dia. Cancela pelo app quando quiser, em 2 cliques.` },
+      };
+    }
     if (campanha) {
       // Cartão na hora: no fim do grátis o Stripe cobra sozinho.
       sessionParams.payment_method_collection = "always";

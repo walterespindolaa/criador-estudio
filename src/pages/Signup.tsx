@@ -126,9 +126,12 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
     setLoading(true);
     const intencao = accountType === "manager" ? { account_intent: "manager" }
       : accountType === "parceiro" ? { account_intent: "parceiro", parceiro_role: parceiroRole }
-      /* Criador testa 7 dias COM CARTÃO (03/11/2026): sem esta marca o banco dá
-         o teste antigo, sem cartão (que continua valendo pros outros tipos). */
-      : { teste_com_cartao: "1" };
+      /* TESTE SEM CARTÃO DE NOVO (Walter, 06/11/2026: experimento pra ver se o
+         fluxo aumenta). Sem a marca `teste_com_cartao`, o banco (gatilho
+         handle_new_user_trial) já dá 7 dias de acesso completo na criação da
+         conta, e o cartão só é pedido no 8º dia, na tela de planos. Pra voltar
+         ao teste com cartão, é só devolver `{ teste_com_cartao: "1" }` aqui. */
+      : {};
     /* ORIGEM DO CADASTRO (motor de tráfego, 21/10/2026). A LP cola a UTM no
        link de "testar" (track.js). Aqui ela vai junto pros metadados da conta,
        e o admin consegue dizer quantos cadastros cada campanha e o link da bio
@@ -235,7 +238,7 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
                 o anúncio promete isso. "7 dias grátis" aqui parecia pegadinha
                 pra quem chegou da LP de social mídia (22/10/2026). */}
             <p className="text-[11px] font-bold tracking-[.6px] text-[#FFCF03]">{accountType === "manager" ? "CONTA GRÁTIS" : "7 DIAS GRÁTIS"}</p>
-            <p className={cn(DISPLAY, "mt-0.5 text-[15px] font-semibold leading-tight text-white")}>{accountType === "manager" ? "Grátis pra sempre. Sem cartão." : "Cancela quando quiser, em 2 cliques."}</p>
+            <p className={cn(DISPLAY, "mt-0.5 text-[15px] font-semibold leading-tight text-white")}>{accountType === "manager" ? "Grátis pra sempre. Sem cartão." : "Sem cartão. Entra e usa tudo."}</p>
           </div>
         </div>
         <img src="/stickers/selo-sem-formula.png" alt="" aria-hidden className="pointer-events-none absolute left-[440px] bottom-10 w-[120px] rotate-[10deg] [@media(max-height:820px)]:hidden" />
@@ -412,7 +415,7 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
             <p className="-mt-1 hidden text-center text-[12.5px] text-[#5B574E] lg:block">
               {accountType === "parceiro" ? "Sem cartão. Quem paga o Cria é a agência."
                 : accountType === "manager" ? "Sem cartão. Você só paga os módulos que ligar."
-                : "Você só paga no 8º dia. Cancela em 2 cliques."}
+                : "Sem cartão. Você só escolhe um plano no 8º dia, se gostar."}
             </p>
           </form>
         )}

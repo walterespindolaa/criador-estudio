@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Copy, Check, Lightbulb, Repeat2, Sparkles, Video, Instagram, ExternalLink } from "lucide-react";
+import { ArrowRight, BarChart3, Copy, Check, Lightbulb, Repeat2, Sparkles, Video, Instagram, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -242,7 +242,10 @@ const Dashboard = () => {
         {/* INSTAGRAM | GANCHO E CRIA IA */}
         <div className={cn("grid grid-cols-1 lg:grid-cols-12", GAP)}>
           <CardInicio className="lg:col-span-8" data-tour="dash-instagram" titulo="Seu Instagram"
-            direita={<button type="button" onClick={() => navigate("/app/insights")} className="inline-flex items-center gap-1 font-semibold text-foreground">Ver tudo <ArrowRight className="h-3.5 w-3.5" /></button>}>
+            direita={<button type="button" onClick={() => navigate("/app/insights")}
+              /* Atalho pros Insights (Walter, 06/11/2026: acesso rápido direto do Início). */
+              className="inline-flex items-center gap-1.5 rounded-full border-2 border-foreground bg-[#F6D9E8] dark:bg-pink-500/20 px-3 h-8 font-body font-bold text-[12px] text-foreground shadow-[0_2px_0_hsl(var(--foreground))] hover:-translate-y-0.5 transition-transform">
+              <BarChart3 className="h-3.5 w-3.5" /> Abrir Insights <ArrowRight className="h-3.5 w-3.5" /></button>}>
             {insta.isLoading ? null : !insta.conn ? (
               <div className="flex h-full flex-col sm:flex-row sm:items-center gap-4">
                 <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4]"><Instagram className="h-6 w-6 text-white" /></span>
@@ -258,7 +261,10 @@ const Dashboard = () => {
             ) : (
               <div className="flex h-full flex-col gap-3">
                 <p className="text-[11.5px] font-body text-muted-foreground -mt-1">Últimos 30 dias, comparados com os 30 anteriores.</p>
-                <NumerosInstagram r={insta} />
+                {/* Os números também abrem os Insights. */}
+                <button type="button" onClick={() => navigate("/app/insights")} aria-label="Abrir Insights" className="block w-full text-left rounded-xl transition-opacity hover:opacity-80">
+                  <NumerosInstagram r={insta} />
+                </button>
                 {insta.mais && (
                   <div className="mt-auto flex flex-wrap sm:flex-nowrap items-center gap-3 rounded-xl bg-[#D8F2E0] dark:bg-emerald-500/10 p-3 min-w-0">
                     <span className="h-[60px] w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
