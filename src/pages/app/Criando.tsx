@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { dataHoraCurta } from "@/lib/data-curta";
 import { SeloPublicacaoIg } from "@/components/shared/PublicarNoInstagram";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
+import { marcarCriandoNaTela } from "@/lib/criandoNaTela";
 import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { tocar } from "@/lib/pwa";
@@ -246,6 +247,11 @@ const Criando = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const overview = searchParams.get("view") === "overview";
+  // Embutido no cliente (cockpit da social mídia): avisa o dock dela pra mostrar
+  // o botão de visão geral, que no criador fica no BottomBar.
+  const { pathname } = useLocation();
+  const embutido = pathname !== "/app/criando";
+  useEffect(() => (embutido ? marcarCriandoNaTela() : undefined), [embutido]);
   // ABRIR UM POST VINDO DA BUSCA (Cmd+K → clica num post → /app/criando?post=ID).
   // A busca NAVEGAVA certo, mas esta tela não lia o parâmetro: a pessoa caía no
   // kanban e tinha que procurar o post na mão. Achar e não abrir é meio caminho.

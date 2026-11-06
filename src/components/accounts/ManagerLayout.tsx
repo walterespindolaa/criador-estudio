@@ -7,8 +7,9 @@ import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton, FeedbackDialog } from "@/components/FeedbackButton";
 import {
   Home, Boxes, Briefcase, Handshake, DollarSign, Users, Layers, ListChecks, Menu, ChevronRight, Gift, PackageCheck, CalendarCheck, FileText,
-  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Camera, Trash2, UserPlus, Search, MessageSquarePlus, BarChart3, PlayCircle, type LucideIcon, UsersRound,
+  Settings as SettingsIcon, LogOut, Send, Users2, Wallet, Lock, Contact, Sparkles, CalendarDays, Camera, Trash2, UserPlus, Search, MessageSquarePlus, BarChart3, PlayCircle, type LucideIcon, UsersRound, Maximize2, Minimize2,
 } from "lucide-react";
+import { useCriandoNaTela } from "@/lib/criandoNaTela";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useActiveAccount } from "@/contexts/AccountContext";
@@ -236,6 +237,13 @@ export default function ManagerLayout() {
   // avisa e recarrega os módulos, então o rail completo aparece sem F5.
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const criandoNaTela = useCriandoNaTela();
+  const visaoGeral = searchParams.get("view") === "overview";
+  const alternarVisaoGeral = () => {
+    const next = new URLSearchParams(searchParams);
+    if (visaoGeral) next.delete("view"); else next.set("view", "overview");
+    setSearchParams(next, { replace: true });
+  };
   useEffect(() => {
     const c = searchParams.get("checkout");
     if (!c) return;
@@ -786,6 +794,16 @@ export default function ManagerLayout() {
                     </>
                   )}
                 </div>
+                {/* Visão geral do kanban do cliente (05/11/2026): mesmo botão do
+                    dock do criador, só aparece com o Criando aberto no cliente. */}
+                {criandoNaTela && (
+                  <button type="button" onClick={alternarVisaoGeral} aria-label={visaoGeral ? "Sair da visão geral" : "Visão geral"}
+                    className={cn("h-[52px] w-[52px] rounded-full flex items-center justify-center active:scale-95 transition-transform",
+                      visaoGeral ? "bg-gradient-to-br from-primary to-pink-400 shadow-lg shadow-primary/30" : "dock-pill")}>
+                    {visaoGeral ? <Minimize2 className="h-5 w-5 text-white" strokeWidth={2} />
+                                : <Maximize2 className="h-5 w-5 text-muted-foreground" strokeWidth={1.9} />}
+                  </button>
+                )}
                 {/* Hambúrguer, igual ao do cliente final. A seta pra cima sugeria
                     "expandir a tela", não "abrir o menu". */}
                 <button type="button" onClick={() => setMoreOpen(!moreOpen)} aria-label="Menu"

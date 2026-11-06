@@ -1371,9 +1371,22 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
       setPendingDriveFiles((prev) => applyOrder(prev));
     } else {
       setDriveMedia((prev) => applyOrder(prev));
-      orderedIds.forEach((id, idx) => {
-        if (id.startsWith("temp-")) return;
-        void supabase.from("external_media_refs").update({ position: idx }).eq("id", id);
+      /* A ORDEM NÃO SALVAVA (Walter, 05/11/2026: "altera a ordem, salva, sai e
+         volta e não alterou"). Era `void supabase.from(...).update(...)`: o
+         builder do Supabase só manda a requisição quando alguém chama .then
+         (await), e o `void` não chama. A tira mudava na tela e nenhum PATCH
+         saía (os logs da API não têm nenhum). Agora a gravação é aguardada e
+         avisa se falhar. */
+      void Promise.all(
+        orderedIds
+          .filter((id) => !id.startsWith("temp-"))
+          .map((id) => supabase.from("external_media_refs").update({ position: orderedIds.indexOf(id) }).eq("id", id)),
+      ).then((res) => {
+        const erro = res.find((r) => r.error)?.error;
+        if (erro) {
+          console.error("[midia] ordem não gravou", erro);
+          toast.error("Não consegui salvar a nova ordem das imagens. Tente de novo.");
+        }
       });
     }
   }, [isNew]);
