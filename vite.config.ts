@@ -24,6 +24,13 @@ const agoraBR = new Intl.DateTimeFormat("pt-BR", {
 }).format(new Date()).replace(",", " às");
 const COMMIT = (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7);
 const VERSAO = COMMIT ? `${agoraBR} · ${COMMIT}` : agoraBR;
+// NÚMERO CURTO (Walter, 06/11/2026: "mostrar tipo V15.90"). Horas desde 01/07/2026
+// (início do Cria em produção) no momento do build: sempre sobe, não depende do
+// histórico do git (a Vercel clona raso, então contar commits não é confiável) e
+// cabe em 4 dígitos por anos. 3084 horas vira "V30.84". Data, hora e commit
+// continuam no title, pra quem precisar rastrear.
+const HORAS = Math.max(0, Math.floor((Date.now() - Date.UTC(2026, 6, 1, 3)) / 3_600_000));
+const VERSAO_CURTA = `V${Math.floor(HORAS / 100)}.${String(HORAS % 100).padStart(2, "0")}`;
 
 // Carimba o service worker com o id do build (ver public/sw.js). Roda depois
 // que o dist está pronto; o sw.js é copiado do public/ como está, então a
@@ -45,6 +52,7 @@ export default defineConfig(() => ({
   define: {
     __APP_BUILD__: JSON.stringify(BUILD_ID),
     __APP_VERSAO__: JSON.stringify(VERSAO),
+    __APP_VERSAO_CURTA__: JSON.stringify(VERSAO_CURTA),
   },
   server: {
     host: "::",

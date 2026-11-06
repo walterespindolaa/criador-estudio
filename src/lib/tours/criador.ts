@@ -142,7 +142,8 @@ export const TOURS_CRIADOR: TourConfig[] = [
     benefits: [
       "Nada se perde entre a ideia e o post no ar",
       "6 etapas claras: da faísca à publicação",
-      "Board, Tabela ou Calendário: você escolhe como ver",
+      "Quadro, Tabela ou Calendário: você escolhe como ver",
+      "O que trava aparece em cima: atrasado, esperando aprovação, sem mídia",
       "Estrutura pronta por formato (Reels, carrossel, story...)",
     ],
     steps: [
@@ -150,8 +151,8 @@ export const TOURS_CRIADOR: TourConfig[] = [
         target: '[data-tour="criando-board"]',
         mobileTarget: '[data-tour="criando-board-m"]',
         title: "As 6 etapas do seu conteúdo",
-        body: "Ideia: o que você quer criar. Planejamento: escreva gancho, roteiro e legenda. Produzindo: gravação e criação da mídia. Pronto: gravado, em finalização. Agendado: com data e hora marcadas. Publicado: no ar! Arraste os cards entre as colunas conforme avança.",
-        mobileBody: "Ideia: o que você quer criar. Planejamento: gancho, roteiro e legenda. Produzindo: gravação da mídia. Pronto: em finalização. Agendado: com data marcada. Publicado: no ar! Deslize pro lado pra ver as colunas e toque num card pra abrir o post.",
+        body: "Ideia: o que você quer criar. Planejamento: escreva gancho, roteiro e legenda. Produzindo: gravação e criação da mídia. Pronto: gravado, em finalização. Agendado: com data e hora marcadas. Publicado: no ar! Arraste os cartões entre as colunas conforme avança, ou use o botão de mover no canto do cartão. Em cima, a faixa mostra o que trava; toque num item pra destacar só esses posts. O botão Mídia mostra ou esconde a prévia no cartão.",
+        mobileBody: "Ideia: o que você quer criar. Planejamento: gancho, roteiro e legenda. Produzindo: gravação da mídia. Pronto: em finalização. Agendado: com data marcada. Publicado: no ar! Deslize pro lado pra ver as colunas e toque num cartão pra abrir o post. Segure o cartão pra ver os atalhos, e o botão de visão geral do menu de baixo mostra o quadro todo.",
         placement: "top",
       },
       {
@@ -171,8 +172,8 @@ export const TOURS_CRIADOR: TourConfig[] = [
       },
       {
         target: '[data-tour="criando-views"]',
-        title: "Board, Tabela e Calendário",
-        body: "O mesmo conteúdo, três visões: Board pra gerenciar o fluxo, Tabela pra editar em massa e ordenar, Calendário pra enxergar a semana como ela vai ao ar. Experimenta as três!",
+        title: "Quadro, Tabela e Calendário",
+        body: "O mesmo conteúdo, três visões: Quadro pra gerenciar o fluxo, Tabela pra editar em massa e ordenar, Calendário pra enxergar a semana como ela vai ao ar. Experimenta as três!",
         skipOnMobile: true,
       },
     ],

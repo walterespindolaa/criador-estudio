@@ -2,7 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { dataHoraCurta } from "@/lib/data-curta";
 import { SeloPublicacaoIg } from "@/components/shared/PublicarNoInstagram";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { CartaoQuadro, PainelDoCartao, FaixaQuadro, VisaoGeralQuadro, usePreviasDosPosts, corDoFormato as corFmt, type FiltroQuadro } from "@/components/kanban/CartaoQuadro";
+import { travasDoPost, somarDias, saiu, type PostTrava, type Trava } from "@/lib/oQueTrava";
+import { useTier } from "@/hooks/useTier";
+import { useSendPostToPrompter } from "@/hooks/usePrompterScripts";
 import { marcarCriandoNaTela } from "@/lib/criandoNaTela";
 import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
@@ -14,7 +18,7 @@ import { useDragScroll } from "@/hooks/useDragScroll";
 import { FormatPicker } from "@/components/kanban/FormatPicker";
 import { useTour } from "@/components/tour/TourProvider";
 import { statusRamp } from "@/lib/statusRamp";
-import { Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, X, Kanban, Pencil, Table, Search, SlidersHorizontal, ArrowLeftRight, ArrowUp, ArrowDown, ArrowUpDown, Users } from "lucide-react";
+import { Image as ImageIcon, Plus, LayoutDashboard, PenLine, Video, Scissors, Calendar, CheckCircle2, X, Kanban, Pencil, Table, Search, SlidersHorizontal, ArrowLeftRight, ArrowUp, ArrowDown, ArrowUpDown, Users } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -249,7 +253,8 @@ const Criando = () => {
   const overview = searchParams.get("view") === "overview";
   // Embutido no cliente (cockpit da social mídia): avisa o dock dela pra mostrar
   // o botão de visão geral, que no criador fica no BottomBar.
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
   const embutido = pathname !== "/app/criando";
   useEffect(() => (embutido ? marcarCriandoNaTela() : undefined), [embutido]);
   // ABRIR UM POST VINDO DA BUSCA (Cmd+K → clica num post → /app/criando?post=ID).
@@ -369,6 +374,61 @@ const Criando = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredPosts, porData, ordemDir]);
 
+  /* ── O QUADRO NOVO (Walter e Gabriela, 06/11/2026, protótipo aprovado) ──
+     Cartão clean, mídia opcional, faixa do que trava (mesma conta do Início),
+     painel de mover logo abaixo do cartão e visão geral em miniatura. */
+  const navigate = useNavigate();
+  const { isStudio } = useTier();
+  const enviarPrompter = useSendPostToPrompter();
+  const [mostrarMidia, setMostrarMidia] = useState<boolean>(() => {
+    try { return localStorage.getItem("criando_midia") === "1"; } catch { return false; }
+  });
+  const alternarMidia = () => setMostrarMidia((v) => {
+    try { localStorage.setItem("criando_midia", v ? "0" : "1"); } catch { /* sem storage, vale só nesta visita */ }
+    return !v;
+  });
+  // O Início manda o filtro quando a pessoa toca em "atrasado" etc.
+  const [filtroQuadro, setFiltroQuadro] = useState<FiltroQuadro | null>(
+    () => (location.state as { filtroTrava?: Trava } | null)?.filtroTrava ?? null,
+  );
+  const [painel, setPainel] = useState<{ id: string; tipo: "mover" | "acoes" } | null>(null);
+  useEffect(() => {
+    if (!painel) return;
+    const fechar = (e: KeyboardEvent) => { if (e.key === "Escape") setPainel(null); };
+    window.addEventListener("keydown", fechar);
+    return () => window.removeEventListener("keydown", fechar);
+  }, [painel]);
+  const hojeIso = hojeBR();
+  const fimDaSemana = somarDias(hojeIso, 6);
+  const idsQuadro = useMemo(() => filteredPosts.map((p) => p.id), [filteredPosts]);
+  const { data: previas = new Map<string, string>() } = usePreviasDosPosts(idsQuadro, mostrarMidia);
+  const travasDe = useMemo(() => {
+    const m = new Map<string, Trava[]>();
+    for (const p of filteredPosts) {
+      const t = travasDoPost(p as unknown as PostTrava, previas.has(p.id), hojeIso);
+      // Mesmo aviso que o "!" amarelo já dava: com social mídia, post Pronto ainda sem aprovação.
+      const ap = (p as unknown as { approval_status?: string | null }).approval_status ?? null;
+      if (temSocialMidia && p.status === "editando" && ap !== "aprovado" && !t.includes("aprovacao")) t.push("aprovacao");
+      m.set(p.id, t);
+    }
+    return m;
+  }, [filteredPosts, previas, hojeIso, temSocialMidia]);
+  const naSemana = (p: Post) => {
+    const d = (p.scheduled_date ?? "").slice(0, 10);
+    return !!d && d >= hojeIso && d <= fimDaSemana && !saiu(p as unknown as PostTrava);
+  };
+  const contagemQuadro = useMemo(() => {
+    const c: Record<FiltroQuadro, number> = { atrasado: 0, aprovacao: 0, semmidia: 0, semana: 0 };
+    for (const p of filteredPosts) {
+      for (const t of travasDe.get(p.id) ?? []) c[t] += 1;
+      if (naSemana(p)) c.semana += 1;
+    }
+    return c;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredPosts, travasDe, hojeIso]);
+  const passaFiltro = (p: Post) =>
+    !filtroQuadro || (filtroQuadro === "semana" ? naSemana(p) : (travasDe.get(p.id) ?? []).includes(filtroQuadro));
+
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingFormat, setPendingFormat] = useState<string | null>(null);
   // Coluna de nascimento do post: o + no cabeçalho de cada coluna cria o post
@@ -475,6 +535,48 @@ const Criando = () => {
   };
 
   const getPillar = (id: string | null) => pillars.find(p => p.id === id);
+
+  const corDaColuna = (key: string) => {
+    const saved = byStatus[key]; const step = ramp[key];
+    return { cor: saved?.cover_from || step.from, ink: saved ? "#fff" : step.ink };
+  };
+  const colunasPainel = COLUMNS.map((c) => ({ key: c.key, label: byStatus[c.key]?.label || c.label, ...corDaColuna(c.key) }));
+  const gravarNoPrompter = (post: Post) => {
+    setPainel(null);
+    // Sem o Studio a rota mostra a vitrine do plano (UpgradeGate), igual ao Início.
+    if (!isStudio) { navigate("/app/prompter"); return; }
+    const fala = [post.hook?.trim() ? `**${post.hook.trim()}**` : "", post.script?.trim() ?? "", post.cta?.trim() ?? ""].filter(Boolean).join("\n\n");
+    enviarPrompter.mutate({ postId: post.id, title: post.title, script: fala }, { onSuccess: (id) => navigate(`/app/prompter/gravar/${id}`) });
+  };
+  const cartaoDe = (post: Post, mobile: boolean) => {
+    const tc = taskCounts.get(post.id);
+    return (
+      <CartaoQuadro idDoPost={post.id} titulo={post.title} formato={post.format} plataforma={post.platform}
+        data={post.scheduled_date} hora={post.scheduled_time} quem={comQuem(post)}
+        tarefas={tc ? { feitas: tc.done, total: tc.count } : null}
+        publishStatus={post.publish_status} autoPublish={post.auto_publish} publicado={post.status === "publicado"}
+        travas={travasDe.get(post.id) ?? []}
+        previa={previas.get(post.id) || (post as unknown as { cover_url?: string | null }).cover_url || null}
+        mostrarMidia={mostrarMidia} apagado={!passaFiltro(post)}
+        onEditar={() => openEdit(post)}
+        onMover={() => setPainel((p) => (p?.id === post.id && p.tipo === "mover" ? null : { id: post.id, tipo: "mover" }))}
+        onSegurar={mobile ? () => { tocar(10); setPainel({ id: post.id, tipo: "acoes" }); } : undefined} />
+    );
+  };
+  const painelDe = (post: Post) => (painel && painel.id === post.id ? (
+    <div className="mt-2">
+      <PainelDoCartao tipo={painel.tipo} colunas={colunasPainel} atual={post.status ?? "ideia"}
+        onMover={(para) => {
+          if (para === "__escolher") { setPainel({ id: post.id, tipo: "mover" }); return; }
+          setPainel(null); void movePostStatus(post.id, para);
+        }}
+        onAbrir={() => { setPainel(null); openEdit(post); }}
+        onPrompter={post.status === "gravando" ? () => gravarNoPrompter(post) : null}
+        onExcluir={() => { setPainel(null); setDeleteTarget({ id: post.id, title: post.title }); }}
+        onFechar={() => setPainel(null)} />
+    </div>
+  ) : null);
+  const atalhoHover = "w-full rounded-lg bg-foreground px-2 py-1 text-left text-[10.5px] font-body font-bold text-background whitespace-nowrap shadow-[2px_2px_0_hsl(var(--primary))]";
 
   const statusRank = (s: string | null) => {
     const i = COLUMNS.findIndex(c => c.key === (s ?? "ideia"));
@@ -789,7 +891,7 @@ const Criando = () => {
         <div className="flex items-center gap-2 md:gap-3 flex-wrap mb-4">
           <div data-tour="criando-views" className="flex items-center gap-1 bg-card rounded-xl border border-border p-1 w-max">
             {([
-              { key: "board", label: "Board", icon: Kanban },
+              { key: "board", label: "Quadro", icon: Kanban },
               { key: "tabela", label: "Tabela", icon: Table },
               { key: "calendario", label: "Calendário", icon: Calendar },
             ] as const).map(t => (
@@ -806,9 +908,17 @@ const Criando = () => {
               cabeçalho e o calendário é organizado pelo dia. */}
           {view === "board" && (
             <>
-              <OrdemDataToggle valor={porData} direcao={ordemDir} onChange={setPorData} onToggle={alternarOrdem} />
+              {/* No celular a ordem já aparece junto da busca, lá em cima. */}
+              <span className="hidden md:inline-flex"><OrdemDataToggle valor={porData} direcao={ordemDir} onChange={setPorData} onToggle={alternarOrdem} /></span>
+              <button type="button" onClick={alternarMidia} aria-pressed={mostrarMidia}
+                className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-body font-semibold transition-colors",
+                  mostrarMidia ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
+                <ImageIcon className="h-3.5 w-3.5" />
+                <span className="md:hidden">{mostrarMidia ? "Ocultar mídia" : "Ver mídia"}</span>
+                <span className="hidden md:inline">{mostrarMidia ? "Mídia: aparecendo" : "Mídia: oculta"}</span>
+              </button>
               {porData && (
-                <span className="text-[11px] font-body text-muted-foreground">Post sem data fica no fim da coluna.</span>
+                <span className="hidden md:inline text-[11px] font-body text-muted-foreground">Post sem data fica no fim da coluna.</span>
               )}
             </>
           )}
@@ -817,6 +927,10 @@ const Criando = () => {
         {/* O QUADRO VAZIO. Antes ele mostrava seis colunas vazias e nada mais o
             que parece um sistema quebrado, não um começo. Um kanban sem card não
             ensina nada; um convite, sim. */}
+        {posts.length > 0 && view === "board" && (
+          <FaixaQuadro contagem={contagemQuadro} filtro={filtroQuadro} onFiltro={setFiltroQuadro} />
+        )}
+
         {posts.length === 0 && (
           <EmptyState
             icon={Kanban}
@@ -853,22 +967,21 @@ const Criando = () => {
             const cSub = savedC ? "rgba(255,255,255,.78)" : step.sub;
             const cTitle = savedC?.label || col.label;
             return (
-              <div key={col.key} className={`w-[85vw] max-w-[320px] sm:w-auto sm:max-w-none sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start flex flex-col ${showDividerBefore ? "border-l-2 border-dashed border-border pl-4" : ""}`}>
+              <div key={col.key} className={`w-[85vw] max-w-[320px] sm:w-auto sm:max-w-none sm:min-w-[200px] flex-shrink-0 sm:flex-1 snap-start flex flex-col `}>
                 {/* CAPA COLORIDA de volta (Walter, 01/09: "isso aqui tinha um
                    fundo antes, tá feio assim"), na versão compacta e SEM
                    itálico. O lápis (personalizar) aparece no hover e o + cria
                    direto na coluna. */}
-                <div className="relative group/cover mb-2">
-                  <CoverHeader compact label="Status" title={cTitle} count={colPosts.length} from={cFrom} to={cTo} ink={cInk} sub={cSub} hint={COLUMN_TOOLTIPS[col.key]} />
-                  <span className="absolute bottom-2 right-2.5 z-10 flex items-center gap-1">
+                <div className="mb-1 flex items-center gap-1.5 px-1 py-1" title={COLUMN_TOOLTIPS[col.key]}>
+                  <span className="min-w-0 truncate rounded-md px-2 py-0.5 text-[11.5px] font-body font-bold" style={{ background: cFrom, color: cInk }}>{cTitle}</span>
+                  <span className="rounded-full bg-muted px-2 text-[11px] font-body font-bold text-muted-foreground tabular-nums">{colPosts.length}</span>
+                  <span className="ml-auto flex items-center gap-0.5">
                     <button onClick={() => openEditCover(col.key)} aria-label="Personalizar coluna"
-                      className="h-6 w-6 rounded-full bg-white/15 backdrop-blur grid place-items-center opacity-0 group-hover/cover:opacity-100 transition-opacity"
-                      style={{ color: cInk }}>
+                      className="grid h-6 w-6 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
                       <Pencil className="h-3 w-3" />
                     </button>
                     <button onClick={() => openNewInColumn(col.key)} aria-label={`Novo post em ${cTitle}`}
-                      className="h-6 w-6 rounded-full bg-white/15 backdrop-blur grid place-items-center hover:bg-white/25 transition-colors"
-                      style={{ color: cInk }}>
+                      className="grid h-6 w-6 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
                       <Plus className="h-3.5 w-3.5" />
                     </button>
                   </span>
@@ -879,87 +992,27 @@ const Criando = () => {
                    31/08): demarca o espaço de cada kanban e "segura" os cards,
                    igual ficou no Cria Post. `0F` = ~6% de opacidade no hex. */
                 <div ref={dropProvided.innerRef} {...dropProvided.droppableProps}
-                  style={!dropSnapshot.isDraggingOver && /^#[0-9a-fA-F]{6}$/.test(cFrom) ? { backgroundColor: `${cFrom}0F` } : undefined}
-                  className={`space-y-3 flex-1 min-h-[200px] rounded-xl p-1.5 transition-all ${dropSnapshot.isDraggingOver ? "ring-2 ring-primary bg-primary/5" : "bg-muted/30"}`}>
-                  {colPosts.map((post, pIdx) => {
-                    const pillar = getPillar(post.pillar_id);
-                    const tc = taskCounts.get(post.id);
-                    const approvalStatus = (post as unknown as { approval_status?: string | null }).approval_status ?? null;
-                    const showApprovalBadge = temSocialMidia && post.status === "editando" && approvalStatus !== "aprovado";
-                    const allDone = tc && tc.count > 0 && tc.done === tc.count;
-                    const pendingTasks = tc ? tc.count - tc.done : 0;
-                                        return (
-                      <Draggable key={post.id} draggableId={post.id} index={pIdx}>
-                      {(dragProvided, dragSnapshot) => (
-                      <div ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps} onClick={() => openEdit(post)}
-                        style={{ borderLeftColor: ramp[post.status ?? "ideia"]?.line ?? "transparent", borderLeftWidth: 4, ...dragProvided.draggableProps.style }}
-                        className={`criando-drag-card group relative bg-card rounded-xl p-3 shadow-warm-sm border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-md transition-all duration-200 ${dragSnapshot.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""} ${isPublished ? "opacity-70" : ""}`}>
-                        {/* Editar + excluir lado a lado (pedido do Walter, 31/08:
-                            "ter um botao de editar e excluir"). O card inteiro já
-                            abre a edição, mas o lápis torna a ação visível. */}
-                        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity z-10">
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); openEdit(post); }}
-                            className="h-6 w-6 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground text-muted-foreground flex items-center justify-center transition-colors"
-                            aria-label="Editar post"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteTarget({ id: post.id, title: post.title });
-                            }}
-                            className="h-6 w-6 rounded-full bg-destructive/80 hover:bg-destructive text-white flex items-center justify-center transition-colors"
-                            aria-label="Excluir post"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                        {/* 2 linhas (Walter, 01/09): com 1 linha nao dava pra LER o
-                            titulo ("Voce ja..."); o de Cria Post mostra 2 e le-se bem. */}
-                        <p title={post.title} className="font-body font-medium text-sm text-foreground mb-1.5 leading-snug line-clamp-2 pr-14">
-                          {showApprovalBadge && (
-                            <span
-                              className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-bold mr-1 align-middle"
-                              title="Aguardando a aprovação da sua social mídia (aba Aprovações)"
-                              aria-label="Aguardando a aprovação da sua social mídia"
-                            >!</span>
-                          )}
-                          {post.title}
-                        </p>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <PlatformIcon platform={post.platform} size="sm" />
-                          <span style={formatColorVars(post.format)} className={`text-[10px] font-body font-bold uppercase tracking-wide bg-muted/60 px-1.5 py-0.5 rounded ${FORMAT_TEXT_CLASS}`}>{FORMAT_LABELS[post.format] || post.format}</span>
-                          <SeloPublicacaoIg status={post.publish_status} autoPublish={post.auto_publish} />
-                          {pillar && <span className="px-1.5 py-0.5 rounded text-xs font-body text-primary-foreground" style={{ backgroundColor: pillar.color }}>{pillar.name}</span>}
-                          {post.week_number != null && (
-                            <span className="px-1.5 py-0.5 rounded text-xs font-body bg-muted text-muted-foreground border border-border">
-                              S{post.week_number}
-                            </span>
-                          )}
-                          {isPublished && <span className="px-1.5 py-0.5 rounded text-xs font-body bg-secondary text-secondary-foreground">Publicado</span>}
-                        </div>
-                        {(() => { const q = comQuem(post); return q ? <div className="mt-1.5"><SeloParceiro nome={q.nome} etapa={q.etapa} /></div> : null; })()}
-                        {post.scheduled_date && <p className="text-xs text-muted-foreground font-body mt-2 flex items-center gap-1"><Calendar className="h-3 w-3" /> {dataHoraCurta(post.scheduled_date, post.scheduled_time)}</p>}
-                        {tc && tc.count > 0 && (
-                          <span className={`inline-flex items-center gap-1 mt-1.5 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded ${allDone ? "bg-secondary/20 text-secondary" : "bg-muted text-muted-foreground"}`}>
-                            {allDone ? "✓" : `${pendingTasks} tarefa${pendingTasks !== 1 ? "s" : ""}`}
-                          </span>
-                        )}
-                        <div className="mt-2 md:hidden" onClick={(e) => e.stopPropagation()}>
-                          <Select value={post.status ?? "ideia"} onValueChange={(val) => movePostStatus(post.id, val)}>
-                            <SelectTrigger className="h-7 w-auto gap-1.5 px-3 rounded-full border-border bg-muted/40 text-xs font-body text-muted-foreground">Mover</SelectTrigger>
-                            <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}</SelectContent>
-                          </Select>
+                  className={`space-y-2.5 flex-1 min-h-[200px] rounded-xl p-1.5 pt-3 transition-all ${dropSnapshot.isDraggingOver ? "ring-2 ring-primary bg-primary/5" : "bg-muted/50"}`}>
+                  {colPosts.map((post, pIdx) => (
+                    <Draggable key={post.id} draggableId={post.id} index={pIdx}>
+                    {(dragProvided, dragSnapshot) => (
+                    <div ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}>
+                      <div onClick={() => openEdit(post)}
+                        className={`criando-drag-card group relative bg-card rounded-xl px-3 pt-2.5 pb-2.5 border border-border cursor-grab active:cursor-grabbing hover:shadow-warm-sm transition-shadow ${dragSnapshot.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""}`}>
+                        {cartaoDe(post, false)}
+                        {/* Passar o mouse: atalhos (Abrir, Mover, Gravar no Prompter). */}
+                        <div className="absolute -right-2 top-8 z-20 hidden flex-col gap-1 group-hover:flex" onClick={(e) => e.stopPropagation()}>
+                          <button type="button" className={atalhoHover} onClick={() => openEdit(post)}>Abrir</button>
+                          <button type="button" className={atalhoHover} onClick={() => setPainel({ id: post.id, tipo: "mover" })}>Mover pra...</button>
+                          {post.status === "gravando" && <button type="button" className={atalhoHover} onClick={() => gravarNoPrompter(post)}>Gravar no Prompter</button>}
+                          <button type="button" className={atalhoHover} onClick={() => setDeleteTarget({ id: post.id, title: post.title })}>Excluir</button>
                         </div>
                       </div>
-                      )}
-                      </Draggable>
-                    );
-                  })}
+                      {painelDe(post)}
+                    </div>
+                    )}
+                    </Draggable>
+                  ))}
                   {colPosts.length === 0 && (
                     <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${dropSnapshot.isDraggingOver ? "border-primary" : "border-border"}`}>
                       <p className="text-xs text-muted-foreground font-body">Arraste pra cá</p>
@@ -1393,58 +1446,16 @@ const Criando = () => {
 
         {posts.length > 0 && view === "board" && (overview ? (
           <div data-tour="criando-board-m" className="md:hidden">
-            {/* onDragStart com vibração: o dedo SENTE que pegou o card. É o detalhe
-            que separa "site num celular" de "app". iOS ignora, Android responde. */}
-        <DragDropContext onDragStart={() => tocar(12)} onDragEnd={(r) => { tocar(8); void handleDragEnd(r); }}>
-            <div ref={boardMobileRef} className="flex gap-2.5 overflow-x-auto -mx-4 px-4 kanban-scroll h-[calc(100svh-230px)] min-h-[340px]">
-              {COLUMNS.map((col, i) => {
-                const colPosts = postsPorColuna[col.key] ?? [];
-                const step = ramp[col.key];
-                return (
-                  <div key={col.key} className="min-w-[172px] w-[172px] flex-none flex flex-col gap-2 h-full">
-                    <button onClick={() => goToColumn(i)}
-                      className="relative rounded-[13px] px-3 py-2.5 text-left shrink-0 shadow-warm-sm"
-                      style={{ background: `linear-gradient(140deg, ${step.from}, ${step.to})` }}>
-                      <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                        style={{ color: step.ink, background: "rgba(255,255,255,.2)" }}>{colPosts.length}</span>
-                      <span className="font-display italic font-light text-lg leading-none" style={{ color: step.ink }}>{col.label}</span>
-                    </button>
-
-                    <Droppable droppableId={col.key}>
-                    {(dropProvided, dropSnapshot) => (
-                    <div ref={dropProvided.innerRef} {...dropProvided.droppableProps}
-                      className={`flex-1 overflow-y-auto flex flex-col gap-2 pr-0.5 kanban-scroll rounded-xl transition-colors ${dropSnapshot.isDraggingOver ? "bg-primary/5" : ""}`}>
-                      {colPosts.map((post, pIdx) => {
-                        const pil = getPillar(post.pillar_id);
-                        return (
-                          <Draggable key={post.id} draggableId={post.id} index={pIdx}>
-                          {(dragProvided, dragSnapshot) => (
-                          <div ref={dragProvided.innerRef} {...dragProvided.draggableProps} {...dragProvided.dragHandleProps}
-                            onClick={() => openEdit(post)}
-                            className={`criando-drag-card relative bg-card rounded-[10px] pl-3 pr-2.5 py-2 text-left shadow-warm-sm border border-border cursor-grab active:cursor-grabbing ${dragSnapshot.isDragging ? "shadow-warm-lg ring-2 ring-primary/40" : ""}`}
-                            style={{ borderLeftColor: step.line, borderLeftWidth: 3, ...dragProvided.draggableProps.style }}>
-                            <span className="block text-[11.5px] font-body font-semibold leading-tight line-clamp-2">{post.title}</span>
-                            <span className="block text-[9.5px] text-muted-foreground mt-1 truncate">{FORMAT_LABELS[post.format] || post.format}{pil ? ` · ${pil.name}` : ""}</span>
-                          </div>
-                          )}
-                          </Draggable>
-                        );
-                      })}
-                      {colPosts.length === 0 && (
-                        <div className="text-[10.5px] text-muted-foreground/60 text-center py-6 border border-dashed border-border rounded-xl">vazio</div>
-                      )}
-                      {dropProvided.placeholder}
-                    </div>
-                    )}
-                    </Droppable>
-                  </div>
-                );
-              })}
-            </div>
-            </DragDropContext>
+            <VisaoGeralQuadro onAbrirColuna={goToColumn}
+              colunas={COLUMNS.map((col) => ({
+                key: col.key, label: byStatus[col.key]?.label || col.label, ...corDaColuna(col.key),
+                itens: (postsPorColuna[col.key] ?? []).filter(passaFiltro).map((p) => ({
+                  id: p.id, titulo: p.title, travado: (travasDe.get(p.id) ?? []).length > 0, corFormato: corFmt(p.format).base,
+                })),
+              }))} />
           </div>
         ) : (
-        <div className="md:hidden">
+        <div className="md:hidden" data-tour="criando-board-m">
           <div className="overflow-hidden -mx-4 px-4">
             <div className="flex transition-transform duration-[420ms]"
                  style={{ transform: `translateX(-${activeCol * 100}%)`, transitionTimingFunction: 'cubic-bezier(.22,.61,.36,1)' }}
@@ -1461,89 +1472,27 @@ const Criando = () => {
                 const title = saved?.label || col.label;
                 return (
                   <div key={col.key} className="min-w-full pr-1">
-                    <div className="relative">
-                      <CoverHeader label="Status" title={title} count={colPosts.length} from={from} to={to} ink={ink} sub={sub} hint={COLUMN_TOOLTIPS[col.key]} />
-                      <button onClick={() => openEditCover(col.key)} className="absolute top-2.5 right-12 z-10 h-7 w-7 rounded-full bg-white/15 backdrop-blur flex items-center justify-center" aria-label="Editar capa">
-                        <Pencil className="h-3.5 w-3.5 text-white/90" />
+                    <div className="flex items-center gap-1.5 px-1 py-1">
+                      <span className="min-w-0 truncate rounded-md px-2 py-0.5 text-[12.5px] font-body font-bold" style={{ background: from, color: ink }}>{title}</span>
+                      <span className="rounded-full bg-muted px-2 text-[11px] font-body font-bold text-muted-foreground tabular-nums">{colPosts.length}</span>
+                      <button onClick={() => openEditCover(col.key)} className="ml-auto grid h-7 w-7 place-items-center rounded-md text-muted-foreground" aria-label="Personalizar coluna">
+                        <Pencil className="h-3.5 w-3.5" />
                       </button>
                     </div>
                     {/* Mesma tinta clara da capa que o board desktop ganhou. */}
-                    <div className="flex flex-col gap-2.5 mt-3 rounded-xl p-1.5 bg-muted/30"
-                      style={/^#[0-9a-fA-F]{6}$/.test(from) ? { backgroundColor: `${from}0F` } : undefined}>
-                      {colPosts.map(post => {
-                        const pillar = getPillar(post.pillar_id);
-                        const tc = taskCounts.get(post.id);
-                        const approvalStatus = (post as unknown as { approval_status?: string | null }).approval_status ?? null;
-                        const showApprovalBadge = temSocialMidia && post.status === "editando" && approvalStatus !== "aprovado";
-                        const allDone = tc && tc.count > 0 && tc.done === tc.count;
-                        const pendingTasks = tc ? tc.count - tc.done : 0;
-                                                return (
-                          <motion.div key={post.id} layout onClick={() => openEdit(post)}
-                            style={{ borderLeftColor: ramp[post.status ?? "ideia"]?.line ?? "transparent", borderLeftWidth: 4 }}
-                            className={`group relative bg-card rounded-xl p-3 shadow-warm-sm border border-border cursor-pointer hover:shadow-warm-md transition-all duration-200 ${isPublished ? "opacity-70" : ""}`}>
-                            {/* Editar + excluir lado a lado, iguais ao kanban desktop. */}
-                            <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
-                              <button
-                                type="button"
-                                onClick={(e) => { e.stopPropagation(); openEdit(post); }}
-                                className="h-6 w-6 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground text-muted-foreground flex items-center justify-center transition-colors"
-                                aria-label="Editar post"
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeleteTarget({ id: post.id, title: post.title });
-                                }}
-                                className="h-6 w-6 rounded-full bg-destructive/80 hover:bg-destructive text-white flex items-center justify-center transition-colors"
-                                aria-label="Excluir post"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </div>
-                            <p title={post.title} className="font-body font-medium text-sm text-foreground mb-1.5 leading-snug line-clamp-2 pr-14">
-                              {showApprovalBadge && (
-                                <span
-                                  className="inline-flex items-center justify-center h-4 w-4 rounded-full bg-yellow-400 text-yellow-950 text-[10px] font-bold mr-1 align-middle"
-                                  title="Aguardando a aprovação da sua social mídia (aba Aprovações)"
-                                  aria-label="Aguardando a aprovação da sua social mídia"
-                                >!</span>
-                              )}
-                              {post.title}
-                            </p>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <PlatformIcon platform={post.platform} size="sm" />
-                              <span style={formatColorVars(post.format)} className={`text-[10px] font-body font-bold uppercase tracking-wide bg-muted/60 px-1.5 py-0.5 rounded ${FORMAT_TEXT_CLASS}`}>{FORMAT_LABELS[post.format] || post.format}</span>
-                              {pillar && <span className="px-1.5 py-0.5 rounded text-xs font-body text-primary-foreground" style={{ backgroundColor: pillar.color }}>{pillar.name}</span>}
-                              {post.week_number != null && (
-                                <span className="px-1.5 py-0.5 rounded text-xs font-body bg-muted text-muted-foreground border border-border">
-                                  S{post.week_number}
-                                </span>
-                              )}
-                              {isPublished && <span className="px-1.5 py-0.5 rounded text-xs font-body bg-secondary text-secondary-foreground">Publicado</span>}
-                            </div>
-                            {post.scheduled_date && <p className="text-xs text-muted-foreground font-body mt-2 flex items-center gap-1"><Calendar className="h-3 w-3" /> {dataHoraCurta(post.scheduled_date, post.scheduled_time)}</p>}
-                            {tc && tc.count > 0 && (
-                              <span className={`inline-flex items-center gap-1 mt-1.5 text-[10px] font-body font-semibold px-1.5 py-0.5 rounded ${allDone ? "bg-secondary/20 text-secondary" : "bg-muted text-muted-foreground"}`}>
-                                {allDone ? "✓" : `${pendingTasks} tarefa${pendingTasks !== 1 ? "s" : ""}`}
-                              </span>
-                            )}
-                            <div className="mt-2.5" onClick={(e) => e.stopPropagation()}>
-                              <Select value={post.status ?? "ideia"} onValueChange={(val) => movePostStatus(post.id, val)}>
-                                <SelectTrigger className="h-8 w-full gap-1.5 px-3 rounded-lg border border-primary/30 bg-primary/5 text-xs font-body font-semibold text-primary">
-                                  <ArrowLeftRight className="h-3.5 w-3.5" /> Mover para…
-                                </SelectTrigger>
-                                <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}</SelectContent>
-                              </Select>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                      <button onClick={openNew}
-                        className="border-[1.5px] border-dashed border-border rounded-2xl py-3 text-sm font-body text-muted-foreground">
-                        + Adicionar card
+                    <div className="flex flex-col gap-2.5 mt-1 rounded-xl p-1.5 pt-3 bg-muted/50">
+                      {colPosts.map(post => (
+                        <div key={post.id}>
+                          <div onClick={() => { if (painel?.id === post.id) return; openEdit(post); }}
+                            className="relative bg-card rounded-xl px-3 pt-2.5 pb-2.5 border border-border cursor-pointer select-none [-webkit-touch-callout:none]">
+                            {cartaoDe(post, true)}
+                          </div>
+                          {painelDe(post)}
+                        </div>
+                      ))}
+                      <button onClick={() => openNewInColumn(col.key)}
+                        className="border-[1.5px] border-dashed border-border rounded-xl py-2.5 text-sm font-body text-muted-foreground">
+                        + Post nesta coluna
                       </button>
                     </div>
                   </div>

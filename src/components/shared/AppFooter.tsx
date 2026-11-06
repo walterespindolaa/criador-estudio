@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 
 const VERSAO = typeof __APP_VERSAO__ !== "undefined" ? __APP_VERSAO__ : "dev";
+const CURTA = typeof __APP_VERSAO_CURTA__ !== "undefined" ? __APP_VERSAO_CURTA__ : "dev";
 
 export function AppFooter() {
   return (
@@ -23,8 +24,8 @@ export function AppFooter() {
             Privacidade
           </Link>
         </p>
-        <p className="text-[11px] text-muted-foreground/70 font-body tabular-nums" title="Data e hora em que esta versão do Cria subiu, e o código da atualização">
-          Versão de {VERSAO}
+        <p className="text-[11px] text-muted-foreground/70 font-body tabular-nums" title={`Subiu em ${VERSAO}`}>
+          {CURTA}
         </p>
       </div>
     </footer>

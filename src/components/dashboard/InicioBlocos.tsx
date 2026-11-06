@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode, type CSSProperties } from "react";
 import { Check, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDateOnly } from "@/lib/date-br";
@@ -40,10 +40,10 @@ export function CardInicio({ titulo, direita, faixa, corpo, children, className,
 }
 
 /* ─── O QUE TRAVA ─── */
-const TRAVA_INFO: Record<Trava, { um: string; varios: string; cor: string }> = {
-  atrasado: { um: "atrasado", varios: "atrasados", cor: "#FFE0D6" },
-  aprovacao: { um: "esperando aprovação", varios: "esperando aprovação", cor: "#FFF1A8" },
-  semmidia: { um: "sem mídia", varios: "sem mídia", cor: "#E3ECFF" },
+const TRAVA_INFO: Record<Trava, { um: string; varios: string; curto: string; cor: string }> = {
+  atrasado: { um: "atrasado", varios: "atrasados", curto: "atrasados", cor: "#FFE0D6" },
+  aprovacao: { um: "esperando aprovação", varios: "esperando aprovação", curto: "aprovação", cor: "#FFF1A8" },
+  semmidia: { um: "sem mídia", varios: "sem mídia", curto: "sem mídia", cor: "#E3ECFF" },
 };
 
 export function FaixaTrava({ contagem, onAbrir }: { contagem: Record<Trava, number>; onAbrir: (t: Trava) => void }) {
@@ -52,14 +52,18 @@ export function FaixaTrava({ contagem, onAbrir }: { contagem: Record<Trava, numb
     return <p className="text-[13px] font-body text-muted-foreground"><b className="text-foreground">Nada travado.</b> Todos os posts estão andando.</p>;
   }
   return (
-    <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1 py-1">
+    /* No celular tudo aparece de uma vez, lado a lado, com o número em cima
+       (Walter, 06/11/2026: "ficar tudo aparecendo ao invés de scrollar pro lado"). */
+    <div className="grid [grid-template-columns:repeat(var(--n),minmax(0,1fr))] sm:flex sm:items-center gap-2 py-1"
+      style={{ ["--n" as string]: itens.length } as CSSProperties}>
       <span className="hidden sm:inline shrink-0 text-[12.5px] font-body italic text-muted-foreground">o que trava:</span>
       {itens.map((k) => (
         <button key={k} type="button" onClick={() => onAbrir(k)}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border-2 border-foreground px-3 h-9 text-[12.5px] font-body font-semibold text-foreground hover:-translate-y-0.5 transition-transform"
+          className="min-w-0 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 rounded-xl border-2 border-foreground px-2 sm:px-3 py-1.5 sm:py-0 sm:h-9 text-[11.5px] sm:text-[12.5px] font-body font-semibold text-foreground hover:-translate-y-0.5 transition-transform text-center leading-tight"
           style={{ background: TRAVA_INFO[k].cor }}>
-          <b className="font-display text-[16px] leading-none">{contagem[k]}</b>
-          {contagem[k] === 1 ? TRAVA_INFO[k].um : TRAVA_INFO[k].varios}
+          <b className="font-display text-[18px] sm:text-[16px] leading-none">{contagem[k]}</b>
+          <span className="sm:hidden">{TRAVA_INFO[k].curto}</span>
+          <span className="hidden sm:inline">{contagem[k] === 1 ? TRAVA_INFO[k].um : TRAVA_INFO[k].varios}</span>
         </button>
       ))}
     </div>
