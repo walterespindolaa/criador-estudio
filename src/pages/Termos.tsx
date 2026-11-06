@@ -27,7 +27,7 @@ export default function Termos() {
           <div>
             <h2 className="text-xl font-display font-semibold mb-3">1. Aceitação dos termos</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Ao criar uma conta ou utilizar o Cria (criasocialclub.com.br), você
+              Ao criar uma conta ou utilizar o Cria Social Club (criasocialclub.com.br), você
               concorda integralmente com estes Termos de Uso e com a nossa Política
               de Privacidade. Se você não concorda com qualquer dispositivo, não
               utilize a plataforma.
@@ -37,7 +37,7 @@ export default function Termos() {
             <p className="text-muted-foreground leading-relaxed mt-2">
               O serviço é prestado por <strong className="text-foreground">WG Business &amp; Branding Ltda. - EPP</strong>,
               inscrita no CNPJ sob o nº <strong className="text-foreground">59.816.277/0001-30</strong>,
-              com sede em <strong className="text-foreground">Itajaí/SC</strong>, doravante "Cria".
+              com sede em <strong className="text-foreground">Itajaí/SC</strong>, doravante "Cria Social Club".
               Contato: <a href="mailto:contato@criasocialclub.com.br" className="text-primary underline">contato@criasocialclub.com.br</a>.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
@@ -49,9 +49,9 @@ export default function Termos() {
           </div>
 
           <div>
-            <h2 className="text-xl font-display font-semibold mb-3">2. O que é o cria</h2>
+            <h2 className="text-xl font-display font-semibold mb-3">2. O que é o Cria Social Club</h2>
             <p className="text-muted-foreground leading-relaxed">
-              O cria é uma plataforma de organização e gestão de conteúdo para
+              O Cria Social Club é uma plataforma de organização e gestão de conteúdo para
               criadores nas redes sociais. Oferecemos ferramentas para
               planejamento, ideação, produção, agendamento e análise de conteúdo,
               incluindo recursos baseados em inteligência artificial para apoiar
@@ -62,13 +62,13 @@ export default function Termos() {
           <div>
             <h2 className="text-xl font-display font-semibold mb-3">3. Cadastro e conta</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Para usar o cria, você precisa criar uma conta fornecendo email
+              Para usar o Cria Social Club, você precisa criar uma conta fornecendo email
               válido e senha. Você é responsável por manter a confidencialidade
               de suas credenciais e por todas as atividades realizadas em sua
               conta.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
-              O cria é destinado a maiores de 18 anos, ou maiores de 16 anos
+              O Cria Social Club é destinado a maiores de 18 anos, ou maiores de 16 anos
               com assistência dos responsáveis legais, conforme o Marco Civil
               da Internet e a LGPD.
             </p>
@@ -79,7 +79,7 @@ export default function Termos() {
               4. Inteligência Artificial, natureza orientativa
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              O cria utiliza modelos de inteligência artificial para gerar
+              O Cria Social Club utiliza modelos de inteligência artificial para gerar
               sugestões de legendas, roteiros, ideias, ganchos e outros conteúdos
               criativos.
             </p>
@@ -93,7 +93,7 @@ export default function Termos() {
               forma.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
-              O cria não se responsabiliza por consequências decorrentes do uso
+              O Cria Social Club não se responsabiliza por consequências decorrentes do uso
               direto de sugestões geradas por IA, incluindo, mas não se limitando
               a: reações do público, sanções de plataformas, questões de direitos
               autorais, imprecisões factuais ou qualquer outro impacto reputacional
@@ -107,17 +107,17 @@ export default function Termos() {
             </h2>
             <p className="text-muted-foreground leading-relaxed">
               Você mantém todos os direitos sobre o conteúdo que produz, armazena
-              ou organiza no cria (ideias, posts, mídias, brandbook etc). Não
+              ou organiza no Cria Social Club (ideias, posts, mídias, brandbook etc). Não
               reivindicamos propriedade sobre seu conteúdo.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
-              Você concede ao cria apenas a licença técnica necessária para
+              Você concede ao Cria Social Club apenas a licença técnica necessária para
               operar o serviço, armazenar, processar e exibir seu conteúdo
               para você mesmo, dentro da plataforma.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
               <strong className="text-foreground">Publicação nas redes.</strong>{" "}
-              Se você conectar o Instagram e autorizar a publicação, o cria envia
+              Se você conectar o Instagram e autorizar a publicação, o Cria Social Club envia
               à sua conta, em seu nome, só os posts que você (ou a social mídia
               que você autorizou) mandou publicar ou agendou, com a mídia e a
               legenda revisadas no app. Você continua responsável pelo conteúdo
@@ -138,7 +138,7 @@ export default function Termos() {
               6. Planos, pagamento e cancelamento
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              O cria oferece ao criador de conteúdo um período de teste gratuito
+              O Cria Social Club oferece ao criador de conteúdo um período de teste gratuito
               de 7 dias no plano escolhido. O meio de pagamento é informado no
               início do teste e a primeira cobrança acontece ao fim dele, salvo
               cancelamento antes disso; avisamos por e-mail dois dias antes e na
@@ -146,7 +146,7 @@ export default function Termos() {
               paga.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
-              Atualmente oferecemos dois planos mensais (cria Pro e cria Studio),
+              Atualmente oferecemos dois planos mensais (Pro e Studio),
               com valores divulgados na página de assinatura. Os pagamentos são
               processados pela Stripe, com cobrança recorrente automática no
               cartão informado.
@@ -169,24 +169,24 @@ export default function Termos() {
 
           <div>
             <h2 className="text-xl font-display font-semibold mb-3">
-              6.1. Propriedade do cria e usos proibidos
+              6.1. Propriedade do Cria Social Club e usos proibidos
             </h2>
             <p className="text-muted-foreground leading-relaxed">
               O software, o código, o banco de dados, os textos, os prompts, os
               modelos, o método, o layout, os fluxos, as marcas e a identidade
-              visual do cria pertencem à WG Business &amp; Branding e são
+              visual do Cria Social Club pertencem à WG Business &amp; Branding e são
               protegidos pela Lei de Software (Lei nº 9.609/1998), pela Lei de
               Direitos Autorais (Lei nº 9.610/1998) e pela Lei de Propriedade
               Industrial (Lei nº 9.279/1996). A assinatura dá a você uma licença
               de uso pessoal, não exclusiva e intransferível, enquanto ela estiver
               ativa. Nada destes Termos transfere a você qualquer direito sobre o
-              cria além desse uso.
+              Cria Social Club além desse uso.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
               É proibido, sem autorização por escrito: (a) copiar, reproduzir,
-              descompilar, desmontar ou fazer engenharia reversa do cria ou de
+              descompilar, desmontar ou fazer engenharia reversa do Cria Social Club ou de
               qualquer parte dele, inclusive com ferramentas automatizadas ou de
-              inteligência artificial; (b) usar o cria, suas telas, seus dados ou
+              inteligência artificial; (b) usar o Cria Social Club, suas telas, seus dados ou
               seus textos para criar, treinar ou alimentar produto ou serviço
               concorrente; (c) extrair dados em massa por robôs, scrapers ou
               chamadas automatizadas fora do uso normal do app; (d) tentar acessar
@@ -203,20 +203,20 @@ export default function Termos() {
 
           <div>
             <h2 className="text-xl font-display font-semibold mb-3">
-              6.2. Criakut: o cria aproxima, quem contrata e quem presta combinam entre si
+              6.2. Criakut: o Cria Social Club aproxima, quem contrata e quem presta combinam entre si
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              O Criakut é um espaço dentro do cria onde criadores, social mídias e
+              O Criakut é um espaço dentro do Cria Social Club onde criadores, social mídias e
               prestadores de serviço (designers, editores, filmmakers, copywriters e
               outros) criam uma página, se encontram, trocam recados, participam de
-              comunidades e enviam propostas. O cria apenas oferece a ferramenta: não
+              comunidades e enviam propostas. O Cria Social Club apenas oferece a ferramenta: não
               é parte, intermediário, agente, empregador nem garantidor de nenhum
               acordo feito entre usuários.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
               Preço, prazo, escopo, entrega, pagamento, nota fiscal, direitos sobre o
               material e qualquer outra condição são combinados diretamente entre
-              as partes, que respondem sozinhas por eles. O cria não recebe nem
+              as partes, que respondem sozinhas por eles. O Cria Social Club não recebe nem
               repassa valores entre usuários, não confere a qualidade dos serviços
               e não responde por atraso, não entrega, inadimplência ou prejuízo
               causado por outro usuário. Avaliações, depoimentos, números e
@@ -224,11 +224,11 @@ export default function Termos() {
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
               É proibido usar o Criakut para spam, golpe, assédio, discriminação,
-              conteúdo ilegal ou para tirar a conversa do cria com o objetivo de
+              conteúdo ilegal ou para tirar a conversa do Cria Social Club com o objetivo de
               enganar a outra parte. Podemos ocultar conteúdo denunciado, suspender
               páginas e encerrar contas que descumpram estas regras. O selo de
               Destaque, quando contratado, só aumenta a visibilidade da página: não
-              é recomendação nem garantia do cria sobre quem o contratou.
+              é recomendação nem garantia do Cria Social Club sobre quem o contratou.
             </p>
           </div>
 
@@ -237,12 +237,12 @@ export default function Termos() {
               7. Limitação de responsabilidade
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              O cria é oferecido "no estado em que se encontra". Embora nos
+              O Cria Social Club é oferecido "no estado em que se encontra". Embora nos
               esforcemos para garantir disponibilidade e qualidade, não
               garantimos operação ininterrupta ou livre de erros.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
-              Em nenhuma hipótese a responsabilidade total do cria por danos
+              Em nenhuma hipótese a responsabilidade total do Cria Social Club por danos
               relacionados ao serviço excederá o valor pago pelo usuário nos 12
               meses anteriores ao evento que originou a controvérsia.
             </p>
@@ -263,7 +263,7 @@ export default function Termos() {
               <Link to="/privacidade" className="text-primary hover:underline">
                 Política de Privacidade
               </Link>
-              , que é parte integrante destes Termos. O cria está em conformidade
+              , que é parte integrante destes Termos. O Cria Social Club está em conformidade
               com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).
             </p>
           </div>
@@ -274,7 +274,7 @@ export default function Termos() {
             </h2>
             <p className="text-muted-foreground leading-relaxed">
               Quando você cadastra clientes, colaboradores ou leads na plataforma,
-              você é o controlador desses dados e o Cria atua como operador, nos
+              você é o controlador desses dados e o Cria Social Club atua como operador, nos
               termos do art. 39 da LGPD: tratamos esses dados apenas conforme as
               suas instruções e para a prestação do serviço, mantemos medidas
               técnicas de segurança, comunicamos incidentes que afetem esses dados

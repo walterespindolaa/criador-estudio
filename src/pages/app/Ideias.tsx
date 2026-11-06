@@ -39,6 +39,8 @@ import { useResumoDesempenho } from "@/hooks/useResumoDesempenho";
 import { usePosts, type Post } from "@/hooks/usePosts";
 import { getIdeaSuggestions } from "@/lib/ai/claude";
 import { SavedRefs } from "@/components/ideas/SavedRefs";
+import { FolhaCard, FolhaDaIdeia, textoDaFolha } from "@/components/ideas/FolhaDaIdeia";
+import { useContagemGeracoes } from "@/hooks/useIdeaGeracoes";
 
 const ideaSchema = z.object({
   // 100 cortava título vindo do ChatGPT (a Gabriela cola frases longas).
@@ -143,7 +145,13 @@ const Ideias = () => {
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingIdea, setEditingIdea] = useState<Idea | null>(null);
-  const [viewMode, setViewMode] = useState<"list" | "gallery">("list");
+  /* FOLHAS (06/11/2026): o bloco de notas é a visão padrão; a lista continua
+     como opção compacta. A preferência fica salva no aparelho. */
+  const [viewMode, setViewModeRaw] = useState<"list" | "gallery">(() => {
+    try { return localStorage.getItem("ideias_visao") === "list" ? "list" : "gallery"; } catch { return "gallery"; }
+  });
+  const setViewMode = (v: "list" | "gallery") => { setViewModeRaw(v); try { localStorage.setItem("ideias_visao", v); } catch { /* sem storage */ } };
+  const [folhaId, setFolhaId] = useState<string | null>(null);
   // Vem do "compartilhar → Cria" (Android PWA): o link pode chegar em url ou dentro de text.
   const _shareRaw = (() => { const sp = new URLSearchParams(window.location.search); return sp.get("url") || sp.get("text") || ""; })();
   const sharedUrl = _shareRaw ? (_shareRaw.match(/https?:\/\/\S+/)?.[0] ?? _shareRaw) : undefined;
@@ -235,7 +243,8 @@ const Ideias = () => {
       title: sanitizeText(data.title),
       pillar_id: data.pillar_id || null,
       platform: data.platform || null,
-      notes: data.notes ? sanitizeText(data.notes) : null,
+      // A anotação de ideia existente mora na folha (HTML limpo): o diálogo não mexe nela.
+      notes: editingIdea ? editingIdea.notes : (data.notes ? sanitizeText(data.notes) : null),
       objective: data.objective || null,
       origin: data.origin || null,
     };
@@ -252,6 +261,8 @@ const Ideias = () => {
         const nova = await createIdea.mutateAsync(payload);
         if (formFolder) await moverIdeia.mutateAsync({ ideaId: nova.id, folderId: formFolder });
         toast.success("Ideia capturada!");
+        // Já abre a folha nova pra anotar.
+        if (viewMode === "gallery") setFolhaId(nova.id);
       }
       setSheetOpen(false);
     } catch {
@@ -282,7 +293,7 @@ const Ideias = () => {
           format: "reels",
           pillar_id: idea.pillar_id,
           status: "ideia",
-          notes: idea.notes,
+          notes: textoDaFolha(idea.notes) || null,
         },
       });
       await updateIdea.mutateAsync({
@@ -565,6 +576,9 @@ const Ideias = () => {
     );
   };
 
+  const { data: contagemGeradas = {} } = useContagemGeracoes(ideas.map((i) => i.id));
+  const folhaAberta = folhaId ? ideas.find((i) => i.id === folhaId) ?? null : null;
+
   const filtered = ideas.filter(idea => {
     const matchSearch = !search || idea.title.toLowerCase().includes(search.toLowerCase());
     const matchPillar = !filterPillar || idea.pillar_id === filterPillar;
@@ -653,7 +667,7 @@ const Ideias = () => {
                 )}
                 aria-pressed={viewMode === "gallery"}
               >
-                <LayoutGrid className="h-3.5 w-3.5 sm:mr-1 inline" /> <span className="hidden sm:inline">Galeria</span>
+                <LayoutGrid className="h-3.5 w-3.5 sm:mr-1 inline" /> <span className="hidden sm:inline">Folhas</span>
               </button>
             </div>
             <Button data-tour="ideias-nova" variant="hero" onClick={openNew} className="shrink-0" size="sm">
@@ -800,114 +814,32 @@ const Ideias = () => {
         )}
 
         {mainTab === "ideias" && filtered.length > 0 && viewMode === "gallery" && (
-          <div className="columns-2 sm:columns-3 lg:columns-4 gap-3 [&>*]:mb-3">
-            {filtered.map((idea) => {
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-5 sm:gap-x-5 sm:gap-y-7 pt-3">
+            {filtered.map((idea, i) => {
               const pillar = idea.pillar_id ? pillars.find((p) => p.id === idea.pillar_id) : null;
+              const pastaId = folderIdDaIdeia(idea);
+              const pasta = pastaId ? folders.find((f) => f.id === pastaId)?.name ?? null : null;
               return (
-                <div
-                  key={idea.id}
-                  onClick={() => {
-                    if (selecting) { toggleSel(idea.id); return; }
-                    if (expandedIdeaId !== idea.id) openEdit(idea);
-                  }}
-                  className={cn("relative break-inside-avoid bg-card rounded-xl border p-4 hover:shadow-warm-md hover:scale-[1.01] transition-all cursor-pointer group",
-                    selecting && selIds.has(idea.id) ? "border-primary ring-2 ring-primary/30" : "border-border")}
-                >
-                  {/* Bolinha de seleção sempre à mão (e VISÍVEL: borda escura e
-                     sombra, a versão clarinha sumia no card branco). O primeiro
-                     clique nela já liga o modo seleção. */}
-                  <button type="button" aria-label="Selecionar ideia"
-                    onClick={(e) => { e.stopPropagation(); if (!selecting) setSelecting(true); toggleSel(idea.id); }}
-                    className={cn("absolute top-2 left-2 z-10 h-6 w-6 rounded-full grid place-items-center border-2 shadow-sm transition-colors",
-                      selIds.has(idea.id) ? "bg-primary border-primary text-primary-foreground" : "bg-card border-muted-foreground/50 hover:border-primary")}>
-                    {selIds.has(idea.id) && <Check className="h-3.5 w-3.5" />}
-                  </button>
-                  <div className="absolute top-2 right-2 flex gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity z-10">
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); toggleAiPanel(idea.id); }}
-                      className={cn(
-                        "h-7 w-7 rounded-lg flex items-center justify-center transition-colors shadow-sm",
-                        expandedIdeaId === idea.id
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-card border border-border text-primary/70 hover:text-primary hover:border-primary/50"
-                      )}
-                      aria-label="Sugestões da Cria IA"
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handlePromoteToPost(idea); }}
-                      disabled={!!idea.promoted_to_post_id || promoteToPost.isPending}
-                      title={idea.promoted_to_post_id ? "Já virou post" : "Virar post"}
-                      className="h-7 w-7 rounded-lg flex items-center justify-center transition-colors shadow-sm bg-card border border-border text-muted-foreground hover:text-primary hover:border-primary/50 disabled:opacity-40 disabled:cursor-not-allowed"
-                      aria-label="Virar post"
-                    >
-                      <Clapperboard className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  {pillar && (
-                    <div
-                      className="w-full h-24 rounded-lg mb-3"
-                      style={{ backgroundColor: pillar.color }}
-                    />
-                  )}
-                  {/* pl-8 quando não há a faixa do pilar: a bolinha de seleção
-                     fica em cima do começo do título sem este respiro. */}
-                  <h3 className={cn("font-display font-semibold text-sm text-foreground line-clamp-2 mb-2", !pillar && "pr-16 pl-8")}>
-                    {idea.title}
-                  </h3>
-                  {idea.notes && (
-                    <p className="text-xs font-body text-muted-foreground line-clamp-3 mb-3 whitespace-pre-line">
-                      {idea.notes}
-                    </p>
-                  )}
-                  <div className="flex flex-wrap gap-1">
-                    {(() => {
-                      const pasta = folders.find(f => f.id === folderIdDaIdeia(idea));
-                      return pasta ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-body font-medium"
-                          style={{ backgroundColor: `${pasta.color}1c`, color: pasta.color }}>
-                          <Folder className="h-2.5 w-2.5" /> {pasta.name}
-                        </span>
-                      ) : null;
-                    })()}
-                    {pillar && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-body font-medium">
-                        {pillar.name}
-                      </span>
-                    )}
-                    {idea.platform && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body capitalize">
-                        {idea.platform}
-                      </span>
-                    )}
-                    {idea.promoted_to_post_id && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary/15 text-secondary font-body font-medium">
-                        ✓ Virou post
-                      </span>
-                    )}
-                  </div>
-
-                  {expandedIdeaId === idea.id && (
-                    <AnimatePresence initial={false}>
-                      <motion.div
-                        key={`ai-gallery-${idea.id}`}
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.25, ease: "easeOut" }}
-                        className="overflow-hidden mt-3"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {renderPainelSugestoes(idea, "galeria")}
-                      </motion.div>
-                    </AnimatePresence>
-                  )}
-                </div>
+                <FolhaCard key={idea.id}
+                  titulo={idea.title}
+                  notes={idea.notes}
+                  pilar={pillar ? { nome: pillar.name, cor: pillar.color } : null}
+                  pasta={pasta}
+                  geradas={contagemGeradas[idea.id] ?? 0}
+                  selecionada={selIds.has(idea.id)}
+                  selecionando={selecting}
+                  inclinacao={i % 3 === 1 ? 0.6 : i % 3 === 2 ? -0.5 : 0}
+                  onAbrir={() => { if (selecting) { toggleSel(idea.id); return; } setFolhaId(idea.id); }}
+                  onSelecionar={() => { if (!selecting) setSelecting(true); toggleSel(idea.id); }}
+                />
               );
             })}
+            {!selecting && (
+              <button type="button" onClick={openNew}
+                className="min-h-[200px] rounded-[18px] border-[2.5px] border-dashed border-muted-foreground/30 grid place-items-center text-muted-foreground font-body font-extrabold text-sm hover:border-primary/50 hover:text-primary transition-colors">
+                <span><span className="block text-3xl leading-none text-primary">+</span>Nova folha</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -993,6 +925,57 @@ const Ideias = () => {
         )}
       </motion.div>
 
+      {folhaAberta && (
+        <FolhaDaIdeia
+          aberta={!!folhaAberta}
+          onFechar={() => setFolhaId(null)}
+          idea={{ id: folhaAberta.id, title: folhaAberta.title, notes: folhaAberta.notes }}
+          donoId={folhaAberta.user_id}
+          pilar={(() => { const pl = folhaAberta.pillar_id ? pillars.find((x) => x.id === folhaAberta.pillar_id) : null; return pl ? { nome: pl.name, cor: pl.color } : null; })()}
+          formatos={FORMATOS_SUGESTAO.map((f) => ({ value: f.value, label: f.label }))}
+          restantes={Math.max(0, AI_LIMIT - aiUsed)}
+          onSalvar={async (d) => {
+            const updates: { title?: string; notes?: string | null } = {};
+            if (d.title !== undefined && d.title.trim()) updates.title = sanitizeText(d.title);
+            if (d.notes !== undefined) updates.notes = d.notes || null;
+            await updateIdea.mutateAsync({ id: folhaAberta.id, updates });
+          }}
+          onDetalhes={() => { const i = folhaAberta; setFolhaId(null); openEdit(i); }}
+          gerar={async (formato, ctx) => {
+            const fmt = FORMATOS_SUGESTAO.find((f) => f.value === formato) ?? FORMATOS_SUGESTAO[1];
+            const pillarName = pillars.find((x) => x.id === folhaAberta.pillar_id)?.name;
+            // A folha inteira vai como texto da ideia; o grifado entra marcado como prioridade.
+            const ideiaTexto = [
+              ctx.titulo,
+              ctx.grifos.length ? `O QUE MAIS IMPORTA (grifado): ${ctx.grifos.join(" | ")}` : "",
+              ctx.texto ? `ANOTAÇÕES:\n${ctx.texto}` : "",
+            ].filter(Boolean).join("\n\n").slice(0, 6000);
+            const params = {
+              ideiaTexto, platform: fmt.platform, formato: fmt.value, modo: "padrao" as const,
+              pilar: pillarName, objetivo: "engajamento", niche: profile?.niche || "lifestyle",
+              brandContext: hasBrandContext ? brandContext : undefined,
+              desempenho: desempenho.texto || undefined,
+            };
+            try {
+              let parsed = parseSuggestions(await getIdeaSuggestions(params, user?.id));
+              if (parsed.length === 0) parsed = parseSuggestions(await getIdeaSuggestions(params, user?.id));
+              if (parsed.length === 0) { toast.error("A Cria IA respondeu fora do formato. Tenta de novo em instantes."); return []; }
+              return parsed.map((x) => ({ ...x, formato: fmt.value }));
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : "";
+              toast.error(/limit|quota|cota|429/i.test(msg) ? "Você atingiu o limite de gerações da Cria IA deste mês." : msg ? `A Cria IA falhou: ${msg}` : "Erro ao gerar. Tenta de novo.");
+              return [];
+            }
+          }}
+          virarPost={async (sug, formato) => { await handleCreateFromSuggestion({ ...sug, formato } as AISuggestion, folhaAberta.id); }}
+          guardarComoIdeia={async (titulo) => {
+            const nova = await createIdea.mutateAsync({ title: sanitizeText(titulo), pillar_id: folhaAberta.pillar_id, platform: null, notes: null, objective: null, origin: null });
+            const pasta = folderIdDaIdeia(folhaAberta);
+            if (pasta) await moverIdeia.mutateAsync({ ideaId: nova.id, folderId: pasta });
+            toast.success("Guardada no banco de ideias.");
+          }}
+        />
+      )}
       <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
         <DialogContent className="sm:max-w-lg" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader><DialogTitle>{editingIdea ? "Editar Ideia" : "Nova Ideia"}</DialogTitle></DialogHeader>
@@ -1051,11 +1034,16 @@ const Ideias = () => {
                 </div>
               </div>
             )}
+            {/* Ideia existente: as anotações moram na folha (bloco de notas). */}
+            {editingIdea ? (
+              <p className="text-[12px] font-body text-muted-foreground">As anotações ficam na folha da ideia. Feche aqui e toque na folha pra escrever.</p>
+            ) : (
             <div className="space-y-2">
               <Label>Notas</Label>
               <Textarea {...register("notes")} placeholder="Mais detalhes..." />
               {errors.notes && <p className="text-xs text-destructive">{errors.notes.message}</p>}
             </div>
+            )}
             <div className="flex gap-3">
               <Button type="submit" variant="hero" className="flex-1">Salvar</Button>
               <Button type="button" variant="outline" onClick={() => setSheetOpen(false)}>Cancelar</Button>

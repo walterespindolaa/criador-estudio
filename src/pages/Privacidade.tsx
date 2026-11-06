@@ -27,7 +27,7 @@ export default function Privacidade() {
           <div>
             <h2 className="text-xl font-display font-semibold mb-3">1. Quem somos</h2>
             <p className="text-muted-foreground leading-relaxed">
-              O cria é uma plataforma operada por Walter Espindola, com sede em
+              O Cria Social Club é uma plataforma operada por Walter Espindola, com sede em
               Blumenau, Santa Catarina, Brasil. Esta Política de Privacidade
               explica como coletamos, usamos, armazenamos e protegemos seus
               dados pessoais, em conformidade com a Lei Geral de Proteção de
@@ -65,7 +65,7 @@ export default function Privacidade() {
               se você conectar sua conta profissional do Instagram, coletamos métricas
               (alcance, interações, salvos, visualizações), informações básicas do perfil
               (nome de usuário, número de seguidores) e dados das suas publicações (legenda,
-              tipo de mídia, miniatura, data). Se você ativar a publicação pelo Cria, também
+              tipo de mídia, miniatura, data). Se você ativar a publicação pelo Cria Social Club, também
               enviamos ao Instagram a mídia e a legenda dos posts que você mandar publicar.
             </p>
           </div>
@@ -172,7 +172,7 @@ export default function Privacidade() {
             <p className="text-muted-foreground leading-relaxed mt-3">
               <strong className="text-foreground">Dados de terceiros que você cadastra.</strong>{" "}
               Se você é social mídia ou agência, os dados dos seus clientes que
-              você registra no Cria (nome, contato, marca, posts) são tratados
+              você registra no Cria Social Club (nome, contato, marca, posts) são tratados
               por nós como operador, em seu nome. Você é responsável por ter base
               legal pra tratá-los e por atender pedidos desses titulares; nós
               garantimos a segurança e a exclusão quando você excluir a conta.
@@ -244,7 +244,7 @@ export default function Privacidade() {
               <li>
                 <strong className="text-foreground">instagram_business_content_publish:</strong>{" "}
                 publicar na sua conta as fotos, carrosséis, reels e stories que você (ou a
-                social mídia que você autorizou) preparou no Cria, na hora em que você clica
+                social mídia que você autorizou) preparou no Cria Social Club, na hora em que você clica
                 em Publicar ou no horário que você agendou.
               </li>
             </ul>
