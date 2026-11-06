@@ -55,3 +55,11 @@ Cada módulo tem uma visão geral (1min30 a 2min) e vídeos curtos por função 
 - **10-criador-06 (Prompter):** o roteiro usado é curto e o texto quase não rola na captura; o modo voz e a câmera não aparecem ligados (pediriam permissão de microfone e câmera). Regravar com um roteiro longo, de preferência no celular.
 - **10-criador-08 e 09:** a conta fake não tem Instagram conectado, então o Mídia Kit automático mostra "Conecte o Instagram" e os resultados do link na bio têm só 1 visita.
 - **Conta fake de criador (Duda Reis), Prompter:** os roteiros "XPTO" (notícia de empresa real, com nome de jornalista) e "IA na prática: como eu uso pra escalar meus negócios" parecem dado real. Foram escondidos só na tela durante a gravação; apagar da conta.
+
+## Criador v2 (06/11/2026)
+
+- 21 vídeos novos em `videos-v2/` (00 a 20), roteiro em `roteiros/10-criador-v2.md`, manifesto em `videos-v2/manifesto-criador-v2.json`.
+- Telas: prints da conta Duda Reis tirados em 06/11 (computador 1440x900 e celular 390x844). Insights e Media Kit usam números da conta da Gabi com nome, @, fotos e capas da Duda trocados só na tela.
+- Voz: **Alexa** (biblioteca ElevenLabs, brasileira neutra), modelo Eleven v4, gerada via Runway. Uma narração inteira por vídeo; legenda karaokê e troca de cena sincronizadas pela transcrição palavra a palavra.
+- Moldura nova: grade creme, blobs Cria, tela com borda e sombra sólida, fita, lista "Neste vídeo" com passo atual, post-it de dica, selo Social Club, celular desenhado nas cenas de celular.
+- Pendente: subir no Bunny e trocar no manifesto do app; Media Kit no celular mostra 8,8 mil seguidores (Instagram de exemplo) e no computador 4,2 mil (números da Gabi).
