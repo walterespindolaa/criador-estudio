@@ -85,7 +85,8 @@ const QUICK_ACTIONS: QuickAction[] = [
 const FORMATO_CRIA = `
 
 [FORMATO DA RESPOSTA, siga sem comentar]
-Se a resposta trouxer ideias (de post, stories, reels, pauta), escreva só 1 ou 2 frases de abertura e coloque CADA ideia no bloco abaixo, sem repetir as ideias no texto.
+Se o pedido for um texto pronto (roteiro, legenda, mensagem), escreva o texto COMPLETO na resposta, fora do bloco, e deixe "ideias" vazio. Roteiro sempre em três partes, cada uma começando numa linha nova com o nome: Gancho, Desenvolvimento e Chamada.
+Se a resposta trouxer ideias soltas (de post, stories, reels, pauta), escreva só 1 ou 2 frases de abertura e coloque CADA ideia no bloco abaixo, sem repetir as ideias no texto.
 Termine SEMPRE com o bloco abaixo, mesmo sem ideias (aí "ideias" fica []):
 \`\`\`cria
 {"ideias":[{"titulo":"nome curto","descricao":"o que mostrar, em 1 ou 2 frases","texto_tela":"frase pronta pra tela ou legenda","formato":"Reels, Stories, Carrossel ou Estático"}],"sugestoes":["próximo pedido curto","outro próximo pedido"]}

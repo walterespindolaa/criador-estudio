@@ -52,7 +52,9 @@ export default function Collabs() {
   const fechadoMes = active
     .filter((c) => ["fechado", "entregue", "pago"].includes(c.status) && c.updated_at.slice(0, 7) === nowMonth)
     .reduce((s, c) => s + (c.value ?? 0), 0);
-  const aReceber = active.filter((c) => c.status !== "pago").reduce((s, c) => s + (c.value ?? 0), 0);
+  /* A receber = o que já foi fechado e ainda não caiu: fechado ou entregue.
+     Lead e negociando ainda não são dinheiro (Walter, 06/11/2026). */
+  const aReceber = active.filter((c) => c.status === "fechado" || c.status === "entregue").reduce((s, c) => s + (c.value ?? 0), 0);
   const entregasPend = active.reduce((s, c) => s + Math.max(0, c.total - c.done), 0);
   const mesNome = new Date(nowMonth + "-15T12:00:00").toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
 

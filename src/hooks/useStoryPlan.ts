@@ -131,14 +131,17 @@ export function useScheduledPostsInRange(fromDate: string, toDate: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("posts")
-        .select("id,title,scheduled_date,scheduled_time,status,platform")
+        .select("id,title,scheduled_date,scheduled_time,status,platform,format")
         .eq("user_id", userId!)
         .is("deleted_at", null)
         .gte("scheduled_date", fromDate)
         .lte("scheduled_date", toDate)
         .order("scheduled_time", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as unknown as ScheduledPostLite[];
+      /* Só post do feed: story que virou post (format story) não conta no
+         "N no feed" (Walter, 06/11/2026: a sexta mostrava 4 com 1 post). */
+      const rows = (data ?? []) as unknown as (ScheduledPostLite & { format?: string | null })[];
+      return rows.filter((p) => !["story", "stories"].includes((p.format ?? "").toLowerCase()));
     },
   });
 }
