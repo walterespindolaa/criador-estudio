@@ -21,6 +21,7 @@ import { CLIENT_COLORS } from "@/components/accounts/CriaPostBoard";
 import { toast } from "sonner";
 import { ROTULO_APROVACAO } from "@/lib/labels";
 import { ListaPorDia } from "@/components/shared/ListaPorDia";
+import { CalendarioMesCelular } from "@/components/shared/CalendarioMesCelular";
 import { hojeBR } from "@/lib/date-br";
 
 // Estados de aprovação (mesmos rótulos do Cria Post) pro popup editável do post.
@@ -378,6 +379,14 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
       </button>
     );
   };
+  const itensDoDia = (dia: string) => naGrade(byDay[dia] ?? []).map(({ kind, post: p }) => ({
+    id: `${kind}:${p.id}`,
+    titulo: p.title,
+    detalhe: `${nameOf[p.external_client_id] ?? ""}${kind === "postagem" && p.scheduled_time ? ` · ${p.scheduled_time.slice(0, 5)}` : ""}${kind === "entrega" && p.assignee_id ? ` · ${(nomeParceiro[p.assignee_id] ?? "parceiro").split(" ")[0]}` : ""}`,
+    cor: kind === "entrega" ? "#7c3aed" : (colorOf[p.external_client_id] ?? "#EA4918"),
+    etiqueta: kind === "entrega" ? "Entrega" : null,
+    movivel: kind === "postagem",
+  }));
   const renderItem = (it: CalItem) =>
     it.kind === "entrega" ? chipEntrega(it.post) : chip(it.post, soParceiros && espiando === it.post.id);
 
@@ -536,22 +545,32 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
           em 390px virava célula de 50px com pontinhos e dois modais pra
           remarcar. Aqui é um bloco por dia, título inteiro, e "Mover" abre o
           seletor de data do sistema. A grade continua no desktop. */}
-      <ListaPorDia
+      {/* CELULAR, MÊS: calendário estilo iPhone (05/11/2026, igual à Agenda).
+          Tocou no dia, abre a lista dele com o mesmo "Mover" de sempre. */}
+      {view === "mes" && (
+        <CalendarioMesCelular
+          className="md:hidden"
+          dias={days.map((d) => dkey(d))}
+          mes={cursor.getMonth()}
+          hoje={hojeBR()}
+          coresDe={(dia) => [...new Set(itensDoDia(dia).map((i) => i.cor ?? "#EA4918"))]}
+          totalDe={(dia) => itensDoDia(dia).length}
+          conteudoDoDia={(dia) => (
+            <ListaPorDia dias={[dia]} hoje="" apenasComItens={false} itensDe={itensDoDia}
+              aoAbrir={(id) => { const pid = id.split(":")[1]; const p = posts.find((x) => x.id === pid); if (p) setEditPost(p); }}
+              aoMover={(id, novo) => { const pid = id.split(":")[1]; reschedule.mutate({ id: pid, date: novo }); }} />
+          )}
+        />
+      )}
+      {view === "semana" && <ListaPorDia
         className="md:hidden"
-        dias={days.filter((d) => view === "semana" || isSameMonth(d, cursor)).map((d) => dkey(d))}
+        dias={days.map((d) => dkey(d))}
         hoje={hojeBR()}
-        itensDe={(dia) => naGrade(byDay[dia] ?? []).map(({ kind, post: p }) => ({
-          id: `${kind}:${p.id}`,
-          titulo: p.title,
-          detalhe: `${nameOf[p.external_client_id] ?? ""}${kind === "postagem" && p.scheduled_time ? ` · ${p.scheduled_time.slice(0, 5)}` : ""}${kind === "entrega" && p.assignee_id ? ` · ${(nomeParceiro[p.assignee_id] ?? "parceiro").split(" ")[0]}` : ""}`,
-          cor: kind === "entrega" ? "#7c3aed" : (colorOf[p.external_client_id] ?? "#EA4918"),
-          etiqueta: kind === "entrega" ? "Entrega" : null,
-          movivel: kind === "postagem",
-        }))}
+        itensDe={itensDoDia}
         aoAbrir={(id) => { const pid = id.split(":")[1]; const p = posts.find((x) => x.id === pid); if (p) setEditPost(p); }}
         aoMover={(id, dia) => { const pid = id.split(":")[1]; reschedule.mutate({ id: pid, date: dia }); }}
         vazio="Nenhum post agendado neste período."
-      />
+      />}
 
       {/* Grade do mês (desktop) */}
       <div className="hidden md:block rounded-xl border border-border overflow-hidden bg-card">

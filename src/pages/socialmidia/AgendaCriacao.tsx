@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown, Trash2, Cake, PartyPopper, Rows3, BarChart3 } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown, Trash2, Cake, PartyPopper, Rows3, BarChart3, ChevronLeft, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -337,6 +337,18 @@ export default function AgendaCriacao() {
   const toggleProducao = () => setProducaoOpen((v) => { const n = !v; try { localStorage.setItem("agenda_producao_open", n ? "1" : "0"); } catch { /* segue */ } return n; });
   // Painel "ver todos" de um dia cheio.
   const [dayModal, setDayModal] = useState<string | null>(null);
+  /* MÊS EM CALENDÁRIO (Walter, 05/11/2026; mockup aprovado): a visão Mês abre no
+     calendário estilo iPhone, com bolinhas por tipo. Tocou no dia, a semana fica
+     no topo e a lista do dia embaixo (no computador, mês e lista lado a lado).
+     A grade de cards de antes vira a opção "Grade". */
+  const [mesModo, setMesModo] = useState<"calendario" | "grade">(() => {
+    try { return (localStorage.getItem("agenda_mes_modo") as "calendario" | "grade") || "calendario"; } catch { return "calendario"; }
+  });
+  const trocarMesModo = (m: "calendario" | "grade") => {
+    setMesModo(m);
+    try { localStorage.setItem("agenda_mes_modo", m); } catch { /* sem storage */ }
+  };
+  const [diaSel, setDiaSel] = useState<string | null>(null);
   /* A data comemorativa aberta, quando ela tem mais de um cliente. Guarda o dia
      junto pra o título do diálogo poder dizer a data por extenso. */
   const [dataModal, setDataModal] = useState<{ iso: string; data: ComemorativaDoDia } | null>(null);
@@ -1028,8 +1040,220 @@ export default function AgendaCriacao() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [clients, criaProfiles]);
 
+  /* Lista de um dia: a mesma do "Ver todos" e do painel do calendário do mês. */
+  const conteudoDoDia = (iso: string, fechar: () => void) => {
+        const caps = capturesByDay.get(iso) ?? []; const tks = tasksByDay.get(iso) ?? [];
+        const cri = byDay.get(iso) ?? []; const pts = postsByDay.get(iso) ?? [];
+        // Posts do Cria do cliente (5o tipo): entram no modal e na contagem, iguais à célula.
+        const criaCli = criaPostsByDay.get(iso) ?? [];
+        // Materiais com prazo no dia (6o tipo).
+        const mats = materialsByDay.get(iso) ?? [];
+        // Aniversários do dia (7o tipo, so leitura).
+        const anivs = birthdaysByDay.get(iso) ?? [];
+        // Mesma ordenação da grade (ordem manual do dia quando houver; senão por horário).
+        const items = buildDayItems(caps, tks, cri, pts, mats, dayOrders[iso]);
+        const d = parseDateOnly(iso);
+        const rowCls = "w-full flex items-center gap-2.5 rounded-xl border border-border p-2.5 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors";
+        const dot = (c: string) => <span className="h-2 w-2 rounded-full shrink-0" style={{ background: c }} />;
+        // O modal segue o MESMO alternador da grade: com "Períodos" ligado ele agrupa em
+        // faixas (aqui sobra altura, então mostra as três com folga); desligado é a lista
+        // plana de sempre. Só leitura: reordenar/definir período continua sendo na grade,
+        // arrastando.
+        const bandasModal = splitFaixas(items, itemPeriods, !!dayOrders[iso]);
+        const criaModal: Record<Faixa, ClientCriaAgendaPost[]> = { sem: [], manha: [], tarde: [], noite: [] };
+        for (const p of criaCli) criaModal[faixaDoItem(null, p.scheduled_time)].push(p);
+        const linhaItem = (item: DayItem) => {
+          if (item.kind === "cria") { const c = item.cria; const cor = corDoItem(null, c.crm_client_id ? clients.find((x) => x.id === c.crm_client_id)?.color : null, "#4B3FA8"); return <button key={`c${c.id}`} onClick={() => { fechar(); setEditCreation(c); }} className={rowCls}>{dot(cor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{c.title?.trim() || nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">{c.event_time ? `${c.event_time.slice(0, 5)} · ` : ""}Reunião</span></button>; }
+          if (item.kind === "task") { const t = item.task; const dotColor = corDaTarefa(t); return <button key={`t${t.id}`} onClick={() => { fechar(); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
+          if (item.kind === "mat") { const mt = item.mat; const done = mt.status === "finalizado"; return <button key={`m${mt.id}`} onClick={() => { fechar(); openMaterial(mt); }} className={rowCls}>{dot(corDoMaterial(mt))}<span className={cn("text-[13px] font-body font-semibold truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{mt.title}</span><span className="ml-auto text-[10px] text-muted-foreground shrink-0">Material</span></button>; }
+          if (item.kind === "cap") { const c = item.cap; return <button key={`p${c.id}`} onClick={() => { fechar(); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{item.time ? ` · ${item.time}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>; }
+          const p = item.post; const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { fechar(); openPost(p); }} className={rowCls}>{dot(corDoPost(p))}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}{p.publish_status && <SeloPublicacaoIg status={p.publish_status} autoPublish={p.auto_publish} className="shrink-0" />}</button>;
+        };
+        // Linhas só leitura (Cria do cliente e aniversário), usadas nos dois modos do modal.
+        const linhaCria = (p: ClientCriaAgendaPost) => (
+          <button key={`cc${p.id}`} onClick={() => { fechar(); setCriaCard(p); }} className={rowCls}>
+            {dot(CRIA_POST_COLOR)}
+            <span className="text-[13px] font-body font-semibold text-foreground truncate">{p.scheduled_time ? `${p.scheduled_time.slice(0, 5)} · ` : ""}{p.title || "Post"}</span>
+            <span className="ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: corEtapaCria(p.status) }}>{CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}</span>
+          </button>
+        );
+        const comem = comemorativasByDay.get(iso) ?? [];
+        const linhaComem = (c: ComemorativaDoDia) => {
+          const aprovados = c.clientes.filter((x) => x.aprovada).length;
+          const total = c.clientes.length;
+          return (
+            <button key={`cm${c.chave}`}
+              onClick={() => {
+                if (total === 1 && c.clientes[0].crmId) { fechar(); navigate(`/socialmidia/clientes/${c.clientes[0].crmId}/cronograma`); }
+                else { fechar(); setDataModal({ iso, data: c }); }
+              }}
+              className={cn(rowCls, !c.agendaDataId && aprovados === 0 && "opacity-70")}>
+              {dot(c.cor || COMEMORATIVA_COLOR)}
+              <span className="text-[13px] font-body font-semibold text-foreground truncate">{c.label}</span>
+              <span className="text-[11px] text-muted-foreground truncate">
+                {total === 1 ? c.clientes[0].nome : `${total} clientes`}
+              </span>
+              <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+                {c.mesTodo ? "Mês todo"
+                  : c.agendaDataId ? (total === 0 || aprovados === total ? "Data" : `${aprovados}/${total}`)
+                  : aprovados === 0 ? "A confirmar"
+                  : aprovados === total ? "Data" : `${aprovados} de ${total}`}
+              </span>
+            </button>
+          );
+        };
+        const linhaAniv = (b: { clientId: string; nome: string; cor: string | null }) => (
+          <button key={`an${b.clientId}`} onClick={() => { fechar(); navigate(`/socialmidia/clientes/${b.clientId}/visao-geral`); }} className={rowCls}>
+            {dot(b.cor || BIRTHDAY_DEFAULT_COLOR)}
+            <span className="text-[13px] font-body font-semibold text-foreground truncate">Aniversário de {b.nome}</span>
+            <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">Lembrete</span>
+          </button>
+        );
+    const total = items.length + criaCli.length + anivs.length + comem.length;
+    const lista = (
+          <div className="space-y-1.5 mt-1">
+            {porPeriodo ? FAIXAS.map((f) => {
+              const its = bandasModal[f];
+              const cris = criaModal[f];
+              // Aniversário é lembrete: entra no topo, junto do "sem período".
+              const ans = f === "sem" ? anivs : [];
+              if (its.length === 0 && cris.length === 0 && ans.length === 0) return null;
+              return (
+                <div key={f} className="space-y-1.5">
+                  {f !== "sem" && (
+                    <div className="flex items-center gap-2 pt-1.5">
+                      <span className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground shrink-0">{FAIXA_LABEL[f]}</span>
+                      <span className="h-px flex-1 bg-border" />
+                    </div>
+                  )}
+                  {its.map(linhaItem)}
+                  {/* Cria do cliente: 5o tipo, só leitura. Clicar abre o kanban do cliente. */}
+                  {cris.map(linhaCria)}
+                  {/* Aniversário: 7o tipo, lembrete. Clicar abre a ficha do cliente. */}
+                  {ans.map(linhaAniv)}
+                </div>
+              );
+            }) : (
+              // "Períodos" desligado: lista plana, na mesma ordem da coluna do dia.
+              <>
+                {items.map(linhaItem)}
+                {criaCli.map(linhaCria)}
+                {comem.map(linhaComem)}
+                {anivs.map(linhaAniv)}
+              </>
+            )}
+          </div>
+    );
+    return { d, total, lista };
+  };
+
+  // ── Calendário do mês (modo "calendario" da visão Mês) ──
+  const TIPOS_DIA: [string, (iso: string) => number][] = [
+    ["#4B3FA8", (iso) => (byDay.get(iso) ?? []).length],
+    ["#0061EE", (iso) => (tasksByDay.get(iso) ?? []).length],
+    ["#FF77B9", (iso) => (capturesByDay.get(iso) ?? []).length],
+    ["#EA4918", (iso) => (postsByDay.get(iso) ?? []).length],
+    [CRIA_POST_COLOR, (iso) => (criaPostsByDay.get(iso) ?? []).length],
+    [MATERIAL_DEFAULT_COLOR, (iso) => (materialsByDay.get(iso) ?? []).length],
+    [BIRTHDAY_DEFAULT_COLOR, (iso) => (birthdaysByDay.get(iso) ?? []).length],
+    [COMEMORATIVA_COLOR, (iso) => (comemorativasByDay.get(iso) ?? []).length],
+  ];
+  const resumoDoDia = (iso: string) => {
+    let n = 0; const cores: string[] = [];
+    for (const [cor, conta] of TIPOS_DIA) { const k = conta(iso); if (k > 0) { n += k; cores.push(cor); } }
+    return { n, cores: cores.slice(0, 4) };
+  };
+  const bolinhas = (cores: string[], cls = "") => (
+    <span className={cn("flex items-center justify-center gap-[3px] h-1.5", cls)}>
+      {cores.map((c) => <i key={c} className="block h-1.5 w-1.5 rounded-full" style={{ background: c }} />)}
+    </span>
+  );
+  const calendarioMes = (() => {
+    const isoDias = days.map(ymd);
+    const padrao = isoDias.includes(today) ? today : ymd(new Date(weekStart.getFullYear(), weekStart.getMonth(), 1));
+    const ativo = diaSel && isoDias.includes(diaSel) ? diaSel : null;
+    const doPainel = ativo ?? padrao;
+    const idx = isoDias.indexOf(doPainel);
+    const semana = days.slice(Math.floor(idx / 7) * 7, Math.floor(idx / 7) * 7 + 7);
+    const { d: dPainel, total, lista } = conteudoDoDia(doPainel, () => { /* painel fica aberto */ });
+    let x0: number | null = null;
+    const pular = (n: number) => {
+      const alvo = idx + n;
+      if (alvo >= 0 && alvo < isoDias.length) setDiaSel(isoDias[alvo]);
+    };
+    const mesNome = weekStart.toLocaleDateString("pt-BR", { month: "long" });
+    return (
+      <div className="lg:grid lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-5 overflow-x-clip">
+        {/* Mês: no celular some quando um dia está aberto; no computador fica sempre. */}
+        <div className={cn(ativo ? "hidden lg:block" : "block")}>
+          <div className="grid grid-cols-7 mb-1">
+            {WD.map((w) => <p key={w} className="text-[10.5px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{w.slice(0, 1)}</p>)}
+          </div>
+          <div className="grid grid-cols-7">
+            {days.map((d) => {
+              const iso = ymd(d); const fora = d.getMonth() !== curMonth;
+              const { n, cores } = resumoDoDia(iso);
+              const hoje = iso === today; const sel = iso === doPainel;
+              return (
+                <button key={iso} type="button" onClick={() => setDiaSel(iso)}
+                  className={cn("min-w-0 flex flex-col items-center gap-1 border-t border-border pt-1.5 pb-2 lg:h-[76px] transition-colors hover:bg-primary/5", fora && "opacity-35")}>
+                  <span className={cn("grid place-items-center h-8 w-8 rounded-full text-[15px] font-body",
+                    hoje ? "bg-primary text-primary-foreground font-bold" : sel ? "lg:bg-foreground lg:text-background font-semibold" : "text-foreground")}>
+                    {d.getDate()}
+                  </span>
+                  {bolinhas(cores)}
+                  {n > 0 && <span className="hidden lg:block text-[10px] font-body text-muted-foreground">{n} {n === 1 ? "item" : "itens"}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Dia: no celular só aparece com um dia tocado; no computador, sempre ao lado. */}
+        <div className={cn("min-w-0", ativo ? "block" : "hidden lg:block")}>
+          <div className="lg:hidden mb-2 flex items-center">
+            <button type="button" onClick={() => setDiaSel(null)}
+              className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-3 py-1.5 text-[13px] font-body font-semibold capitalize">
+              <ChevronLeft className="h-4 w-4" /> {mesNome}
+            </button>
+          </div>
+          <div className="lg:hidden grid grid-cols-7 border-b border-border pb-2 mb-1 touch-pan-y"
+            onTouchStart={(e) => { x0 = e.touches[0].clientX; }}
+            onTouchEnd={(e) => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) pular(dx < 0 ? 7 : -7); x0 = null; }}>
+            {semana.map((d) => {
+              const iso = ymd(d); const { cores } = resumoDoDia(iso);
+              const hoje = iso === today; const sel = iso === doPainel;
+              return (
+                <button key={iso} type="button" onClick={() => setDiaSel(iso)} className="min-w-0 flex flex-col items-center gap-1">
+                  <span className="text-[10.5px] font-body font-semibold text-muted-foreground">{WD[d.getDay()].slice(0, 1)}</span>
+                  <span className={cn("grid place-items-center h-9 w-9 rounded-full text-[16px] font-body",
+                    sel && hoje ? "bg-primary text-primary-foreground font-bold" : sel ? "bg-foreground text-background font-bold" : hoje ? "text-primary font-bold" : "text-foreground")}>
+                    {d.getDate()}
+                  </span>
+                  {bolinhas(cores)}
+                </button>
+              );
+            })}
+          </div>
+          <div className="lg:rounded-2xl lg:border lg:border-border lg:bg-background lg:p-3">
+            <div className="flex items-baseline gap-2 px-0.5 pt-2 pb-2">
+              <p className="font-display font-bold text-[15px] capitalize">{dPainel.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "short" }).replace(".", "")}</p>
+              {doPainel === today && <span className="text-[12px] font-body text-primary font-semibold">hoje</span>}
+              <span className="ml-auto text-[12px] font-body text-muted-foreground">{total} {total === 1 ? "item" : "itens"}</span>
+              <button type="button" onClick={() => { setAddKind("tarefa"); setAddDay(doPainel); }} aria-label="Adicionar no dia"
+                className="grid place-items-center h-7 w-7 rounded-full bg-primary text-primary-foreground"><Plus className="h-4 w-4" /></button>
+            </div>
+            {total === 0
+              ? <p className="text-center text-[13px] font-body text-muted-foreground py-8">Nada marcado neste dia.</p>
+              : lista}
+          </div>
+        </div>
+      </div>
+    );
+  })();
+
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0">
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0 overflow-x-clip">
       <AvisoSoVer code="agenda" />
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-pink-400 grid place-items-center shadow-sm shrink-0">
@@ -1087,6 +1311,17 @@ export default function AgendaCriacao() {
                 </button>
               ))}
             </div>
+            {view === "mes" && (
+              <div className="inline-flex rounded-lg border border-border overflow-hidden" aria-label="Como ver o mês">
+                {([["calendario", "Calendário", CalendarDays], ["grade", "Grade", LayoutGrid]] as const).map(([m, rot, Ic]) => (
+                  <button key={m} onClick={() => trocarMesModo(m)} title={rot}
+                    className={cn("px-2.5 py-1 text-xs font-body font-semibold transition-colors inline-flex items-center gap-1",
+                      mesModo === m ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
+                    <Ic className="h-3.5 w-3.5" /> {rot}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="flex items-center gap-1">
               <Button aria-label="Anterior" variant="outline" size="sm" className="h-9 w-9 p-0"
                 onClick={() => setWeekStart((w) => { const n = new Date(w); if (view === "mes") n.setMonth(n.getMonth() - 1); else n.setDate(n.getDate() - 7); return n; })}>‹</Button>
@@ -1185,14 +1420,16 @@ export default function AgendaCriacao() {
               )}
             </div>
           )}
-          {view === "mes" && (
+          {view === "mes" && mesModo === "calendario" && calendarioMes}
+          {view === "mes" && mesModo === "grade" && (
             <div className="hidden lg:grid lg:grid-cols-7 gap-2 mb-1">
               {WD.map((w) => <p key={w} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{w}</p>)}
             </div>
           )}
           <div ref={gradeRef} className={cn(
+            view === "mes" && mesModo === "calendario" && "hidden",
             gridLayout
-              ? "grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2"
+              ? "grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 overflow-x-clip touch-pan-y"
               // Mobile: colunas espaçosas (~85vw, uma por vez com peek da próxima) e
               // scroll-snap suave; no lg vira grade de 7 sem scroll.
               : "flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth lg:grid lg:grid-cols-7 lg:gap-2 lg:overflow-visible lg:pb-0",
@@ -1213,7 +1450,7 @@ export default function AgendaCriacao() {
               const showWeekday = view === "semana";
               // Classe da coluna do dia (a mesma na semana e no mês; só o tamanho muda).
               const colCls = cn("rounded-xl border p-2.5 flex flex-col gap-1.5 transition-shadow",
-                gridLayout ? "min-h-[110px]" : "w-[85vw] max-w-[380px] shrink-0 snap-start lg:w-auto lg:max-w-none lg:snap-align-none min-h-[240px] lg:min-h-[280px]",
+                gridLayout ? "min-h-[110px] min-w-0 overflow-hidden" : "w-[85vw] max-w-[380px] shrink-0 snap-start lg:w-auto lg:max-w-none lg:snap-align-none min-h-[240px] lg:min-h-[280px]",
                 isToday ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border bg-background",
                 outOfMonth && "opacity-45");
               // Cabeçalho do dia (número, "Ver todos", "+"), igual nas duas visões.
@@ -2136,111 +2373,13 @@ export default function AgendaCriacao() {
       )}
 
       {dayModal && (() => {
-        const iso = dayModal;
-        const caps = capturesByDay.get(iso) ?? []; const tks = tasksByDay.get(iso) ?? [];
-        const cri = byDay.get(iso) ?? []; const pts = postsByDay.get(iso) ?? [];
-        // Posts do Cria do cliente (5o tipo): entram no modal e na contagem, iguais à célula.
-        const criaCli = criaPostsByDay.get(iso) ?? [];
-        // Materiais com prazo no dia (6o tipo).
-        const mats = materialsByDay.get(iso) ?? [];
-        // Aniversários do dia (7o tipo, so leitura).
-        const anivs = birthdaysByDay.get(iso) ?? [];
-        // Mesma ordenação da grade (ordem manual do dia quando houver; senão por horário).
-        const items = buildDayItems(caps, tks, cri, pts, mats, dayOrders[iso]);
-        const d = parseDateOnly(iso);
-        const rowCls = "w-full flex items-center gap-2.5 rounded-xl border border-border p-2.5 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors";
-        const dot = (c: string) => <span className="h-2 w-2 rounded-full shrink-0" style={{ background: c }} />;
-        // O modal segue o MESMO alternador da grade: com "Períodos" ligado ele agrupa em
-        // faixas (aqui sobra altura, então mostra as três com folga); desligado é a lista
-        // plana de sempre. Só leitura: reordenar/definir período continua sendo na grade,
-        // arrastando.
-        const bandasModal = splitFaixas(items, itemPeriods, !!dayOrders[iso]);
-        const criaModal: Record<Faixa, ClientCriaAgendaPost[]> = { sem: [], manha: [], tarde: [], noite: [] };
-        for (const p of criaCli) criaModal[faixaDoItem(null, p.scheduled_time)].push(p);
-        const linhaItem = (item: DayItem) => {
-          if (item.kind === "cria") { const c = item.cria; const cor = corDoItem(null, c.crm_client_id ? clients.find((x) => x.id === c.crm_client_id)?.color : null, "#4B3FA8"); return <button key={`c${c.id}`} onClick={() => { setDayModal(null); setEditCreation(c); }} className={rowCls}>{dot(cor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{c.title?.trim() || nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">{c.event_time ? `${c.event_time.slice(0, 5)} · ` : ""}Reunião</span></button>; }
-          if (item.kind === "task") { const t = item.task; const dotColor = corDaTarefa(t); return <button key={`t${t.id}`} onClick={() => { setDayModal(null); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
-          if (item.kind === "mat") { const mt = item.mat; const done = mt.status === "finalizado"; return <button key={`m${mt.id}`} onClick={() => { setDayModal(null); openMaterial(mt); }} className={rowCls}>{dot(corDoMaterial(mt))}<span className={cn("text-[13px] font-body font-semibold truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{mt.title}</span><span className="ml-auto text-[10px] text-muted-foreground shrink-0">Material</span></button>; }
-          if (item.kind === "cap") { const c = item.cap; return <button key={`p${c.id}`} onClick={() => { setDayModal(null); setEditCap(c); }} className={rowCls}>{dot("#FF77B9")}<span className="text-[13px] font-body font-semibold text-foreground truncate">{nameOf(c.crm_client_id, c.client_name)}{item.time ? ` · ${item.time}` : ""}</span><span className="ml-auto text-[10px] text-muted-foreground">Captação</span></button>; }
-          const p = item.post; const st = POST_STATUS[p.approval_status ?? "em_producao"]; return <button key={`o${p.id}`} onClick={() => { setDayModal(null); openPost(p); }} className={rowCls}>{dot(corDoPost(p))}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{p.title || "Post"}</span>{st && <span className={cn("ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>}{p.publish_status && <SeloPublicacaoIg status={p.publish_status} autoPublish={p.auto_publish} className="shrink-0" />}</button>;
-        };
-        // Linhas só leitura (Cria do cliente e aniversário), usadas nos dois modos do modal.
-        const linhaCria = (p: ClientCriaAgendaPost) => (
-          <button key={`cc${p.id}`} onClick={() => { setDayModal(null); setCriaCard(p); }} className={rowCls}>
-            {dot(CRIA_POST_COLOR)}
-            <span className="text-[13px] font-body font-semibold text-foreground truncate">{p.scheduled_time ? `${p.scheduled_time.slice(0, 5)} · ` : ""}{p.title || "Post"}</span>
-            <span className="ml-auto shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ background: corEtapaCria(p.status) }}>{CRIA_POST_STATUS[p.status ?? ""] ?? "Cria"}</span>
-          </button>
-        );
-        const comem = comemorativasByDay.get(iso) ?? [];
-        const linhaComem = (c: ComemorativaDoDia) => {
-          const aprovados = c.clientes.filter((x) => x.aprovada).length;
-          const total = c.clientes.length;
-          return (
-            <button key={`cm${c.chave}`}
-              onClick={() => {
-                if (total === 1 && c.clientes[0].crmId) { setDayModal(null); navigate(`/socialmidia/clientes/${c.clientes[0].crmId}/cronograma`); }
-                else { setDayModal(null); setDataModal({ iso, data: c }); }
-              }}
-              className={cn(rowCls, !c.agendaDataId && aprovados === 0 && "opacity-70")}>
-              {dot(c.cor || COMEMORATIVA_COLOR)}
-              <span className="text-[13px] font-body font-semibold text-foreground truncate">{c.label}</span>
-              <span className="text-[11px] text-muted-foreground truncate">
-                {total === 1 ? c.clientes[0].nome : `${total} clientes`}
-              </span>
-              <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
-                {c.mesTodo ? "Mês todo"
-                  : c.agendaDataId ? (total === 0 || aprovados === total ? "Data" : `${aprovados}/${total}`)
-                  : aprovados === 0 ? "A confirmar"
-                  : aprovados === total ? "Data" : `${aprovados} de ${total}`}
-              </span>
-            </button>
-          );
-        };
-        const linhaAniv = (b: { clientId: string; nome: string; cor: string | null }) => (
-          <button key={`an${b.clientId}`} onClick={() => { setDayModal(null); navigate(`/socialmidia/clientes/${b.clientId}/visao-geral`); }} className={rowCls}>
-            {dot(b.cor || BIRTHDAY_DEFAULT_COLOR)}
-            <span className="text-[13px] font-body font-semibold text-foreground truncate">Aniversário de {b.nome}</span>
-            <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">Lembrete</span>
-          </button>
-        );
+        const { d, total, lista } = conteudoDoDia(dayModal, () => setDayModal(null));
         return (
           <Dialog open onOpenChange={(o) => { if (!o) setDayModal(null); }}>
             <DialogContent className="sm:max-w-md rounded-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader><DialogTitle className="font-display capitalize">{d.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}</DialogTitle></DialogHeader>
-              <p className="text-[12px] font-body text-muted-foreground -mt-2">{items.length + criaCli.length + anivs.length + comem.length} item(ns) · clique pra editar</p>
-              <div className="space-y-1.5 mt-1">
-                {porPeriodo ? FAIXAS.map((f) => {
-                  const its = bandasModal[f];
-                  const cris = criaModal[f];
-                  // Aniversário é lembrete: entra no topo, junto do "sem período".
-                  const ans = f === "sem" ? anivs : [];
-                  if (its.length === 0 && cris.length === 0 && ans.length === 0) return null;
-                  return (
-                    <div key={f} className="space-y-1.5">
-                      {f !== "sem" && (
-                        <div className="flex items-center gap-2 pt-1.5">
-                          <span className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground shrink-0">{FAIXA_LABEL[f]}</span>
-                          <span className="h-px flex-1 bg-border" />
-                        </div>
-                      )}
-                      {its.map(linhaItem)}
-                      {/* Cria do cliente: 5o tipo, só leitura. Clicar abre o kanban do cliente. */}
-                      {cris.map(linhaCria)}
-                      {/* Aniversário: 7o tipo, lembrete. Clicar abre a ficha do cliente. */}
-                      {ans.map(linhaAniv)}
-                    </div>
-                  );
-                }) : (
-                  // "Períodos" desligado: lista plana, na mesma ordem da coluna do dia.
-                  <>
-                    {items.map(linhaItem)}
-                    {criaCli.map(linhaCria)}
-                    {comem.map(linhaComem)}
-                    {anivs.map(linhaAniv)}
-                  </>
-                )}
-              </div>
+              <p className="text-[12px] font-body text-muted-foreground -mt-2">{total} item(ns) · clique pra editar</p>
+              {lista}
             </DialogContent>
           </Dialog>
         );

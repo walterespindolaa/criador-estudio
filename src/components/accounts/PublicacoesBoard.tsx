@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ConferenciaPublicacao } from "@/components/shared/ConferenciaPublicacao";
 import { ConviteInstagramCliente } from "@/components/accounts/ConviteInstagramCliente";
 import { CLIENT_COLORS } from "@/components/accounts/CriaPostBoard";
+import { getThumbnailUrl, type MediaLike } from "@/lib/driveMedia";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CRIA POST › PUBLICAÇÕES (Walter, 28/10/2026; mockup aprovado)
@@ -38,6 +39,7 @@ type PostPub = {
   publish_status: string | null; publish_error: string | null; publish_aviso: string | null;
   auto_publish: boolean | null; publicar_em: string | null; published_at: string | null; ig_permalink: string | null;
   publish_conferido_em: string | null; publish_sem_aprovacao_motivo: string | null; ig_opcoes: OpcoesIg | null;
+  cover_url?: string | null;
 };
 type StatusIg = { post_id: string; username: string | null; pode_publicar: boolean; motivo: string | null };
 type Numeros = { post_id: string; metrics: Record<string, unknown> | null; captured_at: string | null };
@@ -109,7 +111,7 @@ export function PublicacoesBoard() {
     queryFn: async () => {
       const ini = addDias(hoje, -7), fim = addDias(hoje, 14);
       const { data, error } = await sbFrom("posts")
-        .select("id,title,format,external_client_id,scheduled_date,scheduled_time,approval_status,publish_status,publish_error,publish_aviso,auto_publish,publicar_em,published_at,ig_permalink,publish_conferido_em,publish_sem_aprovacao_motivo,ig_opcoes")
+        .select("id,title,format,external_client_id,scheduled_date,scheduled_time,approval_status,publish_status,publish_error,publish_aviso,auto_publish,publicar_em,published_at,ig_permalink,publish_conferido_em,publish_sem_aprovacao_motivo,ig_opcoes,cover_url")
         .or(`user_id.eq.${agencyOwnerId},agencia_id.eq.${agencyOwnerId}`)
         .not("external_client_id", "is", null)
         .is("deleted_at", null)
@@ -136,6 +138,32 @@ export function PublicacoesBoard() {
     },
   });
   const statusDe = useMemo(() => new Map(status.map((s) => [s.post_id, s])), [status]);
+
+  /* PRÉVIA NO CARD (Walter, 05/11/2026: "fica aparecendo umas cores aleatórias
+     em vez do preview ou da capa"). Ordem: capa do Reels (cover_url), depois a
+     primeira mídia do post (na ordem da tira), depois a logo do cliente. A cor
+     do cliente só fica de fundo enquanto a imagem carrega ou se não houver nada. */
+  const idsTodos = useMemo(() => posts.map((p) => p.id), [posts]);
+  const { data: primeiras = new Map<string, string>() } = useQuery<Map<string, string>>({
+    queryKey: ["publicacoes-previas", idsTodos.join(",")],
+    enabled: idsTodos.length > 0,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data } = await sbFrom("external_media_refs")
+        .select("post_id,provider,external_file_id,file_type,thumbnail_url,view_url,download_url,position,created_at")
+        .in("post_id", idsTodos)
+        .eq("substituida", false)
+        .order("position", { ascending: true, nullsFirst: true })
+        .order("created_at", { ascending: true });
+      const m = new Map<string, string>();
+      for (const r of ((data as unknown as (MediaLike & { post_id: string })[]) ?? [])) {
+        if (m.has(r.post_id)) continue;
+        const u = getThumbnailUrl(r, 240);
+        if (u) m.set(r.post_id, u);
+      }
+      return m;
+    },
+  });
 
   const idsSaiu = useMemo(() => posts.filter((p) => p.publish_status === "publicado" || p.approval_status === "postado").map((p) => p.id), [posts]);
   const { data: numeros = [] } = useQuery<Numeros[]>({
@@ -176,6 +204,7 @@ export function PublicacoesBoard() {
     return "esperando";
   };
 
+  const comPost = new Set(posts.map((p) => p.external_client_id));
   const visiveis = posts.filter((p) => cli === "todos" || p.external_client_id === cli);
   const comSit = visiveis.map((p) => ({ p, s: situacao(p) }));
 
@@ -231,34 +260,38 @@ export function PublicacoesBoard() {
   return (
     <div className="space-y-5">
       {/* Resumo */}
-      <div className="flex flex-wrap gap-2">
+      {/* 4 números numa linha só (05/11/2026: no celular eram 3 em cima e 1 sobrando embaixo). */}
+      <div className="grid grid-cols-4 gap-1.5 sm:gap-2 sm:max-w-2xl">
         {[
           { n: faixas[0].itens.length, r: "saem hoje" },
           { n: conta("conferir"), r: "faltam conferir", cls: "text-amber-700" },
           { n: alertas.length, r: "precisam de você", cls: alertas.length ? "text-red-600" : "" },
           { n: faixas[2].itens.length, r: "saíram (7 dias)" },
         ].map((x) => (
-          <div key={x.r} className="rounded-2xl border bg-card px-4 py-2 min-w-[110px]">
-            <p className={cn("font-display font-extrabold text-2xl leading-tight", x.cls)}>{x.n}</p>
-            <p className="text-xs text-muted-foreground">{x.r}</p>
+          <div key={x.r} className="rounded-2xl border bg-card px-2.5 py-2 sm:px-4 min-w-0">
+            <p className={cn("font-display font-extrabold text-xl sm:text-2xl leading-tight", x.cls)}>{x.n}</p>
+            <p className="text-[10.5px] sm:text-xs text-muted-foreground leading-tight">{x.r}</p>
           </div>
         ))}
       </div>
 
       {/* Filtro por cliente */}
-      <div role="group" aria-label="Filtrar por cliente" className="flex flex-wrap gap-2 items-center">
-        {[{ id: "todos", nome: "Todos" }, ...clients.filter((c) => c.active !== false).map((c) => ({ id: c.id, nome: c.name }))].map((c) => {
+      {/* FILTRO EM UMA LINHA (Walter, 05/11/2026: "cliente que já saiu continua
+          ali" e "visão poluída, desalinhada"). Só entra quem tem post na janela
+          (7 dias pra trás, 14 pra frente) e está ativo; rola pro lado no celular. */}
+      <div role="group" aria-label="Filtrar por cliente" className="flex gap-1.5 items-center overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {[{ id: "todos", nome: "Todos" }, ...clients.filter((c) => c.active !== false && comPost.has(c.id)).map((c) => ({ id: c.id, nome: c.name }))].map((c) => {
           const on = cli === c.id;
           const cor = c.id === "todos" ? "#1C1C1A" : cliente[c.id]?.cor;
           const preso = c.id !== "todos" && !!travados[c.id];
           return (
             <button key={c.id} type="button" aria-pressed={on} onClick={() => setCli(c.id)}
-              className={cn("h-10 pl-1.5 pr-3 rounded-full border text-[13px] font-semibold flex items-center gap-2 transition-colors",
+              className={cn("shrink-0 h-9 pl-1 pr-3 rounded-full border text-[12.5px] font-semibold flex items-center gap-1.5 transition-colors",
                 on ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-muted")}>
-              <span className="w-7 h-7 rounded-full grid place-items-center text-[11px] font-bold text-white shrink-0" style={{ background: cor }}>
-                {c.id === "todos" ? clients.length : c.nome.slice(0, 2).toUpperCase()}
+              <span className="w-7 h-7 rounded-full grid place-items-center text-[10.5px] font-bold text-white shrink-0" style={{ background: cor }}>
+                {c.id === "todos" ? comPost.size : c.nome.slice(0, 2).toUpperCase()}
               </span>
-              <span className="max-w-[140px] truncate">{c.nome}</span>
+              <span className="max-w-[120px] truncate">{c.nome}</span>
               {preso && <span className="w-2 h-2 rounded-full bg-red-500" title="Precisa reconectar o Instagram" />}
             </button>
           );
@@ -305,7 +338,7 @@ export function PublicacoesBoard() {
               <div className="flex flex-col gap-2.5">
                 {f.itens.length === 0 && <p className="text-sm text-muted-foreground px-1 py-2">Nada aqui{cli !== "todos" ? " pra esse cliente" : ""}.</p>}
                 {f.itens.map(({ p, s }) => (
-                  <CardPublicacao key={p.id} p={p} s={s} cli={cliente[p.external_client_id]} st={statusDe.get(p.id)} numeros={numerosDe.get(p.id)}
+                  <CardPublicacao previa={p.cover_url || primeiras.get(p.id) || cliente[p.external_client_id]?.c.logo_url || null} key={p.id} p={p} s={s} cli={cliente[p.external_client_id]} st={statusDe.get(p.id)} numeros={numerosDe.get(p.id)}
                     onConferir={(agora, semAprovacao) => setConf({ postId: p.id, agora, semAprovacao })}
                     onAbrir={() => { const c = cliente[p.external_client_id]?.c; if (c?.crm_client_id) navigate(`/socialmidia/clientes/${c.crm_client_id}/posts?post=${p.id}`); }}
                     onConvite={() => { const c = cliente[p.external_client_id]?.c; if (c) setConvite(c); }} />
@@ -335,7 +368,8 @@ export function PublicacoesBoard() {
   );
 }
 
-function CardPublicacao({ p, s, cli, st, numeros, onConferir, onAbrir, onConvite }: {
+function CardPublicacao({ previa, p, s, cli, st, numeros, onConferir, onAbrir, onConvite }: {
+  previa?: string | null;
   p: PostPub; s: Situacao; cli?: { c: ExternalClient; cor: string }; st?: StatusIg; numeros?: Numeros;
   onConferir: (agora: boolean, semAprovacao: boolean) => void; onAbrir: () => void; onConvite: () => void;
 }) {
@@ -356,9 +390,10 @@ function CardPublicacao({ p, s, cli, st, numeros, onConferir, onAbrir, onConvite
 
   return (
     <article className="rounded-2xl border bg-card p-3 flex gap-3">
-      <div className={cn("shrink-0 rounded-xl w-16 grid place-items-start p-1.5", f === "foto" || f === "carrossel" ? "h-20" : "h-24")}
+      <div className={cn("relative overflow-hidden shrink-0 rounded-xl w-16 grid place-items-start p-1.5", f === "foto" || f === "carrossel" ? "h-20" : "h-24")}
         style={{ background: `linear-gradient(160deg, ${cli?.cor ?? "#888"}, ${cli?.cor ?? "#888"}88)` }}>
-        <span className="text-[9px] font-extrabold tracking-wide text-white bg-black/35 rounded px-1.5 py-0.5">{rotuloFmt}</span>
+        {previa && <PreviaDoCard src={previa} logo={!p.cover_url && previa === cli?.c.logo_url} />}
+        <span className="relative text-[9px] font-extrabold tracking-wide text-white bg-black/45 rounded px-1.5 py-0.5">{rotuloFmt}</span>
       </div>
       <div className="min-w-0 flex-1 flex flex-col gap-1">
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -440,5 +475,16 @@ function CardPublicacao({ p, s, cli, st, numeros, onConferir, onAbrir, onConvite
         )}
       </div>
     </article>
+  );
+}
+
+/** A imagem da prévia por cima da cor do cliente. Logo fica inteira (contain, com
+ *  fundo claro); capa e mídia preenchem o quadro. Se não carregar, some e a cor fica. */
+function PreviaDoCard({ src, logo }: { src: string; logo: boolean }) {
+  const [falhou, setFalhou] = useState(false);
+  if (falhou) return null;
+  return (
+    <img src={src} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFalhou(true)}
+      className={cn("absolute inset-0 w-full h-full", logo ? "object-contain bg-white p-2" : "object-cover")} />
   );
 }

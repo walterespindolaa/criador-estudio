@@ -37,7 +37,7 @@ export default function CriaPost() {
     { to: "/socialmidia/criapost/calendario", label: "Calendário geral" },
     // Publicações (Walter, 28/10/2026): o que sai hoje, o que sai sozinho, o
     // que precisa de conferência e o que já saiu, de todos os clientes.
-    { to: "/socialmidia/criapost/publicacoes", label: "Publicações" },
+    { to: "/socialmidia/criapost/publicacoes", label: "Agendamentos" },
   ];
 
   return (
