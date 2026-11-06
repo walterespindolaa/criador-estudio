@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     const dayMs = 86400000;
     const now = Date.now();
     const iso = (ms: number) => new Date(ms).toISOString();
-    const enviados = { boas_vindas: 0, trial_d2: 0, trial_d0: 0, teste_d5: 0, teste_d6: 0, aprovacao_parada: 0 };
+    const enviados = { boas_vindas: 0, trial_d2: 0, trial_d1: 0, trial_d0: 0, teste_d5: 0, teste_d6: 0, aprovacao_parada: 0 };
 
     // Já mandados: um Set "user:tipo:ref" pra não repetir.
     const { data: jaRows } = await svc.from("emails_ciclo").select("user_id, tipo, ref").gte("sent_at", iso(now - 40 * dayMs));
@@ -137,7 +137,21 @@ Deno.serve(async (req) => {
       if (p.account_type === "parceiro") continue;
       const fim = new Date(p.trial_ends_at!).getTime();
       const ref = p.trial_ends_at!.slice(0, 10);
-      if (fim > now && !ja.has(`${p.id}:trial_d2:${ref}`)) {
+      /* VÉSPERA (06/11/2026, teste sem cartão de volta): faltando 1 dia ou menos
+         vai o aviso de amanhã; com mais de 1 dia, o de 2 dias. O robô roda 1x
+         por dia, então cada aviso sai uma vez (emails_ciclo). */
+      if (fim > now && fim - now <= dayMs && !ja.has(`${p.id}:trial_d1:${ref}`)) {
+        const ok = await enviarEmail(svc, {
+          para: p.email, nome: p.name, etiqueta: "trial_d1",
+          assunto: p.meuPerfil ? "O teste do seu perfil de criadora termina amanhã" : "Seu teste do Cria termina amanhã",
+          paragrafos: [
+            "Amanhã acaba o seu teste. Tudo o que você criou fica guardado na sua conta, mesmo se você não assinar agora.",
+            "Pra seguir sem interrupção, escolhe um plano hoje: leva 1 minuto e você cancela quando quiser, direto no app.",
+          ],
+          botao: { texto: "Escolher meu plano", url: `${APP}/app/assinar` },
+        });
+        if (ok) { enviados.trial_d1 += 1; await marcar(p.id, "trial_d1", ref); }
+      } else if (fim - now > dayMs && !ja.has(`${p.id}:trial_d2:${ref}`)) {
         const ok = await enviarEmail(svc, {
           para: p.email, nome: p.name, etiqueta: "trial_d2",
           assunto: p.meuPerfil ? "O teste do seu perfil de criadora termina em 2 dias" : "Seu teste do Cria termina em 2 dias",
