@@ -9,7 +9,7 @@
       "destination": "https://ecbzfjzoqidowrsfsfih.supabase.co/functions/v1/redes-oauth"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|assets/).*)",
       "destination": "/index.html"
     }
   ],

@@ -39,7 +39,13 @@ function ehErroDeChunk(e?: Error): boolean {
     m.includes("failed to fetch dynamically") ||
     m.includes("importing a module script failed") ||
     m.includes("error loading dynamically imported module") ||
-    (m.includes("chunkloaderror") || m.includes("chunk load"))
+    (m.includes("chunkloaderror") || m.includes("chunk load")) ||
+    /* Safari/iPhone (Walter, 06/11/2026): pedaço velho que sumiu no deploy volta
+       como o index.html (text/html) e o erro vem como "'text/html' is not a valid
+       JavaScript MIME type for module script". Não casava com nada acima, a
+       recarga automática não disparava e a pessoa via a mensagem técnica. */
+    m.includes("not a valid javascript mime type") ||
+    m.includes("mime type for module script")
   );
 }
 
