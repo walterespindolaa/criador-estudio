@@ -83,17 +83,55 @@ export function applyTheme(presetId: string, accent: string) {
   applyAccent(accent);
 }
 
+/* COR DE TEMA CLARA DEMAIS (designer, 05/11/2026: "o botão de confirmar fica
+   azul clarinho e pode dar a impressão de desabilitado"). O botão principal
+   usa a cor do tema com texto quase branco. Com um azul como #A7C7EC o
+   contraste é 1,6:1 e o botão parece apagado. Regra: se o texto claro não
+   chega a 3:1 na cor escolhida, escurece O MESMO TOM até 4,5:1 (no modo
+   claro). No modo escuro, em vez de escurecer, o texto do botão vira escuro.
+   Cores que já passam (laranja do Cria, rosa, azul padrão) não mudam. */
+const TEXTO_CLARO = '#F9F7F3';
+const TEXTO_ESCURO = '#1D1B18';
+
+function contraste(a: string, b: string): number {
+  const la = luminancia(a), lb = luminancia(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+function hslParaHex(h: number, s: number, l: number): string {
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return `#${[f(0), f(8), f(4)].map((v) => Math.round(v * 255).toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** A cor do tema pronta pra levar texto claro por cima (mesmo matiz, mais escura se precisar). */
+export function corLegivelDoTema(hex: string): string {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex) || contraste(hex, TEXTO_CLARO) >= 3) return hex;
+  const [h, s, l] = hexToHsl(hex).split(' ').map((x) => parseFloat(x));
+  for (let luz = l / 100; luz > 0.05; luz -= 0.01) {
+    const c = hslParaHex(h, s / 100, luz);
+    if (contraste(c, TEXTO_CLARO) >= 4.5) return c;
+  }
+  return hex;
+}
+
 export function applyAccent(hex: string) {
-  const hsl = hexToHsl(hex);
   const root = document.documentElement;
+  const escuro = root.classList.contains('dark');
+  const valido = /^#[0-9a-fA-F]{6}$/.test(hex);
+  const fraco = valido && contraste(hex, TEXTO_CLARO) < 3;
+  const cor = fraco && !escuro ? corLegivelDoTema(hex) : hex;
+  const hsl = hexToHsl(cor);
   root.style.setProperty('--primary', hsl);
   root.style.setProperty('--ring', hsl);
   root.style.setProperty('--sidebar-primary', hsl);
   root.style.setProperty('--sidebar-ring', hsl);
 
-  // Primary foreground: white for dark accents, near-white for all
-  root.style.setProperty('--primary-foreground', '40 33% 97%');
-  root.style.setProperty('--sidebar-primary-foreground', '40 33% 97%');
+  // Texto em cima da cor do tema: claro, menos no modo escuro com cor clara.
+  const texto = fraco && escuro ? hexToHsl(TEXTO_ESCURO) : '40 33% 97%';
+  root.style.setProperty('--primary-foreground', texto);
+  root.style.setProperty('--sidebar-primary-foreground', texto);
 }
 
 /* FAIXA DO TOPO (Walter, 19/10/2026). A faixa colorida do alto das telas seguia

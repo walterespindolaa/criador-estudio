@@ -8,13 +8,15 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground rounded-full font-semibold shadow-warm-sm hover:bg-primary/90 hover:shadow-glow",
+        // Desativado vira cinza (05/11/2026): só com opacidade, num tema claro o
+        // botão desativado ficava igual ao ativo. Hover clareia pra parecer clicável.
+        default: "bg-primary text-primary-foreground rounded-full font-semibold shadow-warm-sm hover:bg-primary/85 hover:shadow-glow disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none disabled:opacity-100",
         destructive: "bg-red-50 text-red-600 rounded-full hover:bg-red-100",
         outline: "border border-border bg-transparent rounded-full hover:bg-accent hover:border-primary/30 hover:text-accent-foreground",
         secondary: "bg-primary/10 text-primary rounded-full font-semibold hover:bg-primary/15",
         ghost: "hover:bg-accent hover:text-accent-foreground rounded-xl",
         link: "text-primary underline-offset-4 hover:underline",
-        hero: "bg-primary text-white rounded-full font-bold px-8 shadow-glow hover:shadow-glow-hover hover:scale-[1.02]",
+        hero: "bg-primary text-white rounded-full font-bold px-8 shadow-glow hover:shadow-glow-hover hover:scale-[1.02] disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none disabled:opacity-100",
       },
       size: {
         default: "h-10 px-6 text-sm",

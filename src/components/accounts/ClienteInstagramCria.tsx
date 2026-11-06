@@ -303,7 +303,7 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
             <>
               <p className="text-xs text-muted-foreground font-body mt-1 mb-4 max-w-sm mx-auto">Clique em atualizar pra puxar os primeiros números do Instagram do cliente.</p>
               <button onClick={() => void atualizarAgora()} disabled={syncManaged.isPending}
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-display font-bold text-primary-foreground hover:opacity-90 transition-opacity disabled:opacity-50">
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-display font-bold text-primary-foreground hover:opacity-90 transition-opacity disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100">
                 {syncManaged.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Puxar os dados agora
               </button>
             </>

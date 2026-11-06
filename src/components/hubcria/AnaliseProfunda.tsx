@@ -503,7 +503,7 @@ function AdaptarPraCliente({ postUrl, clientePadrao, aoAdaptar, jaAdaptado, aoTr
         <button type="button" disabled={!clienteId || adaptar.isPending}
           onClick={() => adaptar.mutate({ post_url: postUrl, crm_client_id: clienteId },
             { onSuccess: () => aoAdaptar(clienteId) })}
-          className="flex-1 h-9 rounded-xl bg-primary text-primary-foreground text-[12.5px] font-body font-bold disabled:opacity-50 inline-flex items-center justify-center gap-1.5">
+          className="flex-1 h-9 rounded-xl bg-primary text-primary-foreground text-[12.5px] font-body font-bold disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 inline-flex items-center justify-center gap-1.5">
           {adaptar.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
           Escrever o roteiro
         </button>

@@ -77,7 +77,7 @@ export function AnalisarPorLink() {
             className="flex-1 h-11 rounded-xl border border-border bg-background px-3 text-sm font-body min-w-0"
           />
           <button type="button" onClick={analisar} disabled={!campo.trim()}
-            className="h-11 px-4 rounded-xl bg-primary text-primary-foreground text-[13px] font-body font-bold disabled:opacity-50 shrink-0">
+            className="h-11 px-4 rounded-xl bg-primary text-primary-foreground text-[13px] font-body font-bold disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 shrink-0">
             Analisar
           </button>
         </div>
