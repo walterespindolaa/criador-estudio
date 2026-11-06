@@ -118,7 +118,13 @@ function renderMarkdown(text: string) {
  *  crases de bloco de código (Walter, 12/10/2026: "tá zoado o texto ali", o
  *  JSON aparecia na tela). Por isso, sem crases, procura o {"ideias" no texto. */
 export function separarResposta(raw: string): { texto: string; ideias: IdeiaCria[]; sugestoes: string[] } {
-  const limpar = (t: string) => t.replace(/```\w*\n?|\n?```/g, "").trim();
+  /* Às vezes o modelo devolve a própria instrução de formato antes do bloco
+     (Walter, 06/11/2026: "[FORMATO DA RESPOSTA, siga sem comentar]" apareceu
+     no balão). Corta o eco: do cabeçalho até o "fica []):", e a linha das sugestões. */
+  const semEco = (t: string) => t
+    .replace(/\[FORMATO DA RESPOSTA[^\]]*\][\s\S]*?(?:fica \[\]\):?|$)/gi, "")
+    .replace(/^\s*"sugestoes":\s*2 a 4 pedidos.*$/gim, "");
+  const limpar = (t: string) => semEco(t).replace(/```\w*\n?|\n?```/g, "").trim();
   const re = /```(?:cria|json)\s*([\s\S]*?)(?:```|$)/gi;
   let ultimo: RegExpExecArray | null = null;
   for (let m = re.exec(raw); m; m = re.exec(raw)) {
