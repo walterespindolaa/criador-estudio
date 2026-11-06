@@ -300,10 +300,23 @@ serve(async (req) => {
       success_url: successUrl,
       cancel_url: cancelUrl,
     };
+    // Página do Stripe em português sempre (sem isso ela segue o idioma do navegador).
+    sessionParams.locale = "pt-BR";
     if (testeCartao) {
       // Cartão na hora, R$ 0 hoje; no 8º dia o Stripe cobra sozinho.
       sessionParams.payment_method_collection = "always";
       sessionParams.subscription_data!.trial_period_days = 7;
+      /* POR QUE PEDIMOS O CARTÃO (Walter, 06/11/2026: as pessoas param na tela de
+         pagamento). O texto aparece no próprio Stripe, ao lado do botão, que é
+         onde a dúvida bate. Só promete o que existe: os e-mails do 5º e do 6º
+         dia saem pelo lifecycle-emails e o cancelamento é pelo app. */
+      const cobra = new Date(Date.now() + 7 * 86400000);
+      const dataCobra = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" }).format(cobra);
+      sessionParams.custom_text = {
+        submit: {
+          message: `Hoje não é cobrado nada. O cartão só libera os 7 dias grátis pra você testar o Cria com calma. A primeira cobrança é em ${dataCobra}, e a gente te avisa por e-mail 2 dias antes e na véspera. Se não for pra você, cancela pelo próprio app em 2 cliques e não paga nada.`,
+        },
+      };
     }
     if (campanha) {
       // Cartão na hora: no fim do grátis o Stripe cobra sozinho.
