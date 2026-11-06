@@ -814,7 +814,7 @@ const Ideias = () => {
         )}
 
         {mainTab === "ideias" && filtered.length > 0 && viewMode === "gallery" && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-5 sm:gap-x-5 sm:gap-y-7 pt-3">
+          <div data-tour="ideias-folhas" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-5 sm:gap-x-5 sm:gap-y-7 pt-3">
             {filtered.map((idea, i) => {
               const pillar = idea.pillar_id ? pillars.find((p) => p.id === idea.pillar_id) : null;
               const pastaId = folderIdDaIdeia(idea);

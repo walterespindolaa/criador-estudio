@@ -1312,7 +1312,7 @@ export default function AgendaCriacao() {
               ))}
             </div>
             {view === "mes" && (
-              <div className="inline-flex rounded-lg border border-border overflow-hidden" aria-label="Como ver o mês">
+              <div data-tour="ag-mes-modo" className="inline-flex rounded-lg border border-border overflow-hidden" aria-label="Como ver o mês">
                 {([["calendario", "Calendário", CalendarDays], ["grade", "Grade", LayoutGrid]] as const).map(([m, rot, Ic]) => (
                   <button key={m} onClick={() => trocarMesModo(m)} title={rot}
                     className={cn("px-2.5 py-1 text-xs font-body font-semibold transition-colors inline-flex items-center gap-1",

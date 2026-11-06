@@ -89,25 +89,43 @@ export const TOURS_CRIADOR: TourConfig[] = [
     route: "/app/ideias",
     title: "Banco de Ideias",
     valueProp:
-      "Chega de ideia morrendo em print perdido. Aqui vive o seu estoque criativo: temas, ganchos, referências, links e rascunhos. Tudo que você pensar fica guardado, organizado por pilar e pronto pra virar post.",
+      "Chega de ideia morrendo em print perdido. Cada ideia vira uma folha: você escreve por tópicos, grifa o que importa e a Cria IA tira posts dali. Tudo que saiu de uma folha fica guardado nela.",
     benefits: [
       "Nunca mais comece um post do zero",
-      "Guarde tema, gancho, referência e link numa ideia só",
-      "A Cria IA sugere ideias e desdobra as suas em pautas",
+      "Escreva por tópicos e grife o que mais importa",
+      "A Cria IA lê a folha e sugere carrossel, reels e mais",
       "Da ideia pro kanban de criação em 1 clique",
     ],
     steps: [
       {
         target: '[data-tour="ideias-nova"]',
-        title: "Criar uma ideia",
-        body: "Clique aqui pra registrar qualquer faísca: um tema (\"3 erros de quem começa\"), um gancho que você ouviu, um formato que quer testar. Dá pra escolher o pilar de conteúdo, anotar detalhes e anexar referência. Quanto mais contexto, mais fácil produzir depois.",
+        title: "Uma ideia nova",
+        body: "Dê um título e, se quiser, o pilar e a pasta. Na visão Folhas, a folha abre na hora pra você escrever.",
         placement: "bottom",
       },
       {
         target: '[data-tour="ideias-visualizacao"]',
-        title: "Lista ou Galeria",
-        body: "Alterne como enxerga seu banco: Lista pra varrer rápido título por título, Galeria pra bater o olho em tudo como um mural de inspiração.",
+        title: "Folhas ou Lista",
+        body: "Folhas mostra cada ideia como uma folha de caderno, com o começo do texto e quantas ideias já saíram dela. Lista é pra varrer rápido, título por título. A escolha fica salva.",
+        mobileBody: "Os dois ícones trocam entre Folhas (cada ideia como uma folha de caderno) e Lista (título por título). A escolha fica salva.",
         placement: "bottom",
+      },
+      {
+        // As folhas só existem na visão Folhas e com pelo menos uma ideia.
+        skipIfMissing: true,
+        target: '[data-tour="ideias-folhas"]',
+        title: "Dentro da folha",
+        body: "Abra uma folha e escreva. A barra de cima tem negrito, tópico, título, checklist e quatro cores de grifo (e o sem grifo). Tudo salva sozinho. Ao lado, Tirar ideias desta folha: escolha o formato (Estático, Carrossel, Reels, Story ou YouTube) e toque em Gerar 3 ideias desta folha. A Cria IA lê a folha inteira e o seu brandbook, e o que você grifou pesa mais.",
+        mobileBody: "Toque numa folha e escreva por tópicos: negrito, tópico, título, checklist e grifo em quatro cores. Salva sozinho. Embaixo, escolha o formato e toque em Gerar 3 ideias desta folha. O que você grifou pesa mais.",
+        placement: "top",
+      },
+      {
+        skipIfMissing: true,
+        target: '[data-tour="ideias-folhas"]',
+        title: "Já saiu desta folha",
+        body: "Tudo que a Cria IA gerou fica guardado na própria folha, com data e formato. Em cada uma: Virar post manda pro kanban Criando, Guardar no banco vira uma ideia nova, Descartar tira da vista. Se você escrever mais na folha depois, o Cria avisa que ela mudou pra você gerar de novo.",
+        mobileBody: "O que a Cria IA gerou fica guardado na folha. Em cada sugestão: Virar post, Guardar no banco ou Descartar. Escreveu mais? O Cria avisa pra gerar de novo.",
+        placement: "top",
       },
       {
         target: '[data-tour="ideias-salvos"]',
@@ -117,9 +135,9 @@ export const TOURS_CRIADOR: TourConfig[] = [
         placement: "bottom",
       },
       {
-        target: '[data-tour="ideias-nova"]',
-        title: "O atalho da Cria IA",
-        body: "Em cada card de ideia existe um botão de faísca (✦): a Cria IA desdobra a ideia em ganchos, ângulos e formatos usando o seu brandbook. E quando a ideia estiver madura, o botão de promover manda ela direto pro kanban Criando.",
+        target: '[data-tour="ideias-visualizacao"]',
+        title: "O atalho da Cria IA na Lista",
+        body: "Na Lista, cada ideia tem o botão CrIA: escolha o formato e a Cria IA devolve sugestões com gancho, estrutura e CTA, no tom do seu brandbook. Quando a ideia estiver madura, Virar post manda ela direto pro kanban Criando.",
         placement: "bottom",
         aiPrompt: "Me sugira 5 ideias de post novas no tom da minha marca, baseadas nos meus pilares de conteúdo.",
       },
@@ -497,7 +515,7 @@ export const TOURS_CRIADOR: TourConfig[] = [
       {
         target: '[data-tour="bio-conteudo"]',
         title: "Passo 2: o conteúdo",
-        body: "Cada pedaço da página é um bloco: link, texto, vídeo, galeria, mapa, formulário de contato. A galeria escolhe o formato das fotos (quadrada ou retangular em pé), e uma foto sozinha ocupa a largura toda. Escolha um modelo pronto pra começar, ou vá adicionando bloco a bloco e arrastando pra ordenar.",
+        body: "Cada pedaço da página é um bloco: link, texto, vídeo, galeria, mapa, formulário de contato. No vídeo, cole o link do YouTube, Reels, TikTok ou Vimeo, ou envie o arquivo do celular (até 90 segundos): ele toca enquadrado, com o play no meio. A galeria escolhe o formato das fotos (quadrada ou retangular em pé), e uma foto sozinha ocupa a largura toda. Escolha um modelo pronto pra começar, ou vá adicionando bloco a bloco e arrastando pra ordenar.",
         placement: "top",
       },
       {

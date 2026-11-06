@@ -709,7 +709,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               )}
               {/* PUXAR DO KANBAN (06/11/2026): com nome também no celular e o número do que espera. */}
               {permPost.podeEditar && criaOwnerId && (
-                <Button variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5">
+                <Button data-tour="prod-puxar" variant="outline" onClick={() => setImportOpen(true)} className="gap-1.5">
                   <KanbanSquare className="h-4 w-4" /> Puxar do kanban
                   {praPuxar > 0 && <span className="rounded-full bg-primary text-primary-foreground text-[11px] font-bold px-1.5 min-w-[20px] text-center">{praPuxar}</span>}
                 </Button>

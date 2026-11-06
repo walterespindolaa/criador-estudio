@@ -33,9 +33,12 @@ export const TOURS_GESTOR: TourConfig[] = [
         placement: "bottom",
       },
       {
+        // Só os módulos ATIVOS aparecem nesta grade. Conta sem módulo nenhum
+        // tem a grade vazia (a vitrine é outro bloco), então o passo sai.
+        skipIfMissing: true,
         target: '[data-tour="gh-modulos"]',
         title: "Seus módulos",
-        body: "Cria Post (aprovação por link), Cria Gestão (CRM) e Cria Caixa (financeiro). Módulo ativo abre na hora; módulo que você ainda não tem abre a vitrine mostrando o que ele resolve.",
+        body: "Os Crias que você assinou, cada um na sua cor: Post, Gestão, Caixa, Captação e Radar. Toque pra abrir. Os que você ainda não tem aparecem logo abaixo com o preço, pra conhecer antes de ativar.",
         placement: "bottom",
       },
       {
@@ -46,16 +49,18 @@ export const TOURS_GESTOR: TourConfig[] = [
         placement: "top",
       },
       {
-        target: '[data-tour="gh-aprovacoes"]',
-        title: "O que está travado",
-        body: "As aprovações mais recentes, com há quanto tempo cada uma espera. É o seu radar de cobrança: se um cliente está sentado num post há 5 dias, você vê aqui antes de ele reclamar.",
-        placement: "top",
-      },
-      {
         target: '[data-tour="gh-clientes"]',
+        // A lista recolhe (setinha, salva no aparelho). Recolhida, o tour abre.
+        openFirst: '[data-tour="gh-clientes-abrir"]',
         title: "Seus clientes",
         body: "Atalho pros clientes que você mais mexe. Clicou, você cai na ficha dele: brandbook, posts, cronograma, contrato e financeiro no mesmo lugar. A bolinha ao lado do nome é a saúde do cliente: verde é tudo em dia, amarelo pede atenção, vermelho é urgente, e o motivo vem escrito logo abaixo. Lá em cima, o botão “Continuar de onde parou” te devolve pro último cliente que você abriu.",
         mobileBody: "Atalho pros clientes que você mais mexe. A bolinha é a saúde dele: verde em dia, amarelo pede atenção, vermelho é urgente, com o motivo logo abaixo. Tocou, você cai na ficha completa.",
+        placement: "top",
+      },
+      {
+        target: '[data-tour="gh-aprovacoes"]',
+        title: "O que está travado",
+        body: "As aprovações mais recentes, com há quanto tempo cada uma espera. É o seu radar de cobrança: se um cliente está sentado num post há 5 dias, você vê aqui antes de ele reclamar.",
         placement: "top",
       },
     ],
@@ -167,7 +172,7 @@ export const TOURS_GESTOR: TourConfig[] = [
         openFirst: '[data-tour="cli-nav-post"]',
         title: "O quadro dele, ao vivo",
         body: "Quando o cliente tem conta no Cria, aparece aqui o card Kanban do cliente, que abre o quadro REAL dele dentro do seu painel. Editar um post ou arrastar de coluna mexe no Cria dele na hora, não é cópia nem espelho. Serve pra você adiantar o trabalho sem pedir login e sem trocar de conta. Cliente que só aprova por link não tem esse card.",
-        mobileBody: "Cliente com conta no Cria ganha o card Kanban do cliente, que abre o quadro REAL dele aqui dentro. Mexeu aqui, mexeu no Cria dele. Cliente que só aprova por link não tem esse card.",
+        mobileBody: "Cliente com conta no Cria ganha o card Kanban do cliente, que abre o quadro REAL dele aqui dentro. Mexeu aqui, mexeu no Cria dele. Com o quadro aberto, o botão de setas no menu de baixo liga a visão geral, com todas as colunas na tela; toque de novo pra voltar.",
         placement: "bottom",
       },
       {
@@ -180,6 +185,16 @@ export const TOURS_GESTOR: TourConfig[] = [
         title: "Kanban ou Calendário",
         body: "A Produção tem duas visões que conversam: o kanban por status e o Calendário do mês, com cada formato na própria cor. Logo abaixo, o alternador “Ordem manual | Por data” reordena cada coluna pela data agendada. E o Novo post nasce aqui, já em Produção, sem ir pro cliente antes da hora.",
         mobileBody: "A Produção tem duas visões que conversam: o kanban por status e o Calendário do mês, com cada formato na própria cor. O alternador Ordem manual | Por data reordena as colunas pela data agendada.",
+        placement: "bottom",
+      },
+      {
+        // O botão só existe pra cliente com conta Cria e pra quem pode editar.
+        skipIfMissing: true,
+        target: '[data-tour="prod-puxar"]',
+        openFirst: '[data-tour="cli-sub-posts"]',
+        title: "Puxar do kanban do cliente",
+        body: "Criou post direto no kanban do cliente, numa reunião por exemplo? Não precisa refazer: Puxar do kanban traz título, legenda, roteiro, data e mídias. O número no botão é quanto ainda falta puxar. Lá dentro você vê Criados por você ou Todos do kanban, escolhe o período (30 dias, 90 dias ou Tudo), marca os posts e decide: Só puxar (fica Em produção) ou Puxar e mandar pra aprovação. Dispensar tira da lista sem importar.",
+        mobileBody: "Criou post no kanban do cliente? Puxar do kanban traz título, legenda, roteiro, data e mídias, sem refazer. O número é quanto falta puxar. Marque os posts e escolha Só puxar ou Puxar e mandar pra aprovação. Dispensar tira da lista.",
         placement: "bottom",
       },
       {
@@ -304,7 +319,17 @@ export const TOURS_GESTOR: TourConfig[] = [
       {
         target: '[data-tour="ag-navegacao"]',
         title: "Semana ou mês",
-        body: "Semana é pra executar (o que grava, o que sai). Mês é pra planejar (a distribuição do conteúdo). O botão Hoje traz você de volta pro presente.",
+        body: "Semana é pra executar (o que grava, o que sai). Mês é pra planejar (a distribuição do conteúdo). No Mês aparecem mais duas opções: Calendário, com bolinhas na cor de cada tipo e a lista do dia ao lado, e Grade, com os cards dentro de cada dia. O botão Hoje traz você de volta pro presente.",
+        mobileBody: "Semana é pra executar, Mês é pra planejar. No Mês, Calendário mostra o mês com bolinhas na cor de cada tipo: toque num dia e a semana sobe pro topo com a lista do dia embaixo. Grade mostra os cards dentro de cada dia. Hoje volta pro presente.",
+        placement: "bottom",
+      },
+      {
+        // Só existe com a visão Mês ligada.
+        skipIfMissing: true,
+        target: '[data-tour="ag-mes-modo"]',
+        title: "Calendário ou Grade",
+        body: "Calendário é o mês limpo: cada dia mostra bolinhas na cor do que tem nele, e clicar num dia abre a lista dele no painel ao lado, com o + pra marcar algo ali. Grade é o quadro com os cards dentro de cada dia, pra quem quer ver tudo escrito. A escolha fica salva.",
+        mobileBody: "Calendário é o mês limpo, com bolinhas na cor do que tem em cada dia. Toque num dia: a semana sobe pro topo e a lista do dia aparece embaixo. Deslize a semana pro lado pra trocar, e o botão com o nome do mês volta pro mês inteiro. Grade mostra os cards dentro de cada dia.",
         placement: "bottom",
       },
       {
@@ -479,7 +504,7 @@ export const TOURS_GESTOR: TourConfig[] = [
     route: "/socialmidia/hubcria",
     title: "Cria Radar",
     valueProp:
-      "Análise de concorrentes por cliente + ideias sugeridas pro nicho dele. Você chega na reunião de pauta com inteligência, não com achismo.",
+      "Análise de concorrentes por cliente e pautas sugeridas pro nicho dele. Você chega na reunião de pauta com o que funciona, não com achismo.",
     benefits: [
       "Acompanhe os concorrentes de cada cliente",
       "Ideias baseadas no que funciona no nicho",
@@ -487,15 +512,31 @@ export const TOURS_GESTOR: TourConfig[] = [
     ],
     steps: [
       {
+        skipIfMissing: true,
+        target: '[data-tour="hub-link"]',
+        title: "Viu um reel bom? Cola o link",
+        body: "O caminho curto: cole o link de um reel ou post e toque em Analisar. O Cria lê o vídeo sem você cadastrar concorrente nem rodar pesquisa de perfil.",
+        placement: "bottom",
+      },
+      {
         target: '[data-tour="hub-clientes"]',
         title: "Quem precisa de atenção",
-        body: "O HUB puxa pra cima o cliente que precisa de você: sem concorrente no radar, análise esfriando ou pautas prontas que ninguém abriu. Clicou no card, você cai na pesquisa daquele cliente.",
+        body: "O Radar puxa pra cima o cliente que precisa de você: sem concorrente cadastrado, concorrente esfriando ou pautas prontas que ninguém abriu. Clicou no card, você cai na pesquisa daquele cliente.",
+        mobileBody: "O Radar puxa pra cima o cliente que precisa de você: sem concorrente, concorrente esfriando ou pautas paradas. Toque no card pra abrir a pesquisa dele.",
         placement: "bottom",
+      },
+      {
+        skipIfMissing: true,
+        target: '[data-tour="hub-historico"]',
+        title: "Tudo que você já leu",
+        body: "Cada leitura fica guardada, separada por cliente: abra o grupo pra ver as leituras dele. Busque por @ ou pelo nome do cliente, filtre por tipo, e em cada leitura dá pra mover pra outro cliente, copiar (sem gastar crédito) ou apagar. As que não completaram ficam numa linha só, no topo.",
+        mobileBody: "Cada leitura fica guardada, separada por cliente. Busque por @ ou cliente, filtre por tipo, e mova, copie (sem gastar crédito) ou apague cada leitura.",
+        placement: "top",
       },
       {
         target: '[data-tour="hub-avulsa"]',
         title: "Espiar quem não é cliente",
-        body: "Uma prospecção, uma referência de outro nicho? Rode a análise avulsa aqui. Ela fica guardada no HUB, sem entrar na ficha de ninguém.",
+        body: "Uma prospecção, uma referência de outro nicho? Rode a análise aqui. Ela não entra na ficha de ninguém: fica no histórico, no grupo Pesquisas avulsas, e dá pra mandar pra um cliente depois.",
         placement: "top",
       },
     ],
@@ -515,10 +556,42 @@ export const TOURS_GESTOR: TourConfig[] = [
     steps: [
       {
         target: '[data-tour="hero-tabs"]',
-        title: "As duas seções do Cria Post",
-        body: "Aprovações mostra tudo que está na mão dos clientes: o que está esperando, o que voltou com ajuste, o que já foi aprovado. Calendário geral junta os posts de todos os clientes num mês só, cada formato com a própria cor.",
-        mobileBody: "Aprovações mostra tudo que está na mão dos clientes: o que espera, o que voltou com ajuste, o que foi aprovado. Calendário geral junta os posts de todos os clientes num mês só, cada formato com a própria cor.",
+        title: "As três seções do Cria Post",
+        body: "Aprovações mostra tudo que está na mão dos clientes: o que está esperando, o que voltou com ajuste, o que já foi aprovado. Calendário geral junta os posts de todos os clientes num mês só, cada formato com a própria cor. Agendamentos é o que vai sair no Instagram: hoje, nos próximos dias e o que já saiu.",
+        mobileBody: "Aprovações é o que está na mão dos clientes. Calendário geral junta os posts de todos num mês só. Agendamentos é o que vai sair no Instagram: hoje, nos próximos dias e o que já saiu.",
         placement: "bottom",
+      },
+      {
+        target: '[data-tour="pub-numeros"]',
+        openFirst: '[data-tour="hero-tabs"] a[href="/socialmidia/criapost/publicacoes"]',
+        title: "Agendamentos: o dia num olhar",
+        body: "Quatro números: quantos posts saem hoje, quantos faltam conferir, quantos precisam de você (não saiu, aviso do Instagram, cliente pra reconectar) e quantos saíram nos últimos 7 dias.",
+        mobileBody: "Saem hoje, faltam conferir, precisam de você e saíram nos últimos 7 dias.",
+        placement: "bottom",
+      },
+      {
+        skipIfMissing: true,
+        target: '[data-tour="pub-clientes"]',
+        title: "Um cliente de cada vez",
+        body: "Só aparece aqui quem tem post na janela (7 dias pra trás e 14 pra frente) e está ativo. Clicou, a tela mostra só aquele cliente. A bolinha vermelha avisa que o Instagram dele precisa ser reconectado.",
+        mobileBody: "Só aparece quem tem post agendado ou publicado e está ativo. Arraste pro lado e toque num cliente pra ver só ele. Bolinha vermelha é Instagram pra reconectar.",
+        placement: "bottom",
+      },
+      {
+        skipIfMissing: true,
+        target: '[data-tour="pub-faixas"]',
+        title: "Conferir antes de sair",
+        body: "Cada card mostra a prévia do post, o cliente e a hora. Post aprovado e com data entra como Falta conferir e só sai depois que alguém confere perfil, mídia e legenda: aí vira Conferido, sai sozinho. Faltando 2 horas sem conferência, ele sobe pro Precisa de você e não publica. Em Já saiu ficam os números de cada post.",
+        mobileBody: "Cada card mostra a prévia, o cliente e a hora. Post aprovado entra como Falta conferir e só sai depois de Conferir. Sem conferência até 2 horas antes, ele não publica e sobe pro Precisa de você.",
+        placement: "top",
+      },
+      {
+        target: '[data-tour="cp-calendario"]',
+        openFirst: '[data-tour="hero-tabs"] a[href="/socialmidia/criapost/calendario"]',
+        title: "Calendário geral",
+        body: "Os posts de todos os clientes em Mês ou Semana, cada formato na sua cor. Arraste um post pra outro dia pra mudar a data, ou clique nele pra editar. Os filtros de cliente e de período limpam a tela.",
+        mobileBody: "No celular o mês aparece no estilo do calendário do iPhone, com bolinhas na cor de cada post. Toque num dia pra ver a lista dele, e use Mover pra trocar a data.",
+        placement: "top",
       },
       {
         target: '[data-tour="hero-actions"]',

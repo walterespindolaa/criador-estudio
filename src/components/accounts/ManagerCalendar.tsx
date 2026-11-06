@@ -391,7 +391,7 @@ export function ManagerCalendar({ somenteParceiros = false, compacto = false }: 
     it.kind === "entrega" ? chipEntrega(it.post) : chip(it.post, soParceiros && espiando === it.post.id);
 
   return (
-    <div className="space-y-4">
+    <div data-tour="cp-calendario" className="space-y-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         {compacto ? <span /> : <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight">Calendário</h1>}
         <div className="flex items-center gap-1.5 flex-wrap">

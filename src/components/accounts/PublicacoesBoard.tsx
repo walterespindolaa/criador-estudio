@@ -261,7 +261,7 @@ export function PublicacoesBoard() {
     <div className="space-y-5">
       {/* Resumo */}
       {/* 4 números numa linha só (05/11/2026: no celular eram 3 em cima e 1 sobrando embaixo). */}
-      <div className="grid grid-cols-4 gap-1.5 sm:gap-2 sm:max-w-2xl">
+      <div data-tour="pub-numeros" className="grid grid-cols-4 gap-1.5 sm:gap-2 sm:max-w-2xl">
         {[
           { n: faixas[0].itens.length, r: "saem hoje" },
           { n: conta("conferir"), r: "faltam conferir", cls: "text-amber-700" },
@@ -279,7 +279,7 @@ export function PublicacoesBoard() {
       {/* FILTRO EM UMA LINHA (Walter, 05/11/2026: "cliente que já saiu continua
           ali" e "visão poluída, desalinhada"). Só entra quem tem post na janela
           (7 dias pra trás, 14 pra frente) e está ativo; rola pro lado no celular. */}
-      <div role="group" aria-label="Filtrar por cliente" className="flex gap-1.5 items-center overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div data-tour="pub-clientes" role="group" aria-label="Filtrar por cliente" className="flex gap-1.5 items-center overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {[{ id: "todos", nome: "Todos" }, ...clients.filter((c) => c.active !== false && comPost.has(c.id)).map((c) => ({ id: c.id, nome: c.name }))].map((c) => {
           const on = cli === c.id;
           const cor = c.id === "todos" ? "#1C1C1A" : cliente[c.id]?.cor;
@@ -328,7 +328,7 @@ export function PublicacoesBoard() {
       {isLoading ? (
         <div className="py-16 grid place-items-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-3 items-start">
+        <div data-tour="pub-faixas" className="grid gap-4 lg:grid-cols-3 items-start">
           {faixas.map((f) => (
             <section key={f.k} className="rounded-3xl bg-muted/50 p-3.5">
               <div className="flex items-baseline justify-between gap-2 px-1 mb-3">

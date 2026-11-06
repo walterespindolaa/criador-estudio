@@ -103,29 +103,47 @@ export default function HubCria() {
   const hex = CRIA_HEX.lilas;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0 space-y-6">
-      <AvisoSoVer code="hub_cria" />
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0 flex flex-col gap-6">
+      {/* ORDEM NO CELULAR (Walter, 06/11/2026, mockup aprovado): o que faz agir
+          fica na primeira tela. Topo curto, analisar por link logo abaixo,
+          atenção em faixa que arrasta, placar numa linha. No computador a ordem
+          continua a de antes (order só vale abaixo de sm). */}
+      <div className="order-0 empty:hidden"><AvisoSoVer code="hub_cria" /></div>
 
       {/* HERO */}
-      <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-5 sm:p-7">
+      <div className="order-1 relative overflow-hidden rounded-3xl border border-border bg-card p-4 sm:p-7">
         <OrganicBlobs color="lilas" />
         <div className="relative flex items-start justify-between gap-5 flex-wrap">
           <div className="min-w-0 flex-1">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-3 py-1 mb-2.5">
-              <Radar className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-body font-bold uppercase tracking-wider">Cria Radar</span>
-            </span>
+            <div className="flex items-center justify-between gap-2 mb-2.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-3 py-1">
+                <Radar className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-body font-bold uppercase tracking-wider">Cria Radar</span>
+              </span>
+              {/* No celular os créditos viram uma pílula ao lado da etiqueta. */}
+              {quota > 0 && (
+                <span className="sm:hidden inline-flex items-center gap-1.5 rounded-full border border-border bg-background/70 px-2.5 py-1 text-[11.5px] font-body font-bold text-foreground tabular-nums">
+                  {restantes}/{quota} créditos
+                  <span className="h-1.5 w-8 overflow-hidden rounded-full bg-muted">
+                    <span
+                      className={cn("block h-full rounded-full", restantes === 0 ? "bg-destructive" : pctUso > 80 ? "bg-amber-500" : "bg-primary")}
+                      style={{ width: `${100 - pctUso}%` }}
+                    />
+                  </span>
+                </span>
+              )}
+            </div>
             <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
-              Onde você precisa agir hoje
+              Onde <span className="hidden sm:inline">você precisa </span>agir hoje
             </h1>
-            <p className="text-sm font-body text-muted-foreground mt-1.5 max-w-2xl leading-relaxed">
+            <p className="hidden sm:block text-sm font-body text-muted-foreground mt-1.5 max-w-2xl leading-relaxed">
               Os concorrentes dos seus clientes não avisam quando mudam de estratégia. Aqui você vê
               quem está esfriando e o que já foi lido e ninguém aproveitou.
             </p>
           </div>
 
           {quota > 0 && (
-            <div className="relative w-full sm:w-auto sm:shrink-0 rounded-2xl border border-border bg-background/70 backdrop-blur-sm px-4 py-3 sm:min-w-[172px]">
+            <div className="hidden sm:block relative w-full sm:w-auto sm:shrink-0 rounded-2xl border border-border bg-background/70 backdrop-blur-sm px-4 py-3 sm:min-w-[172px]">
               <p className="text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">Créditos do mês</p>
               <p className="font-display text-2xl font-extrabold text-foreground tabular-nums leading-none mt-1">
                 {restantes}<span className="text-sm font-bold text-muted-foreground">/{quota}</span>
@@ -143,23 +161,24 @@ export default function HubCria() {
 
       {/* PRECISA DE ATENÇÃO */}
       {isLoading ? (
-        <div className="py-16 text-center"><Loader2 className="h-6 w-6 text-primary mx-auto animate-spin" /></div>
+        <div className="order-3 sm:order-2 py-16 text-center"><Loader2 className="h-6 w-6 text-primary mx-auto animate-spin" /></div>
       ) : clients.length === 0 ? (
-        <div className="border border-dashed border-border rounded-3xl py-16 px-6 text-center">
+        <div className="order-3 sm:order-2 border border-dashed border-border rounded-3xl py-16 px-6 text-center">
           <TrendingUp className="h-7 w-7 text-muted-foreground/40 mx-auto mb-3" strokeWidth={1.5} />
           <p className="text-sm font-display font-bold text-foreground">Nenhum cliente ainda</p>
           <p className="text-[13px] font-body text-muted-foreground mt-1 mb-4">Cadastre um cliente pra começar a espiar os concorrentes dele.</p>
           <Button onClick={() => navigate("/socialmidia/clientes")}>Ir para Clientes</Button>
         </div>
       ) : (
-        <div data-tour="hub-clientes">
+        <div data-tour="hub-clientes" className="order-3 sm:order-2 min-w-0">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="h-4 w-4 text-amber-600" />
             <h2 className="text-sm font-display font-extrabold text-foreground">Precisa de atenção</h2>
             {emDia > 0 && (
               <span className="ml-auto flex items-center gap-1.5 text-[12px] font-body text-muted-foreground">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                {emDia} {emDia === 1 ? "cliente em dia" : "clientes em dia"}
+                {atencao.length > 0 && <span className="sm:hidden">{atencao.length} · </span>}
+                {emDia} <span className="sm:hidden">em dia</span><span className="hidden sm:inline">{emDia === 1 ? "cliente em dia" : "clientes em dia"}</span>
               </span>
             )}
           </div>
@@ -173,13 +192,16 @@ export default function HubCria() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <>
+            {/* No celular, uma faixa que arrasta pro lado (eram cartões empilhados
+                que empurravam o resto da tela pra baixo). */}
+            <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-1 sm:pb-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {atencao.map(({ cli, comps, frios, paradas, semRadar }) => (
                 <button
                   key={cli.id}
                   onClick={() => navigate(`/socialmidia/clientes/${cli.id}/pesquisa`)}
                   className={cn(
-                    "text-left rounded-2xl border-2 bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-md",
+                    "text-left rounded-2xl border-2 bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-md shrink-0 snap-start w-[80%] sm:w-auto",
                     semRadar ? "border-destructive/30 bg-destructive/[0.03]" : "border-amber-500/30 bg-amber-500/[0.03]",
                   )}
                 >
@@ -221,24 +243,28 @@ export default function HubCria() {
                 </button>
               ))}
             </div>
+            {atencao.length > 1 && (
+              <p className="sm:hidden mt-1.5 text-center text-[11px] font-body text-muted-foreground">arraste pro lado</p>
+            )}
+            </>
           )}
         </div>
       )}
 
       {/* O PLACAR: o que o HUB já te deu e o que você deixou na mesa. */}
       {placar.total > 0 && (
-        <div>
-          <h2 className="text-sm font-display font-extrabold text-foreground mb-3">O que o HUB já te deu</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Placar label="Pautas geradas" valor={placar.total} />
-            <Placar label="Viraram post" valor={placar.usadas} cor="text-emerald-600" />
-            <Placar label="Marcadas “usar”" valor={placar.marcadas} cor="text-primary" />
-            <Placar label="Ninguém abriu" valor={placar.novas} cor={placar.novas > 0 ? "text-amber-600" : undefined} />
+        <div className="order-4 sm:order-3">
+          <h2 className="text-sm font-display font-extrabold text-foreground mb-3">O que o Radar já te deu</h2>
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-3">
+            <Placar label="Pautas geradas" curto="pautas" valor={placar.total} />
+            <Placar label="Viraram post" curto="viraram post" valor={placar.usadas} cor="text-emerald-600" />
+            <Placar label="Marcadas “usar”" curto="pra usar" valor={placar.marcadas} cor="text-primary" />
+            <Placar label="Ninguém abriu" curto="ninguém abriu" valor={placar.novas} cor={placar.novas > 0 ? "text-amber-600" : undefined} />
           </div>
           {placar.novas > 0 && (
-            <p className="text-[12.5px] font-body text-muted-foreground mt-2.5 leading-relaxed">
+            <p className="text-[12.5px] font-body text-muted-foreground mt-2.5 leading-relaxed rounded-2xl sm:rounded-none bg-amber-500/10 sm:bg-transparent border border-amber-500/25 sm:border-0 px-3 py-2.5 sm:p-0">
               <strong className="text-foreground">{placar.novas} pautas prontas estão paradas.</strong>{" "}
-              Cada uma custou crédito e ninguém olhou é aqui que o módulo deixa de se pagar.
+              Cada uma custou crédito e ninguém olhou. É aqui que o módulo deixa de se pagar.
             </p>
           )}
         </div>
@@ -249,15 +275,15 @@ export default function HubCria() {
           cadastrar um concorrente, rodar a pesquisa e caçar o post no meio do
           resultado. A pesquisa por perfil continua valendo pro que ela serve:
           entender um concorrente ao longo do tempo. */}
-      <AnalisarPorLink />
+      <div data-tour="hub-link" className="order-2 sm:order-4"><AnalisarPorLink /></div>
 
       {/* HISTÓRICO DE TUDO. A leitura custa crédito e demora: ela tem que ser
           fácil de reencontrar, de mandar pro outro cliente e de apagar. */}
-      <HistoricoRadar />
+      <div data-tour="hub-historico" className="order-5"><HistoricoRadar /></div>
 
       {/* PESQUISA AVULSA ela não é de cliente nenhum, então mora aqui, e não
           dentro da ficha. */}
-      <div data-tour="hub-avulsa" className="rounded-3xl border border-border bg-card overflow-hidden">
+      <div data-tour="hub-avulsa" className="order-6 rounded-3xl border border-border bg-card overflow-hidden">
         <button
           onClick={() => setAvulsa((v) => !v)}
           className="w-full flex items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-muted/30"
@@ -268,7 +294,7 @@ export default function HubCria() {
           <span className="min-w-0 flex-1">
             <span className="block text-[14px] font-display font-extrabold text-foreground">Espiar alguém que não é cliente</span>
             <span className="block text-[12.5px] font-body text-muted-foreground">
-              Uma prospecção, uma referência de outro nicho. Fica guardado aqui no HUB não entra na ficha de ninguém.
+              Uma prospecção ou referência de outro nicho. A leitura fica no histórico, em Pesquisas avulsas, fora da ficha de qualquer cliente.
             </span>
           </span>
           <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", avulsa && "rotate-180")} />
@@ -283,11 +309,11 @@ export default function HubCria() {
   );
 }
 
-function Placar({ label, valor, cor }: { label: string; valor: number; cor?: string }) {
+function Placar({ label, curto, valor, cor }: { label: string; curto: string; valor: number; cor?: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <p className={cn("font-display text-2xl font-extrabold tabular-nums leading-none", cor ?? "text-foreground")}>{valor}</p>
-      <p className="text-[11.5px] font-body text-muted-foreground mt-1.5">{label}</p>
+    <div className="rounded-2xl border border-border bg-card px-1.5 py-3 text-center sm:p-4 sm:text-left min-w-0">
+      <p className={cn("font-display text-xl sm:text-2xl font-extrabold tabular-nums leading-none", cor ?? "text-foreground")}>{valor}</p>
+      <p className="text-[10.5px] sm:text-[11.5px] font-body text-muted-foreground mt-1.5 leading-tight"><span className="sm:hidden">{curto}</span><span className="hidden sm:inline">{label}</span></p>
     </div>
   );
 }

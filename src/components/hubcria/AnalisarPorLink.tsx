@@ -53,21 +53,22 @@ export function AnalisarPorLink() {
 
   return (
     <div className="rounded-3xl border border-border bg-card overflow-hidden">
-      <div className="px-5 py-4 flex items-start gap-3">
+      <div className="px-4 sm:px-5 py-4 flex items-start gap-3">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
           <Clapperboard className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-display font-extrabold text-foreground">Analisar um vídeo por link</p>
-          <p className="text-[12.5px] font-body text-muted-foreground">
+          <p className="sm:hidden text-[12.5px] font-body text-muted-foreground">Viu um reel bom? Cola o link e o Cria lê o vídeo inteiro.</p>
+          <p className="hidden sm:block text-[12.5px] font-body text-muted-foreground">
             Viu um reel que funcionou? Cola o link e o Cria lê o vídeo inteiro: gancho, arquitetura,
             ritmo, o que copiar e o que evitar. Não precisa ser de cliente nenhum.
           </p>
         </div>
       </div>
 
-      <div className="px-5 pb-4 space-y-2">
-        <div className="flex flex-col sm:flex-row gap-2">
+      <div className="px-4 sm:px-5 pb-4 space-y-2">
+        <div className="flex gap-2">
           <input
             value={campo}
             onChange={(e) => setCampo(e.target.value)}

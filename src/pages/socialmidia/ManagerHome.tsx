@@ -415,7 +415,7 @@ function ManagerHomeSocialMidia() {
           hover). Não existe mais faixa "Saúde dos clientes" separada. */}
       <div className="flex items-center justify-between mb-3">
         {/* Setinha pra recolher/expandir a lista (persistido em localStorage). */}
-        <button type="button" onClick={toggleClientes} className="flex items-center gap-1.5"
+        <button data-tour="gh-clientes-abrir" type="button" onClick={toggleClientes} className="flex items-center gap-1.5"
           aria-expanded={clientesOpen} aria-label={clientesOpen ? "Recolher clientes" : "Expandir clientes"}>
           <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider">Seus clientes</h2>
           <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${clientesOpen ? "rotate-180" : ""}`} />
