@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { toast } from "sonner";
+import type { MostrarKit } from "@/lib/mediaKitCapas";
 
 // types.ts é travado, cast padrão (igual useSocialInsights/useModules).
 type AnyTable = (table: string) => ReturnType<typeof supabase.from>;
@@ -30,6 +31,13 @@ export type MediaKitProfile = {
   show_top_posts: boolean | null;
   /** Ids (media_insights.id) escolhidos a dedo; null = top 3 automático. */
   featured_post_ids: string[] | null;
+  /* LINK PRA MANDAR PRA MARCA (06/11/2026). Colunas novas: antes do SQL
+     rodar, elas não vêm do banco e ficam com o padrão abaixo. */
+  capa: string | null;
+  slug: string | null;
+  publico: boolean;
+  mostrar: Partial<MostrarKit> | null;
+  aviso_mensal: boolean;
 };
 
 export const MEDIA_KIT_DEFAULTS: MediaKitProfile = {
@@ -56,7 +64,19 @@ export const MEDIA_KIT_DEFAULTS: MediaKitProfile = {
   avatar_url: null,
   show_top_posts: true,
   featured_post_ids: null,
+  capa: "cria",
+  slug: null,
+  publico: false,
+  mostrar: null,
+  aviso_mensal: true,
 };
+
+/** Colunas que só existem depois do SQL de 07/11 (link público do kit). */
+const COLUNAS_NOVAS = ["capa", "slug", "publico", "mostrar", "aviso_mensal"] as const;
+const faltaColuna = (e: { code?: string; message?: string } | null) =>
+  !!e && (e.code === "PGRST204" || e.code === "42703" || /column .* does not exist|could not find the .* column/i.test(e.message ?? ""));
+const faltaTabela = (e: { code?: string; message?: string } | null) =>
+  !!e && (e.code === "PGRST205" || e.code === "42P01" || /relation .* does not exist|could not find the table/i.test(e.message ?? ""));
 
 /** Cores de destaque prontas do kit (o verde era fixo e parecia aleatório). */
 export const KIT_ACCENTS = ["#0F6E56", "#7A1F3D", "#0061EE", "#EA4918", "#7C3AED", "#DB2777", "#B45309", "#1F2937"] as const;
@@ -75,8 +95,10 @@ export function useMediaKitProfile() {
     queryKey: ["media-kit-profile", dono],
     enabled: !!dono,
     queryFn: async () => {
+      // "*" de propósito: as colunas novas do link público só existem depois do
+      // SQL; com a lista explícita a tela quebraria antes dele rodar.
       const { data, error } = await sbFrom("media_kit_profiles")
-        .select("headline,bio,niche,contact,cities,gender,audience,services,accent,link,display_name,avatar_url,show_top_posts,featured_post_ids")
+        .select("*")
         .eq("user_id", dono!)
         .maybeSingle();
       if (error) throw error;
@@ -92,15 +114,133 @@ export function useSaveMediaKitProfile() {
   return useMutation({
     mutationFn: async (patch: Partial<MediaKitProfile>) => {
       if (!dono) throw new Error("Sem sessão");
-      const { error } = await sbFrom("media_kit_profiles")
-        .upsert({ user_id: dono, ...patch, updated_at: new Date().toISOString() } as never, { onConflict: "user_id" });
-      if (error) throw error;
+      const linha = { user_id: dono, ...patch, updated_at: new Date().toISOString() };
+      const { error } = await sbFrom("media_kit_profiles").upsert(linha as never, { onConflict: "user_id" });
+      if (error && faltaColuna(error)) {
+        // SQL do link público ainda não rodou: salva o resto e avisa o que ficou.
+        const semNovas = Object.fromEntries(Object.entries(linha).filter(([k]) => !(COLUNAS_NOVAS as readonly string[]).includes(k)));
+        const { error: e2 } = await sbFrom("media_kit_profiles").upsert(semNovas as never, { onConflict: "user_id" });
+        if (e2) throw e2;
+        if (COLUNAS_NOVAS.some((k) => k in patch)) throw new Error("FALTA_SQL");
+        return;
+      }
+      if (error) {
+        if (error.code === "23505") throw new Error("SLUG_EM_USO");
+        throw error;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["media-kit-profile", dono] });
     },
-    onError: () => toast.error("Não consegui salvar o media kit."),
+    onError: (e) => {
+      const msg = e instanceof Error ? e.message : "";
+      if (msg === "FALTA_SQL") toast.error("O link do kit ainda não está ligado no banco. Falta rodar o SQL do media kit.");
+      else if (msg === "SLUG_EM_USO") toast.error("Esse endereço já é de outra pessoa. Tente outro.");
+      else toast.error("Não consegui salvar o media kit.");
+    },
   });
+}
+
+/* ── VERSÕES POR MARCA ─────────────────────────────────────────────── */
+export type VersaoKit = { id: string; nome: string; slug: string; capa: string | null; accent: string | null; mostrar: Partial<MostrarKit> | null };
+
+export function useVersoesKit() {
+  const dono = useDonoDoKit();
+  const qc = useQueryClient();
+  const query = useQuery<{ lista: VersaoKit[]; semTabela: boolean }>({
+    queryKey: ["media-kit-versoes", dono],
+    enabled: !!dono,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("media_kit_versoes")
+        .select("id,nome,slug,capa,accent,mostrar")
+        .eq("user_id", dono!)
+        .order("created_at", { ascending: true });
+      if (error) { if (faltaTabela(error)) return { lista: [], semTabela: true }; throw error; }
+      return { lista: (data ?? []) as unknown as VersaoKit[], semTabela: false };
+    },
+  });
+  const criar = useMutation({
+    mutationFn: async (v: { nome: string; slug: string; capa: string | null; accent: string | null; mostrar: Partial<MostrarKit> | null }) => {
+      if (!dono) throw new Error("Sem sessão");
+      const { data, error } = await sbFrom("media_kit_versoes").insert({ user_id: dono, ...v } as never).select("id,nome,slug,capa,accent,mostrar").single();
+      if (error) {
+        if (faltaTabela(error)) throw new Error("FALTA_SQL");
+        if (error.code === "23505") throw new Error("SLUG_EM_USO");
+        throw error;
+      }
+      return data as unknown as VersaoKit;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["media-kit-versoes", dono] }),
+    onError: (e) => {
+      const msg = e instanceof Error ? e.message : "";
+      toast.error(msg === "FALTA_SQL" ? "As versões ainda não estão ligadas no banco. Falta rodar o SQL do media kit."
+        : msg === "SLUG_EM_USO" ? "Você já tem uma versão com esse nome." : "Não consegui criar a versão.");
+    },
+  });
+  const atualizar = useMutation({
+    mutationFn: async ({ id, ...patch }: Partial<VersaoKit> & { id: string }) => {
+      const { error } = await sbFrom("media_kit_versoes").update({ ...patch, updated_at: new Date().toISOString() } as never).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["media-kit-versoes", dono] }),
+    onError: () => toast.error("Não consegui salvar a versão."),
+  });
+  const excluir = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await sbFrom("media_kit_versoes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["media-kit-versoes", dono] }),
+    onError: () => toast.error("Não consegui excluir a versão."),
+  });
+  return { versoes: query.data?.lista ?? [], semTabela: query.data?.semTabela ?? false, criar, atualizar, excluir };
+}
+
+/** Quantas vezes o link foi aberto nos últimos 7 dias (null = SQL ainda não rodou). */
+export function useAberturasKit() {
+  const dono = useDonoDoKit();
+  return useQuery<{ semana: number; total: number } | null>({
+    queryKey: ["media-kit-aberturas", dono],
+    enabled: !!dono,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const desde = new Date(Date.now() - 7 * 86400000).toISOString();
+      const [s, t] = await Promise.all([
+        sbFrom("media_kit_aberturas").select("id", { count: "exact", head: true }).eq("user_id", dono!).gte("aberto_em", desde),
+        sbFrom("media_kit_aberturas").select("id", { count: "exact", head: true }).eq("user_id", dono!),
+      ]);
+      if (s.error || t.error) return null;
+      return { semana: s.count ?? 0, total: t.count ?? 0 };
+    },
+  });
+}
+
+/* ── LEITURA PÚBLICA (página do link) ─────────────────────────────── */
+export type KitPublico = {
+  nome: string;
+  handle: string | null;
+  avatar_url: string | null;
+  niche: string;
+  bio: string;
+  capa: string;
+  accent: string;
+  contato: string | null;
+  cidades: string | null;
+  genero: { women?: number; men?: number } | null;
+  audiencia: AudienceBand[] | null;
+  servicos: KitService[] | null;
+  stats: { followers: number; reachMonth: number; engagementPct: number; saves: number } | null;
+  desempenho: { followersGrowth: number; profileViews: number; accountsEngaged: number; interactions: number; avgReach: number; postsCount: number } | null;
+  posts: { title: string; format: string; reach: number; saves: number; thumbnail_url: string | null }[];
+  atualizado_em: string | null;
+  versao: string | null;
+};
+
+export async function buscarKitPublico(slug: string, versao: string | null, contar: boolean): Promise<KitPublico | null> {
+  const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+  const { data, error } = await rpc("media_kit_publico", { _slug: slug, _versao: versao, _contar: contar });
+  if (error) throw error;
+  return (data as KitPublico | null) ?? null;
 }
 
 const BUCKET = "files";

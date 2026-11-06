@@ -569,17 +569,17 @@ export const TOURS_CRIADOR: TourConfig[] = [
     route: "/app/biblioteca",
     title: "Biblioteca",
     valueProp:
-      "Seu acervo de mídia num lugar só: vídeos, fotos e artes que você usa nos posts. Suba uma vez, reaproveite sempre, sem caçar arquivo na galeria ou no Drive.",
+      "Seu fichário de ganchos, formatos, prompts e templates. Travou no começo do post? Busca aqui pelo que você quer causar e leva pronto pro post.",
     benefits: [
-      "Assets organizados e fáceis de achar",
-      "Reaproveite mídia entre posts",
-      "Integração com Google Drive pra arquivos pesados",
+      "Busca em tudo de uma vez, por palavra ou por objetivo",
+      "Exemplo pronto em cada ficha",
+      "Usar no post manda o gancho direto pro rascunho",
     ],
     steps: [
       {
         target: '[data-tour="biblioteca-abas"]',
-        title: "Os acervos da Biblioteca",
-        body: "Explore as abas: cada uma é um tipo de recurso pro seu conteúdo, de hooks prontos pra capturar atenção a materiais seus. Quando estiver criando um post e travar, é aqui que você abastece.",
+        title: "As divisórias do fichário",
+        body: "Hooks, Formatos, Prompts, Templates e Favoritos, com quantos tem em cada. Os seus e os do Cria ficam juntos, os seus com o selo Meu. Toque na estrela pra guardar nos Favoritos e em Usar no post pra levar o gancho pro rascunho.",
         placement: "bottom",
       },
     ],
@@ -613,23 +613,23 @@ export const TOURS_CRIADOR: TourConfig[] = [
     route: "/app/historico",
     title: "Histórico",
     valueProp:
-      "Tudo que você já publicou, em ordem. É o seu acervo: revisite o que funcionou, encontre posts antigos pra reciclar e acompanhe a evolução da sua produção.",
+      "O que você publicou e o que deu resultado. Alcance, salvamentos, compartilhamentos e seguidores por post, pra repetir o que funciona.",
     benefits: [
-      "Linha do tempo de tudo que foi ao ar",
-      "Recicle conteúdo que já deu certo",
-      "Prova concreta da sua constância",
+      "Comparação com o período anterior",
+      "O que mais funcionou, por formato, pilar e horário",
+      "Reaproveite o post que já deu certo",
     ],
     steps: [
       {
-        target: '[data-tour="historico-stats"]',
-        title: "Sua constância em números",
-        body: "Total publicado, plataforma mais ativa, mês mais produtivo e média mensal. Prova concreta de que você está no jogo.",
+        target: '[data-tour="historico-filtros"]',
+        title: "Escolha o período",
+        body: "90 dias, este mês, este ano ou tudo. Formato, pilar e rede aparecem quando você tem mais de um. Tudo embaixo muda junto.",
         placement: "bottom",
       },
       {
-        target: '[data-tour="historico-filtros"]',
-        title: "Encontre qualquer post",
-        body: "Filtre por plataforma, pilar e período. Perfeito pra achar aquele post que funcionou e reciclar. É aqui também que você preenche os resultados de cada post, o combustível dos Relatórios.",
+        target: '[data-tour="historico-stats"]',
+        title: "O resultado, não só a quantidade",
+        body: "Alcance somado, alcance médio, salvamentos e seguidores ganhos, cada um comparado com o período anterior. Mais embaixo: o pódio, onde está o seu resultado e a tabela de todos os posts.",
         placement: "bottom",
       },
     ],

@@ -98,6 +98,7 @@ const Ativar = lazy(() => import("./pages/Ativar"));
 const AprovarPortal = lazy(() => import("./pages/AprovarPortal"));
 const MateriaisPortal = lazy(() => import("./pages/MateriaisPortal"));
 const PropostaPublica = lazy(() => import("./pages/PropostaPublica"));
+const MediaKitPublico = lazy(() => import("./pages/MediaKitPublico"));
 const CronogramaPublica = lazy(() => import("./pages/CronogramaPublica"));
 const RoteirosPublica = lazy(() => import("./pages/RoteirosPublica"));
 const AgendarPublica = lazy(() => import("./pages/AgendarPublica"));
@@ -464,6 +465,9 @@ const App = () => (
                   ÚLTIMO de propósito: toda rota de verdade ganha dele, e um
                   endereço que não é slug de ninguém cai no "página não existe"
                   da própria BioPage. */}
+              {/* MEDIA KIT PÚBLICO (06/11/2026): criaclub.bio/nome/kit e /nome/kit/versao. */}
+              <Route path="/:slug/kit" element={<ErrorBoundary fallback={<BioQuebrou />}><MediaKitPublico /></ErrorBoundary>} />
+              <Route path="/:slug/kit/:versao" element={<ErrorBoundary fallback={<BioQuebrou />}><MediaKitPublico /></ErrorBoundary>} />
               <Route path="/:slug" element={<ErrorBoundary fallback={<BioQuebrou />}><BioPage /></ErrorBoundary>} />
               <Route path="/:slug/p/:itemSlug" element={<ErrorBoundary fallback={<BioQuebrou />}><BioPage /></ErrorBoundary>} />
               <Route path="/:slug/blog/:itemSlug" element={<ErrorBoundary fallback={<BioQuebrou />}><BioPage /></ErrorBoundary>} />

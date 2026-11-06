@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { usePartner } from "@/hooks/usePartner";
-import { PartnerCommissions } from "@/components/accounts/PartnerCommissions";
+import { PainelParceira } from "@/components/accounts/PainelParceira";
 import { ManagerSectionTitle } from "@/components/accounts/ManagerSectionTitle";
 
 export default function Comissoes() {
@@ -9,7 +9,7 @@ export default function Comissoes() {
   return (
     <div>
       <ManagerSectionTitle t="Suas comissões" s="A comissão libera após o cliente pagar a 2ª fatura." />
-      <PartnerCommissions />
+      <PainelParceira />
     </div>
   );
 }

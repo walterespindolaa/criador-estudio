@@ -931,7 +931,16 @@ const Ideias = () => {
           onFechar={() => setFolhaId(null)}
           idea={{ id: folhaAberta.id, title: folhaAberta.title, notes: folhaAberta.notes }}
           donoId={folhaAberta.user_id}
-          pilar={(() => { const pl = folhaAberta.pillar_id ? pillars.find((x) => x.id === folhaAberta.pillar_id) : null; return pl ? { nome: pl.name, cor: pl.color } : null; })()}
+          pilares={pillars.map((x) => ({ id: x.id, nome: x.name, cor: x.color }))}
+          pilarId={folhaAberta.pillar_id ?? null}
+          pastas={folders.map((f) => ({ id: f.id, nome: f.name, cor: f.color }))}
+          pastaId={folderIdDaIdeia(folhaAberta)}
+          onPilar={async (id) => { await updateIdea.mutateAsync({ id: folhaAberta.id, updates: { pillar_id: id } }); }}
+          onPasta={async (id) => { await moverIdeia.mutateAsync({ ideaId: folhaAberta.id, folderId: id }); }}
+          onNovaPasta={async (nome) => {
+            const nova = await criarPasta.mutateAsync({ name: nome, color: CORES_PASTA[folders.length % CORES_PASTA.length] });
+            await moverIdeia.mutateAsync({ ideaId: folhaAberta.id, folderId: nova.id });
+          }}
           formatos={FORMATOS_SUGESTAO.map((f) => ({ value: f.value, label: f.label }))}
           restantes={Math.max(0, AI_LIMIT - aiUsed)}
           onSalvar={async (d) => {
@@ -940,7 +949,6 @@ const Ideias = () => {
             if (d.notes !== undefined) updates.notes = d.notes || null;
             await updateIdea.mutateAsync({ id: folhaAberta.id, updates });
           }}
-          onDetalhes={() => { const i = folhaAberta; setFolhaId(null); openEdit(i); }}
           gerar={async (formato, ctx) => {
             const fmt = FORMATOS_SUGESTAO.find((f) => f.value === formato) ?? FORMATOS_SUGESTAO[1];
             const pillarName = pillars.find((x) => x.id === folhaAberta.pillar_id)?.name;

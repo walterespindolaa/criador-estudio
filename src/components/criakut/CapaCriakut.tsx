@@ -1,3 +1,4 @@
+import type React from "react";
 import type { CapaTipo } from "@/lib/criakut";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +75,16 @@ function Desenho({ tipo }: { tipo: Exclude<CapaTipo, "propria"> }) {
         {selo("/stickers/selo-da-ideia-ao-post-amarelo.png", 1080, 10, 300, 6)}
       </>);
   }
+}
+
+/** Só o desenho, cobrindo o pai (capa do Media Kit usa as mesmas 5 capas). */
+export function DesenhoCapaCria({ tipo, style }: { tipo: Exclude<CapaTipo, "propria">; style?: React.CSSProperties }) {
+  return (
+    <svg viewBox="0 0 1600 400" preserveAspectRatio="xMidYMid slice" aria-hidden
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", ...style }}>
+      <Desenho tipo={tipo} />
+    </svg>
+  );
 }
 
 /** topo = em faixa baixa (página), mostra a parte de cima do desenho, onde ficam os selos. */

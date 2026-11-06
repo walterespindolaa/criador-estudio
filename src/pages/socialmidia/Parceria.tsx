@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Handshake, Check, Clock, Ticket, TrendingUp, LineChart, HeartHandshake, Share2, Wallet } from "lucide-react";
+import { Handshake, Clock, Ticket, TrendingUp, LineChart, HeartHandshake, Share2, Wallet } from "lucide-react";
 import { usePartner } from "@/hooks/usePartner";
 import { Button } from "@/components/ui/button";
-import { PartnerCommissions } from "@/components/accounts/PartnerCommissions";
-import { CopyButton } from "@/components/shared/CopyButton";
+import { PainelParceira } from "@/components/accounts/PainelParceira";
 import { PartnerApplyDrawer } from "@/components/accounts/PartnerApplyDrawer";
 import { ManagerSectionTitle } from "@/components/accounts/ManagerSectionTitle";
 import { LABELS } from "@/lib/labels";
@@ -12,7 +11,7 @@ import { LABELS } from "@/lib/labels";
 const P = { laranja: "#EA4918", verde: "#01A652", azul: "#0061EE", rosa: "#FF77B9", amarelo: "#FFCF03", creme: "#F6F2E8" };
 
 export default function Parceria() {
-  const { partner, isPartner, isPending: isPartnerPending } = usePartner();
+  const { isPartner, isPending: isPartnerPending } = usePartner();
   const [partnerOpen, setPartnerOpen] = useState(false);
   return (
     <div>
@@ -21,33 +20,8 @@ export default function Parceria() {
           estados da tela: parceira aprovada, em análise e ainda não parceira.
           Só um ramo existe no DOM por vez, então o passo sempre acha o alvo. */}
       {isPartner ? (
-        <div data-tour="parceria-programa" className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-card px-5 py-5 space-y-4">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0"><Handshake className="h-4 w-4 text-primary" /></div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-display font-semibold text-foreground flex items-center gap-2">Você é parceira <span aria-hidden>🎉</span></p>
-              <p className="text-xs text-muted-foreground font-body mt-0.5">Compartilhe seu cupom com seus clientes.</p>
-            </div>
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/15 text-primary text-[11px] font-body font-semibold shrink-0"><Check className="h-3 w-3" /> Aprovada</span>
-          </div>
-          {partner?.coupon_code && (
-            <div data-tour="parceria-acao" className="rounded-xl border border-primary/30 bg-background/60 px-4 py-3 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0"><Ticket className="h-5 w-5 text-primary" /></div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Seu cupom{partner.coupon_type === "client_discount" && partner.coupon_discount_pct ? ` · ${partner.coupon_discount_pct}% off` : ""}</p>
-                <p className="text-lg font-display font-extrabold text-foreground tracking-wider truncate">{partner.coupon_code}</p>
-              </div>
-              <CopyButton text={partner.coupon_code} />
-            </div>
-          )}
-          {/* A TELA DE APROVADA MOSTRAVA SÓ O CUPOM (Walter, 22/09/2026). O FAQ
-              logo abaixo prometia que "as regras de comissão, carência e
-              repasse aparecem no seu painel assim que o cadastro for aprovado",
-              e no painel não aparecia nada. Agora a regra, o link, os clientes
-              e o extrato ficam aqui mesmo, sem a parceira ter que caçar outra
-              tela pra saber quanto ganhou. */}
-          <PartnerCommissions />
-        </div>
+        /* Parceira aprovada: o painel novo (mockup aprovado em 07/11/2026). */
+        <div data-tour="parceria-programa"><PainelParceira /></div>
       ) : isPartnerPending ? (
         <div data-tour="parceria-programa" className="rounded-2xl border border-border bg-card/50 px-5 py-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0"><Clock className="h-4 w-4 text-amber-600" /></div>

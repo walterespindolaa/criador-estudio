@@ -27,25 +27,25 @@ export function ConsentBanner() {
 
   const decidir = (v: "aceito" | "recusado") => { guardarConsentimento(v); setDecidido(true); };
 
+  /* DISCRETO (Walter, 06/11/2026: "esse cookies é muito grande"). Era um card de
+     4 linhas cobrindo o rodapé do link na bio. Agora é uma faixa fina: texto
+     curto, os dois botões pequenos e o link da política. Mesmas duas escolhas. */
   return (
     <div role="dialog" aria-label="Aviso de cookies"
-      className="fixed inset-x-3 bottom-3 z-[70] sm:inset-x-auto sm:right-4 sm:bottom-4 sm:max-w-md rounded-2xl border border-border bg-card shadow-lg p-4"
-      style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
-      <p className="text-sm font-body text-foreground leading-relaxed">
-        Usamos cookies essenciais pra você entrar e usar o Cria. Se você permitir, também usamos o pixel da Meta pra medir
-        nossos anúncios. Nada de venda de dados.{" "}
-        <Link to="/privacidade" className="text-primary underline underline-offset-2">Como cuidamos dos seus dados</Link>
+      className="fixed left-1/2 -translate-x-1/2 z-[70] w-[calc(100vw-1.5rem)] max-w-[440px] sm:left-auto sm:right-4 sm:translate-x-0 rounded-full border border-border bg-card/95 backdrop-blur shadow-md pl-3.5 pr-1.5 py-1.5 flex items-center gap-2"
+      style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+      <p className="flex-1 min-w-0 text-[11.5px] font-body text-muted-foreground leading-snug">
+        Pixel da Meta só se você deixar.{" "}
+        <Link to="/privacidade" className="underline underline-offset-2 text-foreground/80">Saiba mais</Link>
       </p>
-      <div className="mt-3 flex gap-2">
-        <button type="button" onClick={() => decidir("aceito")}
-          className="flex-1 h-11 rounded-xl bg-primary text-primary-foreground text-sm font-body font-bold">
-          Aceitar
-        </button>
-        <button type="button" onClick={() => decidir("recusado")}
-          className="flex-1 h-11 rounded-xl border border-border text-sm font-body font-semibold text-foreground">
-          Só o essencial
-        </button>
-      </div>
+      <button type="button" onClick={() => decidir("recusado")}
+        className="shrink-0 h-8 px-2.5 rounded-full text-[11.5px] font-body font-semibold text-foreground/80 hover:bg-muted">
+        Só essencial
+      </button>
+      <button type="button" onClick={() => decidir("aceito")}
+        className="shrink-0 h-8 px-3.5 rounded-full bg-primary text-primary-foreground text-[11.5px] font-body font-bold">
+        Aceitar
+      </button>
     </div>
   );
 }
