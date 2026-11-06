@@ -426,7 +426,11 @@ function VideoDoBloco({ poster, fontes }: { poster: string; fontes: string[] }) 
   }, [poster]);
   const play = () => { setTocando(true); void ref.current?.play().catch(() => { /* o usuário toca de novo */ }); };
   return (
-    <div className="relative w-full overflow-hidden rounded-xl bg-black mx-auto" style={{ aspectRatio: String(proporcao), maxHeight: "80vh" }}>
+    /* Largura = o menor entre o cartão e 80% da altura da tela vezes a
+       proporção. Assim um vídeo em pé num computador encolhe na largura em vez
+       de ser cortado em cima e embaixo; a proporção do quadro é sempre a do vídeo. */
+    <div className="relative overflow-hidden rounded-xl bg-black mx-auto"
+      style={{ aspectRatio: String(proporcao), width: `min(100%, calc(80vh * ${proporcao.toFixed(4)}))` }}>
       <video ref={ref} playsInline preload="none" poster={poster} controls={tocando}
         onLoadedMetadata={(e) => { const v = e.currentTarget; if (v.videoWidth && v.videoHeight) setProporcao(v.videoWidth / v.videoHeight); }}
         onPause={(e) => { if (e.currentTarget.currentTime === 0) setTocando(false); }}
