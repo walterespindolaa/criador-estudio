@@ -15,6 +15,16 @@ const sentryUpload = !!process.env.SENTRY_AUTH_TOKEN && !!process.env.SENTRY_ORG
 // __APP_BUILD__ (cache de dados persistido no IndexedDB, ver lib/queryPersist).
 const BUILD_ID = Date.now().toString(36);
 
+// VERSÃO LEGÍVEL NO RODAPÉ (Walter, 06/11/2026: "a versão num formato que eu
+// consiga entender qual foi o update"). Data e hora do build no fuso de Brasília
+// + os 7 primeiros caracteres do commit (a Vercel passa VERCEL_GIT_COMMIT_SHA),
+// que é o mesmo código que aparece no `git log --oneline`.
+const agoraBR = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+}).format(new Date()).replace(",", " às");
+const COMMIT = (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7);
+const VERSAO = COMMIT ? `${agoraBR} · ${COMMIT}` : agoraBR;
+
 // Carimba o service worker com o id do build (ver public/sw.js). Roda depois
 // que o dist está pronto; o sw.js é copiado do public/ como está, então a
 // troca é feita no arquivo final.
@@ -34,6 +44,7 @@ function swBuildId() {
 export default defineConfig(() => ({
   define: {
     __APP_BUILD__: JSON.stringify(BUILD_ID),
+    __APP_VERSAO__: JSON.stringify(VERSAO),
   },
   server: {
     host: "::",
