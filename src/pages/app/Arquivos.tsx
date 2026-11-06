@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { FolderOpen, Upload, Search, Trash2, FileText, Cloud, ImageIcon, Crown, Clock, Plus, ExternalLink, ChevronLeft, ChevronRight, RefreshCw, File as FileIcon, Link2 } from "lucide-react";
+import { FolderOpen, Upload, Search, Trash2, FileText, ImageIcon, Crown, Plus, ExternalLink, ChevronLeft, ChevronRight, ChevronDown, RefreshCw, File as FileIcon, Link2, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -303,24 +303,110 @@ function UserDriveFolders({ links }: { links: UserLink[] }) {
   );
 }
 
-// Seção completa dos links do usuário: editor + pastas do Drive. Lê/grava via
-// useUserLinks (profiles.useful_links).
+/* LINKS ÚTEIS E PASTAS DO DRIVE (Walter, 06/11/2026, mockup aprovado): saem da
+   primeira tela e viram duas pastas recolhidas embaixo da gaveta, com o número
+   de itens na etiqueta. Abrir mostra o editor e a listagem de sempre. */
+function PastaRecolhivel({ titulo, resumo, cor, aberta, onToggle, children }: {
+  titulo: string; resumo: string; cor: string; aberta: boolean; onToggle: () => void; children: React.ReactNode;
+}) {
+  return (
+    <div className="relative pt-3 min-w-0">
+      <span aria-hidden className="absolute left-4 top-0 h-4 w-24 rounded-t-lg border-2 border-b-0 border-foreground" style={{ background: cor }} />
+      <div className="relative rounded-xl border-2 border-foreground shadow-[4px_4px_0_hsl(var(--foreground))] overflow-hidden" style={{ background: cor }}>
+        <button type="button" onClick={onToggle} aria-expanded={aberta}
+          className="w-full flex items-center gap-3 px-4 py-3 text-left text-[#1d1b18]">
+          <span className="min-w-0 flex-1">
+            <span className="block font-display font-extrabold text-[15px] leading-tight">{titulo}</span>
+            <span className="block text-[11.5px] font-body text-[#1d1b18]/70">{resumo}</span>
+          </span>
+          <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", aberta && "rotate-180")} />
+        </button>
+        {aberta && <div className="bg-card border-t-2 border-foreground p-3 sm:p-4 text-foreground">{children}</div>}
+      </div>
+    </div>
+  );
+}
+
 function UserLinksSection() {
   const { links, save } = useUserLinks();
+  const [abertaLinks, setAbertaLinks] = useState(false);
+  const [abertaDrive, setAbertaDrive] = useState(false);
+  const drives = (links ?? []).filter((l) => l?.url && isDriveLink(l));
   return (
-    <div className="mb-6 space-y-4">
-      <p className="text-sm font-body font-semibold text-foreground flex items-center gap-2">
-        <Link2 className="h-4 w-4 text-primary" />
-        Links úteis
-      </p>
-      <UserLinksEditor rows={links} onSave={(next) => save.mutate(next)} />
-      <div>
-        <div className="flex items-center gap-2 mb-2.5 px-1">
-          <FolderOpen className="h-4 w-4 text-muted-foreground" />
-          <p className="text-xs font-body text-muted-foreground">Pastas do Google Drive</p>
-        </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+      <PastaRecolhivel titulo="Links úteis" cor="#F6DFA0" aberta={abertaLinks} onToggle={() => setAbertaLinks((v) => !v)}
+        resumo={links.length ? `${links.length} ${links.length === 1 ? "link" : "links"} · toque pra abrir` : "nenhum ainda · toque pra adicionar"}>
+        <UserLinksEditor rows={links} onSave={(next) => save.mutate(next)} />
+      </PastaRecolhivel>
+      <PastaRecolhivel titulo="Pastas do Google Drive" cor="#D7E3FF" aberta={abertaDrive} onToggle={() => setAbertaDrive((v) => !v)}
+        resumo={drives.length ? `${drives.length} ${drives.length === 1 ? "pasta" : "pastas"} · toque pra abrir` : "nenhuma ainda · cole o link de uma pasta em Links úteis"}>
         <UserDriveFolders links={links} />
-      </div>
+      </PastaRecolhivel>
+    </div>
+  );
+}
+
+type Aba = "tudo" | "imagem" | "video" | "pdf" | "vencendo";
+const PASSO = 20;
+type Ficha = {
+  chave: string;
+  nome: string;
+  tipo: "imagem" | "video" | "pdf" | "outro";
+  origem: "upload" | "posts";
+  categoria: string | null;
+  dias: number | null;
+  postTitulo: string | null;
+  upload: ReturnType<typeof useFiles>["files"][number] | null;
+  ref: DriveRef | null;
+  criado: string;
+};
+const ROTULO_TIPO: Record<Ficha["tipo"], string> = { imagem: "IMAGEM", video: "VÍDEO", pdf: "PDF", outro: "ARQUIVO" };
+
+/* A FICHA da gaveta: prévia grande, tipo na etiqueta, carimbo "some em N dias"
+   nos temporários e, embaixo, de onde veio (o post onde foi usada ou o upload). */
+function FichaArquivo({ f, resolver, onAbrir, onApagar }: {
+  f: Ficha; resolver: (p: string) => Promise<string>; onAbrir: () => void; onApagar: () => void;
+}) {
+  const [falhou, setFalhou] = useState(false);
+  const thumb = f.ref?.thumbnail_url && !falhou ? f.ref.thumbnail_url : null;
+  return (
+    <div className="group relative min-w-0 rounded-xl border-2 border-foreground bg-[#FFFCF3] dark:bg-background shadow-[4px_4px_0_hsl(var(--foreground))] overflow-hidden">
+      <button type="button" onClick={onAbrir} className="block w-full text-left">
+        <div className="relative aspect-[4/5] border-b-2 border-foreground bg-muted grid place-items-center overflow-hidden">
+          {f.upload && f.tipo === "imagem" ? (
+            <SignedImage path={f.upload.storage_path} alt={f.nome} resolve={resolver} />
+          ) : thumb ? (
+            <img src={thumb} alt={f.nome} loading="lazy" onError={() => setFalhou(true)} className="w-full h-full object-cover" />
+          ) : f.tipo === "pdf" ? (
+            <div className="w-full h-full bg-white" style={{ backgroundImage: "repeating-linear-gradient(transparent 0 15px, #E9E2D0 15px 16px)" }} />
+          ) : (
+            <FileText className="h-8 w-8 text-muted-foreground" />
+          )}
+          {f.tipo === "video" && (
+            <span className="absolute inset-0 grid place-items-center">
+              <span className="grid h-9 w-9 place-items-center rounded-full border-2 border-foreground bg-white"><Play className="h-4 w-4 ml-0.5 text-[#1d1b18]" fill="currentColor" /></span>
+            </span>
+          )}
+          <span className="absolute left-2 top-2 rounded-full border-[1.5px] border-foreground bg-white px-2 py-px text-[9.5px] font-body font-extrabold tracking-wide text-[#1d1b18]">{ROTULO_TIPO[f.tipo]}</span>
+          {f.dias !== null && f.dias <= 7 && (
+            <span className="absolute right-2 bottom-2 -rotate-6 rounded border-2 border-[#D93A12] bg-white/90 px-1.5 py-px text-[10px] font-body font-extrabold uppercase text-[#D93A12]">
+              {f.dias <= 0 ? "some hoje" : `some em ${f.dias} ${f.dias === 1 ? "dia" : "dias"}`}
+            </span>
+          )}
+        </div>
+        <div className="px-2.5 py-2">
+          <p className="text-[12.5px] font-body font-bold text-foreground truncate">{f.nome}</p>
+          <p className="text-[11.5px] font-body italic text-muted-foreground truncate">
+            {f.origem === "posts"
+              ? (f.postTitulo ? <>no post <span className="text-[#0061EE] not-italic font-semibold">{f.postTitulo}</span></> : "mídia vinculada")
+              : <>upload · {(f.categoria ?? "geral")}{f.dias === null ? " · permanente" : ""}</>}
+          </p>
+        </div>
+      </button>
+      <button type="button" onClick={onApagar} aria-label="Excluir"
+        className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full border-[1.5px] border-foreground bg-white text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }
@@ -338,14 +424,15 @@ const Arquivos = () => {
   const { files, uploadFile, deleteFile, getPublicUrl } = useFiles();
   const [search, setSearch] = useState("");
   const [preview, setPreview] = useState<{ kind: "image" | "pdf" | "iframe" | "none"; url: string | null; name: string } | null>(null);
-  const [catFilter, setCatFilter] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingCategory, setPendingCategory] = useState("geral");
   const [pendingPermanent, setPendingPermanent] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
-  // Paginação client-side das "Mídias vinculadas" (sobre a lista já filtrada).
-  const [drivePage, setDrivePage] = useState(0);
+  // A GAVETA: aba por tipo, pílula por origem, "Ver mais" de 20 em 20.
+  const [aba, setAba] = useState<Aba>("tudo");
+  const [origem, setOrigem] = useState<string>("todas");
+  const [quantos, setQuantos] = useState(PASSO);
 
   const storageUsed = activeProfile?.storage_used_bytes ?? 0;
   const storageQuota = activeProfile?.storage_quota_bytes ?? storageBytesForPlan(null, false);
@@ -515,270 +602,198 @@ const Arquivos = () => {
 
   const uploads = files.filter((f) => (f.source ?? "upload") === "upload");
 
-  const filteredUploads = uploads.filter((f) => {
-    const matchSearch = !search || f.name.toLowerCase().includes(search.toLowerCase());
-    const matchCat = !catFilter || f.category === catFilter;
-    return matchSearch && matchCat;
+  // Título do post de cada mídia (external_media_refs.post_id já existe; a tela
+  // só não mostrava onde o arquivo foi usado).
+  const postIds = useMemo(
+    () => Array.from(new Set((driveFiles ?? []).map((f) => f.post_id).filter((x): x is string => !!x))).slice(0, 500),
+    [driveFiles],
+  );
+  const { data: titulosPost = {} } = useQuery<Record<string, string>>({
+    queryKey: ["arquivos-titulos-post", ownerId, postIds.join(",")],
+    enabled: postIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("posts").select("id,title").in("id", postIds);
+      if (error) throw error;
+      const m: Record<string, string> = {};
+      for (const r of (data ?? []) as { id: string; title: string | null }[]) m[r.id] = r.title || "post sem título";
+      return m;
+    },
   });
 
-  const filteredPermanent = filteredUploads.filter((f) => !f.expires_at);
-  const filteredTemporary = filteredUploads.filter((f) => !!f.expires_at);
+  const itens: Ficha[] = useMemo(() => {
+    const ups: Ficha[] = uploads.map((f) => {
+      const ehPdf = (f.file_type ?? "").includes("pdf") || /\.pdf$/i.test(f.name ?? "");
+      return {
+        chave: "u" + f.id, nome: f.name, tipo: isImage(f.file_type) ? "imagem" : ehPdf ? "pdf" : (f.file_type ?? "").startsWith("video/") ? "video" : "outro",
+        origem: "upload", categoria: f.category ?? "geral", dias: daysUntilExpiry(f.expires_at), postTitulo: null,
+        upload: f, ref: null, criado: f.created_at ?? "",
+      };
+    });
+    const mids: Ficha[] = (driveFiles ?? []).map((f) => {
+      const t = f.file_type ?? "";
+      return {
+        chave: "m" + f.id, nome: f.file_name, tipo: t.startsWith("image/") ? "imagem" : t.startsWith("video/") ? "video" : t.includes("pdf") ? "pdf" : "outro",
+        origem: "posts", categoria: null, dias: null, postTitulo: f.post_id ? titulosPost[f.post_id] ?? null : null,
+        upload: null, ref: f, criado: f.created_at ?? "",
+      };
+    });
+    return [...ups, ...mids].sort((a, b) => (b.criado > a.criado ? 1 : b.criado < a.criado ? -1 : 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploads, driveFiles, titulosPost]);
 
-  const filteredDrive = (driveFiles ?? []).filter((f) =>
-    !search || f.file_name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const semAcento = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const porBusca = itens.filter((f) => {
+    if (!search.trim()) return true;
+    const q = semAcento(search.trim());
+    return semAcento(f.nome ?? "").includes(q) || semAcento(f.postTitulo ?? "").includes(q);
+  });
+  const porOrigem = porBusca.filter((f) =>
+    origem === "todas" ? true : origem === "posts" ? f.origem === "posts" : origem === "uploads" ? f.origem === "upload" : f.origem === "upload" && f.categoria === origem);
+  const naAba = (f: Ficha, a: Aba) =>
+    a === "tudo" ? true : a === "vencendo" ? f.dias !== null && f.dias <= 7 : f.tipo === a;
+  const contagem = (a: Aba) => porOrigem.filter((f) => naAba(f, a)).length;
+  const visiveis = porOrigem.filter((f) => naAba(f, aba));
+  const mostradas = visiveis.slice(0, quantos);
+  useEffect(() => { setQuantos(PASSO); }, [search, aba, origem]);
 
-  // Paginação das "Mídias vinculadas": 12 por página, recalcula sobre o
-  // resultado filtrado. Ao mudar busca/filtro, o efeito abaixo volta pra pág 1.
-  const DRIVE_MEDIA_PAGE_SIZE = 12;
-  const driveTotalPages = Math.max(1, Math.ceil(filteredDrive.length / DRIVE_MEDIA_PAGE_SIZE));
-  const driveSafePage = Math.min(drivePage, driveTotalPages - 1);
-  const pagedDrive = filteredDrive.slice(
-    driveSafePage * DRIVE_MEDIA_PAGE_SIZE,
-    driveSafePage * DRIVE_MEDIA_PAGE_SIZE + DRIVE_MEDIA_PAGE_SIZE,
-  );
+  const abrirFicha = async (f: Ficha) => {
+    if (f.ref) { setPreview({ kind: "iframe", url: f.ref.view_url, name: f.ref.file_name }); return; }
+    if (!f.upload) return;
+    const url = await getPublicUrl(f.upload.storage_path);
+    if (!url) { toast.error("Não foi possível abrir o arquivo."); return; }
+    setPreview({ kind: f.tipo === "imagem" ? "image" : f.tipo === "pdf" ? "pdf" : "none", url, name: f.nome });
+  };
+  const apagarFicha = (f: Ficha) => {
+    if (f.upload) return handleDelete(f.upload);
+    if (f.ref) return (async () => {
+      if (!(await confirmar({ titulo: "Remover esta mídia?", descricao: "Ela sai dos seus arquivos e do post onde foi usada.", acao: "Remover", destrutivo: true }))) return;
+      await deleteDriveRef(f.ref!);
+    })();
+  };
 
-  // Trocar busca ou filtro volta as "Mídias vinculadas" pra primeira página.
-  useEffect(() => { setDrivePage(0); }, [search, catFilter]);
+  const ABAS: { k: Aba; rotulo: string; cor: string }[] = [
+    { k: "tudo", rotulo: "Tudo", cor: "#FFFFFF" },
+    { k: "imagem", rotulo: "Imagens", cor: "#D7E3FF" },
+    { k: "video", rotulo: "Vídeos", cor: "#FFD3E8" },
+    { k: "pdf", rotulo: "PDF", cor: "#FFE58A" },
+    { k: "vencendo", rotulo: "Vencendo", cor: "#FFD6C7" },
+  ];
 
   return (
-    <div className="pb-20 md:pb-0">
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4 gap-3">
-          <div className="flex items-center gap-3 min-w-0 md:hidden">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-sm shrink-0">
-              <FolderOpen className="h-5 w-5 text-white" strokeWidth={1.75} />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Arquivos</h1>
-              <p className="text-muted-foreground font-body mt-0.5 text-sm">Seus arquivos e referências visuais.</p>
-            </div>
+    /* ARRASTAR NA TELA INTEIRA (mockup aprovado): a área grande de soltar saiu;
+       soltar um arquivo em qualquer lugar da página abre o mesmo fluxo de upload. */
+    <div className="pb-20 md:pb-0 relative"
+      onDragOver={(e) => { if (e.dataTransfer?.types?.includes("Files")) { e.preventDefault(); setDragOver(true); } }}
+      onDragLeave={(e) => { if (e.currentTarget === e.target) setDragOver(false); }}
+      onDrop={handleDrop}>
+      {dragOver && (
+        <div className="fixed inset-0 z-40 grid place-items-center bg-foreground/20 backdrop-blur-[2px] pointer-events-none">
+          <div className="rounded-2xl border-2 border-foreground bg-card px-6 py-5 shadow-[6px_6px_0_hsl(var(--foreground))] text-center">
+            <Upload className="h-6 w-6 mx-auto mb-1.5" />
+            <p className="font-display font-extrabold text-lg">Solte pra enviar</p>
+            <p className="text-xs font-body text-muted-foreground">Máximo 50MB por arquivo</p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <DrivePickerButton onPicked={() => refetchDrive()} variant="outline" size="sm" />
-            <Button variant="hero" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading || isStorageFull}>
-              <Upload className="h-4 w-4 mr-1" /> {uploading ? "Enviando..." : "Upload"}
+        </div>
+      )}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        {/* Topo: título, cota numa linha, Drive e Enviar. */}
+        <div data-tour="arquivos-topo" className="flex items-center gap-2.5 flex-wrap mb-4">
+          <h1 className="md:hidden text-[26px] font-display font-extrabold text-foreground tracking-tight mr-1">Arquivos</h1>
+          <span data-tour="arquivos-cota" title={`${Math.round(usagePct)}% usado`}
+            className="order-3 sm:order-none inline-flex items-center gap-2 rounded-full border-2 border-foreground bg-card px-3 h-8 text-[12px] font-body font-bold tabular-nums">
+            {formatStorage(storageUsed)} de {formatStorage(storageQuota)}
+            <span className="h-2 w-14 rounded-full border border-foreground bg-background overflow-hidden">
+              <span className={cn("block h-full", usagePct >= 80 ? "bg-red-500" : usagePct >= 60 ? "bg-amber-500" : "bg-[#00A652]")} style={{ width: `${Math.max(3, usagePct)}%` }} />
+            </span>
+          </span>
+          {upgradeStorage && usagePct >= 60 && (
+            <button type="button" onClick={() => navigate(`/app/assinar?plano=${upgradeStorage.plano}`)}
+              className="order-4 sm:order-none text-[11.5px] text-muted-foreground hover:text-primary font-body inline-flex items-center gap-1">
+              <Crown className="h-3 w-3" /> No {upgradeStorage.nome} são {upgradeStorage.espaco}
+            </button>
+          )}
+          <div className="order-2 sm:order-none ml-auto flex items-center gap-2">
+            <span className="hidden sm:inline-flex"><DrivePickerButton onPicked={() => refetchDrive()} variant="outline" size="sm" /></span>
+            <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading || isStorageFull}
+              className="rounded-full border-2 border-foreground bg-[#EB4918] hover:bg-[#d8410f] text-white font-extrabold shadow-[3px_3px_0_hsl(var(--foreground))]">
+              <Plus className="h-4 w-4 mr-1" /> {uploading ? "Enviando..." : <><span className="sm:hidden">Enviar</span><span className="hidden sm:inline">Enviar arquivo</span></>}
             </Button>
           </div>
           <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileChange} />
         </div>
 
-        {/* Storage usage bar */}
-        <div className="bg-card border border-border rounded-xl p-3 sm:p-4 mb-4 flex items-center gap-3 sm:gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between text-xs font-body mb-1.5">
-              <span className="text-muted-foreground">
-                <span className="font-medium text-foreground">{formatStorage(storageUsed)}</span> de {formatStorage(storageQuota)} usados
-              </span>
-              <span className="text-muted-foreground tabular-nums">{Math.round(usagePct)}%</span>
-            </div>
-            <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-              <div
-                style={{ width: `${usagePct}%` }}
-                className={cn(
-                  "h-full rounded-full transition-all",
-                  usagePct >= 80 ? "bg-red-500" : usagePct >= 60 ? "bg-amber-500" : "bg-primary"
-                )}
-              />
-            </div>
-            {/* O CONVITE DE UPGRADE, antes era um texto FIXO no código:
-                "Upgrade para Pro → +250MB". Nunca acompanhou os planos: hoje o
-                Pro dá 5 GB e o Studio 15 GB, e ele ainda prometia 250 MB, pra
-                todo mundo, inclusive pra quem já estava no Studio. Preço e cota
-                escritos à mão numa tela é uma promessa que vence sozinha.
-                Agora ele lê a MESMA tabela que o billing usa (lib/plans.ts). */}
-            {upgradeStorage && (
-              <button
-                type="button"
-                onClick={() => navigate(`/app/assinar?plano=${upgradeStorage.plano}`)}
-                className="mt-2 text-[11px] text-muted-foreground hover:text-primary font-body inline-flex items-center gap-1 transition-colors"
-              >
-                <Crown className="h-3 w-3" />
-                Quer mais espaço? No {upgradeStorage.nome} são {upgradeStorage.espaco}
+        {/* Busca grande: nome do arquivo ou título do post onde foi usado. */}
+        <div className="relative mb-4">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nome do arquivo ou pelo post onde foi usado"
+            className="w-full h-12 rounded-xl border-2 border-foreground bg-card pl-11 pr-4 text-[14px] font-body outline-none shadow-[3px_3px_0_hsl(var(--foreground))] focus:shadow-[3px_3px_0_#EB4918]" />
+        </div>
+
+        {/* A GAVETA: abas por tipo coladas no corpo. */}
+        <div data-tour="arquivos-abas" className="flex items-end gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pl-2 -mb-[2px] relative z-10">
+          {ABAS.map((a) => {
+            const on = aba === a.k;
+            return (
+              <button key={a.k} type="button" onClick={() => setAba(a.k)} aria-pressed={on}
+                className={cn("shrink-0 rounded-t-lg border-2 border-foreground px-3 sm:px-4 text-[12px] sm:text-[13px] font-body font-extrabold text-[#1d1b18] transition-all",
+                  on ? "h-10 border-b-card" : "h-8 opacity-80 hover:opacity-100")}
+                style={{ background: on && a.k === "tudo" ? "hsl(var(--card))" : a.cor }}>
+                {a.rotulo} <span className="font-semibold opacity-60 tabular-nums">{contagem(a.k)}</span>
               </button>
-            )}
-          </div>
+            );
+          })}
         </div>
-
-        {/* Drag & drop zone */}
-        <div
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-2xl p-6 sm:p-8 text-center mb-3 transition-colors ${dragOver ? "border-primary bg-primary/5" : "border-border"}`}
-        >
-          <Upload className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground font-body">Arraste arquivos aqui ou clique em Upload</p>
-          <p className="text-xs text-muted-foreground font-body mt-1">Máximo 50MB por arquivo</p>
-        </div>
-        <p className="text-xs text-muted-foreground font-body text-center mb-6">
-          💡 Arquivos temporários somem em {retentionDays} dias. Escolha "Permanente" no upload pra manter, ocupa sua cota.
-        </p>
-
-        {/* Filters */}
-        <div className="flex gap-3 mb-6 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar arquivos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 rounded-xl" />
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <button onClick={() => setCatFilter(null)} className={`px-3 py-1.5 rounded-xl text-xs font-body border capitalize transition-colors ${!catFilter ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}>Todos</button>
-            {CATEGORIES.map((c) => (
-              <button key={c} onClick={() => setCatFilter(catFilter === c ? null : c)} className={`px-3 py-1.5 rounded-xl text-xs font-body border capitalize transition-colors ${catFilter === c ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}>{c}</button>
+        <div className="rounded-2xl rounded-tl-none border-2 border-foreground bg-card shadow-[6px_6px_0_hsl(var(--foreground))] p-3 sm:p-4">
+          {/* Origem: posts, uploads e as categorias que já existiam. */}
+          <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden mb-3">
+            {[
+              { k: "todas", r: "Todas as origens", n: porBusca.length },
+              { k: "posts", r: "Dos posts", n: porBusca.filter((f) => f.origem === "posts").length },
+              { k: "uploads", r: "Meus uploads", n: porBusca.filter((f) => f.origem === "upload").length },
+              ...CATEGORIES.filter((c) => c !== "geral" && porBusca.some((f) => f.categoria === c)).map((c) => ({ k: c, r: c[0].toUpperCase() + c.slice(1), n: -1 })),
+            ].map((o) => (
+              <button key={o.k} type="button" onClick={() => setOrigem(o.k)} aria-pressed={origem === o.k}
+                className={cn("shrink-0 h-7 rounded-full border-2 border-foreground px-3 text-[11.5px] font-body font-bold",
+                  origem === o.k ? "bg-foreground text-background" : "bg-card text-foreground")}>
+                {o.r}{o.n >= 0 && <span className="ml-1 opacity-60 tabular-nums">{o.n}</span>}
+              </button>
             ))}
           </div>
+
+          {visiveis.length === 0 ? (
+            <div className="rounded-xl border-2 border-dashed border-foreground/30 py-14 text-center">
+              <FolderOpen className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+              <p className="font-display font-extrabold text-[17px]">
+                {itens.length === 0 ? "Seus arquivos aparecem aqui" : "Nada com esse filtro"}
+              </p>
+              <p className="text-[13px] font-body text-muted-foreground mt-1">
+                {itens.length === 0 ? "Envie imagens, PDFs e referências, ou arraste pra cá." : aba === "vencendo" ? "Nenhum arquivo temporário some nos próximos 7 dias." : "Troque a aba, a origem ou limpe a busca."}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div data-tour="arquivos-grade" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+                {mostradas.map((f) => (
+                  <FichaArquivo key={f.chave} f={f} resolver={getPublicUrl} onAbrir={() => void abrirFicha(f)} onApagar={() => void apagarFicha(f)} />
+                ))}
+              </div>
+              {visiveis.length > mostradas.length && (
+                <div className="flex justify-center pt-4">
+                  <button type="button" onClick={() => setQuantos((q) => q + PASSO)}
+                    className="h-9 rounded-full border-2 border-foreground bg-card px-5 text-[12.5px] font-body font-extrabold shadow-[3px_3px_0_hsl(var(--foreground))]">
+                    Ver mais {Math.min(PASSO, visiveis.length - mostradas.length)} de {visiveis.length - mostradas.length}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
-        {/* Links úteis / Drive do próprio criador (rótulo + URL + pastas do Drive) */}
         <UserLinksSection />
 
-        {/* Empty state */}
-        {filteredUploads.length === 0 && filteredDrive.length === 0 ? (
-          <div className="bg-card rounded-xl p-12 shadow-[var(--shadow-warm)] border border-border text-center">
-            <FolderOpen className="h-8 w-8 text-primary mx-auto mb-3" />
-            <p className="text-lg font-display font-semibold text-foreground mb-2">
-              {uploads.length === 0 && (driveFiles ?? []).length === 0 ? "Seus arquivos aparecem aqui" : "Nenhum arquivo encontrado"}
-            </p>
-            <p className="text-muted-foreground font-body text-sm">
-              {uploads.length === 0 && (driveFiles ?? []).length === 0 ? "Faça upload de imagens, PDFs e referências." : "Tente mudar os filtros."}
-            </p>
-          </div>
-        ) : (
-          <>
-            {(() => {
-              const openUpload = async (f: typeof filteredUploads[number]) => {
-                const url = await getPublicUrl(f.storage_path);
-                if (!url) { toast.error("Não foi possível abrir o arquivo."); return; }
-                // Tudo abre AQUI DENTRO. O PDF ia pra window.open, que o
-                // bloqueador de pop-up do celular engole a pessoa clicava e
-                // não acontecia nada. E o que não dá pra renderizar ainda tem
-                // "Baixar" e "Abrir" no cabeçalho do modal.
-                const ehPdf = (f.file_type ?? "").includes("pdf") || /\.pdf$/i.test(f.name ?? "");
-                const kind = isImage(f.file_type) ? "image" : ehPdf ? "pdf" : "none";
-                setPreview({ kind, url, name: f.name });
-              };
-              const renderUploadCard = (f: typeof filteredUploads[number], i: number) => {
-                const dleft = daysUntilExpiry(f.expires_at);
-                return (
-                  <motion.div
-                    key={f.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.02 }}
-                    onClick={() => openUpload(f)}
-                    className="bg-card rounded-xl border border-border overflow-hidden group cursor-pointer hover:shadow-warm-md hover:border-primary/30 transition-all"
-                  >
-                    <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                      {isImage(f.file_type) ? (
-                        <SignedImage path={f.storage_path} alt={f.name} resolve={getPublicUrl} />
-                      ) : (
-                        <FileText className="h-8 w-8 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="p-3">
-                      <p className="text-xs font-body font-medium text-foreground truncate">{f.name}</p>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-[10px] text-muted-foreground font-body">{formatSize(f.size_bytes)}</span>
-                        <button aria-label="Excluir arquivo" onClick={(e) => { e.stopPropagation(); handleDelete(f); }} className="p-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:bg-destructive/10 rounded transition-opacity">
-                          <Trash2 className="h-3 w-3 text-destructive" />
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-1 flex-wrap mt-1">
-                        {f.category && f.category !== "geral" && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-body bg-muted text-muted-foreground capitalize">{f.category}</span>
-                        )}
-                        {dleft !== null && (
-                          <span
-                            className={cn(
-                              "px-1.5 py-0.5 rounded text-[10px] font-body",
-                              dleft < 7 ? "bg-amber-500/15 text-amber-700 dark:text-amber-400" : "bg-muted text-muted-foreground"
-                            )}
-                          >
-                            {dleft <= 0 ? "Expira hoje" : `Expira em ${dleft}d`}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              };
-              return (
-                <>
-                  {/* Seção 1, Permanentes (expires_at = null) */}
-                  {filteredPermanent.length > 0 && (
-                    <div className="mb-6">
-                      <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">
-                        <ImageIcon className="h-4 w-4 text-primary" />
-                        Permanentes
-                        <span className="text-[10px] text-muted-foreground font-normal">({filteredPermanent.length})</span>
-                      </p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {filteredPermanent.map(renderUploadCard)}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Seção 2, Temporárias (expires_at preenchido) */}
-                  {filteredTemporary.length > 0 && (
-                    <div className="mb-6">
-                      <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-primary" />
-                        Temporárias ({retentionDays} dias)
-                        <span className="text-[10px] text-muted-foreground font-normal">({filteredTemporary.length})</span>
-                      </p>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {filteredTemporary.map(renderUploadCard)}
-                      </div>
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-
-            {/* Seção 2, Mídias vinculadas (Drive + Bunny + outros providers) */}
-            {filteredDrive.length > 0 && (
-              <div className="mb-6">
-                <p className="text-sm font-body font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <Cloud className="h-4 w-4 text-primary" />
-                  Mídias vinculadas
-                  <span className="text-[10px] text-muted-foreground font-normal">({filteredDrive.length})</span>
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {pagedDrive.map((f) => (
-                    <DriveMediaPreview
-                      key={f.id}
-                      fileName={f.file_name}
-                      fileType={f.file_type}
-                      thumbnailUrl={f.thumbnail_url}
-                      viewUrl={f.view_url}
-                      size="md"
-                      onRemove={() => deleteDriveRef(f)}
-                      onOpen={() => setPreview({ kind: "iframe", url: f.view_url, name: f.file_name })}
-                    />
-                  ))}
-                </div>
-
-                {/* Paginação: só quando passa de 12 itens. Botões recuar/avançar (‹ ›). */}
-                {filteredDrive.length > DRIVE_MEDIA_PAGE_SIZE && (
-                  <div className="flex items-center justify-center gap-3 pt-4">
-                    <Button variant="outline" size="sm" className="rounded-xl h-8 w-8 p-0" aria-label="Página anterior"
-                      onClick={() => setDrivePage((p) => Math.max(0, p - 1))} disabled={driveSafePage === 0}>
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="text-[12px] font-body text-muted-foreground tabular-nums">
-                      Página {driveSafePage + 1} de {driveTotalPages}
-                    </span>
-                    <Button variant="outline" size="sm" className="rounded-xl h-8 w-8 p-0" aria-label="Próxima página"
-                      onClick={() => setDrivePage((p) => Math.min(driveTotalPages - 1, p + 1))} disabled={driveSafePage >= driveTotalPages - 1}>
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
+        <p className="text-center text-[12px] font-body italic text-muted-foreground mt-5">
+          arraste arquivos em qualquer lugar desta tela pra enviar · temporários somem em {retentionDays} dias
+        </p>
       </motion.div>
 
       {/* Category Dialog */}

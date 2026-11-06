@@ -56,6 +56,9 @@ type Props = {
   onExpandedGoalChange: (id: string | null) => void;
   /** Instagram conectado: meta de Seguidores se atualiza sozinha (selo no card). */
   igConectado?: boolean;
+  /** Salvando a meta nova: trava o botão. Sem isso um clique duplo criava duas
+   *  metas iguais (aconteceu em 29/08, duas linhas com 0,7 s de diferença). */
+  criando?: boolean;
 };
 
 export function GoalsTab({
@@ -79,6 +82,7 @@ export function GoalsTab({
   onNewMilestoneNameChange,
   onExpandedGoalChange,
   igConectado,
+  criando,
 }: Props) {
   return (
     <div className="max-w-3xl space-y-6">
@@ -148,7 +152,7 @@ export function GoalsTab({
             </div>
             <div className="flex gap-2 justify-end">
               <Button variant="ghost" size="sm" onClick={() => onShowNewGoal(false)}>Cancelar</Button>
-              <Button size="sm" onClick={onCreateGoal} disabled={!newGoalForm.title.trim()}>Criar meta</Button>
+              <Button size="sm" onClick={onCreateGoal} disabled={!newGoalForm.title.trim() || criando}>{criando ? "Criando..." : "Criar meta"}</Button>
             </div>
           </CardContent>
         </Card>

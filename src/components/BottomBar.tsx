@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTravarRolagem } from "@/hooks/useTravarRolagem";
 import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
@@ -79,6 +80,7 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
 
 export function BottomBar() {
   const [moreOpen, setMoreOpen] = useState(false);
+  useTravarRolagem(moreOpen);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -155,7 +157,7 @@ export function BottomBar() {
   return (
     <>
       {moreOpen && (
-        <div className="fixed inset-0 z-40 md:hidden bg-foreground/20 backdrop-blur-sm" onClick={() => setMoreOpen(false)} />
+        <div className="fixed inset-0 z-40 md:hidden bg-foreground/20 backdrop-blur-sm touch-none" onClick={() => setMoreOpen(false)} />
       )}
       {moreOpen && (
         <div
@@ -167,7 +169,10 @@ export function BottomBar() {
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-muted-foreground/25" />
             <h2 className="text-xl font-display font-extrabold text-foreground">Menu</h2>
           </div>
-          <div className="overflow-y-auto px-3 pb-2">
+          {/* min-h-0: sem ele o filho de um flex-col cresce até o tamanho do conteúdo, é
+              cortado pelo pai (overflow-hidden) e nunca rola; o dedo então rolava a
+              página de trás. overscroll-contain: ao chegar no fim, não passa pra trás. */}
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-2">
             {sections.map((sec) => (
               <div key={sec.title} className="mb-2">
                 <p className="px-3 pt-3 pb-1.5"><span className="inline-flex items-center rounded-lg bg-primary/10 px-2.5 py-1 text-[11px] uppercase tracking-[0.1em] font-display font-extrabold text-primary">{sec.title}</span></p>

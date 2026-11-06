@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useState, type ReactNode } from "react";
+import { useTravarRolagem } from "@/hooks/useTravarRolagem";
 import { Navigate, Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -150,6 +151,7 @@ export default function ManagerLayout() {
   const [railHovered, setRailHovered] = useState(false);
   const [selectedModule, setSelectedModule] = useState<ModuleWithStatus | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
+  useTravarRolagem(moreOpen);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   // Tema: managers agora escolhem o próprio accent (igual usuário normal). Sem trava de roxo.
@@ -720,7 +722,7 @@ export default function ManagerLayout() {
         return (
           <>
             {moreOpen && (
-              <div className="fixed inset-0 z-40 md:hidden bg-foreground/20 backdrop-blur-sm" onClick={() => setMoreOpen(false)} />
+              <div className="fixed inset-0 z-40 md:hidden bg-foreground/20 backdrop-blur-sm touch-none" onClick={() => setMoreOpen(false)} />
             )}
             {moreOpen && (
               <div
@@ -732,7 +734,10 @@ export default function ManagerLayout() {
                   <h2 className="text-xl font-display font-extrabold text-foreground">Menu</h2>
                 </div>
 
-                <div className="overflow-y-auto px-3 pb-2">
+                {/* min-h-0: sem ele o filho de um flex-col cresce até o tamanho do conteúdo, é
+              cortado pelo pai (overflow-hidden) e nunca rola; o dedo então rolava a
+              página de trás. overscroll-contain: ao chegar no fim, não passa pra trás. */}
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-2">
                   {moreSections.filter((s) => s.items.length > 0).map((sec) => (
                     <div key={sec.title} className="mb-2">
                       <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground/70 px-3 pt-2.5 pb-1">{sec.title}</p>

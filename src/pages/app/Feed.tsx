@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutGrid, Grid3X3 } from "lucide-react";
+import { Grid3X3, ChevronUp } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { usePosts, type Post } from "@/hooks/usePosts";
@@ -13,12 +13,12 @@ import { useSocialConnection, useDailyMetrics, useMediaInsights } from "@/hooks/
 
 // Subset do profile renderizado no header do feed; vem direto da conta ATIVA.
 type FeedProfile = Pick<Profile, "name" | "avatar_url" | "niche" | "instagram_handle" | "bio">;
-import { Button } from "@/components/ui/button";
-import { FeedProfileHeader } from "@/components/feed/FeedProfileHeader";
+import { FeedProfileHeader, type AbaFeed } from "@/components/feed/FeedProfileHeader";
 import { FeedEditProfileDialog } from "@/components/feed/FeedEditProfileDialog";
 import { FeedAddSheet } from "@/components/feed/FeedAddSheet";
 import { FeedGrid, GRID_DROPPABLE_ID } from "@/components/feed/FeedGrid";
-import { FeedSidebar, SIDEBAR_DROPPABLE_ID, type StatusFilter } from "@/components/feed/FeedSidebar";
+import { FeedSidebar, SIDEBAR_DROPPABLE_ID, type FiltroMidia } from "@/components/feed/FeedSidebar";
+import { cn } from "@/lib/utils";
 
 const FEED_STATUSES = ["editando", "agendado", "publicado"] as const;
 type FeedStatus = (typeof FEED_STATUSES)[number];
@@ -82,7 +82,10 @@ const Feed = () => {
 
   const [gridPosts, setGridPosts] = useState<Post[]>([]);
   const [availablePosts, setAvailablePosts] = useState<Post[]>([]);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos");
+  const [filtroLista, setFiltroLista] = useState<FiltroMidia>("todos");
+  const [aba, setAba] = useState<AbaFeed>("grade");
+  // Esconder sem mídia: mostra só o que vai aparecer de fato no perfil.
+  const [esconderSemMidia, setEsconderSemMidia] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -215,6 +218,27 @@ const Feed = () => {
     },
   });
 
+  // Prévia: primeira mídia do post; sem mídia, a capa do Reels (cover_url).
+  const thumbs = useMemo(() => {
+    const m: Record<string, string | null> = { ...thumbnails };
+    for (const p of feedPosts) if (!m[p.id] && p.cover_url) m[p.id] = p.cover_url;
+    return m;
+  }, [thumbnails, feedPosts]);
+
+  const ehReels = (formato: string | null | undefined) => formato === "reels" || formato === "video";
+  const gradeVisivel = useMemo(() => {
+    let lista = gridPosts;
+    if (aba === "reels") lista = lista.filter((p) => ehReels(p.format));
+    if (esconderSemMidia) lista = lista.filter((p) => !!thumbs[p.id]);
+    return lista;
+  }, [gridPosts, aba, esconderSemMidia, thumbs]);
+  const igVisivel = useMemo(
+    () => (aba === "reels" ? igGridPosts.filter((m) => m.mediaType === "VIDEO" || m.mediaType === "REELS") : igGridPosts),
+    [aba, igGridPosts],
+  );
+  // Com filtro ligado o índice da tela não é o da lista inteira: arrastar desliga.
+  const podeArrastar = aba === "grade" && !esconderSemMidia;
+
   const handleDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
     if (!destination) return;
@@ -297,56 +321,58 @@ const Feed = () => {
   const sidebarPanel = (
     <FeedSidebar
       posts={availablePosts}
-      thumbnails={thumbnails}
-      statusFilter={statusFilter}
-      onStatusFilterChange={setStatusFilter}
+      thumbnails={thumbs}
+      filtro={filtroLista}
+      onFiltro={setFiltroLista}
       searchFilter={searchFilter}
       onSearchFilterChange={setSearchFilter}
+      onAdd={(id) => addManyToGrid([id])}
     />
   );
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="pb-20 md:pb-0">
+      <div className="pb-44 md:pb-0">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-          <div className="flex items-center justify-between mb-4 gap-3">
-            <div className="flex items-center gap-3 min-w-0 md:hidden">
+          <div className="flex items-center justify-between mb-4 gap-3 md:hidden">
+            <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-sm shrink-0">
                 <Grid3X3 className="h-5 w-5 text-white" strokeWidth={1.75} />
               </div>
               <div className="min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-foreground tracking-tight">Meu Feed</h1>
-                <p className="text-muted-foreground font-body mt-0.5 text-sm hidden sm:block">
-                  Organize visualmente como seu feed do Instagram vai ficar.
-                </p>
+                <h1 className="text-2xl font-display font-extrabold text-foreground tracking-tight">Meu Feed</h1>
               </div>
             </div>
-            <div className="md:hidden">
-              <Button data-tour="feed-adicionar" size="sm" className="shrink-0" onClick={() => setMobileSidebarOpen(true)}>
-                <LayoutGrid className="h-4 w-4 mr-1.5" />
-                Adicionar ({availablePosts.length})
-              </Button>
-              <FeedAddSheet
-                open={mobileSidebarOpen}
-                onOpenChange={setMobileSidebarOpen}
-                posts={availablePosts}
-                thumbnails={thumbnails}
-                onAddMany={addManyToGrid}
-              />
-            </div>
+            <FeedAddSheet
+              open={mobileSidebarOpen}
+              onOpenChange={setMobileSidebarOpen}
+              posts={availablePosts}
+              thumbnails={thumbs}
+              onAddMany={addManyToGrid}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4 md:gap-6">
-            <aside data-tour="feed-sidebar" className="hidden md:flex flex-col h-[calc(100vh-180px)] sticky top-4 bg-card rounded-xl border border-border overflow-hidden">
-              <div className="px-3 py-2.5 border-b border-border">
-                <p className="text-xs font-body font-semibold uppercase tracking-widest text-muted-foreground">
-                  Posts disponíveis
-                </p>
+            <aside data-tour="feed-sidebar" className="hidden md:flex flex-col h-[calc(100vh-180px)] sticky top-4 bg-card rounded-2xl border-2 border-foreground shadow-[4px_4px_0_hsl(var(--foreground))] overflow-hidden">
+              <div className="px-3 pt-3">
+                <p className="font-display font-extrabold text-[16px] text-foreground leading-tight">Pra montar o feed</p>
+                <p className="text-[11.5px] font-body text-muted-foreground">Arraste pra grade ou toque no +.</p>
               </div>
               {sidebarPanel}
             </aside>
 
-            <section data-tour="feed-grid">
+            <section data-tour="feed-grid" className="min-w-0">
+              <div className="mb-3 flex flex-wrap items-center gap-2 max-w-[470px] mx-auto">
+                <button type="button" aria-pressed={esconderSemMidia} onClick={() => setEsconderSemMidia((v) => !v)}
+                  className={cn("rounded-full border-2 border-foreground px-3 py-1 text-[12px] font-body font-bold transition-colors",
+                    esconderSemMidia ? "bg-foreground text-background" : "bg-card text-foreground")}>
+                  {esconderSemMidia ? "Mostrar sem mídia" : "Esconder sem mídia"}
+                </button>
+                <span className="text-[12px] font-body text-muted-foreground">
+                  {podeArrastar ? "Arraste pra reordenar. O selo com data ainda vai sair." : "Com filtro ligado a ordem não muda."}
+                </span>
+              </div>
+              <div className="max-w-[470px] mx-auto overflow-hidden bg-white dark:bg-black rounded-[22px] border-2 border-foreground shadow-[5px_5px_0_hsl(var(--foreground))] pb-0.5">
               <FeedProfileHeader
                 profile={profile}
                 postCount={gridPosts.length + igGridPosts.length}
@@ -358,14 +384,26 @@ const Feed = () => {
                   following: igConn?.follows_count ?? null,
                 } : null}
                 onEdit={isOwnAccount ? () => setEditProfileOpen(true) : undefined}
+                aba={aba}
+                onAba={setAba}
               />
-              <FeedGrid
-                posts={gridPosts}
-                pillars={pillars}
-                thumbnails={thumbnails}
-                igPosts={igGridPosts}
-                onRemove={removeFromGrid}
-              />
+              {aba === "marcados" ? (
+                <div className="py-14 px-6 text-center text-[#737373] dark:text-[#A8A8A8]">
+                  <p className="text-[15px] font-semibold text-[#000] dark:text-[#F5F5F5]">Fotos e vídeos com você</p>
+                  <p className="text-[13px] mt-1">As marcações vêm do Instagram e não entram na montagem do feed.</p>
+                </div>
+              ) : (
+                <FeedGrid
+                  posts={gradeVisivel}
+                  pillars={pillars}
+                  thumbnails={thumbs}
+                  igPosts={igVisivel}
+                  onRemove={removeFromGrid}
+                  reels={aba === "reels"}
+                  podeArrastar={podeArrastar}
+                />
+              )}
+              </div>
               {feedPosts.length === 0 && !postsLoading && (
                 <div className="mt-6 text-center py-10 px-4 rounded-2xl border border-dashed border-border bg-card">
                   <p className="text-sm font-body text-muted-foreground">
@@ -379,6 +417,27 @@ const Feed = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* CELULAR: a lista vira uma gaveta embaixo com as miniaturas; toque abre a
+          escolha (a ordem do toque é a ordem na grade). */}
+      <button type="button" data-tour="feed-adicionar" onClick={() => setMobileSidebarOpen(true)}
+        className="md:hidden fixed inset-x-3 z-30 rounded-2xl border-2 border-foreground bg-card shadow-[3px_3px_0_hsl(var(--foreground))] px-3 py-2 text-left"
+        style={{ bottom: "calc(88px + env(safe-area-inset-bottom, 0px))" }}>
+        <span className="flex items-center gap-2">
+          <span className="text-[13px] font-display font-extrabold text-foreground">Pra montar o feed · {availablePosts.length}</span>
+          <ChevronUp className="ml-auto h-4 w-4 text-muted-foreground" />
+        </span>
+        {availablePosts.length > 0 && (
+          <span className="mt-1.5 flex gap-1.5 overflow-hidden">
+            {availablePosts.slice(0, 6).map((p) => (
+              <span key={p.id} className={cn("h-10 w-8 shrink-0 overflow-hidden rounded-md",
+                thumbs[p.id] ? "border border-foreground/20 bg-muted" : "border border-dashed border-foreground/40 bg-muted/50")}>
+                {thumbs[p.id] && <img src={thumbs[p.id]!} alt="" className="h-full w-full object-cover" loading="lazy" />}
+              </span>
+            ))}
+          </span>
+        )}
+      </button>
 
       {isOwnAccount && (
         <FeedEditProfileDialog open={editProfileOpen} onOpenChange={setEditProfileOpen} />

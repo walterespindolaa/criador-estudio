@@ -390,6 +390,7 @@ const Plano = () => {
               onShowNewGoal={setShowNewGoal}
               onNewGoalFormChange={(patch) => setNewGoalForm(prev => ({ ...prev, ...patch }))}
               onCreateGoal={createGoal}
+              criando={createGoalMutation.isPending}
               onUpdateGoalValue={updateGoalValue}
               onUpdateGoalStatus={updateGoalStatus}
               onDeleteGoal={deleteGoal}
