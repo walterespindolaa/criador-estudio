@@ -24,7 +24,6 @@ import { definirBadge } from "@/lib/pwa";
 import { ModulePopup } from "@/components/accounts/ModulePopup";
 import { ClientSwitcher } from "@/components/accounts/ClientSwitcher";
 import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
-import { SettingsManagerDrawer } from "@/components/accounts/SettingsManagerDrawer";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { HeroBand } from "@/components/HeroBand";
 import { TituloCriakut } from "@/components/criakut/TituloCriakut";
@@ -100,6 +99,7 @@ const HERO_TITLES: Record<string, string> = {
   "/socialmidia/equipe": "Equipe",
   "/socialmidia/lixeira": "Lixeira",
   "/socialmidia/tutoriais": "Tutoriais",
+  "/socialmidia/configuracoes": "Configurações",
 };
 
 // useManagerOutlet / MODULE_ICON moram em managerOutlet.ts (arquivo leve) pra
@@ -144,7 +144,9 @@ export default function ManagerLayout() {
   const canAgenda = canTeam("agenda");
   const canClients = !actingAsTeam || canTeam("cria_gestao") || canTeam("cria_post");
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  /* CONFIGURAÇÕES VIRARAM PÁGINA (06/11/2026, mockup aprovado). A engrenagem
+     leva pra /socialmidia/configuracoes em vez de abrir a janela antiga. */
+  const abrirConfiguracoes = () => navigate("/socialmidia/configuracoes");
   const [railHovered, setRailHovered] = useState(false);
   const [selectedModule, setSelectedModule] = useState<ModuleWithStatus | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -160,13 +162,6 @@ export default function ManagerLayout() {
     if (profile?.theme_font) applyThemeFont(profile.theme_font);
   }, [profile]);
 
-  // O tour de Configurações abre o drawer via openFirst; quando o tour termina,
-  // fecha o drawer pra fila do treinamento seguir com a tela limpa.
-  useEffect(() => {
-    const fecha = () => setSettingsOpen(false);
-    window.addEventListener("cria-tour-fim", fecha);
-    return () => window.removeEventListener("cria-tour-fim", fecha);
-  }, []);
 
   const isActive = (to: string) =>
     to === "/socialmidia/dashboard"
@@ -280,7 +275,7 @@ export default function ManagerLayout() {
   // colaborador de alguma agência (a conta de time é restaurada só no próximo render).
   if (profile && profile.account_type !== "manager" && !hasManagedAccounts && !actingAsTeam && !isCollaborator && !souParceiro) return <Navigate to="/app" replace />;
 
-  const ctx: ManagerOutletContext = { openModule, openSettings: () => setSettingsOpen(true), parceiroPuro };
+  const ctx: ManagerOutletContext = { openModule, openSettings: abrirConfiguracoes, parceiroPuro };
 
   // ═══ FAIXA DO TOPO ═══
   // Antes ela repetia "Bom dia, Gabriela" a MESMA saudação que já está no card
@@ -521,7 +516,7 @@ export default function ManagerLayout() {
         <div className="flex w-full flex-col items-stretch gap-1">
           {railNode(PlayCircle, "Tutoriais", { active: isActive("/socialmidia/tutoriais"), onClick: () => navigate("/socialmidia/tutoriais") })}
           {railNode(Trash2, "Lixeira", { active: isActive("/socialmidia/lixeira"), onClick: () => navigate("/socialmidia/lixeira") })}
-          {railNode(SettingsIcon, "Configurações", { onClick: () => setSettingsOpen(true), dataTour: "nav-config" })}
+          {railNode(SettingsIcon, "Configurações", { active: isActive("/socialmidia/configuracoes"), onClick: abrirConfiguracoes, dataTour: "nav-config" })}
           {railNode(LogOut, "Sair", { onClick: handleSignOut })}
         </div>
         </div>
@@ -587,7 +582,7 @@ export default function ManagerLayout() {
             <NotificationsBell />
             <button
               type="button"
-              onClick={() => setSettingsOpen(true)}
+              onClick={abrirConfiguracoes}
               aria-label="Configurações"
               data-tour="nav-config-m"
               className="p-2 rounded-xl text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors"
@@ -718,7 +713,7 @@ export default function ManagerLayout() {
               { label: "Tutoriais", desc: "Vídeos curtos de cada tela", icon: PlayCircle as LucideIcon, onClick: () => navigate("/socialmidia/tutoriais") },
               { label: "Enviar feedback", desc: "Uma ideia ou um problema no app", icon: MessageSquarePlus as LucideIcon, onClick: () => setFeedbackOpen(true) },
               { label: "Lixeira", desc: "Recuperar o que você excluiu", icon: Trash2 as LucideIcon, onClick: () => navigate("/socialmidia/lixeira") },
-              { label: "Configurações", desc: "Perfil, visual e integrações", icon: SettingsIcon as LucideIcon, onClick: () => setSettingsOpen(true) },
+              { label: "Configurações", desc: "Perfil, visual e integrações", icon: SettingsIcon as LucideIcon, onClick: abrirConfiguracoes },
             ],
           },
         ];
@@ -817,7 +812,6 @@ export default function ManagerLayout() {
       })()}
 
       <ModulePopup module={selectedModule} onClose={() => setSelectedModule(null)} />
-      <SettingsManagerDrawer open={settingsOpen} onOpenChange={setSettingsOpen} />
       <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} origin="gestor" />
     </div>
     </TourProvider>

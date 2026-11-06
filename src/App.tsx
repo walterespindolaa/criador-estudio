@@ -119,6 +119,7 @@ const Parceria = lazy(() => import("./pages/socialmidia/Parceria"));
 const RelatorioGerencial = lazy(() => import("./pages/socialmidia/RelatorioGerencial"));
 const Comissoes = lazy(() => import("./pages/socialmidia/Comissoes"));
 const Contas = lazy(() => import("./pages/socialmidia/Contas"));
+const ConfiguracoesGestor = lazy(() => import("./pages/socialmidia/ConfiguracoesGestor"));
 const Clientes = lazy(() => import("./pages/socialmidia/Clientes"));
 const ClienteHub = lazy(() => import("./pages/socialmidia/ClienteHub"));
 const HubCria = lazy(() => import("./pages/socialmidia/HubCria"));
@@ -427,6 +428,8 @@ const App = () => (
                 <Route path="relatorio" element={<ErrorBoundary><RelatorioGerencial /></ErrorBoundary>} />
                 <Route path="comissoes" element={<ErrorBoundary><Comissoes /></ErrorBoundary>} />
                 <Route path="contas" element={<ErrorBoundary><Contas /></ErrorBoundary>} />
+                {/* Configurações da social mídia: era uma janela, virou página (06/11/2026). */}
+                <Route path="configuracoes" element={<ErrorBoundary><ConfiguracoesGestor /></ErrorBoundary>} />
                 <Route path="hubcria" element={<ErrorBoundary><HubCria /></ErrorBoundary>} />
                 <Route path="clientes" element={<ErrorBoundary><Clientes /></ErrorBoundary>} />
                 <Route path="clientes/:id" element={<ErrorBoundary><ClienteHub /></ErrorBoundary>} />

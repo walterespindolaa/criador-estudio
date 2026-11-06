@@ -378,3 +378,102 @@ export function InstagramPulse() {
     </PulseCard>
   );
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESUMO DO INSTAGRAM PRO INÍCIO (06/11/2026, mockup aprovado)
+
+   Os 4 números do pulso com a comparação contra os 30 dias anteriores (mesma
+   conta do bloco grande, que continua existindo pra quem usa) e, embaixo,
+   "o que mais funcionou": o post de maior alcance dos últimos 30 dias, com a
+   razão em relação à média e o Reaproveitar. Sem consulta nova: os dados são
+   os mesmos hooks (useDailyMetrics(30/60) e useMediaInsights).
+   O cartão de fora (borda, cabeçalho) é de quem chama: aqui só o miolo.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+export type MaisFuncionou = { postId: string | null; titulo: string; thumb: string | null; permalink: string | null; frase: string };
+
+export function useResumoInstagram() {
+  const { data: conn, isLoading } = useSocialConnection();
+  const { isOwnAccount, contaParaConectar } = useSocialAccountOwner();
+  const { data: daily = [] } = useDailyMetrics(30);
+  const { data: daily60 = [] } = useDailyMetrics(60);
+  const { data: media = [] } = useMediaInsights();
+
+  return useMemo(() => {
+    const agora = Date.now();
+    const janela = (de: number, ate: number) => media.filter((mi) => {
+      const t = mi.posted_at ? new Date(mi.posted_at).getTime() : 0;
+      return t >= agora - de * 86400000 && t < agora - ate * 86400000;
+    });
+    const atual = janela(30, 0), antes = janela(60, 30);
+    const alc = (l: MediaInsight[]) => l.reduce((a, mi) => a + m(mi, "reach"), 0);
+    const inter = (l: MediaInsight[]) => l.reduce((a, mi) => a + m(mi, "likes") + m(mi, "comments") + m(mi, "saved") + m(mi, "saves") + m(mi, "shares"), 0);
+    const temBase = atual.length >= 3 && antes.length >= 3 && alc(antes) > 0;
+    const reach = alc(atual);
+    const engA = reach > 0 ? (inter(atual) / reach) * 100 : null;
+    const engB = alc(antes) > 0 ? (inter(antes) / alc(antes)) * 100 : null;
+    const corte = new Date(agora - 30 * 86400000).toISOString().slice(0, 10);
+    const pv = (l: typeof daily60) => l.map((d) => d.profile_views).filter((v): v is number => v != null);
+    const pvA = pv(daily60.filter((d) => d.date >= corte)), pvB = pv(daily60.filter((d) => d.date < corte));
+    const somaB = pvB.reduce((a, b) => a + b, 0);
+    const fd = computeFollowersDelta(daily);
+
+    const comNumero = atual.filter((mi) => !semNumeros(mi));
+    const top = [...comNumero].sort((a, b) => m(b, "reach") - m(a, "reach"))[0];
+    let mais: MaisFuncionou | null = null;
+    if (top && comNumero.length >= 2) {
+      const outros = comNumero.filter((o) => o.id !== top.id);
+      const mediaAlc = outros.reduce((a, o) => a + m(o, "reach"), 0) / Math.max(1, outros.length);
+      const r = mediaAlc > 0 ? m(top, "reach") / mediaAlc : 0;
+      const quando = top.posted_at
+        ? new Date(top.posted_at).toLocaleDateString("pt-BR", { weekday: "long", timeZone: "America/Sao_Paulo" })
+          + " às " + new Date(top.posted_at).toLocaleTimeString("pt-BR", { hour: "2-digit", timeZone: "America/Sao_Paulo" }).replace(/:00$/, "") + "h"
+        : "";
+      mais = {
+        postId: top.post_id,
+        titulo: tituloDoPost(top),
+        thumb: top.thumbnail_url,
+        permalink: top.permalink,
+        frase: `${fmtNum(m(top, "reach"))} de alcance${r >= 1.2 ? `, ${fmtVezes(r)} a sua média` : ""}. ${rotuloTipo(top.media_type)}${quando ? `, ${quando}` : ""}.`,
+      };
+    }
+
+    return {
+      conn, isLoading, isOwnAccount, contaParaConectar,
+      seguidores: daily[daily.length - 1]?.followers ?? null,
+      seguidoresDelta: fd.hasWindow ? fd.delta : null,
+      alcance: reach,
+      alcancePct: temBase ? Math.round(((reach - alc(antes)) / alc(antes)) * 100) : null,
+      engajamento: engA,
+      engajamentoPts: temBase && engA != null && engB != null ? Math.round((engA - engB) * 10) / 10 : null,
+      visitas: totaisConta30d(daily).profileViews,
+      visitasPct: pvA.length >= 20 && pvB.length >= 20 && somaB > 0
+        ? Math.round(((pvA.reduce((a, b) => a + b, 0) - somaB) / somaB) * 100) : null,
+      mais,
+    };
+  }, [conn, isLoading, isOwnAccount, contaParaConectar, daily, daily60, media]);
+}
+
+const sinal = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+
+export function NumerosInstagram({ r, compacto = false }: { r: ReturnType<typeof useResumoInstagram>; compacto?: boolean }) {
+  const itens: { valor: string; rotulo: string; delta: string | null; bom: boolean }[] = [
+    { valor: fmtNum(r.seguidores), rotulo: "seguidores", delta: r.seguidoresDelta != null ? sinal(r.seguidoresDelta) : null, bom: (r.seguidoresDelta ?? 0) >= 0 },
+    { valor: fmtNum(r.alcance), rotulo: "alcance", delta: r.alcancePct != null ? `${sinal(r.alcancePct)}%` : null, bom: (r.alcancePct ?? 0) >= 0 },
+    { valor: r.engajamento != null ? `${r.engajamento.toFixed(1).replace(".", ",")}%` : "-", rotulo: "engajamento", delta: r.engajamentoPts != null ? `${sinal(r.engajamentoPts).replace(".", ",")} pts` : null, bom: (r.engajamentoPts ?? 0) >= 0 },
+    { valor: fmtNum(r.visitas), rotulo: "visitas ao perfil", delta: r.visitasPct != null ? `${sinal(r.visitasPct)}%` : null, bom: (r.visitasPct ?? 0) >= 0 },
+  ];
+  return (
+    <div className={cn("grid gap-2.5", compacto ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-4")}>
+      {itens.map((x) => (
+        <div key={x.rotulo} className="rounded-xl bg-muted/50 px-3.5 py-3 min-w-0">
+          <p className="font-display font-extrabold text-[22px] leading-none tabular-nums text-foreground">{x.valor}</p>
+          <p className="mt-1.5 text-[11.5px] font-body text-muted-foreground truncate">
+            {x.rotulo}
+            {x.delta && <b className={cn("ml-1.5 font-bold", x.bom ? "text-emerald-600" : "text-red-500")}>{x.delta}</b>}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}

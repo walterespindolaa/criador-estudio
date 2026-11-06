@@ -12,16 +12,15 @@ export const TOURS_CRIADOR: TourConfig[] = [
     route: "/app",
     title: "Seu dia começa aqui",
     valueProp:
-      "O Dashboard é o seu quartel-general: em 10 segundos você sabe o que tem pra hoje, o que tá travado e qual o próximo passo. Sem abrir 6 abas.",
+      "O Início responde uma pergunta: o que eu faço agora. O que sai hoje, o que está travado, a semana e as tarefas do dia, sem abrir outra tela.",
     benefits: [
-      "Veja tudo que importa do seu conteúdo num lugar só",
-      "Saiba sempre qual é a próxima melhor ação, com os outros avisos logo embaixo",
-      "Capture ideias em 2 segundos antes que elas fujam",
+      "Veja o que trava a produção antes de virar atraso",
+      "A semana com a linha editorial e os posts marcados num bloco só",
+      "Tarefas do dia e hábitos com um toque",
     ],
     steps: [
       {
-        // O checklist SOME quando você conclui os 7 itens ou dispensa. Sem isto o
-        // passo continuava no tour falando de algo que não está mais na tela.
+        // O checklist SOME quando você conclui os 7 itens ou dispensa.
         skipIfMissing: true,
         target: '[data-tour="dash-primeiros-passos"]',
         title: "Primeiros passos",
@@ -30,35 +29,35 @@ export const TOURS_CRIADOR: TourConfig[] = [
       },
       {
         target: '[data-tour="dash-acao"]',
-        title: "Sua próxima melhor ação",
-        body: "O CRIA analisa seu fluxo e te diz o que fazer AGORA pra manter a constância. Logo embaixo vêm os outros avisos da semana (meta, pilar esquecido, posts parados), cada um com o atalho pra resolver. Bateu dúvida do que fazer? Olha aqui primeiro.",
+        title: "O que sai hoje e o que trava",
+        body: "Quantos posts saem hoje e três atalhos: Nova ideia, Gravar no Prompter e Pedir pra Cria IA. Embaixo, o que trava: posts atrasados, esperando aprovação ou sem mídia. Toque num deles pra abrir o Criando.",
         placement: "bottom",
-      },
-      {
-        target: '[data-tour="dash-tiles"]',
-        title: "Seu conteúdo em números",
-        body: "Ideias, posts em criação, publicados, agendados, tarefas e hábitos. Cada card é clicável e te leva direto pra área correspondente.",
-        placement: "bottom",
-      },
-      {
-        target: '[data-tour="dash-instagram"]',
-        title: "Seu conteúdo no Instagram",
-        body: "Conecte sua conta business ou de criador e essa faixa deixa de ser convite pra virar número real: seguidores, alcance, engajamento e visitas ao perfil dos últimos 30 dias, sem abrir o app. A tarja verde cruza os seus posts e diz qual formato mais rende e qual o melhor dia pra postar. É esse mesmo dado que deixa a sugestão de horário do editor mais precisa. Sem conectar, o CRIA só consegue estimar pelo seu nicho.",
-        mobileBody: "Conecte sua conta business ou de criador e essa faixa vira número real: seguidores, alcance e engajamento dos últimos 30 dias. A tarja verde diz qual formato mais rende e qual o melhor dia pra postar.",
-        placement: "bottom",
-      },
-      {
-        target: '[data-tour="dash-posts"]',
-        title: "Próximos posts",
-        body: "O que vem pela frente, em ordem. Post atrasado ou sem data aparece aqui antes de virar problema.",
-        placement: "top",
       },
       {
         target: '[data-tour="dash-hoje"]',
-        title: "Hoje: tarefas e hábitos",
-        body: "As próximas tarefas com prazo e os seus hábitos de criação do dia, num bloco só. Marque o hábito quando fizer e crie um novo direto no campo de baixo. Ao lado ficam o gancho do dia, pra copiar, e quanto da Cria IA você já usou no mês.",
-        mobileBody: "As próximas tarefas com prazo e os hábitos de criação do dia, num bloco só. Marque o hábito quando fizer e crie um novo no campo de baixo.",
+        title: "Hoje",
+        body: "As tarefas de hoje, as sem prazo e as que ficaram pra trás. Marque com um toque e crie uma nova escrevendo na última linha e apertando Enter. Os hábitos do dia ficam embaixo, em pílulas.",
+        placement: "left",
+        mobileBody: "As tarefas de hoje. Marque com um toque e crie uma nova escrevendo na última linha. Os hábitos ficam embaixo.",
+      },
+      {
+        target: '[data-tour="dash-posts"]',
+        title: "Sai esta semana",
+        body: "Os próximos 7 dias com o pilar da sua linha editorial e os posts marcados, com a prévia da mídia. Contorno laranja é post travado. Dia sem nada mostra o atalho pra uma ideia do pilar.",
+        mobileBody: "Os próximos 7 dias com o pilar do dia e os posts marcados. Arraste pro lado. Contorno laranja é post travado.",
         placement: "top",
+      },
+      {
+        target: '[data-tour="dash-instagram"]',
+        title: "Seu Instagram",
+        body: "Seguidores, alcance, engajamento e visitas dos últimos 30 dias, comparados com os 30 anteriores. Embaixo, o post que mais funcionou no período, com o Reaproveitar. Sem o Instagram conectado, este bloco vira o convite pra conectar.",
+        placement: "top",
+      },
+      {
+        target: '[data-tour="dash-gancho"]',
+        title: "Gancho do dia",
+        body: "Um gancho por dia pra destravar. Copie ou toque em Usar no post pra criar um rascunho no Criando já com ele. Embaixo, quanto da Cria IA você usou no mês.",
+        placement: "left",
       },
       {
         target: '[data-tour="dash-quem"]',
@@ -67,20 +66,11 @@ export const TOURS_CRIADOR: TourConfig[] = [
         placement: "top",
       },
       {
-        // Some quando a pessoa dispensa ("Agora não") ou não tem acesso ao Criakut.
         skipIfMissing: true,
         target: '[data-tour="dash-criakut"]',
         title: "Sua página no Criakut",
         body: "O Criakut é onde social mídia, designer e editor se encontram com quem cria. Sua página sai pronta em 2 minutos com o que o Cria já sabe de você: nicho, tom e números do Instagram. Depois de publicada, este cartão mostra quem visitou e os pedidos de orçamento.",
         placement: "top",
-      },
-      {
-        target: '[data-tour="dash-captura"]',
-        title: "Nova ideia",
-        body: "Ideia boa não espera. Toque em Nova ideia, digite e capture: ela vai direto pro seu banco de ideias, e você organiza depois.",
-        placement: "bottom",
-        aiPrompt:
-          "Me sugira 5 ideias de post no tom da minha marca, usando meu brandbook como referência.",
       },
     ],
   },
@@ -676,38 +666,38 @@ export const TOURS_CRIADOR: TourConfig[] = [
     route: "/app/configuracoes",
     title: "Configurações",
     valueProp:
-      "Deixe o CRIA com a sua cara e do seu jeito: tema e cores, fonte, fundo decorativo, conexão com o Instagram, notificações, pilares de conteúdo e seu plano. Vale visitar cada aba uma vez.",
+      "Tudo da sua conta numa tela: o resumo mostra como está cada coisa (Instagram, tema, plano, avisos) e um toque leva pra mudar.",
     benefits: [
-      "Visual: tema CRIA, cores, fontes e fundos",
+      "Resumo com o estado de cada seção",
+      "Busca por palavra: senha, pix, tema",
       "Conecte o Instagram pra liberar os Insights",
-      "Pilares de conteúdo alimentam sua linha editorial",
-      "Notificações e resumo diário do seu jeito",
+      "Plano, uso da Cria IA e espaço no mesmo lugar",
     ],
     steps: [
       {
         target: '[data-tour="config-abas"]',
-        title: "Tudo em pílulas",
-        body: "Perfil, Pilares & Hábitos, Marca & Visual, Assinatura, Conexões, Notificações, Equipe e Conta. Cada pílula é uma seção. Vale visitar todas uma vez.",
-        mobileBody: "Perfil, Pilares & Hábitos, Marca & Visual, Assinatura, Conexões, Notificações, Equipe e Conta. Deslize a tira pro lado e toque na pílula pra trocar de seção.",
-        placement: "bottom",
+        title: "Três grupos e uma busca",
+        body: "Você (perfil, visual e hábitos), Ligações (Instagram, Drive, notificações e equipe) e Dinheiro e dados (plano e segurança). Ao lado de cada item aparece como ele está. A busca no topo acha a seção por palavra.",
+        mobileBody: "Uma lista em três grupos, cada linha com o estado ao lado. Toque numa linha pra abrir a seção; o voltar no topo traz de volta pra lista. A busca acha por palavra, como senha ou pix.",
+        placement: "right",
       },
       {
         target: '[data-tour="config-tab-visual"]',
-        title: "Marca & Visual",
-        body: "Tema, cores, fonte e fundo decorativo do app. Deixe o CRIA com a cara da sua marca: você passa horas aqui dentro, que seja bonito.",
-        placement: "bottom",
+        title: "Marca e visual",
+        body: "Tema, cores, fonte e faixa do topo. Deixe o Cria com a cara da sua marca: você passa horas aqui dentro, que seja bonito.",
+        placement: "right",
       },
       {
         target: '[data-tour="config-tab-assinatura"]',
-        title: "Assinatura",
-        body: "Seu plano atual, o uso da Cria IA do mês e o portal pra trocar de plano ou atualizar o cartão. Tudo de cobrança mora nessa pílula.",
-        placement: "bottom",
+        title: "Plano e espaço",
+        body: "Seu plano, o uso da Cria IA do mês, o espaço dos arquivos e o portal pra trocar de plano ou atualizar o cartão.",
+        placement: "right",
       },
       {
         target: '[data-tour="config-tab-conta"]',
-        title: "Conta",
-        body: "Senha, sair do app e exclusão de dados. O lado sério das configurações, num lugar só.",
-        placement: "bottom",
+        title: "Segurança",
+        body: "Senha, cópia dos seus dados e exclusão da conta. Sair da conta fica separado, no fim do menu.",
+        placement: "right",
       },
     ],
   },

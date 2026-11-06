@@ -1426,13 +1426,17 @@ export default function AgendaCriacao() {
               {WD.map((w) => <p key={w} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{w}</p>)}
             </div>
           )}
+          {/* O "hidden" vai POR ÚLTIMO (Walter, 06/11/2026: no celular a grade aparecia
+              embaixo do calendário). O cn() usa tailwind-merge, que entre classes de
+              display fica com a última: com o "hidden" antes, o "grid"/"flex" vencia e a
+              grade de dias continuava na tela no modo Calendário. */}
           <div ref={gradeRef} className={cn(
-            view === "mes" && mesModo === "calendario" && "hidden",
             gridLayout
               ? "grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 overflow-x-clip touch-pan-y"
               // Mobile: colunas espaçosas (~85vw, uma por vez com peek da próxima) e
               // scroll-snap suave; no lg vira grade de 7 sem scroll.
               : "flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth lg:grid lg:grid-cols-7 lg:gap-2 lg:overflow-visible lg:pb-0",
+            view === "mes" && mesModo === "calendario" && "hidden lg:hidden",
           )}>
             {days.map((d, i) => {
               const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const criaDay = criaPostsByDay.get(iso) ?? []; const dayMats = materialsByDay.get(iso) ?? [];

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Trash2, Camera, Eye, EyeOff, RefreshCw, Check, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, Users, LayoutGrid, Plug, Settings, Pencil, CreditCard, Instagram, Bell } from "lucide-react";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useActiveProfile, useAtualizarPerfilAtivo, caminhoAvatar } from "@/hooks/useActiveProfile";
@@ -21,7 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { validateUpload } from "@/lib/upload-validation";
 import { storageBytesForPlan, formatStorage } from "@/lib/plans";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { rotuloPlanoMeuPerfil } from "@/hooks/useMeuPerfil";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
@@ -35,6 +35,10 @@ import { AiUsageCard } from "@/components/shared/AiUsageCard";
 import { sanitizeText, sanitizeUrl } from "@/lib/sanitize";
 import { ImageCropModal } from "@/components/shared/ImageCropModal";
 import { cn } from "@/lib/utils";
+import { ConfigShell, CartaoResumo, CartaoSair, Selo, Barra, haQuanto, type ItemConfig } from "@/components/settings/ConfigShell";
+import { useAiUsage } from "@/hooks/useAiUsage";
+import { THEME_PRESETS } from "@/lib/themes";
+import { isPushEnabled } from "@/lib/push";
 
 const NICHE_OPTIONS = ["Lifestyle", "Moda", "Beleza", "Fitness", "Culinária", "Educação", "Negócios", "Entretenimento", "Saúde", "Tecnologia"];
 
@@ -54,30 +58,6 @@ const profileSchema = z.object({
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
-/* Pílulas de navegação: rótulo sempre visível (ícone sozinho não orienta ninguém)
-   e alvo de toque confortável no celular (min-h 44px). */
-// Celular: pílula com borda, a ativa escura. Computador: item do menu à esquerda,
-// o ativo com fundo da cor de destaque bem clarinho.
-const TAB_PILL = [
-  "flex items-center gap-2 whitespace-nowrap rounded-full border border-border bg-card px-3.5 py-2 min-h-[40px] text-[13px] font-body font-bold text-muted-foreground shadow-none",
-  "data-[state=active]:border-foreground data-[state=active]:bg-foreground data-[state=active]:text-background data-[state=active]:shadow-none",
-  "md:w-full md:justify-start md:rounded-xl md:border-0 md:bg-transparent md:px-3 md:py-2.5 md:min-h-[42px] md:text-sm md:font-medium md:text-foreground/80",
-  "md:data-[state=active]:bg-primary/10 md:data-[state=active]:text-primary md:data-[state=active]:font-bold md:hover:bg-muted",
-].join(" ");
-const ICONE_ABA = "h-4 w-4 shrink-0";
-const SEPARADOR_ABA = "hidden md:block my-1.5 mx-2 h-px bg-border";
-
-/** "há 2 dias" a partir de uma data ISO. */
-function haQuanto(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-  if (min < 1) return "agora";
-  if (min < 60) return `há ${min} min`;
-  const h = Math.round(min / 60);
-  if (h < 24) return `há ${h} h`;
-  const d = Math.round(h / 24);
-  return d === 1 ? "há 1 dia" : `há ${d} dias`;
-}
 
 /** Pix escondido: só os 2 últimos caracteres aparecem. */
 function mascararPix(v: string): string {
@@ -107,23 +87,25 @@ const Configuracoes = () => {
   const profile = (ehMeuPerfil ? perfilAtivo : perfilSessao) as typeof perfilSessao;
   const updateProfile = (ehMeuPerfil ? atualizarAtivo : updateSessao) as typeof updateSessao;
   const verPerfil = !isManaging || ehMeuPerfil;
-  // ?aba=assinatura abre direto na aba (link dos e-mails do teste, 03/11/2026).
-  const [aba, setAba] = useState<string>(() => {
-    const pedida = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("aba") : null;
-    return pedida || (verPerfil ? "perfil" : "pilares");
-  });
-  // Celular: a pílula ativa sempre à vista (rola a fileira até ela).
-  useEffect(() => {
-    if (typeof window === "undefined" || window.innerWidth >= 768) return;
-    document.querySelector(`[data-aba="${aba}"]`)?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
-  }, [aba]);
-  // Aba que sumiu (ex: trocou pra conta de cliente com a Marca e visual aberta): volta pra uma que existe.
+  /* A SEÇÃO MORA NA URL (?aba=assinatura). Os links dos e-mails do teste
+     continuam abrindo direto na seção, e o voltar do celular volta pra lista.
+     Sem ?aba abre o Resumo (cartões no computador, lista no celular). */
+  const [params, setParams] = useSearchParams();
+  const aba = params.get("aba") || "resumo";
+  const setAba = (v: string) => {
+    const n = new URLSearchParams(params);
+    if (v === "resumo") n.delete("aba"); else n.set("aba", v);
+    setParams(n);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0 });
+  };
+  // Seção que sumiu (ex: trocou pra conta de cliente com a Marca e visual aberta): volta pro resumo.
   useEffect(() => {
     const existe: Record<string, boolean> = {
-      perfil: verPerfil, pilares: true, visual: !isManaging || ehMeuPerfil, assinatura: !isManaging || ehMeuPerfil,
+      resumo: true, perfil: verPerfil, pilares: true, visual: !isManaging || ehMeuPerfil, assinatura: !isManaging,
       conexoes: !isManaging, notificacoes: !isManaging, equipe: !isManaging, conta: !isManaging,
     };
-    if (!existe[aba]) setAba(verPerfil ? "perfil" : "pilares");
+    if (!existe[aba]) setAba("resumo");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aba, verPerfil, isManaging, ehMeuPerfil]);
   const { habits, createHabit, deleteHabit: deleteHabitMutation } = useHabits();
   const navigate = useNavigate();
@@ -470,52 +452,190 @@ const Configuracoes = () => {
     toast.success("Google Drive desconectado.");
   };
 
+  // ── RESUMO: o estado de cada seção, visto de fora ─────────────────────
+  const ai = useAiUsage();
+  const [pushLigado, setPushLigado] = useState<boolean | null>(null);
+  useEffect(() => { void isPushEnabled().then(setPushLigado); }, [aba]);
+  // Mesma chave e mesma consulta da tela Equipe: o cache é compartilhado.
+  const { data: membros = [] } = useQuery({
+    queryKey: ["account-members", user?.id],
+    enabled: !!user?.id && !isManaging,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("account_members")
+        .select("id, member_email, member_id, status, invited_at, accepted_at")
+        .eq("owner_id", user!.id)
+        .order("invited_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as { id: string; status: string | null }[];
+    },
+  });
+  const pessoas = membros.filter((m) => m.status !== "revoked").length;
+  const tema = THEME_PRESETS.find((t) => t.id === (profile as { theme_preset?: string | null } | null)?.theme_preset) ?? THEME_PRESETS[0];
+  const corDestaque = (profile as { theme_accent?: string | null } | null)?.theme_accent || "#EA4918";
+  const planoAtivo = ["active", "trialing", "past_due", "unpaid"].includes(profile?.subscription_status ?? "");
+  const nomePlano = ehMeuPerfil
+    ? (rotuloPlanoMeuPerfil(perfilAtivo ?? null) || "sem plano")
+    : planoAtivo && profile?.plan === "studio" ? "Studio"
+    : planoAtivo && profile?.plan === "pro" ? "Pro"
+    : planoAtivo && profile?.plan === "essencial" ? "Essencial"
+    : profile?.trial_ends_at && new Date(profile.trial_ends_at).getTime() > Date.now()
+      ? `teste até ${new Date(profile.trial_ends_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}`
+      : "sem plano";
+  const usado = profile?.storage_used_bytes ?? 0;
+  const cota = profile?.storage_quota_bytes ?? storageBytesForPlan(profile?.plan, profile?.subscription_status === "active");
+  const igVencido = igConnection ? estadoConexaoIg(igConnection).reconectar : false;
+  const ligadas = (igConnection ? 1 : 0) + (driveConnection ? 1 : 0);
+
+  const itensConfig: ItemConfig[] = [
+    ...(verPerfil ? [{ id: "perfil", label: "Perfil", grupo: "voce", cor: "#EB4918",
+      estado: pixSalvo ? undefined : "falta Pix", tom: "alerta",
+      palavras: ["nome", "foto", "bio", "pix", "chave pix", "nicho", "instagram @", "tiktok", "youtube", "posts por semana"] } as ItemConfig] : []),
+    ...(!isManaging || ehMeuPerfil ? [{ id: "visual", label: "Marca e visual", grupo: "voce", cor: "#FF77B9", estado: tema.name,
+      palavras: ["tema", "cor", "cores", "destaque", "fonte", "faixa do topo", "escuro", "claro"], tour: "config-tab-visual" } as ItemConfig] : []),
+    { id: "pilares", label: "Hábitos", grupo: "voce", cor: "#00A652", estado: habits.length ? `${habits.length} ${habits.length === 1 ? "ativo" : "ativos"}` : undefined,
+      palavras: ["hábito", "rotina", "pilares"] },
+    ...(!isManaging ? [
+      { id: "conexoes", label: "Conexões", grupo: "ligacoes", cor: "#0061EE",
+        estado: igVencido ? "reconectar" : ligadas ? `${ligadas} ${ligadas === 1 ? "ligada" : "ligadas"}` : "nenhuma",
+        tom: igVencido ? "alerta" : ligadas ? "ok" : "neutro",
+        palavras: ["instagram", "google drive", "drive", "conectar", "desconectar", "reconectar"] },
+      { id: "notificacoes", label: "Notificações", grupo: "ligacoes", cor: "#FFCF03",
+        estado: pushLigado === null ? undefined : pushLigado ? "ligadas" : "desligadas", tom: pushLigado ? "ok" : "neutro",
+        palavras: ["aviso", "avisos", "push", "notificação", "testar aviso"] },
+      { id: "equipe", label: "Equipe", grupo: "ligacoes", cor: "#00A652",
+        estado: pessoas ? `${pessoas} ${pessoas === 1 ? "pessoa" : "pessoas"}` : undefined,
+        palavras: ["colaborador", "convidar", "acesso", "pessoas"] },
+      { id: "assinatura", label: "Plano e espaço", grupo: "dinheiro", cor: "#EB4918", estado: nomePlano,
+        palavras: ["plano", "assinatura", "cobrança", "cartão", "cria ia", "gerações", "espaço", "armazenamento", "retenção", "upgrade"], tour: "config-tab-assinatura" },
+      { id: "conta", label: "Segurança", grupo: "dinheiro", cor: "#6F675C",
+        palavras: ["senha", "trocar senha", "exportar", "baixar meus dados", "excluir conta", "lgpd", "sair"], tour: "config-tab-conta" },
+    ] as ItemConfig[] : []),
+  ];
+
+  const topoCelular = (
+    <button type="button" onClick={() => setAba(verPerfil ? "perfil" : "pilares")}
+      className="flex w-full items-center gap-3 rounded-2xl border-2 border-foreground bg-card p-3 text-left shadow-[3px_3px_0_hsl(var(--foreground))]">
+      <span className="h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-foreground bg-muted">
+        {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" /> : <span className="grid h-full w-full place-items-center font-display font-extrabold">{(profile?.name || "?").charAt(0).toUpperCase()}</span>}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-display text-[16px] font-extrabold text-foreground">{isManaging && !ehMeuPerfil ? managedName : profile?.name || "Seu perfil"}</span>
+        <span className="block truncate text-[12px] font-body text-muted-foreground">
+          {[!isManaging ? nomePlano : null, igConnection?.username ? `@${igConnection.username}` : null].filter(Boolean).join(" · ") || "Perfil"}
+        </span>
+      </span>
+      <ChevronRightIcon />
+    </button>
+  );
+
+  const resumo = (
+    <div>
+      <h1 className="font-display text-[26px] font-extrabold leading-tight text-foreground">Resumo da sua conta</h1>
+      <p className="mt-0.5 mb-5 text-sm font-body text-muted-foreground">O estado de cada configuração num olhar. Toque num cartão pra mudar.</p>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        {verPerfil && (
+          <CartaoResumo titulo="Perfil" acao="Editar perfil" onAcao={() => setAba("perfil")}>
+            <div className="flex items-center gap-3">
+              <span className="h-11 w-11 shrink-0 overflow-hidden rounded-full border-2 border-foreground bg-muted">
+                {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" /> : null}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-[14px] font-bold text-foreground">{profile?.name || "Sem nome"}</span>
+                <span className="block text-[12px]">
+                  {[profile?.niche?.split(",").slice(0, 2).map((x) => x.trim()).join(", "), profile?.weekly_goal ? `${profile.weekly_goal} posts por semana` : null].filter(Boolean).join(" · ") || "Nicho e meta ainda vazios"}
+                </span>
+              </span>
+            </div>
+            {!pixSalvo && <Selo tom="alerta">falta a chave Pix</Selo>}
+          </CartaoResumo>
+        )}
+        {(!isManaging || ehMeuPerfil) && (
+          <CartaoResumo titulo="Marca e visual" acao="Trocar tema" onAcao={() => setAba("visual")} tour="config-resumo-visual">
+            <div className="overflow-hidden rounded-xl border-2 border-foreground" style={{ background: tema.vars.background }} aria-hidden>
+              <div className="h-4" style={{ background: corDestaque }} />
+              <div className="flex gap-2 p-2">
+                <div className="w-1/4 rounded-md" style={{ background: tema.vars.sidebar, height: 34, border: `1px solid ${tema.vars.border}` }} />
+                <div className="flex-1 space-y-1.5 rounded-md p-1.5" style={{ background: tema.vars.card, border: `1px solid ${tema.vars.border}` }}>
+                  <div className="h-2 w-2/3 rounded-full" style={{ background: corDestaque }} />
+                  <div className="h-1.5 w-1/2 rounded-full" style={{ background: tema.vars.muted }} />
+                </div>
+              </div>
+            </div>
+            <p>Tema {tema.name}{tema.mode === "dark" ? ", escuro" : ""}.</p>
+          </CartaoResumo>
+        )}
+        {!isManaging && (
+          <CartaoResumo titulo="Plano e espaço" acao="Ver planos" onAcao={() => setAba("assinatura")}>
+            <Selo tom={nomePlano === "sem plano" ? "neutro" : "ok"}>{nomePlano}</Selo>
+            {ai.quota > 0 && (
+              <div className="space-y-1">
+                <p>Cria IA: {ai.used} de {ai.quota} gerações este mês</p>
+                <Barra pct={ai.pct} cor="#0061EE" />
+              </div>
+            )}
+            <div className="space-y-1">
+              <p>Arquivos: {formatStorage(usado)} de {formatStorage(cota)}</p>
+              <Barra pct={cota > 0 ? (usado / cota) * 100 : 0} cor="#00A652" />
+            </div>
+          </CartaoResumo>
+        )}
+        {!isManaging && (
+          <CartaoResumo titulo="Conexões" acao="Gerenciar" onAcao={() => setAba("conexoes")}>
+            <div className="flex flex-wrap gap-1.5">
+              {igConnection
+                ? <Selo tom={igVencido ? "alerta" : "ok"}>{igVencido ? "Instagram: reconectar" : `Instagram ligado${igConnection.username ? ` · @${igConnection.username}` : ""}`}</Selo>
+                : <Selo tom="neutro">Instagram não ligado</Selo>}
+              {driveConnection ? <Selo>Google Drive ligado</Selo> : <Selo tom="neutro">Drive não ligado</Selo>}
+            </div>
+            {igConnection?.updated_at && <p>Dados do Instagram atualizados {haQuanto(igConnection.updated_at)}.</p>}
+          </CartaoResumo>
+        )}
+        {!isManaging && (
+          <CartaoResumo titulo="Notificações" acao={pushLigado ? "Testar aviso" : "Ligar avisos"} onAcao={() => setAba("notificacoes")}>
+            {pushLigado !== null && <Selo tom={pushLigado ? "ok" : "neutro"}>{pushLigado ? "Ligadas neste aparelho" : "Desligadas neste aparelho"}</Selo>}
+            <p>Avisos e recados mesmo com o app fechado.</p>
+          </CartaoResumo>
+        )}
+        {!isManaging && (
+          <CartaoResumo titulo="Equipe" acao="Convidar" onAcao={() => setAba("equipe")}>
+            <Selo tom={pessoas ? "ok" : "neutro"}>{pessoas ? `${pessoas} ${pessoas === 1 ? "colaborador" : "colaboradores"}` : "Só você por enquanto"}</Selo>
+            <p>Quem tem acesso ao seu espaço.</p>
+          </CartaoResumo>
+        )}
+        <CartaoResumo titulo="Hábitos" acao="Ver hábitos" onAcao={() => setAba("pilares")}>
+          <Selo tom={habits.length ? "ok" : "neutro"}>{habits.length ? `${habits.length} ${habits.length === 1 ? "hábito ativo" : "hábitos ativos"}` : "Nenhum hábito ainda"}</Selo>
+          <p>As rotinas que sustentam a produção.</p>
+        </CartaoResumo>
+        {!isManaging && (
+          <CartaoResumo titulo="Segurança" acao="Trocar senha" onAcao={() => setAba("conta")} className="xl:col-span-2">
+            <p>Senha, cópia dos seus dados e exclusão da conta.</p>
+          </CartaoResumo>
+        )}
+      </div>
+      <CartaoSair onSair={() => setLogoutOpen(true)} />
+    </div>
+  );
+
   return (
     <div className="pb-20 md:pb-0">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <div className="flex items-center gap-3 mb-6 md:hidden">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-500 to-gray-600 flex items-center justify-center shadow-sm shrink-0">
-            <Settings className="h-5 w-5 text-white" strokeWidth={1.75} />
-          </div>
-          <div>
-            <h1 className="text-3xl font-display font-extrabold text-foreground tracking-tight">Configurações</h1>
-            <p className="text-muted-foreground font-body mt-0.5 text-sm">Gerencie sua conta e preferências.</p>
-          </div>
-        </div>
-
-        {isManaging && !ehMeuPerfil && (
-          <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-center justify-between gap-3">
-            <p className="text-sm font-body text-foreground">
-              Editando o conteúdo da conta de <b>{managedName}</b>. Suas configurações pessoais (perfil, Drive, segurança) ficam em <b>Minha conta</b>.
-            </p>
-            <button onClick={() => setActiveAccount(null)} className="text-sm font-semibold text-primary hover:underline shrink-0 whitespace-nowrap">
-              Ir para Minha conta
-            </button>
-          </div>
-        )}
-
-        {/* CONFIGURAÇÕES NOVAS (Walter, 19/10/2026, mockup aprovado). Computador:
-            menu à esquerda, agrupado, e o conteúdo alinhado ao lado. Celular:
-            pílulas que rolam de lado, a ativa escura e sempre à vista. */}
-        <Tabs value={aba} onValueChange={setAba} orientation="vertical"
-          className="w-full md:grid md:grid-cols-[200px_minmax(0,1fr)] md:items-start md:gap-6">
-          <div className="-mx-4 mb-5 overflow-x-auto px-4 scrollbar-none md:sticky md:top-24 md:mx-0 md:mb-0 md:overflow-visible md:px-0">
-            <TabsList data-tour="config-abas"
-              className="inline-flex h-auto min-w-max gap-1.5 bg-transparent p-0 md:flex md:w-full md:min-w-0 md:flex-col md:items-stretch md:gap-0.5 md:rounded-2xl md:border md:border-border md:bg-card md:p-2">
-              {verPerfil && <TabsTrigger value="perfil" data-aba="perfil" className={TAB_PILL}><User className={ICONE_ABA} /><span>Perfil</span></TabsTrigger>}
-              <TabsTrigger value="pilares" data-aba="pilares" className={TAB_PILL}><LayoutGrid className={ICONE_ABA} /><span>Hábitos</span></TabsTrigger>
-              {(!isManaging || ehMeuPerfil) && <TabsTrigger value="visual" data-aba="visual" data-tour="config-tab-visual" className={TAB_PILL}><Paintbrush className={ICONE_ABA} /><span>Marca e visual</span></TabsTrigger>}
-              {(!isManaging || ehMeuPerfil) && <span aria-hidden className={SEPARADOR_ABA} />}
-              {(!isManaging || ehMeuPerfil) && <TabsTrigger value="assinatura" data-aba="assinatura" data-tour="config-tab-assinatura" className={TAB_PILL}><CreditCard className={ICONE_ABA} /><span>Assinatura</span></TabsTrigger>}
-              {!isManaging && <TabsTrigger value="conexoes" data-aba="conexoes" className={TAB_PILL}><Plug className={ICONE_ABA} /><span>Conexões</span></TabsTrigger>}
-              {!isManaging && <TabsTrigger value="notificacoes" data-aba="notificacoes" className={TAB_PILL}><Bell className={ICONE_ABA} /><span>Notificações</span></TabsTrigger>}
-              {!isManaging && <TabsTrigger value="equipe" data-aba="equipe" className={TAB_PILL}><Users className={ICONE_ABA} /><span>Equipe</span></TabsTrigger>}
-              {!isManaging && <span aria-hidden className={SEPARADOR_ABA} />}
-              {!isManaging && <TabsTrigger value="conta" data-aba="conta" data-tour="config-tab-conta" className={TAB_PILL}><Shield className={ICONE_ABA} /><span>Conta</span></TabsTrigger>}
-            </TabsList>
-          </div>
-
-          <div className="w-full">
+        {/* CONFIGURAÇÕES EM UMA TELA SÓ (Walter, 06/11/2026, mockup aprovado).
+            A casca (menu em grupos, busca, lista do celular) é a mesma da
+            social mídia: src/components/settings/ConfigShell.tsx. */}
+        <Tabs value={aba} onValueChange={setAba} className="w-full">
+          <ConfigShell itens={itensConfig} aba={aba} irPara={setAba} onSair={() => setLogoutOpen(true)} topoCelular={topoCelular}
+            aviso={isManaging && !ehMeuPerfil ? (
+              <div className="mb-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-center justify-between gap-3">
+                <p className="text-sm font-body text-foreground">
+                  Editando o conteúdo da conta de <b>{managedName}</b>. Suas configurações pessoais (perfil, Drive, segurança) ficam em <b>Minha conta</b>.
+                </p>
+                <button onClick={() => setActiveAccount(null)} className="text-sm font-semibold text-primary hover:underline shrink-0 whitespace-nowrap">
+                  Ir para Minha conta
+                </button>
+              </div>
+            ) : null}>
+            <TabsContent value="resumo" className="mt-0">{resumo}</TabsContent>
             {verPerfil && (
             <TabsContent value="perfil">
               {/* Mobile: uma coluna, mesma ordem de sempre. Desktop (lg): duas colunas
@@ -867,7 +987,7 @@ const Configuracoes = () => {
             {!isManaging && (
             <TabsContent value="assinatura">
               <div className="max-w-2xl space-y-6">
-                <SectionHeader title="Assinatura e armazenamento" desc="Seu plano, uso da Cria IA e espaço de arquivos, tudo num lugar só." />
+                <SectionHeader title="Plano e espaço" desc="Seu plano, uso da Cria IA e espaço de arquivos, tudo num lugar só." />
                 {/* MEU PERFIL (passo 6): plano do perfil e caminho pra assinar. */}
                 {ehMeuPerfil && (
                   <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-3">
@@ -1034,7 +1154,7 @@ const Configuracoes = () => {
             {!isManaging && (
             <TabsContent value="conta">
               <div className="max-w-2xl space-y-6">
-                <SectionHeader title="Conta" desc="Segurança, acesso e decisões definitivas sobre a sua conta." />
+                <SectionHeader title="Segurança" desc="Senha, cópia dos seus dados e decisões definitivas sobre a sua conta." />
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                   <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><Lock className="h-5 w-5 text-primary" /> Segurança da Conta</h3>
                   <div className="space-y-4">
@@ -1097,7 +1217,7 @@ const Configuracoes = () => {
               </div>
             </TabsContent>
             )}
-          </div>
+          </ConfigShell>
         </Tabs>
 
         <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
@@ -1175,6 +1295,10 @@ const Configuracoes = () => {
     </div>
   );
 };
+
+const ChevronRightIcon = () => (
+  <svg className="h-4 w-4 shrink-0 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m9 18 6-6-6-6"/></svg>
+);
 
 const Loader2 = ({ className }: { className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>

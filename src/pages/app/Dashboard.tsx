@@ -1,546 +1,323 @@
-import { useEffect, useState, useMemo } from "react";
-import { AtalhosInicio } from "@/components/dashboard/AtalhosInicio";
-import { createPortal } from "react-dom";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Lightbulb, FileText, CheckCircle2, Sparkles, Copy, Check,
-  ListChecks, Pencil, Trash2, Clock, Flame, ArrowRight, CheckSquare
-} from "lucide-react";
-import { useBrandItems } from "@/hooks/useBrandItems";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, Copy, Check, Lightbulb, Repeat2, Sparkles, Video, Instagram, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCriaAI } from "@/contexts/CriaAIContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
-import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
-import { getDailyInsight } from "@/lib/ai/claude";
-import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, isWithinInterval, parseISO } from "date-fns";
-import { hojeBR, toISODateBR } from "@/lib/date-br";
-import { sanitizeText } from "@/lib/sanitize";
-import { useIdeas } from "@/hooks/useIdeas";
-import { usePosts } from "@/hooks/usePosts";
+import { useBrandItems } from "@/hooks/useBrandItems";
+import { usePosts, type Post } from "@/hooks/usePosts";
 import { useHabits } from "@/hooks/useHabits";
 import { useTasks } from "@/hooks/useTasks";
+import { useTarefasExtras, type TarefaExtra } from "@/hooks/useTarefasExtras";
 import { usePillars } from "@/hooks/usePillars";
-import { ConviteCriakut } from "@/components/criakut/ConviteCriakut";
+import { useTier } from "@/hooks/useTier";
+import { useAiUsage } from "@/hooks/useAiUsage";
 import { useAcessoCriakut } from "@/hooks/useCriakut";
-import { NextBestAction } from "@/components/dashboard/NextBestAction";
-import { InstagramPulse } from "@/components/dashboard/InstagramPulse";
+import { connectInstagram } from "@/hooks/useSocialInsights";
+import { hojeBR, parseDateOnly } from "@/lib/date-br";
+import { getThumbnailUrl, type MediaLike } from "@/lib/driveMedia";
+import { contarTravas, saiu, somarDias, type Trava } from "@/lib/oQueTrava";
+import { cn } from "@/lib/utils";
+import { ConviteCriakut } from "@/components/criakut/ConviteCriakut";
 import { FirstStepsPanel } from "@/components/dashboard/FirstStepsPanel";
-import { UpcomingPosts } from "@/components/dashboard/UpcomingPosts";
-import { UpcomingTasks } from "@/components/dashboard/UpcomingTasks";
 import { WhoYouAre } from "@/components/dashboard/WhoYouAre";
+import { CapturaRapidaDialog } from "@/components/dashboard/CapturaRapidaDialog";
+import { VitrineStudio } from "@/components/dashboard/AtalhosInicio";
+import { NumerosInstagram, useResumoInstagram } from "@/components/dashboard/InstagramPulse";
+import { AtalhoInicio, CardInicio, CARTAO_INICIO, FaixaTrava, HojeDoCriador, SemanaDoCriador, type PostSemana } from "@/components/dashboard/InicioBlocos";
+import { RepurposeSheet } from "@/components/kanban/RepurposeSheet";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
-import { AiUsageCard } from "@/components/shared/AiUsageCard";
-import { confirmar } from "@/components/shared/Confirm";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INÍCIO DO CRIADOR (Walter, 06/11/2026, mockup aprovado)
+
+   A home responde uma pergunta: o que eu faço agora.
+     1. Topo: o dia, quanto sai hoje e três atalhos (Nova ideia, Gravar no
+        Prompter, Cria IA). Logo embaixo, o que trava (mesma conta do Criando).
+     2. Sai esta semana (linha editorial + posts, num bloco só) | Hoje.
+     3. Seu Instagram com comparação e o que mais funcionou | Gancho e Cria IA.
+     4. Quem é você e o Criakut no fim.
+   Saíram da primeira tela: os números de "Meu conteúdo" (o Criando mostra), o
+   filtro de período e a próxima ação (o que trava faz esse papel).
+
+   GRADE ÚNICA: 12 colunas a partir de lg, gap de 20px em linha e coluna, e
+   cada bloco é um CardInicio (cabeçalho h-14, corpo p-5). Blocos da mesma
+   linha têm a mesma altura porque o grid estica e o cartão é h-full. No
+   celular, uma coluna só com o mesmo gap.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 const HOOKS_VIRAL = [
-  { text: "Você sabia que [dado surpreendente]?", category: "curiosidade" },
-  { text: "O erro que quase todo mundo comete sem perceber...", category: "problema" },
-  { text: "3 coisas que eu faria diferente se começasse hoje", category: "storytelling" },
-  { text: "Pare de [ação comum] se quiser [resultado]", category: "contraste" },
-  { text: "A verdade que ninguém fala sobre [tema]", category: "polêmica" },
-  { text: "Eu gastei [tempo] pra aprender isso, te conto em 60s", category: "curiosidade" },
-  { text: "Se você [dor do público], esse vídeo é pra você", category: "identificação" },
-  { text: "O segredo que [referência] não te conta", category: "promessa" },
-  { text: "Todo mundo fala pra fazer X, mas ninguém fala que...", category: "contraste" },
-  { text: "Eu perdi [algo] por não saber disso antes", category: "storytelling" },
-  { text: "Você está fazendo [ação] errado. Veja porquê.", category: "problema" },
-  { text: "O que [referência] faz que você não faz", category: "curiosidade" },
-  { text: "Testei [método] por 30 dias. O resultado me surpreendeu.", category: "storytelling" },
-  { text: "5 sinais de que você está [problema]", category: "identificação" },
-  { text: "Por que [crença popular] está ERRADO", category: "polêmica" },
-  { text: "Antes vs Depois de eu descobrir [solução]", category: "contraste" },
-  { text: "Se eu pudesse voltar no tempo, diria isso a mim mesmo...", category: "storytelling" },
-  { text: "Você NÃO precisa de [coisa cara] pra [resultado]", category: "promessa" },
-  { text: "A fórmula que me ajudou a [resultado] em [tempo]", category: "promessa" },
-  { text: "Me julga, mas eu faço [hábito controverso] e funciona", category: "polêmica" },
+  "Você sabia que [dado surpreendente]?",
+  "O erro que quase todo mundo comete sem perceber...",
+  "3 coisas que eu faria diferente se começasse hoje",
+  "Pare de [ação comum] se quiser [resultado]",
+  "A verdade que ninguém fala sobre [tema]",
+  "Eu gastei [tempo] pra aprender isso, te conto em 60s",
+  "Se você [dor do público], esse vídeo é pra você",
+  "O segredo que [referência] não te conta",
+  "Todo mundo fala pra fazer X, mas ninguém fala que...",
+  "Eu perdi [algo] por não saber disso antes",
+  "Você está fazendo [ação] errado. Veja porquê.",
+  "O que [referência] faz que você não faz",
+  "Testei [método] por 30 dias. O resultado me surpreendeu.",
+  "5 sinais de que você está [problema]",
+  "Por que [crença popular] está ERRADO",
+  "Antes vs Depois de eu descobrir [solução]",
+  "Se eu pudesse voltar no tempo, diria isso a mim mesmo...",
+  "Você NÃO precisa de [coisa cara] pra [resultado]",
+  "A fórmula que me ajudou a [resultado] em [tempo]",
+  "Me julga, mas eu faço [hábito controverso] e funciona",
 ];
 
-const getDaysOfWeek = () => {
-  const today = new Date();
-  const monday = new Date(today);
-  // Semana começa no DOMINGO.
-  monday.setDate(today.getDate() - today.getDay());
-  const days = [];
-  const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    days.push({
-      name: dayNames[i],
-      date: toISODateBR(d),
-      dayNum: d.getDate(),
-      isToday: toISODateBR(d) === toISODateBR(today),
-    });
-  }
-  return days;
-};
-
-type PeriodKey = "tudo" | "hoje" | "semana" | "quinzenal" | "mes" | "ano" | "personalizado";
-
-// `primary` periods are visible on mobile; the rest collapse to >= sm.
-const PERIOD_OPTIONS: { key: PeriodKey; label: string; primary?: boolean }[] = [
-  { key: "tudo", label: "Tudo", primary: true },
-  { key: "hoje", label: "Hoje" },
-  { key: "semana", label: "Semana", primary: true },
-  { key: "quinzenal", label: "Quinzenal" },
-  { key: "mes", label: "Mês", primary: true },
-  { key: "ano", label: "Ano", primary: true },
-  { key: "personalizado", label: "Personalizado" },
-];
-
-function getDateRange(period: PeriodKey, customRange?: { from: Date; to: Date }): { start: Date; end: Date } | null {
-  const now = new Date();
-  switch (period) {
-    case "tudo": return null;
-    case "hoje": return { start: new Date(now.getFullYear(), now.getMonth(), now.getDate()), end: now };
-    case "semana": return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
-    case "quinzenal": return { start: subDays(now, 14), end: now };
-    case "mes": return { start: startOfMonth(now), end: endOfMonth(now) };
-    case "ano": return { start: startOfYear(now), end: endOfYear(now) };
-    case "personalizado": return customRange ? { start: customRange.from, end: customRange.to } : null;
-    default: return null;
-  }
-}
-
-function isInRange(dateStr: string | null, range: { start: Date; end: Date } | null): boolean {
-  if (!range || !dateStr) return !range;
-  try {
-    const d = parseISO(dateStr.split("T")[0]);
-    return isWithinInterval(d, { start: range.start, end: range.end });
-  } catch { return false; }
-}
-
-function DCard({ children, className, onClick, ...rest }: { children: React.ReactNode; className?: string; onClick?: () => void } & React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      onClick={onClick}
-      className={cn("bg-card rounded-xl p-5 shadow-[var(--shadow-warm)] border border-border", className, onClick && "cursor-pointer hover:border-primary/30 transition-all")}
-      {...rest}
-    >
-      {children}
-    </div>
-  );
-}
+const GAP = "gap-5";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
-  // Criakut pausado até o relançamento (04/11/2026): sem acesso, o bloco nem entra na home.
+  const { openCria } = useCriaAI();
   const { temAcesso: temCriakut } = useAcessoCriakut();
   const { isLoading: profileLoading } = useProfile();
-  // Saudação/avatar do header refletem a CONTA ATIVA (não a manager).
   const { profile: activeProfile } = useActiveProfile();
-  const navigate = useNavigate();
   const { brandItems } = useBrandItems();
   const temTom = brandItems.some((i) => i.type === "tom");
+  const { isStudio } = useTier();
+  const hoje = useMemo(() => hojeBR(), []);
+  const fimSemana = useMemo(() => somarDias(hoje, 6), [hoje]);
 
-  const today = useMemo(() => hojeBR(), []);
-  const weekDays = useMemo(() => getDaysOfWeek(), []);
-
-  const { ideas } = useIdeas({ limit: 20 });
-  const { posts } = usePosts({ limit: 20 });
-  const {
-    habits,
-    habitLogs,
-    createHabit,
-    updateHabit: updateHabitMutation,
-    deleteHabit,
-    toggleHabitLog,
-  } = useHabits({ date: today, limit: 20 });
-  const { tasks } = useTasks({ limit: 20 });
+  const { posts, createPost } = usePosts();
+  const { tasks, createTask } = useTasks({ limit: 200 });
+  const { alternar } = useTarefasExtras();
+  const { habits, habitLogs, toggleHabitLog } = useHabits({ date: hoje, limit: 20 });
   const { pillars } = usePillars();
+  const ia = useAiUsage();
+  const insta = useResumoInstagram();
 
-  const editorialDays = useMemo(() => ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"], []);
-  const todayIndex = useMemo(() => {
-    const d = new Date().getDay();
-    return d === 0 ? 6 : d - 1;
-  }, []);
+  const [captura, setCaptura] = useState(false);
+  const [vitrine, setVitrine] = useState(false);
+  const [reaproveitar, setReaproveitar] = useState<Post | null>(null);
+  const [copiado, setCopiado] = useState(false);
 
-  const [period, setPeriod] = useState<PeriodKey>("semana");
-  const [customRange, setCustomRange] = useState<{ from: Date; to: Date }>({ from: new Date(), to: new Date() });
-  const [, setCustomOpen] = useState(false);
+  /* Posts que ainda contam: os que não saíram, mais os da semana (pra mostrar
+     o que já saiu no dia). É sobre eles que a faixa e a semana trabalham. */
+  const ativos = useMemo(() => posts.filter((p) => !saiu(p) || (p.scheduled_date && p.scheduled_date.slice(0, 10) >= hoje && p.scheduled_date.slice(0, 10) <= fimSemana)), [posts, hoje, fimSemana]);
+  const ids = useMemo(() => ativos.filter((p) => !saiu(p) && p.status !== "ideia").map((p) => p.id).sort(), [ativos]);
 
-  const dateRange = useMemo(() => getDateRange(period, customRange), [period, customRange]);
+  // Primeira mídia de cada post (mesma leitura dos Agendamentos): serve pra
+  // prévia da semana e pra saber o que está sem mídia.
+  const { data: midias = new Map<string, string | null>() } = useQuery<Map<string, string | null>>({
+    queryKey: ["inicio-midias", ids.join(",")],
+    enabled: ids.length > 0,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const sb = supabase.from.bind(supabase) as unknown as (t: string) => ReturnType<typeof supabase.from>;
+      const m = new Map<string, string | null>();
+      for (let i = 0; i < ids.length; i += 200) {
+        const { data } = await sb("external_media_refs")
+          .select("post_id,provider,external_file_id,file_type,thumbnail_url,view_url,download_url,position,created_at")
+          .in("post_id", ids.slice(i, i + 200)).eq("substituida", false)
+          .order("position", { ascending: true, nullsFirst: true });
+        for (const r of ((data as unknown as (MediaLike & { post_id: string })[]) ?? [])) {
+          if (m.has(r.post_id) && m.get(r.post_id)) continue;
+          m.set(r.post_id, getThumbnailUrl(r, 240));
+        }
+      }
+      return m;
+    },
+  });
+  const comMidia = useMemo(() => new Set(midias.keys()), [midias]);
+  const thumbs = useMemo(() => {
+    const t = new Map<string, string>();
+    midias.forEach((v, k) => { if (v) t.set(k, v); });
+    return t;
+  }, [midias]);
 
-  const [, setAiInsight] = useState<string | null>(null);
-  const [copiedHook, setCopiedHook] = useState(false);
-  const [newHabitName, setNewHabitName] = useState("");
-  const [editingHabitId, setEditingHabitId] = useState<string | null>(null);
-  const [editingHabitName, setEditingHabitName] = useState("");
+  const travas = useMemo(() => contarTravas(ativos.filter((p) => !saiu(p)), comMidia, hoje), [ativos, comMidia, hoje]);
+  const saiHoje = ativos.filter((p) => !saiu(p) && p.scheduled_date?.slice(0, 10) === hoje).length;
+  const praGravar = posts.filter((p) => p.status === "gravando").length;
+  const semana = useMemo(() => ativos.filter((p) => {
+    const d = p.scheduled_date?.slice(0, 10);
+    return !!d && d >= hoje && d <= fimSemana;
+  }) as unknown as PostSemana[], [ativos, hoje, fimSemana]);
 
-  useEffect(() => {
-    if (!user || !posts.length) return;
-    const publishedPosts = posts.filter(p => p.status === "publicado");
-    if (publishedPosts.length < 3) return;
-    const cacheKey = `daily-insight-${user.id}-${today}`;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) { setAiInsight(cached); return; }
-    const weekPosts = posts.filter(p => p.published_at && weekDays.some(d => d.date === p.published_at?.split("T")[0]));
-    const pillarCounts: Record<string, number> = {};
-    publishedPosts.forEach(p => { pillarCounts[p.platform] = (pillarCounts[p.platform] || 0) + 1; });
-    const topPillar = Object.entries(pillarCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
-    getDailyInsight({
-      postsThisWeek: weekPosts.length,
-      weeklyGoal: activeProfile?.weekly_goal || 3,
-      topPillar,
-      lastPublished: publishedPosts[publishedPosts.length - 1]?.published_at || "",
-    }, user?.id)
-      .then(insight => { if (insight) { setAiInsight(insight); localStorage.setItem(cacheKey, insight); } })
-      .catch(() => { /* noop */ });
-  }, [posts, user, activeProfile, today, weekDays]);
-
-  const handleToggleHabit = async (habitId: string) => {
-    try {
-      await toggleHabitLog.mutateAsync({ habitId, date: today });
-    } catch {
-      toast.error("Erro ao atualizar hábito.");
-    }
-  };
-
-  const addHabit = async () => {
-    const sanitized = sanitizeText(newHabitName);
-    if (!sanitized) return;
-    try {
-      await createHabit.mutateAsync({ name: sanitized });
-      setNewHabitName("");
-      toast.success("Hábito adicionado!");
-    } catch {
-      toast.error("Erro ao adicionar hábito.");
-    }
-  };
-
-  const handleDeleteHabit = async (habitId: string) => {
-    if (!(await confirmar({ titulo: "Remover este hábito?", descricao: "O histórico de dias marcados vai junto.", acao: "Remover", destrutivo: true }))) return;
-    try {
-      await deleteHabit.mutateAsync(habitId);
-      toast.success("Hábito removido.");
-    } catch {
-      toast.error("Erro ao remover hábito.");
-    }
-  };
-
-  const handleUpdateHabit = async (habitId: string) => {
-    const sanitized = sanitizeText(editingHabitName);
-    if (!sanitized) return;
-    try {
-      await updateHabitMutation.mutateAsync({ id: habitId, name: sanitized });
-      setEditingHabitId(null);
-      setEditingHabitName("");
-    } catch {
-      toast.error("Erro ao atualizar hábito.");
-    }
-  };
-
-  const handleCopyHook = async () => {
-    await navigator.clipboard.writeText(dailyHook.text);
-    setCopiedHook(true);
-    setTimeout(() => setCopiedHook(false), 2000);
-  };
-
-  const filteredPosts = useMemo(() => {
-    if (!dateRange) return posts;
-    return posts.filter(p => isInRange(p.scheduled_date, dateRange) || isInRange(p.published_at, dateRange));
-  }, [posts, dateRange]);
-
-  const filteredTasks = useMemo(() => {
-    if (!dateRange) return tasks;
-    return tasks.filter(t => isInRange(t.due_date, dateRange));
-  }, [tasks, dateRange]);
-
-  const publishedFiltered = filteredPosts.filter(p => p.status === "publicado");
-  const inCreationFiltered = filteredPosts.filter(p => p.status !== "publicado");
-  const scheduledFiltered = filteredPosts.filter(p => p.scheduled_date && p.status !== "publicado");
-  const pendingTasks = filteredTasks.filter(t => t.status === "pendente");
-  const inProgressTasks = filteredTasks.filter(t => t.status === "em_andamento");
-
-  const habitsToday = habitLogs.filter(l => l.done).length;
-
-  const now = new Date();
-  const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000);
-  const dailyHook = HOOKS_VIRAL[dayOfYear % HOOKS_VIRAL.length];
-
-  /* Rebranding fase 3: cada tile tem uma cor fixa da paleta CRIA
-     (laranja só em ação, os módulos ganham suas próprias cores) */
-  const TILE_COLORS = ["#EA4918", "#D4508F", "#01A652", "#0061EE", "#C99000", "#FF5A24"];
-  const stats = [
-    { label: "Ideias", value: ideas.length, icon: Lightbulb, link: "/app/ideias" },
-    { label: "Em criação", value: inCreationFiltered.length, icon: FileText, link: "/app/criando" },
-    { label: "Publicados", value: publishedFiltered.length, icon: CheckCircle2, link: "/app/historico" },
-    { label: "Agendados", value: scheduledFiltered.length, icon: Clock, link: "/app/criando" },
-    { label: "Tarefas abertas", value: pendingTasks.length + inProgressTasks.length, icon: ListChecks, link: "/app/tarefas" },
-    { label: "Hábitos hoje", value: `${habitsToday}/${habits.length}`, icon: Flame, link: "/app" },
-  ].map((s, i) => ({ ...s, accent: { line: TILE_COLORS[i] } }));
-
-  const [heroSlot, setHeroSlot] = useState<HTMLElement | null>(null);
-  useEffect(() => { setHeroSlot(document.getElementById("cria-hero-slot")); }, []);
-  // Celular: o período mora dentro do cartão-faixa do topo (AppLayout).
-  const [heroSlotMobile, setHeroSlotMobile] = useState<HTMLElement | null>(null);
-  useEffect(() => { setHeroSlotMobile(document.getElementById("cria-hero-slot-mobile")); }, []);
-
-  const renderPeriodFilter = (onBand: boolean) =>
-    PERIOD_OPTIONS.map((opt) => {
-      const active = period === opt.key;
-      return (
-        <button
-          key={opt.key}
-          onClick={() => {
-            setPeriod(opt.key);
-            if (opt.key === "personalizado") setCustomOpen(true);
-          }}
-          className={cn(
-            "rounded-full px-3 py-1 text-xs font-body transition-all duration-200",
-            !opt.primary && "hidden sm:inline-flex",
-            onBand
-              ? (active
-                  ? "bg-white text-foreground font-semibold shadow-sm"
-                  : "text-white/75 font-medium hover:bg-white/10 hover:text-white")
-              : (active
-                  ? "bg-primary text-primary-foreground font-semibold"
-                  : "text-muted-foreground font-medium hover:bg-muted"),
-          )}
-        >
-          {opt.label}
-        </button>
-      );
+  /* Hoje: o que vence hoje, o que não tem prazo e o que ficou de ontem pra
+     trás, sem fazer. As feitas hoje continuam na lista, riscadas. */
+  const tarefasHoje = useMemo(() => {
+    const lista = (tasks as TarefaExtra[]).filter((t) => {
+      if (t.status === "concluida") return t.due_date === hoje || (!!t.concluida_em && t.concluida_em.slice(0, 10) === hoje);
+      return !t.due_date || t.due_date <= hoje;
     });
+    return lista.sort((a, b) => Number(a.status === "concluida") - Number(b.status === "concluida")
+      || (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
+  }, [tasks, hoje]);
+  const feitas = tarefasHoje.filter((t) => t.status === "concluida").length;
 
-  if (profileLoading) {
-    return (
-      <div className="pb-20 md:pb-0">
-        <PageSkeleton />
-      </div>
-    );
-  }
+  const habitos = habits.map((h) => ({ id: h.id, name: h.name, feito: habitLogs.some((l) => l.habit_id === h.id && l.done) }));
+
+  const dia = parseDateOnly(hoje);
+  const dataExtenso = dia.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+  const diaDoAno = Math.floor((dia.getTime() - new Date(dia.getFullYear(), 0, 0).getTime()) / 86400000);
+  const gancho = HOOKS_VIRAL[diaDoAno % HOOKS_VIRAL.length];
+
+  const abrirTrava = (t: Trava) => navigate("/app/criando", { state: { filtroTrava: t } });
+
+  const gravar = () => {
+    if (!isStudio) { setVitrine(true); return; }
+    navigate("/app/prompter");
+  };
+
+  const copiarGancho = async () => {
+    try { await navigator.clipboard.writeText(gancho); setCopiado(true); setTimeout(() => setCopiado(false), 2000); }
+    catch { toast.error("Não consegui copiar. Selecione o texto e copie."); }
+  };
+  const usarGancho = async () => {
+    try {
+      await createPost.mutateAsync({ title: gancho.replace(/[[\]]/g, "").slice(0, 80), hook: gancho, status: "ideia", platform: "instagram", format: "reels" });
+      toast.success("Rascunho criado no Criando com esse gancho.", { action: { label: "Abrir", onClick: () => navigate("/app/criando") } });
+    } catch { toast.error("Não consegui criar o rascunho."); }
+  };
+
+  const reaproveitarPost = () => {
+    const id = insta.mais?.postId;
+    const p = id ? posts.find((x) => x.id === id) : null;
+    if (p) setReaproveitar(p);
+  };
+
+  if (profileLoading) return <div className="pb-20 md:pb-0"><PageSkeleton /></div>;
+
+  const atalhos = (
+    <>
+      <AtalhoInicio cor="#FFCF03" titulo="Nova ideia" curto="Ideia" onClick={() => setCaptura(true)} icone={<Lightbulb className="h-4 w-4 shrink-0" />} />
+      <AtalhoInicio cor="#FF77B9" titulo="Gravar no Prompter" curto="Prompter" sub={isStudio ? (praGravar ? `${praGravar} pra gravar` : "teleprompter") : "no Studio"} onClick={gravar} icone={<Video className="h-4 w-4 shrink-0" />} />
+      <AtalhoInicio cor="#DCE6FF" titulo="Pedir pra Cria IA" curto="Cria IA" onClick={() => openCria()} icone={<Sparkles className="h-4 w-4 shrink-0" />} />
+    </>
+  );
 
   return (
     <div className="pb-20 md:pb-0">
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-
-        {!heroSlotMobile && (
-          <div className="flex sm:justify-end gap-3 mb-6 md:hidden">
-            <div className="flex items-center gap-0.5 bg-muted/50 rounded-full p-1 flex-wrap">
-              {renderPeriodFilter(false)}
-            </div>
-          </div>
-        )}
-        {heroSlot && createPortal(renderPeriodFilter(true), heroSlot)}
-        {heroSlotMobile && createPortal(renderPeriodFilter(true), heroSlotMobile)}
-
-        {/* O data-tour do checklist mora DENTRO do FirstStepsPanel: este painel some
-            quando está completo ou dispensado, e o wrapper que existia aqui virava uma
-            caixa de altura zero, que o tour recortava como uma faixa fina sobre nada. */}
-        {/* Atalhos (Walter, 28/10/2026, foco no celular): gravar story e postar,
-            logo abaixo da saudação. */}
-        <AtalhosInicio />
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className={cn("flex flex-col", GAP)}>
 
         <FirstStepsPanel />
 
-        <div className="mb-4" data-tour="dash-acao">
-          <NextBestAction comAvisos />
-        </div>
-
-        {/* A Captura Rápida saiu daqui (Walter, 19/10/2026): repetia o botão
-            "Nova ideia" do topo, que agora abre a mesma captura numa janela
-            (CapturaRapidaDialog, no AppLayout). */}
-
-        {/* MEU CONTEÚDO ACIMA DO INSTAGRAM (Walter, 19/10/2026): o que a pessoa
-            tem pra fazer vem antes dos números. */}
-        <div className="mb-6 space-y-3">
-        <h2 className="text-xs font-body font-bold uppercase tracking-wider text-muted-foreground">Meu conteúdo</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4" data-tour="dash-tiles">
-          {stats.map((s, i) => (
-            <motion.button
-              key={i}
-              onClick={() => navigate(s.link)}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className={cn(
-                "relative overflow-hidden px-3 py-2.5 sm:px-4 sm:py-3 rounded-2xl border border-border bg-card",
-                "hover:shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-200",
-                "text-left w-full group cursor-pointer"
-              )}
-            >
-              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-5">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm shrink-0" style={{ backgroundColor: s.accent.line }}>
-                  <s.icon className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-white" strokeWidth={1.75} />
-                </div>
-                <div className="min-w-0 flex-1 flex items-baseline gap-1.5">
-                  <p className="text-xl sm:text-2xl font-display font-extrabold text-foreground tracking-tight leading-none">{s.value}</p>
-                  <p className="text-[10px] sm:text-[11px] uppercase tracking-wider font-body font-semibold text-muted-foreground truncate">{s.label}</p>
-                </div>
-              </div>
-              <ArrowRight className="absolute top-1/2 -translate-y-1/2 right-3 h-4 w-4 text-muted-foreground/30 group-hover:text-foreground/50 group-hover:translate-x-0.5 transition-all" />
-            </motion.button>
-          ))}
-        </div>
-        </div>
-
-        {/* NOVO: Seu conteúdo no Instagram (largura cheia, em destaque).
-            Reaproveita os hooks de insights; o "melhor dia" da faixa verde substitui
-            o antigo bloco BestTimeToPost (agora dobrado aqui dentro). */}
-        <div className="mb-6" data-tour="dash-instagram">
-          <InstagramPulse />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-[1.55fr_1fr] gap-6">
-
-          <div className="space-y-6">
-            <div className="mt-4" data-tour="dash-posts">
-              <UpcomingPosts />
+        {/* TOPO */}
+        <section className={cn(CARTAO_INICIO, "p-5 gap-4")} data-tour="dash-acao">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-body italic text-muted-foreground first-letter:uppercase">{dataExtenso}</p>
+              <h2 className="font-display font-extrabold text-[24px] sm:text-[28px] leading-tight text-foreground [text-wrap:balance]">
+                {saiHoje === 0 ? "Nada marcado pra sair hoje." : saiHoje === 1 ? "Hoje sai 1 post." : `Hoje saem ${saiHoje} posts.`}
+              </h2>
             </div>
+            <div className="grid grid-cols-3 lg:flex gap-2 lg:gap-2.5" data-tour="dash-atalhos">{atalhos}</div>
+          </div>
+          <FaixaTrava contagem={travas} onAbrir={abrirTrava} />
+        </section>
 
-            <section className="bg-card border border-border/30 rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-display font-semibold text-foreground">
-                  Linha Editorial
-                </h3>
-                <span className="text-xs text-muted-foreground font-body">
-                  baseada nos seus pilares
-                </span>
-              </div>
+        {/* SEMANA | HOJE */}
+        <div className={cn("grid grid-cols-1 lg:grid-cols-12", GAP)}>
+          <CardInicio className="lg:col-span-8 order-2 lg:order-1" data-tour="dash-posts"
+            titulo="Sai esta semana" direita={<span className="hidden sm:inline">linha editorial e posts</span>}>
+            <SemanaDoCriador posts={semana} comMidia={comMidia} thumbs={thumbs} hoje={hoje}
+              linha={activeProfile?.editorial_line} pilares={pillars}
+              onAbrirPost={() => navigate("/app/criando")}
+              onNovo={() => setCaptura(true)} />
+          </CardInicio>
+          <CardInicio className="lg:col-span-4 order-1 lg:order-2" data-tour="dash-hoje" faixa="#EB4918"
+            titulo={`Hoje · ${feitas} de ${tarefasHoje.length} ${tarefasHoje.length === 1 ? "feita" : "feitas"}`}
+            direita={<button type="button" onClick={() => navigate("/app/tarefas")} className="font-semibold underline">Tarefas</button>}
+            corpo="bg-[#FFFCF3] dark:bg-card">
+            <HojeDoCriador tarefas={tarefasHoje} hoje={hoje}
+              onAlternar={(id) => { const t = tarefasHoje.find((x) => x.id === id); if (t) alternar.mutate(t, { onError: () => toast.error("Não consegui marcar a tarefa.") }); }}
+              onCriar={async (titulo) => { await createTask.mutateAsync({ title: titulo, due_date: hoje, priority: "media", status: "pendente" }); }}
+              habitos={habitos}
+              onHabito={(id) => toggleHabitLog.mutate({ habitId: id, date: hoje }, { onError: () => toast.error("Erro ao marcar o hábito.") })}
+              onVerTodas={() => navigate("/app/tarefas")} />
+          </CardInicio>
+        </div>
 
-              {pillars.length > 0 ? (
-                <div className="grid grid-cols-7 gap-1.5">
-                  {editorialDays.map((day, index) => {
-                    const pilarId = activeProfile?.editorial_line?.[day];
-                    const pilar = pilarId ? pillars.find(p => p.id === pilarId) : undefined;
-                    const isToday = index === todayIndex;
-                    return (
-                      <div
-                        key={day}
-                        className={cn(
-                          "flex flex-col items-center gap-1.5 rounded-xl p-2 transition-colors min-w-0",
-                          isToday
-                            ? "bg-primary/10 border border-primary/20"
-                            : "bg-muted/20 border border-transparent"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "text-[10px] font-body font-semibold uppercase tracking-wide",
-                            isToday ? "text-primary" : "text-muted-foreground"
-                          )}
-                        >
-                          {day}
-                        </span>
-                        <div
-                          className="w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: pilar?.color || "#d4d4d8" }}
-                        />
-                        <span
-                          className={cn(
-                            "text-[9px] font-body text-center leading-tight line-clamp-2 w-full break-words",
-                            isToday ? "text-foreground font-medium" : "text-muted-foreground"
-                          )}
-                        >
-                          {pilar?.name || "-"}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground font-body text-center py-2">
-                  Cadastre seus pilares em{" "}
-                  <button
-                    onClick={() => navigate("/app/configuracoes")}
-                    className="text-primary underline"
-                  >
-                    Configurações
-                  </button>{" "}
-                  para ver sua linha editorial.
+        {/* INSTAGRAM | GANCHO E CRIA IA */}
+        <div className={cn("grid grid-cols-1 lg:grid-cols-12", GAP)}>
+          <CardInicio className="lg:col-span-8" data-tour="dash-instagram" titulo="Seu Instagram"
+            direita={<button type="button" onClick={() => navigate("/app/insights")} className="inline-flex items-center gap-1 font-semibold text-foreground">Ver tudo <ArrowRight className="h-3.5 w-3.5" /></button>}>
+            {insta.isLoading ? null : !insta.conn ? (
+              <div className="flex h-full flex-col sm:flex-row sm:items-center gap-4">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4]"><Instagram className="h-6 w-6 text-white" /></span>
+                <p className="flex-1 text-[13.5px] font-body text-muted-foreground">
+                  {insta.isOwnAccount ? "Conecte seu Instagram pra ver aqui seus números comparados com os 30 dias anteriores e o post que mais funcionou."
+                    : "Instagram ainda não conectado. Peça pro dono da conta conectar em Insights."}
                 </p>
-              )}
-            </section>
-
-
-          </div>
-
-          <div className="space-y-6">
-            {/* HOJE (Walter, 30/10/2026, mockup aprovado): tarefas e hábitos
-                num bloco só. Quem é você desceu pra faixa larga e as
-                notificações entraram na próxima ação, lá em cima. */}
-            <DCard className="border-border/20" data-tour="dash-hoje">
-              <h3 className="font-display font-semibold text-foreground mb-3 flex items-center gap-2">
-                <CheckSquare className="h-4 w-4 text-primary" /> Hoje
-              </h3>
-              <UpcomingTasks embutido />
-              <p className="mt-4 mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                <Flame className="h-3.5 w-3.5 text-primary" /> Hábitos de criação · {habits.filter(h => habitLogs.some(l => l.habit_id === h.id && l.done)).length}/{habits.length}
-              </p>
-              <div className="space-y-3">
-                {habits.map(h => {
-                  const done = habitLogs.some(l => l.habit_id === h.id && l.done);
-                  return (
-                    <div key={h.id} className="flex items-center justify-between group">
-                      <div className="flex items-center gap-3">
-                        <Checkbox checked={done} onCheckedChange={() => handleToggleHabit(h.id)} />
-                        {editingHabitId === h.id ? (
-                          <Input
-                            value={editingHabitName}
-                            onChange={(e) => setEditingHabitName(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleUpdateHabit(h.id)}
-                            onBlur={() => setEditingHabitId(null)}
-                            className="h-8 text-sm py-0 rounded-lg"
-                            autoFocus
-                          />
-                        ) : (
-                          <span className={cn("text-sm font-body", done && "line-through text-muted-foreground")}>{h.name}</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                        <button aria-label="Editar hábito" onClick={() => { setEditingHabitId(h.id); setEditingHabitName(h.name); }} className="p-2 md:p-1 hover:bg-accent rounded text-muted-foreground"><Pencil className="h-3 w-3" /></button>
-                        <button aria-label="Excluir hábito" onClick={() => handleDeleteHabit(h.id)} className="p-2 md:p-1 hover:bg-destructive/10 rounded text-destructive"><Trash2 className="h-3 w-3" /></button>
-                      </div>
+                {insta.isOwnAccount && (
+                  <button type="button" onClick={() => connectInstagram(null, null, insta.contaParaConectar)}
+                    className="shrink-0 rounded-full border-2 border-foreground bg-foreground text-background px-4 h-10 text-[13px] font-body font-bold">Conectar Instagram</button>
+                )}
+              </div>
+            ) : (
+              <div className="flex h-full flex-col gap-3">
+                <p className="text-[11.5px] font-body text-muted-foreground -mt-1">Últimos 30 dias, comparados com os 30 anteriores.</p>
+                <NumerosInstagram r={insta} />
+                {insta.mais && (
+                  <div className="mt-auto flex flex-wrap sm:flex-nowrap items-center gap-3 rounded-xl bg-[#D8F2E0] dark:bg-emerald-500/10 p-3 min-w-0">
+                    <span className="h-[60px] w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
+                      {insta.mais.thumb && <img src={insta.mais.thumb} alt="" loading="lazy" className="h-full w-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-body font-bold uppercase tracking-wide text-foreground/70">O que mais funcionou</p>
+                      <p className="text-[13px] font-body font-bold leading-snug line-clamp-1">{insta.mais.titulo}</p>
+                      <p className="text-[12px] font-body text-foreground/75 leading-snug line-clamp-2">{insta.mais.frase}</p>
                     </div>
-                  );
-                })}
-                <div className="pt-2">
-                  <Input
-                    placeholder="Novo hábito..."
-                    className="h-9 text-xs rounded-xl"
-                    value={newHabitName}
-                    onChange={(e) => setNewHabitName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addHabit()}
-                  />
+                    {insta.mais.postId && posts.some((x) => x.id === insta.mais!.postId) ? (
+                      <button type="button" onClick={reaproveitarPost}
+                        className="shrink-0 w-full sm:w-auto justify-center inline-flex items-center gap-1 rounded-full border-2 border-foreground bg-card px-3 h-9 text-[12px] font-body font-bold"><Repeat2 className="h-3.5 w-3.5" /> Reaproveitar</button>
+                    ) : insta.mais.permalink ? (
+                      <a href={insta.mais.permalink} target="_blank" rel="noopener noreferrer"
+                        className="shrink-0 w-full sm:w-auto justify-center inline-flex items-center gap-1 rounded-full border-2 border-foreground bg-card px-3 h-9 text-[12px] font-body font-bold"><ExternalLink className="h-3.5 w-3.5" /> Ver</a>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            )}
+          </CardInicio>
+
+          <div className={cn("lg:col-span-4 flex flex-col", GAP)}>
+            <CardInicio className="flex-1" titulo="Gancho do dia" corpo="bg-[#FFF6BF] dark:bg-amber-500/10" data-tour="dash-gancho">
+              <div className="flex h-full flex-col gap-3">
+                <p className="text-[14px] font-body italic leading-relaxed text-foreground">"{gancho}"</p>
+                <div className="mt-auto flex gap-2">
+                  <button type="button" onClick={() => void copiarGancho()} className="inline-flex items-center gap-1 rounded-full border-2 border-foreground bg-card px-3 h-8 text-[12px] font-body font-bold">
+                    {copiado ? <><Check className="h-3.5 w-3.5" /> Copiado</> : <><Copy className="h-3.5 w-3.5" /> Copiar</>}
+                  </button>
+                  <button type="button" onClick={() => void usarGancho()} disabled={createPost.isPending}
+                    className="inline-flex items-center gap-1 rounded-full border-2 border-foreground bg-card px-3 h-8 text-[12px] font-body font-bold disabled:opacity-60">Usar no post</button>
                 </div>
               </div>
-            </DCard>
-            <DCard className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200/50 dark:from-amber-500/10 dark:to-orange-500/5 dark:border-amber-500/20">
-              <h3 className="text-sm font-display font-bold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">
-                <div className="w-6 h-6 rounded-lg bg-amber-500 flex items-center justify-center">
-                  <Sparkles className="h-3.5 w-3.5 text-white" />
+            </CardInicio>
+            {!ia.isLoading && ia.quota > 0 && (
+              <CardInicio className="h-auto" titulo="Cria IA este mês" direita={<span className="tabular-nums">{ia.used} de {ia.quota}</span>}>
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div className={cn("h-full rounded-full", ia.pct >= 90 ? "bg-red-500" : ia.pct >= 80 ? "bg-amber-500" : "bg-[#00A652]")} style={{ width: `${Math.min(100, ia.pct)}%` }} />
                 </div>
-                Gancho do Dia
-              </h3>
-              <p className="text-sm font-body text-foreground italic mb-4 leading-relaxed">
-                "{dailyHook.text}"
-              </p>
-              <Button variant="outline" size="sm" onClick={handleCopyHook} className="w-full bg-white/60 dark:bg-background/40 border-amber-300/40 hover:bg-white text-amber-700 dark:text-amber-300">
-                {copiedHook ? <><Check className="h-3.5 w-3.5 mr-2" /> Copiado</> : <><Copy className="h-3.5 w-3.5 mr-2" /> Copiar hook</>}
-              </Button>
-            </DCard>
-            <AiUsageCard />
+                <p className="mt-2 text-[11.5px] font-body text-muted-foreground">
+                  {ia.remaining === 0 ? "As gerações deste mês acabaram." : `${ia.remaining} ${ia.remaining === 1 ? "geração sobrando" : "gerações sobrando"}.`}
+                </p>
+              </CardInicio>
+            )}
           </div>
-
         </div>
 
-        <div className="mt-6 space-y-6">
-          <div data-tour="dash-quem"><WhoYouAre largo /></div>
-          {/* Convite do Criakut no fim da home (Walter, 30/10/2026). Só pra
-              conta da própria pessoa: no "Meu perfil" aberto pela social
-              mídia a página do Criakut seria a dela, não a do perfil. */}
-          {temCriakut && activeProfile?.id === user?.id && (
-            <div data-tour="dash-criakut"><ConviteCriakut variante="criador" nicho={activeProfile?.niche ?? null} temTom={temTom}
-              nomeFallback={activeProfile?.name ?? null} fotoFallback={activeProfile?.avatar_url ?? null} /></div>
-          )}
-        </div>
+        <div data-tour="dash-quem"><WhoYouAre largo /></div>
+        {temCriakut && activeProfile?.id === user?.id && (
+          <div data-tour="dash-criakut"><ConviteCriakut variante="criador" nicho={activeProfile?.niche ?? null} temTom={temTom}
+            nomeFallback={activeProfile?.name ?? null} fotoFallback={activeProfile?.avatar_url ?? null} /></div>
+        )}
       </motion.div>
+
+      <CapturaRapidaDialog open={captura} onOpenChange={setCaptura} />
+      <VitrineStudio open={vitrine} onOpenChange={setVitrine} />
+      {reaproveitar && <RepurposeSheet open={!!reaproveitar} onOpenChange={(o) => { if (!o) setReaproveitar(null); }} originalPost={reaproveitar} />}
     </div>
   );
 };
