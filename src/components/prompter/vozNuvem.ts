@@ -138,6 +138,8 @@ export class SeguidorNuvem {
       const url = URL.createObjectURL(new Blob([WORKLET], { type: "application/javascript" }));
       await ctx.audioWorklet.addModule(url);
       URL.revokeObjectURL(url);
+      /* parou enquanto o worklet carregava: não liga nada no mic */
+      if (this.parado) return;
       const no = new AudioWorkletNode(ctx, "cria-tap");
       no.port.onmessage = (e) => enviar(e.data as Float32Array);
       fonte.connect(no); no.connect(this.mudo); this.no = no;

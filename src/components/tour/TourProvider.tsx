@@ -8,7 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  areaForPath,
+  areaDoTreino,
   findTourByRoute,
   resolverTour,
   findTourById,
@@ -111,7 +111,8 @@ export function TourProvider({ children }: { children: ReactNode }) {
     if (!tour || tour.route !== location.pathname) return;
     const id = window.setTimeout(() => {
       setPendingId(null);
-      begin(tour);
+      // A home do prestador divide a rota com a da social mídia: decide aqui.
+      begin(resolverTour(tour));
     }, 250);
     return () => window.clearTimeout(id);
   }, [pendingId, location.pathname, begin]);
@@ -195,7 +196,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
   );
 
   const startTraining = useCallback(() => {
-    const area = areaForPath(location.pathname);
+    const area = areaDoTreino(location.pathname);
     // Módulo não assinado sai da fila: o tour completo pula a tela trancada.
     const ids = TRAINING_SEQUENCES[area].filter(id => !tourBloqueado(id));
     const firstId = ids.shift();
@@ -204,7 +205,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     if (!first) return;
     trainingRef.current = ids;
     if (first.route === location.pathname) {
-      begin(first);
+      begin(resolverTour(first));
     } else {
       setPendingId(firstId);
       navigate(first.route);

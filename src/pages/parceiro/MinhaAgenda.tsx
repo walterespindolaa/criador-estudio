@@ -157,7 +157,7 @@ export default function MinhaAgenda() {
   return (
     <div>
       {/* ── A FAIXA DO MÊS ─────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 mb-3 flex-wrap">
+      <div data-tour="pa-mes" className="flex items-center gap-2 mb-3 flex-wrap">
         <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl" onClick={() => mudarMes(-1)} aria-label="Mês anterior">
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -170,13 +170,13 @@ export default function MinhaAgenda() {
         <Button variant="ghost" className="h-9 rounded-xl text-[12.5px]" onClick={() => setRef({ ano: h1, mes: h2 })}>
           Hoje
         </Button>
-        <Button className="h-9 rounded-xl ml-auto" onClick={() => setEditando("novo")}>
+        <Button data-tour="pa-anotar" className="h-9 rounded-xl ml-auto" onClick={() => setEditando("novo")}>
           <Plus className="h-4 w-4 mr-1.5" /> Anotar
         </Button>
       </div>
 
       {/* ── O MÊS EM TRÊS NÚMEROS ──────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div data-tour="pa-numeros" className="grid grid-cols-3 gap-2 mb-4">
         {[
           { n: totalEntregas, txt: totalEntregas === 1 ? "entrega" : "entregas", cor: COR.entrega, Icone: Package },
           { n: totalGravacoes, txt: totalGravacoes === 1 ? "gravação" : "gravações", cor: COR.gravacao, Icone: Video },
@@ -200,7 +200,7 @@ export default function MinhaAgenda() {
           {/* ── O CALENDÁRIO, SÓ DE sm PRA CIMA ────────────────────────────
               No celular ele não existe: célula de 48px com quatro tipos de
               coisa dentro não se lê nem se toca (lição do circuito 10). */}
-          <div className="hidden sm:block mb-4">
+          <div data-tour="pa-calendario" className="hidden sm:block mb-4">
             <div className="grid grid-cols-7 gap-1 mb-1">
               {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((d) => (
                 <p key={d} className="text-[9.5px] font-bold uppercase text-muted-foreground text-center">{d}</p>

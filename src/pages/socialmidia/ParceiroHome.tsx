@@ -142,7 +142,7 @@ export default function ParceiroHome() {
         {[
           { v: String(fila.length), l: "na sua fila", Icone: Briefcase, cor: "bg-violet-100 text-violet-700", to: "/socialmidia/demandas" },
           { v: String(agencias.length), l: agencias.length === 1 ? "agência te acoplou" : "agências te acoplaram", Icone: Layers, cor: "bg-pink-100 text-pink-700", to: "/socialmidia/marcas" },
-          { v: brl(aReceber), l: "a receber de cachês", Icone: Wallet, cor: "bg-green-100 text-green-700", to: "/socialmidia/marcas" },
+          { v: brl(aReceber), l: "a receber de cachês", Icone: Wallet, cor: "bg-green-100 text-green-700", to: "/socialmidia/caches" },
         ].map((k) => (
           <button key={k.l} type="button" onClick={() => navigate(k.to)}
             className="rounded-2xl border border-border bg-card p-4 text-left flex items-center gap-3 hover:shadow-md transition-shadow">
@@ -208,7 +208,7 @@ export default function ParceiroHome() {
 
       {/* ── COMO FUNCIONA (só enquanto a fila está vazia) ── */}
       {fila.length === 0 && (
-        <Card className="rounded-2xl border-dashed border-border p-5 mb-5">
+        <Card data-tour="ph-como" className="rounded-2xl border-dashed border-border p-5 mb-5">
           <p className="font-display font-bold text-[15px] mb-3">Como funciona o seu lado do Cria</p>
           <ol className="space-y-2.5">
             {[

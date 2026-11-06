@@ -157,7 +157,7 @@ function FaixaDoDia({ nome, total, atrasadas, venceHoje, fazendo, emAjuste, entr
   ];
 
   return (
-    <div className="relative overflow-hidden rounded-[26px] border border-orange-200/60 dark:border-white/10 bg-gradient-to-br from-orange-50 via-pink-50 to-violet-50 dark:from-orange-500/10 dark:via-pink-500/10 dark:to-violet-500/10 p-4 sm:p-6 mb-5">
+    <div data-tour="pd-resumo" className="relative overflow-hidden rounded-[26px] border border-orange-200/60 dark:border-white/10 bg-gradient-to-br from-orange-50 via-pink-50 to-violet-50 dark:from-orange-500/10 dark:via-pink-500/10 dark:to-violet-500/10 p-4 sm:p-6 mb-5">
       <span aria-hidden className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-orange-200/50 blur-[2px] dark:bg-orange-400/10" />
       <span aria-hidden className="pointer-events-none absolute right-36 -bottom-20 h-32 w-32 rounded-full bg-violet-200/50 blur-[2px] dark:bg-violet-400/10" />
       <div className="relative flex items-start justify-between gap-4">
@@ -289,7 +289,7 @@ export default function MinhasDemandas() {
             mostra quem tá vinculado a ele" resolvido, e a base da conversa de
             cobrança no fim do mês. */}
         {agencias.length > 0 && (
-          <div className="mb-5">
+          <div data-tour="pd-agencias" className="mb-5">
             <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 px-0.5">
               Trabalho com {agencias.length === 1 ? "esta agência" : `${agencias.length} agências`}
             </p>
@@ -359,7 +359,7 @@ export default function MinhasDemandas() {
 
         {/* O SELETOR DE VISÃO: as quatro do mockup aprovado. Pílulas no accent,
             como as abas do resto do app. */}
-        <div className="inline-flex gap-1 rounded-full border border-border bg-card p-1 mb-4 flex-wrap">
+        <div data-tour="pd-visoes" className="inline-flex gap-1 rounded-full border border-border bg-card p-1 mb-4 flex-wrap">
           {([["prazo", "Por prazo"], ["quadro", "Quadro"], ["cliente", "Por cliente"], ["semana", "Semana"], ["mes", "Mês"]] as const).map(([v, r]) => (
             <button key={v} type="button" onClick={() => setVisao(v)}
               className={cn("px-4 py-1.5 rounded-full text-[13px] font-display font-semibold transition-colors",
@@ -369,6 +369,7 @@ export default function MinhasDemandas() {
           ))}
         </div>
 
+        <div data-tour="pd-fila">
         {isLoading ? (
           <div className="grid place-items-center py-16"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : isError && todas.length === 0 ? (
@@ -447,6 +448,7 @@ export default function MinhasDemandas() {
             );
           })
         )}
+        </div>
 
       </motion.div>
 

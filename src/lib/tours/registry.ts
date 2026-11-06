@@ -5,6 +5,7 @@
  */
 import { TOURS_CRIADOR } from "./criador";
 import { TOURS_GESTOR } from "./gestor";
+import { TOURS_PARCEIRO } from "./parceiro";
 
 export type TourStep = {
   /** Seletor do alvo: '[data-tour="chave"]'. Se o elemento não existir, o card aparece centrado. */
@@ -74,7 +75,7 @@ export type TourConfig = {
   steps: TourStep[];
 };
 
-export const TOURS: TourConfig[] = [...TOURS_CRIADOR, ...TOURS_GESTOR];
+export const TOURS: TourConfig[] = [...TOURS_CRIADOR, ...TOURS_GESTOR, ...TOURS_PARCEIRO];
 
 /** Começo de UUID (o formato dos ids do banco). */
 const UUID_INICIO = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
@@ -144,7 +145,7 @@ export function resolverTour(t: TourConfig): TourConfig {
 }
 
 /** Sequência do "tour completo" (modo treinamento) por área. */
-export const TRAINING_SEQUENCES: Record<"criador" | "gestor", string[]> = {
+export const TRAINING_SEQUENCES: Record<"criador" | "gestor" | "parceiro", string[]> = {
   // "estudio" saiu da sequência: a rota /app/estudio não existe mais (virou a
   // aba Arte do editor de post) e o tour completo navegava pra um 404.
   // "cria-ia" também fica fora: é um painel global, a `route` dele é um marcador
@@ -194,6 +195,22 @@ export const TRAINING_SEQUENCES: Record<"criador" | "gestor", string[]> = {
     "gestor-parceria",
     "gestor-lixeira",
   ],
+  // PRESTADOR PURO (designer, editor, filmmaker, copy sem módulo nem cliente).
+  // A rota /socialmidia é a mesma da social mídia, então quem escolhe esta fila
+  // é o marcador [data-parceiro-puro] que o ManagerLayout põe na tela (ver
+  // areaDoTreino). Começa por "gestor-dashboard", que vira "parceiro-home"
+  // pelo `alternativa` quando a home do prestador está montada.
+  parceiro: [
+    "gestor-dashboard",
+    "parceiro-demandas",
+    "parceiro-agenda",
+    "parceiro-entregues",
+    "parceiro-extrato",
+    "parceiro-marcas",
+    "parceiro-caches",
+    "gestor-parceria",
+    "gestor-lixeira",
+  ],
 };
 
 /**
@@ -211,4 +228,11 @@ export const TOUR_MODULE_GATE: Record<string, string> = {
 
 export function areaForPath(pathname: string): "criador" | "gestor" {
   return pathname.startsWith("/socialmidia") ? "gestor" : "criador";
+}
+
+/** Fila do tour completo: a do prestador puro sai do marcador na tela. */
+export function areaDoTreino(pathname: string): "criador" | "gestor" | "parceiro" {
+  const area = areaForPath(pathname);
+  if (area === "gestor" && typeof document !== "undefined" && document.querySelector("[data-parceiro-puro]")) return "parceiro";
+  return area;
 }

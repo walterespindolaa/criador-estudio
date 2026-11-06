@@ -286,7 +286,7 @@ export default function Marcas() {
       {/* O título mora na faixa do topo do ManagerLayout. */}
 
       {/* AS MARCAS: o miolo da tela. Cada uma abre a ficha. */}
-      <section>
+      <section data-tour="pm-marcas">
         <div className="flex items-baseline gap-2 mb-2 px-0.5">
           <h2 className="font-display font-bold text-[15px] text-foreground flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> As marcas que passam pela sua mão</h2>
           {marcas.length > 0 && <span className="text-[11.5px] font-body text-muted-foreground">{marcas.length}</span>}
@@ -360,7 +360,7 @@ export default function Marcas() {
 
       {/* AS AGÊNCIAS: quem me acoplou. Ficou depois das marcas porque é o dado
           de relação, não o de trabalho do dia. */}
-      <section>
+      <section data-tour="pm-agencias">
         <h2 className="font-display font-bold text-[15px] text-foreground mb-2 px-0.5">Quem me acoplou</h2>
         {isLoading ? (
           <div className="grid place-items-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>

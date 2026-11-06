@@ -322,7 +322,7 @@ export default function ManagerLayout() {
   return (
     <VideoPublicConfirmProvider>
     <TourProvider>
-    <div className="min-h-screen app-canvas relative" style={{ ["--active-font-display" as string]: "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif" }}>
+    <div className="min-h-screen app-canvas relative" data-parceiro-puro={parceiroPuro ? "" : undefined} style={{ ["--active-font-display" as string]: "'Bricolage Grotesque', 'Plus Jakarta Sans', sans-serif" }}>
       <BgShapes styleKey={(profile as { theme_bg?: string | null } | null | undefined)?.theme_bg} />
       {/* Rail flutuante (desktop), expande no hover mostrando os nomes */}
       <nav

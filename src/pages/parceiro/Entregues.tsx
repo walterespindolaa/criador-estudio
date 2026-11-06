@@ -62,6 +62,7 @@ export default function Entregues() {
   return (
     <div>
       {/* O título mora na faixa do topo do ManagerLayout. */}
+      <div data-tour="pt-lista">
       {entregas.length > 0 && (
         <p className="text-sm font-body text-muted-foreground mb-4">
           {entregas.length} peça{entregas.length === 1 ? "" : "s"} entregues, o seu histórico de trabalho.
@@ -118,6 +119,7 @@ export default function Entregues() {
           </section>
         ))
       )}
+      </div>
       <CardAbertoDialog postId={aberto} aoFechar={() => setAberto(null)} />
     </div>
   );

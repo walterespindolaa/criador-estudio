@@ -119,7 +119,7 @@ export default function Caches() {
       )}
 
       {/* O QUE EU TENHO A RECEBER: o número que abre a página. */}
-      <div className="grid sm:grid-cols-2 gap-3">
+      <div data-tour="pc-totais" className="grid sm:grid-cols-2 gap-3">
         <Card className="rounded-2xl border-amber-200 bg-amber-50/60 p-5">
           <p className="text-[11px] font-body font-bold uppercase tracking-wider text-amber-900/70 flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5" /> A receber
@@ -145,7 +145,7 @@ export default function Caches() {
           aqui até ela confirmar. "Não recebi" avisa a agência na hora. Os já
           confirmados ficam embaixo, discretos, como recibo. */}
       {pagamentos.length > 0 && (
-        <section className="space-y-2">
+        <section data-tour="pc-pagamentos" className="space-y-2">
           {pagamentos.filter((p) => !p.recebido_em).map((p) => (
             <Card key={`${p.manager_id}-${p.pago_em}`} className={cn("rounded-2xl p-4 border-2", p.contestado_em ? "border-red-300 bg-red-50/40" : "border-green-500 bg-green-50/50")}>
               <p className="font-display font-bold text-[15px]">{p.agencia} marcou como pago</p>
@@ -182,13 +182,13 @@ export default function Caches() {
       )}
 
       {/* AS ENTREGAS, uma a uma. É o que ele manda quando cobra. */}
-      <section>
+      <section data-tour="pc-entregas">
         <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
           <h2 className="font-display font-bold text-[15px] text-foreground flex items-center gap-2">
             <Wallet className="h-4 w-4 text-primary" /> De onde vem esse valor
           </h2>
           <div className="flex items-center gap-2">
-          <Button size="sm" className="rounded-xl"
+          <Button data-tour="pc-adicionar" size="sm" className="rounded-xl"
             onClick={() => setEditando({ cliente: "", valor: 0, valor_pago: 0, data: hojeBR() })}>
             <Plus className="h-4 w-4 mr-1" /> Adicionar cachê
           </Button>

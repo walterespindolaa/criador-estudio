@@ -151,7 +151,7 @@ export default function Extrato() {
   return (
     <div>
       {/* ── CONTROLES (não entram no PDF) ─────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div data-tour="pe-periodo" className="flex flex-wrap items-center gap-2 mb-4">
         <div className="flex items-center rounded-xl border border-input bg-background h-9">
           <button type="button" onClick={() => irMes(-1)} className="h-full px-2 text-muted-foreground hover:text-foreground" aria-label="Mês anterior">
             <ChevronLeft className="h-4 w-4" />
@@ -221,12 +221,12 @@ export default function Extrato() {
             </div>
           </PopoverContent>
         </Popover>
-        <Button variant="outline" className="h-9 rounded-xl text-[12.5px]"
+        <Button data-tour="pe-valores" variant="outline" className="h-9 rounded-xl text-[12.5px]"
           onClick={() => setMostrarValores((v) => !v)}>
           {mostrarValores ? <EyeOff className="h-4 w-4 mr-1.5" /> : <Eye className="h-4 w-4 mr-1.5" />}
           {mostrarValores ? "Esconder valores" : "Mostrar valores"}
         </Button>
-        <Button className="h-9 rounded-xl ml-auto" onClick={() => void baixar()}
+        <Button data-tour="pe-pdf" className="h-9 rounded-xl ml-auto" onClick={() => void baixar()}
           disabled={baixando || linhas.length === 0}>
           {baixando ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
           Baixar PDF
@@ -238,7 +238,7 @@ export default function Extrato() {
       ) : isError && linhas.length === 0 ? (
         <ErroAoCarregar oQue="seu extrato do mês" aoTentarDeNovo={() => void refetch()} tentando={isFetching} />
       ) : (
-        <Card className="rounded-2xl border-border overflow-hidden">
+        <Card data-tour="pe-folha" className="rounded-2xl border-border overflow-hidden">
           {/* ── A FOLHA: o que está aqui é exatamente o que vira PDF ──── */}
           <div ref={folha} style={{ background: "#ffffff", color: C.ink, padding: "20px 18px", fontFamily: "Inter, system-ui, sans-serif" }}>
             {/* Cabeçalho */}

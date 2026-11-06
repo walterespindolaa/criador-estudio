@@ -487,6 +487,11 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
       /* app foi pro fundo sem estar gravando: solta o mic na hora (o indicador
          laranja do iPhone apaga). Na volta, o app recaptura sem novo prompt. */
       if (!(recorder && recorder.state === "recording")) {
+        /* TEXTO PARADO NA VOLTA (06/11/2026): tocando Por voz, o app ia pro
+           fundo, o mic era solto e na volta o botão seguia em "Pausar" com o
+           texto parado (o analyser sumiu e nada o refazia). Agora pausa junto;
+           na volta a pessoa toca Play e o mic é recapturado. */
+        if (playing) stopPlay();
         if (sessionMic) { try { sessionMic.getTracks().forEach((t) => t.stop()); } catch { /* ok */ } sessionMic = null; }
         micStream = null; resetAudioGraph(); stopVu();
         try { setMicIcon(); } catch { /* ok */ }
@@ -1049,7 +1054,17 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
       $("#voiceDot")?.classList.remove("live");
       desligarNuvem();
     }
+    let nuvemLigando = false, nuvemDeNovo = false;
     async function ligarNuvem() {
+      if (nuvemLigando) { nuvemDeNovo = true; return; }
+      nuvemLigando = true;
+      try { await ligarNuvemAgora(); } finally { nuvemLigando = false; }
+      if (nuvemDeNovo) {
+        nuvemDeNovo = false;
+        if (!nuvem && !disposed && playing && mode === "voice") void ligarNuvem();
+      }
+    }
+    async function ligarNuvemAgora() {
       const obterTokenVoz = tokenVozRef.current;
       if (!obterTokenVoz || nuvem || !audioCtx || !micSource || !micLive()) return;
       let token: string | null = null;
@@ -1201,7 +1216,13 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
       try { if (sessionMic) sessionMic.getTracks().forEach((t) => t.stop()); } catch { /* ok */ }
       sessionMic = null; micStream = null; resetAudioGraph();
     }
-    function resetAudioGraph() { try { if (micSource) micSource.disconnect(); } catch { /* ok */ } micSource = null; micAnalyser = null; }
+    function resetAudioGraph() {
+      /* A conexão da nuvem fica presa no micSource. Mic novo (REC, botão Mic,
+         câmera) = ela ficava ouvindo silêncio e o texto parava no meio da
+         gravação. Solta aqui; o buildAnalyser religa no mic novo. */
+      if (nuvem) desligarNuvem();
+      try { if (micSource) micSource.disconnect(); } catch { /* ok */ } micSource = null; micAnalyser = null;
+    }
     async function ensureMic() {
       if (micLive()) return micStream;
       /* reaproveita o mic da sessão (evita novo prompt do iOS ao reentrar),
@@ -1249,8 +1270,11 @@ function PrompterPlayerInner({ title, text, onExit, obterTokenVoz, onAnexar, rot
         const AC = (window as any).AudioContext || (window as any).webkitAudioContext;
         if (!audioCtx) audioCtx = new AC();
         if (audioCtx!.state !== "running") audioCtx!.resume().catch(() => {});
-        if (!micSource) micSource = audioCtx!.createMediaStreamSource(micStream!);
+        let novo = false;
+        if (!micSource) { micSource = audioCtx!.createMediaStreamSource(micStream!); novo = true; }
         if (!micAnalyser) { micAnalyser = audioCtx!.createAnalyser(); micAnalyser.fftSize = 512; micSource.connect(micAnalyser); }
+        /* mic trocado tocando Por voz: a transcrição volta a ouvir o mic novo */
+        if (novo && playing && mode === "voice") void ligarNuvem();
       } catch { /* VU indisponível; gravação não depende dele */ }
     }
     /* A GRAVAÇÃO recebe a trilha CRUA do mic, sem WebAudio no meio.
