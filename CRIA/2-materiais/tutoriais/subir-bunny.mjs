@@ -7,6 +7,8 @@
 //   node CRIA/2-materiais/tutoriais/subir-bunny.mjs --so=10-criador-06-prompter --substituir
 //                                                           troca um vídeo (pente fino)
 //   node CRIA/2-materiais/tutoriais/subir-bunny.mjs --sincronizar       só confere o processamento
+//   node CRIA/2-materiais/tutoriais/subir-bunny.mjs --limpar            apaga do app e do Bunny o que
+//                                                           saiu do manifesto (pede confirmação)
 //
 // Pede seu e-mail e senha de admin aqui no terminal (a senha não aparece) e usa
 // só pra pegar a sessão na Supabase. A chave do Bunny nunca passa por aqui:
@@ -131,6 +133,24 @@ if (!args.sincronizar) {
     }
   }
   console.log(`\nEnviados: ${subiu} · já estavam: ${pulou} · com erro: ${falhou}`);
+}
+
+if (args.limpar) {
+  const manifesto = JSON.parse(readFileSync(join(PASTA, "manifesto.json"), "utf8"));
+  const noManifesto = new Set(manifesto.map((v) => v.slug));
+  const publicos = new Set(manifesto.map((v) => v.publico));
+  const { tutoriais } = await funcao(token, { acao: "listar" });
+  const sobra = (tutoriais || []).filter((t) => publicos.has(t.publico) && !noManifesto.has(t.slug)).map((t) => t.slug);
+  if (!sobra.length) console.log("Nada pra limpar: o app já bate com o manifesto.");
+  else {
+    console.log(`\nEstes ${sobra.length} saíram do manifesto e vão ser apagados do app e do Bunny:`);
+    for (const x of sobra) console.log(`    ${x}`);
+    const ok = await perguntar("Apagar? (s/n) ");
+    if (ok.toLowerCase().startsWith("s")) {
+      const r = await funcao(token, { acao: "remover", slugs: sobra });
+      console.log(`Apagados: ${(r.removidos || []).length}`);
+    } else console.log("Não apaguei nada.");
+  }
 }
 
 const s = await funcao(token, { acao: "sincronizar" });

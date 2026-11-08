@@ -17,6 +17,7 @@
 //       -> pergunta ao Bunny como estão os vídeos em processamento; os prontos
 //          viram status 'pronto' (numa troca, o que estava no ar sai do Bunny).
 //   { acao: "listar" } -> catálogo inteiro, pra conferência.
+//   { acao: "remover", slugs: [...] } -> apaga do Bunny e do catálogo.
 // ═══════════════════════════════════════════════════════════════════════════
 import { createClient } from "npm:@supabase/supabase-js@2";
 
@@ -151,6 +152,23 @@ Deno.serve(async (req) => {
         }
       }
       return json({ resultado });
+    }
+
+    // Tira do catálogo e do Bunny os tutoriais que saíram do manifesto
+    // (ex: a trilha do criador refeita em 07/11/2026). O progresso de quem
+    // assistiu cai junto (FK em cascata).
+    if (body.acao === "remover") {
+      const slugs = Array.isArray(body.slugs) ? body.slugs.map(String).filter((x: string) => /^[a-z0-9-]+$/.test(x)) : [];
+      if (!slugs.length) return json({ error: "slugs vazio" }, 400);
+      const { data: linhas, error } = await svc.from("tutoriais").select("id, slug, bunny_video_id, bunny_video_pendente").in("slug", slugs);
+      if (error) return json({ error: error.message }, 500);
+      const removidos: string[] = [];
+      for (const l of linhas ?? []) {
+        for (const g of [l.bunny_video_id, l.bunny_video_pendente]) if (g) await bunny(`/videos/${g}`, { method: "DELETE" });
+        const { error: e2 } = await svc.from("tutoriais").delete().eq("id", l.id);
+        if (!e2) removidos.push(l.slug);
+      }
+      return json({ removidos });
     }
 
     return json({ error: "acao desconhecida" }, 400);
