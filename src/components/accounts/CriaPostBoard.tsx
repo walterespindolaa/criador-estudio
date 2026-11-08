@@ -40,6 +40,7 @@ import { useClientSocialConnection, connectInstagram } from "@/hooks/useSocialIn
 import { ClienteInstagramCria } from "@/components/accounts/ClienteInstagramCria";
 import { FORMATS_BY_PLATFORM, FORMAT_LABELS, normalizarFormato } from "@/lib/constants";
 import { SeloPublicacaoIg } from "@/components/shared/PublicarNoInstagram";
+import { StoriesDoClienteCria } from "@/components/accounts/StoriesDoClienteCria";
 import { StoriesDoCliente } from "@/components/accounts/StoriesDoCliente";
 import { ConviteInstagramCliente } from "@/components/accounts/ConviteInstagramCliente";
 // Cor por formato (fonte única): a pessoa bate o olho e sabe o que é.
@@ -954,6 +955,10 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
         {/* STORIES DO CLIENTE (29/10/2026, mockup aprovado): a semana só dos
             stories, com o mesmo editor e os mesmos cards do Cria Post. */}
         <TabsContent value="stories">
+          {/* Cliente com Cria: os stories moram no Cria dele (08/11/2026). */}
+          {criaOwnerId ? (
+            <StoriesDoClienteCria criaOwnerId={criaOwnerId} podeEditar={permPost.podeEditar} />
+          ) : (
           <StoriesDoCliente
             posts={posts}
             podeEditar={permPost.podeEditar}
@@ -967,6 +972,7 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
               } catch { toast.error("Não consegui enviar todos. Tente de novo."); }
             }}
           />
+          )}
         </TabsContent>
 
         <TabsContent value="cronograma">

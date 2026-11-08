@@ -25,7 +25,24 @@ const somaDias = (iso: string, n: number) => { const d = parseDateOnly(iso); d.s
 const segundaDe = (iso: string) => { const d = parseDateOnly(iso); const w = (d.getDay() + 6) % 7; d.setDate(d.getDate() - w); return ymd(d); };
 const ehStory = (f: string | null | undefined) => /^stor(y|ies)$/i.test(String(f ?? ""));
 
-type PostStory = ExternalPost & { scheduled_time?: string | null; ig_opcoes?: OpcoesIg | null };
+type PostStory = ExternalPost & { scheduled_time?: string | null; ig_opcoes?: OpcoesIg | null; status?: string | null };
+
+/* CLIENTE QUE TEM O CRIA (08/11/2026). Os stories dele moram no Cria dele (a
+   mesma base do Kanban do cliente), não nos posts de aprovação por link. Lá o
+   approval_status fica "pendente" em tudo por padrão e não diz nada; o que diz
+   o estado é a coluna (status) e a publicação. Pronto = fila de aprovação do
+   próprio cliente no Cria dele. */
+const RASCUNHO_CRIA = ["ideia", "roteiro", "gravando"];
+function estadoDoCria(p: PostStory): Estado {
+  if (p.publish_status === "publicado" || p.status === "publicado") return { txt: "Publicado", cls: "bg-green-600 text-white" };
+  if (p.publish_status === "erro") return { txt: "Não saiu", cls: "bg-amber-100 text-amber-900" };
+  if (p.publish_status === "publicando") return { txt: "Publicando", cls: "bg-violet-100 text-violet-800" };
+  if ((p.publish_status === "na_fila" && p.auto_publish) || p.status === "agendado") return { txt: "Agendado", cls: "bg-sky-100 text-sky-800" };
+  if (p.status === "editando") return { txt: "Pronto · aprovar", cls: "bg-amber-100 text-amber-800" };
+  if (p.status === "gravando") return { txt: "Produzindo", cls: "bg-muted text-foreground" };
+  if (p.status === "roteiro") return { txt: "Planejamento", cls: "bg-muted text-muted-foreground" };
+  return { txt: "Ideia", cls: "bg-muted text-muted-foreground" };
+}
 
 type Estado = { txt: string; cls: string };
 function estadoDo(p: PostStory): Estado {
@@ -42,8 +59,10 @@ function estadoDo(p: PostStory): Estado {
   return { txt: "Rascunho", cls: "bg-muted text-muted-foreground" };
 }
 
-export function StoriesDoCliente({ posts, podeEditar, onNovo, onAbrir, onEnviarSemana }: {
+export function StoriesDoCliente({ posts, podeEditar, onNovo, onAbrir, onEnviarSemana, modo = "aprovacao" }: {
   posts: ExternalPost[];
+  /** "cria": stories do Cria do próprio cliente (estado pela coluna e pela publicação). */
+  modo?: "aprovacao" | "cria";
   podeEditar: boolean;
   onNovo: (dia: string) => void;
   onAbrir: (p: ExternalPost) => void;
@@ -59,7 +78,10 @@ export function StoriesDoCliente({ posts, podeEditar, onNovo, onAbrir, onEnviarS
   const stories = useMemo(() => (posts as PostStory[])
     .filter((p) => ehStory(p.format) && p.scheduled_date && p.scheduled_date >= inicio && p.scheduled_date <= fim)
     .sort((a, b) => (a.scheduled_date! + (a.scheduled_time ?? "99")).localeCompare(b.scheduled_date! + (b.scheduled_time ?? "99"))), [posts, inicio, fim]);
-  const semData = (posts as PostStory[]).filter((p) => ehStory(p.format) && !p.scheduled_date && p.approval_status !== "postado");
+  const ehCria = modo === "cria";
+  const estado = ehCria ? estadoDoCria : estadoDo;
+  const semData = (posts as PostStory[]).filter((p) => ehStory(p.format) && !p.scheduled_date
+    && (ehCria ? p.status !== "publicado" : p.approval_status !== "postado"));
 
   // Miniatura: a primeira mídia de cada story da semana.
   const ids = stories.map((p) => p.id).join(",");
@@ -80,9 +102,16 @@ export function StoriesDoCliente({ posts, podeEditar, onNovo, onAbrir, onEnviarS
     },
   });
 
-  const rascunhos = stories.filter((p) => !p.approval_status || p.approval_status === "em_producao");
+  const rascunhos = ehCria
+    ? stories.filter((p) => RASCUNHO_CRIA.includes(p.status ?? "ideia"))
+    : stories.filter((p) => !p.approval_status || p.approval_status === "em_producao");
   const n = (f: (p: PostStory) => boolean) => stories.filter(f).length;
-  const resumo = [
+  const resumo = ehCria ? [
+    `${stories.length} ${stories.length === 1 ? "story" : "stories"} na semana`,
+    n((p) => estadoDoCria(p).txt === "Agendado") ? `${n((p) => estadoDoCria(p).txt === "Agendado")} agendados` : null,
+    n((p) => p.status === "editando") ? `${n((p) => p.status === "editando")} prontos pra aprovar` : null,
+    rascunhos.length ? `${rascunhos.length} rascunhos` : null,
+  ].filter(Boolean).join(" · ") : [
     `${stories.length} ${stories.length === 1 ? "story" : "stories"} na semana`,
     n((p) => p.approval_status === "aprovado") ? `${n((p) => p.approval_status === "aprovado")} aprovados` : null,
     n((p) => p.approval_status === "pendente") ? `${n((p) => p.approval_status === "pendente")} com o cliente` : null,
@@ -94,7 +123,7 @@ export function StoriesDoCliente({ posts, podeEditar, onNovo, onAbrir, onEnviarS
   const titulo = `${fmtDia(inicio)} a ${fmtDia(fim)}`;
 
   const Card = ({ p }: { p: PostStory }) => {
-    const st = estadoDo(p);
+    const st = estado(p);
     const capa = capas[p.id];
     const fig = resumoFigurinhas(p.ig_opcoes?.figurinhas);
     return (
@@ -148,9 +177,11 @@ export function StoriesDoCliente({ posts, podeEditar, onNovo, onAbrir, onEnviarS
         </Button>
         {podeEditar && (
           <Button type="button" size="sm" className="rounded-full" disabled={rascunhos.length === 0}
-            title={rascunhos.length ? "Os rascunhos da semana vão pro cliente aprovar pelo link" : "Nenhum rascunho nesta semana"}
+            title={rascunhos.length
+              ? (ehCria ? "Os rascunhos da semana vão pra coluna Pronto e entram na fila de aprovação do Cria do cliente" : "Os rascunhos da semana vão pro cliente aprovar pelo link")
+              : "Nenhum rascunho nesta semana"}
             onClick={() => onEnviarSemana(rascunhos.map((p) => p.id), inicio, fim)}>
-            <Send className="h-3.5 w-3.5 mr-1.5" /> Enviar a semana pra aprovar{rascunhos.length ? ` (${rascunhos.length})` : ""}
+            <Send className="h-3.5 w-3.5 mr-1.5" /> {ehCria ? "Mandar a semana pra aprovação" : "Enviar a semana pra aprovar"}{rascunhos.length ? ` (${rascunhos.length})` : ""}
           </Button>
         )}
       </div>
