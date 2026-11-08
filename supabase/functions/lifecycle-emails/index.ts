@@ -130,28 +130,35 @@ Deno.serve(async (req) => {
       .select("id, name, account_type, plan, subscription_status, trial_ends_at, created_at")
       .not("trial_ends_at", "is", null)
       .gte("trial_ends_at", iso(now - 1 * dayMs))
-      .lte("trial_ends_at", iso(now + 2 * dayMs));
+      .lte("trial_ends_at", iso(now + 3 * dayMs));
     if (trialsErr) throw new Error("trials: " + trialsErr.message);
     for (const p of await comEmail((trials ?? []) as Omit<Perfil, "email">[])) {
       if (!p.email || p.subscription_status === "active") continue; // já assinou: não tem trial pra lembrar
       if (p.account_type === "parceiro") continue;
       const fim = new Date(p.trial_ends_at!).getTime();
       const ref = p.trial_ends_at!.slice(0, 10);
-      /* VÉSPERA (06/11/2026, teste sem cartão de volta): faltando 1 dia ou menos
-         vai o aviso de amanhã; com mais de 1 dia, o de 2 dias. O robô roda 1x
-         por dia, então cada aviso sai uma vez (emails_ciclo). */
-      if (fim > now && fim - now <= dayMs && !ja.has(`${p.id}:trial_d1:${ref}`)) {
+      /* DIAS DE CALENDÁRIO NO FUSO BR (08/11/2026). Antes era "faltam até 24 h":
+         como o robô roda 1x por dia às 10h, quem terminava às 10:39 recebia o
+         "termina amanhã" 40 minutos antes de acabar, e quem terminava amanhã
+         recebia "em 2 dias". Agora conta pela data: fim amanhã = véspera,
+         fim depois de amanhã = 2 dias, fim hoje = "termina hoje". */
+      const diaBR = (ms: number) => new Date(ms).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+      const dias = Math.round((Date.parse(diaBR(fim)) - Date.parse(diaBR(now))) / dayMs);
+      if (fim > now && dias <= 1 && !ja.has(`${p.id}:trial_d1:${ref}`)) {
+        const hoje = dias <= 0;
         const ok = await enviarEmail(svc, {
           para: p.email, nome: p.name, etiqueta: "trial_d1",
-          assunto: p.meuPerfil ? "O teste do seu perfil de criadora termina amanhã" : "Seu teste do Cria termina amanhã",
+          assunto: p.meuPerfil
+            ? `O teste do seu perfil de criadora termina ${hoje ? "hoje" : "amanhã"}`
+            : `Seu teste do Cria termina ${hoje ? "hoje" : "amanhã"}`,
           paragrafos: [
-            "Amanhã acaba o seu teste. Tudo o que você criou fica guardado na sua conta, mesmo se você não assinar agora.",
+            `${hoje ? "Hoje" : "Amanhã"} acaba o seu teste. Tudo o que você criou fica guardado na sua conta, mesmo se você não assinar agora.`,
             "Pra seguir sem interrupção, escolhe um plano hoje: leva 1 minuto e você cancela quando quiser, direto no app.",
           ],
           botao: { texto: "Escolher meu plano", url: `${APP}/app/assinar` },
         });
         if (ok) { enviados.trial_d1 += 1; await marcar(p.id, "trial_d1", ref); }
-      } else if (fim - now > dayMs && !ja.has(`${p.id}:trial_d2:${ref}`)) {
+      } else if (fim > now && dias === 2 && !ja.has(`${p.id}:trial_d2:${ref}`)) {
         const ok = await enviarEmail(svc, {
           para: p.email, nome: p.name, etiqueta: "trial_d2",
           assunto: p.meuPerfil ? "O teste do seu perfil de criadora termina em 2 dias" : "Seu teste do Cria termina em 2 dias",

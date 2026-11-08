@@ -197,8 +197,10 @@ export default function Assinar() {
     if (ehMeuPerfil) return;
     const w = typeof window !== "undefined" ? window.innerWidth : 1200;
     const aparelho = w < 768 ? "celular" : w < 1100 ? "tablet" : "computador";
-    void (supabase.rpc as unknown as (fn: string, args: unknown) => Promise<unknown>)("jornada_marcar", { _passo: "planos", _aparelho: aparelho })
-      .catch(() => { /* métrica perdida não é problema */ });
+    // O retorno do rpc é um "thenable" sem .catch: chamar .catch derrubava a
+    // página inteira ("rpc(...).catch is not a function"). then(ok, erro) resolve.
+    void (supabase.rpc as unknown as (fn: string, args: unknown) => PromiseLike<unknown>)("jornada_marcar", { _passo: "planos", _aparelho: aparelho })
+      .then(undefined, () => { /* métrica perdida não é problema */ });
   }, [ehMeuPerfil]);
 
   useEffect(() => {
