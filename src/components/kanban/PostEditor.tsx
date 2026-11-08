@@ -679,7 +679,14 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
     setAutoSaveStatus("saving");
     autoSaveTimerRef.current = setTimeout(async () => {
       try {
-        await updatePost.mutateAsync({ id: post.id, updates: buildSavePayload() });
+        /* DATA, HORA E ETAPA SÓ NO "SALVAR" (Walter, 08/11/2026: "mudo a data
+           dentro do card e ela muda sozinha antes de eu apertar salvar"). E o
+           auto-save regravava a etapa velha por cima de quem acabou de
+           publicar (o card voltava pra Agendado com o post já no Instagram).
+           O auto-save cuida só do texto; data, hora e etapa vão no Salvar. */
+        const { scheduled_date: _d, scheduled_time: _t, status: _s, ...soTexto } = buildSavePayload();
+        void _d; void _t; void _s;
+        await updatePost.mutateAsync({ id: post.id, updates: soTexto });
         setAutoSaveStatus("saved");
         setTimeout(() => setAutoSaveStatus(null), 1500);
       } catch {
@@ -691,15 +698,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, platform, format, pillarId, status, hook, script, caption, cta,
-       scheduledDate, scheduledTime, notes, weekNumber, referenceLink, contentLink, sections, open, post?.id]);
+  }, [title, platform, format, pillarId, hook, script, caption, cta,
+       notes, weekNumber, referenceLink, contentLink, sections, open, post?.id]);
 
   /* Grava já o que o auto-save ainda ia gravar (Publicar no Instagram chama
      antes de abrir a conferência, pra data e hora nunca saírem velhas). */
   const gravarPendente = useCallback(async () => {
-    if (!post?.id || !autoSaveTimerRef.current) return;
-    clearTimeout(autoSaveTimerRef.current);
-    autoSaveTimerRef.current = null;
+    // Agendar/publicar é uma ação explícita: grava tudo, inclusive data e hora
+    // (que o auto-save não grava mais), pra conferência usar o que está na tela.
+    if (!post?.id) return;
+    if (autoSaveTimerRef.current) { clearTimeout(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
     await updatePost.mutateAsync({ id: post.id, updates: buildSavePayload() });
     setAutoSaveStatus("saved");
     setTimeout(() => setAutoSaveStatus(null), 1500);
@@ -1483,6 +1491,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   // O banco já move o card (ig_agendar_publicacao); aqui só alinha o
                   // status da tela pra o próximo salvar não desfazer.
                   onAgendou={(ligado) => setStatus((s) => (ligado ? "agendado" : s === "agendado" ? "editando" : s))}
+                  onPublicou={() => setStatus("publicado")}
                   compacto={telaLarga}
                   formato={format}
                   aoVivo={{ data: scheduledDate || null, hora: scheduledTime || null }}

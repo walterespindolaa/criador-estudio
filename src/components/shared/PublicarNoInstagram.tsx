@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle, CalendarClock, CheckCircle2, ExternalLink, Instagram, Loader2, RefreshCw, RotateCcw, Send, SlidersHorizontal,
 } from "lucide-react";
@@ -341,8 +341,12 @@ export function PublicarNoInstagramView({
    data e hora só do banco, que o auto-save grava 1,5 s depois. Agora o editor
    manda a data e a hora da tela (aoVivo) e, antes de agendar ou publicar, grava
    o que estiver pendente (antesDeAgir), pra conferência nunca usar hora velha. */
-export function PublicarNoInstagram({ postId, onAgendou, compacto, formato, aoVivo, antesDeAgir }: { postId: string | null | undefined; onAgendou?: (ligado: boolean) => void; compacto?: boolean; formato?: string | null; aoVivo?: { data: string | null; hora: string | null }; antesDeAgir?: () => Promise<void> }) {
+export function PublicarNoInstagram({ postId, onAgendou, onPublicou, compacto, formato, aoVivo, antesDeAgir }: { postId: string | null | undefined; onAgendou?: (ligado: boolean) => void; onPublicou?: () => void; compacto?: boolean; formato?: string | null; aoVivo?: { data: string | null; hora: string | null }; antesDeAgir?: () => Promise<void> }) {
   const { data: estBanco } = usePublicacaoDoPost(postId);
+  // Saiu no Instagram: avisa o editor pra etapa da tela virar Publicado e o
+  // próximo Salvar não devolver o card pra Agendado (08/11/2026).
+  const publicadoAgora = estBanco?.publish_status === "publicado";
+  useEffect(() => { if (publicadoAgora) onPublicou?.(); }, [publicadoAgora]); // eslint-disable-line react-hooks/exhaustive-deps
   const est = estBanco && aoVivo ? { ...estBanco, scheduled_date: aoVivo.data, scheduled_time: aoVivo.hora } : estBanco;
   const agir = async (f: () => void) => { try { await antesDeAgir?.(); } catch { /* o auto-save já avisa o erro */ } f(); };
   const { data: cx } = useConexaoDoPost(postId);

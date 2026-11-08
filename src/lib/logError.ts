@@ -12,6 +12,8 @@ const recent = new Map<string, number>();
 
 export function logError(message: string, context?: Record<string, unknown>, level: "error" | "warn" | "info" = "error") {
   try {
+    // Aviso do navegador, não é erro do app (aparecia no Piloto como erro novo, 08/11/2026).
+    if (/ResizeObserver loop/i.test(message || "")) return;
     const key = (message || "").slice(0, 140);
     const now = Date.now();
     const last = recent.get(key);
