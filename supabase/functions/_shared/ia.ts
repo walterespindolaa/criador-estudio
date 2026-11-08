@@ -6,6 +6,9 @@
    a GEMINI_API_KEY. IA_URL é só um endereço interno: quem chama não precisa
    saber de qual provedor é a IA.
    ═══════════════════════════════════════════════════════════════════════════ */
+import { AsyncLocalStorage } from "node:async_hooks";
+import { createClient } from "npm:@supabase/supabase-js@2";
+
 export const IA_URL = "cria://ia/chat";
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
@@ -28,8 +31,120 @@ function modeloGemini(pedido: string): string {
   return nome;
 }
 
-/** fetch do chat da IA: IA_URL vai pro Gemini; qualquer outro endereço é um fetch comum. */
-export async function iaFetch(url: string, init: RequestInit): Promise<Response> {
+/* ═══════════════════════════════════════════════════════════════════════════
+   CUSTO DA IA (Piloto do admin, 08/11/2026)
+
+   Cada chamada de chat grava uma linha em ia_chamadas (função, conta, modelo,
+   tokens e custo). Quem chama não precisa mudar nada: a edge diz uma vez, logo
+   depois de saber quem é a pessoa, `definirContextoIA({ funcao, userId,
+   contaId })`, e todo iaFetch daquele pedido herda isso (AsyncLocalStorage,
+   então dois pedidos ao mesmo tempo no mesmo isolate não se misturam). Também
+   dá pra passar o meta direto no 3º parâmetro do iaFetch.
+
+   O registro roda em segundo plano, numa cópia da resposta (clone), e nunca
+   lança: log que falha não pode derrubar a IA de ninguém.
+   ═══════════════════════════════════════════════════════════════════════════ */
+export type MetaIA = { funcao: string; userId?: string | null; contaId?: string | null };
+const ctxIA = new AsyncLocalStorage<MetaIA>();
+
+/** Marca o pedido atual: as chamadas de IA dele vão pro ia_chamadas com esse meta. */
+export function definirContextoIA(meta: MetaIA) {
+  try { ctxIA.enterWith(meta); } catch { /* sem contexto, grava como "desconhecida" */ }
+}
+
+/* Preço em USD por 1 milhão de tokens (entrada, saída).
+   TODO(Walter): conferir em ai.google.dev/pricing e perplexity.ai os preços dos
+   modelos em uso. Os do Gemini 3.5 não estavam confirmados em 08/11/2026; os
+   valores abaixo são os do Gemini 2.5 Flash / Flash-Lite. Dá pra trocar sem
+   mexer no código pelo segredo IA_PRECOS_JSON, ex:
+   {"gemini-3.5-flash":[0.3,2.5],"gemini-3.5-flash-lite":[0.1,0.4]} */
+const PRECOS_PADRAO: Record<string, [number, number]> = {
+  "gemini-3.5-flash": [0.30, 2.50],
+  "gemini-3.5-flash-lite": [0.10, 0.40],
+  "gemini-2.5-flash": [0.30, 2.50],
+  "gemini-2.5-flash-lite": [0.10, 0.40],
+  "sonar": [1.00, 1.00],
+  "sonar-pro": [3.00, 15.00],
+};
+function precoDe(modelo: string): [number, number] | null {
+  let tabela = PRECOS_PADRAO;
+  try {
+    const extra = Deno.env.get("IA_PRECOS_JSON");
+    if (extra) tabela = { ...PRECOS_PADRAO, ...JSON.parse(extra) };
+  } catch { /* JSON inválido no segredo: fica o padrão */ }
+  const nome = modelo.replace(/^(google|models)\//, "");
+  return tabela[nome] ?? null;
+}
+
+// deno-lint-ignore no-explicit-any
+let _svc: any = null;
+function svcIA() {
+  if (_svc) return _svc;
+  const url = Deno.env.get("SUPABASE_URL"), key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) return null;
+  _svc = createClient(url, key, { auth: { persistSession: false } });
+  return _svc;
+}
+
+async function registrarUso(r: Response, modeloPedido: string, meta: MetaIA | undefined, ms: number, stream: boolean) {
+  try {
+    const svc = svcIA();
+    if (!svc) return;
+    let entrada: number | null = null, saida: number | null = null, modelo = modeloPedido;
+    if (r.ok && !stream) {
+      const j = await r.json().catch(() => null) as { model?: string; usage?: { prompt_tokens?: number; completion_tokens?: number } } | null;
+      if (j?.usage) {
+        entrada = Number(j.usage.prompt_tokens) || 0;
+        saida = Number(j.usage.completion_tokens) || 0;
+      }
+      if (typeof j?.model === "string" && j.model) modelo = j.model;
+    } else {
+      await r.body?.cancel().catch(() => {});
+    }
+    const preco = precoDe(modelo);
+    const custo = preco && entrada != null && saida != null
+      ? (entrada * preco[0] + saida * preco[1]) / 1_000_000
+      : null;
+    await svc.from("ia_chamadas").insert({
+      user_id: meta?.userId ?? null,
+      conta_id: meta?.contaId ?? null,
+      funcao: (meta?.funcao ?? "desconhecida").slice(0, 80),
+      modelo: modelo.slice(0, 80),
+      tokens_entrada: entrada,
+      tokens_saida: saida,
+      custo_usd: custo,
+      ok: r.ok,
+      ms: Math.round(ms),
+    });
+  } catch { /* sem registro, segue */ }
+}
+
+/** fetch do chat da IA: IA_URL vai pro Gemini; qualquer outro endereço é um fetch comum.
+ *  Chat do Gemini e da Perplexity ficam registrados em ia_chamadas (ver acima). */
+export async function iaFetch(url: string, init: RequestInit, meta?: MetaIA): Promise<Response> {
+  const m = meta ?? ctxIA.getStore();
+  const t0 = performance.now();
+  const r = await iaFetchCru(url, init);
+  if (url === IA_URL || /api\.perplexity\.ai\/chat/.test(url)) {
+    let modelo = "", stream = false;
+    try {
+      const j = typeof init.body === "string" ? JSON.parse(init.body) : null;
+      modelo = typeof j?.model === "string" ? (url === IA_URL ? modeloGemini(j.model) : j.model) : "";
+      stream = j?.stream === true;
+    } catch { /* corpo não é JSON */ }
+    try {
+      const tarefa = registrarUso(r.clone(), modelo, m, performance.now() - t0, stream);
+      // Na Supabase, waitUntil segura o isolate até o registro terminar,
+      // mesmo depois da resposta já ter saído pra pessoa.
+      // deno-lint-ignore no-explicit-any
+      const er = (globalThis as any).EdgeRuntime;
+      if (er?.waitUntil) er.waitUntil(tarefa); else void tarefa;
+    } catch { /* clone falhou: sem registro */ }
+  }
+  return r;
+}
+
+async function iaFetchCru(url: string, init: RequestInit): Promise<Response> {
   if (url !== IA_URL) return fetch(url, init);
   const gemini = Deno.env.get("GEMINI_API_KEY");
   if (!gemini) throw new Error("GEMINI_API_KEY não configurada");

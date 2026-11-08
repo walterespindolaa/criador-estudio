@@ -2,7 +2,7 @@
 // Higgsfield (modelo Soul). Assíncrono: action "generate" cria o job + envia à fila;
 // action "poll" consulta o status e traz as imagens prontas. Admin-only.
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { iaFetch, chaveIA, IA_URL } from "../_shared/ia.ts";
+import { iaFetch, chaveIA, IA_URL, definirContextoIA } from "../_shared/ia.ts";
 import { VOZ_CRIA } from "../_shared/voz-cria.ts";
 
 const cors = {
@@ -137,6 +137,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action ?? "generate");
+    definirContextoIA({ funcao: `higgsfield-generate:${action.slice(0, 40)}`, userId: user.id });
 
     // ── POLL ──────────────────────────────────────────────
     if (action === "poll") {

@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { iaFetch, chaveIA, IA_URL } from "../_shared/ia.ts";
+import { iaFetch, chaveIA, IA_URL, definirContextoIA } from "../_shared/ia.ts";
 import { createClient } from "npm:@supabase/supabase-js@2"
 import { VOZ_CRIA, humanizar, humanizarDeep } from "../_shared/voz-cria.ts"
 
@@ -408,6 +408,7 @@ serve(async (req) => {
 
     // Contexto (brandbook) e cota são da conta ativa. `userId` do body é ignorado.
     const userId = contaId
+    definirContextoIA({ funcao: `ai-context-builder:${String(operation ?? "?").slice(0, 50)}`, userId: user.id, contaId })
 
     // ── Recursos pagos por TIER (F19) ──────────────────────────────
     // A trava do frontend (roteador React / UpgradeGate) é UX. Ela não é

@@ -39,7 +39,7 @@
 // Fase 1: SÓ ADMIN. Sem cobrança, sem cota.
 // ═══════════════════════════════════════════════════════════════════════════
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { iaFetch, chaveIA as chaveIAGlobal, IA_URL } from "../_shared/ia.ts";
+import { iaFetch, chaveIA as chaveIAGlobal, IA_URL, definirContextoIA } from "../_shared/ia.ts";
 import { VOZ_CRIA, humanizarDeep } from "../_shared/voz-cria.ts";
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined;
@@ -801,6 +801,7 @@ Deno.serve(async (req) => {
     const apifyToken = Deno.env.get("APIFY_TOKEN") ?? null;
 
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
+    definirContextoIA({ funcao: `video-analyze:${body?.acao === "adaptar" ? "adaptar" : "analisar"}`, userId: user.id });
 
     // Tenant efetivo: colaborador atua no gestor (mesma regra do apify-scrape).
     let mgr = user.id;

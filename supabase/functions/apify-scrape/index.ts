@@ -23,7 +23,7 @@
 //    o custo do mês. Agora tem crédito, debitado por tipo de análise.
 // ═══════════════════════════════════════════════════════════════════════════
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { iaFetch, chaveIA, IA_URL } from "../_shared/ia.ts";
+import { iaFetch, chaveIA, IA_URL, definirContextoIA } from "../_shared/ia.ts";
 import { VOZ_CRIA } from "../_shared/voz-cria.ts";
 import { registrarErro, mensagemDe } from "../_shared/log.ts";
 
@@ -578,6 +578,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const body = await req.json().catch(() => ({}));
+    definirContextoIA({ funcao: `apify-scrape:${String((body as Record<string, unknown>)?.action ?? "?").slice(0, 40)}`, userId: user.id });
     const apifyToken = Deno.env.get("APIFY_TOKEN");
     if (!apifyToken) return json({ error: "apify_not_configured" }, 500);
 

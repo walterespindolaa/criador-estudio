@@ -28,7 +28,7 @@ export async function lerResposta(a: { assunto: string | null; nome: string | nu
         { role: "user", content: `${contexto}\nAssunto: ${a.assunto ?? ""}\nNome: ${a.nome ?? a.conta?.name ?? ""}\n\nMensagem:\n${a.texto.slice(0, 3000)}` },
       ],
     }),
-  });
+  }, { funcao: "email-resposta", contaId: a.conta?.id ?? null });
   if (!r.ok) throw new Error(`ia ${r.status}`);
   const j = await r.json();
   const o = JSON.parse(j.choices?.[0]?.message?.content ?? "{}");

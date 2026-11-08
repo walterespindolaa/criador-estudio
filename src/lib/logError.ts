@@ -5,7 +5,7 @@ import { sanitizeTrackingUrl } from "@/lib/trackingUrl";
 const sbRpc = supabase.rpc.bind(supabase) as unknown as (
   fn: string,
   args?: Record<string, unknown>,
-) => Promise<unknown>;
+) => PromiseLike<unknown>;
 
 // Throttle: não repete a mesma mensagem por 1 minuto (evita spam de log).
 const recent = new Map<string, number>();
@@ -24,7 +24,9 @@ export function logError(message: string, context?: Record<string, unknown>, lev
       // URL mascarada: rotas com token (/aprovar, /ativar, etc.) não vazam o token pro log.
       _url: typeof window !== "undefined" ? sanitizeTrackingUrl(window.location.href) : null,
       _level: level,
-    });
+    }).then(undefined, () => { /* sem log, segue */ });
+    // O retorno do rpc é preguiçoso: sem o .then o pedido nunca era enviado,
+    // e o app_logs ficou com 0 linhas desde sempre (visto em 08/11/2026).
   } catch {
     /* nunca deixar o log quebrar o app */
   }
