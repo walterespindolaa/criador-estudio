@@ -3100,7 +3100,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 <div className="shrink-0 rounded-2xl border border-border bg-card px-3 py-2.5">{blocoMidia}</div>
                 {/* Prévia: ocupa o que sobra do painel e encolhe pela altura
                     (PreviaQueCabe). No celular ela é a aba "Prévia". */}
-                <div className="flex flex-col flex-1 min-h-[220px] w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
+                <div className="flex flex-col flex-1 min-h-[480px] w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
                   <PreviaQueCabe>{previaConteudo(true)}</PreviaQueCabe>
                 </div>
               </aside>
@@ -3247,12 +3247,17 @@ function CarouselMediaStrip({
   onRemove: (ref: DriveRef) => void;
   removingIds: Set<string>;
 }) {
-  /* LISTA COM NOME (08/11/2026, Walter: "quando coloco imagem não aparece a
-     lista/nome das mídias, não consigo visualizar pra colocar em ordem"). A
-     tira de miniaturas pequenas rolava pro lado e escondia as primeiras. Agora
-     abre em lista: número, miniatura maior e nome, arrastando pela alça. A tira
-     continua disponível no botão "miniaturas". */
-  const [modo, setModo] = useState<"lista" | "tira">("lista");
+  /* TIRA + LISTA (08/11/2026, Walter: "quando coloco imagem não aparece a
+     lista/nome das mídias, não consigo visualizar pra colocar em ordem", com o
+     editor da social mídia como exemplo). Em cima a tira numerada pra arrastar;
+     embaixo a lista com o mesmo número, o nome, baixar e remover. */
+  // Fechada por padrão (igual "Anexos e links" da social mídia) e lembra a escolha.
+  const [listaAberta, setListaAberta] = useState<boolean>(() => {
+    try { return localStorage.getItem("cria_lista_midias") === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("cria_lista_midias", listaAberta ? "1" : "0"); } catch { /* sem storage */ }
+  }, [listaAberta]);
   const onDragEnd = (r: DropResult) => {
     if (!r.destination) return;
     const from = r.source.index;
@@ -3267,7 +3272,7 @@ function CarouselMediaStrip({
     const isVideo = m.file_type?.includes("video");
     const src = m.thumbnail_url || m.view_url || "";
     return (
-      <span className={cn("relative block overflow-hidden rounded-lg border border-border bg-muted shrink-0", cls)}>
+      <span className={cn("relative block overflow-hidden bg-muted shrink-0", cls)}>
         {src ? (
           <img src={src} alt="" draggable={false} loading="lazy" className="w-full h-full object-cover select-none" />
         ) : (
@@ -3282,52 +3287,28 @@ function CarouselMediaStrip({
     );
   };
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-end gap-1">
-        {(["lista", "tira"] as const).map((k) => (
-          <button key={k} type="button" onClick={() => setModo(k)}
-            className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-body font-semibold border transition-colors",
-              modo === k ? "bg-foreground text-background border-foreground" : "bg-background text-muted-foreground border-border hover:text-foreground")}>
-            {k === "lista" ? "lista" : "miniaturas"}
-          </button>
-        ))}
-      </div>
-      <div className={modo === "tira" ? "overflow-x-auto overflow-y-hidden pb-2.5 kanban-scroll" : ""}>
+    <div className="space-y-2">
+      <p className="text-[11px] font-body text-muted-foreground">Arraste pela barrinha pra mudar a ordem</p>
+      <div className="overflow-x-auto overflow-y-hidden pb-2.5 kanban-scroll">
         <DragDropContext onDragEnd={onDragEnd}>
-          <Droppable droppableId="carousel-media" direction={modo === "tira" ? "horizontal" : "vertical"}>
+          <Droppable droppableId="carousel-media" direction="horizontal">
             {(dropP) => (
-              <div ref={dropP.innerRef} {...dropP.droppableProps} className={modo === "tira" ? "flex w-max" : "flex flex-col"}>
+              <div ref={dropP.innerRef} {...dropP.droppableProps} className="flex w-max">
                 {media.map((m, i) => (
                   <Draggable key={m.id} draggableId={m.id} index={i} disableInteractiveElementBlocking>
                     {(dragP, dragS) => {
-                      const estilo = { ...dragP.draggableProps.style, WebkitUserSelect: "none" as const, userSelect: "none" as const, WebkitTouchCallout: "none" as const };
-                      const item = modo === "tira" ? (
-                        <div ref={dragP.innerRef} {...dragP.draggableProps} style={estilo}
+                      const item = (
+                        <div ref={dragP.innerRef} {...dragP.draggableProps}
+                          style={{ ...dragP.draggableProps.style, WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" }}
                           className={cn("relative shrink-0 w-16 h-16 mr-2 rounded-xl overflow-hidden border border-border bg-muted select-none",
                             dragS.isDragging && "ring-2 ring-primary/50 shadow-lg")}>
-                          {thumb(m, "w-full h-full rounded-none border-0")}
+                          {thumb(m, "w-full h-full")}
                           <span className="absolute top-0.5 left-0.5 z-10 bg-black/65 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{i + 1}</span>
                           <button type="button" onClick={() => onRemove(m)} disabled={removingIds.has(m.id)} aria-label="Remover imagem"
                             className="absolute top-1 right-1 z-20 grid place-items-center bg-black/65 text-white rounded-full p-1 disabled:opacity-50">
                             <X className="h-3.5 w-3.5" />
                           </button>
                           <MediaGrip handleProps={dragP.dragHandleProps ?? undefined} />
-                        </div>
-                      ) : (
-                        <div ref={dragP.innerRef} {...dragP.draggableProps} style={estilo}
-                          className={cn("flex items-center gap-2.5 mb-1.5 rounded-xl border border-border bg-background px-2 py-1.5 select-none",
-                            dragS.isDragging && "ring-2 ring-primary/50 shadow-lg")}>
-                          <span {...(dragP.dragHandleProps ?? {})} aria-label="Arrastar para reordenar"
-                            className="grid place-items-center h-8 w-6 rounded-md text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none">
-                            <GripVertical className="h-4 w-4" />
-                          </span>
-                          <span className="w-5 text-center text-[12px] font-display font-extrabold tabular-nums">{i + 1}</span>
-                          {thumb(m, "w-11 h-11")}
-                          <span className="min-w-0 flex-1 text-[12.5px] font-body text-foreground truncate" title={m.file_name}>{m.file_name || "sem nome"}</span>
-                          <button type="button" onClick={() => onRemove(m)} disabled={removingIds.has(m.id)} aria-label="Remover imagem"
-                            className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 disabled:opacity-50">
-                            <X className="h-3.5 w-3.5" />
-                          </button>
                         </div>
                       );
                       return dragS.isDragging ? createPortal(item, document.body) : item;
@@ -3339,6 +3320,40 @@ function CarouselMediaStrip({
             )}
           </Droppable>
         </DragDropContext>
+      </div>
+      <div className="rounded-2xl border border-border bg-background">
+        <button type="button" onClick={() => setListaAberta((v) => !v)}
+          className="w-full flex items-center justify-between gap-2 px-3 py-2 text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">
+          <span>Mídias ({media.length})</span>
+          <ChevronDown className={cn("h-4 w-4 transition-transform", listaAberta && "rotate-180")} />
+        </button>
+        {listaAberta && (
+          <div className="px-2 pb-2">
+            {media.map((m, i) => {
+              const baixar = m.download_url || m.view_url || null;
+              return (
+                <div key={m.id} className="flex items-center gap-2.5 rounded-xl px-1.5 py-1.5 hover:bg-muted/40">
+                  <span className="w-5 text-center text-[12px] font-display font-extrabold tabular-nums">{i + 1}</span>
+                  {thumb(m, "w-10 h-10 rounded-lg border border-border")}
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[12.5px] font-body text-foreground truncate" title={m.file_name}>{m.file_name || "sem nome"}</span>
+                    <span className="block text-[11px] font-body text-muted-foreground">{m.file_type?.includes("video") ? "Vídeo" : "Imagem"}</span>
+                  </span>
+                  {baixar && (
+                    <a href={baixar} target="_blank" rel="noreferrer" aria-label="Baixar"
+                      className="shrink-0 grid place-items-center h-8 w-8 rounded-full border border-border text-muted-foreground hover:text-foreground">
+                      <Download className="h-3.5 w-3.5" />
+                    </a>
+                  )}
+                  <button type="button" onClick={() => onRemove(m)} disabled={removingIds.has(m.id)} aria-label="Remover"
+                    className="shrink-0 grid place-items-center h-8 w-8 rounded-full border border-border text-muted-foreground hover:text-destructive disabled:opacity-50">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -3366,8 +3381,12 @@ function PreviaQueCabe({ children, largura = 290 }: { children: React.ReactNode;
       // Cresce E encolhe (Walter, 19/10/2026: em tela alta sobrava um vão
       // embaixo com a prévia pequena). Limite: a altura que sobra e a largura
       // do painel, o que bater primeiro.
+      // 08/11/2026: com a lista de mídias aberta a prévia virava um selo de 40%.
+      // Agora a escala segue só a largura do painel (0.8 a 1.25) e o painel
+      // rola, como na social mídia. A altura não manda mais (alturaLivre fica
+      // só pra referência).
       setEscala(h > 0 && alturaLivre > 0
-        ? Math.max(0.4, Math.min(alturaLivre / h, larguraLivre / largura))
+        ? Math.max(0.8, Math.min(1.25, larguraLivre / largura))
         : 1);
     };
     medir();
@@ -3377,7 +3396,7 @@ function PreviaQueCabe({ children, largura = 290 }: { children: React.ReactNode;
     return () => ro.disconnect();
   }, []);
   return (
-    <div ref={caixaRef} className="flex-1 min-h-0 overflow-hidden p-3 bg-muted/20 flex justify-center">
+    <div ref={caixaRef} className="flex-1 p-3 bg-muted/20 flex justify-center">
       <div style={{ width: largura * escala, height: alturaNatural ? alturaNatural * escala : undefined }} className="shrink-0">
         <div ref={conteudoRef} style={{ width: largura, transform: `scale(${escala})`, transformOrigin: "top left" }}
           className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">

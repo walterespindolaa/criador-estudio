@@ -1,6 +1,6 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Heart, MessageCircle, Send, Bookmark, Play, Music2, Share2, ChevronLeft, ChevronRight, Image, X } from "lucide-react";
 import { VideoMediaSlot } from "./VideoMediaSlot";
@@ -55,15 +55,37 @@ interface PostPreviewProps extends PostPreviewContentProps {
    acesso ao arquivo. */
 function VideoDoDrive({ fileId, poster, className }: { fileId: string; poster: string | null; className?: string }) {
   const [tocar, setTocar] = useState(false);
+  const caixa = useRef<HTMLDivElement>(null);
+  const [tam, setTam] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    if (!tocar || !caixa.current) return;
+    const el = caixa.current;
+    const medir = () => setTam({ w: el.clientWidth, h: el.clientHeight });
+    medir();
+    const ro = new ResizeObserver(medir);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [tocar]);
   if (tocar) {
+    /* O player do Drive abaixo de ~300px de largura empurra o vídeo pro lado e
+       deixa uma faixa preta (testado em 08/11/2026). Então o iframe nasce com
+       405px de largura, na proporção da moldura, e é reduzido por escala. */
+    const BASE = 405;
+    const escala = tam && tam.w > 0 ? tam.w / BASE : 1;
+    const altura = tam && tam.w > 0 ? Math.round((tam.h / tam.w) * BASE) : 720;
     return (
-      <iframe
-        src={`https://drive.google.com/file/d/${fileId}/preview`}
-        title="Vídeo do Drive"
-        allow="autoplay; fullscreen"
-        allowFullScreen
-        className={`${className ?? ""} border-0 bg-black`}
-      />
+      <div ref={caixa} className={`${className ?? ""} overflow-hidden bg-black`}>
+        {tam && (
+          <iframe
+            src={`https://drive.google.com/file/d/${fileId}/preview`}
+            title="Vídeo do Drive"
+            allow="autoplay; fullscreen"
+            allowFullScreen
+            className="absolute top-0 left-0 border-0"
+            style={{ width: BASE, height: altura, transform: `scale(${escala})`, transformOrigin: "top left" }}
+          />
+        )}
+      </div>
     );
   }
   return (

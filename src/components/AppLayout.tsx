@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Outlet, NavLink, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { BottomBar } from "@/components/BottomBar";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
@@ -9,10 +9,14 @@ import { FeedbackButton } from "@/components/FeedbackButton";
 import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { GlobalSearch } from "@/components/shared/GlobalSearch";
-import { Logo } from "@/components/shared/Logo";
 import { PlanBadge } from "@/components/shared/PlanBadge";
 import { AppFooter } from "@/components/shared/AppFooter";
-import { Settings, Lightbulb, Plus } from "lucide-react";
+import {
+  Lightbulb, Plus, X, ArrowLeft, Home, ChevronRight, CheckCircle2, LayoutGrid, ListChecks, Kanban, Target,
+  FolderOpen, BookOpen, BookMarked, Link2, Handshake, BarChart3, FileBarChart, History, GraduationCap,
+  PlayCircle, Settings, Gem, IdCard, Trash2, CalendarRange, Mic, Clapperboard, TrendingUp, Users, Shield, Sparkles,
+  type LucideIcon,
+} from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { useSouParceiro } from "@/hooks/useParceiro";
 import { deriveTier } from "@/hooks/useTier";
@@ -26,7 +30,7 @@ import { applyThemeFont } from "@/components/settings/SettingsVisual";
 import ContaPausada from "@/pages/ContaPausada";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppRail } from "@/components/AppRail";
-import { HeroBand, HeroCardMobile } from "@/components/HeroBand";
+import { BarraSuperior, CartaoInicioMobile } from "@/components/BarraSuperior";
 import { CapturaRapidaDialog } from "@/components/dashboard/CapturaRapidaDialog";
 import { TituloCriakut } from "@/components/criakut/TituloCriakut";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -52,33 +56,45 @@ import { cn } from "@/lib/utils";
 // porque a margem do conteúdo e o recuo da HeroBand dependem dele.
 const RAIL_PIN_KEY = "cria_rail_fixado";
 
-// Emoji da saudação, clicável e personalizável (fica salvo por dispositivo).
-const GREET_EMOJIS = [
-  "👋", "✨", "🚀", "🔥", "💪", "😎", "🎯", "☕", "🌟", "💜", "🙌", "👊",
-  "😊", "😄", "🤩", "🥳", "😌", "🤗", "😉", "🙃", "💫", "⚡", "🌈", "🍀",
-  "❤️", "🧡", "💛", "💙", "💚", "🩷", "👑", "🏆", "📈", "🎨", "💡", "🎬",
-];
-function GreetingEmoji() {
-  const [emoji, setEmoji] = useState<string>(() => { try { return localStorage.getItem("cria_greet_emoji") || "👋"; } catch { return "👋"; } });
-  const [open, setOpen] = useState(false);
-  const pick = (e: string) => { setEmoji(e); setOpen(false); try { localStorage.setItem("cria_greet_emoji", e); } catch { /* noop */ } };
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button type="button" aria-label="Trocar emoji da saudação" className="leading-none transition-transform hover:scale-110">{emoji}</button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-2">
-        <p className="text-[11px] font-body text-muted-foreground mb-1.5 px-0.5">Escolha seu emoji</p>
-        <div className="grid grid-cols-6 gap-1 max-h-[220px] overflow-y-auto">
-          {GREET_EMOJIS.map((e) => (
-            <button key={e} type="button" onClick={() => pick(e)}
-              className={"h-8 w-8 rounded-lg text-lg grid place-items-center transition-colors hover:bg-muted " + (e === emoji ? "bg-muted" : "")}>{e}</button>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
+/* PÁGINAS DO CRIADOR NA BARRA SUPERIOR (Walter, 08/11/2026, mockup aprovado):
+   título, ícone e uma frase curta do que a página faz. Sai o emoji da
+   saudação (Walter não quer emoji nem ícone padrão do sistema). */
+type InfoPagina = { titulo: string; frase?: string; icone: LucideIcon };
+const PAGINAS: Record<string, InfoPagina> = {
+  ideias: { titulo: "Ideias", frase: "anota agora, organiza depois", icone: Lightbulb },
+  aprovacao: { titulo: "Aprovações", frase: "o que está esperando o seu ok", icone: CheckCircle2 },
+  feed: { titulo: "Meu Feed", frase: "como o seu perfil vai ficar", icone: LayoutGrid },
+  tarefas: { titulo: "Tarefas", frase: "o que precisa sair hoje, sem esquecer nada", icone: ListChecks },
+  criando: { titulo: "Criando", frase: "da ideia ao post publicado", icone: Kanban },
+  metas: { titulo: "Metas", frase: "onde você quer chegar", icone: Target },
+  arquivos: { titulo: "Arquivos", frase: "tudo que você subiu, num lugar só", icone: FolderOpen },
+  biblioteca: { titulo: "Biblioteca", frase: "o que você guardou pra usar depois", icone: BookOpen },
+  brandbook: { titulo: "Brandbook", frase: "quem você é, do jeito que a Cria IA precisa saber", icone: BookMarked },
+  linkinbio: { titulo: "Link in Bio", frase: "a porta de entrada do seu perfil", icone: Link2 },
+  collabs: { titulo: "Collabs", frase: "parcerias, propostas e cachê", icone: Handshake },
+  insights: { titulo: "Insights", frase: "o que o seu Instagram anda dizendo", icone: BarChart3 },
+  relatorios: { titulo: "Relatórios", frase: "o mês em números", icone: FileBarChart },
+  historico: { titulo: "Histórico", frase: "tudo o que já saiu", icone: History },
+  aprender: { titulo: "Aprender", frase: "cursos pra crescer criando", icone: GraduationCap },
+  tutoriais: { titulo: "Tutoriais", frase: "o Cria explicado em vídeos curtos", icone: PlayCircle },
+  configuracoes: { titulo: "Configurações", frase: "conta, marca e preferências", icone: Settings },
+  assinar: { titulo: "Planos", frase: "escolha até onde o Cria vai com você", icone: Gem },
+  "media-kit": { titulo: "Media Kit", frase: "seu portfólio pra fechar publi", icone: IdCard },
+  lixeira: { titulo: "Lixeira", frase: "o que foi apagado nos últimos dias", icone: Trash2 },
+  plano: { titulo: "Cria Plano", frase: "o mês inteiro montado, post a post", icone: CalendarRange },
+  prompter: { titulo: "Cria Prompter", frase: "grave com o roteiro rolando na tela", icone: Mic },
+  stories: { titulo: "Cria Stories", frase: "a semana de stories com roteiro", icone: Clapperboard },
+  tendencias: { titulo: "Tendências", frase: "o que está em alta no seu nicho", icone: TrendingUp },
+  criakut: { titulo: "Criakut", icone: Users },
+  "cf-admin-panel": { titulo: "Admin", icone: Shield },
+};
+const paginaDaRota = (path: string): InfoPagina | null => {
+  const seg = path.replace(/^\/app\/?/, "").split("/")[0];
+  return seg ? PAGINAS[seg] ?? null : null;
+};
+// Frase curta do Início por período do dia (sem consulta nova).
+const fraseDoDia = (h: number) =>
+  h < 12 ? "um post de cada vez, bora começar" : h < 18 ? "segue o ritmo, o dia ainda rende" : "o amanhã agradece o que você planejar hoje";
 
 const AppLayout = () => {
   const { profile, isLoading } = useProfile();
@@ -104,6 +120,7 @@ const AppLayout = () => {
   useLastSeen();
   // Janela de captura do botão "Nova ideia" (topo do dashboard).
   const [capturaAberta, setCapturaAberta] = useState(false);
+  const [fabAberto, setFabAberto] = useState(false);
 
   // ── Compra direta pela LP (Payment Link): quem pagou ANTES de criar a conta
   //    tem a assinatura esperando em pending_purchases. No primeiro load logado
@@ -249,18 +266,27 @@ const AppLayout = () => {
   const displayName = managedAccount?.name ?? profile?.name ?? "";
   const displayAvatarUrl = managedAccount ? managedAccount.avatar_url : profile?.avatar_url;
   const firstName = displayName.trim().split(" ")[0] || "criador";
-  const PAGE_TITLES: Record<string, string> = {
-    "/app/ideias": "Ideias", "/app/aprovacao": "Aprovações", "/app/feed": "Meu Feed", "/app/tarefas": "Tarefas",
-    "/app/criando": "Criando", "/app/metas": "Metas", "/app/arquivos": "Arquivos",
-    "/app/biblioteca": "Biblioteca", "/app/brandbook": "Brandbook", "/app/linkinbio": "Link in Bio",
-    "/app/collabs": "Collabs", "/app/insights": "Insights", "/app/relatorios": "Relatórios", "/app/historico": "Histórico",
-    "/app/aprender": "Aprender", "/app/tutoriais": "Tutoriais", "/app/configuracoes": "Configurações",
-  };
   const isDash = location.pathname === "/app";
+  const pagina = isDash ? null : paginaDaRota(location.pathname);
+  const IconePagina = pagina?.icone ?? Sparkles;
   const heroTitle = isDash
-    ? <span className="inline-flex items-center gap-2">{firstName} <GreetingEmoji /></span>
+    ? firstName
     : location.pathname.startsWith("/app/criakut") ? <TituloCriakut />
-    : (PAGE_TITLES[location.pathname] ?? "CRIA");
+    : (pagina?.titulo ?? "Cria");
+  const tituloCurto = isDash ? "Início" : (pagina?.titulo ?? "Cria");
+  const fraseTopo = isDash ? fraseDoDia(hour) : pagina?.frase;
+  const dataHoje = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+  const topoEsquerda = isDash ? (
+    <span className="first-letter:uppercase">{dataHoje}</span>
+  ) : (
+    <nav aria-label="Caminho" className="flex items-center gap-1.5">
+      <button type="button" onClick={() => navigate("/app")} className="inline-flex items-center gap-1.5 hover:text-foreground">
+        <Home className="h-3.5 w-3.5" /> Início
+      </button>
+      <ChevronRight className="h-3.5 w-3.5" />
+      <b className="font-bold text-[#1D1B18]">{tituloCurto}</b>
+    </nav>
+  );
   const heroEyebrow = isDash ? `${greetWord},` : undefined;
   // Topo do dashboard (mockup aprovado 19/10/2026): @ e nicho principal embaixo do nome.
   const displayHandle = (managedAccount ? managedAccount.instagram_handle : profile?.instagram_handle)?.replace(/^@/, "").trim();
@@ -268,13 +294,13 @@ const AppLayout = () => {
   const heroMeta = isDash && (displayHandle || displayNiche) ? (
     <>
       {displayHandle && <span>@{displayHandle}</span>}
-      {displayNiche && <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold">{displayNiche}</span>}
+      {displayNiche && <span className="rounded-full border-[1.5px] border-[#1D1B18] bg-white px-2.5 py-0.5 text-[11.5px] font-bold text-[#1D1B18]">{displayNiche}</span>}
     </>
   ) : undefined;
   const avatarNode = isDash ? (
-    <Avatar className="h-[88px] w-[88px] shrink-0 border-4 border-white/90 shadow-[0_6px_20px_rgba(0,0,0,0.18)]">
+    <Avatar className="h-[62px] w-[62px] shrink-0 border-2 border-[#1D1B18] bg-primary p-[3px] [&>img]:rounded-full [&>img]:border-2 [&>img]:border-white">
       <AvatarImage src={displayAvatarUrl ?? undefined} alt={firstName} />
-      <AvatarFallback className="bg-white/20 font-display text-3xl font-bold text-white">
+      <AvatarFallback className="bg-primary font-display text-2xl font-bold text-primary-foreground">
         {firstName.charAt(0).toUpperCase()}
       </AvatarFallback>
     </Avatar>
@@ -283,11 +309,11 @@ const AppLayout = () => {
   const quickActions = isDash ? (
     <>
       <button onClick={() => setCapturaAberta(true)} data-tour="dash-captura"
-        className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-[13px] font-bold text-foreground shadow-sm transition hover:opacity-90">
+        className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#1D1B18] bg-white px-4 py-2 text-[13.5px] font-extrabold text-[#1D1B18] shadow-[0_2px_0_#1D1B18] transition hover:-translate-y-px">
         <Lightbulb className="h-4 w-4" /> Nova ideia
       </button>
       <button onClick={() => navigate("/app/criando")}
-        className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-2 text-[13px] font-bold text-white ring-1 ring-white/35 transition hover:bg-white/25">
+        className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#1D1B18] bg-primary px-4 py-2 text-[13.5px] font-extrabold text-primary-foreground shadow-[0_2px_0_#1D1B18] transition hover:-translate-y-px">
         <Plus className="h-4 w-4" /> Novo post
       </button>
     </>
@@ -330,44 +356,40 @@ const AppLayout = () => {
                   header NÃO repete a safe-area: quem trata o notch é o banner, e as
                   duas barras ficam coladas, sem gap. Sem banner, o próprio header
                   respeita a safe-area do topo. */}
-              <header
-                className="min-h-14 grid grid-cols-[1fr_auto_1fr] items-center px-3 bg-background border-b border-border md:hidden"
-              >
-                <div className="flex items-center gap-0.5 justify-self-start">
-                  <GlobalSearch />
-                  <HelpButton />
-                  {/* Enviar feedback também no celular (antes só na HeroBand desktop). */}
-                  <FeedbackButton origin="usuario" />
-                </div>
-
-                {/* A logo central sobe a página atual pro topo (não navega pra home).
-
-                    NO CELULAR VAI O SELO, NÃO A ASSINATURA (Walter, 21/09/2026:
-                    "ainda tá meio ofuscado a parte superior no mobile"). O
-                    desenho da marca escrita tem traço fino: reduzido pra 24px de
-                    altura ele vira 44px de largura e só 30% dos pixels ficam
-                    opacos, o resto é antisserrilhado. Daí o efeito de marca
-                    d'água ao lado de ícones nítidos, que nenhuma troca de
-                    arquivo conserta, porque o problema é o tamanho. O selo é uma
-                    forma cheia e aguenta ser pequeno, que é o motivo de o rail
-                    já usar ele quando está fechado. */}
-                <button
-                  type="button"
-                  onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                  className="flex items-center justify-self-center px-2"
-                  aria-label="Subir ao topo"
-                >
-                  <Logo icon pequeno className="h-8 w-8" />
+              {/* TOPO DO CELULAR (Walter, 08/11/2026, mockup aprovado): um só,
+                  compacto, em papel creme. Avatar no Início ou a seta de voltar,
+                  o nome da tela com uma frase à mão, e à direita só o que é
+                  urgente, a troca de conta, a busca e os avisos. Ajuda, sugestão
+                  e Configurações ficam no "Mais" da barra de baixo. */}
+              <header className="flex min-h-14 items-center gap-2.5 border-b-2 border-[#1D1B18] bg-[#FFFCF3] px-3.5 py-2 md:hidden">
+                {isDash ? (
+                  <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Subir ao topo"
+                    className="shrink-0 rounded-full border-2 border-[#1D1B18] bg-primary p-[2px]">
+                    <Avatar className="h-[30px] w-[30px] border-2 border-white">
+                      <AvatarImage src={displayAvatarUrl ?? undefined} alt={firstName} />
+                      <AvatarFallback className="bg-primary font-display text-sm font-bold text-primary-foreground">
+                        {firstName.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/app"))} aria-label="Voltar"
+                    className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[10px] border-2 border-[#1D1B18] bg-white text-[#1D1B18]">
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                )}
+                <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="min-w-0 flex-1 text-left">
+                  <span className="block truncate font-display text-[19px] font-extrabold leading-none text-[#1D1B18]">{tituloCurto}</span>
+                  {fraseTopo && (
+                    <span className="mt-0.5 block truncate text-[15px] font-bold leading-none text-primary" style={{ fontFamily: "Caveat, cursive" }}>{fraseTopo}</span>
+                  )}
                 </button>
-
-                <div className="flex items-center gap-0.5 justify-self-end">
+                <div className="flex shrink-0 items-center gap-0.5">
                   <UploadProgressIndicator />
                   <PlanBadge onlyUrgent compact />
                   <AccountSwitcher compact />
+                  <GlobalSearch />
                   <NotificationsBell />
-                  <NavLink to="/app/configuracoes" aria-label="Configurações" className="p-2 hover:bg-accent/60 rounded-xl transition-colors">
-                    <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
-                  </NavLink>
                 </div>
               </header>
 
@@ -387,52 +409,54 @@ const AppLayout = () => {
         {/* 19/10/2026 (Walter, mockup aprovado): no Início do celular a saudação
             vira o cartão-faixa (fora do topo grudado, rola junto com a página), com foto, @, nicho, ações e o período. */}
         {isDash && (
-          <HeroCardMobile
+          <CartaoInicioMobile
             avatar={
-              <Avatar className="h-16 w-16 shrink-0 border-[3px] border-white/90 shadow-md">
-                <AvatarImage src={displayAvatarUrl ?? undefined} alt={firstName} />
-                <AvatarFallback className="bg-white/20 font-display text-2xl font-bold text-white">
-                  {firstName.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <span className="shrink-0 rounded-full border-2 border-[#1D1B18] bg-primary p-[3px]">
+                <Avatar className="h-14 w-14 border-2 border-white">
+                  <AvatarImage src={displayAvatarUrl ?? undefined} alt={firstName} />
+                  <AvatarFallback className="bg-primary font-display text-2xl font-bold text-primary-foreground">
+                    {firstName.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </span>
             }
             eyebrow={`${greetWord},`}
             title={heroTitle}
             meta={heroMeta}
-            actions={
-              <>
-                <button onClick={() => setCapturaAberta(true)}
-                  className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-full bg-white px-3 text-[13px] font-bold text-foreground shadow-sm">
-                  <Lightbulb className="h-4 w-4" /> Nova ideia
-                </button>
-                <button onClick={() => navigate("/app/criando")}
-                  className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-full bg-white/15 px-3 text-[13px] font-bold text-white ring-1 ring-white/35">
-                  <Plus className="h-4 w-4" /> Novo post
-                </button>
-              </>
-            }
             slotId="cria-hero-slot-mobile"
           />
         )}
 
             <TrialBanner />
             <StorageWarningBanner />
-            <div
-              className={cn(
-                "hidden md:block",
-                railPinned ? "md:-ml-[288px] md:w-[calc(100%+288px)]" : "md:-ml-[104px] md:w-[calc(100%+104px)]",
-              )}
-            >
-              <HeroBand wideInset={railPinned} eyebrow={heroEyebrow} title={heroTitle} avatar={avatarNode} actions={quickActions} meta={heroMeta} destaque={isDash}>
-                <div className="flex items-center gap-2 rounded-2xl bg-white/15 px-2 py-1 backdrop-blur">
-                  <GlobalSearch />
-                  <PlanBadge light />
+            {/* BARRA SUPERIOR DO COMPUTADOR (Walter, 08/11/2026, mockup aprovado):
+                papel creme dentro da área do conteúdo, com a busca larga e
+                ajuda, sugestão e avisos numa pílula só. */}
+            <div className="hidden w-full md:block">
+              <div className="mx-auto max-w-screen-2xl px-8 pt-5">
+                <BarraSuperior
+                  eyebrow={heroEyebrow}
+                  title={heroTitle}
+                  avatar={avatarNode}
+                  icone={isDash ? undefined : <IconePagina />}
+                  frase={fraseTopo}
+                  topoEsquerda={topoEsquerda}
+                  actions={quickActions}
+                  meta={heroMeta}
+                  destaque={isDash}
+                >
+                  <div className="w-[300px] max-w-[30vw] [&>button]:w-full [&>button]:rounded-full [&>button]:border-2 [&>button]:border-[#1D1B18] [&>button]:bg-white [&>button]:shadow-[0_2px_0_#1D1B18]">
+                    <GlobalSearch />
+                  </div>
                   <UploadProgressIndicator />
-                  <HelpButton light />
-                  <FeedbackButton origin="usuario" />
-                  <NotificationsBell />
-                </div>
-              </HeroBand>
+                  <div className="flex items-center rounded-full border-2 border-[#1D1B18] bg-white p-[3px] text-[#1D1B18] shadow-[0_2px_0_#1D1B18] [&_button]:rounded-full">
+                    <HelpButton />
+                    <FeedbackButton origin="usuario" />
+                    <NotificationsBell />
+                  </div>
+                  <PlanBadge />
+                </BarraSuperior>
+              </div>
             </div>
 
             {/* overflow-x CLIP, não hidden. Com `hidden` o navegador transforma este
@@ -455,7 +479,38 @@ const AppLayout = () => {
           </div>
         </div>
       </div>
-      {isDash && <CapturaRapidaDialog open={capturaAberta} onOpenChange={setCapturaAberta} />}
+      {/* + FLUTUANTE DO CELULAR (Walter, 08/11/2026, mockup aprovado): Nova ideia
+          e Novo post saem do topo e ficam aqui, na cor do tema, acima da barra de
+          baixo. A janela da Nova ideia agora existe em todas as telas. */}
+      <Popover open={fabAberto} onOpenChange={setFabAberto}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label={fabAberto ? "Fechar" : "Criar"}
+            className={cn(
+              "fixed right-4 z-40 grid h-14 w-14 place-items-center rounded-[18px] border-2 border-[#1D1B18] shadow-[2px_2px_0_#1D1B18] md:hidden",
+              fabAberto ? "bg-[#1D1B18] text-white" : "bg-primary text-primary-foreground",
+            )}
+            style={{ bottom: "calc(72px + env(safe-area-inset-bottom, 0px) + 16px)" }}
+          >
+            {fabAberto ? <X className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="top" align="end" sideOffset={10}
+          className="w-auto border-0 bg-transparent p-0 shadow-none md:hidden">
+          <div className="flex flex-col items-end gap-2">
+            <button type="button" onClick={() => { setFabAberto(false); setCapturaAberta(true); }}
+              className="inline-flex items-center gap-2 rounded-full border-2 border-[#1D1B18] bg-white px-3.5 py-2 text-[13px] font-extrabold text-[#1D1B18] shadow-[0_2px_0_#1D1B18]">
+              <Lightbulb className="h-4 w-4" /> Nova ideia
+            </button>
+            <button type="button" onClick={() => { setFabAberto(false); navigate("/app/criando"); }}
+              className="inline-flex items-center gap-2 rounded-full border-2 border-[#1D1B18] bg-white px-3.5 py-2 text-[13px] font-extrabold text-[#1D1B18] shadow-[0_2px_0_#1D1B18]">
+              <Plus className="h-4 w-4" /> Novo post
+            </button>
+          </div>
+        </PopoverContent>
+      </Popover>
+      <CapturaRapidaDialog open={capturaAberta} onOpenChange={setCapturaAberta} />
     </SidebarProvider>
     </UploadProgressProvider>
     </VideoPublicConfirmProvider>
