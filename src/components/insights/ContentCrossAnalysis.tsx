@@ -1,4 +1,5 @@
 import { BarChart3, Layers, Hash, CalendarDays, Clock, Sparkles, TrendingUp } from "lucide-react";
+import { CARD, CARD_VAZIO, BARRA } from "./estiloCria";
 import { computeCrossAnalysis, crossHeadlines, fmtNum, type CrossItem, type CrossGroup } from "./insightsUtils";
 
 // CRUZAMENTOS (o ouro): performance típica (mediana) por FORMATO, PILAR, TEMA/HOOK e
@@ -9,18 +10,18 @@ function GroupBlock({ icon: Icon, title, rows, hint }: { icon: typeof BarChart3;
   if (rows.length === 0) return null;
   const max = rows.reduce((mx, r) => Math.max(mx, r.avgReach), 0);
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div className={`${CARD} p-4`}>
       <div className="flex items-center gap-2 mb-1">
         <Icon className="h-4 w-4 text-primary" />
-        <p className="text-sm font-display font-bold text-foreground">{title}</p>
+        <p className="text-[16px] font-display font-extrabold text-foreground leading-tight">{title}</p>
       </div>
       {hint && <p className="text-[11px] font-body text-muted-foreground mb-3">{hint}</p>}
       <div className={`space-y-2.5 ${hint ? "" : "mt-3"}`}>
         {rows.map((r) => (
           <div key={r.label} className={`flex items-center gap-3 ${r.poucos ? "opacity-60" : ""}`} title={r.poucos ? "Poucos posts: ainda não dá pra concluir" : undefined}>
             <span className="w-24 sm:w-28 text-[12px] font-body font-semibold text-foreground shrink-0 truncate" title={r.label}>{r.label}</span>
-            <span className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-              <span className="block h-full rounded-full" style={{ width: `${max > 0 ? Math.max(4, (r.avgReach / max) * 100) : 0}%`, background: r.color || "hsl(var(--primary))" }} />
+            <span className="flex-1 h-[18px] rounded-md bg-muted/70">
+              <span className={BARRA} style={{ width: `${max > 0 ? Math.max(6, (r.avgReach / max) * 100) : 0}%`, background: r.color || "#EA4918" }} />
             </span>
             <span className="w-28 text-right text-[12px] font-body shrink-0">
               <b className={r.poucos ? "text-muted-foreground" : "text-foreground"}>{fmtNum(r.avgReach)}</b>
@@ -38,7 +39,7 @@ export function ContentCrossAnalysis({ items, dicaLigar = false }: { items: Cros
 
   if (!data.hasData) {
     return (
-      <div className="rounded-2xl border border-dashed border-border p-6 text-center">
+      <div className={`${CARD_VAZIO} p-6 text-center`}>
         <BarChart3 className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
         <p className="text-sm font-body text-foreground font-medium">Cruzamentos ainda sem base</p>
         <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">
@@ -51,18 +52,18 @@ export function ContentCrossAnalysis({ items, dicaLigar = false }: { items: Cros
   const headlines = crossHeadlines(data, { dicaLigar });
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Direcionamento em uma frase (o que fazer mais) */}
       {headlines.length > 0 && (
-        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+        <div className={`${CARD} p-4`}>
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            <p className="text-sm font-display font-bold text-foreground">Direcionamento</p>
+            <p className="text-[16px] font-display font-extrabold text-foreground">Direcionamento</p>
           </div>
           <ul className="space-y-2 text-[13px] font-body">
             {headlines.map((h, i) => (
               <li key={i} className="flex gap-2">
-                <TrendingUp className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <TrendingUp className="h-4 w-4 text-[#EA4918] shrink-0 mt-0.5" />
                 <span>{h}</span>
               </li>
             ))}
@@ -70,7 +71,7 @@ export function ContentCrossAnalysis({ items, dicaLigar = false }: { items: Cros
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         <GroupBlock icon={BarChart3} title="Alcance típico por formato" rows={data.byFormat} hint="Alcance de um post normal de cada formato (mediana)." />
         {data.byPillar.length > 0 && (
           <GroupBlock icon={Layers} title="Alcance típico por pilar" rows={data.byPillar} hint="Posts ligados ao Cria, pelo pilar de cada um." />

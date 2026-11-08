@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -40,6 +41,7 @@ import { usePosts, type Post } from "@/hooks/usePosts";
 import { getIdeaSuggestions } from "@/lib/ai/claude";
 import { SavedRefs } from "@/components/ideas/SavedRefs";
 import { FolhaCard, FolhaDaIdeia, textoDaFolha } from "@/components/ideas/FolhaDaIdeia";
+import { NovaIdeiaFolha, type DadosDaFolha } from "@/components/ideas/NovaIdeiaFolha";
 import { useContagemGeracoes } from "@/hooks/useIdeaGeracoes";
 
 const ideaSchema = z.object({
@@ -151,7 +153,18 @@ const Ideias = () => {
     try { return localStorage.getItem("ideias_visao") === "list" ? "list" : "gallery"; } catch { return "gallery"; }
   });
   const setViewMode = (v: "list" | "gallery") => { setViewModeRaw(v); try { localStorage.setItem("ideias_visao", v); } catch { /* sem storage */ } };
+  // "Abrir a folha completa" da janela Nova ideia (Início/topo) chega com ?folha=<id>.
+  // Vale também quando a aba Ideias já está aberta (o botão do topo navega pra cá).
   const [folhaId, setFolhaId] = useState<string | null>(null);
+  const [paramsUrl, setParamsUrl] = useSearchParams();
+  useEffect(() => {
+    const id = paramsUrl.get("folha");
+    if (!id) return;
+    setFolhaId(id);
+    const resto = new URLSearchParams(paramsUrl);
+    resto.delete("folha");
+    setParamsUrl(resto, { replace: true });
+  }, [paramsUrl, setParamsUrl]);
   // Vem do "compartilhar → Cria" (Android PWA): o link pode chegar em url ou dentro de text.
   const _shareRaw = (() => { const sp = new URLSearchParams(window.location.search); return sp.get("url") || sp.get("text") || ""; })();
   const sharedUrl = _shareRaw ? (_shareRaw.match(/https?:\/\/\S+/)?.[0] ?? _shareRaw) : undefined;
@@ -267,6 +280,44 @@ const Ideias = () => {
       setSheetOpen(false);
     } catch {
       toast.error(editingIdea ? "Erro ao atualizar." : "Erro ao salvar.");
+    }
+  };
+
+  /* Guardar pela folha (NovaIdeiaFolha). Mesmo efeito do handleSave de antes:
+     cria ou atualiza, move de pasta se mudou, mesmos avisos. "abrir" abre a
+     folha completa da ideia logo depois. */
+  const guardarFolha = async (d: DadosDaFolha, { abrir }: { abrir: boolean }): Promise<boolean> => {
+    if (!user) return false;
+    const valido = ideaSchema.safeParse({ title: d.titulo, notes: null });
+    if (!valido.success) { toast.error(valido.error.issues[0]?.message ?? "Confira o título."); return false; }
+    try {
+      if (editingIdea) {
+        await updateIdea.mutateAsync({ id: editingIdea.id, updates: {
+          title: d.titulo,
+          pillar_id: d.pilarId,
+          platform: editingIdea.platform || null,
+          // A anotação de ideia existente mora na folha (HTML limpo): a janela não mexe nela.
+          notes: editingIdea.notes,
+          objective: editingIdea.objective || null,
+          origin: editingIdea.origin || null,
+        } });
+        if (d.pastaId !== folderIdDaIdeia(editingIdea)) {
+          await moverIdeia.mutateAsync({ ideaId: editingIdea.id, folderId: d.pastaId });
+        }
+        toast.success("Ideia atualizada!");
+        setSheetOpen(false);
+        if (abrir) setFolhaId(editingIdea.id);
+      } else {
+        const nova = await createIdea.mutateAsync({ title: d.titulo, pillar_id: d.pilarId, platform: null, notes: d.notas, objective: null, origin: null });
+        if (d.pastaId) await moverIdeia.mutateAsync({ ideaId: nova.id, folderId: d.pastaId });
+        toast.success("Ideia capturada!");
+        setSheetOpen(false);
+        if (abrir) setFolhaId(nova.id);
+      }
+      return true;
+    } catch {
+      toast.error(editingIdea ? "Erro ao atualizar." : "Erro ao salvar.");
+      return false;
     }
   };
 
@@ -984,81 +1035,19 @@ const Ideias = () => {
           }}
         />
       )}
-      <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
-        <DialogContent className="sm:max-w-lg" onOpenAutoFocus={(e) => e.preventDefault()}>
-          <DialogHeader><DialogTitle>{editingIdea ? "Editar Ideia" : "Nova Ideia"}</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubmit(handleSave)} className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label>Título</Label>
-              {/* Textarea, não Input: título de ideia colado do ChatGPT é uma
-                  frase inteira e no Input só dava pra ler o comecinho. */}
-              <Textarea {...register("title")} placeholder="Sua ideia..." className="min-h-[60px]" />
-              {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
-            </div>
-            {pillars.length > 0 && (
-              <div className="space-y-2">
-                <Label>Pilar de conteúdo</Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {pillars.map((p) => {
-                    const ativo = pilarEscolhido === p.id;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setValue("pillar_id", ativo ? "" : p.id, { shouldDirty: true })}
-                        className={cn(
-                          "px-2.5 py-1 rounded-full text-xs font-body border transition-colors",
-                          ativo ? "border-transparent font-semibold" : "border-border bg-background text-muted-foreground hover:text-foreground",
-                        )}
-                        style={ativo ? { backgroundColor: `${p.color}22`, color: p.color, borderColor: p.color } : undefined}
-                      >
-                        {p.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            {folders.length > 0 && (
-              <div className="space-y-2">
-                <Label>Pasta</Label>
-                <div className="flex flex-wrap gap-1.5">
-                  <button type="button" onClick={() => setFormFolder(null)}
-                    className={cn("px-2.5 py-1 rounded-full text-xs font-body border transition-colors",
-                      !formFolder ? "bg-primary text-primary-foreground border-primary font-semibold" : "border-border bg-background text-muted-foreground hover:text-foreground")}>
-                    Sem pasta
-                  </button>
-                  {folders.map((f) => {
-                    const ativa = formFolder === f.id;
-                    return (
-                      <button key={f.id} type="button" onClick={() => setFormFolder(ativa ? null : f.id)}
-                        className={cn("inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-body border transition-colors",
-                          ativa ? "border-transparent font-semibold" : "border-border bg-background text-muted-foreground hover:text-foreground")}
-                        style={ativa ? { backgroundColor: `${f.color}22`, color: f.color, borderColor: f.color } : undefined}>
-                        <Folder className="h-3 w-3" style={{ color: f.color }} /> {f.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            {/* Ideia existente: as anotações moram na folha (bloco de notas). */}
-            {editingIdea ? (
-              <p className="text-[12px] font-body text-muted-foreground">As anotações ficam na folha da ideia. Feche aqui e toque na folha pra escrever.</p>
-            ) : (
-            <div className="space-y-2">
-              <Label>Notas</Label>
-              <Textarea {...register("notes")} placeholder="Mais detalhes..." />
-              {errors.notes && <p className="text-xs text-destructive">{errors.notes.message}</p>}
-            </div>
-            )}
-            <div className="flex gap-3">
-              <Button type="submit" variant="hero" className="flex-1">Salvar</Button>
-              <Button type="button" variant="outline" onClick={() => setSheetOpen(false)}>Cancelar</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Nova/Editar ideia: a mesma folha do botão "Nova ideia" do Início (07/11/2026). */}
+      <NovaIdeiaFolha
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        editando={!!editingIdea}
+        inicial={editingIdea
+          ? { titulo: editingIdea.title, pilarId: editingIdea.pillar_id ?? null, pastaId: folderIdDaIdeia(editingIdea) }
+          : { titulo: "", pilarId: null, pastaId: formFolder }}
+        pilares={pillars.map((p) => ({ id: p.id, name: p.name, color: p.color }))}
+        pastas={folders.map((f) => ({ id: f.id, name: f.name, color: f.color }))}
+        salvando={createIdea.isPending || updateIdea.isPending}
+        onGuardar={guardarFolha}
+      />
 
       {promotedPost && (
         <PostEditor

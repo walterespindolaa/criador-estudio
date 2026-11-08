@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CircleDot, Eye, MessageCircle, Reply, MousePointerClick, Share2, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CARD, CARD_VAZIO } from "./estiloCria";
 import { computeStoriesSummary, fmtNum, type StoryLike } from "./insightsUtils";
 
 // Bloco de STORIES: agrega alcance, respostas, taxa de resposta e navegação dos
@@ -11,12 +12,12 @@ import { computeStoriesSummary, fmtNum, type StoryLike } from "./insightsUtils";
 
 function Stat({ icon: Icon, label, value, sub }: { icon: typeof Eye; label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div className={`${CARD} p-4`}>
       <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
         <Icon className="h-3.5 w-3.5" />
-        <p className="text-[11px] font-body uppercase tracking-wide">{label}</p>
+        <p className="text-[11px] font-body font-bold uppercase tracking-wide">{label}</p>
       </div>
-      <p className="text-xl font-display font-extrabold text-foreground">{value}</p>
+      <p className="text-2xl font-display font-extrabold text-foreground leading-tight">{value}</p>
       {sub && <p className="text-[11px] font-body text-muted-foreground mt-0.5">{sub}</p>}
     </div>
   );
@@ -47,7 +48,7 @@ export function StoriesSummary({ stories }: { stories: StoryComCapa[] | undefine
 
   if (!s.hasData) {
     return (
-      <div className="rounded-2xl border border-dashed border-border p-6 text-center">
+      <div className={`${CARD_VAZIO} p-6 text-center`}>
         <CircleDot className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
         <p className="text-sm font-body text-foreground font-medium">Sem stories no período</p>
         <p className="text-xs text-muted-foreground font-body mt-1 max-w-sm mx-auto">
@@ -62,8 +63,8 @@ export function StoriesSummary({ stories }: { stories: StoryComCapa[] | undefine
   const nav = navegacao(am);
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Stat icon={Eye} label="Alcance" value={fmtNum(s.reach)} sub={`${fmtNum(s.avgReach)} por story · ${s.count} stories`} />
         <Stat icon={MessageCircle} label="Respostas" value={fmtNum(s.replies)} sub={s.reach > 0 ? `${s.replyRate.toFixed(1)}% do alcance` : undefined} />
         {tem(todos, "shares")
@@ -76,13 +77,13 @@ export function StoriesSummary({ stories }: { stories: StoryComCapa[] | undefine
       </div>
 
       {lista.length > 0 && (
-        <div className="rounded-2xl border bg-card p-4">
-          <p className="text-sm font-display font-bold">Story por story</p>
+        <div className={`${CARD} p-4`}>
+          <p className="text-[16px] font-display font-extrabold">Story por story</p>
           <p className="text-[11px] text-muted-foreground">A Meta apaga os números do story em 24 h e só mostra com 5 visualizações ou mais. O Cria guarda a última leitura.</p>
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
             {lista.slice(0, 20).map((st, i) => (
               <button key={st.id ?? i} type="button" aria-pressed={i === sel} aria-label={`Story ${i + 1}`} onClick={() => setSel(i)}
-                className={cn("shrink-0 w-14 h-24 rounded-xl overflow-hidden bg-muted border-2 relative", i === sel ? "border-foreground" : "border-transparent")}>
+                className={cn("shrink-0 w-16 h-[104px] rounded-xl overflow-hidden bg-muted border-2 relative", i === sel ? "border-foreground shadow-[2px_2px_0_hsl(var(--foreground))]" : "border-foreground/20")}>
                 {st.thumbnail_url && <img src={st.thumbnail_url} alt="" loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />}
                 <span className="absolute bottom-1 left-1 text-[9px] font-bold text-white bg-black/50 rounded px-1">
                   {st.posted_at ? new Date(st.posted_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : ""}
@@ -92,7 +93,7 @@ export function StoriesSummary({ stories }: { stories: StoryComCapa[] | undefine
           </div>
           <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
             {NUMS.filter(([k]) => k in am).map(([k, r]) => (
-              <div key={k} className="rounded-xl bg-muted/50 px-3 py-2">
+              <div key={k} className="rounded-xl border-2 border-foreground bg-background px-3 py-2">
                 <p className="font-display font-extrabold text-lg leading-none">{fmtNum(am[k])}</p>
                 <p className="text-[11px] text-muted-foreground mt-1">{r}</p>
               </div>

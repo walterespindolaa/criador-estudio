@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Check, Sparkles, ArrowLeft, Shield, UserCircle, Gem, ShieldCheck } from "lucide-react";
+import { Check, ArrowLeft, Shield, UserCircle, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useProfile } from "@/hooks/useProfile";
@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PLANS, PLAN_VALUE, tierRank, type PlanId, type Tier } from "@/lib/plans";
 import { PlanComparison } from "@/components/shared/PlanComparison";
-import { OrganicBlobs } from "@/components/brand/OrganicBlobs";
 import { BgShapes } from "@/components/BgShapes";
 import { track, newEventId } from "@/lib/metaPixel";
 import { lerIndicacao } from "@/lib/indicacao";
@@ -29,6 +28,8 @@ export default function Assinar() {
   const { openPortal, isLoading: portalLoading } = useManageSubscription();
   const [searchParams] = useSearchParams();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  // Celular: régua Essencial/Pro/Studio, um plano aberto por vez (começa no destacado).
+  const [planoCel, setPlanoCel] = useState<PlanId | null>(null);
   const [partnerCode, setPartnerCode] = useState("");
   const [partnerInfo, setPartnerInfo] = useState<{ name: string; discountPct: number | null; durationMonths: number | null } | null>(null);
   const [codeError, setCodeError] = useState(false);
@@ -261,6 +262,123 @@ export default function Assinar() {
     }
   };
 
+  /* REPAGINADA (07/11/2026, mockup aprovado): cada plano tem cabeçalho de
+     cor própria (azul, cor do tema, preto), o verbo em letra de mão e o Pro
+     sobe com selo. A lógica de destaque, plano atual e texto do botão é a
+     mesma de antes, só saiu do map pra servir o computador e o celular. */
+  const TINTA = "#1D1B18";
+  const infoPlano = (plan: (typeof PLANS)[number]) => {
+    const isLoading = loadingPlan === plan.id;
+    // Qualquer checkout em andamento trava todos os botões (evita 2 sessões Stripe).
+    const anyLoading = loadingPlan !== null;
+    // Veio de uma trava ("Liberar por R$ X") → destaca o plano que ela foi buscar.
+    const veioPor = searchParams.get("plano") === plan.id;
+    const atual = planoAtual === plan.id;
+    const abaixo = planoAtual ? tierRank(plan.id) < tierRank(planoAtual) : false;
+    // O destaque NUNCA pode cair num plano abaixo do atual: ficava um botão
+    // laranja gritante escrito "Voltar pro Pro" pra quem é Studio.
+    const destaque = !atual && !abaixo && (veioPor || (plan.highlighted && !searchParams.get("plano")));
+    const curto = plan.name.replace("cria ", "");
+    // O texto do botão muda com ONDE a pessoa está.
+    const textoBotao = atual
+      ? "Você já está aqui"
+      : isLoading
+        ? "Redirecionando..."
+        : planoAtual && !abaixo
+          ? `Subir pro ${curto}`
+          : abaixo
+            ? `Voltar pro ${curto}`
+            : podeTestar
+              ? "Começar 7 dias grátis"
+              : `Assinar ${plan.name}`;
+    return { isLoading, anyLoading, veioPor, atual, abaixo, destaque, curto, textoBotao };
+  };
+  const estiloPlano = (id: PlanId) =>
+    id === "essencial"
+      ? { cab: "bg-[#C9DAFF] text-[#1D1B18]", verbo: "text-[#1D1B18]", marca: "bg-[#C9DAFF]" }
+      : id === "pro"
+        ? { cab: "bg-primary text-primary-foreground", verbo: "text-primary-foreground", marca: "bg-primary/25" }
+        : { cab: "bg-[#1D1B18] text-white", verbo: "text-[#FFCF03]", marca: "bg-[#FFCF03]" };
+  const classeBotao = (plan: (typeof PLANS)[number]) => {
+    const i = infoPlano(plan);
+    return cn(
+      "w-full rounded-full border-2 px-5 py-3 font-body text-[15px] font-extrabold transition-transform active:translate-y-[1px] disabled:opacity-60 shadow-[0_2px_0_#1D1B18]",
+      i.atual
+        ? "bg-white text-[#1D1B18] pointer-events-none opacity-70"
+        : i.destaque
+          ? "bg-primary text-primary-foreground"
+          : plan.id === "studio" && !i.abaixo
+            ? "bg-[#1D1B18] text-white"
+            : "bg-white text-[#1D1B18]",
+    );
+  };
+  const destacadoId = (PLANS.find((p) => infoPlano(p).destaque) ?? PLANS.find((p) => p.highlighted) ?? PLANS[0]).id;
+  const celId: PlanId = planoCel ?? destacadoId;
+  const renderCartao = (plan: (typeof PLANS)[number], noCelular = false) => {
+    const i = infoPlano(plan);
+    const e = estiloPlano(plan.id);
+    return (
+      <div
+        key={plan.id}
+        className={cn(
+          "relative rounded-3xl border-2 bg-white flex flex-col shadow-[2px_2px_0_#1D1B18]",
+          !noCelular && i.destaque && "md:-translate-y-3",
+          i.abaixo && "opacity-60",
+        )}
+        style={{ borderColor: TINTA }}
+      >
+        {(i.atual || i.destaque) && (
+          <div
+            className={cn(
+              "absolute -top-7 -right-3 z-10 grid h-[88px] w-[88px] rotate-12 place-items-center rounded-full border-2 text-center font-display text-[13px] font-extrabold leading-none shadow-[2px_2px_0_#1D1B18]",
+              i.atual ? "bg-emerald-500 text-white" : "bg-[#FFCF03] text-[#1D1B18]",
+            )}
+            style={{ borderColor: TINTA }}
+          >
+            {i.atual ? (<span>seu plano<br />hoje</span>) : i.veioPor ? (<span>é este<br />que você<br />quer</span>) : (<span>mais<br />escolhido</span>)}
+          </div>
+        )}
+        <div className={cn("rounded-t-[22px] border-b-2 px-5 pb-4 pt-5 pr-20", e.cab)} style={{ borderColor: TINTA }}>
+          {/* O VERBO do degrau: a pessoa compra uma mudança, não uma lista. */}
+          <p className={cn("text-[28px] leading-none", e.verbo)} style={{ fontFamily: "'Caveat', cursive", fontWeight: 700 }}>{plan.verbo}</p>
+          <h2 className="mt-1 font-display text-[22px] font-extrabold leading-tight">{plan.name}</h2>
+          <p className="mt-0.5 text-[13px] font-body leading-snug opacity-85">{plan.tagline}</p>
+        </div>
+        <div className="px-5 pt-4">
+          <div className="flex items-end gap-1 whitespace-nowrap">
+            <span className="font-display text-[38px] font-extrabold leading-none text-[#1D1B18]">{plan.price}</span>
+            <span className="mb-1 font-body text-sm text-muted-foreground">/mês</span>
+          </div>
+          {podeTestar && <p className="mt-1 text-xs font-body text-muted-foreground">a partir de {dataCobranca}</p>}
+        </div>
+        <ul className="flex-1 space-y-2.5 px-5 pb-2 pt-4">
+          {plan.features.map((feat, k) => (
+            <li key={feat} className={cn("flex items-start gap-2.5 text-sm font-body text-[#1D1B18]", k === 0 && plan.id !== "essencial" && "font-bold")}>
+              <span className={cn("mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border-2", e.marca)} style={{ borderColor: TINTA }}>
+                <Check className="h-3 w-3 text-[#1D1B18]" strokeWidth={3} />
+              </span>
+              {feat}
+            </li>
+          ))}
+        </ul>
+        {!noCelular && (
+          <div className="px-5 pb-5 pt-3">
+            <button
+              type="button"
+              className={classeBotao(plan)}
+              style={{ borderColor: TINTA }}
+              onClick={() => handleSubscribe(plan.id)}
+              disabled={i.anyLoading || i.atual}
+            >
+              {i.textoBotao}
+            </button>
+          </div>
+        )}
+        {noCelular && <div className="h-4" />}
+      </div>
+    );
+  };
+
   return (
     <div className="relative">
       {/* Agora ela vive DENTRO do app (menu, rail, barra), então o fundo orgânico
@@ -287,28 +405,25 @@ export default function Assinar() {
         </button>
       )}
 
-      {/* ── O CABEÇALHO ──────────────────────────────────────────────────────
-          Esta página era uma folha BRANCA com três caixas brancas. Era a página
-          onde a pessoa decide te pagar, e era a única do sistema sem a cara do
-          Cria. Página de venda sem identidade não vende: parece formulário de
-          banco. Agora ela tem o creme, as manchas orgânicas e o laranja da marca. */}
-      <div className="relative w-full max-w-6xl overflow-hidden rounded-3xl border border-border bg-card px-5 py-7 sm:px-9 sm:py-9 mb-6 text-center">
-        <OrganicBlobs color="laranja" />
-        <div className="relative">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-3 py-1 mb-3">
-            <Gem className="h-3.5 w-3.5" />
-            <span className="text-[10px] font-body font-bold uppercase tracking-wider">Planos</span>
+      {/* ── O CABEÇALHO ─────────────────────────────────────────────────────
+          Repaginado (07/11/2026): selo "Planos" amarelo, frase grande com o
+          grifo amarelo atrás de "o processo". */}
+      <div className="relative w-full max-w-6xl px-2 pb-2 pt-2 mb-4 text-center">
+        <span className="inline-block -rotate-2 rounded-full border-2 bg-[#FFCF03] px-3 py-0.5 text-[11px] font-body font-extrabold uppercase tracking-wider text-[#1D1B18]" style={{ borderColor: "#1D1B18" }}>
+          Planos
+        </span>
+        <h1 className="mt-3 font-display text-[28px] sm:text-[40px] font-extrabold leading-[1.02] tracking-tight text-[#1D1B18]">
+          Todo mundo tem as ideias.
+          <br />
+          <span className="relative inline-block text-primary">
+            <span className="absolute inset-x-0 bottom-1 -z-0 h-2.5 rounded bg-[#FFCF03]/80" aria-hidden />
+            <span className="relative">Quase ninguém tem o processo.</span>
           </span>
-          <h1 className="font-display text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
-            Todo mundo tem as ideias.
-            <br className="hidden sm:block" />{" "}
-            <span className="text-primary">Quase ninguém tem o processo.</span>
-          </h1>
-          <p className="text-sm sm:text-[15px] font-body text-muted-foreground mt-2.5 max-w-xl mx-auto leading-relaxed">
-            Escolha até onde você quer que o cria vá com você: organizar a bagunça,
-            escrever junto, ou fazer por você.
-          </p>
-        </div>
+        </h1>
+        <p className="mx-auto mt-2 max-w-xl text-sm sm:text-[15px] font-body leading-relaxed text-muted-foreground">
+          Escolha até onde você quer que o Cria vá com você: organizar a bagunça,
+          escrever junto, ou fazer por você.
+        </p>
       </div>
 
       {ehMeuPerfil && (
@@ -327,22 +442,27 @@ export default function Assinar() {
         </div>
       )}
 
-      {podeTestar && (
-        <div className="w-full max-w-6xl mb-2 rounded-2xl border border-primary/30 bg-primary/10 px-5 py-4 flex flex-wrap items-center gap-x-5 gap-y-1 text-left">
-          <p className="font-display text-2xl font-extrabold text-primary">7 dias grátis</p>
-          <p className="text-sm font-body text-foreground flex-1 min-w-[240px] leading-relaxed">
-            <b>Hoje você não paga nada.</b> A primeira cobrança é em <b>{dataCobranca}</b>. A gente avisa por
-            e-mail 2 dias antes e na véspera, e você cancela quando quiser, em 2 cliques.
-          </p>
-        </div>
-      )}
-
-      {guardaDias && (
-        <div className="w-full max-w-6xl mb-2 rounded-2xl border border-primary/30 bg-primary/10 px-5 py-4 flex flex-wrap items-center gap-x-5 gap-y-1 text-left">
-          <p className="font-display text-xl font-extrabold text-primary">Seu teste vai até {dataFimTeste}</p>
-          <p className="text-sm font-body text-foreground flex-1 min-w-[240px] leading-relaxed">
-            Se assinar agora, <b>você não perde os dias que faltam</b>: a primeira cobrança só vem em <b>{dataFimTeste}</b>.
-            Cancela quando quiser, em 2 cliques.
+      {(podeTestar || guardaDias) && (
+        <div
+          className="w-full max-w-3xl mb-3 flex flex-col sm:flex-row overflow-hidden rounded-2xl border-2 bg-white text-left shadow-[2px_2px_0_#1D1B18]"
+          style={{ borderColor: "#1D1B18" }}
+        >
+          <div className="flex sm:flex-col items-center justify-center gap-2 sm:gap-0 bg-[#00A652] px-5 py-2.5 sm:py-3 text-white border-b-2 sm:border-b-0 sm:border-r-2 border-dashed" style={{ borderColor: "#1D1B18" }}>
+            <span className="font-display text-2xl sm:text-[30px] font-extrabold leading-none">7 dias</span>
+            <span className="text-[11px] font-body font-bold uppercase tracking-wider">grátis</span>
+          </div>
+          <p className="flex-1 px-4 py-3 text-[13.5px] font-body leading-relaxed text-[#1D1B18] self-center">
+            {podeTestar ? (
+              <>
+                <b>Hoje você não paga nada.</b> A primeira cobrança é em <b>{dataCobranca}</b>. A gente avisa por
+                e-mail 2 dias antes e na véspera, e você cancela quando quiser, em 2 cliques.
+              </>
+            ) : (
+              <>
+                Seu teste vai até <b>{dataFimTeste}</b>. Se assinar agora, <b>não perde os dias que faltam</b>: a
+                primeira cobrança só vem em <b>{dataFimTeste}</b>. Cancela quando quiser, em 2 cliques.
+              </>
+            )}
           </p>
         </div>
       )}
@@ -375,111 +495,57 @@ export default function Assinar() {
         </div>
       )}
 
-      {/* pt-4 no grid: o selo "Mais escolhido" vive em -top-3 e estava sendo
-          COMEÇADO fora do container, o card cortava a metade de cima dele.
-          (E eu tinha piorado pondo overflow-hidden no card.) */}
-      <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-5 pt-4 items-start">
-        {PLANS.map((plan) => {
-          const isLoading = loadingPlan === plan.id;
-          // Qualquer checkout em andamento trava todos os botões (evita 2 sessões Stripe).
-          const anyLoading = loadingPlan !== null;
-          // Veio de uma trava ("Liberar por R$ X") → destaca o plano que ela foi buscar.
-          const veioPor = searchParams.get("plano") === plan.id;
-          const atual = planoAtual === plan.id;
-          const abaixo = planoAtual ? tierRank(plan.id) < tierRank(planoAtual) : false;
-          // O destaque NUNCA pode cair num plano abaixo do atual: ficava um botão
-          // laranja gritante escrito "Voltar pro Pro" pra quem é Studio. A página
-          // estava vendendo downgrade com o CTA principal.
-          const destaque = !atual && !abaixo && (veioPor || (plan.highlighted && !searchParams.get("plano")));
-          return (
-            <div
+      {/* COMPUTADOR: 3 cartões. pt-8 porque o selo do destaque mora em -top-7. */}
+      <div className="hidden md:grid w-full max-w-6xl grid-cols-3 gap-6 pt-8 items-start">
+        {PLANS.map((plan) => renderCartao(plan))}
+      </div>
+
+      {/* CELULAR: régua com um plano aberto por vez, os outros dois em mini
+          cartões e o botão de assinar preso no rodapé. */}
+      <div className="md:hidden w-full">
+        <div className="mb-8 flex rounded-full border-2 bg-white p-1 shadow-[0_2px_0_#1D1B18]" style={{ borderColor: "#1D1B18" }}>
+          {PLANS.map((plan) => (
+            <button
               key={plan.id}
+              type="button"
+              onClick={() => setPlanoCel(plan.id)}
               className={cn(
-                "relative rounded-3xl border p-7 flex flex-col transition-all",
-                atual
-                  ? "border-emerald-600/40 bg-emerald-600/[0.04]"
-                  : destaque
-                    ? "border-primary bg-card ring-2 ring-primary/15 shadow-warm-lg md:-mt-2 md:pb-9"
-                    : "border-border bg-card shadow-warm hover:shadow-warm-md hover:-translate-y-0.5",
-                abaixo && "opacity-60",
+                "flex-1 rounded-full py-1.5 font-display text-sm font-extrabold transition-colors",
+                celId === plan.id ? "bg-primary text-primary-foreground" : "text-[#1D1B18]",
               )}
             >
-              {atual ? (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="inline-flex items-center gap-1 bg-emerald-600 text-white rounded-full px-3 py-1 text-[11px] font-body font-bold shadow-sm whitespace-nowrap">
-                    <Check className="h-3 w-3" /> Seu plano hoje
-                  </span>
-                </div>
-              ) : destaque && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground rounded-full px-3 py-1 text-[11px] font-body font-bold shadow-sm whitespace-nowrap">
-                    <Sparkles className="h-3 w-3" />
-                    {veioPor ? "É este que você quer" : "Mais escolhido"}
-                  </span>
-                </div>
-              )}
-
-              <div className="text-center mb-6">
-                {/* O VERBO do degrau. A pessoa não compra uma lista de recursos,
-                    compra uma mudança: organizar → criar melhor → a IA faz por você. */}
-                <p className="text-[11px] font-body font-bold uppercase tracking-wider text-primary mb-1.5">
-                  {plan.verbo}
-                </p>
-                <h2 className="text-xl font-display font-extrabold text-foreground mb-1">
-                  {plan.name}
-                </h2>
-                <p className="text-xs text-muted-foreground font-body">{plan.tagline}</p>
-              </div>
-
-              <div className="text-center mb-6">
-                <div className="flex items-end justify-center gap-1">
-                  <span className="text-4xl font-display font-extrabold text-foreground">
-                    {plan.price}
-                  </span>
-                  <span className="text-muted-foreground font-body mb-1">/mês</span>
-                </div>
-                {podeTestar && (
-                  <p className="text-xs text-muted-foreground font-body mt-1">a partir de {dataCobranca}</p>
-                )}
-              </div>
-
-              <ul className="space-y-3 mb-8 flex-1">
-                {plan.features.map((feat) => (
-                  <li key={feat} className="flex items-start gap-3">
-                    <div
-                      className={cn(
-                        "w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5",
-                        destaque ? "bg-primary/20" : "bg-primary/15",
-                      )}
-                    >
-                      <Check className="h-3 w-3 text-primary" />
-                    </div>
-                    <span className="text-sm font-body text-foreground">{feat}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Button
-                variant={atual ? "outline" : destaque ? "hero" : "outline"}
-                size="lg"
-                className={cn("w-full text-base", atual && "pointer-events-none opacity-70")}
+              {plan.name.replace("cria ", "")}
+            </button>
+          ))}
+        </div>
+        {PLANS.filter((p) => p.id === celId).map((plan) => renderCartao(plan, true))}
+        <div className="mt-4 flex gap-2.5">
+          {PLANS.filter((p) => p.id !== celId).map((plan) => (
+            <button
+              key={plan.id}
+              type="button"
+              onClick={() => setPlanoCel(plan.id)}
+              className="flex-1 rounded-2xl border-2 bg-white px-3 py-2 text-left shadow-[0_2px_0_#1D1B18]"
+              style={{ borderColor: "#1D1B18" }}
+            >
+              <span className="block font-display text-sm font-extrabold text-[#1D1B18]">{plan.name.replace("cria ", "")}</span>
+              <span className="block text-xs font-body text-muted-foreground">{plan.price} · {plan.verbo.toLowerCase()}</span>
+            </button>
+          ))}
+        </div>
+        {PLANS.filter((p) => p.id === celId).map((plan) => {
+          const i = infoPlano(plan);
+          return (
+            <div key={plan.id} className="sticky z-30 mt-4 bottom-[calc(84px+env(safe-area-inset-bottom,0px))]">
+              <button
+                type="button"
+                className={classeBotao(plan)}
+                style={{ borderColor: "#1D1B18" }}
                 onClick={() => handleSubscribe(plan.id)}
-                disabled={anyLoading || atual}
+                disabled={i.anyLoading || i.atual}
               >
-                {/* O texto do botão muda com ONDE a pessoa está. "Assinar cria Pro"
-                    pra quem já é Pro é ruído; "Subir pro Studio" é um convite. */}
-                {atual
-                  ? "Você já está aqui"
-                  : isLoading
-                    ? "Redirecionando..."
-                    : planoAtual && !abaixo
-                      ? `Subir pro ${plan.name.replace("cria ", "")}`
-                      : abaixo
-                        ? `Voltar pro ${plan.name.replace("cria ", "")}`
-                        : podeTestar
-                          ? "Começar 7 dias grátis"
-                          : `Assinar ${plan.name}`}
-              </Button>
+                {i.atual || i.isLoading ? i.textoBotao : `${i.textoBotao} · ${plan.price}`}
+              </button>
             </div>
           );
         })}
@@ -487,23 +553,21 @@ export default function Assinar() {
 
       {/* ── RISCO ZERO ───────────────────────────────────────────────────────
           A objeção real de quem está com o dedo no botão não é "quanto custa",
-          é "e se eu não usar?". Uma página de upgrade que não responde isso
-          deixa a pessoa fechar a aba e adiar pra sempre. */}
-      <div className="w-full max-w-3xl mt-8 rounded-3xl bg-emerald-700 px-6 py-6 text-center text-white">
-        <p className="inline-flex items-center gap-2 font-display text-lg font-extrabold">
+          é "e se eu não usar?". Vira post-it amarelo. */}
+      <div className="mt-10 w-full max-w-md -rotate-1 bg-[#FFE46B] px-5 py-4 text-left shadow-[3px_4px_0_rgba(29,27,24,0.18)]">
+        <p className="inline-flex items-center gap-2 font-display text-lg font-extrabold text-[#1D1B18]">
           <ShieldCheck className="h-5 w-5" /> Cancelar leva 2 cliques
         </p>
-        <p className="text-[13.5px] font-body text-white/85 mt-1.5 max-w-xl mx-auto leading-relaxed">
-          Sem ligação, sem formulário, sem falar com ninguém, dentro do próprio app.
-          Se em um mês o cria não te economizar tempo, você sai e não paga o mês seguinte.
+        <p className="mt-1 text-[21px] leading-[1.1] text-[#1D1B18]" style={{ fontFamily: "'Caveat', cursive", fontWeight: 700 }}>
+          Sem ligação, sem formulário, sem falar com ninguém. Se em um mês o Cria não te economizar tempo, você sai e não paga o mês seguinte.
         </p>
       </div>
 
       <PlanComparison className="mt-12" />
 
-      <div className="w-full max-w-sm mt-8 rounded-2xl border border-border bg-card px-4 py-3">
+      <div className="w-full max-w-sm mt-8 rounded-2xl border-2 border-dashed bg-white px-4 py-3" style={{ borderColor: "#1D1B18" }}>
         <label htmlFor="partner-code" className="block text-xs font-body text-muted-foreground mb-1.5">
-          Tem um cupom ou código de parceira? (opcional)
+          🎟️ Tem um cupom ou código de parceira? (opcional)
         </label>
         <input
           id="partner-code"

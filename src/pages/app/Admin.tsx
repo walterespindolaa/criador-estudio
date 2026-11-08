@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -190,6 +190,12 @@ function SubAbas({ atual, aoTrocar, itens }: {
 
 const AdminInner = () => {
   const [search, setSearch] = useState("");
+  // A busca só vai pro banco 300ms depois da última tecla.
+  const [buscaFeita, setBuscaFeita] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setBuscaFeita(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
   const [planFilter, setPlanFilter] = useState("todos");
   const [roleFilter, setRoleFilter] = useState("todos");
   const [page, setPage] = useState(0);
@@ -319,7 +325,7 @@ const AdminInner = () => {
   const { users, totalCount, stats, emails, isLoading, updateUserRole, updateUserPlan, runAction } = useAdmin({
     page,
     pageSize: PAGE_SIZE,
-    search,
+    search: buscaFeita,
     planFilter,
     roleFilter,
   });

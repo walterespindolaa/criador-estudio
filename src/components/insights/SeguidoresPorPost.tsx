@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { UserPlus } from "lucide-react";
+import { CARD } from "./estiloCria";
 import { seguidoresPorPost, ehReels, ganchoDaLegenda, type MidiaIg } from "./ganchos";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -32,7 +33,7 @@ export function SeguidoresPorPost({ media, diario, limite = 6 }: {
   const max = Math.max(1, ...linhas.map((l) => Math.max(l.seg ?? 0, (l.visitas ?? 0) / 4)));
 
   return (
-    <div className="rounded-2xl border bg-card p-4">
+    <div className={`${CARD} p-4`}>
       <p className="text-base font-display font-extrabold flex items-center gap-2"><UserPlus className="h-4 w-4 text-primary" /> O que trouxe seguidor</p>
       <p className="text-xs text-muted-foreground mt-0.5 mb-3">Seguidores e visitas ao perfil por post.</p>
       {linhas.length === 0 ? (
@@ -42,14 +43,29 @@ export function SeguidoresPorPost({ media, diario, limite = 6 }: {
           {linhas.map((l) => {
             const tipo = ehReels(l.m.media_type) ? "Reels" : l.m.media_type === "CAROUSEL_ALBUM" ? "Carrossel" : "Foto";
             return (
-              <div key={l.m.id}>
-                <div className="flex justify-between gap-2 text-[12.5px]">
-                  <span className="min-w-0 truncate">{tipo} · {ganchoDaLegenda(l.m.caption) || "(sem legenda)"}</span>
-                  <span className="shrink-0 text-muted-foreground">
-                    {l.seg != null ? `+${l.seg}${l.estimado ? "*" : ""} seguidores` : ""}{l.seg != null && l.visitas != null ? " · " : ""}{l.visitas != null ? `${l.visitas} visitas` : ""}
+              <div key={l.m.id} className="pb-2.5 border-b-[1.5px] border-dashed border-foreground/15 last:border-b-0">
+                <div className="flex items-center gap-3">
+                  <span className="w-9 h-11 rounded-lg border-2 border-foreground bg-muted overflow-hidden shrink-0">
+                    {l.m.thumbnail_url && <img src={l.m.thumbnail_url} alt="" loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />}
                   </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] font-bold truncate">{ganchoDaLegenda(l.m.caption) || "(sem legenda)"}</span>
+                    <span className="block text-[11.5px] text-muted-foreground">{tipo}{l.m.posted_at ? ` · ${new Date(l.m.posted_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}` : ""}</span>
+                  </span>
+                  {l.seg != null && (
+                    <span className="text-right shrink-0">
+                      <span className="block font-display font-extrabold text-[20px] leading-none text-[#00A652]">+{l.seg}{l.estimado ? "*" : ""}</span>
+                      <span className="block text-[10.5px] text-muted-foreground">seguidores</span>
+                    </span>
+                  )}
+                  {l.visitas != null && (
+                    <span className="text-right shrink-0 w-14">
+                      <span className="block font-display font-extrabold text-[18px] leading-none">{l.visitas}</span>
+                      <span className="block text-[10.5px] text-muted-foreground">visitas</span>
+                    </span>
+                  )}
                 </div>
-                <div className="mt-1 flex gap-1 h-2.5">
+                <div className="mt-2 ml-12 flex gap-1 h-2">
                   {l.seg != null && (
                     <div className="h-full rounded" style={{ width: `${Math.max(2, ((l.seg ?? 0) / max) * 60)}%`,
                       background: l.estimado ? "repeating-linear-gradient(45deg,#EA4918 0 3px,#F6C9B8 3px 6px)" : "#EA4918" }} />

@@ -390,7 +390,11 @@ export function InstagramPulse() {
    O cartão de fora (borda, cabeçalho) é de quem chama: aqui só o miolo.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-export type MaisFuncionou = { postId: string | null; titulo: string; thumb: string | null; permalink: string | null; frase: string };
+export type MaisFuncionou = {
+  postId: string | null; titulo: string; thumb: string | null; permalink: string | null; frase: string;
+  /* Números pro polaroid do Início (07/11/2026). vezes = alcance / média dos outros posts do período. */
+  alcance: number; salvos: number; envios: number; seguiu: number; vezes: number | null; tipo: string; dia: string;
+};
 
 export function useResumoInstagram() {
   const { data: conn, isLoading } = useSocialConnection();
@@ -435,12 +439,21 @@ export function useResumoInstagram() {
         thumb: top.thumbnail_url,
         permalink: top.permalink,
         frase: `${fmtNum(m(top, "reach"))} de alcance${r >= 1.2 ? `, ${fmtVezes(r)} a sua média` : ""}. ${rotuloTipo(top.media_type)}${quando ? `, ${quando}` : ""}.`,
+        alcance: m(top, "reach"),
+        salvos: salvos(top),
+        envios: m(top, "shares"),
+        seguiu: m(top, "follows"),
+        vezes: r >= 1.2 ? r : null,
+        tipo: rotuloTipo(top.media_type),
+        dia: top.posted_at ? new Date(top.posted_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" }) : "",
       };
     }
 
     return {
       conn, isLoading, isOwnAccount, contaParaConectar,
       seguidores: daily[daily.length - 1]?.followers ?? null,
+      /* Série de seguidores dos 30 dias, pra minicurva do Início (só os dias com número). */
+      serieSeguidores: daily.map((d) => d.followers).filter((v): v is number => v != null),
       seguidoresDelta: fd.hasWindow ? fd.delta : null,
       alcance: reach,
       alcancePct: temBase ? Math.round(((reach - alc(antes)) / alc(antes)) * 100) : null,
@@ -456,24 +469,104 @@ export function useResumoInstagram() {
 
 const sinal = (n: number) => (n > 0 ? `+${n}` : `${n}`);
 
-export function NumerosInstagram({ r, compacto = false }: { r: ReturnType<typeof useResumoInstagram>; compacto?: boolean }) {
-  const itens: { valor: string; rotulo: string; delta: string | null; bom: boolean }[] = [
-    { valor: fmtNum(r.seguidores), rotulo: "seguidores", delta: r.seguidoresDelta != null ? sinal(r.seguidoresDelta) : null, bom: (r.seguidoresDelta ?? 0) >= 0 },
-    { valor: fmtNum(r.alcance), rotulo: "alcance", delta: r.alcancePct != null ? `${sinal(r.alcancePct)}%` : null, bom: (r.alcancePct ?? 0) >= 0 },
-    { valor: r.engajamento != null ? `${r.engajamento.toFixed(1).replace(".", ",")}%` : "-", rotulo: "engajamento", delta: r.engajamentoPts != null ? `${sinal(r.engajamentoPts).replace(".", ",")} pts` : null, bom: (r.engajamentoPts ?? 0) >= 0 },
-    { valor: fmtNum(r.visitas), rotulo: "visitas ao perfil", delta: r.visitasPct != null ? `${sinal(r.visitasPct)}%` : null, bom: (r.visitasPct ?? 0) >= 0 },
+const TINTA = "#1D1B18";
+
+/* Minicurva feita à mão (sem recharts): só desenha com 2+ pontos. */
+export function MiniCurva({ valores, className }: { valores: number[]; className?: string }) {
+  if (valores.length < 2) return null;
+  const min = Math.min(...valores), max = Math.max(...valores);
+  const amp = max - min || 1;
+  const W = 300, H = 58, P = 6;
+  const pts = valores.map((v, i) => [(i / (valores.length - 1)) * W, H - P - ((v - min) / amp) * (H - P * 2)] as const);
+  const linha = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+  const [ux, uy] = pts[pts.length - 1];
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className={cn("w-full h-[58px] overflow-visible", className)} aria-hidden>
+      <defs>
+        <linearGradient id="curvaIg" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stopColor="#EA4918" stopOpacity=".25" />
+          <stop offset="1" stopColor="#EA4918" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={`${linha} L${W} ${H} L0 ${H}Z`} fill="url(#curvaIg)" />
+      <path d={linha} fill="none" stroke={TINTA} strokeWidth={2.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" className="dark:stroke-foreground" />
+      <circle cx={ux} cy={uy} r={5} fill="#EA4918" stroke={TINTA} strokeWidth={2} vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
+/* O miolo do card "Seu Instagram" do Início (mockup aprovado em 07/11/2026):
+   seguidores em destaque com a curva dos 30 dias e 3 fichas coloridas. */
+export function NumerosInstagram({ r }: { r: ReturnType<typeof useResumoInstagram>; compacto?: boolean }) {
+  const fichas: { rotulo: string; valor: string; delta: string | null; bom: boolean; cor: string }[] = [
+    { rotulo: "Alcance", valor: fmtNum(r.alcance), delta: r.alcancePct != null ? `${Math.abs(r.alcancePct)}%` : null, bom: (r.alcancePct ?? 0) >= 0, cor: "bg-[#C9DAFF]" },
+    { rotulo: "Engajamento", valor: r.engajamento != null ? `${r.engajamento.toFixed(1).replace(".", ",")}%` : "-", delta: r.engajamentoPts != null ? `${String(Math.abs(r.engajamentoPts)).replace(".", ",")} pts` : null, bom: (r.engajamentoPts ?? 0) >= 0, cor: "bg-[#FFE46B]" },
+    { rotulo: "Visitas", valor: fmtNum(r.visitas), delta: r.visitasPct != null ? `${Math.abs(r.visitasPct)}%` : null, bom: (r.visitasPct ?? 0) >= 0, cor: "bg-[#FFD3E8]" },
   ];
   return (
-    <div className={cn("grid gap-2.5", compacto ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-4")}>
-      {itens.map((x) => (
-        <div key={x.rotulo} className="rounded-xl bg-muted/50 px-3.5 py-3 min-w-0">
-          <p className="font-display font-extrabold text-[22px] leading-none tabular-nums text-foreground">{x.valor}</p>
-          <p className="mt-1.5 text-[11.5px] font-body text-muted-foreground truncate">
-            {x.rotulo}
-            {x.delta && <b className={cn("ml-1.5 font-bold", x.bom ? "text-emerald-600" : "text-red-500")}>{x.delta}</b>}
-          </p>
+    <div className="min-w-0">
+      <p className="text-[11px] font-body font-bold uppercase tracking-[0.08em] text-muted-foreground">Seguidores</p>
+      <div className="mt-1 flex flex-wrap items-end gap-2.5">
+        <span className="font-display font-extrabold text-[44px] sm:text-[52px] leading-[0.85] tabular-nums text-foreground">{fmtNum(r.seguidores)}</span>
+        {r.seguidoresDelta != null && (
+          <span className={cn("mb-1 inline-flex items-center rounded-full border-2 border-[#1D1B18] px-2.5 py-0.5 text-[12px] font-body font-extrabold text-[#1D1B18]",
+            r.seguidoresDelta >= 0 ? "bg-[#D8F2E0]" : "bg-[#FFD3C2]")}>
+            {r.seguidoresDelta >= 0 ? "▲" : "▼"} {sinal(r.seguidoresDelta)} em 30 dias
+          </span>
+        )}
+      </div>
+      <MiniCurva valores={r.serieSeguidores} className="mt-2.5" />
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        {fichas.map((f) => (
+          <div key={f.rotulo} className={cn("min-w-0 rounded-2xl border-2 border-[#1D1B18] px-2.5 py-2 text-[#1D1B18] shadow-[2px_2px_0_#1D1B18]", f.cor)}>
+            <p className="text-[10px] sm:text-[11px] font-body font-bold uppercase tracking-[0.05em] truncate">{f.rotulo}</p>
+            <p className="font-display font-extrabold text-[20px] sm:text-[24px] leading-tight tabular-nums truncate">{f.valor}</p>
+            {f.delta && <p className="text-[11.5px] font-body font-bold">{f.bom ? "▲" : "▼"} {f.delta}</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* "O que mais funcionou" como polaroid, com os números do post e o porquê à mão. */
+export function PolaroidMaisFuncionou({ mais, acao }: { mais: MaisFuncionou; acao?: React.ReactNode }) {
+  const chips = [
+    mais.alcance > 0 ? { t: `${fmtNum(mais.alcance)} alcance`, forte: true } : null,
+    mais.salvos > 0 ? { t: `${fmtNum(mais.salvos)} salvos`, forte: false } : null,
+    mais.envios > 0 ? { t: `${fmtNum(mais.envios)} envios`, forte: false } : null,
+    mais.seguiu > 0 ? { t: `+${fmtNum(mais.seguiu)} seguidores`, forte: false } : null,
+  ].filter(Boolean) as { t: string; forte: boolean }[];
+  return (
+    <div className="min-w-0">
+      <p className="text-[11px] font-body font-bold uppercase tracking-[0.08em] text-muted-foreground">O que mais funcionou</p>
+      <div className="mt-2.5 flex items-start gap-3.5">
+        <div className="w-[96px] sm:w-[112px] shrink-0 -rotate-3 border-2 border-[#1D1B18] bg-white p-1.5 pb-6 shadow-[3px_3px_0_rgba(29,27,24,.2)] relative">
+          <div className="aspect-[4/5] overflow-hidden bg-[#E7D9C4]">
+            {mais.thumb && <img src={mais.thumb} alt="" loading="lazy" className="h-full w-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />}
+          </div>
+          <span className="absolute inset-x-0 bottom-0.5 text-center text-[15px] font-bold leading-tight text-[#1D1B18]" style={{ fontFamily: "Caveat, cursive" }}>
+            {[mais.dia, mais.tipo.toLowerCase()].filter(Boolean).join(" · ")}
+          </span>
         </div>
-      ))}
+        <div className="min-w-0 flex-1">
+          <p className="font-display font-extrabold text-[16px] sm:text-[17px] leading-snug line-clamp-3 text-foreground">{mais.titulo}</p>
+          {chips.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {chips.map((c) => (
+                <span key={c.t} className={cn("rounded-full border-[1.8px] border-[#1D1B18] px-2 py-0.5 text-[11.5px] font-body font-bold",
+                  c.forte ? "bg-[#00A652] text-white" : "bg-white text-[#1D1B18]")}>{c.t}</span>
+              ))}
+            </div>
+          )}
+          {mais.vezes != null && (
+            <p className="mt-2 text-[20px] leading-tight font-bold text-[#1d6b3c] dark:text-emerald-400" style={{ fontFamily: "Caveat, cursive" }}>
+              {fmtVezes(mais.vezes)} o seu alcance normal ✎
+            </p>
+          )}
+          {acao && <div className="mt-2.5">{acao}</div>}
+        </div>
+      </div>
     </div>
   );
 }

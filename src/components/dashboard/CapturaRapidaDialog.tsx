@@ -1,73 +1,47 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Lightbulb } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIdeas } from "@/hooks/useIdeas";
-import { sanitizeText } from "@/lib/sanitize";
+import { usePillars } from "@/hooks/usePillars";
+import { useIdeaFolders } from "@/hooks/useIdeaFolders";
+import { NovaIdeiaFolha } from "@/components/ideas/NovaIdeiaFolha";
 
 /* CAPTURA RÁPIDA NO BOTÃO "NOVA IDEIA" (Walter, 19/10/2026). O cartão Captura
    Rápida da página inicial repetia o botão do topo. Agora o botão abre esta
-   janela, com a mesma gravação (useIdeas.createIdea) e o mesmo aviso. */
+   janela, com a mesma gravação (useIdeas.createIdea) e o mesmo aviso.
+   07/11/2026: a janela virou a folha do caderno (NovaIdeiaFolha), a mesma da
+   aba Ideias. "Abrir a folha completa" guarda e abre a folha lá. */
 export function CapturaRapidaDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
-        {open && <Conteudo onFechar={() => onOpenChange(false)} />}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function Conteudo({ onFechar }: { onFechar: () => void }) {
   const { user } = useAuth();
-  const { ideas, createIdea } = useIdeas({ limit: 20 });
-  const [texto, setTexto] = useState("");
-
-  const capturar = async () => {
-    const limpo = sanitizeText(texto);
-    if (!limpo || !user || createIdea.isPending) return;
-    try {
-      await createIdea.mutateAsync({ title: limpo });
-      toast.success("Ideia capturada!");
-      setTexto("");
-      onFechar();
-    } catch {
-      toast.error("Erro ao salvar ideia.");
-    }
-  };
+  const navigate = useNavigate();
+  const { ideas, createIdea } = useIdeas({ limit: 20, enabled: open });
+  const { pillars } = usePillars();
+  const { folders, moverIdeia } = useIdeaFolders();
 
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle className="font-display flex items-center gap-2">
-          <Lightbulb className="h-4 w-4 text-primary" /> Nova ideia
-        </DialogTitle>
-        <DialogDescription className="font-body">
-          Anota agora, organiza depois. Vai direto pro seu banco de ideias.
-        </DialogDescription>
-      </DialogHeader>
-      <div className="space-y-3">
-        <Input
-          autoFocus
-          placeholder="O que você está pensando?"
-          className="rounded-xl h-11"
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); void capturar(); } }}
-        />
-        <div className="flex items-center justify-between gap-3">
-          <Link to="/app/ideias" onClick={onFechar} className="text-xs font-body font-bold text-primary hover:underline">
-            Ver minhas ideias ({ideas.length})
-          </Link>
-          <Button onClick={() => void capturar()} disabled={!texto.trim() || createIdea.isPending} variant="hero">
-            Capturar
-          </Button>
-        </div>
-      </div>
-    </>
+    <NovaIdeiaFolha
+      open={open}
+      onOpenChange={onOpenChange}
+      pilares={pillars.map((p) => ({ id: p.id, name: p.name, color: p.color }))}
+      pastas={folders.map((f) => ({ id: f.id, name: f.name, color: f.color }))}
+      // A busca daqui traz no máximo 20: com 20 ou mais, não mostra um número errado.
+      totalIdeias={ideas.length >= 20 ? undefined : ideas.length}
+      onVerTodas={() => { onOpenChange(false); navigate("/app/ideias"); }}
+      salvando={createIdea.isPending}
+      onGuardar={async (d, { abrir }) => {
+        if (!user) return false;
+        try {
+          const nova = await createIdea.mutateAsync({ title: d.titulo, notes: d.notas, pillar_id: d.pilarId });
+          if (d.pastaId) await moverIdeia.mutateAsync({ ideaId: nova.id, folderId: d.pastaId });
+          toast.success("Ideia capturada!");
+          onOpenChange(false);
+          if (abrir) navigate(`/app/ideias?folha=${nova.id}`);
+          return true;
+        } catch {
+          toast.error("Erro ao salvar ideia.");
+          return false;
+        }
+      }}
+    />
   );
 }

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ExternalLink, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fmtNum } from "./insightsUtils";
+import { CARD, CARD_VAZIO } from "./estiloCria";
 import { rankingDeGanchos, type Janela, type MidiaIg } from "./ganchos";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -16,7 +17,7 @@ const segs = (s: number | null) => (s == null ? "—" : s < 60 ? `${s.toFixed(1)
 
 function Abas<T extends string>({ valor, opcoes, onChange, rotulo }: { valor: T; opcoes: Array<[T, string]>; onChange: (v: T) => void; rotulo: string }) {
   return (
-    <div role="tablist" aria-label={rotulo} className="flex gap-1 rounded-full bg-muted p-1">
+    <div role="tablist" aria-label={rotulo} className="flex gap-1 rounded-full border-2 border-foreground bg-card p-0.5">
       {opcoes.map(([k, nome]) => (
         <button key={k} type="button" role="tab" aria-selected={valor === k} onClick={() => onChange(k)}
           className={cn("h-8 px-3 rounded-full text-xs font-semibold", valor === k ? "bg-foreground text-background" : "text-foreground/80 hover:bg-background")}>
@@ -45,7 +46,7 @@ export function RankingGanchos({ media, ganchoDe, limite = 8 }: {
 
   if (!lista.some((m) => m.media_type === "REELS" || m.media_type === "VIDEO")) {
     return (
-      <div className="rounded-2xl border border-dashed p-6 text-center">
+      <div className={`${CARD_VAZIO} p-6 text-center`}>
         <Flame className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
         <p className="text-sm font-medium">Sem Reels no período</p>
         <p className="text-xs text-muted-foreground mt-1">O ranking de ganchos aparece quando houver Reels com números do Instagram.</p>
@@ -54,7 +55,7 @@ export function RankingGanchos({ media, ganchoDe, limite = 8 }: {
   }
 
   return (
-    <div className="rounded-2xl border bg-card p-4">
+    <div className={`${CARD} p-4`}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-base font-display font-extrabold flex items-center gap-2"><Flame className="h-4 w-4 text-primary" /> Ranking de ganchos</p>
@@ -73,10 +74,10 @@ export function RankingGanchos({ media, ganchoDe, limite = 8 }: {
           Nenhum Reels com a foto de {j === "24h" ? "24 horas" : "7 dias"} ainda. A foto é tirada na primeira coleta depois dessa idade; Reels publicados antes desta versão só aparecem em "Hoje".
         </p>
       ) : (
-        <div className="mt-4 space-y-2">
+        <div className="mt-3">
           {top.map((l, i) => (
-            <div key={l.midia.id} className={cn("grid grid-cols-[28px_1fr] sm:grid-cols-[28px_minmax(180px,1.6fr)_minmax(130px,1fr)_minmax(130px,1fr)_80px] gap-x-3 gap-y-2 items-center rounded-xl px-3 py-2.5", i === 0 ? "bg-primary/5" : "bg-muted/40")}>
-              <span className={cn("w-7 h-7 rounded-full grid place-items-center text-xs font-extrabold", i === 0 ? "bg-primary text-primary-foreground" : "bg-background")}>{i + 1}</span>
+            <div key={l.midia.id} className={cn("grid grid-cols-[28px_1fr] sm:grid-cols-[28px_minmax(180px,1.6fr)_minmax(130px,1fr)_minmax(130px,1fr)_80px] gap-x-3 gap-y-2 items-center px-1 py-3 border-b-[1.5px] border-dashed border-foreground/15 last:border-b-0", i === 0 && "")}>
+              <span className={cn("w-7 h-7 rounded-full grid place-items-center text-xs font-extrabold", i === 0 ? "bg-[#EA4918] text-white border-2 border-foreground" : "border-2 border-foreground bg-card")}>{i + 1}</span>
               <div className="min-w-0">
                 <p className="font-display font-bold text-[13.5px] leading-snug line-clamp-2">"{l.gancho}"</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
@@ -86,14 +87,14 @@ export function RankingGanchos({ media, ganchoDe, limite = 8 }: {
               </div>
               <div className="col-start-2 sm:col-start-auto">
                 <div className="flex justify-between text-[11px] text-muted-foreground"><span>passou do início</span><b className="text-foreground">{l.passou == null ? "—" : `${Math.round(l.passou)}%`}</b></div>
-                <div className="mt-1 h-2 rounded-full bg-background overflow-hidden">
-                  {l.passou != null && <div className={cn("h-full rounded-full", l.passou >= 65 ? "bg-green-600" : l.passou >= 55 ? "bg-amber-500" : "bg-red-500")} style={{ width: `${l.passou}%` }} />}
+                <div className="mt-1 h-2.5 rounded-full border-[1.5px] border-foreground bg-card overflow-hidden">
+                  {l.passou != null && <div className={cn("h-full rounded-full", l.passou >= 65 ? "bg-[#00A652]" : l.passou >= 55 ? "bg-[#FFCF03]" : "bg-[#EA4918]")} style={{ width: `${l.passou}%` }} />}
                 </div>
               </div>
               <div className="col-start-2 sm:col-start-auto">
                 <div className="flex justify-between text-[11px] text-muted-foreground"><span>tempo médio</span><b className="text-foreground">{segs(l.tempoMedioS)}</b></div>
-                <div className="mt-1 h-2 rounded-full bg-background overflow-hidden">
-                  {l.tempoMedioS != null && <div className="h-full rounded-full bg-sky-600" style={{ width: `${(l.tempoMedioS / maxT) * 100}%` }} />}
+                <div className="mt-1 h-2.5 rounded-full border-[1.5px] border-foreground bg-card overflow-hidden">
+                  {l.tempoMedioS != null && <div className="h-full rounded-full bg-[#0061EE]" style={{ width: `${(l.tempoMedioS / maxT) * 100}%` }} />}
                 </div>
               </div>
               <div className="col-start-2 sm:col-start-auto sm:text-right">

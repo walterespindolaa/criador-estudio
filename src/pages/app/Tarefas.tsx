@@ -21,7 +21,7 @@ import { usePosts, type Post } from "@/hooks/usePosts";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { sanitizeText } from "@/lib/sanitize";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { BlocoDeNotas, BotaoFolha, CampoDaFolha, Etiqueta, LINHA, TINTA, ehSalvar } from "@/components/folha/BlocoDeNotas";
 import {
   useTarefasExtras, passosDe, ROTULO_REPETICAO,
   type Passo, type Repeticao, type TarefaExtra,
@@ -90,6 +90,9 @@ const Tarefas = () => {
   const [passos, setPassos] = useState<Passo[]>([]);
   const [novoPasso, setNovoPasso] = useState("");
   const [rapida, setRapida] = useState("");
+  // Folha da tarefa: "outra data" abre o calendário; o post abre a lista ao tocar.
+  const [outraData, setOutraData] = useState(false);
+  const [escolhendoPost, setEscolhendoPost] = useState(false);
   const [focoId, setFocoId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -101,6 +104,18 @@ const Tarefas = () => {
   });
 
   const today = hojeBR();
+  const prioridadeForm = watch("priority");
+  const prazoForm = watch("due_date") ?? "";
+  const postVinculado = posts.find((p) => p.id === watch("post_id")) ?? null;
+  // Atalhos do prazo: sem prazo, hoje, amanhã e a próxima sexta (some se já for hoje ou amanhã).
+  const atalhosPrazo = useMemo(() => {
+    const d = parseDateOnly(today);
+    const amanha = iso(addDays(d, 1));
+    const sexta = iso(addDays(d, ((5 - d.getDay() + 7) % 7) || 7));
+    const lista: [string, string][] = [["", "sem prazo"], [today, "hoje"], [amanha, "amanhã"]];
+    if (sexta !== amanha) lista.push([sexta, "sexta"]);
+    return lista;
+  }, [today]);
   const { ini, fim } = semanaDe(today);
   const feita = (t: TarefaExtra) => t.status === "concluida";
 
@@ -130,6 +145,7 @@ const Tarefas = () => {
     setEditando(null);
     reset({ title: "", priority: "media", due_date: today, status: "pendente", notes: "", post_id: null });
     setRepeticao(""); setPassos([]); setNovoPasso("");
+    setOutraData(false); setEscolhendoPost(false);
     setIsNewTaskOpen(true);
   };
 
@@ -144,6 +160,7 @@ const Tarefas = () => {
       post_id: task.post_id ?? null,
     });
     setRepeticao(task.repeticao ?? ""); setPassos(passosDe(task)); setNovoPasso("");
+    setOutraData(!!task.due_date && !atalhosPrazo.some(([v]) => v === task.due_date)); setEscolhendoPost(false);
     setIsNewTaskOpen(true);
   };
 
@@ -421,104 +438,143 @@ const Tarefas = () => {
         )}
       </motion.div>
 
-      <Dialog open={isNewTaskOpen} onOpenChange={(o) => { setIsNewTaskOpen(o); if (!o) setEditando(null); }}>
-        <DialogContent className="sm:max-w-md bg-background rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
-          <div className="p-6 space-y-5 overflow-y-auto min-h-0 flex-1">
-            <DialogHeader>
-              <DialogTitle className="font-display text-xl">{editando ? "Editar tarefa" : "Nova tarefa"}</DialogTitle>
-            </DialogHeader>
-
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label className="font-body text-sm">O que precisa ser feito?</Label>
-                <Input placeholder="Ex: Gravar reels de moda" {...register("title")} className="rounded-xl h-11" />
-                {errors.title && <p className="text-xs text-destructive mt-1">{errors.title.message}</p>}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label className="font-body text-sm">Prioridade</Label>
-                  <select {...register("priority")} className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm">
-                    <option value="baixa">Baixa</option>
-                    <option value="media">Média</option>
-                    <option value="alta">Alta</option>
-                    <option value="urgente">Urgente</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-body text-sm">Prazo</Label>
-                  <Input type="date" {...register("due_date")} className="rounded-xl h-11" />
-                </div>
-              </div>
-
-              {temExtras && (
-                <div className="space-y-2">
-                  <Label className="font-body text-sm">Repetir</Label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {([["", "Não repete"], ["dia", "Todo dia"], ["semana", "Toda semana"], ["mes", "Todo mês"]] as const).map(([v, l]) => (
-                      <button key={v} type="button" onClick={() => setRepeticao(v)}
-                        className={cn("px-3 h-8 rounded-full border text-xs font-body font-bold", repeticao === v ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground")}>{l}</button>
-                    ))}
-                  </div>
-                  {repeticao && <p className="text-[11.5px] font-body text-muted-foreground">Quando você marcar como feita, a próxima já nasce com o prazo certo.</p>}
-                </div>
-              )}
-
-              {temExtras && (
-                <div className="space-y-2">
-                  <Label className="font-body text-sm">Passos</Label>
-                  <div className="space-y-1.5">
-                    {passos.map((p, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <Checkbox checked={p.feito} onCheckedChange={() => setPassos((l) => l.map((x, k) => (k === i ? { ...x, feito: !x.feito } : x)))} />
-                        <span className={cn("flex-1 text-sm font-body", p.feito && "line-through text-muted-foreground")}>{p.texto}</span>
-                        <button type="button" aria-label="Tirar passo" onClick={() => setPassos((l) => l.filter((_, k) => k !== i))} className="p-1 text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
-                      </div>
-                    ))}
-                    <input value={novoPasso} onChange={(e) => setNovoPasso(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          const v = novoPasso.trim();
-                          if (v) { setPassos((l) => [...l, { texto: sanitizeText(v), feito: false }]); setNovoPasso(""); }
-                        }
-                      }}
-                      placeholder="Novo passo e Enter"
-                      className="w-full h-9 rounded-xl border border-dashed border-border bg-background px-3 text-sm font-body outline-none focus:border-primary" />
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Vincular a um post (opcional)</Label>
-                <select value={watch("post_id") ?? ""} onChange={(e) => setValue("post_id", e.target.value || null)}
-                  className="flex h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm">
-                  <option value="">Nenhum</option>
-                  {posts.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="font-body text-sm">Notas</Label>
-                <Textarea placeholder="Detalhes da tarefa..." {...register("notes")} className="rounded-xl min-h-[70px]" />
-                {errors.notes && <p className="text-xs text-destructive mt-1">{errors.notes.message}</p>}
-              </div>
-
-              <div className="pt-2 flex gap-3">
-                {editando && (
-                  <Button type="button" variant="outline" size="icon" aria-label="Excluir tarefa" onClick={() => void handleDelete(editando.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                )}
-                <Button type="button" variant="outline" className="flex-1" onClick={() => { setIsNewTaskOpen(false); setEditando(null); }}>Cancelar</Button>
-                <Button type="submit" variant="hero" className="flex-1" disabled={createTask.isPending || updateTask.isPending || salvarExtras.isPending}>
-                  {createTask.isPending || updateTask.isPending ? "Salvando…" : editando ? "Salvar tarefa" : "Criar tarefa"}
-                </Button>
-              </div>
-            </form>
+      {/* Nova/Editar tarefa como folha do bloco de notas (07/11/2026, mockup aprovado).
+          Mesmo formulário de antes (react-hook-form + extras), só que na pauta:
+          prioridade, prazo e repetir viram etiquetas, passos são linhas com caixinha. */}
+      <BlocoDeNotas
+        open={isNewTaskOpen}
+        onOpenChange={(o) => { setIsNewTaskOpen(o); if (!o) setEditando(null); }}
+        icone="✓"
+        corIcone="#D8F2E0"
+        fita="rgba(255,207,3,.8)"
+        rotulo={editando ? "Editar tarefa" : "Nova tarefa"}
+        tituloAcessivel={editando ? "Editar tarefa" : "Nova tarefa"}
+      >
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          onKeyDown={(e) => { if (ehSalvar(e)) { e.preventDefault(); void handleSubmit(onSubmit)(); } }}
+        >
+          <div className="flex items-start gap-2.5" style={{ minHeight: LINHA }}>
+            <span aria-hidden className="mt-[5px] h-[22px] w-[22px] shrink-0 rounded-[7px] border-[2.5px] bg-white" style={{ borderColor: TINTA }} />
+            <input
+              {...register("title")}
+              maxLength={100}
+              placeholder="O que precisa ser feito?"
+              aria-label="O que precisa ser feito?"
+              className="h-8 w-full min-w-0 border-0 bg-transparent p-0 font-display text-[21px] font-extrabold leading-8 text-[#1D1B18] outline-none placeholder:text-[#bcb19c] sm:text-[24px]"
+            />
           </div>
-        </DialogContent>
-      </Dialog>
+          {errors.title && <p className="font-body text-xs leading-8 text-destructive">{errors.title.message}</p>}
+
+          <CampoDaFolha rotulo="prioridade" className="mt-1">
+            {([["baixa", "baixa", "#ffffff"], ["media", "média", "#FFE46B"], ["alta", "alta", "#FFD3C2"], ["urgente", "urgente", "#FFB4A8"]] as const).map(([v, l, cor]) => (
+              <Etiqueta key={v} ativa={prioridadeForm === v} cor={cor} onClick={() => setValue("priority", v, { shouldDirty: true })}>{l}</Etiqueta>
+            ))}
+          </CampoDaFolha>
+
+          <CampoDaFolha rotulo="prazo">
+            {atalhosPrazo.map(([v, l]) => (
+              <Etiqueta key={l} ativa={!outraData && prazoForm === v} cor="#C9DAFF" onClick={() => { setOutraData(false); setValue("due_date", v, { shouldDirty: true }); }}>{l}</Etiqueta>
+            ))}
+            <Etiqueta ativa={outraData} cor="#C9DAFF" onClick={() => setOutraData(true)}>
+              <Calendar className="h-3 w-3" /> {outraData && prazoForm ? format(parseDateOnly(prazoForm), "dd/MM") : "outra data"}
+            </Etiqueta>
+            {outraData && (
+              <input type="date" {...register("due_date")} aria-label="Prazo"
+                className="h-[26px] rounded-[9px] border-2 bg-white px-2 font-body text-[12px] text-[#1D1B18] outline-none" style={{ borderColor: TINTA }} />
+            )}
+          </CampoDaFolha>
+
+          {temExtras && (
+            <CampoDaFolha rotulo="repetir">
+              {([["", "não repete"], ["dia", "todo dia"], ["semana", "toda semana"], ["mes", "todo mês"]] as const).map(([v, l]) => (
+                <Etiqueta key={v} ativa={repeticao === v} cor="#ffffff" onClick={() => setRepeticao(v)}>{l}</Etiqueta>
+              ))}
+            </CampoDaFolha>
+          )}
+          {temExtras && repeticao && (
+            <p className="font-body text-[12px] leading-8 text-[#7A7268]">Quando você marcar como feita, a próxima já nasce com o prazo certo.</p>
+          )}
+
+          {temExtras && (
+            <>
+              <CampoDaFolha rotulo="passos"><span /></CampoDaFolha>
+              {passos.map((p, i) => (
+                <div key={i} className="group flex items-center gap-2.5" style={{ height: LINHA }}>
+                  <Checkbox checked={p.feito} onCheckedChange={() => setPassos((l) => l.map((x, k) => (k === i ? { ...x, feito: !x.feito } : x)))}
+                    className="h-[18px] w-[18px] rounded-[5px] border-2 border-[#1D1B18] bg-white data-[state=checked]:border-[#1D1B18] data-[state=checked]:bg-[#00A652]" />
+                  <span className={cn("flex-1 truncate font-body text-[15px]", p.feito && "text-[#7A7268] line-through")}>{p.texto}</span>
+                  <button type="button" aria-label="Tirar passo" onClick={() => setPassos((l) => l.filter((_, k) => k !== i))}
+                    className="p-1 text-[#7A7268] opacity-60 hover:text-destructive hover:opacity-100"><X className="h-3.5 w-3.5" /></button>
+                </div>
+              ))}
+              <div className="flex items-center gap-2.5" style={{ height: LINHA }}>
+                <span aria-hidden className="h-[18px] w-[18px] shrink-0 rounded-[5px] border-2 border-dashed border-[#b9b09a]" />
+                <input value={novoPasso} onChange={(e) => setNovoPasso(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.metaKey && !e.ctrlKey && !e.nativeEvent.isComposing) {
+                      e.preventDefault();
+                      const v = novoPasso.trim();
+                      if (v) { setPassos((l) => [...l, { texto: sanitizeText(v), feito: false }]); setNovoPasso(""); }
+                    }
+                  }}
+                  placeholder="novo passo (Enter)"
+                  aria-label="Novo passo"
+                  className="h-full w-full min-w-0 border-0 bg-transparent p-0 font-body text-[15px] text-[#1D1B18] outline-none placeholder:text-[#bcb19c]" />
+              </div>
+            </>
+          )}
+
+          <CampoDaFolha rotulo="post">
+            {postVinculado && !escolhendoPost && (
+              <span className="inline-flex max-w-full items-center gap-2 rounded-[12px] border-2 bg-white py-[2px] pl-[3px] pr-2.5 font-body text-[12.5px] font-bold" style={{ borderColor: TINTA }}>
+                {postVinculado.cover_url
+                  ? <img src={postVinculado.cover_url} alt="" className="h-6 w-6 shrink-0 rounded-[7px] object-cover" />
+                  : <span className="h-6 w-6 shrink-0 rounded-[7px] bg-gradient-to-br from-[#f7d9c4] to-[#c98d6e]" />}
+                <span className="truncate">
+                  {postVinculado.title}
+                  {[postVinculado.format, postVinculado.scheduled_date ? format(parseDateOnly(postVinculado.scheduled_date.slice(0, 10)), "dd/MM") : null].filter(Boolean).map((x) => ` · ${x}`).join("")}
+                </span>
+              </span>
+            )}
+            {escolhendoPost ? (
+              <select autoFocus value={watch("post_id") ?? ""} onChange={(e) => { setValue("post_id", e.target.value || null); setEscolhendoPost(false); }}
+                onBlur={() => setEscolhendoPost(false)} aria-label="Vincular a um post"
+                className="h-[28px] max-w-full rounded-[9px] border-2 bg-white px-2 font-body text-[12.5px] text-[#1D1B18] outline-none" style={{ borderColor: TINTA }}>
+                <option value="">Nenhum</option>
+                {posts.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+              </select>
+            ) : (
+              <>
+                <Etiqueta ativa={false} onClick={() => setEscolhendoPost(true)}>{postVinculado ? "trocar" : "+ vincular"}</Etiqueta>
+                {postVinculado && <Etiqueta ativa={false} onClick={() => setValue("post_id", null)}>tirar</Etiqueta>}
+              </>
+            )}
+          </CampoDaFolha>
+
+          <textarea
+            {...register("notes")}
+            maxLength={500}
+            rows={2}
+            placeholder="notas, se quiser"
+            aria-label="Notas"
+            className="mt-0.5 block w-full resize-none border-0 bg-transparent p-0 font-body text-[15px] leading-8 text-[#1D1B18] outline-none placeholder:text-[#bcb19c]"
+          />
+          {errors.notes && <p className="font-body text-xs text-destructive">{errors.notes.message}</p>}
+
+          <div className="mt-3 flex items-center gap-2.5">
+            {editando && (
+              <BotaoFolha tipo="branco" type="button" aria-label="Excluir tarefa" className="w-10 px-0" onClick={() => void handleDelete(editando.id)}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </BotaoFolha>
+            )}
+            <BotaoFolha tipo="branco" type="button" className="hidden sm:inline-flex" onClick={() => { setIsNewTaskOpen(false); setEditando(null); }}>Cancelar</BotaoFolha>
+            <BotaoFolha type="submit" className="ml-auto flex-1 sm:flex-none" disabled={createTask.isPending || updateTask.isPending || salvarExtras.isPending}>
+              {createTask.isPending || updateTask.isPending ? "Salvando..." : editando ? "Salvar tarefa" : "Criar tarefa"}
+            </BotaoFolha>
+          </div>
+        </form>
+      </BlocoDeNotas>
 
       {selectedPost && (
         <PostPreviewModal

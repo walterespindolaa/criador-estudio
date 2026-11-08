@@ -5,7 +5,7 @@ import { useT } from "@/lib/i18n";
 import {
   Instagram, Users, Eye, Zap, UserPlus, RefreshCw, Unplug, Link2, Unlink, Bookmark, Heart, Play, Image as ImageIcon, Images, Sparkles, Info, TrendingUp, BarChart3, Search, AlertTriangle,
 } from "lucide-react";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { LineChart, Line, BarChart, Bar, Cell, ReferenceLine, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +27,7 @@ import { TabelaPosts } from "@/components/insights/TabelaPosts";
 import type { MidiaIg } from "@/components/insights/ganchos";
 import { ContentCrossAnalysis } from "@/components/insights/ContentCrossAnalysis";
 import { SugestoesVinculo } from "@/components/insights/SugestoesVinculo";
+import { CARD, MAO, SecaoTitulo, SeloIA, Pilula } from "@/components/insights/estiloCria";
 import { computeFollowersDelta, formatMediaLabel, interacoesDe, type CrossItem } from "@/components/insights/insightsUtils";
 import { STATUS_OPTIONS, FORMAT_LABELS } from "@/lib/constants";
 // Cor por formato (mesma fonte única do kanban/calendário do Cria Post).
@@ -227,7 +228,15 @@ export default function Insights() {
   // ---- Conectado ----
   const lastSync = conn.updated_at ? new Date(conn.updated_at).toLocaleString("pt-BR") : "-";
   const followerSeries = daily.filter((d) => d.followers != null).map((d) => ({ date: d.date.slice(5), v: d.followers ?? 0 }));
-  const reachSeries = daily.filter((d) => d.reach != null).map((d) => ({ date: d.date.slice(5), v: d.reach ?? 0 }));
+  // Alcance por dia: sexta e sábado em azul, dia que estourou (1,6x a média ou
+  // mais) em laranja, e a linha tracejada da média do período.
+  const reachBase = daily.filter((d) => d.reach != null);
+  const mediaAlcance = reachBase.length ? reachBase.reduce((a, d) => a + (d.reach ?? 0), 0) / reachBase.length : 0;
+  const reachSeries = reachBase.map((d) => {
+    const dow = new Date(`${d.date}T12:00:00`).getDay();
+    const v = d.reach ?? 0;
+    return { date: d.date.slice(5), v, fds: dow === 5 || dow === 6, pico: mediaAlcance > 0 && v >= mediaAlcance * 1.6 };
+  });
 
   // Drivers (proxies honestos a partir do que a API entrega)
   const byReach = [...media].sort((a, b) => m(b, "reach") - m(a, "reach"));
@@ -248,19 +257,24 @@ export default function Insights() {
         </div>
         <div>
           <h1 className="text-3xl font-display font-extrabold text-foreground tracking-tight">Insights</h1>
-          <p className="text-muted-foreground font-body mt-0.5 text-sm">{t("insights.subtitle")}</p>
+          <p className="mt-0.5 text-[19px] leading-none text-[#0061EE]" style={MAO}>{t("insights.subtitle")}</p>
         </div>
       </div>
 
       {/* barra da conta */}
-      <div data-tour="insights-conta" className="bg-card border border-border rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] grid place-items-center text-white font-bold shrink-0">
-          {(conn.username ?? "?").charAt(0).toUpperCase()}
+      <div data-tour="insights-conta" className={`${CARD} px-4 py-3 flex items-center gap-3 flex-wrap`}>
+        {/* Foto no anel de stories; sem foto, a inicial. */}
+        <div className="w-12 h-12 rounded-full p-[3px] shrink-0" style={{ background: "conic-gradient(#FFCF03,#EA4918,#FF77B9,#0061EE,#FFCF03)" }}>
+          <div className="w-full h-full rounded-full border-[2.5px] border-card bg-gradient-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] grid place-items-center text-white font-bold overflow-hidden">
+            {conn.profile_picture_url
+              ? <img src={conn.profile_picture_url} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+              : (conn.username ?? "?").charAt(0).toUpperCase()}
+          </div>
         </div>
         <div className="min-w-0">
-          <p className="font-display font-bold text-sm">{conn.username ? `@${conn.username}` : t("insights.connectedAccount")}</p>
+          <p className="font-display font-extrabold text-[17px] leading-tight">{conn.username ? `@${conn.username}` : t("insights.connectedAccount")}</p>
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${estadoConexaoIg(conn).reconectar ? "bg-amber-500" : "bg-green-500"}`} />
+            <span className={`w-2 h-2 rounded-full border border-foreground ${estadoConexaoIg(conn).reconectar ? "bg-amber-500" : "bg-[#00A652]"}`} />
             {estadoConexaoIg(conn).reconectar ? "Conexão vencida" : t("insights.connected")}
           </p>
         </div>
@@ -269,13 +283,13 @@ export default function Insights() {
           {/* Atualizar vale pra conta aberta (a edge confere o acesso e usa o token
               salvo NELA). Desconectar é só do dono (ou do Meu perfil). */}
           {podeAtualizar && (
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => sync.mutate()} disabled={sync.isPending}>
+            <Button variant="outline" size="sm" className="gap-1.5 rounded-full border-2 border-foreground shadow-[0_2px_0_hsl(var(--foreground))] font-bold" onClick={() => sync.mutate()} disabled={sync.isPending}>
               <RefreshCw className={`h-3.5 w-3.5 ${sync.isPending ? "animate-spin" : ""}`} /> {t("insights.refresh")}
             </Button>
           )}
           {isOwnAccount && (
             <>
-              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => disconnect.mutate()}>
+              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground rounded-full" onClick={() => disconnect.mutate()}>
                 <Unplug className="h-3.5 w-3.5" /> {t("insights.disconnect")}
               </Button>
             </>
@@ -288,7 +302,7 @@ export default function Insights() {
           dono consegue reconectar (o login grava a conexão em nome de quem
           clica); a gestora vê o aviso pra combinar com o dono. */}
       {estadoConexaoIg(conn).reconectar && (
-        <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-2.5 flex-wrap">
+        <div className="mt-4 rounded-2xl border-2 border-dashed border-amber-500 bg-amber-50 px-4 py-3 flex items-start gap-2.5 flex-wrap">
           <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
           <div className="text-[13px] font-body text-amber-900 leading-snug flex-1 min-w-[200px]">
             <p className="font-bold">A conexão com o Instagram venceu.</p>
@@ -299,7 +313,7 @@ export default function Insights() {
             </p>
           </div>
           {isOwnAccount && (
-            <Button size="sm" onClick={() => connectInstagram(null, null, contaParaConectar)} className="w-full sm:w-auto h-11 sm:h-9 rounded-xl shrink-0 bg-gradient-to-r from-[#DD2A7B] to-[#8134AF] text-white hover:opacity-90">
+            <Button size="sm" onClick={() => connectInstagram(null, null, contaParaConectar)} className="w-full sm:w-auto h-11 sm:h-9 rounded-full shrink-0 bg-[#EA4918] hover:bg-[#EA4918]/90 text-white border-2 border-foreground font-bold">
               Reconectar
             </Button>
           )}
@@ -311,7 +325,7 @@ export default function Insights() {
           antes não havia pista nenhuma do porquê. Só mostra quando o account_type já
           veio do sync e não é profissional (não incomoda conta nova/pro sem dado ainda). */}
       {conn.account_type && !["BUSINESS", "CREATOR", "MEDIA_CREATOR"].includes((conn.account_type || "").toUpperCase()) && (
-        <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-2.5">
+        <div className="mt-4 rounded-2xl border-2 border-dashed border-amber-500 bg-amber-50 px-4 py-3 flex items-start gap-2.5">
           <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
           <div className="text-[13px] font-body text-amber-900 leading-snug">
             <p className="font-bold">Sua conta do Instagram é pessoal.</p>
@@ -320,41 +334,65 @@ export default function Insights() {
         </div>
       )}
 
-      {/* KPIs */}
-      <div data-tour="insights-kpis" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
-        <Kpi icon={Users} label={t("insights.kpiFollowers")} value={fmt(kpis?.followers)} delta={kpis?.hasFollowersWindow && kpis.followersDelta != null ? `${kpis.followersDelta >= 0 ? "▲" : "▼"} ${Math.abs(kpis.followersDelta)} (30d)` : undefined} up={(kpis?.followersDelta ?? 0) >= 0} />
-        <Kpi icon={Eye} label={t("insights.kpiReach")} value={fmt(kpis?.reach)} />
-        <Kpi icon={Zap} label={t("insights.kpiInteractions")} value={fmt(kpis?.interactions)} />
-        <Kpi icon={UserPlus} label={t("insights.kpiProfileViews")} value={fmt(kpis?.profileViews)} />
+      {/* Frase da Cria IA: só existe depois que a pessoa gera a leitura (botão no fim
+          da página). Sem leitura, o post-it não aparece (não inventa frase). */}
+      {aiRead?.leituras?.[0] && (
+        <div className="mt-4 rounded-[20px] border-2 border-foreground bg-[#FFE46B] px-5 py-3.5 shadow-[2px_2px_0_hsl(var(--foreground))]">
+          <div className="flex items-center gap-2"><SeloIA /><span className="text-[11px] font-extrabold uppercase tracking-wider text-[#1D1B18]/70">a leitura do seu mês</span></div>
+          <p className="mt-1.5 text-[22px] sm:text-[25px] leading-[1.1] text-[#1D1B18]" style={MAO}>{aiRead.leituras[0]}</p>
+        </div>
+      )}
+
+      {/* KPIs: fichas coloridas, variação em chip e minicurva dos 30 dias quando
+          há série diária daquele número. */}
+      <div id="ins-resumo" data-tour="insights-kpis" className="scroll-mt-32 md:scroll-mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-4">
+        <Kpi icon={Users} bg="bg-card" label={t("insights.kpiFollowers")} value={fmt(kpis?.followers)} serie={followerSeries.map((d) => d.v)} delta={kpis?.hasFollowersWindow && kpis.followersDelta != null ? `${kpis.followersDelta >= 0 ? "▲ +" : "▼ "}${Math.abs(kpis.followersDelta)} em 30 dias` : undefined} up={(kpis?.followersDelta ?? 0) >= 0} />
+        <Kpi icon={Eye} bg="bg-[#C9DAFF]" label={t("insights.kpiReach")} value={fmt(kpis?.reach)} serie={reachSeries.map((d) => d.v)} />
+        <Kpi icon={Zap} bg="bg-[#FFE46B]" label={t("insights.kpiInteractions")} value={fmt(kpis?.interactions)} serie={daily.filter((d) => d.total_interactions != null).map((d) => d.total_interactions ?? 0)} />
+        <Kpi icon={UserPlus} bg="bg-[#FFD3E8]" label={t("insights.kpiProfileViews")} value={fmt(kpis?.profileViews)} serie={daily.filter((d) => d.profile_views != null).map((d) => d.profile_views ?? 0)} />
       </div>
+
+      {/* Celular: abas presas no topo que levam até cada parte da página. */}
+      <AbasInsights />
 
       {/* gráficos */}
       {(reachSeries.length > 1 || followerSeries.length > 1) ? (
-        <div className="grid md:grid-cols-2 gap-3 mt-3">
-          <div className="bg-card border border-border rounded-2xl p-4">
-            <h4 className="text-sm font-bold">{t("insights.chartReach")}</h4>
+        <div className="grid lg:grid-cols-[1.5fr_1fr] gap-3 sm:gap-4 mt-4">
+          <div className={`${CARD} p-4`}>
+            <h4 className="text-[16px] font-display font-extrabold">{t("insights.chartReach")}</h4>
             {reachSeries.length > 1 ? (
-              <div className="h-[140px] mt-3">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={reachSeries}>
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-                    <Tooltip />
-                    <Bar dataKey="v" fill="#EA4918" radius={[3, 3, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <>
+                <div className="h-[160px] mt-3">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={reachSeries} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" axisLine={{ stroke: "#1D1B18", strokeWidth: 2 }} tickLine={false} />
+                      <Tooltip cursor={{ fill: "rgba(29,27,24,.06)" }} />
+                      <ReferenceLine y={mediaAlcance} stroke="#1D1B18" strokeOpacity={0.45} strokeDasharray="5 4" strokeWidth={1.5} />
+                      <Bar dataKey="v" stroke="#1D1B18" strokeWidth={1.5} radius={[4, 4, 0, 0]}>
+                        {reachSeries.map((d) => <Cell key={d.date} fill={d.pico ? "#EA4918" : d.fds ? "#0061EE" : "#C9DAFF"} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] text-muted-foreground">
+                  <Legenda cor="#C9DAFF" nome="dia de semana" />
+                  <Legenda cor="#0061EE" nome="sexta e sábado" />
+                  <Legenda cor="#EA4918" nome="dia que estourou" />
+                  <span>- - - sua média</span>
+                </div>
+              </>
             ) : <p className="text-xs text-muted-foreground mt-3">{t("insights.noReachSeries")}</p>}
           </div>
-          <div className="bg-card border border-border rounded-2xl p-4">
-            <h4 className="text-sm font-bold">{t("insights.chartFollowers")}</h4>
+          <div className={`${CARD} p-4`}>
+            <h4 className="text-[16px] font-display font-extrabold">{t("insights.chartFollowers")}</h4>
             {followerSeries.length > 1 ? (
-              <div className="h-[140px] mt-3">
+              <div className="h-[160px] mt-3">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={followerSeries}>
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                  <LineChart data={followerSeries} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" axisLine={{ stroke: "#1D1B18", strokeWidth: 2 }} tickLine={false} />
                     <YAxis hide domain={["dataMin - 1", "dataMax + 1"]} />
                     <Tooltip />
-                    <Line type="monotone" dataKey="v" stroke="#EA4918" strokeWidth={2.5} dot={{ r: 2.5, fill: "#EA4918" }} />
+                    <Line type="monotone" dataKey="v" stroke="#1D1B18" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: "#EA4918", stroke: "#1D1B18", strokeWidth: 2 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -368,21 +406,17 @@ export default function Insights() {
       {/* drivers */}
       {media.length > 0 && (
         <>
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3 flex items-center gap-2">
-            O que mais gerou crescimento <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Cria IA</span>
-          </h2>
-          <div className="grid sm:grid-cols-3 gap-3">
-            <Driver icon={Eye} t={t("insights.topReach")} big={byReach[0]?.caption?.slice(0, 40) ?? "-"} s={`${fmt(m(byReach[0], "reach"))} de alcance`} permalink={byReach[0]?.permalink} />
-            <Driver icon={Bookmark} t={t("insights.topSaves")} big={bySaves[0]?.caption?.slice(0, 40) ?? "-"} s={`${fmt(m(bySaves[0], "saved") + m(bySaves[0], "saves"))} salvos`} permalink={bySaves[0]?.permalink} />
-            <Driver icon={BarChart3} t={t("insights.bestFormat")} big={fmtType(bestFormat?.t ?? null)} s={`média de ${fmt(Math.round(bestFormat?.avg ?? 0))} de alcance`} />
+          <SecaoTitulo titulo="O que mais gerou crescimento" extra={<SeloIA />} mao="repete o que deu certo" />
+          <div className="grid sm:grid-cols-3 gap-3 sm:gap-4">
+            <Driver icon={Eye} t={t("insights.topReach")} big={byReach[0]?.caption?.slice(0, 40) ?? "-"} s={`${fmt(m(byReach[0], "reach"))} de alcance`} permalink={byReach[0]?.permalink} thumb={byReach[0]?.thumbnail_url} legenda={fmtType(byReach[0]?.media_type ?? null)} />
+            <Driver icon={Bookmark} t={t("insights.topSaves")} big={bySaves[0]?.caption?.slice(0, 40) ?? "-"} s={`${fmt(m(bySaves[0], "saved") + m(bySaves[0], "saves"))} salvos`} permalink={bySaves[0]?.permalink} thumb={bySaves[0]?.thumbnail_url} legenda={fmtType(bySaves[0]?.media_type ?? null)} />
+            <Driver icon={BarChart3} t={t("insights.bestFormat")} big={fmtType(bestFormat?.t ?? null)} s={`média de ${fmt(Math.round(bestFormat?.avg ?? 0))} de alcance`} legenda="formato" />
           </div>
         </>
       )}
 
       {/* CRUZAMENTOS: o que rende mais por formato, pilar, tema e horário */}
-      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3 flex items-center gap-2">
-        O que postar mais <span className="text-[10px] font-normal normal-case tracking-normal text-muted-foreground">· cruzamentos do seu conteúdo</span>
-      </h2>
+      <SecaoTitulo id="ins-postar" titulo="O que postar mais" mao="cruzando os seus posts" />
       {/* Sugestões de ligar publicação ↔ post (ciclo 2 dos dados): antes da
           análise, porque é o que faz pilar e gancho aparecerem nela. */}
       <SugestoesVinculo conta={ownerId} />
@@ -390,44 +424,43 @@ export default function Insights() {
 
       {/* GANCHOS (28/10/2026): quem segurou nos 3 primeiros segundos e por
           quanto tempo, na mesma idade (24 h ou 7 dias); e o que trouxe seguidor. */}
-      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">Ganchos e seguidores</h2>
-      <div className="space-y-3">
+      <SecaoTitulo id="ins-ganchos" titulo="Ganchos e seguidores" mao="quem segurou nos primeiros segundos" />
+      <div className="space-y-4">
         <RankingGanchos media={media as unknown as MidiaIg[]}
           ganchoDe={(x) => (x as unknown as { posts?: { hook?: string | null } | null }).posts?.hook ?? null} />
         <SeguidoresPorPost media={media as unknown as MidiaIg[]} diario={daily} />
       </div>
 
       {/* PERFIL DE AUDIÊNCIA */}
-      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">Quem te acompanha</h2>
+      <SecaoTitulo id="ins-publico" titulo="Quem te acompanha" mao="e o que fazem nos stories" />
       <AudienceBreakdown rows={audience} />
 
       {/* STORIES */}
-      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">Stories</h2>
+      <SecaoTitulo titulo="Stories" mao="o resumo e story por story" />
       <StoriesSummary stories={stories} />
 
       {/* TODOS OS POSTS (28/10/2026): tabela ordenável com reposts e ações no perfil */}
-      <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-7 mb-3">Números de cada post</h2>
+      <SecaoTitulo id="ins-posts" titulo="Números de cada post" />
       <TabelaPosts media={media as unknown as MidiaIg[]} />
 
       {/* posts + vínculo manual */}
-      <div className="flex items-center justify-between gap-3 flex-wrap mt-7 mb-3">
-        <h2 data-tour="insights-posts" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("insights.postsTitle")}</h2>
+      <div className="flex items-center justify-between gap-3 flex-wrap mt-9 mb-3.5">
+        <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
+          <h2 data-tour="insights-posts" className="font-display font-extrabold text-[21px] sm:text-2xl leading-none">{t("insights.postsTitle")}</h2>
+          <span className="text-[19px] sm:text-[21px] leading-none text-[#EA4918]" style={MAO}>ligue cada um ao post do Cria</span>
+        </div>
         {media.length > 10 && (
-          <div className="flex items-center gap-1 text-[11px]">
-            <span className="text-muted-foreground mr-1">Mostrar:</span>
+          <div className="flex items-center gap-1.5 text-[11px]">
+            <span className="text-muted-foreground mr-1">Mostrar</span>
             {[10, 20, 30, media.length].map((n, i) => {
               const isAll = i === 3;
               const active = isAll ? postsToShow >= media.length : postsToShow === n && postsToShow < media.length;
               // Evita repetir o botão "Todos" quando total coincide com 10/20/30.
               if (isAll && [10, 20, 30].includes(media.length)) return null;
               return (
-                <button
-                  key={isAll ? "all" : n}
-                  onClick={() => setPostsToShow(n)}
-                  className={`px-2 py-1 rounded-md font-semibold transition-colors ${active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}
-                >
+                <Pilula key={isAll ? "all" : n} ativo={active} onClick={() => setPostsToShow(n)}>
                   {isAll ? "Todos" : n}
-                </button>
+                </Pilula>
               );
             })}
           </div>
@@ -436,12 +469,12 @@ export default function Insights() {
       {media.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nenhum post coletado ainda. Clique em “Atualizar” após conectar.</p>
       ) : (
-        <div className="grid md:grid-cols-2 gap-3">
+        <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
           {media.slice(0, postsToShow).map((mi) => {
             const MI = MEDIA_ICON(mi.media_type);
             return (
-              <div key={mi.id} className="bg-card border border-border rounded-2xl p-3 flex gap-3">
-                <div className="w-[74px] h-[74px] rounded-xl shrink-0 grid place-items-center bg-muted overflow-hidden">
+              <div key={mi.id} className={`${CARD} p-3 flex gap-3`}>
+                <div className="w-[74px] h-[74px] rounded-xl shrink-0 grid place-items-center bg-muted overflow-hidden border-2 border-foreground">
                   {mi.thumbnail_url ? <img src={mi.thumbnail_url} referrerPolicy="no-referrer" alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" /> : <MI className="h-6 w-6 text-muted-foreground" />}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -458,7 +491,7 @@ export default function Insights() {
                     {mi.post_id && mi.posts ? (
                       // Já vinculado: mostra o post ligado + trocar (reabre seletor) e desvincular (postId null).
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#1D1B18] bg-[#FFD3C2] border-[1.5px] border-foreground px-2.5 py-1 rounded-full">
                           <Link2 className="h-3 w-3" /> {[mi.posts.format, mi.posts.hook].filter(Boolean).join(" · ") || mi.posts.title || t("insights.linked")}
                         </span>
                         <button onClick={() => setLinkFor(mi)} className="text-[11px] font-semibold text-muted-foreground hover:text-primary px-1.5 py-1 transition-colors">
@@ -469,7 +502,7 @@ export default function Insights() {
                         </button>
                       </div>
                     ) : (
-                      <button onClick={() => setLinkFor(mi)} className="inline-flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground bg-background border border-dashed border-border px-2.5 py-1 rounded-full hover:border-primary/40 hover:text-primary">
+                      <button onClick={() => setLinkFor(mi)} className="inline-flex items-center gap-1.5 text-[11px] font-bold text-foreground bg-background border-[1.5px] border-dashed border-foreground px-2.5 py-1 rounded-full hover:border-primary/40 hover:text-primary">
                         <Link2 className="h-3 w-3" /> Vincular ao conteúdo do CRIA
                       </button>
                     )}
@@ -482,7 +515,7 @@ export default function Insights() {
       )}
       {media.length > postsToShow && (
         <div className="mt-3 flex items-center justify-center">
-          <Button variant="outline" size="sm" onClick={() => setPostsToShow((n) => n + 20)}>
+          <Button variant="outline" size="sm" className="rounded-full border-2 border-foreground font-bold shadow-[0_2px_0_hsl(var(--foreground))]" onClick={() => setPostsToShow((n) => n + 20)}>
             Carregar mais ({postsToShow} de {media.length})
           </Button>
         </div>
@@ -490,20 +523,20 @@ export default function Insights() {
 
       {/* leitura IA */}
       {media.length > 0 && bestFormat && (
-        <div className="bg-card border border-border rounded-2xl p-4 mt-4">
+        <div className={`${CARD} p-4 sm:p-5 mt-9`}>
           <div className="flex items-center justify-between gap-2">
-            <h4 className="text-sm font-extrabold flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> {t("insights.aiTitle")}</h4>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={genReading} disabled={aiLoading}>
+            <h4 className="text-[18px] font-display font-extrabold flex items-center gap-2">{t("insights.aiTitle")} <SeloIA /></h4>
+            <Button variant="outline" size="sm" className="gap-1.5 rounded-full border-2 border-foreground font-bold shadow-[0_2px_0_hsl(var(--foreground))]" onClick={genReading} disabled={aiLoading}>
               {aiLoading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
               {aiRead ? t("insights.aiRedo") : t("insights.aiAnalyze")}
             </Button>
           </div>
 
           {aiRead ? (
-            <div className="mt-3 space-y-3">
-              <ul className="space-y-2 text-[13px]">
+            <div className="mt-3 grid md:grid-cols-[1.3fr_1fr] gap-5">
+              <ul className="space-y-2 text-[13.5px]">
                 {aiRead.leituras.map((l, i) => (
-                  <li key={i} className="flex gap-2"><TrendingUp className="h-4 w-4 text-primary shrink-0 mt-0.5" /><span>{l}</span></li>
+                  <li key={i} className="flex gap-2"><TrendingUp className="h-4 w-4 text-[#00A652] shrink-0 mt-0.5" /><span>{l}</span></li>
                 ))}
               </ul>
               {aiRead.acoes.length > 0 && (
@@ -533,17 +566,60 @@ export default function Insights() {
   );
 }
 
-function Kpi({ icon: Icon, label, value, delta, up }: { icon: typeof Users; label: string; value: string; delta?: string; up?: boolean }) {
+function Kpi({ icon: Icon, label, value, delta, up, bg, serie }: { icon: typeof Users; label: string; value: string; delta?: string; up?: boolean; bg: string; serie?: number[] }) {
+  // Fichas coloridas do mockup. As cores claras ficam fixas (texto escuro), então
+  // o texto aqui é sempre #1D1B18, menos na ficha branca, que segue o tema.
+  const claro = bg !== "bg-card";
   return (
-    <div className="bg-card border border-border rounded-2xl p-4">
-      <div className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1.5"><Icon className="h-3.5 w-3.5 text-primary" /> {label}</div>
-      <div className="text-2xl font-display font-extrabold mt-1.5">{value}</div>
-      {delta && <div className={`text-[11px] font-bold mt-0.5 ${up ? "text-green-600" : "text-red-600"}`}>{delta}</div>}
+    <div className={`${bg} rounded-[18px] border-2 border-foreground p-3.5 sm:p-4 shadow-[2px_2px_0_hsl(var(--foreground))] min-w-0 flex flex-col gap-1.5 ${claro ? "text-[#1D1B18]" : ""}`}>
+      <div className="text-[11px] font-extrabold uppercase tracking-wider opacity-70 flex items-center gap-1.5"><Icon className="h-3.5 w-3.5" /> {label}</div>
+      <div className="flex items-end justify-between gap-2">
+        <div className="text-[28px] sm:text-[34px] leading-none font-display font-extrabold">{value}</div>
+        {serie && serie.length > 2 && <MiniCurva serie={serie} />}
+      </div>
+      {delta && (
+        <span className={`self-start text-[11.5px] font-extrabold rounded-full border-2 border-[#1D1B18] px-2 py-0.5 ${up ? "bg-white text-[#1D1B18]" : "bg-[#1D1B18] text-white"}`}>{delta}</span>
+      )}
     </div>
   );
 }
 
-function Driver({ icon: Icon, t, big, s, permalink }: { icon: typeof Users; t: string; big: string; s: string; permalink?: string | null }) {
+/** Minicurva dos últimos dias (só desenha quando há série daquele número). */
+function MiniCurva({ serie }: { serie: number[] }) {
+  const w = 84, h = 30;
+  const min = Math.min(...serie), max = Math.max(...serie);
+  const pts = serie.map((v, i) => `${(i / (serie.length - 1)) * (w - 4) + 2},${max === min ? h / 2 : h - 3 - ((v - min) / (max - min)) * (h - 6)}`);
+  const [lx, ly] = pts[pts.length - 1].split(",");
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="hidden sm:block w-[84px] h-[30px] shrink-0" aria-hidden>
+      <polyline points={pts.join(" ")} fill="none" stroke="#1D1B18" strokeWidth={2.2} strokeLinejoin="round" />
+      <circle cx={lx} cy={ly} r={3.2} fill="#EA4918" stroke="#1D1B18" strokeWidth={1.4} />
+    </svg>
+  );
+}
+
+function Legenda({ cor, nome }: { cor: string; nome: string }) {
+  return <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[3px] border-[1.5px] border-foreground" style={{ background: cor }} />{nome}</span>;
+}
+
+/** Celular: abas presas no topo que rolam até cada parte da página. */
+const ABAS: Array<[string, string]> = [["ins-resumo", "Resumo"], ["ins-postar", "Postar"], ["ins-ganchos", "Ganchos"], ["ins-publico", "Público"], ["ins-posts", "Posts"]];
+function AbasInsights() {
+  const [ativa, setAtiva] = useState("ins-resumo");
+  const ir = (id: string) => { setAtiva(id); document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }); };
+  return (
+    <div className="md:hidden sticky top-[calc(var(--topo-app)+56px)] z-30 -mx-4 mt-5 px-4 py-2.5 bg-background border-y-2 border-foreground flex gap-1.5 overflow-x-auto">
+      {ABAS.map(([id, nome]) => (
+        <button key={id} type="button" onClick={() => ir(id)}
+          className={`h-8 px-3 rounded-full text-[13px] font-display font-extrabold border-2 border-foreground whitespace-nowrap ${ativa === id ? "bg-[#EA4918] text-white" : "bg-card"}`}>
+          {nome}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Driver({ icon: Icon, t, big, s, permalink, thumb, legenda }: { icon: typeof Users; t: string; big: string; s: string; permalink?: string | null; thumb?: string | null; legenda?: string }) {
   // Quando há permalink, o destaque abre o post no Instagram em nova aba.
   const clickable = !!permalink;
   const open = () => { if (permalink) window.open(permalink, "_blank", "noopener,noreferrer"); };
@@ -553,11 +629,22 @@ function Driver({ icon: Icon, t, big, s, permalink }: { icon: typeof Users; t: s
       tabIndex={clickable ? 0 : undefined}
       onClick={clickable ? open : undefined}
       onKeyDown={clickable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } } : undefined}
-      className={`bg-card border border-border rounded-2xl p-4 ${clickable ? "cursor-pointer transition-colors hover:border-primary/40 hover:bg-primary/5" : ""}`}
+      className={`${CARD} p-3.5 flex items-center gap-3.5 ${clickable ? "cursor-pointer transition-transform hover:-translate-y-0.5" : ""}`}
     >
-      <div className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider flex items-center gap-1.5"><Icon className="h-3.5 w-3.5 text-primary" /> {t}</div>
-      <div className={`text-sm font-extrabold mt-2 leading-tight ${clickable ? "text-primary" : ""}`}>{big}</div>
-      <div className="text-xs text-muted-foreground mt-1">{s}</div>
+      {/* Polaroid: capa do post (ou o ícone, quando não há capa) com a legenda à mão. */}
+      <div className="shrink-0 w-[84px] bg-white border-2 border-[#1D1B18] p-1 pb-4 -rotate-2 shadow-[2px_2px_0_rgba(29,27,24,.2)] relative">
+        <div className="aspect-[4/5] bg-muted grid place-items-center overflow-hidden">
+          {thumb
+            ? <img src={thumb} alt="" loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+            : <Icon className="h-6 w-6 text-[#1D1B18]/50" />}
+        </div>
+        {legenda && <span className="absolute bottom-0 inset-x-0 text-center text-[13px] leading-4 text-[#1D1B18]" style={MAO}>{legenda}</span>}
+      </div>
+      <div className="min-w-0">
+        <div className="text-[10.5px] text-muted-foreground font-extrabold uppercase tracking-wider flex items-center gap-1.5"><Icon className="h-3.5 w-3.5" /> {t}</div>
+        <div className="font-display font-extrabold text-[15.5px] mt-1 leading-tight line-clamp-3">{big}</div>
+        <div className="text-[18px] leading-tight mt-1 text-[#1d6b3c]" style={MAO}>{s}{clickable ? " · abrir ↗" : ""}</div>
+      </div>
     </div>
   );
 }

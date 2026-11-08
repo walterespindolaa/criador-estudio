@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
@@ -179,6 +179,11 @@ export function useAdmin(filters: AdminFilters) {
   const usersQuery = useQuery<{ rows: AdminProfile[]; count: number }>({
     queryKey: ["admin-users", filters],
     enabled: !!user && isAdmin,
+    // Sem isso, cada letra digitada na busca virava uma chave nova, isLoading
+    // voltava a true e o Admin trocava a página inteira pelo esqueleto (o
+    // campo de busca desmontava e perdia o foco). Mantém a lista anterior na
+    // tela enquanto a nova chega.
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const from = filters.page * filters.pageSize;
       const to = from + filters.pageSize - 1;

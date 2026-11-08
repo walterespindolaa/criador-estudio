@@ -1,3 +1,4 @@
+import { CARD } from "./estiloCria";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Link2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -63,36 +64,36 @@ export function SugestoesVinculo({ conta, crmClientId = null }: { conta: string 
   if (isLoading || lista.length === 0) return null;
 
   return (
-    <section className="mt-3 rounded-2xl border border-violet-200 bg-violet-50/50 p-3 sm:p-4">
+    <section className={`mb-4 ${CARD} p-3 sm:p-4`}>
       <div className="flex items-start gap-2.5 mb-2.5">
-        <span className="w-8 h-8 rounded-xl bg-violet-100 grid place-items-center shrink-0"><Link2 className="h-4 w-4 text-violet-700" /></span>
+        <span className="w-8 h-8 rounded-xl bg-[#FFD3C2] border-2 border-foreground grid place-items-center shrink-0"><Link2 className="h-4 w-4 text-foreground" /></span>
         <div className="min-w-0">
-          <p className="text-sm font-display font-bold text-foreground">Esses posts do Instagram são do Cria?</p>
+          <p className="text-[16px] font-display font-extrabold text-foreground">Esses posts do Instagram são do Cria?</p>
           <p className="text-xs font-body text-muted-foreground">
             Confirme e o Cria passa a saber o pilar, o gancho e a linha editorial de cada um. É isso que deixa a análise certeira.
           </p>
         </div>
       </div>
 
-      <ul className="space-y-2">
+      <ul className="grid gap-2 lg:grid-cols-2">
         {lista.slice(0, 8).map((s) => (
-          <li key={s.insight_id} className="rounded-xl border border-border bg-card p-2.5 flex gap-2.5 items-center">
+          <li key={s.insight_id} className="rounded-2xl border-2 border-foreground bg-background p-2.5 flex gap-2.5 items-center">
             {s.thumbnail_url
-              ? <img src={s.thumbnail_url} alt="" loading="lazy" className="w-12 h-12 rounded-lg object-cover shrink-0 bg-muted" />
-              : <span className="w-12 h-12 rounded-lg bg-muted shrink-0" />}
+              ? <img src={s.thumbnail_url} alt="" loading="lazy" className="w-12 h-12 rounded-lg object-cover shrink-0 bg-muted border-2 border-foreground" />
+              : <span className="w-12 h-12 rounded-lg bg-muted shrink-0 border-2 border-foreground" />}
             <div className="min-w-0 flex-1">
               <p className="text-[12px] font-body text-muted-foreground truncate">
                 Instagram · {formatMediaLabel(s.media_type)} · {dataCurta(s.posted_at)}
               </p>
               <p className="text-[13px] font-body font-bold text-foreground truncate">→ {s.post_title || "Post sem título"}</p>
-              {s.motivo && <p className="text-[11px] font-body text-violet-700 truncate">{s.motivo}</p>}
+              {s.motivo && <p className="text-[11px] font-body text-[#EA4918] truncate">{s.motivo}</p>}
             </div>
             <div className="flex flex-col sm:flex-row gap-1.5 shrink-0">
-              <Button size="sm" className="h-9 rounded-lg px-3" disabled={decidir.isPending}
+              <Button size="sm" className="h-9 rounded-full px-3 bg-[#00A652] hover:bg-[#00A652]/90 text-white border-2 border-foreground" disabled={decidir.isPending}
                 onClick={() => decidir.mutate({ s, aceitar: true })} aria-label="É esse post">
                 {decidir.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Check className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">É esse</span></>}
               </Button>
-              <Button size="sm" variant="ghost" className="h-9 rounded-lg px-3 text-muted-foreground" disabled={decidir.isPending}
+              <Button size="sm" variant="ghost" className="h-9 rounded-full px-3 border-2 border-foreground bg-card" disabled={decidir.isPending}
                 onClick={() => decidir.mutate({ s, aceitar: false })} aria-label="Não é esse post">
                 <X className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">Não é</span>
               </Button>

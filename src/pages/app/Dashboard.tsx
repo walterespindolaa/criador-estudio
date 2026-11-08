@@ -28,7 +28,7 @@ import { FirstStepsPanel } from "@/components/dashboard/FirstStepsPanel";
 import { WhoYouAre } from "@/components/dashboard/WhoYouAre";
 import { CapturaRapidaDialog } from "@/components/dashboard/CapturaRapidaDialog";
 import { VitrineStudio } from "@/components/dashboard/AtalhosInicio";
-import { NumerosInstagram, useResumoInstagram } from "@/components/dashboard/InstagramPulse";
+import { NumerosInstagram, PolaroidMaisFuncionou, useResumoInstagram } from "@/components/dashboard/InstagramPulse";
 import { AtalhoInicio, CardInicio, CARTAO_INICIO, FaixaTrava, HojeDoCriador, SemanaDoCriador, type PostSemana } from "@/components/dashboard/InicioBlocos";
 import { RepurposeSheet } from "@/components/kanban/RepurposeSheet";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
@@ -259,31 +259,43 @@ const Dashboard = () => {
                 )}
               </div>
             ) : (
-              <div className="flex h-full flex-col gap-3">
-                <p className="text-[11.5px] font-body text-muted-foreground -mt-1">Últimos 30 dias, comparados com os 30 anteriores.</p>
-                {/* Os números também abrem os Insights. */}
-                <button type="button" onClick={() => navigate("/app/insights")} aria-label="Abrir Insights" className="block w-full text-left rounded-xl transition-opacity hover:opacity-80">
-                  <NumerosInstagram r={insta} />
-                </button>
-                {insta.mais && (
-                  <div className="mt-auto flex flex-wrap sm:flex-nowrap items-center gap-3 rounded-xl bg-[#D8F2E0] dark:bg-emerald-500/10 p-3 min-w-0">
-                    <span className="h-[60px] w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
-                      {insta.mais.thumb && <img src={insta.mais.thumb} alt="" loading="lazy" className="h-full w-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />}
+              <div className="flex h-full flex-col gap-4">
+                {/* Cabeçalho da conta (mockup aprovado em 07/11/2026). */}
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="h-12 w-12 shrink-0 rounded-full p-[3px]" style={{ background: "conic-gradient(#FFCF03,#EA4918,#FF77B9,#0061EE,#FFCF03)" }}>
+                    <span className="grid h-full w-full place-items-center overflow-hidden rounded-full border-[2.5px] border-white bg-[#E7D9C4]">
+                      {insta.conn.profile_picture_url
+                        ? <img src={insta.conn.profile_picture_url} alt="" loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                        : <Instagram className="h-5 w-5 text-[#1D1B18]" />}
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-body font-bold uppercase tracking-wide text-foreground/70">O que mais funcionou</p>
-                      <p className="text-[13px] font-body font-bold leading-snug line-clamp-1">{insta.mais.titulo}</p>
-                      <p className="text-[12px] font-body text-foreground/75 leading-snug line-clamp-2">{insta.mais.frase}</p>
-                    </div>
-                    {insta.mais.postId && posts.some((x) => x.id === insta.mais!.postId) ? (
-                      <button type="button" onClick={reaproveitarPost}
-                        className="shrink-0 w-full sm:w-auto justify-center inline-flex items-center gap-1 rounded-full border-2 border-foreground bg-card px-3 h-9 text-[12px] font-body font-bold"><Repeat2 className="h-3.5 w-3.5" /> Reaproveitar</button>
-                    ) : insta.mais.permalink ? (
-                      <a href={insta.mais.permalink} target="_blank" rel="noopener noreferrer"
-                        className="shrink-0 w-full sm:w-auto justify-center inline-flex items-center gap-1 rounded-full border-2 border-foreground bg-card px-3 h-9 text-[12px] font-body font-bold"><ExternalLink className="h-3.5 w-3.5" /> Ver</a>
-                    ) : null}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-display font-extrabold text-[17px] leading-tight truncate">{insta.conn.username ? `@${insta.conn.username}` : "Sua conta"}</p>
+                    <p className="text-[12px] font-body text-muted-foreground truncate">
+                      Últimos 30 dias, comparados com os 30 anteriores
+                      {insta.conn.updated_at && ` · atualizado ${new Date(insta.conn.updated_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" })}`}
+                    </p>
                   </div>
-                )}
+                </div>
+                <div className={cn("grid grid-cols-1 gap-5", insta.mais && "lg:grid-cols-[1.1fr_1fr]")}>
+                  {/* Os números também abrem os Insights. */}
+                  <button type="button" onClick={() => navigate("/app/insights")} aria-label="Abrir Insights" className="block w-full min-w-0 text-left rounded-xl transition-opacity hover:opacity-90">
+                    <NumerosInstagram r={insta} />
+                  </button>
+                  {insta.mais && (
+                    <div className="min-w-0 rounded-2xl bg-[#F6FBF7] dark:bg-emerald-500/10 p-3.5 lg:-my-1">
+                      <PolaroidMaisFuncionou mais={insta.mais} acao={
+                        insta.mais.postId && posts.some((x) => x.id === insta.mais!.postId) ? (
+                          <button type="button" onClick={reaproveitarPost}
+                            className="inline-flex items-center gap-1 rounded-full border-2 border-foreground bg-card px-3 h-9 text-[12px] font-body font-bold shadow-[0_2px_0_hsl(var(--foreground))]"><Repeat2 className="h-3.5 w-3.5" /> Reaproveitar</button>
+                        ) : insta.mais.permalink ? (
+                          <a href={insta.mais.permalink} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 rounded-full border-2 border-foreground bg-card px-3 h-9 text-[12px] font-body font-bold shadow-[0_2px_0_hsl(var(--foreground))]"><ExternalLink className="h-3.5 w-3.5" /> Ver no Instagram</a>
+                        ) : null
+                      } />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </CardInicio>
