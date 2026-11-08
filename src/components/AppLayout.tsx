@@ -433,7 +433,8 @@ const AppLayout = () => {
                 papel creme dentro da área do conteúdo, com a busca larga e
                 ajuda, sugestão e avisos numa pílula só. */}
             <div className="hidden w-full md:block">
-              <div className="mx-auto max-w-screen-2xl px-8 pt-5">
+              {/* Largura inteira da página, como a faixa antiga (08/11/2026). */}
+              <div className="px-4 pt-4">
                 <BarraSuperior
                   eyebrow={heroEyebrow}
                   title={heroTitle}

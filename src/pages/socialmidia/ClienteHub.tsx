@@ -211,6 +211,12 @@ export default function ClienteHub() {
     if (sub === "kanban-cliente") return !!client?.cria_owner_id;
     return true;
   };
+  /* CLIENTE QUE USA O CRIA (Walter, 08/11/2026): o Kanban do cliente vem
+     primeiro e a Produção depois, porque é ali que o post dele mora de verdade.
+     Pra quem não tem o Cria, a ordem segue a mesma. */
+  const subsDe = (g: Grp) => (g.key === "cria-post" && client?.cria_owner_id
+    ? ["kanban-cliente", ...g.subs.filter((x) => x !== "kanban-cliente")]
+    : g.subs);
   const allTabKeys = useMemo(() => {
     const s = new Set<string>();
     GROUPS.forEach((g) => { s.add(g.key); g.subs.forEach((x) => {
@@ -678,7 +684,7 @@ export default function ClienteHub() {
             <ArrowLeft className="h-3.5 w-3.5" /> {activeGroup.label}
           </button>
           <div className="flex gap-1 overflow-x-auto rounded-full border border-border bg-muted/40 p-1 w-fit max-w-full">
-            {activeGroup.subs.filter(subVisible).map((sub) => {
+            {subsDe(activeGroup).filter(subVisible).map((sub) => {
               const on = activeTab === sub;
               const hex = activeGroup.modulo ? CRIA_HEX[activeGroup.modulo] : "hsl(var(--primary))";
               return (
@@ -705,7 +711,7 @@ export default function ClienteHub() {
       {/* LANDING do Cria cards dos assuntos daquele módulo. */}
       {onLanding && (
         <div data-tour="cli-subnav" className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
-          {activeGroup.subs.filter(subVisible).map((sub) => {
+          {subsDe(activeGroup).filter(subVisible).map((sub) => {
             const meta = SUB_META[sub];
             const Icon = meta.icon;
             const hex = activeGroup.modulo ? CRIA_HEX[activeGroup.modulo] : "hsl(var(--primary))";
