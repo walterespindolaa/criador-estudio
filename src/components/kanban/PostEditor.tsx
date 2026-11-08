@@ -3247,6 +3247,12 @@ function CarouselMediaStrip({
   onRemove: (ref: DriveRef) => void;
   removingIds: Set<string>;
 }) {
+  /* LISTA COM NOME (08/11/2026, Walter: "quando coloco imagem não aparece a
+     lista/nome das mídias, não consigo visualizar pra colocar em ordem"). A
+     tira de miniaturas pequenas rolava pro lado e escondia as primeiras. Agora
+     abre em lista: número, miniatura maior e nome, arrastando pela alça. A tira
+     continua disponível no botão "miniaturas". */
+  const [modo, setModo] = useState<"lista" | "tira">("lista");
   const onDragEnd = (r: DropResult) => {
     if (!r.destination) return;
     const from = r.source.index;
@@ -3257,76 +3263,83 @@ function CarouselMediaStrip({
     ids.splice(to, 0, moved);
     onReorder(ids);
   };
+  const thumb = (m: DriveRef, cls: string) => {
+    const isVideo = m.file_type?.includes("video");
+    const src = m.thumbnail_url || m.view_url || "";
+    return (
+      <span className={cn("relative block overflow-hidden rounded-lg border border-border bg-muted shrink-0", cls)}>
+        {src ? (
+          <img src={src} alt="" draggable={false} loading="lazy" className="w-full h-full object-cover select-none" />
+        ) : (
+          <span className="w-full h-full flex items-center justify-center text-muted-foreground"><ImageIcon className="h-5 w-5" /></span>
+        )}
+        {isVideo && (
+          <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <Play className="h-4 w-4 text-white [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.7))]" />
+          </span>
+        )}
+      </span>
+    );
+  };
   return (
-    <div className="overflow-x-auto overflow-y-hidden pb-2.5 kanban-scroll">
-      <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="carousel-media" direction="horizontal">
-          {(dropP) => (
-            <div ref={dropP.innerRef} {...dropP.droppableProps} className="flex w-max">
-              {media.map((m, i) => {
-                const isVideo = m.file_type?.includes("video");
-                const src = m.thumbnail_url || m.view_url || "";
-                return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-end gap-1">
+        {(["lista", "tira"] as const).map((k) => (
+          <button key={k} type="button" onClick={() => setModo(k)}
+            className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-body font-semibold border transition-colors",
+              modo === k ? "bg-foreground text-background border-foreground" : "bg-background text-muted-foreground border-border hover:text-foreground")}>
+            {k === "lista" ? "lista" : "miniaturas"}
+          </button>
+        ))}
+      </div>
+      <div className={modo === "tira" ? "overflow-x-auto overflow-y-hidden pb-2.5 kanban-scroll" : ""}>
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Droppable droppableId="carousel-media" direction={modo === "tira" ? "horizontal" : "vertical"}>
+            {(dropP) => (
+              <div ref={dropP.innerRef} {...dropP.droppableProps} className={modo === "tira" ? "flex w-max" : "flex flex-col"}>
+                {media.map((m, i) => (
                   <Draggable key={m.id} draggableId={m.id} index={i} disableInteractiveElementBlocking>
                     {(dragP, dragS) => {
-                      const item = (
-                        <div
-                          ref={dragP.innerRef}
-                          {...dragP.draggableProps}
-                          style={{
-                            ...dragP.draggableProps.style,
-                            WebkitUserSelect: "none",
-                            userSelect: "none",
-                            WebkitTouchCallout: "none",
-                          }}
-                          className={cn(
-                            "relative shrink-0 w-16 h-16 mr-2 rounded-xl overflow-hidden border border-border bg-muted select-none",
-                            dragS.isDragging && "ring-2 ring-primary/50 shadow-lg",
-                          )}
-                        >
-                          {src ? (
-                            <img
-                              src={src}
-                              alt=""
-                              draggable={false}
-                              loading="lazy"
-                              className="w-full h-full object-cover select-none"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                              <ImageIcon className="h-5 w-5" />
-                            </div>
-                          )}
-                          {isVideo && (
-                            <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                              <Play className="h-5 w-5 text-white [filter:drop-shadow(0_1px_2px_rgba(0,0,0,.7))]" />
-                            </span>
-                          )}
-                          <span className="absolute top-0.5 left-0.5 z-10 bg-black/65 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                            {i + 1}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => onRemove(m)}
-                            disabled={removingIds.has(m.id)}
-                            aria-label="Remover imagem"
-                            className="absolute top-1 right-1 z-20 grid place-items-center bg-black/65 text-white rounded-full p-1 disabled:opacity-50"
-                          >
+                      const estilo = { ...dragP.draggableProps.style, WebkitUserSelect: "none" as const, userSelect: "none" as const, WebkitTouchCallout: "none" as const };
+                      const item = modo === "tira" ? (
+                        <div ref={dragP.innerRef} {...dragP.draggableProps} style={estilo}
+                          className={cn("relative shrink-0 w-16 h-16 mr-2 rounded-xl overflow-hidden border border-border bg-muted select-none",
+                            dragS.isDragging && "ring-2 ring-primary/50 shadow-lg")}>
+                          {thumb(m, "w-full h-full rounded-none border-0")}
+                          <span className="absolute top-0.5 left-0.5 z-10 bg-black/65 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{i + 1}</span>
+                          <button type="button" onClick={() => onRemove(m)} disabled={removingIds.has(m.id)} aria-label="Remover imagem"
+                            className="absolute top-1 right-1 z-20 grid place-items-center bg-black/65 text-white rounded-full p-1 disabled:opacity-50">
                             <X className="h-3.5 w-3.5" />
                           </button>
                           <MediaGrip handleProps={dragP.dragHandleProps ?? undefined} />
+                        </div>
+                      ) : (
+                        <div ref={dragP.innerRef} {...dragP.draggableProps} style={estilo}
+                          className={cn("flex items-center gap-2.5 mb-1.5 rounded-xl border border-border bg-background px-2 py-1.5 select-none",
+                            dragS.isDragging && "ring-2 ring-primary/50 shadow-lg")}>
+                          <span {...(dragP.dragHandleProps ?? {})} aria-label="Arrastar para reordenar"
+                            className="grid place-items-center h-8 w-6 rounded-md text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing touch-none">
+                            <GripVertical className="h-4 w-4" />
+                          </span>
+                          <span className="w-5 text-center text-[12px] font-display font-extrabold tabular-nums">{i + 1}</span>
+                          {thumb(m, "w-11 h-11")}
+                          <span className="min-w-0 flex-1 text-[12.5px] font-body text-foreground truncate" title={m.file_name}>{m.file_name || "sem nome"}</span>
+                          <button type="button" onClick={() => onRemove(m)} disabled={removingIds.has(m.id)} aria-label="Remover imagem"
+                            className="shrink-0 rounded-full p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 disabled:opacity-50">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       );
                       return dragS.isDragging ? createPortal(item, document.body) : item;
                     }}
                   </Draggable>
-                );
-              })}
-              {dropP.placeholder}
-            </div>
-          )}
-        </Droppable>
-      </DragDropContext>
+                ))}
+                {dropP.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+      </div>
     </div>
   );
 }

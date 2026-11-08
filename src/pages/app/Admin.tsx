@@ -17,6 +17,7 @@ import {
   Inbox,
   LineChart,
   Gauge,
+  Compass,
   Users,
   MoreVertical,
   Trash2,
@@ -61,6 +62,7 @@ import { useAdmin, type AdminProfile } from "@/hooks/useAdmin";
 import { AdminGuard } from "@/components/AdminGuard";
 import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { CopyButton } from "@/components/shared/CopyButton";
+import { AdminPiloto } from "@/components/admin/piloto/AdminPiloto";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminBenchmarks } from "@/components/admin/AdminBenchmarks";
 import { AdminPartners } from "@/components/admin/AdminPartners";
@@ -202,7 +204,9 @@ const AdminInner = () => {
   // Abre no Início: é a tela que responde "e aí, como estamos?".
   // ?aba=respostas: o aviso do sino de resposta de e-mail abre direto na caixa.
   const [tab, setTab] = useState(() => {
-    try { return new URLSearchParams(window.location.search).get("aba") === "respostas" ? "respostas" : "inicio"; } catch { return "inicio"; }
+    // Piloto é a aba de entrada desde 08/11/2026; ?aba=<valor> abre qualquer outra.
+    const abas = ["piloto", "inicio", "contas", "trafego", "dinheiro", "uso", "rede", "respostas"];
+    try { const q = new URLSearchParams(window.location.search).get("aba"); return q && abas.includes(q) ? q : "piloto"; } catch { return "piloto"; }
   });
   const { data: respostasNovas = 0 } = useRespostasNovas();
   // Segundo nível de cada grupo. Estado separado por grupo de propósito: voltar
@@ -419,6 +423,7 @@ const AdminInner = () => {
               endereço. */}
           <TabsList className="flex flex-wrap gap-1.5 mb-5 bg-transparent h-auto p-0 justify-start border-0 rounded-none">
             {[
+              { value: "piloto", icon: Compass, title: "Piloto" },
               { value: "inicio", icon: LayoutDashboard, title: "Início" },
               { value: "contas", icon: Users, title: "Contas", hint: `${stats.totalUsers}` },
               { value: "trafego", icon: Megaphone, title: "Tráfego" },
@@ -438,6 +443,10 @@ const AdminInner = () => {
               </TabsTrigger>
             ))}
           </TabsList>
+
+          <TabsContent value="piloto">
+            <AdminPiloto aoAbrirConta={setSelectedUserId} />
+          </TabsContent>
 
           <TabsContent value="inicio">
             <AdminHome aoAbrirConta={setSelectedUserId} />

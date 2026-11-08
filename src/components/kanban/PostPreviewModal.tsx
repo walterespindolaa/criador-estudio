@@ -48,6 +48,37 @@ interface PostPreviewProps extends PostPreviewContentProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/* VÍDEO DO DRIVE (08/11/2026, Walter: "não consigo visualizar o vídeo, dar
+   play"). O <video src> do Drive não toca (cookie/CORS), então a prévia era só
+   a foto do quadro, sem play. Agora mostra a foto com o botão e, no clique,
+   troca pelo player do próprio Drive (iframe /preview), que toca pra quem tem
+   acesso ao arquivo. */
+function VideoDoDrive({ fileId, poster, className }: { fileId: string; poster: string | null; className?: string }) {
+  const [tocar, setTocar] = useState(false);
+  if (tocar) {
+    return (
+      <iframe
+        src={`https://drive.google.com/file/d/${fileId}/preview`}
+        title="Vídeo do Drive"
+        allow="autoplay; fullscreen"
+        allowFullScreen
+        className={`${className ?? ""} border-0 bg-black`}
+      />
+    );
+  }
+  return (
+    <button type="button" onClick={() => setTocar(true)} aria-label="Tocar o vídeo"
+      className={`${className ?? ""} block bg-neutral-900 z-[2]`}>
+      {poster && <img src={poster} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />}
+      <span className="absolute inset-0 grid place-items-center">
+        <span className="grid h-12 w-12 place-items-center rounded-full bg-black/45 text-white backdrop-blur-sm">
+          <Play className="h-5 w-5 translate-x-0.5" fill="currentColor" />
+        </span>
+      </span>
+    </button>
+  );
+}
+
 // Conteudo puro da previa (sem Dialog), reutilizavel: vive no modal fullscreen do
 // mobile E na coluna direita fixa do desktop dentro do PostEditor.
 export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections, carouselMedia, folgaParaFechar, semAbasPlataforma, capa, envioPct }: PostPreviewContentProps) {
@@ -210,6 +241,8 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
               playsInline
               className="w-full h-full object-cover"
             />
+          ) : isDriveVideo && driveVideoIdMatch ? (
+            mostraCapa ? null : <VideoDoDrive fileId={driveVideoIdMatch[1]} poster={drivePosterUrl} className="absolute inset-0 w-full h-full" />
           ) : (
             <img src={drivePosterUrl || activeMediaUrl} alt="preview" className="w-full h-full object-cover" loading="lazy" />
           )
@@ -244,6 +277,8 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
                 playsInline
                 className="absolute inset-0 w-full h-full object-cover"
               />
+            ) : isDriveVideo && driveVideoIdMatch ? (
+              mostraCapa ? null : <VideoDoDrive fileId={driveVideoIdMatch[1]} poster={drivePosterUrl} className="absolute inset-0 w-full h-full" />
             ) : (
               <img src={drivePosterUrl || activeMediaUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
             )
