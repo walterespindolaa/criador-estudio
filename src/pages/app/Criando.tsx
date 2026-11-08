@@ -232,6 +232,8 @@ const Criando = () => {
   const [calMode, setCalMode] = useState<"mes" | "semana">("mes");
   const [calWeekStart, setCalWeekStart] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 0 }));
   const [calDragId, setCalDragId] = useState<string | null>(null);
+  // Dias do calendário abertos pelo "+N" (08/11/2026: o "+1" não dizia o que era).
+  const [diasAbertos, setDiasAbertos] = useState<Set<string>>(() => new Set());
   const [calDragOverKey, setCalDragOverKey] = useState<string | null>(null);
   /* O DIA TOCADO NO CELULAR (circuito 10, 15/09/2026).
      O calendário é uma grade de 7 colunas: num aparelho de 390px cada dia
@@ -1246,7 +1248,7 @@ const Criando = () => {
                             </button>
                           </span>
                           <div className="hidden md:flex md:flex-col md:gap-1">
-                          {dayPosts.slice(0, 3).map(post => (
+                          {(diasAbertos.has(cell.key) ? dayPosts : dayPosts.slice(0, 3)).map(post => (
                             /* Card com ETAPA + título + FORMATO, igual ao calendário
                                do social mídia: cor sozinha não diz o que é a peça. */
                             <button key={post.id}
@@ -1278,7 +1280,14 @@ const Criando = () => {
                             </button>
                           ))}
                           {dayPosts.length > 3 && (
-                            <span className="text-[10px] text-muted-foreground font-body px-1">+{dayPosts.length - 3}</span>
+                            <button type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDiasAbertos((prev) => { const n = new Set(prev); if (n.has(cell.key)) n.delete(cell.key); else n.add(cell.key); return n; });
+                              }}
+                              className="self-start rounded-full border border-border bg-card px-2 py-0.5 text-[10px] font-body font-bold text-primary hover:bg-primary/10">
+                              {diasAbertos.has(cell.key) ? "mostrar menos" : `+${dayPosts.length - 3} ${dayPosts.length - 3 === 1 ? "post" : "posts"}`}
+                            </button>
                           )}
                           </div>
                         </div>

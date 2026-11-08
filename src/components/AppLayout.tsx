@@ -432,8 +432,14 @@ const AppLayout = () => {
             {/* BARRA SUPERIOR DO COMPUTADOR (Walter, 08/11/2026, mockup aprovado):
                 papel creme dentro da área do conteúdo, com a busca larga e
                 ajuda, sugestão e avisos numa pílula só. */}
-            <div className="hidden w-full md:block">
-              {/* Largura inteira da página, como a faixa antiga (08/11/2026). */}
+            <div
+              className={cn(
+                "hidden md:block",
+                // Avança por baixo do menu lateral, como a faixa antiga: a barra
+                // vai da borda esquerda da janela até a direita (08/11/2026).
+                railPinned ? "md:-ml-[288px] md:w-[calc(100%+288px)]" : "md:-ml-[104px] md:w-[calc(100%+104px)]",
+              )}
+            >
               <div className="px-4 pt-4">
                 <BarraSuperior
                   eyebrow={heroEyebrow}
