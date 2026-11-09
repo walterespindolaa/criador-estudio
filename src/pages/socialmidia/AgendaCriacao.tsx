@@ -82,6 +82,23 @@ const CRIA_ETAPA_COR: Record<string, string> = {
 const corEtapaCria = (s: string | null | undefined) => CRIA_ETAPA_COR[s ?? ""] ?? CRIA_POST_COLOR;
 
 const WD = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+/* FILTRO POR ETAPA (Gabriela, 09/11/2026, mockup do calendário v2 aprovado).
+   As cinco etapas do kanban de posts da agência, com as mesmas cores das
+   etiquetas do card. Com alguma marcada, a agenda mostra SÓ posts naquela
+   etapa: tarefa, captação, reunião e lembrete não têm etapa de post. */
+const ETAPAS_FILTRO = [
+  ["em_producao", "Produção", "#7C3AED"],
+  ["pendente", "Aguardando", "#F59E0B"],
+  ["ajuste_solicitado", "Ajuste", "#EA580C"],
+  ["aprovado", "Aprovado", "#16A34A"],
+  ["postado", "Postado", "#64748B"],
+] as const;
+/* O post do Cria DO CLIENTE tem outras etapas (ideia, roteiro, gravando...).
+   Pro filtro elas viram a etapa equivalente da agência. */
+const etapaDoCriaPost = (s: string | null | undefined) =>
+  s === "publicado" ? "postado" : s === "agendado" || s === "editando" ? "aprovado" : "em_producao";
+/** O que a célula do calendário do mês precisa de qualquer item do dia. */
+type PilulaInfo = { cor: string; hora: string | null; titulo: string; dica: string; done: boolean; alternar: () => void; abrir: () => void };
 // Inverso de parseDateOnly: formata um Date de meia-noite LOCAL de volta para YYYY-MM-DD.
 function ymd(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
 // Semana começa no DOMINGO (padrão iPhone/BR). Nome mantido por uso interno.
@@ -325,6 +342,12 @@ export default function AgendaCriacao() {
   const togglePostClient = (id: string | null) => setPostClients((prev) => {
     if (id === null) return new Set();
     const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n;
+  });
+  // Etapas marcadas no filtro (vazio = todas). Não persiste: é filtro de momento.
+  const [etapas, setEtapas] = useState<Set<string>>(new Set());
+  const toggleEtapa = (k: string | null) => setEtapas((prev) => {
+    if (k === null) return new Set();
+    const n = new Set(prev); if (n.has(k)) n.delete(k); else n.add(k); return n;
   });
   // Faixa "Posts de:" (chips de cliente) minimizável, persistida. Com muitos
   // clientes ela ocupa a tela toda, então dá pra recolher.
@@ -604,6 +627,51 @@ export default function AgendaCriacao() {
     saveDayOrder.mutate({ day: iso, order: keys });
   };
 
+  /* Muda um item da agenda de dia. Antes vivia só dentro do soltar do arrasto;
+     saiu daqui pra o "Mudar dia" do celular (calendário v2, 09/11/2026) usar a
+     MESMA gravação, sem um segundo caminho que pudesse divergir. */
+  const moverParaDia = (draggableId: string, day: string) => {
+    const sep = draggableId.indexOf(":");
+    const kind = draggableId.slice(0, sep);
+    const id = draggableId.slice(sep + 1);
+    const dest = parseDateOnly(day);
+    const ok = () => toast.success(`Movido para ${WD[dest.getDay()].toUpperCase()} ${dest.getDate()}`);
+    const fail = () => toast.error("Não consegui mover. Tente de novo.");
+    if (kind === "cap") {
+      qc.setQueriesData<Capture[]>({ queryKey: ["agenda-captures"] }, (old) => old?.map((c) => (c.id === id ? { ...c, capture_date: day } : c)));
+      updCapture.mutate({ id, patch: { capture_date: day } }, { onSuccess: ok, onError: fail, onSettled: () => qc.invalidateQueries({ queryKey: ["agenda-captures"] }) });
+    } else if (kind === "task") {
+      qc.setQueriesData<CrmTask[]>({ queryKey: ["crm-tasks"] }, (old) => old?.map((t) => (t.id === id ? { ...t, due_date: day } : t)));
+      // O hook useUpdateCrmTask já mostra toast de erro; aqui só o sucesso e o invalidate.
+      updTask.mutate({ id, due_date: day }, { onSuccess: ok, onSettled: () => qc.invalidateQueries({ queryKey: ["crm-tasks"] }) });
+    } else if (kind === "cria") {
+      qc.setQueriesData<Creation[]>({ queryKey: ["agenda-creations"] }, (old) => old?.map((c) => (c.id === id ? { ...c, day } : c)));
+      updCreation.mutate({ id, patch: { day } }, { onSuccess: ok, onError: fail, onSettled: () => qc.invalidateQueries({ queryKey: ["agenda-creations"] }) });
+    } else if (kind === "post") {
+      // Arrastar um post reprograma a data no Cria Post (reflete no kanban/calendário do cliente).
+      qc.setQueriesData<ExternalPostWithClient[]>({ queryKey: ["external-posts-all"] }, (old) => old?.map((p) => (p.id === id ? { ...p, scheduled_date: day } : p)));
+      movePost.mutate({ id, scheduled_date: day }, { onSuccess: ok, onError: fail });
+    } else if (kind === "criapost") {
+      // Remarca a data no Cria DO CLIENTE. Vai por RPC (o post é da conta dele);
+      // o cache local muda na hora pra o card não "voltar" enquanto salva.
+      // O horário do post é preservado: arrastar muda o DIA, não o horário que
+      // o cliente já tinha escolhido.
+      const horaAtual = clientCriaPosts.find((p) => p.id === id)?.scheduled_time?.slice(0, 5) ?? null;
+      qc.setQueriesData<ClientCriaAgendaPost[]>({ queryKey: ["client-cria-agenda-posts"] }, (old) => old?.map((p) => (p.id === id ? { ...p, scheduled_date: day } : p)));
+      reagendarCliente.mutate({ postId: id, data: day, hora: horaAtual }, {
+        onSuccess: ok,
+        // Mostra o motivo REAL (27/09/2026): a Gabriela via o card voltar e o
+        // aviso genérico não dizia se era permissão, SQL faltando ou rede.
+        onError: (e) => toast.error(`Não consegui remarcar o post do cliente: ${e instanceof Error ? e.message : "erro desconhecido"}`, { duration: 8000 }),
+        onSettled: () => qc.invalidateQueries({ queryKey: ["client-cria-agenda-posts"] }),
+      });
+    } else if (kind === "mat") {
+      // Arrastar um material muda o PRAZO (due_date) dele, e isso reflete no kanban de
+      // Materiais do cliente. Mesma lógica de tarefa/captação; o hook já é otimista.
+      updMaterial.mutate({ id, patch: { due_date: day } }, { onSuccess: ok });
+    }
+  };
+
   // Arrastar item pra outro dia: atualização otimista no cache + persistência conforme o tipo.
   const handleDragEnd = (result: DropResult) => {
     // Libera o alternador de períodos assim que o gesto acaba (inclusive drop cancelado).
@@ -671,56 +739,21 @@ export default function AgendaCriacao() {
       movePost.mutate({ id, scheduled_date: null }, { onSuccess: () => toast.success("Post voltou para Sem data"), onError: () => toast.error("Não consegui mover. Tente de novo.") });
       return;
     }
-    const dest = parseDateOnly(day);
-    const ok = () => toast.success(`Movido para ${WD[dest.getDay()].toUpperCase()} ${dest.getDate()}`);
-    const fail = () => toast.error("Não consegui mover. Tente de novo.");
-    if (kind === "cap") {
-      qc.setQueriesData<Capture[]>({ queryKey: ["agenda-captures"] }, (old) => old?.map((c) => (c.id === id ? { ...c, capture_date: day } : c)));
-      updCapture.mutate({ id, patch: { capture_date: day } }, { onSuccess: ok, onError: fail, onSettled: () => qc.invalidateQueries({ queryKey: ["agenda-captures"] }) });
-    } else if (kind === "task") {
-      qc.setQueriesData<CrmTask[]>({ queryKey: ["crm-tasks"] }, (old) => old?.map((t) => (t.id === id ? { ...t, due_date: day } : t)));
-      // O hook useUpdateCrmTask já mostra toast de erro; aqui só o sucesso e o invalidate.
-      updTask.mutate({ id, due_date: day }, { onSuccess: ok, onSettled: () => qc.invalidateQueries({ queryKey: ["crm-tasks"] }) });
-    } else if (kind === "cria") {
-      qc.setQueriesData<Creation[]>({ queryKey: ["agenda-creations"] }, (old) => old?.map((c) => (c.id === id ? { ...c, day } : c)));
-      updCreation.mutate({ id, patch: { day } }, { onSuccess: ok, onError: fail, onSettled: () => qc.invalidateQueries({ queryKey: ["agenda-creations"] }) });
-    } else if (kind === "post") {
-      // Arrastar um post reprograma a data no Cria Post (reflete no kanban/calendário do cliente).
-      qc.setQueriesData<ExternalPostWithClient[]>({ queryKey: ["external-posts-all"] }, (old) => old?.map((p) => (p.id === id ? { ...p, scheduled_date: day } : p)));
-      movePost.mutate({ id, scheduled_date: day }, { onSuccess: ok, onError: fail });
-    } else if (kind === "criapost") {
-      // Remarca a data no Cria DO CLIENTE. Vai por RPC (o post é da conta dele);
-      // o cache local muda na hora pra o card não "voltar" enquanto salva.
-      // O horário do post é preservado: arrastar muda o DIA, não o horário que
-      // o cliente já tinha escolhido.
-      const horaAtual = clientCriaPosts.find((p) => p.id === id)?.scheduled_time?.slice(0, 5) ?? null;
-      qc.setQueriesData<ClientCriaAgendaPost[]>({ queryKey: ["client-cria-agenda-posts"] }, (old) => old?.map((p) => (p.id === id ? { ...p, scheduled_date: day } : p)));
-      reagendarCliente.mutate({ postId: id, data: day, hora: horaAtual }, {
-        onSuccess: ok,
-        // Mostra o motivo REAL (27/09/2026): a Gabriela via o card voltar e o
-        // aviso genérico não dizia se era permissão, SQL faltando ou rede.
-        onError: (e) => toast.error(`Não consegui remarcar o post do cliente: ${e instanceof Error ? e.message : "erro desconhecido"}`, { duration: 8000 }),
-        onSettled: () => qc.invalidateQueries({ queryKey: ["client-cria-agenda-posts"] }),
-      });
-    } else if (kind === "mat") {
-      // Arrastar um material muda o PRAZO (due_date) dele, e isso reflete no kanban de
-      // Materiais do cliente. Mesma lógica de tarefa/captação; o hook já é otimista.
-      updMaterial.mutate({ id, patch: { due_date: day } }, { onSuccess: ok });
-    }
+    moverParaDia(draggableId, day);
   };
   // Clicar num post abre o popup editável AQUI na agenda (sem navegar pro cliente).
   const openPost = (p: ExternalPostWithClient) => setEditPost(p);
 
   const byDay = useMemo(() => {
     const m = new Map<string, typeof creations>();
-    if (!filters.criacao) return m;
+    if (!filters.criacao || etapas.size > 0) return m;
     for (const c of creations) {
       if (!clientMatches(c.crm_client_id, c.client_name)) continue;
       (m.get(c.day) ?? m.set(c.day, []).get(c.day)!).push(c);
     }
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [creations, filters.criacao, postClients, selectedCrmIds, selectedNames]);
+  }, [creations, filters.criacao, etapas, postClients, selectedCrmIds, selectedNames]);
 
   // Posts (Cria Post) com data no período, por dia. Multi-cliente aplicado aqui.
   const postsByDay = useMemo(() => {
@@ -732,10 +765,11 @@ export default function AgendaCriacao() {
       // cronograma). Quem marcou a data quer ver o post naquele dia. Só os posts SEM data
       // ficam exclusivamente na faixa "Em produção" do topo (ver producaoPosts).
       if (postClients.size > 0 && !postClients.has(p.external_client_id)) continue;
+      if (etapas.size > 0 && !etapas.has(p.approval_status ?? "em_producao")) continue;
       (m.get(p.scheduled_date) ?? m.set(p.scheduled_date, []).get(p.scheduled_date)!).push(p);
     }
     return m;
-  }, [allPosts, from, to, filters.post, postClients]);
+  }, [allPosts, from, to, filters.post, postClients, etapas]);
 
   // TAREFA B Posts do Cria do CLIENTE (o kanban pessoal dele), já "prontos" em diante
   // e com data. A social mídia vê pra se organizar, sem precisar entrar no Cria de cada um.
@@ -757,12 +791,13 @@ export default function AgendaCriacao() {
     for (const p of clientCriaPosts) {
       if (!p.scheduled_date || p.scheduled_date < from || p.scheduled_date > to) continue;
       if (!clientMatches(p.crm_client_id, p.client_name)) continue;
+      if (etapas.size > 0 && !etapas.has(etapaDoCriaPost(p.status))) continue;
       (m.get(p.scheduled_date) ?? m.set(p.scheduled_date, []).get(p.scheduled_date)!).push(p);
     }
     for (const arr of m.values()) arr.sort((a, b) => (a.scheduled_time ?? "99:99").localeCompare(b.scheduled_time ?? "99:99"));
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientCriaPosts, from, to, filters.criapost, postClients, selectedCrmIds, selectedNames]);
+  }, [clientCriaPosts, from, to, filters.criapost, etapas, postClients, selectedCrmIds, selectedNames]);
 
   // Faixa fixa do topo "Em produção": NUNCA some, independente do período/semana/mês.
   // Agrupa os posts SEM data (em produção ou não): sem dia, não teriam onde aparecer na
@@ -773,8 +808,9 @@ export default function AgendaCriacao() {
     if (!filters.post) return [] as ExternalPostWithClient[];
     return allPosts.filter((p) =>
       !p.scheduled_date
-      && (postClients.size === 0 || postClients.has(p.external_client_id)));
-  }, [allPosts, filters.post, postClients]);
+      && (postClients.size === 0 || postClients.has(p.external_client_id))
+      && (etapas.size === 0 || etapas.has(p.approval_status ?? "em_producao")));
+  }, [allPosts, filters.post, postClients, etapas]);
 
   // Rolagem horizontal da semana no mobile: abre ancorado na coluna de HOJE.
   // A coluna é achada por data-dia (não por ref) de propósito: com "Períodos" ligado a
@@ -807,7 +843,7 @@ export default function AgendaCriacao() {
   // Captações da semana exibida, indexadas por dia (YYYY-MM-DD), para aparecerem na grade.
   const capturesByDay = useMemo(() => {
     const m = new Map<string, Capture[]>();
-    if (!filters.capta) return m;
+    if (!filters.capta || etapas.size > 0) return m;
     for (const c of captures) {
       if (c.status === "cancelada") continue;
       if (c.capture_date < from || c.capture_date > to) continue;
@@ -817,7 +853,7 @@ export default function AgendaCriacao() {
     for (const arr of m.values()) arr.sort((a, b) => (a.capture_time ?? "99:99").localeCompare(b.capture_time ?? "99:99"));
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [captures, from, to, filters.capta, postClients, selectedCrmIds, selectedNames]);
+  }, [captures, from, to, filters.capta, etapas, postClients, selectedCrmIds, selectedNames]);
 
   const nameOf = (crmId: string | null, fallback: string | null) =>
     (crmId ? clients.find((c) => c.id === crmId)?.name : null) || fallback || "Cliente";
@@ -830,7 +866,7 @@ export default function AgendaCriacao() {
   // Concluídas ficam de fora: a grade é sobre o que ainda precisa acontecer.
   const tasksByDay = useMemo(() => {
     const m = new Map<string, CrmTask[]>();
-    if (!filters.tarefa) return m;
+    if (!filters.tarefa || etapas.size > 0) return m;
     const prioOrder: Record<string, number> = { urgente: 0, alta: 1, media: 2, baixa: 3 };
     for (const t of crmTasks) {
       // Concluídas continuam aparecendo (riscadas), pra a social mídia ver o que fechou no dia.
@@ -844,7 +880,7 @@ export default function AgendaCriacao() {
     for (const arr of m.values()) arr.sort((a, b) => (prioOrder[a.priority] ?? 9) - (prioOrder[b.priority] ?? 9));
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [crmTasks, from, to, filters.tarefa, postClients, selectedCrmIds, selectedNames]);
+  }, [crmTasks, from, to, filters.tarefa, etapas, postClients, selectedCrmIds, selectedNames]);
 
   // MATERIAIS com prazo no período, por dia (due_date). Material FINALIZADO continua
   // aparecendo, RISCADO, exatamente como a agenda já trata tarefa concluída e captação
@@ -852,7 +888,7 @@ export default function AgendaCriacao() {
   // não quer ver nada de material desliga o chip "Materiais".
   const materialsByDay = useMemo(() => {
     const m = new Map<string, AgendaMaterial[]>();
-    if (!filters.material) return m;
+    if (!filters.material || etapas.size > 0) return m;
     for (const mat of allMaterials) {
       if (!mat.due_date) continue;
       if (mat.due_date < from || mat.due_date > to) continue;
@@ -863,7 +899,7 @@ export default function AgendaCriacao() {
     for (const arr of m.values()) arr.sort((a, b) => Number(a.status === "finalizado") - Number(b.status === "finalizado"));
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allMaterials, from, to, filters.material, postClients, selectedCrmIds, selectedNames]);
+  }, [allMaterials, from, to, filters.material, etapas, postClients, selectedCrmIds, selectedNames]);
 
   // ── ANIVERSÁRIO DO CLIENTE (7º tipo: LEMBRETE, não trabalho) ──────────────────
   // O cadastro guarda dia e mês (crm_clients.birthday grava o ano 2000 só pra caber
@@ -878,7 +914,7 @@ export default function AgendaCriacao() {
   // sumiria três anos seguidos. Em ano bissexto cai no 29 mesmo, e o 28 não repete.
   const birthdaysByDay = useMemo(() => {
     const m = new Map<string, { clientId: string; nome: string; cor: string | null }[]>();
-    if (!filters.aniversario) return m;
+    if (!filters.aniversario || etapas.size > 0) return m;
     // clienteInativo: encerramento agendado pro futuro ainda conta como ativo.
     const comAniversario = clients.filter((c) => !!c.birthday && !clienteInativo(c));
     if (comAniversario.length === 0) return m;
@@ -897,7 +933,7 @@ export default function AgendaCriacao() {
     }
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clients, days, filters.aniversario, postClients, selectedCrmIds, selectedNames]);
+  }, [clients, days, filters.aniversario, etapas, postClients, selectedCrmIds, selectedNames]);
 
   /* DATAS COMEMORATIVAS DOS CLIENTES.
      A informação já existia dentro do cronograma: a social mídia monta a lista,
@@ -911,7 +947,7 @@ export default function AgendaCriacao() {
      na virada de janeiro. */
   const comemorativasByDay = useMemo(() => {
     const m = new Map<string, ComemorativaDoDia[]>();
-    if (!filters.comemorativa || datasComemorativas.length === 0) return m;
+    if (!filters.comemorativa || etapas.size > 0 || datasComemorativas.length === 0) return m;
 
     for (const d of days) {
       const iso = ymd(d);
@@ -990,7 +1026,7 @@ export default function AgendaCriacao() {
     }
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [datasComemorativas, agendaDatas, days, filters.comemorativa, postClients, selectedCrmIds, selectedNames]);
+  }, [datasComemorativas, agendaDatas, days, filters.comemorativa, etapas, postClients, selectedCrmIds, selectedNames]);
 
   // Cor do material: a do cliente dono; sem cor, o dourado padrão do tipo. Mesmo helper
   // corDoItem da captação (material não tem cor própria).
@@ -1009,6 +1045,113 @@ export default function AgendaCriacao() {
     if (!mat.crm_client_id) { toast.error("Este material não está vinculado a um cliente do CRM."); return; }
     navigate(`/socialmidia/clientes/${mat.crm_client_id}/materiais`);
   };
+
+
+  /* ── CALENDÁRIO DO MÊS v2 (Gabriela, 09/11/2026, mockup aprovado) ──
+     Cada item do dia vira uma pílula: cor do cliente, horário, título e o
+     círculo de feito. O círculo faz o MESMO que o check do card da semana
+     (postado, concluída, finalizado), por isso as regras moram aqui uma vez. */
+  const infoDoItem = (item: DayItem): PilulaInfo => {
+    if (item.kind === "cap") {
+      const c = item.cap; const done = c.status === "concluida";
+      return {
+        cor: corDoItem(null, c.crm_client_id ? clients.find((x) => x.id === c.crm_client_id)?.color : null, CAPTURE_DEFAULT_COLOR),
+        hora: item.time, titulo: `Captação · ${nameOf(c.crm_client_id, c.client_name)}`, dica: "Captação", done,
+        alternar: () => updCapture.mutate({ id: c.id, patch: { status: done ? "agendada" : "concluida" } }),
+        abrir: () => setEditCap(c),
+      };
+    }
+    if (item.kind === "task") {
+      const t = item.task; const done = t.status === "concluida";
+      return {
+        cor: corDaTarefa(t), hora: item.time, titulo: t.title, dica: "Tarefa", done,
+        alternar: () => updTask.mutate({ id: t.id, status: done ? "pendente" : "concluida" }),
+        abrir: () => setEditTask(t),
+      };
+    }
+    if (item.kind === "cria") {
+      const c = item.cria;
+      return {
+        cor: corDoItem(null, c.crm_client_id ? clients.find((x) => x.id === c.crm_client_id)?.color : null, "#4B3FA8"),
+        hora: item.time, titulo: c.title?.trim() || `Reunião · ${nameOf(c.crm_client_id, c.client_name)}`, dica: "Reunião", done: !!c.done,
+        alternar: () => updCreation.mutate({ id: c.id, patch: { done: !c.done } }),
+        abrir: () => setEditCreation(c),
+      };
+    }
+    if (item.kind === "mat") {
+      const mt = item.mat; const done = mt.status === "finalizado";
+      return {
+        cor: corDoMaterial(mt), hora: null, titulo: mt.title, dica: "Material", done,
+        alternar: () => updMaterial.mutate({ id: mt.id, patch: { status: done ? "a_fazer" : "finalizado" } }),
+        abrir: () => openMaterial(mt),
+      };
+    }
+    const p = item.post; const done = p.approval_status === "postado";
+    const st = POST_STATUS[p.approval_status ?? "em_producao"];
+    return {
+      cor: corDoPost(p), hora: item.time, titulo: p.title || "Post",
+      dica: [extById.get(p.external_client_id)?.name, st?.label].filter(Boolean).join(" · "), done,
+      alternar: () => updateExtPost.mutate({ id: p.id, patch: { approval_status: done ? "aprovado" : "postado", approval_updated_at: new Date().toISOString() } }),
+      abrir: () => openPost(p),
+    };
+  };
+  const infoDoCriaPost = (p: ClientCriaAgendaPost): PilulaInfo => {
+    const done = p.status === "publicado";
+    return {
+      cor: p.client_color || CRIA_POST_COLOR, hora: p.scheduled_time?.slice(0, 5) ?? null, titulo: p.title || "Post",
+      dica: [p.client_name, CRIA_POST_STATUS[p.status ?? ""]].filter(Boolean).join(" · "), done,
+      alternar: () => publicarCliente.mutate({ postId: p.id, publicado: !done }, {
+        onError: () => toast.error("Não consegui marcar. Rode o SQL da função manager_publish_client_post se ainda não rodou."),
+      }),
+      abrir: () => { setCriaDia(p.scheduled_date ?? ""); setCriaHora(p.scheduled_time?.slice(0, 5) ?? ""); setCriaCard(p); },
+    };
+  };
+  // Pílula arrastável da célula do mês (só no computador: no celular o mês é tocar no dia).
+  const pilula = (key: string, idx: number, info: PilulaInfo) => (
+    <Draggable key={key} draggableId={key} index={idx} disableInteractiveElementBlocking>
+      {(dp, ds) => (
+        <div ref={dp.innerRef} {...dp.draggableProps} {...dp.dragHandleProps}
+          role="button" tabIndex={0} title={info.dica ? `${info.titulo} · ${info.dica}` : info.titulo}
+          onClick={info.abrir} onKeyDown={(e) => { if (e.key === "Enter") info.abrir(); }}
+          style={{ ...dp.draggableProps.style, ...dragCardStyle, borderLeftColor: info.cor, background: ds.isDragging ? undefined : `${info.cor}14` }}
+          className={cn("flex items-center gap-1.5 min-w-0 rounded-md border-l-[3px] pl-1 pr-1.5 py-[3px] cursor-grab active:cursor-grabbing transition-colors hover:brightness-95",
+            info.done && "opacity-55", ds.isDragging && "bg-card shadow-lg ring-2 ring-primary/40")}>
+          <span role="button" tabIndex={0} aria-label={info.done ? "Desmarcar" : "Marcar como feito"}
+            onClick={(e) => { e.stopPropagation(); info.alternar(); }}
+            className={cn("grid h-4 w-4 shrink-0 place-items-center rounded-full border transition-colors",
+              info.done ? "bg-emerald-500 border-emerald-500 text-white" : "border-foreground/30 bg-card hover:border-emerald-500")}>
+            {info.done && <Check className="h-2.5 w-2.5" strokeWidth={3.5} />}
+          </span>
+          {info.hora && <span className="shrink-0 text-[10px] font-body font-bold tabular-nums text-muted-foreground">{info.hora}</span>}
+          <span className={cn("min-w-0 flex-1 truncate text-[11px] font-body font-semibold text-foreground", info.done && "line-through")}>{info.titulo}</span>
+        </div>
+      )}
+    </Draggable>
+  );
+  // Cores do dia pras barrinhas do mês no celular (lembretes primeiro, como na célula).
+  const coresDoDia = (iso: string) => [
+    ...(comemorativasByDay.get(iso) ?? []).map((c) => ({ cor: c.cor || COMEMORATIVA_COLOR, done: false })),
+    ...(birthdaysByDay.get(iso) ?? []).map((b) => ({ cor: b.cor || BIRTHDAY_DEFAULT_COLOR, done: false })),
+    ...itensDoDia(iso).map((it) => { const i = infoDoItem(it); return { cor: i.cor, done: i.done }; }),
+    ...(criaPostsByDay.get(iso) ?? []).map((p) => { const i = infoDoCriaPost(p); return { cor: i.cor, done: i.done }; }),
+  ];
+  /* "Mudar dia" em cada linha da lista do dia. No celular arrastar com o dedo
+     num quadrado de 50px erra muito; aqui ela escolhe o novo dia num calendário. */
+  const mudarDia = (key: string, atual: string) => (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button type="button" aria-label="Mudar o dia"
+          className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1.5 text-[11px] font-body font-bold text-primary hover:bg-primary/15">
+          <CalendarDays className="h-3.5 w-3.5" />Mudar dia
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-auto p-0">
+        <Calendar mode="single" locale={ptBR} weekStartsOn={0}
+          selected={parseDateOnly(atual)} defaultMonth={parseDateOnly(atual)}
+          onSelect={(d) => { if (!d) return; const novo = ymd(d); if (novo !== atual) moverParaDia(key, novo); }} />
+      </PopoverContent>
+    </Popover>
+  );
 
   // Próximas captações: inclui as ATRASADAS (capture_date < hoje e ainda não concluídas),
   // que antes sumiam por causa do filtro capture_date >= hoje. Atrasadas vêm PRIMEIRO
@@ -1058,7 +1201,7 @@ export default function AgendaCriacao() {
         // Mesma ordenação da grade (ordem manual do dia quando houver; senão por horário).
         const items = buildDayItems(caps, tks, cri, pts, mats, dayOrders[iso]);
         const d = parseDateOnly(iso);
-        const rowCls = "w-full flex items-center gap-2.5 rounded-xl border border-border p-2.5 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors";
+        const rowCls = "w-full min-w-0 flex items-center gap-2.5 rounded-xl border border-border p-2.5 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors";
         const dot = (c: string) => <span className="h-2 w-2 rounded-full shrink-0" style={{ background: c }} />;
         // O modal segue o MESMO alternador da grade: com "Períodos" ligado ele agrupa em
         // faixas (aqui sobra altura, então mostra as três com folga); desligado é a lista
@@ -1067,7 +1210,10 @@ export default function AgendaCriacao() {
         const bandasModal = splitFaixas(items, itemPeriods, !!dayOrders[iso]);
         const criaModal: Record<Faixa, ClientCriaAgendaPost[]> = { sem: [], manha: [], tarde: [], noite: [] };
         for (const p of criaCli) criaModal[faixaDoItem(null, p.scheduled_time)].push(p);
-        const linhaItem = (item: DayItem) => {
+        const linhaItem = (item: DayItem) => (
+          <div key={dayItemKey(item)} className="flex items-center gap-1.5">{linhaItemBase(item)}{mudarDia(dayItemKey(item), iso)}</div>
+        );
+        const linhaItemBase = (item: DayItem) => {
           if (item.kind === "cria") { const c = item.cria; const cor = corDoItem(null, c.crm_client_id ? clients.find((x) => x.id === c.crm_client_id)?.color : null, "#4B3FA8"); return <button key={`c${c.id}`} onClick={() => { fechar(); setEditCreation(c); }} className={rowCls}>{dot(cor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{c.title?.trim() || nameOf(c.crm_client_id, c.client_name)}</span><span className="ml-auto text-[10px] text-muted-foreground">{c.event_time ? `${c.event_time.slice(0, 5)} · ` : ""}Reunião</span></button>; }
           if (item.kind === "task") { const t = item.task; const dotColor = corDaTarefa(t); return <button key={`t${t.id}`} onClick={() => { fechar(); setEditTask(t); }} className={rowCls}>{dot(dotColor)}<span className="text-[13px] font-body font-semibold text-foreground truncate">{item.time ? `${item.time} · ` : ""}{t.title}</span><span className="ml-auto text-[10px] text-muted-foreground">Tarefa</span></button>; }
           if (item.kind === "mat") { const mt = item.mat; const done = mt.status === "finalizado"; return <button key={`m${mt.id}`} onClick={() => { fechar(); openMaterial(mt); }} className={rowCls}>{dot(corDoMaterial(mt))}<span className={cn("text-[13px] font-body font-semibold truncate", done ? "line-through text-muted-foreground" : "text-foreground")}>{mt.title}</span><span className="ml-auto text-[10px] text-muted-foreground shrink-0">Material</span></button>; }
@@ -1076,6 +1222,9 @@ export default function AgendaCriacao() {
         };
         // Linhas só leitura (Cria do cliente e aniversário), usadas nos dois modos do modal.
         const linhaCria = (p: ClientCriaAgendaPost) => (
+          <div key={`cc${p.id}`} className="flex items-center gap-1.5">{linhaCriaBase(p)}{mudarDia(`criapost:${p.id}`, iso)}</div>
+        );
+        const linhaCriaBase = (p: ClientCriaAgendaPost) => (
           <button key={`cc${p.id}`} onClick={() => { fechar(); setCriaCard(p); }} className={rowCls}>
             {dot(CRIA_POST_COLOR)}
             <span className="text-[13px] font-body font-semibold text-foreground truncate">{p.scheduled_time ? `${p.scheduled_time.slice(0, 5)} · ` : ""}{p.title || "Post"}</span>
@@ -1332,7 +1481,7 @@ export default function AgendaCriacao() {
                   </button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-auto p-0">
-                  <Calendar mode="single" locale={ptBR} weekStartsOn={1}
+                  <Calendar mode="single" locale={ptBR} weekStartsOn={0}
                     selected={view === "mes" ? undefined : days[0]}
                     modifiers={view === "mes" ? undefined : { semana: days.slice(0, 7) }}
                     modifiersClassNames={{ semana: "bg-primary/15 text-foreground" }}
@@ -1371,6 +1520,26 @@ export default function AgendaCriacao() {
                   );
                 })}
               </div>
+            )}
+          </div>
+        )}
+        {(filters.post || filters.criapost) && (
+          // data-tour="ag-etapa": filtro por etapa (calendário v2, 09/11/2026).
+          <div data-tour="ag-etapa" className="mb-3 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+            <span className="shrink-0 mr-1 text-[10px] font-body font-bold uppercase tracking-wider text-muted-foreground">Etapa</span>
+            {ETAPAS_FILTRO.map(([k, label, cor]) => (
+              <button key={k} type="button" onClick={() => toggleEtapa(k)}
+                className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-body font-semibold transition-colors",
+                  etapas.has(k) ? "bg-foreground text-background border-foreground" : "bg-card border-border text-muted-foreground hover:text-foreground")}>
+                <span className="h-2 w-2 rounded-full" style={{ background: cor }} />{label}
+              </button>
+            ))}
+            {etapas.size > 0 && (
+              <>
+                <button type="button" onClick={() => toggleEtapa(null)}
+                  className="shrink-0 rounded-full border border-dashed border-border px-2.5 py-1 text-[11px] font-body font-semibold text-muted-foreground hover:text-foreground">Limpar</button>
+                <span className="shrink-0 text-[10.5px] font-body text-muted-foreground">mostrando só posts</span>
+              </>
             )}
           </div>
         )}
@@ -1432,7 +1601,7 @@ export default function AgendaCriacao() {
           )}
           {view === "mes" && mesModo === "calendario" && calendarioMes}
           {view === "mes" && mesModo === "grade" && (
-            <div className="hidden lg:grid lg:grid-cols-7 gap-2 mb-1">
+            <div className="hidden lg:grid lg:grid-cols-7 mb-1">
               {WD.map((w) => <p key={w} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{w}</p>)}
             </div>
           )}
@@ -1442,7 +1611,9 @@ export default function AgendaCriacao() {
               grade de dias continuava na tela no modo Calendário. */}
           <div ref={gradeRef} className={cn(
             gridLayout
-              ? "grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 overflow-x-clip touch-pan-y"
+              /* Mês = calendário de verdade (v2): células coladas com borda, só no
+                 computador. No celular o mês é a grade compacta logo abaixo. */
+              ? "hidden lg:grid lg:grid-cols-7 border-l border-t border-border rounded-xl overflow-hidden"
               // Mobile: colunas espaçosas (~85vw, uma por vez com peek da próxima) e
               // scroll-snap suave; no lg vira grade de 7 sem scroll.
               : "flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth lg:grid lg:grid-cols-7 lg:gap-2 lg:overflow-visible lg:pb-0",
@@ -1860,6 +2031,53 @@ export default function AgendaCriacao() {
               //    não pra desenhar o fluxo do dia;
               //  - e na SEMANA com o alternador "Períodos" DESLIGADO (o padrão), que é
               //    exatamente a agenda de antes das faixas.
+              /* MÊS v2: célula de calendário com até 3 pílulas arrastáveis, o
+                 primeiro lembrete do dia em cima e "+N no dia" pro resto (abre a
+                 lista do dia). Os índices do dnd são a posição na lista completa
+                 (itens do dia e depois os do Cria do cliente), então continuam
+                 contíguos com o que aparece e a reordenação do dia segue igual. */
+              if (gridLayout) {
+                const entradas = [
+                  ...dayItems.map((it) => ({ key: dayItemKey(it), info: infoDoItem(it) })),
+                  ...criaDay.map((p) => ({ key: `criapost:${p.id}`, info: infoDoCriaPost(p) })),
+                ];
+                const LIMITE = 3;
+                const vis = entradas.slice(0, LIMITE);
+                const lembretes = dayComemorativas.length + dayBirthdays.length;
+                const resto = entradas.length - vis.length + Math.max(0, lembretes - 1);
+                const lembrete = dayComemorativas[0]
+                  ? { cor: dayComemorativas[0].cor || COMEMORATIVA_COLOR, txt: dayComemorativas[0].label, aniv: false }
+                  : dayBirthdays[0] ? { cor: dayBirthdays[0].cor || BIRTHDAY_DEFAULT_COLOR, txt: `Aniversário de ${dayBirthdays[0].nome}`, aniv: true } : null;
+                return (
+                  <Droppable droppableId={iso} key={iso}>
+                    {(dropProvided, dropSnapshot) => (
+                      <div ref={dropProvided.innerRef} data-dia={iso} {...dropProvided.droppableProps}
+                        className={cn("min-w-0 min-h-[124px] border-r border-b border-border p-1.5 flex flex-col gap-1 transition-colors",
+                          outOfMonth ? "bg-muted/30" : "bg-card", dropSnapshot.isDraggingOver && "bg-primary/10")}>
+                        <div className="flex items-center justify-between">
+                          <span className={cn("grid h-6 min-w-6 place-items-center rounded-full px-1 text-[13px] font-display font-bold",
+                            isToday ? "bg-primary text-primary-foreground" : outOfMonth ? "text-muted-foreground/50" : "text-foreground")}>{d.getDate()}</span>
+                          <button type="button" onClick={() => { setAddKind("tarefa"); setAddDay(iso); }} className="text-muted-foreground/50 hover:text-primary" aria-label="Adicionar"><Plus className="h-3.5 w-3.5" /></button>
+                        </div>
+                        {lembrete && (
+                          <button type="button" onClick={() => setDayModal(iso)} title={lembrete.txt}
+                            className="flex items-center gap-1 min-w-0 rounded-md px-1 py-[2px] text-left text-[10.5px] font-body font-semibold"
+                            style={{ background: `${lembrete.cor}14`, color: lembrete.cor }}>
+                            {lembrete.aniv ? <Cake className="h-3 w-3 shrink-0" /> : <PartyPopper className="h-3 w-3 shrink-0" />}
+                            <span className="truncate">{lembrete.txt}</span>
+                          </button>
+                        )}
+                        {vis.map((e, i) => pilula(e.key, i, e.info))}
+                        {dropProvided.placeholder}
+                        {resto > 0 && (
+                          <button type="button" onClick={() => setDayModal(iso)}
+                            className="px-1 text-left text-[11px] font-body font-bold text-primary hover:underline">+{resto} no dia</button>
+                        )}
+                      </div>
+                    )}
+                  </Droppable>
+                );
+              }
               if (gridLayout || !porPeriodo) {
                 return (
                   <Droppable droppableId={iso} key={iso}>
@@ -1945,6 +2163,34 @@ export default function AgendaCriacao() {
               );
             })}
           </div>
+          {/* MÊS NO CELULAR (v2): calendário compacto, uma barrinha por item na cor
+              do cliente (apagada quando já foi feito). Tocar no dia abre a lista
+              dele, onde cada item tem o check e o "Mudar dia". */}
+          {view === "mes" && (
+            <div className="lg:hidden">
+              <div className="grid grid-cols-7 mb-1">
+                {WD.map((w) => <p key={w} className="text-center text-[10px] font-body font-semibold uppercase tracking-wider text-muted-foreground">{w.slice(0, 1)}</p>)}
+              </div>
+              <div className="grid grid-cols-7 overflow-hidden rounded-xl border-l border-t border-border">
+                {days.map((d) => {
+                  const iso = ymd(d); const fora = d.getMonth() !== curMonth; const hoje = iso === today;
+                  const cores = coresDoDia(iso);
+                  return (
+                    <button key={iso} type="button" onClick={() => setDayModal(iso)} aria-label={`Ver ${d.getDate()}`}
+                      className={cn("flex min-h-[64px] min-w-0 flex-col gap-1 border-b border-r border-border p-1 text-left", fora ? "bg-muted/30" : "bg-card")}>
+                      <span className={cn("mx-auto grid h-6 min-w-6 place-items-center rounded-full px-1 text-[12px] font-display font-bold",
+                        hoje ? "bg-primary text-primary-foreground" : fora ? "text-muted-foreground/50" : "text-foreground")}>{d.getDate()}</span>
+                      <span className="flex flex-col gap-[3px]">
+                        {cores.slice(0, 3).map((c, i) => <i key={i} className={cn("block h-[5px] rounded-full", c.done && "opacity-35")} style={{ background: c.cor }} />)}
+                      </span>
+                      {cores.length > 3 && <span className="text-center text-[9.5px] font-body font-bold text-muted-foreground">+{cores.length - 3}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-center text-[11.5px] font-body text-muted-foreground">Toque num dia pra ver o que tem nele</p>
+            </div>
+          )}
         </DragDropContext>
       </div>
 

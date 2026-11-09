@@ -319,8 +319,8 @@ export const TOURS_GESTOR: TourConfig[] = [
       {
         target: '[data-tour="ag-navegacao"]',
         title: "Semana ou mês",
-        body: "Semana é pra executar (o que grava, o que sai). Mês é pra planejar (a distribuição do conteúdo). Clique no período, ao lado das setas, pra abrir o calendário e pular direto pra semana que quiser. O botão Hoje traz você de volta pro presente.",
-        mobileBody: "Semana é pra executar, Mês é pra planejar. Toque no período, ao lado das setas, pra abrir o calendário e escolher a semana. Hoje volta pro presente.",
+        body: "Semana é pra executar (o que grava, o que sai). Mês é pra planejar: vira um calendário com os posts dentro de cada dia, dá pra marcar como feito no círculo e arrastar pra outro dia. Use o filtro Etapa pra ver só o que está, por exemplo, aguardando aprovação. Clique no período, ao lado das setas, pra abrir o calendário e pular direto pra semana que quiser. O botão Hoje traz você de volta pro presente.",
+        mobileBody: "Semana é pra executar, Mês é pra planejar: toque num dia do mês pra ver, marcar como feito ou mudar o dia. Toque no período, ao lado das setas, pra abrir o calendário e escolher a semana. Hoje volta pro presente.",
         placement: "bottom",
       },
       {
