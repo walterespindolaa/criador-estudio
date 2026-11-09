@@ -52,3 +52,11 @@ vite.config.ts.timestamp-*
 CRIA/2-materiais/tutoriais/videos/*.mp4
 # código-fonte do registro no INPI: nunca no git
 CRIA/1-marca/registro-inpi/
+
+# Rascunho de sessão (cópias de CI, backups, SQL de teste): nunca no git (09/11/2026)
+CRIA/_x/
+/teste*.sql
+supabase/.temp/
+CRIA/criativos/ads-motion/_tmp/
+# Tutoriais v2: os mp4 vivem no Bunny, como os da v1
+CRIA/2-materiais/tutoriais/videos-v2/*.mp4

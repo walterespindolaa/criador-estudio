@@ -615,6 +615,13 @@ Deno.serve(async (req) => {
             });
           }
         }
+        // Painel de cupons: quem entrou por cupom e cancelou sai de "pagante".
+        {
+          const { error: eUsoCancel } = await supabase.from("cupom_usos")
+            .update({ status: "cancelado", atualizado_em: new Date().toISOString() })
+            .eq("stripe_subscription_id", sub.id);
+          if (eUsoCancel) console.error("[webhook] cupom_usos cancelado", eUsoCancel.message);
+        }
         // B.2, cancelamento antes da liberação anula só 'pending'.
         // 'payable' (sobreviveu à carência) e 'paid' (já pagamos) são mantidos.
         await supabase.from("partner_referrals")
@@ -682,6 +689,20 @@ Deno.serve(async (req) => {
         const referredUserId = md.user_id;
         const selfSub = md.self_subscribe === "1";
 
+        /* QUEM ENTROU POR CUPOM (09/11/2026, painel de cupons). Todo cliente
+           que assinou com cupom, de parceira ou de campanha, ganha uma linha em
+           cupom_usos: em teste até a 1ª mensalidade paga, depois pagante, com a
+           última mensalidade e o total pago. Idempotente pela fatura. Nunca
+           derruba o webhook. */
+        const codigoCupom = (md.campanha || md.partner_code || "").trim();
+        if (codigoCupom && referredUserId && !selfSub) {
+          const { error: eUso } = await supabase.rpc("cupom_uso_fatura", {
+            _sub: subId, _codigo: codigoCupom, _partner_id: partnerId || null,
+            _user_id: referredUserId, _plano: md.plan ?? null, _invoice: inv.id, _valor: inv.amount_paid ?? 0,
+          });
+          if (eUso) console.error("[webhook] cupom_uso_fatura", eUso.message);
+        }
+
         // sem atribuição ou self-subscribe → sem comissão
         if (!partnerId || !referredUserId || selfSub) break;
 
@@ -743,9 +764,16 @@ Deno.serve(async (req) => {
            concorrentes (classificado como CRÍTICO na auditoria). Agora a
            segunda tentativa bate no unique e não faz nada.
            ═══════════════════════════════════════════════════════════════════ */
+        /* MENSALIDADE É FATURA PAGA (09/11/2026). A fatura de R$ 0 do teste
+           (7 dias com cartão, meses grátis de cupom) também chega como
+           invoice.paid. Antes ela contava como 1ª fatura, e "comissão da 3ª"
+           virava a 2ª que a pessoa pagou de verdade. Agora só soma quando
+           entrou dinheiro. Nenhuma indicação existia no banco quando mudou. */
+        const pagouAlgo = amountPaid > 0;
+        const contaAntes = (existing as { paid_invoices_count?: number } | null)?.paid_invoices_count ?? 0;
         const seqDaFatura = billingReason === "subscription_create"
-          ? 1
-          : ((existing as { paid_invoices_count?: number } | null)?.paid_invoices_count ?? 1) + 1;
+          ? (pagouAlgo ? 1 : 0)
+          : contaAntes + (pagouAlgo ? 1 : 0);
 
         let referralId = (existing as { id?: string } | null)?.id ?? null;
 
@@ -763,12 +791,13 @@ Deno.serve(async (req) => {
               deduction_pct: deductionPct,
               net_amount_cents: 0,
               currency: inv.currency || "brl",
-              paid_invoices_count: 1,
+              paid_invoices_count: seqDaFatura,
               status: "payable",
+              cupom_codigo: codigoCupom ? codigoCupom.toUpperCase() : null,
             }).select("id").maybeSingle();
             referralId = (novo as { id?: string } | null)?.id ?? null;
           }
-        } else if (billingReason === "subscription_cycle" && existing) {
+        } else if (billingReason === "subscription_cycle" && existing && pagouAlgo) {
           const e = existing as { id: string; paid_invoices_count: number; status: string };
           await supabase.from("partner_referrals").update({
             paid_invoices_count: seqDaFatura,
@@ -788,17 +817,26 @@ Deno.serve(async (req) => {
         if (modeloLegado) console.log("[webhook] indicacao legada, sem lancamento recorrente:", referralId);
 
         if (referralId && amountPaid > 0 && !modeloLegado) {
-          const { data: regra } = await supabase.rpc("partner_regra", { _partner_id: partnerId });
+          /* A REGRA É DO CUPOM (09/11/2026). Cupom criado no painel tem regra
+             própria: % da mensalidade, valor fixo ou nada, da X até a Y. Cupom
+             antigo de parceira cai na regra da parceira (cupom_regra resolve). */
+          const codigoDaIndicacao = (existing as { cupom_codigo?: string | null } | null)?.cupom_codigo
+            ?? (codigoCupom || null);
+          const { data: regra } = await supabase.rpc("cupom_regra", { _codigo: codigoDaIndicacao, _partner_id: partnerId });
           const r = (Array.isArray(regra) ? regra[0] : regra) as
-            { pct?: number; meses?: number; fatura_inicial?: number } | null;
-          const pct = Number(r?.pct ?? 20);
-          const meses = Number(r?.meses ?? 12);
-          const inicio = Number(r?.fatura_inicial ?? 3);
+            { tipo?: string; pct?: number | null; fixo_cents?: number | null; de?: number; ate?: number } | null;
+          const tipo = r?.tipo ?? "pct";
+          const pct = Number(r?.pct ?? 0);
+          const fixo = Number(r?.fixo_cents ?? 0);
+          const inicio = Number(r?.de ?? 3);
+          const fim = Number(r?.ate ?? 14);
 
-          // Dentro da janela? Da fatura de início até (início + meses - 1).
-          const dentro = seqDaFatura >= inicio && seqDaFatura <= (inicio + meses - 1);
+          // Sem regra (cupom_regra falhou ou dono sumiu): não lança nada. Lançar
+          // com regra inventada pagaria comissão errada.
+          if (!r) console.error("[webhook] cupom_regra sem resposta", codigoDaIndicacao, partnerId);
+          const dentro = !!r && tipo !== "nenhuma" && seqDaFatura >= inicio && seqDaFatura <= fim;
           if (dentro) {
-            const valor = Math.round(amountPaid * (pct / 100));
+            const valor = tipo === "fixo" ? fixo : Math.round(amountPaid * (pct / 100));
             // Competência no fuso de Brasília, que é o do caixa dele. Sem isso,
             // fatura paga dia 1 às 00h30 cairia no mês anterior.
             const agoraBR = new Date(Date.now() - 3 * 60 * 60 * 1000);
@@ -810,8 +848,9 @@ Deno.serve(async (req) => {
               stripe_subscription_id: subId,
               invoice_seq: seqDaFatura,
               gross_cents: amountPaid,
-              commission_pct: pct,
+              commission_pct: tipo === "fixo" ? 0 : pct,
               amount_cents: valor,
+              cupom_codigo: codigoDaIndicacao ? codigoDaIndicacao.toUpperCase() : null,
               currency: inv.currency || "brl",
               competencia,
               status: "payable",

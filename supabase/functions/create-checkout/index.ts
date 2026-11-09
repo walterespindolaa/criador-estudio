@@ -135,6 +135,8 @@ serve(async (req) => {
        primeira assinatura (senão o código só trocaria o plano). */
     const rawCode = (typeof body?.partner_code === "string" ? body.partner_code : "").trim();
     let campanha: Campanha | null = null;
+    // Cupom criado no painel pode ter dono (parceira, assessor, agência).
+    let donoCampanha: string | null = null;
     if (rawCode) {
       const codigoEscapado = rawCode.replace(/([\\%_])/g, "\\$1");
       const { data: ehParceira } = await svc.from("partners").select("id")
@@ -151,8 +153,9 @@ serve(async (req) => {
           /* CUPOM DE VOLTA (30/10/2026): VOLTA50 vai no e-mail de quem cancelou
              ou deixou o teste passar. Esse tipo aceita quem já assinou antes. */
           const { data: regra } = await svc.from("cupons_campanha")
-            .select("aceita_quem_ja_assinou").eq("codigo", c.codigo).maybeSingle();
+            .select("aceita_quem_ja_assinou, partner_id").eq("codigo", c.codigo).maybeSingle();
           const aceitaRetorno = !!(regra as { aceita_quem_ja_assinou?: boolean } | null)?.aceita_quem_ja_assinou;
+          donoCampanha = (regra as { partner_id?: string | null } | null)?.partner_id ?? null;
           let jaAssinou = !aceitaRetorno && !!profile?.stripe_subscription_id;
           if (!aceitaRetorno && !jaAssinou && profile?.stripe_customer_id) {
             const anteriores = await stripe.subscriptions.list({ customer: profile.stripe_customer_id, status: "all", limit: 1 });
@@ -252,6 +255,23 @@ serve(async (req) => {
           if (pr.coupon_type === "client_discount" && pr.stripe_promotion_code_id) {
             appliedPromotionCodeId = pr.stripe_promotion_code_id;
           }
+        }
+      }
+    }
+    /* CUPOM COM DONO (09/11/2026, painel de cupons). O desconto segue o
+       caminho da campanha (grátis + desconto calculados aqui); a atribuição
+       vai na mesma metadata do cupom de parceira, então o webhook lança a
+       comissão pela regra do cupom. Dono suspenso ou auto-indicação: o cliente
+       ganha o desconto, ninguém ganha comissão. */
+    if (campanha && donoCampanha) {
+      const { data: dono } = await svc.from("partners")
+        .select("id, user_id, status").eq("id", donoCampanha).maybeSingle();
+      const d = dono as { id: string; user_id: string | null; status: string } | null;
+      if (d && d.status === "approved") {
+        const autoIndicacao = !!d.user_id && d.user_id === user.id;
+        const permitida = selfSubValidated && !!d.user_id && d.user_id === selfSubManagerId;
+        if (!autoIndicacao || permitida) {
+          partnerMeta = { partner_code: campanha.codigo, partner_id: d.id };
         }
       }
     }

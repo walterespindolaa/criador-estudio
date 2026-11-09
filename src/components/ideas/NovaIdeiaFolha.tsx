@@ -154,7 +154,7 @@ function Conteudo({ editando, inicial, pilares, pastas, totalIdeias, onVerTodas,
       )}
 
       {pilares.length > 0 && (
-        <CampoDaFolha rotulo="pilar" className="mt-1">
+        <CampoDaFolha rotulo="pilar">
           {pilares.map((p) => (
             <Etiqueta key={p.id} ativa={pilarId === p.id} cor={`${p.color}55`} onClick={() => setPilarId(pilarId === p.id ? null : p.id)}>
               {p.name}

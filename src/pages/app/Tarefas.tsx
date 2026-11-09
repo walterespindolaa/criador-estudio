@@ -466,7 +466,7 @@ const Tarefas = () => {
           </div>
           {errors.title && <p className="font-body text-xs leading-8 text-destructive">{errors.title.message}</p>}
 
-          <CampoDaFolha rotulo="prioridade" className="mt-1">
+          <CampoDaFolha rotulo="prioridade">
             {([["baixa", "baixa", "#ffffff"], ["media", "média", "#FFE46B"], ["alta", "alta", "#FFD3C2"], ["urgente", "urgente", "#FFB4A8"]] as const).map(([v, l, cor]) => (
               <Etiqueta key={v} ativa={prioridadeForm === v} cor={cor} onClick={() => setValue("priority", v, { shouldDirty: true })}>{l}</Etiqueta>
             ))}
@@ -558,7 +558,7 @@ const Tarefas = () => {
             rows={2}
             placeholder="notas, se quiser"
             aria-label="Notas"
-            className="mt-0.5 block w-full resize-none border-0 bg-transparent p-0 font-body text-[15px] leading-8 text-[#1D1B18] outline-none placeholder:text-[#bcb19c]"
+            className="block w-full resize-none border-0 bg-transparent p-0 font-body text-[15px] leading-8 text-[#1D1B18] outline-none placeholder:text-[#bcb19c]"
           />
           {errors.notes && <p className="font-body text-xs text-destructive">{errors.notes.message}</p>}
 

@@ -7,6 +7,7 @@ import {
   ChevronRight,
   CircleDollarSign,
   Handshake,
+  TicketPercent,
   Plus,
   Briefcase,
   Search,
@@ -75,7 +76,7 @@ import { AdminFeedback } from "@/components/admin/AdminFeedback";
 import { AdminCriakut } from "@/components/admin/AdminCriakut";
 import { AdminGrowth } from "@/components/admin/AdminGrowth";
 import { AdminHome } from "@/components/admin/AdminHome";
-import { AdminParceiras } from "@/components/admin/AdminParceiras";
+import { AdminCupons } from "@/components/admin/cupons/AdminCupons";
 import { AdminTrafego } from "@/components/admin/AdminTrafego";
 import { AdminRespostas, useRespostasNovas } from "@/components/admin/AdminRespostas";
 import { UserDetailsDrawer } from "@/components/admin/UserDetailsDrawer";
@@ -205,7 +206,7 @@ const AdminInner = () => {
   // ?aba=respostas: o aviso do sino de resposta de e-mail abre direto na caixa.
   const [tab, setTab] = useState(() => {
     // Piloto é a aba de entrada desde 08/11/2026; ?aba=<valor> abre qualquer outra.
-    const abas = ["piloto", "inicio", "contas", "trafego", "dinheiro", "uso", "rede", "respostas"];
+    const abas = ["piloto", "inicio", "contas", "trafego", "dinheiro", "cupons", "uso", "rede", "respostas"];
     try { const q = new URLSearchParams(window.location.search).get("aba"); return q && abas.includes(q) ? q : "piloto"; } catch { return "piloto"; }
   });
   const { data: respostasNovas = 0 } = useRespostasNovas();
@@ -428,6 +429,7 @@ const AdminInner = () => {
               { value: "contas", icon: Users, title: "Contas", hint: `${stats.totalUsers}` },
               { value: "trafego", icon: Megaphone, title: "Tráfego" },
               { value: "dinheiro", icon: DollarSign, title: "Dinheiro" },
+              { value: "cupons", icon: TicketPercent, title: "Cupons e parceiros" },
               { value: "uso", icon: Gauge, title: "Uso e custo" },
               { value: "rede", icon: Handshake, title: "Rede e conteúdo" },
               { value: "respostas", icon: Inbox, title: "Respostas", hint: respostasNovas ? `${respostasNovas}` : undefined },
@@ -647,12 +649,16 @@ const AdminInner = () => {
           <TabsContent value="dinheiro">
             <SubAbas atual={subDinheiro} aoTrocar={setSubDinheiro} itens={[
               { valor: "faturamento", rotulo: "Faturamento" },
-              { valor: "parceiras", rotulo: "Parceiras e comissão" },
               { valor: "comissoes", rotulo: "Indicações (histórico)" },
             ]} />
-            {subDinheiro === "parceiras" && <AdminParceiras />}
             {subDinheiro === "comissoes" && <AdminReferrals />}
             {subDinheiro === "faturamento" && <AdminFaturamento />}
+          </TabsContent>
+
+          {/* Cupons e parceiros (09/11/2026): substitui a sub-aba "Parceiras e
+              comissão" de Dinheiro, que lia uma coluna inexistente e dava erro. */}
+          <TabsContent value="cupons">
+            <AdminCupons />
           </TabsContent>
 
           <TabsContent value="uso">

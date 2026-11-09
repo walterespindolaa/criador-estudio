@@ -123,9 +123,13 @@ export function BlocoDeNotas({
 /** Linha da folha com o nome do campo escrito à mão. */
 export function CampoDaFolha({ rotulo, children, className }: { rotulo: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("flex items-start gap-2 py-[3px]", className)} style={{ minHeight: LINHA }}>
-      <span className="w-[62px] shrink-0 pt-0.5 text-right text-[17px] leading-[26px] text-[#7A7268] sm:w-[78px] sm:text-[19px]" style={MAO}>{rotulo}</span>
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 pt-[2px]">{children}</div>
+    /* Cada linha do campo tem exatamente a altura da pauta (Walter, 09/11/2026:
+       os nomes desciam da linha). Antes eram 34px por causa do py-[3px], e a
+       folha escorregava 2px por campo. Etiquetas que quebram de linha usam
+       gap-y de 8px: 24 + 8 = 32, a segunda fileira cai na linha de baixo. */
+    <div className={cn("flex items-start gap-2", className)} style={{ minHeight: LINHA }}>
+      <span className="w-[62px] shrink-0 text-right text-[17px] leading-[32px] text-[#7A7268] sm:w-[78px] sm:text-[19px]" style={{ ...MAO, height: LINHA }}>{rotulo}</span>
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-2 py-1">{children}</div>
     </div>
   );
 }

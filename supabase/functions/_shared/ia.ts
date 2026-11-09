@@ -52,15 +52,15 @@ export function definirContextoIA(meta: MetaIA) {
   try { ctxIA.enterWith(meta); } catch { /* sem contexto, grava como "desconhecida" */ }
 }
 
-/* Preço em USD por 1 milhão de tokens (entrada, saída).
-   TODO(Walter): conferir em ai.google.dev/pricing e perplexity.ai os preços dos
-   modelos em uso. Os do Gemini 3.5 não estavam confirmados em 08/11/2026; os
-   valores abaixo são os do Gemini 2.5 Flash / Flash-Lite. Dá pra trocar sem
+/* Preço em USD por 1 milhão de tokens (entrada, saída), tabela padrão (não
+   batch) do Google. Conferido em 09/11/2026: o Gemini 3.5 Flash custa 5x o
+   2.5 na entrada (1,50 contra 0,30) e o Flash-Lite 3x (0,30 contra 0,10).
+   Antes daqui o custo da IA no Piloto saía subestimado. Dá pra trocar sem
    mexer no código pelo segredo IA_PRECOS_JSON, ex:
-   {"gemini-3.5-flash":[0.3,2.5],"gemini-3.5-flash-lite":[0.1,0.4]} */
+   {"gemini-3.5-flash":[1.5,9],"gemini-3.5-flash-lite":[0.3,2.5]} */
 const PRECOS_PADRAO: Record<string, [number, number]> = {
-  "gemini-3.5-flash": [0.30, 2.50],
-  "gemini-3.5-flash-lite": [0.10, 0.40],
+  "gemini-3.5-flash": [1.50, 9.00],
+  "gemini-3.5-flash-lite": [0.30, 2.50],
   "gemini-2.5-flash": [0.30, 2.50],
   "gemini-2.5-flash-lite": [0.10, 0.40],
   "sonar": [1.00, 1.00],
