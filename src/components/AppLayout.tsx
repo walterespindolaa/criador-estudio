@@ -1,5 +1,4 @@
 import { Suspense, useEffect, useState } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { BottomBar } from "@/components/BottomBar";
@@ -12,7 +11,7 @@ import { GlobalSearch } from "@/components/shared/GlobalSearch";
 import { PlanBadge } from "@/components/shared/PlanBadge";
 import { AppFooter } from "@/components/shared/AppFooter";
 import {
-  Lightbulb, Plus, X, ArrowLeft, Home, ChevronRight, CheckCircle2, LayoutGrid, ListChecks, Kanban, Target,
+  Lightbulb, Plus, ArrowLeft, Home, ChevronRight, CheckCircle2, LayoutGrid, ListChecks, Kanban, Target,
   FolderOpen, BookOpen, BookMarked, Link2, Handshake, BarChart3, FileBarChart, History, GraduationCap,
   PlayCircle, Settings, Gem, IdCard, Trash2, CalendarRange, Mic, Clapperboard, TrendingUp, Users, Shield, Sparkles,
   type LucideIcon,
@@ -120,7 +119,6 @@ const AppLayout = () => {
   useLastSeen();
   // Janela de captura do botão "Nova ideia" (topo do dashboard).
   const [capturaAberta, setCapturaAberta] = useState(false);
-  const [fabAberto, setFabAberto] = useState(false);
 
   // ── Compra direta pela LP (Payment Link): quem pagou ANTES de criar a conta
   //    tem a assinatura esperando em pending_purchases. No primeiro load logado
@@ -486,37 +484,9 @@ const AppLayout = () => {
           </div>
         </div>
       </div>
-      {/* + FLUTUANTE DO CELULAR (Walter, 08/11/2026, mockup aprovado): Nova ideia
-          e Novo post saem do topo e ficam aqui, na cor do tema, acima da barra de
-          baixo. A janela da Nova ideia agora existe em todas as telas. */}
-      <Popover open={fabAberto} onOpenChange={setFabAberto}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            aria-label={fabAberto ? "Fechar" : "Criar"}
-            className={cn(
-              "fixed right-4 z-40 grid h-14 w-14 place-items-center rounded-[18px] border-2 border-[#1D1B18] shadow-[2px_2px_0_#1D1B18] md:hidden",
-              fabAberto ? "bg-[#1D1B18] text-white" : "bg-primary text-primary-foreground",
-            )}
-            style={{ bottom: "calc(72px + env(safe-area-inset-bottom, 0px) + 16px)" }}
-          >
-            {fabAberto ? <X className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
-          </button>
-        </PopoverTrigger>
-        <PopoverContent side="top" align="end" sideOffset={10}
-          className="w-auto border-0 bg-transparent p-0 shadow-none md:hidden">
-          <div className="flex flex-col items-end gap-2">
-            <button type="button" onClick={() => { setFabAberto(false); setCapturaAberta(true); }}
-              className="inline-flex items-center gap-2 rounded-full border-2 border-[#1D1B18] bg-white px-3.5 py-2 text-[13px] font-extrabold text-[#1D1B18] shadow-[0_2px_0_#1D1B18]">
-              <Lightbulb className="h-4 w-4" /> Nova ideia
-            </button>
-            <button type="button" onClick={() => { setFabAberto(false); navigate("/app/criando"); }}
-              className="inline-flex items-center gap-2 rounded-full border-2 border-[#1D1B18] bg-white px-3.5 py-2 text-[13px] font-extrabold text-[#1D1B18] shadow-[0_2px_0_#1D1B18]">
-              <Plus className="h-4 w-4" /> Novo post
-            </button>
-          </div>
-        </PopoverContent>
-      </Popover>
+      {/* O + flutuante do celular saiu em 09/11/2026 (Walter: "no criador de
+          conteúdo não tem necessidade"). Nova ideia e Novo post seguem nas
+          próprias telas (Ideias, Estou Criando) e no topo do computador. */}
       <CapturaRapidaDialog open={capturaAberta} onOpenChange={setCapturaAberta} />
     </SidebarProvider>
     </UploadProgressProvider>

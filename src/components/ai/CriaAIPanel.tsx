@@ -618,11 +618,8 @@ export function CriaAIPanel() {
         <button
           type="button"
           onClick={() => { setMinimized(false); setUnread(0); }}
-          className="fixed right-4 md:right-6 z-50 h-14 w-14 rounded-full shadow-glow hover:shadow-glow-hover hover:scale-105 transition-all grid place-items-center md:bottom-6"
-          /* No celular o + flutuante (AppLayout, 08/11/2026) mora exatamente aqui:
-             72px da barra + 16px. O rostinho ficava por cima e escondia o +.
-             Agora sobe uma casa: 72 + 16 + 56 do + + 12 de respiro. */
-          style={isMobile ? { bottom: "calc(72px + env(safe-area-inset-bottom, 0px) + 84px)" } : undefined}
+          className="fixed right-6 z-50 h-14 w-14 rounded-full shadow-glow hover:shadow-glow-hover hover:scale-105 transition-all grid place-items-center md:bottom-6"
+          style={isMobile ? { bottom: "calc(72px + env(safe-area-inset-bottom, 0px) + 12px)" } : undefined}
           aria-label="Abrir Cria IA"
         >
           <AvatarCria size={56} />
