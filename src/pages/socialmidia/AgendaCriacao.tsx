@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   useAgendaClients, useCrmTasks, useUpdateCrmTask, useCreateCrmTask, useDeleteCrmTask, useCrmLeads,
@@ -372,6 +373,16 @@ export default function AgendaCriacao() {
      botão do período abre um calendário só pra escolher a semana (ou o mês). */
   const [mesModo, setMesModo] = useState<"calendario" | "grade">("grade");
   const [escolherAberto, setEscolherAberto] = useState(false);
+  /* CELULAR (Gabriela, 09/11/2026): "quando eu aperte em Agenda, apareça o
+     kanban como antes e não direto o calendário; um botãozinho do lado pra ver
+     em calendário; não quero que abra uma tela nova pro dia". No celular a
+     agenda SEMPRE abre nos cartões dos dias (semana ou mês), com check e
+     arrastar. O calendário compacto só aparece pelo botão e não fica salvo:
+     abriu a Agenda de novo, volta pros cartões. Tocar num dia do calendário
+     leva pra semana daquele dia nos cartões, sem janela por cima. */
+  const ehCelular = useIsMobile();
+  const [calendarioCel, setCalendarioCel] = useState(false);
+  const verCalendario = ehCelular && calendarioCel;
   const trocarMesModo = (m: "calendario" | "grade") => {
     setMesModo(m);
     try { localStorage.setItem("agenda_mes_modo", m); } catch { /* sem storage */ }
@@ -1458,13 +1469,23 @@ export default function AgendaCriacao() {
             {/* Semana (padrão) / Mês */}
             <div className="inline-flex rounded-lg border border-border overflow-hidden">
               {(["semana", "mes"] as const).map((v) => (
-                <button key={v} onClick={() => setViewPersist(v)}
+                <button key={v} onClick={() => { setViewPersist(v); setCalendarioCel(false); }}
                   className={cn("px-2.5 py-1 text-xs font-body font-semibold transition-colors",
-                    view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+                    view === v && !verCalendario ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
                   {v === "semana" ? "Semana" : "Mês"}
                 </button>
               ))}
             </div>
+            {/* Botãozinho do calendário, só no celular (ver calendarioCel). */}
+            {ehCelular && (
+              <button type="button" aria-label={verCalendario ? "Voltar pros cartões" : "Ver em calendário"}
+                aria-pressed={verCalendario}
+                onClick={() => { if (!verCalendario) setViewPersist("mes"); setCalendarioCel((v) => !v); }}
+                className={cn("grid h-8 w-8 place-items-center rounded-lg border transition-colors",
+                  verCalendario ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground")}>
+                <CalendarDays className="h-4 w-4" />
+              </button>
+            )}
             <div className="flex items-center gap-1">
               <Button aria-label="Anterior" variant="outline" size="sm" className="h-9 w-9 p-0"
                 onClick={() => setWeekStart((w) => { const n = new Date(w); if (view === "mes") n.setMonth(n.getMonth() - 1); else n.setDate(n.getDate() - 7); return n; })}>‹</Button>
@@ -1601,7 +1622,7 @@ export default function AgendaCriacao() {
           )}
           {view === "mes" && mesModo === "calendario" && calendarioMes}
           {view === "mes" && mesModo === "grade" && (
-            <div className="hidden lg:grid lg:grid-cols-7 mb-1">
+            <div className={cn("grid-cols-7 mb-1", ehCelular ? "hidden" : "grid")}>
               {WD.map((w) => <p key={w} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{w}</p>)}
             </div>
           )}
@@ -1613,11 +1634,14 @@ export default function AgendaCriacao() {
             gridLayout
               /* Mês = calendário de verdade (v2): células coladas com borda, só no
                  computador. No celular o mês é a grade compacta logo abaixo. */
-              ? "hidden lg:grid lg:grid-cols-7 border-l border-t border-border rounded-xl overflow-hidden"
+              ? (ehCelular
+                ? "grid grid-cols-2 sm:grid-cols-4 gap-2 overflow-x-clip touch-pan-y"
+                : "grid grid-cols-7 border-l border-t border-border rounded-xl overflow-hidden")
               // Mobile: colunas espaçosas (~85vw, uma por vez com peek da próxima) e
               // scroll-snap suave; no lg vira grade de 7 sem scroll.
               : "flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth lg:grid lg:grid-cols-7 lg:gap-2 lg:overflow-visible lg:pb-0",
             view === "mes" && mesModo === "calendario" && "hidden lg:hidden",
+            verCalendario && "hidden",
           )}>
             {days.map((d, i) => {
               const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const criaDay = criaPostsByDay.get(iso) ?? []; const dayMats = materialsByDay.get(iso) ?? [];
@@ -2036,7 +2060,7 @@ export default function AgendaCriacao() {
                  lista do dia). Os índices do dnd são a posição na lista completa
                  (itens do dia e depois os do Cria do cliente), então continuam
                  contíguos com o que aparece e a reordenação do dia segue igual. */
-              if (gridLayout) {
+              if (gridLayout && !ehCelular) {
                 const entradas = [
                   ...dayItems.map((it) => ({ key: dayItemKey(it), info: infoDoItem(it) })),
                   ...criaDay.map((p) => ({ key: `criapost:${p.id}`, info: infoDoCriaPost(p) })),
@@ -2166,8 +2190,8 @@ export default function AgendaCriacao() {
           {/* MÊS NO CELULAR (v2): calendário compacto, uma barrinha por item na cor
               do cliente (apagada quando já foi feito). Tocar no dia abre a lista
               dele, onde cada item tem o check e o "Mudar dia". */}
-          {view === "mes" && (
-            <div className="lg:hidden">
+          {verCalendario && (
+            <div>
               <div className="grid grid-cols-7 mb-1">
                 {WD.map((w) => <p key={w} className="text-center text-[10px] font-body font-semibold uppercase tracking-wider text-muted-foreground">{w.slice(0, 1)}</p>)}
               </div>
@@ -2176,7 +2200,7 @@ export default function AgendaCriacao() {
                   const iso = ymd(d); const fora = d.getMonth() !== curMonth; const hoje = iso === today;
                   const cores = coresDoDia(iso);
                   return (
-                    <button key={iso} type="button" onClick={() => setDayModal(iso)} aria-label={`Ver ${d.getDate()}`}
+                    <button key={iso} type="button" onClick={() => { setWeekStart(d); setViewPersist("semana"); setCalendarioCel(false); }} aria-label={`Ver a semana do dia ${d.getDate()}`}
                       className={cn("flex min-h-[64px] min-w-0 flex-col gap-1 border-b border-r border-border p-1 text-left", fora ? "bg-muted/30" : "bg-card")}>
                       <span className={cn("mx-auto grid h-6 min-w-6 place-items-center rounded-full px-1 text-[12px] font-display font-bold",
                         hoje ? "bg-primary text-primary-foreground" : fora ? "text-muted-foreground/50" : "text-foreground")}>{d.getDate()}</span>
@@ -2188,7 +2212,7 @@ export default function AgendaCriacao() {
                   );
                 })}
               </div>
-              <p className="mt-2 text-center text-[11.5px] font-body text-muted-foreground">Toque num dia pra ver o que tem nele</p>
+              <p className="mt-2 text-center text-[11.5px] font-body text-muted-foreground">Toque num dia pra abrir a semana dele</p>
             </div>
           )}
         </DragDropContext>
