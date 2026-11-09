@@ -96,6 +96,18 @@ function parseAiJson(raw: string): any {
   }
 }
 
+/* Perplexity com 1 nova tentativa em 429 (09/11/2026). Os dois robôs de
+   tendência (posts e stories) disparam juntos e o segundo levava "rate limit":
+   o banco saía sem pesquisa da web, só com o que o modelo achava. */
+async function perplexity(init: RequestInit): Promise<Response> {
+  const url = 'https://api.perplexity.ai/chat/completions'
+  const r = await aiFetch(url, init)
+  if (r.status !== 429) return r
+  await r.body?.cancel()
+  await new Promise((ok) => setTimeout(ok, 4000))
+  return aiFetch(url, init)
+}
+
 async function runTrendRefresh(admin: any, chaveGemini: string, corsHeaders: Record<string, string>, createdBy: string | null): Promise<Response> {
   const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
 
@@ -116,7 +128,7 @@ async function runTrendRefresh(admin: any, chaveGemini: string, corsHeaders: Rec
   const pplxKey = Deno.env.get('PERPLEXITY_API_KEY')
   if (pplxKey) {
     try {
-      const pr = await aiFetch('https://api.perplexity.ai/chat/completions', {
+      const pr = await perplexity({
         method: 'POST',
         headers: { 'Authorization': `Bearer ${pplxKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -193,7 +205,7 @@ async function runStoryTrendRefresh(admin: any, chaveGemini: string, corsHeaders
   const pplxKey = Deno.env.get('PERPLEXITY_API_KEY')
   if (pplxKey) {
     try {
-      const pr = await aiFetch('https://api.perplexity.ai/chat/completions', {
+      const pr = await perplexity({
         method: 'POST',
         headers: { 'Authorization': `Bearer ${pplxKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -787,7 +799,7 @@ RESPONDA APENAS JSON válido:
       const nicho = String(data?.nicho ?? '').slice(0, 120)
 
       try {
-        const pr = await aiFetch('https://api.perplexity.ai/chat/completions', {
+        const pr = await perplexity({
           method: 'POST',
           headers: { 'Authorization': `Bearer ${pplxKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1627,31 +1639,42 @@ ${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de 
     const OPS_MODELO_CHEIO = new Set(['idea-suggestions', 'capture-scenes', 'generate-caption', 'refine-caption', 'repurpose-content',
       'carousel-script', 'story-escrever', 'story-plan-generate', 'cria-chat', 'autopilot-cronograma', 'autopilot-conceitos', 'art-brief', 'art-prompt', 'score-caption'])
     const modeloCheio = OPS_MODELO_CHEIO.has(operation)
-    const pedirIA = () => aiFetch(IA_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${chaveGemini}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        /* Sugestões de post são CRIAÇÃO, não leitura: o -lite a 0.2 devolvia
-           "dicas de X" genéricas (Walter, 04/09). Modelo cheio + temperatura
-           alta nessas operações; o resto continua barato e previsível.
-           `capture-scenes` entrou aqui em 15/09: o roteiro tem que passar no
-           teste do áudio, e o -lite escreve fala de robô. Dá pra economizar em
-           classificação, não no texto que o cliente vai falar na câmera. */
-        model: modeloCheio ? 'google/gemini-2.5-flash' : 'google/gemini-2.5-flash-lite',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        // O modelo cheio "pensa" antes de escrever e isso sai do mesmo limite:
-        // 500 tokens cortavam a legenda no meio. Só se paga o que ele usa.
-        max_tokens: modeloCheio ? Math.max(maxTokens, 4096) : maxTokens,
-        temperature: temperatura,
-      }),
-    // Modelo cheio leva mais que os 30s padrão.
-    }, modeloCheio ? 55000 : 30000)
+    /* RÁPIDO E SEM ERRO (Walter, 09/11/2026: "demora muito e deu erro").
+       Causa provada no log: o Gemini 3.5 Flash ficou 53s segurando o pedido e
+       devolveu 503 (sobrecarga); a nova tentativa estourou os 55s e a pessoa
+       viu "ai_timeout". Além disso o modelo cheio pensa no nível "alto" por
+       padrão, que é o que mais demora.
+       Agora: (1) pensamento "baixo", que basta pra escrever; (2) o modelo
+       cheio tem 30s; se não responder ou vier sobrecarregado, o -lite assume
+       na hora, com o mesmo dossiê, em vez de devolver erro. */
+    const corpoIA = (cheio: boolean) => JSON.stringify({
+      // Sugestões, legenda, roteiro e chat são CRIAÇÃO: modelo cheio (ver
+      // OPS_MODELO_CHEIO). Classificação e leitura ficam no -lite.
+      model: cheio ? 'google/gemini-2.5-flash' : 'google/gemini-2.5-flash-lite',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      // O modelo cheio "pensa" antes de escrever e isso sai do mesmo limite:
+      // 500 tokens cortavam a legenda no meio. Só se paga o que ele usa.
+      max_tokens: cheio ? Math.max(maxTokens, 4096) : maxTokens,
+      temperature: temperatura,
+      ...(cheio ? { reasoning_effort: 'low' } : {}),
+    })
+    const pedirIA = async (): Promise<Response> => {
+      const headers = { 'Authorization': `Bearer ${chaveGemini}`, 'Content-Type': 'application/json' }
+      if (!modeloCheio) return aiFetch(IA_URL, { method: 'POST', headers, body: corpoIA(false) }, 30000)
+      try {
+        const r = await aiFetch(IA_URL, { method: 'POST', headers, body: corpoIA(true) }, 30000)
+        if (r.ok || ![500, 502, 503, 504].includes(r.status)) return r
+        console.warn('[ia] modelo cheio respondeu', r.status, '- o -lite assume')
+        await r.body?.cancel()
+      } catch (e) {
+        if (!(e instanceof AiTimeoutError)) throw e
+        console.warn('[ia] modelo cheio passou de 30s - o -lite assume em', operation)
+      }
+      return aiFetch(IA_URL, { method: 'POST', headers, body: corpoIA(false) }, 40000)
+    }
     const response = await pedirIA()
 
     if (!response.ok) {

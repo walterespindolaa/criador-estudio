@@ -170,6 +170,16 @@ async function iaFetchCru(url: string, init: RequestInit): Promise<Response> {
      o -lite (outro pool de capacidade no Google) em vez de devolver erro. */
   const passageiro = (st: number) => st === 503 || st === 500 || st === 502 || st === 504;
   let r = await fetch(GEMINI_URL, { ...init, headers, body });
+  /* reasoning_effort (09/11/2026) controla quanto o modelo pensa. Se algum
+     modelo recusar o campo com 400, repete sem ele em vez de quebrar. */
+  if (r.status === 400 && pedido && "reasoning_effort" in pedido && !init.signal?.aborted) {
+    console.warn("[ia] gemini recusou reasoning_effort em", pedido.model, "- repetindo sem");
+    await r.body?.cancel();
+    const { reasoning_effort: _re, ...semEsforco } = pedido;
+    pedido = semEsforco;
+    body = JSON.stringify(semEsforco);
+    r = await fetch(GEMINI_URL, { ...init, headers, body });
+  }
   if (!passageiro(r.status) || init.signal?.aborted) return r;
   console.warn("[ia] gemini", r.status, "em", pedido?.model, "- tentando de novo");
   await r.body?.cancel();
