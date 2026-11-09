@@ -1,17 +1,18 @@
 import { Suspense, useEffect, useState } from "react";
-import { Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { BottomBar } from "@/components/BottomBar";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
 import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton } from "@/components/FeedbackButton";
+import { Logo } from "@/components/shared/Logo";
 import { PWAInstallBanner } from "@/components/shared/PWAInstallBanner";
 import { NotificationsBell } from "@/components/notifications/NotificationsBell";
 import { GlobalSearch } from "@/components/shared/GlobalSearch";
 import { PlanBadge } from "@/components/shared/PlanBadge";
 import { AppFooter } from "@/components/shared/AppFooter";
 import {
-  Lightbulb, Plus, ArrowLeft, Home, ChevronRight, CheckCircle2, LayoutGrid, ListChecks, Kanban, Target,
+  Lightbulb, Plus, Home, ChevronRight, CheckCircle2, LayoutGrid, ListChecks, Kanban, Target,
   FolderOpen, BookOpen, BookMarked, Link2, Handshake, BarChart3, FileBarChart, History, GraduationCap,
   PlayCircle, Settings, Gem, IdCard, Trash2, CalendarRange, Mic, Clapperboard, TrendingUp, Users, Shield, Sparkles,
   type LucideIcon,
@@ -354,40 +355,36 @@ const AppLayout = () => {
                   header NÃO repete a safe-area: quem trata o notch é o banner, e as
                   duas barras ficam coladas, sem gap. Sem banner, o próprio header
                   respeita a safe-area do topo. */}
-              {/* TOPO DO CELULAR (Walter, 08/11/2026, mockup aprovado): um só,
-                  compacto, em papel creme. Avatar no Início ou a seta de voltar,
-                  o nome da tela com uma frase à mão, e à direita só o que é
-                  urgente, a troca de conta, a busca e os avisos. Ajuda, sugestão
-                  e Configurações ficam no "Mais" da barra de baixo. */}
-              <header className="flex min-h-14 items-center gap-2.5 border-b-2 border-[#1D1B18] bg-[#FFFCF3] px-3.5 py-2 md:hidden">
-                {isDash ? (
-                  <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Subir ao topo"
-                    className="shrink-0 rounded-full border-2 border-[#1D1B18] bg-primary p-[2px]">
-                    <Avatar className="h-[30px] w-[30px] border-2 border-white">
-                      <AvatarImage src={displayAvatarUrl ?? undefined} alt={firstName} />
-                      <AvatarFallback className="bg-primary font-display text-sm font-bold text-primary-foreground">
-                        {firstName.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
-                ) : (
-                  <button type="button" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/app"))} aria-label="Voltar"
-                    className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[10px] border-2 border-[#1D1B18] bg-white text-[#1D1B18]">
-                    <ArrowLeft className="h-4 w-4" />
-                  </button>
-                )}
-                <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="min-w-0 flex-1 text-left">
-                  <span className="block truncate font-display text-[19px] font-extrabold leading-none text-[#1D1B18]">{tituloCurto}</span>
-                  {fraseTopo && (
-                    <span className="mt-0.5 block truncate text-[15px] font-bold leading-none text-primary" style={{ fontFamily: "Caveat, cursive" }}>{fraseTopo}</span>
-                  )}
+              {/* TOPO DO CELULAR VOLTA AO DE ANTES (Walter, 09/11/2026: "não tinha
+                  essa barra superior antes... ficava a logo reduzida do Cria
+                  centralizada... por isso tá duplicando tudo"). A barra de 08/11
+                  escrevia o nome da tela e uma frase, e cada tela já escreve o
+                  próprio título logo abaixo: o nome aparecia duas vezes.
+                  Volta o selo do Cria no meio (sobe a página ao tocar), busca,
+                  ajuda e sugestão à esquerda, e avisos e Configurações à direita.
+
+                  NO CELULAR VAI O SELO, NÃO A ASSINATURA (Walter, 21/09/2026): o
+                  desenho escrito da marca tem traço fino e, reduzido, vira marca
+                  d'água ao lado de ícones nítidos. O selo é forma cheia e aguenta
+                  ser pequeno. */}
+              <header className="grid min-h-14 grid-cols-[1fr_auto_1fr] items-center border-b border-border bg-background px-3 md:hidden">
+                <div className="flex items-center gap-0.5 justify-self-start">
+                  <GlobalSearch />
+                  <HelpButton />
+                  <FeedbackButton origin="usuario" />
+                </div>
+                <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                  className="flex items-center justify-self-center px-2" aria-label="Subir ao topo">
+                  <Logo icon pequeno className="h-8 w-8" />
                 </button>
-                <div className="flex shrink-0 items-center gap-0.5">
+                <div className="flex items-center gap-0.5 justify-self-end">
                   <UploadProgressIndicator />
                   <PlanBadge onlyUrgent compact />
                   <AccountSwitcher compact />
-                  <GlobalSearch />
                   <NotificationsBell />
+                  <NavLink to="/app/configuracoes" aria-label="Configurações" className="rounded-xl p-2 transition-colors hover:bg-accent/60">
+                    <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+                  </NavLink>
                 </div>
               </header>
 

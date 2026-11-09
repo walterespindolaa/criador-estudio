@@ -115,7 +115,13 @@ Deno.serve(async (req) => {
     if (platform === "pinterest") {
       try {
         let alvo = url;
-        if (/\/\/pin\.it\//i.test(url)) {
+        /* Só segue o link curto quando o HOST é mesmo pin.it (auditoria
+           09/11/2026). O teste antigo procurava "//pin.it/" em qualquer lugar
+           da URL, então "https://qualquer-site/?x=//pin.it/" fazia o servidor
+           visitar um endereço escolhido por quem colou o link. */
+        let hostPin = "";
+        try { hostPin = new URL(url).hostname.toLowerCase(); } catch { /* url inválida */ }
+        if (hostPin === "pin.it") {
           const red = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(10000) });
           alvo = red.url.split("?")[0] || url;
           await red.body?.cancel();
