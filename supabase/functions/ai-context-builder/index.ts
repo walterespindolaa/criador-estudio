@@ -957,14 +957,14 @@ O QUE TORNA UMA SUGESTÃO BOA (critério de aprovação):
 
 FORMATO ESCOLHIDO PELA PESSOA: ${formatoPedido}.
 ${regraFormato}
-TODAS as 3 sugestões são nesse formato; o que muda entre elas é o ÂNGULO e o OBJETIVO (engajamento, autoridade, venda ou relacionamento, sem repetir).${blocoTendencias}${data.brandContext ? `
+Todas as sugestões são nesse formato; quando houver mais de uma, o que muda entre elas é o ÂNGULO e o OBJETIVO (engajamento, autoridade, venda ou relacionamento, sem repetir).${blocoTendencias}${data.brandContext ? `
 
 BRANDBOOK DA PESSOA (fonte da verdade, leia ANTES de sugerir):
 ${data.brandContext}` : ''}
 
 REGRA MAIS IMPORTANTE: descubra no dossiê QUEM esta pessoa é (o que ela vende, qual serviço presta) e PRA QUEM ela fala (a persona). As 3 sugestões falam COM essa persona, na posição profissional DELA. Se ela é social mídia, nutricionista ou advogada, o conteúdo é sobre O SERVIÇO DELA pro PÚBLICO DELA. Sugestão que contradiz o dossiê está errada.
 
-RESPONDA APENAS COM UM ARRAY JSON de 3 objetos, com estes campos (todos em português, sem markdown):
+RESPONDA APENAS COM UM ARRAY JSON com o número de sugestões pedido, cada uma com estes campos (todos em português, sem markdown):
 [{"titulo":"o hook, máximo 70 caracteres","gancho":"a PRIMEIRA frase literal (falada ou escrita), máximo 140 caracteres","formato":"${formatoPedido}","angulo":"ângulo editorial específico, 3 a 8 palavras","objetivo":"engajamento|autoridade|venda|relacionamento","estrutura":["passo/lâmina/cena 1","passo 2","..."],"cta":"o pedido final, literal","porque":"1 frase: por que isso funciona pra ESSA persona","referencia_visual":"direção de arte em 1 ou 2 frases: cena, enquadramento, cores/tipografia do brandbook","tendencia":"nome da tendência usada, ou string vazia"}]`
         userPrompt = `IDEIA CRUA DA PESSOA: "${data.ideiaTexto || 'conteúdo geral'}"
 FORMATO: ${formatoPedido}
@@ -1647,13 +1647,13 @@ ${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de 
        Agora: (1) pensamento "baixo", que basta pra escrever; (2) o modelo
        cheio tem 30s; se não responder ou vier sobrecarregado, o -lite assume
        na hora, com o mesmo dossiê, em vez de devolver erro. */
-    const corpoIA = (cheio: boolean) => JSON.stringify({
+    const corpoIA = (cheio: boolean, up: string = userPrompt) => JSON.stringify({
       // Sugestões, legenda, roteiro e chat são CRIAÇÃO: modelo cheio (ver
       // OPS_MODELO_CHEIO). Classificação e leitura ficam no -lite.
       model: cheio ? 'google/gemini-2.5-flash' : 'google/gemini-2.5-flash-lite',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
+        { role: 'user', content: up },
       ],
       // O modelo cheio "pensa" antes de escrever e isso sai do mesmo limite:
       // 500 tokens cortavam a legenda no meio. Só se paga o que ele usa.
@@ -1661,11 +1661,11 @@ ${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de 
       temperature: temperatura,
       ...(cheio ? { reasoning_effort: 'low' } : {}),
     })
-    const pedirIA = async (): Promise<Response> => {
+    const pedirUm = async (up: string = userPrompt): Promise<Response> => {
       const headers = { 'Authorization': `Bearer ${chaveGemini}`, 'Content-Type': 'application/json' }
-      if (!modeloCheio) return aiFetch(IA_URL, { method: 'POST', headers, body: corpoIA(false) }, 30000)
+      if (!modeloCheio) return aiFetch(IA_URL, { method: 'POST', headers, body: corpoIA(false, up) }, 30000)
       try {
-        const r = await aiFetch(IA_URL, { method: 'POST', headers, body: corpoIA(true) }, 30000)
+        const r = await aiFetch(IA_URL, { method: 'POST', headers, body: corpoIA(true, up) }, 30000)
         if (r.ok || ![500, 502, 503, 504].includes(r.status)) return r
         console.warn('[ia] modelo cheio respondeu', r.status, '- o -lite assume')
         await r.body?.cancel()
@@ -1673,7 +1673,42 @@ ${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de 
         if (!(e instanceof AiTimeoutError)) throw e
         console.warn('[ia] modelo cheio passou de 30s - o -lite assume em', operation)
       }
-      return aiFetch(IA_URL, { method: 'POST', headers, body: corpoIA(false) }, 40000)
+      return aiFetch(IA_URL, { method: 'POST', headers, body: corpoIA(false, up) }, 40000)
+    }
+
+    /* AS 3 SUGESTÕES AO MESMO TEMPO (Walter, 09/11/2026: "precisa ser mais
+       rápido", 25s pra 3). Cada sugestão é um pedido próprio, em paralelo, com
+       objetivo e ângulo já definidos pra elas não saírem parecidas (um pedido
+       não vê o outro). O tempo cai pro de uma sugestão só; o custo por clique
+       triplica (perto de US$ 0,05) e a cota da pessoa continua contando 1.
+       Se só uma ou duas voltarem, entrega o que veio; se nenhuma, cai no
+       pedido único de antes. */
+    const FAMILIAS = [
+      { objetivo: 'engajamento', angulo: 'bastidor ou história real que está no dossiê (sem inventar), contada pela persona se reconhecer' },
+      { objetivo: 'autoridade', angulo: 'contra-intuitivo, mito vs realidade ou opinião firme que só quem vive isso tem' },
+      { objetivo: 'venda ou relacionamento', angulo: 'prático: passo a passo, erro que custa caro ou antes e depois, puxando pro serviço ou produto dela' },
+    ]
+    const pedirIA = async (): Promise<Response> => {
+      if (operation !== 'idea-suggestions') return pedirUm()
+      const uma = (f: typeof FAMILIAS[number]) => userPrompt.replace(
+        /Gere 3 sugestões completas[^\n]*/,
+        `Gere 1 sugestão completa (array JSON com 1 objeto). Objetivo: ${f.objetivo}. Ângulo: ${f.angulo}. Específica a partir do dossiê, zero genérico e zero inventado: o que for vivência ou número dela e não estiver no dossiê vira lacuna [entre colchetes].`,
+      )
+      const respostas = await Promise.allSettled(FAMILIAS.map((f) => pedirUm(uma(f))))
+      const itens: unknown[] = []
+      for (const r of respostas) {
+        if (r.status !== 'fulfilled' || !r.value.ok) continue
+        try {
+          const j = await r.value.json()
+          const p = parseAiJson(String(j.choices?.[0]?.message?.content || ''))
+          const item = Array.isArray(p) ? p[0] : p
+          if (item && typeof item === 'object') itens.push(item)
+        } catch { /* essa veio quebrada; as outras seguem */ }
+      }
+      if (!itens.length) return pedirUm()
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(itens) } }] }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
     const response = await pedirIA()
 
