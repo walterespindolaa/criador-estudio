@@ -253,6 +253,14 @@ button, a, [role="button"] {
   html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    /* Fundo do <html> = fundo do app. Sem isso, onde o body não alcança (a faixa
+       da barrinha de início no iPhone instalado) aparecia branco puro. */
+    background-color: hsl(var(--background));
+  }
+  /* Menu ou gaveta aberta (useTravarRolagem): a mesma cor do véu escuro de 20%,
+     pra faixa de baixo não sobrar clara. */
+  html.rolagem-travada {
+    background-color: color-mix(in srgb, hsl(var(--background)) 80%, hsl(var(--foreground)));
   }
   html, body, #root {
     min-height: 100svh;

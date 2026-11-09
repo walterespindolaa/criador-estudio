@@ -158,11 +158,8 @@ export function BottomBar() {
     <>
       {moreOpen && (
         <>
-          {/* O véu passa da borda de cima e de baixo (Walter, 09/11/2026: "a borda branca
-              inferior que nasce"). No app instalado do iPhone a área da barrinha de
-              início fica fora do "inset-0": o véu parava antes e sobrava uma faixa
-              branca sem desfoque. Esticar pra fora da tela cobre essa faixa. */}
-          <div className="fixed inset-x-0 z-40 md:hidden bg-foreground/20 backdrop-blur-sm touch-none" style={{ top: -120, bottom: -120 }} onClick={() => setMoreOpen(false)} />
+          {/* Véu escuro. A faixa da barrinha de início, que ele não alcança no iPhone instalado, é pintada pelo fundo do <html> (ver useTravarRolagem). */}
+          <div className="fixed inset-0 z-40 md:hidden bg-foreground/20 backdrop-blur-sm touch-none" onClick={() => setMoreOpen(false)} />
         </>
       )}
       {moreOpen && (
