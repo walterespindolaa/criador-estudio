@@ -175,7 +175,7 @@ pagina(abre('verde', '4 · PLANEJAMENTO', 'Ideias: tudo que inspira o cliente',
   fig('o-ideias', [(0.1, 0.415), (0.41, 0.415), (0.268, 0.601)]) +
   leg(['<b>As cinco fontes de ideia</b> do cliente, cada uma com a sua contagem.',
        '<b>Do HUB:</b> ideias que a IA tirou dos concorrentes dele no Cria Radar.',
-       '<b>Usar, Usada ou Descartar.</b> O que você marca como Usar vira post.'], duas=False) +
+       '<b>Usar, Usada ou Descartar.</b> Marque as boas como Usar e clique em Criar posts.'], duas=False) +
   '<div class="tabela" style="margin-top:3mm"><table><tr><th>Fonte</th><th>De onde vem</th></tr>'
   '<tr><td><b>Suas ideias</b></td><td>O que você anotou (nota ou link de referência)</td></tr>'
   '<tr><td><b>Do cliente</b></td><td>O que ele mesmo anotou no Cria dele</td></tr>'

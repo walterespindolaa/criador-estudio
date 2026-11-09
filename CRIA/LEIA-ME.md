@@ -7,7 +7,7 @@ tudo que é **em volta** do sistema: site, anúncios, materiais, marca e documen
 | Pasta | O que é | Exemplos |
 |---|---|---|
 | `lp-cria/` | **O site** criasocialclub.com.br (sobe com `npx vercel --prod` de dentro dela) | index, social-media, funcionalidades, blog, prints |
-| `criativos/` | **Animações e anúncios** | `ads-motion/` (vídeos em código, roteiros, prints do app), `ads-seguidores/`, estáticos |
+| `criativos/` | **Animações e anúncios** | `trafego-pago-nov26/` (anúncios atuais da Meta: criador e social mídia), `ads-motion/` (vídeos em código, roteiros, prints do app), `ads-seguidores/`, estáticos |
 | `manual-social-midia/` | Manual da social mídia (fonte e PDFs por módulo) | fica na raiz porque os scripts de geração apontam pra cá |
 | `manual-criador/` | Imagens e fontes do manual da criadora | usada pelos scripts do manual da social mídia |
 | `1-marca/` | **Identidade e registro** | logos e stickers, ícone do app, moldura do YouTube, INPI |
