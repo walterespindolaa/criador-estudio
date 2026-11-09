@@ -3,7 +3,7 @@ import { useTravarRolagem } from "@/hooks/useTravarRolagem";
 import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, Menu, ChevronRight, LogOut, Sparkles, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard, Wand2, TrendingUp, IdCard, Trash2, Gem, Video, Globe, MessageSquarePlus, UsersRound, Briefcase
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, Menu, ChevronRight, LogOut, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard, Wand2, TrendingUp, IdCard, Trash2, Gem, Video, Globe, MessageSquarePlus, UsersRound, Briefcase
 } from "lucide-react";
 import { useAcessoCriakut } from "@/hooks/useCriakut";
 import { useSouParceiro } from "@/hooks/useParceiro";
@@ -161,8 +161,13 @@ export function BottomBar() {
       )}
       {moreOpen && (
         <div
-          className="fixed left-0 right-0 z-40 md:hidden bg-card border-t border-border rounded-t-[28px] shadow-warm-lg overflow-hidden flex flex-col"
-          style={{ bottom: 0, maxHeight: '82vh', paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}
+          /* MENU FLUTUANTE (Walter, 09/11/2026: "a borda inferior fica toda
+             branca"). Antes a folha descia até o fim da tela e reservava 96px
+             vazios embaixo pra barra de baixo não cobrir os itens. Agora ela
+             para logo acima da barra, com os quatro cantos redondos, e a barra
+             fica sobre o fundo escurecido. */
+          className="fixed left-3 right-3 z-40 md:hidden bg-card border border-border rounded-[28px] shadow-warm-lg overflow-hidden flex flex-col"
+          style={{ bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))', maxHeight: 'calc(100dvh - 80px - env(safe-area-inset-bottom, 0px) - env(safe-area-inset-top, 0px) - 24px)' }}
         >
           {/* Cabeçalho */}
           <div className="px-5 pt-3 pb-2 shrink-0">
@@ -226,8 +231,9 @@ export function BottomBar() {
           <div className="dock-pill flex items-center gap-0.5 rounded-[30px] p-1.5">
             {leftItems.map(renderNavItem)}
             <button type="button" onClick={() => openCria()} aria-label="cria"
-              className="mx-0.5 h-11 w-11 rounded-full bg-gradient-to-br from-primary to-pink-400 text-white flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-transform">
-              <Sparkles className="h-5 w-5" strokeWidth={2} />
+              className="mx-0.5 h-11 w-11 rounded-full bg-[#FFCF03] flex items-center justify-center shadow-lg shadow-black/15 active:scale-95 transition-transform">
+              {/* Selo das Criaturas, o mesmo do topo do chat da Cria IA (Walter, 09/11/2026). */}
+              <img src="/logo-icon-sm.png" alt="" draggable={false} className="h-[30px] w-[30px] object-contain" />
             </button>
             {rightItems.map(renderNavItem)}
           </div>

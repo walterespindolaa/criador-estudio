@@ -370,7 +370,14 @@ export function CriaAIPanel() {
      fechar e digitar ficam sempre ao alcance, sem nada escondido atrás do
      relógio. Estilo inline vence as classes de centralização do Dialog. */
   const mobilePanelStyle: React.CSSProperties | undefined = isMobile
-    ? { top: 0, left: 0, transform: "none", width: "100%", maxWidth: "none", height: "100dvh", maxHeight: "none", borderRadius: 0, border: "none" }
+    /* No celular o chat abre como folha, com uma faixa livre em cima
+       (Walter, 09/11/2026: "deixar aquela borda superior, pra não ficar até a
+       tampa"). Começa abaixo da barra de status, com os cantos de cima redondos. */
+    ? {
+        top: "calc(env(safe-area-inset-top, 0px) + 14px)", left: 0, transform: "none", width: "100%", maxWidth: "none",
+        height: "calc(100dvh - env(safe-area-inset-top, 0px) - 14px)", maxHeight: "none",
+        borderRadius: "26px 26px 0 0", border: "none", borderTop: "2px solid hsl(var(--foreground))",
+      }
     : undefined;
 
   const botaoTopo = "h-11 rounded-full border-2 border-foreground bg-background hover:bg-muted font-body font-bold text-[14px] inline-flex items-center justify-center gap-1.5 transition-colors";
@@ -392,7 +399,7 @@ export function CriaAIPanel() {
             {/* ── Topo ── */}
             <div
               className="relative shrink-0 flex items-center gap-2.5 px-3 md:px-5 pb-3 md:pt-3.5 border-b-2 border-border"
-              style={isMobile ? { paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" } : undefined}
+              style={isMobile ? { paddingTop: 14 } : undefined}
             >
               <AvatarCria size={isMobile ? 40 : 46} />
               <div className="flex-1 min-w-0">
