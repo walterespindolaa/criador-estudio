@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { casaNicho } from "@/lib/nichos";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTrends, type TrendKind } from "@/hooks/useTrends";
@@ -61,12 +62,11 @@ export function useTendencias() {
   return { data: lista, isLoading: conteudo.isLoading || stories.isLoading };
 }
 
-/** Tendência "pro seu nicho": a do nicho da conta ou a geral (sem nicho). */
+/** Tendência "pro seu nicho": a do nicho da conta ou a geral. Desde 09/11/2026
+ *  compara nicho por nicho (lib/nichos), e "geral" aparece pra todo mundo:
+ *  antes a comparação de texto inteiro escondia as gerais. */
 export function serveProNicho(t: Tendencia, nicho: string | null | undefined): boolean {
-  if (!t.nicho) return true;
-  if (!nicho) return true;
-  const a = t.nicho.toLowerCase(), b = nicho.toLowerCase();
-  return a.includes(b) || b.includes(a);
+  return casaNicho(t.nicho, nicho);
 }
 
 /** Texto curto pra mandar pra Cria IA. */

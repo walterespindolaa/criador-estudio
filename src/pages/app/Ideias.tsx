@@ -377,7 +377,8 @@ const Ideias = () => {
       const pillarName = pillars.find(p => p.id === idea.pillar_id)?.name;
       const fmt = FORMATOS_SUGESTAO.find((f) => f.value === formatoSugestao) ?? FORMATOS_SUGESTAO[2];
       const params = {
-        ideiaTexto: idea.title,
+        // As anotações da ideia vão junto (09/11/2026): era só o título.
+        ideiaTexto: [idea.title, idea.notes?.trim() ? `ANOTAÇÕES:\n${idea.notes.trim()}` : ""].filter(Boolean).join("\n\n").slice(0, 6000),
         platform: fmt.platform,
         formato: fmt.value,
         modo: modoSugestao,

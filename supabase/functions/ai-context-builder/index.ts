@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { iaFetch, chaveIA, IA_URL, definirContextoIA } from "../_shared/ia.ts";
 import { createClient } from "npm:@supabase/supabase-js@2"
 import { VOZ_CRIA, humanizar, humanizarDeep } from "../_shared/voz-cria.ts"
+import { montarDossie, regrasDeVerdade, nichosDe, type Dossie } from "../_shared/dossie.ts"
 
 /* Story em partes (28/10/2026): o Prompter só rola a FALA; o resto vira
    etiqueta. p1/p2/p3 mudam de sentido pelo tipo, igual aos rótulos do app
@@ -76,39 +77,6 @@ async function checkRateLimit(admin: any, userId: string, scope: string, limit: 
   } catch (e) { console.error("[rate-limit] exception, fail-closed:", e); return false }
 }
 
-const getNichePresets = (niche: string): string => {
-  const presets: Record<string, string> = {
-    'Lifestyle': `- Conteúdos que performam bem: rotina matinal, antes/depois, bastidores, comparações
-- Hooks mais eficazes: identificação ("Se você também..."), curiosidade ("O que mudou na minha rotina...")
-- Frequência ideal: 5-7x/semana entre todas as plataformas
-- Pilares sugeridos: Rotina, Bem-estar, Viagens, Bastidores, Dicas`,
-    'Fitness': `- Conteúdos que performam bem: demonstrações de exercícios, transformações, mitos x verdades, receitas fit
-- Hooks mais eficazes: desafio ("Tenta fazer isso..."), promessa ("Em X semanas...")
-- Frequência ideal: 5x/semana
-- Pilares sugeridos: Treinos, Alimentação, Motivação, Resultados, Educação`,
-    'Moda': `- Conteúdos que performam bem: looks do dia, combinações, tendências, dupes
-- Hooks mais eficazes: contraste ("Gastei R$50 nesse look..."), curiosidade ("Tendência que vai bombar...")
-- Frequência ideal: 4-6x/semana
-- Pilares sugeridos: Looks, Tendências, Dicas de estilo, Compras, Inspiração`,
-    'Beleza': `- Conteúdos que performam bem: tutoriais, reviews, antes/depois, rotinas de skincare
-- Hooks mais eficazes: revelação ("O produto que mudou minha pele..."), problema ("Se você tem pele oleosa...")
-- Frequência ideal: 4-5x/semana
-- Pilares sugeridos: Skincare, Maquiagem, Cabelo, Reviews, Tutoriais`,
-    'Culinária': `- Conteúdos que performam bem: receitas rápidas, versões fit, erros comuns, hacks de cozinha
-- Hooks mais eficazes: promessa ("Receita em 10 minutos..."), curiosidade ("Ingrediente secreto...")
-- Frequência ideal: 4x/semana
-- Pilares sugeridos: Receitas, Dicas, Reviews, Fit, Doces`,
-    'Educação': `- Conteúdos que performam bem: listas práticas, erros comuns, ferramentas, passo a passo
-- Hooks mais eficazes: dor ("O erro que impede você de..."), autoridade ("Depois de X anos...")
-- Frequência ideal: 3-4x/semana
-- Pilares sugeridos: Dicas, Tutoriais, Ferramentas, Carreira, Produtividade`,
-    'Negócios': `- Conteúdos que performam bem: bastidores, resultados, estratégias, erros e aprendizados
-- Hooks mais eficazes: resultado ("Como eu faturei X..."), autoridade, polêmica
-- Frequência ideal: 3-5x/semana
-- Pilares sugeridos: Estratégia, Bastidores, Finanças, Marketing, Mindset`,
-  };
-  return presets[niche] || `- Adapte as sugestões ao contexto específico do nicho ${niche}`;
-};
 
 // Refresh do banco de tendências: pesquisa web (Perplexity) + formata (Gemini) + grava.
 // deno-lint-ignore no-explicit-any
@@ -131,6 +99,18 @@ function parseAiJson(raw: string): any {
 async function runTrendRefresh(admin: any, chaveGemini: string, corsHeaders: Record<string, string>, createdBy: string | null): Promise<Response> {
   const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
 
+  /* TENDÊNCIAS POR NICHO (09/11/2026). O banco era nacional e genérico
+     (Teleton, política, futebol) e o nicho vinha livre do modelo, então nunca
+     casava com o nicho de quem usa. Agora o banco é gerado pros nichos das
+     contas ativas, normalizados, e cada tendência vem marcada com um deles. */
+  const { data: perfisAtivos } = await admin.from('profiles').select('niche')
+    .gte('last_seen_at', new Date(Date.now() - 30 * 86400000).toISOString()).not('niche', 'is', null).limit(2000)
+  const contagem = new Map<string, number>()
+  for (const pr of (perfisAtivos ?? []) as { niche: string | null }[]) {
+    for (const n of nichosDe(pr.niche)) contagem.set(n, (contagem.get(n) ?? 0) + 1)
+  }
+  const nichosAlvo = [...contagem].sort((a, b) => b[1] - a[1]).map(([n]) => n).filter((n) => n !== 'geral').slice(0, 8)
+
   // 1) Pesquisa ao vivo na web (Perplexity Sonar). Se falhar/faltar chave, degrada.
   let webResearch = ''
   const pplxKey = Deno.env.get('PERPLEXITY_API_KEY')
@@ -143,15 +123,15 @@ async function runTrendRefresh(admin: any, chaveGemini: string, corsHeaders: Rec
           model: 'sonar',
           messages: [
             { role: 'system', content: 'Você é analista de tendências de redes sociais no Brasil. Responda em português, objetivo e concreto, com base no que está em alta AGORA na web.' },
-            { role: 'user', content: `Hoje é ${hoje}. Pesquise e liste o que está EM ALTA AGORA para criadores de conteúdo no Brasil (Instagram, TikTok, Reels): (1) formatos de vídeo/post em alta, (2) temas/assuntos quentes do momento, (3) ganchos/aberturas que estão retendo, (4) datas comemorativas e sazonais nas próximas 4-6 semanas. Seja específico e atual, evite genérico.` },
+            { role: 'user', content: `Hoje é ${hoje}. Pesquise e liste o que está EM ALTA AGORA para criadores de conteúdo no Brasil (Instagram, TikTok, Reels): (1) formatos de vídeo/post em alta, (2) temas/assuntos quentes do momento, (3) ganchos/aberturas que estão retendo, (4) datas comemorativas e sazonais nas próximas 4-6 semanas.${nichosAlvo.length ? ` Separe por nicho, com pelo menos 3 achados pra cada um destes: ${nichosAlvo.join(', ')}. Mais 3 achados gerais.` : ''} Seja específico e atual, evite genérico.` },
           ],
-          max_tokens: 900,
+          max_tokens: nichosAlvo.length ? 2000 : 900,
           temperature: 0.2,
         }),
       })
       if (pr.ok) {
         const pj = await pr.json()
-        webResearch = String(pj.choices?.[0]?.message?.content || '').slice(0, 4000)
+        webResearch = String(pj.choices?.[0]?.message?.content || '').slice(0, 9000)
       } else {
         console.error('perplexity error', pr.status, await pr.text())
       }
@@ -160,9 +140,12 @@ async function runTrendRefresh(admin: any, chaveGemini: string, corsHeaders: Rec
 
   // 2) Formata a pesquisa nos cards (Gemini).
   const trendSys = `Você é um analista de tendências de conteúdo para criadores e social medias no Brasil. Hoje é ${hoje}. Gere um banco de tendências ATUAL e prático para Instagram, TikTok e Reels. Responda SOMENTE em JSON válido, sem markdown.`
-  const trendUsr = `${webResearch ? `PESQUISA DA WEB (use como base, é atual):\n${webResearch}\n\n` : ''}Gere de 10 a 14 tendências variadas e acionáveis no formato:
-{"trends":[{"kind":"formato|tema|gancho|data","title":"curto (max 8 palavras)","description":"1 frase prática de como usar","niche":"geral"}]}
-OBRIGATÓRIO variar os tipos, inclua PELO MENOS 2 de cada: "formato" (formatos de vídeo/post em alta), "tema" (assuntos quentes), "gancho" (aberturas que retêm), "data" (datas comemorativas/sazonais próximas no Brasil). Seja específico e brasileiro. Nada genérico.`
+  const trendUsr = `${webResearch ? `PESQUISA DA WEB (use como base, é atual):\n${webResearch}\n\n` : ''}${nichosAlvo.length
+    ? `Gere 3 tendências pra CADA nicho desta lista (${nichosAlvo.join(', ')}) e mais 4 gerais. O campo "niche" é EXATAMENTE um destes textos: ${[...nichosAlvo, 'geral'].map((n) => `"${n}"`).join(', ')}. Tendência de nicho tem que fazer sentido pra quem produz conteúdo NAQUELE nicho; o que serve pra todo mundo vai como "geral".`
+    : 'Gere de 10 a 14 tendências, todas com "niche":"geral".'}
+Formato:
+{"trends":[{"kind":"formato|tema|gancho|data","title":"curto (max 8 palavras)","description":"1 frase prática de como usar","niche":"um dos nichos acima"}]}
+OBRIGATÓRIO variar os tipos ("formato", "tema", "gancho", "data") dentro de cada nicho. Seja específico e brasileiro. Nada genérico.`
 
   const tr = await aiFetch(IA_URL, {
     method: 'POST',
@@ -170,7 +153,7 @@ OBRIGATÓRIO variar os tipos, inclua PELO MENOS 2 de cada: "formato" (formatos d
     body: JSON.stringify({
       model: 'google/gemini-2.5-flash-lite',
       messages: [ { role: 'system', content: trendSys }, { role: 'user', content: trendUsr } ],
-      max_tokens: 4096,
+      max_tokens: 8192,
       temperature: 0.7,
     }),
   })
@@ -180,13 +163,15 @@ OBRIGATÓRIO variar os tipos, inclua PELO MENOS 2 de cada: "formato" (formatos d
   const trendsArr = Array.isArray(tparsed) ? tparsed : (tparsed.trends || [])
   const allowed = new Set(['formato', 'tema', 'gancho', 'data'])
   const rows = (trendsArr || [])
-    .filter((t) => t && typeof t.title === 'string')
-    .slice(0, 16)
-    .map((t) => ({
+    .filter((t: any) => t && typeof t.title === 'string')
+    .slice(0, 40)
+    .map((t: any) => ({
       kind: allowed.has(String(t.kind)) ? String(t.kind) : 'tema',
       title: String(t.title).slice(0, 120),
       description: t.description ? String(t.description).slice(0, 300) : null,
-      niche: t.niche ? String(t.niche).slice(0, 60) : 'geral',
+      // Só aceita nicho da lista; o resto vira geral (antes o modelo inventava
+      // "atualidades", "solidariedade" e nada casava).
+      niche: nichosAlvo.find((n) => nichosDe(String(t.niche ?? '')).includes(n)) ?? 'geral',
       created_by: createdBy,
     }))
   if (rows.length === 0) throw new Error('Nenhuma tendência gerada')
@@ -835,71 +820,39 @@ RESPONDA APENAS JSON válido:
       }
     }
 
-    // Fetch user context
+    /* CONTEXTO DA CONTA (09/11/2026). Antes cada operação via um pedaço
+       diferente: o servidor montava um resumo pobre (1 persona, pilar sem
+       descrição, presets genéricos de nicho, "nunca escreva pela pessoa") e
+       algumas telas mandavam o brandbook por fora. Agora toda operação que
+       cria texto recebe o mesmo dossiê do banco (_shared/dossie.ts) e as
+       regras de verdade que proíbem inventar fato sobre a pessoa.
+       Escrevendo pra um CLIENTE da social mídia (data.cliente), o dossiê dela
+       ficaria errado: a marca é a do cliente, que vem nos dados do pedido. */
+    const OPS_SEM_DOSSIE = new Set(['tag-suggestion', 'reference-filter', 'archive-summary', 'brandbook-read', 'relatorio-read', 'admin-system-insight', 'client-report-insight'])
+    const OPS_DOSSIE_LEVE = new Set(['daily-insight', 'insights-reading', 'suggest-hashtags', 'onboarding-setup'])
+    const hojeBR = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: 'long', year: 'numeric' })
+    const paraCliente = !!(data && typeof data.cliente === 'string' && data.cliente.trim())
     let userContext = ''
-    if (userId) {
-      const [profileRes, pillarsRes, brandRes, personaRes, moodboardRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', userId).single(),
-        supabase.from('pillars').select('*').eq('user_id', userId).order('position'),
-        supabase.from('brand_items').select('*').eq('user_id', userId).order('position'),
-        supabase.from('personas').select('*').eq('user_id', userId).limit(1),
-        supabase.from('moodboard_entries').select('section, question_key, answer').eq('user_id', userId),
-      ])
-
-      const profile = profileRes.data
-      const pillars = pillarsRes.data || []
-      const brandItems = brandRes.data || []
-      const persona = personaRes.data?.[0]
-      const moodboardEntries = moodboardRes.data || []
-
-      if (profile) {
-        const nicho = profile.niche || 'creator de conteúdo'
-        const plataformas = (profile.platforms || []).join(', ')
-        const pilaresNomes = pillars.map((p: any) => p.name).join(', ')
-        const tom = brandItems.find((b: any) => b.type === 'tom')?.name || 'autêntico e próximo'
-        const arquetipo = brandItems.find((b: any) => b.type === 'arquetipo')?.name
-        const expressoes = brandItems.filter((b: any) => b.type === 'expressao').map((b: any) => b.name).join(', ')
-        const evitar = brandItems.filter((b: any) => b.type === 'evitar').map((b: any) => b.name).join(', ')
-        const dores = persona?.pain_points?.join(', ')
-        const interesses = persona?.interests?.join(', ')
-
-        userContext = `
-Você está auxiliando ${profile.name}, um(a) creator de conteúdo no nicho de ${nicho}.
-
-PERFIL DO CREATOR:
-- Nome: ${profile.name}
-- Nicho: ${nicho}
-- Plataformas: ${plataformas}
-- Pilares de conteúdo: ${pilaresNomes}
-- Meta semanal: ${profile.weekly_goal || 3} posts por semana
-
-IDENTIDADE DA MARCA:
-- Tom de voz: ${tom}
-${arquetipo ? `- Arquétipo: ${arquetipo}` : ''}
-${expressoes ? `- Expressões que usa: ${expressoes}` : ''}
-${evitar ? `- Evitar: ${evitar}` : ''}
-
-${persona ? `PÚBLICO-ALVO (PERSONA):
-- Perfil: ${persona.name || 'público principal'}
-${persona.age_range ? `- Faixa etária: ${persona.age_range}` : ''}
-${dores ? `- Principais dores: ${dores}` : ''}
-${interesses ? `- Interesses: ${interesses}` : ''}` : ''}
-
-BRANDBOOK (respostas do criador):
-${moodboardEntries.length > 0 ? moodboardEntries.filter((e: any) => e.answer && e.answer.trim()).map((e: any) => `- [${e.section}/${e.question_key}]: ${e.answer}`).join('\n') : '(não preenchido)'}
-
-PRESETS POR NICHO:
-${getNichePresets(nicho)}
-
-REGRAS DE COMPORTAMENTO:
-- Sempre responda em português brasileiro informal
-- Use o nome ${profile.name} quando for pessoal ou encorajador
-- Adapte sugestões ao nicho e ao tom de voz definido
-- Considere o público-alvo em todas as sugestões
-- Use o contexto do Brandbook para personalizar ao máximo
-- Nunca escreva o conteúdo pela pessoa, sugira, direcione, inspire
-- Seja encorajador mas direto
-`
+    let dossie: Dossie | null = null
+    if (userId && !OPS_SEM_DOSSIE.has(operation)) {
+      if (paraCliente) {
+        userContext = `Você está escrevendo para ${String(data.cliente).slice(0, 80)}, cliente de uma social mídia. A marca, o tom e o público são DO CLIENTE e estão nos dados do pedido. Não use nada da social mídia como se fosse do cliente.\n\n${regrasDeVerdade(hojeBR)}`
+      } else {
+        try {
+          const pedido = [data?.ideiaTexto, data?.titulo, data?.tema, data?.mensagem, data?.conteudo, data?.foco]
+            .filter((x) => typeof x === 'string' && x.trim()).join(' ').slice(0, 1500)
+          dossie = await montarDossie(supabase, userId, {
+            pedido, formato: String(data?.formato ?? (operation === 'art-prompt' || operation === 'art-brief' ? 'visual' : '')),
+            leve: OPS_DOSSIE_LEVE.has(operation),
+          })
+          userContext = `${dossie.texto}\n\n${regrasDeVerdade(hojeBR)}`
+          // O brandbook já está no dossiê, com mais coisa. Mandar de novo o que
+          // a tela montou só duplica tokens e às vezes contradiz.
+          if (data && data.brandContext) data.brandContext = undefined
+        } catch (e) {
+          console.error('[dossie] falhou, segue com o brandbook da tela', String(e))
+          userContext = regrasDeVerdade(hojeBR)
+        }
       }
     }
 
@@ -955,12 +908,18 @@ REGRAS DE COMPORTAMENTO:
         let blocoTendencias = ''
         if (modoTendencias) {
           try {
-            const nicho = String(data.niche || 'geral')
-            const { data: tr } = await supabase.from('content_trends')
+            /* Antes: niche = "${data.niche}" com texto exato. "Lifestyle, Moda,
+               Beleza" nunca casava com "lifestyle" e só voltava a "geral".
+               Agora compara nicho por nicho, normalizado. */
+            const meus = dossie?.nichos?.length ? dossie.nichos : nichosDe(String(data.niche || ''))
+            const nicho = meus.join(', ') || 'geral'
+            const { data: trTodas } = await supabase.from('content_trends')
               .select('kind,title,description,niche')
-              .or(`niche.eq.${nicho},niche.eq.geral`)
               .order('created_at', { ascending: false })
-              .limit(14)
+              .limit(80)
+            const casa = (t: { niche: string | null }) => meus.some((n) => nichosDe(t.niche).includes(n))
+            const todas = (trTodas ?? []) as Array<{ kind: string; title: string; description: string | null; niche: string | null }>
+            const tr = [...todas.filter(casa), ...todas.filter((t) => !t.niche || nichosDe(t.niche).includes('geral'))].slice(0, 14)
             const lista = (tr ?? []) as Array<{ kind: string; title: string; description: string | null; niche: string | null }>
             if (lista.length) {
               blocoTendencias = `\n\nTENDÊNCIAS DO MOMENTO (banco do CRIA, nicho ${nicho}):\n` +
@@ -974,10 +933,11 @@ REGRAS DE COMPORTAMENTO:
           }
         }
 
-        operationPrompt = `Você é um diretor criativo sênior de conteúdo para redes sociais brasileiras. Sua marca registrada: ideias ESPECÍFICAS, com cena, número, nome de coisa, exemplo real. Nada de "dicas de X" ou "a importância de Y".
+        operationPrompt = `Você é um diretor criativo sênior de conteúdo para redes sociais brasileiras. Sua marca registrada: ideias ESPECÍFICAS, com cena, nome de coisa e exemplo tirados do DOSSIÊ (profissão, oferta, persona, pilares, o que ela já postou e salvou). Número ou história da pessoa só se estiver no dossiê; se a ideia precisar, deixe a lacuna entre colchetes pra ela preencher. Nada de "dicas de X" ou "a importância de Y".
 
 O QUE TORNA UMA SUGESTÃO BOA (critério de aprovação):
-- Passa no teste do "só essa pessoa poderia postar isso": usa a profissão, o produto, a história e a persona do brandbook.
+- Passa no teste do "só essa pessoa poderia postar isso": usa a profissão, o produto e a persona do dossiê, e soa como as legendas reais dela.
+- Não repete o que está em "JÁ ESTÁ NO KANBAN". Se a ideia já foi feita, ache um ângulo novo.
 - O gancho gera uma pergunta na cabeça de quem lê em 2 segundos (curiosidade, contradição, promessa concreta, confissão).
 - Tem um ângulo claro e diferente entre as 3: contra-intuitivo, bastidor com número, erro que custa caro, antes/depois, mito vs realidade, passo a passo com exemplo, opinião impopular.
 - A estrutura já é quase o roteiro: quem ler consegue gravar ou diagramar sem pensar mais.
@@ -988,9 +948,9 @@ ${regraFormato}
 TODAS as 3 sugestões são nesse formato; o que muda entre elas é o ÂNGULO e o OBJETIVO (engajamento, autoridade, venda ou relacionamento, sem repetir).${blocoTendencias}${data.brandContext ? `
 
 BRANDBOOK DA PESSOA (fonte da verdade, leia ANTES de sugerir):
-${data.brandContext}
+${data.brandContext}` : ''}
 
-REGRA MAIS IMPORTANTE: descubra no brandbook QUEM esta pessoa é (o que ela vende, qual serviço presta) e PRA QUEM ela fala (a persona dela). As 3 sugestões falam COM essa persona, na posição profissional DELA. Se o brandbook diz que ela é social media, nutricionista ou advogada, o conteúdo é sobre O SERVIÇO DELA pro PÚBLICO DELA. Sugestão que contradiz o brandbook está errada.` : ''}
+REGRA MAIS IMPORTANTE: descubra no dossiê QUEM esta pessoa é (o que ela vende, qual serviço presta) e PRA QUEM ela fala (a persona). As 3 sugestões falam COM essa persona, na posição profissional DELA. Se ela é social mídia, nutricionista ou advogada, o conteúdo é sobre O SERVIÇO DELA pro PÚBLICO DELA. Sugestão que contradiz o dossiê está errada.
 
 RESPONDA APENAS COM UM ARRAY JSON de 3 objetos, com estes campos (todos em português, sem markdown):
 [{"titulo":"o hook, máximo 70 caracteres","gancho":"a PRIMEIRA frase literal (falada ou escrita), máximo 140 caracteres","formato":"${formatoPedido}","angulo":"ângulo editorial específico, 3 a 8 palavras","objetivo":"engajamento|autoridade|venda|relacionamento","estrutura":["passo/lâmina/cena 1","passo 2","..."],"cta":"o pedido final, literal","porque":"1 frase: por que isso funciona pra ESSA persona","referencia_visual":"direção de arte em 1 ou 2 frases: cena, enquadramento, cores/tipografia do brandbook","tendencia":"nome da tendência usada, ou string vazia"}]`
@@ -1000,7 +960,7 @@ PILAR: ${data.pilar || 'geral'}
 NICHO: ${data.niche || 'lifestyle'}
 ${data.desempenho ? `O QUE JÁ FUNCIONOU NO INSTAGRAM DESTA PESSOA (use pra escolher ângulo e gancho; não cite números): ${String(data.desempenho).slice(0, 700)}` : ''}
 ${modoTendencias ? 'MODO: tendências (cruze a ideia com o que está quente).' : 'MODO: padrão.'}
-Gere 3 sugestões completas. Seja específico: cena, número, exemplo. Zero genérico.
+Gere 3 sugestões completas, específicas a partir do dossiê. Zero genérico e zero inventado: o que for vivência ou número dela e não estiver no dossiê vira lacuna [entre colchetes].
 RESPONDA APENAS COM O ARRAY JSON. Nenhuma palavra antes ou depois dele.`
         // Sugestão completa (estrutura + moodboard) x3 não cabe em 900 tokens.
         // E o gemini-2.5-flash gasta parte do limite "pensando" antes de
@@ -1660,6 +1620,13 @@ ${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de 
       : OPS_CRIATIVAS.has(operation) ? 0.6
       : 0.2
 
+    /* MODELO CHEIO ONDE A PESSOA LÊ O TEXTO (09/11/2026). O -lite escrevia a
+       legenda, o carrossel, o roteiro, o chat e os stories: o que o cliente
+       final lê saía do modelo mais fraco. Classificação e leitura seguem no
+       -lite, que é barato e basta. */
+    const OPS_MODELO_CHEIO = new Set(['idea-suggestions', 'capture-scenes', 'generate-caption', 'refine-caption', 'repurpose-content',
+      'carousel-script', 'story-escrever', 'story-plan-generate', 'cria-chat', 'autopilot-cronograma', 'autopilot-conceitos', 'art-brief', 'art-prompt', 'score-caption'])
+    const modeloCheio = OPS_MODELO_CHEIO.has(operation)
     const pedirIA = () => aiFetch(IA_URL, {
       method: 'POST',
       headers: {
@@ -1673,17 +1640,18 @@ ${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de 
            `capture-scenes` entrou aqui em 15/09: o roteiro tem que passar no
            teste do áudio, e o -lite escreve fala de robô. Dá pra economizar em
            classificação, não no texto que o cliente vai falar na câmera. */
-        model: operation === 'idea-suggestions' || operation === 'capture-scenes'
-          ? 'google/gemini-2.5-flash' : 'google/gemini-2.5-flash-lite',
+        model: modeloCheio ? 'google/gemini-2.5-flash' : 'google/gemini-2.5-flash-lite',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_tokens: maxTokens,
+        // O modelo cheio "pensa" antes de escrever e isso sai do mesmo limite:
+        // 500 tokens cortavam a legenda no meio. Só se paga o que ele usa.
+        max_tokens: modeloCheio ? Math.max(maxTokens, 4096) : maxTokens,
         temperature: temperatura,
       }),
     // Modelo cheio leva mais que os 30s padrão.
-    }, operation === 'idea-suggestions' || operation === 'capture-scenes' ? 55000 : 30000)
+    }, modeloCheio ? 55000 : 30000)
     const response = await pedirIA()
 
     if (!response.ok) {

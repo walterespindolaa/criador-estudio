@@ -23,7 +23,7 @@ import { toISODateBR } from "@/lib/date-br";
 import { cn } from "@/lib/utils";
 import { CrIA } from "@/components/brand/CrIA";
 import { TrendPickerDialog, Chip } from "@/components/tendencias/TrendPickerDialog";
-import { useTendencias, tendenciasParaIA, registrarUsoTendencias, type Tendencia } from "@/hooks/useTendencias";
+import { useTendencias, tendenciasParaIA, registrarUsoTendencias, serveProNicho, type Tendencia } from "@/hooks/useTendencias";
 import { proximasDatas, dataCurta } from "@/lib/datasComerciais";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -86,7 +86,10 @@ export default function Autopilot() {
   const { pillars } = usePillars();
   const { posts, createPost } = usePosts();
   const { brandContext, hasBrandContext } = useBrandContext();
-  const { data: tendencias } = useTendencias();
+  const { data: todasTendencias } = useTendencias();
+  /* Desde 09/11/2026 o banco tem tendência por nicho: o plano só enxerga as do
+     nicho da conta e as gerais (antes pegava as 3 primeiras de qualquer nicho). */
+  const tendencias = useMemo(() => todasTendencias.filter((t) => serveProNicho(t, profile?.niche)), [todasTendencias, profile?.niche]);
   const desempenho = useResumoDesempenho();
   const qc = useQueryClient();
   const location = useLocation();
