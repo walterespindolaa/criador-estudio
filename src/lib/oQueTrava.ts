@@ -1,4 +1,3 @@
-import { parseDateOnly, toISODateBR } from "@/lib/date-br";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    O QUE TRAVA (Início do criador, 06/11/2026, mockup aprovado)
@@ -23,10 +22,13 @@ export type PostTrava = {
 
 export const saiu = (p: PostTrava) => p.status === "publicado" || p.publish_status === "publicado";
 
+/* Conta só com a data, em UTC (09/11/2026). A versão anterior montava a meia-noite
+   no fuso do aparelho e lia de volta no fuso de Brasília: fora do Brasil (e no
+   robô de testes do GitHub, que roda em UTC) "30/11 + 1" dava 30/11, e o CI
+   falhava desde 06/11. Data pura não tem fuso, então não pode depender dele. */
 export function somarDias(iso: string, dias: number): string {
-  const d = parseDateOnly(iso);
-  d.setDate(d.getDate() + dias);
-  return toISODateBR(d);
+  const [a, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(a, m - 1, d + dias)).toISOString().slice(0, 10);
 }
 
 export function atrasado(p: PostTrava, hoje: string): boolean {

@@ -319,17 +319,8 @@ export const TOURS_GESTOR: TourConfig[] = [
       {
         target: '[data-tour="ag-navegacao"]',
         title: "Semana ou mês",
-        body: "Semana é pra executar (o que grava, o que sai). Mês é pra planejar (a distribuição do conteúdo). No Mês aparecem mais duas opções: Calendário, com bolinhas na cor de cada tipo e a lista do dia ao lado, e Grade, com os cards dentro de cada dia. O botão Hoje traz você de volta pro presente.",
-        mobileBody: "Semana é pra executar, Mês é pra planejar. No Mês, Calendário mostra o mês com bolinhas na cor de cada tipo: toque num dia e a semana sobe pro topo com a lista do dia embaixo. Grade mostra os cards dentro de cada dia. Hoje volta pro presente.",
-        placement: "bottom",
-      },
-      {
-        // Só existe com a visão Mês ligada.
-        skipIfMissing: true,
-        target: '[data-tour="ag-mes-modo"]',
-        title: "Calendário ou Grade",
-        body: "Calendário é o mês limpo: cada dia mostra bolinhas na cor do que tem nele, e clicar num dia abre a lista dele no painel ao lado, com o + pra marcar algo ali. Grade é o quadro com os cards dentro de cada dia, pra quem quer ver tudo escrito. A escolha fica salva.",
-        mobileBody: "Calendário é o mês limpo, com bolinhas na cor do que tem em cada dia. Toque num dia: a semana sobe pro topo e a lista do dia aparece embaixo. Deslize a semana pro lado pra trocar, e o botão com o nome do mês volta pro mês inteiro. Grade mostra os cards dentro de cada dia.",
+        body: "Semana é pra executar (o que grava, o que sai). Mês é pra planejar (a distribuição do conteúdo). Clique no período, ao lado das setas, pra abrir o calendário e pular direto pra semana que quiser. O botão Hoje traz você de volta pro presente.",
+        mobileBody: "Semana é pra executar, Mês é pra planejar. Toque no período, ao lado das setas, pra abrir o calendário e escolher a semana. Hoje volta pro presente.",
         placement: "bottom",
       },
       {
