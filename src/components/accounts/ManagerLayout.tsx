@@ -723,7 +723,7 @@ export default function ManagerLayout() {
           <>
             {moreOpen && (
               <>
-                {/* Véu escuro. A faixa da barrinha de início, que ele não alcança no iPhone instalado, é pintada pelo fundo do <html> (ver useTravarRolagem). */}
+                {/* Véu escuro. A faixa de baixo, que ele não alcança no iPhone instalado, ganha um remendo em useTravarRolagem. */}
                 <div className="fixed inset-0 z-40 md:hidden bg-foreground/20 backdrop-blur-sm touch-none" onClick={() => setMoreOpen(false)} />
               </>
             )}
