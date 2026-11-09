@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { AvisoSoVer } from "@/components/accounts/ModuleGate";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { DragDropContext, Droppable, Draggable, type DropResult, type DraggableProvidedDragHandleProps } from "@hello-pangea/dnd";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown, Trash2, Cake, PartyPopper, Rows3, BarChart3, ChevronLeft, LayoutGrid } from "lucide-react";
+import { CalendarDays, Plus, X, Video, Loader2, Clock, MapPin, Users, ListChecks, ExternalLink, Send, Layers, Check, Copy, HardDrive, Download, Play, FileImage, Link2, Paperclip, GripVertical, FolderOpen, ChevronDown, Trash2, Cake, PartyPopper, Rows3, BarChart3, ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,7 +26,7 @@ import {
   type Capture, type Creation, type ItemPeriods,
 } from "@/hooks/useAgenda";
 import { SeloPublicacaoIg } from "@/components/shared/PublicarNoInstagram";
-import { useAllExternalPosts, useExternalClients, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient, type ExternalClient } from "@/hooks/useCriaPost";
+import { useAllExternalPosts, useExternalClients, useExternalPostCovers, useMoveExternalPostDate, useUpdateExternalPost, type ExternalPostWithClient, type ExternalClient } from "@/hooks/useCriaPost";
 import { useCriaPostMedia, type CriaMedia } from "@/hooks/useCriaPostMedia";
 import { useClientCriaAgendaPosts, useCriaClientProfiles, useManagerPublishClientPost, useManagerRescheduleClientPost, type ClientCriaAgendaPost, type ClientCriaLink } from "@/hooks/useManagerClientCria";
 import { useManagerMaterialsWithDue, useUpdateAgendaMaterial, type AgendaMaterial } from "@/hooks/useClientMaterials";
@@ -349,6 +349,25 @@ export default function AgendaCriacao() {
     try { localStorage.setItem("agenda_mes_modo", m); } catch { /* sem storage */ }
   };
   const [diaSel, setDiaSel] = useState<string | null>(null);
+  /* AGENDA DO CELULAR (Walter, 09/11/2026, mockup aprovado "Agenda da social
+     mídia"): Dia, Semana (padrão, os 7 dias rolando em cartões) e Mês (faixinhas
+     por post + cartões do dia embaixo). Atalhos de foco por cima dos filtros. */
+  type ModoCel = "dia" | "semana" | "mes";
+  const [modoCel, setModoCel] = useState<ModoCel>(() => {
+    try { const v = localStorage.getItem("agenda_cel_modo"); return v === "dia" || v === "mes" ? v : "semana"; } catch { return "semana"; }
+  });
+  const [focoCel, setFocoCel] = useState<"tudo" | "falta" | "posts" | "capta" | "tarefas">("tudo");
+  const trocarModoCel = (m: ModoCel) => {
+    setModoCel(m);
+    try { localStorage.setItem("agenda_cel_modo", m); } catch { /* sem storage */ }
+    setView(m === "mes" ? "mes" : "semana");
+  };
+  // No celular, a visão de dados segue o modo escolhido aqui (o computador usa a dele).
+  useEffect(() => {
+    if (typeof window === "undefined" || window.matchMedia("(min-width: 1024px)").matches) return;
+    setView(modoCel === "mes" ? "mes" : "semana");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   /* A data comemorativa aberta, quando ela tem mais de um cliente. Guarda o dia
      junto pra o título do diálogo poder dizer a data por extenso. */
   const [dataModal, setDataModal] = useState<{ iso: string; data: ComemorativaDoDia } | null>(null);
@@ -731,6 +750,11 @@ export default function AgendaCriacao() {
     }
     return m;
   }, [allPosts, from, to, filters.post, postClients]);
+
+  /* CAPA NOS CARTÕES DO CELULAR (Walter, 09/11/2026, mockup aprovado): uma
+     query só pra primeira mídia de todos os posts do período visível. */
+  const idsComCapa = useMemo(() => [...postsByDay.values()].flat().map((p) => p.id), [postsByDay]);
+  const { data: capas } = useExternalPostCovers(idsComCapa);
 
   // TAREFA B Posts do Cria do CLIENTE (o kanban pessoal dele), já "prontos" em diante
   // e com data. A social mídia vê pra se organizar, sem precisar entrar no Cria de cada um.
@@ -1252,6 +1276,220 @@ export default function AgendaCriacao() {
     );
   })();
 
+  // ── AGENDA DO CELULAR (09/11/2026, mockup aprovado) ─────────────────────
+  // Cartão grande por item: capa, cliente, horário, etapa, selo do Instagram e
+  // o círculo de concluído (postado, no caso do post). Só no celular (lg:hidden).
+  type ItemCel =
+    | { k: "item"; item: DayItem }
+    | { k: "criacli"; p: ClientCriaAgendaPost };
+  const feitoCel = (x: ItemCel): boolean => {
+    if (x.k === "criacli") return x.p.status === "publicado";
+    const it = x.item;
+    if (it.kind === "post") return it.post.approval_status === "postado";
+    if (it.kind === "cap") return it.cap.status === "concluida";
+    if (it.kind === "task") return it.task.status === "concluida";
+    if (it.kind === "cria") return !!it.cria.done;
+    return it.mat.status === "finalizado";
+  };
+  const ehPostCel = (x: ItemCel) => x.k === "criacli" || x.item.kind === "post";
+  const passaFoco = (x: ItemCel) => {
+    if (focoCel === "tudo") return true;
+    if (focoCel === "falta") return ehPostCel(x) && !feitoCel(x);
+    if (focoCel === "posts") return ehPostCel(x);
+    if (focoCel === "capta") return x.k === "item" && x.item.kind === "cap";
+    return x.k === "item" && (x.item.kind === "task" || x.item.kind === "cria" || x.item.kind === "mat");
+  };
+  const itensCelDoDia = (iso: string) => {
+    const its = buildDayItems(capturesByDay.get(iso) ?? [], tasksByDay.get(iso) ?? [], byDay.get(iso) ?? [],
+      postsByDay.get(iso) ?? [], materialsByDay.get(iso) ?? [], dayOrders[iso]);
+    const bandas = splitFaixas(its, itemPeriods, !!dayOrders[iso]);
+    const porFaixa: Record<Faixa, ItemCel[]> = { sem: [], manha: [], tarde: [], noite: [] };
+    for (const f of FAIXAS) porFaixa[f] = bandas[f].map((item) => ({ k: "item" as const, item }));
+    for (const p of criaPostsByDay.get(iso) ?? []) porFaixa[faixaDoItem(null, p.scheduled_time)].push({ k: "criacli", p });
+    const todos = FAIXAS.flatMap((f) => porFaixa[f]);
+    const posts = todos.filter(ehPostCel);
+    return { porFaixa, todos, postsTotal: posts.length, postsFeitos: posts.filter(feitoCel).length };
+  };
+  const capaDe = (postId: string) => {
+    const m = capas?.get(postId);
+    return m ? getThumbnailUrl(m as never, 160) : null;
+  };
+  const cartaoCel = (x: ItemCel) => {
+    const feito = feitoCel(x);
+    let key = ""; let cor = POST_DEFAULT_COLOR; let quem = ""; let hora: string | null = null; let titulo = "";
+    let capa: string | null = null; let Icone = Send; let pill: { txt: string; cls?: string; style?: CSSProperties } | null = null;
+    let selo: ReactNode = null; let abrir = () => { /* */ }; let marcar = () => { /* */ };
+    if (x.k === "criacli") {
+      const p = x.p; key = `cc${p.id}`; cor = p.client_color || CRIA_POST_COLOR; quem = p.client_name ?? "Cliente";
+      hora = p.scheduled_time?.slice(0, 5) ?? null; titulo = p.title || "Post"; Icone = Layers;
+      pill = { txt: CRIA_POST_STATUS[p.status ?? ""] ?? "Cria", style: { background: corEtapaCria(p.status), color: "#fff" } };
+      abrir = () => { setCriaDia(p.scheduled_date ?? ""); setCriaHora(p.scheduled_time?.slice(0, 5) ?? ""); setCriaCard(p); };
+      marcar = () => publicarCliente.mutate({ postId: p.id, publicado: !feito }, {
+        onError: () => toast.error("Não consegui marcar. Rode o SQL da função manager_publish_client_post se ainda não rodou."),
+      });
+    } else {
+      const it = x.item; hora = it.time;
+      if (it.kind === "post") {
+        const p = it.post; key = `o${p.id}`; cor = corDoPost(p); quem = extById.get(p.external_client_id)?.name ?? "Post";
+        titulo = p.title || "Post"; capa = capaDe(p.id);
+        const st = POST_STATUS[p.approval_status ?? "em_producao"]; if (st) pill = { txt: st.label, cls: st.cls };
+        selo = p.publish_status ? <SeloPublicacaoIg status={p.publish_status} autoPublish={p.auto_publish} className="mt-1" /> : null;
+        abrir = () => openPost(p);
+        marcar = () => updateExtPost.mutate({ id: p.id, patch: { approval_status: feito ? "aprovado" : "postado", approval_updated_at: new Date().toISOString() } });
+      } else if (it.kind === "cap") {
+        const c = it.cap; key = `p${c.id}`; cor = "#FF77B9"; quem = `Captação · ${nameOf(c.crm_client_id, c.client_name)}`;
+        titulo = c.location?.trim() || "Gravação"; Icone = Video;
+        abrir = () => setEditCap(c);
+        marcar = () => updCapture.mutate({ id: c.id, patch: { status: feito ? "agendada" : "concluida" } });
+      } else if (it.kind === "task") {
+        const t = it.task; key = `t${t.id}`; cor = corDaTarefa(t); quem = "Tarefa"; titulo = t.title; Icone = ListChecks;
+        abrir = () => setEditTask(t);
+        marcar = () => updTask.mutate({ id: t.id, status: feito ? "pendente" : "concluida" });
+      } else if (it.kind === "cria") {
+        const c = it.cria; key = `c${c.id}`; cor = corDoItem(null, c.crm_client_id ? clients.find((k) => k.id === c.crm_client_id)?.color : null, "#4B3FA8");
+        quem = `Reunião · ${nameOf(c.crm_client_id, c.client_name)}`; titulo = c.title?.trim() || nameOf(c.crm_client_id, c.client_name); Icone = Users;
+        abrir = () => setEditCreation(c);
+        marcar = () => updCreation.mutate({ id: c.id, patch: { done: !c.done } });
+      } else {
+        const mt = it.mat; key = `m${mt.id}`; cor = corDoMaterial(mt); quem = `Material · ${nameOf(mt.crm_client_id, null)}`; titulo = mt.title; Icone = Paperclip;
+        abrir = () => openMaterial(mt);
+        marcar = () => updMaterial.mutate({ id: mt.id, patch: { status: feito ? "a_fazer" : "finalizado" } });
+      }
+    }
+    return (
+      <div key={key} role="button" tabIndex={0} onClick={abrir} onKeyDown={(e) => { if (e.key === "Enter") abrir(); }}
+        className={cn("flex items-center gap-2.5 rounded-[20px] border border-border bg-card p-2 shadow-warm transition-colors active:bg-muted/40",
+          feito && "bg-muted/30 shadow-none")}>
+        <span className="relative h-[46px] w-[46px] shrink-0">
+          {capa
+            ? <img src={capa} alt="" loading="lazy" className={cn("h-full w-full rounded-[14px] object-cover", feito && "opacity-50")} />
+            : <span className="grid h-full w-full place-items-center rounded-[14px]" style={{ background: `${cor}1F`, color: cor }}><Icone className="h-5 w-5" /></span>}
+          <span className="absolute -left-1 -top-1 h-3 w-3 rounded-full border-2 border-card" style={{ background: cor }} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 items-center gap-1.5 text-[11.5px] font-body font-semibold text-muted-foreground">
+            <span className="shrink-0 tabular-nums text-foreground">{hora ?? "sem hora"}</span>
+            <span className="truncate">{quem}</span>
+            {pill && <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold", pill.cls)} style={pill.style}>{pill.txt}</span>}
+          </span>
+          <span className={cn("mt-0.5 block truncate text-[14.5px] font-body font-semibold leading-tight", feito ? "text-muted-foreground line-through" : "text-foreground")}>{titulo}</span>
+          {selo}
+        </span>
+        <button type="button" aria-label={feito ? "Desmarcar" : ehPostCel(x) ? "Marcar como postado" : "Concluir"}
+          onClick={(e) => { e.stopPropagation(); marcar(); }}
+          className={cn("grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full border-2 transition-colors",
+            feito ? "border-emerald-600 bg-emerald-600 text-white" : "border-border bg-card text-transparent hover:border-emerald-600")}>
+          <Check className="h-4 w-4" strokeWidth={3} />
+        </button>
+      </div>
+    );
+  };
+  const lembretesCel = (iso: string) => {
+    if (focoCel !== "tudo") return null;
+    const anivs = birthdaysByDay.get(iso) ?? []; const comem = comemorativasByDay.get(iso) ?? [];
+    if (!anivs.length && !comem.length) return null;
+    return (
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {anivs.map((b) => (
+          <button key={`an${b.clientId}`} type="button" onClick={() => navigate(`/socialmidia/clientes/${b.clientId}/visao-geral`)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-[11.5px] font-body font-semibold">
+            <Cake className="h-3.5 w-3.5" style={{ color: b.cor || BIRTHDAY_DEFAULT_COLOR }} />Aniversário de {b.nome}
+          </button>
+        ))}
+        {comem.map((c) => (
+          <button key={`cm${c.chave}`} type="button"
+            onClick={() => { if (c.clientes.length === 1 && c.clientes[0].crmId) navigate(`/socialmidia/clientes/${c.clientes[0].crmId}/cronograma`); else setDataModal({ iso, data: c }); }}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-[11.5px] font-body font-semibold">
+            <PartyPopper className="h-3.5 w-3.5" style={{ color: c.cor || COMEMORATIVA_COLOR }} />{c.label}
+          </button>
+        ))}
+      </div>
+    );
+  };
+  const diaCel = (iso: string) => {
+    const d = parseDateOnly(iso);
+    const { porFaixa, todos, postsTotal, postsFeitos } = itensCelDoDia(iso);
+    const visiveis = todos.filter(passaFoco);
+    const lembretes = lembretesCel(iso);
+    const nome = d.toLocaleDateString("pt-BR", { weekday: "long" }).replace("-feira", "");
+    return (
+      <section key={iso} className="mt-4 first:mt-3">
+        <div className="flex items-center gap-2 px-1 pb-1">
+          <p className="font-display text-[17px] font-extrabold capitalize">{nome}, {String(d.getDate()).padStart(2, "0")}</p>
+          {iso === today && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11.5px] font-bold text-primary">hoje</span>}
+          <span className="ml-auto text-[12px] font-body font-semibold text-muted-foreground">
+            {postsTotal > 0 ? `${postsFeitos} de ${postsTotal} postados` : todos.length ? `${todos.length} ${todos.length === 1 ? "item" : "itens"}` : ""}
+          </span>
+          {postsTotal > 0 && (
+            <span className="h-1.5 w-11 overflow-hidden rounded-full bg-muted"><i className="block h-full rounded-full bg-emerald-600" style={{ width: `${Math.round((postsFeitos / postsTotal) * 100)}%` }} /></span>
+          )}
+          <button type="button" onClick={() => { setAddKind("tarefa"); setAddDay(iso); }} aria-label="Adicionar no dia"
+            className="grid h-7 w-7 place-items-center rounded-full border border-border bg-card text-muted-foreground"><Plus className="h-4 w-4" /></button>
+        </div>
+        {lembretes}
+        {visiveis.length === 0
+          ? <p className="px-1 py-2 text-[12.5px] font-body text-muted-foreground">{todos.length ? "Nada com esse filtro." : "Nada marcado."}</p>
+          : FAIXAS.map((f) => {
+            const lista = porFaixa[f].filter(passaFoco);
+            if (!lista.length) return null;
+            return (
+              <div key={f} className="space-y-2">
+                {f !== "sem" && (
+                  <p className="mt-2 flex items-center gap-2 px-1 text-[10.5px] font-body font-bold uppercase tracking-[0.12em] text-muted-foreground after:h-px after:flex-1 after:bg-border">{FAIXA_LABEL[f]}</p>
+                )}
+                {lista.map(cartaoCel)}
+              </div>
+            );
+          })}
+      </section>
+    );
+  };
+  const mesCel = (() => {
+    if (modoCel !== "mes") return null;
+    const isoDias = days.map(ymd);
+    const padrao = isoDias.includes(today) ? today : ymd(new Date(weekStart.getFullYear(), weekStart.getMonth(), 1));
+    const sel = diaSel && isoDias.includes(diaSel) ? diaSel : padrao;
+    return (
+      <>
+        <div className="mt-3 grid grid-cols-7 text-center text-[11px] font-body font-bold text-muted-foreground">
+          {WD.map((w) => <span key={w}>{w.slice(0, 1)}</span>)}
+        </div>
+        <div className="mt-1 grid grid-cols-7 gap-1">
+          {days.map((d) => {
+            const iso = ymd(d); const fora = d.getMonth() !== curMonth;
+            const { todos } = itensCelDoDia(iso);
+            const marcas = todos.filter(passaFoco);
+            const corDe = (x: ItemCel) => x.k === "criacli" ? (x.p.client_color || CRIA_POST_COLOR)
+              : x.item.kind === "post" ? corDoPost(x.item.post) : x.item.kind === "cap" ? "#FF77B9"
+              : x.item.kind === "task" ? corDaTarefa(x.item.task) : x.item.kind === "mat" ? corDoMaterial(x.item.mat) : "#4B3FA8";
+            return (
+              <button key={iso} type="button" onClick={() => setDiaSel(iso)}
+                className={cn("flex min-h-[58px] min-w-0 flex-col gap-[3px] rounded-xl border border-border bg-card px-[3px] pb-1 pt-1", fora && "opacity-35",
+                  iso === sel && "border-primary ring-2 ring-primary/20")}>
+                <span className={cn("mx-auto grid h-5 min-w-5 place-items-center rounded-full px-1 text-[12px] font-body font-bold", iso === today && "bg-primary text-primary-foreground")}>{d.getDate()}</span>
+                {marcas.slice(0, 3).map((x, i) => <i key={i} className={cn("block h-[5px] rounded-[3px]", feitoCel(x) && "opacity-30")} style={{ background: corDe(x) }} />)}
+                {marcas.length > 3 && <span className="text-center text-[9px] font-bold text-muted-foreground">+{marcas.length - 3}</span>}
+              </button>
+            );
+          })}
+        </div>
+        {diaCel(sel)}
+      </>
+    );
+  })();
+  const passoCel = (n: number) => {
+    if (modoCel === "mes") { setWeekStart((w) => { const x = new Date(w); x.setMonth(x.getMonth() + n); return x; }); setDiaSel(null); return; }
+    if (modoCel === "semana") { setWeekStart((w) => { const x = new Date(w); x.setDate(x.getDate() + 7 * n); return x; }); return; }
+    const base = parseDateOnly(diaSel && days.map(ymd).includes(diaSel) ? diaSel : today);
+    base.setDate(base.getDate() + n);
+    setDiaSel(ymd(base)); setWeekStart(base);
+  };
+  const rotuloCel = modoCel === "mes"
+    ? weekStart.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+    : modoCel === "semana"
+      ? `${days[0].getDate()} a ${days[6].toLocaleDateString("pt-BR", { day: "numeric", month: "short" }).replace(".", "")}`
+      : parseDateOnly(diaSel && days.map(ymd).includes(diaSel) ? diaSel : today).toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" }).replace(/\./g, "");
+
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="pb-24 md:pb-0 overflow-x-clip">
       <AvisoSoVer code="agenda" />
@@ -1267,7 +1505,27 @@ export default function AgendaCriacao() {
 
       {/* Agenda de criação */}
       <div data-tour="ag-quadro" className="rounded-2xl border border-border bg-card p-4">
-        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        {/* Controles do celular (09/11/2026, mockup aprovado): voltar/hoje/avançar,
+            Dia/Semana/Mês e o relatório. No computador seguem os de sempre. */}
+        <div className="lg:hidden mb-3">
+          <div className="flex items-center gap-1.5">
+            <Button aria-label="Anterior" variant="outline" size="sm" className="h-9 w-9 rounded-full p-0" onClick={() => passoCel(-1)}><ChevronLeft className="h-4 w-4" /></Button>
+            <Button variant="outline" size="sm" className="h-9 rounded-full px-3 text-xs" onClick={() => { setWeekStart(parseDateOnly(hojeBR())); setDiaSel(null); }}>Hoje</Button>
+            <Button aria-label="Próximo" variant="outline" size="sm" className="h-9 w-9 rounded-full p-0" onClick={() => passoCel(1)}><ChevronRight className="h-4 w-4" /></Button>
+            <div className="ml-auto flex rounded-full bg-muted p-[3px]">
+              {(["dia", "semana", "mes"] as const).map((m) => (
+                <button key={m} type="button" onClick={() => trocarModoCel(m)}
+                  className={cn("rounded-full px-2.5 py-1 text-[12px] font-body font-semibold transition-colors",
+                    modoCel === m ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>
+                  {m === "dia" ? "Dia" : m === "semana" ? "Semana" : "Mês"}
+                </button>
+              ))}
+            </div>
+            <Button aria-label="Relatório" variant="outline" size="sm" className="h-9 w-9 rounded-full p-0" onClick={() => setRelatorioOpen(true)}><BarChart3 className="h-4 w-4" /></Button>
+          </div>
+          <p className="mt-2 px-1 text-[13px] font-body font-semibold capitalize text-muted-foreground">{rotuloCel}</p>
+        </div>
+        <div className="hidden lg:flex items-center justify-between mb-3 flex-wrap gap-2">
           <div className="flex items-center gap-3 flex-wrap">
             <p className="text-sm font-display font-bold text-foreground">Agenda de criação</p>
             {/* data-tour="ag-filtros": alvo do passo "Filtrar por tipo" do tour da Agenda. */}
@@ -1364,6 +1622,16 @@ export default function AgendaCriacao() {
             )}
           </div>
         )}
+        {/* Atalhos de foco do celular: só mudam o que aparece na lista de cartões. */}
+        <div className="lg:hidden -mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none]">
+          {([["tudo", "Tudo"], ["falta", "Falta postar"], ["posts", "Posts"], ["capta", "Captações"], ["tarefas", "Tarefas"]] as const).map(([k, rot]) => (
+            <button key={k} type="button" onClick={() => setFocoCel(k)}
+              className={cn("shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-[12px] font-body font-semibold transition-colors",
+                focoCel === k ? "border-foreground bg-foreground text-background" : "border-border bg-card text-muted-foreground")}>
+              {rot}
+            </button>
+          ))}
+        </div>
         <DragDropContext onDragStart={() => setArrastando(true)} onDragEnd={handleDragEnd}>
           {/* Faixa fixa "Em produção": sempre visível, independente do período. Reúne todos
               os posts em produção (com ou sem data) + posts sem data. Arrastar um post daqui
@@ -1420,7 +1688,13 @@ export default function AgendaCriacao() {
               )}
             </div>
           )}
-          {view === "mes" && mesModo === "calendario" && calendarioMes}
+          {view === "mes" && mesModo === "calendario" && <div className="hidden lg:block">{calendarioMes}</div>}
+          {/* Lista de cartões do celular: Semana (7 dias rolando), Dia ou Mês. */}
+          <div className="lg:hidden">
+            {modoCel === "mes" && view === "mes" ? mesCel
+              : modoCel === "dia" ? diaCel(diaSel && days.map(ymd).includes(diaSel) ? diaSel : (days.map(ymd).includes(today) ? today : ymd(days[0])))
+              : days.slice(0, 7).map((d) => diaCel(ymd(d)))}
+          </div>
           {view === "mes" && mesModo === "grade" && (
             <div className="hidden lg:grid lg:grid-cols-7 gap-2 mb-1">
               {WD.map((w) => <p key={w} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{w}</p>)}
@@ -1437,6 +1711,8 @@ export default function AgendaCriacao() {
               // scroll-snap suave; no lg vira grade de 7 sem scroll.
               : "flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth lg:grid lg:grid-cols-7 lg:gap-2 lg:overflow-visible lg:pb-0",
             view === "mes" && mesModo === "calendario" && "hidden lg:hidden",
+            // Celular usa a lista de cartões acima (09/11/2026).
+            "max-lg:hidden",
           )}>
             {days.map((d, i) => {
               const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const criaDay = criaPostsByDay.get(iso) ?? []; const dayMats = materialsByDay.get(iso) ?? [];
