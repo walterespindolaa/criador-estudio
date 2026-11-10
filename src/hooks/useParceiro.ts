@@ -108,6 +108,8 @@ export type CardDaFila = {
   capa: string | null;
   /** A social mídia marcou como prioridade (15/10/2026). Vem primeiro na fila. */
   urgente?: boolean;
+  /** Motivo quando o parceiro sinalizou pausa esperando material ou briefing (09/11/2026). */
+  impedimento?: string | null;
 };
 
 /** Uma peça já entregue, do jeito que `parceiro_entregues()` devolve. */
@@ -191,6 +193,8 @@ export type CardAberto = {
    *  o ponto exato da arte sobre o qual o recado foi escrito. */
   /** Prioridade marcada pela social mídia: faixa vermelha no topo do card. */
   urgente?: boolean;
+  /** Motivo de pausa sinalizado pelo parceiro (09/11/2026). */
+  impedimento?: string | null;
   comentarios: {
     id: string; texto: string; papel: string; em: string;
     midia_indice?: number | null; ancora_x?: number | null;
@@ -231,13 +235,23 @@ export function useFilaDoParceiro() {
     enabled: !!user,
     ...SINCRONIA,
     queryFn: async () => {
-      const { data, error } = await sbRpc("parceiro_minha_fila");
+      const [{ data, error }, { data: impData }] = await Promise.all([
+        sbRpc("parceiro_minha_fila"),
+        sbRpc("parceiro_meus_impedimentos").catch(() => ({ data: null })),
+      ]);
       if (error) {
         // Migration ainda não rodou: fila vazia em vez de tela quebrada.
         if (aindaNaoExisteNoBanco(error.message)) return [];
         throw error;
       }
-      return (data ?? []) as CardDaFila[];
+      const mapaImp = new Map<string, string>();
+      for (const r of (impData ?? []) as { post_id: string; impedimento: string }[]) {
+        if (r?.post_id && r?.impedimento) mapaImp.set(r.post_id, r.impedimento);
+      }
+      return ((data ?? []) as CardDaFila[]).map((c) => ({
+        ...c,
+        impedimento: c.impedimento ?? mapaImp.get(c.post_id) ?? null,
+      }));
     },
   });
 }
@@ -343,7 +357,9 @@ export function useAcoesDoParceiro(postId: string | null) {
   const marcar = useMutation({
     // Entregar aceita o link da versão final: é o antídoto do "qual arquivo é
     // o final?" que apareceu em toda pesquisa de fluxo com freelancer.
-    mutationFn: async (v: { status: "em_producao" | "entregue"; link?: string }) => {
+    // Walter e Agatha, 09/11/2026: também aceita 'aguardando' pra devolver o
+    // post pra coluna Novo quando pausar pra priorizar outro.
+    mutationFn: async (v: { status: "aguardando" | "em_producao" | "entregue"; link?: string }) => {
       const { error } = await sbRpc("parceiro_marcar", {
         _post_id: postId, _status: v.status, _link: v.link?.trim() || null,
       });
@@ -354,9 +370,33 @@ export function useAcoesDoParceiro(postId: string | null) {
       invalidar();
       toast.success(status === "entregue"
         ? "Entregue! A social mídia recebeu o aviso."
+        : status === "aguardando"
+        ? "Post devolvido para Novo."
         : "Marcado como em produção.");
     },
     onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui atualizar.")),
+  });
+
+  /* SINALIZAR PAUSA OU IMPEDIMENTO (Walter e Agatha, 09/11/2026: "mostrar que
+     está com algum impedimento, esperando as fotos"). Fica visível no card pros
+     dois lados e avisa a social mídia na conversa. */
+  const impedimento = useMutation({
+    mutationFn: async (motivo: string | null) => {
+      const limpo = motivo?.trim() || null;
+      const { error } = await sbRpc("parceiro_impedimento", {
+        _post_id: postId, _motivo: limpo,
+      });
+      if (error) throw error;
+      return limpo;
+    },
+    onSuccess: (m) => {
+      invalidar();
+      void qc.invalidateQueries({ queryKey: ["pecas-com-parceiros"] });
+      toast.success(m
+        ? "Pausa registrada. A social mídia foi avisada."
+        : "Impedimento resolvido.");
+    },
+    onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui atualizar o impedimento.")),
   });
 
   const comentar = useMutation({
@@ -468,7 +508,7 @@ export function useAcoesDoParceiro(postId: string | null) {
     onError: (e: Error) => toast.error(mensagemHumana(e, "Não consegui remover o arquivo.")),
   });
 
-  return { marcar, comentar, responderPrazo, anexar, remover };
+  return { marcar, impedimento, comentar, responderPrazo, anexar, remover };
 }
 
 /* ── CACHÊS (fase 3) ─────────────────────────────────────────────────────── */
@@ -1076,6 +1116,8 @@ export type PecaExterna = {
    *  ajuste e a peça sai de "Pra você revisar" até o parceiro entregar de novo
    *  ou o cliente pedir outro ajuste. */
   revisao_assumida_em?: string | null;
+  /** Motivo de pausa sinalizado pelo parceiro quando está esperando material (09/11/2026). */
+  producao_impedimento?: string | null;
 };
 
 /** Tudo que está na mão de parceiros: a matéria-prima do painel "Com
@@ -1106,10 +1148,10 @@ export function usePecasComParceiros(temParceiros: boolean) {
         .is("deleted_at", null)
         .order("prazo_producao", { ascending: true, nullsFirst: false })
         .limit(300);
-      // `urgente` (15/10/2026): se a coluna ainda não existir, busca sem ela
-      // em vez de esvaziar o painel inteiro.
-      let { data, error } = await buscar(`${COLUNAS}, urgente, revisao_assumida_em`);
-      if (error && /urgente|revisao_assumida_em/i.test(error.message ?? "")) ({ data, error } = await buscar(COLUNAS));
+      // `urgente` (15/10/2026) e `producao_impedimento` (09/11/2026): se a coluna
+      // ainda não existir, busca sem ela em vez de esvaziar o painel inteiro.
+      let { data, error } = await buscar(`${COLUNAS}, urgente, revisao_assumida_em, producao_impedimento`);
+      if (error && /urgente|revisao_assumida_em|producao_impedimento/i.test(error.message ?? "")) ({ data, error } = await buscar(COLUNAS));
       if (error) {
         if (aindaNaoExisteNoBanco(error.message)) return [];
         throw error;

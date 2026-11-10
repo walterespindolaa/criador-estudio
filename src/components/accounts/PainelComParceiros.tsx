@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { AlertCircle, AlertTriangle, CalendarDays, Check, CheckCircle2, Clock, KanbanSquare, List, Loader2, MessageCircle, Send, Users, Wallet } from "lucide-react";
+import { AlertCircle, AlertTriangle, CalendarDays, Check, CheckCircle2, Clock, KanbanSquare, List, Loader2, MessageCircle, PauseCircle, Send, Users, Wallet } from "lucide-react";
 import { CardAbertoDialog } from "@/pages/app/MinhasDemandas";
 import { ManagerCalendar } from "@/components/accounts/ManagerCalendar";
 import { cn } from "@/lib/utils";
@@ -232,6 +232,12 @@ function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
           {p.producao_status && ETAPA[p.producao_status] && (
             <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", ETAPA[p.producao_status].cls)}>
               {ETAPA[p.producao_status].txt}
+            </span>
+          )}
+          {p.producao_impedimento && !apagado && p.producao_status !== "entregue" && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 max-w-full truncate">
+              <PauseCircle className="h-3 w-3 shrink-0 text-amber-700" />
+              <span className="truncate">Pausado: {p.producao_impedimento}</span>
             </span>
           )}
           <ChipTipo p={p} />
@@ -762,6 +768,12 @@ export function PainelComParceiros({ clientes }: {
           {p.producao_status && ETAPA[p.producao_status] && (
             <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", ETAPA[p.producao_status].cls)}>
               {ETAPA[p.producao_status].txt}
+            </span>
+          )}
+          {p.producao_impedimento && p.producao_status !== "entregue" && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 max-w-full truncate">
+              <PauseCircle className="h-3 w-3 shrink-0 text-amber-700" />
+              <span className="truncate">Pausado: {p.producao_impedimento}</span>
             </span>
           )}
           {p.prazo_status === "proposto" && (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Clock, Paperclip } from "lucide-react";
+import { ChevronDown, Clock, Paperclip } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { brlReais } from "@/lib/money";
 import { Card } from "@/components/ui/card";
@@ -38,6 +38,11 @@ function rotuloPrazo(prazo: string | null, hoje: string) {
 export function MateriaisDoParceiro({ hoje, soAgencia }: { hoje: string; soAgencia?: string | null }) {
   const { data = [] } = useMateriaisDoParceiro();
   const [aberto, setAberto] = useState<string | null>(null);
+  /* MATERIAIS ENTREGUES RECOLHIDOS NO TOPO (Walter e Agatha, 09/11/2026: "mesmo
+     eu tendo finalizado, eles ficam sempre ali no meu topo"). Quando já estão
+     entregues, ficam recolhidos num botão discreto pra não empurrar os posts
+     do dia pra baixo no celular. */
+  const [verEntregues, setVerEntregues] = useState(false);
   const [params, setParams] = useSearchParams();
 
   useEffect(() => {
@@ -97,11 +102,22 @@ export function MateriaisDoParceiro({ hoje, soAgencia }: { hoje: string; soAgenc
               {abertos.length} na mão
             </span>
             <span className="text-[11.5px] font-body text-muted-foreground hidden sm:inline">apresentação, flyer, cartão e outras peças fora do feed</span>
+            {entregues.length > 0 && (
+              <button type="button" onClick={() => setVerEntregues((v) => !v)}
+                className="ml-auto inline-flex items-center gap-1 text-[12px] font-body font-bold text-primary hover:underline">
+                <span>
+                  {verEntregues ? "Recolher" : `Ver ${entregues.length} ${entregues.length === 1 ? "entregue" : "entregues"}`}
+                </span>
+                <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", verEntregues && "rotate-180")} />
+              </button>
+            )}
           </div>
-          <Card className="rounded-2xl border-border overflow-hidden divide-y divide-border">
-            {abertos.map(linha)}
-            {entregues.map(linha)}
-          </Card>
+          {(abertos.length > 0 || verEntregues) && (
+            <Card className="rounded-2xl border-border overflow-hidden divide-y divide-border">
+              {abertos.map(linha)}
+              {verEntregues && entregues.map(linha)}
+            </Card>
+          )}
         </section>
       )}
       <MaterialAbertoDialog materialId={aberto} aoFechar={() => setAberto(null)} />

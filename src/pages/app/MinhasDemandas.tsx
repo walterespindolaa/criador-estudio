@@ -97,6 +97,14 @@ const SeloUrgente = () => (
   </span>
 );
 
+/** Selo âmbar de pausa esperando material ou briefing (Walter e Agatha, 09/11/2026). */
+const SeloImpedimento = ({ motivo }: { motivo: string }) => (
+  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[11px] font-bold px-2 py-0.5 max-w-full">
+    <PauseCircle className="h-3 w-3 shrink-0 text-amber-700" strokeWidth={2.5} />
+    <span className="truncate">Pausado: {motivo}</span>
+  </span>
+);
+
 const EstadoPill = ({ s }: { s: CardDaFila["producao_status"] }) => (
   <span className={cn("shrink-0 text-[12px] font-bold px-3 py-1.5 rounded-full",
     s === "aguardando" && "bg-foreground text-background",
@@ -423,6 +431,7 @@ export default function MinhasDemandas() {
                         <span className="block font-display font-bold text-[14.5px] text-foreground leading-tight truncate">{c.titulo || "Sem título"}</span>
                         <span className="flex items-center gap-2 mt-1 flex-wrap">
                           {c.urgente && <SeloUrgente />}
+                          {c.impedimento && <SeloImpedimento motivo={c.impedimento} />}
                           <span className="text-xs font-body font-semibold text-foreground/85 truncate">{c.cliente_nome}</span>
                           <span className="text-[12px] font-body text-muted-foreground">via {c.agencia_nome}</span>
                           {c.formato && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[c.formato] ?? c.formato}</span>}
@@ -857,6 +866,10 @@ function CartaoQuadro({ c, hoje, meta, onOpen }: {
   const atrasado = c.prazo_producao && c.prazo_producao < hoje;
   const total = meta?.checklist.length ?? 0;
   const feitos = meta?.checklist.filter((i) => i.done).length ?? 0;
+  const { marcar, impedimento } = useAcoesDoParceiro(c.post_id);
+  const [abrindoPausa, setAbrindoPausa] = useState(false);
+  const [motivoPausa, setMotivoPausa] = useState(c.impedimento ?? "Aguardando fotos da cliente");
+  const ocupado = marcar.isPending || impedimento.isPending;
   /* NÃO É <button> (Walter, 09/09/2026): o @hello-pangea/dnd aborta o início
      do arraste quando o nó do Draggable é um elemento interativo, e o cartão
      inteiro era um botão. Resultado: no quadro do parceiro nada arrastava, nem
@@ -886,6 +899,15 @@ function CartaoQuadro({ c, hoje, meta, onOpen }: {
       </span>
       {c.urgente && <span className="block mb-1.5"><SeloUrgente /></span>}
       <span className="block font-display font-bold text-[13px] leading-tight">{c.titulo || "Sem título"}</span>
+      {c.impedimento && (
+        <span className="mt-1.5 p-2 rounded-lg bg-amber-50 border border-amber-200 text-[11.5px] font-body flex items-center justify-between gap-2">
+          <span className="text-amber-800 font-bold flex items-center gap-1 min-w-0">
+            <span className="shrink-0">⏸</span>
+            <span className="truncate">{c.impedimento}</span>
+          </span>
+          <span className="text-[10px] text-amber-600 font-semibold shrink-0">Agência avisada</span>
+        </span>
+      )}
       <span className="flex items-center gap-1.5 mt-1.5 flex-wrap">
         {c.formato && <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{FORMATO[c.formato] ?? c.formato}</span>}
         {c.prazo_producao && (
@@ -903,6 +925,67 @@ function CartaoQuadro({ c, hoje, meta, onOpen }: {
             <span className="block h-full bg-green-500" style={{ width: `${Math.round((feitos / total) * 100)}%` }} />
           </span>
         </>
+      )}
+      {/* PAUSAR E VOLTAR PRO NOVO (Walter e Agatha, 09/11/2026, mockup aprovado):
+          quando o post está em Fazendo, permite devolver pra Novo se pausou
+          pra priorizar outro, ou sinalizar impedimento esperando fotos/briefing. */}
+      {c.producao_status === "em_producao" && (
+        <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}
+          className="mt-2 pt-2 border-t border-border/80 space-y-2">
+          {abrindoPausa && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-2 space-y-1.5">
+              <div className="flex flex-wrap gap-1">
+                {["Aguardando fotos da cliente", "Aguardando briefing", "Aguardando aprovação de copy"].map((sug) => (
+                  <button key={sug} type="button" onClick={() => setMotivoPausa(sug)}
+                    className={cn("text-[10.5px] font-body font-bold px-2 py-0.5 rounded-full border transition-colors",
+                      motivoPausa === sug ? "bg-amber-700 text-white border-amber-700" : "bg-white text-amber-900 border-amber-200")}>
+                    {sug}
+                  </button>
+                ))}
+              </div>
+              <input type="text" value={motivoPausa} onChange={(e) => setMotivoPausa(e.target.value)}
+                placeholder="Ex.: Aguardando fotos da cliente"
+                className="w-full rounded-md border border-amber-200 bg-white px-2 py-1 text-[11.5px] font-body" />
+              <div className="flex items-center gap-1.5">
+                <button type="button" disabled={ocupado || !motivoPausa.trim()}
+                  onClick={() => { impedimento.mutate(motivoPausa.trim()); setAbrindoPausa(false); }}
+                  className="flex-1 py-1 px-2 rounded-md bg-amber-700 text-white text-[11px] font-bold disabled:opacity-50">
+                  Avisar agência
+                </button>
+                {c.impedimento && (
+                  <button type="button" disabled={ocupado}
+                    onClick={() => { impedimento.mutate(null); setAbrindoPausa(false); }}
+                    className="py-1 px-2 rounded-md border border-amber-300 bg-white text-amber-900 text-[11px] font-bold">
+                    Destravar
+                  </button>
+                )}
+                <button type="button" onClick={() => setAbrindoPausa(false)}
+                  className="py-1 px-2 text-[11px] font-body text-muted-foreground">
+                  Fechar
+                </button>
+              </div>
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-1.5">
+            <button type="button" disabled={ocupado}
+              onClick={() => {
+                if (c.impedimento && !abrindoPausa) impedimento.mutate(null);
+                else setAbrindoPausa((v) => !v);
+              }}
+              className="flex-1 py-1.5 px-2 rounded-lg border border-border bg-background text-[11px] font-bold text-foreground/85 hover:bg-muted/60 transition-colors text-center">
+              {c.impedimento ? "▶ Destravar" : "⏸ Pausar / Esperando"}
+            </button>
+            <button type="button" disabled={ocupado}
+              onClick={() => marcar.mutate({ status: "aguardando" })}
+              className="py-1.5 px-2 rounded-lg border border-border bg-background text-[11px] font-bold text-muted-foreground hover:text-foreground transition-colors text-center">
+              ↩ Voltar p/ Novo
+            </button>
+            <button type="button" onClick={onOpen}
+              className="py-1.5 px-2.5 rounded-lg bg-[#EA4918] text-white text-[11px] font-bold hover:bg-[#d83f10] transition-colors text-center">
+              Entregar
+            </button>
+          </div>
+        </div>
       )}
       </span>
     </div>
@@ -1711,7 +1794,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { data: card, isLoading } = useCardDoParceiro(postId);
-  const { marcar, comentar, responderPrazo, anexar, remover } = useAcoesDoParceiro(postId);
+  const { marcar, impedimento, comentar, responderPrazo, anexar, remover } = useAcoesDoParceiro(postId);
   const marcarUrgente = useMarcarUrgente();
   /* O que o parceiro ainda pode tirar do card (a entrega DELE nesta rodada,
      antes de marcar entregue). No modo agência não se aplica. */
@@ -1840,6 +1923,8 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
   const salvarMeta = useSalvarCardMeta();
   const minhaMeta = postId ? metasCards[postId] : undefined;
   const [novoItem, setNovoItem] = useState("");
+  const [pausandoCard, setPausandoCard] = useState(false);
+  const [motivoPausaCard, setMotivoPausaCard] = useState("");
 
   /* RASCUNHO É DO CARD, NÃO DA JANELA (Agatha, 02/10/2026: "quando coloco um
      link num card, todos os outros que eu abro já estão com esse link").
@@ -1852,6 +1937,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
     setTexto(""); setPropondo(false); setDataProposta(""); setMotivoProposta("");
     setEntregando(false); setLinkEntrega(""); setLinkPrevia("");
     setFichaAberta(null); setPrazoAberto(false); setVendoHistorico(false); setNovoItem("");
+    setPausandoCard(false); setMotivoPausaCard("");
   }, [postId]);
 
   const enviar = async () => {
@@ -1908,6 +1994,22 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     Tirar urgência
                   </button>
                 )}
+              </div>
+            )}
+            {/* IMPEDIMENTO / PAUSA (Walter e Agatha, 09/11/2026): faixa âmbar
+                visível para o parceiro e para a social mídia quando a produção
+                está aguardando fotos, briefing ou insumo. */}
+            {card.impedimento && (
+              <div className="shrink-0 bg-amber-500 text-amber-950 px-5 py-2 flex items-center gap-2 text-[13px] font-body font-bold">
+                <PauseCircle className="h-4 w-4 shrink-0" strokeWidth={2.6} />
+                <span className="flex-1 min-w-0 truncate">
+                  Pausado / Impedimento: {card.impedimento}
+                </span>
+                <button type="button" disabled={impedimento.isPending}
+                  onClick={() => impedimento.mutate(null)}
+                  className="shrink-0 rounded-full bg-black/15 hover:bg-black/25 text-amber-950 px-3 py-1 text-[12px] font-bold transition-colors disabled:opacity-60">
+                  {agencia ? "Resolver impedimento" : "Retomar produção"}
+                </button>
               </div>
             )}
             {/* A CAPA DA MARCA. Era uma faixa chapada na cor do cliente, e
@@ -2599,6 +2701,52 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                             onClick={() => marcar.mutate({ status: "em_producao" })}>
                             Estou fazendo
                           </Button>
+                        )}
+                        {card.producao_status === "em_producao" && (
+                          <>
+                            <Button variant="outline" className="rounded-xl bg-card border-amber-300 text-amber-900 hover:bg-amber-50"
+                              disabled={impedimento.isPending}
+                              onClick={() => {
+                                if (card.impedimento) impedimento.mutate(null);
+                                else setPausandoCard((v) => !v);
+                              }}>
+                              <PauseCircle className="h-4 w-4 mr-1.5" />
+                              {card.impedimento ? "Retomar produção" : "Pausar / Esperando"}
+                            </Button>
+                            <Button variant="outline" className="rounded-xl bg-card text-muted-foreground hover:text-foreground"
+                              disabled={marcar.isPending}
+                              onClick={() => marcar.mutate({ status: "aguardando" })}>
+                              <RotateCcw className="h-4 w-4 mr-1.5" />
+                              Voltar para Novo
+                            </Button>
+                          </>
+                        )}
+                        {pausandoCard && !card.impedimento && (
+                          <div className="w-full rounded-xl border border-amber-300 bg-amber-50/90 p-3 space-y-2 mt-1">
+                            <p className="text-[11px] font-body font-extrabold uppercase tracking-wider text-amber-900">
+                              O que está faltando? (avisa a social mídia na hora)
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {["Aguardando fotos da cliente", "Aguardando briefing", "Aguardando aprovação de copy"].map((sug) => (
+                                <button key={sug} type="button" disabled={impedimento.isPending}
+                                  onClick={() => { impedimento.mutate(sug); setPausandoCard(false); setMotivoPausaCard(""); }}
+                                  className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-body font-bold text-amber-950 hover:bg-amber-100 transition-colors">
+                                  {sug}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="flex gap-1.5">
+                              <input type="text" value={motivoPausaCard}
+                                onChange={(e) => setMotivoPausaCard(e.target.value)}
+                                placeholder="Ou digite o motivo..."
+                                className="flex-1 min-w-0 rounded-lg border border-amber-300 bg-white px-2.5 py-1.5 text-[12px] font-body" />
+                              <Button size="sm" className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white shrink-0"
+                                disabled={!motivoPausaCard.trim() || impedimento.isPending}
+                                onClick={() => { impedimento.mutate(motivoPausaCard.trim()); setPausandoCard(false); setMotivoPausaCard(""); }}>
+                                Avisar
+                              </Button>
+                            </div>
+                          </div>
                         )}
                       </div>
                     ) : (
