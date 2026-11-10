@@ -237,7 +237,7 @@ export function useFilaDoParceiro() {
     queryFn: async () => {
       const [{ data, error }, { data: impData }] = await Promise.all([
         sbRpc("parceiro_minha_fila"),
-        sbRpc("parceiro_meus_impedimentos").catch(() => ({ data: null })),
+        Promise.resolve(sbRpc("parceiro_meus_impedimentos")).catch(() => ({ data: null })),
       ]);
       if (error) {
         // Migration ainda não rodou: fila vazia em vez de tela quebrada.
