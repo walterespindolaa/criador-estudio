@@ -383,6 +383,9 @@ export default function AgendaCriacao() {
   const ehCelular = useIsMobile();
   const [calendarioCel, setCalendarioCel] = useState(false);
   const verCalendario = ehCelular && calendarioCel;
+  // Dia tocado no calendário do celular: o cartão dele aparece embaixo, com os
+  // mesmos checks e botões da semana (Walter, 11/11/2026).
+  const [diaCal, setDiaCal] = useState<string | null>(null);
   const trocarMesModo = (m: "calendario" | "grade") => {
     setMesModo(m);
     try { localStorage.setItem("agenda_mes_modo", m); } catch { /* sem storage */ }
@@ -1480,7 +1483,7 @@ export default function AgendaCriacao() {
             {ehCelular && (
               <button type="button" aria-label={verCalendario ? "Voltar pros cartões" : "Ver em calendário"}
                 aria-pressed={verCalendario}
-                onClick={() => { if (!verCalendario) setViewPersist("mes"); setCalendarioCel((v) => !v); }}
+                onClick={() => { if (!verCalendario) { setViewPersist("mes"); setDiaCal(today); } setCalendarioCel((v) => !v); }}
                 className={cn("grid h-8 w-8 place-items-center rounded-lg border transition-colors",
                   verCalendario ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground")}>
                 <CalendarDays className="h-4 w-4" />
@@ -1626,6 +1629,34 @@ export default function AgendaCriacao() {
               {WD.map((w) => <p key={w} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{w}</p>)}
             </div>
           )}
+          {/* MÊS NO CELULAR (v2): calendário compacto, uma barrinha por item na cor
+              do cliente (apagada quando já foi feito). Tocar no dia abre a lista
+              dele, onde cada item tem o check e o "Mudar dia". */}
+          {verCalendario && (
+            <div>
+              <div className="grid grid-cols-7 mb-1">
+                {WD.map((w) => <p key={w} className="text-center text-[10px] font-body font-semibold uppercase tracking-wider text-muted-foreground">{w.slice(0, 1)}</p>)}
+              </div>
+              <div className="grid grid-cols-7 overflow-hidden rounded-xl border-l border-t border-border">
+                {days.map((d) => {
+                  const iso = ymd(d); const fora = d.getMonth() !== curMonth; const hoje = iso === today;
+                  const cores = coresDoDia(iso);
+                  return (
+                    <button key={iso} type="button" onClick={() => setDiaCal(iso)} aria-label={`Ver o dia ${d.getDate()}`} aria-pressed={iso === diaCal}
+                      className={cn("flex min-h-[64px] min-w-0 flex-col gap-1 border-b border-r border-border p-1 text-left", fora ? "bg-muted/30" : "bg-card", iso === diaCal && "ring-2 ring-inset ring-primary")}>
+                      <span className={cn("mx-auto grid h-6 min-w-6 place-items-center rounded-full px-1 text-[12px] font-display font-bold",
+                        hoje ? "bg-primary text-primary-foreground" : fora ? "text-muted-foreground/50" : "text-foreground")}>{d.getDate()}</span>
+                      <span className="flex flex-col gap-[3px]">
+                        {cores.slice(0, 3).map((c, i) => <i key={i} className={cn("block h-[5px] rounded-full", c.done && "opacity-35")} style={{ background: c.cor }} />)}
+                      </span>
+                      {cores.length > 3 && <span className="text-center text-[9.5px] font-body font-bold text-muted-foreground">+{cores.length - 3}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-center text-[11.5px] font-body text-muted-foreground">Toque num dia pra ver o que tem nele{diaCal && <>{" · "}<button type="button" className="font-semibold text-primary underline-offset-2 hover:underline" onClick={() => { const [y, m, dd] = diaCal.split("-").map(Number); setWeekStart(new Date(y, m - 1, dd)); setViewPersist("semana"); setCalendarioCel(false); }}>abrir a semana dele</button></>}</p>
+            </div>
+          )}
           {/* O "hidden" vai POR ÚLTIMO (Walter, 06/11/2026: no celular a grade aparecia
               embaixo do calendário). O cn() usa tailwind-merge, que entre classes de
               display fica com a última: com o "hidden" antes, o "grid"/"flex" vencia e a
@@ -1641,10 +1672,13 @@ export default function AgendaCriacao() {
               // scroll-snap suave; no lg vira grade de 7 sem scroll.
               : "flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth lg:grid lg:grid-cols-7 lg:gap-2 lg:overflow-visible lg:pb-0",
             view === "mes" && mesModo === "calendario" && "hidden lg:hidden",
-            verCalendario && "hidden",
+            verCalendario && (diaCal ? "grid grid-cols-1 sm:grid-cols-1 gap-2 mt-3" : "hidden"),
           )}>
             {days.map((d, i) => {
-              const iso = ymd(d); const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const criaDay = criaPostsByDay.get(iso) ?? []; const dayMats = materialsByDay.get(iso) ?? [];
+              const iso = ymd(d);
+              // No calendário do celular só o dia tocado aparece (o mesmo cartão da semana).
+              if (verCalendario && iso !== diaCal) return null;
+              const list = byDay.get(iso) ?? []; const caps = capturesByDay.get(iso) ?? []; const dayTasks = tasksByDay.get(iso) ?? []; const dayPosts = postsByDay.get(iso) ?? []; const criaDay = criaPostsByDay.get(iso) ?? []; const dayMats = materialsByDay.get(iso) ?? [];
               // Aniversário NÃO entra no totalDay: é lembrete, não trabalho do dia. Se
               // entrasse, um dia com dois aniversários e nada pra fazer diria "Ver todos (2)".
               const dayBirthdays = birthdaysByDay.get(iso) ?? [];
@@ -1656,7 +1690,11 @@ export default function AgendaCriacao() {
               const dayItems = buildDayItems(caps, dayTasks, list, dayPosts, dayMats, dayOrders[iso]);
               const outOfMonth = view === "mes" && d.getMonth() !== curMonth;
               // No mês mostramos o dia da semana real do dia (WD[getDay]); na semana idem.
-              const showWeekday = view === "semana";
+              /* Dia da semana também nos cartões do MÊS (Walter, 09/11/2026: "colocar o
+                 dia pequeno ao lado da data, pra facilitar a visualização"). No
+                 computador o mês é calendário com a linha de Dom a Sáb em cima e não
+                 passa por aqui. */
+              const showWeekday = true;
               // Classe da coluna do dia (a mesma na semana e no mês; só o tamanho muda).
               const colCls = cn("rounded-xl border p-2.5 flex flex-col gap-1.5 transition-shadow",
                 gridLayout ? "min-h-[110px] min-w-0 overflow-hidden" : "w-[85vw] max-w-[380px] shrink-0 snap-start lg:w-auto lg:max-w-none lg:snap-align-none min-h-[240px] lg:min-h-[280px]",
@@ -2187,34 +2225,6 @@ export default function AgendaCriacao() {
               );
             })}
           </div>
-          {/* MÊS NO CELULAR (v2): calendário compacto, uma barrinha por item na cor
-              do cliente (apagada quando já foi feito). Tocar no dia abre a lista
-              dele, onde cada item tem o check e o "Mudar dia". */}
-          {verCalendario && (
-            <div>
-              <div className="grid grid-cols-7 mb-1">
-                {WD.map((w) => <p key={w} className="text-center text-[10px] font-body font-semibold uppercase tracking-wider text-muted-foreground">{w.slice(0, 1)}</p>)}
-              </div>
-              <div className="grid grid-cols-7 overflow-hidden rounded-xl border-l border-t border-border">
-                {days.map((d) => {
-                  const iso = ymd(d); const fora = d.getMonth() !== curMonth; const hoje = iso === today;
-                  const cores = coresDoDia(iso);
-                  return (
-                    <button key={iso} type="button" onClick={() => { setWeekStart(d); setViewPersist("semana"); setCalendarioCel(false); }} aria-label={`Ver a semana do dia ${d.getDate()}`}
-                      className={cn("flex min-h-[64px] min-w-0 flex-col gap-1 border-b border-r border-border p-1 text-left", fora ? "bg-muted/30" : "bg-card")}>
-                      <span className={cn("mx-auto grid h-6 min-w-6 place-items-center rounded-full px-1 text-[12px] font-display font-bold",
-                        hoje ? "bg-primary text-primary-foreground" : fora ? "text-muted-foreground/50" : "text-foreground")}>{d.getDate()}</span>
-                      <span className="flex flex-col gap-[3px]">
-                        {cores.slice(0, 3).map((c, i) => <i key={i} className={cn("block h-[5px] rounded-full", c.done && "opacity-35")} style={{ background: c.cor }} />)}
-                      </span>
-                      {cores.length > 3 && <span className="text-center text-[9.5px] font-body font-bold text-muted-foreground">+{cores.length - 3}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="mt-2 text-center text-[11.5px] font-body text-muted-foreground">Toque num dia pra abrir a semana dele</p>
-            </div>
-          )}
         </DragDropContext>
       </div>
 
