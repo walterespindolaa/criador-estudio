@@ -29,6 +29,8 @@ import ParceiroHome from "@/pages/socialmidia/ParceiroHome";
 import { BlocoMinhasDemandas } from "@/components/accounts/BlocoMinhasDemandas";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useMyTeamPermissions } from "@/hooks/useTeam";
+import { CompartilharSemana } from "@/components/accounts/CompartilharSemana";
+import { hojeBR, parseDateOnly } from "@/lib/date-br";
 
 // Card do painel. A cor é a do módulo pra onde ele leva: a pessoa aprende
 // a cor uma vez e depois navega no automático, sem ler.
@@ -243,6 +245,19 @@ function ManagerHomeSocialMidia() {
     .sort((a, b) =>
       new Date(b.approval_updated_at ?? b.created_at).getTime() - new Date(a.approval_updated_at ?? a.created_at).getTime())
     .slice(0, 5);
+
+  // "Compartilhar minha semana": posts aprovados de segunda até hoje e em quantos
+  // clientes. Só números; a imagem nunca leva nome de cliente.
+  const semana = (() => {
+    const hoje = parseDateOnly(hojeBR());
+    const seg = new Date(hoje); seg.setDate(hoje.getDate() - ((hoje.getDay() + 6) % 7));
+    const feitos = allExtPosts.filter((p) => p.approval_status === "aprovado" && !!p.approval_updated_at && new Date(p.approval_updated_at) >= seg);
+    const MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+    const periodo = seg.getMonth() === hoje.getMonth()
+      ? (seg.getDate() === hoje.getDate() ? `${hoje.getDate()} de ${MES[hoje.getMonth()]}` : `${seg.getDate()} a ${hoje.getDate()} de ${MES[hoje.getMonth()]}`)
+      : `${seg.getDate()} de ${MES[seg.getMonth()]} a ${hoje.getDate()} de ${MES[hoje.getMonth()]}`;
+    return { aprovados: feitos.length, clientes: new Set(feitos.map((p) => p.external_client_id)).size, periodo };
+  })();
 
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = "";
@@ -477,6 +492,8 @@ function ManagerHomeSocialMidia() {
         </div>
       </TooltipProvider>
       )}
+
+      <CompartilharSemana aprovados={semana.aprovados} clientes={semana.clientes} periodo={semana.periodo} />
 
       {/* ═══ APROVAÇÕES RECENTES ═══ (3ª seção)
           Agrega os posts de aprovação por link de TODOS os clientes do gestor
