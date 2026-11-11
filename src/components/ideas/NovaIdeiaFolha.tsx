@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Folder } from "lucide-react";
 import { sanitizeText } from "@/lib/sanitize";
+import { VoiceInput } from "@/components/shared/VoiceInput";
 import { BlocoDeNotas, BotaoFolha, CampoDaFolha, Etiqueta, LINHA, MAO, ehSalvar } from "@/components/folha/BlocoDeNotas";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -56,21 +57,32 @@ export function topicosEmHtml(topicos: string[]): string | null {
 }
 
 export function NovaIdeiaFolha(props: Props) {
+  // IDEIA POR VOZ (Walter, 11/11/2026; mockup aprovado). A pessoa toca em
+  // "Falar", diz a ideia do jeito que vier e o texto cai no título. O `n` muda
+  // a cada fala pra mesma frase dita duas vezes entrar duas vezes.
+  const [fala, setFala] = useState<{ texto: string; n: number } | null>(null);
+  useEffect(() => { if (!props.open) setFala(null); }, [props.open]);
   return (
     <BlocoDeNotas
+      acao={props.editando ? undefined : <VoiceInput comRotulo title="Falar a ideia" onTranscript={(t) => setFala({ texto: t, n: Date.now() })} />}
       open={props.open}
       onOpenChange={props.onOpenChange}
       icone="💡"
       rotulo={props.editando ? "Editar ideia" : "Nova ideia"}
       tituloAcessivel={props.editando ? "Editar ideia" : "Nova ideia"}
     >
-      {props.open && <Conteudo {...props} />}
+      {props.open && <Conteudo {...props} fala={fala} />}
     </BlocoDeNotas>
   );
 }
 
-function Conteudo({ editando, inicial, pilares, pastas, totalIdeias, onVerTodas, salvando, onGuardar }: Props) {
+function Conteudo({ editando, inicial, pilares, pastas, totalIdeias, onVerTodas, salvando, onGuardar, fala }: Props & { fala: { texto: string; n: number } | null }) {
   const [titulo, setTitulo] = useState(inicial?.titulo ?? "");
+  // O que foi falado entra no fim do título, respeitando o limite.
+  useEffect(() => {
+    if (!fala?.texto) return;
+    setTitulo((t) => `${t ? `${t.trimEnd()} ` : ""}${fala.texto}`.replace(/\n/g, " ").slice(0, LIMITE_TITULO));
+  }, [fala]);
   const [topicos, setTopicos] = useState<string[]>([""]);
   const [pilarId, setPilarId] = useState<string | null>(inicial?.pilarId ?? null);
   const [pastaId, setPastaId] = useState<string | null>(inicial?.pastaId ?? null);

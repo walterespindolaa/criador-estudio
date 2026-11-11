@@ -2205,6 +2205,31 @@ const LinkInBio = () => {
                   </p>
                 )}
               </Card>
+              {/* COMO PÔR O LINK NO STORY (Walter, 11/11/2026; mockup aprovado).
+                  Muita gente tem o link e não sabe colar no story. Três passos
+                  e um botão que já copia. Só orienta: o Cria não posta nada. */}
+              {publicPath && (
+                <Card className="p-4 md:p-5 rounded-2xl border-border">
+                  <Label className="text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground/80">
+                    Como pôr esse link no story
+                  </Label>
+                  <ol className="mt-3 space-y-2.5">
+                    {[
+                      <>Toque em <b>Copiar link pro story</b>. O endereço já vai pronto.</>,
+                      <>No Instagram, abra o story e toque no ícone de figurinhas.</>,
+                      <>Escolha a figurinha <b>Link</b> e cole.</>,
+                    ].map((t, i) => (
+                      <li key={i} className="flex items-start gap-2.5">
+                        <span className="grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full border-2 border-foreground bg-[#FFCF03] text-[13px] font-body font-extrabold text-[#1D1B18]">{i + 1}</span>
+                        <span className="pt-0.5 text-sm font-body text-foreground leading-snug">{t}</span>
+                      </li>
+                    ))}
+                  </ol>
+                  <Button className="mt-3.5 h-11 w-full rounded-full" onClick={handleCopy}>
+                    <Copy className="h-4 w-4 mr-1.5" /> Copiar link pro story
+                  </Button>
+                </Card>
+              )}
               {/* COMO O LINK APARECE NO WHATSAPP. É a mesma imagem que o
                   WhatsApp recebe, desenhada pelo servidor a partir do que está
                   SALVO e no ar. Por isso só aparece com o endereço salvo e sem

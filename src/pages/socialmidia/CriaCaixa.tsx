@@ -26,6 +26,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 
 const pad0 = (n: number) => String(n).padStart(2, "0");
 import { cn } from "@/lib/utils";
+import { clienteInativo } from "@/lib/cliente-status";
+import { nomeExibidoCliente } from "@/lib/cliente-nome";
 import { mascarar, useValoresOcultos } from "@/hooks/useValoresOcultos";
 import { hojeBR, toISODateBR, parseDateOnly } from "@/lib/date-br";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
@@ -504,6 +506,43 @@ function CaixaInner() {
           </div>
         </div>
       )}
+
+      {/* PRÓXIMAS RENOVAÇÕES (Walter, 11/11/2026; mockup aprovado). A data de
+          renovação ficava só dentro da ficha de cada cliente. Aqui aparecem
+          juntos os contratos que renovam nos próximos 45 dias, do mais perto
+          pro mais longe. Usa a data já cadastrada; sem cliente na janela, some. */}
+      {isPj && show("visao") && (() => {
+        const hojeD = parseDateOnly(todayISO);
+        const prox = clients
+          .filter((c) => !!c.renewal_date && !clienteInativo(c, todayISO))
+          .map((c) => ({ c, dias: Math.round((parseDateOnly(c.renewal_date as string).getTime() - hojeD.getTime()) / 86400000) }))
+          .filter((x) => x.dias >= 0 && x.dias <= 45)
+          .sort((a, b) => a.dias - b.dias);
+        if (prox.length === 0) return null;
+        const quando = (d: number) => (d === 0 ? "renova hoje" : d === 1 ? "renova amanhã" : `renova em ${d} dias`);
+        return (
+          <div className="w-full mb-5 rounded-2xl border border-amber-300/70 bg-amber-50 px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-body text-foreground">
+                <span className="font-bold">{prox.length}</span> {prox.length === 1 ? "contrato renova" : "contratos renovam"} nos próximos 45 dias. O primeiro é{" "}
+                <span className="font-bold">{nomeExibidoCliente(prox[0].c)}</span>{prox[0].dias === 0 ? ", hoje." : prox[0].dias === 1 ? ", amanhã." : `, em ${prox[0].dias} dias.`}
+              </span>
+              <button onClick={() => navigate("/socialmidia/criacaixa/empresa/clientes")}
+                className="text-sm font-display font-bold text-amber-700 shrink-0 hover:underline">Ver clientes</button>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {prox.slice(0, 8).map(({ c, dias }) => (
+                <button key={c.id} onClick={() => navigate(`/socialmidia/clientes/${c.id}/cadastro`)}
+                  className="inline-flex items-center gap-1.5 text-[11.5px] font-body font-semibold px-2.5 py-1 rounded-full border border-border bg-card text-foreground hover:border-amber-400">
+                  <i className="block h-2 w-2 rounded-full" style={{ background: c.color || "#EB4918" }} />
+                  {nomeExibidoCliente(c)} · {quando(dias)}
+                </button>
+              ))}
+              {prox.length > 8 && <span className="text-[11.5px] font-body font-semibold px-2 py-1 text-muted-foreground">+{prox.length - 8}</span>}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ═══════ VISÃO GERAL ═══════ */}
       {show("visao") && (isPj ? (

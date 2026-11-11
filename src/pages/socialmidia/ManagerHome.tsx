@@ -30,6 +30,9 @@ import { BlocoMinhasDemandas } from "@/components/accounts/BlocoMinhasDemandas";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useMyTeamPermissions } from "@/hooks/useTeam";
 import { CompartilharSemana } from "@/components/accounts/CompartilharSemana";
+import { useCaptures } from "@/hooks/useAgenda";
+import { cn } from "@/lib/utils";
+import { useCrmTasks } from "@/hooks/useCrm";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
 
 // Card do painel. A cor é a do módulo pra onde ele leva: a pessoa aprende
@@ -259,6 +262,38 @@ function ManagerHomeSocialMidia() {
     return { aprovados: feitos.length, clientes: new Set(feitos.map((p) => p.external_client_id)).size, periodo };
   })();
 
+  // "Sua semana" (Walter, 11/11/2026; mockup aprovado): de segunda a sexta, o que
+  // tem em cada dia (posts com data, captações e tarefas), sem sair do Início.
+  // É atalho: tocar no dia abre a Agenda. Itens concluídos ou cancelados ficam fora.
+  const { data: capturasSemana = [] } = useCaptures();
+  const { data: tarefasSemana = [] } = useCrmTasks();
+  const diasDaSemana = (() => {
+    const hojeIso = hojeBR();
+    const hoje = parseDateOnly(hojeIso);
+    const seg = new Date(hoje); seg.setDate(hoje.getDate() - ((hoje.getDay() + 6) % 7));
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const ROT = ["Seg", "Ter", "Qua", "Qui", "Sex"];
+    return ROT.map((rot, i) => {
+      const d = new Date(seg); d.setDate(seg.getDate() + i);
+      const dia = iso(d);
+      const itens: { cor: string; texto: string }[] = [];
+      for (const p of allExtPosts) {
+        if (p.scheduled_date !== dia || p.approval_status === "postado") continue;
+        const cli = p.external_client_id ? extClientById.get(p.external_client_id) : undefined;
+        itens.push({ cor: cli?.color || "#EB4918", texto: [p.format || "Post", cli?.name].filter(Boolean).join(" · ") });
+      }
+      for (const c of capturasSemana) {
+        if (c.capture_date !== dia || c.status !== "agendada") continue;
+        itens.push({ cor: "#00A652", texto: ["Gravação", c.capture_time?.slice(0, 5), c.client_name].filter(Boolean).join(" · ") });
+      }
+      for (const t of tarefasSemana) {
+        if (t.due_date !== dia || t.status === "concluida") continue;
+        itens.push({ cor: t.color || "#0061EE", texto: [t.due_time?.slice(0, 5), t.title].filter(Boolean).join(" ") });
+      }
+      return { rot, num: d.getDate(), dia, hoje: dia === hojeIso, itens };
+    });
+  })();
+
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; e.target.value = "";
     if (!file) return;
@@ -351,6 +386,31 @@ function ManagerHomeSocialMidia() {
 
       {/* Demandas de quem também é parceira (19/10/2026): logo abaixo da saudação. */}
       <BlocoMinhasDemandas />
+
+      {/* ═══ SUA SEMANA ═══ faixa de segunda a sexta, acima dos módulos. */}
+      <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Sua semana</h2>
+      <div className="mb-7 flex gap-3 overflow-x-auto pb-1 snap-x md:grid md:grid-cols-5 md:overflow-visible md:pb-0">
+        {diasDaSemana.map((d) => (
+          <button key={d.dia} type="button" onClick={() => navigate("/socialmidia/agenda")} aria-label={`Abrir a agenda. ${d.rot} ${d.num}`}
+            className={cn("min-h-[112px] w-[68vw] max-w-[260px] shrink-0 snap-start rounded-2xl border bg-card p-3.5 text-left transition-shadow hover:shadow-warm-md md:w-auto md:max-w-none",
+              d.hoje ? "border-primary ring-1 ring-primary/30" : "border-border")}>
+            <div className="mb-2 flex items-baseline gap-1.5">
+              <span className={cn("text-[11px] font-body font-bold uppercase tracking-wider", d.hoje ? "text-primary" : "text-muted-foreground")}>{d.rot}</span>
+              <span className="text-xl font-display font-extrabold text-foreground">{d.num}</span>
+              {d.hoje && <span className="ml-auto text-[10px] font-body font-bold uppercase text-primary">Hoje</span>}
+            </div>
+            {d.itens.length === 0
+              ? <p className="text-[12.5px] font-body text-muted-foreground/70">dia livre</p>
+              : d.itens.slice(0, 4).map((it, i) => (
+                <p key={i} className="mt-1 flex items-center gap-1.5 text-[12.5px] font-body font-medium text-foreground">
+                  <i className="block h-2 w-2 shrink-0 rounded-full" style={{ background: it.cor }} />
+                  <span className="truncate">{it.texto}</span>
+                </p>
+              ))}
+            {d.itens.length > 4 && <p className="mt-1 text-[11.5px] font-body font-semibold text-muted-foreground">+{d.itens.length - 4} no dia</p>}
+          </button>
+        ))}
+      </div>
 
       {/* ═══ SEUS MÓDULOS ═══ (1ª seção: quem só quer trabalhar entra direto) */}
       <h2 className="text-sm font-display font-semibold text-muted-foreground uppercase tracking-wider mb-3">Seus módulos</h2>

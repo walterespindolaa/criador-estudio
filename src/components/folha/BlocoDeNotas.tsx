@@ -37,11 +37,13 @@ type Props = {
   tituloAcessivel: string;
   children: React.ReactNode;
   rodape?: React.ReactNode;
+  /** Botão extra ao lado do rótulo (ex.: "Falar" na Nova ideia). */
+  acao?: React.ReactNode;
 };
 
 export function BlocoDeNotas({
   open, onOpenChange, icone, corIcone = "#FFE36B", rotulo, fita = "rgba(255,119,185,.75)",
-  tituloAcessivel, children, rodape,
+  tituloAcessivel, children, rodape, acao,
 }: Props) {
   const hoje = format(new Date(), "EEE, d MMM", { locale: ptBR }).replace(".", "");
   return (
@@ -107,6 +109,7 @@ export function BlocoDeNotas({
               <div className="flex h-8 items-center gap-2 pr-10">
                 <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 text-[12px]" style={{ background: corIcone, borderColor: TINTA }}>{icone}</span>
                 <span className="font-body text-[11.5px] font-bold uppercase tracking-[0.07em] text-[#7A7268]">{rotulo}</span>
+                {acao}
                 <span className="ml-auto text-[20px] leading-none text-[#0061EE]" style={MAO}>{hoje}</span>
               </div>
 

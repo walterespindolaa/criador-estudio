@@ -32,11 +32,14 @@ export function VoiceInput({
   lang = "pt-BR",
   className,
   title = "Falar e transcrever",
+  comRotulo = false,
 }: {
   onTranscript: (text: string) => void;
   lang?: string;
   className?: string;
   title?: string;
+  /** Botão em pílula com o texto "Falar" ao lado do microfone (Nova ideia). */
+  comRotulo?: boolean;
 }) {
   const [listening, setListening] = useState(false);
   const [nativo, setNativo] = useState(false);
@@ -98,10 +101,13 @@ export function VoiceInput({
         ativo
           ? "border-red-300 bg-red-50 text-red-600 animate-pulse"
           : "border-border bg-card text-muted-foreground hover:text-primary hover:border-primary/40",
+        comRotulo && "h-[30px] w-auto gap-1.5 rounded-full border-2 border-[#1D1B18] px-3 font-body text-[12.5px] font-bold shadow-[2px_2px_0_#1D1B18] hover:border-[#1D1B18]",
+        comRotulo && (ativo ? "animate-none bg-[#EB4918] text-white" : "bg-[#FFCF03] text-[#1D1B18] hover:text-[#1D1B18]"),
         className,
       )}
     >
-      {nuvem.transcrevendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" strokeWidth={1.75} />}
+      {nuvem.transcrevendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" strokeWidth={comRotulo ? 2.2 : 1.75} />}
+      {comRotulo && <span>{nuvem.transcrevendo ? "Escrevendo..." : ativo ? "Ouvindo... toque pra parar" : "Falar"}</span>}
     </button>
   );
 }

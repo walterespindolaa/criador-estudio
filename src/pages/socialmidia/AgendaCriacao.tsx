@@ -322,7 +322,10 @@ export default function AgendaCriacao() {
   const [weekStart, setWeekStart] = useState(() => parseDateOnly(hojeBR()));
   // Visão: semana (padrão) ou mês. O mês usa a MESMA grade arrastável.
   const [view, setView] = useState<"semana" | "mes">(() => {
-    try { return (localStorage.getItem("agenda_view") as "semana" | "mes") || "semana"; } catch { return "semana"; }
+    // Sem escolha guardada: no computador abre no Mês (Walter, 11/11/2026); no
+    // celular continua na Semana, que é onde ficam os cartões dos dias.
+    const padrao: "semana" | "mes" = typeof window !== "undefined" && window.innerWidth >= 768 ? "mes" : "semana";
+    try { return (localStorage.getItem("agenda_view") as "semana" | "mes") || padrao; } catch { return padrao; }
   });
   const setViewPersist = (v: "semana" | "mes") => {
     setView(v);
@@ -386,6 +389,11 @@ export default function AgendaCriacao() {
   // Dia tocado no calendário do celular: o cartão dele aparece embaixo, com os
   // mesmos checks e botões da semana (Walter, 11/11/2026).
   const [diaCal, setDiaCal] = useState<string | null>(null);
+  // Lista: opção secundária do Mês (Walter, 11/11/2026; mockup aprovado). Em vez
+  // da grade, as semanas viram blocos com o dia ao lado de cada item e o título
+  // inteiro. Não fica guardada: a agenda sempre abre no calendário.
+  const [lista, setLista] = useState(false);
+  const verLista = lista && view === "mes";
   const trocarMesModo = (m: "calendario" | "grade") => {
     setMesModo(m);
     try { localStorage.setItem("agenda_mes_modo", m); } catch { /* sem storage */ }
@@ -1472,12 +1480,17 @@ export default function AgendaCriacao() {
             {/* Semana (padrão) / Mês */}
             <div className="inline-flex rounded-lg border border-border overflow-hidden">
               {(["semana", "mes"] as const).map((v) => (
-                <button key={v} onClick={() => { setViewPersist(v); setCalendarioCel(false); }}
+                <button key={v} onClick={() => { setViewPersist(v); setCalendarioCel(false); setLista(false); }}
                   className={cn("px-2.5 py-1 text-xs font-body font-semibold transition-colors",
-                    view === v && !verCalendario ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+                    view === v && !verCalendario && !verLista ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
                   {v === "semana" ? "Semana" : "Mês"}
                 </button>
               ))}
+              <button onClick={() => { setViewPersist("mes"); setCalendarioCel(false); setLista(true); }} aria-pressed={verLista}
+                className={cn("px-2.5 py-1 text-xs font-body font-semibold transition-colors",
+                  verLista ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+                Lista
+              </button>
             </div>
             {/* Botãozinho do calendário, só no celular (ver calendarioCel). */}
             {ehCelular && (
@@ -1623,12 +1636,74 @@ export default function AgendaCriacao() {
               )}
             </div>
           )}
-          {view === "mes" && mesModo === "calendario" && calendarioMes}
-          {view === "mes" && mesModo === "grade" && (
+          {view === "mes" && mesModo === "calendario" && !verLista && calendarioMes}
+          {view === "mes" && mesModo === "grade" && !verLista && (
             <div className={cn("grid-cols-7 mb-1", ehCelular ? "hidden" : "grid")}>
               {WD.map((w) => <p key={w} className="text-[10px] uppercase tracking-wider font-body font-semibold text-muted-foreground text-center">{w}</p>)}
             </div>
           )}
+          {/* LISTA: as semanas do mês em blocos. No mês atual começa na semana de
+              hoje ("Esta semana", "Semana que vem"); as que já passaram ficam no
+              calendário. Cada linha tem o check e abre o item, como na grade. */}
+          {verLista && (() => {
+            const semanas: Date[][] = [];
+            for (let i = 0; i < days.length; i += 7) semanas.push(days.slice(i, i + 7));
+            const domHoje = ymd(mondayOf(parseDateOnly(today)));
+            const prox = mondayOf(parseDateOnly(today)); prox.setDate(prox.getDate() + 7);
+            const domProx = ymd(prox);
+            const ehMesAtual = semanas.some((s) => ymd(s[0]) === domHoje);
+            const visiveis = ehMesAtual ? semanas.filter((s) => ymd(s[0]) >= domHoje) : semanas;
+            return (
+              <div className="space-y-3">
+                {visiveis.map((s) => {
+                  const ini = ymd(s[0]);
+                  const titulo = ini === domHoje ? "Esta semana" : ini === domProx ? "Semana que vem" : `Semana de ${shortDate(s[0])} a ${shortDate(s[6])}`;
+                  const linhas = s.flatMap((d) => {
+                    const iso = ymd(d);
+                    return [
+                      ...itensDoDia(iso).map((it) => ({ key: dayItemKey(it), d, iso, info: infoDoItem(it) })),
+                      ...(criaPostsByDay.get(iso) ?? []).map((p) => ({ key: `criapost:${p.id}`, d, iso, info: infoDoCriaPost(p) })),
+                    ];
+                  });
+                  return (
+                    <div key={ini} className="overflow-hidden rounded-2xl border border-border bg-card">
+                      <div className={cn("flex items-center justify-between px-4 py-2.5",
+                        ini === domHoje ? "bg-[#FFE27A]" : ini === domProx ? "bg-[#BFD8FF]" : "bg-muted")}>
+                        <span className="text-[15px] font-display font-extrabold text-[#1D1B18]">{titulo}</span>
+                        <span className="text-xs font-body font-semibold text-[#1D1B18]">{linhas.length} {linhas.length === 1 ? "item" : "itens"}</span>
+                      </div>
+                      {linhas.length === 0 ? (
+                        <p className="px-4 py-3 text-[12.5px] font-body text-muted-foreground">Nada marcado nesta semana.</p>
+                      ) : (
+                        <div className="px-4 pb-2 pt-1 md:columns-2 md:gap-8">
+                          {linhas.map(({ key, d, iso, info }) => (
+                            <div key={key} className="flex break-inside-avoid items-center gap-3 border-b border-dashed border-border/70 py-1.5">
+                              <span className={cn("w-[58px] shrink-0 text-[11px] font-body font-bold uppercase tracking-wider",
+                                iso === today ? "text-primary" : "text-muted-foreground")}>{WD[d.getDay()]} {d.getDate()}</span>
+                              <div role="button" tabIndex={0} title={info.dica ? `${info.titulo} · ${info.dica}` : info.titulo}
+                                onClick={info.abrir} onKeyDown={(e) => { if (e.key === "Enter") info.abrir(); }}
+                                style={{ borderLeftColor: info.cor, background: `${info.cor}14` }}
+                                className={cn("flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md border-l-[3px] py-1.5 pl-1.5 pr-2 transition-colors hover:brightness-95",
+                                  info.done && "opacity-55")}>
+                                <span role="button" tabIndex={0} aria-label={info.done ? "Desmarcar" : "Marcar como feito"}
+                                  onClick={(e) => { e.stopPropagation(); info.alternar(); }}
+                                  className={cn("grid h-5 w-5 shrink-0 place-items-center rounded-full border transition-colors md:h-4 md:w-4",
+                                    info.done ? "bg-emerald-500 border-emerald-500 text-white" : "border-foreground/30 bg-card hover:border-emerald-500")}>
+                                  {info.done && <Check className="h-2.5 w-2.5" strokeWidth={3.5} />}
+                                </span>
+                                {info.hora && <span className="shrink-0 text-[10.5px] font-body font-bold tabular-nums text-muted-foreground">{info.hora}</span>}
+                                <span className={cn("min-w-0 flex-1 text-[12.5px] font-body font-semibold leading-snug text-foreground", info.done && "line-through")}>{info.titulo}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
           {/* MÊS NO CELULAR (v2): calendário compacto, uma barrinha por item na cor
               do cliente (apagada quando já foi feito). Tocar no dia abre a lista
               dele, onde cada item tem o check e o "Mudar dia". */}
@@ -1673,6 +1748,7 @@ export default function AgendaCriacao() {
               : "flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth lg:grid lg:grid-cols-7 lg:gap-2 lg:overflow-visible lg:pb-0",
             view === "mes" && mesModo === "calendario" && "hidden lg:hidden",
             verCalendario && (diaCal ? "grid grid-cols-1 sm:grid-cols-1 gap-2 mt-3" : "hidden"),
+            verLista && "hidden",
           )}>
             {days.map((d, i) => {
               const iso = ymd(d);
