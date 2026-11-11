@@ -24,6 +24,10 @@ const STALE_HOURS: Record<string, number> = {
   "agency-inventory-cleanup": 26,
   "daily-health-report": 26,
   "trend-bank-weekly": 24 * 8,
+  // Rodam só segunda e quinta (cron cria-bancos-seg-qui). O maior intervalo é de
+  // quinta a segunda (4 dias); com o padrão de 26h davam alarme falso todo dia.
+  "story-trend-refresh": 24 * 5,
+  "trend-bank-refresh": 24 * 5,
 };
 
 Deno.serve(async (req) => {
