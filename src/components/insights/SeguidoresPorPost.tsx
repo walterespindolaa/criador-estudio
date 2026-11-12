@@ -45,7 +45,7 @@ export function SeguidoresPorPost({ media, diario, limite = 6 }: {
             return (
               <div key={l.m.id} className="pb-2.5 border-b-[1.5px] border-dashed border-foreground/15 last:border-b-0">
                 <div className="flex items-center gap-3">
-                  <span className="w-9 h-11 rounded-lg border-2 border-foreground bg-muted overflow-hidden shrink-0">
+                  <span className="w-9 h-11 rounded-lg border border-foreground/25 bg-muted overflow-hidden shrink-0">
                     {l.m.thumbnail_url && <img src={l.m.thumbnail_url} alt="" loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />}
                   </span>
                   <span className="min-w-0 flex-1">

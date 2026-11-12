@@ -10,12 +10,12 @@ import { cn } from "@/lib/utils";
    Usa a cor do texto (foreground) na borda e na sombra pra seguir o tema.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-export const CARD = "rounded-[20px] border-2 border-foreground bg-card shadow-[2px_2px_0_hsl(var(--foreground))]";
-export const CARD_VAZIO = "rounded-[20px] border-2 border-dashed border-foreground/30 bg-card/60";
+export const CARD = "rounded-[20px] border border-foreground/15 bg-card shadow-[0_1px_3px_hsl(var(--foreground)/0.06)]";
+export const CARD_VAZIO = "rounded-[20px] border border-dashed border-foreground/25 bg-card/60";
 /** Caveat é a letra de mão do Cria. Sem a fonte carregada, cai pra cursiva do sistema. */
 export const MAO: CSSProperties = { fontFamily: "Caveat, cursive", fontWeight: 700 };
 /** Barra horizontal com contorno (cruzamentos, público). */
-export const BARRA = "block h-full rounded-md border-2 border-foreground";
+export const BARRA = "block h-full rounded-md border border-foreground/25";
 
 export function SecaoTitulo({ id, titulo, mao, extra, className }: { id?: string; titulo: string; mao?: string; extra?: ReactNode; className?: string }) {
   return (
@@ -35,8 +35,8 @@ export function SeloIA() {
 export function Pilula({ ativo, onClick, children, ...rest }: { ativo?: boolean; onClick?: () => void; children: ReactNode } & Record<string, unknown>) {
   return (
     <button type="button" onClick={onClick} {...rest}
-      className={cn("h-8 px-3 rounded-full text-xs font-bold border-2 border-foreground whitespace-nowrap transition-colors",
-        ativo ? "bg-foreground text-background" : "bg-card text-foreground hover:bg-muted")}>
+      className={cn("h-8 px-3 rounded-full text-xs font-bold border border-foreground/25 whitespace-nowrap transition-colors",
+        ativo ? "bg-foreground/10 text-foreground" : "bg-card text-foreground/70 hover:bg-muted")}>
       {children}
     </button>
   );

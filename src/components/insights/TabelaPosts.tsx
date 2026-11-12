@@ -70,7 +70,7 @@ export function TabelaPosts({ media, limite = 30 }: { media: MidiaIg[] | null | 
                 <tr key={m.id} className="border-t-[1.5px] border-dashed border-foreground/15 text-right">
                   <td className="text-left py-2 pr-2">
                     <div className="flex items-center gap-2 max-w-[280px]">
-                      <span className="w-9 h-11 rounded-lg border-2 border-foreground bg-muted overflow-hidden shrink-0">
+                      <span className="w-9 h-11 rounded-lg border border-foreground/25 bg-muted overflow-hidden shrink-0">
                         {m.thumbnail_url && <img src={m.thumbnail_url} alt="" loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />}
                       </span>
                       <span className="min-w-0">
@@ -97,7 +97,7 @@ export function TabelaPosts({ media, limite = 30 }: { media: MidiaIg[] | null | 
         <div className="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1">
           {COLS.map((c) => (
             <button key={c.k} type="button" onClick={() => clicar(c.k)}
-              className={cn("h-7 px-2.5 rounded-full text-[11px] font-bold border-2 border-foreground whitespace-nowrap", col === c.k ? "bg-foreground text-background" : "bg-card")}>
+              className={cn("h-7 px-2.5 rounded-full text-[11px] font-bold border border-foreground/25 whitespace-nowrap", col === c.k ? "bg-foreground text-background" : "bg-card")}>
               {c.nome}{col === c.k && (desc ? " ↓" : " ↑")}
             </button>
           ))}
@@ -110,7 +110,7 @@ export function TabelaPosts({ media, limite = 30 }: { media: MidiaIg[] | null | 
           const salvos = n(met.saved) ?? n(met.saves);
           return (
             <div key={m.id} className="flex items-center gap-3 py-2.5 border-b-[1.5px] border-dashed border-foreground/15 last:border-b-0">
-              <span className="w-9 h-11 rounded-lg border-2 border-foreground bg-muted overflow-hidden shrink-0">
+              <span className="w-9 h-11 rounded-lg border border-foreground/25 bg-muted overflow-hidden shrink-0">
                 {m.thumbnail_url && <img src={m.thumbnail_url} alt="" loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />}
               </span>
               <span className="min-w-0 flex-1">

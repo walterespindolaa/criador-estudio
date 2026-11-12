@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cria · O studio de quem cria conteúdo</title><meta name="description" content="Ideia, roteiro, calendário e seus números do Instagram num lugar só. 7 dias grátis pra testar."><meta name="robots" content="noindex,follow"><meta property="og:title" content="Cria · O studio de quem cria conteúdo"><meta property="og:description" content="Ideia, roteiro, calendário e seus números do Instagram num lugar só. 7 dias grátis pra testar."><meta property="og:image" content="https://criasocialclub.com.br/og.png"><link rel="icon" href="/favicon-32.png"><script>window.CRIA_PAGINA="/lp/criador-curta"</script><script defer src="/track.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Roboto:wght@400;500;700&family=Grand+Hotel&display=swap" rel="stylesheet">
+<style>:root{--creme:#F5F3E7;--creme2:#ECE8D5;--ink:#0A0A0A;--laranja:#EA4918;--azul:#0061EE;--rosa:#FF77B9;--amarelo:#FFCF03;--verde:#01A652;--lilas:#7C90F0;--branco:#FDFBF5;--mut:#5d584f}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;overflow-anchor:none;overflow-x:hidden;overflow-x:clip;max-width:100%}
+body{font-family:'Roboto',system-ui,sans-serif;background:var(--creme);color:var(--ink);line-height:1.55;overflow-x:hidden;overflow-x:clip;max-width:100%;overscroll-behavior-x:none;position:relative;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;line-height:1.02;letter-spacing:-.01em}
+.sc{font-family:'Grand Hotel',cursive;font-weight:400;letter-spacing:0}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+.wrap{width:min(1080px,100%);margin:0 auto;padding:0 18px;position:relative}
+.blob{position:absolute;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;pointer-events:none}
+.pill{display:inline-block;font-family:'Baloo 2';font-weight:800;font-size:12.5px;letter-spacing:.07em;text-transform:uppercase;padding:5px 13px;border-radius:99px;color:#fff;transform:rotate(-2deg);margin-bottom:12px}
+section{position:relative;overflow:hidden}
+.s{padding:56px 0}
+.s h2{font-size:clamp(31px,8vw,46px);margin-bottom:10px}
+.s .lead{color:var(--mut);font-size:16.5px;max-width:52ch;margin-bottom:24px}
+.c{text-align:center}.c .lead{margin-left:auto;margin-right:auto}
+
+/* faixa do mockup */
+.mk{background:#17140F;color:#F5F3E7;font-size:12.5px;padding:8px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;position:relative;z-index:40}
+.mk b{color:var(--amarelo);margin-right:4px}
+.mk button{font:inherit;font-weight:700;border:1px solid #4a443b;background:transparent;color:#F5F3E7;border-radius:99px;padding:4px 10px;cursor:pointer}
+.mk button.on{background:var(--amarelo);color:#17140F;border-color:var(--amarelo)}
+.mk .nota{flex-basis:100%;opacity:.7;font-size:11.5px}
+
+/* botões */
+.btn{display:inline-flex;justify-content:center;align-items:center;gap:10px;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:19px;padding:15px 30px;border-radius:999px;background:var(--laranja);color:#fff;box-shadow:0 6px 0 rgba(21,20,18,.92);transition:transform .2s,box-shadow .2s;width:100%;max-width:400px}
+.btn:hover{transform:translateY(-3px);box-shadow:0 9px 0 rgba(21,20,18,.92)}
+.btn.br{background:#fff;color:var(--ink)}
+.btn.sm{font-size:16px;padding:12px 20px}
+.micro{font-size:13px;opacity:.85}
+
+/* topo + hero */
+.hero{background:var(--azul);color:var(--creme);padding:0 0 34px}
+.top{display:flex;justify-content:space-between;align-items:center;padding:14px 0;position:relative;z-index:3}
+.top img{height:30px;width:auto}
+.top nav{display:flex;gap:6px}
+.top nav a{font-size:13.5px;font-weight:700;padding:7px 12px;border-radius:99px;background:rgba(255,255,255,.14)}
+.top nav a.en{background:var(--creme);color:var(--ink)}
+.hero .grid{display:grid;gap:26px;align-items:center;position:relative;z-index:2;padding-top:10px}
+.kick{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);border-radius:99px;padding:6px 13px 6px 9px;font-size:13px;font-weight:700}
+.kick i{width:9px;height:9px;border-radius:50%;background:var(--amarelo);display:inline-block}
+.hero h1{font-size:clamp(40px,11vw,68px);margin:14px 0 2px;color:#fff}
+.hero h1 em{font-style:normal;color:var(--amarelo)}
+.hero .sc.lema{font-size:clamp(30px,8vw,42px);color:var(--rosa);display:block;transform:rotate(-3deg);margin:2px 0 12px}
+.hero p.sub{font-size:17px;opacity:.92;max-width:36ch}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.chips span{font-size:13px;font-weight:700;background:rgba(255,255,255,.14);border-radius:99px;padding:5px 11px}
+.chips span::before{content:"✓ ";color:var(--amarelo);font-weight:900}
+.cta{display:flex;flex-direction:column;gap:9px;margin-top:20px;align-items:flex-start}
+.shot{position:relative;padding:8px 6px 20px}
+.quadro{background:#fff;border:3px solid var(--ink);border-radius:22px;padding:6px;box-shadow:8px 8px 0 var(--ink);transform:rotate(-1.5deg);cursor:zoom-in}
+.quadro img{border-radius:15px;width:100%}
+.quadro.cel{max-width:250px;margin:0 auto;border-radius:32px;background:#17140F;padding:8px}
+.quadro.cel img{border-radius:24px}
+.etq{position:absolute;font-family:'Baloo 2';font-weight:800;font-size:14px;padding:6px 12px;border-radius:12px;background:var(--amarelo);color:var(--ink);transform:rotate(-6deg);left:-2px;top:-8px;box-shadow:0 3px 0 rgba(10,10,10,.85);z-index:2}
+.sticker{position:absolute;width:96px;z-index:3}
+@media(min-width:860px){.hero .grid{grid-template-columns:1.05fr 1fr;gap:44px;padding:30px 0 30px}.hero p.sub{font-size:19px}}
+
+/* ícones correndo + faixa */
+.apps{background:var(--azul);padding:4px 0 26px;overflow:hidden}
+.trilho{display:flex;gap:12px;width:max-content;animation:corre 32s linear infinite}
+.app{width:96px;height:96px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#fff;font-size:11.5px;font-weight:700;text-align:center;line-height:1.1;box-shadow:0 5px 0 rgba(10,10,10,.85);border:2.5px solid var(--ink)}
+.app svg{width:30px;height:30px}
+.app.cl{color:var(--ink)}
+@keyframes corre{to{transform:translateX(-50%)}}
+.faixa{background:var(--laranja);color:#fff;padding:12px 0;overflow:hidden;transform:rotate(-1.2deg);margin:-6px -10px 0;position:relative;z-index:3;border-top:3px solid var(--ink);border-bottom:3px solid var(--ink)}
+.faixa .trilho{animation-duration:26s;gap:22px}
+.faixa span{font-family:'Baloo 2';font-weight:800;font-size:17px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.faixa span.x{color:var(--amarelo)}
+
+/* dor */
+.cartao{background:#fff;border:3px solid var(--ink);border-radius:26px;box-shadow:8px 8px 0 var(--ink);padding:20px}
+.dor{display:grid;gap:4px}
+.dor .it{display:grid;grid-template-columns:40px 1fr;gap:12px;align-items:start;padding:12px 0;border-bottom:1.5px dashed var(--creme2);font-size:15.5px}
+.dor .it:last-child{border:0}
+.dor .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center}
+.dor .ic svg{width:20px;height:20px}
+.dor b{font-weight:700}
+@media(min-width:860px){.dor{grid-template-columns:1fr 1fr;column-gap:26px}}
+
+/* azul: como o Cria organiza */
+.azul{background:var(--azul);color:var(--creme)}
+.azul h2{color:#fff}.azul .lead{color:var(--creme);opacity:.85}
+.azul .sc{color:var(--amarelo)}
+.fluxo{display:grid;gap:10px}
+@media(min-width:860px){.fluxo{grid-template-columns:repeat(5,1fr)}}
+.et{background:#fff;color:var(--ink);border:3px solid var(--ink);border-radius:22px;padding:14px;box-shadow:5px 5px 0 var(--ink);display:grid;grid-template-columns:46px 1fr;gap:12px;align-items:center;position:relative}
+.et .n{position:absolute;top:-11px;right:12px;background:var(--amarelo);border:2px solid var(--ink);border-radius:99px;font-family:'Baloo 2';font-weight:800;font-size:12px;padding:0 9px}
+.et .bol{width:46px;height:46px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;display:grid;place-items:center;color:#fff}
+.et .bol svg{width:22px;height:22px}
+.et b{font-family:'Baloo 2';font-size:19px;line-height:1.05;display:block}
+.et span{font-size:13.5px;color:#4a463e}
+@media(min-width:860px){.et{grid-template-columns:1fr;text-align:center;justify-items:center}}
+.fecho{margin-top:20px;font-size:16px;background:var(--amarelo);color:var(--ink);border:3px solid var(--ink);border-radius:18px;padding:13px 15px;font-weight:600;transform:rotate(-.8deg);box-shadow:5px 5px 0 var(--ink)}
+
+/* números */
+.nums{background:var(--amarelo);border:3px solid var(--ink);border-radius:28px;box-shadow:8px 8px 0 var(--ink);padding:24px 18px;display:grid;gap:18px;text-align:center}
+@media(min-width:860px){.nums{grid-template-columns:repeat(3,1fr)}}
+.nums b{font-family:'Baloo 2';font-weight:800;font-size:48px;line-height:1;display:block}
+.nums span{font-size:14px}
+.nota-p{font-size:12px;color:var(--mut);text-align:center;margin-top:10px}
+
+/* sem x com */
+.vs{display:grid;gap:14px;margin-top:26px}
+@media(min-width:860px){.vs{grid-template-columns:1fr 1fr}}
+.vs>div{border:3px solid var(--ink);border-radius:26px;padding:20px;box-shadow:6px 6px 0 var(--ink)}
+.vs .sem{background:#123FA8;color:var(--creme)}
+.vs .com{background:#fff}
+.vs h3{font-size:24px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.vs h3 img{height:22px}
+.vs ul{list-style:none;display:grid;gap:9px;font-size:15px}
+.vs .sem li::before{content:"✕  ";color:var(--rosa);font-weight:900}
+.vs .com li::before{content:"✓  ";color:var(--verde);font-weight:900}
+.vs .tot{display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:2px dashed currentColor;font-family:'Baloo 2';font-weight:800;font-size:21px}
+.vs .sem .tot span:last-child{color:var(--rosa);text-decoration:line-through}
+.vs .com .tot span:last-child{color:var(--laranja)}
+
+/* funções retráteis */
+.grupo{margin:26px 0 10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.grupo .pill{margin:0}
+.grupo small{color:var(--mut);font-size:13.5px}
+details.fx{background:#fff;border:2.5px solid var(--ink);border-radius:22px;margin-bottom:10px;box-shadow:4px 4px 0 var(--ink);transition:box-shadow .2s,transform .2s}
+details.fx[open]{box-shadow:7px 7px 0 var(--ink);transform:translate(-2px,-2px)}
+details.fx summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 14px}
+details.fx summary::-webkit-details-marker{display:none}
+details.fx .ic{flex:0 0 auto;width:44px;height:44px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;display:grid;place-items:center;color:#fff}
+details.fx .ic svg{width:21px;height:21px}
+details.fx .tt{flex:1;min-width:0}
+details.fx .tt b{display:block;font-family:'Baloo 2';font-size:19px;line-height:1.1}
+details.fx .tt span{display:block;font-size:13.5px;color:#4a463e;line-height:1.3;margin-top:2px}
+details.fx .bd{font-size:11px;font-weight:800;border-radius:99px;padding:3px 9px;background:var(--creme);white-space:nowrap;border:1.5px solid var(--ink)}
+details.fx .bd.dk{background:var(--ink);color:#fff}
+details.fx .bd.ps{background:var(--rosa)}
+details.fx .bd.vd{background:var(--verde);color:#fff}
+details.fx .mais{flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:var(--creme);border:2px solid var(--ink);display:grid;place-items:center;font-weight:900;transition:transform .25s}
+details.fx[open] .mais{transform:rotate(45deg);background:var(--amarelo)}
+details.fx .corpo{padding:0 14px 16px;display:grid;gap:14px;animation:abre .3s ease}
+@keyframes abre{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+details.fx .corpo p{font-size:15.5px;color:#2b2823}
+details.fx .corpo ul{list-style:none;display:grid;gap:6px;font-size:14.5px;margin-top:10px}
+details.fx .corpo li::before{content:"✓ ";color:var(--verde);font-weight:900}
+.zoom{position:relative;display:block;cursor:zoom-in;border:2px solid var(--ink);border-radius:16px;overflow:hidden;background:#fff}
+.zoom img{width:100%;height:auto}
+.zoom.cel{max-width:230px;margin:0 auto;border-radius:26px;border:6px solid #17140F}
+.zoom::after{content:"⤢ ampliar";position:absolute;right:8px;bottom:8px;background:var(--ink);color:#fff;font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:99px}
+@media(min-width:860px){details.fx .corpo{grid-template-columns:1fr 1.35fr;align-items:start}}
+
+/* passos */
+.passos{display:grid;gap:12px;counter-reset:p}
+@media(min-width:860px){.passos{grid-template-columns:repeat(3,1fr)}}
+.passo{background:#fff;border:2.5px solid var(--ink);border-radius:22px;padding:16px 16px 16px 66px;position:relative;font-size:15px;box-shadow:4px 4px 0 var(--ink)}
+.passo::before{counter-increment:p;content:counter(p);position:absolute;left:14px;top:14px;width:38px;height:38px;border-radius:38% 62% 55% 45%/48% 42% 58% 52%;background:var(--laranja);color:#fff;font-family:'Baloo 2';font-weight:800;display:grid;place-items:center;font-size:20px}
+.passo b{display:block;font-family:'Baloo 2';font-size:20px;line-height:1.1;margin-bottom:2px}
+
+/* planos */
+.planos{display:grid;gap:16px}
+@media(min-width:860px){.planos{grid-template-columns:repeat(3,1fr);align-items:start}}
+.plano{background:#fff;border:3px solid var(--ink);border-radius:26px;padding:20px;box-shadow:6px 6px 0 var(--ink);position:relative}
+.plano.pro{background:var(--azul);color:#fff}
+.plano .rot{font-family:'Baloo 2';font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--laranja)}
+.plano.pro .rot{color:var(--amarelo)}
+.plano h3{font-size:28px}
+.plano .pr{font-family:'Baloo 2';font-weight:800;font-size:40px;line-height:1;margin:8px 0 2px}
+.plano .pr small{font-size:15px;opacity:.7}
+.plano .pq{font-size:13.5px;opacity:.8;margin-bottom:12px}
+.plano ul{list-style:none;display:grid;gap:6px;font-size:14px;margin-bottom:16px}
+.plano li::before{content:"✓ ";color:var(--verde);font-weight:900}
+.plano.pro li::before{color:var(--amarelo)}
+.plano .btn{font-size:17px;padding:12px 20px;max-width:none}
+.plano:not(.pro) .btn{background:#fff;color:var(--ink);border:2.5px solid var(--ink);box-shadow:0 4px 0 var(--ink)}
+.plano .flag{position:absolute;top:-14px;right:16px;background:var(--laranja);color:#fff;font-family:'Baloo 2';font-weight:800;font-size:13px;padding:3px 12px;border-radius:99px;transform:rotate(4deg);border:2px solid var(--ink)}
+
+/* conhecer o site */
+.site{border:3px dashed var(--ink);border-radius:28px;padding:22px 18px;background:var(--branco)}
+.site h2{font-size:clamp(28px,7vw,40px)}
+.site .lks{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.site .lks a{border:2.5px solid var(--ink);border-radius:99px;padding:9px 15px;font-weight:700;font-size:14.5px;background:#fff;box-shadow:0 3px 0 var(--ink)}
+.site .lks a:hover{background:var(--amarelo)}
+
+/* faq */
+.faq details{background:#fff;border:2.5px solid var(--ink);border-radius:18px;padding:14px 16px;margin-bottom:8px}
+.faq summary{font-family:'Baloo 2';font-weight:800;font-size:18px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:10px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";color:var(--laranja);font-size:22px;line-height:1}
+.faq details[open] summary::after{content:"–"}
+.faq p{font-size:15px;color:#3b372f;margin-top:8px}
+
+/* final + rodapé */
+.final{background:var(--laranja);color:#fff;text-align:center;padding:64px 0 70px}
+.final h2{font-size:clamp(36px,9.5vw,58px);color:#fff}
+.final .sc{color:var(--amarelo);font-size:clamp(30px,8vw,44px);display:block;transform:rotate(-3deg);margin:4px 0 18px}
+.final .cta{align-items:center}
+.final .btn{background:#fff;color:var(--ink)}
+.rod{background:var(--azul);color:var(--creme);padding:34px 0 120px;font-size:13.5px}
+.rod img{height:28px;margin-bottom:8px}
+.rod .cols{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px}
+.rod a{opacity:.85;text-decoration:underline;text-underline-offset:3px}
+
+/* barra fixa */
+.fixa{position:fixed;left:10px;right:10px;bottom:10px;z-index:20;display:flex;gap:10px;align-items:center;background:#17140F;color:#F5F3E7;border-radius:999px;padding:7px 7px 7px 18px;box-shadow:0 10px 30px rgba(0,0,0,.25);transform:translateY(140%);opacity:0;pointer-events:none;transition:transform .3s,opacity .3s}
+.fixa.on{transform:none;opacity:1;pointer-events:auto}
+.fixa span{font-size:13px;line-height:1.2;flex:1}
+.fixa span b{display:block;font-family:'Baloo 2';font-size:16px}
+.fixa a{background:var(--laranja);color:#fff;font-family:'Baloo 2';font-weight:800;border-radius:999px;padding:11px 18px;white-space:nowrap}
+@media(min-width:860px){.fixa{left:auto;right:20px;width:420px}}
+.ck{position:fixed;left:10px;right:10px;bottom:10px;z-index:25;background:#fff;border-radius:16px;padding:9px 10px 9px 14px;display:flex;gap:8px;align-items:center;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,.14)}
+.ck span{flex:1;line-height:1.3}
+.ck button{font:inherit;font-weight:700;border-radius:99px;padding:7px 11px;border:1.5px solid var(--ink);background:#fff;cursor:pointer}
+.ck button.ok{background:var(--ink);color:#fff}
+@media(min-width:860px){.ck{right:auto;width:460px}}
+
+/* lightbox: a tela inteira cabendo, e zoom com os dedos */
+#lb{position:fixed;inset:0;z-index:60;background:rgba(10,10,10,.92);display:none;align-items:center;justify-content:center;overflow:hidden;touch-action:none}
+#lb.on{display:flex}
+#lb img{max-width:94vw;max-height:84vh;width:auto;height:auto;object-fit:contain;border-radius:12px;background:#fff;transform-origin:0 0;will-change:transform;user-select:none;-webkit-user-drag:none;cursor:zoom-in}
+#lb.zoom img{cursor:grab}
+#lb .f{position:absolute;top:14px;right:14px;width:44px;height:44px;border-radius:50%;background:#fff;border:0;font-size:24px;font-weight:900;cursor:pointer;z-index:2}
+#lb .dica{position:absolute;bottom:16px;left:0;right:0;text-align:center;color:#fff;font-size:12.5px;opacity:.8;pointer-events:none}
+.v{display:none}.v.on{display:block}
+.vs{text-align:left}
+
+.faixa-wrap{overflow:hidden;padding:8px 0;margin:-8px 0}
+
+/* topo novo no celular (03/11/2026): botão e print na primeira tela */
+.so-desk{display:none!important}
+@media(min-width:860px){.so-desk{display:inline-flex!important}img.so-desk{display:block!important}}
+@media(max-width:859px){
+.hero h1{font-size:clamp(33px,9.4vw,44px);margin:10px 0 0;line-height:1.03}
+.hero p.sub{font-size:15.5px;margin-top:10px}
+.hero .cta{margin-top:14px}
+.hero .grid{gap:18px;padding-top:0}
+.hero .shot{padding:4px 2px 6px}
+.hero .quadro{transform:none;box-shadow:5px 5px 0 var(--ink)}
+.hero .chips{margin-top:20px}
+}
+</style><style>
+.k-prova{margin-top:18px;display:grid;gap:10px}
+.k-num{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.14);border-radius:16px;padding:10px 14px;font-size:14.5px;line-height:1.3}
+.k-num b{font-family:'Baloo 2';font-weight:800;font-size:24px;color:var(--amarelo);white-space:nowrap}
+.k-slot{border:2.5px dashed rgba(255,255,255,.75);border-radius:18px;padding:14px;font-size:13.5px;line-height:1.4;background:rgba(10,10,10,.18)}
+.k-slot b{display:block;font-family:'Baloo 2';font-size:15px;margin-bottom:2px;color:var(--amarelo)}
+.k-s{padding:38px 0}
+.k-s h2{font-family:'Baloo 2';font-weight:800;line-height:1.02;font-size:clamp(28px,7.4vw,42px);margin-bottom:8px}
+.k-vs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.k-vs>div{border:3px solid var(--ink);border-radius:20px;padding:14px 12px;background:#fff}
+.k-vs .com{background:var(--amarelo);box-shadow:5px 5px 0 var(--ink)}
+.k-vs h3{font-family:'Baloo 2';font-weight:800;font-size:17px;margin-bottom:6px}
+.k-vs ul{list-style:none;font-size:13.5px;line-height:1.35;display:grid;gap:6px}
+.k-vs .pr{font-family:'Baloo 2';font-weight:800;font-size:26px;margin-top:10px;line-height:1}
+.k-vs .pr small{display:block;font:500 12px Roboto;opacity:.75;margin-top:3px}
+.k-vs .sem .pr{text-decoration:line-through;opacity:.6}
+.k-cards{display:grid;gap:14px;margin-top:16px}
+.k-card{border:3px solid var(--ink);border-radius:22px;background:#fff;overflow:hidden}
+.k-card .img{height:190px;overflow:hidden;border-bottom:3px solid var(--ink);background:var(--creme2)}
+.k-card .img img{width:230%;max-width:none;display:block}
+.k-card .tx{padding:12px 14px 14px}
+.k-card b{font-family:'Baloo 2';font-weight:800;font-size:19px;display:block;line-height:1.1}
+.k-card span{font-size:14.5px;color:var(--mut)}
+.k-planos{border:3px solid var(--ink);border-radius:24px;background:#fff;box-shadow:6px 6px 0 var(--ink);padding:16px 14px;margin-top:14px}
+.k-linha{display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:10px 2px;border-bottom:2px dashed #d9d4c2}
+.k-linha:last-of-type{border-bottom:0}
+.k-linha b{font-family:'Baloo 2';font-weight:800;font-size:18px}
+.k-linha span{display:block;font-size:13px;color:var(--mut)}
+.k-linha i{font-style:normal;font-family:'Baloo 2';font-weight:800;font-size:18px;white-space:nowrap}
+.k-planos .btn{width:100%;margin-top:12px}
+.k-mais{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.k-mais a{border:2.5px solid var(--ink);border-radius:99px;padding:8px 14px;font-weight:700;font-size:14px;background:#fff;color:var(--ink);text-decoration:none}
+.k-fixo{position:fixed;left:10px;right:10px;bottom:10px;z-index:50;display:flex;align-items:center;gap:10px;background:var(--ink);color:#fff;border-radius:99px;padding:8px 8px 8px 18px;font-size:13.5px;line-height:1.2;transform:translateY(130%);transition:transform .25s}
+.k-fixo.on{transform:none}
+.k-fixo .btn{margin-left:auto;font-size:15px;padding:11px 18px;box-shadow:none;white-space:nowrap}
+.k-rod{background:var(--azul);color:var(--creme);padding:22px 0 90px;font-size:13px;text-align:center}
+.k-rod a{color:inherit}
+@media(min-width:760px){.k-cards{grid-template-columns:repeat(3,1fr)}.k-prova{grid-template-columns:1fr 1fr}.k-fixo{display:none}}
+
+.k-dica{font-family:'Baloo 2';font-weight:800;font-size:15px;color:var(--mut);margin-top:2px}
+.k-dica span{display:inline-block;animation:kvai 1.2s ease-in-out infinite}
+@keyframes kvai{50%{transform:translateX(7px)}}
+.k-trilho{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:14px 18px 20px;scrollbar-width:none;max-width:1116px;margin:0 auto}
+.k-trilho::-webkit-scrollbar{display:none}
+.k-passo{flex:0 0 min(76vw,300px);scroll-snap-align:center;border:3px solid var(--ink);border-radius:26px;background:#fff;box-shadow:6px 6px 0 var(--ink);overflow:hidden}
+.k-passo .img{padding:16px 16px 0;border-bottom:3px solid var(--ink)}
+.k-passo .img img{display:block;width:100%;aspect-ratio:390/470;object-fit:cover;object-position:top;border:3px solid var(--ink);border-bottom:0;border-radius:22px 22px 0 0;background:#fff}
+.k-passo .tx{padding:14px 16px 18px}
+.k-passo .pl{display:inline-block;font-family:'Baloo 2';font-weight:800;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:3px 10px;border-radius:99px;border:2px solid var(--ink);margin-bottom:8px}
+.k-passo b{display:block;font-family:'Baloo 2';font-weight:800;font-size:21px;line-height:1.08;margin-bottom:4px}
+.k-passo p{font-size:15px;line-height:1.4;color:var(--mut)}
+.k-pontos{display:flex;justify-content:center;gap:7px}
+.k-pontos i{width:9px;height:9px;border-radius:99px;background:#cfc9b6;transition:all .2s}
+.k-pontos i.on{background:var(--ink);width:24px}
+.k-tambem{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:22px}
+.k-tambem b{font-family:'Baloo 2';font-weight:800;font-size:16px;width:100%}
+.k-tambem span{border:2.5px solid var(--ink);border-radius:99px;padding:7px 13px;font-weight:700;font-size:14px;background:#fff}
+.k-tambem em{font-style:normal;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;background:var(--amarelo);border-radius:99px;padding:2px 7px;margin-left:4px}
+.k-nota{font-size:14px;color:var(--mut);margin-top:12px}
+.hero .wrap{z-index:2}.blob{z-index:0}.k-prova{position:relative;z-index:2}
+</style></head><body>
+<section id="topo" class="hero">
+  <div class="blob" style="width:360px;height:320px;background:var(--rosa);right:-150px;top:-80px"></div>
+  <div class="blob" style="width:240px;height:220px;background:var(--amarelo);left:-130px;bottom:30px"></div>
+  <div class="wrap">
+    <header class="top"><img src="/lp/img/logo-cria-white.webp" alt="Cria"><nav><a class="so-desk" href="https://criasocialclub.com.br/">Ver o site</a><a class="en" href="https://app.criasocialclub.com.br/login">Entrar</a></nav></header>
+    <div class="grid">
+      <div>
+        <span class="kick"><i></i>O studio de quem cria conteúdo</span>
+        <h1>Abre o app e já sabe<br><em>o que postar hoje.</em></h1>
+        <p class="sub">Suas ideias viram posts e os posts caem no calendário. Sem caderno, sem print perdido.</p>
+        <div class="cta"><a class="btn" href="https://app.criasocialclub.com.br/signup">Começar meus 7 dias grátis</a><span class="micro">Sem cartão · você só escolhe o plano no 8º dia</span></div>
+        <div class="k-prova">
+          <div class="k-num"><b>+1.300</b><span>posts já planejados dentro do Cria</span></div>
+        </div>
+      </div>
+      <div class="shot"><span class="etq">Suas ideias num lugar só</span><div class="quadro"><img src="/lp/img/banco-ideias-v2.webp" alt="Banco de ideias do Cria"></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="custo" class="k-s"><div class="wrap">
+  <span class="pill" style="background:var(--laranja)">Na ponta do lápis</span>
+  <h2>Quatro apps <span class="sc" style="color:var(--laranja)">ou um só?</span></h2>
+  <div class="k-vs">
+    <div class="sem"><h3>Sem o Cria</h3><ul><li>Notas e prints pras ideias</li><li>Planilha pro calendário</li><li>App de IA pra legenda</li><li>Link na bio pago</li></ul><div class="pr">~R$205<small>por mês, somando tudo</small></div></div>
+    <div class="com"><h3>Com o Cria</h3><ul><li>Banco de ideias</li><li>Kanban e calendário</li><li>Texto no seu tom</li><li>Link na bio e seus números</li></ul><div class="pr">R$32,90<small>por mês, no plano Pro</small></div></div>
+  </div>
+</div></section>
+
+<section id="prints" class="k-s" style="padding-top:0"><div class="wrap">
+  <span class="pill" style="background:var(--azul)">Por dentro</span>
+  <h2>O que o Cria faz <span class="sc" style="color:var(--azul)">por você</span></h2>
+  <p class="k-dica">Arrasta pro lado <span>→</span></p>
+</div>
+<div class="k-trilho" id="ktrilho"><article class="k-passo"><div class="img" style="background:var(--rosa)"><img src="/lp/img/cel-plano-antes.webp" alt="Tela do Cria Plano no celular" loading="lazy"></div><div class="tx"><span class="pl" style="background:var(--rosa);color:#0A0A0A">Studio</span><b>Cria Plano</b><p>O mês inteiro montado: conceito, data, formato e roteiro de cada post. Você só ajusta.</p></div></article><article class="k-passo"><div class="img" style="background:var(--laranja)"><img src="/lp/img/cel-stories-depois.webp" alt="Tela do Cria Stories no celular" loading="lazy"></div><div class="tx"><span class="pl" style="background:var(--laranja);color:#fff">Studio</span><b>Cria Stories</b><p>A semana de stories pronta, com gancho, enquete e horário de cada um.</p></div></article><article class="k-passo"><div class="img" style="background:var(--azul)"><img src="/lp/img/cel-prompter.webp" alt="Tela do Cria Prompter no celular" loading="lazy"></div><div class="tx"><span class="pl" style="background:var(--azul);color:#fff">Studio</span><b>Cria Prompter</b><p>O texto rola no ritmo da sua fala enquanto você grava. Sem decorar, sem regravar.</p></div></article><article class="k-passo"><div class="img" style="background:var(--verde)"><img src="/lp/img/cel-tendencias.webp" alt="Tela do Tendências do seu nicho no celular" loading="lazy"></div><div class="tx"><span class="pl" style="background:var(--verde);color:#fff">Pro</span><b>Tendências do seu nicho</b><p>Formatos, temas e ganchos em alta, atualizados toda semana. Um toque e vira ideia.</p></div></article><article class="k-passo"><div class="img" style="background:var(--amarelo)"><img src="/lp/img/cel-ideias.webp" alt="Tela do Banco de ideias no celular" loading="lazy"></div><div class="tx"><span class="pl" style="background:var(--amarelo);color:#0A0A0A">Essencial</span><b>Banco de ideias</b><p>Anota em 5 segundos, separa por pasta e nunca mais perde uma ideia num print.</p></div></article><div style="flex:0 0 4px"></div></div>
+<div class="k-pontos" id="kpontos"><i></i><i></i><i></i><i></i><i></i></div>
+<div class="wrap"><div class="k-tambem"><b>E também:</b><span>Legenda e roteiro no seu tom</span><span>Publica direto no Instagram <em>Pro e Studio</em></span><span>Insights do seu perfil</span><span>Link na bio</span><span>Media Kit</span></div>
+<p class="k-nota">Nos 7 dias grátis você testa tudo, inclusive o que é do Studio.</p></div>
+</section>
+
+<section id="planos" class="k-s" style="padding-top:0"><div class="wrap">
+  <span class="pill" style="background:var(--rosa);color:var(--ink)">Planos</span>
+  <h2>Testa agora, <span class="sc" style="color:var(--laranja)">escolhe depois</span></h2>
+  <div class="k-planos">
+    <div class="k-linha"><div><b>Essencial</b><span>Organizar ideias e calendário</span></div><i>R$19,90</i></div>
+    <div class="k-linha"><div><b>Pro</b><span>Escrita no seu tom e seus números</span></div><i>R$32,90</i></div>
+    <div class="k-linha"><div><b>Studio</b><span>O Cria monta o mês por você</span></div><i>R$49,90</i></div>
+    <a class="btn" href="https://app.criasocialclub.com.br/signup">Começar meus 7 dias grátis</a>
+    <p class="micro" style="text-align:center;margin-top:8px;color:var(--mut);opacity:1">7 dias com tudo liberado · sem cartão · cancela em 2 cliques</p>
+  </div>
+  <div class="k-mais"><a href="https://criasocialclub.com.br/funcionalidades">Ver todas as funções →</a><a href="https://criasocialclub.com.br/">Site completo →</a><a href="https://criasocialclub.com.br/#planos">Planos em detalhe →</a></div>
+</div></section>
+
+<section id="duvidas" class="k-s faq" style="padding-top:0"><div class="wrap">
+  <details><summary>Precisa de cartão pra testar?</summary><p>Não. Você cria a conta e usa por 7 dias sem colocar cartão. No 8º dia, se gostar, escolhe um plano.</p></details>
+  <details><summary>Funciona no celular?</summary><p>Sim. Abre no navegador e instala como app na tela inicial, no iPhone e no Android.</p></details>
+  <details><summary>E se eu não gostar?</summary><p>É só não assinar. Nada é cobrado e seus dados ficam guardados.</p></details>
+</div></section>
+
+<footer class="k-rod"><div class="wrap">Cria Social Club · Seu Estúdio Criativo · <a href="https://app.criasocialclub.com.br/termos">Termos</a> · <a href="https://app.criasocialclub.com.br/privacidade">Privacidade</a></div></footer>
+
+<div class="k-fixo" id="kfixo"><span>7 dias grátis, sem cartão</span><a class="btn" href="https://app.criasocialclub.com.br/signup">Começar</a></div>
+<script>(function(){var f=document.getElementById('kfixo');function v(){f.classList.toggle('on',scrollY>520)}addEventListener('scroll',v,{passive:true});v()})();</script>
+<script>(function(){var t=document.getElementById('ktrilho'),p=document.getElementById('kpontos').children;function m(){var c=t.querySelectorAll('.k-passo'),meio=t.scrollLeft+t.clientWidth/2,b=0,d=1e9;for(var i=0;i<c.length;i++){var x=Math.abs(c[i].offsetLeft-t.offsetLeft+c[i].offsetWidth/2-meio);if(x<d){d=x;b=i}}for(var j=0;j<p.length;j++)p[j].classList.toggle('on',j===b)}t.addEventListener('scroll',m,{passive:true});m()})();</script>
+</body></html>

@@ -83,7 +83,7 @@ export function StoriesSummary({ stories }: { stories: StoryComCapa[] | undefine
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
             {lista.slice(0, 20).map((st, i) => (
               <button key={st.id ?? i} type="button" aria-pressed={i === sel} aria-label={`Story ${i + 1}`} onClick={() => setSel(i)}
-                className={cn("shrink-0 w-16 h-[104px] rounded-xl overflow-hidden bg-muted border-2 relative", i === sel ? "border-foreground shadow-[2px_2px_0_hsl(var(--foreground))]" : "border-foreground/20")}>
+                className={cn("shrink-0 w-16 h-[104px] rounded-xl overflow-hidden bg-muted border-2 relative", i === sel ? "border-foreground" : "border-foreground/20")}>
                 {st.thumbnail_url && <img src={st.thumbnail_url} alt="" loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />}
                 <span className="absolute bottom-1 left-1 text-[9px] font-bold text-white bg-black/50 rounded px-1">
                   {st.posted_at ? new Date(st.posted_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : ""}
@@ -93,7 +93,7 @@ export function StoriesSummary({ stories }: { stories: StoryComCapa[] | undefine
           </div>
           <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
             {NUMS.filter(([k]) => k in am).map(([k, r]) => (
-              <div key={k} className="rounded-xl border-2 border-foreground bg-background px-3 py-2">
+              <div key={k} className="rounded-xl border border-foreground/25 bg-background px-3 py-2">
                 <p className="font-display font-extrabold text-lg leading-none">{fmtNum(am[k])}</p>
                 <p className="text-[11px] text-muted-foreground mt-1">{r}</p>
               </div>

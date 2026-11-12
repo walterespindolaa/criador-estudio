@@ -17,10 +17,10 @@ const segs = (s: number | null) => (s == null ? "—" : s < 60 ? `${s.toFixed(1)
 
 function Abas<T extends string>({ valor, opcoes, onChange, rotulo }: { valor: T; opcoes: Array<[T, string]>; onChange: (v: T) => void; rotulo: string }) {
   return (
-    <div role="tablist" aria-label={rotulo} className="flex gap-1 rounded-full border-2 border-foreground bg-card p-0.5">
+    <div role="tablist" aria-label={rotulo} className="flex gap-1 rounded-full border border-foreground/25 bg-card p-0.5">
       {opcoes.map(([k, nome]) => (
         <button key={k} type="button" role="tab" aria-selected={valor === k} onClick={() => onChange(k)}
-          className={cn("h-8 px-3 rounded-full text-xs font-semibold", valor === k ? "bg-foreground text-background" : "text-foreground/80 hover:bg-background")}>
+          className={cn("h-8 px-3 rounded-full text-xs font-semibold", valor === k ? "bg-foreground/10 text-foreground" : "text-foreground/80 hover:bg-background")}>
           {nome}
         </button>
       ))}
@@ -77,7 +77,7 @@ export function RankingGanchos({ media, ganchoDe, limite = 8 }: {
         <div className="mt-3">
           {top.map((l, i) => (
             <div key={l.midia.id} className={cn("grid grid-cols-[28px_1fr] sm:grid-cols-[28px_minmax(180px,1.6fr)_minmax(130px,1fr)_minmax(130px,1fr)_80px] gap-x-3 gap-y-2 items-center px-1 py-3 border-b-[1.5px] border-dashed border-foreground/15 last:border-b-0", i === 0 && "")}>
-              <span className={cn("w-7 h-7 rounded-full grid place-items-center text-xs font-extrabold", i === 0 ? "bg-[#EA4918] text-white border-2 border-foreground" : "border-2 border-foreground bg-card")}>{i + 1}</span>
+              <span className={cn("w-7 h-7 rounded-full grid place-items-center text-xs font-extrabold", i === 0 ? "bg-[#EA4918] text-white border border-foreground/25" : "border border-foreground/25 bg-card")}>{i + 1}</span>
               <div className="min-w-0">
                 <p className="font-display font-bold text-[13.5px] leading-snug line-clamp-2">"{l.gancho}"</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
@@ -87,13 +87,13 @@ export function RankingGanchos({ media, ganchoDe, limite = 8 }: {
               </div>
               <div className="col-start-2 sm:col-start-auto">
                 <div className="flex justify-between text-[11px] text-muted-foreground"><span>passou do início</span><b className="text-foreground">{l.passou == null ? "—" : `${Math.round(l.passou)}%`}</b></div>
-                <div className="mt-1 h-2.5 rounded-full border-[1.5px] border-foreground bg-card overflow-hidden">
+                <div className="mt-1 h-2.5 rounded-full border border-foreground/15 bg-card overflow-hidden">
                   {l.passou != null && <div className={cn("h-full rounded-full", l.passou >= 65 ? "bg-[#00A652]" : l.passou >= 55 ? "bg-[#FFCF03]" : "bg-[#EA4918]")} style={{ width: `${l.passou}%` }} />}
                 </div>
               </div>
               <div className="col-start-2 sm:col-start-auto">
                 <div className="flex justify-between text-[11px] text-muted-foreground"><span>tempo médio</span><b className="text-foreground">{segs(l.tempoMedioS)}</b></div>
-                <div className="mt-1 h-2.5 rounded-full border-[1.5px] border-foreground bg-card overflow-hidden">
+                <div className="mt-1 h-2.5 rounded-full border border-foreground/15 bg-card overflow-hidden">
                   {l.tempoMedioS != null && <div className="h-full rounded-full bg-[#0061EE]" style={{ width: `${(l.tempoMedioS / maxT) * 100}%` }} />}
                 </div>
               </div>
