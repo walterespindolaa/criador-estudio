@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useTravarRolagem } from "@/hooks/useTravarRolagem";
 import { NavLink, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Home, Lightbulb, Kanban, CalendarDays,
-  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, Menu, ChevronRight, LogOut, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard, Wand2, TrendingUp, IdCard, Trash2, Gem, Video, Globe, MessageSquarePlus, UsersRound, Briefcase
+  BookOpen, Archive, GraduationCap, FolderOpen, ListTodo, BookMarked, Settings, Menu, Search, LogOut, Grid3X3, Link2, ClipboardCheck, Handshake, Maximize2, Minimize2, Instagram, BarChart3, ShieldCheck, PlayCircle, Clapperboard, Wand2, TrendingUp, IdCard, Trash2, Gem, Video, Globe, MessageSquarePlus, UsersRound, Briefcase
 } from "lucide-react";
 import { useAcessoCriakut } from "@/hooks/useCriakut";
 import { useSouParceiro } from "@/hooks/useParceiro";
@@ -13,9 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
 import { useCriaAI } from "@/contexts/CriaAIContext";
-import { useTier } from "@/hooks/useTier";
 import { PlanTag } from "@/components/shared/PlanTag";
-import { seloDaRota } from "@/lib/plans";
 import { FeedbackDialog } from "@/components/FeedbackButton";
 import { useTemSocialMidia } from "@/hooks/useTemSocialMidia";
 
@@ -78,6 +78,21 @@ const MORE_SECTIONS: { title: string; items: MoreItem[] }[] = [
   ]},
 ];
 
+/* Cor cheia da marca por grupo do menu. `borda` é a cor usada no contorno e no
+   ícone da linha "Você mais usa" (o amarelo e o rosa ganham um tom mais firme
+   pra não sumir no branco). */
+type CorGrupo = { fundo: string; texto: string; borda: string };
+const CORES_GRUPO: Record<string, CorGrupo> = {
+  "Criar": { fundo: "#EB4918", texto: "#FFFFFF", borda: "#EB4918" },
+  "Mundo CRIA": { fundo: "#FF77B9", texto: "#0A0A0A", borda: "#F0469A" },
+  "Planejar": { fundo: "#0061EE", texto: "#FFFFFF", borda: "#0061EE" },
+  "Resultados": { fundo: "#00A652", texto: "#FFFFFF", borda: "#00A652" },
+  "Minha marca": { fundo: "#FFCF03", texto: "#0A0A0A", borda: "#E0B400" },
+};
+const COR_PADRAO: CorGrupo = { fundo: "#0061EE", texto: "#FFFFFF", borda: "#0061EE" };
+const corDoGrupo = (titulo: string): CorGrupo => CORES_GRUPO[titulo] ?? COR_PADRAO;
+const semAcento = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 export function BottomBar() {
   const [moreOpen, setMoreOpen] = useState(false);
   useTravarRolagem(moreOpen);
@@ -87,7 +102,6 @@ export function BottomBar() {
   const { signOut } = useAuth();
   const { openCria } = useCriaAI();
   const { profile } = useProfile();
-  const { tier } = useTier();
   const { temSocialMidia } = useTemSocialMidia();
   const { temAcesso: temCriakut } = useAcessoCriakut();
   // Parceiro na própria conta de criadora: porta de volta pra bancada (igual ao AppRail).
@@ -108,6 +122,40 @@ export function BottomBar() {
         : s)
     : base;
   const allMoreItems = sections.flatMap((s) => s.items);
+
+  /* ── Menu em grade (12/11/2026) ── */
+  const [busca, setBusca] = useState("");
+  const termo = semAcento(busca.trim());
+  const casa = (i: MoreItem) => !termo || semAcento(i.title).includes(termo) || semAcento(i.desc ?? "").includes(termo);
+  const EM_PILULA = ["Aprender", "Mais"];
+  const gruposGrade = sections.filter((s) => !EM_PILULA.includes(s.title))
+    .map((s) => ({ ...s, items: s.items.filter(casa) })).filter((s) => s.items.length > 0);
+  const pilulas = sections.filter((s) => EM_PILULA.includes(s.title)).flatMap((s) => s.items).filter(casa);
+  /* "Você mais usa": os módulos que a pessoa mais abriu em 30 dias (RPC
+     meus_modulos_mais_usados, lê o contador do RastroDeTelas). Só busca quando
+     o menu abre. O que já mora na barra de baixo fica de fora. Sem a RPC ou
+     com pouco uso, a linha simplesmente não aparece. */
+  const { data: modulosUsados } = useQuery<string[]>({
+    queryKey: ["menu-mais-usados", profile?.id],
+    enabled: moreOpen && !!profile?.id,
+    staleTime: 10 * 60_000,
+    retry: false,
+    queryFn: async () => {
+      try {
+        const { data, error } = await (supabase.rpc as unknown as (fn: string) => PromiseLike<{ data: unknown; error: unknown }>)("meus_modulos_mais_usados");
+        return error || !Array.isArray(data) ? [] : (data as unknown[]).map(String);
+      } catch { return []; }
+    },
+  });
+  const NA_BARRA = ["/app", "/app/ideias", "/app/criando"];
+  const maisUsados = (modulosUsados ?? [])
+    .map((m) => {
+      const sec = sections.find((s) => s.items.some((i) => i.url === `/app/${m}`));
+      const item = sec?.items.find((i) => i.url === `/app/${m}`);
+      return item && sec && !NA_BARRA.includes(item.url) ? { item, cor: corDoGrupo(sec.title) } : null;
+    })
+    .filter((x): x is { item: MoreItem; cor: CorGrupo } => !!x)
+    .slice(0, 4);
   const [searchParams, setSearchParams] = useSearchParams();
   const onCriando = location.pathname === "/app/criando";
   const overview = searchParams.get("view") === "overview";
@@ -180,50 +228,82 @@ export function BottomBar() {
           {/* min-h-0: sem ele o filho de um flex-col cresce até o tamanho do conteúdo, é
               cortado pelo pai (overflow-hidden) e nunca rola; o dedo então rolava a
               página de trás. overscroll-contain: ao chegar no fim, não passa pra trás. */}
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-2">
-            {sections.map((sec) => (
-              <div key={sec.title} className="mb-2">
-                <p className="px-3 pt-3 pb-1.5"><span className="inline-flex items-center rounded-lg bg-primary/10 px-2.5 py-1 text-[11px] uppercase tracking-[0.1em] font-display font-extrabold text-primary">{sec.title}</span></p>
-                <div className="space-y-0.5">
-                  {sec.items.map((item) => {
-                    const active = isActive(item.url);
-                    return (
-                      <NavLink key={item.url + item.title} to={item.url} onClick={() => setMoreOpen(false)}
-                        className={cn("flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-colors", active ? "bg-primary/10" : "active:bg-muted/60")}>
-                        <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-xl", active ? "bg-primary/15 text-primary" : item.hot ? "bg-secondary/12 text-secondary" : "bg-muted text-muted-foreground")}>
-                          <item.icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className={cn("text-[15px] font-body font-semibold truncate", active ? "text-primary" : "text-foreground")}>{item.title}</span>
-                            {/* Selo de plano vindo do mapa (lib/plans.ts), não mais
-                                de um "pro: true" escrito à mão que só existia em 2 itens. */}
-                            <PlanTag to={item.url} />
-                            {item.hot && !seloDaRota(item.url, tier) && <span className="shrink-0 rounded-full bg-secondary/15 text-secondary text-[9px] font-bold px-1.5 py-0.5 leading-none">EM ALTA</span>}
-                          </div>
-                          {item.desc && <p className="text-[11.5px] font-body text-muted-foreground truncate mt-0.5">{item.desc}</p>}
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" strokeWidth={2} />
-                      </NavLink>
-                    );
-                  })}
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-[18px] pb-4">
+            {/* MENU EM GRADE (Walter, 12/11/2026, mockup em tela real aprovado).
+                Antes: 25 itens em lista, 7 por tela. Agora: grade de 4, cor cheia
+                da marca por grupo, sem borda preta nem tom claro. No topo, busca
+                (filtra os blocos) e "Você mais usa" (os módulos que ESTA pessoa
+                mais abriu nos últimos 30 dias, em branco com a borda na cor do
+                grupo). Aprender, Mais, feedback e sair viram pílulas no fim. */}
+            <label className="mb-[18px] flex items-center gap-2.5 rounded-full bg-[#F1EEE4] px-4 py-3 text-[#5B574E]">
+              <Search className="h-[17px] w-[17px] shrink-0" strokeWidth={2} />
+              <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar no Cria" aria-label="Buscar no menu"
+                className="min-w-0 flex-1 bg-transparent text-[14.5px] font-body text-[#0A0A0A] placeholder:text-[#5B574E] outline-none" />
+            </label>
+
+            {!termo && maisUsados.length >= 2 && (
+              <div className="mb-5">
+                <p className="mb-2.5 text-[15px] font-display font-extrabold text-foreground">Você mais usa</p>
+                <div className="grid grid-cols-4 gap-[9px]">
+                  {maisUsados.map(({ item, cor }) => (
+                    <NavLink key={"mu" + item.url} to={item.url} onClick={() => setMoreOpen(false)}
+                      className="flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-[20px] border-[2.5px] bg-white px-1.5 pb-[9px] pt-3 active:scale-[0.97] transition-transform"
+                      style={{ borderColor: cor.borda }}>
+                      <item.icon className="h-[22px] w-[22px]" strokeWidth={1.9} style={{ color: cor.borda }} />
+                      <span className="text-center text-[11.5px] font-body font-bold leading-[1.15] text-[#0A0A0A]">{item.title}</span>
+                    </NavLink>
+                  ))}
                 </div>
               </div>
-            ))}
-            {/* Feedback: abre o mesmo diálogo do desktop, mas acessível no celular. */}
-            <button type="button" onClick={() => { setMoreOpen(false); setFeedbackOpen(true); }}
-              className="mt-1 w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl active:bg-muted/60 transition-colors text-left">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground"><MessageSquarePlus className="h-[18px] w-[18px]" strokeWidth={1.8} /></span>
-              <div className="min-w-0 flex-1">
-                <span className="block text-[15px] font-body font-semibold text-foreground">Enviar feedback</span>
-                <span className="block text-[11.5px] font-body text-muted-foreground truncate mt-0.5">Uma ideia ou um problema no app</span>
-              </div>
-            </button>
-            <button type="button" onClick={handleSignOut}
-              className="mt-1 mb-1 w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl active:bg-destructive/10 transition-colors">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-destructive/10 text-destructive"><LogOut className="h-[18px] w-[18px]" strokeWidth={1.8} /></span>
-              <span className="text-[15px] font-body font-semibold text-destructive">Sair</span>
-            </button>
+            )}
+
+            {gruposGrade.map((sec) => {
+              const cor = corDoGrupo(sec.title);
+              return (
+                <div key={sec.title} className="mb-[18px]">
+                  <p className="mb-2.5 text-[15px] font-display font-extrabold text-foreground">{sec.title === "Mundo CRIA" ? "Mundo Cria" : sec.title}</p>
+                  <div className="grid grid-cols-4 gap-[9px]">
+                    {sec.items.map((item) => (
+                      <NavLink key={item.url + item.title} to={item.url} onClick={() => setMoreOpen(false)}
+                        className={cn("relative flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-[20px] px-1.5 pb-[11px] pt-3.5 active:scale-[0.97] transition-transform",
+                          isActive(item.url) && "ring-[3px] ring-[#0A0A0A] ring-offset-2 ring-offset-card")}
+                        style={{ background: cor.fundo, color: cor.texto }}>
+                        <span className="absolute right-1 top-1"><PlanTag to={item.url} /></span>
+                        <item.icon className="h-[22px] w-[22px]" strokeWidth={1.9} />
+                        <span className="text-center text-[11.5px] font-body font-semibold leading-[1.15]">{item.title}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+
+            {termo && gruposGrade.length === 0 && pilulas.length === 0 && (
+              <p className="py-6 text-center text-[14px] font-body text-muted-foreground">Nada com esse nome no menu.</p>
+            )}
+
+            <div className="mt-1 flex flex-wrap gap-2">
+              {pilulas.map((item) => (
+                <NavLink key={item.url + item.title} to={item.url} onClick={() => setMoreOpen(false)}
+                  className={cn("inline-flex h-10 items-center gap-1.5 rounded-full bg-[#F1EEE4] px-3.5 text-[13px] font-body font-semibold text-[#0A0A0A] active:scale-[0.97] transition-transform",
+                    isActive(item.url) && "bg-[#0A0A0A] text-[#F5F3E7]")}>
+                  <item.icon className="h-4 w-4" strokeWidth={1.9} />{item.title}
+                </NavLink>
+              ))}
+              {!termo && (
+                <>
+                  {/* Feedback: abre o mesmo diálogo do desktop, mas acessível no celular. */}
+                  <button type="button" onClick={() => { setMoreOpen(false); setFeedbackOpen(true); }}
+                    className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[#F1EEE4] px-3.5 text-[13px] font-body font-semibold text-[#0A0A0A] active:scale-[0.97] transition-transform">
+                    <MessageSquarePlus className="h-4 w-4" strokeWidth={1.9} />Enviar feedback
+                  </button>
+                  <button type="button" onClick={handleSignOut}
+                    className="inline-flex h-10 items-center gap-1.5 rounded-full bg-destructive/10 px-3.5 text-[13px] font-body font-semibold text-destructive active:scale-[0.97] transition-transform">
+                    <LogOut className="h-4 w-4" strokeWidth={1.9} />Sair
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -248,7 +328,7 @@ export function BottomBar() {
                         : <Maximize2 className="h-5 w-5 text-muted-foreground" strokeWidth={1.9} />}
             </button>
           )}
-          <button type="button" onClick={() => setMoreOpen(!moreOpen)} aria-label="Menu"
+          <button type="button" onClick={() => { setBusca(""); setMoreOpen(!moreOpen); }} aria-label="Menu"
             className="dock-pill h-[52px] w-[52px] rounded-full flex items-center justify-center active:scale-95 transition-transform">
             <Menu className={cn("h-6 w-6 transition-colors", moreOpen || isMoreActive ? "text-primary" : "text-muted-foreground")} strokeWidth={1.8}/>
           </button>
