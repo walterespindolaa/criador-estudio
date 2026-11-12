@@ -88,7 +88,9 @@ const CORES_GRUPO: Record<string, CorGrupo> = {
   "Planejar": { fundo: "#0061EE", texto: "#FFFFFF", borda: "#0061EE" },
   "Resultados": { fundo: "#00A652", texto: "#FFFFFF", borda: "#00A652" },
   "Minha marca": { fundo: "#FFCF03", texto: "#0A0A0A", borda: "#E0B400" },
+  "Aprender": { fundo: "#7C90F0", texto: "#0A0A0A", borda: "#5B6FE0" },
 };
+const COR_MAIS = "#5B6FE0";
 const COR_PADRAO: CorGrupo = { fundo: "#0061EE", texto: "#FFFFFF", borda: "#0061EE" };
 const corDoGrupo = (titulo: string): CorGrupo => CORES_GRUPO[titulo] ?? COR_PADRAO;
 const semAcento = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -127,7 +129,7 @@ export function BottomBar() {
   const [busca, setBusca] = useState("");
   const termo = semAcento(busca.trim());
   const casa = (i: MoreItem) => !termo || semAcento(i.title).includes(termo) || semAcento(i.desc ?? "").includes(termo);
-  const EM_PILULA = ["Aprender", "Mais"];
+  const EM_PILULA = ["Mais"];
   const gruposGrade = sections.filter((s) => !EM_PILULA.includes(s.title))
     .map((s) => ({ ...s, items: s.items.filter(casa) })).filter((s) => s.items.length > 0);
   const pilulas = sections.filter((s) => EM_PILULA.includes(s.title)).flatMap((s) => s.items).filter(casa);
@@ -282,28 +284,42 @@ export function BottomBar() {
               <p className="py-6 text-center text-[14px] font-body text-muted-foreground">Nada com esse nome no menu.</p>
             )}
 
-            <div className="mt-1 flex flex-wrap gap-2">
-              {pilulas.map((item) => (
-                <NavLink key={item.url + item.title} to={item.url} onClick={() => setMoreOpen(false)}
-                  className={cn("inline-flex h-10 items-center gap-1.5 rounded-full bg-[#F1EEE4] px-3.5 text-[13px] font-body font-semibold text-[#0A0A0A] active:scale-[0.97] transition-transform",
-                    isActive(item.url) && "bg-[#0A0A0A] text-[#F5F3E7]")}>
-                  <item.icon className="h-4 w-4" strokeWidth={1.9} />{item.title}
-                </NavLink>
-              ))}
-              {!termo && (
-                <>
-                  {/* Feedback: abre o mesmo diálogo do desktop, mas acessível no celular. */}
-                  <button type="button" onClick={() => { setMoreOpen(false); setFeedbackOpen(true); }}
-                    className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[#F1EEE4] px-3.5 text-[13px] font-body font-semibold text-[#0A0A0A] active:scale-[0.97] transition-transform">
-                    <MessageSquarePlus className="h-4 w-4" strokeWidth={1.9} />Enviar feedback
-                  </button>
-                  <button type="button" onClick={handleSignOut}
-                    className="inline-flex h-10 items-center gap-1.5 rounded-full bg-destructive/10 px-3.5 text-[13px] font-body font-semibold text-destructive active:scale-[0.97] transition-transform">
-                    <LogOut className="h-4 w-4" strokeWidth={1.9} />Sair
-                  </button>
-                </>
-              )}
-            </div>
+            {/* O ÚLTIMO GRUPO IGUAL AOS OUTROS (Walter, 12/11/2026: "achei feio
+                aqueles últimos botões bem diferentes"). "Mais" usa o mesmo bloco
+                da grade, no estilo da linha "Você mais usa": branco, com borda e
+                ícone coloridos. Feedback e Sair entram como blocos do grupo. */}
+            {(pilulas.length > 0 || !termo) && (
+              <div className="mb-2">
+                <p className="mb-2.5 text-[15px] font-display font-extrabold text-foreground">Mais</p>
+                <div className="grid grid-cols-4 gap-[9px]">
+                  {pilulas.map((item) => (
+                    <NavLink key={item.url + item.title} to={item.url} onClick={() => setMoreOpen(false)}
+                      className={cn("flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-[20px] border-[2.5px] bg-white px-1.5 pb-[9px] pt-3 active:scale-[0.97] transition-transform",
+                        isActive(item.url) && "ring-[3px] ring-[#0A0A0A] ring-offset-2 ring-offset-card")}
+                      style={{ borderColor: COR_MAIS }}>
+                      <item.icon className="h-[22px] w-[22px]" strokeWidth={1.9} style={{ color: COR_MAIS }} />
+                      <span className="text-center text-[11.5px] font-body font-bold leading-[1.15] text-[#0A0A0A]">{item.title}</span>
+                    </NavLink>
+                  ))}
+                  {!termo && (
+                    <>
+                      {/* Feedback: abre o mesmo diálogo do desktop, mas acessível no celular. */}
+                      <button type="button" onClick={() => { setMoreOpen(false); setFeedbackOpen(true); }}
+                        className="flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-[20px] border-[2.5px] bg-white px-1.5 pb-[9px] pt-3 active:scale-[0.97] transition-transform"
+                        style={{ borderColor: COR_MAIS }}>
+                        <MessageSquarePlus className="h-[22px] w-[22px]" strokeWidth={1.9} style={{ color: COR_MAIS }} />
+                        <span className="text-center text-[11.5px] font-body font-bold leading-[1.15] text-[#0A0A0A]">Feedback</span>
+                      </button>
+                      <button type="button" onClick={handleSignOut}
+                        className="flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-[20px] border-[2.5px] border-destructive bg-white px-1.5 pb-[9px] pt-3 active:scale-[0.97] transition-transform">
+                        <LogOut className="h-[22px] w-[22px] text-destructive" strokeWidth={1.9} />
+                        <span className="text-center text-[11.5px] font-body font-bold leading-[1.15] text-destructive">Sair</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
