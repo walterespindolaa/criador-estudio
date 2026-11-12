@@ -40,6 +40,7 @@ import { VideoPublicConfirmProvider } from "@/contexts/VideoPublicConfirmContext
 import { CriaAIPanel } from "@/components/ai/CriaAIPanel";
 import { TrialBanner } from "@/components/TrialBanner";
 import { FaixaConfirmarEmail } from "@/components/ConfirmarEmailAviso";
+import { FaixaCupomCampanha } from "@/components/FaixaCupomCampanha";
 import { StorageWarningBanner } from "@/components/StorageWarningBanner";
 import { ManagingBanner } from "@/components/accounts/ManagingBanner";
 import { AccountSwitcher } from "@/components/accounts/AccountSwitcher";
@@ -431,6 +432,7 @@ const AppLayout = () => {
         )}
 
             <FaixaConfirmarEmail />
+            <FaixaCupomCampanha />
             <TrialBanner />
             <StorageWarningBanner />
             {/* BARRA SUPERIOR DO COMPUTADOR (Walter, 08/11/2026, mockup aprovado):
