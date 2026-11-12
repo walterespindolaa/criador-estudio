@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { contaAtivaAtual } from "@/lib/conta-ativa";
 
-export type AIOperation = 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption' | 'score-caption' | 'client-report-insight' | 'insights-reading' | 'autopilot-cronograma' | 'trend-bank-refresh' | 'admin-system-insight' | 'story-trend-refresh' | 'story-plan-generate' | 'art-prompt' | 'art-brief' | 'brandbook-read' | 'relatorio-read' | 'hot-news' | 'carousel-script' | 'capture-scenes' | 'story-escrever' | 'autopilot-conceitos';
+export type AIOperation = 'ideia-falada' | 'tag-suggestion' | 'reference-filter' | 'archive-summary' | 'daily-insight' | 'idea-suggestions' | 'generate-caption' | 'suggest-hashtags' | 'onboarding-setup' | 'cria-chat' | 'repurpose-content' | 'refine-caption' | 'score-caption' | 'client-report-insight' | 'insights-reading' | 'autopilot-cronograma' | 'trend-bank-refresh' | 'admin-system-insight' | 'story-trend-refresh' | 'story-plan-generate' | 'art-prompt' | 'art-brief' | 'brandbook-read' | 'relatorio-read' | 'hot-news' | 'carousel-script' | 'capture-scenes' | 'story-escrever' | 'autopilot-conceitos';
 
 export interface AutopilotPost {
   titulo: string;
@@ -132,6 +132,12 @@ export async function callAIContextBuilder(payload: AIRequest) {
 
   return data?.result;
 }
+
+export interface SugestaoIdeiaFalada { titulo: string; formato: string; pilar: string; pergunta: string }
+/** Ideia por voz: a pessoa falou solto e a Cria IA devolve título, formato, pilar e uma pergunta. */
+export const sugerirIdeiaFalada = async (ideiaTexto: string, pilares: string[]): Promise<SugestaoIdeiaFalada> => {
+  return callAIContextBuilder({ operation: 'ideia-falada', data: { ideiaTexto, pilares } });
+};
 
 export const suggestTag = async (ideaTitle: string, pillars: { name: string }[], userId?: string) => {
   return callAIContextBuilder({

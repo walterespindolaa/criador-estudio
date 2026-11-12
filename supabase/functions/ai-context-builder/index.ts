@@ -841,7 +841,7 @@ RESPONDA APENAS JSON válido:
        Escrevendo pra um CLIENTE da social mídia (data.cliente), o dossiê dela
        ficaria errado: a marca é a do cliente, que vem nos dados do pedido. */
     const OPS_SEM_DOSSIE = new Set(['tag-suggestion', 'reference-filter', 'archive-summary', 'brandbook-read', 'relatorio-read', 'admin-system-insight', 'client-report-insight'])
-    const OPS_DOSSIE_LEVE = new Set(['daily-insight', 'insights-reading', 'suggest-hashtags', 'onboarding-setup'])
+    const OPS_DOSSIE_LEVE = new Set(['daily-insight', 'insights-reading', 'suggest-hashtags', 'onboarding-setup', 'ideia-falada'])
     const hojeBR = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: 'long', year: 'numeric' })
     const paraCliente = !!(data && typeof data.cliente === 'string' && data.cliente.trim())
     let userContext = ''
@@ -879,6 +879,23 @@ RESPONDA APENAS JSON válido:
         userPrompt = `Título: ${data.ideaTitle}\nPilares disponíveis: ${(data.pillars || []).map((p: any) => p.name || p).join(', ')}`
         maxTokens = 30
         break
+      case 'ideia-falada': {
+        /* IDEIA POR VOZ (Walter, 11/11/2026). A pessoa falou a ideia solta na
+           "Nova ideia" e pediu ajuda pra dar forma. Devolve título curto,
+           formato, pilar (só dos que ela tem) e UMA pergunta que ajuda a
+           decidir como gravar. Não inventa fato: trabalha só com o que foi dito. */
+        const pilaresIdeia = (Array.isArray(data.pilares) ? data.pilares : []).map((x: unknown) => String(x).slice(0, 60)).filter(Boolean).slice(0, 20)
+        operationPrompt = `A pessoa falou em voz alta uma ideia de conteúdo, do jeito que veio. Ajude a dar forma, sem mudar a ideia e sem inventar fato que ela não disse.
+Responda APENAS com JSON, neste formato exato:
+{"titulo":"...","formato":"...","pilar":"...","pergunta":"..."}
+- titulo: a ideia dela em até 9 palavras, como título de post, nas palavras dela. Sem clickbait.
+- formato: o formato que mais combina, em até 4 palavras (ex.: "Reels de bastidor", "Carrossel passo a passo", "Story com enquete").
+- pilar: exatamente um dos pilares da lista, copiado igual. Se nenhum combinar ou a lista estiver vazia, devolva "".
+- pergunta: UMA pergunta curta que ajuda a decidir como gravar ou mostrar (até 14 palavras).`
+        userPrompt = `Ideia falada: ${String(data.ideiaTexto ?? '').slice(0, 600)}\nPilares dela: ${pilaresIdeia.join(', ') || '(nenhum)'}`
+        maxTokens = 220
+        break
+      }
       case 'reference-filter':
         operationPrompt = "Retorne JSON com hook_categories (array, max 2) e format_type (string) mais relevantes para este post."
         userPrompt = `Plataforma: ${data.platform}, Formato: ${data.format}, Pilar: ${data.pillar}, Título: ${data.title}`
@@ -1731,7 +1748,7 @@ ${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de 
     const result = await response.json()
     let content = result.choices?.[0]?.message?.content || ''
 
-    if (operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate' || operation === 'story-escrever' || operation === 'autopilot-conceitos' || operation === 'art-prompt' || operation === 'art-brief' || operation === 'carousel-script' || operation === 'capture-scenes') {
+    if (operation === 'ideia-falada' || operation === 'reference-filter' || operation === 'score-caption' || operation === 'client-report-insight' || operation === 'insights-reading' || operation === 'autopilot-cronograma' || operation === 'story-plan-generate' || operation === 'story-escrever' || operation === 'autopilot-conceitos' || operation === 'art-prompt' || operation === 'art-brief' || operation === 'carousel-script' || operation === 'capture-scenes') {
       const extrair = (txt: string) => {
         const cleaned = String(txt).replace(/```json/gi, '').replace(/```/g, '').trim()
         const jsonMatch = cleaned.match(/\{[\s\S]*\}/)

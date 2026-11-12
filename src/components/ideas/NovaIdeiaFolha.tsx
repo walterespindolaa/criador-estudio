@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Folder } from "lucide-react";
 import { sanitizeText } from "@/lib/sanitize";
 import { VoiceInput } from "@/components/shared/VoiceInput";
+import { toast } from "sonner";
+import { sugerirIdeiaFalada, type SugestaoIdeiaFalada } from "@/lib/ai/claude";
 import { BlocoDeNotas, BotaoFolha, CampoDaFolha, Etiqueta, LINHA, MAO, ehSalvar } from "@/components/folha/BlocoDeNotas";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -83,6 +85,31 @@ function Conteudo({ editando, inicial, pilares, pastas, totalIdeias, onVerTodas,
     if (!fala?.texto) return;
     setTitulo((t) => `${t ? `${t.trimEnd()} ` : ""}${fala.texto}`.replace(/\n/g, " ").slice(0, LIMITE_TITULO));
   }, [fala]);
+  // SUGESTÃO DA CRIA IA. Só aparece depois que a pessoa falou, e só roda quando
+  // ela pede (cada pedido conta na cota de IA do mês). "Usar" aplica o pilar e
+  // anota formato e pergunta como tópicos; nada é guardado sem ela mandar.
+  const [sugestao, setSugestao] = useState<SugestaoIdeiaFalada | null>(null);
+  const [pedindo, setPedindo] = useState(false);
+  const pedirSugestao = async () => {
+    const texto = sanitizeText(titulo).slice(0, 600);
+    if (!texto || pedindo) return;
+    setPedindo(true);
+    try {
+      const r = await sugerirIdeiaFalada(texto, pilares.map((p) => p.name));
+      if (r && (r.formato || r.pergunta || r.pilar)) setSugestao(r);
+      else toast("A Cria IA não achou o que sugerir pra essa ideia.");
+    } catch (e) {
+      toast.error(e instanceof Error && e.message && !/non-2xx|AI Operation/i.test(e.message) ? e.message : "Não consegui pedir a sugestão agora. Tenta de novo?");
+    } finally { setPedindo(false); }
+  };
+  const usarSugestao = () => {
+    if (!sugestao) return;
+    const pilar = pilares.find((p) => p.name.trim().toLowerCase() === sugestao.pilar?.trim().toLowerCase());
+    if (pilar) setPilarId(pilar.id);
+    const novos = [sugestao.formato ? `Formato: ${sugestao.formato}` : "", sugestao.pergunta ?? ""].filter(Boolean);
+    setTopicos((l) => [...l.filter((x) => x.trim()), ...novos, ""]);
+    setSugestao(null);
+  };
   const [topicos, setTopicos] = useState<string[]>([""]);
   const [pilarId, setPilarId] = useState<string | null>(inicial?.pilarId ?? null);
   const [pastaId, setPastaId] = useState<string | null>(inicial?.pastaId ?? null);
@@ -163,6 +190,27 @@ function Conteudo({ editando, inicial, pilares, pastas, totalIdeias, onVerTodas,
             />
           </div>
         ))
+      )}
+
+      {!editando && !!fala && !sugestao && !!titulo.trim() && (
+        <div className="flex items-center" style={{ minHeight: LINHA }}>
+          <button type="button" onClick={pedirSugestao} disabled={pedindo}
+            className="inline-flex h-[26px] items-center rounded-full border-2 border-dashed border-[#0061EE] bg-[#EEF4FF] px-3 font-body text-[12.5px] font-bold text-[#0061EE] disabled:opacity-60">
+            {pedindo ? "A Cria IA está pensando..." : "Pedir sugestão da Cria IA"}
+          </button>
+        </div>
+      )}
+      {!editando && sugestao && (
+        <div className="my-1.5 rounded-[14px] border-2 border-dashed border-[#0061EE] bg-[#EEF4FF] px-3 py-2">
+          <p className="text-[21px] leading-none text-[#0061EE]" style={MAO}>Cria IA sugere</p>
+          <p className="mt-1.5 font-body text-[13.5px] font-medium leading-snug text-[#1D1B18]">
+            {[sugestao.formato, sugestao.pilar ? `pilar ${sugestao.pilar}` : "", sugestao.pergunta].filter(Boolean).join(" · ")}
+          </p>
+          <div className="mt-1.5 flex justify-end gap-2">
+            <button type="button" onClick={() => setSugestao(null)} className="h-[26px] rounded-full px-3 font-body text-[12px] font-bold text-[#7A7268]">Dispensar</button>
+            <button type="button" onClick={usarSugestao} className="h-[26px] rounded-full border-2 border-[#1D1B18] bg-white px-3 font-body text-[12px] font-bold text-[#1D1B18]">Usar</button>
+          </div>
+        </div>
       )}
 
       {pilares.length > 0 && (
