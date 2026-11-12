@@ -7,6 +7,7 @@ import { ExternalApprovalsPanel } from "@/components/accounts/ExternalApprovalsP
 import { ManagerCalendar } from "@/components/accounts/ManagerCalendar";
 import { PublicacoesBoard } from "@/components/accounts/PublicacoesBoard";
 import { QuickReportCard } from "@/components/accounts/QuickReportCard";
+import { LinksEnviados } from "@/components/accounts/LinksEnviados";
 import { Button } from "@/components/ui/button";
 import { useMeusParceiros } from "@/hooks/useParceiro";
 
@@ -23,7 +24,7 @@ export default function CriaPost() {
   const navigate = useNavigate();
   const { search } = useLocation();
   const { data: parceiros = [] } = useMeusParceiros();
-  const ativa = tab === "calendario" ? "calendario" : tab === "publicacoes" ? "publicacoes" : "aprovacoes";
+  const ativa = tab === "calendario" ? "calendario" : tab === "publicacoes" ? "publicacoes" : tab === "links" ? "links" : "aprovacoes";
 
   // /criapost sem aba → cai na de aprovações (senão nenhuma aba fica marcada).
   useEffect(() => {
@@ -38,6 +39,9 @@ export default function CriaPost() {
     // Publicações (Walter, 28/10/2026): o que sai hoje, o que sai sozinho, o
     // que precisa de conferência e o que já saiu, de todos os clientes.
     { to: "/socialmidia/criapost/publicacoes", label: "Agendamentos" },
+    // Links enviados (Walter, 12/11/2026): todos os links mandados pros
+    // clientes num lugar só, com copiar e desligar.
+    { to: "/socialmidia/criapost/links", label: "Links enviados" },
   ];
 
   return (
@@ -70,6 +74,8 @@ export default function CriaPost() {
         </>
       ) : ativa === "publicacoes" ? (
         <PublicacoesBoard />
+      ) : ativa === "links" ? (
+        <LinksEnviados />
       ) : (
         <ManagerCalendar />
       )}
