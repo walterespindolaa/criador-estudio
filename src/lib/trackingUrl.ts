@@ -47,7 +47,17 @@ export function sanitizeTrackingUrl(raw: string | null | undefined): string | nu
       const masked = r.hasParam ? `${r.prefix}/:token` : r.prefix;
       return `${u.origin}${masked}`;
     }
-    return raw;
+    /* O "#" SAI SEMPRE (12/11/2026). O link de confirmação de e-mail e o de
+       entrar sem senha pousam em QUALQUER rota (ex.: /onboarding) com a sessão
+       inteira depois do "#" (access_token, refresh_token). Um erro de tela
+       nessa hora gravava a sessão da pessoa no app_logs. O app não usa "#" pra
+       navegar, então nada se perde. Na query saem só os nomes de segredo. */
+    let mudou = false;
+    if (u.hash) { u.hash = ""; mudou = true; }
+    for (const k of ["access_token", "refresh_token", "token", "code", "token_hash"]) {
+      if (u.searchParams.has(k)) { u.searchParams.delete(k); mudou = true; }
+    }
+    return mudou ? u.toString() : raw;
   } catch {
     return raw ?? null;
   }
