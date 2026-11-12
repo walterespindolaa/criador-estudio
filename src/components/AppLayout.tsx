@@ -457,6 +457,7 @@ const AppLayout = () => {
                   actions={quickActions}
                   meta={heroMeta}
                   destaque={isDash}
+                  recuo={railPinned ? "menu-fixado" : "menu"}
                 >
                   <div className="w-[300px] max-w-[30vw] [&>button]:w-full [&>button]:rounded-full [&>button]:border-2 [&>button]:border-[#1D1B18] [&>button]:bg-white [&>button]:shadow-[0_2px_0_#1D1B18]">
                     <GlobalSearch />

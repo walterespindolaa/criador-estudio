@@ -23,6 +23,7 @@ export function BarraSuperior({
   topoEsquerda,
   icone,
   frase,
+  recuo,
 }: {
   eyebrow?: string;
   title: ReactNode;
@@ -40,9 +41,14 @@ export function BarraSuperior({
   icone?: ReactNode;
   /** Frase curta à mão (Caveat) ao lado do nome ou embaixo do título. */
   frase?: string;
+  /** A barra passa por baixo do menu lateral: o conteúdo começa depois dele
+   *  (12/11/2026: a foto e o nome ficavam escondidos atrás do menu). */
+  recuo?: "menu" | "menu-fixado";
 }) {
   const ramp = statusRamp();
   const grad = `linear-gradient(115deg, ${ramp["publicado"].from} 0%, ${ramp["gravando"].from} 100%)`;
+  // Mesma conta do AppLayout (104px solto, 288px fixado), menos a folga e a borda da barra.
+  const esq = cn("pl-[18px] md:transition-[padding-left] md:duration-200", recuo === "menu" && "md:pl-[86px]", recuo === "menu-fixado" && "md:pl-[270px]");
   return (
     <header
       className="relative overflow-hidden rounded-[22px] border-2 bg-[#FFFCF3] text-[#1D1B18]"
@@ -65,12 +71,12 @@ export function BarraSuperior({
       )}
       <span aria-hidden className="pointer-events-none absolute left-[37%] top-[52px] h-3.5 w-3.5 rounded-full border-2 bg-primary" style={{ borderColor: TINTA }} />
 
-      <div className="relative flex items-center gap-3 px-[18px] pt-3 pr-3.5">
+      <div className={cn("relative flex items-center gap-3 pt-3 pr-3.5", esq)}>
         <div className="min-w-0 text-[12.5px] font-body text-[#7A7268]">{topoEsquerda}</div>
         <div className="ml-auto flex items-center gap-2">{children}</div>
       </div>
 
-      <div className={cn("relative flex gap-4 px-[18px] pb-4 pt-2.5", destaque ? "items-end" : "items-center")}>
+      <div className={cn("relative flex gap-4 pr-[18px] pb-4 pt-2.5", esq, destaque ? "items-end" : "items-center")}>
         {avatar}
         {!avatar && icone && (
           <span
@@ -100,7 +106,7 @@ export function BarraSuperior({
       </div>
       <div
         id="cria-hero-slot"
-        className="relative -mt-1 flex flex-wrap gap-1.5 px-[18px] pb-4 empty:hidden"
+        className={cn("relative -mt-1 flex flex-wrap gap-1.5 pr-[18px] pb-4 empty:hidden", esq)}
       />
     </header>
   );
