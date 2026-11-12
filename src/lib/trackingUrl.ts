@@ -24,6 +24,8 @@ const TOKEN_ROUTES: { prefix: string; hasParam: boolean }[] = [
   { prefix: "/app/obrigado", hasParam: false },
   { prefix: "/ativar", hasParam: false },
   { prefix: "/reset-password", hasParam: false },
+  // Botões dos e-mails (/email/pronto, /email/confirmar): o token vem na query.
+  { prefix: "/email", hasParam: false },
 ];
 
 function matchTokenRoute(pathname: string) {

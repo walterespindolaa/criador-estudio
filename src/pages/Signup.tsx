@@ -65,6 +65,11 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
   const [aceitouTermos, setAceitouTermos] = useState(false);
   const [erroTermos, setErroTermos] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  /* CONFERIR O E-MAIL ANTES DE CRIAR (Walter, 12/11/2026). A conta agora entra
+     direto, sem esperar o clique no e-mail, então o erro de digitação deixou
+     de ser pego na hora. Esta tela mostra o e-mail em letra grande e só cria a
+     conta depois do "Está certo". */
+  const [conferindo, setConferindo] = useState<SignupFormData | null>(null);
   const [emailValue, setEmailValue] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -119,8 +124,13 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
     return { text: t("signup.createError") };
   };
 
-  const onSubmit = async (data: SignupFormData) => {
+  const onSubmit = (data: SignupFormData) => {
     if (!aceitouTermos) { setErroTermos(true); return; }
+    setFormError(null);
+    setConferindo({ ...data, email: data.email.trim() });
+  };
+
+  const criarConta = async (data: SignupFormData) => {
     setEmailValue(data.email);
     setFormError(null);
     setLoading(true);
@@ -154,11 +164,15 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
     })();
     const escolha = accountType === "creator" && planoLp && ["essencial", "pro", "studio"].includes(planoLp)
       ? { plano_escolhido: planoLp } : {};
-    const juntos = { ...intencao, ...origem, ...escolha };
+    /* `confirmar_email` marca a conta que nasceu por este cadastro: é ela que
+       o app cobra a confirmação depois (conta criada pelo admin ou pela
+       agência não tem a marca e nunca é cobrada). */
+    const juntos = { ...intencao, ...origem, ...escolha, confirmar_email: "1" };
     const meta = Object.keys(juntos).length ? juntos : undefined;
     const { error, needsConfirmation } = await signUp(data.email, data.password, data.name, meta);
     setLoading(false);
     if (error) {
+      setConferindo(null);
       console.warn("[signup] error:", error.message);
       const mapped = mapSignupError(error.message);
       if (mapped.field) setError(mapped.field, { message: mapped.text });
@@ -175,8 +189,12 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
           .catch(() => { /* fica pendente, o ProtectedRoute tenta de novo */ });
       }
       if (needsConfirmation) {
+        setConferindo(null);
         setEmailSent(true);
       } else {
+        /* Entrou direto: o e-mail de confirmação sai pela fila do Cria. Se
+           falhar, a faixa dentro do app tem o "Reenviar". */
+        void supabase.functions.invoke("confirmar-email", { body: { action: "enviar" } }).catch(() => { /* a faixa cobre */ });
         toast.success("Conta criada! Bem-vinda ao CRIA.");
         navigate(accountType === "manager" ? "/comecar-agencia"
           : accountType === "parceiro" ? "/comecar-parceiro"
@@ -282,6 +300,25 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
                 {t("signup.tryAgain")}
               </button>.
             </p>
+          </div>
+        ) : conferindo ? (
+          <div className="flex flex-col items-center gap-4 py-6 text-center">
+            <span className={cn("grid h-[76px] w-[76px] place-items-center bg-[#FFCF03] text-[#0A0A0A] border-2 border-[#0A0A0A]", BLOB_A)}>
+              <Mail className="h-8 w-8" strokeWidth={2.4} />
+            </span>
+            <h2 className={cn(DISPLAY, "text-[28px] font-extrabold leading-[1.05]")}>Seu e-mail está certo?</h2>
+            <p className="max-w-full break-all rounded-2xl border-2 border-[#0A0A0A] bg-white px-4 py-3 text-[18px] font-bold text-[#0A0A0A]">{conferindo.email}</p>
+            <p className="text-[15px] leading-[1.5] text-[#5B574E]">
+              É por ele que você recupera a senha e recebe os avisos da conta.
+            </p>
+            <button type="button" disabled={loading} onClick={() => void criarConta(conferindo)}
+              className={cn(DISPLAY, "flex h-[54px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#0A0A0A] bg-[#0A0A0A] text-[17px] font-bold text-[#F5F3E7] disabled:opacity-60")}>
+              {loading ? "Criando sua conta..." : "Está certo, criar conta"}
+            </button>
+            <button type="button" disabled={loading} onClick={() => setConferindo(null)}
+              className="text-[14px] font-semibold text-[#0050C8] underline underline-offset-2 disabled:opacity-60">
+              Corrigir o e-mail
+            </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">

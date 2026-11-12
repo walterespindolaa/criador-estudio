@@ -4,6 +4,7 @@ import { Navigate, Outlet, useLocation, useNavigate, useSearchParams } from "rea
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
+import { FaixaConfirmarEmail } from "@/components/ConfirmarEmailAviso";
 import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton, FeedbackDialog } from "@/components/FeedbackButton";
 import {
@@ -623,6 +624,7 @@ export default function ManagerLayout() {
             de verdade; acima disso o texto ficaria longo demais pra ler. */}
         <main className="relative z-[1] flex-1 px-4 py-7 pb-[96px] sm:px-8 sm:py-10 md:pb-10 overflow-x-hidden">
           <div className="mx-auto w-full max-w-[1600px]">
+            <FaixaConfirmarEmail semMargem />
             <BroadcastBanner audience="social" />
             <NotificationNudge />
             <Suspense fallback={<LoadingScreen compact />}>

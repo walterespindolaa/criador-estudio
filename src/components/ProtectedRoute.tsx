@@ -6,6 +6,7 @@ import { LoadingScreen } from "@/components/shared/LoadingScreen";
 import { ReactNode, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSouParceiro } from "@/hooks/useParceiro";
+import { TravaConfirmarEmail, useEmailConfirmacao } from "@/components/ConfirmarEmailAviso";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
@@ -16,6 +17,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   // convidou, sem plano próprio. Quem já tinha conta de criador com trial
   // vencido ficava preso em /app/assinar pra sempre (auditoria 04/09).
   const { data: souParceiro, isLoading: parceiroLoading } = useSouParceiro();
+  // Confirmação de e-mail depois de entrar (12/11/2026): do 4º dia em diante, trava.
+  const { data: confirmacao } = useEmailConfirmacao();
 
   /* ACEITE DE TERMOS PENDENTE (LGPD, 23/09/2026). Quem se cadastrou com
      confirmação de e-mail não tinha sessão na hora de aceitar; a marca ficou no
@@ -42,6 +45,10 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
      travado por aqui (o painel dele mora fora desta rota de qualquer jeito). */
   if (profile?.subscription_status === "suspended" && profile?.role !== "admin") {
     return <ContaSuspensa />;
+  }
+
+  if (confirmacao?.bloqueia && profile?.role !== "admin") {
+    return <TravaConfirmarEmail email={confirmacao.email} />;
   }
 
   if (!canAccess) {
