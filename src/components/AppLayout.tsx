@@ -439,14 +439,12 @@ const AppLayout = () => {
                 papel creme dentro da área do conteúdo, com a busca larga e
                 ajuda, sugestão e avisos numa pílula só. */}
             <div
-              className={cn(
-                "hidden md:block",
-                // Avança por baixo do menu lateral, como a faixa antiga: a barra
-                // vai da borda esquerda da janela até a direita (08/11/2026).
-                railPinned ? "md:-ml-[288px] md:w-[calc(100%+288px)]" : "md:-ml-[104px] md:w-[calc(100%+104px)]",
-              )}
+              // A barra começa depois do menu lateral, solto ou fixado (Walter,
+              // 12/11/2026). Substitui o "até a borda esquerda" de 08/11: por
+              // baixo do menu ela escondia a foto e, com o menu fixado, ficava estranha.
+              className="hidden md:block"
             >
-              <div className="px-4 pt-4">
+              <div className="max-w-screen-2xl mx-auto px-8 pt-4">
                 <BarraSuperior
                   eyebrow={heroEyebrow}
                   title={heroTitle}
@@ -457,7 +455,6 @@ const AppLayout = () => {
                   actions={quickActions}
                   meta={heroMeta}
                   destaque={isDash}
-                  recuo={railPinned ? "menu-fixado" : "menu"}
                 >
                   <div className="w-[300px] max-w-[30vw] [&>button]:w-full [&>button]:rounded-full [&>button]:border-2 [&>button]:border-[#1D1B18] [&>button]:bg-white [&>button]:shadow-[0_2px_0_#1D1B18]">
                     <GlobalSearch />
