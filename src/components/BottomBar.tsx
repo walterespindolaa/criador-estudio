@@ -184,7 +184,7 @@ export function BottomBar() {
       <NavLink
         key={item.url}
         to={item.url}
-        className="flex flex-col items-center justify-center gap-1 px-2 flex-1"
+        className="flex min-h-[48px] min-w-[56px] flex-col items-center justify-center gap-1 px-2"
       >
         <item.icon
           className={cn("h-5 w-5 transition-colors", active ? "text-primary" : "text-muted-foreground")}
@@ -192,7 +192,7 @@ export function BottomBar() {
         />
         <span
           className={cn(
-            "text-[10px] font-body transition-colors",
+            "text-[11.5px] font-body transition-colors",
             active ? "text-primary font-semibold" : "text-muted-foreground font-medium"
           )}
         >
@@ -218,7 +218,7 @@ export function BottomBar() {
              para logo acima da barra, com os quatro cantos redondos, e a barra
              fica sobre o fundo escurecido. */
           className="fixed left-3 right-3 z-40 md:hidden bg-card border border-border rounded-[28px] shadow-warm-lg overflow-hidden flex flex-col"
-          style={{ bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))', maxHeight: 'calc(100dvh - 80px - env(safe-area-inset-bottom, 0px) - env(safe-area-inset-top, 0px) - 24px)' }}
+          style={{ bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))', maxHeight: 'calc(100dvh - 88px - env(safe-area-inset-bottom, 0px) - env(safe-area-inset-top, 0px) - 24px)' }}
         >
           {/* Cabeçalho */}
           <div className="px-5 pt-3 pb-2 shrink-0">
@@ -310,28 +310,34 @@ export function BottomBar() {
 
       <div className="fixed bottom-0 left-0 right-0 z-50 md:hidden pointer-events-none"
            style={{ paddingBottom: 'calc(14px + env(safe-area-inset-bottom,0px))' }}>
-        <div className="flex items-center justify-center gap-2.5 px-3 pointer-events-auto">
-          <div className="dock-pill flex items-center gap-0.5 rounded-[30px] p-1.5">
-            {leftItems.map(renderNavItem)}
-            <button type="button" onClick={() => openCria()} aria-label="cria"
-              className="mx-0.5 h-11 w-11 rounded-full bg-[#FFCF03] flex items-center justify-center shadow-lg shadow-black/15 active:scale-95 transition-transform">
-              {/* Selo das Criaturas, o mesmo do topo do chat da Cria IA (Walter, 09/11/2026). */}
-              <img src="/logo-icon-sm.png" alt="" draggable={false} className="h-[30px] w-[30px] object-contain" />
-            </button>
-            {rightItems.map(renderNavItem)}
-          </div>
+        {/* BARRA DE BAIXO INTEIRA (Walter, 12/11/2026, mockup em tela real
+            aprovado). Antes era uma pílula de 200px com botões de 41x39 e o
+            Menu numa bolinha solta, sem nome. Agora é uma peça só, de ponta a
+            ponta, com cinco espaços iguais (toque de 48px no mínimo) e o Menu
+            com nome. Continua flutuando, com os cantos redondos. */}
+        <div className="relative flex items-center justify-center px-3 pointer-events-auto">
           {onCriando && (
             <button type="button" onClick={toggleOverview} aria-label={overview ? "Sair da visão geral" : "Visão geral"}
-              className={cn("h-[52px] w-[52px] rounded-full flex items-center justify-center active:scale-95 transition-transform",
+              className={cn("absolute -top-[62px] right-3 h-[52px] w-[52px] rounded-full flex items-center justify-center active:scale-95 transition-transform",
                 overview ? "bg-gradient-to-br from-primary to-pink-400 shadow-lg shadow-primary/30" : "dock-pill")}>
               {overview ? <Minimize2 className="h-5 w-5 text-white" strokeWidth={2} />
                         : <Maximize2 className="h-5 w-5 text-muted-foreground" strokeWidth={1.9} />}
             </button>
           )}
-          <button type="button" onClick={() => { setBusca(""); setMoreOpen(!moreOpen); }} aria-label="Menu"
-            className="dock-pill h-[52px] w-[52px] rounded-full flex items-center justify-center active:scale-95 transition-transform">
-            <Menu className={cn("h-6 w-6 transition-colors", moreOpen || isMoreActive ? "text-primary" : "text-muted-foreground")} strokeWidth={1.8}/>
-          </button>
+          <div className="dock-pill grid h-16 w-full max-w-[440px] grid-cols-5 items-center justify-items-center rounded-[30px] px-1.5">
+            {leftItems.map(renderNavItem)}
+            <button type="button" onClick={() => openCria()} aria-label="cria"
+              className="h-12 w-12 rounded-full bg-[#FFCF03] flex items-center justify-center shadow-lg shadow-black/15 active:scale-95 transition-transform">
+              {/* Selo das Criaturas, o mesmo do topo do chat da Cria IA (Walter, 09/11/2026). */}
+              <img src="/logo-icon-sm.png" alt="" draggable={false} className="h-[32px] w-[32px] object-contain" />
+            </button>
+            {rightItems.map(renderNavItem)}
+            <button type="button" onClick={() => { setBusca(""); setMoreOpen(!moreOpen); }} aria-label="Menu" aria-expanded={moreOpen}
+              className="flex min-h-[48px] min-w-[56px] flex-col items-center justify-center gap-1 px-2">
+              <Menu className={cn("h-5 w-5 transition-colors", moreOpen || isMoreActive ? "text-primary" : "text-muted-foreground")} strokeWidth={moreOpen || isMoreActive ? 2 : 1.5} />
+              <span className={cn("text-[11.5px] font-body transition-colors", moreOpen || isMoreActive ? "text-primary font-semibold" : "text-muted-foreground font-medium")}>Menu</span>
+            </button>
+          </div>
         </div>
       </div>
 

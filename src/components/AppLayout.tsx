@@ -369,11 +369,19 @@ const AppLayout = () => {
                   d'água ao lado de ícones nítidos. O selo é forma cheia e aguenta
                   ser pequeno. */}
               <header className="grid min-h-14 grid-cols-[1fr_auto_1fr] items-center border-b border-border bg-background px-3 md:hidden">
-                <div className="flex items-center gap-0.5 justify-self-start">
-                  <GlobalSearch />
-                  <HelpButton />
-                  <FeedbackButton origin="usuario" />
-                </div>
+                {/* TOPO ENXUTO NO CELULAR (Walter, 12/11/2026, mockup em tela real
+                    aprovado). Eram cinco botões. A foto à esquerda leva pras
+                    Configurações (no lugar da engrenagem); tour, busca e avisos
+                    ficam à direita. O feedback já mora no fim do Menu. */}
+                <NavLink to="/app/configuracoes" aria-label="Meu perfil e configurações"
+                  className="justify-self-start rounded-full border-2 border-[#1D1B18] bg-primary p-[2px] active:scale-95 transition-transform">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={displayAvatarUrl ?? undefined} alt="" />
+                    <AvatarFallback className="bg-primary font-display text-sm font-bold text-primary-foreground">
+                      {firstName.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </NavLink>
                 <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
                   className="flex items-center justify-self-center px-2" aria-label="Subir ao topo">
                   <Logo icon pequeno className="h-8 w-8" />
@@ -382,10 +390,9 @@ const AppLayout = () => {
                   <UploadProgressIndicator />
                   <PlanBadge onlyUrgent compact />
                   <AccountSwitcher compact />
+                  <HelpButton />
+                  <GlobalSearch />
                   <NotificationsBell />
-                  <NavLink to="/app/configuracoes" aria-label="Configurações" className="rounded-xl p-2 transition-colors hover:bg-accent/60">
-                    <Settings className="h-5 w-5 text-muted-foreground hover:text-foreground" />
-                  </NavLink>
                 </div>
               </header>
 
