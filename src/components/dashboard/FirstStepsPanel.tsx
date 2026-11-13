@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Rocket, X, Check, ArrowRight,
+  Rocket, X, Check, ArrowRight, Loader2, Clapperboard,
   Lightbulb, Instagram, Palette, Send, Link as LinkIcon, Target,
   type LucideIcon,
 } from "lucide-react";
@@ -15,6 +15,7 @@ import { useBioLinks } from "@/hooks/useBioLinks";
 import { useGoals } from "@/hooks/useGoals";
 import { useIdeas } from "@/hooks/useIdeas";
 import { TOTAL_PERGUNTAS } from "@/lib/brandbook-perguntas";
+import { toast } from "sonner";
 
 type Step = {
   id: string;
@@ -39,7 +40,7 @@ export function FirstStepsPanel() {
   const { data: conexaoInstagram } = useSocialConnection();
   const { links: bioLinks } = useBioLinks();
   const { structuredGoals } = useGoals();
-  const { ideas: ideias } = useIdeas({ limit: 1 });
+  const { ideas: ideias, promoteToPost } = useIdeas({ limit: 8 });
 
   const dismissKey = user ? `cria-firststeps-dismissed-${user.id}` : "cria-firststeps-dismissed";
 
@@ -83,6 +84,28 @@ export function FirstStepsPanel() {
 
   const handleClick = (step: Step) => { navigate(step.to); };
 
+  /* UM PRIMEIRO PASSO ÓBVIO (Walter, 13/11/2026). Dos criadores que terminavam
+     o onboarding, 6 em 10 saíam sem abrir nenhuma ferramenta: caíam numa lista
+     de 7 itens e tinham que decidir sozinhos por onde começar. Enquanto não
+     existe post, a ideia que a própria pessoa escreveu no onboarding aparece em
+     destaque com um botão só. A mais antiga da lista é a dela (as da Cria IA
+     entram depois). */
+  const ideiaDaVez = posts.length === 0
+    ? [...ideias].reverse().find((i) => !i.promoted_to_post_id) ?? null
+    : null;
+  const virarPost = async () => {
+    if (!ideiaDaVez || promoteToPost.isPending) return;
+    try {
+      const novo = await promoteToPost.mutateAsync({
+        ideaId: ideiaDaVez.id,
+        post: { title: ideiaDaVez.title, platform: ideiaDaVez.platform || "instagram", format: "reels", pillar_id: ideiaDaVez.pillar_id, status: "ideia" },
+      });
+      navigate(`/app/criando?post=${novo.id}`);
+    } catch {
+      toast.error("Não consegui criar o post. Tenta de novo?");
+    }
+  };
+
   if (dismissed || completed >= total) return null;
 
   return (
@@ -123,6 +146,26 @@ export function FirstStepsPanel() {
             transition={{ duration: 0.5, ease: "easeOut" }}
           />
         </div>
+
+        {ideiaDaVez && (
+          <div className="mb-4 rounded-2xl border border-primary/25 bg-primary/[0.06] p-3.5 sm:flex sm:items-center sm:gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-body font-bold uppercase tracking-wider text-primary">Comece por aqui</p>
+              <p className="mt-1 text-[15px] font-display font-bold leading-snug text-foreground line-clamp-2">“{ideiaDaVez.title}”</p>
+              <p className="mt-1 text-[12.5px] font-body text-muted-foreground">Sua ideia já está guardada. Um toque e ela vira post, com gancho, roteiro e data pra você preencher.</p>
+            </div>
+            <div className="mt-3 flex flex-col gap-1.5 sm:mt-0 sm:shrink-0 sm:items-end">
+              <button type="button" onClick={virarPost} disabled={promoteToPost.isPending}
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 text-sm font-body font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60 sm:w-auto">
+                {promoteToPost.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clapperboard className="h-4 w-4" />}
+                Transformar em post
+              </button>
+              <button type="button" onClick={() => navigate("/app/ideias")} className="h-8 text-xs font-body font-semibold text-muted-foreground hover:text-foreground">
+                Escolher outra ideia
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {steps.map((s) => (
