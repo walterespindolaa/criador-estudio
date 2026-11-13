@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Trophy, Lightbulb, CheckCircle2, Flame, UserPlus, Clock, Trash2, Package, Clapperboard, Handshake, CalendarDays, FileText, Video, Cake, MessageCircle, Sun, ShieldAlert, Wallet, Target } from "lucide-react";
+import { Bell, Trophy, Lightbulb, CheckCircle2, CheckCheck, ChevronRight, X, Flame, UserPlus, Clock, Package, Clapperboard, Handshake, CalendarDays, FileText, Video, Cake, MessageCircle, Sun, ShieldAlert, Wallet, Target } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useNotifications, type Notification } from "@/hooks/useNotifications";
@@ -107,12 +106,168 @@ const categoryOf = (type: string) => CATEGORY[type] ?? "Outras";
 
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `há ${mins}min`;
+  const mins = Math.max(0, Math.floor(diff / 60000));
+  if (mins < 1) return "agora";
+  if (mins < 60) return `há ${mins} min`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `há ${hours}h`;
+  if (hours < 24) return `há ${hours} h`;
   const days = Math.floor(hours / 24);
-  return `há ${days}d`;
+  return days === 1 ? "ontem" : `há ${days} dias`;
+}
+
+/* PAINEL REPAGINADO (Walter, 13/11/2026: "essas notificações tão bem zoadas").
+   O que mudou:
+   - agrupa por DIA (Hoje, Ontem, Esta semana, Antes), que é como a pessoa lê
+     aviso. A categoria virou a cor da bolinha do ícone.
+   - lembrete repetido aparece UMA vez: cinco "você tem N posts em andamento"
+     de cinco dias viravam cinco linhas iguais. Fica o mais recente.
+   - não lida tem ponto e fundo; lida fica limpa (antes ficava apagada a 60%).
+   - quem leva a algum lugar mostra a seta; a lixeira não disputa com o texto.
+   A parte visual mora aqui, sem dados, pra poder ser conferida sozinha. */
+const COR_TIPO: Record<string, string> = {
+  "Lembretes": "bg-[#FFF1CC] text-[#8A5A00]",
+  "Ganchos & dicas": "bg-[#FFE0D4] text-[#C23A10]",
+  "Conquistas": "bg-[#D9F2E2] text-[#0A7A3D]",
+  "Cliente / Cria Post": "bg-[#DCE8FF] text-[#0B4FC2]",
+  "Produção": "bg-[#E9E2FF] text-[#5B3FD0]",
+  "Cachês": "bg-[#D9F2E2] text-[#0A7A3D]",
+  "Leads": "bg-[#D9F2E2] text-[#0A7A3D]",
+  "Ideias": "bg-[#FFE0D4] text-[#C23A10]",
+  "Avisos": "bg-[#FFDCE9] text-[#B0246A]",
+  "Outras": "bg-muted text-muted-foreground",
+};
+// Lembretes que o app refaz todo dia: só o mais recente de cada tipo aparece.
+const SO_O_MAIS_RECENTE = new Set(["posts_pendentes", "lembrete_postar", "dica_dia", "meta_semana", "resumo_dia"]);
+
+function grupoDoDia(iso: string | null) {
+  if (!iso) return "Antes";
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  const d = new Date(iso); d.setHours(0, 0, 0, 0);
+  const dias = Math.round((hoje.getTime() - d.getTime()) / 86400000);
+  if (dias <= 0) return "Hoje";
+  if (dias === 1) return "Ontem";
+  if (dias <= 7) return "Esta semana";
+  return "Antes";
+}
+const ORDEM_DIAS = ["Hoje", "Ontem", "Esta semana", "Antes"];
+
+export function PainelNotificacoes({
+  notifications, unreadCount, onAbrir, onExcluir, onMarcarLidas, onLimpar,
+}: {
+  notifications: Notification[];
+  unreadCount: number;
+  onAbrir: (n: Notification) => void;
+  onExcluir: (id: string) => void;
+  onMarcarLidas: () => void;
+  onLimpar: () => void;
+}) {
+  const [aba, setAba] = useState<"todas" | "novas">("todas");
+
+  // Uma linha por lembrete diário (a lista já vem da mais nova pra mais antiga).
+  const vistos = new Set<string>();
+  const enxuta = notifications.filter((n) => {
+    if (!SO_O_MAIS_RECENTE.has(n.type)) return true;
+    if (vistos.has(n.type)) return false;
+    vistos.add(n.type);
+    return true;
+  });
+  const lista = aba === "novas" ? enxuta.filter((n) => !n.read) : enxuta;
+  const grupos = new Map<string, Notification[]>();
+  for (const n of lista) {
+    const g = grupoDoDia(n.created_at);
+    if (!grupos.has(g)) grupos.set(g, []);
+    grupos.get(g)!.push(n);
+  }
+
+  return (
+    <div>
+      <div className="px-4 pt-3.5 pb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <h3 className="font-display font-extrabold text-foreground text-[17px] leading-none">Notificações</h3>
+          {unreadCount > 0 && (
+            <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-body font-bold leading-4 text-primary-foreground whitespace-nowrap">
+              {unreadCount > 99 ? "99+" : unreadCount} {unreadCount === 1 ? "nova" : "novas"}
+            </span>
+          )}
+        </div>
+        {notifications.length > 0 && (
+          <button type="button" onClick={onLimpar} className="shrink-0 text-xs font-body text-muted-foreground hover:text-destructive px-1.5 py-1 rounded-md">
+            Limpar tudo
+          </button>
+        )}
+      </div>
+
+      <div className="px-4 pb-2.5 flex items-center justify-between gap-2">
+        <div role="tablist" className="flex gap-1.5">
+          {([["todas", "Todas"], ["novas", "Não lidas"]] as const).map(([k, rot]) => (
+            <button key={k} type="button" role="tab" aria-selected={aba === k} onClick={() => setAba(k)}
+              className={cn("h-8 px-3.5 rounded-full text-xs font-body font-bold border transition-colors",
+                aba === k ? "bg-foreground text-background border-foreground" : "bg-card text-foreground border-foreground/15 hover:bg-muted")}>
+              {rot}
+            </button>
+          ))}
+        </div>
+        {unreadCount > 0 && (
+          <button type="button" onClick={onMarcarLidas} className="shrink-0 inline-flex items-center gap-1 text-xs font-body font-bold text-primary px-1.5 py-1 rounded-md hover:bg-primary/10">
+            <CheckCheck className="h-3.5 w-3.5" /> Marcar lidas
+          </button>
+        )}
+      </div>
+
+      <div className="max-h-[min(440px,60vh)] overflow-y-auto overscroll-contain px-2 pb-2 border-t border-foreground/10">
+        {lista.length === 0 ? (
+          <div className="py-10 px-6 text-center">
+            <span className="mx-auto mb-2.5 grid h-11 w-11 place-items-center rounded-full bg-[#D9F2E2] text-[#0A7A3D]"><CheckCheck className="h-5 w-5" /></span>
+            <p className="text-sm font-display font-bold text-foreground">{aba === "novas" ? "Você leu tudo" : "Tudo em dia por aqui"}</p>
+            <p className="mt-0.5 text-xs font-body text-muted-foreground">Quando tiver novidade, ela aparece neste sino.</p>
+          </div>
+        ) : ORDEM_DIAS.filter((g) => grupos.has(g)).map((g) => (
+          <div key={g}>
+            <p className="px-2 pt-3 pb-1 text-[11px] font-body font-bold uppercase tracking-wider text-muted-foreground">{g}</p>
+            <div className="space-y-0.5">
+              {grupos.get(g)!.map((n) => {
+                const typeInfo = TYPE_ICONS[n.type] || TYPE_ICONS.lembrete_postar;
+                const Icon = typeInfo.icon;
+                const cor = COR_TIPO[categoryOf(n.type)] ?? COR_TIPO["Outras"];
+                return (
+                  <div
+                    key={n.id}
+                    role={n.link ? "button" : undefined}
+                    tabIndex={n.link ? 0 : undefined}
+                    onClick={() => onAbrir(n)}
+                    onKeyDown={(e) => { if (n.link && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onAbrir(n); } }}
+                    className={cn("group/item relative flex items-start gap-3 rounded-2xl p-2.5 pr-2 transition-colors cursor-pointer",
+                      n.read ? "hover:bg-muted/60" : "bg-primary/[0.06] hover:bg-primary/10")}
+                  >
+                    <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-full", cor)}><Icon className="h-[18px] w-[18px]" /></span>
+                    <div className="min-w-0 flex-1">
+                      <p className={cn("text-[14px] leading-snug font-body text-foreground", n.read ? "font-medium" : "font-bold")}>{n.title}</p>
+                      {n.description && <p className="mt-0.5 text-[12.5px] leading-snug font-body text-muted-foreground">{n.description}</p>}
+                      <p className="mt-1 flex items-center gap-1.5 text-[11px] font-body text-muted-foreground">
+                        {!n.read && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                        {n.created_at ? timeAgo(n.created_at) : ""}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-center gap-1 self-stretch justify-between">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onExcluir(n.id); }}
+                        className="grid h-7 w-7 place-items-center rounded-full text-muted-foreground/45 hover:text-destructive hover:bg-destructive/10 md:opacity-0 md:group-hover/item:opacity-100 transition-opacity"
+                        aria-label="Excluir notificação"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                      {n.link && <ChevronRight aria-hidden className="h-4 w-4 text-muted-foreground/50" />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function NotificationsBell() {
@@ -156,70 +311,6 @@ export function NotificationsBell() {
     navigate(n.link);
   };
 
-  const renderItem = (n: Notification) => {
-    const typeInfo = TYPE_ICONS[n.type] || TYPE_ICONS.lembrete_postar;
-    const Icon = typeInfo.icon;
-    return (
-      <div
-        key={n.id}
-        role={n.link ? "button" : undefined}
-        tabIndex={n.link ? 0 : undefined}
-        onClick={() => abrir(n)}
-        onKeyDown={(e) => { if (n.link && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); abrir(n); } }}
-        className={`group/item w-full text-left flex items-start gap-3 p-3 rounded-xl transition-colors cursor-pointer ${
-          n.read ? "opacity-60" : "bg-primary/5 hover:bg-primary/10"
-        }`}
-      >
-        <Icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${typeInfo.color}`} />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-body font-medium text-foreground">{n.title}</p>
-          {n.description && <p className="text-xs text-muted-foreground font-body mt-0.5">{n.description}</p>}
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <span className="text-[10px] text-muted-foreground font-body whitespace-nowrap">
-            {n.created_at ? timeAgo(n.created_at) : ""}
-          </span>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              deleteOne.mutate(n.id);
-            }}
-            className="p-1 rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 opacity-100 md:opacity-0 md:group-hover/item:opacity-100 transition-opacity"
-            aria-label="Excluir"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  const renderList = (items: Notification[]) => {
-    if (items.length === 0) {
-      return <p className="text-sm text-muted-foreground font-body text-center py-8">Nenhuma notificação</p>;
-    }
-    const groups = new Map<string, Notification[]>();
-    for (const n of items) {
-      const cat = categoryOf(n.type);
-      if (!groups.has(cat)) groups.set(cat, []);
-      groups.get(cat)!.push(n);
-    }
-    const ordered = CATEGORY_ORDER.filter((c) => groups.has(c));
-    return (
-      <div className="space-y-3 max-h-[360px] overflow-y-auto">
-        {ordered.map((cat) => (
-          <div key={cat}>
-            <p className="text-[10px] font-body font-semibold uppercase tracking-widest text-muted-foreground px-1 mb-1">
-              {cat}
-            </p>
-            <div className="space-y-1">{groups.get(cat)!.map(renderItem)}</div>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -232,31 +323,15 @@ export function NotificationsBell() {
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[min(380px,calc(100vw-1rem))] p-0" align="end" collisionPadding={8}>
-        <div className="p-4 border-b border-border flex items-center justify-between gap-2">
-          <h3 className="font-display font-semibold text-foreground text-sm">Notificações</h3>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="text-xs text-primary h-auto py-1 px-2" onClick={handleMarkAllRead}>
-              Marcar lidas
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs text-muted-foreground hover:text-destructive h-auto py-1 px-2"
-              onClick={handleClearAll}
-            >
-              Limpar
-            </Button>
-          </div>
-        </div>
-        <Tabs defaultValue="todas" className="p-3">
-          <TabsList className="bg-muted rounded-lg mb-2 w-full">
-            <TabsTrigger value="todas" className="flex-1 rounded-md font-body text-xs">Todas</TabsTrigger>
-            <TabsTrigger value="nao-lidas" className="flex-1 rounded-md font-body text-xs">Não lidas</TabsTrigger>
-          </TabsList>
-          <TabsContent value="todas">{renderList(notifications)}</TabsContent>
-          <TabsContent value="nao-lidas">{renderList(notifications.filter((n) => !n.read))}</TabsContent>
-        </Tabs>
+      <PopoverContent className="w-[min(400px,calc(100vw-1rem))] p-0 rounded-[22px] border border-foreground/15 overflow-hidden" align="end" collisionPadding={8}>
+        <PainelNotificacoes
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onAbrir={abrir}
+          onExcluir={(id) => deleteOne.mutate(id)}
+          onMarcarLidas={handleMarkAllRead}
+          onLimpar={handleClearAll}
+        />
       </PopoverContent>
     </Popover>
   );

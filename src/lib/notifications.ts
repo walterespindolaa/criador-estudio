@@ -59,7 +59,7 @@ async function runGenerate(userId: string) {
   const weekEnd = toISODateBR(sunday);
 
   const [postsRes, profileRes, existingRes] = await Promise.all([
-    supabase.from("posts").select("id, status, scheduled_date, published_at").eq("user_id", userId).is("deleted_at", null),
+    supabase.from("posts").select("id, title, status, scheduled_date, published_at").eq("user_id", userId).is("deleted_at", null),
     supabase.from("profiles").select("weekly_goal").eq("id", userId).single(),
     supabase.from("notifications").select("type, created_at").eq("user_id", userId).gte("created_at", weekStart),
   ]);
@@ -98,25 +98,32 @@ async function runGenerate(userId: string) {
     ? Math.floor((now.getTime() - new Date(lastPublished).getTime()) / 86400000)
     : null;
 
+  /* LEMBRETES QUE FALAM DO QUE A PESSOA TEM (Walter, 13/11/2026: "bem zoadas,
+     poderiam falar mais com o público"). Antes: "Você tem 56 posts em
+     andamento. Que tal avançar com alguns hoje?", igual todo dia, contando até
+     ideia solta, e o de ontem ficava empilhado com o de hoje. Agora cada
+     lembrete cita o post e a data, e o de dias anteriores sai quando entra o
+     de hoje. */
+  const curto = (t?: string | null) => { const x = (t ?? "").trim() || "Post sem título"; return x.length > 46 ? x.slice(0, 45).trimEnd() + "…" : x; };
+  const dm = (iso?: string | null) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : "");
+  const pl = (n: number, um: string, varios: string) => (n === 1 ? um : varios);
+  const trocarLembrete = async (type: string, title: string, description: string) => {
+    await supabase.from("notifications").delete().eq("user_id", userId).eq("type", type);
+    await supabase.from("notifications").insert({ user_id: userId, type, title, description, link: "/app/criando" } as any);
+  };
+  const emProducao = posts.filter(p => ["roteiro", "gravando", "editando", "agendado"].includes(p.status ?? ""));
+  const prontos = emProducao.filter(p => p.status === "editando" || p.status === "agendado");
+
   const todayReminder = existingNotifs.find(n => n.type === "lembrete_postar" && isTodayBR(n.created_at));
   if (!todayReminder) {
     if (daysSinceLast !== null && daysSinceLast >= 3) {
-      await supabase.from("notifications").insert({
-        user_id: userId,
-        type: "lembrete_postar",
-        title: "Que tal publicar hoje?",
-        description: `Faz ${daysSinceLast} dias desde seu último post.`,
-        link: "/app/criando",
-      } as any);
+      await trocarLembrete("lembrete_postar", `Faz ${daysSinceLast} dias sem publicar`,
+        prontos.length > 0
+          ? `Você tem ${prontos.length} ${pl(prontos.length, "post pronto", "posts prontos")} esperando. O da vez é "${curto(prontos[0].title)}".`
+          : "Nada pronto na fila. Pega uma ideia do banco e leva até o fim hoje.");
     } else if (daysSinceLast === null) {
       // Nunca publicou: incentiva o primeiro post em vez do "999 dias".
-      await supabase.from("notifications").insert({
-        user_id: userId,
-        type: "lembrete_postar",
-        title: "Bora publicar seu primeiro post?",
-        description: "Escolha uma ideia do banco e leve até a publicação.",
-        link: "/app/criando",
-      } as any);
+      await trocarLembrete("lembrete_postar", "Bora publicar seu primeiro post?", "Escolha uma ideia do banco e leve até a publicação.");
     }
   }
 
@@ -126,17 +133,31 @@ async function runGenerate(userId: string) {
   //    MESMA chave de dedup do bloco 2 (lembrete_postar + hoje), então ora
   //    disparava os dois, ora nenhum.
 
-  // 4. Posts em andamento (pendentes de publicação)
-  const pendentes = posts.filter(p => p.status !== "publicado").length;
+  // 4. O lembrete do dia sobre os posts: um só, com o que mais importa hoje.
   const pendentesHoje = existingNotifs.find(n => n.type === "posts_pendentes" && isTodayBR(n.created_at));
-  if (pendentes >= 3 && !pendentesHoje) {
-    await supabase.from("notifications").insert({
-      user_id: userId,
-      type: "posts_pendentes",
-      title: `Você tem ${pendentes} posts em andamento`,
-      description: "Que tal avançar com alguns hoje?",
-      link: "/app/criando",
-    } as any);
+  if (!pendentesHoje) {
+    const porData = (a: { scheduled_date: string | null }, b: { scheduled_date: string | null }) => (a.scheduled_date ?? "").localeCompare(b.scheduled_date ?? "");
+    const atrasados = emProducao.filter(p => p.scheduled_date && p.scheduled_date < today).sort(porData);
+    const daSemana = emProducao.filter(p => p.scheduled_date && p.scheduled_date >= today && p.scheduled_date <= weekEnd).sort(porData);
+    const semData = emProducao.filter(p => !p.scheduled_date);
+    if (atrasados.length > 0) {
+      const a0 = atrasados[0];
+      await trocarLembrete("posts_pendentes",
+        atrasados.length === 1 ? `"${curto(a0.title)}" passou da data` : `${atrasados.length} posts passaram da data`,
+        atrasados.length === 1 ? `Era pra ${dm(a0.scheduled_date)}. Publica hoje ou escolhe um dia novo.` : `O mais antigo é "${curto(a0.title)}", de ${dm(a0.scheduled_date)}. Publica ou escolhe datas novas.`);
+    } else if (daSemana.length > 0) {
+      const ok = daSemana.filter(p => p.status === "editando" || p.status === "agendado").length;
+      const falta = daSemana.length - ok;
+      await trocarLembrete("posts_pendentes",
+        `${daSemana.length} ${pl(daSemana.length, "post sai", "posts saem")} até domingo`,
+        falta === 0 ? `${pl(ok, "Está pronto", "Estão todos prontos")}. O próximo é "${curto(daSemana[0].title)}", dia ${dm(daSemana[0].scheduled_date)}.`
+          : `${ok} ${pl(ok, "pronto", "prontos")}, ${falta} ainda em produção. O próximo é "${curto(daSemana[0].title)}", dia ${dm(daSemana[0].scheduled_date)}.`);
+    } else if (semData.length >= 2) {
+      const adiantado = semData.find(p => p.status === "editando") ?? semData[0];
+      await trocarLembrete("posts_pendentes",
+        `${semData.length} posts em produção sem dia marcado`,
+        `Sem data, post não sai. Que tal agendar "${curto(adiantado.title)}"?`);
+    }
   }
 
   // 5. Dica do dia (rotativa, leva pra biblioteca)
