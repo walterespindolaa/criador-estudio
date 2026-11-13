@@ -34,6 +34,7 @@ import { useCaptures } from "@/hooks/useAgenda";
 import { cn } from "@/lib/utils";
 import { useCrmTasks } from "@/hooks/useCrm";
 import { hojeBR, parseDateOnly } from "@/lib/date-br";
+import { FORMAT_LABELS } from "@/lib/constants";
 
 // Card do painel. A cor é a do módulo pra onde ele leva: a pessoa aprende
 // a cor uma vez e depois navega no automático, sem ler.
@@ -280,7 +281,9 @@ function ManagerHomeSocialMidia() {
       for (const p of allExtPosts) {
         if (p.scheduled_date !== dia || p.approval_status === "postado") continue;
         const cli = p.external_client_id ? extClientById.get(p.external_client_id) : undefined;
-        itens.push({ cor: cli?.color || "#EB4918", texto: [p.format || "Post", cli?.name].filter(Boolean).join(" · ") });
+        // Formato com o nome de exibição ("Reels", "Carrossel"), não a chave em minúscula.
+        const fmt = p.format ? (FORMAT_LABELS[p.format] ?? (p.format.charAt(0).toUpperCase() + p.format.slice(1))) : "Post";
+        itens.push({ cor: cli?.color || "#EB4918", texto: [fmt, cli?.name].filter(Boolean).join(" · ") });
       }
       for (const c of capturasSemana) {
         if (c.capture_date !== dia || c.status !== "agendada") continue;
@@ -392,7 +395,11 @@ function ManagerHomeSocialMidia() {
       <div className="mb-7 flex gap-3 overflow-x-auto pb-1 snap-x md:grid md:grid-cols-5 md:overflow-visible md:pb-0">
         {diasDaSemana.map((d) => (
           <button key={d.dia} type="button" onClick={() => navigate("/socialmidia/agenda")} aria-label={`Abrir a agenda. ${d.rot} ${d.num}`}
-            className={cn("min-h-[112px] w-[68vw] max-w-[260px] shrink-0 snap-start rounded-2xl border bg-card p-3.5 text-left transition-shadow hover:shadow-warm-md md:w-auto md:max-w-none",
+            /* flex-col + justify-start (13/11/2026): o cartão é um <button>, e botão
+               centraliza o conteúdo na vertical. Dia com 1 item ficava com o
+               "SEG 9" no meio do cartão e dia cheio com ele no topo: cada dia numa
+               altura ("meio feio, desorganizado"). Agora todos começam do topo. */
+            className={cn("flex min-h-[112px] w-[68vw] max-w-[260px] shrink-0 snap-start flex-col items-stretch justify-start rounded-2xl border bg-card p-3.5 text-left transition-shadow hover:shadow-warm-md md:w-auto md:max-w-none",
               d.hoje ? "border-primary ring-1 ring-primary/30" : "border-border")}>
             <div className="mb-2 flex items-baseline gap-1.5">
               <span className={cn("text-[11px] font-body font-bold uppercase tracking-wider", d.hoje ? "text-primary" : "text-muted-foreground")}>{d.rot}</span>
