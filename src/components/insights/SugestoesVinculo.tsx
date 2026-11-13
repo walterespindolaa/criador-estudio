@@ -75,9 +75,9 @@ export function SugestoesVinculo({ conta, crmClientId = null }: { conta: string 
         </div>
       </div>
 
-      <ul className="grid gap-2 lg:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
         {lista.slice(0, 8).map((s) => (
-          <li key={s.insight_id} className="rounded-2xl border border-foreground/25 bg-background p-2.5 flex gap-2.5 items-center">
+          <li key={s.insight_id} className="min-w-0 rounded-2xl border border-foreground/25 bg-background p-2.5 flex gap-2.5 items-center">
             {s.thumbnail_url
               ? <img src={s.thumbnail_url} alt="" loading="lazy" className="w-12 h-12 rounded-lg object-cover shrink-0 bg-muted border border-foreground/25" />
               : <span className="w-12 h-12 rounded-lg bg-muted shrink-0 border border-foreground/25" />}

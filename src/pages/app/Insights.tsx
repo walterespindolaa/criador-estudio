@@ -524,9 +524,11 @@ export default function Insights() {
       {/* leitura IA */}
       {media.length > 0 && bestFormat && (
         <div className={`${CARD} p-4 sm:p-5 mt-9`}>
-          <div className="flex items-center justify-between gap-2">
-            <h4 className="text-[18px] font-display font-extrabold flex items-center gap-2">{t("insights.aiTitle")} <SeloIA /></h4>
-            <Button variant="outline" size="sm" className="gap-1.5 rounded-full border-2 border-foreground font-bold shadow-[0_2px_0_hsl(var(--foreground))]" onClick={genReading} disabled={aiLoading}>
+          {/* Celular: o título e o selo numa linha, o botão embaixo (13/11/2026:
+              espremidos lado a lado, "Cria IA" quebrava em duas linhas). */}
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2.5">
+            <h4 className="text-[18px] font-display font-extrabold flex items-center gap-2 whitespace-nowrap [&>*]:shrink-0">{t("insights.aiTitle")} <SeloIA /></h4>
+            <Button variant="outline" size="sm" className="shrink-0 gap-1.5 rounded-full border-2 border-foreground font-bold shadow-[0_2px_0_hsl(var(--foreground))]" onClick={genReading} disabled={aiLoading}>
               {aiLoading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
               {aiRead ? t("insights.aiRedo") : t("insights.aiAnalyze")}
             </Button>
