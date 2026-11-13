@@ -60,6 +60,12 @@ type Jornada = {
   assinante: boolean; plano: string | null; ultimo_acesso: string | null; aparelho: string | null; n_clientes: number;
   passo: number; onde: string; tom: Tom;
   dias: { dia: string; telas: { modulo: string; n: number }[] }[];
+  /** Uso de verdade (13/11/2026). Só vem depois da migração 20261113000001. */
+  uso?: {
+    ferramentas: number; primeira_ferramenta_dia: string | null; dias_ativos: number;
+    n_posts: number; primeiro_post_em: string | null;
+    email_novo: boolean; email_novo_em: string | null;
+  } | null;
 };
 
 export function useJornada(userId: string | null) {
@@ -76,7 +82,7 @@ export function useJornada(userId: string | null) {
 
 const NOME_PLANO: Record<string, string> = { essencial: "Essencial", pro: "Pro", studio: "Studio", agency: "Agência" };
 const TELA: Record<string, string> = {
-  assinar: "Planos", dashboard: "Início", ideias: "Ideias", criando: "Criando", brandbook: "Brandbook", autopilot: "Cria Plano",
+  assinar: "Planos", dashboard: "Início", inicio: "Início", ideias: "Ideias", criando: "Criando", brandbook: "Brandbook", autopilot: "Cria Plano",
   prompter: "Prompter", stories: "Stories", insights: "Insights", configuracoes: "Configurações", linkinbio: "Link na bio",
   clientes: "Clientes", agenda: "Agenda", aprovacoes: "Aprovações", criapost: "Cria Post", captacao: "Captação", criacaixa: "Cria Caixa",
   criacrm: "Cria Gestão", equipe: "Equipe", demandas: "Demandas", tendencias: "Tendências", feed: "Meu Feed", "media-kit": "Media Kit",
@@ -97,7 +103,7 @@ function frase(j: Jornada): string {
     const vezes = j.checkout_vezes > 1 ? ` (${j.checkout_vezes} vezes)` : "";
     return `${plano ? `Escolheu o plano ${plano} e a` : "A"}briu a página de pagamento do Stripe${j.checkout_em ? ` em ${hora(j.checkout_em)}` : ""}${vezes}, mas não concluiu. Está sem acesso ao app, preso na tela de planos.`;
   }
-  if (j.onde.startsWith("Em teste")) return `Teste ativo até ${hora(j.teste_ate, true)}. ${j.teste_inicio ? "Cartão cadastrado: a cobrança é automática no fim." : "Teste antigo, sem cartão."}`;
+  if (j.onde.startsWith("Em teste")) return `Teste ativo até ${hora(j.teste_ate, true)}. ${j.teste_inicio ? "Cartão cadastrado: a cobrança é automática no fim." : "Teste grátis, sem cartão: usa o app inteiro e não precisa passar pelos planos."}`;
   if (j.onde === "Não confirmou o e-mail") return "Criou a conta mas não clicou no link de confirmação. Sem isso não entra no app.";
   if (j.onde === "Não fez o onboarding") return "Entrou mas parou nas telas do começo.";
   if (j.onde === "Viu os planos, não clicou") return "Chegou na tela de planos e não clicou em nenhum.";
@@ -118,6 +124,24 @@ export function AbaJornada({ userId }: { userId: string | null }) {
     { t: "Confirmou e-mail", quando: hora(j.email_em), feito: j.email_ok },
     { t: "Fez o onboarding", quando: hora(j.onboarding_em), feito: j.onboarding_ok },
     { t: "1º cliente", quando: j.n_clientes > 0 ? `${j.n_clientes} ${j.n_clientes === 1 ? "cliente" : "clientes"}` : null, feito: j.n_clientes > 0 },
+  ] : j.uso ? [
+    /* CRIADOR, FUNIL DE USO (Walter, 13/11/2026). Desde 12/11 a pessoa entra
+       direto e tem 7 dias sem cartão: ver os planos deixou de ser o passo
+       seguinte ao onboarding. O painel marcava "parou aqui" nos planos pra
+       quem estava só usando o teste, e não mostrava o que importa: abriu
+       alguma ferramenta? criou post? voltou? */
+    { t: "Cadastrou", quando: hora(j.criado_em), feito: true },
+    ...(j.uso.email_novo ? [] : [{ t: "Confirmou e-mail", quando: hora(j.email_em), feito: j.email_ok }]),
+    { t: "Fez o onboarding", quando: hora(j.onboarding_em), feito: j.onboarding_ok },
+    { t: "Abriu uma ferramenta", feito: j.uso.ferramentas > 0,
+      quando: j.uso.ferramentas > 0 ? `${j.uso.ferramentas} ${j.uso.ferramentas === 1 ? "ferramenta" : "ferramentas"}${j.uso.primeira_ferramenta_dia ? `, a primeira em ${hora(j.uso.primeira_ferramenta_dia + "T12:00:00", true)}` : ""}` : null },
+    { t: "Criou o 1º post", feito: j.uso.n_posts > 0,
+      quando: j.uso.n_posts > 0 ? `${hora(j.uso.primeiro_post_em) ?? ""}${j.uso.n_posts > 1 ? ` · ${j.uso.n_posts} posts` : ""}`.trim() : null },
+    { t: "Voltou em outro dia", feito: j.uso.dias_ativos >= 2, quando: j.uso.dias_ativos >= 2 ? `${j.uso.dias_ativos} dias com uso` : null },
+    { t: "Viu os planos", quando: hora(j.planos_em, hora(j.planos_em)?.endsWith("12:00") ?? false), feito: j.passo >= 4 },
+    { t: "Abriu o pagamento", quando: hora(j.checkout_em), feito: j.passo >= 5,
+      extra: j.checkout_plano ? NOME_PLANO[j.checkout_plano] ?? j.checkout_plano : undefined },
+    { t: "Assinou", quando: hora(j.primeira_cobranca_em) ?? hora(j.teste_inicio), feito: j.passo >= 6 },
   ] : [
     { t: "Cadastrou", quando: hora(j.criado_em), feito: true },
     { t: "Confirmou e-mail", quando: hora(j.email_em), feito: j.email_ok },
@@ -164,6 +188,11 @@ export function AbaJornada({ userId }: { userId: string | null }) {
             );
           })}
         </ol>
+        {!social && j.uso?.email_novo && (
+          <p className="mt-3 border-t border-dashed border-border/70 pt-2.5 text-[12px] font-body text-muted-foreground">
+            E-mail: {j.uso.email_novo_em ? <>confirmado em {hora(j.uso.email_novo_em)}.</> : <>ainda não confirmou. Entrou direto pelo cadastro novo; a conta trava no 4º dia se não confirmar.</>}
+          </p>
+        )}
       </div>
 
       <div className="grid sm:grid-cols-2 gap-3">

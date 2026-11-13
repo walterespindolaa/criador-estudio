@@ -11,6 +11,9 @@ import { supabase } from "@/integrations/supabase/client";
 const BASES = ["/app/", "/socialmidia/"];
 
 export function moduloDaRota(pathname: string): string | null {
+  // O Início do criador é "/app" puro e ficava de fora: quem só via o Início
+  // aparecia no admin como "nenhuma tela" (13/11/2026).
+  if (pathname === "/app" || pathname === "/app/") return "inicio";
   const base = BASES.find((b) => pathname.startsWith(b));
   if (!base) return null;
   const seg = pathname.slice(base.length).split("/")[0]?.trim().toLowerCase();

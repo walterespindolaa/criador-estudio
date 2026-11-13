@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/contexts/AuthContext";
 import { useActiveAccount } from "@/contexts/AccountContext";
 
 /* ═════════════════════════════════════════════════════════════════
@@ -25,6 +26,7 @@ export function FaixaCupomCampanha() {
   const navigate = useNavigate();
   const { status } = useSubscription();
   const { profile } = useProfile();
+  const { user } = useAuth();
   const { ehMeuPerfil, isManaging } = useActiveAccount();
   const [fechada, setFechada] = useState(false);
 
@@ -38,6 +40,13 @@ export function FaixaCupomCampanha() {
   if (fechada || ehMeuPerfil || isManaging) return null;
   if (profile?.account_type === "manager") return null;
   if (status !== "trial_active" && status !== "trial_expiring") return null;
+  /* SÓ A PARTIR DO 2º DIA (Walter, 13/11/2026). No primeiro dia a pessoa ainda
+     não viu o app: desconto no topo puxava pra tela de preço antes de ela usar
+     qualquer coisa. Exceção: se a campanha acaba em menos de um dia, aparece
+     já, senão quem chegou por último nunca fica sabendo. */
+  const UM_DIA = 24 * 60 * 60 * 1000;
+  const criadaEm = user?.created_at ? new Date(user.created_at).getTime() : 0;
+  if (criadaEm && Date.now() - criadaEm < UM_DIA && FIM - Date.now() > UM_DIA) return null;
 
   const fechar = () => {
     try { localStorage.setItem(CHAVE, new Date().toDateString()); } catch { /* ok */ }
