@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   useChecarMidia, useConexaoDoPost, useDesfazerConferencia, usePublicacaoDoPost, useRepublicar,
+  saindoAgora, horaBrCurta,
   type ConexaoDoPost, type EstadoPublicacao, type ResultadoChecagem,
 } from "@/hooks/usePublicarInstagram";
 import { ConferenciaPublicacao } from "@/components/shared/ConferenciaPublicacao";
@@ -127,7 +128,9 @@ export function PublicarNoInstagramView({
   const qtdOpcoes = (est.ig_opcoes?.collaborators?.length ?? 0) + (est.ig_opcoes?.user_tags?.length ?? 0)
     + (est.ig_opcoes?.alt_text ? 1 : 0) + (est.ig_opcoes?.trial ? 1 : 0) + (musicaCelular ? 1 : 0);
 
-  const selo = SELO[estado];
+  // Horário vencido e ainda na fila, ou Instagram processando o vídeo.
+  const saindo = estado === "agendado" ? saindoAgora(est) : null;
+  const selo = saindo ? { txt: "Saindo", cls: "bg-violet-100 text-violet-800" } : SELO[estado];
 
   /* AGENDAR É O PRINCIPAL, PUBLICAR AGORA É O SECUNDÁRIO (Walter, 29/10/2026).
      Antes o botão grande "Publicar" publicava NA HORA e o agendamento era um
@@ -188,6 +191,8 @@ export function PublicarNoInstagramView({
             </div>
             <p className="text-[11px] font-body text-muted-foreground truncate" title={bloqueio ?? (cx?.username ? `@${cx.username}` : undefined)}>
               {estado !== "publicado" && bloqueio ? bloqueio
+                : saindo === "processando" ? `Instagram processando o vídeo · tenta de novo ${horaBrCurta(est.publicar_em)}`
+                : saindo === "fila" ? "Na fila pra sair · sai em instantes"
                 : estado === "agendado" && est.publicar_em ? `Sai sozinho ${dataHoraBr(est.publicar_em)}${cx?.username ? ` · @${cx.username}` : ""}`
                 : cx?.username ? `${estado === "publicado" ? "saiu em" : "em"} @${cx.username}` : ""}
             </p>
@@ -252,7 +257,18 @@ export function PublicarNoInstagramView({
 
         {/* No compacto o "sai sozinho" já está na linha da conta; a caixa só
             aparece se a tentativa automática falhou. */}
-        {estado === "agendado" && (!compacto || !!est.publish_error) && (
+        {saindo && !compacto && (
+          <div className="rounded-xl bg-violet-50 border border-violet-200 p-3" role="status" aria-live="polite">
+            <p className="text-[13px] font-body text-violet-900 flex items-start gap-2">
+              <Loader2 className="h-4 w-4 text-violet-600 animate-spin shrink-0 mt-0.5" />
+              {saindo === "processando"
+                ? <span><b>O Instagram está processando o vídeo.</b> O Cria tenta de novo sozinho às {horaBrCurta(est.publicar_em)}. Não precisa fazer nada.</span>
+                : <span><b>Na fila pra sair.</b> O horário das {horaBrCurta(est.publicar_em)} chegou e este post sai em instantes. Não precisa fazer nada.</span>}
+            </p>
+          </div>
+        )}
+
+        {estado === "agendado" && !saindo && (!compacto || !!est.publish_error) && (
           <div className="rounded-xl bg-sky-50 border border-sky-200 p-3 space-y-1">
             <p className="text-[13px] font-body text-sky-900 flex items-start gap-2">
               <CalendarClock className="h-4 w-4 text-sky-600 shrink-0 mt-0.5" />

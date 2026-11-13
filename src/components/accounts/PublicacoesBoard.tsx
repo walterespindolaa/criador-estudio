@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { hojeBR } from "@/lib/date-br";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { useExternalClients, type ExternalClient } from "@/hooks/useCriaPost";
-import { useDesfazerConferencia, usePublicarAgora, ehStory, type OpcoesIg } from "@/hooks/usePublicarInstagram";
+import { useDesfazerConferencia, usePublicarAgora, ehStory, saindoAgora, horaBrCurta, type OpcoesIg } from "@/hooks/usePublicarInstagram";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConferenciaPublicacao } from "@/components/shared/ConferenciaPublicacao";
@@ -44,11 +44,12 @@ type PostPub = {
 type StatusIg = { post_id: string; username: string | null; pode_publicar: boolean; motivo: string | null };
 type Numeros = { post_id: string; metrics: Record<string, unknown> | null; captured_at: string | null };
 
-type Situacao = "saiu" | "publicando" | "erro" | "conferido" | "conferir" | "esperando" | "celular" | "sem_conexao";
+type Situacao = "saiu" | "publicando" | "saindo" | "erro" | "conferido" | "conferir" | "esperando" | "celular" | "sem_conexao";
 
 const SELO: Record<Situacao, { txt: string; cls: string }> = {
   saiu: { txt: "Saiu", cls: "bg-green-100 text-green-800" },
   publicando: { txt: "Publicando", cls: "bg-violet-100 text-violet-800" },
+  saindo: { txt: "Saindo", cls: "bg-violet-100 text-violet-800" },
   erro: { txt: "Não saiu", cls: "bg-red-100 text-red-800" },
   conferido: { txt: "Conferido · sai sozinho", cls: "bg-sky-100 text-sky-800" },
   conferir: { txt: "Falta conferir", cls: "bg-amber-100 text-amber-900" },
@@ -196,7 +197,7 @@ export function PublicacoesBoard() {
     if (p.publish_status === "publicado" || p.approval_status === "postado") return "saiu";
     if (p.publish_status === "publicando") return "publicando";
     if (p.publish_status === "erro") return "erro";
-    if (p.publish_status === "na_fila" && p.auto_publish) return "conferido";
+    if (p.publish_status === "na_fila" && p.auto_publish) return saindoAgora(p) ? "saindo" : "conferido";
     if (p.ig_opcoes?.musica_celular || p.ig_opcoes?.pelo_celular) return "celular";
     const st = statusDe.get(p.id);
     if (st && !st.pode_publicar) return "sem_conexao";
@@ -462,6 +463,14 @@ function CardPublicacao({ previa, p, s, cli, st, numeros, onConferir, onAbrir, o
               <RotateCcw className="h-3 w-3 mr-1" /> Tentar de novo
             </Button>
           </div>
+        )}
+        {s === "saindo" && (
+          <p className="text-[11.5px] text-violet-800 flex items-start gap-1">
+            <Loader2 className="h-3 w-3 animate-spin shrink-0 mt-0.5" />
+            {saindoAgora(p) === "processando"
+              ? `O Instagram está processando o vídeo. O Cria tenta de novo sozinho às ${horaBrCurta(p.publicar_em)}.`
+              : "Na fila pra sair. O horário chegou e este post sai em instantes."}
+          </p>
         )}
         {s === "publicando" && <p className="text-[11.5px] text-violet-800 flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Publicando agora.</p>}
         {s === "celular" && <p className="text-[11.5px] text-muted-foreground flex items-center gap-1"><Smartphone className="h-3 w-3" /> {p.ig_opcoes?.pelo_celular ? "Tem figurinha" : "Vai com música do Instagram"}: baixe a mídia e publique pelo app.</p>}

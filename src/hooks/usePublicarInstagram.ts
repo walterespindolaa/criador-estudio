@@ -19,6 +19,25 @@ const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
 
 export type PublishStatus = "na_fila" | "publicando" | "publicado" | "erro" | null;
 
+/* "Saindo" (13/11/2026): o horário já chegou e o post ainda está na fila do
+   robô, ou o Instagram está processando o vídeo e o Cria vai tentar de novo.
+   Antes a tela seguia dizendo "Agendado, sai sozinho às 12:00" depois das 12:00
+   e parecia que não tinha postado ("coloquei pra postar 12h e não postou"). */
+export type Saindo = "fila" | "processando" | null;
+export function saindoAgora(
+  p: { publish_status?: string | null; auto_publish?: boolean | null; publicar_em?: string | null; publish_error?: string | null },
+  agora: number = Date.now(),
+): Saindo {
+  if (p.publish_status !== "na_fila" || !p.auto_publish) return null;
+  if (/processando/i.test(p.publish_error ?? "")) return "processando";
+  if (p.publicar_em && new Date(p.publicar_em).getTime() <= agora) return "fila";
+  return null;
+}
+export function horaBrCurta(iso: string | null | undefined): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
+}
+
 export type EstadoPublicacao = {
   id: string;
   auto_publish: boolean;
@@ -90,7 +109,13 @@ export function usePublicacaoDoPost(postId: string | null | undefined) {
     // mostrava a data antiga).
     staleTime: 0,
     // Enquanto publica, atualiza sozinho pra a pessoa ver o resultado.
-    refetchInterval: (q) => (q.state.data?.publish_status === "publicando" ? 4000 : false),
+    refetchInterval: (q) => {
+      const d = q.state.data;
+      if (d?.publish_status === "publicando") return 4000;
+      // Na fila com o horário vencido: confere a cada 15 s até sair.
+      if (d?.publish_status === "na_fila" && d.auto_publish) return saindoAgora(d) ? 15_000 : 60_000;
+      return false;
+    },
     queryFn: async () => {
       const { data, error } = await sbFrom("posts")
         .select("id,auto_publish,publish_status,publish_error,publicar_em,ig_permalink,external_client_id,approval_status,scheduled_date,scheduled_time,published_at,format,publish_conferido_por,publish_conferido_em,publish_sem_aprovacao_motivo,publish_aviso,ig_opcoes")
