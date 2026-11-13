@@ -24,18 +24,46 @@ Deno.serve(async (req) => {
       if (!interno || interno !== Deno.env.get('INTERNAL_PUSH_SECRET')) return json({ error: 'unauthorized' }, 401);
       const inicio = Date.now();
       const feitos: Array<{ post_id: string; estado: string }> = [];
-      // Um de cada vez enquanto sobra tempo (vídeo pode levar mais de 1 min).
-      while (Date.now() - inicio < 30_000 && feitos.length < 5) {
+      // Contas diferentes ao mesmo tempo, a mesma conta um de cada vez (13/11/2026).
+      // Antes era um post por vez no geral: seis posts de clientes diferentes
+      // marcados pras 12:00 saíram entre 12:00 e 12:06, porque vídeo e carrossel
+      // levam perto de 1 min cada ("coloquei pra postar 12h e não postou").
+      // Cada cliente tem a sua conta no Instagram e uma não atrapalha a outra;
+      // dentro da mesma conta continua em fila, pra não bater no limite da Meta.
+      type Alvo = { id: string; user_id: string; publish_by: string | null };
+      const MAX_JUNTOS = 5;
+      while (Date.now() - inicio < 30_000 && feitos.length < 15) {
         const { data } = await admin.from('posts')
           .select('id, user_id, publish_by')
           .eq('auto_publish', true).eq('publish_status', 'na_fila')
           .lte('publicar_em', new Date().toISOString()).is('deleted_at', null)
-          .order('publicar_em', { ascending: true }).limit(1);
-        const alvo = (data as Array<{ id: string; user_id: string; publish_by: string | null }> | null)?.[0];
-        if (!alvo) break;
-        const r = await publicarPost(admin, alvo.id, alvo.publish_by ?? alvo.user_id, true);
-        feitos.push({ post_id: alvo.id, estado: r.estado });
-        if (r.estado === 'ocupado') break; // outro robô pegou: não briga
+          .order('publicar_em', { ascending: true }).limit(20);
+        const vencidos = (data as Alvo[] | null) ?? [];
+        if (!vencidos.length) break;
+        // O mais antigo de cada conta. Sem conta resolvida, o post vai sozinho
+        // (o publicarPost é quem explica o erro no card).
+        const porConta = new Map<string, Alvo>();
+        for (const a of vencidos) {
+          if (porConta.size >= MAX_JUNTOS) break;
+          let chave = `post:${a.id}`;
+          try {
+            const { data: cx } = await admin.rpc('ig_conexao_do_post', { _post_id: a.id, _actor: a.publish_by ?? a.user_id });
+            const c = (cx as Array<{ connection_id: string | null }> | null)?.[0]?.connection_id;
+            if (c) chave = `conta:${c}`;
+          } catch { /* segue sozinho */ }
+          if (!porConta.has(chave)) porConta.set(chave, a);
+        }
+        const rodada = await Promise.all([...porConta.values()].map(async (a) => {
+          try {
+            const r = await publicarPost(admin, a.id, a.publish_by ?? a.user_id, true);
+            return { post_id: a.id, estado: r.estado as string };
+          } catch {
+            return { post_id: a.id, estado: 'erro' };
+          }
+        }));
+        feitos.push(...rodada);
+        // Outro robô já pegou todos: não briga.
+        if (rodada.every((r) => r.estado === 'ocupado')) break;
       }
       await admin.from('cron_runs').upsert(
         { job: 'instagram-publish', last_run_at: new Date().toISOString(), ok: true, detail: feitos.length ? JSON.stringify(feitos) : null } as never,
