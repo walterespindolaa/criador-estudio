@@ -197,6 +197,12 @@ function QuadroDoParceiro({ parceiros, pecas, extClients, hoje, abrirPeca, nomeP
     };
     return [...mapa.entries()]
       .filter(([, c]) => c.abertas.length + c.entregues.length + c.pagas > 0)
+      // Cliente inativo sem nada aberto nem a pagar sai do quadro: só sobrava
+      // a faixa "pago em dd/mm" de um cliente que já foi embora (13/11/2026).
+      .filter(([id, c]) => {
+        const cli = extClients.find((e) => e.id === id);
+        return !(cli && cli.active === false && c.abertas.length === 0 && c.entregues.length === 0);
+      })
       .map(([id, c]) => ({
         id,
         cliente: extClients.find((e) => e.id === id) ?? null,
@@ -538,6 +544,32 @@ export function PainelComParceiros({ clientes }: {
      portal ligado a ela, pra cair na coluna certa. */
   const { data: materiais = [] } = useMateriaisComParceiros(parceiros.length > 0);
   const { agencyOwnerId: agenciaAtual, meuPerfil, setActiveAccount } = useActiveAccount();
+  /* UMA COLUNA POR CLIENTE, DE VERDADE (Gabriela, 13/11/2026: "o Cria tá
+     duplicado"). O mesmo cliente podia chegar com três chaves diferentes: o
+     portal do Cria Post, a ficha do CRM (`crm:`) e o perfil da própria agência
+     (`perfil:`). Cada chave virava uma coluna. Aqui tudo converge pra uma:
+     primeiro pelo vínculo (portal ligado à ficha), depois pelo nome igual. */
+  const chaveUnica = useMemo(() => {
+    const norm = (t?: string | null) => (t ?? "").trim().toLowerCase();
+    const portalPorNome = new Map(extReais.map((c) => [norm(c.name), c.id] as const));
+    const daFicha = (fichaId: string): string => {
+      const portal = extReais.find((c) => c.crm_client_id === fichaId);
+      if (portal) return portal.id;
+      const ficha = crmClients.find((c) => c.id === fichaId);
+      return (ficha && portalPorNome.get(norm(ficha.name))) || `crm:${fichaId}`;
+    };
+    return (k: string | null): string | null => {
+      if (!k) return k;
+      if (k.startsWith("crm:")) return daFicha(k.slice(4));
+      if (k.startsWith("perfil:") && meuPerfil?.name) {
+        const portal = portalPorNome.get(norm(meuPerfil.name));
+        if (portal) return portal;
+        const ficha = crmClients.find((c) => norm(c.name) === norm(meuPerfil.name));
+        if (ficha) return daFicha(ficha.id);
+      }
+      return k;
+    };
+  }, [extReais, crmClients, meuPerfil]);
   const pecas = useMemo<PecaExterna[]>(() => [
     /* Post da conta Cria do cliente (19/10/2026): não tem portal, então a
        coluna é a ficha do CRM ligada àquela conta (`crm:<id>`). */
@@ -569,7 +601,10 @@ export function PainelComParceiros({ clientes }: {
       revisoes: m.revisoes,
       material: { tipo: m.kind },
     })),
-  ], [pecasDePost, materiais, extReais, crmClients, agenciaAtual, meuPerfil]);
+  ].map((p) => {
+    const k = chaveUnica(p.external_client_id);
+    return k === p.external_client_id ? p : { ...p, external_client_id: k };
+  }), [pecasDePost, materiais, extReais, crmClients, agenciaAtual, meuPerfil, chaveUnica]);
   /* MATERIAL DE CLIENTE SEM PORTAL (Walter, 19/10/2026). Material ligado só à
      ficha do CRM, sem portal do Cria Post (o caso de quem usa o Cria, que
      aprova por dentro), caía na coluna "Sem cliente". Agora vira uma coluna
@@ -581,7 +616,7 @@ export function PainelComParceiros({ clientes }: {
       .map((id) => id.slice(4)));
     const daFicha = crmClients.filter((c) => faltam.has(c.id)).map((c): ExternalClient => ({
       id: `crm:${c.id}`, manager_id: c.manager_id, name: c.name, logo_url: null,
-      instagram_handle: null, notes: null, active: true, created_at: "",
+      instagram_handle: null, notes: null, active: c.status !== "inativo", created_at: "",
       color: (c as { color?: string | null }).color ?? null, crm_client_id: c.id, brand_color: null, portal_settings: null,
     }));
     const perfil: ExternalClient[] = meuPerfil && pecas.some((p) => p.external_client_id === `perfil:${meuPerfil.owner_id}`)
@@ -591,7 +626,13 @@ export function PainelComParceiros({ clientes }: {
           color: null, crm_client_id: null, brand_color: null, portal_settings: null,
         } as ExternalClient]
       : [];
-    return [...(extReais as ExternalClient[]), ...daFicha, ...perfil];
+    /* CLIENTE INATIVO NA FICHA (Gabriela, 13/11/2026: "Lorem tá inativa e
+       ainda aparece aqui"). O portal continuava "ativo" mesmo com a ficha do
+       CRM marcada como inativa. A ficha manda. */
+    const fichaInativa = new Set(crmClients.filter((c) => c.status === "inativo").map((c) => c.id));
+    const portais = (extReais as ExternalClient[]).map((c) =>
+      c.crm_client_id && fichaInativa.has(c.crm_client_id) ? { ...c, active: false } : c);
+    return [...portais, ...daFicha, ...perfil];
   }, [extReais, pecas, crmClients, meuPerfil, agenciaAtual]);
   const [materialAberto, setMaterialAberto] = useState<string | null>(null);
   const resolver = useResolverPrazoSugerido();
