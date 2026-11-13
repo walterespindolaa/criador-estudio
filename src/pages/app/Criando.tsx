@@ -295,7 +295,11 @@ const Criando = () => {
   const [filterPlatform, setFilterPlatform] = useState<string | null>(null);
   const [filterPillar, setFilterPillar] = useState<string | null>(null);
   const [filterWeek, setFilterWeek] = useState<number | null>(null);
-  const [filterFormat, setFilterFormat] = useState<string | null>(null);
+  /* MAIS DE UM FORMATO DE UMA VEZ (Gabriela, 13/11/2026: "não consigo
+     selecionar +1 formato, ex: reels e carrossel"). Era um só; agora é uma
+     lista, e o post aparece se for de qualquer um dos marcados. */
+  const [filterFormats, setFilterFormats] = useState<string[]>([]);
+  const alternarFormato = (f: string) => setFilterFormats((l) => (l.includes(f) ? l.filter((x) => x !== f) : [...l, f]));
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [dateSort, setDateSort] = useState<null | "asc" | "desc">(null);
@@ -324,7 +328,7 @@ const Criando = () => {
       if (filterPlatform && post.platform !== filterPlatform) return false;
       if (filterPillar && post.pillar_id !== filterPillar) return false;
       if (filterWeek != null && post.week_number !== filterWeek) return false;
-      if (filterFormat && post.format !== filterFormat) return false;
+      if (filterFormats.length > 0 && !filterFormats.includes(post.format ?? "")) return false;
       if (search.trim() && !(post.title ?? "").toLowerCase().includes(search.trim().toLowerCase())) return false;
       if (period === "personalizado") {
         // Comparação lexicográfica de strings YYYY-MM-DD: sem conversão de fuso, sem off-by-one.
@@ -343,7 +347,7 @@ const Criando = () => {
       }
       return true;
     });
-  }, [posts, filterPlatform, filterPillar, filterWeek, filterFormat, search, dateRange, period, customRange]);
+  }, [posts, filterPlatform, filterPillar, filterWeek, filterFormats, search, dateRange, period, customRange]);
   // Índice por dia: o calendário varria a lista inteira em CADA célula
   // (42 células x todos os posts a cada render). Agora é um Map montado uma vez.
   const postsPorDia = useMemo(() => {
@@ -585,8 +589,8 @@ const Criando = () => {
     return i < 0 ? 99 : i;
   };
 
-  const hasActiveFilters = filterPlatform || filterPillar || filterWeek != null || period !== "tudo" || filterFormat || search.trim();
-  const activeFilterCount = (period !== "tudo" ? 1 : 0) + (filterPlatform ? 1 : 0) + (filterPillar ? 1 : 0) + (filterWeek != null ? 1 : 0) + (filterFormat ? 1 : 0);
+  const hasActiveFilters = filterPlatform || filterPillar || filterWeek != null || period !== "tudo" || filterFormats.length > 0 || search.trim();
+  const activeFilterCount = (period !== "tudo" ? 1 : 0) + (filterPlatform ? 1 : 0) + (filterPillar ? 1 : 0) + (filterWeek != null ? 1 : 0) + filterFormats.length;
   const sheetChip = (on: boolean) => `px-3 py-1.5 rounded-full text-xs font-body border transition-colors inline-flex items-center ${on ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-foreground"}`;
   const activeChip = (key: string, label: string, onClear: () => void) => (
     <button key={key} type="button" onClick={onClear} className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary/10 text-primary">
@@ -647,7 +651,7 @@ const Criando = () => {
               {filterPlatform && activeChip("pl", filterPlatform === "instagram" ? "Instagram" : filterPlatform === "tiktok" ? "TikTok" : "YouTube", () => setFilterPlatform(null))}
               {filterPillar && activeChip("pi", pillars.find(p => p.id === filterPillar)?.name ?? "Pilar", () => setFilterPillar(null))}
               {filterWeek != null && activeChip("w", `Semana ${filterWeek}`, () => setFilterWeek(null))}
-              {filterFormat && activeChip("f", FORMAT_LABELS[filterFormat] ?? filterFormat, () => setFilterFormat(null))}
+              {filterFormats.map((f) => activeChip("f-" + f, FORMAT_LABELS[f] ?? f, () => alternarFormato(f)))}
             </div>
           )}
         </div>
@@ -713,14 +717,14 @@ const Criando = () => {
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Formato</p>
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={() => setFilterFormat(null)} className={sheetChip(!filterFormat)}>Todos</button>
+                  <button type="button" onClick={() => setFilterFormats([])} className={sheetChip(filterFormats.length === 0)}>Todos</button>
                   {FORMATS.map(f => (
-                    <button key={f} type="button" onClick={() => setFilterFormat(filterFormat === f ? null : f)} className={sheetChip(filterFormat === f)}>{FORMAT_LABELS[f] || f}</button>
+                    <button key={f} type="button" aria-pressed={filterFormats.includes(f)} onClick={() => alternarFormato(f)} className={sheetChip(filterFormats.includes(f))}>{FORMAT_LABELS[f] || f}</button>
                   ))}
                 </div>
               </div>
               <div className="flex gap-2 pt-1">
-                <Button variant="outline" className="flex-1 rounded-xl" onClick={() => { setFilterPlatform(null); setFilterPillar(null); setFilterWeek(null); setFilterFormat(null); handlePeriodChange("tudo"); }}>Limpar</Button>
+                <Button variant="outline" className="flex-1 rounded-xl" onClick={() => { setFilterPlatform(null); setFilterPillar(null); setFilterWeek(null); setFilterFormats([]); handlePeriodChange("tudo"); }}>Limpar</Button>
                 <Button className="flex-1 rounded-xl" onClick={() => setFiltersOpen(false)}>Aplicar</Button>
               </div>
             </div>
@@ -762,11 +766,11 @@ const Criando = () => {
                lado deixavam a linha extensa demais (pedido do Walter, 31/08). */}
             <Popover>
               <PopoverTrigger asChild>
-                <button className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-body border transition-colors ${filterPillar || filterWeek != null || filterFormat ? "bg-primary/10 border-primary text-primary font-semibold" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}>
+                <button className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-body border transition-colors ${filterPillar || filterWeek != null || filterFormats.length > 0 ? "bg-primary/10 border-primary text-primary font-semibold" : "bg-card border-border text-muted-foreground hover:text-foreground"}`}>
                   <SlidersHorizontal className="h-3.5 w-3.5" /> Filtros
-                  {(filterPillar || filterWeek != null || filterFormat) && (
+                  {(filterPillar || filterWeek != null || filterFormats.length > 0) && (
                     <span className="h-4 min-w-[16px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold grid place-items-center">
-                      {[filterPillar, filterWeek != null ? 1 : null, filterFormat].filter(Boolean).length}
+                      {[filterPillar, filterWeek != null ? 1 : null, ...filterFormats].filter(Boolean).length}
                     </span>
                   )}
                 </button>
@@ -824,17 +828,18 @@ const Criando = () => {
                   </Select>
                 )}
 
-                <Select value={filterFormat ?? "all"} onValueChange={(v) => setFilterFormat(v === "all" ? null : v)}>
-                  <SelectTrigger className="w-full h-9 rounded-xl text-xs font-body bg-card">
-                    <SelectValue placeholder="Todos os formatos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all"><span className="font-body">Todos os formatos</span></SelectItem>
+                {/* Formato: marca quantos quiser (antes era uma lista de escolher um só). */}
+                <div>
+                  <p className="mb-1.5 text-[11px] font-body font-semibold text-muted-foreground">Formato (pode marcar mais de um)</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button type="button" onClick={() => setFilterFormats([])}
+                      className={`h-8 px-3 rounded-full text-xs font-body border transition-colors ${filterFormats.length === 0 ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:bg-muted"}`}>Todos</button>
                     {FORMATS.map((f) => (
-                      <SelectItem key={f} value={f}><span className="font-body">{FORMAT_LABELS[f] || f}</span></SelectItem>
+                      <button key={f} type="button" aria-pressed={filterFormats.includes(f)} onClick={() => alternarFormato(f)}
+                        className={`h-8 px-3 rounded-full text-xs font-body border transition-colors ${filterFormats.includes(f) ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:bg-muted"}`}>{FORMAT_LABELS[f] || f}</button>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                </div>
               </PopoverContent>
             </Popover>
 
@@ -847,7 +852,7 @@ const Criando = () => {
               <span>·</span>
               <span>{filteredPosts.filter(p => p.scheduled_date).length} agendados</span>
               {hasActiveFilters && (
-                <button onClick={() => { setFilterPlatform(null); setFilterPillar(null); setFilterWeek(null); setFilterFormat(null); setSearch(""); handlePeriodChange("tudo"); }}
+                <button onClick={() => { setFilterPlatform(null); setFilterPillar(null); setFilterWeek(null); setFilterFormats([]); setSearch(""); handlePeriodChange("tudo"); }}
                   className="ml-1 text-primary hover:underline flex items-center gap-1">
                   <X className="h-3 w-3" /> Limpar
                 </button>
@@ -877,7 +882,7 @@ const Criando = () => {
           <span>·</span>
           <span>{filteredPosts.filter(p => p.scheduled_date).length} agendados</span>
           {hasActiveFilters && (
-            <button onClick={() => { setFilterPlatform(null); setFilterPillar(null); setFilterWeek(null); setFilterFormat(null); setSearch(""); handlePeriodChange("tudo"); }}
+            <button onClick={() => { setFilterPlatform(null); setFilterPillar(null); setFilterWeek(null); setFilterFormats([]); setSearch(""); handlePeriodChange("tudo"); }}
               className="ml-2 text-primary hover:underline flex items-center gap-1">
               <X className="h-3 w-3" /> Limpar filtros
             </button>
