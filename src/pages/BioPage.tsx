@@ -8,7 +8,7 @@ import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { renderRichText } from "@/lib/richText";
 import { cn } from "@/lib/utils";
 import { AssinaturaCria } from "@/components/publico/AssinaturaCria";
-import { corDeDestaque, corSobre, faltaNoBloco, nomeDaMarcaSite } from "@/lib/bioBlocks";
+import { corAutoDoTitulo, corDeDestaque, corSobre, faltaNoBloco, nomeDaMarcaSite } from "@/lib/bioBlocks";
 import { BlocoPublico } from "@/components/bio/BlocoPublico";
 import { FormParceria } from "@/components/bio/FormParceria";
 import { SiteBio, PaginaItem, type MarcaSite, type ItemLite } from "@/components/bio/SiteBio";
@@ -1028,7 +1028,7 @@ const ConteudoDaBio = () => {
                     <BlocoPublico
                       kind={b.kind}
                       data={b.data ?? {}}
-                      visual={visualDosBlocos}
+                      visual={b.kind === "titulo" ? { ...visualDosBlocos, tituloAuto: corAutoDoTitulo({ ...settings, columnColor: corDaColuna }) } : visualDosBlocos}
                       onClique={() => trackClick(b.id)}
                       captura={b.kind === "parceria" ? (
                         <FormParceria slug={slug ?? ""} daAgencia={ehDaAgencia} blocoId={b.id} d={b.data ?? {}}

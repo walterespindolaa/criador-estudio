@@ -247,6 +247,42 @@ function FormApresentacao({ d, p }: { d: DadosBloco; p: (patch: DadosBloco) => v
   );
 }
 
+/* Cor do Título de seção (16/11/2026; mockup aprovado). Vazio = automática:
+   a página escolhe claro ou escuro conforme o fundo. */
+function CorDoTitulo({ valor, onTroca }: { valor: string; onTroca: (v: string) => void }) {
+  const ehHex = /^#[0-9a-fA-F]{6}$/.test(valor);
+  const OPCOES: { v: string; t: string; amostra?: string }[] = [
+    { v: "", t: "Automática" },
+    { v: "clara", t: "Clara", amostra: "#FFFFFF" },
+    { v: "escura", t: "Escura", amostra: "#1A1626" },
+    { v: "marca", t: "Cor dos botões" },
+  ];
+  const chip = (ativo: boolean) => cn(
+    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-body font-semibold transition-colors",
+    ativo ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-foreground hover:bg-muted/50");
+  return (
+    <LinhaCampo label="Cor do título" ajuda="Automática escolhe claro ou escuro conforme o fundo da página.">
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cor do título">
+        {OPCOES.map((o) => {
+          const ativo = !ehHex && (valor === o.v || (o.v === "" && !["clara", "escura", "marca"].includes(valor)));
+          return (
+            <button key={o.v || "auto"} type="button" role="radio" aria-checked={ativo} onClick={() => onTroca(o.v)} className={chip(ativo)}>
+              {o.amostra && <i aria-hidden className="block h-3.5 w-3.5 rounded-full border border-black/15" style={{ background: o.amostra }} />}
+              {o.t}
+            </button>
+          );
+        })}
+        <label className={cn(chip(ehHex), "cursor-pointer")}>
+          <i aria-hidden className="block h-3.5 w-3.5 rounded-full border border-black/15"
+            style={{ background: ehHex ? valor : "conic-gradient(#EB4918,#FFCF03,#00A652,#0061EE,#FF77B9,#EB4918)" }} />
+          Outra cor
+          <input type="color" className="sr-only" value={ehHex ? valor : "#EB4918"} onChange={(e) => onTroca(e.target.value)} aria-label="Escolher outra cor" />
+        </label>
+      </div>
+    </LinhaCampo>
+  );
+}
+
 export function FormBloco({ bloco, salvar, slugPublico, telefonePadrao, secoes = [] }: {
   bloco: BioBloco; salvar: (d: DadosBloco) => void; slugPublico?: string | null; telefonePadrao?: string | null;
   /** Partes desta página que um botão pode alcançar (#servicos, #parceria). */
@@ -289,10 +325,13 @@ export function FormBloco({ bloco, salvar, slugPublico, telefonePadrao, secoes =
   switch (bloco.kind) {
     case "titulo":
       return (
-        <LinhaCampo label="Texto do título">
-          <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })}
-            placeholder="Ex.: Meus serviços" className="rounded-xl" />
-        </LinhaCampo>
+        <div className="space-y-3.5">
+          <LinhaCampo label="Texto do título">
+            <Input value={txt(d, "titulo")} onChange={(e) => p({ titulo: e.target.value })}
+              placeholder="Ex.: Meus serviços" className="rounded-xl" />
+          </LinhaCampo>
+          <CorDoTitulo valor={txt(d, "cor")} onTroca={(v) => p({ cor: v })} />
+        </div>
       );
 
     case "link":

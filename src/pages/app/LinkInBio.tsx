@@ -64,7 +64,7 @@ import { FormularioDePrevia } from "@/components/bio/FormParceria";
 import { EmPreviaContext } from "@/components/bio/SiteLoja";
 import { lerSocial, type SocialPublico } from "@/lib/bioCriadora";
 import { RESERVADOS } from "@/lib/previa-bio";
-import { corDeDestaque, corSobre, nomeDaMarcaSite } from "@/lib/bioBlocks";
+import { corAutoDoTitulo, corDeDestaque, corSobre, nomeDaMarcaSite } from "@/lib/bioBlocks";
 import type { BioBloco, EstiloBio } from "@/lib/bioBlocks";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -2879,6 +2879,7 @@ const BioPreview = memo(function BioPreview({ profile, links, blocos = [], produ
                           buttonColor: settings.buttonColor, buttonTextColor: settings.buttonTextColor,
                           cardColor: settings.cardColor, cardTextColor: settings.cardTextColor,
                           radius, isOutline,
+                          tituloAuto: corAutoDoTitulo({ ...settings, columnColor: corDaColunaPrev }),
                         }}
                         captura={
                           <div className={`w-full rounded-2xl shadow-sm p-3 text-center ${settings.cardColor ? "" : "bg-white/90"}`}

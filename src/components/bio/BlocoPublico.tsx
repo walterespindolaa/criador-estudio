@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Copy, MapPin, MessageCircle, Navigation, Play } from "lucide-react";
 import {
   bool, embedDeSpotify, embedDeVideo, faltaAte, linkAppleMaps, linkGoogleMaps,
-  linkSeguro, linkWaze, linkWhatsapp, lista, txt, type DadosBloco,
+  linkSeguro, linkWaze, linkWhatsapp, lista, txt, corDoTitulo, type DadosBloco,
 } from "@/lib/bioBlocks";
 import { urlMapaEmbutido, videoDaCapa } from "@/lib/bioEspecialista";
 import { MapaEmbutido } from "@/components/bio/SiteEspecialista";
@@ -32,6 +32,9 @@ export type VisualBio = {
   /** classe de arredondamento já resolvida pelo estilo do botão */
   radius: string;
   isOutline: boolean;
+  /** Cor automática do Título de seção, já calculada pela página conforme o
+   *  fundo. Sem ela, o título herda a cor da página, como era antes. */
+  tituloAuto?: string;
 };
 
 type Props = {
@@ -263,7 +266,8 @@ export function BlocoPublico({ kind, data, visual, onClique, captura }: Props) {
     case "titulo": {
       const t = txt(data, "titulo");
       if (!t.trim()) return null;
-      return <p className="w-full text-center font-display font-bold text-[17px] pt-4 pb-1 drop-shadow-sm">{t}</p>;
+      const cor = corDoTitulo(data, visual.tituloAuto, visual.buttonColor);
+      return <p className="w-full text-center font-display font-bold text-[17px] pt-4 pb-1 drop-shadow-sm" style={cor ? { color: cor } : undefined}>{t}</p>;
     }
 
     case "link": {

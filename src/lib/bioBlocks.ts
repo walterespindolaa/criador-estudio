@@ -578,6 +578,40 @@ export const corLegivelSobreBranco = (hex: string) => claridade(hex) < 0.62;
 /** Preto ou branco, o que for legível em cima desta cor. */
 export const corSobre = (hex: string) => (claridade(hex) < 0.6 ? "#FFFFFF" : "#1A1626");
 
+/* COR DO TÍTULO DE SEÇÃO (Walter, 16/11/2026). O título saía sempre escuro,
+   sem olhar o fundo: em página azul-petróleo, "Nossos Serviços" quase sumia.
+   Agora o padrão é AUTOMÁTICO (claro em fundo escuro, escuro em fundo claro)
+   e o bloco aceita escolha: "clara", "escura", "marca" (cor dos botões) ou um
+   hex. A superfície é a mesma do cabeçalho: a coluna/cartão se tiver cor,
+   senão o fundo da página. Degradê usa a média das cores dele. */
+export const TITULO_CLARO = "#FFFFFF";
+export const TITULO_ESCURO = "#1A1626";
+const HEX6 = /^#[0-9a-fA-F]{6}$/;
+export function corAutoDoTitulo(s: {
+  columnColor?: string | null; bgType?: string | null; bgColor?: string | null;
+  bgGradient?: string | null;
+}): string | undefined {
+  const coluna = (s.columnColor ?? "").trim();
+  if (HEX6.test(coluna)) return corSobre(coluna);
+  if (s.bgType === "gradient") {
+    const cores: string[] = (s.bgGradient ?? "").match(/#[0-9a-fA-F]{6}\b/g) ?? [];
+    if (cores.length === 0) return undefined;
+    const media = cores.reduce((soma, c) => soma + claridade(c), 0) / cores.length;
+    return media < 0.6 ? TITULO_CLARO : TITULO_ESCURO;
+  }
+  const fundo = (s.bgColor ?? "").trim();
+  return HEX6.test(fundo) ? corSobre(fundo) : undefined;
+}
+/** A cor final do título: a escolhida no bloco, senão a automática. */
+export function corDoTitulo(d: DadosBloco, auto?: string, marca?: string): string | undefined {
+  const c = txt(d, "cor").trim();
+  if (c === "clara") return TITULO_CLARO;
+  if (c === "escura") return TITULO_ESCURO;
+  if (c === "marca") return marca || auto;
+  if (HEX6.test(c)) return c;
+  return auto;
+}
+
 /** A cor da marca já corrigida pra uso como texto e detalhe sobre branco.
  *  Cor clara demais cai pro grafite da identidade, em vez de sumir. */
 export const corDeDestaque = (hex: string) => (corLegivelSobreBranco(hex) ? hex : "#1A1626");
