@@ -212,6 +212,35 @@ export function useLinkClientMedia(criaOwnerId: string | null | undefined) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["cria-client-instagram", criaOwnerId] });
       qc.invalidateQueries({ queryKey: ["cria-posts"] });
+      qc.invalidateQueries({ queryKey: ["client-cria-kanban-posts", criaOwnerId] });
+    },
+  });
+}
+
+// Posts do KANBAN do cliente que usa o Cria (16/11/2026). O "Vincular ao post
+// do Cria" só listava os posts do Cria Post (aprovação por link). Cliente que
+// é criador e produz no próprio kanban ficava com a lista vazia ("não consigo
+// vincular o post ao Cria, porque tô no kanban de criador"). O gestor lê por
+// RLS, igual à Agenda.
+export type ClientKanbanPost = { id: string; title: string; format: string; hook: string | null; scheduled_date: string | null };
+export function useClientKanbanPosts(criaOwnerId: string | null | undefined) {
+  return useQuery<ClientKanbanPost[]>({
+    queryKey: ["client-cria-kanban-posts", criaOwnerId],
+    enabled: !!criaOwnerId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("posts")
+        .select("id, title, format, hook, scheduled_date")
+        .eq("user_id", criaOwnerId as string)
+        .is("external_client_id", null)
+        .is("deleted_at", null)
+        .order("scheduled_date", { ascending: false, nullsFirst: false })
+        .limit(300);
+      if (error) throw new Error(error.message);
+      return ((data as unknown as Array<Partial<ClientKanbanPost>> | null) ?? []).map((p) => ({
+        id: String(p.id), title: p.title ?? "", format: p.format ?? "", hook: p.hook ?? null, scheduled_date: p.scheduled_date ?? null,
+      }));
     },
   });
 }

@@ -3109,7 +3109,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 <div className="shrink-0 rounded-2xl border border-border bg-card px-3 py-2.5">{blocoMidia}</div>
                 {/* Prévia: ocupa o que sobra do painel e encolhe pela altura
                     (PreviaQueCabe). No celular ela é a aba "Prévia". */}
-                <div className="flex flex-col flex-1 min-h-[480px] w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
+                {/* flex-[1_0_auto] (16/11/2026): com flex-1 a caixa ficava presa na
+                    altura que sobrava e CORTAVA a prévia mais alta que ela, sem
+                    barra de rolagem ("não tô conseguindo ver o post todo, ele não
+                    vai pra baixo"). Agora ela tem no mínimo a altura da prévia,
+                    e o painel da direita rola. */}
+                <div className="flex flex-col flex-[1_0_auto] min-h-[480px] w-full rounded-3xl border border-border bg-background overflow-hidden shadow-sm">
                   <PreviaQueCabe>{previaConteudo(true)}</PreviaQueCabe>
                 </div>
               </aside>

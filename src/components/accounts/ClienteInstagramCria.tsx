@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Instagram, Heart, MessageCircle, Eye, Bookmark, Users, Play, Image as ImageIcon, Images, ExternalLink, RefreshCw, Zap, Link2, Layers, TrendingUp, X, Check, Loader2, CalendarDays, Unplug } from "lucide-react";
 import { toast } from "sonner";
 import {
-  useCriaClientInstagram, useLinkClientMedia, type CriaClientIgMedia, type CriaClientIgDaily,
+  useCriaClientInstagram, useLinkClientMedia, useClientKanbanPosts, type CriaClientIgMedia, type CriaClientIgDaily,
   useManagedClientInstagram, useLinkManagedMedia, useSyncManagedInstagram, useDesconectarInstagramCliente,
 } from "@/hooks/useManagerClientCria";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -43,7 +43,20 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
   const criaQ = useCriaClientInstagram(criaOwnerId ?? null);
   const managedQ = useManagedClientInstagram(gerenciado ? crmClientId : null);
   const { data, isLoading, isError } = gerenciado ? managedQ : criaQ;
-  const { posts: criaPosts } = useExternalPosts(extClientId ?? null);
+  const { posts: postsDoCriaPost } = useExternalPosts(extClientId ?? null);
+  // Cliente que usa o Cria: entram também os posts do kanban DELE (16/11/2026).
+  const { data: postsDoKanban = [] } = useClientKanbanPosts(criaOwnerId ?? null);
+  const criaPosts = useMemo(() => {
+    const vistos = new Set<string>();
+    const todos: { id: string; title: string; format: string; hook: string | null; scheduled_date: string | null; doKanban: boolean }[] = [];
+    for (const p of postsDoKanban) { if (!vistos.has(p.id)) { vistos.add(p.id); todos.push({ ...p, doKanban: true }); } }
+    for (const p of postsDoCriaPost) {
+      if (vistos.has(p.id)) continue;
+      vistos.add(p.id);
+      todos.push({ id: p.id, title: p.title, format: p.format, hook: p.hook ?? null, scheduled_date: p.scheduled_date ?? null, doKanban: false });
+    }
+    return todos;
+  }, [postsDoKanban, postsDoCriaPost]);
   const linkCria = useLinkClientMedia(criaOwnerId ?? null);
   const linkManaged = useLinkManagedMedia(gerenciado ? crmClientId : null);
   const link = gerenciado ? linkManaged : linkCria;
@@ -417,7 +430,7 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
                           <span className="flex items-center gap-0.5"><Bookmark className="h-2.5 w-2.5" />{fmt(m(mi, "saved") + m(mi, "saves"))}</span>
                         </div>
                         {/* Vínculo com o post do Cria */}
-                        {extClientId && (linked ? (
+                        {(extClientId || criaOwnerId) && (linked ? (
                           <div className="flex items-center gap-1 rounded-md bg-primary/8 px-1.5 py-1">
                             <Layers className="h-3 w-3 text-primary shrink-0" />
                             <span className="text-[9.5px] font-body font-semibold text-foreground truncate flex-1">Cria · {MEDIA_LABEL[linked.format] ?? linked.format}</span>
@@ -443,18 +456,18 @@ export function ClienteInstagramCria({ criaOwnerId, crmClientId, clientName, ext
         <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle className="font-display">Vincular ao post do Cria</DialogTitle>
-            <DialogDescription className="font-body text-sm">Escolha qual post que você produziu no Cria Post virou esta publicação. O resultado real volta pro post e entra na análise.</DialogDescription>
+            <DialogDescription className="font-body text-sm">Escolha qual post do Cria virou esta publicação: do kanban do cliente ou do Cria Post. O resultado real volta pro post e entra na análise.</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 mt-1 max-h-[52vh] overflow-y-auto">
             {criaPosts.length === 0 ? (
-              <p className="text-sm font-body text-muted-foreground py-6 text-center">Nenhum post no Cria Post deste cliente ainda.</p>
+              <p className="text-sm font-body text-muted-foreground py-6 text-center">Este cliente ainda não tem post no Cria.</p>
             ) : criaPosts.map((p) => (
               <button key={p.id} onClick={() => doLink(p.id)} disabled={link.isPending}
                 className="w-full flex items-center gap-3 rounded-xl border border-border p-3 text-left hover:border-primary/50 hover:bg-primary/5 transition-colors disabled:opacity-60">
                 <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary text-[10px] font-display font-bold shrink-0">{(MEDIA_LABEL[p.format] ?? p.format ?? "POST").slice(0, 4).toUpperCase()}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-[13px] font-body font-semibold text-foreground truncate">{p.title || "Post"}</span>
-                  <span className="block text-[11px] font-body text-muted-foreground truncate">{MEDIA_LABEL[p.format] ?? p.format}{p.scheduled_date ? ` · ${new Date(p.scheduled_date + "T00:00:00").toLocaleDateString("pt-BR")}` : ""}</span>
+                  <span className="block text-[11px] font-body text-muted-foreground truncate">{MEDIA_LABEL[p.format] ?? p.format}{p.scheduled_date ? ` · ${new Date(p.scheduled_date + "T00:00:00").toLocaleDateString("pt-BR")}` : ""}{p.doKanban ? " · kanban do cliente" : " · Cria Post"}</span>
                 </span>
                 {link.isPending ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" /> : <Check className="h-4 w-4 text-muted-foreground/40 shrink-0" />}
               </button>
