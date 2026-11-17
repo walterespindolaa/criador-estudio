@@ -505,9 +505,16 @@ export default function AgendaCriacao() {
      de 90 dias e com a carga de datas prontas a lista tomava a página. Sem
      nenhuma nos próximos 30, aparece só a próxima, com quantos dias faltam. */
   const JANELA_DIAS = 30;
+  /* TETO DE 4 MESES (Walter, 16/11/2026: "Dia do Cliente" caía como próxima data
+     faltando 303 dias). Sem nada nos próximos 30, só mostra a próxima se ela
+     cair dentro de 4 meses (contados em dias, que mês varia); mais longe que
+     isso não é "próxima" e some do resumo, mas segue no "Ver mais datas". */
+  const JANELA_MAX_DIAS = 120;
   const datasNaJanela = useMemo(() => {
     const dentro = datasProximas.filter((x) => x.dias <= JANELA_DIAS);
-    return dentro.length > 0 ? dentro : datasProximas.slice(0, 1);
+    if (dentro.length > 0) return dentro;
+    const prox = datasProximas[0];
+    return prox && prox.dias <= JANELA_MAX_DIAS ? [prox] : [];
   }, [datasProximas]);
   const soAProxima = datasNaJanela.length === 1 && datasNaJanela[0].dias > JANELA_DIAS;
   const [verTodasAsDatas, setVerTodasAsDatas] = useState(false);

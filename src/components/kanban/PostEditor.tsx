@@ -632,6 +632,21 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
     return () => clearTimeout(t);
   }, [post, open, fetchDriveMedia, userId]);
 
+  // Ao fechar o editor, o aviso "sem mídia" dos quadros precisa reconferir: a
+  // presença de mídia mora em external_media_refs, mas Criando, Início, Feed e
+  // Aprovação leem de caches próprios (staleTime 5min) que o editor não
+  // invalidava. Sem isto, adicionar mídia e voltar ao quadro ainda mostrava
+  // "sem mídia" até o cache vencer (Walter, 16/11/2026).
+  const editorEstavaAberto = useRef(false);
+  useEffect(() => {
+    if (open) { editorEstavaAberto.current = true; return; }
+    if (!editorEstavaAberto.current) return;
+    editorEstavaAberto.current = false;
+    for (const k of ["criando-previas", "inicio-midias", "feed-thumbnails", "approval-thumbs"]) {
+      queryClient.invalidateQueries({ queryKey: [k] });
+    }
+  }, [open, queryClient]);
+
   // Reset sections when format changes (only for new posts)
   useEffect(() => {
     if (isNew) {
