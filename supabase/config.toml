@@ -140,6 +140,8 @@ project_id = "ecbzfjzoqidowrsfsfih"
     verify_jwt = false
   [functions.lifecycle-emails]
     verify_jwt = false
+  [functions.aviso-teste-modulos]
+    verify_jwt = false
   [functions.password-reset]
     verify_jwt = false
   [functions.material-anexo]

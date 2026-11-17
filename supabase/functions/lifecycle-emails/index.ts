@@ -144,6 +144,25 @@ Deno.serve(async (req) => {
          fim depois de amanhã = 2 dias, fim hoje = "termina hoje". */
       const diaBR = (ms: number) => new Date(ms).toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
       const dias = Math.round((Date.parse(diaBR(fim)) - Date.parse(diaBR(now))) / dayMs);
+      /* SOCIAL MÍDIA (17/11/2026): o teste dela libera os módulos, não um
+         plano de criadora. O lembrete fala dos módulos e leva pra /app/modulos;
+         a conta segue grátis até 3 clientes depois do teste. */
+      const sm = p.account_type === "manager" && !p.meuPerfil;
+      if (sm && fim > now && dias <= 2 && !ja.has(`${p.id}:trial_sm_fim:${ref}`)) {
+        const quando = dias <= 0 ? "hoje" : dias === 1 ? "amanhã" : "em 2 dias";
+        const ok = await enviarEmail(svc, {
+          para: p.email, nome: p.name, etiqueta: "trial_sm_fim",
+          assunto: `Seu teste completo do Cria termina ${quando}`,
+          paragrafos: [
+            `O acesso a todos os módulos termina ${quando}. Sua conta continua grátis até 3 clientes, e tudo o que você criou fica guardado.`,
+            "Pra seguir usando o Cria Post, a Gestão, o Caixa ou a Captação, é só escolher os módulos que fazem sentido pra você.",
+          ],
+          botao: { texto: "Ver os módulos", url: `${APP}/app/modulos` },
+        });
+        if (ok) { enviados.trial_d1 += 1; await marcar(p.id, "trial_sm_fim", ref); }
+        continue;
+      }
+      if (sm) continue;
       if (fim > now && dias <= 1 && !ja.has(`${p.id}:trial_d1:${ref}`)) {
         const hoje = dias <= 0;
         const ok = await enviarEmail(svc, {
