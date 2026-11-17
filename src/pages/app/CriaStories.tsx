@@ -111,8 +111,12 @@ export default function CriaStories() {
   const [conf, setConf] = useState<{ postId: string; agora: boolean } | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
   /* Atalho "Gravar story" da página inicial: abre o Novo story de hoje, falado. */
-  const [editor, setEditor] = useState<NovoStoryEstado>(() =>
-    (location.state as { novoStory?: boolean } | null)?.novoStory ? { mode: "create", date: localIso(), tipo: "falado" } : { mode: "closed" });
+  const [editor, setEditor] = useState<NovoStoryEstado>(() => {
+    const st = location.state as { novoStory?: boolean; novoStoryBase?: { chave: string; titulo: string; exemplo?: string | null; formato?: string | null } } | null;
+    // "Criar este story" nas Tendências: abre já com a tendência como ponto de partida.
+    if (st?.novoStoryBase) return { mode: "create", date: localIso(), tipo: tipoDoFormato(st.novoStoryBase.formato), base: st.novoStoryBase };
+    return st?.novoStory ? { mode: "create", date: localIso(), tipo: "falado" } : { mode: "closed" };
+  });
   const [salvando, setSalvando] = useState(false);
   const [painel, setPainel] = useState(chavesVindas.length > 0);
   const [avisoOk, setAvisoOk] = useState(() => { try { return localStorage.getItem(AVISO_KEY) === "1"; } catch { return false; } });

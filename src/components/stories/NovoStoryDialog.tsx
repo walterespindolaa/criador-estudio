@@ -29,7 +29,9 @@ import type { StorySlot } from "@/hooks/useStoryPlan";
 export type NovoStoryEstado =
   | { mode: "closed" }
   | { mode: "edit"; slot: StorySlot }
-  | { mode: "create"; date: string; tipo?: TipoStory };
+  /** `base`: vem de "Criar este story" nas Tendências; já abre com o título e o
+   *  jeito de fazer da tendência no primeiro bloco, pra pessoa adaptar. */
+  | { mode: "create"; date: string; tipo?: TipoStory; base?: { chave: string; titulo: string; exemplo?: string | null } };
 
 export type StorySalvo = {
   slot_date: string;
@@ -116,14 +118,15 @@ export function NovoStoryDialog({ state, onClose, onSalvar, ocupado, onExcluir }
   const [chave, setChave] = useState("");
   const [confirmaExcluir, setConfirmaExcluir] = useState(false);
 
-  const k = state.mode === "edit" ? `e:${state.slot.id}` : state.mode === "create" ? `c:${state.date}:${state.tipo ?? ""}` : "";
+  const k = state.mode === "edit" ? `e:${state.slot.id}` : state.mode === "create" ? `c:${state.date}:${state.tipo ?? ""}:${state.base?.chave ?? ""}` : "";
   if (open && k !== chave) {
     setChave(k);
     const s = editando;
     const t = s ? tipoDoFormato(s.format) : (state.mode === "create" && state.tipo) || "falado";
     const p = lerRoteiro(s?.script);
-    setTipo(t); setTitulo(s?.title ?? "");
-    setB1(p.b1); setB2(p.b2); setB3(p.b3); setMostrar(p.mostrar);
+    const base = state.mode === "create" ? state.base : undefined;
+    setTipo(t); setTitulo(s?.title ?? base?.titulo ?? "");
+    setB1(p.b1 || (base?.exemplo ?? "")); setB2(p.b2); setB3(p.b3); setMostrar(p.mostrar);
     setData(s?.slot_date ?? (state.mode === "create" ? state.date : ""));
     setHora(s?.slot_time ? s.slot_time.slice(0, 5) : "");
     setLembrar(s ? !!s.notify_title : true);
