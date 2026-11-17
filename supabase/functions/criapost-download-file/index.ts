@@ -34,6 +34,10 @@ function fetchHostAllowed(raw: string): boolean {
   if (supaHost && h === supaHost) return true;               // Supabase Storage (device/storage)
   if (h === "drive.google.com" || h === "drive.usercontent.google.com") return true;
   if (h.endsWith(".googleusercontent.com")) return true;     // redirect de download do Drive
+  // Stories e artes que a propria Cria hospeda no site (provider "storage" com a url
+  // do site em vez do bucket). So a pasta /stories/, nada alem disso (Gabriela, 17/11/2026:
+  // o zip vinha so com legenda.txt e _avisos.txt "origem nao permitida").
+  if ((h === "criasocialclub.com.br" || h === "www.criasocialclub.com.br") && u.pathname.startsWith("/stories/")) return true;
   return false;
 }
 
