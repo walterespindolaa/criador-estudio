@@ -472,6 +472,7 @@ function MontarSemana({ dias, hoje, nicho, chavesIniciais = [], onFechar }: { di
       datas, perDia: porDia, nicho, objetivo,
       escolhidas: tendencias.length ? tendenciasParaIA(tendencias) : undefined,
       tendencias: storyTrends.length ? storyTrendsToContext(storyTrends) : undefined,
+      evitar: previa?.map((p) => p.title),
     }, { onSuccess: (l) => { setPrevia(l); if (tendencias.length) registrarUsoTendencias(tendencias, "montar-semana-stories"); } });
   };
 

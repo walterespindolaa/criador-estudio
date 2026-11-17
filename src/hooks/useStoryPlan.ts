@@ -94,6 +94,35 @@ export type ScheduledPostLite = {
   platform: string | null;
 };
 
+/* ── NÃO REPETIR A SEMANA PASSADA (Walter, 17/11/2026) ───────────────────────
+   A Cria IA montava a semana sem saber o que a pessoa já tinha feito: com o
+   mesmo nicho e as mesmas tendências, os temas voltavam iguais. Aqui juntamos
+   os títulos dos stories das últimas 5 semanas (e os da prévia que a pessoa
+   acabou de recusar, no "Gerar de novo") pra IA fugir deles. Se a leitura
+   falhar, a geração segue normal, só sem essa lista. */
+export async function storiesJaFeitos(userId: string | null | undefined, extras: string[] = []): Promise<string | undefined> {
+  const titulos: string[] = [...extras];
+  if (userId) {
+    try {
+      const desde = new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString();
+      const { data } = await sbFrom("story_slots").select("title")
+        .eq("user_id", userId).gte("created_at", desde)
+        .order("created_at", { ascending: false }).limit(80);
+      for (const r of (data ?? []) as Array<{ title?: string | null }>) if (r.title) titulos.push(r.title);
+    } catch { /* sem histórico: gera do mesmo jeito */ }
+  }
+  const vistos = new Set<string>();
+  const unicos: string[] = [];
+  for (const t of titulos) {
+    const limpo = String(t).trim();
+    const chave = limpo.toLocaleLowerCase("pt-BR");
+    if (!limpo || limpo === "Story" || vistos.has(chave)) continue;
+    vistos.add(chave); unicos.push(limpo.slice(0, 60));
+    if (unicos.length >= 45) break;
+  }
+  return unicos.length ? unicos.join(" | ") : undefined;
+}
+
 function isoAddDays(iso: string, days: number): string {
   const d = new Date(iso + "T00:00:00");
   d.setDate(d.getDate() + days);
@@ -164,7 +193,7 @@ export function useGenerateStoryPlan() {
       const res = await callAIContextBuilder({
         userId,
         operation: "story-plan-generate",
-        data: { perDia: params.perDia, dias: params.dias, nicho: params.nicho, tendencias: params.tendencias },
+        data: { perDia: params.perDia, dias: params.dias, nicho: params.nicho, tendencias: params.tendencias, jaFeitos: await storiesJaFeitos(userId) },
       });
       const stories: Array<Record<string, unknown>> = Array.isArray(res?.stories) ? res.stories : [];
       if (stories.length === 0) throw new Error("A Cria IA não devolveu stories. Tente de novo.");
@@ -322,16 +351,20 @@ export function useAddStorySlot() {
 export type StoryPrevia = { date: string; slot_time: string | null; title: string; script: string; format: string; tipo: TipoStory };
 
 export function useGerarStoriesPrevia() {
+  const { activeAccountId } = useActiveAccount();
   return useMutation({
     mutationFn: async (params: {
       datas: string[]; perDia: number; nicho?: string; objetivo?: string; escolhidas?: string; tendencias?: string;
+      /** Títulos da prévia que a pessoa está trocando no "Gerar de novo". */
+      evitar?: string[];
     }): Promise<StoryPrevia[]> => {
+      const jaFeitos = await storiesJaFeitos(activeAccountId, params.evitar ?? []);
       const nomes = params.datas.map((iso) => new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit" })).join(", ");
       const res = await callAIContextBuilder({
         operation: "story-plan-generate",
         data: {
           perDia: params.perDia, dias: params.datas.length, diasNomes: nomes, nicho: params.nicho,
-          objetivo: params.objetivo, escolhidas: params.escolhidas, tendencias: params.tendencias,
+          objetivo: params.objetivo, escolhidas: params.escolhidas, tendencias: params.tendencias, jaFeitos,
         },
       });
       const stories: StoryIA[] = Array.isArray(res?.stories) ? res.stories : [];

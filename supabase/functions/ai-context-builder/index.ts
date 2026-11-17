@@ -1394,13 +1394,15 @@ RESPONDA APENAS com JSON válido, sem texto antes ou depois:
 {"stories":[{"dia":0,"horario":"09:00","titulo":"Bastidor do almoço","tipo":"falado|figurinha|midia|texto","formato":"ver acima","mostrar":"","p1":"","p2":"","p3":""}]}
 - "dia" é o índice do dia (0 = primeiro dia), de 0 a ${dias - 1}.
 - "titulo": de 2 a 5 palavras, em português correto, com acentos e inicial maiúscula, do jeito que o criador escreveria na agenda. Nunca em minúsculo sem acento.
-- Gere EXATAMENTE ${perDia} stories por dia (total ${perDia * dias}).`
+- Gere EXATAMENTE ${perDia} stories por dia (total ${perDia * dias}).
+- Se vier a lista "JÁ FEITOS", são stories que esse criador já recebeu nas últimas semanas. Não repita nenhum desses temas nem volte com o mesmo título trocando uma palavra. Traga assunto, cena e ângulo novos. Os formatos (caixinha, enquete, bastidor, tutorial) podem voltar, desde que o assunto seja outro.`
         userPrompt = `Nicho: ${data.nicho || 'lifestyle'}
 Stories por dia: ${perDia}
 Dias: ${dias}${data.diasNomes ? ` (${data.diasNomes})` : ''}
 Objetivo da semana: ${data.objetivo || 'aproximar do público'}
 ${data.escolhidas ? `Tendências ESCOLHIDAS (base da semana): ${data.escolhidas}` : ''}
 Tendências de stories em alta: ${data.tendencias || '-'}
+${data.jaFeitos ? `JÁ FEITOS (não repetir): ${String(data.jaFeitos).slice(0, 2500)}` : ''}
 ${data.brandContext ? `\nMARCA DO CRIADOR:\n${data.brandContext}` : ''}`
         maxTokens = 8192
         break
