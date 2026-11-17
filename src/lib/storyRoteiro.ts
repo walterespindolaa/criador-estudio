@@ -144,7 +144,11 @@ export function storyDaIA(s: StoryIA): { tipo: TipoStory; format: string; script
   const script = temPartes
     ? montarRoteiro(tipoIA, { b1: s.fala, b2: s.tela, b3: s.fechamento, mostrar: s.mostrar })
     : String(s.roteiro ?? "").trim();
-  return { tipo: tipoIA, format, script: script.slice(0, 2000), title: String(s.titulo || "Story").slice(0, 200) };
+  // Rede de segurança: a IA às vezes devolve o título todo em minúsculo. Aqui só
+  // sobe a primeira letra; acento quem resolve é o prompt (17/11/2026).
+  const t = String(s.titulo || "Story").trim() || "Story";
+  const title = (t.charAt(0).toLocaleUpperCase("pt-BR") + t.slice(1)).slice(0, 200);
+  return { tipo: tipoIA, format, script: script.slice(0, 2000), title };
 }
 
 export const NOME_TIPO: Record<TipoStory, string> = {

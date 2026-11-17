@@ -1391,8 +1391,9 @@ REGRAS DO PLANO:
 - Siga o OBJETIVO DA SEMANA informado.
 
 RESPONDA APENAS com JSON válido, sem texto antes ou depois:
-{"stories":[{"dia":0,"horario":"09:00","titulo":"curto","tipo":"falado|figurinha|midia|texto","formato":"ver acima","mostrar":"","p1":"","p2":"","p3":""}]}
+{"stories":[{"dia":0,"horario":"09:00","titulo":"Bastidor do almoço","tipo":"falado|figurinha|midia|texto","formato":"ver acima","mostrar":"","p1":"","p2":"","p3":""}]}
 - "dia" é o índice do dia (0 = primeiro dia), de 0 a ${dias - 1}.
+- "titulo": de 2 a 5 palavras, em português correto, com acentos e inicial maiúscula, do jeito que o criador escreveria na agenda. Nunca em minúsculo sem acento.
 - Gere EXATAMENTE ${perDia} stories por dia (total ${perDia * dias}).`
         userPrompt = `Nicho: ${data.nicho || 'lifestyle'}
 Stories por dia: ${perDia}
@@ -1413,8 +1414,10 @@ ${STORY_PARTES}
 
 - Se vier uma ideia ou rascunho, parta dele e melhore. Se vierem tendências escolhidas, o story usa elas como base.
 
+- "titulo": de 2 a 5 palavras, em português correto, com acentos e inicial maiúscula, do jeito que o criador escreveria na agenda. Nunca em minúsculo sem acento.
+
 RESPONDA APENAS com JSON válido, sem texto antes ou depois:
-{"titulo":"curto","tipo":"${tipo}","formato":"ver acima","mostrar":"","p1":"","p2":"","p3":""}`
+{"titulo":"Bastidor do almoço","tipo":"${tipo}","formato":"ver acima","mostrar":"","p1":"","p2":"","p3":""}`
         userPrompt = `Nicho: ${data.nicho || 'lifestyle'}
 Tipo: ${tipo}
 ${data.ideia ? `Ideia ou rascunho: ${data.ideia}` : ''}
