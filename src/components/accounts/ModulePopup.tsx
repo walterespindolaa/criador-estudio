@@ -149,7 +149,8 @@ export function ModulePopup({ module: m, onClose }: { module: ModuleWithStatus |
 
   const Icon = m ? (ICONS[m.code] ?? Sparkles) : Sparkles;
   const cor = m ? (COR[m.code] ?? "#EA4918") : "#EA4918";
-  const active = m ? (m.status === "active" || m.status === "past_due") : false;
+  // No teste da social mídia o módulo abre, mas a janela segue vendendo (preço e Contratar).
+  const active = m ? ((m.status === "active" && !m.emTeste) || m.status === "past_due") : false;
   const benefits = m ? (BENEFITS[m.code] ?? []) : [];
   const dor = m ? DOR[m.code] : undefined;
   const napratica = m ? (NA_PRATICA[m.code] ?? []) : [];

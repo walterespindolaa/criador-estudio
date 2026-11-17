@@ -19,7 +19,18 @@ export type ModuleCatalogItem = {
 export type ModuleWithStatus = ModuleCatalogItem & {
   status: ModuleStatus;
   current_period_end: string | null;
+  /** Liberado só pelo teste de 7 dias da social mídia (não é assinatura). */
+  emTeste?: boolean;
+  /** Quando o teste acaba (ISO), se emTeste. */
+  teste_ate?: string | null;
 };
+
+/* TESTE COMPLETO DA SOCIAL MÍDIA (Walter, 17/11/2026): nos 7 dias de teste da
+   conta, todos os módulos ficam liberados, menos o Cria Radar (custo do Apify
+   por uso). No 8º dia cada módulo volta a mostrar o cadeado de "Conhecer
+   módulo". Os dados criados no teste ficam guardados. A fonte é o banco
+   (função modulos_teste_ate e has_module), aqui só espelha pra tela. */
+const FORA_DO_TESTE = new Set(["hub_cria", "hub_extra"]);
 
 export type ContractCompany = {
   personType?: "pj" | "pf";
@@ -75,14 +86,22 @@ export function useModules() {
     queryKey: ["modules", agencyOwnerId],
     enabled: !!agencyOwnerId,
     queryFn: async () => {
-      const [catRes, entRes] = await Promise.all([
+      const rpc = supabase.rpc.bind(supabase) as unknown as (
+        fn: string, args: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: unknown }>;
+      const [catRes, entRes, testeRes] = await Promise.all([
         sbFrom("modules").select("*").eq("active", true).order("sort_order"),
         sbFrom("module_entitlements")
           .select("module_code, status, current_period_end")
           .eq("manager_id", agencyOwnerId!),
+        // Sem a função no banco (ou erro), segue sem teste: nunca derruba a tela.
+        Promise.resolve(rpc("modulos_teste_ate", { _manager: agencyOwnerId! }))
+          .catch(() => ({ data: null, error: null })),
       ]);
       if (catRes.error) throw catRes.error;
       if (entRes.error) throw entRes.error;
+      const testeAte = !testeRes.error && typeof testeRes.data === "string"
+        && new Date(testeRes.data).getTime() > Date.now() ? testeRes.data : null;
       const cat = (catRes.data ?? []) as unknown as ModuleCatalogItem[];
       const ent = (entRes.data ?? []) as unknown as {
         module_code: string; status: string; current_period_end: string | null;
@@ -93,6 +112,9 @@ export function useModules() {
         const status: ModuleStatus = e
           ? (e.status === "active" || e.status === "past_due" ? (e.status as ModuleStatus) : "none")
           : "none";
+        if (status === "none" && testeAte && !FORA_DO_TESTE.has(m.code)) {
+          return { ...m, status: "active" as ModuleStatus, current_period_end: null, emTeste: true, teste_ate: testeAte };
+        }
         return { ...m, status, current_period_end: e?.current_period_end ?? null };
       });
     },

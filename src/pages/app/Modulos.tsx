@@ -88,14 +88,20 @@ export default function Modulos() {
 function ModuleCard({ module: m, busy, onContratar, onManage }: {
   module: ModuleWithStatus; busy: boolean; onContratar: () => void; onManage: () => void;
 }) {
-  const active = m.status === "active";
+  // No teste da social mídia o módulo abre, mas não é assinatura: sem "Gerenciar".
+  const emTeste = !!m.emTeste;
+  const active = m.status === "active" && !emTeste;
   const pastDue = m.status === "past_due";
+  const testeAte = emTeste && m.teste_ate
+    ? new Date(m.teste_ate).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+    : null;
   return (
     <div className="bg-card rounded-2xl border border-border shadow-warm-sm p-5 flex flex-col">
       <div className="flex items-start justify-between gap-2 mb-2">
         <h2 className="font-display font-bold text-lg text-foreground">{m.name}</h2>
         {active && <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100"><Check className="h-3 w-3 mr-1" />Ativo</Badge>}
         {pastDue && <Badge className="bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-100">Pagamento pendente</Badge>}
+        {emTeste && <Badge className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100">Em teste{testeAte ? ` até ${testeAte}` : ""}</Badge>}
       </div>
       <p className="text-sm text-muted-foreground font-body flex-1">{m.description}</p>
       <div className="mt-4 flex items-center justify-between">
