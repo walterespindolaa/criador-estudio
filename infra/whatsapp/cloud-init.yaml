@@ -1,0 +1,87 @@
+#cloud-config
+# Servidor do WhatsApp do Cria (Evolution API) na Oracle Cloud, 18/11/2026.
+# Cola este texto inteiro no campo "Cloud-init script" ao criar o servidor
+# (Ubuntu 24.04, formato Ampere/ARM). Antes de colar, troque as duas linhas
+# marcadas TROQUE_AQUI. Nada fica aberto pra internet: o acesso entra pelo
+# túnel da Cloudflare (wa.criasocialclub.com.br), com https automático.
+
+write_files:
+  - path: /opt/cria-wa/docker-compose.yml
+    permissions: "0600"
+    content: |
+      services:
+        api:
+          image: evoapicloud/evolution-api:v2.3.7
+          restart: always
+          env_file: .env
+          depends_on: [postgres, redis]
+          volumes:
+            - instancias:/evolution/instances
+        postgres:
+          image: postgres:15
+          restart: always
+          environment:
+            POSTGRES_DB: evolution
+            POSTGRES_USER: evo
+            POSTGRES_PASSWORD: ${PG_SENHA}
+          volumes:
+            - banco:/var/lib/postgresql/data
+        redis:
+          image: redis:7
+          restart: always
+          command: redis-server --appendonly yes
+          volumes:
+            - cache:/data
+        tunel:
+          image: cloudflare/cloudflared:latest
+          restart: always
+          command: tunnel --no-autoupdate run
+          environment:
+            TUNNEL_TOKEN: ${TUNEL_TOKEN}
+          depends_on: [api]
+      volumes:
+        instancias:
+        banco:
+        cache:
+
+  - path: /opt/cria-wa/.env
+    permissions: "0600"
+    content: |
+      # TROQUE_AQUI 1: a chave que você gerou no terminal do Mac (a mesma vai no segredo EVOLUTION_API_KEY do Supabase)
+      AUTHENTICATION_API_KEY=COLE_A_CHAVE_AQUI
+      # TROQUE_AQUI 2: o token do túnel da Cloudflare
+      TUNEL_TOKEN=COLE_O_TOKEN_DO_TUNEL_AQUI
+      PG_SENHA=SENHA_PG_GERADA
+      SERVER_TYPE=http
+      SERVER_PORT=8080
+      SERVER_URL=https://wa.criasocialclub.com.br
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=false
+      LANGUAGE=pt-BR
+      TELEMETRY_ENABLED=false
+      LOG_LEVEL=ERROR,WARN,INFO
+      LOG_BAILEYS=error
+      DEL_INSTANCE=false
+      DATABASE_PROVIDER=postgresql
+      DATABASE_CONNECTION_URI=postgresql://evo:SENHA_PG_GERADA@postgres:5432/evolution?schema=evolution_api
+      DATABASE_CONNECTION_CLIENT_NAME=cria
+      DATABASE_SAVE_DATA_INSTANCE=true
+      DATABASE_SAVE_DATA_NEW_MESSAGE=true
+      DATABASE_SAVE_MESSAGE_UPDATE=false
+      DATABASE_SAVE_DATA_CONTACTS=true
+      DATABASE_SAVE_DATA_CHATS=true
+      DATABASE_SAVE_DATA_LABELS=false
+      DATABASE_SAVE_DATA_HISTORIC=false
+      CACHE_REDIS_ENABLED=true
+      CACHE_REDIS_URI=redis://redis:6379/6
+      CACHE_REDIS_PREFIX_KEY=cria
+      CACHE_LOCAL_ENABLED=false
+      CONFIG_SESSION_PHONE_CLIENT=Cria
+      CONFIG_SESSION_PHONE_NAME=Chrome
+      QRCODE_LIMIT=30
+      WEBHOOK_GLOBAL_ENABLED=false
+      CORS_ORIGIN=*
+
+runcmd:
+  - curl -fsSL https://get.docker.com | sh
+  - cd /opt/cria-wa && SENHA=$(openssl rand -hex 24) && sed -i "s/SENHA_PG_GERADA/$SENHA/g" .env
+  - cd /opt/cria-wa && docker compose --env-file .env up -d

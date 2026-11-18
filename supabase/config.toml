@@ -142,6 +142,8 @@ project_id = "ecbzfjzoqidowrsfsfih"
     verify_jwt = false
   [functions.aviso-teste-modulos]
     verify_jwt = false
+  [functions.wa-robo]
+    verify_jwt = false
   [functions.password-reset]
     verify_jwt = false
   [functions.material-anexo]

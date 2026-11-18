@@ -45,6 +45,14 @@ const TIPOS: { k: Tipo; titulo: string; desc: string; cor: string }[] = [
   { k: "parceiro", titulo: "Designer / editor", desc: "Produzo pras agências", cor: "#9FB7FF" },
 ];
 
+/* (47) 99999-1234 enquanto digita; guarda só os 11 dígitos depois. */
+function mascaraWhats(v: string): string {
+  const d = v.replace(/\D/g, "").replace(/^55(?=\d{11})/, "").slice(0, 11);
+  if (d.length <= 2) return d.length ? `(${d}` : "";
+  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
 const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
   useForceLightTheme();
   const navigate = useNavigate();
@@ -63,6 +71,12 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
   const [loading, setLoading] = useState(false);
   /* ACEITE DOS TERMOS (pente fino 23/09/2026, LGPD). */
   const [aceitouTermos, setAceitouTermos] = useState(false);
+  /* WHATSAPP NO CADASTRO (Walter, 18/11/2026): opcional, com o chamariz de
+     cupons e comunidade. Quem deixa o número e marca o aceite recebe a
+     boas-vindas no WhatsApp do Cria (robô + Gabi/Walter assumem). */
+  const [whats, setWhats] = useState("");
+  const [whatsAceite, setWhatsAceite] = useState(true);
+  const [erroWhats, setErroWhats] = useState<string | null>(null);
   const [erroTermos, setErroTermos] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   /* CONFERIR O E-MAIL ANTES DE CRIAR (Walter, 12/11/2026). A conta agora entra
@@ -126,6 +140,12 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
 
   const onSubmit = (data: SignupFormData) => {
     if (!aceitouTermos) { setErroTermos(true); return; }
+    const dig = whats.replace(/\D/g, "");
+    if (dig && !(dig.length === 11 && dig[2] === "9")) {
+      setErroWhats("Confere o número: DDD e os 9 dígitos do celular.");
+      return;
+    }
+    setErroWhats(null);
     setFormError(null);
     setConferindo({ ...data, email: data.email.trim() });
   };
@@ -167,7 +187,10 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
     /* `confirmar_email` marca a conta que nasceu por este cadastro: é ela que
        o app cobra a confirmação depois (conta criada pelo admin ou pela
        agência não tem a marca e nunca é cobrada). */
-    const juntos = { ...intencao, ...origem, ...escolha, confirmar_email: "1" };
+    const digWhats = whats.replace(/\D/g, "");
+    const contato: Record<string, string> = digWhats.length === 11
+      ? { whatsapp: "55" + digWhats, ...(whatsAceite ? { whatsapp_optin: "1" } : {}) } : {};
+    const juntos = { ...intencao, ...origem, ...escolha, ...contato, confirmar_email: "1" };
     const meta = Object.keys(juntos).length ? juntos : undefined;
     const { error, needsConfirmation } = await signUp(data.email, data.password, data.name, meta);
     setLoading(false);
@@ -416,6 +439,27 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
                   {olho(showConfirm, () => setShowConfirm((v) => !v))}
                 </div>
                 {errors.confirmPassword && <p className={erroTxt}>{errors.confirmPassword.message}</p>}
+              </div>
+              <div className="flex flex-col gap-1.5 rounded-[20px] border-2 border-dashed border-[#01A652] bg-[#EAF5EC] px-3.5 py-3 lg:col-span-2">
+                <label htmlFor="whatsapp" className={rotulo}>
+                  WhatsApp <span className="font-body text-[13px] font-normal text-[#5B574E]">(opcional)</span>
+                  <span className={cn(DISPLAY, "ml-1.5 inline-block rounded-full border-2 border-[#0A0A0A] bg-[#FFCF03] px-2.5 text-[12px] font-extrabold align-[2px]")}>cupons + comunidade</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-[50px] shrink-0 items-center rounded-2xl border-2 border-[#CFC8B6] bg-white px-3 text-[15px]">+55</span>
+                  <input id="whatsapp" type="tel" inputMode="tel" autoComplete="tel-national" placeholder="(00) 00000-0000"
+                    value={whats} aria-invalid={!!erroWhats} className={campo}
+                    onChange={(e) => { setWhats(mascaraWhats(e.target.value)); if (erroWhats) setErroWhats(null); }} />
+                </div>
+                {erroWhats && <p className={erroTxt}>{erroWhats}</p>}
+                <p className="text-[12.5px] leading-snug text-[#3D3A33]">Pra receber cupons exclusivos e entrar na comunidade do Cria no WhatsApp. Nada de spam.</p>
+                {whats.replace(/\D/g, "").length > 0 && (
+                  <label className="mt-0.5 flex cursor-pointer select-none items-start gap-2.5">
+                    <input type="checkbox" checked={whatsAceite} onChange={(e) => setWhatsAceite(e.target.checked)}
+                      className="mt-0.5 h-5 w-5 shrink-0 rounded border-2 border-[#0A0A0A]/30 accent-[#EA4918]" />
+                    <span className="text-[13.5px] leading-snug text-[#3D3A33]">Quero receber mensagens do Cria no WhatsApp. Posso sair quando quiser.</span>
+                  </label>
+                )}
               </div>
             </div>
 
