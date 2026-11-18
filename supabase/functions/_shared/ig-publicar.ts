@@ -210,6 +210,18 @@ async function avisar(admin: SupabaseClient, userIds: string[], titulo: string, 
 // ── Publica um post ─────────────────────────────────────────────────────────
 // actor: quem mandou (clique) ou, no robô, quem ligou o automático.
 // doRobo: tentativa automática (erro temporário volta pra fila com espera).
+// Assinatura das mídias atuais do post (quais, em que ordem, qual arquivo).
+// Muda quando alguém troca, tira, substitui ou reordena.
+async function assinaturaMidias(admin: SupabaseClient, postId: string): Promise<string> {
+  const { data } = await admin.from('external_media_refs')
+    .select('id, position, external_file_id, view_url, bunny_video_id')
+    .eq('post_id', postId)
+    .or('substituida.is.null,substituida.eq.false')
+    .order('id', { ascending: true });
+  return JSON.stringify((data ?? []).map((m: Record<string, unknown>) =>
+    [m.id, m.position, m.external_file_id, m.view_url, m.bunny_video_id]));
+}
+
 export async function publicarPost(admin: SupabaseClient, postId: string, actor: string, doRobo = false): Promise<ResultadoPublicacao> {
   const inicio = Date.now();
   const limite = inicio + 110_000; // folga antes do teto de tempo da função
@@ -296,6 +308,9 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
     }
     // O que a Meta deixou de fora ao criar (collab ou marcação recusados).
     const avisos: string[] = [];
+    // Retrato das mídias no começo: se a pessoa trocar, tirar ou reordenar
+    // alguma no meio da publicação, não publica a versão velha (Walter 18/11).
+    const midiasNoInicio = await assinaturaMidias(admin, postId);
 
     // Contêiner de uma tentativa anterior (vídeo que demorou): continua dele.
     let containerId = (p.ig_container_id as string | null) ?? null;
@@ -405,6 +420,19 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
           ...(esperaNaFila ? { publicar_em: new Date(Date.now() + 3 * 60_000).toISOString() } : {}) } as never).eq('id', postId);
         return { estado: 'aguardando', mensagem: 'O Instagram ainda está processando o vídeo. Tente de novo em alguns minutos.' };
       }
+    }
+
+    // Última conferência antes de publicar: as mídias são as mesmas do começo
+    // e o contêiner guardado ainda é este (o banco zera o contêiner quando
+    // alguma mídia do post muda). Se mudou, refaz com a mídia nova.
+    const { data: atual } = await admin.from('posts').select('ig_container_id').eq('id', postId).maybeSingle();
+    const containerGuardado = (atual as { ig_container_id?: string | null } | null)?.ig_container_id ?? null;
+    if (containerGuardado !== containerId || (await assinaturaMidias(admin, postId)) !== midiasNoInicio) {
+      const msg = 'A mídia do post mudou durante a publicação. O Cria vai publicar com a mídia nova.';
+      await admin.from('posts').update({ ig_container_id: null, publish_status: esperaNaFila ? 'na_fila' : 'erro',
+        publish_error: esperaNaFila ? msg : 'A mídia do post mudou durante a publicação. Publique de novo.',
+        ...(esperaNaFila ? { publicar_em: new Date(Date.now() + 60_000).toISOString() } : {}) } as never).eq('id', postId);
+      return { estado: 'aguardando', mensagem: msg };
     }
 
     // Publica.
