@@ -207,6 +207,42 @@ async function avisar(admin: SupabaseClient, userIds: string[], titulo: string, 
   })) as never);
 }
 
+async function avisarPostSaiu(admin: SupabaseClient, p: Record<string, unknown>,
+  avisados: string[], avisos: string[], link: string) {
+  try {
+    // Nome do cliente (Cria Post) e a conta Cria dele, quando ele tiver uma.
+    let nome = '';
+    let contaCliente: string | null = null;
+    if (p.external_client_id) {
+      const { data: ec } = await admin.from('external_clients').select('name, crm_client_id')
+        .eq('id', String(p.external_client_id)).maybeSingle();
+      const e = ec as { name?: string | null; crm_client_id?: string | null } | null;
+      nome = String(e?.name ?? '').trim();
+      if (e?.crm_client_id) {
+        const { data: cc } = await admin.from('crm_clients').select('cria_owner_id').eq('id', e.crm_client_id).maybeSingle();
+        contaCliente = (cc as { cria_owner_id?: string | null } | null)?.cria_owner_id ?? null;
+      }
+    }
+    const titulo = String(p.title ?? 'Post').slice(0, 60);
+    const extra = avisos.length ? ' Atenção: ' + avisos.join(' ') : '';
+    const equipe = [...new Set([...avisados, String(p.publish_by ?? '')].filter(Boolean))]
+      .filter((u) => u !== contaCliente);
+    const linhas = equipe.map((u) => ({
+      user_id: u, type: 'post_saiu', read: false, link,
+      title: nome ? `Saiu agora: ${nome}` : 'Seu post saiu agora',
+      description: `"${titulo}" está no ar. Compartilha no story e responde os comentários na primeira hora: é o que mais ajuda o alcance.${extra}`,
+    }));
+    if (contaCliente) linhas.push({
+      user_id: contaCliente, type: 'post_saiu', read: false, link,
+      title: 'Seu post saiu agora',
+      description: `"${titulo}" está no ar. Compartilha no seu story e responde os comentários na primeira hora: é o que mais ajuda o alcance.`,
+    });
+    if (linhas.length) await admin.from('notifications').insert(linhas as never);
+  } catch (e) {
+    console.error('[avisarPostSaiu]', String(e)); // aviso nunca derruba a publicação
+  }
+}
+
 // ── Publica um post ─────────────────────────────────────────────────────────
 // actor: quem mandou (clique) ou, no robô, quem ligou o automático.
 // doRobo: tentativa automática (erro temporário volta pra fila com espera).
@@ -458,9 +494,12 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
       ...(p.external_client_id ? { approval_status: 'postado' } : {}),
     } as never).eq('id', postId);
 
-    await avisar(admin, avisados, avisos.length ? 'Publicado, mas com aviso' : 'Publicado no Instagram',
-      `"${String(p.title ?? 'Post').slice(0, 60)}" saiu no Instagram.${avisos.length ? ' ' + avisos.join(' ') : ''}`,
-      avisos.length ? linkPost : (permalink ?? linkPost));
+    // Aviso de "saiu agora" (Walter 18/11/2026): post agendado sai sem ninguém
+    // online, e a primeira hora é a que mais pesa no alcance. O aviso chama
+    // quem cuida do perfil pra compartilhar no story e responder comentários.
+    // Tipo próprio (post_saiu): não se junta com outros avisos e não conta no
+    // teto diário de push, senão o segundo post do dia chegaria calado.
+    await avisarPostSaiu(admin, p, avisados, avisos, permalink ?? linkPost);
 
     // Vídeo do Drive copiado pro Bunny só pra publicar: apaga a cópia.
     await limparCopiasBunny(admin, postId);
