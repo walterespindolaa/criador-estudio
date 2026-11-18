@@ -225,6 +225,11 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
     .select('id, user_id, title, caption, format, external_client_id, approval_status, auto_publish, publish_attempts, ig_container_id, publish_by, publish_sem_aprovacao_motivo, ig_opcoes')
     .eq('id', postId).maybeSingle();
   const p = post as Record<string, unknown> | null;
+  // Mídia ou vídeo ainda processando não é erro: se o post está agendado
+  // (auto_publish), volta pra fila mesmo quando a tentativa foi manual. Antes,
+  // o clique em "publicar" com vídeo processando marcava erro e o robô largava
+  // o post (caso da Gabi, 18/11/2026).
+  const esperaNaFila = doRobo || p?.auto_publish === true;
   const linkPost = p?.external_client_id ? '/socialmidia/criapost/publicacoes' : '/app/criando';
   const avisados = [String(p?.user_id ?? ''), actor];
 
@@ -298,9 +303,9 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
       try {
         const pronto = await esperarContainer(containerId, token, Math.min(limite, Date.now() + 20_000));
         if (!pronto) {
-          await admin.from('posts').update({ publish_status: doRobo ? 'na_fila' : 'erro',
+          await admin.from('posts').update({ publish_status: esperaNaFila ? 'na_fila' : 'erro',
             publish_error: 'O Instagram ainda está processando o vídeo. Tente de novo em alguns minutos.',
-            ...(doRobo ? { publicar_em: new Date(Date.now() + 3 * 60_000).toISOString() } : {}) } as never).eq('id', postId);
+            ...(esperaNaFila ? { publicar_em: new Date(Date.now() + 3 * 60_000).toISOString() } : {}) } as never).eq('id', postId);
           return { estado: 'aguardando', mensagem: 'O Instagram ainda está processando o vídeo. Tente de novo em alguns minutos.' };
         }
       } catch {
@@ -312,9 +317,9 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
       // Mídia no formato certo (ciclo 3).
       const prep = await prepararMidiaDoPost(admin, postId, 60_000);
       if (prep.pendentes > 0 && prep.erros.length === 0) {
-        await admin.from('posts').update({ publish_status: doRobo ? 'na_fila' : 'erro',
+        await admin.from('posts').update({ publish_status: esperaNaFila ? 'na_fila' : 'erro',
           publish_error: 'Vídeo ainda processando no Cria. Tente de novo em alguns minutos.',
-          ...(doRobo ? { publicar_em: new Date(Date.now() + 5 * 60_000).toISOString() } : {}) } as never).eq('id', postId);
+          ...(esperaNaFila ? { publicar_em: new Date(Date.now() + 5 * 60_000).toISOString() } : {}) } as never).eq('id', postId);
         return { estado: 'aguardando', mensagem: 'Vídeo ainda processando. Tente de novo em alguns minutos.' };
       }
       if (!prep.ok) {
@@ -395,9 +400,9 @@ export async function publicarPost(admin: SupabaseClient, postId: string, actor:
 
       const pronto = await esperarContainer(containerId, token, limite);
       if (!pronto) {
-        await admin.from('posts').update({ publish_status: doRobo ? 'na_fila' : 'erro',
+        await admin.from('posts').update({ publish_status: esperaNaFila ? 'na_fila' : 'erro',
           publish_error: 'O Instagram ainda está processando o vídeo. Tente de novo em alguns minutos.',
-          ...(doRobo ? { publicar_em: new Date(Date.now() + 3 * 60_000).toISOString() } : {}) } as never).eq('id', postId);
+          ...(esperaNaFila ? { publicar_em: new Date(Date.now() + 3 * 60_000).toISOString() } : {}) } as never).eq('id', postId);
         return { estado: 'aguardando', mensagem: 'O Instagram ainda está processando o vídeo. Tente de novo em alguns minutos.' };
       }
     }
