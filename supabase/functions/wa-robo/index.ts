@@ -24,6 +24,7 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { iaFetch, IA_URL, definirContextoIA } from "../_shared/ia.ts";
 import { humanizar } from "../_shared/voz-cria.ts";
+import { montarSistemaWa } from "../_shared/wa-roteiro.ts";
 import { registrarErro, mensagemDe } from "../_shared/log.ts";
 
 const json = (b: unknown, s = 200) =>
@@ -201,33 +202,11 @@ async function contextoDaConta(svc: SupabaseClient, userId: string | null) {
   };
 }
 
-const PRODUTO_SOCIAL = `O Cria pra social mídia: grátis pra sempre até 3 clientes. Nos 7 primeiros dias, tudo liberado menos o Cria Radar.
-Módulos: Cria Post (cliente aprova o post por um link, sem print no WhatsApp, e o post sai sozinho no Instagram na hora marcada),
-Cria Gestão (clientes, tarefas, contratos e propostas num lugar só), Cria Caixa (quanto entra, sai e sobra de cada cliente),
-Cria Captação (roteiros e agenda de gravação por cliente). Depois do teste, paga só o módulo que quiser manter.`;
-const PRODUTO_CRIADOR = `O Cria pro criador de conteúdo: 7 dias grátis sem cartão. Ajuda a ter ideia (ideias e tendências pro nicho da pessoa),
-planejar o mês, escrever roteiro e legenda com a cara da pessoa (o Brandbook ensina a IA a falar como ela), gravar com o teleprompter
-(Cria Prompter) e postar com constância (agendar e publicar direto no Instagram nos planos Pro e Studio).`;
-
 async function responderComIA(c: Conversa, nome: string, contaTxt: string, historico: { autor: string; texto: string | null }[], cfg: Config) {
-  const perfilTxt = c.perfil === "social_midia" ? PRODUTO_SOCIAL : PRODUTO_CRIADOR;
-  const comunidade = cfg.comunidade_url
-    ? `Link da comunidade do Cria no WhatsApp (só mande se a pessoa demonstrar interesse ou na despedida, uma vez): ${cfg.comunidade_url}`
-    : "Ainda não tem link de comunidade: não fale de comunidade.";
-  const sistema = `Você responde pelo WhatsApp do Cria Social Club conversando com quem acabou de se cadastrar no app.
-Objetivo: a pessoa enxergar a vantagem de usar o Cria no dia a dia dela e voltar pro app hoje. Nada de vender plano.
-${perfilTxt}
-${comunidade}
-Endereço do app: ${APP()}
-Como escrever: português do Brasil, tom de conversa de WhatsApp, próximo e direto. No máximo 3 frases curtas. Uma pergunta por vez, no máximo.
-Sem emoji em excesso (no máximo um, e só se fizer sentido), sem travessão, sem lista, sem negrito, sem parecer propaganda.
-Use o que a pessoa contou pra sugerir UMA coisa concreta pra fazer no app agora, ligada à dor dela.
-Nunca invente função, preço, prazo ou desconto que não está acima. Não prometa cupom: diga que os cupons saem na comunidade.
-Você não é uma pessoa: nunca diga que é a Gabi, o Walter ou um humano. Se perguntarem se é robô, diga que é o assistente do Cria e que a Gabi e o Walter acompanham as conversas.
-Passe pra equipe (passar_pra_equipe=true) quando: a pessoa perguntar de preço, pagamento, plano ou cancelamento; relatar erro ou problema no app;
-pedir pra falar com alguém; ficar irritada; ou o assunto fugir do Cria. Nesse caso, a resposta avisa em uma frase que a Gabi vai continuar a conversa por aqui.
-Se a pessoa pedir pra não receber mais mensagens, sair=true e a resposta confirma em uma frase, sem insistir.
-Responda só JSON: {"resposta": "...", "passar_pra_equipe": true|false, "sair": true|false, "motivo": "frase curta do porquê, se passar"}`;
+  const sistema = montarSistemaWa({
+    perfil: c.perfil, rodada: c.respostas_robo + 1, max: cfg.max_respostas_robo ?? 4,
+    comunidadeUrl: cfg.comunidade_url, app: APP(),
+  });
   const msgs = historico.slice(-12).map((m) => ({ role: m.autor === "pessoa" ? "user" : "assistant", content: m.texto ?? "" }));
   const r = await iaFetch(IA_URL, {
     method: "POST",
@@ -241,7 +220,7 @@ Responda só JSON: {"resposta": "...", "passar_pra_equipe": true|false, "sair": 
   const j = await r.json();
   const o = JSON.parse(j.choices?.[0]?.message?.content ?? "{}");
   return {
-    resposta: humanizar(String(o.resposta ?? "")).trim().slice(0, 700),
+    resposta: humanizar(String(o.resposta ?? "")).trim().slice(0, 600),
     passar: o.passar_pra_equipe === true,
     sair: o.sair === true,
     motivo: typeof o.motivo === "string" ? o.motivo.slice(0, 160) : "",
