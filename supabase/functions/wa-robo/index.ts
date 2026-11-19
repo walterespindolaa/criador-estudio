@@ -72,21 +72,35 @@ function primeiroNome(n: string | null | undefined) {
 
 function sortear<T>(lista: T[]): T { return lista[Math.floor(Math.random() * lista.length)]; }
 
-/* Primeira mensagem: sem link, uma pergunta só, pequenas variações. */
+/* Primeira mensagem (Gabi, 19/11/2026): ajudar primeiro. Pergunta se conseguiu
+   entrar e se ficou dúvida, sem link, com pequenas variações. */
 function boasVindas(perfil: Conversa["perfil"], nome: string) {
   const oi = sortear([nome ? `Oi, ${nome}, tudo bem?` : "Oi, tudo bem?", nome ? `Oi, ${nome}! Tudo certo?` : "Oi! Tudo certo?"]);
-  if (perfil === "social_midia") {
-    return `${oi} Aqui é do Cria. ${sortear(["Vi que você criou sua conta agora há pouco.", "Vi que você acabou de criar sua conta."])} ` +
-      sortear([
-        "Me conta uma coisa: hoje você aprova os posts com seus clientes por onde, WhatsApp mesmo? Pergunto porque é a parte que mais economiza tempo no Cria, e te mostro em 2 minutos.",
-        "Uma pergunta rápida: como você aprova os posts com seus clientes hoje, pelo WhatsApp? É onde o Cria mais economiza tempo, e te mostro rapidinho.",
+  const quem = sortear(["Aqui é do Cria.", "Aqui é do Cria, vi que você criou sua conta."]);
+  const corpo = perfil === "social_midia"
+    ? sortear([
+        "Conseguiu entrar direitinho? Se ficou qualquer dúvida pra cadastrar cliente ou mandar post pra aprovar, me chama aqui que eu te ajudo.",
+        "Passando pra saber se deu tudo certo pra entrar. Ficou alguma dúvida? Pode mandar por aqui que eu te ajudo a configurar.",
+      ])
+    : sortear([
+        "Conseguiu entrar direitinho? Se ficou qualquer dúvida pra começar, me chama aqui que eu te ajudo.",
+        "Passando pra saber se deu tudo certo pra entrar. Ficou alguma dúvida? Pode mandar por aqui que eu te ajudo a dar o primeiro passo.",
       ]);
-  }
-  return `${oi} Aqui é do Cria. ${sortear(["Vi que você criou sua conta.", "Vi que você acabou de criar sua conta."])} ` +
-    sortear([
-      "Me conta: o que mais trava hoje no seu conteúdo, ter ideia, gravar ou manter a constância? Assim eu te mostro direto a parte do Cria que resolve isso.",
-      "Uma pergunta rápida: hoje o que mais pega no seu conteúdo, ter ideia, gravar ou postar com constância? Te mostro a parte do Cria que ajuda nisso.",
-    ]);
+  return `${oi} ${quem} ${corpo}`;
+}
+
+/* Um lembrete só, se a pessoa não respondeu a boas-vindas em 24 h. */
+function lembrete(perfil: Conversa["perfil"], nome: string) {
+  const oi = nome ? `Oi, ${nome}!` : "Oi!";
+  return perfil === "social_midia"
+    ? `${oi} Conseguiu testar o Cria com algum cliente? Se travou em alguma parte ou quiser que eu te mostre o caminho mais rápido, é só me chamar aqui.`
+    : `${oi} Conseguiu dar uma olhada no Cria? Se travou em alguma parte ou quiser que eu te mostre por onde começar, é só me chamar aqui.`;
+}
+
+/* Mensagem só em horário de gente: 8h às 21h (Brasília). Fora disso, espera. */
+function horarioBom() {
+  const h = Number(new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", hour12: false, timeZone: "America/Sao_Paulo" }).format(new Date()));
+  return h >= 8 && h < 21;
 }
 
 async function lerConfig(svc: SupabaseClient): Promise<Config> {
@@ -108,6 +122,7 @@ async function avisarEquipe(svc: SupabaseClient, cfg: Config, c: Conversa, nome:
 async function rodarFila(svc: SupabaseClient) {
   const cfg = await lerConfig(svc);
   if (!cfg.robo_ligado) return { ok: true, desligado: true };
+  if (!horarioBom()) return { ok: true, fora_do_horario: true };
 
   const umaHora = new Date(Date.now() - 3600_000).toISOString();
   const { count } = await svc.from("wa_conversas").select("id", { count: "exact", head: true }).gte("enviada_em", umaHora);
@@ -152,7 +167,30 @@ async function rodarFila(svc: SupabaseClient) {
       await registrarErro(svc as never, "wa-robo", "fila: " + mensagemDe(e), { conversa: c.id });
     }
   }
-  return { ok: true, enviados };
+  if (enviados) return { ok: true, enviados };
+
+  /* LEMBRETE (Gabi, 19/11/2026): quem não respondeu a boas-vindas em 24 h
+     recebe uma mensagem a mais, só uma, perguntando se conseguiu testar. */
+  const ontem = new Date(Date.now() - 86400_000).toISOString();
+  const { data: semResposta } = await svc.from("wa_conversas").select("id, user_id, telefone, perfil, estado, respostas_robo, jid, enviada_em")
+    .eq("estado", "enviada").is("ultima_entrada_em", null).is("lembrete_em", null).lte("enviada_em", ontem).order("enviada_em").limit(1);
+  for (const c of (semResposta ?? []) as Conversa[]) {
+    const { data: pega } = await svc.from("wa_conversas").update({ lembrete_em: new Date().toISOString() })
+      .eq("id", c.id).is("lembrete_em", null).select("id");
+    if (!pega?.length || !c.jid) continue;
+    try {
+      const { data: pf } = await svc.from("profiles").select("name, whatsapp_optin").eq("id", c.user_id!).maybeSingle();
+      const p = pf as { name: string | null; whatsapp_optin: boolean } | null;
+      if (!p?.whatsapp_optin) continue;
+      const texto = lembrete(c.perfil, primeiroNome(p.name));
+      const msgId = await enviarTexto(c.jid, texto);
+      await svc.from("wa_mensagens").insert({ conversa_id: c.id, direcao: "saida", autor: "robo", texto, wa_msg_id: msgId });
+      return { ok: true, lembretes: 1 };
+    } catch (e) {
+      await registrarErro(svc as never, "wa-robo", "lembrete: " + mensagemDe(e), { conversa: c.id });
+    }
+  }
+  return { ok: true, enviados: 0 };
 }
 
 // ── WEBHOOK: mensagem chegou ────────────────────────────────────────────────
