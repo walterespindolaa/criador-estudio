@@ -20,7 +20,14 @@ Deno.serve(async (req) => {
     const { data: post } = await svc.from("posts").select("user_id, external_client_id").eq("id", ref.post_id).maybeSingle();
     // A posse já é garantida por user_id. NÃO exigir external_client_id: o rascunho
     // (Novo post) nasce sem cliente vinculado e a pessoa anexa/remove mídia nele.
-    if (!post || post.user_id !== userId) return json({ error: "Sem permissão" }, 403);
+    if (!post) return json({ error: "Sem permissão" }, 403);
+    /* EQUIPE DO GESTOR TAMBÉM REMOVE (Gabi, 19/11/2026): quem anexa pelo
+       criapost_add_media (acts_for) precisa conseguir tirar a mídia também.
+       acts_for roda com o login de quem pediu: dono ou equipe ativa (sem parceiro). */
+    if (post.user_id !== userId) {
+      const { data: pode } = await userClient.rpc("acts_for", { target: post.user_id });
+      if (pode !== true) return json({ error: "Sem permissão" }, 403);
+    }
 
     // Só remove a ref do banco se o delete no Bunny confirmar (ou o recurso já não existir).
     // Sem isto, um 401/500 do Bunny era engolido e a ref sumia → mídia órfã cobrada pra sempre.
