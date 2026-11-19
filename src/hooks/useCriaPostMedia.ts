@@ -114,7 +114,11 @@ export function useCriaPostMedia(postId: string | null) {
   const { user } = useAuth();
   const { activeAccountId } = useActiveAccount();
   const key = ["criapost-media", postId];
-  const invalidate = () => qc.invalidateQueries({ queryKey: key });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: key });
+    // A trava de "post sem mídia" (quadro e revisão da entrega) lê outra lista.
+    qc.invalidateQueries({ queryKey: ["midia-da-entrega"] });
+  };
 
   const list = useQuery({
     queryKey: key,

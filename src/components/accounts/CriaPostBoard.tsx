@@ -419,7 +419,18 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     // Avançar manualmente pra "Aprovado" sem o cliente: pede confirmação (só na mudança de coluna).
     if (from !== dest && dest === "aprovado") { setConfirmMove({ id: r.draggableId, status: dest }); return; }
     if (from !== dest && dest === "pendente" && midiaDosPosts?.[r.draggableId] && !midiaDosPosts[r.draggableId].temMidia) {
-      setSemMidia(r.draggableId); return;
+      /* A lista acima pode estar velha: a mídia anexada agora há pouco no editor
+         não aparece nela (caso da Gabi, 19/11). Confere no banco antes de travar. */
+      const id = r.draggableId;
+      void (async () => {
+        const { count, error } = await supabase.from("external_media_refs")
+          .select("id", { count: "exact", head: true })
+          .eq("post_id", id).or("substituida.is.null,substituida.eq.false");
+        qc.invalidateQueries({ queryKey: ["midia-da-entrega"] });
+        if (!error && (count ?? 0) > 0) moveStatus.mutate({ id, approval_status: "pendente" });
+        else setSemMidia(id);
+      })();
+      return;
     }
     // Com "Por data" ligado, a posição dentro da coluna é calculada pela data.
     // Gravar board_order aqui não teria efeito nenhum (o card voltaria pro lugar),
