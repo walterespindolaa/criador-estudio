@@ -20,15 +20,18 @@ export default function Privacidade() {
           Política de Privacidade
         </h1>
         <p className="text-muted-foreground text-sm mb-12">
-          Última atualização: 13 de outubro de 2026 · Versão 1.2
+          Última atualização: 19 de novembro de 2026 · Versão 1.3
         </p>
 
         <section className="prose prose-sm max-w-none space-y-8 text-foreground">
           <div>
             <h2 className="text-xl font-display font-semibold mb-3">1. Quem somos</h2>
             <p className="text-muted-foreground leading-relaxed">
-              O Cria Social Club é uma plataforma operada por Walter Espindola, com sede em
-              Blumenau, Santa Catarina, Brasil. Esta Política de Privacidade
+              O Cria Social Club é uma plataforma operada por{" "}
+              <strong className="text-foreground">WG Business &amp; Branding Ltda. - EPP</strong>,
+              inscrita no CNPJ sob o nº <strong className="text-foreground">59.816.277/0001-30</strong>,
+              com sede em <strong className="text-foreground">Itajaí/SC</strong>, que é a
+              controladora dos seus dados pessoais. Esta Política de Privacidade
               explica como coletamos, usamos, armazenamos e protegemos seus
               dados pessoais, em conformidade com a Lei Geral de Proteção de
               Dados (LGPD, Lei nº 13.709/2018).
