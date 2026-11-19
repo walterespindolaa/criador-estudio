@@ -2234,7 +2234,7 @@ export function CardAbertoDialog({ postId, aoFechar, agencia }: {
                     ajuste) e o cachê, sem sair do card (29/09/2026). */}
                 {agencia && (
                   <PainelDaAgenciaNoCard postId={card.id} producaoStatus={card.producao_status}
-                    aprovacao={card.aprovacao} cache={card.cache} nomeParceiro={agencia.nomeDoParceiro} onEuResolvo={agencia.euResolvo ?? agencia.irAoPost} />
+                    aprovacao={card.aprovacao} cache={card.cache} nomeParceiro={agencia.nomeDoParceiro} onEuResolvo={agencia.euResolvo ?? agencia.irAoPost} onAbrirPost={agencia.irAoPost} />
                 )}
 
                 {/* ═══ O RECADO FIXO DA SOCIAL MÍDIA (Canal da marca, 28/09/2026) ═══

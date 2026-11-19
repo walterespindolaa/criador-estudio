@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Check, CheckCircle2, Loader2, RotateCcw, Wallet } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Link2, Loader2, Paperclip, RotateCcw, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MoneyInput } from "@/components/shared/MoneyInput";
-import { useAprovarEntrega, useAtualizarCache, usePedidosDoCliente, usePedirAjuste, useProporPrazo, type PedidoDoCliente } from "@/hooks/useParceiro";
+import { useAprovarEntrega, useAtualizarCache, useMidiaDaEntrega, usePedidosDoCliente, usePedirAjuste, useProporPrazo, type PedidoDoCliente } from "@/hooks/useParceiro";
 import { hojeBR } from "@/lib/date-br";
 import { brlReais } from "@/lib/money";
 
@@ -37,12 +37,14 @@ export function precisaRevisar(producaoStatus: string | null | undefined, aprova
 
 /** Os botões de revisão. `compacto` é a versão da linha da lista (sem textos
  *  de apoio); o card usa a completa. */
-export function AcoesDeRevisao({ postId, nomeParceiro, compacto = false, pedidoCliente, onEuResolvo }: {
+export function AcoesDeRevisao({ postId, nomeParceiro, compacto = false, pedidoCliente, onEuResolvo, onAbrirPost }: {
   postId: string; nomeParceiro?: string | null; compacto?: boolean;
   /** Pedido de ajuste do cliente final, ainda não tratado (02/10/2026). */
   pedidoCliente?: PedidoDoCliente | null;
   /** "Eu resolvo": leva ao post pra ela mesma ajustar e reenviar ao cliente. */
   onEuResolvo?: () => void;
+  /** Só abre o post (sem mudar nada), pra anexar a arte. */
+  onAbrirPost?: () => void;
 }) {
   const aprovar = useAprovarEntrega();
   const ajuste = usePedirAjuste();
@@ -56,6 +58,11 @@ export function AcoesDeRevisao({ postId, nomeParceiro, compacto = false, pedidoC
   };
   const ocupado = aprovar.isPending || ajuste.isPending;
   const quem = nomeParceiro?.split(" ")[0] ?? "o parceiro";
+  const { data: midia } = useMidiaDaEntrega([postId]);
+  const entrega = midia?.[postId];
+  const semArquivo = !!entrega && !entrega.temMidia;
+  const [confirmando, setConfirmando] = useState(false);
+  useEffect(() => { setConfirmando(false); }, [postId]);
 
   if (pedindo) {
     return (
@@ -101,6 +108,57 @@ export function AcoesDeRevisao({ postId, nomeParceiro, compacto = false, pedidoC
     );
   }
 
+  /* Entrega sem arquivo (19/11/2026): o "Tá ok" não manda direto pro cliente.
+     Primeiro anexa a arte (ou pede pro parceiro subir o arquivo). */
+  if (semArquivo) {
+    const pedirArquivo = () => ajuste.mutate({ postId, motivo: "Sobe o arquivo final no card, por favor. O link não vai pro cliente." });
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <div className={cn("rounded-xl border-2 border-amber-300 bg-amber-50 px-3 py-2.5", compacto && "py-2")}>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5" /> A entrega veio só como link
+          </p>
+          {!compacto && (
+            <p className="text-[12.5px] font-body text-amber-950/80 leading-snug mt-1">
+              {quem === "o parceiro" ? "O parceiro" : quem} não subiu o arquivo no card, então o post está <b>sem imagem</b>. Se for pro cliente assim, ele aprova sem ver a arte e o post não tem o que publicar.
+            </p>
+          )}
+          {entrega?.link && (
+            <a href={entrega.link} target="_blank" rel="noreferrer"
+              className="mt-2 flex items-center gap-2 rounded-lg border border-amber-200 bg-card px-2.5 py-1.5 text-[12px] font-semibold text-[#0050C8] min-w-0">
+              <Link2 className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{entrega.link.replace(/^https?:\/\//, "")}</span>
+            </a>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {onAbrirPost && (
+            <Button size="sm" className="rounded-xl h-8" disabled={ocupado} onClick={onAbrirPost}>
+              <Paperclip className="h-3.5 w-3.5 mr-1" /> Anexar a arte no post
+            </Button>
+          )}
+          <Button size="sm" variant="outline" className="rounded-xl h-8 border-violet-300 text-violet-700 hover:bg-violet-50" disabled={ocupado} onClick={pedirArquivo}>
+            {ajuste.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <>Pedir pra {quem} subir o arquivo</>}
+          </Button>
+        </div>
+        {confirmando ? (
+          <div className="flex items-center gap-2 flex-wrap text-[12px] font-body">
+            <span className="text-muted-foreground">O cliente vai aprovar sem ver a arte. Mandar mesmo assim?</span>
+            <Button size="sm" variant="outline" className="rounded-xl h-7" disabled={ocupado} onClick={() => setConfirmando(false)}>Não</Button>
+            <Button size="sm" className="rounded-xl h-7 bg-green-600 hover:bg-green-700 text-white" disabled={ocupado}
+              onClick={() => aprovar.mutate({ postId, destino: "cliente" }, { onSuccess: () => setConfirmando(false) })}>
+              Sim, mandar
+            </Button>
+          </div>
+        ) : (
+          <button type="button" disabled={ocupado} onClick={() => setConfirmando(true)}
+            className="text-[11.5px] font-body text-muted-foreground hover:text-foreground underline underline-offset-2">
+            mandar pro cliente mesmo assim
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
       <Button size="sm" className="rounded-xl h-8 bg-green-600 hover:bg-green-700 text-white" disabled={ocupado}
@@ -123,8 +181,9 @@ export function AcoesDeRevisao({ postId, nomeParceiro, compacto = false, pedidoC
 }
 
 /** Bloco que entra no card aberto quando quem abre é a social mídia. */
-export function PainelDaAgenciaNoCard({ postId, producaoStatus, aprovacao, cache, nomeParceiro, onEuResolvo }: {
+export function PainelDaAgenciaNoCard({ postId, producaoStatus, aprovacao, cache, nomeParceiro, onEuResolvo, onAbrirPost }: {
   postId: string;
+  onAbrirPost?: () => void;
   producaoStatus: string | null | undefined;
   aprovacao: string | null | undefined;
   cache: number | null | undefined;
@@ -140,10 +199,17 @@ export function PainelDaAgenciaNoCard({ postId, producaoStatus, aprovacao, cache
   const semCache = !cache || Number(cache) <= 0;
   const { data: pedidos = {} } = usePedidosDoCliente(revisar && aprovacao === "ajuste_solicitado" ? [postId] : []);
   const pedido = pedidos[postId] ?? null;
+  const { data: midia } = useMidiaDaEntrega(revisar ? [postId] : []);
+  const semArquivo = revisar && !pedido && !!midia?.[postId] && !midia[postId].temMidia;
 
   return (
     <div className="mt-4 space-y-3">
-      {revisar && (
+      {revisar && semArquivo && (
+        <div className="rounded-2xl border-2 border-amber-200 bg-amber-50/40 p-3.5">
+          <AcoesDeRevisao postId={postId} nomeParceiro={nomeParceiro} onEuResolvo={onEuResolvo} onAbrirPost={onAbrirPost ?? onEuResolvo} />
+        </div>
+      )}
+      {revisar && !semArquivo && (
         <div className="rounded-2xl border-2 border-green-200 bg-green-50/60 p-3.5">
           <p className="text-[11px] font-bold uppercase tracking-wider text-green-800 flex items-center gap-1.5 mb-0.5">
             <CheckCircle2 className="h-3.5 w-3.5" /> {pedido ? "Volta do cliente pra você decidir" : "Entrega pra você revisar"}

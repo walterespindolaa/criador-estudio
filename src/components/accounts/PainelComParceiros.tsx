@@ -868,7 +868,7 @@ export function PainelComParceiros({ clientes }: {
                     {/* Material revisa dentro do card dele (Tá ok / Pedir ajuste). */}
                     {!p.material && <div className="px-4 pb-3 -mt-1">
                       <AcoesDeRevisao postId={p.id} nomeParceiro={nomeParceiro.get(p.assignee_id)?.nome} compacto
-                        pedidoCliente={pedidos[p.id] ?? null} onEuResolvo={() => euResolvo(p)} />
+                        pedidoCliente={pedidos[p.id] ?? null} onEuResolvo={() => euResolvo(p)} onAbrirPost={() => irAoPost(p)} />
                     </div>}
                   </div>
                 ))}

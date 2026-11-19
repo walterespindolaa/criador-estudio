@@ -1361,6 +1361,40 @@ export function useAssumirRevisao() {
  *   - `direto`: cliente que não aprova peça a peça. Vai direto pra "Aprovado".
  *  Nenhuma coluna nova: o que marca "revisei" é a peça andar no quadro.
  *  O recado entra na conversa com o parceiro, pra ele saber que fechou. */
+/* ENTREGA SEM ARQUIVO (Walter, 19/11/2026). A Agatha entregou só o link do
+   Canva num comentário, o "Tá ok" mandou pro cliente um post sem imagem e o
+   cliente aprovou sem ver a arte. Aqui a gente descobre, por post, se ele tem
+   alguma mídia anexada e qual foi o último link que o parceiro mandou na
+   conversa, pra a revisão e o quadro avisarem antes de ir pro cliente. */
+export type MidiaDaEntrega = { temMidia: boolean; link: string | null };
+export function useMidiaDaEntrega(postIds: string[]) {
+  const ids = [...new Set(postIds.filter(Boolean))].sort();
+  return useQuery({
+    queryKey: ["midia-da-entrega", ids],
+    enabled: ids.length > 0,
+    staleTime: 15_000,
+    queryFn: async (): Promise<Record<string, MidiaDaEntrega>> => {
+      const out: Record<string, MidiaDaEntrega> = {};
+      ids.forEach((id) => { out[id] = { temMidia: false, link: null }; });
+      for (let i = 0; i < ids.length; i += 150) {
+        const lote = ids.slice(i, i + 150);
+        const [{ data: midias }, { data: coments }] = await Promise.all([
+          sbFrom("external_media_refs").select("post_id").in("post_id", lote).or("substituida.is.null,substituida.eq.false"),
+          sbFrom("post_approval_comments").select("post_id, content, created_at").in("post_id", lote)
+            .eq("author_role", "parceiro").ilike("content", "%http%").order("created_at", { ascending: false }),
+        ]);
+        for (const m of (midias ?? []) as { post_id: string }[]) if (out[m.post_id]) out[m.post_id].temMidia = true;
+        for (const c of (coments ?? []) as { post_id: string; content: string }[]) {
+          if (!out[c.post_id] || out[c.post_id].link) continue;
+          const url = c.content.match(/https?:\/\/\S+/)?.[0] ?? null;
+          if (url) out[c.post_id].link = url.replace(/[).,]+$/, "");
+        }
+      }
+      return out;
+    },
+  });
+}
+
 export function useAprovarEntrega() {
   const qc = useQueryClient();
   return useMutation({

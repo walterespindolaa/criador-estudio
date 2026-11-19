@@ -7,7 +7,7 @@ import { PreviaWhatsApp } from "@/components/shared/PreviaWhatsApp";
 import { toast } from "sonner";
 import { confirmar } from "@/components/shared/Confirm";
 import { EnviarParaParceiro, type EnvioPendente } from "@/components/accounts/EnviarParaParceiro";
-import { useMeusParceiros, useDelegarPost, ROTULO_PAPEL } from "@/hooks/useParceiro";
+import { useMeusParceiros, useDelegarPost, useMidiaDaEntrega, ROTULO_PAPEL } from "@/hooks/useParceiro";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -404,6 +404,10 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
   const { profile } = useProfile();
   const { data: portalViewedAt } = usePortalActivity(client.id);
   const [confirmMove, setConfirmMove] = useState<{ id: string; status: ApprovalKey } | null>(null);
+  /* POST SEM MÍDIA INDO PRO CLIENTE (Walter, 19/11/2026): o cliente aprovaria
+     sem ver a arte. Pergunta antes de mandar. */
+  const { data: midiaDosPosts } = useMidiaDaEntrega(posts.map((p) => p.id));
+  const [semMidia, setSemMidia] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const handleApprovalDragEnd = (r: DropResult) => {
@@ -414,6 +418,9 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
     const from = (post.approval_status ?? "pendente");
     // Avançar manualmente pra "Aprovado" sem o cliente: pede confirmação (só na mudança de coluna).
     if (from !== dest && dest === "aprovado") { setConfirmMove({ id: r.draggableId, status: dest }); return; }
+    if (from !== dest && dest === "pendente" && midiaDosPosts?.[r.draggableId] && !midiaDosPosts[r.draggableId].temMidia) {
+      setSemMidia(r.draggableId); return;
+    }
     // Com "Por data" ligado, a posição dentro da coluna é calculada pela data.
     // Gravar board_order aqui não teria efeito nenhum (o card voltaria pro lugar),
     // então avisamos e oferecemos a volta pra ordem manual. Arrastar ENTRE colunas
@@ -1015,6 +1022,25 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
           )}
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={!!semMidia} onOpenChange={(o) => { if (!o) setSemMidia(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Este post está sem imagem ou vídeo</AlertDialogTitle>
+            <AlertDialogDescription>
+              O cliente vai abrir o link e aprovar sem ver a arte. E na hora de publicar, o Instagram não tem o que postar. Anexe a mídia antes de mandar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { if (semMidia) moveStatus.mutate({ id: semMidia, approval_status: "pendente" }); setSemMidia(null); }}>
+              Mandar mesmo assim
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => { const p = posts.find((x) => x.id === semMidia); setSemMidia(null); if (p) openEdit(p); }}>
+              Abrir o post pra anexar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!confirmMove} onOpenChange={(o) => { if (!o) setConfirmMove(null); }}>
         <AlertDialogContent>
