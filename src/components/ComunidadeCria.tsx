@@ -68,27 +68,32 @@ export function FaixaComunidade({ semMargem = false }: { semMargem?: boolean }) 
   const { abrir, adiar } = useAbrirComunidade();
   if (!data?.mostrarFaixa || !data.url) return null;
   if (email?.pendente) return null; // um aviso por vez
+  /* OPÇÃO B (Walter, 20/11/2026): verde forte, mascote em adesivo, selo
+     "cupons só lá". Celular empilha e o botão ocupa a largura; do iPad pra
+     cima fica numa linha com o botão à direita. */
   return (
-    <div role="status" className={`rounded-2xl border-2 border-[#0A0A0A] bg-[#D9F2E0] px-4 py-3 text-[#0A0A0A] shadow-[0_3px_0_#0A0A0A] ${semMargem ? "mb-5" : "mx-3 mt-3 md:mx-6"}`}>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <span className="grid h-9 w-9 shrink-0 place-items-center bg-[#01A652] text-white" style={{ borderRadius: "38% 62% 55% 45% / 48% 42% 58% 52%" }}>
-          <Balao />
-        </span>
-        <p className="min-w-0 flex-1 basis-[220px] text-[14px] font-body leading-snug">
-          <strong className="font-display font-extrabold">Sua vaga na comunidade do Cria está separada.</strong>{" "}
-          <span className="hidden sm:inline">Dicas de conteúdo, novidades do app e cupons que só saem lá no WhatsApp.</span>
-          <span className="sm:hidden">Dicas, novidades e cupons que só saem lá.</span>
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
+    <div role="status" className={`relative overflow-hidden rounded-[22px] border-2 border-[#0A0A0A] bg-[#01A652] text-white shadow-[0_4px_0_#0A0A0A] ${semMargem ? "mb-5" : "mx-3 mt-3 md:mx-6"}`}>
+      <span aria-hidden="true" className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-[#2BC46F]" />
+      <span aria-hidden="true" className="pointer-events-none absolute -bottom-12 right-28 hidden h-24 w-24 rounded-full bg-[#FF77B9] opacity-90 md:block" />
+      <div className="relative flex flex-col items-stretch gap-4 px-4 py-4 md:flex-row md:items-center md:px-5 lg:px-6">
+        <div className="flex min-w-0 items-center gap-3 md:flex-1 lg:gap-4">
+          <img src="/comunidade-cria.webp" alt="" width={72} height={72}
+            className="h-14 w-14 shrink-0 -rotate-6 rounded-full border-2 border-[#0A0A0A] bg-[#F4EFE3] md:h-16 md:w-16 lg:h-[72px] lg:w-[72px]" />
+          <div className="min-w-0">
+            <span className="inline-block -rotate-2 rounded-full border-2 border-[#0A0A0A] bg-[#FFCF03] px-2.5 py-0.5 font-display text-[12px] font-extrabold text-[#0A0A0A]">cupons só lá</span>
+            <p className="mt-1 font-display text-[19px] font-extrabold leading-[1.05] [text-wrap:balance] md:text-[21px] lg:text-[23px]">Entra pra comunidade do Cria no WhatsApp</p>
+            <p className="mt-1 max-w-[62ch] text-[13.5px] font-body leading-snug text-white/90">Dicas de conteúdo toda semana, novidades antes de todo mundo e cupons que não saem em outro lugar.</p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
           <button type="button" onClick={abrir}
-            className="h-9 rounded-xl border-2 border-[#0A0A0A] bg-[#01A652] px-3.5 font-display text-[14px] font-extrabold text-white">
-            Entrar na comunidade
+            className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-[#0A0A0A] bg-[#F4EFE3] px-5 font-display text-[15px] font-extrabold text-[#0A0A0A] shadow-[0_3px_0_#0A0A0A] transition-transform active:translate-y-[2px] active:shadow-[0_1px_0_#0A0A0A] md:flex-none">
+            <Balao className="h-5 w-5 text-[#01A652]" />Quero entrar
           </button>
           <button type="button" onClick={adiar}
-            className="h-9 px-1 text-[13px] font-semibold underline underline-offset-2">Agora não</button>
+            className="h-11 px-1 text-[13px] font-semibold text-white/90 underline underline-offset-2">Agora não</button>
         </div>
       </div>
     </div>
   );
 }
-
