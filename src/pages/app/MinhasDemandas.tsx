@@ -1444,7 +1444,12 @@ export function ChatDoCard({ cor, mensagens, texto, setTexto, enviar, enviando, 
         </p>
       )}
 
-      <div ref={lista} className={cn("flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-2", !className && "max-lg:max-h-[46vh]")}>
+      {/* NO CELULAR A CONVERSA FLUI NO SCROLL DO CARD (Walter, 20/11/2026: "não
+          consigo ver a conversa pelo celular"). O mini-scroll aninhado (flex-1 +
+          max-h-[46vh]) colapsava dentro do pai sem altura fixa e escondia as
+          falas. No desktop (lg) a coluna da direita segue com rolagem própria.
+          A caixa de entrada da Equipe passa className próprio e mantém o scroll. */}
+      <div ref={lista} className={cn("px-3 py-3 space-y-2", className ? "flex-1 min-h-0 overflow-y-auto" : "lg:flex-1 lg:min-h-0 lg:overflow-y-auto")}>
         {mensagens.length === 0 ? (
           <p className="text-xs font-body text-muted-foreground text-center py-8 px-4 leading-relaxed">
             Nada combinado por aqui ainda. O que for escrito neste chat fica no card,
