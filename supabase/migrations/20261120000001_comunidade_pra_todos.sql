@@ -11,14 +11,18 @@ set search_path to 'public'
 as $function$
 declare
   v_url text;
-  p record;
+  v_entrou timestamptz;
+  v_adiou int;
 begin
   select comunidade_url into v_url from public.wa_config where id = 1;
   if v_url is null or v_url = '' then return jsonb_build_object('mostrar', false, 'url', null); end if;
-  select comunidade_entrou_em, comunidade_adiou_vezes into p from public.profiles where id = auth.uid();
+  -- Variáveis soltas, não record: "record is not null" só é verdade se TODOS os
+  -- campos estiverem preenchidos, e comunidade_entrou_em é vazio pra quem deve ver.
+  select comunidade_entrou_em, comunidade_adiou_vezes into v_entrou, v_adiou
+    from public.profiles where id = auth.uid();
   return jsonb_build_object(
     'url', v_url,
-    'mostrar', p is not null and p.comunidade_entrou_em is null and coalesce(p.comunidade_adiou_vezes, 0) = 0
+    'mostrar', found and v_entrou is null and coalesce(v_adiou, 0) = 0
   );
 end $function$;
 
