@@ -23,7 +23,12 @@ export function useComunidade() {
   return useQuery<Info>({
     queryKey: ["comunidade-cria", user?.id],
     enabled: !!user,
-    staleTime: 10 * 60_000,
+    /* Sempre confere de novo ao abrir a tela: a resposta é minúscula, e com 10
+       min de cache a faixa ficava com o estado velho depois de entrar/adiar
+       (o cache ainda é salvo no aparelho e volta ao recarregar). */
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
     retry: false,
     queryFn: async () => {
       try {
