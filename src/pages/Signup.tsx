@@ -443,7 +443,7 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
               <div className="flex flex-col gap-1.5 rounded-[20px] border-2 border-dashed border-[#01A652] bg-[#EAF5EC] px-3.5 py-3 lg:col-span-2">
                 <label htmlFor="whatsapp" className={rotulo}>
                   WhatsApp <span className="font-body text-[13px] font-normal text-[#5B574E]">(opcional)</span>
-                  <span className={cn(DISPLAY, "ml-1.5 inline-block rounded-full border-2 border-[#0A0A0A] bg-[#FFCF03] px-2.5 text-[12px] font-extrabold align-[2px]")}>cupons + comunidade</span>
+                  <span className={cn(DISPLAY, "ml-1.5 inline-block rounded-full border-2 border-[#0A0A0A] bg-[#FFCF03] px-2.5 text-[12px] font-extrabold align-[2px]")}>cupons + dicas</span>
                 </label>
                 <div className="flex items-center gap-2">
                   <span className="flex h-[50px] shrink-0 items-center rounded-2xl border-2 border-[#CFC8B6] bg-white px-3 text-[15px]">+55</span>
@@ -452,7 +452,7 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
                     onChange={(e) => { setWhats(mascaraWhats(e.target.value)); if (erroWhats) setErroWhats(null); }} />
                 </div>
                 {erroWhats && <p className={erroTxt}>{erroWhats}</p>}
-                <p className="text-[12.5px] leading-snug text-[#3D3A33]">Pra receber cupons exclusivos e entrar na comunidade do Cria no WhatsApp. Nada de spam.</p>
+                <p className="text-[12.5px] leading-snug text-[#3D3A33]">Entra na comunidade do Cria no WhatsApp: <strong className="font-semibold text-[#0A0A0A]">cupons exclusivos, dicas de conteúdo e as novidades do app em primeira mão.</strong> Nada de spam.</p>
                 {whats.replace(/\D/g, "").length > 0 && (
                   <label className="mt-0.5 flex cursor-pointer select-none items-start gap-2.5">
                     <input type="checkbox" checked={whatsAceite} onChange={(e) => setWhatsAceite(e.target.checked)}
