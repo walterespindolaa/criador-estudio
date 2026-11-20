@@ -40,6 +40,7 @@ import { VideoPublicConfirmProvider } from "@/contexts/VideoPublicConfirmContext
 import { CriaAIPanel } from "@/components/ai/CriaAIPanel";
 import { TrialBanner } from "@/components/TrialBanner";
 import { FaixaConfirmarEmail } from "@/components/ConfirmarEmailAviso";
+import { FaixaComunidade } from "@/components/ComunidadeCria";
 import { FaixaCupomCampanha } from "@/components/FaixaCupomCampanha";
 import { StorageWarningBanner } from "@/components/StorageWarningBanner";
 import { ManagingBanner } from "@/components/accounts/ManagingBanner";
@@ -432,6 +433,7 @@ const AppLayout = () => {
         )}
 
             <FaixaConfirmarEmail />
+            <FaixaComunidade />
             <FaixaCupomCampanha />
             <TrialBanner />
             <StorageWarningBanner />

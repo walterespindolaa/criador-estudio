@@ -89,6 +89,15 @@ function boasVindas(perfil: Conversa["perfil"], nome: string) {
   return `${oi} ${quem} ${corpo}`;
 }
 
+/* Convite da comunidade (Walter, 20/11/2026): vai como SEGUNDA mensagem, logo
+   depois da de ajuda, pra não misturar "posso te ajudar" com link. */
+function conviteComunidade(url: string) {
+  return sortear([
+    `E aproveitando: sua vaga na comunidade do Cria no WhatsApp já tá separada. É lá que saem as dicas de conteúdo, as novidades do app e os cupons que não vão pra outro lugar: ${url}`,
+    `Ah, e tem a comunidade do Cria aqui no WhatsApp: dicas de conteúdo, novidades do app e cupons que só saem lá. Sua vaga tá separada: ${url}`,
+  ]);
+}
+
 /* Um lembrete só, se a pessoa não respondeu a boas-vindas em 24 h. */
 function lembrete(perfil: Conversa["perfil"], nome: string) {
   const oi = nome ? `Oi, ${nome}!` : "Oi!";
@@ -162,6 +171,16 @@ async function rodarFila(svc: SupabaseClient) {
       await svc.from("wa_mensagens").insert({ conversa_id: c.id, direcao: "saida", autor: "robo", texto, wa_msg_id: msgId });
       await svc.from("wa_conversas").update({ estado: "enviada", enviada_em: new Date().toISOString(), jid: achado.jid }).eq("id", c.id);
       enviados += 1;
+      if (cfg.comunidade_url) {
+        try {
+          const convite = conviteComunidade(cfg.comunidade_url);
+          const idConvite = await enviarTexto(achado.jid, convite);
+          await svc.from("wa_mensagens").insert({ conversa_id: c.id, direcao: "saida", autor: "robo", texto: convite, wa_msg_id: idConvite });
+        } catch (e) {
+          // O convite é extra: se falhar, a boas-vindas já foi e a conversa segue.
+          await registrarErro(svc as never, "wa-robo", "convite comunidade: " + mensagemDe(e), { conversa: c.id });
+        }
+      }
     } catch (e) {
       await svc.from("wa_conversas").update({ estado: "erro", erro: mensagemDe(e).slice(0, 300) }).eq("id", c.id);
       await registrarErro(svc as never, "wa-robo", "fila: " + mensagemDe(e), { conversa: c.id });

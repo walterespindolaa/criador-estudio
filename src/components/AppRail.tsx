@@ -16,13 +16,14 @@ import { useProfile } from "@/hooks/useProfile";
 import { useT } from "@/lib/i18n";
 import { PlanTag } from "@/components/shared/PlanTag";
 import { Logo } from "@/components/shared/Logo";
+import { IconeComunidade, useAbrirComunidade } from "@/components/ComunidadeCria";
 import { supabase } from "@/integrations/supabase/client";
 
 type NavChild = { label: string; icon: LucideIcon; to: string };
 type NavNode = {
   id: string; label: string; icon: LucideIcon;
   to?: string; end?: boolean; children?: NavChild[];
-  action?: "cria" | "logout"; featured?: boolean;
+  action?: "cria" | "logout" | "comunidade"; featured?: boolean;
 };
 
 const TOP: NavNode[] = [
@@ -103,6 +104,7 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
      demandas sem digitar o endereço. No Meu perfil e no Cria de cliente quem
      leva de volta é a faixa do topo, então aqui é só na conta da própria. */
   const { data: souParceiro } = useSouParceiro();
+  const comunidade = useAbrirComunidade();
   const { isManaging } = useActiveAccount();
   const [hovered, setHovered] = useState(false);
   const expanded = pinned || hovered;
@@ -158,6 +160,7 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
   const handleClick = (n: NavNode) => {
     if (n.children) { toggleGroup(n.id); return; }
     if (n.action === "cria") { openCria(); return; }
+    if (n.action === "comunidade") { comunidade.abrir(); return; }
     if (n.action === "logout") { void supabase.auth.signOut().then(() => navigate("/login")); return; }
     if (n.to) navigate(n.to);
   };
@@ -247,7 +250,9 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
         className={cn(
           "relative flex items-center transition-colors",
           expanded ? "h-10 w-full gap-3 rounded-xl px-3" : "mx-auto h-10 w-10 justify-center rounded-2xl",
-          n.featured
+          n.action === "comunidade"
+            ? "bg-[#D9F2E0] text-[#0A0A0A] ring-2 ring-inset ring-[#01A652] hover:brightness-[0.98]"
+            : n.featured
             ? "bg-primary text-primary-foreground shadow-lg hover:brightness-105"
             : active
             ? "bg-primary/15 text-primary"
@@ -332,6 +337,8 @@ export function AppRail({ pinned = false, onTogglePin }: AppRailProps) {
         <div className="mx-auto my-2 h-px w-8 bg-border" />
         <div className="flex w-full flex-col items-stretch gap-1">
           {isAdmin && renderNode({ id: "admin", label: "Admin", icon: ShieldCheck, to: "/app/cf-admin-panel" })}
+          {/* COMUNIDADE fixa no rodapé do menu (mockup aprovado 19/11/2026). */}
+          {comunidade.url && renderNode({ id: "comunidade", label: "Comunidade", icon: IconeComunidade as unknown as LucideIcon, action: "comunidade" })}
           {BOTTOM.map(renderNode)}
         </div>
       </div>

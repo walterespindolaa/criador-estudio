@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BroadcastBanner } from "@/components/BroadcastBanner";
 import { FaixaConfirmarEmail } from "@/components/ConfirmarEmailAviso";
+import { FaixaComunidade, IconeComunidade, useAbrirComunidade } from "@/components/ComunidadeCria";
 import { NotificationNudge } from "@/components/NotificationNudge";
 import { FeedbackButton, FeedbackDialog } from "@/components/FeedbackButton";
 import {
@@ -179,6 +180,7 @@ export default function ManagerLayout() {
   };
 
   const handleSignOut = async () => { await signOut(); navigate("/"); };
+  const comunidade = useAbrirComunidade();
   // O Indique e ganhe já mostra as comissões de quem é parceira aprovada.
   const onNavComissoes = () => navigate("/socialmidia/parceria");
 
@@ -186,7 +188,7 @@ export default function ManagerLayout() {
   const railNode = (
     Icon: LucideIcon,
     label: string,
-    opts: { active?: boolean; onClick: () => void; corner?: ReactNode; tipBadge?: ReactNode; dataTour?: string },
+    opts: { active?: boolean; onClick: () => void; corner?: ReactNode; tipBadge?: ReactNode; dataTour?: string; verde?: boolean },
   ) => (
     <button
       key={label}
@@ -197,7 +199,9 @@ export default function ManagerLayout() {
       className={cn(
         "relative flex h-10 w-full items-center rounded-2xl transition-colors",
         railHovered ? "gap-3 px-2.5 justify-start" : "justify-center",
-        opts.active
+        opts.verde
+          ? "bg-[#D9F2E0] text-[#0A0A0A] ring-2 ring-inset ring-[#01A652] hover:brightness-[0.98]"
+          : opts.active
           ? "bg-primary/15 text-primary"
           : "text-[hsl(var(--sidebar-foreground))] hover:bg-primary/10 hover:text-primary",
       )}
@@ -517,6 +521,8 @@ export default function ManagerLayout() {
         <div className="flex-1" />
         <div className="my-2 h-px w-full bg-border" />
         <div className="flex w-full flex-col items-stretch gap-1">
+          {/* COMUNIDADE fixa no rodapé do menu (mockup aprovado 19/11/2026). */}
+          {comunidade.url && railNode(IconeComunidade as unknown as LucideIcon, "Comunidade", { onClick: comunidade.abrir, verde: true })}
           {railNode(PlayCircle, "Tutoriais", { active: isActive("/socialmidia/tutoriais"), onClick: () => navigate("/socialmidia/tutoriais") })}
           {railNode(Trash2, "Lixeira", { active: isActive("/socialmidia/lixeira"), onClick: () => navigate("/socialmidia/lixeira") })}
           {railNode(SettingsIcon, "Configurações", { active: isActive("/socialmidia/configuracoes"), onClick: abrirConfiguracoes, dataTour: "nav-config" })}
@@ -625,6 +631,7 @@ export default function ManagerLayout() {
         <main className="relative z-[1] flex-1 px-4 py-7 pb-[96px] sm:px-8 sm:py-10 md:pb-10 overflow-x-hidden">
           <div className="mx-auto w-full max-w-[1600px]">
             <FaixaConfirmarEmail semMargem />
+            <FaixaComunidade semMargem />
             <BroadcastBanner audience="social" />
             <NotificationNudge />
             <Suspense fallback={<LoadingScreen compact />}>
@@ -714,6 +721,7 @@ export default function ManagerLayout() {
           {
             title: "Sistema",
             items: [
+              ...(comunidade.url ? [{ label: "Comunidade do Cria", desc: "Dicas e cupons no WhatsApp", icon: IconeComunidade as unknown as LucideIcon, onClick: comunidade.abrir }] : []),
               { label: "Tutoriais", desc: "Vídeos curtos de cada tela", icon: PlayCircle as LucideIcon, onClick: () => navigate("/socialmidia/tutoriais") },
               { label: "Enviar feedback", desc: "Uma ideia ou um problema no app", icon: MessageSquarePlus as LucideIcon, onClick: () => setFeedbackOpen(true) },
               { label: "Lixeira", desc: "Recuperar o que você excluiu", icon: Trash2 as LucideIcon, onClick: () => navigate("/socialmidia/lixeira") },

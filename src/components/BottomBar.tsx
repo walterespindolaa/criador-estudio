@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useCriaAI } from "@/contexts/CriaAIContext";
 import { PlanTag } from "@/components/shared/PlanTag";
 import { FeedbackDialog } from "@/components/FeedbackButton";
+import { IconeComunidade, useAbrirComunidade } from "@/components/ComunidadeCria";
 import { useTemSocialMidia } from "@/hooks/useTemSocialMidia";
 
 const leftItems = [
@@ -167,6 +168,7 @@ export function BottomBar() {
     setSearchParams(next, { replace: true });
   };
 
+  const comunidade = useAbrirComunidade();
   const handleSignOut = async () => {
     setMoreOpen(false);
     await signOut();
@@ -303,6 +305,13 @@ export function BottomBar() {
                   ))}
                   {!termo && (
                     <>
+                      {comunidade.url && (
+                        <button type="button" onClick={() => { setMoreOpen(false); comunidade.abrir(); }}
+                          className="flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-[20px] border-[2.5px] border-[#01A652] bg-[#D9F2E0] px-1.5 pb-[9px] pt-3 active:scale-[0.97] transition-transform">
+                          <IconeComunidade className="h-[22px] w-[22px] text-[#01A652]" />
+                          <span className="text-center text-[11.5px] font-body font-bold leading-[1.15] text-[#0A0A0A]">Comunidade</span>
+                        </button>
+                      )}
                       {/* Feedback: abre o mesmo diálogo do desktop, mas acessível no celular. */}
                       <button type="button" onClick={() => { setMoreOpen(false); setFeedbackOpen(true); }}
                         className="flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-[20px] border-[2.5px] bg-white px-1.5 pb-[9px] pt-3 active:scale-[0.97] transition-transform"
