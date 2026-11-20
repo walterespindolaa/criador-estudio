@@ -14,8 +14,8 @@ import { useEmailConfirmacao } from "@/components/ConfirmarEmailAviso";
    Se a RPC falhar, ninguém vê nada (aviso nunca atrapalha).
    ═════════════════════════════════════════════════════════════════ */
 
-type Info = { url: string | null; mostrarFaixa: boolean };
-const NADA: Info = { url: null, mostrarFaixa: false };
+type Info = { url: string | null; mostrarFaixa: boolean; entrou: boolean };
+const NADA: Info = { url: null, mostrarFaixa: false, entrou: false };
 const sbRpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: unknown }>;
 
 export function useComunidade() {
@@ -29,8 +29,8 @@ export function useComunidade() {
       try {
         const { data, error } = await sbRpc("comunidade_banner");
         if (error || !data || typeof data !== "object") return NADA;
-        const d = data as { url?: string | null; mostrar?: boolean };
-        return { url: d.url ?? null, mostrarFaixa: d.mostrar === true };
+        const d = data as { url?: string | null; mostrar?: boolean; entrou?: boolean };
+        return { url: d.url ?? null, mostrarFaixa: d.mostrar === true, entrou: d.entrou === true };
       } catch { return NADA; }
     },
   });
@@ -42,7 +42,7 @@ export function useAbrirComunidade() {
   const { data } = useComunidade();
   const marcar = async (acao: "entrou" | "adiou") => {
     try { await sbRpc("comunidade_marcar", { _acao: acao }); } catch { /* segue */ }
-    qc.setQueriesData<Info>({ queryKey: ["comunidade-cria"] }, (v) => (v ? { ...v, mostrarFaixa: false } : v));
+    qc.setQueriesData<Info>({ queryKey: ["comunidade-cria"] }, (v) => (v ? { ...v, mostrarFaixa: false, entrou: v.entrou || acao === "entrou" } : v));
   };
   return {
     url: data?.url ?? null,
@@ -62,17 +62,22 @@ const Balao = ({ className = "h-5 w-5" }: { className?: string }) => (
 );
 export { Balao as IconeComunidade };
 
-export function FaixaComunidade({ semMargem = false }: { semMargem?: boolean }) {
+/* TOPO OU RODAPÉ (Walter, 20/11/2026): a faixa abre no topo do Início. Quem
+   toca em "Agora não" não perde o convite: ele desce pro fim do Início e fica
+   lá, sem botão de fechar, até a pessoa entrar. Quem entrou não vê mais. */
+export function FaixaComunidade({ semMargem = false, lugar = "topo" }: { semMargem?: boolean; lugar?: "topo" | "rodape" }) {
   const { data } = useComunidade();
   const { data: email } = useEmailConfirmacao();
   const { abrir, adiar } = useAbrirComunidade();
-  if (!data?.mostrarFaixa || !data.url) return null;
-  if (email?.pendente) return null; // um aviso por vez
+  if (!data?.url || data.entrou) return null;
+  if (lugar === "topo" && (!data.mostrarFaixa || email?.pendente)) return null; // um aviso por vez no topo
+  if (lugar === "rodape" && data.mostrarFaixa) return null; // nunca as duas ao mesmo tempo
+  const rodape = lugar === "rodape";
   /* OPÇÃO B (Walter, 20/11/2026): verde forte, mascote em adesivo, selo
      "cupons só lá". Celular empilha e o botão ocupa a largura; do iPad pra
      cima fica numa linha com o botão à direita. */
   return (
-    <div role="status" className={`relative overflow-hidden rounded-[22px] border-2 border-[#0A0A0A] bg-[#01A652] text-white shadow-[0_4px_0_#0A0A0A] ${semMargem ? "mb-5" : "mx-3 mt-3 md:mx-6"}`}>
+    <div role="status" className={`relative overflow-hidden rounded-[22px] border-2 border-[#0A0A0A] bg-[#01A652] text-white shadow-[0_4px_0_#0A0A0A] ${rodape ? "mt-8" : semMargem ? "mb-5" : "mx-3 mt-3 md:mx-6"}`}>
       <span aria-hidden="true" className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-[#2BC46F]" />
       <span aria-hidden="true" className="pointer-events-none absolute -bottom-12 right-28 hidden h-24 w-24 rounded-full bg-[#FF77B9] opacity-90 md:block" />
       <div className="relative flex flex-col items-stretch gap-4 px-4 py-4 md:flex-row md:items-center md:px-5 lg:px-6">
@@ -90,8 +95,10 @@ export function FaixaComunidade({ semMargem = false }: { semMargem?: boolean }) 
             className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-[#0A0A0A] bg-[#F4EFE3] px-5 font-display text-[15px] font-extrabold text-[#0A0A0A] shadow-[0_3px_0_#0A0A0A] transition-transform active:translate-y-[2px] active:shadow-[0_1px_0_#0A0A0A] md:flex-none">
             <Balao className="h-5 w-5 text-[#01A652]" />Quero entrar
           </button>
-          <button type="button" onClick={adiar}
-            className="h-11 px-1 text-[13px] font-semibold text-white/90 underline underline-offset-2">Agora não</button>
+          {!rodape && (
+            <button type="button" onClick={adiar}
+              className="h-11 px-1 text-[13px] font-semibold text-white/90 underline underline-offset-2">Agora não</button>
+          )}
         </div>
       </div>
     </div>

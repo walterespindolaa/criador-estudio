@@ -484,6 +484,7 @@ const AppLayout = () => {
                 <Suspense fallback={<LoadingScreen compact />}>
                   <Outlet />
                 </Suspense>
+                {isDash && <FaixaComunidade lugar="rodape" />}
               </div>
               <AppFooter />
             </main>

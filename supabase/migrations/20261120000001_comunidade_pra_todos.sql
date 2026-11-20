@@ -22,7 +22,8 @@ begin
     from public.profiles where id = auth.uid();
   return jsonb_build_object(
     'url', v_url,
-    'mostrar', found and v_entrou is null and coalesce(v_adiou, 0) = 0
+    'mostrar', found and v_entrou is null and coalesce(v_adiou, 0) = 0,
+    'entrou', v_entrou is not null
   );
 end $function$;
 

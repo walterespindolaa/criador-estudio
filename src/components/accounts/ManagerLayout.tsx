@@ -637,6 +637,7 @@ export default function ManagerLayout() {
             <Suspense fallback={<LoadingScreen compact />}>
               <Outlet context={ctx} />
             </Suspense>
+            {isDash && <FaixaComunidade lugar="rodape" />}
           </div>
         </main>
       </div>
