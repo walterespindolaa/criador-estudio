@@ -38,7 +38,7 @@ const APP = () => Deno.env.get("APP_URL") ?? "https://app.criasocialclub.com.br"
 type Config = { robo_ligado: boolean; comunidade_url: string | null; max_por_hora: number; max_respostas_robo: number; avisar_ids: string[] };
 type Conversa = {
   id: string; user_id: string | null; telefone: string; perfil: "criador" | "social_midia"; estado: string;
-  respostas_robo: number; jid: string | null; enviada_em: string | null;
+  respostas_robo: number; jid: string | null; enviada_em: string | null; criado_em?: string | null;
 };
 
 async function evo(caminho: string, corpo: unknown, metodo = "POST") {
@@ -98,6 +98,14 @@ function conviteComunidade(url: string) {
   ]);
 }
 
+/* Boas-vindas de quem se cadastrou com o robô desligado (mais de 24 h atrás). */
+function boasVindasAtrasada(perfil: Conversa["perfil"], nome: string) {
+  const oi = nome ? `Oi, ${nome}! Tudo bem?` : "Oi! Tudo bem?";
+  return perfil === "social_midia"
+    ? `${oi} Aqui é do Cria. Você criou sua conta esses dias: conseguiu usar? Se ficou dúvida pra cadastrar cliente ou mandar post pra aprovar, me chama aqui que eu te ajudo.`
+    : `${oi} Aqui é do Cria. Você criou sua conta esses dias: conseguiu usar? Se ficou alguma dúvida pra começar, me chama aqui que eu te ajudo.`;
+}
+
 /* Um lembrete só, se a pessoa não respondeu a boas-vindas em 24 h. */
 function lembrete(perfil: Conversa["perfil"], nome: string) {
   const oi = nome ? `Oi, ${nome}!` : "Oi!";
@@ -138,12 +146,13 @@ async function rodarFila(svc: SupabaseClient) {
   const vagas = Math.max(0, (cfg.max_por_hora ?? 6) - (count ?? 0));
   if (!vagas) return { ok: true, limite_hora: true };
 
-  /* Cadastro de mais de 24 h (robô estava desligado): "vi que você criou a
-     conta agora há pouco" ficaria falso. Essas não recebem a boas-vindas. */
-  await svc.from("wa_conversas").update({ estado: "encerrada", erro: "passou de 24 h sem envio" })
-    .eq("estado", "agendada").lt("criado_em", new Date(Date.now() - 86400_000).toISOString());
+  /* CADASTRO ANTIGO (Walter, 20/11/2026, opção 2): quem se cadastrou com o
+     robô desligado recebe uma boas-vindas própria ("você criou sua conta esses
+     dias"), uma vez só e no mesmo ritmo da fila. Passou de 30 dias, não manda. */
+  await svc.from("wa_conversas").update({ estado: "encerrada", erro: "passou de 30 dias sem envio" })
+    .eq("estado", "agendada").lt("criado_em", new Date(Date.now() - 30 * 86400_000).toISOString());
 
-  const { data: fila } = await svc.from("wa_conversas").select("id, user_id, telefone, perfil, estado, respostas_robo, jid, enviada_em")
+  const { data: fila } = await svc.from("wa_conversas").select("id, user_id, telefone, perfil, estado, respostas_robo, jid, enviada_em, criado_em")
     .eq("estado", "agendada").lte("enviar_em", new Date().toISOString()).order("enviar_em").limit(1);
   /* Uma por minuto (o cron é por minuto): já dá o espaço entre um envio e
      outro, sem disparo em sequência. A linha é "pega" antes de mandar, então
@@ -166,7 +175,8 @@ async function rodarFila(svc: SupabaseClient) {
         await svc.from("wa_conversas").update({ estado: "sem_whatsapp" }).eq("id", c.id);
         continue;
       }
-      const texto = boasVindas(c.perfil, primeiroNome(p.name));
+      const antigo = !!c.criado_em && Date.parse(c.criado_em) < Date.now() - 86400_000;
+      const texto = antigo ? boasVindasAtrasada(c.perfil, primeiroNome(p.name)) : boasVindas(c.perfil, primeiroNome(p.name));
       const msgId = await enviarTexto(achado.jid, texto);
       await svc.from("wa_mensagens").insert({ conversa_id: c.id, direcao: "saida", autor: "robo", texto, wa_msg_id: msgId });
       await svc.from("wa_conversas").update({ estado: "enviada", enviada_em: new Date().toISOString(), jid: achado.jid }).eq("id", c.id);
