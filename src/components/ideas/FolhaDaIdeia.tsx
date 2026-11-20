@@ -419,6 +419,12 @@ export function FolhaDaIdeia({
           {listaSaiu}
         </aside>
 
+        {/* FUNDO QUE FECHA A GAVETA (Walter, 20/11/2026: "clico de volta na folha
+            e abre o teclado em vez de fechar as ideias"). Com a gaveta aberta, o
+            toque na folha fecha a gaveta e não chega no editor, então o teclado
+            não sobe. Sem cor: não muda o visual, só captura o toque. */}
+        {gaveta && <div className="sm:hidden absolute inset-0 z-10" onClick={() => setGaveta(false)} aria-hidden />}
+
         {/* GAVETA (celular) */}
         <div className="sm:hidden absolute inset-x-0 bottom-0 z-20 rounded-t-[22px] bg-white dark:bg-background shadow-[0_-8px_24px_rgba(0,0,0,.12)] px-4 pt-2 pb-[max(14px,env(safe-area-inset-bottom))]">
           <button type="button" onClick={() => setGaveta((v) => !v)} className="block w-10 h-1 rounded-full bg-black/15 mx-auto mb-3" aria-label={gaveta ? "Fechar a gaveta" : "Abrir a gaveta"} />
