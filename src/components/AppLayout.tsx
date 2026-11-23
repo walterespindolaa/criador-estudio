@@ -433,7 +433,8 @@ const AppLayout = () => {
         )}
 
             <FaixaConfirmarEmail />
-            <FaixaComunidade />
+            {/* Comunidade só no Início (Walter, 23/11/2026): no topo de toda página atrapalhava. */}
+            {isDash && <FaixaComunidade />}
             <FaixaCupomCampanha />
             <TrialBanner />
             <StorageWarningBanner />
