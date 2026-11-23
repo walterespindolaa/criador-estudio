@@ -58,6 +58,20 @@ function fetchHostAllowed(raw: string): boolean {
   return false;
 }
 
+// Acha o MP4 de um vídeo do Bunny Stream nas duas bibliotecas do Cria.
+async function mp4DoBunny(guid: string | null): Promise<string | null> {
+  if (!guid || !/^[0-9a-f-]{36}$/i.test(guid)) return null;
+  const hosts = ["vz-86788381-03e.b-cdn.net", "vz-4f7de422-7aa.b-cdn.net"];
+  const arquivos = ["play_1080p.mp4", "play_720p.mp4", "play_480p.mp4"];
+  for (const h of hosts) {
+    for (const a of arquivos) {
+      const u = `https://${h}/${guid}/${a}`;
+      try { const r = await fetch(u, { method: "HEAD" }); if (r.ok) return u; } catch { /* proximo */ }
+    }
+  }
+  return null;
+}
+
 // F26: impoe o teto ANTES de alocar o corpo inteiro. Se o upstream manda
 // Content-Length, rejeita na hora. Senao le o body como stream, acumulando, e
 // aborta (reader.cancel) assim que passar do teto. `cap` = maximo permitido pra
@@ -149,14 +163,20 @@ Deno.serve(async (req) => {
     let total = 0;
     for (const m of (refs ?? []) as Array<Record<string, string | null>>) {
       const provider = (m.provider ?? "").toLowerCase();
-      // Vídeo do Bunny Stream não tem MP4 direto anota e pula.
-      if (m.bunny_video_id || provider === "bunny_stream") { skipped.push(`${m.file_name || "vídeo"} (vídeo)`); continue; }
+      /* VÍDEO DO BUNNY ENTRA NO ZIP (Walter, 23/11/2026: "Se eu baixo o zip, ele ta
+         baixando arquivo em txt e não o vídeo"). Antes todo vídeo do Bunny era pulado.
+         Agora busca o MP4 que o Bunny gera (1080p, senão 720p/480p). O "original"
+         dá 403 nas bibliotecas do Cria, por isso não entra na lista. */
+      const ehVideoBunny = !!m.bunny_video_id || provider === "bunny_stream";
 
       // Já bateu no teto de memória: manda o resto pro aviso pra não derrubar o worker.
       if (total >= MAX_TOTAL_BYTES) { skipped.push(`${m.file_name || "mídia"} (limite do zip)`); continue; }
 
       let url: string | null = null;
-      if (provider === "gdrive" || provider === "google_drive" || provider === "drive") {
+      if (ehVideoBunny) {
+        url = await mp4DoBunny(m.bunny_video_id || m.external_file_id);
+        if (!url) { skipped.push(`${m.file_name || "vídeo"} (vídeo ainda processando, baixe individual)`); continue; }
+      } else if (provider === "gdrive" || provider === "google_drive" || provider === "drive") {
         url = m.external_file_id ? driveDownloadUrl(m.external_file_id) : (m.download_url || m.view_url);
       } else {
         url = m.download_url || m.view_url;
@@ -185,7 +205,7 @@ Deno.serve(async (req) => {
         }
         total += buf.byteLength;
         n++;
-        const isVid = (m.file_type ?? "").startsWith("video") || provider === "bunny_stream";
+        const isVid = ehVideoBunny || (m.file_type ?? "").startsWith("video");
         const base = isVid ? "video" : "imagem";
         const ext = extFrom(m.file_type, m.file_name, isVid ? "mp4" : "jpg");
         // STORE (sem compressão): imagens/vídeos já são comprimidos, deflate só gasta
