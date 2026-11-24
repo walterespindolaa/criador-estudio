@@ -6,7 +6,10 @@
    roxo, fundo cinza, "cria" escrito à mão). Agora TODO e-mail do sistema
    veste a mesma moldura, a mesma dos 6 modelos de login da Supabase
    (CRIA/migracao-emails): logo, faixa colorida com sticker, título na fonte
-   do Cria, botão laranja e o selo "da ideia ao post" no rodapé.
+   do Cria e botão laranja.
+
+   Walter, 24/11/2026: "nao gostei daquele sticker la no rodape". Saiu o
+   selo "da ideia ao post" do rodapé; fica só o sticker da faixa do topo.
 
    Imagens vêm do próprio app (URL absoluta e pública); width vai como
    atributo porque o Outlook ignora CSS de largura.
@@ -78,7 +81,6 @@ ${nota}
 </table>
 </td></tr>
 <tr><td align="center" style="padding:26px 10px 0;">
-<img src="${BASE}/stickers/selo-da-ideia-ao-post-rosa.png" width="150" alt="Da ideia ao post" style="display:block;width:150px;height:auto;border:0;margin:0 auto 12px;">
 <p style="margin:0;font-family:${F};font-size:12px;line-height:1.6;color:#8A7F76;">Cria Social Club · feito pro criador brasileiro<br><a href="https://criasocialclub.com.br" style="color:#8A7F76;">criasocialclub.com.br</a> · <a href="${BASE}/privacidade" style="color:#8A7F76;">privacidade</a></p>
 </td></tr>
 </table></td></tr></table>
