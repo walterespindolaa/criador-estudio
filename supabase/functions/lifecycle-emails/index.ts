@@ -337,7 +337,7 @@ Deno.serve(async (req) => {
            ativo) e quem volta a usar sai dos grupos de "sumiu"/"não usou";
          - "Descadastre aqui" desliga só estes e-mails (prefs.reengajamento).
        Cada pessoa cai em no máximo um grupo por rodada, na ordem abaixo. */
-    const re = { re_confirmar: 0, re_comeco: 0, re_nao_usou: 0, re_trial: 0, re_sumiu: 0, re_volta_cancelou: 0 };
+    const re = { re_confirmar: 0, re_comeco: 0, re_nao_usou: 0, re_trial: 0, re_novidade: 0, re_sumiu: 0, re_volta_cancelou: 0 };
     {
       const SUPA = Deno.env.get("SUPABASE_URL")!;
       const { data: base, error: bErr } = await svc.rpc("reengajamento_base");
@@ -361,6 +361,29 @@ Deno.serve(async (req) => {
       const { data: jaRe } = await svc.from("emails_ciclo").select("user_id, tipo, ref").like("tipo", "re_%");
       const enviadoRe = new Set(((jaRe ?? []) as { user_id: string; tipo: string; ref: string | null }[]).map((r) => `${r.user_id}:${r.tipo}:${r.ref ?? ""}`));
       const dias = (s: string) => (now - Date.parse(s)) / dayMs;
+      /* NOVIDADE DO CRIA (Walter, 24/11/2026: e-mail pra quem nao entra ha 3 dias
+         "falando de alguma novidade do cria e incentivando elas a voltarem").
+         Quem ja usou e sumiu ha 3 a 13 dias recebe UMA novidade por vez da tabela
+         novidades_email (na ordem), nunca a mesma duas vezes. A trava de 1 e-mail
+         de reengajamento por semana continua valendo. */
+      type Novidade = {
+        slug: string; persona: string; assunto: string; titulo: string; paragrafos: string[];
+        botao_texto: string; botao_url: string; tag: string; tema: string;
+        exige_plano: string[] | null; pular_quem_entrou_comunidade: boolean;
+      };
+      const { data: novsData } = await svc.from("novidades_email")
+        .select("slug, persona, assunto, titulo, paragrafos, botao_texto, botao_url, tag, tema, exige_plano, pular_quem_entrou_comunidade")
+        .eq("ativo", true).order("ordem", { ascending: true });
+      const novidades = (novsData ?? []) as Novidade[];
+      const { data: naComunidade } = await svc.from("profiles").select("id").not("comunidade_entrou_em", "is", null);
+      const entrouComunidade = new Set(((naComunidade ?? []) as { id: string }[]).map((r) => r.id));
+      const escolherNovidade = (b: { id: string; plan: string | null }, persona: string, emTeste: boolean): Novidade | null =>
+        novidades.find((n) =>
+          (n.persona === "todos" || n.persona === persona)
+          && !(n.pular_quem_entrou_comunidade && entrouComunidade.has(b.id))
+          && (persona !== "criador" || !n.exige_plano || n.exige_plano.includes(b.plan ?? "") || (emTeste && n.exige_plano.includes("trial")))
+          && !enviadoRe.has(`${b.id}:re_novidade:${n.slug}`)) ?? null;
+      let novidadeDaVez: Novidade | null = null;
       const link = async (user_id: string, tipo: "sair_da_lista" | "confirmar") => {
         const { data } = await svc.from("email_links").insert({ user_id, tipo }).select("token").single();
         const t = (data as { token: string } | null)?.token;
@@ -370,6 +393,7 @@ Deno.serve(async (req) => {
       const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
 
       for (const b of (base ?? []) as Base[]) {
+        novidadeDaVez = null;
         if (!b.email) continue;
         const persona: "criador" | "sm" | "parceiro" =
           b.account_type === "manager" ? "sm" : b.account_type === "parceiro" ? "parceiro" : "criador";
@@ -402,6 +426,9 @@ Deno.serve(async (req) => {
             const dFim = (now - fimTeste) / dayMs;
             if (dFim >= 21 && dFim < 40) { tipo = "re_trial"; ref = "d21:" + b.trial_ends_at!.slice(0, 10); }
             else if (dFim >= 7 && dFim < 20) { tipo = "re_trial"; ref = "d7:" + b.trial_ends_at!.slice(0, 10); }
+          } else if (persona !== "parceiro" && usou && temAcesso && b.last_seen_at && dVisto >= 3 && dVisto < 14) {
+            novidadeDaVez = escolherNovidade(b, persona, fimTeste !== null && fimTeste > now);
+            if (novidadeDaVez) { tipo = "re_novidade"; ref = novidadeDaVez.slug; }
           } else if (persona !== "parceiro" && usou && temAcesso && b.last_seen_at) {
             const visto = b.last_seen_at.slice(0, 10);
             if (dVisto >= 30 && dVisto < 60) { tipo = "re_sumiu"; ref = "30:" + visto; }
@@ -506,6 +533,15 @@ Deno.serve(async (req) => {
                   : ["Faz duas semanas que você não passa no Cria. Acontece, a rotina engole.",
                     "Pra voltar sem peso: abre o banco de ideias, escolhe a que mais te anima e manda pra Cria IA montar o post."] }),
             botao: { texto: sm ? "Abrir minha agenda" : "Ver minhas ideias", url: sm ? casa : `${APP}/app/ideias` },
+          });
+        } else if (tipo === "re_novidade" && novidadeDaVez) {
+          const n = novidadeDaVez;
+          ok = await enviarEmail(svc, {
+            para: b.email, nome: b.name, etiqueta: `re_novidade_${n.slug}`, ...pessoal,
+            assunto: n.assunto, titulo: n.titulo, tag: n.tag,
+            tema: n.tema as Parameters<typeof enviarEmail>[1]["tema"],
+            paragrafos: n.paragrafos,
+            botao: { texto: n.botao_texto, url: n.botao_url.startsWith("http") ? n.botao_url : `${APP}${n.botao_url}` },
           });
         } else if (tipo === "re_volta_cancelou") {
           ok = await enviarEmail(svc, {
