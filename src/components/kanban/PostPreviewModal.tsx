@@ -31,6 +31,9 @@ interface PostPreviewContentProps {
    *  A mídia do carrossel saiu das lâminas e virou uma tira só; a prévia ainda
    *  lia a imagem de cada lâmina e ficava no placeholder. */
   carouselMedia?: string[];
+  /** Vídeo de cada lâmina, na mesma posição de carouselMedia (null = imagem).
+   *  Walter, 24/11/2026: vídeo dentro do carrossel não aparecia na prévia. */
+  carouselVideos?: (string | null)[];
   // No modal, a fila de abas deixa um vao a direita pro X redondo nao cobrir o YT.
   folgaParaFechar?: boolean;
   /** Painel do editor (19/10/2026): a plataforma já foi escolhida no
@@ -103,7 +106,7 @@ function VideoDoDrive({ fileId, poster, className }: { fileId: string; poster: s
 
 // Conteudo puro da previa (sem Dialog), reutilizavel: vive no modal fullscreen do
 // mobile E na coluna direita fixa do desktop dentro do PostEditor.
-export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections, carouselMedia, folgaParaFechar, semAbasPlataforma, capa, envioPct }: PostPreviewContentProps) {
+export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections, carouselMedia, carouselVideos, folgaParaFechar, semAbasPlataforma, capa, envioPct }: PostPreviewContentProps) {
   const initials = (userName || "C")[0].toUpperCase();
   // Trocou a capa, ela volta pra frente mesmo depois de um play.
   const [capaVista, setCapaVista] = useState<string | null>(null);
@@ -191,7 +194,12 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
           ? currentSlide.driveFileId
           : `https://lh3.googleusercontent.com/d/${encodeURIComponent(currentSlide.driveFileId)}=w800`)
       : null;
-  const isCurrentSlideVideo = false; // We don't have this info easily for slides yet, keeping as image for now
+  // Lâmina de vídeo: o endereço do player vem em carouselVideos, na mesma posição.
+  const videoDaLamina = carouselVideos?.[slideIdx] || null;
+  const laminaBunny = !!videoDaLamina && videoDaLamina.includes("iframe.mediadelivery.net");
+  const laminaDriveId = videoDaLamina && videoDaLamina.includes("drive.google.com")
+    ? videoDaLamina.match(/(?:\/d\/|[?&]id=)([a-zA-Z0-9_-]+)/)?.[1] ?? null
+    : null;
 
   // Gradient placeholder when no media
   /* `icone={false}` quando quem chama já desenha o próprio símbolo. Sem isso o
@@ -236,7 +244,15 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
       const imgUrl = currentCarouselMedia;
       return (
         <div className="relative w-full aspect-[4/5] overflow-hidden">
-          {imgUrl ? (
+          {videoDaLamina ? (
+            laminaBunny ? (
+              <VideoMediaSlot key={videoDaLamina} viewUrl={videoDaLamina} className="w-full h-full border-0" />
+            ) : laminaDriveId ? (
+              <VideoDoDrive key={laminaDriveId} fileId={laminaDriveId} poster={imgUrl || `https://lh3.googleusercontent.com/d/${laminaDriveId}=w800`} className="absolute inset-0 w-full h-full" />
+            ) : (
+              <video key={videoDaLamina} src={videoDaLamina} poster={imgUrl || undefined} controls playsInline className="w-full h-full object-cover" />
+            )
+          ) : imgUrl ? (
             <img src={imgUrl} alt={`Lâmina ${slideIdx + 1}`} className="w-full h-full object-cover" loading="lazy"
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
           ) : (

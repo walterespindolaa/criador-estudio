@@ -47,6 +47,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { fireConfetti, primeiraPublicacaoDaSemana } from "@/lib/confetti";
 import { StickerCelebration } from "@/components/shared/StickerCelebration";
 import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS, BUNNY_CRIAPOST_CDN_HOSTNAME } from "@/lib/constants";
@@ -1372,10 +1373,19 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
         return id ? `https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w800` : undefined;
       })();
   const previewMediaType = mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image";
-  // Carrossel: cada imagem da tira vira a lâmina na mesma posição da prévia.
+  /* Carrossel: cada mídia da tira vira a lâmina na mesma posição da prévia.
+     VÍDEO NO CARROSSEL (Walter, 24/11/2026: "aqui nao aparece a visualizacao,
+     aqui eu tenho vídeo dentro de carrossel"). Antes os vídeos eram filtrados
+     e a prévia mostrava 4/4 com 7 mídias na tira. Agora todo item vira lâmina:
+     a imagem (ou o quadro do vídeo) vai em previewCarouselMedia e, no vídeo, o
+     endereço do player vai em previewCarouselVideos, na mesma posição. */
   const previewCarouselMedia = useMemo(() => mediaList
-    .filter((m) => !m.file_type?.includes("video"))
-    .map((m) => m.thumbnail_url || m.view_url || `https://lh3.googleusercontent.com/d/${encodeURIComponent(m.external_file_id || m.id)}=w800`),
+    .map((m) => m.thumbnail_url || (m.file_type?.includes("video") ? "" : m.view_url) || `https://lh3.googleusercontent.com/d/${encodeURIComponent(m.external_file_id || m.id)}=w800`),
+  [mediaList]);
+  const previewCarouselVideos = useMemo(() => mediaList
+    .map((m) => (m.file_type?.includes("video")
+      ? (m.view_url || `https://drive.google.com/uc?id=${encodeURIComponent(m.external_file_id || m.id)}`)
+      : null)),
   [mediaList]);
 
   // Reordena a mídia (carrossel): a ordem da tira = a ordem dos slides.
@@ -1895,6 +1905,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     mediaType={previewMediaType}
                     sections={sections}
                     carouselMedia={previewCarouselMedia}
+                    carouselVideos={previewCarouselVideos}
                     capa={comCapa ? capaDoPost : null}
                     envioPct={activeUpload?.pct ?? null}
                   />
@@ -3174,6 +3185,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
         mediaType={previewMediaType}
         sections={sections}
         carouselMedia={previewCarouselMedia}
+        carouselVideos={previewCarouselVideos}
         capa={comCapa ? capaDoPost : null}
         envioPct={activeUpload?.pct ?? null}
       />
@@ -3287,6 +3299,40 @@ function CarouselMediaStrip({
   useEffect(() => {
     try { localStorage.setItem("cria_lista_midias", listaAberta ? "1" : "0"); } catch { /* sem storage */ }
   }, [listaAberta]);
+  /* MINIATURA QUEBRADA DO VÍDEO (Walter, 24/11/2026). Logo depois do envio o
+     Bunny ainda está convertendo e o thumbnail.jpg dá 404; a imagem ficava com
+     o ícone de quebrada até recarregar a página. Agora esconde o ícone e tenta
+     de novo a cada 5 s (até 12 vezes, cerca de 1 minuto). */
+  const tentarDeNovo = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    const n = Number(img.dataset.tentativa || "0");
+    img.style.visibility = "hidden";
+    if (n >= 12) return;
+    img.dataset.tentativa = String(n + 1);
+    const base = img.src.replace(/[?&]t=\d+$/, "");
+    window.setTimeout(() => {
+      img.onload = () => { img.style.visibility = "visible"; };
+      img.src = `${base}${base.includes("?") ? "&" : "?"}t=${Date.now()}`;
+    }, 5000);
+  };
+  /* BAIXAR ABRIA UMA ABA (Walter e Gabi, 24/11/2026). O botão era um link
+     direto pro view_url: no vídeo do Bunny isso é a página do player, que abre
+     numa aba e não salva. Agora usa o mesmo download do Cria Post da social
+     mídia (acha o MP4 do vídeo e baixa como arquivo). */
+  const [baixandoId, setBaixandoId] = useState<string | null>(null);
+  const baixarUm = async (m: DriveRef, i: number) => {
+    setBaixandoId(m.id);
+    try {
+      const nome = (m.file_name || "midia").replace(/\.[a-z0-9]{2,5}$/i, "");
+      const r = await downloadMediaFile(m, mediaDownloadName(nome, i, m));
+      if (r === "video") toast.message("Esse vídeo ainda está sendo preparado. Tente de novo em alguns minutos.");
+      if (r === "opened") toast.message("Abri o arquivo numa aba: segure ou clique com o botão direito pra salvar.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não consegui baixar.");
+    } finally {
+      setBaixandoId(null);
+    }
+  };
   const onDragEnd = (r: DropResult) => {
     if (!r.destination) return;
     const from = r.source.index;
@@ -3299,11 +3345,12 @@ function CarouselMediaStrip({
   };
   const thumb = (m: DriveRef, cls: string) => {
     const isVideo = m.file_type?.includes("video");
-    const src = m.thumbnail_url || m.view_url || "";
+    // Vídeo não usa o view_url (é o player do Bunny, não imagem).
+    const src = m.thumbnail_url || (isVideo ? "" : m.view_url) || "";
     return (
       <span className={cn("relative block overflow-hidden bg-muted shrink-0", cls)}>
         {src ? (
-          <img src={src} alt="" draggable={false} loading="lazy" className="w-full h-full object-cover select-none" />
+          <img src={src} alt="" draggable={false} loading="lazy" className="w-full h-full object-cover select-none" onError={tentarDeNovo} />
         ) : (
           <span className="w-full h-full flex items-center justify-center text-muted-foreground"><ImageIcon className="h-5 w-5" /></span>
         )}
@@ -3359,7 +3406,7 @@ function CarouselMediaStrip({
         {listaAberta && (
           <div className="px-2 pb-2">
             {media.map((m, i) => {
-              const baixar = m.download_url || m.view_url || null;
+              const baixar = m.download_url || m.view_url || m.thumbnail_url || null;
               return (
                 <div key={m.id} className="flex items-center gap-2.5 rounded-xl px-1.5 py-1.5 hover:bg-muted/40">
                   <span className="w-5 text-center text-[12px] font-display font-extrabold tabular-nums">{i + 1}</span>
@@ -3369,10 +3416,10 @@ function CarouselMediaStrip({
                     <span className="block text-[11px] font-body text-muted-foreground">{m.file_type?.includes("video") ? "Vídeo" : "Imagem"}</span>
                   </span>
                   {baixar && (
-                    <a href={baixar} target="_blank" rel="noreferrer" aria-label="Baixar"
-                      className="shrink-0 grid place-items-center h-8 w-8 rounded-full border border-border text-muted-foreground hover:text-foreground">
-                      <Download className="h-3.5 w-3.5" />
-                    </a>
+                    <button type="button" onClick={() => baixarUm(m, i)} disabled={baixandoId === m.id} aria-label="Baixar"
+                      className="shrink-0 grid place-items-center h-8 w-8 rounded-full border border-border text-muted-foreground hover:text-foreground disabled:opacity-50">
+                      {baixandoId === m.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                    </button>
                   )}
                   <button type="button" onClick={() => onRemove(m)} disabled={removingIds.has(m.id)} aria-label="Remover"
                     className="shrink-0 grid place-items-center h-8 w-8 rounded-full border border-border text-muted-foreground hover:text-destructive disabled:opacity-50">
