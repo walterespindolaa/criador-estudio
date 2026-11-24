@@ -1404,7 +1404,18 @@ export function ClientDetail({ client, onBack, embedded, activeTab, onTabChange 
                   caption={f.caption ?? undefined} handle={client.instagram_handle || undefined}
                   approved={editing.approval_status === "aprovado"}
                   title={f.title || undefined} referenceUrl={serializeRefLinks(refLinks)}
-                  paraSair={midiasParaSair} onParaSairChange={setMidiasParaSair} />
+                  paraSair={midiasParaSair} onParaSairChange={setMidiasParaSair}
+                  aoVivo={{ data: f.scheduled_date ?? null, hora: f.scheduled_time ?? null }}
+                  antesDeAgir={async () => {
+                    /* Agendar é ação explícita: grava a data e a hora da tela
+                       antes, senão o Instagram sairia no horário antigo do banco
+                       (Gabriela, 24/11/2026). Só essas duas colunas. */
+                    const { error } = await supabase.from("posts")
+                      .update({ scheduled_date: f.scheduled_date ?? null, scheduled_time: f.scheduled_time ?? null } as never)
+                      .eq("id", editing.id);
+                    if (error) { toast.error("Não consegui salvar a data antes de agendar."); throw error; }
+                    void qc.invalidateQueries({ queryKey: ["ig-publicacao", editing.id] });
+                  }} />
               ) : (
                 <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Preparando o post pra você anexar a mídia…</p>
               )}

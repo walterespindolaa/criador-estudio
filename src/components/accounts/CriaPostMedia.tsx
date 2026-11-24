@@ -90,7 +90,7 @@ function MediaGrip({ handleProps }: { handleProps?: DraggableProvidedDragHandleP
   );
 }
 
-export function CriaPostMedia({ postId, platform, format, caption, handle, approved, title, referenceUrl, paraSair, onParaSairChange }: {
+export function CriaPostMedia({ postId, platform, format, caption, handle, approved, title, referenceUrl, paraSair, onParaSairChange, aoVivo, antesDeAgir }: {
   postId: string; platform: string; format: string; caption?: string; handle?: string; approved?: boolean;
   title?: string; referenceUrl?: string | null;
   /** REMOÇÃO SÓ NO SALVAR (Gabriela, 16/10/2026: "eu exclui uma midia, apertei
@@ -98,6 +98,13 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
    *  MARCA a mídia; quem apaga de verdade é o Salvar do post (removeMany) e o
    *  Cancelar só limpa a lista. Sem estas props, o X apaga na hora como antes. */
   paraSair?: string[]; onParaSairChange?: (ids: string[]) => void;
+  /** DATA AO VIVO NO CRIA POST (Gabriela, 24/11/2026: "quando coloca o horario,
+   *  ele nao atualiza no agendar, no de criador ele atualiza automatico"). O
+   *  editor da social mídia não passava a data da tela pro painel do Instagram,
+   *  que lia só o que estava salvo. Agora passa, igual ao editor do criador. */
+  aoVivo?: { data: string | null; hora: string | null };
+  /** Grava data e hora antes de agendar ou publicar, pra nunca sair na hora velha. */
+  antesDeAgir?: () => Promise<void>;
 }) {
   const { list, antigas, uploadImage, uploadVideo, addDriveLink, remove, removeAll, reorder } = useCriaPostMedia(postId);
   const adiado = !!onParaSairChange;
@@ -376,7 +383,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
     <div className="space-y-3">
       {/* Publicar direto pelo Cria (ciclo 5). Só aparece pra conta que pode;
           antes da aprovação do cliente mostra que libera depois. */}
-      <PublicarNoInstagram postId={postId} formato={format} />
+      <PublicarNoInstagram postId={postId} formato={format} aoVivo={aoVivo} antesDeAgir={antesDeAgir} />
       {approved && (
         <div className="rounded-2xl border border-green-200 bg-green-50 p-3 space-y-2">
           <p className="text-xs font-body font-bold text-green-800">Aprovado pelo cliente, pronto pra publicar.</p>
