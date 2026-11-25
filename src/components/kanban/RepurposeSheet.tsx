@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { callAIContextBuilder } from "@/lib/ai/claude";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
+import { useProfile } from "@/hooks/useProfile";
 import { usePosts } from "@/hooks/usePosts";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { FORMAT_LABELS } from "@/lib/constants";
@@ -40,6 +41,8 @@ const FORMATS_BY_PLATFORM: Record<string, string[]> = {
   instagram: ["reels", "carrossel", "foto", "story"],
   tiktok: ["video", "carrossel", "foto"],
   youtube: ["video", "shorts"],
+  // Reaproveitar pro LinkedIn (Walter, 25/11/2026). Só o master vê.
+  linkedin: ["texto", "documento", "carrossel", "foto", "video"],
 };
 
 const TONES: { id: string; label: string }[] = [
@@ -77,6 +80,7 @@ function parseRepurpose(raw: unknown): RepurposeResult | null {
 export function RepurposeSheet({ open, onOpenChange, originalPost, mode = "repurpose" }: Props) {
   const { user } = useAuth();
   const { profile } = useActiveProfile();
+  const { profile: perfilSessao } = useProfile();
   const { createPost } = usePosts();
   const navigate = useNavigate();
   const isRecycle = mode === "recycle";
@@ -211,7 +215,7 @@ export function RepurposeSheet({ open, onOpenChange, originalPost, mode = "repur
               Plataforma destino
             </Label>
             <div className="flex flex-wrap gap-2">
-              {PLATFORMS.map((p) => (
+              {[...PLATFORMS, ...(perfilSessao?.role === "admin" ? [{ id: "linkedin", label: "LinkedIn" }] : [])].map((p) => (
                 <button
                   key={p.id}
                   type="button"

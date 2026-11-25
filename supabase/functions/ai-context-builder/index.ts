@@ -268,6 +268,20 @@ REGRAS OBRIGATÓRIAS:
   })
 }
 
+// MODO LINKEDIN (Walter, 25/11/2026: "a IA que vai redigir por tras" tem que
+// saber escrever pro LinkedIn). Vale pra qualquer operação que receba a
+// plataforma "linkedin". O tom continua vindo do brandbook da pessoa.
+const MODO_LINKEDIN = `MODO LINKEDIN (a plataforma é LinkedIn, perfil pessoal):
+- Gancho nas 2 primeiras linhas, até uns 200 caracteres: é só isso que aparece antes do "ver mais".
+- Parágrafos de 1 a 2 frases, com linha em branco entre eles. Nada de bloco de texto.
+- Pode ser longo (até 3.000 caracteres) quando a história pede; prefira 800 a 1.500.
+- Tom profissional e pessoal ao mesmo tempo: primeira pessoa, bastidor, aprendizado, número real do dossiê (se não houver, lacuna entre colchetes).
+- Sem gíria de Instagram ("bora", "arrasta pro lado", "link na bio", "salva esse post").
+- Emoji quase nenhum (no máximo 1 ou 2, e só se fizer sentido).
+- No máximo 3 hashtags, no fim.
+- Termine com uma pergunta ou convite pra comentar.`
+const ehLinkedIn = (p: unknown) => String(p ?? '').toLowerCase() === 'linkedin'
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req)
   if (req.method === 'OPTIONS') {
@@ -927,6 +941,8 @@ Responda APENAS com JSON, neste formato exato:
           carrossel: 'CARROSSEL (6 a 8 lâminas): lâmina 1 = hook que obriga a arrastar; cada lâmina seguinte com UMA ideia só, em frase curta; penúltima = síntese; última = CTA. "estrutura" = uma string por lâmina, começando com "L1:", "L2:"...',
           reels: 'REELS (30 a 45s, vertical): os 2 primeiros segundos são o gancho falado + texto na tela; 3 a 5 cenas com fala e ação visual; final com CTA falado. "estrutura" = uma string por cena, com fala entre aspas e a ação visual entre colchetes.',
           story: 'SEQUÊNCIA DE STORIES (4 a 6 telas): tela 1 prende com pergunta ou afirmação forte; use enquete, caixinha ou quiz em pelo menos 1 tela; a última tela pede resposta ou clique. "estrutura" = uma string por tela, começando com "T1:", "T2:"... e dizendo qual sticker usar.',
+          linkedin: 'POST DE LINKEDIN (texto): o gancho são as 2 primeiras linhas, antes do "ver mais"; depois contexto, virada e 3 aprendizados em parágrafos curtos; fecha com pergunta pra comentar. "estrutura" = uma string por bloco (gancho, contexto, virada, aprendizados, fechamento). ' + MODO_LINKEDIN,
+          linkedin_documento: 'DOCUMENTO DE LINKEDIN (PDF em 6 a 10 páginas): página 1 = título que promete algo concreto; uma ideia por página em frase curta; penúltima = síntese; última = convite pra comentar ou seguir. O texto do post apresenta o documento em 3 a 5 linhas. "estrutura" = uma string por página, começando com "P1:", "P2:"... ' + MODO_LINKEDIN,
           youtube: 'VÍDEO DE YOUTUBE (6 a 12 min): título com promessa clara + curiosidade; roteiro em blocos: gancho (0 a 30s), contexto, 3 a 5 blocos de conteúdo com exemplo real em cada, fechamento com próximo passo. "estrutura" = uma string por bloco, com a minutagem aproximada.',
         }
         const regraFormato = REGRAS_FORMATO[formatoPedido] ?? REGRAS_FORMATO.reels
@@ -1040,11 +1056,15 @@ Termine 100% das legendas com algo que provoque resposta:
 - Comunidade: "Marca alguém que precisa ver isso"
 
 RESPONDA APENAS COM A LEGENDA. Sem título, sem aspas, sem explicação.${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}`
+        // LinkedIn: as regras de Instagram acima (emojis, tamanho, "sem hashtags") não valem.
+        if (ehLinkedIn(data.plataforma)) {
+          operationPrompt += `\n\n${MODO_LINKEDIN}\nESTAS REGRAS DO LINKEDIN SUBSTITUEM as de tamanho, emoji e hashtag acima.`
+        }
         userPrompt = `TÍTULO DO POST: "${data.titulo || ''}"
 PILAR: ${data.pilar || 'geral'}
 NICHO: ${data.nicho || 'lifestyle'}
 CONTEÚDO/ROTEIRO: ${(data.conteudo || data.roteiro || 'não informado').slice(0, 500)}`
-        maxTokens = 500
+        maxTokens = ehLinkedIn(data.plataforma) ? 1500 : 500
         break
       case 'suggest-hashtags':
         operationPrompt = `Você é especialista em estratégia de hashtags para redes sociais brasileiras.
@@ -1066,6 +1086,10 @@ REGRAS:
 
 RESPONDA APENAS com array JSON de strings, sem texto:
 ["hashtag1","hashtag2","hashtag3",...,"hashtag20"]${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}`
+        // LinkedIn: poucas hashtags (até 3), em vez das 20 do Instagram.
+        if (ehLinkedIn(data.plataforma)) {
+          operationPrompt += `\n\nPLATAFORMA LINKEDIN: ignore as 3 camadas e os 20 itens. Devolva NO MÁXIMO 3 hashtags, específicas do assunto e da profissão, no mesmo formato de array JSON.`
+        }
         userPrompt = `TÍTULO: "${data.titulo || ''}"
 FORMATO: ${data.formato || 'post'}
 PLATAFORMA: ${data.plataforma || 'instagram'}
@@ -1175,6 +1199,10 @@ REGRAS:
 
 - Se for de Instagram→YouTube: expanda pra formato mais longo, storytelling
 
+- Se o destino for LinkedIn: reescreva como post de LinkedIn seguindo o MODO LINKEDIN abaixo e devolva no máximo 3 hashtags (não 10)
+
+${MODO_LINKEDIN}
+
 RESPONDA APENAS com JSON válido:
 
 {"titulo":"novo hook max 70 chars","legenda":"legenda adaptada","hashtags":["tag1","tag2"],"dica":"dica de execução"}`
@@ -1209,6 +1237,8 @@ Aplique a instrução e retorne APENAS a legenda nova, sem explicações, sem as
 Mantenha os emojis se houver. Mantenha hashtags se houver.
 
 Linguagem natural brasileira.${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}`
+        // Post de LinkedIn: a legenda refinada segue o jeito do LinkedIn.
+        if (ehLinkedIn(data.plataforma)) operationPrompt += `\n\n${MODO_LINKEDIN}`
         userPrompt = `INSTRUÇÃO: ${data.instrucao || 'Reescreva'}
 
 LEGENDA ORIGINAL:
@@ -1220,7 +1250,7 @@ PLATAFORMA: ${data.plataforma || 'instagram'}
 FORMATO: ${data.formato || 'post'}
 
 NICHO: ${data.nicho || 'geral'}`
-        maxTokens = 500
+        maxTokens = ehLinkedIn(data.plataforma) ? 1500 : 500
         break
       case 'score-caption':
         operationPrompt = `Você é um analista de copy de redes sociais brasileiras. Avalie a legenda recebida.
@@ -1241,8 +1271,12 @@ ENTREGUE:
 
 RESPONDA APENAS com JSON válido, sem texto antes ou depois:
 {"nota":7.5,"veredito":"string","melhorias":["m1","m2"],"variacoes":["v1","v2","v3"]}`
+        // LinkedIn: o critério muda (gancho antes do "ver mais", parágrafos curtos, poucas hashtags).
+        if (ehLinkedIn(data.plataforma)) {
+          operationPrompt += `\n\nAVALIE COMO POST DE LINKEDIN. Critério extra: o gancho cabe nas 2 primeiras linhas (antes do "ver mais")? Parágrafos curtos? No máximo 3 hashtags? As variações seguem o MODO LINKEDIN.\n${MODO_LINKEDIN}`
+        }
         userPrompt = `LEGENDA:
-${(data.legenda || '').slice(0, 1000)}
+${(data.legenda || '').slice(0, ehLinkedIn(data.plataforma) ? 3000 : 1000)}
 
 FORMATO: ${data.formato || 'post'}
 PLATAFORMA: ${data.plataforma || 'instagram'}
@@ -1558,6 +1592,8 @@ Público: ${data.publico || '(não informado)'}`
         const n = Math.max(2, Math.min(12, Number(data.qtd) || 5))
         const ehReels = String(data.formato ?? '').toLowerCase().includes('reels')
           || String(data.formato ?? '').toLowerCase().includes('video')
+        // Documento de LinkedIn (PDF em páginas) usa o mesmo roteiro página a página.
+        const ehDocumento = String(data.formato ?? '').toLowerCase() === 'documento' || ehLinkedIn(data.plataforma)
 
         operationPrompt = `Você é um redator sênior de conteúdo para Instagram no Brasil. Escreva o conteúdo ${ehReels ? 'de cada CENA de um reels' : 'de cada PÁGINA de um carrossel'}, no tom da marca desta pessoa.
 
@@ -1575,6 +1611,10 @@ RESPONDA APENAS JSON válido:
 - Exatamente ${n} itens em "laminas".
 - "hook" e "cta" são os MESMOS da 1ª e da última ${ehReels ? 'cena' : 'página'}, mas escritos como campo isolado (o post tem um lugar próprio pra cada um).`
 
+        if (ehDocumento && !ehReels) {
+          operationPrompt = operationPrompt.replace('para Instagram no Brasil', 'para LinkedIn no Brasil')
+            + `\n\nÉ UM DOCUMENTO (PDF) DE LINKEDIN: CTA final é comentar ou seguir, nunca "salvar" nem "link na bio". Tom profissional e pessoal.`
+        }
         userPrompt = `Formato: ${data.formato || 'carrossel'}
 Tema/título: ${data.tema || data.titulo || '(sem título)'}
 ${data.angulo ? `Ângulo que a pessoa quer: ${data.angulo}` : ''}
