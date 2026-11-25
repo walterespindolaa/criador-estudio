@@ -174,6 +174,8 @@ interface PostEditorProps {
   userId: string;
   onSaved: () => void;
   initialFormat?: string;
+  /** Post novo já nasce nesta rede (passo 1 do "Começar um post", 25/11/2026). */
+  initialPlatform?: string;
   /** Post novo já nasce neste status (o + no cabeçalho da coluna do board). */
   initialStatus?: string;
   /** Post novo já nasce com esta data (o + no dia do calendário). */
@@ -241,7 +243,7 @@ const FALLBACK_PROMPTS = [
   { title: "Carrossel", text: "Monte carrossel de 8 slides sobre [TEMA]. Slide 1 = hook. Último = CTA.", category: "roteiro" },
 ];
 
-export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved, initialFormat, initialStatus, initialDate }: PostEditorProps) {
+export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved, initialFormat, initialPlatform, initialStatus, initialDate }: PostEditorProps) {
   // lg do Tailwind (1024px): é onde a coluna da prévia aparece.
   const [telaLarga, setTelaLarga] = useState(() => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches);
   useEffect(() => {
@@ -623,7 +625,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
         setSections(Array(5).fill(null).map(emptySection));
       }
     } else {
-      setTitle(""); setPlatform("instagram"); setFormat(initialFormat || "reels");
+      setTitle(""); setPlatform(initialPlatform || "instagram"); setFormat(initialFormat || "reels");
       setPillarId(""); setStatus(initialStatus || "ideia"); setHook(""); setScript("");
       setCaption(""); setCta(""); setScheduledDate(initialDate || ""); setScheduledTime(""); setNotes("");
       setWeekNumber(null);

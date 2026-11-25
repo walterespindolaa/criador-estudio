@@ -437,6 +437,8 @@ const Criando = () => {
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingFormat, setPendingFormat] = useState<string | null>(null);
+  // Rede escolhida no passo 1 do "Começar um post" (protótipo aprovado em 25/11/2026).
+  const [pendingRede, setPendingRede] = useState<string | null>(null);
   // Coluna de nascimento do post: o + no cabeçalho de cada coluna cria o post
   // já naquele status (pedido do Walter, 31/08: "adicionar direto no quadro
   // que eu quero"). O Novo Post geral zera e nasce em Ideia.
@@ -448,8 +450,8 @@ const Criando = () => {
   const openNew = () => { setPendingStatus(null); setPendingDate(null); setPickerOpen(true); };
   const openNewInColumn = (statusKey: string) => { setPendingStatus(statusKey); setPendingDate(null); setPickerOpen(true); };
   const openNewAtDay = (dateKey: string) => { setPendingStatus(null); setPendingDate(dateKey); setPickerOpen(true); };
-  const startFromFormat = (fmt: string) => { setPendingFormat(fmt); setPickerOpen(false); setSelectedPost(null); setDrawerOpen(true); };
-  const startBlank = () => { setPendingFormat(null); setPickerOpen(false); setSelectedPost(null); setDrawerOpen(true); };
+  const startFromFormat = (fmt: string, rede: string) => { setPendingFormat(fmt); setPendingRede(rede); setPickerOpen(false); setSelectedPost(null); setDrawerOpen(true); };
+  const startBlank = (rede?: string, formato?: string) => { setPendingFormat(formato ?? null); setPendingRede(rede ?? null); setPickerOpen(false); setSelectedPost(null); setDrawerOpen(true); };
   const openEdit = (post: Post) => { setSelectedPost(post); setDrawerOpen(true); };
 
   const movePostStatus = async (postId: string, newStatus: string) => {
@@ -1523,7 +1525,7 @@ const Criando = () => {
         </div>
         ))}
       </motion.div>
-      <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={activeAccountId || user?.id || ""} onSaved={() => { /* invalidations */ }} initialFormat={pendingFormat ?? undefined} initialStatus={pendingStatus ?? undefined} initialDate={pendingDate ?? undefined} />
+      <PostEditor open={drawerOpen} onOpenChange={setDrawerOpen} post={selectedPost} pillars={pillars} userId={activeAccountId || user?.id || ""} onSaved={() => { /* invalidations */ }} initialFormat={pendingFormat ?? undefined} initialPlatform={pendingRede ?? undefined} initialStatus={pendingStatus ?? undefined} initialDate={pendingDate ?? undefined} />
 
       <FormatPicker open={pickerOpen} onPick={startFromFormat} onBlank={startBlank} onOpenChange={setPickerOpen} />
 
