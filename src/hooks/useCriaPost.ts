@@ -10,6 +10,9 @@ const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 const PORTAL_ORIGIN =
   ((import.meta.env as Record<string, string | undefined>).VITE_CRIAPOST_ORIGIN) ?? window.location.origin;
 
+// Último reenvio gravado por post nesta aba (evita o aviso triplicado).
+const ultimoReenvio = new Map<string, number>();
+
 // Abas extras do portal do cliente. O portal já sabe renderizar as duas;
 // isto aqui é o interruptor que a gestora liga por cliente.
 export type PortalSettings = { show_calendar?: boolean; show_report?: boolean };
@@ -365,7 +368,12 @@ export function useExternalPosts(clientId: string | null) {
       // o "vai e volta" com o cliente (cada pedido de ajuste dele + cada reenvio nosso
       // ficam registrados em post_approval_comments). Best-effort: se falhar, não trava
       // o save do post. author_role "social_media" = nós (o card do cliente é "cliente_externo").
-      if (resend) {
+      /* Um aviso por reenvio (25/11/2026): o reenvio da Gabi gravou três
+         "Ajustado e reenviado" no mesmo segundo (o save corre mais de uma vez
+         no mesmo clique) e a cliente via o recado repetido no histórico. */
+      const ultimo = ultimoReenvio.get(id) ?? 0;
+      if (resend && Date.now() - ultimo > 5000) {
+        ultimoReenvio.set(id, Date.now());
         await sbFrom("post_approval_comments").insert({
           post_id: id, author_id: agencyOwnerId, author_role: "social_media",
           content: "Ajustado e reenviado pro cliente.",

@@ -1700,3 +1700,55 @@ export function useConfirmarPagamento() {
     onError: (e: unknown) => toast.error((e as Error)?.message ?? "Não consegui registrar."),
   });
 }
+
+/* SEM CACHÊ COMBINADO, "ESTOU CIENTE" (Gabriela, 24/11/2026). Peça entregue
+   sem valor ficava no aviso pra sempre, mesmo quando ela e o parceiro
+   combinaram que não tem cobrança, ou quando o editor ganha valor fixo.
+   Tabela cache_dispensado: com peca_id só aquela peça sai do aviso; sem
+   peca_id, todo o parceiro. Só esconde o lembrete, não mexe em Caixa. */
+export function useCacheDispensado() {
+  const { agencyOwnerId } = useActiveAccount();
+  return useQuery<{ pecas: Set<string>; parceiros: Set<string> }>({
+    queryKey: ["cache-dispensado", agencyOwnerId],
+    enabled: !!agencyOwnerId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("cache_dispensado")
+        .select("peca_id, member_id")
+        .eq("agencia_id", agencyOwnerId);
+      // Tabela ainda não criada no banco: segue sem nada dispensado.
+      if (error) return { pecas: new Set(), parceiros: new Set() };
+      const linhas = (data ?? []) as { peca_id: string | null; member_id: string | null }[];
+      return {
+        pecas: new Set(linhas.filter((l) => l.peca_id).map((l) => l.peca_id!)),
+        parceiros: new Set(linhas.filter((l) => !l.peca_id && l.member_id).map((l) => l.member_id!)),
+      };
+    },
+  });
+}
+
+export function useDispensarCache() {
+  const qc = useQueryClient();
+  const { agencyOwnerId } = useActiveAccount();
+  return useMutation({
+    mutationFn: async (v: { pecaId?: string; memberId?: string; desfazer?: boolean }) => {
+      if (!agencyOwnerId) throw new Error("Conta não carregada");
+      if (v.desfazer) {
+        let q = sbFrom("cache_dispensado").delete().eq("agencia_id", agencyOwnerId);
+        q = v.pecaId ? q.eq("peca_id", v.pecaId) : q.is("peca_id", null).eq("member_id", v.memberId);
+        const { error } = await q;
+        if (error) throw error;
+        return;
+      }
+      const { error } = await sbFrom("cache_dispensado").insert({
+        agencia_id: agencyOwnerId,
+        peca_id: v.pecaId ?? null,
+        member_id: v.memberId ?? null,
+      });
+      // 23505: já estava dispensado, tudo certo.
+      if (error && error.code !== "23505") throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["cache-dispensado"] }),
+    onError: () => toast.error("Não deu pra salvar agora. Tente de novo."),
+  });
+}

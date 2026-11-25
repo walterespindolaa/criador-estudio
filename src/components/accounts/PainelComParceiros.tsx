@@ -17,7 +17,7 @@ import {
 } from "@/hooks/useParceiro";
 import { brlReais } from "@/lib/money";
 import { FORMAT_CHIP_SOLID_CLASS, formatColorVars } from "@/lib/format-colors";
-import { useAssumirRevisao, useMarcaDosClientes, usePedidosDoCliente } from "@/hooks/useParceiro";
+import { useAssumirRevisao, useCacheDispensado, useDispensarCache, useMarcaDosClientes, usePedidosDoCliente } from "@/hooks/useParceiro";
 import { AcoesDeRevisao } from "@/components/accounts/RevisaoDaEntrega";
 import { MaterialAbertoDialog } from "@/components/parceiro/MaterialAbertoDialog";
 import { FechamentoDoParceiroDialog } from "@/components/accounts/CaixaTerceiros";
@@ -763,7 +763,28 @@ export function PainelComParceiros({ clientes }: {
   /* ENTREGUE SEM CACHÊ (Walter, 14/09/2026): o parceiro fez o trabalho e a peça
      não entrou no Caixa nem no "a receber" dele. Sem esta lista, o furo só
      aparece quando ele cobra, e aí a conversa já começa errada. */
-  const semCache = pecas.filter((p) => p.producao_status === "entregue" && !Number(p.cache_parceiro ?? 0));
+  /* "Sem cachê" (Gabriela, 24/11/2026): peça ou parceiro que ela marcou como
+     sem cobrança (ou valor fixo) sai do aviso. */
+  const { data: dispensado } = useCacheDispensado();
+  const dispensar = useDispensarCache();
+  const semCache = pecas.filter((p) => p.producao_status === "entregue" && !Number(p.cache_parceiro ?? 0)
+    && !dispensado?.pecas.has(p.id) && !dispensado?.parceiros.has(p.assignee_id));
+  const marcarSemCache = (p: PecaExterna) => {
+    const nome = nomeParceiro.get(p.assignee_id)?.nome ?? nomePelaDescricao.get(p.assignee_id) ?? "este parceiro";
+    dispensar.mutate({ pecaId: p.id }, {
+      onSuccess: () => toast.success("Marcada como sem cachê.", {
+        description: `Se ${nome} recebe valor fixo, dá pra parar de avisar de todas as peças.`,
+        action: {
+          label: "Nunca avisar",
+          onClick: () => dispensar.mutate({ memberId: p.assignee_id }, {
+            onSuccess: () => toast.success(`Peças de ${nome} não entram mais neste aviso.`),
+          }),
+        },
+        cancel: { label: "Desfazer", onClick: () => dispensar.mutate({ pecaId: p.id, desfazer: true }) },
+        duration: 9000,
+      }),
+    });
+  };
 
   const porParceiro = useMemo(() => {
     const mapa = new Map<string, PecaExterna[]>();
@@ -911,14 +932,26 @@ export function PainelComParceiros({ clientes }: {
                 <Wallet className="h-3.5 w-3.5" /> Entregas sem cachê combinado ({semCache.length})
               </p>
               <Card className="rounded-2xl border-amber-200 bg-amber-50/50 overflow-hidden divide-y divide-amber-100">
-                {semCache.map((p) => linhaPeca(p,
-                  <span className="text-[11px] font-bold text-amber-800 bg-amber-100 rounded-full px-2.5 py-1">
-                    definir valor
-                  </span>))}
+                {semCache.map((p) => (
+                  <div key={p.id} className="flex items-center">
+                    <div className="min-w-0 flex-1">
+                      {linhaPeca(p,
+                        <span className="text-[11px] font-bold text-amber-800 bg-amber-100 rounded-full px-2.5 py-1">
+                          definir valor
+                        </span>)}
+                    </div>
+                    <button type="button" onClick={() => marcarSemCache(p)} disabled={dispensar.isPending}
+                      title="Combinado sem cobrança: tira do aviso"
+                      className="shrink-0 mr-3 text-[11px] font-bold text-muted-foreground border border-border bg-card rounded-full px-2.5 py-1 hover:text-foreground hover:border-foreground/30 disabled:opacity-50">
+                      sem cachê
+                    </button>
+                  </div>
+                ))}
               </Card>
               <p className="text-[11px] font-body text-muted-foreground mt-1.5 px-0.5">
                 Enquanto o valor estiver em branco, a peça não entra no seu Caixa nem no "a receber" do parceiro.
                 Clique na peça e preencha o "Cachê desta peça" no card: salva só o valor, sem mexer na entrega nem no prazo.
+                Combinou que não tem cobrança? Toque em "sem cachê".
               </p>
             </section>
           )}
