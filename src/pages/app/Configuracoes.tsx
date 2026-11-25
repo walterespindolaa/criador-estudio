@@ -504,7 +504,7 @@ const Configuracoes = () => {
       { id: "conexoes", label: "Conexões", grupo: "ligacoes", cor: "#0061EE",
         estado: igVencido ? "reconectar" : ligadas ? `${ligadas} ${ligadas === 1 ? "ligada" : "ligadas"}` : "nenhuma",
         tom: igVencido ? "alerta" : ligadas ? "ok" : "neutro",
-        palavras: ["instagram", "google drive", "drive", "youtube", "conectar", "desconectar", "reconectar"] },
+        palavras: ["instagram", "google drive", "drive", "youtube", "linkedin", "tiktok", "redes", "conectar", "desconectar", "reconectar"] },
       { id: "notificacoes", label: "Notificações", grupo: "ligacoes", cor: "#FFCF03",
         estado: pushLigado === null ? undefined : pushLigado ? "ligadas" : "desligadas", tom: pushLigado ? "ok" : "neutro",
         palavras: ["aviso", "avisos", "push", "notificação", "testar aviso"] },
