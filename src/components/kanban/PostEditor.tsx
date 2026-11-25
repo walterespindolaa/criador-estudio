@@ -107,6 +107,7 @@ import { BestTimesHint } from "@/components/shared/BestTimesHint";
 import { PostPreviewModal, PostPreviewContent } from "./PostPreviewModal";
 import { PublicarNoInstagram } from "@/components/shared/PublicarNoInstagram";
 import { RedesSoMaster } from "@/components/shared/RedesSoMaster";
+import { ResultadoLinkedIn } from "@/components/shared/ResultadoLinkedIn";
 import { PublishButton } from "./PublishButton";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePostPreviewIdentity } from "@/hooks/usePostPreviewIdentity";
@@ -1555,6 +1556,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               {/* Publicar também em outras redes (só master): LinkedIn, YouTube e
                   TikTok, de volta em 25/11/2026. */}
               {post?.id && <RedesSoMaster postId={post.id} legenda={caption} titulo={title} plataforma={platform} />}
+              {/* Resultado do post no LinkedIn, digitado à mão (só master, 25/11/2026). */}
+              {post?.id && ehLinkedIn && masterLinkedIn && <ResultadoLinkedIn postId={post.id} />}
 
     </>
   );
