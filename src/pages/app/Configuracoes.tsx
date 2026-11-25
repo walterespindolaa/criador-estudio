@@ -40,6 +40,9 @@ import { cn } from "@/lib/utils";
 import { ConfigShell, CartaoResumo, CartaoSair, Selo, Barra, haQuanto, type ItemConfig } from "@/components/settings/ConfigShell";
 import { useAiUsage } from "@/hooks/useAiUsage";
 import { THEME_PRESETS } from "@/lib/themes";
+
+// Tipo de conta do Instagram como a Meta manda (MEDIA_CREATOR, BUSINESS) em português.
+const TIPO_CONTA_IG: Record<string, string> = { MEDIA_CREATOR: "Criador", CREATOR: "Criador", BUSINESS: "Empresa" };
 import { isPushEnabled } from "@/lib/push";
 
 const NICHE_OPTIONS = ["Lifestyle", "Moda", "Beleza", "Fitness", "Culinária", "Educação", "Negócios", "Entretenimento", "Saúde", "Tecnologia"];
@@ -940,7 +943,7 @@ const Configuracoes = () => {
                 <SectionHeader title="Conexões" desc="Serviços externos ligados à sua conta. Só leitura, você desconecta quando quiser." />
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                   <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><Instagram className="h-5 w-5 text-primary" /> Instagram</h3>
-                  <p className="text-sm text-muted-foreground font-body leading-relaxed">Conecte sua conta Business ou Creator pra ver seus insights (alcance, seguidores, desempenho) na página de Insights. Só leitura, o CRIA não publica por você.</p>
+                  <p className="text-sm text-muted-foreground font-body leading-relaxed">Conecte sua conta Business ou Creator pra ver seus insights (alcance, seguidores, desempenho) e publicar pelo Cria.</p>
                   {igConnection ? (
                     <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
                       <div className="flex items-center gap-3 min-w-0">
@@ -949,7 +952,9 @@ const Configuracoes = () => {
                           <p className="text-sm font-body font-semibold text-foreground truncate">{igConnection.username ? `@${igConnection.username}` : "Conta conectada"}</p>
                           <p className="text-xs font-body text-muted-foreground">
                             {estadoConexaoIg(igConnection).reconectar ? "Conexão vencida" : "Conectado"}
-                            {igConnection.account_type ? ` · ${igConnection.account_type}` : ""}
+                            {/* Walter, 25/11/2026: "pra nao ficar aparecendo aquele MEDIA_CREATOR".
+                                O tipo vem cru da Meta; só os dois conhecidos viram rótulo. */}
+                            {TIPO_CONTA_IG[igConnection.account_type ?? ""] ? ` · ${TIPO_CONTA_IG[igConnection.account_type ?? ""]}` : ""}
                             {/* Selo de teste da publicação (ciclo 2): confirma que a
                                 Meta deu a permissão de publicar nesta conexão. */}
                             {estadoConexaoIg(igConnection).podePublicar ? " · Publicação pelo Cria liberada" : ""}
