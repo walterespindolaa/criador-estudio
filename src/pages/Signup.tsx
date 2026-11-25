@@ -13,6 +13,7 @@ import { Logo } from "@/components/shared/Logo";
 import { useT } from "@/lib/i18n";
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { cn } from "@/lib/utils";
+import { BotaoGoogle, DivisorOuEmail } from "@/components/auth/BotaoGoogle";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CADASTRO NA LINGUAGEM DO LOGIN NOVO (Walter, 12/10/2026: "essa página de
@@ -57,7 +58,8 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
   useForceLightTheme();
   const navigate = useNavigate();
   const t = useT();
-  const { signUp } = useAuth();
+  const { signUp, entrarComGoogle } = useAuth();
+  const [abrindoGoogle, setAbrindoGoogle] = useState(false);
   /* ?tipo=parceiro ou ?tipo=manager já abre no tipo certo (LP, seção "Produz pra
      social mídia? sua conta é de graça", 15/10/2026). */
   const [accountType, setAccountType] = useState<Tipo>(() => {
@@ -150,10 +152,11 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
     setConferindo({ ...data, email: data.email.trim() });
   };
 
-  const criarConta = async (data: SignupFormData) => {
-    setEmailValue(data.email);
-    setFormError(null);
-    setLoading(true);
+  /* ESCOLHAS DA TELA (tipo de conta, origem, plano da LP). Separadas em 25/11/2026
+     pra o cadastro por e-mail e o "Criar conta com o Google" mandarem a mesma
+     coisa: o Google não sabe nada disso, então elas vão guardadas e voltam
+     aplicadas em /entrar-google. */
+  const escolhasDaTela = (): Record<string, string> => {
     const intencao = accountType === "manager" ? { account_intent: "manager" }
       : accountType === "parceiro" ? { account_intent: "parceiro", parceiro_role: parceiroRole }
       /* TESTE SEM CARTÃO DE NOVO (Walter, 06/11/2026: experimento pra ver se o
@@ -184,13 +187,21 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
     })();
     const escolha = accountType === "creator" && planoLp && ["essencial", "pro", "studio"].includes(planoLp)
       ? { plano_escolhido: planoLp } : {};
+    return { ...intencao, ...origem, ...escolha };
+  };
+
+  const criarConta = async (data: SignupFormData) => {
+    setEmailValue(data.email);
+    setFormError(null);
+    setLoading(true);
+    const escolhas = escolhasDaTela();
     /* `confirmar_email` marca a conta que nasceu por este cadastro: é ela que
        o app cobra a confirmação depois (conta criada pelo admin ou pela
        agência não tem a marca e nunca é cobrada). */
     const digWhats = whats.replace(/\D/g, "");
     const contato: Record<string, string> = digWhats.length === 11
       ? { whatsapp: "55" + digWhats, ...(whatsAceite ? { whatsapp_optin: "1" } : {}) } : {};
-    const juntos = { ...intencao, ...origem, ...escolha, ...contato, confirmar_email: "1" };
+    const juntos = { ...escolhas, ...contato, confirmar_email: "1" };
     const meta = Object.keys(juntos).length ? juntos : undefined;
     const { error, needsConfirmation } = await signUp(data.email, data.password, data.name, meta);
     setLoading(false);
@@ -407,6 +418,23 @@ const Signup = ({ defaultManager = false }: { defaultManager?: boolean }) => {
                 </div>
               )}
             </fieldset>
+
+            {/* CRIAR CONTA COM O GOOGLE (Walter, 25/11/2026, mockup aprovado).
+                Vem depois do "Você é" pra levar o tipo de conta junto. Quem vai
+                pelo Google aceita os termos pelo aviso embaixo do botão; a
+                caixinha continua valendo pro cadastro por e-mail. */}
+            <div className="flex flex-col gap-2.5">
+              <BotaoGoogle texto="Criar conta com o Google" carregando={abrindoGoogle} onClick={async () => {
+                setAbrindoGoogle(true);
+                const { error } = await entrarComGoogle(escolhasDaTela());
+                if (error) { setAbrindoGoogle(false); toast.error("Não deu pra abrir o Google. Tenta de novo ou cria com e-mail."); }
+              }} />
+              <p className="text-center text-[13px] leading-snug text-[#6A665D]">
+                Ao continuar, você aceita os{" "}
+                <Link to="/termos" target="_blank" className="font-semibold text-[#0050C8] underline underline-offset-2">Termos de Uso</Link>.
+              </p>
+            </div>
+            <DivisorOuEmail />
 
             {/* Duas colunas no computador, uma no celular. */}
             <div className="grid grid-cols-1 gap-x-3 gap-y-3.5 lg:grid-cols-2">

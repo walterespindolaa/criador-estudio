@@ -15,8 +15,15 @@ interface AuthContextType {
    */
   signUp: (email: string, password: string, name: string, meta?: Record<string, unknown>) => Promise<{ error: AuthError | null; needsConfirmation: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  /** Entrar ou criar conta pelo Google. No cadastro, `meta` leva as escolhas da
+   *  tela (tipo de conta, plano, origem), aplicadas na volta em /entrar-google. */
+  entrarComGoogle: (meta?: Record<string, string>) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
 }
+
+/* Escolhas do cadastro guardadas no aparelho enquanto a pessoa está no Google.
+   A tela /entrar-google lê e apaga. Vencem em 1 hora. */
+export const CHAVE_CADASTRO_GOOGLE = "cria-cadastro-google";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -83,6 +90,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   }, []);
 
+  /* ENTRAR COM O GOOGLE (Walter, 25/11/2026: "fizesse login ou cadastro tanto
+     com a conta do google quanto manualmente"). O Supabase junta sozinho a conta
+     do Google com a de e-mail quando o e-mail é o mesmo (doc oficial: identity
+     linking automático), então quem já tem conta cai nela com tudo dentro.
+     A volta é sempre em /entrar-google, que decide o destino. */
+  const entrarComGoogle = useCallback(async (meta?: Record<string, string>) => {
+    try {
+      if (meta) localStorage.setItem(CHAVE_CADASTRO_GOOGLE, JSON.stringify({ meta, em: Date.now() }));
+      else localStorage.removeItem(CHAVE_CADASTRO_GOOGLE);
+      // Igual ao login por senha: entrar de novo sempre abre na própria conta.
+      localStorage.removeItem("cf_active_account");
+    } catch { /* modo privado: a conta nasce como criador, que é o padrão */ }
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/entrar-google` },
+    });
+    return { error };
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     try { localStorage.removeItem("cf_active_account"); } catch { /* ignore */ }
@@ -91,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Valor memoizado: sem isto o Provider criava um objeto novo a cada render
   // e todo consumidor re-renderizava junto, mesmo sem nada ter mudado.
-  const value = useMemo(() => ({ user, session, loading, signUp, signIn, signOut }), [user, session, loading, signUp, signIn, signOut]);
+  const value = useMemo(() => ({ user, session, loading, signUp, signIn, entrarComGoogle, signOut }), [user, session, loading, signUp, signIn, entrarComGoogle, signOut]);
 
   return (
     <AuthContext.Provider value={value}>

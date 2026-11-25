@@ -11,6 +11,8 @@ import { Logo } from "@/components/shared/Logo";
 import { useT } from "@/lib/i18n";
 import { useForceLightTheme } from "@/hooks/useForceLightTheme";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { BotaoGoogle, DivisorOuEmail } from "@/components/auth/BotaoGoogle";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    LOGIN NOVO (Walter, 12/10/2026: "mais criativa, bonita, de fácil acesso",
@@ -124,7 +126,8 @@ const Login = () => {
   useForceLightTheme();
   const navigate = useNavigate();
   const t = useT();
-  const { signIn } = useAuth();
+  const { signIn, entrarComGoogle } = useAuth();
+  const [abrindoGoogle, setAbrindoGoogle] = useState(false);
   const [tela, setTela] = useState<Tela>("entrar");
   const [loading, setLoading] = useState(false);
   const [erroLogin, setErroLogin] = useState(false);
@@ -254,6 +257,15 @@ const Login = () => {
                 <h2 className={cn(DISPLAY, "mt-0.5 text-[28px] font-extrabold leading-[1.05] lg:mt-0 lg:text-[32px]")}>Bom te ver de novo</h2>
                 <p className="mt-1.5 hidden text-[15px] text-[#5B574E] lg:block">Suas ideias estão te esperando.</p>
               </div>
+
+              {/* GOOGLE PRIMEIRO (Walter, 25/11/2026, mockup aprovado). Mesmo
+                  e-mail cai na mesma conta: o Supabase junta sozinho. */}
+              <BotaoGoogle texto="Continuar com o Google" carregando={abrindoGoogle} onClick={async () => {
+                setAbrindoGoogle(true);
+                const { error } = await entrarComGoogle();
+                if (error) { setAbrindoGoogle(false); toast.error("Não deu pra abrir o Google. Tenta de novo ou entra com e-mail."); }
+              }} />
+              <DivisorOuEmail />
 
               <div className="flex flex-col gap-1.5 lg:gap-2">
                 <label htmlFor="email" className={rotulo}>{t("auth.email")}</label>

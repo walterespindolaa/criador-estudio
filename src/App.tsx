@@ -21,6 +21,8 @@ const AppLayout = lazy(() => import("./components/AppLayout"));
 // está logado (nem no primeiro paint de quem só quer entrar). Todas caem no mesmo
 // <Suspense> do topo. Login/Signup são o caminho crítico do primeiro acesso.
 const Login = lazy(() => import("./pages/Login"));
+// Volta do "Continuar com o Google" (25/11/2026).
+const EntrarGoogle = lazy(() => import("./pages/EntrarGoogle"));
 const Signup = lazy(() => import("./pages/Signup"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
@@ -334,6 +336,7 @@ const App = () => (
               <Route path="/acessos/:token" element={<ErrorBoundary fallback={<BioQuebrou />}><EnviarAcessos /></ErrorBoundary>} />
               <Route path="/ativar" element={<Ativar />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/entrar-google" element={<EntrarGoogle />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/cadastro/agencia" element={<Signup defaultManager />} />
               <Route path="/reset-password" element={<ResetPassword />} />
