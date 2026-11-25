@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -252,7 +253,11 @@ export function useConexoesProprias(userId: string | null | undefined, ativo = t
   return useQuery<ConexaoPropria[]>({
     queryKey: ["redes-conexoes-proprias", userId],
     enabled: !!userId && ativo,
-    staleTime: 60_000,
+    // Walter, 25/11/2026: conectou o LinkedIn, viu o aviso de conectado mas a
+    // linha só mudou depois do F5. Conexão muda fora do app (no login da
+    // rede): sempre rebusca ao abrir e ao voltar pra aba.
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await sbFrom("social_connections")
         .select("id, provider, username, profile_picture_url, token_expires_at, needs_reconnect")
@@ -287,4 +292,29 @@ export function estadoConexaoRede(c: { provider: RedeNova; token_expires_at: str
   const vencida = !!c.needs_reconnect || (venceSozinho && dias !== null && dias <= 0);
   const perto = !vencida && venceSozinho && dias !== null && dias <= 7;
   return { vencida, perto, dias, venceEm: c.token_expires_at };
+}
+
+/** Volta do login da rede (?rede=...&conexao=...): avisa, recarrega as
+    conexões e limpa a URL. Recarrega de novo 1,5 s depois porque a volta pode
+    chegar antes de a conexão gravada aparecer pra leitura (Walter, 25/11/2026:
+    "tive que dar um f5 para ele mostrar"). */
+export function useVoltaDoLoginDaRede() {
+  const qc = useQueryClient();
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const r = q.get("rede"); const c = q.get("conexao");
+    if (!r || !c) return;
+    if (c === "ok") toast.success(`${NOME_REDE[r as RedeNova] ?? "Rede"} conectado.`);
+    else toast.error(`Não deu pra conectar: ${q.get("m") ?? "tente de novo"}`);
+    q.delete("rede"); q.delete("conexao"); q.delete("m");
+    window.history.replaceState(null, "", window.location.pathname + (q.toString() ? `?${q}` : ""));
+    const recarregar = () => {
+      for (const k of ["redes-conexoes-proprias", "rede-conexao", "rede-vencimento", "tiktok-criador"]) {
+        void qc.invalidateQueries({ queryKey: [k] });
+      }
+    };
+    recarregar();
+    const t = window.setTimeout(recarregar, 1500);
+    return () => window.clearTimeout(t);
+  }, [qc]);
 }

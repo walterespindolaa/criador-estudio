@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2, Unplug } from "lucide-react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   conectarRede, estadoConexaoRede, NOME_REDE, useConexoesProprias, useDesconectarRede,
-  type ConexaoPropria, type RedeNova,
+  type ConexaoPropria, type RedeNova, useVoltaDoLoginDaRede,
 } from "@/hooks/usePublicarRedes";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -89,16 +88,8 @@ export function RedesParaPublicar({ userId }: { userId: string | null | undefine
   const lista = useConexoesProprias(userId);
   const desconectar = useDesconectarRede(userId);
 
-  // Volta do login da rede: avisa e limpa a URL (mesma regra da caixa do post).
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
-    const r = q.get("rede"); const c = q.get("conexao");
-    if (!r || !c) return;
-    if (c === "ok") toast.success(`${NOME_REDE[r as RedeNova] ?? "Rede"} conectado.`);
-    else toast.error(`Não deu pra conectar: ${q.get("m") ?? "tente de novo"}`);
-    q.delete("rede"); q.delete("conexao"); q.delete("m");
-    window.history.replaceState(null, "", window.location.pathname + (q.toString() ? `?${q}` : ""));
-  }, []);
+  // Volta do login da rede: avisa, recarrega as conexões e limpa a URL.
+  useVoltaDoLoginDaRede();
 
   const porRede = (r: RedeNova) => (lista.data ?? []).find((c) => c.provider === r) ?? null;
 

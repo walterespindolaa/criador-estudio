@@ -6,9 +6,8 @@ import { Switch } from "@/components/ui/switch";
 import { useProfile } from "@/hooks/useProfile";
 import {
   conectarRede, formatoLinkedInDaMidia, NOME_REDE, useAgendarRede, useConexaoRede, useCrmDoPost, useCriadorTikTok,
-  useMidiaDoPost, usePublicacaoRede, usePublicarAgoraRede, useVencimentoRede, type RedeNova,
+  useMidiaDoPost, usePublicacaoRede, usePublicarAgoraRede, useVencimentoRede, type RedeNova, useVoltaDoLoginDaRede,
 } from "@/hooks/usePublicarRedes";
-import { toast } from "sonner";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PUBLICAR NO TIKTOK E NO YOUTUBE (mockup aprovado em 03/11/2026)
@@ -82,16 +81,8 @@ export function PublicarNasRedes({ postId, legenda, titulo, plataforma }: { post
   const [aberto, setAberto] = useState(!!daRede);
   useEffect(() => { if (daRede) { setRede(daRede); setAberto(true); } }, [daRede]);
 
-  // Volta do login da rede: avisa e limpa a URL.
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
-    const r = q.get("rede"); const c = q.get("conexao");
-    if (!r || !c) return;
-    if (c === "ok") toast.success(`${NOME_REDE[r as RedeNova] ?? "Rede"} conectado.`);
-    else toast.error(`Não deu pra conectar: ${q.get("m") ?? "tente de novo"}`);
-    q.delete("rede"); q.delete("conexao"); q.delete("m");
-    window.history.replaceState(null, "", window.location.pathname + (q.toString() ? `?${q}` : ""));
-  }, []);
+  // Volta do login da rede: avisa, recarrega as conexões e limpa a URL.
+  useVoltaDoLoginDaRede();
 
   if (!master) return null;
   if (!aberto) {
