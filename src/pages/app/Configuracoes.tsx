@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Plus, Trash2, Camera, Eye, EyeOff, RefreshCw, Check, Lock, AlertTriangle, Shield, Paintbrush, HardDrive, ExternalLink, Unplug, User, Users, LayoutGrid, Plug, Settings, Pencil, CreditCard, Instagram, Bell } from "lucide-react";
 import { NotificationToggle } from "@/components/NotificationToggle";
 import { useSocialConnection, connectInstagram, useDisconnectInstagram, estadoConexaoIg } from "@/hooks/useSocialInsights";
+import { ConexaoYouTubeSoMaster } from "@/components/shared/ConexaoYouTubeSoMaster";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -499,7 +500,7 @@ const Configuracoes = () => {
       { id: "conexoes", label: "Conexões", grupo: "ligacoes", cor: "#0061EE",
         estado: igVencido ? "reconectar" : ligadas ? `${ligadas} ${ligadas === 1 ? "ligada" : "ligadas"}` : "nenhuma",
         tom: igVencido ? "alerta" : ligadas ? "ok" : "neutro",
-        palavras: ["instagram", "google drive", "drive", "conectar", "desconectar", "reconectar"] },
+        palavras: ["instagram", "google drive", "drive", "youtube", "conectar", "desconectar", "reconectar"] },
       { id: "notificacoes", label: "Notificações", grupo: "ligacoes", cor: "#FFCF03",
         estado: pushLigado === null ? undefined : pushLigado ? "ligadas" : "desligadas", tom: pushLigado ? "ok" : "neutro",
         palavras: ["aviso", "avisos", "push", "notificação", "testar aviso"] },
@@ -980,6 +981,8 @@ const Configuracoes = () => {
                     </Button>
                   )}
                 </div>
+
+                <ConexaoYouTubeSoMaster />
               </div>
             </TabsContent>
             )}
