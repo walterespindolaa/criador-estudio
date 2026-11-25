@@ -34,6 +34,7 @@ import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { SharedIntake } from "@/components/pwa/SharedIntake";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { usePillars } from "@/hooks/usePillars";
+import { useProfile } from "@/hooks/useProfile";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useBrandContext } from "@/hooks/useBrandContext";
 import { useResumoDesempenho } from "@/hooks/useResumoDesempenho";
@@ -78,6 +79,10 @@ const FORMATOS_SUGESTAO = [
   { value: "reels", label: "Reels", postFormat: "reels", platform: "instagram" },
   { value: "story", label: "Story", postFormat: "story", platform: "instagram" },
   { value: "youtube", label: "YouTube", postFormat: "video", platform: "youtube" },
+  // LinkedIn como destino da ideia (Walter, 25/11/2026: "na hora de pegar e
+  // transformar uma ideia"). Só o master vê enquanto o LinkedIn está em teste.
+  { value: "linkedin", label: "LinkedIn", postFormat: "texto", platform: "linkedin" },
+  { value: "linkedin_documento", label: "LinkedIn documento", postFormat: "documento", platform: "linkedin" },
 ];
 
 const AI_LIMIT = 10;
@@ -137,6 +142,8 @@ const Ideias = () => {
   const { ideas, createIdea, updateIdea, deleteIdea, promoteToPost, isLoading: ideasLoading } = useIdeas();
   const { pillars } = usePillars();
   const { profile } = useActiveProfile();
+  const { profile: perfilSessao } = useProfile();
+  const formatosVisiveis = perfilSessao?.role === "admin" ? FORMATOS_SUGESTAO : FORMATOS_SUGESTAO.filter((f) => f.platform !== "linkedin");
   const { brandContext, hasBrandContext } = useBrandContext();
   const desempenho = useResumoDesempenho();
   const { createPost } = usePosts();
@@ -476,7 +483,7 @@ const Ideias = () => {
         <div>
           <p className="text-[10px] font-display font-bold uppercase tracking-wider text-primary/75 mb-1.5">Formato</p>
           <div className="flex flex-wrap gap-1.5">
-            {FORMATOS_SUGESTAO.map((f) => (
+            {formatosVisiveis.map((f) => (
               <button
                 key={f.value}
                 type="button"
@@ -993,7 +1000,7 @@ const Ideias = () => {
             const nova = await criarPasta.mutateAsync({ name: nome, color: CORES_PASTA[folders.length % CORES_PASTA.length] });
             await moverIdeia.mutateAsync({ ideaId: folhaAberta.id, folderId: nova.id });
           }}
-          formatos={FORMATOS_SUGESTAO.map((f) => ({ value: f.value, label: f.label }))}
+          formatos={formatosVisiveis.map((f) => ({ value: f.value, label: f.label }))}
           restantes={Math.max(0, AI_LIMIT - aiUsed)}
           onSalvar={async (d) => {
             const updates: { title?: string; notes?: string | null } = {};

@@ -89,7 +89,7 @@ function quando(iso: string) {
   return d === 1 ? "ontem" : `há ${d} dias`;
 }
 
-const COR_FORMATO: Record<string, string> = { carrossel: "#EA4918", reels: "#0061EE", story: "#FF77B9", estatico: "#00A652", youtube: "#C4302B" };
+const COR_FORMATO: Record<string, string> = { carrossel: "#EA4918", reels: "#0061EE", story: "#FF77B9", estatico: "#00A652", youtube: "#C4302B", linkedin: "#0A66C2", linkedin_documento: "#0E7490" };
 
 export function FolhaDaIdeia({
   aberta, onFechar, idea, donoId, pilares, pilarId, pastas, pastaId, onPilar, onPasta, onNovaPasta, formatos, restantes,
