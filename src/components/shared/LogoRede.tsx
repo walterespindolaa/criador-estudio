@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 /* LOGOS OFICIAIS DAS REDES (Walter, 25/11/2026: "pq nao bota a logo do youtube
@@ -60,11 +61,14 @@ export function LogoRede({ marca, className, tamanho = 40 }: { marca: MarcaRede;
   );
 }
 
-/** Foto do canal ou perfil com a logo da rede de selinho no canto. */
+/** Foto do canal ou perfil com a logo da rede de selinho no canto. Se a foto
+    não carregar (o link da rede vence), mostra só a logo. */
 export function FotoComSelo({ src, marca }: { src: string; marca: MarcaRede }) {
+  const [falhou, setFalhou] = useState(false);
+  if (falhou) return <LogoRede marca={marca} />;
   return (
     <span className="relative h-10 w-10 shrink-0">
-      <img src={src} alt="" className="h-10 w-10 rounded-full object-cover" />
+      <img src={src} alt="" className="h-10 w-10 rounded-full object-cover" onError={() => setFalhou(true)} />
       <LogoRede marca={marca} tamanho={18} className="absolute -bottom-0.5 -right-0.5 ring-2 ring-card" />
     </span>
   );
