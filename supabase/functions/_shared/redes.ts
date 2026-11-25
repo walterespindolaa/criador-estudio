@@ -13,8 +13,11 @@
 // - YouTube: vídeo vertical ou quadrado de até 3 min vira Short sozinho; não
 //   existe campo "Short" na API. O Cria também publica na hora marcada pelo
 //   robô (mesmo comportamento do TikTok e do Instagram).
+// - LinkedIn (perfil pessoal, Walter 25/11/2026): texto, foto, carrossel de 2 a
+//   20 fotos ou um vídeo. Acesso de 60 dias sem renovar; vídeo fica
+//   "processando" até o LinkedIn liberar e só então o post é criado.
 
-export type Rede = 'instagram' | 'tiktok' | 'youtube';
+export type Rede = 'instagram' | 'tiktok' | 'youtube' | 'linkedin';
 
 export type StatusPublicacao =
   | 'rascunho' | 'na_fila' | 'publicando' | 'processando' | 'publicado' | 'erro' | 'cancelado';
@@ -31,6 +34,7 @@ export const REDES: Record<Rede, {
   instagram: { nome: 'Instagram', escopoPublicar: 'instagram_business_content_publish', processaDepois: false, tituloMax: null, textoMax: 2200 },
   tiktok: { nome: 'TikTok', escopoPublicar: 'video.publish', processaDepois: true, tituloMax: null, textoMax: 2200 },
   youtube: { nome: 'YouTube', escopoPublicar: 'youtube.upload', processaDepois: false, tituloMax: 100, textoMax: 5000 },
+  linkedin: { nome: 'LinkedIn', escopoPublicar: 'w_member_social', processaDepois: true, tituloMax: null, textoMax: 3000 },
 };
 
 /** Erro com texto pronto pra pessoa ler. `definitivo`: tentar de novo não resolve. */
@@ -55,6 +59,10 @@ export type OpcoesYouTube = {
   containsSyntheticMedia?: boolean;
   /** O que a pessoa quer: Short (vertical/quadrado até 3 min) ou vídeo normal. */
   tipo?: 'short' | 'video';
+};
+
+export type OpcoesLinkedIn = {
+  visibility: 'PUBLIC' | 'CONNECTIONS';  // todo mundo ou só conexões
 };
 
 export type CriadorTikTok = {

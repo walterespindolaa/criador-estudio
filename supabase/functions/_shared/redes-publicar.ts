@@ -6,16 +6,20 @@
 // - o robô tenta 3 vezes com espera crescente; erro definitivo avisa no sino.
 // Diferenças: a linha de controle é post_publicacoes (uma por rede), e o
 // TikTok fica "processando" até o status dizer que saiu.
+// LinkedIn (Walter, 25/11/2026): aceita texto, foto e carrossel além de vídeo,
+// então a regra "um vídeo por post" vale só pra TikTok e YouTube. Vídeo do
+// LinkedIn também fica "processando" e o post nasce quando ele fica pronto.
 
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { ErroRede, REDES, type ResultadoPublicacao } from './redes.ts';
 import { tiktok } from './rede-tiktok.ts';
 import { youtube } from './rede-youtube.ts';
+import { linkedin } from './rede-linkedin.ts';
 import { prepararMidiaDoPost } from './ig-midia.ts';
 
 const MAX_TENTATIVAS = 3;
-type RedeNova = 'tiktok' | 'youtube';
-export const PUBLICADORES = { tiktok, youtube };
+type RedeNova = 'tiktok' | 'youtube' | 'linkedin';
+export const PUBLICADORES = { tiktok, youtube, linkedin };
 
 type Pub = {
   id: string; post_id: string; rede: RedeNova; status: string; tentativas: number;
@@ -39,10 +43,10 @@ export async function ehMaster(admin: SupabaseClient, userId: string): Promise<b
 export async function conexaoComToken(admin: SupabaseClient, postId: string, rede: RedeNova, actor: string) {
   const { data, error } = await admin.rpc('conexao_do_post', { _post_id: postId, _rede: rede, _actor: actor });
   if (error) throw new ErroRede(error.message, true);
-  const c = (data as Array<{ connection_id: string | null; username: string | null; pode_publicar: boolean; motivo: string | null }> | null)?.[0];
+  const c = (data as Array<{ connection_id: string | null; external_account_id: string | null; username: string | null; pode_publicar: boolean; motivo: string | null }> | null)?.[0];
   if (!c?.connection_id || !c.pode_publicar) throw new ErroRede(c?.motivo ?? `O ${REDES[rede].nome} deste perfil não está conectado.`, true);
   const token = await tokenValido(admin, c.connection_id, rede);
-  return { connectionId: c.connection_id, usuario: c.username, token };
+  return { connectionId: c.connection_id, contaId: c.external_account_id, usuario: c.username, token };
 }
 
 export async function tokenValido(admin: SupabaseClient, connectionId: string, rede: RedeNova): Promise<string> {
@@ -115,16 +119,29 @@ export async function publicarLinha(admin: SupabaseClient, pubId: string, actor:
 
     // Mídia: o mesmo preparo do Instagram devolve um MP4 público com medidas.
     const prep = await prepararMidiaDoPost(admin, pub.post_id, 45_000);
-    if (prep.pendentes > 0 && prep.erros.length === 0) {
+    // prep.erros traz as regras do Instagram; pro LinkedIn só importa se a
+    // mídia está pronta (a regra de formato dele vem de formatoLinkedIn).
+    const esperando = pub.rede === 'linkedin' ? prep.pendentes > 0 : prep.pendentes > 0 && prep.erros.length === 0;
+    if (esperando) {
       await gravar({ status: doRobo ? 'na_fila' : 'erro', erro: 'Vídeo ainda processando no Cria. Tenta de novo em alguns minutos.',
         ...(doRobo ? { publicar_em: new Date(Date.now() + 5 * 60_000).toISOString() } : {}) });
       return { estado: 'aguardando', mensagem: 'Vídeo ainda processando no Cria.' };
     }
+    const opcoes = (pub.opcoes ?? {}) as Record<string, unknown>;
+    const texto = String(pub.texto ?? p.caption ?? '').trim();
+
+    if (pub.rede === 'linkedin') {
+      const ruim = (prep.itens ?? []).find((i) => i.estado === 'erro');
+      if (ruim) throw new ErroRede(ruim.erro ?? 'Uma mídia do post não pôde ser preparada.', true);
+      if (!cx.contaId) throw new ErroRede('Reconecte o LinkedIn pra publicar.', true, true);
+      const itens = (prep.itens ?? []).filter((i) => i.url && (i.tipo === 'IMAGE' || i.tipo === 'VIDEO'));
+      const r = await linkedin.publicar({ accessToken: cx.token, autor: cx.contaId, itens, texto, opcoes, limiteMs });
+      return await aplicar(admin, pub, r, p, quem, link);
+    }
+
     const videos = (prep.itens ?? []).filter((i) => i.tipo === 'VIDEO' && i.url);
     if (videos.length !== 1) throw new ErroRede(`O ${nome} pelo Cria publica um vídeo por post. Este post tem ${videos.length} vídeo(s).`, true);
     const v = videos[0];
-    const opcoes = (pub.opcoes ?? {}) as Record<string, unknown>;
-    const texto = String(pub.texto ?? p.caption ?? '').trim();
 
     let r: ResultadoPublicacao;
     if (pub.rede === 'tiktok') {
@@ -164,19 +181,24 @@ async function aplicar(admin: SupabaseClient, pub: Pub, r: ResultadoPublicacao, 
   return { estado: 'erro', mensagem: r.erro };
 }
 
-/** TikTok: consulta quem está "processando" e fecha como publicado ou erro. */
+/** TikTok e vídeo do LinkedIn: consulta quem está "processando" e fecha como publicado ou erro. */
 export async function conferirProcessando(admin: SupabaseClient, pubId: string) {
   const { data: row } = await admin.from('post_publicacoes')
     .select('id, post_id, rede, status, tentativas, titulo, texto, opcoes, external_id, criado_por').eq('id', pubId).maybeSingle();
   const pub = row as Pub | null;
-  if (!pub || pub.status !== 'processando' || pub.rede !== 'tiktok' || !pub.external_id) return;
-  const { data: postRow } = await admin.from('posts').select('id, user_id, title, external_client_id').eq('id', pub.post_id).maybeSingle();
+  if (!pub || pub.status !== 'processando' || (pub.rede !== 'tiktok' && pub.rede !== 'linkedin') || !pub.external_id) return;
+  const { data: postRow } = await admin.from('posts').select('id, user_id, title, caption, external_client_id').eq('id', pub.post_id).maybeSingle();
   const p = (postRow ?? {}) as Record<string, unknown>;
   const quem = pub.criado_por ?? String(p.user_id ?? '');
   const link = p.external_client_id ? '/socialmidia/criapost/publicacoes' : '/app/criando';
   try {
-    const cx = await conexaoComToken(admin, pub.post_id, 'tiktok', quem);
-    const r = await tiktok.consultarStatus(cx.token, pub.external_id, cx.usuario);
+    const cx = await conexaoComToken(admin, pub.post_id, pub.rede, quem);
+    const r = pub.rede === 'linkedin'
+      ? await linkedin.conferirVideo({
+        accessToken: cx.token, autor: cx.contaId ?? '', video: pub.external_id,
+        texto: String(pub.texto ?? p.caption ?? '').trim(), opcoes: (pub.opcoes ?? {}) as Record<string, unknown>,
+      })
+      : await tiktok.consultarStatus(cx.token, pub.external_id, cx.usuario);
     if (r.estado === 'processando') {
       await admin.from('post_publicacoes').update({ updated_at: new Date().toISOString() } as never).eq('id', pub.id);
       return;
@@ -184,5 +206,10 @@ export async function conferirProcessando(admin: SupabaseClient, pubId: string) 
     await aplicar(admin, pub, r, p, quem, link);
   } catch (e) {
     console.error('[redes-publicar] status', pub.id, String(e));
+    // Erro que não se resolve sozinho (conexão vencida, post recusado): fecha
+    // como erro em vez de ficar "processando" pra sempre.
+    if (e instanceof ErroRede && e.definitivo) {
+      await aplicar(admin, pub, { estado: 'erro', erro: e.message, tentarDeNovo: false }, p, quem, link);
+    }
   }
 }

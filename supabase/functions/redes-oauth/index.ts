@@ -1,12 +1,12 @@
-// Conectar TikTok e YouTube (03/11/2026).
+// Conectar TikTok e YouTube (03/11/2026) e LinkedIn perfil pessoal (Walter, 25/11/2026).
 //
 // Dois jeitos de chamar:
 //   POST { rede, crm_client_id?, return_to? } com o JWT de quem clica:
 //        cria o ticket de uso único (oauth_states) e devolve a URL de login;
 //   GET  ?code&state (volta da rede): troca o code pelos tokens, grava a
 //        conexão e manda a pessoa de volta pro app.
-// O mesmo endereço serve de redirect pras duas redes (o ticket diz qual é).
-// Endereço a cadastrar no TikTok e no Google:
+// O mesmo endereço serve de redirect pras três redes (o ticket diz qual é).
+// Endereço a cadastrar no TikTok, no Google e no LinkedIn (aba Auth do app):
 //   https://app.criasocialclub.com.br/api/redes-oauth (repassado pelo vercel.json)
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
@@ -14,8 +14,11 @@ import { ErroRede } from '../_shared/redes.ts';
 import { ehMaster, PUBLICADORES } from '../_shared/redes-publicar.ts';
 
 const APP_URL = Deno.env.get('APP_URL') || 'https://app.criasocialclub.com.br';
-type RedeNova = 'tiktok' | 'youtube';
-const ehRede = (r: unknown): r is RedeNova => r === 'tiktok' || r === 'youtube';
+type RedeNova = 'tiktok' | 'youtube' | 'linkedin';
+const ehRede = (r: unknown): r is RedeNova => r === 'tiktok' || r === 'youtube' || r === 'linkedin';
+// Cancelou no login: TikTok e Google mandam access_denied; o LinkedIn manda
+// user_cancelled_login ou user_cancelled_authorize.
+const cancelou = (e: string) => e === 'access_denied' || e.startsWith('user_cancelled');
 
 function volta(rede: string, status: 'ok' | 'erro', detalhe: string | null, crmClientId: string | null, returnTo: string | null) {
   const base = returnTo
@@ -83,7 +86,7 @@ Deno.serve(async (req) => {
   const s = st as { user_id: string; crm_client_id: string | null; provider: string; expires_at: string; return_to: string | null } | null;
   if (!s || !ehRede(s.provider)) return volta('rede', 'erro', 'ticket inválido', null, null);
   const rede = s.provider;
-  if (errParam) return volta(rede, 'erro', errParam === 'access_denied' ? 'cancelado' : errParam, s.crm_client_id, s.return_to);
+  if (errParam) return volta(rede, 'erro', cancelou(errParam) ? 'cancelado' : errParam, s.crm_client_id, s.return_to);
   if (!code) return volta(rede, 'erro', 'sem código', s.crm_client_id, s.return_to);
   if (new Date(s.expires_at).getTime() < Date.now()) return volta(rede, 'erro', 'o login demorou demais, tente de novo', s.crm_client_id, s.return_to);
 

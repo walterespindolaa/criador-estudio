@@ -3,7 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   PUBLICAR NO TIKTOK E NO YOUTUBE (03/11/2026, só pro master por enquanto)
+   PUBLICAR NO TIKTOK, NO YOUTUBE E NO LINKEDIN (só pro master por enquanto)
+   TikTok e YouTube em 03/11/2026; LinkedIn perfil pessoal em 25/11/2026
+   (Walter: "linkedin vamos implementar já que é rapido").
 
    Estado de UM post numa rede (linha de post_publicacoes) e as ações:
    conectar a conta, agendar na data do post, publicar agora e consultar a
@@ -16,8 +18,8 @@ type AnyRpc = (fn: string, args?: Record<string, unknown>) => Promise<{ data: un
 const sbFrom = supabase.from.bind(supabase) as unknown as AnyTable;
 const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
 
-export type RedeNova = "tiktok" | "youtube";
-export const NOME_REDE: Record<RedeNova, string> = { tiktok: "TikTok", youtube: "YouTube" };
+export type RedeNova = "tiktok" | "youtube" | "linkedin";
+export const NOME_REDE: Record<RedeNova, string> = { tiktok: "TikTok", youtube: "YouTube", linkedin: "LinkedIn" };
 
 export type PublicacaoRede = {
   id: string;
@@ -69,6 +71,21 @@ export function useConexaoRede(postId: string | null | undefined, rede: RedeNova
       const { data, error } = await sbRpc("conexao_do_post", { _post_id: postId, _rede: rede });
       if (error) return null;
       return ((data as ConexaoRede[] | null) ?? [])[0] ?? null;
+    },
+  });
+}
+
+/** Quando a conexão vence. O LinkedIn não renova sozinho: a cada 60 dias a
+    pessoa reconecta, e a tela avisa antes (Walter, 25/11/2026). */
+export function useVencimentoRede(postId: string | null | undefined, rede: RedeNova, ativo = true) {
+  return useQuery<string | null>({
+    queryKey: ["rede-vencimento", postId, rede],
+    enabled: !!postId && ativo,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await sbRpc("conexao_vence_em", { _post_id: postId, _rede: rede });
+      if (error) return null;
+      return (data as string | null) ?? null;
     },
   });
 }
@@ -137,6 +154,7 @@ function useInvalidar(postId: string | null | undefined, rede: RedeNova) {
   return () => {
     qc.invalidateQueries({ queryKey: ["rede-publicacao", postId, rede] });
     qc.invalidateQueries({ queryKey: ["rede-conexao", postId, rede] });
+    qc.invalidateQueries({ queryKey: ["rede-vencimento", postId, rede] });
   };
 }
 
