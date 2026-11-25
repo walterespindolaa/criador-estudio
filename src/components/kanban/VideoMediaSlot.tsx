@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoEmbed } from "./VideoEmbed";
+import { getLocalVideoObjectUrl } from "@/lib/media-cache";
 
 export function MediaPreparingPlaceholder({ pct, label }: { pct?: number | null; label?: string }) {
   return (
@@ -18,6 +19,12 @@ export function MediaPreparingPlaceholder({ pct, label }: { pct?: number | null;
       </p>
     </div>
   );
+}
+
+function ehIOS() {
+  if (typeof navigator === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
 /* Vídeos que já ficaram prontos nesta aba: trocar de rede na prévia (que
@@ -50,6 +57,14 @@ export function VideoMediaSlot({ viewUrl, videoGuid, className, autoplay = false
   const [ready, setReady] = useState(() => !guid || prontos.has(guid));
   const [progress, setProgress] = useState<number | null>(null);
   const [falhou, setFalhou] = useState(false);
+  /* PRÉVIA NA HORA COM O ARQUIVO LOCAL (Gabriela, 25/11/2026: "adicionei um
+     vídeo e horror de demorado pra carregar"). Quem acabou de subir o vídeo
+     ainda tem o arquivo na memória da aba (media-cache). Enquanto o Bunny
+     converte, a prévia toca esse arquivo em vez de ficar na logo carregando.
+     Se o navegador não tocar o formato (ex.: HEVC no Chrome), volta pra logo.
+     No iPhone/iPad fica de fora: o WebKit não toca vídeo por blob (ver VideoEmbed). */
+  const local = ehIOS() ? null : getLocalVideoObjectUrl(viewUrl);
+  const [localFalhou, setLocalFalhou] = useState(false);
 
   useEffect(() => {
     if (!guid || prontos.has(guid)) { setReady(true); return; }
@@ -88,6 +103,13 @@ export function VideoMediaSlot({ viewUrl, videoGuid, className, autoplay = false
   }, [guid, libraryId]);
 
   if (ready) return <VideoEmbed viewUrl={viewUrl} autoplay={autoplay} className={className} />;
+  if (local && !localFalhou) {
+    return (
+      <video src={local} autoPlay={autoplay} controls playsInline
+        onError={() => setLocalFalhou(true)}
+        className={`${className ?? ""} object-cover bg-black`} />
+    );
+  }
   if (falhou) {
     return (
       <MediaPreparingPlaceholder pct={0} label="O vídeo não converteu. Remova e suba de novo." />

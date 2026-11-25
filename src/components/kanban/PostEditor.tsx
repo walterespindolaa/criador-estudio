@@ -1353,6 +1353,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
   // Mídia da PRÉVIA (mockup do feed/Instagram). Derivada da mídia primária do post,
   // reaproveitada tanto na prévia fixa do desktop quanto no modal fullscreen do mobile.
+  const linkDriveId = contentLink.match(/\/file\/d\/([^/?#]+)/)?.[1] ?? null;
+  const linkEhVideo = /reel|stor|v[ií]deo|video|tiktok|short/i.test(format ?? "");
   const previewMediaUrl = mediaList.length > 0
     ? (() => {
         const first = mediaList[0];
@@ -1369,10 +1371,20 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
        (/file/d/ID), a gente monta a miniatura pelo id e a prévia enche.
        Link de PASTA não tem miniatura, então continua no placeholder. */
     : (() => {
-        const id = contentLink.match(/\/file\/d\/([^/?#]+)/)?.[1];
-        return id ? `https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w800` : undefined;
+        const id = linkDriveId;
+        if (!id) return undefined;
+        /* LINK DO DRIVE EM POST DE VÍDEO (Gabriela, 25/11/2026: "o link ali do
+           drive parece que não pega"). A miniatura lh3 só abre com o arquivo
+           público, e mesmo aberta era foto parada. Em formato de vídeo a prévia
+           agora recebe o link do arquivo e mostra o player do próprio Drive,
+           que toca pra quem tem acesso. */
+        return linkEhVideo
+          ? `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`
+          : `https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w800`;
       })();
-  const previewMediaType = mediaList.length > 0 ? (mediaList[0].file_type?.includes("video") ? "video" : "image") : "image";
+  const previewMediaType = mediaList.length > 0
+    ? (mediaList[0].file_type?.includes("video") ? "video" : "image")
+    : linkDriveId && linkEhVideo ? "video" : "image";
   /* Carrossel: cada mídia da tira vira a lâmina na mesma posição da prévia.
      VÍDEO NO CARROSSEL (Walter, 24/11/2026: "aqui nao aparece a visualizacao,
      aqui eu tenho vídeo dentro de carrossel"). Antes os vídeos eram filtrados

@@ -51,6 +51,21 @@ interface PostPreviewProps extends PostPreviewContentProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/* MINIATURA DO DRIVE QUE NÃO ABRE (Gabriela, 25/11/2026). O lh3 só serve
+   arquivo público; com o arquivo privado a prévia mostrava o ícone quebrado e
+   a palavra "preview". No erro tenta a miniatura do próprio Drive (que usa o
+   login do Google do navegador) e, se nem ela vier, some com a imagem. */
+function seImagemFalhar(e: React.SyntheticEvent<HTMLImageElement>) {
+  const img = e.currentTarget;
+  const id = img.src.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/)?.[1];
+  if (id && !img.dataset.tentouDrive) {
+    img.dataset.tentouDrive = "1";
+    img.src = `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
+    return;
+  }
+  img.style.display = "none";
+}
+
 /* VÍDEO DO DRIVE (08/11/2026, Walter: "não consigo visualizar o vídeo, dar
    play"). O <video src> do Drive não toca (cookie/CORS), então a prévia era só
    a foto do quadro, sem play. Agora mostra a foto com o botão e, no clique,
@@ -94,7 +109,7 @@ function VideoDoDrive({ fileId, poster, className }: { fileId: string; poster: s
   return (
     <button type="button" onClick={() => setTocar(true)} aria-label="Tocar o vídeo"
       className={`${className ?? ""} block bg-neutral-900 z-[2]`}>
-      {poster && <img src={poster} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />}
+      {poster && <img src={poster} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" onError={seImagemFalhar} />}
       <span className="absolute inset-0 grid place-items-center">
         <span className="grid h-12 w-12 place-items-center rounded-full bg-black/45 text-white backdrop-blur-sm">
           <Play className="h-5 w-5 translate-x-0.5" fill="currentColor" />
@@ -282,7 +297,7 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
           ) : isDriveVideo && driveVideoIdMatch ? (
             mostraCapa ? null : <VideoDoDrive fileId={driveVideoIdMatch[1]} poster={drivePosterUrl} className="absolute inset-0 w-full h-full" />
           ) : (
-            <img src={drivePosterUrl || activeMediaUrl} alt="preview" className="w-full h-full object-cover" loading="lazy" />
+            <img src={drivePosterUrl || activeMediaUrl} alt="preview" className="w-full h-full object-cover" loading="lazy" onError={seImagemFalhar} />
           )
         ) : (
           <GradientPlaceholder>
@@ -318,7 +333,7 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
             ) : isDriveVideo && driveVideoIdMatch ? (
               mostraCapa ? null : <VideoDoDrive fileId={driveVideoIdMatch[1]} poster={drivePosterUrl} className="absolute inset-0 w-full h-full" />
             ) : (
-              <img src={drivePosterUrl || activeMediaUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+              <img src={drivePosterUrl || activeMediaUrl} alt="preview" className="absolute inset-0 w-full h-full object-cover" loading="lazy" onError={seImagemFalhar} />
             )
           ) : (
             <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" }} />
