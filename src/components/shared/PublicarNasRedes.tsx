@@ -27,12 +27,11 @@ import { toast } from "sonner";
    formato sai da mídia do post (texto, foto, carrossel de 2 a 20 fotos ou
    vídeo), texto até 3.000, quem pode ver, e aviso de reconectar nos últimos
    7 dias da conexão (o LinkedIn não renova sozinho).
-   TikTok e YouTube saíram da tela em 03/11/2026 ("até fechar o processo"):
-   a caixa voltou só com o LinkedIn. Pra devolver, é só pôr a rede em
-   REDES_NA_TELA.
+   TikTok e YouTube saíram da tela em 03/11/2026 e voltaram em 25/11/2026
+   (commit 42e317c da main, só master). A aba que abre é a da rede do post.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const REDES_NA_TELA: RedeNova[] = ["linkedin"];
+const REDES_NA_TELA: RedeNova[] = ["linkedin", "youtube", "tiktok"];
 
 const PRIVACIDADE: Record<string, string> = {
   PUBLIC_TO_EVERYONE: "Todo mundo",
@@ -99,7 +98,7 @@ export function PublicarNasRedes({ postId, legenda, titulo, plataforma }: { post
     return (
       <button type="button" onClick={() => setAberto(true)}
         className="w-full flex items-center gap-2 rounded-2xl border border-dashed border-border bg-card px-3.5 py-2.5 text-left hover:bg-muted/40">
-        <span className="text-[12.5px] font-body font-semibold text-muted-foreground">Publicar também no {REDES_NA_TELA.map((r) => NOME_REDE[r]).join(" ou ")}</span>
+        <span className="text-[12.5px] font-body font-semibold text-muted-foreground">Publicar também no LinkedIn, YouTube ou TikTok</span>
         <span className="ml-auto text-[10.5px] font-body font-bold rounded-full px-2 py-0.5 bg-amber-100 text-amber-900">só master</span>
       </button>
     );

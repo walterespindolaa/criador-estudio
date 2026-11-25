@@ -385,7 +385,7 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
       {/* Publicar direto pelo Cria (ciclo 5). Só aparece pra conta que pode;
           antes da aprovação do cliente mostra que libera depois. */}
       {platform !== "linkedin" && <PublicarNoInstagram postId={postId} formato={format} aoVivo={aoVivo} antesDeAgir={antesDeAgir} />}
-      {/* Outras redes (só master): voltou em 25/11/2026 só com o LinkedIn. */}
+      {/* Outras redes (só master): LinkedIn, YouTube e TikTok (25/11/2026). */}
       <RedesSoMaster postId={postId} legenda={caption} titulo={title} plataforma={platform} />
       {approved && (
         <div className="rounded-2xl border border-green-200 bg-green-50 p-3 space-y-2">

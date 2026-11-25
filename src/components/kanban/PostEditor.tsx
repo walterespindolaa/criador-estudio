@@ -1552,8 +1552,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   antesDeAgir={gravarPendente}
                 />
               )}
-              {/* Publicar também em outras redes (só master). Voltou em 25/11/2026
-                  só com o LinkedIn; TikTok e YouTube seguem fora da tela. */}
+              {/* Publicar também em outras redes (só master): LinkedIn, YouTube e
+                  TikTok, de volta em 25/11/2026. */}
               {post?.id && <RedesSoMaster postId={post.id} legenda={caption} titulo={title} plataforma={platform} />}
 
     </>

@@ -243,6 +243,7 @@ export type ConexaoPropria = {
   id: string;
   provider: RedeNova;
   username: string | null;
+  profile_picture_url: string | null;
   token_expires_at: string | null;
   needs_reconnect: boolean | null;
 };
@@ -254,7 +255,7 @@ export function useConexoesProprias(userId: string | null | undefined, ativo = t
     staleTime: 60_000,
     queryFn: async () => {
       const { data, error } = await sbFrom("social_connections")
-        .select("id, provider, username, token_expires_at, needs_reconnect")
+        .select("id, provider, username, profile_picture_url, token_expires_at, needs_reconnect")
         .eq("user_id", userId!).is("crm_client_id", null).in("provider", ["tiktok", "youtube", "linkedin"]);
       if (error) return [];
       return (data ?? []) as unknown as ConexaoPropria[];

@@ -16,6 +16,8 @@ import {
    dentro do post. Aqui ficam as contas DA conta (as dos clientes continuam na
    ficha do cliente). Só o master vê enquanto a publicação está em teste; o
    redes-oauth também barra quem não é master.
+   Substitui o cartão ConexaoYouTubeSoMaster que entrou na main no mesmo dia:
+   uma tela só de redes (mockup aprovado).
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const ORDEM: RedeNova[] = ["youtube", "tiktok", "linkedin"];
@@ -46,7 +48,10 @@ function BlocoRede({ rede, c, onDesconectar, desconectando }: { rede: RedeNova; 
     <div className={cn("rounded-xl border p-3 space-y-2.5",
       alerta ? "border-amber-300 bg-amber-50" : c ? "border-primary/20 bg-primary/5" : "border-border")}>
       <div className="flex items-center gap-3 min-w-0">
-        <div className={cn("h-10 w-10 shrink-0 rounded-full grid place-items-center text-white text-[13px] font-body font-bold", ICONE[rede].cls)}>{ICONE[rede].txt}</div>
+        {/* Foto do canal ou perfil quando a rede manda (trazido do cartão do YouTube, 25/11/2026). */}
+        {c?.profile_picture_url
+          ? <img src={c.profile_picture_url} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+          : <div className={cn("h-10 w-10 shrink-0 rounded-full grid place-items-center text-white text-[13px] font-body font-bold", ICONE[rede].cls)}>{ICONE[rede].txt}</div>}
         <div className="min-w-0">
           <p className="text-sm font-body font-semibold text-foreground">{nome}</p>
           <p className={cn("text-xs font-body truncate", alerta ? "text-amber-800 font-bold" : c ? "text-emerald-700 font-bold" : "text-muted-foreground")}>{linha}</p>
