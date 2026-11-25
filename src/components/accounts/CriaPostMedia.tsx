@@ -12,6 +12,7 @@ import { CriaPostPublishButton } from "@/components/accounts/CriaPostPublishButt
 import { SalvarNoCelular } from "@/components/accounts/SalvarNoCelular";
 import { PublicarNoInstagram } from "@/components/shared/PublicarNoInstagram";
 import { RedesSoMaster } from "@/components/shared/RedesSoMaster";
+import { MolduraLinkedIn } from "@/components/shared/MolduraLinkedIn";
 import { CapaSobreVideo, EditorDeCapa, temCapa, useCapaDoPost } from "@/components/accounts/CapaDoReels";
 import { postAspect } from "@/lib/post-aspect";
 import { getDisplayImageUrl, getDriveFileId, getDriveImageFallbackUrl, getDriveViewPageUrl, isDriveMedia, isUnknownDriveMedia, isVideoMedia, downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
@@ -643,7 +644,18 @@ export function CriaPostMedia({ postId, platform, format, caption, handle, appro
         </div>
       )}
 
-      {isStory ? (
+      {platform === "linkedin" ? (
+        /* Post de LinkedIn com cara de LinkedIn (Walter, 25/11/2026). */
+        <div className="mx-auto w-full max-w-[440px] overflow-hidden rounded-2xl border border-border">
+          <MolduraLinkedIn nome={(handle ?? "").replace(/^@/, "") || "Perfil"} texto={cap}>
+            {visiveis.length > 0 && (
+              <CapaSobreVideo capa={comCapa && visiveis.length <= 1 ? capa : null}>
+                <PostMediaCarousel media={visiveis} aspect={aspect} onRemove={onRemoveMedia} onVideoReady={onReady} />
+              </CapaSobreVideo>
+            )}
+          </MolduraLinkedIn>
+        </div>
+      ) : isStory ? (
         <div className="mx-auto w-full max-w-[300px]">
           <StoryPreview media={visiveis} handle={handle} onRemove={onRemoveMedia} />
         </div>

@@ -14,6 +14,7 @@ import { PostMediaCarousel } from "@/components/shared/PostMediaCarousel";
 import { useMidiaComTipoDrive } from "@/hooks/useMidiaComTipoDrive";
 import { type Alfinete } from "@/components/shared/CamadaDeAlfinetes";
 import { StoryPreview } from "@/components/accounts/StoryPreview";
+import { MolduraLinkedIn } from "@/components/shared/MolduraLinkedIn";
 import { postAspect } from "@/lib/post-aspect";
 import { EtapasChecklist, type Stage } from "@/components/aprovar/EtapasChecklist";
 import { PortalFeed, PortalMes, type DiaEmProducao } from "@/components/aprovar/PortalVisoes";
@@ -115,6 +116,18 @@ function CardIG({ client, post, alfinetes, modoApontar, aoFixar, aoAbrirAlfinete
     return (
       <article className="rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(27,26,24,0.07)]">
         <StoryPreview media={media} handle={handle} avatarUrl={client.client_logo} figurinhas={figurinhasDoPost} />
+      </article>
+    );
+  }
+  // Post de LinkedIn: o cliente vê como no feed do LinkedIn (Walter, 25/11/2026).
+  if ((post.platform || "").toLowerCase() === "linkedin") {
+    return (
+      <article className="border border-border rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(27,26,24,0.07)]">
+        <MolduraLinkedIn nome={client.client_name || handle} avatarUrl={client.client_logo} texto={legenda} vazio="O texto do post aparece aqui.">
+          {media.length > 0 && (
+            <PostMediaCarousel media={media} aspect={aspect} alfinetes={alfinetes} modoApontar={modoApontar} aoFixar={aoFixar} aoAbrirAlfinete={aoAbrirAlfinete} alfineteSelecionado={alfineteSelecionado} />
+          )}
+        </MolduraLinkedIn>
       </article>
     );
   }
