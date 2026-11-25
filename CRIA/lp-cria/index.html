@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CRIA | Seu conteúdo inteiro, organizado. Numa aba só.</title>
+<title>Cria Social Club | Seu conteúdo inteiro, organizado. Numa aba só.</title>
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
@@ -1814,6 +1814,10 @@ html,body{overflow-x:clip}
 .footer-links a{text-decoration:underline;text-underline-offset:3px;opacity:.85;transition:opacity .2s}
 .footer-links a:hover{opacity:1}
 .footer-contato{margin-top:16px;font-size:.82rem;opacity:.75}
+/* Bloco pedido pela verificação de marca do Google (Walter, 25/11/2026). */
+.footer-google{max-width:720px;margin:18px auto 0;font-size:.82rem;line-height:1.55;opacity:.8;text-align:center}
+.footer-google strong{opacity:1}
+.footer-google a{text-decoration:underline;text-underline-offset:3px}
 .footer-contato a{text-decoration:underline}
 .footer-empresa{margin-top:18px;padding-top:16px;border-top:1px solid rgba(244,239,227,.18);font-size:.78rem;line-height:1.6;opacity:.7}
 
@@ -2098,6 +2102,10 @@ section.dobrado .dobra-btn .seta{transform:none}
       <div><h5>Conteúdo</h5><a href="/blog">Blog</a><a href="#faq">Dúvidas</a><a href="https://app.criasocialclub.com.br/login">Entrar no Cria</a></div>
     </div>
     <p>© 2026 CRIA Social Club · Feito no Brasil</p>
+    <!-- O CRIA E A CONTA GOOGLE (Walter, 25/11/2026). A verificação de marca do
+         Google reprovou a página por não dizer pra que o app usa as APIs do
+         Google nem trazer o aviso sobre imagens íntimas geradas por IA. -->
+    <p class="footer-google"><strong>O Cria e a sua conta Google.</strong> O Cria Social Club é um app de organização de conteúdo para criadores e social medias: ideias, roteiros, calendário e aprovação de posts. Com a sua permissão, usamos o login do Google para você entrar e o Google Drive para escolher arquivos que você mesmo seleciona. Não vendemos seus dados e não usamos as APIs do Google para gerar imagens íntimas ou de nudez, de ninguém. Detalhes na <a href="https://app.criasocialclub.com.br/privacidade">Política de Privacidade</a>.</p>
     <nav class="footer-links" aria-label="Links institucionais e legais">
       <a href="funcionalidades.html">Funcionalidades</a>
       <a href="social-media.html">Pra social medias</a>
