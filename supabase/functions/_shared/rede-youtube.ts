@@ -102,6 +102,8 @@ export const youtube = {
   async publicar(args: {
     accessToken: string; midiaUrl: string; titulo: string; texto: string; opcoes: Record<string, unknown>;
     ehShort: boolean; limiteMs: number;
+    /** Campos do post de YouTube (posts.youtube, 25/11/2026). */
+    tags?: string[]; categoria?: string | null; idioma?: string | null; miniaturaUrl?: string | null;
   }): Promise<ResultadoPublicacao> {
     const o = args.opcoes;
     if (!['public', 'unlisted', 'private'].includes(String(o.privacyStatus))) {
@@ -110,8 +112,18 @@ export const youtube = {
     if (typeof o.selfDeclaredMadeForKids !== 'boolean') {
       throw new ErroRede('Responda se o vídeo é feito para crianças antes de publicar no YouTube.', true);
     }
-    const titulo = args.titulo.trim().slice(0, 100);
+    const titulo = args.titulo.replace(/[<>]/g, '').trim().slice(0, 100);
     if (!titulo) throw new ErroRede('O vídeo precisa de um título pro YouTube.', true);
+    /* Agendado pelo próprio YouTube (Walter, 25/11/2026, mockup aprovado): o
+       vídeo sobe agora como privado com publishAt e o YouTube solta na hora,
+       já processado. A API só aceita publishAt com privacyStatus "private". */
+    const publishAt = typeof o.publishAt === 'string' && Date.parse(o.publishAt) > Date.now() + 5 * 60_000 ? new Date(o.publishAt).toISOString() : null;
+    if (publishAt && o.privacyStatus !== 'public') {
+      throw new ErroRede('Só vídeo público pode ser programado no YouTube. Escolha "Pública" ou publique agora.', true);
+    }
+    const tags = cortarTags(args.tags ?? []);
+    const categoria = /^\d{1,3}$/.test(String(args.categoria ?? '')) ? String(args.categoria) : '22';
+    const idioma = /^[a-z]{2}(-[A-Z]{2})?$/.test(String(args.idioma ?? '')) ? String(args.idioma) : 'pt-BR';
 
     const head = await fetch(args.midiaUrl, { method: 'HEAD' });
     const total = Number(head.headers.get('content-length') ?? 0);
@@ -126,9 +138,14 @@ export const youtube = {
         'X-Upload-Content-Type': 'video/mp4',
       },
       body: JSON.stringify({
-        snippet: { title: titulo, description: args.texto.slice(0, 5000), categoryId: '22' },
+        snippet: {
+          title: titulo, description: args.texto.replace(/[<>]/g, '').slice(0, 5000), categoryId: categoria,
+          defaultLanguage: idioma, defaultAudioLanguage: idioma,
+          ...(tags.length ? { tags } : {}),
+        },
         status: {
-          privacyStatus: o.privacyStatus,
+          privacyStatus: publishAt ? 'private' : o.privacyStatus,
+          ...(publishAt ? { publishAt } : {}),
           selfDeclaredMadeForKids: o.selfDeclaredMadeForKids,
           ...(typeof o.containsSyntheticMedia === 'boolean' ? { containsSyntheticMedia: o.containsSyntheticMedia } : {}),
         },
@@ -167,6 +184,59 @@ export const youtube = {
     }
     const id = String(video?.id ?? '');
     if (!id) throw new ErroRede('O YouTube recebeu o vídeo mas não devolveu o endereço. Confira no canal antes de tentar de novo.', true);
-    return { estado: 'publicado', externalId: id, permalink: args.ehShort ? `https://www.youtube.com/shorts/${id}` : `https://youtu.be/${id}` };
+    const permalink = args.ehShort ? `https://www.youtube.com/shorts/${id}` : `https://youtu.be/${id}`;
+    if (!args.miniaturaUrl) return { estado: 'publicado', externalId: id, permalink };
+    // Miniatura: tenta já; se o YouTube ainda estiver processando, o robô tenta
+    // de novo a cada minuto (conferirMiniatura) até dar certo.
+    const m = await youtube.definirMiniatura(args.accessToken, id, args.miniaturaUrl);
+    if (m.ok) return { estado: 'publicado', externalId: id, permalink };
+    if (m.definitivo) return { estado: 'publicado', externalId: id, permalink, aviso: m.erro };
+    return { estado: 'processando', externalId: id, permalink };
+  },
+
+  /** Sobe a miniatura (thumbnails.set aceita youtube.upload e vale pra Shorts). */
+  async definirMiniatura(accessToken: string, videoId: string, url: string): Promise<{ ok: true } | { ok: false; definitivo: boolean; erro: string }> {
+    const img = await fetch(url).catch(() => null);
+    if (!img?.ok) return { ok: false, definitivo: true, erro: 'O vídeo saiu, mas a miniatura não pôde ser lida. Suba de novo no YouTube Studio.' };
+    const tipo = img.headers.get('content-type')?.includes('png') ? 'image/png' : 'image/jpeg';
+    const bytes = new Uint8Array(await img.arrayBuffer());
+    const r = await fetch(`https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${encodeURIComponent(videoId)}&uploadType=media`, {
+      method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': tipo }, body: bytes,
+    });
+    if (r.ok) return { ok: true };
+    const j = await r.json().catch(() => null) as { error?: { message?: string; errors?: Array<{ reason?: string }> } } | null;
+    const motivo = j?.error?.errors?.[0]?.reason ?? '';
+    // 403 "forbidden": o canal ainda não pode usar capa própria (precisa verificar o telefone no YouTube).
+    if (r.status === 403) {
+      return { ok: false, definitivo: true, erro: 'O vídeo saiu com a capa automática: este canal ainda não pode usar miniatura própria (o YouTube pede verificar o canal pelo telefone).' };
+    }
+    if (motivo === 'mediaBodyTooLarge' || r.status === 413 || motivo === 'invalidImage') {
+      return { ok: false, definitivo: true, erro: 'O vídeo saiu, mas o YouTube recusou a miniatura (imagem grande demais ou inválida).' };
+    }
+    return { ok: false, definitivo: false, erro: j?.error?.message ?? `HTTP ${r.status}` };
+  },
+
+  /** Ainda processando no YouTube? (videos.list com processingDetails, só o dono vê.) */
+  async processando(accessToken: string, videoId: string): Promise<boolean> {
+    const r = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=processingDetails&id=${encodeURIComponent(videoId)}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!r.ok) return false;
+    const j = await r.json().catch(() => null) as { items?: Array<{ processingDetails?: { processingStatus?: string } }> } | null;
+    return j?.items?.[0]?.processingDetails?.processingStatus === 'processing';
   },
 };
+
+/** Tags no limite do YouTube: 500 caracteres somando vírgulas e as aspas de tag com espaço. */
+export function cortarTags(lista: unknown[]): string[] {
+  const out: string[] = [];
+  let soma = 0;
+  for (const bruta of lista) {
+    const t = String(bruta ?? '').replace(/[<>,]/g, '').trim().slice(0, 100);
+    if (!t || out.some((x) => x.toLowerCase() === t.toLowerCase())) continue;
+    const custo = t.length + (/\s/.test(t) ? 2 : 0) + (out.length ? 1 : 0);
+    if (soma + custo > 500) break;
+    out.push(t); soma += custo;
+  }
+  return out;
+}

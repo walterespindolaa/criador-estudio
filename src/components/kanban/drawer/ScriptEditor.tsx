@@ -11,6 +11,8 @@ export interface Section {
   driveThumbnail?: string | null;
   /** id da row em external_media_refs (quando a mídia foi registrada lá) */
   mediaRefId?: string | null;
+  /** Vídeo de YouTube: minuto em que o bloco começa ("01:10"). Vira capítulo (25/11/2026). */
+  minuto?: string | null;
 }
 
 export const emptySection = (): Section => ({
@@ -31,6 +33,8 @@ type Props = {
   uploadingLocal?: boolean;
   onUploadLocalForSection?: (index: number) => void;
   onRemoveSectionMedia?: (index: number) => void | Promise<void>;
+  /** Vídeo de YouTube: cada bloco ganha o minuto em que começa (vira capítulo). */
+  comMinuto?: boolean;
 };
 
 export function ScriptEditor({
@@ -42,6 +46,7 @@ export function ScriptEditor({
   uploadingLocal = false,
   onUploadLocalForSection,
   onRemoveSectionMedia,
+  comMinuto = false,
 }: Props) {
   /* Walter (20/10/2026): "deixar só a cena 1 e 2 e um botão de adicionar cena
      mais visível". O post continua guardando as cenas como sempre (posts antigos
@@ -101,6 +106,16 @@ export function ScriptEditor({
                 <span className="text-[9px] font-body uppercase tracking-[0.15em] text-muted-foreground/60 font-semibold">
                   {sectionLabel} {String(i + 1).padStart(2, "0")}
                 </span>
+                {comMinuto && (
+                  <input
+                    value={sec.minuto ?? ""}
+                    onChange={(e) => updateAt(i, { minuto: e.target.value.replace(/[^\d:]/g, "").slice(0, 8) })}
+                    placeholder={i === 0 ? "00:00" : "mm:ss"}
+                    inputMode="numeric"
+                    aria-label={`Minuto em que começa: ${sectionLabel} ${i + 1}`}
+                    className="ml-auto w-[68px] h-7 rounded-lg border border-border bg-background px-2 text-center text-[12.5px] font-mono tabular-nums text-[#065fd4] placeholder:text-muted-foreground/50"
+                  />
+                )}
               </div>
 
               <Textarea

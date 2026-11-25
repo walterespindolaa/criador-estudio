@@ -59,6 +59,8 @@ export type OpcoesYouTube = {
   containsSyntheticMedia?: boolean;
   /** O que a pessoa quer: Short (vertical/quadrado até 3 min) ou vídeo normal. */
   tipo?: 'short' | 'video';
+  /** Programado no próprio YouTube (ISO). Só com vídeo público (25/11/2026). */
+  publishAt?: string;
 };
 
 export type OpcoesLinkedIn = {
@@ -77,8 +79,9 @@ export type CriadorTikTok = {
 };
 
 export type ResultadoPublicacao =
-  | { estado: 'publicado'; externalId: string; permalink?: string | null }
-  | { estado: 'processando'; externalId: string }
+  /** aviso: saiu, mas com um porém (ex.: miniatura recusada). Fica no campo erro da publicação. */
+  | { estado: 'publicado'; externalId: string; permalink?: string | null; aviso?: string }
+  | { estado: 'processando'; externalId: string; permalink?: string | null }
   | { estado: 'erro'; erro: string; tentarDeNovo: boolean };
 
 export type TokensDaConexao = {

@@ -5,9 +5,12 @@ import { PlatformIcon } from "@/components/shared/PlatformIcon";
 import { Heart, MessageCircle, Send, Bookmark, Play, Music2, Share2, ChevronLeft, ChevronRight, Image, X, FileText } from "lucide-react";
 import { MolduraLinkedIn } from "@/components/shared/MolduraLinkedIn";
 import { VideoMediaSlot } from "./VideoMediaSlot";
+import { YT_CORTE_MAIS, capitulosDoRoteiro, duracaoYouTube, hashtagsDaDescricao, type YoutubeDoPost } from "@/lib/youtube";
 
 interface SectionData {
   text: string;
+  /** Minuto do bloco no vídeo de YouTube (vira capítulo). */
+  minuto?: string | null;
   driveFileId?: string | null;
   driveFileName?: string | null;
   driveThumbnail?: string | null;
@@ -45,6 +48,8 @@ interface PostPreviewContentProps {
   capa?: string | null;
   /** Progresso do envio do vídeo (0-100) enquanto ele ainda sobe. */
   envioPct?: number | null;
+  /** Campos do post de YouTube (25/11/2026): título do vídeo, miniatura etc. */
+  youtube?: YoutubeDoPost | null;
 }
 
 interface PostPreviewProps extends PostPreviewContentProps {
@@ -122,7 +127,7 @@ function VideoDoDrive({ fileId, poster, className }: { fileId: string; poster: s
 
 // Conteudo puro da previa (sem Dialog), reutilizavel: vive no modal fullscreen do
 // mobile E na coluna direita fixa do desktop dentro do PostEditor.
-export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections, carouselMedia, carouselVideos, folgaParaFechar, semAbasPlataforma, capa, envioPct }: PostPreviewContentProps) {
+export function PostPreviewContent({ title, hook, caption, platform, format, userName, userHandle, avatarUrl, mediaUrl, mediaType, media, thumbnail, coverImage, sections, carouselMedia, carouselVideos, folgaParaFechar, semAbasPlataforma, capa, envioPct, youtube }: PostPreviewContentProps) {
   const initials = (userName || "C")[0].toUpperCase();
   // Trocou a capa, ela volta pra frente mesmo depois de um play.
   const [capaVista, setCapaVista] = useState<string | null>(null);
@@ -149,7 +154,20 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
   const fmtIg: "feed" | "reels" | null = /reel|stor|v[ií]deo|video/i.test(format ?? "") ? "reels"
     : /carross|foto|post|est[aá]tic|imagem|feed/i.test(format ?? "") ? "feed" : null;
   const igTab = fmtIg ?? igTabEscolhida;
-  const [ytTab, setYtTab] = useState<"thumbnail" | "shorts">("thumbnail");
+  const [ytTab, setYtTab] = useState<"thumbnail" | "shorts">(format === "shorts" ? "shorts" : "thumbnail");
+  // Prévia do YouTube com o que o post tem de verdade (Walter, 25/11/2026, mockup aprovado):
+  // duração do vídeo, hashtags em cima do título, corte do "mais" e capítulos.
+  const [duracaoSeg, setDuracaoSeg] = useState<number | null>(null);
+  const ytCapitulos = format === "video" ? capitulosDoRoteiro(sections ?? []) : [];
+  const ytHashtags = hashtagsDaDescricao(caption).slice(0, 3);
+  const ytDescricao = caption.trim();
+  const ytCorte = (() => {
+    let c = Math.min(YT_CORTE_MAIS, ytDescricao.length);
+    let quebras = 0;
+    for (let i = 0; i < c; i++) if (ytDescricao[i] === "\n" && ++quebras === 2) { c = i; break; }
+    return c;
+  })();
+  const ytTitulo = youtube?.titulo?.trim() || title || hook || "Título do vídeo";
   const [carouselIdx, setCarouselIdx] = useState(0);
 
   const activeMediaUrl = mediaUrl || media || thumbnail || coverImage;
@@ -530,7 +548,10 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
                  sobrava moldura e o vídeo ficava minúsculo (Walter, 09/09). */
               <div className="bg-card">
                 <div className="relative overflow-hidden aspect-video">
-                  {activeMediaUrl ? (
+                  {/* Miniatura própria do post aparece como no YouTube: a capa por cima. */}
+                  {youtube?.miniatura_url ? (
+                    <img src={youtube.miniatura_url} alt="Miniatura do vídeo" className="w-full h-full object-cover" />
+                  ) : activeMediaUrl ? (
                     isBunnyVideo ? (
                       <VideoMediaSlot viewUrl={activeMediaUrl!} envioPct={envioPct} className="w-full h-full border-0" />
                     ) : isPlayableVideo ? (
@@ -538,6 +559,7 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
                         src={activeMediaUrl}
                         controls
                         playsInline
+                        onLoadedMetadata={(e) => setDuracaoSeg(e.currentTarget.duration)}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -553,26 +575,52 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
                       <span className="mt-2 text-[10px] font-body text-white/45">a capa do vídeo entra aqui</span>
                     </GradientPlaceholder>
                   )}
-                  {/* A duração só aparece quando existe mídia. Sem arquivo, o
-                      "8:42" fixo era um número inventado em cima de um vazio. */}
-                  {activeMediaUrl && (
-                    <div className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded font-body pointer-events-none">8:42</div>
+                  {/* Duração de verdade (lida do vídeo). Sem ela, não mostra: o
+                      "8:42" fixo era um número inventado (mockup de 25/11/2026). */}
+                  {duracaoYouTube(duracaoSeg) && (
+                    <div className="absolute bottom-2 right-1.5 bg-black/80 text-white text-[10px] px-1.5 py-0.5 rounded font-body pointer-events-none">{duracaoYouTube(duracaoSeg)}</div>
+                  )}
+                  {/* Barra cortada nos capítulos, como no player do YouTube. */}
+                  {ytCapitulos.length >= 3 && (
+                    <div className="absolute inset-x-0 bottom-0 flex h-1 gap-0.5 pointer-events-none">
+                      {ytCapitulos.map((c, i) => <i key={c.minuto} className={i === 0 ? "flex-1 bg-[#E62117]" : "flex-1 bg-white/55"} />)}
+                    </div>
                   )}
                 </div>
-                <div className="flex gap-2.5 px-3 py-2.5">
-                  <div className="w-9 h-9 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">
+                <div className="px-3 pt-2.5">
+                  {ytHashtags.length > 0 && <p className="text-[11px] text-[#065fd4] truncate">{ytHashtags.join(" ")}</p>}
+                  <p className="text-[15px] font-medium text-foreground line-clamp-2 leading-snug mt-0.5">{ytTitulo}</p>
+                  <p className="text-[10.5px] text-muted-foreground mt-1">Prévia de como vai aparecer</p>
+                </div>
+                <div className="flex items-center gap-2.5 px-3 py-2.5">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center shrink-0">
                     {avatarUrl
                       ? <img src={avatarUrl} className="w-full h-full object-cover" alt={userName} loading="lazy" />
                       : <span className="text-xs font-bold text-primary">{initials}</span>}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground line-clamp-2 leading-snug">{title || hook || "Título do vídeo"}</p>
-                    {/* Número plausível, igual às curtidas do IG aqui do lado.
-                        "0 visualizações · agora" fazia a prévia parecer um vídeo
-                        que ninguém viu, e não um exemplo de como vai ficar. */}
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{userName} · 3,4 mil visualizações · há 2 horas</p>
-                  </div>
+                  <p className="text-[13px] font-medium text-foreground truncate">{userName}</p>
+                  <span className="ml-auto rounded-full bg-foreground text-background px-3 py-1.5 text-[12px] font-medium">Inscrever-se</span>
                 </div>
+                {ytDescricao && (
+                  <div className="mx-3 mb-3 rounded-xl bg-muted/60 px-3 py-2 text-[12.5px] leading-snug text-foreground whitespace-pre-line">
+                    {ytDescricao.slice(0, ytCorte)}{ytCorte < ytDescricao.length && <span className="font-medium"> ...mais</span>}
+                  </div>
+                )}
+                {ytCapitulos.length >= 3 && (
+                  <div className="px-3 pb-3">
+                    <p className="text-[13px] font-medium mb-1.5">Capítulos</p>
+                    <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+                      {ytCapitulos.map((c, i) => (
+                        <div key={c.minuto} className="w-28 shrink-0">
+                          <div className={`relative aspect-video rounded-lg ${["bg-[#EA4918]", "bg-[#FF77B9]", "bg-[#0061EE]", "bg-[#FFCF03]", "bg-[#00A652]"][i % 5]}`}>
+                            <span className="absolute left-1 bottom-1 rounded bg-black/80 px-1 text-[9.5px] text-white">{c.minuto}</span>
+                          </div>
+                          <p className="mt-1 text-[11px] leading-tight line-clamp-2">{c.titulo}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <VerticalPreview variant="shorts" />

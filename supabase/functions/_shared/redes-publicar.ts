@@ -90,7 +90,7 @@ export async function publicarLinha(admin: SupabaseClient, pubId: string, actor:
   const pub = row as Pub | null;
   if (!pub) return { estado: 'erro', mensagem: 'Publicação não encontrada.' };
   const { data: postRow } = await admin.from('posts')
-    .select('id, user_id, title, caption, external_client_id, approval_status, publish_sem_aprovacao_motivo')
+    .select('id, user_id, title, caption, external_client_id, approval_status, publish_sem_aprovacao_motivo, youtube')
     .eq('id', pub.post_id).maybeSingle();
   const p = postRow as Record<string, unknown> | null;
   const quem = actor ?? pub.criado_por ?? String(p?.user_id ?? '');
@@ -154,9 +154,14 @@ export async function publicarLinha(admin: SupabaseClient, pubId: string, actor:
       }
       r = await tiktok.publicar({ accessToken: cx.token, midiaUrl: v.url!, texto, opcoes, limiteMs });
     } else {
-      const titulo = String(pub.titulo ?? p.title ?? '').trim();
+      // Campos do post de YouTube (posts.youtube, 25/11/2026): título do vídeo, tags, categoria, idioma, miniatura.
+      const yt = (p.youtube ?? {}) as { titulo?: string | null; tags?: unknown; categoria?: string | null; idioma?: string | null; miniatura_url?: string | null };
+      const titulo = String(pub.titulo || yt.titulo || p.title || '').trim();
       const ehShort = !!(v.largura && v.altura && v.altura >= v.largura && (v.duracao ?? 0) <= 180);
-      r = await youtube.publicar({ accessToken: cx.token, midiaUrl: v.url!, titulo, texto, opcoes, ehShort, limiteMs });
+      r = await youtube.publicar({
+        accessToken: cx.token, midiaUrl: v.url!, titulo, texto, opcoes, ehShort, limiteMs,
+        tags: Array.isArray(yt.tags) ? yt.tags.map(String) : [], categoria: yt.categoria, idioma: yt.idioma, miniaturaUrl: yt.miniatura_url,
+      });
     }
     return await aplicar(admin, pub, r, p, quem, link);
   } catch (e) {
@@ -168,17 +173,50 @@ async function aplicar(admin: SupabaseClient, pub: Pub, r: ResultadoPublicacao, 
   const agora = new Date().toISOString();
   const nome = REDES[pub.rede].nome;
   if (r.estado === 'publicado') {
-    await admin.from('post_publicacoes').update({ status: 'publicado', external_id: r.externalId, permalink: r.permalink ?? null, erro: null, publicado_em: agora, updated_at: agora } as never).eq('id', pub.id);
-    await avisar(admin, [String(p.user_id ?? ''), quem], `Publicado no ${nome}`, `"${String(p.title ?? 'Post').slice(0, 60)}" já está no ar.`, link);
-    return { estado: 'publicado' };
+    await admin.from('post_publicacoes').update({ status: 'publicado', external_id: r.externalId, permalink: r.permalink ?? null, erro: r.aviso ?? null, publicado_em: agora, updated_at: agora } as never).eq('id', pub.id);
+    // YouTube programado (publishAt): já subiu, mas só aparece na hora marcada.
+    const quando = pub.rede === 'youtube' ? String((pub.opcoes ?? {}).publishAt ?? '') : '';
+    const programado = quando && Date.parse(quando) > Date.now()
+      ? new Date(quando).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+      : null;
+    await avisar(admin, [String(p.user_id ?? ''), quem],
+      programado ? `Programado no ${nome}` : `Publicado no ${nome}`,
+      programado ? `"${String(p.title ?? 'Post').slice(0, 60)}" já subiu e sai sozinho em ${programado}.` : `"${String(p.title ?? 'Post').slice(0, 60)}" já está no ar.`,
+      link);
+    return { estado: 'publicado', ...(programado ? { mensagem: `Enviado. O YouTube publica sozinho em ${programado}.` } : {}) };
   }
   if (r.estado === 'processando') {
-    await admin.from('post_publicacoes').update({ status: 'processando', external_id: r.externalId, erro: null, updated_at: agora } as never).eq('id', pub.id);
-    return { estado: 'processando', mensagem: `O ${nome} está processando o vídeo. Leva alguns minutos.` };
+    await admin.from('post_publicacoes').update({ status: 'processando', external_id: r.externalId, ...(r.permalink ? { permalink: r.permalink } : {}), erro: null, updated_at: agora } as never).eq('id', pub.id);
+    return { estado: 'processando', mensagem: pub.rede === 'youtube'
+      ? 'O vídeo já está no YouTube. Falta só a miniatura, que entra quando o YouTube terminar de processar.'
+      : `O ${nome} está processando o vídeo. Leva alguns minutos.` };
   }
   await admin.from('post_publicacoes').update({ status: 'erro', erro: r.erro, updated_at: agora } as never).eq('id', pub.id);
   await avisar(admin, [String(p.user_id ?? ''), quem], `Não deu pra publicar no ${nome}`, `"${String(p.title ?? 'Post').slice(0, 60)}": ${r.erro}`, link);
   return { estado: 'erro', mensagem: r.erro };
+}
+
+/* YouTube "processando" = o vídeo já subiu e falta a miniatura (25/11/2026).
+   Espera o YouTube terminar de processar, põe a capa e fecha como publicado.
+   Passou de 2 horas sem dar certo: fecha publicado com o aviso. */
+async function conferirMiniatura(admin: SupabaseClient, pub: Pub, token: string, p: Record<string, unknown>, quem: string, link: string) {
+  const { data: linha } = await admin.from('post_publicacoes').select('permalink, created_at').eq('id', pub.id).maybeSingle();
+  const l = (linha ?? {}) as { permalink?: string | null; created_at?: string };
+  const base = { estado: 'publicado' as const, externalId: pub.external_id!, permalink: l.permalink ?? `https://youtu.be/${pub.external_id}` };
+  const url = ((p.youtube ?? {}) as { miniatura_url?: string | null }).miniatura_url;
+  if (!url) { await aplicar(admin, pub, base, p, quem, link); return; }
+  const velho = l.created_at ? Date.now() - new Date(l.created_at).getTime() > 2 * 3600_000 : false;
+  if (!velho && await youtube.processando(token, pub.external_id!)) {
+    await admin.from('post_publicacoes').update({ updated_at: new Date().toISOString() } as never).eq('id', pub.id);
+    return;
+  }
+  const m = await youtube.definirMiniatura(token, pub.external_id!, url);
+  if (m.ok) { await aplicar(admin, pub, base, p, quem, link); return; }
+  if (m.definitivo || velho) {
+    await aplicar(admin, pub, { ...base, aviso: m.definitivo ? m.erro : 'O vídeo saiu, mas a miniatura não entrou. Suba no YouTube Studio.' }, p, quem, link);
+    return;
+  }
+  await admin.from('post_publicacoes').update({ updated_at: new Date().toISOString() } as never).eq('id', pub.id);
 }
 
 /** TikTok e vídeo do LinkedIn: consulta quem está "processando" e fecha como publicado ou erro. */
@@ -186,13 +224,14 @@ export async function conferirProcessando(admin: SupabaseClient, pubId: string) 
   const { data: row } = await admin.from('post_publicacoes')
     .select('id, post_id, rede, status, tentativas, titulo, texto, opcoes, external_id, criado_por').eq('id', pubId).maybeSingle();
   const pub = row as Pub | null;
-  if (!pub || pub.status !== 'processando' || (pub.rede !== 'tiktok' && pub.rede !== 'linkedin') || !pub.external_id) return;
-  const { data: postRow } = await admin.from('posts').select('id, user_id, title, caption, external_client_id').eq('id', pub.post_id).maybeSingle();
+  if (!pub || pub.status !== 'processando' || !pub.external_id) return;
+  const { data: postRow } = await admin.from('posts').select('id, user_id, title, caption, external_client_id, youtube').eq('id', pub.post_id).maybeSingle();
   const p = (postRow ?? {}) as Record<string, unknown>;
   const quem = pub.criado_por ?? String(p.user_id ?? '');
   const link = p.external_client_id ? '/socialmidia/criapost/publicacoes' : '/app/criando';
   try {
     const cx = await conexaoComToken(admin, pub.post_id, pub.rede, quem);
+    if (pub.rede === 'youtube') return await conferirMiniatura(admin, pub, cx.token, p, quem, link);
     const r = pub.rede === 'linkedin'
       ? await linkedin.conferirVideo({
         accessToken: cx.token, autor: cx.contaId ?? '', video: pub.external_id,

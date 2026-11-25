@@ -6,7 +6,7 @@ import { useProfile } from "@/hooks/useProfile";
    pra todo o resto do app este componente não renderiza nem baixa nada. */
 const Painel = lazy(() => import("@/components/shared/PublicarNasRedes").then((m) => ({ default: m.PublicarNasRedes })));
 
-export function RedesSoMaster(props: { postId: string; legenda?: string | null; titulo?: string | null; plataforma?: string | null }) {
+export function RedesSoMaster(props: { postId: string; legenda?: string | null; titulo?: string | null; plataforma?: string | null; aoVivo?: { data: string | null; hora: string | null }; antesDeAgir?: () => Promise<void> }) {
   const { profile } = useProfile();
   if (profile?.role !== "admin") return null;
   return <Suspense fallback={null}><Painel {...props} /></Suspense>;

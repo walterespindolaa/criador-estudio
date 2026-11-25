@@ -79,6 +79,8 @@ const FORMATOS_SUGESTAO = [
   { value: "reels", label: "Reels", postFormat: "reels", platform: "instagram" },
   { value: "story", label: "Story", postFormat: "story", platform: "instagram" },
   { value: "youtube", label: "YouTube", postFormat: "video", platform: "youtube" },
+  // Ideia que vira Short (Walter, 25/11/2026, mockup do post de YouTube aprovado).
+  { value: "shorts", label: "Shorts", postFormat: "shorts", platform: "youtube" },
   // LinkedIn como destino da ideia (Walter, 25/11/2026: "na hora de pegar e
   // transformar uma ideia"). Só o master vê enquanto o LinkedIn está em teste.
   { value: "linkedin", label: "LinkedIn", postFormat: "texto", platform: "linkedin" },

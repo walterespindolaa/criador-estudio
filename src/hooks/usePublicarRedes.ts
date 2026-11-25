@@ -189,7 +189,7 @@ export function usePublicarAgoraRede(postId: string | null | undefined, rede: Re
       return data as { estado?: string; mensagem?: string };
     },
     onSuccess: (r) => {
-      if (r?.estado === "publicado") toast.success(`Publicado no ${NOME_REDE[rede]}.`);
+      if (r?.estado === "publicado") toast.success(r.mensagem ?? `Publicado no ${NOME_REDE[rede]}.`);
       else if (r?.estado === "processando") toast.success(r.mensagem ?? `O ${NOME_REDE[rede]} está processando o vídeo.`);
       else if (r?.estado === "erro") toast.error(r.mensagem ?? "Não saiu.");
       else if (r?.mensagem) toast(r.mensagem);
@@ -317,4 +317,21 @@ export function useVoltaDoLoginDaRede() {
     const t = window.setTimeout(recarregar, 1500);
     return () => window.clearTimeout(t);
   }, [qc]);
+}
+
+/** O que o painel do YouTube mostra em "Vai junto": lido do post salvo (25/11/2026). */
+export type PostParaYouTube = {
+  title: string | null; caption: string | null; youtube: unknown;
+  scheduled_date: string | null; scheduled_time: string | null;
+};
+export function usePostParaYouTube(postId: string | null | undefined, ativo = true) {
+  return useQuery<PostParaYouTube | null>({
+    queryKey: ["post-para-youtube", postId],
+    enabled: !!postId && ativo,
+    staleTime: 0,
+    queryFn: async () => {
+      const { data } = await sbFrom("posts").select("title, caption, youtube, scheduled_date, scheduled_time").eq("id", postId!).maybeSingle();
+      return (data as unknown as PostParaYouTube | null) ?? null;
+    },
+  });
 }

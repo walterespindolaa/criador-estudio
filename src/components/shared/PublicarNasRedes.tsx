@@ -7,7 +7,10 @@ import { useProfile } from "@/hooks/useProfile";
 import {
   conectarRede, formatoLinkedInDaMidia, NOME_REDE, useAgendarRede, useConexaoRede, useCrmDoPost, useCriadorTikTok,
   useMidiaDoPost, usePublicacaoRede, usePublicarAgoraRede, useVencimentoRede, type RedeNova, useVoltaDoLoginDaRede,
+  usePostParaYouTube,
 } from "@/hooks/usePublicarRedes";
+import { useQueryClient } from "@tanstack/react-query";
+import { YT_CATEGORIAS, YT_IDIOMAS, YT_TAGS_MAX, YT_TITULO_MAX, contarTags, hashtagsDaDescricao, lerYoutube } from "@/lib/youtube";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PUBLICAR NO TIKTOK E NO YOUTUBE (mockup aprovado em 03/11/2026)
@@ -71,7 +74,15 @@ function Marca({ marcado, desligado, onClick, children, nota }: { marcado: boole
   );
 }
 
-export function PublicarNasRedes({ postId, legenda, titulo, plataforma }: { postId: string; legenda?: string | null; titulo?: string | null; plataforma?: string | null }) {
+export type AoVivo = { data: string | null; hora: string | null };
+
+export function PublicarNasRedes({ postId, legenda, titulo, plataforma, aoVivo, antesDeAgir }: {
+  postId: string; legenda?: string | null; titulo?: string | null; plataforma?: string | null;
+  /** Data e hora que estão na tela agora (o YouTube programa por elas). */
+  aoVivo?: AoVivo;
+  /** Grava o que está pendente no editor antes de publicar (o painel lê o post salvo). */
+  antesDeAgir?: () => Promise<void>;
+}) {
   const { profile } = useProfile();
   const master = profile?.role === "admin";
   /* Post de TikTok ou YouTube: a caixa já abre na rede dele. Post de Instagram:
@@ -113,7 +124,7 @@ export function PublicarNasRedes({ postId, legenda, titulo, plataforma }: { post
         ? <PainelLinkedIn key="li" postId={postId} legenda={legenda} />
         : rede === "tiktok"
           ? <PainelTikTok key="tt" postId={postId} legenda={legenda} />
-          : <PainelYouTube key="yt" postId={postId} legenda={legenda} titulo={titulo} />}
+          : <PainelYouTube key="yt" postId={postId} titulo={titulo} aoVivo={aoVivo} antesDeAgir={antesDeAgir} />}
     </div>
   );
 }
@@ -138,7 +149,14 @@ function Cabecalho({ postId, rede }: { postId: string; rede: RedeNova }) {
         )}
       </div>
       {pub.erro && pub.status !== "publicado" && <p className="text-[12px] font-body text-amber-900 flex gap-1.5"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />{pub.erro}</p>}
-      {pub.status === "processando" && <p className="text-[12px] font-body text-muted-foreground">O {NOME_REDE[rede]} leva alguns minutos pra processar o vídeo. Esta caixa atualiza sozinha.</p>}
+      {/* Saiu com um porém (ex.: o YouTube recusou a miniatura). */}
+      {pub.erro && pub.status === "publicado" && <p className="text-[12px] font-body text-muted-foreground flex gap-1.5"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />{pub.erro}</p>}
+      {pub.status === "publicado" && programadoPara(pub.opcoes) && (
+        <p className="text-[12px] font-body text-foreground">Programado no YouTube: sai sozinho em <b>{programadoPara(pub.opcoes)}</b>.</p>
+      )}
+      {pub.status === "processando" && <p className="text-[12px] font-body text-muted-foreground">{rede === "youtube"
+        ? "O vídeo já subiu. Falta a miniatura, que entra quando o YouTube terminar de processar. Esta caixa atualiza sozinha."
+        : `O ${NOME_REDE[rede]} leva alguns minutos pra processar o vídeo. Esta caixa atualiza sozinha.`}</p>}
     </div>
   );
 }
@@ -253,35 +271,96 @@ function PainelTikTok({ postId, legenda }: { postId: string; legenda?: string | 
   );
 }
 
-function PainelYouTube({ postId, legenda, titulo: tituloPost }: { postId: string; legenda?: string | null; titulo?: string | null }) {
+/** "dd/mm às hh:mm" do publishAt, se ainda não chegou. */
+function programadoPara(opcoes: Record<string, unknown> | null | undefined): string | null {
+  const q = typeof opcoes?.publishAt === "string" ? Date.parse(opcoes.publishAt) : NaN;
+  if (!Number.isFinite(q) || q <= Date.now()) return null;
+  return new Date(q).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(", ", " às ");
+}
+
+/* YOUTUBE (Walter, 25/11/2026, mockup aprovado). O que é do vídeo (título,
+   descrição, tags, miniatura, categoria) se escreve no post; a caixa só mostra
+   o que vai junto e pergunta o que é da publicação: tipo, visibilidade,
+   crianças e quando. "Na data do post" com vídeo público sobe já e fica
+   programado no próprio YouTube (publishAt); não listado ou privado, o robô
+   do Cria publica na hora. */
+function PainelYouTube({ postId, titulo: tituloTela, aoVivo, antesDeAgir }: { postId: string; titulo?: string | null; aoVivo?: AoVivo; antesDeAgir?: () => Promise<void> }) {
+  const qc = useQueryClient();
   const cx = useConexaoRede(postId, "youtube");
   const pub = usePublicacaoRede(postId, "youtube").data;
+  const conectado = !!cx.data?.connection_id && !!cx.data?.pode_publicar;
+  const post = usePostParaYouTube(postId, conectado).data;
   const agendar = useAgendarRede(postId, "youtube");
   const agora = usePublicarAgoraRede(postId, "youtube");
   const [tipo, setTipo] = useState<"short" | "video">("short");
-  const [titulo, setTitulo] = useState("");
-  const [descricao, setDescricao] = useState("");
   const [visib, setVisib] = useState<"" | "public" | "unlisted" | "private">("");
   const [criancas, setCriancas] = useState<null | boolean>(null);
   const [ia, setIa] = useState(false);
+  const [quando, setQuando] = useState<"agora" | "data">("data");
   useEffect(() => {
-    setTitulo((pub?.titulo ?? tituloPost ?? "").slice(0, 100));
-    setDescricao(pub?.texto ?? legenda ?? "");
     const o = (pub?.opcoes ?? {}) as Record<string, unknown>;
     if (o.tipo === "short" || o.tipo === "video") setTipo(o.tipo);
-  }, [pub?.titulo, pub?.texto, pub?.opcoes, tituloPost, legenda]);
+  }, [pub?.opcoes]);
 
   if (cx.isLoading) return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
-  const conectado = !!cx.data?.connection_id && !!cx.data?.pode_publicar;
   if (!conectado) return <><Cabecalho postId={postId} rede="youtube" /><Conectar postId={postId} rede="youtube" motivo={cx.data?.motivo ?? null} /></>;
-  const travado = pub?.status === "publicando" || pub?.status === "publicado";
-  const podeAgendar = !!visib && criancas !== null && titulo.trim().length > 0 && titulo.length <= 100;
+
+  const yt = lerYoutube(post?.youtube);
+  const tituloVideo = (yt.titulo || post?.title || tituloTela || "").trim();
+  const descricao = post?.caption ?? "";
+  const hs = hashtagsDaDescricao(descricao);
+  const caps = (descricao.match(/^\d{1,2}:\d{2}(?::\d{2})? \S/gm) ?? []).length;
+  const tags = yt.tags ?? [];
+  const categoria = YT_CATEGORIAS.find((c) => c.id === (yt.categoria ?? "22"))?.nome ?? "Pessoas e blogs";
+  const idioma = YT_IDIOMAS.find((c) => c.id === (yt.idioma ?? "pt-BR"))?.nome ?? "Português";
+
+  // Data e hora do post: a da tela, se o editor estiver aberto; senão a salva. Brasil é UTC-3 o ano todo.
+  const data = aoVivo?.data ?? post?.scheduled_date ?? null;
+  const hora = (aoVivo?.hora ?? post?.scheduled_time ?? "09:00").slice(0, 5);
+  const instante = data ? new Date(`${data}T${hora}:00-03:00`) : null;
+  const dataValida = !!instante && instante.getTime() > Date.now() + 15 * 60_000;
+  const diaTxt = instante ? instante.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" }).replace(".", "") : "";
+  const travado = pub?.status === "publicando" || pub?.status === "processando" || pub?.status === "publicado";
+  const pronto = !!visib && criancas !== null && tituloVideo.length > 0;
+  const podeAgendar = pronto && (quando === "agora" || dataValida);
   const opcoes = { privacyStatus: visib, selfDeclaredMadeForKids: criancas, containsSyntheticMedia: ia, tipo };
+
+  const agir = async (f: () => void) => {
+    try { await antesDeAgir?.(); } catch { /* o auto-save já avisa o erro */ }
+    await qc.invalidateQueries({ queryKey: ["post-para-youtube", postId] });
+    f();
+  };
+  const publicar = () => void agir(() => {
+    if (quando === "agora") { agora.mutate({ opcoes, titulo: null, texto: null }); return; }
+    if (visib === "public") { agora.mutate({ opcoes: { ...opcoes, publishAt: instante!.toISOString() }, titulo: null, texto: null }); return; }
+    agendar.mutate({ ligar: true, opcoes, titulo: null, texto: null });
+  });
+  const rotuloBotao = quando === "agora" ? "Publicar agora"
+    : visib === "public" ? `Enviar e programar pra ${instante ? instante.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "a data do post"}`
+    : "Agendar na data do post";
+
+  const Item = ({ cor, children, extra }: { cor: string; children: React.ReactNode; extra?: string }) => (
+    <div className="flex items-center gap-2.5 rounded-2xl bg-muted/40 px-3 py-2 text-[13px] font-body font-bold">
+      <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", cor)} />
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {extra && <span className="text-[11.5px] font-semibold text-muted-foreground tabular-nums">{extra}</span>}
+    </div>
+  );
 
   return (
     <div className="space-y-3">
       <Cabecalho postId={postId} rede="youtube" />
-      <p className="text-[12.5px] font-body text-muted-foreground">Canal: <b className="text-foreground">{cx.data?.username ?? "conectado"}</b></p>
+      <div className="flex items-center gap-2.5 rounded-2xl bg-muted/40 p-2.5">
+        <div className="relative h-9 w-9 shrink-0 rounded-full bg-foreground text-background grid place-items-center font-display text-[15px] font-extrabold">
+          {(cx.data?.username ?? "Y").replace(/^@/, "").slice(0, 1).toUpperCase()}
+          <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-card bg-[#E62117]" />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-[13.5px] font-body font-extrabold">{cx.data?.username ?? "Canal conectado"}</p>
+          <p className="text-[11.5px] font-body text-muted-foreground">canal conectado</p>
+        </div>
+      </div>
+
       <div className="space-y-1">
         <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">Tipo</p>
         <div className="flex gap-2"><Opcao ativo={tipo === "short"} onClick={() => setTipo("short")}>Short</Opcao><Opcao ativo={tipo === "video"} onClick={() => setTipo("video")}>Vídeo normal</Opcao></div>
@@ -289,27 +368,62 @@ function PainelYouTube({ postId, legenda, titulo: tituloPost }: { postId: string
           {tipo === "short" ? "Sai como Short se o vídeo for vertical ou quadrado e tiver até 3 minutos. Senão, sai como vídeo normal." : "Vídeo vertical e curto o YouTube trata como Short mesmo assim."}
         </p>
       </div>
-      <div className="space-y-1">
-        <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">Título <span className="normal-case font-normal">({titulo.length}/100)</span></p>
-        <input value={titulo} maxLength={100} onChange={(e) => setTitulo(e.target.value)} className="w-full h-10 rounded-xl border border-border bg-card px-3 text-[13.5px] font-body" />
+
+      <div className="relative space-y-1.5 rounded-2xl border border-border p-3">
+        <span className="absolute -top-2.5 right-3 rotate-3 rounded-full border-2 border-card bg-[#00A652] px-2.5 py-0.5 font-display text-[11.5px] font-extrabold text-white">tudo do post</span>
+        <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">Vai junto</p>
+        <Item cor="bg-primary" extra={`${tituloVideo.length}/${YT_TITULO_MAX}`}>{tituloVideo || "Sem título"}</Item>
+        <Item cor="bg-[#0061EE]">{caps ? `${caps} capítulos` : "Sem capítulos"} · {hs.length ? `${Math.min(hs.length, 3)} hashtags em cima do título` : "sem hashtag"}</Item>
+        <Item cor="bg-[#FF77B9]" extra={`${contarTags(tags)}/${YT_TAGS_MAX}`}>{tags.length ? `${tags.length} tags` : "Sem tags"}</Item>
+        <Item cor="bg-[#FFCF03]">{yt.miniatura_url ? "Miniatura própria" : "Capa automática do YouTube"}</Item>
+        <Item cor="bg-[#00A652]">{categoria} · {idioma}</Item>
+        <p className="text-[11.5px] font-body text-muted-foreground">Pra mudar, edite no post. A caixa não repete os campos.</p>
       </div>
-      <div className="space-y-1">
-        <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">Descrição</p>
-        <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} maxLength={5000} className="w-full rounded-xl border border-border bg-card px-3 py-2 text-[13.5px] font-body" />
-      </div>
+
       <div className="space-y-1">
         <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">Visibilidade</p>
-        <div className="flex gap-2"><Opcao ativo={visib === "public"} onClick={() => setVisib("public")}>Público</Opcao><Opcao ativo={visib === "unlisted"} onClick={() => setVisib("unlisted")}>Não listado</Opcao><Opcao ativo={visib === "private"} onClick={() => setVisib("private")}>Privado</Opcao></div>
+        <div className="flex gap-2"><Opcao ativo={visib === "public"} onClick={() => setVisib("public")}>Pública</Opcao><Opcao ativo={visib === "unlisted"} onClick={() => setVisib("unlisted")}>Não listada</Opcao><Opcao ativo={visib === "private"} onClick={() => setVisib("private")}>Privada</Opcao></div>
       </div>
       <div className="space-y-1">
         <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">É conteúdo feito para crianças?</p>
         <div className="flex gap-2"><Opcao ativo={criancas === true} onClick={() => setCriancas(true)}>Sim</Opcao><Opcao ativo={criancas === false} onClick={() => setCriancas(false)}>Não</Opcao></div>
       </div>
       <Marca marcado={ia} onClick={() => setIa((v) => !v)}>Tem cena feita com IA que parece real</Marca>
-      {pub?.status === "publicado" && <p className="text-[12px] font-body text-green-800 flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4" />Já está no YouTube.</p>}
-      <Botoes podeAgendar={podeAgendar} travado={travado} ocupado={agendar.isPending || agora.isPending}
-        onAgendar={() => agendar.mutate({ ligar: true, opcoes, titulo, texto: descricao })}
-        onAgora={() => agora.mutate({ opcoes, titulo, texto: descricao })} />
+
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">Quando</p>
+        <div className="flex gap-2"><Opcao ativo={quando === "agora"} onClick={() => setQuando("agora")}>Agora</Opcao><Opcao ativo={quando === "data"} onClick={() => setQuando("data")}>Na data do post</Opcao></div>
+        {quando === "data" && (dataValida ? (
+          <div className="relative flex overflow-hidden rounded-2xl bg-[#FFCF03] text-foreground">
+            <div className="min-w-[84px] border-r-2 border-dashed border-black/25 px-3 py-2.5 text-center">
+              <p className="font-display text-[11px] font-extrabold uppercase tracking-[0.08em]">{diaTxt.split(",")[0]}</p>
+              <p className="font-display text-[30px] font-extrabold leading-[0.9]">{instante!.getDate()}</p>
+              <p className="font-display text-[11px] font-extrabold uppercase tracking-[0.08em]">{instante!.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "")}</p>
+            </div>
+            <div className="flex flex-col justify-center px-3.5">
+              <p className="font-display text-[22px] font-extrabold leading-none">{hora}</p>
+              <p className="mt-1 text-[12px] font-body font-bold">{visib === "public" ? "o próprio YouTube publica" : "o Cria publica na hora"}</p>
+            </div>
+            <span className="absolute -top-[7px] left-[77px] h-3.5 w-3.5 rounded-full bg-card" />
+            <span className="absolute -bottom-[7px] left-[77px] h-3.5 w-3.5 rounded-full bg-card" />
+          </div>
+        ) : (
+          <p className="rounded-xl bg-amber-100 px-3 py-2 text-[12.5px] font-body text-amber-900">
+            {data ? "A data do post já passou ou está a menos de 15 minutos. Mude a data no post ou publique agora." : "O post ainda não tem data. Escolha a data e a hora no post ou publique agora."}
+          </p>
+        ))}
+        {quando === "data" && dataValida && visib === "public" && (
+          <p className="text-[11.5px] font-body text-muted-foreground leading-snug">O vídeo sobe agora como privado e programado. Na hora marcada o YouTube solta sozinho, já processado. Mudou a data do post depois? Ajuste no YouTube Studio.</p>
+        )}
+      </div>
+
+      {pub?.status === "publicado" && !programadoPara(pub.opcoes) && <p className="text-[12px] font-body text-green-800 flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4" />Já está no YouTube.</p>}
+      <p className="text-[11.5px] font-body text-muted-foreground text-center">Ao publicar, você concorda com os Termos do YouTube.</p>
+      <Button className="w-full h-12 rounded-full text-[15px] font-extrabold" disabled={!podeAgendar || travado || agendar.isPending || agora.isPending} onClick={publicar}>
+        {agendar.isPending || agora.isPending
+          ? <Loader2 className="h-4 w-4 animate-spin" />
+          : <>{quando === "agora" ? <Send className="h-4 w-4 mr-2" /> : <CalendarClock className="h-4 w-4 mr-2" />}{rotuloBotao}</>}
+      </Button>
     </div>
   );
 }

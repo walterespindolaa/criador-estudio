@@ -282,6 +282,19 @@ const MODO_LINKEDIN = `MODO LINKEDIN (a plataforma é LinkedIn, perfil pessoal):
 - Termine com uma pergunta ou convite pra comentar.`
 const ehLinkedIn = (p: unknown) => String(p ?? '').toLowerCase() === 'linkedin'
 
+/* MODO YOUTUBE (Walter, 25/11/2026, mockup do post de YouTube aprovado). A
+   descrição do YouTube não é legenda de Instagram: as primeiras linhas são as
+   que aparecem antes do "mais", entram capítulos e as 3 primeiras hashtags
+   vão pra cima do título. Short tem descrição curta. */
+const MODO_YOUTUBE = `MODO YOUTUBE (a plataforma é YouTube):
+- As 2 primeiras linhas (até uns 150 caracteres) são as únicas que aparecem antes do "mais": diga ali o que a pessoa ganha assistindo, com a palavra que ela buscaria.
+- Depois, 1 ou 2 parágrafos curtos sobre o vídeo. Nada de gíria de Instagram ("arrasta pro lado", "link na bio", "salva esse post").
+- Se o roteiro tiver capítulos com minuto, não reescreva os minutos: o sistema põe o bloco "Capítulos" sozinho.
+- Feche com um convite pra se inscrever ou comentar.
+- 3 hashtags no fim, sem espaço dentro da hashtag: são as 3 que aparecem em cima do título.
+- Short: descrição de 1 a 3 linhas + as 3 hashtags.`
+const ehYouTube = (p: unknown) => String(p ?? '').toLowerCase() === 'youtube'
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req)
   if (req.method === 'OPTIONS') {
@@ -855,7 +868,7 @@ RESPONDA APENAS JSON válido:
        Escrevendo pra um CLIENTE da social mídia (data.cliente), o dossiê dela
        ficaria errado: a marca é a do cliente, que vem nos dados do pedido. */
     const OPS_SEM_DOSSIE = new Set(['tag-suggestion', 'reference-filter', 'archive-summary', 'brandbook-read', 'relatorio-read', 'admin-system-insight', 'client-report-insight'])
-    const OPS_DOSSIE_LEVE = new Set(['daily-insight', 'insights-reading', 'suggest-hashtags', 'onboarding-setup', 'ideia-falada'])
+    const OPS_DOSSIE_LEVE = new Set(['daily-insight', 'insights-reading', 'suggest-hashtags', 'youtube-meta', 'onboarding-setup', 'ideia-falada'])
     const hojeBR = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: 'long', year: 'numeric' })
     const paraCliente = !!(data && typeof data.cliente === 'string' && data.cliente.trim())
     let userContext = ''
@@ -943,6 +956,7 @@ Responda APENAS com JSON, neste formato exato:
           story: 'SEQUÊNCIA DE STORIES (4 a 6 telas): tela 1 prende com pergunta ou afirmação forte; use enquete, caixinha ou quiz em pelo menos 1 tela; a última tela pede resposta ou clique. "estrutura" = uma string por tela, começando com "T1:", "T2:"... e dizendo qual sticker usar.',
           linkedin: 'POST DE LINKEDIN (texto): o gancho são as 2 primeiras linhas, antes do "ver mais"; depois contexto, virada e 3 aprendizados em parágrafos curtos; fecha com pergunta pra comentar. "estrutura" = uma string por bloco (gancho, contexto, virada, aprendizados, fechamento). ' + MODO_LINKEDIN,
           linkedin_documento: 'DOCUMENTO DE LINKEDIN (PDF em 6 a 10 páginas): página 1 = título que promete algo concreto; uma ideia por página em frase curta; penúltima = síntese; última = convite pra comentar ou seguir. O texto do post apresenta o documento em 3 a 5 linhas. "estrutura" = uma string por página, começando com "P1:", "P2:"... ' + MODO_LINKEDIN,
+          shorts: 'YOUTUBE SHORTS (até 60s, vertical): título curto que a pessoa buscaria; gancho falado no 1º segundo; 3 a 4 cenas rápidas com fala e ação visual; fecha pedindo pra se inscrever ou ver o vídeo longo. "estrutura" = uma string por cena, com fala entre aspas e a ação visual entre colchetes.',
           youtube: 'VÍDEO DE YOUTUBE (6 a 12 min): título com promessa clara + curiosidade; roteiro em blocos: gancho (0 a 30s), contexto, 3 a 5 blocos de conteúdo com exemplo real em cada, fechamento com próximo passo. "estrutura" = uma string por bloco, com a minutagem aproximada.',
         }
         const regraFormato = REGRAS_FORMATO[formatoPedido] ?? REGRAS_FORMATO.reels
@@ -1060,11 +1074,14 @@ RESPONDA APENAS COM A LEGENDA. Sem título, sem aspas, sem explicação.${data.b
         if (ehLinkedIn(data.plataforma)) {
           operationPrompt += `\n\n${MODO_LINKEDIN}\nESTAS REGRAS DO LINKEDIN SUBSTITUEM as de tamanho, emoji e hashtag acima.`
         }
+        if (ehYouTube(data.plataforma)) {
+          operationPrompt += `\n\n${MODO_YOUTUBE}\nESTAS REGRAS DO YOUTUBE SUBSTITUEM as de tamanho, emoji e hashtag acima. Você escreve a DESCRIÇÃO do vídeo, não uma legenda.`
+        }
         userPrompt = `TÍTULO DO POST: "${data.titulo || ''}"
 PILAR: ${data.pilar || 'geral'}
 NICHO: ${data.nicho || 'lifestyle'}
 CONTEÚDO/ROTEIRO: ${(data.conteudo || data.roteiro || 'não informado').slice(0, 500)}`
-        maxTokens = ehLinkedIn(data.plataforma) ? 1500 : 500
+        maxTokens = ehLinkedIn(data.plataforma) || ehYouTube(data.plataforma) ? 1500 : 500
         break
       case 'suggest-hashtags':
         operationPrompt = `Você é especialista em estratégia de hashtags para redes sociais brasileiras.
@@ -1089,6 +1106,10 @@ RESPONDA APENAS com array JSON de strings, sem texto:
         // LinkedIn: poucas hashtags (até 3), em vez das 20 do Instagram.
         if (ehLinkedIn(data.plataforma)) {
           operationPrompt += `\n\nPLATAFORMA LINKEDIN: ignore as 3 camadas e os 20 itens. Devolva NO MÁXIMO 3 hashtags, específicas do assunto e da profissão, no mesmo formato de array JSON.`
+        }
+        // YouTube: só as 3 primeiras aparecem (em cima do título); mais de 60 anula todas.
+        if (ehYouTube(data.plataforma)) {
+          operationPrompt += `\n\nPLATAFORMA YOUTUBE: ignore as 3 camadas e os 20 itens. Devolva EXATAMENTE 3 hashtags, a mais buscada primeiro, sem espaço dentro, no mesmo formato de array JSON.`
         }
         userPrompt = `TÍTULO: "${data.titulo || ''}"
 FORMATO: ${data.formato || 'post'}
@@ -1239,6 +1260,7 @@ Mantenha os emojis se houver. Mantenha hashtags se houver.
 Linguagem natural brasileira.${data.brandContext ? `\nCONTEXTO DA MARCA DO CRIADOR:\n${data.brandContext}\nUse essas informações pra personalizar o conteúdo ao estilo e tom da marca.` : ''}`
         // Post de LinkedIn: a legenda refinada segue o jeito do LinkedIn.
         if (ehLinkedIn(data.plataforma)) operationPrompt += `\n\n${MODO_LINKEDIN}`
+        if (ehYouTube(data.plataforma)) operationPrompt += `\n\n${MODO_YOUTUBE}`
         userPrompt = `INSTRUÇÃO: ${data.instrucao || 'Reescreva'}
 
 LEGENDA ORIGINAL:
@@ -1250,7 +1272,7 @@ PLATAFORMA: ${data.plataforma || 'instagram'}
 FORMATO: ${data.formato || 'post'}
 
 NICHO: ${data.nicho || 'geral'}`
-        maxTokens = ehLinkedIn(data.plataforma) ? 1500 : 500
+        maxTokens = ehLinkedIn(data.plataforma) || ehYouTube(data.plataforma) ? 1500 : 500
         break
       case 'score-caption':
         operationPrompt = `Você é um analista de copy de redes sociais brasileiras. Avalie a legenda recebida.
@@ -1671,6 +1693,37 @@ ${data.promessa ? `Proposta de valor: ${data.promessa}` : ''}
 ${data.temas ? `Pilares de conteúdo: ${data.temas}` : ''}
 ${data.evitar ? `NUNCA usar (lista do cliente, manda mais que qualquer regra de estilo): ${data.evitar}` : ''}`
         maxTokens = 2000
+        break
+      }
+      case 'youtube-meta': {
+        /* Títulos e tags do vídeo de YouTube (Walter, 25/11/2026, mockup aprovado).
+           Título: até 100, mas o celular mostra uns 70; a palavra buscada vem primeiro.
+           Tags: somam no máximo 500 caracteres (o servidor e a tela cortam de novo). */
+        const pede = data.pede === 'tags' ? 'tags' : 'titulos'
+        operationPrompt = pede === 'titulos'
+          ? `Você escreve títulos de vídeo do YouTube que aparecem na busca e dão vontade de clicar.
+REGRAS:
+- 3 títulos diferentes entre si (ângulos diferentes, não a mesma frase trocando palavra).
+- Cada um com no máximo 70 caracteres. Nunca passe de 100.
+- A palavra ou frase que a pessoa digitaria na busca vem no começo.
+- Promessa clara e concreta; curiosidade sem enganar. Nada de caixa alta inteira, nada de "VOCÊ NÃO VAI ACREDITAR".
+- Short: título curto, até 50 caracteres.
+- Português do Brasil, sem aspas, sem emoji, sem os caracteres < e >.
+RESPONDA APENAS com array JSON de 3 strings: ["título 1","título 2","título 3"]`
+          : `Você escolhe tags de vídeo do YouTube.
+REGRAS:
+- 10 a 15 tags, da mais específica pra mais ampla.
+- Frases que a pessoa digitaria na busca, em português do Brasil (pode 1 ou 2 variações comuns, como erro de digitação frequente).
+- Sem #, sem os caracteres < e >, cada tag com até 30 caracteres.
+- Somando tudo, no máximo 450 caracteres.
+RESPONDA APENAS com array JSON de strings.`
+        userPrompt = `FORMATO: ${data.formato === 'shorts' ? 'Short' : 'vídeo'}
+TÍTULO ATUAL: "${String(data.titulo || '').slice(0, 120)}"
+NICHO: ${data.nicho || 'geral'}
+PILAR: ${data.pilar || 'geral'}
+DESCRIÇÃO: ${String(data.descricao || '').slice(0, 600)}
+ROTEIRO: ${String(data.roteiro || '').slice(0, 600)}`
+        maxTokens = 400
         break
       }
       default:

@@ -53,6 +53,8 @@ import { StickerCelebration } from "@/components/shared/StickerCelebration";
 import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS, BUNNY_CRIAPOST_CDN_HOSTNAME, PLATAFORMAS_SO_MASTER, FORMATS_BY_PLATFORM, LINKEDIN_FORMAT_LABELS, LINKEDIN_FORMAT_DICA, LINKEDIN_TEXTO_MAX } from "@/lib/constants";
 import { useProfile } from "@/hooks/useProfile";
 import { ChecagemLinkedIn, CorteVerMais } from "./LinkedInLegenda";
+import { ChecagemYouTube, ExtrasYouTube, TituloYouTube } from "./YouTubeCampos";
+import { YT_CORTE_MAIS, YT_DESCRICAO_MAX, capitulosDoRoteiro, categoriaDoNicho, descricaoComCapitulos, lerYoutube, type YoutubeDoPost } from "@/lib/youtube";
 import * as tus from "tus-js-client";
 
 const VIDEO_EXTS = ["mov", "mp4", "m4v", "webm", "avi", "mkv", "hevc", "3gp"];
@@ -279,6 +281,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const [hook, setHook] = useState("");
   const [script, setScript] = useState("");
   const [caption, setCaption] = useState("");
+  // Campos só do YouTube (posts.youtube, 25/11/2026): título do vídeo, tags, miniatura, categoria e idioma.
+  const [yt, setYt] = useState<YoutubeDoPost>({});
   const captionRef = useRef<HTMLTextAreaElement>(null);
   // Insere o emoji na posição do cursor da legenda (não só no fim).
   const insertEmoji = (emoji: string) => {
@@ -399,6 +403,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const masterLinkedIn = perfilSessao?.role === "admin";
   const plataformas: string[] = masterLinkedIn || platform === "linkedin" ? [...PLATFORMS, ...PLATAFORMAS_SO_MASTER] : [...PLATFORMS];
   const ehLinkedIn = platform === "linkedin";
+  // Post de YouTube com cara de YouTube (Walter, 25/11/2026, mockup aprovado).
+  const ehYouTube = platform === "youtube";
+  const ehVideoYt = ehYouTube && format === "video";
   // Trocar de rede ajusta o formato: o LinkedIn tem lista própria (texto,
   // documento) e esses dois não existem nas outras redes.
   const trocarPlataforma = (p: string) => {
@@ -598,6 +605,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
       setHook(post.hook || "");
       setScript(post.script || "");
       setCaption(post.caption || "");
+      setYt(lerYoutube((post as unknown as { youtube?: unknown }).youtube));
       setCta(post.cta || "");
       setScheduledDate(post.scheduled_date || "");
       setScheduledTime(post.scheduled_time || "");
@@ -627,7 +635,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
     } else {
       setTitle(""); setPlatform(initialPlatform || "instagram"); setFormat(initialFormat || "reels");
       setPillarId(""); setStatus(initialStatus || "ideia"); setHook(""); setScript("");
-      setCaption(""); setCta(""); setScheduledDate(initialDate || ""); setScheduledTime(""); setNotes("");
+      setCaption(""); setYt({}); setCta(""); setScheduledDate(initialDate || ""); setScheduledTime(""); setNotes("");
       setWeekNumber(null);
       
       setViews(""); setSaves(""); setComments(""); setReach(""); setShares(""); setShowResults(false); setReferenceLink(""); setContentLink("");
@@ -700,8 +708,17 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
     reference_link: referenceLink || null,
     // Link do conteúdo final (Drive/Canva). Reaproveita drive_folder_url.
     drive_folder_url: contentLink || null,
+    // Só post de YouTube grava a coluna youtube; categoria e idioma já saem com o padrão.
+    ...(platform === "youtube" ? {
+      youtube: {
+        ...yt,
+        titulo: yt.titulo?.trim() ? sanitizeText(yt.titulo.trim()) : null,
+        categoria: yt.categoria ?? categoriaDoNicho(profile?.niche),
+        idioma: yt.idioma ?? "pt-BR",
+      },
+    } : {}),
     user_id: userId,
-  }), [title, platform, format, pillarId, status, hook, script, caption, cta,
+  }), [title, platform, format, pillarId, status, hook, script, caption, cta, yt, profile?.niche,
        scheduledDate, scheduledTime, notes, weekNumber, views, saves, comments, reach, shares, sections, referenceLink, contentLink, userId]);
 
   // Debounced auto-save for existing posts.
@@ -1486,8 +1503,13 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
   const formatStructure = getFormatStructure(format);
   const captionLen = caption.length;
-  // LinkedIn aceita 3.000 caracteres; Instagram e TikTok, 2.200.
-  const captionMax = ehLinkedIn ? LINKEDIN_TEXTO_MAX : 2200;
+  // LinkedIn aceita 3.000 caracteres; descrição do YouTube, 5.000; Instagram e TikTok, 2.200.
+  const captionMax = ehLinkedIn ? LINKEDIN_TEXTO_MAX : ehYouTube ? YT_DESCRICAO_MAX : 2200;
+  const capitulosYt = ehVideoYt ? capitulosDoRoteiro(sections) : [];
+  const ctxYt = {
+    userId, formato: format, nicho: profile?.niche, pilar: pillars.find((p) => p.id === pillarId)?.name ?? null,
+    descricao: caption, roteiro: sections.map((s) => s.text).filter(Boolean).join(" | "),
+  };
 
   // Re-usable pill class helper
   const pillClass = (selected: boolean) =>
@@ -1557,7 +1579,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               )}
               {/* Publicar também em outras redes (só master): LinkedIn, YouTube e
                   TikTok, de volta em 25/11/2026. */}
-              {post?.id && <RedesSoMaster postId={post.id} legenda={caption} titulo={title} plataforma={platform} />}
+              {post?.id && <RedesSoMaster postId={post.id} legenda={caption} titulo={title} plataforma={platform}
+                aoVivo={{ data: scheduledDate || null, hora: scheduledTime || null }} antesDeAgir={gravarPendente} />}
               {/* Resultado do post no LinkedIn, digitado à mão (só master, 25/11/2026). */}
               {post?.id && ehLinkedIn && masterLinkedIn && <ResultadoLinkedIn postId={post.id} />}
 
@@ -1945,6 +1968,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     carouselVideos={previewCarouselVideos}
                     capa={comCapa ? capaDoPost : null}
                     envioPct={activeUpload?.pct ?? null}
+                    youtube={platform === "youtube" ? yt : null}
                   />
   );
 
@@ -2414,6 +2438,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   };
                   return (
                     <div className="space-y-4">
+                      {ehYouTube && (
+                        <TituloYouTube valor={yt.titulo ?? ""} onChange={(v) => setYt((o) => ({ ...o, titulo: v }))} tituloPost={title} ctx={ctxYt} />
+                      )}
                       {formatStructure.fields.map((field) => {
                         if (field.key === "caption") return null; // legenda vive no passo 2
                         const IconComponent = iconMap[field.icon] || PenLine;
@@ -2472,6 +2499,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                           sections={sections}
                           onChange={setSections}
                           sectionLabel={formatStructure.sectionLabel ?? "Seção"}
+                          comMinuto={ehVideoYt}
                           picking={picking}
                           uploadingLocal={uploadingLocal}
                           onUploadLocalForSection={(index) => {
@@ -2646,6 +2674,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                           }}
                         />
                       )}
+                      {ehYouTube && (
+                        <ExtrasYouTube yt={yt} onChange={(patch) => setYt((o) => ({ ...o, ...patch }))} ctx={ctxYt} tituloAtual={yt.titulo || title}
+                          categoriaPadrao={categoriaDoNicho(profile?.niche)} />
+                      )}
                     </div>
                   );
                 })()}
@@ -2663,10 +2695,12 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 >
                   <BlocoCabecalho
                     numero={2}
-                    titulo={ehLinkedIn ? "O texto do post" : "A legenda"}
+                    titulo={ehLinkedIn ? "O texto do post" : ehYouTube ? "A descrição" : "A legenda"}
                     subtitulo={legendaAberta
                       ? ehLinkedIn
                         ? "No LinkedIn só as primeiras linhas aparecem. O gancho vem antes da linha azul."
+                        : ehYouTube
+                        ? "Só as primeiras linhas aparecem antes do \"mais\". As 3 primeiras hashtags vão pra cima do título."
                         : "Escreva aqui. A Cria IA te ajuda a gerar, encurtar e melhorar. É o único lugar da legenda."
                       : caption.trim()
                         ? `${caption.trim().split("\n")[0].slice(0, 90)}${caption.trim().length > 90 ? "…" : ""} · ${caption.length} caracteres`
@@ -2683,10 +2717,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     <EmojiPicker onPick={insertEmoji} />
                   </div>
                   {ehLinkedIn && <CorteVerMais texto={caption} textareaRef={captionRef} />}
+                  {ehYouTube && <CorteVerMais texto={caption} textareaRef={captionRef} limite={YT_CORTE_MAIS} linhas={2} rotulo={'antes do "mais"'} cor="#065fd4" fundo="#e8f0fe" />}
                   <textarea
                     ref={captionRef}
-                    maxLength={ehLinkedIn ? LINKEDIN_TEXTO_MAX : undefined}
-                    placeholder={ehLinkedIn ? "Escreva o post aqui. O gancho vem nas primeiras linhas, antes do corte do \"ver mais\"." : "Escreva sua legenda aqui ou gere com a Cria IA..."}
+                    maxLength={ehLinkedIn ? LINKEDIN_TEXTO_MAX : ehYouTube ? YT_DESCRICAO_MAX : undefined}
+                    placeholder={ehLinkedIn ? "Escreva o post aqui. O gancho vem nas primeiras linhas, antes do corte do \"ver mais\"." : ehYouTube ? "O que a pessoa ganha assistindo, nas 2 primeiras linhas. Depois, detalhes, links e 3 hashtags no fim." : "Escreva sua legenda aqui ou gere com a Cria IA..."}
                     value={caption}
                     onChange={(e) => setCaption(e.target.value)}
                     className="w-full min-h-[220px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-body text-base text-foreground placeholder:text-muted-foreground/40 resize-none leading-relaxed pr-10"
@@ -2697,6 +2732,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 </div>
 
                 {ehLinkedIn && <ChecagemLinkedIn texto={caption} />}
+                {ehYouTube && (
+                  <ChecagemYouTube texto={caption} capitulos={capitulosYt} ehVideo={ehVideoYt}
+                    onPorCapitulos={() => setCaption((c) => descricaoComCapitulos(c, capitulosYt).slice(0, YT_DESCRICAO_MAX))} />
+                )}
 
                 {caption.length > 10 && (
                   <div className="flex flex-wrap gap-1.5">
@@ -2705,6 +2744,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                       ...(ehLinkedIn ? [
                         { key: "li-adaptar", label: "Adaptar do Instagram", icon: Sparkles, instruction: "Reescreva este texto no estilo de post de LinkedIn: gancho forte nas 2 primeiras linhas (até 200 caracteres, antes do 'ver mais'), paragrafos curtos de 1 a 2 frases com linha em branco entre eles, tom profissional e pessoal, sem girias de Instagram, no maximo 3 hashtags no final e uma pergunta ou chamada pra comentar no fim. Mantenha a mensagem e o idioma." },
                         { key: "li-gancho", label: "Gancho pro LinkedIn", icon: Sparkles, instruction: "Reescreva so a abertura deste texto pra virar um gancho de LinkedIn que caiba em ate 200 caracteres e em no maximo 2 linhas, e mantenha o resto do texto igual." },
+                      ] as const : []),
+                      // Só no YouTube (mockup aprovado em 25/11/2026): descrição não é legenda.
+                      ...(ehYouTube ? [
+                        { key: "yt-adaptar", label: "Adaptar pro YouTube", icon: Sparkles, instruction: "Reescreva este texto como descricao de video do YouTube: as 2 primeiras linhas (ate 150 caracteres) dizem o que a pessoa ganha assistindo, com a palavra que ela buscaria; depois 1 ou 2 paragrafos curtos; sem giria de Instagram; convite pra se inscrever ou comentar; exatamente 3 hashtags no fim. Se houver um bloco 'Capitulos' com minutos, mantenha igual. Mantenha a mensagem e o idioma." },
                       ] as const : []),
                       { key: "rephrase", label: "Reescrever", icon: RefreshCw, instruction: "Reescreva essa legenda mantendo a mesma mensagem mas com palavras completamente diferentes." },
                       { key: "shorten", label: "Encurtar", icon: Minus, instruction: "Encurte essa legenda pra no maximo 2 linhas mantendo a essencia e o CTA." },

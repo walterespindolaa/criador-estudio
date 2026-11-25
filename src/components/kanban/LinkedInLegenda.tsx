@@ -13,22 +13,26 @@ import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 export const CORTE_VER_MAIS = 210;
 
 /** Onde o feed corta: 210 caracteres ou o fim da 3ª linha, o que vier antes. */
-export function posicaoCorte(texto: string): number | null {
-  let corte = Math.min(CORTE_VER_MAIS, texto.length);
+export function posicaoCorte(texto: string, limite = CORTE_VER_MAIS, linhas = 3): number | null {
+  let corte = Math.min(limite, texto.length);
   let quebras = 0;
   for (let i = 0; i < corte; i++) {
-    if (texto[i] === "\n" && ++quebras === 3) { corte = i; break; }
+    if (texto[i] === "\n" && ++quebras === linhas) { corte = i; break; }
   }
   return corte >= texto.trimEnd().length ? null : corte;
 }
 
 /** Linha azul por cima do textarea, na altura do corte. Um "espelho" invisível
     com o mesmo texto e a mesma fonte mede onde o corte cai. */
-export function CorteVerMais({ texto, textareaRef }: { texto: string; textareaRef: RefObject<HTMLTextAreaElement> }) {
+/* A descrição do YouTube usa a mesma régua com outro corte e outra cor
+   (Walter, 25/11/2026, mockup do post de YouTube): por isso limite, linhas e rótulo. */
+export function CorteVerMais({ texto, textareaRef, limite, linhas, rotulo = 'corte do "ver mais"', cor = "#0A66C2", fundo = "#E8F1FB" }: {
+  texto: string; textareaRef: RefObject<HTMLTextAreaElement>; limite?: number; linhas?: number; rotulo?: string; cor?: string; fundo?: string;
+}) {
   const espelho = useRef<HTMLDivElement>(null);
   const marca = useRef<HTMLSpanElement>(null);
   const [topo, setTopo] = useState<number | null>(null);
-  const corte = posicaoCorte(texto);
+  const corte = posicaoCorte(texto, limite, linhas);
 
   useLayoutEffect(() => {
     if (corte === null) { setTopo(null); return; }
@@ -62,8 +66,8 @@ export function CorteVerMais({ texto, textareaRef }: { texto: string; textareaRe
         {texto.slice(0, corte)}<span ref={marca}>&#8203;</span>{texto.slice(corte)}
       </div>
       {topo !== null && (
-        <div aria-hidden className="pointer-events-none absolute left-3 right-3 border-t-2 border-dashed border-[#0A66C2]" style={{ top: topo }}>
-          <span className="absolute right-0 -top-[11px] rounded-full bg-[#E8F1FB] px-2 py-px text-[10.5px] font-body font-bold text-[#0A66C2]">corte do "ver mais"</span>
+        <div aria-hidden className="pointer-events-none absolute left-3 right-3 border-t-2 border-dashed" style={{ top: topo, borderColor: cor }}>
+          <span className="absolute right-0 -top-[11px] rounded-full px-2 py-px text-[10.5px] font-body font-bold" style={{ background: fundo, color: cor }}>{rotulo}</span>
         </div>
       )}
     </>
