@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTravarRolagem } from "@/hooks/useTravarRolagem";
@@ -96,6 +96,36 @@ const COR_PADRAO: CorGrupo = { fundo: "#0061EE", texto: "#FFFFFF", borda: "#0061
 const corDoGrupo = (titulo: string): CorGrupo => CORES_GRUPO[titulo] ?? COR_PADRAO;
 const semAcento = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
+/* BARRA QUE ENCOLHE AO ROLAR (Walter, 25/11/2026, mockup aprovado). Rolando
+   pra baixo, a barra fica menor e s\u00f3 com \u00edcones; rolando pra cima ou perto do
+   topo, volta inteira. Quem rola \u00e9 a janela (o <main> do AppLayout n\u00e3o tem
+   rolagem pr\u00f3pria). A folga de 6px ignora o tremido do dedo. */
+function useEncolherAoRolar(desligado: boolean) {
+  const [mini, setMini] = useState(false);
+  const ultimo = useRef(0);
+  useEffect(() => {
+    if (desligado) { setMini(false); return; }
+    ultimo.current = window.scrollY;
+    let quadro = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(quadro);
+      quadro = requestAnimationFrame(() => {
+        const y = window.scrollY;
+        if (y < 40) setMini(false);
+        else if (y > ultimo.current + 6) setMini(true);
+        else if (y < ultimo.current - 6) setMini(false);
+        ultimo.current = y;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(quadro); };
+  }, [desligado]);
+  return mini;
+}
+
+// Curva com um pouco de mola, a mesma do mockup aprovado.
+const MOLA = "cubic-bezier(.34,1.25,.64,1)";
+
 export function BottomBar() {
   const [moreOpen, setMoreOpen] = useState(false);
   useTravarRolagem(moreOpen);
@@ -164,7 +194,7 @@ export function BottomBar() {
   const overview = searchParams.get("view") === "overview";
   const toggleOverview = () => {
     const next = new URLSearchParams(searchParams);
-    overview ? next.delete("view") : next.set("view", "overview");
+    if (overview) next.delete("view"); else next.set("view", "overview");
     setSearchParams(next, { replace: true });
   };
 
@@ -181,6 +211,19 @@ export function BottomBar() {
   };
 
   const isMoreActive = allMoreItems.some(item => location.pathname.startsWith(item.url));
+  const mini = useEncolherAoRolar(moreOpen);
+
+  /* Casa do marcador na grade de 5: Início 0, Ideias 1, (Cria IA 2), Criando 3,
+     Menu 4. As abas da barra vêm antes do Menu porque Ideias e Criando também
+     estão no menu e acenderiam o Menu. Fora disso, sem marcador. */
+  const casaAtiva = moreOpen ? 4
+    : isActive("/app", true) ? 0
+    : isActive("/app/ideias") ? 1
+    : isActive("/app/criando") ? 3
+    : isMoreActive ? 4 : -1;
+
+  const rotulo = cn("overflow-hidden text-[11.5px] font-body transition-[opacity,max-height] duration-300",
+    mini ? "max-h-0 opacity-0" : "max-h-4 opacity-100");
 
   const renderNavItem = (item: { title: string; url: string; icon: typeof Home; exact?: boolean }) => {
     const active = isActive(item.url, item.exact);
@@ -188,18 +231,14 @@ export function BottomBar() {
       <NavLink
         key={item.url}
         to={item.url}
-        className="flex min-h-[48px] min-w-[56px] flex-col items-center justify-center gap-1 px-2"
+        className={cn("dock-mola relative z-10 flex min-w-[56px] flex-col items-center justify-center px-2",
+          mini ? "min-h-[40px] gap-0" : "min-h-[48px] gap-1")}
       >
         <item.icon
           className={cn("h-5 w-5 transition-colors", active ? "text-primary" : "text-muted-foreground")}
           strokeWidth={active ? 2 : 1.5}
         />
-        <span
-          className={cn(
-            "text-[11.5px] font-body transition-colors",
-            active ? "text-primary font-semibold" : "text-muted-foreground font-medium"
-          )}
-        >
+        <span className={cn(rotulo, active ? "text-primary font-semibold" : "text-muted-foreground font-medium")}>
           {item.title}
         </span>
       </NavLink>
@@ -349,18 +388,36 @@ export function BottomBar() {
                         : <Maximize2 className="h-5 w-5 text-muted-foreground" strokeWidth={1.9} />}
             </button>
           )}
-          <div className="dock-pill grid h-16 w-full max-w-[440px] grid-cols-5 items-center justify-items-center rounded-[30px] px-1.5">
+          {/* Encolhe ao rolar: 64px com nome, 52px só com ícone (e mais estreita). */}
+          <div className={cn("dock-pill relative grid w-full grid-cols-5 items-center justify-items-center rounded-[32px] px-1.5",
+                 mini ? "h-[52px] max-w-[300px]" : "h-16 max-w-[440px]")}
+               style={{ transition: `height .42s ${MOLA}, max-width .42s ${MOLA}` }}>
+            {/* MARCADOR QUE DESLIZA (Walter, 25/11/2026). Pílula clara na cor do
+                tema atrás da aba aberta. As 5 casas têm a mesma largura, então
+                basta andar 100% da casa por posição, sem medir nada. */}
+            {casaAtiva >= 0 && (
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 left-1.5 right-1.5">
+                <span className="flex h-full w-1/5 items-center justify-center"
+                      style={{ transform: `translateX(${casaAtiva * 100}%)`, transition: `transform .42s cubic-bezier(.34,1.3,.64,1)` }}>
+                  <span className={cn("w-16 rounded-[24px] bg-primary/[0.13] transition-[height] duration-300", mini ? "h-10" : "h-12")} />
+                </span>
+              </span>
+            )}
             {leftItems.map(renderNavItem)}
             <button type="button" onClick={() => openCria()} aria-label="cria"
-              className="h-12 w-12 rounded-full bg-[#FFCF03] flex items-center justify-center shadow-lg shadow-black/15 active:scale-95 transition-transform">
+              /* Halo amarelo suave (25/11/2026): o botão segue sendo o centro sem pesar. */
+              className={cn("dock-mola relative z-10 rounded-full bg-[#FFCF03] flex items-center justify-center shadow-[0_0_0_4px_rgba(255,207,3,.22),0_8px_16px_-6px_rgba(0,0,0,.25)]",
+                mini ? "h-10 w-10" : "h-12 w-12")}
+              style={{ transition: `transform .32s cubic-bezier(.34,1.6,.64,1), width .42s ${MOLA}, height .42s ${MOLA}` }}>
               {/* Selo das Criaturas, o mesmo do topo do chat da Cria IA (Walter, 09/11/2026). */}
-              <img src="/logo-icon-sm.png" alt="" draggable={false} className="h-[32px] w-[32px] object-contain" />
+              <img src="/logo-icon-sm.png" alt="" draggable={false} className={cn("object-contain transition-[width,height] duration-300", mini ? "h-[27px] w-[27px]" : "h-[32px] w-[32px]")} />
             </button>
             {rightItems.map(renderNavItem)}
             <button type="button" onClick={() => { setBusca(""); setMoreOpen(!moreOpen); }} aria-label="Menu" aria-expanded={moreOpen}
-              className="flex min-h-[48px] min-w-[56px] flex-col items-center justify-center gap-1 px-2">
-              <Menu className={cn("h-5 w-5 transition-colors", moreOpen || isMoreActive ? "text-primary" : "text-muted-foreground")} strokeWidth={moreOpen || isMoreActive ? 2 : 1.5} />
-              <span className={cn("text-[11.5px] font-body transition-colors", moreOpen || isMoreActive ? "text-primary font-semibold" : "text-muted-foreground font-medium")}>Menu</span>
+              className={cn("dock-mola relative z-10 flex min-w-[56px] flex-col items-center justify-center px-2",
+                mini ? "min-h-[40px] gap-0" : "min-h-[48px] gap-1")}>
+              <Menu className={cn("h-5 w-5 transition-colors", casaAtiva === 4 ? "text-primary" : "text-muted-foreground")} strokeWidth={casaAtiva === 4 ? 2 : 1.5} />
+              <span className={cn(rotulo, casaAtiva === 4 ? "text-primary font-semibold" : "text-muted-foreground font-medium")}>Menu</span>
             </button>
           </div>
         </div>
