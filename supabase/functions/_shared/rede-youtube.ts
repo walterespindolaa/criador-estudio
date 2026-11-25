@@ -59,7 +59,11 @@ export const youtube = {
     const q = new URLSearchParams({
       client_id: id, redirect_uri: redirectUri, response_type: 'code', scope: ESCOPOS_YOUTUBE,
       // offline + consent: garante o refresh token mesmo em reconexão.
-      access_type: 'offline', prompt: 'consent', include_granted_scopes: 'true', state,
+      // SEM include_granted_scopes (Walter, 25/11/2026: "nao consegui entrar na
+      // minha conta do youtube"). O YouTube usa o mesmo cliente OAuth do Drive;
+      // juntando as permissões antigas, o pedido levava drive.file junto e o
+      // Google recusa: "scopes that cannot be requested together" (erro 400).
+      access_type: 'offline', prompt: 'consent', state,
     });
     return `https://accounts.google.com/o/oauth2/v2/auth?${q}`;
   },
