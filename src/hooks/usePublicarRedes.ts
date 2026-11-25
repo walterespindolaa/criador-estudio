@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { createContext, useContext, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -159,9 +159,18 @@ export function useCriadorTikTok(postId: string | null | undefined, ativo: boole
   });
 }
 
+/* O CARD ANDA NO QUADRO (Walter, 25/11/2026: "eu publiquei e nao saiu da aba
+   de ideias ali do Criando"). O banco e o redes-publicar já mudam a coluna do
+   post quando a rede publicada é a rede do post. Aqui o editor fica sabendo,
+   igual ao PublicarNoInstagram (onAgendou/onPublicou), pro próximo salvar não
+   devolver o post pra coluna antiga. */
+export type CardDoPost = { plataforma?: string | null; onAgendou?: (ligado: boolean) => void; onPublicou?: () => void };
+export const CardDoPostCtx = createContext<CardDoPost | null>(null);
+
 function useInvalidar(postId: string | null | undefined, rede: RedeNova) {
   const qc = useQueryClient();
   return () => {
+    qc.invalidateQueries({ queryKey: ["posts"] });
     qc.invalidateQueries({ queryKey: ["rede-publicacao", postId, rede] });
     qc.invalidateQueries({ queryKey: ["rede-conexao", postId, rede] });
     qc.invalidateQueries({ queryKey: ["rede-vencimento", postId, rede] });
@@ -172,6 +181,7 @@ type Escolhas = { opcoes: Record<string, unknown>; titulo?: string | null; texto
 
 export function useAgendarRede(postId: string | null | undefined, rede: RedeNova) {
   const inv = useInvalidar(postId, rede);
+  const card = useContext(CardDoPostCtx);
   return useMutation({
     mutationFn: async (v: Escolhas & { ligar: boolean }) => {
       const { error } = await sbRpc("agendar_publicacao_rede", {
@@ -179,13 +189,18 @@ export function useAgendarRede(postId: string | null | undefined, rede: RedeNova
       });
       if (error) throw new Error(error.message);
     },
-    onSuccess: (_d, v) => { toast.success(v.ligar ? `Agendado no ${NOME_REDE[rede]} pra data do post.` : "Agendamento cancelado."); inv(); },
+    onSuccess: (_d, v) => {
+      toast.success(v.ligar ? `Agendado no ${NOME_REDE[rede]} pra data do post.` : "Agendamento cancelado.");
+      if (card?.plataforma === rede) card.onAgendou?.(v.ligar);
+      inv();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 }
 
 export function usePublicarAgoraRede(postId: string | null | undefined, rede: RedeNova) {
   const inv = useInvalidar(postId, rede);
+  const card = useContext(CardDoPostCtx);
   return useMutation({
     mutationFn: async (v: Escolhas) => {
       const { data: id, error } = await sbRpc("preparar_publicacao_rede", {
@@ -194,13 +209,16 @@ export function usePublicarAgoraRede(postId: string | null | undefined, rede: Re
       if (error) throw new Error(error.message);
       const { data, error: e2 } = await supabase.functions.invoke("redes-publicar", { body: { pub_id: id } });
       if (e2) throw new Error(await erroDaFuncao(e2, data));
-      return data as { estado?: string; mensagem?: string };
+      return data as { estado?: string; mensagem?: string; programado?: boolean };
     },
     onSuccess: (r) => {
       if (r?.estado === "publicado") toast.success(r.mensagem ?? `Publicado no ${NOME_REDE[rede]}.`);
       else if (r?.estado === "processando") toast.success(r.mensagem ?? `O ${NOME_REDE[rede]} está processando o vídeo.`);
       else if (r?.estado === "erro") toast.error(r.mensagem ?? "Não saiu.");
       else if (r?.mensagem) toast(r.mensagem);
+      if (r?.estado === "publicado" && card?.plataforma === rede) {
+        if (r.programado) card.onAgendou?.(true); else card.onPublicou?.();
+      }
       inv();
     },
     onError: (e: Error) => { toast.error(e.message); inv(); },

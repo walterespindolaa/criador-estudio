@@ -1578,7 +1578,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               {/* Publicar também em outras redes (só master): LinkedIn, YouTube e
                   TikTok, de volta em 25/11/2026. */}
               {post?.id && <RedesSoMaster postId={post.id} legenda={caption} titulo={title} plataforma={platform}
-                aoVivo={{ data: scheduledDate || null, hora: scheduledTime || null }} antesDeAgir={gravarPendente} />}
+                aoVivo={{ data: scheduledDate || null, hora: scheduledTime || null }} antesDeAgir={gravarPendente}
+                onAgendou={(ligado) => setStatus((s) => (ligado ? "agendado" : s === "agendado" ? "editando" : s))}
+                onPublicou={() => setStatus("publicado")} />}
               {/* Resultado do post no LinkedIn, digitado à mão (só master, 25/11/2026). */}
               {post?.id && ehLinkedIn && <ResultadoLinkedIn postId={post.id} />}
 

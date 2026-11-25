@@ -141,6 +141,11 @@ function SeloParceiro({ nome, etapa, mini, pilula }: { nome: string; etapa?: str
   );
 }
 
+// Filtro de rede no topo do Criando. Walter, 25/11/2026: "nao tem filtro por
+// plataforma (linkedin nao ta)". LinkedIn entra junto, já que liberou pra todos.
+const PLATAFORMAS_FILTRO = ["instagram", "tiktok", "youtube", "linkedin"] as const;
+const NOME_PLATAFORMA: Record<string, string> = { instagram: "Instagram", tiktok: "TikTok", youtube: "YouTube", linkedin: "LinkedIn" };
+
 const Criando = () => {
   const { user } = useAuth();
   const { activeAccountId } = useActiveAccount();
@@ -650,7 +655,7 @@ const Criando = () => {
           {activeFilterCount > 0 && (
             <div className="flex items-center gap-1.5 mt-2 overflow-x-auto scrollbar-none">
               {period !== "tudo" && activeChip("p", PERIOD_OPTIONS.find(o => o.key === period)?.label ?? "Período", () => handlePeriodChange("tudo"))}
-              {filterPlatform && activeChip("pl", filterPlatform === "instagram" ? "Instagram" : filterPlatform === "tiktok" ? "TikTok" : "YouTube", () => setFilterPlatform(null))}
+              {filterPlatform && activeChip("pl", NOME_PLATAFORMA[filterPlatform] ?? filterPlatform, () => setFilterPlatform(null))}
               {filterPillar && activeChip("pi", pillars.find(p => p.id === filterPillar)?.name ?? "Pilar", () => setFilterPillar(null))}
               {filterWeek != null && activeChip("w", `Semana ${filterWeek}`, () => setFilterWeek(null))}
               {filterFormats.map((f) => activeChip("f-" + f, FORMAT_LABELS[f] ?? f, () => alternarFormato(f)))}
@@ -685,9 +690,9 @@ const Criando = () => {
                 <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Rede</p>
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={() => setFilterPlatform(null)} className={sheetChip(!filterPlatform)}>Todas</button>
-                  {(["instagram", "tiktok", "youtube"] as const).map(p => (
+                  {PLATAFORMAS_FILTRO.map(p => (
                     <button key={p} type="button" onClick={() => setFilterPlatform(filterPlatform === p ? null : p)} className={sheetChip(filterPlatform === p)}>
-                      <PlatformIcon platform={p} size="sm" /> <span className="ml-1.5">{p === "instagram" ? "Instagram" : p === "tiktok" ? "TikTok" : "YouTube"}</span>
+                      <PlatformIcon platform={p} size="sm" /> <span className="ml-1.5">{NOME_PLATAFORMA[p]}</span>
                     </button>
                   ))}
                 </div>
@@ -756,7 +761,7 @@ const Criando = () => {
                 className={`px-3 py-1.5 rounded-xl text-xs font-body border transition-colors ${!filterPlatform ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border"}`}>
                 Todas
               </button>
-              {(["instagram", "tiktok", "youtube"] as const).map(p => (
+              {PLATAFORMAS_FILTRO.map(p => (
                 <button key={p} onClick={() => setFilterPlatform(filterPlatform === p ? null : p)}
                   className={`px-2 py-1.5 rounded-xl border transition-colors flex items-center gap-1 ${filterPlatform === p ? "bg-primary/10 border-primary" : "bg-card border-border"}`}>
                   <PlatformIcon platform={p} size="sm" />

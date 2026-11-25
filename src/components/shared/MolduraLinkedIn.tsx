@@ -43,7 +43,8 @@ export function MolduraLinkedIn({ nome, avatarUrl, texto, children, vazio = "O t
           </p>
         ) : <p className="px-3 pb-2.5 text-[12px] italic text-[#999]">{vazio}</p>}
         {children}
-        <div className="flex justify-between px-3 py-1.5 text-[11px] text-[#666]"><span>👍 ❤️ 128</span><span>24 comentários</span></div>
+        {/* Sem contagem de reações e comentários: eram números inventados ("128",
+            "24 comentários") e pareciam dado real (Walter, 25/11/2026). */}
         <div className="flex justify-around border-t border-[#E8E8E8] px-1 py-2 text-[11.5px] font-semibold text-[#5e5e5e]">
           <span className="flex items-center gap-1"><ThumbsUp className="h-3.5 w-3.5" />Gostei</span>
           <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" />Comentar</span>

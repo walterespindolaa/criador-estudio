@@ -7,7 +7,7 @@ import { useProfile } from "@/hooks/useProfile";
 import {
   conectarRede, formatoLinkedInDaMidia, NOME_REDE, useAgendarRede, useConexaoRede, useCrmDoPost, useCriadorTikTok,
   useMidiaDoPost, usePublicacaoRede, usePublicarAgoraRede, useVencimentoRede, type RedeNova, useVoltaDoLoginDaRede,
-  usePostParaYouTube, redeLiberada,
+  usePostParaYouTube, redeLiberada, CardDoPostCtx,
 } from "@/hooks/usePublicarRedes";
 import { useQueryClient } from "@tanstack/react-query";
 import { YT_CATEGORIAS, YT_IDIOMAS, YT_TAGS_MAX, YT_TITULO_MAX, contarTags, hashtagsDaDescricao, lerYoutube } from "@/lib/youtube";
@@ -76,12 +76,15 @@ function Marca({ marcado, desligado, onClick, children, nota }: { marcado: boole
 
 export type AoVivo = { data: string | null; hora: string | null };
 
-export function PublicarNasRedes({ postId, legenda, titulo, plataforma, aoVivo, antesDeAgir }: {
+export function PublicarNasRedes({ postId, legenda, titulo, plataforma, aoVivo, antesDeAgir, onAgendou, onPublicou }: {
   postId: string; legenda?: string | null; titulo?: string | null; plataforma?: string | null;
   /** Data e hora que estão na tela agora (o YouTube programa por elas). */
   aoVivo?: AoVivo;
   /** Grava o que está pendente no editor antes de publicar (o painel lê o post salvo). */
   antesDeAgir?: () => Promise<void>;
+  /** A rede do post agendou ou publicou: o editor alinha a coluna (25/11/2026). */
+  onAgendou?: (ligado: boolean) => void;
+  onPublicou?: () => void;
 }) {
   const { profile } = useProfile();
   const master = profile?.role === "admin";
@@ -108,6 +111,7 @@ export function PublicarNasRedes({ postId, legenda, titulo, plataforma, aoVivo, 
     );
   }
   return (
+    <CardDoPostCtx.Provider value={{ plataforma, onAgendou, onPublicou }}>
     <div className="rounded-2xl border border-border bg-card p-3.5 space-y-3">
       <div className="flex items-center gap-2">
         <p className="text-[13px] font-body font-bold text-foreground">Publicar também em</p>
@@ -128,6 +132,7 @@ export function PublicarNasRedes({ postId, legenda, titulo, plataforma, aoVivo, 
           ? <PainelTikTok key="tt" postId={postId} legenda={legenda} />
           : <PainelYouTube key="yt" postId={postId} titulo={titulo} aoVivo={aoVivo} antesDeAgir={antesDeAgir} />}
     </div>
+    </CardDoPostCtx.Provider>
   );
 }
 
@@ -178,11 +183,13 @@ function Conectar({ postId, rede, motivo }: { postId: string; rede: RedeNova; mo
 
 function Botoes({ podeAgendar, ocupado, onAgendar, onAgora, travado }: { podeAgendar: boolean; ocupado: boolean; onAgendar: () => void; onAgora: () => void; travado: boolean }) {
   return (
-    <div className="flex gap-2">
-      <Button className="flex-1 rounded-xl" disabled={!podeAgendar || ocupado || travado} onClick={onAgendar}>
+    // Quebra em duas linhas quando não cabe (Walter, 25/11/2026: "o botao de
+    // publicar agora ta cortado" na coluna do editor no computador).
+    <div className="flex flex-wrap gap-2">
+      <Button className="grow basis-[13rem] rounded-xl" disabled={!podeAgendar || ocupado || travado} onClick={onAgendar}>
         {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CalendarClock className="h-4 w-4 mr-1.5" />Agendar na data do post</>}
       </Button>
-      <Button variant="outline" className="rounded-xl" disabled={!podeAgendar || ocupado || travado} onClick={onAgora}>
+      <Button variant="outline" className="grow basis-[9rem] rounded-xl" disabled={!podeAgendar || ocupado || travado} onClick={onAgora}>
         <Send className="h-4 w-4 mr-1.5" />Publicar agora
       </Button>
     </div>

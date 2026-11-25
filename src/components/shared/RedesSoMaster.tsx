@@ -8,7 +8,7 @@ import { useProfile } from "@/hooks/useProfile";
    continua num pedaço separado, baixado só quando o editor abre. */
 const Painel = lazy(() => import("@/components/shared/PublicarNasRedes").then((m) => ({ default: m.PublicarNasRedes })));
 
-export function RedesSoMaster(props: { postId: string; legenda?: string | null; titulo?: string | null; plataforma?: string | null; aoVivo?: { data: string | null; hora: string | null }; antesDeAgir?: () => Promise<void> }) {
+export function RedesSoMaster(props: { postId: string; legenda?: string | null; titulo?: string | null; plataforma?: string | null; aoVivo?: { data: string | null; hora: string | null }; antesDeAgir?: () => Promise<void>; onAgendou?: (ligado: boolean) => void; onPublicou?: () => void }) {
   const { profile } = useProfile();
   if (!profile) return null;
   return <Suspense fallback={null}><Painel {...props} /></Suspense>;

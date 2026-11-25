@@ -99,7 +99,7 @@ export async function publicarLinha(admin: SupabaseClient, pubId: string, actor:
   const pub = row as Pub | null;
   if (!pub) return { estado: 'erro', mensagem: 'Publicação não encontrada.' };
   const { data: postRow } = await admin.from('posts')
-    .select('id, user_id, title, caption, external_client_id, approval_status, publish_sem_aprovacao_motivo, youtube')
+    .select('id, user_id, title, caption, platform, status, external_client_id, approval_status, publish_sem_aprovacao_motivo, youtube')
     .eq('id', pub.post_id).maybeSingle();
   const p = postRow as Record<string, unknown> | null;
   const quem = actor ?? pub.criado_por ?? String(p?.user_id ?? '');
@@ -178,6 +178,25 @@ export async function publicarLinha(admin: SupabaseClient, pubId: string, actor:
   }
 }
 
+/* O CARD ANDA NO QUADRO (Walter, 25/11/2026: "eu publiquei e nao saiu da aba
+   de ideias ali do Criando"). Igual ao Instagram (ig-publicar.ts): publicou,
+   vai pra Publicado (e o post de cliente vira "postado" na aprovação); YouTube
+   programado (publishAt) vai pra Agendado. Só quando a rede publicada é a
+   rede do post: um post de Instagram que sai também no LinkedIn não muda de
+   coluna por causa do LinkedIn. */
+async function moverCard(admin: SupabaseClient, pub: Pub, p: Record<string, unknown>, para: 'publicado' | 'agendado', agora: string) {
+  if (String(p.platform ?? '') !== pub.rede || p.status === 'publicado') return;
+  if (para === 'agendado') {
+    if (p.external_client_id) return; // Cria Post: as colunas seguem a aprovação
+    await admin.from('posts').update({ status: 'agendado' } as never).eq('id', pub.post_id);
+    return;
+  }
+  await admin.from('posts').update({
+    status: 'publicado', published_at: agora,
+    ...(p.external_client_id ? { approval_status: 'postado' } : {}),
+  } as never).eq('id', pub.post_id);
+}
+
 async function aplicar(admin: SupabaseClient, pub: Pub, r: ResultadoPublicacao, p: Record<string, unknown>, quem: string, link: string) {
   const agora = new Date().toISOString();
   const nome = REDES[pub.rede].nome;
@@ -192,7 +211,8 @@ async function aplicar(admin: SupabaseClient, pub: Pub, r: ResultadoPublicacao, 
       programado ? `Programado no ${nome}` : `Publicado no ${nome}`,
       programado ? `"${String(p.title ?? 'Post').slice(0, 60)}" já subiu e sai sozinho em ${programado}.` : `"${String(p.title ?? 'Post').slice(0, 60)}" já está no ar.`,
       link);
-    return { estado: 'publicado', ...(programado ? { mensagem: `Enviado. O YouTube publica sozinho em ${programado}.` } : {}) };
+    await moverCard(admin, pub, p, programado ? 'agendado' : 'publicado', agora);
+    return { estado: 'publicado', programado: !!programado, ...(programado ? { mensagem: `Enviado. O YouTube publica sozinho em ${programado}.` } : {}) };
   }
   if (r.estado === 'processando') {
     await admin.from('post_publicacoes').update({ status: 'processando', external_id: r.externalId, ...(r.permalink ? { permalink: r.permalink } : {}), erro: null, updated_at: agora } as never).eq('id', pub.id);
@@ -234,7 +254,7 @@ export async function conferirProcessando(admin: SupabaseClient, pubId: string) 
     .select('id, post_id, rede, status, tentativas, titulo, texto, opcoes, external_id, criado_por').eq('id', pubId).maybeSingle();
   const pub = row as Pub | null;
   if (!pub || pub.status !== 'processando' || !pub.external_id) return;
-  const { data: postRow } = await admin.from('posts').select('id, user_id, title, caption, external_client_id, youtube').eq('id', pub.post_id).maybeSingle();
+  const { data: postRow } = await admin.from('posts').select('id, user_id, title, caption, platform, status, external_client_id, youtube').eq('id', pub.post_id).maybeSingle();
   const p = (postRow ?? {}) as Record<string, unknown>;
   const quem = pub.criado_por ?? String(p.user_id ?? '');
   const link = p.external_client_id ? '/socialmidia/criapost/publicacoes' : '/app/criando';
