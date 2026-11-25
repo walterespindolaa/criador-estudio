@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Loader2, Unplug } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Selo } from "@/components/settings/ConfigShell";
+import { FotoComSelo, LogoRede } from "@/components/shared/LogoRede";
 import { Button } from "@/components/ui/button";
 import {
   conectarRede, estadoConexaoRede, NOME_REDE, useConexoesProprias, useDesconectarRede,
@@ -20,14 +21,13 @@ import {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const ORDEM: RedeNova[] = ["youtube", "tiktok", "linkedin"];
-const ICONE: Record<RedeNova, { txt: string; cls: string }> = {
-  youtube: { txt: "YT", cls: "bg-[#E62117]" },
-  tiktok: { txt: "TT", cls: "bg-[#111]" },
-  linkedin: { txt: "in", cls: "bg-[#0A66C2]" },
-};
 
 const dataCurta = (iso: string | null) => iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "";
 
+/* Padrão Cria (Walter, 25/11/2026: "unifique elas por favor pra ficar um
+   padrao Cria"): cada rede usa a mesma linha do Instagram conectado (fundo
+   laranja claro, borda, avatar de 40px, botões iguais) e os avisos viram os
+   selos do resumo de Configurações, sem caixa amarela solta. */
 function BlocoRede({ rede, c, onDesconectar, desconectando }: { rede: RedeNova; c: ConexaoPropria | null; onDesconectar: () => void; desconectando: boolean }) {
   const [indo, setIndo] = useState(false);
   const nome = NOME_REDE[rede];
@@ -35,51 +35,51 @@ function BlocoRede({ rede, c, onDesconectar, desconectando }: { rede: RedeNova; 
   const est = c ? estadoConexaoRede(c) : null;
   const alerta = !!est && (est.vencida || est.perto);
 
-  let linha = "Não conectado";
-  if (c && est) {
-    const quem = c.username ? ` · ${c.username}` : "";
-    if (est.vencida) linha = `Conexão vencida${quem}`;
-    else if (est.perto) linha = `Vence em ${Math.max(est.dias ?? 0, 0)} dia${est.dias === 1 ? "" : "s"}${quem}`;
-    else linha = `Conectado${quem}${rede === "linkedin" && est.venceEm ? ` · vale até ${dataCurta(est.venceEm)}` : ""}`;
+  if (!c) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl border border-border bg-card">
+        <div className="flex items-center gap-3 min-w-0">
+          <LogoRede marca={rede} />
+          <div className="min-w-0">
+            <p className="text-sm font-body font-semibold text-foreground">{nome}</p>
+            <p className="text-xs font-body text-muted-foreground">Não conectado</p>
+          </div>
+        </div>
+        <Button variant="hero" size="sm" disabled={indo} onClick={() => void conectar()} className="w-full sm:w-auto">
+          {indo ? <Loader2 className="h-4 w-4 animate-spin" /> : `Conectar ${nome}`}
+        </Button>
+      </div>
+    );
   }
 
   return (
-    <div className={cn("rounded-xl border p-3 space-y-2.5",
-      alerta ? "border-amber-300 bg-amber-50" : c ? "border-primary/20 bg-primary/5" : "border-border")}>
+    <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-primary/5 rounded-xl border border-primary/20">
       <div className="flex items-center gap-3 min-w-0">
-        {/* Foto do canal ou perfil quando a rede manda (trazido do cartão do YouTube, 25/11/2026). */}
-        {c?.profile_picture_url
-          ? <img src={c.profile_picture_url} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
-          : <div className={cn("h-10 w-10 shrink-0 rounded-full grid place-items-center text-white text-[13px] font-body font-bold", ICONE[rede].cls)}>{ICONE[rede].txt}</div>}
+        {c.profile_picture_url ? <FotoComSelo src={c.profile_picture_url} marca={rede} /> : <LogoRede marca={rede} />}
         <div className="min-w-0">
-          <p className="text-sm font-body font-semibold text-foreground">{nome}</p>
-          <p className={cn("text-xs font-body truncate", alerta ? "text-amber-800 font-bold" : c ? "text-emerald-700 font-bold" : "text-muted-foreground")}>{linha}</p>
+          <p className="text-sm font-body font-semibold text-foreground truncate">{c.username ?? nome}</p>
+          <p className="text-xs font-body text-muted-foreground flex flex-wrap items-center gap-1">
+            {nome} ·{" "}
+            {est?.vencida ? <Selo tom="alerta">conexão vencida</Selo>
+              : est?.perto ? <Selo tom="alerta">vence em {Math.max(est.dias ?? 0, 0)} dia{est.dias === 1 ? "" : "s"}</Selo>
+              : <>Conectado{rede === "linkedin" && est?.venceEm ? ` · vale até ${dataCurta(est.venceEm)}` : ""}</>}
+          </p>
         </div>
       </div>
-      {c && rede === "linkedin" && !alerta && (
-        <p className="text-[11.5px] font-body text-muted-foreground leading-snug">O LinkedIn não renova sozinho: a cada 60 dias você reconecta. O Cria avisa 7 dias antes.</p>
-      )}
-      {c && rede !== "linkedin" && !alerta && (
-        <p className="text-[11.5px] font-body text-muted-foreground leading-snug">Renova sozinho. Só precisa reconectar se você tirar o acesso na conta da rede.</p>
-      )}
-      {est?.perto && (
-        <p className="rounded-lg bg-amber-100 px-2.5 py-2 text-[12px] font-body text-amber-900 leading-snug">Posts agendados no LinkedIn depois de {dataCurta(est.venceEm)} não saem se a conexão vencer. Reconecte agora pra ganhar mais 60 dias.</p>
-      )}
-      {est?.vencida && (
-        <p className="rounded-lg bg-amber-100 px-2.5 py-2 text-[12px] font-body text-amber-900 leading-snug">Posts agendados pro {nome} ficam parados até você reconectar.</p>
-      )}
-      <div className="flex gap-2 [&>button]:flex-1">
-        {(!c || alerta) && (
+      <div className="flex gap-2 w-full sm:w-auto [&>button]:flex-1 sm:[&>button]:flex-none">
+        {alerta && (
           <Button variant="hero" size="sm" disabled={indo} onClick={() => void conectar()}>
-            {indo ? <Loader2 className="h-4 w-4 animate-spin" /> : c ? "Reconectar" : `Conectar ${nome}`}
+            {indo ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reconectar"}
           </Button>
         )}
-        {c && (
-          <Button variant="outline" size="sm" disabled={desconectando} onClick={onDesconectar}>
-            <Unplug className="h-4 w-4 mr-2" /> Desconectar
-          </Button>
-        )}
+        <Button variant="outline" size="sm" disabled={desconectando} onClick={onDesconectar}><Unplug className="h-4 w-4 mr-2" /> Desconectar</Button>
       </div>
+      {alerta && (
+        <p className="w-full text-xs font-body text-muted-foreground leading-snug">
+          {rede === "linkedin" ? "O LinkedIn não renova sozinho: a cada 60 dias você reconecta. " : ""}
+          Posts agendados pro {nome} ficam parados até reconectar.
+        </p>
+      )}
     </div>
   );
 }
@@ -95,15 +95,14 @@ export function RedesParaPublicar({ userId }: { userId: string | null | undefine
 
   return (
     <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
-      <h3 className="font-display font-semibold text-foreground flex items-center gap-2">
-        Redes pra publicar
-        <span className="text-[10.5px] font-body font-bold rounded-full px-2 py-0.5 bg-amber-100 text-amber-900">teste · só master</span>
+      <h3 className="font-display font-semibold text-foreground flex flex-wrap items-center gap-2">
+        Redes pra publicar <Selo tom="neutro">teste · só master</Selo>
       </h3>
       <p className="text-sm text-muted-foreground font-body leading-relaxed">Ligue as contas onde o Cria vai publicar por você. Cada rede pede o login dela uma vez.</p>
       {lista.isLoading
         ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         : (
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {ORDEM.map((r) => {
               const c = porRede(r);
               return <BlocoRede key={r} rede={r} c={c} desconectando={desconectar.isPending} onDesconectar={() => c && desconectar.mutate(c)} />;

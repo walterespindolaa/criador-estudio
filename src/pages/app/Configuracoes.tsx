@@ -27,6 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
 import { RedesParaPublicar } from "@/components/shared/RedesParaPublicar";
+import { LogoRede } from "@/components/shared/LogoRede";
 import { estadoConexaoRede, NOME_REDE, useConexoesProprias } from "@/hooks/usePublicarRedes";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { useActiveAccount } from "@/contexts/AccountContext";
@@ -981,7 +982,8 @@ const Configuracoes = () => {
                   {driveConnection ? (
                     <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-primary/5 rounded-xl border border-primary/20 overflow-hidden">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">G</div>
+                        {/* Logo do Google Drive no lugar do "G" (Walter, 25/11/2026). */}
+                        <LogoRede marca="drive" />
                         <div className="min-w-0">
                           <p className="text-sm font-body font-semibold text-foreground truncate max-w-[200px] sm:max-w-none" title={driveConnection.google_email || undefined}>
                             {driveConnection.google_email || "Conectado"}
