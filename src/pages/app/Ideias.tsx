@@ -34,7 +34,6 @@ import { PageSkeleton } from "@/components/shared/PageSkeleton";
 import { SharedIntake } from "@/components/pwa/SharedIntake";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { usePillars } from "@/hooks/usePillars";
-import { useProfile } from "@/hooks/useProfile";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { useBrandContext } from "@/hooks/useBrandContext";
 import { useResumoDesempenho } from "@/hooks/useResumoDesempenho";
@@ -144,8 +143,8 @@ const Ideias = () => {
   const { ideas, createIdea, updateIdea, deleteIdea, promoteToPost, isLoading: ideasLoading } = useIdeas();
   const { pillars } = usePillars();
   const { profile } = useActiveProfile();
-  const { profile: perfilSessao } = useProfile();
-  const formatosVisiveis = perfilSessao?.role === "admin" ? FORMATOS_SUGESTAO : FORMATOS_SUGESTAO.filter((f) => f.platform !== "linkedin");
+  // LinkedIn liberado pra todos em 25/11/2026 (antes só o master via esses formatos).
+  const formatosVisiveis = FORMATOS_SUGESTAO;
   const { brandContext, hasBrandContext } = useBrandContext();
   const desempenho = useResumoDesempenho();
   const { createPost } = usePosts();

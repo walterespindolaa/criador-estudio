@@ -11,7 +11,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { ErroRede } from '../_shared/redes.ts';
-import { ehMaster, PUBLICADORES } from '../_shared/redes-publicar.ts';
+import { podeUsarRede, PUBLICADORES } from '../_shared/redes-publicar.ts';
 
 const APP_URL = Deno.env.get('APP_URL') || 'https://app.criasocialclub.com.br';
 type RedeNova = 'tiktok' | 'youtube' | 'linkedin';
@@ -46,9 +46,10 @@ Deno.serve(async (req) => {
     const { data: u } = await admin.auth.getUser(jwt);
     const userId = u?.user?.id;
     if (!userId) return json({ error: 'unauthorized' }, 401);
-    if (!(await ehMaster(admin, userId))) return json({ error: 'sem permissão' }, 403);
     const b = await req.json().catch(() => ({})) as Record<string, unknown>;
     if (!ehRede(b.rede)) return json({ error: 'rede inválida' }, 400);
+    // LinkedIn pra todos desde 25/11/2026; YouTube e TikTok só o master.
+    if (!(await podeUsarRede(admin, userId, b.rede))) return json({ error: 'sem permissão' }, 403);
     const crmClientId = typeof b.crm_client_id === 'string' ? b.crm_client_id : null;
     const returnTo = typeof b.return_to === 'string' && /^\/(?!\/)[^\s]{0,300}$/.test(b.return_to) ? b.return_to : null;
 

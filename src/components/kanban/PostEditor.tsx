@@ -50,8 +50,7 @@ import { toast } from "sonner";
 import { downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { fireConfetti, primeiraPublicacaoDaSemana } from "@/lib/confetti";
 import { StickerCelebration } from "@/components/shared/StickerCelebration";
-import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS, BUNNY_CRIAPOST_CDN_HOSTNAME, PLATAFORMAS_SO_MASTER, FORMATS_BY_PLATFORM, LINKEDIN_FORMAT_LABELS, LINKEDIN_FORMAT_DICA, LINKEDIN_TEXTO_MAX } from "@/lib/constants";
-import { useProfile } from "@/hooks/useProfile";
+import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS, BUNNY_CRIAPOST_CDN_HOSTNAME, PLATAFORMAS_EXTRAS, FORMATS_BY_PLATFORM, LINKEDIN_FORMAT_LABELS, LINKEDIN_FORMAT_DICA, LINKEDIN_TEXTO_MAX } from "@/lib/constants";
 import { ChecagemLinkedIn, CorteVerMais } from "./LinkedInLegenda";
 import { ChecagemYouTube, ExtrasYouTube, TituloYouTube } from "./YouTubeCampos";
 import { YT_CORTE_MAIS, YT_DESCRICAO_MAX, capitulosDoRoteiro, categoriaDoNicho, descricaoComCapitulos, lerYoutube, type YoutubeDoPost } from "@/lib/youtube";
@@ -399,9 +398,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
   const { profile } = useActiveProfile();
   // LinkedIn como plataforma do post: só o master enquanto está em teste (Walter, 25/11/2026).
-  const { profile: perfilSessao } = useProfile();
-  const masterLinkedIn = perfilSessao?.role === "admin";
-  const plataformas: string[] = masterLinkedIn || platform === "linkedin" ? [...PLATFORMS, ...PLATAFORMAS_SO_MASTER] : [...PLATFORMS];
+  // Liberado pra todos em 25/11/2026 (antes só o master via LinkedIn aqui).
+  const plataformas: string[] = [...PLATFORMS, ...PLATAFORMAS_EXTRAS];
   const ehLinkedIn = platform === "linkedin";
   // Post de YouTube com cara de YouTube (Walter, 25/11/2026, mockup aprovado).
   const ehYouTube = platform === "youtube";
@@ -1582,7 +1580,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               {post?.id && <RedesSoMaster postId={post.id} legenda={caption} titulo={title} plataforma={platform}
                 aoVivo={{ data: scheduledDate || null, hora: scheduledTime || null }} antesDeAgir={gravarPendente} />}
               {/* Resultado do post no LinkedIn, digitado à mão (só master, 25/11/2026). */}
-              {post?.id && ehLinkedIn && masterLinkedIn && <ResultadoLinkedIn postId={post.id} />}
+              {post?.id && ehLinkedIn && <ResultadoLinkedIn postId={post.id} />}
 
     </>
   );

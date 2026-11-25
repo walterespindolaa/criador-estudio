@@ -28,7 +28,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
 import { RedesParaPublicar } from "@/components/shared/RedesParaPublicar";
 import { LogoRede } from "@/components/shared/LogoRede";
-import { estadoConexaoRede, NOME_REDE, useConexoesProprias } from "@/hooks/usePublicarRedes";
+import { estadoConexaoRede, NOME_REDE, redeLiberada, useConexoesProprias } from "@/hooks/usePublicarRedes";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { SettingsVisual } from "@/components/settings/SettingsVisual";
@@ -177,9 +177,10 @@ const Configuracoes = () => {
 
   const { data: igConnection } = useSocialConnection();
   const igDisconnect = useDisconnectInstagram();
-  // Redes pra publicar (YouTube, TikTok, LinkedIn): só o master enquanto está em teste (Walter, 25/11/2026).
+  // Redes pra publicar: LinkedIn pra todos desde 25/11/2026 ("linkedin acho que
+  // ja da pra liberar pra todos"); YouTube e TikTok só o master.
   const masterRedes = perfilSessao?.role === "admin";
-  const redesProprias = useConexoesProprias(user?.id, masterRedes).data ?? [];
+  const redesProprias = useConexoesProprias(user?.id).data ?? [];
 
   /* PERFIL NOVO (Walter, 19/10/2026; mockup aprovado). Bio pode vir do
      Instagram conectado; Pix fica mascarado até a pessoa pedir pra ver. */
@@ -595,7 +596,7 @@ const Configuracoes = () => {
               {igConnection
                 ? <Selo tom={igVencido ? "alerta" : "ok"}>{igVencido ? "Instagram: reconectar" : `Instagram ligado${igConnection.username ? ` · @${igConnection.username}` : ""}`}</Selo>
                 : <Selo tom="neutro">Instagram não ligado</Selo>}
-              {masterRedes && (["youtube", "tiktok", "linkedin"] as const).map((r) => {
+              {(["youtube", "tiktok", "linkedin"] as const).filter((r) => redeLiberada(r, masterRedes)).map((r) => {
                 const c = redesProprias.find((x) => x.provider === r);
                 if (!c) return <Selo key={r} tom="neutro">{NOME_REDE[r]} não ligado</Selo>;
                 const e = estadoConexaoRede(c);
@@ -974,7 +975,7 @@ const Configuracoes = () => {
                   )}
                 </div>
 
-                {masterRedes && <RedesParaPublicar userId={user?.id} />}
+                <RedesParaPublicar userId={user?.id} master={masterRedes} />
 
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                   <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><HardDrive className="h-5 w-5 text-primary" /> Google Drive</h3>

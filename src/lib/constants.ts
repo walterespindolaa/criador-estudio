@@ -1,9 +1,10 @@
 export const PLATFORMS = ["instagram", "tiktok", "youtube"] as const;
 
 // LinkedIn como plataforma do post (mockup aprovado pelo Walter em 25/11/2026).
-// Fica fora de PLATFORMS de propósito: enquanto a publicação está em teste só o
-// master escolhe LinkedIn no editor (PostEditor junta esta lista quando é admin).
-export const PLATAFORMAS_SO_MASTER = ["linkedin"] as const;
+// Fica fora de PLATFORMS de propósito (filtros e relatórios antigos contam só as
+// três). Era só do master; liberado pra todos em 25/11/2026 ("linkedin acho que
+// ja da pra liberar pra todos"). O PostEditor junta esta lista sempre.
+export const PLATAFORMAS_EXTRAS = ["linkedin"] as const;
 
 export const BUNNY_CDN_HOSTNAME = "vz-4f7de422-7aa.b-cdn.net";
 

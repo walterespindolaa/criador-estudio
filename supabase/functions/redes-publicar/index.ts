@@ -10,7 +10,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { ErroRede } from '../_shared/redes.ts';
-import { conexaoComToken, conferirProcessando, ehMaster, publicarLinha } from '../_shared/redes-publicar.ts';
+import { conexaoComToken, conferirProcessando, podeUsarRede, publicarLinha } from '../_shared/redes-publicar.ts';
+import type { RedeNova } from '../_shared/redes-publicar.ts';
 import { tiktok } from '../_shared/rede-tiktok.ts';
 
 Deno.serve(async (req) => {
@@ -53,9 +54,10 @@ Deno.serve(async (req) => {
     const { data: u } = await admin.auth.getUser(jwt);
     const actor = u?.user?.id;
     if (!actor) return json({ error: 'unauthorized' }, 401);
-    if (!(await ehMaster(admin, actor))) return json({ error: 'sem permissão' }, 403);
-
+    // Quem pode usar cada rede: LinkedIn pra todos desde 25/11/2026; YouTube e
+    // TikTok só o master. O banco confere de novo na trava e na validação.
     if (body.acao === 'criador') {
+      if (!(await podeUsarRede(admin, actor, 'tiktok'))) return json({ error: 'sem permissão' }, 403);
       const postId = String(body.post_id ?? '');
       const cx = await conexaoComToken(admin, postId, 'tiktok', actor);
       return json({ criador: await tiktok.criador(cx.token) });
@@ -63,6 +65,9 @@ Deno.serve(async (req) => {
 
     const pubId = String(body.pub_id ?? '');
     if (!pubId) return json({ error: 'pub_id obrigatório' }, 400);
+    const { data: linha } = await admin.from('post_publicacoes').select('rede').eq('id', pubId).maybeSingle();
+    const redeDaLinha = (linha as { rede?: RedeNova } | null)?.rede;
+    if (!redeDaLinha || !(await podeUsarRede(admin, actor, redeDaLinha))) return json({ error: 'sem permissão' }, 403);
     // Direito ao post e trava (um publica por vez).
     const { data: trava, error } = await admin.rpc('redes_travar_publicacao', { _pub_id: pubId, _actor: actor });
     if (error) return json({ error: error.message }, 403);

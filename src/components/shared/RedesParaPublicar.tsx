@@ -4,7 +4,7 @@ import { Selo } from "@/components/settings/ConfigShell";
 import { FotoComSelo, LogoRede } from "@/components/shared/LogoRede";
 import { Button } from "@/components/ui/button";
 import {
-  conectarRede, estadoConexaoRede, NOME_REDE, useConexoesProprias, useDesconectarRede,
+  conectarRede, estadoConexaoRede, NOME_REDE, redeLiberada, useConexoesProprias, useDesconectarRede,
   type ConexaoPropria, type RedeNova, useVoltaDoLoginDaRede,
 } from "@/hooks/usePublicarRedes";
 
@@ -14,8 +14,8 @@ import {
    Walter, 25/11/2026: "precisamos ajustar a conexao com o youtube, a conexao
    com linkedin etc". Ele não achava onde conectar o YouTube: só dava por
    dentro do post. Aqui ficam as contas DA conta (as dos clientes continuam na
-   ficha do cliente). Só o master vê enquanto a publicação está em teste; o
-   redes-oauth também barra quem não é master.
+   ficha do cliente). Desde 25/11/2026 o LinkedIn aparece pra todo mundo;
+   YouTube e TikTok só pro master (o redes-oauth barra igual).
    Substitui o cartão ConexaoYouTubeSoMaster que entrou na main no mesmo dia:
    uma tela só de redes (mockup aprovado).
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -84,7 +84,7 @@ function BlocoRede({ rede, c, onDesconectar, desconectando }: { rede: RedeNova; 
   );
 }
 
-export function RedesParaPublicar({ userId }: { userId: string | null | undefined }) {
+export function RedesParaPublicar({ userId, master }: { userId: string | null | undefined; master: boolean }) {
   const lista = useConexoesProprias(userId);
   const desconectar = useDesconectarRede(userId);
 
@@ -96,14 +96,14 @@ export function RedesParaPublicar({ userId }: { userId: string | null | undefine
   return (
     <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
       <h3 className="font-display font-semibold text-foreground flex flex-wrap items-center gap-2">
-        Redes pra publicar <Selo tom="neutro">teste · só master</Selo>
+        Redes pra publicar {master && <Selo tom="neutro">YouTube e TikTok: só master</Selo>}
       </h3>
       <p className="text-sm text-muted-foreground font-body leading-relaxed">Ligue as contas onde o Cria vai publicar por você. Cada rede pede o login dela uma vez.</p>
       {lista.isLoading
         ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         : (
           <div className="space-y-3">
-            {ORDEM.map((r) => {
+            {ORDEM.filter((r) => redeLiberada(r, master)).map((r) => {
               const c = porRede(r);
               return <BlocoRede key={r} rede={r} c={c} desconectando={desconectar.isPending} onDesconectar={() => c && desconectar.mutate(c)} />;
             })}

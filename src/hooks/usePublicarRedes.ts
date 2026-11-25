@@ -22,6 +22,14 @@ const sbRpc = supabase.rpc.bind(supabase) as unknown as AnyRpc;
 
 export type RedeNova = "tiktok" | "youtube" | "linkedin";
 export const NOME_REDE: Record<RedeNova, string> = { tiktok: "TikTok", youtube: "YouTube", linkedin: "LinkedIn" };
+// Walter, 25/11/2026: "linkedin acho que ja da pra liberar pra todos".
+// LinkedIn liberado pra todo mundo; YouTube e TikTok seguem só pro master até
+// o Google e o TikTok aprovarem os apps. A mesma regra vale no servidor
+// (podeUsarRede em _shared/redes-publicar.ts) e no banco (migration 20261125000005).
+export const REDES_PRA_TODOS: RedeNova[] = ["linkedin"];
+export function redeLiberada(r: RedeNova, master: boolean): boolean {
+  return master || REDES_PRA_TODOS.includes(r);
+}
 
 export type PublicacaoRede = {
   id: string;

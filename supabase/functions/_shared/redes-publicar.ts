@@ -18,7 +18,7 @@ import { linkedin } from './rede-linkedin.ts';
 import { prepararMidiaDoPost } from './ig-midia.ts';
 
 const MAX_TENTATIVAS = 3;
-type RedeNova = 'tiktok' | 'youtube' | 'linkedin';
+export type RedeNova = 'tiktok' | 'youtube' | 'linkedin';
 export const PUBLICADORES = { tiktok, youtube, linkedin };
 
 type Pub = {
@@ -37,6 +37,15 @@ async function avisar(admin: SupabaseClient, ids: string[], titulo: string, desc
 export async function ehMaster(admin: SupabaseClient, userId: string): Promise<boolean> {
   const { data } = await admin.from('profiles').select('role').eq('id', userId).maybeSingle();
   return (data as { role?: string | null } | null)?.role === 'admin';
+}
+
+/** Redes liberadas pra todo mundo. Walter, 25/11/2026: "linkedin acho que ja
+    da pra liberar pra todos". YouTube e TikTok seguem só pro master até o
+    Google e o TikTok aprovarem os apps. Mesma regra do app (redeLiberada) e do
+    banco (validar_publicacao_rede, migration 20261125000005). */
+export const REDES_PRA_TODOS: RedeNova[] = ['linkedin'];
+export async function podeUsarRede(admin: SupabaseClient, userId: string, rede: RedeNova): Promise<boolean> {
+  return REDES_PRA_TODOS.includes(rede) || await ehMaster(admin, userId);
 }
 
 /** Conexão do post naquela rede + access token válido (renova se precisar). */

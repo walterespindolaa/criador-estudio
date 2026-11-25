@@ -7,7 +7,7 @@ import { useProfile } from "@/hooks/useProfile";
 import {
   conectarRede, formatoLinkedInDaMidia, NOME_REDE, useAgendarRede, useConexaoRede, useCrmDoPost, useCriadorTikTok,
   useMidiaDoPost, usePublicacaoRede, usePublicarAgoraRede, useVencimentoRede, type RedeNova, useVoltaDoLoginDaRede,
-  usePostParaYouTube,
+  usePostParaYouTube, redeLiberada,
 } from "@/hooks/usePublicarRedes";
 import { useQueryClient } from "@tanstack/react-query";
 import { YT_CATEGORIAS, YT_IDIOMAS, YT_TAGS_MAX, YT_TITULO_MAX, contarTags, hashtagsDaDescricao, lerYoutube } from "@/lib/youtube";
@@ -85,23 +85,25 @@ export function PublicarNasRedes({ postId, legenda, titulo, plataforma, aoVivo, 
 }) {
   const { profile } = useProfile();
   const master = profile?.role === "admin";
+  // LinkedIn pra todos desde 25/11/2026; YouTube e TikTok só o master vê.
+  const redesDaPessoa = REDES_NA_TELA.filter((r) => redeLiberada(r, master));
   /* Post de TikTok ou YouTube: a caixa já abre na rede dele. Post de Instagram:
      fica fechada numa linha (é opcional, não pode pesar no editor). */
-  const daRede = REDES_NA_TELA.includes(plataforma as RedeNova) ? (plataforma as RedeNova) : null;
-  const [rede, setRede] = useState<RedeNova>(daRede ?? REDES_NA_TELA[0]);
+  const daRede = redesDaPessoa.includes(plataforma as RedeNova) ? (plataforma as RedeNova) : null;
+  const [rede, setRede] = useState<RedeNova>(daRede ?? redesDaPessoa[0]);
   const [aberto, setAberto] = useState(!!daRede);
   useEffect(() => { if (daRede) { setRede(daRede); setAberto(true); } }, [daRede]);
 
   // Volta do login da rede: avisa, recarrega as conexões e limpa a URL.
   useVoltaDoLoginDaRede();
 
-  if (!master) return null;
+  if (!redesDaPessoa.length) return null;
   if (!aberto) {
     return (
       <button type="button" onClick={() => setAberto(true)}
         className="w-full flex items-center gap-2 rounded-2xl border border-dashed border-border bg-card px-3.5 py-2.5 text-left hover:bg-muted/40">
-        <span className="text-[12.5px] font-body font-semibold text-muted-foreground">Publicar também no LinkedIn, YouTube ou TikTok</span>
-        <span className="ml-auto text-[10.5px] font-body font-bold rounded-full px-2 py-0.5 bg-amber-100 text-amber-900">só master</span>
+        <span className="text-[12.5px] font-body font-semibold text-muted-foreground">{master ? "Publicar também no LinkedIn, YouTube ou TikTok" : "Publicar também no LinkedIn"}</span>
+        {master && <span className="ml-auto text-[10.5px] font-body font-bold rounded-full px-2 py-0.5 bg-amber-100 text-amber-900">YouTube e TikTok: só master</span>}
       </button>
     );
   }
@@ -109,17 +111,17 @@ export function PublicarNasRedes({ postId, legenda, titulo, plataforma, aoVivo, 
     <div className="rounded-2xl border border-border bg-card p-3.5 space-y-3">
       <div className="flex items-center gap-2">
         <p className="text-[13px] font-body font-bold text-foreground">Publicar também em</p>
-        <span className="text-[10.5px] font-body font-bold rounded-full px-2 py-0.5 bg-amber-100 text-amber-900">teste · só master</span>
+        {master && <span className="text-[10.5px] font-body font-bold rounded-full px-2 py-0.5 bg-amber-100 text-amber-900">YouTube e TikTok: só master</span>}
         {!daRede && <button type="button" onClick={() => setAberto(false)} className="ml-auto text-[12px] font-body text-muted-foreground hover:text-foreground">fechar</button>}
       </div>
-      <div className="flex gap-1.5">
-        {REDES_NA_TELA.map((r) => (
+      {redesDaPessoa.length > 1 && <div className="flex gap-1.5">
+        {redesDaPessoa.map((r) => (
           <button key={r} type="button" onClick={() => setRede(r)}
             className={cn("rounded-full px-3 py-1.5 text-[12px] font-body font-bold", rede === r ? "bg-foreground text-background" : "bg-muted text-muted-foreground")}>
             {NOME_REDE[r]}
           </button>
         ))}
-      </div>
+      </div>}
       {rede === "linkedin"
         ? <PainelLinkedIn key="li" postId={postId} legenda={legenda} />
         : rede === "tiktok"

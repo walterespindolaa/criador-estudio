@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { LogoRede } from "@/components/shared/LogoRede";
-import { useProfile } from "@/hooks/useProfile";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    COMEÇAR UM POST EM DOIS PASSOS (protótipo aprovado pelo Walter em 25/11/2026:
@@ -10,19 +9,19 @@ import { useProfile } from "@/hooks/useProfile";
    Agora: passo 1 "Onde vai sair?" (a rede), passo 2 "Qual formato?" (só os
    formatos daquela rede, cada um com um desenho pequeno do formato). Escolher
    o formato abre o editor com rede e formato já marcados.
-   Quem vê o quê: LinkedIn só o master enquanto a publicação está em teste;
-   Instagram, TikTok e YouTube pra todo mundo, porque já são redes de planejar.
+   Quem vê o quê: as 4 redes pra todo mundo. O LinkedIn era só do master e foi
+   liberado em 25/11/2026 ("linkedin acho que ja da pra liberar pra todos").
    Mobile first: pensado em 390px, pop up centralizado também no celular.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type Rede = "instagram" | "tiktok" | "youtube" | "linkedin";
 type Desenho = "vertical" | "quadrado" | "pilha" | "texto" | "pdf" | "horizontal" | "live";
 
-const REDES: { k: Rede; nome: string; cor: string; resumo: string; master?: boolean }[] = [
+const REDES: { k: Rede; nome: string; cor: string; resumo: string }[] = [
   { k: "instagram", nome: "Instagram", cor: "#DD2A7B", resumo: "Reels, carrossel, estático, story" },
   { k: "tiktok", nome: "TikTok", cor: "#FE2C55", resumo: "Vídeo, foto, story" },
   { k: "youtube", nome: "YouTube", cor: "#FF0000", resumo: "Vídeo e Shorts" },
-  { k: "linkedin", nome: "LinkedIn", cor: "#0A66C2", resumo: "Texto, documento, fotos, vídeo", master: true },
+  { k: "linkedin", nome: "LinkedIn", cor: "#0A66C2", resumo: "Texto, documento, fotos, vídeo" },
 ];
 
 // [código gravado no banco, nome, resumo da estrutura, desenho]. Instagram
@@ -105,9 +104,6 @@ export function FormatPicker({ open, onPick, onBlank, onOpenChange }: {
   onBlank: (rede?: string, formato?: string) => void;
   onOpenChange: (o: boolean) => void;
 }) {
-  const { profile } = useProfile();
-  const master = profile?.role === "admin";
-  const redes = REDES.filter((r) => !r.master || master);
   const [rede, setRede] = useState<Rede | null>(null);
   // Toda vez que abre, volta pro passo 1.
   useEffect(() => { if (open) setRede(null); }, [open]);
@@ -128,11 +124,10 @@ export function FormatPicker({ open, onPick, onBlank, onOpenChange }: {
               Escolha a rede. Depois aparecem só os formatos dela, com a estrutura pronta.
             </DialogDescription>
             <div className="grid grid-cols-2 gap-2.5">
-              {redes.map((x) => (
+              {REDES.map((x) => (
                 <button key={x.k} type="button" onClick={() => setRede(x.k)}
                   className="relative min-h-[132px] overflow-hidden rounded-[22px] border border-border bg-card px-3 pb-3 pt-3.5 text-left transition-transform active:scale-95 hover:-translate-y-0.5">
                   <span aria-hidden className="absolute -bottom-8 -right-7 h-[100px] w-[110px] opacity-[0.16]" style={{ background: x.cor, borderRadius: "61% 39% 52% 48% / 47% 58% 42% 53%" }} />
-                  {x.master && <span className="absolute right-2.5 top-2.5 rounded-full bg-[#FFF1C2] px-[7px] py-[3px] text-[9.5px] font-body font-extrabold text-[#7a5b00]">só master</span>}
                   <LogoRede marca={x.k} tamanho={40} className="relative" />
                   <b className="relative mt-2.5 block font-display text-lg font-extrabold">{x.nome}</b>
                   <small className="relative block text-xs leading-snug text-muted-foreground">{x.resumo}</small>
