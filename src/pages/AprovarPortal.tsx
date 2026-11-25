@@ -283,9 +283,19 @@ function PostApproval({ client, post, index, busy, history, onApproveFast, onAdj
   const [alfineteAberto, setAlfineteAberto] = useState<string | null>(null);
 
   // Só os comentários que TÊM ponto viram alfinete, agrupados por slide.
-  const meusAlfinetes = useMemo(
-    () => history.filter((c) => c.ancora_x != null && c.ancora_y != null && c.comment_id),
-    [history]);
+  /* SÓ OS PONTOS DA RODADA ABERTA (Gabriela, 25/11/2026: "quando reenvio
+     ainda tá os pontos que ela botou anteriormente" e "mesmo parando de
+     apontar ele não sai"). A rodada fecha quando a cliente toca em Enviar
+     ajuste ou quando a equipe reenvia a peça: os dois gravam um comentário
+     sem ponto. Alfinete de antes disso já foi resolvido, cobria o texto que a
+     Gabi ajustou e continua só no "Ver o que você pediu". */
+  const meusAlfinetes = useMemo(() => {
+    const fechouEm = history
+      .filter((c) => c.ancora_x == null || c.ancora_y == null)
+      .reduce((m, c) => (c.created_at > m ? c.created_at : m), "");
+    return history.filter((c) => c.ancora_x != null && c.ancora_y != null && c.comment_id
+      && (!fechouEm || c.created_at > fechouEm));
+  }, [history]);
   const alfinetesPorMidia = useMemo(() => {
     const m: Record<number, Alfinete[]> = {};
     for (const c of meusAlfinetes) {
