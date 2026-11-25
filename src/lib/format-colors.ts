@@ -23,6 +23,9 @@ export const FORMAT_COLORS: Record<string, FormatColor> = {
   video: { base: "#4B3FA8", dark: "#9C92F2" },      // índigo
   shorts: { base: "#DB2777", dark: "#FF8FC2" },     // rosa (o #FF77B9 puro some no branco)
   live: { base: "#D97706", dark: "#FFC24D" },       // âmbar (o amarelo puro some no branco)
+  // Formatos só do LinkedIn (Walter, 25/11/2026).
+  texto: { base: "#0A66C2", dark: "#70B5F9" },      // azul LinkedIn
+  documento: { base: "#0E7490", dark: "#5EC8DE" },  // petróleo
 };
 
 // Cor do formato, com fallback neutro pra formato desconhecido/vazio.

@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useProfile } from "@/hooks/useProfile";
 import {
-  conectarRede, NOME_REDE, useAgendarRede, useConexaoRede, useCrmDoPost, useCriadorTikTok,
-  usePublicacaoRede, usePublicarAgoraRede, type RedeNova,
+  conectarRede, formatoLinkedInDaMidia, NOME_REDE, useAgendarRede, useConexaoRede, useCrmDoPost, useCriadorTikTok,
+  useMidiaDoPost, usePublicacaoRede, usePublicarAgoraRede, useVencimentoRede, type RedeNova,
 } from "@/hooks/usePublicarRedes";
 import { toast } from "sonner";
 
@@ -22,7 +22,17 @@ import { toast } from "sonner";
    texto de consentimento acima do botão, sem marca do Cria no texto.
    YouTube: Short ou vídeo normal (o YouTube decide pelo formato; a tela avisa),
    título até 100, visibilidade e "feito para crianças" obrigatórios.
+
+   LinkedIn perfil pessoal (mockup aprovado em 25/11/2026, "ta aprovado"):
+   formato sai da mídia do post (texto, foto, carrossel de 2 a 20 fotos ou
+   vídeo), texto até 3.000, quem pode ver, e aviso de reconectar nos últimos
+   7 dias da conexão (o LinkedIn não renova sozinho).
+   TikTok e YouTube saíram da tela em 03/11/2026 ("até fechar o processo"):
+   a caixa voltou só com o LinkedIn. Pra devolver, é só pôr a rede em
+   REDES_NA_TELA.
    ═══════════════════════════════════════════════════════════════════════════ */
+
+const REDES_NA_TELA: RedeNova[] = ["linkedin"];
 
 const PRIVACIDADE: Record<string, string> = {
   PUBLIC_TO_EVERYONE: "Todo mundo",
@@ -68,8 +78,8 @@ export function PublicarNasRedes({ postId, legenda, titulo, plataforma }: { post
   const master = profile?.role === "admin";
   /* Post de TikTok ou YouTube: a caixa já abre na rede dele. Post de Instagram:
      fica fechada numa linha (é opcional, não pode pesar no editor). */
-  const daRede = plataforma === "tiktok" || plataforma === "youtube" ? (plataforma as RedeNova) : null;
-  const [rede, setRede] = useState<RedeNova>(daRede ?? "tiktok");
+  const daRede = REDES_NA_TELA.includes(plataforma as RedeNova) ? (plataforma as RedeNova) : null;
+  const [rede, setRede] = useState<RedeNova>(daRede ?? REDES_NA_TELA[0]);
   const [aberto, setAberto] = useState(!!daRede);
   useEffect(() => { if (daRede) { setRede(daRede); setAberto(true); } }, [daRede]);
 
@@ -89,7 +99,7 @@ export function PublicarNasRedes({ postId, legenda, titulo, plataforma }: { post
     return (
       <button type="button" onClick={() => setAberto(true)}
         className="w-full flex items-center gap-2 rounded-2xl border border-dashed border-border bg-card px-3.5 py-2.5 text-left hover:bg-muted/40">
-        <span className="text-[12.5px] font-body font-semibold text-muted-foreground">Publicar também no TikTok ou YouTube</span>
+        <span className="text-[12.5px] font-body font-semibold text-muted-foreground">Publicar também no {REDES_NA_TELA.map((r) => NOME_REDE[r]).join(" ou ")}</span>
         <span className="ml-auto text-[10.5px] font-body font-bold rounded-full px-2 py-0.5 bg-amber-100 text-amber-900">só master</span>
       </button>
     );
@@ -102,16 +112,18 @@ export function PublicarNasRedes({ postId, legenda, titulo, plataforma }: { post
         {!daRede && <button type="button" onClick={() => setAberto(false)} className="ml-auto text-[12px] font-body text-muted-foreground hover:text-foreground">fechar</button>}
       </div>
       <div className="flex gap-1.5">
-        {(["tiktok", "youtube"] as RedeNova[]).map((r) => (
+        {REDES_NA_TELA.map((r) => (
           <button key={r} type="button" onClick={() => setRede(r)}
             className={cn("rounded-full px-3 py-1.5 text-[12px] font-body font-bold", rede === r ? "bg-foreground text-background" : "bg-muted text-muted-foreground")}>
             {NOME_REDE[r]}
           </button>
         ))}
       </div>
-      {rede === "tiktok"
-        ? <PainelTikTok key="tt" postId={postId} legenda={legenda} />
-        : <PainelYouTube key="yt" postId={postId} legenda={legenda} titulo={titulo} />}
+      {rede === "linkedin"
+        ? <PainelLinkedIn key="li" postId={postId} legenda={legenda} />
+        : rede === "tiktok"
+          ? <PainelTikTok key="tt" postId={postId} legenda={legenda} />
+          : <PainelYouTube key="yt" postId={postId} legenda={legenda} titulo={titulo} />}
     </div>
   );
 }
@@ -136,7 +148,7 @@ function Cabecalho({ postId, rede }: { postId: string; rede: RedeNova }) {
         )}
       </div>
       {pub.erro && pub.status !== "publicado" && <p className="text-[12px] font-body text-amber-900 flex gap-1.5"><AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />{pub.erro}</p>}
-      {pub.status === "processando" && <p className="text-[12px] font-body text-muted-foreground">O TikTok leva alguns minutos pra processar. Esta caixa atualiza sozinha.</p>}
+      {pub.status === "processando" && <p className="text-[12px] font-body text-muted-foreground">O {NOME_REDE[rede]} leva alguns minutos pra processar o vídeo. Esta caixa atualiza sozinha.</p>}
     </div>
   );
 }
@@ -308,6 +320,72 @@ function PainelYouTube({ postId, legenda, titulo: tituloPost }: { postId: string
       <Botoes podeAgendar={podeAgendar} travado={travado} ocupado={agendar.isPending || agora.isPending}
         onAgendar={() => agendar.mutate({ ligar: true, opcoes, titulo, texto: descricao })}
         onAgora={() => agora.mutate({ opcoes, titulo, texto: descricao })} />
+    </div>
+  );
+}
+
+function PainelLinkedIn({ postId, legenda }: { postId: string; legenda?: string | null }) {
+  const cx = useConexaoRede(postId, "linkedin");
+  const pub = usePublicacaoRede(postId, "linkedin").data;
+  const conectado = !!cx.data?.connection_id && !!cx.data?.pode_publicar;
+  const vence = useVencimentoRede(postId, "linkedin", conectado).data ?? null;
+  const midia = useMidiaDoPost(postId, conectado).data;
+  const crm = useCrmDoPost(postId).data ?? null;
+  const agendar = useAgendarRede(postId, "linkedin");
+  const agora = usePublicarAgoraRede(postId, "linkedin");
+  const [texto, setTexto] = useState("");
+  const [visib, setVisib] = useState<"PUBLIC" | "CONNECTIONS">("PUBLIC");
+  useEffect(() => {
+    setTexto(pub?.texto ?? legenda ?? "");
+    const v = (pub?.opcoes as Record<string, unknown> | null)?.visibility;
+    if (v === "PUBLIC" || v === "CONNECTIONS") setVisib(v);
+  }, [pub?.texto, pub?.opcoes, legenda]);
+
+  if (cx.isLoading) return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
+  if (!conectado) return <><Cabecalho postId={postId} rede="linkedin" /><Conectar postId={postId} rede="linkedin" motivo={cx.data?.motivo ?? "O LinkedIn deste perfil ainda não está conectado ao Cria. A conexão vale por 60 dias; o Cria avisa antes de vencer."} /></>;
+
+  const dias = vence ? Math.ceil((new Date(vence).getTime() - Date.now()) / 86_400_000) : null;
+  const venceTxt = vence ? new Date(vence).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : null;
+  const f = midia ? formatoLinkedInDaMidia(midia) : null;
+  const erroMidia = f && "erro" in f ? f.erro : null;
+  const travado = pub?.status === "publicando" || pub?.status === "processando" || pub?.status === "publicado";
+  const semTexto = !!f && !("erro" in f) && f.formato === "texto" && !texto.trim();
+  const podeAgendar = !!f && !erroMidia && !semTexto && texto.length <= 3000;
+  const opcoes = { visibility: visib };
+
+  return (
+    <div className="space-y-3">
+      <Cabecalho postId={postId} rede="linkedin" />
+      {dias !== null && dias <= 7 && (
+        <div className="rounded-xl bg-amber-100 px-3 py-2 text-[12.5px] font-body text-amber-900 flex items-start gap-2">
+          <span className="flex-1">A conexão com o LinkedIn vence em {Math.max(dias, 0)} dia{dias === 1 ? "" : "s"}. O LinkedIn não renova sozinho.</span>
+          <button type="button" className="font-bold underline shrink-0" onClick={() => void conectarRede("linkedin", crm)}>Reconectar</button>
+        </div>
+      )}
+      <div className="flex items-center gap-2.5">
+        <div className="h-8 w-8 rounded-full bg-[#0A66C2] text-white grid place-items-center text-[12px] font-body font-bold shrink-0">{(cx.data?.username ?? "in").slice(0, 1).toUpperCase()}</div>
+        <div className="min-w-0">
+          <p className="text-[13px] font-body font-bold truncate">{cx.data?.username ?? "Perfil do LinkedIn"}</p>
+          <p className="text-[11.5px] font-body text-muted-foreground">Vai sair no perfil pessoal{venceTxt ? ` · conexão vale até ${venceTxt}` : ""}</p>
+        </div>
+      </div>
+      {f && !erroMidia && "rotulo" in f && <span className="inline-flex rounded-full bg-[#E8F1FB] px-2.5 py-1 text-[12px] font-body font-bold text-[#0A66C2]">{f.rotulo}</span>}
+      {erroMidia && <p className="rounded-xl bg-amber-100 px-3 py-2 text-[12.5px] font-body text-amber-900">{erroMidia}</p>}
+      <div className="space-y-1">
+        <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">Texto do post <span className="normal-case font-normal">({texto.length}/3000)</span></p>
+        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={4} maxLength={3000}
+          className="w-full rounded-xl border border-border bg-card px-3 py-2 text-[13.5px] font-body" />
+        {semTexto && <p className="text-[12px] font-body text-amber-900">Post sem foto nem vídeo precisa de texto.</p>}
+      </div>
+      <div className="space-y-1">
+        <p className="text-[11px] font-body font-bold uppercase tracking-wide text-muted-foreground">Quem pode ver</p>
+        <div className="flex gap-2"><Opcao ativo={visib === "PUBLIC"} onClick={() => setVisib("PUBLIC")}>Todo mundo</Opcao><Opcao ativo={visib === "CONNECTIONS"} onClick={() => setVisib("CONNECTIONS")}>Só conexões</Opcao></div>
+      </div>
+      <p className="text-[11.5px] font-body text-muted-foreground leading-snug">Hashtag continua clicável. O LinkedIn não agenda: o Cria publica na data e hora do post.</p>
+      {pub?.status === "publicado" && <p className="text-[12px] font-body text-green-800 flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4" />Já está no LinkedIn.</p>}
+      <Botoes podeAgendar={podeAgendar} travado={travado} ocupado={agendar.isPending || agora.isPending}
+        onAgendar={() => agendar.mutate({ ligar: true, opcoes, texto })}
+        onAgora={() => agora.mutate({ opcoes, texto })} />
     </div>
   );
 }

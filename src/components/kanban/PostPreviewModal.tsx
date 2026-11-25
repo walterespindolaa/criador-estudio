@@ -2,7 +2,8 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect, useRef } from "react";
 import { PlatformIcon } from "@/components/shared/PlatformIcon";
-import { Heart, MessageCircle, Send, Bookmark, Play, Music2, Share2, ChevronLeft, ChevronRight, Image, X } from "lucide-react";
+import { Heart, MessageCircle, Send, Bookmark, Play, Music2, Share2, ChevronLeft, ChevronRight, Image, X, ThumbsUp, MessageSquare, Repeat2, FileText } from "lucide-react";
+import { posicaoCorte } from "./LinkedInLegenda";
 import { VideoMediaSlot } from "./VideoMediaSlot";
 
 interface SectionData {
@@ -401,14 +402,16 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
   };
 
   return (
-    <Tabs defaultValue={platform || "instagram"} className="w-full">
+    // key: trocar a plataforma no editor reabre a prévia na aba dela (a aba do LinkedIn só existe em post de LinkedIn).
+    <Tabs key={platform || "instagram"} defaultValue={platform || "instagram"} className="w-full">
           {/* Seletor em pílulas (Walter, 01/09: as abas antigas estavam "muito
               feias perto do sistema"): trilho arredondado, sem linhas duras. */}
-          <TabsList className={`${semAbasPlataforma ? "hidden" : "grid"} ml-2 mt-2 mb-1 grid-cols-3 h-8 rounded-xl bg-muted/60 p-0.5 gap-0.5 ${folgaParaFechar ? "mr-12" : "mr-2"}`}>
-            {["instagram", "tiktok", "youtube"].map(p => (
+          {/* LinkedIn só entra nas abas quando o post é de LinkedIn (25/11/2026). */}
+          <TabsList className={`${semAbasPlataforma ? "hidden" : "grid"} ml-2 mt-2 mb-1 ${platform === "linkedin" ? "grid-cols-4" : "grid-cols-3"} h-8 rounded-xl bg-muted/60 p-0.5 gap-0.5 ${folgaParaFechar ? "mr-12" : "mr-2"}`}>
+            {["instagram", "tiktok", "youtube", ...(platform === "linkedin" ? ["linkedin"] : [])].map(p => (
               <TabsTrigger key={p} value={p} className="font-body text-[11px] gap-1 rounded-[10px] data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm">
                 <PlatformIcon platform={p} size="sm" />
-                <span className="capitalize">{p === "youtube" ? "YT" : p === "instagram" ? "IG" : "TK"}</span>
+                <span className="capitalize">{p === "youtube" ? "YT" : p === "instagram" ? "IG" : p === "linkedin" ? "in" : "TK"}</span>
               </TabsTrigger>
             ))}
           </TabsList>
@@ -473,6 +476,65 @@ export function PostPreviewContent({ title, hook, caption, platform, format, use
               <VerticalPreview variant="reels" />
             )}
           </TabsContent>
+
+          {/* LINKEDIN (mockup aprovado em 25/11/2026): cara do feed do LinkedIn,
+              texto cortado onde o feed corta ("ver mais") e mídia por formato. */}
+          {platform === "linkedin" && (
+            <TabsContent value="linkedin" className="m-0">
+              <div className="bg-[#F4F2EE] p-2">
+                <div className="overflow-hidden rounded-lg border border-[#E0DFDC] bg-white text-[#1d1d1d]" style={{ fontFamily: "-apple-system, system-ui, 'Segoe UI', Roboto, sans-serif" }}>
+                  <div className="flex gap-2 px-3 pt-3 pb-1.5">
+                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#0A66C2]/15 flex items-center justify-center">
+                      {avatarUrl ? <img src={avatarUrl} className="h-full w-full object-cover" alt={userName} loading="lazy" /> : <span className="text-xs font-bold text-[#0A66C2]">{initials}</span>}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-[13px] font-semibold">{userName}</p>
+                      {userHandle && <p className="truncate text-[11px] text-[#666]">@{userHandle}</p>}
+                      <p className="text-[11px] text-[#666]">Agora · 🌐</p>
+                    </div>
+                  </div>
+                  {caption ? (() => {
+                    const corte = posicaoCorte(caption);
+                    const visivel = corte === null ? caption : caption.slice(0, corte).trimEnd();
+                    return (
+                      <p className="whitespace-pre-line px-3 pb-2.5 text-[13px] leading-[1.43]">
+                        {visivel.split(/(#[\p{L}\p{N}_]+)/u).map((t, i) => t.startsWith("#") ? <span key={i} className="font-semibold text-[#0A66C2]">{t}</span> : t)}
+                        {corte !== null && <span className="text-[#666]">…ver mais</span>}
+                      </p>
+                    );
+                  })() : <p className="px-3 pb-2.5 text-[12px] italic text-[#999]">O texto do post aparece aqui</p>}
+                  {format === "carrossel" && nMidias > 1 ? (
+                    <div className="grid aspect-square grid-cols-[2fr_1fr] grid-rows-2 gap-0.5 bg-white">
+                      {carouselMedia!.slice(0, 3).map((u, i) => (
+                        <div key={i} className={`relative overflow-hidden bg-muted ${i === 0 ? "row-span-2" : ""}`}>
+                          <img src={u} alt="" className="h-full w-full object-cover" onError={seImagemFalhar} />
+                          {i === 2 && nMidias > 3 && <span className="absolute inset-0 grid place-items-center bg-black/55 text-lg font-bold text-white">+{nMidias - 3}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  ) : format === "documento" ? (
+                    <div className="bg-[#1d1d1d]">
+                      <div className="relative aspect-[4/5] overflow-hidden">
+                        {carouselMedia?.[0] || activeMediaUrl
+                          ? <img src={carouselMedia?.[0] || activeMediaUrl} alt="" className="h-full w-full object-cover" onError={seImagemFalhar} />
+                          : <GradientPlaceholder icone={false}><FileText className="h-10 w-10 text-white/40" /><span className="mt-2 text-[11px] text-white/60">Primeira página do PDF</span></GradientPlaceholder>}
+                      </div>
+                      <div className="flex items-center justify-between px-3 py-2 text-[11px] text-white"><span>Documento</span><span>1 / {Math.max(1, nMidias)}</span></div>
+                    </div>
+                  ) : format !== "texto" ? (
+                    <FeedMedia />
+                  ) : null}
+                  <div className="flex justify-between px-3 py-1.5 text-[11px] text-[#666]"><span>👍 ❤️ 128</span><span>24 comentários</span></div>
+                  <div className="flex justify-around border-t border-[#E8E8E8] px-1 py-2 text-[11.5px] font-semibold text-[#5e5e5e]">
+                    <span className="flex items-center gap-1"><ThumbsUp className="h-3.5 w-3.5" />Gostei</span>
+                    <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" />Comentar</span>
+                    <span className="flex items-center gap-1"><Repeat2 className="h-3.5 w-3.5" />Compartilhar</span>
+                    <span className="flex items-center gap-1"><Send className="h-3.5 w-3.5" />Enviar</span>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          )}
 
           {/* TIKTOK */}
           <TabsContent value="tiktok" className="m-0">

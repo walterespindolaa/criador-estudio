@@ -26,6 +26,8 @@ import { rotuloPlanoMeuPerfil } from "@/hooks/useMeuPerfil";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 import { useGoogleDriveConnection } from "@/hooks/useGoogleDriveConnection";
+import { RedesParaPublicar } from "@/components/shared/RedesParaPublicar";
+import { estadoConexaoRede, NOME_REDE, useConexoesProprias } from "@/hooks/usePublicarRedes";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { useActiveAccount } from "@/contexts/AccountContext";
 import { SettingsVisual } from "@/components/settings/SettingsVisual";
@@ -171,6 +173,9 @@ const Configuracoes = () => {
 
   const { data: igConnection } = useSocialConnection();
   const igDisconnect = useDisconnectInstagram();
+  // Redes pra publicar (YouTube, TikTok, LinkedIn): só o master enquanto está em teste (Walter, 25/11/2026).
+  const masterRedes = perfilSessao?.role === "admin";
+  const redesProprias = useConexoesProprias(user?.id, masterRedes).data ?? [];
 
   /* PERFIL NOVO (Walter, 19/10/2026; mockup aprovado). Bio pode vir do
      Instagram conectado; Pix fica mascarado até a pessoa pedir pra ver. */
@@ -586,6 +591,12 @@ const Configuracoes = () => {
               {igConnection
                 ? <Selo tom={igVencido ? "alerta" : "ok"}>{igVencido ? "Instagram: reconectar" : `Instagram ligado${igConnection.username ? ` · @${igConnection.username}` : ""}`}</Selo>
                 : <Selo tom="neutro">Instagram não ligado</Selo>}
+              {masterRedes && (["youtube", "tiktok", "linkedin"] as const).map((r) => {
+                const c = redesProprias.find((x) => x.provider === r);
+                if (!c) return <Selo key={r} tom="neutro">{NOME_REDE[r]} não ligado</Selo>;
+                const e = estadoConexaoRede(c);
+                return <Selo key={r} tom={e.vencida || e.perto ? "alerta" : "ok"}>{e.vencida || e.perto ? `${NOME_REDE[r]}: reconectar` : `${NOME_REDE[r]} ligado`}</Selo>;
+              })}
               {driveConnection ? <Selo>Google Drive ligado</Selo> : <Selo tom="neutro">Drive não ligado</Selo>}
             </div>
             {igConnection?.updated_at && <p>Dados do Instagram atualizados {haQuanto(igConnection.updated_at)}.</p>}
@@ -956,6 +967,8 @@ const Configuracoes = () => {
                     <Button variant="hero" onClick={() => connectInstagram()} className="w-full sm:w-auto"><Instagram className="h-4 w-4 mr-2" /> Conectar Instagram</Button>
                   )}
                 </div>
+
+                {masterRedes && <RedesParaPublicar userId={user?.id} />}
 
                 <div className="bg-card rounded-xl p-6 shadow-[var(--shadow-warm)] border border-border space-y-4">
                   <h3 className="font-display font-semibold text-foreground flex items-center gap-2"><HardDrive className="h-5 w-5 text-primary" /> Google Drive</h3>

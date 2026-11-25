@@ -1,5 +1,10 @@
 export const PLATFORMS = ["instagram", "tiktok", "youtube"] as const;
 
+// LinkedIn como plataforma do post (mockup aprovado pelo Walter em 25/11/2026).
+// Fica fora de PLATFORMS de propósito: enquanto a publicação está em teste só o
+// master escolhe LinkedIn no editor (PostEditor junta esta lista quando é admin).
+export const PLATAFORMAS_SO_MASTER = ["linkedin"] as const;
+
 export const BUNNY_CDN_HOSTNAME = "vz-4f7de422-7aa.b-cdn.net";
 
 export const BUNNY_CRIAPOST_CDN_HOSTNAME = "vz-86788381-03e.b-cdn.net";
@@ -12,6 +17,8 @@ export const FORMAT_LABELS: Record<string, string> = {
   video: "Vídeo",
   shorts: "Shorts",
   live: "Live",
+  texto: "Texto",
+  documento: "Documento",
 };
 
 export const FORMATS = ["reels", "carrossel", "foto", "story", "video", "shorts", "live"] as const;
@@ -46,7 +53,18 @@ export const FORMATS_BY_PLATFORM: Record<string, string[]> = {
   instagram: ["reels", "carrossel", "foto", "story"],
   tiktok: ["video", "foto", "story"],
   youtube: ["video", "shorts"],
+  // Perfil pessoal pela API (Walter, 25/11/2026). Documento = PDF em páginas.
+  linkedin: ["texto", "foto", "carrossel", "documento", "video"],
 };
+
+/** Rótulo do formato no LinkedIn ("foto" lá é Foto, não Estático). */
+export const LINKEDIN_FORMAT_LABELS: Record<string, string> = {
+  texto: "Texto", foto: "Foto", carrossel: "Carrossel", documento: "Documento", video: "Vídeo",
+};
+export const LINKEDIN_FORMAT_DICA: Record<string, string> = {
+  texto: "só escrita, sem mídia", foto: "1 imagem", carrossel: "2 a 20 fotos", documento: "PDF, até 300 páginas", video: "3 s a 30 min, MP4",
+};
+export const LINKEDIN_TEXTO_MAX = 3000;
 
 export const STATUS_OPTIONS = [
   { key: "ideia", label: "Ideia" },

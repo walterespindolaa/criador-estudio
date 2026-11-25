@@ -50,7 +50,9 @@ import { toast } from "sonner";
 import { downloadMediaFile, mediaDownloadName } from "@/lib/driveMedia";
 import { fireConfetti, primeiraPublicacaoDaSemana } from "@/lib/confetti";
 import { StickerCelebration } from "@/components/shared/StickerCelebration";
-import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS, BUNNY_CRIAPOST_CDN_HOSTNAME } from "@/lib/constants";
+import { FORMAT_LABELS, PLATFORMS, FORMATS, STATUS_OPTIONS, BUNNY_CRIAPOST_CDN_HOSTNAME, PLATAFORMAS_SO_MASTER, FORMATS_BY_PLATFORM, LINKEDIN_FORMAT_LABELS, LINKEDIN_FORMAT_DICA, LINKEDIN_TEXTO_MAX } from "@/lib/constants";
+import { useProfile } from "@/hooks/useProfile";
+import { ChecagemLinkedIn, CorteVerMais } from "./LinkedInLegenda";
 import * as tus from "tus-js-client";
 
 const VIDEO_EXTS = ["mov", "mp4", "m4v", "webm", "avi", "mkv", "hevc", "3gp"];
@@ -104,6 +106,7 @@ import { RepurposeSheet } from "./RepurposeSheet";
 import { BestTimesHint } from "@/components/shared/BestTimesHint";
 import { PostPreviewModal, PostPreviewContent } from "./PostPreviewModal";
 import { PublicarNoInstagram } from "@/components/shared/PublicarNoInstagram";
+import { RedesSoMaster } from "@/components/shared/RedesSoMaster";
 import { PublishButton } from "./PublishButton";
 import { useActiveProfile } from "@/hooks/useActiveProfile";
 import { usePostPreviewIdentity } from "@/hooks/usePostPreviewIdentity";
@@ -388,6 +391,18 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const initialLoadCompleteRef = useRef(false);
 
   const { profile } = useActiveProfile();
+  // LinkedIn como plataforma do post: só o master enquanto está em teste (Walter, 25/11/2026).
+  const { profile: perfilSessao } = useProfile();
+  const masterLinkedIn = perfilSessao?.role === "admin";
+  const plataformas: string[] = masterLinkedIn || platform === "linkedin" ? [...PLATFORMS, ...PLATAFORMAS_SO_MASTER] : [...PLATFORMS];
+  const ehLinkedIn = platform === "linkedin";
+  // Trocar de rede ajusta o formato: o LinkedIn tem lista própria (texto,
+  // documento) e esses dois não existem nas outras redes.
+  const trocarPlataforma = (p: string) => {
+    setPlatform(p);
+    if (p === "linkedin" && !FORMATS_BY_PLATFORM.linkedin.includes(format)) setFormat("foto");
+    if (p !== "linkedin" && (format === "texto" || format === "documento")) setFormat("foto");
+  };
   // Mapa invertido pilarId -> dias da semana, a partir da linha editorial das
   // Configuracoes (profile.editorial_line: CHAVE = dia "SEG"/"TER"..., VALOR = pilar.id).
   // Serve so de enfeite visual: ao lado de cada pilar mostramos o(s) dia(s) sugerido(s).
@@ -1468,7 +1483,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
 
   const formatStructure = getFormatStructure(format);
   const captionLen = caption.length;
-  const captionMax = 2200;
+  // LinkedIn aceita 3.000 caracteres; Instagram e TikTok, 2.200.
+  const captionMax = ehLinkedIn ? LINKEDIN_TEXTO_MAX : 2200;
 
   // Re-usable pill class helper
   const pillClass = (selected: boolean) =>
@@ -1522,7 +1538,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   abaixo da data, porque "publicar sozinho na data e hora" é a
                   continuação natural dela. Só aparece pra conta que pode
                   publicar pelo Cria; pros outros a tela fica igual. */}
-              {post?.id && (
+              {/* Post de LinkedIn não sai no Instagram (25/11/2026): a caixa some. */}
+              {post?.id && !ehLinkedIn && (
                 <PublicarNoInstagram
                   postId={post.id}
                   // O banco já move o card (ig_agendar_publicacao); aqui só alinha o
@@ -1535,6 +1552,9 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   antesDeAgir={gravarPendente}
                 />
               )}
+              {/* Publicar também em outras redes (só master). Voltou em 25/11/2026
+                  só com o LinkedIn; TikTok e YouTube seguem fora da tela. */}
+              {post?.id && <RedesSoMaster postId={post.id} legenda={caption} titulo={title} plataforma={platform} />}
 
     </>
   );
@@ -2241,16 +2261,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     <Label className="text-[11px] uppercase tracking-wider font-display font-bold text-primary/75">
                       Plataforma
                     </Label>
-                    <Select value={platform} onValueChange={setPlatform}>
+                    <Select value={platform} onValueChange={trocarPlataforma}>
                       <SelectTrigger className="rounded-xl h-10 bg-card">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {PLATFORMS.map((p) => (
+                        {plataformas.map((p) => (
                           <SelectItem key={p} value={p}>
                             <span className="flex items-center gap-2">
-                              <PlatformIcon platform={p} size="sm" />
-                              <span className="capitalize">{p}</span>
+                              <PlatformIcon platform={p} size="sm" className={p === "linkedin" ? "text-[#0A66C2]" : undefined} />
+                              <span className="capitalize">{p === "linkedin" ? "LinkedIn" : p}</span>
                             </span>
                           </SelectItem>
                         ))}
@@ -2266,9 +2286,18 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {FORMATS.map((f) => (
-                          <SelectItem key={f} value={f}>{FORMAT_LABELS[f] || f}</SelectItem>
-                        ))}
+                        {ehLinkedIn
+                          ? FORMATS_BY_PLATFORM.linkedin.map((f) => (
+                            <SelectItem key={f} value={f}>
+                              <span className="flex w-full items-center justify-between gap-3">
+                                {LINKEDIN_FORMAT_LABELS[f] || f}
+                                <span className="text-[11px] text-muted-foreground">{LINKEDIN_FORMAT_DICA[f]}</span>
+                              </span>
+                            </SelectItem>
+                          ))
+                          : FORMATS.map((f) => (
+                            <SelectItem key={f} value={f}>{FORMAT_LABELS[f] || f}</SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -2629,9 +2658,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 >
                   <BlocoCabecalho
                     numero={2}
-                    titulo="A legenda"
+                    titulo={ehLinkedIn ? "O texto do post" : "A legenda"}
                     subtitulo={legendaAberta
-                      ? "Escreva aqui. A Cria IA te ajuda a gerar, encurtar e melhorar. É o único lugar da legenda."
+                      ? ehLinkedIn
+                        ? "No LinkedIn só as primeiras linhas aparecem. O gancho vem antes da linha azul."
+                        : "Escreva aqui. A Cria IA te ajuda a gerar, encurtar e melhorar. É o único lugar da legenda."
                       : caption.trim()
                         ? `${caption.trim().split("\n")[0].slice(0, 90)}${caption.trim().length > 90 ? "…" : ""} · ${caption.length} caracteres`
                         : "Ainda sem legenda. Toque pra escrever ou gerar com a Cria IA."}
@@ -2646,9 +2677,11 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   <div className="absolute top-2 right-2 z-10 rounded-full bg-card/90 backdrop-blur-sm shadow-sm border border-border">
                     <EmojiPicker onPick={insertEmoji} />
                   </div>
+                  {ehLinkedIn && <CorteVerMais texto={caption} textareaRef={captionRef} />}
                   <textarea
                     ref={captionRef}
-                    placeholder="Escreva sua legenda aqui ou gere com a Cria IA..."
+                    maxLength={ehLinkedIn ? LINKEDIN_TEXTO_MAX : undefined}
+                    placeholder={ehLinkedIn ? "Escreva o post aqui. O gancho vem nas primeiras linhas, antes do corte do \"ver mais\"." : "Escreva sua legenda aqui ou gere com a Cria IA..."}
                     value={caption}
                     onChange={(e) => setCaption(e.target.value)}
                     className="w-full min-h-[220px] bg-transparent border-none outline-none focus:outline-none focus:ring-0 font-body text-base text-foreground placeholder:text-muted-foreground/40 resize-none leading-relaxed pr-10"
@@ -2658,9 +2691,16 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                   </span>
                 </div>
 
+                {ehLinkedIn && <ChecagemLinkedIn texto={caption} />}
+
                 {caption.length > 10 && (
                   <div className="flex flex-wrap gap-1.5">
                     {([
+                      // Só no LinkedIn (mockup aprovado em 25/11/2026): a estrutura do post lá é outra.
+                      ...(ehLinkedIn ? [
+                        { key: "li-adaptar", label: "Adaptar do Instagram", icon: Sparkles, instruction: "Reescreva este texto no estilo de post de LinkedIn: gancho forte nas 2 primeiras linhas (até 200 caracteres, antes do 'ver mais'), paragrafos curtos de 1 a 2 frases com linha em branco entre eles, tom profissional e pessoal, sem girias de Instagram, no maximo 3 hashtags no final e uma pergunta ou chamada pra comentar no fim. Mantenha a mensagem e o idioma." },
+                        { key: "li-gancho", label: "Gancho pro LinkedIn", icon: Sparkles, instruction: "Reescreva so a abertura deste texto pra virar um gancho de LinkedIn que caiba em ate 200 caracteres e em no maximo 2 linhas, e mantenha o resto do texto igual." },
+                      ] as const : []),
                       { key: "rephrase", label: "Reescrever", icon: RefreshCw, instruction: "Reescreva essa legenda mantendo a mesma mensagem mas com palavras completamente diferentes." },
                       { key: "shorten", label: "Encurtar", icon: Minus, instruction: "Encurte essa legenda pra no maximo 2 linhas mantendo a essencia e o CTA." },
                       { key: "expand", label: "Expandir", icon: Plus, instruction: "Expanda essa legenda com mais detalhes, storytelling e contexto. Mantenha o tom." },

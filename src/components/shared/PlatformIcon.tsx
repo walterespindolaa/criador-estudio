@@ -72,5 +72,15 @@ export const PlatformIcon = ({ platform, size = 'md', className }: PlatformIconP
     );
   }
 
+  // LinkedIn (Walter, 25/11/2026): quadrado arredondado com "in", na cor do texto.
+  if (platform === 'linkedin') {
+    return (
+      <svg width={pixelSize} height={pixelSize} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={cn(className)}>
+        <rect x="1.5" y="1.5" width="21" height="21" rx="4" fill="currentColor" />
+        <text x="12" y="17" textAnchor="middle" fontSize="12.5" fontWeight="800" fontFamily="Arial, sans-serif" fill="white">in</text>
+      </svg>
+    );
+  }
+
   return null;
 };

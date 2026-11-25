@@ -87,6 +87,26 @@ export const FORMAT_STRUCTURES: Record<string, FormatStructure> = {
     ],
     hasDynamicSections: false,
   },
+  // Formatos só do LinkedIn (Walter, 25/11/2026: "a estrutura de criacao dele
+  // interna é diferente"). Texto: o post é a escrita; o gancho é o que aparece
+  // antes do "ver mais". Documento: PDF em páginas, igual ao carrossel.
+  texto: {
+    fields: [
+      { key: "hook", label: "Gancho (antes do \"ver mais\")", placeholder: "As 2 primeiras linhas, o que faz a pessoa abrir o post inteiro...", rows: 2, icon: "Anchor" },
+      { key: "cta", label: "Fechamento", placeholder: "Ex: E você, já passou por isso? Conta nos comentários.", rows: 1, icon: "MousePointerClick" },
+    ],
+    hasDynamicSections: false,
+  },
+  documento: {
+    fields: [
+      { key: "hook", label: "Capa (página 1)", placeholder: "O título da primeira página do PDF, o que faz a pessoa passar pras próximas...", rows: 2, icon: "Layers" },
+      { key: "cta", label: "Conteúdo das páginas", placeholder: "Uma página por linha ou parágrafo e, no fim, o CTA da última página.", rows: 8, icon: "PenLine" },
+    ],
+    hasDynamicSections: true,
+    devField: true,
+    sectionLabel: "Página",
+    defaultSections: 5,
+  },
 };
 
 export function getFormatStructure(format: string): FormatStructure {

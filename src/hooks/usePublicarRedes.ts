@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { isVideoMedia } from "@/lib/driveMedia";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PUBLICAR NO TIKTOK, NO YOUTUBE E NO LINKEDIN (só pro master por enquanto)
@@ -195,4 +196,94 @@ export function usePublicarAgoraRede(postId: string | null | undefined, rede: Re
     },
     onError: (e: Error) => { toast.error(e.message); inv(); },
   });
+}
+
+/* ── Mídia do post pro LinkedIn (Walter, 25/11/2026) ──────────────────────
+   O formato do post no LinkedIn sai da mídia: só texto, foto, carrossel de
+   2 a 20 fotos ou um vídeo. A tela mostra e trava antes de mandar; o servidor
+   (rede-linkedin.ts, formatoLinkedIn) confere de novo na hora de publicar. */
+export type MidiaDoPost = { fotos: number; videos: number };
+
+export function useMidiaDoPost(postId: string | null | undefined, ativo = true) {
+  return useQuery<MidiaDoPost>({
+    queryKey: ["post-midia-contagem", postId],
+    enabled: !!postId && ativo,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data } = await sbFrom("external_media_refs")
+        .select("file_type, provider, bunny_video_id, file_name, view_url, download_url, substituida")
+        .eq("post_id", postId!);
+      const refs = ((data ?? []) as Array<Record<string, unknown> & { substituida?: boolean | null }>)
+        .filter((r) => !r.substituida);
+      const videos = refs.filter((r) => isVideoMedia(r as never)).length;
+      return { fotos: refs.length - videos, videos };
+    },
+  });
+}
+
+export type FormatoLinkedIn = "texto" | "foto" | "carrossel" | "video";
+
+/** Mesma regra do servidor (formatoLinkedIn em _shared/rede-linkedin.ts). */
+export function formatoLinkedInDaMidia(m: MidiaDoPost): { formato: FormatoLinkedIn; rotulo: string } | { erro: string } {
+  if (m.videos && m.fotos) return { erro: `No LinkedIn o post leva fotos ou um vídeo, não os dois juntos. Este post tem ${m.fotos} foto(s) e ${m.videos} vídeo(s).` };
+  if (m.videos > 1) return { erro: `No LinkedIn o post leva um vídeo só. Este post tem ${m.videos}.` };
+  if (m.videos === 1) return { formato: "video", rotulo: "Vídeo" };
+  if (m.fotos > 20) return { erro: `O carrossel do LinkedIn aceita até 20 fotos. Este post tem ${m.fotos}.` };
+  if (m.fotos > 1) return { formato: "carrossel", rotulo: `Carrossel · ${m.fotos} fotos` };
+  if (m.fotos === 1) return { formato: "foto", rotulo: "Foto" };
+  return { formato: "texto", rotulo: "Só texto" };
+}
+
+/* ── Conexões da própria conta (Configurações > Conexões) ─────────────────
+   Walter, 25/11/2026: não achava onde conectar o YouTube (só dava por dentro
+   do post). As contas dos clientes continuam na ficha do cliente; aqui ficam
+   só as da conta (crm_client_id vazio). O RLS de social_connections deixa o
+   dono ler e apagar a própria linha. */
+export type ConexaoPropria = {
+  id: string;
+  provider: RedeNova;
+  username: string | null;
+  token_expires_at: string | null;
+  needs_reconnect: boolean | null;
+};
+
+export function useConexoesProprias(userId: string | null | undefined, ativo = true) {
+  return useQuery<ConexaoPropria[]>({
+    queryKey: ["redes-conexoes-proprias", userId],
+    enabled: !!userId && ativo,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await sbFrom("social_connections")
+        .select("id, provider, username, token_expires_at, needs_reconnect")
+        .eq("user_id", userId!).is("crm_client_id", null).in("provider", ["tiktok", "youtube", "linkedin"]);
+      if (error) return [];
+      return (data ?? []) as unknown as ConexaoPropria[];
+    },
+  });
+}
+
+export function useDesconectarRede(userId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (c: ConexaoPropria) => {
+      const { error } = await sbFrom("social_connections").delete().eq("id", c.id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: (_d, c) => {
+      toast.success(`${NOME_REDE[c.provider]} desconectado.`);
+      qc.invalidateQueries({ queryKey: ["redes-conexoes-proprias", userId] });
+      qc.invalidateQueries({ queryKey: ["rede-conexao"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+/** Estado da conexão: o LinkedIn vence em 60 dias e não renova (aviso 7 dias antes). */
+export function estadoConexaoRede(c: { provider: RedeNova; token_expires_at: string | null; needs_reconnect: boolean | null }) {
+  const vence = c.token_expires_at ? new Date(c.token_expires_at).getTime() : null;
+  const dias = vence ? Math.ceil((vence - Date.now()) / 86_400_000) : null;
+  const venceSozinho = c.provider === "linkedin";
+  const vencida = !!c.needs_reconnect || (venceSozinho && dias !== null && dias <= 0);
+  const perto = !vencida && venceSozinho && dias !== null && dias <= 7;
+  return { vencida, perto, dias, venceEm: c.token_expires_at };
 }
