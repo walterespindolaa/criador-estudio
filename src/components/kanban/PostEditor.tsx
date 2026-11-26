@@ -424,6 +424,21 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   const ehVideoYt = ehYouTube && format === "video";
   // No YouTube a descrição já abre: é o texto que vai pro ar (26/11/2026).
   useEffect(() => { if (open && ehYouTube) setLegendaAberta(true); }, [open, ehYouTube, post?.id]);
+  /* ORDEM PELA FASE DO KANBAN (Walter, 26/11/2026: "se a pessoa ta na ideia ...
+     a parte de roteiro com gancho e cta vai estar em cima ... e depois conforme
+     passar no kanban vai pra baixo"). Ideia, Planejamento e Produzindo: o roteiro
+     fica em cima, é o que a pessoa está fazendo. De Pronto em diante: em cima o
+     que vai pro ar (título, legenda, tags, capa) e o roteiro desce pro fim.
+     A fase é lida só quando o post abre, pra os blocos não pularem de lugar
+     enquanto a pessoa troca o status lá dentro. Só no editor do criador. */
+  const [vaiProAr, setVaiProAr] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const fase = post?.status ?? initialStatus ?? "ideia";
+    const pronto = fase === "editando" || fase === "agendado" || fase === "publicado";
+    setVaiProAr(pronto);
+    if (pronto) setLegendaAberta(true);
+  }, [open, post?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // Trocar de rede ajusta o formato: o LinkedIn tem lista própria (texto,
   // documento) e esses dois não existem nas outras redes.
   const trocarPlataforma = (p: string) => {
@@ -1527,6 +1542,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
   };
 
   const formatStructure = getFormatStructure(format);
+  // Roteiro desce pro fim só se o formato tiver roteiro (ver vaiProAr).
+  const roteiroEmBaixo = vaiProAr && (formatStructure.fields.some((f) => f.key !== "caption") || !!formatStructure.hasDynamicSections);
   const captionLen = caption.length;
   // LinkedIn aceita 3.000 caracteres; descrição do YouTube, 5.000; Instagram e TikTok, 2.200.
   const captionMax = ehLinkedIn ? LINKEDIN_TEXTO_MAX : ehYouTube ? YT_DESCRICAO_MAX : 2200;
@@ -2509,7 +2526,7 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               <section ref={conteudoRef} className="scroll-mt-4 rounded-3xl border border-border bg-card shadow-sm p-4 sm:p-5 space-y-4">
                 {/* Pilar no cabeçalho do bloco (Walter, 19/10/2026): antes ficava
                     numa linha solta em cima e desalinhava o começo das colunas. */}
-                <BlocoCabecalho numero={1} titulo={ehYouTube ? "O vídeo" : "O conteúdo do post"} subtitulo={ehYouTube ? "Formato e título. O resto vem nos passos de baixo, na ordem do YouTube." : "Escolha o formato e escreva a estrutura."} extra={<>
+                <BlocoCabecalho numero={1} titulo={ehYouTube ? "O vídeo" : "O conteúdo do post"} subtitulo={vaiProAr ? (ehYouTube ? "Formato e título. O resto vem embaixo, na ordem do YouTube." : "Formato e detalhes. O roteiro está lá embaixo.") : ehYouTube ? "Formato, título e o roteiro pra gravar." : "Escolha o formato e escreva a estrutura."} extra={<>
             {pillars.length > 0 && (
               <div className="flex items-center gap-1.5 flex-wrap">
                 <Popover>
@@ -2718,9 +2735,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                 {/* Roteiro/estrutura (muda conforme o formato). A LEGENDA saiu daqui
                     de proposito: agora tem lugar unico no passo 2, pra ninguem mais
                     procurar "onde escrevo a legenda". */}
-                {ehYouTube
-                  ? <TituloYouTube valor={yt.titulo ?? ""} onChange={(v) => setYt((o) => ({ ...o, titulo: v }))} tituloPost={title} ctx={ctxYt} />
-                  : renderEstrutura()}
+                {ehYouTube && <TituloYouTube valor={yt.titulo ?? ""} onChange={(v) => setYt((o) => ({ ...o, titulo: v }))} tituloPost={title} ctx={ctxYt} />}
+                {!roteiroEmBaixo && renderEstrutura()}
 
               </section>
 
@@ -3055,8 +3071,8 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
               </section>
 
               {/* YouTube na ordem do que vai pro ar (Walter, 26/11/2026): título,
-                  descrição, depois tags, miniatura e categoria. O roteiro (gancho,
-                  cenas, CTA) é só pra gravar, então fica por último. */}
+                  descrição, depois tags, miniatura e categoria. O roteiro sobe ou
+                  desce conforme a fase (ver vaiProAr). */}
               {ehYouTube && (
                 <section className="rounded-3xl border border-border bg-card shadow-sm p-4 sm:p-5 space-y-4">
                   <BlocoCabecalho numero={3} titulo="Tags, miniatura e categoria" subtitulo="Vai junto com o vídeo no YouTube." />
@@ -3064,9 +3080,10 @@ export function PostEditor({ open, onOpenChange, post, pillars, userId, onSaved,
                     categoriaPadrao={categoriaDoNicho(profile?.niche)} />
                 </section>
               )}
-              {ehYouTube && (
+              {roteiroEmBaixo && (
                 <section className="rounded-3xl border border-border bg-card shadow-sm p-4 sm:p-5 space-y-4">
-                  <BlocoCabecalho numero={4} titulo="O roteiro" subtitulo="Gancho, cenas e CTA pra você gravar. Não aparece no YouTube." />
+                  <BlocoCabecalho numero={ehYouTube ? 4 : 3} titulo="O roteiro"
+                    subtitulo={`Gancho, cenas e CTA de quando você criou. Não aparece no ${ehYouTube ? "YouTube" : ehLinkedIn ? "LinkedIn" : "post"}.`} />
                   {renderEstrutura()}
                 </section>
               )}
