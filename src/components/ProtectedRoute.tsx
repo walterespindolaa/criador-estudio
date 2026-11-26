@@ -33,6 +33,20 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
       .catch(() => { /* tenta na próxima navegação */ });
   }, [user]);
 
+  /* VOLTOU POR UM E-MAIL (Walter, 26/11/2026). O botão dos e-mails leva
+     ?de=email_<etiqueta>. Com a pessoa logada, grava a volta (uma por dia) e
+     tira o parâmetro da barra. Robô de antivírus não loga, então não conta. */
+  useEffect(() => {
+    if (!user) return;
+    const u = new URL(window.location.href);
+    const de = u.searchParams.get("de") ?? "";
+    if (!/^email_[a-z0-9_]{1,74}$/.test(de)) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    void (supabase as any).rpc("registrar_volta_email", { _etiqueta: de }).then(() => undefined, () => undefined);
+    u.searchParams.delete("de");
+    window.history.replaceState(window.history.state, "", `${u.pathname}${u.search}${u.hash}`);
+  }, [user]);
+
   if (authLoading) return <LoadingScreen />;
 
   if (!user) return <Navigate to="/login" replace />;

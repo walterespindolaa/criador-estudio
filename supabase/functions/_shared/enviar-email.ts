@@ -96,10 +96,24 @@ export function montarTexto(e: EmailCria): string {
   return linhas.join("\n");
 }
 
+/* DE ONDE A PESSOA VOLTOU (Walter, 26/11/2026). O botão que leva pro app
+   ganha ?de=email_<etiqueta>, e o app grava a volta (registrar_volta_email)
+   quando a pessoa já está logada. Só links do próprio app. */
+function comOrigem(url: string, etiqueta: string): string {
+  try {
+    const u = new URL(url);
+    if (u.origin !== new URL(APP_URL()).origin || u.searchParams.has("de")) return url;
+    const tag = `email_${etiqueta}`.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 80);
+    u.searchParams.set("de", tag);
+    return u.toString();
+  } catch { return url; }
+}
+
 /** Enfileira. Devolve true se entrou na fila. */
 export async function enviarEmail(svc: Svc, e: EmailCria): Promise<boolean> {
   try {
     if (!e.para || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.para)) return false;
+    if (e.botao) e = { ...e, botao: { ...e.botao, url: comOrigem(e.botao.url, e.etiqueta) } };
     const messageId = crypto.randomUUID();
     const { error } = await svc.rpc("enqueue_email", {
       queue_name: "transactional_emails",
